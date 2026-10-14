@@ -1,6 +1,6 @@
 -- Copy-history dialog adapted from CleanerChat 2.44 Components/Modules/CopyChat.lua.
 -- See third_party/CleanerChat-NOTICE.txt for the supplied source attribution.
--- The dialog is fixed, session-only and uses the native text selection/clipboard.
+-- Fixed dimensions and session-only capture; native text selection/clipboard.
 
 DFRL:NewMod("ChatCopy", 0, function()
     DFRL.CleanerChat = DFRL.CleanerChat or {}
@@ -89,11 +89,11 @@ DFRL:NewMod("ChatCopy", 0, function()
         end
         edit:SetScript("OnTextChanged", function() ResizeText(this:GetText()) end)
 
-        local function ScrollWheel()
+        local function ScrollWheel(direction)
             local slider = _G.SurvivorsDragonUiChatCopyScrollScrollBar
             if not slider then return end
             local low, high = slider:GetMinMaxValues()
-            local value = slider:GetValue() - (arg1 or 0) * 36
+            local value = slider:GetValue() - (direction or arg1 or 0) * 36
             slider:SetValue(math.max(low, math.min(high, value)))
         end
         scroll:EnableMouseWheel(true)
@@ -109,6 +109,10 @@ DFRL:NewMod("ChatCopy", 0, function()
         _G.UISpecialFrames = _G.UISpecialFrames or {}
         table.insert(_G.UISpecialFrames, "SurvivorsDragonUiChatCopy")
         frame:Hide()
+        DFRL.layout.Register("copyWindow", frame, function(window)
+            window:ClearAllPoints()
+            window:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+        end, {onlyWhenShown = true, onMouseWheel = ScrollWheel})
         return frame
     end
 

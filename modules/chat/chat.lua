@@ -422,6 +422,16 @@ DFRL:NewMod("Chat", 1, function()
                 for _, state in pairs(states) do PositionNative(state, now) end
             end
         end)
+        DFRL.layout.Register("chat", root, function(frame)
+            frame:ClearAllPoints()
+            frame:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", 20, 40)
+        end, {
+            -- The SHIFT drag overlay must preserve wheel navigation. Movement
+            -- itself never rearms retained messages or changes their fading.
+            onMouseWheel = function(direction)
+                if selected then Scroll(selected, direction or 0) end
+            end,
+        })
     end
 
     Initialize()
