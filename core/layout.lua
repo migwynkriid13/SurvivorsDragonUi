@@ -2,8 +2,9 @@
 DFRL:NewMod("Layout", 0, function()
     local layout, entries, order = {}, {}, {}
     DFRL.layout = layout
-    local ready, inWorld = false, true
+    local ready, inWorld, needsRestore = false, true, false
     local activeDrag
+    local editing, draft, confirm = false, nil, nil
     local labels = {
         playerFrame = "Player", targetFrame = "Target", bossBars = "Boss health",
         runTimer = "Run timer", actionBar = "Action bar", xpBar = "XP",
@@ -25,6 +26,24 @@ DFRL:NewMod("Layout", 0, function()
             _G.SurvivorsDragonUiLayout = {}
         end
         return _G.SurvivorsDragonUiLayout
+    end
+    local function GeometryStore()
+        return editing and draft or Saved()
+    end
+    local function CopyGeometry(geometry)
+        if not Valid(geometry) then return end
+        local copy = {x = geometry.x, y = geometry.y}
+        for _, field in ipairs({"scale", "width", "height"}) do
+            if Number(geometry[field]) then copy[field] = geometry[field] end
+        end
+        return copy
+    end
+    local function LockFrame(frame)
+        -- SetUserPlaced requires movability on 1.12. Clear native caching before
+        -- locking the frame, so the explicit editor owns both movement and save.
+        frame:SetMovable(true)
+        if frame.SetUserPlaced then frame:SetUserPlaced(false) end
+        frame:SetMovable(editing)
     end
     local function Scale(frame)
         return frame.GetEffectiveScale and frame:GetEffectiveScale() or 1
@@ -55,7 +74,7 @@ DFRL:NewMod("Layout", 0, function()
         frame:SetPoint("TOPLEFT", UIParent, "TOPLEFT",
             position.x * width * uiScale / scale, position.y * height * uiScale / scale)
         -- Native StartMoving marks the frame user-placed. Keep a single layout store.
-        if frame.SetUserPlaced then frame:SetUserPlaced(false) end
+        LockFrame(frame)
     end
     local function CaptureAnchors(frame)
         local points = {}
@@ -110,25 +129,25 @@ DFRL:NewMod("Layout", 0, function()
             entry.defaultPosition = ReadPosition(entry.frame)
         end
         if not entry.defaultPosition then return end
-        local position = Saved()[key]
+        local position = GeometryStore()[key]
         ApplySize(entry, Valid(position) and position or nil)
         ApplyPosition(entry.frame, Valid(position) and position or entry.defaultPosition)
     end
     function layout.IsPlaced(key)
-        return (entries[key] and entries[key].dragging) or Valid(Saved()[key])
+        return (entries[key] and entries[key].dragging) or Valid(GeometryStore()[key])
     end
-    local function FinishDrag(entry, save)
+    local function FinishDrag(entry, capture)
         if not entry or not entry.dragging then return end
         entry.frame:StopMovingOrSizing()
         entry.dragging = false
         activeDrag = nil
-        if save then
+        if capture then
             local position = entry.resizePosition or ReadPosition(entry.frame)
             local geometry = ReadGeometry(entry, position)
-            if geometry then Saved()[entry.key] = geometry end
+            if geometry and editing then draft[entry.key] = geometry end
         end
         entry.resizing, entry.resizePosition = nil, nil
-        if entry.frame.SetUserPlaced then entry.frame:SetUserPlaced(false) end
+        LockFrame(entry.frame)
         layout.Place(entry.key)
     end
 
@@ -139,7 +158,7 @@ DFRL:NewMod("Layout", 0, function()
         return x / scale - (UIParent:GetLeft() or 0), y / scale - (UIParent:GetTop() or height)
     end
     local function BeginResize(entry, corner)
-        if not ready or not IsShiftKeyDown() then return end
+        if not ready or not inWorld or not editing then return end
         FinishDrag(activeDrag, true)
         local width, height, uiScale = Viewport()
         local x, y = Cursor()
@@ -234,10 +253,11 @@ DFRL:NewMod("Layout", 0, function()
         label:SetTextColor(0.87, 0.73, 0.41)
         label:SetText(labels[entry.key] or entry.key)
         handle:SetScript("OnDragStart", function()
-            if not ready or not IsShiftKeyDown() then return end
+            if not ready or not inWorld or not editing then return end
             FinishDrag(activeDrag, true)
             entry.dragging, activeDrag = true, entry
             entry.frame:StartMoving()
+            LockFrame(entry.frame)
         end)
         handle:SetScript("OnDragStop", function() FinishDrag(entry, true) end)
         handle:SetScript("OnMouseUp", function() FinishDrag(entry, true) end)
@@ -277,8 +297,7 @@ DFRL:NewMod("Layout", 0, function()
         entries[key] = entry
         table.insert(order, entry)
         entry.defaultAnchor(frame)
-        frame:SetMovable(true)
-        if frame.SetUserPlaced then frame:SetUserPlaced(false) end
+        LockFrame(frame)
         MakeHandle(entry)
         if ready then layout.Place(key) end
     end
@@ -289,12 +308,50 @@ DFRL:NewMod("Layout", 0, function()
             entry.defaultPosition = nil
             ApplySize(entry, nil)
             entry.defaultAnchor(entry.frame)
-            if entry.frame.SetUserPlaced then entry.frame:SetUserPlaced(false) end
+            LockFrame(entry.frame)
         end
         for _, entry in ipairs(order) do entry.defaultPosition = ReadPosition(entry.frame) end
         for _, entry in ipairs(order) do layout.Place(entry.key) end
     end
+    local function CloseEditing(save, restore)
+        if not editing then return end
+        FinishDrag(activeDrag, save)
+        if save then _G.SurvivorsDragonUiLayout = draft end
+        editing, draft = false, nil
+        for _, entry in ipairs(order) do
+            LockFrame(entry.frame)
+            entry.handle:EnableMouse(false)
+            entry.handle:Hide()
+        end
+        if confirm then confirm:Hide() end
+        if restore ~= false then
+            for _, entry in ipairs(order) do layout.Place(entry.key) end
+        end
+    end
+    function layout.BeginEdit()
+        if not ready or not inWorld then return end
+        if not editing then
+            draft = {}
+            -- Preserve lazy-window records too, without aliasing committed data.
+            for key, geometry in pairs(Saved()) do draft[key] = CopyGeometry(geometry) end
+            editing = true
+            for _, entry in ipairs(order) do
+                LockFrame(entry.frame)
+                layout.Place(entry.key)
+            end
+        end
+        if not confirm then
+            confirm = T.CreateButton(UIParent, "Confirm", 140, 34)
+            confirm:SetFrameStrata("TOOLTIP")
+            confirm:SetFrameLevel(200)
+            confirm:SetScript("OnClick", function() CloseEditing(true, true) end)
+        end
+        confirm:ClearAllPoints()
+        confirm:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+        confirm:Show()
+    end
     function layout.Reset()
+        CloseEditing(false, false)
         FinishDrag(activeDrag, false)
         _G.SurvivorsDragonUiLayout = {}
         RestoreDefaults()
@@ -314,14 +371,18 @@ DFRL:NewMod("Layout", 0, function()
             FinishDrag(activeDrag, true)
             RestoreDefaults()
         end
+        if needsRestore then
+            for _, entry in ipairs(order) do layout.Place(entry.key) end
+            needsRestore = false
+        end
         lastWidth, lastHeight, lastScale = width, height, scale
-        local shift = inWorld and IsShiftKeyDown()
-        if activeDrag and not shift then FinishDrag(activeDrag, true) end
+        local enabled = inWorld and editing
+        if activeDrag and not enabled then FinishDrag(activeDrag, false) end
         if activeDrag and activeDrag.resizing then UpdateResize(activeDrag) end
         for _, entry in ipairs(order) do
             if not entry.defaultPosition then layout.Place(entry.key) end
             local handle, region = entry.handle, entry.options.region or entry.frame
-            local shown = shift and entry.defaultPosition
+            local shown = enabled and entry.defaultPosition
                 and (not entry.options.onlyWhenShown or entry.frame:IsShown())
             if shown then
                 local ratio = Scale(region) / scale
@@ -343,9 +404,11 @@ DFRL:NewMod("Layout", 0, function()
     controller:SetScript("OnEvent", function()
         if event == "PLAYER_ENTERING_WORLD" then
             inWorld = true
+            needsRestore = true
         else
             inWorld = false
-            FinishDrag(activeDrag, true)
+            CloseEditing(false, true)
+            FinishDrag(activeDrag, false)
             for _, entry in ipairs(order) do entry.handle:Hide() end
         end
     end)
@@ -357,8 +420,10 @@ DFRL:NewMod("Layout", 0, function()
         if command == "reset" then
             layout.Reset()
             if DEFAULT_CHAT_FRAME then DEFAULT_CHAT_FRAME:AddMessage("SurvivorsDragonUi: default layout restored.") end
+        elseif command == "" then
+            layout.BeginEdit()
         elseif DEFAULT_CHAT_FRAME then
-            DEFAULT_CHAT_FRAME:AddMessage("Hold SHIFT and left-drag to move frames, or drag a corner to resize. /sdui reset restores positions and sizes.")
+            DEFAULT_CHAT_FRAME:AddMessage("Use /sdui to edit the layout, then click Confirm to save. /sdui reset restores default positions and sizes.")
         end
     end
 end)

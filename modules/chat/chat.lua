@@ -435,7 +435,7 @@ DFRL:NewMod("Chat", 1, function()
                 for _, state in pairs(states) do PositionNative(state, now) end
                 PositionInput()
             end,
-            -- The SHIFT drag overlay must preserve wheel navigation. Movement
+            -- The layout-edit overlay must preserve wheel navigation. Movement
             -- itself never rearms retained messages or changes their fading.
             onMouseWheel = function(direction)
                 if selected then Scroll(selected, direction or 0) end
