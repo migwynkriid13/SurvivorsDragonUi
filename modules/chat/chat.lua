@@ -10,27 +10,23 @@ DFRL:NewMod("Chat", 1, function()
         if initialized or not ChatFrame1 then return end
         initialized = true
 
-        local WIDTH, HEIGHT, DOCK_HEIGHT = 520, 340, 20
+        local WIDTH, HEIGHT = 520, 340
         local HOLD, FADE, SLIDE = 14, 0.6, 0.35
         local tex = DFRL:GetInfoOrCons("tex") .. "chat\\"
         local states, selected = {}, nil
         local input = _G.ChatFrameEditBox or _G.ChatFrame1EditBox or ChatFrame1.editBox
-        local RefreshTabs, SelectTab, PositionInput, UpdateIndicator
+        local RefreshFrames, SelectChat, PositionInput, UpdateIndicator
         local hovered, focused = false, false
-        local dockUntil, dockAlpha = GetTime() + 10, 1
 
         local root = CreateFrame("Frame", "SurvivorsDragonUiChat", UIParent)
         root:SetWidth(WIDTH)
         root:SetHeight(HEIGHT)
-        root:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", 20, 230)
+        -- Leave only enough bottom clearance for the input and scroll indicator.
+        root:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", 20, 40)
         root:SetFrameStrata("LOW")
         root:SetAlpha(1)
         root:Show()
         chat.frame = root
-        local dock = CreateFrame("Frame", nil, root)
-        dock:SetWidth(WIDTH)
-        dock:SetHeight(DOCK_HEIGHT)
-        dock:SetPoint("TOPLEFT", root, "TOPLEFT", 0, 0)
 
         local function Flag(value) return value == true or value == 1 end
         local function Clamp(value, low, high) return math.max(low, math.min(high, value)) end
@@ -47,17 +43,12 @@ DFRL:NewMod("Chat", 1, function()
             label:SetText(text or "")
             return label
         end
-        local function Background(parent)
-            local texture = parent:CreateTexture(nil, "BACKGROUND")
-            texture:SetTexture(17 / 255, 17 / 255, 17 / 255, 0.05)
-            texture:SetAllPoints(parent)
-            return texture
-        end
         local function HideControl(control)
             if not control then return end
             control:Hide()
             control.Show = control.Hide
         end
+
         local function Over(frame)
             if not frame or not frame:IsVisible() then return false end
             local left, right, top, bottom = frame:GetLeft(), frame:GetRight(), frame:GetTop(), frame:GetBottom()
@@ -134,7 +125,6 @@ DFRL:NewMod("Chat", 1, function()
         end
         local function Reveal(state)
             local now = GetTime()
-            dockUntil = now + 10
             if state then
                 local lastVisible = math.max(state.lastActivity or 0, state.lastReveal or 0)
                 if now - lastVisible >= HOLD + FADE then
@@ -149,9 +139,9 @@ DFRL:NewMod("Chat", 1, function()
             local progress = state.slideStart and Clamp((now - state.slideStart) / SLIDE, 0, 1) or 1
             local shift = -12 * (1 - progress) * (1 - progress) * (1 - progress)
             frame:ClearAllPoints()
-            frame:SetPoint("TOPLEFT", root, "TOPLEFT", 3, -DOCK_HEIGHT - 5 + shift)
+            frame:SetPoint("TOPLEFT", root, "TOPLEFT", 3, -5 + shift)
             frame:SetWidth(WIDTH - 6)
-            frame:SetHeight(HEIGHT - DOCK_HEIGHT - 5)
+            frame:SetHeight(HEIGHT - 5)
             local font, size, flags
             if frame.GetFont then font, size, flags = frame:GetFont() end
             if font ~= "DEFAULT" or size ~= 12 or flags ~= "OUTLINE" then
@@ -167,10 +157,6 @@ DFRL:NewMod("Chat", 1, function()
         indicator:SetHeight(32)
         indicator:SetPoint("TOPLEFT", root, "BOTTOMLEFT", 0, 0)
         indicator:SetFrameLevel(root:GetFrameLevel() + 5)
-        local mask = indicator:CreateTexture(nil, "BACKGROUND")
-        mask:SetTexture(tex .. "cleaner_overlayMask.tga")
-        mask:SetVertexColor(17 / 255, 17 / 255, 17 / 255, 0.6)
-        mask:SetAllPoints(indicator)
         local indicatorText = Label(indicator, "Bring me to the present")
         indicatorText:SetPoint("CENTER", indicator, "CENTER", -10, 0)
         indicatorText:SetTextColor(223 / 255, 186 / 255, 105 / 255)
@@ -213,7 +199,6 @@ DFRL:NewMod("Chat", 1, function()
         local function NoticeMessage(state)
             state.slideStart = GetTime()
             state.lastActivity = state.slideStart
-            dockUntil = state.slideStart + 10
             if state ~= selected or not AtBottom(state) then state.unread = true end
             if UpdateIndicator then UpdateIndicator() end
         end
@@ -245,7 +230,8 @@ DFRL:NewMod("Chat", 1, function()
             if not selected then selected = state end
 
             -- Keep actual native rendering, including direct client writes.
-            -- The Lua hook never filters or substitutes text and renders first.
+            -- Only approved message categories are formatted. Rendering still
+            -- uses the actual native frame, with raw-text fallback on failure.
             native:SetParent(root)
             PositionNative(state, GetTime())
             FadeSettings(state, false)
@@ -256,7 +242,6 @@ DFRL:NewMod("Chat", 1, function()
             for _, region in ipairs({native:GetRegions()}) do
                 if region.GetObjectType and region:GetObjectType() == "Texture" then HideControl(region) end
             end
-            state.background = Background(native)
             native:EnableMouse(state == selected)
             native:EnableMouseWheel(state == selected)
             native:SetScript("OnMouseWheel", function() Scroll(state, arg1 or 0) end)
@@ -335,7 +320,7 @@ DFRL:NewMod("Chat", 1, function()
                     FadeSettings(state, state == selected and (hovered or focused or not AtBottom(state)))
                     PositionNative(state, GetTime())
                     PositionInput()
-                    if RefreshTabs then RefreshTabs() end
+                    if RefreshFrames then RefreshFrames() end
                 end
             end)
 
@@ -344,42 +329,15 @@ DFRL:NewMod("Chat", 1, function()
             end
             if native.SetMovable then native:SetMovable(false) end
             if native.SetResizable then native:SetResizable(false) end
-            local tab = CreateFrame("Button", nil, dock)
-            tab:SetHeight(DOCK_HEIGHT)
-            tab.text = Label(tab, "", 12)
-            tab.text:SetAllPoints(tab)
-            tab.text:SetJustifyH("LEFT")
-            tab:SetScript("OnClick", function() SelectTab(state) end)
-            state.tab = tab
         end
 
-        RefreshTabs = function()
-            local active = {}
+        RefreshFrames = function()
             for i = 1, NUM_CHAT_WINDOWS or 7 do
                 AttachNative(i)
-                local state = states[i]
-                if state then
-                    local name, size, r, g, b, alpha, shown
-                    if GetChatWindowInfo then name, size, r, g, b, alpha, shown = GetChatWindowInfo(i) end
-                    state.active = i <= 2 or Flag(state.native.isDocked) or Flag(shown)
-                    state.name = name and name ~= "" and name or (i == 2 and "Combat Log" or "Chat")
-                    if state.active then table.insert(active, state) else state.tab:Hide() end
-                end
-            end
-            local count = table.getn(active)
-            local maxWidth = count > 0 and (WIDTH - 52) / count or 100
-            local x = 5
-            for _, state in ipairs(active) do
-                state.tab.text:SetText(state.name)
-                state.tab:SetWidth(math.min(maxWidth - 5, math.max(48, state.tab.text:GetStringWidth() + 10)))
-                state.tab:ClearAllPoints()
-                state.tab:SetPoint("TOPLEFT", dock, "TOPLEFT", x, 0)
-                state.tab:Show()
-                x = x + state.tab:GetWidth() + 5
             end
         end
 
-        SelectTab = function(state)
+        SelectChat = function(state)
             if not state then return end
             selected = state
             selected.unread = false
@@ -397,23 +355,9 @@ DFRL:NewMod("Chat", 1, function()
             Reveal(state)
             FadeSettings(state, hovered or focused or not AtBottom(state))
             PositionInput()
-            RefreshTabs()
+            RefreshFrames()
             UpdateIndicator()
         end
-
-        local copy = CreateFrame("Button", nil, dock)
-        copy:SetWidth(42)
-        copy:SetHeight(DOCK_HEIGHT)
-        copy:SetPoint("TOPRIGHT", dock, "TOPRIGHT", -2, 0)
-        copy.text = Label(copy, "Copy", 11)
-        copy.text:SetAllPoints(copy)
-        copy.text:SetTextColor(223 / 255, 186 / 255, 105 / 255)
-        copy:SetScript("OnClick", function()
-            if not selected or not chat.ShowCopy then return end
-            if selected.FlushLevel then selected.FlushLevel() end
-            local text = chat.GetCaptureText and chat.GetCaptureText(states) or ""
-            chat.ShowCopy(text, "Copy chat - raw messages and events")
-        end)
 
         if input then
             input:SetParent(UIParent)
@@ -423,7 +367,6 @@ DFRL:NewMod("Chat", 1, function()
                 if region.GetObjectType and region:GetObjectType() == "Texture" then HideControl(region) end
             end
             if input.SetBackdrop then input:SetBackdrop(nil) end
-            input.cleanerBackground = Background(input)
             local oldShow, oldHide = input:GetScript("OnShow"), input:GetScript("OnHide")
             input:SetScript("OnShow", function()
                 if oldShow then oldShow() end
@@ -459,8 +402,8 @@ DFRL:NewMod("Chat", 1, function()
         end
 
         ConfigureRegularChat()
-        RefreshTabs()
-        SelectTab(states[1])
+        RefreshFrames()
+        SelectChat(states[1])
         HideControl(ChatFrameMenuButton)
         local refresh = 0
         root:SetScript("OnUpdate", function()
@@ -471,17 +414,8 @@ DFRL:NewMod("Chat", 1, function()
                 Reveal(selected)
             end
             local held = hovered or focused or (selected and not AtBottom(selected))
-            if held then dockUntil = now + 10 end
-            local target = held or now < dockUntil
-            local duration = target and 0.3 or 0.6
-            dockAlpha = Clamp(dockAlpha + (target and 1 or -1) * elapsed / duration, 0, 1)
-            dock:SetAlpha(dockAlpha)
-            copy:EnableMouse(dockAlpha > 0.05)
             for _, state in pairs(states) do
                 if state.pendingLevel and now >= state.pendingLevel.deadline then state.FlushLevel() end
-                state.tab:EnableMouse(dockAlpha > 0.05)
-                local pulse = state.unread and (0.5 + 0.5 * math.sin(now * 6)) or 1
-                state.tab.text:SetTextColor(1, 191 / 255, 0, (state == selected and 1 or 0.7) * pulse)
                 if state.revealStart then
                     state.visualAlpha = Clamp((now - state.revealStart) / FADE, 0, 1)
                     if state.visualAlpha == 1 then state.revealStart = nil end
@@ -502,7 +436,7 @@ DFRL:NewMod("Chat", 1, function()
             if refresh >= 1 then
                 refresh = 0
                 PositionInput()
-                RefreshTabs()
+                RefreshFrames()
                 for _, state in pairs(states) do PositionNative(state, now) end
             end
         end)

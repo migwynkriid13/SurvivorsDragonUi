@@ -36,7 +36,7 @@ DFRL:NewMod("ChatCopy", 0, function()
             edgeFile = "Interface\\Buttons\\WHITE8x8",
             edgeSize = 1,
         })
-        frame:SetBackdropColor(0.035, 0.045, 0.055, 0.96)
+        frame:SetBackdropColor(0, 0, 0, 0)
         frame:SetBackdropBorderColor(0.35, 0.42, 0.48, 0.9)
 
         local title = frame:CreateFontString(nil, "OVERLAY")
