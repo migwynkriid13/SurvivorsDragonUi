@@ -70,8 +70,9 @@ DFRL:NewMod("ChatCopy", 0, function()
         edit:SetScript("OnEscapePressed", function() frame:Hide() end)
         scroll:SetScrollChild(edit)
 
-        -- Vanilla EditBox has no modern text-height getter. A same-width
-        -- FontString measures wrapping so the native scroll child has an extent.
+        -- A same-width FontString measures wrapping for the scroll child.
+        -- In 1.12, GetHeight returns its wrapped height when no height is set;
+        -- GetStringHeight is not available in this client.
         local measure = frame:CreateFontString(nil, "ARTWORK")
         measure:SetFont("DEFAULT", 12, "")
         measure:SetWidth(TEXT_WIDTH - 8)
@@ -82,7 +83,7 @@ DFRL:NewMod("ChatCopy", 0, function()
 
         local function ResizeText(text)
             measure:SetText(text or "")
-            local textHeight = measure:GetStringHeight() or 0
+            local textHeight = measure:GetHeight() or 0
             edit:SetHeight(math.max(HEIGHT - 66, textHeight + 16))
             if scroll.UpdateScrollChildRect then scroll:UpdateScrollChildRect() end
         end
