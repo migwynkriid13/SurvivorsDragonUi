@@ -202,6 +202,13 @@ DFRL:NewMod("Bars", 1, function()
             ActionButton_Update()
         end
         _G.this = previousThis
+        local moveRegion = CreateFrame("Frame", nil, mainBar)
+        moveRegion:SetPoint("TOPLEFT", mainBar, "TOPLEFT", -6, 14)
+        moveRegion:SetPoint("BOTTOMRIGHT", mainBar, "BOTTOMRIGHT", 6, 0)
+        DFRL.layout.Register("actionBar", mainBar, function()
+            mainBar:ClearAllPoints()
+            mainBar:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, 55)
+        end, {region = moveRegion})
         if DFRL.AttachXPBar then DFRL.AttachXPBar(mainBar) end
         events:UnregisterEvent("PLAYER_ENTERING_WORLD")
         events:SetScript("OnEvent", nil)

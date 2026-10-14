@@ -144,6 +144,7 @@ DFRL:NewMod("Cast", 1, function()
         end)
 
         self.frame = f
+        DFRL.layout.Register("castBar", f)
     end
 
     function Setup:UpdateBarVisual(progress)

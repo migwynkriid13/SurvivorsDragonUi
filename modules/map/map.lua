@@ -1,9 +1,14 @@
 DFRL:NewMod("Map", 1, function()
     local texpath = "Interface\\AddOns\\SurvivorsDragonUi\\media\\tex\\minimap\\"
 
+    local container = CreateFrame("Frame", "DFRL_Minimap", UIParent)
+    container:SetWidth(180)
+    container:SetHeight(180)
+    container:SetPoint("TOPRIGHT", UIParent, "TOPRIGHT", -8, -32)
+    Minimap:SetParent(container)
     Minimap:ClearAllPoints()
     -- Keep the zone strip at the top edge and tuck the map closer beneath it.
-    Minimap:SetPoint("TOPRIGHT", UIParent, "TOPRIGHT", -8, -32)
+    Minimap:SetAllPoints(container)
     Minimap:SetWidth(180)
     Minimap:SetHeight(180)
     Minimap:SetAlpha(1)
@@ -105,6 +110,7 @@ DFRL:NewMod("Map", 1, function()
     end
 
     MiniMapMailFrame:ClearAllPoints()
+    MiniMapMailFrame:SetParent(Minimap)
     MiniMapMailFrame:SetPoint("TOPLEFT", panel, "BOTTOMLEFT", -2, -1)
     MiniMapMailIcon:SetTexture(texpath .. "mail.tga")
     MiniMapMailIcon:SetWidth(32)
@@ -112,17 +118,24 @@ DFRL:NewMod("Map", 1, function()
     MiniMapMailBorder:Hide()
 
     MiniMapTrackingFrame:ClearAllPoints()
+    MiniMapTrackingFrame:SetParent(Minimap)
     MiniMapTrackingFrame:SetPoint("TOPRIGHT", panel, "TOPLEFT", -15, 0)
     MiniMapTrackingFrame:SetScale(0.6)
     MiniMapTrackingBorder:Hide()
 
     DurabilityFrame:ClearAllPoints()
+    DurabilityFrame:SetParent(Minimap)
     DurabilityFrame:SetPoint("TOPRIGHT", Minimap, "BOTTOMLEFT", 15, 15)
     DurabilityFrame.SetPoint = function() end
     DurabilityFrame:SetScale(0.7)
 
     local questframe = CreateFrame("Frame", "DFRL_questframe", UIParent)
-    questframe:SetPoint("LEFT", Minimap, "LEFT", -150, -130)
+    local function PlaceQuestDefault()
+        questframe:ClearAllPoints()
+        -- This is the default minimap-relative position expressed on the screen.
+        questframe:SetPoint("LEFT", UIParent, "TOPRIGHT", -338, -252)
+    end
+    PlaceQuestDefault()
     questframe:SetWidth(170)
     questframe:SetHeight(5)
     QuestWatchFrame:SetParent(questframe)
@@ -132,5 +145,8 @@ DFRL:NewMod("Map", 1, function()
     QuestWatchFrame.SetPoint = function() end
 
     DFRL.topPanel = panel
+    DFRL.minimapRoot = container
     DFRL.questframe = questframe
+    DFRL.layout.Register("minimap", container, nil, {wheelFrame = Minimap})
+    DFRL.layout.Register("questWatch", questframe, PlaceQuestDefault)
 end)

@@ -55,4 +55,8 @@ DFRL:NewMod("Micro", 1, function()
     end
     if MicroButtonPortrait then MicroButtonPortrait:Hide() end
     DFRL.microMenuContainer = container
+    DFRL.layout.Register("microMenu", container, function(frame)
+        frame:ClearAllPoints()
+        frame:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT", -15, 15)
+    end)
 end)

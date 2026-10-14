@@ -88,13 +88,33 @@ DFRL:NewMod("RunTimers", 5, function()
     end
 
     local run, runBar, runText, overlay = Pill("DFRL_RunTimerPill", "FillBlue")
-    run:SetPoint("TOP", UIParent, "TOP", 0, -38)
+    local runMoveRegion = CreateFrame("Frame", nil, run)
+    runMoveRegion:SetPoint("TOPLEFT", run, "TOPLEFT", 0, 18)
+    runMoveRegion:SetPoint("BOTTOMRIGHT", run, "BOTTOMRIGHT", 0, 0)
+    DFRL.layout.Register("runTimer", run, function()
+        run:ClearAllPoints()
+        run:SetPoint("TOP", UIParent, "TOP", 0, -38)
+    end, {region = runMoveRegion})
+
+    -- Encounters share a movable group, independent of the run clock.
+    -- Its bounds include the first name and every stacked health pill.
+    local bossGroup = CreateFrame("Frame", "DFRL_BossHealthGroup", UIParent)
+    bossGroup:SetWidth(BAR_WIDTH + 16)
+    bossGroup:SetHeight(47)
+    bossGroup:SetFrameStrata("HIGH")
+    bossGroup:Hide()
+    DFRL.layout.Register("bossBars", bossGroup, function()
+        bossGroup:ClearAllPoints()
+        bossGroup:SetPoint("TOP", UIParent, "TOP", 0, -77)
+    end)
+
     local tally, tallyBar, tallyTitle, tallyOverlay = Pill("DFRL_RunTallyPill", "FillYellow")
     tallyBar:SetValue(1)
     tallyBar:SetAlpha(0.4)
     tallyTitle:Hide()
     local tallyFields = {}
     local tallyAttached = false
+    local tallyRegistered = false
     local fieldWidth = BAR_WIDTH / 3
     local counters = {
         {key = "kills", label = "Enemies killed", icon = "Interface\\TargetingFrame\\UI-TargetingFrame-Skull"},
@@ -150,11 +170,18 @@ DFRL:NewMod("RunTimers", 5, function()
         if not xp or not DFRL.mainBar then return false end
         local width = xp:GetWidth()
         if not IsNumber(width) or width <= 70 then return false end
-        -- XP already follows the action-bar artwork's exact outer edges.
-        -- Keep this a sibling so reaching maximum XP cannot hide the tally.
-        tally:ClearAllPoints()
-        tally:SetPoint("TOPLEFT", xp, "BOTTOMLEFT", 0, -4)
-        tally:SetPoint("TOPRIGHT", xp, "BOTTOMRIGHT", 0, -4)
+        -- Match XP's artwork width without making either group follow the
+        -- other's position. Maximum XP also cannot hide the tally.
+        tally:SetWidth(width)
+        if not tallyRegistered then
+            DFRL.layout.Register("runTally", tally, function()
+                tally:ClearAllPoints()
+                tally:SetPoint("TOP", UIParent, "BOTTOM", 0, 39)
+            end)
+            tallyRegistered = true
+        else
+            DFRL.layout.Place("runTally", tally)
+        end
         local sectionWidth = (width - 16) / table.getn(tallyFields)
         for index, entry in ipairs(tallyFields) do
             entry.frame:SetWidth(sectionWidth)
@@ -245,6 +272,7 @@ DFRL:NewMod("RunTimers", 5, function()
             Retire(row)
             activeRows[key] = nil
         end
+        bossGroup:Hide()
     end
 
     local function ReleaseClock()
@@ -358,6 +386,7 @@ DFRL:NewMod("RunTimers", 5, function()
         if row then return row end
         createdRows = createdRows + 1
         local frame, bar, name, rowOverlay = Pill("DFRL_BossHealthPill" .. tostring(createdRows), "FillWhite")
+        frame:SetParent(bossGroup)
         bar:SetStatusBarColor(0.86, 0.12, 0.1, 1)
         name:SetFont("DEFAULT", 12, "OUTLINE")
         name:SetWidth(BAR_WIDTH)
@@ -381,6 +410,10 @@ DFRL:NewMod("RunTimers", 5, function()
                 activeRows[key] = nil
             end
         end
+        local count = table.getn(entries)
+        bossGroup:SetHeight(47 + math.max(0, count - 1) * ROW_HEIGHT)
+        DFRL.layout.Place("bossBars", bossGroup)
+        if count > 0 then bossGroup:Show() else bossGroup:Hide() end
         for index, entry in ipairs(entries) do
             local row = activeRows[entry.key]
             if not row then
@@ -388,7 +421,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 activeRows[entry.key] = row
             end
             row.frame:ClearAllPoints()
-            row.frame:SetPoint("TOP", run, "BOTTOM", 0, -24 - (index - 1) * ROW_HEIGHT)
+            row.frame:SetPoint("TOP", bossGroup, "TOP", 0, -16 - (index - 1) * ROW_HEIGHT)
             row.bar:SetValue(math.min(1, entry.hp / entry.maximum))
             row.name:SetText(entry.name)
             row.health:SetText(tostring(math.floor(entry.hp)) .. " / " .. tostring(math.floor(entry.maximum)))

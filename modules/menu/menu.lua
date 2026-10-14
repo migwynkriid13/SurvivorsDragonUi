@@ -72,4 +72,8 @@ DFRL:NewMod("Menu", 1, function()
         if UnitExists("target") then ClearTarget() else menu:Show() end
     end
     DFRL.menuframe = menu
+    DFRL.layout.Register("menu", menu, function(frame)
+        frame:ClearAllPoints()
+        frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+    end, {onlyWhenShown = true})
 end)

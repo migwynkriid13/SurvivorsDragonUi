@@ -32,6 +32,7 @@ DFRL:NewMod("Xprep", 1, function()
     rightBorder:SetTexCoord(1, 0, 0, 1)
 
     local attached = false
+    local registered = false
     local function UpdateXP()
         local currentXP = UnitXP("player") or 0
         local maximumXP = UnitXPMax("player") or 0
@@ -41,12 +42,23 @@ DFRL:NewMod("Xprep", 1, function()
     end
 
     function DFRL.AttachXPBar(mainBar)
-        bar:SetParent(mainBar)
-        bar:ClearAllPoints()
-        -- Match the action-bar artwork's six-pixel outer edge on each side.
-        bar:SetPoint("TOPLEFT", mainBar, "BOTTOMLEFT", -6, -6)
-        bar:SetPoint("TOPRIGHT", mainBar, "BOTTOMRIGHT", 6, -6)
+        -- Keep the artwork width, while positioning XP independently of the
+        -- action bar. Moving or hiding another group never moves this bar.
+        bar:SetParent(UIParent)
+        bar:SetWidth(mainBar:GetWidth() + 12)
         bar:SetFrameLevel(mainBar:GetFrameLevel() + 2)
+        if not registered then
+            local moveRegion = CreateFrame("Frame", nil, bar)
+            moveRegion:SetPoint("TOPLEFT", bar, "TOPLEFT", 0, 3)
+            moveRegion:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", 0, -3)
+            DFRL.layout.Register("xpBar", bar, function()
+                bar:ClearAllPoints()
+                bar:SetPoint("TOP", UIParent, "BOTTOM", 0, 49)
+            end, {region = moveRegion})
+            registered = true
+        else
+            DFRL.layout.Place("xpBar", bar)
+        end
         attached = true
         UpdateXP()
         if DFRL.AttachRunTally then DFRL.AttachRunTally() end
