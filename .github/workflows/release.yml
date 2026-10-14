@@ -1,0 +1,96 @@
+name: Package and release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      matrix: ${{ steps.commits.outputs.matrix }}
+    steps:
+      - name: Check out the pushed history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Select every new commit
+        id: commits
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import subprocess
+
+          head = os.environ["HEAD_SHA"]
+          before = os.environ.get("BEFORE_SHA", "")
+          if os.environ["EVENT_NAME"] == "push":
+              revision = head if not before or set(before) == {"0"} else before + ".." + head
+              commits = subprocess.check_output(
+                  ["git", "rev-list", "--reverse", revision], text=True
+              ).splitlines()
+          else:
+              commits = [head]
+
+          matrix = {"include": [{"sha": sha} for sha in commits or [head]]}
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write("matrix=" + json.dumps(matrix) + "\n")
+          PY
+
+  release:
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      BUILD_SHA: ${{ matrix.sha }}
+    steps:
+      - name: Check out this commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ matrix.sha }}
+          persist-credentials: false
+
+      - name: Package the addon
+        run: python3 scripts/package.py dist/SurvivorsDragonUi.zip
+
+      - name: Publish this commit's release
+        shell: bash
+        run: |
+          tag="build-$BUILD_SHA"
+          archive="dist/SurvivorsDragonUi.zip"
+
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" "$archive" --clobber
+          else
+            gh release create "$tag" "$archive" \
+              --target "$BUILD_SHA" \
+              --title "SurvivorsDragonUi (${BUILD_SHA:0:7})" \
+              --notes "Addon package for commit $BUILD_SHA. Extract SurvivorsDragonUi.zip into your game's AddOns folder, keeping the SurvivorsDragonUi folder intact. Requires Azeroth Survivors 0.87.0 or later for the custom run HUD." \
+              --latest=false
+          fi
+
+          main_sha="$(gh api "repos/$GH_REPO/git/ref/heads/main" --jq '.object.sha')"
+          if [ "$main_sha" = "$BUILD_SHA" ]; then
+            gh release edit "$tag" --latest
+          fi
