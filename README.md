@@ -22,7 +22,7 @@ This targets Azeroth Survivors and its WoW 1.12.1 addon interface (`11200`). It 
 - Player and target frames with one uninterrupted health bar and no resource bar.
 - DEFAULT font, square minimap, one backpack, and Character/Talents/Main Menu buttons.
 - Built-in nameplate scrolling combat text with damage icons and independent animations that continue after kills.
-- A fixed glass-style chat window with visible native messages and tabs, scrolling, clickable game links and the native input. Messages keep their full text without filters, abbreviations or animations. A Copy button exposes the history available to the addon; see [chat port notes](docs/CLEANERCHAT-PORT.md) for client limits.
+- A fixed glass-style chat window with fading messages, slide animation, hover reveal, styled tabs, a scroll indicator and a matching native input. Incoming messages keep their full original text; message formatting can be added as requested. A Copy button exposes the history available to the addon; see [chat port notes](docs/CLEANERCHAT-PORT.md) for client limits.
 
 Appearance and placement are fixed. There are no addon settings, profiles, saved variables or frame movers.
 
