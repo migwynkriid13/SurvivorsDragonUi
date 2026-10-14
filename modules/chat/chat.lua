@@ -68,11 +68,30 @@ DFRL:NewMod("Chat", 1, function()
             return x >= left and x <= right and y >= bottom and y <= top
         end
 
-        local function EnableAllMessages()
-            if ChatFrame_AddMessageGroup and type(ChatTypeGroup) == "table" then
+        local regularNotices = {
+            COMBAT_XP_GAIN = true,
+            COMBAT_HONOR_GAIN = true,
+            COMBAT_FACTION_CHANGE = true,
+            SPELL_TRADESKILLS = true,
+            SPELL_ITEM_ENCHANTMENTS = true,
+        }
+        local function IsCombatLogGroup(group)
+            if regularNotices[group] then return false end
+            return string.find(group, "^COMBAT_") ~= nil or string.find(group, "^SPELL_") ~= nil
+        end
+        local function ConfigureRegularChat()
+            if type(ChatTypeGroup) == "table" then
                 for group in pairs(ChatTypeGroup) do
-                    if type(group) == "string" and not Contains(ChatFrame1.messageTypeList, group) then
-                        ChatFrame_AddMessageGroup(ChatFrame1, group)
+                    if type(group) == "string" then
+                        if IsCombatLogGroup(group) then
+                            -- Undo combat subscriptions saved by the earlier
+                            -- all-groups setup; leave ChatFrame2 untouched.
+                            if ChatFrame_RemoveMessageGroup and Contains(ChatFrame1.messageTypeList, group) then
+                                ChatFrame_RemoveMessageGroup(ChatFrame1, group)
+                            end
+                        elseif ChatFrame_AddMessageGroup and not Contains(ChatFrame1.messageTypeList, group) then
+                            ChatFrame_AddMessageGroup(ChatFrame1, group)
+                        end
                     end
                 end
             end
@@ -263,7 +282,7 @@ DFRL:NewMod("Chat", 1, function()
                 if currentEvent and string.find(currentEvent, "^CHAT_MSG_") then NoticeMessage(state) end
                 if currentEvent == "UPDATE_CHAT_WINDOWS" or currentEvent == "PLAYER_ENTERING_WORLD"
                     or currentEvent == "CHANNEL_UI_UPDATE" then
-                    if index == 1 then EnableAllMessages() end
+                    if index == 1 then ConfigureRegularChat() end
                     state.fadeConfigured, state.held = nil, nil
                     FadeSettings(state, state == selected and (hovered or focused or not AtBottom(state)))
                     PositionNative(state, GetTime())
@@ -400,7 +419,7 @@ DFRL:NewMod("Chat", 1, function()
             end
         end
 
-        EnableAllMessages()
+        ConfigureRegularChat()
         RefreshTabs()
         SelectTab(states[1])
         HideControl(ChatFrameMenuButton)
