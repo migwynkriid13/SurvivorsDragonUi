@@ -130,8 +130,8 @@ DFRL:NewMod("Chat", 1, function()
             local shift = -12 * (1 - progress) * (1 - progress) * (1 - progress)
             frame:ClearAllPoints()
             frame:SetPoint("TOPLEFT", root, "TOPLEFT", 3, -5 + shift)
-            frame:SetWidth(WIDTH - 6)
-            frame:SetHeight(HEIGHT - 5)
+            frame:SetWidth(root:GetWidth() - 6)
+            frame:SetHeight(root:GetHeight() - 5)
             local font, size, flags
             if frame.GetFont then font, size, flags = frame:GetFont() end
             if font ~= "DEFAULT" or size ~= 12 or flags ~= "OUTLINE" then
@@ -189,7 +189,7 @@ DFRL:NewMod("Chat", 1, function()
             if not input then return end
             input:ClearAllPoints()
             input:SetPoint("TOPLEFT", root, "BOTTOMLEFT", -1, -1)
-            input:SetWidth(WIDTH)
+            input:SetWidth(root:GetWidth())
             input:SetHeight(28)
             input:SetFont("DEFAULT", 12, "OUTLINE")
             if input.SetShadowColor then input:SetShadowColor(0, 0, 0, 1) end
@@ -426,6 +426,15 @@ DFRL:NewMod("Chat", 1, function()
             frame:ClearAllPoints()
             frame:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", 20, 40)
         end, {
+            resize = "dimensions",
+            minWidth = 240, minHeight = 120,
+            maxWidth = 2400, maxHeight = 1600,
+            onResize = function(frame)
+                indicator:SetWidth(frame:GetWidth())
+                local now = GetTime()
+                for _, state in pairs(states) do PositionNative(state, now) end
+                PositionInput()
+            end,
             -- The SHIFT drag overlay must preserve wheel navigation. Movement
             -- itself never rearms retained messages or changes their fading.
             onMouseWheel = function(direction)

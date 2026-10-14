@@ -1,6 +1,6 @@
 -- Copy-history dialog adapted from CleanerChat 2.44 Components/Modules/CopyChat.lua.
 -- See third_party/CleanerChat-NOTICE.txt for the supplied source attribution.
--- Fixed dimensions and session-only capture; native text selection/clipboard.
+-- Resizable dialog and session-only capture; native text selection/clipboard.
 
 DFRL:NewMod("ChatCopy", 0, function()
     DFRL.CleanerChat = DFRL.CleanerChat or {}
@@ -8,7 +8,6 @@ DFRL:NewMod("ChatCopy", 0, function()
     local dialog
     local WIDTH = 600
     local HEIGHT = 400
-    local TEXT_WIDTH = WIDTH - 48
 
     local function PlainText(text)
         if type(text) ~= "string" then text = tostring(text or "") end
@@ -64,7 +63,7 @@ DFRL:NewMod("ChatCopy", 0, function()
         edit:SetAutoFocus(false)
         edit:SetFont("DEFAULT", 12, "")
         edit:SetTextColor(0.94, 0.94, 0.94)
-        edit:SetWidth(TEXT_WIDTH)
+        edit:SetWidth(WIDTH - 48)
         edit:SetHeight(HEIGHT - 66)
         edit:SetTextInsets(4, 4, 4, 4)
         edit:SetScript("OnEscapePressed", function() frame:Hide() end)
@@ -75,16 +74,19 @@ DFRL:NewMod("ChatCopy", 0, function()
         -- GetStringHeight is not available in this client.
         local measure = frame:CreateFontString(nil, "ARTWORK")
         measure:SetFont("DEFAULT", 12, "")
-        measure:SetWidth(TEXT_WIDTH - 8)
+        measure:SetWidth(WIDTH - 56)
         measure:SetJustifyH("LEFT")
         measure:SetJustifyV("TOP")
         measure:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, 0)
         measure:Hide()
 
         local function ResizeText(text)
+            local textWidth = frame:GetWidth() - 48
+            edit:SetWidth(textWidth)
+            measure:SetWidth(textWidth - 8)
             measure:SetText(text or "")
             local textHeight = measure:GetHeight() or 0
-            edit:SetHeight(math.max(HEIGHT - 66, textHeight + 16))
+            edit:SetHeight(math.max(frame:GetHeight() - 66, textHeight + 16))
             if scroll.UpdateScrollChildRect then scroll:UpdateScrollChildRect() end
         end
         edit:SetScript("OnTextChanged", function() ResizeText(this:GetText()) end)
@@ -112,7 +114,17 @@ DFRL:NewMod("ChatCopy", 0, function()
         DFRL.layout.Register("copyWindow", frame, function(window)
             window:ClearAllPoints()
             window:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
-        end, {onlyWhenShown = true, onMouseWheel = ScrollWheel})
+        end, {
+            onlyWhenShown = true, onMouseWheel = ScrollWheel,
+            resize = "dimensions",
+            minWidth = 360, minHeight = 180,
+            maxWidth = 2400, maxHeight = 1600,
+            onResize = function(window)
+                title:SetWidth(window:GetWidth() - 56)
+                hint:SetWidth(window:GetWidth() - 24)
+                ResizeText(edit:GetText())
+            end,
+        })
         return frame
     end
 
