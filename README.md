@@ -2,6 +2,8 @@
 
 A custom HUD for **Azeroth Survivors 0.87.0+**, using its official addon API. Install the addon alone; no companion process, client patch or special launcher is required.
 
+See [Commands](#commands) for every addon command, including layout editing, reset, chat copying and combat-text modes.
+
 ## Install
 
 1. Download `SurvivorsDragonUi.zip` from this repository's **Releases**.
@@ -33,11 +35,14 @@ Only **Confirm** saves pending geometry; releasing a drag does not save it. Conf
 
 ## Commands
 
+All addon commands are listed below. Layout editing does not require holding SHIFT.
+
 | Command | Behavior |
 | --- | --- |
-| `/sdui` | Enter layout editing; click the centered **Confirm** button to save changes and lock the frames. |
+| `/sdui` | Enter layout editing: left-drag a frame to move it or its corner icons to resize it. Click the centered **Confirm** button to save changes and lock the frames. |
 | `/sdui reset` | Exit editing, clear saved frame geometry and restore default positions and sizes, including hidden frames. |
-| `/copy` | Open raw session diagnostics; press **Ctrl+C** to copy the selected text. |
+| `/copy` | Open a snapshot of raw chat messages and events, including hidden messages; press **Ctrl+C** to copy the selected text. |
+| `/sct` | Show the available combat-text modes and the currently selected mode. |
 | `/sct on` | Custom icon-and-damage SCT; native outgoing damage text disabled. |
 | `/sct off` | Both custom and native outgoing damage text disabled. |
 | `/sct default` | Native outgoing damage text only. |
