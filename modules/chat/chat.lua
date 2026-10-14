@@ -16,7 +16,7 @@ DFRL:NewMod("Chat", 1, function()
         local states, selected = {}, nil
         local input = _G.ChatFrameEditBox or _G.ChatFrame1EditBox or ChatFrame1.editBox
         local RefreshFrames, SelectChat, PositionInput, UpdateIndicator
-        local hovered, focused = false, false
+        local focused = false
 
         local root = CreateFrame("Frame", "SurvivorsDragonUiChat", UIParent)
         root:SetWidth(WIDTH)
@@ -47,16 +47,6 @@ DFRL:NewMod("Chat", 1, function()
             if not control then return end
             control:Hide()
             control.Show = control.Hide
-        end
-
-        local function Over(frame)
-            if not frame or not frame:IsVisible() then return false end
-            local left, right, top, bottom = frame:GetLeft(), frame:GetRight(), frame:GetTop(), frame:GetBottom()
-            if not left or not right or not top or not bottom then return false end
-            local x, y = GetCursorPosition()
-            local scale = frame:GetEffectiveScale()
-            x, y = x / scale, y / scale
-            return x >= left and x <= right and y >= bottom and y <= top
         end
 
         local regularNotices = {
@@ -152,12 +142,12 @@ DFRL:NewMod("Chat", 1, function()
             if frame.SetJustifyH then frame:SetJustifyH("LEFT") end
         end
 
-        local indicator = CreateFrame("Button", nil, root)
+        local indicator = CreateFrame("Frame", nil, root)
         indicator:SetWidth(WIDTH)
         indicator:SetHeight(32)
         indicator:SetPoint("TOPLEFT", root, "BOTTOMLEFT", 0, 0)
         indicator:SetFrameLevel(root:GetFrameLevel() + 5)
-        local indicatorText = Label(indicator, "Bring me to the present")
+        local indicatorText = Label(indicator, "Scroll down for latest messages")
         indicatorText:SetPoint("CENTER", indicator, "CENTER", -10, 0)
         indicatorText:SetTextColor(223 / 255, 186 / 255, 105 / 255)
         local icon = indicator:CreateTexture(nil, "ARTWORK")
@@ -169,22 +159,14 @@ DFRL:NewMod("Chat", 1, function()
 
         UpdateIndicator = function()
             if selected and not AtBottom(selected) and not focused then
-                indicatorText:SetText(selected.unread and "Unread messages" or "Bring me to the present")
+                indicatorText:SetText(selected.unread and "Unread messages" or "Scroll down for latest messages")
                 indicator:Show()
             else
                 indicator:Hide()
             end
         end
-        local function SnapToBottom()
-            if not selected then return end
-            if selected.native.ScrollToBottom then selected.native:ScrollToBottom() end
-            selected.scrolled, selected.unread = false, false
-            Reveal(selected)
-            UpdateIndicator()
-        end
-        indicator:SetScript("OnClick", SnapToBottom)
-
         local function Scroll(state, direction)
+            if direction == 0 then return end
             local steps = IsShiftKeyDown() and 10 or 3
             for i = 1, steps do
                 if direction > 0 then state.native:ScrollUp() else state.native:ScrollDown() end
@@ -221,6 +203,12 @@ DFRL:NewMod("Chat", 1, function()
             end
             input:SetTextInsets((header and header:GetStringWidth() or 0) + 12, 8, 6, 6)
         end
+
+        root:EnableMouse(true)
+        root:EnableMouseWheel(true)
+        root:SetScript("OnMouseWheel", function()
+            if selected then Scroll(selected, arg1 or 0) end
+        end)
 
         local function AttachNative(index)
             local native = _G["ChatFrame" .. index]
@@ -317,7 +305,7 @@ DFRL:NewMod("Chat", 1, function()
                     or currentEvent == "CHANNEL_UI_UPDATE" then
                     if index == 1 then ConfigureRegularChat() end
                     state.fadeConfigured, state.held = nil, nil
-                    FadeSettings(state, state == selected and (hovered or focused or not AtBottom(state)))
+                    FadeSettings(state, state == selected and not AtBottom(state))
                     PositionNative(state, GetTime())
                     PositionInput()
                     if RefreshFrames then RefreshFrames() end
@@ -352,8 +340,7 @@ DFRL:NewMod("Chat", 1, function()
             end
             state.native:Show()
             if FCF_StopAlertFlash then FCF_StopAlertFlash(state.native) end
-            Reveal(state)
-            FadeSettings(state, hovered or focused or not AtBottom(state))
+            FadeSettings(state, not AtBottom(state))
             PositionInput()
             RefreshFrames()
             UpdateIndicator()
@@ -372,24 +359,22 @@ DFRL:NewMod("Chat", 1, function()
                 if oldShow then oldShow() end
                 focused = true
                 PositionInput()
-                SnapToBottom()
+                UpdateIndicator()
             end)
             input:SetScript("OnHide", function()
                 if oldHide then oldHide() end
                 focused = false
-                Reveal(selected)
                 UpdateIndicator()
             end)
             local oldGained, oldLost = input:GetScript("OnEditFocusGained"), input:GetScript("OnEditFocusLost")
             input:SetScript("OnEditFocusGained", function()
                 if oldGained then oldGained() end
                 focused = true
-                SnapToBottom()
+                UpdateIndicator()
             end)
             input:SetScript("OnEditFocusLost", function()
                 if oldLost then oldLost() end
                 focused = false
-                Reveal(selected)
                 UpdateIndicator()
             end)
             if _G.ChatEdit_UpdateHeader then
@@ -408,12 +393,9 @@ DFRL:NewMod("Chat", 1, function()
         local refresh = 0
         root:SetScript("OnUpdate", function()
             local now, elapsed = GetTime(), arg1 or 0
-            local over = Over(root) or Over(input) or Over(indicator)
-            if over ~= hovered then
-                hovered = over
-                Reveal(selected)
-            end
-            local held = hovered or focused or (selected and not AtBottom(selected))
+            -- Only wheel navigation uncovers retained history. Hover and input
+            -- focus never rearm lines or hold their fading.
+            local held = selected and not AtBottom(selected) or false
             for _, state in pairs(states) do
                 if state.pendingLevel and now >= state.pendingLevel.deadline then state.FlushLevel() end
                 if state.revealStart then

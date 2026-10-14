@@ -22,9 +22,11 @@ This targets Azeroth Survivors and its WoW 1.12.1 addon interface (`11200`). It 
 - Player and target frames with one uninterrupted health bar and no resource bar.
 - DEFAULT font, square minimap, one backpack, and Character/Talents/Main Menu buttons.
 - Built-in nameplate scrolling combat text with damage icons and independent animations that continue after kills.
-- A fixed glass-style chat window with fading messages, slide animation, hover reveal, styled tabs, a scroll indicator and a matching native input. Incoming messages keep their full original text; message formatting can be added as requested. A Copy button exposes the history available to the addon; see [chat port notes](docs/CLEANERCHAT-PORT.md) for client limits.
+- A fixed chat window at the bottom left with fully transparent backgrounds, fading messages, slide animation, mouse-wheel history reveal, a passive scroll indicator and a matching native input. Hovering or opening, closing or focusing the input does not reveal history or pause fading. New messages display normally, and fading pauses while wheel-scrolled back for reading until you return to the bottom. Chat tabs, the Combat Log tab and the Copy button are hidden. Level, stat-gain, self-loot and class talent-progress notices use compact source-style formatting; learned abilities and skill increases show `+Name`; NPC yells show a red name and colon followed by the message; other messages keep their original text. `/copy` opens raw session diagnostics, including hidden announcements and combat/addon events. The archive runs continuously and resets on reload; see [chat port notes](docs/CLEANERCHAT-PORT.md) for native-history limits.
 
 Appearance and placement are fixed. There are no addon settings, profiles, saved variables or frame movers.
+
+Type `/copy` to open the Copy window, then press **Ctrl+C** to copy the selected diagnostics. Chat clicks and hyperlinks keep their native behavior.
 
 ## Combat-text commands
 
