@@ -4,6 +4,9 @@ DFRL:NewMod("RunTimers", 5, function()
     local path = DFRL:GetInfoOrCons("tex") .. "timer\\"
     local BAR_WIDTH = 280
     local ROW_HEIGHT = 48
+    local SKULL_ICON = "Interface\\TargetingFrame\\UI-TargetingFrame-Skull"
+    local ATTACK_ICON = "Interface\\Cursor\\Attack.blp"
+    local MARKER_SIZE = 18
     local PHASES = {
         ready = true, playing = true, choosing = true,
         paused = true, dead = true, victory = true,
@@ -117,7 +120,7 @@ DFRL:NewMod("RunTimers", 5, function()
     local tallyRegistered = false
     local fieldWidth = BAR_WIDTH / 3
     local counters = {
-        {key = "kills", label = "Enemies killed", icon = "Interface\\TargetingFrame\\UI-TargetingFrame-Skull"},
+        {key = "kills", label = "Enemies killed", icon = ATTACK_ICON},
         {key = "gold", label = "Gold", icon = "Interface\\Icons\\INV_Misc_Coin_01"},
         {key = "chest", label = "Next cache cost (gold)", icon = "Interface\\Icons\\INV_Crate_01"},
     }
@@ -327,11 +330,10 @@ DFRL:NewMod("RunTimers", 5, function()
         for index, at in ipairs(times) do
             local marker = markers[index]
             if not marker then
-                marker = overlay:CreateTexture(nil, "ARTWORK")
-                marker:SetTexture("Interface\\Buttons\\WHITE8X8")
-                marker:SetVertexColor(0.9, 0.8, 0.55, 0.9)
-                marker:SetWidth(1)
-                marker:SetHeight(runBar:GetHeight())
+                marker = overlay:CreateTexture(nil, "OVERLAY")
+                marker:SetTexture(SKULL_ICON)
+                marker:SetWidth(MARKER_SIZE)
+                marker:SetHeight(MARKER_SIZE)
                 markers[index] = marker
             end
             marker:ClearAllPoints()
