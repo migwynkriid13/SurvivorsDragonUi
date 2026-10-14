@@ -1,4 +1,4 @@
--- AzerothSurvivors uses one fixed HUD. There is no saved configuration.
+-- AzerothSurvivors appearance is fixed; only independently dragged positions are saved.
 DFRL = CreateFrame("Frame", nil, UIParent)
 DFRL.env = {}
 DFRL.tools = {}
