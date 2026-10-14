@@ -277,7 +277,7 @@ DFRL:NewMod("RunTimers", 5, function()
         local seen, final = {}, false
         -- An empty table after /reload is not a received schedule. Require
         -- every zone boss, including those already up/dead, and matching native
-        -- final-boss time before replacing the original clock/next-boss HUD.
+        -- final-boss time before drawing markers. Clock recovery is independent.
         for _, entry in ipairs(schedule) do
             if type(entry) ~= "table" or not IsNumber(entry.index)
                 or entry.index ~= math.floor(entry.index) or seen[entry.index]
@@ -422,12 +422,13 @@ DFRL:NewMod("RunTimers", 5, function()
         previousZone = zone
         if IsNumber(seconds) then previousTime = seconds end
         local times = maximum and ScheduleTimes(maximum) or nil
-        if IsNumber(seconds) and maximum and times then
+        if IsNumber(seconds) and maximum then
             runBar:SetMinMaxValues(0, maximum)
             runBar:SetValue(math.min(maximum, seconds))
             runText:SetText("Run: " .. Clock(seconds) .. " / " .. Clock(maximum))
-            -- Markers must be ready before the replacement hides native clock.
-            if refreshRows or not run:IsShown() then UpdateMarkers(maximum, times) end
+            -- Missing schedule replay affects only spawn lines, never a clock
+            -- whose native elapsed time and duration have already recovered.
+            if refreshRows or not run:IsShown() then UpdateMarkers(maximum, times or {}) end
             run:Show()
             if not TakeOver("clock") then ReleaseClock() end
         else

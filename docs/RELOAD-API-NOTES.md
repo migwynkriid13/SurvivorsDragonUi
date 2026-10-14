@@ -21,14 +21,22 @@ The addon does not change the engine, parser, launcher or server. These source c
 
 For reliable `/reload` recovery, including while paused or with unchanged lists, reinstall the official API parser/getters in each new Lua VM, then force a full current-state replay after the parser is registered. At minimum replay `AZSZONE`, `AZSRUN`, `AZSBOSSES` and `AZSUNITS`; ideally replay all API prefixes. Replay must occur even when the native state has not changed.
 
-The supplied API documents no request/resync function that the addon can invoke. Without the native replay, missing once-per-run facts or unchanged encounter lists cannot be recovered faithfully by addon polling alone. Native HUD fallback stays available until those values arrive.
+The supplied API documents no request/resync function that the addon can invoke. Without the native replay, missing once-per-run facts or unchanged encounter lists cannot be recovered faithfully by addon polling alone. Native HUD fallback stays available until the corresponding replacement's required values arrive; marker availability does not gate a valid custom clock.
 
 ## Missing boss-spawn lines — 2026-10-15
 
 The user subsequently reported that the custom progress timer returns after `/reload` but its vertical boss-spawn markers disappear. The native clock and recurring `AZS_RUN.fin` can recover before the complete schedule. The previous marker update treated a fresh empty `AZS_SCHEDULE` as an empty set of spawn times, while clock takeover required only valid time and duration. That allowed a replacement lacking the native next-boss information to hide the original clock HUD.
 
-The custom clock now requires a complete valid native schedule before takeover. It checks the expected boss count from `AZS_RUN.bt` or `AZS_ZONE.bt`, unique numeric schedule indices, positive `at` times within the native duration, and a final-boss flag/time agreeing with that duration. Every complete schedule entry contributes a marker regardless of `due`, `up` or `dead` state. Markers are rendered before hiding the native clock. An absent or incomplete schedule releases the custom clock and restores its captured native visibility, without overriding an originally hidden clock preference. Tally and encounter recovery remains independent.
+The first response required a complete valid native schedule before displaying or taking over the custom clock. The complete check uses the expected boss count from `AZS_RUN.bt` or `AZS_ZONE.bt`, unique numeric schedule indices, positive `at` times within the native duration, and a final-boss flag/time agreeing with that duration. Every complete schedule entry contributes a marker regardless of `due`, `up` or `dead` state.
 
-This addresses the addon-side premature takeover and blank-marker substitution. It cannot recreate intermediate spawn times from the final-boss duration or the future-only `AZS_GetUpcomingBosses()` list. The game must replay the complete `AZSBOSSES` snapshot into each new Lua VM, even when paused or when boss states are unchanged. Polling the official API and responding to its existing messages remains the recovery path; there is no documented request/resync function, private persisted snapshot, hardcoded schedule or SavedVariables fallback.
+The addon cannot recreate intermediate spawn times from the final-boss duration or the future-only `AZS_GetUpcomingBosses()` list. The game must replay the complete `AZSBOSSES` snapshot into each new Lua VM, even when paused or when boss states are unchanged. Polling the official API and responding to its existing messages remains the recovery path; there is no documented request/resync function, private persisted snapshot, hardcoded schedule or SavedVariables fallback.
+
+## Full progress-bar regression and correction — 2026-10-15
+
+The user reported that `/reload` now removes the entire custom top bar, whereas previously only its vertical boss-spawn lines were missing. The new schedule readiness condition gated the whole custom clock, so an absent or incomplete `AZS_SCHEDULE` called `ReleaseClock()` even with valid native elapsed time and duration.
+
+Clock display and native clock takeover again depend only on a valid phase, native elapsed time and native duration, including the phase-gated `AZS_RUN.fin` duration fallback. The complete schedule check now gates marker drawing alone. Missing schedule data clears marker textures without hiding the progress bar or time text; the native clock stays replaced to avoid duplicate displays. Markers rebuild when the complete official snapshot arrives. Invalid phase/time/duration still releases the replacement and restores captured native visibility, preserving an originally false preference. Tally and encounter recovery remains independent.
+
+This corrects the addon-side full-bar regression without inventing marker times, persisting private snapshots or changing the game. The native replay requirement for complete spawn-line recovery remains.
 
 No tests, syntax checks, validation, addon execution or game startups were run for this edit. Full marker restoration after `/reload` has not been verified live.
