@@ -129,24 +129,16 @@ DFRL:NewMod("Map", 1, function()
     DurabilityFrame.SetPoint = function() end
     DurabilityFrame:SetScale(0.7)
 
-    local questframe = CreateFrame("Frame", "DFRL_questframe", UIParent)
-    local function PlaceQuestDefault()
-        questframe:ClearAllPoints()
-        -- This is the default minimap-relative position expressed on the screen.
-        questframe:SetPoint("LEFT", UIParent, "TOPRIGHT", -338, -252)
+    for _, name in ipairs({"QuestWatchFrame", "QuestTimerFrame"}) do
+        local frame = _G[name]
+        if frame then
+            KillFrame(frame)
+            frame.Show = frame.Hide
+            frame:SetScript("OnShow", function() this:Hide() end)
+        end
     end
-    PlaceQuestDefault()
-    questframe:SetWidth(170)
-    questframe:SetHeight(5)
-    QuestWatchFrame:SetParent(questframe)
-    QuestWatchFrame:ClearAllPoints()
-    QuestWatchFrame:SetAllPoints(questframe)
-    QuestWatchFrame:SetFrameLevel(1)
-    QuestWatchFrame.SetPoint = function() end
 
     DFRL.topPanel = panel
     DFRL.minimapRoot = container
-    DFRL.questframe = questframe
     DFRL.layout.Register("minimap", container, nil, {wheelFrame = Minimap})
-    DFRL.layout.Register("questWatch", questframe, PlaceQuestDefault)
 end)
