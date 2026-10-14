@@ -16,8 +16,8 @@ This targets Azeroth Survivors and its WoW 1.12.1 addon interface (`11200`). It 
 
 - One action bar with seven buttons: native ability slots 1–6, followed by the permanent ability in native slot 12. No paging or gryphons.
 - An XP bar whose default placement is below the abilities, matching the action bar's default artwork width, without numbers or hover text.
-- A gold bar whose default placement is directly below XP with three equal sections: kills, current gold and the next cache's gold cost. Each has a game icon and centered number.
-- A blue run-progress pill using the native pause-aware clock, actual zone length and scheduled boss markers.
+- A gold bar whose default placement is directly below XP with three equal sections: kills, current gold and the next cache's gold cost. Kills use the enemy-hover sword cursor icon; each section has a game icon and centered number.
+- A blue run-progress pill using the native pause-aware clock and actual zone length, with skull icons marking scheduled boss spawns.
 - Separate red health pills for every live boss and engaged guardian, keyed by spawn id.
 - Player and target frames with one uninterrupted health bar and no resource bar.
 - DEFAULT font, square minimap, one backpack, and Character/Talents/Main Menu buttons.

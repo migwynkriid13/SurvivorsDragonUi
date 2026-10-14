@@ -65,3 +65,7 @@ The base source supplies the mechanism: [native nameplate show/hide functions](h
 Custom SCT uses live visible or invisible plates and recently retired positions with name/health-change evidence. Unmatched or ambiguous messages still appear at the shared fallback; no destination GUID or exact enemy projection is exposed by this integration. The tracked coordinates retain native collision displacement, so this does not disable native plate stacking. Native overhead enemy names can remain suppressed while the internal native tracker is active, even though the plate layers are invisible. Each hit keeps its independent animation through plate hiding, deaths and frame reuse, and mode changes clear active and queued hits immediately.
 
 This is addon-only integration, with no settings window, companion process or client patch. No tests, syntax checks, validation, addon execution or game startups were run for this change.
+
+## Run HUD icons — 2026-10-15
+
+Scheduled boss-spawn markers use `Interface\\TargetingFrame\\UI-TargetingFrame-Skull`. The kills tally uses the native enemy-hover sword cursor `Interface\\Cursor\\Attack.blp`, as mapped in the [base game's cursor source](https://github.com/samwhosung/benilla/blob/main/crates/benilla-app/src/cursor.rs#L83). Its number remains the official `AZS_RUN.kills` enemy-kill count. This visual change preserves native schedule timing, clock/marker readiness and reload recovery, tally values and independent layout geometry. No tests, syntax checks, validation, addon execution or game startups were run for this edit.
