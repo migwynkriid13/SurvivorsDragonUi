@@ -5,9 +5,10 @@ A fixed HUD for **Azeroth Survivors 0.87.0+**, using its official addon API. Ins
 ## Install
 
 1. Download `SurvivorsDragonUi.zip` from this repository's **Releases**.
-2. On Windows or Linux, extract the `SurvivorsDragonUi` folder into `benilla-config/AddOns/` beside the game's executable. The file must be at `benilla-config/AddOns/SurvivorsDragonUi/SurvivorsDragonUi.toc`.
-3. In the browser version, use **Options → AddOns → install a .zip**.
-4. Enable SurvivorsDragonUi and enter the world.
+2. On Windows or Linux, extract the ZIP. In the game, open **Options → AddOns** and click **Open AddOns Folder**, then place the extracted `SurvivorsDragonUi` folder inside it. You can also place that folder manually in `benilla-config/AddOns/` beside the game's executable.
+3. The installed file should be at `benilla-config/AddOns/SurvivorsDragonUi/SurvivorsDragonUi.toc`.
+4. In the browser version, use **Options → AddOns → install a .zip** instead.
+5. Enable SurvivorsDragonUi and enter the world.
 
 This targets Azeroth Survivors and its WoW 1.12.1 addon interface (`11200`). It is not a retail WoW addon. The native run HUD needs the game's 0.87.0+ API; unsupported clients retain their native run displays.
 

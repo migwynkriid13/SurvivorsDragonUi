@@ -3,6 +3,7 @@
 - Keep the user updated whenever meaningful progress happens.
 - Never run validation, tests, syntax checks, or game startups for this project. Packaging ZIPs and publishing releases are allowed when requested, but are not addon validation.
 - Public addon name and install folder: `SurvivorsDragonUi`. Keep its TOC filename, addon-loaded match and runtime texture paths consistent.
+- Keep installation instructions in the README's `## Install` section. Releases copy that section with `scripts/release_notes.py`, including manual placement in `benilla-config/AddOns/` and the game's Options → AddOns → Open AddOns Folder button. Keep the public README focused on SurvivorsDragonUi without naming other addons.
 - The addon is distributed alone. No companion, client patch, alternate launcher or machine-specific runtime dependency.
 - Keep all appearance and placement hardcoded, with DEFAULT font and no settings UI, profiles, saved variables or frame movers. Only `/sct on|off|default` are supported configuration commands; modes are session-only.
 - Preserve the seven-button action bar using native slots 1–6 and 12. No paging, extra bars or decorative end caps.

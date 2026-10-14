@@ -79,14 +79,17 @@ jobs:
         run: |
           tag="build-$BUILD_SHA"
           archive="dist/SurvivorsDragonUi.zip"
+          notes="dist/release-notes.md"
+          python3 scripts/release_notes.py "$BUILD_SHA" "$notes"
 
           if gh release view "$tag" >/dev/null 2>&1; then
             gh release upload "$tag" "$archive" --clobber
+            gh release edit "$tag" --notes-file "$notes"
           else
             gh release create "$tag" "$archive" \
               --target "$BUILD_SHA" \
               --title "SurvivorsDragonUi (${BUILD_SHA:0:7})" \
-              --notes "Addon package for commit $BUILD_SHA. Extract SurvivorsDragonUi.zip into your game's AddOns folder, keeping the SurvivorsDragonUi folder intact. Requires Azeroth Survivors 0.87.0 or later for the custom run HUD." \
+              --notes-file "$notes" \
               --latest=false
           fi
 
