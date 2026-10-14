@@ -47,14 +47,14 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local discoveredChildren = 0
     local arcDirection = 1
     local sctMode = "on"
-    -- V controls custom SCT visibility without changing the selected mode.
-    -- Natural plate retirement must never truncate a killing-blow animation.
+    -- V controls native plates only. Custom SCT is controlled by /sct.
+    -- Hidden plates cannot provide fresh positions, but hits must still animate.
     -- Respect the native saved V state even when this addon initializes after
     -- FrameXML has already shown/hidden its nameplates.
     local enemyPlatesEnabled = NAMEPLATES_ON and true or false
 
     local function CustomEnabled()
-        return sctMode == "on" and enemyPlatesEnabled
+        return sctMode == "on"
     end
 
     local function ReleaseText(index)
@@ -81,7 +81,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     end
 
     local function IsShownEnemy(plate, data)
-        if not CustomEnabled() or not plate:IsShown() then return false end
+        if not CustomEnabled() or not enemyPlatesEnabled or not plate:IsShown() then return false end
         if plate.IsVisible and not plate:IsVisible() then return false end
         if not data.bar or not data.bar.GetStatusBarColor then return false end
         local red, green, blue = data.bar:GetStatusBarColor()
@@ -482,7 +482,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         local feedback
         if mode == "on" then
             SelectMode("on")
-            feedback = "Custom SCT enabled. V controls nameplates and custom combat text."
+            feedback = "Custom SCT enabled, including with nameplates hidden. V controls nameplates only."
         elseif mode == "off" then
             SelectMode("off")
             feedback = "Custom and vanilla SCT disabled."
@@ -528,7 +528,9 @@ DFRL:NewMod("NameplateCombatText", 6, function()
 
     hooksecurefunc("HideNameplates", function()
         enemyPlatesEnabled = false
-        ResetDisplay()
+        -- Keep active and pending hits. Freeze retired origins at their last
+        -- known positions; later unmatched hits use the shared fallback.
+        for plate in pairs(plates) do RetirePlate(plate) end
     end)
     hooksecurefunc("ShowNameplates", function()
         enemyPlatesEnabled = true
