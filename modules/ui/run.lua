@@ -263,17 +263,39 @@ DFRL:NewMod("RunTimers", 5, function()
         refreshRows = true
     end
 
-    local function UpdateMarkers(maximum)
-        local times = {}
+    local function ScheduleTimes(maximum)
         local schedule = AZS_SCHEDULE
-        if type(schedule) == "table" then
-            -- The complete schedule retains markers for bosses already up/dead.
-            for _, entry in ipairs(schedule) do
-                if type(entry) == "table" and IsNumber(entry.at) and entry.at > 0 and entry.at <= maximum then
-                    table.insert(times, entry.at)
-                end
-            end
+        if type(schedule) ~= "table" then return nil end
+        local state, zone = AZS_RUN, AZS_ZONE
+        local expected = type(state) == "table" and state.bt or nil
+        if not IsNumber(expected) or expected <= 0 then
+            expected = type(zone) == "table" and zone.bt or nil
         end
+        if not IsNumber(expected) or expected <= 0 or expected ~= math.floor(expected) then return nil end
+
+        local times = {}
+        local seen, final = {}, false
+        -- An empty table after /reload is not a received schedule. Require
+        -- every zone boss, including those already up/dead, and matching native
+        -- final-boss time before replacing the original clock/next-boss HUD.
+        for _, entry in ipairs(schedule) do
+            if type(entry) ~= "table" or not IsNumber(entry.index)
+                or entry.index ~= math.floor(entry.index) or seen[entry.index]
+                or not IsNumber(entry.at) or entry.at <= 0 or entry.at > maximum then
+                return nil
+            end
+            seen[entry.index] = true
+            if entry.final == 1 or entry.final == true then
+                if final or entry.at ~= maximum then return nil end
+                final = true
+            end
+            table.insert(times, entry.at)
+        end
+        if table.getn(times) ~= expected or not final then return nil end
+        return times
+    end
+
+    local function UpdateMarkers(maximum, times)
         for index, at in ipairs(times) do
             local marker = markers[index]
             if not marker then
@@ -399,10 +421,13 @@ DFRL:NewMod("RunTimers", 5, function()
         end
         previousZone = zone
         if IsNumber(seconds) then previousTime = seconds end
-        if IsNumber(seconds) and maximum then
+        local times = maximum and ScheduleTimes(maximum) or nil
+        if IsNumber(seconds) and maximum and times then
             runBar:SetMinMaxValues(0, maximum)
             runBar:SetValue(math.min(maximum, seconds))
             runText:SetText("Run: " .. Clock(seconds) .. " / " .. Clock(maximum))
+            -- Markers must be ready before the replacement hides native clock.
+            if refreshRows or not run:IsShown() then UpdateMarkers(maximum, times) end
             run:Show()
             if not TakeOver("clock") then ReleaseClock() end
         else
@@ -413,7 +438,6 @@ DFRL:NewMod("RunTimers", 5, function()
         if refreshRows then
             refreshRows = false
             UpdateTally()
-            if run:IsShown() then UpdateMarkers(maximum) end
             UpdateRows()
         end
     end
