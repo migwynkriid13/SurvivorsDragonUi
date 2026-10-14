@@ -126,4 +126,13 @@ DFRL:NewMod("ChatCopy", 0, function()
         dialog.edit:SetFocus()
         dialog.edit:HighlightText()
     end
+
+    -- Register in real globals: module initialization uses DFRL's private env.
+    -- This entry point does not depend on the visible chat frame's mouse hooks.
+    _G.SLASH_SURVIVORSDRAGONUICOPY1 = "/copy"
+    _G.SlashCmdList = _G.SlashCmdList or {}
+    _G.SlashCmdList["SURVIVORSDRAGONUICOPY"] = function()
+        local text = Chat.GetCaptureText and Chat.GetCaptureText() or ""
+        Chat.ShowCopy(text, "Copy chat - raw messages and events")
+    end
 end)

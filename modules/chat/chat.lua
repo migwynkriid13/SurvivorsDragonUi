@@ -240,7 +240,7 @@ DFRL:NewMod("Chat", 1, function()
         local function AttachNative(index)
             local native = _G["ChatFrame" .. index]
             if not native or states[index] then return end
-            local state = {native = native, messages = {}, index = index, unread = false}
+            local state = {native = native, index = index, unread = false}
             states[index] = state
             if not selected then selected = state end
 
@@ -268,11 +268,7 @@ DFRL:NewMod("Chat", 1, function()
             local addMessage = native.AddMessage
             local function RenderMessage(frame, displayed, r, g, b, id, addToStart)
                 local result = addMessage(frame, displayed, r, g, b, id, addToStart)
-                if type(displayed) == "string" then
-                    table.insert(state.messages, displayed)
-                    if table.getn(state.messages) > 512 then table.remove(state.messages, 1) end
-                    NoticeMessage(state)
-                end
+                if type(displayed) == "string" then NoticeMessage(state) end
                 return result
             end
             state.FlushLevel = function()
@@ -283,6 +279,9 @@ DFRL:NewMod("Chat", 1, function()
                     pending.b, pending.id, pending.addToStart)
             end
             native.AddMessage = function(frame, text, r, g, b, id, addToStart)
+                if chat.CaptureRaw then
+                    chat.CaptureRaw(frame, text, state.eventContext, state.eventSpeaker, state.eventMessage)
+                end
                 local displayed, kind = text, nil
                 if index ~= 2 and type(text) == "string" and chat.PrettifyMessage then
                     local success, formatted, messageKind = pcall(chat.PrettifyMessage, text, state.eventContext,
@@ -412,18 +411,8 @@ DFRL:NewMod("Chat", 1, function()
         copy:SetScript("OnClick", function()
             if not selected or not chat.ShowCopy then return end
             if selected.FlushLevel then selected.FlushLevel() end
-            local frame, lines = selected.native, {}
-            if frame.GetNumMessages and frame.GetMessageInfo then
-                local count = frame:GetNumMessages() or 0
-                for i = 1, count do
-                    local text = frame:GetMessageInfo(i)
-                    if type(text) == "string" then table.insert(lines, text) end
-                end
-            end
-            if table.getn(lines) == 0 then
-                for _, text in ipairs(selected.messages) do table.insert(lines, text) end
-            end
-            chat.ShowCopy(table.concat(lines, "\n"), "Copy chat - press Ctrl+C")
+            local text = chat.GetCaptureText and chat.GetCaptureText(states) or ""
+            chat.ShowCopy(text, "Copy chat - raw messages and events")
         end)
 
         if input then
