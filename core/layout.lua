@@ -1,4 +1,4 @@
--- Only frame locations are saved. Appearance and gameplay state stay in code.
+-- Only frame geometry is saved. Styling and gameplay state stay in code.
 DFRL:NewMod("Layout", 0, function()
     local layout, entries, order = {}, {}, {}
     DFRL.layout = layout
@@ -8,8 +8,7 @@ DFRL:NewMod("Layout", 0, function()
         playerFrame = "Player", targetFrame = "Target", bossBars = "Boss health",
         runTimer = "Run timer", actionBar = "Action bar", xpBar = "XP",
         runTally = "Kills / Gold / Cache", microMenu = "Micro menu", buffs = "Buffs",
-        minimap = "Minimap", menu = "Main menu", chat = "Chat", castBar = "Cast bar",
-        questWatch = "Quest watch", copyWindow = "Copy",
+        minimap = "Minimap", menu = "Main menu", chat = "Chat", copyWindow = "Copy",
     }
 
     local function Number(value)
@@ -17,6 +16,9 @@ DFRL:NewMod("Layout", 0, function()
     end
     local function Valid(position)
         return type(position) == "table" and Number(position.x) and Number(position.y)
+    end
+    local function Clamp(value, minimum, maximum)
+        return math.max(minimum, math.min(maximum, value))
     end
     local function Saved()
         if type(_G.SurvivorsDragonUiLayout) ~= "table" then
@@ -26,6 +28,9 @@ DFRL:NewMod("Layout", 0, function()
     end
     local function Scale(frame)
         return frame.GetEffectiveScale and frame:GetEffectiveScale() or 1
+    end
+    local function LocalScale(frame)
+        return frame.GetScale and frame:GetScale() or 1
     end
     local function Viewport()
         local width, height, scale = UIParent:GetWidth(), UIParent:GetHeight(), Scale(UIParent)
@@ -66,6 +71,37 @@ DFRL:NewMod("Layout", 0, function()
         end
     end
 
+    local function ApplySize(entry, geometry)
+        local frame, options = entry.frame, entry.options
+        local oldScale, oldWidth, oldHeight = LocalScale(frame), frame:GetWidth(), frame:GetHeight()
+        geometry = geometry or {}
+        if options.resize == "dimensions" then
+            frame:SetScale(entry.defaultScale)
+            frame:SetWidth(Number(geometry.width) and Clamp(geometry.width,
+                options.minWidth or 120, options.maxWidth or 2400) or entry.defaultWidth)
+            frame:SetHeight(Number(geometry.height) and Clamp(geometry.height,
+                options.minHeight or 80, options.maxHeight or 1600) or entry.defaultHeight)
+        else
+            frame:SetScale(Number(geometry.scale) and Clamp(geometry.scale,
+                entry.defaultScale * 0.4, entry.defaultScale * 3) or entry.defaultScale)
+        end
+        if options.onResize and (not entry.sizeApplied or oldScale ~= LocalScale(frame)
+            or oldWidth ~= frame:GetWidth() or oldHeight ~= frame:GetHeight()) then
+            options.onResize(frame, frame:GetWidth(), frame:GetHeight())
+        end
+        entry.sizeApplied = true
+    end
+    local function ReadGeometry(entry, position)
+        if not position then return end
+        local geometry = {x = position.x, y = position.y}
+        if entry.options.resize == "dimensions" then
+            geometry.width, geometry.height = entry.frame:GetWidth(), entry.frame:GetHeight()
+        else
+            geometry.scale = LocalScale(entry.frame)
+        end
+        return geometry
+    end
+
     function layout.Place(key, frame)
         local entry = entries[key]
         if not ready or not entry or entry.dragging or (frame and frame ~= entry.frame) then return end
@@ -75,6 +111,7 @@ DFRL:NewMod("Layout", 0, function()
         end
         if not entry.defaultPosition then return end
         local position = Saved()[key]
+        ApplySize(entry, Valid(position) and position or nil)
         ApplyPosition(entry.frame, Valid(position) and position or entry.defaultPosition)
     end
     function layout.IsPlaced(key)
@@ -86,11 +123,102 @@ DFRL:NewMod("Layout", 0, function()
         entry.dragging = false
         activeDrag = nil
         if save then
-            local position = ReadPosition(entry.frame)
-            if position then Saved()[entry.key] = position end
+            local position = entry.resizePosition or ReadPosition(entry.frame)
+            local geometry = ReadGeometry(entry, position)
+            if geometry then Saved()[entry.key] = geometry end
         end
+        entry.resizing, entry.resizePosition = nil, nil
         if entry.frame.SetUserPlaced then entry.frame:SetUserPlaced(false) end
         layout.Place(entry.key)
+    end
+
+    local function Cursor()
+        local width, height, scale = Viewport()
+        local x, y = GetCursorPosition()
+        if not width or not Number(x) or not Number(y) then return end
+        return x / scale - (UIParent:GetLeft() or 0), y / scale - (UIParent:GetTop() or height)
+    end
+    local function BeginResize(entry, corner)
+        if not ready or not IsShiftKeyDown() then return end
+        FinishDrag(activeDrag, true)
+        local width, height, uiScale = Viewport()
+        local x, y = Cursor()
+        local position = ReadPosition(entry.frame)
+        if not x or not position or not width then return end
+        local scale = Scale(entry.frame) / uiScale
+        entry.resizing = {
+            corner = corner, cursorX = x, cursorY = y,
+            x = position.x * width, y = position.y * height,
+            width = entry.frame:GetWidth() * scale, height = entry.frame:GetHeight() * scale,
+            scale = LocalScale(entry.frame),
+        }
+        entry.resizePosition = position
+        entry.dragging, activeDrag = true, entry
+    end
+    local function UpdateResize(entry)
+        local start = entry.resizing
+        local width, height, uiScale = Viewport()
+        local cursorX, cursorY = Cursor()
+        if not start or not width or not cursorX then return end
+        local right = string.find(start.corner, "RIGHT") ~= nil
+        local top = string.find(start.corner, "TOP") ~= nil
+        local signX, signY = right and 1 or -1, top and 1 or -1
+        local dx, dy = cursorX - start.cursorX, cursorY - start.cursorY
+        if entry.options.resize == "dimensions" then
+            local ratio = Scale(entry.frame) / uiScale
+            ApplySize(entry, {
+                width = (start.width + signX * dx) / ratio,
+                height = (start.height + signY * dy) / ratio,
+            })
+        else
+            -- Project the pointer onto the corner diagonal, preserving artwork
+            -- aspect ratios instead of stretching portraits, icons or bars.
+            local diagonal = start.width * start.width + start.height * start.height
+            if diagonal <= 0 then return end
+            local factor = 1 + (signX * dx * start.width + signY * dy * start.height) / diagonal
+            ApplySize(entry, {scale = start.scale * factor})
+        end
+        local ratio = Scale(entry.frame) / uiScale
+        local newWidth, newHeight = entry.frame:GetWidth() * ratio, entry.frame:GetHeight() * ratio
+        -- Keep the opposite corner fixed throughout the resize.
+        local x = right and start.x or start.x + start.width - newWidth
+        local y = top and start.y - start.height + newHeight or start.y
+        entry.resizePosition = {x = x / width, y = y / height}
+        ApplyPosition(entry.frame, entry.resizePosition)
+    end
+
+    local function MakeCorner(entry, corner)
+        local grip = CreateFrame("Button", nil, entry.handle)
+        grip:SetWidth(14)
+        grip:SetHeight(14)
+        grip:SetFrameLevel(entry.handle:GetFrameLevel() + 2)
+        local right = string.find(corner, "RIGHT") ~= nil
+        local top = string.find(corner, "TOP") ~= nil
+        local signX, signY = right and -1 or 1, top and -1 or 1
+        grip:SetPoint("CENTER", entry.handle, corner, -signX * 4, -signY * 4)
+        -- Draw three nested corner marks with vanilla's solid texture, so the
+        -- resize icons need no modern texture APIs or extra assets.
+        for index = 0, 2 do
+            local length, offset = 10 - index * 3, index * 3
+            local horizontal = grip:CreateTexture(nil, "OVERLAY")
+            horizontal:SetTexture("Interface\\Buttons\\WHITE8X8")
+            horizontal:SetVertexColor(0.87, 0.73, 0.41, 1)
+            horizontal:SetWidth(length)
+            horizontal:SetHeight(1)
+            horizontal:SetPoint(corner, grip, corner, signX * offset, signY * offset)
+            local vertical = grip:CreateTexture(nil, "OVERLAY")
+            vertical:SetTexture("Interface\\Buttons\\WHITE8X8")
+            vertical:SetVertexColor(0.87, 0.73, 0.41, 1)
+            vertical:SetWidth(1)
+            vertical:SetHeight(length)
+            vertical:SetPoint(corner, grip, corner, signX * offset, signY * offset)
+        end
+        grip:RegisterForDrag("LeftButton")
+        grip:SetScript("OnDragStart", function() BeginResize(entry, corner) end)
+        grip:SetScript("OnDragStop", function() FinishDrag(entry, true) end)
+        grip:SetScript("OnMouseUp", function() FinishDrag(entry, true) end)
+        grip:SetScript("OnHide", function() FinishDrag(entry, true) end)
+        grip:EnableMouse(true)
     end
 
     local function MakeHandle(entry)
@@ -135,11 +263,16 @@ DFRL:NewMod("Layout", 0, function()
         handle:EnableMouse(false)
         handle:Hide()
         entry.handle = handle
+        for _, corner in ipairs({"TOPLEFT", "TOPRIGHT", "BOTTOMLEFT", "BOTTOMRIGHT"}) do
+            MakeCorner(entry, corner)
+        end
     end
 
     function layout.Register(key, frame, defaultAnchor, options)
         if not frame or entries[key] then return end
         local entry = {key = key, frame = frame, options = options or {}}
+        entry.defaultScale = LocalScale(frame)
+        entry.defaultWidth, entry.defaultHeight = frame:GetWidth(), frame:GetHeight()
         entry.defaultAnchor = defaultAnchor or CaptureAnchors(frame)
         entries[key] = entry
         table.insert(order, entry)
@@ -154,6 +287,7 @@ DFRL:NewMod("Layout", 0, function()
         -- Resolve every default before detaching relative anchors or applying saved ones.
         for _, entry in ipairs(order) do
             entry.defaultPosition = nil
+            ApplySize(entry, nil)
             entry.defaultAnchor(entry.frame)
             if entry.frame.SetUserPlaced then entry.frame:SetUserPlaced(false) end
         end
@@ -183,6 +317,7 @@ DFRL:NewMod("Layout", 0, function()
         lastWidth, lastHeight, lastScale = width, height, scale
         local shift = inWorld and IsShiftKeyDown()
         if activeDrag and not shift then FinishDrag(activeDrag, true) end
+        if activeDrag and activeDrag.resizing then UpdateResize(activeDrag) end
         for _, entry in ipairs(order) do
             if not entry.defaultPosition then layout.Place(entry.key) end
             local handle, region = entry.handle, entry.options.region or entry.frame
@@ -223,7 +358,7 @@ DFRL:NewMod("Layout", 0, function()
             layout.Reset()
             if DEFAULT_CHAT_FRAME then DEFAULT_CHAT_FRAME:AddMessage("SurvivorsDragonUi: default layout restored.") end
         elseif DEFAULT_CHAT_FRAME then
-            DEFAULT_CHAT_FRAME:AddMessage("Hold SHIFT and left-drag to move frames. /sdui reset restores the default layout.")
+            DEFAULT_CHAT_FRAME:AddMessage("Hold SHIFT and left-drag to move frames, or drag a corner to resize. /sdui reset restores positions and sizes.")
         end
     end
 end)

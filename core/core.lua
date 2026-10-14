@@ -1,4 +1,4 @@
--- AzerothSurvivors appearance is fixed; only independently dragged positions are saved.
+-- AzerothSurvivors styling is fixed; independently edited frame geometry is saved.
 DFRL = CreateFrame("Frame", nil, UIParent)
 DFRL.env = {}
 DFRL.tools = {}
