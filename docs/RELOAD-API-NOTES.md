@@ -13,7 +13,7 @@ The existing addon retried official getters every frame, but required valid cloc
 - Read the phase first, then use official `AZS_RUN.fin` if `AZS_GetRunLength()` has not recovered. Both values describe the native final-boss time.
 - Reconnect clock, tally and encounter displays independently, preserving each native HUD part until its replacement has valid data.
 - Require `AZS_UNITS_UPDATED` before accepting an initially empty encounter snapshot.
-- Keep retrying the official getters and responding to native addon messages. Do not reconstruct elapsed time, guess boss markers or persist private native-data caches. The separately authorized layout SavedVariables contain positions only.
+- Keep retrying the official getters and responding to native addon messages. Do not reconstruct elapsed time, guess boss markers or persist private native-data caches. The separately authorized layout SavedVariables contain frame geometry only.
 
 The addon does not change the engine, parser, launcher or server. These source changes remain unverified live.
 
@@ -43,8 +43,10 @@ No tests, syntax checks, validation, addon execution or game startups were run f
 
 ## Layout restoration is separate from native-data recovery — 2026-10-15
 
-The user subsequently authorized independent SHIFT + left-drag positions for the UI groups. The `SurvivorsDragonUiLayout` SavedVariables table stores only those positions, so `/reload` can restore the layout while each native HUD replacement continues to wait independently for its required official data. Timer and boss-health group positions are independent. Action bar, XP and tally retain their existing widths and default order, but moving one does not move another.
+The user subsequently authorized SHIFT + left-drag on each remaining UI group's body to move it and SHIFT + left-drag on its corner icons to resize it. Corner icons appear only while SHIFT is held. HUD groups use independent uniform scale to preserve artwork proportions; chat and Copy use actual width and height for text wrapping and viewport layout, without font scaling. Cast-bar and quest-watch displays are removed.
 
-`/sdui reset` clears all saved positions and restores the default layout for every registered group, including currently hidden groups. It does not replay or cache native clock, schedule, encounter or counter state; it does not change the session-only SCT mode. Chat still defaults to the bottom-left corner with opacity 0, and moving it does not uncover faded history. `/copy` still opens the session-only raw capture window.
+The `SurvivorsDragonUiLayout` SavedVariables table stores only geometry: locations, HUD scale and chat/Copy dimensions. `/reload` restores it while each native HUD replacement continues to wait independently for its required official data. Timer and boss-health group geometry is independent. Action bar, XP and tally retain matching default widths and their default order, but each can be moved and resized independently.
 
-Position persistence therefore does not change the game-owner snapshot replay requirement. No tests, syntax checks, validation, addon execution or game startups were run for these layout edits.
+`/sdui reset` clears all saved geometry and restores the default position and size for every registered group, including currently hidden groups. It does not replay or cache native clock, schedule, encounter or counter state; it does not change the session-only SCT mode. Chat still defaults to the bottom-left corner with opacity 0, and moving or resizing it does not uncover faded history. `/copy` still opens the session-only raw capture window.
+
+Geometry persistence therefore does not change the game-owner snapshot replay requirement. No tests, syntax checks, validation, addon execution or game startups were run for these layout edits.

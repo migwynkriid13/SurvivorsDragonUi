@@ -15,24 +15,27 @@ This targets Azeroth Survivors and its WoW 1.12.1 addon interface (`11200`). It 
 ## HUD
 
 - One action bar with seven buttons: native ability slots 1–6, followed by the permanent ability in native slot 12. No paging or gryphons.
-- An XP bar below the abilities, matching the action bar's artwork width, without numbers or hover text.
-- A gold bar directly below XP with three equal sections: kills, current gold and the next cache's gold cost. Each has a game icon and centered number.
+- An XP bar whose default placement is below the abilities, matching the action bar's default artwork width, without numbers or hover text.
+- A gold bar whose default placement is directly below XP with three equal sections: kills, current gold and the next cache's gold cost. Each has a game icon and centered number.
 - A blue run-progress pill using the native pause-aware clock, actual zone length and scheduled boss markers.
 - Separate red health pills for every live boss and engaged guardian, keyed by spawn id.
 - Player and target frames with one uninterrupted health bar and no resource bar.
 - DEFAULT font, square minimap, one backpack, and Character/Talents/Main Menu buttons.
+- Cast-bar and quest-watch displays are removed.
 - Built-in scrolling combat text with damage icons and independent animations that continue after kills, including with nameplates hidden.
 - Chat defaults to the bottom left with fully transparent backgrounds, fading messages, slide animation, mouse-wheel history reveal, a passive scroll indicator and a matching native input. Hovering or opening, closing or focusing the input does not reveal history or pause fading. New messages display normally, and fading pauses while wheel-scrolled back for reading until you return to the bottom. Chat tabs, the Combat Log tab and the Copy button are hidden. Level, stat-gain, self-loot and class talent-progress notices use compact source-style formatting; learned abilities and skill increases show `+Name`; NPC yells show a red name and colon followed by the message; other messages keep their original text. `/copy` opens raw session diagnostics, including hidden announcements and combat/addon events. The archive runs continuously and resets on reload; see [chat port notes](docs/CLEANERCHAT-PORT.md) for native-history limits.
 
-Hold **SHIFT + left-drag** to move the player frame, target frame, boss/guardian health-bar group, run timer, action bar, XP bar, kills/gold/cache bar, micro menu, player buffs, minimap, chat, cast bar or quest watch. Each group moves independently: moving the action bar does not move XP or the tally. SHIFT shows temporary outlines, including for currently hidden HUD groups, without showing inactive targets or encounters. The main menu and Copy window can also be moved while open. There is no settings panel or permanent handle; ordinary clicks keep their usual behavior without SHIFT. Dragging chat does not uncover faded messages; only the mouse wheel does that.
+Hold **SHIFT**, then **left-drag a frame's body** to move the player frame, target frame, boss/guardian health-bar group, run timer, action bar, XP bar, kills/gold/cache bar, micro menu, player buffs, minimap or chat. **Left-drag a corner icon while holding SHIFT** to resize that group. Each group moves and resizes independently: changing the action bar does not change XP or the tally. SHIFT shows temporary outlines and corner icons, including for currently hidden HUD groups, without showing inactive targets or encounters. The main menu and Copy window support the same controls while open. The corner icons appear only while SHIFT is held; ordinary clicks keep their usual behavior without SHIFT. Moving or resizing chat does not uncover faded messages; only the mouse wheel does that.
 
-Positions are saved across `/reload` and game sessions in the single `SurvivorsDragonUiLayout` SavedVariables table. It stores locations only, without appearance settings, game data or profiles. `/sdui reset` clears all saved locations and restores every registered frame to its default position, including frames currently hidden. Appearance stays defined in code; there are no settings windows or profiles. Chat diagnostics remain session-only and are not stored with the layout.
+HUD groups resize by uniform scale, keeping their artwork proportions. Chat and Copy resize their actual width and height so text wraps and the viewport adjusts; their fonts keep their normal size. The action bar, XP and tally match at their default sizes, but can differ when resized independently.
+
+Layout geometry is saved across `/reload` and game sessions in the single `SurvivorsDragonUiLayout` SavedVariables table: locations, HUD scale and chat/Copy dimensions. `/sdui reset` clears that geometry and restores every registered frame to its default position and size, including frames currently hidden. Appearance defaults stay defined in code; there are no settings windows, profiles or other saved configuration. Chat diagnostics remain session-only, and gameplay/native API state is never stored with the layout.
 
 ## Commands
 
 | Command | Behavior |
 | --- | --- |
-| `/sdui reset` | Clear saved frame positions and restore the default layout. |
+| `/sdui reset` | Clear saved frame geometry and restore default positions and sizes, including hidden frames. |
 | `/copy` | Open raw session diagnostics; press **Ctrl+C** to copy the selected text. |
 | `/sct on` | Custom icon-and-damage SCT; native outgoing damage text disabled. |
 | `/sct off` | Both custom and native outgoing damage text disabled. |
