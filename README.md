@@ -41,12 +41,13 @@ Layout geometry is saved across `/reload` and game sessions in the single `Survi
 | `/sct off` | Both custom and native outgoing damage text disabled. |
 | `/sct default` | Native outgoing damage text only. |
 
-The normal **V** binding controls native nameplates; `/sct` controls custom combat text independently. In `/sct on` mode, hits still display with nameplates hidden. Visible or recent plate positions help place hits when reliable; otherwise they appear at a shared fallback position. Mode changes clear active and queued custom hits immediately. SCT mode is not saved: it lasts for the current UI session, and reloading starts in custom mode. Combat logs and the damage meter are unaffected. Chat clicks and hyperlinks keep their native behavior.
+The normal **V** binding controls whether native nameplates are visible; `/sct` controls custom combat text independently. In `/sct on` mode, invisible native plates continue tracking enemies when V is off, so matched hits can follow them. Your V preference stays unchanged. Visible, invisible or recently retired plate positions are matched using names and health changes; unmatched or ambiguous hits appear at a shared fallback position. Mode changes clear active and queued custom hits immediately. SCT mode is not saved: it lasts for the current UI session, and reloading starts in custom mode. Combat logs and the damage meter are unaffected. Chat clicks and hyperlinks keep their native behavior.
 
 ## Client limitations
 
 - `/reload` rebuilds the client's Lua state. The addon reconnects its clock, counters and encounters independently as native data arrives, and uses the official `AZS_RUN.fin` duration when once-per-run zone data is absent. Full recovery while paused, including unchanged encounters and schedule markers, requires the client to replay its API snapshots. The addon cannot request that through the documented API.
 - Nameplate collision stacking is controlled by the client. This build exposes no overlap switch to addons.
+- Custom SCT uses native plate coordinates, including the client's collision displacement. With custom SCT on and V off, keeping invisible tracking active can also leave native overhead enemy names suppressed. The tracking integration has not been verified in the packaged game; see [API notes](docs/API-NOTES.md).
 - The original 1.12 combat log identifies enemies by name rather than destination GUID. Same-name hits can have ambiguous positions; the addon shows those hits at a shared or fallback position.
 
 The official API reference is included in [docs/AzerothSurvivors-Addon-API.md](docs/AzerothSurvivors-Addon-API.md).
