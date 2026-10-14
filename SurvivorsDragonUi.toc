@@ -15,6 +15,7 @@ modules\nameplates\sct.lua
 modules\bars\bars.lua
 modules\bars\range.lua
 modules\cast\cast.lua
+modules\chat\prettify.lua
 modules\chat\copy.lua
 modules\chat\chat.lua
 modules\bags\bags.lua

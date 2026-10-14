@@ -1,4 +1,4 @@
--- CleanerChat visual presentation; incoming message text is never rewritten.
+-- CleanerChat presentation with only the explicitly requested message formats.
 -- Source credits are retained in third_party/CleanerChat-NOTICE.txt.
 DFRL:NewMod("Chat", 1, function()
     DFRL.CleanerChat = DFRL.CleanerChat or {}
@@ -266,20 +266,69 @@ DFRL:NewMod("Chat", 1, function()
             end
             native:SetAlpha(1)
             local addMessage = native.AddMessage
-            native.AddMessage = function(frame, text, r, g, b, id, addToStart)
-                local result = addMessage(frame, text, r, g, b, id, addToStart)
-                if type(text) == "string" then
-                    table.insert(state.messages, text)
+            local function RenderMessage(frame, displayed, r, g, b, id, addToStart)
+                local result = addMessage(frame, displayed, r, g, b, id, addToStart)
+                if type(displayed) == "string" then
+                    table.insert(state.messages, displayed)
                     if table.getn(state.messages) > 512 then table.remove(state.messages, 1) end
                     NoticeMessage(state)
                 end
                 return result
             end
+            state.FlushLevel = function()
+                local pending = state.pendingLevel
+                if not pending then return end
+                state.pendingLevel = nil
+                return RenderMessage(pending.frame, pending.text, pending.r, pending.g,
+                    pending.b, pending.id, pending.addToStart)
+            end
+            native.AddMessage = function(frame, text, r, g, b, id, addToStart)
+                local displayed, kind = text, nil
+                if index ~= 2 and type(text) == "string" and chat.PrettifyMessage then
+                    local success, formatted, messageKind = pcall(chat.PrettifyMessage, text, state.eventContext,
+                        state.eventSpeaker, state.eventMessage)
+                    if success and messageKind == "hide" then
+                        state.eventHadSuppression = true
+                        return
+                    end
+                    if success and type(formatted) == "string" then
+                        displayed, kind = formatted, messageKind
+                    end
+                end
+                if kind == "level" then
+                    state.FlushLevel()
+                    state.pendingLevel = {frame = frame, text = displayed, r = r, g = g,
+                        b = b, id = id, addToStart = addToStart, deadline = GetTime() + 0.25}
+                    return
+                end
+                local pending = state.pendingLevel
+                if kind == "level_stats" and pending and GetTime() <= pending.deadline
+                    and Flag(pending.addToStart) == Flag(addToStart) then
+                    state.pendingLevel = nil
+                    return RenderMessage(pending.frame, pending.text .. ": " .. displayed,
+                        pending.r, pending.g, pending.b, pending.id, pending.addToStart)
+                end
+                -- Preserve order and retain level announcements without gains.
+                state.FlushLevel()
+                return RenderMessage(frame, displayed, r, g, b, id, addToStart)
+            end
             local oldEvent = native:GetScript("OnEvent")
             native:SetScript("OnEvent", function()
                 local currentEvent = event
+                local previousContext = state.eventContext
+                local previousSpeaker, previousMessage = state.eventSpeaker, state.eventMessage
+                local previousSuppression = state.eventHadSuppression
+                state.eventContext = currentEvent
+                state.eventSpeaker, state.eventMessage = arg2, arg1
+                state.eventHadSuppression = false
                 if oldEvent then oldEvent() end
-                if currentEvent and string.find(currentEvent, "^CHAT_MSG_") then NoticeMessage(state) end
+                local suppressed = state.eventHadSuppression
+                state.eventContext = previousContext
+                state.eventSpeaker, state.eventMessage = previousSpeaker, previousMessage
+                state.eventHadSuppression = previousSuppression
+                if not suppressed and currentEvent and string.find(currentEvent, "^CHAT_MSG_") then
+                    NoticeMessage(state)
+                end
                 if currentEvent == "UPDATE_CHAT_WINDOWS" or currentEvent == "PLAYER_ENTERING_WORLD"
                     or currentEvent == "CHANNEL_UI_UPDATE" then
                     if index == 1 then ConfigureRegularChat() end
@@ -362,6 +411,7 @@ DFRL:NewMod("Chat", 1, function()
         copy.text:SetTextColor(223 / 255, 186 / 255, 105 / 255)
         copy:SetScript("OnClick", function()
             if not selected or not chat.ShowCopy then return end
+            if selected.FlushLevel then selected.FlushLevel() end
             local frame, lines = selected.native, {}
             if frame.GetNumMessages and frame.GetMessageInfo then
                 local count = frame:GetNumMessages() or 0
@@ -439,6 +489,7 @@ DFRL:NewMod("Chat", 1, function()
             dock:SetAlpha(dockAlpha)
             copy:EnableMouse(dockAlpha > 0.05)
             for _, state in pairs(states) do
+                if state.pendingLevel and now >= state.pendingLevel.deadline then state.FlushLevel() end
                 state.tab:EnableMouse(dockAlpha > 0.05)
                 local pulse = state.unread and (0.5 + 0.5 * math.sin(now * 6)) or 1
                 state.tab.text:SetTextColor(1, 191 / 255, 0, (state == selected and 1 or 0.7) * pulse)

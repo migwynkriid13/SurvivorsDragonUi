@@ -8,7 +8,7 @@ local RED = "|cffe88888"
 local GRAY = "|cffaaaaaa"
 local WHITE = "|cfffafafa"
 local YELLOW = "|cffdfba69"
-local PLUS = GREEN .. "+|r "
+local PLUS = GREEN .. "+|r"
 local MINUS = RED .. "-|r "
 
 local conversations = {
@@ -226,13 +226,13 @@ local function FormatGameNotice(text, eventName)
         if label then return rule[3] .. GRAY .. ":|r " .. label end
     end
 
-    if text == GlobalFormat("MARKED_AFK", "You are now AFK.") then return YELLOW .. "+ Away|r" end
+    if text == GlobalFormat("MARKED_AFK", "You are now AFK.") then return YELLOW .. "+Away|r" end
     if text == GlobalFormat("CLEARED_AFK", "You are no longer AFK.") then return GREEN .. "- Away|r" end
     if text == GlobalFormat("CLEARED_DND", "You are no longer marked DND.") then return GREEN .. "- Busy|r" end
     label = CaptureFormat(text, GlobalFormat("MARKED_AFK_MESSAGE", "You are now AFK: %s"), true)
-    if label then return YELLOW .. "+ Away:|r " .. label end
+    if label then return YELLOW .. "+Away:|r " .. label end
     label = CaptureFormat(text, GlobalFormat("MARKED_DND", "You are now DND: %s."), true)
-    if label then return YELLOW .. "+ Busy:|r " .. label end
+    if label then return YELLOW .. "+Busy:|r " .. label end
     return text
 end
 
