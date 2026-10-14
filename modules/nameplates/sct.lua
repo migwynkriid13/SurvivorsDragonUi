@@ -47,14 +47,89 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local discoveredChildren = 0
     local arcDirection = 1
     local sctMode = "on"
-    -- V controls native plates only. Custom SCT is controlled by /sct.
-    -- Hidden plates cannot provide fresh positions, but hits must still animate.
-    -- Respect the native saved V state even when this addon initializes after
-    -- FrameXML has already shown/hidden its nameplates.
+    -- Keep V's visible request separate from the backing coordinate feed. The
+    -- native verbs do not write FrameXML's saved NAMEPLATES_ON preference.
     local enemyPlatesEnabled = NAMEPLATES_ON and true or false
+    local nativeShowNameplates, nativeHideNameplates = _G.ShowNameplates, _G.HideNameplates
+    local inWorld, backingEnabled = true, nil
+    local drawLayers = {"BACKGROUND", "BORDER", "ARTWORK", "OVERLAY", "HIGHLIGHT"}
+    local trackingSupported = type(nativeShowNameplates) == "function"
+        and type(nativeHideNameplates) == "function" and WorldFrame
+        and WorldFrame.DisableDrawLayer and WorldFrame.EnableDrawLayer
+        and WorldFrame.GetHitRectInsets and WorldFrame.SetHitRectInsets
 
     local function CustomEnabled()
         return sctMode == "on"
+    end
+
+    local function IsEnemyPlate(data)
+        if not data.bar or not data.bar.GetStatusBarColor then return false end
+        local red, green, blue = data.bar:GetStatusBarColor()
+        if not red or not green or not blue then return false end
+        -- Ignore green/blue friendly plates requested by Shift-V.
+        return not (green > red + 0.1 and green > blue + 0.1)
+            and not (blue > red + 0.1 and blue > green + 0.1)
+    end
+    local function MaskFrame(frame, state, masked)
+        if not frame.DisableDrawLayer or not frame.EnableDrawLayer
+            or not frame.GetHitRectInsets or not frame.SetHitRectInsets then return end
+        if masked and not state.masked then
+            local left, right, top, bottom = frame:GetHitRectInsets()
+            state.insets = {left or 0, right or 0, top or 0, bottom or 0}
+            state.layers = {}
+            for _, layer in ipairs(drawLayers) do
+                -- Stock anonymous plate frames start with all layers enabled.
+                -- Use an optional getter where a client exposes one.
+                local enabled = true
+                if frame.IsDrawLayerEnabled then
+                    local value = frame:IsDrawLayerEnabled(layer)
+                    enabled = value == true or value == 1
+                end
+                state.layers[layer] = enabled
+                frame:DisableDrawLayer(layer)
+            end
+            -- An empty mouse rectangle survives native freelook flag changes.
+            -- Leave the native mouse-enabled state, size and position intact.
+            frame:SetHitRectInsets(1000000, 1000000, 1000000, 1000000)
+            state.masked = true
+        elseif not masked and state.masked then
+            for _, layer in ipairs(drawLayers) do
+                if state.layers[layer] then frame:EnableDrawLayer(layer)
+                else frame:DisableDrawLayer(layer) end
+            end
+            frame:SetHitRectInsets(state.insets[1], state.insets[2], state.insets[3], state.insets[4])
+            state.masked, state.layers, state.insets = nil, nil, nil
+        end
+    end
+    local function RestorePresentation(data)
+        for frame, state in pairs(data.presentation) do MaskFrame(frame, state, false) end
+    end
+    local function UpdatePresentation(plate, data)
+        local masked = trackingSupported and inWorld and CustomEnabled()
+            and not enemyPlatesEnabled and IsEnemyPlate(data)
+        if not masked then
+            RestorePresentation(data)
+            return
+        end
+        local function Visit(frame)
+            local state = data.presentation[frame]
+            if not state then state = {}; data.presentation[frame] = state end
+            MaskFrame(frame, state, masked)
+            for _, child in ipairs({frame:GetChildren()}) do Visit(child) end
+        end
+        Visit(plate)
+    end
+    local function ApplyPlateTracking(force)
+        local wanted = enemyPlatesEnabled or (trackingSupported and inWorld and CustomEnabled())
+        for plate, data in pairs(plates) do UpdatePresentation(plate, data) end
+        if force or backingEnabled ~= wanted then
+            backingEnabled = wanted
+            -- Call the captured native verb directly: our visible-toggle hooks
+            -- and NAMEPLATES_ON must not observe this internal tracking request.
+            if wanted then
+                if type(nativeShowNameplates) == "function" then nativeShowNameplates() end
+            elseif type(nativeHideNameplates) == "function" then nativeHideNameplates() end
+        end
     end
 
     local function ReleaseText(index)
@@ -81,15 +156,9 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     end
 
     local function IsShownEnemy(plate, data)
-        if not CustomEnabled() or not enemyPlatesEnabled or not plate:IsShown() then return false end
+        if not CustomEnabled() or not inWorld or not plate:IsShown() then return false end
         if plate.IsVisible and not plate:IsVisible() then return false end
-        if not data.bar or not data.bar.GetStatusBarColor then return false end
-        local red, green, blue = data.bar:GetStatusBarColor()
-        if not red or not green or not blue then return false end
-        -- Ignore the green/blue friendly plates enabled by Shift-V.
-        if green > red + 0.1 and green > blue + 0.1 then return false end
-        if blue > red + 0.1 and blue > green + 0.1 then return false end
-        return true
+        return IsEnemyPlate(data)
     end
 
     local function SamplePosition(plate, origin)
@@ -143,6 +212,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     end
 
     local function RefreshPlate(plate, data, now)
+        UpdatePresentation(plate, data)
         if not IsShownEnemy(plate, data) then
             RetirePlate(plate)
             return
@@ -206,7 +276,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             end
         end
         if not name or not bar then return end
-        local data = {nameRegion = name, bar = bar}
+        local data = {nameRegion = name, bar = bar, presentation = {}}
         plates[plate] = data
         HookScript(plate, "OnHide", function() RetirePlate(plate) end)
         HookScript(plate, "OnShow", function()
@@ -220,7 +290,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     end
 
     local function ScanPlates(force)
-        if not CustomEnabled() or not WorldFrame then return end
+        if not inWorld or not CustomEnabled() or not WorldFrame then return end
         local now = GetTime()
         local count = WorldFrame:GetNumChildren() or 0
         if count < discoveredChildren then discoveredChildren = 0 end
@@ -449,7 +519,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     end
 
     local function HandleCombatEvent(eventName, message)
-        if not CustomEnabled() then return end
+        if not inWorld or not CustomEnabled() then return end
         ScanPlates(false)
         local info = ParseCombatEvent(eventName, message)
         if not info or info.kind == "aura" or not info.targetName or info.targetName == "" then return end
@@ -467,6 +537,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         -- modes, so switching to vanilla never produces overlapping displays.
         ResetDisplay()
         ApplyDamageMode()
+        ApplyPlateTracking(true)
         if sctMode == "on" then
             RebuildSpellTextures()
             ScanPlates(true)
@@ -482,7 +553,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         local feedback
         if mode == "on" then
             SelectMode("on")
-            feedback = "Custom SCT enabled, including with nameplates hidden. V controls nameplates only."
+            feedback = "Custom SCT enabled. V controls visible nameplates; invisible plates track hit positions."
         elseif mode == "off" then
             SelectMode("off")
             feedback = "Custom and vanilla SCT disabled."
@@ -499,15 +570,25 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local index
     for index = 1, table.getn(COMBAT_EVENTS) do frame:RegisterEvent(COMBAT_EVENTS[index]) end
     frame:RegisterEvent("PLAYER_ENTERING_WORLD")
+    frame:RegisterEvent("PLAYER_LEAVING_WORLD")
+    frame:RegisterEvent("PLAYER_LOGOUT")
     frame:RegisterEvent("PLAYER_TARGET_CHANGED")
     frame:RegisterEvent("SPELLS_CHANGED")
     frame:RegisterEvent("CVAR_UPDATE")
     frame:SetScript("OnEvent", function()
         if event == "PLAYER_ENTERING_WORLD" then
+            inWorld = true
+            enemyPlatesEnabled = _G.NAMEPLATES_ON and true or false
             ResetDisplay()
             ApplyDamageMode()
+            ApplyPlateTracking(true)
             if sctMode == "on" then RebuildSpellTextures() end
             if CustomEnabled() then ScanPlates(true) end
+        elseif event == "PLAYER_LEAVING_WORLD" or event == "PLAYER_LOGOUT" then
+            inWorld = false
+            for _, data in pairs(plates) do RestorePresentation(data) end
+            ApplyPlateTracking(true)
+            ResetDisplay()
         elseif event == "SPELLS_CHANGED" then
             if sctMode == "on" then RebuildSpellTextures() end
         elseif event == "PLAYER_TARGET_CHANGED" then
@@ -519,7 +600,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         end
     end)
     frame:SetScript("OnUpdate", function()
-        if not CustomEnabled() then return end
+        if not inWorld or not CustomEnabled() then return end
         ScanPlates(false)
         local now = GetTime()
         UpdatePending(now)
@@ -528,16 +609,18 @@ DFRL:NewMod("NameplateCombatText", 6, function()
 
     hooksecurefunc("HideNameplates", function()
         enemyPlatesEnabled = false
-        -- Keep active and pending hits. Freeze retired origins at their last
-        -- known positions; later unmatched hits use the shared fallback.
-        for plate in pairs(plates) do RetirePlate(plate) end
+        -- Keep the backing feed alive while masking hostile plate visuals and
+        -- clicks. Existing origins and hit animations continue to track mobs.
+        ApplyPlateTracking(true)
     end)
     hooksecurefunc("ShowNameplates", function()
         enemyPlatesEnabled = true
+        ApplyPlateTracking(true)
         ScanPlates(true)
     end)
 
     ApplyDamageMode()
+    ApplyPlateTracking(true)
     RebuildSpellTextures()
     ScanPlates(true)
 end)
