@@ -1,6 +1,6 @@
 # SurvivorsDragonUi
 
-A fixed HUD for **Azeroth Survivors 0.87.0+**, using its official addon API. Install the addon alone; no companion process, client patch or special launcher is required.
+A custom HUD for **Azeroth Survivors 0.87.0+**, using its official addon API. Install the addon alone; no companion process, client patch or special launcher is required.
 
 ## Install
 
@@ -22,21 +22,23 @@ This targets Azeroth Survivors and its WoW 1.12.1 addon interface (`11200`). It 
 - Player and target frames with one uninterrupted health bar and no resource bar.
 - DEFAULT font, square minimap, one backpack, and Character/Talents/Main Menu buttons.
 - Built-in nameplate scrolling combat text with damage icons and independent animations that continue after kills.
-- A fixed chat window at the bottom left with fully transparent backgrounds, fading messages, slide animation, mouse-wheel history reveal, a passive scroll indicator and a matching native input. Hovering or opening, closing or focusing the input does not reveal history or pause fading. New messages display normally, and fading pauses while wheel-scrolled back for reading until you return to the bottom. Chat tabs, the Combat Log tab and the Copy button are hidden. Level, stat-gain, self-loot and class talent-progress notices use compact source-style formatting; learned abilities and skill increases show `+Name`; NPC yells show a red name and colon followed by the message; other messages keep their original text. `/copy` opens raw session diagnostics, including hidden announcements and combat/addon events. The archive runs continuously and resets on reload; see [chat port notes](docs/CLEANERCHAT-PORT.md) for native-history limits.
+- Chat defaults to the bottom left with fully transparent backgrounds, fading messages, slide animation, mouse-wheel history reveal, a passive scroll indicator and a matching native input. Hovering or opening, closing or focusing the input does not reveal history or pause fading. New messages display normally, and fading pauses while wheel-scrolled back for reading until you return to the bottom. Chat tabs, the Combat Log tab and the Copy button are hidden. Level, stat-gain, self-loot and class talent-progress notices use compact source-style formatting; learned abilities and skill increases show `+Name`; NPC yells show a red name and colon followed by the message; other messages keep their original text. `/copy` opens raw session diagnostics, including hidden announcements and combat/addon events. The archive runs continuously and resets on reload; see [chat port notes](docs/CLEANERCHAT-PORT.md) for native-history limits.
 
-Appearance and placement are fixed. There are no addon settings, profiles, saved variables or frame movers.
+Hold **SHIFT + left-drag** to move the player frame, target frame, boss/guardian health-bar group, run timer, action bar, XP bar, kills/gold/cache bar, micro menu, player buffs, minimap, chat, cast bar or quest watch. Each group moves independently: moving the action bar does not move XP or the tally. SHIFT shows temporary outlines, including for currently hidden HUD groups, without showing inactive targets or encounters. The main menu and Copy window can also be moved while open. There is no settings panel or permanent handle; ordinary clicks keep their usual behavior without SHIFT. Dragging chat does not uncover faded messages; only the mouse wheel does that.
 
-Type `/copy` to open the Copy window, then press **Ctrl+C** to copy the selected diagnostics. Chat clicks and hyperlinks keep their native behavior.
+Positions are saved across `/reload` and game sessions in the single `SurvivorsDragonUiLayout` SavedVariables table. It stores locations only, without appearance settings, game data or profiles. `/sdui reset` clears all saved locations and restores every registered frame to its default position, including frames currently hidden. Appearance stays defined in code; there are no settings windows or profiles. Chat diagnostics remain session-only and are not stored with the layout.
 
-## Combat-text commands
+## Commands
 
 | Command | Behavior |
 | --- | --- |
+| `/sdui reset` | Clear saved frame positions and restore the default layout. |
+| `/copy` | Open raw session diagnostics; press **Ctrl+C** to copy the selected text. |
 | `/sct on` | Custom icon-and-damage SCT; native outgoing damage text disabled. |
 | `/sct off` | Both custom and native outgoing damage text disabled. |
 | `/sct default` | Native outgoing damage text only. |
 
-The normal **V** binding controls nameplates and custom SCT visibility. Mode changes clear custom text immediately. The selected mode lasts for the current UI session; reloading starts in custom mode. Combat logs and the damage meter are unaffected.
+The normal **V** binding controls nameplates and custom SCT visibility. Mode changes clear custom text immediately. The selected SCT mode lasts for the current UI session; reloading starts in custom mode. Combat logs and the damage meter are unaffected. Chat clicks and hyperlinks keep their native behavior.
 
 ## Client limitations
 
