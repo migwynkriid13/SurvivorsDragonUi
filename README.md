@@ -21,7 +21,7 @@ This targets Azeroth Survivors and its WoW 1.12.1 addon interface (`11200`). It 
 - Separate red health pills for every live boss and engaged guardian, keyed by spawn id.
 - Player and target frames with one uninterrupted health bar and no resource bar.
 - DEFAULT font, square minimap, one backpack, and Character/Talents/Main Menu buttons.
-- Built-in nameplate scrolling combat text with damage icons and independent animations that continue after kills.
+- Built-in scrolling combat text with damage icons and independent animations that continue after kills, including with nameplates hidden.
 - Chat defaults to the bottom left with fully transparent backgrounds, fading messages, slide animation, mouse-wheel history reveal, a passive scroll indicator and a matching native input. Hovering or opening, closing or focusing the input does not reveal history or pause fading. New messages display normally, and fading pauses while wheel-scrolled back for reading until you return to the bottom. Chat tabs, the Combat Log tab and the Copy button are hidden. Level, stat-gain, self-loot and class talent-progress notices use compact source-style formatting; learned abilities and skill increases show `+Name`; NPC yells show a red name and colon followed by the message; other messages keep their original text. `/copy` opens raw session diagnostics, including hidden announcements and combat/addon events. The archive runs continuously and resets on reload; see [chat port notes](docs/CLEANERCHAT-PORT.md) for native-history limits.
 
 Hold **SHIFT + left-drag** to move the player frame, target frame, boss/guardian health-bar group, run timer, action bar, XP bar, kills/gold/cache bar, micro menu, player buffs, minimap, chat, cast bar or quest watch. Each group moves independently: moving the action bar does not move XP or the tally. SHIFT shows temporary outlines, including for currently hidden HUD groups, without showing inactive targets or encounters. The main menu and Copy window can also be moved while open. There is no settings panel or permanent handle; ordinary clicks keep their usual behavior without SHIFT. Dragging chat does not uncover faded messages; only the mouse wheel does that.
@@ -38,7 +38,7 @@ Positions are saved across `/reload` and game sessions in the single `SurvivorsD
 | `/sct off` | Both custom and native outgoing damage text disabled. |
 | `/sct default` | Native outgoing damage text only. |
 
-The normal **V** binding controls nameplates and custom SCT visibility. Mode changes clear custom text immediately. The selected SCT mode lasts for the current UI session; reloading starts in custom mode. Combat logs and the damage meter are unaffected. Chat clicks and hyperlinks keep their native behavior.
+The normal **V** binding controls native nameplates; `/sct` controls custom combat text independently. In `/sct on` mode, hits still display with nameplates hidden. Visible or recent plate positions help place hits when reliable; otherwise they appear at a shared fallback position. Mode changes clear active and queued custom hits immediately. SCT mode is not saved: it lasts for the current UI session, and reloading starts in custom mode. Combat logs and the damage meter are unaffected. Chat clicks and hyperlinks keep their native behavior.
 
 ## Client limitations
 
