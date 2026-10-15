@@ -5,10 +5,13 @@ DFRL:NewMod("RunTimers", 5, function()
     local BAR_WIDTH = 280
     local ROW_HEIGHT = 48
     local SKULL_ICON = "Interface\\TargetingFrame\\UI-TargetingFrame-Skull"
+    local CHECK_ICON = "Interface\\Buttons\\UI-CheckBox-Check"
     local ATTACK_ICON = "Interface\\Cursor\\Attack.blp"
     local CACHE_ICON = "Interface\\Cursor\\LootAll.blp"
     local COINS_ICON = DFRL:GetInfoOrCons("tex") .. "chat\\cleaner_coins.tga"
     local MARKER_SIZE = 18
+    local PASSED_MARKER_SCALE = 0.8
+    local PASSED_MARKER_ALPHA = 0.55
     local PHASES = {
         ready = true,
         playing = true,
@@ -476,10 +479,16 @@ DFRL:NewMod("RunTimers", 5, function()
         bossGroup:Hide()
     end
 
+    local function HideMarker(marker)
+        marker:Hide()
+        marker.check:Hide()
+        marker.passed = nil
+    end
+
     local function ReleaseClock()
         run:Hide()
         for _, marker in ipairs(markers) do
-            marker:Hide()
+            HideMarker(marker)
         end
         Restore("clock")
     end
@@ -534,10 +543,20 @@ DFRL:NewMod("RunTimers", 5, function()
         for index, at in ipairs(times) do
             local marker = markers[index]
             if not marker then
-                marker = overlay:CreateTexture(nil, "OVERLAY")
-                marker:SetTexture(SKULL_ICON)
+                marker = CreateFrame("Frame", nil, overlay)
                 marker:SetWidth(MARKER_SIZE)
                 marker:SetHeight(MARKER_SIZE)
+                marker:EnableMouse(false)
+                marker.skull = marker:CreateTexture(nil, "ARTWORK")
+                marker.skull:SetTexture(SKULL_ICON)
+                marker.skull:SetPoint("CENTER", marker, "CENTER", 0, 0)
+                marker.check = marker:CreateTexture(nil, "OVERLAY")
+                marker.check:SetTexture(CHECK_ICON)
+                marker.check:SetVertexColor(0.2, 1, 0.2, 1)
+                marker.check:SetWidth(MARKER_SIZE * 0.6)
+                marker.check:SetHeight(MARKER_SIZE * 0.6)
+                marker.check:SetPoint("BOTTOMRIGHT", marker, "BOTTOMRIGHT", 2, -1)
+                HideMarker(marker)
                 markers[index] = marker
             end
             markerTimes[index] = at
@@ -550,18 +569,31 @@ DFRL:NewMod("RunTimers", 5, function()
         end
         for index = table.getn(times) + 1, table.getn(markers) do
             markerTimes[index] = nil
-            markers[index]:Hide()
+            HideMarker(markers[index])
         end
     end
 
     local function UpdateMarkerVisibility(seconds)
-        -- Native pause-aware time owns expiry; no separate clock is advanced.
+        -- A check means the native scheduled time passed, not that the boss died.
         for index, marker in ipairs(markers) do
             local at = markerTimes[index]
-            if at and seconds < at then
+            if at then
+                local passed = seconds >= at
+                if marker.passed ~= passed then
+                    marker.passed = passed
+                    local size = MARKER_SIZE * (passed and PASSED_MARKER_SCALE or 1)
+                    marker.skull:SetWidth(size)
+                    marker.skull:SetHeight(size)
+                    marker.skull:SetAlpha(passed and PASSED_MARKER_ALPHA or 1)
+                    if passed then
+                        marker.check:Show()
+                    else
+                        marker.check:Hide()
+                    end
+                end
                 marker:Show()
             else
-                marker:Hide()
+                HideMarker(marker)
             end
         end
     end
