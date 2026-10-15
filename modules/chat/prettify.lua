@@ -266,15 +266,22 @@ local function LootMessage(text)
         item = item .. "|r"
     end
 
-    -- The supplied game adds an already-collected suffix to otherwise normal
-    -- self-loot text. Preserve that fact and any existing suffix colors.
+    -- Collection status is part of native self-loot text. Recognize both known
+    -- statuses while preserving their wording and any existing suffix colors.
     local plainSuffix = string.gsub(suffix, "|c%x%x%x%x%x%x%x%x", "")
     plainSuffix = string.gsub(plainSuffix, "|r", "")
     if plainSuffix == "." then
         suffix = ""
     elseif plainSuffix ~= "" then
-        if not string.find(plainSuffix, "^%s+%(already collected%)%.?$") then return nil end
-        if suffix == plainSuffix then suffix = GRAY .. suffix .. "|r" end
+        local statusColor
+        if string.find(plainSuffix, "^%s+%(already collected%)%.?$") then
+            statusColor = GRAY
+        elseif string.find(plainSuffix, "^%s+New in your collection!$") then
+            statusColor = GREEN
+        else
+            return nil
+        end
+        if suffix == plainSuffix then suffix = statusColor .. suffix .. "|r" end
     end
     return PLUS .. ItemLabel(item) .. suffix
 end
