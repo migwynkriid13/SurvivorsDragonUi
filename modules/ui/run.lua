@@ -325,9 +325,13 @@ DFRL:NewMod("RunTimers", 5, function()
             fontDraft.showText = not fontDraft.showText
             PreviewFont(fontDraft)
         end)
-        FontEditorButton("Addon defaults", defaultsWidth, (width - defaultsWidth) / 2, -188, function()
-            DFRL.layout.Reset()
-        end)
+        FontEditorButton(
+            "Addon defaults",
+            defaultsWidth,
+            (width - defaultsWidth) / 2,
+            -188,
+            function() DFRL.layout.Reset() end
+        )
     end
 
     local function EditRunFont(active, save)
