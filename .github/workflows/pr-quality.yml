@@ -23,11 +23,20 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Select all tracked source and owned text files
         id: sources
         run: python3 scripts/pr_quality.py collect
+
+      - name: Require a TOC version bump for ZIP payload changes
+        id: version
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_BASE_REF: ${{ github.base_ref }}
+        run: python3 scripts/pr_quality.py toc-version
 
       - name: Set up Node for Prettier
         if: steps.sources.outputs.prettier_count != '0'
@@ -79,6 +88,7 @@ jobs:
       - name: Report all quality results together
         if: always() && steps.sources.outcome == 'success'
         env:
+          VERSION_OUTCOME: ${{ steps.version.outcome }}
           PRETTIER_OUTCOME: ${{ steps.prettier.outcome }}
           STYLUA_OUTCOME: ${{ steps.stylua.outcome }}
           DEADCODE_OUTCOME: ${{ steps.deadcode.outcome }}

@@ -465,10 +465,7 @@ DFRL:NewMod("Chat", 1, function()
                 end
             end
         end)
-        DFRL.layout.Register("chat", root, function(frame)
-            frame:ClearAllPoints()
-            frame:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", 20, 40)
-        end, {
+        DFRL.layout.Register("chat", root, nil, {
             resize = "dimensions",
             minWidth = 240,
             minHeight = 120,

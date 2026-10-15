@@ -22,20 +22,6 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         Shadow = { 0.75, 0.45, 1 },
         Arcane = { 1, 0.50, 1 },
     }
-    local COMBAT_EVENTS = {
-        "CHAT_MSG_COMBAT_SELF_HITS",
-        "CHAT_MSG_COMBAT_SELF_MISSES",
-        "CHAT_MSG_COMBAT_PET_HITS",
-        "CHAT_MSG_COMBAT_PET_MISSES",
-        "CHAT_MSG_SPELL_SELF_DAMAGE",
-        "CHAT_MSG_SPELL_PET_DAMAGE",
-        "CHAT_MSG_SPELL_PERIODIC_CREATURE_DAMAGE",
-        "CHAT_MSG_SPELL_PERIODIC_HOSTILEPLAYER_DAMAGE",
-        "CHAT_MSG_SPELL_PERIODIC_FRIENDLYPLAYER_DAMAGE",
-        "CHAT_MSG_SPELL_PERIODIC_PARTY_DAMAGE",
-        "CHAT_MSG_SPELL_DAMAGESHIELDS_ON_SELF",
-        "CHAT_MSG_SPELL_DAMAGESHIELDS_ON_OTHERS",
-    }
 
     local plates = {}
     local origins = {}
@@ -597,8 +583,8 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     end
 
     local frame = CreateFrame("Frame", "DFRL_NameplateCombatText")
-    for index = 1, table.getn(COMBAT_EVENTS) do
-        frame:RegisterEvent(COMBAT_EVENTS[index])
+    for eventName in pairs(T.NameplateCombatEventHandlers) do
+        frame:RegisterEvent(eventName)
     end
     frame:RegisterEvent("PLAYER_ENTERING_WORLD")
     frame:RegisterEvent("PLAYER_LEAVING_WORLD")

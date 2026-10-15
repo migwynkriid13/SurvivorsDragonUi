@@ -23,6 +23,14 @@ function KillFrame(frame)
     if frame.EnableKeyboard then frame:EnableKeyboard(false) end
 end
 
+function PermanentlyDisableFrame(frame)
+    if not frame then return end
+    KillFrame(frame)
+    -- Native updates may try to show omitted widgets again.
+    frame.Show = frame.Hide
+    frame:SetScript("OnShow", function() frame:Hide() end)
+end
+
 function HideFrameTextures(frame)
     if not frame then return end
     for _, region in ipairs({ frame:GetRegions() }) do

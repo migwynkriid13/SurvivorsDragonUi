@@ -12,6 +12,15 @@ def git(*arguments):
     return subprocess.check_output(["git", *arguments], cwd=SOURCE)
 
 
+def payload_changes(current, previous, changed):
+    """Describe shipped-file and membership changes for releases and PR versions."""
+    current, previous, changed = set(current), set(previous), set(changed)
+    return {
+        "changed_payload_files": sorted(changed & (current | previous)),
+        "payload_membership_changes": sorted(current ^ previous),
+    }
+
+
 def payload_changed():
     current = set(runtime_files())
     if os.environ["EVENT_NAME"] == "workflow_dispatch":
@@ -40,13 +49,9 @@ def payload_changed():
     previous = set(json.loads(previous_file.stdout)["files"])
     changed = set(git("diff", "--name-only", "--no-renames", "-z", before, head, "--").decode().split("\0"))
     changed.discard("")
-    included_changes = sorted(changed & (current | previous))
-    membership_changes = sorted(current ^ previous)
-    print(json.dumps({
-        "changed_payload_files": included_changes,
-        "payload_membership_changes": membership_changes,
-    }, indent=2))
-    return bool(included_changes or membership_changes)
+    changes = payload_changes(current, previous, changed)
+    print(json.dumps(changes, indent=2))
+    return any(changes.values())
 
 
 def main():

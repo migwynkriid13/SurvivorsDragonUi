@@ -82,8 +82,5 @@ DFRL:NewMod("Menu", 1, function()
         end
     end
     DFRL.menuframe = menu
-    DFRL.layout.Register("menu", menu, function(frame)
-        frame:ClearAllPoints()
-        frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
-    end, { onlyWhenShown = true })
+    DFRL.layout.Register("menu", menu, nil, { onlyWhenShown = true })
 end)
