@@ -18,11 +18,11 @@ This targets Azeroth Survivors and its WoW 1.12.1 addon interface (`11200`). It 
 
 - One action bar with seven buttons: native ability slots 1–6, followed by the permanent ability in native slot 12. No paging or gryphons.
 - An XP bar whose default placement is below the abilities, matching the action bar's default artwork width, without numbers or hover text.
-- A gold bar whose default placement is directly below XP with three equal sections: kills, current gold and the next cache's gold cost. Kills use the enemy-hover sword cursor icon; each section has a game icon and centered number.
-- A blue run-progress pill using the native pause-aware clock and actual zone length, with skull icons marking scheduled boss spawns.
+- A gold bar whose default placement is directly below XP with three equal sections: kills, current gold and the next cache's gold cost. Kills use the enemy-hover sword cursor icon, current gold uses custom gold-coin artwork, and the cache cost uses the native loot-pouch cursor icon. Each section has a centered number.
+- A blue run-progress pill with `RUN 05:42 / 16:00` centered above it using the client's Morpheus font when available. The timer group defaults eight pixels higher on the screen. It reads the native pause-aware clock and actual zone length, with skull icons marking upcoming boss spawns. Each skull disappears when the native clock reaches its scheduled spawn time.
 - Separate red health pills for every live boss and engaged guardian, keyed by spawn id.
 - Player and target frames with one uninterrupted health bar and no resource bar.
-- DEFAULT font, square minimap, one backpack, and Character/Talents/Main Menu buttons.
+- DEFAULT font throughout the UI except the run timer, square minimap, one backpack, and Character/Talents/Main Menu buttons.
 - Cast-bar and quest-watch displays are removed.
 - Built-in scrolling combat text with damage icons and independent animations that continue after kills, including with nameplates hidden.
 - Chat defaults to the bottom left with fully transparent backgrounds, fading messages, slide animation, mouse-wheel history reveal, a passive scroll indicator and a matching native input. Hovering or opening, closing or focusing the input does not reveal history or pause fading. New messages display normally, and fading pauses while wheel-scrolled back for reading until you return to the bottom. Chat tabs, the Combat Log tab and the Copy button are hidden. Level, stat-gain, self-loot and class talent-progress notices use compact source-style formatting; learned abilities and skill increases show `+Name`; NPC yells show a red name and colon followed by the message; other messages keep their original text. `/copy` opens raw session diagnostics, including hidden announcements and combat/addon events. The archive runs continuously and resets on reload; see [chat port notes](docs/CLEANERCHAT-PORT.md) for native-history limits.

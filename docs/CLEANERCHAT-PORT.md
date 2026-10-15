@@ -49,7 +49,7 @@ Original Blizzard 1.12.1 implementation references: [chat dispatch](https://gith
 
 ## Source assets
 
-The supplied `Assets/overlayMask.tga` and `Assets/snapToBottomIcon.tga` remain in `media/tex/chat/cleaner_overlayMask.tga` and `media/tex/chat/cleaner_snapToBottomIcon.tga` with their attribution. The scroll indicator uses the supplied return-to-bottom icon; the dark overlay mask is unused because chat backgrounds are fully transparent. The source's `Assets/coins.tga` atlas is not incorporated because incoming money notices retain their original text.
+The supplied `Assets/overlayMask.tga` and `Assets/snapToBottomIcon.tga` remain in `media/tex/chat/cleaner_overlayMask.tga` and `media/tex/chat/cleaner_snapToBottomIcon.tga` with their attribution. The scroll indicator uses the supplied return-to-bottom icon; the dark overlay mask is unused because chat backgrounds are fully transparent. The supplied `Assets/coins.tga` atlas is bundled unchanged as `media/tex/chat/cleaner_coins.tga`; its top-left gold quadrant supplies the current-gold tally icon. Incoming money notices still retain their original text.
 
 ## Validation limit
 
