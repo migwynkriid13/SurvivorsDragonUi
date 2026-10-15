@@ -104,7 +104,17 @@ DFRL:NewMod("Waypoints", 3, function()
             line:SetWidth(HUD_WIDTH / 2)
             line:SetHeight(1)
             line:SetPoint(left and "BOTTOMLEFT" or "BOTTOMRIGHT", hud, left and "BOTTOMLEFT" or "BOTTOMRIGHT", 0, 0)
-            line:SetGradientAlpha("HORIZONTAL", 0.73, 0.58, 0.34, left and 0 or 0.35, 0.73, 0.58, 0.34, left and 0.35 or 0)
+            line:SetGradientAlpha(
+                "HORIZONTAL",
+                0.73,
+                0.58,
+                0.34,
+                left and 0 or 0.35,
+                0.73,
+                0.58,
+                0.34,
+                left and 0.35 or 0
+            )
         end
     end
 

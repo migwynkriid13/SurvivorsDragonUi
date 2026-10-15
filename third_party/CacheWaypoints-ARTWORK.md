@@ -56,10 +56,10 @@ DragonUI core code is copyright 2026 NeticSoul and DragonUI contributors under M
 
 Original glyph pixels and alpha are retained without rescaling. Transparent source padding is cropped, then the glyph is centered inside a square transparent sampling region with at least one pixel of padding. Both outputs use uncompressed 32-bit RGBA TGA on power-of-two canvases:
 
-| Bundled file | Original canvas | Source rectangle | Output canvas | Placement and sampling |
-| --- | --- | --- | --- | --- |
-| `media/tex/waypoint/GuardianFloating.tga` | 64 × 64 | `[0, 1, 62, 64)` | 128 × 128 | Paste at `(1, 1)`; square region `[0, 0, 65, 65)`, UV `0..65/128` on each axis. |
-| `media/tex/waypoint/CachePouch.tga` | 128 × 128 | `[28, 7, 117, 124)` | 128 × 128 | Paste at `(15, 1)`; square region `[0, 0, 119, 119)`, UV `0..119/128` on each axis. |
+| Bundled file                              | Original canvas | Source rectangle    | Output canvas | Placement and sampling                                                              |
+| ----------------------------------------- | --------------- | ------------------- | ------------- | ----------------------------------------------------------------------------------- |
+| `media/tex/waypoint/GuardianFloating.tga` | 64 × 64         | `[0, 1, 62, 64)`    | 128 × 128     | Paste at `(1, 1)`; square region `[0, 0, 65, 65)`, UV `0..65/128` on each axis.     |
+| `media/tex/waypoint/CachePouch.tga`       | 128 × 128       | `[28, 7, 117, 124)` | 128 × 128     | Paste at `(15, 1)`; square region `[0, 0, 119, 119)`, UV `0..119/128` on each axis. |
 
 Square sampling preserves each glyph's proportions inside its 32-by-32 HUD icon field. The existing `Guardian.tga` world-map rare-elite marker and `MapPin.tga` cache pin remain unchanged. `HudDiamond.tga` is retained as a source reference for the previous HUD, but is no longer used or included in the runtime manifest.
 
