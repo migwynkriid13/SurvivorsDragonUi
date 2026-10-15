@@ -1,3 +1,5 @@
+-- Original Main Menu artwork by guzruul, used with confirmed redistribution permission.
+-- Source: dbtdsilva/-DragonflightReloaded, commit 5c6a63fda03fe9b8fd8219e6c1f65c574679077a.
 DFRL:NewMod("Micro", 1, function()
     local path = DFRL:GetInfoOrCons("tex") .. "micromenu\\color_micro\\"
     local container = CreateFrame("Frame", "DFRLMicroMenuContainer", UIParent)
@@ -8,7 +10,7 @@ DFRL:NewMod("Micro", 1, function()
     local entries = {
         { "CharacterMicroButton", "character" },
         { "TalentMicroButton", "talents" },
-        { "MainMenuMicroButton", "mainmenu" },
+        { "MainMenuMicroButton", "wow" },
     }
     local previous
     for _, entry in ipairs(entries) do
@@ -37,16 +39,6 @@ DFRL:NewMod("Micro", 1, function()
                 button:GetHighlightTexture():SetTexCoord(82 / 256, 116 / 256, 216 / 512, 264 / 512)
                 button:SetDisabledTexture(atlas)
                 button:GetDisabledTexture():SetTexCoord(2 / 256, 37 / 256, 324 / 512, 372 / 512)
-            elseif entry[1] == "MainMenuMicroButton" then
-                local native = "Interface\\Buttons\\UI-MicroButton-"
-                button:SetNormalTexture(native .. "MainMenu-Up")
-                button:SetPushedTexture(native .. "MainMenu-Down")
-                button:SetDisabledTexture(native .. "MainMenu-Disabled")
-                button:SetHighlightTexture(native .. "Hilight")
-                for _, state in ipairs({ "Normal", "Pushed", "Highlight", "Disabled" }) do
-                    local texture = button["Get" .. state .. "Texture"](button)
-                    if texture then texture:SetTexCoord(0, 1, 0.25, 1) end
-                end
             else
                 for _, state in ipairs({ { "Normal", "regular" }, { "Pushed", "faded" }, { "Highlight", "highlight" } }) do
                     button["Set" .. state[1] .. "Texture"](button, path .. entry[2] .. "-" .. state[2] .. ".tga")
