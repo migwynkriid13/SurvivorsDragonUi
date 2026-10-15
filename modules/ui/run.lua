@@ -15,8 +15,8 @@ DFRL:NewMod("RunTimers", 5, function()
     local DEAD_MARKER_SCALE = 0.8
     local DEAD_MARKER_ALPHA = 0.7
     local ACTIVE_GLOW_PERIOD = 2.4
-    local ACTIVE_GLOW_MIN_ALPHA, ACTIVE_GLOW_MAX_ALPHA = 0.18, 0.62
-    local ACTIVE_GLOW_SIZE, ACTIVE_GLOW_GROWTH = 30, 4
+    local ACTIVE_GLOW_MIN_ALPHA, ACTIVE_GLOW_MAX_ALPHA = 0.1, 0.2
+    local ACTIVE_GLOW_MIN_OFFSET, ACTIVE_GLOW_MAX_OFFSET = 0.75, 2.5
     local PHASES = {
         ready = true,
         playing = true,
@@ -612,10 +612,12 @@ DFRL:NewMod("RunTimers", 5, function()
     end
 
     local function ShowMarkerGlow(marker, shown)
-        if shown then
-            marker.glow:Show()
-        else
-            marker.glow:Hide()
+        for _, glow in ipairs(marker.glow) do
+            if shown then
+                glow.texture:Show()
+            else
+                glow.texture:Hide()
+            end
         end
     end
 
@@ -775,16 +777,32 @@ DFRL:NewMod("RunTimers", 5, function()
                 marker:SetWidth(MARKER_SIZE)
                 marker:SetHeight(MARKER_SIZE)
                 marker:EnableMouse(false)
-                -- One soft radial halo avoids the saturated hard edge made by
-                -- overlapping skull copies. Only this background breathes.
-                marker.glow = marker:CreateTexture(nil, "BACKGROUND")
-                marker.glow:SetTexture(path .. "BossGlow.tga")
-                marker.glow:SetWidth(ACTIVE_GLOW_SIZE)
-                marker.glow:SetHeight(ACTIVE_GLOW_SIZE)
-                marker.glow:SetPoint("CENTER", marker, "CENTER", 0, 0)
-                marker.glow:SetVertexColor(1, 0.12, 0.02, 1)
-                marker.glow:SetAlpha(ACTIVE_GLOW_MIN_ALPHA)
-                marker.glow:SetBlendMode("ADD")
+                marker.glow = {}
+                -- Low-opacity copies trace the native skull silhouette. Their
+                -- offsets breathe inward/outward beneath the unchanged skull.
+                for x = -1, 1 do
+                    for y = -1, 1 do
+                        if x ~= 0 or y ~= 0 then
+                            local distance = math.sqrt(x * x + y * y)
+                            local dx, dy = x / distance, y / distance
+                            local glow = marker:CreateTexture(nil, "BACKGROUND")
+                            glow:SetTexture(SKULL_ICON)
+                            glow:SetWidth(MARKER_SIZE)
+                            glow:SetHeight(MARKER_SIZE)
+                            glow:SetPoint(
+                                "CENTER",
+                                marker,
+                                "CENTER",
+                                dx * ACTIVE_GLOW_MIN_OFFSET,
+                                dy * ACTIVE_GLOW_MIN_OFFSET
+                            )
+                            glow:SetVertexColor(1, 0.08, 0.02, 1)
+                            glow:SetAlpha(ACTIVE_GLOW_MIN_ALPHA)
+                            glow:SetBlendMode("ADD")
+                            table.insert(marker.glow, { texture = glow, x = dx, y = dy })
+                        end
+                    end
+                end
                 marker.skull = marker:CreateTexture(nil, "ARTWORK")
                 marker.skull:SetTexture(SKULL_ICON)
                 marker.skull:SetPoint("CENTER", marker, "CENTER", 0, 0)
@@ -817,7 +835,7 @@ DFRL:NewMod("RunTimers", 5, function()
         -- The native run clock and schedule still own all gameplay timing/state.
         local pulse = 0.5 - 0.5 * math.cos(GetTime() * 2 * math.pi / ACTIVE_GLOW_PERIOD)
         local glowAlpha = ACTIVE_GLOW_MIN_ALPHA + (ACTIVE_GLOW_MAX_ALPHA - ACTIVE_GLOW_MIN_ALPHA) * pulse
-        local glowSize = ACTIVE_GLOW_SIZE + ACTIVE_GLOW_GROWTH * pulse
+        local glowOffset = ACTIVE_GLOW_MIN_OFFSET + (ACTIVE_GLOW_MAX_OFFSET - ACTIVE_GLOW_MIN_OFFSET) * pulse
         for index, marker in ipairs(markers) do
             local state = markerStates[index]
             if state then
@@ -836,9 +854,11 @@ DFRL:NewMod("RunTimers", 5, function()
                     end
                 end
                 if state == "up" then
-                    marker.glow:SetAlpha(glowAlpha)
-                    marker.glow:SetWidth(glowSize)
-                    marker.glow:SetHeight(glowSize)
+                    for _, glow in ipairs(marker.glow) do
+                        glow.texture:SetAlpha(glowAlpha)
+                        glow.texture:ClearAllPoints()
+                        glow.texture:SetPoint("CENTER", marker, "CENTER", glow.x * glowOffset, glow.y * glowOffset)
+                    end
                 end
                 marker:Show()
             else
