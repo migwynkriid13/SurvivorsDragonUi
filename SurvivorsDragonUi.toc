@@ -29,7 +29,6 @@ modules\menu\menu.lua
 modules\micro\micro.lua
 modules\ui\ui.lua
 modules\ui\run.lua
-modules\ui\talents.lua
 modules\unit\player.lua
 modules\unit\auras.lua
 modules\unit\target.lua

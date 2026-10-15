@@ -151,3 +151,11 @@ Boss/guardian debuff textures, stack counts and dispel types come from the local
 The `/sdui` editor adds **Boss debuffs** (default on) and **Damage icons** (default off). Both preview live through the shared display preference store, including icons on already animating custom hits, without changing SCT mode, animation timing or native outgoing damage text. Confirm alone saves normalized boolean choices in `SurvivorsDragonUiDisplay`. World leave/logout/reload discard drafts; `/sdui reset` and **Addon defaults** clear the preferences and restore both defaults along with the existing full layout/font reset. These display preferences store no gameplay or native data.
 
 No local validation, tests, syntax checks or game/addon execution were run for this change; source-quality checks are left to the authorized GitHub Actions workflow. Base-source mechanisms do not establish packaged-game behavior.
+
+## Native talent window — 2026-10-15
+
+The user confirmed that N and the bottom talent button open the correct Azeroth Survivors talent window when the addon is disabled. The addon had replaced the real global `ToggleTalentFrame` with a separate Classic three-tree display and wrapped `UpdateMicroButtons` for that replacement. Removing the replacement restores the game's own talent-opening function and native micro-button updates rather than requiring another client API.
+
+`modules/ui/talents.lua` is removed from source, the TOC and the shared runtime manifest. Its three otherwise-unused header textures are removed with it. The micro-menu keeps its existing talent artwork, geometry and original TalentMicroButton click handler. The general UI skin no longer modifies TalentFrameCloseButton, preserving the game's talent-window close control. The native game owns the talent contents, point spending and window behavior; no hardcoded tree data or addon-specific talent command is introduced.
+
+No local validation, tests, syntax checks, addon execution or game startups were run. The user's disabled-addon observation establishes the available native window; opening it with the updated addon remains unverified in-game.
