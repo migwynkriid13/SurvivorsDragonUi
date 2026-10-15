@@ -107,6 +107,7 @@ def prettier(files):
 
 def lua_format(files):
     reports = []
+    messages = []
     failed = False
     for name in files:
         result = run([
@@ -114,9 +115,14 @@ def lua_format(files):
             "--config-path", ".stylua.toml", "--", name,
         ])
         failed = failed or result.returncode != 0
-        reports.append(result.stdout + result.stderr)
+        reports.append(result.stdout.replace(
+            "--- old\n+++ new\n", f"--- a/{name}\n+++ b/{name}\n", 1,
+        ))
+        messages.append(f"{name}: StyLua exit {result.returncode}\n{result.stderr}")
     report = "".join(reports)
     (REPORTS / "stylua.patch").write_text(report, encoding="utf-8")
+    (REPORTS / "stylua.log").write_text("\n".join(messages), encoding="utf-8")
+    print("\n".join(messages))
     print(report or "All tracked Lua files use the configured formatting.")
     return failed
 
