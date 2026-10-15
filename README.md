@@ -33,31 +33,23 @@ HUD groups resize by uniform scale, keeping their artwork proportions. Chat and 
 
 While `/sdui` is open, the **Run timer font** controls preview the top `RUN` label's font, size, outline and shadow. The **Run text** control shows or hides the entire `RUN elapsed / duration` label while keeping the progress pill and boss markers visible. Left-drag the panel's background to move it; its width fits the controls and available font labels. Its position is session-only, and both `/sdui reset` and **Addon defaults** recenter it. Choose the game's `DEFAULT` face or its native Friz Quadrata, Arial Narrow, Morpheus and Skurri faces; no font download is needed. The initial timer settings are visible text in Skurri, size 14, normal outline and black shadow at offset `(1, -1)`, with DEFAULT as the fallback when a native font is unavailable. Existing confirmed font choices remain in use until changed or reset. **Addon defaults** immediately performs the same full reset as `/sdui reset`: it clears saved geometry and timer font/text choices, discards pending edits, restores all frame and timer font defaults with the label visible, and exits editing without requiring Confirm. The selected SCT mode stays unchanged. Other UI keeps DEFAULT.
 
-The same `/sdui` panel has **Boss debuffs: on/off** and **Damage icons: on/off** controls. Boss debuffs default to **on**; custom damage-text icons default to **off**. Changes preview live, including on hits already animating. The debuff row uses local `UnitDebuff("target", index)` data and the official target spawn id to attach effects to the correct encounter. Icons clear when the target changes, and wait for a fresh target identity snapshot before returning. Native stack counts, dispel-type borders and hover tooltips are shown where available; no countdown is invented. These controls do not change the selected `/sct` mode or native outgoing text.
+The same `/sdui` panel has **Boss debuffs: on/off** and **Damage icons: on/off** controls. Boss debuffs default to **on**; custom damage-text icons default to **off**. Changes preview live, including on hits already animating. The debuff row uses local `UnitDebuff("target", index)` data and the official target spawn id to attach effects to the correct encounter. Icons clear when the target changes, and wait for a fresh target identity snapshot before returning. Rectangular icons reuse the health pill’s metallic border textures, with native stack counts and hover tooltips where available; no countdown is invented. These controls do not change the selected `/sct` mode or native outgoing text.
 
 Only **Confirm** saves pending geometry, timer font/text and display-toggle changes; releasing a drag or changing an editor control does not save. Confirmed locations, HUD scale and chat/Copy dimensions persist across `/reload` and game sessions in `SurvivorsDragonUiLayout`; the confirmed timer font and label visibility are stored separately in `SurvivorsDragonUiRunFont`, and the two boolean display choices in `SurvivorsDragonUiDisplay`. Unconfirmed edits are discarded on world leave, logout or `/reload`, preserving the last confirmed choices. `/sdui reset` and **Addon defaults** clear saved geometry, timer font/text and display-toggle choices, exit editing and restore every registered group's defaults, including hidden frames, the visible run label, boss debuffs on and damage icons off. Defaults stay defined in code; controls appear only during layout editing, without profiles or a separate settings window. The selected SCT mode is saved separately in `SurvivorsDragonUiSctMode`; reset leaves it unchanged. Chat diagnostics remain session-only, and gameplay/native API state is never persisted.
-
-### Simulated previews
-
-These standalone mockups reuse the addon's pill artwork with illustrative spell pictograms and mock encounter values. They show the intended layout, not live gameplay or proof of runtime behavior. No addon or game code was executed to produce them.
-
-![Simulated defaults: targeted boss debuffs on, damage icons off](docs/previews/boss-debuffs-defaults-simulated.png)
-
-![Simulated alternative: boss debuffs off, damage icons on](docs/previews/boss-debuffs-alternate-simulated.png)
 
 ## Commands
 
 All addon commands are listed below. Layout editing does not require holding SHIFT.
 
-| Command        | Behavior                                                                                                                                             |
-| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Command        | Behavior                                                                                                                                                      |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `/sdui`        | Edit frame positions, sizes, timer text, boss debuffs and custom damage icons. Click the centered **Confirm** button to save all changes and lock the frames. |
-| `/sdui reset`  | Exit editing and restore layout, timer text and display defaults: visible run label, boss debuffs on, damage icons off. |
-| `/copy`        | Open a snapshot of raw chat messages and events, including hidden messages; press **Ctrl+C** to copy the selected text.                              |
-| `/sct`         | Show the available combat-text modes and the currently selected mode.                                                                                |
-| `/sct on`      | Custom SCT with optional icons controlled in `/sdui`; native outgoing damage text disabled.                                                                                    |
-| `/sct off`     | Both custom and native outgoing damage text disabled.                                                                                                |
-| `/sct default` | Native outgoing damage text only.                                                                                                                    |
+| `/sdui reset`  | Exit editing and restore layout, timer text and display defaults: visible run label, boss debuffs on, damage icons off.                                       |
+| `/copy`        | Open a snapshot of raw chat messages and events, including hidden messages; press **Ctrl+C** to copy the selected text.                                       |
+| `/sct`         | Show the available combat-text modes and the currently selected mode.                                                                                         |
+| `/sct on`      | Custom SCT with optional icons controlled in `/sdui`; native outgoing damage text disabled.                                                                   |
+| `/sct off`     | Both custom and native outgoing damage text disabled.                                                                                                         |
+| `/sct default` | Native outgoing damage text only.                                                                                                                             |
 
 The normal **V** binding controls whether native nameplates are visible; `/sct` controls custom combat text independently. In `/sct on` mode, invisible native plates continue tracking enemies when V is off, so matched hits can follow them. Your V preference stays unchanged. Visible, invisible or recently retired plate positions are matched using names and health changes; unmatched or ambiguous hits appear at a shared fallback position. Mode changes clear active and queued custom hits immediately. The selected `on`, `off` or `default` mode is saved across runs, `/reload` and game sessions. New installations and missing or invalid saved values start in custom `on` mode. Combat logs and the damage meter are unaffected. Chat clicks and hyperlinks keep their native behavior.
 

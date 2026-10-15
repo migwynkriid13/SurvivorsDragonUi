@@ -336,12 +336,20 @@ DFRL:NewMod("RunTimers", 5, function()
             fontDraft.showText = not fontDraft.showText
             PreviewFont(fontDraft)
         end)
-        debuffsLabel = FontEditorButton("", contentWidth, padding, -188, function()
-            DFRL.display.Set("bossDebuffs", not DFRL.display.Get("bossDebuffs"))
-        end)
-        damageIconsLabel = FontEditorButton("", contentWidth, padding, -222, function()
-            DFRL.display.Set("damageIcons", not DFRL.display.Get("damageIcons"))
-        end)
+        debuffsLabel = FontEditorButton(
+            "",
+            contentWidth,
+            padding,
+            -188,
+            function() DFRL.display.Set("bossDebuffs", not DFRL.display.Get("bossDebuffs")) end
+        )
+        damageIconsLabel = FontEditorButton(
+            "",
+            contentWidth,
+            padding,
+            -222,
+            function() DFRL.display.Set("damageIcons", not DFRL.display.Get("damageIcons")) end
+        )
         UpdateDisplayLabels()
         FontEditorButton(
             "Addon defaults",
@@ -846,10 +854,25 @@ DFRL:NewMod("RunTimers", 5, function()
             8 + math.mod(index - 1, DEBUFF_COLUMNS) * (DEBUFF_SIZE + DEBUFF_GAP),
             -DEBUFF_GAP - math.floor((index - 1) / DEBUFF_COLUMNS) * (DEBUFF_SIZE + DEBUFF_GAP)
         )
-        icon:SetBackdrop({ edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 1 })
+        icon:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8" })
+        icon:SetBackdropColor(0, 0, 0, 1)
+        -- Reuse straight metal strips from the pill artwork, keeping squared
+        -- corners instead of squeezing rounded end caps around a small icon.
+        local top = Texture(icon, "BorderCenter", "OVERLAY", DEBUFF_SIZE, 2, 1, 7 / 32)
+        top:SetTexCoord(0, 1, 5 / 32, 7 / 32)
+        top:SetPoint("TOPLEFT", icon, "TOPLEFT", 0, 0)
+        local bottom = Texture(icon, "BorderCenter", "OVERLAY", DEBUFF_SIZE, 2, 1, 26 / 32)
+        bottom:SetTexCoord(0, 1, 24 / 32, 26 / 32)
+        bottom:SetPoint("BOTTOMLEFT", icon, "BOTTOMLEFT", 0, 0)
+        local left = Texture(icon, "BorderLeft", "OVERLAY", 2, DEBUFF_SIZE - 4, 7 / 64, 20 / 32)
+        left:SetTexCoord(5 / 64, 7 / 64, 11 / 32, 20 / 32)
+        left:SetPoint("TOPLEFT", icon, "TOPLEFT", 0, -2)
+        local right = Texture(icon, "BorderRight", "OVERLAY", 2, DEBUFF_SIZE - 4, 30 / 64, 20 / 32)
+        right:SetTexCoord(28 / 64, 30 / 64, 11 / 32, 20 / 32)
+        right:SetPoint("TOPRIGHT", icon, "TOPRIGHT", 0, -2)
         icon.texture = icon:CreateTexture(nil, "ARTWORK")
-        icon.texture:SetPoint("TOPLEFT", icon, "TOPLEFT", 1, -1)
-        icon.texture:SetPoint("BOTTOMRIGHT", icon, "BOTTOMRIGHT", -1, 1)
+        icon.texture:SetPoint("TOPLEFT", icon, "TOPLEFT", 2, -2)
+        icon.texture:SetPoint("BOTTOMRIGHT", icon, "BOTTOMRIGHT", -2, 2)
         icon.texture:SetTexCoord(0.07, 0.93, 0.07, 0.93)
         icon.count = icon:CreateFontString(nil, "OVERLAY")
         icon.count:SetFont("DEFAULT", 10, "OUTLINE")
@@ -875,13 +898,11 @@ DFRL:NewMod("RunTimers", 5, function()
             for index = 1, DEBUFF_LIMIT do
                 -- The 1.12 API returns only texture, applications and dispel
                 -- type. No durations or effects for untargeted bosses are exposed.
-                local texture, applications, dispelType = UnitDebuff("target", index)
+                local texture, applications = UnitDebuff("target", index)
                 if not texture then break end
                 local icon = DebuffIcon(row, index)
                 icon.texture:SetTexture(texture)
                 icon.count:SetText(IsNumber(applications) and applications > 1 and tostring(applications) or "")
-                local color = type(DebuffTypeColor) == "table" and DebuffTypeColor[dispelType or "none"] or nil
-                icon:SetBackdropBorderColor(color and color.r or 0.8, color and color.g or 0, color and color.b or 0, 1)
                 icon:Show()
                 if GameTooltip and GameTooltip:IsOwned(icon) and type(GameTooltip.SetUnitDebuff) == "function" then
                     GameTooltip:SetUnitDebuff("target", index)
@@ -1038,14 +1059,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 refreshRows = true
                 return
             end
-            if
-                arg1 ~= "AZSZONE"
-                and arg1 ~= "AZSRUN"
-                and arg1 ~= "AZSBOSSES"
-                and arg1 ~= "AZSUNITS"
-            then
-                return
-            end
+            if arg1 ~= "AZSZONE" and arg1 ~= "AZSRUN" and arg1 ~= "AZSBOSSES" and arg1 ~= "AZSUNITS" then return end
             refreshRows = true
         end
         Update()
