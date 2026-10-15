@@ -55,12 +55,19 @@ function DFRL.tools.CreateButton(parent, text, width, height)
     return button
 end
 
+-- The large health fill and its damage-loss overlay share the same artwork crop.
+DFRL.tools.LargeHealthFill = {
+    texture = DFRL:GetInfoOrCons("tex") .. "unitframes\\healthDF2.tga",
+    texCoords = { 4.5 / 128, 123.5 / 128, 5 / 32, 25 / 32 },
+}
+
 -- Reuse the original 256x128 portrait sheet, omitting its internal power-bar
 -- divider. Both large unit frames share one health fill across the full opening.
 function DFRL.tools.CreateHealthOnlyUnitBorder(frame, healthBar, portraitTexture, background, texturePath, portraitSide)
     local mirrored = portraitSide == "LEFT"
+    local healthFill = DFRL.tools.LargeHealthFill
     -- Keep the original shading, cropping off the texture's transparent padding.
-    healthBar:SetStatusBarTexture(DFRL:GetInfoOrCons("tex") .. "unitframes\\healthDF2.tga")
+    healthBar:SetStatusBarTexture(healthFill.texture)
     healthBar:SetWidth(mirrored and 122 or 137)
     healthBar:SetHeight(29)
     healthBar:SetFrameLevel(frame:GetFrameLevel() + 1)
@@ -74,7 +81,7 @@ function DFRL.tools.CreateHealthOnlyUnitBorder(frame, healthBar, portraitTexture
 
     local function CropHealthFill()
         local fill = healthBar:GetStatusBarTexture()
-        if fill then fill:SetTexCoord(4.5 / 128, 123.5 / 128, 5 / 32, 25 / 32) end
+        if fill then fill:SetTexCoord(unpack(healthFill.texCoords)) end
     end
     HookScript(healthBar, "OnValueChanged", CropHealthFill)
     CropHealthFill()

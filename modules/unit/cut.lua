@@ -87,8 +87,9 @@ DFRL:NewMod("Cut-Out", 1, function()
                 overlay:SetAllPoints(bar)
                 local texture = overlay:CreateTexture(nil, "OVERLAY")
                 if data[1] == "PlayerFrameHealthBar" or data[1] == "TargetFrameHealthBar" then
-                    texture:SetTexture(tex .. "healthDF2.tga")
-                    texture:SetTexCoord(4.5 / 128, 123.5 / 128, 5 / 32, 25 / 32)
+                    local healthFill = T.LargeHealthFill
+                    texture:SetTexture(healthFill.texture)
+                    texture:SetTexCoord(unpack(healthFill.texCoords))
                 elseif data[2] == "health" then
                     texture:SetTexture(tex .. "healthDF2.tga")
                 else

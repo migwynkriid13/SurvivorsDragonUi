@@ -112,10 +112,7 @@ DFRL:NewMod("ChatCopy", 0, function()
         _G.UISpecialFrames = _G.UISpecialFrames or {}
         table.insert(_G.UISpecialFrames, "SurvivorsDragonUiChatCopy")
         frame:Hide()
-        DFRL.layout.Register("copyWindow", frame, function(window)
-            window:ClearAllPoints()
-            window:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
-        end, {
+        DFRL.layout.Register("copyWindow", frame, nil, {
             onlyWhenShown = true,
             onMouseWheel = ScrollWheel,
             resize = "dimensions",

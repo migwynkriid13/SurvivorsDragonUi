@@ -35,9 +35,8 @@ DFRL:NewMod("Target", 1, function()
 
     local function HidePowerBar()
         if TargetFrameManaBar then
-            KillFrame(TargetFrameManaBar)
+            PermanentlyDisableFrame(TargetFrameManaBar)
             TargetFrameManaBar:SetAlpha(0)
-            TargetFrameManaBar.Show = TargetFrameManaBar.Hide
         end
         if TargetFrameManaBarText then
             TargetFrameManaBarText:SetText("")

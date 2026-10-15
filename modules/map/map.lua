@@ -130,12 +130,7 @@ DFRL:NewMod("Map", 1, function()
     DurabilityFrame:SetScale(0.7)
 
     for _, name in ipairs({ "QuestWatchFrame", "QuestTimerFrame" }) do
-        local frame = _G[name]
-        if frame then
-            KillFrame(frame)
-            frame.Show = frame.Hide
-            frame:SetScript("OnShow", function() this:Hide() end)
-        end
+        PermanentlyDisableFrame(_G[name])
     end
 
     DFRL.topPanel = panel

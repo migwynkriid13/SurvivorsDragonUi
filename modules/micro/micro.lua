@@ -53,17 +53,9 @@ DFRL:NewMod("Micro", 1, function()
         "SocialsMicroButton",
         "HelpMicroButton",
     }) do
-        local button = _G[name]
-        if button then
-            KillFrame(button)
-            button.Show = button.Hide
-            button:SetScript("OnShow", function() button:Hide() end)
-        end
+        PermanentlyDisableFrame(_G[name])
     end
     if MicroButtonPortrait then MicroButtonPortrait:Hide() end
     DFRL.microMenuContainer = container
-    DFRL.layout.Register("microMenu", container, function(frame)
-        frame:ClearAllPoints()
-        frame:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT", -15, 15)
-    end)
+    DFRL.layout.Register("microMenu", container)
 end)

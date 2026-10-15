@@ -265,41 +265,40 @@ local function ParsePeriodic(message)
     return nil
 end
 
+local function ParseDamageShield(message)
+    -- Native shield messages do not identify the originating aura.
+    local data = CaptureGlobal(message, "DAMAGESHIELDSELFOTHER", { "amount", "school", "targetName" })
+    if data then return Damage(data, "reflected", nil, nil, 1) end
+    data = CaptureGlobal(message, "DAMAGESHIELDOTHEROTHER", { "sourceName", "amount", "school", "targetName" })
+    if IsKnownOwnedSource(data) then return Damage(data, "reflected", nil, nil, 1) end
+    -- Native SPELLLOGMISS packets share the damageshield category.
+    data = ParseSpell(message)
+    if data then return data end
+    data = ParseSpell(message, 1)
+    if IsKnownOwnedSource(data) then return data end
+    return nil
+end
+
+-- The same event map drives parsing and the SCT frame's subscriptions.
+local combatEventHandlers = {
+    CHAT_MSG_COMBAT_SELF_HITS = ParseMeleeHit,
+    CHAT_MSG_COMBAT_PET_HITS = function(message) return ParseMeleeHit(message, 1) end,
+    CHAT_MSG_COMBAT_SELF_MISSES = ParseMeleeMiss,
+    CHAT_MSG_COMBAT_PET_MISSES = function(message) return ParseMeleeMiss(message, 1) end,
+    CHAT_MSG_SPELL_SELF_DAMAGE = ParseSpell,
+    CHAT_MSG_SPELL_PET_DAMAGE = function(message) return ParseSpell(message, 1) end,
+    CHAT_MSG_SPELL_PERIODIC_CREATURE_DAMAGE = ParsePeriodic,
+    CHAT_MSG_SPELL_PERIODIC_HOSTILEPLAYER_DAMAGE = ParsePeriodic,
+    CHAT_MSG_SPELL_PERIODIC_FRIENDLYPLAYER_DAMAGE = ParsePeriodic,
+    CHAT_MSG_SPELL_PERIODIC_PARTY_DAMAGE = ParsePeriodic,
+    CHAT_MSG_SPELL_DAMAGESHIELDS_ON_SELF = ParseDamageShield,
+    CHAT_MSG_SPELL_DAMAGESHIELDS_ON_OTHERS = ParseDamageShield,
+}
+DFRL.tools.NameplateCombatEventHandlers = combatEventHandlers
+
 function DFRL.tools.ParseNameplateCombatEvent(eventName, message)
     if type(message) ~= "string" or message == "" then return nil end
-    if eventName == "CHAT_MSG_COMBAT_SELF_HITS" then
-        return ParseMeleeHit(message)
-    elseif eventName == "CHAT_MSG_COMBAT_PET_HITS" then
-        return ParseMeleeHit(message, 1)
-    elseif eventName == "CHAT_MSG_COMBAT_SELF_MISSES" then
-        return ParseMeleeMiss(message)
-    elseif eventName == "CHAT_MSG_COMBAT_PET_MISSES" then
-        return ParseMeleeMiss(message, 1)
-    elseif eventName == "CHAT_MSG_SPELL_SELF_DAMAGE" then
-        return ParseSpell(message)
-    elseif eventName == "CHAT_MSG_SPELL_PET_DAMAGE" then
-        return ParseSpell(message, 1)
-    elseif
-        eventName == "CHAT_MSG_SPELL_PERIODIC_CREATURE_DAMAGE"
-        or eventName == "CHAT_MSG_SPELL_PERIODIC_HOSTILEPLAYER_DAMAGE"
-        or eventName == "CHAT_MSG_SPELL_PERIODIC_FRIENDLYPLAYER_DAMAGE"
-        or eventName == "CHAT_MSG_SPELL_PERIODIC_PARTY_DAMAGE"
-    then
-        return ParsePeriodic(message)
-    elseif
-        eventName == "CHAT_MSG_SPELL_DAMAGESHIELDS_ON_SELF"
-        or eventName == "CHAT_MSG_SPELL_DAMAGESHIELDS_ON_OTHERS"
-    then
-        -- Native shield messages do not identify the originating aura.
-        local data = CaptureGlobal(message, "DAMAGESHIELDSELFOTHER", { "amount", "school", "targetName" })
-        if data then return Damage(data, "reflected", nil, nil, 1) end
-        data = CaptureGlobal(message, "DAMAGESHIELDOTHEROTHER", { "sourceName", "amount", "school", "targetName" })
-        if IsKnownOwnedSource(data) then return Damage(data, "reflected", nil, nil, 1) end
-        -- Native SPELLLOGMISS packets share the damageshield category.
-        data = ParseSpell(message)
-        if data then return data end
-        data = ParseSpell(message, 1)
-        if IsKnownOwnedSource(data) then return data end
-    end
+    local handler = combatEventHandlers[eventName]
+    if handler then return handler(message) end
     return nil
 end

@@ -26,9 +26,8 @@ DFRL:NewMod("Player", 1, function()
 
     local function HidePowerBar()
         if PlayerFrameManaBar then
-            KillFrame(PlayerFrameManaBar)
+            PermanentlyDisableFrame(PlayerFrameManaBar)
             PlayerFrameManaBar:SetAlpha(0)
-            PlayerFrameManaBar.Show = PlayerFrameManaBar.Hide
         end
         if PlayerFrameManaBarText then
             PlayerFrameManaBarText:SetText("")
