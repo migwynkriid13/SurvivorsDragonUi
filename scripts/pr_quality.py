@@ -1,21 +1,27 @@
 """Read-only PR formatting and local dead-code checks, run only in GitHub CI.
 
-Only changed files are checked, not the unchanged legacy baseline. No Lua file
-is loaded or executed. Reports and suggested formatting patches go to dist/.
+Every tracked Lua source and owned Markdown/JSON/YAML file is checked on every
+PR push. No Lua file is loaded or executed. Reports and suggested formatting
+patches go to dist/.
 """
 
 import difflib
 import json
 import os
 from pathlib import Path
-import re
 import subprocess
 import sys
 
 
 REPORTS = Path("dist/pr-quality")
-MANIFEST = REPORTS / "changed-files.json"
+MANIFEST = REPORTS / "source-files.json"
 PRETTIER_SUFFIXES = {".json", ".md", ".markdown", ".yaml", ".yml"}
+# Keep the owner's supplied API reference verbatim and upstream attribution
+# untouched. These exclusions do not omit any addon Lua sources.
+VERBATIM_TEXT = {
+    "docs/AzerothSurvivors-Addon-API.md",
+    "third_party/WidgetStatusBar-SOURCE.md",
+}
 DEAD_CODE_WARNINGS = ("211", "213", "231", "241", "311", "331", "511", "512")
 
 
@@ -24,19 +30,10 @@ def git(*arguments):
 
 
 def collect():
-    base = os.environ["PR_BASE_SHA"]
-    head = os.environ["PR_HEAD_SHA"]
-    for revision in (base, head):
-        if not re.fullmatch(r"[0-9a-fA-F]{40}", revision):
-            raise ValueError("Expected a complete Git SHA from PR metadata")
-    ancestor = git("merge-base", base, head).decode().strip()
-    changed = git(
-        "diff", "--name-only", "--diff-filter=ACMR", "--no-renames", "-z",
-        ancestor, head, "--",
-    ).decode().split("\0")
+    tracked = git("ls-files", "--cached", "-z").decode().split("\0")
     root = Path.cwd().resolve()
     files = {"lua": [], "prettier": []}
-    for name in changed:
+    for name in tracked:
         if not name:
             continue
         path = Path(name)
@@ -46,7 +43,7 @@ def collect():
             continue
         if path.suffix.lower() == ".lua":
             files["lua"].append(name)
-        elif path.suffix.lower() in PRETTIER_SUFFIXES:
+        elif path.suffix.lower() in PRETTIER_SUFFIXES and name not in VERBATIM_TEXT:
             files["prettier"].append(name)
     REPORTS.mkdir(parents=True, exist_ok=True)
     MANIFEST.write_text(json.dumps(files, indent=2) + "\n", encoding="utf-8")
@@ -57,11 +54,13 @@ def collect():
     with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as summary:
         summary.write(
             "## PR code quality\n\n"
-            f"Checking {len(files['lua'])} changed Lua file(s) and "
-            f"{len(files['prettier'])} changed Markdown/JSON/YAML file(s).\n\n"
-            "Checks cover whole changed files; untouched legacy files are excluded. "
-            "Existing formatting in a file may need updating when it is first touched. "
-            "No addon or game code is executed.\n\n"
+            f"Checking all {len(files['lua'])} tracked Lua file(s) and "
+            f"{len(files['prettier'])} owned Markdown/JSON/YAML file(s).\n\n"
+            "The complete codebase is checked on every PR push, including unchanged "
+            "files. No addon or game code is executed.\n\n"
+            "Formatting preserves the verbatim API reference "
+            "`docs/AzerothSurvivors-Addon-API.md` and upstream attribution "
+            "`third_party/WidgetStatusBar-SOURCE.md` without rewriting them.\n\n"
             "Dead-code analysis covers unused locals/loop variables, unused local "
             "assignments and unreachable or single-iteration loops. It does not prove "
             "that dynamically registered globals, callbacks or assets are unused. "
@@ -118,7 +117,7 @@ def lua_format(files):
         reports.append(result.stdout + result.stderr)
     report = "".join(reports)
     (REPORTS / "stylua.patch").write_text(report, encoding="utf-8")
-    print(report or "All changed Lua files use the configured formatting.")
+    print(report or "All tracked Lua files use the configured formatting.")
     return failed
 
 
@@ -135,7 +134,7 @@ def dead_code(files):
         reports.append(result.stdout + result.stderr)
     report = "".join(reports)
     (REPORTS / "dead-code.log").write_text(report, encoding="utf-8")
-    print(report or "No configured local dead-code warnings in changed Lua files.")
+    print(report or "No configured local dead-code warnings in tracked Lua files.")
     return failed
 
 
