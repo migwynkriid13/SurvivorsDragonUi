@@ -10,6 +10,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local FALLBACK_ICON = "Interface\\Icons\\INV_Misc_QuestionMark"
     local ATTACK_ICON = "Interface\\Icons\\INV_Sword_04"
     local TEXT_DURATION = 1.45
+    local FOLLOW_TIME = 0.08
     local EVENT_SETTLE = 0.08
     local EVENT_FALLBACK_DELAY = 0.16
     local RECENT_PLATE_TIME = 0.65
@@ -50,6 +51,8 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         and WorldFrame.SetHitRectInsets
 
     local function CustomEnabled() return sctMode == "on" end
+
+    local function IsFiniteNumber(value) return type(value) == "number" and value - value == 0 end
 
     local function IsEnemyPlate(data)
         if not data.bar or not data.bar.GetStatusBarColor then return false end
@@ -178,15 +181,50 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         return IsEnemyPlate(data)
     end
 
-    local function SamplePosition(plate, origin)
+    local function SamplePosition(plate, origin, now)
         local x, y = plate:GetCenter()
-        if not x or not y then return end
-        if plate.GetTop then y = plate:GetTop() or y end
+        if not IsFiniteNumber(x) or not IsFiniteNumber(y) then return end
         local rootScale = WorldFrame:GetEffectiveScale() or 1
         local plateScale = plate:GetEffectiveScale() or rootScale
+        if not IsFiniteNumber(rootScale) or rootScale <= 0 or not IsFiniteNumber(plateScale) or plateScale <= 0 then
+            return
+        end
         local ratio = plateScale / rootScale
-        origin.x = x * ratio - (WorldFrame:GetLeft() or 0)
-        origin.y = y * ratio - (WorldFrame:GetBottom() or 0)
+        local left, bottom = WorldFrame:GetLeft() or 0, WorldFrame:GetBottom() or 0
+        x, y = x * ratio - left, y * ratio - bottom
+        local width, height = WorldFrame:GetWidth(), WorldFrame:GetHeight()
+        local halfWidth = (plate:GetWidth() or 0) * ratio * 0.5
+        local halfHeight = (plate:GetHeight() or 0) * ratio * 0.5
+        if
+            not IsFiniteNumber(x)
+            or not IsFiniteNumber(y)
+            or not IsFiniteNumber(width)
+            or not IsFiniteNumber(height)
+            or width <= 0
+            or height <= 0
+            or not IsFiniteNumber(halfWidth)
+            or not IsFiniteNumber(halfHeight)
+            or halfWidth < 0
+            or halfHeight < 0
+            or x < -halfWidth
+            or x > width + halfWidth
+            or y < -halfHeight
+            or y > height + halfHeight
+        then
+            return
+        end
+        -- Test the center with the native extents, so partly visible plates
+        -- at the screen edge remain usable even when their top is outside it.
+        local top = plate.GetTop and plate:GetTop()
+        if top then
+            if not IsFiniteNumber(top) then return end
+            y = top * ratio - bottom
+        end
+        if not IsFiniteNumber(y) then return end
+        -- Keep the previous usable point when projection is unavailable. It
+        -- still belongs to this incarnation and never restarts an active hit.
+        origin.x, origin.y = x, y
+        origin.positionAt = now
     end
 
     local function SampleHealth(data, origin, now)
@@ -251,7 +289,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             table.insert(origins, origin)
         end
         origin.lastSeen = now
-        SamplePosition(plate, origin)
+        SamplePosition(plate, origin, now)
         SampleHealth(data, origin, now)
     end
 
@@ -353,6 +391,8 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                 origin.name == info.targetName
                 and origin.x
                 and origin.y
+                and origin.positionAt
+                and now - origin.positionAt <= RECENT_PLATE_TIME
                 and (origin.live or now - (origin.hiddenAt or origin.lastSeen) <= RECENT_PLATE_TIME)
             then
                 table.insert(candidates, origin)
@@ -521,6 +561,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         text.origin = origin
         text.x, text.y = x, y
         text.started = GetTime()
+        text.updatedAt = text.started
         text.impact = info.critical or info.kind == "miss"
         text.sizeScale = info.critical and 1.5 or 1
         text.arcX = arcDirection * math.random(36, 64)
@@ -568,11 +609,16 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             if progress >= 1 then
                 ReleaseText(index)
             else
-                -- While live, follow this exact plate incarnation. Once it
-                -- retires, its stored position remains and the arc keeps going.
+                -- Smooth only the cosmetic follow point. Native model/stack
+                -- placement can jump as enemies arrive; matching keeps raw
+                -- coordinates, while each hit keeps its own age, arc and fade.
                 if text.origin then
-                    text.x, text.y = text.origin.x, text.origin.y
+                    local elapsed = math.max(0, now - text.updatedAt)
+                    local follow = 1 - math.exp(-elapsed / FOLLOW_TIME)
+                    text.x = text.x + (text.origin.x - text.x) * follow
+                    text.y = text.y + (text.origin.y - text.y) * follow
                 end
+                text.updatedAt = now
                 local x = text.x + text.arcX * progress
                 local y = text.y + 12 + text.launch * progress - text.gravity * progress * progress
                 text.holder:ClearAllPoints()
