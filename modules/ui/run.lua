@@ -14,6 +14,7 @@ DFRL:NewMod("RunTimers", 5, function()
     local MARKER_SIZE = 18
     local DEAD_MARKER_SCALE = 0.8
     local DEAD_MARKER_ALPHA = 0.7
+    local ACTIVE_GLOW_ALPHA, ACTIVE_GLOW_PULSE, ACTIVE_GLOW_PERIOD = 0.82, 0.06, 2.4
     local PHASES = {
         ready = true,
         playing = true,
@@ -785,7 +786,8 @@ DFRL:NewMod("RunTimers", 5, function()
                             glow:SetWidth(MARKER_SIZE)
                             glow:SetHeight(MARKER_SIZE)
                             glow:SetPoint("CENTER", marker, "CENTER", x * 1.5, y * 1.5)
-                            glow:SetVertexColor(1, 0.25, 0, 0.85)
+                            glow:SetVertexColor(1, 0.12, 0.02, 1)
+                            glow:SetAlpha(ACTIVE_GLOW_ALPHA)
                             glow:SetBlendMode("ADD")
                             table.insert(marker.glow, glow)
                         end
@@ -817,8 +819,9 @@ DFRL:NewMod("RunTimers", 5, function()
         end
     end
 
-    local function UpdateMarkerStates()
+    local function UpdateMarkerStates(seconds)
         -- Only the official schedule establishes active and defeated bosses.
+        local glowAlpha = ACTIVE_GLOW_ALPHA + ACTIVE_GLOW_PULSE * math.sin(seconds * 2 * math.pi / ACTIVE_GLOW_PERIOD)
         for index, marker in ipairs(markers) do
             local state = markerStates[index]
             if state then
@@ -834,6 +837,13 @@ DFRL:NewMod("RunTimers", 5, function()
                         marker.check:Show()
                     else
                         marker.check:Hide()
+                    end
+                end
+                if state == "up" then
+                    -- Cosmetic intensity follows the smooth native clock, so
+                    -- pausing the run also pauses the pulse. Never tint the skull.
+                    for _, glow in ipairs(marker.glow) do
+                        glow:SetAlpha(glowAlpha)
                     end
                 end
                 marker:Show()
@@ -1125,7 +1135,7 @@ DFRL:NewMod("RunTimers", 5, function()
             -- Missing schedule replay affects only spawn markers, never a clock
             -- whose native elapsed time and duration have already recovered.
             if refreshRows or not run:IsShown() or not scheduled then UpdateMarkers(maximum, scheduled or {}) end
-            UpdateMarkerStates()
+            UpdateMarkerStates(seconds)
             run:Show()
             if not TakeOver("clock") then ReleaseClock() end
         else
