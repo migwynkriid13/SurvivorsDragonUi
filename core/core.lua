@@ -1,4 +1,4 @@
--- AzerothSurvivors styling is fixed; independently edited frame geometry is saved.
+-- AzerothSurvivors styling is fixed; frame geometry and SCT mode are saved.
 DFRL = CreateFrame("Frame", nil, UIParent)
 DFRL.env = {}
 DFRL.tools = {}
