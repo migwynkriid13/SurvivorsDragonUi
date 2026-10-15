@@ -100,21 +100,57 @@ DFRL:NewMod("Mini", 1, function()
         UpdatePet()
     end
 
-    if TargetofTargetFrame and TargetofTargetHealthBar and TargetofTargetManaBar then
-        local target = AddValues(TargetofTargetFrame, TargetofTargetHealthBar, TargetofTargetManaBar, "targettarget")
-        if TargetofTargetTexture then
-            TargetofTargetTexture:SetTexture(tex .. "pet")
-            TargetofTargetTexture:SetVertexColor(1, 1, 1, 1)
-            TargetofTargetTexture:SetTexCoord(0, 1, 0, 1)
-            TargetofTargetTexture:ClearAllPoints()
-            TargetofTargetTexture:SetPoint("TOPLEFT", TargetofTargetFrame, "TOPLEFT", 0, 0)
-            TargetofTargetTexture:SetPoint("BOTTOMRIGHT", TargetofTargetFrame, "BOTTOMRIGHT", 20, -15)
+    if TargetofTargetFrame and TargetofTargetHealthBar then
+        local target = AddValues(TargetofTargetFrame, TargetofTargetHealthBar, nil, "targettarget")
+        PermanentlyDisableFrame(TargetofTargetManaBar)
+        if TargetofTargetManaBar then TargetofTargetManaBar:SetAlpha(0) end
+        for _, name in ipairs({
+            "TargetofTargetHealthBarText",
+            "TargetofTargetManaBarText",
+            "TargetofTargetFrameManaBarText",
+        }) do
+            local text = _G[name]
+            if text then
+                text:SetText("")
+                text:SetAlpha(0)
+                text:Hide()
+                text.Show = text.Hide
+            end
         end
+
+        local border = CreateFrame("Frame", nil, TargetofTargetFrame)
+        TargetofTargetHealthBar:SetFrameLevel(TargetofTargetFrame:GetFrameLevel() + 1)
+        border:SetFrameLevel(TargetofTargetHealthBar:GetFrameLevel() + 2)
+        border:SetAllPoints(TargetofTargetFrame)
+        target.health:SetParent(border)
+        if TargetofTargetTexture then
+            TargetofTargetTexture:SetAlpha(0)
+            TargetofTargetTexture:Hide()
+            TargetofTargetTexture.Show = TargetofTargetTexture.Hide
+        end
+        -- Preserve the original 128x64 portrait/border sheet at its existing size,
+        -- omitting only the interior divider between the old health/power rows.
+        local scaleX = (TargetofTargetFrame:GetWidth() + 20) / 128
+        local scaleY = (TargetofTargetFrame:GetHeight() + 15) / 64
+        local function AddBorderStrip(x, y, width, height)
+            local strip = border:CreateTexture(nil, "OVERLAY")
+            strip:SetTexture(tex .. "pet")
+            strip:SetTexCoord(x / 128, (x + width) / 128, y / 64, (y + height) / 64)
+            strip:SetPoint("TOPLEFT", border, "TOPLEFT", x * scaleX, -y * scaleY)
+            strip:SetWidth(width * scaleX)
+            strip:SetHeight(height * scaleY)
+        end
+        AddBorderStrip(0, 0, 44, 64)
+        AddBorderStrip(44, 0, 84, 22)
+        AddBorderStrip(44, 34, 84, 30)
+        AddBorderStrip(114, 22, 14, 12)
         if TargetFrame then
             TargetofTargetFrame:ClearAllPoints()
             TargetofTargetFrame:SetPoint("TOPLEFT", TargetFrame, "BOTTOM", 0, 20)
         end
         if TargetofTargetPortrait then
+            TargetofTargetPortrait:SetParent(border)
+            TargetofTargetPortrait:SetDrawLayer("ARTWORK")
             TargetofTargetPortrait:SetHeight(32)
             TargetofTargetPortrait:SetWidth(32)
         end
@@ -123,33 +159,31 @@ DFRL:NewMod("Mini", 1, function()
             TargetofTargetFrameDebuff1:SetPoint("TOPLEFT", TargetofTargetFrame, "BOTTOMLEFT", 40, 5)
         end
         if TargetofTargetBackground then
+            TargetofTargetBackground:SetTexture("Interface\\Buttons\\WHITE8X8")
+            TargetofTargetBackground:SetTexCoord(0, 1, 0, 1)
+            TargetofTargetBackground:SetVertexColor(0, 0, 0, 0.6)
             TargetofTargetBackground:ClearAllPoints()
-            TargetofTargetBackground:SetWidth(60)
-            TargetofTargetBackground:SetPoint("LEFT", TargetofTargetFrame, "LEFT", 40, -2)
+            TargetofTargetBackground:SetAllPoints(TargetofTargetHealthBar)
         end
         TargetofTargetHealthBar:SetStatusBarTexture(tex .. "UI-HUD-UnitFrame-TargetofTarget-PortraitOn-Bar-Health.tga")
         TargetofTargetHealthBar:SetWidth(60)
-        TargetofTargetHealthBar:SetHeight(11)
+        TargetofTargetHealthBar:SetHeight(16)
         TargetofTargetHealthBar:ClearAllPoints()
-        TargetofTargetHealthBar:SetPoint("LEFT", TargetofTargetFrame, "LEFT", 40, 1)
-        TargetofTargetManaBar:SetWidth(60)
-        TargetofTargetManaBar:SetHeight(5)
-        TargetofTargetManaBar:ClearAllPoints()
-        TargetofTargetManaBar:SetPoint("TOPLEFT", TargetofTargetHealthBar, "BOTTOMLEFT", 0, 0)
+        TargetofTargetHealthBar:SetPoint("LEFT", TargetofTargetFrame, "LEFT", 40, -1.5)
+        TargetofTargetHealthBar:SetScript("OnEnter", nil)
+        TargetofTargetHealthBar:SetScript("OnLeave", nil)
+        if TargetofTargetDeadText then
+            TargetofTargetDeadText:SetParent(border)
+            TargetofTargetDeadText:ClearAllPoints()
+            TargetofTargetDeadText:SetPoint("CENTER", TargetofTargetHealthBar, "CENTER", 0, 0)
+            TargetofTargetDeadText:SetFont(font, 9, "OUTLINE")
+        end
         if TargetofTargetFrame.name then
             TargetofTargetFrame.name:ClearAllPoints()
             TargetofTargetFrame.name:SetPoint("TOPLEFT", TargetofTargetFrame, "TOPLEFT", 40, 25)
             TargetofTargetFrame.name:SetFont(font, 9, "")
         end
         local function UpdateTarget()
-            local power = UnitPowerType("targettarget")
-            local texture = "UI-HUD-UnitFrame-TargetofTarget-PortraitOn-Bar-Mana"
-            if power == 1 then
-                texture = "UI-HUD-UnitFrame-TargetofTarget-PortraitOn-Bar-Rage"
-            elseif power == 2 then
-                texture = "UI-HUD-UnitFrame-TargetofTarget-PortraitOn-Bar-Focus"
-            end
-            TargetofTargetManaBar:SetStatusBarTexture(tex .. texture)
             if TargetofTargetFrame.name and UnitExists("targettarget") then
                 local name = UnitName("targettarget")
                 if name and string.len(name) > 5 then name = string.sub(name, 1, 8) .. "..." end
@@ -165,7 +199,6 @@ DFRL:NewMod("Mini", 1, function()
             end
         end
         HookScript(TargetofTargetHealthBar, "OnValueChanged", function() UpdateValues(target) end)
-        HookScript(TargetofTargetManaBar, "OnValueChanged", function() UpdateValues(target) end)
         UpdateTarget()
     end
 
