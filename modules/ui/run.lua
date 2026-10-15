@@ -91,12 +91,16 @@ DFRL:NewMod("RunTimers", 5, function()
     end
 
     local run, runBar, runText, overlay = Pill("DFRL_RunTimerPill", "FillBlue")
+    -- A failed native font load leaves the initialized DEFAULT face intact.
+    runText:SetFont("Fonts\\MORPHEUS.TTF", 14, "OUTLINE")
+    runText:SetShadowColor(0, 0, 0, 1)
+    runText:SetShadowOffset(1, -1)
     local runMoveRegion = CreateFrame("Frame", nil, run)
     runMoveRegion:SetPoint("TOPLEFT", run, "TOPLEFT", 0, 18)
     runMoveRegion:SetPoint("BOTTOMRIGHT", run, "BOTTOMRIGHT", 0, 0)
     DFRL.layout.Register("runTimer", run, function()
         run:ClearAllPoints()
-        run:SetPoint("TOP", UIParent, "TOP", 0, -38)
+        run:SetPoint("TOP", UIParent, "TOP", 0, -30)
     end, {region = runMoveRegion})
 
     -- Encounters share a movable group, independent of the run clock.
@@ -460,7 +464,7 @@ DFRL:NewMod("RunTimers", 5, function()
         if IsNumber(seconds) and maximum then
             runBar:SetMinMaxValues(0, maximum)
             runBar:SetValue(math.min(maximum, seconds))
-            runText:SetText("Run: " .. Clock(seconds) .. " / " .. Clock(maximum))
+            runText:SetText("RUN " .. Clock(seconds) .. " / " .. Clock(maximum))
             -- Missing schedule replay affects only spawn lines, never a clock
             -- whose native elapsed time and duration have already recovered.
             if refreshRows or not run:IsShown() then UpdateMarkers(maximum, times or {}) end
