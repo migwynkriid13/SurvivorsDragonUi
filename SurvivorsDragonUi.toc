@@ -13,6 +13,7 @@ core\fonts.lua
 core\display.lua
 core\layout.lua
 
+modules\nameplates\style.lua
 modules\nameplates\parser.lua
 modules\nameplates\sct.lua
 modules\bars\bars.lua

@@ -5,6 +5,7 @@
 
 DFRL:NewMod("NameplateCombatText", 6, function()
     local ParseCombatEvent = T.ParseNameplateCombatEvent
+    local plateStyle = T.NameplateStyle
     local BORDER = "Interface\\Tooltips\\Nameplate-Border"
     local FALLBACK_ICON = "Interface\\Icons\\INV_Misc_QuestionMark"
     local ATTACK_ICON = "Interface\\Icons\\INV_Sword_04"
@@ -101,6 +102,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         for frame, state in pairs(data.presentation) do
             MaskFrame(frame, state, false)
         end
+        if plateStyle then plateStyle.SetMasked(data, false) end
     end
     local function UpdatePresentation(plate, data)
         local masked = trackingSupported
@@ -112,6 +114,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             RestorePresentation(data)
             return
         end
+        if plateStyle then plateStyle.SetMasked(data, true) end
         local function Visit(frame)
             local state = data.presentation[frame]
             if not state then
@@ -224,6 +227,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     end
 
     local function RefreshPlate(plate, data, now)
+        if plateStyle then plateStyle.Update(plate, data) end
         UpdatePresentation(plate, data)
         if not IsShownEnemy(plate, data) then
             RetirePlate(plate)
@@ -292,8 +296,11 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             end
         end
         if not name or not bar then return end
-        local data = { nameRegion = name, bar = bar, presentation = {} }
+        local data = { nameRegion = name, bar = bar, nativeRegions = regions, presentation = {} }
         plates[plate] = data
+        -- Build the skin before the first recursive mask so V-off tracking
+        -- covers every visual child without touching the SCT data sources.
+        if plateStyle then plateStyle.Attach(plate, data) end
         HookScript(plate, "OnHide", function() RetirePlate(plate) end)
         HookScript(plate, "OnShow", function()
             RetirePlate(plate)
@@ -304,7 +311,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     end
 
     local function ScanPlates(force)
-        if not inWorld or not CustomEnabled() or not WorldFrame then return end
+        if not inWorld or not WorldFrame then return end
         local now = GetTime()
         local count = WorldFrame:GetNumChildren() or 0
         if count < discoveredChildren then discoveredChildren = 0 end
@@ -616,10 +623,9 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         ResetDisplay()
         ApplyDamageMode()
         ApplyPlateTracking(true)
-        if sctMode == "on" then
-            if damageIcons then RebuildSpellTextures() end
-            ScanPlates(true)
-        end
+        if sctMode == "on" and damageIcons then RebuildSpellTextures() end
+        -- Plate appearance is independent of the selected combat-text mode.
+        ScanPlates(true)
     end
 
     -- Module initialization uses DFRL's private environment; slash aliases
@@ -662,7 +668,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             ApplyDamageMode()
             ApplyPlateTracking(true)
             if sctMode == "on" and damageIcons then RebuildSpellTextures() end
-            if CustomEnabled() then ScanPlates(true) end
+            ScanPlates(true)
         elseif event == "PLAYER_LEAVING_WORLD" or event == "PLAYER_LOGOUT" then
             inWorld = false
             for _, data in pairs(plates) do
@@ -673,7 +679,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         elseif event == "SPELLS_CHANGED" then
             if sctMode == "on" and damageIcons then RebuildSpellTextures() end
         elseif event == "PLAYER_TARGET_CHANGED" then
-            if CustomEnabled() then ScanPlates(true) end
+            ScanPlates(true)
         elseif event == "CVAR_UPDATE" then
             ApplyDamageMode()
         else
@@ -681,8 +687,9 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         end
     end)
     frame:SetScript("OnUpdate", function()
-        if not inWorld or not CustomEnabled() then return end
+        if not inWorld then return end
         ScanPlates(false)
+        if not CustomEnabled() then return end
         local now = GetTime()
         UpdatePending(now)
         UpdateTexts(now)
