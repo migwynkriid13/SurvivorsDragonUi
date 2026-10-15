@@ -98,19 +98,16 @@ DFRL:NewMod("Layout", 0, function()
         if options.resize == "dimensions" then
             frame:SetScale(entry.defaultScale)
             frame:SetWidth(
-                Number(geometry.width)
-                        and Clamp(geometry.width, options.minWidth or 120, options.maxWidth or 2400)
+                Number(geometry.width) and Clamp(geometry.width, options.minWidth or 120, options.maxWidth or 2400)
                     or entry.defaultWidth
             )
             frame:SetHeight(
-                Number(geometry.height)
-                        and Clamp(geometry.height, options.minHeight or 80, options.maxHeight or 1600)
+                Number(geometry.height) and Clamp(geometry.height, options.minHeight or 80, options.maxHeight or 1600)
                     or entry.defaultHeight
             )
         else
             frame:SetScale(
-                Number(geometry.scale)
-                        and Clamp(geometry.scale, entry.defaultScale * 0.4, entry.defaultScale * 3)
+                Number(geometry.scale) and Clamp(geometry.scale, entry.defaultScale * 0.4, entry.defaultScale * 3)
                     or entry.defaultScale
             )
         end
