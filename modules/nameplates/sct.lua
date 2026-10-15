@@ -34,6 +34,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local arcDirection = 1
     local sctMode = _G.SurvivorsDragonUiSctMode
     if sctMode ~= "on" and sctMode ~= "off" and sctMode ~= "default" then sctMode = "on" end
+    local damageIcons = DFRL.display.Get("damageIcons")
     -- Keep V's visible request separate from the backing coordinate feed. The
     -- native verbs do not write FrameXML's saved NAMEPLATES_ON preference.
     local enemyPlatesEnabled = NAMEPLATES_ON and true or false
@@ -152,6 +153,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         text.icon:Hide()
         text.holder:ClearAllPoints()
         text.origin = nil
+        text.spell, text.damageType = nil, nil
         table.insert(textPool, text)
     end
 
@@ -420,6 +422,26 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         return FALLBACK_ICON
     end
 
+    local function UpdateIcon(text)
+        if damageIcons then
+            text.icon:SetTexture(CombatIcon(text))
+            text.icon:Show()
+        else
+            text.icon:SetTexture(nil)
+            text.icon:Hide()
+        end
+    end
+
+    DFRL.display.Listen(function()
+        local enabled = DFRL.display.Get("damageIcons")
+        if damageIcons == enabled then return end
+        damageIcons = enabled
+        if damageIcons and CustomEnabled() then RebuildSpellTextures() end
+        for _, text in ipairs(activeTexts) do
+            UpdateIcon(text)
+        end
+    end)
+
     local function AcquireText()
         -- All accepted hits get their full lifetime, even in a large AoE pack.
         -- The pool grows to peak concurrency; active entries are never evicted.
@@ -470,8 +492,8 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         text.label:SetText(tostring(value))
         text.label:SetTextColor(color[1], color[2], color[3])
         text.label:Show()
-        text.icon:SetTexture(CombatIcon(info))
-        text.icon:Show()
+        text.spell, text.damageType = info.spell, info.damageType
+        UpdateIcon(text)
         text.visual:SetScale(text.sizeScale * (text.impact and 0.5 or 1))
         text.visual:Show()
         text.holder:SetAlpha(1)
@@ -557,7 +579,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         ApplyDamageMode()
         ApplyPlateTracking(true)
         if sctMode == "on" then
-            RebuildSpellTextures()
+            if damageIcons then RebuildSpellTextures() end
             ScanPlates(true)
         end
     end
@@ -601,7 +623,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             ResetDisplay()
             ApplyDamageMode()
             ApplyPlateTracking(true)
-            if sctMode == "on" then RebuildSpellTextures() end
+            if sctMode == "on" and damageIcons then RebuildSpellTextures() end
             if CustomEnabled() then ScanPlates(true) end
         elseif event == "PLAYER_LEAVING_WORLD" or event == "PLAYER_LOGOUT" then
             inWorld = false
@@ -611,7 +633,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             ApplyPlateTracking(true)
             ResetDisplay()
         elseif event == "SPELLS_CHANGED" then
-            if sctMode == "on" then RebuildSpellTextures() end
+            if sctMode == "on" and damageIcons then RebuildSpellTextures() end
         elseif event == "PLAYER_TARGET_CHANGED" then
             if CustomEnabled() then ScanPlates(true) end
         elseif event == "CVAR_UPDATE" then

@@ -3,6 +3,7 @@
   "files": [
     "SurvivorsDragonUi.toc",
     "core/core.lua",
+    "core/display.lua",
     "core/error.lua",
     "core/fonts.lua",
     "core/layout.lua",

@@ -1,4 +1,4 @@
--- Save frame geometry, confirmed run timer font settings and the selected SCT mode.
+-- Save confirmed geometry, timer font/display choices and the selected SCT mode.
 DFRL = CreateFrame("Frame", nil, UIParent)
 DFRL.env = {}
 DFRL.tools = {}
