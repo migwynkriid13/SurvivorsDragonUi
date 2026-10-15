@@ -15,8 +15,8 @@ DFRL:NewMod("RunTimers", 5, function()
     local DEAD_MARKER_SCALE = 0.8
     local DEAD_MARKER_ALPHA = 0.7
     local ACTIVE_GLOW_PERIOD = 2.4
-    local ACTIVE_GLOW_MIN_ALPHA, ACTIVE_GLOW_MAX_ALPHA = 0.1, 0.2
-    local ACTIVE_GLOW_MIN_OFFSET, ACTIVE_GLOW_MAX_OFFSET = 0.75, 3.25
+    local ACTIVE_GLOW_MIN_ALPHA, ACTIVE_GLOW_MAX_ALPHA = 0.25, 0.5
+    local ACTIVE_GLOW_MIN_OFFSET, ACTIVE_GLOW_MAX_OFFSET = 0.75, 4.55
     local PHASES = {
         ready = true,
         playing = true,
@@ -778,7 +778,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 marker:SetHeight(MARKER_SIZE)
                 marker:EnableMouse(false)
                 marker.glow = {}
-                -- Low-opacity copies trace the native skull silhouette. Their
+                -- Translucent copies trace the native skull silhouette. Their
                 -- offsets breathe inward/outward beneath the unchanged skull.
                 for x = -1, 1 do
                     for y = -1, 1 do
@@ -796,7 +796,7 @@ DFRL:NewMod("RunTimers", 5, function()
                                 dx * ACTIVE_GLOW_MIN_OFFSET,
                                 dy * ACTIVE_GLOW_MIN_OFFSET
                             )
-                            glow:SetVertexColor(1, 0.08, 0.02, 1)
+                            glow:SetVertexColor(1, 0.25, 0, 1)
                             glow:SetAlpha(ACTIVE_GLOW_MIN_ALPHA)
                             glow:SetBlendMode("ADD")
                             table.insert(marker.glow, { texture = glow, x = dx, y = dy })
