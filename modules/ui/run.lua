@@ -16,7 +16,7 @@ DFRL:NewMod("RunTimers", 5, function()
     local DEAD_MARKER_ALPHA = 0.7
     local ACTIVE_GLOW_PERIOD = 2.4
     local ACTIVE_GLOW_MIN_ALPHA, ACTIVE_GLOW_MAX_ALPHA = 0.25, 0.5
-    local ACTIVE_GLOW_MIN_OFFSET, ACTIVE_GLOW_MAX_OFFSET = 0.75, 4.55
+    local ACTIVE_GLOW_MIN_OFFSET, ACTIVE_GLOW_MAX_OFFSET = 0.9, 4.55
     local PHASES = {
         ready = true,
         playing = true,
