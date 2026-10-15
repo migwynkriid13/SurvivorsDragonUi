@@ -2,7 +2,9 @@
 
 The owner announced native addon support in **Azeroth Survivors 0.87.0**, and the user supplied the official `addon_docs.md`. A verbatim copy is saved as `AzerothSurvivors-Addon-API.md` beside this note.
 
-This supplies everything needed for DragonSurvivorsUI's native run-progress and boss-health replacements, including control over the original HUD. Public users install only the addon; the old external REA companion is unnecessary and excluded.
+The owner's updated reference supplied on **2026-10-15** is preserved separately and verbatim in [AzerothSurvivors-Addon-API-2026-10-15.txt](AzerothSurvivors-Addon-API-2026-10-15.txt). It adds authoritative per-spawn boss/guardian debuffs through `AZS_GetDebuffs(id)`, superseding the former target-only limitation. The original Markdown reference remains unchanged.
+
+This supplies everything needed for SurvivorsDragonUi's native run-progress and boss-health replacements, including control over the original HUD. Users install only the addon; the old external REA companion is unnecessary and excluded.
 
 | Purpose                                                                    | Official interface                                             |
 | -------------------------------------------------------------------------- | -------------------------------------------------------------- |
@@ -12,9 +14,10 @@ This supplies everything needed for DragonSurvivorsUI's native run-progress and 
 | Complete boss-spawn schedule; boss-state skull, glow and checkmark display | `AZS_SCHEDULE`, each entry's `at` and `state`                  |
 | Every live boss, with stable identity within a run                         | `AZS_GetBosses()`: `id`, `name`, `hp`, **`hpm`**               |
 | Guardian bars sharing the native boss-HUD group                            | `AZS_GetGuardians()`: `id`, `name`, `hp`, `hpm`                |
+| Debuffs on every displayed boss and awake guardian                        | `AZS_GetDebuffs(id)`: native icons, stacks, timing and permanence |
 | Kills, current gold and the next cache's gold cost                         | `AZS_RUN.kills`, `AZS_RUN.gold`, `AZS_RUN.chest`               |
 | Show/hide native HUD groups                                                | `AZS_SetHudShown(part, shown)` and `AZS_IsHudShown(part)`      |
-| Immediate state/list refreshes                                             | `CHAT_MSG_ADDON`: `AZSZONE`, `AZSRUN`, `AZSBOSSES`, `AZSUNITS` |
+| Immediate state/list refreshes                                             | `CHAT_MSG_ADDON`: `AZSZONE`, `AZSRUN`, `AZSBOSSES`, `AZSUNITS`, `AZSDEBUFFS` |
 
 `modules/ui/run.lua` consumes these APIs directly. There is no companion sequence/acknowledgement protocol, independent run clock or heartbeat timeout. The native getter owns interpolation and pauses. The local 0.1-second accumulator only throttles list refreshes. The user-authorized reload-only schedule handoff below preserves already-received facts without writing native API tables.
 
@@ -32,7 +35,7 @@ After `/reload`, each HUD replacement reconnects independently when its required
 
 The API also exposes damage-meter lines, damage taken, spells/cooldowns, buffs, other hero/run statistics, targets and unit kinds. Those extra capabilities are available for future work; the current replacements cover run/encounter bars, the tally and their native visibility.
 
-The supplied release announcement establishes the **0.87.0+** requirement. It does not prove the locally installed executable has been updated. The implementation detects unavailable APIs and leaves the native HUD available. No tests, syntax checks, validation or game startups were run for this change, per the project instruction.
+The supplied release announcement establishes the **0.87.0+** requirement for the original run HUD APIs. Individual features also require their documented getters and snapshots from the matching game build. The implementation detects unavailable APIs and leaves the native HUD available. No tests, syntax checks, validation or game startups were run for this change, per the project instruction.
 
 ## Independent clock and marker recovery after reload — 2026-10-15
 
@@ -86,7 +89,7 @@ Smoothing never resets a hit's start time, arc, critical pop, color, alpha or fu
 
 ## Nameplate appearance integration — 2026-10-15
 
-The local nameplate style adapts the [Kui Nameplates Vanilla port's beta0.16 release](https://github.com/laytya/Kui-Namaplates/releases/tag/beta0.16), using the `Kui-Namaplates_beta0.16b.zip` asset. Its fixed 100-by-10 outer bar has a one-pixel black border, a 98-by-8 health fill, a centered name above and cyan target glow/arrows, with native raid markers retained. Health percentages and all level indicators, including the unknown-level skull, are omitted. Only its four required health-fill, frame-shadow and target textures are bundled. Upstream authorship/media notices and the full GPL-3.0 license remain in the shipped style module and `third_party/Kui-Nameplates-NOTICE.txt`; imported material retains its upstream terms. Appearance defaults are fixed in code and use DEFAULT. No upstream settings, profiles, estimated auras, cast tracking, health estimates, unit caches, libraries or client extensions are imported.
+The nameplate style adapts the [Kui Nameplates Vanilla port's beta0.16 release](https://github.com/laytya/Kui-Namaplates/releases/tag/beta0.16), using the `Kui-Namaplates_beta0.16b.zip` asset. Its fixed 100-by-10 outer bar has a one-pixel black border, a 98-by-8 health fill, a centered name above and cyan target glow/arrows, with native raid markers retained. Health percentages and all level indicators, including the unknown-level skull, are omitted. Only its four required health-fill, frame-shadow and target textures are bundled. Upstream authorship/media notices and the full GPL-3.0 license remain in the shipped style module and `third_party/Kui-Nameplates-NOTICE.txt`; imported material retains its upstream terms. Appearance defaults are fixed in code and use DEFAULT. No upstream settings, profiles, estimated auras, cast tracking, health estimates, unit caches, libraries or client extensions are imported.
 
 Each skin is a mouse-disabled child of the native plate. It reads the original health bar's range, value and reaction color and the original name region without modifying them. Native plate geometry, alpha, shown state and mouse-enabled state remain controlled by the client. Native artwork and omitted label regions are made transparent; the native border texture identity remains available for plate discovery. Target emphasis follows the client's target/non-target plate alpha as a presentation hint. None of the upstream name-based targeting scans, GUID caches or native targeting changes are included.
 
@@ -94,7 +97,7 @@ The same discovery loop refreshes appearance in all SCT modes. It builds each sk
 
 V-off masking also hides the entire custom visual child explicitly, including its black background, shadow and target artwork. Restoring presentation shows that child again. Native plate and health-bar frames remain shown with their original alpha, so invisible coordinate tracking and SCT animations continue. The complete-child masking from the black-rectangle fix is retained with the replacement style.
 
-This is a local preview for manual in-game inspection. No tests, syntax checks, validation, addon execution or game startups were run; visual appearance and SCT coexistence remain unverified in the packaged game.
+No tests, syntax checks, validation, addon execution or game startups were run; visual appearance and SCT coexistence remain unverified in the packaged game.
 
 ## First-allocation nameplate flash — 2026-10-15
 
@@ -146,15 +149,17 @@ The available faces are `DEFAULT` and the four client fonts listed in the [base 
 
 No local validation, tests, syntax checks, addon execution or game startups were run. Native-font loading and editing behavior in the packaged game remain unverified.
 
-## Local target debuffs and display controls — 2026-10-15
+## Native per-spawn debuffs and display controls — 2026-10-15
 
-Boss/guardian debuff textures, stack counts and dispel types come from the local client's 1.12 `UnitDebuff("target", index)` return values, up to 16 slots. `AZS_TARGET.id` and its kind match that target to the correct encounter pill; names are only a supplemental native-target consistency check. Neither `AZS_GetBosses()` nor `AZS_GetGuardians()` supplies aura lists. The [base aura implementation](https://github.com/samwhosung/benilla/blob/e5321beda0ba007db63549c7df6b913d82a76b5d/crates/benilla-ui/src/script/aura/mod.rs) returns texture, applications and dispel type without duration or caster. The [base unit resolver](https://github.com/samwhosung/benilla/blob/e5321beda0ba007db63549c7df6b913d82a76b5d/crates/benilla-ui/src/script/unit/resolve.rs) has no boss/spawn-id unit token. Consequently only the currently targeted boss or engaged guardian displays debuffs. All-boss simultaneous auras need owner-exposed per-spawn data; combat messages and name matching cannot supply authoritative identity or state.
+The owner's supplied [official reference](AzerothSurvivors-Addon-API-2026-10-15.txt) exposes `AZS_GetDebuffs(id)` for each boss or guardian spawn id. The addon reads that getter for every displayed live boss and awake guardian, including untargeted encounters. It feature-detects the getter and does not use `UnitDebuff`, target changes, names or combat messages to identify encounter auras. A missing getter or unavailable debuff list hides only the icons; valid encounter health bars remain independent.
 
-`PLAYER_TARGET_CHANGED` immediately clears icons and invalidates the previous official target identity. A later `AZSTGT` snapshot is consumed after the parser's event handlers; a same-tick packet observed after invalidation is fresh even while paused. A strictly newer `AZS_TARGET_UPDATED` timestamp also permits recovery. Missing target data, world leave/logout, retired rows and the off toggle clear icons and owned tooltips. Native `UNIT_AURA` updates and the existing 0.1-second encounter refresh rebuild live slots, including stack counts and tooltips; squared icon frames reuse straight strips of the pill’s metallic border artwork, without new assets or rounded caps. No guessed duration or private aura snapshot is retained. Debuffs sit below the encounter pill, wrap within the bar width and expand the movable group's bounds without overlapping the next encounter.
+The getter supplies `spell`, `name`, `icon`, `stacks`, optional `duration` and `remaining`, optional `dispelType`, and `permanent`. Its `remaining` value is worked out on every call from `AZS_GetRunTime()`, so the addon reads it during OnUpdate for smooth countdowns that pause with the native run clock. It never subtracts a private wall clock or invents a duration. Only `permanent == true` means no expiration; missing timing or a nil permanence value remains unknown. Permanent effects have no expiration countdown, and unknown timing does not gain one. `AZSDEBUFFS` announces list changes; an unchanged or paused list stays valid without a timeout. All returned native lists remain read-only.
+
+Rectangular icon frames retain the straight metallic border strips from the health pill, stack counts, and tooltips built from the API's spell name, dispel type and timing. Debuffs sit beneath each pill, wrap within the bar width and expand the movable group's bounds without overlapping the next encounter. Removed effects, unavailable API/data, retired rows, world leave/logout and the off toggle clear icons and owned tooltips. No debuff snapshot or gameplay state is written to SavedVariables. Recovery after `/reload` still requires the client to reinstall its getter and replay the current native debuff snapshot; no request/resync API is documented.
 
 The `/sdui` editor adds **Boss debuffs** (default on) and **Damage icons** (default off). Both preview live through the shared display preference store, including icons on already animating custom hits, without changing SCT mode, animation timing or native outgoing damage text. Confirm alone saves normalized boolean choices in `SurvivorsDragonUiDisplay`. World leave/logout/reload discard drafts; `/sdui reset` and **Addon defaults** clear the preferences and restore both defaults along with the existing full layout/font reset. These display preferences store no gameplay or native data.
 
-No local validation, tests, syntax checks or game/addon execution were run for this change; source-quality checks are left to the authorized GitHub Actions workflow. Base-source mechanisms do not establish packaged-game behavior.
+This integration requires a matching game build that provides the documented getter. No local validation, tests, syntax checks, formatting tools or game/addon execution were run. Countdown behavior, multi-encounter display and tooltips remain unverified in the packaged game.
 
 ## Native talent window — 2026-10-15
 

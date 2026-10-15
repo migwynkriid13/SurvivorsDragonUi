@@ -4,7 +4,7 @@ DFRL:NewMod("RunTimers", 5, function()
     local path = DFRL:GetInfoOrCons("tex") .. "timer\\"
     local BAR_WIDTH = 280
     local ROW_HEIGHT = 48
-    local DEBUFF_SIZE, DEBUFF_GAP, DEBUFF_LIMIT = 18, 4, 16
+    local DEBUFF_SIZE, DEBUFF_GAP = 18, 4
     local DEBUFF_COLUMNS = math.floor((BAR_WIDTH + DEBUFF_GAP) / (DEBUFF_SIZE + DEBUFF_GAP))
     local SKULL_ICON = "Interface\\TargetingFrame\\UI-TargetingFrame-Skull"
     local CHECK_ICON = "Interface\\Buttons\\UI-CheckBox-Check"
@@ -501,6 +501,7 @@ DFRL:NewMod("RunTimers", 5, function()
     local markers = {}
     local markerStates = {}
     local activeRows = {}
+    local rowOrder = {}
     local spareRows = {}
     local createdRows = 0
     local nativeParts = {}
@@ -518,8 +519,6 @@ DFRL:NewMod("RunTimers", 5, function()
     -- nil phase from destroying it before the native API has replayed AZSRUN.
     local scheduleCache = _G.SurvivorsDragonUiBossSchedule
     _G.SurvivorsDragonUiBossSchedule = nil
-    local targetChangedAt
-    local targetSnapshotReceived, targetPacketAt = false, nil
 
     local function Shown(value)
         if value == true or value == 1 or value == "1" then return true end
@@ -586,12 +585,15 @@ DFRL:NewMod("RunTimers", 5, function()
         icon:Hide()
         icon.texture:SetTexture(nil)
         icon.count:SetText("")
+        icon.time:SetText("")
+        icon.effect = nil
     end
 
     local function ClearDebuffs(row)
         for _, icon in ipairs(row.debuffs) do
             HideDebuff(icon)
         end
+        row.debuffHeight = 0
     end
 
     local function Retire(row)
@@ -600,6 +602,7 @@ DFRL:NewMod("RunTimers", 5, function()
         row.name:SetText("")
         row.health:SetText("")
         row.bar:SetValue(0)
+        row.id, row.key = nil, nil
         table.insert(spareRows, row)
     end
 
@@ -608,6 +611,7 @@ DFRL:NewMod("RunTimers", 5, function()
             Retire(row)
             activeRows[key] = nil
         end
+        rowOrder = {}
         bossGroup:Hide()
     end
 
@@ -932,29 +936,34 @@ DFRL:NewMod("RunTimers", 5, function()
         return { frame = frame, bar = bar, name = name, health = health, debuffs = {} }
     end
 
-    local function TargetEncounter(entries)
-        if not DFRL.display.Get("bossDebuffs") or type(UnitDebuff) ~= "function" then return end
-        local target = AZS_TARGET
-        -- A native target change can precede AZSTGT. Never read the new unit's
-        -- auras using the previous target's retained spawn id, even for namesakes.
-        if
-            type(target) ~= "table"
-            or not IsNumber(AZS_TARGET_UPDATED)
-            or (targetChangedAt and not targetSnapshotReceived and AZS_TARGET_UPDATED <= targetChangedAt)
-            or not UnitExists("target")
-            or UnitIsDead("target")
-            or UnitName("target") ~= target.name
-        then
-            return
+    local function Permanent(effect) return effect.permanent == true or effect.permanent == 1 end
+
+    local function DebuffRemaining(effect)
+        if not Permanent(effect) and IsNumber(effect.remaining) then return effect.remaining end
+    end
+
+    local function DebuffTooltip(icon)
+        local effect = icon.effect
+        if not GameTooltip or not effect then return end
+        GameTooltip:SetText(type(effect.name) == "string" and effect.name ~= "" and effect.name or "Debuff", 1, 1, 1)
+        if IsNumber(effect.stacks) and effect.stacks > 1 then
+            GameTooltip:AddLine("Stacks: " .. tostring(math.floor(effect.stacks)), 1, 1, 1)
         end
-        for _, entry in ipairs(entries) do
-            if
-                entry.id == target.id
-                and (entry.kind == target.kind or (entry.kind == "boss" and target.kind == "final"))
-            then
-                return entry.key
-            end
+        if type(effect.dispelType) == "string" and effect.dispelType ~= "" then
+            GameTooltip:AddLine(effect.dispelType, 0.65, 0.8, 1)
         end
+        local remaining = DebuffRemaining(effect)
+        if Permanent(effect) then
+            GameTooltip:AddLine("No expiration", 1, 0.85, 0.4)
+        elseif remaining then
+            GameTooltip:AddLine("Remaining: " .. Clock(math.ceil(remaining)), 1, 0.85, 0.4)
+        else
+            GameTooltip:AddLine("Remaining time unavailable", 0.7, 0.7, 0.7)
+        end
+        if not Permanent(effect) and IsNumber(effect.duration) and effect.duration > 0 then
+            GameTooltip:AddLine("Duration: " .. Clock(math.ceil(effect.duration)), 0.8, 0.8, 0.8)
+        end
+        GameTooltip:Show()
     end
 
     local function DebuffIcon(row, index)
@@ -993,13 +1002,14 @@ DFRL:NewMod("RunTimers", 5, function()
         icon.count = icon:CreateFontString(nil, "OVERLAY")
         icon.count:SetFont("DEFAULT", 10, "OUTLINE")
         icon.count:SetPoint("BOTTOMRIGHT", icon, "BOTTOMRIGHT", 1, -1)
+        icon.time = icon:CreateFontString(nil, "OVERLAY")
+        icon.time:SetFont("DEFAULT", 8, "OUTLINE")
+        icon.time:SetPoint("TOP", icon, "TOP", 0, -1)
         icon:EnableMouse(true)
         icon:SetScript("OnEnter", function()
-            if not GameTooltip or type(GameTooltip.SetUnitDebuff) ~= "function" then return end
-            local entries = EncounterRows()
-            if not entries or TargetEncounter(entries) ~= row.key then return end
+            if not GameTooltip or not icon.effect then return end
             GameTooltip:SetOwner(icon, "ANCHOR_BOTTOMRIGHT")
-            GameTooltip:SetUnitDebuff("target", index)
+            DebuffTooltip(icon)
         end)
         icon:SetScript("OnLeave", function()
             if GameTooltip and GameTooltip:IsOwned(icon) then GameTooltip:Hide() end
@@ -1008,22 +1018,34 @@ DFRL:NewMod("RunTimers", 5, function()
         return icon
     end
 
-    local function UpdateDebuffs(row, targeted)
+    local function UpdateDebuffs(row, enabled)
         local count = 0
-        if targeted then
-            for index = 1, DEBUFF_LIMIT do
-                -- The 1.12 API returns only texture, applications and dispel
-                -- type. No durations or effects for untargeted bosses are exposed.
-                local texture, applications = UnitDebuff("target", index)
-                if not texture then break end
-                local icon = DebuffIcon(row, index)
-                icon.texture:SetTexture(texture)
-                icon.count:SetText(IsNumber(applications) and applications > 1 and tostring(applications) or "")
-                icon:Show()
-                if GameTooltip and GameTooltip:IsOwned(icon) and type(GameTooltip.SetUnitDebuff) == "function" then
-                    GameTooltip:SetUnitDebuff("target", index)
+        local getter = _G.AZS_GetDebuffs
+        if enabled and type(getter) == "function" then
+            -- The getter owns timing and returns current effects for this exact
+            -- spawn, including when no unit is targeted. Never advance a local clock.
+            local ok, effects = pcall(getter, row.id)
+            if ok and type(effects) == "table" then
+                for _, effect in ipairs(effects) do
+                    if type(effect) == "table" and type(effect.icon) == "string" and effect.icon ~= "" then
+                        count = count + 1
+                        local icon = DebuffIcon(row, count)
+                        icon.effect = effect
+                        icon.texture:SetTexture(effect.icon)
+                        icon.count:SetText(
+                            IsNumber(effect.stacks) and effect.stacks > 1 and tostring(math.floor(effect.stacks)) or ""
+                        )
+                        local remaining = DebuffRemaining(effect)
+                        local text = ""
+                        if remaining then
+                            text = remaining >= 60 and (tostring(math.ceil(remaining / 60)) .. "m")
+                                or tostring(math.ceil(remaining))
+                        end
+                        icon.time:SetText(text)
+                        icon:Show()
+                        if GameTooltip and GameTooltip:IsOwned(icon) then DebuffTooltip(icon) end
+                    end
                 end
-                count = index
             end
         end
         for index = count + 1, table.getn(row.debuffs) do
@@ -1032,7 +1054,28 @@ DFRL:NewMod("RunTimers", 5, function()
         return math.ceil(count / DEBUFF_COLUMNS) * (DEBUFF_SIZE + DEBUFF_GAP)
     end
 
-    local function UpdateRows()
+    local function ReflowRows()
+        local offset = 0
+        for _, row in ipairs(rowOrder) do
+            row.frame:ClearAllPoints()
+            row.frame:SetPoint("TOP", bossGroup, "TOP", 0, -16 - offset)
+            offset = offset + ROW_HEIGHT + (row.debuffHeight or 0)
+        end
+        bossGroup:SetHeight(math.max(47, offset - 1))
+        DFRL.layout.Place("bossBars", bossGroup)
+    end
+
+    local function UpdateDebuffRows(phase, reflow)
+        local enabled = phase ~= "ready" and phase ~= "dead" and DFRL.display.Get("bossDebuffs")
+        for _, row in ipairs(rowOrder) do
+            local height = UpdateDebuffs(row, enabled)
+            if row.debuffHeight ~= height then reflow = true end
+            row.debuffHeight = height
+        end
+        if reflow then ReflowRows() end
+    end
+
+    local function UpdateRows(phase)
         local entries, seen = EncounterRows()
         if not entries then
             ClearRows()
@@ -1046,13 +1089,12 @@ DFRL:NewMod("RunTimers", 5, function()
             end
         end
         local count = table.getn(entries)
-        local targeted = TargetEncounter(entries)
         if count > 0 then
             bossGroup:Show()
         else
             bossGroup:Hide()
         end
-        local offset = 0
+        rowOrder = {}
         for _, entry in ipairs(entries) do
             local row = activeRows[entry.key]
             if not row then
@@ -1060,16 +1102,14 @@ DFRL:NewMod("RunTimers", 5, function()
                 activeRows[entry.key] = row
             end
             row.key = entry.key
-            row.frame:ClearAllPoints()
-            row.frame:SetPoint("TOP", bossGroup, "TOP", 0, -16 - offset)
+            row.id = entry.id
             row.bar:SetValue(math.min(1, entry.hp / entry.maximum))
             row.name:SetText(entry.name)
             row.health:SetText(tostring(math.floor(entry.hp)) .. " / " .. tostring(math.floor(entry.maximum)))
             row.frame:Show()
-            offset = offset + ROW_HEIGHT + UpdateDebuffs(row, targeted == entry.key)
+            table.insert(rowOrder, row)
         end
-        bossGroup:SetHeight(math.max(47, offset - 1))
-        DFRL.layout.Place("bossBars", bossGroup)
+        UpdateDebuffRows(phase, true)
         if not TakeOver("bosses") then
             ClearRows()
             Restore("bosses")
@@ -1128,10 +1168,6 @@ DFRL:NewMod("RunTimers", 5, function()
         local maximum = RunLength()
         local zone = type(AZS_ZONE) == "table" and AZS_ZONE.zone or nil
         if previousZone ~= zone or (previousTime and IsNumber(seconds) and seconds < previousTime) then
-            if previousZone or previousTime then
-                targetChangedAt = GetTime()
-                targetSnapshotReceived, targetPacketAt = false, nil
-            end
             ClearRows()
             refreshRows = true
         end
@@ -1160,7 +1196,11 @@ DFRL:NewMod("RunTimers", 5, function()
         if refreshRows then
             refreshRows = false
             UpdateTally()
-            UpdateRows()
+            UpdateRows(phase)
+        else
+            -- Native remaining time is calculated on every getter call, even
+            -- without a new AZSDEBUFFS packet and while the run is paused.
+            UpdateDebuffRows(phase)
         end
     end
 
@@ -1194,8 +1234,6 @@ DFRL:NewMod("RunTimers", 5, function()
     reader:RegisterEvent("PLAYER_ENTERING_WORLD")
     reader:RegisterEvent("PLAYER_LEAVING_WORLD")
     reader:RegisterEvent("PLAYER_LOGOUT")
-    reader:RegisterEvent("PLAYER_TARGET_CHANGED")
-    reader:RegisterEvent("UNIT_AURA")
     reader:SetScript("OnEvent", function()
         if event == "PLAYER_LEAVING_WORLD" or event == "PLAYER_LOGOUT" then
             if not reloading then
@@ -1203,30 +1241,14 @@ DFRL:NewMod("RunTimers", 5, function()
                 _G.SurvivorsDragonUiBossSchedule = nil
             end
             inWorld = false
-            targetChangedAt = GetTime()
-            targetSnapshotReceived, targetPacketAt = false, nil
             ReleaseHUD()
             return
         end
         if event == "PLAYER_ENTERING_WORLD" then
             inWorld = true
             refreshRows = true
-        elseif event == "PLAYER_TARGET_CHANGED" then
-            targetChangedAt = GetTime()
-            targetSnapshotReceived, targetPacketAt = false, nil
-            for _, row in pairs(activeRows) do
-                ClearDebuffs(row)
-            end
-            refreshRows = true
-        elseif event == "UNIT_AURA" then
-            if arg1 ~= "target" then return end
-            refreshRows = true
         elseif event == "CHAT_MSG_ADDON" then
-            if arg1 == "AZSTGT" then
-                -- Read after all event handlers, regardless of parser order.
-                -- An observed post-change packet may share the target event's
-                -- timestamp while paused; it is still a fresh native snapshot.
-                targetPacketAt = GetTime()
+            if arg1 == "AZSDEBUFFS" then
                 refreshRows = true
                 return
             end
@@ -1247,12 +1269,6 @@ DFRL:NewMod("RunTimers", 5, function()
         Update()
     end)
     reader:SetScript("OnUpdate", function()
-        if targetPacketAt then
-            targetSnapshotReceived = IsNumber(AZS_TARGET_UPDATED)
-                and AZS_TARGET_UPDATED >= targetPacketAt
-                and (not targetChangedAt or AZS_TARGET_UPDATED >= targetChangedAt)
-            targetPacketAt = nil
-        end
         -- List/marker refreshes are throttled; boss-state packets refresh them
         -- immediately. The pause-aware native clock is read every frame.
         pollAge = pollAge + (tonumber(arg1) or 0)

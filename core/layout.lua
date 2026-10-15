@@ -16,6 +16,8 @@ DFRL:NewMod("Layout", 0, function()
         microMenu = "Micro menu",
         buffs = "Buffs",
         minimap = "Minimap",
+        cacheWaypoint = "Cache waypoint",
+        guardianWaypoint = "Guardian waypoint",
         menu = "Main menu",
         chat = "Chat",
         copyWindow = "Copy",

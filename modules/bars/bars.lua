@@ -4,6 +4,14 @@ DFRL:NewMod("Bars", 1, function()
     local BUTTON_COUNT = 7
     local BUTTON_SPACING = 6
     local TEX_PATH = "Interface\\AddOns\\SurvivorsDragonUi\\media\\tex\\actionbars\\"
+    local defaults = {
+        bottom = 55,
+        topInset = 14,
+        sideInset = 6,
+        width = BUTTON_COUNT * ActionButton1:GetWidth() + (BUTTON_COUNT - 1) * BUTTON_SPACING,
+        height = ActionButton1:GetHeight(),
+    }
+    DFRL.actionBarDefaults = defaults
 
     local function DisableFrame(frame)
         if not frame then return end
@@ -117,17 +125,17 @@ DFRL:NewMod("Bars", 1, function()
     local function CreateBackground(bar)
         local left = bar:CreateTexture("DFRL_ActionBarLeftTexture", "BACKGROUND")
         left:SetTexture(TEX_PATH .. "HDActionBar.tga")
-        left:SetPoint("LEFT", bar, "LEFT", -6, 0)
+        left:SetPoint("LEFT", bar, "LEFT", -defaults.sideInset, 0)
         left:SetPoint("RIGHT", bar, "CENTER", 0, 0)
-        left:SetPoint("TOP", bar, "TOP", 0, 14)
-        left:SetPoint("BOTTOM", bar, "BOTTOM", 0, -14)
+        left:SetPoint("TOP", bar, "TOP", 0, defaults.topInset)
+        left:SetPoint("BOTTOM", bar, "BOTTOM", 0, -defaults.topInset)
 
         local right = bar:CreateTexture("DFRL_ActionBarRightTexture", "BACKGROUND")
         right:SetTexture(TEX_PATH .. "HDActionBar.tga")
         right:SetPoint("LEFT", bar, "CENTER", 0, 0)
-        right:SetPoint("RIGHT", bar, "RIGHT", 6, 0)
-        right:SetPoint("TOP", bar, "TOP", 0, 14)
-        right:SetPoint("BOTTOM", bar, "BOTTOM", 0, -14)
+        right:SetPoint("RIGHT", bar, "RIGHT", defaults.sideInset, 0)
+        right:SetPoint("TOP", bar, "TOP", 0, defaults.topInset)
+        right:SetPoint("BOTTOM", bar, "BOTTOM", 0, -defaults.topInset)
         right:SetTexCoord(1, 0, 0, 1)
         DFRL.actionBarBGleft = left
         DFRL.actionBarBGright = right
@@ -189,9 +197,9 @@ DFRL:NewMod("Bars", 1, function()
         HideStockBars()
 
         local mainBar = CreateFrame("Frame", "DFRL_MainBar", UIParent)
-        mainBar:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, 55)
-        mainBar:SetWidth(BUTTON_COUNT * ActionButton1:GetWidth() + (BUTTON_COUNT - 1) * BUTTON_SPACING)
-        mainBar:SetHeight(ActionButton1:GetHeight())
+        mainBar:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, defaults.bottom)
+        mainBar:SetWidth(defaults.width)
+        mainBar:SetHeight(defaults.height)
         mainBar:SetClampedToScreen(true)
         mainBar:SetFrameStrata("LOW")
         mainBar:SetFrameLevel(1)
@@ -223,11 +231,11 @@ DFRL:NewMod("Bars", 1, function()
         end
         _G.this = previousThis
         local moveRegion = CreateFrame("Frame", nil, mainBar)
-        moveRegion:SetPoint("TOPLEFT", mainBar, "TOPLEFT", -6, 14)
-        moveRegion:SetPoint("BOTTOMRIGHT", mainBar, "BOTTOMRIGHT", 6, 0)
+        moveRegion:SetPoint("TOPLEFT", mainBar, "TOPLEFT", -defaults.sideInset, defaults.topInset)
+        moveRegion:SetPoint("BOTTOMRIGHT", mainBar, "BOTTOMRIGHT", defaults.sideInset, 0)
         DFRL.layout.Register("actionBar", mainBar, function()
             mainBar:ClearAllPoints()
-            mainBar:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, 55)
+            mainBar:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, defaults.bottom)
         end, { region = moveRegion })
         if DFRL.AttachXPBar then DFRL.AttachXPBar(mainBar) end
         events:UnregisterEvent("PLAYER_ENTERING_WORLD")
