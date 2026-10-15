@@ -506,6 +506,15 @@ DFRL:NewMod("RunTimers", 5, function()
     local refreshRows = true
     local previousTime
     local previousZone
+    local previousPhase, previousNativeTime
+    local packetSequence, runSequence, scheduleSequence = 0, 0, 0
+    local zoneSequence, zoneRunPending
+    local scheduleBarrier = -1
+    local reloading = false
+    -- Only ReloadUI writes this handoff. Consume it once, keeping an initial
+    -- nil phase from destroying it before the native API has replayed AZSRUN.
+    local scheduleCache = _G.SurvivorsDragonUiBossSchedule
+    _G.SurvivorsDragonUiBossSchedule = nil
     local targetChangedAt
     local targetSnapshotReceived, targetPacketAt = false, nil
 
@@ -634,14 +643,16 @@ DFRL:NewMod("RunTimers", 5, function()
         refreshRows = true
     end
 
-    local function ScheduleMarkers(maximum)
-        local schedule = AZS_SCHEDULE
-        if type(schedule) ~= "table" then return nil end
+    local function ExpectedBosses()
         local state, zone = AZS_RUN, AZS_ZONE
         local expected = type(state) == "table" and state.bt or nil
         if not IsNumber(expected) or expected <= 0 then expected = type(zone) == "table" and zone.bt or nil end
         if not IsNumber(expected) or expected <= 0 or expected ~= math.floor(expected) then return nil end
+        return expected
+    end
 
+    local function ValidateSchedule(schedule, maximum, expected)
+        if type(schedule) ~= "table" then return nil end
         local entries = {}
         local seen, final = {}, false
         -- An empty table after /reload is not a received schedule. Require
@@ -667,10 +678,91 @@ DFRL:NewMod("RunTimers", 5, function()
                 if final or entry.at ~= maximum then return nil end
                 final = true
             end
-            table.insert(entries, { at = entry.at, state = entry.state })
+            table.insert(entries, {
+                index = entry.index,
+                at = entry.at,
+                final = entry.final == 1 or entry.final == true,
+                state = entry.state,
+            })
         end
         if table.getn(entries) ~= expected or not final then return nil end
         return entries
+    end
+
+    local function ScheduleSample(maximum, expected)
+        local state = AZS_RUN
+        if type(state) ~= "table" or state.fin ~= maximum or state.bt ~= expected then return nil end
+        for _, key in ipairs({ "t", "bs", "bk", "kills" }) do
+            if not IsNumber(state[key]) then return nil end
+        end
+        return { t = state.t, bs = state.bs, bk = state.bk, kills = state.kills }
+    end
+
+    local function ScheduleMarkers(maximum, phase)
+        local expected = ExpectedBosses()
+        if not expected then return nil end
+        local sample = not zoneRunPending and phase ~= "ready" and ScheduleSample(maximum, expected) or nil
+        local entries
+        -- After a known run boundary, retained native tables are not a fresh
+        -- schedule. Packet order is recorded before reading the parsed tables.
+        if scheduleSequence > scheduleBarrier then entries = ValidateSchedule(AZS_SCHEDULE, maximum, expected) end
+        if entries then
+            scheduleCache = nil
+            if sample then
+                local spawned, killed = 0, 0
+                for _, entry in ipairs(entries) do
+                    if entry.state ~= "due" then spawned = spawned + 1 end
+                    if entry.state == "dead" then killed = killed + 1 end
+                end
+                -- The two prefixes can arrive separately. Never stamp new run
+                -- counters onto old schedule states for the next reload.
+                if spawned == math.min(expected, sample.bs) and killed == math.min(expected, sample.bk) then
+                    scheduleCache = {
+                        version = 1,
+                        maximum = maximum,
+                        expected = expected,
+                        hero = UnitName("player"),
+                        entries = entries,
+                        sample = sample,
+                    }
+                end
+            end
+            return entries
+        end
+        -- A cache never supplies phase, time, length or boss count. Wait for
+        -- native data, including a raw clock sample rather than interpolation.
+        if not sample then return nil end
+        local cache = scheduleCache
+        local saved = type(cache) == "table" and cache.sample or nil
+        if
+            type(cache) ~= "table"
+            or cache.version ~= 1
+            or cache.maximum ~= maximum
+            or cache.expected ~= expected
+            or cache.hero ~= UnitName("player")
+            or type(saved) ~= "table"
+            or not IsNumber(saved.t)
+            or not IsNumber(saved.kills)
+            or sample.t < saved.t
+            or sample.kills < saved.kills
+            or sample.bs ~= saved.bs
+            or sample.bk ~= saved.bk
+        then
+            scheduleCache = nil
+            return nil
+        end
+        entries = ValidateSchedule(cache.entries, maximum, expected)
+        if not entries then
+            scheduleCache = nil
+            return nil
+        end
+        cache.sample = sample
+        return entries
+    end
+
+    local function InvalidateSchedule(sequence)
+        scheduleCache = nil
+        scheduleBarrier = math.max(scheduleBarrier, sequence)
     end
 
     local function UpdateMarkers(maximum, entries)
@@ -979,8 +1071,34 @@ DFRL:NewMod("RunTimers", 5, function()
         -- first; no old table values or invented clocks may stand in for it.
         local phase = Read("AZS_GetPhase")
         if not PHASES[phase] then
+            if phase ~= nil then InvalidateSchedule(packetSequence) end
             ReleaseHUD()
             return
+        end
+        local nativeTime = type(AZS_RUN) == "table" and AZS_RUN.t or nil
+        local zoneBoundary = zoneSequence
+        if zoneBoundary then
+            InvalidateSchedule(zoneBoundary)
+            zoneSequence = nil
+            zoneRunPending = zoneBoundary
+            previousPhase, previousNativeTime = nil, nil
+        end
+        -- Zone, schedule and run prefixes can land in different frames. Do not
+        -- mistake the first new clock sample for another boundary and reject
+        -- a schedule already received after AZSZONE.
+        if zoneRunPending and runSequence > zoneRunPending then zoneRunPending = nil end
+        if
+            not zoneRunPending
+            and (
+                (phase == "ready" and (scheduleCache or (previousPhase and previousPhase ~= "ready")))
+                or (previousNativeTime and IsNumber(nativeTime) and nativeTime < previousNativeTime)
+            )
+        then
+            InvalidateSchedule(runSequence)
+        end
+        if not zoneRunPending then
+            previousPhase = phase
+            if IsNumber(nativeTime) then previousNativeTime = nativeTime end
         end
         local seconds = Read("AZS_GetRunTime")
         local maximum = RunLength()
@@ -995,7 +1113,7 @@ DFRL:NewMod("RunTimers", 5, function()
         end
         previousZone = zone
         if IsNumber(seconds) then previousTime = seconds end
-        local scheduled = maximum and ScheduleMarkers(maximum) or nil
+        local scheduled = maximum and ScheduleMarkers(maximum, phase) or nil
         if IsNumber(seconds) and maximum then
             runBar:SetMinMaxValues(0, maximum)
             runBar:SetValue(math.min(maximum, seconds))
@@ -1022,6 +1140,31 @@ DFRL:NewMod("RunTimers", 5, function()
         end
     end
 
+    if type(_G.ReloadUI) == "function" then
+        local reloadUI = _G.ReloadUI
+        _G.ReloadUI = function()
+            -- Refresh from native data before the client saves addon variables.
+            -- Repeated reloads can hand off an accepted cached schedule too.
+            local ok = pcall(Update)
+            local phase = Read("AZS_GetPhase")
+            local maximum, expected = RunLength(), ExpectedBosses()
+            local sample = maximum and expected and ScheduleSample(maximum, expected) or nil
+            _G.SurvivorsDragonUiBossSchedule = nil
+            if
+                ok
+                and inWorld
+                and PHASES[phase]
+                and phase ~= "ready"
+                and IsNumber(Read("AZS_GetRunTime"))
+                and sample
+            then
+                _G.SurvivorsDragonUiBossSchedule = scheduleCache
+            end
+            reloading = true
+            return reloadUI()
+        end
+    end
+
     local reader = CreateFrame("Frame", "DFRL_NativeHUDReader", UIParent)
     reader:RegisterEvent("CHAT_MSG_ADDON")
     reader:RegisterEvent("PLAYER_ENTERING_WORLD")
@@ -1031,6 +1174,10 @@ DFRL:NewMod("RunTimers", 5, function()
     reader:RegisterEvent("UNIT_AURA")
     reader:SetScript("OnEvent", function()
         if event == "PLAYER_LEAVING_WORLD" or event == "PLAYER_LOGOUT" then
+            if not reloading then
+                InvalidateSchedule(packetSequence)
+                _G.SurvivorsDragonUiBossSchedule = nil
+            end
             inWorld = false
             targetChangedAt = GetTime()
             targetSnapshotReceived, targetPacketAt = false, nil
@@ -1060,7 +1207,18 @@ DFRL:NewMod("RunTimers", 5, function()
                 return
             end
             if arg1 ~= "AZSZONE" and arg1 ~= "AZSRUN" and arg1 ~= "AZSBOSSES" and arg1 ~= "AZSUNITS" then return end
+            packetSequence = packetSequence + 1
+            if arg1 == "AZSZONE" then
+                zoneSequence = packetSequence
+            elseif arg1 == "AZSRUN" then
+                runSequence = packetSequence
+            elseif arg1 == "AZSBOSSES" then
+                scheduleSequence = packetSequence
+            end
             refreshRows = true
+            -- The native parser may run after this handler. Read all prefixes
+            -- on the next frame so cache decisions see their parsed values.
+            return
         end
         Update()
     end)

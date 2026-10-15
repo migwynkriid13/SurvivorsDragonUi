@@ -1,4 +1,4 @@
--- Save confirmed geometry, timer font/display choices and the selected SCT mode.
+-- Save confirmed preferences and the one-use boss schedule handoff for ReloadUI.
 DFRL = CreateFrame("Frame", nil, UIParent)
 DFRL.env = {}
 DFRL.tools = {}
