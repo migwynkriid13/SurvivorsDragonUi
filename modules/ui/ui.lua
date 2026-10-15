@@ -2,7 +2,6 @@ DFRL:NewMod("Ui", 5, function()
     -- locals
     local UnitHealth = UnitHealth
     local UnitHealthMax = UnitHealthMax
-    local GetTime = GetTime
     local sin = math.sin
 
     -- hide stuff
@@ -54,7 +53,7 @@ DFRL:NewMod("Ui", 5, function()
         local questLogFrame = QuestLogFrame
         if questLogFrame then
             local regions = {questLogFrame:GetRegions()}
-            for i, region in ipairs(regions) do
+            for _, region in ipairs(regions) do
                 if region:GetObjectType() == "Texture" then
                     local texture = region:GetTexture()
                     if texture then

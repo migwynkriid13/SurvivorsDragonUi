@@ -168,7 +168,7 @@ DFRL:NewMod("Chat", 1, function()
         local function Scroll(state, direction)
             if direction == 0 then return end
             local steps = IsShiftKeyDown() and 10 or 3
-            for i = 1, steps do
+            for _ = 1, steps do
                 if direction > 0 then state.native:ScrollUp() else state.native:ScrollDown() end
             end
             if state.native.AtBottom then state.scrolled = not AtBottom(state)

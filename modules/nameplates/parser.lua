@@ -104,7 +104,6 @@ local function CaptureGlobal(message, globalName, fields)
     if not startPosition then return nil end
     local captures = {first, second, third, fourth, fifth, sixth}
     local result = {}
-    local index
     for index = 1, table.getn(fields) do
         local field = fields[index]
         local captureIndex = pattern.capturesByArgument[index] or index
@@ -122,7 +121,6 @@ end
 local function CaptureOutgoing(message, stem, fields, pet)
     if not pet then return CaptureGlobal(message, stem .. "SELFOTHER", fields) end
     local namedFields = {"sourceName"}
-    local index
     for index = 1, table.getn(fields) do
         table.insert(namedFields, fields[index])
     end
@@ -204,7 +202,6 @@ local function ParseMeleeHit(message, pet)
 end
 
 local function ParseMeleeMiss(message, pet)
-    local index
     for index = 1, table.getn(meleeMissPatterns) do
         local pattern = meleeMissPatterns[index]
         local data = CaptureOutgoing(message, pattern[1], {"targetName"}, pet)
@@ -225,7 +222,6 @@ local function ParseSpell(message, pet)
     data = CaptureOutgoing(message, "SPELLSPLITDAMAGE", {"spell", "targetName", "amount"}, pet)
     if data then return Damage(data, "spell") end
 
-    local index
     for index = 1, table.getn(spellMissPatterns) do
         local pattern = spellMissPatterns[index]
         data = CaptureOutgoing(message, pattern[1], {"spell", "targetName"}, pet)

@@ -146,11 +146,9 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     end
 
     local function ResetDisplay()
-        local index
         for index = table.getn(activeTexts), 1, -1 do ReleaseText(index) end
         pending = {}
         origins = {}
-        local _, data
         for _, data in pairs(plates) do data.origin = nil end
         discoveredChildren = 0
     end
@@ -244,7 +242,6 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         local border, glow, name, level, skull, raid = plate:GetRegions()
         local regions = {border, glow, name, level, skull, raid}
         local hasBorder = false
-        local index
         for index = 1, table.getn(regions) do
             local region = regions[index]
             if region and region.GetObjectType and region:GetObjectType() == "Texture"
@@ -297,15 +294,12 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         if force or count > discoveredChildren then
             local children = {WorldFrame:GetChildren()}
             local first = force and 1 or discoveredChildren + 1
-            local index
             for index = first, count do DiscoverPlate(children[index], now) end
             discoveredChildren = count
         end
         -- Snapshot on every frame, rather than every tenth of a second: a
         -- one-shot enemy can disappear between two of the old scans.
-        local plate, data
         for plate, data in pairs(plates) do RefreshPlate(plate, data, now) end
-        local index
         for index = table.getn(origins), 1, -1 do
             local origin = origins[index]
             if not origin.live and now - (origin.hiddenAt or origin.lastSeen) > RECENT_PLATE_TIME then
@@ -327,7 +321,6 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         local candidates = {}
         local losses = {}
         local exact = {}
-        local index
         for index = 1, table.getn(origins) do
             local origin = origins[index]
             if origin.name == info.targetName and origin.x and origin.y
@@ -376,10 +369,8 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         spellTextures = {}
         if not keepMisses then missingSpellTextures = {} end
         local book = BOOKTYPE_SPELL or "spell"
-        local tab
         for tab = 1, GetNumSpellTabs() or 0 do
             local _, _, offset, count = GetSpellTabInfo(tab)
-            local index
             for index = (offset or 0) + 1, (offset or 0) + (count or 0) do
                 local name = GetSpellName(index, book)
                 local texture = GetSpellTexture(index, book)
@@ -485,7 +476,6 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     end
 
     local function UpdateTexts(now)
-        local index
         for index = table.getn(activeTexts), 1, -1 do
             local text = activeTexts[index]
             local progress = (now - text.started) / TEXT_DURATION
@@ -567,7 +557,6 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     end
 
     local frame = CreateFrame("Frame", "DFRL_NameplateCombatText")
-    local index
     for index = 1, table.getn(COMBAT_EVENTS) do frame:RegisterEvent(COMBAT_EVENTS[index]) end
     frame:RegisterEvent("PLAYER_ENTERING_WORLD")
     frame:RegisterEvent("PLAYER_LEAVING_WORLD")
