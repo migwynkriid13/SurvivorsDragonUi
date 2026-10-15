@@ -60,7 +60,9 @@ The official API reference is included in [docs/AzerothSurvivors-Addon-API.md](d
 
 ## Automated releases
 
-Each new commit pushed to `main` builds `SurvivorsDragonUi.zip` and gets a GitHub release tagged with its commit SHA, including when several commits are pushed together. The ZIP contains the installable `SurvivorsDragonUi/` folder. Re-running a release replaces its ZIP without creating another release for the same commit.
+Each push to `main` that changes `SurvivorsDragonUi.toc`, `core/`, `modules/` or `media/` builds one `SurvivorsDragonUi.zip` from that push's final commit. Documentation, license, script and workflow changes alone do not trigger a release. The ZIP contains the installable `SurvivorsDragonUi/` folder.
+
+Releases use the final commit's SHA as their tag. Re-running the same build replaces its ZIP without creating another release. Publication is serialized, and an older rerun cannot replace a newer Latest release. The stable [latest ZIP download](https://github.com/migwynkriid13/SurvivorsDragonUi/releases/latest/download/SurvivorsDragonUi.zip) points to the newest published build. A manual workflow run on `main` can also package the current commit.
 
 Packaging and publishing do not run the addon, launch the game, or perform addon validation. A published release is a packaged snapshot, not proof of in-game validation.
 
@@ -69,6 +71,12 @@ To package locally with Python 3:
 ```sh
 python3 scripts/package.py dist/SurvivorsDragonUi.zip
 ```
+
+## Pull request checks
+
+Pull requests run one source-quality job on files changed from their merge base. Prettier checks Markdown, JSON and YAML; StyLua checks Lua formatting; Luacheck reports unused local variables and assignments, unreachable code and single-iteration loops. These checks never load the addon or start the game.
+
+The checks cover whole changed files, so editing an older file can require formatting that file. CI uploads suggested formatting patches and analysis logs without committing changes automatically. Lua formatting uses the nearest supported grammar, Lua 5.1; it does not establish 1.12 runtime compatibility. Dead-code analysis excludes dynamic WoW/DFRL globals and unused callback arguments, and cannot prove that globally registered callbacks or assets are unused.
 
 ## License
 
