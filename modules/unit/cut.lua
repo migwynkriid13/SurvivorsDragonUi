@@ -9,9 +9,7 @@ DFRL:NewMod("Cut-Out", 1, function()
     local frame = CreateFrame("Frame")
     local initialized = false
 
-    local function ReadValue(cutout)
-        return UnitHealth(cutout.unit), UnitHealthMax(cutout.unit)
-    end
+    local function ReadValue(cutout) return UnitHealth(cutout.unit), UnitHealthMax(cutout.unit) end
 
     local function Reset(cutout)
         cutout.texture:Hide()
