@@ -14,7 +14,9 @@ DFRL:NewMod("RunTimers", 5, function()
     local MARKER_SIZE = 18
     local DEAD_MARKER_SCALE = 0.8
     local DEAD_MARKER_ALPHA = 0.7
-    local ACTIVE_GLOW_ALPHA, ACTIVE_GLOW_PULSE, ACTIVE_GLOW_PERIOD = 0.82, 0.06, 2.4
+    local ACTIVE_GLOW_PERIOD = 2.4
+    local ACTIVE_GLOW_MIN_ALPHA, ACTIVE_GLOW_MAX_ALPHA = 0.18, 0.62
+    local ACTIVE_GLOW_SIZE, ACTIVE_GLOW_GROWTH = 30, 4
     local PHASES = {
         ready = true,
         playing = true,
@@ -610,12 +612,10 @@ DFRL:NewMod("RunTimers", 5, function()
     end
 
     local function ShowMarkerGlow(marker, shown)
-        for _, glow in ipairs(marker.glow) do
-            if shown then
-                glow:Show()
-            else
-                glow:Hide()
-            end
+        if shown then
+            marker.glow:Show()
+        else
+            marker.glow:Hide()
         end
     end
 
@@ -775,24 +775,16 @@ DFRL:NewMod("RunTimers", 5, function()
                 marker:SetWidth(MARKER_SIZE)
                 marker:SetHeight(MARKER_SIZE)
                 marker:EnableMouse(false)
-                marker.glow = {}
-                -- Offset copies follow the skull's transparent silhouette,
-                -- outlining an active boss without recoloring the foreground.
-                for x = -1, 1 do
-                    for y = -1, 1 do
-                        if x ~= 0 or y ~= 0 then
-                            local glow = marker:CreateTexture(nil, "BACKGROUND")
-                            glow:SetTexture(SKULL_ICON)
-                            glow:SetWidth(MARKER_SIZE)
-                            glow:SetHeight(MARKER_SIZE)
-                            glow:SetPoint("CENTER", marker, "CENTER", x * 1.5, y * 1.5)
-                            glow:SetVertexColor(1, 0.12, 0.02, 1)
-                            glow:SetAlpha(ACTIVE_GLOW_ALPHA)
-                            glow:SetBlendMode("ADD")
-                            table.insert(marker.glow, glow)
-                        end
-                    end
-                end
+                -- One soft radial halo avoids the saturated hard edge made by
+                -- overlapping skull copies. Only this background breathes.
+                marker.glow = marker:CreateTexture(nil, "BACKGROUND")
+                marker.glow:SetTexture(path .. "BossGlow.tga")
+                marker.glow:SetWidth(ACTIVE_GLOW_SIZE)
+                marker.glow:SetHeight(ACTIVE_GLOW_SIZE)
+                marker.glow:SetPoint("CENTER", marker, "CENTER", 0, 0)
+                marker.glow:SetVertexColor(1, 0.12, 0.02, 1)
+                marker.glow:SetAlpha(ACTIVE_GLOW_MIN_ALPHA)
+                marker.glow:SetBlendMode("ADD")
                 marker.skull = marker:CreateTexture(nil, "ARTWORK")
                 marker.skull:SetTexture(SKULL_ICON)
                 marker.skull:SetPoint("CENTER", marker, "CENTER", 0, 0)
@@ -819,9 +811,13 @@ DFRL:NewMod("RunTimers", 5, function()
         end
     end
 
-    local function UpdateMarkerStates(seconds)
+    local function UpdateMarkerStates()
         -- Only the official schedule establishes active and defeated bosses.
-        local glowAlpha = ACTIVE_GLOW_ALPHA + ACTIVE_GLOW_PULSE * math.sin(seconds * 2 * math.pi / ACTIVE_GLOW_PERIOD)
+        -- UI time drives decoration only, including while the run is paused.
+        -- The native run clock and schedule still own all gameplay timing/state.
+        local pulse = 0.5 - 0.5 * math.cos(GetTime() * 2 * math.pi / ACTIVE_GLOW_PERIOD)
+        local glowAlpha = ACTIVE_GLOW_MIN_ALPHA + (ACTIVE_GLOW_MAX_ALPHA - ACTIVE_GLOW_MIN_ALPHA) * pulse
+        local glowSize = ACTIVE_GLOW_SIZE + ACTIVE_GLOW_GROWTH * pulse
         for index, marker in ipairs(markers) do
             local state = markerStates[index]
             if state then
@@ -840,11 +836,9 @@ DFRL:NewMod("RunTimers", 5, function()
                     end
                 end
                 if state == "up" then
-                    -- Cosmetic intensity follows the smooth native clock, so
-                    -- pausing the run also pauses the pulse. Never tint the skull.
-                    for _, glow in ipairs(marker.glow) do
-                        glow:SetAlpha(glowAlpha)
-                    end
+                    marker.glow:SetAlpha(glowAlpha)
+                    marker.glow:SetWidth(glowSize)
+                    marker.glow:SetHeight(glowSize)
                 end
                 marker:Show()
             else
@@ -1135,7 +1129,7 @@ DFRL:NewMod("RunTimers", 5, function()
             -- Missing schedule replay affects only spawn markers, never a clock
             -- whose native elapsed time and duration have already recovered.
             if refreshRows or not run:IsShown() or not scheduled then UpdateMarkers(maximum, scheduled or {}) end
-            UpdateMarkerStates(seconds)
+            UpdateMarkerStates()
             run:Show()
             if not TakeOver("clock") then ReleaseClock() end
         else
