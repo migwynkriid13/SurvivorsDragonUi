@@ -37,15 +37,15 @@ Only **Confirm** saves pending geometry; releasing a drag does not save it. Conf
 
 All addon commands are listed below. Layout editing does not require holding SHIFT.
 
-| Command | Behavior |
-| --- | --- |
-| `/sdui` | Enter layout editing: left-drag a frame to move it or its corner icons to resize it. Click the centered **Confirm** button to save changes and lock the frames. |
-| `/sdui reset` | Exit editing, clear saved frame geometry and restore default positions and sizes, including hidden frames. |
-| `/copy` | Open a snapshot of raw chat messages and events, including hidden messages; press **Ctrl+C** to copy the selected text. |
-| `/sct` | Show the available combat-text modes and the currently selected mode. |
-| `/sct on` | Custom icon-and-damage SCT; native outgoing damage text disabled. |
-| `/sct off` | Both custom and native outgoing damage text disabled. |
-| `/sct default` | Native outgoing damage text only. |
+| Command        | Behavior                                                                                                                                                        |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/sdui`        | Enter layout editing: left-drag a frame to move it or its corner icons to resize it. Click the centered **Confirm** button to save changes and lock the frames. |
+| `/sdui reset`  | Exit editing, clear saved frame geometry and restore default positions and sizes, including hidden frames.                                                      |
+| `/copy`        | Open a snapshot of raw chat messages and events, including hidden messages; press **Ctrl+C** to copy the selected text.                                         |
+| `/sct`         | Show the available combat-text modes and the currently selected mode.                                                                                           |
+| `/sct on`      | Custom icon-and-damage SCT; native outgoing damage text disabled.                                                                                               |
+| `/sct off`     | Both custom and native outgoing damage text disabled.                                                                                                           |
+| `/sct default` | Native outgoing damage text only.                                                                                                                               |
 
 The normal **V** binding controls whether native nameplates are visible; `/sct` controls custom combat text independently. In `/sct on` mode, invisible native plates continue tracking enemies when V is off, so matched hits can follow them. Your V preference stays unchanged. Visible, invisible or recently retired plate positions are matched using names and health changes; unmatched or ambiguous hits appear at a shared fallback position. Mode changes clear active and queued custom hits immediately. SCT mode is not saved: it lasts for the current UI session, and reloading starts in custom mode. Combat logs and the damage meter are unaffected. Chat clicks and hyperlinks keep their native behavior.
 
