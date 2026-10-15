@@ -13,15 +13,13 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local EVENT_FALLBACK_DELAY = 0.16
     local RECENT_PLATE_TIME = 0.65
     local LOSS_TIME = 0.25
-    local SCHOOL_COLORS = {
-        Physical = { 1, 1, 1 },
-        Holy = { 1, 0.90, 0.50 },
-        Fire = { 1, 0.45, 0.15 },
-        Nature = { 0.30, 1, 0.30 },
-        Frost = { 0.40, 0.75, 1 },
-        Shadow = { 0.75, 0.45, 1 },
-        Arcane = { 1, 0.50, 1 },
+    local DAMAGE_COLORS = {
+        normal = { 0.72, 0.72, 0.72 },
+        strong = { 1, 0.82, 0 },
+        critical = { 1, 0.45, 0.10 },
     }
+    local DAMAGE_SAMPLE_LIMIT, DAMAGE_SAMPLE_TIME = 8, 30
+    local DAMAGE_SAMPLE_MINIMUM, STRONG_DAMAGE_RATIO = 3, 1.2
 
     local plates = {}
     local origins = {}
@@ -30,6 +28,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local pending = {}
     local spellTextures = {}
     local missingSpellTextures = {}
+    local recentDamage = {}
     local discoveredChildren = 0
     local arcDirection = 1
     local sctMode = _G.SurvivorsDragonUiSctMode
@@ -163,6 +162,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         end
         pending = {}
         origins = {}
+        recentDamage = {}
         for _, data in pairs(plates) do
             data.origin = nil
         end
@@ -474,6 +474,41 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         return text
     end
 
+    local function DamageColor(info, now)
+        -- Critical status comes from the parsed native message, never from
+        -- damage size. Crits and miss labels do not affect normal-hit averages.
+        if info.kind ~= "damage" then return DAMAGE_COLORS.strong end
+        if info.critical then return DAMAGE_COLORS.critical end
+        if info.damageType ~= "autoattack" and (not info.spell or info.spell == "") then
+            return DAMAGE_COLORS.normal
+        end
+        local key = table.concat({
+            info.sourceName or "",
+            info.damageType or "",
+            info.school or "",
+            info.spell or "",
+        }, "\031")
+        local samples = recentDamage[key]
+        if not samples then
+            samples = {}
+            recentDamage[key] = samples
+        end
+        local total = 0
+        for index = table.getn(samples), 1, -1 do
+            local sample = samples[index]
+            if now - sample.time > DAMAGE_SAMPLE_TIME then
+                table.remove(samples, index)
+            else
+                total = total + sample.amount
+            end
+        end
+        local count = table.getn(samples)
+        local strong = count >= DAMAGE_SAMPLE_MINIMUM and info.amount >= total / count * STRONG_DAMAGE_RATIO
+        table.insert(samples, { amount = info.amount, time = now })
+        if table.getn(samples) > DAMAGE_SAMPLE_LIMIT then table.remove(samples, 1) end
+        return strong and DAMAGE_COLORS.strong or DAMAGE_COLORS.normal
+    end
+
     local function DisplayDamage(info, x, y, origin)
         local value = info.text or info.amount
         if not value then return end
@@ -487,8 +522,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         text.launch = math.random(105, 130)
         text.gravity = text.launch + 65
         arcDirection = -arcDirection
-        local color = SCHOOL_COLORS[info.school]
-        if info.kind == "miss" or not color then color = { 1, 0.82, 0 } end
+        local color = info.color or DAMAGE_COLORS.normal
         text.label:SetText(tostring(value))
         text.label:SetTextColor(color[1], color[2], color[3])
         text.label:Show()
@@ -562,7 +596,11 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         ScanPlates(false)
         local info = ParseCombatEvent(eventName, message)
         if not info or info.kind == "aura" or not info.targetName or info.targetName == "" then return end
-        table.insert(pending, { info = info, time = GetTime() })
+        local now = GetTime()
+        -- Choose once in combat-message order, before plate-matching delays
+        -- can reorder the display. An animating hit keeps its chosen color.
+        info.color = DamageColor(info, now)
+        table.insert(pending, { info = info, time = now })
     end
 
     local function ApplyDamageMode()

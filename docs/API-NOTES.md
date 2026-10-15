@@ -62,6 +62,12 @@ Moving and resizing stage draft geometry without saving on drop. Confirm stores 
 
 Layout persistence never stores phase, clock, schedules, encounters, counters or other native API snapshots. The separate reload-only schedule handoff above does not change layout storage. The HUD still requires current official native data and, where the handoff cannot apply, client replay. These layout edits were made without tests, syntax checks, validation, addon execution or game startups.
 
+## SCT damage colors — 2026-10-15
+
+Custom damage text uses gray for normal hits, yellow for stronger non-critical hits and orange for critical hits. A stronger hit is at least 1.2 times the average of the same attack's preceding non-critical hits: at most eight samples, no older than 30 seconds, with at least three samples before yellow can appear. The source, parsed damage type, school and spell name separate those baselines, including periodic ticks versus direct hits. Unnamed attacks other than autoattacks stay gray rather than combining unknown abilities. Critical status comes only from the existing native-message parser; crits and misses do not contribute samples. Existing miss labels retain yellow.
+
+Colors are chosen once in native message order before matching delays, and remain fixed throughout each hit's animation. The sample tables are memory-only and clear with the existing mode/world reset; they are never SavedVariables. Combat parsing, original damage amounts, crit pop/size, position matching and nameplate masking are unchanged. No tests, syntax checks, validation, addon execution or game startups were run for this local change.
+
 ## Invisible nameplate tracking for custom SCT — 2026-10-15
 
 The user reported that custom hits fell back to the center when native nameplates were hidden. Custom `/sct on` now separates V's requested visible state from the native tracking state: it uses the original `ShowNameplates` to keep hostile plates live and their coordinates updating even when the user has chosen to hide the plates. `NAMEPLATES_ON` and the user's saved V preference remain unchanged. `/sct off` and `/sct default` release that tracking control and restore the originally requested native visibility. World leave and logout release it too; the selected SCT mode is saved separately and restored on the next UI initialization.
