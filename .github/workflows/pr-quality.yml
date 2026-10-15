@@ -76,6 +76,14 @@ jobs:
         continue-on-error: true
         run: python3 scripts/pr_quality.py dead-code
 
+      - name: Report all quality results together
+        if: always() && steps.sources.outcome == 'success'
+        env:
+          PRETTIER_OUTCOME: ${{ steps.prettier.outcome }}
+          STYLUA_OUTCOME: ${{ steps.stylua.outcome }}
+          DEADCODE_OUTCOME: ${{ steps.deadcode.outcome }}
+        run: python3 scripts/pr_quality.py summary
+
       - name: Upload formatting patches and analysis logs
         if: always() && steps.sources.outcome == 'success'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

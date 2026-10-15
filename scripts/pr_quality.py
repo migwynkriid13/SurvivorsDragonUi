@@ -6,6 +6,7 @@ patches go to dist/.
 """
 
 import difflib
+import html
 import json
 import os
 from pathlib import Path
@@ -144,10 +145,80 @@ def dead_code(files):
     return failed
 
 
+def summary():
+    checks = (
+        ("Markdown / JSON / YAML formatting", "PRETTIER_OUTCOME"),
+        ("Lua formatting", "STYLUA_OUTCOME"),
+        ("Local Lua dead code", "DEADCODE_OUTCOME"),
+    )
+    statuses = {
+        "success": "Passed",
+        "failure": "Failed",
+        "skipped": "Skipped",
+        "cancelled": "Cancelled",
+    }
+    sections = [
+        "## Combined quality results\n\n",
+        "| Check | Result |\n| --- | --- |\n",
+    ]
+    for label, variable in checks:
+        status = statuses.get(os.environ.get(variable, ""), "Not completed")
+        sections.append(f"| {label} | {status} |\n")
+    sections.append(
+        "\nAll configured checks report before the final result is enforced. "
+        "A skipped or incomplete check can indicate a setup failure; inspect its "
+        "workflow step. No addon or game code is executed.\n\n"
+        "Logs and suggested formatting patches are collected below. "
+        "Download the `pr-quality` artifact for the full reports if a section "
+        "is truncated.\n\n"
+    )
+    report_files = (
+        ("prettier.log", "No formatting diagnostics emitted."),
+        ("stylua.log", "No formatting diagnostics emitted."),
+        ("dead-code.log", "No configured dead-code warnings emitted."),
+        ("prettier.patch", "No formatting differences."),
+        ("stylua.patch", "No formatting differences."),
+    )
+    # Five sections at <=140 KiB each plus fixed headings stay below 800 KiB,
+    # leaving ample space below GitHub's 1 MiB per-step summary limit.
+    section_limit = 140 * 1024
+    for name, empty_message in report_files:
+        path = REPORTS / name
+        content = (
+            path.read_text(encoding="utf-8", errors="replace") or empty_message
+            if path.is_file()
+            else "Report not produced. Inspect the setup and check steps."
+        )
+        escaped = html.escape(content, quote=False).encode("utf-8")
+        truncated = len(escaped) > section_limit
+        if truncated:
+            escaped = escaped[:section_limit]
+        displayed = escaped.decode("utf-8", errors="ignore")
+        if truncated:
+            # Do not leave a partially written HTML entity at the cutoff.
+            ampersand = displayed.rfind("&")
+            if ampersand > displayed.rfind(";"):
+                displayed = displayed[:ampersand]
+            displayed += "\n[Truncated here; full content is in the artifact.]"
+        sections.append(
+            f"<details>\n<summary>{name}</summary>\n\n"
+            f"<pre>{displayed}</pre>\n</details>\n\n"
+        )
+    report = "".join(sections)
+    REPORTS.mkdir(parents=True, exist_ok=True)
+    (REPORTS / "summary.md").write_text(report, encoding="utf-8")
+    with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as output:
+        output.write(report)
+    print("Combined quality report written to the job summary and artifact.")
+
+
 def main():
     operation = sys.argv[1]
     if operation == "collect":
         collect()
+        return 0
+    if operation == "summary":
+        summary()
         return 0
     files = json.loads(MANIFEST.read_text(encoding="utf-8"))
     if operation == "prettier":

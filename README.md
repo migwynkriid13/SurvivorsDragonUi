@@ -78,7 +78,7 @@ python3 scripts/package.py dist/SurvivorsDragonUi.zip
 
 Every push to a pull request runs all source-quality checks across the complete tracked codebase. Prettier checks owned Markdown, JSON and YAML; StyLua checks all Lua formatting; Luacheck reports unused local variables and assignments, unreachable code and single-iteration loops. These checks never load the addon or start the game.
 
-CI uploads suggested formatting patches and analysis logs without committing changes automatically. The supplied API reference and upstream WidgetStatusBar attribution stay verbatim. Lua formatting uses the nearest supported grammar, Lua 5.1; it does not establish 1.12 runtime compatibility. Dead-code analysis excludes dynamic WoW/DFRL globals and unused callback arguments, and cannot prove that globally registered callbacks or assets are unused.
+All three checks finish before CI enforces the result. One combined job summary and downloadable artifact contain every tool's findings and suggested formatting patches; CI does not commit changes automatically. The supplied API reference and upstream WidgetStatusBar attribution stay verbatim. Lua formatting uses the nearest supported grammar, Lua 5.1; it does not establish 1.12 runtime compatibility. Dead-code analysis excludes dynamic WoW/DFRL globals and unused callback arguments, and cannot prove that globally registered callbacks or assets are unused.
 
 ## License
 
