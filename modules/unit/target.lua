@@ -21,13 +21,15 @@ DFRL:NewMod("Target", 1, function()
     TargetFrameHealthBar:SetScript("OnLeave", nil)
     -- Survivors uses this frame for enemies; native health updates must keep it red.
     local setHealthColor = TargetFrameHealthBar.SetStatusBarColor
-    TargetFrameHealthBar.SetStatusBarColor = function(bar)
-        setHealthColor(bar, 1, 0, 0)
-    end
+    TargetFrameHealthBar.SetStatusBarColor = function(bar) setHealthColor(bar, 1, 0, 0) end
     TargetFrameHealthBar:SetStatusBarColor(1, 0, 0)
     local UpdateBorderTexture = T.CreateHealthOnlyUnitBorder(
-        TargetFrame, TargetFrameHealthBar, TargetFrameTexture,
-        TargetFrameBackground, tex .. "UI-TargetingFrameDF1.blp", "RIGHT"
+        TargetFrame,
+        TargetFrameHealthBar,
+        TargetFrameTexture,
+        TargetFrameBackground,
+        tex .. "UI-TargetingFrameDF1.blp",
+        "RIGHT"
     )
     local healthText = CreateValueText(TargetFrameHealthBar, 10)
 

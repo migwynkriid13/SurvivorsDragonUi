@@ -35,13 +35,19 @@ DFRL:NewMod("Menu", 1, function()
     end)
     local function CloseOptions()
         if optionsFrame and optionsFrame:IsShown() then
-            if BenillaOptionsFrameCloseButton then BenillaOptionsFrameCloseButton:Click()
-            else HideUIPanel(optionsFrame) end
+            if BenillaOptionsFrameCloseButton then
+                BenillaOptionsFrameCloseButton:Click()
+            else
+                HideUIPanel(optionsFrame)
+            end
             return true
         end
         if OptionsFrame and OptionsFrame:IsShown() then
-            if OptionsFrameCancel then OptionsFrameCancel:Click()
-            else HideUIPanel(OptionsFrame) end
+            if OptionsFrameCancel then
+                OptionsFrameCancel:Click()
+            else
+                HideUIPanel(OptionsFrame)
+            end
             return true
         end
     end
@@ -69,11 +75,15 @@ DFRL:NewMod("Menu", 1, function()
         if SpellStopCasting() then return end
         if SpellStopTargeting() then return end
         if CloseAllWindows() then return end
-        if UnitExists("target") then ClearTarget() else menu:Show() end
+        if UnitExists("target") then
+            ClearTarget()
+        else
+            menu:Show()
+        end
     end
     DFRL.menuframe = menu
     DFRL.layout.Register("menu", menu, function(frame)
         frame:ClearAllPoints()
         frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
-    end, {onlyWhenShown = true})
+    end, { onlyWhenShown = true })
 end)

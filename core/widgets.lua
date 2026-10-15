@@ -2,7 +2,7 @@ setfenv(1, DFRL:GetEnv())
 
 function DFRL.tools.GradientLine(frame)
     local width = (frame:GetWidth() - 10) / 2
-    for _, side in ipairs({"LEFT", "RIGHT"}) do
+    for _, side in ipairs({ "LEFT", "RIGHT" }) do
         local texture = frame:CreateTexture(nil, "OVERLAY")
         texture:SetTexture("Interface\\Buttons\\WHITE8x8")
         texture:SetPoint("TOP", frame, "TOP", 0, -2)
@@ -10,9 +10,9 @@ function DFRL.tools.GradientLine(frame)
         texture:SetWidth(width)
         texture:SetHeight(3)
         if side == "LEFT" then
-            texture:SetGradientAlpha("HORIZONTAL", 1,0.82,0,0, 1,0.82,0,1)
+            texture:SetGradientAlpha("HORIZONTAL", 1, 0.82, 0, 0, 1, 0.82, 0, 1)
         else
-            texture:SetGradientAlpha("HORIZONTAL", 1,0.82,0,1, 1,0.82,0,0)
+            texture:SetGradientAlpha("HORIZONTAL", 1, 0.82, 0, 1, 1, 0.82, 0, 0)
         end
     end
 end
@@ -22,7 +22,7 @@ function DFRL.tools.CreateDFRLFrame(parent, width, height)
     frame:SetWidth(width)
     frame:SetHeight(height)
     frame:EnableMouse(true)
-    frame:SetBackdrop({bgFile = "Interface\\Buttons\\WHITE8X8"})
+    frame:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8" })
     frame:SetBackdropColor(0, 0, 0, 0.9)
     DFRL.tools.GradientLine(frame)
     return frame
@@ -35,8 +35,10 @@ function DFRL.tools.CreateButton(parent, text, width, height)
     button:SetBackdrop({
         bgFile = "Interface\\Buttons\\WHITE8X8",
         edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-        tile = true, tileSize = 16, edgeSize = 16,
-        insets = {left = 4, right = 4, top = 4, bottom = 4}
+        tile = true,
+        tileSize = 16,
+        edgeSize = 16,
+        insets = { left = 4, right = 4, top = 4, bottom = 4 },
     })
     button:SetBackdropColor(0, 0, 0, 0.5)
     button:SetBackdropBorderColor(0.5, 0.5, 0.5, 1)
@@ -133,7 +135,9 @@ function DFRL.tools.CreateHealthOnlyUnitBorder(frame, healthBar, portraitTexture
 
     local function UpdateTexture(path)
         portraitTexture:SetTexture(path)
-        for _, strip in ipairs(strips) do strip:SetTexture(path) end
+        for _, strip in ipairs(strips) do
+            strip:SetTexture(path)
+        end
     end
     UpdateTexture(texturePath)
     return UpdateTexture

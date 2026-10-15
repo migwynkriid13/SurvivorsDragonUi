@@ -4,77 +4,53 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'SurvivorsDragonUi.toc'
+      - 'core/**'
+      - 'modules/**'
+      - 'media/**'
+      - 'packaging/runtime-files.json'
   workflow_dispatch:
 
 permissions:
   contents: write
 
+concurrency:
+  group: survivorsdragonui-release-main
+  queue: max
+  cancel-in-progress: false
+
 jobs:
-  prepare:
+  release:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    outputs:
-      matrix: ${{ steps.commits.outputs.matrix }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      BUILD_SHA: ${{ github.sha }}
     steps:
-      - name: Check out the pushed history
+      - name: Check out the pushed commit
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Select every new commit
-        id: commits
+      - name: Select changes to the installable payload
+        id: payload
         env:
           EVENT_NAME: ${{ github.event_name }}
           BEFORE_SHA: ${{ github.event.before }}
           HEAD_SHA: ${{ github.sha }}
-        shell: bash
-        run: |
-          python3 - <<'PY'
-          import json
-          import os
-          import subprocess
-
-          head = os.environ["HEAD_SHA"]
-          before = os.environ.get("BEFORE_SHA", "")
-          if os.environ["EVENT_NAME"] == "push":
-              revision = head if not before or set(before) == {"0"} else before + ".." + head
-              commits = subprocess.check_output(
-                  ["git", "rev-list", "--reverse", revision], text=True
-              ).splitlines()
-          else:
-              commits = [head]
-
-          matrix = {"include": [{"sha": sha} for sha in commits or [head]]}
-          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
-              output.write("matrix=" + json.dumps(matrix) + "\n")
-          PY
-
-  release:
-    needs: prepare
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    strategy:
-      fail-fast: false
-      max-parallel: 4
-      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
-    env:
-      GH_TOKEN: ${{ github.token }}
-      GH_REPO: ${{ github.repository }}
-      BUILD_SHA: ${{ matrix.sha }}
-    steps:
-      - name: Check out this commit
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ matrix.sha }}
-          persist-credentials: false
+        run: python3 scripts/release_changes.py
 
       - name: Package the addon
+        if: steps.payload.outputs.payload_changed == 'true'
         run: python3 scripts/package.py dist/SurvivorsDragonUi.zip
 
       - name: Publish this commit's release
+        if: steps.payload.outputs.payload_changed == 'true'
         shell: bash
         run: |
           tag="build-$BUILD_SHA"
@@ -93,7 +69,20 @@ jobs:
               --latest=false
           fi
 
-          main_sha="$(gh api "repos/$GH_REPO/git/ref/heads/main" --jq '.object.sha')"
-          if [ "$main_sha" = "$BUILD_SHA" ]; then
-            gh release edit "$tag" --latest
+          # A docs-only main push must not block this runtime build becoming
+          # Latest. An older rerun must not replace a newer published build.
+          latest_error="$RUNNER_TEMP/latest-release-error.txt"
+          if latest_tag="$(gh api "repos/$GH_REPO/releases/latest" --jq '.tag_name' 2>"$latest_error")"; then
+            comparison="$(gh api "repos/$GH_REPO/compare/$latest_tag...$BUILD_SHA" --jq '.status')"
+          elif [[ "$(cat "$latest_error")" == *"HTTP 404"* ]]; then
+            comparison="ahead"
+          else
+            cat "$latest_error" >&2
+            exit 1
           fi
+
+          case "$comparison" in
+            ahead|identical) gh release edit "$tag" --latest ;;
+            behind|diverged) echo "Keeping the newer Latest release." ;;
+            *) echo "Unexpected commit comparison: $comparison" >&2; exit 1 ;;
+          esac

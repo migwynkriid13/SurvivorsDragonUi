@@ -37,15 +37,15 @@ Only **Confirm** saves pending geometry; releasing a drag does not save it. Conf
 
 All addon commands are listed below. Layout editing does not require holding SHIFT.
 
-| Command | Behavior |
-| --- | --- |
-| `/sdui` | Enter layout editing: left-drag a frame to move it or its corner icons to resize it. Click the centered **Confirm** button to save changes and lock the frames. |
-| `/sdui reset` | Exit editing, clear saved frame geometry and restore default positions and sizes, including hidden frames. |
-| `/copy` | Open a snapshot of raw chat messages and events, including hidden messages; press **Ctrl+C** to copy the selected text. |
-| `/sct` | Show the available combat-text modes and the currently selected mode. |
-| `/sct on` | Custom icon-and-damage SCT; native outgoing damage text disabled. |
-| `/sct off` | Both custom and native outgoing damage text disabled. |
-| `/sct default` | Native outgoing damage text only. |
+| Command        | Behavior                                                                                                                                                        |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/sdui`        | Enter layout editing: left-drag a frame to move it or its corner icons to resize it. Click the centered **Confirm** button to save changes and lock the frames. |
+| `/sdui reset`  | Exit editing, clear saved frame geometry and restore default positions and sizes, including hidden frames.                                                      |
+| `/copy`        | Open a snapshot of raw chat messages and events, including hidden messages; press **Ctrl+C** to copy the selected text.                                         |
+| `/sct`         | Show the available combat-text modes and the currently selected mode.                                                                                           |
+| `/sct on`      | Custom icon-and-damage SCT; native outgoing damage text disabled.                                                                                               |
+| `/sct off`     | Both custom and native outgoing damage text disabled.                                                                                                           |
+| `/sct default` | Native outgoing damage text only.                                                                                                                               |
 
 The normal **V** binding controls whether native nameplates are visible; `/sct` controls custom combat text independently. In `/sct on` mode, invisible native plates continue tracking enemies when V is off, so matched hits can follow them. Your V preference stays unchanged. Visible, invisible or recently retired plate positions are matched using names and health changes; unmatched or ambiguous hits appear at a shared fallback position. Mode changes clear active and queued custom hits immediately. SCT mode is not saved: it lasts for the current UI session, and reloading starts in custom mode. Combat logs and the damage meter are unaffected. Chat clicks and hyperlinks keep their native behavior.
 
@@ -60,7 +60,11 @@ The official API reference is included in [docs/AzerothSurvivors-Addon-API.md](d
 
 ## Automated releases
 
-Each new commit pushed to `main` builds `SurvivorsDragonUi.zip` and gets a GitHub release tagged with its commit SHA, including when several commits are pushed together. The ZIP contains the installable `SurvivorsDragonUi/` folder. Re-running a release replaces its ZIP without creating another release for the same commit.
+Each push to `main` that changes the installable payload builds one `SurvivorsDragonUi.zip` from that push's final commit. The payload is listed in `packaging/runtime-files.json`: the TOC, its loaded Lua files and the textures used at runtime. The ZIP contains only those files inside the installable `SurvivorsDragonUi/` folder. Repository documentation, tooling, workflows, unused source/artwork and standalone license/attribution files stay on GitHub. Required third-party license text remains in the packaged Lua source comments.
+
+Release eligibility uses the same manifest as packaging, including removed files and changes to payload membership. Documentation, tooling, license notices and unused files do not cause a ZIP or release to be built. Manifest formatting alone does not build one either. A candidate code/asset push may run the eligibility step; packaging and publication are skipped when no packaged content changed.
+
+Releases use the final commit's SHA as their tag. Re-running the same build replaces its ZIP without creating another release. Publication is serialized, and an older rerun cannot replace a newer Latest release. The stable [latest ZIP download](https://github.com/migwynkriid13/SurvivorsDragonUi/releases/latest/download/SurvivorsDragonUi.zip) points to the newest published build. A manual workflow run on `main` can also package the current commit.
 
 Packaging and publishing do not run the addon, launch the game, or perform addon validation. A published release is a packaged snapshot, not proof of in-game validation.
 
@@ -69,6 +73,12 @@ To package locally with Python 3:
 ```sh
 python3 scripts/package.py dist/SurvivorsDragonUi.zip
 ```
+
+## Pull request checks
+
+Every push to a pull request runs all source-quality checks across the complete tracked codebase. Prettier checks owned Markdown, JSON and YAML; StyLua checks all Lua formatting; Luacheck reports unused local variables and assignments, unreachable code and single-iteration loops. These checks never load the addon or start the game.
+
+All three checks finish before CI enforces the result. One combined job summary and downloadable artifact contain every tool's findings and suggested formatting patches; CI does not commit changes automatically. The supplied API reference and upstream WidgetStatusBar attribution stay verbatim. Lua formatting uses the nearest supported grammar, Lua 5.1; it does not establish 1.12 runtime compatibility. Dead-code analysis excludes dynamic WoW/DFRL globals and unused callback arguments, and cannot prove that globally registered callbacks or assets are unused.
 
 ## License
 

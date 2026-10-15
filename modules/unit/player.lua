@@ -100,7 +100,11 @@ DFRL:NewMod("Player", 1, function()
             end
         end)
         local function UpdateResting()
-            if IsResting() then animation:Show() else animation:Hide() end
+            if IsResting() then
+                animation:Show()
+            else
+                animation:Hide()
+            end
         end
         local events = CreateFrame("Frame")
         events:RegisterEvent("PLAYER_UPDATE_RESTING")
@@ -113,8 +117,14 @@ DFRL:NewMod("Player", 1, function()
         initialized = true
         PlayerFrame:SetScale(1)
         PlayerFrame:Show()
-        T.CreateHealthOnlyUnitBorder(PlayerFrame, PlayerFrameHealthBar,
-            PlayerFrameTexture, PlayerFrameBackground, tex .. "UI-TargetingFrameDF.blp", "LEFT")
+        T.CreateHealthOnlyUnitBorder(
+            PlayerFrame,
+            PlayerFrameHealthBar,
+            PlayerFrameTexture,
+            PlayerFrameBackground,
+            tex .. "UI-TargetingFrameDF.blp",
+            "LEFT"
+        )
         HidePowerBar()
         if PlayerFrameHealthBarText then PlayerFrameHealthBarText:SetAlpha(0) end
         healthText = CreateValueText(PlayerFrameHealthBar, 10, 0)
@@ -143,7 +153,14 @@ DFRL:NewMod("Player", 1, function()
         end
         -- Preserve the original addon status effects without stock overlays.
         _G.PlayerFrame_UpdateStatus = function() end
-        for _, name in ipairs({"PlayerStatusTexture", "PlayerAttackGlow", "PlayerAttackIcon", "PlayerRestIcon", "PlayerRestGlow", "PlayerAttackBackground"}) do
+        for _, name in ipairs({
+            "PlayerStatusTexture",
+            "PlayerAttackGlow",
+            "PlayerAttackIcon",
+            "PlayerRestIcon",
+            "PlayerRestGlow",
+            "PlayerAttackBackground",
+        }) do
             local texture = _G[name]
             if texture then
                 texture:SetTexture(nil)

@@ -4,7 +4,7 @@ DFRL.env = {}
 DFRL.tools = {}
 DFRL.modules = {}
 
-setmetatable(DFRL.env, {__index = getfenv(0)})
+setmetatable(DFRL.env, { __index = getfenv(0) })
 
 function DFRL:GetEnv()
     self.env._G = getfenv(0)
@@ -19,7 +19,7 @@ function DFRL:GetInfoOrCons(kind)
 end
 
 function DFRL:NewMod(name, priority, initialize)
-    table.insert(self.modules, {name = name, priority = priority, initialize = initialize})
+    table.insert(self.modules, { name = name, priority = priority, initialize = initialize })
 end
 
 local booted = false
@@ -43,7 +43,5 @@ end
 DFRL:RegisterEvent("ADDON_LOADED")
 DFRL:RegisterEvent("PLAYER_LOGIN")
 DFRL:SetScript("OnEvent", function()
-    if event == "PLAYER_LOGIN" or (event == "ADDON_LOADED" and arg1 == "SurvivorsDragonUi") then
-        Initialize()
-    end
+    if event == "PLAYER_LOGIN" or (event == "ADDON_LOADED" and arg1 == "SurvivorsDragonUi") then Initialize() end
 end)

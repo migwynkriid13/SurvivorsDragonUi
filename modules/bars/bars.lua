@@ -1,6 +1,6 @@
 DFRL:NewMod("Bars", 1, function()
     -- The run fills slots 1-6; the always-available ability stays in native slot 12.
-    local ACTION_SLOTS = {1, 2, 3, 4, 5, 6, 12}
+    local ACTION_SLOTS = { 1, 2, 3, 4, 5, 6, 12 }
     local BUTTON_COUNT = 7
     local BUTTON_SPACING = 6
     local TEX_PATH = "Interface\\AddOns\\SurvivorsDragonUi\\media\\tex\\actionbars\\"
@@ -8,9 +8,7 @@ DFRL:NewMod("Bars", 1, function()
     local function DisableFrame(frame)
         if not frame then return end
         KillFrame(frame)
-        if frame.SetScript then
-            frame:SetScript("OnShow", function() frame:Hide() end)
-        end
+        if frame.SetScript then frame:SetScript("OnShow", function() frame:Hide() end) end
     end
 
     local function HideHotkey(button)
@@ -28,10 +26,18 @@ DFRL:NewMod("Bars", 1, function()
         MainMenuBarArtFrame:EnableMouse(false)
 
         for _, name in ipairs({
-            "ActionBarUpButton", "ActionBarDownButton", "MainMenuBarPageNumber",
-            "MultiBarBottomLeft", "MultiBarBottomRight", "MultiBarLeft", "MultiBarRight",
-            "PetActionBarFrame", "ShapeshiftBarFrame", "BonusActionBarFrame", "PossessBarFrame",
-            "ExhaustionTick"
+            "ActionBarUpButton",
+            "ActionBarDownButton",
+            "MainMenuBarPageNumber",
+            "MultiBarBottomLeft",
+            "MultiBarBottomRight",
+            "MultiBarLeft",
+            "MultiBarRight",
+            "PetActionBarFrame",
+            "ShapeshiftBarFrame",
+            "BonusActionBarFrame",
+            "PossessBarFrame",
+            "ExhaustionTick",
         }) do
             DisableFrame(_G[name])
         end
@@ -40,19 +46,29 @@ DFRL:NewMod("Bars", 1, function()
             DisableFrame(_G["ActionButton" .. i])
         end
         for _, prefix in ipairs({
-            "MultiBarBottomLeftButton", "MultiBarBottomRightButton", "MultiBarLeftButton",
-            "MultiBarRightButton", "BonusActionButton", "PetActionButton", "ShapeshiftButton",
-            "PossessButton"
+            "MultiBarBottomLeftButton",
+            "MultiBarBottomRightButton",
+            "MultiBarLeftButton",
+            "MultiBarRightButton",
+            "BonusActionButton",
+            "PetActionButton",
+            "ShapeshiftButton",
+            "PossessButton",
         }) do
             for i = 1, 12 do
                 DisableFrame(_G[prefix .. i])
             end
         end
         for _, name in ipairs({
-            "MainMenuBarLeftEndCap", "MainMenuBarRightEndCap",
-            "SlidingActionBarTexture0", "SlidingActionBarTexture1",
-            "BonusActionBarTexture0", "BonusActionBarTexture1",
-            "ShapeshiftBarLeft", "ShapeshiftBarMiddle", "ShapeshiftBarRight"
+            "MainMenuBarLeftEndCap",
+            "MainMenuBarRightEndCap",
+            "SlidingActionBarTexture0",
+            "SlidingActionBarTexture1",
+            "BonusActionBarTexture0",
+            "BonusActionBarTexture1",
+            "ShapeshiftBarLeft",
+            "ShapeshiftBarMiddle",
+            "ShapeshiftBarRight",
         }) do
             local texture = _G[name]
             if texture then texture:SetTexture(nil) end
@@ -86,9 +102,13 @@ DFRL:NewMod("Bars", 1, function()
         end
         -- Existing client bindings must not execute slots on discarded bars.
         for _, name in ipairs({
-            "MultiActionButtonDown", "MultiActionButtonUp",
-            "BonusActionButtonDown", "BonusActionButtonUp",
-            "PetActionButtonDown", "PetActionButtonUp", "ShapeshiftBar_ChangeForm"
+            "MultiActionButtonDown",
+            "MultiActionButtonUp",
+            "BonusActionButtonDown",
+            "BonusActionButtonUp",
+            "PetActionButtonDown",
+            "PetActionButtonUp",
+            "ShapeshiftBar_ChangeForm",
         }) do
             _G[name] = function() end
         end
@@ -208,7 +228,7 @@ DFRL:NewMod("Bars", 1, function()
         DFRL.layout.Register("actionBar", mainBar, function()
             mainBar:ClearAllPoints()
             mainBar:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, 55)
-        end, {region = moveRegion})
+        end, { region = moveRegion })
         if DFRL.AttachXPBar then DFRL.AttachXPBar(mainBar) end
         events:UnregisterEvent("PLAYER_ENTERING_WORLD")
         events:SetScript("OnEvent", nil)

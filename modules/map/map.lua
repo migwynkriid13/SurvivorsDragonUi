@@ -98,7 +98,7 @@ DFRL:NewMod("Map", 1, function()
     MinimapZoomOut:ClearAllPoints()
     MinimapZoomOut:SetParent(Minimap)
     MinimapZoomOut:SetPoint("TOPRIGHT", MinimapZoomIn, "BOTTOMLEFT", 0, 0)
-    for _, button in ipairs({MinimapZoomIn, MinimapZoomOut}) do
+    for _, button in ipairs({ MinimapZoomIn, MinimapZoomOut }) do
         local name = button == MinimapZoomIn and "ZoomIn32" or "ZoomOut32"
         button:SetScale(0.8)
         button:SetAlpha(1)
@@ -129,7 +129,7 @@ DFRL:NewMod("Map", 1, function()
     DurabilityFrame.SetPoint = function() end
     DurabilityFrame:SetScale(0.7)
 
-    for _, name in ipairs({"QuestWatchFrame", "QuestTimerFrame"}) do
+    for _, name in ipairs({ "QuestWatchFrame", "QuestTimerFrame" }) do
         local frame = _G[name]
         if frame then
             KillFrame(frame)
@@ -140,5 +140,5 @@ DFRL:NewMod("Map", 1, function()
 
     DFRL.topPanel = panel
     DFRL.minimapRoot = container
-    DFRL.layout.Register("minimap", container, nil, {wheelFrame = Minimap})
+    DFRL.layout.Register("minimap", container, nil, { wheelFrame = Minimap })
 end)

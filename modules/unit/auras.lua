@@ -14,7 +14,7 @@ DFRL:NewMod("Player Auras", 2, function()
     container:SetHeight(iconSize + rowGap)
 
     -- Keep the native frames, buttons, and aura updates. Only their layout changes.
-    local nativeFrames = {BuffFrame}
+    local nativeFrames = { BuffFrame }
     if TemporaryEnchantFrame then table.insert(nativeFrames, TemporaryEnchantFrame) end
     for _, frame in ipairs(nativeFrames) do
         frame:SetParent(container)
@@ -24,17 +24,25 @@ DFRL:NewMod("Player Auras", 2, function()
     local entries = {}
     local function AddButton(name)
         local button = _G[name]
-        if button then table.insert(entries, {button = button, name = name}) end
+        if button then table.insert(entries, { button = button, name = name }) end
     end
     -- Native indices 0-15 are helpful auras; 16-23 are harmful auras.
-    for i = 0, 23 do AddButton("BuffButton" .. i) end
+    for i = 0, 23 do
+        AddButton("BuffButton" .. i)
+    end
     AddButton("TempEnchant1")
     AddButton("TempEnchant2")
 
     local function PlaceNativeFrame(frame)
         local point, relative, relativePoint, x, y = frame:GetPoint(1)
-        if frame:GetNumPoints() ~= 1 or point ~= "TOPLEFT" or relative ~= container
-            or relativePoint ~= "TOPLEFT" or x ~= 0 or y ~= 0 then
+        if
+            frame:GetNumPoints() ~= 1
+            or point ~= "TOPLEFT"
+            or relative ~= container
+            or relativePoint ~= "TOPLEFT"
+            or x ~= 0
+            or y ~= 0
+        then
             frame:ClearAllPoints()
             frame:SetPoint("TOPLEFT", container, "TOPLEFT", 0, 0)
         end
@@ -75,16 +83,22 @@ DFRL:NewMod("Player Auras", 2, function()
     local function Layout(force)
         -- The native enchant update re-anchors BuffFrame even when no aura changes.
         -- Restore its container anchor each time, independently of icon reflow.
-        for _, frame in ipairs(nativeFrames) do PlaceNativeFrame(frame) end
+        for _, frame in ipairs(nativeFrames) do
+            PlaceNativeFrame(frame)
+        end
         local slot = 0
         for _, entry in ipairs(entries) do
             if entry.button:IsShown() then
                 if force or entry.slot ~= slot then
                     SizeButton(entry)
                     entry.button:ClearAllPoints()
-                    entry.button:SetPoint("TOPRIGHT", container, "TOPRIGHT",
+                    entry.button:SetPoint(
+                        "TOPRIGHT",
+                        container,
+                        "TOPRIGHT",
                         -math.mod(slot, columns) * (iconSize + gap),
-                        -math.floor(slot / columns) * (iconSize + rowGap))
+                        -math.floor(slot / columns) * (iconSize + rowGap)
+                    )
                     entry.slot = slot
                 end
                 slot = slot + 1

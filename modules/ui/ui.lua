@@ -2,7 +2,6 @@ DFRL:NewMod("Ui", 5, function()
     -- locals
     local UnitHealth = UnitHealth
     local UnitHealthMax = UnitHealthMax
-    local GetTime = GetTime
     local sin = math.sin
 
     -- hide stuff
@@ -14,20 +13,18 @@ DFRL:NewMod("Ui", 5, function()
     -- close button
     do
         local closeButtonData = {
-            {"CharacterFrame", "CharacterFrameCloseButton", -36, -16},
-            {"SpellBookFrame", "SpellBookCloseButton", -36, -15},
-            {"TalentFrame", "TalentFrameCloseButton", -36, -17},
-            {"QuestLogFrame", "QuestLogFrameCloseButton", -91, -15},
-            {"FriendsFrame", "FriendsFrameCloseButton", -36, -15},
-            {"HelpFrame", "HelpFrameCloseButton", -50, -10},
-            {"QuestFrame", "QuestFrameCloseButton", -34, -22},
-            {"GuildMemberDetailFrame", "GuildMemberDetailCloseButton", -10, -10},
-
+            { "CharacterFrame", "CharacterFrameCloseButton", -36, -16 },
+            { "SpellBookFrame", "SpellBookCloseButton", -36, -15 },
+            { "TalentFrame", "TalentFrameCloseButton", -36, -17 },
+            { "QuestLogFrame", "QuestLogFrameCloseButton", -91, -15 },
+            { "FriendsFrame", "FriendsFrameCloseButton", -36, -15 },
+            { "HelpFrame", "HelpFrameCloseButton", -50, -10 },
+            { "QuestFrame", "QuestFrameCloseButton", -34, -22 },
+            { "GuildMemberDetailFrame", "GuildMemberDetailCloseButton", -10, -10 },
         }
 
-
         for i = 1, 5 do
-            table.insert(closeButtonData, {"ContainerFrame"..i, "ContainerFrame"..i.."CloseButton", -8, -8})
+            table.insert(closeButtonData, { "ContainerFrame" .. i, "ContainerFrame" .. i .. "CloseButton", -8, -8 })
         end
 
         local path = "Interface\\AddOns\\SurvivorsDragonUi\\media\\tex\\ui\\close_normal.tga"
@@ -44,7 +41,7 @@ DFRL:NewMod("Ui", 5, function()
                 button:SetHighlightTexture(path)
                 button:SetWidth(17)
                 button:SetHeight(17)
-                button:SetPoint('TOPRIGHT', frame, 'TOPRIGHT', offsetX, offsetY)
+                button:SetPoint("TOPRIGHT", frame, "TOPRIGHT", offsetX, offsetY)
             end
         end
     end
@@ -53,15 +50,17 @@ DFRL:NewMod("Ui", 5, function()
     do
         local questLogFrame = QuestLogFrame
         if questLogFrame then
-            local regions = {questLogFrame:GetRegions()}
-            for i, region in ipairs(regions) do
+            local regions = { questLogFrame:GetRegions() }
+            for _, region in ipairs(regions) do
                 if region:GetObjectType() == "Texture" then
                     local texture = region:GetTexture()
                     if texture then
                         if texture == "Interface\\QuestFrame\\UI-QuestLog-Left" then
                             region:SetTexture("Interface\\AddOns\\SurvivorsDragonUi\\media\\tex\\ui\\questlog_left.tga")
                         elseif texture == "Interface\\QuestFrame\\UI-QuestLog-Right" then
-                            region:SetTexture("Interface\\AddOns\\SurvivorsDragonUi\\media\\tex\\ui\\questlog_right.tga")
+                            region:SetTexture(
+                                "Interface\\AddOns\\SurvivorsDragonUi\\media\\tex\\ui\\questlog_right.tga"
+                            )
                         end
                     end
                 end
@@ -107,9 +106,7 @@ DFRL:NewMod("Ui", 5, function()
             end
         end
 
-        HookScript(CharacterFrame, "OnShow", function()
-            ReplaceFrameTextures(CharacterFrame)
-        end)
+        HookScript(CharacterFrame, "OnShow", function() ReplaceFrameTextures(CharacterFrame) end)
 
         local subFrames = {
             "PaperDollFrame",
@@ -117,16 +114,11 @@ DFRL:NewMod("Ui", 5, function()
             "ReputationFrame",
             "SkillFrame",
             "HonorFrame",
-
         }
 
         for i = 1, table.getn(subFrames) do
             local f = getglobal(subFrames[i])
-            if f then
-                HookScript(f, "OnShow", function()
-                    ReplaceFrameTextures(f)
-                end)
-            end
+            if f then HookScript(f, "OnShow", function() ReplaceFrameTextures(f) end) end
         end
     end
 
@@ -137,25 +129,33 @@ DFRL:NewMod("Ui", 5, function()
 
             if not frame.customTopLeft then
                 frame.customTopLeft = frame:CreateTexture(nil, "OVERLAY")
-                frame.customTopLeft:SetTexture("Interface\\AddOns\\SurvivorsDragonUi\\media\\tex\\ui\\paperdoll_top_left.tga")
+                frame.customTopLeft:SetTexture(
+                    "Interface\\AddOns\\SurvivorsDragonUi\\media\\tex\\ui\\paperdoll_top_left.tga"
+                )
                 frame.customTopLeft:SetWidth(256)
                 frame.customTopLeft:SetHeight(256)
                 frame.customTopLeft:SetPoint("TOPLEFT", frame, "TOPLEFT", -3, 0)
 
                 frame.customTopRight = frame:CreateTexture(nil, "OVERLAY")
-                frame.customTopRight:SetTexture("Interface\\AddOns\\SurvivorsDragonUi\\media\\tex\\ui\\paperdoll_top_right.tga")
+                frame.customTopRight:SetTexture(
+                    "Interface\\AddOns\\SurvivorsDragonUi\\media\\tex\\ui\\paperdoll_top_right.tga"
+                )
                 frame.customTopRight:SetWidth(128)
                 frame.customTopRight:SetHeight(256)
                 frame.customTopRight:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -3, 0)
 
                 frame.customBottomLeft = frame:CreateTexture(nil, "OVERLAY")
-                frame.customBottomLeft:SetTexture("Interface\\AddOns\\SurvivorsDragonUi\\media\\tex\\ui\\paperdoll_bot_left.tga")
+                frame.customBottomLeft:SetTexture(
+                    "Interface\\AddOns\\SurvivorsDragonUi\\media\\tex\\ui\\paperdoll_bot_left.tga"
+                )
                 frame.customBottomLeft:SetWidth(256)
                 frame.customBottomLeft:SetHeight(256)
                 frame.customBottomLeft:SetPoint("TOPLEFT", frame, "TOPLEFT", -3, -256)
 
                 frame.customBottomRight = frame:CreateTexture(nil, "OVERLAY")
-                frame.customBottomRight:SetTexture("Interface\\AddOns\\SurvivorsDragonUi\\media\\tex\\ui\\paperdoll_bot_right.tga")
+                frame.customBottomRight:SetTexture(
+                    "Interface\\AddOns\\SurvivorsDragonUi\\media\\tex\\ui\\paperdoll_bot_right.tga"
+                )
                 frame.customBottomRight:SetWidth(128)
                 frame.customBottomRight:SetHeight(256)
                 frame.customBottomRight:SetPoint("TOPLEFT", frame, "TOPLEFT", 253, -256)
@@ -169,16 +169,14 @@ DFRL:NewMod("Ui", 5, function()
                             bg:SetWidth(44)
                             bg:SetHeight(44)
                         end
-                        _G["SpellButton" .. i.."SubSpellName"]:SetTextColor(0.9, 0.9, 0.8,0.6);
+                        _G["SpellButton" .. i .. "SubSpellName"]:SetTextColor(0.9, 0.9, 0.8, 0.6)
                     end
                 end
             end
         end
 
         if SpellBookFrame then
-            HookScript(SpellBookFrame, "OnShow", function()
-                ApplyCustomTextures(SpellBookFrame)
-            end)
+            HookScript(SpellBookFrame, "OnShow", function() ApplyCustomTextures(SpellBookFrame) end)
         end
 
         ApplyCustomTextures(SpellBookFrame)
@@ -197,7 +195,7 @@ DFRL:NewMod("Ui", 5, function()
     warning:SetFrameStrata("BACKGROUND")
     warning:Hide()
     local edges = {}
-    for _, side in ipairs({"TOP", "BOTTOM", "LEFT", "RIGHT"}) do
+    for _, side in ipairs({ "TOP", "BOTTOM", "LEFT", "RIGHT" }) do
         local texture = warning:CreateTexture(nil, "BACKGROUND")
         texture:SetTexture("Interface\\Buttons\\WHITE8X8")
         if side == "TOP" or side == "BOTTOM" then
@@ -225,10 +223,10 @@ DFRL:NewMod("Ui", 5, function()
             local intensity = math.max(0, math.min(1, (70 - health) / 70))
             pulse = pulse + elapsed * (1 + 7 * intensity)
             local alpha = 0.7 * (0.1 + 0.9 * intensity) * (0.3 + 0.7 * (sin(pulse) + 1) / 2)
-            edges.TOP:SetGradientAlpha("VERTICAL", 1,0,0,0, 1,0,0,alpha)
-            edges.BOTTOM:SetGradientAlpha("VERTICAL", 1,0,0,alpha, 1,0,0,0)
-            edges.LEFT:SetGradientAlpha("HORIZONTAL", 1,0,0,alpha, 1,0,0,0)
-            edges.RIGHT:SetGradientAlpha("HORIZONTAL", 1,0,0,0, 1,0,0,alpha)
+            edges.TOP:SetGradientAlpha("VERTICAL", 1, 0, 0, 0, 1, 0, 0, alpha)
+            edges.BOTTOM:SetGradientAlpha("VERTICAL", 1, 0, 0, alpha, 1, 0, 0, 0)
+            edges.LEFT:SetGradientAlpha("HORIZONTAL", 1, 0, 0, alpha, 1, 0, 0, 0)
+            edges.RIGHT:SetGradientAlpha("HORIZONTAL", 1, 0, 0, 0, 1, 0, 0, alpha)
             warning:Show()
         end
         elapsed = 0
