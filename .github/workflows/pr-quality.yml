@@ -1,0 +1,103 @@
+name: PR formatting and dead code
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-quality-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Formatting and local dead code
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out the PR head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Select changed source and text files
+        id: changed
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: python3 scripts/pr_quality.py collect
+
+      - name: Set up Node for Prettier
+        if: steps.changed.outputs.prettier_count != '0'
+        uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
+      - name: Install pinned Prettier
+        if: steps.changed.outputs.prettier_count != '0'
+        run: |
+          npm install --prefix "$RUNNER_TEMP/pr-quality-node" \
+            --ignore-scripts --no-audit --no-fund --package-lock=false \
+            --save-exact prettier@3.9.10
+          echo "PR_PRETTIER=$RUNNER_TEMP/pr-quality-node/node_modules/.bin/prettier" >> "$GITHUB_ENV"
+
+      - name: Install pinned Lua analysis tools
+        if: steps.changed.outputs.lua_count != '0'
+        run: |
+          curl --fail --location --retry 3 \
+            https://github.com/JohnnyMorganz/StyLua/releases/download/v2.6.0/stylua-linux-x86_64.zip \
+            --output "$RUNNER_TEMP/stylua.zip"
+          echo "a485f72bbfa22e4642e77a84b5edc2611a5cab7477b34e2e709dd8f78e919895  $RUNNER_TEMP/stylua.zip" | sha256sum --check
+          unzip -q "$RUNNER_TEMP/stylua.zip" -d "$RUNNER_TEMP/pr-quality-bin"
+          chmod +x "$RUNNER_TEMP/pr-quality-bin/stylua"
+          echo "$RUNNER_TEMP/pr-quality-bin" >> "$GITHUB_PATH"
+          sudo apt-get update
+          sudo apt-get install --yes lua5.1 liblua5.1-0-dev luarocks
+          sudo luarocks --lua-version=5.1 install luacheck 1.2.0-1
+
+      - name: Check Markdown, JSON and YAML formatting
+        id: prettier
+        if: steps.changed.outputs.prettier_count != '0'
+        continue-on-error: true
+        run: python3 scripts/pr_quality.py prettier
+
+      - name: Check Lua formatting
+        id: stylua
+        if: steps.changed.outputs.lua_count != '0'
+        continue-on-error: true
+        run: python3 scripts/pr_quality.py lua-format
+
+      - name: Check local Lua dead code
+        id: deadcode
+        if: steps.changed.outputs.lua_count != '0'
+        continue-on-error: true
+        run: python3 scripts/pr_quality.py dead-code
+
+      - name: Upload formatting patches and analysis logs
+        if: always() && steps.changed.outcome == 'success'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: pr-quality-${{ github.event.pull_request.number }}
+          path: dist/pr-quality/
+          retention-days: 7
+
+      - name: Enforce check results
+        if: always()
+        env:
+          RESULTS: ${{ join(steps.*.outcome, ',') }}
+        run: |
+          if [[ ",$RESULTS," == *,failure,* ]]; then
+            echo 'A setup or quality check failed. See the logs and pr-quality artifact.'
+            exit 1
+          fi

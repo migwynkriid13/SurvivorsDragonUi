@@ -1,0 +1,12 @@
+# Lua 5.1 is the nearest supported grammar to the addon's Lua 5.0 subset.
+# Formatting does not verify compatibility with the 1.12 client.
+syntax = "Lua51"
+column_width = 120
+line_endings = "Unix"
+indent_type = "Spaces"
+indent_width = 4
+quote_style = "AutoPreferDouble"
+collapse_simple_statement = "Always"
+
+[sort_requires]
+enabled = false
