@@ -20,9 +20,7 @@ DFRL:NewMod("Navigation", 2, function()
     local samples, seen, width, height = {}, {}, nil, nil
 
     local function Number(value) return type(value) == "number" and value - value == 0 end
-    local function Coordinates(x, y)
-        return Number(x) and Number(y) and x >= 0 and x <= 1 and y >= 0 and y <= 1
-    end
+    local function Coordinates(x, y) return Number(x) and Number(y) and x >= 0 and x <= 1 and y >= 0 and y <= 1 end
     function navigation.IsRunPhase(phase) return phases[phase] == true end
     function navigation.Reset()
         identity, expected, realZone, arrow = nil, nil, nil, nil
@@ -34,12 +32,7 @@ DFRL:NewMod("Navigation", 2, function()
         local ok, phase = pcall(_G.AZS_GetPhase)
         if not ok or not navigation.IsRunPhase(phase) then return end
         local zone = _G.AZS_ZONE
-        if
-            type(zone) ~= "table"
-            or not zones[zone.zone]
-            or not Number(zone.map)
-            or not Number(_G.AZS_ZONE_UPDATED)
-        then
+        if type(zone) ~= "table" or not zones[zone.zone] or not Number(zone.map) or not Number(_G.AZS_ZONE_UPDATED) then
             return
         end
         local current = zone.zone .. ":" .. tostring(zone.map) .. ":" .. tostring(_G.AZS_ZONE_UPDATED)
@@ -185,7 +178,9 @@ DFRL:NewMod("Navigation", 2, function()
         local targetX, targetY = target.mx, target.my
         if type(GetWorldLocMapPosition) == "function" then
             local projectedX, projectedY = navigation.Project(target)
-            if projectedX then targetX, targetY = projectedX, projectedY end
+            if projectedX then
+                targetX, targetY = projectedX, projectedY
+            end
         end
         if not Coordinates(targetX, targetY) then return end
         local w, h = navigation.Metric()

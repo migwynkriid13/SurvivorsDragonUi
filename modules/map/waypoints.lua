@@ -64,9 +64,7 @@ DFRL:NewMod("Waypoints", 3, function()
     local mapLayer, mapRegion
 
     local function Number(value) return type(value) == "number" and value - value == 0 end
-    local function Integer(value, minimum)
-        return Number(value) and value >= minimum and value == math.floor(value)
-    end
+    local function Integer(value, minimum) return Number(value) and value >= minimum and value == math.floor(value) end
     local function Native(name)
         local getter = _G[name]
         if type(getter) ~= "function" then return end
@@ -101,9 +99,8 @@ DFRL:NewMod("Waypoints", 3, function()
         for columnIndex, column in ipairs(columns) do
             for rowIndex, row in ipairs(rows) do
                 if columnIndex ~= 2 or rowIndex ~= 2 then
-                    local rim = PillTexture(
-                        hud, column[1], "BORDER", column[3], row[2], column[4], column[5], row[3], row[4]
-                    )
+                    local rim =
+                        PillTexture(hud, column[1], "BORDER", column[3], row[2], column[4], column[5], row[3], row[4])
                     rim:SetPoint("TOPLEFT", hud, "TOPLEFT", column[2], -row[1])
                     -- The original caps contain black outer shadows.
                     rim:SetBlendMode("ADD")
@@ -124,9 +121,8 @@ DFRL:NewMod("Waypoints", 3, function()
             { HUD_SIZE - 3 * artScale, artScale, 5 * artScale },
         }
         for _, band in ipairs(bands) do
-            local fill = PillTexture(
-                hud, "BackgroundCenter", "BACKGROUND", HUD_SIZE - 2 * band[3], band[2], 0, 1, 0, 18 / 32
-            )
+            local fill =
+                PillTexture(hud, "BackgroundCenter", "BACKGROUND", HUD_SIZE - 2 * band[3], band[2], 0, 1, 0, 18 / 32)
             fill:SetPoint("TOP", hud, "TOP", 0, -band[1])
             fill:SetAlpha(0.45)
         end
@@ -316,9 +312,7 @@ DFRL:NewMod("Waypoints", 3, function()
         if not entry or not GameTooltip then return end
         GameTooltip:SetText(tracker.title, 1, 0.9, 0.58)
         if tracker.kind == "guardian" then
-            if type(entry.name) == "string" and entry.name ~= "" then
-                GameTooltip:AddLine(entry.name, 1, 1, 1)
-            end
+            if type(entry.name) == "string" and entry.name ~= "" then GameTooltip:AddLine(entry.name, 1, 1, 1) end
             GameTooltip:AddLine(
                 entry.state == "awake" and "Fighting; marker shows its lair" or "Waiting at its lair",
                 0.8,

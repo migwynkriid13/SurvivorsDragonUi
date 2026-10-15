@@ -35,12 +35,12 @@ The source atlas was decoded and visually inspected before cropping. `Guardian.t
 
 The PNG originals were visually inspected before cropping. Original colors and transparency are retained. Outputs are uncompressed, 32-bit RGBA TGA files with power-of-two canvas dimensions. No addon or game code was executed during preparation.
 
-| Bundled file | Canvas | Preparation |
-| --- | --- | --- |
-| `media/tex/waypoint/MapPin.tga` | 32 × 32 | Complete original tracked minimap PNG, converted to TGA without cropping or rescaling. |
+| Bundled file                        | Canvas  | Preparation                                                                                                             |
+| ----------------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `media/tex/waypoint/MapPin.tga`     | 32 × 32 | Complete original tracked minimap PNG, converted to TGA without cropping or rescaling.                                  |
 | `media/tex/waypoint/HudDiamond.tga` | 32 × 64 | Original navigation atlas pixel rectangle `[28, 0, 54, 37)`, placed at `(3, 13)` on a transparent canvas. No rescaling. |
-| `media/tex/waypoint/HudArrow.tga` | 32 × 32 | Original navigation atlas pixel rectangle `[0, 35, 24, 55)`, placed at `(4, 6)` on a transparent canvas. No rescaling. |
-| `media/tex/waypoint/Guardian.tga` | 64 × 64 | Dragonflight 10.2.7 `VignetteKillElite`, original atlas rectangle `[265, 131, 329, 195)`, without rescaling. |
+| `media/tex/waypoint/HudArrow.tga`   | 32 × 32 | Original navigation atlas pixel rectangle `[0, 35, 24, 55)`, placed at `(4, 6)` on a transparent canvas. No rescaling.  |
+| `media/tex/waypoint/Guardian.tga`   | 64 × 64 | Dragonflight 10.2.7 `VignetteKillElite`, original atlas rectangle `[265, 131, 329, 195)`, without rescaling.            |
 
 Pixel rectangles use a top-left origin and exclusive right/bottom edges.
 
