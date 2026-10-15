@@ -4,17 +4,17 @@ The owner announced native addon support in **Azeroth Survivors 0.87.0**, and th
 
 This supplies everything needed for DragonSurvivorsUI's native run-progress and boss-health replacements, including control over the original HUD. Public users install only the addon; the old external REA companion is unnecessary and excluded.
 
-| Purpose | Official interface |
-|---|---|
-| Native smooth, pause-aware elapsed time | `AZS_GetRunTime()` |
-| Current run lifecycle | `AZS_GetPhase()` |
-| Actual zone duration/final-boss time | `AZS_GetRunLength()`, with native `AZS_RUN.fin` fallback |
+| Purpose                                                                | Official interface                                                  |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| Native smooth, pause-aware elapsed time                                | `AZS_GetRunTime()`                                                  |
+| Current run lifecycle                                                  | `AZS_GetPhase()`                                                    |
+| Actual zone duration/final-boss time                                   | `AZS_GetRunLength()`, with native `AZS_RUN.fin` fallback            |
 | Complete boss-spawn schedule for validation; future skulls for display | `AZS_SCHEDULE`, each entry's `at`, compared with `AZS_GetRunTime()` |
-| Every live boss, with stable identity within a run | `AZS_GetBosses()`: `id`, `name`, `hp`, **`hpm`** |
-| Guardian bars sharing the native boss-HUD group | `AZS_GetGuardians()`: `id`, `name`, `hp`, `hpm` |
-| Kills, current gold and the next cache's gold cost | `AZS_RUN.kills`, `AZS_RUN.gold`, `AZS_RUN.chest` |
-| Show/hide native HUD groups | `AZS_SetHudShown(part, shown)` and `AZS_IsHudShown(part)` |
-| Immediate state/list refreshes | `CHAT_MSG_ADDON`: `AZSZONE`, `AZSRUN`, `AZSBOSSES`, `AZSUNITS` |
+| Every live boss, with stable identity within a run                     | `AZS_GetBosses()`: `id`, `name`, `hp`, **`hpm`**                    |
+| Guardian bars sharing the native boss-HUD group                        | `AZS_GetGuardians()`: `id`, `name`, `hp`, `hpm`                     |
+| Kills, current gold and the next cache's gold cost                     | `AZS_RUN.kills`, `AZS_RUN.gold`, `AZS_RUN.chest`                    |
+| Show/hide native HUD groups                                            | `AZS_SetHudShown(part, shown)` and `AZS_IsHudShown(part)`           |
+| Immediate state/list refreshes                                         | `CHAT_MSG_ADDON`: `AZSZONE`, `AZSRUN`, `AZSBOSSES`, `AZSUNITS`      |
 
 `modules/ui/run.lua` now consumes these APIs directly. There is no invented snapshot global, companion sequence/acknowledgement protocol, independent run clock or heartbeat timeout. The native getter owns interpolation and pauses. The local 0.1-second accumulator only throttles list refreshes.
 
