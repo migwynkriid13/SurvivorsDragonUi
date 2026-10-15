@@ -6,6 +6,8 @@ DFRL:NewMod("RunTimers", 5, function()
     local ROW_HEIGHT = 48
     local SKULL_ICON = "Interface\\TargetingFrame\\UI-TargetingFrame-Skull"
     local ATTACK_ICON = "Interface\\Cursor\\Attack.blp"
+    local CACHE_ICON = "Interface\\Cursor\\LootAll.blp"
+    local COINS_ICON = DFRL:GetInfoOrCons("tex") .. "chat\\cleaner_coins.tga"
     local MARKER_SIZE = 18
     local PHASES = {
         ready = true, playing = true, choosing = true,
@@ -125,8 +127,8 @@ DFRL:NewMod("RunTimers", 5, function()
     local fieldWidth = BAR_WIDTH / 3
     local counters = {
         {key = "kills", label = "Enemies killed", icon = ATTACK_ICON},
-        {key = "gold", label = "Gold", icon = "Interface\\Icons\\INV_Misc_Coin_01"},
-        {key = "chest", label = "Next cache cost (gold)", icon = "Interface\\Icons\\INV_Crate_01"},
+        {key = "gold", label = "Gold", icon = COINS_ICON},
+        {key = "chest", label = "Next cache cost (gold)", icon = CACHE_ICON},
     }
     for index, counter in ipairs(counters) do
         local field = CreateFrame("Frame", nil, tallyOverlay)
@@ -137,6 +139,10 @@ DFRL:NewMod("RunTimers", 5, function()
 
         local icon = field:CreateTexture(nil, "ARTWORK")
         icon:SetTexture(counter.icon)
+        if counter.key == "gold" then
+            -- CleanerChat's 64x64 atlas places gold in the top-left 32x32.
+            icon:SetTexCoord(0, 0.5, 0, 0.5)
+        end
         icon:SetWidth(18)
         icon:SetHeight(18)
         icon:SetPoint("LEFT", field, "LEFT", 5, 0)
