@@ -29,7 +29,7 @@ The guardian icon is Dragonflight's `VignetteKillElite` rare-elite marker: a gol
 - [UiTextureAtlas client metadata](https://wago.tools/db2/UiTextureAtlas/csv?build=10.2.7.54847): atlas `647`, `1024 × 1024`, FileDataID `1121272`.
 - [Original client atlas](https://wago.tools/api/casc/1121272?version=10.2.7.54847): `interface/minimap/objecticonsatlas.blp`, FileDataID `1121272`.
 
-The source atlas was decoded and visually inspected before cropping. `Guardian.tga` preserves the 64-by-64 source glyph's colors and transparency without rescaling. Its square bounds include the dragon surround; use full texture coordinates. The original atlas specifies a native 32-by-32 display size, while the compact square HUD draws it at 20 by 20. Cache and guardian HUDs reuse the same original retail direction-arrow artwork.
+The source atlas was decoded and visually inspected before cropping. `Guardian.tga` preserves the 64-by-64 source glyph's colors and transparency without rescaling. Its square bounds include the dragon surround; use full texture coordinates. The original atlas specifies a native 32-by-32 display size. This rare-elite marker remains the world-map guardian pin; the floating-label HUD uses the separate skull medallion described below. Cache and guardian HUDs reuse the same original retail direction-arrow artwork.
 
 ## Texture preparation
 
@@ -44,15 +44,34 @@ The PNG originals were visually inspected before cropping. Original colors and t
 
 Pixel rectangles use a top-left origin and exclusive right/bottom edges.
 
+## Floating-label HUD icons
+
+The selected HUD design uses actual Blizzard game textures distributed by [NeticSoul/DragonUI](https://github.com/NeticSoul/DragonUI/tree/00197f223180323ea7297c0157edbd1a43d2f99f), pinned to commit `00197f223180323ea7297c0157edbd1a43d2f99f`:
+
+- [Guardian gold-dragon/skull medallion: `kill_elite.tga`](https://raw.githubusercontent.com/NeticSoul/DragonUI/00197f223180323ea7297c0157edbd1a43d2f99f/DragonUI/Textures/Nameplates/Quests/Kill/kill_elite.tga).
+- [Cache loot pouch: `loot_bag.tga`](https://raw.githubusercontent.com/NeticSoul/DragonUI/00197f223180323ea7297c0157edbd1a43d2f99f/DragonUI/Textures/Nameplates/Quests/Loot/loot_bag.tga).
+- [Pinned upstream LICENSE](https://github.com/NeticSoul/DragonUI/blob/00197f223180323ea7297c0157edbd1a43d2f99f/LICENSE).
+
+DragonUI core code is copyright 2026 NeticSoul and DragonUI contributors under MIT. Its LICENSE explicitly excludes World of Warcraft game artwork from that core-code license: these textures are copyright Blizzard Entertainment and included only for use with the game. This change imports no upstream Lua. The shipped `modules/map/waypoints.lua` comment retains source attribution and this artwork notice; the public source document is not added to the runtime ZIP.
+
+Original glyph pixels and alpha are retained without rescaling. Transparent source padding is cropped, then the glyph is centered inside a square transparent sampling region with at least one pixel of padding. Both outputs use uncompressed 32-bit RGBA TGA on power-of-two canvases:
+
+| Bundled file | Original canvas | Source rectangle | Output canvas | Placement and sampling |
+| --- | --- | --- | --- | --- |
+| `media/tex/waypoint/GuardianFloating.tga` | 64 × 64 | `[0, 1, 62, 64)` | 128 × 128 | Paste at `(1, 1)`; square region `[0, 0, 65, 65)`, UV `0..65/128` on each axis. |
+| `media/tex/waypoint/CachePouch.tga` | 128 × 128 | `[28, 7, 117, 124)` | 128 × 128 | Paste at `(15, 1)`; square region `[0, 0, 119, 119)`, UV `0..119/128` on each axis. |
+
+Square sampling preserves each glyph's proportions inside its 32-by-32 HUD icon field. The existing `Guardian.tga` world-map rare-elite marker and `MapPin.tga` cache pin remain unchanged. `HudDiamond.tga` is retained as a source reference for the previous HUD, but is no longer used or included in the runtime manifest.
+
 ## Drawing recommendations
 
-Square waypoint frames preserve the original textured gold pill artwork using eight slices from `BorderLeft.tga`, `BorderCenter.tga` and `BorderRight.tga`, with the center omitted. The tight column ranges are `[5, 16)`, `[0, 64)` and `[19, 30)` respectively, divided into source row thirds `[5, 12)`, `[12, 19)` and `[19, 26)`. At art scale 1.5, fixed 16.5-by-10.5 corners retain the original bevels and the visible gold rim is three pixels thick; only straight middle sections stretch. ADD blending at 0.9 alpha removes black outer shadow. Seven `media/tex/timer/BackgroundCenter.tga` strips at 0.45 alpha follow the inner cut-corner contour without background caps. No new texture assets are added. The marker and arrow share the top row, with the arrow rotating in place; the name and distance are stacked below. Existing timer artwork attribution is retained in [WidgetStatusBar-SOURCE.md](WidgetStatusBar-SOURCE.md).
-
-- Map/minimap pin: use the full `MapPin.tga` texture on a 32 × 32 frame. Its visible diamond is centered at `(16, 16)`, with transparent padding around it. Scale the frame uniformly as needed.
-- Cache HUD marker: draw the original `HudDiamond.tga` at 14 × 20 using `SetTexCoord(3 / 32, 29 / 32, 13 / 64, 50 / 64)`. Keep it upright in the square frame's top graphic row.
-- Direction arrow: use the full `HudArrow.tga` texture on a square 18 × 18 frame for both cache and guardian guidance, rotating in place beside the top-row marker without orbiting. Its artwork points upward at zero rotation and is centered in its source canvas at `(16, 16)`. Both guides use exactly the same arrow size. A vanilla port should use its supported texture-coordinate rotation rather than assume retail `Texture:SetRotation` exists.
-- Guardian marker: use the full `Guardian.tga` texture, at 20 × 20 in the square HUD and the existing independent world-map size. Keep the silver dragon and gold star upright.
-- Square frame: keep the original textured gold artwork's fixed beveled corner slices, three-pixel visible rim and straight middle edges, with the dark inset following the inner contour described above. Both dimensions equal 95% of the combined DEFAULT action-bar artwork and XP border height, using static addon-owned appearance metadata. Stack the marker/arrow row, centered DEFAULT 9 name and bottom DEFAULT 10 distance inside the square. Uniform HUD scaling preserves the square proportions.
-- Addon paths use `Interface\\AddOns\\SurvivorsDragonUi\\media\\tex\\waypoint\\` with the filenames above.
+- Floating waypoint guides default to 190 by 46, with no enclosing border. A dark lower rail fades at both ends and has a fine muted-gold bottom line. Native `WHITE8X8` gradients draw this rail; the old square frame slices are no longer used by waypoints. Existing timer artwork and its [WidgetStatusBar attribution](WidgetStatusBar-SOURCE.md) remain unchanged.
+- Cache HUD marker: draw `CachePouch.tga` in a 32-by-32 field with `SetTexCoord(0, 119 / 128, 0, 119 / 128)`. Keep the loot pouch upright.
+- Guardian HUD marker: draw `GuardianFloating.tga` in a 32-by-32 field with `SetTexCoord(0, 65 / 128, 0, 65 / 128)`. Keep the gold dragon and skull upright.
+- Place a left-aligned DEFAULT 13 destination title above DEFAULT 15 distance beside the icon, with outline and black shadow. Rotate the arrow in place to the right of the text.
+- Direction arrow: retain the full original `HudArrow.tga`. The selected preview has a 19-pixel-wide visible arrow; increase that visible width by 20% to 22.8. The original source glyph is 24 pixels wide on a 32-pixel canvas, so draw the full texture at `19 * 1.2 * 32 / 24 = 30.4` square. Its artwork points upward at zero rotation and is centered at `(16, 16)`. Both guides share this size and the existing supported texture-coordinate rotation, without assuming retail `Texture:SetRotation`.
+- World-map cache pin: keep the full `MapPin.tga`, with its centered diamond and transparent padding. World-map guardian pin: keep full `Guardian.tga`, including the silver dragon and gold star. Existing map pin sizes and selection behavior remain unchanged; neither is a minimap indicator.
+- Default anchors use the midpoint of the combined DEFAULT action-bar artwork and XP border height from static addon-owned appearance metadata. Cache is left and Guardian right with an eight-unit gap beyond the artwork. Uniform HUD scaling preserves the 190:46 proportions; confirmed independent geometry stays in use.
+- Addon texture paths use `Interface\\AddOns\\SurvivorsDragonUi\\media\\tex\\waypoint\\` with the filenames above.
 
 These assets provide artwork only. They do not add native waypoint APIs, enemy/cache coordinates, or world-to-screen projection capabilities to the 1.12 client.

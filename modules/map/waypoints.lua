@@ -14,24 +14,31 @@ preserved at 64x64 without rescaling; its native display override is 32x32:
 https://wago.tools/api/casc/1121272?version=10.2.7.54847
 https://wago.tools/db2/UiTextureAtlasMember/csv?build=10.2.7.54847
 
-Frame slices reuse the original Blizzard WidgetStatusBar artwork:
-https://github.com/Gethe/wow-ui-textures/blob/d23deaf8f44a7d280dc974a5c9d5321c013db59b/Widgets/WidgetStatusBar.PNG
-Detailed preparation: third_party/CacheWaypoints-ARTWORK.md and
-third_party/WidgetStatusBar-SOURCE.md.
+Floating-label HUD glyphs are Blizzard game artwork distributed by
+NeticSoul/DragonUI, commit 00197f223180323ea7297c0157edbd1a43d2f99f:
+DragonUI/Textures/Nameplates/Quests/Loot/loot_bag.tga (CachePouch.tga)
+DragonUI/Textures/Nameplates/Quests/Kill/kill_elite.tga (GuardianFloating.tga)
+https://github.com/NeticSoul/DragonUI/tree/00197f223180323ea7297c0157edbd1a43d2f99f
+The upstream LICENSE excludes World of Warcraft artwork from its core MIT
+license: game textures are copyright Blizzard Entertainment and included only
+for use with the game. No upstream Lua is imported.
+https://github.com/NeticSoul/DragonUI/blob/00197f223180323ea7297c0157edbd1a43d2f99f/LICENSE
+
+Detailed preparation: third_party/CacheWaypoints-ARTWORK.md.
 ]]
 DFRL:NewMod("Waypoints", 3, function()
     local navigation = DFRL.navigation
     if not navigation then return end
     local texturePath = DFRL:GetInfoOrCons("tex") .. "waypoint\\"
-    local pillPath = DFRL:GetInfoOrCons("tex") .. "timer\\"
     local actionDefaults, xpDefaults = DFRL.actionBarDefaults, DFRL.xpBarDefaults
     if not actionDefaults or not xpDefaults then return end
     local stackTop = actionDefaults.bottom + actionDefaults.height + actionDefaults.topInset
     local stackBottom = xpDefaults.top - (xpDefaults.height + xpDefaults.borderHeight) / 2
-    local HUD_SIZE = (stackTop - stackBottom) * 0.95
+    local HUD_WIDTH, HUD_HEIGHT = 190, 46
     local stackCenter = (stackTop + stackBottom) / 2
-    local sideOffset = actionDefaults.width / 2 + actionDefaults.sideInset + 8 + HUD_SIZE / 2
-    local POINTER_SIZE = 18
+    local sideOffset = actionDefaults.width / 2 + actionDefaults.sideInset + 8 + HUD_WIDTH / 2
+    -- The selected preview shows 19 visible pixels; the source glyph spans 24/32.
+    local POINTER_SIZE = 19 * 1.2 * 32 / 24
     local trackers = {
         {
             kind = "cache",
@@ -42,10 +49,8 @@ DFRL:NewMod("Waypoints", 3, function()
             title = "Cache",
             defaultSide = "LEFT",
             mapArt = "MapPin.tga",
-            hudArt = "HudDiamond.tga",
-            hudWidth = 14,
-            hudHeight = 20,
-            hudTexCoord = { 3 / 32, 29 / 32, 13 / 64, 50 / 64 },
+            hudArt = "CachePouch.tga",
+            hudTexCoord = { 0, 119 / 128, 0, 119 / 128 },
         },
         {
             kind = "guardian",
@@ -56,6 +61,8 @@ DFRL:NewMod("Waypoints", 3, function()
             title = "Guardian",
             defaultSide = "RIGHT",
             mapArt = "Guardian.tga",
+            hudArt = "GuardianFloating.tga",
+            hudTexCoord = { 0, 65 / 128, 0, 65 / 128 },
         },
     }
     local identity
@@ -72,59 +79,32 @@ DFRL:NewMod("Waypoints", 3, function()
         if ok then return value end
     end
 
-    local function PillTexture(hud, name, layer, width, height, left, right, top, bottom)
-        local texture = hud:CreateTexture(nil, layer)
-        texture:SetTexture(pillPath .. name .. ".tga")
-        texture:SetWidth(width)
-        texture:SetHeight(height)
-        texture:SetTexCoord(left, right, top, bottom)
-        return texture
-    end
-
-    local function WaypointSquare(hud)
-        -- Keep the pill artwork's complete beveled corners and gold shading.
-        -- Split its caps vertically so only straight sections stretch taller.
-        local artScale = 1.5
-        local capWidth, cornerHeight = 11 * artScale, 7 * artScale
-        local columns = {
-            { "BorderLeft", 0, capWidth, 5 / 64, 16 / 64 },
-            { "BorderCenter", capWidth, HUD_SIZE - 2 * capWidth, 0, 1 },
-            { "BorderRight", HUD_SIZE - capWidth, capWidth, 19 / 64, 30 / 64 },
-        }
-        local rows = {
-            { 0, cornerHeight, 5 / 32, 12 / 32 },
-            { cornerHeight, HUD_SIZE - 2 * cornerHeight, 12 / 32, 19 / 32 },
-            { HUD_SIZE - cornerHeight, cornerHeight, 19 / 32, 26 / 32 },
-        }
-        for columnIndex, column in ipairs(columns) do
-            for rowIndex, row in ipairs(rows) do
-                if columnIndex ~= 2 or rowIndex ~= 2 then
-                    local rim =
-                        PillTexture(hud, column[1], "BORDER", column[3], row[2], column[4], column[5], row[3], row[4])
-                    rim:SetPoint("TOPLEFT", hud, "TOPLEFT", column[2], -row[1])
-                    -- The original caps contain black outer shadows.
-                    rim:SetBlendMode("ADD")
-                    rim:SetAlpha(0.9)
-                end
-            end
-        end
-
-        -- Follow the original inner contour instead of drawing a black square
-        -- behind its cut corners. The central band expands with the frame.
-        local bands = {
-            { 2 * artScale, artScale, 5 * artScale },
-            { 3 * artScale, artScale, 4 * artScale },
-            { 4 * artScale, artScale, 3 * artScale },
-            { 5 * artScale, HUD_SIZE - 10 * artScale, 2 * artScale },
-            { HUD_SIZE - 5 * artScale, artScale, 3 * artScale },
-            { HUD_SIZE - 4 * artScale, artScale, 4 * artScale },
-            { HUD_SIZE - 3 * artScale, artScale, 5 * artScale },
-        }
-        for _, band in ipairs(bands) do
-            local fill =
-                PillTexture(hud, "BackgroundCenter", "BACKGROUND", HUD_SIZE - 2 * band[3], band[2], 0, 1, 0, 18 / 32)
-            fill:SetPoint("TOP", hud, "TOP", 0, -band[1])
-            fill:SetAlpha(0.45)
+    local function FloatingRail(hud)
+        -- Fade the lower rail at both ends; leave the icon and label unenclosed.
+        for _, side in ipairs({ "LEFT", "RIGHT" }) do
+            local left = side == "LEFT"
+            local fill = hud:CreateTexture(nil, "BACKGROUND")
+            fill:SetTexture("Interface\\Buttons\\WHITE8X8")
+            fill:SetWidth(HUD_WIDTH / 2)
+            fill:SetHeight(18)
+            fill:SetPoint(left and "BOTTOMLEFT" or "BOTTOMRIGHT", hud, left and "BOTTOMLEFT" or "BOTTOMRIGHT", 0, 0)
+            fill:SetGradientAlpha(
+                "HORIZONTAL",
+                0.065,
+                0.125,
+                0.085,
+                left and 0 or 0.8,
+                0.065,
+                0.125,
+                0.085,
+                left and 0.8 or 0
+            )
+            local line = hud:CreateTexture(nil, "BORDER")
+            line:SetTexture("Interface\\Buttons\\WHITE8X8")
+            line:SetWidth(HUD_WIDTH / 2)
+            line:SetHeight(1)
+            line:SetPoint(left and "BOTTOMLEFT" or "BOTTOMRIGHT", hud, left and "BOTTOMLEFT" or "BOTTOMRIGHT", 0, 0)
+            line:SetGradientAlpha("HORIZONTAL", 0.73, 0.58, 0.34, left and 0 or 0.35, 0.73, 0.58, 0.34, left and 0.35 or 0)
         end
     end
 
@@ -145,18 +125,18 @@ DFRL:NewMod("Waypoints", 3, function()
     local function MakeHUD(tracker)
         tracker.entries, tracker.pins = {}, {}
         local hud = CreateFrame("Frame", tracker.frameName, UIParent)
-        hud:SetWidth(HUD_SIZE)
-        hud:SetHeight(HUD_SIZE)
+        hud:SetWidth(HUD_WIDTH)
+        hud:SetHeight(HUD_HEIGHT)
         hud:SetFrameStrata("HIGH")
         hud:EnableMouse(false)
         hud:Hide()
-        WaypointSquare(hud)
+        FloatingRail(hud)
         local marker = hud:CreateTexture(nil, "ARTWORK")
         marker:SetTexture(texturePath .. (tracker.hudArt or tracker.mapArt))
-        marker:SetWidth(tracker.hudWidth or 20)
-        marker:SetHeight(tracker.hudHeight or 20)
-        if tracker.hudTexCoord then marker:SetTexCoord(unpack(tracker.hudTexCoord)) end
-        marker:SetPoint("CENTER", hud, "TOP", -11, -HUD_SIZE * 0.27)
+        marker:SetWidth(32)
+        marker:SetHeight(32)
+        marker:SetTexCoord(unpack(tracker.hudTexCoord))
+        marker:SetPoint("LEFT", hud, "LEFT", 26, 0)
         tracker.marker = marker
         local pointer = hud:CreateTexture(nil, "OVERLAY")
         pointer:SetTexture(texturePath .. "HudArrow.tga")
@@ -164,23 +144,23 @@ DFRL:NewMod("Waypoints", 3, function()
         pointer:SetHeight(POINTER_SIZE)
         pointer:Hide()
         local title = hud:CreateFontString(nil, "OVERLAY")
-        title:SetFont("DEFAULT", 9, "OUTLINE")
-        title:SetTextColor(1, 0.9, 0.58)
-        title:SetPoint("CENTER", hud, "TOP", 0, -HUD_SIZE * 0.58)
-        title:SetWidth(HUD_SIZE - 8)
-        title:SetHeight(12)
-        title:SetJustifyH("CENTER")
+        title:SetFont("DEFAULT", 13, "OUTLINE")
+        title:SetTextColor(0.93, 0.8, 0.53)
+        title:SetPoint("TOPLEFT", hud, "TOPLEFT", 68, -6)
+        title:SetWidth(76)
+        title:SetHeight(16)
+        title:SetJustifyH("LEFT")
         title:SetJustifyV("MIDDLE")
         title:SetShadowColor(0, 0, 0, 0.9)
         title:SetShadowOffset(1, -1)
         title:SetText(tracker.title)
         local distanceText = hud:CreateFontString(nil, "OVERLAY")
-        distanceText:SetFont("DEFAULT", 10, "OUTLINE")
-        distanceText:SetTextColor(1, 1, 1)
-        distanceText:SetPoint("CENTER", hud, "TOP", 0, -HUD_SIZE * 0.8)
-        distanceText:SetWidth(HUD_SIZE - 8)
-        distanceText:SetHeight(12)
-        distanceText:SetJustifyH("CENTER")
+        distanceText:SetFont("DEFAULT", 15, "OUTLINE")
+        distanceText:SetTextColor(1, 0.96, 0.85)
+        distanceText:SetPoint("TOPLEFT", hud, "TOPLEFT", 68, -22)
+        distanceText:SetWidth(76)
+        distanceText:SetHeight(19)
+        distanceText:SetJustifyH("LEFT")
         distanceText:SetJustifyV("MIDDLE")
         distanceText:SetShadowColor(0, 0, 0, 0.9)
         distanceText:SetShadowOffset(1, -1)
@@ -430,7 +410,7 @@ DFRL:NewMod("Waypoints", 3, function()
             -- Native heading is counterclockwise, destination bearing clockwise.
             local angle = math.atan2(east, north) + facing
             tracker.pointer:ClearAllPoints()
-            tracker.pointer:SetPoint("CENTER", tracker.hud, "TOP", 11, -HUD_SIZE * 0.27)
+            tracker.pointer:SetPoint("CENTER", tracker.hud, "LEFT", HUD_WIDTH - 27, 0)
             Rotate(tracker.pointer, angle)
             tracker.pointer:Show()
         else
