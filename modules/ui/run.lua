@@ -10,8 +10,8 @@ DFRL:NewMod("RunTimers", 5, function()
     local CACHE_ICON = "Interface\\Cursor\\LootAll.blp"
     local COINS_ICON = DFRL:GetInfoOrCons("tex") .. "chat\\cleaner_coins.tga"
     local MARKER_SIZE = 18
-    local PASSED_MARKER_SCALE = 0.8
-    local PASSED_MARKER_ALPHA = 0.55
+    local DEAD_MARKER_SCALE = 0.8
+    local DEAD_MARKER_ALPHA = 0.7
     local PHASES = {
         ready = true,
         playing = true,
@@ -442,7 +442,7 @@ DFRL:NewMod("RunTimers", 5, function()
     DFRL.AttachRunTally()
 
     local markers = {}
-    local markerTimes = {}
+    local markerStates = {}
     local activeRows = {}
     local spareRows = {}
     local createdRows = 0
@@ -529,10 +529,21 @@ DFRL:NewMod("RunTimers", 5, function()
         bossGroup:Hide()
     end
 
+    local function ShowMarkerGlow(marker, shown)
+        for _, glow in ipairs(marker.glow) do
+            if shown then
+                glow:Show()
+            else
+                glow:Hide()
+            end
+        end
+    end
+
     local function HideMarker(marker)
         marker:Hide()
         marker.check:Hide()
-        marker.passed = nil
+        ShowMarkerGlow(marker, false)
+        marker.state = nil
     end
 
     local function ReleaseClock()
@@ -553,7 +564,7 @@ DFRL:NewMod("RunTimers", 5, function()
         refreshRows = true
     end
 
-    local function ScheduleTimes(maximum)
+    local function ScheduleMarkers(maximum)
         local schedule = AZS_SCHEDULE
         if type(schedule) ~= "table" then return nil end
         local state, zone = AZS_RUN, AZS_ZONE
@@ -561,7 +572,7 @@ DFRL:NewMod("RunTimers", 5, function()
         if not IsNumber(expected) or expected <= 0 then expected = type(zone) == "table" and zone.bt or nil end
         if not IsNumber(expected) or expected <= 0 or expected ~= math.floor(expected) then return nil end
 
-        local times = {}
+        local entries = {}
         local seen, final = {}, false
         -- An empty table after /reload is not a received schedule. Require
         -- every zone boss, including those already up/dead, and matching native
@@ -571,10 +582,13 @@ DFRL:NewMod("RunTimers", 5, function()
                 type(entry) ~= "table"
                 or not IsNumber(entry.index)
                 or entry.index ~= math.floor(entry.index)
+                or entry.index < 1
+                or entry.index > expected
                 or seen[entry.index]
                 or not IsNumber(entry.at)
                 or entry.at <= 0
                 or entry.at > maximum
+                or (entry.state ~= "due" and entry.state ~= "up" and entry.state ~= "dead")
             then
                 return nil
             end
@@ -583,20 +597,38 @@ DFRL:NewMod("RunTimers", 5, function()
                 if final or entry.at ~= maximum then return nil end
                 final = true
             end
-            table.insert(times, entry.at)
+            table.insert(entries, { at = entry.at, state = entry.state })
         end
-        if table.getn(times) ~= expected or not final then return nil end
-        return times
+        if table.getn(entries) ~= expected or not final then return nil end
+        return entries
     end
 
-    local function UpdateMarkers(maximum, times)
-        for index, at in ipairs(times) do
+    local function UpdateMarkers(maximum, entries)
+        for index, entry in ipairs(entries) do
+            local at = entry.at
             local marker = markers[index]
             if not marker then
                 marker = CreateFrame("Frame", nil, overlay)
                 marker:SetWidth(MARKER_SIZE)
                 marker:SetHeight(MARKER_SIZE)
                 marker:EnableMouse(false)
+                marker.glow = {}
+                -- Offset copies follow the skull's transparent silhouette,
+                -- outlining an active boss without recoloring the foreground.
+                for x = -1, 1 do
+                    for y = -1, 1 do
+                        if x ~= 0 or y ~= 0 then
+                            local glow = marker:CreateTexture(nil, "BACKGROUND")
+                            glow:SetTexture(SKULL_ICON)
+                            glow:SetWidth(MARKER_SIZE)
+                            glow:SetHeight(MARKER_SIZE)
+                            glow:SetPoint("CENTER", marker, "CENTER", x * 1.5, y * 1.5)
+                            glow:SetVertexColor(1, 0.25, 0, 0.85)
+                            glow:SetBlendMode("ADD")
+                            table.insert(marker.glow, glow)
+                        end
+                    end
+                end
                 marker.skull = marker:CreateTexture(nil, "ARTWORK")
                 marker.skull:SetTexture(SKULL_ICON)
                 marker.skull:SetPoint("CENTER", marker, "CENTER", 0, 0)
@@ -609,7 +641,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 HideMarker(marker)
                 markers[index] = marker
             end
-            markerTimes[index] = at
+            markerStates[index] = entry.state
             marker:ClearAllPoints()
             if at == maximum then
                 marker:SetPoint("RIGHT", runBar, "RIGHT", 0, 0)
@@ -617,25 +649,26 @@ DFRL:NewMod("RunTimers", 5, function()
                 marker:SetPoint("CENTER", runBar, "LEFT", BAR_WIDTH * at / maximum, 0)
             end
         end
-        for index = table.getn(times) + 1, table.getn(markers) do
-            markerTimes[index] = nil
+        for index = table.getn(entries) + 1, table.getn(markers) do
+            markerStates[index] = nil
             HideMarker(markers[index])
         end
     end
 
-    local function UpdateMarkerVisibility(seconds)
-        -- A check means the native scheduled time passed, not that the boss died.
+    local function UpdateMarkerStates()
+        -- Only the official schedule establishes active and defeated bosses.
         for index, marker in ipairs(markers) do
-            local at = markerTimes[index]
-            if at then
-                local passed = seconds >= at
-                if marker.passed ~= passed then
-                    marker.passed = passed
-                    local size = MARKER_SIZE * (passed and PASSED_MARKER_SCALE or 1)
+            local state = markerStates[index]
+            if state then
+                if marker.state ~= state then
+                    marker.state = state
+                    local dead = state == "dead"
+                    local size = MARKER_SIZE * (dead and DEAD_MARKER_SCALE or 1)
                     marker.skull:SetWidth(size)
                     marker.skull:SetHeight(size)
-                    marker.skull:SetAlpha(passed and PASSED_MARKER_ALPHA or 1)
-                    if passed then
+                    marker.skull:SetAlpha(dead and DEAD_MARKER_ALPHA or 1)
+                    ShowMarkerGlow(marker, state == "up")
+                    if dead then
                         marker.check:Show()
                     else
                         marker.check:Hide()
@@ -767,7 +800,7 @@ DFRL:NewMod("RunTimers", 5, function()
         end
         previousZone = zone
         if IsNumber(seconds) then previousTime = seconds end
-        local times = maximum and ScheduleTimes(maximum) or nil
+        local scheduled = maximum and ScheduleMarkers(maximum) or nil
         if IsNumber(seconds) and maximum then
             runBar:SetMinMaxValues(0, maximum)
             runBar:SetValue(math.min(maximum, seconds))
@@ -778,8 +811,8 @@ DFRL:NewMod("RunTimers", 5, function()
             end
             -- Missing schedule replay affects only spawn markers, never a clock
             -- whose native elapsed time and duration have already recovered.
-            if refreshRows or not run:IsShown() or not times then UpdateMarkers(maximum, times or {}) end
-            UpdateMarkerVisibility(seconds)
+            if refreshRows or not run:IsShown() or not scheduled then UpdateMarkers(maximum, scheduled or {}) end
+            UpdateMarkerStates()
             run:Show()
             if not TakeOver("clock") then ReleaseClock() end
         else
@@ -815,8 +848,8 @@ DFRL:NewMod("RunTimers", 5, function()
         Update()
     end)
     reader:SetScript("OnUpdate", function()
-        -- Only list/marker placement refreshes are throttled. The clock and
-        -- skull visibility use AZS_GetRunTime() every frame, including pauses.
+        -- List/marker refreshes are throttled; boss-state packets refresh them
+        -- immediately. The pause-aware native clock is read every frame.
         pollAge = pollAge + (tonumber(arg1) or 0)
         if pollAge >= 0.1 then
             pollAge = 0
