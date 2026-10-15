@@ -4,6 +4,11 @@ DFRL:NewMod("RunTimers", 5, function()
     local path = DFRL:GetInfoOrCons("tex") .. "timer\\"
     local BAR_WIDTH = 280
     local ROW_HEIGHT = 48
+    local SKULL_ICON = "Interface\\TargetingFrame\\UI-TargetingFrame-Skull"
+    local ATTACK_ICON = "Interface\\Cursor\\Attack.blp"
+    local CACHE_ICON = "Interface\\Cursor\\LootAll.blp"
+    local COINS_ICON = DFRL:GetInfoOrCons("tex") .. "chat\\cleaner_coins.tga"
+    local MARKER_SIZE = 18
     local PHASES = {
         ready = true, playing = true, choosing = true,
         paused = true, dead = true, victory = true,
@@ -88,18 +93,42 @@ DFRL:NewMod("RunTimers", 5, function()
     end
 
     local run, runBar, runText, overlay = Pill("DFRL_RunTimerPill", "FillBlue")
-    run:SetPoint("TOP", UIParent, "TOP", 0, -38)
+    -- A failed native font load leaves the initialized DEFAULT face intact.
+    runText:SetFont("Fonts\\MORPHEUS.TTF", 14, "OUTLINE")
+    runText:SetShadowColor(0, 0, 0, 1)
+    runText:SetShadowOffset(1, -1)
+    local runMoveRegion = CreateFrame("Frame", nil, run)
+    runMoveRegion:SetPoint("TOPLEFT", run, "TOPLEFT", 0, 18)
+    runMoveRegion:SetPoint("BOTTOMRIGHT", run, "BOTTOMRIGHT", 0, 0)
+    DFRL.layout.Register("runTimer", run, function()
+        run:ClearAllPoints()
+        run:SetPoint("TOP", UIParent, "TOP", 0, -30)
+    end, {region = runMoveRegion})
+
+    -- Encounters share a movable group, independent of the run clock.
+    -- Its bounds include the first name and every stacked health pill.
+    local bossGroup = CreateFrame("Frame", "DFRL_BossHealthGroup", UIParent)
+    bossGroup:SetWidth(BAR_WIDTH + 16)
+    bossGroup:SetHeight(47)
+    bossGroup:SetFrameStrata("HIGH")
+    bossGroup:Hide()
+    DFRL.layout.Register("bossBars", bossGroup, function()
+        bossGroup:ClearAllPoints()
+        bossGroup:SetPoint("TOP", UIParent, "TOP", 0, -77)
+    end)
+
     local tally, tallyBar, tallyTitle, tallyOverlay = Pill("DFRL_RunTallyPill", "FillYellow")
     tallyBar:SetValue(1)
     tallyBar:SetAlpha(0.4)
     tallyTitle:Hide()
     local tallyFields = {}
     local tallyAttached = false
+    local tallyRegistered = false
     local fieldWidth = BAR_WIDTH / 3
     local counters = {
-        {key = "kills", label = "Enemies killed", icon = "Interface\\TargetingFrame\\UI-TargetingFrame-Skull"},
-        {key = "gold", label = "Gold", icon = "Interface\\Icons\\INV_Misc_Coin_01"},
-        {key = "chest", label = "Next cache cost (gold)", icon = "Interface\\Icons\\INV_Crate_01"},
+        {key = "kills", label = "Enemies killed", icon = ATTACK_ICON},
+        {key = "gold", label = "Gold", icon = COINS_ICON},
+        {key = "chest", label = "Next cache cost (gold)", icon = CACHE_ICON},
     }
     for index, counter in ipairs(counters) do
         local field = CreateFrame("Frame", nil, tallyOverlay)
@@ -110,6 +139,10 @@ DFRL:NewMod("RunTimers", 5, function()
 
         local icon = field:CreateTexture(nil, "ARTWORK")
         icon:SetTexture(counter.icon)
+        if counter.key == "gold" then
+            -- CleanerChat's 64x64 atlas places gold in the top-left 32x32.
+            icon:SetTexCoord(0, 0.5, 0, 0.5)
+        end
         icon:SetWidth(18)
         icon:SetHeight(18)
         icon:SetPoint("LEFT", field, "LEFT", 5, 0)
@@ -150,11 +183,18 @@ DFRL:NewMod("RunTimers", 5, function()
         if not xp or not DFRL.mainBar then return false end
         local width = xp:GetWidth()
         if not IsNumber(width) or width <= 70 then return false end
-        -- XP already follows the action-bar artwork's exact outer edges.
-        -- Keep this a sibling so reaching maximum XP cannot hide the tally.
-        tally:ClearAllPoints()
-        tally:SetPoint("TOPLEFT", xp, "BOTTOMLEFT", 0, -4)
-        tally:SetPoint("TOPRIGHT", xp, "BOTTOMRIGHT", 0, -4)
+        -- Match XP's artwork width without making either group follow the
+        -- other's position. Maximum XP also cannot hide the tally.
+        tally:SetWidth(width)
+        if not tallyRegistered then
+            DFRL.layout.Register("runTally", tally, function()
+                tally:ClearAllPoints()
+                tally:SetPoint("TOP", UIParent, "BOTTOM", 0, 39)
+            end)
+            tallyRegistered = true
+        else
+            DFRL.layout.Place("runTally", tally)
+        end
         local sectionWidth = (width - 16) / table.getn(tallyFields)
         for index, entry in ipairs(tallyFields) do
             entry.frame:SetWidth(sectionWidth)
@@ -168,6 +208,7 @@ DFRL:NewMod("RunTimers", 5, function()
     DFRL.AttachRunTally()
 
     local markers = {}
+    local markerTimes = {}
     local activeRows = {}
     local spareRows = {}
     local createdRows = 0
@@ -245,6 +286,7 @@ DFRL:NewMod("RunTimers", 5, function()
             Retire(row)
             activeRows[key] = nil
         end
+        bossGroup:Hide()
     end
 
     local function ReleaseClock()
@@ -263,36 +305,72 @@ DFRL:NewMod("RunTimers", 5, function()
         refreshRows = true
     end
 
-    local function UpdateMarkers(maximum)
-        local times = {}
+    local function ScheduleTimes(maximum)
         local schedule = AZS_SCHEDULE
-        if type(schedule) == "table" then
-            -- The complete schedule retains markers for bosses already up/dead.
-            for _, entry in ipairs(schedule) do
-                if type(entry) == "table" and IsNumber(entry.at) and entry.at > 0 and entry.at <= maximum then
-                    table.insert(times, entry.at)
-                end
-            end
+        if type(schedule) ~= "table" then return nil end
+        local state, zone = AZS_RUN, AZS_ZONE
+        local expected = type(state) == "table" and state.bt or nil
+        if not IsNumber(expected) or expected <= 0 then
+            expected = type(zone) == "table" and zone.bt or nil
         end
+        if not IsNumber(expected) or expected <= 0 or expected ~= math.floor(expected) then return nil end
+
+        local times = {}
+        local seen, final = {}, false
+        -- An empty table after /reload is not a received schedule. Require
+        -- every zone boss, including those already up/dead, and matching native
+        -- final-boss time before drawing markers. Clock recovery is independent.
+        for _, entry in ipairs(schedule) do
+            if type(entry) ~= "table" or not IsNumber(entry.index)
+                or entry.index ~= math.floor(entry.index) or seen[entry.index]
+                or not IsNumber(entry.at) or entry.at <= 0 or entry.at > maximum then
+                return nil
+            end
+            seen[entry.index] = true
+            if entry.final == 1 or entry.final == true then
+                if final or entry.at ~= maximum then return nil end
+                final = true
+            end
+            table.insert(times, entry.at)
+        end
+        if table.getn(times) ~= expected or not final then return nil end
+        return times
+    end
+
+    local function UpdateMarkers(maximum, times)
         for index, at in ipairs(times) do
             local marker = markers[index]
             if not marker then
-                marker = overlay:CreateTexture(nil, "ARTWORK")
-                marker:SetTexture("Interface\\Buttons\\WHITE8X8")
-                marker:SetVertexColor(0.9, 0.8, 0.55, 0.9)
-                marker:SetWidth(1)
-                marker:SetHeight(runBar:GetHeight())
+                marker = overlay:CreateTexture(nil, "OVERLAY")
+                marker:SetTexture(SKULL_ICON)
+                marker:SetWidth(MARKER_SIZE)
+                marker:SetHeight(MARKER_SIZE)
                 markers[index] = marker
             end
+            markerTimes[index] = at
             marker:ClearAllPoints()
             if at == maximum then
                 marker:SetPoint("RIGHT", runBar, "RIGHT", 0, 0)
             else
                 marker:SetPoint("CENTER", runBar, "LEFT", BAR_WIDTH * at / maximum, 0)
             end
-            marker:Show()
         end
-        for index = table.getn(times) + 1, table.getn(markers) do markers[index]:Hide() end
+        for index = table.getn(times) + 1, table.getn(markers) do
+            markerTimes[index] = nil
+            markers[index]:Hide()
+        end
+    end
+
+    local function UpdateMarkerVisibility(seconds)
+        -- Native pause-aware time owns expiry; no separate clock is advanced.
+        for index, marker in ipairs(markers) do
+            local at = markerTimes[index]
+            if at and seconds < at then
+                marker:Show()
+            else
+                marker:Hide()
+            end
+        end
     end
 
     local function EncounterRows()
@@ -336,6 +414,7 @@ DFRL:NewMod("RunTimers", 5, function()
         if row then return row end
         createdRows = createdRows + 1
         local frame, bar, name, rowOverlay = Pill("DFRL_BossHealthPill" .. tostring(createdRows), "FillWhite")
+        frame:SetParent(bossGroup)
         bar:SetStatusBarColor(0.86, 0.12, 0.1, 1)
         name:SetFont("DEFAULT", 12, "OUTLINE")
         name:SetWidth(BAR_WIDTH)
@@ -359,6 +438,10 @@ DFRL:NewMod("RunTimers", 5, function()
                 activeRows[key] = nil
             end
         end
+        local count = table.getn(entries)
+        bossGroup:SetHeight(47 + math.max(0, count - 1) * ROW_HEIGHT)
+        DFRL.layout.Place("bossBars", bossGroup)
+        if count > 0 then bossGroup:Show() else bossGroup:Hide() end
         for index, entry in ipairs(entries) do
             local row = activeRows[entry.key]
             if not row then
@@ -366,7 +449,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 activeRows[entry.key] = row
             end
             row.frame:ClearAllPoints()
-            row.frame:SetPoint("TOP", run, "BOTTOM", 0, -24 - (index - 1) * ROW_HEIGHT)
+            row.frame:SetPoint("TOP", bossGroup, "TOP", 0, -16 - (index - 1) * ROW_HEIGHT)
             row.bar:SetValue(math.min(1, entry.hp / entry.maximum))
             row.name:SetText(entry.name)
             row.health:SetText(tostring(math.floor(entry.hp)) .. " / " .. tostring(math.floor(entry.maximum)))
@@ -399,10 +482,15 @@ DFRL:NewMod("RunTimers", 5, function()
         end
         previousZone = zone
         if IsNumber(seconds) then previousTime = seconds end
+        local times = maximum and ScheduleTimes(maximum) or nil
         if IsNumber(seconds) and maximum then
             runBar:SetMinMaxValues(0, maximum)
             runBar:SetValue(math.min(maximum, seconds))
-            runText:SetText("Run: " .. Clock(seconds) .. " / " .. Clock(maximum))
+            runText:SetText("RUN " .. Clock(seconds) .. " / " .. Clock(maximum))
+            -- Missing schedule replay affects only spawn markers, never a clock
+            -- whose native elapsed time and duration have already recovered.
+            if refreshRows or not run:IsShown() or not times then UpdateMarkers(maximum, times or {}) end
+            UpdateMarkerVisibility(seconds)
             run:Show()
             if not TakeOver("clock") then ReleaseClock() end
         else
@@ -413,7 +501,6 @@ DFRL:NewMod("RunTimers", 5, function()
         if refreshRows then
             refreshRows = false
             UpdateTally()
-            if run:IsShown() then UpdateMarkers(maximum) end
             UpdateRows()
         end
     end
@@ -439,8 +526,8 @@ DFRL:NewMod("RunTimers", 5, function()
         Update()
     end)
     reader:SetScript("OnUpdate", function()
-        -- This accumulator only limits list/marker refreshes. The displayed
-        -- clock always comes directly from AZS_GetRunTime(), including pauses.
+        -- Only list/marker placement refreshes are throttled. The clock and
+        -- skull visibility use AZS_GetRunTime() every frame, including pauses.
         pollAge = pollAge + (tonumber(arg1) or 0)
         if pollAge >= 0.1 then
             pollAge = 0

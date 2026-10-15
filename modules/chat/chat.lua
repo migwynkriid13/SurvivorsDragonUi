@@ -1,22 +1,456 @@
+-- CleanerChat presentation with only the explicitly requested message formats.
+-- Source credits are retained in third_party/CleanerChat-NOTICE.txt.
 DFRL:NewMod("Chat", 1, function()
-    if ChatFrame1Tab then ChatFrame1Tab:SetClampedToScreen(true) end
-    local path = DFRL:GetInfoOrCons("tex") .. "chat\\"
-    local function SkinButton(button, texture)
-        if not button then return end
-        button:SetNormalTexture(path .. texture)
-        button:SetHighlightTexture(path .. texture)
-        button:SetPushedTexture(path .. texture)
-        button:SetScale(0.8)
-    end
-    SkinButton(ChatFrameMenuButton, "chat_menu")
-    for i = 1, NUM_CHAT_WINDOWS or 7 do
-        SkinButton(_G["ChatFrame" .. i .. "UpButton"], "chat_up")
-        SkinButton(_G["ChatFrame" .. i .. "DownButton"], "chat_down")
-        SkinButton(_G["ChatFrame" .. i .. "BottomButton"], "chat_down_full")
-        local frame = _G["ChatFrame" .. i]
-        if frame then
-            frame:SetFadeDuration(3)
-            frame:SetTimeVisible(180)
+    DFRL.CleanerChat = DFRL.CleanerChat or {}
+    local chat = DFRL.CleanerChat
+    local initialized = false
+    local Initialize
+
+    Initialize = function()
+        if initialized or not ChatFrame1 then return end
+        initialized = true
+
+        local WIDTH, HEIGHT = 520, 340
+        local HOLD, FADE, SLIDE = 14, 0.6, 0.35
+        local tex = DFRL:GetInfoOrCons("tex") .. "chat\\"
+        local states, selected = {}, nil
+        local input = _G.ChatFrameEditBox or _G.ChatFrame1EditBox or ChatFrame1.editBox
+        local RefreshFrames, SelectChat, PositionInput, UpdateIndicator
+        local focused = false
+
+        local root = CreateFrame("Frame", "SurvivorsDragonUiChat", UIParent)
+        root:SetWidth(WIDTH)
+        root:SetHeight(HEIGHT)
+        -- Leave only enough bottom clearance for the input and scroll indicator.
+        root:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", 20, 40)
+        root:SetFrameStrata("LOW")
+        root:SetAlpha(1)
+        root:Show()
+        chat.frame = root
+
+        local function Flag(value) return value == true or value == 1 end
+        local function Clamp(value, low, high) return math.max(low, math.min(high, value)) end
+        local function Contains(list, value)
+            if type(list) ~= "table" then return false end
+            for _, entry in pairs(list) do if entry == value then return true end end
+            return false
         end
+        local function Label(parent, text, size)
+            local label = parent:CreateFontString(nil, "OVERLAY")
+            label:SetFont("DEFAULT", size or 12, "OUTLINE")
+            label:SetShadowColor(0, 0, 0, 1)
+            label:SetShadowOffset(1, -1)
+            label:SetText(text or "")
+            return label
+        end
+        local function HideControl(control)
+            if not control then return end
+            control:Hide()
+            control.Show = control.Hide
+        end
+
+        local regularNotices = {
+            COMBAT_XP_GAIN = true,
+            COMBAT_HONOR_GAIN = true,
+            COMBAT_FACTION_CHANGE = true,
+            SPELL_TRADESKILLS = true,
+            SPELL_ITEM_ENCHANTMENTS = true,
+        }
+        local function IsCombatLogGroup(group)
+            if regularNotices[group] then return false end
+            return string.find(group, "^COMBAT_") ~= nil or string.find(group, "^SPELL_") ~= nil
+        end
+        local function ConfigureRegularChat()
+            if type(ChatTypeGroup) == "table" then
+                for group in pairs(ChatTypeGroup) do
+                    if type(group) == "string" then
+                        if IsCombatLogGroup(group) then
+                            -- Undo combat subscriptions saved by the earlier
+                            -- all-groups setup; leave ChatFrame2 untouched.
+                            if ChatFrame_RemoveMessageGroup and Contains(ChatFrame1.messageTypeList, group) then
+                                ChatFrame_RemoveMessageGroup(ChatFrame1, group)
+                            end
+                        elseif ChatFrame_AddMessageGroup and not Contains(ChatFrame1.messageTypeList, group) then
+                            ChatFrame_AddMessageGroup(ChatFrame1, group)
+                        end
+                    end
+                end
+            end
+            if GetChannelList and ChatFrame_AddChannel then
+                local channels = {GetChannelList()}
+                for i = 2, table.getn(channels), 2 do
+                    local name = channels[i]
+                    if name and not Contains(ChatFrame1.channelList, name) then ChatFrame_AddChannel(ChatFrame1, name) end
+                end
+            end
+        end
+        local function AtBottom(state)
+            if state.native.AtBottom then return Flag(state.native:AtBottom()) end
+            return not state.scrolled
+        end
+        local function FadeSettings(state, held)
+            local frame = state.native
+            if not state.fadeConfigured then
+                if frame.SetTimeVisible then frame:SetTimeVisible(HOLD) end
+                if frame.SetFadeDuration then frame:SetFadeDuration(FADE) end
+                state.fadeConfigured = true
+            end
+            if state.held ~= held then
+                if frame.SetFading then frame:SetFading(not held) end
+                state.held = held
+            end
+        end
+        local function Rearm(state)
+            if not state then return end
+            local frame = state.native
+            -- The native engine rearms displayed-line fade timers on scroll.
+            -- At the bottom, Down is a no-op. Else Down/Up restores the offset.
+            -- This preserves stored text, colors, hyperlinks and message order.
+            if AtBottom(state) then
+                if frame.ScrollDown then frame:ScrollDown() end
+            elseif frame.ScrollDown and frame.ScrollUp then
+                frame:ScrollDown()
+                frame:ScrollUp()
+            end
+        end
+        local function Reveal(state)
+            local now = GetTime()
+            if state then
+                local lastVisible = math.max(state.lastActivity or 0, state.lastReveal or 0)
+                if now - lastVisible >= HOLD + FADE then
+                    state.revealStart, state.visualAlpha = now, 0
+                end
+                state.lastReveal = now
+                Rearm(state)
+            end
+        end
+        local function PositionNative(state, now)
+            local frame = state.native
+            local progress = state.slideStart and Clamp((now - state.slideStart) / SLIDE, 0, 1) or 1
+            local shift = -12 * (1 - progress) * (1 - progress) * (1 - progress)
+            frame:ClearAllPoints()
+            frame:SetPoint("TOPLEFT", root, "TOPLEFT", 3, -5 + shift)
+            frame:SetWidth(root:GetWidth() - 6)
+            frame:SetHeight(root:GetHeight() - 5)
+            local font, size, flags
+            if frame.GetFont then font, size, flags = frame:GetFont() end
+            if font ~= "DEFAULT" or size ~= 12 or flags ~= "OUTLINE" then
+                frame:SetFont("DEFAULT", 12, "OUTLINE")
+            end
+            if frame.SetShadowColor then frame:SetShadowColor(0, 0, 0, 1) end
+            if frame.SetShadowOffset then frame:SetShadowOffset(1, -1) end
+            if frame.SetJustifyH then frame:SetJustifyH("LEFT") end
+        end
+
+        local indicator = CreateFrame("Frame", nil, root)
+        indicator:SetWidth(WIDTH)
+        indicator:SetHeight(32)
+        indicator:SetPoint("TOPLEFT", root, "BOTTOMLEFT", 0, 0)
+        indicator:SetFrameLevel(root:GetFrameLevel() + 5)
+        local indicatorText = Label(indicator, "Scroll down for latest messages")
+        indicatorText:SetPoint("CENTER", indicator, "CENTER", -10, 0)
+        indicatorText:SetTextColor(223 / 255, 186 / 255, 105 / 255)
+        local icon = indicator:CreateTexture(nil, "ARTWORK")
+        icon:SetTexture(tex .. "cleaner_snapToBottomIcon.tga")
+        icon:SetWidth(16)
+        icon:SetHeight(16)
+        icon:SetPoint("LEFT", indicatorText, "RIGHT", 6, 0)
+        indicator:Hide()
+
+        UpdateIndicator = function()
+            if selected and not AtBottom(selected) and not focused then
+                indicatorText:SetText(selected.unread and "Unread messages" or "Scroll down for latest messages")
+                indicator:Show()
+            else
+                indicator:Hide()
+            end
+        end
+        local function Scroll(state, direction)
+            if direction == 0 then return end
+            local steps = IsShiftKeyDown() and 10 or 3
+            for i = 1, steps do
+                if direction > 0 then state.native:ScrollUp() else state.native:ScrollDown() end
+            end
+            if state.native.AtBottom then state.scrolled = not AtBottom(state)
+            else state.scrolled = direction > 0 end
+            if not state.scrolled then state.unread = false end
+            Reveal(state)
+            FadeSettings(state, true)
+            UpdateIndicator()
+        end
+        local function NoticeMessage(state)
+            state.slideStart = GetTime()
+            state.lastActivity = state.slideStart
+            if state ~= selected or not AtBottom(state) then state.unread = true end
+            if UpdateIndicator then UpdateIndicator() end
+        end
+
+        PositionInput = function()
+            if not input then return end
+            input:ClearAllPoints()
+            input:SetPoint("TOPLEFT", root, "BOTTOMLEFT", -1, -1)
+            input:SetWidth(root:GetWidth())
+            input:SetHeight(28)
+            input:SetFont("DEFAULT", 12, "OUTLINE")
+            if input.SetShadowColor then input:SetShadowColor(0, 0, 0, 1) end
+            if input.SetShadowOffset then input:SetShadowOffset(1, -1) end
+            input:SetAlpha(1)
+            local header = input:GetName() and _G[input:GetName() .. "Header"]
+            if header then
+                header:SetFont("DEFAULT", 12, "OUTLINE")
+                header:ClearAllPoints()
+                header:SetPoint("LEFT", input, "LEFT", 8, 0)
+            end
+            input:SetTextInsets((header and header:GetStringWidth() or 0) + 12, 8, 6, 6)
+        end
+
+        root:EnableMouse(true)
+        root:EnableMouseWheel(true)
+        root:SetScript("OnMouseWheel", function()
+            if selected then Scroll(selected, arg1 or 0) end
+        end)
+
+        local function AttachNative(index)
+            local native = _G["ChatFrame" .. index]
+            if not native or states[index] then return end
+            local state = {native = native, index = index, unread = false}
+            states[index] = state
+            if not selected then selected = state end
+
+            -- Keep actual native rendering, including direct client writes.
+            -- Only approved message categories are formatted. Rendering still
+            -- uses the actual native frame, with raw-text fallback on failure.
+            native:SetParent(root)
+            PositionNative(state, GetTime())
+            FadeSettings(state, false)
+            -- SetMaxLines clears the native ring; preserve existing history.
+            if native.SetSpacing then native:SetSpacing(3) end
+            if native.SetIndentedWordWrap then native:SetIndentedWordWrap(true) end
+            if native.SetBackdrop then native:SetBackdrop(nil) end
+            for _, region in ipairs({native:GetRegions()}) do
+                if region.GetObjectType and region:GetObjectType() == "Texture" then HideControl(region) end
+            end
+            native:EnableMouse(state == selected)
+            native:EnableMouseWheel(state == selected)
+            native:SetScript("OnMouseWheel", function() Scroll(state, arg1 or 0) end)
+            local setAlpha = native.SetAlpha
+            native.SetAlpha = function(frame)
+                setAlpha(frame, state == selected and (state.visualAlpha or 1) or 0)
+            end
+            native:SetAlpha(1)
+            local addMessage = native.AddMessage
+            local function RenderMessage(frame, displayed, r, g, b, id, addToStart)
+                local result = addMessage(frame, displayed, r, g, b, id, addToStart)
+                if type(displayed) == "string" then NoticeMessage(state) end
+                return result
+            end
+            state.FlushLevel = function()
+                local pending = state.pendingLevel
+                if not pending then return end
+                state.pendingLevel = nil
+                return RenderMessage(pending.frame, pending.text, pending.r, pending.g,
+                    pending.b, pending.id, pending.addToStart)
+            end
+            native.AddMessage = function(frame, text, r, g, b, id, addToStart)
+                if chat.CaptureRaw then
+                    chat.CaptureRaw(frame, text, state.eventContext, state.eventSpeaker, state.eventMessage)
+                end
+                local displayed, kind = text, nil
+                if index ~= 2 and type(text) == "string" and chat.PrettifyMessage then
+                    local success, formatted, messageKind = pcall(chat.PrettifyMessage, text, state.eventContext,
+                        state.eventSpeaker, state.eventMessage)
+                    if success and messageKind == "hide" then
+                        state.eventHadSuppression = true
+                        return
+                    end
+                    if success and type(formatted) == "string" then
+                        displayed, kind = formatted, messageKind
+                    end
+                end
+                if kind == "level" then
+                    state.FlushLevel()
+                    state.pendingLevel = {frame = frame, text = displayed, r = r, g = g,
+                        b = b, id = id, addToStart = addToStart, deadline = GetTime() + 0.25}
+                    return
+                end
+                local pending = state.pendingLevel
+                if kind == "level_stats" and pending and GetTime() <= pending.deadline
+                    and Flag(pending.addToStart) == Flag(addToStart) then
+                    state.pendingLevel = nil
+                    return RenderMessage(pending.frame, pending.text .. ": " .. displayed,
+                        pending.r, pending.g, pending.b, pending.id, pending.addToStart)
+                end
+                -- Preserve order and retain level announcements without gains.
+                state.FlushLevel()
+                return RenderMessage(frame, displayed, r, g, b, id, addToStart)
+            end
+            local oldEvent = native:GetScript("OnEvent")
+            native:SetScript("OnEvent", function()
+                local currentEvent = event
+                local previousContext = state.eventContext
+                local previousSpeaker, previousMessage = state.eventSpeaker, state.eventMessage
+                local previousSuppression = state.eventHadSuppression
+                state.eventContext = currentEvent
+                state.eventSpeaker, state.eventMessage = arg2, arg1
+                state.eventHadSuppression = false
+                if oldEvent then oldEvent() end
+                local suppressed = state.eventHadSuppression
+                state.eventContext = previousContext
+                state.eventSpeaker, state.eventMessage = previousSpeaker, previousMessage
+                state.eventHadSuppression = previousSuppression
+                if not suppressed and currentEvent and string.find(currentEvent, "^CHAT_MSG_") then
+                    NoticeMessage(state)
+                end
+                if currentEvent == "UPDATE_CHAT_WINDOWS" or currentEvent == "PLAYER_ENTERING_WORLD"
+                    or currentEvent == "CHANNEL_UI_UPDATE" then
+                    if index == 1 then ConfigureRegularChat() end
+                    state.fadeConfigured, state.held = nil, nil
+                    FadeSettings(state, state == selected and not AtBottom(state))
+                    PositionNative(state, GetTime())
+                    PositionInput()
+                    if RefreshFrames then RefreshFrames() end
+                end
+            end)
+
+            for _, suffix in ipairs({"Tab", "ResizeButton", "UpButton", "DownButton", "BottomButton", "ButtonFrame"}) do
+                HideControl(_G["ChatFrame" .. index .. suffix])
+            end
+            if native.SetMovable then native:SetMovable(false) end
+            if native.SetResizable then native:SetResizable(false) end
+        end
+
+        RefreshFrames = function()
+            for i = 1, NUM_CHAT_WINDOWS or 7 do
+                AttachNative(i)
+            end
+        end
+
+        SelectChat = function(state)
+            if not state then return end
+            selected = state
+            selected.unread = false
+            _G.SELECTED_CHAT_FRAME = state.native
+            if FCF_SelectDockFrame and Flag(state.native.isDocked) then FCF_SelectDockFrame(state.native)
+            else _G.SELECTED_DOCK_FRAME = state.native end
+            for _, other in pairs(states) do
+                other.native:SetAlpha(other == selected and 1 or 0)
+                other.native:EnableMouse(other == selected)
+                other.native:EnableMouseWheel(other == selected)
+                PositionNative(other, GetTime())
+            end
+            state.native:Show()
+            if FCF_StopAlertFlash then FCF_StopAlertFlash(state.native) end
+            FadeSettings(state, not AtBottom(state))
+            PositionInput()
+            RefreshFrames()
+            UpdateIndicator()
+        end
+
+        if input then
+            input:SetParent(UIParent)
+            input:SetFrameStrata("LOW")
+            input:SetFrameLevel(root:GetFrameLevel() + 6)
+            for _, region in ipairs({input:GetRegions()}) do
+                if region.GetObjectType and region:GetObjectType() == "Texture" then HideControl(region) end
+            end
+            if input.SetBackdrop then input:SetBackdrop(nil) end
+            local oldShow, oldHide = input:GetScript("OnShow"), input:GetScript("OnHide")
+            input:SetScript("OnShow", function()
+                if oldShow then oldShow() end
+                focused = true
+                PositionInput()
+                UpdateIndicator()
+            end)
+            input:SetScript("OnHide", function()
+                if oldHide then oldHide() end
+                focused = false
+                UpdateIndicator()
+            end)
+            local oldGained, oldLost = input:GetScript("OnEditFocusGained"), input:GetScript("OnEditFocusLost")
+            input:SetScript("OnEditFocusGained", function()
+                if oldGained then oldGained() end
+                focused = true
+                UpdateIndicator()
+            end)
+            input:SetScript("OnEditFocusLost", function()
+                if oldLost then oldLost() end
+                focused = false
+                UpdateIndicator()
+            end)
+            if _G.ChatEdit_UpdateHeader then
+                local oldHeader = _G.ChatEdit_UpdateHeader
+                _G.ChatEdit_UpdateHeader = function(editBox)
+                    oldHeader(editBox)
+                    if editBox == input then PositionInput() end
+                end
+            end
+        end
+
+        ConfigureRegularChat()
+        RefreshFrames()
+        SelectChat(states[1])
+        HideControl(ChatFrameMenuButton)
+        local refresh = 0
+        root:SetScript("OnUpdate", function()
+            local now, elapsed = GetTime(), arg1 or 0
+            -- Only wheel navigation uncovers retained history. Hover and input
+            -- focus never rearm lines or hold their fading.
+            local held = selected and not AtBottom(selected) or false
+            for _, state in pairs(states) do
+                if state.pendingLevel and now >= state.pendingLevel.deadline then state.FlushLevel() end
+                if state.revealStart then
+                    state.visualAlpha = Clamp((now - state.revealStart) / FADE, 0, 1)
+                    if state.visualAlpha == 1 then state.revealStart = nil end
+                end
+                if state.slideStart then
+                    PositionNative(state, now)
+                    if now - state.slideStart >= SLIDE then state.slideStart = nil end
+                end
+                FadeSettings(state, state == selected and held)
+            end
+            if selected then
+                selected.native:SetAlpha(1)
+                selected.native:Show()
+                if AtBottom(selected) then selected.unread = false end
+            end
+            UpdateIndicator()
+            refresh = refresh + elapsed
+            if refresh >= 1 then
+                refresh = 0
+                PositionInput()
+                RefreshFrames()
+                for _, state in pairs(states) do PositionNative(state, now) end
+            end
+        end)
+        DFRL.layout.Register("chat", root, function(frame)
+            frame:ClearAllPoints()
+            frame:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", 20, 40)
+        end, {
+            resize = "dimensions",
+            minWidth = 240, minHeight = 120,
+            maxWidth = 2400, maxHeight = 1600,
+            onResize = function(frame)
+                indicator:SetWidth(frame:GetWidth())
+                local now = GetTime()
+                for _, state in pairs(states) do PositionNative(state, now) end
+                PositionInput()
+            end,
+            -- The layout-edit overlay must preserve wheel navigation. Movement
+            -- itself never rearms retained messages or changes their fading.
+            onMouseWheel = function(direction)
+                if selected then Scroll(selected, direction or 0) end
+            end,
+        })
+    end
+
+    Initialize()
+    if not initialized then
+        local waiting = CreateFrame("Frame")
+        waiting:RegisterEvent("PLAYER_LOGIN")
+        waiting:RegisterEvent("PLAYER_ENTERING_WORLD")
+        waiting:SetScript("OnEvent", function()
+            Initialize()
+            if initialized then waiting:UnregisterAllEvents() end
+        end)
     end
 end)

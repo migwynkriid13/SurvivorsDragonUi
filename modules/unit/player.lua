@@ -155,6 +155,7 @@ DFRL:NewMod("Player", 1, function()
         CreateRestingAnimation()
         FixPlayerClick()
         UpdateValues()
+        DFRL.layout.Register("playerFrame", PlayerFrame)
     end
 
     local frame = CreateFrame("Frame")

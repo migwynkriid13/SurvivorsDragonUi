@@ -4,7 +4,12 @@ DFRL:NewMod("Player Auras", 2, function()
     local iconSize, gap, rowGap, columns = 28, 3, 14, 6
     local width = columns * iconSize + (columns - 1) * gap
     local container = CreateFrame("Frame", "DFRL_PlayerAuras", UIParent)
-    container:SetPoint("TOPRIGHT", DFRL.topPanel or Minimap, "TOPLEFT", -50, -4)
+    local function PlaceDefault()
+        container:ClearAllPoints()
+        -- Match the old position beside the minimap without following map moves.
+        container:SetPoint("TOPRIGHT", UIParent, "TOPRIGHT", -238, -6)
+    end
+    PlaceDefault()
     container:SetWidth(width)
     container:SetHeight(iconSize + rowGap)
 
@@ -104,4 +109,6 @@ DFRL:NewMod("Player Auras", 2, function()
     hooksecurefunc("BuffFrame_Enchant_OnUpdate", function() Layout(false) end)
     hooksecurefunc("UIParent_ManageFramePositions", function() Layout(true) end)
     Layout(true)
+    -- Aura updates resize/reflow this container without replacing its own anchor.
+    DFRL.layout.Register("buffs", container, PlaceDefault)
 end)

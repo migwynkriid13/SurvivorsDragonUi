@@ -1,6 +1,8 @@
 # SurvivorsDragonUi
 
-A fixed HUD for **Azeroth Survivors 0.87.0+**, using its official addon API. Install the addon alone; no companion process, client patch or special launcher is required.
+A custom HUD for **Azeroth Survivors 0.87.0+**, using its official addon API. Install the addon alone; no companion process, client patch or special launcher is required.
+
+See [Commands](#commands) for every addon command, including layout editing, reset, chat copying and combat-text modes.
 
 ## Install
 
@@ -15,30 +17,43 @@ This targets Azeroth Survivors and its WoW 1.12.1 addon interface (`11200`). It 
 ## HUD
 
 - One action bar with seven buttons: native ability slots 1–6, followed by the permanent ability in native slot 12. No paging or gryphons.
-- An XP bar below the abilities, matching the action bar's artwork width, without numbers or hover text.
-- A gold bar directly below XP with three equal sections: kills, current gold and the next cache's gold cost. Each has a game icon and centered number.
-- A blue run-progress pill using the native pause-aware clock, actual zone length and scheduled boss markers.
+- An XP bar whose default placement is below the abilities, matching the action bar's default artwork width, without numbers or hover text.
+- A gold bar whose default placement is directly below XP with three equal sections: kills, current gold and the next cache's gold cost. Kills use the enemy-hover sword cursor icon, current gold uses custom gold-coin artwork, and the cache cost uses the native loot-pouch cursor icon. Each section has a centered number.
+- A blue run-progress pill with `RUN 05:42 / 16:00` centered above it using the client's Morpheus font when available. The timer group defaults eight pixels higher on the screen. It reads the native pause-aware clock and actual zone length, with skull icons marking upcoming boss spawns. Each skull disappears when the native clock reaches its scheduled spawn time.
 - Separate red health pills for every live boss and engaged guardian, keyed by spawn id.
 - Player and target frames with one uninterrupted health bar and no resource bar.
-- DEFAULT font, square minimap, one backpack, and Character/Talents/Main Menu buttons.
-- Built-in nameplate scrolling combat text with damage icons and independent animations that continue after kills.
+- DEFAULT font throughout the UI except the run timer, square minimap, one backpack, and Character/Talents/Main Menu buttons.
+- Cast-bar and quest-watch displays are removed.
+- Built-in scrolling combat text with damage icons and independent animations that continue after kills, including with nameplates hidden.
+- Chat defaults to the bottom left with fully transparent backgrounds, fading messages, slide animation, mouse-wheel history reveal, a passive scroll indicator and a matching native input. Hovering or opening, closing or focusing the input does not reveal history or pause fading. New messages display normally, and fading pauses while wheel-scrolled back for reading until you return to the bottom. Chat tabs, the Combat Log tab and the Copy button are hidden. Level, stat-gain, self-loot and class talent-progress notices use compact source-style formatting; learned abilities and skill increases show `+Name`; NPC yells show a red name and colon followed by the message; other messages keep their original text. `/copy` opens raw session diagnostics, including hidden announcements and combat/addon events. The archive runs continuously and resets on reload; see [chat port notes](docs/CLEANERCHAT-PORT.md) for native-history limits.
 
-Appearance and placement are fixed. There are no addon settings, profiles, saved variables or frame movers.
+Type **`/sdui`** to edit the layout, then **left-drag a frame's body** to move the player frame, target frame, boss/guardian health-bar group, run timer, action bar, XP bar, kills/gold/cache bar, micro menu, player buffs, minimap or chat. **Left-drag a corner icon** to resize that group. Each group moves and resizes independently: changing the action bar does not change XP or the tally. Editing shows outlines and corner icons, including for currently hidden HUD groups, without showing inactive targets or encounters. The main menu and Copy window support the same controls while open. Click the single **Confirm** button in the center of the screen to save all pending changes and lock the frames again. Using `/sdui` again while editing keeps it open. Moving or resizing chat does not uncover faded messages; only the mouse wheel does that, and it still works during layout editing.
 
-## Combat-text commands
+HUD groups resize by uniform scale, keeping their artwork proportions. Chat and Copy resize their actual width and height so text wraps and the viewport adjusts; their fonts keep their normal size. The action bar, XP and tally match at their default sizes, but can differ when resized independently.
+
+Only **Confirm** saves pending geometry; releasing a drag does not save it. Confirmed locations, HUD scale and chat/Copy dimensions persist across `/reload` and game sessions in the single `SurvivorsDragonUiLayout` SavedVariables table. Unconfirmed edits are discarded on world leave, logout or `/reload`, preserving the last confirmed layout. `/sdui reset` clears all saved geometry, exits editing and restores every registered frame to its default position and size, including frames currently hidden. Appearance defaults stay defined in code; there are no settings windows, profiles or other saved configuration. Chat diagnostics remain session-only, and gameplay/native API state is never stored with the layout.
+
+## Commands
+
+All addon commands are listed below. Layout editing does not require holding SHIFT.
 
 | Command | Behavior |
 | --- | --- |
+| `/sdui` | Enter layout editing: left-drag a frame to move it or its corner icons to resize it. Click the centered **Confirm** button to save changes and lock the frames. |
+| `/sdui reset` | Exit editing, clear saved frame geometry and restore default positions and sizes, including hidden frames. |
+| `/copy` | Open a snapshot of raw chat messages and events, including hidden messages; press **Ctrl+C** to copy the selected text. |
+| `/sct` | Show the available combat-text modes and the currently selected mode. |
 | `/sct on` | Custom icon-and-damage SCT; native outgoing damage text disabled. |
 | `/sct off` | Both custom and native outgoing damage text disabled. |
 | `/sct default` | Native outgoing damage text only. |
 
-The normal **V** binding controls nameplates and custom SCT visibility. Mode changes clear custom text immediately. The selected mode lasts for the current UI session; reloading starts in custom mode. Combat logs and the damage meter are unaffected.
+The normal **V** binding controls whether native nameplates are visible; `/sct` controls custom combat text independently. In `/sct on` mode, invisible native plates continue tracking enemies when V is off, so matched hits can follow them. Your V preference stays unchanged. Visible, invisible or recently retired plate positions are matched using names and health changes; unmatched or ambiguous hits appear at a shared fallback position. Mode changes clear active and queued custom hits immediately. SCT mode is not saved: it lasts for the current UI session, and reloading starts in custom mode. Combat logs and the damage meter are unaffected. Chat clicks and hyperlinks keep their native behavior.
 
 ## Client limitations
 
 - `/reload` rebuilds the client's Lua state. The addon reconnects its clock, counters and encounters independently as native data arrives, and uses the official `AZS_RUN.fin` duration when once-per-run zone data is absent. Full recovery while paused, including unchanged encounters and schedule markers, requires the client to replay its API snapshots. The addon cannot request that through the documented API.
 - Nameplate collision stacking is controlled by the client. This build exposes no overlap switch to addons.
+- Custom SCT uses native plate coordinates, including the client's collision displacement. With custom SCT on and V off, keeping invisible tracking active can also leave native overhead enemy names suppressed. The tracking integration has not been verified in the packaged game; see [API notes](docs/API-NOTES.md).
 - The original 1.12 combat log identifies enemies by name rather than destination GUID. Same-name hits can have ambiguous positions; the addon shows those hits at a shared or fallback position.
 
 The official API reference is included in [docs/AzerothSurvivors-Addon-API.md](docs/AzerothSurvivors-Addon-API.md).

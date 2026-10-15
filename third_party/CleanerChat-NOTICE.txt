@@ -1,0 +1,38 @@
+CleanerChat source attribution
+==============================
+
+The supplied CleanerChat 2.44 source is the reference for the integrated chat
+presentation and message formatting in SurvivorsDragonUi.
+
+Original metadata, preserved verbatim from CleanerChat.toc:
+
+## Title: CleanerChat
+## Version: 2.44
+## Author: migwynkriid
+## X-License: Custom
+
+Original source repository pointer from GlassUI/Modules/Config.lua:
+
+https://github.com/migwynkriid/CleanerChat-WotLK
+
+Original attribution text, preserved verbatim from
+GlassUI/Modules/Config.lua:
+
+CleanerChat stands on the shoulders of two excellent addons. All credit for the original work belongs to their creators.
+
+Glass
+The immersive chat UI is built on Glass by mixxorz. This project keeps the spirit of Glass alive on 3.3.5.
+
+ChatCleaner
+The message filtering is based on ChatCleaner by Lars Norberg (Goldpaw). Backported to 3.3.5.
+
+The supplied CleanerChat directory contains no standalone license text for
+CleanerChat, Glass, or the Assets directory. Its "Custom" license metadata is
+preserved above; this notice does not supply or infer additional license terms.
+
+The bundled Ace, LibStub, LibSharedMedia, LibMoreEvents and LibEasing libraries
+are not incorporated into this port.
+
+The supplied Assets/coins.tga is bundled unchanged as
+media/tex/chat/cleaner_coins.tga. Its top-left gold quadrant is used by the
+current-gold tally, with the original atlas artwork and attribution retained.
