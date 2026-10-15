@@ -109,7 +109,7 @@ DFRL:NewMod("RunTimers", 5, function()
         { label = "Thick outline", value = "THICKOUTLINE" },
     }
     local fontDefaults = { face = "Fonts\\MORPHEUS.TTF", size = 14, outline = "OUTLINE", shadow = true }
-    local currentFont, fontDraft, fontEditor, fontSample
+    local currentFont, fontDraft, fontEditor, fontSample, fontMenu
     local faceLabel, sizeLabel, outlineLabel, shadowLabel
 
     local function FontSettings(value)
@@ -173,28 +173,17 @@ DFRL:NewMod("RunTimers", 5, function()
         return label
     end
 
-    local function FontEditorButton(text, width, x, y, callback)
-        local button = T.CreateButton(fontEditor, "", width, 28)
-        button:SetPoint("TOPLEFT", fontEditor, "TOPLEFT", x, y)
+    local function FontEditorButton(text, width, x, y, callback, parent)
+        parent = parent or fontEditor
+        local button = T.CreateButton(parent, "", width, 28)
+        button:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
         local label = button:CreateFontString(nil, "OVERLAY")
         label:SetFont("DEFAULT", 12, "OUTLINE")
         label:SetTextColor(1, 1, 1)
         label:SetPoint("CENTER", button, "CENTER", 0, 0)
         label:SetText(text)
         button:SetScript("OnClick", callback)
-        return label
-    end
-
-    local function ChangeFace(direction)
-        if not fontDraft then return end
-        for index, entry in ipairs(fontFaces) do
-            if fontDraft.face == entry.face then
-                local nextIndex = math.mod(index - 1 + direction + table.getn(fontFaces), table.getn(fontFaces)) + 1
-                fontDraft.face = fontFaces[nextIndex].face
-                break
-            end
-        end
-        PreviewFont(fontDraft)
+        return label, button
     end
 
     local function ChangeSize(direction)
@@ -212,10 +201,40 @@ DFRL:NewMod("RunTimers", 5, function()
         fontSample:ClearAllPoints()
         fontSample:SetPoint("TOP", fontEditor, "TOP", 0, -56)
 
-        FontEditorLabel(fontEditor, "Face", 16, -104)
-        FontEditorButton("<", 32, 72, -96, function() ChangeFace(-1) end)
-        faceLabel = FontEditorLabel(fontEditor, "", 113, -104)
-        FontEditorButton(">", 32, 392, -96, function() ChangeFace(1) end)
+        FontEditorLabel(fontEditor, "Font", 16, -104)
+        local fontButton
+        faceLabel, fontButton = FontEditorButton("", 352, 72, -96, function()
+            if not fontDraft then return end
+            if fontMenu:IsShown() then
+                fontMenu:Hide()
+            else
+                fontMenu:Show()
+            end
+        end)
+        local arrow = FontEditorLabel(fontButton, "v", 0, 0)
+        arrow:ClearAllPoints()
+        arrow:SetPoint("RIGHT", fontButton, "RIGHT", -12, 0)
+
+        -- The popup catches outside clicks while its list stays above the editor.
+        fontMenu = CreateFrame("Button", nil, fontEditor)
+        fontMenu:SetAllPoints(UIParent)
+        fontMenu:SetFrameLevel(160)
+        fontMenu:EnableMouse(true)
+        fontMenu:SetScript("OnClick", function() fontMenu:Hide() end)
+        fontMenu:Hide()
+        local fontList = T.CreateDFRLFrame(fontMenu, 352, table.getn(fontFaces) * 28 + 8)
+        fontList:SetFrameLevel(170)
+        fontList:SetPoint("TOPLEFT", fontButton, "BOTTOMLEFT", 0, 0)
+        for index, entry in ipairs(fontFaces) do
+            local selectedFace = entry.face
+            FontEditorButton(entry.label, 344, 4, -4 - (index - 1) * 28, function()
+                if not fontDraft then return end
+                fontDraft.face = selectedFace
+                PreviewFont(fontDraft)
+                fontMenu:Hide()
+            end, fontList)
+        end
+        fontEditor:SetScript("OnHide", function() fontMenu:Hide() end)
         FontEditorLabel(fontEditor, "Size", 16, -137)
         FontEditorButton("-", 32, 72, -129, function() ChangeSize(-1) end)
         sizeLabel = FontEditorLabel(fontEditor, "", 115, -137)
