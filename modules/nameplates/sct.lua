@@ -34,7 +34,8 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local discoveredChildren = 0
     local arcDirection = 1
     local sctMode = _G.SurvivorsDragonUiSctMode
-    if sctMode ~= "on" and sctMode ~= "off" and sctMode ~= "default" then sctMode = "on" end
+    if sctMode ~= "on" and sctMode ~= "off" and sctMode ~= "default" then sctMode = "default" end
+    local customEnabled, changingSettings = false, false
     local damageIcons = DFRL.display.Get("damageIcons")
     -- Keep V's visible request separate from the backing coordinate feed. The
     -- native verbs do not write FrameXML's saved NAMEPLATES_ON preference.
@@ -50,7 +51,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         and WorldFrame.GetHitRectInsets
         and WorldFrame.SetHitRectInsets
 
-    local function CustomEnabled() return sctMode == "on" end
+    local function CustomEnabled() return customEnabled end
 
     local function IsFiniteNumber(value) return type(value) == "number" and value - value == 0 end
 
@@ -654,22 +655,52 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         table.insert(pending, { info = info, time = now })
     end
 
-    local function ApplyDamageMode()
-        local nativeDamage = sctMode == "default" and "1" or "0"
-        if GetCVar("CombatDamage") ~= nativeDamage then SetCVar("CombatDamage", nativeDamage) end
+    local function SyncGameSettings(force)
+        if changingSettings then return end
+        local floatingText = _G.SHOW_COMBAT_TEXT == "1"
+        local nativeDamage = GetCVar("CombatDamage") ~= "0"
+        local previousMode = sctMode
+        -- Menu choices take precedence over a previously saved addon mode.
+        -- Native target damage has no separate renderer-suppression switch.
+        if nativeDamage then
+            sctMode = "default"
+        elseif sctMode == "off" and floatingText then
+            sctMode = "on"
+        end
+        local enabled = sctMode == "on" and floatingText
+        if not force and enabled == customEnabled and previousMode == sctMode then return end
+        _G.SurvivorsDragonUiSctMode = sctMode
+        customEnabled = enabled
+        ResetDisplay()
+        ApplyPlateTracking(true)
+        if CustomEnabled() and damageIcons then RebuildSpellTextures() end
+        -- Plate appearance stays active even while combat text is disabled.
+        ScanPlates(true)
     end
 
     local function SelectMode(mode)
         sctMode = mode
         _G.SurvivorsDragonUiSctMode = mode
-        -- Drop both active and queued custom hits immediately when changing
-        -- modes, so switching to vanilla never produces overlapping displays.
-        ResetDisplay()
-        ApplyDamageMode()
-        ApplyPlateTracking(true)
-        if sctMode == "on" and damageIcons then RebuildSpellTextures() end
-        -- Plate appearance is independent of the selected combat-text mode.
-        ScanPlates(true)
+        if mode ~= "default" then
+            -- Only an explicit on/off command changes the game's settings.
+            -- CombatDamage controls native outgoing numbers, independently of
+            -- the floating-text checkbox; suppress them once to avoid duplicates.
+            changingSettings = true
+            _G.SHOW_COMBAT_TEXT = mode == "on" and "1" or "0"
+            if GetCVar("CombatDamage") ~= "0" then SetCVar("CombatDamage", "0") end
+            if type(_G.BenillaCombatText_UpdateOrLoad) == "function" then
+                _G.BenillaCombatText_UpdateOrLoad()
+            else
+                if mode == "on" and type(_G.UIParentLoadAddOn) == "function" then
+                    _G.UIParentLoadAddOn("Blizzard_CombatText")
+                end
+                if type(_G.CombatText_UpdateDisplayedMessages) == "function" then
+                    _G.CombatText_UpdateDisplayedMessages()
+                end
+            end
+            changingSettings = false
+        end
+        SyncGameSettings(true)
     end
 
     -- Module initialization uses DFRL's private environment; slash aliases
@@ -687,7 +718,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             feedback = "Custom and vanilla SCT disabled."
         elseif mode == "default" then
             SelectMode("default")
-            feedback = "Vanilla SCT enabled; custom SCT disabled."
+            feedback = "Custom SCT disabled; native SCT follows your game settings."
         else
             feedback = "Usage: /sct on | off | default. Current mode: " .. sctMode .. "."
         end
@@ -708,11 +739,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         if event == "PLAYER_ENTERING_WORLD" then
             inWorld = true
             enemyPlatesEnabled = _G.NAMEPLATES_ON and true or false
-            ResetDisplay()
-            ApplyDamageMode()
-            ApplyPlateTracking(true)
-            if sctMode == "on" and damageIcons then RebuildSpellTextures() end
-            ScanPlates(true)
+            SyncGameSettings(true)
         elseif event == "PLAYER_LEAVING_WORLD" or event == "PLAYER_LOGOUT" then
             inWorld = false
             for _, data in pairs(plates) do
@@ -721,17 +748,21 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             ApplyPlateTracking(true)
             ResetDisplay()
         elseif event == "SPELLS_CHANGED" then
-            if sctMode == "on" and damageIcons then RebuildSpellTextures() end
+            if CustomEnabled() and damageIcons then RebuildSpellTextures() end
         elseif event == "PLAYER_TARGET_CHANGED" then
             ScanPlates(true)
         elseif event == "CVAR_UPDATE" then
-            ApplyDamageMode()
+            SyncGameSettings(false)
         else
+            SyncGameSettings(false)
             HandleCombatEvent(event, arg1)
         end
     end)
     frame:SetScript("OnUpdate", function()
         if not inWorld then return end
+        -- The floating-text checkbox writes a saved global, and not every
+        -- native CVar setter emits CVAR_UPDATE. Observe both without writing.
+        SyncGameSettings(false)
         ScanPlates(false)
         if not CustomEnabled() then return end
         local now = GetTime()
@@ -751,5 +782,5 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         ScanPlates(true)
     end)
 
-    SelectMode(sctMode)
+    SyncGameSettings(true)
 end)
