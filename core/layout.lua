@@ -6,34 +6,33 @@ DFRL:NewMod("Layout", 0, function()
     local activeDrag
     local editing, draft, confirm = false, nil, nil
     local labels = {
-        playerFrame = "Player", targetFrame = "Target", bossBars = "Boss health",
-        runTimer = "Run timer", actionBar = "Action bar", xpBar = "XP",
-        runTally = "Kills / Gold / Cache", microMenu = "Micro menu", buffs = "Buffs",
-        minimap = "Minimap", menu = "Main menu", chat = "Chat", copyWindow = "Copy",
+        playerFrame = "Player",
+        targetFrame = "Target",
+        bossBars = "Boss health",
+        runTimer = "Run timer",
+        actionBar = "Action bar",
+        xpBar = "XP",
+        runTally = "Kills / Gold / Cache",
+        microMenu = "Micro menu",
+        buffs = "Buffs",
+        minimap = "Minimap",
+        menu = "Main menu",
+        chat = "Chat",
+        copyWindow = "Copy",
     }
 
-    local function Number(value)
-        return type(value) == "number" and value - value == 0
-    end
-    local function Valid(position)
-        return type(position) == "table" and Number(position.x) and Number(position.y)
-    end
-    local function Clamp(value, minimum, maximum)
-        return math.max(minimum, math.min(maximum, value))
-    end
+    local function Number(value) return type(value) == "number" and value - value == 0 end
+    local function Valid(position) return type(position) == "table" and Number(position.x) and Number(position.y) end
+    local function Clamp(value, minimum, maximum) return math.max(minimum, math.min(maximum, value)) end
     local function Saved()
-        if type(_G.SurvivorsDragonUiLayout) ~= "table" then
-            _G.SurvivorsDragonUiLayout = {}
-        end
+        if type(_G.SurvivorsDragonUiLayout) ~= "table" then _G.SurvivorsDragonUiLayout = {} end
         return _G.SurvivorsDragonUiLayout
     end
-    local function GeometryStore()
-        return editing and draft or Saved()
-    end
+    local function GeometryStore() return editing and draft or Saved() end
     local function CopyGeometry(geometry)
         if not Valid(geometry) then return end
-        local copy = {x = geometry.x, y = geometry.y}
-        for _, field in ipairs({"scale", "width", "height"}) do
+        local copy = { x = geometry.x, y = geometry.y }
+        for _, field in ipairs({ "scale", "width", "height" }) do
             if Number(geometry[field]) then copy[field] = geometry[field] end
         end
         return copy
@@ -45,16 +44,13 @@ DFRL:NewMod("Layout", 0, function()
         if frame.SetUserPlaced then frame:SetUserPlaced(false) end
         frame:SetMovable(editing)
     end
-    local function Scale(frame)
-        return frame.GetEffectiveScale and frame:GetEffectiveScale() or 1
-    end
-    local function LocalScale(frame)
-        return frame.GetScale and frame:GetScale() or 1
-    end
+    local function Scale(frame) return frame.GetEffectiveScale and frame:GetEffectiveScale() or 1 end
+    local function LocalScale(frame) return frame.GetScale and frame:GetScale() or 1 end
     local function Viewport()
         local width, height, scale = UIParent:GetWidth(), UIParent:GetHeight(), Scale(UIParent)
-        if not Number(width) or not Number(height) or not Number(scale)
-            or width <= 0 or height <= 0 or scale <= 0 then return end
+        if not Number(width) or not Number(height) or not Number(scale) or width <= 0 or height <= 0 or scale <= 0 then
+            return
+        end
         return width, height, scale
     end
     local function ReadPosition(frame)
@@ -71,8 +67,13 @@ DFRL:NewMod("Layout", 0, function()
         local scale = Scale(frame)
         if not width or not Valid(position) or not Number(scale) or scale <= 0 then return end
         frame:ClearAllPoints()
-        frame:SetPoint("TOPLEFT", UIParent, "TOPLEFT",
-            position.x * width * uiScale / scale, position.y * height * uiScale / scale)
+        frame:SetPoint(
+            "TOPLEFT",
+            UIParent,
+            "TOPLEFT",
+            position.x * width * uiScale / scale,
+            position.y * height * uiScale / scale
+        )
         -- Native StartMoving marks the frame user-placed. Keep a single layout store.
         LockFrame(frame)
     end
@@ -80,7 +81,7 @@ DFRL:NewMod("Layout", 0, function()
         local points = {}
         for i = 1, frame:GetNumPoints() do
             local point, relative, relativePoint, x, y = frame:GetPoint(i)
-            table.insert(points, {point, relative or UIParent, relativePoint or point, x or 0, y or 0})
+            table.insert(points, { point, relative or UIParent, relativePoint or point, x or 0, y or 0 })
         end
         return function()
             frame:ClearAllPoints()
@@ -96,23 +97,39 @@ DFRL:NewMod("Layout", 0, function()
         geometry = geometry or {}
         if options.resize == "dimensions" then
             frame:SetScale(entry.defaultScale)
-            frame:SetWidth(Number(geometry.width) and Clamp(geometry.width,
-                options.minWidth or 120, options.maxWidth or 2400) or entry.defaultWidth)
-            frame:SetHeight(Number(geometry.height) and Clamp(geometry.height,
-                options.minHeight or 80, options.maxHeight or 1600) or entry.defaultHeight)
+            frame:SetWidth(
+                Number(geometry.width)
+                        and Clamp(geometry.width, options.minWidth or 120, options.maxWidth or 2400)
+                    or entry.defaultWidth
+            )
+            frame:SetHeight(
+                Number(geometry.height)
+                        and Clamp(geometry.height, options.minHeight or 80, options.maxHeight or 1600)
+                    or entry.defaultHeight
+            )
         else
-            frame:SetScale(Number(geometry.scale) and Clamp(geometry.scale,
-                entry.defaultScale * 0.4, entry.defaultScale * 3) or entry.defaultScale)
+            frame:SetScale(
+                Number(geometry.scale)
+                        and Clamp(geometry.scale, entry.defaultScale * 0.4, entry.defaultScale * 3)
+                    or entry.defaultScale
+            )
         end
-        if options.onResize and (not entry.sizeApplied or oldScale ~= LocalScale(frame)
-            or oldWidth ~= frame:GetWidth() or oldHeight ~= frame:GetHeight()) then
+        if
+            options.onResize
+            and (
+                not entry.sizeApplied
+                or oldScale ~= LocalScale(frame)
+                or oldWidth ~= frame:GetWidth()
+                or oldHeight ~= frame:GetHeight()
+            )
+        then
             options.onResize(frame, frame:GetWidth(), frame:GetHeight())
         end
         entry.sizeApplied = true
     end
     local function ReadGeometry(entry, position)
         if not position then return end
-        local geometry = {x = position.x, y = position.y}
+        local geometry = { x = position.x, y = position.y }
         if entry.options.resize == "dimensions" then
             geometry.width, geometry.height = entry.frame:GetWidth(), entry.frame:GetHeight()
         else
@@ -133,9 +150,7 @@ DFRL:NewMod("Layout", 0, function()
         ApplySize(entry, Valid(position) and position or nil)
         ApplyPosition(entry.frame, Valid(position) and position or entry.defaultPosition)
     end
-    function layout.IsPlaced(key)
-        return (entries[key] and entries[key].dragging) or Valid(GeometryStore()[key])
-    end
+    function layout.IsPlaced(key) return (entries[key] and entries[key].dragging) or Valid(GeometryStore()[key]) end
     local function FinishDrag(entry, capture)
         if not entry or not entry.dragging then return end
         entry.frame:StopMovingOrSizing()
@@ -166,9 +181,13 @@ DFRL:NewMod("Layout", 0, function()
         if not x or not position or not width then return end
         local scale = Scale(entry.frame) / uiScale
         entry.resizing = {
-            corner = corner, cursorX = x, cursorY = y,
-            x = position.x * width, y = position.y * height,
-            width = entry.frame:GetWidth() * scale, height = entry.frame:GetHeight() * scale,
+            corner = corner,
+            cursorX = x,
+            cursorY = y,
+            x = position.x * width,
+            y = position.y * height,
+            width = entry.frame:GetWidth() * scale,
+            height = entry.frame:GetHeight() * scale,
             scale = LocalScale(entry.frame),
         }
         entry.resizePosition = position
@@ -195,14 +214,14 @@ DFRL:NewMod("Layout", 0, function()
             local diagonal = start.width * start.width + start.height * start.height
             if diagonal <= 0 then return end
             local factor = 1 + (signX * dx * start.width + signY * dy * start.height) / diagonal
-            ApplySize(entry, {scale = start.scale * factor})
+            ApplySize(entry, { scale = start.scale * factor })
         end
         local ratio = Scale(entry.frame) / uiScale
         local newWidth, newHeight = entry.frame:GetWidth() * ratio, entry.frame:GetHeight() * ratio
         -- Keep the opposite corner fixed throughout the resize.
         local x = right and start.x or start.x + start.width - newWidth
         local y = top and start.y - start.height + newHeight or start.y
-        entry.resizePosition = {x = x / width, y = y / height}
+        entry.resizePosition = { x = x / width, y = y / height }
         ApplyPosition(entry.frame, entry.resizePosition)
     end
 
@@ -245,7 +264,7 @@ DFRL:NewMod("Layout", 0, function()
         handle:SetFrameStrata("TOOLTIP")
         handle:SetFrameLevel(100)
         handle:RegisterForDrag("LeftButton")
-        handle:SetBackdrop({edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 1})
+        handle:SetBackdrop({ edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 1 })
         handle:SetBackdropBorderColor(0.87, 0.73, 0.41, 0.8)
         local label = handle:CreateFontString(nil, "OVERLAY")
         label:SetFont("DEFAULT", 10, "OUTLINE")
@@ -283,14 +302,14 @@ DFRL:NewMod("Layout", 0, function()
         handle:EnableMouse(false)
         handle:Hide()
         entry.handle = handle
-        for _, corner in ipairs({"TOPLEFT", "TOPRIGHT", "BOTTOMLEFT", "BOTTOMRIGHT"}) do
+        for _, corner in ipairs({ "TOPLEFT", "TOPRIGHT", "BOTTOMLEFT", "BOTTOMRIGHT" }) do
             MakeCorner(entry, corner)
         end
     end
 
     function layout.Register(key, frame, defaultAnchor, options)
         if not frame or entries[key] then return end
-        local entry = {key = key, frame = frame, options = options or {}}
+        local entry = { key = key, frame = frame, options = options or {} }
         entry.defaultScale = LocalScale(frame)
         entry.defaultWidth, entry.defaultHeight = frame:GetWidth(), frame:GetHeight()
         entry.defaultAnchor = defaultAnchor or CaptureAnchors(frame)
@@ -310,8 +329,12 @@ DFRL:NewMod("Layout", 0, function()
             entry.defaultAnchor(entry.frame)
             LockFrame(entry.frame)
         end
-        for _, entry in ipairs(order) do entry.defaultPosition = ReadPosition(entry.frame) end
-        for _, entry in ipairs(order) do layout.Place(entry.key) end
+        for _, entry in ipairs(order) do
+            entry.defaultPosition = ReadPosition(entry.frame)
+        end
+        for _, entry in ipairs(order) do
+            layout.Place(entry.key)
+        end
     end
     local function CloseEditing(save, restore)
         if not editing then return end
@@ -325,7 +348,9 @@ DFRL:NewMod("Layout", 0, function()
         end
         if confirm then confirm:Hide() end
         if restore ~= false then
-            for _, entry in ipairs(order) do layout.Place(entry.key) end
+            for _, entry in ipairs(order) do
+                layout.Place(entry.key)
+            end
         end
     end
     function layout.BeginEdit()
@@ -333,7 +358,9 @@ DFRL:NewMod("Layout", 0, function()
         if not editing then
             draft = {}
             -- Preserve lazy-window records too, without aliasing committed data.
-            for key, geometry in pairs(Saved()) do draft[key] = CopyGeometry(geometry) end
+            for key, geometry in pairs(Saved()) do
+                draft[key] = CopyGeometry(geometry)
+            end
             editing = true
             for _, entry in ipairs(order) do
                 LockFrame(entry.frame)
@@ -372,7 +399,9 @@ DFRL:NewMod("Layout", 0, function()
             RestoreDefaults()
         end
         if needsRestore then
-            for _, entry in ipairs(order) do layout.Place(entry.key) end
+            for _, entry in ipairs(order) do
+                layout.Place(entry.key)
+            end
             needsRestore = false
         end
         lastWidth, lastHeight, lastScale = width, height, scale
@@ -382,7 +411,8 @@ DFRL:NewMod("Layout", 0, function()
         for _, entry in ipairs(order) do
             if not entry.defaultPosition then layout.Place(entry.key) end
             local handle, region = entry.handle, entry.options.region or entry.frame
-            local shown = enabled and entry.defaultPosition
+            local shown = enabled
+                and entry.defaultPosition
                 and (not entry.options.onlyWhenShown or entry.frame:IsShown())
             if shown then
                 local ratio = Scale(region) / scale
@@ -409,7 +439,9 @@ DFRL:NewMod("Layout", 0, function()
             inWorld = false
             CloseEditing(false, true)
             FinishDrag(activeDrag, false)
-            for _, entry in ipairs(order) do entry.handle:Hide() end
+            for _, entry in ipairs(order) do
+                entry.handle:Hide()
+            end
         end
     end)
 
@@ -423,7 +455,9 @@ DFRL:NewMod("Layout", 0, function()
         elseif command == "" then
             layout.BeginEdit()
         elseif DEFAULT_CHAT_FRAME then
-            DEFAULT_CHAT_FRAME:AddMessage("Use /sdui to edit the layout, then click Confirm to save. /sdui reset restores default positions and sizes.")
+            DEFAULT_CHAT_FRAME:AddMessage(
+                "Use /sdui to edit the layout, then click Confirm to save. /sdui reset restores default positions and sizes."
+            )
         end
     end
 end)

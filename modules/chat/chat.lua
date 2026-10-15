@@ -32,7 +32,9 @@ DFRL:NewMod("Chat", 1, function()
         local function Clamp(value, low, high) return math.max(low, math.min(high, value)) end
         local function Contains(list, value)
             if type(list) ~= "table" then return false end
-            for _, entry in pairs(list) do if entry == value then return true end end
+            for _, entry in pairs(list) do
+                if entry == value then return true end
+            end
             return false
         end
         local function Label(parent, text, size)
@@ -77,10 +79,12 @@ DFRL:NewMod("Chat", 1, function()
                 end
             end
             if GetChannelList and ChatFrame_AddChannel then
-                local channels = {GetChannelList()}
+                local channels = { GetChannelList() }
                 for i = 2, table.getn(channels), 2 do
                     local name = channels[i]
-                    if name and not Contains(ChatFrame1.channelList, name) then ChatFrame_AddChannel(ChatFrame1, name) end
+                    if name and not Contains(ChatFrame1.channelList, name) then
+                        ChatFrame_AddChannel(ChatFrame1, name)
+                    end
                 end
             end
         end
@@ -133,10 +137,10 @@ DFRL:NewMod("Chat", 1, function()
             frame:SetWidth(root:GetWidth() - 6)
             frame:SetHeight(root:GetHeight() - 5)
             local font, size, flags
-            if frame.GetFont then font, size, flags = frame:GetFont() end
-            if font ~= "DEFAULT" or size ~= 12 or flags ~= "OUTLINE" then
-                frame:SetFont("DEFAULT", 12, "OUTLINE")
+            if frame.GetFont then
+                font, size, flags = frame:GetFont()
             end
+            if font ~= "DEFAULT" or size ~= 12 or flags ~= "OUTLINE" then frame:SetFont("DEFAULT", 12, "OUTLINE") end
             if frame.SetShadowColor then frame:SetShadowColor(0, 0, 0, 1) end
             if frame.SetShadowOffset then frame:SetShadowOffset(1, -1) end
             if frame.SetJustifyH then frame:SetJustifyH("LEFT") end
@@ -169,10 +173,17 @@ DFRL:NewMod("Chat", 1, function()
             if direction == 0 then return end
             local steps = IsShiftKeyDown() and 10 or 3
             for _ = 1, steps do
-                if direction > 0 then state.native:ScrollUp() else state.native:ScrollDown() end
+                if direction > 0 then
+                    state.native:ScrollUp()
+                else
+                    state.native:ScrollDown()
+                end
             end
-            if state.native.AtBottom then state.scrolled = not AtBottom(state)
-            else state.scrolled = direction > 0 end
+            if state.native.AtBottom then
+                state.scrolled = not AtBottom(state)
+            else
+                state.scrolled = direction > 0
+            end
             if not state.scrolled then state.unread = false end
             Reveal(state)
             FadeSettings(state, true)
@@ -213,7 +224,7 @@ DFRL:NewMod("Chat", 1, function()
         local function AttachNative(index)
             local native = _G["ChatFrame" .. index]
             if not native or states[index] then return end
-            local state = {native = native, index = index, unread = false}
+            local state = { native = native, index = index, unread = false }
             states[index] = state
             if not selected then selected = state end
 
@@ -227,16 +238,14 @@ DFRL:NewMod("Chat", 1, function()
             if native.SetSpacing then native:SetSpacing(3) end
             if native.SetIndentedWordWrap then native:SetIndentedWordWrap(true) end
             if native.SetBackdrop then native:SetBackdrop(nil) end
-            for _, region in ipairs({native:GetRegions()}) do
+            for _, region in ipairs({ native:GetRegions() }) do
                 if region.GetObjectType and region:GetObjectType() == "Texture" then HideControl(region) end
             end
             native:EnableMouse(state == selected)
             native:EnableMouseWheel(state == selected)
             native:SetScript("OnMouseWheel", function() Scroll(state, arg1 or 0) end)
             local setAlpha = native.SetAlpha
-            native.SetAlpha = function(frame)
-                setAlpha(frame, state == selected and (state.visualAlpha or 1) or 0)
-            end
+            native.SetAlpha = function(frame) setAlpha(frame, state == selected and (state.visualAlpha or 1) or 0) end
             native:SetAlpha(1)
             local addMessage = native.AddMessage
             local function RenderMessage(frame, displayed, r, g, b, id, addToStart)
@@ -248,8 +257,15 @@ DFRL:NewMod("Chat", 1, function()
                 local pending = state.pendingLevel
                 if not pending then return end
                 state.pendingLevel = nil
-                return RenderMessage(pending.frame, pending.text, pending.r, pending.g,
-                    pending.b, pending.id, pending.addToStart)
+                return RenderMessage(
+                    pending.frame,
+                    pending.text,
+                    pending.r,
+                    pending.g,
+                    pending.b,
+                    pending.id,
+                    pending.addToStart
+                )
             end
             native.AddMessage = function(frame, text, r, g, b, id, addToStart)
                 if chat.CaptureRaw then
@@ -257,8 +273,8 @@ DFRL:NewMod("Chat", 1, function()
                 end
                 local displayed, kind = text, nil
                 if index ~= 2 and type(text) == "string" and chat.PrettifyMessage then
-                    local success, formatted, messageKind = pcall(chat.PrettifyMessage, text, state.eventContext,
-                        state.eventSpeaker, state.eventMessage)
+                    local success, formatted, messageKind =
+                        pcall(chat.PrettifyMessage, text, state.eventContext, state.eventSpeaker, state.eventMessage)
                     if success and messageKind == "hide" then
                         state.eventHadSuppression = true
                         return
@@ -269,16 +285,35 @@ DFRL:NewMod("Chat", 1, function()
                 end
                 if kind == "level" then
                     state.FlushLevel()
-                    state.pendingLevel = {frame = frame, text = displayed, r = r, g = g,
-                        b = b, id = id, addToStart = addToStart, deadline = GetTime() + 0.25}
+                    state.pendingLevel = {
+                        frame = frame,
+                        text = displayed,
+                        r = r,
+                        g = g,
+                        b = b,
+                        id = id,
+                        addToStart = addToStart,
+                        deadline = GetTime() + 0.25,
+                    }
                     return
                 end
                 local pending = state.pendingLevel
-                if kind == "level_stats" and pending and GetTime() <= pending.deadline
-                    and Flag(pending.addToStart) == Flag(addToStart) then
+                if
+                    kind == "level_stats"
+                    and pending
+                    and GetTime() <= pending.deadline
+                    and Flag(pending.addToStart) == Flag(addToStart)
+                then
                     state.pendingLevel = nil
-                    return RenderMessage(pending.frame, pending.text .. ": " .. displayed,
-                        pending.r, pending.g, pending.b, pending.id, pending.addToStart)
+                    return RenderMessage(
+                        pending.frame,
+                        pending.text .. ": " .. displayed,
+                        pending.r,
+                        pending.g,
+                        pending.b,
+                        pending.id,
+                        pending.addToStart
+                    )
                 end
                 -- Preserve order and retain level announcements without gains.
                 state.FlushLevel()
@@ -301,8 +336,11 @@ DFRL:NewMod("Chat", 1, function()
                 if not suppressed and currentEvent and string.find(currentEvent, "^CHAT_MSG_") then
                     NoticeMessage(state)
                 end
-                if currentEvent == "UPDATE_CHAT_WINDOWS" or currentEvent == "PLAYER_ENTERING_WORLD"
-                    or currentEvent == "CHANNEL_UI_UPDATE" then
+                if
+                    currentEvent == "UPDATE_CHAT_WINDOWS"
+                    or currentEvent == "PLAYER_ENTERING_WORLD"
+                    or currentEvent == "CHANNEL_UI_UPDATE"
+                then
                     if index == 1 then ConfigureRegularChat() end
                     state.fadeConfigured, state.held = nil, nil
                     FadeSettings(state, state == selected and not AtBottom(state))
@@ -312,7 +350,7 @@ DFRL:NewMod("Chat", 1, function()
                 end
             end)
 
-            for _, suffix in ipairs({"Tab", "ResizeButton", "UpButton", "DownButton", "BottomButton", "ButtonFrame"}) do
+            for _, suffix in ipairs({ "Tab", "ResizeButton", "UpButton", "DownButton", "BottomButton", "ButtonFrame" }) do
                 HideControl(_G["ChatFrame" .. index .. suffix])
             end
             if native.SetMovable then native:SetMovable(false) end
@@ -330,8 +368,11 @@ DFRL:NewMod("Chat", 1, function()
             selected = state
             selected.unread = false
             _G.SELECTED_CHAT_FRAME = state.native
-            if FCF_SelectDockFrame and Flag(state.native.isDocked) then FCF_SelectDockFrame(state.native)
-            else _G.SELECTED_DOCK_FRAME = state.native end
+            if FCF_SelectDockFrame and Flag(state.native.isDocked) then
+                FCF_SelectDockFrame(state.native)
+            else
+                _G.SELECTED_DOCK_FRAME = state.native
+            end
             for _, other in pairs(states) do
                 other.native:SetAlpha(other == selected and 1 or 0)
                 other.native:EnableMouse(other == selected)
@@ -350,7 +391,7 @@ DFRL:NewMod("Chat", 1, function()
             input:SetParent(UIParent)
             input:SetFrameStrata("LOW")
             input:SetFrameLevel(root:GetFrameLevel() + 6)
-            for _, region in ipairs({input:GetRegions()}) do
+            for _, region in ipairs({ input:GetRegions() }) do
                 if region.GetObjectType and region:GetObjectType() == "Texture" then HideControl(region) end
             end
             if input.SetBackdrop then input:SetBackdrop(nil) end
@@ -419,7 +460,9 @@ DFRL:NewMod("Chat", 1, function()
                 refresh = 0
                 PositionInput()
                 RefreshFrames()
-                for _, state in pairs(states) do PositionNative(state, now) end
+                for _, state in pairs(states) do
+                    PositionNative(state, now)
+                end
             end
         end)
         DFRL.layout.Register("chat", root, function(frame)
@@ -427,12 +470,16 @@ DFRL:NewMod("Chat", 1, function()
             frame:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", 20, 40)
         end, {
             resize = "dimensions",
-            minWidth = 240, minHeight = 120,
-            maxWidth = 2400, maxHeight = 1600,
+            minWidth = 240,
+            minHeight = 120,
+            maxWidth = 2400,
+            maxHeight = 1600,
             onResize = function(frame)
                 indicator:SetWidth(frame:GetWidth())
                 local now = GetTime()
-                for _, state in pairs(states) do PositionNative(state, now) end
+                for _, state in pairs(states) do
+                    PositionNative(state, now)
+                end
                 PositionInput()
             end,
             -- The layout-edit overlay must preserve wheel navigation. Movement

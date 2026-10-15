@@ -4,7 +4,7 @@ DFRL:NewMod("Mini", 1, function()
     local units = {}
 
     local function AddValues(frame, health, mana, unit)
-        local values = {unit = unit, healthBar = health, manaBar = mana}
+        local values = { unit = unit, healthBar = health, manaBar = mana }
         values.health = health:CreateFontString(nil, "OVERLAY")
         values.health:SetFont(font, 9, "OUTLINE")
         values.health:SetPoint("CENTER", health, "CENTER", 0, 0)
@@ -29,7 +29,11 @@ DFRL:NewMod("Mini", 1, function()
         end
         values.health:SetText(UnitHealth(unit))
         if values.mana then
-            if UnitManaMax(unit) > 0 then values.mana:SetText(UnitMana(unit)) else values.mana:SetText("") end
+            if UnitManaMax(unit) > 0 then
+                values.mana:SetText(UnitMana(unit))
+            else
+                values.mana:SetText("")
+            end
         end
         if unit == "targettarget" then
             if not UnitIsPlayer(unit) and UnitIsTapped(unit) and not UnitIsTappedByPlayer(unit) then
@@ -87,12 +91,10 @@ DFRL:NewMod("Mini", 1, function()
         if PetFrameHealthBarText then PetFrameHealthBarText:SetAlpha(0) end
         if PetFrameManaBarText then PetFrameManaBarText:SetAlpha(0) end
         local original = _G.PetFrame_Update
-        if original then
-            _G.PetFrame_Update = function()
-                original()
-                UpdatePet()
-            end
-        end
+        if original then _G.PetFrame_Update = function()
+            original()
+            UpdatePet()
+        end end
         HookScript(PetFrameHealthBar, "OnValueChanged", function() UpdateValues(pet) end)
         HookScript(PetFrameManaBar, "OnValueChanged", function() UpdateValues(pet) end)
         UpdatePet()
@@ -142,8 +144,11 @@ DFRL:NewMod("Mini", 1, function()
         local function UpdateTarget()
             local power = UnitPowerType("targettarget")
             local texture = "UI-HUD-UnitFrame-TargetofTarget-PortraitOn-Bar-Mana"
-            if power == 1 then texture = "UI-HUD-UnitFrame-TargetofTarget-PortraitOn-Bar-Rage"
-            elseif power == 2 then texture = "UI-HUD-UnitFrame-TargetofTarget-PortraitOn-Bar-Focus" end
+            if power == 1 then
+                texture = "UI-HUD-UnitFrame-TargetofTarget-PortraitOn-Bar-Rage"
+            elseif power == 2 then
+                texture = "UI-HUD-UnitFrame-TargetofTarget-PortraitOn-Bar-Focus"
+            end
             TargetofTargetManaBar:SetStatusBarTexture(tex .. texture)
             if TargetofTargetFrame.name and UnitExists("targettarget") then
                 local name = UnitName("targettarget")
@@ -203,7 +208,7 @@ DFRL:NewMod("Mini", 1, function()
             mana:SetHeight(5)
             mana:ClearAllPoints()
             mana:SetPoint("CENTER", frame, "CENTER", 15, 0.5)
-            for _, bar in ipairs({health, mana}) do
+            for _, bar in ipairs({ health, mana }) do
                 local background = bar:CreateTexture(nil, "BACKGROUND")
                 background:SetTexture(bar:GetStatusBarTexture():GetTexture())
                 background:SetVertexColor(0.3, 0.3, 0.3, 0.5)
@@ -215,7 +220,9 @@ DFRL:NewMod("Mini", 1, function()
     end
 
     local function UpdateAll()
-        for _, values in ipairs(units) do UpdateValues(values) end
+        for _, values in ipairs(units) do
+            UpdateValues(values)
+        end
     end
     if table.getn(units) == 0 then return end
     local frame = CreateFrame("Frame")

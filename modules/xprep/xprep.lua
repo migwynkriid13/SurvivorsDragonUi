@@ -38,7 +38,11 @@ DFRL:NewMod("Xprep", 1, function()
         local maximumXP = UnitXPMax("player") or 0
         bar:SetMinMaxValues(0, maximumXP > 0 and maximumXP or 1)
         bar:SetValue(currentXP)
-        if attached and maximumXP > 0 then bar:Show() else bar:Hide() end
+        if attached and maximumXP > 0 then
+            bar:Show()
+        else
+            bar:Hide()
+        end
     end
 
     function DFRL.AttachXPBar(mainBar)
@@ -54,7 +58,7 @@ DFRL:NewMod("Xprep", 1, function()
             DFRL.layout.Register("xpBar", bar, function()
                 bar:ClearAllPoints()
                 bar:SetPoint("TOP", UIParent, "BOTTOM", 0, 49)
-            end, {region = moveRegion})
+            end, { region = moveRegion })
             registered = true
         else
             DFRL.layout.Place("xpBar", bar)
@@ -69,9 +73,7 @@ DFRL:NewMod("Xprep", 1, function()
     events:RegisterEvent("PLAYER_XP_UPDATE")
     events:RegisterEvent("PLAYER_LEVEL_UP")
     events:SetScript("OnEvent", function()
-        if event ~= "PLAYER_XP_UPDATE" or arg1 == "player" or arg1 == nil then
-            UpdateXP()
-        end
+        if event ~= "PLAYER_XP_UPDATE" or arg1 == "player" or arg1 == nil then UpdateXP() end
     end)
     DFRL.xpBar = bar
     -- The bar may already exist, or its world-entry callback will attach us.

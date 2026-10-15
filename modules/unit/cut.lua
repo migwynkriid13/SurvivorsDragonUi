@@ -1,10 +1,10 @@
 DFRL:NewMod("Cut-Out", 1, function()
     local tex = DFRL:GetInfoOrCons("tex") .. "unitframes\\"
     local bars = {
-        {"PlayerFrameHealthBar", "health", "player"},
-        {"TargetFrameHealthBar", "health", "target"},
-        {"TargetofTargetHealthBar", "health", "targettarget"},
-        {"TargetofTargetManaBar", "mana", "targettarget"},
+        { "PlayerFrameHealthBar", "health", "player" },
+        { "TargetFrameHealthBar", "health", "target" },
+        { "TargetofTargetHealthBar", "health", "targettarget" },
+        { "TargetofTargetManaBar", "mana", "targettarget" },
     }
     local cutouts, fading = {}, {}
     local frame = CreateFrame("Frame")
@@ -89,10 +89,13 @@ DFRL:NewMod("Cut-Out", 1, function()
                 if data[1] == "PlayerFrameHealthBar" or data[1] == "TargetFrameHealthBar" then
                     texture:SetTexture(tex .. "healthDF2.tga")
                     texture:SetTexCoord(4.5 / 128, 123.5 / 128, 5 / 32, 25 / 32)
-                elseif data[2] == "health" then texture:SetTexture(tex .. "healthDF2.tga")
-                else texture:SetTexture(tex .. "UI-HUD-UnitFrame-Player-PortraitOn-Bar-Mana-Status.tga") end
+                elseif data[2] == "health" then
+                    texture:SetTexture(tex .. "healthDF2.tga")
+                else
+                    texture:SetTexture(tex .. "UI-HUD-UnitFrame-Player-PortraitOn-Bar-Mana-Status.tga")
+                end
                 texture:SetVertexColor(1, 1, 1, 0.7)
-                local cutout = {bar = bar, texture = texture, unit = data[3], health = data[2] == "health"}
+                local cutout = { bar = bar, texture = texture, unit = data[3], health = data[2] == "health" }
                 table.insert(cutouts, cutout)
                 Reset(cutout)
                 HookScript(bar, "OnValueChanged", function() Update(cutout) end)

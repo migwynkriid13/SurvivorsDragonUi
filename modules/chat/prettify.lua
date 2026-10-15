@@ -15,9 +15,18 @@ local RED = "|cffcc1a1a"
 local PLUS = GREEN .. "+|r"
 
 local patternCharacters = {
-    ["^"] = true, ["$"] = true, ["("] = true, [")"] = true,
-    ["%"] = true, ["."] = true, ["["] = true, ["]"] = true,
-    ["*"] = true, ["+"] = true, ["-"] = true, ["?"] = true,
+    ["^"] = true,
+    ["$"] = true,
+    ["("] = true,
+    [")"] = true,
+    ["%"] = true,
+    ["."] = true,
+    ["["] = true,
+    ["]"] = true,
+    ["*"] = true,
+    ["+"] = true,
+    ["-"] = true,
+    ["?"] = true,
 }
 local patterns = {}
 
@@ -65,9 +74,7 @@ local function CaptureFormat(text, formatText)
     return arguments[1], arguments[2], arguments[3], arguments[4]
 end
 
-local function StatGain(amount, label)
-    return PLUS .. WHITE .. amount .. "|r " .. GREEN .. label .. "|r"
-end
+local function StatGain(amount, label) return PLUS .. WHITE .. amount .. "|r " .. GREEN .. label .. "|r" end
 
 local abilityFormats = {
     { "ERR_LEARN_ABILITY_S", "You have learned a new ability: %s." },
@@ -102,33 +109,43 @@ local function HiddenAnnouncement(text)
     plain = string.gsub(plain, "^[ \t]+", "")
     plain = string.gsub(plain, "[ \t]+$", "")
     if string.find(plain, "^DFRL: Error") then return false end
-    if string.find(plain, " yells:", 1, true) or string.find(plain, " says:", 1, true)
-        or string.find(plain, " whispers:", 1, true) then return false end
+    if
+        string.find(plain, " yells:", 1, true)
+        or string.find(plain, " says:", 1, true)
+        or string.find(plain, " whispers:", 1, true)
+    then
+        return false
+    end
     if plain == GUARDIAN_SLAIN then return true end
     local guardian = CaptureFormat(plain, "%s " .. GUARDIAN_SLAIN)
     if guardian and string.find(guardian, "^[^\r\n]+$") then return true end
     -- Match announcement wording, never a mob-name whitelist. Some native
     -- emotes supply the speaker separately and only print the nameless body.
-    return plain == "Swarm surrounds you!" or
-        plain == "claims its lair once more." or
-        plain == "enters the battlefield!" or
-        plain == "refuses to fall!" or
-        plain == "survive the onslaught!" or
-        string.find(plain, "^[^\r\n]+ approaches!$") ~= nil or
-        string.find(plain, "^[^\r\n]+ claims its lair once more%.$") ~= nil or
-        string.find(plain, "^[^\r\n]+ enters the battlefield!$") ~= nil or
-        string.find(plain, "^[^\r\n]+ refuses to fall!$") ~= nil or
-        string.find(plain, "^[^\r\n]+ — survive the onslaught!$") ~= nil or
-        string.find(plain, "^[^\r\n]+ – survive the onslaught!$") ~= nil or
-        string.find(plain, "^[^\r\n]+ %- survive the onslaught!$") ~= nil
+    return plain == "Swarm surrounds you!"
+        or plain == "claims its lair once more."
+        or plain == "enters the battlefield!"
+        or plain == "refuses to fall!"
+        or plain == "survive the onslaught!"
+        or string.find(plain, "^[^\r\n]+ approaches!$") ~= nil
+        or string.find(plain, "^[^\r\n]+ claims its lair once more%.$") ~= nil
+        or string.find(plain, "^[^\r\n]+ enters the battlefield!$") ~= nil
+        or string.find(plain, "^[^\r\n]+ refuses to fall!$") ~= nil
+        or string.find(plain, "^[^\r\n]+ — survive the onslaught!$") ~= nil
+        or string.find(plain, "^[^\r\n]+ – survive the onslaught!$") ~= nil
+        or string.find(plain, "^[^\r\n]+ %- survive the onslaught!$") ~= nil
 end
 
 local function NpcYell(text, speaker, message)
     -- Native event data avoids depending on an English "yells" prefix or on
     -- any particular NPC name. Only transform the corresponding dialogue line.
-    if type(speaker) == "string" and speaker ~= "" and type(message) == "string"
-        and message ~= "" and string.find(text, speaker, 1, true)
-        and string.sub(text, -string.len(message)) == message then
+    if
+        type(speaker) == "string"
+        and speaker ~= ""
+        and type(message) == "string"
+        and message ~= ""
+        and string.find(text, speaker, 1, true)
+        and string.sub(text, -string.len(message)) == message
+    then
         local name = string.gsub(speaker, "|c%x%x%x%x%x%x%x%x", "")
         name = string.gsub(name, "|r", "")
         return RED .. name .. ":|r " .. message
@@ -146,15 +163,13 @@ end
 local function TalentExperience(text)
     -- Capture the game's class label verbatim, including plural/compound names.
     -- Neither a class whitelist nor fixed XP/point amounts belong here.
-    local first, last, class, experience, tail = string.find(text,
-        "^Your (.-) earns? (%d[%d,]*) talent experience(.*)$")
+    local first, last, class, experience, tail =
+        string.find(text, "^Your (.-) earns? (%d[%d,]*) talent experience(.*)$")
     if not first or not string.find(class, "%S") then return nil end
-    local output = PLUS .. WHITE .. experience .. "|r " .. WHITE .. "Talent XP:|r " ..
-        YELLOW .. class .. "|r"
+    local output = PLUS .. WHITE .. experience .. "|r " .. WHITE .. "Talent XP:|r " .. YELLOW .. class .. "|r"
     if tail == "" or tail == "." or tail == "!" then return output end
 
-    local pointFirst, pointLast, points, instruction = string.find(tail,
-        "^:%s*(%d+) new talent points?!(.*)$")
+    local pointFirst, pointLast, points, instruction = string.find(tail, "^:%s*(%d+) new talent points?!(.*)$")
     if not pointFirst then return nil end
     local prompt = string.gsub(instruction, "^%s+", "")
     prompt = string.gsub(prompt, "%.$", "")
@@ -176,18 +191,25 @@ local function ProgressMessage(text)
         level = value
     end
     -- Only the native plain-number announcement enters the levelup_ding format.
-    if level and string.find(level, "^%d+$") then
-        return YELLOW .. "Level " .. level .. "|r", "level"
-    end
+    if level and string.find(level, "^%d+$") then return YELLOW .. "Level " .. level .. "|r", "level" end
 
     -- Survivors combines the three gains into one notice. Apply the source
     -- levelup_stat/levelup_hp appearance to each gain without rounding decimals.
-    local first, last, damage, health, regeneration = string.find(text,
-        "^You have gained %+([%d%.]+)%% damage, %+([%d%.]+) maximum health and %+([%d%.]+) health per second%.?$")
-    if first and string.find(damage, "^%d+%.?%d*$") and
-        string.find(health, "^%d+%.?%d*$") and string.find(regeneration, "^%d+%.?%d*$") then
-        return StatGain(damage .. "%", "Damage") .. ", " .. StatGain(health, "HP") ..
-            ", " .. StatGain(regeneration, "HP/sec"), "level_stats"
+    local first, last, damage, health, regeneration = string.find(
+        text,
+        "^You have gained %+([%d%.]+)%% damage, %+([%d%.]+) maximum health and %+([%d%.]+) health per second%.?$"
+    )
+    if
+        first
+        and string.find(damage, "^%d+%.?%d*$")
+        and string.find(health, "^%d+%.?%d*$")
+        and string.find(regeneration, "^%d+%.?%d*$")
+    then
+        return StatGain(damage .. "%", "Damage") .. ", " .. StatGain(health, "HP") .. ", " .. StatGain(
+            regeneration,
+            "HP/sec"
+        ),
+            "level_stats"
     end
     return nil
 end
@@ -196,12 +218,15 @@ local function ItemLabel(item)
     -- The source removes display brackets. Leave the full hyperlink payload,
     -- item-quality color and all other label characters intact.
     if string.find(item, "|Hitem:", 1, true) then
-        return (string.gsub(item, "(|Hitem:[^|]+|h)(.-)(|h)", function(open, label, close)
-            return open .. string.gsub(label, "[%[%]]", "") .. close
-        end))
+        return (
+            string.gsub(
+                item,
+                "(|Hitem:[^|]+|h)(.-)(|h)",
+                function(open, label, close) return open .. string.gsub(label, "[%[%]]", "") .. close end
+            )
+        )
     end
-    local first, last, color, name, reset = string.find(item,
-        "^(|c%x%x%x%x%x%x%x%x)%[([^%]]+)%](|r)$")
+    local first, last, color, name, reset = string.find(item, "^(|c%x%x%x%x%x%x%x%x)%[([^%]]+)%](|r)$")
     if first then return color .. name .. reset end
     return (string.gsub(item, "^%[([^%]]+)%]", "%1"))
 end
@@ -224,14 +249,12 @@ local function LootMessage(text)
         body = string.gsub(string.sub(body, 3), "^%s+", "")
     end
 
-    local first, last, item, suffix = string.find(body,
-        "^(|c%x%x%x%x%x%x%x%x|Hitem:[^|]+|h.-|h)(.*)$")
+    local first, last, item, suffix = string.find(body, "^(|c%x%x%x%x%x%x%x%x|Hitem:[^|]+|h.-|h)(.*)$")
     if not first then
         first, last, item, suffix = string.find(body, "^(|Hitem:[^|]+|h.-|h)(.*)$")
     end
     if not first then
-        first, last, item, suffix = string.find(body,
-            "^(|c%x%x%x%x%x%x%x%x%[[^%]]+%])(.*)$")
+        first, last, item, suffix = string.find(body, "^(|c%x%x%x%x%x%x%x%x%[[^%]]+%])(.*)$")
     end
     if not first then
         first, last, item, suffix = string.find(body, "^(%[[^%]]+%])(.*)$")
@@ -258,17 +281,24 @@ end
 
 CleanerChat.PrettifyMessage = function(text, eventName, speaker, message)
     if type(text) ~= "string" then return text end
-    local announcementEvent = not eventName or eventName == "CHAT_MSG_SYSTEM" or
-        eventName == "CHAT_MSG_MONSTER_EMOTE" or eventName == "CHAT_MSG_RAID_BOSS_EMOTE"
+    local announcementEvent = not eventName
+        or eventName == "CHAT_MSG_SYSTEM"
+        or eventName == "CHAT_MSG_MONSTER_EMOTE"
+        or eventName == "CHAT_MSG_RAID_BOSS_EMOTE"
     if announcementEvent and (HiddenAnnouncement(text) or (eventName and HiddenAnnouncement(message))) then
         return nil, "hide"
     end
     if eventName == "CHAT_MSG_MONSTER_YELL" then return NpcYell(text, speaker, message) end
     -- The caller supplies an event while native Lua chat handlers run. Direct
     -- client writes have no event; only anchored, recognizable notices match.
-    if eventName and eventName ~= "CHAT_MSG_SYSTEM" and eventName ~= "PLAYER_LEVEL_UP"
-        and eventName ~= "CHAT_MSG_COMBAT_XP_GAIN" and eventName ~= "CHAT_MSG_LOOT"
-        and eventName ~= "CHAT_MSG_SKILL" then
+    if
+        eventName
+        and eventName ~= "CHAT_MSG_SYSTEM"
+        and eventName ~= "PLAYER_LEVEL_UP"
+        and eventName ~= "CHAT_MSG_COMBAT_XP_GAIN"
+        and eventName ~= "CHAT_MSG_LOOT"
+        and eventName ~= "CHAT_MSG_SKILL"
+    then
         return text
     end
     local result, kind
@@ -276,8 +306,12 @@ CleanerChat.PrettifyMessage = function(text, eventName, speaker, message)
         result = AbilityMessage(text)
         if result then return result end
     end
-    if not eventName or eventName == "CHAT_MSG_SYSTEM" or eventName == "PLAYER_LEVEL_UP"
-        or eventName == "CHAT_MSG_COMBAT_XP_GAIN" then
+    if
+        not eventName
+        or eventName == "CHAT_MSG_SYSTEM"
+        or eventName == "PLAYER_LEVEL_UP"
+        or eventName == "CHAT_MSG_COMBAT_XP_GAIN"
+    then
         result, kind = ProgressMessage(text)
         if result then return result, kind end
     end

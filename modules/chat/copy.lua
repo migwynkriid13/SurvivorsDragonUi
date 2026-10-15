@@ -53,7 +53,8 @@ DFRL:NewMod("ChatCopy", 0, function()
         close:SetPoint("TOPRIGHT", frame, "TOPRIGHT", 2, 2)
         close:SetScript("OnClick", function() frame:Hide() end)
 
-        local scroll = CreateFrame("ScrollFrame", "SurvivorsDragonUiChatCopyScroll", frame, "UIPanelScrollFrameTemplate")
+        local scroll =
+            CreateFrame("ScrollFrame", "SurvivorsDragonUiChatCopyScroll", frame, "UIPanelScrollFrameTemplate")
         scroll:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -36)
         scroll:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -36, 30)
 
@@ -115,10 +116,13 @@ DFRL:NewMod("ChatCopy", 0, function()
             window:ClearAllPoints()
             window:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
         end, {
-            onlyWhenShown = true, onMouseWheel = ScrollWheel,
+            onlyWhenShown = true,
+            onMouseWheel = ScrollWheel,
             resize = "dimensions",
-            minWidth = 360, minHeight = 180,
-            maxWidth = 2400, maxHeight = 1600,
+            minWidth = 360,
+            minHeight = 180,
+            maxWidth = 2400,
+            maxHeight = 1600,
             onResize = function(window)
                 title:SetWidth(window:GetWidth() - 56)
                 hint:SetWidth(window:GetWidth() - 24)

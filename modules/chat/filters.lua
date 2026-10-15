@@ -12,21 +12,42 @@ local PLUS = GREEN .. "+|r"
 local MINUS = RED .. "-|r "
 
 local conversations = {
-    CHAT_MSG_SAY = true, CHAT_MSG_YELL = true, CHAT_MSG_EMOTE = true,
-    CHAT_MSG_TEXT_EMOTE = true, CHAT_MSG_PARTY = true, CHAT_MSG_RAID = true,
-    CHAT_MSG_RAID_LEADER = true, CHAT_MSG_RAID_WARNING = true,
-    CHAT_MSG_GUILD = true, CHAT_MSG_OFFICER = true, CHAT_MSG_WHISPER = true,
-    CHAT_MSG_WHISPER_INFORM = true, CHAT_MSG_CHANNEL = true,
-    CHAT_MSG_MONSTER_SAY = true, CHAT_MSG_MONSTER_YELL = true,
-    CHAT_MSG_MONSTER_WHISPER = true, CHAT_MSG_MONSTER_EMOTE = true,
-    CHAT_MSG_AFK = true, CHAT_MSG_DND = true, CHAT_MSG_IGNORED = true,
+    CHAT_MSG_SAY = true,
+    CHAT_MSG_YELL = true,
+    CHAT_MSG_EMOTE = true,
+    CHAT_MSG_TEXT_EMOTE = true,
+    CHAT_MSG_PARTY = true,
+    CHAT_MSG_RAID = true,
+    CHAT_MSG_RAID_LEADER = true,
+    CHAT_MSG_RAID_WARNING = true,
+    CHAT_MSG_GUILD = true,
+    CHAT_MSG_OFFICER = true,
+    CHAT_MSG_WHISPER = true,
+    CHAT_MSG_WHISPER_INFORM = true,
+    CHAT_MSG_CHANNEL = true,
+    CHAT_MSG_MONSTER_SAY = true,
+    CHAT_MSG_MONSTER_YELL = true,
+    CHAT_MSG_MONSTER_WHISPER = true,
+    CHAT_MSG_MONSTER_EMOTE = true,
+    CHAT_MSG_AFK = true,
+    CHAT_MSG_DND = true,
+    CHAT_MSG_IGNORED = true,
     CHAT_MSG_ADDON = true,
 }
 
 local patternCharacters = {
-    ["^"] = true, ["$"] = true, ["("] = true, [")"] = true,
-    ["%"] = true, ["."] = true, ["["] = true, ["]"] = true,
-    ["*"] = true, ["+"] = true, ["-"] = true, ["?"] = true,
+    ["^"] = true,
+    ["$"] = true,
+    ["("] = true,
+    [")"] = true,
+    ["%"] = true,
+    ["."] = true,
+    ["["] = true,
+    ["]"] = true,
+    ["*"] = true,
+    ["+"] = true,
+    ["-"] = true,
+    ["?"] = true,
 }
 local compiledFormats = {}
 
@@ -85,9 +106,7 @@ local function CaptureFormat(text, formatText, anchored)
     return arguments[1], arguments[2], arguments[3], arguments[4]
 end
 
-local function GlobalFormat(name, fallback)
-    return _G[name] or fallback
-end
+local function GlobalFormat(name, fallback) return _G[name] or fallback end
 
 local function CompactItem(text)
     if not text then return text end
@@ -116,8 +135,14 @@ local function XP(amount, source)
 end
 
 local function Reputation(faction, amount, loss)
-    return (loss and MINUS or PLUS) .. WHITE .. amount .. "|r " ..
-        (_G.REPUTATION or "Reputation") .. GRAY .. ":|r " .. faction
+    return (loss and MINUS or PLUS)
+        .. WHITE
+        .. amount
+        .. "|r "
+        .. (_G.REPUTATION or "Reputation")
+        .. GRAY
+        .. ":|r "
+        .. faction
 end
 
 local lootRules = {
@@ -179,23 +204,30 @@ local function FormatGameNotice(text, eventName)
         if amount then return FormatMoney(amount) or text end
     end
     if not eventName or eventName == "CHAT_MSG_COMBAT_XP_GAIN" then
-        local source, amount = CaptureFormat(text,
-            GlobalFormat("COMBATLOG_XPGAIN_FIRSTPERSON", "%s dies, you gain %d experience."), true)
+        local source, amount =
+            CaptureFormat(text, GlobalFormat("COMBATLOG_XPGAIN_FIRSTPERSON", "%s dies, you gain %d experience."), true)
         if source and amount then return XP(amount, source) end
-        amount = CaptureFormat(text, GlobalFormat("COMBATLOG_XPGAIN_FIRSTPERSON_UNNAMED", "You gain %d experience."), true)
+        amount =
+            CaptureFormat(text, GlobalFormat("COMBATLOG_XPGAIN_FIRSTPERSON_UNNAMED", "You gain %d experience."), true)
         if amount then return XP(amount) end
     end
     if not eventName or eventName == "CHAT_MSG_COMBAT_FACTION_CHANGE" then
-        local faction, amount = CaptureFormat(text,
-            GlobalFormat("FACTION_STANDING_INCREASED", "Your %s reputation has increased by %d."), true)
+        local faction, amount = CaptureFormat(
+            text,
+            GlobalFormat("FACTION_STANDING_INCREASED", "Your %s reputation has increased by %d."),
+            true
+        )
         if faction and amount then return Reputation(faction, amount, false) end
-        faction, amount = CaptureFormat(text,
-            GlobalFormat("FACTION_STANDING_DECREASED", "Your %s reputation has decreased by %d."), true)
+        faction, amount = CaptureFormat(
+            text,
+            GlobalFormat("FACTION_STANDING_DECREASED", "Your %s reputation has decreased by %d."),
+            true
+        )
         if faction and amount then return Reputation(faction, amount, true) end
     end
     if not eventName or eventName == "CHAT_MSG_SKILL" then
-        local skill, rank = CaptureFormat(text,
-            GlobalFormat("SKILL_RANK_UP", "Your skill in %s has increased to %d."), true)
+        local skill, rank =
+            CaptureFormat(text, GlobalFormat("SKILL_RANK_UP", "Your skill in %s has increased to %d."), true)
         if skill and rank then return PLUS .. skill .. GRAY .. ":|r " .. WHITE .. rank .. "|r" end
     end
     if eventName and eventName ~= "CHAT_MSG_SYSTEM" then return text end
@@ -207,7 +239,8 @@ local function FormatGameNotice(text, eventName)
     local amount = CaptureFormat(text, GlobalFormat("ERR_QUEST_REWARD_EXP_I", "Experience gained: %d."), true)
     if amount then return XP(amount) end
     local source
-    source, amount = CaptureFormat(text, GlobalFormat("ERR_ZONE_EXPLORED_XP", "Discovered %s: %d experience gained"), true)
+    source, amount =
+        CaptureFormat(text, GlobalFormat("ERR_ZONE_EXPLORED_XP", "Discovered %s: %d experience gained"), true)
     if source and amount then return XP(amount, source) end
     amount = CaptureFormat(text, GlobalFormat("LEVEL_UP", "Congratulations, you have reached level %d!"), true)
     if amount then return YELLOW .. "Level " .. amount .. "|r" end
@@ -237,20 +270,23 @@ local function FormatGameNotice(text, eventName)
 end
 
 local groupTags = {
-    { "CHAT_GUILD_GET", "Guild", "G" }, { "CHAT_OFFICER_GET", "Officer", "O" },
-    { "CHAT_PARTY_GET", "Party", "P" }, { "CHAT_RAID_GET", "Raid", "R" },
+    { "CHAT_GUILD_GET", "Guild", "G" },
+    { "CHAT_OFFICER_GET", "Officer", "O" },
+    { "CHAT_PARTY_GET", "Party", "P" },
+    { "CHAT_RAID_GET", "Raid", "R" },
     { "CHAT_RAID_LEADER_GET", "Raid Leader", "RL" },
     { "CHAT_RAID_WARNING_GET", "Raid Warning", "!" },
 }
 
-local function FormatChannel(number, name)
-    return number .. ". [" .. string.upper(string.sub(name, 1, 1)) .. "]"
-end
+local function FormatChannel(number, name) return number .. ". [" .. string.upper(string.sub(name, 1, 1)) .. "]" end
 
 local function FormatChannels(text)
     -- Native channel hyperlink payloads remain unchanged and clickable.
-    text = string.gsub(text, "(|Hchannel:[^|]+|h)%[(%d+)%. ([^%]|]+)%](|h)",
-        function(open, number, name, close) return open .. FormatChannel(number, name) .. close end)
+    text = string.gsub(
+        text,
+        "(|Hchannel:[^|]+|h)%[(%d+)%. ([^%]|]+)%](|h)",
+        function(open, number, name, close) return open .. FormatChannel(number, name) .. close end
+    )
     local color = ""
     if string.find(text, "^|c%x%x%x%x%x%x%x%x") then
         color = string.sub(text, 1, 10)
@@ -260,7 +296,9 @@ local function FormatChannels(text)
     for _, tag in ipairs(groupTags) do
         local localized = _G[tag[1]]
         local first, last, name
-        if localized then first, last, name = string.find(localized, "%[([^%]]+)%]") end
+        if localized then
+            first, last, name = string.find(localized, "%[([^%]]+)%]")
+        end
         name = name or tag[2]
         local escaped = ""
         for i = 1, string.len(name) do
@@ -274,8 +312,12 @@ local function FormatChannels(text)
 end
 
 local classUnits = { "player", "target", "targettarget", "mouseover" }
-for i = 1, 4 do table.insert(classUnits, "party" .. i) end
-for i = 1, 40 do table.insert(classUnits, "raid" .. i) end
+for i = 1, 4 do
+    table.insert(classUnits, "party" .. i)
+end
+for i = 1, 40 do
+    table.insert(classUnits, "raid" .. i)
+end
 
 local function ClassColoredName(name)
     name = string.gsub(name, "^%a", string.upper)
@@ -285,8 +327,13 @@ local function ClassColoredName(name)
             local localized, class = UnitClass(unit)
             local color = class and RAID_CLASS_COLORS[class]
             if color then
-                return string.format("|cff%02x%02x%02x%s|r", math.floor(color.r * 255),
-                    math.floor(color.g * 255), math.floor(color.b * 255), name)
+                return string.format(
+                    "|cff%02x%02x%02x%s|r",
+                    math.floor(color.r * 255),
+                    math.floor(color.g * 255),
+                    math.floor(color.b * 255),
+                    name
+                )
             end
             return name
         end
@@ -295,17 +342,22 @@ local function ClassColoredName(name)
 end
 
 local function FormatPlayerLinks(text)
-    return (string.gsub(text, "(|Hplayer:[^|]+|h)(.-)(|h)", function(open, name, close)
-        local first, last, bare = string.find(name, "^%[(.-)%]$")
-        name = bare or name
-        if string.find(name, "|", 1, true) then
-            name = string.gsub(name, "^(|c%x%x%x%x%x%x%x%x)(%a)",
-                function(color, initial) return color .. string.upper(initial) end)
-        else
-            name = ClassColoredName(name)
-        end
-        return open .. name .. close
-    end))
+    return (
+        string.gsub(text, "(|Hplayer:[^|]+|h)(.-)(|h)", function(open, name, close)
+            local first, last, bare = string.find(name, "^%[(.-)%]$")
+            name = bare or name
+            if string.find(name, "|", 1, true) then
+                name = string.gsub(
+                    name,
+                    "^(|c%x%x%x%x%x%x%x%x)(%a)",
+                    function(color, initial) return color .. string.upper(initial) end
+                )
+            else
+                name = ClassColoredName(name)
+            end
+            return open .. name .. close
+        end)
+    )
 end
 
 local function LinkifyPlainText(text)
@@ -318,7 +370,10 @@ local function LinkifyPlainText(text)
             local position = string.find(lower, prefix, cursor, true)
             if position and (not first or position < first) then first = position end
         end
-        if not first then output = output .. string.sub(text, cursor); break end
+        if not first then
+            output = output .. string.sub(text, cursor)
+            break
+        end
         local previous = string.sub(text, first - 1, first - 1)
         if first > 1 and (string.find(previous, "[%w_/@]") ~= nil) then
             output = output .. string.sub(text, cursor, first)
@@ -326,11 +381,13 @@ local function LinkifyPlainText(text)
         else
             local boundary = string.find(text, "[%s|]", first)
             local last = boundary and boundary - 1 or string.len(text)
-            while last >= first and string.find(string.sub(text, last, last), "[.,;!%?%)%]]") do last = last - 1 end
+            while last >= first and string.find(string.sub(text, last, last), "[.,;!%?%)%]]") do
+                last = last - 1
+            end
             local url = string.sub(text, first, last)
             output = output .. string.sub(text, cursor, first - 1)
-            local hasAddress = string.find(string.lower(url), "^https?://[^/]+") or
-                (string.find(string.lower(url), "^www%.") and string.len(url) > 4)
+            local hasAddress = string.find(string.lower(url), "^https?://[^/]+")
+                or (string.find(string.lower(url), "^www%.") and string.len(url) > 4)
             if hasAddress then
                 output = output .. "|Hurl:" .. url .. "|h[" .. url .. "]|h"
             else
@@ -349,11 +406,17 @@ function CleanerChat.LinkifyURLs(text)
     local cursor = 1
     while cursor <= string.len(text) do
         local open = string.find(text, "|H", cursor, true)
-        if not open then output = output .. LinkifyPlainText(string.sub(text, cursor)); break end
+        if not open then
+            output = output .. LinkifyPlainText(string.sub(text, cursor))
+            break
+        end
         output = output .. LinkifyPlainText(string.sub(text, cursor, open - 1))
         local label = string.find(text, "|h", open + 2, true)
         local close = label and string.find(text, "|h", label + 2, true)
-        if not close then output = output .. string.sub(text, open); break end
+        if not close then
+            output = output .. string.sub(text, open)
+            break
+        end
         output = output .. string.sub(text, open, close + 1)
         cursor = close + 2
     end

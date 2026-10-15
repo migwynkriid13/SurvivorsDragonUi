@@ -10,13 +10,15 @@ DFRL:NewMod("RunTimers", 5, function()
     local COINS_ICON = DFRL:GetInfoOrCons("tex") .. "chat\\cleaner_coins.tga"
     local MARKER_SIZE = 18
     local PHASES = {
-        ready = true, playing = true, choosing = true,
-        paused = true, dead = true, victory = true,
+        ready = true,
+        playing = true,
+        choosing = true,
+        paused = true,
+        dead = true,
+        victory = true,
     }
 
-    local function IsNumber(value)
-        return type(value) == "number" and value >= 0 and value - value == 0
-    end
+    local function IsNumber(value) return type(value) == "number" and value >= 0 and value - value == 0 end
 
     local function Clock(seconds)
         seconds = math.floor(seconds)
@@ -103,7 +105,7 @@ DFRL:NewMod("RunTimers", 5, function()
     DFRL.layout.Register("runTimer", run, function()
         run:ClearAllPoints()
         run:SetPoint("TOP", UIParent, "TOP", 0, -30)
-    end, {region = runMoveRegion})
+    end, { region = runMoveRegion })
 
     -- Encounters share a movable group, independent of the run clock.
     -- Its bounds include the first name and every stacked health pill.
@@ -126,9 +128,9 @@ DFRL:NewMod("RunTimers", 5, function()
     local tallyRegistered = false
     local fieldWidth = BAR_WIDTH / 3
     local counters = {
-        {key = "kills", label = "Enemies killed", icon = ATTACK_ICON},
-        {key = "gold", label = "Gold", icon = COINS_ICON},
-        {key = "chest", label = "Next cache cost (gold)", icon = CACHE_ICON},
+        { key = "kills", label = "Enemies killed", icon = ATTACK_ICON },
+        { key = "gold", label = "Gold", icon = COINS_ICON },
+        { key = "chest", label = "Next cache cost (gold)", icon = CACHE_ICON },
     }
     for index, counter in ipairs(counters) do
         local field = CreateFrame("Frame", nil, tallyOverlay)
@@ -155,7 +157,7 @@ DFRL:NewMod("RunTimers", 5, function()
         text:SetPoint("CENTER", field, "CENTER", 0, 0)
         text:SetJustifyH("CENTER")
         text:SetJustifyV("MIDDLE")
-        local entry = {key = counter.key, label = counter.label, text = text, frame = field}
+        local entry = { key = counter.key, label = counter.label, text = text, frame = field }
         table.insert(tallyFields, entry)
         field:SetScript("OnEnter", function()
             GameTooltip:SetOwner(this, "ANCHOR_LEFT")
@@ -231,7 +233,7 @@ DFRL:NewMod("RunTimers", 5, function()
         if not ok then return false end
         local shown = Shown(value)
         if shown == nil then return false end
-        if not nativeParts[part] then nativeParts[part] = {shown = shown} end
+        if not nativeParts[part] then nativeParts[part] = { shown = shown } end
         if shown then
             ok = pcall(AZS_SetHudShown, part, false)
             if not ok then return false end
@@ -249,7 +251,9 @@ DFRL:NewMod("RunTimers", 5, function()
 
     local function ClearTally()
         tally:Hide()
-        for _, field in ipairs(tallyFields) do field.text:SetText("") end
+        for _, field in ipairs(tallyFields) do
+            field.text:SetText("")
+        end
         Restore("tally")
     end
 
@@ -257,8 +261,12 @@ DFRL:NewMod("RunTimers", 5, function()
         local state = AZS_RUN
         -- Zero is a valid counter or free cache. Missing fields must not be
         -- replaced by invented values while the native overlay is hidden.
-        if type(state) ~= "table" or not IsNumber(state.kills)
-            or not IsNumber(state.gold) or not IsNumber(state.chest) then
+        if
+            type(state) ~= "table"
+            or not IsNumber(state.kills)
+            or not IsNumber(state.gold)
+            or not IsNumber(state.chest)
+        then
             ClearTally()
             return
         end
@@ -291,7 +299,9 @@ DFRL:NewMod("RunTimers", 5, function()
 
     local function ReleaseClock()
         run:Hide()
-        for _, marker in ipairs(markers) do marker:Hide() end
+        for _, marker in ipairs(markers) do
+            marker:Hide()
+        end
         Restore("clock")
     end
 
@@ -310,9 +320,7 @@ DFRL:NewMod("RunTimers", 5, function()
         if type(schedule) ~= "table" then return nil end
         local state, zone = AZS_RUN, AZS_ZONE
         local expected = type(state) == "table" and state.bt or nil
-        if not IsNumber(expected) or expected <= 0 then
-            expected = type(zone) == "table" and zone.bt or nil
-        end
+        if not IsNumber(expected) or expected <= 0 then expected = type(zone) == "table" and zone.bt or nil end
         if not IsNumber(expected) or expected <= 0 or expected ~= math.floor(expected) then return nil end
 
         local times = {}
@@ -321,9 +329,15 @@ DFRL:NewMod("RunTimers", 5, function()
         -- every zone boss, including those already up/dead, and matching native
         -- final-boss time before drawing markers. Clock recovery is independent.
         for _, entry in ipairs(schedule) do
-            if type(entry) ~= "table" or not IsNumber(entry.index)
-                or entry.index ~= math.floor(entry.index) or seen[entry.index]
-                or not IsNumber(entry.at) or entry.at <= 0 or entry.at > maximum then
+            if
+                type(entry) ~= "table"
+                or not IsNumber(entry.index)
+                or entry.index ~= math.floor(entry.index)
+                or seen[entry.index]
+                or not IsNumber(entry.at)
+                or entry.at <= 0
+                or entry.at > maximum
+            then
                 return nil
             end
             seen[entry.index] = true
@@ -392,15 +406,21 @@ DFRL:NewMod("RunTimers", 5, function()
                 -- Lua considers 0 truthy, so do not test awake by truthiness.
                 local engaged = kind ~= "guardian" or entry.awake == true or entry.awake == 1
                 if engaged then
-                    if not IsNumber(entry.id) or entry.id ~= math.floor(entry.id)
-                        or type(entry.name) ~= "string" or entry.name == ""
-                        or not IsNumber(entry.hp) or not IsNumber(entry.hpm) or entry.hpm <= 0 then
+                    if
+                        not IsNumber(entry.id)
+                        or entry.id ~= math.floor(entry.id)
+                        or type(entry.name) ~= "string"
+                        or entry.name == ""
+                        or not IsNumber(entry.hp)
+                        or not IsNumber(entry.hpm)
+                        or entry.hpm <= 0
+                    then
                         return false
                     end
                     local key = kind .. ":" .. tostring(entry.id)
                     if seen[key] then return false end
                     seen[key] = true
-                    table.insert(entries, {key = key, name = entry.name, hp = entry.hp, maximum = entry.hpm})
+                    table.insert(entries, { key = key, name = entry.name, hp = entry.hp, maximum = entry.hpm })
                 end
             end
             return true
@@ -422,7 +442,7 @@ DFRL:NewMod("RunTimers", 5, function()
         health:SetFont("DEFAULT", 12, "OUTLINE")
         health:SetPoint("CENTER", frame, "CENTER", 0, 0)
         health:SetTextColor(1, 1, 1)
-        return {frame = frame, bar = bar, name = name, health = health}
+        return { frame = frame, bar = bar, name = name, health = health }
     end
 
     local function UpdateRows()
@@ -441,7 +461,11 @@ DFRL:NewMod("RunTimers", 5, function()
         local count = table.getn(entries)
         bossGroup:SetHeight(47 + math.max(0, count - 1) * ROW_HEIGHT)
         DFRL.layout.Place("bossBars", bossGroup)
-        if count > 0 then bossGroup:Show() else bossGroup:Hide() end
+        if count > 0 then
+            bossGroup:Show()
+        else
+            bossGroup:Hide()
+        end
         for index, entry in ipairs(entries) do
             local row = activeRows[entry.key]
             if not row then
