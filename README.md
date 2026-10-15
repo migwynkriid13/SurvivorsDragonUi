@@ -62,7 +62,7 @@ The official API reference is included in [docs/AzerothSurvivors-Addon-API.md](d
 
 Each push to `main` that changes the installable payload builds one `SurvivorsDragonUi.zip` from that push's final commit. The payload is listed in `packaging/runtime-files.json`: the TOC, its loaded Lua files and the textures used at runtime. The ZIP contains only those files inside the installable `SurvivorsDragonUi/` folder. Repository documentation, tooling, workflows, unused source/artwork and standalone license/attribution files stay on GitHub. Required third-party license text remains in the packaged Lua source comments.
 
-Release eligibility uses the same manifest as packaging, including removed files and changes to payload membership. Documentation, tooling, license notices and unused files do not cause a ZIP or release to be built. Manifest formatting alone does not build one either. A candidate code/asset push may run the eligibility step; packaging and publication are skipped when no packaged content changed.
+Release eligibility uses the same manifest as packaging, including removed files and changes to payload membership. PRs that change the shipped ZIP payload must increase the TOC version. Documentation/tooling-only PRs leave the version unchanged and do not publish a release. Files outside the payload and manifest formatting alone do not trigger packaging; publication is skipped when no packaged content changed.
 
 Releases use the final commit's SHA as their tag. Re-running the same build replaces its ZIP without creating another release. Publication is serialized, and an older rerun cannot replace a newer Latest release. The stable [latest ZIP download](https://github.com/migwynkriid13/SurvivorsDragonUi/releases/latest/download/SurvivorsDragonUi.zip) points to the newest published build. A manual workflow run on `main` can also package the current commit.
 
@@ -76,9 +76,13 @@ python3 scripts/package.py dist/SurvivorsDragonUi.zip
 
 ## Pull request checks
 
+PRs that change the shipped ZIP payload must set `## Version` in `SurvivorsDragonUi.toc` strictly higher than the latest target `main` version, keeping the `major.minor.patch-survivors` format and `-survivors` suffix. Default to one patch increment, for example `3.2.2-survivors` to `3.2.3-survivors`. Bump once per qualifying PR, not on every commit or push. If another merge brings `main` to the same or a higher version, update the PR version before merging. Documentation/tooling-only PRs leave the version unchanged. PR-introduced payload impact uses the shared release comparison of the PR merge-base and PR-head `packaging/runtime-files.json` manifests, including removals and membership changes.
+
+An automated metadata guard uses that shared payload comparison and requires a version increase when shipped content changes, comparing the pinned PR head with the target branch's current version when CI runs. Enforcing that comparison at merge time also requires required up-to-date checks or a merge queue; the guard alone cannot prevent `main` advancing after a successful run. CI never bumps or commits the version automatically.
+
 Every push to a pull request runs all source-quality checks across the complete tracked codebase. Prettier checks owned Markdown, JSON and YAML; StyLua checks all Lua formatting; Luacheck reports unused local variables and assignments, unreachable code and single-iteration loops. These checks never load the addon or start the game.
 
-All three checks finish before CI enforces the result. One combined job summary and downloadable artifact contain every tool's findings and suggested formatting patches; CI does not commit changes automatically. The supplied API reference and upstream WidgetStatusBar attribution stay verbatim. Lua formatting uses the nearest supported grammar, Lua 5.1; it does not establish 1.12 runtime compatibility. Dead-code analysis excludes dynamic WoW/DFRL globals and unused callback arguments, and cannot prove that globally registered callbacks or assets are unused.
+The version guard and all three source-quality checks finish before CI enforces the result. One combined job summary and downloadable artifact contain the version result, every tool's findings and suggested formatting patches; CI does not commit changes automatically. The supplied API reference and upstream WidgetStatusBar attribution stay verbatim. Lua formatting uses the nearest supported grammar, Lua 5.1; it does not establish 1.12 runtime compatibility. Dead-code analysis excludes dynamic WoW/DFRL globals and unused callback arguments, and cannot prove that globally registered callbacks or assets are unused.
 
 ## License
 

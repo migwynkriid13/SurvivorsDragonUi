@@ -1,4 +1,4 @@
-"""Read-only PR formatting and local dead-code checks, run only in GitHub CI.
+"""Read-only PR version, formatting and local dead-code checks for GitHub CI.
 
 Every tracked Lua source and owned Markdown/JSON/YAML file is checked on every
 PR push. No Lua file is loaded or executed. Reports and suggested formatting
@@ -10,8 +10,13 @@ import html
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import sys
+from urllib.parse import quote
+
+from package import MANIFEST as RUNTIME_MANIFEST, SOURCE, runtime_files
+from release_changes import payload_changes
 
 
 REPORTS = Path("dist/pr-quality")
@@ -71,6 +76,59 @@ def collect():
 
 def run(command, **kwargs):
     return subprocess.run(command, text=True, capture_output=True, **kwargs)
+
+
+def toc_version():
+    """Compare PR metadata with the current target branch, without running Lua."""
+    toc = "SurvivorsDragonUi.toc"
+
+    def version(text):
+        text = "\n".join(text.splitlines())
+        values = re.findall(r"^##[ \t]*Version[ \t]*:[ \t]*([^\r\n]*)$", text, re.MULTILINE)
+        if len(values) != 1:
+            raise ValueError(toc + " must have exactly one Version header")
+        value = values[0].strip()
+        match = re.fullmatch(r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)-survivors", value)
+        if not match:
+            raise ValueError("Expected major.minor.patch-survivors, got " + repr(value))
+        return tuple(int(part) for part in match.groups()), value
+
+    try:
+        repository = os.environ["GITHUB_REPOSITORY"]
+        branch = os.environ["PR_BASE_REF"]
+        commit_endpoint = "repos/" + repository + "/commits/" + quote(branch, safe="")
+
+        def base_head():
+            return json.loads(run(["gh", "api", commit_endpoint], check=True).stdout)["sha"]
+
+        base_sha = base_head()
+        merge_base = git("merge-base", base_sha, "HEAD").decode().strip()
+        manifest_path = RUNTIME_MANIFEST.relative_to(SOURCE).as_posix()
+        previous_files = json.loads(git("show", merge_base + ":" + manifest_path))["files"]
+        changed = git("diff", "--name-only", "--no-renames", "-z", merge_base, "HEAD", "--").decode().split("\0")
+        changes = payload_changes(runtime_files(), previous_files, (name for name in changed if name))
+        report = json.dumps(changes, indent=2) + "\n"
+        if any(changes.values()):
+            previous, previous_label = version(git("show", base_sha + ":" + toc).decode("utf-8-sig"))
+            current, current_label = version(Path(toc).read_text(encoding="utf-8-sig"))
+            if current <= previous:
+                raise ValueError(
+                    "PR version " + current_label + " must be higher than " + branch + " version "
+                    + previous_label + ". Bump the TOC once per payload-changing PR; default to the next patch version."
+                )
+            report += "Passed: " + previous_label + " -> " + current_label + " (" + branch + " at " + base_sha + ")\n"
+        else:
+            report += "No ZIP payload changes; no TOC version bump required.\n"
+        if base_head() != base_sha:
+            raise ValueError("The target branch changed during the version check; rerun against its latest version")
+        failed = False
+    except (KeyError, OSError, ValueError, subprocess.CalledProcessError) as error:
+        report = "TOC version check failed: " + str(error) + "\n"
+        failed = True
+    REPORTS.mkdir(parents=True, exist_ok=True)
+    (REPORTS / "version.log").write_text(report, encoding="utf-8")
+    print(report, end="")
+    return failed
 
 
 def prettier(files):
@@ -147,6 +205,7 @@ def dead_code(files):
 
 def summary():
     checks = (
+        ("TOC version increment", "VERSION_OUTCOME"),
         ("Markdown / JSON / YAML formatting", "PRETTIER_OUTCOME"),
         ("Lua formatting", "STYLUA_OUTCOME"),
         ("Local Lua dead code", "DEADCODE_OUTCOME"),
@@ -173,15 +232,16 @@ def summary():
         "is truncated.\n\n"
     )
     report_files = (
+        ("version.log", "No version diagnostics emitted."),
         ("prettier.log", "No formatting diagnostics emitted."),
         ("stylua.log", "No formatting diagnostics emitted."),
         ("dead-code.log", "No configured dead-code warnings emitted."),
         ("prettier.patch", "No formatting differences."),
         ("stylua.patch", "No formatting differences."),
     )
-    # Five sections at <=140 KiB each plus fixed headings stay below 800 KiB,
+    # Six sections at <=120 KiB each plus fixed headings stay below 800 KiB,
     # leaving ample space below GitHub's 1 MiB per-step summary limit.
-    section_limit = 140 * 1024
+    section_limit = 120 * 1024
     for name, empty_message in report_files:
         path = REPORTS / name
         content = (
@@ -220,6 +280,8 @@ def main():
     if operation == "summary":
         summary()
         return 0
+    if operation == "toc-version":
+        return int(toc_version())
     files = json.loads(MANIFEST.read_text(encoding="utf-8"))
     if operation == "prettier":
         return int(prettier(files["prettier"]))
