@@ -111,7 +111,7 @@ DFRL:NewMod("RunTimers", 5, function()
         { label = "Outline", value = "OUTLINE" },
         { label = "Thick outline", value = "THICKOUTLINE" },
     }
-    local fontDefaults = { face = "Fonts\\MORPHEUS.TTF", size = 14, outline = "OUTLINE", shadow = true }
+    local fontDefaults = { face = "Fonts\\SKURRI.TTF", size = 14, outline = "OUTLINE", shadow = true }
     local currentFont, fontDraft, fontEditor, fontSample, fontMenu
     local faceLabel, sizeLabel, outlineLabel, shadowLabel
 
@@ -195,18 +195,62 @@ DFRL:NewMod("RunTimers", 5, function()
         PreviewFont(fontDraft)
     end
 
+    local function PlaceFontEditor()
+        if not fontEditor then return end
+        fontEditor:ClearAllPoints()
+        fontEditor:SetPoint("TOP", UIParent, "CENTER", 0, -25)
+    end
+
+    local function FinishFontEditorDrag()
+        if not fontEditor then return end
+        fontEditor:StopMovingOrSizing()
+        if fontEditor.SetUserPlaced then fontEditor:SetUserPlaced(false) end
+    end
+
     local function CreateFontEditor()
-        fontEditor = T.CreateDFRLFrame(UIParent, 440, 254)
+        local measure = FontEditorLabel(UIParent, "", 0, 0)
+        measure:Hide()
+        local function TextWidth(text)
+            measure:SetText(text)
+            return math.ceil(measure:GetStringWidth() or 0)
+        end
+        local padding, gap = 12, 8
+        local labelWidth = math.max(TextWidth("Font"), TextWidth("Size"))
+        local dropdownWidth, outlineWidth = 0, 0
+        for _, entry in ipairs(fontFaces) do
+            dropdownWidth = math.max(dropdownWidth, TextWidth(entry.label) + 36)
+        end
+        for _, entry in ipairs(fontOutlines) do
+            outlineWidth = math.max(outlineWidth, TextWidth(entry.label) + 24)
+        end
+        local shadowWidth = math.max(TextWidth("Shadow: on"), TextWidth("Shadow: off")) + 24
+        local defaultsWidth = TextWidth("Addon defaults") + 24
+        local contentWidth = math.max(labelWidth + gap + dropdownWidth, outlineWidth + gap + shadowWidth)
+        contentWidth = math.max(contentWidth, labelWidth + gap + 96, defaultsWidth)
+        local width = contentWidth + padding * 2
+        local inputX = padding + labelWidth + gap
+        dropdownWidth = contentWidth - labelWidth - gap
+
+        fontEditor = T.CreateDFRLFrame(UIParent, width, 194)
         fontEditor:SetFrameStrata("TOOLTIP")
         fontEditor:SetFrameLevel(150)
-        fontEditor:SetPoint("TOP", UIParent, "CENTER", 0, -25)
-        fontSample = FontEditorLabel(fontEditor, "RUN font preview", 16, -57)
+        PlaceFontEditor()
+        fontEditor:SetMovable(true)
+        if fontEditor.SetClampedToScreen then fontEditor:SetClampedToScreen(true) end
+        fontEditor:RegisterForDrag("LeftButton")
+        fontEditor:SetScript("OnDragStart", function()
+            if not fontDraft then return end
+            fontMenu:Hide()
+            fontEditor:StartMoving()
+        end)
+        fontEditor:SetScript("OnDragStop", FinishFontEditorDrag)
+        fontSample = FontEditorLabel(fontEditor, "RUN", padding, -12)
         fontSample:ClearAllPoints()
-        fontSample:SetPoint("TOP", fontEditor, "TOP", 0, -56)
+        fontSample:SetPoint("TOP", fontEditor, "TOP", 0, -12)
 
-        FontEditorLabel(fontEditor, "Font", 16, -104)
+        FontEditorLabel(fontEditor, "Font", padding, -60)
         local fontButton
-        faceLabel, fontButton = FontEditorButton("", 352, 72, -96, function()
+        faceLabel, fontButton = FontEditorButton("", dropdownWidth, inputX, -52, function()
             if not fontDraft then return end
             if fontMenu:IsShown() then
                 fontMenu:Hide()
@@ -225,24 +269,27 @@ DFRL:NewMod("RunTimers", 5, function()
         fontMenu:EnableMouse(true)
         fontMenu:SetScript("OnClick", function() fontMenu:Hide() end)
         fontMenu:Hide()
-        local fontList = T.CreateDFRLFrame(fontMenu, 352, table.getn(fontFaces) * 28 + 8)
+        local fontList = T.CreateDFRLFrame(fontMenu, dropdownWidth, table.getn(fontFaces) * 28 + 8)
         fontList:SetFrameLevel(170)
         fontList:SetPoint("TOPLEFT", fontButton, "BOTTOMLEFT", 0, 0)
         for index, entry in ipairs(fontFaces) do
             local selectedFace = entry.face
-            FontEditorButton(entry.label, 344, 4, -4 - (index - 1) * 28, function()
+            FontEditorButton(entry.label, dropdownWidth - 8, 4, -4 - (index - 1) * 28, function()
                 if not fontDraft then return end
                 fontDraft.face = selectedFace
                 PreviewFont(fontDraft)
                 fontMenu:Hide()
             end, fontList)
         end
-        fontEditor:SetScript("OnHide", function() fontMenu:Hide() end)
-        FontEditorLabel(fontEditor, "Size", 16, -137)
-        FontEditorButton("-", 32, 72, -129, function() ChangeSize(-1) end)
-        sizeLabel = FontEditorLabel(fontEditor, "", 115, -137)
-        FontEditorButton("+", 32, 146, -129, function() ChangeSize(1) end)
-        outlineLabel = FontEditorButton("", 130, 188, -129, function()
+        fontEditor:SetScript("OnHide", function()
+            FinishFontEditorDrag()
+            fontMenu:Hide()
+        end)
+        FontEditorLabel(fontEditor, "Size", padding, -94)
+        FontEditorButton("-", 28, inputX, -86, function() ChangeSize(-1) end)
+        sizeLabel = FontEditorLabel(fontEditor, "", inputX + 38, -94)
+        FontEditorButton("+", 28, inputX + 68, -86, function() ChangeSize(1) end)
+        outlineLabel = FontEditorButton("", outlineWidth, padding, -120, function()
             if not fontDraft then return end
             for index, entry in ipairs(fontOutlines) do
                 if fontDraft.outline == entry.value then
@@ -252,12 +299,14 @@ DFRL:NewMod("RunTimers", 5, function()
             end
             PreviewFont(fontDraft)
         end)
-        shadowLabel = FontEditorButton("", 102, 322, -129, function()
+        shadowLabel = FontEditorButton("", shadowWidth, padding + outlineWidth + gap, -120, function()
             if not fontDraft then return end
             fontDraft.shadow = not fontDraft.shadow
             PreviewFont(fontDraft)
         end)
-        FontEditorButton("Addon defaults", 140, 16, -164, function() DFRL.layout.Reset() end)
+        FontEditorButton("Addon defaults", defaultsWidth, (width - defaultsWidth) / 2, -154, function()
+            DFRL.layout.Reset()
+        end)
     end
 
     local function EditRunFont(active, save)
@@ -286,6 +335,7 @@ DFRL:NewMod("RunTimers", 5, function()
             fontDraft = nil
             PreviewFont(nil)
             if fontEditor then fontEditor:Hide() end
+            PlaceFontEditor()
         end,
     })
 
