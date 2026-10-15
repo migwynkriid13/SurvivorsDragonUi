@@ -111,9 +111,15 @@ DFRL:NewMod("RunTimers", 5, function()
         { label = "Outline", value = "OUTLINE" },
         { label = "Thick outline", value = "THICKOUTLINE" },
     }
-    local fontDefaults = { face = "Fonts\\SKURRI.TTF", size = 14, outline = "OUTLINE", shadow = true }
+    local fontDefaults = {
+        face = "Fonts\\SKURRI.TTF",
+        size = 14,
+        outline = "OUTLINE",
+        shadow = true,
+        showText = true,
+    }
     local currentFont, fontDraft, fontEditor, fontSample, fontMenu
-    local faceLabel, sizeLabel, outlineLabel, shadowLabel
+    local faceLabel, sizeLabel, outlineLabel, shadowLabel, visibilityLabel
 
     local function FontSettings(value)
         value = type(value) == "table" and value or {}
@@ -122,6 +128,7 @@ DFRL:NewMod("RunTimers", 5, function()
             size = fontDefaults.size,
             outline = fontDefaults.outline,
             shadow = fontDefaults.shadow,
+            showText = fontDefaults.showText,
         }
         for _, entry in ipairs(fontFaces) do
             if value.face == entry.face then settings.face = entry.face end
@@ -131,6 +138,7 @@ DFRL:NewMod("RunTimers", 5, function()
         end
         if IsNumber(value.size) then settings.size = math.max(8, math.min(32, math.floor(value.size))) end
         if type(value.shadow) == "boolean" then settings.shadow = value.shadow end
+        if type(value.showText) == "boolean" then settings.showText = value.showText end
         return settings
     end
 
@@ -144,16 +152,22 @@ DFRL:NewMod("RunTimers", 5, function()
     end
 
     local function UpdateRunFontBounds()
-        local width = runText:GetStringWidth() or 0
+        local width = currentFont.showText and (runText:GetStringWidth() or 0) or 0
         local overflow = math.max(0, (width + 8 - run:GetWidth()) / 2)
+        local top = currentFont.showText and currentFont.size + 4 or 0
         runMoveRegion:ClearAllPoints()
-        runMoveRegion:SetPoint("TOPLEFT", run, "TOPLEFT", -overflow, currentFont.size + 4)
+        runMoveRegion:SetPoint("TOPLEFT", run, "TOPLEFT", -overflow, top)
         runMoveRegion:SetPoint("BOTTOMRIGHT", run, "BOTTOMRIGHT", overflow, 0)
     end
 
     local function PreviewFont(settings)
         currentFont = FontSettings(settings)
         ApplyFont(runText, currentFont)
+        if currentFont.showText then
+            runText:Show()
+        else
+            runText:Hide()
+        end
         UpdateRunFontBounds()
         if not fontEditor then return end
         ApplyFont(fontSample, currentFont)
@@ -165,6 +179,7 @@ DFRL:NewMod("RunTimers", 5, function()
         end
         sizeLabel:SetText(tostring(currentFont.size))
         shadowLabel:SetText(currentFont.shadow and "Shadow: on" or "Shadow: off")
+        visibilityLabel:SetText(currentFont.showText and "Run text: shown" or "Run text: hidden")
     end
 
     local function FontEditorLabel(parent, text, x, y, size)
@@ -224,14 +239,15 @@ DFRL:NewMod("RunTimers", 5, function()
             outlineWidth = math.max(outlineWidth, TextWidth(entry.label) + 24)
         end
         local shadowWidth = math.max(TextWidth("Shadow: on"), TextWidth("Shadow: off")) + 24
+        local visibilityWidth = math.max(TextWidth("Run text: shown"), TextWidth("Run text: hidden")) + 24
         local defaultsWidth = TextWidth("Addon defaults") + 24
         local contentWidth = math.max(labelWidth + gap + dropdownWidth, outlineWidth + gap + shadowWidth)
-        contentWidth = math.max(contentWidth, labelWidth + gap + 96, defaultsWidth)
+        contentWidth = math.max(contentWidth, labelWidth + gap + 96, defaultsWidth, visibilityWidth)
         local width = contentWidth + padding * 2
         local inputX = padding + labelWidth + gap
         dropdownWidth = contentWidth - labelWidth - gap
 
-        fontEditor = T.CreateDFRLFrame(UIParent, width, 194)
+        fontEditor = T.CreateDFRLFrame(UIParent, width, 228)
         fontEditor:SetFrameStrata("TOOLTIP")
         fontEditor:SetFrameLevel(150)
         PlaceFontEditor()
@@ -304,7 +320,12 @@ DFRL:NewMod("RunTimers", 5, function()
             fontDraft.shadow = not fontDraft.shadow
             PreviewFont(fontDraft)
         end)
-        FontEditorButton("Addon defaults", defaultsWidth, (width - defaultsWidth) / 2, -154, function()
+        visibilityLabel = FontEditorButton("", contentWidth, padding, -154, function()
+            if not fontDraft then return end
+            fontDraft.showText = not fontDraft.showText
+            PreviewFont(fontDraft)
+        end)
+        FontEditorButton("Addon defaults", defaultsWidth, (width - defaultsWidth) / 2, -188, function()
             DFRL.layout.Reset()
         end)
     end
