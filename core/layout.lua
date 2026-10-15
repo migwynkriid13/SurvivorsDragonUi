@@ -385,6 +385,7 @@ DFRL:NewMod("Layout", 0, function()
             if entry.options.onReset then entry.options.onReset() end
         end
         RestoreDefaults()
+        if DEFAULT_CHAT_FRAME then DEFAULT_CHAT_FRAME:AddMessage("SurvivorsDragonUi: default layout restored.") end
     end
     function layout.Ready()
         ready = true
@@ -454,7 +455,6 @@ DFRL:NewMod("Layout", 0, function()
         local command = string.lower(string.gsub(message or "", "^%s*(.-)%s*$", "%1"))
         if command == "reset" then
             layout.Reset()
-            if DEFAULT_CHAT_FRAME then DEFAULT_CHAT_FRAME:AddMessage("SurvivorsDragonUi: default layout restored.") end
         elseif command == "" then
             layout.BeginEdit()
         elseif DEFAULT_CHAT_FRAME then

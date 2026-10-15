@@ -254,11 +254,7 @@ DFRL:NewMod("RunTimers", 5, function()
             fontDraft.shadow = not fontDraft.shadow
             PreviewFont(fontDraft)
         end)
-        FontEditorButton("Addon defaults", 140, 16, -164, function()
-            if not fontDraft then return end
-            fontDraft = FontSettings(nil)
-            PreviewFont(fontDraft)
-        end)
+        FontEditorButton("Addon defaults", 140, 16, -164, function() DFRL.layout.Reset() end)
     end
 
     local function EditRunFont(active, save)
