@@ -1,3 +1,5 @@
+-- Original Main Menu artwork by guzruul, used with confirmed redistribution permission.
+-- Source: dbtdsilva/-DragonflightReloaded, commit 5c6a63fda03fe9b8fd8219e6c1f65c574679077a.
 DFRL:NewMod("Micro", 1, function()
     local path = DFRL:GetInfoOrCons("tex") .. "micromenu\\color_micro\\"
     local container = CreateFrame("Frame", "DFRLMicroMenuContainer", UIParent)
@@ -8,13 +10,14 @@ DFRL:NewMod("Micro", 1, function()
     local entries = {
         { "CharacterMicroButton", "character" },
         { "TalentMicroButton", "talents" },
-        { "MainMenuMicroButton", "eye" },
+        { "MainMenuMicroButton", "wow" },
     }
     local previous
     for _, entry in ipairs(entries) do
         local button = _G[entry[1]]
         if button then
             button:SetParent(container)
+            button:SetScale(1)
             button:ClearAllPoints()
             if previous then
                 button:SetPoint("LEFT", previous, "RIGHT", 3, 0)
@@ -23,6 +26,9 @@ DFRL:NewMod("Micro", 1, function()
             end
             button:SetWidth(20)
             button:SetHeight(30)
+            -- Native micro buttons reserve an 18-pixel top strip. The compact
+            -- artwork fills this whole button, so its hit rectangle must too.
+            button:SetHitRectInsets(0, 0, 0, 0)
             if entry[1] == "CharacterMicroButton" then
                 local atlas = DFRL:GetInfoOrCons("tex") .. "micromenu\\uimicromenu2x.tga"
                 button:SetNormalTexture(atlas)
@@ -31,11 +37,25 @@ DFRL:NewMod("Micro", 1, function()
                 button:GetPushedTexture():SetTexCoord(82 / 256, 116 / 256, 216 / 512, 264 / 512)
                 button:SetHighlightTexture(atlas)
                 button:GetHighlightTexture():SetTexCoord(82 / 256, 116 / 256, 216 / 512, 264 / 512)
+                button:SetDisabledTexture(atlas)
+                button:GetDisabledTexture():SetTexCoord(2 / 256, 37 / 256, 324 / 512, 372 / 512)
             else
                 for _, state in ipairs({ { "Normal", "regular" }, { "Pushed", "faded" }, { "Highlight", "highlight" } }) do
                     button["Set" .. state[1] .. "Texture"](button, path .. entry[2] .. "-" .. state[2] .. ".tga")
                     local texture = button["Get" .. state[1] .. "Texture"](button)
                     if texture then texture:SetTexCoord(36 / 128, 86 / 128, 29 / 128, 98 / 128) end
+                end
+                button:SetDisabledTexture(path .. entry[2] .. "-faded.tga")
+                button:GetDisabledTexture():SetTexCoord(36 / 128, 86 / 128, 29 / 128, 98 / 128)
+                button:GetDisabledTexture():SetDesaturated(1)
+            end
+            for _, state in ipairs({ "Normal", "Pushed", "Highlight", "Disabled" }) do
+                local texture = button["Get" .. state .. "Texture"](button)
+                if texture then
+                    -- Reusing a native state texture keeps its old anchors.
+                    -- Match every visible state to the actual click rectangle.
+                    texture:ClearAllPoints()
+                    texture:SetAllPoints(button)
                 end
             end
             if entry[1] == "MainMenuMicroButton" then

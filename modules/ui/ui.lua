@@ -15,7 +15,6 @@ DFRL:NewMod("Ui", 5, function()
         local closeButtonData = {
             { "CharacterFrame", "CharacterFrameCloseButton", -36, -16 },
             { "SpellBookFrame", "SpellBookCloseButton", -36, -15 },
-            { "TalentFrame", "TalentFrameCloseButton", -36, -17 },
             { "QuestLogFrame", "QuestLogFrameCloseButton", -91, -15 },
             { "FriendsFrame", "FriendsFrameCloseButton", -36, -15 },
             { "HelpFrame", "HelpFrameCloseButton", -50, -10 },

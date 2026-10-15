@@ -5,23 +5,23 @@
 
 DFRL:NewMod("NameplateCombatText", 6, function()
     local ParseCombatEvent = T.ParseNameplateCombatEvent
+    local plateStyle = T.NameplateStyle
     local BORDER = "Interface\\Tooltips\\Nameplate-Border"
     local FALLBACK_ICON = "Interface\\Icons\\INV_Misc_QuestionMark"
     local ATTACK_ICON = "Interface\\Icons\\INV_Sword_04"
     local TEXT_DURATION = 1.45
+    local FOLLOW_TIME = 0.08
     local EVENT_SETTLE = 0.08
     local EVENT_FALLBACK_DELAY = 0.16
     local RECENT_PLATE_TIME = 0.65
     local LOSS_TIME = 0.25
-    local SCHOOL_COLORS = {
-        Physical = { 1, 1, 1 },
-        Holy = { 1, 0.90, 0.50 },
-        Fire = { 1, 0.45, 0.15 },
-        Nature = { 0.30, 1, 0.30 },
-        Frost = { 0.40, 0.75, 1 },
-        Shadow = { 0.75, 0.45, 1 },
-        Arcane = { 1, 0.50, 1 },
+    local DAMAGE_COLORS = {
+        normal = { 0.72, 0.72, 0.72 },
+        strong = { 1, 0.82, 0 },
+        critical = { 1, 0.45, 0.10 },
     }
+    local DAMAGE_SAMPLE_LIMIT, DAMAGE_SAMPLE_TIME = 8, 30
+    local DAMAGE_SAMPLE_MINIMUM, STRONG_DAMAGE_RATIO = 3, 1.2
 
     local plates = {}
     local origins = {}
@@ -30,6 +30,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local pending = {}
     local spellTextures = {}
     local missingSpellTextures = {}
+    local recentDamage = {}
     local discoveredChildren = 0
     local arcDirection = 1
     local sctMode = _G.SurvivorsDragonUiSctMode
@@ -50,6 +51,8 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         and WorldFrame.SetHitRectInsets
 
     local function CustomEnabled() return sctMode == "on" end
+
+    local function IsFiniteNumber(value) return type(value) == "number" and value - value == 0 end
 
     local function IsEnemyPlate(data)
         if not data.bar or not data.bar.GetStatusBarColor then return false end
@@ -102,6 +105,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         for frame, state in pairs(data.presentation) do
             MaskFrame(frame, state, false)
         end
+        if plateStyle then plateStyle.SetMasked(data, false) end
     end
     local function UpdatePresentation(plate, data)
         local masked = trackingSupported
@@ -113,6 +117,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             RestorePresentation(data)
             return
         end
+        if plateStyle then plateStyle.SetMasked(data, true) end
         local function Visit(frame)
             local state = data.presentation[frame]
             if not state then
@@ -163,6 +168,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         end
         pending = {}
         origins = {}
+        recentDamage = {}
         for _, data in pairs(plates) do
             data.origin = nil
         end
@@ -175,15 +181,50 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         return IsEnemyPlate(data)
     end
 
-    local function SamplePosition(plate, origin)
+    local function SamplePosition(plate, origin, now)
         local x, y = plate:GetCenter()
-        if not x or not y then return end
-        if plate.GetTop then y = plate:GetTop() or y end
+        if not IsFiniteNumber(x) or not IsFiniteNumber(y) then return end
         local rootScale = WorldFrame:GetEffectiveScale() or 1
         local plateScale = plate:GetEffectiveScale() or rootScale
+        if not IsFiniteNumber(rootScale) or rootScale <= 0 or not IsFiniteNumber(plateScale) or plateScale <= 0 then
+            return
+        end
         local ratio = plateScale / rootScale
-        origin.x = x * ratio - (WorldFrame:GetLeft() or 0)
-        origin.y = y * ratio - (WorldFrame:GetBottom() or 0)
+        local left, bottom = WorldFrame:GetLeft() or 0, WorldFrame:GetBottom() or 0
+        x, y = x * ratio - left, y * ratio - bottom
+        local width, height = WorldFrame:GetWidth(), WorldFrame:GetHeight()
+        local halfWidth = (plate:GetWidth() or 0) * ratio * 0.5
+        local halfHeight = (plate:GetHeight() or 0) * ratio * 0.5
+        if
+            not IsFiniteNumber(x)
+            or not IsFiniteNumber(y)
+            or not IsFiniteNumber(width)
+            or not IsFiniteNumber(height)
+            or width <= 0
+            or height <= 0
+            or not IsFiniteNumber(halfWidth)
+            or not IsFiniteNumber(halfHeight)
+            or halfWidth < 0
+            or halfHeight < 0
+            or x < -halfWidth
+            or x > width + halfWidth
+            or y < -halfHeight
+            or y > height + halfHeight
+        then
+            return
+        end
+        -- Test the center with the native extents, so partly visible plates
+        -- at the screen edge remain usable even when their top is outside it.
+        local top = plate.GetTop and plate:GetTop()
+        if top then
+            if not IsFiniteNumber(top) then return end
+            y = top * ratio - bottom
+        end
+        if not IsFiniteNumber(y) then return end
+        -- Keep the previous usable point when projection is unavailable. It
+        -- still belongs to this incarnation and never restarts an active hit.
+        origin.x, origin.y = x, y
+        origin.positionAt = now
     end
 
     local function SampleHealth(data, origin, now)
@@ -224,6 +265,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     end
 
     local function RefreshPlate(plate, data, now)
+        if plateStyle then plateStyle.Update(plate, data) end
         UpdatePresentation(plate, data)
         if not IsShownEnemy(plate, data) then
             RetirePlate(plate)
@@ -247,7 +289,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             table.insert(origins, origin)
         end
         origin.lastSeen = now
-        SamplePosition(plate, origin)
+        SamplePosition(plate, origin, now)
         SampleHealth(data, origin, now)
     end
 
@@ -292,8 +334,11 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             end
         end
         if not name or not bar then return end
-        local data = { nameRegion = name, bar = bar, presentation = {} }
+        local data = { nameRegion = name, bar = bar, nativeRegions = regions, presentation = {} }
         plates[plate] = data
+        -- Build the skin before the first recursive mask so V-off tracking
+        -- covers every visual child without touching the SCT data sources.
+        if plateStyle then plateStyle.Attach(plate, data) end
         HookScript(plate, "OnHide", function() RetirePlate(plate) end)
         HookScript(plate, "OnShow", function()
             RetirePlate(plate)
@@ -304,7 +349,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     end
 
     local function ScanPlates(force)
-        if not inWorld or not CustomEnabled() or not WorldFrame then return end
+        if not inWorld or not WorldFrame then return end
         local now = GetTime()
         local count = WorldFrame:GetNumChildren() or 0
         if count < discoveredChildren then discoveredChildren = 0 end
@@ -346,6 +391,8 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                 origin.name == info.targetName
                 and origin.x
                 and origin.y
+                and origin.positionAt
+                and now - origin.positionAt <= RECENT_PLATE_TIME
                 and (origin.live or now - (origin.hiddenAt or origin.lastSeen) <= RECENT_PLATE_TIME)
             then
                 table.insert(candidates, origin)
@@ -474,6 +521,39 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         return text
     end
 
+    local function DamageColor(info, now)
+        -- Critical status comes from the parsed native message, never from
+        -- damage size. Crits and miss labels do not affect normal-hit averages.
+        if info.kind ~= "damage" then return DAMAGE_COLORS.strong end
+        if info.critical then return DAMAGE_COLORS.critical end
+        if info.damageType ~= "autoattack" and (not info.spell or info.spell == "") then return DAMAGE_COLORS.normal end
+        local key = table.concat({
+            info.sourceName or "",
+            info.damageType or "",
+            info.school or "",
+            info.spell or "",
+        }, "\031")
+        local samples = recentDamage[key]
+        if not samples then
+            samples = {}
+            recentDamage[key] = samples
+        end
+        local total = 0
+        for index = table.getn(samples), 1, -1 do
+            local sample = samples[index]
+            if now - sample.time > DAMAGE_SAMPLE_TIME then
+                table.remove(samples, index)
+            else
+                total = total + sample.amount
+            end
+        end
+        local count = table.getn(samples)
+        local strong = count >= DAMAGE_SAMPLE_MINIMUM and info.amount >= total / count * STRONG_DAMAGE_RATIO
+        table.insert(samples, { amount = info.amount, time = now })
+        if table.getn(samples) > DAMAGE_SAMPLE_LIMIT then table.remove(samples, 1) end
+        return strong and DAMAGE_COLORS.strong or DAMAGE_COLORS.normal
+    end
+
     local function DisplayDamage(info, x, y, origin)
         local value = info.text or info.amount
         if not value then return end
@@ -481,14 +561,14 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         text.origin = origin
         text.x, text.y = x, y
         text.started = GetTime()
+        text.updatedAt = text.started
         text.impact = info.critical or info.kind == "miss"
         text.sizeScale = info.critical and 1.5 or 1
         text.arcX = arcDirection * math.random(36, 64)
         text.launch = math.random(105, 130)
         text.gravity = text.launch + 65
         arcDirection = -arcDirection
-        local color = SCHOOL_COLORS[info.school]
-        if info.kind == "miss" or not color then color = { 1, 0.82, 0 } end
+        local color = info.color or DAMAGE_COLORS.normal
         text.label:SetText(tostring(value))
         text.label:SetTextColor(color[1], color[2], color[3])
         text.label:Show()
@@ -529,11 +609,16 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             if progress >= 1 then
                 ReleaseText(index)
             else
-                -- While live, follow this exact plate incarnation. Once it
-                -- retires, its stored position remains and the arc keeps going.
+                -- Smooth only the cosmetic follow point. Native model/stack
+                -- placement can jump as enemies arrive; matching keeps raw
+                -- coordinates, while each hit keeps its own age, arc and fade.
                 if text.origin then
-                    text.x, text.y = text.origin.x, text.origin.y
+                    local elapsed = math.max(0, now - text.updatedAt)
+                    local follow = 1 - math.exp(-elapsed / FOLLOW_TIME)
+                    text.x = text.x + (text.origin.x - text.x) * follow
+                    text.y = text.y + (text.origin.y - text.y) * follow
                 end
+                text.updatedAt = now
                 local x = text.x + text.arcX * progress
                 local y = text.y + 12 + text.launch * progress - text.gravity * progress * progress
                 text.holder:ClearAllPoints()
@@ -562,7 +647,11 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         ScanPlates(false)
         local info = ParseCombatEvent(eventName, message)
         if not info or info.kind == "aura" or not info.targetName or info.targetName == "" then return end
-        table.insert(pending, { info = info, time = GetTime() })
+        local now = GetTime()
+        -- Choose once in combat-message order, before plate-matching delays
+        -- can reorder the display. An animating hit keeps its chosen color.
+        info.color = DamageColor(info, now)
+        table.insert(pending, { info = info, time = now })
     end
 
     local function ApplyDamageMode()
@@ -578,10 +667,9 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         ResetDisplay()
         ApplyDamageMode()
         ApplyPlateTracking(true)
-        if sctMode == "on" then
-            if damageIcons then RebuildSpellTextures() end
-            ScanPlates(true)
-        end
+        if sctMode == "on" and damageIcons then RebuildSpellTextures() end
+        -- Plate appearance is independent of the selected combat-text mode.
+        ScanPlates(true)
     end
 
     -- Module initialization uses DFRL's private environment; slash aliases
@@ -624,7 +712,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             ApplyDamageMode()
             ApplyPlateTracking(true)
             if sctMode == "on" and damageIcons then RebuildSpellTextures() end
-            if CustomEnabled() then ScanPlates(true) end
+            ScanPlates(true)
         elseif event == "PLAYER_LEAVING_WORLD" or event == "PLAYER_LOGOUT" then
             inWorld = false
             for _, data in pairs(plates) do
@@ -635,7 +723,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         elseif event == "SPELLS_CHANGED" then
             if sctMode == "on" and damageIcons then RebuildSpellTextures() end
         elseif event == "PLAYER_TARGET_CHANGED" then
-            if CustomEnabled() then ScanPlates(true) end
+            ScanPlates(true)
         elseif event == "CVAR_UPDATE" then
             ApplyDamageMode()
         else
@@ -643,8 +731,9 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         end
     end)
     frame:SetScript("OnUpdate", function()
-        if not inWorld or not CustomEnabled() then return end
+        if not inWorld then return end
         ScanPlates(false)
+        if not CustomEnabled() then return end
         local now = GetTime()
         UpdatePending(now)
         UpdateTexts(now)
