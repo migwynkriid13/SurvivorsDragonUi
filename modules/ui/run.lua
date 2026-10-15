@@ -208,6 +208,7 @@ DFRL:NewMod("RunTimers", 5, function()
     DFRL.AttachRunTally()
 
     local markers = {}
+    local markerTimes = {}
     local activeRows = {}
     local spareRows = {}
     local createdRows = 0
@@ -346,15 +347,30 @@ DFRL:NewMod("RunTimers", 5, function()
                 marker:SetHeight(MARKER_SIZE)
                 markers[index] = marker
             end
+            markerTimes[index] = at
             marker:ClearAllPoints()
             if at == maximum then
                 marker:SetPoint("RIGHT", runBar, "RIGHT", 0, 0)
             else
                 marker:SetPoint("CENTER", runBar, "LEFT", BAR_WIDTH * at / maximum, 0)
             end
-            marker:Show()
         end
-        for index = table.getn(times) + 1, table.getn(markers) do markers[index]:Hide() end
+        for index = table.getn(times) + 1, table.getn(markers) do
+            markerTimes[index] = nil
+            markers[index]:Hide()
+        end
+    end
+
+    local function UpdateMarkerVisibility(seconds)
+        -- Native pause-aware time owns expiry; no separate clock is advanced.
+        for index, marker in ipairs(markers) do
+            local at = markerTimes[index]
+            if at and seconds < at then
+                marker:Show()
+            else
+                marker:Hide()
+            end
+        end
     end
 
     local function EncounterRows()
@@ -471,9 +487,10 @@ DFRL:NewMod("RunTimers", 5, function()
             runBar:SetMinMaxValues(0, maximum)
             runBar:SetValue(math.min(maximum, seconds))
             runText:SetText("RUN " .. Clock(seconds) .. " / " .. Clock(maximum))
-            -- Missing schedule replay affects only spawn lines, never a clock
+            -- Missing schedule replay affects only spawn markers, never a clock
             -- whose native elapsed time and duration have already recovered.
-            if refreshRows or not run:IsShown() then UpdateMarkers(maximum, times or {}) end
+            if refreshRows or not run:IsShown() or not times then UpdateMarkers(maximum, times or {}) end
+            UpdateMarkerVisibility(seconds)
             run:Show()
             if not TakeOver("clock") then ReleaseClock() end
         else
@@ -509,8 +526,8 @@ DFRL:NewMod("RunTimers", 5, function()
         Update()
     end)
     reader:SetScript("OnUpdate", function()
-        -- This accumulator only limits list/marker refreshes. The displayed
-        -- clock always comes directly from AZS_GetRunTime(), including pauses.
+        -- Only list/marker placement refreshes are throttled. The clock and
+        -- skull visibility use AZS_GetRunTime() every frame, including pauses.
         pollAge = pollAge + (tonumber(arg1) or 0)
         if pollAge >= 0.1 then
             pollAge = 0
