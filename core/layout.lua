@@ -1,4 +1,4 @@
--- Only frame geometry is saved. Styling and gameplay state stay in code.
+-- This store saves only frame geometry; the timer owns its separate font preference.
 DFRL:NewMod("Layout", 0, function()
     local layout, entries, order = {}, {}, {}
     DFRL.layout = layout
@@ -316,6 +316,7 @@ DFRL:NewMod("Layout", 0, function()
         LockFrame(frame)
         MakeHandle(entry)
         if ready then layout.Place(key) end
+        if editing and entry.options.onEdit then entry.options.onEdit(true) end
     end
 
     local function RestoreDefaults()
@@ -339,6 +340,7 @@ DFRL:NewMod("Layout", 0, function()
         if save then _G.SurvivorsDragonUiLayout = draft end
         editing, draft = false, nil
         for _, entry in ipairs(order) do
+            if entry.options.onEdit then entry.options.onEdit(false, save) end
             LockFrame(entry.frame)
             entry.handle:EnableMouse(false)
             entry.handle:Hide()
@@ -362,6 +364,7 @@ DFRL:NewMod("Layout", 0, function()
             for _, entry in ipairs(order) do
                 LockFrame(entry.frame)
                 layout.Place(entry.key)
+                if entry.options.onEdit then entry.options.onEdit(true) end
             end
         end
         if not confirm then
@@ -378,6 +381,9 @@ DFRL:NewMod("Layout", 0, function()
         CloseEditing(false, false)
         FinishDrag(activeDrag, false)
         _G.SurvivorsDragonUiLayout = {}
+        for _, entry in ipairs(order) do
+            if entry.options.onReset then entry.options.onReset() end
+        end
         RestoreDefaults()
     end
     function layout.Ready()

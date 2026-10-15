@@ -95,17 +95,185 @@ DFRL:NewMod("RunTimers", 5, function()
     end
 
     local run, runBar, runText, overlay = Pill("DFRL_RunTimerPill", "FillBlue")
-    -- A failed native font load leaves the initialized DEFAULT face intact.
-    runText:SetFont("Fonts\\MORPHEUS.TTF", 14, "OUTLINE")
-    runText:SetShadowColor(0, 0, 0, 1)
-    runText:SetShadowOffset(1, -1)
     local runMoveRegion = CreateFrame("Frame", nil, run)
-    runMoveRegion:SetPoint("TOPLEFT", run, "TOPLEFT", 0, 18)
-    runMoveRegion:SetPoint("BOTTOMRIGHT", run, "BOTTOMRIGHT", 0, 0)
+    local fontFaces = {
+        { label = "Game DEFAULT", face = "DEFAULT" },
+        { label = "Friz Quadrata", face = "Fonts\\FRIZQT__.TTF" },
+        { label = "Arial Narrow", face = "Fonts\\ARIALN.TTF" },
+        { label = "Morpheus", face = "Fonts\\MORPHEUS.TTF" },
+        { label = "Skurri", face = "Fonts\\SKURRI.TTF" },
+    }
+    local fontOutlines = {
+        { label = "None", value = "" },
+        { label = "Outline", value = "OUTLINE" },
+        { label = "Thick outline", value = "THICKOUTLINE" },
+    }
+    local fontDefaults = { face = "Fonts\\MORPHEUS.TTF", size = 14, outline = "OUTLINE", shadow = true }
+    local currentFont, fontDraft, fontEditor, fontSample
+    local faceLabel, sizeLabel, outlineLabel, shadowLabel
+
+    local function FontSettings(value)
+        value = type(value) == "table" and value or {}
+        local settings = {
+            face = fontDefaults.face,
+            size = fontDefaults.size,
+            outline = fontDefaults.outline,
+            shadow = fontDefaults.shadow,
+        }
+        for _, entry in ipairs(fontFaces) do
+            if value.face == entry.face then settings.face = entry.face end
+        end
+        for _, entry in ipairs(fontOutlines) do
+            if value.outline == entry.value then settings.outline = entry.value end
+        end
+        if IsNumber(value.size) then settings.size = math.max(8, math.min(32, math.floor(value.size))) end
+        if type(value.shadow) == "boolean" then settings.shadow = value.shadow end
+        return settings
+    end
+
+    local function ApplyFont(text, settings)
+        -- Initialize the game's DEFAULT face first so a missing native face
+        -- leaves readable text at the requested size and outline.
+        text:SetFont("DEFAULT", settings.size, settings.outline)
+        if settings.face ~= "DEFAULT" then pcall(text.SetFont, text, settings.face, settings.size, settings.outline) end
+        text:SetShadowColor(0, 0, 0, settings.shadow and 1 or 0)
+        text:SetShadowOffset(settings.shadow and 1 or 0, settings.shadow and -1 or 0)
+    end
+
+    local function UpdateRunFontBounds()
+        local width = runText:GetStringWidth() or 0
+        local overflow = math.max(0, (width + 8 - run:GetWidth()) / 2)
+        runMoveRegion:ClearAllPoints()
+        runMoveRegion:SetPoint("TOPLEFT", run, "TOPLEFT", -overflow, currentFont.size + 4)
+        runMoveRegion:SetPoint("BOTTOMRIGHT", run, "BOTTOMRIGHT", overflow, 0)
+    end
+
+    local function PreviewFont(settings)
+        currentFont = FontSettings(settings)
+        ApplyFont(runText, currentFont)
+        UpdateRunFontBounds()
+        if not fontEditor then return end
+        ApplyFont(fontSample, currentFont)
+        for _, entry in ipairs(fontFaces) do
+            if currentFont.face == entry.face then faceLabel:SetText(entry.label) end
+        end
+        for _, entry in ipairs(fontOutlines) do
+            if currentFont.outline == entry.value then outlineLabel:SetText(entry.label) end
+        end
+        sizeLabel:SetText(tostring(currentFont.size))
+        shadowLabel:SetText(currentFont.shadow and "Shadow: on" or "Shadow: off")
+    end
+
+    local function FontEditorLabel(parent, text, x, y, size)
+        local label = parent:CreateFontString(nil, "OVERLAY")
+        label:SetFont("DEFAULT", size or 12, "OUTLINE")
+        label:SetTextColor(1, 1, 1)
+        label:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
+        label:SetText(text)
+        return label
+    end
+
+    local function FontEditorButton(text, width, x, y, callback)
+        local button = T.CreateButton(fontEditor, "", width, 28)
+        button:SetPoint("TOPLEFT", fontEditor, "TOPLEFT", x, y)
+        local label = button:CreateFontString(nil, "OVERLAY")
+        label:SetFont("DEFAULT", 12, "OUTLINE")
+        label:SetTextColor(1, 1, 1)
+        label:SetPoint("CENTER", button, "CENTER", 0, 0)
+        label:SetText(text)
+        button:SetScript("OnClick", callback)
+        return label
+    end
+
+    local function ChangeFace(direction)
+        if not fontDraft then return end
+        for index, entry in ipairs(fontFaces) do
+            if fontDraft.face == entry.face then
+                local nextIndex = math.mod(index - 1 + direction + table.getn(fontFaces), table.getn(fontFaces)) + 1
+                fontDraft.face = fontFaces[nextIndex].face
+                break
+            end
+        end
+        PreviewFont(fontDraft)
+    end
+
+    local function ChangeSize(direction)
+        if not fontDraft then return end
+        fontDraft.size = math.max(8, math.min(32, fontDraft.size + direction))
+        PreviewFont(fontDraft)
+    end
+
+    local function CreateFontEditor()
+        fontEditor = T.CreateDFRLFrame(UIParent, 440, 254)
+        fontEditor:SetFrameStrata("TOOLTIP")
+        fontEditor:SetFrameLevel(150)
+        fontEditor:SetPoint("TOP", UIParent, "CENTER", 0, -25)
+        FontEditorLabel(fontEditor, "Run timer font", 16, -12, 14)
+        FontEditorLabel(fontEditor, "Preview only - Confirm above saves all changes.", 16, -34)
+        fontSample = FontEditorLabel(fontEditor, "RUN font preview", 16, -57)
+        fontSample:ClearAllPoints()
+        fontSample:SetPoint("TOP", fontEditor, "TOP", 0, -56)
+
+        FontEditorLabel(fontEditor, "Face", 16, -104)
+        FontEditorButton("<", 32, 72, -96, function() ChangeFace(-1) end)
+        faceLabel = FontEditorLabel(fontEditor, "", 113, -104)
+        FontEditorButton(">", 32, 392, -96, function() ChangeFace(1) end)
+        FontEditorLabel(fontEditor, "Size", 16, -137)
+        FontEditorButton("-", 32, 72, -129, function() ChangeSize(-1) end)
+        sizeLabel = FontEditorLabel(fontEditor, "", 115, -137)
+        FontEditorButton("+", 32, 146, -129, function() ChangeSize(1) end)
+        outlineLabel = FontEditorButton("", 130, 188, -129, function()
+            if not fontDraft then return end
+            for index, entry in ipairs(fontOutlines) do
+                if fontDraft.outline == entry.value then
+                    fontDraft.outline = fontOutlines[math.mod(index, table.getn(fontOutlines)) + 1].value
+                    break
+                end
+            end
+            PreviewFont(fontDraft)
+        end)
+        shadowLabel = FontEditorButton("", 102, 322, -129, function()
+            if not fontDraft then return end
+            fontDraft.shadow = not fontDraft.shadow
+            PreviewFont(fontDraft)
+        end)
+        FontEditorButton("Addon defaults", 140, 16, -164, function()
+            if not fontDraft then return end
+            fontDraft = FontSettings(nil)
+            PreviewFont(fontDraft)
+        end)
+        FontEditorLabel(fontEditor, "Addon: Morpheus, 14, outline, black shadow (1, -1).", 16, -202)
+        FontEditorLabel(fontEditor, "Game DEFAULT selects the game's default font face.", 16, -222)
+    end
+
+    local function EditRunFont(active, save)
+        if active then
+            fontDraft = FontSettings(_G.SurvivorsDragonUiRunFont)
+            if not fontEditor then CreateFontEditor() end
+            PreviewFont(fontDraft)
+            fontEditor:Show()
+        else
+            if save and fontDraft then _G.SurvivorsDragonUiRunFont = FontSettings(fontDraft) end
+            fontDraft = nil
+            PreviewFont(_G.SurvivorsDragonUiRunFont)
+            if fontEditor then fontEditor:Hide() end
+        end
+    end
+
+    PreviewFont(_G.SurvivorsDragonUiRunFont)
     DFRL.layout.Register("runTimer", run, function()
         run:ClearAllPoints()
         run:SetPoint("TOP", UIParent, "TOP", 0, -30)
-    end, { region = runMoveRegion })
+    end, {
+        region = runMoveRegion,
+        onEdit = EditRunFont,
+        onReset = function()
+            _G.SurvivorsDragonUiRunFont = nil
+            fontDraft = nil
+            PreviewFont(nil)
+            if fontEditor then fontEditor:Hide() end
+        end,
+    })
 
     -- Encounters share a movable group, independent of the run clock.
     -- Its bounds include the first name and every stacked health pill.
@@ -510,7 +678,11 @@ DFRL:NewMod("RunTimers", 5, function()
         if IsNumber(seconds) and maximum then
             runBar:SetMinMaxValues(0, maximum)
             runBar:SetValue(math.min(maximum, seconds))
-            runText:SetText("RUN " .. Clock(seconds) .. " / " .. Clock(maximum))
+            local clockText = "RUN " .. Clock(seconds) .. " / " .. Clock(maximum)
+            if runText:GetText() ~= clockText then
+                runText:SetText(clockText)
+                UpdateRunFontBounds()
+            end
             -- Missing schedule replay affects only spawn markers, never a clock
             -- whose native elapsed time and duration have already recovered.
             if refreshRows or not run:IsShown() or not times then UpdateMarkers(maximum, times or {}) end

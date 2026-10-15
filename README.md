@@ -31,7 +31,9 @@ Type **`/sdui`** to edit the layout, then **left-drag a frame's body** to move t
 
 HUD groups resize by uniform scale, keeping their artwork proportions. Chat and Copy resize their actual width and height so text wraps and the viewport adjusts; their fonts keep their normal size. The action bar, XP and tally match at their default sizes, but can differ when resized independently.
 
-Only **Confirm** saves pending geometry; releasing a drag does not save it. Confirmed locations, HUD scale and chat/Copy dimensions persist across `/reload` and game sessions in the single `SurvivorsDragonUiLayout` SavedVariables table. Unconfirmed edits are discarded on world leave, logout or `/reload`, preserving the last confirmed layout. `/sdui reset` clears all saved geometry, exits editing and restores every registered frame to its default position and size, including frames currently hidden. Appearance defaults stay defined in code; there are no settings windows or profiles. The selected SCT mode is saved separately in `SurvivorsDragonUiSctMode`; `/sdui reset` leaves it unchanged. Chat diagnostics remain session-only, and gameplay/native API state is never stored with the layout.
+While `/sdui` is open, the **Run timer font** controls preview the top `RUN` label's font, size, outline and shadow. Choose the game's `DEFAULT` face or its native Friz Quadrata, Arial Narrow, Morpheus and Skurri faces; no font download is needed. **Addon defaults** restores the addon's initial timer settings: Morpheus, size 14, outline and black shadow at offset `(1, -1)`, with DEFAULT as the fallback when a native font is unavailable. Other UI keeps DEFAULT.
+
+Only **Confirm** saves pending geometry and timer font changes; releasing a drag or changing a font control does not save. Confirmed locations, HUD scale and chat/Copy dimensions persist across `/reload` and game sessions in `SurvivorsDragonUiLayout`; the confirmed timer font is stored separately in `SurvivorsDragonUiRunFont`. Unconfirmed edits are discarded on world leave, logout or `/reload`, preserving the last confirmed layout and timer font. `/sdui reset` clears saved geometry and timer font choices, exits editing and restores every registered frame's default position and size, including hidden frames, plus the initial timer font. Defaults stay defined in code; font controls appear only during layout editing, without profiles or a separate settings window. The selected SCT mode is saved separately in `SurvivorsDragonUiSctMode`; `/sdui reset` leaves it unchanged. Chat diagnostics remain session-only, and gameplay/native API state is never stored with the layout.
 
 ## Commands
 
@@ -39,8 +41,8 @@ All addon commands are listed below. Layout editing does not require holding SHI
 
 | Command        | Behavior                                                                                                                                                        |
 | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/sdui`        | Enter layout editing: left-drag a frame to move it or its corner icons to resize it. Click the centered **Confirm** button to save changes and lock the frames. |
-| `/sdui reset`  | Exit editing, clear saved frame geometry and restore default positions and sizes, including hidden frames.                                                      |
+| `/sdui`        | Edit frame positions, sizes and the run timer font. Click the centered **Confirm** button to save all changes and lock the frames. |
+| `/sdui reset`  | Exit editing, clear saved geometry and timer font choices, and restore defaults, including hidden frames. |
 | `/copy`        | Open a snapshot of raw chat messages and events, including hidden messages; press **Ctrl+C** to copy the selected text.                                         |
 | `/sct`         | Show the available combat-text modes and the currently selected mode.                                                                                           |
 | `/sct on`      | Custom icon-and-damage SCT; native outgoing damage text disabled.                                                                                               |

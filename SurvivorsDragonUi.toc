@@ -3,7 +3,7 @@
 ## Notes: HUD with seven action buttons, nameplate combat text, native run/boss bars and gold/kill/cache counters using AzerothSurvivors 0.87.0+ APIs.
 ## Version: 3.2.5-survivors
 ## Author: Guzruul and community contributors
-## SavedVariables: SurvivorsDragonUiLayout, SurvivorsDragonUiSctMode
+## SavedVariables: SurvivorsDragonUiLayout, SurvivorsDragonUiSctMode, SurvivorsDragonUiRunFont
 
 core\error.lua
 core\core.lua
