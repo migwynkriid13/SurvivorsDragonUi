@@ -4,6 +4,8 @@ DFRL:NewMod("RunTimers", 5, function()
     local path = DFRL:GetInfoOrCons("tex") .. "timer\\"
     local BAR_WIDTH = 280
     local ROW_HEIGHT = 48
+    local DEBUFF_SIZE, DEBUFF_GAP, DEBUFF_LIMIT = 18, 4, 16
+    local DEBUFF_COLUMNS = math.floor((BAR_WIDTH + DEBUFF_GAP) / (DEBUFF_SIZE + DEBUFF_GAP))
     local SKULL_ICON = "Interface\\TargetingFrame\\UI-TargetingFrame-Skull"
     local CHECK_ICON = "Interface\\Buttons\\UI-CheckBox-Check"
     local ATTACK_ICON = "Interface\\Cursor\\Attack.blp"
@@ -120,6 +122,14 @@ DFRL:NewMod("RunTimers", 5, function()
     }
     local currentFont, fontDraft, fontEditor, fontSample, fontMenu
     local faceLabel, sizeLabel, outlineLabel, shadowLabel, visibilityLabel
+    local debuffsLabel, damageIconsLabel
+
+    local function UpdateDisplayLabels()
+        if debuffsLabel then
+            debuffsLabel:SetText(DFRL.display.Get("bossDebuffs") and "Boss debuffs: on" or "Boss debuffs: off")
+            damageIconsLabel:SetText(DFRL.display.Get("damageIcons") and "Damage icons: on" or "Damage icons: off")
+        end
+    end
 
     local function FontSettings(value)
         value = type(value) == "table" and value or {}
@@ -243,11 +253,12 @@ DFRL:NewMod("RunTimers", 5, function()
         local defaultsWidth = TextWidth("Addon defaults") + 24
         local contentWidth = math.max(labelWidth + gap + dropdownWidth, outlineWidth + gap + shadowWidth)
         contentWidth = math.max(contentWidth, labelWidth + gap + 96, defaultsWidth, visibilityWidth)
+        contentWidth = math.max(contentWidth, TextWidth("Boss debuffs: off") + 24, TextWidth("Damage icons: off") + 24)
         local width = contentWidth + padding * 2
         local inputX = padding + labelWidth + gap
         dropdownWidth = contentWidth - labelWidth - gap
 
-        fontEditor = T.CreateDFRLFrame(UIParent, width, 228)
+        fontEditor = T.CreateDFRLFrame(UIParent, width, 296)
         fontEditor:SetFrameStrata("TOOLTIP")
         fontEditor:SetFrameLevel(150)
         PlaceFontEditor()
@@ -325,22 +336,31 @@ DFRL:NewMod("RunTimers", 5, function()
             fontDraft.showText = not fontDraft.showText
             PreviewFont(fontDraft)
         end)
+        debuffsLabel = FontEditorButton("", contentWidth, padding, -188, function()
+            DFRL.display.Set("bossDebuffs", not DFRL.display.Get("bossDebuffs"))
+        end)
+        damageIconsLabel = FontEditorButton("", contentWidth, padding, -222, function()
+            DFRL.display.Set("damageIcons", not DFRL.display.Get("damageIcons"))
+        end)
+        UpdateDisplayLabels()
         FontEditorButton(
             "Addon defaults",
             defaultsWidth,
             (width - defaultsWidth) / 2,
-            -188,
+            -256,
             function() DFRL.layout.Reset() end
         )
     end
 
     local function EditRunFont(active, save)
         if active then
+            DFRL.display.BeginEdit()
             fontDraft = FontSettings(_G.SurvivorsDragonUiRunFont)
             if not fontEditor then CreateFontEditor() end
             PreviewFont(fontDraft)
             fontEditor:Show()
         else
+            DFRL.display.FinishEdit(save)
             if save and fontDraft then _G.SurvivorsDragonUiRunFont = FontSettings(fontDraft) end
             fontDraft = nil
             PreviewFont(_G.SurvivorsDragonUiRunFont)
@@ -356,6 +376,7 @@ DFRL:NewMod("RunTimers", 5, function()
         region = runMoveRegion,
         onEdit = EditRunFont,
         onReset = function()
+            DFRL.display.Reset()
             _G.SurvivorsDragonUiRunFont = nil
             fontDraft = nil
             PreviewFont(nil)
@@ -477,6 +498,8 @@ DFRL:NewMod("RunTimers", 5, function()
     local refreshRows = true
     local previousTime
     local previousZone
+    local targetChangedAt
+    local targetSnapshotReceived, targetPacketAt = false, nil
 
     local function Shown(value)
         if value == true or value == 1 or value == "1" then return true end
@@ -538,7 +561,21 @@ DFRL:NewMod("RunTimers", 5, function()
         if not TakeOver("tally") then ClearTally() end
     end
 
+    local function HideDebuff(icon)
+        if GameTooltip and GameTooltip:IsOwned(icon) then GameTooltip:Hide() end
+        icon:Hide()
+        icon.texture:SetTexture(nil)
+        icon.count:SetText("")
+    end
+
+    local function ClearDebuffs(row)
+        for _, icon in ipairs(row.debuffs) do
+            HideDebuff(icon)
+        end
+    end
+
     local function Retire(row)
+        ClearDebuffs(row)
         row.frame:Hide()
         row.name:SetText("")
         row.health:SetText("")
@@ -739,7 +776,14 @@ DFRL:NewMod("RunTimers", 5, function()
                     local key = kind .. ":" .. tostring(entry.id)
                     if seen[key] then return false end
                     seen[key] = true
-                    table.insert(entries, { key = key, name = entry.name, hp = entry.hp, maximum = entry.hpm })
+                    table.insert(entries, {
+                        key = key,
+                        id = entry.id,
+                        kind = kind,
+                        name = entry.name,
+                        hp = entry.hp,
+                        maximum = entry.hpm,
+                    })
                 end
             end
             return true
@@ -761,7 +805,94 @@ DFRL:NewMod("RunTimers", 5, function()
         health:SetFont("DEFAULT", 12, "OUTLINE")
         health:SetPoint("CENTER", frame, "CENTER", 0, 0)
         health:SetTextColor(1, 1, 1)
-        return { frame = frame, bar = bar, name = name, health = health }
+        return { frame = frame, bar = bar, name = name, health = health, debuffs = {} }
+    end
+
+    local function TargetEncounter(entries)
+        if not DFRL.display.Get("bossDebuffs") or type(UnitDebuff) ~= "function" then return end
+        local target = AZS_TARGET
+        -- A native target change can precede AZSTGT. Never read the new unit's
+        -- auras using the previous target's retained spawn id, even for namesakes.
+        if
+            type(target) ~= "table"
+            or not IsNumber(AZS_TARGET_UPDATED)
+            or (targetChangedAt and not targetSnapshotReceived and AZS_TARGET_UPDATED <= targetChangedAt)
+            or not UnitExists("target")
+            or UnitIsDead("target")
+            or UnitName("target") ~= target.name
+        then
+            return
+        end
+        for _, entry in ipairs(entries) do
+            if
+                entry.id == target.id
+                and (entry.kind == target.kind or (entry.kind == "boss" and target.kind == "final"))
+            then
+                return entry.key
+            end
+        end
+    end
+
+    local function DebuffIcon(row, index)
+        local icon = row.debuffs[index]
+        if icon then return icon end
+        icon = CreateFrame("Frame", nil, row.frame)
+        icon:SetWidth(DEBUFF_SIZE)
+        icon:SetHeight(DEBUFF_SIZE)
+        icon:SetPoint(
+            "TOPLEFT",
+            row.frame,
+            "BOTTOMLEFT",
+            8 + math.mod(index - 1, DEBUFF_COLUMNS) * (DEBUFF_SIZE + DEBUFF_GAP),
+            -DEBUFF_GAP - math.floor((index - 1) / DEBUFF_COLUMNS) * (DEBUFF_SIZE + DEBUFF_GAP)
+        )
+        icon:SetBackdrop({ edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 1 })
+        icon.texture = icon:CreateTexture(nil, "ARTWORK")
+        icon.texture:SetPoint("TOPLEFT", icon, "TOPLEFT", 1, -1)
+        icon.texture:SetPoint("BOTTOMRIGHT", icon, "BOTTOMRIGHT", -1, 1)
+        icon.texture:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+        icon.count = icon:CreateFontString(nil, "OVERLAY")
+        icon.count:SetFont("DEFAULT", 10, "OUTLINE")
+        icon.count:SetPoint("BOTTOMRIGHT", icon, "BOTTOMRIGHT", 1, -1)
+        icon:EnableMouse(true)
+        icon:SetScript("OnEnter", function()
+            if not GameTooltip or type(GameTooltip.SetUnitDebuff) ~= "function" then return end
+            local entries = EncounterRows()
+            if not entries or TargetEncounter(entries) ~= row.key then return end
+            GameTooltip:SetOwner(icon, "ANCHOR_BOTTOMRIGHT")
+            GameTooltip:SetUnitDebuff("target", index)
+        end)
+        icon:SetScript("OnLeave", function()
+            if GameTooltip and GameTooltip:IsOwned(icon) then GameTooltip:Hide() end
+        end)
+        row.debuffs[index] = icon
+        return icon
+    end
+
+    local function UpdateDebuffs(row, targeted)
+        local count = 0
+        if targeted then
+            for index = 1, DEBUFF_LIMIT do
+                -- The 1.12 API returns only texture, applications and dispel
+                -- type. No durations or effects for untargeted bosses are exposed.
+                local texture, applications, dispelType = UnitDebuff("target", index)
+                if not texture then break end
+                local icon = DebuffIcon(row, index)
+                icon.texture:SetTexture(texture)
+                icon.count:SetText(IsNumber(applications) and applications > 1 and tostring(applications) or "")
+                local color = type(DebuffTypeColor) == "table" and DebuffTypeColor[dispelType or "none"] or nil
+                icon:SetBackdropBorderColor(color and color.r or 0.8, color and color.g or 0, color and color.b or 0, 1)
+                icon:Show()
+                if GameTooltip and GameTooltip:IsOwned(icon) and type(GameTooltip.SetUnitDebuff) == "function" then
+                    GameTooltip:SetUnitDebuff("target", index)
+                end
+                count = index
+            end
+        end
+        for index = count + 1, table.getn(row.debuffs) do
+            HideDebuff(row.debuffs[index])
+        end
+        return math.ceil(count / DEBUFF_COLUMNS) * (DEBUFF_SIZE + DEBUFF_GAP)
     end
 
     local function UpdateRows()
@@ -778,31 +909,45 @@ DFRL:NewMod("RunTimers", 5, function()
             end
         end
         local count = table.getn(entries)
-        bossGroup:SetHeight(47 + math.max(0, count - 1) * ROW_HEIGHT)
-        DFRL.layout.Place("bossBars", bossGroup)
+        local targeted = TargetEncounter(entries)
         if count > 0 then
             bossGroup:Show()
         else
             bossGroup:Hide()
         end
-        for index, entry in ipairs(entries) do
+        local offset = 0
+        for _, entry in ipairs(entries) do
             local row = activeRows[entry.key]
             if not row then
                 row = NewRow()
                 activeRows[entry.key] = row
             end
+            row.key = entry.key
             row.frame:ClearAllPoints()
-            row.frame:SetPoint("TOP", bossGroup, "TOP", 0, -16 - (index - 1) * ROW_HEIGHT)
+            row.frame:SetPoint("TOP", bossGroup, "TOP", 0, -16 - offset)
             row.bar:SetValue(math.min(1, entry.hp / entry.maximum))
             row.name:SetText(entry.name)
             row.health:SetText(tostring(math.floor(entry.hp)) .. " / " .. tostring(math.floor(entry.maximum)))
             row.frame:Show()
+            offset = offset + ROW_HEIGHT + UpdateDebuffs(row, targeted == entry.key)
         end
+        bossGroup:SetHeight(math.max(47, offset - 1))
+        DFRL.layout.Place("bossBars", bossGroup)
         if not TakeOver("bosses") then
             ClearRows()
             Restore("bosses")
         end
     end
+
+    DFRL.display.Listen(function()
+        UpdateDisplayLabels()
+        refreshRows = true
+        -- Clearing is immediate even outside a run; valid encounters will reflow
+        -- on the next native HUD update without affecting clock takeover.
+        for _, row in pairs(activeRows) do
+            ClearDebuffs(row)
+        end
+    end)
 
     local function Update()
         if not inWorld then
@@ -820,6 +965,10 @@ DFRL:NewMod("RunTimers", 5, function()
         local maximum = RunLength()
         local zone = type(AZS_ZONE) == "table" and AZS_ZONE.zone or nil
         if previousZone ~= zone or (previousTime and IsNumber(seconds) and seconds < previousTime) then
+            if previousZone or previousTime then
+                targetChangedAt = GetTime()
+                targetSnapshotReceived, targetPacketAt = false, nil
+            end
             ClearRows()
             refreshRows = true
         end
@@ -857,22 +1006,57 @@ DFRL:NewMod("RunTimers", 5, function()
     reader:RegisterEvent("PLAYER_ENTERING_WORLD")
     reader:RegisterEvent("PLAYER_LEAVING_WORLD")
     reader:RegisterEvent("PLAYER_LOGOUT")
+    reader:RegisterEvent("PLAYER_TARGET_CHANGED")
+    reader:RegisterEvent("UNIT_AURA")
     reader:SetScript("OnEvent", function()
         if event == "PLAYER_LEAVING_WORLD" or event == "PLAYER_LOGOUT" then
             inWorld = false
+            targetChangedAt = GetTime()
+            targetSnapshotReceived, targetPacketAt = false, nil
             ReleaseHUD()
             return
         end
         if event == "PLAYER_ENTERING_WORLD" then
             inWorld = true
             refreshRows = true
+        elseif event == "PLAYER_TARGET_CHANGED" then
+            targetChangedAt = GetTime()
+            targetSnapshotReceived, targetPacketAt = false, nil
+            for _, row in pairs(activeRows) do
+                ClearDebuffs(row)
+            end
+            refreshRows = true
+        elseif event == "UNIT_AURA" then
+            if arg1 ~= "target" then return end
+            refreshRows = true
         elseif event == "CHAT_MSG_ADDON" then
-            if arg1 ~= "AZSZONE" and arg1 ~= "AZSRUN" and arg1 ~= "AZSBOSSES" and arg1 ~= "AZSUNITS" then return end
+            if arg1 == "AZSTGT" then
+                -- Read after all event handlers, regardless of parser order.
+                -- An observed post-change packet may share the target event's
+                -- timestamp while paused; it is still a fresh native snapshot.
+                targetPacketAt = GetTime()
+                refreshRows = true
+                return
+            end
+            if
+                arg1 ~= "AZSZONE"
+                and arg1 ~= "AZSRUN"
+                and arg1 ~= "AZSBOSSES"
+                and arg1 ~= "AZSUNITS"
+            then
+                return
+            end
             refreshRows = true
         end
         Update()
     end)
     reader:SetScript("OnUpdate", function()
+        if targetPacketAt then
+            targetSnapshotReceived = IsNumber(AZS_TARGET_UPDATED)
+                and AZS_TARGET_UPDATED >= targetPacketAt
+                and (not targetChangedAt or AZS_TARGET_UPDATED >= targetChangedAt)
+            targetPacketAt = nil
+        end
         -- List/marker refreshes are throttled; boss-state packets refresh them
         -- immediately. The pause-aware native clock is read every frame.
         pollAge = pollAge + (tonumber(arg1) or 0)
