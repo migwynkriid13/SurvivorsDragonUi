@@ -1,7 +1,7 @@
 -- Nameplate discovery and combat-text motion adapted from
 -- Ryogin/NameplateSCT-Vanilla v0.5.0b-test (https://github.com/Ryogin/NameplateSCT-Vanilla).
 -- Original NameplateSCT copyright (c) 2020 Justwait, MIT License.
--- See third_party/NameplateSCT-LICENSE.txt for the full upstream notice.
+-- The full upstream MIT notice is included in parser.lua, shipped with this module.
 
 DFRL:NewMod("NameplateCombatText", 6, function()
     local ParseCombatEvent = T.ParseNameplateCombatEvent
