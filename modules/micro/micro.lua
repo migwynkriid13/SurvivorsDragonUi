@@ -8,7 +8,7 @@ DFRL:NewMod("Micro", 1, function()
     local entries = {
         { "CharacterMicroButton", "character" },
         { "TalentMicroButton", "talents" },
-        { "MainMenuMicroButton", "eye" },
+        { "MainMenuMicroButton", "mainmenu" },
     }
     local previous
     for _, entry in ipairs(entries) do
@@ -37,12 +37,25 @@ DFRL:NewMod("Micro", 1, function()
                 button:GetHighlightTexture():SetTexCoord(82 / 256, 116 / 256, 216 / 512, 264 / 512)
                 button:SetDisabledTexture(atlas)
                 button:GetDisabledTexture():SetTexCoord(2 / 256, 37 / 256, 324 / 512, 372 / 512)
+            elseif entry[1] == "MainMenuMicroButton" then
+                local native = "Interface\\Buttons\\UI-MicroButton-"
+                button:SetNormalTexture(native .. "MainMenu-Up")
+                button:SetPushedTexture(native .. "MainMenu-Down")
+                button:SetDisabledTexture(native .. "MainMenu-Disabled")
+                button:SetHighlightTexture(native .. "Hilight")
+                for _, state in ipairs({ "Normal", "Pushed", "Highlight", "Disabled" }) do
+                    local texture = button["Get" .. state .. "Texture"](button)
+                    if texture then texture:SetTexCoord(0, 1, 0.25, 1) end
+                end
             else
                 for _, state in ipairs({ { "Normal", "regular" }, { "Pushed", "faded" }, { "Highlight", "highlight" } }) do
                     button["Set" .. state[1] .. "Texture"](button, path .. entry[2] .. "-" .. state[2] .. ".tga")
                     local texture = button["Get" .. state[1] .. "Texture"](button)
                     if texture then texture:SetTexCoord(36 / 128, 86 / 128, 29 / 128, 98 / 128) end
                 end
+                button:SetDisabledTexture(path .. entry[2] .. "-faded.tga")
+                button:GetDisabledTexture():SetTexCoord(36 / 128, 86 / 128, 29 / 128, 98 / 128)
+                button:GetDisabledTexture():SetDesaturated(1)
             end
             for _, state in ipairs({ "Normal", "Pushed", "Highlight", "Disabled" }) do
                 local texture = button["Get" .. state .. "Texture"](button)
