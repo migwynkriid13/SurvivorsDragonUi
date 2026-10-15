@@ -486,9 +486,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         -- damage size. Crits and miss labels do not affect normal-hit averages.
         if info.kind ~= "damage" then return DAMAGE_COLORS.strong end
         if info.critical then return DAMAGE_COLORS.critical end
-        if info.damageType ~= "autoattack" and (not info.spell or info.spell == "") then
-            return DAMAGE_COLORS.normal
-        end
+        if info.damageType ~= "autoattack" and (not info.spell or info.spell == "") then return DAMAGE_COLORS.normal end
         local key = table.concat({
             info.sourceName or "",
             info.damageType or "",
