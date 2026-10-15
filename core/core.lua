@@ -1,4 +1,4 @@
--- AzerothSurvivors styling is fixed; independently edited frame geometry is saved.
+-- Save frame geometry, confirmed run timer font settings and the selected SCT mode.
 DFRL = CreateFrame("Frame", nil, UIParent)
 DFRL.env = {}
 DFRL.tools = {}

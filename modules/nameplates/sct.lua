@@ -32,7 +32,8 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local missingSpellTextures = {}
     local discoveredChildren = 0
     local arcDirection = 1
-    local sctMode = "on"
+    local sctMode = _G.SurvivorsDragonUiSctMode
+    if sctMode ~= "on" and sctMode ~= "off" and sctMode ~= "default" then sctMode = "on" end
     -- Keep V's visible request separate from the backing coordinate feed. The
     -- native verbs do not write FrameXML's saved NAMEPLATES_ON preference.
     local enemyPlatesEnabled = NAMEPLATES_ON and true or false
@@ -549,6 +550,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
 
     local function SelectMode(mode)
         sctMode = mode
+        _G.SurvivorsDragonUiSctMode = mode
         -- Drop both active and queued custom hits immediately when changing
         -- modes, so switching to vanilla never produces overlapping displays.
         ResetDisplay()
@@ -638,8 +640,5 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         ScanPlates(true)
     end)
 
-    ApplyDamageMode()
-    ApplyPlateTracking(true)
-    RebuildSpellTextures()
-    ScanPlates(true)
+    SelectMode(sctMode)
 end)

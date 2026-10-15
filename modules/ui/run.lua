@@ -5,10 +5,13 @@ DFRL:NewMod("RunTimers", 5, function()
     local BAR_WIDTH = 280
     local ROW_HEIGHT = 48
     local SKULL_ICON = "Interface\\TargetingFrame\\UI-TargetingFrame-Skull"
+    local CHECK_ICON = "Interface\\Buttons\\UI-CheckBox-Check"
     local ATTACK_ICON = "Interface\\Cursor\\Attack.blp"
     local CACHE_ICON = "Interface\\Cursor\\LootAll.blp"
     local COINS_ICON = DFRL:GetInfoOrCons("tex") .. "chat\\cleaner_coins.tga"
     local MARKER_SIZE = 18
+    local DEAD_MARKER_SCALE = 0.8
+    local DEAD_MARKER_ALPHA = 0.7
     local PHASES = {
         ready = true,
         playing = true,
@@ -95,17 +98,271 @@ DFRL:NewMod("RunTimers", 5, function()
     end
 
     local run, runBar, runText, overlay = Pill("DFRL_RunTimerPill", "FillBlue")
-    -- A failed native font load leaves the initialized DEFAULT face intact.
-    runText:SetFont("Fonts\\MORPHEUS.TTF", 14, "OUTLINE")
-    runText:SetShadowColor(0, 0, 0, 1)
-    runText:SetShadowOffset(1, -1)
     local runMoveRegion = CreateFrame("Frame", nil, run)
-    runMoveRegion:SetPoint("TOPLEFT", run, "TOPLEFT", 0, 18)
-    runMoveRegion:SetPoint("BOTTOMRIGHT", run, "BOTTOMRIGHT", 0, 0)
+    local fontFaces = {
+        { label = "Game DEFAULT", face = "DEFAULT" },
+        { label = "Friz Quadrata", face = "Fonts\\FRIZQT__.TTF" },
+        { label = "Arial Narrow", face = "Fonts\\ARIALN.TTF" },
+        { label = "Morpheus", face = "Fonts\\MORPHEUS.TTF" },
+        { label = "Skurri", face = "Fonts\\SKURRI.TTF" },
+    }
+    local fontOutlines = {
+        { label = "None", value = "" },
+        { label = "Outline", value = "OUTLINE" },
+        { label = "Thick outline", value = "THICKOUTLINE" },
+    }
+    local fontDefaults = {
+        face = "Fonts\\SKURRI.TTF",
+        size = 14,
+        outline = "OUTLINE",
+        shadow = true,
+        showText = true,
+    }
+    local currentFont, fontDraft, fontEditor, fontSample, fontMenu
+    local faceLabel, sizeLabel, outlineLabel, shadowLabel, visibilityLabel
+
+    local function FontSettings(value)
+        value = type(value) == "table" and value or {}
+        local settings = {
+            face = fontDefaults.face,
+            size = fontDefaults.size,
+            outline = fontDefaults.outline,
+            shadow = fontDefaults.shadow,
+            showText = fontDefaults.showText,
+        }
+        for _, entry in ipairs(fontFaces) do
+            if value.face == entry.face then settings.face = entry.face end
+        end
+        for _, entry in ipairs(fontOutlines) do
+            if value.outline == entry.value then settings.outline = entry.value end
+        end
+        if IsNumber(value.size) then settings.size = math.max(8, math.min(32, math.floor(value.size))) end
+        if type(value.shadow) == "boolean" then settings.shadow = value.shadow end
+        if type(value.showText) == "boolean" then settings.showText = value.showText end
+        return settings
+    end
+
+    local function ApplyFont(text, settings)
+        -- Initialize the game's DEFAULT face first so a missing native face
+        -- leaves readable text at the requested size and outline.
+        text:SetFont("DEFAULT", settings.size, settings.outline)
+        if settings.face ~= "DEFAULT" then pcall(text.SetFont, text, settings.face, settings.size, settings.outline) end
+        text:SetShadowColor(0, 0, 0, settings.shadow and 1 or 0)
+        text:SetShadowOffset(settings.shadow and 1 or 0, settings.shadow and -1 or 0)
+    end
+
+    local function UpdateRunFontBounds()
+        local width = currentFont.showText and (runText:GetStringWidth() or 0) or 0
+        local overflow = math.max(0, (width + 8 - run:GetWidth()) / 2)
+        local top = currentFont.showText and currentFont.size + 4 or 0
+        runMoveRegion:ClearAllPoints()
+        runMoveRegion:SetPoint("TOPLEFT", run, "TOPLEFT", -overflow, top)
+        runMoveRegion:SetPoint("BOTTOMRIGHT", run, "BOTTOMRIGHT", overflow, 0)
+    end
+
+    local function PreviewFont(settings)
+        currentFont = FontSettings(settings)
+        ApplyFont(runText, currentFont)
+        if currentFont.showText then
+            runText:Show()
+        else
+            runText:Hide()
+        end
+        UpdateRunFontBounds()
+        if not fontEditor then return end
+        ApplyFont(fontSample, currentFont)
+        for _, entry in ipairs(fontFaces) do
+            if currentFont.face == entry.face then faceLabel:SetText(entry.label) end
+        end
+        for _, entry in ipairs(fontOutlines) do
+            if currentFont.outline == entry.value then outlineLabel:SetText(entry.label) end
+        end
+        sizeLabel:SetText(tostring(currentFont.size))
+        shadowLabel:SetText(currentFont.shadow and "Shadow: on" or "Shadow: off")
+        visibilityLabel:SetText(currentFont.showText and "Run text: shown" or "Run text: hidden")
+    end
+
+    local function FontEditorLabel(parent, text, x, y, size)
+        local label = parent:CreateFontString(nil, "OVERLAY")
+        label:SetFont("DEFAULT", size or 12, "OUTLINE")
+        label:SetTextColor(1, 1, 1)
+        label:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
+        label:SetText(text)
+        return label
+    end
+
+    local function FontEditorButton(text, width, x, y, callback, parent)
+        parent = parent or fontEditor
+        local button = T.CreateButton(parent, "", width, 28)
+        button:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
+        local label = button:CreateFontString(nil, "OVERLAY")
+        label:SetFont("DEFAULT", 12, "OUTLINE")
+        label:SetTextColor(1, 1, 1)
+        label:SetPoint("CENTER", button, "CENTER", 0, 0)
+        label:SetText(text)
+        button:SetScript("OnClick", callback)
+        return label, button
+    end
+
+    local function ChangeSize(direction)
+        if not fontDraft then return end
+        fontDraft.size = math.max(8, math.min(32, fontDraft.size + direction))
+        PreviewFont(fontDraft)
+    end
+
+    local function PlaceFontEditor()
+        if not fontEditor then return end
+        fontEditor:ClearAllPoints()
+        fontEditor:SetPoint("TOP", UIParent, "CENTER", 0, -25)
+    end
+
+    local function FinishFontEditorDrag()
+        if not fontEditor then return end
+        fontEditor:StopMovingOrSizing()
+        if fontEditor.SetUserPlaced then fontEditor:SetUserPlaced(false) end
+    end
+
+    local function CreateFontEditor()
+        local measure = FontEditorLabel(UIParent, "", 0, 0)
+        measure:Hide()
+        local function TextWidth(text)
+            measure:SetText(text)
+            return math.ceil(measure:GetStringWidth() or 0)
+        end
+        local padding, gap = 12, 8
+        local labelWidth = math.max(TextWidth("Font"), TextWidth("Size"))
+        local dropdownWidth, outlineWidth = 0, 0
+        for _, entry in ipairs(fontFaces) do
+            dropdownWidth = math.max(dropdownWidth, TextWidth(entry.label) + 36)
+        end
+        for _, entry in ipairs(fontOutlines) do
+            outlineWidth = math.max(outlineWidth, TextWidth(entry.label) + 24)
+        end
+        local shadowWidth = math.max(TextWidth("Shadow: on"), TextWidth("Shadow: off")) + 24
+        local visibilityWidth = math.max(TextWidth("Run text: shown"), TextWidth("Run text: hidden")) + 24
+        local defaultsWidth = TextWidth("Addon defaults") + 24
+        local contentWidth = math.max(labelWidth + gap + dropdownWidth, outlineWidth + gap + shadowWidth)
+        contentWidth = math.max(contentWidth, labelWidth + gap + 96, defaultsWidth, visibilityWidth)
+        local width = contentWidth + padding * 2
+        local inputX = padding + labelWidth + gap
+        dropdownWidth = contentWidth - labelWidth - gap
+
+        fontEditor = T.CreateDFRLFrame(UIParent, width, 228)
+        fontEditor:SetFrameStrata("TOOLTIP")
+        fontEditor:SetFrameLevel(150)
+        PlaceFontEditor()
+        fontEditor:SetMovable(true)
+        if fontEditor.SetClampedToScreen then fontEditor:SetClampedToScreen(true) end
+        fontEditor:RegisterForDrag("LeftButton")
+        fontEditor:SetScript("OnDragStart", function()
+            if not fontDraft then return end
+            fontMenu:Hide()
+            fontEditor:StartMoving()
+        end)
+        fontEditor:SetScript("OnDragStop", FinishFontEditorDrag)
+        fontSample = FontEditorLabel(fontEditor, "RUN", padding, -12)
+        fontSample:ClearAllPoints()
+        fontSample:SetPoint("TOP", fontEditor, "TOP", 0, -12)
+
+        FontEditorLabel(fontEditor, "Font", padding, -60)
+        local fontButton
+        faceLabel, fontButton = FontEditorButton("", dropdownWidth, inputX, -52, function()
+            if not fontDraft then return end
+            if fontMenu:IsShown() then
+                fontMenu:Hide()
+            else
+                fontMenu:Show()
+            end
+        end)
+        local arrow = FontEditorLabel(fontButton, "v", 0, 0)
+        arrow:ClearAllPoints()
+        arrow:SetPoint("RIGHT", fontButton, "RIGHT", -12, 0)
+
+        -- The popup catches outside clicks while its list stays above the editor.
+        fontMenu = CreateFrame("Button", nil, fontEditor)
+        fontMenu:SetAllPoints(UIParent)
+        fontMenu:SetFrameLevel(160)
+        fontMenu:EnableMouse(true)
+        fontMenu:SetScript("OnClick", function() fontMenu:Hide() end)
+        fontMenu:Hide()
+        local fontList = T.CreateDFRLFrame(fontMenu, dropdownWidth, table.getn(fontFaces) * 28 + 8)
+        fontList:SetFrameLevel(170)
+        fontList:SetPoint("TOPLEFT", fontButton, "BOTTOMLEFT", 0, 0)
+        for index, entry in ipairs(fontFaces) do
+            local selectedFace = entry.face
+            FontEditorButton(entry.label, dropdownWidth - 8, 4, -4 - (index - 1) * 28, function()
+                if not fontDraft then return end
+                fontDraft.face = selectedFace
+                PreviewFont(fontDraft)
+                fontMenu:Hide()
+            end, fontList)
+        end
+        fontEditor:SetScript("OnHide", function()
+            FinishFontEditorDrag()
+            fontMenu:Hide()
+        end)
+        FontEditorLabel(fontEditor, "Size", padding, -94)
+        FontEditorButton("-", 28, inputX, -86, function() ChangeSize(-1) end)
+        sizeLabel = FontEditorLabel(fontEditor, "", inputX + 38, -94)
+        FontEditorButton("+", 28, inputX + 68, -86, function() ChangeSize(1) end)
+        outlineLabel = FontEditorButton("", outlineWidth, padding, -120, function()
+            if not fontDraft then return end
+            for index, entry in ipairs(fontOutlines) do
+                if fontDraft.outline == entry.value then
+                    fontDraft.outline = fontOutlines[math.mod(index, table.getn(fontOutlines)) + 1].value
+                    break
+                end
+            end
+            PreviewFont(fontDraft)
+        end)
+        shadowLabel = FontEditorButton("", shadowWidth, padding + outlineWidth + gap, -120, function()
+            if not fontDraft then return end
+            fontDraft.shadow = not fontDraft.shadow
+            PreviewFont(fontDraft)
+        end)
+        visibilityLabel = FontEditorButton("", contentWidth, padding, -154, function()
+            if not fontDraft then return end
+            fontDraft.showText = not fontDraft.showText
+            PreviewFont(fontDraft)
+        end)
+        FontEditorButton(
+            "Addon defaults",
+            defaultsWidth,
+            (width - defaultsWidth) / 2,
+            -188,
+            function() DFRL.layout.Reset() end
+        )
+    end
+
+    local function EditRunFont(active, save)
+        if active then
+            fontDraft = FontSettings(_G.SurvivorsDragonUiRunFont)
+            if not fontEditor then CreateFontEditor() end
+            PreviewFont(fontDraft)
+            fontEditor:Show()
+        else
+            if save and fontDraft then _G.SurvivorsDragonUiRunFont = FontSettings(fontDraft) end
+            fontDraft = nil
+            PreviewFont(_G.SurvivorsDragonUiRunFont)
+            if fontEditor then fontEditor:Hide() end
+        end
+    end
+
+    PreviewFont(_G.SurvivorsDragonUiRunFont)
     DFRL.layout.Register("runTimer", run, function()
         run:ClearAllPoints()
         run:SetPoint("TOP", UIParent, "TOP", 0, -30)
-    end, { region = runMoveRegion })
+    end, {
+        region = runMoveRegion,
+        onEdit = EditRunFont,
+        onReset = function()
+            _G.SurvivorsDragonUiRunFont = nil
+            fontDraft = nil
+            PreviewFont(nil)
+            if fontEditor then fontEditor:Hide() end
+            PlaceFontEditor()
+        end,
+    })
 
     -- Encounters share a movable group, independent of the run clock.
     -- Its bounds include the first name and every stacked health pill.
@@ -210,7 +467,7 @@ DFRL:NewMod("RunTimers", 5, function()
     DFRL.AttachRunTally()
 
     local markers = {}
-    local markerTimes = {}
+    local markerStates = {}
     local activeRows = {}
     local spareRows = {}
     local createdRows = 0
@@ -297,10 +554,27 @@ DFRL:NewMod("RunTimers", 5, function()
         bossGroup:Hide()
     end
 
+    local function ShowMarkerGlow(marker, shown)
+        for _, glow in ipairs(marker.glow) do
+            if shown then
+                glow:Show()
+            else
+                glow:Hide()
+            end
+        end
+    end
+
+    local function HideMarker(marker)
+        marker:Hide()
+        marker.check:Hide()
+        ShowMarkerGlow(marker, false)
+        marker.state = nil
+    end
+
     local function ReleaseClock()
         run:Hide()
         for _, marker in ipairs(markers) do
-            marker:Hide()
+            HideMarker(marker)
         end
         Restore("clock")
     end
@@ -315,7 +589,7 @@ DFRL:NewMod("RunTimers", 5, function()
         refreshRows = true
     end
 
-    local function ScheduleTimes(maximum)
+    local function ScheduleMarkers(maximum)
         local schedule = AZS_SCHEDULE
         if type(schedule) ~= "table" then return nil end
         local state, zone = AZS_RUN, AZS_ZONE
@@ -323,7 +597,7 @@ DFRL:NewMod("RunTimers", 5, function()
         if not IsNumber(expected) or expected <= 0 then expected = type(zone) == "table" and zone.bt or nil end
         if not IsNumber(expected) or expected <= 0 or expected ~= math.floor(expected) then return nil end
 
-        local times = {}
+        local entries = {}
         local seen, final = {}, false
         -- An empty table after /reload is not a received schedule. Require
         -- every zone boss, including those already up/dead, and matching native
@@ -333,10 +607,13 @@ DFRL:NewMod("RunTimers", 5, function()
                 type(entry) ~= "table"
                 or not IsNumber(entry.index)
                 or entry.index ~= math.floor(entry.index)
+                or entry.index < 1
+                or entry.index > expected
                 or seen[entry.index]
                 or not IsNumber(entry.at)
                 or entry.at <= 0
                 or entry.at > maximum
+                or (entry.state ~= "due" and entry.state ~= "up" and entry.state ~= "dead")
             then
                 return nil
             end
@@ -345,23 +622,51 @@ DFRL:NewMod("RunTimers", 5, function()
                 if final or entry.at ~= maximum then return nil end
                 final = true
             end
-            table.insert(times, entry.at)
+            table.insert(entries, { at = entry.at, state = entry.state })
         end
-        if table.getn(times) ~= expected or not final then return nil end
-        return times
+        if table.getn(entries) ~= expected or not final then return nil end
+        return entries
     end
 
-    local function UpdateMarkers(maximum, times)
-        for index, at in ipairs(times) do
+    local function UpdateMarkers(maximum, entries)
+        for index, entry in ipairs(entries) do
+            local at = entry.at
             local marker = markers[index]
             if not marker then
-                marker = overlay:CreateTexture(nil, "OVERLAY")
-                marker:SetTexture(SKULL_ICON)
+                marker = CreateFrame("Frame", nil, overlay)
                 marker:SetWidth(MARKER_SIZE)
                 marker:SetHeight(MARKER_SIZE)
+                marker:EnableMouse(false)
+                marker.glow = {}
+                -- Offset copies follow the skull's transparent silhouette,
+                -- outlining an active boss without recoloring the foreground.
+                for x = -1, 1 do
+                    for y = -1, 1 do
+                        if x ~= 0 or y ~= 0 then
+                            local glow = marker:CreateTexture(nil, "BACKGROUND")
+                            glow:SetTexture(SKULL_ICON)
+                            glow:SetWidth(MARKER_SIZE)
+                            glow:SetHeight(MARKER_SIZE)
+                            glow:SetPoint("CENTER", marker, "CENTER", x * 1.5, y * 1.5)
+                            glow:SetVertexColor(1, 0.25, 0, 0.85)
+                            glow:SetBlendMode("ADD")
+                            table.insert(marker.glow, glow)
+                        end
+                    end
+                end
+                marker.skull = marker:CreateTexture(nil, "ARTWORK")
+                marker.skull:SetTexture(SKULL_ICON)
+                marker.skull:SetPoint("CENTER", marker, "CENTER", 0, 0)
+                marker.check = marker:CreateTexture(nil, "OVERLAY")
+                marker.check:SetTexture(CHECK_ICON)
+                marker.check:SetVertexColor(0.2, 1, 0.2, 1)
+                marker.check:SetWidth(MARKER_SIZE * 0.6)
+                marker.check:SetHeight(MARKER_SIZE * 0.6)
+                marker.check:SetPoint("BOTTOMRIGHT", marker, "BOTTOMRIGHT", 2, -1)
+                HideMarker(marker)
                 markers[index] = marker
             end
-            markerTimes[index] = at
+            markerStates[index] = entry.state
             marker:ClearAllPoints()
             if at == maximum then
                 marker:SetPoint("RIGHT", runBar, "RIGHT", 0, 0)
@@ -369,20 +674,34 @@ DFRL:NewMod("RunTimers", 5, function()
                 marker:SetPoint("CENTER", runBar, "LEFT", BAR_WIDTH * at / maximum, 0)
             end
         end
-        for index = table.getn(times) + 1, table.getn(markers) do
-            markerTimes[index] = nil
-            markers[index]:Hide()
+        for index = table.getn(entries) + 1, table.getn(markers) do
+            markerStates[index] = nil
+            HideMarker(markers[index])
         end
     end
 
-    local function UpdateMarkerVisibility(seconds)
-        -- Native pause-aware time owns expiry; no separate clock is advanced.
+    local function UpdateMarkerStates()
+        -- Only the official schedule establishes active and defeated bosses.
         for index, marker in ipairs(markers) do
-            local at = markerTimes[index]
-            if at and seconds < at then
+            local state = markerStates[index]
+            if state then
+                if marker.state ~= state then
+                    marker.state = state
+                    local dead = state == "dead"
+                    local size = MARKER_SIZE * (dead and DEAD_MARKER_SCALE or 1)
+                    marker.skull:SetWidth(size)
+                    marker.skull:SetHeight(size)
+                    marker.skull:SetAlpha(dead and DEAD_MARKER_ALPHA or 1)
+                    ShowMarkerGlow(marker, state == "up")
+                    if dead then
+                        marker.check:Show()
+                    else
+                        marker.check:Hide()
+                    end
+                end
                 marker:Show()
             else
-                marker:Hide()
+                HideMarker(marker)
             end
         end
     end
@@ -506,15 +825,19 @@ DFRL:NewMod("RunTimers", 5, function()
         end
         previousZone = zone
         if IsNumber(seconds) then previousTime = seconds end
-        local times = maximum and ScheduleTimes(maximum) or nil
+        local scheduled = maximum and ScheduleMarkers(maximum) or nil
         if IsNumber(seconds) and maximum then
             runBar:SetMinMaxValues(0, maximum)
             runBar:SetValue(math.min(maximum, seconds))
-            runText:SetText("RUN " .. Clock(seconds) .. " / " .. Clock(maximum))
+            local clockText = "RUN " .. Clock(seconds) .. " / " .. Clock(maximum)
+            if runText:GetText() ~= clockText then
+                runText:SetText(clockText)
+                UpdateRunFontBounds()
+            end
             -- Missing schedule replay affects only spawn markers, never a clock
             -- whose native elapsed time and duration have already recovered.
-            if refreshRows or not run:IsShown() or not times then UpdateMarkers(maximum, times or {}) end
-            UpdateMarkerVisibility(seconds)
+            if refreshRows or not run:IsShown() or not scheduled then UpdateMarkers(maximum, scheduled or {}) end
+            UpdateMarkerStates()
             run:Show()
             if not TakeOver("clock") then ReleaseClock() end
         else
@@ -550,8 +873,8 @@ DFRL:NewMod("RunTimers", 5, function()
         Update()
     end)
     reader:SetScript("OnUpdate", function()
-        -- Only list/marker placement refreshes are throttled. The clock and
-        -- skull visibility use AZS_GetRunTime() every frame, including pauses.
+        -- List/marker refreshes are throttled; boss-state packets refresh them
+        -- immediately. The pause-aware native clock is read every frame.
         pollAge = pollAge + (tonumber(arg1) or 0)
         if pollAge >= 0.1 then
             pollAge = 0
