@@ -259,8 +259,6 @@ DFRL:NewMod("RunTimers", 5, function()
             fontDraft = FontSettings(nil)
             PreviewFont(fontDraft)
         end)
-        FontEditorLabel(fontEditor, "Addon: Morpheus, 14, outline, black shadow (1, -1).", 16, -202)
-        FontEditorLabel(fontEditor, "Game DEFAULT selects the game's default font face.", 16, -222)
     end
 
     local function EditRunFont(active, save)
