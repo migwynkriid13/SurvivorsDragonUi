@@ -581,9 +581,9 @@ DFRL:NewMod("RunTimers", 5, function()
         local text = field:CreateFontString(nil, "OVERLAY")
         text:SetFont("DEFAULT", 12, "OUTLINE")
         text:SetTextColor(1, 0.88, 0.55)
-        text:SetWidth(fieldWidth - 48)
         text:SetHeight(18)
-        text:SetPoint("CENTER", field, "CENTER", 0, 0)
+        text:SetPoint("LEFT", icon, "RIGHT", 4, 0)
+        text:SetPoint("RIGHT", field, "RIGHT", -5, 0)
         text:SetJustifyH("CENTER")
         text:SetJustifyV("MIDDLE")
         local entry = { key = counter.key, label = counter.label, text = text, frame = field }
@@ -631,7 +631,6 @@ DFRL:NewMod("RunTimers", 5, function()
             entry.frame:SetWidth(sectionWidth)
             entry.frame:ClearAllPoints()
             entry.frame:SetPoint("LEFT", tally, "LEFT", 8 + (index - 1) * sectionWidth, 0)
-            entry.text:SetWidth(sectionWidth - 48)
         end
         tallyAttached = true
         return true
