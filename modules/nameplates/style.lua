@@ -8,7 +8,6 @@ DFRL:NewMod("NameplateStyle", 5, function()
     local path = DFRL:GetInfoOrCons("tex") .. "nameplates\\"
     local WIDTH, HEIGHT, FONT_SIZE = 100, 10, 9
     local TEXT_OFFSET, GLOW_OFFSET = 2.5, 4
-    local TARGET_RED, TARGET_GREEN, TARGET_BLUE = 0.3, 0.7, 1
 
     local function PlateColor(red, green, blue)
         if red > 0.9 and green < 0.2 and blue < 0.2 then
@@ -75,32 +74,6 @@ DFRL:NewMod("NameplateStyle", 5, function()
         name:SetPoint("BOTTOM", health, "TOP", 0.5, -TEXT_OFFSET)
         name:SetWidth(WIDTH * 2)
 
-        local targetGlow = overlay:CreateTexture(nil, "ARTWORK")
-        targetGlow:SetTexture(path .. "kui_target_glow.tga")
-        targetGlow:SetTexCoord(0, 0.593, 0, 0.875)
-        targetGlow:SetPoint("TOP", health, "BOTTOM", 0, 1)
-        targetGlow:SetWidth(106)
-        targetGlow:SetHeight(5)
-        targetGlow:SetVertexColor(TARGET_RED, TARGET_GREEN, TARGET_BLUE, 1)
-        targetGlow:Hide()
-
-        local leftArrow = overlay:CreateTexture(nil, "ARTWORK")
-        leftArrow:SetTexture(path .. "kui_target_arrows.tga")
-        leftArrow:SetPoint("RIGHT", shadow, "LEFT", 7, 0)
-        leftArrow:SetWidth(28)
-        leftArrow:SetHeight(28)
-        leftArrow:SetVertexColor(TARGET_RED, TARGET_GREEN, TARGET_BLUE, 1)
-        leftArrow:Hide()
-
-        local rightArrow = overlay:CreateTexture(nil, "ARTWORK")
-        rightArrow:SetTexture(path .. "kui_target_arrows.tga")
-        rightArrow:SetTexCoord(1, 0, 0, 1)
-        rightArrow:SetPoint("LEFT", shadow, "RIGHT", -7, 0)
-        rightArrow:SetWidth(28)
-        rightArrow:SetHeight(28)
-        rightArrow:SetVertexColor(TARGET_RED, TARGET_GREEN, TARGET_BLUE, 1)
-        rightArrow:Hide()
-
         local raid = overlay:CreateTexture(nil, "OVERLAY")
         raid:SetPoint("LEFT", health, "RIGHT", 8, 0)
         raid:SetWidth(30)
@@ -111,9 +84,6 @@ DFRL:NewMod("NameplateStyle", 5, function()
             visual = visual,
             health = health,
             name = name,
-            targetGlow = targetGlow,
-            leftArrow = leftArrow,
-            rightArrow = rightArrow,
             raid = raid,
         }
     end
@@ -142,18 +112,6 @@ DFRL:NewMod("NameplateStyle", 5, function()
         end
         local nativeTexture = data.bar:GetStatusBarTexture()
         if nativeTexture and nativeTexture.SetAlpha then nativeTexture:SetAlpha(0) end
-
-        -- Native target opacity is a presentation hint, never an enemy identity.
-        local target = UnitExists("target") and plate:GetAlpha() == 1 or false
-        if target then
-            style.targetGlow:Show()
-            style.leftArrow:Show()
-            style.rightArrow:Show()
-        else
-            style.targetGlow:Hide()
-            style.leftArrow:Hide()
-            style.rightArrow:Hide()
-        end
 
         local minimum, maximum = data.bar:GetMinMaxValues()
         local value = data.bar:GetValue()

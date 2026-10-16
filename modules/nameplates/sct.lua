@@ -35,8 +35,18 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local discoveredChildren = 0
     local combatDiscoveryNeeded = true
     local arcDirection = 1
+    local function IsMode(mode) return mode == "on" or mode == "off" or mode == "default" end
     local sctMode = _G.SurvivorsDragonUiSctMode
-    if sctMode ~= "on" and sctMode ~= "off" and sctMode ~= "default" then sctMode = "default" end
+    if not IsMode(sctMode) then sctMode = "default" end
+    local sct, settingsListeners, settingsDraft = {}, {}, nil
+    DFRL.sct = sct
+    local observedIncoming
+    local function NotifySettings()
+        for _, callback in ipairs(settingsListeners) do
+            callback()
+        end
+    end
+    local function ActiveMode() return settingsDraft and settingsDraft.mode or sctMode end
     local customEnabled, changingSettings = false, false
     local damageIcons = DFRL.display.Get("damageIcons")
     -- Keep V's visible request separate from the backing coordinate feed. The
@@ -709,20 +719,83 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         table.insert(pending, { info = info, time = now })
     end
 
+    local function ReadNativeDamage() return GetCVar("CombatDamage") end
+    local function WriteNativeDamage(value)
+        changingSettings = true
+        if ReadNativeDamage() ~= value then SetCVar("CombatDamage", value) end
+        changingSettings = false
+    end
+    local function ReadIncoming() return _G.SHOW_COMBAT_TEXT end
+    local function WriteIncoming(value)
+        changingSettings = true
+        _G.SHOW_COMBAT_TEXT = value
+        if type(_G.BenillaCombatText_UpdateOrLoad) == "function" then
+            _G.BenillaCombatText_UpdateOrLoad()
+        else
+            if value == "1" and type(_G.UIParentLoadAddOn) == "function" then
+                _G.UIParentLoadAddOn("Blizzard_CombatText")
+            end
+            if type(_G.CombatText_UpdateDisplayedMessages) == "function" then
+                _G.CombatText_UpdateDisplayedMessages()
+            end
+        end
+        changingSettings = false
+    end
+
+    local function PreviewSetting(key, value, read, write)
+        local current = read()
+        if current == value then return end
+        local preview = settingsDraft[key]
+        if not preview or current ~= preview.applied then
+            preview = { original = current }
+            settingsDraft[key] = preview
+        end
+        preview.applied = value
+        write(value)
+    end
+    local function RestoreSetting(draft, key, read, write)
+        local preview = draft[key]
+        draft[key] = nil
+        -- Later native choices supersede our preview. Originals, including a
+        -- nil incoming preference, live only in this session's transaction.
+        if preview and read() == preview.applied and preview.original ~= preview.applied then
+            write(preview.original)
+        end
+    end
+
     local function SyncGameSettings(force)
         if changingSettings then return end
-        local floatingText = _G.SHOW_COMBAT_TEXT == "1"
-        local nativeDamage = GetCVar("CombatDamage") ~= "0"
-        local previousMode = sctMode
+        -- Observe incoming/self text only to refresh its editor label. It is
+        -- independent of the custom outgoing renderer and never selects a mode.
+        local incomingText = _G.SHOW_COMBAT_TEXT == "1"
+        local incomingChanged = incomingText ~= observedIncoming
+        observedIncoming = incomingText
+        local damageValue = ReadNativeDamage()
+        if settingsDraft then
+            if settingsDraft.damage and damageValue ~= settingsDraft.damage.applied then settingsDraft.damage = nil end
+            if settingsDraft.incoming and ReadIncoming() ~= settingsDraft.incoming.applied then
+                settingsDraft.incoming = nil
+            end
+        end
+        local nativeDamage = damageValue ~= "0"
+        local previousMode, previousCommittedMode = ActiveMode(), sctMode
         -- Menu choices take precedence over a previously saved addon mode.
         -- Native target damage has no separate renderer-suppression switch.
         if nativeDamage then
             sctMode = "default"
-        elseif sctMode == "off" and floatingText then
-            sctMode = "on"
+            if settingsDraft then settingsDraft.mode = nil end
         end
-        local enabled = sctMode == "on" and floatingText
-        if not force and enabled == customEnabled and previousMode == sctMode then return end
+        local enabled = ActiveMode() == "on"
+        if
+            not force
+            and enabled == customEnabled
+            and previousMode == ActiveMode()
+            and previousCommittedMode == sctMode
+        then
+            if incomingChanged then NotifySettings() end
+            return
+        end
+        -- Persist only the committed mode, never the effective editor preview.
         _G.SurvivorsDragonUiSctMode = sctMode
         customEnabled = enabled
         ResetDisplay()
@@ -730,31 +803,62 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         if CustomEnabled() and damageIcons then RebuildSpellTextures() end
         -- Plate appearance stays active even while combat text is disabled.
         ScanPlates(true)
+        NotifySettings()
     end
 
     local function SelectMode(mode)
+        if not IsMode(mode) then return end
+        if settingsDraft then
+            -- An explicit slash command commits its own choice and supersedes
+            -- pending mode/outgoing rollback without touching incoming preview.
+            settingsDraft.mode, settingsDraft.damage = nil, nil
+        end
         sctMode = mode
         _G.SurvivorsDragonUiSctMode = mode
         if mode ~= "default" then
-            -- Only an explicit on/off command changes the game's settings.
-            -- CombatDamage controls native outgoing numbers, independently of
-            -- the floating-text checkbox; suppress them once to avoid duplicates.
-            changingSettings = true
-            _G.SHOW_COMBAT_TEXT = mode == "on" and "1" or "0"
-            if GetCVar("CombatDamage") ~= "0" then SetCVar("CombatDamage", "0") end
-            if type(_G.BenillaCombatText_UpdateOrLoad) == "function" then
-                _G.BenillaCombatText_UpdateOrLoad()
-            else
-                if mode == "on" and type(_G.UIParentLoadAddOn) == "function" then
-                    _G.UIParentLoadAddOn("Blizzard_CombatText")
-                end
-                if type(_G.CombatText_UpdateDisplayedMessages) == "function" then
-                    _G.CombatText_UpdateDisplayedMessages()
-                end
-            end
-            changingSettings = false
+            -- Mode choices affect only outgoing text. The independent incoming
+            -- control is the only editor action that changes SHOW_COMBAT_TEXT.
+            WriteNativeDamage("0")
         end
         SyncGameSettings(true)
+    end
+
+    function sct.GetMode() return ActiveMode() end
+    function sct.GetIncoming() return ReadIncoming() == "1" end
+    function sct.BeginEdit()
+        if not settingsDraft then settingsDraft = {} end
+    end
+    function sct.SetMode(mode)
+        if not settingsDraft or not IsMode(mode) then return end
+        settingsDraft.mode = mode
+        if mode == "default" then
+            RestoreSetting(settingsDraft, "damage", ReadNativeDamage, WriteNativeDamage)
+        else
+            PreviewSetting("damage", "0", ReadNativeDamage, WriteNativeDamage)
+        end
+        SyncGameSettings(true)
+    end
+    function sct.SetIncoming(enabled)
+        if not settingsDraft or type(enabled) ~= "boolean" then return end
+        PreviewSetting("incoming", enabled and "1" or "0", ReadIncoming, WriteIncoming)
+        SyncGameSettings(false)
+    end
+    function sct.FinishEdit(save)
+        if not settingsDraft then return end
+        local selection = settingsDraft
+        settingsDraft = nil
+        if save then
+            if selection.mode then sctMode = selection.mode end
+            _G.SurvivorsDragonUiSctMode = sctMode
+        else
+            RestoreSetting(selection, "damage", ReadNativeDamage, WriteNativeDamage)
+            RestoreSetting(selection, "incoming", ReadIncoming, WriteIncoming)
+        end
+        SyncGameSettings(false)
+        NotifySettings()
+    end
+    function sct.Listen(callback)
+        if type(callback) == "function" then table.insert(settingsListeners, callback) end
     end
 
     -- Module initialization uses DFRL's private environment; slash aliases
@@ -769,7 +873,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             feedback = "Custom SCT enabled. V controls visible nameplates; invisible plates track hit positions."
         elseif mode == "off" then
             SelectMode("off")
-            feedback = "Custom and vanilla SCT disabled."
+            feedback = "Custom and native outgoing SCT disabled. Incoming/self text is unchanged."
         elseif mode == "default" then
             SelectMode("default")
             feedback = "Custom SCT disabled; native SCT follows your game settings."
@@ -795,6 +899,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             enemyPlatesEnabled = _G.NAMEPLATES_ON and true or false
             SyncGameSettings(true)
         elseif event == "PLAYER_LEAVING_WORLD" or event == "PLAYER_LOGOUT" then
+            sct.FinishEdit(false)
             inWorld = false
             for _, data in pairs(plates) do
                 RestorePresentation(data)
@@ -814,8 +919,8 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     end)
     frame:SetScript("OnUpdate", function()
         if not inWorld then return end
-        -- The floating-text checkbox writes a saved global, and not every
-        -- native CVar setter emits CVAR_UPDATE. Observe both without writing.
+        -- Observe outgoing CVar changes without writing; the independent
+        -- incoming/self global is read only for its editor control.
         SyncGameSettings(false)
         ScanPlates(false)
         -- Native plate allocation follows this update. The first accepted hit
@@ -839,6 +944,15 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         ApplyPlateTracking(true)
         ScanPlates(true)
     end)
+
+    if type(_G.ReloadUI) == "function" then
+        local reloadUI = _G.ReloadUI
+        _G.ReloadUI = function()
+            -- Restore native preview values before ReloadUI can serialize them.
+            sct.FinishEdit(false)
+            return reloadUI()
+        end
+    end
 
     SyncGameSettings(true)
 end)

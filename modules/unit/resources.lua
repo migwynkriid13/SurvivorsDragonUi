@@ -34,7 +34,6 @@ DFRL:NewMod("Class resources", 2, function()
     local path = DFRL:GetInfoOrCons("tex") .. "resources\\"
     local POINTS, UNITS_PER_POINT = 5, 20
     local SLOT_WIDTH, ROW_HEIGHT = 24, 32
-    local PHASES = { playing = true, choosing = true, paused = true }
     local styles = {
         WARLOCK = {
             power = 0,
@@ -54,7 +53,7 @@ DFRL:NewMod("Class resources", 2, function()
         },
     }
 
-    local row = CreateFrame("Frame", "SurvivorsDragonUiClassResources", UIParent)
+    local row = CreateFrame("Frame", "SurvivorsDragonUiClassResources", PlayerFrame)
     row:SetWidth(POINTS * SLOT_WIDTH)
     row:SetHeight(ROW_HEIGHT)
     row:SetFrameStrata("MEDIUM")
@@ -62,13 +61,9 @@ DFRL:NewMod("Class resources", 2, function()
     row:EnableMouse(false)
     row:Hide()
 
-    local function PlaceDefault()
-        row:ClearAllPoints()
-        -- Match the player's default health area. The layout controller then
-        -- resolves this to an independent position, like the buffs and XP groups.
-        row:SetPoint("TOPLEFT", PlayerFrame, "TOPLEFT", 105, -72)
-    end
-    PlaceDefault()
+    -- Secondary meters belong to the player frame too: its confirmed position
+    -- and scale move the health, primary power and point artwork together.
+    row:SetPoint("TOPLEFT", PlayerFrame, "TOPLEFT", 105, -68)
 
     local points = {}
     for i = 1, POINTS do
@@ -84,35 +79,57 @@ DFRL:NewMod("Class resources", 2, function()
 
     local inWorld, displayedStyle, displayedCount = true, nil, nil
     local function IsNumber(value) return type(value) == "number" and value >= 0 and value - value == 0 end
-    local function ReadResource()
+    local function ReadPrimary()
         if not DFRL.display.Get("classResources") then return end
-        if not inWorld or type(AZS_GetPhase) ~= "function" or not PHASES[AZS_GetPhase()] then return end
-        if not UnitExists("player") then return end
-        -- Native class is current even if the once-per-run AZSZONE packet has
-        -- not replayed after reload. No retained AZS tables are consulted.
+        if not inWorld or not UnitExists("player") then return end
+        -- Native unit getters stay current across reload and power-type changes,
+        -- without retaining run packets or assuming a class-specific maximum.
         local _, class = UnitClass("player")
-        local style = styles[class]
-        if not style or UnitPowerType("player") ~= style.power then return end
+        local power = UnitPowerType("player")
         local value, maximum = UnitMana("player"), UnitManaMax("player")
-        if not IsNumber(value) or not IsNumber(maximum) or maximum <= 0 then return end
-        -- Survivors encodes each shard/point as 20 active-power units, confirmed
-        -- in native v0.94.2 code; see docs/CLASS-RESOURCES.md. This is an
-        -- absolute conversion, not a percentage of maximum mana or energy.
-        -- GetComboPoints() is target-dependent and does not read this mechanic.
-        local count = math.floor(math.min(value, maximum, POINTS * UNITS_PER_POINT) / UNITS_PER_POINT)
-        return style, count
+        if not IsNumber(power) or not IsNumber(value) or not IsNumber(maximum) or maximum <= 0 then return end
+        return value, maximum, power, class
+    end
+
+    local function ReadSecondary(class, value, maximum, power)
+        local style = styles[class]
+        if style and power == style.power then
+            -- Survivors v0.94.2 publishes its Rogue combo and Warlock shard
+            -- counters in the active power field at 20 units per point. The
+            -- ordinary target-dependent combo getter reads a different state.
+            -- See docs/CLASS-RESOURCES.md for the recorded native evidence.
+            local count = math.floor(math.min(value, maximum, POINTS * UNITS_PER_POINT) / UNITS_PER_POINT)
+            return style, count
+        end
+        -- Native combo points are an additional, target-dependent resource.
+        -- Other classes use these only when the client actually exposes them;
+        -- no extra pool is inferred from their active mana, rage or energy.
+        local combo
+        if type(GetComboPoints) == "function" then
+            local success, count = pcall(GetComboPoints)
+            if success and IsNumber(count) and count <= POINTS and count == math.floor(count) then combo = count end
+        end
+        if combo and combo > 0 then return styles.ROGUE, combo end
+        if combo and class == "DRUID" and power == styles.ROGUE.power then return styles.ROGUE, combo end
     end
 
     local function Clear()
         row:Hide()
         displayedStyle, displayedCount = nil, nil
         for _, point in ipairs(points) do
+            point.empty:Hide()
             point.full:Hide()
         end
     end
 
     local function Update()
-        local style, count = ReadResource()
+        local value, maximum, power, class = ReadPrimary()
+        if DFRL.playerResources then DFRL.playerResources.SetPrimary(value, maximum, power) end
+        if value == nil then
+            if displayedStyle then Clear() end
+            return
+        end
+        local style, count = ReadSecondary(class, value, maximum, power)
         if not style then
             if displayedStyle then Clear() end
             return
@@ -127,6 +144,7 @@ DFRL:NewMod("Class resources", 2, function()
                     texture:SetWidth(style.width)
                     texture:SetHeight(style.height)
                 end
+                point.empty:Show()
             end
         end
         if style ~= displayedStyle or count ~= displayedCount then
@@ -156,11 +174,16 @@ DFRL:NewMod("Class resources", 2, function()
         "PLAYER_LEAVING_WORLD",
         "PLAYER_LOGOUT",
         "UNIT_MANA",
+        "UNIT_RAGE",
+        "UNIT_FOCUS",
         "UNIT_ENERGY",
         "UNIT_MAXMANA",
+        "UNIT_MAXRAGE",
+        "UNIT_MAXFOCUS",
         "UNIT_MAXENERGY",
         "UNIT_DISPLAYPOWER",
-        "CHAT_MSG_ADDON",
+        "PLAYER_TARGET_CHANGED",
+        "PLAYER_COMBO_POINTS",
     }) do
         controller:RegisterEvent(name)
     end
@@ -170,15 +193,15 @@ DFRL:NewMod("Class resources", 2, function()
             Update()
         elseif event == "PLAYER_LEAVING_WORLD" or event == "PLAYER_LOGOUT" then
             inWorld = false
+            if DFRL.playerResources then DFRL.playerResources.SetPrimary() end
             Clear()
-        elseif event == "CHAT_MSG_ADDON" then
-            if arg1 == "AZSZONE" or arg1 == "AZSRUN" then Update() end
+        elseif event == "PLAYER_TARGET_CHANGED" or event == "PLAYER_COMBO_POINTS" then
+            Update()
         elseif arg1 == "player" then
             Update()
         end
     end)
 
     DFRL.display.Listen(Update)
-    DFRL.layout.Register("classResources", row, PlaceDefault)
     Update()
 end)

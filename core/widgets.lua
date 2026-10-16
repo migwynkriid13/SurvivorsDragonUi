@@ -61,9 +61,9 @@ DFRL.tools.LargeHealthFill = {
     texCoords = { 4.5 / 128, 123.5 / 128, 5 / 32, 25 / 32 },
 }
 
--- Reuse the original 256x128 portrait sheet, omitting its internal power-bar
--- divider. Both large unit frames share one health fill across the full opening.
-function DFRL.tools.CreateHealthOnlyUnitBorder(frame, healthBar, portraitTexture, background, texturePath, portraitSide)
+-- Reuse the original 256x128 portrait sheet. The full health opening remains
+-- the default; the player can restore its original health/power divider.
+function DFRL.tools.CreateUnitBorder(frame, healthBar, portraitTexture, background, texturePath, portraitSide)
     local mirrored = portraitSide == "LEFT"
     local healthFill = DFRL.tools.LargeHealthFill
     -- Keep the original shading, cropping off the texture's transparent padding.
@@ -133,12 +133,32 @@ function DFRL.tools.CreateHealthOnlyUnitBorder(frame, healthBar, portraitTexture
             strip:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -(256 - x - width), -y)
         end
         table.insert(strips, strip)
+        return strip
     end
     -- Retain top/bottom artwork and the outer end cap. The former horizontal
     -- divider lies in the omitted interior (x30..152, y34..63).
     AddStrip(0, 0, 152, 34)
     AddStrip(0, 63, 152, 65)
     AddStrip(0, 34, 30, 29)
+
+    local powerInterior
+    if mirrored then
+        powerInterior = AddStrip(30, 34, 122, 29)
+        powerInterior:Hide()
+    end
+
+    local powerShown = false
+    local function SetPowerShown(shown)
+        if not powerInterior or shown == powerShown then return end
+        powerShown = shown
+        if shown then
+            healthBar:SetHeight(19)
+            powerInterior:Show()
+        else
+            healthBar:SetHeight(29)
+            powerInterior:Hide()
+        end
+    end
 
     local function UpdateTexture(path)
         portraitTexture:SetTexture(path)
@@ -147,5 +167,5 @@ function DFRL.tools.CreateHealthOnlyUnitBorder(frame, healthBar, portraitTexture
         end
     end
     UpdateTexture(texturePath)
-    return UpdateTexture
+    return UpdateTexture, SetPowerShown
 end

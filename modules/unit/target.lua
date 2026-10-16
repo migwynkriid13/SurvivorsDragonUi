@@ -23,7 +23,7 @@ DFRL:NewMod("Target", 1, function()
     local setHealthColor = TargetFrameHealthBar.SetStatusBarColor
     TargetFrameHealthBar.SetStatusBarColor = function(bar) setHealthColor(bar, 1, 0, 0) end
     TargetFrameHealthBar:SetStatusBarColor(1, 0, 0)
-    local UpdateBorderTexture = T.CreateHealthOnlyUnitBorder(
+    local UpdateBorderTexture = T.CreateUnitBorder(
         TargetFrame,
         TargetFrameHealthBar,
         TargetFrameTexture,

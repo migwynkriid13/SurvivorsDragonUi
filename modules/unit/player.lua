@@ -4,7 +4,38 @@ DFRL:NewMod("Player", 1, function()
     local tex = DFRL:GetInfoOrCons("tex") .. "unitframes\\"
     local font = "DEFAULT"
     local healthText
+    local primaryBar, primaryText, setPowerShown
     local initialized = false
+
+    DFRL.playerResources = DFRL.playerResources or {}
+    DFRL.playerResources.SetPrimary = function(value, maximum, powerType)
+        if not primaryBar then return end
+        if
+            type(value) ~= "number"
+            or value < 0
+            or value - value ~= 0
+            or type(maximum) ~= "number"
+            or maximum <= 0
+            or maximum - maximum ~= 0
+            or type(powerType) ~= "number"
+        then
+            primaryBar:Hide()
+            primaryText:SetText("")
+            setPowerShown(false)
+            return
+        end
+        local color = type(ManaBarColor) == "table" and ManaBarColor[powerType]
+        if type(color) == "table" then
+            primaryBar:SetStatusBarColor(color.r, color.g, color.b)
+        else
+            primaryBar:SetStatusBarColor(1, 1, 1)
+        end
+        primaryBar:SetMinMaxValues(0, maximum)
+        primaryBar:SetValue(value)
+        primaryText:SetText(value)
+        setPowerShown(true)
+        primaryBar:Show()
+    end
 
     local function CreateValueText(bar, size, y)
         local frame = CreateFrame("Frame", nil, PlayerFrame)
@@ -116,7 +147,8 @@ DFRL:NewMod("Player", 1, function()
         initialized = true
         PlayerFrame:SetScale(1)
         PlayerFrame:Show()
-        T.CreateHealthOnlyUnitBorder(
+        local _
+        _, setPowerShown = T.CreateUnitBorder(
             PlayerFrame,
             PlayerFrameHealthBar,
             PlayerFrameTexture,
@@ -125,6 +157,23 @@ DFRL:NewMod("Player", 1, function()
             "LEFT"
         )
         HidePowerBar()
+        primaryBar = CreateFrame("StatusBar", nil, PlayerFrame)
+        primaryBar:SetWidth(122)
+        primaryBar:SetHeight(9)
+        primaryBar:SetPoint("TOPLEFT", PlayerFrame, "TOPLEFT", 104, -54)
+        primaryBar:SetFrameLevel(PlayerFrameHealthBar:GetFrameLevel())
+        primaryBar:SetStatusBarTexture(tex .. "UI-HUD-UnitFrame-Player-PortraitOn-Bar-Mana-Status.tga")
+        primaryBar:SetMinMaxValues(0, 1)
+        primaryBar:SetValue(0)
+        local primaryBackground = primaryBar:CreateTexture(nil, "BACKGROUND")
+        primaryBackground:SetAllPoints(primaryBar)
+        primaryBackground:SetTexture("Interface\\Buttons\\WHITE8X8")
+        primaryBackground:SetVertexColor(0, 0, 0, 0.6)
+        primaryText = primaryBar:CreateFontString(nil, "OVERLAY")
+        primaryText:SetFont(font, 8, "OUTLINE")
+        primaryText:SetTextColor(1, 1, 1)
+        primaryText:SetPoint("CENTER", primaryBar, "CENTER", 0, 0)
+        primaryBar:Hide()
         if PlayerFrameHealthBarText then PlayerFrameHealthBarText:SetAlpha(0) end
         healthText = CreateValueText(PlayerFrameHealthBar, 10, 0)
         if PlayerFrame.portrait then
