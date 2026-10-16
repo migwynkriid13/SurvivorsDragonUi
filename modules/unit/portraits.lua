@@ -2,9 +2,7 @@ DFRL:NewMod("AnimatedPortraits", 2, function()
     local entries = {}
     local inWorld = UnitExists("player") and true or false
 
-    local function RestoreStill(entry)
-        entry.portrait:SetAlpha(entry.stillAlpha)
-    end
+    local function RestoreStill(entry) entry.portrait:SetAlpha(entry.stillAlpha) end
 
     local function DropCopy(entry)
         entry.bound = false
