@@ -568,13 +568,8 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         if not iconTooltip then
             iconTooltipParent = CreateFrame("Frame", nil, UIParent)
             iconTooltipParent:Hide()
-            local ok, tooltip = pcall(
-                CreateFrame,
-                "GameTooltip",
-                "DFRL_CombatIconTooltip",
-                iconTooltipParent,
-                "GameTooltipTemplate"
-            )
+            local ok, tooltip =
+                pcall(CreateFrame, "GameTooltip", "DFRL_CombatIconTooltip", iconTooltipParent, "GameTooltipTemplate")
             if
                 not ok
                 or not tooltip
