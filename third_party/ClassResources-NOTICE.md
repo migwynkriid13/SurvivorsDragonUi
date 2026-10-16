@@ -10,10 +10,10 @@ Coordinate reference: [`Modules/Unitframe/Target.mixin.lua`](https://github.com/
 
 The original 128-by-128 raw BGRA BLP2 is converted to `media/tex/resources/ComboPoints.tga`, an uncompressed 32-bit RGBA TGA preserving its pixels and alpha. The selected socket and red-orb regions use the original 20-by-20 pixel bounds; UVs below use exact pixel fractions instead of rounded decimal fractions.
 
-| State | Pixel bounds, left/top/right/bottom | UV left/right/top/bottom |
-| --- | --- | --- |
-| Empty socket | `29,66,49,86` | `29/128,49/128,66/128,86/128` |
-| Red orb | `29,44,49,64` | `29/128,49/128,44/128,64/128` |
+| State        | Pixel bounds, left/top/right/bottom | UV left/right/top/bottom      |
+| ------------ | ----------------------------------- | ----------------------------- |
+| Empty socket | `29,66,49,86`                       | `29/128,49/128,66/128,86/128` |
+| Red orb      | `29,44,49,64`                       | `29/128,49/128,44/128,64/128` |
 
 ## Soul shards
 
@@ -25,10 +25,10 @@ The [mirrored Blizzard `ShardBar.xml`](https://github.com/Gethe/wow-ui-source/bl
 
 The original 256-by-64 RGBA PNG is converted to `media/tex/resources/SoulShards.tga`, an uncompressed 32-bit RGBA TGA preserving its pixels and alpha. Each selected region is 17 by 22 pixels.
 
-| Native atlas name | Pixel bounds, left/top/right/bottom | UV left/right/top/bottom |
-| --- | --- | --- |
-| `Warlock-EmptyShard` | `1,38,18,60` | `1/256,18/256,38/64,60/64` |
-| `Warlock-ReadyShard` | `23,25,40,47` | `23/256,40/256,25/64,47/64` |
+| Native atlas name    | Pixel bounds, left/top/right/bottom | UV left/right/top/bottom    |
+| -------------------- | ----------------------------------- | --------------------------- |
+| `Warlock-EmptyShard` | `1,38,18,60`                        | `1/256,18/256,38/64,60/64`  |
+| `Warlock-ReadyShard` | `23,25,40,47`                       | `23/256,40/256,25/64,47/64` |
 
 ## Upstream MIT notice
 
