@@ -482,16 +482,196 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         return WorldFrame:GetWidth() * 0.5, WorldFrame:GetHeight() * 0.58, nil
     end
 
+    local learnedSpellTextures = {}
+    local iconSourcesDirty = { talents = true, debuffs = true, target = true, mouseover = true }
+    local iconScanAt, iconSnapshotReceivedAt
+    local iconTooltip, iconTooltipParent
+    local ICON_SCAN_INTERVAL = 0.35
+    local ICON_DEBUFF_LIMIT = 16
+
+    local function TextureKey(texture)
+        if type(texture) ~= "string" or texture == "" then return nil end
+        local key = string.lower(string.gsub(texture, "/", "\\"))
+        key = string.gsub(key, "%.blp$", "")
+        key = string.gsub(key, "%.tga$", "")
+        if key == string.lower(FALLBACK_ICON) then return nil end
+        return key
+    end
+
+    local function LearnSpellTexture(name, texture)
+        local key = TextureKey(texture)
+        if type(name) ~= "string" or name == "" or not key then return end
+        local previous = learnedSpellTextures[name]
+        -- The 1.12 combat message supplies a localized name, not a spell id.
+        -- Conflicting observed icons cannot be disambiguated from that name.
+        if previous == false then return end
+        if previous and TextureKey(previous) ~= key then
+            learnedSpellTextures[name] = false
+        else
+            learnedSpellTextures[name] = texture
+        end
+    end
+
+    local function ResetLearnedSpellTextures()
+        learnedSpellTextures = {}
+        iconSourcesDirty = { talents = true, debuffs = true, target = true, mouseover = true }
+        iconScanAt, iconSnapshotReceivedAt = nil, nil
+        if iconTooltip then iconTooltip:Hide() end
+    end
+
+    local function LearnTalentTextures()
+        if
+            type(_G.GetNumTalentTabs) ~= "function"
+            or type(_G.GetNumTalents) ~= "function"
+            or type(_G.GetTalentInfo) ~= "function"
+        then
+            return
+        end
+        for tab = 1, _G.GetNumTalentTabs() or 0 do
+            for index = 1, _G.GetNumTalents(tab) or 0 do
+                local name, texture, _, _, rank = _G.GetTalentInfo(tab, index)
+                if type(rank) == "number" and rank > 0 then LearnSpellTexture(name, texture) end
+            end
+        end
+    end
+
+    local function LearnNativeDebuffTextures()
+        if type(_G.AZS_GetPhase) ~= "function" then return end
+        local ok, phase = pcall(_G.AZS_GetPhase)
+        -- Read phase before retained native tables, including after reload.
+        if
+            not ok
+            or (
+                phase ~= "playing"
+                and phase ~= "choosing"
+                and phase ~= "paused"
+                and phase ~= "dead"
+                and phase ~= "victory"
+            )
+        then
+            return
+        end
+        local stamp = _G.AZS_DEBUFFS_UPDATED
+        if not IsFiniteNumber(stamp) or stamp < 0 then return end
+        local entries = _G.AZS_DEBUFFS
+        if type(entries) ~= "table" then return end
+        -- This official snapshot includes untargeted bosses and guardians.
+        -- Copy only display metadata, independently of encounter HUD settings.
+        for _, entry in pairs(entries) do
+            if type(entry) == "table" then LearnSpellTexture(entry.name, entry.icon) end
+        end
+        return true
+    end
+
+    local function GetIconTooltip()
+        if iconTooltip == false then return nil end
+        if not iconTooltip then
+            iconTooltipParent = CreateFrame("Frame", nil, UIParent)
+            iconTooltipParent:Hide()
+            local ok, tooltip = pcall(
+                CreateFrame,
+                "GameTooltip",
+                "DFRL_CombatIconTooltip",
+                iconTooltipParent,
+                "GameTooltipTemplate"
+            )
+            if
+                not ok
+                or not tooltip
+                or type(tooltip.SetOwner) ~= "function"
+                or type(tooltip.SetUnitDebuff) ~= "function"
+                or type(tooltip.ClearLines) ~= "function"
+            then
+                if ok and tooltip then tooltip:Hide() end
+                iconTooltip = false
+                return nil
+            end
+            -- Native tooltip builders may Show and reset alpha. The hidden
+            -- parent keeps this private scanner out of the visible tooltip UI.
+            iconTooltip = tooltip
+            iconTooltip:EnableMouse(false)
+        end
+        return iconTooltip
+    end
+
+    local function LearnUnitDebuffTextures(unit)
+        if type(_G.UnitDebuff) ~= "function" or type(_G.UnitExists) ~= "function" or not _G.UnitExists(unit) then
+            return
+        end
+        local tooltip = GetIconTooltip()
+        if not tooltip then return end
+        for index = 1, ICON_DEBUFF_LIMIT do
+            local ok, texture = pcall(_G.UnitDebuff, unit, index)
+            if not ok or not texture then break end
+            if TextureKey(texture) then
+                -- Hide clears native ownership and lines: re-own for each slot
+                -- and read the title before hiding, never from GameTooltip.
+                tooltip:SetOwner(iconTooltipParent, "ANCHOR_NONE")
+                tooltip:ClearLines()
+                local shown = pcall(tooltip.SetUnitDebuff, tooltip, unit, index)
+                local title = _G.DFRL_CombatIconTooltipTextLeft1
+                if shown and title and type(title.GetText) == "function" then
+                    LearnSpellTexture(title:GetText(), texture)
+                end
+                tooltip:Hide()
+            end
+        end
+    end
+
+    local function RefreshLearnedSpellTextures()
+        if
+            not inWorld
+            or not (
+                iconSourcesDirty.talents
+                or iconSourcesDirty.debuffs
+                or iconSourcesDirty.target
+                or iconSourcesDirty.mouseover
+            )
+        then
+            return
+        end
+        local now = GetTime()
+        -- Native prefix parsing may follow CHAT_MSG_ADDON. Do not consume that
+        -- dirty snapshot in the same UI-time sample, or scan once per AoE hit.
+        if iconSnapshotReceivedAt == now or (iconScanAt and now - iconScanAt < ICON_SCAN_INTERVAL) then return end
+        iconScanAt = now
+        if iconSourcesDirty.talents then
+            iconSourcesDirty.talents = false
+            LearnTalentTextures()
+        end
+        if iconSourcesDirty.debuffs then
+            -- Keep pending when phase/data is not ready. Snapshot timestamps
+            -- are UI time, so distinct received updates may share one value.
+            iconSourcesDirty.debuffs = not LearnNativeDebuffTextures()
+        end
+        if iconSourcesDirty.target then
+            iconSourcesDirty.target = false
+            LearnUnitDebuffTextures("target")
+        end
+        if iconSourcesDirty.mouseover then
+            iconSourcesDirty.mouseover = false
+            LearnUnitDebuffTextures("mouseover")
+        end
+    end
+
     local function RebuildSpellTextures(keepMisses)
         spellTextures = {}
         if not keepMisses then missingSpellTextures = {} end
+        if
+            type(_G.GetNumSpellTabs) ~= "function"
+            or type(_G.GetSpellTabInfo) ~= "function"
+            or type(_G.GetSpellName) ~= "function"
+            or type(_G.GetSpellTexture) ~= "function"
+        then
+            return
+        end
         local book = BOOKTYPE_SPELL or "spell"
         for tab = 1, GetNumSpellTabs() or 0 do
             local _, _, offset, count = GetSpellTabInfo(tab)
             for index = (offset or 0) + 1, (offset or 0) + (count or 0) do
                 local name = GetSpellName(index, book)
                 local texture = GetSpellTexture(index, book)
-                if name and texture then spellTextures[name] = texture end
+                if name and TextureKey(texture) then spellTextures[name] = texture end
             end
         end
     end
@@ -503,6 +683,10 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                 RebuildSpellTextures(true)
                 texture = spellTextures[info.spell]
                 missingSpellTextures[info.spell] = not texture
+            end
+            if not texture then
+                RefreshLearnedSpellTextures()
+                texture = learnedSpellTextures[info.spell]
             end
             return texture or FALLBACK_ICON
         end
@@ -725,7 +909,15 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local function HandleCombatEvent(eventName, message)
         if not inWorld or not CustomEnabled() then return end
         local info = ParseCombatEvent(eventName, message)
-        if not info or info.kind == "aura" or not info.targetName or info.targetName == "" then return end
+        if not info then return end
+        if info.kind == "aura" then
+            -- Mouseover has no UNIT_AURA fan-out in the native 1.12 client.
+            -- An application notice only dirties metadata observations; the
+            -- scanner still reads actual unit tokens and never assigns hits.
+            iconSourcesDirty.target, iconSourcesDirty.mouseover = true, true
+            return
+        end
+        if not info.targetName or info.targetName == "" then return end
         local now = GetTime()
         -- Catch newly allocated plates before a lethal hit can retire them.
         -- Known plates already sample on show/health changes and every frame;
@@ -913,10 +1105,16 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     frame:RegisterEvent("PLAYER_LOGOUT")
     frame:RegisterEvent("PLAYER_TARGET_CHANGED")
     frame:RegisterEvent("SPELLS_CHANGED")
+    frame:RegisterEvent("CHARACTER_POINTS_CHANGED")
+    frame:RegisterEvent("UNIT_AURA")
+    frame:RegisterEvent("UPDATE_MOUSEOVER_UNIT")
+    frame:RegisterEvent("CHAT_MSG_ADDON")
     frame:RegisterEvent("CVAR_UPDATE")
     frame:SetScript("OnEvent", function()
         if event == "PLAYER_ENTERING_WORLD" then
             inWorld = true
+            iconSourcesDirty.talents, iconSourcesDirty.debuffs = true, true
+            iconSourcesDirty.target, iconSourcesDirty.mouseover = true, true
             enemyPlatesEnabled = _G.NAMEPLATES_ON and true or false
             SyncGameSettings(true)
         elseif event == "PLAYER_LEAVING_WORLD" or event == "PLAYER_LOGOUT" then
@@ -927,10 +1125,26 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             end
             ApplyPlateTracking(true)
             ResetDisplay()
+            ResetLearnedSpellTextures()
         elseif event == "SPELLS_CHANGED" then
+            iconSourcesDirty.talents = true
             if CustomEnabled() and damageIcons then RebuildSpellTextures() end
+        elseif event == "CHARACTER_POINTS_CHANGED" then
+            iconSourcesDirty.talents = true
         elseif event == "PLAYER_TARGET_CHANGED" then
+            iconSourcesDirty.target = true
             ScanPlates(true)
+        elseif event == "UPDATE_MOUSEOVER_UNIT" then
+            iconSourcesDirty.mouseover = true
+        elseif event == "UNIT_AURA" then
+            if arg1 == "target" or arg1 == "mouseover" then iconSourcesDirty[arg1] = true end
+        elseif event == "CHAT_MSG_ADDON" then
+            if arg1 == "AZSDEBUFFS" then
+                iconSourcesDirty.debuffs = true
+                iconSnapshotReceivedAt = GetTime()
+            elseif arg1 == "AZSZONE" then
+                iconSourcesDirty.debuffs = true
+            end
         elseif event == "CVAR_UPDATE" then
             SyncGameSettings(false)
         else
