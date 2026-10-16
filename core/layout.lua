@@ -75,13 +75,7 @@ DFRL:NewMod("Layout", 0, function()
         if frame:GetNumPoints() == 1 then
             point, relative, relativePoint, oldX, oldY = frame:GetPoint(1)
         end
-        if
-            point ~= "TOPLEFT"
-            or relative ~= UIParent
-            or relativePoint ~= "TOPLEFT"
-            or oldX ~= x
-            or oldY ~= y
-        then
+        if point ~= "TOPLEFT" or relative ~= UIParent or relativePoint ~= "TOPLEFT" or oldX ~= x or oldY ~= y then
             frame:ClearAllPoints()
             frame:SetPoint("TOPLEFT", UIParent, "TOPLEFT", x, y)
         end

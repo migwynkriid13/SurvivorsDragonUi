@@ -65,18 +65,24 @@ DFRL:NewMod("Chat", 1, function()
         end
         local function SetChatFont(frame)
             local font, size, flags
-            if frame.GetFont then font, size, flags = frame:GetFont() end
+            if frame.GetFont then
+                font, size, flags = frame:GetFont()
+            end
             if font ~= "DEFAULT" or size ~= 12 or flags ~= "OUTLINE" then frame:SetFont("DEFAULT", 12, "OUTLINE") end
         end
         local function SetChatShadow(frame)
             if frame.SetShadowColor then
                 local r, g, b, a
-                if frame.GetShadowColor then r, g, b, a = frame:GetShadowColor() end
+                if frame.GetShadowColor then
+                    r, g, b, a = frame:GetShadowColor()
+                end
                 if r ~= 0 or g ~= 0 or b ~= 0 or a ~= 1 then frame:SetShadowColor(0, 0, 0, 1) end
             end
             if frame.SetShadowOffset then
                 local x, y
-                if frame.GetShadowOffset then x, y = frame:GetShadowOffset() end
+                if frame.GetShadowOffset then
+                    x, y = frame:GetShadowOffset()
+                end
                 if x ~= 1 or y ~= -1 then frame:SetShadowOffset(1, -1) end
             end
         end
@@ -277,7 +283,9 @@ DFRL:NewMod("Chat", 1, function()
             end
             local left = (header and header:GetStringWidth() or 0) + 12
             local currentLeft, right, top, bottom
-            if input.GetTextInsets then currentLeft, right, top, bottom = input:GetTextInsets() end
+            if input.GetTextInsets then
+                currentLeft, right, top, bottom = input:GetTextInsets()
+            end
             if currentLeft ~= left or right ~= 8 or top ~= 6 or bottom ~= 6 then input:SetTextInsets(left, 8, 6, 6) end
         end
 
