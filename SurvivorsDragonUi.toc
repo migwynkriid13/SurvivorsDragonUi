@@ -32,6 +32,7 @@ modules\micro\micro.lua
 modules\ui\ui.lua
 modules\ui\run.lua
 modules\unit\player.lua
+modules\unit\portraits.lua
 modules\unit\resources.lua
 modules\unit\auras.lua
 modules\unit\target.lua
