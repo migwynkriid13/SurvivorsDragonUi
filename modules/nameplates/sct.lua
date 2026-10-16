@@ -200,27 +200,38 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         return IsEnemyPlate(data)
     end
 
-    local function SamplePosition(plate, origin, now)
+    local function SampleWorldGeometry(geometry)
+        geometry = geometry or {}
+        if geometry.valid then return geometry end
+        geometry.scale = WorldFrame:GetEffectiveScale() or 1
+        geometry.left, geometry.bottom = WorldFrame:GetLeft() or 0, WorldFrame:GetBottom() or 0
+        geometry.width, geometry.height = WorldFrame:GetWidth(), WorldFrame:GetHeight()
+        geometry.valid = IsFiniteNumber(geometry.scale)
+            and geometry.scale > 0
+            and IsFiniteNumber(geometry.left)
+            and IsFiniteNumber(geometry.bottom)
+            and IsFiniteNumber(geometry.width)
+            and IsFiniteNumber(geometry.height)
+            and geometry.width > 0
+            and geometry.height > 0
+        return geometry
+    end
+
+    local function SamplePosition(plate, origin, now, geometry)
         local x, y = plate:GetCenter()
         if not IsFiniteNumber(x) or not IsFiniteNumber(y) then return end
-        local rootScale = WorldFrame:GetEffectiveScale() or 1
-        local plateScale = plate:GetEffectiveScale() or rootScale
-        if not IsFiniteNumber(rootScale) or rootScale <= 0 or not IsFiniteNumber(plateScale) or plateScale <= 0 then
-            return
-        end
-        local ratio = plateScale / rootScale
-        local left, bottom = WorldFrame:GetLeft() or 0, WorldFrame:GetBottom() or 0
-        x, y = x * ratio - left, y * ratio - bottom
-        local width, height = WorldFrame:GetWidth(), WorldFrame:GetHeight()
+        geometry = SampleWorldGeometry(geometry)
+        if not geometry.valid then return end
+        local plateScale = plate:GetEffectiveScale() or geometry.scale
+        if not IsFiniteNumber(plateScale) or plateScale <= 0 then return end
+        local ratio = plateScale / geometry.scale
+        x, y = x * ratio - geometry.left, y * ratio - geometry.bottom
+        local width, height = geometry.width, geometry.height
         local halfWidth = (plate:GetWidth() or 0) * ratio * 0.5
         local halfHeight = (plate:GetHeight() or 0) * ratio * 0.5
         if
             not IsFiniteNumber(x)
             or not IsFiniteNumber(y)
-            or not IsFiniteNumber(width)
-            or not IsFiniteNumber(height)
-            or width <= 0
-            or height <= 0
             or not IsFiniteNumber(halfWidth)
             or not IsFiniteNumber(halfHeight)
             or halfWidth < 0
@@ -237,7 +248,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         local top = plate.GetTop and plate:GetTop()
         if top then
             if not IsFiniteNumber(top) then return end
-            y = top * ratio - bottom
+            y = top * ratio - geometry.bottom
         end
         if not IsFiniteNumber(y) then return end
         -- Keep the previous usable point when projection is unavailable. It
@@ -283,7 +294,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         data.origin = nil
     end
 
-    local function RefreshPlate(plate, data, now, forcePresentation)
+    local function RefreshPlate(plate, data, now, forcePresentation, geometry)
         UpdatePresentation(plate, data, forcePresentation)
         -- Hidden tracking still samples native data, but its skin has no pixels
         -- to refresh. Unmasking updates the skin in this same callback.
@@ -310,11 +321,11 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             table.insert(origins, origin)
         end
         origin.lastSeen = now
-        SamplePosition(plate, origin, now)
+        SamplePosition(plate, origin, now, geometry)
         SampleHealth(data, origin, now)
     end
 
-    local function DiscoverPlate(plate, now)
+    local function DiscoverPlate(plate, now, geometry)
         if not plate or not plate.GetRegions or plates[plate] then return end
         local border, glow, name, level, skull, raid = plate:GetRegions()
         local regions = { border, glow, name, level, skull, raid }
@@ -367,17 +378,18 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             RefreshPlate(plate, data, GetTime(), true)
         end)
         HookScript(bar, "OnValueChanged", function() RefreshPlate(plate, data, GetTime()) end)
-        RefreshPlate(plate, data, now)
+        RefreshPlate(plate, data, now, nil, geometry)
     end
 
-    local function DiscoverPlates(force, now)
+    local function DiscoverPlates(force, now, geometry)
         local count = WorldFrame:GetNumChildren() or 0
         if count < discoveredChildren then discoveredChildren = 0 end
         if force or count > discoveredChildren then
+            geometry = geometry or {}
             local children = { WorldFrame:GetChildren() }
             local first = force and 1 or discoveredChildren + 1
             for index = first, count do
-                DiscoverPlate(children[index], now)
+                DiscoverPlate(children[index], now, geometry)
             end
             discoveredChildren = count
         end
@@ -386,11 +398,15 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local function ScanPlates(force)
         if not inWorld or not WorldFrame then return end
         local now = GetTime()
-        DiscoverPlates(force, now)
+        -- Share root geometry only inside this synchronous pass. Show/health
+        -- callbacks keep sampling afresh, including later in the same frame.
+        -- Retry invalid geometry and retain each origin's last usable point.
+        local geometry = {}
+        DiscoverPlates(force, now, geometry)
         -- Snapshot on every frame, rather than every tenth of a second: a
         -- one-shot enemy can disappear between two of the old scans.
         for plate, data in pairs(plates) do
-            RefreshPlate(plate, data, now, force)
+            RefreshPlate(plate, data, now, force, geometry)
         end
         for index = table.getn(origins), 1, -1 do
             local origin = origins[index]
@@ -608,12 +624,17 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         text.label:Show()
         text.spell, text.damageType = info.spell, info.damageType
         UpdateIcon(text)
-        text.scale = text.sizeScale * (text.impact and 0.5 or 1)
-        text.visual:SetScale(text.scale)
+        local scale = text.sizeScale * (text.impact and 0.5 or 1)
+        if text.scale ~= scale then
+            text.scale = scale
+            text.visual:SetScale(scale)
+        end
         text.visual:Show()
-        text.alpha = 1
-        text.holder:SetAlpha(1)
-        text.holder:ClearAllPoints()
+        if text.alpha ~= 1 then
+            text.alpha = 1
+            text.holder:SetAlpha(1)
+        end
+        -- New holders have no anchor; ReleaseText cleared pooled holders.
         text.holder:SetPoint("CENTER", WorldFrame, "BOTTOMLEFT", x, y + 12)
         text.holder:Show()
         table.insert(activeTexts, text)
