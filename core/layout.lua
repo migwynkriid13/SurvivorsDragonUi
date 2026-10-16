@@ -7,6 +7,7 @@ DFRL:NewMod("Layout", 0, function()
     local editing, draft, confirm = false, nil, nil
     local labels = {
         playerFrame = "Player",
+        classResources = "Class resources",
         targetFrame = "Target",
         bossBars = "Boss health",
         runTimer = "Run timer",
@@ -16,6 +17,8 @@ DFRL:NewMod("Layout", 0, function()
         microMenu = "Micro menu",
         buffs = "Buffs",
         minimap = "Minimap",
+        cacheWaypoint = "Cache waypoint",
+        guardianWaypoint = "Guardian waypoint",
         menu = "Main menu",
         chat = "Chat",
         copyWindow = "Copy",

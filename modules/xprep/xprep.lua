@@ -1,11 +1,13 @@
 DFRL:NewMod("Xprep", 1, function()
     local texpath = "Interface\\AddOns\\SurvivorsDragonUi\\media\\tex\\xprep\\"
+    local defaults = { top = 49, height = 6, borderHeight = 12 }
+    DFRL.xpBarDefaults = defaults
     KillFrame(MainMenuBarPerformanceBarFrame)
     KillFrame(MainMenuExpBar)
     KillFrame(ReputationWatchBar)
 
     local bar = CreateFrame("StatusBar", "DFRL_XPBar", UIParent)
-    bar:SetHeight(6)
+    bar:SetHeight(defaults.height)
     bar:SetFrameStrata("LOW")
     bar:SetStatusBarTexture(texpath .. "main.tga")
     bar:SetStatusBarColor(0.85, 0.4, 0.85)
@@ -22,13 +24,13 @@ DFRL:NewMod("Xprep", 1, function()
     leftBorder:SetTexture(texpath .. "border_half.tga")
     leftBorder:SetPoint("LEFT", bar, "LEFT", 0, 0)
     leftBorder:SetPoint("RIGHT", bar, "CENTER", 0, 0)
-    leftBorder:SetHeight(12)
+    leftBorder:SetHeight(defaults.borderHeight)
 
     local rightBorder = bar:CreateTexture(nil, "OVERLAY")
     rightBorder:SetTexture(texpath .. "border_half.tga")
     rightBorder:SetPoint("LEFT", bar, "CENTER", 0, 0)
     rightBorder:SetPoint("RIGHT", bar, "RIGHT", 0, 0)
-    rightBorder:SetHeight(12)
+    rightBorder:SetHeight(defaults.borderHeight)
     rightBorder:SetTexCoord(1, 0, 0, 1)
 
     local attached = false
@@ -49,15 +51,16 @@ DFRL:NewMod("Xprep", 1, function()
         -- Keep the artwork width, while positioning XP independently of the
         -- action bar. Moving or hiding another group never moves this bar.
         bar:SetParent(UIParent)
-        bar:SetWidth(mainBar:GetWidth() + 12)
+        bar:SetWidth(mainBar:GetWidth() + 2 * DFRL.actionBarDefaults.sideInset)
         bar:SetFrameLevel(mainBar:GetFrameLevel() + 2)
         if not registered then
             local moveRegion = CreateFrame("Frame", nil, bar)
-            moveRegion:SetPoint("TOPLEFT", bar, "TOPLEFT", 0, 3)
-            moveRegion:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", 0, -3)
+            local borderInset = (defaults.borderHeight - defaults.height) / 2
+            moveRegion:SetPoint("TOPLEFT", bar, "TOPLEFT", 0, borderInset)
+            moveRegion:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", 0, -borderInset)
             DFRL.layout.Register("xpBar", bar, function()
                 bar:ClearAllPoints()
-                bar:SetPoint("TOP", UIParent, "BOTTOM", 0, 49)
+                bar:SetPoint("TOP", UIParent, "BOTTOM", 0, defaults.top)
             end, { region = moveRegion })
             registered = true
         else

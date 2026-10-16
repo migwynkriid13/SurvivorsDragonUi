@@ -27,11 +27,13 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local origins = {}
     local activeTexts = {}
     local textPool = {}
+    local textRoot
     local pending = {}
     local spellTextures = {}
     local missingSpellTextures = {}
     local recentDamage = {}
     local discoveredChildren = 0
+    local combatDiscoveryNeeded = true
     local arcDirection = 1
     local sctMode = _G.SurvivorsDragonUiSctMode
     if sctMode ~= "on" and sctMode ~= "off" and sctMode ~= "default" then sctMode = "default" end
@@ -107,13 +109,16 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             MaskFrame(frame, state, false)
         end
         if plateStyle then plateStyle.SetMasked(data, false) end
+        data.presentationMasked = false
     end
-    local function UpdatePresentation(plate, data)
+    local function UpdatePresentation(plate, data, force)
         local masked = trackingSupported
-            and inWorld
-            and CustomEnabled()
-            and not enemyPlatesEnabled
-            and IsEnemyPlate(data)
+                and inWorld
+                and CustomEnabled()
+                and not enemyPlatesEnabled
+                and IsEnemyPlate(data)
+            or false
+        if data.presentationMasked == masked and not force then return end
         if not masked then
             RestorePresentation(data)
             return
@@ -131,6 +136,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             end
         end
         Visit(plate)
+        data.presentationMasked = true
     end
     local function ApplyPlateTracking(force)
         local wanted = enemyPlatesEnabled or (trackingSupported and inWorld and CustomEnabled())
@@ -149,8 +155,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         end
     end
 
-    local function ReleaseText(index)
-        local text = table.remove(activeTexts, index)
+    local function ReleaseText(text)
         text.holder:Hide()
         text.visual:Hide()
         text.label:SetText("")
@@ -165,8 +170,10 @@ DFRL:NewMod("NameplateCombatText", 6, function()
 
     local function ResetDisplay()
         for index = table.getn(activeTexts), 1, -1 do
-            ReleaseText(index)
+            ReleaseText(activeTexts[index])
+            activeTexts[index] = nil
         end
+        table.setn(activeTexts, 0)
         pending = {}
         origins = {}
         recentDamage = {}
@@ -174,6 +181,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             data.origin = nil
         end
         discoveredChildren = 0
+        combatDiscoveryNeeded = true
     end
 
     local function IsShownEnemy(plate, data)
@@ -265,9 +273,11 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         data.origin = nil
     end
 
-    local function RefreshPlate(plate, data, now)
-        if plateStyle then plateStyle.Update(plate, data) end
-        UpdatePresentation(plate, data)
+    local function RefreshPlate(plate, data, now, forcePresentation)
+        UpdatePresentation(plate, data, forcePresentation)
+        -- Hidden tracking still samples native data, but its skin has no pixels
+        -- to refresh. Unmasking updates the skin in this same callback.
+        if plateStyle and not data.presentationMasked then plateStyle.Update(plate, data) end
         if not IsShownEnemy(plate, data) then
             RetirePlate(plate)
             return
@@ -343,15 +353,14 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         HookScript(plate, "OnHide", function() RetirePlate(plate) end)
         HookScript(plate, "OnShow", function()
             RetirePlate(plate)
-            RefreshPlate(plate, data, GetTime())
+            -- Revisit descendants on reuse, including children added while hidden.
+            RefreshPlate(plate, data, GetTime(), true)
         end)
         HookScript(bar, "OnValueChanged", function() RefreshPlate(plate, data, GetTime()) end)
         RefreshPlate(plate, data, now)
     end
 
-    local function ScanPlates(force)
-        if not inWorld or not WorldFrame then return end
-        local now = GetTime()
+    local function DiscoverPlates(force, now)
         local count = WorldFrame:GetNumChildren() or 0
         if count < discoveredChildren then discoveredChildren = 0 end
         if force or count > discoveredChildren then
@@ -362,10 +371,16 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             end
             discoveredChildren = count
         end
+    end
+
+    local function ScanPlates(force)
+        if not inWorld or not WorldFrame then return end
+        local now = GetTime()
+        DiscoverPlates(force, now)
         -- Snapshot on every frame, rather than every tenth of a second: a
         -- one-shot enemy can disappear between two of the old scans.
         for plate, data in pairs(plates) do
-            RefreshPlate(plate, data, now)
+            RefreshPlate(plate, data, now, force)
         end
         for index = table.getn(origins), 1, -1 do
             local origin = origins[index]
@@ -383,9 +398,9 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     end
 
     local function ResolveOrigin(info, now, allowFallback)
-        local candidates = {}
-        local losses = {}
-        local exact = {}
+        local candidateCount, lossCount, exactCount = 0, 0, 0
+        local candidateOrigin, lossOrigin, exactOrigin
+        local candidateX, candidateY, lossX, lossY = 0, 0, 0, 0
         for index = 1, table.getn(origins) do
             local origin = origins[index]
             if
@@ -396,29 +411,36 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                 and now - origin.positionAt <= RECENT_PLATE_TIME
                 and (origin.live or now - (origin.hiddenAt or origin.lastSeen) <= RECENT_PLATE_TIME)
             then
-                table.insert(candidates, origin)
+                candidateCount = candidateCount + 1
+                candidateOrigin = origin
+                candidateX, candidateY = candidateX + origin.x, candidateY + origin.y
                 if
                     info.kind == "damage"
                     and origin.lossAt
                     and now - origin.lossAt <= LOSS_TIME
                     and (origin.lossRemaining or 0) > 0
                 then
-                    table.insert(losses, origin)
+                    lossCount = lossCount + 1
+                    lossOrigin = origin
+                    lossX, lossY = lossX + origin.x, lossY + origin.y
                     if origin.absoluteHealth then
                         local remaining = origin.lossRemaining
                         local lethal = origin.health <= origin.minimum and info.amount >= remaining
-                        if math.abs(remaining - info.amount) < 0.5 or lethal then table.insert(exact, origin) end
+                        if math.abs(remaining - info.amount) < 0.5 or lethal then
+                            exactCount = exactCount + 1
+                            exactOrigin = origin
+                        end
                     end
                 end
             end
         end
         local origin
-        if table.getn(exact) == 1 then
-            origin = exact[1]
-        elseif table.getn(losses) == 1 then
-            origin = losses[1]
-        elseif table.getn(candidates) == 1 then
-            origin = candidates[1]
+        if exactCount == 1 then
+            origin = exactOrigin
+        elseif lossCount == 1 then
+            origin = lossOrigin
+        elseif candidateCount == 1 then
+            origin = candidateOrigin
         end
         if origin then
             UseLoss(origin, info)
@@ -429,16 +451,8 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         -- even when it cannot distinguish identical names or no plate was
         -- rendered before a lethal hit. A shared origin avoids claiming
         -- an arbitrary enemy is the exact destination.
-        local shared = table.getn(losses) > 0 and losses or candidates
-        local total = table.getn(shared)
-        if total > 0 then
-            local x, y = 0, 0
-            for index = 1, total do
-                x = x + shared[index].x
-                y = y + shared[index].y
-            end
-            return x / total, y / total, nil
-        end
+        if lossCount > 0 then return lossX / lossCount, lossY / lossCount, nil end
+        if candidateCount > 0 then return candidateX / candidateCount, candidateY / candidateCount, nil end
         return WorldFrame:GetWidth() * 0.5, WorldFrame:GetHeight() * 0.58, nil
     end
 
@@ -495,7 +509,16 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         -- The pool grows to peak concurrency; active entries are never evicted.
         local text = table.remove(textPool)
         if not text then
-            local holder = CreateFrame("Frame", nil, WorldFrame)
+            if not textRoot then
+                -- Native child-count queries copy the direct-child list. Keep
+                -- the growing hit pool out of the nameplate discovery roster.
+                textRoot = CreateFrame("Frame", nil, WorldFrame)
+                textRoot:SetAllPoints(WorldFrame)
+                textRoot:SetFrameStrata("HIGH")
+                textRoot:SetFrameLevel(WorldFrame:GetFrameLevel())
+                textRoot:EnableMouse(false)
+            end
+            local holder = CreateFrame("Frame", nil, textRoot)
             holder:Hide()
             holder:SetWidth(1)
             holder:SetHeight(1)
@@ -575,8 +598,10 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         text.label:Show()
         text.spell, text.damageType = info.spell, info.damageType
         UpdateIcon(text)
-        text.visual:SetScale(text.sizeScale * (text.impact and 0.5 or 1))
+        text.scale = text.sizeScale * (text.impact and 0.5 or 1)
+        text.visual:SetScale(text.scale)
         text.visual:Show()
+        text.alpha = 1
         text.holder:SetAlpha(1)
         text.holder:ClearAllPoints()
         text.holder:SetPoint("CENTER", WorldFrame, "BOTTOMLEFT", x, y + 12)
@@ -585,31 +610,44 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     end
 
     local function UpdatePending(now)
-        local index = 1
-        while index <= table.getn(pending) do
+        local count = table.getn(pending)
+        local kept = 0
+        for index = 1, count do
             local entry = pending[index]
             local age = now - entry.time
+            local displayed = false
             if age >= EVENT_SETTLE then
                 local x, y, origin = ResolveOrigin(entry.info, now, age >= EVENT_FALLBACK_DELAY)
                 if x and y then
                     DisplayDamage(entry.info, x, y, origin)
-                    table.remove(pending, index)
-                else
-                    index = index + 1
+                    displayed = true
                 end
-            else
-                index = index + 1
+            end
+            -- Preserve combat-message order without shifting the remaining
+            -- queue once per displayed hit during large damage bursts.
+            if not displayed then
+                kept = kept + 1
+                pending[kept] = entry
             end
         end
+        for index = kept + 1, count do
+            pending[index] = nil
+        end
+        -- Lua 5.0 insert/getn remembers a size independently of cleared slots.
+        table.setn(pending, kept)
     end
 
     local function UpdateTexts(now)
-        for index = table.getn(activeTexts), 1, -1 do
+        local count = table.getn(activeTexts)
+        local kept = 0
+        for index = 1, count do
             local text = activeTexts[index]
             local progress = (now - text.started) / TEXT_DURATION
             if progress >= 1 then
-                ReleaseText(index)
+                ReleaseText(text)
             else
+                kept = kept + 1
+                activeTexts[kept] = text
                 -- Smooth only the cosmetic follow point. Native model/stack
                 -- placement can jump as enemies arrive; matching keeps raw
                 -- coordinates, while each hit keeps its own age, arc and fade.
@@ -622,7 +660,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                 text.updatedAt = now
                 local x = text.x + text.arcX * progress
                 local y = text.y + 12 + text.launch * progress - text.gravity * progress * progress
-                text.holder:ClearAllPoints()
+                -- Replacing CENTER updates the existing anchor in place.
                 text.holder:SetPoint("CENTER", WorldFrame, "BOTTOMLEFT", x, y)
                 local scale = text.sizeScale
                 if text.impact and progress < 1 / 6 then
@@ -635,20 +673,36 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                 end
                 -- Only the inner visual scales: its world-space origin stays
                 -- fixed during crit pop, including after the mob has died.
-                text.visual:SetScale(scale)
+                if text.scale ~= scale then
+                    text.scale = scale
+                    text.visual:SetScale(scale)
+                end
                 local alpha = 1
                 if progress > 0.68 then alpha = (1 - progress) / 0.32 end
-                text.holder:SetAlpha(alpha)
+                if text.alpha ~= alpha then
+                    text.alpha = alpha
+                    text.holder:SetAlpha(alpha)
+                end
             end
         end
+        for index = kept + 1, count do
+            activeTexts[index] = nil
+        end
+        table.setn(activeTexts, kept)
     end
 
     local function HandleCombatEvent(eventName, message)
         if not inWorld or not CustomEnabled() then return end
-        ScanPlates(false)
         local info = ParseCombatEvent(eventName, message)
         if not info or info.kind == "aura" or not info.targetName or info.targetName == "" then return end
         local now = GetTime()
+        -- Catch newly allocated plates before a lethal hit can retire them.
+        -- Known plates already sample on show/health changes and every frame;
+        -- refreshing the entire pack for each combat message multiplies UI work.
+        if WorldFrame and combatDiscoveryNeeded then
+            combatDiscoveryNeeded = false
+            DiscoverPlates(false, now)
+        end
         -- Choose once in combat-message order, before plate-matching delays
         -- can reorder the display. An animating hit keeps its chosen color.
         info.color = DamageColor(info, now)
@@ -764,6 +818,10 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         -- native CVar setter emits CVAR_UPDATE. Observe both without writing.
         SyncGameSettings(false)
         ScanPlates(false)
+        -- Native plate allocation follows this update. The first accepted hit
+        -- in the next event batch must inspect that roster, even if GetTime
+        -- still has this update's value; later hits can share the discovery.
+        combatDiscoveryNeeded = true
         if not CustomEnabled() then return end
         local now = GetTime()
         UpdatePending(now)
