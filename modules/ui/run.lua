@@ -105,6 +105,14 @@ DFRL:NewMod("RunTimers", 5, function()
     end
 
     local run, runBar, runText, overlay = Pill("DFRL_RunTimerPill", "FillBlue")
+    local runGlow = runBar:CreateTexture(nil, "OVERLAY")
+    runGlow:SetTexture(path .. "FillWhite.tga")
+    runGlow:SetBlendMode("ADD")
+    runGlow:SetAllPoints(runBar)
+    runGlow:SetVertexColor(1, 0.2, 0.08)
+    runGlow:SetAlpha(0.4)
+    runGlow:Hide()
+    local glowShown = false
     local runFlows = {}
     local flowRed, flowUpdatedAt
     for index = 1, 2 do
@@ -118,6 +126,14 @@ DFRL:NewMod("RunTimers", 5, function()
     end
 
     local function SetRunAppearance(atLimit)
+        if glowShown ~= atLimit then
+            if atLimit then
+                runGlow:Show()
+            else
+                runGlow:Hide()
+            end
+            glowShown = atLimit
+        end
         if flowRed == atLimit then return end
         flowRed = atLimit
         runBar:SetStatusBarTexture(path .. (atLimit and "FillWhite" or "FillBlue") .. ".tga")
@@ -129,6 +145,10 @@ DFRL:NewMod("RunTimers", 5, function()
 
     local function HideRunFlow()
         flowUpdatedAt = nil
+        if glowShown then
+            runGlow:Hide()
+            glowShown = false
+        end
         for _, flow in ipairs(runFlows) do
             if flow.shown then
                 flow.texture:Hide()
