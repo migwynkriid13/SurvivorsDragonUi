@@ -24,6 +24,8 @@ license: game textures are copyright Blizzard Entertainment and included only
 for use with the game. No upstream Lua is imported.
 https://github.com/NeticSoul/DragonUI/blob/00197f223180323ea7297c0157edbd1a43d2f99f/LICENSE
 
+FloatingRail.tga is addon-owned artwork with its fade and gold baseline baked
+into RGBA pixels, avoiding client-specific SetGradientAlpha rendering.
 Detailed preparation: third_party/CacheWaypoints-ARTWORK.md.
 ]]
 DFRL:NewMod("Waypoints", 3, function()
@@ -82,42 +84,15 @@ DFRL:NewMod("Waypoints", 3, function()
     end
 
     local function FloatingRail(hud)
-        -- Fade the lower rail at both ends; leave the icon and label unenclosed.
-        for _, side in ipairs({ "LEFT", "RIGHT" }) do
-            local left = side == "LEFT"
-            local fill = hud:CreateTexture(nil, "BACKGROUND")
-            fill:SetTexture("Interface\\Buttons\\WHITE8X8")
-            fill:SetWidth(HUD_WIDTH / 2)
-            fill:SetHeight(18)
-            fill:SetPoint(left and "BOTTOMLEFT" or "BOTTOMRIGHT", hud, left and "BOTTOMLEFT" or "BOTTOMRIGHT", 0, 0)
-            fill:SetGradientAlpha(
-                "HORIZONTAL",
-                0.065,
-                0.125,
-                0.085,
-                left and 0 or 0.8,
-                0.065,
-                0.125,
-                0.085,
-                left and 0.8 or 0
-            )
-            local line = hud:CreateTexture(nil, "BORDER")
-            line:SetTexture("Interface\\Buttons\\WHITE8X8")
-            line:SetWidth(HUD_WIDTH / 2)
-            line:SetHeight(1)
-            line:SetPoint(left and "BOTTOMLEFT" or "BOTTOMRIGHT", hud, left and "BOTTOMLEFT" or "BOTTOMRIGHT", 0, 0)
-            line:SetGradientAlpha(
-                "HORIZONTAL",
-                0.73,
-                0.58,
-                0.34,
-                left and 0 or 0.35,
-                0.73,
-                0.58,
-                0.34,
-                left and 0.35 or 0
-            )
-        end
+        -- Encode the fade in texels; older clients flatten vertex gradients.
+        local rail = hud:CreateTexture(nil, "BACKGROUND")
+        rail:SetTexture(texturePath .. "FloatingRail.tga")
+        rail:SetWidth(HUD_WIDTH)
+        rail:SetHeight(18)
+        rail:SetTexCoord(0, 190 / 256, 0, 18 / 32)
+        rail:SetPoint("BOTTOMLEFT", hud, "BOTTOMLEFT", 0, 0)
+        rail:SetBlendMode("BLEND")
+        rail:SetVertexColor(1, 1, 1, 1)
     end
 
     local function RegisterHUD(tracker)
