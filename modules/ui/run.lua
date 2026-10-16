@@ -138,6 +138,10 @@ DFRL:NewMod("RunTimers", 5, function()
     end
 
     local function UpdateRunFlow(seconds, maximum)
+        if seconds == 0 then
+            HideRunFlow()
+            return
+        end
         -- UI time only moves decoration; native elapsed time owns the fill.
         -- Crop each pooled streak to that fill without texture wrapping or
         -- newer clipping APIs, beneath the separate metal border and skulls.
