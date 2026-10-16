@@ -24,8 +24,6 @@ license: game textures are copyright Blizzard Entertainment and included only
 for use with the game. No upstream Lua is imported.
 https://github.com/NeticSoul/DragonUI/blob/00197f223180323ea7297c0157edbd1a43d2f99f/LICENSE
 
-FloatingRail.tga is addon-owned artwork with its fade and gold baseline baked
-into RGBA pixels, avoiding client-specific SetGradientAlpha rendering.
 Detailed preparation: third_party/CacheWaypoints-ARTWORK.md.
 ]]
 DFRL:NewMod("Waypoints", 3, function()
@@ -84,15 +82,14 @@ DFRL:NewMod("Waypoints", 3, function()
     end
 
     local function FloatingRail(hud)
-        -- Encode the fade in texels; older clients flatten vertex gradients.
+        -- Keep only the thin gold stripe beneath the floating icon and text.
         local rail = hud:CreateTexture(nil, "BACKGROUND")
-        rail:SetTexture(texturePath .. "FloatingRail.tga")
+        rail:SetTexture("Interface\\Buttons\\WHITE8X8")
         rail:SetWidth(HUD_WIDTH)
-        rail:SetHeight(18)
-        rail:SetTexCoord(0, 190 / 256, 0, 18 / 32)
+        rail:SetHeight(1)
         rail:SetPoint("BOTTOMLEFT", hud, "BOTTOMLEFT", 0, 0)
         rail:SetBlendMode("BLEND")
-        rail:SetVertexColor(1, 1, 1, 1)
+        rail:SetVertexColor(186 / 255, 148 / 255, 87 / 255, 85 / 255)
     end
 
     local function RegisterHUD(tracker)

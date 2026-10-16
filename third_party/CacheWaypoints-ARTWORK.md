@@ -1,6 +1,6 @@
 # Cache and guardian waypoint artwork
 
-The icon files contain actual Blizzard World of Warcraft waypoint artwork. Cache/navigation textures were downloaded from the Gethe UI texture mirror on 2026-10-15. The guardian marker was extracted from the Dragonflight 10.2.7 client atlas through Wago's client-data service on the same date. They are not generated approximations. The separate floating-label rail is original addon-owned artwork, described below.
+The icon files contain actual Blizzard World of Warcraft waypoint artwork. Cache/navigation textures were downloaded from the Gethe UI texture mirror on 2026-10-15. The guardian marker was extracted from the Dragonflight 10.2.7 client atlas through Wago's client-data service on the same date. They are not generated approximations.
 
 Original artwork and World of Warcraft are copyright Blizzard Entertainment. The mirror provides access to the source files; this attribution does not assert a separate redistribution license.
 
@@ -65,7 +65,7 @@ Square sampling preserves each glyph's proportions inside its 32-by-32 HUD icon 
 
 ## Drawing recommendations
 
-- Floating waypoint guides default to 190 by 46, with no enclosing border. Draw the single `FloatingRail.tga` texture at 190 by 18 along the bottom, with `SetTexCoord(0, 190 / 256, 0, 18 / 32)`, ordinary `BLEND` and neutral vertex color. Its RGBA pixels contain the horizontal fade and fine muted-gold baseline; do not apply native vertex gradients. Existing timer artwork and its [WidgetStatusBar attribution](WidgetStatusBar-SOURCE.md) remain unchanged.
+- Floating waypoint guides default to 190 by 46 with transparent backgrounds and only a fine muted-gold stripe along the bottom. Draw the stripe at 190 by 1 using native `Interface\\Buttons\\WHITE8X8`, ordinary `BLEND` and `SetVertexColor(186 / 255, 148 / 255, 87 / 255, 85 / 255)`. Keep the stripe's bottom-left anchor at the HUD's bottom-left corner. Do not draw a dark fill, enclosing border or native vertex gradient. The previous `FloatingRail.tga` is removed from the source and runtime manifest. Existing timer artwork and its [WidgetStatusBar attribution](WidgetStatusBar-SOURCE.md) remain unchanged.
 - Cache HUD marker: draw `CachePouch.tga` in a 32-by-32 field with `SetTexCoord(0, 119 / 128, 0, 119 / 128)`. Keep the loot pouch upright.
 - Guardian HUD marker: draw `GuardianFloating.tga` in a 32-by-32 field with `SetTexCoord(0, 65 / 128, 0, 65 / 128)`. Keep the gold dragon and skull upright.
 - Place a left-aligned DEFAULT 13 destination title above DEFAULT 15 distance beside the icon, with outline and black shadow. Rotate the arrow in place to the right of the text.
@@ -75,11 +75,3 @@ Square sampling preserves each glyph's proportions inside its 32-by-32 HUD icon 
 - Addon texture paths use `Interface\\AddOns\\SurvivorsDragonUi\\media\\tex\\waypoint\\` with the filenames above.
 
 These assets provide artwork only. They do not add native waypoint APIs, enemy/cache coordinates, or world-to-screen projection capabilities to the 1.12 client.
-
-## Addon-owned floating rail
-
-`media/tex/waypoint/FloatingRail.tga` is original SurvivorsDragonUi artwork rather than an imported Blizzard texture. It is an uncompressed 32-bit RGBA TGA with a transparent 256-by-32 canvas. Its top-left 190-by-18 region supplies the complete rail at the default display size.
-
-The first 17 rows fade from transparent to alpha 221 over the first 18% of the width, hold that alpha through 82%, then fade to transparent. The fill interpolates from RGB `(17, 32, 23)` to `(23, 39, 28)` across the middle section. The final row is a continuous one-pixel gold baseline, RGB `(186, 148, 87)` at alpha 85. This preserves the selected floating-label design's broad dark center, open ends and thin baseline without enclosing its icon or text.
-
-The fade is baked into texture alpha to avoid depending on native `SetGradientAlpha` behavior. The [upstream renderer change a96977e](https://github.com/samwhosung/benilla/commit/a96977e7592a10b5e5d649294dfb77169fa86dd2) replaces a gradient-midpoint fallback with per-vertex gradient tinting. That older fallback is consistent with the flat background in the supplied game screenshot; the screenshot alone does not establish the installed client's source revision. This asset removes that gradient dependency. The updated rail has not been verified in the packaged game.
