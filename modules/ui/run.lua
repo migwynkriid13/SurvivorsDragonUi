@@ -125,12 +125,15 @@ DFRL:NewMod("RunTimers", 5, function()
     }
     local currentFont, fontDraft, fontEditor, fontSample, fontMenu
     local faceLabel, sizeLabel, outlineLabel, shadowLabel, visibilityLabel
-    local debuffsLabel, damageIconsLabel
+    local debuffsLabel, damageIconsLabel, classResourcesLabel
 
     local function UpdateDisplayLabels()
         if debuffsLabel then
             debuffsLabel:SetText(DFRL.display.Get("bossDebuffs") and "Boss debuffs: on" or "Boss debuffs: off")
             damageIconsLabel:SetText(DFRL.display.Get("damageIcons") and "Damage icons: on" or "Damage icons: off")
+            classResourcesLabel:SetText(
+                DFRL.display.Get("classResources") and "Class resources: on" or "Class resources: off"
+            )
         end
     end
 
@@ -256,12 +259,17 @@ DFRL:NewMod("RunTimers", 5, function()
         local defaultsWidth = TextWidth("Addon defaults") + 24
         local contentWidth = math.max(labelWidth + gap + dropdownWidth, outlineWidth + gap + shadowWidth)
         contentWidth = math.max(contentWidth, labelWidth + gap + 96, defaultsWidth, visibilityWidth)
-        contentWidth = math.max(contentWidth, TextWidth("Boss debuffs: off") + 24, TextWidth("Damage icons: off") + 24)
+        contentWidth = math.max(
+            contentWidth,
+            TextWidth("Boss debuffs: off") + 24,
+            TextWidth("Damage icons: off") + 24,
+            TextWidth("Class resources: off") + 24
+        )
         local width = contentWidth + padding * 2
         local inputX = padding + labelWidth + gap
         dropdownWidth = contentWidth - labelWidth - gap
 
-        fontEditor = T.CreateDFRLFrame(UIParent, width, 296)
+        fontEditor = T.CreateDFRLFrame(UIParent, width, 330)
         fontEditor:SetFrameStrata("TOOLTIP")
         fontEditor:SetFrameLevel(150)
         PlaceFontEditor()
@@ -353,12 +361,19 @@ DFRL:NewMod("RunTimers", 5, function()
             -222,
             function() DFRL.display.Set("damageIcons", not DFRL.display.Get("damageIcons")) end
         )
+        classResourcesLabel = FontEditorButton(
+            "",
+            contentWidth,
+            padding,
+            -256,
+            function() DFRL.display.Set("classResources", not DFRL.display.Get("classResources")) end
+        )
         UpdateDisplayLabels()
         FontEditorButton(
             "Addon defaults",
             defaultsWidth,
             (width - defaultsWidth) / 2,
-            -256,
+            -290,
             function() DFRL.layout.Reset() end
         )
     end

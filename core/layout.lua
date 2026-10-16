@@ -7,6 +7,7 @@ DFRL:NewMod("Layout", 0, function()
     local editing, draft, confirm = false, nil, nil
     local labels = {
         playerFrame = "Player",
+        classResources = "Class resources",
         targetFrame = "Target",
         bossBars = "Boss health",
         runTimer = "Run timer",
