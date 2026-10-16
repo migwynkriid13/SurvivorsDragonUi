@@ -5,9 +5,9 @@ DFRL:NewMod("Layout", 0, function()
     local ready, inWorld, needsRestore = false, true, false
     local activeDrag
     local editing, draft, confirm = false, nil, nil
+    local confirmAnchor
     local labels = {
         playerFrame = "Player",
-        classResources = "Class resources",
         targetFrame = "Target",
         bossBars = "Boss health",
         runTimer = "Run timer",
@@ -355,6 +355,19 @@ DFRL:NewMod("Layout", 0, function()
             end
         end
     end
+    local function PlaceConfirm()
+        if not confirm then return end
+        local anchor = confirmAnchor or UIParent
+        confirm:SetParent(anchor)
+        confirm:SetFrameStrata("TOOLTIP")
+        confirm:SetFrameLevel(200)
+        confirm:ClearAllPoints()
+        confirm:SetPoint("CENTER", anchor, "CENTER", 0, 0)
+    end
+    function layout.SetConfirmAnchor(anchor)
+        confirmAnchor = anchor
+        PlaceConfirm()
+    end
     function layout.BeginEdit()
         if not ready or not inWorld then return end
         if not editing then
@@ -371,13 +384,10 @@ DFRL:NewMod("Layout", 0, function()
             end
         end
         if not confirm then
-            confirm = T.CreateButton(UIParent, "Confirm", 140, 34)
-            confirm:SetFrameStrata("TOOLTIP")
-            confirm:SetFrameLevel(200)
+            confirm = T.CreateEditorButton(confirmAnchor or UIParent, "Confirm", 140, 30, true)
             confirm:SetScript("OnClick", function() CloseEditing(true, true) end)
         end
-        confirm:ClearAllPoints()
-        confirm:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+        PlaceConfirm()
         confirm:Show()
     end
     function layout.Reset()

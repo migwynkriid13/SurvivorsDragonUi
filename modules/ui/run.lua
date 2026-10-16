@@ -124,23 +124,29 @@ DFRL:NewMod("RunTimers", 5, function()
         showText = true,
     }
     local currentFont, fontDraft, fontEditor, fontSample, fontMenu
-    local faceLabel, sizeLabel, outlineLabel, shadowLabel, visibilityLabel
-    local debuffsLabel, damageIconsLabel, classResourcesLabel
-    local cacheGuidanceLabel, guardianGuidanceLabel
+    local faceLabel, sizeLabel, shadowControl, visibilityControl
+    local displayControls, outlineButtons, faceButtons, sctButtons = {}, {}, {}, {}
+    local incomingControl, sctDescription
+
+    local function UpdateSctLabels()
+        if not incomingControl or not DFRL.sct then return end
+        local mode = DFRL.sct.GetMode()
+        for value, button in pairs(sctButtons) do
+            button:SetSelected(value == mode)
+        end
+        if mode == "on" then
+            sctDescription:SetText("Addon damage numbers follow enemies.")
+        elseif mode == "off" then
+            sctDescription:SetText("Custom and native outgoing damage text are off.")
+        else
+            sctDescription:SetText("Native outgoing text follows Show Target Damage.")
+        end
+        incomingControl:SetChecked(DFRL.sct.GetIncoming())
+    end
 
     local function UpdateDisplayLabels()
-        if debuffsLabel then
-            debuffsLabel:SetText(DFRL.display.Get("bossDebuffs") and "Boss debuffs: on" or "Boss debuffs: off")
-            damageIconsLabel:SetText(DFRL.display.Get("damageIcons") and "Damage icons: on" or "Damage icons: off")
-            classResourcesLabel:SetText(
-                DFRL.display.Get("classResources") and "Class resources: on" or "Class resources: off"
-            )
-            cacheGuidanceLabel:SetText(
-                DFRL.display.Get("cacheGuidance") and "Cache guidance: on" or "Cache guidance: off"
-            )
-            guardianGuidanceLabel:SetText(
-                DFRL.display.Get("guardianGuidance") and "Guardian guidance: on" or "Guardian guidance: off"
-            )
+        for key, control in pairs(displayControls) do
+            control:SetChecked(DFRL.display.Get(key))
         end
     end
 
@@ -196,13 +202,14 @@ DFRL:NewMod("RunTimers", 5, function()
         ApplyFont(fontSample, currentFont)
         for _, entry in ipairs(fontFaces) do
             if currentFont.face == entry.face then faceLabel:SetText(entry.label) end
+            if faceButtons[entry.face] then faceButtons[entry.face]:SetSelected(currentFont.face == entry.face) end
         end
         for _, entry in ipairs(fontOutlines) do
-            if currentFont.outline == entry.value then outlineLabel:SetText(entry.label) end
+            outlineButtons[entry.value]:SetSelected(currentFont.outline == entry.value)
         end
         sizeLabel:SetText(tostring(currentFont.size))
-        shadowLabel:SetText(currentFont.shadow and "Shadow: on" or "Shadow: off")
-        visibilityLabel:SetText(currentFont.showText and "Run text: shown" or "Run text: hidden")
+        shadowControl:SetChecked(currentFont.shadow)
+        visibilityControl:SetChecked(currentFont.showText)
     end
 
     local function FontEditorLabel(parent, text, x, y, size)
@@ -216,15 +223,10 @@ DFRL:NewMod("RunTimers", 5, function()
 
     local function FontEditorButton(text, width, x, y, callback, parent)
         parent = parent or fontEditor
-        local button = T.CreateButton(parent, "", width, 28)
+        local button = T.CreateEditorButton(parent, text, width, 28)
         button:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
-        local label = button:CreateFontString(nil, "OVERLAY")
-        label:SetFont("DEFAULT", 12, "OUTLINE")
-        label:SetTextColor(1, 1, 1)
-        label:SetPoint("CENTER", button, "CENTER", 0, 0)
-        label:SetText(text)
         button:SetScript("OnClick", callback)
-        return label, button
+        return button.label, button
     end
 
     local function ChangeSize(direction)
@@ -236,7 +238,7 @@ DFRL:NewMod("RunTimers", 5, function()
     local function PlaceFontEditor()
         if not fontEditor then return end
         fontEditor:ClearAllPoints()
-        fontEditor:SetPoint("TOP", UIParent, "CENTER", 0, -25)
+        fontEditor:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
     end
 
     local function FinishFontEditorDrag()
@@ -252,33 +254,47 @@ DFRL:NewMod("RunTimers", 5, function()
             measure:SetText(text)
             return math.ceil(measure:GetStringWidth() or 0)
         end
-        local padding, gap = 12, 8
-        local labelWidth = math.max(TextWidth("Font"), TextWidth("Size"))
-        local dropdownWidth, outlineWidth = 0, 0
+        local padding, gap = 20, 8
+        local labelWidth = math.max(TextWidth("Font"), TextWidth("Size"), TextWidth("Outline"))
+        local dropdownWidth, tabWidth, modeWidth = 0, 0, 0
+        local tabs = {
+            { key = "hud", label = "HUD" },
+            { key = "combat", label = "Combat text" },
+            { key = "timer", label = "Run timer" },
+        }
+        local modes = {
+            { value = "on", label = "Custom" },
+            { value = "off", label = "Off" },
+            { value = "default", label = "Game settings" },
+        }
         for _, entry in ipairs(fontFaces) do
             dropdownWidth = math.max(dropdownWidth, TextWidth(entry.label) + 36)
         end
+        for _, entry in ipairs(tabs) do
+            tabWidth = math.max(tabWidth, TextWidth(entry.label) + 32)
+        end
+        for _, entry in ipairs(modes) do
+            modeWidth = math.max(modeWidth, TextWidth(entry.label) + 24)
+        end
+        local outlineWidth = 0
         for _, entry in ipairs(fontOutlines) do
             outlineWidth = math.max(outlineWidth, TextWidth(entry.label) + 24)
         end
-        local shadowWidth = math.max(TextWidth("Shadow: on"), TextWidth("Shadow: off")) + 24
-        local visibilityWidth = math.max(TextWidth("Run text: shown"), TextWidth("Run text: hidden")) + 24
         local defaultsWidth = TextWidth("Addon defaults") + 24
-        local contentWidth = math.max(labelWidth + gap + dropdownWidth, outlineWidth + gap + shadowWidth)
-        contentWidth = math.max(contentWidth, labelWidth + gap + 96, defaultsWidth, visibilityWidth)
-        contentWidth = math.max(
-            contentWidth,
-            TextWidth("Boss debuffs: off") + 24,
-            TextWidth("Damage icons: off") + 24,
-            TextWidth("Class resources: off") + 24,
-            TextWidth("Cache guidance: off") + 24,
-            TextWidth("Guardian guidance: off") + 24
+        local instructions = "Drag frames to move. Drag corners to resize."
+        local contentWidth = math.max(
+            tabWidth * 3 + gap * 2,
+            modeWidth * 3 + gap * 2,
+            labelWidth + gap + dropdownWidth,
+            labelWidth + gap + outlineWidth * 3 + gap * 2,
+            defaultsWidth * 2 + 140 + gap * 4,
+            TextWidth(instructions)
         )
         local width = contentWidth + padding * 2
         local inputX = padding + labelWidth + gap
         dropdownWidth = contentWidth - labelWidth - gap
 
-        fontEditor = T.CreateDFRLFrame(UIParent, width, 398)
+        fontEditor = T.CreateEditorPanel(UIParent, width, 420)
         fontEditor:SetFrameStrata("TOOLTIP")
         fontEditor:SetFrameLevel(150)
         PlaceFontEditor()
@@ -291,20 +307,101 @@ DFRL:NewMod("RunTimers", 5, function()
             fontEditor:StartMoving()
         end)
         fontEditor:SetScript("OnDragStop", FinishFontEditorDrag)
-        fontSample = FontEditorLabel(fontEditor, "RUN", padding, -12)
-        fontSample:ClearAllPoints()
-        fontSample:SetPoint("TOP", fontEditor, "TOP", 0, -12)
+        local title = FontEditorLabel(fontEditor, "SurvivorsDragonUi", 0, 0, 17)
+        title:ClearAllPoints()
+        title:SetPoint("TOP", fontEditor, "TOP", 0, -18)
+        title:SetTextColor(1, 0.84, 0.48)
+        local hint = FontEditorLabel(fontEditor, instructions, 0, 0, 10)
+        hint:ClearAllPoints()
+        hint:SetPoint("TOP", fontEditor, "TOP", 0, -49)
+        hint:SetTextColor(0.75, 0.73, 0.67)
 
-        FontEditorLabel(fontEditor, "Font", padding, -60)
-        local fontButton
-        faceLabel, fontButton = FontEditorButton("", dropdownWidth, inputX, -52, function()
-            if not fontDraft then return end
-            if fontMenu:IsShown() then
-                fontMenu:Hide()
-            else
-                fontMenu:Show()
+        local pages, tabButtons = {}, {}
+        local function SelectPage(key)
+            if fontMenu then fontMenu:Hide() end
+            for pageKey, page in pairs(pages) do
+                if pageKey == key then page:Show() else page:Hide() end
+                tabButtons[pageKey]:SetSelected(pageKey == key)
             end
-        end)
+        end
+        local tabSize = (contentWidth - gap * 2) / 3
+        for index, entry in ipairs(tabs) do
+            local key = entry.key
+            local page = CreateFrame("Frame", nil, fontEditor)
+            page:SetPoint("TOPLEFT", fontEditor, "TOPLEFT", padding, -130)
+            page:SetWidth(contentWidth)
+            page:SetHeight(220)
+            page:SetFrameLevel(152)
+            pages[key] = page
+            local button = T.CreateEditorButton(fontEditor, entry.label, tabSize, 30)
+            button:SetPoint("TOPLEFT", fontEditor, "TOPLEFT", padding + (index - 1) * (tabSize + gap), -76)
+            button:SetScript("OnClick", function() SelectPage(key) end)
+            tabButtons[key] = button
+        end
+        local divider = T.EditorDivider(fontEditor, contentWidth)
+        divider:SetPoint("TOPLEFT", fontEditor, "TOPLEFT", padding, -116)
+
+        local function DisplayToggle(parent, key, label, description, y)
+            local control = T.CreateEditorToggle(parent, label, description, contentWidth, function(value)
+                DFRL.display.Set(key, value)
+            end)
+            control:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, y)
+            displayControls[key] = control
+        end
+        DisplayToggle(pages.hud, "classResources", "Class resources", "Show power inside the player frame.", 0)
+        DisplayToggle(pages.hud, "bossDebuffs", "Boss debuffs", "Effects on boss and guardian health bars.", -52)
+        DisplayToggle(pages.hud, "cacheGuidance", "Cache guidance", "Show the cache direction and distance.", -104)
+        DisplayToggle(
+            pages.hud,
+            "guardianGuidance",
+            "Guardian guidance",
+            "Show the guardian lair direction and distance.",
+            -156
+        )
+
+        local combat = pages.combat
+        local heading = FontEditorLabel(combat, "Outgoing damage", 0, 0, 12)
+        heading:SetTextColor(0.94, 0.79, 0.47)
+        for index, entry in ipairs(modes) do
+            local mode = entry.value
+            local button = T.CreateEditorButton(combat, entry.label, tabSize, 30)
+            button:SetPoint("TOPLEFT", combat, "TOPLEFT", (index - 1) * (tabSize + gap), -24)
+            button:SetScript("OnClick", function()
+                if DFRL.sct then DFRL.sct.SetMode(mode) end
+            end)
+            sctButtons[mode] = button
+        end
+        sctDescription = FontEditorLabel(combat, "", 0, -66, 10)
+        sctDescription:SetWidth(contentWidth)
+        sctDescription:SetHeight(28)
+        sctDescription:SetJustifyH("LEFT")
+        sctDescription:SetJustifyV("TOP")
+        sctDescription:SetTextColor(0.75, 0.73, 0.67)
+        divider = T.EditorDivider(combat, contentWidth)
+        divider:SetPoint("TOPLEFT", combat, "TOPLEFT", 0, -104)
+        incomingControl = T.CreateEditorToggle(
+            combat,
+            "Incoming / self text",
+            "Received damage and other native self feedback.",
+            contentWidth,
+            function(value) if DFRL.sct then DFRL.sct.SetIncoming(value) end end
+        )
+        incomingControl:SetPoint("TOPLEFT", combat, "TOPLEFT", 0, -120)
+        DisplayToggle(combat, "damageIcons", "Damage icons", "Spell icons beside custom damage numbers.", -172)
+
+        local timer = pages.timer
+        local caption = FontEditorLabel(timer, "Timer label preview", 0, 0, 9)
+        caption:SetTextColor(0.75, 0.73, 0.67)
+        fontSample = FontEditorLabel(timer, "RUN 02:34 / 20:00", 0, 0)
+        fontSample:ClearAllPoints()
+        fontSample:SetPoint("TOP", timer, "TOP", 0, -16)
+        local controlX = inputX - padding
+        FontEditorLabel(timer, "Font", 0, -66, 11)
+        local fontButton
+        faceLabel, fontButton = FontEditorButton("", dropdownWidth, controlX, -58, function()
+            if not fontDraft then return end
+            if fontMenu:IsShown() then fontMenu:Hide() else fontMenu:Show() end
+        end, timer)
         local arrow = FontEditorLabel(fontButton, "v", 0, 0)
         arrow:ClearAllPoints()
         arrow:SetPoint("RIGHT", fontButton, "RIGHT", -12, 0)
@@ -312,104 +409,95 @@ DFRL:NewMod("RunTimers", 5, function()
         -- The popup catches outside clicks while its list stays above the editor.
         fontMenu = CreateFrame("Button", nil, fontEditor)
         fontMenu:SetAllPoints(UIParent)
-        fontMenu:SetFrameLevel(160)
+        fontMenu:SetFrameLevel(180)
         fontMenu:EnableMouse(true)
         fontMenu:SetScript("OnClick", function() fontMenu:Hide() end)
         fontMenu:Hide()
-        local fontList = T.CreateDFRLFrame(fontMenu, dropdownWidth, table.getn(fontFaces) * 28 + 8)
-        fontList:SetFrameLevel(170)
-        fontList:SetPoint("TOPLEFT", fontButton, "BOTTOMLEFT", 0, 0)
+        local fontList = T.CreateEditorPanel(fontMenu, dropdownWidth, table.getn(fontFaces) * 28 + 16)
+        fontList:SetFrameLevel(190)
+        fontList:SetPoint("TOPLEFT", fontButton, "BOTTOMLEFT", 0, -4)
         for index, entry in ipairs(fontFaces) do
             local selectedFace = entry.face
-            FontEditorButton(entry.label, dropdownWidth - 8, 4, -4 - (index - 1) * 28, function()
+            local _, button = FontEditorButton(entry.label, dropdownWidth - 16, 8, -8 - (index - 1) * 28, function()
                 if not fontDraft then return end
                 fontDraft.face = selectedFace
                 PreviewFont(fontDraft)
                 fontMenu:Hide()
             end, fontList)
+            faceButtons[selectedFace] = button
         end
         fontEditor:SetScript("OnHide", function()
             FinishFontEditorDrag()
             fontMenu:Hide()
         end)
-        FontEditorLabel(fontEditor, "Size", padding, -94)
-        FontEditorButton("-", 28, inputX, -86, function() ChangeSize(-1) end)
-        sizeLabel = FontEditorLabel(fontEditor, "", inputX + 38, -94)
-        FontEditorButton("+", 28, inputX + 68, -86, function() ChangeSize(1) end)
-        outlineLabel = FontEditorButton("", outlineWidth, padding, -120, function()
+        FontEditorLabel(timer, "Size", 0, -104, 11)
+        FontEditorButton("-", 28, controlX, -96, function() ChangeSize(-1) end, timer)
+        sizeLabel = FontEditorLabel(timer, "", controlX + 42, -104)
+        FontEditorButton("+", 28, controlX + 76, -96, function() ChangeSize(1) end, timer)
+        FontEditorLabel(timer, "Outline", 0, -140, 11)
+        local outlineSize = (dropdownWidth - gap * 2) / 3
+        for index, entry in ipairs(fontOutlines) do
+            local value = entry.value
+            local _, button = FontEditorButton(
+                entry.label,
+                outlineSize,
+                controlX + (index - 1) * (outlineSize + gap),
+                -132,
+                function()
+                    if not fontDraft then return end
+                    fontDraft.outline = value
+                    PreviewFont(fontDraft)
+                end,
+                timer
+            )
+            outlineButtons[value] = button
+        end
+        local halfWidth = (contentWidth - gap) / 2
+        shadowControl = T.CreateEditorToggle(timer, "Black shadow", nil, halfWidth, function(value)
             if not fontDraft then return end
-            for index, entry in ipairs(fontOutlines) do
-                if fontDraft.outline == entry.value then
-                    fontDraft.outline = fontOutlines[math.mod(index, table.getn(fontOutlines)) + 1].value
-                    break
-                end
-            end
+            fontDraft.shadow = value
             PreviewFont(fontDraft)
         end)
-        shadowLabel = FontEditorButton("", shadowWidth, padding + outlineWidth + gap, -120, function()
+        shadowControl:SetPoint("TOPLEFT", timer, "TOPLEFT", 0, -176)
+        visibilityControl = T.CreateEditorToggle(timer, "Run text", nil, halfWidth, function(value)
             if not fontDraft then return end
-            fontDraft.shadow = not fontDraft.shadow
+            fontDraft.showText = value
             PreviewFont(fontDraft)
         end)
-        visibilityLabel = FontEditorButton("", contentWidth, padding, -154, function()
-            if not fontDraft then return end
-            fontDraft.showText = not fontDraft.showText
-            PreviewFont(fontDraft)
-        end)
-        debuffsLabel = FontEditorButton(
-            "",
-            contentWidth,
-            padding,
-            -188,
-            function() DFRL.display.Set("bossDebuffs", not DFRL.display.Get("bossDebuffs")) end
-        )
-        damageIconsLabel = FontEditorButton(
-            "",
-            contentWidth,
-            padding,
-            -222,
-            function() DFRL.display.Set("damageIcons", not DFRL.display.Get("damageIcons")) end
-        )
-        classResourcesLabel = FontEditorButton(
-            "",
-            contentWidth,
-            padding,
-            -256,
-            function() DFRL.display.Set("classResources", not DFRL.display.Get("classResources")) end
-        )
-        cacheGuidanceLabel = FontEditorButton(
-            "",
-            contentWidth,
-            padding,
-            -290,
-            function() DFRL.display.Set("cacheGuidance", not DFRL.display.Get("cacheGuidance")) end
-        )
-        guardianGuidanceLabel = FontEditorButton(
-            "",
-            contentWidth,
-            padding,
-            -324,
-            function() DFRL.display.Set("guardianGuidance", not DFRL.display.Get("guardianGuidance")) end
-        )
+        visibilityControl:SetPoint("TOPLEFT", timer, "TOPLEFT", halfWidth + gap, -176)
+
+        divider = T.EditorDivider(fontEditor, contentWidth)
+        divider:SetPoint("TOPLEFT", fontEditor, "TOPLEFT", padding, -356)
+        hint = FontEditorLabel(fontEditor, "Changes preview immediately. Confirm keeps them.", 0, 0, 9)
+        hint:ClearAllPoints()
+        hint:SetPoint("TOP", fontEditor, "TOP", 0, -365)
+        hint:SetTextColor(0.75, 0.73, 0.67)
+        local footer = CreateFrame("Frame", nil, fontEditor)
+        footer:SetWidth(contentWidth)
+        footer:SetHeight(30)
+        footer:SetPoint("BOTTOM", fontEditor, "BOTTOM", 0, 16)
+        local defaults = T.CreateEditorButton(footer, "Addon defaults", defaultsWidth, 30)
+        defaults:SetPoint("LEFT", footer, "LEFT", 0, 0)
+        defaults:SetScript("OnClick", function() DFRL.layout.Reset() end)
+        DFRL.layout.SetConfirmAnchor(footer)
+        SelectPage("hud")
         UpdateDisplayLabels()
-        FontEditorButton(
-            "Addon defaults",
-            defaultsWidth,
-            (width - defaultsWidth) / 2,
-            -358,
-            function() DFRL.layout.Reset() end
-        )
+        if DFRL.sct then DFRL.sct.Listen(UpdateSctLabels) end
+        UpdateSctLabels()
     end
 
     local function EditRunFont(active, save)
         if active then
             DFRL.display.BeginEdit()
+            if DFRL.sct then DFRL.sct.BeginEdit() end
             fontDraft = FontSettings(_G.SurvivorsDragonUiRunFont)
             if not fontEditor then CreateFontEditor() end
             PreviewFont(fontDraft)
+            UpdateSctLabels()
             fontEditor:Show()
         else
             DFRL.display.FinishEdit(save)
+            if DFRL.sct then DFRL.sct.FinishEdit(save) end
             if save and fontDraft then _G.SurvivorsDragonUiRunFont = FontSettings(fontDraft) end
             fontDraft = nil
             PreviewFont(_G.SurvivorsDragonUiRunFont)

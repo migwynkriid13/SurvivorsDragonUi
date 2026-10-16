@@ -4,7 +4,7 @@ DFRL:NewMod("Display", 0, function()
     local defaults = {
         bossDebuffs = true,
         damageIcons = false,
-        classResources = true,
+        classResources = false,
         cacheGuidance = true,
         guardianGuidance = true,
     }
