@@ -85,6 +85,7 @@ DFRL:NewMod("Class resources", 2, function()
     local inWorld, displayedStyle, displayedCount = true, nil, nil
     local function IsNumber(value) return type(value) == "number" and value >= 0 and value - value == 0 end
     local function ReadResource()
+        if not DFRL.display.Get("classResources") then return end
         if not inWorld or type(AZS_GetPhase) ~= "function" or not PHASES[AZS_GetPhase()] then return end
         if not UnitExists("player") then return end
         -- Native class is current even if the once-per-run AZSZONE packet has
@@ -176,6 +177,7 @@ DFRL:NewMod("Class resources", 2, function()
         end
     end)
 
+    DFRL.display.Listen(Update)
     DFRL.layout.Register("classResources", row, PlaceDefault)
     Update()
 end)
