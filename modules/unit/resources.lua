@@ -95,8 +95,9 @@ DFRL:NewMod("Class resources", 2, function()
         if not style or UnitPowerType("player") ~= style.power then return end
         local value, maximum = UnitMana("player"), UnitManaMax("player")
         if not IsNumber(value) or not IsNumber(maximum) or maximum <= 0 then return end
-        -- Survivors encodes each shard/point as 20 active-power units. This is
-        -- an absolute conversion, not a percentage of maximum mana or energy.
+        -- Survivors encodes each shard/point as 20 active-power units, confirmed
+        -- in native v0.94.2 code; see docs/CLASS-RESOURCES.md. This is an
+        -- absolute conversion, not a percentage of maximum mana or energy.
         -- GetComboPoints() is target-dependent and does not read this mechanic.
         local count = math.floor(math.min(value, maximum, POINTS * UNITS_PER_POINT) / UNITS_PER_POINT)
         return style, count
