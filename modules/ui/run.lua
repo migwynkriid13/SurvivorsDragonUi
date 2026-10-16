@@ -17,8 +17,12 @@ DFRL:NewMod("RunTimers", 5, function()
     local ACTIVE_GLOW_PERIOD = 2.4
     local ACTIVE_GLOW_MIN_ALPHA, ACTIVE_GLOW_MAX_ALPHA = 0.25, 0.5
     local ACTIVE_GLOW_MIN_OFFSET, ACTIVE_GLOW_MAX_OFFSET = 0.9, 4.55
-    local FLOW_WIDTH, FLOW_SPEED = 42, 52
+    local FLOW_WIDTH, FLOW_SPEED = 64, 32
     local FLOW_INTERVAL = 1 / 30
+    local FLOW_SPACING = (BAR_WIDTH + FLOW_WIDTH) / 5 / 1.7
+    local FLOW_COUNT = math.ceil((BAR_WIDTH + FLOW_WIDTH) / FLOW_SPACING)
+    local FLOW_SPAN = FLOW_SPACING * FLOW_COUNT
+    local RED_SPARKLE_OPACITY = 0.85
     local PHASES = {
         ready = true,
         playing = true,
@@ -104,90 +108,163 @@ DFRL:NewMod("RunTimers", 5, function()
         return frame, bar, text, overlay
     end
 
-    local run, runBar, runText, overlay = Pill("DFRL_RunTimerPill", "FillBlue")
-    local runGlow = runBar:CreateTexture(nil, "OVERLAY")
-    runGlow:SetTexture(path .. "FillWhite.tga")
-    runGlow:SetBlendMode("ADD")
-    runGlow:SetAllPoints(runBar)
-    runGlow:SetVertexColor(1, 0.2, 0.08)
-    runGlow:SetAlpha(0.4)
-    runGlow:Hide()
-    local glowShown = false
-    local runFlows = {}
-    local flowRed, flowUpdatedAt
-    for index = 1, 2 do
-        local texture = runBar:CreateTexture(nil, "OVERLAY")
-        texture:SetTexture("Interface\\CastingBar\\UI-CastingBar-Spark")
-        texture:SetBlendMode("ADD")
-        texture:SetHeight(15)
-        texture:SetAlpha(0.32)
-        texture:Hide()
-        runFlows[index] = { texture = texture, offset = (index - 1) * (BAR_WIDTH + FLOW_WIDTH) / 2 }
-    end
-
-    local function SetRunAppearance(atLimit)
-        if glowShown ~= atLimit then
-            if atLimit then
-                runGlow:Show()
-            else
-                runGlow:Hide()
-            end
-            glowShown = atLimit
-        end
-        if flowRed == atLimit then return end
-        flowRed = atLimit
-        runBar:SetStatusBarTexture(path .. (atLimit and "FillWhite" or "FillBlue") .. ".tga")
-        runBar:SetStatusBarColor(1, atLimit and 0.08 or 1, atLimit and 0.05 or 1)
-        for _, flow in ipairs(runFlows) do
-            flow.texture:SetVertexColor(atLimit and 1 or 0.3, atLimit and 0.65 or 0.7, atLimit and 0.35 or 1)
-            flow.texture:SetAlpha(atLimit and 0.55 or 0.32)
-        end
-    end
-
-    local function HideRunFlow()
-        flowUpdatedAt = nil
-        if glowShown then
-            runGlow:Hide()
-            glowShown = false
-        end
-        for _, flow in ipairs(runFlows) do
-            if flow.shown then
-                flow.texture:Hide()
-                flow.shown = false
+    -- Pooled cosmetic fill effects; native run data still controls progress.
+    local function AnimatedRunFill(bar)
+        local runGlow = bar:CreateTexture(nil, "OVERLAY")
+        runGlow:SetTexture(path .. "FillWhite.tga")
+        runGlow:SetBlendMode("ADD")
+        runGlow:SetAllPoints(bar)
+        runGlow:SetVertexColor(0.65, 0.04, 0.055)
+        runGlow:SetAlpha(0.18)
+        runGlow:Hide()
+        local glowShown = false
+        local runFlows = {}
+        local flowRed, flowUpdatedAt
+        -- Broad, soft ripples in three staggered streams form a continuous
+        -- current. Each stream drifts right at its own speed and gently bends.
+        for lane = 1, 3 do
+            for index = 1, FLOW_COUNT do
+                local texture = bar:CreateTexture(nil, "OVERLAY")
+                texture:SetTexture("Interface\\CastingBar\\UI-CastingBar-Spark")
+                texture:SetBlendMode("ADD")
+                texture:SetHeight(lane == 2 and 4 or 3)
+                texture:SetVertexColor(0.22, 0.75, 1)
+                texture:SetAlpha(lane == 2 and 0.7644 or 0.546)
+                texture:Hide()
+                table.insert(runFlows, {
+                    texture = texture,
+                    offset = (index - 1) * FLOW_SPACING + (lane - 1) * FLOW_WIDTH / 3,
+                    speed = FLOW_SPEED + (lane - 2) * 6,
+                    y = (lane - 2) * 4,
+                    phase = lane * 1.7 + index * 1.2,
+                })
             end
         end
-    end
 
-    local function UpdateRunFlow(seconds, maximum)
-        if seconds == 0 then
-            HideRunFlow()
-            return
+        local redSparkles = {}
+        local sparklesShown = false
+        for index = 1, 28 do
+            local center = (index - 0.5) * BAR_WIDTH / 28
+            local left, right = math.max(0, center - 7), math.min(BAR_WIDTH, center + 7)
+            local texture = bar:CreateTexture(nil, "OVERLAY")
+            texture:SetTexture("Interface\\CastingBar\\UI-CastingBar-Spark")
+            texture:SetBlendMode("ADD")
+            texture:SetWidth(right - left)
+            texture:SetHeight(9)
+            texture:SetPoint("LEFT", bar, "LEFT", left, (math.mod(index - 1, 3) - 1) * 3)
+            texture:SetTexCoord((left - center + 7) / 14, (right - center + 7) / 14, 0, 1)
+            texture:SetVertexColor(1, 0.8, 0.7)
+            texture:SetAlpha(0.22 * RED_SPARKLE_OPACITY)
+            texture:Hide()
+            redSparkles[index] = {
+                texture = texture,
+                period = 1.1 + math.mod(index, 7) * 0.2,
+                phase = index * 2.39996,
+            }
         end
-        -- UI time only moves decoration; native elapsed time owns the fill.
-        -- Crop each pooled streak to that fill without texture wrapping or
-        -- newer clipping APIs, beneath the separate metal border and skulls.
-        local now = GetTime()
-        if flowUpdatedAt and now - flowUpdatedAt < FLOW_INTERVAL then return end
-        flowUpdatedAt = now
-        local filledWidth = BAR_WIDTH * math.min(1, seconds / maximum)
-        local span = BAR_WIDTH + FLOW_WIDTH
-        for _, flow in ipairs(runFlows) do
-            local left = math.mod(now * FLOW_SPEED + flow.offset, span) - FLOW_WIDTH
-            local first, last = math.max(0, left), math.min(filledWidth, left + FLOW_WIDTH)
-            if first < last then
-                flow.texture:SetWidth(last - first)
-                flow.texture:SetPoint("LEFT", runBar, "LEFT", first, 0)
-                flow.texture:SetTexCoord((first - left) / FLOW_WIDTH, (last - left) / FLOW_WIDTH, 0, 1)
-                if not flow.shown then
-                    flow.texture:Show()
-                    flow.shown = true
+
+        local function SetRunAppearance(atLimit)
+            if glowShown ~= atLimit then
+                if atLimit then
+                    runGlow:Show()
+                else
+                    runGlow:Hide()
                 end
-            elseif flow.shown then
-                flow.texture:Hide()
-                flow.shown = false
+                glowShown = atLimit
+            end
+            if sparklesShown ~= atLimit then
+                for _, sparkle in ipairs(redSparkles) do
+                    if atLimit then
+                        sparkle.texture:Show()
+                    else
+                        sparkle.texture:Hide()
+                    end
+                end
+                sparklesShown = atLimit
+            end
+            if flowRed == atLimit then return end
+            flowRed = atLimit
+            bar:SetStatusBarTexture(path .. (atLimit and "FillWhite" or "FillBlue") .. ".tga")
+            bar:SetStatusBarColor(
+                atLimit and 0.72 or 1,
+                atLimit and 0.025 or 1,
+                atLimit and 0.045 or 1,
+                atLimit and 0.9 or 1
+            )
+            for _, flow in ipairs(runFlows) do
+                if atLimit and flow.shown then
+                    flow.texture:Hide()
+                    flow.shown = false
+                end
             end
         end
+
+        local function HideRunFlow()
+            flowUpdatedAt = nil
+            if glowShown then
+                runGlow:Hide()
+                glowShown = false
+            end
+            if sparklesShown then
+                for _, sparkle in ipairs(redSparkles) do
+                    sparkle.texture:Hide()
+                end
+                sparklesShown = false
+            end
+            for _, flow in ipairs(runFlows) do
+                if flow.shown then
+                    flow.texture:Hide()
+                    flow.shown = false
+                end
+            end
+        end
+
+        local function UpdateRunFlow(seconds, maximum)
+            if seconds == 0 then
+                HideRunFlow()
+                return
+            end
+            -- UI time only moves decoration; native elapsed time owns the fill.
+            -- Crop each pooled streak to that fill without texture wrapping or
+            -- newer clipping APIs, beneath the separate metal border and skulls.
+            local now = GetTime()
+            if flowUpdatedAt and now - flowUpdatedAt < FLOW_INTERVAL then return end
+            flowUpdatedAt = now
+            if flowRed then
+                -- Keep the full red fill alive everywhere: overlapping stationary
+                -- glints twinkle independently, with no gaps between passing waves.
+                -- Geometry is fixed at creation; only alpha changes during updates.
+                for _, sparkle in ipairs(redSparkles) do
+                    local pulse = 0.5 + 0.5 * math.sin(now * 2 * math.pi / sparkle.period + sparkle.phase)
+                    sparkle.texture:SetAlpha((0.22 + 0.68 * pulse * pulse * pulse) * RED_SPARKLE_OPACITY)
+                end
+                return
+            end
+            local filledWidth = BAR_WIDTH * math.min(1, seconds / maximum)
+            local span = FLOW_SPAN
+            for _, flow in ipairs(runFlows) do
+                local left = math.mod(now * flow.speed + flow.offset, span) - FLOW_WIDTH
+                local first, last = math.max(0, left), math.min(filledWidth, left + FLOW_WIDTH)
+                if first < last then
+                    local y = flow.y + 0.65 * math.sin(now * 1.7 + flow.phase)
+                    flow.texture:SetWidth(last - first)
+                    flow.texture:SetPoint("LEFT", bar, "LEFT", first, y)
+                    flow.texture:SetTexCoord((first - left) / FLOW_WIDTH, (last - left) / FLOW_WIDTH, 0, 1)
+                    if not flow.shown then
+                        flow.texture:Show()
+                        flow.shown = true
+                    end
+                elseif flow.shown then
+                    flow.texture:Hide()
+                    flow.shown = false
+                end
+            end
+        end
+        return SetRunAppearance, HideRunFlow, UpdateRunFlow
     end
+
+    local run, runBar, runText, overlay = Pill("DFRL_RunTimerPill", "FillBlue")
+    local SetRunAppearance, HideRunFlow, UpdateRunFlow = AnimatedRunFill(runBar)
 
     local runMoveRegion = CreateFrame("Frame", nil, run)
     local fontFaces = {
@@ -1064,7 +1141,13 @@ DFRL:NewMod("RunTimers", 5, function()
         end
     end
 
-    local function UpdateMarkerStates()
+    local function UpdateMarkerStates(atLimit)
+        if atLimit then
+            for _, marker in ipairs(markers) do
+                if marker.state then HideMarker(marker) end
+            end
+            return
+        end
         -- Only the official schedule establishes active and defeated bosses.
         -- UI time drives decoration only, including while the run is paused.
         -- The native run clock and schedule still own all gameplay timing/state.
@@ -1420,7 +1503,7 @@ DFRL:NewMod("RunTimers", 5, function()
             -- Missing schedule replay affects only spawn markers, never a clock
             -- whose native elapsed time and duration have already recovered.
             if refreshRows or not run:IsShown() or not scheduled then UpdateMarkers(maximum, scheduled or {}) end
-            UpdateMarkerStates()
+            UpdateMarkerStates(atLimit)
             run:Show()
             if not TakeOver("clock") then ReleaseClock() end
         else
