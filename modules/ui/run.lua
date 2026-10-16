@@ -561,9 +561,14 @@ DFRL:NewMod("RunTimers", 5, function()
         { key = "gold", label = "Gold", icon = COINS_ICON },
         { key = "chest", label = "Next cache cost (gold)", icon = CACHE_ICON },
     }
+    local function SetTallyFieldWidth(entry, width)
+        entry.frame:SetWidth(width)
+        -- Native FontStrings need an explicit width; opposing anchors alone
+        -- do not resolve their width in the packaged client.
+        entry.text:SetWidth(width - 32)
+    end
     for index, counter in ipairs(counters) do
         local field = CreateFrame("Frame", nil, tallyOverlay)
-        field:SetWidth(fieldWidth)
         field:SetHeight(20)
         field:SetPoint("LEFT", tally, "LEFT", 8 + (index - 1) * fieldWidth, 0)
         field:EnableMouse(true)
@@ -581,12 +586,12 @@ DFRL:NewMod("RunTimers", 5, function()
         local text = field:CreateFontString(nil, "OVERLAY")
         text:SetFont("DEFAULT", 12, "OUTLINE")
         text:SetTextColor(1, 0.88, 0.55)
-        text:SetWidth(fieldWidth - 48)
         text:SetHeight(18)
-        text:SetPoint("CENTER", field, "CENTER", 0, 0)
+        text:SetPoint("LEFT", icon, "RIGHT", 4, 0)
         text:SetJustifyH("CENTER")
         text:SetJustifyV("MIDDLE")
         local entry = { key = counter.key, label = counter.label, text = text, frame = field }
+        SetTallyFieldWidth(entry, fieldWidth)
         table.insert(tallyFields, entry)
         field:SetScript("OnEnter", function()
             GameTooltip:SetOwner(this, "ANCHOR_LEFT")
@@ -628,10 +633,9 @@ DFRL:NewMod("RunTimers", 5, function()
         end
         local sectionWidth = (width - 16) / table.getn(tallyFields)
         for index, entry in ipairs(tallyFields) do
-            entry.frame:SetWidth(sectionWidth)
+            SetTallyFieldWidth(entry, sectionWidth)
             entry.frame:ClearAllPoints()
             entry.frame:SetPoint("LEFT", tally, "LEFT", 8 + (index - 1) * sectionWidth, 0)
-            entry.text:SetWidth(sectionWidth - 48)
         end
         tallyAttached = true
         return true
