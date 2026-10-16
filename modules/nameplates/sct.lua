@@ -173,6 +173,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             ReleaseText(activeTexts[index])
             activeTexts[index] = nil
         end
+        table.setn(activeTexts, 0)
         pending = {}
         origins = {}
         recentDamage = {}
@@ -632,6 +633,8 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         for index = kept + 1, count do
             pending[index] = nil
         end
+        -- Lua 5.0 insert/getn remembers a size independently of cleared slots.
+        table.setn(pending, kept)
     end
 
     local function UpdateTexts(now)
@@ -685,6 +688,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         for index = kept + 1, count do
             activeTexts[index] = nil
         end
+        table.setn(activeTexts, kept)
     end
 
     local function HandleCombatEvent(eventName, message)
