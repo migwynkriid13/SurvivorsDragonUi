@@ -17,6 +17,8 @@ DFRL:NewMod("RunTimers", 5, function()
     local ACTIVE_GLOW_PERIOD = 2.4
     local ACTIVE_GLOW_MIN_ALPHA, ACTIVE_GLOW_MAX_ALPHA = 0.25, 0.5
     local ACTIVE_GLOW_MIN_OFFSET, ACTIVE_GLOW_MAX_OFFSET = 0.9, 4.55
+    local FLOW_WIDTH, FLOW_SPEED = 42, 52
+    local FLOW_INTERVAL = 1 / 30
     local PHASES = {
         ready = true,
         playing = true,
@@ -103,6 +105,65 @@ DFRL:NewMod("RunTimers", 5, function()
     end
 
     local run, runBar, runText, overlay = Pill("DFRL_RunTimerPill", "FillBlue")
+    local runFlows = {}
+    local flowRed, flowUpdatedAt
+    for index = 1, 2 do
+        local texture = runBar:CreateTexture(nil, "OVERLAY")
+        texture:SetTexture("Interface\\CastingBar\\UI-CastingBar-Spark")
+        texture:SetBlendMode("ADD")
+        texture:SetHeight(15)
+        texture:SetAlpha(0.32)
+        texture:Hide()
+        runFlows[index] = { texture = texture, offset = (index - 1) * (BAR_WIDTH + FLOW_WIDTH) / 2 }
+    end
+
+    local function SetRunAppearance(atLimit)
+        if flowRed == atLimit then return end
+        flowRed = atLimit
+        runBar:SetStatusBarTexture(path .. (atLimit and "FillWhite" or "FillBlue") .. ".tga")
+        runBar:SetStatusBarColor(1, atLimit and 0.08 or 1, atLimit and 0.05 or 1)
+        for _, flow in ipairs(runFlows) do
+            flow.texture:SetVertexColor(atLimit and 1 or 0.3, atLimit and 0.16 or 0.7, atLimit and 0.1 or 1)
+        end
+    end
+
+    local function HideRunFlow()
+        flowUpdatedAt = nil
+        for _, flow in ipairs(runFlows) do
+            if flow.shown then
+                flow.texture:Hide()
+                flow.shown = false
+            end
+        end
+    end
+
+    local function UpdateRunFlow(seconds, maximum)
+        -- UI time only moves decoration; native elapsed time owns the fill.
+        -- Crop each pooled streak to that fill without texture wrapping or
+        -- newer clipping APIs, beneath the separate metal border and skulls.
+        local now = GetTime()
+        if flowUpdatedAt and now - flowUpdatedAt < FLOW_INTERVAL then return end
+        flowUpdatedAt = now
+        local filledWidth = BAR_WIDTH * math.min(1, seconds / maximum)
+        local span = BAR_WIDTH + FLOW_WIDTH
+        for _, flow in ipairs(runFlows) do
+            local left = math.mod(now * FLOW_SPEED + flow.offset, span) - FLOW_WIDTH
+            local first, last = math.max(0, left), math.min(filledWidth, left + FLOW_WIDTH)
+            if first < last then
+                flow.texture:SetWidth(last - first)
+                flow.texture:SetPoint("LEFT", runBar, "LEFT", first, 0)
+                flow.texture:SetTexCoord((first - left) / FLOW_WIDTH, (last - left) / FLOW_WIDTH, 0, 1)
+                if not flow.shown then
+                    flow.texture:Show()
+                    flow.shown = true
+                end
+            elseif flow.shown then
+                flow.texture:Hide()
+                flow.shown = false
+            end
+        end
+    end
+
     local runMoveRegion = CreateFrame("Frame", nil, run)
     local fontFaces = {
         { label = "Game DEFAULT", face = "DEFAULT" },
@@ -778,6 +839,7 @@ DFRL:NewMod("RunTimers", 5, function()
 
     local function ReleaseClock()
         run:Hide()
+        HideRunFlow()
         for _, marker in ipairs(markers) do
             HideMarker(marker)
         end
@@ -1321,7 +1383,11 @@ DFRL:NewMod("RunTimers", 5, function()
         if IsNumber(seconds) and maximum then
             runBar:SetMinMaxValues(0, maximum)
             runBar:SetValue(math.min(maximum, seconds))
-            local clockText = "RUN " .. Clock(seconds) .. " / " .. Clock(maximum)
+            local atLimit = seconds >= maximum
+            SetRunAppearance(atLimit)
+            UpdateRunFlow(seconds, maximum)
+            local clockText = "RUN " .. Clock(seconds)
+            if not atLimit then clockText = clockText .. " / " .. Clock(maximum) end
             if runText:GetText() ~= clockText then
                 runText:SetText(clockText)
                 UpdateRunFontBounds()
