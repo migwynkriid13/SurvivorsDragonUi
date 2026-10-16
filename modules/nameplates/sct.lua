@@ -772,9 +772,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         observedIncoming = incomingText
         local damageValue = ReadNativeDamage()
         if settingsDraft then
-            if settingsDraft.damage and damageValue ~= settingsDraft.damage.applied then
-                settingsDraft.damage = nil
-            end
+            if settingsDraft.damage and damageValue ~= settingsDraft.damage.applied then settingsDraft.damage = nil end
             if settingsDraft.incoming and ReadIncoming() ~= settingsDraft.incoming.applied then
                 settingsDraft.incoming = nil
             end

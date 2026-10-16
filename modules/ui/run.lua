@@ -320,7 +320,11 @@ DFRL:NewMod("RunTimers", 5, function()
         local function SelectPage(key)
             if fontMenu then fontMenu:Hide() end
             for pageKey, page in pairs(pages) do
-                if pageKey == key then page:Show() else page:Hide() end
+                if pageKey == key then
+                    page:Show()
+                else
+                    page:Hide()
+                end
                 tabButtons[pageKey]:SetSelected(pageKey == key)
             end
         end
@@ -342,9 +346,13 @@ DFRL:NewMod("RunTimers", 5, function()
         divider:SetPoint("TOPLEFT", fontEditor, "TOPLEFT", padding, -116)
 
         local function DisplayToggle(parent, key, label, description, y)
-            local control = T.CreateEditorToggle(parent, label, description, contentWidth, function(value)
-                DFRL.display.Set(key, value)
-            end)
+            local control = T.CreateEditorToggle(
+                parent,
+                label,
+                description,
+                contentWidth,
+                function(value) DFRL.display.Set(key, value) end
+            )
             control:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, y)
             displayControls[key] = control
         end
@@ -384,7 +392,9 @@ DFRL:NewMod("RunTimers", 5, function()
             "Incoming / self text",
             "Received damage and other native self feedback.",
             contentWidth,
-            function(value) if DFRL.sct then DFRL.sct.SetIncoming(value) end end
+            function(value)
+                if DFRL.sct then DFRL.sct.SetIncoming(value) end
+            end
         )
         incomingControl:SetPoint("TOPLEFT", combat, "TOPLEFT", 0, -120)
         DisplayToggle(combat, "damageIcons", "Damage icons", "Spell icons beside custom damage numbers.", -172)
@@ -400,7 +410,11 @@ DFRL:NewMod("RunTimers", 5, function()
         local fontButton
         faceLabel, fontButton = FontEditorButton("", dropdownWidth, controlX, -58, function()
             if not fontDraft then return end
-            if fontMenu:IsShown() then fontMenu:Hide() else fontMenu:Show() end
+            if fontMenu:IsShown() then
+                fontMenu:Hide()
+            else
+                fontMenu:Show()
+            end
         end, timer)
         local arrow = FontEditorLabel(fontButton, "v", 0, 0)
         arrow:ClearAllPoints()

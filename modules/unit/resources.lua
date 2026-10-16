@@ -110,9 +110,7 @@ DFRL:NewMod("Class resources", 2, function()
             if success and IsNumber(count) and count <= POINTS and count == math.floor(count) then combo = count end
         end
         if combo and combo > 0 then return styles.ROGUE, combo end
-        if combo and class == "DRUID" and power == styles.ROGUE.power then
-            return styles.ROGUE, combo
-        end
+        if combo and class == "DRUID" and power == styles.ROGUE.power then return styles.ROGUE, combo end
     end
 
     local function Clear()

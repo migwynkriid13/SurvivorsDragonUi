@@ -42,16 +42,16 @@ The 1024-by-128 destination contains only the eight diamond-metal border cells
 used by the editor, from the 512-by-512 `chrome-dialog.tga` source. The center is
 not included. Corners retain fixed dimensions; only straight edges stretch.
 
-| Cell | Source rectangle | Destination |
-| --- | --- | --- |
-| Top left | `(4, 276, 132, 404)` | `(0, 0)` |
-| Top right | `(140, 276, 268, 404)` | `(128, 0)` |
-| Bottom left | `(140, 140, 268, 268)` | `(256, 0)` |
-| Bottom right | `(276, 140, 404, 268)` | `(384, 0)` |
-| Left edge | `(4, 4, 132, 132)` | `(512, 0)` |
-| Right edge | `(140, 4, 268, 132)` | `(640, 0)` |
-| Top edge | `(4, 140, 132, 268)` | `(768, 0)` |
-| Bottom edge | `(276, 4, 404, 132)` | `(896, 0)` |
+| Cell         | Source rectangle       | Destination |
+| ------------ | ---------------------- | ----------- |
+| Top left     | `(4, 276, 132, 404)`   | `(0, 0)`    |
+| Top right    | `(140, 276, 268, 404)` | `(128, 0)`  |
+| Bottom left  | `(140, 140, 268, 268)` | `(256, 0)`  |
+| Bottom right | `(276, 140, 404, 268)` | `(384, 0)`  |
+| Left edge    | `(4, 4, 132, 132)`     | `(512, 0)`  |
+| Right edge   | `(140, 4, 268, 132)`   | `(640, 0)`  |
+| Top edge     | `(4, 140, 132, 268)`   | `(768, 0)`  |
+| Bottom edge  | `(276, 4, 404, 132)`   | `(896, 0)`  |
 
 ### `media/tex/editor/header.tga`
 
@@ -64,10 +64,10 @@ opacity behind the editor title.
 
 The 256-by-64 destination contains two 187-by-21 cells from `chrome-options.tga`:
 
-| Cell | Source rectangle | Destination |
-| --- | --- | --- |
-| Selected row | `(398, 180, 585, 201)` | `(0, 0)` |
-| Hover row | `(594, 180, 781, 201)` | `(0, 32)` |
+| Cell         | Source rectangle       | Destination |
+| ------------ | ---------------------- | ----------- |
+| Selected row | `(398, 180, 585, 201)` | `(0, 0)`    |
+| Hover row    | `(594, 180, 781, 201)` | `(0, 32)`   |
 
 ### `media/tex/editor/divider.tga`
 
@@ -79,10 +79,10 @@ from `chrome-options.tga`: rectangle `(288, 220, 918, 221)`, placed at `(0, 0)`.
 The 64-by-32 destination contains two 30-by-29 cells from the 128-by-256
 `controls-basic.tga` source:
 
-| Cell | Source rectangle | Destination |
-| --- | --- | --- |
-| Checkbox | `(64, 4, 94, 33)` | `(0, 0)` |
-| Checkmark | `(4, 52, 34, 81)` | `(32, 0)` |
+| Cell      | Source rectangle  | Destination |
+| --------- | ----------------- | ----------- |
+| Checkbox  | `(64, 4, 94, 33)` | `(0, 0)`    |
+| Checkmark | `(4, 52, 34, 81)` | `(32, 0)`   |
 
 ## Format and shipped attribution
 
