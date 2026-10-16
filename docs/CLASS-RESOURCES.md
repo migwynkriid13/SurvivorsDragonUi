@@ -12,9 +12,9 @@ Player mana/energy, maximum-power and display-power events trigger immediate rea
 
 ## Display preference
 
-The **Class resources: on/off** control appears in the existing `/sdui` panel alongside boss debuffs and damage icons. It defaults to **on**. Turning it off hides the resource row and restores the previous health-only appearance without changing frame geometry or the selected SCT mode. Changes preview live while editing; **Confirm** alone saves the choice. World leave, logout and `/reload` discard unconfirmed changes and restore the last confirmed value.
+The **Class resources: on/off** control appears in the existing `/sdui` panel alongside boss debuffs, damage icons and independent Cache/Guardian guidance. It defaults to **on**. Turning it off hides the resource row and restores the previous health-only appearance without changing frame geometry or the selected SCT mode. Changes preview live while editing; **Confirm** alone saves the choice. World leave, logout and `/reload` discard unconfirmed changes and restore the last confirmed value.
 
-The choice is the third normalized boolean, `classResources`, in the existing `SurvivorsDragonUiDisplay` SavedVariable, alongside `bossDebuffs` and `damageIcons`. Missing or invalid `classResources` values use `true`, so existing display saves keep the new row enabled by default. Both `/sdui reset` and **Addon defaults** use the existing shared full reset to restore class resources on, boss debuffs on and damage icons off, together with layout and timer defaults; the selected SCT mode remains unchanged. No separate reset path is added.
+The choice is one of five normalized booleans in the existing `SurvivorsDragonUiDisplay` SavedVariable: `classResources`, `bossDebuffs`, `damageIcons`, `cacheGuidance` and `guardianGuidance`. Missing or invalid `classResources` values use `true`, so existing display saves keep the new row enabled by default. Both `/sdui reset` and **Addon defaults** use the existing shared full reset to restore class resources on, boss debuffs on, damage icons off and both guides on, together with layout and timer defaults; the selected SCT mode remains unchanged. No separate reset path is added.
 
 ## Layout
 

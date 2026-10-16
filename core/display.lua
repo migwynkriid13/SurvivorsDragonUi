@@ -1,7 +1,13 @@
 -- Display choices preview in the layout editor and save only with Confirm.
 DFRL:NewMod("Display", 0, function()
     local display, listeners, draft = {}, {}, nil
-    local defaults = { bossDebuffs = true, damageIcons = false, classResources = true }
+    local defaults = {
+        bossDebuffs = true,
+        damageIcons = false,
+        classResources = true,
+        cacheGuidance = true,
+        guardianGuidance = true,
+    }
     DFRL.display = display
 
     local function Read(source, key)
@@ -13,6 +19,8 @@ DFRL:NewMod("Display", 0, function()
             bossDebuffs = Read(source, "bossDebuffs"),
             damageIcons = Read(source, "damageIcons"),
             classResources = Read(source, "classResources"),
+            cacheGuidance = Read(source, "cacheGuidance"),
+            guardianGuidance = Read(source, "guardianGuidance"),
         }
     end
     local function Notify()

@@ -44,6 +44,7 @@ DFRL:NewMod("Waypoints", 3, function()
             kind = "cache",
             source = "AZS_CHESTS",
             prefix = "AZSCHESTS",
+            displayKey = "cacheGuidance",
             layoutKey = "cacheWaypoint",
             frameName = "DFRL_CacheWaypoint",
             title = "Cache",
@@ -56,6 +57,7 @@ DFRL:NewMod("Waypoints", 3, function()
             kind = "guardian",
             source = "AZS_LAIRS",
             prefix = "AZSLAIRS",
+            displayKey = "guardianGuidance",
             layoutKey = "guardianWaypoint",
             frameName = "DFRL_GuardianWaypoint",
             title = "Guardian",
@@ -370,21 +372,23 @@ DFRL:NewMod("Waypoints", 3, function()
         end
         for _, tracker in ipairs(trackers) do
             local index = 0
-            for _, entry in ipairs(tracker.entries) do
-                local x, y = navigation.Project(entry)
-                if x then
-                    index = index + 1
-                    local pin = MapPin(tracker, index)
-                    pin.entry = entry
-                    local tracked = entry.key == tracker.selectedKey
-                    local size = tracked and 32 or 26
-                    pin:SetWidth(size)
-                    pin:SetHeight(size)
-                    pin:SetAlpha(tracked and 1 or 0.75)
-                    pin:ClearAllPoints()
-                    pin:SetPoint("CENTER", region, "TOPLEFT", x * width, -y * height)
-                    pin:Show()
-                    if GameTooltip and GameTooltip:IsOwned(pin) then PinTooltip(tracker, pin) end
+            if DFRL.display.Get(tracker.displayKey) then
+                for _, entry in ipairs(tracker.entries) do
+                    local x, y = navigation.Project(entry)
+                    if x then
+                        index = index + 1
+                        local pin = MapPin(tracker, index)
+                        pin.entry = entry
+                        local tracked = entry.key == tracker.selectedKey
+                        local size = tracked and 32 or 26
+                        pin:SetWidth(size)
+                        pin:SetHeight(size)
+                        pin:SetAlpha(tracked and 1 or 0.75)
+                        pin:ClearAllPoints()
+                        pin:SetPoint("CENTER", region, "TOPLEFT", x * width, -y * height)
+                        pin:Show()
+                        if GameTooltip and GameTooltip:IsOwned(pin) then PinTooltip(tracker, pin) end
+                    end
                 end
             end
             for unused = index + 1, table.getn(tracker.pins) do
@@ -408,7 +412,7 @@ DFRL:NewMod("Waypoints", 3, function()
     end
 
     local function UpdateGuide(tracker)
-        if not tracker.selected then
+        if not DFRL.display.Get(tracker.displayKey) or not tracker.selected then
             tracker.hud:Hide()
             return
         end
@@ -538,6 +542,13 @@ DFRL:NewMod("Waypoints", 3, function()
             for _, tracker in ipairs(trackers) do
                 UpdateGuide(tracker)
             end
+        end
+    end)
+    DFRL.display.Listen(function()
+        -- Visibility drafts do not retire snapshots, selections or calibration.
+        UpdateMap()
+        for _, tracker in ipairs(trackers) do
+            UpdateGuide(tracker)
         end
     end)
     Refresh()

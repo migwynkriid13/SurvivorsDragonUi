@@ -126,6 +126,7 @@ DFRL:NewMod("RunTimers", 5, function()
     local currentFont, fontDraft, fontEditor, fontSample, fontMenu
     local faceLabel, sizeLabel, outlineLabel, shadowLabel, visibilityLabel
     local debuffsLabel, damageIconsLabel, classResourcesLabel
+    local cacheGuidanceLabel, guardianGuidanceLabel
 
     local function UpdateDisplayLabels()
         if debuffsLabel then
@@ -133,6 +134,12 @@ DFRL:NewMod("RunTimers", 5, function()
             damageIconsLabel:SetText(DFRL.display.Get("damageIcons") and "Damage icons: on" or "Damage icons: off")
             classResourcesLabel:SetText(
                 DFRL.display.Get("classResources") and "Class resources: on" or "Class resources: off"
+            )
+            cacheGuidanceLabel:SetText(
+                DFRL.display.Get("cacheGuidance") and "Cache guidance: on" or "Cache guidance: off"
+            )
+            guardianGuidanceLabel:SetText(
+                DFRL.display.Get("guardianGuidance") and "Guardian guidance: on" or "Guardian guidance: off"
             )
         end
     end
@@ -263,13 +270,15 @@ DFRL:NewMod("RunTimers", 5, function()
             contentWidth,
             TextWidth("Boss debuffs: off") + 24,
             TextWidth("Damage icons: off") + 24,
-            TextWidth("Class resources: off") + 24
+            TextWidth("Class resources: off") + 24,
+            TextWidth("Cache guidance: off") + 24,
+            TextWidth("Guardian guidance: off") + 24
         )
         local width = contentWidth + padding * 2
         local inputX = padding + labelWidth + gap
         dropdownWidth = contentWidth - labelWidth - gap
 
-        fontEditor = T.CreateDFRLFrame(UIParent, width, 330)
+        fontEditor = T.CreateDFRLFrame(UIParent, width, 398)
         fontEditor:SetFrameStrata("TOOLTIP")
         fontEditor:SetFrameLevel(150)
         PlaceFontEditor()
@@ -368,12 +377,26 @@ DFRL:NewMod("RunTimers", 5, function()
             -256,
             function() DFRL.display.Set("classResources", not DFRL.display.Get("classResources")) end
         )
+        cacheGuidanceLabel = FontEditorButton(
+            "",
+            contentWidth,
+            padding,
+            -290,
+            function() DFRL.display.Set("cacheGuidance", not DFRL.display.Get("cacheGuidance")) end
+        )
+        guardianGuidanceLabel = FontEditorButton(
+            "",
+            contentWidth,
+            padding,
+            -324,
+            function() DFRL.display.Set("guardianGuidance", not DFRL.display.Get("guardianGuidance")) end
+        )
         UpdateDisplayLabels()
         FontEditorButton(
             "Addon defaults",
             defaultsWidth,
             (width - defaultsWidth) / 2,
-            -290,
+            -358,
             function() DFRL.layout.Reset() end
         )
     end
