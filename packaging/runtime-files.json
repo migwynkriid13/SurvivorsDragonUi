@@ -39,6 +39,8 @@
     "media/tex/nameplates/kui_frame_glow.tga",
     "media/tex/nameplates/kui_target_arrows.tga",
     "media/tex/nameplates/kui_target_glow.tga",
+    "media/tex/resources/ComboPoints.tga",
+    "media/tex/resources/SoulShards.tga",
     "media/tex/timer/BackgroundCenter.tga",
     "media/tex/timer/BackgroundLeft.tga",
     "media/tex/timer/BackgroundRight.tga",
@@ -96,6 +98,7 @@
     "modules/unit/cut.lua",
     "modules/unit/mini.lua",
     "modules/unit/player.lua",
+    "modules/unit/resources.lua",
     "modules/unit/target.lua",
     "modules/xprep/xprep.lua"
   ]

@@ -1,0 +1,32 @@
+# Class resources
+
+The player frame deliberately keeps one uninterrupted health bar. A separate layout group now displays the two requested class mechanics: warlock soul shards and rogue combo points. It defaults beneath the player's health area, with five empty sockets and one filled socket per complete 20 resource units, capped at five. For example, 19 units lights no slots, 20 lights one, 59 lights two and 100 lights five. Partial units do not light another slot. This conversion follows the reported Survivors mechanic, rather than ordinary WoW mana, energy or inventory soul shards.
+
+## Current native values
+
+`modules/unit/resources.lua` reads `AZS_GetPhase()` before displaying anything. Only `playing`, `choosing` and `paused` are eligible. It uses the current native `UnitClass("player")` token rather than retained `AZS_ZONE.class`, so a missing once-per-run zone replay after reload does not itself block recovery. Warlocks require native power type `0` (mana), rogues `3` (energy), an existing player, finite nonnegative current power and a finite positive maximum. Other classes, unavailable values, ready/dead/victory and world leave/logout hide and clear the row. Five empty sockets remain visible at zero during eligible runs.
+
+In the [base client's native bindings](https://github.com/samwhosung/benilla/blob/129b3bb852b2f328de529f3c698595c14baf5fa5/crates/benilla-ui/src/script/unit/bindings.rs), `UnitMana` and `UnitManaMax` read the current power type, including energy. The module clamps current power to its native maximum and 100, then divides by 20 and rounds down. It never normalizes by maximum power. The base client's `GetComboPoints()` is target-dependent and reads a different native combo state; this module does not use it, derive points from attacks or require a selected target. The official supplied Survivors API has no separate shard/point field. The public base source supports the API choice; the 20-unit meaning comes from the reported game mechanic and has not been verified in the packaged game.
+
+Player mana/energy, maximum-power and display-power events trigger immediate reads, as do world entry and the official zone/run message prefixes. The [base client's field-event routing](https://github.com/samwhosung/benilla/blob/129b3bb852b2f328de529f3c698595c14baf5fa5/crates/benilla-app/src/ui_unit/field_events.rs) supplies the player token on those unit events. An independent controller polls every 0.1 seconds while the visual row is hidden too, covering delayed phase/class/power initialization. There is no independent resource timer, spell-name matching, native-state mutation or gameplay persistence.
+
+## Layout
+
+`classResources` is its own group in the shared `/sdui` editor. Moving or scaling it does not change player, target, action-bar or other geometry. Its edit outline remains available while its actual resource display is hidden; editing never fabricates filled slots. Confirm alone saves its position/scale in the existing geometry store. Discard and both full resets use the shared layout flow. No extra commands, settings, profiles or SavedVariables are introduced. Existing health-only player/target frames and hidden mana/energy bars remain as before.
+
+## Referenced addon research
+
+All four requested repositories were inspected. These are the pinned snapshots consulted, rather than dependencies of the installed addon.
+
+| Repository | Snapshot | Relevant result |
+| --- | --- | --- |
+| [NeticSoul/DragonUI](https://github.com/NeticSoul/DragonUI/tree/23b36a57acf4cbdf0a01fea600eef97ae9983109) | `23b36a57acf4cbdf0a01fea600eef97ae9983109` | Large retail/Forever combo atlases and a later-client implementation. No dedicated shard atlas found. |
+| [Karl-HeinzSchneider/WoW-DragonflightUI](https://github.com/Karl-HeinzSchneider/WoW-DragonflightUI/tree/b8b35451d4621a8097e887385f72ec03e17765f1) | `b8b35451d4621a8097e887385f72ec03e17765f1` | Selected compact red-orb combo atlas and its documented UVs. Shards use a native later-client `ShardBarFrame` rather than bundled shard art. |
+| [Stormhand-dev/DragonflightUI-Reforged](https://github.com/Stormhand-dev/DragonflightUI-Reforged/tree/2a8d2ffb3d9262f0d2af2071b9b47ef27f76f7f8) | `2a8d2ffb3d9262f0d2af2071b9b47ef27f76f7f8` | No dedicated combo/shard art or corresponding module found. No material imported. |
+| [DarckRovert/ProjectJaina_DragonflightUI](https://github.com/DarckRovert/ProjectJaina_DragonflightUI/tree/d11727768f15168478b524a376f30752940a924d) | `d11727768f15168478b524a376f30752940a924d` | Ordinary unit-frame/resource-bar art; no dedicated combo/shard display found. No material imported. |
+
+The selected combo atlas is converted from its original raw BGRA BLP2 to uncompressed 32-bit TGA without changing pixels. The original purple-shard atlas is obtained separately from the Blizzard texture archive because the referenced addons do not bundle it, and likewise converted losslessly from RGBA PNG to TGA. Both render through ordinary `SetTexture` and `SetTexCoord`. No Ace framework, modern class frame, mixin, animation group or `SetAtlas` API is imported. Source links, atlas rectangles and notices are in [the artwork notice](../third_party/ClassResources-NOTICE.md) and the shipped Lua comments.
+
+## Verification boundary
+
+No local validation, tests, syntax checks, addon execution or game startup were performed. The existing PR workflow runs its authorized formatting, local dead-code and TOC metadata checks in GitHub Actions. Those checks cannot establish packaged-game rendering, native event behavior, resource values, reload recovery or layout interaction. In-game confirmation of both classes and their 20-unit transitions remains required.
