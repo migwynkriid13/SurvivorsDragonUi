@@ -139,7 +139,8 @@ DFRL:NewMod("RunTimers", 5, function()
         runBar:SetStatusBarTexture(path .. (atLimit and "FillWhite" or "FillBlue") .. ".tga")
         runBar:SetStatusBarColor(1, atLimit and 0.08 or 1, atLimit and 0.05 or 1)
         for _, flow in ipairs(runFlows) do
-            flow.texture:SetVertexColor(atLimit and 1 or 0.3, atLimit and 0.16 or 0.7, atLimit and 0.1 or 1)
+            flow.texture:SetVertexColor(atLimit and 1 or 0.3, atLimit and 0.65 or 0.7, atLimit and 0.35 or 1)
+            flow.texture:SetAlpha(atLimit and 0.55 or 0.32)
         end
     end
 
