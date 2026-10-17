@@ -17,7 +17,6 @@ DFRL:NewMod("Layout", 0, function()
         actionBar = "Action bar",
         xpBar = "XP",
         runTally = "Kills / Gold / Cache",
-        jewelryBar = "Equipped jewelry",
         microMenu = "Micro menu",
         buffs = "Buffs",
         minimap = "Minimap",

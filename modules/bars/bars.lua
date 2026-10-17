@@ -144,6 +144,33 @@ DFRL:NewMod("Bars", 1, function()
         right:SetTexCoord(1, 0, 0, 1)
         DFRL.actionBarBGleft = left
         DFRL.actionBarBGright = right
+
+        -- Keep every socket foot and straight span in one texture and anchor
+        -- space. Separate scaled caps can round to different screen rows.
+        local artHeight = defaults.height + 2 * defaults.topInset
+        local socketBottom = defaults.buttonWidth * 2 / 36
+        local topUV = (defaults.topInset - socketBottom) / artHeight
+        local upper = bar:CreateTexture(nil, "BACKGROUND")
+        upper:SetTexture(DFRL:GetInfoOrCons("tex") .. "jewelry\\SocketRail.tga")
+        upper:SetPoint("TOPLEFT", bar, "TOPLEFT", -defaults.sideInset, defaults.buttonWidth * 40 / 36)
+        upper:SetPoint("BOTTOMRIGHT", bar, "TOPRIGHT", defaults.sideInset, socketBottom)
+        upper:SetTexCoord(0, 1200 / 2048, 0, 152 / 256)
+        upper:Hide()
+        local active = false
+        function DFRL.SetJewelryBarShown(shown)
+            if active == shown then return end
+            active = shown
+            local top = shown and socketBottom or defaults.topInset
+            left:ClearAllPoints()
+            left:SetPoint("TOPLEFT", bar, "TOPLEFT", -defaults.sideInset, top)
+            left:SetPoint("BOTTOMRIGHT", bar, "BOTTOM", 0, -defaults.topInset)
+            right:ClearAllPoints()
+            right:SetPoint("TOPLEFT", bar, "TOP", 0, top)
+            right:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", defaults.sideInset, -defaults.topInset)
+            left:SetTexCoord(0, 1, shown and topUV or 0, 1)
+            right:SetTexCoord(1, 0, shown and topUV or 0, 1)
+            if shown then upper:Show() else upper:Hide() end
+        end
     end
 
     local function StyleButton(button, index, bar)
@@ -362,10 +389,17 @@ DFRL:NewMod("Bars", 1, function()
         local moveRegion = CreateFrame("Frame", nil, mainBar)
         moveRegion:SetPoint("TOPLEFT", mainBar, "TOPLEFT", -defaults.sideInset, defaults.topInset)
         moveRegion:SetPoint("BOTTOMRIGHT", mainBar, "BOTTOMRIGHT", defaults.sideInset, 0)
+        DFRL.actionBarMoveRegion = moveRegion
         DFRL.layout.Register("actionBar", mainBar, function()
             mainBar:ClearAllPoints()
             mainBar:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, defaults.bottom)
-        end, { region = moveRegion })
+        end, {
+            region = moveRegion,
+            onEdit = function(active)
+                if DFRL.SetJewelryEditing then DFRL.SetJewelryEditing(active) end
+            end,
+        })
+        if DFRL.AttachJewelry then DFRL.AttachJewelry(mainBar) end
         if DFRL.AttachXPBar then DFRL.AttachXPBar(mainBar) end
         events:UnregisterEvent("PLAYER_ENTERING_WORLD")
         events:SetScript("OnEvent", nil)

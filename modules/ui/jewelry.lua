@@ -1,6 +1,10 @@
--- Five equipped jewelry icons and gold rims; the native build HUD is hidden.
+-- Five equipped jewelry sockets attached to the original action bar.
 --[[
-The simplified design retains only the Blizzard gold circular rim artwork.
+The selected thin-bezel design keeps the Blizzard gold circular rim artwork.
+SocketRail.tga joins all upper socket arches and straight spans in one texture
+using pixels from the existing HDActionBar.tga. The original bar texture is
+unchanged; only its narrow top strip switches while this jewelry row is visible.
+No extra inner or lower curved line is drawn beneath the gold circles.
 Texture conversion does not change the underlying artwork's ownership.
 No upstream Lua is imported. Sources and preparation: third_party/Jewelry-ARTWORK.md.
 
@@ -32,7 +36,7 @@ SOFTWARE.
 ]]
 DFRL:NewMod("Jewelry", 4, function()
     local WIDTH, HEIGHT, ICON_SIZE, INTERVAL = 317, 88, 32, 0.2
-    local RIM_SIZE, RIM_TOP, BAR_GAP = 43, 25, 4
+    local RIM_SIZE = 43
     local actionDefaults = DFRL.actionBarDefaults
     if
         type(actionDefaults) ~= "table"
@@ -43,21 +47,20 @@ DFRL:NewMod("Jewelry", 4, function()
     then
         return
     end
-    -- Match the width of one ability and the center-to-center button spacing.
+    -- Use one ability's width as the scale reference and match button spacing.
     -- The five jewelry slots then span action buttons 2 through 6 exactly.
     local defaultScale = actionDefaults.buttonWidth / RIM_SIZE
     local columnPitch = (actionDefaults.buttonWidth + actionDefaults.buttonGap) / defaultScale
-    local rowWidth = RIM_SIZE + columnPitch * 4
     local ANIMATION_INTERVAL = 1 / 30
     local texturePath = DFRL:GetInfoOrCons("tex") .. "jewelry\\"
     local SLOT_NAMES = { "NeckSlot", "Finger0Slot", "Finger1Slot", "Trinket0Slot", "Trinket1Slot" }
     local slots, slotsReady = {}, false
-    local inWorld, editing, elapsed, animationElapsed = true, false, 0, 0
+    local inWorld, editing, attached, elapsed, animationElapsed = true, false, false, 0, 0
     local hud = CreateFrame("Frame", "SurvivorsDragonUiJewelry", UIParent)
     hud:SetWidth(WIDTH)
     hud:SetHeight(HEIGHT)
     hud:SetScale(defaultScale)
-    hud:SetFrameStrata("HIGH")
+    hud:SetFrameStrata("LOW")
     hud:EnableMouse(false)
     hud:Hide()
 
@@ -124,10 +127,13 @@ DFRL:NewMod("Jewelry", 4, function()
     for _, slot in ipairs(slots) do
         local rim = overlay:CreateTexture(nil, "OVERLAY")
         rim:SetTexture(texturePath .. "Frame.tga")
-        rim:SetWidth(RIM_SIZE)
-        rim:SetHeight(RIM_SIZE)
+        rim:SetWidth(RIM_SIZE * 72 / 86)
+        rim:SetHeight(RIM_SIZE * 72 / 86)
         rim:SetPoint("CENTER", slot.button, "CENTER", 0, 0)
-        rim:SetTexCoord(98 / 1024, 184 / 1024, 50 / 256, 136 / 256)
+        -- Trim the source rim's uneven clear padding; its visible circle is
+        -- centered in this square crop rather than the full source rectangle.
+        -- Compensate the crop size to preserve the visible rim's diameter.
+        rim:SetTexCoord(106 / 1024, 178 / 1024, 56 / 256, 128 / 256)
     end
     local function ClearSlot(slot)
         if slot.texture then
@@ -148,9 +154,13 @@ DFRL:NewMod("Jewelry", 4, function()
         hud:Hide()
     end
     hud:SetScript("OnHide", function()
+        if DFRL.SetJewelryBarShown then DFRL.SetJewelryBarShown(false) end
         for _, slot in ipairs(slots) do
             HideTooltip(slot)
         end
+    end)
+    hud:SetScript("OnShow", function()
+        if DFRL.SetJewelryBarShown then DFRL.SetJewelryBarShown(true) end
     end)
     local function ResolveSlots()
         if slotsReady then return true end
@@ -212,6 +222,7 @@ DFRL:NewMod("Jewelry", 4, function()
     local function Refresh()
         if
             not inWorld
+            or not attached
             or type(UnitExists) ~= "function"
             or not UnitExists("player")
             or type(GetInventoryItemTexture) ~= "function"
@@ -238,28 +249,36 @@ DFRL:NewMod("Jewelry", 4, function()
         end
         hud:Show()
     end
-    local artTop = actionDefaults.bottom + actionDefaults.height + actionDefaults.topInset
-    -- Position the visible rims, rather than the transparent anchor-frame edge.
-    local bottom = (artTop + BAR_GAP) / defaultScale - (HEIGHT - RIM_TOP - RIM_SIZE)
-    local moveRegion = CreateFrame("Frame", nil, hud)
-    moveRegion:SetWidth(rowWidth)
-    moveRegion:SetHeight(RIM_SIZE)
-    moveRegion:SetPoint("TOPLEFT", hud, "TOPLEFT", (WIDTH - rowWidth) / 2, -RIM_TOP)
-    moveRegion:EnableMouse(false)
-    DFRL.layout.Register("jewelryBar", hud, function()
-        hud:ClearAllPoints()
-        hud:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, bottom)
-    end, {
-        region = moveRegion,
-        onEdit = function(active)
-            editing = active
-            if editing then
-                for _, slot in ipairs(slots) do
-                    HideTooltip(slot)
-                end
+    function DFRL.SetJewelryEditing(active)
+        editing = active
+        if editing then
+            for _, slot in ipairs(slots) do
+                HideTooltip(slot)
             end
-        end,
-    })
+        end
+    end
+    function DFRL.AttachJewelry(mainBar)
+        if attached then return end
+        hud:SetParent(mainBar)
+        hud:SetFrameLevel(mainBar:GetFrameLevel() + 2)
+        for _, slot in ipairs(slots) do
+            slot.button:SetFrameLevel(hud:GetFrameLevel() + 1)
+        end
+        overlay:SetFrameLevel(hud:GetFrameLevel() + 3)
+        hud:ClearAllPoints()
+        hud:SetPoint("TOP", mainBar, "TOP", 0, 46.5 + RIM_SIZE * 20 / 36)
+        local region = DFRL.actionBarMoveRegion
+        if region then
+            region:SetPoint(
+                "TOPLEFT", mainBar, "TOPLEFT", -actionDefaults.sideInset,
+                math.max(actionDefaults.topInset, actionDefaults.buttonWidth * 40 / 36)
+            )
+        end
+        attached = true
+        Refresh()
+        PaintCooldowns()
+    end
+    if DFRL.mainBar then DFRL.AttachJewelry(DFRL.mainBar) end
     local controller = CreateFrame("Frame", nil, UIParent)
     controller:RegisterEvent("PLAYER_ENTERING_WORLD")
     controller:RegisterEvent("PLAYER_LEAVING_WORLD")
