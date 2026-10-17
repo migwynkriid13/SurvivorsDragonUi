@@ -1,6 +1,6 @@
 # SDUI editor artwork
 
-The `/sdui` editor uses World of Warcraft interface artwork, copyright Blizzard
+The `/sdui` editor and equipped-jewelry effects cards use World of Warcraft interface artwork, copyright Blizzard
 Entertainment, Inc., obtained through the public projects listed below. Cropping,
 repacking and format conversion do not change the ownership of that artwork. The
 artwork is included for use inside the game; the source projects' MIT licenses
@@ -85,6 +85,12 @@ The 64-by-32 destination contains two 30-by-29 cells from the 128-by-256
 | Checkmark | `(4, 52, 34, 81)` | `(32, 0)`   |
 
 ## Format and shipped attribution
+
+The jewelry effects card reuses `border.tga` with fixed 12-unit corner cells and
+stretched straight edges, plus `divider.tga` as a subtle top accent. Its dark fill
+and text are drawn in Lua through the same helpers. It hides the editor header
+and adds no texture, upstream code, font or runtime dependency. The existing
+editor keeps its 24-unit panel corners.
 
 The source files are 32-bit RLE TGA images. Their RGBA pixels were decoded,
 cropped without resizing or recoloring and repacked into the dimensions listed

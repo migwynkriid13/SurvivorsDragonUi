@@ -77,19 +77,122 @@ DFRL:NewMod("Jewelry", 4, function()
     detached:Hide()
 
     local function Number(value) return type(value) == "number" and value - value == 0 end
+    local hoveredSlot, effectPanel, effectText, scanner, scannerParent
+    local SCANNER_NAME = "SurvivorsDragonUiJewelryScanner"
+    local EFFECT_PREFIXES = {
+        { "ITEM_SPELL_TRIGGER_ONEQUIP", "Equip:" },
+        { "ITEM_SPELL_TRIGGER_ONUSE", "Use:" },
+        { "ITEM_SPELL_TRIGGER_ONPROC", "Chance on hit:" },
+    }
+    local function GetScanner()
+        if scanner == false then return nil end
+        if not scanner then
+            scannerParent = CreateFrame("Frame", nil, UIParent)
+            scannerParent:Hide()
+            local ok, tooltip = pcall(CreateFrame, "GameTooltip", SCANNER_NAME, scannerParent, "GameTooltipTemplate")
+            if
+                not ok
+                or not tooltip
+                or type(tooltip.SetInventoryItem) ~= "function"
+                or type(tooltip.SetOwner) ~= "function"
+                or type(tooltip.ClearLines) ~= "function"
+                or type(tooltip.NumLines) ~= "function"
+            then
+                if ok and tooltip then tooltip:Hide() end
+                scanner = false
+                return nil
+            end
+            -- Native builders may Show and reset alpha; the hidden parent keeps
+            -- this private reader invisible without touching GameTooltip.
+            scanner = tooltip
+            scanner:EnableMouse(false)
+        end
+        return scanner
+    end
+    local function IsEffect(text)
+        if type(text) ~= "string" then return false end
+        local plain = string.gsub(text, "|c%x%x%x%x%x%x%x%x", "")
+        plain = string.gsub(plain, "|r", "")
+        plain = string.gsub(plain, "^%s+", "")
+        for _, entry in ipairs(EFFECT_PREFIXES) do
+            local prefix = _G[entry[1]]
+            if type(prefix) ~= "string" or prefix == "" then prefix = entry[2] end
+            if string.sub(plain, 1, string.len(prefix)) == prefix then return true end
+        end
+        return false
+    end
+    local function ReadEffects(slot)
+        local tooltip = GetScanner()
+        if not tooltip then return nil end
+        -- Hide releases native ownership and clears lines, so re-own for every
+        -- read and copy complete wrapped effect rows before hiding the scanner.
+        tooltip:SetOwner(scannerParent, "ANCHOR_NONE")
+        tooltip:ClearLines()
+        local ok, hasItem = pcall(tooltip.SetInventoryItem, tooltip, "player", slot.id)
+        local effects = {}
+        if ok and (hasItem == true or hasItem == 1) then
+            for index = 2, math.min(64, tooltip:NumLines()) do
+                local line = _G[SCANNER_NAME .. "TextLeft" .. index]
+                local text = line and type(line.GetText) == "function" and line:GetText()
+                if IsEffect(text) then table.insert(effects, text) end
+            end
+        end
+        tooltip:Hide()
+        if table.getn(effects) > 0 then return table.concat(effects, "\n\n") end
+        return nil
+    end
+    local function GetEffectPanel()
+        if not effectPanel then
+            -- Reuse the shipped Dragonflight diamond-metal chrome and gold
+            -- divider. Artwork attribution is carried by core/editor.lua.
+            effectPanel = DFRL.tools.CreateEditorPanel(UIParent, 300, 48, 12)
+            effectPanel:Hide()
+            effectPanel:EnableMouse(false)
+            effectPanel:SetFrameStrata("TOOLTIP")
+            if effectPanel.SetClampedToScreen then effectPanel:SetClampedToScreen(true) end
+            effectPanel.editorHeader:Hide()
+            local accent = DFRL.tools.EditorDivider(effectPanel, 272)
+            accent:SetPoint("TOP", effectPanel, "TOP", 0, -9)
+            effectText = effectPanel:CreateFontString(nil, "OVERLAY")
+            effectText:SetFont("DEFAULT", 13, "")
+            effectText:SetTextColor(0, 1, 0)
+            effectText:SetShadowColor(0, 0, 0, 1)
+            effectText:SetShadowOffset(1, -1)
+            effectText:SetJustifyH("LEFT")
+            effectText:SetJustifyV("TOP")
+            effectText:SetWidth(272)
+            effectText:SetPoint("TOPLEFT", effectPanel, "TOPLEFT", 14, -16)
+        end
+        return effectPanel
+    end
     local function HideTooltip(slot)
-        if GameTooltip and GameTooltip:IsOwned(slot.button) then GameTooltip:Hide() end
+        if hoveredSlot ~= slot then return end
+        hoveredSlot = nil
+        if effectPanel then
+            effectPanel:Hide()
+            effectText:SetText("")
+        end
     end
     local function ShowTooltip(slot)
-        if not inWorld or editing or not slot.id or not hud:IsVisible() then return end
-        if not GameTooltip or type(GameTooltip.SetInventoryItem) ~= "function" then return end
-        GameTooltip:SetOwner(slot.button, "ANCHOR_RIGHT")
-        local ok, hasItem = pcall(GameTooltip.SetInventoryItem, GameTooltip, "player", slot.id)
-        if ok and (hasItem == true or hasItem == 1) then
-            GameTooltip:Show()
-        else
-            GameTooltip:Hide()
+        if not inWorld or editing or not slot.id or not slot.texture or not hud:IsVisible() then return end
+        hoveredSlot = slot
+        local text = ReadEffects(slot)
+        if not text then
+            if effectPanel then
+                effectPanel:Hide()
+                effectText:SetText("")
+            end
+            return
         end
+        local panel = GetEffectPanel()
+        effectText:SetText(text)
+        -- The 1.12 width getter measures wrapping; an unconstrained height then
+        -- exposes that measurement without the later-client GetStringHeight.
+        effectText:GetStringWidth()
+        panel:SetHeight(math.max(14, effectText:GetHeight()) + 30)
+        panel:ClearAllPoints()
+        panel:SetPoint("BOTTOMLEFT", slot.button, "TOPLEFT", -14, 12)
+        panel:Show()
     end
     for index, name in ipairs(SLOT_NAMES) do
         local button = CreateFrame("Frame", nil, hud)
@@ -264,7 +367,7 @@ DFRL:NewMod("Jewelry", 4, function()
                     slot.texture = texture
                 end
                 UpdateCooldown(slot)
-                if GameTooltip and GameTooltip:IsOwned(slot.button) then ShowTooltip(slot) end
+                if hoveredSlot == slot then ShowTooltip(slot) end
             else
                 ClearSlot(slot)
             end

@@ -106,13 +106,13 @@ local function Label(parent, size, text)
     return label
 end
 
-function DFRL.tools.CreateEditorPanel(parent, width, height)
+function DFRL.tools.CreateEditorPanel(parent, width, height, borderSize)
     local frame = CreateFrame("Frame", nil, parent)
     frame:SetWidth(width)
     frame:SetHeight(height)
     frame:EnableMouse(true)
     frame.editorFill = Fill(frame, 0.035, 0.038, 0.043, 0.97)
-    frame.editorBorder = Border(frame, 24)
+    frame.editorBorder = Border(frame, borderSize or 24)
     local header = Artwork(frame, "header", "ARTWORK", 0, 199 / 256, 0, 1)
     header:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -6)
     header:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -16, -6)
