@@ -231,3 +231,33 @@ DFRL:NewMod("Ui", 5, function()
         elapsed = 0
     end)
 end)
+
+-- The native weapon/jewelry rows are a game HUD part, not Lua frames.
+DFRL:NewMod("Native build rows", 1, function()
+    local inWorld, applying = true, false
+    local function HideBuild()
+        if not inWorld or applying then return end
+        if type(AZS_SetHudShown) ~= "function" or type(AZS_IsHudShown) ~= "function" then return end
+        local ok, shown = pcall(AZS_IsHudShown, "build")
+        if not ok or (shown ~= true and shown ~= 1) then return end
+        applying = true
+        pcall(AZS_SetHudShown, "build", false)
+        applying = false
+    end
+    local controller = CreateFrame("Frame")
+    controller:RegisterEvent("PLAYER_ENTERING_WORLD")
+    controller:RegisterEvent("PLAYER_LEAVING_WORLD")
+    controller:RegisterEvent("PLAYER_LOGOUT")
+    controller:RegisterEvent("CVAR_UPDATE")
+    controller:SetScript("OnEvent", function()
+        if event == "PLAYER_ENTERING_WORLD" then
+            inWorld = true
+            HideBuild()
+        elseif event == "PLAYER_LEAVING_WORLD" or event == "PLAYER_LOGOUT" then
+            inWorld = false
+        elseif type(arg1) == "string" and string.lower(arg1) == "hudbuild" then
+            HideBuild()
+        end
+    end)
+    HideBuild()
+end)
