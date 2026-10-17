@@ -1,22 +1,16 @@
--- Equipped jewelry only; the native six-pickup build remains visible for comparison.
+-- Five equipped jewelry icons and gold rims; the native build HUD is hidden.
 --[[
-Design 20 (Reliquary) combines original capsule geometry with Blizzard game
-artwork. Texture conversion does not change the underlying artwork's ownership.
+The simplified design retains only the Blizzard gold circular rim artwork.
+Texture conversion does not change the underlying artwork's ownership.
 No upstream Lua is imported. Sources and preparation: third_party/Jewelry-ARTWORK.md.
 
 Gold circular rim: Karl-HeinzSchneider/WoW-DragonflightUI
 b8b35451d4621a8097e887385f72ec03e17765f1, Textures/bagborder2.blp.
-Filigree: PentSec/DragonUI 623eca5893c9d475a7b77bd25808bdbe801d247c,
-DragonUI/Textures/Collections/IconFrameGold.tga, crop (0,90,114,123).
-Stone: Stormhand-dev/DragonflightUI-Reforged
-2a8d2ffb3d9262f0d2af2071b9b47ef27f76f7f8,
-media/tex/castbar/CastingBarBackground.blp.
-Fine trim: already attributed Blizzard WidgetStatusBar border-center artwork.
+The transparent circular cooldown atlas is original generated geometry.
 
 Applicable source notices (Blizzard artwork is distinct from MIT software):
 MIT License
 Copyright (c) 2022 Karl-HeinzSchneider
-Copyright (c) 2026 NeticSoul and DragonUI contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -38,9 +32,11 @@ SOFTWARE.
 ]]
 DFRL:NewMod("Jewelry", 4, function()
     local WIDTH, HEIGHT, ICON_SIZE, INTERVAL = 317, 88, 32, 0.2
+    local ANIMATION_INTERVAL = 1 / 30
+    local texturePath = DFRL:GetInfoOrCons("tex") .. "jewelry\\"
     local SLOT_NAMES = { "NeckSlot", "Finger0Slot", "Finger1Slot", "Trinket0Slot", "Trinket1Slot" }
     local slots, slotsReady = {}, false
-    local inWorld, editing, elapsed = true, false, 0
+    local inWorld, editing, elapsed, animationElapsed = true, false, 0, 0
     local hud = CreateFrame("Frame", "SurvivorsDragonUiJewelry", UIParent)
     hud:SetWidth(WIDTH)
     hud:SetHeight(HEIGHT)
@@ -69,27 +65,33 @@ DFRL:NewMod("Jewelry", 4, function()
         button:SetHeight(ICON_SIZE)
         button:SetPoint("TOPLEFT", hud, "TOPLEFT", 54.5 + (index - 1) * 44, -30.5)
         button:EnableMouse(true)
-        local empty = button:CreateTexture(nil, "BACKGROUND")
-        empty:SetTexture("Interface\\Buttons\\WHITE8X8")
-        empty:SetVertexColor(17 / 255, 24 / 255, 24 / 255)
-        empty:SetAllPoints(button)
-        local icon = button:CreateTexture(nil, "ARTWORK")
-        icon:SetAllPoints(button)
-        icon:SetTexCoord(3 / 64, 61 / 64, 3 / 64, 61 / 64)
-        icon:Hide()
-        local slot = { name = name, button = button, icon = icon }
-        -- The 1.12 stock cooldown template is a Model, not a retail Cooldown frame.
-        if type(CooldownFrame_SetTimer) == "function" then
-            local ok, cooldown = pcall(CreateFrame, "Model", nil, button, "CooldownFrameTemplate")
-            if ok and cooldown then
-                cooldown:ClearAllPoints()
-                cooldown:SetAllPoints(button)
-                cooldown:EnableMouse(false)
-                cooldown:SetFrameLevel(hud:GetFrameLevel() + 2)
-                cooldown:Hide()
-                slot.cooldown = cooldown
+        local slot = { name = name, button = button, strips = {} }
+        -- Ordinary cropped texture strips leave real transparency outside the
+        -- icon's circle, without a black corner cover or retail texture masks.
+        for part = 1, 16 do
+            local top, bottom = (part - 1) * 2, part * 2
+            local edge = math.max(math.abs(top - 16), math.abs(bottom - 16))
+            local half = math.sqrt(math.max(0, 256 - edge * edge))
+            if half > 0 then
+                local strip = button:CreateTexture(nil, "ARTWORK")
+                strip:SetWidth(half * 2)
+                strip:SetHeight(2)
+                strip:SetPoint("TOPLEFT", button, "TOPLEFT", 16 - half, -top)
+                strip:SetTexCoord(
+                    (3 + (16 - half) * 58 / 32) / 64,
+                    (3 + (16 + half) * 58 / 32) / 64,
+                    (3 + top * 58 / 32) / 64,
+                    (3 + bottom * 58 / 32) / 64
+                )
+                strip:Hide()
+                table.insert(slot.strips, strip)
             end
         end
+        local cooldown = button:CreateTexture(nil, "OVERLAY")
+        cooldown:SetTexture(texturePath .. "Cooldown.tga")
+        cooldown:SetAllPoints(button)
+        cooldown:Hide()
+        slot.cooldown = cooldown
         button:SetScript("OnEnter", function() ShowTooltip(slot) end)
         button:SetScript("OnLeave", function() HideTooltip(slot) end)
         button:SetScript("OnHide", function() HideTooltip(slot) end)
@@ -97,30 +99,25 @@ DFRL:NewMod("Jewelry", 4, function()
         table.insert(slots, slot)
     end
 
-    -- Put the opaque socket corners above icons AND native cooldown models.
-    -- Circular alpha apertures avoid relying on unavailable retail mask APIs.
+    -- Only gold rims remain in this texture; the space between them is clear.
     local overlay = CreateFrame("Frame", nil, hud)
     overlay:SetAllPoints(hud)
     overlay:SetFrameLevel(hud:GetFrameLevel() + 3)
     overlay:EnableMouse(false)
     local artwork = overlay:CreateTexture(nil, "OVERLAY")
-    artwork:SetTexture(DFRL:GetInfoOrCons("tex") .. "jewelry\\Frame.tga")
+    artwork:SetTexture(texturePath .. "Frame.tga")
     artwork:SetAllPoints(overlay)
     artwork:SetTexCoord(0, WIDTH / 512, 0, HEIGHT / 128)
-    local label = overlay:CreateFontString(nil, "OVERLAY")
-    label:SetFont("DEFAULT", 10, "OUTLINE")
-    label:SetTextColor(0.76, 0.67, 0.46)
-    label:SetShadowColor(0, 0, 0, 1)
-    label:SetShadowOffset(1, -1)
-    label:SetPoint("TOPLEFT", hud, "TOPLEFT", 50, -3)
-    label:SetText("JEWELRY")
-
     local function ClearSlot(slot)
+        if slot.texture then
+            for _, strip in ipairs(slot.strips) do
+                strip:Hide()
+                strip:SetTexture(nil)
+            end
+        end
         slot.texture = nil
-        slot.icon:Hide()
-        slot.icon:SetTexture(nil)
-        if slot.cooldown then slot.cooldown:Hide() end
-        slot.start, slot.duration, slot.enabled = nil, nil, nil
+        slot.cooldown:Hide()
+        slot.start, slot.duration, slot.painted = nil, nil, nil
         HideTooltip(slot)
     end
     local function Clear()
@@ -150,24 +147,44 @@ DFRL:NewMod("Jewelry", 4, function()
         return true
     end
     local function UpdateCooldown(slot)
-        if not slot.cooldown then return end
-        if type(GetInventoryItemCooldown) ~= "function" or type(CooldownFrame_SetTimer) ~= "function" then
-            slot.cooldown:Hide()
-            slot.start, slot.duration, slot.enabled = nil, nil, nil
+        if type(GetInventoryItemCooldown) ~= "function" then
+            slot.start, slot.duration = nil, nil
             return
         end
         local ok, start, duration, enabled = pcall(GetInventoryItemCooldown, "player", slot.id)
-        if not ok or not Number(start) or not Number(duration) or not Number(enabled) then
-            slot.cooldown:Hide()
-            slot.start, slot.duration, slot.enabled = nil, nil, nil
+        if
+            not ok
+            or not Number(start)
+            or not Number(duration)
+            or not Number(enabled)
+            or start <= 0
+            or duration <= 0
+            or enabled <= 0
+        then
+            slot.start, slot.duration = nil, nil
             return
         end
-        if slot.start ~= start or slot.duration ~= duration or slot.enabled ~= enabled then
-            local applied = pcall(CooldownFrame_SetTimer, slot.cooldown, start, duration, enabled)
-            if applied then
-                slot.start, slot.duration, slot.enabled = start, duration, enabled
-            else
+        slot.start, slot.duration = start, duration
+    end
+    local function PaintCooldowns()
+        if not hud:IsVisible() then return end
+        local now = type(GetTime) == "function" and GetTime() or nil
+        for _, slot in ipairs(slots) do
+            local frame
+            if slot.texture and Number(now) and slot.start and slot.duration then
+                local remaining = slot.duration - (now - slot.start)
+                if remaining > 0 then frame = math.ceil(math.min(1, remaining / slot.duration) * 63) end
+            end
+            if frame then
+                if frame ~= slot.painted then
+                    local column, row = math.mod(frame, 8), math.floor(frame / 8)
+                    slot.cooldown:SetTexCoord(column / 8, (column + 1) / 8, row / 8, (row + 1) / 8)
+                    slot.cooldown:Show()
+                    slot.painted = frame
+                end
+            elseif slot.painted then
                 slot.cooldown:Hide()
+                slot.painted = nil
             end
         end
     end
@@ -186,11 +203,12 @@ DFRL:NewMod("Jewelry", 4, function()
             local ok, texture = pcall(GetInventoryItemTexture, "player", slot.id)
             if ok and type(texture) == "string" and texture ~= "" then
                 if slot.texture ~= texture then
-                    slot.icon:SetTexture(texture)
+                    for _, strip in ipairs(slot.strips) do
+                        strip:SetTexture(texture)
+                        strip:Show()
+                    end
                     slot.texture = texture
-                    slot.start, slot.duration, slot.enabled = nil, nil, nil
                 end
-                slot.icon:Show()
                 UpdateCooldown(slot)
                 if GameTooltip and GameTooltip:IsOwned(slot.button) then ShowTooltip(slot) end
             else
@@ -202,10 +220,17 @@ DFRL:NewMod("Jewelry", 4, function()
     local actionDefaults = DFRL.actionBarDefaults
     local bottom = actionDefaults and actionDefaults.bottom + actionDefaults.height + actionDefaults.topInset + 12
         or 117
+    -- Keep confirmed anchors/scales while tightening edit handles to the rims.
+    local moveRegion = CreateFrame("Frame", nil, hud)
+    moveRegion:SetWidth(219)
+    moveRegion:SetHeight(43)
+    moveRegion:SetPoint("TOPLEFT", hud, "TOPLEFT", 49, -25)
+    moveRegion:EnableMouse(false)
     DFRL.layout.Register("jewelryBar", hud, function()
         hud:ClearAllPoints()
         hud:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, bottom)
     end, {
+        region = moveRegion,
         onEdit = function(active)
             editing = active
             if editing then
@@ -224,13 +249,14 @@ DFRL:NewMod("Jewelry", 4, function()
     controller:SetScript("OnEvent", function()
         if event == "PLAYER_LEAVING_WORLD" or event == "PLAYER_LOGOUT" then
             inWorld = false
-            elapsed = 0
+            elapsed, animationElapsed = 0, 0
             Clear()
         elseif event == "PLAYER_ENTERING_WORLD" then
             inWorld = true
-            elapsed = 0
+            elapsed, animationElapsed = 0, 0
             Clear()
             Refresh()
+            PaintCooldowns()
         elseif event ~= "UNIT_INVENTORY_CHANGED" or arg1 == "player" then
             elapsed = INTERVAL
         end
@@ -238,9 +264,17 @@ DFRL:NewMod("Jewelry", 4, function()
     controller:SetScript("OnUpdate", function()
         if not inWorld then return end
         elapsed = elapsed + arg1
-        if elapsed < INTERVAL then return end
-        elapsed = 0
-        Refresh()
+        animationElapsed = animationElapsed + arg1
+        if elapsed >= INTERVAL then
+            elapsed = 0
+            Refresh()
+            animationElapsed = ANIMATION_INTERVAL
+        end
+        if animationElapsed >= ANIMATION_INTERVAL then
+            animationElapsed = 0
+            PaintCooldowns()
+        end
     end)
     Refresh()
+    PaintCooldowns()
 end)
