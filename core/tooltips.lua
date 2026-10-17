@@ -1,7 +1,7 @@
 --[[
-Tooltip presentation adapted from PentSec/DragonUI, modules/tooltip.lua,
-commit 623eca5893c9d475a7b77bd25808bdbe801d247c.
-Only its native-tooltip styling and unit colors are adapted.
+Shared native-tooltip styling and unit colors.
+Adapted implementation source commit: 623eca5893c9d475a7b77bd25808bdbe801d247c.
+Source provenance: third_party/Tooltip-STYLE.md.
 Targeting text and tooltip health bars are omitted at the user's request.
 No Wrath module framework, settings or runtime dependency is used.
 Native World of Warcraft interface textures are Copyright Blizzard Entertainment,

@@ -9,8 +9,8 @@ SocketDetached.tga retains the silver-gray circle borders in detached mode.
 Texture conversion does not change the underlying artwork's ownership.
 No upstream Lua is imported. Sources and preparation: third_party/Jewelry-ARTWORK.md.
 
-Gold circular rim: Karl-HeinzSchneider/WoW-DragonflightUI
-b8b35451d4621a8097e887385f72ec03e17765f1, Textures/bagborder2.blp.
+Gold circular rim source: commit b8b35451d4621a8097e887385f72ec03e17765f1,
+Textures/bagborder2.blp; provenance is recorded in the document above.
 The transparent circular cooldown atlas is original generated geometry.
 
 Applicable source notices (Blizzard artwork is distinct from MIT software):

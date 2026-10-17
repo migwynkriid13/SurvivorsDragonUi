@@ -14,15 +14,14 @@ preserved at 64x64 without rescaling; its native display override is 32x32:
 https://wago.tools/api/casc/1121272?version=10.2.7.54847
 https://wago.tools/db2/UiTextureAtlasMember/csv?build=10.2.7.54847
 
-Floating-label HUD glyphs are Blizzard game artwork distributed by
-NeticSoul/DragonUI, commit 00197f223180323ea7297c0157edbd1a43d2f99f:
-DragonUI/Textures/Nameplates/Quests/Loot/loot_bag.tga (CachePouch.tga)
-DragonUI/Textures/Nameplates/Quests/Kill/kill_elite.tga (GuardianFloating.tga)
-https://github.com/NeticSoul/DragonUI/tree/00197f223180323ea7297c0157edbd1a43d2f99f
+Floating-label HUD glyphs are Blizzard game artwork from source commit
+00197f223180323ea7297c0157edbd1a43d2f99f:
+Textures/Nameplates/Quests/Loot/loot_bag.tga (CachePouch.tga)
+Textures/Nameplates/Quests/Kill/kill_elite.tga (GuardianFloating.tga)
+Source provenance and license: third_party/CacheWaypoints-ARTWORK.md.
 The upstream LICENSE excludes World of Warcraft artwork from its core MIT
 license: game textures are copyright Blizzard Entertainment and included only
 for use with the game. No upstream Lua is imported.
-https://github.com/NeticSoul/DragonUI/blob/00197f223180323ea7297c0157edbd1a43d2f99f/LICENSE
 
 Detailed preparation: third_party/CacheWaypoints-ARTWORK.md.
 ]]

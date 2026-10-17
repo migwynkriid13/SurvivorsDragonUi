@@ -1,6 +1,6 @@
--- Combo-point atlas and coordinates from Karl-HeinzSchneider/WoW-DragonflightUI,
--- commit b8b35451d4621a8097e887385f72ec03e17765f1, Textures/Unitframe/classoverlaycombopoints.blp
--- and Modules/Unitframe/Target.mixin.lua. The underlying WoW artwork is Blizzard's.
+-- Combo-point atlas and coordinates: source commit b8b35451d4621a8097e887385f72ec03e17765f1,
+-- Textures/Unitframe/classoverlaycombopoints.blp and Modules/Unitframe/Target.mixin.lua.
+-- Source provenance: docs/CLASS-RESOURCES.md. The underlying WoW artwork is Blizzard's.
 -- Soul-shard artwork is also Blizzard's, obtained from Gethe/wow-ui-textures,
 -- commit d23deaf8f44a7d280dc974a5c9d5321c013db59b, PLAYERFRAME/ClassOverlayWarlockShards725.PNG.
 -- Shard UVs: Ketho/BlizzardInterfaceResources, commit 36dd01db2d8fa5086dffda5cbfb3d55f4a70e526,

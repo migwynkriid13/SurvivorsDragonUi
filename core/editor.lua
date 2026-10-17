@@ -1,10 +1,9 @@
 --[[
-SDUI artwork is cropped from PentSec/DragonUI commit
-623eca5893c9d475a7b77bd25808bdbe801d247c, using the pixel coordinates in
-DragonUI/utils/forever_atlas_chrome.lua and forever_atlas_controls.lua.
+SDUI artwork uses cropped texture pixels from source commit
+623eca5893c9d475a7b77bd25808bdbe801d247c.
+Source provenance and pixel coordinates: third_party/SDUI-ARTWORK.md.
 The underlying World of Warcraft artwork is Copyright Blizzard Entertainment,
-Inc.; it is not licensed under the MIT notices below. DragonUI and DragonflightUI
-are credited as the source projects. See third_party/SDUI-ARTWORK.md for provenance.
+Inc.; it is not licensed under the MIT notices below.
 These helpers use texture pixels directly, without the source addons or atlas APIs.
 
 MIT License
