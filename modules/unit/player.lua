@@ -7,6 +7,40 @@ DFRL:NewMod("Player", 1, function()
     local primaryBar, primaryText, setPowerShown
     local initialized = false
 
+    -- Original 1.12.1 FrameXML/Fonts.xml RAID_CLASS_COLORS, including pink Shaman:
+    -- https://github.com/MOUZU/Blizzard-WoW-Interface/blob/master/1.12.1/FrameXML/Fonts.xml
+    local classColors = {
+        HUNTER = { 0.67, 0.83, 0.45 },
+        WARLOCK = { 0.58, 0.51, 0.79 },
+        PRIEST = { 1, 1, 1 },
+        PALADIN = { 0.96, 0.55, 0.73 },
+        MAGE = { 0.41, 0.8, 0.94 },
+        ROGUE = { 1, 0.96, 0.41 },
+        DRUID = { 1, 0.49, 0.04 },
+        SHAMAN = { 0.96, 0.55, 0.73 },
+        WARRIOR = { 0.78, 0.61, 0.43 },
+    }
+    local healthR, healthG, healthB = 0, 1, 0
+    local setHealthColor = PlayerFrameHealthBar.SetStatusBarColor
+    -- Native health updates also recolor this bar; keep the effective display choice.
+    PlayerFrameHealthBar.SetStatusBarColor = function(bar) setHealthColor(bar, healthR, healthG, healthB) end
+
+    local function UpdateHealthColor()
+        local color
+        if DFRL.display.Get("classHealth") then
+            local _, class = UnitClass("player")
+            color = classColors[class]
+        end
+        if color then
+            healthR, healthG, healthB = unpack(color)
+        else
+            healthR, healthG, healthB = 0, 1, 0
+        end
+        -- Tint the shared shaded healthDF2 artwork; retain its crop and damage-loss overlay.
+        PlayerFrameHealthBar:SetStatusBarColor(healthR, healthG, healthB)
+    end
+    DFRL.display.Listen(UpdateHealthColor)
+
     DFRL.playerResources = DFRL.playerResources or {}
     DFRL.playerResources.SetPrimary = function(value, maximum, powerType)
         if not primaryBar then return end
@@ -52,7 +86,7 @@ DFRL:NewMod("Player", 1, function()
         if not initialized then return end
         healthText:SetText(UnitHealth("player"))
         if PlayerLevelText then PlayerLevelText:SetText(UnitLevel("player")) end
-        PlayerFrameHealthBar:SetStatusBarColor(0, 1, 0)
+        UpdateHealthColor()
     end
 
     local function HidePowerBar()

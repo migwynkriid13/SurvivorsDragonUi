@@ -519,15 +519,22 @@ DFRL:NewMod("RunTimers", 5, function()
             control:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, y)
             displayControls[key] = control
         end
-        DisplayToggle(pages.hud, "classResources", "Class resources", "Show power inside the player frame.", 0)
-        DisplayToggle(pages.hud, "bossDebuffs", "Boss debuffs", "Effects on boss and guardian health bars.", -52)
-        DisplayToggle(pages.hud, "cacheGuidance", "Cache guidance", "Show the cache direction and distance.", -104)
+        DisplayToggle(
+            pages.hud,
+            "classHealth",
+            "Class-colored health",
+            "Use your vanilla class color for player health.",
+            0
+        )
+        DisplayToggle(pages.hud, "classResources", "Class resources", "Show power inside the player frame.", -44)
+        DisplayToggle(pages.hud, "bossDebuffs", "Boss debuffs", "Effects on boss and guardian health bars.", -88)
+        DisplayToggle(pages.hud, "cacheGuidance", "Cache guidance", "Show the cache direction and distance.", -132)
         DisplayToggle(
             pages.hud,
             "guardianGuidance",
             "Guardian guidance",
             "Show the guardian lair direction and distance.",
-            -156
+            -176
         )
 
         local combat = pages.combat

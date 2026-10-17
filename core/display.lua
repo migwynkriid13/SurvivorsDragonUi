@@ -5,6 +5,7 @@ DFRL:NewMod("Display", 0, function()
         bossDebuffs = true,
         damageIcons = false,
         classResources = false,
+        classHealth = false,
         cacheGuidance = true,
         guardianGuidance = true,
     }
@@ -19,6 +20,7 @@ DFRL:NewMod("Display", 0, function()
             bossDebuffs = Read(source, "bossDebuffs"),
             damageIcons = Read(source, "damageIcons"),
             classResources = Read(source, "classResources"),
+            classHealth = Read(source, "classHealth"),
             cacheGuidance = Read(source, "cacheGuidance"),
             guardianGuidance = Read(source, "guardianGuidance"),
         }
