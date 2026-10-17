@@ -43,6 +43,8 @@ The user requested retaining the game's original weapon and jewelry rows while c
 
 The `Native build comparison` initializer in `modules/ui/ui.lua` feature-detects the official getter/setter and calls `AZS_SetHudShown("build", true)` only when the getter explicitly reports hidden. Restoring it once also reverses the saved `hudBuild = 0` left by the earlier version. If APIs are unavailable or fail during initialization, world entry retries; retries stop after success. There is no CVar listener or per-frame polling, so later game-option changes are respected. It adds no addon setting, SavedVariable or prior-visibility snapshot and leaves the existing clock/boss/tally takeover and restoration paths intact. Packaged-game behavior remains unverified; no local checks or game/addon execution were run.
 
+The user explicitly chose five ordinary equipped jewelry slots for the custom design-20 row: neck, two rings and two trinkets. This uses the stock inventory APIs and native tooltips/cooldowns, with no custom ability row. It does not substitute equipped items for the native six-pickup build or invent an AZS jewelry feed. See [EQUIPPED-JEWELRY.md](EQUIPPED-JEWELRY.md) for sources, refresh/cleanup and shared layout behavior.
+
 ## Independent clock and marker recovery after reload — 2026-10-15
 
 The user reported that `/reload` leaves the run progress bar without its vertical boss-spawn markers. A recovered native clock and `AZS_RUN.fin` can supply elapsed time and duration before `AZSBOSSES` has replayed the complete schedule. The first response made the entire clock wait for that schedule; the user then reported that the whole custom top bar disappeared after `/reload`. That schedule gate has been removed from clock display and takeover.
