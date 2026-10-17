@@ -266,7 +266,7 @@ DFRL:NewMod("Bars", 1, function()
         overlay.text:SetText(FormatCooldown(remaining))
         if remaining < 1 then
             overlay.text:SetTextColor(1, 85 / 255, 85 / 255)
-        elseif remaining < 5 then
+        elseif math.ceil(remaining) < 5 then
             overlay.text:SetTextColor(1, 1, 85 / 255)
         else
             overlay.text:SetTextColor(1, 1, 1)
