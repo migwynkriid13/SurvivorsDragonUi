@@ -3,6 +3,9 @@ DFRL:NewMod("Bars", 1, function()
     local ACTION_SLOTS = { 1, 2, 3, 4, 5, 6, 12 }
     local BUTTON_COUNT = 7
     local BUTTON_SPACING = 6
+    local COOLDOWN_INTERVAL = 0.1
+    local COOLDOWN_MINIMUM = 2
+    local COOLDOWN_UNITS = { { 86400, "d" }, { 3600, "h" }, { 60, "m" }, { 1, "" } }
     local TEX_PATH = "Interface\\AddOns\\SurvivorsDragonUi\\media\\tex\\actionbars\\"
     local defaults = {
         bottom = 55,
@@ -187,6 +190,115 @@ DFRL:NewMod("Bars", 1, function()
         macro:SetTextColor(1, 1, 1)
     end
 
+    -- Visual reference: Turtle Dragonflight by TheLinuxITGuy, with Shagu's
+    -- cooldown-number styling. This implementation reads only our seven native
+    -- action slots; it does not import their code or hook cooldowns globally.
+    -- https://github.com/DustinChecketts/Turtle-Dragonflight/tree/b2c62e9095e1c859bff0209db09f4ff5b9884f5a
+    local function FormatCooldown(remaining)
+        for _, unit in ipairs(COOLDOWN_UNITS) do
+            if remaining >= unit[1] or unit[1] == 1 then return math.ceil(remaining / unit[1]) .. unit[2] end
+        end
+    end
+
+    local function UpdateCooldownNumber(button, now)
+        local overlay = button.DFRL_cooldownNumber
+        local slot = ActionButton_GetPagedID(button)
+        if not button:IsVisible() or not HasAction(slot) or type(GetActionCooldown) ~= "function" then
+            overlay:Hide()
+            return
+        end
+
+        -- Read again on every refresh so native resets, replacements and clock
+        -- adjustments take effect without keeping a separate cooldown clock.
+        local start, duration, enabled = GetActionCooldown(slot)
+        if
+            type(start) ~= "number"
+            or not (start > 0)
+            or type(duration) ~= "number"
+            or not (duration >= COOLDOWN_MINIMUM)
+            or enabled ~= 1
+        then
+            overlay:Hide()
+            return
+        end
+        local remaining = duration - (now - start)
+        if not (remaining > 0 and remaining <= duration) then
+            overlay:Hide()
+            return
+        end
+
+        overlay.text:SetText(FormatCooldown(remaining))
+        if remaining < 5 then
+            overlay.text:SetTextColor(1, 85 / 255, 85 / 255)
+        elseif remaining < 10 then
+            overlay.text:SetTextColor(1, 1, 85 / 255)
+        else
+            overlay.text:SetTextColor(1, 1, 1)
+        end
+        overlay:Show()
+    end
+
+    local function CreateCooldownNumbers(bar)
+        for _, button in ipairs(DFRL.actionButtons) do
+            local cooldown = _G[button:GetName() .. "Cooldown"]
+            local overlay = CreateFrame("Frame", nil, button)
+            overlay:SetAllPoints(button)
+            overlay:SetFrameLevel(math.max(button:GetFrameLevel(), cooldown and cooldown:GetFrameLevel() or 0) + 1)
+            overlay:EnableMouse(false)
+            overlay.text = overlay:CreateFontString(nil, "OVERLAY")
+            overlay.text:SetPoint("CENTER", overlay, "CENTER", 0, 0)
+            overlay.text:SetFont("DEFAULT", math.min(14, button:GetHeight() * 0.64), "OUTLINE")
+            overlay.text:SetShadowColor(0, 0, 0, 1)
+            overlay.text:SetShadowOffset(1, -1)
+            overlay:Hide()
+            button.DFRL_cooldownNumber = overlay
+        end
+
+        local active = true
+        local elapsed = 0
+        local function ClearNumbers()
+            for _, button in ipairs(DFRL.actionButtons) do
+                button.DFRL_cooldownNumber:Hide()
+            end
+        end
+        local function RefreshNumbers()
+            if not active then return end
+            local now = GetTime()
+            for _, button in ipairs(DFRL.actionButtons) do
+                UpdateCooldownNumber(button, now)
+            end
+        end
+
+        -- One updater serves the whole bar. Text inherits each button's scale,
+        -- alpha and visibility, while its stock swipe and click scripts stay intact.
+        local controller = CreateFrame("Frame", nil, bar)
+        controller:RegisterEvent("ACTIONBAR_UPDATE_COOLDOWN")
+        controller:RegisterEvent("ACTIONBAR_SLOT_CHANGED")
+        controller:RegisterEvent("PLAYER_ENTERING_WORLD")
+        controller:RegisterEvent("PLAYER_LEAVING_WORLD")
+        controller:RegisterEvent("PLAYER_LOGOUT")
+        controller:SetScript("OnEvent", function()
+            if event == "PLAYER_LEAVING_WORLD" or event == "PLAYER_LOGOUT" then
+                active = false
+                ClearNumbers()
+                return
+            end
+            if event == "PLAYER_ENTERING_WORLD" then active = true end
+            elapsed = 0
+            RefreshNumbers()
+        end)
+        controller:SetScript("OnUpdate", function()
+            if not active then return end
+            elapsed = elapsed + arg1
+            if elapsed < COOLDOWN_INTERVAL then return end
+            elapsed = 0
+            RefreshNumbers()
+        end)
+        controller:SetScript("OnHide", ClearNumbers)
+        controller:SetScript("OnShow", RefreshNumbers)
+        RefreshNumbers()
+    end
+
     local initialized = false
     local events = CreateFrame("Frame")
     events:RegisterEvent("PLAYER_ENTERING_WORLD")
@@ -240,6 +352,7 @@ DFRL:NewMod("Bars", 1, function()
             ActionButton_Update()
         end
         _G.this = previousThis
+        CreateCooldownNumbers(mainBar)
         local moveRegion = CreateFrame("Frame", nil, mainBar)
         moveRegion:SetPoint("TOPLEFT", mainBar, "TOPLEFT", -defaults.sideInset, defaults.topInset)
         moveRegion:SetPoint("BOTTOMRIGHT", mainBar, "BOTTOMRIGHT", defaults.sideInset, 0)
