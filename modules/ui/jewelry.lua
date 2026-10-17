@@ -77,15 +77,9 @@ DFRL:NewMod("Jewelry", 4, function()
     detached:Hide()
 
     local function Number(value) return type(value) == "number" and value - value == 0 end
-    local hoveredSlot, effectPanel, effectText, effectTail, scanner, scannerParent
+    local hoveredSlot, effectPanel, effectText, scanner, scannerParent
     local SCANNER_NAME = "SurvivorsDragonUiJewelryScanner"
-    local EFFECT_MAX_WIDTH, EFFECT_PADDING = 272, 14
-    local EFFECT_BORDER, EFFECT_TAIL_SIZE = 12, 10
-    local EFFECT_TAIL_EDGE = EFFECT_BORDER * 18 / 128
-    local EFFECT_TAIL_JOIN = EFFECT_BORDER * (1 - 86 / 128)
-    local EFFECT_TAIL_DIAGONAL = math.sqrt(2)
-    local EFFECT_TAIL_WIDTH = EFFECT_TAIL_SIZE + EFFECT_TAIL_DIAGONAL * EFFECT_TAIL_EDGE
-    local EFFECT_TAIL_REACH = EFFECT_TAIL_SIZE + (EFFECT_TAIL_DIAGONAL + 1) * EFFECT_TAIL_EDGE
+    local EFFECT_MAX_WIDTH, EFFECT_PADDING = 272, 10
     local EFFECT_PREFIXES = {
         { "ITEM_SPELL_TRIGGER_ONEQUIP", "Equip:" },
         { "ITEM_SPELL_TRIGGER_ONUSE", "Use:" },
@@ -342,149 +336,12 @@ DFRL:NewMod("Jewelry", 4, function()
         if table.getn(effects) > 0 then return table.concat(effects, "\n\n") end
         return nil
     end
-    local function EffectScale(frame)
-        local scale = frame.GetEffectiveScale and frame:GetEffectiveScale() or 1
-        return Number(scale) and scale > 0 and scale or 1
-    end
-    local function CreateEffectTail(panel)
-        local tail = CreateFrame("Frame", nil, panel)
-        tail:SetWidth(EFFECT_TAIL_WIDTH)
-        tail:SetHeight(EFFECT_TAIL_REACH)
-        tail:EnableMouse(false)
-        tail:Hide()
-        tail.parts = {}
-        local borderPath = DFRL:GetInfoOrCons("tex") .. "editor\\border.tga"
-        local function Part(x, y, width, height, bevel)
-            if width <= 0 then return end
-            local texture = tail:CreateTexture(nil, bevel and "BORDER" or "BACKGROUND")
-            texture:SetWidth(width)
-            texture:SetHeight(height)
-            if bevel then
-                texture:SetTexture(borderPath)
-                for index, distance in ipairs(bevel) do
-                    bevel[index] = 86 / 128 + distance / EFFECT_BORDER
-                end
-            else
-                texture:SetTexture("Interface\\Buttons\\WHITE8X8")
-                texture:SetVertexColor(0.035, 0.038, 0.043, 0.97)
-            end
-            table.insert(tail.parts, {
-                texture = texture,
-                x = x,
-                y = y,
-                width = width,
-                bevel = bevel,
-            })
-        end
-        -- Offset each bevel contour perpendicular to its edge. Its miter joins
-        -- the diagonal to the horizontal border without a square end or bump.
-        -- Half-unit rows reuse the existing border profile, not a flat color.
-        for row = 0, math.ceil(EFFECT_TAIL_REACH * 2) - 1 do
-            local y = row / 2
-            local height = math.min(0.5, EFFECT_TAIL_REACH - y)
-            local middle = y + height / 2
-            local inner = math.max(0, (middle - EFFECT_TAIL_SIZE) / (EFFECT_TAIL_DIAGONAL + 1))
-            local outer = math.min(middle, EFFECT_TAIL_EDGE)
-            Part(EFFECT_TAIL_EDGE - outer, y, outer - inner, height, { outer, outer, inner, inner })
-            local right = EFFECT_TAIL_EDGE + EFFECT_TAIL_SIZE - middle + EFFECT_TAIL_DIAGONAL * inner
-            local offset = height / (2 * EFFECT_TAIL_DIAGONAL)
-            Part(right, y, EFFECT_TAIL_DIAGONAL * (outer - inner), height, {
-                inner - offset,
-                inner + offset,
-                outer - offset,
-                outer + offset,
-            })
-            Part(EFFECT_TAIL_EDGE, y, EFFECT_TAIL_SIZE - middle, height)
-            if middle < EFFECT_TAIL_EDGE then
-                -- Continue the native horizontal profile into both miters.
-                local profile = { y, y + height, y, y + height }
-                Part(0, y, EFFECT_TAIL_EDGE - outer, height, profile)
-                right = EFFECT_TAIL_EDGE + EFFECT_TAIL_SIZE - middle + EFFECT_TAIL_DIAGONAL * outer
-                Part(right, y, EFFECT_TAIL_WIDTH - right, height, { y, y + height, y, y + height })
-            end
-        end
-        tail.bottomRight = panel:CreateTexture(nil, "BORDER")
-        tail.bottomRight:SetTexture(borderPath)
-        tail.bottomRight:SetTexCoord(7 / 8, 1, 0, 1)
-        tail.bottomRight:SetHeight(EFFECT_BORDER)
-        tail.bottomRight:Hide()
-        return tail
-    end
-    local function PositionEffectTail(slot, scale)
-        local panel, tail = effectPanel, effectTail
-        local edge, corners = panel.editorBorder[8], panel.editorBorder
-        -- Restore the ordinary edge until usable owner/card geometry is known.
-        tail:Hide()
-        tail.bottomRight:Hide()
-        edge:ClearAllPoints()
-        edge:SetPoint("TOPLEFT", corners[3], "TOPRIGHT", 0, 0)
-        edge:SetPoint("TOPRIGHT", corners[4], "TOPLEFT", 0, 0)
-        local center = slot.button:GetCenter()
-        local left, width = panel:GetLeft(), panel:GetWidth()
-        if not Number(center) or not Number(left) or not Number(width) then return end
-        if width < EFFECT_BORDER * 2 + EFFECT_TAIL_WIDTH then return end
-        -- GetCenter/GetLeft use each owner's effective scale. Read the card
-        -- after showing it so horizontal screen clamping is reflected here.
-        local target = center * scale - left
-        local mirror = target > width - EFFECT_BORDER - EFFECT_TAIL_WIDTH + EFFECT_TAIL_EDGE / 2
-        local x = target - (mirror and EFFECT_TAIL_WIDTH - EFFECT_TAIL_EDGE / 2 or EFFECT_TAIL_EDGE / 2)
-        x = math.max(EFFECT_BORDER, math.min(width - EFFECT_BORDER - EFFECT_TAIL_WIDTH, x))
-        tail:ClearAllPoints()
-        tail:SetPoint("TOPLEFT", panel, "BOTTOMLEFT", x, EFFECT_TAIL_JOIN)
-        if tail.mirrored ~= mirror then
-            for _, part in ipairs(tail.parts) do
-                local offset = mirror and EFFECT_TAIL_WIDTH - part.x - part.width or part.x
-                part.texture:ClearAllPoints()
-                part.texture:SetPoint("TOPLEFT", tail, "TOPLEFT", offset, -part.y)
-                if part.bevel then
-                    local first, second, third, fourth = unpack(part.bevel)
-                    if mirror then
-                        first, second, third, fourth = third, fourth, first, second
-                    end
-                    part.texture:SetTexCoord(
-                        960 / 1024,
-                        first,
-                        960 / 1024,
-                        second,
-                        960 / 1024,
-                        third,
-                        960 / 1024,
-                        fourth
-                    )
-                end
-            end
-            tail.mirrored = mirror
-        end
-        -- Split the real bottom edge around the opening; never paint a line
-        -- across the pointer's dark interior or cover it with an opaque patch.
-        edge:ClearAllPoints()
-        edge:SetPoint("TOPLEFT", corners[3], "TOPRIGHT", 0, 0)
-        edge:SetPoint("TOPRIGHT", panel, "BOTTOMLEFT", x, EFFECT_BORDER)
-        tail.bottomRight:ClearAllPoints()
-        tail.bottomRight:SetPoint("TOPLEFT", panel, "BOTTOMLEFT", x + EFFECT_TAIL_WIDTH, EFFECT_BORDER)
-        tail.bottomRight:SetPoint("TOPRIGHT", corners[4], "TOPLEFT", 0, 0)
-        tail.bottomRight:Show()
-        tail:Show()
-    end
     local function GetEffectPanel()
         if not effectPanel then
-            -- Reuse the shipped Dragonflight diamond-metal chrome and gold
-            -- divider. Artwork attribution is carried by core/editor.lua.
-            effectPanel =
-                DFRL.tools.CreateEditorPanel(UIParent, EFFECT_MAX_WIDTH + EFFECT_PADDING * 2, 48, EFFECT_BORDER)
+            -- Share the native-style hover skin without taking GameTooltip's
+            -- ownership or exposing the private inventory reader.
+            effectPanel = DFRL.tools.CreateHoverCard(UIParent, EFFECT_MAX_WIDTH + EFFECT_PADDING * 2, 40)
             effectPanel:Hide()
-            effectPanel:EnableMouse(false)
-            effectPanel:SetFrameStrata("TOOLTIP")
-            if effectPanel.SetClampedToScreen then effectPanel:SetClampedToScreen(true) end
-            effectPanel.editorHeader:Hide()
-            -- The 12-unit border's inner bevel ends near four units. Overlap
-            -- the fill beneath it instead of leaving the editor's six-unit gap.
-            effectPanel.editorFill:ClearAllPoints()
-            effectPanel.editorFill:SetPoint("TOPLEFT", effectPanel, "TOPLEFT", 3, -3)
-            effectPanel.editorFill:SetPoint("BOTTOMRIGHT", effectPanel, "BOTTOMRIGHT", -3, 3)
-            local accent = DFRL.tools.EditorDivider(effectPanel, EFFECT_MAX_WIDTH)
-            accent:SetPoint("TOPLEFT", effectPanel, "TOPLEFT", EFFECT_PADDING, -9)
-            accent:SetPoint("TOPRIGHT", effectPanel, "TOPRIGHT", -EFFECT_PADDING, -9)
             effectText = effectPanel:CreateFontString(nil, "OVERLAY")
             effectText:SetFont("DEFAULT", 13, "")
             effectText:SetTextColor(0, 1, 0)
@@ -493,8 +350,7 @@ DFRL:NewMod("Jewelry", 4, function()
             effectText:SetJustifyH("LEFT")
             effectText:SetJustifyV("TOP")
             effectText:SetWidth(EFFECT_MAX_WIDTH)
-            effectText:SetPoint("TOPLEFT", effectPanel, "TOPLEFT", EFFECT_PADDING, -16)
-            effectTail = CreateEffectTail(effectPanel)
+            effectText:SetPoint("TOPLEFT", effectPanel, "TOPLEFT", EFFECT_PADDING, -EFFECT_PADDING)
         end
         return effectPanel
     end
@@ -532,20 +388,10 @@ DFRL:NewMod("Jewelry", 4, function()
         -- Measure again at the fitted width before reading wrapped height.
         -- The 1.12 client uses GetHeight rather than GetStringHeight.
         effectText:GetStringWidth()
-        panel:SetHeight(math.max(14, effectText:GetHeight()) + 30)
-        local scale = EffectScale(slot.button) / EffectScale(panel)
+        panel:SetHeight(math.max(14, effectText:GetHeight()) + EFFECT_PADDING * 2)
         panel:ClearAllPoints()
-        -- Leave four card units beyond the gold rim for the pointer's tip.
-        local rimInset = (RIM_SIZE * 72 / 86 - ICON_SIZE) * scale / 2
-        panel:SetPoint(
-            "BOTTOMLEFT",
-            slot.button,
-            "TOPLEFT",
-            -EFFECT_PADDING,
-            EFFECT_TAIL_REACH - EFFECT_TAIL_JOIN + rimInset + 4
-        )
+        panel:SetPoint("BOTTOMLEFT", slot.button, "TOPLEFT", -EFFECT_PADDING, 12)
         panel:Show()
-        PositionEffectTail(slot, scale)
     end
     for index, name in ipairs(SLOT_NAMES) do
         local button = CreateFrame("Frame", nil, hud)

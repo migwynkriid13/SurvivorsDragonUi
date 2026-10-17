@@ -10,6 +10,7 @@
     "core/fstack.lua",
     "core/layout.lua",
     "core/tools.lua",
+    "core/tooltips.lua",
     "core/widgets.lua",
     "media/tex/actionbars/HDActionBar.tga",
     "media/tex/actionbars/HDActionBarBtn.tga",

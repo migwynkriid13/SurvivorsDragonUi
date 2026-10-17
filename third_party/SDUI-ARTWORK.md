@@ -1,6 +1,6 @@
 # SDUI editor artwork
 
-The `/sdui` editor and equipped-jewelry effects cards use World of Warcraft interface artwork, copyright Blizzard
+The `/sdui` editor uses World of Warcraft interface artwork, copyright Blizzard
 Entertainment, Inc., obtained through the public projects listed below. Cropping,
 repacking and format conversion do not change the ownership of that artwork. The
 artwork is included for use inside the game; the source projects' MIT licenses
@@ -86,23 +86,10 @@ The 64-by-32 destination contains two 30-by-29 cells from the 128-by-256
 
 ## Format and shipped attribution
 
-The jewelry effects card reuses `border.tga` with fixed 12-unit corner cells and
-stretched straight edges, plus `divider.tga` as a subtle top accent. Its dark fill
-uses a three-unit inset, overlapping beneath the border's inner bevel rather
-than leaving the normal editor's six-unit inset around the smaller card. Fill
-and text are drawn in Lua through the same helpers. It hides the editor header
-and adds no texture, upstream code, font or runtime dependency. The existing
-editor keeps its 24-unit panel corners.
-
-The jewelry card's speech-bubble pointer also samples the existing bottom-edge
-cell in `border.tga`, using column 960 and rows 86 through 104 as its bronze bevel
-profile at the same 12-unit border scale. Pooled half-unit geometry strips form a
-vertical drop, a 45-degree diagonal and mitered joins; the diagonal uses the same
-perpendicular bevel thickness. Its join strips continue the horizontal profile
-through the turn, without a square end cap. The dark interior uses the card's
-existing Lua fill color and alpha. The normal bottom edge is split around this
-opening, and the geometry can mirror when the hovered socket is near the card's
-right edge. No source pixels or shipped texture files are changed or added.
+The editor keeps its 24-unit panel corners, stretched straight edges and six-unit
+fill inset. Jewelry hovers now use the separate native-tooltip skin described in
+[Tooltip-STYLE.md](Tooltip-STYLE.md), without this editor border, divider or the
+earlier geometric speech-bubble pointer. No editor texture files were changed.
 
 The source files are 32-bit RLE TGA images. Their RGBA pixels were decoded,
 cropped without resizing or recoloring and repacked into the dimensions listed

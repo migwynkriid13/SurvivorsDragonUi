@@ -9,6 +9,7 @@ core\error.lua
 core\core.lua
 core\tools.lua
 core\widgets.lua
+core\tooltips.lua
 core\editor.lua
 core\fonts.lua
 core\display.lua
