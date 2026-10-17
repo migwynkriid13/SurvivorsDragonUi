@@ -117,6 +117,10 @@ DFRL:NewMod("Jewelry", 4, function()
         if percent then return "+ Movement speed: " .. percent .. "%" end
         _, _, percent = string.find(sentence, "^Reduces the cooldown of your spells by (%d+[.,]?%d*)%%$")
         if percent then return "- " .. percent .. "% Cooldown" end
+        _, _, percent = string.find(sentence, "^Reduces all damage taken by (%d+[.,]?%d*)%%$")
+        if percent then return "- " .. percent .. "% Damage taken" end
+        _, _, percent = string.find(sentence, "^Increases your maximum health by (%d+[.,]?%d*)%%$")
+        if percent then return "+ Maximum health: " .. percent .. "%" end
         return description
     end
     local function EffectDescription(text)
