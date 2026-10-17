@@ -29,6 +29,8 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local textPool = {}
     local textRoot
     local pending = {}
+    local pendingGroups = {}
+    local intakeBuckets = {}
     local spellTextures = {}
     local missingSpellTextures = {}
     local recentDamage = {}
@@ -174,7 +176,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         text.icon:Hide()
         text.holder:ClearAllPoints()
         text.origin = nil
-        text.spell, text.damageType = nil, nil
+        text.spell, text.damageType, text.iconTexture = nil, nil, nil
         table.insert(textPool, text)
     end
 
@@ -185,6 +187,8 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         end
         table.setn(activeTexts, 0)
         pending = {}
+        pendingGroups = {}
+        intakeBuckets = {}
         origins = {}
         recentDamage = {}
         for _, data in pairs(plates) do
@@ -697,9 +701,61 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         return FALLBACK_ICON
     end
 
+    local function IconIdentityPart(value) return string.len(value) .. ":" .. value end
+
+    local function QueueCombatText(info, now)
+        local byAmount, group
+        if info.kind == "damage" then
+            -- Resolve once even when icons are hidden, so identity and the
+            -- eventual displayed icon cannot change while this hit waits.
+            info.iconTexture = CombatIcon(info)
+            local attack, attackKind = info.spell, "spell"
+            if not attack or attack == "" then
+                if info.damageType == "autoattack" then
+                    attack, attackKind = "", "autoattack"
+                else
+                    attack = nil
+                end
+            end
+            if attack then
+                local source = info.sourceName
+                if not source or source == "" then
+                    source = type(_G.UnitName) == "function" and _G.UnitName("player") or ""
+                end
+                local identity = IconIdentityPart(attackKind)
+                    .. IconIdentityPart(attack)
+                    .. IconIdentityPart(source)
+                    .. IconIdentityPart(info.damageType or "")
+                    .. IconIdentityPart(info.school or "")
+                    .. IconIdentityPart(TextureKey(info.iconTexture) or FALLBACK_ICON)
+                local bucket = intakeBuckets[now]
+                if not bucket then
+                    bucket = {}
+                    intakeBuckets[now] = bucket
+                end
+                byAmount = bucket[identity]
+                if not byAmount then
+                    byAmount = {}
+                    bucket[identity] = byAmount
+                end
+                -- Both time and original damage stay numeric keys: no
+                -- rounding, widened window, summed value or target key.
+                group = byAmount[info.amount]
+            end
+        end
+        if not group then
+            -- The first original hit owns the unchanged value and styling.
+            group = { info = info, remaining = 0, count = 0, x = 0, y = 0 }
+            table.insert(pendingGroups, group)
+            if byAmount then byAmount[info.amount] = group end
+        end
+        group.remaining = group.remaining + 1
+        table.insert(pending, { info = info, time = now, group = group })
+    end
+
     local function UpdateIcon(text)
         if damageIcons then
-            text.icon:SetTexture(CombatIcon(text))
+            text.icon:SetTexture(text.iconTexture or CombatIcon(text))
             text.icon:Show()
         else
             text.icon:SetTexture(nil)
@@ -718,7 +774,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     end)
 
     local function AcquireText()
-        -- All accepted hits get their full lifetime, even in a large AoE pack.
+        -- Every displayed hit/group gets its full lifetime, including in AoE.
         -- The pool grows to peak concurrency; active entries are never evicted.
         local text = table.remove(textPool)
         if not text then
@@ -809,7 +865,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         text.label:SetText(tostring(value))
         text.label:SetTextColor(color[1], color[2], color[3])
         text.label:Show()
-        text.spell, text.damageType = info.spell, info.damageType
+        text.spell, text.damageType, text.iconTexture = info.spell, info.damageType, info.iconTexture
         UpdateIcon(text)
         local scale = text.sizeScale * (text.impact and 0.5 or 1)
         if text.scale ~= scale then
@@ -833,17 +889,25 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         for index = 1, count do
             local entry = pending[index]
             local age = now - entry.time
-            local displayed = false
+            local resolved = false
             if age >= EVENT_SETTLE then
                 local x, y, origin = ResolveOrigin(entry.info, now, age >= EVENT_FALLBACK_DELAY)
                 if x and y then
-                    DisplayDamage(entry.info, x, y, origin)
-                    displayed = true
+                    local group = entry.group
+                    if group.count == 0 then
+                        group.origin = origin
+                    elseif group.origin ~= origin then
+                        group.origin = nil
+                    end
+                    group.count = group.count + 1
+                    group.x, group.y = group.x + x, group.y + y
+                    group.remaining = group.remaining - 1
+                    resolved = true
                 end
             end
-            -- Preserve combat-message order without shifting the remaining
-            -- queue once per displayed hit during large damage bursts.
-            if not displayed then
+            -- Match every original hit once in native message order, retaining
+            -- original amounts for health-loss consumption and plate identity.
+            if not resolved then
                 kept = kept + 1
                 pending[kept] = entry
             end
@@ -853,6 +917,24 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         end
         -- Lua 5.0 insert/getn remembers a size independently of cleared slots.
         table.setn(pending, kept)
+
+        local groupCount = table.getn(pendingGroups)
+        kept = 0
+        for index = 1, groupCount do
+            local group = pendingGroups[index]
+            if group.remaining == 0 then
+                -- Different or unknown victims use a fixed centroid; follow
+                -- only when every original resolved to the same known origin.
+                DisplayDamage(group.info, group.x / group.count, group.y / group.count, group.origin)
+            else
+                kept = kept + 1
+                pendingGroups[kept] = group
+            end
+        end
+        for index = kept + 1, groupCount do
+            pendingGroups[index] = nil
+        end
+        table.setn(pendingGroups, kept)
     end
 
     local function UpdateTexts(now)
@@ -909,7 +991,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         table.setn(activeTexts, kept)
     end
 
-    local function HandleCombatEvent(eventName, message)
+    local function HandleCombatEvent(eventName, message, eventTime)
         if not inWorld or not CustomEnabled() then return end
         local info = ParseCombatEvent(eventName, message)
         if not info then return end
@@ -921,7 +1003,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             return
         end
         if not info.targetName or info.targetName == "" then return end
-        local now = GetTime()
+        local now = eventTime or GetTime()
         -- Catch newly allocated plates before a lethal hit can retire them.
         -- Known plates already sample on show/health changes and every frame;
         -- refreshing the entire pack for each combat message multiplies UI work.
@@ -932,7 +1014,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         -- Choose once in combat-message order, before plate-matching delays
         -- can reorder the display. An animating hit keeps its chosen color.
         info.color = DamageColor(info, now)
-        table.insert(pending, { info = info, time = now })
+        QueueCombatText(info, now)
     end
 
     local function ReadNativeDamage() return GetCVar("CombatDamage") end
@@ -1114,6 +1196,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     frame:RegisterEvent("CHAT_MSG_ADDON")
     frame:RegisterEvent("CVAR_UPDATE")
     frame:SetScript("OnEvent", function()
+        local eventTime = T.NameplateCombatEventHandlers[event] and GetTime() or nil
         if event == "PLAYER_ENTERING_WORLD" then
             inWorld = true
             iconSourcesDirty.talents, iconSourcesDirty.debuffs = true, true
@@ -1151,10 +1234,12 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             SyncGameSettings(false)
         else
             SyncGameSettings(false)
-            HandleCombatEvent(event, arg1)
+            HandleCombatEvent(event, arg1, eventTime)
         end
     end)
     frame:SetScript("OnUpdate", function()
+        -- Exact-time duplicate identity never crosses an update/event batch.
+        intakeBuckets = {}
         if not inWorld then return end
         -- Observe outgoing CVar changes without writing; the independent
         -- incoming/self global is read only for its editor control.
