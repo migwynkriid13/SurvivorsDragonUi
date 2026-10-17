@@ -4,7 +4,9 @@ DFRL:NewMod("Bars", 1, function()
     local BUTTON_COUNT = 7
     local BUTTON_SPACING = 6
     local COOLDOWN_INTERVAL = 0.1
-    local COOLDOWN_MINIMUM = 2
+    local COOLDOWN_MINIMUM = 0.999
+    local COOLDOWN_ZERO = 0.1
+    local COOLDOWN_FINAL_WINDOW = 0.2
     local COOLDOWN_UNITS = { { 86400, "d" }, { 3600, "h" }, { 60, "m" }, { 1, "" } }
     local TEX_PATH = "Interface\\AddOns\\SurvivorsDragonUi\\media\\tex\\actionbars\\"
     local defaults = {
@@ -228,6 +230,7 @@ DFRL:NewMod("Bars", 1, function()
     -- action slots; it does not import their code or hook cooldowns globally.
     -- https://github.com/DustinChecketts/Turtle-Dragonflight/tree/b2c62e9095e1c859bff0209db09f4ff5b9884f5a
     local function FormatCooldown(remaining)
+        if remaining < COOLDOWN_ZERO then return "0" end
         for _, unit in ipairs(COOLDOWN_UNITS) do
             if remaining >= unit[1] or unit[1] == 1 then return math.ceil(remaining / unit[1]) .. unit[2] end
         end
@@ -248,7 +251,7 @@ DFRL:NewMod("Bars", 1, function()
             type(start) ~= "number"
             or not (start > 0)
             or type(duration) ~= "number"
-            or not (duration >= COOLDOWN_MINIMUM)
+            or not (duration > COOLDOWN_MINIMUM)
             or enabled ~= 1
         then
             overlay:Hide()
@@ -269,6 +272,7 @@ DFRL:NewMod("Bars", 1, function()
             overlay.text:SetTextColor(1, 1, 1)
         end
         overlay:Show()
+        return remaining
     end
 
     local function CreateCooldownNumbers(bar)
@@ -287,9 +291,10 @@ DFRL:NewMod("Bars", 1, function()
             button.DFRL_cooldownNumber = overlay
         end
 
-        local active = true
+        local active, finishing = true, false
         local elapsed = 0
         local function ClearNumbers()
+            finishing = false
             for _, button in ipairs(DFRL.actionButtons) do
                 button.DFRL_cooldownNumber:Hide()
             end
@@ -300,8 +305,10 @@ DFRL:NewMod("Bars", 1, function()
                 return
             end
             local now = GetTime()
+            finishing = false
             for _, button in ipairs(DFRL.actionButtons) do
-                UpdateCooldownNumber(button, now)
+                local remaining = UpdateCooldownNumber(button, now)
+                if remaining and remaining <= COOLDOWN_FINAL_WINDOW then finishing = true end
             end
         end
 
@@ -326,7 +333,9 @@ DFRL:NewMod("Bars", 1, function()
         controller:SetScript("OnUpdate", function()
             if not active or not DFRL.display.Get("cooldownNumbers") then return end
             elapsed = elapsed + arg1
-            if elapsed < COOLDOWN_INTERVAL then return end
+            -- Sample each rendered frame near expiration so a 100-ms periodic
+            -- refresh does not skip the positive final-100-ms zero window.
+            if not finishing and elapsed < COOLDOWN_INTERVAL then return end
             elapsed = 0
             RefreshNumbers()
         end)
