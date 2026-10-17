@@ -53,9 +53,14 @@ DFRL:NewMod("Frame stack", 2, function()
         local left, right = Read(frame, "GetLeft"), Read(frame, "GetRight")
         local bottom, top = Read(frame, "GetBottom"), Read(frame, "GetTop")
         if
-            not Number(scale) or scale <= 0
-            or not Number(left) or not Number(right) or right <= left
-            or not Number(bottom) or not Number(top) or top <= bottom
+            not Number(scale)
+            or scale <= 0
+            or not Number(left)
+            or not Number(right)
+            or right <= left
+            or not Number(bottom)
+            or not Number(top)
+            or top <= bottom
         then
             return
         end
@@ -163,8 +168,11 @@ DFRL:NewMod("Frame stack", 2, function()
             if frame == panel or frame == highlight or not Visible(frame) then return end
             local bounds = Bounds(frame, uiScale, uiLeft, uiBottom)
             if
-                not bounds or cursorX < bounds.left or cursorX > bounds.right
-                or cursorY < bounds.bottom or cursorY > bounds.top
+                not bounds
+                or cursorX < bounds.left
+                or cursorX > bounds.right
+                or cursorY < bounds.bottom
+                or cursorY > bounds.top
             then
                 return
             end
@@ -215,7 +223,10 @@ DFRL:NewMod("Frame stack", 2, function()
         local count = table.getn(rows)
         for i = 1, math.min(count, STACK_ROWS) do
             local row = rows[i]
-            table.insert(lines, (row.frame == focus and "> " or "  ") .. row.strata .. ":" .. row.level .. "  " .. Name(row.frame))
+            table.insert(
+                lines,
+                (row.frame == focus and "> " or "  ") .. row.strata .. ":" .. row.level .. "  " .. Name(row.frame)
+            )
         end
         if count > STACK_ROWS then table.insert(lines, "+ " .. (count - STACK_ROWS) .. " more overlapping frames") end
         if count == 0 then table.insert(lines, "No visible frame bounds at the cursor.") end
@@ -228,14 +239,32 @@ DFRL:NewMod("Frame stack", 2, function()
             local frameWidth, frameHeight = Read(inspected, "GetWidth"), Read(inspected, "GetHeight")
             local scale = Read(inspected, "GetEffectiveScale")
             if Number(frameWidth) and Number(frameHeight) and Number(scale) then
-                table.insert(lines, string.format("Size %.2f x %.2f; effective scale %.3f", frameWidth, frameHeight, scale))
+                table.insert(
+                    lines,
+                    string.format("Size %.2f x %.2f; effective scale %.3f", frameWidth, frameHeight, scale)
+                )
             end
-            table.insert(lines, "Type: " .. tostring(Read(inspected, "GetObjectType") or "unknown")
-                .. "; strata: " .. tostring(Read(inspected, "GetFrameStrata") or "unknown")
-                .. "; level: " .. tostring(Read(inspected, "GetFrameLevel") or "unknown"))
+            table.insert(
+                lines,
+                "Type: "
+                    .. tostring(Read(inspected, "GetObjectType") or "unknown")
+                    .. "; strata: "
+                    .. tostring(Read(inspected, "GetFrameStrata") or "unknown")
+                    .. "; level: "
+                    .. tostring(Read(inspected, "GetFrameLevel") or "unknown")
+            )
             local bounds = Bounds(inspected, uiScale, uiLeft, uiBottom)
             if bounds then
-                table.insert(lines, string.format("UI bounds L %.2f B %.2f R %.2f T %.2f", bounds.left, bounds.bottom, bounds.right, bounds.top))
+                table.insert(
+                    lines,
+                    string.format(
+                        "UI bounds L %.2f B %.2f R %.2f T %.2f",
+                        bounds.left,
+                        bounds.bottom,
+                        bounds.right,
+                        bounds.top
+                    )
+                )
                 if inspected ~= UIParent and inspected ~= WorldFrame then
                     highlight:ClearAllPoints()
                     highlight:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", bounds.left, bounds.top)
@@ -249,7 +278,17 @@ DFRL:NewMod("Frame stack", 2, function()
                 for i = 1, math.min(points, 4) do
                     local point, relative, relativePoint, x, y = Read(inspected, "GetPoint", i)
                     if point and Number(x) and Number(y) then
-                        table.insert(lines, string.format("%s -> %s.%s (%.2f, %.2f)", point, Name(relative), tostring(relativePoint), x, y))
+                        table.insert(
+                            lines,
+                            string.format(
+                                "%s -> %s.%s (%.2f, %.2f)",
+                                point,
+                                Name(relative),
+                                tostring(relativePoint),
+                                x,
+                                y
+                            )
+                        )
                     end
                 end
                 if points > 4 then table.insert(lines, "+ " .. (points - 4) .. " more anchors") end
@@ -264,7 +303,9 @@ DFRL:NewMod("Frame stack", 2, function()
         if not enabled then
             if panel then panel:Hide() end
             if highlight then highlight:Hide() end
-            for _, label in ipairs(labels) do label:SetText("") end
+            for _, label in ipairs(labels) do
+                label:SetText("")
+            end
             return
         end
         CreateOverlay()
@@ -292,7 +333,9 @@ DFRL:NewMod("Frame stack", 2, function()
         elseif command == "on" or command == "off" then
             SetEnabled(command == "on")
         elseif DEFAULT_CHAT_FRAME then
-            DEFAULT_CHAT_FRAME:AddMessage("SurvivorsDragonUi: /fstack toggles frame inspection; /fstack on|off sets it.")
+            DEFAULT_CHAT_FRAME:AddMessage(
+                "SurvivorsDragonUi: /fstack toggles frame inspection; /fstack on|off sets it."
+            )
         end
     end
 end)
