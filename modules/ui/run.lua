@@ -458,7 +458,7 @@ DFRL:NewMod("RunTimers", 5, function()
         local inputX = padding + labelWidth + gap
         dropdownWidth = contentWidth - labelWidth - gap
 
-        fontEditor = T.CreateEditorPanel(UIParent, width, 508)
+        fontEditor = T.CreateEditorPanel(UIParent, width, 552)
         fontEditor:SetFrameStrata("TOOLTIP")
         fontEditor:SetFrameLevel(150)
         PlaceFontEditor()
@@ -499,7 +499,7 @@ DFRL:NewMod("RunTimers", 5, function()
             local page = CreateFrame("Frame", nil, fontEditor)
             page:SetPoint("TOPLEFT", fontEditor, "TOPLEFT", padding, -130)
             page:SetWidth(contentWidth)
-            page:SetHeight(308)
+            page:SetHeight(352)
             page:SetFrameLevel(152)
             pages[key] = page
             local button = T.CreateEditorButton(fontEditor, entry.label, tabSize, 30)
@@ -547,6 +547,13 @@ DFRL:NewMod("RunTimers", 5, function()
             "Equipped jewelry",
             "Show five equipped items attached to the action bar.",
             -264
+        )
+        DisplayToggle(
+            pages.hud,
+            "hideNativeBuild",
+            "Hide game build rows",
+            "Hide the game's original weapon and jewelry rows.",
+            -308
         )
 
         local combat = pages.combat
@@ -663,10 +670,10 @@ DFRL:NewMod("RunTimers", 5, function()
         visibilityControl:SetPoint("TOPLEFT", timer, "TOPLEFT", halfWidth + gap, -176)
 
         divider = T.EditorDivider(fontEditor, contentWidth)
-        divider:SetPoint("TOPLEFT", fontEditor, "TOPLEFT", padding, -444)
+        divider:SetPoint("TOPLEFT", fontEditor, "TOPLEFT", padding, -488)
         hint = FontEditorLabel(fontEditor, "Changes preview immediately. Confirm keeps them.", 0, 0, 9)
         hint:ClearAllPoints()
-        hint:SetPoint("TOP", fontEditor, "TOP", 0, -453)
+        hint:SetPoint("TOP", fontEditor, "TOP", 0, -497)
         hint:SetTextColor(0.75, 0.73, 0.67)
         local footer = CreateFrame("Frame", nil, fontEditor)
         footer:SetWidth(contentWidth)
