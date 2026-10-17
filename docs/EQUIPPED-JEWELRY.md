@@ -8,15 +8,22 @@ The user selected action-bar attachment design **4 — Thin shared bezel**, with
 
 Hover shows only the equipped item's native **Equip**, **Use** and **Chance on hit** effect descriptions. A private `GameTooltipTemplate` under a permanently hidden parent reads `SetInventoryItem("player", id)`; the shared `GameTooltip` is never owned, cleared or restyled. The reader scans at most 64 native rows, skipping the item title and selecting effect rows by the native localized `ITEM_SPELL_TRIGGER_*` prefixes, with English fallback labels only when those globals are missing. The complete matched trigger label and its following whitespace are removed for display, including multiword labels such as Chance on hit. Effect wording, numbers and wrapped text are preserved; no arbitrary first word of a description is removed. Binding, equipment type, requirements, flavor text, sale value and separate cooldown metadata are omitted. No effect values are inferred from the icon or item name. Missing APIs, unavailable descriptions or items without recognized effect rows produce no popup; a hovered slot retries at the existing five-Hz cadence so late native data can appear.
 
-Five user-requested English effect sentences use compact display wording after trigger-label removal:
+Twelve user-requested English effect sentences use compact display wording after trigger-label removal:
 
 - `Increases your movement speed by X%` becomes `+ Movement speed: X%`.
 - `Reduces the cooldown of your spells by X%` becomes `- X% Cooldown`.
 - `Reduces all damage taken by X%` becomes `- X% Damage taken`.
 - `Increases your maximum health by X%` becomes `+ Maximum health: X%`.
 - `Improves your chance to get a critical strike by X%` becomes `+ Critical strike chance: X%`.
+- `Increases the damage of your critical strikes by X%` becomes `+ Critical damage: X%`.
+- `Increases the range you pick up loot from by X%` becomes `+ Loot pickup range: X%`.
+- `Increases gold found by X%` becomes `+ Gold found: X%`.
+- `Increases the area of effect of your spells by X%` becomes `+ Spell area: X%`.
+- `Increases all damage you deal by X%` becomes `+ Damage dealt: X%`.
+- `Your damage, haste, shield and thorns buffs are X% stronger` becomes `+ Buff power: X%`.
+- `Restores X health per second` becomes `+ Health regen: X/s`.
 
-The percentage is copied from the native description, preserving integer or decimal text without rounding or a fixed item value. Matching tolerates wrapped whitespace and an optional final period, and requires the complete sentence so compound effects are not shortened accidentally. Other descriptions and languages retain their native wording after trigger-label removal. These rewrites affect only jewelry hover text, with no change to gameplay stats or chat formatting.
+The number is copied from the native description, preserving integer or decimal text without rounding or a fixed item value. Percentage effects retain `%`; regeneration retains health per second through `/s`. Buff power abbreviates the native damage, haste, shield and thorns buff-strength sentence. Matching tolerates wrapped whitespace and an optional final period, and requires the complete sentence so compound effects are not shortened accidentally. Other descriptions and languages retain their native wording after trigger-label removal. These rewrites affect only jewelry hover text, with no change to equipment-slot selection, gameplay stats, other item tooltips or chat formatting. Armor and flat Health lines in the supplied inventory examples remain item metadata outside the effects-only card.
 
 The effects appear above the hovered circle in a compact, mouse-transparent dark card with a bronze diamond-metal border, subtle gold divider and green DEFAULT 13 text. The panel reuses the shipped Dragonflight-family artwork and helpers from `core/editor.lua`, with smaller 12-unit border cells and no header. Its background starts three units inside each edge, overlapping beneath the smaller border's inner bevel so the fill joins the metal without a transparent gap. Normal editor panels retain their existing fill inset. It wraps within a 272-unit text column, measures height through the native 1.12 `GetStringWidth`/`GetHeight` methods and requests screen clamping when available. It works in attached and detached modes and clears on mouse leave, owner hiding, equipment removal, editing, disable and world leave/logout. The panel and scanner are pooled; no hover or effect state is saved. Artwork provenance is in [SDUI-ARTWORK.md](../third_party/SDUI-ARTWORK.md).
 

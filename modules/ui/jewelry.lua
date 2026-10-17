@@ -123,6 +123,21 @@ DFRL:NewMod("Jewelry", 4, function()
         if percent then return "+ Maximum health: " .. percent .. "%" end
         _, _, percent = string.find(sentence, "^Improves your chance to get a critical strike by (%d+[.,]?%d*)%%$")
         if percent then return "+ Critical strike chance: " .. percent .. "%" end
+        _, _, percent = string.find(sentence, "^Increases the damage of your critical strikes by (%d+[.,]?%d*)%%$")
+        if percent then return "+ Critical damage: " .. percent .. "%" end
+        _, _, percent = string.find(sentence, "^Increases the range you pick up loot from by (%d+[.,]?%d*)%%$")
+        if percent then return "+ Loot pickup range: " .. percent .. "%" end
+        _, _, percent = string.find(sentence, "^Increases gold found by (%d+[.,]?%d*)%%$")
+        if percent then return "+ Gold found: " .. percent .. "%" end
+        _, _, percent = string.find(sentence, "^Increases the area of effect of your spells by (%d+[.,]?%d*)%%$")
+        if percent then return "+ Spell area: " .. percent .. "%" end
+        _, _, percent = string.find(sentence, "^Increases all damage you deal by (%d+[.,]?%d*)%%$")
+        if percent then return "+ Damage dealt: " .. percent .. "%" end
+        _, _, percent =
+            string.find(sentence, "^Your damage, haste, shield and thorns buffs are (%d+[.,]?%d*)%% stronger$")
+        if percent then return "+ Buff power: " .. percent .. "%" end
+        local _, _, health = string.find(sentence, "^Restores (%d+[.,]?%d*) health per second$")
+        if health then return "+ Health regen: " .. health .. "/s" end
         return description
     end
     local function EffectDescription(text)
