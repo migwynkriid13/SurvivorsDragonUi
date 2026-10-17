@@ -231,7 +231,7 @@ DFRL:NewMod("Bars", 1, function()
     local function FormatCooldown(remaining)
         if remaining < COOLDOWN_ZERO then return "0" end
         for _, unit in ipairs(COOLDOWN_UNITS) do
-            if remaining >= unit[1] or unit[1] == 1 then return math.ceil(remaining / unit[1]) .. unit[2] end
+            if remaining >= unit[1] or unit[1] == 1 then return math.ceil(remaining / unit[1]) .. DFRL.locale.Text(unit[2]) end
         end
     end
 

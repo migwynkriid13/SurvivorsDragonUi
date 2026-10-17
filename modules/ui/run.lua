@@ -343,7 +343,11 @@ DFRL:NewMod("RunTimers", 5, function()
         -- Initialize the game's DEFAULT face first so a missing native face
         -- leaves readable text at the requested size and outline.
         text:SetFont("DEFAULT", settings.size, settings.outline)
-        if settings.face ~= "DEFAULT" then pcall(text.SetFont, text, settings.face, settings.size, settings.outline) end
+        -- Translated run captions with non-ASCII glyphs use the game face;
+        -- retain the user's saved font choice for the other languages.
+        if settings.face ~= "DEFAULT" and not string.find(DFRL.locale.Text("RUN"), "[\128-\255]") then
+            pcall(text.SetFont, text, settings.face, settings.size, settings.outline)
+        end
         text:SetShadowColor(0, 0, 0, settings.shadow and 1 or 0)
         text:SetShadowOffset(settings.shadow and 1 or 0, settings.shadow and -1 or 0)
     end
@@ -382,6 +386,7 @@ DFRL:NewMod("RunTimers", 5, function()
 
     local function FontEditorLabel(parent, text, x, y, size)
         local label = parent:CreateFontString(nil, "OVERLAY")
+        DFRL.locale.Bind(label)
         label:SetFont("DEFAULT", size or 12, "OUTLINE")
         label:SetTextColor(1, 1, 1)
         label:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
@@ -396,6 +401,11 @@ DFRL:NewMod("RunTimers", 5, function()
         button:SetScript("OnClick", callback)
         return button.label, button
     end
+
+    DFRL.locale.Listen(function()
+        if fontSample then fontSample:SetText(DFRL.locale.Text("RUN") .. " 02:34 / 20:00") end
+        PreviewFont(fontDraft or _G.SurvivorsDragonUiRunFont)
+    end)
 
     local function ChangeSize(direction)
         if not fontDraft then return end
@@ -419,8 +429,7 @@ DFRL:NewMod("RunTimers", 5, function()
         local measure = FontEditorLabel(UIParent, "", 0, 0)
         measure:Hide()
         local function TextWidth(text)
-            measure:SetText(text)
-            return math.ceil(measure:GetStringWidth() or 0)
+            return DFRL.locale.Width(measure, text)
         end
         local padding, gap = 20, 8
         local labelWidth = math.max(TextWidth("Font"), TextWidth("Size"), TextWidth("Outline"))
@@ -459,7 +468,8 @@ DFRL:NewMod("RunTimers", 5, function()
             defaultsWidth * 2 + 140 + gap * 4,
             TextWidth(instructions)
         )
-        local width = contentWidth + padding * 2
+        local width = math.min(contentWidth + padding * 2, math.max(320, UIParent:GetWidth() - 20))
+        contentWidth = width - padding * 2
         local inputX = padding + labelWidth + gap
         dropdownWidth = contentWidth - labelWidth - gap
 
@@ -603,7 +613,7 @@ DFRL:NewMod("RunTimers", 5, function()
         local timer = pages.timer
         local caption = FontEditorLabel(timer, "Timer label preview", 0, 0, 9)
         caption:SetTextColor(0.75, 0.73, 0.67)
-        fontSample = FontEditorLabel(timer, "RUN 02:34 / 20:00", 0, 0)
+        fontSample = FontEditorLabel(timer, DFRL.locale.Text("RUN") .. " 02:34 / 20:00", 0, 0)
         fontSample:ClearAllPoints()
         fontSample:SetPoint("TOP", timer, "TOP", 0, -16)
         local controlX = inputX - padding
@@ -799,7 +809,7 @@ DFRL:NewMod("RunTimers", 5, function()
         table.insert(tallyFields, entry)
         field:SetScript("OnEnter", function()
             GameTooltip:SetOwner(this, "ANCHOR_LEFT")
-            GameTooltip:AddLine(entry.label, 1, 0.82, 0)
+            GameTooltip:AddLine(DFRL.locale.Text(entry.label), 1, 0.82, 0)
             GameTooltip:AddLine(entry.text:GetText() or "", 1, 1, 1)
             GameTooltip:Show()
         end)
@@ -1300,23 +1310,23 @@ DFRL:NewMod("RunTimers", 5, function()
     local function DebuffTooltip(icon)
         local effect = icon.effect
         if not GameTooltip or not effect then return end
-        GameTooltip:SetText(type(effect.name) == "string" and effect.name ~= "" and effect.name or "Debuff", 1, 1, 1)
+        GameTooltip:SetText(type(effect.name) == "string" and effect.name ~= "" and effect.name or DFRL.locale.Text("Debuff"), 1, 1, 1)
         if IsNumber(effect.stacks) and effect.stacks > 1 then
-            GameTooltip:AddLine("Stacks: " .. tostring(math.floor(effect.stacks)), 1, 1, 1)
+            GameTooltip:AddLine(DFRL.locale.Text("Stacks: ") .. tostring(math.floor(effect.stacks)), 1, 1, 1)
         end
         if type(effect.dispelType) == "string" and effect.dispelType ~= "" then
-            GameTooltip:AddLine(effect.dispelType, 0.65, 0.8, 1)
+            GameTooltip:AddLine(DFRL.locale.Text(effect.dispelType), 0.65, 0.8, 1)
         end
         local remaining = DebuffRemaining(effect)
         if Permanent(effect) then
-            GameTooltip:AddLine("No expiration", 1, 0.85, 0.4)
+            GameTooltip:AddLine(DFRL.locale.Text("No expiration"), 1, 0.85, 0.4)
         elseif remaining then
-            GameTooltip:AddLine("Remaining: " .. Clock(math.ceil(remaining)), 1, 0.85, 0.4)
+            GameTooltip:AddLine(DFRL.locale.Text("Remaining: ") .. Clock(math.ceil(remaining)), 1, 0.85, 0.4)
         else
-            GameTooltip:AddLine("Remaining time unavailable", 0.7, 0.7, 0.7)
+            GameTooltip:AddLine(DFRL.locale.Text("Remaining time unavailable"), 0.7, 0.7, 0.7)
         end
         if not Permanent(effect) and IsNumber(effect.duration) and effect.duration > 0 then
-            GameTooltip:AddLine("Duration: " .. Clock(math.ceil(effect.duration)), 0.8, 0.8, 0.8)
+            GameTooltip:AddLine(DFRL.locale.Text("Duration: ") .. Clock(math.ceil(effect.duration)), 0.8, 0.8, 0.8)
         end
         GameTooltip:Show()
     end
@@ -1535,7 +1545,7 @@ DFRL:NewMod("RunTimers", 5, function()
             local atLimit = seconds >= maximum
             SetRunAppearance(atLimit)
             UpdateRunFlow(seconds, maximum)
-            local clockText = "RUN " .. Clock(seconds)
+            local clockText = DFRL.locale.Text("RUN") .. " " .. Clock(seconds)
             if not atLimit then clockText = clockText .. " / " .. Clock(maximum) end
             if runText:GetText() ~= clockText then
                 runText:SetText(clockText)

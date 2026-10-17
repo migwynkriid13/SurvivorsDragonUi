@@ -32,10 +32,10 @@ DFRL:NewMod("Frame stack", 2, function()
         if ok then return a, b, c, d, e end
     end
     local function Name(frame)
-        if not frame then return "none" end
+        if not frame then return DFRL.locale.Text("none") end
         local name = Read(frame, "GetName")
         if not name or name == "" then
-            name = "(unnamed " .. tostring(Read(frame, "GetObjectType") or "frame") .. ") " .. tostring(frame)
+            name = DFRL.locale.Text("(unnamed ") .. tostring(Read(frame, "GetObjectType") or "frame") .. ") " .. tostring(frame)
         end
         return (string.gsub(tostring(name), "|", "||"))
     end
@@ -125,7 +125,7 @@ DFRL:NewMod("Frame stack", 2, function()
             local remaining = i < table.getn(lines) and 14 or 0
             local limited = contentHeight + lineHeight + remaining > maximumHeight
             if limited then
-                label:SetText("... screen limit reached; /fstack off to close.")
+                label:SetText(DFRL.locale.Text("... screen limit reached; /fstack off to close."))
                 lineHeight = 14
             end
             label:ClearAllPoints()
@@ -152,10 +152,10 @@ DFRL:NewMod("Frame stack", 2, function()
             highlight:Hide()
             return
         end
-        local lines = { "SurvivorsDragonUi frame stack - /fstack to close" }
+        local lines = { DFRL.locale.Text("SurvivorsDragonUi frame stack - /fstack to close") }
         highlight:Hide()
         if type(_G.GetCursorPosition) ~= "function" or not Number(uiScale) or uiScale <= 0 then
-            table.insert(lines, "Native cursor/scale data is unavailable.")
+            table.insert(lines, DFRL.locale.Text("Native cursor/scale data is unavailable."))
             Display(lines, 0, width, height)
             return
         end
@@ -228,7 +228,7 @@ DFRL:NewMod("Frame stack", 2, function()
             while scanned < SCAN_LIMIT do
                 local ok, nextFrame = pcall(_G.EnumerateFrames, frame)
                 if not ok or (nextFrame and seen[nextFrame]) then
-                    warning = "Frame enumeration stopped; the list may be incomplete."
+                    warning = DFRL.locale.Text("Frame enumeration stopped; the list may be incomplete.")
                     break
                 end
                 if not nextFrame then break end
@@ -236,9 +236,9 @@ DFRL:NewMod("Frame stack", 2, function()
                 seen[frame] = true
                 Scan(frame, scanned)
             end
-            if scanned == SCAN_LIMIT then warning = "Frame scan limit reached; the list may be incomplete." end
+            if scanned == SCAN_LIMIT then warning = DFRL.locale.Text("Frame scan limit reached; the list may be incomplete.") end
         else
-            warning = "EnumerateFrames unavailable; showing mouse focus and parents."
+            warning = DFRL.locale.Text("EnumerateFrames unavailable; showing mouse focus and parents.")
         end
         -- Also include focus and its regions without global frame enumeration.
         frame = focus
@@ -269,8 +269,8 @@ DFRL:NewMod("Frame stack", 2, function()
         local index = selectedIndex or focusIndex or 1
         local inspectedRow = rows[index]
         local inspected = inspectedRow and inspectedRow.frame or focus
-        table.insert(lines, "Mouse focus: " .. Name(focus))
-        table.insert(lines, "Client-wide frames, textures and text (> focus, * inspected):")
+        table.insert(lines, DFRL.locale.Text("Mouse focus: ") .. Name(focus))
+        table.insert(lines, DFRL.locale.Text("Client-wide frames, textures and text (> focus, * inspected):"))
         local count = table.getn(rows)
         local first = math.floor((index - 1) / STACK_ROWS) * STACK_ROWS + 1
         local last = math.min(count, first + STACK_ROWS - 1)
@@ -288,49 +288,49 @@ DFRL:NewMod("Frame stack", 2, function()
                     .. Name(row.frame)
             )
         end
-        if count > 0 then table.insert(lines, "Elements " .. first .. "-" .. last .. " of " .. count) end
-        if count == 0 then table.insert(lines, "No visible UI element bounds at the cursor.") end
+        if count > 0 then table.insert(lines, DFRL.locale.Text("Elements ") .. first .. "-" .. last .. DFRL.locale.Text(" of ") .. count) end
+        if count == 0 then table.insert(lines, DFRL.locale.Text("No visible UI element bounds at the cursor.")) end
         if warning then table.insert(lines, warning) end
-        if regionWarning then table.insert(lines, "Region scan unavailable or limited; the list may be incomplete.") end
+        if regionWarning then table.insert(lines, DFRL.locale.Text("Region scan unavailable or limited; the list may be incomplete.")) end
         if inspected then
             table.insert(lines, "")
-            table.insert(lines, "Inspect: " .. Name(inspected))
-            table.insert(lines, "Parent: " .. Name(Read(inspected, "GetParent")))
+            table.insert(lines, DFRL.locale.Text("Inspect: ") .. Name(inspected))
+            table.insert(lines, DFRL.locale.Text("Parent: ") .. Name(Read(inspected, "GetParent")))
             local frameWidth, frameHeight = Read(inspected, "GetWidth"), Read(inspected, "GetHeight")
             local owner = inspectedRow and inspectedRow.owner or inspected
             local scale = Read(inspected, "GetEffectiveScale") or Read(owner, "GetEffectiveScale")
             if Number(frameWidth) and Number(frameHeight) and Number(scale) then
                 table.insert(
                     lines,
-                    string.format("Size %.2f x %.2f; effective scale %.3f", frameWidth, frameHeight, scale)
+                    string.format(DFRL.locale.Text("Size %.2f x %.2f; effective scale %.3f"), frameWidth, frameHeight, scale)
                 )
             end
             table.insert(
                 lines,
-                "Type: "
-                    .. tostring(Read(inspected, "GetObjectType") or "unknown")
-                    .. "; strata: "
-                    .. tostring(Read(owner, "GetFrameStrata") or "unknown")
-                    .. "; level: "
-                    .. tostring(Read(owner, "GetFrameLevel") or "unknown")
+                DFRL.locale.Text("Type: ")
+                    .. tostring(Read(inspected, "GetObjectType") or DFRL.locale.Text("unknown"))
+                    .. DFRL.locale.Text("; strata: ")
+                    .. tostring(Read(owner, "GetFrameStrata") or DFRL.locale.Text("unknown"))
+                    .. DFRL.locale.Text("; level: ")
+                    .. tostring(Read(owner, "GetFrameLevel") or DFRL.locale.Text("unknown"))
             )
             local layer = Read(inspected, "GetDrawLayer")
-            if layer then table.insert(lines, "Draw layer: " .. tostring(layer)) end
+            if layer then table.insert(lines, DFRL.locale.Text("Draw layer: ") .. tostring(layer)) end
             local texture = Read(inspected, "GetTexture")
-            if type(texture) == "string" then table.insert(lines, "Texture: " .. (string.gsub(texture, "|", "||"))) end
+            if type(texture) == "string" then table.insert(lines, DFRL.locale.Text("Texture: ") .. (string.gsub(texture, "|", "||"))) end
             local text = Read(inspected, "GetText")
             if type(text) == "string" and text ~= "" then
-                local preview = string.sub(text, 1, 120)
+                local preview, clipped = DFRL.locale.Preview(text, 120)
                 preview = string.gsub(preview, "\n", "\\n")
                 preview = string.gsub(preview, "|", "||")
-                table.insert(lines, "Text: " .. preview .. (string.len(text) > 120 and "..." or ""))
+                table.insert(lines, DFRL.locale.Text("Text: ") .. preview .. (clipped and "..." or ""))
             end
             local bounds = Bounds(inspected, uiScale, uiLeft, uiBottom, owner)
             if bounds then
                 table.insert(
                     lines,
                     string.format(
-                        "UI bounds L %.2f B %.2f R %.2f T %.2f",
+                        DFRL.locale.Text("UI bounds L %.2f B %.2f R %.2f T %.2f"),
                         bounds.left,
                         bounds.bottom,
                         bounds.right,
@@ -363,11 +363,11 @@ DFRL:NewMod("Frame stack", 2, function()
                         )
                     end
                 end
-                if points > 4 then table.insert(lines, "+ " .. (points - 4) .. " more anchors") end
+                if points > 4 then table.insert(lines, "+ " .. (points - 4) .. DFRL.locale.Text(" more anchors")) end
             end
         end
-        table.insert(lines, "/fstack next|prev cycles all overlaps; /fstack focus follows the mouse.")
-        table.insert(lines, "Native UI API only; bounds order is not exact hit testing/draw order.")
+        table.insert(lines, DFRL.locale.Text("/fstack next|prev cycles all overlaps; /fstack focus follows the mouse."))
+        table.insert(lines, DFRL.locale.Text("Native UI API only; bounds order is not exact hit testing/draw order."))
         Display(lines, cursorX, width, height)
     end
     local function SetEnabled(value)
@@ -437,7 +437,7 @@ DFRL:NewMod("Frame stack", 2, function()
             end
         elseif DEFAULT_CHAT_FRAME then
             DEFAULT_CHAT_FRAME:AddMessage(
-                "SurvivorsDragonUi: /fstack [on|off|next|prev|focus]. Inspect all Lua-exposed UI, including the game's own."
+                DFRL.locale.Text("SurvivorsDragonUi: /fstack [on|off|next|prev|focus]. Inspect all Lua-exposed UI, including the game's own.")
             )
         end
     end

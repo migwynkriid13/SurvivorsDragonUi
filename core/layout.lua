@@ -292,6 +292,7 @@ DFRL:NewMod("Layout", 0, function()
         handle:SetBackdrop({ edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 1 })
         handle:SetBackdropBorderColor(0.87, 0.73, 0.41, 0.8)
         local label = handle:CreateFontString(nil, "OVERLAY")
+        DFRL.locale.Bind(label)
         label:SetFont("DEFAULT", 10, "OUTLINE")
         label:SetPoint("CENTER", handle, "CENTER", 0, 0)
         label:SetTextColor(0.87, 0.73, 0.41)
@@ -485,6 +486,7 @@ DFRL:NewMod("Layout", 0, function()
         showCoordinates = activate
         local function Text(text, y, size)
             local label = coordinates:CreateFontString(nil, "OVERLAY")
+            DFRL.locale.Bind(label)
             label:SetFont("DEFAULT", size or 11, "")
             label:SetPoint("TOP", coordinates, "TOP", 0, y)
             label:SetText(text)
@@ -679,7 +681,7 @@ DFRL:NewMod("Layout", 0, function()
             if entry.options.onReset then entry.options.onReset() end
         end
         RestoreDefaults()
-        if DEFAULT_CHAT_FRAME then DEFAULT_CHAT_FRAME:AddMessage("SurvivorsDragonUi: default layout restored.") end
+        if DEFAULT_CHAT_FRAME then DEFAULT_CHAT_FRAME:AddMessage(DFRL.locale.Text("SurvivorsDragonUi: default layout restored.")) end
     end
     function layout.Ready()
         ready = true
@@ -766,7 +768,7 @@ DFRL:NewMod("Layout", 0, function()
             layout.BeginEdit()
         elseif DEFAULT_CHAT_FRAME then
             DEFAULT_CHAT_FRAME:AddMessage(
-                "Use /sdui to edit the layout, then click Confirm to save. /sdui reset restores default positions, sizes and visibility."
+                DFRL.locale.Text("Use /sdui to edit the layout, then click Confirm to save. /sdui reset restores default positions, sizes and visibility.")
             )
         end
     end

@@ -127,6 +127,7 @@ DFRL:NewMod("Waypoints", 3, function()
         pointer:SetHeight(POINTER_SIZE)
         pointer:Hide()
         local title = hud:CreateFontString(nil, "OVERLAY")
+        DFRL.locale.Bind(title)
         title:SetFont("DEFAULT", 13, "OUTLINE")
         title:SetTextColor(0.93, 0.8, 0.53)
         title:SetPoint("TOPLEFT", hud, "TOPLEFT", 68, -6)
@@ -273,17 +274,17 @@ DFRL:NewMod("Waypoints", 3, function()
     local function PinTooltip(tracker, pin)
         local entry = pin.entry
         if not entry or not GameTooltip then return end
-        GameTooltip:SetText(tracker.title, 1, 0.9, 0.58)
+        GameTooltip:SetText(DFRL.locale.Text(tracker.title), 1, 0.9, 0.58)
         if tracker.kind == "guardian" then
             if type(entry.name) == "string" and entry.name ~= "" then GameTooltip:AddLine(entry.name, 1, 1, 1) end
             GameTooltip:AddLine(
-                entry.state == "awake" and "Fighting; marker shows its lair" or "Waiting at its lair",
+                DFRL.locale.Text(entry.state == "awake" and "Fighting; marker shows its lair" or "Waiting at its lair"),
                 0.8,
                 0.8,
                 0.8
             )
         end
-        GameTooltip:AddLine(entry.key == tracker.selectedKey and "Tracking this waypoint" or "Click to track", 1, 1, 1)
+        GameTooltip:AddLine(DFRL.locale.Text(entry.key == tracker.selectedKey and "Tracking this waypoint" or "Click to track"), 1, 1, 1)
         GameTooltip:Show()
     end
 
@@ -401,7 +402,7 @@ DFRL:NewMod("Waypoints", 3, function()
         else
             tracker.pointer:Hide()
         end
-        local text = distance and (tostring(math.floor(distance + 0.5)) .. " yd") or "On map"
+        local text = distance and DFRL.locale.Native("common.yards", { n = math.floor(distance + 0.5) }) or DFRL.locale.Text("On map")
         if tracker.distanceText:GetText() ~= text then tracker.distanceText:SetText(text) end
     end
 

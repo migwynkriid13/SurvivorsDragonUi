@@ -7,6 +7,8 @@
 
 core\error.lua
 core\core.lua
+core\localization.lua
+localization\data.lua
 core\tools.lua
 core\widgets.lua
 core\tooltips.lua

@@ -878,7 +878,9 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         text.gravity = text.launch + 65
         arcDirection = -arcDirection
         local color = info.color or DAMAGE_COLORS.normal
-        text.label:SetText(tostring(value))
+        local displayText = tostring(value)
+        if info.kind == "miss" then displayText = DFRL.locale.CombatText(displayText) end
+        text.label:SetText(displayText)
         text.label:SetTextColor(color[1], color[2], color[3])
         text.label:Show()
         text.spell, text.damageType, text.iconTexture = info.spell, info.damageType, info.iconTexture
@@ -1181,15 +1183,15 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         local feedback
         if mode == "on" then
             SelectMode("on")
-            feedback = "Custom SCT enabled. V controls visible nameplates; invisible plates track hit positions."
+            feedback = DFRL.locale.Text("Custom SCT enabled. V controls visible nameplates; invisible plates track hit positions.")
         elseif mode == "off" then
             SelectMode("off")
-            feedback = "Custom and native outgoing SCT disabled. Incoming/self text is unchanged."
+            feedback = DFRL.locale.Text("Custom and native outgoing SCT disabled. Incoming/self text is unchanged.")
         elseif mode == "default" then
             SelectMode("default")
-            feedback = "Custom SCT disabled; native SCT follows your game settings."
+            feedback = DFRL.locale.Text("Custom SCT disabled; native SCT follows your game settings.")
         else
-            feedback = "Usage: /sct on | off | default. Current mode: " .. sctMode .. "."
+            feedback = DFRL.locale.Text("Usage: /sct on | off | default. Current mode: ") .. sctMode .. "."
         end
         if DEFAULT_CHAT_FRAME then DEFAULT_CHAT_FRAME:AddMessage("SurvivorsDragonUi: " .. feedback) end
     end

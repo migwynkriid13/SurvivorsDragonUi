@@ -74,7 +74,7 @@ local function CaptureFormat(text, formatText)
     return arguments[1], arguments[2], arguments[3], arguments[4]
 end
 
-local function StatGain(amount, label) return PLUS .. WHITE .. amount .. "|r " .. GREEN .. label .. "|r" end
+local function StatGain(amount, label) return PLUS .. WHITE .. amount .. "|r " .. GREEN .. DFRL.locale.Text(label) .. "|r" end
 
 local abilityFormats = {
     { "ERR_LEARN_ABILITY_S", "You have learned a new ability: %s." },
@@ -117,6 +117,19 @@ local function HiddenAnnouncement(text)
         return false
     end
     if plain == GUARDIAN_SLAIN then return true end
+    for _, key in ipairs({
+        "%s approaches!",
+        "%s enters the battlefield!",
+        "%s claims its lair once more.",
+        "%s refuses to fall!",
+        "%s is slain! Its lair yields treasure and its strength, and the other guardians grow stronger.",
+    }) do
+        local native = DFRL.locale.Native(key)
+        if CaptureFormat(plain, native) then return true end
+        if string.sub(native, 1, 2) == "%s" and plain == string.gsub(native, "^%%s%s*", "") then return true end
+    end
+    if plain == DFRL.locale.Native("Swarm surrounds you!") then return true end
+    if DFRL.locale.Match("{subtitle} — survive the onslaught!", plain) then return true end
     local guardian = CaptureFormat(plain, "%s " .. GUARDIAN_SLAIN)
     if guardian and string.find(guardian, "^[^\r\n]+$") then return true end
     -- Match announcement wording, never a mob-name whitelist. Some native
@@ -161,12 +174,29 @@ local function NpcYell(text, speaker, message)
 end
 
 local function TalentExperience(text)
+    for _, key in ipairs({
+        "Your {class}s earn {xp} talent experience: 1 new talent point! Spend it in the armory.",
+        "Your {class}s earn {xp} talent experience: {n} new talent points! Spend them in the armory.",
+        "Your {class}s earn {xp} talent experience.",
+    }) do
+        local values = DFRL.locale.Match(key, text)
+        if values and string.find(values.xp or "", "^%d[%d,%.]*$") and string.find(values.class or "", "%S") then
+            local output = PLUS .. WHITE .. values.xp .. "|r " .. WHITE .. DFRL.locale.Text("Talent XP:") .. "|r " .. YELLOW .. values.class .. "|r"
+            if key ~= "Your {class}s earn {xp} talent experience." then
+                local points = values.n or "1"
+                if not string.find(points, "^%d+$") then return nil end
+                output = output .. ", " .. StatGain(points, points == "1" and "Talent Point" or "Talent Points")
+                output = output .. GRAY .. " (" .. DFRL.locale.Text("Spend in armory") .. ")|r"
+            end
+            return output
+        end
+    end
     -- Capture the game's class label verbatim, including plural/compound names.
     -- Neither a class whitelist nor fixed XP/point amounts belong here.
     local first, last, class, experience, tail =
         string.find(text, "^Your (.-) earns? (%d[%d,]*) talent experience(.*)$")
     if not first or not string.find(class, "%S") then return nil end
-    local output = PLUS .. WHITE .. experience .. "|r " .. WHITE .. "Talent XP:|r " .. YELLOW .. class .. "|r"
+    local output = PLUS .. WHITE .. experience .. "|r " .. WHITE .. DFRL.locale.Text("Talent XP:") .. "|r " .. YELLOW .. class .. "|r"
     if tail == "" or tail == "." or tail == "!" then return output end
 
     local pointFirst, pointLast, points, instruction = string.find(tail, "^:%s*(%d+) new talent points?!(.*)$")
@@ -178,7 +208,7 @@ local function TalentExperience(text)
 
     local label = tonumber(points) == 1 and "Talent Point" or "Talent Points"
     output = output .. ", " .. StatGain(points, label)
-    if armory then output = output .. GRAY .. " (Spend in armory)|r" end
+    if armory then output = output .. GRAY .. " (" .. DFRL.locale.Text("Spend in armory") .. ")|r" end
     return output
 end
 
@@ -191,7 +221,7 @@ local function ProgressMessage(text)
         level = value
     end
     -- Only the native plain-number announcement enters the levelup_ding format.
-    if level and string.find(level, "^%d+$") then return YELLOW .. "Level " .. level .. "|r", "level" end
+    if level and string.find(level, "^%d+$") then return YELLOW .. DFRL.locale.Text("Level ") .. level .. "|r", "level" end
 
     -- Survivors combines the three gains into one notice. Apply the source
     -- levelup_stat/levelup_hp appearance to each gain without rounding decimals.
@@ -234,6 +264,15 @@ end
 local function LootMessage(text)
     local body = CaptureFormat(text, _G.LOOT_ITEM_SELF)
     if not body then
+        local prefix = DFRL.locale.Native("You receive loot:")
+        local first, last = string.find(text, prefix, 1, true)
+        if first then
+            local leading = string.gsub(string.sub(text, 1, first - 1), "|c%x%x%x%x%x%x%x%x", "")
+            leading = string.gsub(leading, "|r", "")
+            if leading == "" then body = string.sub(text, last + 1) end
+        end
+    end
+    if not body then
         local first, last = string.find(text, "You receive loot:", 1, true)
         if first then
             local prefix = string.sub(text, 1, first - 1)
@@ -274,9 +313,12 @@ local function LootMessage(text)
         suffix = ""
     elseif plainSuffix ~= "" then
         local statusColor
-        if string.find(plainSuffix, "^%s+%(already collected%)%.?$") then
+        local normalized = string.gsub(plainSuffix, "^%s+", "")
+        normalized = string.gsub(normalized, "%.$", "")
+        local collected = "(" .. DFRL.locale.Native("already collected") .. ")"
+        if normalized == collected or string.find(plainSuffix, "^%s+%(already collected%)%.?$") then
             statusColor = GRAY
-        elseif string.find(plainSuffix, "^%s+New in your collection!$") then
+        elseif normalized == DFRL.locale.Native("New in your collection!") or string.find(plainSuffix, "^%s+New in your collection!$") then
             statusColor = GREEN
         else
             return nil

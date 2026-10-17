@@ -39,14 +39,20 @@ DFRL:NewMod("ChatCopy", 0, function()
         frame:SetBackdropBorderColor(0.35, 0.42, 0.48, 0.9)
 
         local title = frame:CreateFontString(nil, "OVERLAY")
+        DFRL.locale.Bind(title)
         title:SetFont("DEFAULT", 12, "")
+        title:SetWidth(WIDTH - 56)
         title:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -12)
         title:SetTextColor(0.87, 0.73, 0.41)
 
         local hint = frame:CreateFontString(nil, "OVERLAY")
         hint:SetFont("DEFAULT", 12, "")
         hint:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 12, 10)
-        hint:SetText("Select text and press Ctrl+C. Escape closes this window.")
+        hint:SetWidth(WIDTH - 24)
+        hint:SetHeight(30)
+        hint:SetJustifyH("LEFT")
+        hint:SetJustifyV("BOTTOM")
+        DFRL.locale.Bind(hint):SetText("Select text and press Ctrl+C. Escape closes this window.")
         hint:SetTextColor(0.7, 0.74, 0.78)
 
         local close = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
@@ -56,7 +62,7 @@ DFRL:NewMod("ChatCopy", 0, function()
         local scroll =
             CreateFrame("ScrollFrame", "SurvivorsDragonUiChatCopyScroll", frame, "UIPanelScrollFrameTemplate")
         scroll:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -36)
-        scroll:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -36, 30)
+        scroll:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -36, 46)
 
         local edit = CreateFrame("EditBox", "SurvivorsDragonUiChatCopyText", scroll)
         edit:SetMultiLine(true)
@@ -132,7 +138,7 @@ DFRL:NewMod("ChatCopy", 0, function()
     function Chat.ShowCopy(text, title)
         if not dialog then dialog = CreateDialog() end
         local plain = PlainText(text)
-        if plain == "" then plain = "No chat messages are available to copy." end
+        if plain == "" then plain = DFRL.locale.Text("No chat messages are available to copy.") end
         dialog.title:SetText(PlainText(title or "Copy chat history"))
         dialog.edit:SetText(plain)
         dialog.resizeText(plain)

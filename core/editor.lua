@@ -97,6 +97,7 @@ end
 
 local function Label(parent, size, text)
     local label = parent:CreateFontString(nil, "OVERLAY")
+    DFRL.locale.Bind(label)
     label:SetFont("DEFAULT", size, "")
     label:SetTextColor(0.88, 0.87, 0.83)
     label:SetShadowColor(0, 0, 0, 1)

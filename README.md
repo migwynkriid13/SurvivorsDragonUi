@@ -4,6 +4,8 @@ A custom HUD for **Azeroth Survivors 0.87.0+**, using its official addon API. In
 
 See [Commands](#commands) for every addon command, including layout editing, reset, chat copying and combat-text modes.
 
+Addon captions and compact jewelry effects support all thirteen game languages. Language follows the game's received localized zone/class metadata, with the client locale as the initial fallback; see [language support](docs/LOCALIZATION.md) for coverage and integration limits.
+
 ## Install
 
 1. Download `SurvivorsDragonUi.zip` from this repository's **Releases**.
