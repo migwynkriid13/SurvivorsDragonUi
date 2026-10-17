@@ -1,10 +1,9 @@
 --[[
-SDUI artwork is cropped from PentSec/DragonUI commit
-623eca5893c9d475a7b77bd25808bdbe801d247c, using the pixel coordinates in
-DragonUI/utils/forever_atlas_chrome.lua and forever_atlas_controls.lua.
+SDUI artwork uses cropped texture pixels from source commit
+623eca5893c9d475a7b77bd25808bdbe801d247c.
+Source provenance and pixel coordinates: third_party/SDUI-ARTWORK.md.
 The underlying World of Warcraft artwork is Copyright Blizzard Entertainment,
-Inc.; it is not licensed under the MIT notices below. DragonUI and DragonflightUI
-are credited as the source projects. See third_party/SDUI-ARTWORK.md for provenance.
+Inc.; it is not licensed under the MIT notices below.
 These helpers use texture pixels directly, without the source addons or atlas APIs.
 
 MIT License
@@ -98,6 +97,7 @@ end
 
 local function Label(parent, size, text)
     local label = parent:CreateFontString(nil, "OVERLAY")
+    DFRL.locale.Bind(label)
     label:SetFont("DEFAULT", size, "")
     label:SetTextColor(0.88, 0.87, 0.83)
     label:SetShadowColor(0, 0, 0, 1)
@@ -106,13 +106,13 @@ local function Label(parent, size, text)
     return label
 end
 
-function DFRL.tools.CreateEditorPanel(parent, width, height)
+function DFRL.tools.CreateEditorPanel(parent, width, height, borderSize)
     local frame = CreateFrame("Frame", nil, parent)
     frame:SetWidth(width)
     frame:SetHeight(height)
     frame:EnableMouse(true)
     frame.editorFill = Fill(frame, 0.035, 0.038, 0.043, 0.97)
-    frame.editorBorder = Border(frame, 24)
+    frame.editorBorder = Border(frame, borderSize or 24)
     local header = Artwork(frame, "header", "ARTWORK", 0, 199 / 256, 0, 1)
     header:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -6)
     header:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -16, -6)
@@ -161,6 +161,19 @@ function DFRL.tools.CreateEditorButton(parent, text, width, height, primary)
     end
     button:SetSelected(false)
     return button
+end
+
+function DFRL.tools.CreateEditorInput(parent, width, height)
+    local box = CreateFrame("EditBox", nil, parent)
+    box:SetWidth(width)
+    box:SetHeight(height)
+    box:SetFont("DEFAULT", 12, "")
+    box:SetAutoFocus(false)
+    box:SetMaxLetters(16)
+    box:SetTextInsets(8, 8, 0, 0)
+    box.editorFill = Fill(box, 0.055, 0.06, 0.065, 0.93)
+    box.editorBorder = Border(box, 12)
+    return box
 end
 
 function DFRL.tools.EditorDivider(parent, width)

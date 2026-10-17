@@ -1,4 +1,4 @@
--- This store saves only frame geometry; the timer owns its separate font preference.
+-- Layout geometry and visibility; the timer owns its separate font preference.
 DFRL:NewMod("Layout", 0, function()
     local layout, entries, order = {}, {}, {}
     DFRL.layout = layout
@@ -6,6 +6,8 @@ DFRL:NewMod("Layout", 0, function()
     local needsDefaultPosition = false
     local activeDrag
     local editing, draft, confirm = false, nil, nil
+    local coordinates, selected, RefreshCoordinates, SelectEntry
+    local showCoordinates
     local confirmAnchor
     local labels = {
         playerFrame = "Player",
@@ -13,6 +15,7 @@ DFRL:NewMod("Layout", 0, function()
         bossBars = "Boss health",
         runTimer = "Run timer",
         actionBar = "Action bar",
+        jewelryBar = "Equipped jewelry (detached)",
         xpBar = "XP",
         runTally = "Kills / Gold / Cache",
         microMenu = "Micro menu",
@@ -33,9 +36,22 @@ DFRL:NewMod("Layout", 0, function()
         return _G.SurvivorsDragonUiLayout
     end
     local function GeometryStore() return editing and draft or Saved() end
+    local function IsHidden(entry)
+        local geometry = GeometryStore()[entry.key]
+        return type(geometry) == "table" and geometry.hidden == true
+    end
+    local function ApplyVisibility(entry)
+        local shown = not IsHidden(entry) and entry.wantsShown
+        if shown and not entry.frame:IsShown() then
+            entry.nativeShow(entry.frame)
+        elseif not shown and entry.frame:IsShown() then
+            entry.nativeHide(entry.frame)
+        end
+    end
     local function CopyGeometry(geometry)
         if not Valid(geometry) then return end
         local copy = { x = geometry.x, y = geometry.y }
+        if geometry.hidden == true then copy.hidden = true end
         for _, field in ipairs({ "scale", "width", "height" }) do
             if Number(geometry[field]) then copy[field] = geometry[field] end
         end
@@ -132,6 +148,7 @@ DFRL:NewMod("Layout", 0, function()
     local function ReadGeometry(entry, position)
         if not position then return end
         local geometry = { x = position.x, y = position.y }
+        if IsHidden(entry) then geometry.hidden = true end
         if entry.options.resize == "dimensions" then
             geometry.width, geometry.height = entry.frame:GetWidth(), entry.frame:GetHeight()
         else
@@ -154,6 +171,7 @@ DFRL:NewMod("Layout", 0, function()
         local position = GeometryStore()[key]
         ApplySize(entry, Valid(position) and position or nil)
         ApplyPosition(entry.frame, Valid(position) and position or entry.defaultPosition)
+        ApplyVisibility(entry)
     end
     function layout.IsPlaced(key) return (entries[key] and entries[key].dragging) or Valid(GeometryStore()[key]) end
     local function FinishDrag(entry, capture)
@@ -169,6 +187,7 @@ DFRL:NewMod("Layout", 0, function()
         entry.resizing, entry.resizePosition = nil, nil
         LockFrame(entry.frame)
         layout.Place(entry.key)
+        if capture and editing and coordinates and entry == selected then RefreshCoordinates() end
     end
 
     local function Cursor()
@@ -180,6 +199,7 @@ DFRL:NewMod("Layout", 0, function()
     local function BeginResize(entry, corner)
         if not ready or not inWorld or not editing then return end
         FinishDrag(activeDrag, true)
+        SelectEntry(entry, true)
         local width, height, uiScale = Viewport()
         local x, y = Cursor()
         local position = ReadPosition(entry.frame)
@@ -272,6 +292,7 @@ DFRL:NewMod("Layout", 0, function()
         handle:SetBackdrop({ edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 1 })
         handle:SetBackdropBorderColor(0.87, 0.73, 0.41, 0.8)
         local label = handle:CreateFontString(nil, "OVERLAY")
+        DFRL.locale.Bind(label)
         label:SetFont("DEFAULT", 10, "OUTLINE")
         label:SetPoint("CENTER", handle, "CENTER", 0, 0)
         label:SetTextColor(0.87, 0.73, 0.41)
@@ -279,10 +300,12 @@ DFRL:NewMod("Layout", 0, function()
         handle:SetScript("OnDragStart", function()
             if not ready or not inWorld or not editing then return end
             FinishDrag(activeDrag, true)
+            SelectEntry(entry, true)
             entry.dragging, activeDrag = true, entry
             entry.frame:StartMoving()
             LockFrame(entry.frame)
         end)
+        handle:SetScript("OnClick", function() SelectEntry(entry, true) end)
         handle:SetScript("OnDragStop", function() FinishDrag(entry, true) end)
         handle:SetScript("OnMouseUp", function() FinishDrag(entry, true) end)
         handle:SetScript("OnHide", function() FinishDrag(entry, true) end)
@@ -332,12 +355,246 @@ DFRL:NewMod("Layout", 0, function()
         entry.defaultAnchor = defaultAnchor or CaptureAnchors(frame)
         needsDefaultPosition = true
         entries[key] = entry
+        -- Preserve the module's requested visibility, including conditional frames.
+        entry.nativeShow, entry.nativeHide = frame.Show, frame.Hide
+        entry.wantsShown = frame:IsShown() and true or false
+        frame.Show = function(self)
+            entry.wantsShown = true
+            if not IsHidden(entry) then entry.nativeShow(self) end
+        end
+        frame.Hide = function(self)
+            entry.wantsShown = false
+            entry.nativeHide(self)
+        end
         table.insert(order, entry)
         entry.defaultAnchor(frame)
         LockFrame(frame)
         MakeHandle(entry)
         if ready then layout.Place(key) end
         if editing and entry.options.onEdit then entry.options.onEdit(true) end
+    end
+
+    -- Coordinates use UIParent units and the frame's center, independent of its scale.
+    local function CenterPosition(entry)
+        local width, height, uiScale = Viewport()
+        local position = ReadPosition(entry.frame)
+        if not width or not position then return end
+        local ratio = Scale(entry.frame) / uiScale
+        return position.x * width + entry.frame:GetWidth() * ratio / 2 - width / 2,
+            position.y * height - entry.frame:GetHeight() * ratio / 2 + height / 2
+    end
+    local function SetCoordinateText(field, text)
+        -- Remember programmatic text before SetText, including delayed change events.
+        coordinates[field].layoutText = text
+        coordinates[field]:SetText(text)
+    end
+    RefreshCoordinates = function()
+        if not coordinates or not selected then return end
+        coordinates.refreshing = true
+        local x, y = CenterPosition(selected)
+        coordinates.label:SetText(labels[selected.key] or selected.key)
+        SetCoordinateText("x", x and string.format("%.2f", x) or "")
+        SetCoordinateText("y", y and string.format("%.2f", y) or "")
+        if not x then
+            coordinates.unavailable = true
+            coordinates.status:SetText("Frame position is not available yet.")
+        elseif coordinates.unavailable then
+            coordinates.unavailable = false
+            coordinates.status:SetText("")
+        end
+        local dimensions = selected.options.resize == "dimensions"
+        coordinates.sizeLabel:SetText(dimensions and "Width / Height (frame units)" or "Scale (%) - 40 to 300")
+        SetCoordinateText(
+            "width",
+            string.format(
+                "%.2f",
+                dimensions and selected.frame:GetWidth() or LocalScale(selected.frame) / selected.defaultScale * 100
+            )
+        )
+        SetCoordinateText("height", string.format("%.2f", selected.frame:GetHeight()))
+        if dimensions then
+            coordinates.height:Show()
+        else
+            coordinates.height:Hide()
+        end
+        coordinates.visibility:SetChecked(IsHidden(selected))
+        coordinates.dirty = false
+        coordinates.refreshing = false
+    end
+    local function ClearCoordinateFocus()
+        for _, field in ipairs({ "x", "y", "width", "height" }) do
+            coordinates[field]:ClearFocus()
+        end
+        coordinates.focused = nil
+    end
+    SelectEntry = function(entry, activate)
+        if not editing or not entry then return end
+        selected = entry
+        if coordinates then
+            coordinates.dirty = false
+            ClearCoordinateFocus()
+            coordinates.status:SetText("")
+            RefreshCoordinates()
+        end
+        if activate and showCoordinates then showCoordinates() end
+    end
+    local function ApplyCoordinates()
+        if not editing or not selected then return end
+        FinishDrag(activeDrag, true)
+        local x = tonumber((string.gsub(coordinates.x:GetText(), ",", ".")))
+        local y = tonumber((string.gsub(coordinates.y:GetText(), ",", ".")))
+        local size = tonumber((string.gsub(coordinates.width:GetText(), ",", ".")))
+        local sizeHeight = tonumber((string.gsub(coordinates.height:GetText(), ",", ".")))
+        local dimensions = selected.options.resize == "dimensions"
+        if not Number(x) or not Number(y) then
+            coordinates.status:SetText("Enter valid X and Y numbers.")
+            return
+        end
+        if not Number(size) or size <= 0 or (dimensions and (not Number(sizeHeight) or sizeHeight <= 0)) then
+            coordinates.status:SetText("Enter positive size values.")
+            return
+        end
+        local width, height, uiScale = Viewport()
+        if not width or not ReadPosition(selected.frame) then
+            coordinates.status:SetText("Frame position is not available yet.")
+            return
+        end
+        local frame = selected.frame
+        -- Apply size first so the entered center remains fixed when resizing.
+        if dimensions then
+            ApplySize(selected, { width = size, height = sizeHeight })
+        else
+            ApplySize(selected, { scale = selected.defaultScale * size / 100 })
+        end
+        local ratio = Scale(frame) / uiScale
+        local position = {
+            x = (x + width / 2 - frame:GetWidth() * ratio / 2) / width,
+            y = (y - height / 2 + frame:GetHeight() * ratio / 2) / height,
+        }
+        draft[selected.key] = ReadGeometry(selected, position)
+        layout.Place(selected.key)
+        ClearCoordinateFocus()
+        coordinates.status:SetText("Applied. Confirm to save.")
+        coordinates.dirty = false
+        RefreshCoordinates()
+        return true
+    end
+    -- The community's numeric editor shares the existing dialog and draft store.
+    function layout.CreateControls(parent, width, activate)
+        coordinates = CreateFrame("Frame", nil, parent)
+        coordinates:SetAllPoints(parent)
+        showCoordinates = activate
+        local function Text(text, y, size)
+            local label = coordinates:CreateFontString(nil, "OVERLAY")
+            DFRL.locale.Bind(label)
+            label:SetFont("DEFAULT", size or 11, "")
+            label:SetPoint("TOP", coordinates, "TOP", 0, y)
+            label:SetText(text)
+            label:SetTextColor(0.88, 0.87, 0.83)
+            label:SetShadowColor(0, 0, 0, 1)
+            label:SetShadowOffset(1, -1)
+            return label
+        end
+        coordinates.label = Text("", -8, 12)
+        coordinates.label:SetWidth(width - 80)
+        coordinates.label:SetHeight(16)
+        Text("Center relative to screen center (UI units)", -36, 10)
+        coordinates.sizeLabel = Text("", -106)
+        local gap, inputWidth = 12, (width - 12) / 2
+        for _, field in ipairs({ "x", "y", "width", "height" }) do
+            local positionField = field == "x" or field == "y"
+            local left = field == "x" or field == "width"
+            local x = left and 0 or inputWidth + gap
+            if positionField then
+                local label = Text(left and "X: right +" or "Y: up +", -56)
+                label:ClearAllPoints()
+                label:SetPoint("TOPLEFT", coordinates, "TOPLEFT", x + 6, -56)
+            end
+            local box = T.CreateEditorInput(coordinates, inputWidth, 26)
+            box:SetPoint("TOPLEFT", coordinates, "TOPLEFT", x, positionField and -72 or -122)
+            box:SetScript("OnEditFocusGained", function() coordinates.focused = this end)
+            box:SetScript("OnEditFocusLost", function()
+                if coordinates.focused == this then coordinates.focused = nil end
+            end)
+            box:SetScript("OnTextChanged", function()
+                if not coordinates.refreshing and this:GetText() ~= this.layoutText then coordinates.dirty = true end
+            end)
+            box:SetScript("OnEnterPressed", ApplyCoordinates)
+            box:SetScript("OnEscapePressed", function() SelectEntry(selected) end)
+            coordinates[field] = box
+        end
+        local fields = { "x", "y", "width", "height" }
+        for index, field in ipairs(fields) do
+            local nextIndex = index + 1
+            coordinates[field]:SetScript("OnTabPressed", function()
+                local nextField = fields[nextIndex] or "x"
+                if nextField == "height" and selected.options.resize ~= "dimensions" then nextField = "x" end
+                this:ClearFocus()
+                coordinates[nextField]:SetFocus()
+            end)
+        end
+        for _, step in ipairs({ -1, 1 }) do
+            local direction = step
+            local button = T.CreateEditorButton(coordinates, direction == -1 and "<" or ">", 30, 28)
+            button:SetPoint(
+                direction == -1 and "TOPLEFT" or "TOPRIGHT",
+                coordinates,
+                direction == -1 and "TOPLEFT" or "TOPRIGHT",
+                0,
+                0
+            )
+            button:SetScript("OnClick", function()
+                FinishDrag(activeDrag, true)
+                local index = 1
+                for i, entry in ipairs(order) do
+                    if entry == selected then index = i end
+                end
+                index = index + direction
+                if index < 1 then index = table.getn(order) end
+                if index > table.getn(order) then index = 1 end
+                SelectEntry(order[index])
+            end)
+        end
+        local visibility = T.CreateEditorToggle(
+            coordinates,
+            "Hide frame",
+            "Keep this group hidden during gameplay.",
+            width,
+            function(hidden)
+                if not editing or not selected then return end
+                FinishDrag(activeDrag, true)
+                local geometry = ReadGeometry(selected, ReadPosition(selected.frame))
+                if not geometry then
+                    coordinates.visibility:SetChecked(IsHidden(selected))
+                    coordinates.status:SetText("Frame position is not available yet.")
+                    return
+                end
+                geometry.hidden = hidden or nil
+                draft[selected.key] = geometry
+                ApplyVisibility(selected)
+                coordinates.status:SetText("Preview. Confirm to save.")
+            end
+        )
+        visibility:SetPoint("TOPLEFT", coordinates, "TOPLEFT", 0, -156)
+        coordinates.visibility = visibility
+        local apply = T.CreateEditorButton(coordinates, "Apply position / size", width, 28)
+        apply:SetPoint("TOPLEFT", coordinates, "TOPLEFT", 0, -204)
+        apply:SetScript("OnClick", ApplyCoordinates)
+        coordinates.status = Text("", -242, 10)
+        coordinates.status:SetWidth(width)
+        coordinates.status:SetHeight(18)
+        local refreshElapsed = 0
+        coordinates:SetScript("OnUpdate", function()
+            refreshElapsed = refreshElapsed + (arg1 or 0)
+            if refreshElapsed < 0.1 then return end
+            refreshElapsed = 0
+            if not coordinates.dirty and not coordinates.focused then RefreshCoordinates() end
+        end)
+        coordinates:SetScript("OnShow", function()
+            if not coordinates.dirty and not coordinates.focused then RefreshCoordinates() end
+        end)
+        coordinates:SetScript("OnHide", ClearCoordinateFocus)
+        SelectEntry(selected or entries.playerFrame or order[1])
     end
 
     local function RestoreDefaults()
@@ -358,7 +615,12 @@ DFRL:NewMod("Layout", 0, function()
     end
     local function CloseEditing(save, restore)
         if not editing then return end
+        -- Capture pointer geometry before deciding whether numeric input needs applying.
         FinishDrag(activeDrag, save)
+        if save and coordinates and coordinates.dirty and not ApplyCoordinates() then
+            if showCoordinates then showCoordinates() end
+            return
+        end
         if save then _G.SurvivorsDragonUiLayout = draft end
         editing, draft = false, nil
         for _, entry in ipairs(order) do
@@ -373,6 +635,7 @@ DFRL:NewMod("Layout", 0, function()
             end
         end
     end
+    function layout.CancelEdit() CloseEditing(false, true) end
     local function PlaceConfirm()
         if not confirm then return end
         local anchor = confirmAnchor or UIParent
@@ -388,6 +651,7 @@ DFRL:NewMod("Layout", 0, function()
     end
     function layout.BeginEdit()
         if not ready or not inWorld then return end
+        local starting = not editing
         if not editing then
             draft = {}
             -- Preserve lazy-window records too, without aliasing committed data.
@@ -407,6 +671,7 @@ DFRL:NewMod("Layout", 0, function()
         end
         PlaceConfirm()
         confirm:Show()
+        if starting and coordinates then SelectEntry(selected or entries.playerFrame or order[1]) end
     end
     function layout.Reset()
         CloseEditing(false, false)
@@ -416,7 +681,9 @@ DFRL:NewMod("Layout", 0, function()
             if entry.options.onReset then entry.options.onReset() end
         end
         RestoreDefaults()
-        if DEFAULT_CHAT_FRAME then DEFAULT_CHAT_FRAME:AddMessage("SurvivorsDragonUi: default layout restored.") end
+        if DEFAULT_CHAT_FRAME then
+            DEFAULT_CHAT_FRAME:AddMessage(DFRL.locale.Text("SurvivorsDragonUi: default layout restored."))
+        end
     end
     function layout.Ready()
         ready = true
@@ -454,7 +721,7 @@ DFRL:NewMod("Layout", 0, function()
         if not enabled then return end
         for _, entry in ipairs(order) do
             local handle, region = entry.handle, entry.options.region or entry.frame
-            local shown = entry.defaultPosition and (not entry.options.onlyWhenShown or entry.frame:IsShown())
+            local shown = entry.defaultPosition and (not entry.options.onlyWhenShown or entry.wantsShown)
             if shown then
                 local ratio = Scale(region) / scale
                 local handleWidth = math.max(12, region:GetWidth() * ratio)
@@ -503,7 +770,9 @@ DFRL:NewMod("Layout", 0, function()
             layout.BeginEdit()
         elseif DEFAULT_CHAT_FRAME then
             DEFAULT_CHAT_FRAME:AddMessage(
-                "Use /sdui to edit the layout, then click Confirm to save. /sdui reset restores default positions and sizes."
+                DFRL.locale.Text(
+                    "Use /sdui to edit the layout, then click Confirm to save. /sdui reset restores default positions, sizes and visibility."
+                )
             )
         end
     end

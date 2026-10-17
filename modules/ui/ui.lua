@@ -231,3 +231,50 @@ DFRL:NewMod("Ui", 5, function()
         elapsed = 0
     end)
 end)
+
+-- The native build is renderer-owned; control it through the official HUD API.
+DFRL:NewMod("Native build rows", 1, function()
+    local inWorld, applying = true, false
+    local function ApplyBuild()
+        if not inWorld or applying then return end
+        if type(AZS_SetHudShown) ~= "function" or type(AZS_IsHudShown) ~= "function" then return end
+        local ok, shown = pcall(AZS_IsHudShown, "build")
+        if not ok or (shown ~= true and shown ~= false and shown ~= 1 and shown ~= 0) then return end
+        local wanted = not DFRL.display.Get("hideNativeBuild")
+        if (shown == true or shown == 1) == wanted then return end
+        applying = true
+        pcall(AZS_SetHudShown, "build", wanted)
+        applying = false
+    end
+    local controller = CreateFrame("Frame")
+    controller:RegisterEvent("PLAYER_ENTERING_WORLD")
+    controller:RegisterEvent("PLAYER_LEAVING_WORLD")
+    controller:RegisterEvent("PLAYER_LOGOUT")
+    controller:RegisterEvent("CVAR_UPDATE")
+    controller:SetScript("OnEvent", function()
+        if event == "PLAYER_ENTERING_WORLD" then
+            inWorld = true
+            ApplyBuild()
+        elseif event == "PLAYER_LEAVING_WORLD" or event == "PLAYER_LOGOUT" then
+            -- Restore the committed native preference before world-exit saving,
+            -- regardless of the layout controller's event-handler order.
+            DFRL.display.FinishEdit(false)
+            ApplyBuild()
+            inWorld = false
+        elseif type(arg1) == "string" and string.lower(arg1) == "hudbuild" then
+            ApplyBuild()
+        end
+    end)
+    if type(_G.ReloadUI) == "function" then
+        local reloadUI = _G.ReloadUI
+        _G.ReloadUI = function()
+            -- The native setter also changes the game's saved HUD preference.
+            -- Discard previews before ReloadUI can serialize that preference.
+            DFRL.display.FinishEdit(false)
+            ApplyBuild()
+            return reloadUI()
+        end
+    end
+    DFRL.display.Listen(ApplyBuild)
+    ApplyBuild()
+end)

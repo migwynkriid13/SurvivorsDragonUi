@@ -186,8 +186,11 @@ DFRL:NewMod("Mini", 1, function()
         local function UpdateTarget()
             if TargetofTargetFrame.name and UnitExists("targettarget") then
                 local name = UnitName("targettarget")
-                if name and string.len(name) > 5 then name = string.sub(name, 1, 8) .. "..." end
-                TargetofTargetFrame.name:SetText(name or "No target")
+                if name then
+                    local preview, clipped = DFRL.locale.Preview(name, 8)
+                    name = preview .. (clipped and "..." or "")
+                end
+                TargetofTargetFrame.name:SetText(name or DFRL.locale.Text("No target"))
             end
             UpdateValues(target)
         end

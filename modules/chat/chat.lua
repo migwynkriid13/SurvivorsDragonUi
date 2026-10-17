@@ -11,6 +11,7 @@ DFRL:NewMod("Chat", 1, function()
         initialized = true
 
         local WIDTH, HEIGHT = 520, 340
+        local FOOTER_HEIGHT = 32
         local HOLD, FADE, SLIDE = 14, 0.6, 0.35
         local tex = DFRL:GetInfoOrCons("tex") .. "chat\\"
         local states, selected = {}, nil
@@ -28,6 +29,10 @@ DFRL:NewMod("Chat", 1, function()
         root:Show()
         chat.frame = root
         local rootWidth, rootHeight = WIDTH, HEIGHT
+        -- Include the native input and passive indicator below the message pane.
+        local moveRegion = CreateFrame("Frame", nil, root)
+        moveRegion:SetPoint("TOPLEFT", root, "TOPLEFT", -1, 0)
+        moveRegion:SetPoint("BOTTOMRIGHT", root, "BOTTOMRIGHT", 0, -FOOTER_HEIGHT)
 
         local function Flag(value) return value == true or value == 1 end
         local function Clamp(value, low, high) return math.max(low, math.min(high, value)) end
@@ -40,6 +45,7 @@ DFRL:NewMod("Chat", 1, function()
         end
         local function Label(parent, text, size)
             local label = parent:CreateFontString(nil, "OVERLAY")
+            DFRL.locale.Bind(label)
             label:SetFont("DEFAULT", size or 12, "OUTLINE")
             label:SetShadowColor(0, 0, 0, 1)
             label:SetShadowOffset(1, -1)
@@ -202,7 +208,7 @@ DFRL:NewMod("Chat", 1, function()
 
         local indicator = CreateFrame("Frame", nil, root)
         indicator:SetWidth(WIDTH)
-        indicator:SetHeight(32)
+        indicator:SetHeight(FOOTER_HEIGHT)
         indicator:SetPoint("TOPLEFT", root, "BOTTOMLEFT", 0, 0)
         indicator:SetFrameLevel(root:GetFrameLevel() + 5)
         local indicatorText = Label(indicator, "Scroll down for latest messages")
@@ -555,6 +561,7 @@ DFRL:NewMod("Chat", 1, function()
             end
         end)
         DFRL.layout.Register("chat", root, nil, {
+            region = moveRegion,
             resize = "dimensions",
             minWidth = 240,
             minHeight = 120,

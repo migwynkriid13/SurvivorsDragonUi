@@ -86,6 +86,11 @@ The 64-by-32 destination contains two 30-by-29 cells from the 128-by-256
 
 ## Format and shipped attribution
 
+The editor keeps its 24-unit panel corners, stretched straight edges and six-unit
+fill inset. Jewelry hovers now use the separate native-tooltip skin described in
+[Tooltip-STYLE.md](Tooltip-STYLE.md), without this editor border, divider or the
+earlier geometric speech-bubble pointer. No editor texture files were changed.
+
 The source files are 32-bit RLE TGA images. Their RGBA pixels were decoded,
 cropped without resizing or recoloring and repacked into the dimensions listed
 above. The destination files are uncompressed, true-color TGA images: image type

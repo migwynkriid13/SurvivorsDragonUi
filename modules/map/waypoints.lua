@@ -14,15 +14,14 @@ preserved at 64x64 without rescaling; its native display override is 32x32:
 https://wago.tools/api/casc/1121272?version=10.2.7.54847
 https://wago.tools/db2/UiTextureAtlasMember/csv?build=10.2.7.54847
 
-Floating-label HUD glyphs are Blizzard game artwork distributed by
-NeticSoul/DragonUI, commit 00197f223180323ea7297c0157edbd1a43d2f99f:
-DragonUI/Textures/Nameplates/Quests/Loot/loot_bag.tga (CachePouch.tga)
-DragonUI/Textures/Nameplates/Quests/Kill/kill_elite.tga (GuardianFloating.tga)
-https://github.com/NeticSoul/DragonUI/tree/00197f223180323ea7297c0157edbd1a43d2f99f
+Floating-label HUD glyphs are Blizzard game artwork from source commit
+00197f223180323ea7297c0157edbd1a43d2f99f:
+Textures/Nameplates/Quests/Loot/loot_bag.tga (CachePouch.tga)
+Textures/Nameplates/Quests/Kill/kill_elite.tga (GuardianFloating.tga)
+Source provenance and license: third_party/CacheWaypoints-ARTWORK.md.
 The upstream LICENSE excludes World of Warcraft artwork from its core MIT
 license: game textures are copyright Blizzard Entertainment and included only
 for use with the game. No upstream Lua is imported.
-https://github.com/NeticSoul/DragonUI/blob/00197f223180323ea7297c0157edbd1a43d2f99f/LICENSE
 
 Detailed preparation: third_party/CacheWaypoints-ARTWORK.md.
 ]]
@@ -128,6 +127,7 @@ DFRL:NewMod("Waypoints", 3, function()
         pointer:SetHeight(POINTER_SIZE)
         pointer:Hide()
         local title = hud:CreateFontString(nil, "OVERLAY")
+        DFRL.locale.Bind(title)
         title:SetFont("DEFAULT", 13, "OUTLINE")
         title:SetTextColor(0.93, 0.8, 0.53)
         title:SetPoint("TOPLEFT", hud, "TOPLEFT", 68, -6)
@@ -169,6 +169,7 @@ DFRL:NewMod("Waypoints", 3, function()
         tracker.entries = {}
         navigation.SetPoints(tracker.source, nil)
         tracker.selectedKey, tracker.selected, tracker.provisionalSelection = nil, nil, nil
+        tracker.presentation = nil
         tracker.hud:Hide()
         tracker.pointer:Hide()
         tracker.distanceText:SetText("")
@@ -274,17 +275,22 @@ DFRL:NewMod("Waypoints", 3, function()
     local function PinTooltip(tracker, pin)
         local entry = pin.entry
         if not entry or not GameTooltip then return end
-        GameTooltip:SetText(tracker.title, 1, 0.9, 0.58)
+        GameTooltip:SetText(DFRL.locale.Text(tracker.title), 1, 0.9, 0.58)
         if tracker.kind == "guardian" then
             if type(entry.name) == "string" and entry.name ~= "" then GameTooltip:AddLine(entry.name, 1, 1, 1) end
             GameTooltip:AddLine(
-                entry.state == "awake" and "Fighting; marker shows its lair" or "Waiting at its lair",
+                DFRL.locale.Text(entry.state == "awake" and "Fighting; marker shows its lair" or "Waiting at its lair"),
                 0.8,
                 0.8,
                 0.8
             )
         end
-        GameTooltip:AddLine(entry.key == tracker.selectedKey and "Tracking this waypoint" or "Click to track", 1, 1, 1)
+        GameTooltip:AddLine(
+            DFRL.locale.Text(entry.key == tracker.selectedKey and "Tracking this waypoint" or "Click to track"),
+            1,
+            1,
+            1
+        )
         GameTooltip:Show()
     end
 
@@ -383,18 +389,81 @@ DFRL:NewMod("Waypoints", 3, function()
         )
     end
 
-    local function UpdateGuide(tracker)
+    local function WrapAngle(angle)
+        local turn = math.pi * 2
+        return angle - math.floor((angle + math.pi) / turn) * turn
+    end
+
+    local function Blend(presentation, key, target, stamp, elapsed, angular, playing)
+        if not playing or not Number(target) or not Number(stamp) then
+            presentation[key] = nil
+            return target
+        end
+        local value = presentation[key]
+        if not value or stamp < value.stamp or stamp - value.stamp > 1 then
+            value = { current = target, from = target, target = target, stamp = stamp, age = 0, duration = 0 }
+            presentation[key] = value
+        elseif target ~= value.target then
+            local interval = stamp - value.stamp
+            value.from, value.target, value.age = value.current, target, 0
+            value.duration = math.max(0, math.min(interval, 0.5))
+        end
+        value.stamp = stamp
+        value.age = math.min(value.age + elapsed, value.duration)
+        if value.duration == 0 or value.age >= value.duration then
+            value.current = target
+        else
+            local delta = target - value.from
+            if angular then delta = WrapAngle(delta) end
+            value.current = value.from + delta * value.age / value.duration
+        end
+        if angular then value.current = WrapAngle(value.current) end
+        return value.current
+    end
+
+    local function UpdateGuide(tracker, elapsed)
         if not DFRL.display.Get(tracker.displayKey) or not tracker.selected then
+            tracker.presentation = nil
             tracker.hud:Hide()
             return
         end
         tracker.hud:Show()
-        local east, north, distance, metric = navigation.Delta(tracker.selected)
-        local facing = navigation.Heading()
+        if not tracker.hud:IsShown() then
+            tracker.presentation = nil
+            return
+        end
+        elapsed = elapsed or 0
+        local selected = tracker.selected
+        local east, north, distance, metric, stamp = navigation.GuideDelta(selected)
+        local facing, headingStamp = navigation.Heading()
+        local presentation = tracker.presentation
+        if
+            not presentation
+            or presentation.key ~= selected.key
+            or presentation.x ~= selected.x
+            or presentation.y ~= selected.y
+            or elapsed > 0.5
+            or (
+                east
+                and presentation.east
+                and (east - presentation.east) ^ 2 + (north - presentation.north) ^ 2 > 32 ^ 2
+            )
+        then
+            presentation = { key = selected.key, x = selected.x, y = selected.y }
+            tracker.presentation = presentation
+        end
+        presentation.east, presentation.north = east, north
+        local playing = Native("AZS_GetPhase") == "playing"
         local moving = east and (east ~= 0 or north ~= 0)
+        local bearing = moving and metric and math.atan2(east, north) or nil
+        -- Only the paint values blend. Selection and map pins keep native data,
+        -- and interpolation stops at each received sample without prediction.
+        distance = Blend(presentation, "distance", distance, stamp, elapsed, false, playing)
+        bearing = Blend(presentation, "bearing", bearing, stamp, elapsed, true, playing)
+        facing = Blend(presentation, "facing", facing, headingStamp, elapsed, true, playing)
         if moving and metric and facing then
             -- Native heading is counterclockwise, destination bearing clockwise.
-            local angle = math.atan2(east, north) + facing
+            local angle = bearing + facing
             tracker.pointer:ClearAllPoints()
             tracker.pointer:SetPoint("CENTER", tracker.hud, "LEFT", HUD_WIDTH - 27, 0)
             Rotate(tracker.pointer, angle)
@@ -402,7 +471,8 @@ DFRL:NewMod("Waypoints", 3, function()
         else
             tracker.pointer:Hide()
         end
-        local text = distance and (tostring(math.floor(distance + 0.5)) .. " yd") or "On map"
+        local text = distance and DFRL.locale.Native("common.yards", { n = math.floor(distance + 0.5) })
+            or DFRL.locale.Text("On map")
         if tracker.distanceText:GetText() ~= text then tracker.distanceText:SetText(text) end
     end
 
@@ -505,14 +575,16 @@ DFRL:NewMod("Waypoints", 3, function()
         dirty = true
     end)
     controller:SetScript("OnUpdate", function()
-        age = age + (tonumber(arg1) or 0)
+        local elapsed = tonumber(arg1) or 0
+        if not Number(elapsed) or elapsed < 0 then elapsed = 0 end
+        age = age + elapsed
         if dirty or age >= 0.1 then
             dirty, age = false, 0
             Refresh()
         end
         if inWorld then
             for _, tracker in ipairs(trackers) do
-                UpdateGuide(tracker)
+                UpdateGuide(tracker, elapsed)
             end
         end
     end)

@@ -9,6 +9,9 @@ DFRL:NewMod("Display", 0, function()
         cooldownNumbers = false,
         cacheGuidance = true,
         guardianGuidance = true,
+        equippedJewelry = true,
+        hideNativeBuild = true,
+        attachJewelry = true,
     }
     DFRL.display = display
 
@@ -25,6 +28,9 @@ DFRL:NewMod("Display", 0, function()
             cooldownNumbers = Read(source, "cooldownNumbers"),
             cacheGuidance = Read(source, "cacheGuidance"),
             guardianGuidance = Read(source, "guardianGuidance"),
+            equippedJewelry = Read(source, "equippedJewelry"),
+            hideNativeBuild = Read(source, "hideNativeBuild"),
+            attachJewelry = Read(source, "attachJewelry"),
         }
     end
     local function Notify()

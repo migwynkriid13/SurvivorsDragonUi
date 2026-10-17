@@ -3,17 +3,6 @@
 DFRL:NewMod("Navigation", 2, function()
     local navigation = {}
     DFRL.navigation = navigation
-    local zones = {
-        elwynn = true,
-        duskwood = true,
-        wsg = true,
-        ab = true,
-        feralas = true,
-        arena = true,
-        av = true,
-        brm = true,
-        aq = true,
-    }
     local phases = { playing = true, choosing = true, paused = true, victory = true }
     local identity, expected, realZone, arrow
     local points = {}
@@ -27,12 +16,25 @@ DFRL:NewMod("Navigation", 2, function()
         samples, seen, width, height = {}, {}, nil, nil
     end
     function navigation.SetPoints(key, list) points[key] = list end
+    local function RunState()
+        if type(_G.AZS_GetPhase) ~= "function" then return end
+        local ok, phase = pcall(_G.AZS_GetPhase)
+        if not ok or not navigation.IsRunPhase(phase) then return end
+        local state = _G.AZS_RUN
+        if type(state) == "table" and Number(_G.AZS_RUN_UPDATED) then return state end
+    end
     local function Context()
         if type(_G.AZS_GetPhase) ~= "function" then return end
         local ok, phase = pcall(_G.AZS_GetPhase)
         if not ok or not navigation.IsRunPhase(phase) then return end
         local zone = _G.AZS_ZONE
-        if type(zone) ~= "table" or not zones[zone.zone] or not Number(zone.map) or not Number(_G.AZS_ZONE_UPDATED) then
+        if
+            type(zone) ~= "table"
+            or type(zone.zone) ~= "string"
+            or zone.zone == ""
+            or not Number(zone.map)
+            or not Number(_G.AZS_ZONE_UPDATED)
+        then
             return
         end
         local current = zone.zone .. ":" .. tostring(zone.map) .. ":" .. tostring(_G.AZS_ZONE_UPDATED)
@@ -171,7 +173,7 @@ DFRL:NewMod("Navigation", 2, function()
         end
         return 1
     end
-    function navigation.Delta(target)
+    local function MapDelta(target)
         if type(target) ~= "table" then return end
         local x, y = navigation.Position()
         if not x then return end
@@ -189,6 +191,24 @@ DFRL:NewMod("Navigation", 2, function()
             return east, north, math.sqrt(east * east + north * north), true
         end
         return (targetX - x) * Aspect(), y - targetY, nil, false
+    end
+    function navigation.Delta(target)
+        if type(target) ~= "table" then return end
+        local state = RunState()
+        if state and Number(state.px) and Number(state.py) and Number(target.x) and Number(target.y) then
+            -- Official world coordinates work without a map sheet or calibration,
+            -- including instances. The stamp identifies sampled HUD presentation.
+            local east, north = state.py - target.y, target.x - state.px
+            return east, north, math.sqrt(east * east + north * north), true, _G.AZS_RUN_UPDATED
+        end
+        return MapDelta(target)
+    end
+    function navigation.GuideDelta(target)
+        -- A valid current-sheet native reading follows movement every frame.
+        -- Keep sampled world coordinates for instances and other map sheets.
+        local east, north, distance, metric = MapDelta(target)
+        if metric then return east, north, distance, true end
+        return navigation.Delta(target)
     end
 
     local function PlayerArrow()
@@ -214,10 +234,14 @@ DFRL:NewMod("Navigation", 2, function()
     end
     function navigation.Heading()
         if not arrow then arrow = PlayerArrow() end
-        if not arrow or not arrow.GetFacing then return end
-        local ok, facing = pcall(arrow.GetFacing, arrow)
-        -- Native facing is radians: zero north, positive counterclockwise.
-        if ok and Number(facing) then return facing end
+        if arrow and arrow.GetFacing then
+            local ok, facing = pcall(arrow.GetFacing, arrow)
+            -- This native model is fed every frame, unlike the run snapshot.
+            if ok and Number(facing) then return facing end
+        end
         arrow = nil
+        local state = RunState()
+        -- Both headings use native radians: north, counterclockwise.
+        if state and Number(state.pf) then return state.pf, _G.AZS_RUN_UPDATED end
     end
 end)

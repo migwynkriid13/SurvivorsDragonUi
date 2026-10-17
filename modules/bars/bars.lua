@@ -4,13 +4,16 @@ DFRL:NewMod("Bars", 1, function()
     local BUTTON_COUNT = 7
     local BUTTON_SPACING = 6
     local COOLDOWN_INTERVAL = 0.1
-    local COOLDOWN_MINIMUM = 2
+    local COOLDOWN_ZERO = 0.1
+    local COOLDOWN_FINAL_WINDOW = 0.2
     local COOLDOWN_UNITS = { { 86400, "d" }, { 3600, "h" }, { 60, "m" }, { 1, "" } }
     local TEX_PATH = "Interface\\AddOns\\SurvivorsDragonUi\\media\\tex\\actionbars\\"
     local defaults = {
         bottom = 55,
         topInset = 14,
         sideInset = 6,
+        buttonWidth = ActionButton1:GetWidth(),
+        buttonGap = BUTTON_SPACING,
         width = BUTTON_COUNT * ActionButton1:GetWidth() + (BUTTON_COUNT - 1) * BUTTON_SPACING,
         height = ActionButton1:GetHeight(),
     }
@@ -142,6 +145,37 @@ DFRL:NewMod("Bars", 1, function()
         right:SetTexCoord(1, 0, 0, 1)
         DFRL.actionBarBGleft = left
         DFRL.actionBarBGright = right
+
+        -- Keep every socket foot and straight span in one texture and anchor
+        -- space. Separate scaled caps can round to different screen rows.
+        local artHeight = defaults.height + 2 * defaults.topInset
+        local socketBottom = defaults.buttonWidth * 2 / 36
+        local topUV = (defaults.topInset - socketBottom) / artHeight
+        local upper = bar:CreateTexture(nil, "BACKGROUND")
+        upper:SetTexture(DFRL:GetInfoOrCons("tex") .. "jewelry\\SocketRail.tga")
+        upper:SetPoint("TOPLEFT", bar, "TOPLEFT", -defaults.sideInset, defaults.buttonWidth * 40 / 36)
+        upper:SetPoint("BOTTOMRIGHT", bar, "TOPRIGHT", defaults.sideInset, socketBottom)
+        upper:SetTexCoord(0, 1200 / 2048, 0, 152 / 256)
+        upper:Hide()
+        local active = false
+        function DFRL.SetJewelryBarShown(shown)
+            if active == shown then return end
+            active = shown
+            local top = shown and socketBottom or defaults.topInset
+            left:ClearAllPoints()
+            left:SetPoint("TOPLEFT", bar, "TOPLEFT", -defaults.sideInset, top)
+            left:SetPoint("BOTTOMRIGHT", bar, "BOTTOM", 0, -defaults.topInset)
+            right:ClearAllPoints()
+            right:SetPoint("TOPLEFT", bar, "TOP", 0, top)
+            right:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", defaults.sideInset, -defaults.topInset)
+            left:SetTexCoord(0, 1, shown and topUV or 0, 1)
+            right:SetTexCoord(1, 0, shown and topUV or 0, 1)
+            if shown then
+                upper:Show()
+            else
+                upper:Hide()
+            end
+        end
     end
 
     local function StyleButton(button, index, bar)
@@ -195,8 +229,11 @@ DFRL:NewMod("Bars", 1, function()
     -- action slots; it does not import their code or hook cooldowns globally.
     -- https://github.com/DustinChecketts/Turtle-Dragonflight/tree/b2c62e9095e1c859bff0209db09f4ff5b9884f5a
     local function FormatCooldown(remaining)
+        if remaining < COOLDOWN_ZERO then return "0" end
         for _, unit in ipairs(COOLDOWN_UNITS) do
-            if remaining >= unit[1] or unit[1] == 1 then return math.ceil(remaining / unit[1]) .. unit[2] end
+            if remaining >= unit[1] or unit[1] == 1 then
+                return math.ceil(remaining / unit[1]) .. DFRL.locale.Text(unit[2])
+            end
         end
     end
 
@@ -215,7 +252,7 @@ DFRL:NewMod("Bars", 1, function()
             type(start) ~= "number"
             or not (start > 0)
             or type(duration) ~= "number"
-            or not (duration >= COOLDOWN_MINIMUM)
+            or not (duration > 0)
             or enabled ~= 1
         then
             overlay:Hide()
@@ -228,14 +265,15 @@ DFRL:NewMod("Bars", 1, function()
         end
 
         overlay.text:SetText(FormatCooldown(remaining))
-        if remaining < 5 then
+        if remaining < 1 then
             overlay.text:SetTextColor(1, 85 / 255, 85 / 255)
-        elseif remaining < 10 then
+        elseif math.ceil(remaining) < 5 then
             overlay.text:SetTextColor(1, 1, 85 / 255)
         else
             overlay.text:SetTextColor(1, 1, 1)
         end
         overlay:Show()
+        return remaining
     end
 
     local function CreateCooldownNumbers(bar)
@@ -254,9 +292,10 @@ DFRL:NewMod("Bars", 1, function()
             button.DFRL_cooldownNumber = overlay
         end
 
-        local active = true
+        local active, finishing = true, false
         local elapsed = 0
         local function ClearNumbers()
+            finishing = false
             for _, button in ipairs(DFRL.actionButtons) do
                 button.DFRL_cooldownNumber:Hide()
             end
@@ -267,8 +306,10 @@ DFRL:NewMod("Bars", 1, function()
                 return
             end
             local now = GetTime()
+            finishing = false
             for _, button in ipairs(DFRL.actionButtons) do
-                UpdateCooldownNumber(button, now)
+                local remaining = UpdateCooldownNumber(button, now)
+                if remaining and remaining <= COOLDOWN_FINAL_WINDOW then finishing = true end
             end
         end
 
@@ -293,7 +334,9 @@ DFRL:NewMod("Bars", 1, function()
         controller:SetScript("OnUpdate", function()
             if not active or not DFRL.display.Get("cooldownNumbers") then return end
             elapsed = elapsed + arg1
-            if elapsed < COOLDOWN_INTERVAL then return end
+            -- Sample each rendered frame near expiration so a 100-ms periodic
+            -- refresh does not skip the positive final-100-ms zero window.
+            if not finishing and elapsed < COOLDOWN_INTERVAL then return end
             elapsed = 0
             RefreshNumbers()
         end)
@@ -360,10 +403,17 @@ DFRL:NewMod("Bars", 1, function()
         local moveRegion = CreateFrame("Frame", nil, mainBar)
         moveRegion:SetPoint("TOPLEFT", mainBar, "TOPLEFT", -defaults.sideInset, defaults.topInset)
         moveRegion:SetPoint("BOTTOMRIGHT", mainBar, "BOTTOMRIGHT", defaults.sideInset, 0)
+        DFRL.actionBarMoveRegion = moveRegion
         DFRL.layout.Register("actionBar", mainBar, function()
             mainBar:ClearAllPoints()
             mainBar:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, defaults.bottom)
-        end, { region = moveRegion })
+        end, {
+            region = moveRegion,
+            onEdit = function(active)
+                if DFRL.SetJewelryEditing then DFRL.SetJewelryEditing(active) end
+            end,
+        })
+        if DFRL.AttachJewelry then DFRL.AttachJewelry(mainBar) end
         if DFRL.AttachXPBar then DFRL.AttachXPBar(mainBar) end
         events:UnregisterEvent("PLAYER_ENTERING_WORLD")
         events:SetScript("OnEvent", nil)
