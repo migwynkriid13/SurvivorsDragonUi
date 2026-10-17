@@ -73,15 +73,15 @@ Only **Confirm** saves pending geometry and per-group visibility, timer font/tex
 
 All addon commands are listed below. Layout editing does not require holding SHIFT.
 
-| Command        | Behavior                                                                                                                                                                                      |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Command        | Behavior                                                                                                                                                                                            |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `/sdui`        | Open the Layout, HUD, Combat text and Run timer tabs to edit positions, sizes and visibility. Changes preview immediately; click **Confirm** in the editor footer to keep them and lock the frames. |
-| `/sdui reset`  | Exit editing and restore layout, timer text and display defaults: visible run label, boss debuffs on, damage icons off, class resources off and class-colored health off.                     |
-| `/copy`        | Open a snapshot of raw chat messages and events, including hidden messages; press **Ctrl+C** to copy the selected text.                                                                       |
-| `/sct`         | Show the available combat-text modes and the currently selected mode.                                                                                                                         |
-| `/sct on`      | Enable custom outgoing SCT and disable native outgoing damage text; preserve incoming/self text.                                                                                              |
-| `/sct off`     | Disable custom and native outgoing damage text; preserve incoming/self text.                                                                                                                  |
-| `/sct default` | Disable custom SCT and leave the game's current combat-text settings unchanged.                                                                                                               |
+| `/sdui reset`  | Exit editing and restore layout, timer text and display defaults: visible run label, boss debuffs on, damage icons off, class resources off and class-colored health off.                           |
+| `/copy`        | Open a snapshot of raw chat messages and events, including hidden messages; press **Ctrl+C** to copy the selected text.                                                                             |
+| `/sct`         | Show the available combat-text modes and the currently selected mode.                                                                                                                               |
+| `/sct on`      | Enable custom outgoing SCT and disable native outgoing damage text; preserve incoming/self text.                                                                                                    |
+| `/sct off`     | Disable custom and native outgoing damage text; preserve incoming/self text.                                                                                                                        |
+| `/sct default` | Disable custom SCT and leave the game's current combat-text settings unchanged.                                                                                                                     |
 
 The game's **Enable Floating Combat Text** checkbox controls native incoming/self feedback independently of custom outgoing SCT. Changing it does not stop custom hits or switch SCT mode. Enabling **Show Target Damage** selects and saves `default` mode so native and custom outgoing numbers do not overlap. The addon observes game settings during startup, world entry and setting updates without rewriting them. `/sct on` and `/sct off` disable native outgoing damage text once when explicitly entered; neither changes incoming/self text. `/sct default` preserves the current native settings, so enable **Show Target Damage** separately to restore native outgoing numbers after `on` or `off`.
 
