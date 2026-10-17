@@ -138,6 +138,13 @@ DFRL:NewMod("Jewelry", 4, function()
         if percent then return "+ Buff power: " .. percent .. "%" end
         local _, _, health = string.find(sentence, "^Restores (%d+[.,]?%d*) health per second$")
         if health then return "+ Health regen: " .. health .. "/s" end
+        local _, _, ability, value = string.find(sentence, "^(%u[^%.!?;]*) strikes %+(%d+) more targets$")
+        if ability then return "+ " .. ability .. " targets: " .. value end
+        _, _, ability, value = string.find(sentence, "^Increases the damage of (%u[^%.!?;]*) by (%d+[.,]?%d*)%%$")
+        if ability then return "+ " .. ability .. " damage: " .. value .. "%" end
+        _, _, ability, value =
+            string.find(sentence, "^Increases the stun duration of (%u[^%.!?;]*) by (%d+[.,]?%d*)%%$")
+        if ability then return "+ " .. ability .. " stun duration: " .. value .. "%" end
         return description
     end
     local function EffectDescription(text)
