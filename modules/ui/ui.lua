@@ -232,20 +232,32 @@ DFRL:NewMod("Ui", 5, function()
     end)
 end)
 
--- Restore the native build once for side-by-side jewelry comparison.
-DFRL:NewMod("Native build comparison", 1, function()
-    local function ShowBuild()
-        if type(AZS_SetHudShown) ~= "function" or type(AZS_IsHudShown) ~= "function" then return false end
+-- The native build is renderer-owned; hide it through the official HUD API.
+DFRL:NewMod("Native build rows", 1, function()
+    local inWorld, applying = true, false
+    local function HideBuild()
+        if not inWorld or applying then return end
+        if type(AZS_SetHudShown) ~= "function" or type(AZS_IsHudShown) ~= "function" then return end
         local ok, shown = pcall(AZS_IsHudShown, "build")
-        if not ok then return false end
-        if shown == true or shown == 1 then return true end
-        if shown ~= false and shown ~= 0 then return false end
-        return pcall(AZS_SetHudShown, "build", true)
+        if not ok or (shown ~= true and shown ~= 1) then return end
+        applying = true
+        pcall(AZS_SetHudShown, "build", false)
+        applying = false
     end
-    if ShowBuild() then return end
     local controller = CreateFrame("Frame")
     controller:RegisterEvent("PLAYER_ENTERING_WORLD")
+    controller:RegisterEvent("PLAYER_LEAVING_WORLD")
+    controller:RegisterEvent("PLAYER_LOGOUT")
+    controller:RegisterEvent("CVAR_UPDATE")
     controller:SetScript("OnEvent", function()
-        if ShowBuild() then controller:UnregisterAllEvents() end
+        if event == "PLAYER_ENTERING_WORLD" then
+            inWorld = true
+            HideBuild()
+        elseif event == "PLAYER_LEAVING_WORLD" or event == "PLAYER_LOGOUT" then
+            inWorld = false
+        elseif type(arg1) == "string" and string.lower(arg1) == "hudbuild" then
+            HideBuild()
+        end
     end)
+    HideBuild()
 end)
