@@ -10,9 +10,9 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local FALLBACK_ICON = "Interface\\Icons\\INV_Misc_QuestionMark"
     local ATTACK_ICON = "Interface\\Icons\\INV_Sword_04"
     local TEXT_DURATION = 1.45
-    local FOLLOW_TIME = 0.08
     local EVENT_SETTLE = 0.08
     local EVENT_FALLBACK_DELAY = 0.16
+    local DUPLICATE_WINDOW = 0.075
     local RECENT_PLATE_TIME = 0.65
     local LOSS_TIME = 0.25
     local DAMAGE_COLORS = {
@@ -29,6 +29,8 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local textPool = {}
     local textRoot
     local pending = {}
+    local pendingGroups = {}
+    local intakeBuckets = {}
     local spellTextures = {}
     local missingSpellTextures = {}
     local recentDamage = {}
@@ -173,8 +175,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         text.icon:SetTexture(nil)
         text.icon:Hide()
         text.holder:ClearAllPoints()
-        text.origin = nil
-        text.spell, text.damageType = nil, nil
+        text.spell, text.damageType, text.iconTexture = nil, nil, nil
         table.insert(textPool, text)
     end
 
@@ -185,6 +186,8 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         end
         table.setn(activeTexts, 0)
         pending = {}
+        pendingGroups = {}
+        intakeBuckets = {}
         origins = {}
         recentDamage = {}
         for _, data in pairs(plates) do
@@ -200,27 +203,38 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         return IsEnemyPlate(data)
     end
 
-    local function SamplePosition(plate, origin, now)
+    local function SampleWorldGeometry(geometry)
+        geometry = geometry or {}
+        if geometry.valid then return geometry end
+        geometry.scale = WorldFrame:GetEffectiveScale() or 1
+        geometry.left, geometry.bottom = WorldFrame:GetLeft() or 0, WorldFrame:GetBottom() or 0
+        geometry.width, geometry.height = WorldFrame:GetWidth(), WorldFrame:GetHeight()
+        geometry.valid = IsFiniteNumber(geometry.scale)
+            and geometry.scale > 0
+            and IsFiniteNumber(geometry.left)
+            and IsFiniteNumber(geometry.bottom)
+            and IsFiniteNumber(geometry.width)
+            and IsFiniteNumber(geometry.height)
+            and geometry.width > 0
+            and geometry.height > 0
+        return geometry
+    end
+
+    local function SamplePosition(plate, origin, now, geometry)
         local x, y = plate:GetCenter()
         if not IsFiniteNumber(x) or not IsFiniteNumber(y) then return end
-        local rootScale = WorldFrame:GetEffectiveScale() or 1
-        local plateScale = plate:GetEffectiveScale() or rootScale
-        if not IsFiniteNumber(rootScale) or rootScale <= 0 or not IsFiniteNumber(plateScale) or plateScale <= 0 then
-            return
-        end
-        local ratio = plateScale / rootScale
-        local left, bottom = WorldFrame:GetLeft() or 0, WorldFrame:GetBottom() or 0
-        x, y = x * ratio - left, y * ratio - bottom
-        local width, height = WorldFrame:GetWidth(), WorldFrame:GetHeight()
+        geometry = SampleWorldGeometry(geometry)
+        if not geometry.valid then return end
+        local plateScale = plate:GetEffectiveScale() or geometry.scale
+        if not IsFiniteNumber(plateScale) or plateScale <= 0 then return end
+        local ratio = plateScale / geometry.scale
+        x, y = x * ratio - geometry.left, y * ratio - geometry.bottom
+        local width, height = geometry.width, geometry.height
         local halfWidth = (plate:GetWidth() or 0) * ratio * 0.5
         local halfHeight = (plate:GetHeight() or 0) * ratio * 0.5
         if
             not IsFiniteNumber(x)
             or not IsFiniteNumber(y)
-            or not IsFiniteNumber(width)
-            or not IsFiniteNumber(height)
-            or width <= 0
-            or height <= 0
             or not IsFiniteNumber(halfWidth)
             or not IsFiniteNumber(halfHeight)
             or halfWidth < 0
@@ -237,7 +251,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         local top = plate.GetTop and plate:GetTop()
         if top then
             if not IsFiniteNumber(top) then return end
-            y = top * ratio - bottom
+            y = top * ratio - geometry.bottom
         end
         if not IsFiniteNumber(y) then return end
         -- Keep the previous usable point when projection is unavailable. It
@@ -283,7 +297,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         data.origin = nil
     end
 
-    local function RefreshPlate(plate, data, now, forcePresentation)
+    local function RefreshPlate(plate, data, now, forcePresentation, geometry)
         UpdatePresentation(plate, data, forcePresentation)
         -- Hidden tracking still samples native data, but its skin has no pixels
         -- to refresh. Unmasking updates the skin in this same callback.
@@ -310,11 +324,11 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             table.insert(origins, origin)
         end
         origin.lastSeen = now
-        SamplePosition(plate, origin, now)
+        SamplePosition(plate, origin, now, geometry)
         SampleHealth(data, origin, now)
     end
 
-    local function DiscoverPlate(plate, now)
+    local function DiscoverPlate(plate, now, geometry)
         if not plate or not plate.GetRegions or plates[plate] then return end
         local border, glow, name, level, skull, raid = plate:GetRegions()
         local regions = { border, glow, name, level, skull, raid }
@@ -367,17 +381,18 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             RefreshPlate(plate, data, GetTime(), true)
         end)
         HookScript(bar, "OnValueChanged", function() RefreshPlate(plate, data, GetTime()) end)
-        RefreshPlate(plate, data, now)
+        RefreshPlate(plate, data, now, nil, geometry)
     end
 
-    local function DiscoverPlates(force, now)
+    local function DiscoverPlates(force, now, geometry)
         local count = WorldFrame:GetNumChildren() or 0
         if count < discoveredChildren then discoveredChildren = 0 end
         if force or count > discoveredChildren then
+            geometry = geometry or {}
             local children = { WorldFrame:GetChildren() }
             local first = force and 1 or discoveredChildren + 1
             for index = first, count do
-                DiscoverPlate(children[index], now)
+                DiscoverPlate(children[index], now, geometry)
             end
             discoveredChildren = count
         end
@@ -386,11 +401,15 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local function ScanPlates(force)
         if not inWorld or not WorldFrame then return end
         local now = GetTime()
-        DiscoverPlates(force, now)
+        -- Share root geometry only inside this synchronous pass. Show/health
+        -- callbacks keep sampling afresh, including later in the same frame.
+        -- Retry invalid geometry and retain each origin's last usable point.
+        local geometry = {}
+        DiscoverPlates(force, now, geometry)
         -- Snapshot on every frame, rather than every tenth of a second: a
         -- one-shot enemy can disappear between two of the old scans.
         for plate, data in pairs(plates) do
-            RefreshPlate(plate, data, now, force)
+            RefreshPlate(plate, data, now, force, geometry)
         end
         for index = table.getn(origins), 1, -1 do
             local origin = origins[index]
@@ -466,16 +485,195 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         return WorldFrame:GetWidth() * 0.5, WorldFrame:GetHeight() * 0.58, nil
     end
 
+    local auraSpellTextures, talentSpellTextures = {}, {}
+    local iconCatalog = T.SpellIconCatalog or {}
+    local gameIconTextures = iconCatalog.game or {}
+    local locale = type(_G.GetLocale) == "function" and _G.GetLocale() or nil
+    local localeIconTextures = iconCatalog.locales and iconCatalog.locales[locale] or {}
+    local localeSchoolIconTextures = iconCatalog.schools and iconCatalog.schools[locale] or {}
+    local iconSourcesDirty = { talents = true, debuffs = true, target = true, mouseover = true }
+    local iconScanAt
+    local iconTooltip, iconTooltipParent
+    local ICON_SCAN_INTERVAL = 0.35
+    local ICON_DEBUFF_LIMIT = 16
+
+    local function TextureKey(texture)
+        if type(texture) ~= "string" or texture == "" then return nil end
+        local key = string.lower(string.gsub(texture, "/", "\\"))
+        key = string.gsub(key, "%.blp$", "")
+        key = string.gsub(key, "%.tga$", "")
+        if key == string.lower(FALLBACK_ICON) then return nil end
+        return key
+    end
+
+    local function LearnSpellTexture(cache, name, texture)
+        local key = TextureKey(texture)
+        if type(name) ~= "string" or name == "" or not key then return end
+        local previous = cache[name]
+        -- The 1.12 combat message supplies a localized name, not a spell id.
+        -- Conflicting icons within one source tier cannot be disambiguated.
+        if previous == false then return end
+        if previous and TextureKey(previous) ~= key then
+            cache[name] = false
+        else
+            cache[name] = texture
+        end
+    end
+
+    local function ResetLearnedSpellTextures()
+        auraSpellTextures, talentSpellTextures = {}, {}
+        iconSourcesDirty = { talents = true, debuffs = true, target = true, mouseover = true }
+        iconScanAt = nil
+        if iconTooltip then iconTooltip:Hide() end
+    end
+
+    local function LearnTalentTextures()
+        if
+            type(_G.GetNumTalentTabs) ~= "function"
+            or type(_G.GetNumTalents) ~= "function"
+            or type(_G.GetTalentInfo) ~= "function"
+        then
+            return
+        end
+        for tab = 1, _G.GetNumTalentTabs() or 0 do
+            for index = 1, _G.GetNumTalents(tab) or 0 do
+                local name, texture, _, _, rank = _G.GetTalentInfo(tab, index)
+                if type(rank) == "number" and rank > 0 then LearnSpellTexture(talentSpellTextures, name, texture) end
+            end
+        end
+    end
+
+    local function LearnNativeDebuffTextures()
+        if type(_G.AZS_GetPhase) ~= "function" then return end
+        local ok, phase = pcall(_G.AZS_GetPhase)
+        -- Read phase before retained native tables, including after reload.
+        if
+            not ok
+            or (
+                phase ~= "playing"
+                and phase ~= "choosing"
+                and phase ~= "paused"
+                and phase ~= "dead"
+                and phase ~= "victory"
+            )
+        then
+            return
+        end
+        local stamp = _G.AZS_DEBUFFS_UPDATED
+        if not IsFiniteNumber(stamp) or stamp < 0 then return end
+        local entries = _G.AZS_DEBUFFS
+        if type(entries) ~= "table" then return end
+        -- This official snapshot includes untargeted bosses and guardians.
+        -- Copy only display metadata, independently of encounter HUD settings.
+        for _, entry in pairs(entries) do
+            if type(entry) == "table" then LearnSpellTexture(auraSpellTextures, entry.name, entry.icon) end
+        end
+        return true
+    end
+
+    local function GetIconTooltip()
+        if iconTooltip == false then return nil end
+        if not iconTooltip then
+            iconTooltipParent = CreateFrame("Frame", nil, UIParent)
+            iconTooltipParent:Hide()
+            local ok, tooltip =
+                pcall(CreateFrame, "GameTooltip", "DFRL_CombatIconTooltip", iconTooltipParent, "GameTooltipTemplate")
+            if
+                not ok
+                or not tooltip
+                or type(tooltip.SetOwner) ~= "function"
+                or type(tooltip.SetUnitDebuff) ~= "function"
+                or type(tooltip.ClearLines) ~= "function"
+            then
+                if ok and tooltip then tooltip:Hide() end
+                iconTooltip = false
+                return nil
+            end
+            -- Native tooltip builders may Show and reset alpha. The hidden
+            -- parent keeps this private scanner out of the visible tooltip UI.
+            iconTooltip = tooltip
+            iconTooltip:EnableMouse(false)
+        end
+        return iconTooltip
+    end
+
+    local function LearnUnitDebuffTextures(unit)
+        if type(_G.UnitDebuff) ~= "function" or type(_G.UnitExists) ~= "function" or not _G.UnitExists(unit) then
+            return
+        end
+        local tooltip = GetIconTooltip()
+        if not tooltip then return end
+        for index = 1, ICON_DEBUFF_LIMIT do
+            local ok, texture = pcall(_G.UnitDebuff, unit, index)
+            if not ok or not texture then break end
+            if TextureKey(texture) then
+                -- Hide clears native ownership and lines: re-own for each slot
+                -- and read the title before hiding, never from GameTooltip.
+                tooltip:SetOwner(iconTooltipParent, "ANCHOR_NONE")
+                tooltip:ClearLines()
+                local shown = pcall(tooltip.SetUnitDebuff, tooltip, unit, index)
+                local title = _G.DFRL_CombatIconTooltipTextLeft1
+                if shown and title and type(title.GetText) == "function" then
+                    LearnSpellTexture(auraSpellTextures, title:GetText(), texture)
+                end
+                tooltip:Hide()
+            end
+        end
+    end
+
+    local function RefreshLearnedSpellTextures()
+        if
+            not inWorld
+            or not (
+                iconSourcesDirty.talents
+                or iconSourcesDirty.debuffs
+                or iconSourcesDirty.target
+                or iconSourcesDirty.mouseover
+            )
+        then
+            return
+        end
+        local now = GetTime()
+        -- Dirty events coalesce; never scan native metadata once per AoE hit.
+        if iconScanAt and now - iconScanAt < ICON_SCAN_INTERVAL then return end
+        iconScanAt = now
+        if iconSourcesDirty.talents then
+            iconSourcesDirty.talents = false
+            LearnTalentTextures()
+        end
+        if iconSourcesDirty.debuffs then
+            -- Keep pending when phase/data is not ready. Snapshot timestamps
+            -- are UI time, so distinct received updates may share one value.
+            iconSourcesDirty.debuffs = not LearnNativeDebuffTextures()
+        end
+        if iconSourcesDirty.target then
+            iconSourcesDirty.target = false
+            LearnUnitDebuffTextures("target")
+        end
+        if iconSourcesDirty.mouseover then
+            iconSourcesDirty.mouseover = false
+            LearnUnitDebuffTextures("mouseover")
+        end
+    end
+
     local function RebuildSpellTextures(keepMisses)
         spellTextures = {}
         if not keepMisses then missingSpellTextures = {} end
+        if
+            type(_G.GetNumSpellTabs) ~= "function"
+            or type(_G.GetSpellTabInfo) ~= "function"
+            or type(_G.GetSpellName) ~= "function"
+            or type(_G.GetSpellTexture) ~= "function"
+        then
+            return
+        end
         local book = BOOKTYPE_SPELL or "spell"
         for tab = 1, GetNumSpellTabs() or 0 do
             local _, _, offset, count = GetSpellTabInfo(tab)
             for index = (offset or 0) + 1, (offset or 0) + (count or 0) do
                 local name = GetSpellName(index, book)
                 local texture = GetSpellTexture(index, book)
-                if name and texture then spellTextures[name] = texture end
+                if name and TextureKey(texture) then spellTextures[name] = texture end
             end
         end
     end
@@ -488,15 +686,92 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                 texture = spellTextures[info.spell]
                 missingSpellTextures[info.spell] = not texture
             end
+            if not texture then
+                RefreshLearnedSpellTextures()
+                texture = auraSpellTextures[info.spell]
+                -- Observed auras outrank catalog and talent artwork. Preserve
+                -- ambiguity within each tier instead of choosing a random icon.
+                if texture == nil then texture = gameIconTextures[info.spell] end
+                if texture == nil then texture = talentSpellTextures[info.spell] end
+                if texture == nil then
+                    texture = localeIconTextures[info.spell]
+                    if texture == false then
+                        -- Only refine the database tier with the actual parsed
+                        -- school; stronger native ambiguities remain blocked.
+                        local schoolTextures = localeSchoolIconTextures[info.school]
+                        if schoolTextures and schoolTextures[info.spell] ~= nil then
+                            texture = schoolTextures[info.spell]
+                        end
+                    end
+                end
+            end
             return texture or FALLBACK_ICON
         end
         if info.damageType == "autoattack" then return GetInventoryItemTexture("player", 16) or ATTACK_ICON end
         return FALLBACK_ICON
     end
 
+    local function IconIdentityPart(value) return string.len(value) .. ":" .. value end
+
+    local function QueueCombatText(info, now)
+        local identity, byAmount, group
+        if info.kind == "damage" then
+            -- Resolve once even when icons are hidden, so identity and the
+            -- eventual displayed icon cannot change while this hit waits.
+            info.iconTexture = CombatIcon(info)
+            local attack, attackKind = info.spell, "spell"
+            if not attack or attack == "" then
+                if info.damageType == "autoattack" then
+                    attack, attackKind = "", "autoattack"
+                else
+                    attack = nil
+                end
+            end
+            if attack then
+                local source = info.sourceName
+                if not source or source == "" then
+                    source = type(_G.UnitName) == "function" and _G.UnitName("player") or ""
+                end
+                identity = IconIdentityPart(attackKind)
+                    .. IconIdentityPart(attack)
+                    .. IconIdentityPart(source)
+                    .. IconIdentityPart(info.damageType or "")
+                    .. IconIdentityPart(info.school or "")
+                    .. IconIdentityPart(TextureKey(info.iconTexture) or FALLBACK_ICON)
+                byAmount = intakeBuckets[identity]
+                if not byAmount then
+                    byAmount = {}
+                    intakeBuckets[identity] = byAmount
+                end
+                -- The first hit fixes the inclusive 75 ms deadline. Joining
+                -- hits never slide it forward or change the original amount.
+                group = byAmount[info.amount]
+                if group and (now < group.time or now > group.closesAt) then group = nil end
+            end
+        end
+        if not group then
+            -- The first original hit owns the unchanged value and styling.
+            group = {
+                info = info,
+                time = now,
+                closesAt = now + DUPLICATE_WINDOW,
+                bucket = byAmount,
+                identity = identity,
+                remaining = 0,
+                count = 0,
+                x = 0,
+                y = 0,
+            }
+            table.insert(pendingGroups, group)
+            if byAmount then byAmount[info.amount] = group end
+        end
+        group.remaining = group.remaining + 1
+        table.insert(pending, { info = info, time = now, group = group })
+    end
+
     local function UpdateIcon(text)
         if damageIcons then
-            text.icon:SetTexture(CombatIcon(text))
+            text.icon:SetTexture(text.iconTexture or CombatIcon(text))
             text.icon:Show()
         else
             text.icon:SetTexture(nil)
@@ -515,7 +790,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     end)
 
     local function AcquireText()
-        -- All accepted hits get their full lifetime, even in a large AoE pack.
+        -- Every displayed hit/group gets its full lifetime, including in AoE.
         -- The pool grows to peak concurrency; active entries are never evicted.
         local text = table.remove(textPool)
         if not text then
@@ -588,14 +863,14 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         return strong and DAMAGE_COLORS.strong or DAMAGE_COLORS.normal
     end
 
-    local function DisplayDamage(info, x, y, origin)
+    local function DisplayDamage(info, x, y)
         local value = info.text or info.amount
         if not value then return end
         local text = AcquireText()
-        text.origin = origin
+        -- Snapshot the launch point; later native plate rearrangements must
+        -- never drag an already visible number across the screen.
         text.x, text.y = x, y
         text.started = GetTime()
-        text.updatedAt = text.started
         text.impact = info.critical or info.kind == "miss"
         text.sizeScale = info.critical and 1.5 or 1
         text.arcX = arcDirection * math.random(36, 64)
@@ -606,14 +881,19 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         text.label:SetText(tostring(value))
         text.label:SetTextColor(color[1], color[2], color[3])
         text.label:Show()
-        text.spell, text.damageType = info.spell, info.damageType
+        text.spell, text.damageType, text.iconTexture = info.spell, info.damageType, info.iconTexture
         UpdateIcon(text)
-        text.scale = text.sizeScale * (text.impact and 0.5 or 1)
-        text.visual:SetScale(text.scale)
+        local scale = text.sizeScale * (text.impact and 0.5 or 1)
+        if text.scale ~= scale then
+            text.scale = scale
+            text.visual:SetScale(scale)
+        end
         text.visual:Show()
-        text.alpha = 1
-        text.holder:SetAlpha(1)
-        text.holder:ClearAllPoints()
+        if text.alpha ~= 1 then
+            text.alpha = 1
+            text.holder:SetAlpha(1)
+        end
+        -- New holders have no anchor; ReleaseText cleared pooled holders.
         text.holder:SetPoint("CENTER", WorldFrame, "BOTTOMLEFT", x, y + 12)
         text.holder:Show()
         table.insert(activeTexts, text)
@@ -625,17 +905,20 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         for index = 1, count do
             local entry = pending[index]
             local age = now - entry.time
-            local displayed = false
+            local resolved = false
             if age >= EVENT_SETTLE then
-                local x, y, origin = ResolveOrigin(entry.info, now, age >= EVENT_FALLBACK_DELAY)
+                local x, y = ResolveOrigin(entry.info, now, age >= EVENT_FALLBACK_DELAY)
                 if x and y then
-                    DisplayDamage(entry.info, x, y, origin)
-                    displayed = true
+                    local group = entry.group
+                    group.count = group.count + 1
+                    group.x, group.y = group.x + x, group.y + y
+                    group.remaining = group.remaining - 1
+                    resolved = true
                 end
             end
-            -- Preserve combat-message order without shifting the remaining
-            -- queue once per displayed hit during large damage bursts.
-            if not displayed then
+            -- Match every original hit once in native message order, retaining
+            -- original amounts for health-loss consumption and plate identity.
+            if not resolved then
                 kept = kept + 1
                 pending[kept] = entry
             end
@@ -645,6 +928,35 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         end
         -- Lua 5.0 insert/getn remembers a size independently of cleared slots.
         table.setn(pending, kept)
+
+        local groupCount = table.getn(pendingGroups)
+        kept = 0
+        for index = 1, groupCount do
+            local group = pendingGroups[index]
+            local bucket = group.bucket
+            if bucket and (now < group.time or now > group.closesAt) then
+                -- A newer group may already own this key while the old one
+                -- finishes matching. Retire only this group's own intake.
+                if bucket[group.info.amount] == group then
+                    bucket[group.info.amount] = nil
+                    if not next(bucket) and intakeBuckets[group.identity] == bucket then
+                        intakeBuckets[group.identity] = nil
+                    end
+                end
+                group.bucket, group.identity = nil, nil
+            end
+            if group.remaining == 0 and not group.bucket then
+                -- Every display keeps its resolved centroid for the full arc.
+                DisplayDamage(group.info, group.x / group.count, group.y / group.count)
+            else
+                kept = kept + 1
+                pendingGroups[kept] = group
+            end
+        end
+        for index = kept + 1, groupCount do
+            pendingGroups[index] = nil
+        end
+        table.setn(pendingGroups, kept)
     end
 
     local function UpdateTexts(now)
@@ -658,16 +970,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             else
                 kept = kept + 1
                 activeTexts[kept] = text
-                -- Smooth only the cosmetic follow point. Native model/stack
-                -- placement can jump as enemies arrive; matching keeps raw
-                -- coordinates, while each hit keeps its own age, arc and fade.
-                if text.origin then
-                    local elapsed = math.max(0, now - text.updatedAt)
-                    local follow = 1 - math.exp(-elapsed / FOLLOW_TIME)
-                    text.x = text.x + (text.origin.x - text.x) * follow
-                    text.y = text.y + (text.origin.y - text.y) * follow
-                end
-                text.updatedAt = now
+                -- Only the hit's own animation moves it from its launch point.
                 local x = text.x + text.arcX * progress
                 local y = text.y + 12 + text.launch * progress - text.gravity * progress * progress
                 -- Replacing CENTER updates the existing anchor in place.
@@ -681,7 +984,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                         scale = scale * (2 - math.pow((pop - 0.5) * 2, 5))
                     end
                 end
-                -- Only the inner visual scales: its world-space origin stays
+                -- Only the inner visual scales: its launch point stays
                 -- fixed during crit pop, including after the mob has died.
                 if text.scale ~= scale then
                     text.scale = scale
@@ -701,11 +1004,19 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         table.setn(activeTexts, kept)
     end
 
-    local function HandleCombatEvent(eventName, message)
+    local function HandleCombatEvent(eventName, message, eventTime)
         if not inWorld or not CustomEnabled() then return end
         local info = ParseCombatEvent(eventName, message)
-        if not info or info.kind == "aura" or not info.targetName or info.targetName == "" then return end
-        local now = GetTime()
+        if not info then return end
+        if info.kind == "aura" then
+            -- Mouseover has no UNIT_AURA fan-out in the native 1.12 client.
+            -- An application notice only dirties metadata observations; the
+            -- scanner still reads actual unit tokens and never assigns hits.
+            iconSourcesDirty.target, iconSourcesDirty.mouseover = true, true
+            return
+        end
+        if not info.targetName or info.targetName == "" then return end
+        local now = eventTime or GetTime()
         -- Catch newly allocated plates before a lethal hit can retire them.
         -- Known plates already sample on show/health changes and every frame;
         -- refreshing the entire pack for each combat message multiplies UI work.
@@ -716,7 +1027,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         -- Choose once in combat-message order, before plate-matching delays
         -- can reorder the display. An animating hit keeps its chosen color.
         info.color = DamageColor(info, now)
-        table.insert(pending, { info = info, time = now })
+        QueueCombatText(info, now)
     end
 
     local function ReadNativeDamage() return GetCVar("CombatDamage") end
@@ -892,10 +1203,17 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     frame:RegisterEvent("PLAYER_LOGOUT")
     frame:RegisterEvent("PLAYER_TARGET_CHANGED")
     frame:RegisterEvent("SPELLS_CHANGED")
+    frame:RegisterEvent("CHARACTER_POINTS_CHANGED")
+    frame:RegisterEvent("UNIT_AURA")
+    frame:RegisterEvent("UPDATE_MOUSEOVER_UNIT")
+    frame:RegisterEvent("CHAT_MSG_ADDON")
     frame:RegisterEvent("CVAR_UPDATE")
     frame:SetScript("OnEvent", function()
+        local eventTime = T.NameplateCombatEventHandlers[event] and GetTime() or nil
         if event == "PLAYER_ENTERING_WORLD" then
             inWorld = true
+            iconSourcesDirty.talents, iconSourcesDirty.debuffs = true, true
+            iconSourcesDirty.target, iconSourcesDirty.mouseover = true, true
             enemyPlatesEnabled = _G.NAMEPLATES_ON and true or false
             SyncGameSettings(true)
         elseif event == "PLAYER_LEAVING_WORLD" or event == "PLAYER_LOGOUT" then
@@ -906,15 +1224,30 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             end
             ApplyPlateTracking(true)
             ResetDisplay()
+            ResetLearnedSpellTextures()
         elseif event == "SPELLS_CHANGED" then
+            iconSourcesDirty.talents = true
             if CustomEnabled() and damageIcons then RebuildSpellTextures() end
+        elseif event == "CHARACTER_POINTS_CHANGED" then
+            iconSourcesDirty.talents = true
         elseif event == "PLAYER_TARGET_CHANGED" then
+            iconSourcesDirty.target = true
             ScanPlates(true)
+        elseif event == "UPDATE_MOUSEOVER_UNIT" then
+            iconSourcesDirty.mouseover = true
+        elseif event == "UNIT_AURA" then
+            if arg1 == "target" or arg1 == "mouseover" then iconSourcesDirty[arg1] = true end
+        elseif event == "CHAT_MSG_ADDON" then
+            if arg1 == "AZSDEBUFFS" then
+                iconSourcesDirty.debuffs = true
+            elseif arg1 == "AZSZONE" then
+                iconSourcesDirty.debuffs = true
+            end
         elseif event == "CVAR_UPDATE" then
             SyncGameSettings(false)
         else
             SyncGameSettings(false)
-            HandleCombatEvent(event, arg1)
+            HandleCombatEvent(event, arg1, eventTime)
         end
     end)
     frame:SetScript("OnUpdate", function()

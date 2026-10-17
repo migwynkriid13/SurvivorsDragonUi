@@ -142,6 +142,16 @@ DFRL:NewMod("Bars", 1, function()
     end
 
     local function StyleButton(button, index, bar)
+        -- Run abilities are assigned by the game. Block both drag directions and
+        -- the stock shift-click pickup; checkCursor 0 also prevents click-to-place.
+        -- Keep native activation, including registered right-clicks and key self-casts.
+        button:RegisterForDrag()
+        button:SetScript("OnDragStart", nil)
+        button:SetScript("OnReceiveDrag", nil)
+        button:SetScript("OnClick", function()
+            UseAction(ActionButton_GetPagedID(button), 0)
+            ActionButton_UpdateState()
+        end)
         button:SetParent(DFRL.mainBar)
         button:ClearAllPoints()
         button:SetPoint("BOTTOMLEFT", DFRL.mainBar, "BOTTOMLEFT", (index - 1) * (button:GetWidth() + BUTTON_SPACING), 0)

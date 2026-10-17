@@ -27,6 +27,7 @@ DFRL:NewMod("Chat", 1, function()
         root:SetAlpha(1)
         root:Show()
         chat.frame = root
+        local rootWidth, rootHeight = WIDTH, HEIGHT
 
         local function Flag(value) return value == true or value == 1 end
         local function Clamp(value, low, high) return math.max(low, math.min(high, value)) end
@@ -49,6 +50,41 @@ DFRL:NewMod("Chat", 1, function()
             if not control then return end
             control:Hide()
             control.Show = control.Hide
+        end
+        local function ReadDimensions()
+            rootWidth, rootHeight = root:GetWidth(), root:GetHeight()
+        end
+        local function HasAnchor(frame, point, relative, relativePoint, x, y)
+            if not frame.GetNumPoints or not frame.GetPoint or frame:GetNumPoints() ~= 1 then return false end
+            local currentPoint, currentRelative, currentRelativePoint, currentX, currentY = frame:GetPoint(1)
+            return currentPoint == point
+                and currentRelative == relative
+                and currentRelativePoint == relativePoint
+                and currentX == x
+                and currentY == y
+        end
+        local function SetChatFont(frame)
+            local font, size, flags
+            if frame.GetFont then
+                font, size, flags = frame:GetFont()
+            end
+            if font ~= "DEFAULT" or size ~= 12 or flags ~= "OUTLINE" then frame:SetFont("DEFAULT", 12, "OUTLINE") end
+        end
+        local function SetChatShadow(frame)
+            if frame.SetShadowColor then
+                local r, g, b, a
+                if frame.GetShadowColor then
+                    r, g, b, a = frame:GetShadowColor()
+                end
+                if r ~= 0 or g ~= 0 or b ~= 0 or a ~= 1 then frame:SetShadowColor(0, 0, 0, 1) end
+            end
+            if frame.SetShadowOffset then
+                local x, y
+                if frame.GetShadowOffset then
+                    x, y = frame:GetShadowOffset()
+                end
+                if x ~= 1 or y ~= -1 then frame:SetShadowOffset(1, -1) end
+            end
         end
 
         local regularNotices = {
@@ -128,22 +164,40 @@ DFRL:NewMod("Chat", 1, function()
                 Rearm(state)
             end
         end
-        local function PositionNative(state, now)
+        local function PositionNative(state, now, refresh)
             local frame = state.native
             local progress = state.slideStart and Clamp((now - state.slideStart) / SLIDE, 0, 1) or 1
             local shift = -12 * (1 - progress) * (1 - progress) * (1 - progress)
-            frame:ClearAllPoints()
-            frame:SetPoint("TOPLEFT", root, "TOPLEFT", 3, -5 + shift)
-            frame:SetWidth(root:GetWidth() - 6)
-            frame:SetHeight(root:GetHeight() - 5)
-            local font, size, flags
-            if frame.GetFont then
-                font, size, flags = frame:GetFont()
+            local y, width, height = -5 + shift, rootWidth - 6, rootHeight - 5
+            -- Native window events can replace presentation settings. Recheck
+            -- them at the existing refresh points, outside the slide hot path.
+            if refresh then
+                state.anchored = HasAnchor(frame, "TOPLEFT", root, "TOPLEFT", 3, y)
+                state.positionY = state.anchored and y or nil
+                state.width, state.height = frame:GetWidth(), frame:GetHeight()
+                SetChatFont(frame)
+                SetChatShadow(frame)
+                if frame.SetJustifyH and (not frame.GetJustifyH or frame:GetJustifyH() ~= "LEFT") then
+                    frame:SetJustifyH("LEFT")
+                end
             end
-            if font ~= "DEFAULT" or size ~= 12 or flags ~= "OUTLINE" then frame:SetFont("DEFAULT", 12, "OUTLINE") end
-            if frame.SetShadowColor then frame:SetShadowColor(0, 0, 0, 1) end
-            if frame.SetShadowOffset then frame:SetShadowOffset(1, -1) end
-            if frame.SetJustifyH then frame:SetJustifyH("LEFT") end
+            if not state.anchored then
+                frame:ClearAllPoints()
+                state.anchored = true
+                state.positionY = nil
+            end
+            if state.positionY ~= y then
+                frame:SetPoint("TOPLEFT", root, "TOPLEFT", 3, y)
+                state.positionY = y
+            end
+            if state.width ~= width then
+                frame:SetWidth(width)
+                state.width = width
+            end
+            if state.height ~= height then
+                frame:SetHeight(height)
+                state.height = height
+            end
         end
 
         local indicator = CreateFrame("Frame", nil, root)
@@ -160,13 +214,24 @@ DFRL:NewMod("Chat", 1, function()
         icon:SetHeight(16)
         icon:SetPoint("LEFT", indicatorText, "RIGHT", 6, 0)
         indicator:Hide()
+        local indicatorShown = false
+        local indicatorMessage = "Scroll down for latest messages"
 
-        UpdateIndicator = function()
-            if selected and not AtBottom(selected) and not focused then
-                indicatorText:SetText(selected.unread and "Unread messages" or "Scroll down for latest messages")
-                indicator:Show()
-            else
+        UpdateIndicator = function(atBottom)
+            if atBottom == nil and selected then atBottom = AtBottom(selected) end
+            if selected and not atBottom and not focused then
+                local message = selected.unread and "Unread messages" or "Scroll down for latest messages"
+                if indicatorMessage ~= message then
+                    indicatorText:SetText(message)
+                    indicatorMessage = message
+                end
+                if not indicatorShown then
+                    indicator:Show()
+                    indicatorShown = true
+                end
+            elseif indicatorShown then
                 indicator:Hide()
+                indicatorShown = false
             end
         end
         local function Scroll(state, direction)
@@ -198,21 +263,30 @@ DFRL:NewMod("Chat", 1, function()
 
         PositionInput = function()
             if not input then return end
-            input:ClearAllPoints()
-            input:SetPoint("TOPLEFT", root, "BOTTOMLEFT", -1, -1)
-            input:SetWidth(root:GetWidth())
-            input:SetHeight(28)
-            input:SetFont("DEFAULT", 12, "OUTLINE")
-            if input.SetShadowColor then input:SetShadowColor(0, 0, 0, 1) end
-            if input.SetShadowOffset then input:SetShadowOffset(1, -1) end
-            input:SetAlpha(1)
-            local header = input:GetName() and _G[input:GetName() .. "Header"]
-            if header then
-                header:SetFont("DEFAULT", 12, "OUTLINE")
-                header:ClearAllPoints()
-                header:SetPoint("LEFT", input, "LEFT", 8, 0)
+            if not HasAnchor(input, "TOPLEFT", root, "BOTTOMLEFT", -1, -1) then
+                input:ClearAllPoints()
+                input:SetPoint("TOPLEFT", root, "BOTTOMLEFT", -1, -1)
             end
-            input:SetTextInsets((header and header:GetStringWidth() or 0) + 12, 8, 6, 6)
+            if input:GetWidth() ~= rootWidth then input:SetWidth(rootWidth) end
+            if input:GetHeight() ~= 28 then input:SetHeight(28) end
+            SetChatFont(input)
+            SetChatShadow(input)
+            if input:GetAlpha() ~= 1 then input:SetAlpha(1) end
+            local inputName = input:GetName()
+            local header = inputName and _G[inputName .. "Header"]
+            if header then
+                SetChatFont(header)
+                if not HasAnchor(header, "LEFT", input, "LEFT", 8, 0) then
+                    header:ClearAllPoints()
+                    header:SetPoint("LEFT", input, "LEFT", 8, 0)
+                end
+            end
+            local left = (header and header:GetStringWidth() or 0) + 12
+            local currentLeft, right, top, bottom
+            if input.GetTextInsets then
+                currentLeft, right, top, bottom = input:GetTextInsets()
+            end
+            if currentLeft ~= left or right ~= 8 or top ~= 6 or bottom ~= 6 then input:SetTextInsets(left, 8, 6, 6) end
         end
 
         root:EnableMouse(true)
@@ -232,7 +306,7 @@ DFRL:NewMod("Chat", 1, function()
             -- Only approved message categories are formatted. Rendering still
             -- uses the actual native frame, with raw-text fallback on failure.
             native:SetParent(root)
-            PositionNative(state, GetTime())
+            PositionNative(state, GetTime(), true)
             FadeSettings(state, false)
             -- SetMaxLines clears the native ring; preserve existing history.
             if native.SetSpacing then native:SetSpacing(3) end
@@ -245,7 +319,10 @@ DFRL:NewMod("Chat", 1, function()
             native:EnableMouseWheel(state == selected)
             native:SetScript("OnMouseWheel", function() Scroll(state, arg1 or 0) end)
             local setAlpha = native.SetAlpha
-            native.SetAlpha = function(frame) setAlpha(frame, state == selected and (state.visualAlpha or 1) or 0) end
+            native.SetAlpha = function(frame)
+                local alpha = state == selected and (state.visualAlpha or 1) or 0
+                if frame:GetAlpha() ~= alpha then setAlpha(frame, alpha) end
+            end
             native:SetAlpha(1)
             local addMessage = native.AddMessage
             local function RenderMessage(frame, displayed, r, g, b, id, addToStart)
@@ -344,7 +421,8 @@ DFRL:NewMod("Chat", 1, function()
                     if index == 1 then ConfigureRegularChat() end
                     state.fadeConfigured, state.held = nil, nil
                     FadeSettings(state, state == selected and not AtBottom(state))
-                    PositionNative(state, GetTime())
+                    ReadDimensions()
+                    PositionNative(state, GetTime(), true)
                     PositionInput()
                     if RefreshFrames then RefreshFrames() end
                 end
@@ -373,11 +451,13 @@ DFRL:NewMod("Chat", 1, function()
             else
                 _G.SELECTED_DOCK_FRAME = state.native
             end
+            ReadDimensions()
+            local now = GetTime()
             for _, other in pairs(states) do
                 other.native:SetAlpha(other == selected and 1 or 0)
                 other.native:EnableMouse(other == selected)
                 other.native:EnableMouseWheel(other == selected)
-                PositionNative(other, GetTime())
+                PositionNative(other, now, true)
             end
             state.native:Show()
             if FCF_StopAlertFlash then FCF_StopAlertFlash(state.native) end
@@ -436,9 +516,13 @@ DFRL:NewMod("Chat", 1, function()
             local now, elapsed = GetTime(), arg1 or 0
             -- Only wheel navigation uncovers retained history. Hover and input
             -- focus never rearm lines or hold their fading.
-            local held = selected and not AtBottom(selected) or false
+            local atBottom = not selected or AtBottom(selected)
+            local held = not atBottom
             for _, state in pairs(states) do
-                if state.pendingLevel and now >= state.pendingLevel.deadline then state.FlushLevel() end
+                if state.pendingLevel and now >= state.pendingLevel.deadline then
+                    state.FlushLevel()
+                    if state == selected then atBottom = nil end
+                end
                 if state.revealStart then
                     state.visualAlpha = Clamp((now - state.revealStart) / FADE, 0, 1)
                     if state.visualAlpha == 1 then state.revealStart = nil end
@@ -451,17 +535,22 @@ DFRL:NewMod("Chat", 1, function()
             end
             if selected then
                 selected.native:SetAlpha(1)
-                selected.native:Show()
-                if AtBottom(selected) then selected.unread = false end
+                if not Flag(selected.native:IsShown()) then
+                    selected.native:Show()
+                    atBottom = nil
+                end
+                if atBottom == nil then atBottom = AtBottom(selected) end
+                if atBottom then selected.unread = false end
             end
-            UpdateIndicator()
+            UpdateIndicator(atBottom)
             refresh = refresh + elapsed
             if refresh >= 1 then
                 refresh = 0
+                ReadDimensions()
                 PositionInput()
                 RefreshFrames()
                 for _, state in pairs(states) do
-                    PositionNative(state, now)
+                    PositionNative(state, now, true)
                 end
             end
         end)
@@ -472,7 +561,8 @@ DFRL:NewMod("Chat", 1, function()
             maxWidth = 2400,
             maxHeight = 1600,
             onResize = function(frame)
-                indicator:SetWidth(frame:GetWidth())
+                rootWidth, rootHeight = frame:GetWidth(), frame:GetHeight()
+                if indicator:GetWidth() ~= rootWidth then indicator:SetWidth(rootWidth) end
                 local now = GetTime()
                 for _, state in pairs(states) do
                     PositionNative(state, now)

@@ -32,6 +32,12 @@ DFRL:NewMod("Target", 1, function()
         "RIGHT"
     )
     local healthText = CreateValueText(TargetFrameHealthBar, 10)
+    local displayedHealth
+    local function SetHealthText(value)
+        if value == displayedHealth then return end
+        displayedHealth = value
+        healthText:SetText(value)
+    end
 
     local function HidePowerBar()
         if TargetFrameManaBar then
@@ -69,7 +75,8 @@ DFRL:NewMod("Target", 1, function()
         TargetLevelText:SetTextColor(1, 0.82, 0)
     end
 
-    local function UpdateClassification()
+    local borderTexture
+    local function UpdateClassification(force)
         local classification = UnitClassification("target")
         local texture = "UI-TargetingFrameDF1.blp"
         if classification == "worldboss" then
@@ -81,24 +88,30 @@ DFRL:NewMod("Target", 1, function()
         elseif classification == "rare" then
             texture = "UI-TargetingFrame-Rare.blp"
         end
-        UpdateBorderTexture(tex .. texture)
+        local path = tex .. texture
+        -- Health events can arrive through both the native bar and UNIT_HEALTH.
+        -- Our border only changes with classification; native rebuilds still force it.
+        if force == true or path ~= borderTexture then
+            borderTexture = path
+            UpdateBorderTexture(path)
+        end
     end
-    _G.TargetFrame_CheckClassification = UpdateClassification
+    _G.TargetFrame_CheckClassification = function() UpdateClassification(true) end
 
-    local function UpdateTarget()
+    local function UpdateTarget(forceBorder)
         if not UnitExists("target") then
-            healthText:SetText("")
+            SetHealthText("")
             return
         end
         if UnitIsDead("target") or UnitIsGhost("target") then
-            healthText:SetText("")
+            SetHealthText("")
         else
-            healthText:SetText(UnitHealth("target"))
+            SetHealthText(UnitHealth("target"))
         end
-        UpdateClassification()
+        UpdateClassification(forceBorder)
     end
 
-    HookScript(TargetFrameHealthBar, "OnValueChanged", UpdateTarget)
+    HookScript(TargetFrameHealthBar, "OnValueChanged", function() UpdateTarget() end)
     local frame = CreateFrame("Frame")
     frame:RegisterEvent("PLAYER_TARGET_CHANGED")
     frame:RegisterEvent("PLAYER_ENTERING_WORLD")
@@ -107,7 +120,7 @@ DFRL:NewMod("Target", 1, function()
     frame:RegisterEvent("UNIT_CLASSIFICATION_CHANGED")
     frame:SetScript("OnEvent", function()
         if event == "PLAYER_TARGET_CHANGED" or event == "PLAYER_ENTERING_WORLD" or arg1 == "target" then
-            UpdateTarget()
+            UpdateTarget(event == "PLAYER_TARGET_CHANGED" or event == "PLAYER_ENTERING_WORLD")
         end
     end)
     UpdateClassification()

@@ -3,6 +3,7 @@ DFRL:NewMod("Layout", 0, function()
     local layout, entries, order = {}, {}, {}
     DFRL.layout = layout
     local ready, inWorld, needsRestore = false, true, false
+    local needsDefaultPosition = false
     local activeDrag
     local editing, draft, confirm = false, nil, nil
     local confirmAnchor
@@ -69,14 +70,15 @@ DFRL:NewMod("Layout", 0, function()
         local width, height, uiScale = Viewport()
         local scale = Scale(frame)
         if not width or not Valid(position) or not Number(scale) or scale <= 0 then return end
-        frame:ClearAllPoints()
-        frame:SetPoint(
-            "TOPLEFT",
-            UIParent,
-            "TOPLEFT",
-            position.x * width * uiScale / scale,
-            position.y * height * uiScale / scale
-        )
+        local x, y = position.x * width * uiScale / scale, position.y * height * uiScale / scale
+        local point, relative, relativePoint, oldX, oldY
+        if frame:GetNumPoints() == 1 then
+            point, relative, relativePoint, oldX, oldY = frame:GetPoint(1)
+        end
+        if point ~= "TOPLEFT" or relative ~= UIParent or relativePoint ~= "TOPLEFT" or oldX ~= x or oldY ~= y then
+            frame:ClearAllPoints()
+            frame:SetPoint("TOPLEFT", UIParent, "TOPLEFT", x, y)
+        end
         -- Native StartMoving marks the frame user-placed. Keep a single layout store.
         LockFrame(frame)
     end
@@ -99,20 +101,20 @@ DFRL:NewMod("Layout", 0, function()
         local oldScale, oldWidth, oldHeight = LocalScale(frame), frame:GetWidth(), frame:GetHeight()
         geometry = geometry or {}
         if options.resize == "dimensions" then
-            frame:SetScale(entry.defaultScale)
-            frame:SetWidth(
-                Number(geometry.width) and Clamp(geometry.width, options.minWidth or 120, options.maxWidth or 2400)
-                    or entry.defaultWidth
-            )
-            frame:SetHeight(
-                Number(geometry.height) and Clamp(geometry.height, options.minHeight or 80, options.maxHeight or 1600)
-                    or entry.defaultHeight
-            )
+            local width = Number(geometry.width)
+                    and Clamp(geometry.width, options.minWidth or 120, options.maxWidth or 2400)
+                or entry.defaultWidth
+            local height = Number(geometry.height)
+                    and Clamp(geometry.height, options.minHeight or 80, options.maxHeight or 1600)
+                or entry.defaultHeight
+            if oldScale ~= entry.defaultScale then frame:SetScale(entry.defaultScale) end
+            if oldWidth ~= width then frame:SetWidth(width) end
+            if oldHeight ~= height then frame:SetHeight(height) end
         else
-            frame:SetScale(
-                Number(geometry.scale) and Clamp(geometry.scale, entry.defaultScale * 0.4, entry.defaultScale * 3)
-                    or entry.defaultScale
-            )
+            local scale = Number(geometry.scale)
+                    and Clamp(geometry.scale, entry.defaultScale * 0.4, entry.defaultScale * 3)
+                or entry.defaultScale
+            if oldScale ~= scale then frame:SetScale(scale) end
         end
         if
             options.onResize
@@ -145,7 +147,10 @@ DFRL:NewMod("Layout", 0, function()
             -- Late or initially unresolved frames still have their default anchors.
             entry.defaultPosition = ReadPosition(entry.frame)
         end
-        if not entry.defaultPosition then return end
+        if not entry.defaultPosition then
+            needsDefaultPosition = true
+            return
+        end
         local position = GeometryStore()[key]
         ApplySize(entry, Valid(position) and position or nil)
         ApplyPosition(entry.frame, Valid(position) and position or entry.defaultPosition)
@@ -302,8 +307,20 @@ DFRL:NewMod("Layout", 0, function()
         handle:EnableMouse(false)
         handle:Hide()
         entry.handle = handle
+        entry.handleShown = false
         for _, corner in ipairs({ "TOPLEFT", "TOPRIGHT", "BOTTOMLEFT", "BOTTOMRIGHT" }) do
             MakeCorner(entry, corner)
+        end
+    end
+
+    local function ShowHandle(entry, shown)
+        if entry.handleShown == shown then return end
+        entry.handleShown = shown
+        entry.handle:EnableMouse(shown)
+        if shown then
+            entry.handle:Show()
+        else
+            entry.handle:Hide()
         end
     end
 
@@ -313,6 +330,7 @@ DFRL:NewMod("Layout", 0, function()
         entry.defaultScale = LocalScale(frame)
         entry.defaultWidth, entry.defaultHeight = frame:GetWidth(), frame:GetHeight()
         entry.defaultAnchor = defaultAnchor or CaptureAnchors(frame)
+        needsDefaultPosition = true
         entries[key] = entry
         table.insert(order, entry)
         entry.defaultAnchor(frame)
@@ -323,6 +341,7 @@ DFRL:NewMod("Layout", 0, function()
     end
 
     local function RestoreDefaults()
+        needsDefaultPosition = false
         -- Resolve every default before detaching relative anchors or applying saved ones.
         for _, entry in ipairs(order) do
             entry.defaultPosition = nil
@@ -345,8 +364,7 @@ DFRL:NewMod("Layout", 0, function()
         for _, entry in ipairs(order) do
             if entry.options.onEdit then entry.options.onEdit(false, save) end
             LockFrame(entry.frame)
-            entry.handle:EnableMouse(false)
-            entry.handle:Hide()
+            ShowHandle(entry, false)
         end
         if confirm then confirm:Hide() end
         if restore ~= false then
@@ -425,24 +443,37 @@ DFRL:NewMod("Layout", 0, function()
         local enabled = inWorld and editing
         if activeDrag and not enabled then FinishDrag(activeDrag, false) end
         if activeDrag and activeDrag.resizing then UpdateResize(activeDrag) end
+        if needsDefaultPosition then
+            needsDefaultPosition = false
+            for _, entry in ipairs(order) do
+                if not entry.defaultPosition then layout.Place(entry.key) end
+            end
+        end
+        -- Settled groups need no handle reads or native visibility writes during
+        -- gameplay. Viewport changes and unresolved defaults still run above.
+        if not enabled then return end
         for _, entry in ipairs(order) do
-            if not entry.defaultPosition then layout.Place(entry.key) end
             local handle, region = entry.handle, entry.options.region or entry.frame
-            local shown = enabled
-                and entry.defaultPosition
-                and (not entry.options.onlyWhenShown or entry.frame:IsShown())
+            local shown = entry.defaultPosition and (not entry.options.onlyWhenShown or entry.frame:IsShown())
             if shown then
                 local ratio = Scale(region) / scale
-                handle:ClearAllPoints()
-                handle:SetPoint("TOPLEFT", region, "TOPLEFT", 0, 0)
-                handle:SetWidth(math.max(12, region:GetWidth() * ratio))
-                handle:SetHeight(math.max(12, region:GetHeight() * ratio))
-                handle:EnableMouse(true)
-                handle:Show()
-            else
-                handle:EnableMouse(false)
-                handle:Hide()
+                local handleWidth = math.max(12, region:GetWidth() * ratio)
+                local handleHeight = math.max(12, region:GetHeight() * ratio)
+                if entry.handleRegion ~= region then
+                    handle:ClearAllPoints()
+                    handle:SetPoint("TOPLEFT", region, "TOPLEFT", 0, 0)
+                    entry.handleRegion = region
+                end
+                if entry.handleWidth ~= handleWidth then
+                    handle:SetWidth(handleWidth)
+                    entry.handleWidth = handleWidth
+                end
+                if entry.handleHeight ~= handleHeight then
+                    handle:SetHeight(handleHeight)
+                    entry.handleHeight = handleHeight
+                end
             end
+            ShowHandle(entry, shown and true or false)
         end
     end)
     controller:RegisterEvent("PLAYER_LEAVING_WORLD")
@@ -457,7 +488,7 @@ DFRL:NewMod("Layout", 0, function()
             CloseEditing(false, true)
             FinishDrag(activeDrag, false)
             for _, entry in ipairs(order) do
-                entry.handle:Hide()
+                ShowHandle(entry, false)
             end
         end
     end)
