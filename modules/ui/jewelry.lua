@@ -130,6 +130,8 @@ DFRL:NewMod("Jewelry", 4, function()
         if percent then return "+ Loot pickup range: " .. percent .. "%" end
         _, _, percent = string.find(sentence, "^Increases gold found by (%d+[.,]?%d*)%%$")
         if percent then return "+ Gold found: " .. percent .. "%" end
+        _, _, percent = string.find(sentence, "^Increases your luck by (%d+[.,]?%d*)%%$")
+        if percent then return "+ Luck: " .. percent .. "%" end
         _, _, percent = string.find(sentence, "^Increases the area of effect of your spells by (%d+[.,]?%d*)%%$")
         if percent then return "+ Spell area: " .. percent .. "%" end
         _, _, percent = string.find(sentence, "^Increases all damage you deal by (%d+[.,]?%d*)%%$")

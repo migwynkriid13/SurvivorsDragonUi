@@ -8,7 +8,7 @@ The user selected action-bar attachment design **4 — Thin shared bezel**, with
 
 Hover shows only the equipped item's native **Equip**, **Use** and **Chance on hit** effect descriptions. A private `GameTooltipTemplate` under a permanently hidden parent reads `SetInventoryItem("player", id)`; the shared `GameTooltip` is never owned, cleared or restyled. The reader scans at most 64 native rows, skipping the item title and selecting effect rows by the native localized `ITEM_SPELL_TRIGGER_*` prefixes, with English fallback labels only when those globals are missing. The complete matched trigger label and its following whitespace are removed for display, including multiword labels such as Chance on hit. Effect wording, numbers and wrapped text are preserved; no arbitrary first word of a description is removed. Binding, equipment type, requirements, flavor text, sale value and separate cooldown metadata are omitted. No effect values are inferred from the icon or item name. Missing APIs, unavailable descriptions or items without recognized effect rows produce no popup; a hovered slot retries at the existing five-Hz cadence so late native data can appear.
 
-Fifteen user-requested English effect sentence templates use compact display wording after trigger-label removal:
+Sixteen user-requested English effect sentence templates use compact display wording after trigger-label removal:
 
 - `Increases your movement speed by X%` becomes `+ Movement speed: X%`.
 - `Reduces the cooldown of your spells by X%` becomes `- X% Cooldown`.
@@ -18,6 +18,7 @@ Fifteen user-requested English effect sentence templates use compact display wor
 - `Increases the damage of your critical strikes by X%` becomes `+ Critical damage: X%`.
 - `Increases the range you pick up loot from by X%` becomes `+ Loot pickup range: X%`.
 - `Increases gold found by X%` becomes `+ Gold found: X%`.
+- `Increases your luck by X%` becomes `+ Luck: X%`.
 - `Increases the area of effect of your spells by X%` becomes `+ Spell area: X%`.
 - `Increases all damage you deal by X%` becomes `+ Damage dealt: X%`.
 - `Your damage, haste, shield and thorns buffs are X% stronger` becomes `+ Buff power: X%`.
