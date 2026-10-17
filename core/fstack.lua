@@ -1,6 +1,6 @@
 -- Read-only, session-only frame inspection through the native 1.12 widget API.
 DFRL:NewMod("Frame stack", 2, function()
-    local INTERVAL, SCAN_LIMIT, STACK_ROWS = 0.2, 10000, 10
+    local INTERVAL, SCAN_LIMIT, REGION_LIMIT, STACK_ROWS = 0.2, 10000, 50000, 10
     local strataOrder = {
         BACKGROUND = 1,
         LOW = 2,
@@ -11,7 +11,9 @@ DFRL:NewMod("Frame stack", 2, function()
         FULLSCREEN_DIALOG = 7,
         TOOLTIP = 8,
     }
+    local layerOrder = { BACKGROUND = 1, BORDER = 2, ARTWORK = 3, OVERLAY = 4, HIGHLIGHT = 5 }
     local enabled, inWorld, elapsed = false, true, 0
+    local selection, snapshot = nil, {}
     local panel, highlight
     local labels = {}
     local controller = CreateFrame("Frame", nil, UIParent)
@@ -48,8 +50,9 @@ DFRL:NewMod("Frame stack", 2, function()
         end
         return parent == nil
     end
-    local function Bounds(frame, uiScale, uiLeft, uiBottom)
-        local scale = Read(frame, "GetEffectiveScale")
+    local function Bounds(frame, uiScale, uiLeft, uiBottom, owner)
+        -- Texture/FontString coordinates use their owner's scale on 1.12.
+        local scale = Read(frame, "GetEffectiveScale") or Read(owner, "GetEffectiveScale")
         local left, right = Read(frame, "GetLeft"), Read(frame, "GetRight")
         local bottom, top = Read(frame, "GetBottom"), Read(frame, "GetTop")
         if
@@ -140,6 +143,7 @@ DFRL:NewMod("Frame stack", 2, function()
         panel:Show()
     end
     local function Refresh()
+        snapshot = {}
         local width, height = UIParent:GetWidth(), UIParent:GetHeight()
         local uiScale = Read(UIParent, "GetEffectiveScale")
         local uiLeft, uiBottom = Read(UIParent, "GetLeft") or 0, Read(UIParent, "GetBottom") or 0
@@ -163,10 +167,11 @@ DFRL:NewMod("Frame stack", 2, function()
             local ok, frame = pcall(_G.GetMouseFocus)
             if ok and frame ~= panel and frame ~= highlight then focus = frame end
         end
-        local rows, seen = {}, {}
-        local function Add(frame, order)
+        local rows, seen, seenRegions = {}, {}, {}
+        local regionCount, regionWarning = 0, false
+        local function Add(frame, owner, order, regionIndex)
             if frame == panel or frame == highlight or not Visible(frame) then return end
-            local bounds = Bounds(frame, uiScale, uiLeft, uiBottom)
+            local bounds = Bounds(frame, uiScale, uiLeft, uiBottom, owner)
             if
                 not bounds
                 or cursorX < bounds.left
@@ -176,15 +181,47 @@ DFRL:NewMod("Frame stack", 2, function()
             then
                 return
             end
-            local strata = Read(frame, "GetFrameStrata") or "UNKNOWN"
-            local level = Read(frame, "GetFrameLevel")
+            local strata = Read(owner, "GetFrameStrata") or "UNKNOWN"
+            local level = Read(owner, "GetFrameLevel")
+            local layer = Read(frame, "GetDrawLayer")
             table.insert(rows, {
                 frame = frame,
+                owner = owner,
                 strata = strata,
                 rank = strataOrder[strata] or 0,
                 level = Number(level) and level or 0,
                 order = order,
+                layer = layer,
+                layerRank = layerOrder[layer] or 0,
+                regionIndex = regionIndex,
             })
+        end
+        local function Scan(frame, order)
+            if frame == panel or frame == highlight or not Visible(frame) then return end
+            Add(frame, frame, order, 0)
+            -- Visit regions even outside their owner's bounds; artwork can extend
+            -- beyond its parent, just like the chat input below the message pane.
+            if type(frame.GetRegions) ~= "function" then
+                regionWarning = true
+                return
+            end
+            local regions = { pcall(frame.GetRegions, frame) }
+            if not regions[1] then
+                regionWarning = true
+                return
+            end
+            for i = 2, table.getn(regions) do
+                if regionCount >= REGION_LIMIT then
+                    regionWarning = true
+                    break
+                end
+                local region = regions[i]
+                if region and not seenRegions[region] then
+                    seenRegions[region] = true
+                    regionCount = regionCount + 1
+                    Add(region, frame, order, i - 1)
+                end
+            end
         end
         local scanned, frame, warning = 0, nil, nil
         if type(_G.EnumerateFrames) == "function" then
@@ -197,47 +234,71 @@ DFRL:NewMod("Frame stack", 2, function()
                 if not nextFrame then break end
                 scanned, frame = scanned + 1, nextFrame
                 seen[frame] = true
-                Add(frame, scanned)
+                Scan(frame, scanned)
             end
             if scanned == SCAN_LIMIT then warning = "Frame scan limit reached; the list may be incomplete." end
         else
             warning = "EnumerateFrames unavailable; showing mouse focus and parents."
         end
-        -- Also include focus on older clients without frame enumeration.
+        -- Also include focus and its regions without global frame enumeration.
         frame = focus
         for i = 1, 64 do
             if not frame or frame == panel or frame == highlight then break end
             if not seen[frame] then
                 seen[frame] = true
-                Add(frame, SCAN_LIMIT + 1 - i)
+                Scan(frame, SCAN_LIMIT + 1 - i)
             end
             frame = Read(frame, "GetParent")
         end
         table.sort(rows, function(a, b)
             if a.rank ~= b.rank then return a.rank > b.rank end
             if a.level ~= b.level then return a.level > b.level end
-            return a.order > b.order
+            if a.order ~= b.order then return a.order > b.order end
+            if a.layerRank ~= b.layerRank then return a.layerRank > b.layerRank end
+            return a.regionIndex > b.regionIndex
         end)
+        snapshot = rows
+        local selectedIndex, focusIndex
+        for i, row in ipairs(rows) do
+            if row.frame == selection then selectedIndex = i end
+            if row.frame == focus then focusIndex = i end
+        end
+        if not selectedIndex then selection = nil end
+        -- World/UIParent focus should not obscure mouse-transparent HUD artwork.
+        if focus == UIParent or focus == WorldFrame then focusIndex = nil end
+        local index = selectedIndex or focusIndex or 1
+        local inspectedRow = rows[index]
+        local inspected = inspectedRow and inspectedRow.frame or focus
         table.insert(lines, "Mouse focus: " .. Name(focus))
-        table.insert(lines, "Frames at cursor by strata/level (> = mouse focus):")
+        table.insert(lines, "Client-wide frames, textures and text (> focus, * inspected):")
         local count = table.getn(rows)
-        for i = 1, math.min(count, STACK_ROWS) do
+        local first = math.floor((index - 1) / STACK_ROWS) * STACK_ROWS + 1
+        local last = math.min(count, first + STACK_ROWS - 1)
+        for i = first, last do
             local row = rows[i]
             table.insert(
                 lines,
-                (row.frame == focus and "> " or "  ") .. row.strata .. ":" .. row.level .. "  " .. Name(row.frame)
+                (row.frame == focus and ">" or " ")
+                    .. (row.frame == inspected and "* " or "  ")
+                    .. row.strata
+                    .. ":"
+                    .. row.level
+                    .. (row.layer and "/" .. row.layer or "")
+                    .. "  "
+                    .. Name(row.frame)
             )
         end
-        if count > STACK_ROWS then table.insert(lines, "+ " .. (count - STACK_ROWS) .. " more overlapping frames") end
-        if count == 0 then table.insert(lines, "No visible frame bounds at the cursor.") end
+        if count > 0 then table.insert(lines, "Elements " .. first .. "-" .. last .. " of " .. count) end
+        if count == 0 then table.insert(lines, "No visible UI element bounds at the cursor.") end
         if warning then table.insert(lines, warning) end
-        local inspected = focus or (rows[1] and rows[1].frame)
+        if regionWarning then table.insert(lines, "Region scan unavailable or limited; the list may be incomplete.") end
         if inspected then
             table.insert(lines, "")
             table.insert(lines, "Inspect: " .. Name(inspected))
             table.insert(lines, "Parent: " .. Name(Read(inspected, "GetParent")))
             local frameWidth, frameHeight = Read(inspected, "GetWidth"), Read(inspected, "GetHeight")
-            local scale = Read(inspected, "GetEffectiveScale")
+            local owner = inspectedRow and inspectedRow.owner or inspected
+            local scale = Read(inspected, "GetEffectiveScale") or Read(owner, "GetEffectiveScale")
             if Number(frameWidth) and Number(frameHeight) and Number(scale) then
                 table.insert(
                     lines,
@@ -249,11 +310,24 @@ DFRL:NewMod("Frame stack", 2, function()
                 "Type: "
                     .. tostring(Read(inspected, "GetObjectType") or "unknown")
                     .. "; strata: "
-                    .. tostring(Read(inspected, "GetFrameStrata") or "unknown")
+                    .. tostring(Read(owner, "GetFrameStrata") or "unknown")
                     .. "; level: "
-                    .. tostring(Read(inspected, "GetFrameLevel") or "unknown")
+                    .. tostring(Read(owner, "GetFrameLevel") or "unknown")
             )
-            local bounds = Bounds(inspected, uiScale, uiLeft, uiBottom)
+            local layer = Read(inspected, "GetDrawLayer")
+            if layer then table.insert(lines, "Draw layer: " .. tostring(layer)) end
+            local texture = Read(inspected, "GetTexture")
+            if type(texture) == "string" then
+                table.insert(lines, "Texture: " .. (string.gsub(texture, "|", "||")))
+            end
+            local text = Read(inspected, "GetText")
+            if type(text) == "string" and text ~= "" then
+                local preview = string.sub(text, 1, 120)
+                preview = string.gsub(preview, "\n", "\\n")
+                preview = string.gsub(preview, "|", "||")
+                table.insert(lines, "Text: " .. preview .. (string.len(text) > 120 and "..." or ""))
+            end
+            local bounds = Bounds(inspected, uiScale, uiLeft, uiBottom, owner)
             if bounds then
                 table.insert(
                     lines,
@@ -294,13 +368,15 @@ DFRL:NewMod("Frame stack", 2, function()
                 if points > 4 then table.insert(lines, "+ " .. (points - 4) .. " more anchors") end
             end
         end
-        table.insert(lines, "Bounds overlap is not a native hit-test or exact draw order.")
+        table.insert(lines, "/fstack next|prev cycles all overlaps; /fstack focus follows the mouse.")
+        table.insert(lines, "Native UI API only; bounds order is not exact hit testing/draw order.")
         Display(lines, cursorX, width, height)
     end
     local function SetEnabled(value)
         enabled, elapsed = value and inWorld, 0
         controller:SetScript("OnUpdate", nil)
         if not enabled then
+            selection, snapshot = nil, {}
             if panel then panel:Hide() end
             if highlight then highlight:Hide() end
             for _, label in ipairs(labels) do
@@ -317,6 +393,26 @@ DFRL:NewMod("Frame stack", 2, function()
             Refresh()
         end)
     end
+    local function Step(direction)
+        if not enabled then SetEnabled(true) end
+        if not enabled then return end
+        Refresh()
+        local count = table.getn(snapshot)
+        if count == 0 then return end
+        local index = 1
+        for i, row in ipairs(snapshot) do
+            if row.frame == selection then index = i end
+        end
+        if not selection then
+            -- The first step can reach every element, including the first row.
+            index = direction > 0 and 0 or count + 1
+        end
+        index = index + direction
+        if index < 1 then index = count end
+        if index > count then index = 1 end
+        selection = snapshot[index].frame
+        Refresh()
+    end
     controller:RegisterEvent("PLAYER_LEAVING_WORLD")
     controller:RegisterEvent("PLAYER_ENTERING_WORLD")
     controller:RegisterEvent("PLAYER_LOGOUT")
@@ -332,9 +428,18 @@ DFRL:NewMod("Frame stack", 2, function()
             SetEnabled(not enabled)
         elseif command == "on" or command == "off" then
             SetEnabled(command == "on")
+        elseif command == "next" or command == "prev" then
+            Step(command == "next" and 1 or -1)
+        elseif command == "focus" then
+            selection = nil
+            if not enabled then
+                SetEnabled(true)
+            else
+                Refresh()
+            end
         elseif DEFAULT_CHAT_FRAME then
             DEFAULT_CHAT_FRAME:AddMessage(
-                "SurvivorsDragonUi: /fstack toggles frame inspection; /fstack on|off sets it."
+                "SurvivorsDragonUi: /fstack [on|off|next|prev|focus]. Inspect all Lua-exposed UI, including the game's own."
             )
         end
     end
