@@ -109,6 +109,16 @@ DFRL:NewMod("Jewelry", 4, function()
         end
         return scanner
     end
+    local function FormatEffect(description)
+        local sentence = string.gsub(description, "%s+", " ")
+        sentence = string.gsub(sentence, "%s+$", "")
+        sentence = string.gsub(sentence, "%.$", "")
+        local _, _, percent = string.find(sentence, "^Increases your movement speed by (%d+[.,]?%d*)%%$")
+        if percent then return "+ Movement speed: " .. percent .. "%" end
+        _, _, percent = string.find(sentence, "^Reduces the cooldown of your spells by (%d+[.,]?%d*)%%$")
+        if percent then return "- " .. percent .. "% Cooldown" end
+        return description
+    end
     local function EffectDescription(text)
         if type(text) ~= "string" then return nil end
         local plain = string.gsub(text, "|c%x%x%x%x%x%x%x%x", "")
@@ -119,7 +129,7 @@ DFRL:NewMod("Jewelry", 4, function()
             if type(prefix) ~= "string" or prefix == "" then prefix = entry[2] end
             if string.sub(plain, 1, string.len(prefix)) == prefix then
                 local description = string.gsub(string.sub(plain, string.len(prefix) + 1), "^%s+", "")
-                if description ~= "" then return description end
+                if description ~= "" then return FormatEffect(description) end
             end
         end
         return nil
