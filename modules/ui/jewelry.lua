@@ -109,17 +109,20 @@ DFRL:NewMod("Jewelry", 4, function()
         end
         return scanner
     end
-    local function IsEffect(text)
-        if type(text) ~= "string" then return false end
+    local function EffectDescription(text)
+        if type(text) ~= "string" then return nil end
         local plain = string.gsub(text, "|c%x%x%x%x%x%x%x%x", "")
         plain = string.gsub(plain, "|r", "")
         plain = string.gsub(plain, "^%s+", "")
         for _, entry in ipairs(EFFECT_PREFIXES) do
             local prefix = _G[entry[1]]
             if type(prefix) ~= "string" or prefix == "" then prefix = entry[2] end
-            if string.sub(plain, 1, string.len(prefix)) == prefix then return true end
+            if string.sub(plain, 1, string.len(prefix)) == prefix then
+                local description = string.gsub(string.sub(plain, string.len(prefix) + 1), "^%s+", "")
+                if description ~= "" then return description end
+            end
         end
-        return false
+        return nil
     end
     local function ReadEffects(slot)
         local tooltip = GetScanner()
@@ -134,7 +137,8 @@ DFRL:NewMod("Jewelry", 4, function()
             for index = 2, math.min(64, tooltip:NumLines()) do
                 local line = _G[SCANNER_NAME .. "TextLeft" .. index]
                 local text = line and type(line.GetText) == "function" and line:GetText()
-                if IsEffect(text) then table.insert(effects, text) end
+                local description = EffectDescription(text)
+                if description then table.insert(effects, description) end
             end
         end
         tooltip:Hide()
