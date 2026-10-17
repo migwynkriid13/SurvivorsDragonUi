@@ -79,6 +79,7 @@ DFRL:NewMod("Jewelry", 4, function()
     local function Number(value) return type(value) == "number" and value - value == 0 end
     local hoveredSlot, effectPanel, effectText, scanner, scannerParent
     local SCANNER_NAME = "SurvivorsDragonUiJewelryScanner"
+    local EFFECT_MAX_WIDTH, EFFECT_PADDING = 272, 14
     local EFFECT_PREFIXES = {
         { "ITEM_SPELL_TRIGGER_ONEQUIP", "Equip:" },
         { "ITEM_SPELL_TRIGGER_ONUSE", "Use:" },
@@ -187,7 +188,7 @@ DFRL:NewMod("Jewelry", 4, function()
         if not effectPanel then
             -- Reuse the shipped Dragonflight diamond-metal chrome and gold
             -- divider. Artwork attribution is carried by core/editor.lua.
-            effectPanel = DFRL.tools.CreateEditorPanel(UIParent, 300, 48, 12)
+            effectPanel = DFRL.tools.CreateEditorPanel(UIParent, EFFECT_MAX_WIDTH + EFFECT_PADDING * 2, 48, 12)
             effectPanel:Hide()
             effectPanel:EnableMouse(false)
             effectPanel:SetFrameStrata("TOOLTIP")
@@ -198,8 +199,9 @@ DFRL:NewMod("Jewelry", 4, function()
             effectPanel.editorFill:ClearAllPoints()
             effectPanel.editorFill:SetPoint("TOPLEFT", effectPanel, "TOPLEFT", 3, -3)
             effectPanel.editorFill:SetPoint("BOTTOMRIGHT", effectPanel, "BOTTOMRIGHT", -3, 3)
-            local accent = DFRL.tools.EditorDivider(effectPanel, 272)
-            accent:SetPoint("TOP", effectPanel, "TOP", 0, -9)
+            local accent = DFRL.tools.EditorDivider(effectPanel, EFFECT_MAX_WIDTH)
+            accent:SetPoint("TOPLEFT", effectPanel, "TOPLEFT", EFFECT_PADDING, -9)
+            accent:SetPoint("TOPRIGHT", effectPanel, "TOPRIGHT", -EFFECT_PADDING, -9)
             effectText = effectPanel:CreateFontString(nil, "OVERLAY")
             effectText:SetFont("DEFAULT", 13, "")
             effectText:SetTextColor(0, 1, 0)
@@ -207,8 +209,8 @@ DFRL:NewMod("Jewelry", 4, function()
             effectText:SetShadowOffset(1, -1)
             effectText:SetJustifyH("LEFT")
             effectText:SetJustifyV("TOP")
-            effectText:SetWidth(272)
-            effectText:SetPoint("TOPLEFT", effectPanel, "TOPLEFT", 14, -16)
+            effectText:SetWidth(EFFECT_MAX_WIDTH)
+            effectText:SetPoint("TOPLEFT", effectPanel, "TOPLEFT", EFFECT_PADDING, -16)
         end
         return effectPanel
     end
@@ -233,12 +235,22 @@ DFRL:NewMod("Jewelry", 4, function()
         end
         local panel = GetEffectPanel()
         effectText:SetText(text)
-        -- The 1.12 width getter measures wrapping; an unconstrained height then
-        -- exposes that measurement without the later-client GetStringHeight.
+        -- Native natural width is independent of the previous wrapping width,
+        -- so the same pooled card can shrink and grow when changing items.
+        local textWidth = effectText:GetStringWidth()
+        if not Number(textWidth) or textWidth <= 0 then
+            panel:Hide()
+            return
+        end
+        textWidth = math.min(EFFECT_MAX_WIDTH, math.ceil(textWidth) + 1)
+        effectText:SetWidth(textWidth)
+        panel:SetWidth(textWidth + EFFECT_PADDING * 2)
+        -- Measure again at the fitted width before reading wrapped height.
+        -- The 1.12 client uses GetHeight rather than GetStringHeight.
         effectText:GetStringWidth()
         panel:SetHeight(math.max(14, effectText:GetHeight()) + 30)
         panel:ClearAllPoints()
-        panel:SetPoint("BOTTOMLEFT", slot.button, "TOPLEFT", -14, 12)
+        panel:SetPoint("BOTTOMLEFT", slot.button, "TOPLEFT", -EFFECT_PADDING, 12)
         panel:Show()
     end
     for index, name in ipairs(SLOT_NAMES) do
