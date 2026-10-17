@@ -490,6 +490,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local gameIconTextures = iconCatalog.game or {}
     local locale = type(_G.GetLocale) == "function" and _G.GetLocale() or nil
     local localeIconTextures = iconCatalog.locales and iconCatalog.locales[locale] or {}
+    local localeSchoolIconTextures = iconCatalog.schools and iconCatalog.schools[locale] or {}
     local iconSourcesDirty = { talents = true, debuffs = true, target = true, mouseover = true }
     local iconScanAt
     local iconTooltip, iconTooltipParent
@@ -692,7 +693,17 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                 -- ambiguity within each tier instead of choosing a random icon.
                 if texture == nil then texture = gameIconTextures[info.spell] end
                 if texture == nil then texture = talentSpellTextures[info.spell] end
-                if texture == nil then texture = localeIconTextures[info.spell] end
+                if texture == nil then
+                    texture = localeIconTextures[info.spell]
+                    if texture == false then
+                        -- Only refine the database tier with the actual parsed
+                        -- school; stronger native ambiguities remain blocked.
+                        local schoolTextures = localeSchoolIconTextures[info.school]
+                        if schoolTextures and schoolTextures[info.spell] ~= nil then
+                            texture = schoolTextures[info.spell]
+                        end
+                    end
+                end
             end
             return texture or FALLBACK_ICON
         end
