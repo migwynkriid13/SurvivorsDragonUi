@@ -110,10 +110,7 @@ DFRL:NewMod("Jewelry", 4, function()
         end
         return scanner
     end
-    local function FormatEffect(description)
-        local sentence = string.gsub(description, "%s+", " ")
-        sentence = string.gsub(sentence, "%s+$", "")
-        sentence = string.gsub(sentence, "%.$", "")
+    local function CompactEffect(sentence)
         local _, _, percent = string.find(sentence, "^Increases your movement speed by (%d+[.,]?%d*)%%$")
         if percent then return "+ Movement speed: " .. percent .. "%" end
         _, _, percent = string.find(sentence, "^Reduces the cooldown of your spells by (%d+[.,]?%d*)%%$")
@@ -148,6 +145,17 @@ DFRL:NewMod("Jewelry", 4, function()
         _, _, ability, value =
             string.find(sentence, "^Increases the stun duration of (%u[^%.!?;]*) by (%d+[.,]?%d*)%%$")
         if ability then return "+ " .. ability .. " stun duration: " .. value .. "%" end
+        return nil
+    end
+    local function FormatEffect(description)
+        local sentence = string.gsub(description, "%s+", " ")
+        sentence = string.gsub(sentence, "%s+$", "")
+        sentence = string.gsub(sentence, "%.$", "")
+        -- Only a marker supplied by the native description establishes a cap.
+        -- Keep unknown descriptions intact, including their marker and wording.
+        local core, capCount = string.gsub(sentence, " %(max%)$", "")
+        local formatted = CompactEffect(core)
+        if formatted then return formatted .. (capCount == 1 and " (max)" or "") end
         return description
     end
     local function EffectDescription(text)
