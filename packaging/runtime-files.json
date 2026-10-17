@@ -7,6 +7,7 @@
     "core/editor.lua",
     "core/error.lua",
     "core/fonts.lua",
+    "core/fstack.lua",
     "core/layout.lua",
     "core/tools.lua",
     "core/widgets.lua",

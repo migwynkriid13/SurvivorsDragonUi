@@ -13,6 +13,7 @@ core\editor.lua
 core\fonts.lua
 core\display.lua
 core\layout.lua
+core\fstack.lua
 
 modules\nameplates\style.lua
 modules\nameplates\icons.lua
