@@ -1,10 +1,11 @@
--- Five equipped jewelry sockets attached to the original action bar.
+-- Five equipped jewelry sockets, attached by default and optionally independent.
 --[[
 The selected thin-bezel design keeps the Blizzard gold circular rim artwork.
 SocketRail.tga joins all upper socket arches and straight spans in one texture
 using pixels from the existing HDActionBar.tga. The original bar texture is
 unchanged; only its narrow top strip switches while this jewelry row is visible.
 No extra inner or lower curved line is drawn beneath the gold circles.
+SocketDetached.tga retains the silver-gray circle borders in detached mode.
 Texture conversion does not change the underlying artwork's ownership.
 No upstream Lua is imported. Sources and preparation: third_party/Jewelry-ARTWORK.md.
 
@@ -51,6 +52,7 @@ DFRL:NewMod("Jewelry", 4, function()
     -- The five jewelry slots then span action buttons 2 through 6 exactly.
     local defaultScale = actionDefaults.buttonWidth / RIM_SIZE
     local columnPitch = (actionDefaults.buttonWidth + actionDefaults.buttonGap) / defaultScale
+    local socketSize = RIM_SIZE * 40 / 36
     local ANIMATION_INTERVAL = 1 / 30
     local texturePath = DFRL:GetInfoOrCons("tex") .. "jewelry\\"
     local SLOT_NAMES = { "NeckSlot", "Finger0Slot", "Finger1Slot", "Trinket0Slot", "Trinket1Slot" }
@@ -63,6 +65,13 @@ DFRL:NewMod("Jewelry", 4, function()
     hud:SetFrameStrata("LOW")
     hud:EnableMouse(false)
     hud:Hide()
+    local detached = CreateFrame("Frame", "SurvivorsDragonUiDetachedJewelry", UIParent)
+    detached:SetWidth(WIDTH)
+    detached:SetHeight(HEIGHT)
+    detached:SetScale(defaultScale)
+    detached:SetFrameStrata("LOW")
+    detached:EnableMouse(false)
+    detached:Hide()
 
     local function Number(value) return type(value) == "number" and value - value == 0 end
     local function HideTooltip(slot)
@@ -86,6 +95,14 @@ DFRL:NewMod("Jewelry", 4, function()
         button:SetPoint("TOPLEFT", hud, "TOPLEFT", WIDTH / 2 - ICON_SIZE / 2 + (index - 3) * columnPitch, -30.5)
         button:EnableMouse(true)
         local slot = { name = name, button = button, strips = {} }
+        local socket = hud:CreateTexture(nil, "BACKGROUND")
+        socket:SetTexture(texturePath .. "SocketDetached.tga")
+        socket:SetWidth(socketSize)
+        socket:SetHeight(socketSize)
+        socket:SetPoint("CENTER", button, "CENTER", 0, 0)
+        socket:SetTexCoord(0, 160 / 256, 0, 160 / 256)
+        socket:Hide()
+        slot.socket = socket
         -- Ordinary cropped texture strips leave real transparency outside the
         -- icon's circle, without a black corner cover or retail texture masks.
         for part = 1, 16 do
@@ -152,6 +169,7 @@ DFRL:NewMod("Jewelry", 4, function()
             ClearSlot(slot)
         end
         hud:Hide()
+        detached:Hide()
     end
     hud:SetScript("OnHide", function()
         if DFRL.SetJewelryBarShown then DFRL.SetJewelryBarShown(false) end
@@ -160,7 +178,7 @@ DFRL:NewMod("Jewelry", 4, function()
         end
     end)
     hud:SetScript("OnShow", function()
-        if DFRL.SetJewelryBarShown then DFRL.SetJewelryBarShown(true) end
+        if DFRL.SetJewelryBarShown then DFRL.SetJewelryBarShown(DFRL.display.Get("attachJewelry")) end
     end)
     local function ResolveSlots()
         if slotsReady then return true end
@@ -248,17 +266,46 @@ DFRL:NewMod("Jewelry", 4, function()
                 ClearSlot(slot)
             end
         end
+        if DFRL.display.Get("attachJewelry") then
+            detached:Hide()
+        else
+            detached:Show()
+        end
         hud:Show()
     end
     local function UpdateDisplay()
+        local docked = DFRL.display.Get("attachJewelry")
+        if attached then
+            local owner = docked and DFRL.mainBar or detached
+            if hud:GetParent() ~= owner then
+                hud:Hide()
+                hud:SetParent(owner)
+            end
+            hud:SetScale(docked and defaultScale or 1)
+            hud:SetFrameLevel(owner:GetFrameLevel() + 2)
+            hud:ClearAllPoints()
+            hud:SetPoint("TOP", owner, "TOP", 0, docked and (46.5 + RIM_SIZE * 20 / 36) or 0)
+            for _, slot in ipairs(slots) do
+                slot.button:SetFrameLevel(hud:GetFrameLevel() + 1)
+                if docked then
+                    slot.socket:Hide()
+                else
+                    slot.socket:Show()
+                end
+            end
+            overlay:SetFrameLevel(hud:GetFrameLevel() + 3)
+        end
         local region = DFRL.actionBarMoveRegion
         if region then
             local top = actionDefaults.topInset
-            if DFRL.display.Get("equippedJewelry") then top = math.max(top, actionDefaults.buttonWidth * 40 / 36) end
+            if DFRL.display.Get("equippedJewelry") and docked then
+                top = math.max(top, actionDefaults.buttonWidth * 40 / 36)
+            end
             region:SetPoint("TOPLEFT", DFRL.mainBar, "TOPLEFT", -actionDefaults.sideInset, top)
         end
         Refresh()
         PaintCooldowns()
+        if DFRL.SetJewelryBarShown then DFRL.SetJewelryBarShown(docked and hud:IsVisible() and true or false) end
     end
     function DFRL.SetJewelryEditing(active)
         editing = active
@@ -269,18 +316,20 @@ DFRL:NewMod("Jewelry", 4, function()
         end
     end
     function DFRL.AttachJewelry(mainBar)
-        if attached then return end
-        hud:SetParent(mainBar)
-        hud:SetFrameLevel(mainBar:GetFrameLevel() + 2)
-        for _, slot in ipairs(slots) do
-            slot.button:SetFrameLevel(hud:GetFrameLevel() + 1)
-        end
-        overlay:SetFrameLevel(hud:GetFrameLevel() + 3)
-        hud:ClearAllPoints()
-        hud:SetPoint("TOP", mainBar, "TOP", 0, 46.5 + RIM_SIZE * 20 / 36)
+        if attached or not mainBar then return end
         attached = true
         UpdateDisplay()
     end
+    local detachedRegion = CreateFrame("Frame", nil, detached)
+    detachedRegion:SetWidth(socketSize + columnPitch * 4)
+    detachedRegion:SetHeight(socketSize)
+    detachedRegion:SetPoint("TOP", detached, "TOP", 0, -(46.5 - socketSize / 2))
+    DFRL.layout.Register("jewelryBar", detached, function()
+        local artTop = actionDefaults.bottom + actionDefaults.height + actionDefaults.topInset
+        local bottom = (artTop + 4) / defaultScale - (HEIGHT - 46.5 - socketSize / 2)
+        detached:ClearAllPoints()
+        detached:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, bottom)
+    end, { region = detachedRegion, onlyWhenShown = true, onEdit = DFRL.SetJewelryEditing })
     if DFRL.mainBar then DFRL.AttachJewelry(DFRL.mainBar) end
     local controller = CreateFrame("Frame", nil, UIParent)
     controller:RegisterEvent("PLAYER_ENTERING_WORLD")

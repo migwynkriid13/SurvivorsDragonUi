@@ -310,6 +310,11 @@ DFRL:NewMod("RunTimers", 5, function()
     local function UpdateDisplayLabels()
         for key, control in pairs(displayControls) do
             control:SetChecked(DFRL.display.Get(key))
+            if key == "attachJewelry" then
+                local enabled = DFRL.display.Get("equippedJewelry")
+                control:EnableMouse(enabled)
+                control:SetAlpha(enabled and 1 or 0.45)
+            end
         end
     end
 
@@ -458,7 +463,7 @@ DFRL:NewMod("RunTimers", 5, function()
         local inputX = padding + labelWidth + gap
         dropdownWidth = contentWidth - labelWidth - gap
 
-        fontEditor = T.CreateEditorPanel(UIParent, width, 552)
+        fontEditor = T.CreateEditorPanel(UIParent, width, 596)
         fontEditor:SetFrameStrata("TOOLTIP")
         fontEditor:SetFrameLevel(150)
         PlaceFontEditor()
@@ -499,7 +504,7 @@ DFRL:NewMod("RunTimers", 5, function()
             local page = CreateFrame("Frame", nil, fontEditor)
             page:SetPoint("TOPLEFT", fontEditor, "TOPLEFT", padding, -130)
             page:SetWidth(contentWidth)
-            page:SetHeight(352)
+            page:SetHeight(396)
             page:SetFrameLevel(152)
             pages[key] = page
             local button = T.CreateEditorButton(fontEditor, entry.label, tabSize, 30)
@@ -554,6 +559,13 @@ DFRL:NewMod("RunTimers", 5, function()
             "Hide game build rows",
             "Hide the game's original weapon and jewelry rows.",
             -308
+        )
+        DisplayToggle(
+            pages.hud,
+            "attachJewelry",
+            "Attach jewelry to action bar",
+            "Off: move jewelry separately, keeping the silver rims.",
+            -352
         )
 
         local combat = pages.combat
@@ -670,10 +682,10 @@ DFRL:NewMod("RunTimers", 5, function()
         visibilityControl:SetPoint("TOPLEFT", timer, "TOPLEFT", halfWidth + gap, -176)
 
         divider = T.EditorDivider(fontEditor, contentWidth)
-        divider:SetPoint("TOPLEFT", fontEditor, "TOPLEFT", padding, -488)
+        divider:SetPoint("TOPLEFT", fontEditor, "TOPLEFT", padding, -532)
         hint = FontEditorLabel(fontEditor, "Changes preview immediately. Confirm keeps them.", 0, 0, 9)
         hint:ClearAllPoints()
-        hint:SetPoint("TOP", fontEditor, "TOP", 0, -497)
+        hint:SetPoint("TOP", fontEditor, "TOP", 0, -541)
         hint:SetTextColor(0.75, 0.73, 0.67)
         local footer = CreateFrame("Frame", nil, fontEditor)
         footer:SetWidth(contentWidth)

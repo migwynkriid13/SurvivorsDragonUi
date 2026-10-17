@@ -15,6 +15,7 @@ DFRL:NewMod("Layout", 0, function()
         bossBars = "Boss health",
         runTimer = "Run timer",
         actionBar = "Action bar",
+        jewelryBar = "Equipped jewelry (detached)",
         xpBar = "XP",
         runTally = "Kills / Gold / Cache",
         microMenu = "Micro menu",

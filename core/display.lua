@@ -11,6 +11,7 @@ DFRL:NewMod("Display", 0, function()
         guardianGuidance = true,
         equippedJewelry = true,
         hideNativeBuild = true,
+        attachJewelry = true,
     }
     DFRL.display = display
 
@@ -29,6 +30,7 @@ DFRL:NewMod("Display", 0, function()
             guardianGuidance = Read(source, "guardianGuidance"),
             equippedJewelry = Read(source, "equippedJewelry"),
             hideNativeBuild = Read(source, "hideNativeBuild"),
+            attachJewelry = Read(source, "attachJewelry"),
         }
     end
     local function Notify()

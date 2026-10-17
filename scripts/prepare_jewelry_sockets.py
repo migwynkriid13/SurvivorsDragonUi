@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SCALE = 4
 
 
-def prepare(bar_path, output):
+def prepare(bar_path, output, detached_output):
     bar = Image.open(bar_path).convert("RGBA")
     half = bar.resize((150 * SCALE, 64 * SCALE), Image.Resampling.BILINEAR)
     native = Image.new("RGBA", (300 * SCALE, 64 * SCALE))
@@ -71,11 +71,22 @@ def prepare(bar_path, output):
     atlas.alpha_composite(rail)
     output.parent.mkdir(parents=True, exist_ok=True)
     atlas.save(output, compression=None)
+    circle = Image.new("RGBA", (256, 256))
+    circle_pixels = circle.load()
+    for py in range(40 * SCALE):
+        for px in range(40 * SCALE):
+            radial = math.hypot((px + 0.5) / SCALE - center, (py + 0.5) / SCALE - center)
+            if opening <= radial <= radius:
+                source_y = min(48, 30 + math.floor((radius - radial) * SCALE))
+                circle_pixels[px, py] = native.getpixel((150 * SCALE + px - 20 * SCALE, source_y))
+    detached_output.parent.mkdir(parents=True, exist_ok=True)
+    circle.save(detached_output, compression=None)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bar", type=Path, default=ROOT / "media/tex/actionbars/HDActionBar.tga")
     parser.add_argument("--output", type=Path, default=ROOT / "media/tex/jewelry/SocketRail.tga")
+    parser.add_argument("--detached-output", type=Path, default=ROOT / "media/tex/jewelry/SocketDetached.tga")
     args = parser.parse_args()
-    prepare(args.bar, args.output)
+    prepare(args.bar, args.output, args.detached_output)
