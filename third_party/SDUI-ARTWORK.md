@@ -94,6 +94,16 @@ and text are drawn in Lua through the same helpers. It hides the editor header
 and adds no texture, upstream code, font or runtime dependency. The existing
 editor keeps its 24-unit panel corners.
 
+The jewelry card's speech-bubble pointer also samples the existing bottom-edge
+cell in `border.tga`, using column 960 and rows 86 through 104 as its bronze bevel
+profile at the same 12-unit border scale. Pooled half-unit geometry strips form a
+vertical drop, a 45-degree diagonal and mitered joins; the diagonal uses the same
+perpendicular bevel thickness. Its join strips continue the horizontal profile
+through the turn, without a square end cap. The dark interior uses the card's
+existing Lua fill color and alpha. The normal bottom edge is split around this
+opening, and the geometry can mirror when the hovered socket is near the card's
+right edge. No source pixels or shipped texture files are changed or added.
+
 The source files are 32-bit RLE TGA images. Their RGBA pixels were decoded,
 cropped without resizing or recoloring and repacked into the dimensions listed
 above. The destination files are uncompressed, true-color TGA images: image type
