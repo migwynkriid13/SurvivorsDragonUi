@@ -100,6 +100,7 @@
     "modules/map/waypoints.lua",
     "modules/menu/menu.lua",
     "modules/micro/micro.lua",
+    "modules/nameplates/icons.lua",
     "modules/nameplates/parser.lua",
     "modules/nameplates/sct.lua",
     "modules/nameplates/style.lua",

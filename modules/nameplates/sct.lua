@@ -482,9 +482,13 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         return WorldFrame:GetWidth() * 0.5, WorldFrame:GetHeight() * 0.58, nil
     end
 
-    local learnedSpellTextures = {}
+    local auraSpellTextures, talentSpellTextures = {}, {}
+    local iconCatalog = T.SpellIconCatalog or {}
+    local gameIconTextures = iconCatalog.game or {}
+    local locale = type(_G.GetLocale) == "function" and _G.GetLocale() or nil
+    local localeIconTextures = iconCatalog.locales and iconCatalog.locales[locale] or {}
     local iconSourcesDirty = { talents = true, debuffs = true, target = true, mouseover = true }
-    local iconScanAt, iconSnapshotReceivedAt
+    local iconScanAt
     local iconTooltip, iconTooltipParent
     local ICON_SCAN_INTERVAL = 0.35
     local ICON_DEBUFF_LIMIT = 16
@@ -498,24 +502,24 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         return key
     end
 
-    local function LearnSpellTexture(name, texture)
+    local function LearnSpellTexture(cache, name, texture)
         local key = TextureKey(texture)
         if type(name) ~= "string" or name == "" or not key then return end
-        local previous = learnedSpellTextures[name]
+        local previous = cache[name]
         -- The 1.12 combat message supplies a localized name, not a spell id.
-        -- Conflicting observed icons cannot be disambiguated from that name.
+        -- Conflicting icons within one source tier cannot be disambiguated.
         if previous == false then return end
         if previous and TextureKey(previous) ~= key then
-            learnedSpellTextures[name] = false
+            cache[name] = false
         else
-            learnedSpellTextures[name] = texture
+            cache[name] = texture
         end
     end
 
     local function ResetLearnedSpellTextures()
-        learnedSpellTextures = {}
+        auraSpellTextures, talentSpellTextures = {}, {}
         iconSourcesDirty = { talents = true, debuffs = true, target = true, mouseover = true }
-        iconScanAt, iconSnapshotReceivedAt = nil, nil
+        iconScanAt = nil
         if iconTooltip then iconTooltip:Hide() end
     end
 
@@ -530,7 +534,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         for tab = 1, _G.GetNumTalentTabs() or 0 do
             for index = 1, _G.GetNumTalents(tab) or 0 do
                 local name, texture, _, _, rank = _G.GetTalentInfo(tab, index)
-                if type(rank) == "number" and rank > 0 then LearnSpellTexture(name, texture) end
+                if type(rank) == "number" and rank > 0 then LearnSpellTexture(talentSpellTextures, name, texture) end
             end
         end
     end
@@ -558,7 +562,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         -- This official snapshot includes untargeted bosses and guardians.
         -- Copy only display metadata, independently of encounter HUD settings.
         for _, entry in pairs(entries) do
-            if type(entry) == "table" then LearnSpellTexture(entry.name, entry.icon) end
+            if type(entry) == "table" then LearnSpellTexture(auraSpellTextures, entry.name, entry.icon) end
         end
         return true
     end
@@ -606,7 +610,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                 local shown = pcall(tooltip.SetUnitDebuff, tooltip, unit, index)
                 local title = _G.DFRL_CombatIconTooltipTextLeft1
                 if shown and title and type(title.GetText) == "function" then
-                    LearnSpellTexture(title:GetText(), texture)
+                    LearnSpellTexture(auraSpellTextures, title:GetText(), texture)
                 end
                 tooltip:Hide()
             end
@@ -626,9 +630,8 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             return
         end
         local now = GetTime()
-        -- Native prefix parsing may follow CHAT_MSG_ADDON. Do not consume that
-        -- dirty snapshot in the same UI-time sample, or scan once per AoE hit.
-        if iconSnapshotReceivedAt == now or (iconScanAt and now - iconScanAt < ICON_SCAN_INTERVAL) then return end
+        -- Dirty events coalesce; never scan native metadata once per AoE hit.
+        if iconScanAt and now - iconScanAt < ICON_SCAN_INTERVAL then return end
         iconScanAt = now
         if iconSourcesDirty.talents then
             iconSourcesDirty.talents = false
@@ -681,7 +684,12 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             end
             if not texture then
                 RefreshLearnedSpellTextures()
-                texture = learnedSpellTextures[info.spell]
+                texture = auraSpellTextures[info.spell]
+                -- Observed auras outrank catalog and talent artwork. Preserve
+                -- ambiguity within each tier instead of choosing a random icon.
+                if texture == nil then texture = gameIconTextures[info.spell] end
+                if texture == nil then texture = talentSpellTextures[info.spell] end
+                if texture == nil then texture = localeIconTextures[info.spell] end
             end
             return texture or FALLBACK_ICON
         end
@@ -1136,7 +1144,6 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         elseif event == "CHAT_MSG_ADDON" then
             if arg1 == "AZSDEBUFFS" then
                 iconSourcesDirty.debuffs = true
-                iconSnapshotReceivedAt = GetTime()
             elseif arg1 == "AZSZONE" then
                 iconSourcesDirty.debuffs = true
             end
