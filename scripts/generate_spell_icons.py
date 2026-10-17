@@ -88,15 +88,16 @@ def resolve_groups(groups):
 
 def lua_string(value):
     """Quote UTF-8 text using escapes supported by the client's Lua 5.0."""
+    quote = "'" if '"' in value and "'" not in value else '"'
     escaped = []
     for character in value:
-        if character in ('"', "\\"):
+        if character in (quote, "\\"):
             escaped.append("\\" + character)
         elif ord(character) < 32 or ord(character) == 127:
             escaped.append("\\" + format(ord(character), "03d"))
         else:
             escaped.append(character)
-    return '"' + "".join(escaped) + '"'
+    return quote + "".join(escaped) + quote
 
 
 def write_catalog(output, game, locales, provenance):
