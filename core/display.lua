@@ -6,7 +6,7 @@ DFRL:NewMod("Display", 0, function()
         damageIcons = false,
         classResources = false,
         classHealth = false,
-        cooldownNumbers = true,
+        cooldownNumbers = false,
         cacheGuidance = true,
         guardianGuidance = true,
     }
