@@ -443,7 +443,11 @@ DFRL:NewMod("Waypoints", 3, function()
             or presentation.x ~= selected.x
             or presentation.y ~= selected.y
             or elapsed > 0.5
-            or (east and presentation.east and (east - presentation.east)^2 + (north - presentation.north)^2 > 32^2)
+            or (
+                east
+                and presentation.east
+                and (east - presentation.east) ^ 2 + (north - presentation.north) ^ 2 > 32 ^ 2
+            )
         then
             presentation = { key = selected.key, x = selected.x, y = selected.y }
             tracker.presentation = presentation
