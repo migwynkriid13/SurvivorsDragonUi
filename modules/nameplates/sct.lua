@@ -10,7 +10,6 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local FALLBACK_ICON = "Interface\\Icons\\INV_Misc_QuestionMark"
     local ATTACK_ICON = "Interface\\Icons\\INV_Sword_04"
     local TEXT_DURATION = 1.45
-    local FOLLOW_TIME = 0.08
     local EVENT_SETTLE = 0.08
     local EVENT_FALLBACK_DELAY = 0.16
     local DUPLICATE_WINDOW = 0.075
@@ -176,7 +175,6 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         text.icon:SetTexture(nil)
         text.icon:Hide()
         text.holder:ClearAllPoints()
-        text.origin = nil
         text.spell, text.damageType, text.iconTexture = nil, nil, nil
         table.insert(textPool, text)
     end
@@ -854,14 +852,14 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         return strong and DAMAGE_COLORS.strong or DAMAGE_COLORS.normal
     end
 
-    local function DisplayDamage(info, x, y, origin)
+    local function DisplayDamage(info, x, y)
         local value = info.text or info.amount
         if not value then return end
         local text = AcquireText()
-        text.origin = origin
+        -- Snapshot the launch point; later native plate rearrangements must
+        -- never drag an already visible number across the screen.
         text.x, text.y = x, y
         text.started = GetTime()
-        text.updatedAt = text.started
         text.impact = info.critical or info.kind == "miss"
         text.sizeScale = info.critical and 1.5 or 1
         text.arcX = arcDirection * math.random(36, 64)
@@ -898,14 +896,9 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             local age = now - entry.time
             local resolved = false
             if age >= EVENT_SETTLE then
-                local x, y, origin = ResolveOrigin(entry.info, now, age >= EVENT_FALLBACK_DELAY)
+                local x, y = ResolveOrigin(entry.info, now, age >= EVENT_FALLBACK_DELAY)
                 if x and y then
                     local group = entry.group
-                    if group.count == 0 then
-                        group.origin = origin
-                    elseif group.origin ~= origin then
-                        group.origin = nil
-                    end
                     group.count = group.count + 1
                     group.x, group.y = group.x + x, group.y + y
                     group.remaining = group.remaining - 1
@@ -942,9 +935,8 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                 group.bucket, group.identity = nil, nil
             end
             if group.remaining == 0 and not group.bucket then
-                -- Different or unknown victims use a fixed centroid; follow
-                -- only when every original resolved to the same known origin.
-                DisplayDamage(group.info, group.x / group.count, group.y / group.count, group.origin)
+                -- Every display keeps its resolved centroid for the full arc.
+                DisplayDamage(group.info, group.x / group.count, group.y / group.count)
             else
                 kept = kept + 1
                 pendingGroups[kept] = group
@@ -967,16 +959,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             else
                 kept = kept + 1
                 activeTexts[kept] = text
-                -- Smooth only the cosmetic follow point. Native model/stack
-                -- placement can jump as enemies arrive; matching keeps raw
-                -- coordinates, while each hit keeps its own age, arc and fade.
-                if text.origin then
-                    local elapsed = math.max(0, now - text.updatedAt)
-                    local follow = 1 - math.exp(-elapsed / FOLLOW_TIME)
-                    text.x = text.x + (text.origin.x - text.x) * follow
-                    text.y = text.y + (text.origin.y - text.y) * follow
-                end
-                text.updatedAt = now
+                -- Only the hit's own animation moves it from its launch point.
                 local x = text.x + text.arcX * progress
                 local y = text.y + 12 + text.launch * progress - text.gravity * progress * progress
                 -- Replacing CENTER updates the existing anchor in place.
@@ -990,7 +973,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                         scale = scale * (2 - math.pow((pop - 0.5) * 2, 5))
                     end
                 end
-                -- Only the inner visual scales: its world-space origin stays
+                -- Only the inner visual scales: its launch point stays
                 -- fixed during crit pop, including after the mob has died.
                 if text.scale ~= scale then
                     text.scale = scale
