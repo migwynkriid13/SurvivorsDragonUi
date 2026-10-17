@@ -13,6 +13,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local FOLLOW_TIME = 0.08
     local EVENT_SETTLE = 0.08
     local EVENT_FALLBACK_DELAY = 0.16
+    local DUPLICATE_WINDOW = 0.1
     local RECENT_PLATE_TIME = 0.65
     local LOSS_TIME = 0.25
     local DAMAGE_COLORS = {
@@ -704,7 +705,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local function IconIdentityPart(value) return string.len(value) .. ":" .. value end
 
     local function QueueCombatText(info, now)
-        local byAmount, group
+        local identity, byAmount, group
         if info.kind == "damage" then
             -- Resolve once even when icons are hidden, so identity and the
             -- eventual displayed icon cannot change while this hit waits.
@@ -722,30 +723,36 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                 if not source or source == "" then
                     source = type(_G.UnitName) == "function" and _G.UnitName("player") or ""
                 end
-                local identity = IconIdentityPart(attackKind)
+                identity = IconIdentityPart(attackKind)
                     .. IconIdentityPart(attack)
                     .. IconIdentityPart(source)
                     .. IconIdentityPart(info.damageType or "")
                     .. IconIdentityPart(info.school or "")
                     .. IconIdentityPart(TextureKey(info.iconTexture) or FALLBACK_ICON)
-                local bucket = intakeBuckets[now]
-                if not bucket then
-                    bucket = {}
-                    intakeBuckets[now] = bucket
-                end
-                byAmount = bucket[identity]
+                byAmount = intakeBuckets[identity]
                 if not byAmount then
                     byAmount = {}
-                    bucket[identity] = byAmount
+                    intakeBuckets[identity] = byAmount
                 end
-                -- Both time and original damage stay numeric keys: no
-                -- rounding, widened window, summed value or target key.
+                -- The first hit fixes the inclusive 100 ms deadline. Joining
+                -- hits never slide it forward or change the original amount.
                 group = byAmount[info.amount]
+                if group and (now < group.time or now > group.closesAt) then group = nil end
             end
         end
         if not group then
             -- The first original hit owns the unchanged value and styling.
-            group = { info = info, remaining = 0, count = 0, x = 0, y = 0 }
+            group = {
+                info = info,
+                time = now,
+                closesAt = now + DUPLICATE_WINDOW,
+                bucket = byAmount,
+                identity = identity,
+                remaining = 0,
+                count = 0,
+                x = 0,
+                y = 0,
+            }
             table.insert(pendingGroups, group)
             if byAmount then byAmount[info.amount] = group end
         end
@@ -922,7 +929,19 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         kept = 0
         for index = 1, groupCount do
             local group = pendingGroups[index]
-            if group.remaining == 0 then
+            local bucket = group.bucket
+            if bucket and (now < group.time or now > group.closesAt) then
+                -- A newer group may already own this key while the old one
+                -- finishes matching. Retire only this group's own intake.
+                if bucket[group.info.amount] == group then
+                    bucket[group.info.amount] = nil
+                    if not next(bucket) and intakeBuckets[group.identity] == bucket then
+                        intakeBuckets[group.identity] = nil
+                    end
+                end
+                group.bucket, group.identity = nil, nil
+            end
+            if group.remaining == 0 and not group.bucket then
                 -- Different or unknown victims use a fixed centroid; follow
                 -- only when every original resolved to the same known origin.
                 DisplayDamage(group.info, group.x / group.count, group.y / group.count, group.origin)
@@ -1238,8 +1257,6 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         end
     end)
     frame:SetScript("OnUpdate", function()
-        -- Exact-time duplicate identity never crosses an update/event batch.
-        intakeBuckets = {}
         if not inWorld then return end
         -- Observe outgoing CVar changes without writing; the independent
         -- incoming/self global is read only for its editor control.
