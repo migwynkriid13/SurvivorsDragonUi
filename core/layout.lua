@@ -396,10 +396,18 @@ DFRL:NewMod("Layout", 0, function()
         end
         local dimensions = selected.options.resize == "dimensions"
         coordinates.sizeLabel:SetText(dimensions and "Width / Height (frame units)" or "Scale (%) - 40 to 300")
-        coordinates.width:SetText(string.format("%.2f", dimensions and selected.frame:GetWidth()
-            or LocalScale(selected.frame) / selected.defaultScale * 100))
+        coordinates.width:SetText(
+            string.format(
+                "%.2f",
+                dimensions and selected.frame:GetWidth() or LocalScale(selected.frame) / selected.defaultScale * 100
+            )
+        )
         coordinates.height:SetText(string.format("%.2f", selected.frame:GetHeight()))
-        if dimensions then coordinates.height:Show() else coordinates.height:Hide() end
+        if dimensions then
+            coordinates.height:Show()
+        else
+            coordinates.height:Hide()
+        end
         coordinates.visibility:SetChecked(IsHidden(selected))
         coordinates.refreshing = false
     end
@@ -517,32 +525,45 @@ DFRL:NewMod("Layout", 0, function()
         for _, step in ipairs({ -1, 1 }) do
             local direction = step
             local button = T.CreateEditorButton(coordinates, direction == -1 and "<" or ">", 30, 28)
-            button:SetPoint(direction == -1 and "TOPLEFT" or "TOPRIGHT", coordinates,
-                direction == -1 and "TOPLEFT" or "TOPRIGHT", 0, 0)
+            button:SetPoint(
+                direction == -1 and "TOPLEFT" or "TOPRIGHT",
+                coordinates,
+                direction == -1 and "TOPLEFT" or "TOPRIGHT",
+                0,
+                0
+            )
             button:SetScript("OnClick", function()
                 FinishDrag(activeDrag, true)
                 local index = 1
-                for i, entry in ipairs(order) do if entry == selected then index = i end end
+                for i, entry in ipairs(order) do
+                    if entry == selected then index = i end
+                end
                 index = index + direction
                 if index < 1 then index = table.getn(order) end
                 if index > table.getn(order) then index = 1 end
                 SelectEntry(order[index])
             end)
         end
-        local visibility = T.CreateEditorToggle(coordinates, "Hide frame", "Keep this group hidden during gameplay.", width, function(hidden)
-            if not editing or not selected then return end
-            FinishDrag(activeDrag, true)
-            local geometry = ReadGeometry(selected, ReadPosition(selected.frame))
-            if not geometry then
-                coordinates.visibility:SetChecked(IsHidden(selected))
-                coordinates.status:SetText("Frame position is not available yet.")
-                return
+        local visibility = T.CreateEditorToggle(
+            coordinates,
+            "Hide frame",
+            "Keep this group hidden during gameplay.",
+            width,
+            function(hidden)
+                if not editing or not selected then return end
+                FinishDrag(activeDrag, true)
+                local geometry = ReadGeometry(selected, ReadPosition(selected.frame))
+                if not geometry then
+                    coordinates.visibility:SetChecked(IsHidden(selected))
+                    coordinates.status:SetText("Frame position is not available yet.")
+                    return
+                end
+                geometry.hidden = hidden or nil
+                draft[selected.key] = geometry
+                ApplyVisibility(selected)
+                coordinates.status:SetText("Preview. Confirm to save.")
             end
-            geometry.hidden = hidden or nil
-            draft[selected.key] = geometry
-            ApplyVisibility(selected)
-            coordinates.status:SetText("Preview. Confirm to save.")
-        end)
+        )
         visibility:SetPoint("TOPLEFT", coordinates, "TOPLEFT", 0, -156)
         coordinates.visibility = visibility
         local apply = T.CreateEditorButton(coordinates, "Apply position / size", width, 28)
