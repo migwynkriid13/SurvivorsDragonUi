@@ -37,11 +37,11 @@ The API also exposes damage-meter lines, damage taken, spells/cooldowns, buffs, 
 
 The supplied release announcement establishes the **0.87.0+** requirement for the original run HUD APIs. Individual features also require their documented getters and snapshots from the matching game build. The implementation detects unavailable APIs and leaves the native HUD available. No tests, syntax checks, validation or game startups were run for this change, per the project instruction.
 
-## Hide the native weapon and jewelry rows — 2026-10-17
+## Keep the native build visible for comparison — 2026-10-17
 
-The user requested hiding the game's default six-weapon and six-jewelry rows. The supplied reference identifies both as the native `build` HUD part, controlled by `AZS_SetHudShown("build", false)` and the game's saved `hudBuild` preference. These rows are separate from Lua/FrameXML objects and are not discoverable through the addon's frame inspector.
+The user requested retaining the game's original weapon and jewelry rows while comparing the custom jewelry display. This supersedes the earlier hiding request. The supplied reference identifies both native rows as the `build` HUD part, controlled by `AZS_SetHudShown` and the game's saved `hudBuild` preference. These rows are separate from Lua/FrameXML objects and are not discoverable through the addon's frame inspector.
 
-The `Native build rows` initializer in `modules/ui/ui.lua` feature-detects the official getter/setter, reads current visibility and hides only a currently shown `build` part. It runs on addon initialization, world entry and `hudBuild` CVar changes while in the world, with a guard against synchronous callbacks. It adds no per-frame polling, replacement HUD, addon setting, SavedVariable or prior-visibility snapshot. This explicit suppression request is independent of run-data readiness and leaves the existing clock/boss/tally takeover and restoration paths intact. Missing or failing native APIs leave the rows unchanged. Packaged-game behavior remains unverified; no local checks or game/addon execution were run.
+The `Native build comparison` initializer in `modules/ui/ui.lua` feature-detects the official getter/setter and calls `AZS_SetHudShown("build", true)` only when the getter explicitly reports hidden. Restoring it once also reverses the saved `hudBuild = 0` left by the earlier version. If APIs are unavailable or fail during initialization, world entry retries; retries stop after success. There is no CVar listener or per-frame polling, so later game-option changes are respected. It adds no addon setting, SavedVariable or prior-visibility snapshot and leaves the existing clock/boss/tally takeover and restoration paths intact. Packaged-game behavior remains unverified; no local checks or game/addon execution were run.
 
 ## Independent clock and marker recovery after reload — 2026-10-15
 
