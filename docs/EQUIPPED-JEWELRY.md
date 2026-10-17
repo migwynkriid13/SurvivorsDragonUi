@@ -1,6 +1,6 @@
 # Equipped jewelry
 
-The user selected action-bar attachment design **4 — Thin shared bezel**, with the extra inner/lower curved line beneath the gold circles removed. The original bar artwork is retained, adding only five upper socket extensions. There is no jewelry panel, permanent title or side ornament. The row uses the character's five normal equipment slots: necklace, first ring, second ring, first trinket and second trinket. It is independent of the native six-pickup run build and does not add an ability row or infer run jewelry from worn gear, stats or chat.
+The user selected action-bar attachment design **4 — Thin shared bezel**, with the extra inner/lower curved line beneath the gold circles removed. The original bar artwork is retained, adding only five upper socket extensions. There is no jewelry panel, permanent title or side ornament. The row uses the character's five normal equipment slots, ordered left to right as first ring, second ring, necklace, first trinket and second trinket. The necklace occupies the middle socket in both attached and detached modes, including its empty-slot placeholder. It is independent of the native six-pickup run build and does not add an ability row or infer run jewelry from worn gear, stats or chat.
 
 ## Data and interaction
 

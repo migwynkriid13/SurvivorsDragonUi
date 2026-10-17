@@ -59,11 +59,11 @@ DFRL:NewMod("Jewelry", 4, function()
     local socketSize = RIM_SIZE * 40 / 36
     local ANIMATION_INTERVAL = 1 / 30
     local texturePath = DFRL:GetInfoOrCons("tex") .. "jewelry\\"
-    local SLOT_NAMES = { "NeckSlot", "Finger0Slot", "Finger1Slot", "Trinket0Slot", "Trinket1Slot" }
+    local SLOT_NAMES = { "Finger0Slot", "Finger1Slot", "NeckSlot", "Trinket0Slot", "Trinket1Slot" }
     local EMPTY_TEXTURES = {
+        "EmptyRing.tga",
+        "EmptyRing.tga",
         "EmptyNeck.tga",
-        "EmptyRing.tga",
-        "EmptyRing.tga",
         "EmptyTrinket.tga",
         "EmptyTrinket.tga",
     }
