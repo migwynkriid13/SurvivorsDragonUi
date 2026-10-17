@@ -13,7 +13,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local FOLLOW_TIME = 0.08
     local EVENT_SETTLE = 0.08
     local EVENT_FALLBACK_DELAY = 0.16
-    local DUPLICATE_WINDOW = 0.1
+    local DUPLICATE_WINDOW = 0.075
     local RECENT_PLATE_TIME = 0.65
     local LOSS_TIME = 0.25
     local DAMAGE_COLORS = {
@@ -734,7 +734,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                     byAmount = {}
                     intakeBuckets[identity] = byAmount
                 end
-                -- The first hit fixes the inclusive 100 ms deadline. Joining
+                -- The first hit fixes the inclusive 75 ms deadline. Joining
                 -- hits never slide it forward or change the original amount.
                 group = byAmount[info.amount]
                 if group and (now < group.time or now > group.closesAt) then group = nil end
