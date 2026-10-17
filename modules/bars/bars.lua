@@ -4,7 +4,6 @@ DFRL:NewMod("Bars", 1, function()
     local BUTTON_COUNT = 7
     local BUTTON_SPACING = 6
     local COOLDOWN_INTERVAL = 0.1
-    local COOLDOWN_MINIMUM = 0.999
     local COOLDOWN_ZERO = 0.1
     local COOLDOWN_FINAL_WINDOW = 0.2
     local COOLDOWN_UNITS = { { 86400, "d" }, { 3600, "h" }, { 60, "m" }, { 1, "" } }
@@ -251,7 +250,7 @@ DFRL:NewMod("Bars", 1, function()
             type(start) ~= "number"
             or not (start > 0)
             or type(duration) ~= "number"
-            or not (duration > COOLDOWN_MINIMUM)
+            or not (duration > 0)
             or enabled ~= 1
         then
             overlay:Hide()
