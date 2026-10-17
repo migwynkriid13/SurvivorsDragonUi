@@ -173,15 +173,8 @@ DFRL:NewMod("Navigation", 2, function()
         end
         return 1
     end
-    function navigation.Delta(target)
+    local function MapDelta(target)
         if type(target) ~= "table" then return end
-        local state = RunState()
-        if state and Number(state.px) and Number(state.py) and Number(target.x) and Number(target.y) then
-            -- Official world coordinates work without a map sheet or calibration,
-            -- including instances. Keep the guide's horizontal yard distance.
-            local east, north = state.py - target.y, target.x - state.px
-            return east, north, math.sqrt(east * east + north * north), true
-        end
         local x, y = navigation.Position()
         if not x then return end
         local targetX, targetY = target.mx, target.my
@@ -198,6 +191,24 @@ DFRL:NewMod("Navigation", 2, function()
             return east, north, math.sqrt(east * east + north * north), true
         end
         return (targetX - x) * Aspect(), y - targetY, nil, false
+    end
+    function navigation.Delta(target)
+        if type(target) ~= "table" then return end
+        local state = RunState()
+        if state and Number(state.px) and Number(state.py) and Number(target.x) and Number(target.y) then
+            -- Official world coordinates work without a map sheet or calibration,
+            -- including instances. The stamp identifies sampled HUD presentation.
+            local east, north = state.py - target.y, target.x - state.px
+            return east, north, math.sqrt(east * east + north * north), true, _G.AZS_RUN_UPDATED
+        end
+        return MapDelta(target)
+    end
+    function navigation.GuideDelta(target)
+        -- A valid current-sheet native reading follows movement every frame.
+        -- Keep sampled world coordinates for instances and other map sheets.
+        local east, north, distance, metric = MapDelta(target)
+        if metric then return east, north, distance, true end
+        return navigation.Delta(target)
     end
 
     local function PlayerArrow()
@@ -222,14 +233,15 @@ DFRL:NewMod("Navigation", 2, function()
         if candidate.GetFacing then return candidate end
     end
     function navigation.Heading()
-        local state = RunState()
-        -- The official heading uses native radians: north, counterclockwise.
-        if state and Number(state.pf) then return state.pf end
         if not arrow then arrow = PlayerArrow() end
-        if not arrow or not arrow.GetFacing then return end
-        local ok, facing = pcall(arrow.GetFacing, arrow)
-        -- Native facing is radians: zero north, positive counterclockwise.
-        if ok and Number(facing) then return facing end
+        if arrow and arrow.GetFacing then
+            local ok, facing = pcall(arrow.GetFacing, arrow)
+            -- This native model is fed every frame, unlike the run snapshot.
+            if ok and Number(facing) then return facing end
+        end
         arrow = nil
+        local state = RunState()
+        -- Both headings use native radians: north, counterclockwise.
+        if state and Number(state.pf) then return state.pf, _G.AZS_RUN_UPDATED end
     end
 end)

@@ -169,6 +169,7 @@ DFRL:NewMod("Waypoints", 3, function()
         tracker.entries = {}
         navigation.SetPoints(tracker.source, nil)
         tracker.selectedKey, tracker.selected, tracker.provisionalSelection = nil, nil, nil
+        tracker.presentation = nil
         tracker.hud:Hide()
         tracker.pointer:Hide()
         tracker.distanceText:SetText("")
@@ -388,18 +389,77 @@ DFRL:NewMod("Waypoints", 3, function()
         )
     end
 
-    local function UpdateGuide(tracker)
+    local function WrapAngle(angle)
+        local turn = math.pi * 2
+        return angle - math.floor((angle + math.pi) / turn) * turn
+    end
+
+    local function Blend(presentation, key, target, stamp, elapsed, angular, playing)
+        if not playing or not Number(target) or not Number(stamp) then
+            presentation[key] = nil
+            return target
+        end
+        local value = presentation[key]
+        if not value or stamp < value.stamp or stamp - value.stamp > 1 then
+            value = { current = target, from = target, target = target, stamp = stamp, age = 0, duration = 0 }
+            presentation[key] = value
+        elseif target ~= value.target then
+            local interval = stamp - value.stamp
+            value.from, value.target, value.age = value.current, target, 0
+            value.duration = math.max(0, math.min(interval, 0.5))
+        end
+        value.stamp = stamp
+        value.age = math.min(value.age + elapsed, value.duration)
+        if value.duration == 0 or value.age >= value.duration then
+            value.current = target
+        else
+            local delta = target - value.from
+            if angular then delta = WrapAngle(delta) end
+            value.current = value.from + delta * value.age / value.duration
+        end
+        if angular then value.current = WrapAngle(value.current) end
+        return value.current
+    end
+
+    local function UpdateGuide(tracker, elapsed)
         if not DFRL.display.Get(tracker.displayKey) or not tracker.selected then
+            tracker.presentation = nil
             tracker.hud:Hide()
             return
         end
         tracker.hud:Show()
-        local east, north, distance, metric = navigation.Delta(tracker.selected)
-        local facing = navigation.Heading()
+        if not tracker.hud:IsShown() then
+            tracker.presentation = nil
+            return
+        end
+        elapsed = elapsed or 0
+        local selected = tracker.selected
+        local east, north, distance, metric, stamp = navigation.GuideDelta(selected)
+        local facing, headingStamp = navigation.Heading()
+        local presentation = tracker.presentation
+        if
+            not presentation
+            or presentation.key ~= selected.key
+            or presentation.x ~= selected.x
+            or presentation.y ~= selected.y
+            or elapsed > 0.5
+            or (east and presentation.east and (east - presentation.east)^2 + (north - presentation.north)^2 > 32^2)
+        then
+            presentation = { key = selected.key, x = selected.x, y = selected.y }
+            tracker.presentation = presentation
+        end
+        presentation.east, presentation.north = east, north
+        local playing = Native("AZS_GetPhase") == "playing"
         local moving = east and (east ~= 0 or north ~= 0)
+        local bearing = moving and metric and math.atan2(east, north) or nil
+        -- Only the paint values blend. Selection and map pins keep native data,
+        -- and interpolation stops at each received sample without prediction.
+        distance = Blend(presentation, "distance", distance, stamp, elapsed, false, playing)
+        bearing = Blend(presentation, "bearing", bearing, stamp, elapsed, true, playing)
+        facing = Blend(presentation, "facing", facing, headingStamp, elapsed, true, playing)
         if moving and metric and facing then
             -- Native heading is counterclockwise, destination bearing clockwise.
-            local angle = math.atan2(east, north) + facing
+            local angle = bearing + facing
             tracker.pointer:ClearAllPoints()
             tracker.pointer:SetPoint("CENTER", tracker.hud, "LEFT", HUD_WIDTH - 27, 0)
             Rotate(tracker.pointer, angle)
@@ -511,14 +571,16 @@ DFRL:NewMod("Waypoints", 3, function()
         dirty = true
     end)
     controller:SetScript("OnUpdate", function()
-        age = age + (tonumber(arg1) or 0)
+        local elapsed = tonumber(arg1) or 0
+        if not Number(elapsed) or elapsed < 0 then elapsed = 0 end
+        age = age + elapsed
         if dirty or age >= 0.1 then
             dirty, age = false, 0
             Refresh()
         end
         if inWorld then
             for _, tracker in ipairs(trackers) do
-                UpdateGuide(tracker)
+                UpdateGuide(tracker, elapsed)
             end
         end
     end)
