@@ -163,6 +163,19 @@ function DFRL.tools.CreateEditorButton(parent, text, width, height, primary)
     return button
 end
 
+function DFRL.tools.CreateEditorInput(parent, width, height)
+    local box = CreateFrame("EditBox", nil, parent)
+    box:SetWidth(width)
+    box:SetHeight(height)
+    box:SetFont("DEFAULT", 12, "")
+    box:SetAutoFocus(false)
+    box:SetMaxLetters(16)
+    box:SetTextInsets(8, 8, 0, 0)
+    box.editorFill = Fill(box, 0.055, 0.06, 0.065, 0.93)
+    box.editorBorder = Border(box, 12)
+    return box
+end
+
 function DFRL.tools.EditorDivider(parent, width)
     local divider = Artwork(parent, "divider", "ARTWORK", 0, 630 / 1024, 0, 1)
     divider:SetWidth(width)

@@ -421,6 +421,7 @@ DFRL:NewMod("RunTimers", 5, function()
         local labelWidth = math.max(TextWidth("Font"), TextWidth("Size"), TextWidth("Outline"))
         local dropdownWidth, tabWidth, modeWidth = 0, 0, 0
         local tabs = {
+            { key = "layout", label = "Layout" },
             { key = "hud", label = "HUD" },
             { key = "combat", label = "Combat text" },
             { key = "timer", label = "Run timer" },
@@ -446,7 +447,7 @@ DFRL:NewMod("RunTimers", 5, function()
         local defaultsWidth = TextWidth("Addon defaults") + 24
         local instructions = "Drag frames to move. Drag corners to resize."
         local contentWidth = math.max(
-            tabWidth * 3 + gap * 2,
+            tabWidth * table.getn(tabs) + gap * (table.getn(tabs) - 1),
             modeWidth * 3 + gap * 2,
             labelWidth + gap + dropdownWidth,
             labelWidth + gap + outlineWidth * 3 + gap * 2,
@@ -491,7 +492,8 @@ DFRL:NewMod("RunTimers", 5, function()
                 tabButtons[pageKey]:SetSelected(pageKey == key)
             end
         end
-        local tabSize = (contentWidth - gap * 2) / 3
+        local tabSize = (contentWidth - gap * (table.getn(tabs) - 1)) / table.getn(tabs)
+        local modeSize = (contentWidth - gap * 2) / 3
         for index, entry in ipairs(tabs) do
             local key = entry.key
             local page = CreateFrame("Frame", nil, fontEditor)
@@ -507,6 +509,8 @@ DFRL:NewMod("RunTimers", 5, function()
         end
         local divider = T.EditorDivider(fontEditor, contentWidth)
         divider:SetPoint("TOPLEFT", fontEditor, "TOPLEFT", padding, -116)
+
+        DFRL.layout.CreateControls(pages.layout, contentWidth, function() SelectPage("layout") end)
 
         local function DisplayToggle(parent, key, label, description, y)
             local control = T.CreateEditorToggle(
@@ -543,8 +547,8 @@ DFRL:NewMod("RunTimers", 5, function()
         heading:SetTextColor(0.94, 0.79, 0.47)
         for index, entry in ipairs(modes) do
             local mode = entry.value
-            local button = T.CreateEditorButton(combat, entry.label, tabSize, 30)
-            button:SetPoint("TOPLEFT", combat, "TOPLEFT", (index - 1) * (tabSize + gap), -24)
+            local button = T.CreateEditorButton(combat, entry.label, modeSize, 30)
+            button:SetPoint("TOPLEFT", combat, "TOPLEFT", (index - 1) * (modeSize + gap), -24)
             button:SetScript("OnClick", function()
                 if DFRL.sct then DFRL.sct.SetMode(mode) end
             end)
@@ -664,8 +668,11 @@ DFRL:NewMod("RunTimers", 5, function()
         local defaults = T.CreateEditorButton(footer, "Addon defaults", defaultsWidth, 30)
         defaults:SetPoint("LEFT", footer, "LEFT", 0, 0)
         defaults:SetScript("OnClick", function() DFRL.layout.Reset() end)
+        local cancel = T.CreateEditorButton(footer, "Cancel", defaultsWidth, 30)
+        cancel:SetPoint("RIGHT", footer, "RIGHT", 0, 0)
+        cancel:SetScript("OnClick", function() DFRL.layout.CancelEdit() end)
         DFRL.layout.SetConfirmAnchor(footer)
-        SelectPage("hud")
+        SelectPage("layout")
         UpdateDisplayLabels()
         if DFRL.sct then DFRL.sct.Listen(UpdateSctLabels) end
         UpdateSctLabels()
