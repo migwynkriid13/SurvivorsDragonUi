@@ -438,7 +438,9 @@ DFRL:NewMod("Jewelry", 4, function()
                 part.texture:SetPoint("TOPLEFT", tail, "TOPLEFT", offset, -part.y)
                 if part.bevel then
                     local first, second, third, fourth = unpack(part.bevel)
-                    if mirror then first, second, third, fourth = third, fourth, first, second end
+                    if mirror then
+                        first, second, third, fourth = third, fourth, first, second
+                    end
                     part.texture:SetTexCoord(
                         960 / 1024,
                         first,
@@ -468,12 +470,8 @@ DFRL:NewMod("Jewelry", 4, function()
         if not effectPanel then
             -- Reuse the shipped Dragonflight diamond-metal chrome and gold
             -- divider. Artwork attribution is carried by core/editor.lua.
-            effectPanel = DFRL.tools.CreateEditorPanel(
-                UIParent,
-                EFFECT_MAX_WIDTH + EFFECT_PADDING * 2,
-                48,
-                EFFECT_BORDER
-            )
+            effectPanel =
+                DFRL.tools.CreateEditorPanel(UIParent, EFFECT_MAX_WIDTH + EFFECT_PADDING * 2, 48, EFFECT_BORDER)
             effectPanel:Hide()
             effectPanel:EnableMouse(false)
             effectPanel:SetFrameStrata("TOOLTIP")
