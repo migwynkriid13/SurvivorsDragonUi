@@ -7,7 +7,7 @@ DFRL:NewMod("Player", 1, function()
     local primaryBar, primaryText, setPowerShown
     local initialized = false
 
-    -- Original 1.12.1 FrameXML/Fonts.xml RAID_CLASS_COLORS, including pink Shaman:
+    -- Original 1.12.1 FrameXML/Fonts.xml RAID_CLASS_COLORS:
     -- https://github.com/MOUZU/Blizzard-WoW-Interface/blob/master/1.12.1/FrameXML/Fonts.xml
     local classColors = {
         HUNTER = { 0.67, 0.83, 0.45 },
@@ -17,7 +17,7 @@ DFRL:NewMod("Player", 1, function()
         MAGE = { 0.41, 0.8, 0.94 },
         ROGUE = { 1, 0.96, 0.41 },
         DRUID = { 1, 0.49, 0.04 },
-        SHAMAN = { 0.96, 0.55, 0.73 },
+        SHAMAN = { 0, 112 / 255, 221 / 255 }, -- User-requested blue #0070DD.
         WARRIOR = { 0.78, 0.61, 0.43 },
     }
     local healthR, healthG, healthB = 0, 1, 0
