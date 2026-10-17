@@ -115,17 +115,25 @@ DFRL:NewMod("Jewelry", 4, function()
     local EFFECT_VALUE = "(%d+[.,]?%d*%%?)"
     local EFFECT_SUBJECT = "([^%.!?;:%%\r\n]+)"
     local EFFECT_FIELDS = {
-        p = "(%d+[.,]?%d*%%)", v = EFFECT_VALUE, g = EFFECT_VALUE, n = "(%+?%d+)",
-        who = EFFECT_SUBJECT, hits = EFFECT_SUBJECT, spell = EFFECT_SUBJECT,
-        frac = "(%d+[.,]?%d*%%)", chance = "(%d+[.,]?%d*%%)", s = EFFECT_NUMBER,
-        radius = EFFECT_NUMBER, dur = EFFECT_NUMBER, heal = EFFECT_VALUE,
-        cd = EFFECT_NUMBER, max = EFFECT_NUMBER,
+        p = "(%d+[.,]?%d*%%)",
+        v = EFFECT_VALUE,
+        g = EFFECT_VALUE,
+        n = "(%+?%d+)",
+        who = EFFECT_SUBJECT,
+        hits = EFFECT_SUBJECT,
+        spell = EFFECT_SUBJECT,
+        frac = "(%d+[.,]?%d*%%)",
+        chance = "(%d+[.,]?%d*%%)",
+        s = EFFECT_NUMBER,
+        radius = EFFECT_NUMBER,
+        dur = EFFECT_NUMBER,
+        heal = EFFECT_VALUE,
+        cd = EFFECT_NUMBER,
+        max = EFFECT_NUMBER,
     }
     local compiled = {}
     local formattedCache, cacheSize = {}, 0
-    local function EscapeEffectLiteral(text)
-        return (string.gsub(text, "([%^%$%(%)%%%.%[%]%*%+%-%?])", "%%%1"))
-    end
+    local function EscapeEffectLiteral(text) return (string.gsub(text, "([%^%$%(%)%%%.%[%]%*%+%-%?])", "%%%1")) end
     local function TrimPeriod(text)
         text = string.gsub(text, "%s+$", "")
         if string.sub(text, -3) == "。" then return string.sub(text, 1, -4) end
@@ -210,7 +218,9 @@ DFRL:NewMod("Jewelry", 4, function()
         local cached = formattedCache[key]
         if cached ~= nil then return cached or description end
         local function Remember(value)
-            if cacheSize >= 128 then formattedCache, cacheSize = {}, 0 end
+            if cacheSize >= 128 then
+                formattedCache, cacheSize = {}, 0
+            end
             formattedCache[key] = value or false
             cacheSize = cacheSize + 1
             return value or description

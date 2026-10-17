@@ -1183,7 +1183,9 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         local feedback
         if mode == "on" then
             SelectMode("on")
-            feedback = DFRL.locale.Text("Custom SCT enabled. V controls visible nameplates; invisible plates track hit positions.")
+            feedback = DFRL.locale.Text(
+                "Custom SCT enabled. V controls visible nameplates; invisible plates track hit positions."
+            )
         elseif mode == "off" then
             SelectMode("off")
             feedback = DFRL.locale.Text("Custom and native outgoing SCT disabled. Incoming/self text is unchanged.")

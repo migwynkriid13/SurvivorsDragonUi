@@ -284,7 +284,12 @@ DFRL:NewMod("Waypoints", 3, function()
                 0.8
             )
         end
-        GameTooltip:AddLine(DFRL.locale.Text(entry.key == tracker.selectedKey and "Tracking this waypoint" or "Click to track"), 1, 1, 1)
+        GameTooltip:AddLine(
+            DFRL.locale.Text(entry.key == tracker.selectedKey and "Tracking this waypoint" or "Click to track"),
+            1,
+            1,
+            1
+        )
         GameTooltip:Show()
     end
 
@@ -402,7 +407,8 @@ DFRL:NewMod("Waypoints", 3, function()
         else
             tracker.pointer:Hide()
         end
-        local text = distance and DFRL.locale.Native("common.yards", { n = math.floor(distance + 0.5) }) or DFRL.locale.Text("On map")
+        local text = distance and DFRL.locale.Native("common.yards", { n = math.floor(distance + 0.5) })
+            or DFRL.locale.Text("On map")
         if tracker.distanceText:GetText() ~= text then tracker.distanceText:SetText(text) end
     end
 

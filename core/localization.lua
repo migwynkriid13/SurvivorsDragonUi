@@ -2,9 +2,21 @@
 local language = { code = "en", data = {}, listeners = {}, labels = {} }
 DFRL.locale = language
 local aliases = {
-    enUS = "en", enGB = "en", plPL = "pl", deDE = "de", ptBR = "pt",
-    esES = "es", esMX = "es", frFR = "fr", roRO = "ro", trTR = "tr",
-    ruRU = "ru", ukUA = "uk", zhCN = "zh", jaJP = "ja", koKR = "ko",
+    enUS = "en",
+    enGB = "en",
+    plPL = "pl",
+    deDE = "de",
+    ptBR = "pt",
+    esES = "es",
+    esMX = "es",
+    frFR = "fr",
+    roRO = "ro",
+    trTR = "tr",
+    ruRU = "ru",
+    ukUA = "uk",
+    zhCN = "zh",
+    jaJP = "ja",
+    koKR = "ko",
 }
 
 function language.Text(source)
@@ -16,9 +28,11 @@ function language.Native(key, values)
     local catalog = language.data[language.code] or language.data.en
     local text = catalog and catalog.native[key] or key
     if values then
-        text = string.gsub(text, "{(%w+)}", function(field)
-            return values[field] ~= nil and tostring(values[field]) or "{" .. field .. "}"
-        end)
+        text = string.gsub(
+            text,
+            "{(%w+)}",
+            function(field) return values[field] ~= nil and tostring(values[field]) or "{" .. field .. "}" end
+        )
     end
     return text
 end
@@ -72,13 +86,16 @@ function language.Match(key, text)
             table.insert(fields, field)
             cursor = last + 1
         end
-        compiled = { pattern = pattern .. string.gsub(string.sub(source, cursor), "(%W)", "%%%1") .. "$", fields = fields }
+        compiled =
+            { pattern = pattern .. string.gsub(string.sub(source, cursor), "(%W)", "%%%1") .. "$", fields = fields }
         templates[source] = compiled
     end
     local captures = { string.find(text, compiled.pattern) }
     if not captures[1] then return nil end
     local values = {}
-    for index, field in ipairs(compiled.fields) do values[field] = captures[index + 2] end
+    for index, field in ipairs(compiled.fields) do
+        values[field] = captures[index + 2]
+    end
     return values
 end
 
@@ -90,7 +107,9 @@ function language.Select(code)
             entry.original(label, type(entry.source) == "string" and language.Text(entry.source) or entry.source)
         end
     end
-    for _, callback in ipairs(language.listeners) do callback() end
+    for _, callback in ipairs(language.listeners) do
+        callback()
+    end
 end
 
 -- Exact localized zone subtitles distinguish all thirteen game catalogs. Names

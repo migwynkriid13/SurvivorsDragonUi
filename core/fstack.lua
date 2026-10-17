@@ -35,7 +35,10 @@ DFRL:NewMod("Frame stack", 2, function()
         if not frame then return DFRL.locale.Text("none") end
         local name = Read(frame, "GetName")
         if not name or name == "" then
-            name = DFRL.locale.Text("(unnamed ") .. tostring(Read(frame, "GetObjectType") or "frame") .. ") " .. tostring(frame)
+            name = DFRL.locale.Text("(unnamed ")
+                .. tostring(Read(frame, "GetObjectType") or "frame")
+                .. ") "
+                .. tostring(frame)
         end
         return (string.gsub(tostring(name), "|", "||"))
     end
@@ -236,7 +239,9 @@ DFRL:NewMod("Frame stack", 2, function()
                 seen[frame] = true
                 Scan(frame, scanned)
             end
-            if scanned == SCAN_LIMIT then warning = DFRL.locale.Text("Frame scan limit reached; the list may be incomplete.") end
+            if scanned == SCAN_LIMIT then
+                warning = DFRL.locale.Text("Frame scan limit reached; the list may be incomplete.")
+            end
         else
             warning = DFRL.locale.Text("EnumerateFrames unavailable; showing mouse focus and parents.")
         end
@@ -288,10 +293,17 @@ DFRL:NewMod("Frame stack", 2, function()
                     .. Name(row.frame)
             )
         end
-        if count > 0 then table.insert(lines, DFRL.locale.Text("Elements ") .. first .. "-" .. last .. DFRL.locale.Text(" of ") .. count) end
+        if count > 0 then
+            table.insert(
+                lines,
+                DFRL.locale.Text("Elements ") .. first .. "-" .. last .. DFRL.locale.Text(" of ") .. count
+            )
+        end
         if count == 0 then table.insert(lines, DFRL.locale.Text("No visible UI element bounds at the cursor.")) end
         if warning then table.insert(lines, warning) end
-        if regionWarning then table.insert(lines, DFRL.locale.Text("Region scan unavailable or limited; the list may be incomplete.")) end
+        if regionWarning then
+            table.insert(lines, DFRL.locale.Text("Region scan unavailable or limited; the list may be incomplete."))
+        end
         if inspected then
             table.insert(lines, "")
             table.insert(lines, DFRL.locale.Text("Inspect: ") .. Name(inspected))
@@ -302,7 +314,12 @@ DFRL:NewMod("Frame stack", 2, function()
             if Number(frameWidth) and Number(frameHeight) and Number(scale) then
                 table.insert(
                     lines,
-                    string.format(DFRL.locale.Text("Size %.2f x %.2f; effective scale %.3f"), frameWidth, frameHeight, scale)
+                    string.format(
+                        DFRL.locale.Text("Size %.2f x %.2f; effective scale %.3f"),
+                        frameWidth,
+                        frameHeight,
+                        scale
+                    )
                 )
             end
             table.insert(
@@ -317,7 +334,9 @@ DFRL:NewMod("Frame stack", 2, function()
             local layer = Read(inspected, "GetDrawLayer")
             if layer then table.insert(lines, DFRL.locale.Text("Draw layer: ") .. tostring(layer)) end
             local texture = Read(inspected, "GetTexture")
-            if type(texture) == "string" then table.insert(lines, DFRL.locale.Text("Texture: ") .. (string.gsub(texture, "|", "||"))) end
+            if type(texture) == "string" then
+                table.insert(lines, DFRL.locale.Text("Texture: ") .. (string.gsub(texture, "|", "||")))
+            end
             local text = Read(inspected, "GetText")
             if type(text) == "string" and text ~= "" then
                 local preview, clipped = DFRL.locale.Preview(text, 120)
@@ -437,7 +456,9 @@ DFRL:NewMod("Frame stack", 2, function()
             end
         elseif DEFAULT_CHAT_FRAME then
             DEFAULT_CHAT_FRAME:AddMessage(
-                DFRL.locale.Text("SurvivorsDragonUi: /fstack [on|off|next|prev|focus]. Inspect all Lua-exposed UI, including the game's own.")
+                DFRL.locale.Text(
+                    "SurvivorsDragonUi: /fstack [on|off|next|prev|focus]. Inspect all Lua-exposed UI, including the game's own."
+                )
             )
         end
     end

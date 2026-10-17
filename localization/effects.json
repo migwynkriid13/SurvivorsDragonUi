@@ -1,19 +1,7 @@
 [
-  [
-    "Increases all damage you deal by {p}.",
-    "+ Damage dealt: {p}",
-    "+{p} damage"
-  ],
-  [
-    "Reduces the cooldown of your spells by {p}.",
-    "- {p} Cooldown",
-    "-{p} cooldowns"
-  ],
-  [
-    "Increases your maximum health by {p}.",
-    "+ Maximum health: {p}",
-    "+{p} max health"
-  ],
+  ["Increases all damage you deal by {p}.", "+ Damage dealt: {p}", "+{p} damage"],
+  ["Reduces the cooldown of your spells by {p}.", "- {p} Cooldown", "-{p} cooldowns"],
+  ["Increases your maximum health by {p}.", "+ Maximum health: {p}", "+{p} max health"],
   [
     "Improves your chance to get a critical strike by {p}.",
     "+ Critical strike chance: {p}",
@@ -24,21 +12,9 @@
     "+ Critical damage: {p}",
     "+{p} critical strike damage"
   ],
-  [
-    "Reduces all damage taken by {p}.",
-    "- {p} Damage taken",
-    "+{p} damage reduction"
-  ],
-  [
-    "Restores {v} health per second.",
-    "+ Health regen: {v}/s",
-    "+{v} health per second"
-  ],
-  [
-    "Increases your movement speed by {p}.",
-    "+ Movement speed: {p}",
-    "+{p} movement speed"
-  ],
+  ["Reduces all damage taken by {p}.", "- {p} Damage taken", "+{p} damage reduction"],
+  ["Restores {v} health per second.", "+ Health regen: {v}/s", "+{v} health per second"],
+  ["Increases your movement speed by {p}.", "+ Movement speed: {p}", "+{p} movement speed"],
   [
     "Increases the area of effect of your spells by {p}.",
     "+ Spell area: {p}",
@@ -49,21 +25,9 @@
     "+ Loot pickup range: {p}",
     "+{p} pickup range"
   ],
-  [
-    "Increases experience gained by {p}.",
-    "+ Experience gained: {p}",
-    "+{p} experience"
-  ],
-  [
-    "Increases gold found by {p}.",
-    "+ Gold found: {p}",
-    "+{p} gold"
-  ],
-  [
-    "Increases your luck by {p}.",
-    "+ Luck: {p}",
-    "+{p} luck"
-  ],
+  ["Increases experience gained by {p}.", "+ Experience gained: {p}", "+{p} experience"],
+  ["Increases gold found by {p}.", "+ Gold found: {p}", "+{p} gold"],
+  ["Increases your luck by {p}.", "+ Luck: {p}", "+{p} luck"],
   [
     "Gives your spells a {p} chance to cast twice.",
     "+ Spell double-cast chance: {p}",
@@ -79,16 +43,8 @@
     "+ Health on kill: {v}",
     "Each kill heals {v} health"
   ],
-  [
-    "Increases your weapon damage by {p}.",
-    "+ Weapon damage: {p}",
-    "+{p} weapon damage"
-  ],
-  [
-    "Increases the damage your pets deal by {p}.",
-    "+ Pet damage: {p}",
-    "+{p} pet damage"
-  ],
+  ["Increases your weapon damage by {p}.", "+ Weapon damage: {p}", "+{p} weapon damage"],
+  ["Increases the damage your pets deal by {p}.", "+ Pet damage: {p}", "+{p} pet damage"],
   [
     "Increases damage dealt to crowd-controlled enemies by {p}.",
     "+ Damage vs crowd-controlled enemies: {p}",
@@ -154,36 +110,12 @@
     "Revive at half health; max {n} lives",
     null
   ],
-  [
-    "Increases the healing of {who} by {g}.",
-    "+ {who} healing: {g}",
-    "{who}: +{g} healing"
-  ],
-  [
-    "Increases the absorb of {who} by {g}.",
-    "+ {who} absorb: {g}",
-    "{who}: +{g} absorb"
-  ],
-  [
-    "Increases the damage of {who} by {v}.",
-    "+ {who} damage: {v}",
-    "{who}: +{v} damage"
-  ],
-  [
-    "Reduces the cooldown of {who} by {v}.",
-    "- {who} cooldown: {v}",
-    "{who}: -{v} cooldown"
-  ],
-  [
-    "Increases the area of {who} by {v}.",
-    "+ {who} area: {v}",
-    "{who}: +{v} area"
-  ],
-  [
-    "Increases the duration of {who} by {v}.",
-    "+ {who} duration: {v}",
-    "{who}: +{v} duration"
-  ],
+  ["Increases the healing of {who} by {g}.", "+ {who} healing: {g}", "{who}: +{g} healing"],
+  ["Increases the absorb of {who} by {g}.", "+ {who} absorb: {g}", "{who}: +{g} absorb"],
+  ["Increases the damage of {who} by {v}.", "+ {who} damage: {v}", "{who}: +{v} damage"],
+  ["Reduces the cooldown of {who} by {v}.", "- {who} cooldown: {v}", "{who}: -{v} cooldown"],
+  ["Increases the area of {who} by {v}.", "+ {who} area: {v}", "{who}: +{v} area"],
+  ["Increases the duration of {who} by {v}.", "+ {who} duration: {v}", "{who}: +{v} duration"],
   [
     "{who} deals an extra {v} of your maximum health.",
     "{who}: +{v} of your max health as damage",
@@ -194,51 +126,23 @@
     "{who}: +{v} of your max health as damage",
     "{who}: +{v} of max health as damage"
   ],
-  [
-    "{who} strikes 1 more target.",
-    "+ {who} targets: 1",
-    "{who}: +{n} target"
-  ],
-  [
-    "{who} strikes {n} more targets.",
-    "+ {who} targets: {n}",
-    "{who}: +{n} targets"
-  ],
-  [
-    "{who} strike 1 more target.",
-    "+ {who} targets: 1",
-    "{who}: +{n} target"
-  ],
-  [
-    "{who} strike {n} more targets.",
-    "+ {who} targets: {n}",
-    "{who}: +{n} targets"
-  ],
+  ["{who} strikes 1 more target.", "+ {who} targets: 1", "{who}: +{n} target"],
+  ["{who} strikes {n} more targets.", "+ {who} targets: {n}", "{who}: +{n} targets"],
+  ["{who} strike 1 more target.", "+ {who} targets: 1", "{who}: +{n} target"],
+  ["{who} strike {n} more targets.", "+ {who} targets: {n}", "{who}: +{n} targets"],
   [
     "Increases how much {who} weakens enemies by {v}.",
     "+ {who} weakening: {v}",
     "{who}: +{v} weakening"
   ],
-  [
-    "Increases the strength of {who} by {v}.",
-    "+ {who} strength: {v}",
-    "{who}: +{v} strength"
-  ],
-  [
-    "{who} procs {v} more often.",
-    "+ {who} proc rate: {v}",
-    "{who}: +{v} proc rate"
-  ],
+  ["Increases the strength of {who} by {v}.", "+ {who} strength: {v}", "{who}: +{v} strength"],
+  ["{who} procs {v} more often.", "+ {who} proc rate: {v}", "{who}: +{v} proc rate"],
   [
     "Increases the stun duration of {who} by {v}.",
     "+ {who} stun duration: {v}",
     "{who}: +{v} stun duration"
   ],
-  [
-    "{hits} leap to 1 more enemy for {frac}",
-    "{hits}: chain +1 enemy at {frac} damage",
-    null
-  ],
+  ["{hits} leap to 1 more enemy for {frac}", "{hits}: chain +1 enemy at {frac} damage", null],
   [
     "{hits} leap to {n} more enemies for {frac}",
     "{hits}: chain +{n} enemies at {frac} damage",
@@ -259,26 +163,14 @@
     "Shield breaks: {frac} of absorbed damage to enemies within {radius} yd",
     null
   ],
-  [
-    "{hits} stun for {s} sec",
-    "{hits}: stun {s} sec",
-    null
-  ],
-  [
-    "{hits} root for {s} sec",
-    "{hits}: root {s} sec",
-    null
-  ],
+  ["{hits} stun for {s} sec", "{hits}: stun {s} sec", null],
+  ["{hits} root for {s} sec", "{hits}: root {s} sec", null],
   [
     "{hits} leave enemies taking {v} more damage for {s} sec",
     "{hits}: enemies take {v} more damage for {s} sec",
     null
   ],
-  [
-    "{hits} hinder enemies",
-    "{hits}: hinder enemies",
-    null
-  ],
+  ["{hits} hinder enemies", "{hits}: hinder enemies", null],
   [
     "{hits} burn and bleed for {frac} more over {dur} sec",
     "{hits}: +{frac} burn and bleed over {dur} sec",
@@ -309,11 +201,7 @@
     "On victim death: {who} leaps to {n} enemies",
     null
   ],
-  [
-    "A kill with {who} readies it again at once",
-    "On {who} kill: ready again instantly",
-    null
-  ],
+  ["A kill with {who} readies it again at once", "On {who} kill: ready again instantly", null],
   [
     "Every totem pulse heals you {frac} of max health",
     "Totem pulse: heal {frac} of max health",

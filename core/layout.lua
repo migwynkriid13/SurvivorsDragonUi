@@ -681,7 +681,9 @@ DFRL:NewMod("Layout", 0, function()
             if entry.options.onReset then entry.options.onReset() end
         end
         RestoreDefaults()
-        if DEFAULT_CHAT_FRAME then DEFAULT_CHAT_FRAME:AddMessage(DFRL.locale.Text("SurvivorsDragonUi: default layout restored.")) end
+        if DEFAULT_CHAT_FRAME then
+            DEFAULT_CHAT_FRAME:AddMessage(DFRL.locale.Text("SurvivorsDragonUi: default layout restored."))
+        end
     end
     function layout.Ready()
         ready = true
@@ -768,7 +770,9 @@ DFRL:NewMod("Layout", 0, function()
             layout.BeginEdit()
         elseif DEFAULT_CHAT_FRAME then
             DEFAULT_CHAT_FRAME:AddMessage(
-                DFRL.locale.Text("Use /sdui to edit the layout, then click Confirm to save. /sdui reset restores default positions, sizes and visibility.")
+                DFRL.locale.Text(
+                    "Use /sdui to edit the layout, then click Confirm to save. /sdui reset restores default positions, sizes and visibility."
+                )
             )
         end
     end

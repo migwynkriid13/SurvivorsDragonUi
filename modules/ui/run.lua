@@ -428,9 +428,7 @@ DFRL:NewMod("RunTimers", 5, function()
     local function CreateFontEditor()
         local measure = FontEditorLabel(UIParent, "", 0, 0)
         measure:Hide()
-        local function TextWidth(text)
-            return DFRL.locale.Width(measure, text)
-        end
+        local function TextWidth(text) return DFRL.locale.Width(measure, text) end
         local padding, gap = 20, 8
         local labelWidth = math.max(TextWidth("Font"), TextWidth("Size"), TextWidth("Outline"))
         local dropdownWidth, tabWidth, modeWidth = 0, 0, 0
@@ -1310,7 +1308,12 @@ DFRL:NewMod("RunTimers", 5, function()
     local function DebuffTooltip(icon)
         local effect = icon.effect
         if not GameTooltip or not effect then return end
-        GameTooltip:SetText(type(effect.name) == "string" and effect.name ~= "" and effect.name or DFRL.locale.Text("Debuff"), 1, 1, 1)
+        GameTooltip:SetText(
+            type(effect.name) == "string" and effect.name ~= "" and effect.name or DFRL.locale.Text("Debuff"),
+            1,
+            1,
+            1
+        )
         if IsNumber(effect.stacks) and effect.stacks > 1 then
             GameTooltip:AddLine(DFRL.locale.Text("Stacks: ") .. tostring(math.floor(effect.stacks)), 1, 1, 1)
         end

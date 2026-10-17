@@ -74,7 +74,9 @@ local function CaptureFormat(text, formatText)
     return arguments[1], arguments[2], arguments[3], arguments[4]
 end
 
-local function StatGain(amount, label) return PLUS .. WHITE .. amount .. "|r " .. GREEN .. DFRL.locale.Text(label) .. "|r" end
+local function StatGain(amount, label)
+    return PLUS .. WHITE .. amount .. "|r " .. GREEN .. DFRL.locale.Text(label) .. "|r"
+end
 
 local abilityFormats = {
     { "ERR_LEARN_ABILITY_S", "You have learned a new ability: %s." },
@@ -181,7 +183,16 @@ local function TalentExperience(text)
     }) do
         local values = DFRL.locale.Match(key, text)
         if values and string.find(values.xp or "", "^%d[%d,%.]*$") and string.find(values.class or "", "%S") then
-            local output = PLUS .. WHITE .. values.xp .. "|r " .. WHITE .. DFRL.locale.Text("Talent XP:") .. "|r " .. YELLOW .. values.class .. "|r"
+            local output = PLUS
+                .. WHITE
+                .. values.xp
+                .. "|r "
+                .. WHITE
+                .. DFRL.locale.Text("Talent XP:")
+                .. "|r "
+                .. YELLOW
+                .. values.class
+                .. "|r"
             if key ~= "Your {class}s earn {xp} talent experience." then
                 local points = values.n or "1"
                 if not string.find(points, "^%d+$") then return nil end
@@ -196,7 +207,16 @@ local function TalentExperience(text)
     local first, last, class, experience, tail =
         string.find(text, "^Your (.-) earns? (%d[%d,]*) talent experience(.*)$")
     if not first or not string.find(class, "%S") then return nil end
-    local output = PLUS .. WHITE .. experience .. "|r " .. WHITE .. DFRL.locale.Text("Talent XP:") .. "|r " .. YELLOW .. class .. "|r"
+    local output = PLUS
+        .. WHITE
+        .. experience
+        .. "|r "
+        .. WHITE
+        .. DFRL.locale.Text("Talent XP:")
+        .. "|r "
+        .. YELLOW
+        .. class
+        .. "|r"
     if tail == "" or tail == "." or tail == "!" then return output end
 
     local pointFirst, pointLast, points, instruction = string.find(tail, "^:%s*(%d+) new talent points?!(.*)$")
@@ -221,7 +241,9 @@ local function ProgressMessage(text)
         level = value
     end
     -- Only the native plain-number announcement enters the levelup_ding format.
-    if level and string.find(level, "^%d+$") then return YELLOW .. DFRL.locale.Text("Level ") .. level .. "|r", "level" end
+    if level and string.find(level, "^%d+$") then
+        return YELLOW .. DFRL.locale.Text("Level ") .. level .. "|r", "level"
+    end
 
     -- Survivors combines the three gains into one notice. Apply the source
     -- levelup_stat/levelup_hp appearance to each gain without rounding decimals.
@@ -318,7 +340,10 @@ local function LootMessage(text)
         local collected = "(" .. DFRL.locale.Native("already collected") .. ")"
         if normalized == collected or string.find(plainSuffix, "^%s+%(already collected%)%.?$") then
             statusColor = GRAY
-        elseif normalized == DFRL.locale.Native("New in your collection!") or string.find(plainSuffix, "^%s+New in your collection!$") then
+        elseif
+            normalized == DFRL.locale.Native("New in your collection!")
+            or string.find(plainSuffix, "^%s+New in your collection!$")
+        then
             statusColor = GREEN
         else
             return nil
