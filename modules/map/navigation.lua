@@ -3,17 +3,6 @@
 DFRL:NewMod("Navigation", 2, function()
     local navigation = {}
     DFRL.navigation = navigation
-    local zones = {
-        elwynn = true,
-        duskwood = true,
-        wsg = true,
-        ab = true,
-        feralas = true,
-        arena = true,
-        av = true,
-        brm = true,
-        aq = true,
-    }
     local phases = { playing = true, choosing = true, paused = true, victory = true }
     local identity, expected, realZone, arrow
     local points = {}
@@ -27,12 +16,25 @@ DFRL:NewMod("Navigation", 2, function()
         samples, seen, width, height = {}, {}, nil, nil
     end
     function navigation.SetPoints(key, list) points[key] = list end
+    local function RunState()
+        if type(_G.AZS_GetPhase) ~= "function" then return end
+        local ok, phase = pcall(_G.AZS_GetPhase)
+        if not ok or not navigation.IsRunPhase(phase) then return end
+        local state = _G.AZS_RUN
+        if type(state) == "table" and Number(_G.AZS_RUN_UPDATED) then return state end
+    end
     local function Context()
         if type(_G.AZS_GetPhase) ~= "function" then return end
         local ok, phase = pcall(_G.AZS_GetPhase)
         if not ok or not navigation.IsRunPhase(phase) then return end
         local zone = _G.AZS_ZONE
-        if type(zone) ~= "table" or not zones[zone.zone] or not Number(zone.map) or not Number(_G.AZS_ZONE_UPDATED) then
+        if
+            type(zone) ~= "table"
+            or type(zone.zone) ~= "string"
+            or zone.zone == ""
+            or not Number(zone.map)
+            or not Number(_G.AZS_ZONE_UPDATED)
+        then
             return
         end
         local current = zone.zone .. ":" .. tostring(zone.map) .. ":" .. tostring(_G.AZS_ZONE_UPDATED)
@@ -173,6 +175,13 @@ DFRL:NewMod("Navigation", 2, function()
     end
     function navigation.Delta(target)
         if type(target) ~= "table" then return end
+        local state = RunState()
+        if state and Number(state.px) and Number(state.py) and Number(target.x) and Number(target.y) then
+            -- Official world coordinates work without a map sheet or calibration,
+            -- including instances. Keep the guide's horizontal yard distance.
+            local east, north = state.py - target.y, target.x - state.px
+            return east, north, math.sqrt(east * east + north * north), true
+        end
         local x, y = navigation.Position()
         if not x then return end
         local targetX, targetY = target.mx, target.my
@@ -213,6 +222,9 @@ DFRL:NewMod("Navigation", 2, function()
         if candidate.GetFacing then return candidate end
     end
     function navigation.Heading()
+        local state = RunState()
+        -- The official heading uses native radians: north, counterclockwise.
+        if state and Number(state.pf) then return state.pf end
         if not arrow then arrow = PlayerArrow() end
         if not arrow or not arrow.GetFacing then return end
         local ok, facing = pcall(arrow.GetFacing, arrow)
