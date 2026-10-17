@@ -4,7 +4,7 @@ The user selected action-bar attachment design **4 — Thin shared bezel**, with
 
 ## Data and interaction
 
-`modules/ui/jewelry.lua` resolves `NeckSlot`, `Finger0Slot`, `Finger1Slot`, `Trinket0Slot` and `Trinket1Slot` through `GetInventorySlotInfo`, requiring five distinct valid native IDs. `GetInventoryItemTexture("player", id)` supplies each current icon. An empty or unavailable texture leaves that socket blank. No sample icons, item IDs, item names, item statistics, invented ranks or sixth slot are shipped.
+`modules/ui/jewelry.lua` resolves `NeckSlot`, `Finger0Slot`, `Finger1Slot`, `Trinket0Slot` and `Trinket1Slot` through `GetInventorySlotInfo`, requiring five distinct valid native IDs. `GetInventoryItemTexture("player", id)` supplies each current icon. Item art uses a centered texture crop with exactly 5% added magnification in both attached and detached modes; circle and rim dimensions are unchanged. An empty or unavailable texture leaves that socket blank. No sample icons, item IDs, item names, item statistics, invented ranks or sixth slot are shipped.
 
 Hover uses native `GameTooltip:SetInventoryItem("player", id)`, retaining the game's item description, quality and tooltip cooldown text. The row has no item-use, equip, pickup, replacement or drag handlers outside shared layout editing. Optional cooldown swipes read only native `GetInventoryItemCooldown` start/duration/enable values and use `GetTime` on the same UI clock. A generated 64-state circular shade atlas visualizes the remaining fraction without putting a square model or dark corner cover around the icon. Missing optional APIs omit those features; they do not invent gameplay timing or disable valid icons.
 

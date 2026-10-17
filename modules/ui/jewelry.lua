@@ -38,6 +38,9 @@ SOFTWARE.
 DFRL:NewMod("Jewelry", 4, function()
     local WIDTH, HEIGHT, ICON_SIZE, INTERVAL = 317, 88, 32, 0.2
     local RIM_SIZE = 43
+    local ICON_ZOOM = 1.05
+    local iconSpan = 1 / ICON_ZOOM
+    local iconInset = (1 - iconSpan) / 2
     local actionDefaults = DFRL.actionBarDefaults
     if
         type(actionDefaults) ~= "table"
@@ -115,10 +118,10 @@ DFRL:NewMod("Jewelry", 4, function()
                 strip:SetHeight(2)
                 strip:SetPoint("TOPLEFT", button, "TOPLEFT", 16 - half, -top)
                 strip:SetTexCoord(
-                    (3 + (16 - half) * 58 / 32) / 64,
-                    (3 + (16 + half) * 58 / 32) / 64,
-                    (3 + top * 58 / 32) / 64,
-                    (3 + bottom * 58 / 32) / 64
+                    iconInset + (16 - half) * iconSpan / ICON_SIZE,
+                    iconInset + (16 + half) * iconSpan / ICON_SIZE,
+                    iconInset + top * iconSpan / ICON_SIZE,
+                    iconInset + bottom * iconSpan / ICON_SIZE
                 )
                 strip:Hide()
                 table.insert(slot.strips, strip)
