@@ -317,9 +317,7 @@ DFRL:NewMod("Frame stack", 2, function()
             local layer = Read(inspected, "GetDrawLayer")
             if layer then table.insert(lines, "Draw layer: " .. tostring(layer)) end
             local texture = Read(inspected, "GetTexture")
-            if type(texture) == "string" then
-                table.insert(lines, "Texture: " .. (string.gsub(texture, "|", "||")))
-            end
+            if type(texture) == "string" then table.insert(lines, "Texture: " .. (string.gsub(texture, "|", "||"))) end
             local text = Read(inspected, "GetText")
             if type(text) == "string" and text ~= "" then
                 local preview = string.sub(text, 1, 120)
