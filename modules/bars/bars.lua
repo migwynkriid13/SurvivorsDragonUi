@@ -262,7 +262,10 @@ DFRL:NewMod("Bars", 1, function()
             end
         end
         local function RefreshNumbers()
-            if not active then return end
+            if not active or not DFRL.display.Get("cooldownNumbers") then
+                ClearNumbers()
+                return
+            end
             local now = GetTime()
             for _, button in ipairs(DFRL.actionButtons) do
                 UpdateCooldownNumber(button, now)
@@ -288,7 +291,7 @@ DFRL:NewMod("Bars", 1, function()
             RefreshNumbers()
         end)
         controller:SetScript("OnUpdate", function()
-            if not active then return end
+            if not active or not DFRL.display.Get("cooldownNumbers") then return end
             elapsed = elapsed + arg1
             if elapsed < COOLDOWN_INTERVAL then return end
             elapsed = 0
@@ -296,6 +299,7 @@ DFRL:NewMod("Bars", 1, function()
         end)
         controller:SetScript("OnHide", ClearNumbers)
         controller:SetScript("OnShow", RefreshNumbers)
+        DFRL.display.Listen(RefreshNumbers)
         RefreshNumbers()
     end
 

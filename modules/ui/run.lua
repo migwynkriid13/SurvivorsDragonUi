@@ -457,7 +457,7 @@ DFRL:NewMod("RunTimers", 5, function()
         local inputX = padding + labelWidth + gap
         dropdownWidth = contentWidth - labelWidth - gap
 
-        fontEditor = T.CreateEditorPanel(UIParent, width, 420)
+        fontEditor = T.CreateEditorPanel(UIParent, width, 464)
         fontEditor:SetFrameStrata("TOOLTIP")
         fontEditor:SetFrameLevel(150)
         PlaceFontEditor()
@@ -497,7 +497,7 @@ DFRL:NewMod("RunTimers", 5, function()
             local page = CreateFrame("Frame", nil, fontEditor)
             page:SetPoint("TOPLEFT", fontEditor, "TOPLEFT", padding, -130)
             page:SetWidth(contentWidth)
-            page:SetHeight(220)
+            page:SetHeight(264)
             page:SetFrameLevel(152)
             pages[key] = page
             local button = T.CreateEditorButton(fontEditor, entry.label, tabSize, 30)
@@ -527,14 +527,15 @@ DFRL:NewMod("RunTimers", 5, function()
             0
         )
         DisplayToggle(pages.hud, "classResources", "Class resources", "Show power inside the player frame.", -44)
-        DisplayToggle(pages.hud, "bossDebuffs", "Boss debuffs", "Effects on boss and guardian health bars.", -88)
-        DisplayToggle(pages.hud, "cacheGuidance", "Cache guidance", "Show the cache direction and distance.", -132)
+        DisplayToggle(pages.hud, "cooldownNumbers", "Cooldown numbers", "Show countdowns on ability buttons.", -88)
+        DisplayToggle(pages.hud, "bossDebuffs", "Boss debuffs", "Effects on boss and guardian health bars.", -132)
+        DisplayToggle(pages.hud, "cacheGuidance", "Cache guidance", "Show the cache direction and distance.", -176)
         DisplayToggle(
             pages.hud,
             "guardianGuidance",
             "Guardian guidance",
             "Show the guardian lair direction and distance.",
-            -176
+            -220
         )
 
         local combat = pages.combat
@@ -651,10 +652,10 @@ DFRL:NewMod("RunTimers", 5, function()
         visibilityControl:SetPoint("TOPLEFT", timer, "TOPLEFT", halfWidth + gap, -176)
 
         divider = T.EditorDivider(fontEditor, contentWidth)
-        divider:SetPoint("TOPLEFT", fontEditor, "TOPLEFT", padding, -356)
+        divider:SetPoint("TOPLEFT", fontEditor, "TOPLEFT", padding, -400)
         hint = FontEditorLabel(fontEditor, "Changes preview immediately. Confirm keeps them.", 0, 0, 9)
         hint:ClearAllPoints()
-        hint:SetPoint("TOP", fontEditor, "TOP", 0, -365)
+        hint:SetPoint("TOP", fontEditor, "TOP", 0, -409)
         hint:SetTextColor(0.75, 0.73, 0.67)
         local footer = CreateFrame("Frame", nil, fontEditor)
         footer:SetWidth(contentWidth)
