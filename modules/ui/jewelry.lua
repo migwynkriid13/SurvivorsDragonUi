@@ -254,9 +254,7 @@ DFRL:NewMod("Jewelry", 4, function()
         local region = DFRL.actionBarMoveRegion
         if region then
             local top = actionDefaults.topInset
-            if DFRL.display.Get("equippedJewelry") then
-                top = math.max(top, actionDefaults.buttonWidth * 40 / 36)
-            end
+            if DFRL.display.Get("equippedJewelry") then top = math.max(top, actionDefaults.buttonWidth * 40 / 36) end
             region:SetPoint("TOPLEFT", DFRL.mainBar, "TOPLEFT", -actionDefaults.sideInset, top)
         end
         Refresh()

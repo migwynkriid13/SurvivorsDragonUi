@@ -169,7 +169,11 @@ DFRL:NewMod("Bars", 1, function()
             right:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", defaults.sideInset, -defaults.topInset)
             left:SetTexCoord(0, 1, shown and topUV or 0, 1)
             right:SetTexCoord(1, 0, shown and topUV or 0, 1)
-            if shown then upper:Show() else upper:Hide() end
+            if shown then
+                upper:Show()
+            else
+                upper:Hide()
+            end
         end
     end
 
