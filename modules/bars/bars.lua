@@ -11,6 +11,8 @@ DFRL:NewMod("Bars", 1, function()
         bottom = 55,
         topInset = 14,
         sideInset = 6,
+        buttonWidth = ActionButton1:GetWidth(),
+        buttonGap = BUTTON_SPACING,
         width = BUTTON_COUNT * ActionButton1:GetWidth() + (BUTTON_COUNT - 1) * BUTTON_SPACING,
         height = ActionButton1:GetHeight(),
     }

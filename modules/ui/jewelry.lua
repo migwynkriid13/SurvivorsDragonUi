@@ -32,6 +32,22 @@ SOFTWARE.
 ]]
 DFRL:NewMod("Jewelry", 4, function()
     local WIDTH, HEIGHT, ICON_SIZE, INTERVAL = 317, 88, 32, 0.2
+    local RIM_SIZE, RIM_TOP, BAR_GAP = 43, 25, 4
+    local actionDefaults = DFRL.actionBarDefaults
+    if
+        type(actionDefaults) ~= "table"
+        or type(actionDefaults.buttonWidth) ~= "number"
+        or actionDefaults.buttonWidth <= 0
+        or type(actionDefaults.buttonGap) ~= "number"
+        or actionDefaults.buttonGap < 0
+    then
+        return
+    end
+    -- Match the width of one ability and the center-to-center button spacing.
+    -- The five jewelry slots then span action buttons 2 through 6 exactly.
+    local defaultScale = actionDefaults.buttonWidth / RIM_SIZE
+    local columnPitch = (actionDefaults.buttonWidth + actionDefaults.buttonGap) / defaultScale
+    local rowWidth = RIM_SIZE + columnPitch * 4
     local ANIMATION_INTERVAL = 1 / 30
     local texturePath = DFRL:GetInfoOrCons("tex") .. "jewelry\\"
     local SLOT_NAMES = { "NeckSlot", "Finger0Slot", "Finger1Slot", "Trinket0Slot", "Trinket1Slot" }
@@ -40,6 +56,7 @@ DFRL:NewMod("Jewelry", 4, function()
     local hud = CreateFrame("Frame", "SurvivorsDragonUiJewelry", UIParent)
     hud:SetWidth(WIDTH)
     hud:SetHeight(HEIGHT)
+    hud:SetScale(defaultScale)
     hud:SetFrameStrata("HIGH")
     hud:EnableMouse(false)
     hud:Hide()
@@ -63,7 +80,7 @@ DFRL:NewMod("Jewelry", 4, function()
         local button = CreateFrame("Frame", nil, hud)
         button:SetWidth(ICON_SIZE)
         button:SetHeight(ICON_SIZE)
-        button:SetPoint("TOPLEFT", hud, "TOPLEFT", 54.5 + (index - 1) * 44, -30.5)
+        button:SetPoint("TOPLEFT", hud, "TOPLEFT", WIDTH / 2 - ICON_SIZE / 2 + (index - 3) * columnPitch, -30.5)
         button:EnableMouse(true)
         local slot = { name = name, button = button, strips = {} }
         -- Ordinary cropped texture strips leave real transparency outside the
@@ -99,15 +116,19 @@ DFRL:NewMod("Jewelry", 4, function()
         table.insert(slots, slot)
     end
 
-    -- Only gold rims remain in this texture; the space between them is clear.
+    -- Reuse one rim crop independently so socket spacing can match the buttons.
     local overlay = CreateFrame("Frame", nil, hud)
     overlay:SetAllPoints(hud)
     overlay:SetFrameLevel(hud:GetFrameLevel() + 3)
     overlay:EnableMouse(false)
-    local artwork = overlay:CreateTexture(nil, "OVERLAY")
-    artwork:SetTexture(texturePath .. "Frame.tga")
-    artwork:SetAllPoints(overlay)
-    artwork:SetTexCoord(0, WIDTH / 512, 0, HEIGHT / 128)
+    for _, slot in ipairs(slots) do
+        local rim = overlay:CreateTexture(nil, "OVERLAY")
+        rim:SetTexture(texturePath .. "Frame.tga")
+        rim:SetWidth(RIM_SIZE)
+        rim:SetHeight(RIM_SIZE)
+        rim:SetPoint("CENTER", slot.button, "CENTER", 0, 0)
+        rim:SetTexCoord(98 / 1024, 184 / 1024, 50 / 256, 136 / 256)
+    end
     local function ClearSlot(slot)
         if slot.texture then
             for _, strip in ipairs(slot.strips) do
@@ -217,14 +238,13 @@ DFRL:NewMod("Jewelry", 4, function()
         end
         hud:Show()
     end
-    local actionDefaults = DFRL.actionBarDefaults
-    local bottom = actionDefaults and actionDefaults.bottom + actionDefaults.height + actionDefaults.topInset + 12
-        or 117
-    -- Keep confirmed anchors/scales while tightening edit handles to the rims.
+    local artTop = actionDefaults.bottom + actionDefaults.height + actionDefaults.topInset
+    -- Position the visible rims, rather than the transparent anchor-frame edge.
+    local bottom = (artTop + BAR_GAP) / defaultScale - (HEIGHT - RIM_TOP - RIM_SIZE)
     local moveRegion = CreateFrame("Frame", nil, hud)
-    moveRegion:SetWidth(219)
-    moveRegion:SetHeight(43)
-    moveRegion:SetPoint("TOPLEFT", hud, "TOPLEFT", 49, -25)
+    moveRegion:SetWidth(rowWidth)
+    moveRegion:SetHeight(RIM_SIZE)
+    moveRegion:SetPoint("TOPLEFT", hud, "TOPLEFT", (WIDTH - rowWidth) / 2, -RIM_TOP)
     moveRegion:EnableMouse(false)
     DFRL.layout.Register("jewelryBar", hud, function()
         hud:ClearAllPoints()
