@@ -110,41 +110,178 @@ DFRL:NewMod("Jewelry", 4, function()
         end
         return scanner
     end
+    -- Native English item-effect templates, not item IDs or computed stats.
+    -- Catalog source and all compact forms: docs/JEWELRY-EFFECTS.md.
+    local EFFECT_RULES = {
+        { "Increases all damage you deal by {p}.", "+ Damage dealt: {p}" },
+        { "Reduces the cooldown of your spells by {p}.", "- {p} Cooldown" },
+        { "Increases your maximum health by {p}.", "+ Maximum health: {p}" },
+        { "Improves your chance to get a critical strike by {p}.", "+ Critical strike chance: {p}" },
+        { "Increases the damage of your critical strikes by {p}.", "+ Critical damage: {p}" },
+        { "Reduces all damage taken by {p}.", "- {p} Damage taken" },
+        { "Restores {v} health per second.", "+ Health regen: {v}/s" },
+        { "Increases your movement speed by {p}.", "+ Movement speed: {p}" },
+        { "Increases the area of effect of your spells by {p}.", "+ Spell area: {p}" },
+        { "Increases the range you pick up loot from by {p}.", "+ Loot pickup range: {p}" },
+        { "Increases experience gained by {p}.", "+ Experience gained: {p}" },
+        { "Increases gold found by {p}.", "+ Gold found: {p}" },
+        { "Increases your luck by {p}.", "+ Luck: {p}" },
+        { "Gives your spells a {p} chance to cast twice.", "+ Spell double-cast chance: {p}" },
+        { "Heals you for {p} of all damage you deal.", "+ Lifesteal: {p}" },
+        { "Each enemy you kill restores {v} health.", "+ Health on kill: {v}" },
+        { "Increases your weapon damage by {p}.", "+ Weapon damage: {p}" },
+        { "Increases the damage your pets deal by {p}.", "+ Pet damage: {p}" },
+        { "Increases damage dealt to crowd-controlled enemies by {p}.", "+ Damage vs crowd-controlled enemies: {p}" },
+        { "Increases damage dealt to elites and bosses by {p}.", "+ Damage vs elites / bosses: {p}" },
+        { "Increases damage dealt to enemies below 30% health by {p}.", "+ Damage vs enemies below 30% health: {p}" },
+        { "Increases damage dealt to afflicted enemies by {p}.", "+ Damage vs afflicted enemies: {p}" },
+        {
+            "Melee attackers take {p} of the damage they deal you.",
+            "Reflect to melee attackers: {p} of their damage to you",
+        },
+        { "Your damage, haste, shield and thorns buffs are {p} stronger.", "+ Buff power: {p}" },
+        { "Restores {p} of your maximum health per second.", "+ Health regen: {p} max health/s" },
+        {
+            "Increases all damage you deal by {v}% for every 10% damage reduction you have.",
+            "+ Damage: {v}% per 10% damage reduction",
+        },
+        {
+            "Each 1% of damage reduction past the cap increases your damage by {v}%.",
+            "+ Damage: {v}% per 1% damage reduction above cap",
+        },
+        { "Raises your damage reduction cap by {p}.", "+ Damage reduction cap: {p}" },
+        { "Increases all damage you deal by {p} while a shield holds.", "+ Damage while shielded: {p}" },
+        {
+            "Your damage over time spells tick {v}% faster: more ticks, and more damage, in the same time. {max}% at most.",
+            "+ DoT haste: {v}% (more ticks / damage; same duration; cap {max}%)",
+        },
+        {
+            "Returns you to life at half health when you die. Holds {n} lives at most.",
+            "Revive at half health; max {n} lives",
+        },
+        -- Native subjects include ability names, your hits and critical hits.
+        { "Increases the healing of {who} by {g}.", "+ {who} healing: {g}" },
+        { "Increases the absorb of {who} by {g}.", "+ {who} absorb: {g}" },
+        { "Increases the damage of {who} by {v}.", "+ {who} damage: {v}" },
+        { "Reduces the cooldown of {who} by {v}.", "- {who} cooldown: {v}" },
+        { "Increases the area of {who} by {v}.", "+ {who} area: {v}" },
+        { "Increases the duration of {who} by {v}.", "+ {who} duration: {v}" },
+        { "{who} deals an extra {v} of your maximum health.", "{who}: +{v} of your max health as damage" },
+        { "{who} deal an extra {v} of your maximum health.", "{who}: +{v} of your max health as damage" },
+        { "{who} strikes 1 more target.", "+ {who} targets: 1" },
+        { "{who} strikes {n} more targets.", "+ {who} targets: {n}" },
+        { "{who} strike 1 more target.", "+ {who} targets: 1" },
+        { "{who} strike {n} more targets.", "+ {who} targets: {n}" },
+        { "Increases how much {who} weakens enemies by {v}.", "+ {who} weakening: {v}" },
+        { "Increases the strength of {who} by {v}.", "+ {who} strength: {v}" },
+        { "{who} procs {v} more often.", "+ {who} proc rate: {v}" },
+        { "Increases the stun duration of {who} by {v}.", "+ {who} stun duration: {v}" },
+        -- Keep each legendary modifier's conditions, ranges and extra values.
+        { "{hits} leap to 1 more enemy for {frac}", "{hits}: chain +1 enemy at {frac} damage" },
+        { "{hits} leap to {n} more enemies for {frac}", "{hits}: chain +{n} enemies at {frac} damage" },
+        { "{chance} chance for {hits} to strike again for {frac}", "{hits}: {chance} chance to hit again for {frac}" },
+        { "{chance} chance to stun a melee attacker for {s} sec", "Melee attackers: {chance} stun chance for {s} sec" },
+        {
+            "A broken shield bursts for {frac} of what it absorbed on enemies within {radius} yd",
+            "Shield breaks: {frac} of absorbed damage to enemies within {radius} yd",
+        },
+        { "{hits} stun for {s} sec", "{hits}: stun {s} sec" },
+        { "{hits} root for {s} sec", "{hits}: root {s} sec" },
+        {
+            "{hits} leave enemies taking {v} more damage for {s} sec",
+            "{hits}: enemies take {v} more damage for {s} sec",
+        },
+        { "{hits} hinder enemies", "{hits}: hinder enemies" },
+        { "{hits} burn and bleed for {frac} more over {dur} sec", "{hits}: +{frac} burn and bleed over {dur} sec" },
+        { "{hits} splash {frac} on enemies within {radius} yd", "{hits}: splash {frac} to enemies in {radius} yd" },
+        {
+            "Enemies that die with {spell} on them explode for {frac} of their max health",
+            "On enemy death with {spell}: explode for {frac} of its max health",
+        },
+        {
+            "Enemies {spell} kills explode for {frac} of their max health",
+            "{spell} kills: explode for {frac} of enemy max health",
+        },
+        {
+            "Enemies you kill explode for {frac} of their max health",
+            "On kill: explode for {frac} of enemy max health",
+        },
+        { "{who} leaps to {n} enemies when its victim dies", "On victim death: {who} leaps to {n} enemies" },
+        { "A kill with {who} readies it again at once", "On {who} kill: ready again instantly" },
+        { "Every totem pulse heals you {frac} of max health", "Totem pulse: heal {frac} of max health" },
+        {
+            "A killing blow leaves you at {heal} health instead, once every {cd} sec",
+            "Fatal hit: survive at {heal} health (once per {cd} sec)",
+        },
+        {
+            "Enemies you kill during {spell} explode for {frac} of their max health",
+            "Kills during {spell}: explode for {frac} of enemy max health",
+        },
+        {
+            "{spell} explodes a second time for {frac} of its damage",
+            "{spell}: second explosion for {frac} of its damage",
+        },
+        {
+            "{spell} also shields you for {frac} of your max health",
+            "{spell}: also shield for {frac} of your max health",
+        },
+        {
+            "While {spell} heals you, {p} of the damage you deal heals you too",
+            "While {spell} heals you: lifesteal {p} of damage dealt",
+        },
+    }
+    local EFFECT_NUMBER = "(%d+[.,]?%d*)"
+    local EFFECT_VALUE = "(%d+[.,]?%d*%%?)"
+    local EFFECT_SUBJECT = "([%a][^%.!?;:%%]*)"
+    local EFFECT_FIELDS = {
+        p = "(%d+[.,]?%d*%%)",
+        v = EFFECT_VALUE,
+        g = EFFECT_VALUE,
+        n = "(%+?%d+)",
+        who = EFFECT_SUBJECT,
+        hits = EFFECT_SUBJECT,
+        spell = EFFECT_SUBJECT,
+        frac = "(%d+[.,]?%d*%%)",
+        chance = "(%d+[.,]?%d*%%)",
+        s = EFFECT_NUMBER,
+        radius = EFFECT_NUMBER,
+        dur = EFFECT_NUMBER,
+        heal = EFFECT_VALUE,
+        cd = EFFECT_NUMBER,
+        max = EFFECT_NUMBER,
+    }
+    local function EscapeEffectLiteral(text) return (string.gsub(text, "(%W)", "%%%1")) end
+    -- Compile only literal templates and bounded named fields, once per load.
+    -- A percent sign already in the template requires a bare numeric capture.
+    for _, rule in ipairs(EFFECT_RULES) do
+        local source = string.gsub(rule[1], "%.$", "")
+        local pattern, fields, cursor = "^", {}, 1
+        while true do
+            local first, last, field = string.find(source, "{(%w+)}", cursor)
+            if not first then break end
+            local capture = EFFECT_FIELDS[field]
+            if string.sub(source, last + 1, last + 1) == "%" then capture = EFFECT_NUMBER end
+            pattern = pattern .. EscapeEffectLiteral(string.sub(source, cursor, first - 1)) .. capture
+            table.insert(fields, field)
+            cursor = last + 1
+        end
+        rule[1] = pattern .. EscapeEffectLiteral(string.sub(source, cursor)) .. "$"
+        rule[3] = fields
+    end
     local function CompactEffect(sentence)
-        local _, _, percent = string.find(sentence, "^Increases your movement speed by (%d+[.,]?%d*)%%$")
-        if percent then return "+ Movement speed: " .. percent .. "%" end
-        _, _, percent = string.find(sentence, "^Reduces the cooldown of your spells by (%d+[.,]?%d*)%%$")
-        if percent then return "- " .. percent .. "% Cooldown" end
-        _, _, percent = string.find(sentence, "^Reduces all damage taken by (%d+[.,]?%d*)%%$")
-        if percent then return "- " .. percent .. "% Damage taken" end
-        _, _, percent = string.find(sentence, "^Increases your maximum health by (%d+[.,]?%d*)%%$")
-        if percent then return "+ Maximum health: " .. percent .. "%" end
-        _, _, percent = string.find(sentence, "^Improves your chance to get a critical strike by (%d+[.,]?%d*)%%$")
-        if percent then return "+ Critical strike chance: " .. percent .. "%" end
-        _, _, percent = string.find(sentence, "^Increases the damage of your critical strikes by (%d+[.,]?%d*)%%$")
-        if percent then return "+ Critical damage: " .. percent .. "%" end
-        _, _, percent = string.find(sentence, "^Increases the range you pick up loot from by (%d+[.,]?%d*)%%$")
-        if percent then return "+ Loot pickup range: " .. percent .. "%" end
-        _, _, percent = string.find(sentence, "^Increases gold found by (%d+[.,]?%d*)%%$")
-        if percent then return "+ Gold found: " .. percent .. "%" end
-        _, _, percent = string.find(sentence, "^Increases your luck by (%d+[.,]?%d*)%%$")
-        if percent then return "+ Luck: " .. percent .. "%" end
-        _, _, percent = string.find(sentence, "^Increases the area of effect of your spells by (%d+[.,]?%d*)%%$")
-        if percent then return "+ Spell area: " .. percent .. "%" end
-        _, _, percent = string.find(sentence, "^Increases all damage you deal by (%d+[.,]?%d*)%%$")
-        if percent then return "+ Damage dealt: " .. percent .. "%" end
-        _, _, percent =
-            string.find(sentence, "^Your damage, haste, shield and thorns buffs are (%d+[.,]?%d*)%% stronger$")
-        if percent then return "+ Buff power: " .. percent .. "%" end
-        local _, _, health = string.find(sentence, "^Restores (%d+[.,]?%d*) health per second$")
-        if health then return "+ Health regen: " .. health .. "/s" end
-        local _, _, ability, value = string.find(sentence, "^(%u[^%.!?;]*) strikes %+(%d+) more targets$")
-        if ability then return "+ " .. ability .. " targets: " .. value end
-        _, _, ability, value = string.find(sentence, "^Increases the damage of (%u[^%.!?;]*) by (%d+[.,]?%d*)%%$")
-        if ability then return "+ " .. ability .. " damage: " .. value .. "%" end
-        _, _, ability, value =
-            string.find(sentence, "^Increases the stun duration of (%u[^%.!?;]*) by (%d+[.,]?%d*)%%$")
-        if ability then return "+ " .. ability .. " stun duration: " .. value .. "%" end
+        for _, rule in ipairs(EFFECT_RULES) do
+            local matches = { string.find(sentence, rule[1]) }
+            if matches[1] then
+                local values = {}
+                for index, field in ipairs(rule[3]) do
+                    local value = matches[index + 2]
+                    -- The display supplies the additional-target plus sign.
+                    if field == "n" then value = string.gsub(value, "^%+", "") end
+                    values[field] = value
+                end
+                return (string.gsub(rule[2], "{(%w+)}", function(field) return values[field] end))
+            end
+        end
         return nil
     end
     local function FormatEffect(description)
@@ -154,8 +291,13 @@ DFRL:NewMod("Jewelry", 4, function()
         -- Only a marker supplied by the native description establishes a cap.
         -- Keep unknown descriptions intact, including their marker and wording.
         local core, capCount = string.gsub(sentence, " %(max%)$", "")
+        -- Native legendary effects can append a separate proc-rate ceiling.
+        -- Retain the whole suffix, including its count and time unit.
+        local first, _, rateLimit = string.find(core, "(, at most %d+ times a second)$")
+        if first then core = string.sub(core, 1, first - 1) end
+        core = string.gsub(core, "%.$", "")
         local formatted = CompactEffect(core)
-        if formatted then return formatted .. (capCount == 1 and " (max)" or "") end
+        if formatted then return formatted .. (rateLimit or "") .. (capCount == 1 and " (max)" or "") end
         return description
     end
     local function EffectDescription(text)
