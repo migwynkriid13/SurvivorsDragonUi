@@ -223,6 +223,7 @@ DFRL:NewMod("Jewelry", 4, function()
         if
             not inWorld
             or not attached
+            or not DFRL.display.Get("equippedJewelry")
             or type(UnitExists) ~= "function"
             or not UnitExists("player")
             or type(GetInventoryItemTexture) ~= "function"
@@ -249,6 +250,18 @@ DFRL:NewMod("Jewelry", 4, function()
         end
         hud:Show()
     end
+    local function UpdateDisplay()
+        local region = DFRL.actionBarMoveRegion
+        if region then
+            local top = actionDefaults.topInset
+            if DFRL.display.Get("equippedJewelry") then
+                top = math.max(top, actionDefaults.buttonWidth * 40 / 36)
+            end
+            region:SetPoint("TOPLEFT", DFRL.mainBar, "TOPLEFT", -actionDefaults.sideInset, top)
+        end
+        Refresh()
+        PaintCooldowns()
+    end
     function DFRL.SetJewelryEditing(active)
         editing = active
         if editing then
@@ -267,16 +280,8 @@ DFRL:NewMod("Jewelry", 4, function()
         overlay:SetFrameLevel(hud:GetFrameLevel() + 3)
         hud:ClearAllPoints()
         hud:SetPoint("TOP", mainBar, "TOP", 0, 46.5 + RIM_SIZE * 20 / 36)
-        local region = DFRL.actionBarMoveRegion
-        if region then
-            region:SetPoint(
-                "TOPLEFT", mainBar, "TOPLEFT", -actionDefaults.sideInset,
-                math.max(actionDefaults.topInset, actionDefaults.buttonWidth * 40 / 36)
-            )
-        end
         attached = true
-        Refresh()
-        PaintCooldowns()
+        UpdateDisplay()
     end
     if DFRL.mainBar then DFRL.AttachJewelry(DFRL.mainBar) end
     local controller = CreateFrame("Frame", nil, UIParent)
@@ -301,7 +306,7 @@ DFRL:NewMod("Jewelry", 4, function()
         end
     end)
     controller:SetScript("OnUpdate", function()
-        if not inWorld then return end
+        if not inWorld or not DFRL.display.Get("equippedJewelry") then return end
         elapsed = elapsed + arg1
         animationElapsed = animationElapsed + arg1
         if elapsed >= INTERVAL then
@@ -314,6 +319,6 @@ DFRL:NewMod("Jewelry", 4, function()
             PaintCooldowns()
         end
     end)
-    Refresh()
-    PaintCooldowns()
+    DFRL.display.Listen(UpdateDisplay)
+    UpdateDisplay()
 end)
