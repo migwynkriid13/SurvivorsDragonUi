@@ -200,7 +200,8 @@ DFRL:NewMod("Jewelry", 4, function()
         hud:Show()
     end
     local actionDefaults = DFRL.actionBarDefaults
-    local bottom = actionDefaults and actionDefaults.bottom + actionDefaults.height + actionDefaults.topInset + 12 or 117
+    local bottom = actionDefaults and actionDefaults.bottom + actionDefaults.height + actionDefaults.topInset + 12
+        or 117
     DFRL.layout.Register("jewelryBar", hud, function()
         hud:ClearAllPoints()
         hud:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, bottom)
