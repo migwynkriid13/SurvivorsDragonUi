@@ -88,6 +88,8 @@ The 64-by-32 destination contains two 30-by-29 cells from the 128-by-256
 
 The jewelry effects card reuses `border.tga` with fixed 12-unit corner cells and
 stretched straight edges, plus `divider.tga` as a subtle top accent. Its dark fill
+uses a three-unit inset, overlapping beneath the border's inner bevel rather
+than leaving the normal editor's six-unit inset around the smaller card. Fill
 and text are drawn in Lua through the same helpers. It hides the editor header
 and adds no texture, upstream code, font or runtime dependency. The existing
 editor keeps its 24-unit panel corners.

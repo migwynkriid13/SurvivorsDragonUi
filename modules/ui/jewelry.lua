@@ -151,6 +151,11 @@ DFRL:NewMod("Jewelry", 4, function()
             effectPanel:SetFrameStrata("TOOLTIP")
             if effectPanel.SetClampedToScreen then effectPanel:SetClampedToScreen(true) end
             effectPanel.editorHeader:Hide()
+            -- The 12-unit border's inner bevel ends near four units. Overlap
+            -- the fill beneath it instead of leaving the editor's six-unit gap.
+            effectPanel.editorFill:ClearAllPoints()
+            effectPanel.editorFill:SetPoint("TOPLEFT", effectPanel, "TOPLEFT", 3, -3)
+            effectPanel.editorFill:SetPoint("BOTTOMRIGHT", effectPanel, "BOTTOMRIGHT", -3, 3)
             local accent = DFRL.tools.EditorDivider(effectPanel, 272)
             accent:SetPoint("TOP", effectPanel, "TOP", 0, -9)
             effectText = effectPanel:CreateFontString(nil, "OVERLAY")
