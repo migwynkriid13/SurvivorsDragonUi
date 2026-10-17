@@ -411,15 +411,18 @@ DFRL:NewMod("Layout", 0, function()
         coordinates.visibility:SetChecked(IsHidden(selected))
         coordinates.refreshing = false
     end
+    local function ClearCoordinateFocus()
+        for _, field in ipairs({ "x", "y", "width", "height" }) do
+            coordinates[field]:ClearFocus()
+        end
+        coordinates.focused = nil
+    end
     SelectEntry = function(entry, activate)
         if not editing or not entry then return end
         selected = entry
         if coordinates then
             coordinates.dirty = false
-            coordinates.x:ClearFocus()
-            coordinates.y:ClearFocus()
-            coordinates.width:ClearFocus()
-            coordinates.height:ClearFocus()
+            ClearCoordinateFocus()
             coordinates.status:SetText("")
             RefreshCoordinates()
         end
@@ -460,10 +463,7 @@ DFRL:NewMod("Layout", 0, function()
         }
         draft[selected.key] = ReadGeometry(selected, position)
         layout.Place(selected.key)
-        coordinates.x:ClearFocus()
-        coordinates.y:ClearFocus()
-        coordinates.width:ClearFocus()
-        coordinates.height:ClearFocus()
+        ClearCoordinateFocus()
         coordinates.status:SetText("Applied. Confirm to save.")
         coordinates.dirty = false
         RefreshCoordinates()
@@ -582,6 +582,7 @@ DFRL:NewMod("Layout", 0, function()
         coordinates:SetScript("OnShow", function()
             if not coordinates.dirty and not coordinates.focused then RefreshCoordinates() end
         end)
+        coordinates:SetScript("OnHide", ClearCoordinateFocus)
         SelectEntry(selected or entries.playerFrame or order[1])
     end
 
