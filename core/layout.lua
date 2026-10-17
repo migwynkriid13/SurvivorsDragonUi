@@ -186,6 +186,7 @@ DFRL:NewMod("Layout", 0, function()
         entry.resizing, entry.resizePosition = nil, nil
         LockFrame(entry.frame)
         layout.Place(entry.key)
+        if capture and editing and coordinates and entry == selected then RefreshCoordinates() end
     end
 
     local function Cursor()
@@ -380,13 +381,18 @@ DFRL:NewMod("Layout", 0, function()
         return position.x * width + entry.frame:GetWidth() * ratio / 2 - width / 2,
             position.y * height - entry.frame:GetHeight() * ratio / 2 + height / 2
     end
+    local function SetCoordinateText(field, text)
+        -- Remember programmatic text before SetText, including delayed change events.
+        coordinates[field].layoutText = text
+        coordinates[field]:SetText(text)
+    end
     RefreshCoordinates = function()
         if not coordinates or not selected then return end
         coordinates.refreshing = true
         local x, y = CenterPosition(selected)
         coordinates.label:SetText(labels[selected.key] or selected.key)
-        coordinates.x:SetText(x and string.format("%.2f", x) or "")
-        coordinates.y:SetText(y and string.format("%.2f", y) or "")
+        SetCoordinateText("x", x and string.format("%.2f", x) or "")
+        SetCoordinateText("y", y and string.format("%.2f", y) or "")
         if not x then
             coordinates.unavailable = true
             coordinates.status:SetText("Frame position is not available yet.")
@@ -396,19 +402,21 @@ DFRL:NewMod("Layout", 0, function()
         end
         local dimensions = selected.options.resize == "dimensions"
         coordinates.sizeLabel:SetText(dimensions and "Width / Height (frame units)" or "Scale (%) - 40 to 300")
-        coordinates.width:SetText(
+        SetCoordinateText(
+            "width",
             string.format(
                 "%.2f",
                 dimensions and selected.frame:GetWidth() or LocalScale(selected.frame) / selected.defaultScale * 100
             )
         )
-        coordinates.height:SetText(string.format("%.2f", selected.frame:GetHeight()))
+        SetCoordinateText("height", string.format("%.2f", selected.frame:GetHeight()))
         if dimensions then
             coordinates.height:Show()
         else
             coordinates.height:Hide()
         end
         coordinates.visibility:SetChecked(IsHidden(selected))
+        coordinates.dirty = false
         coordinates.refreshing = false
     end
     local function ClearCoordinateFocus()
@@ -430,6 +438,7 @@ DFRL:NewMod("Layout", 0, function()
     end
     local function ApplyCoordinates()
         if not editing or not selected then return end
+        FinishDrag(activeDrag, true)
         local x = tonumber((string.gsub(coordinates.x:GetText(), ",", ".")))
         local y = tonumber((string.gsub(coordinates.y:GetText(), ",", ".")))
         local size = tonumber((string.gsub(coordinates.width:GetText(), ",", ".")))
@@ -443,7 +452,6 @@ DFRL:NewMod("Layout", 0, function()
             coordinates.status:SetText("Enter positive size values.")
             return
         end
-        FinishDrag(activeDrag, true)
         local width, height, uiScale = Viewport()
         if not width or not ReadPosition(selected.frame) then
             coordinates.status:SetText("Frame position is not available yet.")
@@ -506,7 +514,7 @@ DFRL:NewMod("Layout", 0, function()
                 if coordinates.focused == this then coordinates.focused = nil end
             end)
             box:SetScript("OnTextChanged", function()
-                if not coordinates.refreshing then coordinates.dirty = true end
+                if not coordinates.refreshing and this:GetText() ~= this.layoutText then coordinates.dirty = true end
             end)
             box:SetScript("OnEnterPressed", ApplyCoordinates)
             box:SetScript("OnEscapePressed", function() SelectEntry(selected) end)
@@ -604,11 +612,12 @@ DFRL:NewMod("Layout", 0, function()
     end
     local function CloseEditing(save, restore)
         if not editing then return end
+        -- Capture pointer geometry before deciding whether numeric input needs applying.
+        FinishDrag(activeDrag, save)
         if save and coordinates and coordinates.dirty and not ApplyCoordinates() then
             if showCoordinates then showCoordinates() end
             return
         end
-        FinishDrag(activeDrag, save)
         if save then _G.SurvivorsDragonUiLayout = draft end
         editing, draft = false, nil
         for _, entry in ipairs(order) do
