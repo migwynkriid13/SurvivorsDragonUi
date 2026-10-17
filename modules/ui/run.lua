@@ -556,8 +556,8 @@ DFRL:NewMod("RunTimers", 5, function()
         DisplayToggle(
             pages.hud,
             "hideNativeBuild",
-            "Hide game build rows",
-            "Hide the game's original weapon and jewelry rows.",
+            "Hide default jewelry / abilities",
+            "Off: show the game's original jewelry and ability rows.",
             -308
         )
         DisplayToggle(
