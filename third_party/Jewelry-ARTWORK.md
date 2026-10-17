@@ -1,6 +1,6 @@
 # Equipped jewelry artwork
 
-The selected thin-bezel attachment retains each equipped item icon and its gold circular rim, adding a thin socket arch that joins the existing action bar. The preview's extra inner/lower curved line is omitted. Empty circular openings are transparent; the formed socket body uses the original bar material inside the border and below its bends. There is no jewelry panel, permanent title, filigree or side ornament. Native item icons are read at runtime rather than bundled into this artwork.
+The selected thin-bezel attachment retains each equipped item icon and its gold circular rim, adding a thin socket arch that joins the existing action bar. The preview's extra inner/lower curved line is omitted. Socket artwork retains transparent circular openings; empty slots place original gray silhouettes and charcoal circles behind the gold rims. The formed socket body uses the original bar material inside the border and below its bends. There is no jewelry panel, permanent title, filigree or side ornament. Native item icons are read at runtime rather than bundled into this artwork.
 
 ## Gold rim source
 
@@ -26,8 +26,14 @@ Native item textures have nominal local size 32 by 32, centered in each rim at l
 
 `media/tex/jewelry/SocketRail.tga` is a 2048-by-256 uncompressed RGBA canvas. Its upper-left 1200-by-152 rectangle contains the complete rail, prepared at four pixels per UI unit for a nominal 300-by-38 display; the remaining pixels are clear. Runtime UVs are `0`, `1200 / 2048`, `0`, `152 / 256`. One bar-owned texture spans from six units outside each side of the bar, with its top 40 units above the button tops and bottom two units above them. The sockets and straight spans therefore share one sampling rectangle and anchor space. The existing bar backgrounds draw below the narrow replacement strip. The complete original backgrounds return when jewelry is unavailable or hidden. All seven button positions and button artwork are unchanged.
 
-The four used TGA files ship through the runtime manifest. Source BLPs, sample item icons and previews are excluded. Static image preparation does not establish packaged-client rendering; runtime appearance remains unverified.
+The seven used TGA files ship through the runtime manifest. Source BLPs, sample item icons and previews are excluded. Static image preparation does not establish packaged-client rendering; runtime appearance remains unverified.
 
 ## Detached silver outline
 
 The same preparation script also writes `media/tex/jewelry/SocketDetached.tga`, an uncompressed 256-by-256 RGBA canvas with a 160-by-160 occupied rectangle at its upper-left. A complete 20-unit-radius circle uses the same native border profile and 13.7-unit-radius transparent opening as the attached sockets. There are no feet or horizontal bar spans. Each of the five detached slots reuses this crop at 40 by 40 units at the native button reference. The gray texture sits behind the unchanged item icon and gold rim, preserving the silver-gray outline around the entire circle. The rail is restored to the original bar artwork while detached; neither the original action-bar source nor item artwork is modified. This fourth used TGA is included in the shared runtime manifest.
+
+## Original empty-slot silhouettes
+
+`scripts/prepare_jewelry_placeholders.py` draws three original geometric silhouettes: a chain and pointed pendant, a ring band with a small stone and a hanging circular medallion. They do not reuse the game's character-screen placeholders, item icons or third-party artwork. Gray shading distinguishes their forms without implying item rarity or effects. A subtle charcoal circular background fills each empty socket, with transparent outer corners. Existing gold rims and attached/detached silver artwork remain above and around the placeholder.
+
+The script uses Pillow to draw at four times the output resolution and downsample to 64-by-64 RGBA, writing uncompressed `EmptyNeck.tga`, `EmptyRing.tga` and `EmptyTrinket.tga` in `media/tex/jewelry/`. The full image maps to the existing 32-by-32 icon frame, independent of the equipped item's 5% zoom and cropped strips. Each ring/trinket pair reuses its matching file. These three textures join the four existing jewelry textures in the runtime manifest; the generator and optional artwork contact sheet are excluded from the package. The generator only prepares image geometry and never loads or executes addon code. An artwork preview does not establish in-game rendering.

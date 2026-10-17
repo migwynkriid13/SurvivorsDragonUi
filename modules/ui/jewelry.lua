@@ -6,6 +6,7 @@ using pixels from the existing HDActionBar.tga. The original bar texture is
 unchanged; only its narrow top strip switches while this jewelry row is visible.
 No extra inner or lower curved line is drawn beneath the gold circles.
 SocketDetached.tga retains the silver-gray circle borders in detached mode.
+EmptyNeck.tga, EmptyRing.tga and EmptyTrinket.tga are original gray silhouettes.
 Texture conversion does not change the underlying artwork's ownership.
 No upstream Lua is imported. Sources and preparation: third_party/Jewelry-ARTWORK.md.
 
@@ -59,6 +60,13 @@ DFRL:NewMod("Jewelry", 4, function()
     local ANIMATION_INTERVAL = 1 / 30
     local texturePath = DFRL:GetInfoOrCons("tex") .. "jewelry\\"
     local SLOT_NAMES = { "NeckSlot", "Finger0Slot", "Finger1Slot", "Trinket0Slot", "Trinket1Slot" }
+    local EMPTY_TEXTURES = {
+        "EmptyNeck.tga",
+        "EmptyRing.tga",
+        "EmptyRing.tga",
+        "EmptyTrinket.tga",
+        "EmptyTrinket.tga",
+    }
     local slots, slotsReady = {}, false
     local inWorld, editing, attached, elapsed, animationElapsed = true, false, false, 0, 0
     local hud = CreateFrame("Frame", "SurvivorsDragonUiJewelry", UIParent)
@@ -341,6 +349,11 @@ DFRL:NewMod("Jewelry", 4, function()
         button:SetPoint("TOPLEFT", hud, "TOPLEFT", WIDTH / 2 - ICON_SIZE / 2 + (index - 3) * columnPitch, -30.5)
         button:EnableMouse(true)
         local slot = { name = name, button = button, strips = {} }
+        local placeholder = button:CreateTexture(nil, "ARTWORK")
+        placeholder:SetTexture(texturePath .. EMPTY_TEXTURES[index])
+        placeholder:SetAllPoints(button)
+        placeholder:Hide()
+        slot.placeholder = placeholder
         local socket = hud:CreateTexture(nil, "BACKGROUND")
         socket:SetTexture(texturePath .. "SocketDetached.tga")
         socket:SetWidth(socketSize)
@@ -399,6 +412,7 @@ DFRL:NewMod("Jewelry", 4, function()
         rim:SetTexCoord(106 / 1024, 178 / 1024, 56 / 256, 128 / 256)
     end
     local function ClearSlot(slot)
+        slot.placeholder:Hide()
         if slot.texture then
             for _, strip in ipairs(slot.strips) do
                 strip:Hide()
@@ -500,6 +514,7 @@ DFRL:NewMod("Jewelry", 4, function()
         for _, slot in ipairs(slots) do
             local ok, texture = pcall(GetInventoryItemTexture, "player", slot.id)
             if ok and type(texture) == "string" and texture ~= "" then
+                slot.placeholder:Hide()
                 if slot.texture ~= texture then
                     for _, strip in ipairs(slot.strips) do
                         strip:SetTexture(texture)
@@ -511,6 +526,7 @@ DFRL:NewMod("Jewelry", 4, function()
                 if hoveredSlot == slot then ShowTooltip(slot) end
             else
                 ClearSlot(slot)
+                if ok and (texture == nil or texture == "") then slot.placeholder:Show() end
             end
         end
         if DFRL.display.Get("attachJewelry") then
