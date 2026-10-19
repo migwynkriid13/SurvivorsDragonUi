@@ -13,10 +13,22 @@ DFRL:NewMod("Cut-Out", 1, function()
 
     local function Reset(cutout)
         cutout.texture:Hide()
+        cutout.startFraction, cutout.widthFraction = nil, nil
         cutout.lastValue, cutout.lastMax = ReadValue(cutout)
         if cutout.lastMax and cutout.lastMax > 0 then
             cutout.lastValue = math.max(0, math.min(cutout.lastValue, cutout.lastMax))
         end
+    end
+
+    local function PlaceLoss(cutout)
+        if not cutout.startFraction or not cutout.widthFraction then return end
+        local width = cutout.bar:GetWidth()
+        if width <= 0 then return end
+        local texture = cutout.texture
+        texture:ClearAllPoints()
+        texture:SetPoint("TOPLEFT", cutout.bar, "TOPLEFT", width * cutout.startFraction, 0)
+        texture:SetPoint("BOTTOMLEFT", cutout.bar, "BOTTOMLEFT", width * cutout.startFraction, 0)
+        texture:SetWidth(width * cutout.widthFraction)
     end
 
     local function Animate()
@@ -54,14 +66,11 @@ DFRL:NewMod("Cut-Out", 1, function()
         if lost <= 0 then return end
         local width = cutout.bar:GetWidth()
         if width <= 0 then return end
-        local start = width * current / maximum
-        local segmentWidth = math.min(width - start, width * lost / maximum)
-        if segmentWidth <= 0 then return end
+        cutout.startFraction = current / maximum
+        cutout.widthFraction = math.min(1 - cutout.startFraction, lost / maximum)
+        if cutout.widthFraction <= 0 then return end
+        PlaceLoss(cutout)
         local texture = cutout.texture
-        texture:ClearAllPoints()
-        texture:SetPoint("TOPLEFT", cutout.bar, "TOPLEFT", start, 0)
-        texture:SetPoint("BOTTOMLEFT", cutout.bar, "BOTTOMLEFT", start, 0)
-        texture:SetWidth(segmentWidth)
         texture:SetAlpha(1)
         texture:Show()
         cutout.fadeStart = GetTime()
@@ -94,6 +103,7 @@ DFRL:NewMod("Cut-Out", 1, function()
                 table.insert(cutouts, cutout)
                 Reset(cutout)
                 HookScript(bar, "OnValueChanged", function() Update(cutout) end)
+                HookScript(bar, "OnSizeChanged", function() PlaceLoss(cutout) end)
             end
         end
         frame:UnregisterEvent("PLAYER_ENTERING_WORLD")

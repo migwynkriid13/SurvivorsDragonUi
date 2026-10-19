@@ -4,7 +4,7 @@ DFRL:NewMod("Player", 1, function()
     local tex = DFRL:GetInfoOrCons("tex") .. "unitframes\\"
     local font = "DEFAULT"
     local healthText
-    local primaryBar, primaryText, setPowerShown
+    local primaryBar, primaryText, setPowerShown, setPortraitOverlap
     local updateBorder
     local pulseTextures = {}
     local initialized = false
@@ -31,6 +31,15 @@ DFRL:NewMod("Player", 1, function()
         if not updateBorder then return end
         local round = DFRL.display.Get("roundPlayerPortrait")
         updateBorder(tex .. (round and "UI-TargetingFrameDF1.blp" or "UI-TargetingFrameDF.blp"))
+        local extension = setPortraitOverlap(round)
+        if healthText then healthText:SetPoint("CENTER", PlayerFrameHealthBar, "CENTER", extension / 2, 0) end
+        if PlayerFrame.name then
+            PlayerFrame.name:SetPoint("BOTTOMLEFT", PlayerFrameHealthBar, "TOPLEFT", 2 + extension, 4)
+        end
+        if primaryBar then
+            primaryBar:SetWidth(PlayerFrameHealthBar:GetWidth())
+            primaryText:SetPoint("CENTER", primaryBar, "CENTER", extension / 2, 0)
+        end
         for _, textures in ipairs(pulseTextures) do
             if round then
                 textures.original:Hide()
@@ -200,7 +209,7 @@ DFRL:NewMod("Player", 1, function()
         initialized = true
         PlayerFrame:SetScale(1)
         PlayerFrame:Show()
-        updateBorder, setPowerShown = T.CreateUnitBorder(
+        updateBorder, setPowerShown, setPortraitOverlap = T.CreateUnitBorder(
             PlayerFrame,
             PlayerFrameHealthBar,
             PlayerFrameTexture,
@@ -210,9 +219,9 @@ DFRL:NewMod("Player", 1, function()
         )
         HidePowerBar()
         primaryBar = CreateFrame("StatusBar", nil, PlayerFrame)
-        primaryBar:SetWidth(122)
+        primaryBar:SetWidth(PlayerFrameHealthBar:GetWidth())
         primaryBar:SetHeight(9)
-        primaryBar:SetPoint("TOPLEFT", PlayerFrame, "TOPLEFT", 104, -54)
+        primaryBar:SetPoint("TOPLEFT", PlayerFrameHealthBar, "TOPLEFT", 0, -20)
         primaryBar:SetFrameLevel(PlayerFrameHealthBar:GetFrameLevel())
         primaryBar:SetStatusBarTexture(tex .. "UI-HUD-UnitFrame-Player-PortraitOn-Bar-Mana-Status.tga")
         primaryBar:SetMinMaxValues(0, 1)

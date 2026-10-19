@@ -89,10 +89,12 @@ DFRL:NewMod("AnimatedPortraits", 2, function()
             return
         end
         entry.supported = true
+        -- A late player-border initialization can raise the still after this
+        -- copy was created. The border may align its level without rebinding it.
+        owner.sduiPortraitModel = model
 
-        -- The player's original gold sheet still belongs to PlayerFrame, unlike
-        -- the raised target/target-of-target borders. Lift that sheet above the
-        -- model without changing its artwork, anchors, dimensions or hit area.
+        -- If the player's border has not initialized yet, keep its stock gold
+        -- sheet above this copy. A later border build aligns both at its level.
         if unit == "player" and PlayerFrameTexture and PlayerFrameTexture:GetParent() == owner then
             local foreground = CreateFrame("Frame", nil, owner)
             foreground:SetAllPoints(owner)
