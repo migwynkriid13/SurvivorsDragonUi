@@ -497,7 +497,7 @@ DFRL:NewMod("RunTimers", 5, function()
         end
         local hudOptionWidth = 0
         for _, entry in ipairs(hudOptions) do
-            hudOptionWidth = math.max(hudOptionWidth, TextWidth(entry[2]) + 36, TextWidth(entry[3]) + 36)
+            hudOptionWidth = math.max(hudOptionWidth, TextWidth(entry[2]) + 36, TextWidth(entry[3]) / 2 + 36)
         end
         local outlineWidth = 0
         for _, entry in ipairs(fontOutlines) do
@@ -509,7 +509,7 @@ DFRL:NewMod("RunTimers", 5, function()
             tabWidth * table.getn(tabs) + gap * (table.getn(tabs) - 1),
             modeWidth * 3 + gap * 2,
             filterWidth * 2 + gap,
-            hudOptionWidth + 24,
+            hudOptionWidth * 2 + gap + 24,
             TextWidth("SCT size") + gap + 136,
             labelWidth + gap + dropdownWidth,
             labelWidth + gap + outlineWidth * 3 + gap * 2,
@@ -592,21 +592,34 @@ DFRL:NewMod("RunTimers", 5, function()
         hudScroll:SetPoint("TOPLEFT", pages.hud, "TOPLEFT", 0, 0)
         hudScroll:SetPoint("BOTTOMRIGHT", pages.hud, "BOTTOMRIGHT", -24, 0)
         local hudWidth = contentWidth - 24
+        local hudColumnWidth, hudRowHeight = (hudWidth - gap) / 2, 60
         local hud = CreateFrame("Frame", nil, hudScroll)
         hud:SetWidth(hudWidth)
-        hud:SetHeight(table.getn(hudOptions) * 44)
+        hud:SetHeight(math.ceil(table.getn(hudOptions) / 2) * hudRowHeight)
         hudScroll:SetScrollChild(hud)
         local function ScrollHud(direction)
             local slider = _G.SurvivorsDragonUiHudOptionsScrollScrollBar
             if not slider then return end
             local low, high = slider:GetMinMaxValues()
-            local value = slider:GetValue() - (direction or arg1 or 0) * 44
+            local value = slider:GetValue() - (direction or arg1 or 0) * hudRowHeight
             slider:SetValue(math.max(low, math.min(high, value)))
         end
         hudScroll:EnableMouseWheel(true)
         hudScroll:SetScript("OnMouseWheel", ScrollHud)
         for index, entry in ipairs(hudOptions) do
-            local control = DisplayToggle(hud, entry[1], entry[2], entry[3], -(index - 1) * 44, hudWidth)
+            local row = math.floor((index - 1) / 2)
+            local control = DisplayToggle(hud, entry[1], entry[2], entry[3], -row * hudRowHeight, hudColumnWidth)
+            control:ClearAllPoints()
+            control:SetPoint(
+                "TOPLEFT",
+                hud,
+                "TOPLEFT",
+                math.mod(index - 1, 2) * (hudColumnWidth + gap),
+                -row * hudRowHeight
+            )
+            control:SetHeight(hudRowHeight)
+            control.description:SetHeight(28)
+            control.description:SetJustifyV("TOP")
             control:EnableMouseWheel(true)
             control:SetScript("OnMouseWheel", ScrollHud)
         end

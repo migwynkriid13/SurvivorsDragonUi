@@ -1,5 +1,9 @@
 # Official addon API integration — 2026-10-14
 
+## Two-column HUD options — 2026-10-19
+
+The HUD tab places its existing eleven controls left to right in two columns and six 60-unit rows. Each description has two lines below its label. Dialog sizing measures translated labels across all supported languages and allows descriptions to wrap instead of reserving their full single-line width in both columns. The existing scroll frame and mouse-wheel handling remain available, with scrolling stepping by one paired row. The shared display controls, jewelry dependencies, live preview, Confirm, Cancel and reset paths remain unchanged. No new setting, SavedVariable or asset is added. No local checks or addon/game execution were run; packaged-game appearance remains unverified.
+
 ## Disable the talent-button reminder pulse — 2026-10-19
 
 The user requested a steady Talents (N) micro-menu icon. The native [talent event handler](https://github.com/MOUZU/Blizzard-WoW-Interface/blob/master/1.12.1/FrameXML/MainMenuBarMicroButtons.lua#L109-L119) starts its level-up reminder through `SetButtonPulse`. The native [pulse helpers](https://github.com/MOUZU/Blizzard-WoW-Interface/blob/master/1.12.1/FrameXML/UIParent.lua#L1279-L1318) animate a locked highlight and provide `ButtonPulse_StopPulse` to remove an active reminder.
