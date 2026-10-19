@@ -716,13 +716,14 @@ DFRL:NewMod("Layout", 0, function()
         local width, height, scale = Viewport()
         if not width then return end
         if
-            lastWidth
-            and (
-                not T.NearlyEqual(width, lastWidth)
-                or not T.NearlyEqual(height, lastHeight)
-                or not T.NearlyEqual(scale, lastScale)
-            )
+            not lastWidth
+            or not T.NearlyEqual(width, lastWidth)
+            or not T.NearlyEqual(height, lastHeight)
+            or not T.NearlyEqual(scale, lastScale)
         then
+            -- The client applies its saved UI scale after ADDON_LOADED. Rebase
+            -- defaults on the first world update too, before using positions
+            -- captured during module initialization at the earlier scale.
             FinishDrag(activeDrag, true)
             RestoreDefaults()
         end

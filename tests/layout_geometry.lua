@@ -427,5 +427,130 @@ layout.Reset()
 local x, y = actualCenter(subject)
 equal(x, 0, "reset actual center x")
 equal(y, 55 + 36 / 2 - screenHeight / UIParent.scale / 2, "reset bottom anchor actual center y")
+-- The native client loads addons before applying its saved UIParent scale.
+-- Each fresh VM must therefore rebase addon defaults before its first update.
+-- A same-VM scale change after an earlier update does not cover this ordering.
+local originalGetEnv, originalNewMod = DFRL.GetEnv, DFRL.NewMod
+local function FreshBoot(saved)
+    all, controls, modules = {}, {}, {}
+    screenWidth, screenHeight = 1365.3333333333333, 768
+    UIParent = CreateFrame("Frame", "UIParent")
+    UIParent:SetScale(1)
+    DFRL = {
+        env = {},
+        tools = tools,
+        GetEnv = originalGetEnv,
+        NewMod = originalNewMod,
+        locale = { Bind = function() end, Text = function(text) return text end },
+    }
+    setmetatable(DFRL.env, { __index = globals })
+    dofile(arg[2] or (root .. "core/layout.lua"))
+    setfenv(modules.Layout, DFRL:GetEnv())
+    modules.Layout()
+    local bootLayout = DFRL.layout
+    local definitions = {
+        { key = "runTimer", width = 296, height = 31, point = "TOP", relative = "TOP", x = 0, y = -30 },
+        { key = "chat", width = 520, height = 340, point = "BOTTOMLEFT", relative = "BOTTOMLEFT", x = 20, y = 40 },
+        {
+            key = "microMenu",
+            width = 66,
+            height = 30,
+            scale = 0.85,
+            point = "BOTTOMRIGHT",
+            relative = "BOTTOMRIGHT",
+            x = -15,
+            y = 15,
+        },
+        { key = "minimap", width = 180, height = 180, point = "TOPRIGHT", relative = "TOPRIGHT", x = -8, y = -32 },
+        { key = "cacheWaypoint", width = 190, height = 46, point = "CENTER", relative = "BOTTOM", x = -253, y = 72.5 },
+        {
+            key = "guardianWaypoint",
+            width = 190,
+            height = 46,
+            point = "CENTER",
+            relative = "BOTTOM",
+            x = 253,
+            y = 72.5,
+        },
+    }
+    local frames = {}
+    for _, definition in ipairs(definitions) do
+        local defaults = definition
+        local frame = CreateFrame("Frame", defaults.key, UIParent)
+        frame:SetWidth(defaults.width)
+        frame:SetHeight(defaults.height)
+        frame:SetScale(defaults.scale or 1)
+        bootLayout.Register(defaults.key, frame, function(owner)
+            owner:ClearAllPoints()
+            owner:SetPoint(defaults.point, UIParent, defaults.relative, defaults.x, defaults.y)
+        end)
+        frames[defaults.key] = frame
+    end
+    local confirmed = CreateFrame("Frame", "ConfirmedBootGroup", UIParent)
+    confirmed:SetWidth(200)
+    confirmed:SetHeight(60)
+    bootLayout.Register("playerFrame", confirmed, function(frame)
+        frame:ClearAllPoints()
+        frame:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 10, -10)
+    end)
+    SurvivorsDragonUiLayout = saved or {}
+    bootLayout.Ready()
+    local bootController
+    for _, object in ipairs(all) do
+        if object:GetScript("OnUpdate") and object:GetScript("OnEvent") then bootController = object end
+    end
+    -- Match native lifecycle.rs: saved scale is seated after ADDON_LOADED and
+    -- VARIABLES_LOADED, before PLAYER_LOGIN/ENTERING and any rendered update.
+    UIParent:SetScale(0.9)
+    event = "PLAYER_ENTERING_WORLD"
+    invoke(bootController, "OnEvent")
+    invoke(bootController, "OnUpdate", 0.1)
+    return bootLayout, bootController, frames, confirmed
+end
+local function ExpectBootDefaults(frames, name)
+    local u = UIParent:GetEffectiveScale()
+    local expected = {
+        runTimer = { screenWidth / 2 - 148 * u, screenHeight - (30 + 31) * u, 296 * u, 31 * u },
+        chat = { 20 * u, 40 * u, 520 * u, 340 * u },
+        microMenu = { screenWidth - (15 + 66) * 0.85 * u, 15 * 0.85 * u, 66 * 0.85 * u, 30 * 0.85 * u },
+        minimap = { screenWidth - (8 + 180) * u, screenHeight - (32 + 180) * u, 180 * u, 180 * u },
+        cacheWaypoint = { screenWidth / 2 - (253 + 95) * u, (72.5 - 23) * u, 190 * u, 46 * u },
+        guardianWaypoint = { screenWidth / 2 + (253 - 95) * u, (72.5 - 23) * u, 190 * u, 46 * u },
+    }
+    for key, bounds in pairs(expected) do
+        local left, bottom, width, height = rect(frames[key])
+        equal(left, bounds[1], name .. " " .. key .. " physical left")
+        equal(bottom, bounds[2], name .. " " .. key .. " physical bottom")
+        equal(width, bounds[3], name .. " " .. key .. " physical width")
+        equal(height, bounds[4], name .. " " .. key .. " physical height")
+    end
+end
+local confirmedRecord = { x = 0.22, y = -0.14, scale = 1.5 }
+local bootSaved = { playerFrame = confirmedRecord }
+local bootLayout, bootController, bootFrames, confirmedFrame = FreshBoot(bootSaved)
+ExpectBootDefaults(bootFrames, "first update after native scale")
+local confirmedLeft, confirmedBottom, _, confirmedHeight = rect(confirmedFrame)
+equal(confirmedLeft, 0.22 * screenWidth * 0.9, "boot retains confirmed legacy normalized x")
+equal(
+    confirmedBottom + confirmedHeight,
+    screenHeight - 0.14 * screenHeight * 0.9,
+    "boot retains confirmed legacy normalized y"
+)
+equal(confirmedFrame:GetScale(), 1.5, "boot retains confirmed group scale")
+equal(SurvivorsDragonUiLayout.playerFrame, confirmedRecord, "boot does not replace confirmed geometry record")
+-- The immediate reset works in the settled VM; the next fresh VM must agree.
+bootLayout.Reset()
+ExpectBootDefaults(bootFrames, "Addon defaults in settled VM")
+equal(SurvivorsDragonUiLayout.playerFrame, nil, "Addon defaults clears confirmed geometry immediately")
+event = "PLAYER_LEAVING_WORLD"
+invoke(bootController, "OnEvent")
+event = "PLAYER_ENTERING_WORLD"
+invoke(bootController, "OnEvent")
+invoke(bootController, "OnUpdate", 0.1)
+ExpectBootDefaults(bootFrames, "same VM world re-entry after reset")
+local resetSaved = SurvivorsDragonUiLayout
+local _, _, nextBootFrames = FreshBoot(resetSaved)
+ExpectBootDefaults(nextBootFrames, "fresh VM world re-entry after reset")
+equal(SurvivorsDragonUiLayout, resetSaved, "fresh boot retains saved reset table")
 print("native geometry passed=" .. passed .. " failed=" .. failed)
 if failed > 0 then os.exit(1) end

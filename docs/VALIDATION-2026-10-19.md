@@ -14,13 +14,19 @@ Subsequent action-bar and chat screenshots exposed a gap in the first geometry a
 
 The corrected source-calibrated fixture reproduces the old outline at exactly 90% of the artwork width under UI scale 0.9: 252.72 versus 280.8. The edge-based local-size helper fixes the outline, resize geometry, numeric screen centers and dialog width clipping. Existing saved-position normalization is preserved so confirmed geometry does not shift or require a reset.
 
-The committed `tests/layout_geometry.lua` passes all 73 assertions; the prior layout fails 41 of the same 73. It covers four UI scales crossed with four group scales, explicit and anchored dimensions, chat footer bounds, numeric centers, uniform/dimensional corner resizing, Cancel/Reset and already-confirmed positions. This adapter checks native source examples explicitly rather than treating every size getter alike.
+The first 73 assertions in `tests/layout_geometry.lua` pass; the prior layout fails 41 of those 73. It covers four UI scales crossed with four group scales, explicit and anchored dimensions, chat footer bounds, numeric centers, uniform/dimensional corner resizing, Cancel/Reset and already-confirmed positions. This adapter checks native source examples explicitly rather than treating every size getter alike.
 
 With a stock Lua 5.0 interpreter, the focused regression runs without starting the game:
 
 ```sh
 lua tests/layout_geometry.lua .
 ```
+
+## Follow-up: defaults after a fresh run
+
+The owner then reported Addon defaults shifting the run timer, chat, micro menu, minimap and cache/guardian guides left/up after the next run, without making further edits. The native save file correctly contained empty layout geometry and cleared display/timer-font preferences. Source inspection found that native startup applies UI scale after addon initialization; Layout Ready had captured defaults earlier, and its first update skipped viewport recovery because no previous sample existed.
+
+The first valid layout update now refreshes default anchors in the current viewport before applying existing geometry. The committed fixture models the native ordering explicitly: initialize at scale 1, apply scale 0.9 before the first world update, then reset, leave/re-enter and create another fresh session with the saved reset. Its expanded 175 assertions pass; the immediately preceding layout fails 18 startup assertions. Confirmed record identity, normalized coordinates and group scale are preserved. The earlier passing same-session transition checks did not exercise this fresh-session ordering.
 
 ## Static and package checks
 
@@ -35,13 +41,13 @@ The machine's default Lua 5.5 is unsuitable for the client checks, and its insta
 
 ## Behavior checks
 
-All eleven separate harness runs pass. The five suites with explicit counters total 400 passing assertions; the other runs exercise boot and HUD scenarios. Each loads the actual addon modules, using small native-API/widget adapters where required:
+All eleven separate harness runs pass. The five suites with explicit counters total 502 passing assertions; the other runs exercise boot and HUD scenarios. Each loads the actual addon modules, using small native-API/widget adapters where required:
 
 - File-load smoke: all 40 shipped Lua files load with native `_G` absent and the old `DEFAULT` alias rejected; 33 unique modules register in the dependency order. Native font fallback succeeds without adding a native `_G`. This smoke check registers modules without running all their initializers.
 - Font initializer: 62 assertions cover both supported/rejected `DEFAULT` clients, native-face fallback, stale `GetObjectType` and broken `GetFont` candidates, zero-size global fonts, invalid-size fallback and private `_G` isolation.
 - Formatter and display: 197 assertions cover requested ability, skill, level, decimal stat, loot, talent and announcement rules, all 13 languages, raw fallback, and display normalization/draft/confirm/reset behavior.
 - Layout lifecycle: 41 assertions cover fractional and decimal-comma coordinates, four viewport/UI-scale combinations including 1080p, 1440p and 4K, Apply versus Confirm, invalid input, discard, world leave, reset and hidden targets. The geometry adapter supplies independent WoW-style coordinate conversions.
-- Native geometry: 73 assertions check the mixed size contract, action/chat outlines and preserved confirmed positions as described above.
+- Native geometry: 175 assertions check the mixed size contract, action/chat outlines, preserved confirmed positions and late UI-scale application across fresh sessions as described above.
 - Chat integration: 27 assertions cover level/stat coalescing, standalone timeout and message order, insert direction, player speech, NPC yells, suppression, untouched combat-log formatting, protected-call raw fallback, wheel-only history, cross-frame capture deduplication, same-frame repeated calls and a fresh `/copy` snapshot.
 - Run HUD: clock/tally initialization, zero-valued gold/cache, encounter pool retirement/reuse, native takeover/restoration, world leave and reacquisition.
 - Schedule: complete due/up/dead lists, rejection of incomplete/duplicate/mismatched-final/unknown-state lists, skull/glow/check behavior, time-limit hiding/restoration and unused-marker cleanup.
