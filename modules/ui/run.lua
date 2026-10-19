@@ -449,6 +449,20 @@ DFRL:NewMod("RunTimers", 5, function()
             { key = "sctPeriodicDamage", label = "Damage over time" },
             { key = "sctReflectedDamage", label = "Reflected damage" },
             { key = "sctMisses", label = "Misses / avoidance" },
+            { key = "sctClassColors", label = "Class-colored damage" },
+        }
+        local hudOptions = {
+            { "classHealth", "Class-colored health", "Use your vanilla class color for player health." },
+            { "classResources", "Class resources", "Show power inside the player frame." },
+            { "roundPlayerPortrait", "Round player portrait", "Use the target's circular border without the pointed corner." },
+            { "flipBuffs", "Flip buff layout", "Grow left to right, with timers above the icons." },
+            { "cooldownNumbers", "Cooldown numbers", "Show countdowns on ability buttons." },
+            { "bossDebuffs", "Boss debuffs", "Effects on boss and guardian health bars." },
+            { "cacheGuidance", "Cache guidance", "Show the cache direction and distance." },
+            { "guardianGuidance", "Guardian guidance", "Show the guardian lair direction and distance." },
+            { "equippedJewelry", "Equipped jewelry", "Show five equipped items attached to the action bar." },
+            { "hideNativeBuild", "Hide default jewelry / abilities", "Off: show the game's original jewelry and ability rows." },
+            { "attachJewelry", "Attach jewelry to action bar", "Off: move jewelry separately, keeping the silver rims." },
         }
         for _, entry in ipairs(fontFaces) do
             dropdownWidth = math.max(dropdownWidth, TextWidth(entry.label) + 36)
@@ -463,6 +477,10 @@ DFRL:NewMod("RunTimers", 5, function()
         for _, entry in ipairs(combatFilters) do
             filterWidth = math.max(filterWidth, TextWidth(entry.label) + 36)
         end
+        local hudOptionWidth = 0
+        for _, entry in ipairs(hudOptions) do
+            hudOptionWidth = math.max(hudOptionWidth, TextWidth(entry[2]) + 36, TextWidth(entry[3]) + 36)
+        end
         local outlineWidth = 0
         for _, entry in ipairs(fontOutlines) do
             outlineWidth = math.max(outlineWidth, TextWidth(entry.label) + 24)
@@ -473,6 +491,7 @@ DFRL:NewMod("RunTimers", 5, function()
             tabWidth * table.getn(tabs) + gap * (table.getn(tabs) - 1),
             modeWidth * 3 + gap * 2,
             filterWidth * 2 + gap,
+            hudOptionWidth + 24,
             labelWidth + gap + dropdownWidth,
             labelWidth + gap + outlineWidth * 3 + gap * 2,
             defaultsWidth * 2 + 140 + gap * 4,
@@ -537,56 +556,42 @@ DFRL:NewMod("RunTimers", 5, function()
 
         DFRL.layout.CreateControls(pages.layout, contentWidth, function() SelectPage("layout") end)
 
-        local function DisplayToggle(parent, key, label, description, y)
+        local function DisplayToggle(parent, key, label, description, y, rowWidth)
             local control = T.CreateEditorToggle(
                 parent,
                 label,
                 description,
-                contentWidth,
+                rowWidth or contentWidth,
                 function(value) DFRL.display.Set(key, value) end
             )
             control:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, y)
             displayControls[key] = control
+            return control
         end
-        DisplayToggle(
-            pages.hud,
-            "classHealth",
-            "Class-colored health",
-            "Use your vanilla class color for player health.",
-            0
-        )
-        DisplayToggle(pages.hud, "classResources", "Class resources", "Show power inside the player frame.", -44)
-        DisplayToggle(pages.hud, "cooldownNumbers", "Cooldown numbers", "Show countdowns on ability buttons.", -88)
-        DisplayToggle(pages.hud, "bossDebuffs", "Boss debuffs", "Effects on boss and guardian health bars.", -132)
-        DisplayToggle(pages.hud, "cacheGuidance", "Cache guidance", "Show the cache direction and distance.", -176)
-        DisplayToggle(
-            pages.hud,
-            "guardianGuidance",
-            "Guardian guidance",
-            "Show the guardian lair direction and distance.",
-            -220
-        )
-        DisplayToggle(
-            pages.hud,
-            "equippedJewelry",
-            "Equipped jewelry",
-            "Show five equipped items attached to the action bar.",
-            -264
-        )
-        DisplayToggle(
-            pages.hud,
-            "hideNativeBuild",
-            "Hide default jewelry / abilities",
-            "Off: show the game's original jewelry and ability rows.",
-            -308
-        )
-        DisplayToggle(
-            pages.hud,
-            "attachJewelry",
-            "Attach jewelry to action bar",
-            "Off: move jewelry separately, keeping the silver rims.",
-            -352
-        )
+        local hudScroll =
+            CreateFrame("ScrollFrame", "SurvivorsDragonUiHudOptionsScroll", pages.hud, "UIPanelScrollFrameTemplate")
+        hudScroll:SetPoint("TOPLEFT", pages.hud, "TOPLEFT", 0, 0)
+        hudScroll:SetPoint("BOTTOMRIGHT", pages.hud, "BOTTOMRIGHT", -24, 0)
+        local hudWidth = contentWidth - 24
+        local hud = CreateFrame("Frame", nil, hudScroll)
+        hud:SetWidth(hudWidth)
+        hud:SetHeight(table.getn(hudOptions) * 44)
+        hudScroll:SetScrollChild(hud)
+        local function ScrollHud(direction)
+            local slider = _G.SurvivorsDragonUiHudOptionsScrollScrollBar
+            if not slider then return end
+            local low, high = slider:GetMinMaxValues()
+            local value = slider:GetValue() - (direction or arg1 or 0) * 44
+            slider:SetValue(math.max(low, math.min(high, value)))
+        end
+        hudScroll:EnableMouseWheel(true)
+        hudScroll:SetScript("OnMouseWheel", ScrollHud)
+        for index, entry in ipairs(hudOptions) do
+            local control = DisplayToggle(hud, entry[1], entry[2], entry[3], -(index - 1) * 44, hudWidth)
+            control:EnableMouseWheel(true)
+            control:SetScript("OnMouseWheel", ScrollHud)
+        end
+        if hudScroll.UpdateScrollChildRect then hudScroll:UpdateScrollChildRect() end
 
         local combat = pages.combat
         local heading = FontEditorLabel(combat, "Outgoing damage", 0, 0, 12)
@@ -619,7 +624,7 @@ DFRL:NewMod("RunTimers", 5, function()
         )
         incomingControl:SetPoint("TOPLEFT", combat, "TOPLEFT", 0, -120)
         DisplayToggle(combat, "damageIcons", "Damage icons", "Spell icons beside custom damage numbers.", -172)
-        heading = FontEditorLabel(combat, "Show in custom outgoing text", 0, -232, 12)
+        heading = FontEditorLabel(combat, "Custom outgoing text", 0, -232, 12)
         heading:SetTextColor(0.94, 0.79, 0.47)
         local filterSize = (contentWidth - gap) / 2
         for index, entry in ipairs(combatFilters) do

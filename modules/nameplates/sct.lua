@@ -191,6 +191,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         text.holder:ClearAllPoints()
         text.spell, text.damageType, text.iconTexture = nil, nil, nil
         text.kind = nil
+        text.color = nil
         table.insert(textPool, text)
     end
 
@@ -794,16 +795,27 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         end
     end
 
-    DFRL.display.Listen(function()
-        for index = table.getn(activeTexts), 1, -1 do
-            if not ShouldShowText(activeTexts[index]) then ReleaseText(table.remove(activeTexts, index)) end
+    local function UpdateTextColor(text)
+        local color = text.color or DAMAGE_COLORS.normal
+        if text.kind == "damage" and DFRL.display.Get("sctClassColors") then
+            color = T.GetPlayerClassColor() or color
         end
+        text.label:SetTextColor(color[1], color[2], color[3])
+    end
+
+    DFRL.display.Listen(function()
         local enabled = DFRL.display.Get("damageIcons")
-        if damageIcons == enabled then return end
+        local iconsChanged = damageIcons ~= enabled
         damageIcons = enabled
-        if damageIcons and CustomEnabled() then RebuildSpellTextures() end
-        for _, text in ipairs(activeTexts) do
-            UpdateIcon(text)
+        if iconsChanged and damageIcons and CustomEnabled() then RebuildSpellTextures() end
+        for index = table.getn(activeTexts), 1, -1 do
+            local text = activeTexts[index]
+            if not ShouldShowText(text) then
+                ReleaseText(table.remove(activeTexts, index))
+            else
+                UpdateTextColor(text)
+                if iconsChanged then UpdateIcon(text) end
+            end
         end
     end)
 
@@ -898,14 +910,14 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         text.launch = math.random(105, 130)
         text.gravity = text.launch + 65
         arcDirection = -arcDirection
-        local color = info.color or DAMAGE_COLORS.normal
         local displayText = tostring(value)
         if info.kind == "miss" then displayText = DFRL.locale.CombatText(displayText) end
         text.label:SetText(displayText)
-        text.label:SetTextColor(color[1], color[2], color[3])
         text.label:Show()
         text.spell, text.damageType, text.iconTexture = info.spell, info.damageType, info.iconTexture
         text.kind = info.kind
+        text.color = info.color
+        UpdateTextColor(text)
         UpdateIcon(text)
         local scale = text.sizeScale * (text.impact and 0.5 or 1)
         if text.scale ~= scale then
@@ -1141,23 +1153,6 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         NotifySettings()
     end
 
-    local function SelectMode(mode)
-        if not IsMode(mode) then return end
-        if settingsDraft then
-            -- An explicit slash command commits its own choice and supersedes
-            -- pending mode/outgoing rollback without touching incoming preview.
-            settingsDraft.mode, settingsDraft.damage = nil, nil
-        end
-        sctMode = mode
-        _G.SurvivorsDragonUiSctMode = mode
-        if mode ~= "default" then
-            -- Mode choices affect only outgoing text. The independent incoming
-            -- control is the only editor action that changes SHOW_COMBAT_TEXT.
-            WriteNativeDamage("0")
-        end
-        SyncGameSettings(true)
-    end
-
     function sct.GetMode() return ActiveMode() end
     function sct.GetIncoming() return ReadIncoming() == "1" end
     function sct.BeginEdit()
@@ -1194,30 +1189,6 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     end
     function sct.Listen(callback)
         if type(callback) == "function" then table.insert(settingsListeners, callback) end
-    end
-
-    -- Module initialization uses DFRL's private environment; slash aliases
-    -- must be registered in the real global table for the stock chat parser.
-    _G.SLASH_DRAGONSURVIVORSSCT1 = "/sct"
-    _G.SlashCmdList = _G.SlashCmdList or {}
-    _G.SlashCmdList["DRAGONSURVIVORSSCT"] = function(message)
-        local mode = string.gsub(string.lower(message or ""), "^%s*(.-)%s*$", "%1")
-        local feedback
-        if mode == "on" then
-            SelectMode("on")
-            feedback = DFRL.locale.Text(
-                "Custom SCT enabled. V controls visible nameplates; invisible plates track hit positions."
-            )
-        elseif mode == "off" then
-            SelectMode("off")
-            feedback = DFRL.locale.Text("Custom and native outgoing SCT disabled. Incoming/self text is unchanged.")
-        elseif mode == "default" then
-            SelectMode("default")
-            feedback = DFRL.locale.Text("Custom SCT disabled; native SCT follows your game settings.")
-        else
-            feedback = DFRL.locale.Text("Usage: /sct on | off | default. Current mode: ") .. sctMode .. "."
-        end
-        if DEFAULT_CHAT_FRAME then DEFAULT_CHAT_FRAME:AddMessage("SurvivorsDragonUi: " .. feedback) end
     end
 
     local frame = CreateFrame("Frame", "DFRL_NameplateCombatText")
