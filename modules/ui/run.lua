@@ -510,7 +510,7 @@ DFRL:NewMod("RunTimers", 5, function()
             modeWidth * 3 + gap * 2,
             filterWidth * 2 + gap,
             hudOptionWidth + 24,
-            TextWidth("SCT size") + gap + 148 + TextWidth("25% - 200%"),
+            TextWidth("SCT size") + gap + 136,
             labelWidth + gap + dropdownWidth,
             labelWidth + gap + outlineWidth * 3 + gap * 2,
             defaultsWidth * 2 + 140 + gap * 4,
@@ -669,7 +669,6 @@ DFRL:NewMod("RunTimers", 5, function()
         sctSizeLabel:SetWidth(64)
         sctSizeLabel:SetJustifyH("CENTER")
         FontEditorButton("+", 28, scaleX + 108, -190, function() ChangeSctSize(1) end, combat)
-        FontEditorLabel(combat, "25% - 200%", scaleX + 148, -198, 10)
         heading = FontEditorLabel(combat, "Custom outgoing text", 0, -232, 12)
         heading:SetTextColor(0.94, 0.79, 0.47)
         local filterSize = (contentWidth - gap) / 2
