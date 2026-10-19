@@ -1,5 +1,11 @@
 # Official addon API integration — 2026-10-14
 
+## Round portrait divider remnant — 2026-10-19
+
+The user identified a short horizontal line inside the health fill just to the right of the circular portrait, above the intended gray lower border. The circular sheet still contains the original health/resource divider in source columns 152–153 at rows 52–54. The portrait crop includes those columns even though the shared bar interior omits the rest of the divider.
+
+`CreateRoundPlayerRim` draws the same existing artwork in three horizontal pieces. Only the divider band trims those two columns, with half-texel filtering margins horizontally and vertically; the upper/lower artwork, circular rim and gray lower bar border remain. The rounded player's normal rim and combat/rest pulses share that crop, so animation cannot reintroduce the stub. The optional full resource divider remains available through its existing control. Original pointed artwork, health/resource geometry, values, model copies and saved layout are unchanged. Pieces are created once with no new OnUpdate or polling; no texture file, setting or SavedVariable is added. No local checks or addon/game execution were run; the correction remains unverified in-game.
+
 ## Two-column HUD options — 2026-10-19
 
 The HUD tab places its existing eleven controls left to right in two columns and six 60-unit rows. Each description has two lines below its label. Dialog sizing measures translated labels across all supported languages and allows descriptions to wrap instead of reserving their full single-line width in both columns. The existing scroll frame and mouse-wheel handling remain available, with scrolling stepping by one paired row. The shared display controls, jewelry dependencies, live preview, Confirm, Cancel and reset paths remain unchanged. No new setting, SavedVariable or asset is added. No local checks or addon/game execution were run; packaged-game appearance remains unverified.
