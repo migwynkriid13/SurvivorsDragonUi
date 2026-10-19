@@ -105,12 +105,12 @@ Only **Confirm** saves pending geometry and per-group visibility, timer font/tex
 
 All addon commands are listed below. Layout editing does not require holding SHIFT.
 
-| Command        | Behavior                                                                                                                                                                                            |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/sdui`        | Open the Layout, HUD, Combat text and Run timer tabs to edit positions, sizes and visibility. Changes preview immediately; click **Confirm** in the editor footer to keep them and lock the frames. |
-| `/sdui reset`  | Exit editing and restore layout, timer text and display defaults: visible run label, boss debuffs on, damage icons off, class resources off and class-colored health off.                           |
-| `/copy`        | Open a snapshot of raw chat messages and events, including hidden messages; press **Ctrl+C** to copy the selected text.                                                                             |
-| `/fstack`      | Toggle a mouse-transparent frame inspector; `/fstack on` and `/fstack off` explicitly enable or disable it.                                                                                         |
+| Command       | Behavior                                                                                                                                                                                            |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/sdui`       | Open the Layout, HUD, Combat text and Run timer tabs to edit positions, sizes and visibility. Changes preview immediately; click **Confirm** in the editor footer to keep them and lock the frames. |
+| `/sdui reset` | Exit editing and restore layout, timer text and display defaults: visible run label, boss debuffs on, damage icons off, class resources off and class-colored health off.                           |
+| `/copy`       | Open a snapshot of raw chat messages and events, including hidden messages; press **Ctrl+C** to copy the selected text.                                                                             |
+| `/fstack`     | Toggle a mouse-transparent frame inspector; `/fstack on` and `/fstack off` explicitly enable or disable it.                                                                                         |
 
 `/fstack` inspects all Lua-exposed UI under the cursor, including the game's default frames, other addons, textures and text regions. It has no addon-ownership filter. `>` marks native mouse focus; `*` and a yellow outline identify the inspected element. The panel shows its name, parent, anchors, dimensions, effective owner scale, strata, frame level, draw layer and available texture/text metadata. Use `/fstack next` or `/fstack prev` to cycle every discovered overlap; the list pages around your selection. `/fstack focus` returns to following the mouse. The panel moves to the opposite side of the screen and leaves clicks and dragging available.
 

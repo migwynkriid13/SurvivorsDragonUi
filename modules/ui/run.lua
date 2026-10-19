@@ -454,15 +454,27 @@ DFRL:NewMod("RunTimers", 5, function()
         local hudOptions = {
             { "classHealth", "Class-colored health", "Use your vanilla class color for player health." },
             { "classResources", "Class resources", "Show power inside the player frame." },
-            { "roundPlayerPortrait", "Round player portrait", "Use the target's circular border without the pointed corner." },
+            {
+                "roundPlayerPortrait",
+                "Round player portrait",
+                "Use the target's circular border without the pointed corner.",
+            },
             { "flipBuffs", "Flip buff layout", "Grow left to right, with timers above the icons." },
             { "cooldownNumbers", "Cooldown numbers", "Show countdowns on ability buttons." },
             { "bossDebuffs", "Boss debuffs", "Effects on boss and guardian health bars." },
             { "cacheGuidance", "Cache guidance", "Show the cache direction and distance." },
             { "guardianGuidance", "Guardian guidance", "Show the guardian lair direction and distance." },
             { "equippedJewelry", "Equipped jewelry", "Show five equipped items attached to the action bar." },
-            { "hideNativeBuild", "Hide default jewelry / abilities", "Off: show the game's original jewelry and ability rows." },
-            { "attachJewelry", "Attach jewelry to action bar", "Off: move jewelry separately, keeping the silver rims." },
+            {
+                "hideNativeBuild",
+                "Hide default jewelry / abilities",
+                "Off: show the game's original jewelry and ability rows.",
+            },
+            {
+                "attachJewelry",
+                "Attach jewelry to action bar",
+                "Off: move jewelry separately, keeping the silver rims.",
+            },
         }
         for _, entry in ipairs(fontFaces) do
             dropdownWidth = math.max(dropdownWidth, TextWidth(entry.label) + 36)
