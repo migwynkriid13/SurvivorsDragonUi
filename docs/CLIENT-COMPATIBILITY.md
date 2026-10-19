@@ -12,6 +12,19 @@ This explains the reported source path: player and target health labels are crea
 
 Layout entries become visible to the update list and native visibility wrappers only after their anchors and complete handles have been constructed. A new handle starts hidden. This prevents a failed handle setup from creating the repeated nil-handle error.
 
+The additional reported missing UI follows these same initialization dependencies:
+
+| Reported symptom | Affected source path |
+| --- | --- |
+| Missing player/target health text | Their new value FontStrings use the rejected default-font assignment before their first health `SetText`. |
+| CleanerChat presentation absent | Its first custom captions require a loaded default font; a failed caption stops `Chat` setup. Native chat can remain visible. |
+| Jewelry textures absent | `Jewelry` registers its layout handle before attaching its hidden HUD to the action bar and enabling inventory texture refresh. A failed handle caption aborts those steps even when the texture files are present. |
+| SCT text absent | Its pooled damage FontStrings use the same default-font assignment before the first damage label is written. |
+| Nameplate text absent | Both the copied-name FontStrings and native `NAMEPLATE_FONT` previously used the rejected alias. |
+| Kills, gold and cache-cost tally absent | `RunTimers` registers its run-timer and boss-bar handles before creating the three tally fields. A failed handle caption prevents tally creation. |
+
+This maps the reports to source-level failure paths; visibility and texture rendering still require confirmation in the packaged game.
+
 ## Screen-unit rounding
 
 BeNilla [#1946](https://github.com/samwhosung/benilla/pull/1946) changed frame sizes, positions, screen extents and cursor coordinates to the original client's screen-unit conversions. [#1962](https://github.com/samwhosung/benilla/pull/1962) extended them to font sizes, shadows, insets and other lengths. Native getters can now differ slightly from the Lua values passed to setters: a width of 100 can read back as 99.99999850988391 at 4:3 or 100.00000136774479 at 16:9, as documented in the upstream [source cases](https://github.com/samwhosung/benilla/blob/adbfedc3660d/crates/benilla-ui/src/script/tests/screen_units.rs).
