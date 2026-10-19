@@ -10,6 +10,23 @@ function DFRL.tools.NearlyEqual(a, b)
         and math.abs(a - b) <= 0.000001 * math.max(1, math.abs(a), math.abs(b))
 end
 
+local function EdgeExtent(first, last, fallback)
+    if type(first) == "number" and type(last) == "number" then
+        local extent = last - first
+        if extent > 0 and extent - extent == 0 then return extent end
+    end
+    return fallback
+end
+
+-- Native size getters return an authored local size when set, but an already
+-- scaled span for anchor-only axes. Edges consistently use the frame's own
+-- units. Keep the raw getter as a fallback while edge geometry is unresolved.
+function DFRL.tools.GetLocalSize(frame)
+    local left, right = frame:GetLeft(), frame:GetRight()
+    local bottom, top = frame:GetBottom(), frame:GetTop()
+    return EdgeExtent(left, right, frame:GetWidth()), EdgeExtent(bottom, top, frame:GetHeight())
+end
+
 -- Original 1.12.1 FrameXML/Fonts.xml RAID_CLASS_COLORS:
 -- https://github.com/MOUZU/Blizzard-WoW-Interface/blob/master/1.12.1/FrameXML/Fonts.xml
 local classColors = {

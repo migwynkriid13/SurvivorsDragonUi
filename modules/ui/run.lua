@@ -603,7 +603,8 @@ DFRL:NewMod("RunTimers", 5, function()
             defaultsWidth * 2 + 140 + gap * 4,
             TextWidth(instructions)
         )
-        local width = math.min(contentWidth + padding * 2, math.max(320, UIParent:GetWidth() - 20))
+        local screenWidth = T.GetLocalSize(UIParent)
+        local width = math.min(contentWidth + padding * 2, math.max(320, screenWidth - 20))
         contentWidth = width - padding * 2
         local inputX = padding + labelWidth + gap
         dropdownWidth = contentWidth - labelWidth - gap
