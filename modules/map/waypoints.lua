@@ -369,7 +369,9 @@ DFRL:NewMod("Waypoints", 3, function()
             local wantsGuardian = GuardianEnabled() and FlaggedGuardian() ~= nil
             local wantsCaches = DFRL.display.Get("cacheGuidance") and trackers[1].entries[1] ~= nil
             local scale, edge
-            if wantsGuardian or wantsCaches then scale, edge = Geometry() end
+            if wantsGuardian or wantsCaches then
+                scale, edge = Geometry()
+            end
             UpdateGuardian(scale, edge)
             UpdateCaches(scale, edge)
         end
