@@ -31,8 +31,12 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     }
 
     local function ShouldShowText(info)
-        -- Miss/avoidance notices have their own choice, independently of the
-        -- attack's damage category. Critical hits retain that category.
+        if info.kind == "damage" then
+            local result = info.critical and "sctCriticalHits" or "sctNormalHits"
+            if not DFRL.display.Get(result) then return false end
+        end
+        -- Result and damage-category choices must both allow a damage label.
+        -- Miss/avoidance notices retain their independent control.
         local key = info.kind == "miss" and "sctMisses" or DAMAGE_FILTERS[info.damageType]
         return not key or DFRL.display.Get(key)
     end
@@ -192,6 +196,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         text.holder:ClearAllPoints()
         text.spell, text.damageType, text.iconTexture = nil, nil, nil
         text.kind = nil
+        text.critical = nil
         text.color = nil
         table.insert(textPool, text)
     end
@@ -754,6 +759,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                     .. IconIdentityPart(source)
                     .. IconIdentityPart(info.damageType or "")
                     .. IconIdentityPart(info.school or "")
+                    .. IconIdentityPart(info.critical and "critical" or "normal")
                     .. IconIdentityPart(TextureKey(info.iconTexture) or FALLBACK_ICON)
                 byAmount = intakeBuckets[identity]
                 if not byAmount then
@@ -918,6 +924,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         text.label:Show()
         text.spell, text.damageType, text.iconTexture = info.spell, info.damageType, info.iconTexture
         text.kind = info.kind
+        text.critical = info.critical
         text.color = info.color
         UpdateTextColor(text)
         UpdateIcon(text)

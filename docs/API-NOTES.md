@@ -1,5 +1,11 @@
 # Official addon API integration — 2026-10-14
 
+## SCT normal/critical result filters — 2026-10-19
+
+Normal hits and Critical hits are independent display booleans defaulting to true, `sctNormalHits` and `sctCriticalHits`, using the shared display normalization, live preview, Confirm, discard and reset paths. Numeric damage must pass its result choice and existing damage category; miss/avoidance notices keep their independent control. Normal includes stronger yellow non-critical hits. Native parsed critical status determines the choice even with class-colored damage enabled; no magnitude or color inference is used.
+
+The first-hit info and active text retain native critical status, and the duplicate intake key includes it. Otherwise a normal first hit could absorb an equal-valued critical hit into its group and hide that critical when normal text is disabled, or vice versa. Same-type duplicates retain the original fixed 75 ms admission window and unchanged number. All original events still match in order, consume their own loss evidence and sample original colors before display filtering. Active rejected labels are returned to the pool; queued groups use current choices at display time. Compact two-column checkbox rows keep all controls inside the existing Combat text page. No local checks or game/addon execution were run; runtime behavior remains unverified.
+
 ## SCT size and shared checkbox row — 2026-10-19
 
 The Combat text tab places Incoming/self text and Damage icons side by side, retaining both independent native/addon preference paths and allowing two lines for each description. SCT size uses the existing minus/plus editor buttons, with a 100% default and five-percentage-point steps clamped to 25–200%. The existing display table adds only a normalized numeric `sctScale` multiplier (0.25–2): missing, nonnumeric and nonfinite values use 1; finite out-of-range values clamp. This is the user-authorized numeric exception to that table's display booleans.

@@ -4,6 +4,8 @@ DFRL:NewMod("Display", 0, function()
     local defaults = {
         bossDebuffs = true,
         damageIcons = false,
+        sctNormalHits = true,
+        sctCriticalHits = true,
         sctAutoAttacks = true,
         sctDirectDamage = true,
         sctPeriodicDamage = true,
@@ -39,6 +41,8 @@ DFRL:NewMod("Display", 0, function()
         return {
             bossDebuffs = Read(source, "bossDebuffs"),
             damageIcons = Read(source, "damageIcons"),
+            sctNormalHits = Read(source, "sctNormalHits"),
+            sctCriticalHits = Read(source, "sctCriticalHits"),
             sctAutoAttacks = Read(source, "sctAutoAttacks"),
             sctDirectDamage = Read(source, "sctDirectDamage"),
             sctPeriodicDamage = Read(source, "sctPeriodicDamage"),

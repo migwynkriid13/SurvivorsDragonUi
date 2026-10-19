@@ -448,6 +448,8 @@ DFRL:NewMod("RunTimers", 5, function()
             { value = "default", label = "Game settings" },
         }
         local combatFilters = {
+            { key = "sctNormalHits", label = "Normal hits" },
+            { key = "sctCriticalHits", label = "Critical hits" },
             { key = "sctAutoAttacks", label = "Auto-attacks" },
             { key = "sctDirectDamage", label = "Direct abilities / spells" },
             { key = "sctPeriodicDamage", label = "Damage over time" },
@@ -680,12 +682,15 @@ DFRL:NewMod("RunTimers", 5, function()
                 filterSize,
                 function(value) DFRL.display.Set(key, value) end
             )
+            control:SetHeight(36)
+            control.label:ClearAllPoints()
+            control.label:SetPoint("TOPLEFT", control, "TOPLEFT", 32, -10)
             control:SetPoint(
                 "TOPLEFT",
                 combat,
                 "TOPLEFT",
                 math.mod(index - 1, 2) * (filterSize + gap),
-                -252 - math.floor((index - 1) / 2) * 44
+                -252 - math.floor((index - 1) / 2) * 36
             )
             displayControls[key] = control
         end
