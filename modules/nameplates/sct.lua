@@ -22,6 +22,20 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     }
     local DAMAGE_SAMPLE_LIMIT, DAMAGE_SAMPLE_TIME = 8, 30
     local DAMAGE_SAMPLE_MINIMUM, STRONG_DAMAGE_RATIO = 3, 1.2
+    local DAMAGE_FILTERS = {
+        autoattack = "sctAutoAttacks",
+        ability = "sctDirectDamage",
+        spell = "sctDirectDamage",
+        periodic = "sctPeriodicDamage",
+        reflected = "sctReflectedDamage",
+    }
+
+    local function ShouldShowText(info)
+        -- Miss/avoidance notices have their own choice, independently of the
+        -- attack's damage category. Critical hits retain that category.
+        local key = info.kind == "miss" and "sctMisses" or DAMAGE_FILTERS[info.damageType]
+        return not key or DFRL.display.Get(key)
+    end
 
     local plates = {}
     local origins = {}
@@ -176,6 +190,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         text.icon:Hide()
         text.holder:ClearAllPoints()
         text.spell, text.damageType, text.iconTexture = nil, nil, nil
+        text.kind = nil
         table.insert(textPool, text)
     end
 
@@ -780,6 +795,9 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     end
 
     DFRL.display.Listen(function()
+        for index = table.getn(activeTexts), 1, -1 do
+            if not ShouldShowText(activeTexts[index]) then ReleaseText(table.remove(activeTexts, index)) end
+        end
         local enabled = DFRL.display.Get("damageIcons")
         if damageIcons == enabled then return end
         damageIcons = enabled
@@ -864,6 +882,9 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     end
 
     local function DisplayDamage(info, x, y)
+        -- Filter only after every original hit has consumed its matching and
+        -- color evidence, including members of a visually collapsed group.
+        if not ShouldShowText(info) then return end
         local value = info.text or info.amount
         if not value then return end
         local text = AcquireText()
@@ -884,6 +905,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         text.label:SetTextColor(color[1], color[2], color[3])
         text.label:Show()
         text.spell, text.damageType, text.iconTexture = info.spell, info.damageType, info.iconTexture
+        text.kind = info.kind
         UpdateIcon(text)
         local scale = text.sizeScale * (text.impact and 0.5 or 1)
         if text.scale ~= scale then

@@ -443,6 +443,13 @@ DFRL:NewMod("RunTimers", 5, function()
             { value = "off", label = "Off" },
             { value = "default", label = "Game settings" },
         }
+        local combatFilters = {
+            { key = "sctAutoAttacks", label = "Auto-attacks" },
+            { key = "sctDirectDamage", label = "Direct abilities / spells" },
+            { key = "sctPeriodicDamage", label = "Damage over time" },
+            { key = "sctReflectedDamage", label = "Reflected damage" },
+            { key = "sctMisses", label = "Misses / avoidance" },
+        }
         for _, entry in ipairs(fontFaces) do
             dropdownWidth = math.max(dropdownWidth, TextWidth(entry.label) + 36)
         end
@@ -451,6 +458,10 @@ DFRL:NewMod("RunTimers", 5, function()
         end
         for _, entry in ipairs(modes) do
             modeWidth = math.max(modeWidth, TextWidth(entry.label) + 24)
+        end
+        local filterWidth = 0
+        for _, entry in ipairs(combatFilters) do
+            filterWidth = math.max(filterWidth, TextWidth(entry.label) + 36)
         end
         local outlineWidth = 0
         for _, entry in ipairs(fontOutlines) do
@@ -461,6 +472,7 @@ DFRL:NewMod("RunTimers", 5, function()
         local contentWidth = math.max(
             tabWidth * table.getn(tabs) + gap * (table.getn(tabs) - 1),
             modeWidth * 3 + gap * 2,
+            filterWidth * 2 + gap,
             labelWidth + gap + dropdownWidth,
             labelWidth + gap + outlineWidth * 3 + gap * 2,
             defaultsWidth * 2 + 140 + gap * 4,
@@ -607,6 +619,27 @@ DFRL:NewMod("RunTimers", 5, function()
         )
         incomingControl:SetPoint("TOPLEFT", combat, "TOPLEFT", 0, -120)
         DisplayToggle(combat, "damageIcons", "Damage icons", "Spell icons beside custom damage numbers.", -172)
+        heading = FontEditorLabel(combat, "Show in custom outgoing text", 0, -232, 12)
+        heading:SetTextColor(0.94, 0.79, 0.47)
+        local filterSize = (contentWidth - gap) / 2
+        for index, entry in ipairs(combatFilters) do
+            local key = entry.key
+            local control = T.CreateEditorToggle(
+                combat,
+                entry.label,
+                nil,
+                filterSize,
+                function(value) DFRL.display.Set(key, value) end
+            )
+            control:SetPoint(
+                "TOPLEFT",
+                combat,
+                "TOPLEFT",
+                math.mod(index - 1, 2) * (filterSize + gap),
+                -252 - math.floor((index - 1) / 2) * 44
+            )
+            displayControls[key] = control
+        end
 
         local timer = pages.timer
         local caption = FontEditorLabel(timer, "Timer label preview", 0, 0, 9)

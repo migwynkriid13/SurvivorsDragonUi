@@ -4,6 +4,11 @@ DFRL:NewMod("Display", 0, function()
     local defaults = {
         bossDebuffs = true,
         damageIcons = false,
+        sctAutoAttacks = true,
+        sctDirectDamage = true,
+        sctPeriodicDamage = true,
+        sctReflectedDamage = true,
+        sctMisses = true,
         classResources = false,
         classHealth = false,
         cooldownNumbers = false,
@@ -23,6 +28,11 @@ DFRL:NewMod("Display", 0, function()
         return {
             bossDebuffs = Read(source, "bossDebuffs"),
             damageIcons = Read(source, "damageIcons"),
+            sctAutoAttacks = Read(source, "sctAutoAttacks"),
+            sctDirectDamage = Read(source, "sctDirectDamage"),
+            sctPeriodicDamage = Read(source, "sctPeriodicDamage"),
+            sctReflectedDamage = Read(source, "sctReflectedDamage"),
+            sctMisses = Read(source, "sctMisses"),
             classResources = Read(source, "classResources"),
             classHealth = Read(source, "classHealth"),
             cooldownNumbers = Read(source, "cooldownNumbers"),
