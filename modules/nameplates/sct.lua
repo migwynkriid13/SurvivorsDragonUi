@@ -198,6 +198,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         text.kind = nil
         text.critical = nil
         text.color = nil
+        text.needsMeasure = nil
         table.insert(textPool, text)
     end
 
@@ -810,6 +811,19 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         text.label:SetTextColor(color[1], color[2], color[3])
     end
 
+    local function FitText(text)
+        -- Natural width is already local to the label. Refit after scaling:
+        -- native raster rounding changes with crit pop, and its drawn shadow
+        -- can exceed the exact automatic width and replace digits with "...".
+        local width = text.label:GetStringWidth()
+        text.needsMeasure = not IsFiniteNumber(width) or width <= 0
+        width = text.needsMeasure and 240 or math.ceil(width) + 4
+        if text.width ~= width then
+            text.width = width
+            text.label:SetWidth(width)
+        end
+    end
+
     DFRL.display.Listen(function()
         textScale = DFRL.display.Get("sctScale")
         local enabled = DFRL.display.Get("damageIcons")
@@ -856,6 +870,9 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             T.SetFont(label, 18, "OUTLINE")
             label:SetShadowOffset(1, -1)
             label:SetPoint("CENTER", visual, "CENTER", 0, 0)
+            label:SetHeight(36)
+            label:SetJustifyH("CENTER")
+            label:SetJustifyV("MIDDLE")
             local icon = visual:CreateTexture(nil, "OVERLAY")
             icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
             icon:SetPoint("RIGHT", label, "LEFT", -3, 0)
@@ -933,6 +950,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             text.scale = scale
             text.visual:SetScale(scale)
         end
+        FitText(text)
         text.visual:Show()
         if text.alpha ~= 1 then
             text.alpha = 1
@@ -1034,6 +1052,9 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                 if text.scale ~= scale then
                     text.scale = scale
                     text.visual:SetScale(scale)
+                    FitText(text)
+                elseif text.needsMeasure then
+                    FitText(text)
                 end
                 local alpha = 1
                 if progress > 0.68 then alpha = (1 - progress) / 0.32 end
