@@ -1,5 +1,11 @@
 # Official addon API integration — 2026-10-14
 
+## Disable the talent-button reminder pulse — 2026-10-19
+
+The user requested a steady Talents (N) micro-menu icon. The native [talent event handler](https://github.com/MOUZU/Blizzard-WoW-Interface/blob/master/1.12.1/FrameXML/MainMenuBarMicroButtons.lua#L109-L119) starts its level-up reminder through `SetButtonPulse`. The native [pulse helpers](https://github.com/MOUZU/Blizzard-WoW-Interface/blob/master/1.12.1/FrameXML/UIParent.lua#L1279-L1318) animate a locked highlight and provide `ButtonPulse_StopPulse` to remove an active reminder.
+
+The micro-menu initializer stops any existing talent pulse when that helper is available and unlocks its highlight once. A wrapper on the real global `SetButtonPulse` rejects only the existing TalentMicroButton; calls for every other button retain the original function and arguments. Native talent events, availability, tooltip/binding updates, click handling, normal hover artwork and the game's talent window remain intact. No polling, setting, SavedVariable or new asset is added. This follows the 1.12 FrameXML path; packaged-game behavior remains unverified. No local checks or addon/game execution were run.
+
 ## Round player portrait fill overlap — 2026-10-19
 
 The supplied screenshot shows world background between the new circular rim and the original player health opening. The pointed border formerly covered that area. The shared unit-border helper now exposes its existing 15-unit circular overlap: the target retains its current geometry, while the player opts in only with Round player portrait. Player fill width/inset become 137/89 instead of 122/104, leaving the far edge at 226. Its background follows the bar; the optional resource row and native divider use the same extended span. Name and centered health/resource values compensate for the extension so their visible positions stay fixed. Disabling the option restores the original internal geometry without changing confirmed PlayerFrame layout or native values.
