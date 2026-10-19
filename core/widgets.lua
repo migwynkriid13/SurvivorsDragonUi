@@ -91,7 +91,8 @@ function DFRL.tools.CreateUnitBorder(frame, healthBar, portraitTexture, backgrou
     local healthWidth, portraitInset, portraitOverlap = 122, 104, 15
     local powerInterior, roundRim
     local function SetPortraitOverlap(extended)
-        local extension = extended and portraitOverlap or 0
+        -- The pointed player rim also needs a small underlap to close its seam.
+        local extension = extended and portraitOverlap or (mirrored and 2 or 0)
         healthBar:SetWidth(healthWidth + extension)
         healthBar:ClearAllPoints()
         if mirrored then

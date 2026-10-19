@@ -1,5 +1,11 @@
 # Official addon API integration — 2026-10-14
 
+## Pointed player health-bar seam — 2026-10-19
+
+The user reported a slight gap beside the non-circular player portrait and requested a two-unit extension to the left. The shared overlap helper now uses a two-unit underlap for the pointed player frame: health width/inset become 124/102 instead of 122/104, keeping the far edge at 226. The health background, damage-loss segment and optional resource row/divider follow the same span. The existing label compensation keeps health/resource values and the name in place; name width excludes the overlap so its original text area remains unchanged.
+
+The circular player's existing 15-unit overlap (137/89), circular divider cleanup and target geometry remain unchanged. This supersedes earlier notes that disabling Round player portrait restores the original 122/104 opening. No setting, asset or SavedVariable is added. No local checks or addon/game execution were run; the correction remains unverified in-game.
+
 ## Blue timer leading-edge foam — 2026-10-19
 
 The user requested a waterfall-like foam effect where the blue run-progress fill ends. The existing cosmetic fill controller now pools a soft blue glow, a pale blue-white crest and eight small flecks using the native casting-bar spark texture. The crest follows the current native elapsed/duration fill width; staggered flecks swell, fade and drift five to nine units back into the water. Every piece crops its quad and UV coordinates to the current filled width and bar height, beneath the metal border and boss markers.

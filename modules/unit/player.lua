@@ -35,6 +35,7 @@ DFRL:NewMod("Player", 1, function()
         if healthText then healthText:SetPoint("CENTER", PlayerFrameHealthBar, "CENTER", extension / 2, 0) end
         if PlayerFrame.name then
             PlayerFrame.name:SetPoint("BOTTOMLEFT", PlayerFrameHealthBar, "TOPLEFT", 2 + extension, 4)
+            PlayerFrame.name:SetWidth(PlayerFrameHealthBar:GetWidth() - extension - 24)
         end
         if primaryBar then
             primaryBar:SetWidth(PlayerFrameHealthBar:GetWidth())
@@ -240,7 +241,6 @@ DFRL:NewMod("Player", 1, function()
         if PlayerFrame.name then
             PlayerFrame.name:ClearAllPoints()
             PlayerFrame.name:SetPoint("BOTTOMLEFT", PlayerFrameHealthBar, "TOPLEFT", 2, 4)
-            PlayerFrame.name:SetWidth(PlayerFrameHealthBar:GetWidth() - 24)
             PlayerFrame.name:SetJustifyH("LEFT")
             PlayerFrame.name:SetFont(font, 11, "NONE")
             PlayerFrame.name:SetTextColor(1, 0.82, 0)
