@@ -31,6 +31,10 @@ DFRL:NewMod("AnimatedPortraits", 2, function()
             entry.model:SetUnit(entry.unit)
             entry.bound = true
             entry.model:Show()
+            -- Request camera 0 (the standard character headshot) after Show, which may
+            -- request another copy. BeNilla #1849 holds this for a pending copy;
+            -- older renderers can retain their body view despite accepting it.
+            if type(entry.model.SetCamera) == "function" then pcall(entry.model.SetCamera, entry.model, 0) end
         end)
         entry.binding = false
         if not success then
@@ -57,7 +61,7 @@ DFRL:NewMod("AnimatedPortraits", 2, function()
         end
 
         -- Keep the native rectangular viewport at the existing portrait's bounds.
-        -- The client supplies its own body camera and animation; no guessed zoom,
+        -- The client supplies its authored camera and animation; no guessed zoom,
         -- model offsets, circular clipping or animation timers are substituted here.
         success = pcall(function()
             model:Hide()
