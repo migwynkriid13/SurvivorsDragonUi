@@ -535,14 +535,25 @@ DFRL:NewMod("RunTimers", 5, function()
             { value = "default", label = "Game settings" },
         }
         local combatFilters = {
-            { key = "sctNormalHits", label = "Normal hits" },
-            { key = "sctCriticalHits", label = "Critical hits" },
-            { key = "sctAutoAttacks", label = "Auto-attacks" },
-            { key = "sctDirectDamage", label = "Direct abilities / spells" },
-            { key = "sctPeriodicDamage", label = "Damage over time" },
-            { key = "sctReflectedDamage", label = "Reflected damage" },
-            { key = "sctMisses", label = "Misses / avoidance" },
-            { key = "sctClassColors", label = "Class-colored damage" },
+            {
+                label = "Damage type",
+                y = -226,
+                entries = {
+                    { key = "sctNormalHits", label = "Normal hits" },
+                    { key = "sctCriticalHits", label = "Critical hits" },
+                },
+            },
+            {
+                label = "Damage categories",
+                y = -288,
+                entries = {
+                    { key = "sctAutoAttacks", label = "Auto-attacks" },
+                    { key = "sctDirectDamage", label = "Direct abilities / spells" },
+                    { key = "sctPeriodicDamage", label = "Damage over time" },
+                    { key = "sctReflectedDamage", label = "Reflected damage" },
+                    { key = "sctMisses", label = "Misses / avoidance" },
+                },
+            },
         }
         local hudOptions = {
             { "classHealth", "Class-colored health", "Use your vanilla class color for player health." },
@@ -578,9 +589,12 @@ DFRL:NewMod("RunTimers", 5, function()
         for _, entry in ipairs(modes) do
             modeWidth = math.max(modeWidth, TextWidth(entry.label) + 24)
         end
-        local filterWidth = 0
-        for _, entry in ipairs(combatFilters) do
-            filterWidth = math.max(filterWidth, TextWidth(entry.label) + 36)
+        local filterWidth, filterHeadingWidth = TextWidth("Class-colored damage") + 36, 0
+        for _, group in ipairs(combatFilters) do
+            filterHeadingWidth = math.max(filterHeadingWidth, TextWidth(group.label))
+            for _, entry in ipairs(group.entries) do
+                filterWidth = math.max(filterWidth, TextWidth(entry.label) + 36)
+            end
         end
         local hudOptionWidth = 0
         for _, entry in ipairs(hudOptions) do
@@ -596,8 +610,9 @@ DFRL:NewMod("RunTimers", 5, function()
             tabWidth * table.getn(tabs) + gap * (table.getn(tabs) - 1),
             modeWidth * 3 + gap * 2,
             filterWidth * 2 + gap,
+            filterHeadingWidth,
             hudOptionWidth * 2 + gap + 24,
-            TextWidth("SCT size") + gap + 136,
+            (TextWidth("SCT size") + gap + 136) * 2 + gap,
             labelWidth + gap + dropdownWidth,
             labelWidth + gap + outlineWidth * 3 + gap * 2,
             defaultsWidth * 2 + 140 + gap * 4,
@@ -743,56 +758,56 @@ DFRL:NewMod("RunTimers", 5, function()
                 if DFRL.sct then DFRL.sct.SetIncoming(value) end
             end
         )
-        incomingControl:SetPoint("TOPLEFT", combat, "TOPLEFT", 0, -120)
+        incomingControl:SetPoint("TOPLEFT", combat, "TOPLEFT", 0, -112)
         local iconControl = DisplayToggle(
             combat,
             "damageIcons",
             "Damage icons",
             "Spell icons beside custom damage numbers.",
-            -120,
+            -112,
             combatToggleWidth
         )
         iconControl:ClearAllPoints()
-        iconControl:SetPoint("TOPLEFT", combat, "TOPLEFT", combatToggleWidth + gap, -120)
+        iconControl:SetPoint("TOPLEFT", combat, "TOPLEFT", combatToggleWidth + gap, -112)
         for _, control in ipairs({ incomingControl, iconControl }) do
             control:SetHeight(60)
             control.description:SetHeight(28)
             control.description:SetJustifyV("TOP")
         end
-        FontEditorLabel(combat, "SCT size", 0, -198, 11)
+        FontEditorLabel(combat, "SCT size", 0, -190, 11)
         local scaleX = TextWidth("SCT size") + gap
         local function ChangeSctSize(direction)
             local percent = math.floor(DFRL.display.Get("sctScale") * 100 + 0.5)
             DFRL.display.Set("sctScale", (percent + direction * 5) / 100)
         end
-        FontEditorButton("-", 28, scaleX, -190, function() ChangeSctSize(-1) end, combat)
-        sctSizeLabel = FontEditorLabel(combat, "", scaleX + 36, -198)
+        FontEditorButton("-", 28, scaleX, -182, function() ChangeSctSize(-1) end, combat)
+        sctSizeLabel = FontEditorLabel(combat, "", scaleX + 36, -190)
         sctSizeLabel:SetWidth(64)
         sctSizeLabel:SetJustifyH("CENTER")
-        FontEditorButton("+", 28, scaleX + 108, -190, function() ChangeSctSize(1) end, combat)
-        heading = FontEditorLabel(combat, "Custom outgoing text", 0, -232, 12)
-        heading:SetTextColor(0.94, 0.79, 0.47)
+        FontEditorButton("+", 28, scaleX + 108, -182, function() ChangeSctSize(1) end, combat)
         local filterSize = (contentWidth - gap) / 2
-        for index, entry in ipairs(combatFilters) do
-            local key = entry.key
-            local control = T.CreateEditorToggle(
-                combat,
-                entry.label,
-                nil,
-                filterSize,
-                function(value) DFRL.display.Set(key, value) end
-            )
-            control:SetHeight(36)
+        local function CombatToggle(key, label, x, y)
+            local control = DisplayToggle(combat, key, label, nil, y, filterSize)
+            control:ClearAllPoints()
+            control:SetPoint("TOPLEFT", combat, "TOPLEFT", x, y)
+            control:SetHeight(28)
             control.label:ClearAllPoints()
-            control.label:SetPoint("TOPLEFT", control, "TOPLEFT", 32, -10)
-            control:SetPoint(
-                "TOPLEFT",
-                combat,
-                "TOPLEFT",
-                math.mod(index - 1, 2) * (filterSize + gap),
-                -252 - math.floor((index - 1) / 2) * 36
-            )
-            displayControls[key] = control
+            control.label:SetPoint("LEFT", control, "LEFT", 32, 0)
+        end
+        CombatToggle("sctClassColors", "Class-colored damage", filterSize + gap, -182)
+        divider = T.EditorDivider(combat, contentWidth)
+        divider:SetPoint("TOPLEFT", combat, "TOPLEFT", 0, -282)
+        for _, group in ipairs(combatFilters) do
+            heading = FontEditorLabel(combat, group.label, 0, group.y, 12)
+            heading:SetTextColor(0.94, 0.79, 0.47)
+            for index, entry in ipairs(group.entries) do
+                CombatToggle(
+                    entry.key,
+                    entry.label,
+                    math.mod(index - 1, 2) * (filterSize + gap),
+                    group.y - 24 - math.floor((index - 1) / 2) * 28
+                )
+            end
         end
 
         local timer = pages.timer
