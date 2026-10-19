@@ -14,14 +14,14 @@ Layout entries become visible to the update list and native visibility wrappers 
 
 The additional reported missing UI follows these same initialization dependencies:
 
-| Reported symptom | Affected source path |
-| --- | --- |
-| Missing player/target health text | Their new value FontStrings use the rejected default-font assignment before their first health `SetText`. |
-| CleanerChat presentation absent | Its first custom captions require a loaded default font; a failed caption stops `Chat` setup. Native chat can remain visible. |
-| Jewelry textures absent | `Jewelry` registers its layout handle before attaching its hidden HUD to the action bar and enabling inventory texture refresh. A failed handle caption aborts those steps even when the texture files are present. |
-| SCT text absent | Its pooled damage FontStrings use the same default-font assignment before the first damage label is written. |
-| Nameplate text absent | Both the copied-name FontStrings and native `NAMEPLATE_FONT` previously used the rejected alias. |
-| Kills, gold and cache-cost tally absent | `RunTimers` registers its run-timer and boss-bar handles before creating the three tally fields. A failed handle caption prevents tally creation. |
+| Reported symptom                        | Affected source path                                                                                                                                                                                                |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Missing player/target health text       | Their new value FontStrings use the rejected default-font assignment before their first health `SetText`.                                                                                                           |
+| CleanerChat presentation absent         | Its first custom captions require a loaded default font; a failed caption stops `Chat` setup. Native chat can remain visible.                                                                                       |
+| Jewelry textures absent                 | `Jewelry` registers its layout handle before attaching its hidden HUD to the action bar and enabling inventory texture refresh. A failed handle caption aborts those steps even when the texture files are present. |
+| SCT text absent                         | Its pooled damage FontStrings use the same default-font assignment before the first damage label is written.                                                                                                        |
+| Nameplate text absent                   | Both the copied-name FontStrings and native `NAMEPLATE_FONT` previously used the rejected alias.                                                                                                                    |
+| Kills, gold and cache-cost tally absent | `RunTimers` registers its run-timer and boss-bar handles before creating the three tally fields. A failed handle caption prevents tally creation.                                                                   |
 
 This maps the reports to source-level failure paths; visibility and texture rendering still require confirmation in the packaged game.
 
