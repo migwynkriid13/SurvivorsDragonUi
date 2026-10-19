@@ -62,23 +62,66 @@ DFRL.tools.LargeHealthFill = {
     texCoords = { 4.5 / 128, 123.5 / 128, 5 / 32, 25 / 32 },
 }
 
+function DFRL.tools.CreateRoundPlayerRim(parent, owner, r, g, b, blendMode)
+    local artwork = CreateFrame("Frame", nil, parent)
+    artwork:SetAllPoints(owner)
+    artwork:EnableMouse(false)
+    local path = DFRL:GetInfoOrCons("tex") .. "unitframes\\UI-TargetingFrameDF1.blp"
+    -- The circular sheet retains the old divider at x152..154, y52..55.
+    -- Omit that stub only; the half-texel margin keeps it out of filtering.
+    for _, piece in ipairs({ { 0, 51.5, 104 }, { 51.5, 4, 101.5 }, { 55.5, 72.5, 104 } }) do
+        local y, height, width = unpack(piece)
+        local texture = artwork:CreateTexture(nil, "OVERLAY")
+        texture:SetTexture(path)
+        texture:SetTexCoord(1, (256 - width) / 256, y / 128, (y + height) / 128)
+        texture:SetWidth(width)
+        texture:SetHeight(height)
+        texture:SetPoint("TOPLEFT", owner, "TOPLEFT", 0, -y)
+        texture:SetVertexColor(r or 1, g or 1, b or 1)
+        if blendMode then texture:SetBlendMode(blendMode) end
+    end
+    return artwork
+end
+
 -- Reuse the original 256x128 portrait sheet. The full health opening remains
 -- the default; the player can restore its original health/power divider.
 function DFRL.tools.CreateUnitBorder(frame, healthBar, portraitTexture, background, texturePath, portraitSide)
     local mirrored = portraitSide == "LEFT"
     local healthFill = DFRL.tools.LargeHealthFill
+    local healthWidth, portraitInset, portraitOverlap = 122, 104, 15
+    local powerInterior, roundRim
+    local function SetPortraitOverlap(extended)
+        -- The pointed player rim also needs a small underlap to close its seam.
+        local extension = extended and portraitOverlap or (mirrored and 2 or 0)
+        healthBar:SetWidth(healthWidth + extension)
+        healthBar:ClearAllPoints()
+        if mirrored then
+            healthBar:SetPoint("TOPLEFT", frame, "TOPLEFT", portraitInset - extension, -34)
+        else
+            healthBar:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -(portraitInset - extension), -34)
+        end
+        if powerInterior then
+            powerInterior:SetWidth(healthBar:GetWidth())
+            powerInterior:ClearAllPoints()
+            powerInterior:SetPoint("TOPLEFT", healthBar, "TOPLEFT", 0, 0)
+        end
+        if roundRim then
+            if extended then
+                portraitTexture:SetAlpha(0)
+                roundRim:Show()
+            else
+                portraitTexture:SetAlpha(1)
+                roundRim:Hide()
+            end
+        end
+        return extension
+    end
     -- Keep the original shading, cropping off the texture's transparent padding.
     healthBar:SetStatusBarTexture(healthFill.texture)
-    healthBar:SetWidth(mirrored and 122 or 137)
     healthBar:SetHeight(29)
     healthBar:SetFrameLevel(frame:GetFrameLevel() + 1)
-    healthBar:ClearAllPoints()
-    if mirrored then
-        healthBar:SetPoint("TOPLEFT", frame, "TOPLEFT", 104, -34)
-    else
-        -- Extend beneath the target's curved portrait edge without moving the far end.
-        healthBar:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -89, -34)
-    end
+    -- The target always overlaps its circular edge; the player opts in below.
+    SetPortraitOverlap(not mirrored)
 
     local function CropHealthFill()
         local fill = healthBar:GetStatusBarTexture()
@@ -100,14 +143,13 @@ function DFRL.tools.CreateUnitBorder(frame, healthBar, portraitTexture, backgrou
     borderFrame:SetAllPoints(frame)
 
     if not portraitTexture then portraitTexture = frame:CreateTexture(nil, "OVERLAY") end
-    if not mirrored then
-        -- Keep the face and circular rim above both the extended fill and damage loss.
-        portraitTexture:SetParent(borderFrame)
-        if frame.portrait then
-            frame.portrait:SetParent(borderFrame)
-            frame.portrait:SetDrawLayer("ARTWORK")
-        end
+    -- Keep stills, independent model copies and the rim above an overlapping fill.
+    portraitTexture:SetParent(borderFrame)
+    if frame.portrait then
+        frame.portrait:SetParent(borderFrame)
+        frame.portrait:SetDrawLayer("ARTWORK")
     end
+    if frame.sduiPortraitModel then frame.sduiPortraitModel:SetFrameLevel(borderFrame:GetFrameLevel()) end
     portraitTexture:SetWidth(104)
     portraitTexture:SetHeight(128)
     portraitTexture:ClearAllPoints()
@@ -120,6 +162,10 @@ function DFRL.tools.CreateUnitBorder(frame, healthBar, portraitTexture, backgrou
     end
     portraitTexture:SetVertexColor(1, 1, 1, 1)
     portraitTexture:SetDrawLayer("OVERLAY")
+    if mirrored then
+        roundRim = DFRL.tools.CreateRoundPlayerRim(borderFrame, frame)
+        roundRim:Hide()
+    end
 
     local strips = {}
     local function AddStrip(x, y, width, height)
@@ -142,7 +188,6 @@ function DFRL.tools.CreateUnitBorder(frame, healthBar, portraitTexture, backgrou
     AddStrip(0, 63, 152, 65)
     AddStrip(0, 34, 30, 29)
 
-    local powerInterior
     if mirrored then
         powerInterior = AddStrip(30, 34, 122, 29)
         powerInterior:Hide()
@@ -168,5 +213,5 @@ function DFRL.tools.CreateUnitBorder(frame, healthBar, portraitTexture, backgrou
         end
     end
     UpdateTexture(texturePath)
-    return UpdateTexture, SetPowerShown
+    return UpdateTexture, SetPowerShown, SetPortraitOverlap
 end

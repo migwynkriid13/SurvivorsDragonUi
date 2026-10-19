@@ -141,6 +141,90 @@ DFRL:NewMod("RunTimers", 5, function()
             end
         end
 
+        local blueFoam = {}
+        local function NewFoam(r, g, b)
+            local texture = bar:CreateTexture(nil, "OVERLAY")
+            texture:SetTexture("Interface\\CastingBar\\UI-CastingBar-Spark")
+            texture:SetBlendMode("ADD")
+            texture:SetVertexColor(r, g, b)
+            texture:Hide()
+            local piece = { texture = texture }
+            table.insert(blueFoam, piece)
+            return piece
+        end
+        local foamGlow = NewFoam(0.3, 0.8, 1)
+        local foamCrest = NewFoam(0.8, 0.96, 1)
+        local foamFlecks = {}
+        for index = 1, 8 do
+            local fleck = NewFoam(0.75, 0.94, 1)
+            fleck.period = 0.7 + math.mod(index, 5) * 0.13
+            fleck.phase = index * 0.618034
+            fleck.drift = 5 + math.mod(index, 3) * 2
+            fleck.y = (math.mod(index - 1, 3) - 1) * 3.6
+            foamFlecks[index] = fleck
+        end
+
+        local function HideBlueFoam()
+            for _, piece in ipairs(blueFoam) do
+                if piece.shown then
+                    piece.texture:Hide()
+                    piece.shown = false
+                end
+            end
+        end
+
+        local function DrawFoam(piece, left, y, width, height, alpha, filledWidth)
+            local first, last = math.max(0, left), math.min(filledWidth, left + width)
+            local halfHeight = bar:GetHeight() / 2
+            local bottom, top = math.max(-halfHeight, y - height / 2), math.min(halfHeight, y + height / 2)
+            if first >= last or bottom >= top then
+                if piece.shown then
+                    piece.texture:Hide()
+                    piece.shown = false
+                end
+                return
+            end
+            local texture = piece.texture
+            texture:SetWidth(last - first)
+            texture:SetHeight(top - bottom)
+            texture:SetPoint("LEFT", bar, "LEFT", first, (bottom + top) / 2)
+            texture:SetTexCoord(
+                (first - left) / width,
+                (last - left) / width,
+                (y + height / 2 - top) / height,
+                (y + height / 2 - bottom) / height
+            )
+            texture:SetAlpha(alpha)
+            if not piece.shown then
+                texture:Show()
+                piece.shown = true
+            end
+        end
+
+        local function UpdateBlueFoam(now, filledWidth)
+            -- A soft lip stays at the native fill edge while tiny puffs wash
+            -- back into the current. Every quad is cropped to the filled area.
+            DrawFoam(foamGlow, filledWidth - 6, 0, 8, 15, 0.32 + 0.07 * math.sin(now * 4.1), filledWidth)
+            DrawFoam(
+                foamCrest,
+                filledWidth - 3.5,
+                0.4 * math.sin(now * 3.3),
+                4,
+                12,
+                0.52 + 0.1 * math.sin(now * 5.3),
+                filledWidth
+            )
+            for index, fleck in ipairs(foamFlecks) do
+                local age = math.mod(now / fleck.period + fleck.phase, 1)
+                local swell = math.sin(age * math.pi)
+                local width = 2.4 + swell * 1.6
+                local height = 1.4 + math.mod(index, 3) * 0.4
+                local y = fleck.y + 1.1 * math.sin(age * 2 * math.pi + fleck.phase)
+                local left = filledWidth - 1 - age * fleck.drift - width / 2
+                DrawFoam(fleck, left, y, width, height, 0.72 * swell, filledWidth)
+            end
+        end
+
         local redSparkles = {}
         local sparklesShown = false
         for index = 1, 28 do
@@ -184,6 +268,7 @@ DFRL:NewMod("RunTimers", 5, function()
             end
             if flowRed == atLimit then return end
             flowRed = atLimit
+            if atLimit then HideBlueFoam() end
             bar:SetStatusBarTexture(path .. (atLimit and "FillWhite" or "FillBlue") .. ".tga")
             bar:SetStatusBarColor(
                 atLimit and 0.72 or 1,
@@ -201,6 +286,7 @@ DFRL:NewMod("RunTimers", 5, function()
 
         local function HideRunFlow()
             flowUpdatedAt = nil
+            HideBlueFoam()
             if glowShown then
                 runGlow:Hide()
                 glowShown = false
@@ -259,6 +345,7 @@ DFRL:NewMod("RunTimers", 5, function()
                     flow.shown = false
                 end
             end
+            UpdateBlueFoam(now, filledWidth)
         end
         return SetRunAppearance, HideRunFlow, UpdateRunFlow
     end
@@ -290,6 +377,7 @@ DFRL:NewMod("RunTimers", 5, function()
     local faceLabel, sizeLabel, shadowControl, visibilityControl
     local displayControls, outlineButtons, faceButtons, sctButtons = {}, {}, {}, {}
     local incomingControl, sctDescription
+    local sctSizeLabel
 
     local function UpdateSctLabels()
         if not incomingControl or not DFRL.sct then return end
@@ -308,6 +396,9 @@ DFRL:NewMod("RunTimers", 5, function()
     end
 
     local function UpdateDisplayLabels()
+        if sctSizeLabel then
+            sctSizeLabel:SetText(tostring(math.floor(DFRL.display.Get("sctScale") * 100 + 0.5)) .. "%")
+        end
         for key, control in pairs(displayControls) do
             control:SetChecked(DFRL.display.Get(key))
             if key == "attachJewelry" then
@@ -443,6 +534,41 @@ DFRL:NewMod("RunTimers", 5, function()
             { value = "off", label = "Off" },
             { value = "default", label = "Game settings" },
         }
+        local combatFilters = {
+            { key = "sctNormalHits", label = "Normal hits" },
+            { key = "sctCriticalHits", label = "Critical hits" },
+            { key = "sctAutoAttacks", label = "Auto-attacks" },
+            { key = "sctDirectDamage", label = "Direct abilities / spells" },
+            { key = "sctPeriodicDamage", label = "Damage over time" },
+            { key = "sctReflectedDamage", label = "Reflected damage" },
+            { key = "sctMisses", label = "Misses / avoidance" },
+            { key = "sctClassColors", label = "Class-colored damage" },
+        }
+        local hudOptions = {
+            { "classHealth", "Class-colored health", "Use your vanilla class color for player health." },
+            { "classResources", "Class resources", "Show power inside the player frame." },
+            {
+                "roundPlayerPortrait",
+                "Round player portrait",
+                "Use the target's circular border without the pointed corner.",
+            },
+            { "flipBuffs", "Flip buff layout", "Flip icon order only; keep text placement." },
+            { "cooldownNumbers", "Cooldown numbers", "Show countdowns on ability buttons." },
+            { "bossDebuffs", "Boss debuffs", "Effects on boss and guardian health bars." },
+            { "cacheGuidance", "Cache guidance", "Show the cache direction and distance." },
+            { "guardianGuidance", "Guardian guidance", "Show the guardian lair direction and distance." },
+            { "equippedJewelry", "Equipped jewelry", "Show five equipped items attached to the action bar." },
+            {
+                "hideNativeBuild",
+                "Hide default jewelry / abilities",
+                "Off: show the game's original jewelry and ability rows.",
+            },
+            {
+                "attachJewelry",
+                "Attach jewelry to action bar",
+                "Off: move jewelry separately, keeping the silver rims.",
+            },
+        }
         for _, entry in ipairs(fontFaces) do
             dropdownWidth = math.max(dropdownWidth, TextWidth(entry.label) + 36)
         end
@@ -451,6 +577,14 @@ DFRL:NewMod("RunTimers", 5, function()
         end
         for _, entry in ipairs(modes) do
             modeWidth = math.max(modeWidth, TextWidth(entry.label) + 24)
+        end
+        local filterWidth = 0
+        for _, entry in ipairs(combatFilters) do
+            filterWidth = math.max(filterWidth, TextWidth(entry.label) + 36)
+        end
+        local hudOptionWidth = 0
+        for _, entry in ipairs(hudOptions) do
+            hudOptionWidth = math.max(hudOptionWidth, TextWidth(entry[2]) + 36, TextWidth(entry[3]) / 2 + 36)
         end
         local outlineWidth = 0
         for _, entry in ipairs(fontOutlines) do
@@ -461,6 +595,9 @@ DFRL:NewMod("RunTimers", 5, function()
         local contentWidth = math.max(
             tabWidth * table.getn(tabs) + gap * (table.getn(tabs) - 1),
             modeWidth * 3 + gap * 2,
+            filterWidth * 2 + gap,
+            hudOptionWidth * 2 + gap + 24,
+            TextWidth("SCT size") + gap + 136,
             labelWidth + gap + dropdownWidth,
             labelWidth + gap + outlineWidth * 3 + gap * 2,
             defaultsWidth * 2 + 140 + gap * 4,
@@ -525,56 +662,55 @@ DFRL:NewMod("RunTimers", 5, function()
 
         DFRL.layout.CreateControls(pages.layout, contentWidth, function() SelectPage("layout") end)
 
-        local function DisplayToggle(parent, key, label, description, y)
+        local function DisplayToggle(parent, key, label, description, y, rowWidth)
             local control = T.CreateEditorToggle(
                 parent,
                 label,
                 description,
-                contentWidth,
+                rowWidth or contentWidth,
                 function(value) DFRL.display.Set(key, value) end
             )
             control:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, y)
             displayControls[key] = control
+            return control
         end
-        DisplayToggle(
-            pages.hud,
-            "classHealth",
-            "Class-colored health",
-            "Use your vanilla class color for player health.",
-            0
-        )
-        DisplayToggle(pages.hud, "classResources", "Class resources", "Show power inside the player frame.", -44)
-        DisplayToggle(pages.hud, "cooldownNumbers", "Cooldown numbers", "Show countdowns on ability buttons.", -88)
-        DisplayToggle(pages.hud, "bossDebuffs", "Boss debuffs", "Effects on boss and guardian health bars.", -132)
-        DisplayToggle(pages.hud, "cacheGuidance", "Cache guidance", "Show the cache direction and distance.", -176)
-        DisplayToggle(
-            pages.hud,
-            "guardianGuidance",
-            "Guardian guidance",
-            "Show the guardian lair direction and distance.",
-            -220
-        )
-        DisplayToggle(
-            pages.hud,
-            "equippedJewelry",
-            "Equipped jewelry",
-            "Show five equipped items attached to the action bar.",
-            -264
-        )
-        DisplayToggle(
-            pages.hud,
-            "hideNativeBuild",
-            "Hide default jewelry / abilities",
-            "Off: show the game's original jewelry and ability rows.",
-            -308
-        )
-        DisplayToggle(
-            pages.hud,
-            "attachJewelry",
-            "Attach jewelry to action bar",
-            "Off: move jewelry separately, keeping the silver rims.",
-            -352
-        )
+        local hudScroll =
+            CreateFrame("ScrollFrame", "SurvivorsDragonUiHudOptionsScroll", pages.hud, "UIPanelScrollFrameTemplate")
+        hudScroll:SetPoint("TOPLEFT", pages.hud, "TOPLEFT", 0, 0)
+        hudScroll:SetPoint("BOTTOMRIGHT", pages.hud, "BOTTOMRIGHT", -24, 0)
+        local hudWidth = contentWidth - 24
+        local hudColumnWidth, hudRowHeight = (hudWidth - gap) / 2, 60
+        local hud = CreateFrame("Frame", nil, hudScroll)
+        hud:SetWidth(hudWidth)
+        hud:SetHeight(math.ceil(table.getn(hudOptions) / 2) * hudRowHeight)
+        hudScroll:SetScrollChild(hud)
+        local function ScrollHud(direction)
+            local slider = _G.SurvivorsDragonUiHudOptionsScrollScrollBar
+            if not slider then return end
+            local low, high = slider:GetMinMaxValues()
+            local value = slider:GetValue() - (direction or arg1 or 0) * hudRowHeight
+            slider:SetValue(math.max(low, math.min(high, value)))
+        end
+        hudScroll:EnableMouseWheel(true)
+        hudScroll:SetScript("OnMouseWheel", ScrollHud)
+        for index, entry in ipairs(hudOptions) do
+            local row = math.floor((index - 1) / 2)
+            local control = DisplayToggle(hud, entry[1], entry[2], entry[3], -row * hudRowHeight, hudColumnWidth)
+            control:ClearAllPoints()
+            control:SetPoint(
+                "TOPLEFT",
+                hud,
+                "TOPLEFT",
+                math.mod(index - 1, 2) * (hudColumnWidth + gap),
+                -row * hudRowHeight
+            )
+            control:SetHeight(hudRowHeight)
+            control.description:SetHeight(28)
+            control.description:SetJustifyV("TOP")
+            control:EnableMouseWheel(true)
+            control:SetScript("OnMouseWheel", ScrollHud)
+        end
+        if hudScroll.UpdateScrollChildRect then hudScroll:UpdateScrollChildRect() end
 
         local combat = pages.combat
         local heading = FontEditorLabel(combat, "Outgoing damage", 0, 0, 12)
@@ -596,17 +732,67 @@ DFRL:NewMod("RunTimers", 5, function()
         sctDescription:SetTextColor(0.75, 0.73, 0.67)
         divider = T.EditorDivider(combat, contentWidth)
         divider:SetPoint("TOPLEFT", combat, "TOPLEFT", 0, -104)
+        local combatToggleWidth = (contentWidth - gap) / 2
         incomingControl = T.CreateEditorToggle(
             combat,
             "Incoming / self text",
             "Received damage and other native self feedback.",
-            contentWidth,
+            combatToggleWidth,
             function(value)
                 if DFRL.sct then DFRL.sct.SetIncoming(value) end
             end
         )
         incomingControl:SetPoint("TOPLEFT", combat, "TOPLEFT", 0, -120)
-        DisplayToggle(combat, "damageIcons", "Damage icons", "Spell icons beside custom damage numbers.", -172)
+        local iconControl = DisplayToggle(
+            combat,
+            "damageIcons",
+            "Damage icons",
+            "Spell icons beside custom damage numbers.",
+            -120,
+            combatToggleWidth
+        )
+        iconControl:ClearAllPoints()
+        iconControl:SetPoint("TOPLEFT", combat, "TOPLEFT", combatToggleWidth + gap, -120)
+        for _, control in ipairs({ incomingControl, iconControl }) do
+            control:SetHeight(60)
+            control.description:SetHeight(28)
+            control.description:SetJustifyV("TOP")
+        end
+        FontEditorLabel(combat, "SCT size", 0, -198, 11)
+        local scaleX = TextWidth("SCT size") + gap
+        local function ChangeSctSize(direction)
+            local percent = math.floor(DFRL.display.Get("sctScale") * 100 + 0.5)
+            DFRL.display.Set("sctScale", (percent + direction * 5) / 100)
+        end
+        FontEditorButton("-", 28, scaleX, -190, function() ChangeSctSize(-1) end, combat)
+        sctSizeLabel = FontEditorLabel(combat, "", scaleX + 36, -198)
+        sctSizeLabel:SetWidth(64)
+        sctSizeLabel:SetJustifyH("CENTER")
+        FontEditorButton("+", 28, scaleX + 108, -190, function() ChangeSctSize(1) end, combat)
+        heading = FontEditorLabel(combat, "Custom outgoing text", 0, -232, 12)
+        heading:SetTextColor(0.94, 0.79, 0.47)
+        local filterSize = (contentWidth - gap) / 2
+        for index, entry in ipairs(combatFilters) do
+            local key = entry.key
+            local control = T.CreateEditorToggle(
+                combat,
+                entry.label,
+                nil,
+                filterSize,
+                function(value) DFRL.display.Set(key, value) end
+            )
+            control:SetHeight(36)
+            control.label:ClearAllPoints()
+            control.label:SetPoint("TOPLEFT", control, "TOPLEFT", 32, -10)
+            control:SetPoint(
+                "TOPLEFT",
+                combat,
+                "TOPLEFT",
+                math.mod(index - 1, 2) * (filterSize + gap),
+                -252 - math.floor((index - 1) / 2) * 36
+            )
+            displayControls[key] = control
+        end
 
         local timer = pages.timer
         local caption = FontEditorLabel(timer, "Timer label preview", 0, 0, 9)

@@ -1,5 +1,25 @@
 setfenv(1, DFRL:GetEnv())
 
+-- Original 1.12.1 FrameXML/Fonts.xml RAID_CLASS_COLORS:
+-- https://github.com/MOUZU/Blizzard-WoW-Interface/blob/master/1.12.1/FrameXML/Fonts.xml
+local classColors = {
+    HUNTER = { 0.67, 0.83, 0.45 },
+    WARLOCK = { 0.58, 0.51, 0.79 },
+    PRIEST = { 1, 1, 1 },
+    PALADIN = { 0.96, 0.55, 0.73 },
+    MAGE = { 0.41, 0.8, 0.94 },
+    ROGUE = { 1, 0.96, 0.41 },
+    DRUID = { 1, 0.49, 0.04 },
+    SHAMAN = { 0, 112 / 255, 221 / 255 }, -- User-requested blue #0070DD.
+    WARRIOR = { 0.78, 0.61, 0.43 },
+}
+
+function DFRL.tools.GetPlayerClassColor()
+    if type(UnitClass) ~= "function" then return end
+    local _, class = UnitClass("player")
+    return classColors[class]
+end
+
 function KillFrame(frame)
     if not frame then return end
     frame:Hide()

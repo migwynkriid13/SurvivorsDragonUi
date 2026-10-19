@@ -66,6 +66,19 @@ DFRL:NewMod("Micro", 1, function()
             previous = button
         end
     end
+    local talentButton = _G.TalentMicroButton
+    if talentButton then
+        -- Suppress the talent reminder without changing native events or hover.
+        if type(ButtonPulse_StopPulse) == "function" then ButtonPulse_StopPulse(talentButton) end
+        talentButton:UnlockHighlight()
+        local setButtonPulse = _G.SetButtonPulse
+        if type(setButtonPulse) == "function" then
+            _G.SetButtonPulse = function(button, duration, pulseRate)
+                if button == talentButton then return end
+                return setButtonPulse(button, duration, pulseRate)
+            end
+        end
+    end
     for _, name in ipairs({
         "SpellbookMicroButton",
         "WorldMapMicroButton",

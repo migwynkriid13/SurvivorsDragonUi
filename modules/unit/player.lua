@@ -4,22 +4,11 @@ DFRL:NewMod("Player", 1, function()
     local tex = DFRL:GetInfoOrCons("tex") .. "unitframes\\"
     local font = "DEFAULT"
     local healthText
-    local primaryBar, primaryText, setPowerShown
+    local primaryBar, primaryText, setPowerShown, setPortraitOverlap
+    local updateBorder
+    local pulseTextures = {}
     local initialized = false
 
-    -- Original 1.12.1 FrameXML/Fonts.xml RAID_CLASS_COLORS:
-    -- https://github.com/MOUZU/Blizzard-WoW-Interface/blob/master/1.12.1/FrameXML/Fonts.xml
-    local classColors = {
-        HUNTER = { 0.67, 0.83, 0.45 },
-        WARLOCK = { 0.58, 0.51, 0.79 },
-        PRIEST = { 1, 1, 1 },
-        PALADIN = { 0.96, 0.55, 0.73 },
-        MAGE = { 0.41, 0.8, 0.94 },
-        ROGUE = { 1, 0.96, 0.41 },
-        DRUID = { 1, 0.49, 0.04 },
-        SHAMAN = { 0, 112 / 255, 221 / 255 }, -- User-requested blue #0070DD.
-        WARRIOR = { 0.78, 0.61, 0.43 },
-    }
     local healthR, healthG, healthB = 0, 1, 0
     local setHealthColor = PlayerFrameHealthBar.SetStatusBarColor
     -- Native health updates also recolor this bar; keep the effective display choice.
@@ -27,10 +16,7 @@ DFRL:NewMod("Player", 1, function()
 
     local function UpdateHealthColor()
         local color
-        if DFRL.display.Get("classHealth") then
-            local _, class = UnitClass("player")
-            color = classColors[class]
-        end
+        if DFRL.display.Get("classHealth") then color = T.GetPlayerClassColor() end
         if color then
             healthR, healthG, healthB = unpack(color)
         else
@@ -40,6 +26,32 @@ DFRL:NewMod("Player", 1, function()
         PlayerFrameHealthBar:SetStatusBarColor(healthR, healthG, healthB)
     end
     DFRL.display.Listen(UpdateHealthColor)
+
+    local function UpdatePortraitShape()
+        if not updateBorder then return end
+        local round = DFRL.display.Get("roundPlayerPortrait")
+        updateBorder(tex .. (round and "UI-TargetingFrameDF1.blp" or "UI-TargetingFrameDF.blp"))
+        local extension = setPortraitOverlap(round)
+        if healthText then healthText:SetPoint("CENTER", PlayerFrameHealthBar, "CENTER", extension / 2, 0) end
+        if PlayerFrame.name then
+            PlayerFrame.name:SetPoint("BOTTOMLEFT", PlayerFrameHealthBar, "TOPLEFT", 2 + extension, 4)
+            PlayerFrame.name:SetWidth(PlayerFrameHealthBar:GetWidth() - extension - 24)
+        end
+        if primaryBar then
+            primaryBar:SetWidth(PlayerFrameHealthBar:GetWidth())
+            primaryText:SetPoint("CENTER", primaryBar, "CENTER", extension / 2, 0)
+        end
+        for _, textures in ipairs(pulseTextures) do
+            if round then
+                textures.original:Hide()
+                textures.round:Show()
+            else
+                textures.original:Show()
+                textures.round:Hide()
+            end
+        end
+    end
+    DFRL.display.Listen(UpdatePortraitShape)
 
     DFRL.playerResources = DFRL.playerResources or {}
     DFRL.playerResources.SetPrimary = function(value, maximum, powerType)
@@ -130,6 +142,13 @@ DFRL:NewMod("Player", 1, function()
         texture:SetVertexColor(r, g, b)
         texture:SetBlendMode("ADD")
         texture:SetAlpha(0)
+        -- Use the same circular rim as the target for the optional status pulse,
+        -- so the original pointed silhouette cannot return during combat/rest.
+        local round = T.CreateRoundPlayerRim(PlayerFrame, PlayerFrame, r, g, b, "ADD")
+        round:SetFrameLevel(PlayerFrameHealthBar:GetFrameLevel() + 3)
+        round:SetAlpha(0)
+        round:Hide()
+        table.insert(pulseTextures, { original = texture, round = round })
         local pulseTime = 0
         overlay:SetScript("OnUpdate", function()
             local elapsed = arg1 or 0
@@ -139,6 +158,7 @@ DFRL:NewMod("Player", 1, function()
             else
                 texture:SetAlpha(math.max(0, texture:GetAlpha() - elapsed * 2))
             end
+            round:SetAlpha(texture:GetAlpha())
         end)
     end
 
@@ -181,8 +201,7 @@ DFRL:NewMod("Player", 1, function()
         initialized = true
         PlayerFrame:SetScale(1)
         PlayerFrame:Show()
-        local _
-        _, setPowerShown = T.CreateUnitBorder(
+        updateBorder, setPowerShown, setPortraitOverlap = T.CreateUnitBorder(
             PlayerFrame,
             PlayerFrameHealthBar,
             PlayerFrameTexture,
@@ -192,9 +211,9 @@ DFRL:NewMod("Player", 1, function()
         )
         HidePowerBar()
         primaryBar = CreateFrame("StatusBar", nil, PlayerFrame)
-        primaryBar:SetWidth(122)
+        primaryBar:SetWidth(PlayerFrameHealthBar:GetWidth())
         primaryBar:SetHeight(9)
-        primaryBar:SetPoint("TOPLEFT", PlayerFrame, "TOPLEFT", 104, -54)
+        primaryBar:SetPoint("TOPLEFT", PlayerFrameHealthBar, "TOPLEFT", 0, -20)
         primaryBar:SetFrameLevel(PlayerFrameHealthBar:GetFrameLevel())
         primaryBar:SetStatusBarTexture(tex .. "UI-HUD-UnitFrame-Player-PortraitOn-Bar-Mana-Status.tga")
         primaryBar:SetMinMaxValues(0, 1)
@@ -222,7 +241,6 @@ DFRL:NewMod("Player", 1, function()
         if PlayerFrame.name then
             PlayerFrame.name:ClearAllPoints()
             PlayerFrame.name:SetPoint("BOTTOMLEFT", PlayerFrameHealthBar, "TOPLEFT", 2, 4)
-            PlayerFrame.name:SetWidth(PlayerFrameHealthBar:GetWidth() - 24)
             PlayerFrame.name:SetJustifyH("LEFT")
             PlayerFrame.name:SetFont(font, 11, "NONE")
             PlayerFrame.name:SetTextColor(1, 0.82, 0)
@@ -251,6 +269,7 @@ DFRL:NewMod("Player", 1, function()
         end
         CreatePulse(1, 0, 0, function() return UnitAffectingCombat("player") end)
         CreatePulse(0, 1, 1, IsResting)
+        UpdatePortraitShape()
         CreateRestingAnimation()
         FixPlayerClick()
         UpdateValues()

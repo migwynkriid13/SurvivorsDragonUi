@@ -2,6 +2,7 @@ DFRL:NewMod("Player Auras", 2, function()
     if not Minimap or not BuffFrame then return end
 
     local iconSize, gap, rowGap, columns = 28, 3, 14, 6
+    local flipped = DFRL.display.Get("flipBuffs")
     local width = columns * iconSize + (columns - 1) * gap
     local container = CreateFrame("Frame", "DFRL_PlayerAuras", UIParent)
     local function PlaceDefault()
@@ -92,13 +93,13 @@ DFRL:NewMod("Player Auras", 2, function()
                 if force or entry.slot ~= slot then
                     SizeButton(entry)
                     entry.button:ClearAllPoints()
-                    entry.button:SetPoint(
-                        "TOPRIGHT",
-                        container,
-                        "TOPRIGHT",
-                        -math.mod(slot, columns) * (iconSize + gap),
-                        -math.floor(slot / columns) * (iconSize + rowGap)
-                    )
+                    local column = math.mod(slot, columns) * (iconSize + gap)
+                    local row = -math.floor(slot / columns) * (iconSize + rowGap)
+                    if flipped then
+                        entry.button:SetPoint("TOPLEFT", container, "TOPLEFT", column, row)
+                    else
+                        entry.button:SetPoint("TOPRIGHT", container, "TOPRIGHT", -column, row)
+                    end
                     entry.slot = slot
                 end
                 slot = slot + 1
@@ -122,6 +123,12 @@ DFRL:NewMod("Player Auras", 2, function()
     hooksecurefunc("BuffButtons_UpdatePositions", function() Layout(true) end)
     hooksecurefunc("BuffFrame_Enchant_OnUpdate", function() Layout(false) end)
     hooksecurefunc("UIParent_ManageFramePositions", function() Layout(true) end)
+    DFRL.display.Listen(function()
+        local value = DFRL.display.Get("flipBuffs")
+        if value == flipped then return end
+        flipped = value
+        Layout(true)
+    end)
     Layout(true)
     -- Aura updates resize/reflow this container without replacing its own anchor.
     DFRL.layout.Register("buffs", container, PlaceDefault)

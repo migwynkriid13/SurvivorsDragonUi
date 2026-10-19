@@ -22,6 +22,24 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     }
     local DAMAGE_SAMPLE_LIMIT, DAMAGE_SAMPLE_TIME = 8, 30
     local DAMAGE_SAMPLE_MINIMUM, STRONG_DAMAGE_RATIO = 3, 1.2
+    local DAMAGE_FILTERS = {
+        autoattack = "sctAutoAttacks",
+        ability = "sctDirectDamage",
+        spell = "sctDirectDamage",
+        periodic = "sctPeriodicDamage",
+        reflected = "sctReflectedDamage",
+    }
+
+    local function ShouldShowText(info)
+        if info.kind == "damage" then
+            local result = info.critical and "sctCriticalHits" or "sctNormalHits"
+            if not DFRL.display.Get(result) then return false end
+        end
+        -- Result and damage-category choices must both allow a damage label.
+        -- Miss/avoidance notices retain their independent control.
+        local key = info.kind == "miss" and "sctMisses" or DAMAGE_FILTERS[info.damageType]
+        return not key or DFRL.display.Get(key)
+    end
 
     local plates = {}
     local origins = {}
@@ -51,6 +69,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local function ActiveMode() return settingsDraft and settingsDraft.mode or sctMode end
     local customEnabled, changingSettings = false, false
     local damageIcons = DFRL.display.Get("damageIcons")
+    local textScale = DFRL.display.Get("sctScale")
     -- Keep V's visible request separate from the backing coordinate feed. The
     -- native verbs do not write FrameXML's saved NAMEPLATES_ON preference.
     local enemyPlatesEnabled = NAMEPLATES_ON and true or false
@@ -176,6 +195,9 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         text.icon:Hide()
         text.holder:ClearAllPoints()
         text.spell, text.damageType, text.iconTexture = nil, nil, nil
+        text.kind = nil
+        text.critical = nil
+        text.color = nil
         table.insert(textPool, text)
     end
 
@@ -737,6 +759,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                     .. IconIdentityPart(source)
                     .. IconIdentityPart(info.damageType or "")
                     .. IconIdentityPart(info.school or "")
+                    .. IconIdentityPart(info.critical and "critical" or "normal")
                     .. IconIdentityPart(TextureKey(info.iconTexture) or FALLBACK_ICON)
                 byAmount = intakeBuckets[identity]
                 if not byAmount then
@@ -779,13 +802,28 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         end
     end
 
+    local function UpdateTextColor(text)
+        local color = text.color or DAMAGE_COLORS.normal
+        if text.kind == "damage" and DFRL.display.Get("sctClassColors") then
+            color = T.GetPlayerClassColor() or color
+        end
+        text.label:SetTextColor(color[1], color[2], color[3])
+    end
+
     DFRL.display.Listen(function()
+        textScale = DFRL.display.Get("sctScale")
         local enabled = DFRL.display.Get("damageIcons")
-        if damageIcons == enabled then return end
+        local iconsChanged = damageIcons ~= enabled
         damageIcons = enabled
-        if damageIcons and CustomEnabled() then RebuildSpellTextures() end
-        for _, text in ipairs(activeTexts) do
-            UpdateIcon(text)
+        if iconsChanged and damageIcons and CustomEnabled() then RebuildSpellTextures() end
+        for index = table.getn(activeTexts), 1, -1 do
+            local text = activeTexts[index]
+            if not ShouldShowText(text) then
+                ReleaseText(table.remove(activeTexts, index))
+            else
+                UpdateTextColor(text)
+                if iconsChanged then UpdateIcon(text) end
+            end
         end
     end)
 
@@ -864,6 +902,9 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     end
 
     local function DisplayDamage(info, x, y)
+        -- Filter only after every original hit has consumed its matching and
+        -- color evidence, including members of a visually collapsed group.
+        if not ShouldShowText(info) then return end
         local value = info.text or info.amount
         if not value then return end
         local text = AcquireText()
@@ -877,15 +918,17 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         text.launch = math.random(105, 130)
         text.gravity = text.launch + 65
         arcDirection = -arcDirection
-        local color = info.color or DAMAGE_COLORS.normal
         local displayText = tostring(value)
         if info.kind == "miss" then displayText = DFRL.locale.CombatText(displayText) end
         text.label:SetText(displayText)
-        text.label:SetTextColor(color[1], color[2], color[3])
         text.label:Show()
         text.spell, text.damageType, text.iconTexture = info.spell, info.damageType, info.iconTexture
+        text.kind = info.kind
+        text.critical = info.critical
+        text.color = info.color
+        UpdateTextColor(text)
         UpdateIcon(text)
-        local scale = text.sizeScale * (text.impact and 0.5 or 1)
+        local scale = textScale * text.sizeScale * (text.impact and 0.5 or 1)
         if text.scale ~= scale then
             text.scale = scale
             text.visual:SetScale(scale)
@@ -977,7 +1020,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                 local y = text.y + 12 + text.launch * progress - text.gravity * progress * progress
                 -- Replacing CENTER updates the existing anchor in place.
                 text.holder:SetPoint("CENTER", WorldFrame, "BOTTOMLEFT", x, y)
-                local scale = text.sizeScale
+                local scale = textScale * text.sizeScale
                 if text.impact and progress < 1 / 6 then
                     local pop = progress * 6
                     if pop < 0.5 then
@@ -1119,23 +1162,6 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         NotifySettings()
     end
 
-    local function SelectMode(mode)
-        if not IsMode(mode) then return end
-        if settingsDraft then
-            -- An explicit slash command commits its own choice and supersedes
-            -- pending mode/outgoing rollback without touching incoming preview.
-            settingsDraft.mode, settingsDraft.damage = nil, nil
-        end
-        sctMode = mode
-        _G.SurvivorsDragonUiSctMode = mode
-        if mode ~= "default" then
-            -- Mode choices affect only outgoing text. The independent incoming
-            -- control is the only editor action that changes SHOW_COMBAT_TEXT.
-            WriteNativeDamage("0")
-        end
-        SyncGameSettings(true)
-    end
-
     function sct.GetMode() return ActiveMode() end
     function sct.GetIncoming() return ReadIncoming() == "1" end
     function sct.BeginEdit()
@@ -1172,30 +1198,6 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     end
     function sct.Listen(callback)
         if type(callback) == "function" then table.insert(settingsListeners, callback) end
-    end
-
-    -- Module initialization uses DFRL's private environment; slash aliases
-    -- must be registered in the real global table for the stock chat parser.
-    _G.SLASH_DRAGONSURVIVORSSCT1 = "/sct"
-    _G.SlashCmdList = _G.SlashCmdList or {}
-    _G.SlashCmdList["DRAGONSURVIVORSSCT"] = function(message)
-        local mode = string.gsub(string.lower(message or ""), "^%s*(.-)%s*$", "%1")
-        local feedback
-        if mode == "on" then
-            SelectMode("on")
-            feedback = DFRL.locale.Text(
-                "Custom SCT enabled. V controls visible nameplates; invisible plates track hit positions."
-            )
-        elseif mode == "off" then
-            SelectMode("off")
-            feedback = DFRL.locale.Text("Custom and native outgoing SCT disabled. Incoming/self text is unchanged.")
-        elseif mode == "default" then
-            SelectMode("default")
-            feedback = DFRL.locale.Text("Custom SCT disabled; native SCT follows your game settings.")
-        else
-            feedback = DFRL.locale.Text("Usage: /sct on | off | default. Current mode: ") .. sctMode .. "."
-        end
-        if DEFAULT_CHAT_FRAME then DEFAULT_CHAT_FRAME:AddMessage("SurvivorsDragonUi: " .. feedback) end
     end
 
     local frame = CreateFrame("Frame", "DFRL_NameplateCombatText")
