@@ -2,6 +2,10 @@
 -- Experience.lua and Loot.lua, adapted for Lua 5.0 and native Survivors notices.
 -- Learned abilities remain visible with the explicitly requested compact label.
 -- Unknown messages and player conversations keep their original text.
+-- This file defines helpers at load time rather than through NewMod. Use the
+-- same private globals as modules: the Lua 5.0 client has no native _G alias.
+setfenv(1, DFRL:GetEnv())
+
 DFRL.CleanerChat = DFRL.CleanerChat or {}
 local CleanerChat = DFRL.CleanerChat
 

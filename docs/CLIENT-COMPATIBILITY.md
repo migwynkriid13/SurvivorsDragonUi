@@ -41,7 +41,7 @@ Layout and chat now compare these values with one finite-number tolerance instea
 
 ## Lua globals and memory
 
-BeNilla [#1792](https://github.com/samwhosung/benilla/pull/1792) removed the native `_G` global. The addon already supplies `_G = getfenv(0)` inside its private module environment through `DFRL:GetEnv()`. Adding a global `_G` shim is not needed for the reported paths.
+BeNilla [#1792](https://github.com/samwhosung/benilla/pull/1792) removed the native `_G` global. The addon supplies `_G = getfenv(0)` inside its private module environment through `DFRL:GetEnv()`, but `modules/chat/prettify.lua` defines helpers directly at file load and had not entered that environment. Its reads of learned-ability, level-up and self-loot format globals therefore raised. The chat wrapper's protected call preserved the raw message, explaining the supplied screenshot's unformatted level announcements, stat gains and learned Gouge notice without a visible Lua error. The prettifier now enters the same private environment before defining its helpers. No native global alias or extra formatting category is added.
 
 BeNilla [#1782](https://github.com/samwhosung/benilla/pull/1782) enabled the original client's `scriptMemory` enforcement. Its default 49,152 KB limit covers the whole Lua state, including the game interface and all addons. The client attempts collection, shows the supplied popup if usage remains over the limit, and may exit after 15 seconds. [#1788](https://github.com/samwhosung/benilla/pull/1788) subsequently aligned the accounting with 32-bit Lua 5.0 object sizes. WeNilla's [upstream merge](https://github.com/Arnesen/wenilla/commit/024ae5882e44) includes these Lua and memory changes.
 
