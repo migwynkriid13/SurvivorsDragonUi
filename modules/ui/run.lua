@@ -459,7 +459,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 "Round player portrait",
                 "Use the target's circular border without the pointed corner.",
             },
-            { "flipBuffs", "Flip buff layout", "Grow left to right, with timers above the icons." },
+            { "flipBuffs", "Flip buff layout", "Flip icon order only; keep text placement." },
             { "cooldownNumbers", "Cooldown numbers", "Show countdowns on ability buttons." },
             { "bossDebuffs", "Boss debuffs", "Effects on boss and guardian health bars." },
             { "cacheGuidance", "Cache guidance", "Show the cache direction and distance." },

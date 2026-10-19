@@ -68,11 +68,7 @@ DFRL:NewMod("Player Auras", 2, function()
         if duration then
             duration:SetFont("DEFAULT", 9, "OUTLINE")
             duration:ClearAllPoints()
-            if flipped then
-                duration:SetPoint("BOTTOM", button, "TOP", 0, 1)
-            else
-                duration:SetPoint("TOP", button, "BOTTOM", 0, -1)
-            end
+            duration:SetPoint("TOP", button, "BOTTOM", 0, -1)
             duration:SetWidth(iconSize)
             duration:SetHeight(12)
         end
@@ -100,7 +96,7 @@ DFRL:NewMod("Player Auras", 2, function()
                     local column = math.mod(slot, columns) * (iconSize + gap)
                     local row = -math.floor(slot / columns) * (iconSize + rowGap)
                     if flipped then
-                        entry.button:SetPoint("TOPLEFT", container, "TOPLEFT", column, row - rowGap)
+                        entry.button:SetPoint("TOPLEFT", container, "TOPLEFT", column, row)
                     else
                         entry.button:SetPoint("TOPRIGHT", container, "TOPRIGHT", -column, row)
                     end
