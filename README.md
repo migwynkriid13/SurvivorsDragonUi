@@ -83,13 +83,13 @@ In **Combat text**, **Custom**, **Off** and **Game settings** select outgoing co
 
 Under **Show in custom outgoing text**, uncheck any of these categories to reduce clutter. All five default to shown, including for older saves with missing or invalid values.
 
-| Category | Includes |
-| --- | --- |
-| **Auto-attacks** | Native auto-attack hits, including critical hits. |
-| **Direct abilities / spells** | Direct ability and spell damage, including critical hits. |
-| **Damage over time** | Native periodic damage ticks. |
-| **Reflected damage** | Native damage-shield / reflected damage messages. |
-| **Misses / avoidance** | Miss, dodge, parry, block, absorb, resist, immune, evade, deflect and spell-reflect notices, independently of damage-category choices. |
+| Category                      | Includes                                                                                                                               |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| **Auto-attacks**              | Native auto-attack hits, including critical hits.                                                                                      |
+| **Direct abilities / spells** | Direct ability and spell damage, including critical hits.                                                                              |
+| **Damage over time**          | Native periodic damage ticks.                                                                                                          |
+| **Reflected damage**          | Native damage-shield / reflected damage messages.                                                                                      |
+| **Misses / avoidance**        | Miss, dodge, parry, block, absorb, resist, immune, evade, deflect and spell-reflect notices, independently of damage-category choices. |
 
 These filters apply to the addon's **Custom** outgoing text, including already animating labels. Player and pet hits use the same category choices. Hidden hits still take part in enemy matching, duplicate suppression and damage-color history; native damage totals, combat logs, raw diagnostics and game combat-text preferences are unaffected. Preview changes immediately, then **Confirm** to save the five booleans in the existing `SurvivorsDragonUiDisplay` table. Cancel, world leave, logout and reload discard unconfirmed choices; both full resets restore all five categories to shown while preserving the confirmed SCT mode. Individual ability filters are not included. In-game behavior remains unverified.
 
