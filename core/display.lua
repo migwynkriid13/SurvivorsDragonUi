@@ -10,6 +10,7 @@ DFRL:NewMod("Display", 0, function()
         sctReflectedDamage = true,
         sctMisses = true,
         sctClassColors = false,
+        sctScale = 1,
         roundPlayerPortrait = false,
         flipBuffs = false,
         classResources = false,
@@ -23,8 +24,15 @@ DFRL:NewMod("Display", 0, function()
     }
     DFRL.display = display
 
+    local function NormalizeScale(value)
+        if type(value) ~= "number" or value - value ~= 0 then return nil end
+        return math.max(0.25, math.min(2, value))
+    end
     local function Read(source, key)
-        if type(source) == "table" and type(source[key]) == "boolean" then return source[key] end
+        local value
+        if type(source) == "table" then value = source[key] end
+        if key == "sctScale" then return NormalizeScale(value) or defaults.sctScale end
+        if type(value) == "boolean" then return value end
         return defaults[key]
     end
     local function Normalize(source)
@@ -37,6 +45,7 @@ DFRL:NewMod("Display", 0, function()
             sctReflectedDamage = Read(source, "sctReflectedDamage"),
             sctMisses = Read(source, "sctMisses"),
             sctClassColors = Read(source, "sctClassColors"),
+            sctScale = Read(source, "sctScale"),
             roundPlayerPortrait = Read(source, "roundPlayerPortrait"),
             flipBuffs = Read(source, "flipBuffs"),
             classResources = Read(source, "classResources"),
@@ -60,7 +69,14 @@ DFRL:NewMod("Display", 0, function()
         if not draft then draft = Normalize(_G.SurvivorsDragonUiDisplay) end
     end
     function display.Set(key, value)
-        if not draft or defaults[key] == nil or type(value) ~= "boolean" or draft[key] == value then return end
+        if not draft or defaults[key] == nil then return end
+        if key == "sctScale" then
+            value = NormalizeScale(value)
+            if not value then return end
+        elseif type(value) ~= "boolean" then
+            return
+        end
+        if draft[key] == value then return end
         draft[key] = value
         Notify()
     end

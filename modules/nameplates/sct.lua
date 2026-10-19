@@ -65,6 +65,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local function ActiveMode() return settingsDraft and settingsDraft.mode or sctMode end
     local customEnabled, changingSettings = false, false
     local damageIcons = DFRL.display.Get("damageIcons")
+    local textScale = DFRL.display.Get("sctScale")
     -- Keep V's visible request separate from the backing coordinate feed. The
     -- native verbs do not write FrameXML's saved NAMEPLATES_ON preference.
     local enemyPlatesEnabled = NAMEPLATES_ON and true or false
@@ -804,6 +805,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     end
 
     DFRL.display.Listen(function()
+        textScale = DFRL.display.Get("sctScale")
         local enabled = DFRL.display.Get("damageIcons")
         local iconsChanged = damageIcons ~= enabled
         damageIcons = enabled
@@ -919,7 +921,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         text.color = info.color
         UpdateTextColor(text)
         UpdateIcon(text)
-        local scale = text.sizeScale * (text.impact and 0.5 or 1)
+        local scale = textScale * text.sizeScale * (text.impact and 0.5 or 1)
         if text.scale ~= scale then
             text.scale = scale
             text.visual:SetScale(scale)
@@ -1011,7 +1013,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                 local y = text.y + 12 + text.launch * progress - text.gravity * progress * progress
                 -- Replacing CENTER updates the existing anchor in place.
                 text.holder:SetPoint("CENTER", WorldFrame, "BOTTOMLEFT", x, y)
-                local scale = text.sizeScale
+                local scale = textScale * text.sizeScale
                 if text.impact and progress < 1 / 6 then
                     local pop = progress * 6
                     if pop < 0.5 then

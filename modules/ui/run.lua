@@ -290,6 +290,7 @@ DFRL:NewMod("RunTimers", 5, function()
     local faceLabel, sizeLabel, shadowControl, visibilityControl
     local displayControls, outlineButtons, faceButtons, sctButtons = {}, {}, {}, {}
     local incomingControl, sctDescription
+    local sctSizeLabel
 
     local function UpdateSctLabels()
         if not incomingControl or not DFRL.sct then return end
@@ -308,6 +309,9 @@ DFRL:NewMod("RunTimers", 5, function()
     end
 
     local function UpdateDisplayLabels()
+        if sctSizeLabel then
+            sctSizeLabel:SetText(tostring(math.floor(DFRL.display.Get("sctScale") * 100 + 0.5)) .. "%")
+        end
         for key, control in pairs(displayControls) do
             control:SetChecked(DFRL.display.Get(key))
             if key == "attachJewelry" then
@@ -504,6 +508,7 @@ DFRL:NewMod("RunTimers", 5, function()
             modeWidth * 3 + gap * 2,
             filterWidth * 2 + gap,
             hudOptionWidth + 24,
+            TextWidth("SCT size") + gap + 148 + TextWidth("25% - 200%"),
             labelWidth + gap + dropdownWidth,
             labelWidth + gap + outlineWidth * 3 + gap * 2,
             defaultsWidth * 2 + 140 + gap * 4,
@@ -625,17 +630,44 @@ DFRL:NewMod("RunTimers", 5, function()
         sctDescription:SetTextColor(0.75, 0.73, 0.67)
         divider = T.EditorDivider(combat, contentWidth)
         divider:SetPoint("TOPLEFT", combat, "TOPLEFT", 0, -104)
+        local combatToggleWidth = (contentWidth - gap) / 2
         incomingControl = T.CreateEditorToggle(
             combat,
             "Incoming / self text",
             "Received damage and other native self feedback.",
-            contentWidth,
+            combatToggleWidth,
             function(value)
                 if DFRL.sct then DFRL.sct.SetIncoming(value) end
             end
         )
         incomingControl:SetPoint("TOPLEFT", combat, "TOPLEFT", 0, -120)
-        DisplayToggle(combat, "damageIcons", "Damage icons", "Spell icons beside custom damage numbers.", -172)
+        local iconControl = DisplayToggle(
+            combat,
+            "damageIcons",
+            "Damage icons",
+            "Spell icons beside custom damage numbers.",
+            -120,
+            combatToggleWidth
+        )
+        iconControl:ClearAllPoints()
+        iconControl:SetPoint("TOPLEFT", combat, "TOPLEFT", combatToggleWidth + gap, -120)
+        for _, control in ipairs({ incomingControl, iconControl }) do
+            control:SetHeight(60)
+            control.description:SetHeight(28)
+            control.description:SetJustifyV("TOP")
+        end
+        FontEditorLabel(combat, "SCT size", 0, -198, 11)
+        local scaleX = TextWidth("SCT size") + gap
+        local function ChangeSctSize(direction)
+            local percent = math.floor(DFRL.display.Get("sctScale") * 100 + 0.5)
+            DFRL.display.Set("sctScale", (percent + direction * 5) / 100)
+        end
+        FontEditorButton("-", 28, scaleX, -190, function() ChangeSctSize(-1) end, combat)
+        sctSizeLabel = FontEditorLabel(combat, "", scaleX + 36, -198)
+        sctSizeLabel:SetWidth(64)
+        sctSizeLabel:SetJustifyH("CENTER")
+        FontEditorButton("+", 28, scaleX + 108, -190, function() ChangeSctSize(1) end, combat)
+        FontEditorLabel(combat, "25% - 200%", scaleX + 148, -198, 10)
         heading = FontEditorLabel(combat, "Custom outgoing text", 0, -232, 12)
         heading:SetTextColor(0.94, 0.79, 0.47)
         local filterSize = (contentWidth - gap) / 2

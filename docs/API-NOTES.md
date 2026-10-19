@@ -1,5 +1,11 @@
 # Official addon API integration — 2026-10-14
 
+## SCT size and shared checkbox row — 2026-10-19
+
+The Combat text tab places Incoming/self text and Damage icons side by side, retaining both independent native/addon preference paths and allowing two lines for each description. SCT size uses the existing minus/plus editor buttons, with a 100% default and five-percentage-point steps clamped to 25–200%. The existing display table adds only a normalized numeric `sctScale` multiplier (0.25–2): missing, nonnumeric and nonfinite values use 1; finite out-of-range values clamp. This is the user-authorized numeric exception to that table's display booleans.
+
+The renderer multiplies only each hit's inner visual scale at launch and throughout animation, so text, icons and existing critical/miss pop follow the setting. Holder coordinates, trajectory, lifetime, matching, raw amounts, grouping, colors and native combat text are unchanged. Already animating hits preview size without resetting their launch/lifetime. The shared display draft handles Confirm-only saving, Cancel/world cleanup/reload discard and both full resets to 100%, without changing SCT mode. No new SavedVariable, command or asset is added. No local checks or game/addon execution were run; packaged-game behavior remains unverified.
+
 ## Player/buff options, class damage colors and command retirement — 2026-10-19
 
 The shared display table adds `roundPlayerPortrait`, `flipBuffs` and `sctClassColors`, all normalized booleans defaulting to false. They use the existing preview/Confirm/Cancel/world cleanup/reset lifecycle, with no new SavedVariable or gameplay state.
