@@ -64,7 +64,7 @@ DFRL:NewMod("Map", 1, function()
     MinimapZoneTextButton:SetParent(panel)
     MinimapZoneTextButton:SetPoint("LEFT", panel, "LEFT", 4, -3)
     MinimapZoneText:SetJustifyH("LEFT")
-    MinimapZoneText:SetFont("DEFAULT", 10, "")
+    T.SetFont(MinimapZoneText, 10, "")
 
     local timeFrame = CreateFrame("Frame", "MinimapTimeFrame", panel)
     timeFrame:SetWidth(40)
@@ -74,7 +74,7 @@ DFRL:NewMod("Map", 1, function()
 
     local timeText = timeFrame:CreateFontString("MinimapTimeText", "OVERLAY", "GameFontNormal")
     timeText:SetPoint("CENTER", timeFrame, "CENTER", 0, 0)
-    timeText:SetFont("DEFAULT", 10, "")
+    T.SetFont(timeText, 10, "")
     timeText:SetTextColor(1, 1, 1, 1)
     timeText:SetText(date("%H:%M"))
     local nextClockUpdate = 0

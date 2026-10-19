@@ -26,7 +26,7 @@ DFRL:NewMod("NameplateStyle", 5, function()
 
     local function CreateLabel(parent, justify)
         local label = parent:CreateFontString(nil, "OVERLAY")
-        label:SetFont("DEFAULT", FONT_SIZE, "OUTLINE")
+        T.SetFont(label, FONT_SIZE, "OUTLINE")
         label:SetHeight(10)
         label:SetJustifyH(justify)
         label:SetJustifyV("BOTTOM")

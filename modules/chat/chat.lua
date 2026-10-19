@@ -46,7 +46,7 @@ DFRL:NewMod("Chat", 1, function()
         local function Label(parent, text, size)
             local label = parent:CreateFontString(nil, "OVERLAY")
             DFRL.locale.Bind(label)
-            label:SetFont("DEFAULT", size or 12, "OUTLINE")
+            T.SetFont(label, size or 12, "OUTLINE")
             label:SetShadowColor(0, 0, 0, 1)
             label:SetShadowOffset(1, -1)
             label:SetText(text or "")
@@ -66,15 +66,17 @@ DFRL:NewMod("Chat", 1, function()
             return currentPoint == point
                 and currentRelative == relative
                 and currentRelativePoint == relativePoint
-                and currentX == x
-                and currentY == y
+                and T.NearlyEqual(currentX, x)
+                and T.NearlyEqual(currentY, y)
         end
         local function SetChatFont(frame)
             local font, size, flags
             if frame.GetFont then
                 font, size, flags = frame:GetFont()
             end
-            if font ~= "DEFAULT" or size ~= 12 or flags ~= "OUTLINE" then frame:SetFont("DEFAULT", 12, "OUTLINE") end
+            if font ~= T.GetDefaultFont() or not T.NearlyEqual(size, 12) or flags ~= "OUTLINE" then
+                T.SetFont(frame, 12, "OUTLINE")
+            end
         end
         local function SetChatShadow(frame)
             if frame.SetShadowColor then
@@ -89,7 +91,7 @@ DFRL:NewMod("Chat", 1, function()
                 if frame.GetShadowOffset then
                     x, y = frame:GetShadowOffset()
                 end
-                if x ~= 1 or y ~= -1 then frame:SetShadowOffset(1, -1) end
+                if not T.NearlyEqual(x, 1) or not T.NearlyEqual(y, -1) then frame:SetShadowOffset(1, -1) end
             end
         end
 
@@ -273,8 +275,8 @@ DFRL:NewMod("Chat", 1, function()
                 input:ClearAllPoints()
                 input:SetPoint("TOPLEFT", root, "BOTTOMLEFT", -1, -1)
             end
-            if input:GetWidth() ~= rootWidth then input:SetWidth(rootWidth) end
-            if input:GetHeight() ~= 28 then input:SetHeight(28) end
+            if not T.NearlyEqual(input:GetWidth(), rootWidth) then input:SetWidth(rootWidth) end
+            if not T.NearlyEqual(input:GetHeight(), 28) then input:SetHeight(28) end
             SetChatFont(input)
             SetChatShadow(input)
             if input:GetAlpha() ~= 1 then input:SetAlpha(1) end
@@ -292,7 +294,14 @@ DFRL:NewMod("Chat", 1, function()
             if input.GetTextInsets then
                 currentLeft, right, top, bottom = input:GetTextInsets()
             end
-            if currentLeft ~= left or right ~= 8 or top ~= 6 or bottom ~= 6 then input:SetTextInsets(left, 8, 6, 6) end
+            if
+                not T.NearlyEqual(currentLeft, left)
+                or not T.NearlyEqual(right, 8)
+                or not T.NearlyEqual(top, 6)
+                or not T.NearlyEqual(bottom, 6)
+            then
+                input:SetTextInsets(left, 8, 6, 6)
+            end
         end
 
         root:EnableMouse(true)
@@ -569,7 +578,7 @@ DFRL:NewMod("Chat", 1, function()
             maxHeight = 1600,
             onResize = function(frame)
                 rootWidth, rootHeight = frame:GetWidth(), frame:GetHeight()
-                if indicator:GetWidth() ~= rootWidth then indicator:SetWidth(rootWidth) end
+                if not T.NearlyEqual(indicator:GetWidth(), rootWidth) then indicator:SetWidth(rootWidth) end
                 local now = GetTime()
                 for _, state in pairs(states) do
                     PositionNative(state, now)

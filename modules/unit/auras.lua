@@ -66,7 +66,7 @@ DFRL:NewMod("Player Auras", 2, function()
         end
         local duration = _G[name .. "Duration"]
         if duration then
-            duration:SetFont("DEFAULT", 9, "OUTLINE")
+            T.SetFont(duration, 9, "OUTLINE")
             duration:ClearAllPoints()
             duration:SetPoint("TOP", button, "BOTTOM", 0, -1)
             duration:SetWidth(iconSize)
@@ -74,7 +74,7 @@ DFRL:NewMod("Player Auras", 2, function()
         end
         local count = _G[name .. "Count"]
         if count then
-            count:SetFont("DEFAULT", 9, "OUTLINE")
+            T.SetFont(count, 9, "OUTLINE")
             count:ClearAllPoints()
             count:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", 0, 0)
         end

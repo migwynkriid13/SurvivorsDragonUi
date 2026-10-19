@@ -1,5 +1,15 @@
 setfenv(1, DFRL:GetEnv())
 
+-- Native screen-unit setters now round through 24-bit floats. Their getters
+-- need not return the exact Lua number that was set, even at a fixed viewport.
+function DFRL.tools.NearlyEqual(a, b)
+    return type(a) == "number"
+        and type(b) == "number"
+        and a - a == 0
+        and b - b == 0
+        and math.abs(a - b) <= 0.000001 * math.max(1, math.abs(a), math.abs(b))
+end
+
 -- Original 1.12.1 FrameXML/Fonts.xml RAID_CLASS_COLORS:
 -- https://github.com/MOUZU/Blizzard-WoW-Interface/blob/master/1.12.1/FrameXML/Fonts.xml
 local classColors = {

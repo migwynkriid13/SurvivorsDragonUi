@@ -2,7 +2,6 @@ DFRL:NewMod("Target", 1, function()
     if not TargetFrame or not TargetFrameHealthBar then return end
 
     local tex = DFRL:GetInfoOrCons("tex") .. "unitframes\\"
-    local font = "DEFAULT"
     local T = DFRL.tools
 
     local function CreateValueText(bar, size)
@@ -10,7 +9,7 @@ DFRL:NewMod("Target", 1, function()
         frame:SetAllPoints(bar)
         frame:SetFrameLevel(bar:GetFrameLevel() + 3)
         local text = frame:CreateFontString(nil, "OVERLAY")
-        text:SetFont(font, size, "OUTLINE")
+        T.SetFont(text, size, "OUTLINE")
         text:SetPoint("CENTER", bar, "CENTER", 0, 0)
         text:SetTextColor(1, 1, 1)
         return text
@@ -65,13 +64,13 @@ DFRL:NewMod("Target", 1, function()
         TargetFrame.name:ClearAllPoints()
         TargetFrame.name:SetPoint("CENTER", TargetFrame, "CENTER", -40, 25)
         TargetFrame.name:SetJustifyH("RIGHT")
-        TargetFrame.name:SetFont(font, 11, "")
+        T.SetFont(TargetFrame.name, 11, "")
         TargetFrame.name:SetTextColor(1, 0.82, 0)
     end
     if TargetLevelText then
         TargetLevelText:ClearAllPoints()
         TargetLevelText:SetPoint("CENTER", TargetFrame, "CENTER", -102, 25)
-        TargetLevelText:SetFont(font, 11, "")
+        T.SetFont(TargetLevelText, 11, "")
         TargetLevelText:SetTextColor(1, 0.82, 0)
     end
 

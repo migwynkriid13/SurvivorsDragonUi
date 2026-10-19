@@ -111,7 +111,7 @@ DFRL:NewMod("Frame stack", 2, function()
             local label = labels[i]
             if not label then
                 label = panel:CreateFontString(nil, "OVERLAY")
-                label:SetFont("DEFAULT", 11, "OUTLINE")
+                T.SetFont(label, 11, "OUTLINE")
                 label:SetJustifyH("LEFT")
                 label:SetJustifyV("TOP")
                 label:SetShadowColor(0, 0, 0, 1)
