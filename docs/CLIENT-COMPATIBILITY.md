@@ -49,4 +49,6 @@ The screenshot alone cannot attribute those allocations. This fix removes the fo
 
 ## Evidence limits
 
-Investigation and implementation used the supplied screenshots/changelog and read-only source inspection. No local tests, syntax checks, formatting checks, harnesses, addon execution or game startups were run. The existing GitHub Actions workflow performs the authorized formatting, local dead-code and TOC metadata checks only. Packaged-game startup, memory use and appearance at 1080p, 1440p, 4K and different UI scales require game-side confirmation.
+The initial investigation and fixes used the supplied screenshots/changelog and read-only source inspection. The user subsequently authorized a full local validation pass on 2026-10-19. That pass compiled all tracked Lua with stock Lua 5.0.3, checked the package and formatting, and exercised actual modules through focused native-API adapters. It found and fixed an additional UTF-8 literal-matching defect; see the [validation report](VALIDATION-2026-10-19.md).
+
+No game was started. The existing GitHub Actions workflow still performs formatting, local dead-code and TOC metadata checks only. Stock Lua and adapter results do not establish packaged-game startup, memory use, native rendering or appearance on particular monitors; these still require game-side confirmation.

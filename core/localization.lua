@@ -72,6 +72,10 @@ function language.Width(label, source)
     return math.ceil(width)
 end
 
+-- Lua 5.0's escaped character classes do not match high UTF-8 bytes reliably.
+-- Escape only pattern syntax; keep each translated literal's bytes unchanged.
+local function EscapePatternLiteral(text) return (string.gsub(text, "([%^%$%(%)%%%.%[%]%*%+%-%?])", "%%%1")) end
+
 local templates = {}
 function language.Match(key, text)
     if type(text) ~= "string" then return nil end
@@ -82,12 +86,11 @@ function language.Match(key, text)
         while true do
             local first, last, field = string.find(source, "{(%w+)}", cursor)
             if not first then break end
-            pattern = pattern .. string.gsub(string.sub(source, cursor, first - 1), "(%W)", "%%%1") .. "([^\r\n]-)"
+            pattern = pattern .. EscapePatternLiteral(string.sub(source, cursor, first - 1)) .. "([^\r\n]-)"
             table.insert(fields, field)
             cursor = last + 1
         end
-        compiled =
-            { pattern = pattern .. string.gsub(string.sub(source, cursor), "(%W)", "%%%1") .. "$", fields = fields }
+        compiled = { pattern = pattern .. EscapePatternLiteral(string.sub(source, cursor)) .. "$", fields = fields }
         templates[source] = compiled
     end
     local captures = { string.find(text, compiled.pattern) }
