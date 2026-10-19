@@ -82,6 +82,13 @@ local function StatGain(amount, label)
     return PLUS .. WHITE .. amount .. "|r " .. GREEN .. DFRL.locale.Text(label) .. "|r"
 end
 
+local function NumericGain(value)
+    if type(value) ~= "string" then return nil end
+    value = string.gsub(value, "^%+", "")
+    if string.find(value, "^%d+$") or string.find(value, "^%d+[.,]%d+$") then return value end
+    return nil
+end
+
 local abilityFormats = {
     { "ERR_LEARN_ABILITY_S", "You have learned a new ability: %s." },
     { "ERR_LEARN_SPELL_S", "You have learned a new spell: %s." },
@@ -251,16 +258,23 @@ local function ProgressMessage(text)
 
     -- Survivors combines the three gains into one notice. Apply the source
     -- levelup_stat/levelup_hp appearance to each gain without rounding decimals.
-    local first, last, damage, health, regeneration = string.find(
-        text,
-        "^You have gained %+([%d%.]+)%% damage, %+([%d%.]+) maximum health and %+([%d%.]+) health per second%.?$"
+    local values = DFRL.locale.Match(
+        "You have gained {damage}% damage, {health} maximum health and {regen} health per second.",
+        text
     )
-    if
-        first
-        and string.find(damage, "^%d+%.?%d*$")
-        and string.find(health, "^%d+%.?%d*$")
-        and string.find(regeneration, "^%d+%.?%d*$")
-    then
+    local damage, health, regeneration
+    if values then
+        damage, health, regeneration = values.damage, values.health, values.regen
+    else
+        local first, _, oldDamage, oldHealth, oldRegeneration = string.find(
+            text,
+            "^You have gained %+([%d%.]+)%% damage, %+([%d%.]+) maximum health and %+([%d%.]+) health per second%.?$"
+        )
+        if not first then return nil end
+        damage, health, regeneration = oldDamage, oldHealth, oldRegeneration
+    end
+    damage, health, regeneration = NumericGain(damage), NumericGain(health), NumericGain(regeneration)
+    if damage and health and regeneration then
         return StatGain(damage .. "%", "Damage") .. ", " .. StatGain(health, "HP") .. ", " .. StatGain(
             regeneration,
             "HP/sec"

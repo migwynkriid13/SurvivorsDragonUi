@@ -5,6 +5,7 @@ local aliases = {
     enUS = "en",
     enGB = "en",
     plPL = "pl",
+    csCZ = "cs",
     deDE = "de",
     ptBR = "pt",
     esES = "es",
@@ -115,7 +116,7 @@ function language.Select(code)
     end
 end
 
--- Exact localized zone subtitles distinguish all thirteen game catalogs. Names
+-- Exact localized zone subtitles distinguish all fourteen game catalogs. Names
 -- supplement them; tied/unknown evidence never guesses a language from bytes.
 function language.ObserveZone()
     if type(AZS_GetPhase) ~= "function" then return end

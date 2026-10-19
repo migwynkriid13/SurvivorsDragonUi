@@ -529,6 +529,36 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         return key
     end
 
+    local function GeneratedTexture(source, name, aliases)
+        local texture = source[name]
+        if not aliases or texture == false then return texture end
+        local key = TextureKey(texture)
+        if not key then texture = nil end
+        for _, alias in ipairs(aliases) do
+            local candidate = source[alias]
+            if candidate == false then return false end
+            local candidateKey = TextureKey(candidate)
+            if candidateKey then
+                if key and candidateKey ~= key then return false end
+                texture, key = candidate, candidateKey
+            end
+        end
+        return texture
+    end
+
+    local function CanRefineGenerated(source, name, aliases)
+        local canonical = source[name] ~= nil and name or nil
+        if aliases then
+            for _, alias in ipairs(aliases) do
+                if source[alias] ~= nil then
+                    if canonical and canonical ~= alias then return false end
+                    canonical = alias
+                end
+            end
+        end
+        return canonical ~= nil
+    end
+
     local function LearnSpellTexture(cache, name, texture)
         local key = TextureKey(texture)
         if type(name) ~= "string" or name == "" or not key then return end
@@ -712,18 +742,33 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             if not texture then
                 RefreshLearnedSpellTextures()
                 texture = auraSpellTextures[info.spell]
+                -- The game's picker can differ from GetLocale(). Read its
+                -- current optional aliases only for generated metadata tiers.
+                local language = DFRL.locale
+                local catalog = language and language.data[language.code]
+                local spellNames = catalog and catalog.spellNames
+                local aliases = spellNames and spellNames[info.spell]
                 -- Observed auras outrank catalog and talent artwork. Preserve
                 -- ambiguity within each tier instead of choosing a random icon.
-                if texture == nil then texture = gameIconTextures[info.spell] end
+                if texture == nil then texture = GeneratedTexture(gameIconTextures, info.spell, aliases) end
                 if texture == nil then texture = talentSpellTextures[info.spell] end
                 if texture == nil then
-                    texture = localeIconTextures[info.spell]
-                    if texture == false then
+                    local database, schools = localeIconTextures, localeSchoolIconTextures
+                    if spellNames then
+                        -- These aliases name verified English catalog entries;
+                        -- use their English DBC rows and actual-school sets.
+                        database = iconCatalog.locales and iconCatalog.locales.enUS or {}
+                        schools = iconCatalog.schools and iconCatalog.schools.enUS or {}
+                    end
+                    texture = GeneratedTexture(database, info.spell, aliases)
+                    if texture == false and CanRefineGenerated(database, info.spell, aliases) then
                         -- Only refine the database tier with the actual parsed
-                        -- school; stronger native ambiguities remain blocked.
-                        local schoolTextures = localeSchoolIconTextures[info.school]
-                        if schoolTextures and schoolTextures[info.spell] ~= nil then
-                            texture = schoolTextures[info.spell]
+                        -- school. School sets cover ambiguous English names,
+                        -- not every row in a merged localized-name group.
+                        local schoolTextures = schools[info.school]
+                        if schoolTextures then
+                            local refined = GeneratedTexture(schoolTextures, info.spell, aliases)
+                            if refined ~= nil then texture = refined end
                         end
                     end
                 end
