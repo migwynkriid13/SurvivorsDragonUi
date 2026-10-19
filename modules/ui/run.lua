@@ -563,6 +563,11 @@ DFRL:NewMod("RunTimers", 5, function()
                 "Round player portrait",
                 "Use the target's circular border without the pointed corner.",
             },
+            {
+                "playerPortrait3D",
+                "Experimental 3D player portrait",
+                "Original 2D by default; enable experimental 3D.",
+            },
             { "flipBuffs", "Flip buff layout", "Flip icon order only; keep text placement." },
             { "cooldownNumbers", "Cooldown numbers", "Show countdowns on ability buttons." },
             { "bossDebuffs", "Boss debuffs", "Effects on boss and guardian health bars." },

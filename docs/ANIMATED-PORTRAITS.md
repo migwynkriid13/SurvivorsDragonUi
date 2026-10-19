@@ -1,6 +1,12 @@
 # Native animated unit portraits
 
-The player, target and target-of-target frames create independent anonymous `PlayerModel` widgets in their existing portrait slots. Each uses the actual unit's native appearance and animation. Existing health-only frames, gold artwork, native clicks and shared layout controls remain in use. Models do not intercept mouse input, and this feature adds no settings or saved gameplay state.
+The player portrait defaults to the original native 2D still. **Experimental 3D player portrait** under `/sdui` → **HUD** enables an independent anonymous `PlayerModel` in that same slot. Target and target-of-target retain their independent animated models. Each model uses the actual unit's native appearance and animation. Existing health-only frames, gold artwork, native clicks and shared layout controls remain in use, and models do not intercept mouse input.
+
+## Player portrait choice
+
+The player option defaults off, including older saves without the field and invalid saved values. It previews immediately and saves only the normalized `playerPortrait3D` boolean in the existing `SurvivorsDragonUiDisplay` table when Confirm is clicked. Cancel, world leave/logout/reload discard drafts; `/sdui reset` and Addon defaults restore 2D. No separate SavedVariable or saved model/gameplay state is added. Round player portrait remains an independent choice of border artwork.
+
+While off, the player's model stays hidden and unbound, and the native still keeps its normal updates. Turning 3D on binds the current player through the existing protected model path. Turning it off immediately clears/hides the copy and restores the original still alpha. A late model-paint callback cannot suppress the 2D portrait after disable. Only effective option changes apply this transition: unrelated display previews and confirming an unchanged choice do not restart the model. Target and target-of-target models are unaffected by this player-only toggle.
 
 ## Client support
 
@@ -34,4 +40,4 @@ The change addresses the first stock-artwork flash. It adds no stable enemy IDs,
 
 ## Verification boundary
 
-The camera-selection change was reviewed against the native implementation and build/show ordering. Formatting, local dead-code and TOC-version checks run in GitHub Actions. Local tests, syntax checks, formatting tools and game/addon execution were intentionally not run for this change under the standing project policy. The earlier client-compatibility validation predates this camera change. Native callback delivery, visual framing, draw order and fallback behavior still require confirmation in the matching game build.
+The camera-selection change was reviewed against the native implementation and build/show ordering. The player option was reviewed against the shared display lifecycle, copy binding and late paint callbacks. Formatting, local dead-code and TOC-version checks run in GitHub Actions. Local tests, syntax checks, formatting tools and game/addon execution were intentionally not run for these changes under the standing project policy. The earlier client-compatibility validation predates them. Native callback delivery, visual framing, draw order and fallback behavior still require confirmation in the matching game build.
