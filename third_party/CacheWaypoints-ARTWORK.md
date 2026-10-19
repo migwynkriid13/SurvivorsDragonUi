@@ -75,3 +75,5 @@ Square sampling preserves each glyph's proportions inside its 32-by-32 HUD icon 
 - Addon texture paths use `Interface\\AddOns\\SurvivorsDragonUi\\media\\tex\\waypoint\\` with the filenames above.
 
 These assets provide artwork only. They do not add native waypoint APIs, enemy/cache coordinates, or world-to-screen projection capabilities to the 1.12 client.
+
+The minimap guardian replacement and available-cache markers also reuse the floating HUD glyphs above: `GuardianFloating.tga` with the `0..65/128` crop, and `CachePouch.tga` with `0..119/128`, both drawn at 20 by 20 local units. These add no new artwork and do not change the separate world-map pin textures.
