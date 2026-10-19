@@ -25,6 +25,14 @@ The additional reported missing UI follows these same initialization dependencie
 
 This maps the reports to source-level failure paths; visibility and texture rendering still require confirmation in the packaged game.
 
+The first installed fix exposed another native-handle difference: `Fonts` stopped at `core/fonts.lua:36` with `stale or invalid widget handle` while scanning globals. A retained wrapper can expose `GetObjectType` but raise when called. Each native font candidate is now inspected and updated within its own protected call, so a retired widget cannot abort the rest of the pass.
+
+## Lua 5.0 closure limit
+
+The subsequent supplied reload screenshot reports `modules/ui/run.lua:1761: too many upvalues (limit=32)`. This is a compiler rejection: the combined HUD update captured more locals than Lua 5.0 permits, so the whole `RunTimers` module was unavailable before any of its initialization ran. That independently explains the absent run clock, encounter bars and kills/gold/cache-cost tally. The earlier font errors also affected these paths where compilation succeeded.
+
+The update now calls separate boundary and clock helpers. Each helper captures only its own dependencies, and the small coordinator still checks native phase before reading retained tables, updates run boundaries before the clock, and refreshes the tally/encounters last. Native timing, schedule continuity, takeover/release and reload handoff behavior are preserved. No captured state becomes global or saved, and no native compiler limit is bypassed.
+
 ## Screen-unit rounding
 
 BeNilla [#1946](https://github.com/samwhosung/benilla/pull/1946) changed frame sizes, positions, screen extents and cursor coordinates to the original client's screen-unit conversions. [#1962](https://github.com/samwhosung/benilla/pull/1962) extended them to font sizes, shadows, insets and other lengths. Native getters can now differ slightly from the Lua values passed to setters: a width of 100 can read back as 99.99999850988391 at 4:3 or 100.00000136774479 at 16:9, as documented in the upstream [source cases](https://github.com/samwhosung/benilla/blob/adbfedc3660d/crates/benilla-ui/src/script/tests/screen_units.rs).

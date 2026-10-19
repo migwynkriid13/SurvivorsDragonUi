@@ -28,17 +28,16 @@ DFRL:NewMod("Fonts", 0, function()
     _G.UNIT_NAME_FONT = defaultFace
     _G.DAMAGE_TEXT_FONT = defaultFace
     _G.NAMEPLATE_FONT = defaultFace
-    for _, object in pairs(_G) do
-        local kind = type(object)
-        if
-            (kind == "table" or kind == "userdata")
-            and object.GetObjectType
-            and object:GetObjectType() == "Font"
-            and object.GetFont
-            and object.SetFont
-        then
+    local function UpdateNativeFont(object)
+        if object.GetObjectType and object:GetObjectType() == "Font" and object.GetFont and object.SetFont then
             local _, size, flags = object:GetFont()
             if type(size) == "number" and size > 0 then T.SetFont(object, size, flags) end
         end
+    end
+    for _, object in pairs(_G) do
+        local kind = type(object)
+        -- Native globals can retain retired widget wrappers. Even GetObjectType
+        -- can raise on those; skip that object without aborting the font pass.
+        if kind == "table" or kind == "userdata" then pcall(UpdateNativeFont, object) end
     end
 end)

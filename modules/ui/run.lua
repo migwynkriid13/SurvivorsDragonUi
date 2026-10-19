@@ -1680,19 +1680,10 @@ DFRL:NewMod("RunTimers", 5, function()
         end
     end)
 
-    local function Update()
-        if not inWorld then
-            ReleaseHUD()
-            return
-        end
-        -- Out-of-run tables can retain the previous run. Phase must be read
-        -- first; no old table values or invented clocks may stand in for it.
-        local phase = Read("AZS_GetPhase")
-        if not PHASES[phase] then
-            if phase ~= nil then InvalidateSchedule(packetSequence) end
-            ReleaseHUD()
-            return
-        end
+    -- Keep boundary and clock work in separate closures. Lua 5.0 permits only
+    -- 32 captured locals per closure; the combined HUD update exceeded that
+    -- limit and prevented this entire module from compiling on the new client.
+    local function UpdateRunBoundary(phase)
         local nativeTime = type(AZS_RUN) == "table" and AZS_RUN.t or nil
         local zoneBoundary = zoneSequence
         if zoneBoundary then
@@ -1718,6 +1709,9 @@ DFRL:NewMod("RunTimers", 5, function()
             previousPhase = phase
             if IsNumber(nativeTime) then previousNativeTime = nativeTime end
         end
+    end
+
+    local function UpdateClock(phase)
         local seconds = Read("AZS_GetRunTime")
         local maximum = RunLength()
         local zone = type(AZS_ZONE) == "table" and AZS_ZONE.zone or nil
@@ -1749,6 +1743,23 @@ DFRL:NewMod("RunTimers", 5, function()
         else
             ReleaseClock()
         end
+    end
+
+    local function Update()
+        if not inWorld then
+            ReleaseHUD()
+            return
+        end
+        -- Out-of-run tables can retain the previous run. Phase must be read
+        -- first; no old table values or invented clocks may stand in for it.
+        local phase = Read("AZS_GetPhase")
+        if not PHASES[phase] then
+            if phase ~= nil then InvalidateSchedule(packetSequence) end
+            ReleaseHUD()
+            return
+        end
+        UpdateRunBoundary(phase)
+        UpdateClock(phase)
         -- A missing zone/clock snapshot must not block valid counters or
         -- encounter lists from reconnecting to their own native HUD parts.
         if refreshRows then
