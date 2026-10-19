@@ -141,6 +141,90 @@ DFRL:NewMod("RunTimers", 5, function()
             end
         end
 
+        local blueFoam = {}
+        local function NewFoam(r, g, b)
+            local texture = bar:CreateTexture(nil, "OVERLAY")
+            texture:SetTexture("Interface\\CastingBar\\UI-CastingBar-Spark")
+            texture:SetBlendMode("ADD")
+            texture:SetVertexColor(r, g, b)
+            texture:Hide()
+            local piece = { texture = texture }
+            table.insert(blueFoam, piece)
+            return piece
+        end
+        local foamGlow = NewFoam(0.3, 0.8, 1)
+        local foamCrest = NewFoam(0.8, 0.96, 1)
+        local foamFlecks = {}
+        for index = 1, 8 do
+            local fleck = NewFoam(0.75, 0.94, 1)
+            fleck.period = 0.7 + math.mod(index, 5) * 0.13
+            fleck.phase = index * 0.618034
+            fleck.drift = 5 + math.mod(index, 3) * 2
+            fleck.y = (math.mod(index - 1, 3) - 1) * 3.6
+            foamFlecks[index] = fleck
+        end
+
+        local function HideBlueFoam()
+            for _, piece in ipairs(blueFoam) do
+                if piece.shown then
+                    piece.texture:Hide()
+                    piece.shown = false
+                end
+            end
+        end
+
+        local function DrawFoam(piece, left, y, width, height, alpha, filledWidth)
+            local first, last = math.max(0, left), math.min(filledWidth, left + width)
+            local halfHeight = bar:GetHeight() / 2
+            local bottom, top = math.max(-halfHeight, y - height / 2), math.min(halfHeight, y + height / 2)
+            if first >= last or bottom >= top then
+                if piece.shown then
+                    piece.texture:Hide()
+                    piece.shown = false
+                end
+                return
+            end
+            local texture = piece.texture
+            texture:SetWidth(last - first)
+            texture:SetHeight(top - bottom)
+            texture:SetPoint("LEFT", bar, "LEFT", first, (bottom + top) / 2)
+            texture:SetTexCoord(
+                (first - left) / width,
+                (last - left) / width,
+                (y + height / 2 - top) / height,
+                (y + height / 2 - bottom) / height
+            )
+            texture:SetAlpha(alpha)
+            if not piece.shown then
+                texture:Show()
+                piece.shown = true
+            end
+        end
+
+        local function UpdateBlueFoam(now, filledWidth)
+            -- A soft lip stays at the native fill edge while tiny puffs wash
+            -- back into the current. Every quad is cropped to the filled area.
+            DrawFoam(foamGlow, filledWidth - 6, 0, 8, 15, 0.32 + 0.07 * math.sin(now * 4.1), filledWidth)
+            DrawFoam(
+                foamCrest,
+                filledWidth - 3.5,
+                0.4 * math.sin(now * 3.3),
+                4,
+                12,
+                0.52 + 0.1 * math.sin(now * 5.3),
+                filledWidth
+            )
+            for index, fleck in ipairs(foamFlecks) do
+                local age = math.mod(now / fleck.period + fleck.phase, 1)
+                local swell = math.sin(age * math.pi)
+                local width = 2.4 + swell * 1.6
+                local height = 1.4 + math.mod(index, 3) * 0.4
+                local y = fleck.y + 1.1 * math.sin(age * 2 * math.pi + fleck.phase)
+                local left = filledWidth - 1 - age * fleck.drift - width / 2
+                DrawFoam(fleck, left, y, width, height, 0.72 * swell, filledWidth)
+            end
+        end
+
         local redSparkles = {}
         local sparklesShown = false
         for index = 1, 28 do
@@ -184,6 +268,7 @@ DFRL:NewMod("RunTimers", 5, function()
             end
             if flowRed == atLimit then return end
             flowRed = atLimit
+            if atLimit then HideBlueFoam() end
             bar:SetStatusBarTexture(path .. (atLimit and "FillWhite" or "FillBlue") .. ".tga")
             bar:SetStatusBarColor(
                 atLimit and 0.72 or 1,
@@ -201,6 +286,7 @@ DFRL:NewMod("RunTimers", 5, function()
 
         local function HideRunFlow()
             flowUpdatedAt = nil
+            HideBlueFoam()
             if glowShown then
                 runGlow:Hide()
                 glowShown = false
@@ -259,6 +345,7 @@ DFRL:NewMod("RunTimers", 5, function()
                     flow.shown = false
                 end
             end
+            UpdateBlueFoam(now, filledWidth)
         end
         return SetRunAppearance, HideRunFlow, UpdateRunFlow
     end

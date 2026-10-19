@@ -1,5 +1,11 @@
 # Official addon API integration — 2026-10-14
 
+## Blue timer leading-edge foam — 2026-10-19
+
+The user requested a waterfall-like foam effect where the blue run-progress fill ends. The existing cosmetic fill controller now pools a soft blue glow, a pale blue-white crest and eight small flecks using the native casting-bar spark texture. The crest follows the current native elapsed/duration fill width; staggered flecks swell, fade and drift five to nine units back into the water. Every piece crops its quad and UV coordinates to the current filled width and bar height, beneath the metal border and boss markers.
+
+Animation shares the existing 30 Hz UI-time update and continues while paused without advancing the native run clock. The shared cleanup hides foam at zero progress and clock release, including world leave/logout. Switching to the red time-limit appearance hides it immediately; the existing red glow and stationary sparkles retain their behavior. A return to blue or a new run reacquires the edge from current native data. All pieces are created once, with no new OnUpdate, asset, setting or SavedVariable. No local checks, fixed-sample previews or addon/game execution were run; live appearance and performance remain unverified.
+
 ## Round portrait divider remnant — 2026-10-19
 
 The user identified a short horizontal line inside the health fill just to the right of the circular portrait, above the intended gray lower border. The circular sheet still contains the original health/resource divider in source columns 152–153 at rows 52–54. The portrait crop includes those columns even though the shared bar interior omits the rest of the divider.
