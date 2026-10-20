@@ -1,8 +1,9 @@
 # Character window
 
 The character window opened with C uses a metal portrait frame, equipment
-columns around the existing character model, bottom tabs and a scrollable
-right-hand stats panel. Mouse wheel, scrollbar and arrow buttons reach the
+columns around the existing character model and a scrollable right-hand stats
+panel. The Character, Skills and Honor bottom tabs stay hidden, including after
+native updates try to show them. Mouse wheel, scrollbar and arrow buttons reach the
 complete stats list. This is an addon skin of the native window.
 
 ## Native behavior
@@ -33,9 +34,10 @@ after the queued pass and while the window is hidden. The scroll position is
 session-only, clamped when the list shrinks and reset on world leave/logout.
 Missing native extra stats leave the primary panel usable.
 
-Pet, Skills, Honor and any available native tabs retain their contents and
-scripts. The skin does not enable a tab the game hides. Non-character tabs keep
-their original content area, with room for the native translated tab strip.
+The hidden tabs retain their native contents and scripts; C and any existing
+native key bindings still control their panes. Pet and any other available
+native tabs retain their existing visibility. The skin does not enable a tab
+the game hides. Non-character panes keep their original content area.
 There are no new preferences, commands, SavedVariables or runtime dependencies.
 
 ## Source evidence

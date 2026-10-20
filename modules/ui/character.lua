@@ -420,6 +420,7 @@ DFRL:NewMod("Character window", 6, function()
         { "LeftDisabled", 1, 127, 36, 169, 35, 42, "TOPLEFT", -4 },
         { "RightDisabled", 1, 83, 38, 125, 37, 42, "TOPRIGHT", 6 },
     }
+    local hiddenTabs = { [1] = true, [4] = true, [5] = true }
     local function StyleTab(tab)
         if tab.sduiCharacterTab then return end
         tab.sduiCharacterTab = true
@@ -458,8 +459,12 @@ DFRL:NewMod("Character window", 6, function()
         for index = 1, 5 do
             local tab = _G["CharacterFrameTab" .. index]
             if tab then
-                StyleTab(tab)
-                if tab:IsShown() then
+                if hiddenTabs[index] then
+                    tab:Hide()
+                else
+                    StyleTab(tab)
+                end
+                if not hiddenTabs[index] and tab:IsShown() then
                     local text = tab:GetFontString()
                     T.SetFont(text, 11)
                     local width = math.max(72, math.ceil(text:GetStringWidth()) + 30)
