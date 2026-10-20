@@ -483,6 +483,23 @@ DFRL:NewMod("Character window", 6, function()
         tabsUpdating = false
     end
 
+    local function HideHeaderContents()
+        for _, name in ipairs({
+            "CharacterFramePortrait",
+            "CharacterNameFrame",
+            "CharacterNameText",
+            "CharacterLevelText",
+            "CharacterGuildText",
+            "CharacterTitleText",
+        }) do
+            local widget = _G[name]
+            if widget then
+                widget.Show = widget.Hide
+                widget:Hide()
+            end
+        end
+    end
+
     local function InsetDefaultPosition()
         if owner:GetNumPoints() ~= 1 then return end
         local point, relative, relativePoint, x, y = owner:GetPoint(1)
@@ -508,21 +525,7 @@ DFRL:NewMod("Character window", 6, function()
         for _, name in ipairs(panes) do
             HideStockArt(_G[name])
         end
-        if CharacterFramePortrait then Place(CharacterFramePortrait, owner, -5, 7, 62, 62) end
-        if CharacterNameFrame then
-            CharacterNameFrame:ClearAllPoints()
-            CharacterNameFrame:SetPoint("TOPLEFT", owner, "TOPLEFT", 62, -1)
-            CharacterNameFrame:SetPoint("TOPRIGHT", owner, "TOPRIGHT", -25, -1)
-            CharacterNameFrame:SetHeight(20)
-        end
-        if CharacterNameText then
-            T.SetFont(CharacterNameText, 13)
-            CharacterNameText:SetWidth(owner:GetWidth() - 100)
-            CharacterNameText:SetHeight(18)
-        end
-        if CharacterLevelText then Place(CharacterLevelText, paper, 62, -31, WIDTH - 100, 16) end
-        if CharacterGuildText then Place(CharacterGuildText, paper, 62, -47, WIDTH - 100, 14) end
-        if CharacterTitleText then Place(CharacterTitleText, paper, 62, -47, WIDTH - 100, 14) end
+        HideHeaderContents()
         local close = CharacterFrameCloseButton
         if close then
             close:ClearAllPoints()
@@ -567,6 +570,7 @@ DFRL:NewMod("Character window", 6, function()
     end)
     hooksecurefunc("MovePanelToLeft", InsetDefaultPosition)
     HookScript(owner, "OnShow", Apply)
+    HookScript(owner, "OnEvent", HideHeaderContents)
     HookScript(owner, "OnHide", function() controller:SetScript("OnUpdate", nil) end)
     HookScript(paper, "OnEvent", QueueStats)
     controller:RegisterEvent("PLAYER_LEAVING_WORLD")

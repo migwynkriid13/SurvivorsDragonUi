@@ -48,14 +48,14 @@ All unoccupied destination pixels are transparent.
 
 ### `media/tex/character/Chrome.tga`
 
-The 1024-by-256 sheet contains the eight pieces of the portrait metal frame.
+The 1024-by-256 sheet contains the eight pieces of the plain metal frame.
 Sources are `UI/uiframemetal2x.blp` (512 by 512),
 `UI/uiframemetalhorizontal2x.blp` (64 by 256) and
 `UI/uiframemetalvertical2x.blp` (512 by 32).
 
 | Piece             | Source     | Source rectangle       | Destination  | Draw size     |
 | ----------------- | ---------- | ---------------------- | ------------ | ------------- |
-| Portrait top left | Metal      | `(1, 153, 151, 303)`   | `(0, 0)`     | 75 by 75      |
+| Top left          | Metal      | `(1, 1, 151, 151)`     | `(0, 0)`     | 75 by 75      |
 | Top right         | Metal      | `(153, 1, 303, 151)`   | `(256, 0)`   | 75 by 75      |
 | Bottom left       | Metal      | `(153, 153, 217, 217)` | `(512, 0)`   | 32 by 32      |
 | Bottom right      | Metal      | `(219, 153, 283, 217)` | `(640, 0)`   | 32 by 32      |
@@ -65,8 +65,9 @@ Sources are `UI/uiframemetal2x.blp` (512 by 512),
 | Right             | Vertical   | `(153, 0, 303, 32)`    | `(256, 192)` | 75 by stretch |
 
 Corners keep their proportions; straight edges stretch between them. Draw
-order is OVERLAY, with ordinary alpha blending. The existing native portrait
-remains below the ring, aligned at `(-5, 7)` with size 62 by 62.
+order is OVERLAY, with ordinary alpha blending. The plain top-left region is
+`UI-Frame-Metal-CornerTopLeft` from the pinned atlas table. It replaces the
+earlier portrait cutout and ring while the native portrait stays hidden.
 
 ### `media/tex/character/Parts.tga`
 

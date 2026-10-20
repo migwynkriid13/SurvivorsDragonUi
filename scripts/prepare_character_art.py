@@ -37,7 +37,7 @@ def prepare():
     vertical = source(DRAGONUI, "UI/uiframemetalvertical2x.blp")
     chrome = Image.new("RGBA", (1024, 256))
     for sheet, rectangle, destination in [
-        (metal, (1, 153, 151, 303), (0, 0)),
+        (metal, (1, 1, 151, 151), (0, 0)),
         (metal, (153, 1, 303, 151), (256, 0)),
         (metal, (153, 153, 217, 217), (512, 0)),
         (metal, (219, 153, 283, 217), (640, 0)),
