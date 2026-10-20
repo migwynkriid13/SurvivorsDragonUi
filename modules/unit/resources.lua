@@ -154,11 +154,15 @@ DFRL:NewMod("Class resources", 2, function()
     local function Update()
         local enabled = inWorld and UnitExists("player") and DFRL.display.Get("classResources")
         local value, maximum, power
-        if enabled then value, maximum, power = ReadPrimary() end
+        if enabled then
+            value, maximum, power = ReadPrimary()
+        end
         if DFRL.playerResources then DFRL.playerResources.SetPrimary(value, maximum, power) end
         -- Observe phase boundaries even while the display option is off.
         local style, current, total
-        if inWorld then style, current, total = ReadSecondary() end
+        if inWorld then
+            style, current, total = ReadSecondary()
+        end
         if not enabled or not style then
             if displayedStyle then Clear() end
             return

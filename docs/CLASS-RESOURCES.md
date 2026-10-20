@@ -10,11 +10,11 @@ The primary bar reads `UnitPowerType("player")`, `UnitMana("player")` and `UnitM
 
 The game update supplied by the owner on 2026-10-20 adds three `AZS_RUN` fields:
 
-| Field | Meaning |
-|---|---|
+| Field  | Meaning                                                                         |
+| ------ | ------------------------------------------------------------------------------- |
 | `proc` | `bloodrage`, `seal_fate`, `soul_fire`, `lightwell`, or an empty string for none |
-| `pv` | Current meter value |
-| `pm` | Full meter value |
+| `pv`   | Current meter value                                                             |
+| `pm`   | Full meter value                                                                |
 
 The proc reader checks the native phase before reading the received run table and requires a finite nonnegative `AZS_RUN_UPDATED`. It shares the existing active-phase definition: `playing`, `choosing`, `paused` and `victory`. The value must be finite and nonnegative, and the maximum finite and positive. A value above its maximum is clamped for display without changing the native table. Empty, unknown, missing or invalid proc data hides only the secondary display. Older builds without these fields retain their primary power bar but show no inferred proc meter.
 
