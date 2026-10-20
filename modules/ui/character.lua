@@ -43,6 +43,8 @@ DFRL:NewMod("Character window", 6, function()
     local LEFT_INSET = 12
     local MODEL_HEIGHT = 358
     local CONTENT_WIDTH, ROW_WIDTH = 246, 230
+    local COLUMN_GAP = 12
+    local COLUMN_WIDTH = (ROW_WIDTH - COLUMN_GAP) / 2
     local path = DFRL:GetInfoOrCons("tex") .. "character\\"
     local sheets = { Chrome = { 1024, 256 }, Parts = { 256, 256 }, Tabs = { 64, 256 }, Close = { 128, 128 } }
     local panes = { "PaperDollFrame", "PetPaperDollFrame", "ReputationFrame", "SkillFrame", "HonorFrame" }
@@ -341,7 +343,7 @@ DFRL:NewMod("Character window", 6, function()
     scroll:EnableMouseWheel(true)
     scroll:SetScript("OnMouseWheel", function() Step(-arg1 * 48) end)
 
-    local function StyleRow(row, y)
+    local function StyleRow(row, x, y)
         local name = row:GetName()
         local label = row.label or (name and _G[name .. "Label"])
         local value = row.value or (name and _G[name .. "StatText"])
@@ -351,10 +353,10 @@ DFRL:NewMod("Character window", 6, function()
             T.SetFont(value, 12)
             row.sduiCharacterFonts = true
         end
-        local valueWidth = math.min(ROW_WIDTH * 0.48, math.max(56, math.ceil(value:GetStringWidth()) + 2))
+        local valueWidth = math.min(COLUMN_WIDTH * 0.48, math.max(24, math.ceil(value:GetStringWidth()) + 2))
         label:ClearAllPoints()
         label:SetPoint("LEFT", row, "LEFT", 0, 0)
-        label:SetWidth(ROW_WIDTH - valueWidth - 8)
+        label:SetWidth(COLUMN_WIDTH - valueWidth - 8)
         label:SetJustifyH("LEFT")
         value:ClearAllPoints()
         value:SetPoint("RIGHT", row, "RIGHT", 0, 0)
@@ -363,7 +365,7 @@ DFRL:NewMod("Character window", 6, function()
         label:GetStringWidth()
         value:GetStringWidth()
         local height = math.max(16, label:GetHeight() + 2, value:GetHeight() + 2)
-        Place(row, row:GetParent(), 8, -y, ROW_WIDTH, height)
+        Place(row, row:GetParent(), x, -y, COLUMN_WIDTH, height)
         row:SetFrameLevel(row:GetParent():GetFrameLevel() + 1)
         local stat = name and _G[name .. "Stat"]
         if stat then
@@ -373,6 +375,22 @@ DFRL:NewMod("Character window", 6, function()
         end
         row:EnableMouse(true)
         return height
+    end
+
+    local function LayoutRows(rows, y)
+        local visible = {}
+        for _, row in ipairs(rows) do
+            if row:IsShown() then table.insert(visible, row) end
+        end
+        for index = 1, table.getn(visible), 2 do
+            local first, second = visible[index], visible[index + 1]
+            local height = StyleRow(first, 8, y)
+            if second then height = math.max(height, StyleRow(second, 8 + COLUMN_WIDTH + COLUMN_GAP, y)) end
+            first:SetHeight(height)
+            if second then second:SetHeight(height) end
+            y = y + height
+        end
+        return y
     end
 
     local function RowIndex(row)
@@ -385,13 +403,13 @@ DFRL:NewMod("Character window", 6, function()
         refreshing = true
         heading:SetText(CharacterFrameTab1 and CharacterFrameTab1:GetText() or CHARACTER or "")
         Place(attributes, content, 0, 0, CONTENT_WIDTH)
-        local y = 28
+        local primary = {}
         for _, name in ipairs(primaryNames) do
             local row = _G[name]
-            if row and row:IsShown() then y = y + StyleRow(row, y) end
+            if row then table.insert(primary, row) end
         end
-        attributes:SetHeight(math.max(60, y + 8))
-        y = attributes:GetHeight() + 8
+        attributes:SetHeight(math.max(60, LayoutRows(primary, 28) + 8))
+        local y = attributes:GetHeight() + 8
 
         -- Move the actual native container and its live rows. No AZS stat values,
         -- tooltip text or conditional visibility are copied or recomputed here.
@@ -417,11 +435,7 @@ DFRL:NewMod("Character window", 6, function()
                 if row.label and row.value then table.insert(rows, row) end
             end
             table.sort(rows, function(a, b) return RowIndex(a) < RowIndex(b) end)
-            local moreY = 30
-            for _, row in ipairs(rows) do
-                if row:IsShown() then moreY = moreY + StyleRow(row, moreY) end
-            end
-            more:SetHeight(math.max(60, moreY + 8))
+            more:SetHeight(math.max(60, LayoutRows(rows, 30) + 8))
             if more:IsShown() then y = y + more:GetHeight() + 8 end
         end
 

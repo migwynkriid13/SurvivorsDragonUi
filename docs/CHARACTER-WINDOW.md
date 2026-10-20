@@ -56,6 +56,15 @@ The twelve primary stat rows keep their native names, labels, values and
 handlers. The game still owns their calculation and formatting. The skin
 reparents their `CharacterAttributesFrame` into the stats scroll child.
 
+Each category lays out its visible stats in two columns of label/value pairs,
+in native order from left to right, then down. Both columns share the existing
+panel width, with a 12-unit gutter. Each pair uses the taller row's measured
+height, so long translated labels and values wrap without overlapping the next
+pair. An odd final stat stays in the left column. Hidden conditional stats leave
+no empty cells; category heights and the scroll range follow the visible rows.
+The category headings still span both columns. Window, equipment and model
+geometry remain unchanged.
+
 The native `AZSMoreStats` container and its existing rows join that same scroll
 child. Rows retain their native conditional Show/Hide state and tooltip fields.
 The skin does not read `AZS_STATS`, copy values, reconstruct tooltips or maintain
