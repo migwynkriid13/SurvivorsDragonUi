@@ -17,7 +17,8 @@ The file should be at `benilla-config/AddOns/SurvivorsDragonUi/SurvivorsDragonUi
 
 Type `/sdui` to open the editor.
 
-- Drag a frame to move it. Drag its corners to resize it.
+- Drag a frame to move it. Drag its corners to resize it. The grid and gold screen-center guides help line things up.
+- Use `/sdui lock` for move and resize handles with only the **Confirm** button. Use `/sdui` to return to the full editor.
 - Use **Layout** for positions and sizes, **HUD** for display options, **Combat text** for damage numbers, and **Run timer** for its text and font.
 - Click **Confirm** to save, or **Cancel** to undo your changes. Leaving the run or reloading also discards unsaved changes.
 
@@ -29,7 +30,8 @@ To use the game's damage numbers, choose **Game settings** under **Combat text**
 
 - Player and target frames, a seven-button action bar, equipped jewelry, XP, kills, gold and cache cost.
 - A run timer with boss markers, plus boss and guardian health bars.
-- Compact nameplates and custom damage numbers with size, color and hit filters.
+- A movable **Level Up!** button for stored levels. Select it in `/sdui` → **Layout** to move or resize it, then **Confirm** to save.
+- Compact nameplates and custom damage numbers with size, color and damage filters.
 - Transparent chat with shorter game messages and mouse-wheel history.
 - Cache and guardian guides with distance, direction and world-map pins.
 - Minimap loot-pouch icons for nearby caches and gold skull medallions for all living guardians. Empty or dead lairs show no icon, and Guardian guidance hides the red flag. Guardian icons mark their lairs, including while they are fighting elsewhere.

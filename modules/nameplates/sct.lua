@@ -32,6 +32,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
 
     local function ShouldShowText(info)
         if info.kind == "damage" then
+            if info.sourceIsPet and not DFRL.display.Get("sctPetDamage") then return false end
             local result = info.critical and "sctCriticalHits" or "sctNormalHits"
             if not DFRL.display.Get(result) then return false end
         end
@@ -197,6 +198,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         text.spell, text.damageType, text.iconTexture = nil, nil, nil
         text.kind = nil
         text.critical = nil
+        text.sourceIsPet = nil
         text.color = nil
         text.needsMeasure = nil
         table.insert(textPool, text)
@@ -510,7 +512,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
 
     local auraSpellTextures, talentSpellTextures = {}, {}
     local iconCatalog = T.SpellIconCatalog or {}
-    local gameIconTextures = iconCatalog.game or {}
+    local nativeIconSources = { iconCatalog.game or {}, iconCatalog.abilities or {}, iconCatalog.effects or {} }
     local locale = type(_G.GetLocale) == "function" and _G.GetLocale() or nil
     local localeIconTextures = iconCatalog.locales and iconCatalog.locales[locale] or {}
     local localeSchoolIconTextures = iconCatalog.schools and iconCatalog.schools[locale] or {}
@@ -557,6 +559,20 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             end
         end
         return canonical ~= nil
+    end
+
+    local function NativeGameTexture(name, aliases)
+        local texture, key
+        for _, source in ipairs(nativeIconSources) do
+            local candidate = GeneratedTexture(source, name, aliases)
+            if candidate == false then return false end
+            local candidateKey = TextureKey(candidate)
+            if candidateKey then
+                if key and candidateKey ~= key then return false end
+                texture, key = candidate, candidateKey
+            end
+        end
+        return texture
     end
 
     local function LearnSpellTexture(cache, name, texture)
@@ -750,7 +766,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                 local aliases = spellNames and spellNames[info.spell]
                 -- Observed auras outrank catalog and talent artwork. Preserve
                 -- ambiguity within each tier instead of choosing a random icon.
-                if texture == nil then texture = GeneratedTexture(gameIconTextures, info.spell, aliases) end
+                if texture == nil then texture = NativeGameTexture(info.spell, aliases) end
                 if texture == nil then texture = talentSpellTextures[info.spell] end
                 if texture == nil then
                     local database, schools = localeIconTextures, localeSchoolIconTextures
@@ -803,6 +819,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                 identity = IconIdentityPart(attackKind)
                     .. IconIdentityPart(attack)
                     .. IconIdentityPart(source)
+                    .. IconIdentityPart(info.sourceIsPet and "pet" or "")
                     .. IconIdentityPart(info.damageType or "")
                     .. IconIdentityPart(info.school or "")
                     .. IconIdentityPart(info.critical and "critical" or "normal")
@@ -987,6 +1004,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         text.spell, text.damageType, text.iconTexture = info.spell, info.damageType, info.iconTexture
         text.kind = info.kind
         text.critical = info.critical
+        text.sourceIsPet = info.sourceIsPet
         text.color = info.color
         UpdateTextColor(text)
         UpdateIcon(text)

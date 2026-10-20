@@ -539,8 +539,8 @@ DFRL:NewMod("RunTimers", 5, function()
                 label = "Damage type",
                 y = -226,
                 entries = {
-                    { key = "sctNormalHits", label = "Normal hits" },
-                    { key = "sctCriticalHits", label = "Critical hits" },
+                    { key = "sctNormalHits", label = "Normal damage" },
+                    { key = "sctCriticalHits", label = "Critical damage" },
                 },
             },
             {
@@ -552,6 +552,7 @@ DFRL:NewMod("RunTimers", 5, function()
                     { key = "sctPeriodicDamage", label = "Damage over time" },
                     { key = "sctReflectedDamage", label = "Reflected damage" },
                     { key = "sctMisses", label = "Misses / avoidance" },
+                    { key = "sctPetDamage", label = "Pet damage" },
                 },
             },
         }
@@ -926,10 +927,8 @@ DFRL:NewMod("RunTimers", 5, function()
             DFRL.display.BeginEdit()
             if DFRL.sct then DFRL.sct.BeginEdit() end
             fontDraft = FontSettings(_G.SurvivorsDragonUiRunFont)
-            if not fontEditor then CreateFontEditor() end
             PreviewFont(fontDraft)
             UpdateSctLabels()
-            fontEditor:Show()
         else
             DFRL.display.FinishEdit(save)
             if DFRL.sct then DFRL.sct.FinishEdit(save) end
@@ -939,6 +938,17 @@ DFRL:NewMod("RunTimers", 5, function()
             if fontEditor then fontEditor:Hide() end
         end
     end
+
+    DFRL.layout.SetEditorVisibilityHandler(function(shown)
+        if shown then
+            if not fontEditor then CreateFontEditor() end
+            PreviewFont(fontDraft)
+            UpdateSctLabels()
+            fontEditor:Show()
+        elseif fontEditor then
+            fontEditor:Hide()
+        end
+    end)
 
     PreviewFont(_G.SurvivorsDragonUiRunFont)
     DFRL.layout.Register("runTimer", run, function()
