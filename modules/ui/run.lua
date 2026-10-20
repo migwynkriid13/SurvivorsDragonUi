@@ -557,6 +557,7 @@ DFRL:NewMod("RunTimers", 5, function()
         }
         local hudOptions = {
             { "classHealth", "Class-colored health", "Use your vanilla class color for player health." },
+            { "healthLossAnimation", "Health loss animation", "Show recently lost health fading out on unit frames." },
             { "classResources", "Class resources", "Show power inside the player frame." },
             {
                 "roundPlayerPortrait",
