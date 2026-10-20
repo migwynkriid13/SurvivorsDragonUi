@@ -51,7 +51,12 @@ DFRL:NewMod("Cut-Out", 1, function()
     end
 
     local function Update(cutout)
-        if not animationEnabled or not UnitExists(cutout.unit) or UnitIsDead(cutout.unit) or UnitIsGhost(cutout.unit) then
+        if
+            not animationEnabled
+            or not UnitExists(cutout.unit)
+            or UnitIsDead(cutout.unit)
+            or UnitIsGhost(cutout.unit)
+        then
             Reset(cutout)
             return
         end
