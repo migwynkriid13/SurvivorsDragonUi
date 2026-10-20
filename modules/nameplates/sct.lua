@@ -512,8 +512,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
 
     local auraSpellTextures, talentSpellTextures = {}, {}
     local iconCatalog = T.SpellIconCatalog or {}
-    local gameIconTextures = iconCatalog.game or {}
-    local abilityIconTextures = iconCatalog.abilities or {}
+    local nativeIconSources = { iconCatalog.game or {}, iconCatalog.abilities or {}, iconCatalog.effects or {} }
     local locale = type(_G.GetLocale) == "function" and _G.GetLocale() or nil
     local localeIconTextures = iconCatalog.locales and iconCatalog.locales[locale] or {}
     local localeSchoolIconTextures = iconCatalog.schools and iconCatalog.schools[locale] or {}
@@ -563,11 +562,17 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     end
 
     local function NativeGameTexture(name, aliases)
-        local talent = GeneratedTexture(gameIconTextures, name, aliases)
-        local ability = GeneratedTexture(abilityIconTextures, name, aliases)
-        if talent == false or ability == false then return false end
-        if talent and ability and TextureKey(talent) ~= TextureKey(ability) then return false end
-        return talent or ability
+        local texture, key
+        for _, source in ipairs(nativeIconSources) do
+            local candidate = GeneratedTexture(source, name, aliases)
+            if candidate == false then return false end
+            local candidateKey = TextureKey(candidate)
+            if candidateKey then
+                if key and candidateKey ~= key then return false end
+                texture, key = candidate, candidateKey
+            end
+        end
+        return texture
     end
 
     local function LearnSpellTexture(cache, name, texture)

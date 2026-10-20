@@ -4,7 +4,7 @@
 -- School refinements narrow DBC name ambiguities using native School column 1.
 -- Spell.dbc SHA256: 913d01c0376d88310ed4a44ea1115f30fd8be15af64ce304f4f17b6bc51cf15b
 -- SpellIcon.dbc SHA256: 938e8c333fe914938994fc331c04655d7eb5719bc2d1b29eaf5fad4239abdfdc
--- Native game catalog JSON SHA256: e99c8c2485a01c081d0543c2c1dafd5f2b613ecdb099472efb4954cc0df14ca0
+-- Native game catalog JSON SHA256: ba3eb77f04db805f4caa8725c03d1556a902fe81c09b4635e1c24c3795be5a6e
 -- Native game executable SHA256: 96e24dcd0e53fc13a6fdef5826aa46f77a29aa1aad4abd585adf04e94b2756d3
 
 local icons = {
@@ -1315,6 +1315,13 @@ DFRL.tools.SpellIconCatalog = {
         ["Whirlwind"] = icons[151],
         ["Will of the Forsaken"] = icons[784],
         ["Wrath"] = icons[640],
+    },
+    effects = {
+        ["Holy Nova"] = icons[581],
+        ["Inferno"] = icons[803],
+        ["Soul Fire"] = icons[505],
+        ["Thorns"] = icons[720],
+        ["Tranquility"] = icons[723],
     },
     locales = {
         enUS = {

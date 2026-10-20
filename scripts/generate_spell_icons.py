@@ -102,9 +102,10 @@ def lua_string(value):
     return quote + "".join(escaped) + quote
 
 
-def write_catalog(output, game, locales, schools, provenance, abilities=None):
+def write_catalog(output, game, locales, schools, provenance, abilities=None, effects=None):
     abilities = abilities or {}
-    catalogs = [game, abilities] + list(locales.values())
+    effects = effects or {}
+    catalogs = [game, abilities, effects] + list(locales.values())
     base_paths = {icon for catalog in catalogs for icon in catalog.values() if icon}
     school_paths = {
         icon for by_school in schools.values() for catalog in by_school.values() for icon in catalog.values() if icon
@@ -134,6 +135,8 @@ def write_catalog(output, game, locales, schools, provenance, abilities=None):
     append_names(game, "        ")
     lines += ["    },", "    abilities = {"]
     append_names(abilities, "        ")
+    lines += ["    },", "    effects = {"]
+    append_names(effects, "        ")
     lines += ["    },", "    locales = {"]
     for locale, catalog in locales.items():
         if catalog:
@@ -164,7 +167,7 @@ def catalog_counts(catalog):
     return {"names": len(catalog), "resolved": resolved, "ambiguous": len(catalog) - resolved}
 
 
-def refresh_game_catalog(output, game, abilities, provenance):
+def refresh_game_catalog(output, game, abilities, effects, provenance):
     """Replace native game data, preserving the already generated DBC tiers.
 
     Read only the generated path pool's JSON-compatible string literals. No Lua
@@ -176,13 +179,13 @@ def refresh_game_catalog(output, game, abilities, provenance):
         raise ValueError("Missing generated icon path pool")
     paths = [json.loads(line.strip().removesuffix(",")) for line in pool[1].splitlines()]
     indices = {path: index for index, path in enumerate(paths, 1)}
-    native_paths = {value for catalog in (game, abilities) for value in catalog.values() if value}
+    native_paths = {value for catalog in (game, abilities, effects) for value in catalog.values() if value}
     for path in sorted(native_paths - set(paths)):
         paths.append(path)
         indices[path] = len(paths)
     pool_source = "".join("    " + lua_string(path) + ",\n" for path in paths)
     source = source[:pool.start(1)] + pool_source + source[pool.end(1):]
-    for label, catalog in (("game", game), ("abilities", abilities)):
+    for label, catalog in (("game", game), ("abilities", abilities), ("effects", effects)):
         lines = ["    " + label + " = {"]
         for name in sorted(catalog):
             value = catalog[name]
@@ -193,7 +196,7 @@ def refresh_game_catalog(output, game, abilities, provenance):
         block = re.search(r"^    " + label + r" = \{\n.*?^    \},", source, re.MULTILINE | re.DOTALL)
         if block:
             source = source[:block.start()] + replacement + source[block.end():]
-        elif label == "abilities" and "    locales = {" in source:
+        elif label in ("abilities", "effects") and "    locales = {" in source:
             source = source.replace("    locales = {", replacement + "\n    locales = {", 1)
         else:
             raise ValueError("Missing generated native game table: " + label)
@@ -216,25 +219,27 @@ def main():
     arguments = parser.parse_args()
     game_bytes = arguments.game_catalog.read_bytes()
     metadata = json.loads(game_bytes)
-    game_groups, ability_groups = {}, {}
+    native_groups = {"talent": {}, "ability": {}, "effect": {}}
     for record in metadata["records"]:
-        groups = ability_groups if record.get("kind") == "ability" else game_groups
+        groups = native_groups[record.get("kind", "talent")]
         add_icon(groups, record["name"], record["icon"])
-    game = resolve_groups(game_groups)
-    abilities = resolve_groups(ability_groups)
+    game = resolve_groups(native_groups["talent"])
+    abilities = resolve_groups(native_groups["ability"])
+    effects = resolve_groups(native_groups["effect"])
     game_provenance = [("Native game catalog JSON SHA256", hashlib.sha256(game_bytes).hexdigest())]
     if metadata.get("source", {}).get("sha256"):
         game_provenance.append(("Native game executable SHA256", metadata["source"]["sha256"]))
     if arguments.refresh_game_only:
         if arguments.spell_dbc or arguments.spell_icon_dbc:
             parser.error("--refresh-game-only retains existing DBC data; omit DBC input paths")
-        path_count = refresh_game_catalog(arguments.output, game, abilities, game_provenance)
+        path_count = refresh_game_catalog(arguments.output, game, abilities, effects, game_provenance)
         print(
             json.dumps(
                 {
                     "native_game_records": len(metadata["records"]),
                     "game": catalog_counts(game),
                     "abilities": catalog_counts(abilities),
+                    "effects": catalog_counts(effects),
                     "unique_icon_paths": path_count,
                     "output": str(arguments.output),
                 },
@@ -272,7 +277,7 @@ def main():
         ("Spell.dbc SHA256", spells.sha256()),
         ("SpellIcon.dbc SHA256", spell_icons.sha256()),
     ] + game_provenance
-    path_count = write_catalog(arguments.output, game, locales, schools, provenance, abilities)
+    path_count = write_catalog(arguments.output, game, locales, schools, provenance, abilities, effects)
     school_counts = [catalog_counts(catalog) for by_school in schools.values() for catalog in by_school.values()]
     print(
         json.dumps(
@@ -284,6 +289,7 @@ def main():
                 "native_game_records": len(metadata["records"]),
                 "game": catalog_counts(game),
                 "abilities": catalog_counts(abilities),
+                "effects": catalog_counts(effects),
                 "locales": {locale: catalog_counts(catalog) for locale, catalog in locales.items()},
                 "school_refinements": {
                     "entries": sum(count["names"] for count in school_counts),
