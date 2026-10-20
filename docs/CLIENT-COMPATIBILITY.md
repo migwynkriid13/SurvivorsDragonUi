@@ -75,6 +75,14 @@ BeNilla [#1782](https://github.com/samwhosung/benilla/pull/1782) enabled the ori
 
 The screenshot alone cannot attribute those allocations. This fix removes the font/layout error cascade and redundant native writes; it does not claim to prove or eliminate script-memory exhaustion. The requested complete session diagnostics remain uncapped and session-only. The addon does not change the game's memory limit, discard capture records or alter other addons.
 
+## Target debuff placement
+
+**Target debuffs on top** in `/sdui` → HUD defaults off. When enabled, the target's native debuff rows grow above its frame, while buffs stay below. The setting uses the existing display preview, Confirm, Cancel and reset behavior.
+
+The integration follows the original [1.12.1 target-frame code](https://github.com/MOUZU/Blizzard-WoW-Interface/blob/d162a4c0d198a4381b5b6573d975635ed7316702/1.12.1/FrameXML/TargetFrame.lua): `TargetDebuffButton_Update()` manages both aura types and only rewrites selected row anchors. The addon changes those same TOPLEFT points, preserving native icon sizes and horizontal chains. Calling the native updater restores every changed point when the option is disabled. Buffs use the native friendly-target anchor so they do not follow the moved debuff rows. No additional per-frame aura scan is added.
+
+The hook is feature-detected. The packaged game's FrameXML was not extracted, and live placement remains unverified; this contract comes from the pinned original source. No local checks or game execution were run.
+
 ## Evidence limits
 
 The initial investigation and fixes used the supplied screenshots/changelog and read-only source inspection. The user subsequently authorized a full local validation pass on 2026-10-19. That pass compiled all tracked Lua with stock Lua 5.0.3, checked the package and formatting, and exercised actual modules through focused native-API adapters. It found and fixed an additional UTF-8 literal-matching defect; see the [validation report](VALIDATION-2026-10-19.md).

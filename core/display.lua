@@ -3,6 +3,7 @@ DFRL:NewMod("Display", 0, function()
     local display, listeners, draft = {}, {}, nil
     local defaults = {
         bossDebuffs = true,
+        targetDebuffsOnTop = false,
         damageIcons = false,
         sctNormalHits = true,
         sctCriticalHits = true,
@@ -42,6 +43,7 @@ DFRL:NewMod("Display", 0, function()
     local function Normalize(source)
         return {
             bossDebuffs = Read(source, "bossDebuffs"),
+            targetDebuffsOnTop = Read(source, "targetDebuffsOnTop"),
             damageIcons = Read(source, "damageIcons"),
             sctNormalHits = Read(source, "sctNormalHits"),
             sctCriticalHits = Read(source, "sctCriticalHits"),

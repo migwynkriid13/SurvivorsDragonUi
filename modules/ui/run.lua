@@ -572,6 +572,7 @@ DFRL:NewMod("RunTimers", 5, function()
             { "flipBuffs", "Flip buff layout", "Flip icon order only; keep text placement." },
             { "cooldownNumbers", "Cooldown numbers", "Show countdowns on ability buttons." },
             { "bossDebuffs", "Boss debuffs", "Effects on boss and guardian health bars." },
+            { "targetDebuffsOnTop", "Target debuffs on top", "Place target debuffs above the target frame." },
             { "cacheGuidance", "Cache guidance", "Show the cache direction and distance." },
             { "guardianGuidance", "Guardian guidance", "Show the guardian lair direction and distance." },
             { "equippedJewelry", "Equipped jewelry", "Show five equipped items attached to the action bar." },

@@ -52,6 +52,38 @@ DFRL:NewMod("Target", 1, function()
     end
     HidePowerBar()
 
+    -- Change only TOPLEFT anchors rewritten by the native 1.12 aura updater.
+    -- Its icon sizes, horizontal chains, aura data and tooltip scripts stay native.
+    if type(_G.TargetDebuffButton_Update) == "function" then
+        local debuffsOnTop = DFRL.display.Get("targetDebuffsOnTop")
+        local function PlaceDebuffRow(button, relative, gap)
+            if not button or not relative then return end
+            button:SetPoint("TOPLEFT", relative, "TOPLEFT", 0, button:GetHeight() + gap)
+        end
+        local function PlaceTargetDebuffs()
+            if not debuffsOnTop or not TargetFrameDebuff1 then return end
+            TargetFrameDebuff1:SetPoint("TOPLEFT", TargetFrame, "TOPLEFT", 5, TargetFrameDebuff1:GetHeight() + 4)
+            local hasTargetOfTarget = TargetofTargetFrame and TargetofTargetFrame:IsShown()
+            local wrap = hasTargetOfTarget and 5 or 6
+            PlaceDebuffRow(_G["TargetFrameDebuff" .. (wrap + 1)], TargetFrameDebuff1, 2)
+            if hasTargetOfTarget then PlaceDebuffRow(_G.TargetFrameDebuff11, _G.TargetFrameDebuff6, 2) end
+            -- Enemy buffs normally follow a debuff row; detach them below the
+            -- frame using the native friendly-target buff anchor instead.
+            if TargetFrameBuff1 then
+                TargetFrameBuff1:SetPoint("TOPLEFT", TargetFrame, "BOTTOMLEFT", 5, 32)
+            end
+        end
+        hooksecurefunc("TargetDebuffButton_Update", PlaceTargetDebuffs)
+        DFRL.display.Listen(function()
+            local value = DFRL.display.Get("targetDebuffsOnTop")
+            if value == debuffsOnTop then return end
+            debuffsOnTop = value
+            -- Native layout restores every point we change when switching off.
+            _G.TargetDebuffButton_Update()
+        end)
+        if debuffsOnTop then _G.TargetDebuffButton_Update() end
+    end
+
     if TargetFrameNameBackground then TargetFrameNameBackground:SetTexture(nil) end
     if TargetFrameHealthBarText then TargetFrameHealthBarText:SetAlpha(0) end
     if TargetHPText then TargetHPText:SetAlpha(0) end
