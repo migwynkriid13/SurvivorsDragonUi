@@ -1,6 +1,6 @@
 # Level Up artwork
 
-The stored-level button retains the gold square border from the selected **28 · Framed Icon + Text** comparison, with the decorative flourishes removed. The native class icon has a round waiting-count badge at its upper-right. A single **Upgrades pending** heading centers vertically beside it, with no current-level subtitle. The compact icon/text group centers inside its edit box. A translucent black backdrop with feathered edges and a pulsing gold halo improve visibility. Text remains live and uses the game's DEFAULT font and shared language system.
+The stored-level button retains the gold square border from the selected **28 · Framed Icon + Text** comparison, with the decorative flourishes removed. The native class icon has a round waiting-count badge at its upper-right. A single **LEVEL UP** heading centers vertically beside it, with no current-level subtitle. The compact icon/text group centers inside its edit box. A translucent black backdrop with feathered edges and a pulsing gold halo improve visibility. Text remains live and uses the game's DEFAULT font and shared language system.
 
 ## Gold frame source
 
