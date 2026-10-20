@@ -94,6 +94,8 @@ DFRL:NewMod("StoredLevels", 5, function()
     local title = content:CreateFontString(nil, "OVERLAY")
     DFRL.locale.Bind(title)
     T.SetFont(title, 22, "OUTLINE")
+    -- Initialize DEFAULT first so a missing native Skurri face stays readable.
+    pcall(title.SetFont, title, "Fonts\\SKURRI.TTF", 22, "OUTLINE")
     title:SetTextColor(1, 0.91, 0.69)
     title:SetShadowColor(0, 0, 0, 1)
     title:SetShadowOffset(1, -1)
