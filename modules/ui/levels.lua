@@ -1,6 +1,6 @@
 -- A movable replacement for the game's stored-level button, using its own APIs.
 DFRL:NewMod("StoredLevels", 5, function()
-    local HEIGHT, INTERVAL, VISUAL_SCALE = 72, 0.1, 0.42
+    local HEIGHT, INTERVAL, VISUAL_SCALE = 72, 0.1, 0.7
     local CLASS_ICONS = {
         WARRIOR = { 0, 0.25, 0, 0.25 },
         MAGE = { 0.25, 0.5, 0, 0.25 },
