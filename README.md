@@ -29,6 +29,7 @@ To use the game's damage numbers, choose **Game settings** under **Combat text**
 
 - Player and target frames, a seven-button action bar, equipped jewelry, XP, kills, gold and cache cost.
 - A run timer with boss markers, plus boss and guardian health bars.
+- A movable **Level Up!** button for stored levels. Select it in `/sdui` → **Layout** to move or resize it, then **Confirm** to save.
 - Compact nameplates and custom damage numbers with size, color and hit filters.
 - Transparent chat with shorter game messages and mouse-wheel history.
 - Cache and guardian guides with distance, direction and world-map pins.
