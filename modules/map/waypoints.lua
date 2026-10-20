@@ -80,6 +80,276 @@ DFRL:NewMod("Waypoints", 3, function()
         if ok then return value end
     end
 
+    local UpdateMinimapPins, ClearMinimapPins, DirtyMinimapScale, StopMinimapPins
+    do
+        local PIN_SIZE = 20
+        local outdoorDiameter = { 14, 12, 10, 8, 6, 4 }
+        local indoorDiameter = { 300, 240, 180, 120, 80, 50 }
+        local originalFlag
+        local mode, modeDirty, probing, reloading = nil, true, false, false
+        local pendingZoom, RollbackZoom
+        for _, tracker in ipairs(trackers) do
+            tracker.minimapPins, tracker.minimapPool, tracker.minimapCycle = {}, {}, 0
+        end
+
+        local function Shown(value)
+            if value == true or value == 1 or value == "1" then return true end
+            if value == false or value == 0 or value == "0" then return false end
+        end
+
+        local function FlagShown()
+            if type(_G.AZS_IsHudShown) ~= "function" then return end
+            local ok, value = pcall(_G.AZS_IsHudShown, "flag")
+            if ok then return Shown(value) end
+        end
+
+        local function RecyclePins(tracker, cycle)
+            for key, pin in pairs(tracker.minimapPins) do
+                if not cycle or pin.cycle ~= cycle then
+                    pin:Hide()
+                    pin.entryKey, pin.cycle = nil, nil
+                    tracker.minimapPins[key] = nil
+                    table.insert(tracker.minimapPool, pin)
+                end
+            end
+        end
+
+        ClearMinimapPins = function(kind, retryZoom)
+            for _, tracker in ipairs(trackers) do
+                if not kind or tracker.kind == kind then RecyclePins(tracker, nil) end
+            end
+            if pendingZoom and (pendingZoom.retry or retryZoom) and not probing then RollbackZoom() end
+        end
+
+        local function RestoreNativeFlag()
+            if originalFlag == nil or type(_G.AZS_SetHudShown) ~= "function" then return end
+            local ok = pcall(_G.AZS_SetHudShown, "flag", originalFlag)
+            if ok and FlagShown() == originalFlag then originalFlag = nil end
+        end
+
+        local function HideNativeFlag()
+            if type(_G.AZS_SetHudShown) ~= "function" then return false end
+            local shown = FlagShown()
+            if shown == nil then return false end
+            if originalFlag == nil then originalFlag = shown end
+            if shown then
+                local ok = pcall(_G.AZS_SetHudShown, "flag", false)
+                if not ok then return false end
+            end
+            return FlagShown() == false
+        end
+
+        DirtyMinimapScale = function()
+            if probing then return end
+            mode, modeDirty = nil, true
+            if pendingZoom then
+                pendingZoom.retry = true
+                RollbackZoom()
+            end
+        end
+
+        local function ReadZoom()
+            if not Minimap or type(Minimap.GetZoom) ~= "function" or type(_G.GetCVar) ~= "function" then return end
+            local ok, zoom = pcall(Minimap.GetZoom, Minimap)
+            local outsideOK, outside = pcall(_G.GetCVar, "minimapZoom")
+            local insideOK, inside = pcall(_G.GetCVar, "minimapInsideZoom")
+            outside, inside = tonumber(outside), tonumber(inside)
+            if
+                not ok
+                or not outsideOK
+                or not insideOK
+                or not Integer(zoom, 0)
+                or zoom > 5
+                or not Integer(outside, 0)
+                or outside > 5
+                or not Integer(inside, 0)
+                or inside > 5
+            then
+                return
+            end
+            return zoom, outside, inside
+        end
+
+        RollbackZoom = function()
+            local saved = pendingZoom
+            if not saved then return true end
+            saved.retry = false
+            local wasProbing = probing
+            probing = true
+            if Minimap and type(Minimap.SetZoom) == "function" then pcall(Minimap.SetZoom, Minimap, saved.zoom) end
+            local zoom, outside, inside = ReadZoom()
+            if zoom ~= saved.zoom or outside ~= saved.outside or inside ~= saved.inside then
+                -- SetCVar restores each saved slot; SetZoom separately restores
+                -- the active native index. Neither is trusted without readback.
+                if type(_G.SetCVar) == "function" then
+                    pcall(_G.SetCVar, "minimapZoom", saved.outside)
+                    pcall(_G.SetCVar, "minimapInsideZoom", saved.inside)
+                end
+                if Minimap and type(Minimap.SetZoom) == "function" then pcall(Minimap.SetZoom, Minimap, saved.zoom) end
+                zoom, outside, inside = ReadZoom()
+            end
+            probing = wasProbing
+            if zoom == saved.zoom and outside == saved.outside and inside == saved.inside then
+                pendingZoom = nil
+                return true
+            end
+            return false
+        end
+
+        local function ResolveMode(zoom, outside, inside)
+            -- Defer an ambiguous probe until a valid minimap destination needs it.
+            -- Failed measurements wait for a native mode/zone/zoom event to retry.
+            modeDirty = false
+            if zoom == outside and zoom ~= inside then
+                mode = "outdoor"
+            elseif zoom == inside and zoom ~= outside then
+                mode = "indoor"
+            elseif zoom == outside and zoom == inside and type(Minimap.SetZoom) == "function" then
+                -- SetZoom changes only the active zoom CVar. Restore synchronously
+                -- before any drawing, including when the probe reports a failure.
+                local neighbor = zoom == 5 and 4 or zoom + 1
+                pendingZoom = { zoom = zoom, outside = outside, inside = inside, retry = true }
+                probing = true
+                local changed = pcall(Minimap.SetZoom, Minimap, neighbor)
+                local sampledZoom, sampledOutside, sampledInside = ReadZoom()
+                local restored = RollbackZoom()
+                probing = false
+                if not changed or not restored or sampledZoom ~= neighbor then return end
+                if sampledOutside == neighbor and sampledInside == inside then
+                    mode = "outdoor"
+                elseif sampledInside == neighbor and sampledOutside == outside then
+                    mode = "indoor"
+                end
+            end
+        end
+
+        local function Diameter()
+            -- An unresolved rollback blocks every new probe and replacement.
+            if pendingZoom then return end
+            local zoom, outside, inside = ReadZoom()
+            if zoom == nil then return end
+            if modeDirty then ResolveMode(zoom, outside, inside) end
+            if mode == "outdoor" and zoom == outside then
+                return outdoorDiameter[zoom + 1] * (533.3333 / 16)
+            elseif mode == "indoor" and zoom == inside then
+                return indoorDiameter[zoom + 1]
+            end
+            mode = nil
+        end
+
+        local function MakeMinimapPin(tracker)
+            local pin = CreateFrame("Frame", nil, Minimap)
+            local size = tracker.kind == "cache" and PIN_SIZE * 0.8 or PIN_SIZE
+            pin:Hide()
+            pin:SetWidth(size)
+            pin:SetHeight(size)
+            pin:SetFrameLevel(Minimap:GetFrameLevel() + (tracker.kind == "guardian" and 11 or 10))
+            pin:EnableMouse(false)
+            local art = pin:CreateTexture(nil, "OVERLAY")
+            art:SetTexture(texturePath .. tracker.hudArt)
+            art:SetTexCoord(unpack(tracker.hudTexCoord))
+            art:SetAllPoints(pin)
+            return pin
+        end
+
+        local function PlacePin(pin, x, y)
+            pin:ClearAllPoints()
+            pin:SetPoint("CENTER", Minimap, "CENTER", x, y)
+            pin:Show()
+            return Shown(pin:IsVisible()) == true
+        end
+
+        local function Geometry()
+            if not Minimap then return end
+            local visibleOK, visible = pcall(Minimap.IsVisible, Minimap)
+            if not visibleOK or Shown(visible) ~= true then return end
+            local sizeOK, width, height = pcall(T.GetLocalSize, Minimap)
+            if not sizeOK or not Number(width) or not Number(height) or width <= PIN_SIZE or height <= PIN_SIZE then
+                return
+            end
+            local diameter = Diameter()
+            if not Number(diameter) or diameter <= 0 then return end
+            return math.min(width, height) / diameter, (math.min(width, height) - PIN_SIZE) / 2
+        end
+
+        local function Offset(entry, scale)
+            local east, north, _, metric = navigation.GuideDelta(entry)
+            if not metric or not Number(east) or not Number(north) then return end
+            local x, y = east * scale, north * scale
+            if Number(x) and Number(y) then return x, y end
+        end
+
+        local function DrawTrackedPin(tracker, entry, x, y)
+            local pin = tracker.minimapPins[entry.key]
+            if not pin then
+                pin = table.remove(tracker.minimapPool) or MakeMinimapPin(tracker)
+                tracker.minimapPins[entry.key] = pin
+            end
+            pin.entryKey, pin.cycle = entry.key, tracker.minimapCycle
+            return PlacePin(pin, x, y)
+        end
+
+        local function UpdateTrackerPins(tracker, scale, edge)
+            tracker.minimapCycle = tracker.minimapCycle + 1
+            if scale and DFRL.display.Get(tracker.displayKey) then
+                for _, entry in ipairs(tracker.entries) do
+                    local x, y = Offset(entry, scale)
+                    -- Every living guardian keeps its own distant indicator.
+                    -- Off-map caches hide instead of piling up on the edge.
+                    if x and tracker.kind == "guardian" then
+                        local ratio = math.max(1, math.abs(x) / edge, math.abs(y) / edge)
+                        x, y = x / ratio, y / ratio
+                    end
+                    if x and (tracker.kind == "guardian" or (math.abs(x) <= edge and math.abs(y) <= edge)) then
+                        local drawOK, drawn = pcall(DrawTrackedPin, tracker, entry, x, y)
+                        if not drawOK or not drawn then
+                            local pin = tracker.minimapPins[entry.key]
+                            if pin then pin.cycle = nil end
+                        end
+                    end
+                end
+            end
+            RecyclePins(tracker, tracker.minimapCycle)
+        end
+
+        UpdateMinimapPins = function()
+            if not inWorld or reloading then
+                ClearMinimapPins()
+                RestoreNativeFlag()
+                return
+            end
+            -- Flag ownership does not depend on a destination or its geometry:
+            -- empty/dead lairs and snapshot refreshes must never restore it.
+            if DFRL.display.Get("guardianGuidance") then
+                HideNativeFlag()
+            else
+                RestoreNativeFlag()
+            end
+            if not navigation.IsRunPhase(Native("AZS_GetPhase")) then
+                ClearMinimapPins()
+                return
+            end
+            local scale, edge
+            for _, tracker in ipairs(trackers) do
+                if DFRL.display.Get(tracker.displayKey) and tracker.entries[1] then
+                    scale, edge = Geometry()
+                    break
+                end
+            end
+            for _, tracker in ipairs(trackers) do
+                UpdateTrackerPins(tracker, scale, edge)
+            end
+        end
+
+        StopMinimapPins = function()
+            reloading = true
+            inWorld = false
+            if pendingZoom then pendingZoom.retry = true end
+            ClearMinimapPins()
+            RestoreNativeFlag()
+        end
+    end
+
     local function FloatingRail(hud)
         -- Keep only the thin gold stripe beneath the floating icon and text.
         local rail = hud:CreateTexture(nil, "BACKGROUND")
@@ -128,7 +398,7 @@ DFRL:NewMod("Waypoints", 3, function()
         pointer:Hide()
         local title = hud:CreateFontString(nil, "OVERLAY")
         DFRL.locale.Bind(title)
-        title:SetFont("DEFAULT", 13, "OUTLINE")
+        T.SetFont(title, 13, "OUTLINE")
         title:SetTextColor(0.93, 0.8, 0.53)
         title:SetPoint("TOPLEFT", hud, "TOPLEFT", 68, -6)
         title:SetWidth(76)
@@ -139,7 +409,7 @@ DFRL:NewMod("Waypoints", 3, function()
         title:SetShadowOffset(1, -1)
         title:SetText(tracker.title)
         local distanceText = hud:CreateFontString(nil, "OVERLAY")
-        distanceText:SetFont("DEFAULT", 15, "OUTLINE")
+        T.SetFont(distanceText, 15, "OUTLINE")
         distanceText:SetTextColor(1, 0.96, 0.85)
         distanceText:SetPoint("TOPLEFT", hud, "TOPLEFT", 68, -22)
         distanceText:SetWidth(76)
@@ -166,6 +436,7 @@ DFRL:NewMod("Waypoints", 3, function()
         end
     end
     local function Clear(tracker)
+        ClearMinimapPins(tracker.kind)
         tracker.entries = {}
         navigation.SetPoints(tracker.source, nil)
         tracker.selectedKey, tracker.selected, tracker.provisionalSelection = nil, nil, nil
@@ -209,6 +480,10 @@ DFRL:NewMod("Waypoints", 3, function()
             -- Both occupied states mean a living guardian. Coordinates belong
             -- to its lair, not to the creature while it moves during a fight.
             local occupied = (entry.state == "asleep" or entry.state == "awake") and Integer(entry.id, 1)
+            if guardian then
+                if not Integer(entry.index, 1) or seen[entry.index] then return end
+                seen[entry.index] = true
+            end
             if not guardian or occupied then
                 if
                     not Integer(entry.id, guardian and 1 or 0)
@@ -218,9 +493,10 @@ DFRL:NewMod("Waypoints", 3, function()
                 then
                     return
                 end
-                local identityKey = guardian and entry.index or entry.id
-                if seen[identityKey] then return end
-                seen[identityKey] = true
+                if not guardian then
+                    if seen[entry.id] then return end
+                    seen[entry.id] = true
+                end
                 local key = guardian and (tostring(entry.index) .. ":" .. tostring(entry.id)) or tostring(entry.id)
                 table.insert(result, {
                     key = key,
@@ -536,7 +812,9 @@ DFRL:NewMod("Waypoints", 3, function()
         "PLAYER_LOGOUT",
         "WORLD_MAP_UPDATE",
         "ZONE_CHANGED_NEW_AREA",
+        "ZONE_CHANGED_INDOORS",
         "ZONE_CHANGED",
+        "MINIMAP_UPDATE_ZOOM",
     }) do
         controller:RegisterEvent(eventName)
     end
@@ -548,7 +826,18 @@ DFRL:NewMod("Waypoints", 3, function()
             identity = nil
             navigation.Reset()
             ClearAll()
+            DirtyMinimapScale()
+            UpdateMinimapPins()
             return
+        end
+        if
+            event == "PLAYER_ENTERING_WORLD"
+            or event == "ZONE_CHANGED_NEW_AREA"
+            or event == "ZONE_CHANGED_INDOORS"
+            or event == "ZONE_CHANGED"
+            or event == "MINIMAP_UPDATE_ZOOM"
+        then
+            DirtyMinimapScale()
         end
         if event == "PLAYER_ENTERING_WORLD" then
             inWorld = true
@@ -587,6 +876,7 @@ DFRL:NewMod("Waypoints", 3, function()
                 UpdateGuide(tracker, elapsed)
             end
         end
+        UpdateMinimapPins()
     end)
     DFRL.display.Listen(function()
         -- Visibility drafts do not retire snapshots, selections or calibration.
@@ -594,6 +884,15 @@ DFRL:NewMod("Waypoints", 3, function()
         for _, tracker in ipairs(trackers) do
             UpdateGuide(tracker)
         end
+        if not DFRL.display.Get("guardianGuidance") then ClearMinimapPins("guardian", true) end
+        UpdateMinimapPins()
     end)
+    if type(_G.ReloadUI) == "function" then
+        local reloadUI = _G.ReloadUI
+        _G.ReloadUI = function()
+            StopMinimapPins()
+            return reloadUI()
+        end
+    end
     Refresh()
 end)

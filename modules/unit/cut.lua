@@ -8,6 +8,7 @@ DFRL:NewMod("Cut-Out", 1, function()
     local cutouts, fading = {}, {}
     local frame = CreateFrame("Frame")
     local initialized = false
+    local animationEnabled = DFRL.display.Get("healthLossAnimation")
 
     local function ReadValue(cutout) return UnitHealth(cutout.unit), UnitHealthMax(cutout.unit) end
 
@@ -50,7 +51,12 @@ DFRL:NewMod("Cut-Out", 1, function()
     end
 
     local function Update(cutout)
-        if not UnitExists(cutout.unit) or UnitIsDead(cutout.unit) or UnitIsGhost(cutout.unit) then
+        if
+            not animationEnabled
+            or not UnitExists(cutout.unit)
+            or UnitIsDead(cutout.unit)
+            or UnitIsGhost(cutout.unit)
+        then
             Reset(cutout)
             return
         end
@@ -80,6 +86,18 @@ DFRL:NewMod("Cut-Out", 1, function()
         end
         frame:SetScript("OnUpdate", Animate)
     end
+
+    DFRL.display.Listen(function()
+        local enabled = DFRL.display.Get("healthLossAnimation")
+        if enabled == animationEnabled then return end
+        animationEnabled = enabled
+        frame:SetScript("OnUpdate", nil)
+        fading = {}
+        for _, cutout in ipairs(cutouts) do
+            cutout.fading, cutout.fadeStart = nil, nil
+            Reset(cutout)
+        end
+    end)
 
     local function Initialize()
         if initialized then return end

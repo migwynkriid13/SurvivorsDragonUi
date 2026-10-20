@@ -2,7 +2,6 @@ DFRL:NewMod("Player", 1, function()
     if not PlayerFrame or not PlayerFrameHealthBar then return end
 
     local tex = DFRL:GetInfoOrCons("tex") .. "unitframes\\"
-    local font = "DEFAULT"
     local healthText
     local primaryBar, primaryText, setPowerShown, setPortraitOverlap
     local updateBorder
@@ -88,7 +87,7 @@ DFRL:NewMod("Player", 1, function()
         frame:SetAllPoints(bar)
         frame:SetFrameLevel(PlayerFrameHealthBar:GetFrameLevel() + 3)
         local text = frame:CreateFontString(nil, "OVERLAY")
-        text:SetFont(font, size, "OUTLINE")
+        T.SetFont(text, size, "OUTLINE")
         text:SetTextColor(1, 1, 1)
         text:SetPoint("CENTER", bar, "CENTER", 0, y)
         return text
@@ -223,7 +222,7 @@ DFRL:NewMod("Player", 1, function()
         primaryBackground:SetTexture("Interface\\Buttons\\WHITE8X8")
         primaryBackground:SetVertexColor(0, 0, 0, 0.6)
         primaryText = primaryBar:CreateFontString(nil, "OVERLAY")
-        primaryText:SetFont(font, 8, "OUTLINE")
+        T.SetFont(primaryText, 8, "OUTLINE")
         primaryText:SetTextColor(1, 1, 1)
         primaryText:SetPoint("CENTER", primaryBar, "CENTER", 0, 0)
         primaryBar:Hide()
@@ -242,13 +241,13 @@ DFRL:NewMod("Player", 1, function()
             PlayerFrame.name:ClearAllPoints()
             PlayerFrame.name:SetPoint("BOTTOMLEFT", PlayerFrameHealthBar, "TOPLEFT", 2, 4)
             PlayerFrame.name:SetJustifyH("LEFT")
-            PlayerFrame.name:SetFont(font, 11, "NONE")
+            T.SetFont(PlayerFrame.name, 11, "NONE")
             PlayerFrame.name:SetTextColor(1, 0.82, 0)
         end
         if PlayerLevelText then
             PlayerLevelText:ClearAllPoints()
             PlayerLevelText:SetPoint("RIGHT", PlayerFrame, "RIGHT", -14, 25)
-            PlayerLevelText:SetFont(font, 11, "NONE")
+            T.SetFont(PlayerLevelText, 11, "NONE")
             PlayerLevelText:SetTextColor(1, 0.82, 0)
         end
         -- Preserve the original addon status effects without stock overlays.

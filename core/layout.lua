@@ -67,6 +67,9 @@ DFRL:NewMod("Layout", 0, function()
     local function Scale(frame) return frame.GetEffectiveScale and frame:GetEffectiveScale() or 1 end
     local function LocalScale(frame) return frame.GetScale and frame:GetScale() or 1 end
     local function Viewport()
+        -- These are the existing saved-position denominators. Rendered screen
+        -- extents are read separately for editor math; changing this contract
+        -- would reinterpret confirmed layouts saved by the current client.
         local width, height, scale = UIParent:GetWidth(), UIParent:GetHeight(), Scale(UIParent)
         if not Number(width) or not Number(height) or not Number(scale) or width <= 0 or height <= 0 or scale <= 0 then
             return
@@ -91,7 +94,13 @@ DFRL:NewMod("Layout", 0, function()
         if frame:GetNumPoints() == 1 then
             point, relative, relativePoint, oldX, oldY = frame:GetPoint(1)
         end
-        if point ~= "TOPLEFT" or relative ~= UIParent or relativePoint ~= "TOPLEFT" or oldX ~= x or oldY ~= y then
+        if
+            point ~= "TOPLEFT"
+            or relative ~= UIParent
+            or relativePoint ~= "TOPLEFT"
+            or not T.NearlyEqual(oldX, x)
+            or not T.NearlyEqual(oldY, y)
+        then
             frame:ClearAllPoints()
             frame:SetPoint("TOPLEFT", UIParent, "TOPLEFT", x, y)
         end
@@ -123,22 +132,22 @@ DFRL:NewMod("Layout", 0, function()
             local height = Number(geometry.height)
                     and Clamp(geometry.height, options.minHeight or 80, options.maxHeight or 1600)
                 or entry.defaultHeight
-            if oldScale ~= entry.defaultScale then frame:SetScale(entry.defaultScale) end
-            if oldWidth ~= width then frame:SetWidth(width) end
-            if oldHeight ~= height then frame:SetHeight(height) end
+            if not T.NearlyEqual(oldScale, entry.defaultScale) then frame:SetScale(entry.defaultScale) end
+            if not T.NearlyEqual(oldWidth, width) then frame:SetWidth(width) end
+            if not T.NearlyEqual(oldHeight, height) then frame:SetHeight(height) end
         else
             local scale = Number(geometry.scale)
                     and Clamp(geometry.scale, entry.defaultScale * 0.4, entry.defaultScale * 3)
                 or entry.defaultScale
-            if oldScale ~= scale then frame:SetScale(scale) end
+            if not T.NearlyEqual(oldScale, scale) then frame:SetScale(scale) end
         end
         if
             options.onResize
             and (
                 not entry.sizeApplied
-                or oldScale ~= LocalScale(frame)
-                or oldWidth ~= frame:GetWidth()
-                or oldHeight ~= frame:GetHeight()
+                or not T.NearlyEqual(oldScale, LocalScale(frame))
+                or not T.NearlyEqual(oldWidth, frame:GetWidth())
+                or not T.NearlyEqual(oldHeight, frame:GetHeight())
             )
         then
             options.onResize(frame, frame:GetWidth(), frame:GetHeight())
@@ -205,14 +214,15 @@ DFRL:NewMod("Layout", 0, function()
         local position = ReadPosition(entry.frame)
         if not x or not position or not width then return end
         local scale = Scale(entry.frame) / uiScale
+        local frameWidth, frameHeight = T.GetLocalSize(entry.frame)
         entry.resizing = {
             corner = corner,
             cursorX = x,
             cursorY = y,
             x = position.x * width,
             y = position.y * height,
-            width = entry.frame:GetWidth() * scale,
-            height = entry.frame:GetHeight() * scale,
+            width = frameWidth * scale,
+            height = frameHeight * scale,
             scale = LocalScale(entry.frame),
         }
         entry.resizePosition = position
@@ -242,7 +252,8 @@ DFRL:NewMod("Layout", 0, function()
             ApplySize(entry, { scale = start.scale * factor })
         end
         local ratio = Scale(entry.frame) / uiScale
-        local newWidth, newHeight = entry.frame:GetWidth() * ratio, entry.frame:GetHeight() * ratio
+        local frameWidth, frameHeight = T.GetLocalSize(entry.frame)
+        local newWidth, newHeight = frameWidth * ratio, frameHeight * ratio
         -- Keep the opposite corner fixed throughout the resize.
         local x = right and start.x or start.x + start.width - newWidth
         local y = top and start.y - start.height + newHeight or start.y
@@ -286,6 +297,7 @@ DFRL:NewMod("Layout", 0, function()
 
     local function MakeHandle(entry)
         local handle = CreateFrame("Button", nil, UIParent)
+        handle:Hide()
         handle:SetFrameStrata("TOOLTIP")
         handle:SetFrameLevel(100)
         handle:RegisterForDrag("LeftButton")
@@ -293,7 +305,7 @@ DFRL:NewMod("Layout", 0, function()
         handle:SetBackdropBorderColor(0.87, 0.73, 0.41, 0.8)
         local label = handle:CreateFontString(nil, "OVERLAY")
         DFRL.locale.Bind(label)
-        label:SetFont("DEFAULT", 10, "OUTLINE")
+        T.SetFont(label, 10, "OUTLINE")
         label:SetPoint("CENTER", handle, "CENTER", 0, 0)
         label:SetTextColor(0.87, 0.73, 0.41)
         label:SetText(labels[entry.key] or entry.key)
@@ -354,10 +366,17 @@ DFRL:NewMod("Layout", 0, function()
         entry.defaultWidth, entry.defaultHeight = frame:GetWidth(), frame:GetHeight()
         entry.defaultAnchor = defaultAnchor or CaptureAnchors(frame)
         needsDefaultPosition = true
-        entries[key] = entry
         -- Preserve the module's requested visibility, including conditional frames.
         entry.nativeShow, entry.nativeHide = frame.Show, frame.Hide
         entry.wantsShown = frame:IsShown() and true or false
+        -- Complete the handle before publishing the entry to the update loop or
+        -- replacing native visibility methods. A setup error must not leave a
+        -- half-registered entry whose handle is nil on every following frame.
+        entry.defaultAnchor(frame)
+        LockFrame(frame)
+        MakeHandle(entry)
+        entries[key] = entry
+        table.insert(order, entry)
         frame.Show = function(self)
             entry.wantsShown = true
             if not IsHidden(entry) then entry.nativeShow(self) end
@@ -366,10 +385,6 @@ DFRL:NewMod("Layout", 0, function()
             entry.wantsShown = false
             entry.nativeHide(self)
         end
-        table.insert(order, entry)
-        entry.defaultAnchor(frame)
-        LockFrame(frame)
-        MakeHandle(entry)
         if ready then layout.Place(key) end
         if editing and entry.options.onEdit then entry.options.onEdit(true) end
     end
@@ -379,9 +394,11 @@ DFRL:NewMod("Layout", 0, function()
         local width, height, uiScale = Viewport()
         local position = ReadPosition(entry.frame)
         if not width or not position then return end
+        local screenWidth, screenHeight = T.GetLocalSize(UIParent)
+        local frameWidth, frameHeight = T.GetLocalSize(entry.frame)
         local ratio = Scale(entry.frame) / uiScale
-        return position.x * width + entry.frame:GetWidth() * ratio / 2 - width / 2,
-            position.y * height - entry.frame:GetHeight() * ratio / 2 + height / 2
+        return position.x * width + frameWidth * ratio / 2 - screenWidth / 2,
+            position.y * height - frameHeight * ratio / 2 + screenHeight / 2
     end
     local function SetCoordinateText(field, text)
         -- Remember programmatic text before SetText, including delayed change events.
@@ -466,10 +483,12 @@ DFRL:NewMod("Layout", 0, function()
         else
             ApplySize(selected, { scale = selected.defaultScale * size / 100 })
         end
+        local screenWidth, screenHeight = T.GetLocalSize(UIParent)
+        local frameWidth, frameHeight = T.GetLocalSize(frame)
         local ratio = Scale(frame) / uiScale
         local position = {
-            x = (x + width / 2 - frame:GetWidth() * ratio / 2) / width,
-            y = (y - height / 2 + frame:GetHeight() * ratio / 2) / height,
+            x = (x + screenWidth / 2 - frameWidth * ratio / 2) / width,
+            y = (y - screenHeight / 2 + frameHeight * ratio / 2) / height,
         }
         draft[selected.key] = ReadGeometry(selected, position)
         layout.Place(selected.key)
@@ -487,7 +506,7 @@ DFRL:NewMod("Layout", 0, function()
         local function Text(text, y, size)
             local label = coordinates:CreateFontString(nil, "OVERLAY")
             DFRL.locale.Bind(label)
-            label:SetFont("DEFAULT", size or 11, "")
+            T.SetFont(label, size or 11, "")
             label:SetPoint("TOP", coordinates, "TOP", 0, y)
             label:SetText(text)
             label:SetTextColor(0.88, 0.87, 0.83)
@@ -696,7 +715,15 @@ DFRL:NewMod("Layout", 0, function()
         if not ready then return end
         local width, height, scale = Viewport()
         if not width then return end
-        if lastWidth and (width ~= lastWidth or height ~= lastHeight or scale ~= lastScale) then
+        if
+            not lastWidth
+            or not T.NearlyEqual(width, lastWidth)
+            or not T.NearlyEqual(height, lastHeight)
+            or not T.NearlyEqual(scale, lastScale)
+        then
+            -- The client applies its saved UI scale after ADDON_LOADED. Rebase
+            -- defaults on the first world update too, before using positions
+            -- captured during module initialization at the earlier scale.
             FinishDrag(activeDrag, true)
             RestoreDefaults()
         end
@@ -724,8 +751,9 @@ DFRL:NewMod("Layout", 0, function()
             local shown = entry.defaultPosition and (not entry.options.onlyWhenShown or entry.wantsShown)
             if shown then
                 local ratio = Scale(region) / scale
-                local handleWidth = math.max(12, region:GetWidth() * ratio)
-                local handleHeight = math.max(12, region:GetHeight() * ratio)
+                local regionWidth, regionHeight = T.GetLocalSize(region)
+                local handleWidth = math.max(12, regionWidth * ratio)
+                local handleHeight = math.max(12, regionHeight * ratio)
                 if entry.handleRegion ~= region then
                     handle:ClearAllPoints()
                     handle:SetPoint("TOPLEFT", region, "TOPLEFT", 0, 0)

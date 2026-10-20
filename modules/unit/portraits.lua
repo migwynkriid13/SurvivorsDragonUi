@@ -1,6 +1,8 @@
 DFRL:NewMod("AnimatedPortraits", 2, function()
     local entries = {}
     local inWorld = UnitExists("player") and true or false
+    -- Keep the legacy saved key; the choice now covers all three portraits.
+    local portraits3D = DFRL.display.Get("playerPortrait3D")
 
     local function RestoreStill(entry) entry.portrait:SetAlpha(entry.stillAlpha) end
 
@@ -17,7 +19,7 @@ DFRL:NewMod("AnimatedPortraits", 2, function()
 
     local function Bind(entry)
         if entry.binding or not entry.supported then return end
-        if not inWorld or not UnitExists(entry.unit) then
+        if not portraits3D or not inWorld or not UnitExists(entry.unit) then
             Release(entry)
             return
         end
@@ -29,8 +31,16 @@ DFRL:NewMod("AnimatedPortraits", 2, function()
         local success = pcall(function()
             entry.model:ClearModel()
             entry.model:SetUnit(entry.unit)
+            if not portraits3D or not inWorld or not UnitExists(entry.unit) then
+                Release(entry)
+                return
+            end
             entry.bound = true
             entry.model:Show()
+            -- Request camera 0 (the standard character headshot) after Show, which may
+            -- request another copy. BeNilla #1849 holds this for a pending copy;
+            -- older renderers can retain their body view despite accepting it.
+            if type(entry.model.SetCamera) == "function" then pcall(entry.model.SetCamera, entry.model, 0) end
         end)
         entry.binding = false
         if not success then
@@ -57,7 +67,7 @@ DFRL:NewMod("AnimatedPortraits", 2, function()
         end
 
         -- Keep the native rectangular viewport at the existing portrait's bounds.
-        -- The client supplies its own body camera and animation; no guessed zoom,
+        -- The client supplies its authored camera and animation; no guessed zoom,
         -- model offsets, circular clipping or animation timers are substituted here.
         success = pcall(function()
             model:Hide()
@@ -74,12 +84,21 @@ DFRL:NewMod("AnimatedPortraits", 2, function()
                 -- every frame; only a current copy's callback may replace it again.
                 -- This also recovers when a client has the methods but no renderer.
                 RestoreStill(entry)
-                if entry.bound and (not inWorld or not UnitExists(entry.unit)) then Release(entry) end
+                if entry.bound and (not portraits3D or not inWorld or not UnitExists(entry.unit)) then
+                    Release(entry)
+                end
             end)
             model:SetScript("OnUpdateModel", function()
                 -- This is evidence of a copy and a drawable viewport, not a public
                 -- promise that every GPU resource has finished displaying.
-                if entry.bound and not entry.binding and inWorld and UnitExists(entry.unit) and model:IsVisible() then
+                if
+                    portraits3D
+                    and entry.bound
+                    and not entry.binding
+                    and inWorld
+                    and UnitExists(entry.unit)
+                    and model:IsVisible()
+                then
                     portrait:SetAlpha(0)
                 end
             end)
@@ -108,6 +127,19 @@ DFRL:NewMod("AnimatedPortraits", 2, function()
     CreatePortrait(PlayerFrame, PlayerFrame and PlayerFrame.portrait, "player")
     CreatePortrait(TargetFrame, TargetFrame and TargetFrame.portrait, "target")
     CreatePortrait(TargetofTargetFrame, TargetofTargetPortrait, "targettarget")
+
+    DFRL.display.Listen(function()
+        local enabled = DFRL.display.Get("playerPortrait3D")
+        if enabled == portraits3D then return end
+        portraits3D = enabled
+        for _, entry in ipairs(entries) do
+            if enabled then
+                Bind(entry)
+            else
+                Release(entry)
+            end
+        end
+    end)
 
     local events = CreateFrame("Frame")
     events:RegisterEvent("PLAYER_ENTERING_WORLD")
@@ -144,4 +176,17 @@ DFRL:NewMod("AnimatedPortraits", 2, function()
             end
         end
     end)
+
+    if type(_G.ReloadUI) == "function" then
+        local reloadUI = _G.ReloadUI
+        _G.ReloadUI = function()
+            -- Retire copies before downstream edit cleanup can discard drafts
+            -- and before the native reload can serialize confirmed preferences.
+            inWorld = false
+            for _, entry in ipairs(entries) do
+                Release(entry)
+            end
+            return reloadUI()
+        end
+    end
 end)

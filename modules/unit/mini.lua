@@ -1,17 +1,16 @@
 DFRL:NewMod("Mini", 1, function()
     local tex = DFRL:GetInfoOrCons("tex") .. "unitframes\\"
-    local font = "DEFAULT"
     local units = {}
 
     local function AddValues(frame, health, mana, unit)
         local values = { unit = unit, healthBar = health, manaBar = mana }
         values.health = health:CreateFontString(nil, "OVERLAY")
-        values.health:SetFont(font, 9, "OUTLINE")
+        T.SetFont(values.health, 9, "OUTLINE")
         values.health:SetPoint("CENTER", health, "CENTER", 0, 0)
         values.health:SetTextColor(1, 1, 1)
         if mana then
             values.mana = mana:CreateFontString(nil, "OVERLAY")
-            values.mana:SetFont(font, 8, "OUTLINE")
+            T.SetFont(values.mana, 8, "OUTLINE")
             values.mana:SetPoint("CENTER", mana, "CENTER", 0, 0)
             values.mana:SetTextColor(1, 1, 1)
         end
@@ -76,7 +75,7 @@ DFRL:NewMod("Mini", 1, function()
             if PetName then
                 PetName:ClearAllPoints()
                 PetName:SetPoint("CENTER", PetFrame, "CENTER", 5, 16)
-                PetName:SetFont(font, 10, "")
+                T.SetFont(PetName, 10, "")
             end
             UpdateValues(pet)
         end
@@ -176,12 +175,12 @@ DFRL:NewMod("Mini", 1, function()
             TargetofTargetDeadText:SetParent(border)
             TargetofTargetDeadText:ClearAllPoints()
             TargetofTargetDeadText:SetPoint("CENTER", TargetofTargetHealthBar, "CENTER", 0, 0)
-            TargetofTargetDeadText:SetFont(font, 9, "OUTLINE")
+            T.SetFont(TargetofTargetDeadText, 9, "OUTLINE")
         end
         if TargetofTargetFrame.name then
             TargetofTargetFrame.name:ClearAllPoints()
             TargetofTargetFrame.name:SetPoint("TOPLEFT", TargetofTargetFrame, "TOPLEFT", 40, 25)
-            TargetofTargetFrame.name:SetFont(font, 9, "")
+            T.SetFont(TargetofTargetFrame.name, 9, "")
         end
         local function UpdateTarget()
             if TargetofTargetFrame.name and UnitExists("targettarget") then
@@ -234,7 +233,7 @@ DFRL:NewMod("Mini", 1, function()
                 name:ClearAllPoints()
                 name:SetPoint("CENTER", frame, "CENTER", 6, 23)
                 name:SetDrawLayer("BORDER")
-                name:SetFont(font, 10, "")
+                T.SetFont(name, 10, "")
             end
             health:SetStatusBarTexture(tex .. "UI-HUD-UnitFrame-TargetofTarget-PortraitOn-Bar-Health")
             mana:SetStatusBarTexture(tex .. "UI-HUD-UnitFrame-Target-MinusMob-PortraitOn-Bar-Health-Status.tga")

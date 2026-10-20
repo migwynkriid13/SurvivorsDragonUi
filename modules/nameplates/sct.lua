@@ -198,6 +198,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         text.kind = nil
         text.critical = nil
         text.color = nil
+        text.needsMeasure = nil
         table.insert(textPool, text)
     end
 
@@ -528,6 +529,36 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         return key
     end
 
+    local function GeneratedTexture(source, name, aliases)
+        local texture = source[name]
+        if not aliases or texture == false then return texture end
+        local key = TextureKey(texture)
+        if not key then texture = nil end
+        for _, alias in ipairs(aliases) do
+            local candidate = source[alias]
+            if candidate == false then return false end
+            local candidateKey = TextureKey(candidate)
+            if candidateKey then
+                if key and candidateKey ~= key then return false end
+                texture, key = candidate, candidateKey
+            end
+        end
+        return texture
+    end
+
+    local function CanRefineGenerated(source, name, aliases)
+        local canonical = source[name] ~= nil and name or nil
+        if aliases then
+            for _, alias in ipairs(aliases) do
+                if source[alias] ~= nil then
+                    if canonical and canonical ~= alias then return false end
+                    canonical = alias
+                end
+            end
+        end
+        return canonical ~= nil
+    end
+
     local function LearnSpellTexture(cache, name, texture)
         local key = TextureKey(texture)
         if type(name) ~= "string" or name == "" or not key then return end
@@ -711,18 +742,33 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             if not texture then
                 RefreshLearnedSpellTextures()
                 texture = auraSpellTextures[info.spell]
+                -- The game's picker can differ from GetLocale(). Read its
+                -- current optional aliases only for generated metadata tiers.
+                local language = DFRL.locale
+                local catalog = language and language.data[language.code]
+                local spellNames = catalog and catalog.spellNames
+                local aliases = spellNames and spellNames[info.spell]
                 -- Observed auras outrank catalog and talent artwork. Preserve
                 -- ambiguity within each tier instead of choosing a random icon.
-                if texture == nil then texture = gameIconTextures[info.spell] end
+                if texture == nil then texture = GeneratedTexture(gameIconTextures, info.spell, aliases) end
                 if texture == nil then texture = talentSpellTextures[info.spell] end
                 if texture == nil then
-                    texture = localeIconTextures[info.spell]
-                    if texture == false then
+                    local database, schools = localeIconTextures, localeSchoolIconTextures
+                    if spellNames then
+                        -- These aliases name verified English catalog entries;
+                        -- use their English DBC rows and actual-school sets.
+                        database = iconCatalog.locales and iconCatalog.locales.enUS or {}
+                        schools = iconCatalog.schools and iconCatalog.schools.enUS or {}
+                    end
+                    texture = GeneratedTexture(database, info.spell, aliases)
+                    if texture == false and CanRefineGenerated(database, info.spell, aliases) then
                         -- Only refine the database tier with the actual parsed
-                        -- school; stronger native ambiguities remain blocked.
-                        local schoolTextures = localeSchoolIconTextures[info.school]
-                        if schoolTextures and schoolTextures[info.spell] ~= nil then
-                            texture = schoolTextures[info.spell]
+                        -- school. School sets cover ambiguous English names,
+                        -- not every row in a merged localized-name group.
+                        local schoolTextures = schools[info.school]
+                        if schoolTextures then
+                            local refined = GeneratedTexture(schoolTextures, info.spell, aliases)
+                            if refined ~= nil then texture = refined end
                         end
                     end
                 end
@@ -810,6 +856,19 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         text.label:SetTextColor(color[1], color[2], color[3])
     end
 
+    local function FitText(text)
+        -- Natural width is already local to the label. Refit after scaling:
+        -- native raster rounding changes with crit pop, and its drawn shadow
+        -- can exceed the exact automatic width and replace digits with "...".
+        local width = text.label:GetStringWidth()
+        text.needsMeasure = not IsFiniteNumber(width) or width <= 0
+        width = text.needsMeasure and 240 or math.ceil(width) + 4
+        if text.width ~= width then
+            text.width = width
+            text.label:SetWidth(width)
+        end
+    end
+
     DFRL.display.Listen(function()
         textScale = DFRL.display.Get("sctScale")
         local enabled = DFRL.display.Get("damageIcons")
@@ -853,9 +912,12 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             visual:SetPoint("CENTER", holder, "CENTER", 0, 0)
             visual:EnableMouse(false)
             local label = visual:CreateFontString(nil, "OVERLAY")
-            label:SetFont("DEFAULT", 18, "OUTLINE")
+            T.SetFont(label, 18, "OUTLINE")
             label:SetShadowOffset(1, -1)
             label:SetPoint("CENTER", visual, "CENTER", 0, 0)
+            label:SetHeight(36)
+            label:SetJustifyH("CENTER")
+            label:SetJustifyV("MIDDLE")
             local icon = visual:CreateTexture(nil, "OVERLAY")
             icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
             icon:SetPoint("RIGHT", label, "LEFT", -3, 0)
@@ -933,6 +995,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             text.scale = scale
             text.visual:SetScale(scale)
         end
+        FitText(text)
         text.visual:Show()
         if text.alpha ~= 1 then
             text.alpha = 1
@@ -1034,6 +1097,9 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                 if text.scale ~= scale then
                     text.scale = scale
                     text.visual:SetScale(scale)
+                    FitText(text)
+                elseif text.needsMeasure then
+                    FitText(text)
                 end
                 local alpha = 1
                 if progress > 0.68 then alpha = (1 - progress) / 0.32 end

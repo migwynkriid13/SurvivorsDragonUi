@@ -101,7 +101,7 @@ DFRL:NewMod("RunTimers", 5, function()
         center:SetPoint("RIGHT", right, "LEFT", 0, 0)
 
         local text = overlay:CreateFontString(nil, "OVERLAY")
-        text:SetFont("DEFAULT", 14, "OUTLINE")
+        T.SetFont(text, 14, "OUTLINE")
         text:SetPoint("BOTTOM", frame, "TOP", 0, 2)
         text:SetTextColor(1, 1, 1)
         frame:Hide()
@@ -194,7 +194,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 (y + height / 2 - top) / height,
                 (y + height / 2 - bottom) / height
             )
-            texture:SetAlpha(alpha)
+            texture:SetAlpha(alpha * 1.25)
             if not piece.shown then
                 texture:Show()
                 piece.shown = true
@@ -433,7 +433,7 @@ DFRL:NewMod("RunTimers", 5, function()
     local function ApplyFont(text, settings)
         -- Initialize the game's DEFAULT face first so a missing native face
         -- leaves readable text at the requested size and outline.
-        text:SetFont("DEFAULT", settings.size, settings.outline)
+        T.SetFont(text, settings.size, settings.outline)
         -- Translated run captions with non-ASCII glyphs use the game face;
         -- retain the user's saved font choice for the other languages.
         if settings.face ~= "DEFAULT" and not string.find(DFRL.locale.Text("RUN"), "[\128-\255]") then
@@ -478,7 +478,7 @@ DFRL:NewMod("RunTimers", 5, function()
     local function FontEditorLabel(parent, text, x, y, size)
         local label = parent:CreateFontString(nil, "OVERLAY")
         DFRL.locale.Bind(label)
-        label:SetFont("DEFAULT", size or 12, "OUTLINE")
+        T.SetFont(label, size or 12, "OUTLINE")
         label:SetTextColor(1, 1, 1)
         label:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
         label:SetText(text)
@@ -535,26 +535,44 @@ DFRL:NewMod("RunTimers", 5, function()
             { value = "default", label = "Game settings" },
         }
         local combatFilters = {
-            { key = "sctNormalHits", label = "Normal hits" },
-            { key = "sctCriticalHits", label = "Critical hits" },
-            { key = "sctAutoAttacks", label = "Auto-attacks" },
-            { key = "sctDirectDamage", label = "Direct abilities / spells" },
-            { key = "sctPeriodicDamage", label = "Damage over time" },
-            { key = "sctReflectedDamage", label = "Reflected damage" },
-            { key = "sctMisses", label = "Misses / avoidance" },
-            { key = "sctClassColors", label = "Class-colored damage" },
+            {
+                label = "Damage type",
+                y = -226,
+                entries = {
+                    { key = "sctNormalHits", label = "Normal hits" },
+                    { key = "sctCriticalHits", label = "Critical hits" },
+                },
+            },
+            {
+                label = "Damage categories",
+                y = -288,
+                entries = {
+                    { key = "sctAutoAttacks", label = "Auto-attacks" },
+                    { key = "sctDirectDamage", label = "Direct abilities / spells" },
+                    { key = "sctPeriodicDamage", label = "Damage over time" },
+                    { key = "sctReflectedDamage", label = "Reflected damage" },
+                    { key = "sctMisses", label = "Misses / avoidance" },
+                },
+            },
         }
         local hudOptions = {
             { "classHealth", "Class-colored health", "Use your vanilla class color for player health." },
+            { "healthLossAnimation", "Health loss animation", "Show recently lost health fading out on unit frames." },
             { "classResources", "Class resources", "Show power inside the player frame." },
             {
                 "roundPlayerPortrait",
                 "Round player portrait",
                 "Use the target's circular border without the pointed corner.",
             },
+            {
+                "playerPortrait3D",
+                "Experimental 3D portraits",
+                "Use 3D for player, target and target-of-target.",
+            },
             { "flipBuffs", "Flip buff layout", "Flip icon order only; keep text placement." },
             { "cooldownNumbers", "Cooldown numbers", "Show countdowns on ability buttons." },
             { "bossDebuffs", "Boss debuffs", "Effects on boss and guardian health bars." },
+            { "targetDebuffsOnTop", "Target debuffs on top", "Place target debuffs above the target frame." },
             { "cacheGuidance", "Cache guidance", "Show the cache direction and distance." },
             { "guardianGuidance", "Guardian guidance", "Show the guardian lair direction and distance." },
             { "equippedJewelry", "Equipped jewelry", "Show five equipped items attached to the action bar." },
@@ -578,9 +596,12 @@ DFRL:NewMod("RunTimers", 5, function()
         for _, entry in ipairs(modes) do
             modeWidth = math.max(modeWidth, TextWidth(entry.label) + 24)
         end
-        local filterWidth = 0
-        for _, entry in ipairs(combatFilters) do
-            filterWidth = math.max(filterWidth, TextWidth(entry.label) + 36)
+        local filterWidth, filterHeadingWidth = TextWidth("Class-colored damage") + 36, 0
+        for _, group in ipairs(combatFilters) do
+            filterHeadingWidth = math.max(filterHeadingWidth, TextWidth(group.label))
+            for _, entry in ipairs(group.entries) do
+                filterWidth = math.max(filterWidth, TextWidth(entry.label) + 36)
+            end
         end
         local hudOptionWidth = 0
         for _, entry in ipairs(hudOptions) do
@@ -596,14 +617,16 @@ DFRL:NewMod("RunTimers", 5, function()
             tabWidth * table.getn(tabs) + gap * (table.getn(tabs) - 1),
             modeWidth * 3 + gap * 2,
             filterWidth * 2 + gap,
+            filterHeadingWidth,
             hudOptionWidth * 2 + gap + 24,
-            TextWidth("SCT size") + gap + 136,
+            (TextWidth("SCT size") + gap + 136) * 2 + gap,
             labelWidth + gap + dropdownWidth,
             labelWidth + gap + outlineWidth * 3 + gap * 2,
             defaultsWidth * 2 + 140 + gap * 4,
             TextWidth(instructions)
         )
-        local width = math.min(contentWidth + padding * 2, math.max(320, UIParent:GetWidth() - 20))
+        local screenWidth = T.GetLocalSize(UIParent)
+        local width = math.min(contentWidth + padding * 2, math.max(320, screenWidth - 20))
         contentWidth = width - padding * 2
         local inputX = padding + labelWidth + gap
         dropdownWidth = contentWidth - labelWidth - gap
@@ -742,56 +765,56 @@ DFRL:NewMod("RunTimers", 5, function()
                 if DFRL.sct then DFRL.sct.SetIncoming(value) end
             end
         )
-        incomingControl:SetPoint("TOPLEFT", combat, "TOPLEFT", 0, -120)
+        incomingControl:SetPoint("TOPLEFT", combat, "TOPLEFT", 0, -112)
         local iconControl = DisplayToggle(
             combat,
             "damageIcons",
             "Damage icons",
             "Spell icons beside custom damage numbers.",
-            -120,
+            -112,
             combatToggleWidth
         )
         iconControl:ClearAllPoints()
-        iconControl:SetPoint("TOPLEFT", combat, "TOPLEFT", combatToggleWidth + gap, -120)
+        iconControl:SetPoint("TOPLEFT", combat, "TOPLEFT", combatToggleWidth + gap, -112)
         for _, control in ipairs({ incomingControl, iconControl }) do
             control:SetHeight(60)
             control.description:SetHeight(28)
             control.description:SetJustifyV("TOP")
         end
-        FontEditorLabel(combat, "SCT size", 0, -198, 11)
+        FontEditorLabel(combat, "SCT size", 0, -190, 11)
         local scaleX = TextWidth("SCT size") + gap
         local function ChangeSctSize(direction)
             local percent = math.floor(DFRL.display.Get("sctScale") * 100 + 0.5)
             DFRL.display.Set("sctScale", (percent + direction * 5) / 100)
         end
-        FontEditorButton("-", 28, scaleX, -190, function() ChangeSctSize(-1) end, combat)
-        sctSizeLabel = FontEditorLabel(combat, "", scaleX + 36, -198)
+        FontEditorButton("-", 28, scaleX, -182, function() ChangeSctSize(-1) end, combat)
+        sctSizeLabel = FontEditorLabel(combat, "", scaleX + 36, -190)
         sctSizeLabel:SetWidth(64)
         sctSizeLabel:SetJustifyH("CENTER")
-        FontEditorButton("+", 28, scaleX + 108, -190, function() ChangeSctSize(1) end, combat)
-        heading = FontEditorLabel(combat, "Custom outgoing text", 0, -232, 12)
-        heading:SetTextColor(0.94, 0.79, 0.47)
+        FontEditorButton("+", 28, scaleX + 108, -182, function() ChangeSctSize(1) end, combat)
         local filterSize = (contentWidth - gap) / 2
-        for index, entry in ipairs(combatFilters) do
-            local key = entry.key
-            local control = T.CreateEditorToggle(
-                combat,
-                entry.label,
-                nil,
-                filterSize,
-                function(value) DFRL.display.Set(key, value) end
-            )
-            control:SetHeight(36)
+        local function CombatToggle(key, label, x, y)
+            local control = DisplayToggle(combat, key, label, nil, y, filterSize)
+            control:ClearAllPoints()
+            control:SetPoint("TOPLEFT", combat, "TOPLEFT", x, y)
+            control:SetHeight(28)
             control.label:ClearAllPoints()
-            control.label:SetPoint("TOPLEFT", control, "TOPLEFT", 32, -10)
-            control:SetPoint(
-                "TOPLEFT",
-                combat,
-                "TOPLEFT",
-                math.mod(index - 1, 2) * (filterSize + gap),
-                -252 - math.floor((index - 1) / 2) * 36
-            )
-            displayControls[key] = control
+            control.label:SetPoint("LEFT", control, "LEFT", 32, 0)
+        end
+        CombatToggle("sctClassColors", "Class-colored damage", filterSize + gap, -182)
+        divider = T.EditorDivider(combat, contentWidth)
+        divider:SetPoint("TOPLEFT", combat, "TOPLEFT", 0, -282)
+        for _, group in ipairs(combatFilters) do
+            heading = FontEditorLabel(combat, group.label, 0, group.y, 12)
+            heading:SetTextColor(0.94, 0.79, 0.47)
+            for index, entry in ipairs(group.entries) do
+                CombatToggle(
+                    entry.key,
+                    entry.label,
+                    math.mod(index - 1, 2) * (filterSize + gap),
+                    group.y - 24 - math.floor((index - 1) / 2) * 28
+                )
+            end
         end
 
         local timer = pages.timer
@@ -982,7 +1005,7 @@ DFRL:NewMod("RunTimers", 5, function()
         icon:SetPoint("LEFT", field, "LEFT", 5, 0)
 
         local text = field:CreateFontString(nil, "OVERLAY")
-        text:SetFont("DEFAULT", 12, "OUTLINE")
+        T.SetFont(text, 12, "OUTLINE")
         text:SetTextColor(1, 0.88, 0.55)
         text:SetHeight(18)
         text:SetPoint("LEFT", icon, "RIGHT", 4, 0)
@@ -1476,10 +1499,10 @@ DFRL:NewMod("RunTimers", 5, function()
         local frame, bar, name, rowOverlay = Pill("DFRL_BossHealthPill" .. tostring(createdRows), "FillWhite")
         frame:SetParent(bossGroup)
         bar:SetStatusBarColor(0.86, 0.12, 0.1, 1)
-        name:SetFont("DEFAULT", 12, "OUTLINE")
+        T.SetFont(name, 12, "OUTLINE")
         name:SetWidth(BAR_WIDTH)
         local health = rowOverlay:CreateFontString(nil, "OVERLAY")
-        health:SetFont("DEFAULT", 12, "OUTLINE")
+        T.SetFont(health, 12, "OUTLINE")
         health:SetPoint("CENTER", frame, "CENTER", 0, 0)
         health:SetTextColor(1, 1, 1)
         return { frame = frame, bar = bar, name = name, health = health, debuffs = {} }
@@ -1554,10 +1577,10 @@ DFRL:NewMod("RunTimers", 5, function()
         icon.texture:SetPoint("BOTTOMRIGHT", icon, "BOTTOMRIGHT", -2, 2)
         icon.texture:SetTexCoord(0.07, 0.93, 0.07, 0.93)
         icon.count = icon:CreateFontString(nil, "OVERLAY")
-        icon.count:SetFont("DEFAULT", 10, "OUTLINE")
+        T.SetFont(icon.count, 10, "OUTLINE")
         icon.count:SetPoint("BOTTOMRIGHT", icon, "BOTTOMRIGHT", 1, -1)
         icon.time = icon:CreateFontString(nil, "OVERLAY")
-        icon.time:SetFont("DEFAULT", 8, "OUTLINE")
+        T.SetFont(icon.time, 8, "OUTLINE")
         icon.time:SetPoint("TOP", icon, "TOP", 0, -1)
         icon:EnableMouse(true)
         icon:SetScript("OnEnter", function()
@@ -1680,19 +1703,10 @@ DFRL:NewMod("RunTimers", 5, function()
         end
     end)
 
-    local function Update()
-        if not inWorld then
-            ReleaseHUD()
-            return
-        end
-        -- Out-of-run tables can retain the previous run. Phase must be read
-        -- first; no old table values or invented clocks may stand in for it.
-        local phase = Read("AZS_GetPhase")
-        if not PHASES[phase] then
-            if phase ~= nil then InvalidateSchedule(packetSequence) end
-            ReleaseHUD()
-            return
-        end
+    -- Keep boundary and clock work in separate closures. Lua 5.0 permits only
+    -- 32 captured locals per closure; the combined HUD update exceeded that
+    -- limit and prevented this entire module from compiling on the new client.
+    local function UpdateRunBoundary(phase)
         local nativeTime = type(AZS_RUN) == "table" and AZS_RUN.t or nil
         local zoneBoundary = zoneSequence
         if zoneBoundary then
@@ -1718,6 +1732,9 @@ DFRL:NewMod("RunTimers", 5, function()
             previousPhase = phase
             if IsNumber(nativeTime) then previousNativeTime = nativeTime end
         end
+    end
+
+    local function UpdateClock(phase)
         local seconds = Read("AZS_GetRunTime")
         local maximum = RunLength()
         local zone = type(AZS_ZONE) == "table" and AZS_ZONE.zone or nil
@@ -1749,6 +1766,23 @@ DFRL:NewMod("RunTimers", 5, function()
         else
             ReleaseClock()
         end
+    end
+
+    local function Update()
+        if not inWorld then
+            ReleaseHUD()
+            return
+        end
+        -- Out-of-run tables can retain the previous run. Phase must be read
+        -- first; no old table values or invented clocks may stand in for it.
+        local phase = Read("AZS_GetPhase")
+        if not PHASES[phase] then
+            if phase ~= nil then InvalidateSchedule(packetSequence) end
+            ReleaseHUD()
+            return
+        end
+        UpdateRunBoundary(phase)
+        UpdateClock(phase)
         -- A missing zone/clock snapshot must not block valid counters or
         -- encounter lists from reconnecting to their own native HUD parts.
         if refreshRows then

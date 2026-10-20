@@ -3,6 +3,7 @@ DFRL:NewMod("Display", 0, function()
     local display, listeners, draft = {}, {}, nil
     local defaults = {
         bossDebuffs = true,
+        targetDebuffsOnTop = false,
         damageIcons = false,
         sctNormalHits = true,
         sctCriticalHits = true,
@@ -14,10 +15,12 @@ DFRL:NewMod("Display", 0, function()
         sctClassColors = false,
         sctScale = 1,
         roundPlayerPortrait = false,
+        playerPortrait3D = false, -- Legacy key; controls player, target and target-of-target.
         flipBuffs = false,
         classResources = false,
         classHealth = false,
-        cooldownNumbers = false,
+        healthLossAnimation = true,
+        cooldownNumbers = true,
         cacheGuidance = true,
         guardianGuidance = true,
         equippedJewelry = true,
@@ -40,6 +43,7 @@ DFRL:NewMod("Display", 0, function()
     local function Normalize(source)
         return {
             bossDebuffs = Read(source, "bossDebuffs"),
+            targetDebuffsOnTop = Read(source, "targetDebuffsOnTop"),
             damageIcons = Read(source, "damageIcons"),
             sctNormalHits = Read(source, "sctNormalHits"),
             sctCriticalHits = Read(source, "sctCriticalHits"),
@@ -51,9 +55,11 @@ DFRL:NewMod("Display", 0, function()
             sctClassColors = Read(source, "sctClassColors"),
             sctScale = Read(source, "sctScale"),
             roundPlayerPortrait = Read(source, "roundPlayerPortrait"),
+            playerPortrait3D = Read(source, "playerPortrait3D"),
             flipBuffs = Read(source, "flipBuffs"),
             classResources = Read(source, "classResources"),
             classHealth = Read(source, "classHealth"),
+            healthLossAnimation = Read(source, "healthLossAnimation"),
             cooldownNumbers = Read(source, "cooldownNumbers"),
             cacheGuidance = Read(source, "cacheGuidance"),
             guardianGuidance = Read(source, "guardianGuidance"),

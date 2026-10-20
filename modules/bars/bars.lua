@@ -220,7 +220,7 @@ DFRL:NewMod("Bars", 1, function()
         local macro = _G[button:GetName() .. "Name"]
         macro:ClearAllPoints()
         macro:SetPoint("TOP", button, "TOP", 0, 2)
-        macro:SetFont("DEFAULT", 13, "OUTLINE")
+        T.SetFont(macro, 13, "OUTLINE")
         macro:SetTextColor(1, 1, 1)
     end
 
@@ -285,7 +285,7 @@ DFRL:NewMod("Bars", 1, function()
             overlay:EnableMouse(false)
             overlay.text = overlay:CreateFontString(nil, "OVERLAY")
             overlay.text:SetPoint("CENTER", overlay, "CENTER", 0, 0)
-            overlay.text:SetFont("DEFAULT", math.min(14, button:GetHeight() * 0.64), "OUTLINE")
+            T.SetFont(overlay.text, math.min(14, button:GetHeight() * 0.64), "OUTLINE")
             overlay.text:SetShadowColor(0, 0, 0, 1)
             overlay.text:SetShadowOffset(1, -1)
             overlay:Hide()
