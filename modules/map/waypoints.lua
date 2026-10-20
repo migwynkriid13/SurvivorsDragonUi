@@ -249,9 +249,10 @@ DFRL:NewMod("Waypoints", 3, function()
 
         local function MakeMinimapPin(tracker)
             local pin = CreateFrame("Frame", nil, Minimap)
+            local size = tracker.kind == "cache" and PIN_SIZE * 0.8 or PIN_SIZE
             pin:Hide()
-            pin:SetWidth(PIN_SIZE)
-            pin:SetHeight(PIN_SIZE)
+            pin:SetWidth(size)
+            pin:SetHeight(size)
             pin:SetFrameLevel(Minimap:GetFrameLevel() + (tracker.kind == "guardian" and 11 or 10))
             pin:EnableMouse(false)
             local art = pin:CreateTexture(nil, "OVERLAY")
