@@ -39,6 +39,7 @@ DFRL:NewMod("Character window", 6, function()
     if not owner or not paper or not model or not attributes then return end
 
     local WIDTH, HEIGHT, LEFT_WIDTH = 624, 512, 338
+    local LEFT_INSET = 12
     local CONTENT_WIDTH, ROW_WIDTH = 246, 230
     local path = DFRL:GetInfoOrCons("tex") .. "character\\"
     local sheets = { Chrome = { 1024, 256 }, Parts = { 256, 256 }, Tabs = { 64, 256 }, Close = { 128, 128 } }
@@ -481,7 +482,23 @@ DFRL:NewMod("Character window", 6, function()
         tabsUpdating = false
     end
 
+    local function InsetDefaultPosition()
+        if owner:GetNumPoints() ~= 1 then return end
+        local point, relative, relativePoint, x, y = owner:GetPoint(1)
+        if
+            point == "TOPLEFT"
+            and (relative == UIParent or relative == "UIParent" or not relative)
+            and relativePoint == "TOPLEFT"
+            and T.NearlyEqual(x, 0)
+            and T.NearlyEqual(y, -104)
+        then
+            owner:ClearAllPoints()
+            owner:SetPoint("TOPLEFT", UIParent, "TOPLEFT", LEFT_INSET, y)
+        end
+    end
+
     local function Apply()
+        InsetDefaultPosition()
         owner:SetWidth(paper:IsShown() and WIDTH or 384)
         owner:SetHeight(HEIGHT)
         owner:SetHitRectInsets(0, 0, 0, 0)
@@ -544,6 +561,10 @@ DFRL:NewMod("Character window", 6, function()
     hooksecurefunc("PanelTemplates_UpdateTabs", function(frame)
         if frame == owner then UpdateTabs() end
     end)
+    hooksecurefunc("SetLeftFrame", function(frame)
+        if frame == owner then InsetDefaultPosition() end
+    end)
+    hooksecurefunc("MovePanelToLeft", InsetDefaultPosition)
     HookScript(owner, "OnShow", Apply)
     HookScript(owner, "OnHide", function() controller:SetScript("OnUpdate", nil) end)
     HookScript(paper, "OnEvent", QueueStats)
