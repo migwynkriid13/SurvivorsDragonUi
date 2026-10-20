@@ -20,7 +20,7 @@ The original is hidden only after the replacement has been built and populated a
 
 ## Shared layout
 
-`levelUp` is an independent group in the existing layout registry, labeled **Level Up!**. Its default anchor is centered 190 UI units above the bottom of UIParent. Its width fits the heading across all supported languages. The icon, text, badge and button scale together.
+`levelUp` is an independent group in the existing layout registry, labeled **Level Up!**. Its default anchor is centered 190 UI units above the bottom of UIParent. Its width fits the heading across all supported languages. The default design is 30% of the initial PR button's width and height: a 0.3-scale inner visual sits inside matching button/edit bounds. The icon, text, badge and border scale together. The shared Layout scale stays relative to this smaller design, so a confirmed 100% scale also uses the new default without rewriting saved geometry or moving its anchor.
 
 The existing editor owns dragging, corner resizing, numeric placement, Hide frame, Confirm, Cancel, both full resets and world/reload draft discard. Only confirmed geometry and optional visibility use `SurvivorsDragonUiLayout`; no SavedVariable, display setting or command is added. The layout handle remains available when no levels are waiting without showing invented counts or enabling a gameplay click. Editing disables the button's click action.
 

@@ -1,6 +1,6 @@
 -- A movable replacement for the game's stored-level button, using its own APIs.
 DFRL:NewMod("StoredLevels", 5, function()
-    local HEIGHT, INTERVAL = 72, 0.1
+    local HEIGHT, INTERVAL, VISUAL_SCALE = 72, 0.1, 0.3
     local CLASS_ICONS = {
         WARRIOR = { 0, 0.25, 0, 0.25 },
         MAGE = { 0.25, 0.5, 0, 0.25 },
@@ -16,49 +16,57 @@ DFRL:NewMod("StoredLevels", 5, function()
     local inWorld, editing, reloading, elapsed = true, false, false, 0
     local nativePreference, retiredRun
     local button = CreateFrame("Button", "SurvivorsDragonUiStoredLevels", UIParent)
-    button:SetHeight(HEIGHT)
+    button:SetHeight(HEIGHT * VISUAL_SCALE)
     button:SetFrameStrata("HIGH")
     button:RegisterForClicks("LeftButtonUp")
-    button:SetBackdrop({
+    button:Hide()
+    -- Keep saved layout scale relative to the smaller design, so existing
+    -- 100% records also use the new default without rewriting saved geometry.
+    local visual = CreateFrame("Frame", nil, button)
+    visual:SetHeight(HEIGHT)
+    visual:SetScale(VISUAL_SCALE)
+    visual:SetPoint("TOPLEFT", button, "TOPLEFT", 0, 0)
+    visual:EnableMouse(false)
+    visual:SetBackdrop({
         bgFile = "Interface\\Buttons\\WHITE8X8",
         edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
         edgeSize = 12,
         insets = { left = 3, right = 3, top = 3, bottom = 3 },
     })
-    button:SetBackdropColor(0.12, 0.015, 0.015, 0.96)
-    button:SetBackdropBorderColor(0.73, 0.58, 0.34, 1)
-    button:Hide()
+    visual:SetBackdropColor(0.12, 0.015, 0.015, 0.96)
+    visual:SetBackdropBorderColor(0.73, 0.58, 0.34, 1)
 
-    local icon = button:CreateTexture(nil, "ARTWORK")
+    local icon = visual:CreateTexture(nil, "ARTWORK")
     icon:SetTexture("Interface\\Glues\\CharacterCreate\\UI-CharacterCreate-Classes")
     icon:SetWidth(48)
     icon:SetHeight(48)
-    icon:SetPoint("LEFT", button, "LEFT", 12, 0)
-    local title = button:CreateFontString(nil, "OVERLAY")
+    icon:SetPoint("LEFT", visual, "LEFT", 12, 0)
+    local title = visual:CreateFontString(nil, "OVERLAY")
     DFRL.locale.Bind(title)
     T.SetFont(title, 22, "OUTLINE")
     title:SetTextColor(1, 0.91, 0.69)
     title:SetShadowColor(0, 0, 0, 1)
     title:SetShadowOffset(1, -1)
     title:SetJustifyH("LEFT")
-    title:SetPoint("BOTTOMLEFT", button, "LEFT", 78, -25)
+    title:SetPoint("BOTTOMLEFT", visual, "LEFT", 78, -25)
     title:SetText("Level Up!")
     local width = math.max(220, DFRL.locale.Width(title, "Level Up!") + 96)
-    button:SetWidth(width)
+    visual:SetWidth(width)
+    button:SetWidth(width * VISUAL_SCALE)
     title:SetWidth(width - 90)
     title:SetHeight(30)
-    local level = button:CreateFontString(nil, "OVERLAY")
+    local level = visual:CreateFontString(nil, "OVERLAY")
     T.SetFont(level, 12, "OUTLINE")
     level:SetWidth(width - 90)
     level:SetHeight(18)
     level:SetJustifyH("LEFT")
     level:SetTextColor(0.87, 0.73, 0.41)
-    level:SetPoint("TOPLEFT", button, "TOPLEFT", 78, -12)
+    level:SetPoint("TOPLEFT", visual, "TOPLEFT", 78, -12)
 
-    local badge = CreateFrame("Frame", nil, button)
+    local badge = CreateFrame("Frame", nil, visual)
     badge:SetWidth(26)
     badge:SetHeight(24)
-    badge:SetPoint("TOPRIGHT", button, "TOPLEFT", 72, -6)
+    badge:SetPoint("TOPRIGHT", visual, "TOPLEFT", 72, -6)
     badge:SetBackdrop({
         bgFile = "Interface\\Buttons\\WHITE8X8",
         edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
@@ -75,8 +83,8 @@ DFRL:NewMod("StoredLevels", 5, function()
 
     local highlight = button:CreateTexture(nil, "HIGHLIGHT")
     highlight:SetTexture("Interface\\Buttons\\WHITE8X8")
-    highlight:SetPoint("TOPLEFT", button, "TOPLEFT", 4, -4)
-    highlight:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -4, 4)
+    highlight:SetPoint("TOPLEFT", button, "TOPLEFT", 4 * VISUAL_SCALE, -4 * VISUAL_SCALE)
+    highlight:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -4 * VISUAL_SCALE, 4 * VISUAL_SCALE)
     highlight:SetVertexColor(0.97, 0.82, 0.42, 0.12)
 
     local function PositiveInteger(value)
