@@ -2,7 +2,8 @@
 --[[
 The selected Framed Icon + Text design uses IconFrameGold.tga from
 NeticSoul/DragonUI commit 6d9cc95eedd1de78fab3b965683df13421e21604,
-DragonUI/Textures/Collections/IconFrameGold.tga, full 128-by-128 canvas.
+DragonUI/Textures/Collections/IconFrameGold.tga. The clean upper-right border
+is mirrored into a plain gold rim; the decorative flourishes are omitted.
 Its source notices credit the DragonflightUI Spellbook-Parts artwork.
 Underlying World of Warcraft artwork remains copyright Blizzard Entertainment;
 the software license below does not relicense Blizzard artwork.
@@ -35,7 +36,7 @@ SOFTWARE.
 ]]
 DFRL:NewMod("StoredLevels", 5, function()
     local HEIGHT, INTERVAL, VISUAL_SCALE, PULSE_PERIOD = 72, 0.1, 0.7, 1.8
-    local TEXT_LEFT, PANEL_PADDING = 72, 10
+    local TEXT_LEFT, PANEL_PADDING, ICON_OFFSET_X, ICON_OFFSET_Y = 60, 10, -12, 4
     local texturePath = DFRL:GetInfoOrCons("tex") .. "levelup\\"
     local CLASS_ICONS = {
         WARRIOR = { 0, 0.25, 0, 0.25 },
@@ -84,12 +85,18 @@ DFRL:NewMod("StoredLevels", 5, function()
     icon:SetTexture("Interface\\Glues\\CharacterCreate\\UI-CharacterCreate-Classes")
     icon:SetWidth(HEIGHT * 55 / 103)
     icon:SetHeight(HEIGHT * 55 / 103)
-    icon:SetPoint("TOPLEFT", content, "TOPLEFT", HEIGHT * 21 / 103, -HEIGHT * 17 / 103)
+    icon:SetPoint(
+        "TOPLEFT",
+        content,
+        "TOPLEFT",
+        HEIGHT * 21 / 103 + ICON_OFFSET_X,
+        -HEIGHT * 17 / 103 - ICON_OFFSET_Y
+    )
     local bezel = content:CreateTexture(nil, "ARTWORK")
     bezel:SetTexture(texturePath .. "IconFrameGold.tga")
     bezel:SetWidth(HEIGHT)
     bezel:SetHeight(HEIGHT)
-    bezel:SetPoint("TOPLEFT", content, "TOPLEFT", 0, 0)
+    bezel:SetPoint("TOPLEFT", content, "TOPLEFT", ICON_OFFSET_X, -ICON_OFFSET_Y)
     local title = content:CreateFontString(nil, "OVERLAY")
     DFRL.locale.Bind(title)
     T.SetFont(title, 22, "OUTLINE")
@@ -97,33 +104,25 @@ DFRL:NewMod("StoredLevels", 5, function()
     title:SetShadowColor(0, 0, 0, 1)
     title:SetShadowOffset(1, -1)
     title:SetJustifyH("CENTER")
-    title:SetPoint("TOPLEFT", content, "TOPLEFT", TEXT_LEFT, -12)
-    title:SetText("Level Up!")
-    local width = math.max(220, DFRL.locale.Width(title, "Level Up!") + 96)
+    title:SetPoint("LEFT", content, "LEFT", TEXT_LEFT, 0)
+    title:SetText("Upgrades pending")
+    local width = math.max(220, DFRL.locale.Width(title, "Upgrades pending") + 96)
     visual:SetWidth(width)
     button:SetWidth(width * VISUAL_SCALE)
     panel:SetWidth(width)
     content:SetWidth(width - PANEL_PADDING * 2)
     title:SetWidth(width - PANEL_PADDING * 2 - TEXT_LEFT)
     title:SetHeight(30)
-    local level = content:CreateFontString(nil, "OVERLAY")
-    T.SetFont(level, 12, "OUTLINE")
-    level:SetWidth(width - PANEL_PADDING * 2 - TEXT_LEFT)
-    level:SetHeight(18)
-    level:SetJustifyH("CENTER")
-    level:SetTextColor(0.87, 0.73, 0.41)
-    level:SetPoint("TOP", title, "BOTTOM", 0, -2)
 
-    local function AlignCaptions()
-        -- Fit the backdrop to the active captions instead of the widest locale,
+    local function AlignContent()
+        -- Fit the backdrop to the active caption instead of the widest locale,
         -- keeping the compact panel centered in the existing edit bounds.
         local measured = title:GetStringWidth()
         if type(measured) ~= "number" or measured <= 0 or measured - measured ~= 0 then return end
-        local textWidth = math.max(math.ceil(measured), math.ceil(level:GetStringWidth() or 0)) + 4
+        local textWidth = math.ceil(measured) + 4
         local contentWidth = TEXT_LEFT + textWidth
         local panelWidth = contentWidth + PANEL_PADDING * 2
         if not T.NearlyEqual(title:GetWidth(), textWidth) then title:SetWidth(textWidth) end
-        if not T.NearlyEqual(level:GetWidth(), textWidth) then level:SetWidth(textWidth) end
         if not T.NearlyEqual(content:GetWidth(), contentWidth) then content:SetWidth(contentWidth) end
         if not T.NearlyEqual(panel:GetWidth(), panelWidth) then panel:SetWidth(panelWidth) end
     end
@@ -131,7 +130,7 @@ DFRL:NewMod("StoredLevels", 5, function()
     local badge = CreateFrame("Frame", nil, content)
     badge:SetWidth(20)
     badge:SetHeight(20)
-    badge:SetPoint("TOPRIGHT", content, "TOPLEFT", 68, -8)
+    badge:SetPoint("TOPRIGHT", content, "TOPLEFT", 68 + ICON_OFFSET_X, -8)
     local badgeArt = badge:CreateTexture(nil, "BACKGROUND")
     badgeArt:SetTexture(texturePath .. "CountBadge.tga")
     badgeArt:SetAllPoints(badge)
@@ -190,16 +189,9 @@ DFRL:NewMod("StoredLevels", 5, function()
         local ok, phase = pcall(AZS_GetPhase)
         if not ok or not PHASES[phase] then return end
         local state = AZS_RUN
-        if
-            type(state) ~= "table"
-            or state == retiredRun
-            or type(AZS_RUN_UPDATED) ~= "number"
-            or not PositiveInteger(state.lvl)
-        then
-            return
-        end
+        if type(state) ~= "table" or state == retiredRun or type(AZS_RUN_UPDATED) ~= "number" then return end
         local received, count = pcall(AZS_GetStoredLevels)
-        if received and PositiveInteger(count) then return count, state.lvl end
+        if received and PositiveInteger(count) then return count end
     end
 
     local function RestoreNative()
@@ -222,13 +214,12 @@ DFRL:NewMod("StoredLevels", 5, function()
         button:Hide()
         highlight:Hide()
         countText:SetText("")
-        level:SetText("")
         icon:Hide()
         RestoreNative()
     end
 
     local function Update()
-        local count, currentLevel = ReadState()
+        local count = ReadState()
         if not count then
             Clear()
             return
@@ -245,8 +236,7 @@ DFRL:NewMod("StoredLevels", 5, function()
         local badgeWidth = math.max(20, math.ceil(countText:GetStringWidth() or 0) + 10)
         badge:SetWidth(badgeWidth)
         countText:SetWidth(badgeWidth - 8)
-        level:SetText(DFRL.locale.Native("LEVEL {n}", { n = currentLevel }))
-        AlignCaptions()
+        AlignContent()
         button:Show()
         -- Construct and populate the replacement before suppressing native UI.
         -- Layout's Hide frame choice intentionally suppresses both versions.
@@ -268,7 +258,7 @@ DFRL:NewMod("StoredLevels", 5, function()
             hovered = false
             button:EnableMouse(not active)
         end,
-        onResize = AlignCaptions,
+        onResize = AlignContent,
     })
     DFRL.locale.Listen(Update)
 

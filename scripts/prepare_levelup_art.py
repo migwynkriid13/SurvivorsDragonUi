@@ -7,11 +7,24 @@ the isolated IconFrameGold.tga from the source pinned in LevelUp-ARTWORK.md.
 import argparse
 import math
 from pathlib import Path
-from shutil import copyfile
 
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageOps
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def prepare_border(source, output):
+    # Retain the original clean gold pixels, omitting the vines and leaves.
+    # Mirror the upper-right quadrant into a square with a clear opening.
+    original = Image.open(source).convert("RGBA")
+    corner = original.crop((61, 19, 99, 57))
+    border = Image.new("RGBA", original.size)
+    border.alpha_composite(corner, (61, 19))
+    border.alpha_composite(ImageOps.mirror(corner), (23, 19))
+    border.alpha_composite(ImageOps.flip(corner), (61, 57))
+    border.alpha_composite(ImageOps.flip(ImageOps.mirror(corner)), (23, 57))
+    ImageDraw.Draw(border).rounded_rectangle((29, 24, 93, 89), radius=3, fill=(0, 0, 0, 0))
+    border.save(output / "IconFrameGold.tga", compression=None)
 
 
 def prepare_backdrop(output):
@@ -37,7 +50,7 @@ def prepare_backdrop(output):
 
 def prepare(source, output):
     output.mkdir(parents=True, exist_ok=True)
-    copyfile(source, output / "IconFrameGold.tga")
+    prepare_border(source, output)
     scale, size = 4, 64
     image = Image.new("RGBA", (size * scale, size * scale))
     draw = ImageDraw.Draw(image)
