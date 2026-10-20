@@ -48,7 +48,7 @@ Optional custom SCT icons use exact Czech names derived only from the official `
 
 ## Source and maintenance
 
-The stored-level button uses the user-requested **LEVEL UP** heading through `localization/ui.tsv` and the matching fourteen runtime UI entries. This is addon wording rather than a native caption. The former `Level Up!` and `LEVEL {n}` selections were removed with the current-level subtitle. See [STORED-LEVELS.md](STORED-LEVELS.md); other generated catalogs and the generator's reviewed source fingerprint are unchanged.
+The stored-level button uses the user-requested **CHOOSE UPGRADE** heading through `localization/ui.tsv` and the matching fourteen runtime UI entries. This is addon wording rather than a native caption. The former `Level Up!` and `LEVEL {n}` selections were removed with the current-level subtitle. See [STORED-LEVELS.md](STORED-LEVELS.md); other generated catalogs and the generator's reviewed source fingerprint are unchanged.
 
 Source executable SHA-256: `6382e9ae654295293b82d48fb07a1aa999132775bda10c6c6f80d973d2c1ddfb`. The reviewed physical catalog order is `en/pl/cs/de/pt/es/fr/ro/tr/ru/uk/zh/ja/ko`. The generator reads the client only as data; it never launches it or executes addon/formatter code. The previous thirteen-language source was pinned to `2149da82c8e6e1096cdd7d600c60a2b7d763a6969bae425323db9ebbe6e56a4e` with 2,621 keys per catalog.
 

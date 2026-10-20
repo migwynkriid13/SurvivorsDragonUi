@@ -15,7 +15,7 @@ DFRL:NewMod("Layout", 0, function()
         targetFrame = "Target",
         bossBars = "Boss health",
         runTimer = "Run timer",
-        levelUp = "LEVEL UP",
+        levelUp = "CHOOSE UPGRADE",
         actionBar = "Action bar",
         jewelryBar = "Equipped jewelry (detached)",
         xpBar = "XP",
