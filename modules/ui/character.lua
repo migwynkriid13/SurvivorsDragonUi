@@ -184,8 +184,18 @@ DFRL:NewMod("Character window", 6, function()
     end
 
     local slotColumns = {
-        { names = { "Head", "Neck", "Shoulder", "Back", "Chest", "Shirt", "Tabard", "Wrist" }, x = 8, cut = { 53, 76, 102, 120 }, offset = -4 },
-        { names = { "Hands", "Waist", "Legs", "Feet", "Finger0", "Finger1", "Trinket0", "Trinket1" }, x = 293, cut = { 1, 76, 51, 120 }, offset = -9 },
+        {
+            names = { "Head", "Neck", "Shoulder", "Back", "Chest", "Shirt", "Tabard", "Wrist" },
+            x = 8,
+            cut = { 53, 76, 102, 120 },
+            offset = -4,
+        },
+        {
+            names = { "Hands", "Waist", "Legs", "Feet", "Finger0", "Finger1", "Trinket0", "Trinket1" },
+            x = 293,
+            cut = { 1, 76, 51, 120 },
+            offset = -9,
+        },
     }
     local function SlotArt(button, rectangle, x, y, width, height)
         local texture = Cut(button, "Parts", rectangle[1], rectangle[2], rectangle[3], rectangle[4], width, height)
@@ -253,8 +263,16 @@ DFRL:NewMod("Character window", 6, function()
         value = math.max(0, math.min(range, value))
         scroll:SetVerticalScroll(value)
         if up then
-            if value > 0 then up:Enable() else up:Disable() end
-            if value < range then down:Enable() else down:Disable() end
+            if value > 0 then
+                up:Enable()
+            else
+                up:Disable()
+            end
+            if value < range then
+                down:Enable()
+            else
+                down:Disable()
+            end
         end
     end
     slider:SetScript("OnValueChanged", function() SetScroll(slider:GetValue()) end)
@@ -300,8 +318,10 @@ DFRL:NewMod("Character window", 6, function()
         value:GetStringWidth()
         local height = math.max(16, label:GetHeight() + 2, value:GetHeight() + 2)
         Place(row, row:GetParent(), 8, -y, ROW_WIDTH, height)
+        row:SetFrameLevel(row:GetParent():GetFrameLevel() + 1)
         local stat = name and _G[name .. "Stat"]
         if stat then
+            stat:SetFrameLevel(row:GetFrameLevel() + 1)
             stat:SetWidth(valueWidth)
             stat:SetHeight(height)
         end
@@ -317,7 +337,7 @@ DFRL:NewMod("Character window", 6, function()
     local function RefreshStats()
         if refreshing or not paper:IsVisible() then return end
         refreshing = true
-        heading:SetText(CHARACTER or "")
+        heading:SetText(CharacterFrameTab1 and CharacterFrameTab1:GetText() or CHARACTER or "")
         Place(attributes, content, 0, 0, CONTENT_WIDTH)
         local y = 28
         for _, name in ipairs(primaryNames) do
@@ -462,7 +482,9 @@ DFRL:NewMod("Character window", 6, function()
         owner:SetHitRectInsets(0, 0, 0, 0)
         paper:SetHitRectInsets(0, 0, 0, 0)
         HideStockArt(owner)
-        for _, name in ipairs(panes) do HideStockArt(_G[name]) end
+        for _, name in ipairs(panes) do
+            HideStockArt(_G[name])
+        end
         if CharacterFramePortrait then Place(CharacterFramePortrait, owner, -5, 7, 62, 62) end
         if CharacterNameFrame then
             CharacterNameFrame:ClearAllPoints()

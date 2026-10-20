@@ -53,16 +53,16 @@ Sources are `UI/uiframemetal2x.blp` (512 by 512),
 `UI/uiframemetalhorizontal2x.blp` (64 by 256) and
 `UI/uiframemetalvertical2x.blp` (512 by 32).
 
-| Piece | Source | Source rectangle | Destination | Draw size |
-| --- | --- | --- | --- | --- |
-| Portrait top left | Metal | `(1, 153, 151, 303)` | `(0, 0)` | 75 by 75 |
-| Top right | Metal | `(153, 1, 303, 151)` | `(256, 0)` | 75 by 75 |
-| Bottom left | Metal | `(153, 153, 217, 217)` | `(512, 0)` | 32 by 32 |
-| Bottom right | Metal | `(219, 153, 283, 217)` | `(640, 0)` | 32 by 32 |
-| Top | Horizontal | `(0, 1, 64, 151)` | `(768, 0)` | Stretch by 75 |
-| Bottom | Horizontal | `(0, 153, 32, 217)` | `(896, 0)` | Stretch by 32 |
-| Left | Vertical | `(1, 0, 151, 32)` | `(0, 192)` | 75 by stretch |
-| Right | Vertical | `(153, 0, 303, 32)` | `(256, 192)` | 75 by stretch |
+| Piece             | Source     | Source rectangle       | Destination  | Draw size     |
+| ----------------- | ---------- | ---------------------- | ------------ | ------------- |
+| Portrait top left | Metal      | `(1, 153, 151, 303)`   | `(0, 0)`     | 75 by 75      |
+| Top right         | Metal      | `(153, 1, 303, 151)`   | `(256, 0)`   | 75 by 75      |
+| Bottom left       | Metal      | `(153, 153, 217, 217)` | `(512, 0)`   | 32 by 32      |
+| Bottom right      | Metal      | `(219, 153, 283, 217)` | `(640, 0)`   | 32 by 32      |
+| Top               | Horizontal | `(0, 1, 64, 151)`      | `(768, 0)`   | Stretch by 75 |
+| Bottom            | Horizontal | `(0, 153, 32, 217)`    | `(896, 0)`   | Stretch by 32 |
+| Left              | Vertical   | `(1, 0, 151, 32)`      | `(0, 192)`   | 75 by stretch |
+| Right             | Vertical   | `(153, 0, 303, 32)`    | `(256, 192)` | 75 by stretch |
 
 Corners keep their proportions; straight edges stretch between them. Draw
 order is OVERLAY, with ordinary alpha blending. The existing native portrait
@@ -72,12 +72,12 @@ remains below the ring, aligned at `(-5, 7)` with size 62 by 62.
 
 The 256-by-256 sheet places these sources without resizing:
 
-| Source | Canvas | Destination |
-| --- | --- | --- |
-| Gethe `CHARACTERFRAME/Char-Paperdoll-Parts.PNG` | 256 by 128 | `(0, 0)` |
-| Gethe `CHARACTERFRAME/Char-Paperdoll-Horizontal.PNG` | 32 by 16 | `(0, 128)` |
-| Gethe `CHARACTERFRAME/Char-Paperdoll-Vertical.PNG` | 16 by 32 | `(64, 128)` |
-| DragonUI `CharacterPanel/charstatmiddle.blp` | 256 by 8 | `(0, 192)` |
+| Source                                               | Canvas     | Destination |
+| ---------------------------------------------------- | ---------- | ----------- |
+| Gethe `CHARACTERFRAME/Char-Paperdoll-Parts.PNG`      | 256 by 128 | `(0, 0)`    |
+| Gethe `CHARACTERFRAME/Char-Paperdoll-Horizontal.PNG` | 32 by 16   | `(0, 128)`  |
+| Gethe `CHARACTERFRAME/Char-Paperdoll-Vertical.PNG`   | 16 by 32   | `(64, 128)` |
+| DragonUI `CharacterPanel/charstatmiddle.blp`         | 256 by 8   | `(0, 192)`  |
 
 The parts source regions used at their original locations are left equipment
 surround `(53, 76, 102, 120)`, right surround `(1, 76, 51, 120)`, bottom weapon
@@ -105,14 +105,14 @@ draws only that region, with UVs `(0, 450/512, 0, 420/512)`.
 This is the complete 64-by-256 `UI/uiframetabs.blp`, converted without changing
 its pixels. The native tab's existing state textures use these rectangles:
 
-| State/piece | Rectangle | Draw size |
-| --- | --- | --- |
-| Inactive left | `(1, 209, 36, 245)` | 35 by 36 |
-| Inactive right | `(1, 171, 38, 207)` | 37 by 36 |
-| Inactive middle | `(0, 45, 1, 81)` | Stretch by 36 |
-| Selected left | `(1, 127, 36, 169)` | 35 by 42 |
-| Selected right | `(1, 83, 38, 125)` | 37 by 42 |
-| Selected middle | `(0, 1, 1, 43)` | Stretch by 42 |
+| State/piece     | Rectangle           | Draw size     |
+| --------------- | ------------------- | ------------- |
+| Inactive left   | `(1, 209, 36, 245)` | 35 by 36      |
+| Inactive right  | `(1, 171, 38, 207)` | 37 by 36      |
+| Inactive middle | `(0, 45, 1, 81)`    | Stretch by 36 |
+| Selected left   | `(1, 127, 36, 169)` | 35 by 42      |
+| Selected right  | `(1, 83, 38, 125)`  | 37 by 42      |
+| Selected middle | `(0, 1, 1, 43)`     | Stretch by 42 |
 
 Native selected/disabled state handling controls which set is shown. The old
 rectangular highlight is transparent rather than covering the shaped tab.
