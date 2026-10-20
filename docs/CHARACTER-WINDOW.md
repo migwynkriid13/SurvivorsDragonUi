@@ -30,6 +30,17 @@ placement. Its top artwork edge aligns with the wrist row's bottom artwork
 edge. Horizontal positions and button sizes stay the same; the model viewport,
 scenery and lower trim end higher to keep the equipment row clear.
 
+Equipped items of uncommon or higher quality have a colored inner border,
+using Blizzard's `WhiteIconFrame` artwork and the native item-quality palette.
+All equipment slots, including weapons, ranged/relic and ammo, share the same
+handling. Poor/common, empty and unknown-quality slots keep the neutral metal
+surround. Native slot updates refresh the border after equipment changes;
+opening the pane refreshes every border. The skin reads
+`GetInventoryItemQuality` and `GetItemQualityColor`, with the native quality
+color globals as a fallback. It never infers rarity from the item's name or
+tooltip, recolors its icon or replaces native slot scripts. Borders hide on
+world leave/logout and no item data is saved.
+
 ## Native behavior
 
 `modules/ui/character.lua` retains `CharacterFrame`, `PaperDollFrame`, the

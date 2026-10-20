@@ -94,6 +94,27 @@ straight trim and card middles stretch. Equipment artwork is BACKGROUND behind
 native item icons; trim is OVERLAY. No item content or tooltip pixels are baked
 into these textures.
 
+### `media/tex/character/QualityBorder.tga`
+
+This is the complete 64-by-64 `COMMON/WhiteIconFrame.PNG` from the pinned
+Dragonflight 10.0.0 build 45454 texture mirror, converted without cropping,
+recoloring or resizing. The transparent center leaves native item icons visible.
+The character module draws it over each native equipment button at that button's
+size: 37 by 37, or 27 by 27 for ammo, with ordinary alpha blending. Its vertex
+color comes from the native item-quality palette, for uncommon or higher items.
+Poor/common, empty and unavailable-quality slots have no colored overlay.
+
+Blizzard's pinned 10.2.7
+[`ItemButtonTemplate.xml`](https://github.com/Gethe/wow-ui-source/blob/6b65c2922baca3db5a28fb39b69c95cef1047bec/Interface/AddOns/Blizzard_ItemButton/Mainline/ItemButtonTemplate.xml)
+defines the centered 37-by-37 `IconBorder` using this texture. Its
+[`ItemButtonTemplate.lua`](https://github.com/Gethe/wow-ui-source/blob/6b65c2922baca3db5a28fb39b69c95cef1047bec/Interface/AddOns/Blizzard_ItemButton/Mainline/ItemButtonTemplate.lua)
+applies quality colors through vertex tinting. These are drawing references;
+no retail item-button API or Lua module is imported. DragonUI's pinned
+[`itemquality.lua`](https://github.com/NeticSoul/DragonUI/blob/6d9cc95eedd1de78fab3b965683df13421e21604/DragonUI/modules/itemquality.lua)
+was also inspected: it uses the native equipped-item quality and defaults to
+uncommon or higher, with a larger additive action-button glow. This integration
+uses Blizzard's thin item frame with the existing metal surrounds.
+
 ### `media/tex/character/Background.tga`
 
 The 512-by-512 canvas contains `character-panel-background`, the 450-by-420

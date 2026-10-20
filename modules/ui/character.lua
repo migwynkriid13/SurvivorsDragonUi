@@ -200,11 +200,49 @@ DFRL:NewMod("Character window", 6, function()
             offset = -9,
         },
     }
+    local qualityBorders = {}
+    local function UpdateQuality(button)
+        local border = qualityBorders[button]
+        if not border then return end
+        border:Hide()
+        if type(GetInventoryItemQuality) ~= "function" then return end
+        local slot = button:GetID()
+        if not GetInventoryItemTexture("player", slot) then return end
+        local quality = GetInventoryItemQuality("player", slot)
+        if type(quality) ~= "number" or quality < 2 then return end
+        local r, g, b
+        if type(GetItemQualityColor) == "function" then
+            r, g, b = GetItemQualityColor(quality)
+        else
+            local color = _G["ITEM_QUALITY" .. quality .. "_COLOR"]
+            if color then r, g, b = color.r, color.g, color.b end
+        end
+        if type(r) ~= "number" or type(g) ~= "number" or type(b) ~= "number" then return end
+        border:SetVertexColor(r, g, b, 1)
+        border:Show()
+    end
+
+    local function AddQualityBorder(button)
+        local border = button:CreateTexture(nil, "OVERLAY")
+        border:SetTexture(path .. "QualityBorder.tga")
+        border:SetBlendMode("BLEND")
+        border:SetAllPoints(button)
+        border:Hide()
+        qualityBorders[button] = border
+    end
+
+    local function RefreshQuality()
+        for button in pairs(qualityBorders) do
+            UpdateQuality(button)
+        end
+    end
+
     local function SlotArt(button, rectangle, x, y, width, height)
         local texture = Cut(button, "Parts", rectangle[1], rectangle[2], rectangle[3], rectangle[4], width, height)
         texture:SetPoint("TOPLEFT", button, "TOPLEFT", x, y)
         local normal = button:GetNormalTexture()
         if normal then normal:SetTexture(nil) end
+        AddQualityBorder(button)
     end
     for _, column in ipairs(slotColumns) do
         for index, name in ipairs(column.names) do
@@ -222,7 +260,10 @@ DFRL:NewMod("Character window", 6, function()
             SlotArt(button, { 172, 1, 214, 54 }, -3, 8, 42, 53)
         end
     end
-    if CharacterAmmoSlot then Place(CharacterAmmoSlot, paper, 239, -BODY_TOP - 378, 27, 27) end
+    if CharacterAmmoSlot then
+        Place(CharacterAmmoSlot, paper, 239, -BODY_TOP - 378, 27, 27)
+        AddQualityBorder(CharacterAmmoSlot)
+    end
 
     local panel = CreateFrame("Frame", nil, paper)
     Place(panel, paper, LEFT_WIDTH + 4, -BODY_TOP, WIDTH - LEFT_WIDTH - 10, HEIGHT - BODY_TOP - 6)
@@ -595,6 +636,7 @@ DFRL:NewMod("Character window", 6, function()
         end
         UpdateTabs()
         UpdateHeader()
+        RefreshQuality()
         AttachNativeHooks()
         QueueStats()
     end
@@ -618,6 +660,9 @@ DFRL:NewMod("Character window", 6, function()
     end)
     hooksecurefunc("MovePanelToLeft", InsetDefaultPosition)
     hooksecurefunc("PaperDollFrame_SetLevel", UpdateHeader)
+    hooksecurefunc("PaperDollItemSlotButton_Update", function()
+        if this then UpdateQuality(this) end
+    end)
     HookScript(owner, "OnShow", Apply)
     HookScript(owner, "OnEvent", UpdateHeader)
     HookScript(owner, "OnHide", function() controller:SetScript("OnUpdate", nil) end)
@@ -628,6 +673,9 @@ DFRL:NewMod("Character window", 6, function()
     controller:SetScript("OnEvent", function()
         controller:SetScript("OnUpdate", nil)
         slider:SetValue(0)
+        for _, border in pairs(qualityBorders) do
+            border:Hide()
+        end
     end)
     Apply()
 end)

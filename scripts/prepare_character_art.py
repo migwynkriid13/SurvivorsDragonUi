@@ -55,6 +55,7 @@ def prepare():
     parts.paste(source(DRAGONFLIGHT, "CHARACTERFRAME/Char-Paperdoll-Vertical.PNG"), (64, 128))
     parts.paste(source(DRAGONUI, "CharacterPanel/charstatmiddle.blp"), (0, 192))
     save(parts, "Parts.tga")
+    save(source(DRAGONFLIGHT, "COMMON/WhiteIconFrame.PNG"), "QualityBorder.tga")
 
     background = Image.new("RGBA", (512, 512))
     background.paste(
