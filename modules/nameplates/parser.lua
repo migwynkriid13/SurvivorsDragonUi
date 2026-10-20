@@ -279,14 +279,20 @@ local function ParseDamageShield(message)
     return nil
 end
 
+local function ParsePetEvent(parser, message)
+    local data = parser(message, 1)
+    if data then data.sourceIsPet = true end
+    return data
+end
+
 -- The same event map drives parsing and the SCT frame's subscriptions.
 local combatEventHandlers = {
     CHAT_MSG_COMBAT_SELF_HITS = ParseMeleeHit,
-    CHAT_MSG_COMBAT_PET_HITS = function(message) return ParseMeleeHit(message, 1) end,
+    CHAT_MSG_COMBAT_PET_HITS = function(message) return ParsePetEvent(ParseMeleeHit, message) end,
     CHAT_MSG_COMBAT_SELF_MISSES = ParseMeleeMiss,
-    CHAT_MSG_COMBAT_PET_MISSES = function(message) return ParseMeleeMiss(message, 1) end,
+    CHAT_MSG_COMBAT_PET_MISSES = function(message) return ParsePetEvent(ParseMeleeMiss, message) end,
     CHAT_MSG_SPELL_SELF_DAMAGE = ParseSpell,
-    CHAT_MSG_SPELL_PET_DAMAGE = function(message) return ParseSpell(message, 1) end,
+    CHAT_MSG_SPELL_PET_DAMAGE = function(message) return ParsePetEvent(ParseSpell, message) end,
     CHAT_MSG_SPELL_PERIODIC_CREATURE_DAMAGE = ParsePeriodic,
     CHAT_MSG_SPELL_PERIODIC_HOSTILEPLAYER_DAMAGE = ParsePeriodic,
     CHAT_MSG_SPELL_PERIODIC_FRIENDLYPLAYER_DAMAGE = ParsePeriodic,
@@ -299,6 +305,14 @@ DFRL.tools.NameplateCombatEventHandlers = combatEventHandlers
 function DFRL.tools.ParseNameplateCombatEvent(eventName, message)
     if type(message) ~= "string" or message == "" then return nil end
     local handler = combatEventHandlers[eventName]
-    if handler then return handler(message) end
+    if handler then
+        local data = handler(message)
+        -- Shared periodic/shield categories need an explicit owned source.
+        -- SELF wording without a source cannot establish pet ownership.
+        if data and not data.sourceIsPet and data.sourceName and UnitName then
+            data.sourceIsPet = data.sourceName ~= UnitName("player") and data.sourceName == UnitName("pet") or nil
+        end
+        return data
+    end
     return nil
 end

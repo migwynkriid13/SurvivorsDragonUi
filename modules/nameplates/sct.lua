@@ -32,6 +32,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
 
     local function ShouldShowText(info)
         if info.kind == "damage" then
+            if info.sourceIsPet and not DFRL.display.Get("sctPetDamage") then return false end
             local result = info.critical and "sctCriticalHits" or "sctNormalHits"
             if not DFRL.display.Get(result) then return false end
         end
@@ -197,6 +198,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         text.spell, text.damageType, text.iconTexture = nil, nil, nil
         text.kind = nil
         text.critical = nil
+        text.sourceIsPet = nil
         text.color = nil
         text.needsMeasure = nil
         table.insert(textPool, text)
@@ -812,6 +814,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                 identity = IconIdentityPart(attackKind)
                     .. IconIdentityPart(attack)
                     .. IconIdentityPart(source)
+                    .. IconIdentityPart(info.sourceIsPet and "pet" or "")
                     .. IconIdentityPart(info.damageType or "")
                     .. IconIdentityPart(info.school or "")
                     .. IconIdentityPart(info.critical and "critical" or "normal")
@@ -996,6 +999,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         text.spell, text.damageType, text.iconTexture = info.spell, info.damageType, info.iconTexture
         text.kind = info.kind
         text.critical = info.critical
+        text.sourceIsPet = info.sourceIsPet
         text.color = info.color
         UpdateTextColor(text)
         UpdateIcon(text)

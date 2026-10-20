@@ -539,8 +539,8 @@ DFRL:NewMod("RunTimers", 5, function()
                 label = "Damage type",
                 y = -226,
                 entries = {
-                    { key = "sctNormalHits", label = "Normal hits" },
-                    { key = "sctCriticalHits", label = "Critical hits" },
+                    { key = "sctNormalHits", label = "Normal damage" },
+                    { key = "sctCriticalHits", label = "Critical damage" },
                 },
             },
             {
@@ -552,6 +552,7 @@ DFRL:NewMod("RunTimers", 5, function()
                     { key = "sctPeriodicDamage", label = "Damage over time" },
                     { key = "sctReflectedDamage", label = "Reflected damage" },
                     { key = "sctMisses", label = "Misses / avoidance" },
+                    { key = "sctPetDamage", label = "Pet damage" },
                 },
             },
         }
