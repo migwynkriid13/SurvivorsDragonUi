@@ -10,6 +10,8 @@ DFRL:NewMod("Layout", 0, function()
     local coordinates, selected, RefreshCoordinates, SelectEntry
     local showCoordinates
     local confirmAnchor
+    local grid, gridWidth, gridHeight, gridScale
+    local GRID_SPACING = 32
     local labels = {
         playerFrame = "Player",
         targetFrame = "Target",
@@ -68,6 +70,67 @@ DFRL:NewMod("Layout", 0, function()
     end
     local function Scale(frame) return frame.GetEffectiveScale and frame:GetEffectiveScale() or 1 end
     local function LocalScale(frame) return frame.GetScale and frame:GetScale() or 1 end
+    local function UpdateGrid()
+        local width, height = T.GetLocalSize(UIParent)
+        local scale = Scale(UIParent)
+        if not Number(width) or not Number(height) or not Number(scale) or width <= 0 or height <= 0 or scale <= 0 then
+            if grid then grid:Hide() end
+            return
+        end
+        if not grid then
+            grid = CreateFrame("Frame", nil, UIParent)
+            grid:Hide()
+            grid:SetAllPoints(UIParent)
+            grid:SetFrameStrata("BACKGROUND")
+            grid:SetFrameLevel(0)
+            grid:EnableMouse(false)
+            grid.lines = {}
+        end
+        if
+            not T.NearlyEqual(width, gridWidth)
+            or not T.NearlyEqual(height, gridHeight)
+            or not T.NearlyEqual(scale, gridScale)
+        then
+            local used, pixel = 0, 1 / scale
+            for axis = 1, 2 do
+                local vertical = axis == 1
+                local extent = vertical and width or height
+                local steps = math.floor(extent / (2 * GRID_SPACING))
+                for step = -steps, steps do
+                    used = used + 1
+                    local line = grid.lines[used]
+                    if not line then
+                        line = grid:CreateTexture(nil, "ARTWORK")
+                        line:SetTexture("Interface\\Buttons\\WHITE8X8")
+                        table.insert(grid.lines, line)
+                    end
+                    local center = step == 0
+                    local thickness = center and 2 * pixel or pixel
+                    line:ClearAllPoints()
+                    line:SetPoint(
+                        "CENTER",
+                        grid,
+                        "CENTER",
+                        vertical and step * GRID_SPACING or 0,
+                        vertical and 0 or step * GRID_SPACING
+                    )
+                    line:SetWidth(vertical and thickness or width)
+                    line:SetHeight(vertical and height or thickness)
+                    if center then
+                        line:SetVertexColor(0.87, 0.73, 0.41, 0.8)
+                    else
+                        line:SetVertexColor(0.75, 0.8, 0.85, math.mod(step, 4) == 0 and 0.28 or 0.13)
+                    end
+                    line:Show()
+                end
+            end
+            for index = used + 1, table.getn(grid.lines) do
+                grid.lines[index]:Hide()
+            end
+            gridWidth, gridHeight, gridScale = width, height, scale
+        end
+        if not grid:IsShown() then grid:Show() end
+    end
     local function Viewport()
         -- These are the existing saved-position denominators. Rendered screen
         -- extents are read separately for editor math; changing this contract
@@ -648,6 +711,7 @@ DFRL:NewMod("Layout", 0, function()
         end
         if save then _G.SurvivorsDragonUiLayout = draft end
         editing, draft = false, nil
+        if grid then grid:Hide() end
         for _, entry in ipairs(order) do
             if entry.options.onEdit then entry.options.onEdit(false, save) end
             LockFrame(entry.frame)
@@ -699,6 +763,7 @@ DFRL:NewMod("Layout", 0, function()
                 if entry.options.onEdit then entry.options.onEdit(true) end
             end
         end
+        UpdateGrid()
         if setEditorVisible then setEditorVisible(not handlesOnly) end
         if not confirm then
             confirm = T.CreateEditorButton(confirmAnchor or UIParent, "Confirm", 140, 30, true)
@@ -762,6 +827,7 @@ DFRL:NewMod("Layout", 0, function()
         -- Settled groups need no handle reads or native visibility writes during
         -- gameplay. Viewport changes and unresolved defaults still run above.
         if not enabled then return end
+        UpdateGrid()
         for _, entry in ipairs(order) do
             local handle, region = entry.handle, entry.options.region or entry.frame
             local shown = entry.defaultPosition and (not entry.options.onlyWhenShown or entry.wantsShown)
