@@ -40,6 +40,7 @@ DFRL:NewMod("Character window", 6, function()
 
     local WIDTH, HEIGHT, LEFT_WIDTH = 624, 512, 338
     local LEFT_INSET = 12
+    local MODEL_HEIGHT = 358
     local CONTENT_WIDTH, ROW_WIDTH = 246, 230
     local path = DFRL:GetInfoOrCons("tex") .. "character\\"
     local sheets = { Chrome = { 1024, 256 }, Parts = { 256, 256 }, Tabs = { 64, 256 }, Close = { 128, 128 } }
@@ -161,9 +162,9 @@ DFRL:NewMod("Character window", 6, function()
 
     local modelBorder = CreateFrame("Frame", nil, paper)
     modelBorder:EnableMouse(false)
-    Place(modelBorder, paper, 48, -64, 239, 398)
+    Place(modelBorder, paper, 48, -64, 239, MODEL_HEIGHT + 8)
     Trim(modelBorder)
-    Place(model, paper, 52, -68, 231, 390)
+    Place(model, paper, 52, -68, 231, MODEL_HEIGHT)
     -- Keep the existing model, bindings, rotation, equipment refresh and camera.
     -- These four native race textures are only its background scenery.
     if type(DressUpTexturePath) == "function" then
@@ -178,8 +179,8 @@ DFRL:NewMod("Character window", 6, function()
             texture:SetTexture(DressUpTexturePath() .. q[1])
             texture:SetTexCoord(q[6], q[7], q[8], q[9])
             texture:SetWidth(q[4])
-            texture:SetHeight(q[5] * 390 / 320)
-            texture:SetPoint("TOPLEFT", model, "TOPLEFT", q[2], -q[3] * 390 / 320)
+            texture:SetHeight(q[5] * MODEL_HEIGHT / 320)
+            texture:SetPoint("TOPLEFT", model, "TOPLEFT", q[2], -q[3] * MODEL_HEIGHT / 320)
             texture:SetVertexColor(0.38, 0.38, 0.38)
         end
     end
@@ -216,11 +217,11 @@ DFRL:NewMod("Character window", 6, function()
     for index, name in ipairs({ "MainHand", "SecondaryHand", "Ranged" }) do
         local button = _G["Character" .. name .. "Slot"]
         if button then
-            Place(button, paper, 101 + (index - 1) * 42, -467, 37, 37)
+            Place(button, paper, 101 + (index - 1) * 42, -435, 37, 37)
             SlotArt(button, { 172, 1, 214, 54 }, -3, 8, 42, 53)
         end
     end
-    if CharacterAmmoSlot then Place(CharacterAmmoSlot, paper, 239, -472, 27, 27) end
+    if CharacterAmmoSlot then Place(CharacterAmmoSlot, paper, 239, -440, 27, 27) end
 
     local panel = CreateFrame("Frame", nil, paper)
     Place(panel, paper, LEFT_WIDTH + 4, -62, WIDTH - LEFT_WIDTH - 10, HEIGHT - 68)

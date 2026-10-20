@@ -11,6 +11,11 @@ clears the screen edge. Native vertical placement, center/pushed positions and
 other anchors remain unchanged. Opening or moving the panel back to the native
 left slot reapplies the inset without accumulating it or saving a position.
 
+The weapon, shield/off-hand, ranged and ammo row sits 32 units above its first
+placement. Its top artwork edge aligns with the wrist row's bottom artwork
+edge. Horizontal positions and button sizes stay the same; the model viewport,
+scenery and lower trim end higher to keep the equipment row clear.
+
 ## Native behavior
 
 `modules/ui/character.lua` retains `CharacterFrame`, `PaperDollFrame`, the
