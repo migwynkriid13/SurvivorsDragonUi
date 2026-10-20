@@ -36,6 +36,7 @@ modules\map\waypoints.lua
 modules\menu\menu.lua
 modules\micro\micro.lua
 modules\ui\ui.lua
+modules\ui\character.lua
 modules\ui\jewelry.lua
 modules\ui\run.lua
 modules\ui\levels.lua

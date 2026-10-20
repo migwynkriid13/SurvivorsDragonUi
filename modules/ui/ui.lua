@@ -13,7 +13,6 @@ DFRL:NewMod("Ui", 5, function()
     -- close button
     do
         local closeButtonData = {
-            { "CharacterFrame", "CharacterFrameCloseButton", -36, -16 },
             { "SpellBookFrame", "SpellBookCloseButton", -36, -15 },
             { "QuestLogFrame", "QuestLogFrameCloseButton", -91, -15 },
             { "FriendsFrame", "FriendsFrameCloseButton", -36, -15 },
@@ -64,60 +63,6 @@ DFRL:NewMod("Ui", 5, function()
                     end
                 end
             end
-        end
-    end
-
-    -- characterframe
-    do
-        local tex = {
-            "Interface\\AddOns\\SurvivorsDragonUi\\media\\tex\\ui\\paperdoll_top_left.tga",
-            "Interface\\AddOns\\SurvivorsDragonUi\\media\\tex\\ui\\paperdoll_top_right.tga",
-            "Interface\\AddOns\\SurvivorsDragonUi\\media\\tex\\ui\\paperdoll_bot_left.tga",
-            "Interface\\AddOns\\SurvivorsDragonUi\\media\\tex\\ui\\paperdoll_bot_right.tga",
-        }
-
-        local function ReplaceFrameTextures(frame)
-            if not frame then return end
-            frame:SetFrameStrata("MEDIUM")
-
-            local regions = { frame:GetRegions() }
-            local texIndex = 1
-            for i = 1, table.getn(regions) do
-                local r = regions[i]
-                if r and r:IsObjectType("Texture") then
-                    local name = r:GetName()
-                    if not name or not string.find(name, "Portrait") then
-                        r:ClearAllPoints()
-                        if texIndex == 1 then
-                            r:SetPoint("TOPLEFT", 0, 0)
-                        elseif texIndex == 2 then
-                            r:SetPoint("TOPLEFT", 256, 0)
-                        elseif texIndex == 3 then
-                            r:SetPoint("TOPLEFT", 0, -256)
-                        elseif texIndex == 4 then
-                            r:SetPoint("TOPLEFT", 256, -256)
-                        end
-                        r:SetTexture(tex[texIndex])
-                        texIndex = texIndex + 1
-                        if texIndex > table.getn(tex) then break end
-                    end
-                end
-            end
-        end
-
-        HookScript(CharacterFrame, "OnShow", function() ReplaceFrameTextures(CharacterFrame) end)
-
-        local subFrames = {
-            "PaperDollFrame",
-            "PetPaperDollFrame",
-            "ReputationFrame",
-            "SkillFrame",
-            "HonorFrame",
-        }
-
-        for i = 1, table.getn(subFrames) do
-            local f = getglobal(subFrames[i])
-            if f then HookScript(f, "OnShow", function() ReplaceFrameTextures(f) end) end
         end
     end
 
