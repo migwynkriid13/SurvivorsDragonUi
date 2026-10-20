@@ -1,6 +1,6 @@
 # Editing without the dialog
 
-`/sdui lock` enters the existing layout editing session with move/resize handles and the same shared Confirm button, centered 24 UI units above the bottom of UIParent. It does not create or show the settings dialog on first use. Clicking a handle does not open it either. The button retains the editor's normal artwork, dimensions and confirmation action.
+`/sdui lock` enters the existing layout editing session with move/resize handles and the same shared Confirm button, centered in the middle of UIParent. It does not create or show the settings dialog on first use. Clicking a handle does not open it either. The button retains the editor's normal artwork, dimensions and confirmation action.
 
 `/sdui` shows the full editor within the same session. Switching either way retains staged geometry and display, timer and combat-text drafts. Entering handles-only mode discards unapplied numeric text, while keeping geometry already staged with Apply or pointer editing. Confirm saves the session and hides the handles. World leave, logout and reload retain the existing draft-discard behavior; neither command adds a saved mode or window position.
 

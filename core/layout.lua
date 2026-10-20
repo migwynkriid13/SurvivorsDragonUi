@@ -665,11 +665,7 @@ DFRL:NewMod("Layout", 0, function()
         confirm:SetFrameStrata("TOOLTIP")
         confirm:SetFrameLevel(200)
         confirm:ClearAllPoints()
-        if handlesOnly then
-            confirm:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, 24)
-        else
-            confirm:SetPoint("CENTER", anchor, "CENTER", 0, 0)
-        end
+        confirm:SetPoint("CENTER", anchor, "CENTER", 0, 0)
     end
     function layout.SetConfirmAnchor(anchor)
         confirmAnchor = anchor
