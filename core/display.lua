@@ -15,7 +15,7 @@ DFRL:NewMod("Display", 0, function()
         sctClassColors = false,
         sctScale = 1,
         roundPlayerPortrait = false,
-        playerPortrait3D = false,
+        playerPortrait3D = false, -- Legacy key; controls player, target and target-of-target.
         flipBuffs = false,
         classResources = false,
         classHealth = false,

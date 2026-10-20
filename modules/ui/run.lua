@@ -566,8 +566,8 @@ DFRL:NewMod("RunTimers", 5, function()
             },
             {
                 "playerPortrait3D",
-                "Experimental 3D player portrait",
-                "Original 2D by default; enable experimental 3D.",
+                "Experimental 3D portraits",
+                "Use 3D for player, target and target-of-target.",
             },
             { "flipBuffs", "Flip buff layout", "Flip icon order only; keep text placement." },
             { "cooldownNumbers", "Cooldown numbers", "Show countdowns on ability buttons." },

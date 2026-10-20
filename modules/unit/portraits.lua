@@ -1,9 +1,8 @@
 DFRL:NewMod("AnimatedPortraits", 2, function()
     local entries = {}
     local inWorld = UnitExists("player") and true or false
-    local playerPortrait3D = DFRL.display.Get("playerPortrait3D")
-
-    local function Enabled(entry) return entry.unit ~= "player" or playerPortrait3D end
+    -- Keep the legacy saved key; the choice now covers all three portraits.
+    local portraits3D = DFRL.display.Get("playerPortrait3D")
 
     local function RestoreStill(entry) entry.portrait:SetAlpha(entry.stillAlpha) end
 
@@ -20,7 +19,7 @@ DFRL:NewMod("AnimatedPortraits", 2, function()
 
     local function Bind(entry)
         if entry.binding or not entry.supported then return end
-        if not Enabled(entry) or not inWorld or not UnitExists(entry.unit) then
+        if not portraits3D or not inWorld or not UnitExists(entry.unit) then
             Release(entry)
             return
         end
@@ -32,7 +31,7 @@ DFRL:NewMod("AnimatedPortraits", 2, function()
         local success = pcall(function()
             entry.model:ClearModel()
             entry.model:SetUnit(entry.unit)
-            if not Enabled(entry) or not inWorld or not UnitExists(entry.unit) then
+            if not portraits3D or not inWorld or not UnitExists(entry.unit) then
                 Release(entry)
                 return
             end
@@ -85,7 +84,7 @@ DFRL:NewMod("AnimatedPortraits", 2, function()
                 -- every frame; only a current copy's callback may replace it again.
                 -- This also recovers when a client has the methods but no renderer.
                 RestoreStill(entry)
-                if entry.bound and (not Enabled(entry) or not inWorld or not UnitExists(entry.unit)) then
+                if entry.bound and (not portraits3D or not inWorld or not UnitExists(entry.unit)) then
                     Release(entry)
                 end
             end)
@@ -93,7 +92,7 @@ DFRL:NewMod("AnimatedPortraits", 2, function()
                 -- This is evidence of a copy and a drawable viewport, not a public
                 -- promise that every GPU resource has finished displaying.
                 if
-                    Enabled(entry)
+                    portraits3D
                     and entry.bound
                     and not entry.binding
                     and inWorld
@@ -131,15 +130,13 @@ DFRL:NewMod("AnimatedPortraits", 2, function()
 
     DFRL.display.Listen(function()
         local enabled = DFRL.display.Get("playerPortrait3D")
-        if enabled == playerPortrait3D then return end
-        playerPortrait3D = enabled
+        if enabled == portraits3D then return end
+        portraits3D = enabled
         for _, entry in ipairs(entries) do
-            if entry.unit == "player" then
-                if enabled then
-                    Bind(entry)
-                else
-                    Release(entry)
-                end
+            if enabled then
+                Bind(entry)
+            else
+                Release(entry)
             end
         end
     end)

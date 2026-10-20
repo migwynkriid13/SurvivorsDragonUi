@@ -34,7 +34,7 @@ To use the game's damage numbers, choose **Game settings** under **Combat text**
 - Cache and guardian guides with distance, direction and world-map pins.
 - Minimap loot-pouch icons for nearby caches and a gold skull medallion for the flagged guardian. Empty flagged lairs show no marker or flag. Guardian markers point to the lair, even while its guardian is fighting elsewhere.
 
-The player portrait uses the original 2D image by default. You can try **Experimental 3D player portrait** in `/sdui` → **HUD**.
+Player, target and target-of-target portraits use the original 2D images by default. **Experimental 3D portraits** in `/sdui` → **HUD** switches all three to 3D.
 
 Supports all 14 game languages, including Czech.
 
