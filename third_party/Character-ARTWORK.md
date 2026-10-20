@@ -53,16 +53,16 @@ Sources are `UI/uiframemetal2x.blp` (512 by 512),
 `UI/uiframemetalhorizontal2x.blp` (64 by 256) and
 `UI/uiframemetalvertical2x.blp` (512 by 32).
 
-| Piece             | Source     | Source rectangle       | Destination  | Draw size     |
-| ----------------- | ---------- | ---------------------- | ------------ | ------------- |
-| Top left          | Metal      | `(1, 1, 151, 151)`     | `(0, 0)`     | 75 by 75      |
-| Top right         | Metal      | `(153, 1, 303, 151)`   | `(256, 0)`   | 75 by 75      |
-| Bottom left       | Metal      | `(153, 153, 217, 217)` | `(512, 0)`   | 32 by 32      |
-| Bottom right      | Metal      | `(219, 153, 283, 217)` | `(640, 0)`   | 32 by 32      |
-| Top               | Horizontal | `(0, 1, 64, 151)`      | `(768, 0)`   | Stretch by 75 |
-| Bottom            | Horizontal | `(0, 153, 32, 217)`    | `(896, 0)`   | Stretch by 32 |
-| Left              | Vertical   | `(1, 0, 151, 32)`      | `(0, 192)`   | 75 by stretch |
-| Right             | Vertical   | `(153, 0, 303, 32)`    | `(256, 192)` | 75 by stretch |
+| Piece        | Source     | Source rectangle       | Destination  | Draw size     |
+| ------------ | ---------- | ---------------------- | ------------ | ------------- |
+| Top left     | Metal      | `(1, 1, 151, 151)`     | `(0, 0)`     | 75 by 75      |
+| Top right    | Metal      | `(153, 1, 303, 151)`   | `(256, 0)`   | 75 by 75      |
+| Bottom left  | Metal      | `(153, 153, 217, 217)` | `(512, 0)`   | 32 by 32      |
+| Bottom right | Metal      | `(219, 153, 283, 217)` | `(640, 0)`   | 32 by 32      |
+| Top          | Horizontal | `(0, 1, 64, 151)`      | `(768, 0)`   | Stretch by 75 |
+| Bottom       | Horizontal | `(0, 153, 32, 217)`    | `(896, 0)`   | Stretch by 32 |
+| Left         | Vertical   | `(1, 0, 151, 32)`      | `(0, 192)`   | 75 by stretch |
+| Right        | Vertical   | `(153, 0, 303, 32)`    | `(256, 192)` | 75 by stretch |
 
 Corners keep their proportions; straight edges stretch between them. Draw
 order is OVERLAY, with ordinary alpha blending. The plain top-left region is
