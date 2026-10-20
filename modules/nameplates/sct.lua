@@ -511,6 +511,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local auraSpellTextures, talentSpellTextures = {}, {}
     local iconCatalog = T.SpellIconCatalog or {}
     local gameIconTextures = iconCatalog.game or {}
+    local abilityIconTextures = iconCatalog.abilities or {}
     local locale = type(_G.GetLocale) == "function" and _G.GetLocale() or nil
     local localeIconTextures = iconCatalog.locales and iconCatalog.locales[locale] or {}
     local localeSchoolIconTextures = iconCatalog.schools and iconCatalog.schools[locale] or {}
@@ -557,6 +558,14 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             end
         end
         return canonical ~= nil
+    end
+
+    local function NativeGameTexture(name, aliases)
+        local talent = GeneratedTexture(gameIconTextures, name, aliases)
+        local ability = GeneratedTexture(abilityIconTextures, name, aliases)
+        if talent == false or ability == false then return false end
+        if talent and ability and TextureKey(talent) ~= TextureKey(ability) then return false end
+        return talent or ability
     end
 
     local function LearnSpellTexture(cache, name, texture)
@@ -750,7 +759,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                 local aliases = spellNames and spellNames[info.spell]
                 -- Observed auras outrank catalog and talent artwork. Preserve
                 -- ambiguity within each tier instead of choosing a random icon.
-                if texture == nil then texture = GeneratedTexture(gameIconTextures, info.spell, aliases) end
+                if texture == nil then texture = NativeGameTexture(info.spell, aliases) end
                 if texture == nil then texture = talentSpellTextures[info.spell] end
                 if texture == nil then
                     local database, schools = localeIconTextures, localeSchoolIconTextures

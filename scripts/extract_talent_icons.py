@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Read the pinned native talent catalog as data without executing the game.
+"""Read pinned native talent and ability catalogs without executing the game.
 
 The fixed PE layout belongs only to the SHA256 below. Unknown builds are rejected
 before their headers, pointers or catalog offsets are interpreted.
@@ -13,17 +13,21 @@ import json
 import struct
 
 
-SOURCE_SHA256 = "7264d50b82a1ecc2b5f0fcf2f29669c2acaa8bb87c058e17898a47a12984ff30"
-CATALOG_OFFSET = 109907016
+SOURCE_SHA256 = "96e24dcd0e53fc13a6fdef5826aa46f77a29aa1aad4abd585adf04e94b2756d3"
+CATALOG_OFFSET = 115721904
 CLASS_COUNT = 9
 CLASS_BYTES = 200
 TREE_COUNT = 3
 TREE_BYTES = 64
-NODE_BYTES = 104
+NODE_BYTES = 120
+ABILITY_OFFSET = 112808376
+ABILITY_COUNT = 113
+ABILITY_BYTES = 120
 SELECTION = (
     "All nine class records, each containing its three native tree records; "
-    "each tree selects its entire node array using the stored pointer/count slice. "
-    "Names and texture basenames are read from native UTF-8 fat-pointer string fields, "
+    "each tree selects its entire node array using the stored pointer/count slice; "
+    "plus the complete 113-record native ability array. "
+    "Names and texture basenames are read from actual UTF-8 fat-pointer string fields, "
     "not inferred from adjacent text."
 )
 
@@ -74,15 +78,27 @@ def extract_records(raw):
                 at = nodes_start + node_index * NODE_BYTES
                 records.append(
                     {
-                        "key": string_at(at),
-                        "name": string_at(at + 16),
-                        "icon": "Interface\\Icons\\" + string_at(at + 32),
+                        "key": string_at(at + 32),
+                        "name": string_at(at + 48),
+                        "icon": "Interface\\Icons\\" + string_at(at + 64),
+                        "kind": "talent",
                         "class": class_name,
                         "class_id": class_id,
                         "tree": tree_name,
                         "offset": at,
                     }
                 )
+    for index in range(ABILITY_COUNT):
+        at = ABILITY_OFFSET + index * ABILITY_BYTES
+        records.append(
+            {
+                "key": string_at(at),
+                "name": string_at(at + 16),
+                "icon": "Interface\\Icons\\" + string_at(at + 32),
+                "kind": "ability",
+                "offset": at,
+            }
+        )
     return records
 
 
@@ -104,6 +120,9 @@ def main():
             "class_record_bytes": CLASS_BYTES,
             "tree_record_bytes": TREE_BYTES,
             "node_record_bytes": NODE_BYTES,
+            "ability_table_file_offset": ABILITY_OFFSET,
+            "ability_records": ABILITY_COUNT,
+            "ability_record_bytes": ABILITY_BYTES,
             "selection": SELECTION,
         },
         "records": records,
@@ -113,7 +132,7 @@ def main():
         json.dumps(metadata, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
     print(str(arguments.output))
-    print(str(len(records)) + " native talent records")
+    print(str(len(records)) + " native talent/ability records")
 
 
 if __name__ == "__main__":
