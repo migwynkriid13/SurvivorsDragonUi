@@ -6,12 +6,15 @@ panel. The Character, Skills and Honor bottom tabs stay hidden, including after
 native updates try to show them. Mouse wheel, scrollbar and arrow buttons reach the
 complete stats list. This is an addon skin of the native window.
 
-The portrait, character name and level/race/class line stay hidden, along with
-the native guild/title captions. A plain Blizzard metal corner replaces the
-portrait ring; the window border and working close button remain. Native
-updates can still populate those hidden widgets without making them visible.
+The native character name and level/race/class caption share one centered row
+inside the top metal border. Both use gold DEFAULT text. Native name, rank and
+level updates still supply the captions, including translated wording; their
+combined width stays clear of the close button. Other native panes show only
+the name. The portrait and native guild/title captions stay hidden, including
+after native Show attempts. A plain Blizzard metal corner replaces the
+portrait ring; the window border and working close button remain.
 
-With those captions hidden, the character content starts 34 units higher,
+With the captions inside the border, the character content starts 34 units higher,
 just below the title bar. The character window is also 34 units shorter, at
 478 units, so the removed gap is not transferred to the bottom. Equipment
 sizes, the model viewport size and the stats scrolling area remain unchanged.

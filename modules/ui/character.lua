@@ -487,9 +487,6 @@ DFRL:NewMod("Character window", 6, function()
     local function HideHeaderContents()
         for _, name in ipairs({
             "CharacterFramePortrait",
-            "CharacterNameFrame",
-            "CharacterNameText",
-            "CharacterLevelText",
             "CharacterGuildText",
             "CharacterTitleText",
         }) do
@@ -499,6 +496,56 @@ DFRL:NewMod("Character window", 6, function()
                 widget:Hide()
             end
         end
+    end
+
+    local nameFrame, nameText, levelText = CharacterNameFrame, CharacterNameText, CharacterLevelText
+    if nameFrame and nameText then
+        nameFrame:EnableMouse(false)
+        for _, name in ipairs({ "CharacterNameText", "CharacterLevelText" }) do
+            local text = _G[name]
+            if text then
+                text:SetParent(nameFrame)
+                T.SetFont(text, 12)
+                text:SetTextColor(1, 0.82, 0)
+                text:SetJustifyH("LEFT")
+                text:SetHeight(16)
+            end
+        end
+    end
+
+    local function UpdateHeader()
+        HideHeaderContents()
+        if not nameFrame or not nameText then return end
+        nameFrame:SetFrameLevel(owner:GetFrameLevel() + 2)
+        nameText:SetWidth(0)
+        local nameWidth = math.ceil(nameText:GetStringWidth())
+        local levelWidth, gap = 0, 0
+        if levelText then
+            levelText:SetWidth(0)
+            if paper:IsShown() then
+                levelWidth = math.ceil(levelText:GetStringWidth())
+                if nameWidth > 0 and levelWidth > 0 then gap = 12 end
+                levelText:Show()
+            else
+                levelText:Hide()
+            end
+        end
+        local fit = math.min(1, (owner:GetWidth() - 72 - gap) / math.max(1, nameWidth + levelWidth))
+        nameWidth, levelWidth = nameWidth * fit, levelWidth * fit
+        nameFrame:ClearAllPoints()
+        nameFrame:SetPoint("TOP", owner, "TOP", -8, -3)
+        nameFrame:SetWidth(math.max(1, nameWidth + gap + levelWidth))
+        nameFrame:SetHeight(16)
+        nameText:ClearAllPoints()
+        nameText:SetPoint("LEFT", nameFrame, "LEFT", 0, 0)
+        nameText:SetWidth(nameWidth)
+        if levelText then
+            levelText:ClearAllPoints()
+            levelText:SetPoint("LEFT", nameText, "RIGHT", gap, 0)
+            levelText:SetWidth(levelWidth)
+        end
+        nameText:Show()
+        nameFrame:Show()
     end
 
     local function InsetDefaultPosition()
@@ -526,7 +573,6 @@ DFRL:NewMod("Character window", 6, function()
         for _, name in ipairs(panes) do
             HideStockArt(_G[name])
         end
-        HideHeaderContents()
         local close = CharacterFrameCloseButton
         if close then
             close:ClearAllPoints()
@@ -548,6 +594,7 @@ DFRL:NewMod("Character window", 6, function()
             close:GetHighlightTexture():SetBlendMode("ADD")
         end
         UpdateTabs()
+        UpdateHeader()
         AttachNativeHooks()
         QueueStats()
     end
@@ -570,10 +617,12 @@ DFRL:NewMod("Character window", 6, function()
         if frame == owner then InsetDefaultPosition() end
     end)
     hooksecurefunc("MovePanelToLeft", InsetDefaultPosition)
+    hooksecurefunc("PaperDollFrame_SetLevel", UpdateHeader)
     HookScript(owner, "OnShow", Apply)
-    HookScript(owner, "OnEvent", HideHeaderContents)
+    HookScript(owner, "OnEvent", UpdateHeader)
     HookScript(owner, "OnHide", function() controller:SetScript("OnUpdate", nil) end)
     HookScript(paper, "OnEvent", QueueStats)
+    HookScript(paper, "OnHide", UpdateHeader)
     controller:RegisterEvent("PLAYER_LEAVING_WORLD")
     controller:RegisterEvent("PLAYER_LOGOUT")
     controller:SetScript("OnEvent", function()
