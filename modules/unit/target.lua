@@ -69,9 +69,7 @@ DFRL:NewMod("Target", 1, function()
             if hasTargetOfTarget then PlaceDebuffRow(_G.TargetFrameDebuff11, _G.TargetFrameDebuff6, 2) end
             -- Enemy buffs normally follow a debuff row; detach them below the
             -- frame using the native friendly-target buff anchor instead.
-            if TargetFrameBuff1 then
-                TargetFrameBuff1:SetPoint("TOPLEFT", TargetFrame, "BOTTOMLEFT", 5, 32)
-            end
+            if TargetFrameBuff1 then TargetFrameBuff1:SetPoint("TOPLEFT", TargetFrame, "BOTTOMLEFT", 5, 32) end
         end
         hooksecurefunc("TargetDebuffButton_Update", PlaceTargetDebuffs)
         DFRL.display.Listen(function()
