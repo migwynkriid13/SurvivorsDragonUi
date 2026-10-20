@@ -20,7 +20,7 @@ DFRL:NewMod("Display", 0, function()
         classResources = false,
         classHealth = false,
         healthLossAnimation = true,
-        cooldownNumbers = false,
+        cooldownNumbers = true,
         cacheGuidance = true,
         guardianGuidance = true,
         equippedJewelry = true,
