@@ -32,11 +32,11 @@ DFRL:NewMod("Class resources", 2, function()
     if not PlayerFrame then return end
 
     local path = DFRL:GetInfoOrCons("tex") .. "resources\\"
-    local POINTS, UNITS_PER_POINT = 5, 20
+    local POINTS = 5
     local SLOT_WIDTH, ROW_HEIGHT = 24, 32
     local styles = {
         WARLOCK = {
-            power = 0,
+            color = { 0.55, 0.25, 1 },
             texture = path .. "SoulShards.tga",
             empty = { 1 / 256, 18 / 256, 38 / 64, 60 / 64 },
             full = { 23 / 256, 40 / 256, 25 / 64, 47 / 64 },
@@ -44,13 +44,19 @@ DFRL:NewMod("Class resources", 2, function()
             height = 22,
         },
         ROGUE = {
-            power = 3,
+            color = { 1, 0, 0 },
             texture = path .. "ComboPoints.tga",
             empty = { 29 / 128, 49 / 128, 66 / 128, 86 / 128 },
             full = { 29 / 128, 49 / 128, 44 / 128, 64 / 128 },
             width = 20,
             height = 20,
         },
+    }
+    local procs = {
+        seal_fate = styles.ROGUE,
+        soul_fire = styles.WARLOCK,
+        bloodrage = { color = { 0.86, 0.12, 0.1 } },
+        lightwell = { color = { 1, 0.82, 0 } },
     }
 
     local row = CreateFrame("Frame", "SurvivorsDragonUiClassResources", PlayerFrame)
@@ -77,65 +83,95 @@ DFRL:NewMod("Class resources", 2, function()
         points[i] = point
     end
 
-    local inWorld, displayedStyle, displayedCount = true, nil, nil
+    local meter = CreateFrame("StatusBar", nil, row)
+    meter:SetWidth(row:GetWidth())
+    meter:SetHeight(12)
+    meter:SetPoint("CENTER", row, "CENTER", 0, 0)
+    meter:EnableMouse(false)
+    meter:SetStatusBarTexture(
+        DFRL:GetInfoOrCons("tex") .. "unitframes\\UI-HUD-UnitFrame-Player-PortraitOn-Bar-Mana-Status.tga"
+    )
+    meter:SetMinMaxValues(0, 1)
+    meter:SetValue(0)
+    local background = meter:CreateTexture(nil, "BACKGROUND")
+    background:SetAllPoints(meter)
+    background:SetTexture("Interface\\Buttons\\WHITE8X8")
+    background:SetVertexColor(0, 0, 0, 0.6)
+    local meterText = meter:CreateFontString(nil, "OVERLAY")
+    T.SetFont(meterText, 10, "OUTLINE")
+    meterText:SetTextColor(1, 1, 1)
+    meterText:SetShadowColor(0, 0, 0, 1)
+    meterText:SetShadowOffset(1, -1)
+    meterText:SetPoint("CENTER", meter, "CENTER", 0, 0)
+    meter:Hide()
+
+    local inWorld, retiredRun = true, nil
+    local displayedStyle, displayedValue, displayedMaximum
     local function IsNumber(value) return type(value) == "number" and value >= 0 and value - value == 0 end
     local function ReadPrimary()
-        if not DFRL.display.Get("classResources") then return end
-        if not inWorld or not UnitExists("player") then return end
         -- Native unit getters stay current across reload and power-type changes,
         -- without retaining run packets or assuming a class-specific maximum.
-        local _, class = UnitClass("player")
         local power = UnitPowerType("player")
         local value, maximum = UnitMana("player"), UnitManaMax("player")
         if not IsNumber(power) or not IsNumber(value) or not IsNumber(maximum) or maximum <= 0 then return end
-        return value, maximum, power, class
+        return value, maximum, power
     end
 
-    local function ReadSecondary(class, value, maximum, power)
-        local style = styles[class]
-        if style and power == style.power then
-            -- Survivors v0.94.2 publishes its Rogue combo and Warlock shard
-            -- counters in the active power field at 20 units per point. The
-            -- ordinary target-dependent combo getter reads a different state.
-            -- See docs/CLASS-RESOURCES.md for the recorded native evidence.
-            local count = math.floor(math.min(value, maximum, POINTS * UNITS_PER_POINT) / UNITS_PER_POINT)
-            return style, count
+    local function ReadSecondary()
+        if type(_G.AZS_GetPhase) ~= "function" or not DFRL.navigation then return end
+        local ok, phase = pcall(_G.AZS_GetPhase)
+        if not ok then return end
+        if not DFRL.navigation.IsRunPhase(phase) then
+            retiredRun = _G.AZS_RUN
+            return
         end
-        -- Native combo points are an additional, target-dependent resource.
-        -- Other classes use these only when the client actually exposes them;
-        -- no extra pool is inferred from their active mana, rage or energy.
-        local combo
-        if type(GetComboPoints) == "function" then
-            local success, count = pcall(GetComboPoints)
-            if success and IsNumber(count) and count <= POINTS and count == math.floor(count) then combo = count end
-        end
-        if combo and combo > 0 then return styles.ROGUE, combo end
-        if combo and class == "DRUID" and power == styles.ROGUE.power then return styles.ROGUE, combo end
+        local state = _G.AZS_RUN
+        if type(state) ~= "table" or state == retiredRun or not IsNumber(_G.AZS_RUN_UPDATED) then return end
+        -- The native proc identifies the meter and publishes its own range.
+        -- Empty, unknown or missing fields never fall back to active power.
+        local style = procs[state.proc]
+        if not style or not IsNumber(state.pv) or not IsNumber(state.pm) or state.pm <= 0 then return end
+        return style, math.min(state.pv, state.pm), state.pm
     end
 
-    local function Clear()
-        row:Hide()
-        displayedStyle, displayedCount = nil, nil
+    local function HidePoints()
         for _, point in ipairs(points) do
             point.empty:Hide()
             point.full:Hide()
         end
     end
 
+    local function Clear()
+        row:Hide()
+        displayedStyle, displayedValue, displayedMaximum = nil, nil, nil
+        HidePoints()
+        meter:Hide()
+        meterText:SetText("")
+        meter:SetValue(0)
+        meter:SetMinMaxValues(0, 1)
+    end
+
     local function Update()
-        local value, maximum, power, class = ReadPrimary()
+        local enabled = inWorld and UnitExists("player") and DFRL.display.Get("classResources")
+        local value, maximum, power
+        if enabled then
+            value, maximum, power = ReadPrimary()
+        end
         if DFRL.playerResources then DFRL.playerResources.SetPrimary(value, maximum, power) end
-        if value == nil then
+        -- Observe phase boundaries even while the display option is off.
+        local style, current, total
+        if inWorld then
+            style, current, total = ReadSecondary()
+        end
+        if not enabled or not style then
             if displayedStyle then Clear() end
             return
         end
-        local style, count = ReadSecondary(class, value, maximum, power)
-        if not style then
-            if displayedStyle then Clear() end
-            return
-        end
-        if style ~= displayedStyle then
-            for _, point in ipairs(points) do
+        if style == displayedStyle and current == displayedValue and total == displayedMaximum then return end
+        if style.texture and total <= POINTS and total == math.floor(total) then
+            meter:Hide()
+            meterText:SetText("")
+            for i, point in ipairs(points) do
                 point.empty:SetTexture(style.texture)
                 point.empty:SetTexCoord(unpack(style.empty))
                 point.full:SetTexture(style.texture)
@@ -144,19 +180,28 @@ DFRL:NewMod("Class resources", 2, function()
                     texture:SetWidth(style.width)
                     texture:SetHeight(style.height)
                 end
-                point.empty:Show()
-            end
-        end
-        if style ~= displayedStyle or count ~= displayedCount then
-            for i, point in ipairs(points) do
-                if i <= count then
+                if i <= total then
+                    point.empty:Show()
+                else
+                    point.empty:Hide()
+                end
+                if i <= current and i <= total then
                     point.full:Show()
                 else
                     point.full:Hide()
                 end
             end
+        else
+            -- Continuous procs, or point ranges beyond the existing artwork,
+            -- retain their exact native range rather than assuming five points.
+            HidePoints()
+            meter:SetStatusBarColor(unpack(style.color))
+            meter:SetMinMaxValues(0, total)
+            meter:SetValue(current)
+            meterText:SetText(tostring(current) .. " / " .. tostring(total))
+            meter:Show()
         end
-        displayedStyle, displayedCount = style, count
+        displayedStyle, displayedValue, displayedMaximum = style, current, total
         row:Show()
     end
 
@@ -173,6 +218,7 @@ DFRL:NewMod("Class resources", 2, function()
         "PLAYER_ENTERING_WORLD",
         "PLAYER_LEAVING_WORLD",
         "PLAYER_LOGOUT",
+        "CHAT_MSG_ADDON",
         "UNIT_MANA",
         "UNIT_RAGE",
         "UNIT_FOCUS",
@@ -182,8 +228,6 @@ DFRL:NewMod("Class resources", 2, function()
         "UNIT_MAXFOCUS",
         "UNIT_MAXENERGY",
         "UNIT_DISPLAYPOWER",
-        "PLAYER_TARGET_CHANGED",
-        "PLAYER_COMBO_POINTS",
     }) do
         controller:RegisterEvent(name)
     end
@@ -193,10 +237,12 @@ DFRL:NewMod("Class resources", 2, function()
             Update()
         elseif event == "PLAYER_LEAVING_WORLD" or event == "PLAYER_LOGOUT" then
             inWorld = false
+            retiredRun = _G.AZS_RUN
             if DFRL.playerResources then DFRL.playerResources.SetPrimary() end
             Clear()
-        elseif event == "PLAYER_TARGET_CHANGED" or event == "PLAYER_COMBO_POINTS" then
-            Update()
+        elseif event == "CHAT_MSG_ADDON" then
+            -- Read after the native parser has replaced the run snapshot.
+            if arg1 == "AZSRUN" then elapsed = 0.1 end
         elseif arg1 == "player" then
             Update()
         end
