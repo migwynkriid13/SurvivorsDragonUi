@@ -11,6 +11,12 @@ the native guild/title captions. A plain Blizzard metal corner replaces the
 portrait ring; the window border and working close button remain. Native
 updates can still populate those hidden widgets without making them visible.
 
+With those captions hidden, the character content starts 34 units higher,
+just below the title bar. The character window is also 34 units shorter, at
+478 units, so the removed gap is not transferred to the bottom. Equipment
+sizes, the model viewport size and the stats scrolling area remain unchanged.
+Other native panes keep their original 512-unit window height.
+
 The default left placement has a 12-unit horizontal inset so the window border
 clears the screen edge. Native vertical placement, center/pushed positions and
 other anchors remain unchanged. Opening or moving the panel back to the native

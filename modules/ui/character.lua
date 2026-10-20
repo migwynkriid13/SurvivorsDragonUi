@@ -38,7 +38,8 @@ DFRL:NewMod("Character window", 6, function()
     local attributes = CharacterAttributesFrame
     if not owner or not paper or not model or not attributes then return end
 
-    local WIDTH, HEIGHT, LEFT_WIDTH = 624, 512, 338
+    local WIDTH, HEIGHT, LEFT_WIDTH = 624, 478, 338
+    local BODY_TOP = 28
     local LEFT_INSET = 12
     local MODEL_HEIGHT = 358
     local CONTENT_WIDTH, ROW_WIDTH = 246, 230
@@ -162,9 +163,9 @@ DFRL:NewMod("Character window", 6, function()
 
     local modelBorder = CreateFrame("Frame", nil, paper)
     modelBorder:EnableMouse(false)
-    Place(modelBorder, paper, 48, -64, 239, MODEL_HEIGHT + 8)
+    Place(modelBorder, paper, 48, -BODY_TOP - 2, 239, MODEL_HEIGHT + 8)
     Trim(modelBorder)
-    Place(model, paper, 52, -68, 231, MODEL_HEIGHT)
+    Place(model, paper, 52, -BODY_TOP - 6, 231, MODEL_HEIGHT)
     -- Keep the existing model, bindings, rotation, equipment refresh and camera.
     -- These four native race textures are only its background scenery.
     if type(DressUpTexturePath) == "function" then
@@ -209,7 +210,7 @@ DFRL:NewMod("Character window", 6, function()
         for index, name in ipairs(column.names) do
             local button = _G["Character" .. name .. "Slot"]
             if button then
-                Place(button, paper, column.x, -68 - (index - 1) * 45, 37, 37)
+                Place(button, paper, column.x, -BODY_TOP - 6 - (index - 1) * 45, 37, 37)
                 SlotArt(button, column.cut, column.offset, 0, column.cut[3] - column.cut[1], 44)
             end
         end
@@ -217,18 +218,18 @@ DFRL:NewMod("Character window", 6, function()
     for index, name in ipairs({ "MainHand", "SecondaryHand", "Ranged" }) do
         local button = _G["Character" .. name .. "Slot"]
         if button then
-            Place(button, paper, 101 + (index - 1) * 42, -435, 37, 37)
+            Place(button, paper, 101 + (index - 1) * 42, -BODY_TOP - 373, 37, 37)
             SlotArt(button, { 172, 1, 214, 54 }, -3, 8, 42, 53)
         end
     end
-    if CharacterAmmoSlot then Place(CharacterAmmoSlot, paper, 239, -440, 27, 27) end
+    if CharacterAmmoSlot then Place(CharacterAmmoSlot, paper, 239, -BODY_TOP - 378, 27, 27) end
 
     local panel = CreateFrame("Frame", nil, paper)
-    Place(panel, paper, LEFT_WIDTH + 4, -62, WIDTH - LEFT_WIDTH - 10, HEIGHT - 68)
+    Place(panel, paper, LEFT_WIDTH + 4, -BODY_TOP, WIDTH - LEFT_WIDTH - 10, HEIGHT - BODY_TOP - 6)
     panel:EnableMouse(false)
     Trim(panel)
     local scroll = CreateFrame("ScrollFrame", "SurvivorsDragonUiCharacterStatsScroll", panel)
-    Place(scroll, panel, 8, -8, CONTENT_WIDTH, HEIGHT - 84)
+    Place(scroll, panel, 8, -8, CONTENT_WIDTH, HEIGHT - BODY_TOP - 22)
     local content = CreateFrame("Frame", nil, scroll)
     content:SetWidth(CONTENT_WIDTH)
     content:SetHeight(1)
@@ -518,7 +519,7 @@ DFRL:NewMod("Character window", 6, function()
     local function Apply()
         InsetDefaultPosition()
         owner:SetWidth(paper:IsShown() and WIDTH or 384)
-        owner:SetHeight(HEIGHT)
+        owner:SetHeight(paper:IsShown() and HEIGHT or 512)
         owner:SetHitRectInsets(0, 0, 0, 0)
         paper:SetHitRectInsets(0, 0, 0, 0)
         HideStockArt(owner)
