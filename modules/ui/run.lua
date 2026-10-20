@@ -926,10 +926,8 @@ DFRL:NewMod("RunTimers", 5, function()
             DFRL.display.BeginEdit()
             if DFRL.sct then DFRL.sct.BeginEdit() end
             fontDraft = FontSettings(_G.SurvivorsDragonUiRunFont)
-            if not fontEditor then CreateFontEditor() end
             PreviewFont(fontDraft)
             UpdateSctLabels()
-            fontEditor:Show()
         else
             DFRL.display.FinishEdit(save)
             if DFRL.sct then DFRL.sct.FinishEdit(save) end
@@ -939,6 +937,17 @@ DFRL:NewMod("RunTimers", 5, function()
             if fontEditor then fontEditor:Hide() end
         end
     end
+
+    DFRL.layout.SetEditorVisibilityHandler(function(shown)
+        if shown then
+            if not fontEditor then CreateFontEditor() end
+            PreviewFont(fontDraft)
+            UpdateSctLabels()
+            fontEditor:Show()
+        elseif fontEditor then
+            fontEditor:Hide()
+        end
+    end)
 
     PreviewFont(_G.SurvivorsDragonUiRunFont)
     DFRL.layout.Register("runTimer", run, function()

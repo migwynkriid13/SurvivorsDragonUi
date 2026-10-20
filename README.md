@@ -18,6 +18,7 @@ The file should be at `benilla-config/AddOns/SurvivorsDragonUi/SurvivorsDragonUi
 Type `/sdui` to open the editor.
 
 - Drag a frame to move it. Drag its corners to resize it.
+- Use `/sdui lock` for move and resize handles with only the **Confirm** button. Use `/sdui` to return to the full editor.
 - Use **Layout** for positions and sizes, **HUD** for display options, **Combat text** for damage numbers, and **Run timer** for its text and font.
 - Click **Confirm** to save, or **Cancel** to undo your changes. Leaving the run or reloading also discards unsaved changes.
 

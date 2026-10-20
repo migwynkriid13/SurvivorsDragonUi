@@ -6,6 +6,7 @@ DFRL:NewMod("Layout", 0, function()
     local needsDefaultPosition = false
     local activeDrag
     local editing, draft, confirm = false, nil, nil
+    local handlesOnly, setEditorVisible = false, nil
     local coordinates, selected, RefreshCoordinates, SelectEntry
     local showCoordinates
     local confirmAnchor
@@ -454,7 +455,7 @@ DFRL:NewMod("Layout", 0, function()
             coordinates.status:SetText("")
             RefreshCoordinates()
         end
-        if activate and showCoordinates then showCoordinates() end
+        if activate and showCoordinates and not handlesOnly then showCoordinates() end
     end
     local function ApplyCoordinates()
         if not editing or not selected then return end
@@ -649,6 +650,7 @@ DFRL:NewMod("Layout", 0, function()
             ShowHandle(entry, false)
         end
         if confirm then confirm:Hide() end
+        handlesOnly = false
         if restore ~= false then
             for _, entry in ipairs(order) do
                 layout.Place(entry.key)
@@ -658,20 +660,32 @@ DFRL:NewMod("Layout", 0, function()
     function layout.CancelEdit() CloseEditing(false, true) end
     local function PlaceConfirm()
         if not confirm then return end
-        local anchor = confirmAnchor or UIParent
+        local anchor = not handlesOnly and confirmAnchor or UIParent
         confirm:SetParent(anchor)
         confirm:SetFrameStrata("TOOLTIP")
         confirm:SetFrameLevel(200)
         confirm:ClearAllPoints()
-        confirm:SetPoint("CENTER", anchor, "CENTER", 0, 0)
+        if handlesOnly then
+            confirm:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, 24)
+        else
+            confirm:SetPoint("CENTER", anchor, "CENTER", 0, 0)
+        end
     end
     function layout.SetConfirmAnchor(anchor)
         confirmAnchor = anchor
         PlaceConfirm()
     end
-    function layout.BeginEdit()
+    function layout.SetEditorVisibilityHandler(callback) setEditorVisible = callback end
+    function layout.BeginEdit(onlyHandles)
         if not ready or not inWorld then return end
         local starting = not editing
+        handlesOnly = onlyHandles == true
+        if editing and handlesOnly and coordinates then
+            -- Keep staged geometry, but leave no unapplied text behind a hidden dialog.
+            FinishDrag(activeDrag, true)
+            ClearCoordinateFocus()
+            RefreshCoordinates()
+        end
         if not editing then
             draft = {}
             -- Preserve lazy-window records too, without aliasing committed data.
@@ -685,6 +699,7 @@ DFRL:NewMod("Layout", 0, function()
                 if entry.options.onEdit then entry.options.onEdit(true) end
             end
         end
+        if setEditorVisible then setEditorVisible(not handlesOnly) end
         if not confirm then
             confirm = T.CreateEditorButton(confirmAnchor or UIParent, "Confirm", 140, 30, true)
             confirm:SetScript("OnClick", function() CloseEditing(true, true) end)
@@ -795,6 +810,8 @@ DFRL:NewMod("Layout", 0, function()
         local command = string.lower(string.gsub(message or "", "^%s*(.-)%s*$", "%1"))
         if command == "reset" then
             layout.Reset()
+        elseif command == "lock" then
+            layout.BeginEdit(true)
         elseif command == "" then
             layout.BeginEdit()
         elseif DEFAULT_CHAT_FRAME then
