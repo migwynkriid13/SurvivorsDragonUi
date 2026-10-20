@@ -194,7 +194,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 (y + height / 2 - top) / height,
                 (y + height / 2 - bottom) / height
             )
-            texture:SetAlpha(alpha)
+            texture:SetAlpha(alpha * 1.25)
             if not piece.shown then
                 texture:Show()
                 piece.shown = true
