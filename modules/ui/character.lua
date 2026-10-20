@@ -215,7 +215,9 @@ DFRL:NewMod("Character window", 6, function()
             r, g, b = GetItemQualityColor(quality)
         else
             local color = _G["ITEM_QUALITY" .. quality .. "_COLOR"]
-            if color then r, g, b = color.r, color.g, color.b end
+            if color then
+                r, g, b = color.r, color.g, color.b
+            end
         end
         if type(r) ~= "number" or type(g) ~= "number" or type(b) ~= "number" then return end
         border:SetVertexColor(r, g, b, 1)
