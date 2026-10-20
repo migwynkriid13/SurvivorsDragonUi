@@ -44,6 +44,7 @@ DFRL:NewMod("Waypoints", 3, function()
             source = "AZS_CHESTS",
             prefix = "AZSCHESTS",
             displayKey = "cacheGuidance",
+            mirrorKey = "mirrorCacheWaypoint",
             layoutKey = "cacheWaypoint",
             frameName = "DFRL_CacheWaypoint",
             title = "Cache",
@@ -57,6 +58,7 @@ DFRL:NewMod("Waypoints", 3, function()
             source = "AZS_LAIRS",
             prefix = "AZSLAIRS",
             displayKey = "guardianGuidance",
+            mirrorKey = "mirrorGuardianWaypoint",
             layoutKey = "guardianWaypoint",
             frameName = "DFRL_GuardianWaypoint",
             title = "Guardian",
@@ -375,6 +377,26 @@ DFRL:NewMod("Waypoints", 3, function()
         return true
     end
 
+    local function LayoutHUD(tracker)
+        local mirrored = DFRL.display.Get(tracker.mirrorKey)
+        if tracker.mirrored == mirrored then return end
+        local hud = tracker.hud
+        local side = mirrored and "RIGHT" or "LEFT"
+        local sign = mirrored and -1 or 1
+        tracker.marker:ClearAllPoints()
+        tracker.marker:SetPoint(side, hud, side, sign * 26, 0)
+        for _, entry in ipairs({ { tracker.titleText, -6 }, { tracker.distanceText, -22 } }) do
+            local label = entry[1]
+            label:ClearAllPoints()
+            label:SetPoint("TOP" .. side, hud, "TOP" .. side, sign * 68, entry[2])
+            label:SetJustifyH(side)
+        end
+        -- Move the arrow's pivot only; its native direction and UV rotation stay intact.
+        tracker.pointer:ClearAllPoints()
+        tracker.pointer:SetPoint("CENTER", hud, "LEFT", mirrored and 27 or HUD_WIDTH - 27, 0)
+        tracker.mirrored = mirrored
+    end
+
     local function MakeHUD(tracker)
         tracker.entries, tracker.pins = {}, {}
         local hud = CreateFrame("Frame", tracker.frameName, UIParent)
@@ -389,7 +411,6 @@ DFRL:NewMod("Waypoints", 3, function()
         marker:SetWidth(32)
         marker:SetHeight(32)
         marker:SetTexCoord(unpack(tracker.hudTexCoord))
-        marker:SetPoint("LEFT", hud, "LEFT", 26, 0)
         tracker.marker = marker
         local pointer = hud:CreateTexture(nil, "OVERLAY")
         pointer:SetTexture(texturePath .. "HudArrow.tga")
@@ -400,10 +421,8 @@ DFRL:NewMod("Waypoints", 3, function()
         DFRL.locale.Bind(title)
         T.SetFont(title, 13, "OUTLINE")
         title:SetTextColor(0.93, 0.8, 0.53)
-        title:SetPoint("TOPLEFT", hud, "TOPLEFT", 68, -6)
         title:SetWidth(76)
         title:SetHeight(16)
-        title:SetJustifyH("LEFT")
         title:SetJustifyV("MIDDLE")
         title:SetShadowColor(0, 0, 0, 0.9)
         title:SetShadowOffset(1, -1)
@@ -411,14 +430,14 @@ DFRL:NewMod("Waypoints", 3, function()
         local distanceText = hud:CreateFontString(nil, "OVERLAY")
         T.SetFont(distanceText, 15, "OUTLINE")
         distanceText:SetTextColor(1, 0.96, 0.85)
-        distanceText:SetPoint("TOPLEFT", hud, "TOPLEFT", 68, -22)
         distanceText:SetWidth(76)
         distanceText:SetHeight(19)
-        distanceText:SetJustifyH("LEFT")
         distanceText:SetJustifyV("MIDDLE")
         distanceText:SetShadowColor(0, 0, 0, 0.9)
         distanceText:SetShadowOffset(1, -1)
-        tracker.hud, tracker.pointer, tracker.distanceText = hud, pointer, distanceText
+        tracker.hud, tracker.pointer = hud, pointer
+        tracker.titleText, tracker.distanceText = title, distanceText
+        LayoutHUD(tracker)
         RegisterHUD(tracker)
     end
     for _, tracker in ipairs(trackers) do
@@ -436,6 +455,7 @@ DFRL:NewMod("Waypoints", 3, function()
         end
     end
     local function Clear(tracker)
+        if tracker.kind == "guardian" and DFRL.guardians then DFRL.guardians.Clear() end
         ClearMinimapPins(tracker.kind)
         tracker.entries = {}
         navigation.SetPoints(tracker.source, nil)
@@ -474,7 +494,7 @@ DFRL:NewMod("Waypoints", 3, function()
             return
         end
         local guardian = tracker.kind == "guardian"
-        local result, seen = {}, {}
+        local result, seen, lairs = {}, {}, {}
         for _, entry in ipairs(list) do
             if type(entry) ~= "table" then return end
             -- Both occupied states mean a living guardian. Coordinates belong
@@ -483,6 +503,18 @@ DFRL:NewMod("Waypoints", 3, function()
             if guardian then
                 if not Integer(entry.index, 1) or seen[entry.index] then return end
                 seen[entry.index] = true
+                table.insert(lairs, {
+                    index = entry.index,
+                    id = entry.id,
+                    name = entry.name,
+                    state = entry.state,
+                    left = entry.left,
+                    x = entry.x,
+                    y = entry.y,
+                    z = entry.z,
+                    mx = entry.mx,
+                    my = entry.my,
+                })
             end
             if not guardian or occupied then
                 if
@@ -513,6 +545,10 @@ DFRL:NewMod("Waypoints", 3, function()
         end
         tracker.acceptedSnapshot = list
         tracker.acceptedGeneration = tracker.packetGeneration or 0
+        if guardian and DFRL.guardians then
+            local context = Number(_G.AZS_ZONE_UPDATED) and _G.AZS_ZONE or nil
+            DFRL.guardians.AcceptLairs(lairs, _G.AZS_LAIRS_UPDATED, tracker.acceptedGeneration, context)
+        end
         return result
     end
 
@@ -740,8 +776,6 @@ DFRL:NewMod("Waypoints", 3, function()
         if moving and metric and facing then
             -- Native heading is counterclockwise, destination bearing clockwise.
             local angle = bearing + facing
-            tracker.pointer:ClearAllPoints()
-            tracker.pointer:SetPoint("CENTER", tracker.hud, "LEFT", HUD_WIDTH - 27, 0)
             Rotate(tracker.pointer, angle)
             tracker.pointer:Show()
         else
@@ -847,6 +881,9 @@ DFRL:NewMod("Waypoints", 3, function()
                 identity = nil
                 navigation.Reset()
                 ClearAll()
+            elseif arg1 == "AZSUNITS" then
+                if DFRL.guardians then DFRL.guardians.UnitsReceived() end
+                return
             elseif arg1 ~= "AZSRUN" then
                 local received = false
                 for _, tracker in ipairs(trackers) do
@@ -882,6 +919,7 @@ DFRL:NewMod("Waypoints", 3, function()
         -- Visibility drafts do not retire snapshots, selections or calibration.
         UpdateMap()
         for _, tracker in ipairs(trackers) do
+            LayoutHUD(tracker)
             UpdateGuide(tracker)
         end
         if not DFRL.display.Get("guardianGuidance") then ClearMinimapPins("guardian", true) end

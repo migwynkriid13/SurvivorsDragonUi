@@ -373,7 +373,7 @@ DFRL:NewMod("RunTimers", 5, function()
         shadow = true,
         showText = true,
     }
-    local currentFont, fontDraft, fontEditor, fontSample, fontMenu
+    local currentFont, fontDraft, fontEditor, fontSample, fontSampleClock, fontMenu
     local faceLabel, sizeLabel, shadowControl, visibilityControl
     local displayControls, outlineButtons, faceButtons, sctButtons = {}, {}, {}, {}
     local incomingControl, sctDescription
@@ -443,10 +443,87 @@ DFRL:NewMod("RunTimers", 5, function()
         text:SetShadowOffset(settings.shadow and 1 or 0, settings.shadow and -1 or 0)
     end
 
+    local function NewClockLabel(source)
+        local ruler = source:GetParent():CreateFontString(nil, "OVERLAY")
+        ruler:Hide()
+        source:Hide()
+        return { source = source, ruler = ruler, parts = {} }
+    end
+
+    local function RefreshClockLabel(clock)
+        local source = clock.source
+        local text = source:GetText() or ""
+        local scale = source:GetParent():GetEffectiveScale()
+        if not IsNumber(scale) or scale <= 0 then return end
+        if clock.text == text and T.NearlyEqual(clock.scale, scale) then return end
+        local width, height = source:GetStringWidth() or 0, source:GetHeight() or 0
+        if text ~= "" and (width <= 0 or height <= 0) then return end
+        local pixel = 1 / scale
+        local used, cursor = 0, 1
+        local function Part(first, last, raised)
+            if last < first then return end
+            used = used + 1
+            local label = clock.parts[used]
+            if not label then
+                label = source:GetParent():CreateFontString(nil, "OVERLAY")
+                ApplyFont(label, clock.settings)
+                label:SetTextColor(source:GetTextColor())
+                label:SetJustifyH("LEFT")
+                label:SetJustifyV("MIDDLE")
+                table.insert(clock.parts, label)
+            end
+            local x = 0
+            if first > 1 then
+                -- Keep the full string's kerning at each segment boundary.
+                clock.ruler:SetText(string.sub(text, 1, first))
+                x = clock.ruler:GetStringWidth() or 0
+                clock.ruler:SetText(string.sub(text, first, first))
+                x = x - (clock.ruler:GetStringWidth() or 0)
+            end
+            label:ClearAllPoints()
+            label:SetPoint("BOTTOMLEFT", source, "BOTTOMLEFT", x, raised and pixel or 0)
+            label:SetHeight(height)
+            label:SetText(string.sub(text, first, last))
+            if clock.visible then
+                label:Show()
+            else
+                label:Hide()
+            end
+        end
+        while cursor <= string.len(text) do
+            local first, last = string.find(text, "%d+:%d%d", cursor)
+            if not first then
+                Part(cursor, string.len(text), false)
+                break
+            end
+            Part(cursor, last - 2, false)
+            Part(last - 1, last, true)
+            cursor = last + 1
+        end
+        for index = used + 1, table.getn(clock.parts) do
+            clock.parts[index]:SetText("")
+            clock.parts[index]:Hide()
+        end
+        clock.text, clock.scale, clock.pixel = text, scale, pixel
+        return true
+    end
+
+    local function StyleClockLabel(clock, settings, visible)
+        clock.settings, clock.visible, clock.text = settings, visible, nil
+        ApplyFont(clock.source, settings)
+        ApplyFont(clock.ruler, settings)
+        for _, label in ipairs(clock.parts) do
+            ApplyFont(label, settings)
+            label:Hide()
+        end
+        RefreshClockLabel(clock)
+    end
+
+    local runClock = NewClockLabel(runText)
     local function UpdateRunFontBounds()
         local width = currentFont.showText and (runText:GetStringWidth() or 0) or 0
         local overflow = math.max(0, (width + 8 - run:GetWidth()) / 2)
-        local top = currentFont.showText and currentFont.size + 4 or 0
+        local top = currentFont.showText and currentFont.size + 4 + (runClock.pixel or 0) or 0
         runMoveRegion:ClearAllPoints()
         runMoveRegion:SetPoint("TOPLEFT", run, "TOPLEFT", -overflow, top)
         runMoveRegion:SetPoint("BOTTOMRIGHT", run, "BOTTOMRIGHT", overflow, 0)
@@ -454,15 +531,10 @@ DFRL:NewMod("RunTimers", 5, function()
 
     local function PreviewFont(settings)
         currentFont = FontSettings(settings)
-        ApplyFont(runText, currentFont)
-        if currentFont.showText then
-            runText:Show()
-        else
-            runText:Hide()
-        end
+        StyleClockLabel(runClock, currentFont, currentFont.showText)
         UpdateRunFontBounds()
         if not fontEditor then return end
-        ApplyFont(fontSample, currentFont)
+        StyleClockLabel(fontSampleClock, currentFont, true)
         for _, entry in ipairs(fontFaces) do
             if currentFont.face == entry.face then faceLabel:SetText(entry.label) end
             if faceButtons[entry.face] then faceButtons[entry.face]:SetSelected(currentFont.face == entry.face) end
@@ -573,9 +645,19 @@ DFRL:NewMod("RunTimers", 5, function()
             { "flipBuffs", "Flip buff layout", "Flip icon order only; keep text placement." },
             { "cooldownNumbers", "Cooldown numbers", "Show countdowns on ability buttons." },
             { "bossDebuffs", "Boss debuffs", "Effects on boss and guardian health bars." },
-            { "targetDebuffsOnTop", "Target debuffs on top", "Place target debuffs above the target frame." },
             { "cacheGuidance", "Cache guidance", "Show the cache direction and distance." },
+            {
+                "mirrorCacheWaypoint",
+                "Mirror cache waypoint",
+                "Move the arrow to the left and the icon to the right.",
+            },
             { "guardianGuidance", "Guardian guidance", "Show the guardian lair direction and distance." },
+            {
+                "mirrorGuardianWaypoint",
+                "Mirror guardian waypoint",
+                "Move the arrow to the left and the icon to the right.",
+            },
+            { "targetDebuffsOnTop", "Target debuffs on top", "Place target debuffs above the target frame." },
             { "equippedJewelry", "Equipped jewelry", "Show five equipped items attached to the action bar." },
             {
                 "hideNativeBuild",
@@ -824,6 +906,7 @@ DFRL:NewMod("RunTimers", 5, function()
         fontSample = FontEditorLabel(timer, DFRL.locale.Text("RUN") .. " 02:34 / 20:00", 0, 0)
         fontSample:ClearAllPoints()
         fontSample:SetPoint("TOP", timer, "TOP", 0, -16)
+        fontSampleClock = NewClockLabel(fontSample)
         local controlX = inputX - padding
         FontEditorLabel(timer, "Font", 0, -66, 11)
         local fontButton
@@ -957,6 +1040,10 @@ DFRL:NewMod("RunTimers", 5, function()
     end, {
         region = runMoveRegion,
         onEdit = EditRunFont,
+        onResize = function()
+            RefreshClockLabel(runClock)
+            UpdateRunFontBounds()
+        end,
         onReset = function()
             DFRL.display.Reset()
             _G.SurvivorsDragonUiRunFont = nil
@@ -1508,13 +1595,11 @@ DFRL:NewMod("RunTimers", 5, function()
         createdRows = createdRows + 1
         local frame, bar, name, rowOverlay = Pill("DFRL_BossHealthPill" .. tostring(createdRows), "FillWhite")
         frame:SetParent(bossGroup)
-        bar:SetStatusBarColor(0.86, 0.12, 0.1, 1)
         T.SetFont(name, 12, "OUTLINE")
         name:SetWidth(BAR_WIDTH)
         local health = rowOverlay:CreateFontString(nil, "OVERLAY")
-        T.SetFont(health, 12, "OUTLINE")
         health:SetPoint("CENTER", frame, "CENTER", 0, 0)
-        health:SetTextColor(1, 1, 1)
+        T.StyleEncounterHealth(bar, health)
         return { frame = frame, bar = bar, name = name, health = health, debuffs = {} }
     end
 
@@ -1692,7 +1777,7 @@ DFRL:NewMod("RunTimers", 5, function()
             row.id = entry.id
             row.bar:SetValue(math.min(1, entry.hp / entry.maximum))
             row.name:SetText(entry.name)
-            row.health:SetText(tostring(math.floor(entry.hp)) .. " / " .. tostring(math.floor(entry.maximum)))
+            row.health:SetText(T.EncounterHealthText(entry.hp, entry.maximum))
             row.frame:Show()
             table.insert(rowOrder, row)
         end
@@ -1763,10 +1848,9 @@ DFRL:NewMod("RunTimers", 5, function()
             UpdateRunFlow(seconds, maximum)
             local clockText = DFRL.locale.Text("RUN") .. " " .. Clock(seconds)
             if not atLimit then clockText = clockText .. " / " .. Clock(maximum) end
-            if runText:GetText() ~= clockText then
-                runText:SetText(clockText)
-                UpdateRunFontBounds()
-            end
+            if runText:GetText() ~= clockText then runText:SetText(clockText) end
+            if RefreshClockLabel(runClock) then UpdateRunFontBounds() end
+            if fontEditor and fontEditor:IsShown() then RefreshClockLabel(fontSampleClock) end
             -- Missing schedule replay affects only spawn markers, never a clock
             -- whose native elapsed time and duration have already recovered.
             if refreshRows or not run:IsShown() or not scheduled then UpdateMarkers(maximum, scheduled or {}) end

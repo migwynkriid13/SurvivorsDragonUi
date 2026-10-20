@@ -16,6 +16,12 @@ Language is session-only. No setting, command, profile, SavedVariable, client pr
 
 The shared editor/button factories bind only addon-owned captions. Changing the language refreshes existing bound captions, including layout handles and pending editor status text, without recreating controls or discarding drafts. Dynamic HUD/tooltips read the shared translations when they update.
 
+The two waypoint mirror captions and their shared arrow/icon hint have source TSV
+entries and runtime UI entries in all fourteen languages. The HUD editor measures
+them through its existing shared label/description sizing and scrolls the paired
+guidance/mirror rows. Only these new caption entries were generated; reviewed
+native catalogs, effects and aliases remain unchanged.
+
 Coverage includes the four editor tabs and their controls, numeric-layout hints and status, run label, counter and encounter hints, waypoint titles/map-pin hints/distance units, menu buttons, chat scrolling/copy captions, combat-text feedback/miss captions, cooldown unit abbreviations and the frame inspector's explanatory text. Font family names, addon/game names, slash-command tokens, API identifiers, native unit/item/spell names, raw captured messages/events and bootstrap error diagnostics remain verbatim.
 
 Editor controls measure native glyph widths across all fourteen translations before choosing shared widths. The dialog stays within the available viewport width. Jewelry retains natural-width measurement, its 272-unit wrapping column and the native wrapped-height measurement; no character-count width estimates or UTF-8 byte slicing are introduced. The frame inspector truncates previews only at complete UTF-8 character boundaries. Copy's hint area reserves two lines.
@@ -59,3 +65,20 @@ Source executable SHA-256: `6382e9ae654295293b82d48fb07a1aa999132775bda10c6c6f80
 - `scripts/generate_localization.py --client PATH_TO_CLIENT` prepares `localization/data.lua`. Its pinned fingerprint and catalog-count guard require source review before accepting a different game build or language order. It supplies neither fixed gameplay values nor a complete localization dump.
 
 The runtime manifest adds only `core/localization.lua` and `localization/data.lua`; source JSON/TSV, documentation and the generator do not enter the release ZIP. Source inspection and data generation do not establish packaged-game behavior or native-speaker translation approval. No local tests, syntax checks, formatting tools or addon/game execution were run. The existing PR GitHub Actions checks are the authorized static checks.
+
+The guardian tracker adds nine addon-caption rows for its heading, layout label,
+states, formatted return text and lair tooltip. They are represented
+in `ui.tsv` and all fourteen generated UI sections. The current executable was not
+accepted as a replacement for the pinned native catalogs: its layout could not be
+read by the existing extractor. Only the new TSV caption data was inserted into
+the existing generated UI sections; native wording, effects, identity evidence and
+Czech icon aliases remain from the reviewed source above.
+
+The resting guardian caption is **Alive** in all fourteen languages; native due
+rows optimistically use the same caption and green color. The tracker
+uses shared boss-bar current / maximum health formatting instead of a Fighting
+caption or percentage; the unused earlier status captions were removed.
+
+The guardian header toggle adds localized **Show living guardians only** and
+**Show all lairs** tooltips in all fourteen UI catalogs. Its collapsed plus
+view contains living guardians; its expanded minus view contains all lairs; native names remain unchanged.

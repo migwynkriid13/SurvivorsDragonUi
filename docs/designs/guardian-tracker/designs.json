@@ -1,0 +1,142 @@
+[
+  {
+    "number": 1,
+    "title": "Waypoint ledger",
+    "subtitle": "The closest fit to the existing Guardian HUD.",
+    "recipe": "A",
+    "description": "A transparent list, one medallion and the existing muted gold baseline."
+  },
+  {
+    "number": 2,
+    "title": "Editor metal ledger",
+    "subtitle": "Matches the /sdui diamond-metal frame.",
+    "recipe": "AB",
+    "description": "A contained list using the editor's fixed corners and stretched edge strips."
+  },
+  {
+    "number": 3,
+    "title": "Character metal panel",
+    "subtitle": "Plain Blizzard metal, restrained gold text.",
+    "recipe": "AC",
+    "description": "A compact sibling of the character window with its plain metal frame."
+  },
+  {
+    "number": 4,
+    "title": "Quest header list",
+    "subtitle": "A published quest-tracker header above open rows.",
+    "recipe": "AD",
+    "description": "An older retail-style header option; more ornamental than the current HUD."
+  },
+  {
+    "number": 5,
+    "title": "Medallion stack",
+    "subtitle": "Independent rows built around the Guardian medallion.",
+    "recipe": "A",
+    "description": "A smaller repeat of the existing floating waypoint language on every row."
+  },
+  {
+    "number": 6,
+    "title": "State chapters",
+    "subtitle": "Separate sections for held and vacant lairs.",
+    "recipe": "A",
+    "description": "Status grouping keeps fighting and upcoming returns easy to find."
+  },
+  {
+    "number": 7,
+    "title": "Two-column ledger",
+    "subtitle": "Living on the left, vacant lairs on the right.",
+    "recipe": "AB",
+    "description": "A wider, shorter list for placement below the minimap."
+  },
+  {
+    "number": 8,
+    "title": "Numbered lair register",
+    "subtitle": "A compact three-column register in native order.",
+    "recipe": "AB",
+    "description": "Stable lair numbers, names and a right-aligned status column."
+  },
+  {
+    "number": 9,
+    "title": "Timer bezel rows",
+    "subtitle": "The same gold-edged pills as the run timer.",
+    "recipe": "AE",
+    "description": "Each status sits inside a real timer bezel; only known health has a fill."
+  },
+  {
+    "number": 10,
+    "title": "Horizontal nameplates",
+    "subtitle": "Five small entries in a single row.",
+    "recipe": "A",
+    "description": "A wide strip with one medallion per lair and status underneath."
+  },
+  {
+    "number": 11,
+    "title": "Lair tile grid",
+    "subtitle": "A compact three-by-two arrangement.",
+    "recipe": "AC",
+    "description": "Five metal tiles with clear state text and a reserved final summary cell."
+  },
+  {
+    "number": 12,
+    "title": "Numbered spine",
+    "subtitle": "A vertical guide line with small lair badges.",
+    "recipe": "AF",
+    "description": "One continuous spine keeps the list visually light."
+  },
+  {
+    "number": 13,
+    "title": "Metal row cards",
+    "subtitle": "Shallow character-panel cards for each guardian.",
+    "recipe": "AC",
+    "description": "Native stat-card pieces form individual rows without a surrounding window."
+  },
+  {
+    "number": 14,
+    "title": "Fight focus",
+    "subtitle": "A larger active fight beside the complete roster.",
+    "recipe": "ACE",
+    "description": "Highlights the fighting guardian's actual health; all other lairs stay listed."
+  },
+  {
+    "number": 15,
+    "title": "Next return focus",
+    "subtitle": "A large return time beside the held lairs.",
+    "recipe": "ABE",
+    "description": "A readable native countdown without inventing a respawn progress percentage."
+  },
+  {
+    "number": 16,
+    "title": "Micro ledger",
+    "subtitle": "The narrowest complete list.",
+    "recipe": "A",
+    "description": "A very small open ledger with concise, readable status text."
+  },
+  {
+    "number": 17,
+    "title": "Soft shadow ledger",
+    "subtitle": "A fading dark backdrop borrowed from Level Up.",
+    "recipe": "AF",
+    "description": "The soft backdrop supports the text without another hard window border."
+  },
+  {
+    "number": 18,
+    "title": "Highlighted register",
+    "subtitle": "A single focus row with the editor's gold selection.",
+    "recipe": "AB",
+    "description": "A list that can later show the selected lair; the preview demonstrates the artwork only."
+  },
+  {
+    "number": 19,
+    "title": "Bottom status tray",
+    "subtitle": "Five evenly spaced state cells in a thin tray.",
+    "recipe": "ABE",
+    "description": "A low, wide alternative intended near the action-bar stack."
+  },
+  {
+    "number": 20,
+    "title": "Waypoint companion",
+    "subtitle": "The current guidance label above a matching roster.",
+    "recipe": "A",
+    "description": "Reuses the visual proportions of the existing Guardian guidance HUD."
+  }
+]

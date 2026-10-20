@@ -34,6 +34,11 @@ scenery and lower trim end higher to keep the equipment row clear.
 
 Equipped items of uncommon or higher quality have a colored inner border,
 using Blizzard's `WhiteIconFrame` artwork and the native item-quality palette.
+The original full-opacity rim now has a 40%-alpha additive brightness pass and
+a 30%-alpha additive outer rim extending one UI unit beyond the button. All three
+reuse the same transparent artwork and native color, making the quality outline
+brighter and wider while keeping the item icon clear. Button and icon dimensions,
+metal surrounds, cooldowns and input bounds remain unchanged.
 All equipment slots, including weapons, ranged/relic and ammo, share the same
 handling. Poor/common, empty and unknown-quality slots keep the neutral metal
 surround. Native slot updates refresh the border after equipment changes;
@@ -41,7 +46,9 @@ opening the pane refreshes every border. The skin reads
 `GetInventoryItemQuality` and `GetItemQualityColor`, with the native quality
 color globals as a fallback. It never infers rarity from the item's name or
 tooltip, recolors its icon or replaces native slot scripts. Borders hide on
-world leave/logout and no item data is saved.
+world leave/logout and no item data is saved. One shared hide path clears all
+three layers together before each native quality read, including missing,
+common-quality and empty-slot results.
 
 ## Native behavior
 

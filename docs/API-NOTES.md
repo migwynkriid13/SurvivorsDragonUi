@@ -1,5 +1,25 @@
 # Official addon API integration — 2026-10-14
 
+## Run-timer seconds alignment — 2026-10-20
+
+The user reported the seconds appearing one pixel below the minutes and requested
+a fixed upward correction for all seconds values. The live run label and its font
+preview now share a segmented renderer: minutes and colons keep their existing
+baseline, while both elapsed and duration seconds are raised by one physical
+pixel. The correction is uniform for 00–59, without digit-specific rules or font
+substitution. This does not establish the original renderer/font cause.
+
+The full translated caption stays in a hidden native FontString for its original
+centred bounds. A second hidden FontString measures prefixes, preserving kerning
+at segment boundaries. Pooled visible parts use the same native font resolution,
+size, outline, shadow and text visibility. Text/font/effective-scale changes
+refresh their anchors, and shared resize handling updates the live label and edit
+bounds. Unused duration parts clear and hide when the run reaches its limit. Run
+values, `MM:SS` formatting, tooltip clocks, clock takeover, preferences and saved
+geometry remain unchanged. No new setting, font, asset or SavedVariable is added.
+No local checks or addon/game execution were run; packaged-game rendering remains
+unverified.
+
 ## Pointed player health-bar seam — 2026-10-19
 
 The user reported a slight gap beside the non-circular player portrait and requested a two-unit extension to the left. The shared overlap helper now uses a two-unit underlap for the pointed player frame: health width/inset become 124/102 instead of 122/104, keeping the far edge at 226. The health background, damage-loss segment and optional resource row/divider follow the same span. The existing label compensation keeps health/resource values and the name in place; name width excludes the overlap so its original text area remains unchanged.
