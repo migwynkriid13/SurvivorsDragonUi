@@ -81,11 +81,16 @@ DFRL:NewMod("StoredLevels", 5, function()
     countText:SetTextColor(0.1, 0.05, 0)
     countText:SetPoint("CENTER", badge, "CENTER", 0, 0)
 
-    local highlight = button:CreateTexture(nil, "HIGHLIGHT")
+    local highlight = visual:CreateTexture(nil, "OVERLAY")
     highlight:SetTexture("Interface\\Buttons\\WHITE8X8")
-    highlight:SetPoint("TOPLEFT", button, "TOPLEFT", 4 * VISUAL_SCALE, -4 * VISUAL_SCALE)
-    highlight:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -4 * VISUAL_SCALE, 4 * VISUAL_SCALE)
+    highlight:SetPoint("TOPLEFT", visual, "TOPLEFT", 4, -4)
+    highlight:SetPoint("BOTTOMRIGHT", visual, "BOTTOMRIGHT", -4, 4)
     highlight:SetVertexColor(0.97, 0.82, 0.42, 0.12)
+    highlight:Hide()
+    button:SetScript("OnEnter", function()
+        if not editing then highlight:Show() end
+    end)
+    button:SetScript("OnLeave", function() highlight:Hide() end)
 
     local function PositiveInteger(value)
         return type(value) == "number" and value > 0 and value - value == 0 and math.floor(value) == value
@@ -134,6 +139,7 @@ DFRL:NewMod("StoredLevels", 5, function()
 
     local function Clear()
         button:Hide()
+        highlight:Hide()
         countText:SetText("")
         level:SetText("")
         icon:Hide()
@@ -176,6 +182,7 @@ DFRL:NewMod("StoredLevels", 5, function()
     end, {
         onEdit = function(active)
             editing = active
+            highlight:Hide()
             button:EnableMouse(not active)
         end,
     })
