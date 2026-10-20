@@ -35,6 +35,7 @@ SOFTWARE.
 ]]
 DFRL:NewMod("StoredLevels", 5, function()
     local HEIGHT, INTERVAL, VISUAL_SCALE, PULSE_PERIOD = 72, 0.1, 0.7, 1.8
+    local TEXT_LEFT, PANEL_PADDING = 72, 10
     local texturePath = DFRL:GetInfoOrCons("tex") .. "levelup\\"
     local CLASS_ICONS = {
         WARRIOR = { 0, 0.25, 0, 0.25 },
@@ -62,17 +63,21 @@ DFRL:NewMod("StoredLevels", 5, function()
     visual:SetScale(VISUAL_SCALE)
     visual:SetPoint("TOPLEFT", button, "TOPLEFT", 0, 0)
     visual:EnableMouse(false)
-    local backdrop = visual:CreateTexture(nil, "BACKGROUND")
+    local panel = CreateFrame("Frame", nil, visual)
+    panel:SetHeight(HEIGHT)
+    panel:SetPoint("CENTER", visual, "CENTER", 0, 0)
+    panel:EnableMouse(false)
+    local backdrop = panel:CreateTexture(nil, "BACKGROUND")
     backdrop:SetTexture(texturePath .. "Backdrop.tga")
-    backdrop:SetAllPoints(visual)
-    local glow = visual:CreateTexture(nil, "BORDER")
+    backdrop:SetAllPoints(panel)
+    local glow = panel:CreateTexture(nil, "BORDER")
     glow:SetTexture(texturePath .. "Glow.tga")
-    glow:SetAllPoints(visual)
+    glow:SetAllPoints(panel)
     glow:SetBlendMode("ADD")
     glow:Hide()
-    local content = CreateFrame("Frame", nil, visual)
+    local content = CreateFrame("Frame", nil, panel)
     content:SetHeight(HEIGHT)
-    content:SetPoint("CENTER", visual, "CENTER", 0, 0)
+    content:SetPoint("CENTER", panel, "CENTER", 0, 0)
     content:EnableMouse(false)
 
     local icon = content:CreateTexture(nil, "BACKGROUND")
@@ -92,38 +97,41 @@ DFRL:NewMod("StoredLevels", 5, function()
     title:SetShadowColor(0, 0, 0, 1)
     title:SetShadowOffset(1, -1)
     title:SetJustifyH("CENTER")
-    title:SetPoint("TOPLEFT", content, "TOPLEFT", 82, -12)
+    title:SetPoint("TOPLEFT", content, "TOPLEFT", TEXT_LEFT, -12)
     title:SetText("Level Up!")
     local width = math.max(220, DFRL.locale.Width(title, "Level Up!") + 96)
     visual:SetWidth(width)
     button:SetWidth(width * VISUAL_SCALE)
-    content:SetWidth(width - 8)
-    title:SetWidth(width - 90)
+    panel:SetWidth(width)
+    content:SetWidth(width - PANEL_PADDING * 2)
+    title:SetWidth(width - PANEL_PADDING * 2 - TEXT_LEFT)
     title:SetHeight(30)
     local level = content:CreateFontString(nil, "OVERLAY")
     T.SetFont(level, 12, "OUTLINE")
-    level:SetWidth(width - 90)
+    level:SetWidth(width - PANEL_PADDING * 2 - TEXT_LEFT)
     level:SetHeight(18)
     level:SetJustifyH("CENTER")
     level:SetTextColor(0.87, 0.73, 0.41)
     level:SetPoint("TOP", title, "BOTTOM", 0, -2)
 
     local function AlignCaptions()
-        -- Fit one centered icon/text group inside the stable multilingual bounds.
-        -- Both captions share a column, including a wider current-level caption.
+        -- Fit the backdrop to the active captions instead of the widest locale,
+        -- keeping the compact panel centered in the existing edit bounds.
         local measured = title:GetStringWidth()
         if type(measured) ~= "number" or measured <= 0 or measured - measured ~= 0 then return end
         local textWidth = math.max(math.ceil(measured), math.ceil(level:GetStringWidth() or 0)) + 4
-        local contentWidth = 82 + textWidth
+        local contentWidth = TEXT_LEFT + textWidth
+        local panelWidth = contentWidth + PANEL_PADDING * 2
         if not T.NearlyEqual(title:GetWidth(), textWidth) then title:SetWidth(textWidth) end
         if not T.NearlyEqual(level:GetWidth(), textWidth) then level:SetWidth(textWidth) end
         if not T.NearlyEqual(content:GetWidth(), contentWidth) then content:SetWidth(contentWidth) end
+        if not T.NearlyEqual(panel:GetWidth(), panelWidth) then panel:SetWidth(panelWidth) end
     end
 
     local badge = CreateFrame("Frame", nil, content)
     badge:SetWidth(20)
     badge:SetHeight(20)
-    badge:SetPoint("TOPRIGHT", content, "TOPLEFT", 68, 0)
+    badge:SetPoint("TOPRIGHT", content, "TOPLEFT", 68, -8)
     local badgeArt = badge:CreateTexture(nil, "BACKGROUND")
     badgeArt:SetTexture(texturePath .. "CountBadge.tga")
     badgeArt:SetAllPoints(badge)
