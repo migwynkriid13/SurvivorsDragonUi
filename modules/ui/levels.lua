@@ -6,7 +6,8 @@ DragonUI/Textures/Collections/IconFrameGold.tga, full 128-by-128 canvas.
 Its source notices credit the DragonflightUI Spellbook-Parts artwork.
 Underlying World of Warcraft artwork remains copyright Blizzard Entertainment;
 the software license below does not relicense Blizzard artwork.
-CountBadge.tga is original geometric artwork. No source-addon Lua is imported.
+CountBadge.tga, Backdrop.tga and Glow.tga are original geometric artwork.
+No source-addon Lua is imported.
 Full provenance and preparation: third_party/LevelUp-ARTWORK.md.
 
 Applicable source notices:
@@ -33,7 +34,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ]]
 DFRL:NewMod("StoredLevels", 5, function()
-    local HEIGHT, INTERVAL, VISUAL_SCALE = 72, 0.1, 0.7
+    local HEIGHT, INTERVAL, VISUAL_SCALE, PULSE_PERIOD = 72, 0.1, 0.7, 1.8
     local texturePath = DFRL:GetInfoOrCons("tex") .. "levelup\\"
     local CLASS_ICONS = {
         WARRIOR = { 0, 0.25, 0, 0.25 },
@@ -61,32 +62,45 @@ DFRL:NewMod("StoredLevels", 5, function()
     visual:SetScale(VISUAL_SCALE)
     visual:SetPoint("TOPLEFT", button, "TOPLEFT", 0, 0)
     visual:EnableMouse(false)
+    local backdrop = visual:CreateTexture(nil, "BACKGROUND")
+    backdrop:SetTexture(texturePath .. "Backdrop.tga")
+    backdrop:SetAllPoints(visual)
+    local glow = visual:CreateTexture(nil, "BORDER")
+    glow:SetTexture(texturePath .. "Glow.tga")
+    glow:SetAllPoints(visual)
+    glow:SetBlendMode("ADD")
+    glow:Hide()
+    local content = CreateFrame("Frame", nil, visual)
+    content:SetHeight(HEIGHT)
+    content:SetPoint("CENTER", visual, "CENTER", 0, 0)
+    content:EnableMouse(false)
 
-    local icon = visual:CreateTexture(nil, "BACKGROUND")
+    local icon = content:CreateTexture(nil, "BACKGROUND")
     icon:SetTexture("Interface\\Glues\\CharacterCreate\\UI-CharacterCreate-Classes")
     icon:SetWidth(HEIGHT * 55 / 103)
     icon:SetHeight(HEIGHT * 55 / 103)
-    icon:SetPoint("TOPLEFT", visual, "TOPLEFT", HEIGHT * 21 / 103, -HEIGHT * 17 / 103)
-    local bezel = visual:CreateTexture(nil, "ARTWORK")
+    icon:SetPoint("TOPLEFT", content, "TOPLEFT", HEIGHT * 21 / 103, -HEIGHT * 17 / 103)
+    local bezel = content:CreateTexture(nil, "ARTWORK")
     bezel:SetTexture(texturePath .. "IconFrameGold.tga")
     bezel:SetWidth(HEIGHT)
     bezel:SetHeight(HEIGHT)
-    bezel:SetPoint("TOPLEFT", visual, "TOPLEFT", 0, 0)
-    local title = visual:CreateFontString(nil, "OVERLAY")
+    bezel:SetPoint("TOPLEFT", content, "TOPLEFT", 0, 0)
+    local title = content:CreateFontString(nil, "OVERLAY")
     DFRL.locale.Bind(title)
     T.SetFont(title, 22, "OUTLINE")
     title:SetTextColor(1, 0.91, 0.69)
     title:SetShadowColor(0, 0, 0, 1)
     title:SetShadowOffset(1, -1)
     title:SetJustifyH("CENTER")
-    title:SetPoint("TOPLEFT", visual, "TOPLEFT", 82, -12)
+    title:SetPoint("TOPLEFT", content, "TOPLEFT", 82, -12)
     title:SetText("Level Up!")
     local width = math.max(220, DFRL.locale.Width(title, "Level Up!") + 96)
     visual:SetWidth(width)
     button:SetWidth(width * VISUAL_SCALE)
+    content:SetWidth(width - 8)
     title:SetWidth(width - 90)
     title:SetHeight(30)
-    local level = visual:CreateFontString(nil, "OVERLAY")
+    local level = content:CreateFontString(nil, "OVERLAY")
     T.SetFont(level, 12, "OUTLINE")
     level:SetWidth(width - 90)
     level:SetHeight(18)
@@ -95,20 +109,21 @@ DFRL:NewMod("StoredLevels", 5, function()
     level:SetPoint("TOP", title, "BOTTOM", 0, -2)
 
     local function AlignCaptions()
-        -- Natural glyph width keeps the level centered under the visible title,
-        -- independently of the stable edit bounds measured across languages.
+        -- Fit one centered icon/text group inside the stable multilingual bounds.
+        -- Both captions share a column, including a wider current-level caption.
         local measured = title:GetStringWidth()
         if type(measured) ~= "number" or measured <= 0 or measured - measured ~= 0 then return end
-        local titleWidth = math.ceil(measured) + 4
-        local levelWidth = math.max(titleWidth, math.ceil(level:GetStringWidth() or 0) + 4)
-        if not T.NearlyEqual(title:GetWidth(), titleWidth) then title:SetWidth(titleWidth) end
-        if not T.NearlyEqual(level:GetWidth(), levelWidth) then level:SetWidth(levelWidth) end
+        local textWidth = math.max(math.ceil(measured), math.ceil(level:GetStringWidth() or 0)) + 4
+        local contentWidth = 82 + textWidth
+        if not T.NearlyEqual(title:GetWidth(), textWidth) then title:SetWidth(textWidth) end
+        if not T.NearlyEqual(level:GetWidth(), textWidth) then level:SetWidth(textWidth) end
+        if not T.NearlyEqual(content:GetWidth(), contentWidth) then content:SetWidth(contentWidth) end
     end
 
-    local badge = CreateFrame("Frame", nil, visual)
+    local badge = CreateFrame("Frame", nil, content)
     badge:SetWidth(20)
     badge:SetHeight(20)
-    badge:SetPoint("TOPRIGHT", visual, "TOPLEFT", 68, 0)
+    badge:SetPoint("TOPRIGHT", content, "TOPLEFT", 68, 0)
     local badgeArt = badge:CreateTexture(nil, "BACKGROUND")
     badgeArt:SetTexture(texturePath .. "CountBadge.tga")
     badgeArt:SetAllPoints(badge)
@@ -118,16 +133,37 @@ DFRL:NewMod("StoredLevels", 5, function()
     countText:SetTextColor(0.1, 0.05, 0)
     countText:SetPoint("CENTER", badge, "CENTER", 0, 0)
 
-    local highlight = visual:CreateTexture(nil, "OVERLAY")
+    local highlight = content:CreateTexture(nil, "OVERLAY")
     highlight:SetTexture(texturePath .. "IconFrameGold.tga")
     highlight:SetAllPoints(bezel)
     highlight:SetBlendMode("ADD")
-    highlight:SetAlpha(0.35)
     highlight:Hide()
+    local pulseElapsed, hovered = 0, false
     button:SetScript("OnEnter", function()
-        if not editing then highlight:Show() end
+        if not editing then hovered = true end
     end)
-    button:SetScript("OnLeave", function() highlight:Hide() end)
+    button:SetScript("OnLeave", function() hovered = false end)
+    button:SetScript("OnShow", function()
+        pulseElapsed = 0
+        glow:SetAlpha(0.25)
+        highlight:SetAlpha(0.1)
+        glow:Show()
+        highlight:Show()
+    end)
+    button:SetScript("OnHide", function()
+        pulseElapsed, hovered = 0, false
+        glow:Hide()
+        highlight:Hide()
+    end)
+    -- This updater runs only while the real button is visible with waiting
+    -- levels. Hidden groups and cleanup stop it through normal frame visibility.
+    button:SetScript("OnUpdate", function()
+        pulseElapsed = pulseElapsed + math.min(tonumber(arg1) or 0, 0.1)
+        if pulseElapsed >= PULSE_PERIOD then pulseElapsed = pulseElapsed - PULSE_PERIOD end
+        local pulse = 0.5 - 0.5 * math.cos(pulseElapsed * 2 * math.pi / PULSE_PERIOD)
+        glow:SetAlpha(0.25 + 0.65 * pulse)
+        highlight:SetAlpha((hovered and 0.3 or 0.1) + 0.4 * pulse)
+    end)
 
     local function PositiveInteger(value)
         return type(value) == "number" and value > 0 and value - value == 0 and math.floor(value) == value
@@ -218,9 +254,10 @@ DFRL:NewMod("StoredLevels", 5, function()
         button:ClearAllPoints()
         button:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, 190)
     end, {
+        labelAbove = true,
         onEdit = function(active)
             editing = active
-            highlight:Hide()
+            hovered = false
             button:EnableMouse(not active)
         end,
         onResize = AlignCaptions,

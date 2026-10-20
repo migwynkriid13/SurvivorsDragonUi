@@ -308,7 +308,11 @@ DFRL:NewMod("Layout", 0, function()
         local label = handle:CreateFontString(nil, "OVERLAY")
         DFRL.locale.Bind(label)
         T.SetFont(label, 10, "OUTLINE")
-        label:SetPoint("CENTER", handle, "CENTER", 0, 0)
+        if entry.options.labelAbove then
+            label:SetPoint("BOTTOM", handle, "TOP", 0, 6)
+        else
+            label:SetPoint("CENTER", handle, "CENTER", 0, 0)
+        end
         label:SetTextColor(0.87, 0.73, 0.41)
         label:SetText(labels[entry.key] or entry.key)
         handle:SetScript("OnDragStart", function()
