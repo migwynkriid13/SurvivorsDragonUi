@@ -85,13 +85,7 @@ DFRL:NewMod("StoredLevels", 5, function()
     icon:SetTexture("Interface\\Glues\\CharacterCreate\\UI-CharacterCreate-Classes")
     icon:SetWidth(HEIGHT * 55 / 103)
     icon:SetHeight(HEIGHT * 55 / 103)
-    icon:SetPoint(
-        "TOPLEFT",
-        content,
-        "TOPLEFT",
-        HEIGHT * 21 / 103 + ICON_OFFSET_X,
-        -HEIGHT * 17 / 103 - ICON_OFFSET_Y
-    )
+    icon:SetPoint("TOPLEFT", content, "TOPLEFT", HEIGHT * 21 / 103 + ICON_OFFSET_X, -HEIGHT * 17 / 103 - ICON_OFFSET_Y)
     local bezel = content:CreateTexture(nil, "ARTWORK")
     bezel:SetTexture(texturePath .. "IconFrameGold.tga")
     bezel:SetWidth(HEIGHT)
