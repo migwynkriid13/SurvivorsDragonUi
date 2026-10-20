@@ -567,7 +567,7 @@ DFRL:NewMod("Character window", 6, function()
             levelText:SetWidth(0)
             if paper:IsShown() then
                 levelWidth = math.ceil(levelText:GetStringWidth())
-                if nameWidth > 0 and levelWidth > 0 then gap = 12 end
+                if nameWidth > 0 and levelWidth > 0 then gap = 3 end
                 levelText:Show()
             else
                 levelText:Hide()

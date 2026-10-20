@@ -7,7 +7,8 @@ native updates try to show them. Mouse wheel, scrollbar and arrow buttons reach 
 complete stats list. This is an addon skin of the native window.
 
 The native character name and level/race/class caption share one centered row
-inside the top metal border. Both use gold DEFAULT text. Native name, rank and
+inside the top metal border, with a three-unit word gap. Both use gold DEFAULT
+text. Native name, rank and
 level updates still supply the captions, including translated wording; their
 combined width stays clear of the close button. Other native panes show only
 the name. The portrait and native guild/title captions stay hidden, including
