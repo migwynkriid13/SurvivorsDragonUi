@@ -2,7 +2,7 @@
 
 The game's stored-level **Level Up!** button is drawn outside Lua's frame system. Its public addon API supports hiding the original, reading the waiting count and opening the choices. It does not expose the original button's anchors or artwork for direct movement or reskinning.
 
-`modules/ui/levels.lua` supplies an addon-owned replacement with a class icon, waiting-count badge, current-level caption and Level Up! label. It uses native textures, the DEFAULT font and the game's fourteen translated captions. Its red background and gold border follow the original's appearance without copying its renderer, circular clipping or animated hover treatment.
+`modules/ui/levels.lua` supplies an addon-owned replacement using the selected **28 · Framed Icon + Text** design. A gold ornamental square frames the native class icon, with a round waiting-count badge at its upper-right. The Level Up! heading floats beside it, with the current-level caption centered directly underneath. Both use the DEFAULT font and the game's fourteen translated captions. The heading uses its natural glyph width so the caption remains centered across languages. See [artwork sources and preparation](../third_party/LevelUp-ARTWORK.md).
 
 ## Native API
 
@@ -20,7 +20,7 @@ The original is hidden only after the replacement has been built and populated a
 
 ## Shared layout
 
-`levelUp` is an independent group in the existing layout registry, labeled **Level Up!**. Its default anchor is centered 190 UI units above the bottom of UIParent. Its width fits the heading across all supported languages. The default design is 70% of the initial PR button's width and height: a 0.7-scale inner visual sits inside matching button/edit bounds. The icon, text, badge and border scale together. The shared Layout scale stays relative to this smaller design, so a confirmed 100% scale also uses the new default without rewriting saved geometry or moving its anchor.
+`levelUp` is an independent group in the existing layout registry, labeled **Level Up!**. Its default anchor is centered 190 UI units above the bottom of UIParent. Its width fits the heading across all supported languages. The default design is 70% of the initial PR button's width and height: a 0.7-scale inner visual sits inside matching button/edit bounds. The icon, text, badge and gold frame scale together. The shared Layout scale stays relative to this smaller design, so a confirmed 100% scale also uses the new default without rewriting saved geometry or moving its anchor.
 
 The existing editor owns dragging, corner resizing, numeric placement, Hide frame, Confirm, Cancel, both full resets and world/reload draft discard. Only confirmed geometry and optional visibility use `SurvivorsDragonUiLayout`; no SavedVariable, display setting or command is added. The layout handle remains available when no levels are waiting without showing invented counts or enabling a gameplay click. Editing disables the button's click action.
 
