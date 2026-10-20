@@ -27,6 +27,12 @@ This maps the reports to source-level failure paths; visibility and texture rend
 
 The first installed fix exposed another native-handle difference: `Fonts` stopped at `core/fonts.lua:36` with `stale or invalid widget handle` while scanning globals. A retained wrapper can expose `GetObjectType` but raise when called. Each native font candidate is now inspected and updated within its own protected call, so a retired widget cannot abort the rest of the pass.
 
+## Native chat resize error
+
+The supplied screenshot reports `FloatingChatFrame.lua:600: Frame ChatFrame1 is not resizable`. The addon marked each attached native chat frame non-resizable but hid only a control named `ResizeButton`. The pinned [original FloatingChatFrame XML](https://github.com/MOUZU/Blizzard-WoW-Interface/blob/d162a4c0d198a4381b5b6573d975635ed7316702/1.12.1/FrameXML/FloatingChatFrame.xml) instead defines eight edge/corner resize buttons. Their mouse handlers call `FCF_Resize`, whose [native Lua implementation](https://github.com/MOUZU/Blizzard-WoW-Interface/blob/d162a4c0d198a4381b5b6573d975635ed7316702/1.12.1/FrameXML/FloatingChatFrame.lua#L600) calls `StartSizing` on the parent. Those untouched buttons could therefore invoke sizing on a frame the addon had made non-resizable.
+
+Chat setup now permanently hides all eight controls through the existing control-hiding helper, retaining `ResizeButton` support for other client layouts. It restores the native frame's XML-declared resizable capability. The separate `/sdui` container still owns chat position and dimensions; native events, history, hyperlinks, wheel scrolling and message formatting remain in place. No FrameXML globals are overridden and no error handler is suppressed. This is a source-reviewed correction; local checks and addon/game execution were intentionally not run, so live behavior remains unverified.
+
 ## Lua 5.0 closure limit
 
 The subsequent supplied reload screenshot reports `modules/ui/run.lua:1761: too many upvalues (limit=32)`. This is a compiler rejection: the combined HUD update captured more locals than Lua 5.0 permits, so the whole `RunTimers` module was unavailable before any of its initialization ran. That independently explains the absent run clock, encounter bars and kills/gold/cache-cost tally. The earlier font errors also affected these paths where compilation succeeded.

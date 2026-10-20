@@ -443,11 +443,30 @@ DFRL:NewMod("Chat", 1, function()
                 end
             end)
 
-            for _, suffix in ipairs({ "Tab", "ResizeButton", "UpButton", "DownButton", "BottomButton", "ButtonFrame" }) do
+            -- Classic chat has eight separate resize buttons. Hiding only
+            -- ResizeButton leaves those native hit areas active.
+            for _, suffix in ipairs({
+                "Tab",
+                "ResizeButton",
+                "ResizeTopLeft",
+                "ResizeTopRight",
+                "ResizeBottomLeft",
+                "ResizeBottomRight",
+                "ResizeTop",
+                "ResizeBottom",
+                "ResizeLeft",
+                "ResizeRight",
+                "UpButton",
+                "DownButton",
+                "BottomButton",
+                "ButtonFrame",
+            }) do
                 HideControl(_G["ChatFrame" .. index .. suffix])
             end
             if native.SetMovable then native:SetMovable(false) end
-            if native.SetResizable then native:SetResizable(false) end
+            -- Preserve FrameXML's resize capability; /sdui owns the container
+            -- dimensions and the native mouse resize controls stay hidden.
+            if native.SetResizable then native:SetResizable(true) end
         end
 
         RefreshFrames = function()
