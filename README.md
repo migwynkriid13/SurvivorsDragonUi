@@ -30,10 +30,11 @@ To use the game's damage numbers, choose **Game settings** under **Combat text**
 
 - Player and target frames, a seven-button action bar, equipped jewelry, XP, kills, gold and cache cost.
 - A run timer with boss markers, plus boss and guardian health bars.
+- A guardian tracker with health bars during combat. Plus shows only living guardians; minus shows all lairs and respawn timers. Move, resize or hide it through `/sdui` → **Layout**.
 - A movable **Level Up!** button for stored levels. Select it in `/sdui` → **Layout** to move or resize it, then **Confirm** to save.
 - Compact nameplates and custom damage numbers with size, color and damage filters.
 - Transparent chat with shorter game messages and mouse-wheel history.
-- Cache and guardian guides with distance, direction and world-map pins.
+- Cache and guardian guides with distance, direction and world-map pins. Mirror each guide in `/sdui` → **HUD** to put its arrow on either side.
 - Minimap loot-pouch icons for nearby caches and gold skull medallions for all living guardians. Empty or dead lairs show no icon, and Guardian guidance hides the red flag. Guardian icons mark their lairs, including while they are fighting elsewhere.
 
 Player, target and target-of-target portraits use the original 2D images by default. **Experimental 3D portraits** in `/sdui` → **HUD** switches all three to 3D.

@@ -1,16 +1,20 @@
 DFRL:NewMod("Map", 1, function()
     local texpath = "Interface\\AddOns\\SurvivorsDragonUi\\media\\tex\\minimap\\"
+    local defaults = { width = 180, height = 180, right = -8, top = -32, zoomX = -21, zoomY = 40, zoomScale = 0.8 }
+    -- Export appearance geometry before layout restores any confirmed placement.
+    defaults.zoomOutCenterX = defaults.right + (defaults.zoomX - MinimapZoomOut:GetWidth() / 2) * defaults.zoomScale
+    DFRL.minimapDefaults = defaults
 
     local container = CreateFrame("Frame", "DFRL_Minimap", UIParent)
-    container:SetWidth(180)
-    container:SetHeight(180)
-    container:SetPoint("TOPRIGHT", UIParent, "TOPRIGHT", -8, -32)
+    container:SetWidth(defaults.width)
+    container:SetHeight(defaults.height)
+    container:SetPoint("TOPRIGHT", UIParent, "TOPRIGHT", defaults.right, defaults.top)
     Minimap:SetParent(container)
     Minimap:ClearAllPoints()
     -- Keep the zone strip at the top edge and tuck the map closer beneath it.
     Minimap:SetAllPoints(container)
-    Minimap:SetWidth(180)
-    Minimap:SetHeight(180)
+    Minimap:SetWidth(defaults.width)
+    Minimap:SetHeight(defaults.height)
     Minimap:SetAlpha(1)
     Minimap:SetFrameStrata("MEDIUM")
     Minimap:SetMaskTexture("Interface\\Buttons\\WHITE8X8")
@@ -94,18 +98,14 @@ DFRL:NewMod("Map", 1, function()
 
     MinimapZoomIn:ClearAllPoints()
     MinimapZoomIn:SetParent(Minimap)
-    MinimapZoomIn:SetPoint("TOPLEFT", Minimap, "BOTTOMRIGHT", -21, 40)
+    MinimapZoomIn:SetPoint("TOPLEFT", Minimap, "BOTTOMRIGHT", defaults.zoomX, defaults.zoomY)
     MinimapZoomOut:ClearAllPoints()
     MinimapZoomOut:SetParent(Minimap)
     MinimapZoomOut:SetPoint("TOPRIGHT", MinimapZoomIn, "BOTTOMLEFT", 0, 0)
     for _, button in ipairs({ MinimapZoomIn, MinimapZoomOut }) do
         local name = button == MinimapZoomIn and "ZoomIn32" or "ZoomOut32"
-        button:SetScale(0.8)
-        button:SetAlpha(1)
-        button:SetNormalTexture(texpath .. name .. ".tga")
-        button:SetDisabledTexture(texpath .. name .. "-disabled.tga")
-        button:SetHighlightTexture(texpath .. name .. "-over.tga")
-        button:SetPushedTexture(texpath .. name .. "-push.tga")
+        button:SetScale(defaults.zoomScale)
+        T.StyleMinimapZoomButton(button, name)
         button:Show()
     end
 

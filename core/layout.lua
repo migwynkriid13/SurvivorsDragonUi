@@ -27,6 +27,7 @@ DFRL:NewMod("Layout", 0, function()
         minimap = "Minimap",
         cacheWaypoint = "Cache waypoint",
         guardianWaypoint = "Guardian waypoint",
+        guardianTracker = "Guardian tracker",
         menu = "Main menu",
         chat = "Chat",
         copyWindow = "Copy",
@@ -244,6 +245,11 @@ DFRL:NewMod("Layout", 0, function()
         end
         local position = GeometryStore()[key]
         ApplySize(entry, Valid(position) and position or nil)
+        -- Variable-width groups may keep a default edge aligned as their text grows.
+        if entry.options.refreshDefault and not Valid(position) then
+            entry.defaultAnchor(entry.frame)
+            entry.defaultPosition = ReadPosition(entry.frame)
+        end
         ApplyPosition(entry.frame, Valid(position) and position or entry.defaultPosition)
         ApplyVisibility(entry)
     end

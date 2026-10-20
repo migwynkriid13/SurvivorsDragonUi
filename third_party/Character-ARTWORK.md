@@ -104,6 +104,15 @@ size: 37 by 37, or 27 by 27 for ammo, with ordinary alpha blending. Its vertex
 color comes from the native item-quality palette, for uncommon or higher items.
 Poor/common, empty and unavailable-quality slots have no colored overlay.
 
+For the requested stronger quality outline, the original full-opacity layer is
+joined by two copies of this same unmodified texture: an aligned additive pass
+at alpha 0.4 and an additive outer rim at alpha 0.3. The outer copy extends one
+local UI unit on every side (39 by 39 for equipment, 29 by 29 for ammo). All
+copies use the exact native quality RGB and the full original UV rectangle;
+transparent centres leave item artwork clear. They remain ordinary button-owned
+OVERLAY textures, preserving native child cooldowns and input handling. No new
+asset or source crop is introduced, and all layers share native refresh/cleanup.
+
 Blizzard's pinned 10.2.7
 [`ItemButtonTemplate.xml`](https://github.com/Gethe/wow-ui-source/blob/6b65c2922baca3db5a28fb39b69c95cef1047bec/Interface/AddOns/Blizzard_ItemButton/Mainline/ItemButtonTemplate.xml)
 defines the centered 37-by-37 `IconBorder` using this texture. Its
@@ -113,7 +122,8 @@ no retail item-button API or Lua module is imported. DragonUI's pinned
 [`itemquality.lua`](https://github.com/NeticSoul/DragonUI/blob/6d9cc95eedd1de78fab3b965683df13421e21604/DragonUI/modules/itemquality.lua)
 was also inspected: it uses the native equipped-item quality and defaults to
 uncommon or higher, with a larger additive action-button glow. This integration
-uses Blizzard's thin item frame with the existing metal surrounds.
+uses Blizzard's item frame with the existing metal surrounds and the additional
+brightness/outer-rim passes described above.
 
 ### `media/tex/character/Background.tga`
 

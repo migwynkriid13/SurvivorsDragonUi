@@ -206,10 +206,17 @@ DFRL:NewMod("Character window", 6, function()
         },
     }
     local qualityBorders = {}
+    local function HideQuality(button)
+        local borders = qualityBorders[button]
+        if not borders then return end
+        for _, border in ipairs(borders) do
+            border:Hide()
+        end
+        return borders
+    end
     local function UpdateQuality(button)
-        local border = qualityBorders[button]
-        if not border then return end
-        border:Hide()
+        local borders = HideQuality(button)
+        if not borders then return end
         if type(GetInventoryItemQuality) ~= "function" then return end
         local slot = button:GetID()
         if not GetInventoryItemTexture("player", slot) then return end
@@ -225,17 +232,29 @@ DFRL:NewMod("Character window", 6, function()
             end
         end
         if type(r) ~= "number" or type(g) ~= "number" or type(b) ~= "number" then return end
-        border:SetVertexColor(r, g, b, 1)
-        border:Show()
+        for _, border in ipairs(borders) do
+            border:SetVertexColor(r, g, b, 1)
+            border:Show()
+        end
     end
 
-    local function AddQualityBorder(button)
+    local function QualityEdge(button, blend, alpha, outset)
         local border = button:CreateTexture(nil, "OVERLAY")
         border:SetTexture(path .. "QualityBorder.tga")
-        border:SetBlendMode("BLEND")
-        border:SetAllPoints(button)
+        border:SetBlendMode(blend)
+        border:SetAlpha(alpha)
+        border:SetPoint("TOPLEFT", button, "TOPLEFT", -outset, outset)
+        border:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", outset, -outset)
         border:Hide()
-        qualityBorders[button] = border
+        return border
+    end
+    local function AddQualityBorder(button)
+        -- Keep the native palette and icon clear; brighten and widen only the rim.
+        qualityBorders[button] = {
+            QualityEdge(button, "BLEND", 1, 0),
+            QualityEdge(button, "ADD", 0.4, 0),
+            QualityEdge(button, "ADD", 0.3, 1),
+        }
     end
 
     local function RefreshQuality()
@@ -692,8 +711,8 @@ DFRL:NewMod("Character window", 6, function()
     controller:SetScript("OnEvent", function()
         controller:SetScript("OnUpdate", nil)
         slider:SetValue(0)
-        for _, border in pairs(qualityBorders) do
-            border:Hide()
+        for button in pairs(qualityBorders) do
+            HideQuality(button)
         end
     end)
     Apply()
