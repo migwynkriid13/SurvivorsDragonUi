@@ -38,8 +38,11 @@ DFRL:NewMod("Character window", 6, function()
     local attributes = CharacterAttributesFrame
     if not owner or not paper or not model or not attributes then return end
 
-    local WIDTH, HEIGHT, LEFT_WIDTH = 624, 478, 338
+    local WIDTH, LEFT_WIDTH = 624, 338
     local BODY_TOP = 28
+    local WEAPON_TOP = BODY_TOP + 373
+    local WEAPON_ART_TOP, WEAPON_ART_HEIGHT = 8, 53
+    local HEIGHT = WEAPON_TOP - WEAPON_ART_TOP + WEAPON_ART_HEIGHT + 6
     local LEFT_INSET = 12
     local MODEL_HEIGHT = 358
     local CONTENT_WIDTH, ROW_WIDTH = 246, 230
@@ -260,12 +263,12 @@ DFRL:NewMod("Character window", 6, function()
     for index, name in ipairs({ "MainHand", "SecondaryHand", "Ranged" }) do
         local button = _G["Character" .. name .. "Slot"]
         if button then
-            Place(button, paper, 101 + (index - 1) * 42, -BODY_TOP - 373, 37, 37)
-            SlotArt(button, { 172, 1, 214, 54 }, -3, 8, 42, 53)
+            Place(button, paper, 101 + (index - 1) * 42, -WEAPON_TOP, 37, 37)
+            SlotArt(button, { 172, 1, 214, 54 }, -3, WEAPON_ART_TOP, 42, WEAPON_ART_HEIGHT)
         end
     end
     if CharacterAmmoSlot then
-        Place(CharacterAmmoSlot, paper, 239, -BODY_TOP - 378, 27, 27)
+        Place(CharacterAmmoSlot, paper, 239, -WEAPON_TOP - 5, 27, 27)
         AddQualityBorder(CharacterAmmoSlot)
     end
 

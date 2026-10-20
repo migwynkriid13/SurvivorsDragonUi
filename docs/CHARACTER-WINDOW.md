@@ -15,11 +15,12 @@ the name. The portrait and native guild/title captions stay hidden, including
 after native Show attempts. A plain Blizzard metal corner replaces the
 portrait ring; the window border and working close button remain.
 
-With the captions inside the border, the character content starts 34 units higher,
-just below the title bar. The character window is also 34 units shorter, at
-478 units, so the removed gap is not transferred to the bottom. Equipment
-sizes, the model viewport size and the stats scrolling area remain unchanged.
-Other native panes keep their original 512-unit window height.
+The character content starts just below the title bar. Window height follows
+the bottom of the weapon artwork, with six units of clearance. At the current
+equipment placement that is 452 units high, removing the empty strip below the
+weapons. The sidebar follows the shorter window and retains a 402-unit scroll
+viewport. Equipment positions and sizes, the model viewport and the top anchor
+remain unchanged. Other native panes keep their original 512-unit height.
 
 The default left placement has a 12-unit horizontal inset so the window border
 clears the screen edge. Native vertical placement, center/pushed positions and
@@ -62,8 +63,8 @@ panel width, with a 12-unit gutter. Each pair uses the taller row's measured
 height, so long translated labels and values wrap without overlapping the next
 pair. An odd final stat stays in the left column. Hidden conditional stats leave
 no empty cells; category heights and the scroll range follow the visible rows.
-The category headings still span both columns. Window, equipment and model
-geometry remain unchanged.
+The category headings still span both columns. Both columns use the shared
+scroll area; equipment and model geometry are independent of row layout.
 
 The native `AZSMoreStats` container and its existing rows join that same scroll
 child. Rows retain their native conditional Show/Hide state and tooltip fields.
