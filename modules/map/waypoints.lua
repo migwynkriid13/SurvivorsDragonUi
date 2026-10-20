@@ -85,11 +85,12 @@ DFRL:NewMod("Waypoints", 3, function()
         local PIN_SIZE = 20
         local outdoorDiameter = { 14, 12, 10, 8, 6, 4 }
         local indoorDiameter = { 300, 240, 180, 120, 80, 50 }
-        local guardianPin
-        local cachePins, cachePool, cacheCycle = {}, {}, 0
         local originalFlag
         local mode, modeDirty, probing, reloading = nil, true, false, false
         local pendingZoom, RollbackZoom
+        for _, tracker in ipairs(trackers) do
+            tracker.minimapPins, tracker.minimapPool, tracker.minimapCycle = {}, {}, 0
+        end
 
         local function Shown(value)
             if value == true or value == 1 or value == "1" then return true end
@@ -102,24 +103,25 @@ DFRL:NewMod("Waypoints", 3, function()
             if ok then return Shown(value) end
         end
 
-        local function RecycleCaches(cycle)
-            for key, pin in pairs(cachePins) do
+        local function RecyclePins(tracker, cycle)
+            for key, pin in pairs(tracker.minimapPins) do
                 if not cycle or pin.cycle ~= cycle then
                     pin:Hide()
                     pin.entryKey, pin.cycle = nil, nil
-                    cachePins[key] = nil
-                    table.insert(cachePool, pin)
+                    tracker.minimapPins[key] = nil
+                    table.insert(tracker.minimapPool, pin)
                 end
             end
         end
 
         ClearMinimapPins = function(kind, retryZoom)
-            if not kind or kind == "cache" then RecycleCaches(nil) end
-            if not kind or kind == "guardian" then
-                if guardianPin then guardianPin:Hide() end
+            for _, tracker in ipairs(trackers) do
+                if not kind or tracker.kind == kind then RecyclePins(tracker, nil) end
             end
             if pendingZoom and (pendingZoom.retry or retryZoom) and not probing then RollbackZoom() end
-            if kind == "cache" then return end
+        end
+
+        local function RestoreNativeFlag()
             if originalFlag == nil or type(_G.AZS_SetHudShown) ~= "function" then return end
             local ok = pcall(_G.AZS_SetHudShown, "flag", originalFlag)
             if ok and FlagShown() == originalFlag then originalFlag = nil end
@@ -235,18 +237,6 @@ DFRL:NewMod("Waypoints", 3, function()
             mode = nil
         end
 
-        local function FlaggedGuardian()
-            if trackers[2].flagState ~= "occupied" then return end
-            local flagged
-            for _, entry in ipairs(trackers[2].entries) do
-                if entry.flag == 1 then
-                    if flagged then return end
-                    flagged = entry
-                end
-            end
-            return flagged
-        end
-
         local function MakeMinimapPin(tracker)
             local pin = CreateFrame("Frame", nil, Minimap)
             local size = tracker.kind == "cache" and PIN_SIZE * 0.8 or PIN_SIZE
@@ -289,92 +279,66 @@ DFRL:NewMod("Waypoints", 3, function()
             if Number(x) and Number(y) then return x, y end
         end
 
-        local function DrawGuardian(x, y)
-            if not guardianPin then guardianPin = MakeMinimapPin(trackers[2]) end
-            return PlacePin(guardianPin, x, y)
-        end
-
-        local function GuardianEnabled()
-            return DFRL.display.Get("guardianGuidance")
-                and type(_G.AZS_GetFlaggedLair) == "function"
-                and type(_G.AZS_IsHudShown) == "function"
-                and type(_G.AZS_SetHudShown) == "function"
-                and Minimap
-        end
-
-        local function UpdateGuardian(scale, edge)
-            -- The getter's presence identifies flag-capable builds. Its return
-            -- shape is not assumed; only the accepted lair snapshot selects it.
-            if not GuardianEnabled() then
-                ClearMinimapPins("guardian")
-                return
-            end
-            -- The native flag also selects an empty lair that will refill.
-            -- Suppress that explicit accepted state without inventing a target
-            -- or requiring coordinates/zoom to draw a replacement there.
-            if trackers[2].flagState == "empty" then
-                if guardianPin then guardianPin:Hide() end
-                if not HideNativeFlag() then ClearMinimapPins("guardian") end
-                return
-            end
-            local flagged = FlaggedGuardian()
-            if not scale or not flagged or FlagShown() == nil then
-                ClearMinimapPins("guardian")
-                return
-            end
-            local x, y = Offset(flagged, scale)
-            if not x then
-                ClearMinimapPins("guardian")
-                return
-            end
-            local ratio = math.max(1, math.abs(x) / edge, math.abs(y) / edge)
-            x, y = x / ratio, y / ratio
-            local drawOK, drawn = pcall(DrawGuardian, x, y)
-            if not drawOK or not drawn or not HideNativeFlag() then ClearMinimapPins("guardian") end
-        end
-
-        local function DrawCache(entry, x, y)
-            local pin = cachePins[entry.key]
+        local function DrawTrackedPin(tracker, entry, x, y)
+            local pin = tracker.minimapPins[entry.key]
             if not pin then
-                pin = table.remove(cachePool) or MakeMinimapPin(trackers[1])
-                cachePins[entry.key] = pin
+                pin = table.remove(tracker.minimapPool) or MakeMinimapPin(tracker)
+                tracker.minimapPins[entry.key] = pin
             end
-            pin.entryKey, pin.cycle = entry.key, cacheCycle
+            pin.entryKey, pin.cycle = entry.key, tracker.minimapCycle
             return PlacePin(pin, x, y)
         end
 
-        local function UpdateCaches(scale, edge)
-            cacheCycle = cacheCycle + 1
-            if scale and DFRL.display.Get("cacheGuidance") then
-                for _, entry in ipairs(trackers[1].entries) do
+        local function UpdateTrackerPins(tracker, scale, edge)
+            tracker.minimapCycle = tracker.minimapCycle + 1
+            if scale and DFRL.display.Get(tracker.displayKey) then
+                for _, entry in ipairs(tracker.entries) do
                     local x, y = Offset(entry, scale)
-                    -- Only the flagged guardian keeps a distant edge indicator.
-                    -- Off-map caches hide instead of piling up on that edge.
-                    if x and math.abs(x) <= edge and math.abs(y) <= edge then
-                        local drawOK, drawn = pcall(DrawCache, entry, x, y)
+                    -- Every living guardian keeps its own distant indicator.
+                    -- Off-map caches hide instead of piling up on the edge.
+                    if x and tracker.kind == "guardian" then
+                        local ratio = math.max(1, math.abs(x) / edge, math.abs(y) / edge)
+                        x, y = x / ratio, y / ratio
+                    end
+                    if x and (tracker.kind == "guardian" or (math.abs(x) <= edge and math.abs(y) <= edge)) then
+                        local drawOK, drawn = pcall(DrawTrackedPin, tracker, entry, x, y)
                         if not drawOK or not drawn then
-                            local pin = cachePins[entry.key]
+                            local pin = tracker.minimapPins[entry.key]
                             if pin then pin.cycle = nil end
                         end
                     end
                 end
             end
-            RecycleCaches(cacheCycle)
+            RecyclePins(tracker, tracker.minimapCycle)
         end
 
         UpdateMinimapPins = function()
-            if not inWorld or reloading or not navigation.IsRunPhase(Native("AZS_GetPhase")) then
+            if not inWorld or reloading then
+                ClearMinimapPins()
+                RestoreNativeFlag()
+                return
+            end
+            -- Flag ownership does not depend on a destination or its geometry:
+            -- empty/dead lairs and snapshot refreshes must never restore it.
+            if DFRL.display.Get("guardianGuidance") then
+                HideNativeFlag()
+            else
+                RestoreNativeFlag()
+            end
+            if not navigation.IsRunPhase(Native("AZS_GetPhase")) then
                 ClearMinimapPins()
                 return
             end
-            local wantsGuardian = GuardianEnabled() and FlaggedGuardian() ~= nil
-            local wantsCaches = DFRL.display.Get("cacheGuidance") and trackers[1].entries[1] ~= nil
             local scale, edge
-            if wantsGuardian or wantsCaches then
-                scale, edge = Geometry()
+            for _, tracker in ipairs(trackers) do
+                if DFRL.display.Get(tracker.displayKey) and tracker.entries[1] then
+                    scale, edge = Geometry()
+                    break
+                end
             end
-            UpdateGuardian(scale, edge)
-            UpdateCaches(scale, edge)
+            for _, tracker in ipairs(trackers) do
+                UpdateTrackerPins(tracker, scale, edge)
+            end
         end
 
         StopMinimapPins = function()
@@ -382,6 +346,7 @@ DFRL:NewMod("Waypoints", 3, function()
             inWorld = false
             if pendingZoom then pendingZoom.retry = true end
             ClearMinimapPins()
+            RestoreNativeFlag()
         end
     end
 
@@ -471,7 +436,6 @@ DFRL:NewMod("Waypoints", 3, function()
         end
     end
     local function Clear(tracker)
-        tracker.flagState = nil
         ClearMinimapPins(tracker.kind)
         tracker.entries = {}
         navigation.SetPoints(tracker.source, nil)
@@ -511,7 +475,6 @@ DFRL:NewMod("Waypoints", 3, function()
         end
         local guardian = tracker.kind == "guardian"
         local result, seen = {}, {}
-        local flaggedCount, flagState = 0, nil
         for _, entry in ipairs(list) do
             if type(entry) ~= "table" then return end
             -- Both occupied states mean a living guardian. Coordinates belong
@@ -520,16 +483,6 @@ DFRL:NewMod("Waypoints", 3, function()
             if guardian then
                 if not Integer(entry.index, 1) or seen[entry.index] then return end
                 seen[entry.index] = true
-                if entry.flag == 1 then
-                    flaggedCount = flaggedCount + 1
-                    if occupied then
-                        flagState = "occupied"
-                    elseif entry.state == "empty" and entry.id == 0 then
-                        flagState = "empty"
-                    else
-                        flagState = nil
-                    end
-                end
             end
             if not guardian or occupied then
                 if
@@ -551,7 +504,6 @@ DFRL:NewMod("Waypoints", 3, function()
                     index = guardian and entry.index or nil,
                     name = guardian and entry.name or nil,
                     state = guardian and entry.state or nil,
-                    flag = guardian and entry.flag or nil,
                     x = entry.x,
                     y = entry.y,
                     mx = entry.mx,
@@ -561,7 +513,6 @@ DFRL:NewMod("Waypoints", 3, function()
         end
         tracker.acceptedSnapshot = list
         tracker.acceptedGeneration = tracker.packetGeneration or 0
-        tracker.flagState = guardian and flaggedCount == 1 and flagState or nil
         return result
     end
 
@@ -876,6 +827,7 @@ DFRL:NewMod("Waypoints", 3, function()
             navigation.Reset()
             ClearAll()
             DirtyMinimapScale()
+            UpdateMinimapPins()
             return
         end
         if

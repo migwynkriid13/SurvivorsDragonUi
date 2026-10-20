@@ -32,7 +32,7 @@ To use the game's damage numbers, choose **Game settings** under **Combat text**
 - Compact nameplates and custom damage numbers with size, color and hit filters.
 - Transparent chat with shorter game messages and mouse-wheel history.
 - Cache and guardian guides with distance, direction and world-map pins.
-- Minimap loot-pouch icons for nearby caches and a gold skull medallion for the flagged guardian. Empty flagged lairs show no marker or flag. Guardian markers point to the lair, even while its guardian is fighting elsewhere.
+- Minimap loot-pouch icons for nearby caches and gold skull medallions for all living guardians. Empty or dead lairs show no icon, and Guardian guidance hides the red flag. Guardian icons mark their lairs, including while they are fighting elsewhere.
 
 Player, target and target-of-target portraits use the original 2D images by default. **Experimental 3D portraits** in `/sdui` → **HUD** switches all three to 3D.
 
