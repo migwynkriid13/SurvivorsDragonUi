@@ -2,6 +2,7 @@
 DFRL.locale.data = {
     en = {
         ui = {
+            ["Boss in: %s"] = "Boss in: %s",
             ["You received"] = "You received",
             ["Loot notifications"] = "Loot notifications",
             ["Guardians in boss bar"] = "Guardians in boss bar",
@@ -418,6 +419,7 @@ DFRL.locale.data = {
     },
     pl = {
         ui = {
+            ["Boss in: %s"] = "Boss za: %s",
             ["You received"] = "Otrzymano",
             ["Loot notifications"] = "Powiadomienia o łupach",
             ["Guardians in boss bar"] = "Strażnicy na pasku bossów",
@@ -858,6 +860,7 @@ DFRL.locale.data = {
     },
     cs = {
         ui = {
+            ["Boss in: %s"] = "Boss za: %s",
             ["You received"] = "Získali jste",
             ["Loot notifications"] = "Oznámení o kořisti",
             ["Guardians in boss bar"] = "Strážci v liště bossů",
@@ -1749,6 +1752,7 @@ DFRL.locale.data = {
     },
     de = {
         ui = {
+            ["Boss in: %s"] = "Boss in: %s",
             ["You received"] = "Ihr habt erhalten",
             ["Loot notifications"] = "Beutebenachrichtigungen",
             ["Guardians in boss bar"] = "Wächter in der Bossleiste",
@@ -2195,6 +2199,7 @@ DFRL.locale.data = {
     },
     pt = {
         ui = {
+            ["Boss in: %s"] = "Chefe em: %s",
             ["You received"] = "Você recebeu",
             ["Loot notifications"] = "Notificações de saque",
             ["Guardians in boss bar"] = "Guardiões na barra de chefes",
@@ -2626,6 +2631,7 @@ DFRL.locale.data = {
     },
     es = {
         ui = {
+            ["Boss in: %s"] = "Jefe en: %s",
             ["You received"] = "Has recibido",
             ["Loot notifications"] = "Notificaciones de botín",
             ["Guardians in boss bar"] = "Guardianes en la barra de jefes",
@@ -3060,6 +3066,7 @@ DFRL.locale.data = {
     },
     fr = {
         ui = {
+            ["Boss in: %s"] = "Boss dans : %s",
             ["You received"] = "Vous avez reçu",
             ["Loot notifications"] = "Notifications de butin",
             ["Guardians in boss bar"] = "Gardiens dans la barre des boss",
@@ -3521,6 +3528,7 @@ DFRL.locale.data = {
     },
     ro = {
         ui = {
+            ["Boss in: %s"] = "Boss în: %s",
             ["You received"] = "Ai primit",
             ["Loot notifications"] = "Notificări de pradă",
             ["Guardians in boss bar"] = "Străjeri în bara șefilor",
@@ -3952,6 +3960,7 @@ DFRL.locale.data = {
     },
     tr = {
         ui = {
+            ["Boss in: %s"] = "Bossa kalan: %s",
             ["You received"] = "Aldın",
             ["Loot notifications"] = "Ganimet bildirimleri",
             ["Guardians in boss bar"] = "Boss çubuğunda muhafızlar",
@@ -4380,6 +4389,7 @@ DFRL.locale.data = {
     },
     ru = {
         ui = {
+            ["Boss in: %s"] = "Босс через: %s",
             ["You received"] = "Вы получили",
             ["Loot notifications"] = "Уведомления о добыче",
             ["Guardians in boss bar"] = "Стражи на панели боссов",
@@ -4898,6 +4908,7 @@ DFRL.locale.data = {
     },
     uk = {
         ui = {
+            ["Boss in: %s"] = "Бос через: %s",
             ["You received"] = "Ви отримали",
             ["Loot notifications"] = "Сповіщення про здобич",
             ["Guardians in boss bar"] = "Вартові на панелі босів",
@@ -5392,6 +5403,7 @@ DFRL.locale.data = {
     },
     zh = {
         ui = {
+            ["Boss in: %s"] = "首领出现倒计时：%s",
             ["You received"] = "你获得了",
             ["Loot notifications"] = "拾取通知",
             ["Guardians in boss bar"] = "首领血条中显示守卫",
@@ -5811,6 +5823,7 @@ DFRL.locale.data = {
     },
     ja = {
         ui = {
+            ["Boss in: %s"] = "ボス出現まで: %s",
             ["You received"] = "獲得しました",
             ["Loot notifications"] = "戦利品通知",
             ["Guardians in boss bar"] = "ボスバーにガーディアンを表示",
@@ -6263,6 +6276,7 @@ DFRL.locale.data = {
     },
     ko = {
         ui = {
+            ["Boss in: %s"] = "우두머리 등장까지: %s",
             ["You received"] = "획득한 아이템",
             ["Loot notifications"] = "전리품 알림",
             ["Guardians in boss bar"] = "우두머리 바에 수호자 표시",

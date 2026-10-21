@@ -1,5 +1,36 @@
 # Official addon API integration — 2026-10-14
 
+## Endless boss countdown — 2026-10-21
+
+After the native phase check, a received `AZS_RUN.endl == 1` switches the run
+caption to elapsed time above the pill's left edge and **Boss in: M:SS** above
+its right edge. Final-boss death (`won`) and passing the zone duration do not
+activate this layout. Outside Endless, the existing centered caption returns.
+
+The countdown reads only finite nonnegative `AZS_RUN.nb`, rounded up to the next
+whole second. Minutes have no leading zero: `5:00`, `4:59`, through `0:00`.
+Missing, invalid or negative data hides and clears only the boss caption. No
+deadline is reconstructed from the zone schedule, final-boss kill time, repeat
+boss deaths or a fixed 300-second interval. Pauses, repeat spawns and overlapping
+bosses follow the native countdown snapshots; no gameplay clock is added.
+
+Both captions reuse the pooled seconds renderer and the existing font, outline,
+shadow and text-visibility controls. Each translated prefix resolves its own
+DEFAULT fallback for non-ASCII text. Measured captions can extend equally past
+the pill's edges when needed to retain an eight-unit gap at large font sizes;
+the shared edit bounds include this overflow and the raised seconds. The pill
+and confirmed geometry are unchanged. Clock release clears the boss caption and
+restores the centered anchor. The caption is present in all fourteen source and
+runtime UI catalogs. No setting, asset or SavedVariable was added.
+
+The API fields are documented in [the supplied reference](AzerothSurvivors-Addon-API.md#azs_run-the-run-right-now).
+The supplied static analysis of the installed 0.107.0 client places the first
+Endless deadline five run-clock minutes after Continue Endless and resets it
+after each actual spawn. That evidence explains why the addon uses the native
+remaining time rather than the zone ending or a kill-based cadence. No local
+tests, syntax/formatting checks or addon/game execution were run; GitHub Actions
+provides the authorized static checks. Live rendering remains unverified.
+
 ## Run-timer seconds alignment — 2026-10-20
 
 The user reported the seconds appearing one pixel below the minutes and requested
