@@ -19,7 +19,13 @@ DFRL:NewMod("ChatCapture", 0, function()
         if now ~= broadcastTime then
             broadcastTime, broadcasts = now, {}
         end
-        local signature = tostring(eventName) .. "\001" .. tostring(author) .. "\001" .. tostring(message) .. "\001" .. text
+        local signature = tostring(eventName)
+            .. "\001"
+            .. tostring(author)
+            .. "\001"
+            .. tostring(message)
+            .. "\001"
+            .. text
         local delivery = broadcasts[signature]
         if not delivery then
             delivery = { counts = {}, maximum = 0 }
