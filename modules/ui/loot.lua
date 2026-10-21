@@ -106,14 +106,23 @@ DFRL:NewMod("LootNotifications", 0, function()
         if type(entry.itemReference) == "string" and type(GetItemInfo) == "function" then
             local ok, name, _, quality, _, _, _, _, slot, icon = pcall(GetItemInfo, entry.itemReference)
             if ok and type(name) == "string" and name ~= "" then
-                if type(quality) == "number" and quality >= 0 and quality - quality == 0 and quality == math.floor(quality) then
+                if
+                    type(quality) == "number"
+                    and quality >= 0
+                    and quality - quality == 0
+                    and quality == math.floor(quality)
+                then
                     result.quality = quality
                 end
                 if type(slot) == "string" and string.find(slot, "^INVTYPE_[A-Z_]+$") then
                     result.equipLoc = slot
                     if type(_G[slot]) == "string" and _G[slot] ~= "" then result.equipText = _G[slot] end
                 end
-                if type(icon) == "string" and icon ~= "" and not string.find(string.lower(icon), "inv_misc_questionmark", 1, true) then
+                if
+                    type(icon) == "string"
+                    and icon ~= ""
+                    and not string.find(string.lower(icon), "inv_misc_questionmark", 1, true)
+                then
                     result.icon, result.iconSource = icon, "native"
                 end
             end
