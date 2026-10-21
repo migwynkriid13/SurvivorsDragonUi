@@ -180,14 +180,14 @@ def prepare(scratch):
         sheet.paste(image.convert("RGB").resize((700, 470), Image.Resampling.LANCZOS), (((number - 1) % 2) * 700, ((number - 1) // 2) * 470))
         proposals.append({"id": str(number).zfill(2), "title": title, "description": description, "image": filename, "source": source})
     sheet.save(OUT / "comparison.png")
-    (OUT / "designs.json").write_text(json.dumps({"selected": None, "sources": SOURCES, "proposals": proposals}, indent=2) + "\n")
+    (OUT / "designs.json").write_text(json.dumps({"selected": "02", "selectedImage": "selected.png", "sources": SOURCES, "proposals": proposals}, indent=2) + "\n")
     tiles = "".join('<a href="' + row["image"] + '"><img src="' + row["image"] + '" alt="' + row["title"] + '"></a>' for row in proposals)
     (OUT / "index.html").write_text('''<!doctype html>
 <html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>SurvivorsDragonUi · Loot designs</title>
 <style>body{margin:0;background:#101719;color:#eee9df;font:16px system-ui}main{max-width:1500px;margin:auto;padding:30px}h1{color:#d7bd80}p{line-height:1.6;color:#b8b9ad}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(480px,1fr));gap:20px}img{width:100%;border-radius:12px}a{color:#d7bd80}@media(max-width:550px){.grid{display:block}main{padding:16px}}</style>
-<main><h1>Loot notification designs</h1><p>Four proposals using actual published WoW artwork and our existing bundled pieces. Each shows collected common, new common and collected epic items. Click a proposal for its full image. The native popup stays active until the chosen view is ready.</p>
-<div class="grid">''' + tiles + '''</div><p>These are static artwork previews, not game captures. Item icons are representative; the runtime will use native item data when available. Georgia substitutes for the game DEFAULT face. No proposal or its extra assets enters the runtime payload before selection. Sources and exact crops: <a href="../../LOOT-NOTIFICATIONS.md">developer notes</a>.</p></main></html>''')
+<main><h1>Selected: 02 · Silver loot alert</h1><p>The final version uses You received and the item name in the game's Friz Quadrata font. Already-collected drops never show a popup. No loot/slot or collection line appears.</p><a href="selected.png"><img src="selected.png" alt="Selected silver alert with two text lines"></a><h2>Original proposals</h2><p>Four proposals using actual published WoW artwork and our existing bundled pieces. Each shows collected common, new common and collected epic items. Click a proposal for its full image. The native popup stays active until the chosen view is ready.</p>
+<div class="grid">''' + tiles + '''</div><p>These are static artwork previews, not game captures. Item icons are representative; the runtime uses native item data when available. These original proposals retain their earlier text and substitute fonts; the selected preview above shows the final direction. Only the selected silver frame enters the runtime payload. Sources and exact crops: <a href="../../LOOT-NOTIFICATIONS.md">developer notes</a>.</p></main></html>''')
     print(str(OUT / "comparison.png"))
 
 

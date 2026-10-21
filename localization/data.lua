@@ -2,6 +2,8 @@
 DFRL.locale.data = {
     en = {
         ui = {
+            ["You received"] = "You received",
+            ["Loot notifications"] = "Loot notifications",
             ["Guardians in boss bar"] = "Guardians in boss bar",
             ["Off: show only bosses in the boss bar."] = "Off: show only bosses in the boss bar.",
             ["Mirror cache waypoint"] = "Mirror cache waypoint",
@@ -416,6 +418,8 @@ DFRL.locale.data = {
     },
     pl = {
         ui = {
+            ["You received"] = "Otrzymano",
+            ["Loot notifications"] = "Powiadomienia o łupach",
             ["Guardians in boss bar"] = "Strażnicy na pasku bossów",
             ["Off: show only bosses in the boss bar."] = "Wył.: pokazuj na pasku tylko bossów.",
             ["Mirror cache waypoint"] = "Odbij nawigację do skrytki",
@@ -854,6 +858,8 @@ DFRL.locale.data = {
     },
     cs = {
         ui = {
+            ["You received"] = "Získali jste",
+            ["Loot notifications"] = "Oznámení o kořisti",
             ["Guardians in boss bar"] = "Strážci v liště bossů",
             ["Off: show only bosses in the boss bar."] = "Vypnuto: v liště zobrazovat pouze bossy.",
             ["Mirror cache waypoint"] = "Zrcadlit navigaci k truhle",
@@ -1743,6 +1749,8 @@ DFRL.locale.data = {
     },
     de = {
         ui = {
+            ["You received"] = "Ihr habt erhalten",
+            ["Loot notifications"] = "Beutebenachrichtigungen",
             ["Guardians in boss bar"] = "Wächter in der Bossleiste",
             ["Off: show only bosses in the boss bar."] = "Aus: nur Bosse in der Bossleiste anzeigen.",
             ["Mirror cache waypoint"] = "Truhenwegpunkt spiegeln",
@@ -2187,6 +2195,8 @@ DFRL.locale.data = {
     },
     pt = {
         ui = {
+            ["You received"] = "Você recebeu",
+            ["Loot notifications"] = "Notificações de saque",
             ["Guardians in boss bar"] = "Guardiões na barra de chefes",
             ["Off: show only bosses in the boss bar."] = "Desativado: mostrar apenas chefes na barra.",
             ["Mirror cache waypoint"] = "Espelhar rota do baú",
@@ -2616,6 +2626,8 @@ DFRL.locale.data = {
     },
     es = {
         ui = {
+            ["You received"] = "Has recibido",
+            ["Loot notifications"] = "Notificaciones de botín",
             ["Guardians in boss bar"] = "Guardianes en la barra de jefes",
             ["Off: show only bosses in the boss bar."] = "Desactivado: mostrar solo jefes en la barra.",
             ["Mirror cache waypoint"] = "Reflejar ruta al cofre",
@@ -3048,6 +3060,8 @@ DFRL.locale.data = {
     },
     fr = {
         ui = {
+            ["You received"] = "Vous avez reçu",
+            ["Loot notifications"] = "Notifications de butin",
             ["Guardians in boss bar"] = "Gardiens dans la barre des boss",
             ["Off: show only bosses in the boss bar."] = "Désactivé : afficher uniquement les boss dans la barre.",
             ["Mirror cache waypoint"] = "Inverser le repère du coffre",
@@ -3507,6 +3521,8 @@ DFRL.locale.data = {
     },
     ro = {
         ui = {
+            ["You received"] = "Ai primit",
+            ["Loot notifications"] = "Notificări de pradă",
             ["Guardians in boss bar"] = "Străjeri în bara șefilor",
             ["Off: show only bosses in the boss bar."] = "Dezactivat: arată doar șefii în bară.",
             ["Mirror cache waypoint"] = "Oglindește reperul cufărului",
@@ -3936,6 +3952,8 @@ DFRL.locale.data = {
     },
     tr = {
         ui = {
+            ["You received"] = "Aldın",
+            ["Loot notifications"] = "Ganimet bildirimleri",
             ["Guardians in boss bar"] = "Boss çubuğunda muhafızlar",
             ["Off: show only bosses in the boss bar."] = "Kapalı: boss çubuğunda yalnızca bossları göster.",
             ["Mirror cache waypoint"] = "Sandık işaretini yansıt",
@@ -4362,6 +4380,8 @@ DFRL.locale.data = {
     },
     ru = {
         ui = {
+            ["You received"] = "Вы получили",
+            ["Loot notifications"] = "Уведомления о добыче",
             ["Guardians in boss bar"] = "Стражи на панели боссов",
             ["Off: show only bosses in the boss bar."] = "Выкл.: показывать на панели только боссов.",
             ["Mirror cache waypoint"] = "Отразить путь к тайнику",
@@ -4878,6 +4898,8 @@ DFRL.locale.data = {
     },
     uk = {
         ui = {
+            ["You received"] = "Ви отримали",
+            ["Loot notifications"] = "Сповіщення про здобич",
             ["Guardians in boss bar"] = "Вартові на панелі босів",
             ["Off: show only bosses in the boss bar."] = "Вимк.: показувати на панелі лише босів.",
             ["Mirror cache waypoint"] = "Віддзеркалити шлях до схованки",
@@ -5370,6 +5392,8 @@ DFRL.locale.data = {
     },
     zh = {
         ui = {
+            ["You received"] = "你获得了",
+            ["Loot notifications"] = "拾取通知",
             ["Guardians in boss bar"] = "首领血条中显示守卫",
             ["Off: show only bosses in the boss bar."] = "关闭：首领血条中只显示首领。",
             ["Mirror cache waypoint"] = "镜像宝箱路标",
@@ -5787,6 +5811,8 @@ DFRL.locale.data = {
     },
     ja = {
         ui = {
+            ["You received"] = "獲得しました",
+            ["Loot notifications"] = "戦利品通知",
             ["Guardians in boss bar"] = "ボスバーにガーディアンを表示",
             ["Off: show only bosses in the boss bar."] = "オフ：ボスバーにボスだけを表示。",
             ["Mirror cache waypoint"] = "宝箱の目印を反転",
@@ -6237,6 +6263,8 @@ DFRL.locale.data = {
     },
     ko = {
         ui = {
+            ["You received"] = "획득한 아이템",
+            ["Loot notifications"] = "전리품 알림",
             ["Guardians in boss bar"] = "우두머리 바에 수호자 표시",
             ["Off: show only bosses in the boss bar."] = "끄기: 우두머리 바에 우두머리만 표시합니다.",
             ["Mirror cache waypoint"] = "보물함 경로 좌우 반전",

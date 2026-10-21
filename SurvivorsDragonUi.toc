@@ -27,6 +27,7 @@ modules\bars\range.lua
 modules\cast\cast.lua
 modules\chat\prettify.lua
 modules\ui\loot.lua
+modules\ui\loot_view.lua
 modules\chat\capture.lua
 modules\chat\copy.lua
 modules\chat\chat.lua

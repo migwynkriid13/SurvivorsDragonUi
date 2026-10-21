@@ -1,4 +1,4 @@
--- Design-independent loot intake and native HUD ownership. No view is selected.
+-- Shared loot intake and native HUD ownership; the selected view is separate.
 -- API and renderer contract: docs/LOOT-NOTIFICATIONS.md.
 DFRL:NewMod("LootNotifications", 0, function()
     local loot = {}
@@ -115,7 +115,7 @@ DFRL:NewMod("LootNotifications", 0, function()
         local chat = DFRL.CleanerChat
         if not chat or type(chat.ParseLootMessage) ~= "function" then return end
         local ok, entry = pcall(chat.ParseLootMessage, text)
-        if not ok or type(entry) ~= "table" then return end
+        if not ok or type(entry) ~= "table" or entry.collection == "collected" then return end
         sequence = sequence + 1
         entry.sequence, entry.receivedAt = sequence, GetTime()
         if count == MAX_QUEUE then

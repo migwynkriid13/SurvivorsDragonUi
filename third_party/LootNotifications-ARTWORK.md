@@ -1,9 +1,11 @@
-# Loot notification proposals
+# Loot notification artwork
 
-No final design or new runtime artwork has been selected. These four static
-proposals compare actual published WoW artwork and existing addon assets. The
-assembly, layout, sample text and example glow treatment are proposal choices,
-not a claim that Blizzard ships these exact combined notifications.
+The user selected **02**, the silver retail loot alert, with the gold
+**You received** heading and item name in the game's Friz Quadrata font.
+Only that frame crop enters the runtime payload. The original four proposals
+remain archived; their slot/status lines and collection glow were proposal
+choices and are omitted from the selected view. Already-collected drops never
+enter the selected view.
 
 World of Warcraft artwork is copyright Blizzard Entertainment. Cropping,
 tinting, repacking and conversion do not relicense it. DragonUI's notices
@@ -12,9 +14,9 @@ Gethe's texture mirror has no root license grant covering these images; public
 availability is not a separate redistribution license. Existing project notices
 and the owner's upstream-texture permission remain relevant, but no general
 new license is asserted for these candidate pixels. No source addon or framework
-is imported. Only selected, attributed assets may enter a later runtime payload.
+is imported. Only the selected, attributed crop enters the runtime payload.
 
-## 01 · Retail item card (recommended)
+## 01 · Retail item card (unselected)
 
 - Source: [NeticSoul/DragonUI](https://github.com/NeticSoul/DragonUI/tree/27255b131d734113f92a379c55a7df054e36be52),
   commit `27255b131d734113f92a379c55a7df054e36be52`.
@@ -47,7 +49,7 @@ is imported. Only selected, attributed assets may enter a later runtime payload.
   and use ordinary `SetTexture`, `SetTexCoord`, draw layers and native tint.
   No `SetAtlas`, retail mixin, mask or source-addon dependency is needed.
 
-## 02 · Silver loot alert
+## 02 · Silver loot alert (selected)
 
 - Source: [Gethe/wow-ui-textures](https://github.com/Gethe/wow-ui-textures/tree/e80e3278cc833c89e1f3fc79557b68315d750935),
   commit `e80e3278cc833c89e1f3fc79557b68315d750935`, identified by its commit
@@ -65,6 +67,30 @@ is imported. Only selected, attributed assets may enter a later runtime payload.
   draw it with regular alpha blending, retaining side-cap proportions.
   The proposed text and collection glow are our composition, not that template's
   original label, roll controls or exact animation.
+
+### Shipped adaptation
+
+`media/tex/loot/Toast.tga` is a 512-by-128 RGBA canvas. The unchanged 276-by-96
+background crop is placed at `(0, 0)` with transparent padding. Runtime UVs are
+`(0, 276/512, 0, 96/128)` and regular alpha blending; no neighboring glow,
+shine or alternative frame is included. The single card keeps the crop's native
+aspect ratio, with an inset 50-by-50 icon and two text lines. The existing
+WhiteIconFrame rim is tinted from the received item color or native quality.
+Missing native icon data is omitted, never replaced by an example icon.
+
+The same pinned Dragonflight `AlertFrameSystems.xml` supplies a 0.2-second
+fade-in and a 1.5-second fade-out starting at 4.05 seconds for the normal item
+alert. The addon reproduces those cosmetic timings with ordinary legacy UI
+alpha updates. It does not import the retail animation XML, mixins, sheen,
+sounds, roll controls or item acquisition code.
+
+The game-owned `Fonts\\FRIZQT__.TTF` is requested for both the gold caption
+and item name, at sizes 12 and 14 without an outline and with a black shadow.
+The inspected installed game includes `data/fonts/frizqt__.ttf`; its native
+`data/interface/framexml/fonts.xml` uses that face for `GameFontNormal`.
+The addon ships no font bytes and falls back to resolved DEFAULT if the native
+font request fails. Its heading and Layout caption use the fourteen-language
+addon catalogs; item names and colors remain received game data.
 
 ## 03 · Plain addon metal
 
@@ -99,9 +125,11 @@ and
 64 × 64 each, at the mirror's pinned `9.2.7 (45114)` commit
 `d23deaf8f44a7d280dc974a5c9d5321c013db59b`. They are sample pixels, not verified
 icon assignments for the packaged game's named custom items. They do not ship.
-Georgia substitutes for DEFAULT in the images; no font file or font setting is
-added. Common collected, common new and epic collected examples follow the
-user's supplied references without copying a native popup as the proposed skin.
+Georgia substitutes for DEFAULT in the original proposal images. The selected
+preview uses the game's existing Friz Quadrata through a local preview-only
+font path. No font file or font setting is added. Common collected, common new
+and epic collected samples remain historical proposals; the selected preview
+shows only eligible common and epic drops, with no collection subtitle.
 
 ## Research coverage and stored artifacts
 
@@ -122,8 +150,11 @@ Dragonflight PTR texture commit supplied the build evidence instead.
 
 `docs/designs/loot-notifications/asset-regions.png` exposes the actual selected
 candidate regions against a checkerboard. `designs.json` records the four
-proposals and source files with `selected: null`. Original bytes remain in the
+proposals and source files with `selected: "02"`. `selected.png` shows the final
+two-line direction using the same native card geometry. Original bytes remain in the
 temporary source directory, separate from crops and compositions.
-No proposal, icon, downloaded original or gallery file is in the runtime manifest.
+No proposal image, example icon, downloaded original or gallery file is in the
+runtime manifest. `scripts/prepare_loot_art.py` writes only the chosen runtime
+crop and its static preview; `--font` supplies a local game font for the preview.
 Static artwork preparation does not establish game rendering. No addon/game
 execution or local checks were performed.

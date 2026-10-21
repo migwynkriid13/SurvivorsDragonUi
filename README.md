@@ -33,6 +33,7 @@ To use the game's damage numbers, choose **Game settings** under **Combat text**
 - A guardian tracker with health bars during combat. Plus shows only living guardians; minus shows all lairs and respawn timers. Move, resize or hide it through `/sdui` → **Layout**.
 - A movable **Level Up!** button for stored levels. Select it in `/sdui` → **Layout** to move or resize it, then **Confirm** to save.
 - Compact nameplates and custom damage numbers with size, color and damage filters.
+- Retail-style loot popups for new drops, using WoW’s original font. Already-collected items stay in chat without a popup. Move, resize or hide loot notifications through **Layout**.
 - Transparent chat with shorter game messages and mouse-wheel history.
 - Cache and guardian guides with distance, direction and world-map pins. Mirror each guide in `/sdui` → **HUD** to put its arrow on either side.
 - Minimap loot-pouch icons for nearby caches and gold skull medallions for all living guardians. Empty or dead lairs show no icon, and Guardian guidance hides the red flag. Guardian icons mark their lairs, including while they are fighting elsewhere.

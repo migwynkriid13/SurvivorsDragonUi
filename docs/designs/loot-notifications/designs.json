@@ -1,5 +1,6 @@
 {
-  "selected": null,
+  "selected": "02",
+  "selectedImage": "selected.png",
   "sources": {
     "card": {
       "repository": "NeticSoul/DragonUI",

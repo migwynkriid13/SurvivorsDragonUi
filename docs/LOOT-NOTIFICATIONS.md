@@ -1,11 +1,46 @@
-# Loot notification preparation
+# Loot notifications
 
-The user will choose the visual design. The four static proposals are in
-[the gallery](designs/loot-notifications/index.html) and
-[comparison sheet](designs/loot-notifications/comparison.png). No proposal,
-placeholder view, popup geometry or extra artwork is selected for the runtime.
-The native loot notice remains available until a real renderer registers and
-explicitly reports that it is ready.
+The user selected **02**, Blizzard's silver loot alert, with the retail-style
+gold **You received** heading and quality-colored item name. The slot header
+and collection subtitle are omitted. Both lines request the game's original
+`Fonts\\FRIZQT__.TTF` (Friz Quadrata), with resolved DEFAULT as a fallback.
+The installed game's native `data/interface/framexml/fonts.xml` selects this
+face for `GameFontNormal`, and `data/fonts/frizqt__.ttf` is present. No font
+file or font setting ships with the addon.
+
+[Selected static preview](designs/loot-notifications/selected.png).
+The [original proposals](designs/loot-notifications/index.html) remain outside
+the runtime payload. Their earlier slot/status lines are not the selected view.
+
+## Selected view
+
+`modules/ui/loot_view.lua` registers a real, passive three-card pool. Each card
+uses the unmodified 276-by-96 silver LootToast crop, with a 50-by-50 native item
+icon when available and the existing quality rim. Names keep their received
+color; exact native item quality supplies a color only when the message has none.
+Unavailable icons and their rims are omitted, with text using the freed space.
+Names may wrap within the native-style two-line name area. No tooltip, click
+handler, roll button, sound, collection subtitle or slot line is added.
+
+Explicit native **already collected** status is rejected before queueing,
+metadata resolution or sequence assignment. The view repeats that guard before
+accepting any entry. Compact chat retains those messages and their wording.
+Absent collection status stays unknown and is eligible; no collection database
+or item-name inference decides whether a drop is new.
+
+Cards fade in over 0.2 seconds and begin a 1.5-second fade at age 4.05, following
+the inspected retail alert timing. The pool stacks upward in occurrence order,
+80 units apart, and waits when all three cards are occupied. Its separate
+cosmetic updater runs only while cards exist, including while Layout hides the
+group, so hidden cards expire normally. Exact-reference metadata can retry at
+0.2-second intervals for the first two seconds. A cosmetic update failure clears
+the view and marks it unready, releasing native ownership on the service tick.
+
+The shared `lootNotifications` Layout group starts centered 150 units above the
+screen bottom, with fixed 276-by-256 edit bounds. Existing move, uniform resize,
+hide, Confirm, Cancel, discard and reset behavior applies. Only confirmed geometry
+uses the existing `SurvivorsDragonUiLayout` table. No new SavedVariable or display
+setting is introduced.
 
 ## Shared message intake
 
@@ -50,12 +85,12 @@ chat path, not that every native loot-notice variant has been observed.
 
 ## Renderer contract
 
-`modules/ui/loot.lua` registers the design-independent `DFRL.loot` service. It
-starts without a renderer and without an OnUpdate handler. No `hudLoot` read or
-write, item lookup, card, sound, layout group, setting or saved field is started
-by the current preparation.
+`modules/ui/loot.lua` registers the shared `DFRL.loot` service without a renderer
+or an OnUpdate handler. The selected `LootView` module attaches after the service
+and Layout initialize. Attachment requires loaded card textures and usable fonts;
+until the registered renderer reports ready, native visibility is retained.
 
-The chosen view will register one object through `SetRenderer`:
+The view registers one object through `SetRenderer`:
 
 ```lua
 DFRL.loot.SetRenderer({
@@ -81,8 +116,8 @@ every 0.2 seconds. Each has its own increasing `sequence` and cosmetic
 `receivedAt` UI time. Overflow retires the oldest queued notice; it does not
 alter chat or actual item acquisition. Arrays are synchronized through
 `table.setn` for Lua 5.0. Nothing is replayed from before attachment, world leave,
-logout or reload. The chosen renderer will own its visible pool, measured text,
-animations, lifetime and shared layout registration; those choices remain open.
+logout or reload. The selected renderer owns its visible pool, text, animation,
+lifetime and shared layout registration.
 
 ## Native item metadata
 
@@ -132,17 +167,22 @@ for item acquisition are replaced, and no gameplay data is saved.
 
 ## Artwork and verification
 
-The sample cases follow the supplied common-item collected/new notices and the
-earlier epic-item notice. Preview icons are representative published WoW icons;
-Georgia substitutes for game DEFAULT. The previews are not client captures and
-do not establish native metadata, font metrics or rendering.
+The original proposals follow the supplied common-item collected/new notices
+and earlier epic-item notice. Their representative icons and Georgia font are
+historical proposal choices. The selected preview contains only eligible drops
+and uses the installed game's Friz Quadrata. Its icons remain representative,
+not verified assignments for custom game items. Static previews are not client
+captures and do not establish native metadata or runtime rendering.
 Exact files, crops, expansion evidence and reuse notices are in
 [Loot notification artwork](../third_party/LootNotifications-ARTWORK.md).
-`scripts/preview_loot_designs.py` prepares only these static artwork proposals.
+`scripts/preview_loot_designs.py` prepares the archived static artwork proposals.
+`scripts/prepare_loot_art.py --sources <scratch> --font <native-friz-path>` repacks
+the selected crop and composes the selected static preview; it executes no Lua.
 Original downloaded files remain separate in a temporary source directory.
-Only the new Lua service joins the runtime manifest; gallery/source data do not.
+The runtime manifest contains the shared service, selected view and single
+Toast TGA. Gallery images, originals, proposal data and example icons do not ship.
 
 Local tests, syntax checks, formatting tools and addon/game execution remain
 unauthorized and were not run. GitHub Actions provides the authorized static
-formatting/dead-code/version checks. No runtime functionality or final visual
-parity is claimed before design selection and permitted game validation.
+formatting/dead-code/version checks. Runtime functionality and exact visual
+parity still require permitted game validation.
