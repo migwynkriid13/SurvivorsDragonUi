@@ -80,29 +80,47 @@ DFRL:NewMod("LootNotifications", 0, function()
         return true
     end
 
-    -- Unknown item templates and missing icons/slots stay unknown. In 1.12 the
-    -- getter takes the inner item: reference, not the colored display hyperlink.
+    local function CatalogIcon(entry)
+        local catalogs = DFRL.LootIconCatalog
+        local code = DFRL.locale.code
+        local catalog = catalogs and (catalogs[code] or catalogs.en)
+        local icon = catalog and catalog[entry.name]
+        if type(icon) == "string" then return icon end
+        -- Refine only ambiguity in this same native source, using the actual
+        -- player class captured at delivery. No class is inferred from a name.
+        if icon == false and entry.itemClass then
+            local classes = catalogs.classes and catalogs.classes[code]
+            local names = classes and classes[entry.itemClass]
+            icon = names and names[entry.name]
+            if type(icon) == "string" then return icon end
+        end
+    end
+    -- Prefer exact-reference native metadata. Native self-loot text can contain
+    -- only a colored name, so use the generated exact native catalog as fallback.
+    -- Missing/conflicting catalog entries stay unknown; never invent item ids.
     function loot.Resolve(entry)
         local result = {}
         for key, value in pairs(entry) do
             result[key] = value
         end
-        if type(entry.itemReference) ~= "string" or type(GetItemInfo) ~= "function" then return result end
-        local ok, name, _, quality, _, _, _, _, slot, icon = pcall(GetItemInfo, entry.itemReference)
-        if not ok or type(name) ~= "string" or name == "" then return result end
-        if type(quality) == "number" and quality >= 0 and quality - quality == 0 and quality == math.floor(quality) then
-            result.quality = quality
+        if type(entry.itemReference) == "string" and type(GetItemInfo) == "function" then
+            local ok, name, _, quality, _, _, _, _, slot, icon = pcall(GetItemInfo, entry.itemReference)
+            if ok and type(name) == "string" and name ~= "" then
+                if type(quality) == "number" and quality >= 0 and quality - quality == 0 and quality == math.floor(quality) then
+                    result.quality = quality
+                end
+                if type(slot) == "string" and string.find(slot, "^INVTYPE_[A-Z_]+$") then
+                    result.equipLoc = slot
+                    if type(_G[slot]) == "string" and _G[slot] ~= "" then result.equipText = _G[slot] end
+                end
+                if type(icon) == "string" and icon ~= "" and not string.find(string.lower(icon), "inv_misc_questionmark", 1, true) then
+                    result.icon, result.iconSource = icon, "native"
+                end
+            end
         end
-        if type(slot) == "string" and string.find(slot, "^INVTYPE_[A-Z_]+$") then
-            result.equipLoc = slot
-            if type(_G[slot]) == "string" and _G[slot] ~= "" then result.equipText = _G[slot] end
-        end
-        if
-            type(icon) == "string"
-            and icon ~= ""
-            and not string.find(string.lower(icon), "inv_misc_questionmark", 1, true)
-        then
-            result.icon = icon
+        if not result.icon then
+            result.icon = CatalogIcon(entry)
+            if result.icon then result.iconSource = "catalog" end
         end
         return result
     end
@@ -116,6 +134,10 @@ DFRL:NewMod("LootNotifications", 0, function()
         if not chat or type(chat.ParseLootMessage) ~= "function" then return end
         local ok, entry = pcall(chat.ParseLootMessage, text)
         if not ok or type(entry) ~= "table" or entry.collection == "collected" then return end
+        if type(UnitClass) == "function" then
+            local classOK, _, class = pcall(UnitClass, "player")
+            if classOK and type(class) == "string" then entry.itemClass = string.lower(class) end
+        end
         sequence = sequence + 1
         entry.sequence, entry.receivedAt = sequence, GetTime()
         if count == MAX_QUEUE then

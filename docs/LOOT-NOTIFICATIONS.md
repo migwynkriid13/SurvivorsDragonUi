@@ -129,17 +129,24 @@ lifetime and shared layout registration.
 
 ## Native item metadata
 
-`Resolve(entry)` returns a fresh record, preserving the original message name
-and color. It feature-detects `GetItemInfo` and passes only the exact original
-`item:...` reference. It never queries by a guessed item name or substitutes a
-different item. Successful native data can add `quality`, `equipLoc`, localized
-`equipText` through the corresponding native `INVTYPE_*` global, and `icon`.
-Missing templates, empty values, getter errors and question-mark fallback icons
-remain unknown. Bracket-only announcements supply no item reference and therefore
-cannot acquire an icon or slot by this route. The view must omit unavailable
-fields rather than inventing them. `Push` may receive partial metadata;
-the selected view may call `Resolve` again for an active occurrence at a bounded
-cadence if its template becomes available later.
+`Resolve(entry)` returns a fresh record, preserving the original name and color.
+It first feature-detects `GetItemInfo` and passes only the exact original
+`item:...` reference when supplied. Successful native data can add `quality`,
+`equipLoc`, localized `equipText` and `icon`. An icon records `iconSource =
+"native"`. No item id or substitute item is guessed.
+
+Native self-loot notices also arrive as colored names without links. These
+previously returned before any icon lookup. The generated native gear catalog
+now supplies exact name/icon metadata in all fourteen languages, following the
+SCT catalog approach. Native class captured through `UnitClass("player")` at
+delivery can refine same-name variants within that source. Generated matches
+record `iconSource = "catalog"`; they supply no inferred quality, slot or item id.
+Missing/conflicting mappings stay unavailable. Details, the reported Novice's
+Circlet join and pinned extraction evidence are in [LOOT-ICONS.md](LOOT-ICONS.md).
+
+Linked notices retain the existing bounded metadata retries even while showing
+a catalog icon, so a later native template can replace the weaker fallback.
+The view omits unavailable fields and `Push` may receive partial metadata.
 
 The inspected base-client implementation is
 [`item_stats.rs` at `f55bb79b1343629df2705d9e4207a7612a886253`](https://github.com/samwhosung/benilla/blob/f55bb79b1343629df2705d9e4207a7612a886253/crates/benilla-ui/src/script/item_stats.rs).

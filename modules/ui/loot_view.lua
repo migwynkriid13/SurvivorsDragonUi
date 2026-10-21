@@ -148,7 +148,7 @@ DFRL:NewMod("LootView", 4, function()
                 -- delivery. Retry for two seconds, never by a guessed item name.
                 if card.retryAt and now >= card.retryAt then
                     card.entry = loot.Resolve(card.entry)
-                    card.retryAt = elapsed < 2 and not card.entry.icon and now + 0.2 or nil
+                    card.retryAt = elapsed < 2 and card.entry.iconSource ~= "native" and now + 0.2 or nil
                     Refresh(card)
                 end
             end
@@ -175,7 +175,7 @@ DFRL:NewMod("LootView", 4, function()
         end
         if not card then return false end
         card.entry, card.started = entry, GetTime()
-        card.retryAt = entry.itemReference and not entry.icon and card.started + 0.2 or nil
+        card.retryAt = entry.itemReference and entry.iconSource ~= "native" and card.started + 0.2 or nil
         Refresh(card)
         count = count + 1
         visible[count] = card
