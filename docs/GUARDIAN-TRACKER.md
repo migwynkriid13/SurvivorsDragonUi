@@ -59,8 +59,10 @@ command, alert, sound, SavedVariable or dependency. Its header toggle choice is
 session-only and starts expanded on reload; it survives run/world changes within
 the session. Both shared resets restore expanded. The button is disabled during
 layout editing so it does not interfere with dragging. Collapsing or filtering
-clears pooled row health and tooltip ownership, then fits the frame to visible
-rows; the header icon changes between minus and plus immediately. Existing
+clears pooled row health, then fits the frame to visible rows; the header icon
+changes between minus and plus immediately. Guardian rows are mouse-transparent
+and have no hover popups. The header toggle retains its explanatory tooltip and
+the shared layout handles still support editing. Existing
 guardian waypoints and map/minimap markers keep their appearance and independent
 guidance control.
 
@@ -115,7 +117,7 @@ optional native `name`, `left`, world/map coordinates, and a semantic `status`:
 backend status keys and actual native names are not English UI captions. Caption
 widths are measured with the real DEFAULT face across every supported language,
 including populated time/health fields. Native names occupy a separate
-bounded column and remain available in row tooltips.
+bounded column without hover popups.
 
 Health is read once per consumer snapshot through the official
 `AZS_GetGuardians()`, only during an active run and after `AZS_UNITS_UPDATED`
