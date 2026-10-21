@@ -25,7 +25,9 @@ end
 -- Chat and run banners share the same resolved native face and styling.
 function DFRL.tools.SetChatFont(frame)
     local font, size, flags
-    if frame.GetFont then font, size, flags = frame:GetFont() end
+    if frame.GetFont then
+        font, size, flags = frame:GetFont()
+    end
     if font ~= defaultFace or not DFRL.tools.NearlyEqual(size, 12) or flags ~= "OUTLINE" then
         DFRL.tools.SetFont(frame, 12, "OUTLINE")
     end
@@ -34,12 +36,16 @@ end
 function DFRL.tools.SetChatShadow(frame)
     if frame.SetShadowColor then
         local r, g, b, a
-        if frame.GetShadowColor then r, g, b, a = frame:GetShadowColor() end
+        if frame.GetShadowColor then
+            r, g, b, a = frame:GetShadowColor()
+        end
         if r ~= 0 or g ~= 0 or b ~= 0 or a ~= 1 then frame:SetShadowColor(0, 0, 0, 1) end
     end
     if frame.SetShadowOffset then
         local x, y
-        if frame.GetShadowOffset then x, y = frame:GetShadowOffset() end
+        if frame.GetShadowOffset then
+            x, y = frame:GetShadowOffset()
+        end
         if not DFRL.tools.NearlyEqual(x, 1) or not DFRL.tools.NearlyEqual(y, -1) then frame:SetShadowOffset(1, -1) end
     end
 end

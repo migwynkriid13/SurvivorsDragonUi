@@ -48,17 +48,17 @@ Registration receives future events only. The native API invokes
 `time` is client receipt time, not run elapsed time. `AZS_BANNERS` stores the
 newest 20 publications, oldest first; this addon does not consume that history.
 
-| Native kind   | Notification                       |
-| ------------- | ---------------------------------- |
-| `boss`        | Regular boss approaching           |
-| `finalboss`   | Final boss arriving                |
-| `bossdown`    | Boss defeated                      |
-| `guardian`    | Guardian slain                     |
-| `achievement` | Achievement earned                 |
-| `unlocked`    | Zone opened                        |
-| `magnet`      | Magnet appeared or collected       |
-| `cache`       | Cache hints and purchase feedback  |
-| `rune`        | Rune notification                  |
+| Native kind   | Notification                      |
+| ------------- | --------------------------------- |
+| `boss`        | Regular boss approaching          |
+| `finalboss`   | Final boss arriving               |
+| `bossdown`    | Boss defeated                     |
+| `guardian`    | Guardian slain                    |
+| `achievement` | Achievement earned                |
+| `unlocked`    | Zone opened                       |
+| `magnet`      | Magnet appeared or collected      |
+| `cache`       | Cache hints and purchase feedback |
+| `rune`        | Rune notification                 |
 
 All supplied kinds use the same text path, including future unknown kinds.
 Guardian-slain notices also have `boss == true`; the flag is not used to infer

@@ -544,7 +544,9 @@ DFRL:NewMod("RunTimers", 5, function()
         local pixel = math.max(runClock.pixel or 0, bossClock.pixel or 0)
         local top = currentFont.showText and currentFont.size + 4 + pixel or 0
         local bannerWidth, bannerHeight = 0, 0
-        if DFRL.banners then bannerWidth, bannerHeight = DFRL.banners.GetBounds() end
+        if DFRL.banners then
+            bannerWidth, bannerHeight = DFRL.banners.GetBounds()
+        end
         local side = math.max(overflow, (bannerWidth - run:GetWidth()) / 2)
         runMoveRegion:ClearAllPoints()
         runMoveRegion:SetPoint("TOPLEFT", run, "TOPLEFT", -side, top)

@@ -64,8 +64,12 @@ DFRL:NewMod("RunBanners", 4, function()
             row.label:SetText("")
             row.entry, row.sequence, row.started = nil, nil, nil
         end
-        for index = 1, visibleCount do visible[index] = nil end
-        for index = 1, queueCount do queue[index] = nil end
+        for index = 1, visibleCount do
+            visible[index] = nil
+        end
+        for index = 1, queueCount do
+            queue[index] = nil
+        end
         for index = 1, seenCount do
             seen[seenOrder[index]] = nil
             seenOrder[index] = nil
