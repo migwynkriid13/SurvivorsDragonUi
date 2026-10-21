@@ -29,7 +29,7 @@ To use the game's damage numbers, choose **Game settings** under **Combat text**
 ## Features
 
 - Player and target frames, a seven-button action bar, equipped jewelry, XP, kills, gold and cache cost.
-- A run timer with boss markers, plus boss and guardian health bars.
+- A run timer with boss markers, plus boss and guardian health bars. Turn off **Guardians in boss bar** in `/sdui` → **HUD** to show only bosses there; it starts on.
 - A guardian tracker with health bars during combat. Plus shows only living guardians; minus shows all lairs and respawn timers. Move, resize or hide it through `/sdui` → **Layout**.
 - A movable **Level Up!** button for stored levels. Select it in `/sdui` → **Layout** to move or resize it, then **Confirm** to save.
 - Compact nameplates and custom damage numbers with size, color and damage filters.

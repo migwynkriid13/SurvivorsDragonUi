@@ -27,6 +27,23 @@ DEFAULT 12 text. Both views share `core/widgets.lua` style/text helpers; the
 tracker has no Fighting caption or percentage. Missing health stays text-only,
 and a prior bar is cleared when its row stops fighting or is filtered out.
 
+The separate boss-health group includes fighting guardians by default. Turn off
+**Guardians in boss bar** in `/sdui` → **HUD** to leave only bosses there. This
+does not change target health, the tracker, guidance or map markers.
+`guardiansInBossBar` is a normalized boolean in the existing
+`SurvivorsDragonUiDisplay` table; missing or invalid values use `true`. The shared
+display lifecycle previews it live, saves only with Confirm, discards drafts on
+Cancel/world leave/logout/reload, and restores on through both full resets.
+
+`modules/ui/run.lua` filters only the guardian list from its encounter rows,
+retaining the received-unit-snapshot gate and native boss validation. Boss-only
+mode does not require or read the excluded guardian list. The existing row
+retirement clears removed guardian health/debuffs/tooltips and reflows bosses on
+the next HUD update. A valid empty boss list still takes over native `bosses`,
+which also contains guardians, so native guardian bars cannot reappear when only
+guardians are fighting. Native visibility restoration and data-unavailable
+fallbacks retain their existing lifecycle.
+
 Move, scale or hide **Guardian tracker** through the shared `/sdui` Layout
 controls. Confirm saves only its geometry and optional hidden flag in the existing
 layout table; Cancel, world/reload discard and both resets use the normal shared
@@ -37,8 +54,8 @@ screen top, with the toggle centred beneath the minimap's default minus button.
 That horizontal anchor comes from shared static minimap appearance metadata,
 not moved or resized minimap geometry. Width changes reapply this default edge
 only when no confirmed or draft position exists; custom positions stay independent.
-There is no new display setting,
-command, alert, sound, SavedVariable or dependency. The toggle choice is
+The tracker adds no display setting,
+command, alert, sound, SavedVariable or dependency. Its header toggle choice is
 session-only and starts expanded on reload; it survives run/world changes within
 the session. Both shared resets restore expanded. The button is disabled during
 layout editing so it does not interfere with dragging. Collapsing or filtering
