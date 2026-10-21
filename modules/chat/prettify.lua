@@ -301,7 +301,9 @@ local function ItemLabel(item)
     return (string.gsub(item, "^%[([^%]]+)%]", "%1"))
 end
 
-local function LootMessage(text)
+-- Shared, side-effect-free intake for compact chat and the optional loot view.
+function CleanerChat.ParseLootMessage(text)
+    if type(text) ~= "string" then return nil end
     local body = CaptureFormat(text, _G.LOOT_ITEM_SELF)
     if not body then
         local prefix = DFRL.locale.Native("You receive loot:")
@@ -347,6 +349,7 @@ local function LootMessage(text)
 
     -- Collection status is part of native self-loot text. Recognize both known
     -- statuses while preserving their wording and any existing suffix colors.
+    local collection, collectionText
     local plainSuffix = string.gsub(suffix, "|c%x%x%x%x%x%x%x%x", "")
     plainSuffix = string.gsub(plainSuffix, "|r", "")
     if plainSuffix == "." then
@@ -358,17 +361,34 @@ local function LootMessage(text)
         local collected = "(" .. DFRL.locale.Native("already collected") .. ")"
         if normalized == collected or string.find(plainSuffix, "^%s+%(already collected%)%.?$") then
             statusColor = GRAY
+            collection = "collected"
         elseif
             normalized == DFRL.locale.Native("New in your collection!")
             or string.find(plainSuffix, "^%s+New in your collection!$")
         then
             statusColor = GREEN
+            collection = "new"
         else
             return nil
         end
+        collectionText = normalized
         if suffix == plainSuffix then suffix = statusColor .. suffix .. "|r" end
     end
-    return PLUS .. ItemLabel(item) .. suffix
+    local label = ItemLabel(item)
+    local name = string.gsub(label, "|Hitem:[^|]+|h(.-)|h", "%1")
+    name = string.gsub(name, "|c%x%x%x%x%x%x%x%x", "")
+    name = string.gsub(name, "|r", "")
+    local _, _, reference = string.find(item, "|H(item:[^|]+)|h")
+    local _, _, color = string.find(item, "^|c(%x%x%x%x%x%x%x%x)")
+    return {
+        name = name,
+        label = label,
+        itemReference = reference,
+        color = color,
+        collection = collection,
+        collectionText = collectionText,
+        chatText = PLUS .. label .. suffix,
+    }
 end
 
 CleanerChat.PrettifyMessage = function(text, eventName, speaker, message)
@@ -409,8 +429,8 @@ CleanerChat.PrettifyMessage = function(text, eventName, speaker, message)
     end
     -- Recognize native self-loot on the system channel as well as loot events.
     if not eventName or eventName == "CHAT_MSG_LOOT" or eventName == "CHAT_MSG_SYSTEM" then
-        result = LootMessage(text)
-        if result then return result end
+        local loot = CleanerChat.ParseLootMessage(text)
+        if loot then return loot.chatText end
     end
     return text
 end

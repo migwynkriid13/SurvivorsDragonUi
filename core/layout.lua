@@ -28,6 +28,7 @@ DFRL:NewMod("Layout", 0, function()
         cacheWaypoint = "Cache waypoint",
         guardianWaypoint = "Guardian waypoint",
         guardianTracker = "Guardian tracker",
+        lootNotifications = "Loot notifications",
         menu = "Main menu",
         chat = "Chat",
         copyWindow = "Copy",

@@ -14,6 +14,12 @@ Language is session-only. No setting, command, profile, SavedVariable, client pr
 
 ## Display text
 
+The **Guardians in boss bar** caption and its boss-only hint have source TSV and
+runtime UI entries in all fourteen languages. Only these new caption entries
+were generated; the reviewed native catalogs, effects and aliases are unchanged.
+The existing HUD editor measures their widths and includes the added row in its
+scrolling content.
+
 The shared editor/button factories bind only addon-owned captions. Changing the language refreshes existing bound captions, including layout handles and pending editor status text, without recreating controls or discarding drafts. Dynamic HUD/tooltips read the shared translations when they update.
 
 The two waypoint mirror captions and their shared arrow/icon hint have source TSV

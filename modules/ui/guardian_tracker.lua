@@ -21,6 +21,7 @@ DFRL:NewMod("GuardianTracker", 4, function()
     local expanded = true
     local DEFAULT_SCALE = 0.85
     local ROW_INSET, NAME_WIDTH, COLUMN_GAP = 12, 120, 16 * 0.9
+    local HEALTH_RIGHT_OFFSET = 4
     local TOGGLE_SIZE, TOGGLE_INSET = 25.6, 11
     local WIDTH, ROW_HEIGHT = 128 + NAME_WIDTH + COLUMN_GAP + 2 * ROW_INSET, 26
     local width, statusWidth = WIDTH, 128
@@ -95,12 +96,10 @@ DFRL:NewMod("GuardianTracker", 4, function()
         end
         return DFRL.locale.Text(captions[entry.status] or "Empty")
     end
-    local function HideTooltip(row)
-        if GameTooltip and GameTooltip:IsOwned(row) then GameTooltip:Hide() end
+    local function HideTooltip(owner)
+        if GameTooltip and GameTooltip:IsOwned(owner) then GameTooltip:Hide() end
     end
     local function ClearRow(row)
-        HideTooltip(row)
-        row.entry = nil
         row.bar:SetValue(0)
         row.pill:Hide()
         row:Hide()
@@ -116,7 +115,7 @@ DFRL:NewMod("GuardianTracker", 4, function()
     local function MakeRow()
         local row = CreateFrame("Frame", nil, frame)
         row:SetHeight(ROW_HEIGHT)
-        row:EnableMouse(not editing)
+        row:EnableMouse(false)
         row.name = Label(row, 12)
         row.name:SetPoint("LEFT", row, "LEFT", 0, 0)
         row.name:SetHeight(ROW_HEIGHT)
@@ -125,7 +124,7 @@ DFRL:NewMod("GuardianTracker", 4, function()
         row.status:SetHeight(ROW_HEIGHT)
         local pill = CreateFrame("Frame", nil, row)
         pill:SetHeight(22)
-        pill:SetPoint("RIGHT", row, "RIGHT", 4, 0)
+        pill:SetPoint("RIGHT", row, "RIGHT", HEALTH_RIGHT_OFFSET, 0)
         pill:EnableMouse(false)
         local background = Texture(pill, "timer\\BackgroundCenter", "BACKGROUND", statusWidth, 12, 1, 18 / 32)
         background:SetPoint("LEFT", pill, "LEFT", 6, 0)
@@ -156,25 +155,6 @@ DFRL:NewMod("GuardianTracker", 4, function()
         T.StyleEncounterHealth(bar, health)
         row.pill, row.bar, row.health = pill, bar, health
         pill:Hide()
-        row:SetScript("OnEnter", function()
-            local entry = this.entry
-            if not entry or editing or not GameTooltip then return end
-            GameTooltip:SetOwner(this, "ANCHOR_LEFT")
-            GameTooltip:AddLine(entry.name or Format("Lair %d", entry.index), 0.87, 0.74, 0.49)
-            GameTooltip:AddLine(Status(entry), 1, 1, 1)
-            if
-                Number(entry.mx)
-                and Number(entry.my)
-                and entry.mx >= 0
-                and entry.mx <= 1
-                and entry.my >= 0
-                and entry.my <= 1
-            then
-                GameTooltip:AddLine(Format("Lair: %.0f, %.0f", entry.mx * 100, entry.my * 100), 0.66, 0.72, 0.68)
-            end
-            GameTooltip:Show()
-        end)
-        row:SetScript("OnLeave", function() HideTooltip(this) end)
         table.insert(rows, row)
         return row
     end
@@ -239,8 +219,6 @@ DFRL:NewMod("GuardianTracker", 4, function()
             if expanded or entry.state == "asleep" or entry.state == "awake" then
                 used = used + 1
                 local row = rows[used] or MakeRow()
-                if row.entry and row.entry.key ~= entry.key then HideTooltip(row) end
-                row.entry = entry
                 row:ClearAllPoints()
                 row:SetPoint("TOPLEFT", frame, "TOPLEFT", ROW_INSET, -(width / 8 + 6 + (used - 1) * ROW_HEIGHT))
                 row:SetWidth(width - 2 * ROW_INSET)
@@ -286,8 +264,8 @@ DFRL:NewMod("GuardianTracker", 4, function()
     end)
     toggle:SetScript("OnLeave", function() HideTooltip(toggle) end)
     DFRL.layout.Register("guardianTracker", frame, function()
-        -- Match the default minimap minus centre, without following moved geometry.
-        local right = minimapDefaults.zoomOutCenterX / DEFAULT_SCALE + TOGGLE_INSET + TOGGLE_SIZE / 2
+        -- Match the health pill's right edge to the default minimap right edge.
+        local right = minimapDefaults.right / DEFAULT_SCALE + ROW_INSET - HEALTH_RIGHT_OFFSET
         frame:ClearAllPoints()
         frame:SetPoint("TOPRIGHT", UIParent, "TOPRIGHT", right, -252 / DEFAULT_SCALE)
     end, {
@@ -301,10 +279,6 @@ DFRL:NewMod("GuardianTracker", 4, function()
                 toggle:Disable()
             else
                 toggle:Enable()
-            end
-            for _, row in ipairs(rows) do
-                HideTooltip(row)
-                row:EnableMouse(not active)
             end
         end,
         onReset = function()

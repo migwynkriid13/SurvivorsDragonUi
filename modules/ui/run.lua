@@ -669,6 +669,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 "Attach jewelry to action bar",
                 "Off: move jewelry separately, keeping the silver rims.",
             },
+            { "guardiansInBossBar", "Guardians in boss bar", "Off: show only bosses in the boss bar." },
         }
         for _, entry in ipairs(fontFaces) do
             dropdownWidth = math.max(dropdownWidth, TextWidth(entry.label) + 36)
@@ -1546,10 +1547,12 @@ DFRL:NewMod("RunTimers", 5, function()
         -- getter result does not mean the native encounters disappeared.
         if not IsNumber(AZS_UNITS_UPDATED) then return nil end
         local bosses = Read("AZS_GetBosses")
-        local guardians = Read("AZS_GetGuardians")
+        local showGuardians = DFRL.display.Get("guardiansInBossBar")
+        local guardians = showGuardians and Read("AZS_GetGuardians") or nil
         -- The native "bosses" part includes guardians. Only awake guardians
         -- are fighting; the full list also includes sleeping lairs on the map.
-        if type(bosses) ~= "table" or type(guardians) ~= "table" then return nil end
+        -- Boss-only mode does not depend on the excluded guardian list.
+        if type(bosses) ~= "table" or (showGuardians and type(guardians) ~= "table") then return nil end
         local entries = {}
         local seen = {}
         local function Append(list, kind)
@@ -1585,7 +1588,7 @@ DFRL:NewMod("RunTimers", 5, function()
             end
             return true
         end
-        if not Append(bosses, "boss") or not Append(guardians, "guardian") then return nil end
+        if not Append(bosses, "boss") or (showGuardians and not Append(guardians, "guardian")) then return nil end
         return entries, seen
     end
 

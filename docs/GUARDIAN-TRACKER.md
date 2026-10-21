@@ -27,23 +27,46 @@ DEFAULT 12 text. Both views share `core/widgets.lua` style/text helpers; the
 tracker has no Fighting caption or percentage. Missing health stays text-only,
 and a prior bar is cleared when its row stops fighting or is filtered out.
 
+The separate boss-health group shows only bosses by default. Enable
+**Guardians in boss bar** in `/sdui` → **HUD** to include fighting guardians. This
+does not change target health, the tracker, guidance or map markers.
+`guardiansInBossBar` is a normalized boolean in the existing
+`SurvivorsDragonUiDisplay` table; missing or invalid values use `false`. Existing
+saved boolean choices remain unchanged. The shared
+display lifecycle previews it live, saves only with Confirm, discards drafts on
+Cancel/world leave/logout/reload, and restores off through both full resets.
+
+`modules/ui/run.lua` filters only the guardian list from its encounter rows,
+retaining the received-unit-snapshot gate and native boss validation. Boss-only
+mode does not require or read the excluded guardian list. The existing row
+retirement clears removed guardian health/debuffs/tooltips and reflows bosses on
+the next HUD update. A valid empty boss list still takes over native `bosses`,
+which also contains guardians, so native guardian bars cannot reappear when only
+guardians are fighting. Native visibility restoration and data-unavailable
+fallbacks retain their existing lifecycle.
+
 Move, scale or hide **Guardian tracker** through the shared `/sdui` Layout
 controls. Confirm saves only its geometry and optional hidden flag in the existing
 layout table; Cancel, world/reload discard and both resets use the normal shared
 lifecycle. Its default scale is `0.85`, 15% smaller than the original size. The
 name/status column gap is `14.4` units instead of `16`, retaining the name column
 and measured translated status widths. Its top stays 252 UI units below the
-screen top, with the toggle centred beneath the minimap's default minus button.
-That horizontal anchor comes from shared static minimap appearance metadata,
-not moved or resized minimap geometry. Width changes reapply this default edge
-only when no confirmed or draft position exists; custom positions stay independent.
-There is no new display setting,
-command, alert, sound, SavedVariable or dependency. The toggle choice is
+screen top, with each health pill's right edge aligned beneath the minimap's
+default right edge. The root's horizontal anchor uses shared static
+`DFRL.minimapDefaults.right`, compensating for the existing row inset and health
+pill's right offset at the default scale. The pill anchor and default calculation
+share `HEALTH_RIGHT_OFFSET`; neither follows moved or resized minimap geometry.
+Width changes reapply this default edge only when no confirmed or draft position
+exists; custom positions stay independent.
+The tracker adds no display setting,
+command, alert, sound, SavedVariable or dependency. Its header toggle choice is
 session-only and starts expanded on reload; it survives run/world changes within
 the session. Both shared resets restore expanded. The button is disabled during
 layout editing so it does not interfere with dragging. Collapsing or filtering
-clears pooled row health and tooltip ownership, then fits the frame to visible
-rows; the header icon changes between minus and plus immediately. Existing
+clears pooled row health, then fits the frame to visible rows; the header icon
+changes between minus and plus immediately. Guardian rows are mouse-transparent
+and have no hover popups. The header toggle retains its explanatory tooltip and
+the shared layout handles still support editing. Existing
 guardian waypoints and map/minimap markers keep their appearance and independent
 guidance control.
 
@@ -98,7 +121,7 @@ optional native `name`, `left`, world/map coordinates, and a semantic `status`:
 backend status keys and actual native names are not English UI captions. Caption
 widths are measured with the real DEFAULT face across every supported language,
 including populated time/health fields. Native names occupy a separate
-bounded column and remain available in row tooltips.
+bounded column without hover popups.
 
 Health is read once per consumer snapshot through the official
 `AZS_GetGuardians()`, only during an active run and after `AZS_UNITS_UPDATED`

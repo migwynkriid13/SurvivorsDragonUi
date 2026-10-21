@@ -1,0 +1,5316 @@
+{
+  "executable_sha256": "8f8de1512420dd6c9fefcbbf90a6a6feaf7388ba1cda3b6c3d5eaa7a74927514",
+  "item_display_sha256": "6f37ca862dc632a11aaf86e0ba7b183aa7abaebb052549e6120aa9fa69dd9dee",
+  "class_offset": 119190736,
+  "class_stride": 304,
+  "weapon_stride": 144,
+  "pvp_offset": 119194688,
+  "pvp_stride": 120,
+  "pvp_weapon_stride": 48,
+  "records": [
+    {
+      "name": "Recruit's Helm",
+      "class": "warrior",
+      "declared_display": 0,
+      "display": 31284,
+      "icon": "Interface\\Icons\\INV_Helmet_02",
+      "source_offset": 119190872,
+      "display_source_offset": 119190904
+    },
+    {
+      "name": "Recruit's Pauldrons",
+      "class": "warrior",
+      "declared_display": 26164,
+      "display": 26164,
+      "icon": "Interface\\Icons\\INV_Shoulder_28",
+      "source_offset": 119190876,
+      "display_source_offset": 119190876
+    },
+    {
+      "name": "Recruit's Breastplate",
+      "class": "warrior",
+      "declared_display": 16183,
+      "display": 16183,
+      "icon": "Interface\\Icons\\INV_Chest_Plate10",
+      "source_offset": 119190880,
+      "display_source_offset": 119190880
+    },
+    {
+      "name": "Recruit's Girdle",
+      "class": "warrior",
+      "declared_display": 3418,
+      "display": 3418,
+      "icon": "Interface\\Icons\\INV_Belt_01",
+      "source_offset": 119190884,
+      "display_source_offset": 119190884
+    },
+    {
+      "name": "Recruit's Legplates",
+      "class": "warrior",
+      "declared_display": 3414,
+      "display": 3414,
+      "icon": "Interface\\Icons\\INV_Pants_04",
+      "source_offset": 119190888,
+      "display_source_offset": 119190888
+    },
+    {
+      "name": "Recruit's Sabatons",
+      "class": "warrior",
+      "declared_display": 25828,
+      "display": 25828,
+      "icon": "Interface\\Icons\\INV_Boots_01",
+      "source_offset": 119190892,
+      "display_source_offset": 119190892
+    },
+    {
+      "name": "Recruit's Bracers",
+      "class": "warrior",
+      "declared_display": 4448,
+      "display": 4448,
+      "icon": "Interface\\Icons\\INV_Bracer_07",
+      "source_offset": 119190896,
+      "display_source_offset": 119190896
+    },
+    {
+      "name": "Recruit's Gauntlets",
+      "class": "warrior",
+      "declared_display": 25831,
+      "display": 25831,
+      "icon": "Interface\\Icons\\INV_Gauntlets_23",
+      "source_offset": 119190900,
+      "display_source_offset": 119190900
+    },
+    {
+      "name": "Helm of Valor",
+      "class": "warrior",
+      "declared_display": 31284,
+      "display": 31284,
+      "icon": "Interface\\Icons\\INV_Helmet_02",
+      "source_offset": 119190904,
+      "display_source_offset": 119190904
+    },
+    {
+      "name": "Pauldrons of Valor",
+      "class": "warrior",
+      "declared_display": 29964,
+      "display": 29964,
+      "icon": "Interface\\Icons\\INV_Shoulder_30",
+      "source_offset": 119190908,
+      "display_source_offset": 119190908
+    },
+    {
+      "name": "Breastplate of Valor",
+      "class": "warrior",
+      "declared_display": 29958,
+      "display": 29958,
+      "icon": "Interface\\Icons\\INV_Chest_Plate03",
+      "source_offset": 119190912,
+      "display_source_offset": 119190912
+    },
+    {
+      "name": "Girdle of Valor",
+      "class": "warrior",
+      "declared_display": 29959,
+      "display": 29959,
+      "icon": "Interface\\Icons\\INV_Belt_34",
+      "source_offset": 119190916,
+      "display_source_offset": 119190916
+    },
+    {
+      "name": "Legplates of Valor",
+      "class": "warrior",
+      "declared_display": 29963,
+      "display": 29963,
+      "icon": "Interface\\Icons\\INV_Pants_04",
+      "source_offset": 119190920,
+      "display_source_offset": 119190920
+    },
+    {
+      "name": "Sabatons of Valor",
+      "class": "warrior",
+      "declared_display": 29960,
+      "display": 29960,
+      "icon": "Interface\\Icons\\INV_Boots_Plate_03",
+      "source_offset": 119190924,
+      "display_source_offset": 119190924
+    },
+    {
+      "name": "Bracers of Valor",
+      "class": "warrior",
+      "declared_display": 29961,
+      "display": 29961,
+      "icon": "Interface\\Icons\\INV_Bracer_18",
+      "source_offset": 119190928,
+      "display_source_offset": 119190928
+    },
+    {
+      "name": "Gauntlets of Valor",
+      "class": "warrior",
+      "declared_display": 29962,
+      "display": 29962,
+      "icon": "Interface\\Icons\\INV_Gauntlets_26",
+      "source_offset": 119190932,
+      "display_source_offset": 119190932
+    },
+    {
+      "name": "Helm of Might",
+      "class": "warrior",
+      "declared_display": 31259,
+      "display": 31259,
+      "icon": "Interface\\Icons\\INV_Helmet_09",
+      "source_offset": 119190936,
+      "display_source_offset": 119190936
+    },
+    {
+      "name": "Pauldrons of Might",
+      "class": "warrior",
+      "declared_display": 31024,
+      "display": 31024,
+      "icon": "Interface\\Icons\\INV_Shoulder_15",
+      "source_offset": 119190940,
+      "display_source_offset": 119190940
+    },
+    {
+      "name": "Breastplate of Might",
+      "class": "warrior",
+      "declared_display": 31021,
+      "display": 31021,
+      "icon": "Interface\\Icons\\INV_Chest_Plate16",
+      "source_offset": 119190944,
+      "display_source_offset": 119190944
+    },
+    {
+      "name": "Girdle of Might",
+      "class": "warrior",
+      "declared_display": 31019,
+      "display": 31019,
+      "icon": "Interface\\Icons\\INV_Belt_09",
+      "source_offset": 119190948,
+      "display_source_offset": 119190948
+    },
+    {
+      "name": "Legplates of Might",
+      "class": "warrior",
+      "declared_display": 31023,
+      "display": 31023,
+      "icon": "Interface\\Icons\\INV_Pants_04",
+      "source_offset": 119190952,
+      "display_source_offset": 119190952
+    },
+    {
+      "name": "Sabatons of Might",
+      "class": "warrior",
+      "declared_display": 31025,
+      "display": 31025,
+      "icon": "Interface\\Icons\\INV_Boots_Plate_04",
+      "source_offset": 119190956,
+      "display_source_offset": 119190956
+    },
+    {
+      "name": "Bracers of Might",
+      "class": "warrior",
+      "declared_display": 31020,
+      "display": 31020,
+      "icon": "Interface\\Icons\\INV_Bracer_19",
+      "source_offset": 119190960,
+      "display_source_offset": 119190960
+    },
+    {
+      "name": "Gauntlets of Might",
+      "class": "warrior",
+      "declared_display": 31022,
+      "display": 31022,
+      "icon": "Interface\\Icons\\INV_Gauntlets_10",
+      "source_offset": 119190964,
+      "display_source_offset": 119190964
+    },
+    {
+      "name": "Helm of Wrath",
+      "class": "warrior",
+      "declared_display": 34215,
+      "display": 34215,
+      "icon": "Interface\\Icons\\INV_Helmet_71",
+      "source_offset": 119190968,
+      "display_source_offset": 119190968
+    },
+    {
+      "name": "Pauldrons of Wrath",
+      "class": "warrior",
+      "declared_display": 34253,
+      "display": 34253,
+      "icon": "Interface\\Icons\\INV_Shoulder_34",
+      "source_offset": 119190972,
+      "display_source_offset": 119190972
+    },
+    {
+      "name": "Breastplate of Wrath",
+      "class": "warrior",
+      "declared_display": 33983,
+      "display": 33983,
+      "icon": "Interface\\Icons\\INV_Chest_Plate16",
+      "source_offset": 119190976,
+      "display_source_offset": 119190976
+    },
+    {
+      "name": "Girdle of Wrath",
+      "class": "warrior",
+      "declared_display": 33990,
+      "display": 33990,
+      "icon": "Interface\\Icons\\INV_Belt_09",
+      "source_offset": 119190980,
+      "display_source_offset": 119190980
+    },
+    {
+      "name": "Legplates of Wrath",
+      "class": "warrior",
+      "declared_display": 33986,
+      "display": 33986,
+      "icon": "Interface\\Icons\\INV_Pants_04",
+      "source_offset": 119190984,
+      "display_source_offset": 119190984
+    },
+    {
+      "name": "Sabatons of Wrath",
+      "class": "warrior",
+      "declared_display": 33989,
+      "display": 33989,
+      "icon": "Interface\\Icons\\INV_Boots_Plate_04",
+      "source_offset": 119190988,
+      "display_source_offset": 119190988
+    },
+    {
+      "name": "Bracers of Wrath",
+      "class": "warrior",
+      "declared_display": 33982,
+      "display": 33982,
+      "icon": "Interface\\Icons\\INV_Bracer_19",
+      "source_offset": 119190992,
+      "display_source_offset": 119190992
+    },
+    {
+      "name": "Gauntlets of Wrath",
+      "class": "warrior",
+      "declared_display": 33984,
+      "display": 33984,
+      "icon": "Interface\\Icons\\INV_Gauntlets_10",
+      "source_offset": 119190996,
+      "display_source_offset": 119190996
+    },
+    {
+      "name": "Dreadnaught Helm",
+      "class": "warrior",
+      "declared_display": 36730,
+      "display": 36730,
+      "icon": "Interface\\Icons\\INV_Helmet_58",
+      "source_offset": 119191000,
+      "display_source_offset": 119191000
+    },
+    {
+      "name": "Dreadnaught Pauldrons",
+      "class": "warrior",
+      "declared_display": 35177,
+      "display": 35177,
+      "icon": "Interface\\Icons\\INV_Shoulder_29",
+      "source_offset": 119191004,
+      "display_source_offset": 119191004
+    },
+    {
+      "name": "Dreadnaught Breastplate",
+      "class": "warrior",
+      "declared_display": 35049,
+      "display": 35049,
+      "icon": "Interface\\Icons\\INV_Chest_Plate02",
+      "source_offset": 119191008,
+      "display_source_offset": 119191008
+    },
+    {
+      "name": "Dreadnaught Girdle",
+      "class": "warrior",
+      "declared_display": 35058,
+      "display": 35058,
+      "icon": "Interface\\Icons\\INV_Belt_27",
+      "source_offset": 119191012,
+      "display_source_offset": 119191012
+    },
+    {
+      "name": "Dreadnaught Legplates",
+      "class": "warrior",
+      "declared_display": 35051,
+      "display": 35051,
+      "icon": "Interface\\Icons\\INV_Pants_Plate_05",
+      "source_offset": 119191016,
+      "display_source_offset": 119191016
+    },
+    {
+      "name": "Dreadnaught Sabatons",
+      "class": "warrior",
+      "declared_display": 35067,
+      "display": 35067,
+      "icon": "Interface\\Icons\\INV_Boots_Plate_06",
+      "source_offset": 119191020,
+      "display_source_offset": 119191020
+    },
+    {
+      "name": "Dreadnaught Bracers",
+      "class": "warrior",
+      "declared_display": 35044,
+      "display": 35044,
+      "icon": "Interface\\Icons\\INV_Bracer_15",
+      "source_offset": 119191024,
+      "display_source_offset": 119191024
+    },
+    {
+      "name": "Dreadnaught Gauntlets",
+      "class": "warrior",
+      "declared_display": 35050,
+      "display": 35050,
+      "icon": "Interface\\Icons\\INV_Gauntlets_28",
+      "source_offset": 119191028,
+      "display_source_offset": 119191028
+    },
+    {
+      "name": "Worn Claymore",
+      "class": "warrior",
+      "declared_display": 563,
+      "display": 563,
+      "icon": "Interface\\Icons\\INV_Sword_08",
+      "source_offset": 119188040,
+      "display_source_offset": 119188040
+    },
+    {
+      "name": "Bastard Sword of Valor",
+      "class": "warrior",
+      "declared_display": 1639,
+      "display": 1639,
+      "icon": "Interface\\Icons\\INV_Sword_07",
+      "source_offset": 119188044,
+      "display_source_offset": 119188044
+    },
+    {
+      "name": "Blackhand Doomsaw",
+      "class": "warrior",
+      "declared_display": 22905,
+      "display": 22905,
+      "icon": "Interface\\Icons\\INV_Weapon_ShortBlade_12",
+      "source_offset": 119188048,
+      "display_source_offset": 119188048
+    },
+    {
+      "name": "Ravager's Greatblade",
+      "class": "warrior",
+      "declared_display": 33881,
+      "display": 33881,
+      "icon": "Interface\\Icons\\INV_Sword_56",
+      "source_offset": 119188052,
+      "display_source_offset": 119188052
+    },
+    {
+      "name": "Sulfuras, Hand of Ragnaros",
+      "class": "warrior",
+      "declared_display": 29698,
+      "display": 29698,
+      "icon": "Interface\\Icons\\INV_Hammer_Unique_Sulfuras",
+      "source_offset": 119188056,
+      "display_source_offset": 119188056
+    },
+    {
+      "name": "Squire's Helm",
+      "class": "paladin",
+      "declared_display": 0,
+      "display": 31207,
+      "icon": "Interface\\Icons\\INV_Helmet_08",
+      "source_offset": 119191176,
+      "display_source_offset": 119191208
+    },
+    {
+      "name": "Squire's Pauldrons",
+      "class": "paladin",
+      "declared_display": 26164,
+      "display": 26164,
+      "icon": "Interface\\Icons\\INV_Shoulder_28",
+      "source_offset": 119191180,
+      "display_source_offset": 119191180
+    },
+    {
+      "name": "Squire's Breastplate",
+      "class": "paladin",
+      "declared_display": 16183,
+      "display": 16183,
+      "icon": "Interface\\Icons\\INV_Chest_Plate10",
+      "source_offset": 119191184,
+      "display_source_offset": 119191184
+    },
+    {
+      "name": "Squire's Girdle",
+      "class": "paladin",
+      "declared_display": 3418,
+      "display": 3418,
+      "icon": "Interface\\Icons\\INV_Belt_01",
+      "source_offset": 119191188,
+      "display_source_offset": 119191188
+    },
+    {
+      "name": "Squire's Legplates",
+      "class": "paladin",
+      "declared_display": 3414,
+      "display": 3414,
+      "icon": "Interface\\Icons\\INV_Pants_04",
+      "source_offset": 119191192,
+      "display_source_offset": 119191192
+    },
+    {
+      "name": "Squire's Sabatons",
+      "class": "paladin",
+      "declared_display": 25828,
+      "display": 25828,
+      "icon": "Interface\\Icons\\INV_Boots_01",
+      "source_offset": 119191196,
+      "display_source_offset": 119191196
+    },
+    {
+      "name": "Squire's Bracers",
+      "class": "paladin",
+      "declared_display": 4448,
+      "display": 4448,
+      "icon": "Interface\\Icons\\INV_Bracer_07",
+      "source_offset": 119191200,
+      "display_source_offset": 119191200
+    },
+    {
+      "name": "Squire's Gauntlets",
+      "class": "paladin",
+      "declared_display": 25831,
+      "display": 25831,
+      "icon": "Interface\\Icons\\INV_Gauntlets_23",
+      "source_offset": 119191204,
+      "display_source_offset": 119191204
+    },
+    {
+      "name": "Lightforge Helm",
+      "class": "paladin",
+      "declared_display": 31207,
+      "display": 31207,
+      "icon": "Interface\\Icons\\INV_Helmet_08",
+      "source_offset": 119191208,
+      "display_source_offset": 119191208
+    },
+    {
+      "name": "Lightforge Pauldrons",
+      "class": "paladin",
+      "declared_display": 29971,
+      "display": 29971,
+      "icon": "Interface\\Icons\\INV_Shoulder_10",
+      "source_offset": 119191212,
+      "display_source_offset": 119191212
+    },
+    {
+      "name": "Lightforge Breastplate",
+      "class": "paladin",
+      "declared_display": 29969,
+      "display": 29969,
+      "icon": "Interface\\Icons\\INV_Chest_Plate03",
+      "source_offset": 119191216,
+      "display_source_offset": 119191216
+    },
+    {
+      "name": "Lightforge Girdle",
+      "class": "paladin",
+      "declared_display": 29966,
+      "display": 29966,
+      "icon": "Interface\\Icons\\INV_Belt_11",
+      "source_offset": 119191220,
+      "display_source_offset": 119191220
+    },
+    {
+      "name": "Lightforge Legplates",
+      "class": "paladin",
+      "declared_display": 29972,
+      "display": 29972,
+      "icon": "Interface\\Icons\\INV_Pants_04",
+      "source_offset": 119191224,
+      "display_source_offset": 119191224
+    },
+    {
+      "name": "Lightforge Sabatons",
+      "class": "paladin",
+      "declared_display": 29967,
+      "display": 29967,
+      "icon": "Interface\\Icons\\INV_Boots_Plate_03",
+      "source_offset": 119191228,
+      "display_source_offset": 119191228
+    },
+    {
+      "name": "Lightforge Bracers",
+      "class": "paladin",
+      "declared_display": 29968,
+      "display": 29968,
+      "icon": "Interface\\Icons\\INV_Bracer_14",
+      "source_offset": 119191232,
+      "display_source_offset": 119191232
+    },
+    {
+      "name": "Lightforge Gauntlets",
+      "class": "paladin",
+      "declared_display": 29970,
+      "display": 29970,
+      "icon": "Interface\\Icons\\INV_Gauntlets_19",
+      "source_offset": 119191236,
+      "display_source_offset": 119191236
+    },
+    {
+      "name": "Lawbringer Helm",
+      "class": "paladin",
+      "declared_display": 31506,
+      "display": 31506,
+      "icon": "Interface\\Icons\\INV_Helmet_05",
+      "source_offset": 119191240,
+      "display_source_offset": 119191240
+    },
+    {
+      "name": "Lawbringer Pauldrons",
+      "class": "paladin",
+      "declared_display": 31510,
+      "display": 31510,
+      "icon": "Interface\\Icons\\INV_Shoulder_20",
+      "source_offset": 119191244,
+      "display_source_offset": 119191244
+    },
+    {
+      "name": "Lawbringer Breastplate",
+      "class": "paladin",
+      "declared_display": 31505,
+      "display": 31505,
+      "icon": "Interface\\Icons\\INV_Chest_Plate03",
+      "source_offset": 119191248,
+      "display_source_offset": 119191248
+    },
+    {
+      "name": "Lawbringer Girdle",
+      "class": "paladin",
+      "declared_display": 31353,
+      "display": 31353,
+      "icon": "Interface\\Icons\\INV_Belt_27",
+      "source_offset": 119191252,
+      "display_source_offset": 119191252
+    },
+    {
+      "name": "Lawbringer Legplates",
+      "class": "paladin",
+      "declared_display": 31352,
+      "display": 31352,
+      "icon": "Interface\\Icons\\INV_Pants_04",
+      "source_offset": 119191256,
+      "display_source_offset": 119191256
+    },
+    {
+      "name": "Lawbringer Sabatons",
+      "class": "paladin",
+      "declared_display": 31354,
+      "display": 31354,
+      "icon": "Interface\\Icons\\INV_Boots_Plate_09",
+      "source_offset": 119191260,
+      "display_source_offset": 119191260
+    },
+    {
+      "name": "Lawbringer Bracers",
+      "class": "paladin",
+      "declared_display": 31509,
+      "display": 31509,
+      "icon": "Interface\\Icons\\INV_Bracer_18",
+      "source_offset": 119191264,
+      "display_source_offset": 119191264
+    },
+    {
+      "name": "Lawbringer Gauntlets",
+      "class": "paladin",
+      "declared_display": 31507,
+      "display": 31507,
+      "icon": "Interface\\Icons\\INV_Gauntlets_29",
+      "source_offset": 119191268,
+      "display_source_offset": 119191268
+    },
+    {
+      "name": "Judgement Helm",
+      "class": "paladin",
+      "declared_display": 34216,
+      "display": 34216,
+      "icon": "Interface\\Icons\\INV_Helmet_74",
+      "source_offset": 119191272,
+      "display_source_offset": 119191272
+    },
+    {
+      "name": "Judgement Pauldrons",
+      "class": "paladin",
+      "declared_display": 34258,
+      "display": 34258,
+      "icon": "Interface\\Icons\\INV_Shoulder_37",
+      "source_offset": 119191276,
+      "display_source_offset": 119191276
+    },
+    {
+      "name": "Judgement Breastplate",
+      "class": "paladin",
+      "declared_display": 33635,
+      "display": 33635,
+      "icon": "Interface\\Icons\\INV_Chest_Plate03",
+      "source_offset": 119191280,
+      "display_source_offset": 119191280
+    },
+    {
+      "name": "Judgement Girdle",
+      "class": "paladin",
+      "declared_display": 33633,
+      "display": 33633,
+      "icon": "Interface\\Icons\\INV_Belt_27",
+      "source_offset": 119191284,
+      "display_source_offset": 119191284
+    },
+    {
+      "name": "Judgement Legplates",
+      "class": "paladin",
+      "declared_display": 33637,
+      "display": 33637,
+      "icon": "Interface\\Icons\\INV_Pants_04",
+      "source_offset": 119191288,
+      "display_source_offset": 119191288
+    },
+    {
+      "name": "Judgement Sabatons",
+      "class": "paladin",
+      "declared_display": 33639,
+      "display": 33639,
+      "icon": "Interface\\Icons\\INV_Boots_Plate_09",
+      "source_offset": 119191292,
+      "display_source_offset": 119191292
+    },
+    {
+      "name": "Judgement Bracers",
+      "class": "paladin",
+      "declared_display": 33634,
+      "display": 33634,
+      "icon": "Interface\\Icons\\INV_Bracer_18",
+      "source_offset": 119191296,
+      "display_source_offset": 119191296
+    },
+    {
+      "name": "Judgement Gauntlets",
+      "class": "paladin",
+      "declared_display": 33636,
+      "display": 33636,
+      "icon": "Interface\\Icons\\INV_Gauntlets_29",
+      "source_offset": 119191300,
+      "display_source_offset": 119191300
+    },
+    {
+      "name": "Redemption Helm",
+      "class": "paladin",
+      "declared_display": 36972,
+      "display": 36972,
+      "icon": "Interface\\Icons\\INV_Helmet_15",
+      "source_offset": 119191304,
+      "display_source_offset": 119191304
+    },
+    {
+      "name": "Redemption Pauldrons",
+      "class": "paladin",
+      "declared_display": 35617,
+      "display": 35617,
+      "icon": "Interface\\Icons\\INV_Shoulder_14",
+      "source_offset": 119191308,
+      "display_source_offset": 119191308
+    },
+    {
+      "name": "Redemption Breastplate",
+      "class": "paladin",
+      "declared_display": 35618,
+      "display": 35618,
+      "icon": "Interface\\Icons\\INV_Chest_Chain_15",
+      "source_offset": 119191312,
+      "display_source_offset": 119191312
+    },
+    {
+      "name": "Redemption Girdle",
+      "class": "paladin",
+      "declared_display": 35614,
+      "display": 35614,
+      "icon": "Interface\\Icons\\INV_Belt_22",
+      "source_offset": 119191316,
+      "display_source_offset": 119191316
+    },
+    {
+      "name": "Redemption Legplates",
+      "class": "paladin",
+      "declared_display": 35616,
+      "display": 35616,
+      "icon": "Interface\\Icons\\INV_Pants_Mail_15",
+      "source_offset": 119191320,
+      "display_source_offset": 119191320
+    },
+    {
+      "name": "Redemption Sabatons",
+      "class": "paladin",
+      "declared_display": 35613,
+      "display": 35613,
+      "icon": "Interface\\Icons\\INV_Boots_Chain_05",
+      "source_offset": 119191324,
+      "display_source_offset": 119191324
+    },
+    {
+      "name": "Redemption Bracers",
+      "class": "paladin",
+      "declared_display": 35619,
+      "display": 35619,
+      "icon": "Interface\\Icons\\INV_Bracer_02",
+      "source_offset": 119191328,
+      "display_source_offset": 119191328
+    },
+    {
+      "name": "Redemption Gauntlets",
+      "class": "paladin",
+      "declared_display": 35615,
+      "display": 35615,
+      "icon": "Interface\\Icons\\INV_Gauntlets_25",
+      "source_offset": 119191332,
+      "display_source_offset": 119191332
+    },
+    {
+      "name": "Wooden Maul",
+      "class": "paladin",
+      "declared_display": 1243,
+      "display": 1243,
+      "icon": "Interface\\Icons\\INV_Hammer_01",
+      "source_offset": 119188320,
+      "display_source_offset": 119188320
+    },
+    {
+      "name": "Hammer of the Squire",
+      "class": "paladin",
+      "declared_display": 2056,
+      "display": 2056,
+      "icon": "Interface\\Icons\\INV_Hammer_03",
+      "source_offset": 119188324,
+      "display_source_offset": 119188324
+    },
+    {
+      "name": "Hammer of the Lightforge",
+      "class": "paladin",
+      "declared_display": 25362,
+      "display": 25362,
+      "icon": "Interface\\Icons\\INV_Hammer_03",
+      "source_offset": 119188328,
+      "display_source_offset": 119188328
+    },
+    {
+      "name": "Lightforged Hammer",
+      "class": "paladin",
+      "declared_display": 34109,
+      "display": 34109,
+      "icon": "Interface\\Icons\\INV_Hammer_05",
+      "source_offset": 119188332,
+      "display_source_offset": 119188332
+    },
+    {
+      "name": "Ashbringer",
+      "class": "paladin",
+      "declared_display": 23875,
+      "display": 23875,
+      "icon": "Interface\\Icons\\INV_Sword_48",
+      "source_offset": 119188336,
+      "display_source_offset": 119188336
+    },
+    {
+      "name": "Tracker's Helm",
+      "class": "hunter",
+      "declared_display": 1131,
+      "display": 1131,
+      "icon": "Interface\\Icons\\INV_Helmet_03",
+      "source_offset": 119191480,
+      "display_source_offset": 119191480
+    },
+    {
+      "name": "Tracker's Spaulders",
+      "class": "hunter",
+      "declared_display": 4975,
+      "display": 4975,
+      "icon": "Interface\\Icons\\INV_Shoulder_08",
+      "source_offset": 119191484,
+      "display_source_offset": 119191484
+    },
+    {
+      "name": "Tracker's Breastplate",
+      "class": "hunter",
+      "declared_display": 954,
+      "display": 954,
+      "icon": "Interface\\Icons\\INV_Chest_Chain",
+      "source_offset": 119191488,
+      "display_source_offset": 119191488
+    },
+    {
+      "name": "Tracker's Belt",
+      "class": "hunter",
+      "declared_display": 12298,
+      "display": 12298,
+      "icon": "Interface\\Icons\\INV_Belt_22",
+      "source_offset": 119191492,
+      "display_source_offset": 119191492
+    },
+    {
+      "name": "Tracker's Legguards",
+      "class": "hunter",
+      "declared_display": 685,
+      "display": 685,
+      "icon": "Interface\\Icons\\INV_Pants_03",
+      "source_offset": 119191496,
+      "display_source_offset": 119191496
+    },
+    {
+      "name": "Tracker's Greaves",
+      "class": "hunter",
+      "declared_display": 2229,
+      "display": 2229,
+      "icon": "Interface\\Icons\\INV_Boots_01",
+      "source_offset": 119191500,
+      "display_source_offset": 119191500
+    },
+    {
+      "name": "Tracker's Bracers",
+      "class": "hunter",
+      "declared_display": 2230,
+      "display": 2230,
+      "icon": "Interface\\Icons\\INV_Jewelry_Ring_02",
+      "source_offset": 119191504,
+      "display_source_offset": 119191504
+    },
+    {
+      "name": "Tracker's Gauntlets",
+      "class": "hunter",
+      "declared_display": 1407,
+      "display": 1407,
+      "icon": "Interface\\Icons\\INV_Gauntlets_09",
+      "source_offset": 119191508,
+      "display_source_offset": 119191508
+    },
+    {
+      "name": "Beaststalker's Helm",
+      "class": "hunter",
+      "declared_display": 31410,
+      "display": 31410,
+      "icon": "Interface\\Icons\\INV_Helmet_24",
+      "source_offset": 119191512,
+      "display_source_offset": 119191512
+    },
+    {
+      "name": "Beaststalker's Spaulders",
+      "class": "hunter",
+      "declared_display": 31409,
+      "display": 31409,
+      "icon": "Interface\\Icons\\INV_Shoulder_10",
+      "source_offset": 119191516,
+      "display_source_offset": 119191516
+    },
+    {
+      "name": "Beaststalker's Breastplate",
+      "class": "hunter",
+      "declared_display": 31402,
+      "display": 31402,
+      "icon": "Interface\\Icons\\INV_Chest_Chain_03",
+      "source_offset": 119191520,
+      "display_source_offset": 119191520
+    },
+    {
+      "name": "Beaststalker's Belt",
+      "class": "hunter",
+      "declared_display": 31404,
+      "display": 31404,
+      "icon": "Interface\\Icons\\INV_Belt_28",
+      "source_offset": 119191524,
+      "display_source_offset": 119191524
+    },
+    {
+      "name": "Beaststalker's Legguards",
+      "class": "hunter",
+      "declared_display": 31403,
+      "display": 31403,
+      "icon": "Interface\\Icons\\INV_Pants_03",
+      "source_offset": 119191528,
+      "display_source_offset": 119191528
+    },
+    {
+      "name": "Beaststalker's Greaves",
+      "class": "hunter",
+      "declared_display": 31408,
+      "display": 31408,
+      "icon": "Interface\\Icons\\INV_Boots_Plate_07",
+      "source_offset": 119191532,
+      "display_source_offset": 119191532
+    },
+    {
+      "name": "Beaststalker's Bracers",
+      "class": "hunter",
+      "declared_display": 31405,
+      "display": 31405,
+      "icon": "Interface\\Icons\\INV_Bracer_17",
+      "source_offset": 119191536,
+      "display_source_offset": 119191536
+    },
+    {
+      "name": "Beaststalker's Gauntlets",
+      "class": "hunter",
+      "declared_display": 31406,
+      "display": 31406,
+      "icon": "Interface\\Icons\\INV_Gauntlets_10",
+      "source_offset": 119191540,
+      "display_source_offset": 119191540
+    },
+    {
+      "name": "Giantstalker's Helm",
+      "class": "hunter",
+      "declared_display": 32028,
+      "display": 32028,
+      "icon": "Interface\\Icons\\INV_Helmet_05",
+      "source_offset": 119191544,
+      "display_source_offset": 119191544
+    },
+    {
+      "name": "Giantstalker's Spaulders",
+      "class": "hunter",
+      "declared_display": 32030,
+      "display": 32030,
+      "icon": "Interface\\Icons\\INV_Shoulder_10",
+      "source_offset": 119191548,
+      "display_source_offset": 119191548
+    },
+    {
+      "name": "Giantstalker's Breastplate",
+      "class": "hunter",
+      "declared_display": 32022,
+      "display": 32022,
+      "icon": "Interface\\Icons\\INV_Chest_Chain_03",
+      "source_offset": 119191552,
+      "display_source_offset": 119191552
+    },
+    {
+      "name": "Giantstalker's Belt",
+      "class": "hunter",
+      "declared_display": 32019,
+      "display": 32019,
+      "icon": "Interface\\Icons\\INV_Belt_28",
+      "source_offset": 119191556,
+      "display_source_offset": 119191556
+    },
+    {
+      "name": "Giantstalker's Legguards",
+      "class": "hunter",
+      "declared_display": 32029,
+      "display": 32029,
+      "icon": "Interface\\Icons\\INV_Pants_Mail_03",
+      "source_offset": 119191560,
+      "display_source_offset": 119191560
+    },
+    {
+      "name": "Giantstalker's Greaves",
+      "class": "hunter",
+      "declared_display": 32040,
+      "display": 32040,
+      "icon": "Interface\\Icons\\INV_Boots_Chain_13",
+      "source_offset": 119191564,
+      "display_source_offset": 119191564
+    },
+    {
+      "name": "Giantstalker's Bracers",
+      "class": "hunter",
+      "declared_display": 32021,
+      "display": 32021,
+      "icon": "Interface\\Icons\\INV_Bracer_17",
+      "source_offset": 119191568,
+      "display_source_offset": 119191568
+    },
+    {
+      "name": "Giantstalker's Gauntlets",
+      "class": "hunter",
+      "declared_display": 32024,
+      "display": 32024,
+      "icon": "Interface\\Icons\\INV_Gauntlets_10",
+      "source_offset": 119191572,
+      "display_source_offset": 119191572
+    },
+    {
+      "name": "Dragonstalker's Helm",
+      "class": "hunter",
+      "declared_display": 34367,
+      "display": 34367,
+      "icon": "Interface\\Icons\\INV_Helmet_05",
+      "source_offset": 119191576,
+      "display_source_offset": 119191576
+    },
+    {
+      "name": "Dragonstalker's Spaulders",
+      "class": "hunter",
+      "declared_display": 34091,
+      "display": 34091,
+      "icon": "Interface\\Icons\\INV_Shoulder_10",
+      "source_offset": 119191580,
+      "display_source_offset": 119191580
+    },
+    {
+      "name": "Dragonstalker's Breastplate",
+      "class": "hunter",
+      "declared_display": 33667,
+      "display": 33667,
+      "icon": "Interface\\Icons\\INV_Chest_Chain_03",
+      "source_offset": 119191584,
+      "display_source_offset": 119191584
+    },
+    {
+      "name": "Dragonstalker's Belt",
+      "class": "hunter",
+      "declared_display": 33665,
+      "display": 33665,
+      "icon": "Interface\\Icons\\INV_Belt_28",
+      "source_offset": 119191588,
+      "display_source_offset": 119191588
+    },
+    {
+      "name": "Dragonstalker's Legguards",
+      "class": "hunter",
+      "declared_display": 33672,
+      "display": 33672,
+      "icon": "Interface\\Icons\\INV_Pants_03",
+      "source_offset": 119191592,
+      "display_source_offset": 119191592
+    },
+    {
+      "name": "Dragonstalker's Greaves",
+      "class": "hunter",
+      "declared_display": 34269,
+      "display": 34269,
+      "icon": "Interface\\Icons\\INV_Boots_Plate_07",
+      "source_offset": 119191596,
+      "display_source_offset": 119191596
+    },
+    {
+      "name": "Dragonstalker's Bracers",
+      "class": "hunter",
+      "declared_display": 33666,
+      "display": 33666,
+      "icon": "Interface\\Icons\\INV_Bracer_17",
+      "source_offset": 119191600,
+      "display_source_offset": 119191600
+    },
+    {
+      "name": "Dragonstalker's Gauntlets",
+      "class": "hunter",
+      "declared_display": 33668,
+      "display": 33668,
+      "icon": "Interface\\Icons\\INV_Gauntlets_10",
+      "source_offset": 119191604,
+      "display_source_offset": 119191604
+    },
+    {
+      "name": "Cryptstalker Helm",
+      "class": "hunter",
+      "declared_display": 35601,
+      "display": 35601,
+      "icon": "Interface\\Icons\\INV_Helmet_15",
+      "source_offset": 119191608,
+      "display_source_offset": 119191608
+    },
+    {
+      "name": "Cryptstalker Spaulders",
+      "class": "hunter",
+      "declared_display": 35611,
+      "display": 35611,
+      "icon": "Interface\\Icons\\INV_Shoulder_14",
+      "source_offset": 119191612,
+      "display_source_offset": 119191612
+    },
+    {
+      "name": "Cryptstalker Breastplate",
+      "class": "hunter",
+      "declared_display": 35415,
+      "display": 35415,
+      "icon": "Interface\\Icons\\INV_Chest_Chain_15",
+      "source_offset": 119191616,
+      "display_source_offset": 119191616
+    },
+    {
+      "name": "Cryptstalker Belt",
+      "class": "hunter",
+      "declared_display": 35410,
+      "display": 35410,
+      "icon": "Interface\\Icons\\INV_Belt_22",
+      "source_offset": 119191620,
+      "display_source_offset": 119191620
+    },
+    {
+      "name": "Cryptstalker Legguards",
+      "class": "hunter",
+      "declared_display": 35413,
+      "display": 35413,
+      "icon": "Interface\\Icons\\INV_Pants_Mail_15",
+      "source_offset": 119191624,
+      "display_source_offset": 119191624
+    },
+    {
+      "name": "Cryptstalker Greaves",
+      "class": "hunter",
+      "declared_display": 35409,
+      "display": 35409,
+      "icon": "Interface\\Icons\\INV_Boots_Chain_05",
+      "source_offset": 119191628,
+      "display_source_offset": 119191628
+    },
+    {
+      "name": "Cryptstalker Bracers",
+      "class": "hunter",
+      "declared_display": 35416,
+      "display": 35416,
+      "icon": "Interface\\Icons\\INV_Bracer_02",
+      "source_offset": 119191632,
+      "display_source_offset": 119191632
+    },
+    {
+      "name": "Cryptstalker Gauntlets",
+      "class": "hunter",
+      "declared_display": 35411,
+      "display": 35411,
+      "icon": "Interface\\Icons\\INV_Gauntlets_25",
+      "source_offset": 119191636,
+      "display_source_offset": 119191636
+    },
+    {
+      "name": "Short Bow",
+      "class": "hunter",
+      "declared_display": 2786,
+      "display": 2786,
+      "icon": "Interface\\Icons\\INV_Weapon_Bow_05",
+      "source_offset": 119188648,
+      "display_source_offset": 119188648
+    },
+    {
+      "name": "Hunting Bow of the Wilds",
+      "class": "hunter",
+      "declared_display": 30927,
+      "display": 30927,
+      "icon": "Interface\\Icons\\INV_Weapon_Bow_08",
+      "source_offset": 119188652,
+      "display_source_offset": 119188652
+    },
+    {
+      "name": "Bow of the Dragonflight",
+      "class": "hunter",
+      "declared_display": 35254,
+      "display": 35254,
+      "icon": "Interface\\Icons\\INV_Weapon_Bow_13",
+      "source_offset": 119188656,
+      "display_source_offset": 119188656
+    },
+    {
+      "name": "Ahn'Qiraj Rifle",
+      "class": "hunter",
+      "declared_display": 33826,
+      "display": 33826,
+      "icon": "Interface\\Icons\\INV_Weapon_Rifle_11",
+      "source_offset": 119188660,
+      "display_source_offset": 119188660
+    },
+    {
+      "name": "Rhok'delar, Longbow of the Ancient Keepers",
+      "class": "hunter",
+      "declared_display": 31338,
+      "display": 31338,
+      "icon": "Interface\\Icons\\INV_Weapon_Bow_01",
+      "source_offset": 119188664,
+      "display_source_offset": 119188664
+    },
+    {
+      "name": "Footpad's Cover",
+      "class": "rogue",
+      "declared_display": 0,
+      "display": 28180,
+      "icon": "Interface\\Icons\\INV_Helmet_41",
+      "source_offset": 119191784,
+      "display_source_offset": 119191816
+    },
+    {
+      "name": "Footpad's Spaulders",
+      "class": "rogue",
+      "declared_display": 7836,
+      "display": 7836,
+      "icon": "Interface\\Icons\\INV_Shoulder_08",
+      "source_offset": 119191788,
+      "display_source_offset": 119191788
+    },
+    {
+      "name": "Footpad's Chestpiece",
+      "class": "rogue",
+      "declared_display": 3719,
+      "display": 3719,
+      "icon": "Interface\\Icons\\INV_Chest_Wolf",
+      "source_offset": 119191792,
+      "display_source_offset": 119191792
+    },
+    {
+      "name": "Footpad's Belt",
+      "class": "rogue",
+      "declared_display": 4473,
+      "display": 4473,
+      "icon": "Interface\\Icons\\INV_Belt_01",
+      "source_offset": 119191796,
+      "display_source_offset": 119191796
+    },
+    {
+      "name": "Footpad's Pants",
+      "class": "rogue",
+      "declared_display": 4469,
+      "display": 4469,
+      "icon": "Interface\\Icons\\INV_Pants_Wolf",
+      "source_offset": 119191800,
+      "display_source_offset": 119191800
+    },
+    {
+      "name": "Footpad's Boots",
+      "class": "rogue",
+      "declared_display": 9773,
+      "display": 9773,
+      "icon": "Interface\\Icons\\INV_Boots_03",
+      "source_offset": 119191804,
+      "display_source_offset": 119191804
+    },
+    {
+      "name": "Footpad's Bracers",
+      "class": "rogue",
+      "declared_display": 4471,
+      "display": 4471,
+      "icon": "Interface\\Icons\\INV_Bracer_05",
+      "source_offset": 119191808,
+      "display_source_offset": 119191808
+    },
+    {
+      "name": "Footpad's Gloves",
+      "class": "rogue",
+      "declared_display": 4470,
+      "display": 4470,
+      "icon": "Interface\\Icons\\INV_Gauntlets_05",
+      "source_offset": 119191812,
+      "display_source_offset": 119191812
+    },
+    {
+      "name": "Shadowcraft Cover",
+      "class": "rogue",
+      "declared_display": 28180,
+      "display": 28180,
+      "icon": "Interface\\Icons\\INV_Helmet_41",
+      "source_offset": 119191816,
+      "display_source_offset": 119191816
+    },
+    {
+      "name": "Shadowcraft Spaulders",
+      "class": "rogue",
+      "declared_display": 28179,
+      "display": 28179,
+      "icon": "Interface\\Icons\\INV_Shoulder_07",
+      "source_offset": 119191820,
+      "display_source_offset": 119191820
+    },
+    {
+      "name": "Shadowcraft Chestpiece",
+      "class": "rogue",
+      "declared_display": 28160,
+      "display": 28160,
+      "icon": "Interface\\Icons\\INV_Chest_Leather_07",
+      "source_offset": 119191824,
+      "display_source_offset": 119191824
+    },
+    {
+      "name": "Shadowcraft Belt",
+      "class": "rogue",
+      "declared_display": 28177,
+      "display": 28177,
+      "icon": "Interface\\Icons\\INV_Belt_03",
+      "source_offset": 119191828,
+      "display_source_offset": 119191828
+    },
+    {
+      "name": "Shadowcraft Pants",
+      "class": "rogue",
+      "declared_display": 28161,
+      "display": 28161,
+      "icon": "Interface\\Icons\\INV_Pants_02",
+      "source_offset": 119191832,
+      "display_source_offset": 119191832
+    },
+    {
+      "name": "Shadowcraft Boots",
+      "class": "rogue",
+      "declared_display": 28162,
+      "display": 28162,
+      "icon": "Interface\\Icons\\INV_Boots_08",
+      "source_offset": 119191836,
+      "display_source_offset": 119191836
+    },
+    {
+      "name": "Shadowcraft Bracers",
+      "class": "rogue",
+      "declared_display": 24190,
+      "display": 24190,
+      "icon": "Interface\\Icons\\INV_Bracer_07",
+      "source_offset": 119191840,
+      "display_source_offset": 119191840
+    },
+    {
+      "name": "Shadowcraft Gloves",
+      "class": "rogue",
+      "declared_display": 28166,
+      "display": 28166,
+      "icon": "Interface\\Icons\\INV_Gauntlets_24",
+      "source_offset": 119191844,
+      "display_source_offset": 119191844
+    },
+    {
+      "name": "Nightslayer Cover",
+      "class": "rogue",
+      "declared_display": 31514,
+      "display": 31514,
+      "icon": "Interface\\Icons\\INV_Helmet_41",
+      "source_offset": 119191848,
+      "display_source_offset": 119191848
+    },
+    {
+      "name": "Nightslayer Spaulders",
+      "class": "rogue",
+      "declared_display": 31504,
+      "display": 31504,
+      "icon": "Interface\\Icons\\INV_Shoulder_25",
+      "source_offset": 119191852,
+      "display_source_offset": 119191852
+    },
+    {
+      "name": "Nightslayer Chestpiece",
+      "class": "rogue",
+      "declared_display": 31105,
+      "display": 31105,
+      "icon": "Interface\\Icons\\INV_Chest_Cloth_07",
+      "source_offset": 119191856,
+      "display_source_offset": 119191856
+    },
+    {
+      "name": "Nightslayer Belt",
+      "class": "rogue",
+      "declared_display": 31339,
+      "display": 31339,
+      "icon": "Interface\\Icons\\INV_Belt_23",
+      "source_offset": 119191860,
+      "display_source_offset": 119191860
+    },
+    {
+      "name": "Nightslayer Pants",
+      "class": "rogue",
+      "declared_display": 31340,
+      "display": 31340,
+      "icon": "Interface\\Icons\\INV_Pants_06",
+      "source_offset": 119191864,
+      "display_source_offset": 119191864
+    },
+    {
+      "name": "Nightslayer Boots",
+      "class": "rogue",
+      "declared_display": 31109,
+      "display": 31109,
+      "icon": "Interface\\Icons\\INV_Boots_08",
+      "source_offset": 119191868,
+      "display_source_offset": 119191868
+    },
+    {
+      "name": "Nightslayer Bracers",
+      "class": "rogue",
+      "declared_display": 31106,
+      "display": 31106,
+      "icon": "Interface\\Icons\\INV_Bracer_02",
+      "source_offset": 119191872,
+      "display_source_offset": 119191872
+    },
+    {
+      "name": "Nightslayer Gloves",
+      "class": "rogue",
+      "declared_display": 31503,
+      "display": 31503,
+      "icon": "Interface\\Icons\\INV_Gauntlets_21",
+      "source_offset": 119191876,
+      "display_source_offset": 119191876
+    },
+    {
+      "name": "Bloodfang Cover",
+      "class": "rogue",
+      "declared_display": 33743,
+      "display": 33743,
+      "icon": "Interface\\Icons\\INV_Helmet_41",
+      "source_offset": 119191880,
+      "display_source_offset": 119191880
+    },
+    {
+      "name": "Bloodfang Spaulders",
+      "class": "rogue",
+      "declared_display": 33653,
+      "display": 33653,
+      "icon": "Interface\\Icons\\INV_Shoulder_23",
+      "source_offset": 119191884,
+      "display_source_offset": 119191884
+    },
+    {
+      "name": "Bloodfang Chestpiece",
+      "class": "rogue",
+      "declared_display": 33650,
+      "display": 33650,
+      "icon": "Interface\\Icons\\INV_Chest_Cloth_07",
+      "source_offset": 119191888,
+      "display_source_offset": 119191888
+    },
+    {
+      "name": "Bloodfang Belt",
+      "class": "rogue",
+      "declared_display": 31110,
+      "display": 31110,
+      "icon": "Interface\\Icons\\INV_Belt_23",
+      "source_offset": 119191892,
+      "display_source_offset": 119191892
+    },
+    {
+      "name": "Bloodfang Pants",
+      "class": "rogue",
+      "declared_display": 31115,
+      "display": 31115,
+      "icon": "Interface\\Icons\\INV_Pants_06",
+      "source_offset": 119191896,
+      "display_source_offset": 119191896
+    },
+    {
+      "name": "Bloodfang Boots",
+      "class": "rogue",
+      "declared_display": 31111,
+      "display": 31111,
+      "icon": "Interface\\Icons\\INV_Boots_08",
+      "source_offset": 119191900,
+      "display_source_offset": 119191900
+    },
+    {
+      "name": "Bloodfang Bracers",
+      "class": "rogue",
+      "declared_display": 31127,
+      "display": 31127,
+      "icon": "Interface\\Icons\\INV_Bracer_02",
+      "source_offset": 119191904,
+      "display_source_offset": 119191904
+    },
+    {
+      "name": "Bloodfang Gloves",
+      "class": "rogue",
+      "declared_display": 33651,
+      "display": 33651,
+      "icon": "Interface\\Icons\\INV_Gauntlets_21",
+      "source_offset": 119191908,
+      "display_source_offset": 119191908
+    },
+    {
+      "name": "Bonescythe Cover",
+      "class": "rogue",
+      "declared_display": 35061,
+      "display": 35061,
+      "icon": "Interface\\Icons\\INV_Helmet_58",
+      "source_offset": 119191912,
+      "display_source_offset": 119191912
+    },
+    {
+      "name": "Bonescythe Spaulders",
+      "class": "rogue",
+      "declared_display": 35064,
+      "display": 35064,
+      "icon": "Interface\\Icons\\INV_Shoulder_29",
+      "source_offset": 119191916,
+      "display_source_offset": 119191916
+    },
+    {
+      "name": "Bonescythe Chestpiece",
+      "class": "rogue",
+      "declared_display": 35054,
+      "display": 35054,
+      "icon": "Interface\\Icons\\INV_Chest_Plate02",
+      "source_offset": 119191920,
+      "display_source_offset": 119191920
+    },
+    {
+      "name": "Bonescythe Belt",
+      "class": "rogue",
+      "declared_display": 36349,
+      "display": 36349,
+      "icon": "Interface\\Icons\\INV_Belt_27",
+      "source_offset": 119191924,
+      "display_source_offset": 119191924
+    },
+    {
+      "name": "Bonescythe Pants",
+      "class": "rogue",
+      "declared_display": 35065,
+      "display": 35065,
+      "icon": "Interface\\Icons\\INV_Pants_Plate_05",
+      "source_offset": 119191928,
+      "display_source_offset": 119191928
+    },
+    {
+      "name": "Bonescythe Boots",
+      "class": "rogue",
+      "declared_display": 36351,
+      "display": 36351,
+      "icon": "Interface\\Icons\\INV_Boots_Plate_06",
+      "source_offset": 119191932,
+      "display_source_offset": 119191932
+    },
+    {
+      "name": "Bonescythe Bracers",
+      "class": "rogue",
+      "declared_display": 35053,
+      "display": 35053,
+      "icon": "Interface\\Icons\\INV_Bracer_15",
+      "source_offset": 119191936,
+      "display_source_offset": 119191936
+    },
+    {
+      "name": "Bonescythe Gloves",
+      "class": "rogue",
+      "declared_display": 35055,
+      "display": 35055,
+      "icon": "Interface\\Icons\\INV_Gauntlets_28",
+      "source_offset": 119191940,
+      "display_source_offset": 119191940
+    },
+    {
+      "name": "Worn Dagger",
+      "class": "rogue",
+      "declared_display": 1845,
+      "display": 1845,
+      "icon": "Interface\\Icons\\INV_Weapon_ShortBlade_05",
+      "source_offset": 119189016,
+      "display_source_offset": 119189016
+    },
+    {
+      "name": "Assassin's Blade",
+      "class": "rogue",
+      "declared_display": 2707,
+      "display": 2707,
+      "icon": "Interface\\Icons\\INV_Weapon_ShortBlade_05",
+      "source_offset": 119189020,
+      "display_source_offset": 119189020
+    },
+    {
+      "name": "Shadowcraft Dirk",
+      "class": "rogue",
+      "declared_display": 3512,
+      "display": 3512,
+      "icon": "Interface\\Icons\\INV_Weapon_ShortBlade_02",
+      "source_offset": 119189024,
+      "display_source_offset": 119189024
+    },
+    {
+      "name": "Blackwing Shiv",
+      "class": "rogue",
+      "declared_display": 31850,
+      "display": 31850,
+      "icon": "Interface\\Icons\\INV_Weapon_Shortblade_28",
+      "source_offset": 119189028,
+      "display_source_offset": 119189028
+    },
+    {
+      "name": "Thunderfury, Blessed Blade of the Windseeker",
+      "class": "rogue",
+      "declared_display": 30606,
+      "display": 30606,
+      "icon": "Interface\\Icons\\INV_Sword_39",
+      "source_offset": 119189032,
+      "display_source_offset": 119189032
+    },
+    {
+      "name": "Rusty Shiv",
+      "class": "rogue",
+      "declared_display": 1845,
+      "display": 1845,
+      "icon": "Interface\\Icons\\INV_Weapon_ShortBlade_05",
+      "source_offset": 119189160,
+      "display_source_offset": 119189160
+    },
+    {
+      "name": "Thief's Blade",
+      "class": "rogue",
+      "declared_display": 2707,
+      "display": 2707,
+      "icon": "Interface\\Icons\\INV_Weapon_ShortBlade_05",
+      "source_offset": 119189164,
+      "display_source_offset": 119189164
+    },
+    {
+      "name": "Nightslayer Kris",
+      "class": "rogue",
+      "declared_display": 3512,
+      "display": 3512,
+      "icon": "Interface\\Icons\\INV_Weapon_ShortBlade_02",
+      "source_offset": 119189168,
+      "display_source_offset": 119189168
+    },
+    {
+      "name": "Fang of the Faceless",
+      "class": "rogue",
+      "declared_display": 31850,
+      "display": 31850,
+      "icon": "Interface\\Icons\\INV_Weapon_Shortblade_28",
+      "source_offset": 119189172,
+      "display_source_offset": 119189172
+    },
+    {
+      "name": "Kingsfall",
+      "class": "rogue",
+      "declared_display": 35712,
+      "display": 35712,
+      "icon": "Interface\\Icons\\INV_knife_1h_stratholme_d_01",
+      "source_offset": 119189176,
+      "display_source_offset": 119189176
+    },
+    {
+      "name": "Acolyte's Circlet",
+      "class": "priest",
+      "declared_display": 8415,
+      "display": 8415,
+      "icon": "Interface\\Icons\\INV_Helmet_04",
+      "source_offset": 119192088,
+      "display_source_offset": 119192088
+    },
+    {
+      "name": "Acolyte's Mantle",
+      "class": "priest",
+      "declared_display": 0,
+      "display": 31103,
+      "icon": "Interface\\Icons\\INV_Shoulder_02",
+      "source_offset": 119192092,
+      "display_source_offset": 119192124
+    },
+    {
+      "name": "Acolyte's Robes",
+      "class": "priest",
+      "declared_display": 2163,
+      "display": 2163,
+      "icon": "Interface\\Icons\\INV_Shirt_01",
+      "source_offset": 119192096,
+      "display_source_offset": 119192096
+    },
+    {
+      "name": "Acolyte's Belt",
+      "class": "priest",
+      "declared_display": 4444,
+      "display": 4444,
+      "icon": "Interface\\Icons\\INV_Belt_01",
+      "source_offset": 119192100,
+      "display_source_offset": 119192100
+    },
+    {
+      "name": "Acolyte's Leggings",
+      "class": "priest",
+      "declared_display": 1883,
+      "display": 1883,
+      "icon": "Interface\\Icons\\INV_Pants_01",
+      "source_offset": 119192104,
+      "display_source_offset": 119192104
+    },
+    {
+      "name": "Acolyte's Boots",
+      "class": "priest",
+      "declared_display": 14046,
+      "display": 14046,
+      "icon": "Interface\\Icons\\INV_Boots_09",
+      "source_offset": 119192108,
+      "display_source_offset": 119192108
+    },
+    {
+      "name": "Acolyte's Bindings",
+      "class": "priest",
+      "declared_display": 4094,
+      "display": 4094,
+      "icon": "Interface\\Icons\\INV_Bracer_10",
+      "source_offset": 119192112,
+      "display_source_offset": 119192112
+    },
+    {
+      "name": "Acolyte's Gloves",
+      "class": "priest",
+      "declared_display": 2164,
+      "display": 2164,
+      "icon": "Interface\\Icons\\INV_Gauntlets_06",
+      "source_offset": 119192116,
+      "display_source_offset": 119192116
+    },
+    {
+      "name": "Devout Circlet",
+      "class": "priest",
+      "declared_display": 31104,
+      "display": 31104,
+      "icon": "Interface\\Icons\\INV_Crown_01",
+      "source_offset": 119192120,
+      "display_source_offset": 119192120
+    },
+    {
+      "name": "Devout Mantle",
+      "class": "priest",
+      "declared_display": 31103,
+      "display": 31103,
+      "icon": "Interface\\Icons\\INV_Shoulder_02",
+      "source_offset": 119192124,
+      "display_source_offset": 119192124
+    },
+    {
+      "name": "Devout Robes",
+      "class": "priest",
+      "declared_display": 30422,
+      "display": 30422,
+      "icon": "Interface\\Icons\\INV_Chest_Cloth_11",
+      "source_offset": 119192128,
+      "display_source_offset": 119192128
+    },
+    {
+      "name": "Devout Belt",
+      "class": "priest",
+      "declared_display": 30425,
+      "display": 30425,
+      "icon": "Interface\\Icons\\INV_Belt_10",
+      "source_offset": 119192132,
+      "display_source_offset": 119192132
+    },
+    {
+      "name": "Devout Leggings",
+      "class": "priest",
+      "declared_display": 30424,
+      "display": 30424,
+      "icon": "Interface\\Icons\\INV_Pants_08",
+      "source_offset": 119192136,
+      "display_source_offset": 119192136
+    },
+    {
+      "name": "Devout Boots",
+      "class": "priest",
+      "declared_display": 30430,
+      "display": 30430,
+      "icon": "Interface\\Icons\\INV_Boots_05",
+      "source_offset": 119192140,
+      "display_source_offset": 119192140
+    },
+    {
+      "name": "Devout Bindings",
+      "class": "priest",
+      "declared_display": 30426,
+      "display": 30426,
+      "icon": "Interface\\Icons\\INV_Belt_31",
+      "source_offset": 119192144,
+      "display_source_offset": 119192144
+    },
+    {
+      "name": "Devout Gloves",
+      "class": "priest",
+      "declared_display": 30427,
+      "display": 30427,
+      "icon": "Interface\\Icons\\INV_Gauntlets_14",
+      "source_offset": 119192148,
+      "display_source_offset": 119192148
+    },
+    {
+      "name": "Circlet of Prophecy",
+      "class": "priest",
+      "declared_display": 31371,
+      "display": 31371,
+      "icon": "Interface\\Icons\\INV_Helmet_34",
+      "source_offset": 119192152,
+      "display_source_offset": 119192152
+    },
+    {
+      "name": "Mantle of Prophecy",
+      "class": "priest",
+      "declared_display": 30623,
+      "display": 30623,
+      "icon": "Interface\\Icons\\INV_Shoulder_02",
+      "source_offset": 119192156,
+      "display_source_offset": 119192156
+    },
+    {
+      "name": "Robes of Prophecy",
+      "class": "priest",
+      "declared_display": 31490,
+      "display": 31490,
+      "icon": "Interface\\Icons\\INV_Chest_Cloth_03",
+      "source_offset": 119192160,
+      "display_source_offset": 119192160
+    },
+    {
+      "name": "Belt of Prophecy",
+      "class": "priest",
+      "declared_display": 30621,
+      "display": 30621,
+      "icon": "Interface\\Icons\\INV_Belt_22",
+      "source_offset": 119192164,
+      "display_source_offset": 119192164
+    },
+    {
+      "name": "Leggings of Prophecy",
+      "class": "priest",
+      "declared_display": 28198,
+      "display": 28198,
+      "icon": "Interface\\Icons\\INV_Pants_08",
+      "source_offset": 119192168,
+      "display_source_offset": 119192168
+    },
+    {
+      "name": "Boots of Prophecy",
+      "class": "priest",
+      "declared_display": 31718,
+      "display": 31718,
+      "icon": "Interface\\Icons\\INV_Boots_07",
+      "source_offset": 119192172,
+      "display_source_offset": 119192172
+    },
+    {
+      "name": "Bindings of Prophecy",
+      "class": "priest",
+      "declared_display": 30617,
+      "display": 30617,
+      "icon": "Interface\\Icons\\INV_Bracer_09",
+      "source_offset": 119192176,
+      "display_source_offset": 119192176
+    },
+    {
+      "name": "Gloves of Prophecy",
+      "class": "priest",
+      "declared_display": 30620,
+      "display": 30620,
+      "icon": "Interface\\Icons\\INV_Gauntlets_14",
+      "source_offset": 119192180,
+      "display_source_offset": 119192180
+    },
+    {
+      "name": "Circlet of Transcendence",
+      "class": "priest",
+      "declared_display": 34233,
+      "display": 34233,
+      "icon": "Interface\\Icons\\INV_Helmet_24",
+      "source_offset": 119192184,
+      "display_source_offset": 119192184
+    },
+    {
+      "name": "Mantle of Transcendence",
+      "class": "priest",
+      "declared_display": 34048,
+      "display": 34048,
+      "icon": "Interface\\Icons\\INV_Shoulder_02",
+      "source_offset": 119192188,
+      "display_source_offset": 119192188
+    },
+    {
+      "name": "Robes of Transcendence",
+      "class": "priest",
+      "declared_display": 34047,
+      "display": 34047,
+      "icon": "Interface\\Icons\\INV_Chest_Cloth_03",
+      "source_offset": 119192192,
+      "display_source_offset": 119192192
+    },
+    {
+      "name": "Belt of Transcendence",
+      "class": "priest",
+      "declared_display": 34053,
+      "display": 34053,
+      "icon": "Interface\\Icons\\INV_Belt_22",
+      "source_offset": 119192196,
+      "display_source_offset": 119192196
+    },
+    {
+      "name": "Leggings of Transcendence",
+      "class": "priest",
+      "declared_display": 34049,
+      "display": 34049,
+      "icon": "Interface\\Icons\\INV_Pants_08",
+      "source_offset": 119192200,
+      "display_source_offset": 119192200
+    },
+    {
+      "name": "Boots of Transcendence",
+      "class": "priest",
+      "declared_display": 34055,
+      "display": 34055,
+      "icon": "Interface\\Icons\\INV_Boots_07",
+      "source_offset": 119192204,
+      "display_source_offset": 119192204
+    },
+    {
+      "name": "Bindings of Transcendence",
+      "class": "priest",
+      "declared_display": 34052,
+      "display": 34052,
+      "icon": "Interface\\Icons\\INV_Bracer_09",
+      "source_offset": 119192208,
+      "display_source_offset": 119192208
+    },
+    {
+      "name": "Gloves of Transcendence",
+      "class": "priest",
+      "declared_display": 34051,
+      "display": 34051,
+      "icon": "Interface\\Icons\\INV_Gauntlets_14",
+      "source_offset": 119192212,
+      "display_source_offset": 119192212
+    },
+    {
+      "name": "Circlet of Faith",
+      "class": "priest",
+      "declared_display": 35155,
+      "display": 35155,
+      "icon": "Interface\\Icons\\INV_Crown_01",
+      "source_offset": 119192216,
+      "display_source_offset": 119192216
+    },
+    {
+      "name": "Mantle of Faith",
+      "class": "priest",
+      "declared_display": 35149,
+      "display": 35149,
+      "icon": "Interface\\Icons\\INV_Shoulder_25",
+      "source_offset": 119192220,
+      "display_source_offset": 119192220
+    },
+    {
+      "name": "Robes of Faith",
+      "class": "priest",
+      "declared_display": 36354,
+      "display": 36354,
+      "icon": "Interface\\Icons\\INV_Chest_Cloth_43",
+      "source_offset": 119192224,
+      "display_source_offset": 119192224
+    },
+    {
+      "name": "Belt of Faith",
+      "class": "priest",
+      "declared_display": 35143,
+      "display": 35143,
+      "icon": "Interface\\Icons\\INV_Belt_08",
+      "source_offset": 119192228,
+      "display_source_offset": 119192228
+    },
+    {
+      "name": "Leggings of Faith",
+      "class": "priest",
+      "declared_display": 35154,
+      "display": 35154,
+      "icon": "Interface\\Icons\\INV_Pants_Cloth_05",
+      "source_offset": 119192232,
+      "display_source_offset": 119192232
+    },
+    {
+      "name": "Boots of Faith",
+      "class": "priest",
+      "declared_display": 35148,
+      "display": 35148,
+      "icon": "Interface\\Icons\\INV_Boots_Fabric_01",
+      "source_offset": 119192236,
+      "display_source_offset": 119192236
+    },
+    {
+      "name": "Bindings of Faith",
+      "class": "priest",
+      "declared_display": 35144,
+      "display": 35144,
+      "icon": "Interface\\Icons\\INV_Bracer_13",
+      "source_offset": 119192240,
+      "display_source_offset": 119192240
+    },
+    {
+      "name": "Gloves of Faith",
+      "class": "priest",
+      "declared_display": 35145,
+      "display": 35145,
+      "icon": "Interface\\Icons\\INV_Gauntlets_17",
+      "source_offset": 119192244,
+      "display_source_offset": 119192244
+    },
+    {
+      "name": "Acolyte's Staff",
+      "class": "priest",
+      "declared_display": 2778,
+      "display": 2778,
+      "icon": "Interface\\Icons\\INV_Staff_02",
+      "source_offset": 119189416,
+      "display_source_offset": 119189416
+    },
+    {
+      "name": "Staff of the Devout",
+      "class": "priest",
+      "declared_display": 2943,
+      "display": 2943,
+      "icon": "Interface\\Icons\\INV_Staff_08",
+      "source_offset": 119189420,
+      "display_source_offset": 119189420
+    },
+    {
+      "name": "Staff of Prophecy",
+      "class": "priest",
+      "declared_display": 5554,
+      "display": 5554,
+      "icon": "Interface\\Icons\\INV_Staff_07",
+      "source_offset": 119189424,
+      "display_source_offset": 119189424
+    },
+    {
+      "name": "Benediction",
+      "class": "priest",
+      "declared_display": 31347,
+      "display": 31347,
+      "icon": "Interface\\Icons\\INV_Staff_30",
+      "source_offset": 119189428,
+      "display_source_offset": 119189428
+    },
+    {
+      "name": "Anathema",
+      "class": "priest",
+      "declared_display": 31346,
+      "display": 31346,
+      "icon": "Interface\\Icons\\INV_Staff_12",
+      "source_offset": 119189432,
+      "display_source_offset": 119189432
+    },
+    {
+      "name": "Primal Helm",
+      "class": "shaman",
+      "declared_display": 1131,
+      "display": 1131,
+      "icon": "Interface\\Icons\\INV_Helmet_03",
+      "source_offset": 119192392,
+      "display_source_offset": 119192392
+    },
+    {
+      "name": "Primal Spaulders",
+      "class": "shaman",
+      "declared_display": 4975,
+      "display": 4975,
+      "icon": "Interface\\Icons\\INV_Shoulder_08",
+      "source_offset": 119192396,
+      "display_source_offset": 119192396
+    },
+    {
+      "name": "Primal Breastplate",
+      "class": "shaman",
+      "declared_display": 954,
+      "display": 954,
+      "icon": "Interface\\Icons\\INV_Chest_Chain",
+      "source_offset": 119192400,
+      "display_source_offset": 119192400
+    },
+    {
+      "name": "Primal Belt",
+      "class": "shaman",
+      "declared_display": 12298,
+      "display": 12298,
+      "icon": "Interface\\Icons\\INV_Belt_22",
+      "source_offset": 119192404,
+      "display_source_offset": 119192404
+    },
+    {
+      "name": "Primal Legguards",
+      "class": "shaman",
+      "declared_display": 685,
+      "display": 685,
+      "icon": "Interface\\Icons\\INV_Pants_03",
+      "source_offset": 119192408,
+      "display_source_offset": 119192408
+    },
+    {
+      "name": "Primal Greaves",
+      "class": "shaman",
+      "declared_display": 2229,
+      "display": 2229,
+      "icon": "Interface\\Icons\\INV_Boots_01",
+      "source_offset": 119192412,
+      "display_source_offset": 119192412
+    },
+    {
+      "name": "Primal Bracers",
+      "class": "shaman",
+      "declared_display": 2230,
+      "display": 2230,
+      "icon": "Interface\\Icons\\INV_Jewelry_Ring_02",
+      "source_offset": 119192416,
+      "display_source_offset": 119192416
+    },
+    {
+      "name": "Primal Gauntlets",
+      "class": "shaman",
+      "declared_display": 1407,
+      "display": 1407,
+      "icon": "Interface\\Icons\\INV_Gauntlets_09",
+      "source_offset": 119192420,
+      "display_source_offset": 119192420
+    },
+    {
+      "name": "Helm of Elements",
+      "class": "shaman",
+      "declared_display": 31117,
+      "display": 31117,
+      "icon": "Interface\\Icons\\INV_Helmet_04",
+      "source_offset": 119192424,
+      "display_source_offset": 119192424
+    },
+    {
+      "name": "Spaulders of Elements",
+      "class": "shaman",
+      "declared_display": 30925,
+      "display": 30925,
+      "icon": "Interface\\Icons\\INV_Shoulder_29",
+      "source_offset": 119192428,
+      "display_source_offset": 119192428
+    },
+    {
+      "name": "Breastplate of Elements",
+      "class": "shaman",
+      "declared_display": 31416,
+      "display": 31416,
+      "icon": "Interface\\Icons\\INV_Chest_Chain_11",
+      "source_offset": 119192432,
+      "display_source_offset": 119192432
+    },
+    {
+      "name": "Belt of Elements",
+      "class": "shaman",
+      "declared_display": 31413,
+      "display": 31413,
+      "icon": "Interface\\Icons\\INV_Belt_16",
+      "source_offset": 119192436,
+      "display_source_offset": 119192436
+    },
+    {
+      "name": "Legguards of Elements",
+      "class": "shaman",
+      "declared_display": 31415,
+      "display": 31415,
+      "icon": "Interface\\Icons\\INV_Pants_03",
+      "source_offset": 119192440,
+      "display_source_offset": 119192440
+    },
+    {
+      "name": "Greaves of Elements",
+      "class": "shaman",
+      "declared_display": 31412,
+      "display": 31412,
+      "icon": "Interface\\Icons\\INV_Boots_Wolf",
+      "source_offset": 119192444,
+      "display_source_offset": 119192444
+    },
+    {
+      "name": "Bracers of Elements",
+      "class": "shaman",
+      "declared_display": 31411,
+      "display": 31411,
+      "icon": "Interface\\Icons\\INV_Bracer_02",
+      "source_offset": 119192448,
+      "display_source_offset": 119192448
+    },
+    {
+      "name": "Gauntlets of Elements",
+      "class": "shaman",
+      "declared_display": 31414,
+      "display": 31414,
+      "icon": "Interface\\Icons\\INV_Gauntlets_11",
+      "source_offset": 119192452,
+      "display_source_offset": 119192452
+    },
+    {
+      "name": "Earthfury Helm",
+      "class": "shaman",
+      "declared_display": 31835,
+      "display": 31835,
+      "icon": "Interface\\Icons\\INV_Helmet_09",
+      "source_offset": 119192456,
+      "display_source_offset": 119192456
+    },
+    {
+      "name": "Earthfury Spaulders",
+      "class": "shaman",
+      "declared_display": 31833,
+      "display": 31833,
+      "icon": "Interface\\Icons\\INV_Shoulder_29",
+      "source_offset": 119192460,
+      "display_source_offset": 119192460
+    },
+    {
+      "name": "Earthfury Breastplate",
+      "class": "shaman",
+      "declared_display": 31832,
+      "display": 31832,
+      "icon": "Interface\\Icons\\INV_Chest_Chain_11",
+      "source_offset": 119192464,
+      "display_source_offset": 119192464
+    },
+    {
+      "name": "Earthfury Belt",
+      "class": "shaman",
+      "declared_display": 31829,
+      "display": 31829,
+      "icon": "Interface\\Icons\\INV_Belt_14",
+      "source_offset": 119192468,
+      "display_source_offset": 119192468
+    },
+    {
+      "name": "Earthfury Legguards",
+      "class": "shaman",
+      "declared_display": 31836,
+      "display": 31836,
+      "icon": "Interface\\Icons\\INV_Pants_03",
+      "source_offset": 119192472,
+      "display_source_offset": 119192472
+    },
+    {
+      "name": "Earthfury Greaves",
+      "class": "shaman",
+      "declared_display": 31830,
+      "display": 31830,
+      "icon": "Interface\\Icons\\INV_Boots_Plate_06",
+      "source_offset": 119192476,
+      "display_source_offset": 119192476
+    },
+    {
+      "name": "Earthfury Bracers",
+      "class": "shaman",
+      "declared_display": 31831,
+      "display": 31831,
+      "icon": "Interface\\Icons\\INV_Bracer_16",
+      "source_offset": 119192480,
+      "display_source_offset": 119192480
+    },
+    {
+      "name": "Earthfury Gauntlets",
+      "class": "shaman",
+      "declared_display": 31834,
+      "display": 31834,
+      "icon": "Interface\\Icons\\INV_Gauntlets_11",
+      "source_offset": 119192484,
+      "display_source_offset": 119192484
+    },
+    {
+      "name": "Helm of Ten Storms",
+      "class": "shaman",
+      "declared_display": 34217,
+      "display": 34217,
+      "icon": "Interface\\Icons\\INV_Helmet_69",
+      "source_offset": 119192488,
+      "display_source_offset": 119192488
+    },
+    {
+      "name": "Spaulders of Ten Storms",
+      "class": "shaman",
+      "declared_display": 34255,
+      "display": 34255,
+      "icon": "Interface\\Icons\\INV_Shoulder_33",
+      "source_offset": 119192492,
+      "display_source_offset": 119192492
+    },
+    {
+      "name": "Breastplate of Ten Storms",
+      "class": "shaman",
+      "declared_display": 34081,
+      "display": 34081,
+      "icon": "Interface\\Icons\\INV_Chest_Chain_11",
+      "source_offset": 119192496,
+      "display_source_offset": 119192496
+    },
+    {
+      "name": "Belt of Ten Storms",
+      "class": "shaman",
+      "declared_display": 34078,
+      "display": 34078,
+      "icon": "Interface\\Icons\\INV_Belt_14",
+      "source_offset": 119192500,
+      "display_source_offset": 119192500
+    },
+    {
+      "name": "Legguards of Ten Storms",
+      "class": "shaman",
+      "declared_display": 34084,
+      "display": 34084,
+      "icon": "Interface\\Icons\\INV_Pants_03",
+      "source_offset": 119192504,
+      "display_source_offset": 119192504
+    },
+    {
+      "name": "Greaves of Ten Storms",
+      "class": "shaman",
+      "declared_display": 34083,
+      "display": 34083,
+      "icon": "Interface\\Icons\\INV_Boots_Plate_06",
+      "source_offset": 119192508,
+      "display_source_offset": 119192508
+    },
+    {
+      "name": "Bracers of Ten Storms",
+      "class": "shaman",
+      "declared_display": 34079,
+      "display": 34079,
+      "icon": "Interface\\Icons\\INV_Bracer_16",
+      "source_offset": 119192512,
+      "display_source_offset": 119192512
+    },
+    {
+      "name": "Gauntlets of Ten Storms",
+      "class": "shaman",
+      "declared_display": 34082,
+      "display": 34082,
+      "icon": "Interface\\Icons\\INV_Gauntlets_11",
+      "source_offset": 119192516,
+      "display_source_offset": 119192516
+    },
+    {
+      "name": "Earthshatter Helm",
+      "class": "shaman",
+      "declared_display": 35749,
+      "display": 35749,
+      "icon": "Interface\\Icons\\INV_Helmet_15",
+      "source_offset": 119192520,
+      "display_source_offset": 119192520
+    },
+    {
+      "name": "Earthshatter Spaulders",
+      "class": "shaman",
+      "declared_display": 35751,
+      "display": 35751,
+      "icon": "Interface\\Icons\\INV_Shoulder_14",
+      "source_offset": 119192524,
+      "display_source_offset": 119192524
+    },
+    {
+      "name": "Earthshatter Breastplate",
+      "class": "shaman",
+      "declared_display": 35752,
+      "display": 35752,
+      "icon": "Interface\\Icons\\INV_Chest_Chain_15",
+      "source_offset": 119192528,
+      "display_source_offset": 119192528
+    },
+    {
+      "name": "Earthshatter Belt",
+      "class": "shaman",
+      "declared_display": 35747,
+      "display": 35747,
+      "icon": "Interface\\Icons\\INV_Belt_22",
+      "source_offset": 119192532,
+      "display_source_offset": 119192532
+    },
+    {
+      "name": "Earthshatter Legguards",
+      "class": "shaman",
+      "declared_display": 35754,
+      "display": 35754,
+      "icon": "Interface\\Icons\\INV_Pants_Mail_15",
+      "source_offset": 119192536,
+      "display_source_offset": 119192536
+    },
+    {
+      "name": "Earthshatter Greaves",
+      "class": "shaman",
+      "declared_display": 35746,
+      "display": 35746,
+      "icon": "Interface\\Icons\\INV_Boots_Chain_05",
+      "source_offset": 119192540,
+      "display_source_offset": 119192540
+    },
+    {
+      "name": "Earthshatter Bracers",
+      "class": "shaman",
+      "declared_display": 35753,
+      "display": 35753,
+      "icon": "Interface\\Icons\\INV_Bracer_02",
+      "source_offset": 119192544,
+      "display_source_offset": 119192544
+    },
+    {
+      "name": "Earthshatter Gauntlets",
+      "class": "shaman",
+      "declared_display": 35748,
+      "display": 35748,
+      "icon": "Interface\\Icons\\INV_Gauntlets_25",
+      "source_offset": 119192548,
+      "display_source_offset": 119192548
+    },
+    {
+      "name": "Spiked Club",
+      "class": "shaman",
+      "declared_display": 1839,
+      "display": 1839,
+      "icon": "Interface\\Icons\\INV_Mace_01",
+      "source_offset": 119189768,
+      "display_source_offset": 119189768
+    },
+    {
+      "name": "Mace of the Elements",
+      "class": "shaman",
+      "declared_display": 1784,
+      "display": 1784,
+      "icon": "Interface\\Icons\\INV_Mace_01",
+      "source_offset": 119189772,
+      "display_source_offset": 119189772
+    },
+    {
+      "name": "Earthfury Hammer",
+      "class": "shaman",
+      "declared_display": 35250,
+      "display": 35250,
+      "icon": "Interface\\Icons\\INV_Mace_1H_Stratholme_D_01",
+      "source_offset": 119189776,
+      "display_source_offset": 119189776
+    },
+    {
+      "name": "Blackwing Mace",
+      "class": "shaman",
+      "declared_display": 31861,
+      "display": 31861,
+      "icon": "Interface\\Icons\\INV_Mace_07",
+      "source_offset": 119189780,
+      "display_source_offset": 119189780
+    },
+    {
+      "name": "Doomhammer",
+      "class": "shaman",
+      "declared_display": 35574,
+      "display": 35574,
+      "icon": "Interface\\Icons\\INV_Mace_27",
+      "source_offset": 119189784,
+      "display_source_offset": 119189784
+    },
+    {
+      "name": "Round Buckler",
+      "class": "shaman",
+      "declared_display": 1684,
+      "display": 1684,
+      "icon": "Interface\\Icons\\INV_Shield_09",
+      "source_offset": 119189912,
+      "display_source_offset": 119189912
+    },
+    {
+      "name": "Crested Shield",
+      "class": "shaman",
+      "declared_display": 1705,
+      "display": 1705,
+      "icon": "Interface\\Icons\\INV_Shield_04",
+      "source_offset": 119189916,
+      "display_source_offset": 119189916
+    },
+    {
+      "name": "Totem Shield",
+      "class": "shaman",
+      "declared_display": 23835,
+      "display": 23835,
+      "icon": "Interface\\Icons\\INV_Shield_18",
+      "source_offset": 119189920,
+      "display_source_offset": 119189920
+    },
+    {
+      "name": "Aegis of the Ten Storms",
+      "class": "shaman",
+      "declared_display": 32558,
+      "display": 32558,
+      "icon": "Interface\\Icons\\INV_Shield_21",
+      "source_offset": 119189924,
+      "display_source_offset": 119189924
+    },
+    {
+      "name": "Shield of the Earthshatter",
+      "class": "shaman",
+      "declared_display": 35573,
+      "display": 35573,
+      "icon": "Interface\\Icons\\INV_Shield_28",
+      "source_offset": 119189928,
+      "display_source_offset": 119189928
+    },
+    {
+      "name": "Apprentice's Circlet",
+      "class": "mage",
+      "declared_display": 8415,
+      "display": 8415,
+      "icon": "Interface\\Icons\\INV_Helmet_04",
+      "source_offset": 119192696,
+      "display_source_offset": 119192696
+    },
+    {
+      "name": "Apprentice's Mantle",
+      "class": "mage",
+      "declared_display": 0,
+      "display": 30211,
+      "icon": "Interface\\Icons\\INV_Shoulder_23",
+      "source_offset": 119192700,
+      "display_source_offset": 119192732
+    },
+    {
+      "name": "Apprentice's Robes",
+      "class": "mage",
+      "declared_display": 2163,
+      "display": 2163,
+      "icon": "Interface\\Icons\\INV_Shirt_01",
+      "source_offset": 119192704,
+      "display_source_offset": 119192704
+    },
+    {
+      "name": "Apprentice's Belt",
+      "class": "mage",
+      "declared_display": 4444,
+      "display": 4444,
+      "icon": "Interface\\Icons\\INV_Belt_01",
+      "source_offset": 119192708,
+      "display_source_offset": 119192708
+    },
+    {
+      "name": "Apprentice's Leggings",
+      "class": "mage",
+      "declared_display": 1883,
+      "display": 1883,
+      "icon": "Interface\\Icons\\INV_Pants_01",
+      "source_offset": 119192712,
+      "display_source_offset": 119192712
+    },
+    {
+      "name": "Apprentice's Boots",
+      "class": "mage",
+      "declared_display": 14046,
+      "display": 14046,
+      "icon": "Interface\\Icons\\INV_Boots_09",
+      "source_offset": 119192716,
+      "display_source_offset": 119192716
+    },
+    {
+      "name": "Apprentice's Bindings",
+      "class": "mage",
+      "declared_display": 4094,
+      "display": 4094,
+      "icon": "Interface\\Icons\\INV_Bracer_10",
+      "source_offset": 119192720,
+      "display_source_offset": 119192720
+    },
+    {
+      "name": "Apprentice's Gloves",
+      "class": "mage",
+      "declared_display": 2164,
+      "display": 2164,
+      "icon": "Interface\\Icons\\INV_Gauntlets_06",
+      "source_offset": 119192724,
+      "display_source_offset": 119192724
+    },
+    {
+      "name": "Magister's Circlet",
+      "class": "mage",
+      "declared_display": 31087,
+      "display": 31087,
+      "icon": "Interface\\Icons\\INV_Crown_02",
+      "source_offset": 119192728,
+      "display_source_offset": 119192728
+    },
+    {
+      "name": "Magister's Mantle",
+      "class": "mage",
+      "declared_display": 30211,
+      "display": 30211,
+      "icon": "Interface\\Icons\\INV_Shoulder_23",
+      "source_offset": 119192732,
+      "display_source_offset": 119192732
+    },
+    {
+      "name": "Magister's Robes",
+      "class": "mage",
+      "declared_display": 29591,
+      "display": 29591,
+      "icon": "Interface\\Icons\\INV_Chest_Cloth_25",
+      "source_offset": 119192736,
+      "display_source_offset": 119192736
+    },
+    {
+      "name": "Magister's Belt",
+      "class": "mage",
+      "declared_display": 29596,
+      "display": 29596,
+      "icon": "Interface\\Icons\\INV_Belt_08",
+      "source_offset": 119192740,
+      "display_source_offset": 119192740
+    },
+    {
+      "name": "Magister's Leggings",
+      "class": "mage",
+      "declared_display": 29273,
+      "display": 29273,
+      "icon": "Interface\\Icons\\INV_Pants_06",
+      "source_offset": 119192744,
+      "display_source_offset": 119192744
+    },
+    {
+      "name": "Magister's Boots",
+      "class": "mage",
+      "declared_display": 29594,
+      "display": 29594,
+      "icon": "Interface\\Icons\\INV_Boots_02",
+      "source_offset": 119192748,
+      "display_source_offset": 119192748
+    },
+    {
+      "name": "Magister's Bindings",
+      "class": "mage",
+      "declared_display": 29597,
+      "display": 29597,
+      "icon": "Interface\\Icons\\INV_Jewelry_Ring_23",
+      "source_offset": 119192752,
+      "display_source_offset": 119192752
+    },
+    {
+      "name": "Magister's Gloves",
+      "class": "mage",
+      "declared_display": 29593,
+      "display": 29593,
+      "icon": "Interface\\Icons\\INV_Gauntlets_17",
+      "source_offset": 119192756,
+      "display_source_offset": 119192756
+    },
+    {
+      "name": "Arcanist Circlet",
+      "class": "mage",
+      "declared_display": 31517,
+      "display": 31517,
+      "icon": "Interface\\Icons\\INV_Helmet_53",
+      "source_offset": 119192760,
+      "display_source_offset": 119192760
+    },
+    {
+      "name": "Arcanist Mantle",
+      "class": "mage",
+      "declared_display": 30586,
+      "display": 30586,
+      "icon": "Interface\\Icons\\INV_Shoulder_02",
+      "source_offset": 119192764,
+      "display_source_offset": 119192764
+    },
+    {
+      "name": "Arcanist Robes",
+      "class": "mage",
+      "declared_display": 30581,
+      "display": 30581,
+      "icon": "Interface\\Icons\\INV_Chest_Cloth_03",
+      "source_offset": 119192768,
+      "display_source_offset": 119192768
+    },
+    {
+      "name": "Arcanist Belt",
+      "class": "mage",
+      "declared_display": 30583,
+      "display": 30583,
+      "icon": "Interface\\Icons\\INV_Belt_30",
+      "source_offset": 119192772,
+      "display_source_offset": 119192772
+    },
+    {
+      "name": "Arcanist Leggings",
+      "class": "mage",
+      "declared_display": 30582,
+      "display": 30582,
+      "icon": "Interface\\Icons\\INV_Pants_08",
+      "source_offset": 119192776,
+      "display_source_offset": 119192776
+    },
+    {
+      "name": "Arcanist Boots",
+      "class": "mage",
+      "declared_display": 30587,
+      "display": 30587,
+      "icon": "Interface\\Icons\\INV_Boots_07",
+      "source_offset": 119192780,
+      "display_source_offset": 119192780
+    },
+    {
+      "name": "Arcanist Bindings",
+      "class": "mage",
+      "declared_display": 30584,
+      "display": 30584,
+      "icon": "Interface\\Icons\\INV_Belt_29",
+      "source_offset": 119192784,
+      "display_source_offset": 119192784
+    },
+    {
+      "name": "Arcanist Gloves",
+      "class": "mage",
+      "declared_display": 30585,
+      "display": 30585,
+      "icon": "Interface\\Icons\\INV_Gauntlets_14",
+      "source_offset": 119192788,
+      "display_source_offset": 119192788
+    },
+    {
+      "name": "Netherwind Circlet",
+      "class": "mage",
+      "declared_display": 34218,
+      "display": 34218,
+      "icon": "Interface\\Icons\\INV_Helmet_70",
+      "source_offset": 119192792,
+      "display_source_offset": 119192792
+    },
+    {
+      "name": "Netherwind Mantle",
+      "class": "mage",
+      "declared_display": 34254,
+      "display": 34254,
+      "icon": "Interface\\Icons\\INV_Shoulder_32",
+      "source_offset": 119192796,
+      "display_source_offset": 119192796
+    },
+    {
+      "name": "Netherwind Robes",
+      "class": "mage",
+      "declared_display": 34038,
+      "display": 34038,
+      "icon": "Interface\\Icons\\INV_Chest_Cloth_03",
+      "source_offset": 119192800,
+      "display_source_offset": 119192800
+    },
+    {
+      "name": "Netherwind Belt",
+      "class": "mage",
+      "declared_display": 34046,
+      "display": 34046,
+      "icon": "Interface\\Icons\\INV_Belt_22",
+      "source_offset": 119192804,
+      "display_source_offset": 119192804
+    },
+    {
+      "name": "Netherwind Leggings",
+      "class": "mage",
+      "declared_display": 34039,
+      "display": 34039,
+      "icon": "Interface\\Icons\\INV_Pants_08",
+      "source_offset": 119192808,
+      "display_source_offset": 119192808
+    },
+    {
+      "name": "Netherwind Boots",
+      "class": "mage",
+      "declared_display": 34044,
+      "display": 34044,
+      "icon": "Interface\\Icons\\INV_Boots_07",
+      "source_offset": 119192812,
+      "display_source_offset": 119192812
+    },
+    {
+      "name": "Netherwind Bindings",
+      "class": "mage",
+      "declared_display": 34045,
+      "display": 34045,
+      "icon": "Interface\\Icons\\INV_Bracer_09",
+      "source_offset": 119192816,
+      "display_source_offset": 119192816
+    },
+    {
+      "name": "Netherwind Gloves",
+      "class": "mage",
+      "declared_display": 34041,
+      "display": 34041,
+      "icon": "Interface\\Icons\\INV_Gauntlets_14",
+      "source_offset": 119192820,
+      "display_source_offset": 119192820
+    },
+    {
+      "name": "Frostfire Circlet",
+      "class": "mage",
+      "declared_display": 36440,
+      "display": 36440,
+      "icon": "Interface\\Icons\\INV_Crown_01",
+      "source_offset": 119192824,
+      "display_source_offset": 119192824
+    },
+    {
+      "name": "Frostfire Mantle",
+      "class": "mage",
+      "declared_display": 35326,
+      "display": 35326,
+      "icon": "Interface\\Icons\\INV_Shoulder_25",
+      "source_offset": 119192828,
+      "display_source_offset": 119192828
+    },
+    {
+      "name": "Frostfire Robes",
+      "class": "mage",
+      "declared_display": 35523,
+      "display": 35523,
+      "icon": "Interface\\Icons\\INV_Chest_Cloth_43",
+      "source_offset": 119192832,
+      "display_source_offset": 119192832
+    },
+    {
+      "name": "Frostfire Belt",
+      "class": "mage",
+      "declared_display": 35519,
+      "display": 35519,
+      "icon": "Interface\\Icons\\INV_Belt_03",
+      "source_offset": 119192836,
+      "display_source_offset": 119192836
+    },
+    {
+      "name": "Frostfire Leggings",
+      "class": "mage",
+      "declared_display": 35522,
+      "display": 35522,
+      "icon": "Interface\\Icons\\INV_Pants_Cloth_05",
+      "source_offset": 119192840,
+      "display_source_offset": 119192840
+    },
+    {
+      "name": "Frostfire Boots",
+      "class": "mage",
+      "declared_display": 35525,
+      "display": 35525,
+      "icon": "Interface\\Icons\\INV_Boots_Fabric_01",
+      "source_offset": 119192844,
+      "display_source_offset": 119192844
+    },
+    {
+      "name": "Frostfire Bindings",
+      "class": "mage",
+      "declared_display": 35677,
+      "display": 35677,
+      "icon": "Interface\\Icons\\INV_Bracer_13",
+      "source_offset": 119192848,
+      "display_source_offset": 119192848
+    },
+    {
+      "name": "Frostfire Gloves",
+      "class": "mage",
+      "declared_display": 35521,
+      "display": 35521,
+      "icon": "Interface\\Icons\\INV_Gauntlets_17",
+      "source_offset": 119192852,
+      "display_source_offset": 119192852
+    },
+    {
+      "name": "Apprentice's Staff",
+      "class": "mage",
+      "declared_display": 2778,
+      "display": 2778,
+      "icon": "Interface\\Icons\\INV_Staff_02",
+      "source_offset": 119190208,
+      "display_source_offset": 119190208
+    },
+    {
+      "name": "Magister's Staff",
+      "class": "mage",
+      "declared_display": 2943,
+      "display": 2943,
+      "icon": "Interface\\Icons\\INV_Staff_08",
+      "source_offset": 119190212,
+      "display_source_offset": 119190212
+    },
+    {
+      "name": "Arcanist's Staff",
+      "class": "mage",
+      "declared_display": 5554,
+      "display": 5554,
+      "icon": "Interface\\Icons\\INV_Staff_07",
+      "source_offset": 119190216,
+      "display_source_offset": 119190216
+    },
+    {
+      "name": "Staff of Dominance",
+      "class": "mage",
+      "declared_display": 34250,
+      "display": 34250,
+      "icon": "Interface\\Icons\\INV_Weapon_Halberd_AhnQiraj",
+      "source_offset": 119190220,
+      "display_source_offset": 119190220
+    },
+    {
+      "name": "Atiesh, Greatstaff of the Guardian",
+      "class": "mage",
+      "declared_display": 35632,
+      "display": 35632,
+      "icon": "Interface\\Icons\\INV_Staff_Medivh",
+      "source_offset": 119190224,
+      "display_source_offset": 119190224
+    },
+    {
+      "name": "Novice's Circlet",
+      "class": "warlock",
+      "declared_display": 8415,
+      "display": 8415,
+      "icon": "Interface\\Icons\\INV_Helmet_04",
+      "source_offset": 119193000,
+      "display_source_offset": 119193000
+    },
+    {
+      "name": "Novice's Mantle",
+      "class": "warlock",
+      "declared_display": 0,
+      "display": 29798,
+      "icon": "Interface\\Icons\\INV_Misc_Bone_TaurenSkull_01",
+      "source_offset": 119193004,
+      "display_source_offset": 119193036
+    },
+    {
+      "name": "Novice's Robes",
+      "class": "warlock",
+      "declared_display": 2163,
+      "display": 2163,
+      "icon": "Interface\\Icons\\INV_Shirt_01",
+      "source_offset": 119193008,
+      "display_source_offset": 119193008
+    },
+    {
+      "name": "Novice's Belt",
+      "class": "warlock",
+      "declared_display": 4444,
+      "display": 4444,
+      "icon": "Interface\\Icons\\INV_Belt_01",
+      "source_offset": 119193012,
+      "display_source_offset": 119193012
+    },
+    {
+      "name": "Novice's Leggings",
+      "class": "warlock",
+      "declared_display": 1883,
+      "display": 1883,
+      "icon": "Interface\\Icons\\INV_Pants_01",
+      "source_offset": 119193016,
+      "display_source_offset": 119193016
+    },
+    {
+      "name": "Novice's Boots",
+      "class": "warlock",
+      "declared_display": 14046,
+      "display": 14046,
+      "icon": "Interface\\Icons\\INV_Boots_09",
+      "source_offset": 119193020,
+      "display_source_offset": 119193020
+    },
+    {
+      "name": "Novice's Bindings",
+      "class": "warlock",
+      "declared_display": 4094,
+      "display": 4094,
+      "icon": "Interface\\Icons\\INV_Bracer_10",
+      "source_offset": 119193024,
+      "display_source_offset": 119193024
+    },
+    {
+      "name": "Novice's Gloves",
+      "class": "warlock",
+      "declared_display": 2164,
+      "display": 2164,
+      "icon": "Interface\\Icons\\INV_Gauntlets_06",
+      "source_offset": 119193028,
+      "display_source_offset": 119193028
+    },
+    {
+      "name": "Dreadmist Circlet",
+      "class": "warlock",
+      "declared_display": 31263,
+      "display": 31263,
+      "icon": "Interface\\Icons\\INV_Helmet_29",
+      "source_offset": 119193032,
+      "display_source_offset": 119193032
+    },
+    {
+      "name": "Dreadmist Mantle",
+      "class": "warlock",
+      "declared_display": 29798,
+      "display": 29798,
+      "icon": "Interface\\Icons\\INV_Misc_Bone_TaurenSkull_01",
+      "source_offset": 119193036,
+      "display_source_offset": 119193036
+    },
+    {
+      "name": "Dreadmist Robes",
+      "class": "warlock",
+      "declared_display": 29792,
+      "display": 29792,
+      "icon": "Interface\\Icons\\INV_Chest_Cloth_49",
+      "source_offset": 119193040,
+      "display_source_offset": 119193040
+    },
+    {
+      "name": "Dreadmist Belt",
+      "class": "warlock",
+      "declared_display": 29793,
+      "display": 29793,
+      "icon": "Interface\\Icons\\INV_Belt_12",
+      "source_offset": 119193044,
+      "display_source_offset": 119193044
+    },
+    {
+      "name": "Dreadmist Leggings",
+      "class": "warlock",
+      "declared_display": 29797,
+      "display": 29797,
+      "icon": "Interface\\Icons\\INV_Pants_08",
+      "source_offset": 119193048,
+      "display_source_offset": 119193048
+    },
+    {
+      "name": "Dreadmist Boots",
+      "class": "warlock",
+      "declared_display": 29799,
+      "display": 29799,
+      "icon": "Interface\\Icons\\INV_Boots_05",
+      "source_offset": 119193052,
+      "display_source_offset": 119193052
+    },
+    {
+      "name": "Dreadmist Bindings",
+      "class": "warlock",
+      "declared_display": 29795,
+      "display": 29795,
+      "icon": "Interface\\Icons\\INV_Bracer_13",
+      "source_offset": 119193056,
+      "display_source_offset": 119193056
+    },
+    {
+      "name": "Dreadmist Gloves",
+      "class": "warlock",
+      "declared_display": 29800,
+      "display": 29800,
+      "icon": "Interface\\Icons\\INV_Gauntlets_32",
+      "source_offset": 119193060,
+      "display_source_offset": 119193060
+    },
+    {
+      "name": "Felheart Circlet",
+      "class": "warlock",
+      "declared_display": 31987,
+      "display": 31987,
+      "icon": "Interface\\Icons\\INV_Helmet_08",
+      "source_offset": 119193064,
+      "display_source_offset": 119193064
+    },
+    {
+      "name": "Felheart Mantle",
+      "class": "warlock",
+      "declared_display": 31974,
+      "display": 31974,
+      "icon": "Interface\\Icons\\INV_Shoulder_23",
+      "source_offset": 119193068,
+      "display_source_offset": 119193068
+    },
+    {
+      "name": "Felheart Robes",
+      "class": "warlock",
+      "declared_display": 31973,
+      "display": 31973,
+      "icon": "Interface\\Icons\\INV_Chest_Cloth_09",
+      "source_offset": 119193072,
+      "display_source_offset": 119193072
+    },
+    {
+      "name": "Felheart Belt",
+      "class": "warlock",
+      "declared_display": 31969,
+      "display": 31969,
+      "icon": "Interface\\Icons\\INV_Belt_13",
+      "source_offset": 119193076,
+      "display_source_offset": 119193076
+    },
+    {
+      "name": "Felheart Leggings",
+      "class": "warlock",
+      "declared_display": 31972,
+      "display": 31972,
+      "icon": "Interface\\Icons\\INV_Pants_Cloth_14",
+      "source_offset": 119193080,
+      "display_source_offset": 119193080
+    },
+    {
+      "name": "Felheart Boots",
+      "class": "warlock",
+      "declared_display": 31975,
+      "display": 31975,
+      "icon": "Interface\\Icons\\INV_Boots_Cloth_05",
+      "source_offset": 119193084,
+      "display_source_offset": 119193084
+    },
+    {
+      "name": "Felheart Bindings",
+      "class": "warlock",
+      "declared_display": 31970,
+      "display": 31970,
+      "icon": "Interface\\Icons\\INV_Bracer_07",
+      "source_offset": 119193088,
+      "display_source_offset": 119193088
+    },
+    {
+      "name": "Felheart Gloves",
+      "class": "warlock",
+      "declared_display": 31971,
+      "display": 31971,
+      "icon": "Interface\\Icons\\INV_Gauntlets_19",
+      "source_offset": 119193092,
+      "display_source_offset": 119193092
+    },
+    {
+      "name": "Nemesis Circlet",
+      "class": "warlock",
+      "declared_display": 34369,
+      "display": 34369,
+      "icon": "Interface\\Icons\\INV_Helmet_08",
+      "source_offset": 119193096,
+      "display_source_offset": 119193096
+    },
+    {
+      "name": "Nemesis Mantle",
+      "class": "warlock",
+      "declared_display": 34022,
+      "display": 34022,
+      "icon": "Interface\\Icons\\INV_Shoulder_19",
+      "source_offset": 119193100,
+      "display_source_offset": 119193100
+    },
+    {
+      "name": "Nemesis Robes",
+      "class": "warlock",
+      "declared_display": 34014,
+      "display": 34014,
+      "icon": "Interface\\Icons\\INV_Chest_Leather_01",
+      "source_offset": 119193104,
+      "display_source_offset": 119193104
+    },
+    {
+      "name": "Nemesis Belt",
+      "class": "warlock",
+      "declared_display": 34011,
+      "display": 34011,
+      "icon": "Interface\\Icons\\INV_Belt_13",
+      "source_offset": 119193108,
+      "display_source_offset": 119193108
+    },
+    {
+      "name": "Nemesis Leggings",
+      "class": "warlock",
+      "declared_display": 29857,
+      "display": 29857,
+      "icon": "Interface\\Icons\\INV_Pants_07",
+      "source_offset": 119193112,
+      "display_source_offset": 119193112
+    },
+    {
+      "name": "Nemesis Boots",
+      "class": "warlock",
+      "declared_display": 34015,
+      "display": 34015,
+      "icon": "Interface\\Icons\\INV_Boots_05",
+      "source_offset": 119193116,
+      "display_source_offset": 119193116
+    },
+    {
+      "name": "Nemesis Bindings",
+      "class": "warlock",
+      "declared_display": 34012,
+      "display": 34012,
+      "icon": "Interface\\Icons\\INV_Bracer_07",
+      "source_offset": 119193120,
+      "display_source_offset": 119193120
+    },
+    {
+      "name": "Nemesis Gloves",
+      "class": "warlock",
+      "declared_display": 34013,
+      "display": 34013,
+      "icon": "Interface\\Icons\\INV_Gauntlets_19",
+      "source_offset": 119193124,
+      "display_source_offset": 119193124
+    },
+    {
+      "name": "Plagueheart Circlet",
+      "class": "warlock",
+      "declared_display": 35182,
+      "display": 35182,
+      "icon": "Interface\\Icons\\INV_Crown_01",
+      "source_offset": 119193128,
+      "display_source_offset": 119193128
+    },
+    {
+      "name": "Plagueheart Mantle",
+      "class": "warlock",
+      "declared_display": 35187,
+      "display": 35187,
+      "icon": "Interface\\Icons\\INV_Shoulder_25",
+      "source_offset": 119193132,
+      "display_source_offset": 119193132
+    },
+    {
+      "name": "Plagueheart Robes",
+      "class": "warlock",
+      "declared_display": 35185,
+      "display": 35185,
+      "icon": "Interface\\Icons\\INV_Chest_Cloth_43",
+      "source_offset": 119193136,
+      "display_source_offset": 119193136
+    },
+    {
+      "name": "Plagueheart Belt",
+      "class": "warlock",
+      "declared_display": 35179,
+      "display": 35179,
+      "icon": "Interface\\Icons\\INV_Belt_03",
+      "source_offset": 119193140,
+      "display_source_offset": 119193140
+    },
+    {
+      "name": "Plagueheart Leggings",
+      "class": "warlock",
+      "declared_display": 35184,
+      "display": 35184,
+      "icon": "Interface\\Icons\\INV_Pants_Cloth_05",
+      "source_offset": 119193144,
+      "display_source_offset": 119193144
+    },
+    {
+      "name": "Plagueheart Boots",
+      "class": "warlock",
+      "declared_display": 35186,
+      "display": 35186,
+      "icon": "Interface\\Icons\\INV_Boots_Fabric_01",
+      "source_offset": 119193148,
+      "display_source_offset": 119193148
+    },
+    {
+      "name": "Plagueheart Bindings",
+      "class": "warlock",
+      "declared_display": 35180,
+      "display": 35180,
+      "icon": "Interface\\Icons\\INV_Bracer_13",
+      "source_offset": 119193152,
+      "display_source_offset": 119193152
+    },
+    {
+      "name": "Plagueheart Gloves",
+      "class": "warlock",
+      "declared_display": 35183,
+      "display": 35183,
+      "icon": "Interface\\Icons\\INV_Gauntlets_17",
+      "source_offset": 119193156,
+      "display_source_offset": 119193156
+    },
+    {
+      "name": "Novice's Staff",
+      "class": "warlock",
+      "declared_display": 2778,
+      "display": 2778,
+      "icon": "Interface\\Icons\\INV_Staff_02",
+      "source_offset": 119190464,
+      "display_source_offset": 119190464
+    },
+    {
+      "name": "Dreadmist Staff",
+      "class": "warlock",
+      "declared_display": 2943,
+      "display": 2943,
+      "icon": "Interface\\Icons\\INV_Staff_08",
+      "source_offset": 119190468,
+      "display_source_offset": 119190468
+    },
+    {
+      "name": "Felheart Staff",
+      "class": "warlock",
+      "declared_display": 5554,
+      "display": 5554,
+      "icon": "Interface\\Icons\\INV_Staff_07",
+      "source_offset": 119190472,
+      "display_source_offset": 119190472
+    },
+    {
+      "name": "Staff of the Shadow Flame",
+      "class": "warlock",
+      "declared_display": 31960,
+      "display": 31960,
+      "icon": "Interface\\Icons\\INV_Staff_06",
+      "source_offset": 119190476,
+      "display_source_offset": 119190476
+    },
+    {
+      "name": "Atiesh, Greatstaff of the Guardian",
+      "class": "warlock",
+      "declared_display": 35631,
+      "display": 35631,
+      "icon": "Interface\\Icons\\INV_Staff_Medivh",
+      "source_offset": 119190480,
+      "display_source_offset": 119190480
+    },
+    {
+      "name": "Thicket Cover",
+      "class": "druid",
+      "declared_display": 0,
+      "display": 31228,
+      "icon": "Interface\\Icons\\INV_Helmet_27",
+      "source_offset": 119193304,
+      "display_source_offset": 119193336
+    },
+    {
+      "name": "Thicket Spaulders",
+      "class": "druid",
+      "declared_display": 7836,
+      "display": 7836,
+      "icon": "Interface\\Icons\\INV_Shoulder_08",
+      "source_offset": 119193308,
+      "display_source_offset": 119193308
+    },
+    {
+      "name": "Thicket Chestpiece",
+      "class": "druid",
+      "declared_display": 3719,
+      "display": 3719,
+      "icon": "Interface\\Icons\\INV_Chest_Wolf",
+      "source_offset": 119193312,
+      "display_source_offset": 119193312
+    },
+    {
+      "name": "Thicket Belt",
+      "class": "druid",
+      "declared_display": 4473,
+      "display": 4473,
+      "icon": "Interface\\Icons\\INV_Belt_01",
+      "source_offset": 119193316,
+      "display_source_offset": 119193316
+    },
+    {
+      "name": "Thicket Pants",
+      "class": "druid",
+      "declared_display": 4469,
+      "display": 4469,
+      "icon": "Interface\\Icons\\INV_Pants_Wolf",
+      "source_offset": 119193320,
+      "display_source_offset": 119193320
+    },
+    {
+      "name": "Thicket Boots",
+      "class": "druid",
+      "declared_display": 9773,
+      "display": 9773,
+      "icon": "Interface\\Icons\\INV_Boots_03",
+      "source_offset": 119193324,
+      "display_source_offset": 119193324
+    },
+    {
+      "name": "Thicket Bracers",
+      "class": "druid",
+      "declared_display": 4471,
+      "display": 4471,
+      "icon": "Interface\\Icons\\INV_Bracer_05",
+      "source_offset": 119193328,
+      "display_source_offset": 119193328
+    },
+    {
+      "name": "Thicket Gloves",
+      "class": "druid",
+      "declared_display": 4470,
+      "display": 4470,
+      "icon": "Interface\\Icons\\INV_Gauntlets_05",
+      "source_offset": 119193332,
+      "display_source_offset": 119193332
+    },
+    {
+      "name": "Wildheart Cover",
+      "class": "druid",
+      "declared_display": 31228,
+      "display": 31228,
+      "icon": "Interface\\Icons\\INV_Helmet_27",
+      "source_offset": 119193336,
+      "display_source_offset": 119193336
+    },
+    {
+      "name": "Wildheart Spaulders",
+      "class": "druid",
+      "declared_display": 30412,
+      "display": 30412,
+      "icon": "Interface\\Icons\\INV_Shoulder_01",
+      "source_offset": 119193340,
+      "display_source_offset": 119193340
+    },
+    {
+      "name": "Wildheart Chestpiece",
+      "class": "druid",
+      "declared_display": 29974,
+      "display": 29974,
+      "icon": "Interface\\Icons\\INV_Chest_Plate06",
+      "source_offset": 119193344,
+      "display_source_offset": 119193344
+    },
+    {
+      "name": "Wildheart Belt",
+      "class": "druid",
+      "declared_display": 29976,
+      "display": 29976,
+      "icon": "Interface\\Icons\\INV_Belt_15",
+      "source_offset": 119193348,
+      "display_source_offset": 119193348
+    },
+    {
+      "name": "Wildheart Pants",
+      "class": "druid",
+      "declared_display": 29975,
+      "display": 29975,
+      "icon": "Interface\\Icons\\INV_Pants_08",
+      "source_offset": 119193352,
+      "display_source_offset": 119193352
+    },
+    {
+      "name": "Wildheart Boots",
+      "class": "druid",
+      "declared_display": 29981,
+      "display": 29981,
+      "icon": "Interface\\Icons\\INV_Boots_08",
+      "source_offset": 119193356,
+      "display_source_offset": 119193356
+    },
+    {
+      "name": "Wildheart Bracers",
+      "class": "druid",
+      "declared_display": 29977,
+      "display": 29977,
+      "icon": "Interface\\Icons\\INV_Bracer_09",
+      "source_offset": 119193360,
+      "display_source_offset": 119193360
+    },
+    {
+      "name": "Wildheart Gloves",
+      "class": "druid",
+      "declared_display": 29979,
+      "display": 29979,
+      "icon": "Interface\\Icons\\INV_Gauntlets_17",
+      "source_offset": 119193364,
+      "display_source_offset": 119193364
+    },
+    {
+      "name": "Cenarion Cover",
+      "class": "druid",
+      "declared_display": 32790,
+      "display": 32790,
+      "icon": "Interface\\Icons\\INV_Helmet_09",
+      "source_offset": 119193368,
+      "display_source_offset": 119193368
+    },
+    {
+      "name": "Cenarion Spaulders",
+      "class": "druid",
+      "declared_display": 32016,
+      "display": 32016,
+      "icon": "Interface\\Icons\\INV_Shoulder_07",
+      "source_offset": 119193372,
+      "display_source_offset": 119193372
+    },
+    {
+      "name": "Cenarion Chestpiece",
+      "class": "druid",
+      "declared_display": 31797,
+      "display": 31797,
+      "icon": "Interface\\Icons\\INV_Chest_Cloth_06",
+      "source_offset": 119193376,
+      "display_source_offset": 119193376
+    },
+    {
+      "name": "Cenarion Belt",
+      "class": "druid",
+      "declared_display": 31722,
+      "display": 31722,
+      "icon": "Interface\\Icons\\INV_Belt_06",
+      "source_offset": 119193380,
+      "display_source_offset": 119193380
+    },
+    {
+      "name": "Cenarion Pants",
+      "class": "druid",
+      "declared_display": 31729,
+      "display": 31729,
+      "icon": "Interface\\Icons\\INV_Pants_06",
+      "source_offset": 119193384,
+      "display_source_offset": 119193384
+    },
+    {
+      "name": "Cenarion Boots",
+      "class": "druid",
+      "declared_display": 31724,
+      "display": 31724,
+      "icon": "Interface\\Icons\\INV_Boots_08",
+      "source_offset": 119193388,
+      "display_source_offset": 119193388
+    },
+    {
+      "name": "Cenarion Bracers",
+      "class": "druid",
+      "declared_display": 31725,
+      "display": 31725,
+      "icon": "Interface\\Icons\\INV_Bracer_03",
+      "source_offset": 119193392,
+      "display_source_offset": 119193392
+    },
+    {
+      "name": "Cenarion Gloves",
+      "class": "druid",
+      "declared_display": 31726,
+      "display": 31726,
+      "icon": "Interface\\Icons\\INV_Gauntlets_07",
+      "source_offset": 119193396,
+      "display_source_offset": 119193396
+    },
+    {
+      "name": "Stormrage Cover",
+      "class": "druid",
+      "declared_display": 33655,
+      "display": 33655,
+      "icon": "Interface\\Icons\\INV_Helmet_09",
+      "source_offset": 119193400,
+      "display_source_offset": 119193400
+    },
+    {
+      "name": "Stormrage Spaulders",
+      "class": "druid",
+      "declared_display": 30546,
+      "display": 30546,
+      "icon": "Interface\\Icons\\INV_Shoulder_07",
+      "source_offset": 119193404,
+      "display_source_offset": 119193404
+    },
+    {
+      "name": "Stormrage Chestpiece",
+      "class": "druid",
+      "declared_display": 30536,
+      "display": 30536,
+      "icon": "Interface\\Icons\\INV_Chest_Chain_16",
+      "source_offset": 119193408,
+      "display_source_offset": 119193408
+    },
+    {
+      "name": "Stormrage Belt",
+      "class": "druid",
+      "declared_display": 30541,
+      "display": 30541,
+      "icon": "Interface\\Icons\\INV_Belt_06",
+      "source_offset": 119193412,
+      "display_source_offset": 119193412
+    },
+    {
+      "name": "Stormrage Pants",
+      "class": "druid",
+      "declared_display": 30540,
+      "display": 30540,
+      "icon": "Interface\\Icons\\INV_Pants_06",
+      "source_offset": 119193416,
+      "display_source_offset": 119193416
+    },
+    {
+      "name": "Stormrage Boots",
+      "class": "druid",
+      "declared_display": 30542,
+      "display": 30542,
+      "icon": "Interface\\Icons\\INV_Boots_08",
+      "source_offset": 119193420,
+      "display_source_offset": 119193420
+    },
+    {
+      "name": "Stormrage Bracers",
+      "class": "druid",
+      "declared_display": 30548,
+      "display": 30548,
+      "icon": "Interface\\Icons\\INV_Bracer_03",
+      "source_offset": 119193424,
+      "display_source_offset": 119193424
+    },
+    {
+      "name": "Stormrage Gloves",
+      "class": "druid",
+      "declared_display": 34016,
+      "display": 34016,
+      "icon": "Interface\\Icons\\INV_Gauntlets_25",
+      "source_offset": 119193428,
+      "display_source_offset": 119193428
+    },
+    {
+      "name": "Dreamwalker Cover",
+      "class": "druid",
+      "declared_display": 35162,
+      "display": 35162,
+      "icon": "Interface\\Icons\\INV_Helmet_15",
+      "source_offset": 119193432,
+      "display_source_offset": 119193432
+    },
+    {
+      "name": "Dreamwalker Spaulders",
+      "class": "druid",
+      "declared_display": 35160,
+      "display": 35160,
+      "icon": "Interface\\Icons\\INV_Shoulder_14",
+      "source_offset": 119193436,
+      "display_source_offset": 119193436
+    },
+    {
+      "name": "Dreamwalker Chestpiece",
+      "class": "druid",
+      "declared_display": 35159,
+      "display": 35159,
+      "icon": "Interface\\Icons\\INV_Chest_Chain_15",
+      "source_offset": 119193440,
+      "display_source_offset": 119193440
+    },
+    {
+      "name": "Dreamwalker Belt",
+      "class": "druid",
+      "declared_display": 35164,
+      "display": 35164,
+      "icon": "Interface\\Icons\\INV_Belt_22",
+      "source_offset": 119193444,
+      "display_source_offset": 119193444
+    },
+    {
+      "name": "Dreamwalker Pants",
+      "class": "druid",
+      "declared_display": 35161,
+      "display": 35161,
+      "icon": "Interface\\Icons\\INV_Pants_Mail_15",
+      "source_offset": 119193448,
+      "display_source_offset": 119193448
+    },
+    {
+      "name": "Dreamwalker Boots",
+      "class": "druid",
+      "declared_display": 35173,
+      "display": 35173,
+      "icon": "Interface\\Icons\\INV_Boots_Chain_05",
+      "source_offset": 119193452,
+      "display_source_offset": 119193452
+    },
+    {
+      "name": "Dreamwalker Bracers",
+      "class": "druid",
+      "declared_display": 35158,
+      "display": 35158,
+      "icon": "Interface\\Icons\\INV_Bracer_02",
+      "source_offset": 119193456,
+      "display_source_offset": 119193456
+    },
+    {
+      "name": "Dreamwalker Gloves",
+      "class": "druid",
+      "declared_display": 35167,
+      "display": 35167,
+      "icon": "Interface\\Icons\\INV_Gauntlets_25",
+      "source_offset": 119193460,
+      "display_source_offset": 119193460
+    },
+    {
+      "name": "Gnarled Staff",
+      "class": "druid",
+      "declared_display": 2778,
+      "display": 2778,
+      "icon": "Interface\\Icons\\INV_Staff_02",
+      "source_offset": 119190712,
+      "display_source_offset": 119190712
+    },
+    {
+      "name": "Wildheart Staff",
+      "class": "druid",
+      "declared_display": 2943,
+      "display": 2943,
+      "icon": "Interface\\Icons\\INV_Staff_08",
+      "source_offset": 119190716,
+      "display_source_offset": 119190716
+    },
+    {
+      "name": "Cenarion Staff",
+      "class": "druid",
+      "declared_display": 5554,
+      "display": 5554,
+      "icon": "Interface\\Icons\\INV_Staff_07",
+      "source_offset": 119190720,
+      "display_source_offset": 119190720
+    },
+    {
+      "name": "Staff of the Moon",
+      "class": "druid",
+      "declared_display": 34250,
+      "display": 34250,
+      "icon": "Interface\\Icons\\INV_Weapon_Halberd_AhnQiraj",
+      "source_offset": 119190724,
+      "display_source_offset": 119190724
+    },
+    {
+      "name": "Atiesh, Greatstaff of the Guardian",
+      "class": "druid",
+      "declared_display": 35633,
+      "display": 35633,
+      "icon": "Interface\\Icons\\INV_Staff_Medivh",
+      "source_offset": 119190728,
+      "display_source_offset": 119190728
+    },
+    {
+      "name": "Field Marshal's Helm",
+      "class": "warrior",
+      "declared_display": 30316,
+      "display": 30316,
+      "icon": "Interface\\Icons\\INV_Helmet_05",
+      "source_offset": 119194736,
+      "display_source_offset": 119194736
+    },
+    {
+      "name": "Field Marshal's Pauldrons",
+      "class": "warrior",
+      "declared_display": 30318,
+      "display": 30318,
+      "icon": "Interface\\Icons\\INV_Shoulder_20",
+      "source_offset": 119194740,
+      "display_source_offset": 119194740
+    },
+    {
+      "name": "Field Marshal's Breastplate",
+      "class": "warrior",
+      "declared_display": 30315,
+      "display": 30315,
+      "icon": "Interface\\Icons\\INV_Chest_Plate03",
+      "source_offset": 119194744,
+      "display_source_offset": 119194744
+    },
+    {
+      "name": "Field Marshal's Girdle",
+      "class": "warrior",
+      "declared_display": 0,
+      "display": 33990,
+      "icon": "Interface\\Icons\\INV_Belt_09",
+      "source_offset": 119194748,
+      "display_source_offset": 119190980
+    },
+    {
+      "name": "Field Marshal's Legplates",
+      "class": "warrior",
+      "declared_display": 30317,
+      "display": 30317,
+      "icon": "Interface\\Icons\\INV_Pants_04",
+      "source_offset": 119194752,
+      "display_source_offset": 119194752
+    },
+    {
+      "name": "Field Marshal's Sabatons",
+      "class": "warrior",
+      "declared_display": 30319,
+      "display": 30319,
+      "icon": "Interface\\Icons\\INV_Boots_Plate_09",
+      "source_offset": 119194756,
+      "display_source_offset": 119194756
+    },
+    {
+      "name": "Field Marshal's Bracers",
+      "class": "warrior",
+      "declared_display": 0,
+      "display": 33982,
+      "icon": "Interface\\Icons\\INV_Bracer_19",
+      "source_offset": 119194760,
+      "display_source_offset": 119190992
+    },
+    {
+      "name": "Field Marshal's Gauntlets",
+      "class": "warrior",
+      "declared_display": 30321,
+      "display": 30321,
+      "icon": "Interface\\Icons\\INV_Gauntlets_29",
+      "source_offset": 119194764,
+      "display_source_offset": 119194764
+    },
+    {
+      "name": "Warlord's Helm",
+      "class": "warrior",
+      "declared_display": 30374,
+      "display": 30374,
+      "icon": "Interface\\Icons\\INV_Helmet_09",
+      "source_offset": 119194768,
+      "display_source_offset": 119194768
+    },
+    {
+      "name": "Warlord's Pauldrons",
+      "class": "warrior",
+      "declared_display": 30928,
+      "display": 30928,
+      "icon": "Interface\\Icons\\INV_Shoulder_11",
+      "source_offset": 119194772,
+      "display_source_offset": 119194772
+    },
+    {
+      "name": "Warlord's Breastplate",
+      "class": "warrior",
+      "declared_display": 30373,
+      "display": 30373,
+      "icon": "Interface\\Icons\\INV_Chest_Plate16",
+      "source_offset": 119194776,
+      "display_source_offset": 119194776
+    },
+    {
+      "name": "Warlord's Girdle",
+      "class": "warrior",
+      "declared_display": 0,
+      "display": 33990,
+      "icon": "Interface\\Icons\\INV_Belt_09",
+      "source_offset": 119194780,
+      "display_source_offset": 119190980
+    },
+    {
+      "name": "Warlord's Legplates",
+      "class": "warrior",
+      "declared_display": 30375,
+      "display": 30375,
+      "icon": "Interface\\Icons\\INV_Pants_04",
+      "source_offset": 119194784,
+      "display_source_offset": 119194784
+    },
+    {
+      "name": "Warlord's Sabatons",
+      "class": "warrior",
+      "declared_display": 30370,
+      "display": 30370,
+      "icon": "Interface\\Icons\\INV_Boots_Plate_04",
+      "source_offset": 119194788,
+      "display_source_offset": 119194788
+    },
+    {
+      "name": "Warlord's Bracers",
+      "class": "warrior",
+      "declared_display": 0,
+      "display": 33982,
+      "icon": "Interface\\Icons\\INV_Bracer_19",
+      "source_offset": 119194792,
+      "display_source_offset": 119190992
+    },
+    {
+      "name": "Warlord's Gauntlets",
+      "class": "warrior",
+      "declared_display": 30371,
+      "display": 30371,
+      "icon": "Interface\\Icons\\INV_Gauntlets_10",
+      "source_offset": 119194796,
+      "display_source_offset": 119194796
+    },
+    {
+      "name": "Grand Marshal's Claymore",
+      "class": "warrior",
+      "declared_display": 31996,
+      "display": 31996,
+      "icon": "Interface\\Icons\\INV_Sword_39",
+      "source_offset": 119193976,
+      "display_source_offset": 119193976
+    },
+    {
+      "name": "High Warlord's Greatsword",
+      "class": "warrior",
+      "declared_display": 31998,
+      "display": 31998,
+      "icon": "Interface\\Icons\\INV_Sword_48",
+      "source_offset": 119194000,
+      "display_source_offset": 119194000
+    },
+    {
+      "name": "Field Marshal's Helm",
+      "class": "paladin",
+      "declared_display": 30316,
+      "display": 30316,
+      "icon": "Interface\\Icons\\INV_Helmet_05",
+      "source_offset": 119194856,
+      "display_source_offset": 119194856
+    },
+    {
+      "name": "Field Marshal's Pauldrons",
+      "class": "paladin",
+      "declared_display": 30318,
+      "display": 30318,
+      "icon": "Interface\\Icons\\INV_Shoulder_20",
+      "source_offset": 119194860,
+      "display_source_offset": 119194860
+    },
+    {
+      "name": "Field Marshal's Breastplate",
+      "class": "paladin",
+      "declared_display": 30315,
+      "display": 30315,
+      "icon": "Interface\\Icons\\INV_Chest_Plate03",
+      "source_offset": 119194864,
+      "display_source_offset": 119194864
+    },
+    {
+      "name": "Field Marshal's Girdle",
+      "class": "paladin",
+      "declared_display": 0,
+      "display": 33633,
+      "icon": "Interface\\Icons\\INV_Belt_27",
+      "source_offset": 119194868,
+      "display_source_offset": 119191284
+    },
+    {
+      "name": "Field Marshal's Legplates",
+      "class": "paladin",
+      "declared_display": 30317,
+      "display": 30317,
+      "icon": "Interface\\Icons\\INV_Pants_04",
+      "source_offset": 119194872,
+      "display_source_offset": 119194872
+    },
+    {
+      "name": "Field Marshal's Sabatons",
+      "class": "paladin",
+      "declared_display": 30319,
+      "display": 30319,
+      "icon": "Interface\\Icons\\INV_Boots_Plate_09",
+      "source_offset": 119194876,
+      "display_source_offset": 119194876
+    },
+    {
+      "name": "Field Marshal's Bracers",
+      "class": "paladin",
+      "declared_display": 0,
+      "display": 33634,
+      "icon": "Interface\\Icons\\INV_Bracer_18",
+      "source_offset": 119194880,
+      "display_source_offset": 119191296
+    },
+    {
+      "name": "Field Marshal's Gauntlets",
+      "class": "paladin",
+      "declared_display": 30321,
+      "display": 30321,
+      "icon": "Interface\\Icons\\INV_Gauntlets_29",
+      "source_offset": 119194884,
+      "display_source_offset": 119194884
+    },
+    {
+      "name": "Field Marshal's Helm",
+      "class": "paladin",
+      "declared_display": 30316,
+      "display": 30316,
+      "icon": "Interface\\Icons\\INV_Helmet_05",
+      "source_offset": 119194888,
+      "display_source_offset": 119194888
+    },
+    {
+      "name": "Field Marshal's Pauldrons",
+      "class": "paladin",
+      "declared_display": 30318,
+      "display": 30318,
+      "icon": "Interface\\Icons\\INV_Shoulder_20",
+      "source_offset": 119194892,
+      "display_source_offset": 119194892
+    },
+    {
+      "name": "Field Marshal's Breastplate",
+      "class": "paladin",
+      "declared_display": 30315,
+      "display": 30315,
+      "icon": "Interface\\Icons\\INV_Chest_Plate03",
+      "source_offset": 119194896,
+      "display_source_offset": 119194896
+    },
+    {
+      "name": "Field Marshal's Girdle",
+      "class": "paladin",
+      "declared_display": 0,
+      "display": 33633,
+      "icon": "Interface\\Icons\\INV_Belt_27",
+      "source_offset": 119194900,
+      "display_source_offset": 119191284
+    },
+    {
+      "name": "Field Marshal's Legplates",
+      "class": "paladin",
+      "declared_display": 30317,
+      "display": 30317,
+      "icon": "Interface\\Icons\\INV_Pants_04",
+      "source_offset": 119194904,
+      "display_source_offset": 119194904
+    },
+    {
+      "name": "Field Marshal's Sabatons",
+      "class": "paladin",
+      "declared_display": 30319,
+      "display": 30319,
+      "icon": "Interface\\Icons\\INV_Boots_Plate_09",
+      "source_offset": 119194908,
+      "display_source_offset": 119194908
+    },
+    {
+      "name": "Field Marshal's Bracers",
+      "class": "paladin",
+      "declared_display": 0,
+      "display": 33634,
+      "icon": "Interface\\Icons\\INV_Bracer_18",
+      "source_offset": 119194912,
+      "display_source_offset": 119191296
+    },
+    {
+      "name": "Field Marshal's Gauntlets",
+      "class": "paladin",
+      "declared_display": 30321,
+      "display": 30321,
+      "icon": "Interface\\Icons\\INV_Gauntlets_29",
+      "source_offset": 119194916,
+      "display_source_offset": 119194916
+    },
+    {
+      "name": "Grand Marshal's Demolisher",
+      "class": "paladin",
+      "declared_display": 31954,
+      "display": 31954,
+      "icon": "Interface\\Icons\\INV_Hammer_03",
+      "source_offset": 119194056,
+      "display_source_offset": 119194056
+    },
+    {
+      "name": "Grand Marshal's Demolisher",
+      "class": "paladin",
+      "declared_display": 31954,
+      "display": 31954,
+      "icon": "Interface\\Icons\\INV_Hammer_03",
+      "source_offset": 119194080,
+      "display_source_offset": 119194080
+    },
+    {
+      "name": "Field Marshal's Helm",
+      "class": "hunter",
+      "declared_display": 32093,
+      "display": 32093,
+      "icon": "Interface\\Icons\\INV_Helmet_05",
+      "source_offset": 119194976,
+      "display_source_offset": 119194976
+    },
+    {
+      "name": "Field Marshal's Spaulders",
+      "class": "hunter",
+      "declared_display": 32092,
+      "display": 32092,
+      "icon": "Interface\\Icons\\INV_Shoulder_10",
+      "source_offset": 119194980,
+      "display_source_offset": 119194980
+    },
+    {
+      "name": "Field Marshal's Breastplate",
+      "class": "hunter",
+      "declared_display": 32094,
+      "display": 32094,
+      "icon": "Interface\\Icons\\INV_Chest_Chain_03",
+      "source_offset": 119194984,
+      "display_source_offset": 119194984
+    },
+    {
+      "name": "Field Marshal's Belt",
+      "class": "hunter",
+      "declared_display": 0,
+      "display": 33665,
+      "icon": "Interface\\Icons\\INV_Belt_28",
+      "source_offset": 119194988,
+      "display_source_offset": 119191588
+    },
+    {
+      "name": "Field Marshal's Legguards",
+      "class": "hunter",
+      "declared_display": 32097,
+      "display": 32097,
+      "icon": "Interface\\Icons\\INV_Pants_Mail_17",
+      "source_offset": 119194992,
+      "display_source_offset": 119194992
+    },
+    {
+      "name": "Field Marshal's Greaves",
+      "class": "hunter",
+      "declared_display": 32095,
+      "display": 32095,
+      "icon": "Interface\\Icons\\INV_Boots_Plate_07",
+      "source_offset": 119194996,
+      "display_source_offset": 119194996
+    },
+    {
+      "name": "Field Marshal's Bracers",
+      "class": "hunter",
+      "declared_display": 0,
+      "display": 33666,
+      "icon": "Interface\\Icons\\INV_Bracer_17",
+      "source_offset": 119195000,
+      "display_source_offset": 119191600
+    },
+    {
+      "name": "Field Marshal's Gauntlets",
+      "class": "hunter",
+      "declared_display": 32098,
+      "display": 32098,
+      "icon": "Interface\\Icons\\INV_Gauntlets_10",
+      "source_offset": 119195004,
+      "display_source_offset": 119195004
+    },
+    {
+      "name": "Warlord's Helm",
+      "class": "hunter",
+      "declared_display": 32135,
+      "display": 32135,
+      "icon": "Interface\\Icons\\INV_Helmet_09",
+      "source_offset": 119195008,
+      "display_source_offset": 119195008
+    },
+    {
+      "name": "Warlord's Spaulders",
+      "class": "hunter",
+      "declared_display": 32125,
+      "display": 32125,
+      "icon": "Interface\\Icons\\INV_Shoulder_29",
+      "source_offset": 119195012,
+      "display_source_offset": 119195012
+    },
+    {
+      "name": "Warlord's Breastplate",
+      "class": "hunter",
+      "declared_display": 32122,
+      "display": 32122,
+      "icon": "Interface\\Icons\\INV_Chest_Chain_11",
+      "source_offset": 119195016,
+      "display_source_offset": 119195016
+    },
+    {
+      "name": "Warlord's Belt",
+      "class": "hunter",
+      "declared_display": 0,
+      "display": 33665,
+      "icon": "Interface\\Icons\\INV_Belt_28",
+      "source_offset": 119195020,
+      "display_source_offset": 119191588
+    },
+    {
+      "name": "Warlord's Legguards",
+      "class": "hunter",
+      "declared_display": 32120,
+      "display": 32120,
+      "icon": "Interface\\Icons\\INV_Pants_Mail_16",
+      "source_offset": 119195024,
+      "display_source_offset": 119195024
+    },
+    {
+      "name": "Warlord's Greaves",
+      "class": "hunter",
+      "declared_display": 32124,
+      "display": 32124,
+      "icon": "Interface\\Icons\\INV_Boots_Plate_06",
+      "source_offset": 119195028,
+      "display_source_offset": 119195028
+    },
+    {
+      "name": "Warlord's Bracers",
+      "class": "hunter",
+      "declared_display": 0,
+      "display": 33666,
+      "icon": "Interface\\Icons\\INV_Bracer_17",
+      "source_offset": 119195032,
+      "display_source_offset": 119191600
+    },
+    {
+      "name": "Warlord's Gauntlets",
+      "class": "hunter",
+      "declared_display": 32119,
+      "display": 32119,
+      "icon": "Interface\\Icons\\INV_Gauntlets_11",
+      "source_offset": 119195036,
+      "display_source_offset": 119195036
+    },
+    {
+      "name": "Grand Marshal's Bullseye",
+      "class": "hunter",
+      "declared_display": 31759,
+      "display": 31759,
+      "icon": "Interface\\Icons\\INV_Weapon_Bow_12",
+      "source_offset": 119194152,
+      "display_source_offset": 119194152
+    },
+    {
+      "name": "High Warlord's Recurve",
+      "class": "hunter",
+      "declared_display": 31748,
+      "display": 31748,
+      "icon": "Interface\\Icons\\INV_Weapon_Bow_08",
+      "source_offset": 119194176,
+      "display_source_offset": 119194176
+    },
+    {
+      "name": "Field Marshal's Cover",
+      "class": "rogue",
+      "declared_display": 30330,
+      "display": 30330,
+      "icon": "Interface\\Icons\\INV_Helmet_41",
+      "source_offset": 119195096,
+      "display_source_offset": 119195096
+    },
+    {
+      "name": "Field Marshal's Spaulders",
+      "class": "rogue",
+      "declared_display": 30328,
+      "display": 30328,
+      "icon": "Interface\\Icons\\INV_Shoulder_23",
+      "source_offset": 119195100,
+      "display_source_offset": 119195100
+    },
+    {
+      "name": "Field Marshal's Chestpiece",
+      "class": "rogue",
+      "declared_display": 30327,
+      "display": 30327,
+      "icon": "Interface\\Icons\\INV_Chest_Cloth_07",
+      "source_offset": 119195104,
+      "display_source_offset": 119195104
+    },
+    {
+      "name": "Field Marshal's Belt",
+      "class": "rogue",
+      "declared_display": 0,
+      "display": 31110,
+      "icon": "Interface\\Icons\\INV_Belt_23",
+      "source_offset": 119195108,
+      "display_source_offset": 119191892
+    },
+    {
+      "name": "Field Marshal's Pants",
+      "class": "rogue",
+      "declared_display": 30329,
+      "display": 30329,
+      "icon": "Interface\\Icons\\INV_Pants_06",
+      "source_offset": 119195112,
+      "display_source_offset": 119195112
+    },
+    {
+      "name": "Field Marshal's Boots",
+      "class": "rogue",
+      "declared_display": 30333,
+      "display": 30333,
+      "icon": "Interface\\Icons\\INV_Boots_08",
+      "source_offset": 119195116,
+      "display_source_offset": 119195116
+    },
+    {
+      "name": "Field Marshal's Bracers",
+      "class": "rogue",
+      "declared_display": 0,
+      "display": 31127,
+      "icon": "Interface\\Icons\\INV_Bracer_02",
+      "source_offset": 119195120,
+      "display_source_offset": 119191904
+    },
+    {
+      "name": "Field Marshal's Gloves",
+      "class": "rogue",
+      "declared_display": 30334,
+      "display": 30334,
+      "icon": "Interface\\Icons\\INV_Gauntlets_21",
+      "source_offset": 119195124,
+      "display_source_offset": 119195124
+    },
+    {
+      "name": "Warlord's Cover",
+      "class": "rogue",
+      "declared_display": 32132,
+      "display": 32132,
+      "icon": "Interface\\Icons\\INV_Helmet_09",
+      "source_offset": 119195128,
+      "display_source_offset": 119195128
+    },
+    {
+      "name": "Warlord's Spaulders",
+      "class": "rogue",
+      "declared_display": 32131,
+      "display": 32131,
+      "icon": "Interface\\Icons\\INV_Shoulder_07",
+      "source_offset": 119195132,
+      "display_source_offset": 119195132
+    },
+    {
+      "name": "Warlord's Chestpiece",
+      "class": "rogue",
+      "declared_display": 32115,
+      "display": 32115,
+      "icon": "Interface\\Icons\\INV_Chest_Chain_16",
+      "source_offset": 119195136,
+      "display_source_offset": 119195136
+    },
+    {
+      "name": "Warlord's Belt",
+      "class": "rogue",
+      "declared_display": 0,
+      "display": 31110,
+      "icon": "Interface\\Icons\\INV_Belt_23",
+      "source_offset": 119195140,
+      "display_source_offset": 119191892
+    },
+    {
+      "name": "Warlord's Pants",
+      "class": "rogue",
+      "declared_display": 32112,
+      "display": 32112,
+      "icon": "Interface\\Icons\\INV_Pants_06",
+      "source_offset": 119195144,
+      "display_source_offset": 119195144
+    },
+    {
+      "name": "Warlord's Boots",
+      "class": "rogue",
+      "declared_display": 32114,
+      "display": 32114,
+      "icon": "Interface\\Icons\\INV_Boots_08",
+      "source_offset": 119195148,
+      "display_source_offset": 119195148
+    },
+    {
+      "name": "Warlord's Bracers",
+      "class": "rogue",
+      "declared_display": 0,
+      "display": 31127,
+      "icon": "Interface\\Icons\\INV_Bracer_02",
+      "source_offset": 119195152,
+      "display_source_offset": 119191904
+    },
+    {
+      "name": "Warlord's Gloves",
+      "class": "rogue",
+      "declared_display": 32113,
+      "display": 32113,
+      "icon": "Interface\\Icons\\INV_Gauntlets_25",
+      "source_offset": 119195156,
+      "display_source_offset": 119195156
+    },
+    {
+      "name": "Grand Marshal's Dirk",
+      "class": "rogue",
+      "declared_display": 31379,
+      "display": 31379,
+      "icon": "Interface\\Icons\\INV_Weapon_ShortBlade_26",
+      "source_offset": 119194296,
+      "display_source_offset": 119194296
+    },
+    {
+      "name": "High Warlord's Razor",
+      "class": "rogue",
+      "declared_display": 31380,
+      "display": 31380,
+      "icon": "Interface\\Icons\\INV_Weapon_ShortBlade_13",
+      "source_offset": 119194320,
+      "display_source_offset": 119194320
+    },
+    {
+      "name": "Grand Marshal's Mageblade",
+      "class": "rogue",
+      "declared_display": 31379,
+      "display": 31379,
+      "icon": "Interface\\Icons\\INV_Weapon_ShortBlade_26",
+      "source_offset": 119194344,
+      "display_source_offset": 119194344
+    },
+    {
+      "name": "High Warlord's Spellblade",
+      "class": "rogue",
+      "declared_display": 31381,
+      "display": 31381,
+      "icon": "Interface\\Icons\\INV_Weapon_ShortBlade_13",
+      "source_offset": 119194368,
+      "display_source_offset": 119194368
+    },
+    {
+      "name": "Field Marshal's Circlet",
+      "class": "priest",
+      "declared_display": 32980,
+      "display": 32980,
+      "icon": "Interface\\Icons\\INV_Helmet_24",
+      "source_offset": 119195216,
+      "display_source_offset": 119195216
+    },
+    {
+      "name": "Field Marshal's Mantle",
+      "class": "priest",
+      "declared_display": 33005,
+      "display": 33005,
+      "icon": "Interface\\Icons\\INV_Shoulder_02",
+      "source_offset": 119195220,
+      "display_source_offset": 119195220
+    },
+    {
+      "name": "Field Marshal's Robes",
+      "class": "priest",
+      "declared_display": 32984,
+      "display": 32984,
+      "icon": "Interface\\Icons\\INV_Chest_Cloth_02",
+      "source_offset": 119195224,
+      "display_source_offset": 119195224
+    },
+    {
+      "name": "Field Marshal's Belt",
+      "class": "priest",
+      "declared_display": 0,
+      "display": 34053,
+      "icon": "Interface\\Icons\\INV_Belt_22",
+      "source_offset": 119195228,
+      "display_source_offset": 119192196
+    },
+    {
+      "name": "Field Marshal's Leggings",
+      "class": "priest",
+      "declared_display": 32991,
+      "display": 32991,
+      "icon": "Interface\\Icons\\INV_Pants_06",
+      "source_offset": 119195232,
+      "display_source_offset": 119195232
+    },
+    {
+      "name": "Field Marshal's Boots",
+      "class": "priest",
+      "declared_display": 32992,
+      "display": 32992,
+      "icon": "Interface\\Icons\\INV_Boots_07",
+      "source_offset": 119195236,
+      "display_source_offset": 119195236
+    },
+    {
+      "name": "Field Marshal's Bindings",
+      "class": "priest",
+      "declared_display": 0,
+      "display": 34052,
+      "icon": "Interface\\Icons\\INV_Bracer_09",
+      "source_offset": 119195240,
+      "display_source_offset": 119192208
+    },
+    {
+      "name": "Field Marshal's Gloves",
+      "class": "priest",
+      "declared_display": 32990,
+      "display": 32990,
+      "icon": "Interface\\Icons\\INV_Gauntlets_14",
+      "source_offset": 119195244,
+      "display_source_offset": 119195244
+    },
+    {
+      "name": "Warlord's Circlet",
+      "class": "priest",
+      "declared_display": 33082,
+      "display": 33082,
+      "icon": "Interface\\Icons\\INV_Helmet_08",
+      "source_offset": 119195248,
+      "display_source_offset": 119195248
+    },
+    {
+      "name": "Warlord's Mantle",
+      "class": "priest",
+      "declared_display": 33083,
+      "display": 33083,
+      "icon": "Interface\\Icons\\INV_Shoulder_19",
+      "source_offset": 119195252,
+      "display_source_offset": 119195252
+    },
+    {
+      "name": "Warlord's Robes",
+      "class": "priest",
+      "declared_display": 33084,
+      "display": 33084,
+      "icon": "Interface\\Icons\\INV_Chest_Leather_01",
+      "source_offset": 119195256,
+      "display_source_offset": 119195256
+    },
+    {
+      "name": "Warlord's Belt",
+      "class": "priest",
+      "declared_display": 0,
+      "display": 34053,
+      "icon": "Interface\\Icons\\INV_Belt_22",
+      "source_offset": 119195260,
+      "display_source_offset": 119192196
+    },
+    {
+      "name": "Warlord's Leggings",
+      "class": "priest",
+      "declared_display": 26021,
+      "display": 26021,
+      "icon": "Interface\\Icons\\INV_Pants_07",
+      "source_offset": 119195264,
+      "display_source_offset": 119195264
+    },
+    {
+      "name": "Warlord's Boots",
+      "class": "priest",
+      "declared_display": 33080,
+      "display": 33080,
+      "icon": "Interface\\Icons\\INV_Boots_05",
+      "source_offset": 119195268,
+      "display_source_offset": 119195268
+    },
+    {
+      "name": "Warlord's Bindings",
+      "class": "priest",
+      "declared_display": 0,
+      "display": 34052,
+      "icon": "Interface\\Icons\\INV_Bracer_09",
+      "source_offset": 119195272,
+      "display_source_offset": 119192208
+    },
+    {
+      "name": "Warlord's Gloves",
+      "class": "priest",
+      "declared_display": 33081,
+      "display": 33081,
+      "icon": "Interface\\Icons\\INV_Gauntlets_27",
+      "source_offset": 119195276,
+      "display_source_offset": 119195276
+    },
+    {
+      "name": "Grand Marshal's Stave",
+      "class": "priest",
+      "declared_display": 31763,
+      "display": 31763,
+      "icon": "Interface\\Icons\\INV_Staff_14",
+      "source_offset": 119194440,
+      "display_source_offset": 119194440
+    },
+    {
+      "name": "High Warlord's War Staff",
+      "class": "priest",
+      "declared_display": 31765,
+      "display": 31765,
+      "icon": "Interface\\Icons\\INV_Misc_Bone_ElfSkull_01",
+      "source_offset": 119194464,
+      "display_source_offset": 119194464
+    },
+    {
+      "name": "Warlord's Helm",
+      "class": "shaman",
+      "declared_display": 32133,
+      "display": 32133,
+      "icon": "Interface\\Icons\\INV_Helmet_09",
+      "source_offset": 119195336,
+      "display_source_offset": 119195336
+    },
+    {
+      "name": "Warlord's Spaulders",
+      "class": "shaman",
+      "declared_display": 32128,
+      "display": 32128,
+      "icon": "Interface\\Icons\\INV_Shoulder_29",
+      "source_offset": 119195340,
+      "display_source_offset": 119195340
+    },
+    {
+      "name": "Warlord's Breastplate",
+      "class": "shaman",
+      "declared_display": 32103,
+      "display": 32103,
+      "icon": "Interface\\Icons\\INV_Chest_Chain_11",
+      "source_offset": 119195344,
+      "display_source_offset": 119195344
+    },
+    {
+      "name": "Warlord's Belt",
+      "class": "shaman",
+      "declared_display": 0,
+      "display": 34078,
+      "icon": "Interface\\Icons\\INV_Belt_14",
+      "source_offset": 119195348,
+      "display_source_offset": 119192500
+    },
+    {
+      "name": "Warlord's Legguards",
+      "class": "shaman",
+      "declared_display": 32127,
+      "display": 32127,
+      "icon": "Interface\\Icons\\INV_Pants_Mail_15",
+      "source_offset": 119195352,
+      "display_source_offset": 119195352
+    },
+    {
+      "name": "Warlord's Greaves",
+      "class": "shaman",
+      "declared_display": 32126,
+      "display": 32126,
+      "icon": "Interface\\Icons\\INV_Boots_Plate_06",
+      "source_offset": 119195356,
+      "display_source_offset": 119195356
+    },
+    {
+      "name": "Warlord's Bracers",
+      "class": "shaman",
+      "declared_display": 0,
+      "display": 34079,
+      "icon": "Interface\\Icons\\INV_Bracer_16",
+      "source_offset": 119195360,
+      "display_source_offset": 119192512
+    },
+    {
+      "name": "Warlord's Gauntlets",
+      "class": "shaman",
+      "declared_display": 32100,
+      "display": 32100,
+      "icon": "Interface\\Icons\\INV_Gauntlets_11",
+      "source_offset": 119195364,
+      "display_source_offset": 119195364
+    },
+    {
+      "name": "Warlord's Helm",
+      "class": "shaman",
+      "declared_display": 32133,
+      "display": 32133,
+      "icon": "Interface\\Icons\\INV_Helmet_09",
+      "source_offset": 119195368,
+      "display_source_offset": 119195368
+    },
+    {
+      "name": "Warlord's Spaulders",
+      "class": "shaman",
+      "declared_display": 32128,
+      "display": 32128,
+      "icon": "Interface\\Icons\\INV_Shoulder_29",
+      "source_offset": 119195372,
+      "display_source_offset": 119195372
+    },
+    {
+      "name": "Warlord's Breastplate",
+      "class": "shaman",
+      "declared_display": 32103,
+      "display": 32103,
+      "icon": "Interface\\Icons\\INV_Chest_Chain_11",
+      "source_offset": 119195376,
+      "display_source_offset": 119195376
+    },
+    {
+      "name": "Warlord's Belt",
+      "class": "shaman",
+      "declared_display": 0,
+      "display": 34078,
+      "icon": "Interface\\Icons\\INV_Belt_14",
+      "source_offset": 119195380,
+      "display_source_offset": 119192500
+    },
+    {
+      "name": "Warlord's Legguards",
+      "class": "shaman",
+      "declared_display": 32127,
+      "display": 32127,
+      "icon": "Interface\\Icons\\INV_Pants_Mail_15",
+      "source_offset": 119195384,
+      "display_source_offset": 119195384
+    },
+    {
+      "name": "Warlord's Greaves",
+      "class": "shaman",
+      "declared_display": 32126,
+      "display": 32126,
+      "icon": "Interface\\Icons\\INV_Boots_Plate_06",
+      "source_offset": 119195388,
+      "display_source_offset": 119195388
+    },
+    {
+      "name": "Warlord's Bracers",
+      "class": "shaman",
+      "declared_display": 0,
+      "display": 34079,
+      "icon": "Interface\\Icons\\INV_Bracer_16",
+      "source_offset": 119195392,
+      "display_source_offset": 119192512
+    },
+    {
+      "name": "Warlord's Gauntlets",
+      "class": "shaman",
+      "declared_display": 32100,
+      "display": 32100,
+      "icon": "Interface\\Icons\\INV_Gauntlets_11",
+      "source_offset": 119195396,
+      "display_source_offset": 119195396
+    },
+    {
+      "name": "High Warlord's Battle Mace",
+      "class": "shaman",
+      "declared_display": 31751,
+      "display": 31751,
+      "icon": "Interface\\Icons\\INV_Hammer_20",
+      "source_offset": 119194544,
+      "display_source_offset": 119194544
+    },
+    {
+      "name": "High Warlord's Battle Mace",
+      "class": "shaman",
+      "declared_display": 31751,
+      "display": 31751,
+      "icon": "Interface\\Icons\\INV_Hammer_20",
+      "source_offset": 119194568,
+      "display_source_offset": 119194568
+    },
+    {
+      "name": "High Warlord's Shield Wall",
+      "class": "shaman",
+      "declared_display": 31746,
+      "display": 31746,
+      "icon": "Interface\\Icons\\INV_Shield_19",
+      "source_offset": 119194592,
+      "display_source_offset": 119194592
+    },
+    {
+      "name": "High Warlord's Shield Wall",
+      "class": "shaman",
+      "declared_display": 31746,
+      "display": 31746,
+      "icon": "Interface\\Icons\\INV_Shield_19",
+      "source_offset": 119194616,
+      "display_source_offset": 119194616
+    },
+    {
+      "name": "Field Marshal's Circlet",
+      "class": "mage",
+      "declared_display": 32978,
+      "display": 32978,
+      "icon": "Interface\\Icons\\INV_Helmet_24",
+      "source_offset": 119195456,
+      "display_source_offset": 119195456
+    },
+    {
+      "name": "Field Marshal's Mantle",
+      "class": "mage",
+      "declared_display": 33004,
+      "display": 33004,
+      "icon": "Interface\\Icons\\INV_Shoulder_23",
+      "source_offset": 119195460,
+      "display_source_offset": 119195460
+    },
+    {
+      "name": "Field Marshal's Robes",
+      "class": "mage",
+      "declared_display": 32981,
+      "display": 32981,
+      "icon": "Interface\\Icons\\INV_Chest_Cloth_12",
+      "source_offset": 119195464,
+      "display_source_offset": 119195464
+    },
+    {
+      "name": "Field Marshal's Belt",
+      "class": "mage",
+      "declared_display": 0,
+      "display": 34046,
+      "icon": "Interface\\Icons\\INV_Belt_22",
+      "source_offset": 119195468,
+      "display_source_offset": 119192804
+    },
+    {
+      "name": "Field Marshal's Leggings",
+      "class": "mage",
+      "declared_display": 28715,
+      "display": 28715,
+      "icon": "Interface\\Icons\\INV_Pants_08",
+      "source_offset": 119195472,
+      "display_source_offset": 119195472
+    },
+    {
+      "name": "Field Marshal's Boots",
+      "class": "mage",
+      "declared_display": 33009,
+      "display": 33009,
+      "icon": "Interface\\Icons\\INV_Boots_Cloth_03",
+      "source_offset": 119195476,
+      "display_source_offset": 119195476
+    },
+    {
+      "name": "Field Marshal's Bindings",
+      "class": "mage",
+      "declared_display": 0,
+      "display": 34045,
+      "icon": "Interface\\Icons\\INV_Bracer_09",
+      "source_offset": 119195480,
+      "display_source_offset": 119192816
+    },
+    {
+      "name": "Field Marshal's Gloves",
+      "class": "mage",
+      "declared_display": 32988,
+      "display": 32988,
+      "icon": "Interface\\Icons\\INV_Gauntlets_14",
+      "source_offset": 119195484,
+      "display_source_offset": 119195484
+    },
+    {
+      "name": "Warlord's Circlet",
+      "class": "mage",
+      "declared_display": 32999,
+      "display": 32999,
+      "icon": "Interface\\Icons\\INV_Helmet_08",
+      "source_offset": 119195488,
+      "display_source_offset": 119195488
+    },
+    {
+      "name": "Warlord's Mantle",
+      "class": "mage",
+      "declared_display": 33089,
+      "display": 33089,
+      "icon": "Interface\\Icons\\INV_Shoulder_19",
+      "source_offset": 119195492,
+      "display_source_offset": 119195492
+    },
+    {
+      "name": "Warlord's Robes",
+      "class": "mage",
+      "declared_display": 33085,
+      "display": 33085,
+      "icon": "Interface\\Icons\\INV_Chest_Leather_01",
+      "source_offset": 119195496,
+      "display_source_offset": 119195496
+    },
+    {
+      "name": "Warlord's Belt",
+      "class": "mage",
+      "declared_display": 0,
+      "display": 34046,
+      "icon": "Interface\\Icons\\INV_Belt_22",
+      "source_offset": 119195500,
+      "display_source_offset": 119192804
+    },
+    {
+      "name": "Warlord's Leggings",
+      "class": "mage",
+      "declared_display": 32998,
+      "display": 32998,
+      "icon": "Interface\\Icons\\INV_Pants_07",
+      "source_offset": 119195504,
+      "display_source_offset": 119195504
+    },
+    {
+      "name": "Warlord's Boots",
+      "class": "mage",
+      "declared_display": 32996,
+      "display": 32996,
+      "icon": "Interface\\Icons\\INV_Boots_05",
+      "source_offset": 119195508,
+      "display_source_offset": 119195508
+    },
+    {
+      "name": "Warlord's Bindings",
+      "class": "mage",
+      "declared_display": 0,
+      "display": 34045,
+      "icon": "Interface\\Icons\\INV_Bracer_09",
+      "source_offset": 119195512,
+      "display_source_offset": 119192816
+    },
+    {
+      "name": "Warlord's Gloves",
+      "class": "mage",
+      "declared_display": 32997,
+      "display": 32997,
+      "icon": "Interface\\Icons\\INV_Gauntlets_19",
+      "source_offset": 119195516,
+      "display_source_offset": 119195516
+    },
+    {
+      "name": "Grand Marshal's Stave",
+      "class": "mage",
+      "declared_display": 31764,
+      "display": 31764,
+      "icon": "Interface\\Icons\\INV_Staff_14",
+      "source_offset": 119194640,
+      "display_source_offset": 119194640
+    },
+    {
+      "name": "High Warlord's War Staff",
+      "class": "mage",
+      "declared_display": 31765,
+      "display": 31765,
+      "icon": "Interface\\Icons\\INV_Misc_Bone_ElfSkull_01",
+      "source_offset": 119194664,
+      "display_source_offset": 119194664
+    },
+    {
+      "name": "Field Marshal's Circlet",
+      "class": "warlock",
+      "declared_display": 32979,
+      "display": 32979,
+      "icon": "Interface\\Icons\\INV_Helmet_24",
+      "source_offset": 119195576,
+      "display_source_offset": 119195576
+    },
+    {
+      "name": "Field Marshal's Mantle",
+      "class": "warlock",
+      "declared_display": 33002,
+      "display": 33002,
+      "icon": "Interface\\Icons\\INV_Shoulder_02",
+      "source_offset": 119195580,
+      "display_source_offset": 119195580
+    },
+    {
+      "name": "Field Marshal's Robes",
+      "class": "warlock",
+      "declared_display": 33001,
+      "display": 33001,
+      "icon": "Interface\\Icons\\INV_Chest_Cloth_09",
+      "source_offset": 119195584,
+      "display_source_offset": 119195584
+    },
+    {
+      "name": "Field Marshal's Belt",
+      "class": "warlock",
+      "declared_display": 0,
+      "display": 34011,
+      "icon": "Interface\\Icons\\INV_Belt_13",
+      "source_offset": 119195588,
+      "display_source_offset": 119193108
+    },
+    {
+      "name": "Field Marshal's Leggings",
+      "class": "warlock",
+      "declared_display": 33007,
+      "display": 33007,
+      "icon": "Interface\\Icons\\INV_Pants_Cloth_09",
+      "source_offset": 119195592,
+      "display_source_offset": 119195592
+    },
+    {
+      "name": "Field Marshal's Boots",
+      "class": "warlock",
+      "declared_display": 33006,
+      "display": 33006,
+      "icon": "Interface\\Icons\\INV_Boots_07",
+      "source_offset": 119195596,
+      "display_source_offset": 119195596
+    },
+    {
+      "name": "Field Marshal's Bindings",
+      "class": "warlock",
+      "declared_display": 0,
+      "display": 34012,
+      "icon": "Interface\\Icons\\INV_Bracer_07",
+      "source_offset": 119195600,
+      "display_source_offset": 119193120
+    },
+    {
+      "name": "Field Marshal's Gloves",
+      "class": "warlock",
+      "declared_display": 32995,
+      "display": 32995,
+      "icon": "Interface\\Icons\\INV_Gauntlets_14",
+      "source_offset": 119195604,
+      "display_source_offset": 119195604
+    },
+    {
+      "name": "Warlord's Circlet",
+      "class": "warlock",
+      "declared_display": 33071,
+      "display": 33071,
+      "icon": "Interface\\Icons\\INV_Helmet_08",
+      "source_offset": 119195608,
+      "display_source_offset": 119195608
+    },
+    {
+      "name": "Warlord's Mantle",
+      "class": "warlock",
+      "declared_display": 33088,
+      "display": 33088,
+      "icon": "Interface\\Icons\\INV_Shoulder_19",
+      "source_offset": 119195612,
+      "display_source_offset": 119195612
+    },
+    {
+      "name": "Warlord's Robes",
+      "class": "warlock",
+      "declared_display": 33079,
+      "display": 33079,
+      "icon": "Interface\\Icons\\INV_Chest_Leather_01",
+      "source_offset": 119195616,
+      "display_source_offset": 119195616
+    },
+    {
+      "name": "Warlord's Belt",
+      "class": "warlock",
+      "declared_display": 0,
+      "display": 34011,
+      "icon": "Interface\\Icons\\INV_Belt_13",
+      "source_offset": 119195620,
+      "display_source_offset": 119193108
+    },
+    {
+      "name": "Warlord's Leggings",
+      "class": "warlock",
+      "declared_display": 30380,
+      "display": 30380,
+      "icon": "Interface\\Icons\\INV_Pants_07",
+      "source_offset": 119195624,
+      "display_source_offset": 119195624
+    },
+    {
+      "name": "Warlord's Boots",
+      "class": "warlock",
+      "declared_display": 33076,
+      "display": 33076,
+      "icon": "Interface\\Icons\\INV_Boots_05",
+      "source_offset": 119195628,
+      "display_source_offset": 119195628
+    },
+    {
+      "name": "Warlord's Bindings",
+      "class": "warlock",
+      "declared_display": 0,
+      "display": 34012,
+      "icon": "Interface\\Icons\\INV_Bracer_07",
+      "source_offset": 119195632,
+      "display_source_offset": 119193120
+    },
+    {
+      "name": "Warlord's Gloves",
+      "class": "warlock",
+      "declared_display": 33077,
+      "display": 33077,
+      "icon": "Interface\\Icons\\INV_Gauntlets_19",
+      "source_offset": 119195636,
+      "display_source_offset": 119195636
+    },
+    {
+      "name": "Grand Marshal's Stave",
+      "class": "warlock",
+      "declared_display": 31764,
+      "display": 31764,
+      "icon": "Interface\\Icons\\INV_Staff_14",
+      "source_offset": 119194640,
+      "display_source_offset": 119194640
+    },
+    {
+      "name": "High Warlord's War Staff",
+      "class": "warlock",
+      "declared_display": 31765,
+      "display": 31765,
+      "icon": "Interface\\Icons\\INV_Misc_Bone_ElfSkull_01",
+      "source_offset": 119194664,
+      "display_source_offset": 119194664
+    },
+    {
+      "name": "Field Marshal's Cover",
+      "class": "druid",
+      "declared_display": 30330,
+      "display": 30330,
+      "icon": "Interface\\Icons\\INV_Helmet_41",
+      "source_offset": 119195696,
+      "display_source_offset": 119195696
+    },
+    {
+      "name": "Field Marshal's Spaulders",
+      "class": "druid",
+      "declared_display": 30328,
+      "display": 30328,
+      "icon": "Interface\\Icons\\INV_Shoulder_23",
+      "source_offset": 119195700,
+      "display_source_offset": 119195700
+    },
+    {
+      "name": "Field Marshal's Chestpiece",
+      "class": "druid",
+      "declared_display": 30327,
+      "display": 30327,
+      "icon": "Interface\\Icons\\INV_Chest_Cloth_07",
+      "source_offset": 119195704,
+      "display_source_offset": 119195704
+    },
+    {
+      "name": "Field Marshal's Belt",
+      "class": "druid",
+      "declared_display": 0,
+      "display": 30541,
+      "icon": "Interface\\Icons\\INV_Belt_06",
+      "source_offset": 119195708,
+      "display_source_offset": 119193412
+    },
+    {
+      "name": "Field Marshal's Pants",
+      "class": "druid",
+      "declared_display": 30329,
+      "display": 30329,
+      "icon": "Interface\\Icons\\INV_Pants_06",
+      "source_offset": 119195712,
+      "display_source_offset": 119195712
+    },
+    {
+      "name": "Field Marshal's Boots",
+      "class": "druid",
+      "declared_display": 30333,
+      "display": 30333,
+      "icon": "Interface\\Icons\\INV_Boots_08",
+      "source_offset": 119195716,
+      "display_source_offset": 119195716
+    },
+    {
+      "name": "Field Marshal's Bracers",
+      "class": "druid",
+      "declared_display": 0,
+      "display": 30548,
+      "icon": "Interface\\Icons\\INV_Bracer_03",
+      "source_offset": 119195720,
+      "display_source_offset": 119193424
+    },
+    {
+      "name": "Field Marshal's Gloves",
+      "class": "druid",
+      "declared_display": 30334,
+      "display": 30334,
+      "icon": "Interface\\Icons\\INV_Gauntlets_21",
+      "source_offset": 119195724,
+      "display_source_offset": 119195724
+    },
+    {
+      "name": "Warlord's Cover",
+      "class": "druid",
+      "declared_display": 32134,
+      "display": 32134,
+      "icon": "Interface\\Icons\\INV_Helmet_09",
+      "source_offset": 119195728,
+      "display_source_offset": 119195728
+    },
+    {
+      "name": "Warlord's Spaulders",
+      "class": "druid",
+      "declared_display": 32129,
+      "display": 32129,
+      "icon": "Interface\\Icons\\INV_Shoulder_07",
+      "source_offset": 119195732,
+      "display_source_offset": 119195732
+    },
+    {
+      "name": "Warlord's Chestpiece",
+      "class": "druid",
+      "declared_display": 32110,
+      "display": 32110,
+      "icon": "Interface\\Icons\\INV_Chest_Chain_16",
+      "source_offset": 119195736,
+      "display_source_offset": 119195736
+    },
+    {
+      "name": "Warlord's Belt",
+      "class": "druid",
+      "declared_display": 0,
+      "display": 30541,
+      "icon": "Interface\\Icons\\INV_Belt_06",
+      "source_offset": 119195740,
+      "display_source_offset": 119193412
+    },
+    {
+      "name": "Warlord's Pants",
+      "class": "druid",
+      "declared_display": 32108,
+      "display": 32108,
+      "icon": "Interface\\Icons\\INV_Pants_06",
+      "source_offset": 119195744,
+      "display_source_offset": 119195744
+    },
+    {
+      "name": "Warlord's Boots",
+      "class": "druid",
+      "declared_display": 32106,
+      "display": 32106,
+      "icon": "Interface\\Icons\\INV_Boots_08",
+      "source_offset": 119195748,
+      "display_source_offset": 119195748
+    },
+    {
+      "name": "Warlord's Bracers",
+      "class": "druid",
+      "declared_display": 0,
+      "display": 30548,
+      "icon": "Interface\\Icons\\INV_Bracer_03",
+      "source_offset": 119195752,
+      "display_source_offset": 119193424
+    },
+    {
+      "name": "Warlord's Gloves",
+      "class": "druid",
+      "declared_display": 32107,
+      "display": 32107,
+      "icon": "Interface\\Icons\\INV_Gauntlets_25",
+      "source_offset": 119195756,
+      "display_source_offset": 119195756
+    },
+    {
+      "name": "Grand Marshal's Stave",
+      "class": "druid",
+      "declared_display": 31763,
+      "display": 31763,
+      "icon": "Interface\\Icons\\INV_Staff_14",
+      "source_offset": 119194440,
+      "display_source_offset": 119194440
+    },
+    {
+      "name": "High Warlord's War Staff",
+      "class": "druid",
+      "declared_display": 31765,
+      "display": 31765,
+      "icon": "Interface\\Icons\\INV_Misc_Bone_ElfSkull_01",
+      "source_offset": 119194464,
+      "display_source_offset": 119194464
+    }
+  ],
+  "locales": {
+    "en": {
+      "names": 470,
+      "resolved": 449
+    },
+    "pl": {
+      "names": 464,
+      "resolved": 444
+    },
+    "cs": {
+      "names": 462,
+      "resolved": 441
+    },
+    "de": {
+      "names": 468,
+      "resolved": 449
+    },
+    "pt": {
+      "names": 466,
+      "resolved": 447
+    },
+    "es": {
+      "names": 470,
+      "resolved": 449
+    },
+    "fr": {
+      "names": 468,
+      "resolved": 447
+    },
+    "ro": {
+      "names": 458,
+      "resolved": 430
+    },
+    "tr": {
+      "names": 470,
+      "resolved": 449
+    },
+    "ru": {
+      "names": 466,
+      "resolved": 447
+    },
+    "uk": {
+      "names": 464,
+      "resolved": 445
+    },
+    "zh": {
+      "names": 460,
+      "resolved": 441
+    },
+    "ja": {
+      "names": 470,
+      "resolved": 449
+    },
+    "ko": {
+      "names": 466,
+      "resolved": 446
+    }
+  },
+  "texture_paths": 194,
+  "unresolved_class_names": {
+    "en": 0,
+    "pl": 0,
+    "cs": 0,
+    "de": 0,
+    "pt": 0,
+    "es": 0,
+    "fr": 0,
+    "ro": 14,
+    "tr": 0,
+    "ru": 0,
+    "uk": 0,
+    "zh": 0,
+    "ja": 0,
+    "ko": 0
+  }
+}
