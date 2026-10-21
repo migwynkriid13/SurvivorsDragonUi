@@ -1,5 +1,64 @@
 # Official addon API integration — 2026-10-14
 
+## Endless boss countdown — 2026-10-21
+
+After the native phase check, a received `AZS_RUN.endl == 1` switches the run
+caption to elapsed time above the pill's left edge and **Boss in: M:SS** above
+its right edge. Final-boss death (`won`) and passing the zone duration do not
+activate this layout. Outside Endless, the existing centered caption returns.
+
+The countdown reads only finite nonnegative `AZS_RUN.nb`, rounded up to the next
+whole second. Minutes have no leading zero: `5:00`, `4:59`, through `0:00`.
+Missing, invalid or negative data hides and clears only the boss caption. No
+deadline is reconstructed from the zone schedule, final-boss kill time, repeat
+boss deaths or a fixed 300-second interval. Pauses, repeat spawns and overlapping
+bosses follow the native countdown snapshots; no gameplay clock is added.
+
+Both captions reuse the pooled seconds renderer and the existing font, outline,
+shadow and text-visibility controls. Each translated prefix resolves its own
+DEFAULT fallback for non-ASCII text. Measured captions can extend equally past
+the pill's edges when needed to retain an eight-unit gap at large font sizes;
+the shared edit bounds include this overflow and the raised seconds. The pill
+and confirmed geometry are unchanged. Clock release clears the boss caption and
+restores the centered anchor. The caption is present in all fourteen source and
+runtime UI catalogs. No setting, asset or SavedVariable was added.
+
+The reported 0.108.0 startup error came from clearing the new boss FontString
+before assigning any font. It now receives the resolved DEFAULT face immediately
+after creation, before its first `SetText`, matching the existing pill caption.
+The shared font preview still applies the selected face, size, outline and shadow.
+
+The API fields are documented in [the supplied reference](AzerothSurvivors-Addon-API.md#azs_run-the-run-right-now).
+The supplied static analysis of the installed 0.107.0 client places the first
+Endless deadline five run-clock minutes after Continue Endless and resets it
+after each actual spawn. That evidence explains why the addon uses the native
+remaining time rather than the zone ending or a kill-based cadence. No local
+tests, syntax/formatting checks or addon/game execution were run; GitHub Actions
+provides the authorized static checks. Live rendering remains unverified.
+
+## Native 0.108.0 UI compatibility — 2026-10-21
+
+Read-only inspection of the installed executable's embedded Lua found the new
+native bar using `ActionButton1`–`ActionButton6` and `ActionButton12`. Buttons
+7–11 are retained under hidden `AZS_HiddenBar`. The addon already reparents
+button 7 into its own visible bar, maps it to slot 12 and refreshes its native
+action state. Its existing texture suppression covers `AZS_RacialRim` on
+`MainMenuBarArtFrame`; its XP replacement hides `MainMenuExpBar`, which also owns
+the new always-visible native XP text. No action-bar geometry or preferences
+were changed for this update.
+
+The same embedded API adds `AZS_RegisterBannerHandler` and
+`AZS_UnregisterBannerHandler`, delivering banner tables with `id`, `kind`, `boss`,
+`name`, `text` and receipt `time` even when native banners are hidden.
+`AZS_BANNERS` retains the newest 20 entries. These are available for future banner
+work; the timer fix does not register a handler or replace native banners.
+
+Source fingerprint: installed `AzerothSurvivors.exe`, SHA-256
+`dc0040043fff7995a9137d96509c08debd1dbf8b0125a935273d718c66cb698b`.
+The bar setup is embedded near file offset `0x71f90b6`, and banner registration
+near `0x71ecee5`. This is source inspection only. No local checks or addon/game
+execution were run; live 0.108.0 rendering remains unverified.
+
 ## Run-timer seconds alignment — 2026-10-20
 
 The user reported the seconds appearing one pixel below the minutes and requested

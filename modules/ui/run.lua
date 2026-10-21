@@ -351,6 +351,11 @@ DFRL:NewMod("RunTimers", 5, function()
     end
 
     local run, runBar, runText, overlay = Pill("DFRL_RunTimerPill", "FillBlue")
+    local bossText = overlay:CreateFontString(nil, "OVERLAY")
+    T.SetFont(bossText, 14, "OUTLINE")
+    bossText:SetTextColor(1, 1, 1)
+    bossText:SetJustifyH("RIGHT")
+    bossText:SetText("")
     local SetRunAppearance, HideRunFlow, UpdateRunFlow = AnimatedRunFill(runBar)
 
     local runMoveRegion = CreateFrame("Frame", nil, run)
@@ -430,24 +435,24 @@ DFRL:NewMod("RunTimers", 5, function()
         return settings
     end
 
-    local function ApplyFont(text, settings)
+    local function ApplyFont(text, settings, caption)
         -- Initialize the game's DEFAULT face first so a missing native face
         -- leaves readable text at the requested size and outline.
         T.SetFont(text, settings.size, settings.outline)
         -- Translated run captions with non-ASCII glyphs use the game face;
         -- retain the user's saved font choice for the other languages.
-        if settings.face ~= "DEFAULT" and not string.find(DFRL.locale.Text("RUN"), "[\128-\255]") then
+        if settings.face ~= "DEFAULT" and not string.find(DFRL.locale.Text(caption or "RUN"), "[\128-\255]") then
             pcall(text.SetFont, text, settings.face, settings.size, settings.outline)
         end
         text:SetShadowColor(0, 0, 0, settings.shadow and 1 or 0)
         text:SetShadowOffset(settings.shadow and 1 or 0, settings.shadow and -1 or 0)
     end
 
-    local function NewClockLabel(source)
+    local function NewClockLabel(source, caption)
         local ruler = source:GetParent():CreateFontString(nil, "OVERLAY")
         ruler:Hide()
         source:Hide()
-        return { source = source, ruler = ruler, parts = {} }
+        return { source = source, ruler = ruler, parts = {}, caption = caption }
     end
 
     local function RefreshClockLabel(clock)
@@ -455,7 +460,7 @@ DFRL:NewMod("RunTimers", 5, function()
         local text = source:GetText() or ""
         local scale = source:GetParent():GetEffectiveScale()
         if not IsNumber(scale) or scale <= 0 then return end
-        if clock.text == text and T.NearlyEqual(clock.scale, scale) then return end
+        if clock.text == text and T.NearlyEqual(clock.scale, scale) and clock.drawn == clock.visible then return end
         local width, height = source:GetStringWidth() or 0, source:GetHeight() or 0
         if text ~= "" and (width <= 0 or height <= 0) then return end
         local pixel = 1 / scale
@@ -466,7 +471,7 @@ DFRL:NewMod("RunTimers", 5, function()
             local label = clock.parts[used]
             if not label then
                 label = source:GetParent():CreateFontString(nil, "OVERLAY")
-                ApplyFont(label, clock.settings)
+                ApplyFont(label, clock.settings, clock.caption)
                 label:SetTextColor(source:GetTextColor())
                 label:SetJustifyH("LEFT")
                 label:SetJustifyV("MIDDLE")
@@ -505,25 +510,39 @@ DFRL:NewMod("RunTimers", 5, function()
             clock.parts[index]:Hide()
         end
         clock.text, clock.scale, clock.pixel = text, scale, pixel
+        clock.drawn = clock.visible
         return true
     end
 
     local function StyleClockLabel(clock, settings, visible)
         clock.settings, clock.visible, clock.text = settings, visible, nil
-        ApplyFont(clock.source, settings)
-        ApplyFont(clock.ruler, settings)
+        ApplyFont(clock.source, settings, clock.caption)
+        ApplyFont(clock.ruler, settings, clock.caption)
         for _, label in ipairs(clock.parts) do
-            ApplyFont(label, settings)
+            ApplyFont(label, settings, clock.caption)
             label:Hide()
         end
         RefreshClockLabel(clock)
     end
 
     local runClock = NewClockLabel(runText)
+    local bossClock = NewClockLabel(bossText, "Boss in: %s")
     local function UpdateRunFontBounds()
         local width = currentFont.showText and (runText:GetStringWidth() or 0) or 0
         local overflow = math.max(0, (width + 8 - run:GetWidth()) / 2)
-        local top = currentFont.showText and currentFont.size + 4 + (runClock.pixel or 0) or 0
+        runText:ClearAllPoints()
+        bossText:ClearAllPoints()
+        if runClock.endless then
+            local bossWidth = bossClock.visible and (bossText:GetStringWidth() or 0) or 0
+            -- Keep the captions apart at large font sizes or with wider translations.
+            overflow = math.max(0, (width + bossWidth + 8 - run:GetWidth()) / 2)
+            runText:SetPoint("BOTTOMLEFT", run, "TOPLEFT", -overflow, 2)
+        else
+            runText:SetPoint("BOTTOM", run, "TOP", 0, 2)
+        end
+        bossText:SetPoint("BOTTOMRIGHT", run, "TOPRIGHT", overflow, 2)
+        local pixel = math.max(runClock.pixel or 0, bossClock.pixel or 0)
+        local top = currentFont.showText and currentFont.size + 4 + pixel or 0
         runMoveRegion:ClearAllPoints()
         runMoveRegion:SetPoint("TOPLEFT", run, "TOPLEFT", -overflow, top)
         runMoveRegion:SetPoint("BOTTOMRIGHT", run, "BOTTOMRIGHT", overflow, 0)
@@ -532,6 +551,7 @@ DFRL:NewMod("RunTimers", 5, function()
     local function PreviewFont(settings)
         currentFont = FontSettings(settings)
         StyleClockLabel(runClock, currentFont, currentFont.showText)
+        StyleClockLabel(bossClock, currentFont, currentFont.showText and bossText:GetText() ~= "")
         UpdateRunFontBounds()
         if not fontEditor then return end
         StyleClockLabel(fontSampleClock, currentFont, true)
@@ -545,6 +565,42 @@ DFRL:NewMod("RunTimers", 5, function()
         sizeLabel:SetText(tostring(currentFont.size))
         shadowControl:SetChecked(currentFont.shadow)
         visibilityControl:SetChecked(currentFont.showText)
+    end
+
+    local function SetClockLabelText(clock, text, visible)
+        if clock.source:GetText() ~= text then clock.source:SetText(text) end
+        clock.visible = visible
+        return RefreshClockLabel(clock)
+    end
+
+    local function ClearEndlessCaption()
+        if not runClock.endless then return end
+        runClock.endless = false
+        SetClockLabelText(bossClock, "", false)
+        UpdateRunFontBounds()
+    end
+
+    local function UpdateClockCaptions(seconds, maximum, atLimit)
+        -- The caller has already checked the native phase. Only received run
+        -- flags select Endless; passing the zone limit or a boss death cannot.
+        local state = AZS_RUN
+        local endless = type(state) == "table" and IsNumber(AZS_RUN_UPDATED) and state.endl == 1
+        local changed = runClock.endless ~= endless
+        runClock.endless = endless
+        local text = DFRL.locale.Text("RUN") .. " " .. Clock(seconds)
+        if not endless and not atLimit then text = text .. " / " .. Clock(maximum) end
+        if SetClockLabelText(runClock, text, currentFont.showText) then changed = true end
+        local countdown = ""
+        if endless and IsNumber(state.nb) then
+            -- nb is the native remaining time, including pauses and each actual
+            -- spawn's new deadline. Never rebuild it from a fixed five minutes.
+            local remaining = math.ceil(state.nb)
+            local time = string.format("%d:%02d", math.floor(remaining / 60), math.mod(remaining, 60))
+            countdown = string.format(DFRL.locale.Text("Boss in: %s"), time)
+        end
+        if SetClockLabelText(bossClock, countdown, currentFont.showText and countdown ~= "") then changed = true end
+        if changed then UpdateRunFontBounds() end
+        if fontEditor and fontEditor:IsShown() then RefreshClockLabel(fontSampleClock) end
     end
 
     local function FontEditorLabel(parent, text, x, y, size)
@@ -1043,6 +1099,7 @@ DFRL:NewMod("RunTimers", 5, function()
         onEdit = EditRunFont,
         onResize = function()
             RefreshClockLabel(runClock)
+            RefreshClockLabel(bossClock)
             UpdateRunFontBounds()
         end,
         onReset = function()
@@ -1297,6 +1354,7 @@ DFRL:NewMod("RunTimers", 5, function()
 
     local function ReleaseClock()
         run:Hide()
+        ClearEndlessCaption()
         HideRunFlow()
         for _, marker in ipairs(markers) do
             HideMarker(marker)
@@ -1849,11 +1907,7 @@ DFRL:NewMod("RunTimers", 5, function()
             local atLimit = seconds >= maximum
             SetRunAppearance(atLimit)
             UpdateRunFlow(seconds, maximum)
-            local clockText = DFRL.locale.Text("RUN") .. " " .. Clock(seconds)
-            if not atLimit then clockText = clockText .. " / " .. Clock(maximum) end
-            if runText:GetText() ~= clockText then runText:SetText(clockText) end
-            if RefreshClockLabel(runClock) then UpdateRunFontBounds() end
-            if fontEditor and fontEditor:IsShown() then RefreshClockLabel(fontSampleClock) end
+            UpdateClockCaptions(seconds, maximum, atLimit)
             -- Missing schedule replay affects only spawn markers, never a clock
             -- whose native elapsed time and duration have already recovered.
             if refreshRows or not run:IsShown() or not scheduled then UpdateMarkers(maximum, scheduled or {}) end
