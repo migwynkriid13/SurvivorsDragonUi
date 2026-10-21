@@ -1,0 +1,99 @@
+{
+  "selected": null,
+  "sources": {
+    "card": {
+      "repository": "NeticSoul/DragonUI",
+      "commit": "27255b131d734113f92a379c55a7df054e36be52",
+      "path": "DragonUI/Textures/UI/looting-itemcard.blp",
+      "canvas": [
+        512,
+        256
+      ],
+      "regions": {
+        "background": [
+          0,
+          0,
+          298,
+          76
+        ],
+        "normal": [
+          0,
+          78,
+          298,
+          154
+        ],
+        "rarity": [
+          304,
+          0,
+          512,
+          15
+        ]
+      }
+    },
+    "toast": {
+      "repository": "Gethe/wow-ui-textures",
+      "commit": "e80e3278cc833c89e1f3fc79557b68315d750935",
+      "path": "LootFrame/LootToast.PNG",
+      "canvas": [
+        1024,
+        256
+      ],
+      "regions": {
+        "background": [
+          289,
+          148,
+          565,
+          244
+        ]
+      }
+    },
+    "boots": {
+      "repository": "Gethe/wow-ui-textures",
+      "commit": "d23deaf8f44a7d280dc974a5c9d5321c013db59b",
+      "path": "ICONS/INV_Boots_Plate_04.PNG",
+      "canvas": [
+        64,
+        64
+      ]
+    },
+    "helm": {
+      "repository": "Gethe/wow-ui-textures",
+      "commit": "d23deaf8f44a7d280dc974a5c9d5321c013db59b",
+      "path": "ICONS/INV_Helmet_25.PNG",
+      "canvas": [
+        64,
+        64
+      ]
+    }
+  },
+  "proposals": [
+    {
+      "id": "01",
+      "title": "Retail item card",
+      "description": "Recommended: a restrained quality wash and the published retail item-card rim.",
+      "image": "01.png",
+      "source": "DragonUI retail item-card atlas; native quality colouring."
+    },
+    {
+      "id": "02",
+      "title": "Silver loot alert",
+      "description": "The recognisable Blizzard loot-alert frame, with quieter text and effects.",
+      "image": "02.png",
+      "source": "Dragonflight-era LootToast crop, also referenced by later retail UI."
+    },
+    {
+      "id": "03",
+      "title": "Plain addon metal",
+      "description": "A small sibling of our character window with the same plain metal corners.",
+      "image": "03.png",
+      "source": "Existing bundled Blizzard character-frame chrome; custom card assembly."
+    },
+    {
+      "id": "04",
+      "title": "Floating loot label",
+      "description": "A light, open layout that fits our waypoints and stored-level button.",
+      "image": "04.png",
+      "source": "Existing soft backdrop, gold glow and native-quality icon rim."
+    }
+  ]
+}

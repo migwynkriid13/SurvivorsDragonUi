@@ -14,27 +14,35 @@ DFRL:NewMod("ChatCapture", 0, function()
     end
     local function FrameName(frame) return frame.GetName and frame:GetName() or "<unnamed>" end
 
+    local function FirstDelivery(frame, text, eventName, author, message)
+        local now = GetTime()
+        if now ~= broadcastTime then
+            broadcastTime, broadcasts = now, {}
+        end
+        local signature = tostring(eventName) .. "\001" .. tostring(author) .. "\001" .. tostring(message) .. "\001" .. text
+        local delivery = broadcasts[signature]
+        if not delivery then
+            delivery = { counts = {}, maximum = 0 }
+            broadcasts[signature] = delivery
+        end
+        local count = (delivery.counts[frame] or 0) + 1
+        delivery.counts[frame] = count
+        -- Additional chat frames receive the same delivery. Repeated identical
+        -- messages on one frame remain distinct, including in the same UI tick.
+        if count <= delivery.maximum then return false end
+        delivery.maximum = count
+        return true
+    end
+
     chat.CaptureRaw = function(frame, text, eventName, author, message)
         if type(text) ~= "string" then return end
-        if eventName and string.find(eventName, "^CHAT_MSG_") then
-            local now = GetTime()
-            if now ~= broadcastTime then
-                broadcastTime, broadcasts = now, {}
-            end
-            local signature = eventName .. "\001" .. tostring(author) .. "\001" .. tostring(message) .. "\001" .. text
-            local delivery = broadcasts[signature]
-            if not delivery then
-                delivery = { counts = {}, maximum = 0 }
-                broadcasts[signature] = delivery
-            end
-            local count = (delivery.counts[frame] or 0) + 1
-            delivery.counts[frame] = count
-            -- Collapse delivery to additional subscribed frames, while keeping
-            -- every separate identical occurrence on the same frame.
-            if count <= delivery.maximum then return end
-            delivery.maximum = count
+        local first = FirstDelivery(frame, text, eventName, author, message)
+        -- Preserve direct native writes in diagnostics even when another frame
+        -- received the same text. Only the optional loot view collapses them.
+        if first or not eventName or not string.find(eventName, "^CHAT_MSG_") then
+            table.insert(history, '[RAW] frame="' .. Escape(FrameName(frame)) .. '" "' .. Escape(text) .. '"')
         end
-        table.insert(history, '[RAW] frame="' .. Escape(FrameName(frame)) .. '" "' .. Escape(text) .. '"')
+        if first and DFRL.loot then DFRL.loot.Observe(text, eventName) end
     end
 
     chat.GetCaptureText = function(states)
