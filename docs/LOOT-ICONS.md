@@ -107,8 +107,11 @@ refinements retain otherwise ambiguous authored class variants.
 All **581** source records resolve to native icons after the game's **43**
 display fallbacks: seven regular armor records and 36 PvP records. This also
 covers pieces such as Squire's Helm whose direct display field is zero.
-Every exact name/class group resolves within each of the fourteen catalogs;
-class data is still required for globally ambiguous names. An actually absent
+Every exact name/class group resolves in thirteen catalogs. Romanian has 14
+groups where different native icons share the same name and class; those retain
+ambiguity rather than choosing an arbitrary picture. Class data is still required
+for globally ambiguous names, and exact-reference native metadata retains priority.
+An actually absent
 or question-mark icon, an unresolved collision, definitions outside the pinned
 catalogs and future changed names retain the existing unavailable fallback.
 No generic item picture is passed off as a known native icon.
