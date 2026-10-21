@@ -56,8 +56,12 @@ DFRL:NewMod("LootView", 4, function()
         card:SetAlpha(0)
     end
     local function Clear()
-        for index = 1, LIMIT do Retire(pool[index]) end
-        for index = 1, count do visible[index] = nil end
+        for index = 1, LIMIT do
+            Retire(pool[index])
+        end
+        for index = 1, count do
+            visible[index] = nil
+        end
         count = 0
         table.setn(visible, 0)
         animation:SetScript("OnUpdate", nil)
