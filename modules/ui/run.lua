@@ -352,6 +352,7 @@ DFRL:NewMod("RunTimers", 5, function()
 
     local run, runBar, runText, overlay = Pill("DFRL_RunTimerPill", "FillBlue")
     local bossText = overlay:CreateFontString(nil, "OVERLAY")
+    T.SetFont(bossText, 14, "OUTLINE")
     bossText:SetTextColor(1, 1, 1)
     bossText:SetJustifyH("RIGHT")
     bossText:SetText("")
