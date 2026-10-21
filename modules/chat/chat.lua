@@ -69,31 +69,6 @@ DFRL:NewMod("Chat", 1, function()
                 and T.NearlyEqual(currentX, x)
                 and T.NearlyEqual(currentY, y)
         end
-        local function SetChatFont(frame)
-            local font, size, flags
-            if frame.GetFont then
-                font, size, flags = frame:GetFont()
-            end
-            if font ~= T.GetDefaultFont() or not T.NearlyEqual(size, 12) or flags ~= "OUTLINE" then
-                T.SetFont(frame, 12, "OUTLINE")
-            end
-        end
-        local function SetChatShadow(frame)
-            if frame.SetShadowColor then
-                local r, g, b, a
-                if frame.GetShadowColor then
-                    r, g, b, a = frame:GetShadowColor()
-                end
-                if r ~= 0 or g ~= 0 or b ~= 0 or a ~= 1 then frame:SetShadowColor(0, 0, 0, 1) end
-            end
-            if frame.SetShadowOffset then
-                local x, y
-                if frame.GetShadowOffset then
-                    x, y = frame:GetShadowOffset()
-                end
-                if not T.NearlyEqual(x, 1) or not T.NearlyEqual(y, -1) then frame:SetShadowOffset(1, -1) end
-            end
-        end
 
         local regularNotices = {
             COMBAT_XP_GAIN = true,
@@ -183,8 +158,8 @@ DFRL:NewMod("Chat", 1, function()
                 state.anchored = HasAnchor(frame, "TOPLEFT", root, "TOPLEFT", 3, y)
                 state.positionY = state.anchored and y or nil
                 state.width, state.height = frame:GetWidth(), frame:GetHeight()
-                SetChatFont(frame)
-                SetChatShadow(frame)
+                T.SetChatFont(frame)
+                T.SetChatShadow(frame)
                 if frame.SetJustifyH and (not frame.GetJustifyH or frame:GetJustifyH() ~= "LEFT") then
                     frame:SetJustifyH("LEFT")
                 end
@@ -277,13 +252,13 @@ DFRL:NewMod("Chat", 1, function()
             end
             if not T.NearlyEqual(input:GetWidth(), rootWidth) then input:SetWidth(rootWidth) end
             if not T.NearlyEqual(input:GetHeight(), 28) then input:SetHeight(28) end
-            SetChatFont(input)
-            SetChatShadow(input)
+            T.SetChatFont(input)
+            T.SetChatShadow(input)
             if input:GetAlpha() ~= 1 then input:SetAlpha(1) end
             local inputName = input:GetName()
             local header = inputName and _G[inputName .. "Header"]
             if header then
-                SetChatFont(header)
+                T.SetChatFont(header)
                 if not HasAnchor(header, "LEFT", input, "LEFT", 8, 0) then
                     header:ClearAllPoints()
                     header:SetPoint("LEFT", input, "LEFT", 8, 0)
