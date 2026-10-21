@@ -54,12 +54,20 @@ The native regular class array starts at file offset **119190736**. Its nine
 pointer/count at 120/128, five eight-element display-id rows at 136, and
 material/class bytes at 296/297. Each 144-byte weapon record supplies five
 name slices at 8 and five display ids at 120. All selected arrays are walked.
+The native gear reader calls `0x1459d2510` to choose a regular armor display:
+start at the item's tier, descend to zero, then search higher tiers ascending,
+returning the first nonzero display. The generator mirrors that verified order
+when a field is zero; it does not assign an icon from an armor-slot stereotype.
 
 The PvP array starts at **119194688**. Each of its nine 120-byte records contains
 the two faction prefixes, a weapon-array pointer/count at 32/40, two eight-element
 display-id rows at 48 and the class id at 112. Its 48-byte weapon records contain
 two 24-byte display/name records. The generator reads the actual prefix and
 weapon names; it does not invent faction aliases or add a weapon whitelist.
+At `0x1458f24c6` through `0x1458f24d8`, an empty PvP display is replaced by
+`class + 0xe8 + slot*4`: the regular tier with index 3. This native fallback
+also participates in generation. Developer metadata preserves both the declared
+display field and the resolved display's actual source offset.
 
 All fourteen embedded catalogs provide the exact `set.*`, `noun.*`,
 `item.name_prefix`, `item.name_of` and `weapon.*` text. Regular names use their
@@ -93,13 +101,17 @@ join for review. Only the generated Lua tables join the runtime manifest.
 The current extraction walks **581** authored gear records: **415** regular
 armor/weapon records and **166** faction PvP records across all nine classes.
 It produces **194** texture paths and fourteen localized name catalogs. The
-English catalog has **470** exact names, **441** globally resolved; native class
+English catalog has **470** exact names, **449** globally resolved; native class
 refinements retain otherwise ambiguous authored class variants.
 
-Zero display ids and absent/question-mark icons remain unavailable, including
-seven regular records whose source supplies no direct display. Definitions
-outside the pinned catalogs and future changed names retain the existing
-fallback. No generic item picture is passed off as a known native icon.
+All **581** source records resolve to native icons after the game's **43**
+display fallbacks: seven regular armor records and 36 PvP records. This also
+covers pieces such as Squire's Helm whose direct display field is zero.
+Every exact name/class group resolves within each of the fourteen catalogs;
+class data is still required for globally ambiguous names. An actually absent
+or question-mark icon, an unresolved collision, definitions outside the pinned
+catalogs and future changed names retain the existing unavailable fallback.
+No generic item picture is passed off as a known native icon.
 
 No local tests, syntax/formatting checks or addon/game execution were run.
 GitHub Actions supplies the authorized static checks. The native data join

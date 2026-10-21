@@ -98,12 +98,12 @@ def generate(arguments):
     class_groups = {code: {key: {} for _, key in CLASSES} for code in CODES}
     records = []
 
-    def add(names, display_id, origin, class_key):
+    def add(names, display_id, origin, class_key, declared=None, display_origin=None):
         icon = display_icons.get(display_id)
         for code, name in names.items():
             groups[code].setdefault(name, set()).add(icon)
             class_groups[code][class_key].setdefault(name, set()).add(icon)
-        records.append({"name": names["en"], "class": class_key, "display": display_id, "icon": icon, "source_offset": origin})
+        records.append({"name": names["en"], "class": class_key, "declared_display": display_id if declared is None else declared, "display": display_id, "icon": icon, "source_offset": origin, "display_source_offset": origin if display_origin is None else display_origin})
 
     for index, (class_id, key) in enumerate(CLASSES):
         at = CLASS_OFFSET + index * CLASS_BYTES
@@ -122,7 +122,15 @@ def generate(arguments):
                 noun = "noun." + MATERIALS[material] + "." + str(slot)
                 names = {code: catalog[template].replace("{noun}", catalog[noun]).replace("{set}", catalog[prefix_key]) for code, catalog in catalogs.items()}
                 origin = at + 136 + tier * 32 + slot * 4
-                add(names, native.number(origin, "I"), origin, key)
+                declared, selected, display_origin = native.number(origin, "I"), 0, origin
+                # Native iterator 0x1459d2510: current tier down through zero,
+                # then higher tiers ascending, selecting the first nonzero id.
+                for candidate in list(range(tier, -1, -1)) + list(range(tier + 1, 5)):
+                    display_origin = at + 136 + candidate * 32 + slot * 4
+                    selected = native.number(display_origin, "I")
+                    if selected:
+                        break
+                add(names, selected, origin, key, declared, display_origin)
         weapons, count = struct.unpack_from("<QQ", native.raw, at + 120)
         if count not in (1, 2):
             raise ValueError("Review the changed native weapon array")
@@ -146,7 +154,11 @@ def generate(arguments):
                 noun = "noun." + material + "." + str(slot)
                 names = {code: catalog["item.name_prefix"].replace("{noun}", catalog[noun]).replace("{set}", catalog[prefix]) for code, catalog in catalogs.items()}
                 origin = at + 48 + faction * 32 + slot * 4
-                add(names, native.number(origin, "I"), origin, key)
+                declared = native.number(origin, "I")
+                # Native 0x1458f24c6..0x1458f24d8 substitutes class +0xe8:
+                # regular tier index 3, for an empty PvP display field.
+                display_origin = origin if declared else CLASS_OFFSET + index * CLASS_BYTES + 0xE8 + slot * 4
+                add(names, native.number(display_origin, "I"), origin, key, declared, display_origin)
         weapons, count = struct.unpack_from("<QQ", native.raw, at + 32)
         if count not in (1, 2):
             raise ValueError("Review the changed native PvP weapon array")
@@ -184,11 +196,15 @@ def generate(arguments):
     lines.extend(["    },", "}"])
     arguments.output.write_text("\n".join(lines) + "\n")
     metadata = {"executable_sha256": SOURCE_SHA256, "item_display_sha256": DISPLAY_SHA256, "class_offset": CLASS_OFFSET, "class_stride": CLASS_BYTES, "weapon_stride": WEAPON_BYTES, "pvp_offset": PVP_OFFSET, "pvp_stride": PVP_BYTES, "pvp_weapon_stride": PVP_WEAPON_BYTES, "records": records,
-                "locales": {code: {"names": len(catalog), "resolved": sum(bool(icon) for icon in catalog.values())} for code, catalog in resolved.items()}, "texture_paths": len(paths)}
+                "locales": {code: {"names": len(catalog), "resolved": sum(bool(icon) for icon in catalog.values())} for code, catalog in resolved.items()}, "texture_paths": len(paths),
+                "unresolved_class_names": {code: sum(len(choices) != 1 or None in choices for names in classes.values() for choices in names.values()) for code, classes in class_groups.items()}}
     arguments.metadata.write_text(json.dumps(metadata, ensure_ascii=False, indent=2) + "\n")
     print(str(len(records)) + " native gear records; " + str(len(paths)) + " texture paths; fourteen language catalogs")
     print("English exact names:", metadata["locales"]["en"])
     print("Novice's Circlet:", resolved["en"].get("Novice's Circlet"))
+    print("Native display fallbacks:", sum(record["declared_display"] != record["display"] for record in records))
+    print("Source records without a native icon:", sum(not record["icon"] for record in records))
+    print("Unresolved exact name/class groups:", metadata["unresolved_class_names"])
 
 
 if __name__ == "__main__":
