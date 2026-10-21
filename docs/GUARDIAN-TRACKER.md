@@ -27,13 +27,14 @@ DEFAULT 12 text. Both views share `core/widgets.lua` style/text helpers; the
 tracker has no Fighting caption or percentage. Missing health stays text-only,
 and a prior bar is cleared when its row stops fighting or is filtered out.
 
-The separate boss-health group includes fighting guardians by default. Turn off
-**Guardians in boss bar** in `/sdui` → **HUD** to leave only bosses there. This
+The separate boss-health group shows only bosses by default. Enable
+**Guardians in boss bar** in `/sdui` → **HUD** to include fighting guardians. This
 does not change target health, the tracker, guidance or map markers.
 `guardiansInBossBar` is a normalized boolean in the existing
-`SurvivorsDragonUiDisplay` table; missing or invalid values use `true`. The shared
+`SurvivorsDragonUiDisplay` table; missing or invalid values use `false`. Existing
+saved boolean choices remain unchanged. The shared
 display lifecycle previews it live, saves only with Confirm, discards drafts on
-Cancel/world leave/logout/reload, and restores on through both full resets.
+Cancel/world leave/logout/reload, and restores off through both full resets.
 
 `modules/ui/run.lua` filters only the guardian list from its encounter rows,
 retaining the received-unit-snapshot gate and native boss validation. Boss-only

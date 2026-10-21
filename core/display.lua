@@ -3,7 +3,7 @@ DFRL:NewMod("Display", 0, function()
     local display, listeners, draft = {}, {}, nil
     local defaults = {
         bossDebuffs = true,
-        guardiansInBossBar = true,
+        guardiansInBossBar = false,
         targetDebuffsOnTop = false,
         damageIcons = false,
         sctNormalHits = true,
