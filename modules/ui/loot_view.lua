@@ -10,10 +10,11 @@ No retail Lua, mixin, atlas API or framework is imported.
 Sources, layout and animation evidence: third_party/LootNotifications-ARTWORK.md.
 ]]
 DFRL:NewMod("LootView", 4, function()
-    local loot, layout = DFRL.loot, DFRL.layout
-    if not loot or not layout then return end
+    local loot, layout, actionDefaults = DFRL.loot, DFRL.layout, DFRL.actionBarDefaults
+    if not loot or not layout or not actionDefaults then return end
     local path = DFRL:GetInfoOrCons("tex")
     local WIDTH, HEIGHT, STEP, LIMIT = 276, 96, 80, 3
+    local BORDER_BOTTOM_INSET = 12
     local FADE_IN, FADE_START, LIFETIME = 0.2, 4.05, 5.55
     local pool, visible, count = {}, {}, 0
     local ready = true
@@ -192,8 +193,11 @@ DFRL:NewMod("LootView", 4, function()
         return true
     end
     layout.Register("lootNotifications", frame, function()
+        -- Align the visible silver rim, above the crop's bottom padding, with
+        -- the default action artwork top. Keep both groups independently movable.
+        local barTop = actionDefaults.bottom + actionDefaults.height + actionDefaults.topInset
         frame:ClearAllPoints()
-        frame:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, 150)
+        frame:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, barTop - BORDER_BOTTOM_INSET)
     end, { labelAbove = true })
     DFRL.locale.Listen(function()
         for index = 1, count do

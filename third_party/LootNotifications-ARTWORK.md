@@ -77,6 +77,9 @@ shine or alternative frame is included. The single card keeps the crop's native
 aspect ratio, with an inset 50-by-50 icon and two text lines. The existing
 WhiteIconFrame rim is tinted from the received item color or native quality.
 Missing native icon data is omitted, never replaced by an example icon.
+The silver rim's lower edge is 12 source units above the crop bottom; default
+placement subtracts that padding so the visible rim meets the action bar's
+default artwork top. The original crop and its aspect ratio remain unchanged.
 
 The same pinned Dragonflight `AlertFrameSystems.xml` supplies a 0.2-second
 fade-in and a 1.5-second fade-out starting at 4.05 seconds for the normal item

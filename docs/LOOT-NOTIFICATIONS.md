@@ -36,11 +36,19 @@ group, so hidden cards expire normally. Exact-reference metadata can retry at
 0.2-second intervals for the first two seconds. A cosmetic update failure clears
 the view and marks it unready, releasing native ownership on the service tick.
 
-The shared `lootNotifications` Layout group starts centered 150 units above the
-screen bottom, with fixed 276-by-256 edit bounds. Existing move, uniform resize,
-hide, Confirm, Cancel, discard and reset behavior applies. Only confirmed geometry
-uses the existing `SurvivorsDragonUiLayout` table. No new SavedVariable or display
-setting is introduced.
+The shared `lootNotifications` Layout group starts centered above the default
+action bar, with its bottom silver border meeting the action artwork's top edge.
+The anchor uses static `DFRL.actionBarDefaults`: `bottom + height + topInset`,
+minus the loot crop's 12-unit bottom padding. With a native 36-unit button height,
+the shared border is at 105 and the loot frame's bottom is at 93 UI units.
+Both groups remain independently movable; moving or resizing the action bar
+does not change the loot group's default or confirmed position.
+
+The loot edit bounds stay 276 by 256, with additional cards stacking upward.
+Existing move, uniform resize, hide, Confirm, Cancel, discard and reset behavior
+applies. Existing confirmed/draft geometry is retained; both full resets use the
+new default. Only confirmed geometry uses the existing `SurvivorsDragonUiLayout`
+table. No new SavedVariable or display setting is introduced.
 
 ## Shared message intake
 
