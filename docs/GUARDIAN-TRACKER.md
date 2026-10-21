@@ -50,10 +50,13 @@ layout table; Cancel, world/reload discard and both resets use the normal shared
 lifecycle. Its default scale is `0.85`, 15% smaller than the original size. The
 name/status column gap is `14.4` units instead of `16`, retaining the name column
 and measured translated status widths. Its top stays 252 UI units below the
-screen top, with the toggle centred beneath the minimap's default minus button.
-That horizontal anchor comes from shared static minimap appearance metadata,
-not moved or resized minimap geometry. Width changes reapply this default edge
-only when no confirmed or draft position exists; custom positions stay independent.
+screen top, with each health pill's right edge aligned beneath the minimap's
+default right edge. The root's horizontal anchor uses shared static
+`DFRL.minimapDefaults.right`, compensating for the existing row inset and health
+pill's right offset at the default scale. The pill anchor and default calculation
+share `HEALTH_RIGHT_OFFSET`; neither follows moved or resized minimap geometry.
+Width changes reapply this default edge only when no confirmed or draft position
+exists; custom positions stay independent.
 The tracker adds no display setting,
 command, alert, sound, SavedVariable or dependency. Its header toggle choice is
 session-only and starts expanded on reload; it survives run/world changes within

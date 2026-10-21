@@ -92,10 +92,12 @@ images. `T.StyleMinimapZoomButton` supplies the same normal, pressed, hover and
 disabled paths for both minimap buttons and the tracker. The tracker draws at
 25.6 by 25.6, keeping its button in the former count position. Minimap placement,
 scale, native zoom actions and state handling stay unchanged.
-The tracker toggle inherits the tracker's smaller default scale. Its centre
-aligns horizontally beneath the default minimap minus centre, using shared
-minimap appearance metadata and independent UIParent anchors. Text-driven width
-changes retain that edge only for an unpositioned tracker.
+The tracker toggle inherits the tracker's smaller default scale. The tracker
+places its health pills' right edge beneath the default minimap right edge,
+using shared minimap appearance metadata and independent UIParent anchors.
+The default root compensates for the row inset and health pill's right offset.
+Text-driven width changes retain that edge only for an unpositioned tracker;
+confirmed and draft placements remain independent.
 
 The normal `ZoomIn32.tga` plus glyph is two source pixels left of the other
 states: its bright-gold horizontal bounds are `[3, 25)`, compared with `[5, 27)`

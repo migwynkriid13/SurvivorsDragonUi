@@ -21,6 +21,7 @@ DFRL:NewMod("GuardianTracker", 4, function()
     local expanded = true
     local DEFAULT_SCALE = 0.85
     local ROW_INSET, NAME_WIDTH, COLUMN_GAP = 12, 120, 16 * 0.9
+    local HEALTH_RIGHT_OFFSET = 4
     local TOGGLE_SIZE, TOGGLE_INSET = 25.6, 11
     local WIDTH, ROW_HEIGHT = 128 + NAME_WIDTH + COLUMN_GAP + 2 * ROW_INSET, 26
     local width, statusWidth = WIDTH, 128
@@ -123,7 +124,7 @@ DFRL:NewMod("GuardianTracker", 4, function()
         row.status:SetHeight(ROW_HEIGHT)
         local pill = CreateFrame("Frame", nil, row)
         pill:SetHeight(22)
-        pill:SetPoint("RIGHT", row, "RIGHT", 4, 0)
+        pill:SetPoint("RIGHT", row, "RIGHT", HEALTH_RIGHT_OFFSET, 0)
         pill:EnableMouse(false)
         local background = Texture(pill, "timer\\BackgroundCenter", "BACKGROUND", statusWidth, 12, 1, 18 / 32)
         background:SetPoint("LEFT", pill, "LEFT", 6, 0)
@@ -263,8 +264,8 @@ DFRL:NewMod("GuardianTracker", 4, function()
     end)
     toggle:SetScript("OnLeave", function() HideTooltip(toggle) end)
     DFRL.layout.Register("guardianTracker", frame, function()
-        -- Match the default minimap minus centre, without following moved geometry.
-        local right = minimapDefaults.zoomOutCenterX / DEFAULT_SCALE + TOGGLE_INSET + TOGGLE_SIZE / 2
+        -- Match the health pill's right edge to the default minimap right edge.
+        local right = minimapDefaults.right / DEFAULT_SCALE + ROW_INSET - HEALTH_RIGHT_OFFSET
         frame:ClearAllPoints()
         frame:SetPoint("TOPRIGHT", UIParent, "TOPRIGHT", right, -252 / DEFAULT_SCALE)
     end, {
