@@ -245,7 +245,7 @@ DFRL:NewMod("Waypoints", 3, function()
             pin:Hide()
             pin:SetWidth(size)
             pin:SetHeight(size)
-            pin:SetFrameLevel(Minimap:GetFrameLevel() + (tracker.kind == "guardian" and 11 or 10))
+            pin:SetFrameLevel(navigation.MinimapLevel(tracker.kind))
             pin:EnableMouse(false)
             local art = pin:CreateTexture(nil, "OVERLAY")
             art:SetTexture(texturePath .. tracker.hudArt)
@@ -320,6 +320,7 @@ DFRL:NewMod("Waypoints", 3, function()
                 RestoreNativeFlag()
                 return
             end
+            navigation.StyleMinimap()
             -- Flag ownership does not depend on a destination or its geometry:
             -- empty/dead lairs and snapshot refreshes must never restore it.
             if DFRL.display.Get("guardianGuidance") then

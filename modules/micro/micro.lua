@@ -66,15 +66,21 @@ DFRL:NewMod("Micro", 1, function()
             previous = button
         end
     end
-    local talentButton = _G.TalentMicroButton
-    if talentButton then
-        -- Suppress the talent reminder without changing native events or hover.
-        if type(ButtonPulse_StopPulse) == "function" then ButtonPulse_StopPulse(talentButton) end
-        talentButton:UnlockHighlight()
+    local quietButtons = {}
+    for _, name in ipairs({ "TalentMicroButton", "PlayerFrame" }) do
+        local button = _G[name]
+        if button then
+            -- Clear queued reminders as well as preventing new pulses.
+            quietButtons[button] = true
+            if type(ButtonPulse_StopPulse) == "function" then ButtonPulse_StopPulse(button) end
+            button:UnlockHighlight()
+        end
+    end
+    if next(quietButtons) then
         local setButtonPulse = _G.SetButtonPulse
         if type(setButtonPulse) == "function" then
             _G.SetButtonPulse = function(button, duration, pulseRate)
-                if button == talentButton then return end
+                if quietButtons[button] then return end
                 return setButtonPulse(button, duration, pulseRate)
             end
         end

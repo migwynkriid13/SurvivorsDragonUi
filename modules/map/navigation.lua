@@ -4,6 +4,7 @@ DFRL:NewMod("Navigation", 2, function()
     local navigation = {}
     DFRL.navigation = navigation
     local phases = { playing = true, choosing = true, paused = true, victory = true }
+    local minimapLevels = { cache = 10, guardian = 11, player = 12 }
     local identity, expected, realZone, arrow
     local points = {}
     local samples, seen, width, height = {}, {}, nil, nil
@@ -11,6 +12,7 @@ DFRL:NewMod("Navigation", 2, function()
     local function Number(value) return type(value) == "number" and value - value == 0 end
     local function Coordinates(x, y) return Number(x) and Number(y) and x >= 0 and x <= 1 and y >= 0 and y <= 1 end
     function navigation.IsRunPhase(phase) return phases[phase] == true end
+    function navigation.MinimapLevel(kind) return Minimap:GetFrameLevel() + minimapLevels[kind] end
     function navigation.Reset()
         identity, expected, realZone, arrow = nil, nil, nil, nil
         samples, seen, width, height = {}, {}, nil, nil
@@ -214,15 +216,23 @@ DFRL:NewMod("Navigation", 2, function()
     local function PlayerArrow()
         if not Minimap or not Minimap.GetChildren then return end
         local children = { Minimap:GetChildren() }
+        local player
         for _, child in ipairs(children) do
             if child.GetModel and child.GetFacing then
                 local ok, path = pcall(child.GetModel, child)
                 if ok and type(path) == "string" then
                     path = string.gsub(string.lower(path), "/", "\\")
-                    if string.find(path, "\\minimaparrow", 1, true) then return child end
+                    if string.find(path, "\\minimaparrow", 1, true) then
+                        player = child
+                    elseif string.find(path, "\\rotating-minimaparrow", 1, true) then
+                        -- The native updater can show these indicators again;
+                        -- transparent models stay hidden without stopping it.
+                        child:SetAlpha(0)
+                    end
                 end
             end
         end
+        if player then return player end
         -- Native minimaps construct nine Model children before addon children.
         -- Use that fallback only when every native slot still has that shape.
         for index = 1, 9 do
@@ -230,7 +240,17 @@ DFRL:NewMod("Navigation", 2, function()
             if not child or not child.GetObjectType or child:GetObjectType() ~= "Model" then return end
         end
         local candidate = children[9]
-        if candidate.GetFacing then return candidate end
+        if candidate.GetFacing then
+            for index = 1, 8 do children[index]:SetAlpha(0) end
+            return candidate
+        end
+    end
+    function navigation.StyleMinimap()
+        if not arrow then arrow = PlayerArrow() end
+        if not arrow then return end
+        local strata, level = Minimap:GetFrameStrata(), navigation.MinimapLevel("player")
+        if arrow:GetFrameStrata() ~= strata then arrow:SetFrameStrata(strata) end
+        if arrow:GetFrameLevel() < level then arrow:SetFrameLevel(level) end
     end
     function navigation.Heading()
         if not arrow then arrow = PlayerArrow() end

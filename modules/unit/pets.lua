@@ -1,10 +1,16 @@
 DFRL:NewMod("PetFrames", 4, function()
-    local MAX_VISIBLE, COLUMNS, COLUMN_PITCH, ROW_PITCH = 8, 2, 174, 50
-    local WIDTH, HEIGHT = COLUMNS * COLUMN_PITCH, math.ceil(MAX_VISIBLE / COLUMNS) * ROW_PITCH + 18
+    local COLUMNS, COLUMN_PITCH, ROW_PITCH = 2, 174, 50
+    local ICON_SIZE, ICON_RADIUS = 34, 17
+    local CENTER_X, CENTER_Y = 24.5, 22.5
+    local RIM_SIZE = 39
+    local petIcons = {
+        wolf = "Interface\\Icons\\Ability_Hunter_Pet_Wolf",
+        raptor = "Interface\\Icons\\Ability_Hunter_Pet_Raptor",
+    }
     local path = DFRL:GetInfoOrCons("tex")
     local root = CreateFrame("Frame", nil, UIParent)
-    root:SetWidth(WIDTH)
-    root:SetHeight(HEIGHT)
+    root:SetWidth(COLUMNS * COLUMN_PITCH)
+    root:SetHeight(ROW_PITCH)
     root:SetFrameStrata("MEDIUM")
     root:EnableMouse(false)
     root:Hide()
@@ -30,15 +36,8 @@ DFRL:NewMod("PetFrames", 4, function()
         label:SetShadowOffset(1, -1)
         return label
     end
-    local function Artwork(parent, file, layer)
-        local texture = parent:CreateTexture(nil, layer)
-        texture:SetTexture(path .. "pets\\" .. file .. ".tga")
-        texture:SetWidth(128)
-        texture:SetHeight(64)
-        texture:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, 0)
-        return texture
-    end
-    for index = 1, MAX_VISIBLE do
+    local function Row(index)
+        if rows[index] then return rows[index] end
         local frame = CreateFrame("Frame", nil, root)
         frame:SetWidth(COLUMN_PITCH)
         frame:SetHeight(ROW_PITCH)
@@ -50,68 +49,133 @@ DFRL:NewMod("PetFrames", 4, function()
             -math.floor((index - 1) / COLUMNS) * ROW_PITCH
         )
         frame:EnableMouse(false)
-        Artwork(frame, "Background", "BACKGROUND")
-        local row = { frame = frame, strips = {} }
-        -- Legacy textures have no retail masks. Fixed one-unit cropped strips
-        -- keep native square icons inside the round portrait opening.
-        local radius = 17
-        for part = 1, 34 do
-            local top, bottom = part - 1, part
-            local edge = math.max(math.abs(top - radius), math.abs(bottom - radius))
-            local half = math.sqrt(math.max(0, radius * radius - edge * edge))
-            if half > 0 then
-                local strip = frame:CreateTexture(nil, "ARTWORK")
-                strip:SetWidth(half * 2)
-                strip:SetHeight(1)
-                strip:SetPoint("TOPLEFT", frame, "TOPLEFT", 24.5 - half, -5.5 - top)
-                strip:SetTexCoord((radius - half) / 34, (radius + half) / 34, top / 34, bottom / 34)
-                strip:Hide()
-                table.insert(row.strips, strip)
-            end
-        end
-        row.fill = frame:CreateTexture(nil, "ARTWORK")
-        row.fill:SetTexture(path .. "unitframes\\UI-HUD-UnitFrame-TargetofTarget-PortraitOn-Bar-Mana")
-        row.fill:SetPoint("TOPLEFT", frame, "TOPLEFT", 40.5, -28)
-        row.fill:SetHeight(7.5)
-        row.fill:Hide()
-        Artwork(frame, "Border", "OVERLAY")
+        frame:Hide()
+        local row = { frame = frame }
         row.name = Label(frame, 10)
-        row.name:SetPoint("TOPLEFT", frame, "TOPLEFT", 44, 0)
-        row.name:SetWidth(COLUMN_PITCH - 46)
+        row.name:SetPoint("TOPLEFT", frame, "TOPLEFT", 48, -8)
+        row.name:SetWidth(COLUMN_PITCH - 50)
         row.name:SetHeight(14)
         row.status = Label(frame, 9)
-        row.status:SetPoint("TOPLEFT", frame, "TOPLEFT", 44, -16)
-        row.status:SetWidth(70)
+        row.status:SetPoint("TOPLEFT", frame, "TOPLEFT", 48, -24)
+        row.status:SetWidth(COLUMN_PITCH - 50)
         row.status:SetHeight(12)
-        frame:Hide()
-        rows[index] = row
+        table.insert(rows, row)
+        return row
     end
-    local overflow = Label(root, 11)
-    overflow:SetPoint("TOPLEFT", root, "TOPLEFT", 8, -HEIGHT + 18)
-    overflow:SetWidth(WIDTH - 16)
-    overflow:SetHeight(16)
-    overflow:Hide()
-
-    local function HideRow(row)
-        row.frame:Hide()
-        row.name:SetText("")
-        row.status:SetText("")
-        row.fill:Hide()
-        for _, strip in ipairs(row.strips) do
+    local function Circle(row)
+        if row.circle then return row.circle end
+        local frame = CreateFrame("Frame", nil, row.frame)
+        frame:SetWidth(49)
+        frame:SetHeight(46)
+        frame:SetPoint("TOPLEFT", row.frame, "TOPLEFT", 0, 0)
+        frame:SetFrameLevel(row.frame:GetFrameLevel() + 1)
+        frame:EnableMouse(false)
+        frame:Hide()
+        local rim = frame:CreateTexture(nil, "OVERLAY")
+        rim:SetTexture(path .. "jewelry\\Frame.tga")
+        rim:SetTexCoord(106 / 1024, 178 / 1024, 56 / 256, 128 / 256)
+        rim:SetWidth(RIM_SIZE)
+        rim:SetHeight(RIM_SIZE)
+        rim:SetPoint("CENTER", frame, "TOPLEFT", CENTER_X, -CENTER_Y)
+        -- A complete alpha-edged rim avoids clipping its gold contour into
+        -- hard horizontal steps or retaining pieces of the old bar borders.
+        local circle = { frame = frame, strips = {} }
+        circle.count = Label(frame, 10)
+        circle.count:SetJustifyH("RIGHT")
+        circle.count:SetPoint(
+            "BOTTOMRIGHT",
+            frame,
+            "TOPLEFT",
+            CENTER_X + RIM_SIZE / 2,
+            -CENTER_Y - RIM_SIZE / 2
+        )
+        circle.count:SetHeight(14)
+        row.circle = circle
+        return circle
+    end
+    local function SetIcon(circle, icon, scale)
+        local changed = not T.NearlyEqual(circle.scale, scale)
+        if changed and icon then
+            -- At most one physical pixel per icon strip. The complete rim
+            -- covers this clip edge without slicing the rim artwork itself.
+            local parts = math.max(2, math.ceil(ICON_SIZE * scale))
+            local step, used = ICON_SIZE / parts, 0
+            for part = 1, parts do
+                local top, bottom = (part - 1) * step, part * step
+                local edge = math.max(math.abs(top - ICON_RADIUS), math.abs(bottom - ICON_RADIUS))
+                local half = math.sqrt(math.max(0, ICON_RADIUS * ICON_RADIUS - edge * edge))
+                if half > 0 then
+                    used = used + 1
+                    local strip = circle.strips[used]
+                    if not strip then
+                        strip = circle.frame:CreateTexture(nil, "ARTWORK")
+                        table.insert(circle.strips, strip)
+                    end
+                    strip:ClearAllPoints()
+                    strip:SetPoint(
+                        "TOPLEFT",
+                        circle.frame,
+                        "TOPLEFT",
+                        CENTER_X - half,
+                        -CENTER_Y + ICON_RADIUS - top
+                    )
+                    strip:SetWidth(half * 2)
+                    strip:SetHeight(step)
+                    strip:SetTexCoord(
+                        (ICON_RADIUS - half) / ICON_SIZE,
+                        (ICON_RADIUS + half) / ICON_SIZE,
+                        top / ICON_SIZE,
+                        bottom / ICON_SIZE
+                    )
+                end
+            end
+            circle.used, circle.scale = used, scale
+        end
+        if changed or circle.icon ~= icon then
+            for index, strip in ipairs(circle.strips) do
+                if icon and index <= (circle.used or 0) then
+                    strip:SetTexture(icon)
+                    strip:Show()
+                else
+                    strip:Hide()
+                    strip:SetTexture(nil)
+                end
+            end
+            circle.icon = icon
+        end
+    end
+    local function HideCircle(circle)
+        if not circle.active then return end
+        circle.frame:Hide()
+        for _, strip in ipairs(circle.strips) do
             strip:Hide()
             strip:SetTexture(nil)
         end
-        row.id, row.icon = nil, nil
+        circle.count:SetText("")
+        circle.icon, circle.active = nil, false
+    end
+    local function HideRow(row)
+        if not row.active then return end
+        row.frame:Hide()
+        row.name:SetText("")
+        row.status:SetText("")
+        if row.circle then HideCircle(row.circle) end
+        row.id, row.active = nil, false
+    end
+    local function Bounds(count)
+        local width = COLUMNS * COLUMN_PITCH
+        local height = math.max(ROW_PITCH, math.ceil(count / COLUMNS) * ROW_PITCH)
+        if T.NearlyEqual(root:GetWidth(), width) and T.NearlyEqual(root:GetHeight(), height) then return end
+        root:SetWidth(width)
+        root:SetHeight(height)
+        DFRL.layout.Place("petFrames")
     end
     local function Clear()
         if not displayed then return end
-        for _, row in ipairs(rows) do
-            HideRow(row)
-        end
-        overflow:SetText("")
-        overflow:Hide()
+        for _, row in ipairs(rows) do HideRow(row) end
         root:Hide()
         displayed = false
+        Bounds(0)
     end
     local function Retire()
         blockedPacket, blockedStamp = _G.AZS_PETS, _G.AZS_PETS_UPDATED
@@ -122,41 +186,23 @@ DFRL:NewMod("PetFrames", 4, function()
         local rounded = math.ceil(seconds)
         return string.format("%d:%02d", math.floor(rounded / 60), math.mod(rounded, 60))
     end
-    local function Paint(row, entry)
+    local function Paint(row, entry, scale)
         row.id = entry.id
         row.name:SetText(entry.name)
-        if row.icon ~= entry.icon then
-            for _, strip in ipairs(row.strips) do
-                strip:SetTexture(entry.icon)
-                if entry.icon then
-                    strip:Show()
-                else
-                    strip:Hide()
-                end
-            end
-            row.icon = entry.icon
-        end
+        local circle = Circle(row)
+        SetIcon(circle, entry.icon, scale)
+        circle.count:SetText(entry.count > 1 and ("x" .. entry.count) or "")
+        if not circle.active then circle.frame:Show() end
+        circle.active = true
         if entry.permanent then
-            row.status:SetText(DFRL.locale.Text("Permanent"))
+            row.status:SetText("")
         elseif Number(entry.remaining) and entry.remaining >= 0 then
             row.status:SetText(Time(entry.remaining))
         else
             row.status:SetText("--:--")
         end
-        row.fill:Hide()
-        if
-            not entry.permanent
-            and Number(entry.remaining)
-            and entry.remaining > 0
-            and Number(entry.duration)
-            and entry.duration > 0
-        then
-            local fraction = math.min(1, entry.remaining / entry.duration)
-            row.fill:SetWidth(74 * fraction)
-            row.fill:SetTexCoord(0, fraction, 0, 1)
-            row.fill:Show()
-        end
-        row.frame:Show()
+        if not row.active then row.frame:Show() end
+        row.active = true
     end
     local function Refresh()
         if not inWorld then return end
@@ -180,12 +226,11 @@ DFRL:NewMod("PetFrames", 4, function()
             Clear()
             return
         end
-        -- Copy only the bounded visible rows; the native list remains read-only.
-        -- The native total includes overflow without allocating more widgets.
-        local total, entries, seen = table.getn(list), {}, {}
-        local count = math.min(MAX_VISIBLE, total)
-        for index = 1, count do
-            local entry = list[index]
+        -- Copy every distinct group in native arrival order. Permanent members
+        -- stay separate; only a supplied type key combines temporary pets.
+        local entries, seen, temporary = {}, {}, {}
+        local count = 0
+        for _, entry in ipairs(list) do
             if
                 type(entry) ~= "table"
                 or not Number(entry.id)
@@ -199,34 +244,40 @@ DFRL:NewMod("PetFrames", 4, function()
                 return
             end
             seen[entry.id] = true
-            entries[index] = {
-                id = entry.id,
-                name = entry.name,
-                icon = type(entry.icon) == "string" and entry.icon ~= "" and entry.icon or nil,
-                permanent = entry.permanent == true,
-                duration = entry.duration,
-                remaining = entry.remaining,
-            }
+            local key = entry.permanent ~= true and type(entry.key) == "string" and entry.key ~= "" and entry.key
+            local group = key and temporary[key]
+            local remaining = Number(entry.remaining) and entry.remaining >= 0 and entry.remaining or nil
+            if group then
+                group.count = group.count + 1
+                if group.remaining and remaining then
+                    group.remaining = math.min(group.remaining, remaining)
+                else
+                    group.remaining = nil
+                end
+            else
+                count = count + 1
+                group = {
+                    id = entry.id,
+                    name = entry.name,
+                    icon = petIcons[entry.key]
+                        or (type(entry.icon) == "string" and entry.icon ~= "" and entry.icon or nil),
+                    permanent = entry.permanent == true,
+                    remaining = remaining,
+                    count = 1,
+                }
+                entries[count] = group
+                if key then temporary[key] = group end
+            end
         end
         if count == 0 then
             Clear()
             return
         end
-        for index = 1, MAX_VISIBLE do
-            if entries[index] then
-                Paint(rows[index], entries[index])
-            else
-                HideRow(rows[index])
-            end
-        end
-        local overflowCount = total - count
-        if overflowCount > 0 then
-            overflow:SetText(string.format(DFRL.locale.Text("+%d more pets"), overflowCount))
-            overflow:Show()
-        else
-            overflow:SetText("")
-            overflow:Hide()
-        end
+        local scale = root:GetEffectiveScale()
+        if not Number(scale) or scale <= 0 then return end
+        Bounds(count)
+        for index = 1, count do Paint(Row(index), entries[index], scale) end
+        for index = count + 1, table.getn(rows) do HideRow(rows[index]) end
         root:Show()
         displayed = true
     end
@@ -240,7 +291,7 @@ DFRL:NewMod("PetFrames", 4, function()
     DFRL.layout.Register("petFrames", root, function()
         root:ClearAllPoints()
         root:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 12, -220)
-    end, { labelAbove = true, onReset = Clear })
+    end, { labelAbove = true, refreshDefault = true, onReset = Clear })
     DFRL.locale.Listen(Refresh)
     for _, name in ipairs({ "PLAYER_ENTERING_WORLD", "PLAYER_LEAVING_WORLD", "PLAYER_LOGOUT", "CHAT_MSG_ADDON" }) do
         controller:RegisterEvent(name)
