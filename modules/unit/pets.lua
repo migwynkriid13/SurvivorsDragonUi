@@ -202,9 +202,7 @@ DFRL:NewMod("PetFrames", 4, function()
         local rowCount = math.min(DFRL.display.Get("petRows"), math.max(1, count))
         local columns = math.max(1, math.ceil(count / rowCount))
         local cellWidth = CELL_WIDTH
-        if DFRL.display.Get("hidePetNames") then
-            cellWidth = DFRL.display.Get("hidePetTimers") and 49 or 98
-        end
+        if DFRL.display.Get("hidePetNames") then cellWidth = DFRL.display.Get("hidePetTimers") and 49 or 98 end
         local spacing = DFRL.display.Get("petSpacing")
         local width = columns * cellWidth + (columns - 1) * spacing
         local height = rowCount * CELL_HEIGHT + (rowCount - 1) * spacing
@@ -269,10 +267,7 @@ DFRL:NewMod("PetFrames", 4, function()
         end
         local circle = Circle(row)
         SetIcon(circle, entry.icon, scale)
-        Text(
-            circle.count,
-            not DFRL.display.Get("hidePetCounts") and entry.count > 1 and ("x" .. entry.count) or ""
-        )
+        Text(circle.count, not DFRL.display.Get("hidePetCounts") and entry.count > 1 and ("x" .. entry.count) or "")
         if not circle.active then circle.frame:Show() end
         circle.active = true
         if not showTimer then
@@ -423,7 +418,9 @@ DFRL:NewMod("PetFrames", 4, function()
         acceptedPacket = nil
         dirty, age = true, 0.1
     end)
-    DFRL.display.Listen(function() dirty, age = true, 0.1 end)
+    DFRL.display.Listen(function()
+        dirty, age = true, 0.1
+    end)
     for _, name in ipairs({ "PLAYER_ENTERING_WORLD", "PLAYER_LEAVING_WORLD", "PLAYER_LOGOUT", "CHAT_MSG_ADDON" }) do
         controller:RegisterEvent(name)
     end

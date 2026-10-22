@@ -641,7 +641,8 @@ DFRL:NewMod("RunTimers", 5, function()
     local function FitFontEditor()
         if not fontEditor then return end
         local screenWidth, screenHeight = T.GetLocalSize(UIParent)
-        local scale = math.min(1, (screenWidth - 20) / fontEditor:GetWidth(), (screenHeight - 20) / fontEditor:GetHeight())
+        local scale =
+            math.min(1, (screenWidth - 20) / fontEditor:GetWidth(), (screenHeight - 20) / fontEditor:GetHeight())
         if scale > 0 and not T.NearlyEqual(fontEditor:GetScale(), scale) then fontEditor:SetScale(scale) end
     end
 
@@ -900,10 +901,8 @@ DFRL:NewMod("RunTimers", 5, function()
         for _, entry in ipairs(categories) do
             categoryGaps = categoryGaps + (entry.gapBefore or 0)
         end
-        local categoryPitch = math.min(
-            42,
-            math.floor((sidebar:GetHeight() - 12 - categoryGaps + 6) / table.getn(categories))
-        )
+        local categoryPitch =
+            math.min(42, math.floor((sidebar:GetHeight() - 12 - categoryGaps + 6) / table.getn(categories)))
         for _, entry in ipairs(categories) do
             local key = entry.key
             local page = CreateFrame("Frame", nil, fontEditor)
@@ -954,9 +953,10 @@ DFRL:NewMod("RunTimers", 5, function()
                 local step = direction * entry.step
                 local button = T.CreateEditorButton(control, direction < 0 and "-" or "+", 28, 28)
                 button:SetPoint("TOPRIGHT", control, "TOPRIGHT", direction < 0 and -108 or 0, -8)
-                button:SetScript("OnClick", function()
-                    DFRL.display.Set(entry[1], DFRL.display.Get(entry[1]) + step)
-                end)
+                button:SetScript(
+                    "OnClick",
+                    function() DFRL.display.Set(entry[1], DFRL.display.Get(entry[1]) + step) end
+                )
             end
             local value = FontEditorLabel(control, "", 0, 0, 12)
             value:ClearAllPoints()
