@@ -8,9 +8,7 @@ Confirm, Cancel, discard and both full resets use the shared layout lifecycle.
 There is one `petFrames` geometry record in the existing layout table, without
 another setting or SavedVariable.
 
-The frame uses published pet artwork, rather than a newly drawn substitute.
-The [artwork notes](../third_party/PetFrames-ARTWORK.md) pin the original files,
-owning code, conversion and notices. The native summon icon occupies the round
+The native summon icon occupies the round
 portrait opening; fixed cropped texture strips preserve transparency using
 legacy texture APIs. The name appears above the bar wells. The upper well
 contains the remaining duration or translated **Permanent** label; the lower

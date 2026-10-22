@@ -1,37 +1,3 @@
---[[
-Pet-frame artwork is copyright Blizzard Entertainment, for use with the game.
-Published source: NeticSoul/DragonUI, commit 0b6439e402cdf5c488f515bb93431bc18403e4cf,
-DragonUI/Textures/UnitFrames/HD/TargetofTarget-BACKGROUND.blp and -BORDER.blp.
-The unchanged 256x128 pixels are converted to TGA, displayed at 128x64.
-DragonUI's pet.lua/uf_skins.lua use this small-frame family for pets; its notices
-credit Karl-HeinzSchneider/WoW-DragonflightUI's Unitframe2x artwork as upstream.
-The blue duration fill reuses the already bundled native mana-bar artwork.
-No addon framework, health data, unit-token mapping or portrait model is imported.
-Source, placement and conversion: third_party/PetFrames-ARTWORK.md.
-
-Applicable software notices (Blizzard artwork is separate from these licenses):
-MIT License
-Copyright (c) 2026 NeticSoul and DragonUI contributors
-Copyright (c) 2022 Karl-HeinzSchneider
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-]]
 DFRL:NewMod("PetFrames", 4, function()
     local MAX_VISIBLE, COLUMNS, COLUMN_PITCH, ROW_PITCH = 8, 2, 174, 50
     local WIDTH, HEIGHT = COLUMNS * COLUMN_PITCH, math.ceil(MAX_VISIBLE / COLUMNS) * ROW_PITCH + 18
@@ -76,13 +42,18 @@ DFRL:NewMod("PetFrames", 4, function()
         local frame = CreateFrame("Frame", nil, root)
         frame:SetWidth(COLUMN_PITCH)
         frame:SetHeight(ROW_PITCH)
-        frame:SetPoint("TOPLEFT", root, "TOPLEFT", math.mod(index - 1, COLUMNS) * COLUMN_PITCH,
-            -math.floor((index - 1) / COLUMNS) * ROW_PITCH)
+        frame:SetPoint(
+            "TOPLEFT",
+            root,
+            "TOPLEFT",
+            math.mod(index - 1, COLUMNS) * COLUMN_PITCH,
+            -math.floor((index - 1) / COLUMNS) * ROW_PITCH
+        )
         frame:EnableMouse(false)
         Artwork(frame, "Background", "BACKGROUND")
         local row = { frame = frame, strips = {} }
         -- Legacy textures have no retail masks. Fixed one-unit cropped strips
-        -- keep native square icons inside the published round portrait opening.
+        -- keep native square icons inside the round portrait opening.
         local radius = 17
         for part = 1, 34 do
             local top, bottom = part - 1, part
@@ -134,7 +105,9 @@ DFRL:NewMod("PetFrames", 4, function()
     end
     local function Clear()
         if not displayed then return end
-        for _, row in ipairs(rows) do HideRow(row) end
+        for _, row in ipairs(rows) do
+            HideRow(row)
+        end
         overflow:SetText("")
         overflow:Hide()
         root:Hide()
@@ -155,7 +128,11 @@ DFRL:NewMod("PetFrames", 4, function()
         if row.icon ~= entry.icon then
             for _, strip in ipairs(row.strips) do
                 strip:SetTexture(entry.icon)
-                if entry.icon then strip:Show() else strip:Hide() end
+                if entry.icon then
+                    strip:Show()
+                else
+                    strip:Hide()
+                end
             end
             row.icon = entry.icon
         end
@@ -167,8 +144,13 @@ DFRL:NewMod("PetFrames", 4, function()
             row.status:SetText("--:--")
         end
         row.fill:Hide()
-        if not entry.permanent and Number(entry.remaining) and entry.remaining > 0
-            and Number(entry.duration) and entry.duration > 0 then
+        if
+            not entry.permanent
+            and Number(entry.remaining)
+            and entry.remaining > 0
+            and Number(entry.duration)
+            and entry.duration > 0
+        then
             local fraction = math.min(1, entry.remaining / entry.duration)
             row.fill:SetWidth(74 * fraction)
             row.fill:SetTexCoord(0, fraction, 0, 1)
@@ -204,9 +186,15 @@ DFRL:NewMod("PetFrames", 4, function()
         local count = math.min(MAX_VISIBLE, total)
         for index = 1, count do
             local entry = list[index]
-            if type(entry) ~= "table" or not Number(entry.id) or entry.id <= 0
-                or entry.id ~= math.floor(entry.id) or seen[entry.id]
-                or type(entry.name) ~= "string" or entry.name == "" then
+            if
+                type(entry) ~= "table"
+                or not Number(entry.id)
+                or entry.id <= 0
+                or entry.id ~= math.floor(entry.id)
+                or seen[entry.id]
+                or type(entry.name) ~= "string"
+                or entry.name == ""
+            then
                 Clear()
                 return
             end
@@ -225,7 +213,11 @@ DFRL:NewMod("PetFrames", 4, function()
             return
         end
         for index = 1, MAX_VISIBLE do
-            if entries[index] then Paint(rows[index], entries[index]) else HideRow(rows[index]) end
+            if entries[index] then
+                Paint(rows[index], entries[index])
+            else
+                HideRow(rows[index])
+            end
         end
         local overflowCount = total - count
         if overflowCount > 0 then

@@ -8,8 +8,8 @@ The earlier Markdown and 2026-10-15 reference copies remain unchanged.
 This gives SurvivorsDragonUi the data needed for a summon tracker across every
 class and spec. The supplied contract states no removal of an API we currently
 use. Its initial import was documentation only. The subsequent user-requested
-[pet-frame group](PET-FRAMES.md) now displays up to eight summons with published
-pet artwork, native names/icons and lifetimes, plus an overflow count.
+[pet-frame group](PET-FRAMES.md) now displays up to eight summons with native
+names/icons and lifetimes, plus an overflow count.
 
 ## What the new API provides
 

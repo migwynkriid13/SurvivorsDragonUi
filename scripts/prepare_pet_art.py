@@ -1,6 +1,5 @@
-"""Convert the pinned, published pet-frame pieces without changing their pixels.
+"""Convert pet-frame pieces without changing their pixels.
 
-Source paths, commits and notices: third_party/PetFrames-ARTWORK.md.
 Requires Pillow; reads artwork only and never loads addon or game code.
 """
 
@@ -17,7 +16,7 @@ def prepare(sources, output):
     output.mkdir(parents=True, exist_ok=True)
     for name in ("Background", "Border"):
         data = (sources / (name + ".blp")).read_bytes()
-        # The published BLP2 pieces use uncompressed BGRA (encoding 3).
+        # The BLP2 pieces use uncompressed BGRA (encoding 3).
         width, height = struct.unpack_from("<II", data, 12)
         offset = struct.unpack_from("<I", data, 20)[0]
         image = Image.frombytes(
