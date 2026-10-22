@@ -36,26 +36,87 @@ It adds no gameplay clock, setting, SavedVariable or native client dependency.
 - Jewelry hover cards retain native retries and only repeat layout when their
   text, owner or effective scale changes.
 
-## Exact artwork boundaries
+## Jewelry rendering
 
 Jewelry keeps its existing magnified icon crop and stepped circular outline:
 14 regions per populated icon, or 70 across five populated slots. Even merging
 the geometrically identical central strips could change sampling at their
 shared seam on clients that clamp cropped UVs per quad, so their original
-partition remains unchanged.
+partition remains unchanged. Icon regions now share one artwork owner, ordered
+by exact texture path, then strip, then slot. Equal images with the same UV
+window are adjacent for native batching. Their slot-relative anchors, dimensions,
+crop and order within each icon stay the same. The icons cannot overlap: their
+32-unit canvases have at least 43 units between centers, including while detached.
+Cooldowns and gold rims retain their original layers above the icons.
+
+The base renderer additionally sorts equal-texture quads using an unstable
+native-style sort. For an isolated batch of two equal icons, that sort leaves
+16 material runs instead of the original 28; five equal icons leave 16 instead
+of 70. Different images and unrelated artwork in the same native layer can
+alter that permutation, so this is a conditional batching improvement rather
+than a fixed draw-count guarantee. Five different icons still need 70 regions.
+The default docked action-button icons share this layer, so the isolated
+examples do not predict the live combined batch's draw count.
+The Actions reference model reports equipment/rank combinations without running
+addon Lua; these are source-model results, not measured GPU counters. Failed
+texture assignments retain that slot's last successful artwork; recycling never
+borrows another slot's old pixels.
 
 The native portrait conversion used by pet frames is not interchangeable here.
 The reviewed client masks portrait pixels before applying texture coordinates;
 the jewelry crop would enlarge that circle, and the partially transparent gold
 rim does not fully conceal the difference. No approximate native-circle
-replacement, prepared item images or new artwork are included. The jewelry
-strip rendering cost remains; only its repeated hover presentation work changes.
+replacement or prepared item images are included. Grouping preserves the native
+texture paths, including future or unknown valid paths, without an icon catalog.
+
+## Timer rendering
+
+Fixed run and boss-health pills use one assembled background region in place of
+three. Each base pill therefore uses five regions instead of seven. The original
+left and right caps are copied unchanged around the horizontally uniform black
+center. Their joins have the same constant texels on both sides, so removing the
+two internal UV clamps preserves bilinear samples. The variable-width tally
+keeps its original three-piece background. Borders, fills and geometry are
+unchanged; the new image is prepared by `scripts/prepare_timer_background.py`.
+
+Each active scheduled skull retains eight glow copies in the same creation and
+draw order. Their centers are permanently anchored to two empty geometric
+frames: cardinal copies follow edge centers and diagonal copies follow corners.
+Four dimension writes replace sixteen clear/reanchor calls per animated frame;
+the eight original texture-alpha writes remain. This reduces that loop from 24
+to 12 native methods per active marker per frame. The original trigonometry,
+alpha values, textures, timing and cadence remain. Blue flow and foam also skip
+identical size and UV writes, while position and animation continue normally.
 
 The timer also retains all existing cosmetic layers: 66 allocated textures,
 with at most 37 blue flow/foam pieces or 29 red sparkle/glow pieces visible at
 once, plus the base pill and schedule markers. Active boss markers retain their
-eight glow copies. The work avoids unnecessary hidden and unchanged updates;
-it does not claim to eliminate the cost of drawing these requested effects.
+eight glow copies. Their drawing cost remains alongside the reductions above.
+A finite baked animation cannot preserve these independently phased effects at
+every native time and layout scale, so no animation frames are substituted.
+
+## Renderer evidence
+
+Read-only inspection of the supplied Windows executable found native
+`UiQuadBatch` / `UiQuadMaterial` type names at byte offset 99,712,445 and the
+cropped-UV shader's `uv_clamp` input at 100,347,689. The inspected executable's
+SHA-256 is `e069bf3152f8d8f7160d66388907fc181c733bd170aa150d3b7ff7adf251e048`.
+The shader starts near 100,342,970 and identifies `shaders/ui_quad.wgsl`.
+
+The public native-base
+[UI renderer](https://github.com/samwhosung/benilla/blob/main/crates/benilla-app/src/ui_pass.rs)
+groups contiguous quads with the same texture and material, including their UV
+clamp. The native-base
+[layer ordering](https://github.com/samwhosung/benilla/blob/main/crates/benilla-ui/src/order.rs)
+and
+[texture sort](https://github.com/samwhosung/benilla/blob/main/crates/benilla-ui/src/script/layer_batch.rs)
+can further permute equal-texture quads across all owners sharing a flat
+stratum, level and layer. Owner creation order alone cannot guarantee a batch.
+Its
+[extraction code](https://github.com/samwhosung/benilla/blob/main/crates/benilla-app/src/ui_script/extract/mod.rs)
+defines cropped half-texel clamps. These sources explain the proposed batching
+and the reason to retain every jewelry strip boundary. They do not establish
+the complete packaged renderer's identity or a measured performance result.
 
 ## Full chat history
 
@@ -70,7 +131,10 @@ pagination or saved archive. Memory still necessarily grows with retained text.
 ## Verification limits
 
 Checks run only in GitHub Actions: version gating, formatting, Lua static
-analysis and runtime-manifest packaging. No local tests, syntax checks,
+analysis, fractional timer-artwork sampling, a native-base batching reference
+model and runtime-manifest packaging. The extra checks read TGA pixels and model
+ordering only; they do not execute addon Lua or client code.
+No local tests, syntax checks,
 formatters, addon execution or game launches are part of this work.
 
 The source review covers unchanged values, reused rows, malformed reload

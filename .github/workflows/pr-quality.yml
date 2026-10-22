@@ -94,6 +94,14 @@ jobs:
           DEADCODE_OUTCOME: ${{ steps.deadcode.outcome }}
         run: python3 scripts/pr_quality.py summary
 
+      - name: Compare fixed timer artwork sampling
+        # Image sampling compares artwork only; no addon or game code runs.
+        # Keep this separate from the Lua static-analysis steps above.
+        run: python3 scripts/check_timer_background.py
+
+      - name: Model native-base jewelry material ordering
+        run: python3 scripts/check_jewelry_batching.py
+
       - name: Package the PR runtime payload without executing Lua
         run: python3 scripts/package.py dist/SurvivorsDragonUi.zip
 

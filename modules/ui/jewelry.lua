@@ -351,13 +351,106 @@ DFRL:NewMod("Jewelry", 4, function()
         effectSlot, effectValue, effectScale = slot, text, scale
         panel:Show()
     end
+    local artwork = CreateFrame("Frame", nil, hud)
+    artwork:SetAllPoints(hud)
+    artwork:SetFrameLevel(hud:GetFrameLevel() + 1)
+    artwork:EnableMouse(false)
+    local iconProbe = artwork:CreateTexture(nil, "ARTWORK")
+    iconProbe:Hide()
+    local iconParts, iconPool, iconsDirty = {}, {}, false
+    for part = 1, 16 do
+        local top, bottom = (part - 1) * 2, part * 2
+        local edge = math.max(math.abs(top - 16), math.abs(bottom - 16))
+        local half = math.sqrt(math.max(0, 256 - edge * edge))
+        if half > 0 then
+            table.insert(iconParts, {
+                left = 16 - half,
+                top = top,
+                width = half * 2,
+                firstU = iconInset + (16 - half) * iconSpan / ICON_SIZE,
+                lastU = iconInset + (16 + half) * iconSpan / ICON_SIZE,
+                firstV = iconInset + top * iconSpan / ICON_SIZE,
+                lastV = iconInset + bottom * iconSpan / ICON_SIZE,
+            })
+        end
+    end
+    local function SetIcon(slot, texture)
+        -- A failed native texture assignment keeps the preceding slot artwork.
+        -- Probe from empty so a retained image cannot masquerade as success.
+        iconProbe:SetTexture(nil)
+        local loaded = iconProbe:SetTexture(texture)
+        local assigned = iconProbe:GetTexture()
+        local stem = string.gsub(texture, "%.[^%.]*$", "")
+        if loaded == 1 or loaded == true or assigned == texture or assigned == stem then slot.artTexture = texture end
+        iconProbe:SetTexture(nil)
+        slot.texture = texture
+        iconsDirty = true
+    end
+    local function PaintIcons()
+        if not iconsDirty then return end
+        local groups, byTexture = {}, {}
+        for _, slot in ipairs(slots) do
+            if slot.artTexture then
+                local group = byTexture[slot.artTexture]
+                if not group then
+                    group = { texture = slot.artTexture, slots = {} }
+                    byTexture[slot.artTexture] = group
+                    table.insert(groups, group)
+                end
+                table.insert(group.slots, slot)
+            end
+        end
+        local used = 0
+        for _, group in ipairs(groups) do
+            for _, part in ipairs(iconParts) do
+                for _, slot in ipairs(group.slots) do
+                    used = used + 1
+                    local strip = iconPool[used]
+                    if not strip then
+                        strip = artwork:CreateTexture(nil, "ARTWORK")
+                        strip:Hide()
+                        table.insert(iconPool, strip)
+                    end
+                    if strip.jewelrySlot ~= slot then
+                        strip:Hide()
+                        strip:SetTexture(nil)
+                        strip.jewelryTexture = nil
+                        strip:ClearAllPoints()
+                        strip:SetPoint("TOPLEFT", slot.button, "TOPLEFT", part.left, -part.top)
+                        strip.jewelrySlot = slot
+                    elseif strip.jewelryPart ~= part then
+                        strip:ClearAllPoints()
+                        strip:SetPoint("TOPLEFT", slot.button, "TOPLEFT", part.left, -part.top)
+                    end
+                    if strip.jewelryPart ~= part then
+                        strip:SetWidth(part.width)
+                        strip:SetHeight(2)
+                        strip:SetTexCoord(part.firstU, part.lastU, part.firstV, part.lastV)
+                        strip.jewelryPart = part
+                    end
+                    if strip.jewelryTexture ~= group.texture then
+                        strip:SetTexture(group.texture)
+                        strip.jewelryTexture = group.texture
+                    end
+                    if not strip:IsShown() then strip:Show() end
+                end
+            end
+        end
+        for index = used + 1, table.getn(iconPool) do
+            local strip = iconPool[index]
+            if strip:IsShown() then strip:Hide() end
+            if strip.jewelryTexture then strip:SetTexture(nil) end
+            strip.jewelryTexture, strip.jewelrySlot, strip.jewelryPart = nil, nil, nil
+        end
+        iconsDirty = false
+    end
     for index, name in ipairs(SLOT_NAMES) do
         local button = CreateFrame("Frame", nil, hud)
         button:SetWidth(ICON_SIZE)
         button:SetHeight(ICON_SIZE)
         button:SetPoint("TOPLEFT", hud, "TOPLEFT", WIDTH / 2 - ICON_SIZE / 2 + (index - 3) * columnPitch, -30.5)
         button:EnableMouse(true)
-        local slot = { name = name, button = button, strips = {} }
+        local slot = { name = name, button = button }
         local placeholder = button:CreateTexture(nil, "ARTWORK")
         placeholder:SetTexture(texturePath .. EMPTY_TEXTURES[index])
         placeholder:SetAllPoints(button)
@@ -371,27 +464,6 @@ DFRL:NewMod("Jewelry", 4, function()
         socket:SetTexCoord(0, 160 / 256, 0, 160 / 256)
         socket:Hide()
         slot.socket = socket
-        -- Ordinary cropped texture strips leave real transparency outside the
-        -- icon's circle, without a black corner cover or retail texture masks.
-        for part = 1, 16 do
-            local top, bottom = (part - 1) * 2, part * 2
-            local edge = math.max(math.abs(top - 16), math.abs(bottom - 16))
-            local half = math.sqrt(math.max(0, 256 - edge * edge))
-            if half > 0 then
-                local strip = button:CreateTexture(nil, "ARTWORK")
-                strip:SetWidth(half * 2)
-                strip:SetHeight(2)
-                strip:SetPoint("TOPLEFT", button, "TOPLEFT", 16 - half, -top)
-                strip:SetTexCoord(
-                    iconInset + (16 - half) * iconSpan / ICON_SIZE,
-                    iconInset + (16 + half) * iconSpan / ICON_SIZE,
-                    iconInset + top * iconSpan / ICON_SIZE,
-                    iconInset + bottom * iconSpan / ICON_SIZE
-                )
-                strip:Hide()
-                table.insert(slot.strips, strip)
-            end
-        end
         local cooldown = button:CreateTexture(nil, "OVERLAY")
         cooldown:SetTexture(texturePath .. "Cooldown.tga")
         cooldown:SetAllPoints(button)
@@ -422,13 +494,8 @@ DFRL:NewMod("Jewelry", 4, function()
     end
     local function ClearSlot(slot)
         slot.placeholder:Hide()
-        if slot.texture then
-            for _, strip in ipairs(slot.strips) do
-                strip:Hide()
-                strip:SetTexture(nil)
-            end
-        end
-        slot.texture = nil
+        if slot.texture or slot.artTexture then iconsDirty = true end
+        slot.texture, slot.artTexture = nil, nil
         slot.cooldown:Hide()
         slot.start, slot.duration, slot.painted = nil, nil, nil
         HideTooltip(slot)
@@ -438,6 +505,7 @@ DFRL:NewMod("Jewelry", 4, function()
         for _, slot in ipairs(slots) do
             ClearSlot(slot)
         end
+        PaintIcons()
         hud:Hide()
         detached:Hide()
     end
@@ -524,13 +592,7 @@ DFRL:NewMod("Jewelry", 4, function()
             local ok, texture = pcall(GetInventoryItemTexture, "player", slot.id)
             if ok and type(texture) == "string" and texture ~= "" then
                 slot.placeholder:Hide()
-                if slot.texture ~= texture then
-                    for _, strip in ipairs(slot.strips) do
-                        strip:SetTexture(texture)
-                        strip:Show()
-                    end
-                    slot.texture = texture
-                end
+                if slot.texture ~= texture then SetIcon(slot, texture) end
                 UpdateCooldown(slot)
                 if hoveredSlot == slot then ShowTooltip(slot) end
             else
@@ -538,6 +600,7 @@ DFRL:NewMod("Jewelry", 4, function()
                 if ok and (texture == nil or texture == "") then slot.placeholder:Show() end
             end
         end
+        PaintIcons()
         if DFRL.display.Get("attachJewelry") then
             detached:Hide()
         else
@@ -555,6 +618,7 @@ DFRL:NewMod("Jewelry", 4, function()
             end
             hud:SetScale(docked and defaultScale or 1)
             hud:SetFrameLevel(owner:GetFrameLevel() + 2)
+            artwork:SetFrameLevel(hud:GetFrameLevel() + 1)
             hud:ClearAllPoints()
             hud:SetPoint("TOP", owner, "TOP", 0, docked and (46.5 + RIM_SIZE * 20 / 36) or 0)
             for _, slot in ipairs(slots) do

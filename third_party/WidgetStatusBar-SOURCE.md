@@ -31,3 +31,19 @@ All coordinates below are pixels measured from the top-left of the sheet. Right 
 | Spark | 75, 205, 83, 237 | 8 × 32 | 8 × 32 | 1.0 | 1.0 |
 
 The original atlas names use the `widgetstatusbar-` prefix: `borderleft`, `borderright`, `bordercenter`, `bgleft`, `bgright`, `bgcenter`, `fill-blue`, `fill-yellow`, `fill-white`, and `spark`.
+
+## Fixed-width pill background
+
+`BackgroundFixed.tga` combines the existing background crops for the run timer
+and boss pills. Its 284-by-18 content uses the 29 left-cap columns, 226 copies
+of each center row's first pixel, and the 29 right-cap columns, on a transparent
+512-by-32 canvas. `scripts/prepare_timer_background.py` reproduces the file from
+the shipped crops without a new download or image resampling.
+
+The original center rows are horizontally uniform opaque black, and the cap
+columns at both joins have the same pixels. The composite keeps each cap's
+one-source-pixel-per-local-unit mapping and the same vertical crop. Native
+half-texel crop clamping therefore retains the original filtering at the
+outside edges and identical black samples at the internal joins, including
+under uniform Layout scaling. The variable-width tally retains its original
+three pieces. Border pieces stay separate because their joining rows differ.

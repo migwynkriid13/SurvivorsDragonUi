@@ -66,20 +66,25 @@ DFRL:NewMod("RunTimers", 5, function()
         return texture
     end
 
-    local function Pill(name, fillName)
+    local function Pill(name, fillName, variableWidth)
         local frame = CreateFrame("Frame", name, UIParent)
         frame:SetWidth(BAR_WIDTH + 16)
         frame:SetHeight(31)
         frame:SetFrameStrata("HIGH")
         frame:EnableMouse(false)
 
-        local backgroundLeft = Texture(frame, "BackgroundLeft", "BACKGROUND", 29, 18, 29 / 32, 18 / 32)
-        backgroundLeft:SetPoint("LEFT", frame, "LEFT", 6, 0)
-        local backgroundRight = Texture(frame, "BackgroundRight", "BACKGROUND", 29, 18, 29 / 32, 18 / 32)
-        backgroundRight:SetPoint("RIGHT", frame, "RIGHT", -6, 0)
-        local backgroundCenter = Texture(frame, "BackgroundCenter", "BACKGROUND", BAR_WIDTH - 54, 18, 1, 18 / 32)
-        backgroundCenter:SetPoint("LEFT", backgroundLeft, "RIGHT", 0, 0)
-        backgroundCenter:SetPoint("RIGHT", backgroundRight, "LEFT", 0, 0)
+        if variableWidth then
+            local backgroundLeft = Texture(frame, "BackgroundLeft", "BACKGROUND", 29, 18, 29 / 32, 18 / 32)
+            backgroundLeft:SetPoint("LEFT", frame, "LEFT", 6, 0)
+            local backgroundRight = Texture(frame, "BackgroundRight", "BACKGROUND", 29, 18, 29 / 32, 18 / 32)
+            backgroundRight:SetPoint("RIGHT", frame, "RIGHT", -6, 0)
+            local backgroundCenter = Texture(frame, "BackgroundCenter", "BACKGROUND", BAR_WIDTH - 54, 18, 1, 18 / 32)
+            backgroundCenter:SetPoint("LEFT", backgroundLeft, "RIGHT", 0, 0)
+            backgroundCenter:SetPoint("RIGHT", backgroundRight, "LEFT", 0, 0)
+        else
+            local background = Texture(frame, "BackgroundFixed", "BACKGROUND", BAR_WIDTH + 4, 18, (BAR_WIDTH + 4) / 512, 18 / 32)
+            background:SetPoint("LEFT", frame, "LEFT", 6, 0)
+        end
 
         local bar = CreateFrame("StatusBar", nil, frame)
         bar:SetHeight(15)
@@ -185,15 +190,22 @@ DFRL:NewMod("RunTimers", 5, function()
                 return
             end
             local texture = piece.texture
-            texture:SetWidth(last - first)
-            texture:SetHeight(top - bottom)
+            local drawnWidth, drawnHeight = last - first, top - bottom
+            if piece.drawnWidth ~= drawnWidth then
+                texture:SetWidth(drawnWidth)
+                piece.drawnWidth = drawnWidth
+            end
+            if piece.drawnHeight ~= drawnHeight then
+                texture:SetHeight(drawnHeight)
+                piece.drawnHeight = drawnHeight
+            end
             texture:SetPoint("LEFT", bar, "LEFT", first, (bottom + top) / 2)
-            texture:SetTexCoord(
-                (first - left) / width,
-                (last - left) / width,
-                (y + height / 2 - top) / height,
-                (y + height / 2 - bottom) / height
-            )
+            local u1, u2 = (first - left) / width, (last - left) / width
+            local v1, v2 = (y + height / 2 - top) / height, (y + height / 2 - bottom) / height
+            if piece.u1 ~= u1 or piece.u2 ~= u2 or piece.v1 ~= v1 or piece.v2 ~= v2 then
+                texture:SetTexCoord(u1, u2, v1, v2)
+                piece.u1, piece.u2, piece.v1, piece.v2 = u1, u2, v1, v2
+            end
             texture:SetAlpha(alpha * 1.25)
             if not piece.shown then
                 texture:Show()
@@ -333,9 +345,17 @@ DFRL:NewMod("RunTimers", 5, function()
                 local first, last = math.max(0, left), math.min(filledWidth, left + FLOW_WIDTH)
                 if first < last then
                     local y = flow.y + 0.65 * math.sin(now * 1.7 + flow.phase)
-                    flow.texture:SetWidth(last - first)
+                    local drawnWidth = last - first
+                    if flow.drawnWidth ~= drawnWidth then
+                        flow.texture:SetWidth(drawnWidth)
+                        flow.drawnWidth = drawnWidth
+                    end
                     flow.texture:SetPoint("LEFT", bar, "LEFT", first, y)
-                    flow.texture:SetTexCoord((first - left) / FLOW_WIDTH, (last - left) / FLOW_WIDTH, 0, 1)
+                    local u1, u2 = (first - left) / FLOW_WIDTH, (last - left) / FLOW_WIDTH
+                    if flow.u1 ~= u1 or flow.u2 ~= u2 then
+                        flow.texture:SetTexCoord(u1, u2, 0, 1)
+                        flow.u1, flow.u2 = u1, u2
+                    end
                     if not flow.shown then
                         flow.texture:Show()
                         flow.shown = true
@@ -1252,7 +1272,7 @@ DFRL:NewMod("RunTimers", 5, function()
         bossGroup:SetPoint("TOP", UIParent, "TOP", 0, -77)
     end)
 
-    local tally, tallyBar, tallyTitle, tallyOverlay = Pill("DFRL_RunTallyPill", "FillYellow")
+    local tally, tallyBar, tallyTitle, tallyOverlay = Pill("DFRL_RunTallyPill", "FillYellow", true)
     tallyBar:SetValue(1)
     tallyBar:SetAlpha(0.4)
     tallyTitle:Hide()
@@ -1720,6 +1740,17 @@ DFRL:NewMod("RunTimers", 5, function()
                 marker:SetScript("OnLeave", function() HideMarkerTooltip(marker) end)
                 marker:SetScript("OnHide", function() HideMarkerTooltip(marker) end)
                 marker.glow = {}
+                marker.glowCardinal = CreateFrame("Frame", nil, marker)
+                marker.glowDiagonal = CreateFrame("Frame", nil, marker)
+                marker.glowCardinal:SetPoint("CENTER", marker, "CENTER", 0, 0)
+                marker.glowDiagonal:SetPoint("CENTER", marker, "CENTER", 0, 0)
+                marker.glowCardinal:SetWidth(2 * ACTIVE_GLOW_MIN_OFFSET)
+                marker.glowCardinal:SetHeight(2 * ACTIVE_GLOW_MIN_OFFSET)
+                marker.glowDiagonal:SetWidth(2 * ((1 / math.sqrt(2)) * ACTIVE_GLOW_MIN_OFFSET))
+                marker.glowDiagonal:SetHeight(2 * ((1 / math.sqrt(2)) * ACTIVE_GLOW_MIN_OFFSET))
+                marker.glowCardinal:Hide()
+                marker.glowDiagonal:Hide()
+                marker.glowOffset = ACTIVE_GLOW_MIN_OFFSET
                 -- Translucent copies trace the native skull silhouette. Their
                 -- offsets breathe inward/outward beneath the unchanged skull.
                 for x = -1, 1 do
@@ -1731,12 +1762,14 @@ DFRL:NewMod("RunTimers", 5, function()
                             glow:SetTexture(SKULL_ICON)
                             glow:SetWidth(MARKER_SIZE)
                             glow:SetHeight(MARKER_SIZE)
+                            local point = (y == 1 and "TOP" or y == -1 and "BOTTOM" or "")
+                                .. (x == 1 and "RIGHT" or x == -1 and "LEFT" or "")
                             glow:SetPoint(
                                 "CENTER",
-                                marker,
-                                "CENTER",
-                                dx * ACTIVE_GLOW_MIN_OFFSET,
-                                dy * ACTIVE_GLOW_MIN_OFFSET
+                                distance == 1 and marker.glowCardinal or marker.glowDiagonal,
+                                point,
+                                0,
+                                0
                             )
                             glow:SetVertexColor(1, 0.25, 0, 1)
                             glow:SetAlpha(ACTIVE_GLOW_MIN_ALPHA)
@@ -1810,10 +1843,16 @@ DFRL:NewMod("RunTimers", 5, function()
                     end
                 end
                 if state == "up" then
+                    if marker.glowOffset ~= glowOffset then
+                        local cardinalSide, diagonalSide = 2 * glowOffset, 2 * ((1 / math.sqrt(2)) * glowOffset)
+                        marker.glowCardinal:SetWidth(cardinalSide)
+                        marker.glowCardinal:SetHeight(cardinalSide)
+                        marker.glowDiagonal:SetWidth(diagonalSide)
+                        marker.glowDiagonal:SetHeight(diagonalSide)
+                        marker.glowOffset = glowOffset
+                    end
                     for _, glow in ipairs(marker.glow) do
                         glow.texture:SetAlpha(glowAlpha)
-                        glow.texture:ClearAllPoints()
-                        glow.texture:SetPoint("CENTER", marker, "CENTER", glow.x * glowOffset, glow.y * glowOffset)
                     end
                 end
                 if not marker:IsShown() then marker:Show() end
