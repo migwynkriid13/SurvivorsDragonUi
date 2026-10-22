@@ -38,16 +38,18 @@ It adds no gameplay clock, setting, SavedVariable or native client dependency.
 
 ## Exact artwork boundaries
 
-Jewelry keeps its existing magnified icon crop and stepped circular outline.
-The two identical central strips are merged into one continuous rectangle:
-13 regions per populated icon instead of 14, or 65 instead of 70 across five
-populated slots. Texture content and alpha outside that merge are unchanged.
+Jewelry keeps its existing magnified icon crop and stepped circular outline:
+14 regions per populated icon, or 70 across five populated slots. Even merging
+the geometrically identical central strips could change sampling at their
+shared seam on clients that clamp cropped UVs per quad, so their original
+partition remains unchanged.
 
 The native portrait conversion used by pet frames is not interchangeable here.
 The reviewed client masks portrait pixels before applying texture coordinates;
 the jewelry crop would enlarge that circle, and the partially transparent gold
 rim does not fully conceal the difference. No approximate native-circle
-replacement, prepared item images or new artwork are included.
+replacement, prepared item images or new artwork are included. The jewelry
+strip rendering cost remains; only its repeated hover presentation work changes.
 
 The timer also retains all existing cosmetic layers: 66 allocated textures,
 with at most 37 blue flow/foam pieces or 29 red sparkle/glow pieces visible at

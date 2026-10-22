@@ -374,25 +374,22 @@ DFRL:NewMod("Jewelry", 4, function()
         -- Ordinary cropped texture strips leave real transparency outside the
         -- icon's circle, without a black corner cover or retail texture masks.
         for part = 1, 16 do
-            -- The two central rows share their width and one affine UV span.
-            if part ~= 9 then
-                local top, bottom = (part - 1) * 2, part == 8 and 18 or part * 2
-                local edge = math.max(math.abs(top - 16), math.abs(bottom - 16))
-                local half = math.sqrt(math.max(0, 256 - edge * edge))
-                if half > 0 then
-                    local strip = button:CreateTexture(nil, "ARTWORK")
-                    strip:SetWidth(half * 2)
-                    strip:SetHeight(bottom - top)
-                    strip:SetPoint("TOPLEFT", button, "TOPLEFT", 16 - half, -top)
-                    strip:SetTexCoord(
-                        iconInset + (16 - half) * iconSpan / ICON_SIZE,
-                        iconInset + (16 + half) * iconSpan / ICON_SIZE,
-                        iconInset + top * iconSpan / ICON_SIZE,
-                        iconInset + bottom * iconSpan / ICON_SIZE
-                    )
-                    strip:Hide()
-                    table.insert(slot.strips, strip)
-                end
+            local top, bottom = (part - 1) * 2, part * 2
+            local edge = math.max(math.abs(top - 16), math.abs(bottom - 16))
+            local half = math.sqrt(math.max(0, 256 - edge * edge))
+            if half > 0 then
+                local strip = button:CreateTexture(nil, "ARTWORK")
+                strip:SetWidth(half * 2)
+                strip:SetHeight(2)
+                strip:SetPoint("TOPLEFT", button, "TOPLEFT", 16 - half, -top)
+                strip:SetTexCoord(
+                    iconInset + (16 - half) * iconSpan / ICON_SIZE,
+                    iconInset + (16 + half) * iconSpan / ICON_SIZE,
+                    iconInset + top * iconSpan / ICON_SIZE,
+                    iconInset + bottom * iconSpan / ICON_SIZE
+                )
+                strip:Hide()
+                table.insert(slot.strips, strip)
             end
         end
         local cooldown = button:CreateTexture(nil, "OVERLAY")
