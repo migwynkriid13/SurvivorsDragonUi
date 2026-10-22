@@ -464,7 +464,12 @@ DFRL:NewMod("Bars", 1, function()
         _G.this = previousThis
         CreateCooldownNumbers(mainBar)
         local selectionEvents = CreateFrame("Frame", nil, mainBar)
-        for _, name in ipairs({ "ACTIONBAR_SLOT_CHANGED", "PLAYER_LEAVING_WORLD", "PLAYER_ENTERING_WORLD", "PLAYER_LOGOUT" }) do
+        for _, name in ipairs({
+            "ACTIONBAR_SLOT_CHANGED",
+            "PLAYER_LEAVING_WORLD",
+            "PLAYER_ENTERING_WORLD",
+            "PLAYER_LOGOUT",
+        }) do
             selectionEvents:RegisterEvent(name)
         end
         selectionEvents:SetScript("OnEvent", ClearSelection)
