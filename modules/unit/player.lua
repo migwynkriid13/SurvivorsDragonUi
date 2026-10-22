@@ -200,6 +200,14 @@ DFRL:NewMod("Player", 1, function()
         initialized = true
         PlayerFrame:SetScale(1)
         PlayerFrame:Show()
+        -- Unit clicks need no locked button highlight or reminder flash.
+        PlayerFrame:UnlockHighlight()
+        PlayerFrame.LockHighlight = PlayerFrame.UnlockHighlight
+        local highlight = PlayerFrame:GetHighlightTexture()
+        if highlight then
+            highlight:SetAlpha(0)
+            highlight:Hide()
+        end
         updateBorder, setPowerShown, setPortraitOverlap = T.CreateUnitBorder(
             PlayerFrame,
             PlayerFrameHealthBar,

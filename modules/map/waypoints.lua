@@ -120,6 +120,7 @@ DFRL:NewMod("Waypoints", 3, function()
             for _, tracker in ipairs(trackers) do
                 if not kind or tracker.kind == kind then RecyclePins(tracker, nil) end
             end
+            if not kind then navigation.UpdateMinimapPlayer(false) end
             if pendingZoom and (pendingZoom.retry or retryZoom) and not probing then RollbackZoom() end
         end
 
@@ -245,7 +246,7 @@ DFRL:NewMod("Waypoints", 3, function()
             pin:Hide()
             pin:SetWidth(size)
             pin:SetHeight(size)
-            pin:SetFrameLevel(Minimap:GetFrameLevel() + (tracker.kind == "guardian" and 11 or 10))
+            pin:SetFrameLevel(navigation.MinimapLevel(tracker.kind))
             pin:EnableMouse(false)
             local art = pin:CreateTexture(nil, "OVERLAY")
             art:SetTexture(texturePath .. tracker.hudArt)
@@ -320,6 +321,7 @@ DFRL:NewMod("Waypoints", 3, function()
                 RestoreNativeFlag()
                 return
             end
+            navigation.StyleMinimap()
             -- Flag ownership does not depend on a destination or its geometry:
             -- empty/dead lairs and snapshot refreshes must never restore it.
             if DFRL.display.Get("guardianGuidance") then
@@ -338,9 +340,12 @@ DFRL:NewMod("Waypoints", 3, function()
                     break
                 end
             end
+            local pinsVisible = false
             for _, tracker in ipairs(trackers) do
                 UpdateTrackerPins(tracker, scale, edge)
+                if next(tracker.minimapPins) then pinsVisible = true end
             end
+            navigation.UpdateMinimapPlayer(pinsVisible)
         end
 
         StopMinimapPins = function()

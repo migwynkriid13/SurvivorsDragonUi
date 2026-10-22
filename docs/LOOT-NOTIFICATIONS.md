@@ -24,7 +24,8 @@ handler, roll button, sound, collection subtitle or slot line is added.
 
 Explicit native **already collected** status is rejected before queueing,
 metadata resolution or sequence assignment. The view repeats that guard before
-accepting any entry. Compact chat retains those messages and their wording.
+accepting any entry. Regular chat also hides that same explicit `collected`
+result from the shared parser; raw diagnostics retain the original input.
 Absent collection status stays unknown and is eligible; no collection database
 or item-name inference decides whether a drop is new.
 

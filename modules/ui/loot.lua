@@ -3,28 +3,13 @@
 DFRL:NewMod("LootNotifications", 0, function()
     local loot = {}
     DFRL.loot = loot
-    local renderer, nativePreference
-    local inWorld, active, applying = true, false, false
+    local renderer
+    local native = T.NewHudOwner("loot", "hudLoot")
+    local inWorld, active = true, false
     local queue, count, sequence, age = {}, 0, 0, 0
     local MAX_QUEUE = 32
     local controller = CreateFrame("Frame")
 
-    local function Shown(value)
-        if value == true or value == 1 or value == "1" then return true end
-        if value == false or value == 0 or value == "0" then return false end
-    end
-    local function ReadNative()
-        if type(AZS_IsHudShown) ~= "function" then return nil end
-        local ok, value = pcall(AZS_IsHudShown, "loot")
-        if ok then return Shown(value) end
-    end
-    local function WriteNative(shown)
-        if applying or type(AZS_SetHudShown) ~= "function" then return false end
-        applying = true
-        local ok = pcall(AZS_SetHudShown, "loot", shown)
-        applying = false
-        return ok
-    end
     local function Clear()
         for index = 1, count do
             queue[index] = nil
@@ -35,16 +20,7 @@ DFRL:NewMod("LootNotifications", 0, function()
     end
     local function Release()
         active = false
-        if nativePreference ~= nil then
-            local current = ReadNative()
-            -- A later external value that no longer matches our suppression
-            -- wins. An originally hidden preference must remain hidden too.
-            if current == nil then return end
-            if current == false and current ~= nativePreference then
-                if not WriteNative(nativePreference) or ReadNative() ~= nativePreference then return end
-            end
-            nativePreference = nil
-        end
+        native.Release()
     end
     local function Ready()
         if not inWorld or not renderer then return false end
@@ -53,25 +29,13 @@ DFRL:NewMod("LootNotifications", 0, function()
     end
     local function Refresh()
         if not Ready() then
-            if active or nativePreference ~= nil then
+            if active or native.IsCaptured() then
                 Clear()
                 Release()
             end
             return false
         end
-        if type(AZS_SetHudShown) ~= "function" then
-            Clear()
-            Release()
-            return false
-        end
-        local shown = ReadNative()
-        if shown == nil then
-            Clear()
-            Release()
-            return false
-        end
-        if nativePreference == nil then nativePreference = shown end
-        if shown and (not WriteNative(false) or ReadNative() ~= false) then
+        if not native.Acquire() then
             Clear()
             Release()
             return false
@@ -213,11 +177,7 @@ DFRL:NewMod("LootNotifications", 0, function()
             controller:SetScript("OnUpdate", nil)
             Clear()
             Release()
-        elseif not applying and type(arg1) == "string" and string.lower(arg1) == "hudloot" then
-            if nativePreference ~= nil then
-                local shown = ReadNative()
-                if shown ~= nil then nativePreference = shown end
-            end
+        elseif native.Observe(arg1) then
             Refresh()
         end
     end)

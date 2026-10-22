@@ -106,6 +106,17 @@ local function Label(parent, size, text)
     return label
 end
 
+local function Hover(button, inset, alpha)
+    local hover = Artwork(button, "choice", "ARTWORK", 0, 187 / 256, 32 / 64, 53 / 64)
+    hover:SetPoint("TOPLEFT", button, "TOPLEFT", inset, -inset)
+    hover:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -inset, inset)
+    hover:SetAlpha(alpha)
+    hover:Hide()
+    button:SetScript("OnEnter", function() hover:Show() end)
+    button:SetScript("OnLeave", function() hover:Hide() end)
+    button:SetScript("OnHide", function() hover:Hide() end)
+end
+
 function DFRL.tools.CreateEditorPanel(parent, width, height, borderSize)
     local frame = CreateFrame("Frame", nil, parent)
     frame:SetWidth(width)
@@ -137,10 +148,7 @@ function DFRL.tools.CreateEditorButton(parent, text, width, height, primary)
     selected:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -4, 4)
     selected:SetAlpha(primary and 0.2 or 0.15)
     selected:Hide()
-    local hover = Artwork(button, "choice", "HIGHLIGHT", 0, 187 / 256, 32 / 64, 53 / 64)
-    hover:SetPoint("TOPLEFT", button, "TOPLEFT", 4, -4)
-    hover:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -4, 4)
-    hover:SetAlpha(0.16)
+    Hover(button, 4, 0.45)
     button.label = Label(button, 12, text)
     button.label:SetPoint("CENTER", button, "CENTER", 0, 0)
     button.label:SetWidth(math.max(1, width - 12))
@@ -176,6 +184,31 @@ function DFRL.tools.CreateEditorInput(parent, width, height)
     return box
 end
 
+function DFRL.tools.CreateEditorCategory(parent, text, width, height)
+    local button = DFRL.tools.CreateEditorButton(parent, text, width, height)
+    button.label:ClearAllPoints()
+    button.label:SetPoint("LEFT", button, "LEFT", 16, 0)
+    button.label:SetWidth(math.max(1, width - 28))
+    button.label:SetJustifyH("LEFT")
+    local accent = button:CreateTexture(nil, "OVERLAY")
+    accent:SetTexture("Interface\\Buttons\\WHITE8X8")
+    accent:SetVertexColor(1, 0.83, 0.38, 1)
+    accent:SetWidth(2)
+    accent:SetPoint("TOPLEFT", button, "TOPLEFT", 7, -8)
+    accent:SetPoint("BOTTOMLEFT", button, "BOTTOMLEFT", 7, 8)
+    accent:Hide()
+    local select = button.SetSelected
+    function button:SetSelected(value)
+        select(self, value)
+        if self.editorSelected then
+            accent:Show()
+        else
+            accent:Hide()
+        end
+    end
+    return button
+end
+
 function DFRL.tools.EditorDivider(parent, width)
     local divider = Artwork(parent, "divider", "ARTWORK", 0, 630 / 1024, 0, 1)
     divider:SetWidth(width)
@@ -195,10 +228,7 @@ function DFRL.tools.CreateEditorToggle(parent, text, description, width, callbac
     local mark = Artwork(button, "checkbox", "OVERLAY", 32 / 64, 62 / 64, 0, 29 / 32)
     mark:SetAllPoints(checkbox)
     mark:Hide()
-    local hover = Artwork(button, "choice", "HIGHLIGHT", 0, 187 / 256, 32 / 64, 53 / 64)
-    hover:SetPoint("TOPLEFT", button, "TOPLEFT", 0, -2)
-    hover:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", 0, 2)
-    hover:SetAlpha(0.09)
+    Hover(button, 2, 0.22)
     button.label = Label(button, 12, text)
     button.label:SetPoint("TOPLEFT", button, "TOPLEFT", 32, description and -7 or -14)
     button.label:SetWidth(math.max(1, width - 36))

@@ -2,6 +2,12 @@
 DFRL:NewMod("Display", 0, function()
     local display, listeners, draft = {}, {}, nil
     local defaults = {
+        customBanners = true,
+        petRows = 6,
+        petSpacing = 4,
+        hidePetNames = false,
+        hidePetCounts = false,
+        hidePetTimers = true,
         bossDebuffs = true,
         guardiansInBossBar = false,
         targetDebuffsOnTop = false,
@@ -33,19 +39,32 @@ DFRL:NewMod("Display", 0, function()
     }
     DFRL.display = display
 
-    local function NormalizeScale(value)
+    local ranges = {
+        sctScale = { minimum = 0.25, maximum = 2 },
+        petRows = { minimum = 1, maximum = 6, integer = true },
+        petSpacing = { minimum = 0, maximum = 60, integer = true },
+    }
+    local function NormalizeNumber(key, value)
         if type(value) ~= "number" or value - value ~= 0 then return nil end
-        return math.max(0.25, math.min(2, value))
+        local range = ranges[key]
+        value = math.max(range.minimum, math.min(range.maximum, value))
+        return range.integer and math.floor(value + 0.5) or value
     end
     local function Read(source, key)
         local value
         if type(source) == "table" then value = source[key] end
-        if key == "sctScale" then return NormalizeScale(value) or defaults.sctScale end
+        if ranges[key] then return NormalizeNumber(key, value) or defaults[key] end
         if type(value) == "boolean" then return value end
         return defaults[key]
     end
     local function Normalize(source)
         return {
+            customBanners = Read(source, "customBanners"),
+            petRows = Read(source, "petRows"),
+            petSpacing = Read(source, "petSpacing"),
+            hidePetNames = Read(source, "hidePetNames"),
+            hidePetCounts = Read(source, "hidePetCounts"),
+            hidePetTimers = Read(source, "hidePetTimers"),
             bossDebuffs = Read(source, "bossDebuffs"),
             guardiansInBossBar = Read(source, "guardiansInBossBar"),
             targetDebuffsOnTop = Read(source, "targetDebuffsOnTop"),
@@ -88,8 +107,8 @@ DFRL:NewMod("Display", 0, function()
     end
     function display.Set(key, value)
         if not draft or defaults[key] == nil then return end
-        if key == "sctScale" then
-            value = NormalizeScale(value)
+        if ranges[key] then
+            value = NormalizeNumber(key, value)
             if not value then return end
         elseif type(value) ~= "boolean" then
             return

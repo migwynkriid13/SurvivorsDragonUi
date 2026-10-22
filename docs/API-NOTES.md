@@ -1,5 +1,20 @@
 # Official addon API integration — 2026-10-14
 
+## Supplied summon API reference — 2026-10-22
+
+The [latest supplied API reference](AzerothSurvivors-Addon-API-2026-10-22.txt)
+is preserved verbatim alongside the earlier Markdown and 2026-10-15 copies.
+The date records receipt; the supplied text does not identify a game version.
+It documents `AZS_GetSummons`, `AZS_GetSummonCount`, `AZS_GetSummonGroups`,
+`AZS_PETS` and the `AZSPETS` update prefix for every class and spec.
+
+The [summon API assessment](SUMMONS-API.md) explains the new counts, native
+icons and run-clock lifetimes, their limits, and the effect on our current pet
+frame and SCT filter. The [pet-frame group](PET-FRAMES.md) now uses this roster
+for up to eight names, native icons and lifetimes. The API does not identify the
+source of unattributed SELF combat messages, including the reported Imp
+Fireball. No existing API removal is stated in the supplied reference.
+
 ## Endless boss countdown — 2026-10-21
 
 After the native phase check, a received `AZS_RUN.endl == 1` switches the run
@@ -50,8 +65,10 @@ were changed for this update.
 The same embedded API adds `AZS_RegisterBannerHandler` and
 `AZS_UnregisterBannerHandler`, delivering banner tables with `id`, `kind`, `boss`,
 `name`, `text` and receipt `time` even when native banners are hidden.
-`AZS_BANNERS` retains the newest 20 entries. These are available for future banner
-work; the timer fix does not register a handler or replace native banners.
+`AZS_BANNERS` retains the newest 20 entries. The later replacement in
+[RUN-BANNERS.md](RUN-BANNERS.md) consumes future callbacks and also redirects the
+separate legacy `RaidBossEmoteFrame` display path. Its independent **Banners**
+Layout group leaves the timer bounds and original default boss position intact.
 
 Source fingerprint: installed `AzerothSurvivors.exe`, SHA-256
 `dc0040043fff7995a9137d96509c08debd1dbf8b0125a935273d718c66cb698b`.
@@ -165,6 +182,8 @@ This supplies everything needed for SurvivorsDragonUi's native run-progress and 
 `modules/ui/run.lua` consumes these APIs directly. There is no companion sequence/acknowledgement protocol, independent run clock or heartbeat timeout. The native getter owns interpolation and pauses. The local 0.1-second accumulator only throttles list refreshes. The user-authorized reload-only schedule handoff below preserves already-received facts without writing native API tables.
 
 The official document corrects the earlier assumption that every zone lasts 16 minutes: duration and spawn times are zone-specific. Elwynn Forest remains 960 seconds with spawns at 3, 6, 9, 12 and 16 minutes. Other zones use their native duration and full schedule. The addon validates that full schedule and displays every scheduled skull. Native `due` entries keep the default full-size, opaque skull; `up` entries add a red/orange glow underneath the unchanged skull; `dead` entries use an 80%-size skull at 70% opacity with a green checkmark and no active glow. The checkmark means the boss was killed, based only on the official schedule state. Only the fill is clamped after the final-boss time, allowing elapsed time to continue in endless mode.
+
+Hovering a visible timer skull shows its native schedule `name` unchanged. The normalized schedule retains that name through the existing reload-only handoff. Missing or empty names, including older handoffs without names, leave valid skulls visible without a tooltip or guessed boss identity. Pooled markers refresh an owned tooltip when their name changes and hide only their own tooltip on mouse leave, marker or parent hiding, retirement and clock release. The hit area remains the existing 18-by-18 marker; timing, appearance and layout geometry stay unchanged. Local checks and addon/game execution were intentionally not run; hover behavior remains unverified in-game.
 
 Every live boss and engaged guardian has its own spawn-id key and health pill, with no addon-imposed four-row limit. Guardians are shown only when their documented `awake` flag is true (or native numeric 1); sleeping guardians are omitted. This keeps map-wide dormant lairs from bloating the HUD, while engaged enemies remain visible even at full health. Do not use `enraged` (a low-health state), selection or missing HP as an engagement test. The API's `hpm` maximum-health field replaces the private JSON's old `hpMax` field. All returned native lists remain read-only.
 

@@ -380,7 +380,7 @@ DFRL:NewMod("RunTimers", 5, function()
     }
     local currentFont, fontDraft, fontEditor, fontSample, fontSampleClock, fontMenu
     local faceLabel, sizeLabel, shadowControl, visibilityControl
-    local displayControls, outlineButtons, faceButtons, sctButtons = {}, {}, {}, {}
+    local displayControls, displayNumbers, outlineButtons, faceButtons, sctButtons = {}, {}, {}, {}, {}
     local incomingControl, sctDescription
     local sctSizeLabel
 
@@ -403,6 +403,9 @@ DFRL:NewMod("RunTimers", 5, function()
     local function UpdateDisplayLabels()
         if sctSizeLabel then
             sctSizeLabel:SetText(tostring(math.floor(DFRL.display.Get("sctScale") * 100 + 0.5)) .. "%")
+        end
+        for key, label in pairs(displayNumbers) do
+            label:SetText(tostring(DFRL.display.Get(key)))
         end
         for key, control in pairs(displayControls) do
             control:SetChecked(DFRL.display.Get(key))
@@ -526,22 +529,25 @@ DFRL:NewMod("RunTimers", 5, function()
     end
 
     local runClock = NewClockLabel(runText)
-    local bossClock = NewClockLabel(bossText, "Boss in: %s")
+    -- Both captions resolve the same face, including translated RUN fallback.
+    local bossClock = NewClockLabel(bossText, "RUN")
     local function UpdateRunFontBounds()
         local width = currentFont.showText and (runText:GetStringWidth() or 0) or 0
         local overflow = math.max(0, (width + 8 - run:GetWidth()) / 2)
+        local pixel = math.max(runClock.pixel or 0, bossClock.pixel or 0)
+        local inset = runClock.endless and 5 * pixel or 0
         runText:ClearAllPoints()
         bossText:ClearAllPoints()
         if runClock.endless then
             local bossWidth = bossClock.visible and (bossText:GetStringWidth() or 0) or 0
             -- Keep the captions apart at large font sizes or with wider translations.
-            overflow = math.max(0, (width + bossWidth + 8 - run:GetWidth()) / 2)
-            runText:SetPoint("BOTTOMLEFT", run, "TOPLEFT", -overflow, 2)
+            overflow = math.max(0, (width + bossWidth + 8 + 2 * inset - run:GetWidth()) / 2)
+            runText:SetPoint("BOTTOMLEFT", run, "TOPLEFT", inset - overflow, 2)
         else
             runText:SetPoint("BOTTOM", run, "TOP", 0, 2)
         end
-        bossText:SetPoint("BOTTOMRIGHT", run, "TOPRIGHT", overflow, 2)
-        local pixel = math.max(runClock.pixel or 0, bossClock.pixel or 0)
+        bossText:SetPoint("BOTTOMRIGHT", run, "TOPRIGHT", overflow - inset, 2)
+        overflow = math.max(0, overflow - inset)
         local top = currentFont.showText and currentFont.size + 4 + pixel or 0
         runMoveRegion:ClearAllPoints()
         runMoveRegion:SetPoint("TOPLEFT", run, "TOPLEFT", -overflow, top)
@@ -596,7 +602,7 @@ DFRL:NewMod("RunTimers", 5, function()
             -- spawn's new deadline. Never rebuild it from a fixed five minutes.
             local remaining = math.ceil(state.nb)
             local time = string.format("%d:%02d", math.floor(remaining / 60), math.mod(remaining, 60))
-            countdown = string.format(DFRL.locale.Text("Boss in: %s"), time)
+            countdown = string.format(DFRL.locale.Text("BOSS IN: %s"), time)
         end
         if SetClockLabelText(bossClock, countdown, currentFont.showText and countdown ~= "") then changed = true end
         if changed then UpdateRunFontBounds() end
@@ -632,8 +638,17 @@ DFRL:NewMod("RunTimers", 5, function()
         PreviewFont(fontDraft)
     end
 
+    local function FitFontEditor()
+        if not fontEditor then return end
+        local screenWidth, screenHeight = T.GetLocalSize(UIParent)
+        local scale =
+            math.min(1, (screenWidth - 20) / fontEditor:GetWidth(), (screenHeight - 20) / fontEditor:GetHeight())
+        if scale > 0 and not T.NearlyEqual(fontEditor:GetScale(), scale) then fontEditor:SetScale(scale) end
+    end
+
     local function PlaceFontEditor()
         if not fontEditor then return end
+        FitFontEditor()
         fontEditor:ClearAllPoints()
         fontEditor:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
     end
@@ -650,11 +665,110 @@ DFRL:NewMod("RunTimers", 5, function()
         local function TextWidth(text) return DFRL.locale.Width(measure, text) end
         local padding, gap = 20, 8
         local labelWidth = math.max(TextWidth("Font"), TextWidth("Size"), TextWidth("Outline"))
-        local dropdownWidth, tabWidth, modeWidth = 0, 0, 0
-        local tabs = {
+        local dropdownWidth, sidebarWidth, modeWidth = 0, 148, 0
+        local categories = {
             { key = "layout", label = "Layout" },
-            { key = "hud", label = "HUD" },
-            { key = "combat", label = "Combat text" },
+            {
+                key = "units",
+                label = "Unit frames",
+                gapBefore = 8,
+                options = {
+                    { "classHealth", "Class-colored health", "Use your vanilla class color for player health." },
+                    {
+                        "healthLossAnimation",
+                        "Health loss animation",
+                        "Show recently lost health fading out on unit frames.",
+                    },
+                    { "classResources", "Class resources", "Show power inside the player frame." },
+                    {
+                        "roundPlayerPortrait",
+                        "Round player portrait",
+                        "Use the target's circular border without the pointed corner.",
+                    },
+                    {
+                        "playerPortrait3D",
+                        "Experimental 3D portraits",
+                        "Use 3D for player, target and target-of-target.",
+                    },
+                },
+            },
+            {
+                key = "pets",
+                label = "Pet frames",
+                options = {
+                    { "petRows", "Rows", "Arrange pet groups in one to six rows.", step = 1 },
+                    { "petSpacing", "Spacing", "Gap between pet groups.", step = 1 },
+                    { "hidePetNames", "Hide names", "Hide pet names beside the portraits." },
+                    { "hidePetCounts", "Hide counts", "Hide the x2, x3 summon count." },
+                    { "hidePetTimers", "Hide timers", "Hide the remaining summon duration." },
+                },
+            },
+            {
+                key = "bosses",
+                label = "Boss bars",
+                options = {
+                    { "bossDebuffs", "Boss debuffs", "Effects on boss and guardian health bars." },
+                    { "guardiansInBossBar", "Guardians in boss bar", "Off: show only bosses in the boss bar." },
+                },
+            },
+            {
+                key = "auras",
+                label = "Auras",
+                options = {
+                    { "flipBuffs", "Flip buff layout", "Flip icon order only; keep text placement." },
+                    { "targetDebuffsOnTop", "Target debuffs on top", "Place target debuffs above the target frame." },
+                },
+            },
+            {
+                key = "abilities",
+                label = "Action bar",
+                options = {
+                    { "cooldownNumbers", "Cooldown numbers", "Show countdowns on ability buttons." },
+                    {
+                        "hideNativeBuild",
+                        "Hide default jewelry / abilities",
+                        "Off: show the game's original jewelry and ability rows.",
+                    },
+                },
+            },
+            {
+                key = "jewelry",
+                label = "Equipped jewelry",
+                options = {
+                    { "equippedJewelry", "Equipped jewelry", "Show five equipped items attached to the action bar." },
+                    {
+                        "attachJewelry",
+                        "Attach jewelry to action bar",
+                        "Off: move jewelry separately, keeping the silver rims.",
+                    },
+                },
+            },
+            {
+                key = "waypoints",
+                label = "Waypoints",
+                options = {
+                    { "cacheGuidance", "Cache guidance", "Show the cache direction and distance." },
+                    {
+                        "mirrorCacheWaypoint",
+                        "Mirror cache waypoint",
+                        "Move the arrow to the left and the icon to the right.",
+                    },
+                    { "guardianGuidance", "Guardian guidance", "Show the guardian lair direction and distance." },
+                    {
+                        "mirrorGuardianWaypoint",
+                        "Mirror guardian waypoint",
+                        "Move the arrow to the left and the icon to the right.",
+                    },
+                },
+            },
+            {
+                key = "banners",
+                label = "Banners",
+                options = {
+                    { "customBanners", "Custom banners", "Off: use the game's original banners." },
+                },
+            },
+            { key = "combat", label = "Combat text", gapBefore = 8 },
             { key = "timer", label = "Run timer" },
         }
         local modes = {
@@ -684,54 +798,11 @@ DFRL:NewMod("RunTimers", 5, function()
                 },
             },
         }
-        local hudOptions = {
-            { "classHealth", "Class-colored health", "Use your vanilla class color for player health." },
-            { "healthLossAnimation", "Health loss animation", "Show recently lost health fading out on unit frames." },
-            { "classResources", "Class resources", "Show power inside the player frame." },
-            {
-                "roundPlayerPortrait",
-                "Round player portrait",
-                "Use the target's circular border without the pointed corner.",
-            },
-            {
-                "playerPortrait3D",
-                "Experimental 3D portraits",
-                "Use 3D for player, target and target-of-target.",
-            },
-            { "flipBuffs", "Flip buff layout", "Flip icon order only; keep text placement." },
-            { "cooldownNumbers", "Cooldown numbers", "Show countdowns on ability buttons." },
-            { "bossDebuffs", "Boss debuffs", "Effects on boss and guardian health bars." },
-            { "cacheGuidance", "Cache guidance", "Show the cache direction and distance." },
-            {
-                "mirrorCacheWaypoint",
-                "Mirror cache waypoint",
-                "Move the arrow to the left and the icon to the right.",
-            },
-            { "guardianGuidance", "Guardian guidance", "Show the guardian lair direction and distance." },
-            {
-                "mirrorGuardianWaypoint",
-                "Mirror guardian waypoint",
-                "Move the arrow to the left and the icon to the right.",
-            },
-            { "targetDebuffsOnTop", "Target debuffs on top", "Place target debuffs above the target frame." },
-            { "equippedJewelry", "Equipped jewelry", "Show five equipped items attached to the action bar." },
-            {
-                "hideNativeBuild",
-                "Hide default jewelry / abilities",
-                "Off: show the game's original jewelry and ability rows.",
-            },
-            {
-                "attachJewelry",
-                "Attach jewelry to action bar",
-                "Off: move jewelry separately, keeping the silver rims.",
-            },
-            { "guardiansInBossBar", "Guardians in boss bar", "Off: show only bosses in the boss bar." },
-        }
         for _, entry in ipairs(fontFaces) do
             dropdownWidth = math.max(dropdownWidth, TextWidth(entry.label) + 36)
         end
-        for _, entry in ipairs(tabs) do
-            tabWidth = math.max(tabWidth, TextWidth(entry.label) + 32)
+        for _, entry in ipairs(categories) do
+            sidebarWidth = math.max(sidebarWidth, TextWidth(entry.label) + 32)
         end
         for _, entry in ipairs(modes) do
             modeWidth = math.max(modeWidth, TextWidth(entry.label) + 24)
@@ -744,8 +815,15 @@ DFRL:NewMod("RunTimers", 5, function()
             end
         end
         local hudOptionWidth = 0
-        for _, entry in ipairs(hudOptions) do
-            hudOptionWidth = math.max(hudOptionWidth, TextWidth(entry[2]) + 36, TextWidth(entry[3]) / 2 + 36)
+        for _, category in ipairs(categories) do
+            for _, entry in ipairs(category.options or {}) do
+                local controlsWidth = entry.step and 156 or 36
+                hudOptionWidth = math.max(
+                    hudOptionWidth,
+                    TextWidth(entry[2]) + controlsWidth,
+                    TextWidth(entry[3]) / 2 + controlsWidth
+                )
+            end
         end
         local outlineWidth = 0
         for _, entry in ipairs(fontOutlines) do
@@ -754,21 +832,18 @@ DFRL:NewMod("RunTimers", 5, function()
         local defaultsWidth = TextWidth("Addon defaults") + 24
         local instructions = "Drag frames to move. Drag corners to resize."
         local contentWidth = math.max(
-            tabWidth * table.getn(tabs) + gap * (table.getn(tabs) - 1),
             modeWidth * 3 + gap * 2,
             filterWidth * 2 + gap,
             filterHeadingWidth,
-            hudOptionWidth * 2 + gap + 24,
+            hudOptionWidth + 24,
             (TextWidth("SCT size") + gap + 136) * 2 + gap,
             labelWidth + gap + dropdownWidth,
             labelWidth + gap + outlineWidth * 3 + gap * 2,
             defaultsWidth * 2 + 140 + gap * 4,
             TextWidth(instructions)
         )
-        local screenWidth = T.GetLocalSize(UIParent)
-        local width = math.min(contentWidth + padding * 2, math.max(320, screenWidth - 20))
-        contentWidth = width - padding * 2
-        local inputX = padding + labelWidth + gap
+        local contentLeft = padding + sidebarWidth + 24
+        local width = contentLeft + contentWidth + padding
         dropdownWidth = contentWidth - labelWidth - gap
 
         fontEditor = T.CreateEditorPanel(UIParent, width, 596)
@@ -784,6 +859,7 @@ DFRL:NewMod("RunTimers", 5, function()
             fontEditor:StartMoving()
         end)
         fontEditor:SetScript("OnDragStop", FinishFontEditorDrag)
+        fontEditor:SetScript("OnShow", FitFontEditor)
         local title = FontEditorLabel(fontEditor, "SurvivorsDragonUi", 0, 0, 17)
         title:ClearAllPoints()
         title:SetPoint("TOP", fontEditor, "TOP", 0, -18)
@@ -793,7 +869,22 @@ DFRL:NewMod("RunTimers", 5, function()
         hint:SetPoint("TOP", fontEditor, "TOP", 0, -49)
         hint:SetTextColor(0.75, 0.73, 0.67)
 
-        local pages, tabButtons = {}, {}
+        local sidebar = CreateFrame("Frame", nil, fontEditor)
+        sidebar:SetPoint("TOPLEFT", fontEditor, "TOPLEFT", padding - 6, -76)
+        sidebar:SetWidth(sidebarWidth + 12)
+        sidebar:SetHeight(448)
+        sidebar:EnableMouse(false)
+        local sidebarFill = sidebar:CreateTexture(nil, "BACKGROUND")
+        sidebarFill:SetTexture("Interface\\Buttons\\WHITE8X8")
+        sidebarFill:SetVertexColor(0.018, 0.02, 0.024, 0.88)
+        sidebarFill:SetAllPoints(sidebar)
+        local separator = fontEditor:CreateTexture(nil, "BORDER")
+        separator:SetTexture("Interface\\Buttons\\WHITE8X8")
+        separator:SetVertexColor(0.45, 0.38, 0.23, 0.5)
+        separator:SetWidth(1)
+        separator:SetPoint("TOPLEFT", fontEditor, "TOPLEFT", contentLeft - 12, -76)
+        separator:SetPoint("BOTTOMLEFT", fontEditor, "TOPLEFT", contentLeft - 12, -524)
+        local pages, categoryButtons = {}, {}
         local function SelectPage(key)
             if fontMenu then fontMenu:Hide() end
             for pageKey, page in pairs(pages) do
@@ -802,26 +893,33 @@ DFRL:NewMod("RunTimers", 5, function()
                 else
                     page:Hide()
                 end
-                tabButtons[pageKey]:SetSelected(pageKey == key)
+                categoryButtons[pageKey]:SetSelected(pageKey == key)
             end
         end
-        local tabSize = (contentWidth - gap * (table.getn(tabs) - 1)) / table.getn(tabs)
         local modeSize = (contentWidth - gap * 2) / 3
-        for index, entry in ipairs(tabs) do
+        local sidebarY, categoryGaps = -6, 0
+        for _, entry in ipairs(categories) do
+            categoryGaps = categoryGaps + (entry.gapBefore or 0)
+        end
+        local categoryPitch =
+            math.min(42, math.floor((sidebar:GetHeight() - 12 - categoryGaps + 6) / table.getn(categories)))
+        for _, entry in ipairs(categories) do
             local key = entry.key
             local page = CreateFrame("Frame", nil, fontEditor)
-            page:SetPoint("TOPLEFT", fontEditor, "TOPLEFT", padding, -130)
+            page:SetPoint("TOPLEFT", fontEditor, "TOPLEFT", contentLeft, -130)
             page:SetWidth(contentWidth)
             page:SetHeight(396)
             page:SetFrameLevel(152)
             pages[key] = page
-            local button = T.CreateEditorButton(fontEditor, entry.label, tabSize, 30)
-            button:SetPoint("TOPLEFT", fontEditor, "TOPLEFT", padding + (index - 1) * (tabSize + gap), -76)
+            local button = T.CreateEditorCategory(sidebar, entry.label, sidebarWidth, categoryPitch - 6)
+            sidebarY = sidebarY - (entry.gapBefore or 0)
+            button:SetPoint("TOPLEFT", sidebar, "TOPLEFT", 6, sidebarY)
+            sidebarY = sidebarY - categoryPitch
             button:SetScript("OnClick", function() SelectPage(key) end)
-            tabButtons[key] = button
+            categoryButtons[key] = button
         end
         local divider = T.EditorDivider(fontEditor, contentWidth)
-        divider:SetPoint("TOPLEFT", fontEditor, "TOPLEFT", padding, -116)
+        divider:SetPoint("TOPLEFT", fontEditor, "TOPLEFT", contentLeft, -116)
 
         DFRL.layout.CreateControls(pages.layout, contentWidth, function() SelectPage("layout") end)
 
@@ -837,43 +935,77 @@ DFRL:NewMod("RunTimers", 5, function()
             displayControls[key] = control
             return control
         end
-        local hudScroll =
-            CreateFrame("ScrollFrame", "SurvivorsDragonUiHudOptionsScroll", pages.hud, "UIPanelScrollFrameTemplate")
-        hudScroll:SetPoint("TOPLEFT", pages.hud, "TOPLEFT", 0, 0)
-        hudScroll:SetPoint("BOTTOMRIGHT", pages.hud, "BOTTOMRIGHT", -24, 0)
-        local hudWidth = contentWidth - 24
-        local hudColumnWidth, hudRowHeight = (hudWidth - gap) / 2, 60
-        local hud = CreateFrame("Frame", nil, hudScroll)
-        hud:SetWidth(hudWidth)
-        hud:SetHeight(math.ceil(table.getn(hudOptions) / 2) * hudRowHeight)
-        hudScroll:SetScrollChild(hud)
-        local function ScrollHud(direction)
-            local slider = _G.SurvivorsDragonUiHudOptionsScrollScrollBar
-            if not slider then return end
-            local low, high = slider:GetMinMaxValues()
-            local value = slider:GetValue() - (direction or arg1 or 0) * hudRowHeight
-            slider:SetValue(math.max(low, math.min(high, value)))
+        local function DisplayNumber(parent, entry, width, height)
+            local control = CreateFrame("Frame", nil, parent)
+            control:SetWidth(width)
+            control:SetHeight(height)
+            local label = FontEditorLabel(control, entry[2], 0, -7, 12)
+            label:SetWidth(width - 156)
+            label:SetHeight(16)
+            label:SetJustifyH("LEFT")
+            local description = FontEditorLabel(control, entry[3], 0, -24, 10)
+            description:SetTextColor(0.59, 0.59, 0.56)
+            description:SetWidth(width - 156)
+            description:SetHeight(28)
+            description:SetJustifyH("LEFT")
+            description:SetJustifyV("TOP")
+            for _, direction in ipairs({ -1, 1 }) do
+                local step = direction * entry.step
+                local button = T.CreateEditorButton(control, direction < 0 and "-" or "+", 28, 28)
+                button:SetPoint("TOPRIGHT", control, "TOPRIGHT", direction < 0 and -108 or 0, -8)
+                button:SetScript(
+                    "OnClick",
+                    function() DFRL.display.Set(entry[1], DFRL.display.Get(entry[1]) + step) end
+                )
+            end
+            local value = FontEditorLabel(control, "", 0, 0, 12)
+            value:ClearAllPoints()
+            value:SetPoint("CENTER", control, "TOPRIGHT", -68, -22)
+            value:SetWidth(64)
+            value:SetHeight(16)
+            value:SetJustifyH("CENTER")
+            displayNumbers[entry[1]] = value
+            return control
         end
-        hudScroll:EnableMouseWheel(true)
-        hudScroll:SetScript("OnMouseWheel", ScrollHud)
-        for index, entry in ipairs(hudOptions) do
-            local row = math.floor((index - 1) / 2)
-            local control = DisplayToggle(hud, entry[1], entry[2], entry[3], -row * hudRowHeight, hudColumnWidth)
-            control:ClearAllPoints()
-            control:SetPoint(
-                "TOPLEFT",
-                hud,
-                "TOPLEFT",
-                math.mod(index - 1, 2) * (hudColumnWidth + gap),
-                -row * hudRowHeight
-            )
-            control:SetHeight(hudRowHeight)
-            control.description:SetHeight(28)
-            control.description:SetJustifyV("TOP")
-            control:EnableMouseWheel(true)
-            control:SetScript("OnMouseWheel", ScrollHud)
+        local function CreateOptionsPage(category)
+            local page = pages[category.key]
+            local scrollName = "SurvivorsDragonUi" .. category.key .. "OptionsScroll"
+            local scroll = CreateFrame("ScrollFrame", scrollName, page, "UIPanelScrollFrameTemplate")
+            scroll:SetPoint("TOPLEFT", page, "TOPLEFT", 0, 0)
+            scroll:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -24, 0)
+            local rowWidth, rowHeight = contentWidth - 24, 60
+            local content = CreateFrame("Frame", nil, scroll)
+            content:SetWidth(rowWidth)
+            content:SetHeight(table.getn(category.options) * rowHeight)
+            scroll:SetScrollChild(content)
+            local function ScrollOptions(direction)
+                local slider = _G[scrollName .. "ScrollBar"]
+                if not slider then return end
+                local low, high = slider:GetMinMaxValues()
+                local value = slider:GetValue() - (direction or arg1 or 0) * rowHeight
+                slider:SetValue(math.max(low, math.min(high, value)))
+            end
+            scroll:EnableMouseWheel(true)
+            scroll:SetScript("OnMouseWheel", ScrollOptions)
+            for index, entry in ipairs(category.options) do
+                local control
+                if entry.step then
+                    control = DisplayNumber(content, entry, rowWidth, rowHeight)
+                    control:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -(index - 1) * rowHeight)
+                else
+                    control = DisplayToggle(content, entry[1], entry[2], entry[3], -(index - 1) * rowHeight, rowWidth)
+                    control:SetHeight(rowHeight)
+                    control.description:SetHeight(28)
+                    control.description:SetJustifyV("TOP")
+                end
+                control:EnableMouseWheel(true)
+                control:SetScript("OnMouseWheel", ScrollOptions)
+            end
+            if scroll.UpdateScrollChildRect then scroll:UpdateScrollChildRect() end
         end
-        if hudScroll.UpdateScrollChildRect then hudScroll:UpdateScrollChildRect() end
+        for _, category in ipairs(categories) do
+            if category.options then CreateOptionsPage(category) end
+        end
 
         local combat = pages.combat
         local heading = FontEditorLabel(combat, "Outgoing damage", 0, 0, 12)
@@ -964,7 +1096,7 @@ DFRL:NewMod("RunTimers", 5, function()
         fontSample:ClearAllPoints()
         fontSample:SetPoint("TOP", timer, "TOP", 0, -16)
         fontSampleClock = NewClockLabel(fontSample)
-        local controlX = inputX - padding
+        local controlX = labelWidth + gap
         FontEditorLabel(timer, "Font", 0, -66, 11)
         local fontButton
         faceLabel, fontButton = FontEditorButton("", dropdownWidth, controlX, -58, function()
@@ -1039,14 +1171,10 @@ DFRL:NewMod("RunTimers", 5, function()
         end)
         visibilityControl:SetPoint("TOPLEFT", timer, "TOPLEFT", halfWidth + gap, -176)
 
-        divider = T.EditorDivider(fontEditor, contentWidth)
+        divider = T.EditorDivider(fontEditor, width - padding * 2)
         divider:SetPoint("TOPLEFT", fontEditor, "TOPLEFT", padding, -532)
-        hint = FontEditorLabel(fontEditor, "Changes preview immediately. Confirm keeps them.", 0, 0, 9)
-        hint:ClearAllPoints()
-        hint:SetPoint("TOP", fontEditor, "TOP", 0, -541)
-        hint:SetTextColor(0.75, 0.73, 0.67)
         local footer = CreateFrame("Frame", nil, fontEditor)
-        footer:SetWidth(contentWidth)
+        footer:SetWidth(width - padding * 2)
         footer:SetHeight(30)
         footer:SetPoint("BOTTOM", fontEditor, "BOTTOM", 0, 16)
         local defaults = T.CreateEditorButton(footer, "Addon defaults", defaultsWidth, 30)
@@ -1345,7 +1473,23 @@ DFRL:NewMod("RunTimers", 5, function()
         end
     end
 
+    local function HideMarkerTooltip(marker)
+        if GameTooltip and GameTooltip:IsOwned(marker) then GameTooltip:Hide() end
+    end
+
+    local function ShowMarkerTooltip(marker)
+        if not GameTooltip then return end
+        if not marker.name then
+            HideMarkerTooltip(marker)
+            return
+        end
+        GameTooltip:SetOwner(marker, "ANCHOR_BOTTOM")
+        GameTooltip:SetText(marker.name, 1, 0.82, 0)
+        GameTooltip:Show()
+    end
+
     local function HideMarker(marker)
+        HideMarkerTooltip(marker)
         marker:Hide()
         marker.check:Hide()
         ShowMarkerGlow(marker, false)
@@ -1410,6 +1554,7 @@ DFRL:NewMod("RunTimers", 5, function()
             table.insert(entries, {
                 index = entry.index,
                 at = entry.at,
+                name = type(entry.name) == "string" and entry.name ~= "" and entry.name or nil,
                 final = entry.final == 1 or entry.final == true,
                 state = entry.state,
             })
@@ -1503,6 +1648,9 @@ DFRL:NewMod("RunTimers", 5, function()
                 marker:SetWidth(MARKER_SIZE)
                 marker:SetHeight(MARKER_SIZE)
                 marker:EnableMouse(false)
+                marker:SetScript("OnEnter", function() ShowMarkerTooltip(marker) end)
+                marker:SetScript("OnLeave", function() HideMarkerTooltip(marker) end)
+                marker:SetScript("OnHide", function() HideMarkerTooltip(marker) end)
                 marker.glow = {}
                 -- Translucent copies trace the native skull silhouette. Their
                 -- offsets breathe inward/outward beneath the unchanged skull.
@@ -1540,6 +1688,11 @@ DFRL:NewMod("RunTimers", 5, function()
                 marker.check:SetPoint("BOTTOMRIGHT", marker, "BOTTOMRIGHT", 2, -1)
                 HideMarker(marker)
                 markers[index] = marker
+            end
+            if marker.name ~= entry.name then
+                marker.name = entry.name
+                marker:EnableMouse(marker.name ~= nil)
+                if GameTooltip and GameTooltip:IsOwned(marker) then ShowMarkerTooltip(marker) end
             end
             markerStates[index] = entry.state
             marker:ClearAllPoints()

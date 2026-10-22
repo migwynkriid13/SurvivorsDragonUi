@@ -4,13 +4,16 @@ DFRL:NewMod("Navigation", 2, function()
     local navigation = {}
     DFRL.navigation = navigation
     local phases = { playing = true, choosing = true, paused = true, victory = true }
+    local minimapLevels = { cache = 10, guardian = 11, player = 12 }
     local identity, expected, realZone, arrow
+    local playerOverlay, playerTexture, playerSide, playerFacing
     local points = {}
     local samples, seen, width, height = {}, {}, nil, nil
 
     local function Number(value) return type(value) == "number" and value - value == 0 end
     local function Coordinates(x, y) return Number(x) and Number(y) and x >= 0 and x <= 1 and y >= 0 and y <= 1 end
     function navigation.IsRunPhase(phase) return phases[phase] == true end
+    function navigation.MinimapLevel(kind) return Minimap:GetFrameLevel() + minimapLevels[kind] end
     function navigation.Reset()
         identity, expected, realZone, arrow = nil, nil, nil, nil
         samples, seen, width, height = {}, {}, nil, nil
@@ -214,15 +217,23 @@ DFRL:NewMod("Navigation", 2, function()
     local function PlayerArrow()
         if not Minimap or not Minimap.GetChildren then return end
         local children = { Minimap:GetChildren() }
+        local player
         for _, child in ipairs(children) do
             if child.GetModel and child.GetFacing then
                 local ok, path = pcall(child.GetModel, child)
                 if ok and type(path) == "string" then
                     path = string.gsub(string.lower(path), "/", "\\")
-                    if string.find(path, "\\minimaparrow", 1, true) then return child end
+                    if string.find(path, "\\minimaparrow", 1, true) then
+                        player = child
+                    elseif string.find(path, "\\rotating-minimaparrow", 1, true) then
+                        -- The native updater can show these indicators again;
+                        -- transparent models stay hidden without stopping it.
+                        child:SetAlpha(0)
+                    end
                 end
             end
         end
+        if player then return player end
         -- Native minimaps construct nine Model children before addon children.
         -- Use that fallback only when every native slot still has that shape.
         for index = 1, 9 do
@@ -230,7 +241,19 @@ DFRL:NewMod("Navigation", 2, function()
             if not child or not child.GetObjectType or child:GetObjectType() ~= "Model" then return end
         end
         local candidate = children[9]
-        if candidate.GetFacing then return candidate end
+        if candidate.GetFacing then
+            for index = 1, 8 do
+                children[index]:SetAlpha(0)
+            end
+            return candidate
+        end
+    end
+    function navigation.StyleMinimap()
+        if not arrow then arrow = PlayerArrow() end
+        if not arrow then return end
+        local strata, level = Minimap:GetFrameStrata(), navigation.MinimapLevel("player")
+        if arrow:GetFrameStrata() ~= strata then arrow:SetFrameStrata(strata) end
+        if arrow:GetFrameLevel() < level then arrow:SetFrameLevel(level) end
     end
     function navigation.Heading()
         if not arrow then arrow = PlayerArrow() end
@@ -243,5 +266,59 @@ DFRL:NewMod("Navigation", 2, function()
         local state = RunState()
         -- Both headings use native radians: north, counterclockwise.
         if state and Number(state.pf) then return state.pf, _G.AZS_RUN_UPDATED end
+    end
+    function navigation.UpdateMinimapPlayer(visible)
+        -- Older clients paint the native arrows inside the map, ignoring the
+        -- Model children's alpha and frame level. Redraw the native player art
+        -- above our pins there; keep its live Model facing as the source.
+        if not visible or not Minimap or type(Minimap.SetPlayerModel) == "function" then
+            if playerOverlay then playerOverlay:Hide() end
+            return
+        end
+        local facing = navigation.Heading()
+        local width, height = T.GetLocalSize(Minimap)
+        if not Number(facing) or not Number(width) or not Number(height) or width <= 0 or height <= 0 then
+            if playerOverlay then playerOverlay:Hide() end
+            return
+        end
+        if not playerOverlay then
+            playerOverlay = CreateFrame("Frame", nil, Minimap)
+            playerOverlay:EnableMouse(false)
+            playerTexture = playerOverlay:CreateTexture(nil, "OVERLAY")
+            playerTexture:SetTexture("Interface\\Minimap\\MinimapArrow")
+            playerTexture:SetAllPoints(playerOverlay)
+        end
+        local strata, level = Minimap:GetFrameStrata(), navigation.MinimapLevel("player")
+        if playerOverlay:GetFrameStrata() ~= strata then playerOverlay:SetFrameStrata(strata) end
+        if playerOverlay:GetFrameLevel() ~= level then playerOverlay:SetFrameLevel(level) end
+        local side = math.min(width, height)
+        if not T.NearlyEqual(playerSide, side) or not T.NearlyEqual(playerFacing, facing) then
+            -- Match the legacy renderer's native 33.6-pixel quad and rotating
+            -- authored centre offset, both measured against its 140.8 basis.
+            local scale, c, s = side / 140.8, math.cos(facing), math.sin(facing)
+            playerOverlay:SetWidth(33.6 * scale)
+            playerOverlay:SetHeight(33.6 * scale)
+            playerOverlay:ClearAllPoints()
+            playerOverlay:SetPoint(
+                "CENTER",
+                Minimap,
+                "CENTER",
+                (0.51 * c - 1.73 * s) * scale,
+                (0.51 * s + 1.73 * c) * scale
+            )
+            c, s = c / 2, -s / 2
+            playerTexture:SetTexCoord(
+                0.5 - c - s,
+                0.5 + s - c,
+                0.5 - c + s,
+                0.5 + s + c,
+                0.5 + c - s,
+                0.5 - s - c,
+                0.5 + c + s,
+                0.5 - s + c
+            )
+            playerSide, playerFacing = side, facing
+        end
+        playerOverlay:Show()
     end
 end)

@@ -141,7 +141,14 @@ local function HiddenAnnouncement(text)
         if CaptureFormat(plain, native) then return true end
         if string.sub(native, 1, 2) == "%s" and plain == string.gsub(native, "^%%s%s*", "") then return true end
     end
-    if plain == DFRL.locale.Native("Swarm surrounds you!") then return true end
+    for _, key in ipairs({
+        "Swarm surrounds you!",
+        "A stampede charges through!",
+        "A wall of foes closes in!",
+        "A pack hunts you!",
+    }) do
+        if plain == DFRL.locale.Native(key) then return true end
+    end
     if DFRL.locale.Match("{subtitle} — survive the onslaught!", plain) then return true end
     local guardian = CaptureFormat(plain, "%s " .. GUARDIAN_SLAIN)
     if guardian and string.find(guardian, "^[^\r\n]+$") then return true end
@@ -397,7 +404,13 @@ CleanerChat.PrettifyMessage = function(text, eventName, speaker, message)
         or eventName == "CHAT_MSG_SYSTEM"
         or eventName == "CHAT_MSG_MONSTER_EMOTE"
         or eventName == "CHAT_MSG_RAID_BOSS_EMOTE"
-    if announcementEvent and (HiddenAnnouncement(text) or (eventName and HiddenAnnouncement(message))) then
+    local banners = DFRL.banners
+    if
+        announcementEvent
+        and banners
+        and banners.IsActive()
+        and (HiddenAnnouncement(text) or (eventName and HiddenAnnouncement(message)))
+    then
         return nil, "hide"
     end
     if eventName == "CHAT_MSG_MONSTER_YELL" then return NpcYell(text, speaker, message) end
@@ -430,7 +443,10 @@ CleanerChat.PrettifyMessage = function(text, eventName, speaker, message)
     -- Recognize native self-loot on the system channel as well as loot events.
     if not eventName or eventName == "CHAT_MSG_LOOT" or eventName == "CHAT_MSG_SYSTEM" then
         local loot = CleanerChat.ParseLootMessage(text)
-        if loot then return loot.chatText end
+        if loot then
+            if loot.collection == "collected" then return nil, "hide" end
+            return loot.chatText
+        end
     end
     return text
 end
