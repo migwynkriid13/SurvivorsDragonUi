@@ -103,6 +103,8 @@ DFRL:NewMod("Target", 1, function()
         T.SetFont(TargetLevelText, 11, "")
         TargetLevelText:SetTextColor(1, 0.82, 0)
     end
+    T.BindUnitLabelVisibility(TargetFrame.name, "showTargetName")
+    T.BindUnitLabelVisibility(TargetLevelText, "showTargetLevel")
 
     local borderTexture
     local function UpdateClassification(force)

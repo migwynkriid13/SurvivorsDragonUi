@@ -697,7 +697,12 @@ DFRL:NewMod("RunTimers", 5, function()
                 key = "units",
                 label = "Unit frames",
                 gapBefore = 8,
+                columns = 2,
                 options = {
+                    { "showPlayerName", "Show player name", "Show the name above the player frame." },
+                    { "showPlayerLevel", "Show player level", "Show the level above the player frame." },
+                    { "showTargetName", "Show target name", "Show the name above the target frame." },
+                    { "showTargetLevel", "Show target level", "Show the level above the target frame." },
                     { "classHealth", "Class-colored health", "Use your vanilla class color for player health." },
                     {
                         "healthLossAnimation",
@@ -852,12 +857,16 @@ DFRL:NewMod("RunTimers", 5, function()
         end
         local hudOptionWidth = 0
         for _, category in ipairs(categories) do
+            local columns = category.columns or 1
             for _, entry in ipairs(category.options or {}) do
                 local controlsWidth = entry.step and 156 or 36
-                hudOptionWidth = math.max(
-                    hudOptionWidth,
+                local optionWidth = math.max(
                     TextWidth(entry[2]) + controlsWidth,
                     TextWidth(entry[3]) / 2 + controlsWidth
+                )
+                hudOptionWidth = math.max(
+                    hudOptionWidth,
+                    optionWidth * columns + gap * (columns - 1) + (category.columns and 0 or 24)
                 )
             end
         end
@@ -871,7 +880,7 @@ DFRL:NewMod("RunTimers", 5, function()
             modeWidth * 3 + gap * 2,
             filterWidth * 2 + gap,
             filterHeadingWidth,
-            hudOptionWidth + 24,
+            hudOptionWidth,
             (TextWidth("SCT size") + gap + 136) * 2 + gap,
             labelWidth + gap + dropdownWidth,
             labelWidth + gap + outlineWidth * 3 + gap * 2,
@@ -1005,39 +1014,48 @@ DFRL:NewMod("RunTimers", 5, function()
         end
         local function CreateOptionsPage(category)
             local page = pages[category.key]
-            local scrollName = "SurvivorsDragonUi" .. category.key .. "OptionsScroll"
-            local scroll = CreateFrame("ScrollFrame", scrollName, page, "UIPanelScrollFrameTemplate")
-            scroll:SetPoint("TOPLEFT", page, "TOPLEFT", 0, 0)
-            scroll:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -24, 0)
-            local rowWidth, rowHeight = contentWidth - 24, 60
-            local content = CreateFrame("Frame", nil, scroll)
-            content:SetWidth(rowWidth)
-            content:SetHeight(table.getn(category.options) * rowHeight)
-            scroll:SetScrollChild(content)
-            local function ScrollOptions(direction)
-                local slider = _G[scrollName .. "ScrollBar"]
-                if not slider then return end
-                local low, high = slider:GetMinMaxValues()
-                local value = slider:GetValue() - (direction or arg1 or 0) * rowHeight
-                slider:SetValue(math.max(low, math.min(high, value)))
+            local columns, rowHeight = category.columns or 1, 60
+            local rowWidth = (contentWidth - gap * (columns - 1)) / columns
+            local content, scroll, ScrollOptions = page, nil, nil
+            if not category.columns then
+                local scrollName = "SurvivorsDragonUi" .. category.key .. "OptionsScroll"
+                scroll = CreateFrame("ScrollFrame", scrollName, page, "UIPanelScrollFrameTemplate")
+                scroll:SetPoint("TOPLEFT", page, "TOPLEFT", 0, 0)
+                scroll:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -24, 0)
+                rowWidth = contentWidth - 24
+                content = CreateFrame("Frame", nil, scroll)
+                content:SetWidth(rowWidth)
+                content:SetHeight(table.getn(category.options) * rowHeight)
+                scroll:SetScrollChild(content)
+                ScrollOptions = function(direction)
+                    local slider = _G[scrollName .. "ScrollBar"]
+                    if not slider then return end
+                    local low, high = slider:GetMinMaxValues()
+                    local value = slider:GetValue() - (direction or arg1 or 0) * rowHeight
+                    slider:SetValue(math.max(low, math.min(high, value)))
+                end
+                scroll:EnableMouseWheel(true)
+                scroll:SetScript("OnMouseWheel", ScrollOptions)
             end
-            scroll:EnableMouseWheel(true)
-            scroll:SetScript("OnMouseWheel", ScrollOptions)
             for index, entry in ipairs(category.options) do
+                local x = math.mod(index - 1, columns) * (rowWidth + gap)
+                local y = -math.floor((index - 1) / columns) * rowHeight
                 local control
                 if entry.step then
                     control = DisplayNumber(content, entry, rowWidth, rowHeight)
-                    control:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -(index - 1) * rowHeight)
                 else
-                    control = DisplayToggle(content, entry[1], entry[2], entry[3], -(index - 1) * rowHeight, rowWidth)
+                    control = DisplayToggle(content, entry[1], entry[2], entry[3], y, rowWidth)
                     control:SetHeight(rowHeight)
                     control.description:SetHeight(28)
                     control.description:SetJustifyV("TOP")
                 end
-                control:EnableMouseWheel(true)
-                control:SetScript("OnMouseWheel", ScrollOptions)
+                control:SetPoint("TOPLEFT", content, "TOPLEFT", x, y)
+                if ScrollOptions then
+                    control:EnableMouseWheel(true)
+                    control:SetScript("OnMouseWheel", ScrollOptions)
+                end
             end
-            if scroll.UpdateScrollChildRect then scroll:UpdateScrollChildRect() end
+            if scroll and scroll.UpdateScrollChildRect then scroll:UpdateScrollChildRect() end
         end
         for _, category in ipairs(categories) do
             if category.options then CreateOptionsPage(category) end

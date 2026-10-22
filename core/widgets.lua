@@ -37,6 +37,22 @@ function DFRL.tools.EncounterHealthText(current, maximum)
     return tostring(math.floor(current)) .. " / " .. tostring(math.floor(maximum))
 end
 
+-- Keep native caption text and Show/Hide decisions; mask only its effective alpha.
+function DFRL.tools.BindUnitLabelVisibility(label, key)
+    if not label then return end
+    local setAlpha, nativeAlpha = label.SetAlpha, label:GetAlpha()
+    local function Update()
+        local alpha = DFRL.display.Get(key) and nativeAlpha or 0
+        if not T.NearlyEqual(label:GetAlpha(), alpha) then setAlpha(label, alpha) end
+    end
+    label.SetAlpha = function(self, alpha)
+        nativeAlpha = alpha
+        return setAlpha(self, DFRL.display.Get(key) and alpha or 0)
+    end
+    DFRL.display.Listen(Update)
+    Update()
+end
+
 function DFRL.tools.GradientLine(frame)
     local width = (frame:GetWidth() - 10) / 2
     for _, side in ipairs({ "LEFT", "RIGHT" }) do

@@ -1,9 +1,30 @@
-# Unit portraits
+# Unit frames
 
 **Hide portraits** in `/sdui` → **Unit frames** switches the player,
 target and target-of-target to closed health bars without their portrait
 pictures or gold rings. Names, levels and health values keep their native
 updates. The separately selected class resources remain available.
+
+## Names, levels and editor layout
+
+**Show player name**, **Show player level**, **Show target name** and
+**Show target level** independently control the four native captions. The
+normalized `showPlayerName`, `showPlayerLevel`, `showTargetName` and
+`showTargetLevel` booleans default true in the existing display table. They
+reuse live preview, Confirm-only saving, Cancel/world/logout/reload discard
+and both full resets to on, independently of portrait and resource choices.
+
+One shared `BindUnitLabelVisibility` helper masks only each FontString's alpha.
+Native text and Show/Hide decisions continue; later native alpha requests are
+retained and become effective when the option is on. The helper never shows
+an inactive target, clears its caption or changes the frame's geometry.
+
+Unit frames has no scroll frame. Its ten controls occupy five rows in two
+columns, starting with player name/level and then target name/level. Each row
+is 60 units within the existing 396-unit page. Column width is measured against
+all fourteen caption and hint catalogs; existing descriptions keep their two-line
+space. The shared editor still fits the viewport, and other pages retain their
+existing layouts and scrolling behavior.
 
 ## Settings and layout
 

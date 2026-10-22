@@ -290,6 +290,8 @@ DFRL:NewMod("Player", 1, function()
             T.SetFont(PlayerLevelText, 11, "NONE")
             PlayerLevelText:SetTextColor(1, 0.82, 0)
         end
+        T.BindUnitLabelVisibility(PlayerFrame.name, "showPlayerName")
+        T.BindUnitLabelVisibility(PlayerLevelText, "showPlayerLevel")
         -- Preserve the original addon status effects without stock overlays.
         _G.PlayerFrame_UpdateStatus = function() end
         for _, name in ipairs({
