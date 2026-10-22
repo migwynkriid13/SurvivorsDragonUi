@@ -36,9 +36,13 @@ DFRL:NewMod("Player", 1, function()
     end
     DFRL.display.Listen(UpdateHealthColor)
 
+    local appliedRound, appliedHidden
     local function UpdatePortraitShape()
         if not updateBorder then return end
         local round = DFRL.display.Get("roundPlayerPortrait")
+        local hidden = DFRL.display.Get("hidePortraits")
+        if round == appliedRound and hidden == appliedHidden then return end
+        appliedRound, appliedHidden = round, hidden
         updateBorder(tex .. (round and "UI-TargetingFrameDF1.blp" or "UI-TargetingFrameDF.blp"))
         local extension = setPortraitOverlap(round)
         if healthText then healthText:SetPoint("CENTER", PlayerFrameHealthBar, "CENTER", extension / 2, 0) end
@@ -51,7 +55,10 @@ DFRL:NewMod("Player", 1, function()
             primaryText:SetPoint("CENTER", primaryBar, "CENTER", extension / 2, 0)
         end
         for _, textures in ipairs(pulseTextures) do
-            if round then
+            if hidden then
+                textures.original:Hide()
+                textures.round:Hide()
+            elseif round then
                 textures.original:Hide()
                 textures.round:Show()
             else
@@ -169,6 +176,7 @@ DFRL:NewMod("Player", 1, function()
         table.insert(pulseTextures, { original = texture, round = round })
         local pulseTime, pulseAlpha = 0, 0
         overlay:SetScript("OnUpdate", function()
+            if DFRL.display.Get("hidePortraits") then return end
             local elapsed = arg1 or 0
             if active() then
                 pulseTime = math.mod(pulseTime + elapsed, 1)
@@ -206,7 +214,7 @@ DFRL:NewMod("Player", 1, function()
             end
         end)
         local function UpdateResting()
-            if IsResting() then
+            if IsResting() and not DFRL.display.Get("hidePortraits") then
                 animation:Show()
             else
                 animation:Hide()
@@ -215,6 +223,7 @@ DFRL:NewMod("Player", 1, function()
         local events = CreateFrame("Frame")
         events:RegisterEvent("PLAYER_UPDATE_RESTING")
         events:SetScript("OnEvent", UpdateResting)
+        DFRL.display.Listen(UpdateResting)
         UpdateResting()
     end
 

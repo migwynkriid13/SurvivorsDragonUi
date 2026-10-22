@@ -143,6 +143,7 @@ DFRL:NewMod("Mini", 1, function()
         -- omitting only the interior divider between the old health/power rows.
         local scaleX = (TargetofTargetFrame:GetWidth() + 20) / 128
         local scaleY = (TargetofTargetFrame:GetHeight() + 15) / 64
+        local borderStrips = {}
         local function AddBorderStrip(x, y, width, height)
             local strip = border:CreateTexture(nil, "OVERLAY")
             strip:SetTexture(tex .. "pet")
@@ -150,6 +151,7 @@ DFRL:NewMod("Mini", 1, function()
             strip:SetPoint("TOPLEFT", border, "TOPLEFT", x * scaleX, -y * scaleY)
             strip:SetWidth(width * scaleX)
             strip:SetHeight(height * scaleY)
+            table.insert(borderStrips, strip)
         end
         AddBorderStrip(0, 0, 44, 64)
         AddBorderStrip(44, 0, 84, 22)
@@ -183,6 +185,23 @@ DFRL:NewMod("Mini", 1, function()
         TargetofTargetHealthBar:SetPoint("LEFT", TargetofTargetFrame, "LEFT", 40, -1.5)
         TargetofTargetHealthBar:SetScript("OnEnter", nil)
         TargetofTargetHealthBar:SetScript("OnLeave", nil)
+        local portraitless = T.CreatePortraitlessBorder(TargetofTargetFrame, TargetofTargetHealthBar, 16)
+        local portraitsHidden
+        local function UpdatePortraitVisibility()
+            local hidden = DFRL.display.Get("hidePortraits")
+            if hidden == portraitsHidden then return end
+            portraitsHidden = hidden
+            for _, strip in ipairs(borderStrips) do
+                strip:SetAlpha(hidden and 0 or 1)
+            end
+            if hidden then
+                portraitless:Show()
+            else
+                portraitless:Hide()
+            end
+        end
+        DFRL.display.Listen(UpdatePortraitVisibility)
+        UpdatePortraitVisibility()
         if TargetofTargetDeadText then
             TargetofTargetDeadText:SetParent(border)
             TargetofTargetDeadText:ClearAllPoints()

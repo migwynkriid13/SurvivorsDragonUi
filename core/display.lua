@@ -22,6 +22,7 @@ DFRL:NewMod("Display", 0, function()
         sctMisses = true,
         sctClassColors = false,
         sctScale = 1,
+        hidePortraits = false,
         roundPlayerPortrait = false,
         playerPortrait3D = false, -- Legacy key; controls player, target and target-of-target.
         flipBuffs = false,
@@ -79,6 +80,7 @@ DFRL:NewMod("Display", 0, function()
             sctMisses = Read(source, "sctMisses"),
             sctClassColors = Read(source, "sctClassColors"),
             sctScale = Read(source, "sctScale"),
+            hidePortraits = Read(source, "hidePortraits"),
             roundPlayerPortrait = Read(source, "roundPlayerPortrait"),
             playerPortrait3D = Read(source, "playerPortrait3D"),
             flipBuffs = Read(source, "flipBuffs"),
