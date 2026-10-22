@@ -21,7 +21,7 @@ DFRL:NewMod("Layout", 0, function()
         levelUp = "LEVEL UP",
         actionBar = "Action bar",
         jewelryBar = "Equipped jewelry (detached)",
-        xpBar = "XP",
+        xpBar = "XP (detached)",
         runTally = "Kills / Gold / Cache",
         microMenu = "Micro menu",
         buffs = "Buffs",

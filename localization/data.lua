@@ -2,6 +2,9 @@
 DFRL.locale.data = {
     en = {
         ui = {
+            ["Attach XP to action bar"] = "Attach XP to action bar",
+            ["Off: move and resize the XP bar separately."] = "Off: move and resize the XP bar separately.",
+            ["XP (detached)"] = "XP (detached)",
             ["Lock action buttons"] = "Lock action buttons",
             ["Off: Shift-click two occupied buttons to swap them."] = "Off: Shift-click two occupied buttons to swap them.",
             ["Rows"] = "Rows",
@@ -450,6 +453,9 @@ DFRL.locale.data = {
     },
     pl = {
         ui = {
+            ["Attach XP to action bar"] = "Dołącz pasek PD do paska akcji",
+            ["Off: move and resize the XP bar separately."] = "Wyłączone: przesuwaj i skaluj pasek PD osobno.",
+            ["XP (detached)"] = "PD (odłączone)",
             ["Lock action buttons"] = "Zablokuj przyciski akcji",
             ["Off: Shift-click two occupied buttons to swap them."] = "Wyłączone: kliknij z Shiftem dwa zajęte przyciski, aby zamienić je miejscami.",
             ["Rows"] = "Wiersze",
@@ -922,6 +928,9 @@ DFRL.locale.data = {
     },
     cs = {
         ui = {
+            ["Attach XP to action bar"] = "Připojit zkušenosti k akční liště",
+            ["Off: move and resize the XP bar separately."] = "Vypnuto: lištu zkušeností lze přesouvat a měnit její velikost samostatně.",
+            ["XP (detached)"] = "Zkušenosti (odpojené)",
             ["Lock action buttons"] = "Zamknout tlačítka akcí",
             ["Off: Shift-click two occupied buttons to swap them."] = "Vypnuto: kliknutím se Shiftem na dvě obsazená tlačítka je prohodíte.",
             ["Rows"] = "Řádky",
@@ -1845,6 +1854,9 @@ DFRL.locale.data = {
     },
     de = {
         ui = {
+            ["Attach XP to action bar"] = "EP-Leiste an Aktionsleiste anheften",
+            ["Off: move and resize the XP bar separately."] = "Aus: EP-Leiste separat verschieben und skalieren.",
+            ["XP (detached)"] = "EP (losgelöst)",
             ["Lock action buttons"] = "Aktionsbuttons sperren",
             ["Off: Shift-click two occupied buttons to swap them."] = "Aus: Zwei belegte Buttons mit Umschalt anklicken, um sie zu tauschen.",
             ["Rows"] = "Reihen",
@@ -2323,6 +2335,9 @@ DFRL.locale.data = {
     },
     pt = {
         ui = {
+            ["Attach XP to action bar"] = "Anexar XP à barra de ações",
+            ["Off: move and resize the XP bar separately."] = "Desativado: mova e redimensione a barra de XP separadamente.",
+            ["XP (detached)"] = "XP (separado)",
             ["Lock action buttons"] = "Bloquear botões de ação",
             ["Off: Shift-click two occupied buttons to swap them."] = "Desativado: clique com Shift em dois botões ocupados para trocá-los.",
             ["Rows"] = "Linhas",
@@ -2786,6 +2801,9 @@ DFRL.locale.data = {
     },
     es = {
         ui = {
+            ["Attach XP to action bar"] = "Unir la barra de experiencia a la barra de acción",
+            ["Off: move and resize the XP bar separately."] = "Desactivado: mueve y cambia el tamaño de la barra de experiencia por separado.",
+            ["XP (detached)"] = "Experiencia (separada)",
             ["Lock action buttons"] = "Bloquear botones de acción",
             ["Off: Shift-click two occupied buttons to swap them."] = "Desactivado: pulsa con Mayús dos botones ocupados para intercambiarlos.",
             ["Rows"] = "Filas",
@@ -3252,6 +3270,9 @@ DFRL.locale.data = {
     },
     fr = {
         ui = {
+            ["Attach XP to action bar"] = "Attacher l’EXP à la barre d’action",
+            ["Off: move and resize the XP bar separately."] = "Désactivé : déplacez et redimensionnez la barre d’EXP séparément.",
+            ["XP (detached)"] = "EXP (détachée)",
             ["Lock action buttons"] = "Verrouiller les boutons d’action",
             ["Off: Shift-click two occupied buttons to swap them."] = "Désactivé : cliquez avec Maj sur deux boutons occupés pour les échanger.",
             ["Rows"] = "Rangées",
@@ -3745,6 +3766,9 @@ DFRL.locale.data = {
     },
     ro = {
         ui = {
+            ["Attach XP to action bar"] = "Atașează XP la bara de acțiuni",
+            ["Off: move and resize the XP bar separately."] = "Dezactivat: mută și redimensionează bara XP separat.",
+            ["XP (detached)"] = "XP (detașat)",
             ["Lock action buttons"] = "Blochează butoanele de acțiune",
             ["Off: Shift-click two occupied buttons to swap them."] = "Dezactivat: apasă cu Shift pe două butoane ocupate pentru a le schimba între ele.",
             ["Rows"] = "Rânduri",
@@ -4208,6 +4232,9 @@ DFRL.locale.data = {
     },
     tr = {
         ui = {
+            ["Attach XP to action bar"] = "XP çubuğunu aksiyon çubuğuna bağla",
+            ["Off: move and resize the XP bar separately."] = "Kapalı: XP çubuğunu ayrı taşı ve boyutlandır.",
+            ["XP (detached)"] = "XP (ayrı)",
             ["Lock action buttons"] = "Aksiyon düğmelerini kilitle",
             ["Off: Shift-click two occupied buttons to swap them."] = "Kapalı: Dolu iki düğmeye Shift ile tıklayarak yerlerini değiştir.",
             ["Rows"] = "Satırlar",
@@ -4668,6 +4695,9 @@ DFRL.locale.data = {
     },
     ru = {
         ui = {
+            ["Attach XP to action bar"] = "Прикрепить опыт к панели действий",
+            ["Off: move and resize the XP bar separately."] = "Выкл.: перемещайте и меняйте размер полосы опыта отдельно.",
+            ["XP (detached)"] = "Опыт (отдельно)",
             ["Lock action buttons"] = "Закрепить кнопки действий",
             ["Off: Shift-click two occupied buttons to swap them."] = "Выкл.: нажмите с Shift две занятые кнопки, чтобы поменять их местами.",
             ["Rows"] = "Ряды",
@@ -5218,6 +5248,9 @@ DFRL.locale.data = {
     },
     uk = {
         ui = {
+            ["Attach XP to action bar"] = "Приєднати досвід до панелі дій",
+            ["Off: move and resize the XP bar separately."] = "Вимк.: переміщуйте та змінюйте розмір смуги досвіду окремо.",
+            ["XP (detached)"] = "Досвід (окремо)",
             ["Lock action buttons"] = "Закріпити кнопки дій",
             ["Off: Shift-click two occupied buttons to swap them."] = "Вимк.: натисніть із Shift дві зайняті кнопки, щоб поміняти їх місцями.",
             ["Rows"] = "Ряди",
@@ -5744,6 +5777,9 @@ DFRL.locale.data = {
     },
     zh = {
         ui = {
+            ["Attach XP to action bar"] = "将经验条连接到动作条",
+            ["Off: move and resize the XP bar separately."] = "关闭：单独移动和缩放经验条。",
+            ["XP (detached)"] = "经验条（已分离）",
             ["Lock action buttons"] = "锁定动作按钮",
             ["Off: Shift-click two occupied buttons to swap them."] = "关闭：按住Shift点击两个已有技能的按钮以交换位置。",
             ["Rows"] = "行数",
@@ -6195,6 +6231,9 @@ DFRL.locale.data = {
     },
     ja = {
         ui = {
+            ["Attach XP to action bar"] = "経験値バーをアクションバーに接続",
+            ["Off: move and resize the XP bar separately."] = "オフ：経験値バーを個別に移動・拡大縮小します。",
+            ["XP (detached)"] = "経験値（分離）",
             ["Lock action buttons"] = "アクションボタンをロック",
             ["Off: Shift-click two occupied buttons to swap them."] = "オフ：Shiftを押しながら使用中のボタンを2つクリックして入れ替えます。",
             ["Rows"] = "行数",
@@ -6679,6 +6718,9 @@ DFRL.locale.data = {
     },
     ko = {
         ui = {
+            ["Attach XP to action bar"] = "경험치 바를 행동 단축바에 연결",
+            ["Off: move and resize the XP bar separately."] = "끔: 경험치 바를 따로 이동하고 크기를 조절합니다.",
+            ["XP (detached)"] = "경험치 (분리됨)",
             ["Lock action buttons"] = "행동 단축 버튼 잠금",
             ["Off: Shift-click two occupied buttons to swap them."] = "끔: Shift를 누른 채 사용 중인 버튼 두 개를 클릭하면 서로 바뀝니다.",
             ["Rows"] = "행 수",

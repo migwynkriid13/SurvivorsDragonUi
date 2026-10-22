@@ -1,4 +1,6 @@
 -- XP gain animation source research and artwork: third_party/XPBar-ANIMATION.md.
+-- The joined shell reuses the bundled action-bar artwork. Blizzard artwork
+-- remains Blizzard Entertainment's property; see third_party/XP-ARTWORK.md.
 DFRL:NewMod("Xprep", 1, function()
     local texpath = DFRL:GetInfoOrCons("tex") .. "xprep\\"
     local defaults = { top = 49, height = 6, borderHeight = 12 }
@@ -7,7 +9,18 @@ DFRL:NewMod("Xprep", 1, function()
     KillFrame(MainMenuExpBar)
     KillFrame(ReputationWatchBar)
 
-    local bar = CreateFrame("StatusBar", "DFRL_XPBar", UIParent)
+    local hud = CreateFrame("Frame", "SurvivorsDragonUiXP", UIParent)
+    hud:SetHeight(defaults.height)
+    hud:SetFrameStrata("LOW")
+    hud:EnableMouse(false)
+    hud:Hide()
+    local detached = CreateFrame("Frame", "SurvivorsDragonUiDetachedXP", UIParent)
+    detached:SetHeight(defaults.height)
+    detached:SetFrameStrata("LOW")
+    detached:EnableMouse(false)
+    detached:Hide()
+
+    local bar = CreateFrame("StatusBar", "DFRL_XPBar", hud)
     bar:SetHeight(defaults.height)
     bar:SetFrameStrata("LOW")
     bar:SetStatusBarTexture(texpath .. "main.tga")
@@ -50,6 +63,7 @@ DFRL:NewMod("Xprep", 1, function()
     spark:Hide()
 
     local attached, registered, editing = false, false, false
+    local docked
     local inWorld = UnitExists("player") and true or false
     local previousXP, previousMaximum, previousLevel
     local displayed, desired = 0, 0
@@ -68,6 +82,53 @@ DFRL:NewMod("Xprep", 1, function()
         gain:Hide()
         spark:Hide()
         if not pending then events:SetScript("OnUpdate", nil) end
+    end
+
+    local function ShowXP(shown)
+        if shown and attached then
+            if docked then
+                detached:Hide()
+            else
+                detached:Show()
+            end
+            hud:Show()
+            bar:Show()
+        else
+            bar:Hide()
+            hud:Hide()
+            detached:Hide()
+        end
+        if DFRL.SetXPBarJoined then DFRL.SetXPBarJoined(docked and shown and attached or false) end
+    end
+
+    local function UpdateAttachment()
+        if not attached then return false end
+        local joined = DFRL.display.Get("attachXP")
+        if docked == joined then return false end
+        StopAnimation()
+        hud:Hide()
+        docked = joined
+        local owner = joined and DFRL.mainBar or detached
+        hud:SetParent(owner)
+        hud:SetScale(1)
+        hud:SetFrameLevel(owner:GetFrameLevel() + 2)
+        bar:SetFrameLevel(hud:GetFrameLevel() + 1)
+        hud:ClearAllPoints()
+        bar:ClearAllPoints()
+        if joined then
+            local action = DFRL.actionBarDefaults
+            hud:SetPoint("TOP", owner, "BOTTOM", 0, action.xpTop)
+            bar:SetPoint("TOPLEFT", hud, "TOPLEFT", action.xpInset, 0)
+            bar:SetPoint("BOTTOMRIGHT", hud, "BOTTOMRIGHT", -action.xpInset, 0)
+            leftBorder:Hide()
+            rightBorder:Hide()
+        else
+            hud:SetPoint("TOPLEFT", owner, "TOPLEFT", 0, 0)
+            bar:SetAllPoints(hud)
+            leftBorder:Show()
+            rightBorder:Show()
+        end
+        return true
     end
 
     local function PaintGlow(alpha)
@@ -111,7 +172,7 @@ DFRL:NewMod("Xprep", 1, function()
             previousXP, previousMaximum, previousLevel = nil, nil, nil
             desired = 0
             StopAnimation()
-            bar:Hide()
+            ShowXP(false)
             return
         end
         currentXP = math.min(currentXP, maximumXP)
@@ -136,11 +197,7 @@ DFRL:NewMod("Xprep", 1, function()
             StopAnimation()
         end
         previousXP, previousMaximum, previousLevel = currentXP, maximumXP, level
-        if attached then
-            bar:Show()
-        else
-            bar:Hide()
-        end
+        ShowXP(true)
     end
 
     OnUpdate = function()
@@ -199,21 +256,20 @@ DFRL:NewMod("Xprep", 1, function()
     end)
 
     function DFRL.AttachXPBar(mainBar)
-        -- Keep the artwork width, while positioning XP independently of the
-        -- action bar. Moving or hiding another group never moves this bar.
-        bar:SetParent(UIParent)
-        bar:SetWidth(mainBar:GetWidth() + 2 * DFRL.actionBarDefaults.sideInset)
-        bar:SetFrameLevel(mainBar:GetFrameLevel() + 2)
+        local width = mainBar:GetWidth() + 2 * DFRL.actionBarDefaults.sideInset
+        hud:SetWidth(width)
+        detached:SetWidth(width)
         if not registered then
-            local moveRegion = CreateFrame("Frame", nil, bar)
+            local moveRegion = CreateFrame("Frame", nil, detached)
             local borderInset = (defaults.borderHeight - defaults.height) / 2
-            moveRegion:SetPoint("TOPLEFT", bar, "TOPLEFT", 0, borderInset)
-            moveRegion:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", 0, -borderInset)
-            DFRL.layout.Register("xpBar", bar, function()
-                bar:ClearAllPoints()
-                bar:SetPoint("TOP", UIParent, "BOTTOM", 0, defaults.top)
+            moveRegion:SetPoint("TOPLEFT", detached, "TOPLEFT", 0, borderInset)
+            moveRegion:SetPoint("BOTTOMRIGHT", detached, "BOTTOMRIGHT", 0, -borderInset)
+            DFRL.layout.Register("xpBar", detached, function()
+                detached:ClearAllPoints()
+                detached:SetPoint("TOP", UIParent, "BOTTOM", 0, defaults.top)
             end, {
                 region = moveRegion,
+                onlyWhenShown = true,
                 onEdit = function(active)
                     editing = active
                     StopAnimation()
@@ -222,13 +278,17 @@ DFRL:NewMod("Xprep", 1, function()
             })
             registered = true
         else
-            DFRL.layout.Place("xpBar", bar)
+            DFRL.layout.Place("xpBar", detached)
         end
         attached = true
+        UpdateAttachment()
         UpdateXP(false)
         if DFRL.AttachRunTally then DFRL.AttachRunTally() end
     end
 
+    DFRL.display.Listen(function()
+        if UpdateAttachment() then UpdateXP(false) end
+    end)
     events:RegisterEvent("PLAYER_ENTERING_WORLD")
     events:RegisterEvent("PLAYER_LEAVING_WORLD")
     events:RegisterEvent("PLAYER_LOGOUT")
@@ -240,7 +300,7 @@ DFRL:NewMod("Xprep", 1, function()
             previousXP, previousMaximum, previousLevel = nil, nil, nil
             desired = 0
             StopAnimation()
-            bar:Hide()
+            ShowXP(false)
         elseif event ~= "PLAYER_XP_UPDATE" or arg1 == "player" or arg1 == nil then
             if event == "PLAYER_ENTERING_WORLD" then
                 inWorld, instant = true, true
@@ -252,7 +312,7 @@ DFRL:NewMod("Xprep", 1, function()
             end
         end
     end)
-    DFRL.xpBar = bar
+    DFRL.xpBar = hud
     -- The bar may already exist, or its world-entry callback will attach us.
     if DFRL.mainBar then DFRL.AttachXPBar(DFRL.mainBar) end
 end)

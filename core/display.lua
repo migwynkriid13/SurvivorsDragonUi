@@ -38,6 +38,7 @@ DFRL:NewMod("Display", 0, function()
         equippedJewelry = true,
         hideNativeBuild = true,
         attachJewelry = true,
+        attachXP = true,
     }
     DFRL.display = display
 
@@ -97,6 +98,7 @@ DFRL:NewMod("Display", 0, function()
             equippedJewelry = Read(source, "equippedJewelry"),
             hideNativeBuild = Read(source, "hideNativeBuild"),
             attachJewelry = Read(source, "attachJewelry"),
+            attachXP = Read(source, "attachXP"),
         }
     end
     local function Notify()

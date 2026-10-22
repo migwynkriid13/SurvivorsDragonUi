@@ -16,6 +16,9 @@ DFRL:NewMod("Bars", 1, function()
         buttonGap = BUTTON_SPACING,
         width = BUTTON_COUNT * ActionButton1:GetWidth() + (BUTTON_COUNT - 1) * BUTTON_SPACING,
         height = ActionButton1:GetHeight(),
+        xpExtension = 8,
+        xpTop = -3,
+        xpInset = 9,
     }
     DFRL.actionBarDefaults = defaults
 
@@ -150,30 +153,49 @@ DFRL:NewMod("Bars", 1, function()
         -- space. Separate scaled caps can round to different screen rows.
         local artHeight = defaults.height + 2 * defaults.topInset
         local socketBottom = defaults.buttonWidth * 2 / 36
-        local topUV = (defaults.topInset - socketBottom) / artHeight
         local upper = bar:CreateTexture(nil, "BACKGROUND")
         upper:SetTexture(DFRL:GetInfoOrCons("tex") .. "jewelry\\SocketRail.tga")
         upper:SetPoint("TOPLEFT", bar, "TOPLEFT", -defaults.sideInset, defaults.buttonWidth * 40 / 36)
         upper:SetPoint("BOTTOMRIGHT", bar, "TOPRIGHT", defaults.sideInset, socketBottom)
         upper:SetTexCoord(0, 1200 / 2048, 0, 152 / 256)
         upper:Hide()
-        local active = false
-        function DFRL.SetJewelryBarShown(shown)
-            if active == shown then return end
-            active = shown
-            local top = shown and socketBottom or defaults.topInset
+        local jewelryShown, xpJoined = false, false
+        local function UpdateBackground()
+            local top = jewelryShown and socketBottom or defaults.topInset
+            local bottom = -defaults.topInset - (xpJoined and defaults.xpExtension or 0)
+            local texture = TEX_PATH .. (xpJoined and "HDActionBarXP.tga" or "HDActionBar.tga")
+            local endUV = xpJoined and 144 / 256 or 1
+            local height = artHeight + (xpJoined and defaults.xpExtension or 0)
+            local topUV = jewelryShown and (defaults.topInset - socketBottom) / height * endUV or 0
+            left:SetTexture(texture)
+            right:SetTexture(texture)
             left:ClearAllPoints()
             left:SetPoint("TOPLEFT", bar, "TOPLEFT", -defaults.sideInset, top)
-            left:SetPoint("BOTTOMRIGHT", bar, "BOTTOM", 0, -defaults.topInset)
+            left:SetPoint("BOTTOMRIGHT", bar, "BOTTOM", 0, bottom)
             right:ClearAllPoints()
             right:SetPoint("TOPLEFT", bar, "TOP", 0, top)
-            right:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", defaults.sideInset, -defaults.topInset)
-            left:SetTexCoord(0, 1, shown and topUV or 0, 1)
-            right:SetTexCoord(1, 0, shown and topUV or 0, 1)
-            if shown then
+            right:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", defaults.sideInset, bottom)
+            left:SetTexCoord(0, 1, topUV, endUV)
+            right:SetTexCoord(1, 0, topUV, endUV)
+            if jewelryShown then
                 upper:Show()
             else
                 upper:Hide()
+            end
+        end
+        function DFRL.SetJewelryBarShown(shown)
+            if jewelryShown == shown then return end
+            jewelryShown = shown
+            UpdateBackground()
+        end
+        function DFRL.SetXPBarJoined(shown)
+            if xpJoined == shown then return end
+            xpJoined = shown
+            UpdateBackground()
+            local region = DFRL.actionBarMoveRegion
+            if region then
+                local bottom = shown and -(defaults.topInset + defaults.xpExtension) or 0
+                region:SetPoint("BOTTOMRIGHT", DFRL.mainBar, "BOTTOMRIGHT", defaults.sideInset, bottom)
             end
         end
     end

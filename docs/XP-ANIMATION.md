@@ -23,10 +23,11 @@ accept current XP immediately. Showing the bar schedules an immediate native
 baseline, so hidden gains are not replayed. The event controller has no idle
 OnUpdate: it runs only for a pending read or an active visual effect.
 
-The original fill, border, color, six-unit height, independent `xpBar` geometry,
-mouse transparency and lack of XP text/tooltips stay intact. Only two passive
-texture regions are added beneath the existing border. There are no new
-assets, settings, SavedVariables or runtime dependencies.
+The original fill, color, six-unit height, mouse transparency and lack of XP
+text/tooltips stay intact. The animation uses two passive texture regions and
+adds no asset, setting, SavedVariable or runtime dependency. The separate
+border and independent `xpBar` geometry remain available when detached;
+[XP-ATTACHMENT.md](XP-ATTACHMENT.md) describes the default joined shell.
 
 Source research, precise upstream pins and artwork ownership are recorded in
 [XPBar-ANIMATION.md](../third_party/XPBar-ANIMATION.md). This is an adaptation of
