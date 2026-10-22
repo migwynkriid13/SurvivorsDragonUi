@@ -1,5 +1,5 @@
 DFRL:NewMod("PetFrames", 4, function()
-    local COLUMNS, COLUMN_PITCH, ROW_PITCH = 2, 174, 50
+    local CELL_WIDTH, CELL_HEIGHT = 174, 46
     local ICON_SIZE, ICON_RADIUS = 34, 17
     local CENTER_X, CENTER_Y = 24.5, 22.5
     local RIM_SIZE = 39
@@ -9,8 +9,8 @@ DFRL:NewMod("PetFrames", 4, function()
     }
     local path = DFRL:GetInfoOrCons("tex")
     local root = CreateFrame("Frame", nil, UIParent)
-    root:SetWidth(COLUMNS * COLUMN_PITCH)
-    root:SetHeight(ROW_PITCH)
+    root:SetWidth(CELL_WIDTH)
+    root:SetHeight(CELL_HEIGHT)
     root:SetFrameStrata("MEDIUM")
     root:EnableMouse(false)
     root:Hide()
@@ -39,25 +39,19 @@ DFRL:NewMod("PetFrames", 4, function()
     local function Row(index)
         if rows[index] then return rows[index] end
         local frame = CreateFrame("Frame", nil, root)
-        frame:SetWidth(COLUMN_PITCH)
-        frame:SetHeight(ROW_PITCH)
-        frame:SetPoint(
-            "TOPLEFT",
-            root,
-            "TOPLEFT",
-            math.mod(index - 1, COLUMNS) * COLUMN_PITCH,
-            -math.floor((index - 1) / COLUMNS) * ROW_PITCH
-        )
+        frame:SetWidth(CELL_WIDTH)
+        frame:SetHeight(CELL_HEIGHT)
+        frame:SetPoint("TOPLEFT", root, "TOPLEFT", 0, 0)
         frame:EnableMouse(false)
         frame:Hide()
         local row = { frame = frame }
         row.name = Label(frame, 10)
         row.name:SetPoint("TOPLEFT", frame, "TOPLEFT", 48, -8)
-        row.name:SetWidth(COLUMN_PITCH - 50)
+        row.name:SetWidth(CELL_WIDTH - 50)
         row.name:SetHeight(14)
         row.status = Label(frame, 9)
         row.status:SetPoint("TOPLEFT", frame, "TOPLEFT", 48, -24)
-        row.status:SetWidth(COLUMN_PITCH - 50)
+        row.status:SetWidth(CELL_WIDTH - 50)
         row.status:SetHeight(12)
         table.insert(rows, row)
         return row
@@ -151,15 +145,27 @@ DFRL:NewMod("PetFrames", 4, function()
         row.id, row.active = nil, false
     end
     local function Bounds(count)
-        local width = COLUMNS * COLUMN_PITCH
-        local height = math.max(ROW_PITCH, math.ceil(count / COLUMNS) * ROW_PITCH)
-        if T.NearlyEqual(root:GetWidth(), width) and T.NearlyEqual(root:GetHeight(), height) then return end
-        root:SetWidth(width)
-        root:SetHeight(height)
-        DFRL.layout.Place("petFrames")
+        local rowCount = math.min(DFRL.display.Get("petRows"), math.max(1, count))
+        local columns = math.max(1, math.ceil(count / rowCount))
+        local cellWidth = CELL_WIDTH
+        if DFRL.display.Get("hidePetNames") then
+            cellWidth = DFRL.display.Get("hidePetTimers") and 49 or 98
+        end
+        local spacing = DFRL.display.Get("petSpacing")
+        local width = columns * cellWidth + (columns - 1) * spacing
+        local height = rowCount * CELL_HEIGHT + (rowCount - 1) * spacing
+        if not T.NearlyEqual(root:GetWidth(), width) or not T.NearlyEqual(root:GetHeight(), height) then
+            root:SetWidth(width)
+            root:SetHeight(height)
+            DFRL.layout.Place("petFrames")
+        end
+        return rowCount, cellWidth, spacing
     end
     local function Clear()
-        if not displayed then return end
+        if not displayed then
+            Bounds(0)
+            return
+        end
         for _, row in ipairs(rows) do
             HideRow(row)
         end
@@ -176,15 +182,36 @@ DFRL:NewMod("PetFrames", 4, function()
         local rounded = math.ceil(seconds)
         return string.format("%d:%02d", math.floor(rounded / 60), math.mod(rounded, 60))
     end
-    local function Paint(row, entry, scale)
+    local function Paint(row, entry, scale, column, line, cellWidth, spacing)
         row.id = entry.id
-        row.name:SetText(entry.name)
+        local x, y = column * (cellWidth + spacing), -line * (CELL_HEIGHT + spacing)
+        local resized = row.width ~= cellWidth
+        if row.x ~= x or row.y ~= y or resized then
+            row.frame:SetWidth(cellWidth)
+            row.frame:ClearAllPoints()
+            row.frame:SetPoint("TOPLEFT", root, "TOPLEFT", x, y)
+            row.x, row.y, row.width = x, y, cellWidth
+        end
+        local showName = not DFRL.display.Get("hidePetNames")
+        local showTimer = not DFRL.display.Get("hidePetTimers") and entry.temporary > 0
+        row.name:SetText(showName and entry.name or "")
+        if resized or row.showName ~= showName or row.showTimer ~= showTimer then
+            row.name:ClearAllPoints()
+            row.name:SetPoint("TOPLEFT", row.frame, "TOPLEFT", 48, showTimer and -8 or -16)
+            row.name:SetWidth(math.max(1, cellWidth - 50))
+            row.status:ClearAllPoints()
+            row.status:SetPoint("TOPLEFT", row.frame, "TOPLEFT", 48, showName and -24 or -16)
+            row.status:SetWidth(math.max(1, cellWidth - 50))
+            row.showName, row.showTimer = showName, showTimer
+        end
         local circle = Circle(row)
         SetIcon(circle, entry.icon, scale)
-        circle.count:SetText(entry.count > 1 and ("x" .. entry.count) or "")
+        circle.count:SetText(
+            not DFRL.display.Get("hidePetCounts") and entry.count > 1 and ("x" .. entry.count) or ""
+        )
         if not circle.active then circle.frame:Show() end
         circle.active = true
-        if entry.temporary == 0 then
+        if not showTimer then
             row.status:SetText("")
         elseif Number(entry.remaining) and entry.remaining >= 0 then
             row.status:SetText(Time(entry.remaining))
@@ -268,9 +295,15 @@ DFRL:NewMod("PetFrames", 4, function()
         end
         local scale = root:GetEffectiveScale()
         if not Number(scale) or scale <= 0 then return end
-        Bounds(count)
+        local rowCount, cellWidth, spacing = Bounds(count)
+        local perRow, extra = math.floor(count / rowCount), math.mod(count, rowCount)
+        local column, line = 0, 0
         for index = 1, count do
-            Paint(Row(index), entries[index], scale)
+            Paint(Row(index), entries[index], scale, column, line, cellWidth, spacing)
+            column = column + 1
+            if column == perRow + (line < extra and 1 or 0) then
+                column, line = 0, line + 1
+            end
         end
         for index = count + 1, table.getn(rows) do
             HideRow(rows[index])
@@ -287,9 +320,16 @@ DFRL:NewMod("PetFrames", 4, function()
     end
     DFRL.layout.Register("petFrames", root, function()
         root:ClearAllPoints()
-        root:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 12, -220)
+        if PlayerFrame and PlayerFrame.portrait then
+            root:SetPoint("TOPLEFT", PlayerFrame.portrait, "BOTTOMLEFT", -10, -8)
+        elseif PlayerFrame then
+            root:SetPoint("TOPLEFT", PlayerFrame, "BOTTOMLEFT", -10, -8)
+        else
+            root:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 2, -220)
+        end
     end, { labelAbove = true, refreshDefault = true, onReset = Clear })
     DFRL.locale.Listen(Refresh)
+    DFRL.display.Listen(function() age = 0.1 end)
     for _, name in ipairs({ "PLAYER_ENTERING_WORLD", "PLAYER_LEAVING_WORLD", "PLAYER_LOGOUT", "CHAT_MSG_ADDON" }) do
         controller:RegisterEvent(name)
     end

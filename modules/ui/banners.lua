@@ -62,6 +62,7 @@ DFRL:NewMod("RunBanners", 4, function()
             and type(AZS_IsHudShown) == "function"
             and type(AZS_SetHudShown) == "function"
     end
+    function banners.IsActive() return active and inWorld and DFRL.display.Get("customBanners") end
     local function Reflow()
         table.sort(visible, function(a, b) return a.sequence < b.sequence end)
         local height = 0
@@ -201,7 +202,7 @@ DFRL:NewMod("RunBanners", 4, function()
         table.setn(queue, queueCount)
     end
     local function Receive(entry)
-        if not active or not inWorld or type(entry) ~= "table" then return end
+        if not banners.IsActive() or type(entry) ~= "table" then return end
         local id = entry.id
         if type(id) ~= "number" or id < 0 or id - id ~= 0 or id ~= math.floor(id) or seen[id] then return end
         if type(entry.text) ~= "string" or entry.text == "" then return end
@@ -221,7 +222,7 @@ DFRL:NewMod("RunBanners", 4, function()
         Enqueue(text, entry.boss == true, entry.kind, id, entry.text)
     end
     function banners.RedirectChat(source, text, eventName, speaker, message)
-        if not active or not inWorld or not source or type(text) ~= "string" then return false end
+        if not banners.IsActive() or not source or type(text) ~= "string" then return false end
         if eventName == "CHAT_MSG_RAID_BOSS_EMOTE" then
             -- The owned legacy bridge already forwards this whole native
             -- event category to Banners. Suppress its regular-chat copy
@@ -270,7 +271,7 @@ DFRL:NewMod("RunBanners", 4, function()
             Enqueue(text, false, "legacy")
         end
         hook = function(owner, text, r, g, b, id, addToStart)
-            if active and legacyHook == hook and type(text) == "string" and text ~= "" then
+            if banners.IsActive() and legacyHook == hook and type(text) == "string" and text ~= "" then
                 local ok, message = pcall(ReceiveLegacy, this or owner, text, event, arg2, arg1)
                 if ok then return end
                 Failed(message)
@@ -288,7 +289,7 @@ DFRL:NewMod("RunBanners", 4, function()
         ReleaseErrors()
         local original, hook = frame.AddMessage
         hook = function(owner, text, r, g, b, id, hold)
-            if active and errorHook == hook and type(text) == "string" and text ~= "" then
+            if banners.IsActive() and errorHook == hook and type(text) == "string" and text ~= "" then
                 if HasBanner(text) then return end
                 -- Wait until the next update so either native delivery order
                 -- can pair with an accepted banner. Unmatched errors stay native.
@@ -324,7 +325,8 @@ DFRL:NewMod("RunBanners", 4, function()
         if not ok and geterrorhandler then geterrorhandler()(message) end
     end
     Refresh = function()
-        if not inWorld or faulted or not Supported() then
+        if delivering then return false end
+        if not inWorld or not DFRL.display.Get("customBanners") or faulted or not Supported() then
             if active or registered or native.IsCaptured() then Release() end
             return false
         end
@@ -393,6 +395,7 @@ DFRL:NewMod("RunBanners", 4, function()
         root:ClearAllPoints()
         root:SetPoint("TOP", UIParent, "TOP", 0, -130)
     end, { labelAbove = true, refreshDefault = true, onReset = banners.Clear })
+    DFRL.display.Listen(Refresh)
     controller:RegisterEvent("PLAYER_ENTERING_WORLD")
     controller:RegisterEvent("PLAYER_LEAVING_WORLD")
     controller:RegisterEvent("PLAYER_LOGOUT")

@@ -404,7 +404,13 @@ CleanerChat.PrettifyMessage = function(text, eventName, speaker, message)
         or eventName == "CHAT_MSG_SYSTEM"
         or eventName == "CHAT_MSG_MONSTER_EMOTE"
         or eventName == "CHAT_MSG_RAID_BOSS_EMOTE"
-    if announcementEvent and (HiddenAnnouncement(text) or (eventName and HiddenAnnouncement(message))) then
+    local banners = DFRL.banners
+    if
+        announcementEvent
+        and banners
+        and banners.IsActive()
+        and (HiddenAnnouncement(text) or (eventName and HiddenAnnouncement(message)))
+    then
         return nil, "hide"
     end
     if eventName == "CHAT_MSG_MONSTER_YELL" then return NpcYell(text, speaker, message) end
