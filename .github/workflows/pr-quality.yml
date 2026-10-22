@@ -105,6 +105,10 @@ jobs:
       - name: Model native-base jewelry material ordering
         run: python3 scripts/check_jewelry_batching.py
 
+      - name: Model candidate jewelry sampling arithmetic
+        # A standalone reference, not addon/client execution or pixel acceptance.
+        run: python3 scripts/check_jewelry_repeat_sampling.py | tee dist/pr-quality/jewelry-repeat-sampling.log
+
       - name: Upload formatting patches and analysis logs
         if: always() && steps.sources.outcome == 'success'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

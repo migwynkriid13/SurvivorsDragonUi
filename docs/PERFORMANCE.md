@@ -55,8 +55,9 @@ native-style sort. For an isolated batch of two equal icons, that sort leaves
 of 70. Different images and unrelated artwork in the same native layer can
 alter that permutation, so this is a conditional batching improvement rather
 than a fixed draw-count guarantee. Five different icons still need 70 regions.
-The default docked action-button icons share this layer, so the isolated
-examples do not predict the live combined batch's draw count.
+Native action-button normal/pushed artwork can share this layer; their icon
+images use BACKGROUND. The isolated examples therefore do not predict the live
+combined batch's draw count.
 The Actions reference model reports equipment/rank combinations without running
 addon Lua; these are source-model results, not measured GPU counters. Failed
 texture assignments retain that slot's last successful artwork; recycling never
@@ -81,15 +82,20 @@ texture paths, including future or unknown valid paths, without an icon catalog.
 The remaining unique-image drawing cost is unresolved. The supplied executable
 stores `uv_clamp` as one material uniform at `0x5fb2f29`, applies that clamp at
 `0x5fb339e`, and samples the image at `0x5fb3442`. Each of the fourteen original
-bands has a different half-texel sampling window. Five distinct images therefore
-still require seventy texture/window states in this renderer. An atlas shares
-the image handle but cannot share those windows. A full quad or baked alpha mask
-changes the original hard boundaries or their filtering at fractional scales.
+bands has a different half-texel sampling window. The existing one-quad-per-band
+implementation therefore retains seventy texture/window states for five
+distinct images. This is a bound on that implementation, not proof that every
+addon-only approach requires seventy states.
 
-Removing this cost exactly needs native support, such as a per-quad sampling
-window inside one batch or an equivalent compositor/mask API. The inspected
-addon interface exposes neither. This PR does not patch the client or present
-the remaining seventy draws as fixed.
+Further read-only inspection found an addon-accessible repeat-mode route that
+could replace sampling clamps with subdivided geometry. It could use five
+material groups and 630 regions, or a partial version could use 35 groups and
+210 regions. The packaged client supports the required repeat-mode loading.
+Exact rendered output, overlap ordering and net performance are not established;
+neither candidate is enabled. See
+[the follow-up investigation](JEWELRY-RENDERING-INVESTIGATION.md) for the concrete
+construction, evidence and remaining questions. The five-different-icons request
+remains unresolved; this PR does not present these candidates as a shipped fix.
 
 The follow-up nevertheless removes redundant work for every equipment
 combination: unrelated display previews retain unchanged row anchors and edit
