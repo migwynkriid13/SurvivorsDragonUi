@@ -2,6 +2,9 @@
 DFRL.locale.data = {
     en = {
         ui = {
+            ["Pet frames"] = "Pet frames",
+            ["Permanent"] = "Permanent",
+            ["+%d more pets"] = "+%d more pets",
             ["Banners"] = "Banners",
             ["Boss in: %s"] = "Boss in: %s",
             ["You received"] = "You received",
@@ -426,6 +429,9 @@ DFRL.locale.data = {
     },
     pl = {
         ui = {
+            ["Pet frames"] = "Ramki zwierzaków",
+            ["Permanent"] = "Stały",
+            ["+%d more pets"] = "+%d innych zwierzaków",
             ["Banners"] = "Banery",
             ["Boss in: %s"] = "Boss za: %s",
             ["You received"] = "Otrzymano",
@@ -874,6 +880,9 @@ DFRL.locale.data = {
     },
     cs = {
         ui = {
+            ["Pet frames"] = "Rámečky mazlíčků",
+            ["Permanent"] = "Trvalý",
+            ["+%d more pets"] = "Další mazlíčci: %d",
             ["Banners"] = "Oznámení",
             ["Boss in: %s"] = "Boss za: %s",
             ["You received"] = "Získali jste",
@@ -1773,6 +1782,9 @@ DFRL.locale.data = {
     },
     de = {
         ui = {
+            ["Pet frames"] = "Begleiterfenster",
+            ["Permanent"] = "Dauerhaft",
+            ["+%d more pets"] = "+%d weitere Begleiter",
             ["Banners"] = "Banner",
             ["Boss in: %s"] = "Boss in: %s",
             ["You received"] = "Ihr habt erhalten",
@@ -2227,6 +2239,9 @@ DFRL.locale.data = {
     },
     pt = {
         ui = {
+            ["Pet frames"] = "Quadros dos ajudantes",
+            ["Permanent"] = "Permanente",
+            ["+%d more pets"] = "+%d outros ajudantes",
             ["Banners"] = "Avisos",
             ["Boss in: %s"] = "Chefe em: %s",
             ["You received"] = "Você recebeu",
@@ -2666,6 +2681,9 @@ DFRL.locale.data = {
     },
     es = {
         ui = {
+            ["Pet frames"] = "Marcos de mascotas",
+            ["Permanent"] = "Permanente",
+            ["+%d more pets"] = "+%d mascotas más",
             ["Banners"] = "Avisos",
             ["Boss in: %s"] = "Jefe en: %s",
             ["You received"] = "Has recibido",
@@ -3108,6 +3126,9 @@ DFRL.locale.data = {
     },
     fr = {
         ui = {
+            ["Pet frames"] = "Cadres des familiers",
+            ["Permanent"] = "Permanent",
+            ["+%d more pets"] = "+%d autres familiers",
             ["Banners"] = "Annonces",
             ["Boss in: %s"] = "Boss dans : %s",
             ["You received"] = "Vous avez reçu",
@@ -3577,6 +3598,9 @@ DFRL.locale.data = {
     },
     ro = {
         ui = {
+            ["Pet frames"] = "Cadre pentru companioni",
+            ["Permanent"] = "Permanent",
+            ["+%d more pets"] = "+%d alți companioni",
             ["Banners"] = "Anunțuri",
             ["Boss in: %s"] = "Boss în: %s",
             ["You received"] = "Ai primit",
@@ -4016,6 +4040,9 @@ DFRL.locale.data = {
     },
     tr = {
         ui = {
+            ["Pet frames"] = "Yoldaş çerçeveleri",
+            ["Permanent"] = "Kalıcı",
+            ["+%d more pets"] = "+%d yoldaş daha",
             ["Banners"] = "Duyurular",
             ["Boss in: %s"] = "Bossa kalan: %s",
             ["You received"] = "Aldın",
@@ -4452,6 +4479,9 @@ DFRL.locale.data = {
     },
     ru = {
         ui = {
+            ["Pet frames"] = "Рамки питомцев",
+            ["Permanent"] = "Постоянный",
+            ["+%d more pets"] = "Еще питомцев: %d",
             ["Banners"] = "Объявления",
             ["Boss in: %s"] = "Босс через: %s",
             ["You received"] = "Вы получили",
@@ -4978,6 +5008,9 @@ DFRL.locale.data = {
     },
     uk = {
         ui = {
+            ["Pet frames"] = "Рамки вихованців",
+            ["Permanent"] = "Постійний",
+            ["+%d more pets"] = "Ще вихованців: %d",
             ["Banners"] = "Оголошення",
             ["Boss in: %s"] = "Бос через: %s",
             ["You received"] = "Ви отримали",
@@ -5480,6 +5513,9 @@ DFRL.locale.data = {
     },
     zh = {
         ui = {
+            ["Pet frames"] = "宠物框体",
+            ["Permanent"] = "永久",
+            ["+%d more pets"] = "另有%d只宠物",
             ["Banners"] = "通告",
             ["Boss in: %s"] = "首领出现倒计时：%s",
             ["You received"] = "你获得了",
@@ -5907,6 +5943,9 @@ DFRL.locale.data = {
     },
     ja = {
         ui = {
+            ["Pet frames"] = "ペットフレーム",
+            ["Permanent"] = "常時",
+            ["+%d more pets"] = "ほか%d体",
             ["Banners"] = "通知",
             ["Boss in: %s"] = "ボス出現まで: %s",
             ["You received"] = "獲得しました",
@@ -6367,6 +6406,9 @@ DFRL.locale.data = {
     },
     ko = {
         ui = {
+            ["Pet frames"] = "소환수 프레임",
+            ["Permanent"] = "영구",
+            ["+%d more pets"] = "추가 소환수 %d마리",
             ["Banners"] = "알림",
             ["Boss in: %s"] = "우두머리 등장까지: %s",
             ["You received"] = "획득한 아이템",

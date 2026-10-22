@@ -53,5 +53,6 @@ modules\unit\resources.lua
 modules\unit\auras.lua
 modules\unit\target.lua
 modules\unit\mini.lua
+modules\unit\pets.lua
 modules\unit\cut.lua
 modules\xprep\xprep.lua

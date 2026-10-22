@@ -10,8 +10,8 @@ It documents `AZS_GetSummons`, `AZS_GetSummonCount`, `AZS_GetSummonGroups`,
 
 The [summon API assessment](SUMMONS-API.md) explains the new counts, native
 icons and run-clock lifetimes, their limits, and the effect on our current pet
-frame and SCT filter. A summon tracker is now possible, but this documentation
-update adds no tracker or runtime dependency. The API does not identify the
+frame and SCT filter. The [pet-frame group](PET-FRAMES.md) now uses this roster
+for up to eight names, native icons and lifetimes. The API does not identify the
 source of unattributed SELF combat messages, including the reported Imp
 Fireball. No existing API removal is stated in the supplied reference.
 

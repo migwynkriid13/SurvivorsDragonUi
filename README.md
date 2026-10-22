@@ -31,9 +31,10 @@ To use the game's damage numbers, choose **Game settings** under **Combat text**
 - Player and target frames, a seven-button action bar, equipped jewelry, XP, kills, gold and cache cost.
 - A run timer with boss markers, movable event banners and boss health bars. Move, resize or hide **Banners** through `/sdui` → **Layout**. Enable **Guardians in boss bar** in `/sdui` → **HUD** to include fighting guardians; it defaults off.
 - A guardian tracker with health bars during combat. Plus shows only living guardians; minus shows all lairs and respawn timers. Move, resize or hide it through `/sdui` → **Layout**.
+- Pet frames for up to eight active summons, with native names, icons and duration. Extra pets appear as a count. Move, resize or hide the whole **Pet frames** group through `/sdui` → **Layout**.
 - A movable **Level Up!** button for stored levels. Select it in `/sdui` → **Layout** to move or resize it, then **Confirm** to save.
 - Compact nameplates and custom damage numbers with size, color and damage filters.
-- Retail-style loot popups for new drops, using WoW’s original font. Already-collected items stay in chat without a popup. Move, resize or hide loot notifications through **Layout**.
+- Retail-style loot popups for new drops, using WoW’s original font. Already-collected drops are hidden from both chat and popups. Move, resize or hide loot notifications through **Layout**.
 - Transparent chat with shorter game messages and mouse-wheel history.
 - Cache and guardian guides with distance, direction and world-map pins. Mirror each guide in `/sdui` → **HUD** to put its arrow on either side.
 - Minimap loot-pouch icons for nearby caches and gold skull medallions for all living guardians. Empty or dead lairs show no icon, and Guardian guidance hides the red flag. Guardian icons mark their lairs, including while they are fighting elsewhere.

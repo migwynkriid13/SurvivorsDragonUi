@@ -7,8 +7,9 @@ The earlier Markdown and 2026-10-15 reference copies remain unchanged.
 
 This gives SurvivorsDragonUi the data needed for a summon tracker across every
 class and spec. The supplied contract states no removal of an API we currently
-use. This update adds documentation only; it does not display summons or change
-the existing pet frame, combat text, settings or runtime package.
+use. Its initial import was documentation only. The subsequent user-requested
+[pet-frame group](PET-FRAMES.md) now displays up to eight summons with published
+pet artwork, native names/icons and lifetimes, plus an overflow count.
 
 ## What the new API provides
 
@@ -41,33 +42,32 @@ Elementals and Warlock demons, including Legion Gate's lesser demons, Felguard,
 Pit Lord, Infernal and Doomguard. The cosmetic Rewards-page companion is
 explicitly excluded.
 
-## What we can add
+## What the pet-frame group uses
 
-A compact tracker can show the game's own icon and translated name, how many
-are active, and when the next temporary member expires. An expanded view could
-show each temporary member's own remaining time. Permanent members can retain
-their count without an invented expiry. Native icon paths avoid bundled summon
-artwork, guessed spell icons or a separate creature catalog.
+The group shows each visible member's own icon, translated name and remaining
+time. Only explicit permanence shows **Permanent**; missing timing remains
+unknown. Native icon paths avoid bundled creature artwork, guessed spell icons
+or a separate creature catalog. Eight passive rows share one Layout group;
+there is no per-creature saved state.
 
 The supplied reference ties remaining time to `AZS_GetRunTime()`. That preserves
 the game's pause and card-choice timing without estimating duration from casts,
 talents, class or receipt time. Stable keys support logic across languages while
 the supplied names remain suitable for display.
 
-These are possible follow-up features, not behavior implemented by importing
-the reference. A future view should use the existing layout and lifecycle
-helpers, feature-detect its required getters and stay unavailable on older
-builds without affecting the current HUD. Read phase before retained tables,
-require a received current summon snapshot, defer event-triggered reads until
-native parsing completes, and clear session rows on run/world cleanup. Native
-lists must remain read-only, with no saved summon state or independent gameplay
+The implementation uses the existing layout and lifecycle helpers,
+feature-detects its required getters and stays unavailable on older builds
+without affecting the current HUD. It reads phase before retained tables,
+requires a received current summon snapshot, defers event-triggered reads until
+native parsing completes, and clears session rows on run/world cleanup. Native
+lists remain read-only, with no saved summon state or independent gameplay
 clock. The new reference documents no `pets` or `summons` HUD takeover part.
 
 ## Effect on the existing pet frame
 
 [The current pet frame](../modules/unit/mini.lua) styles the native `PetFrame`
-and reads the single `pet` unit's health and power. No runtime module currently
-uses the new summon getters, table or update prefix.
+and reads the single `pet` unit's health and power. The new roster group uses
+the summon getter and update prefix separately, without changing that frame.
 
 The summon roster can describe multiple simultaneous creatures that a single
 unit token cannot enumerate. It supplies no health, maximum health, power,
@@ -76,10 +76,11 @@ unique among the player's summons in a run, not as enemy spawn IDs or native
 unit GUIDs. There is no documented conversion to `AZS_UNITS`, `AZS_TARGET` or a
 unit token.
 
-An additional summon tracker would preserve the native pet frame's information.
-Replacing that frame with roster data alone would lose its available health
-and power display; the roster cannot reconstruct those values. Importing these
-docs does not perform that replacement.
+The summon tracker preserves the native pet frame's information. Replacing
+that frame with roster data alone would lose its available health and power
+display; the roster cannot reconstruct those values. The user chose names,
+icons and duration with an eight-frame cap and reported that summons are
+immortal. Immortality supplies neither health values nor a permanence flag.
 
 ## Effect on Pet damage and SCT icons
 
@@ -107,13 +108,14 @@ for that creature's attack or the spell that created it. The existing
 [exact-name SCT icon resolver](SCT-ICONS.md) keeps its source priorities and
 ambiguity rules; this API adds no verified attack-icon mapping.
 
-## What changes or is lost now
+## Compatibility limits
 
 Nothing in the supplied contract requires migration of our existing features.
 No API removal or changed signature used by the addon is stated. This is a
 documentation-level compatibility assessment, not verification of a new client
 binary. Existing pet health/power, combat text and settings continue through
-their current paths because this update changes no runtime files.
+their current paths. The new group adds only geometry to the existing layout
+store, with no additional settings or gameplay persistence.
 
 The new data does not control summons, command attacks, extend lifetimes,
 identify individual damage events or include the cosmetic companion. It also
