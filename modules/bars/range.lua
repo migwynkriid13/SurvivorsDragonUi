@@ -1,5 +1,5 @@
 DFRL:NewMod("RangeIndicator", 1, function()
-    local TEX_PATH = "Interface\\AddOns\\SurvivorsDragonUi\\media\\tex\\actionbars\\"
+    local TEX_PATH = DFRL:GetInfoOrCons("tex") .. "actionbars\\"
     local INDICATOR_ALPHA = 0.5
     local UPDATE_INTERVAL = 0.1
 

@@ -1,5 +1,5 @@
 DFRL:NewMod("Xprep", 1, function()
-    local texpath = "Interface\\AddOns\\SurvivorsDragonUi\\media\\tex\\xprep\\"
+    local texpath = DFRL:GetInfoOrCons("tex") .. "xprep\\"
     local defaults = { top = 49, height = 6, borderHeight = 12 }
     DFRL.xpBarDefaults = defaults
     KillFrame(MainMenuBarPerformanceBarFrame)

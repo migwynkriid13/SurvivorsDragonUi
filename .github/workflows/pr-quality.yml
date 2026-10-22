@@ -99,6 +99,9 @@ jobs:
         # Keep this separate from the Lua static-analysis steps above.
         run: python3 scripts/check_timer_background.py
 
+      - name: Check shared addon asset paths
+        run: python3 scripts/check_asset_paths.py
+
       - name: Model native-base jewelry material ordering
         run: python3 scripts/check_jewelry_batching.py
 

@@ -125,6 +125,21 @@ defines cropped half-texel clamps. These sources explain the proposed batching
 and the reason to retain every jewelry strip boundary. They do not establish
 the complete packaged renderer's identity or a measured performance result.
 
+## Asset roots in the legacy installation
+
+The public package uses the `SurvivorsDragonUi` folder; the existing local
+installation uses `-DragonflightReloaded`. The action bar, range indicator,
+XP bar, minimap and older window skins now obtain their texture subfolders
+through `DFRL:GetInfoOrCons("tex")`, as the newer modules already did. No module
+bypasses the shared root with a hardcoded public folder name.
+
+This corrects missing action-bar backgrounds/buttons, purple XP fill and borders,
+minimap borders/shadow, zone-strip background and older window textures after a
+legacy sync. Filenames, pixels, UVs, colors, dimensions and native handlers are
+unchanged. The local copy translates only the shared core root and loader event
+identity. Actions statically enforces one asset root across every runtime Lua
+file and checks both root spellings without loading Lua.
+
 ## Full chat history
 
 Every diagnostic record remains available for the complete Lua session, with

@@ -7,7 +7,7 @@ DFRL:NewMod("Bars", 1, function()
     local COOLDOWN_ZERO = 0.1
     local COOLDOWN_FINAL_WINDOW = 0.2
     local COOLDOWN_UNITS = { { 86400, "d" }, { 3600, "h" }, { 60, "m" }, { 1, "" } }
-    local TEX_PATH = "Interface\\AddOns\\SurvivorsDragonUi\\media\\tex\\actionbars\\"
+    local TEX_PATH = DFRL:GetInfoOrCons("tex") .. "actionbars\\"
     local defaults = {
         bottom = 55,
         topInset = 14,
