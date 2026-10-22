@@ -11,7 +11,17 @@ DFRL:NewMod("Player", 1, function()
     local healthR, healthG, healthB = 0, 1, 0
     local setHealthColor = PlayerFrameHealthBar.SetStatusBarColor
     -- Native health updates also recolor this bar; keep the effective display choice.
-    PlayerFrameHealthBar.SetStatusBarColor = function(bar) setHealthColor(bar, healthR, healthG, healthB) end
+    PlayerFrameHealthBar.SetStatusBarColor = function(bar)
+        local red, green, blue, alpha = bar:GetStatusBarColor()
+        if
+            not T.NearlyEqual(red, healthR)
+            or not T.NearlyEqual(green, healthG)
+            or not T.NearlyEqual(blue, healthB)
+            or (alpha and not T.NearlyEqual(alpha, 1))
+        then
+            setHealthColor(bar, healthR, healthG, healthB)
+        end
+    end
 
     local function UpdateHealthColor()
         local color
@@ -26,9 +36,13 @@ DFRL:NewMod("Player", 1, function()
     end
     DFRL.display.Listen(UpdateHealthColor)
 
+    local appliedRound, appliedHidden
     local function UpdatePortraitShape()
         if not updateBorder then return end
         local round = DFRL.display.Get("roundPlayerPortrait")
+        local hidden = DFRL.display.Get("hidePortraits")
+        if round == appliedRound and hidden == appliedHidden then return end
+        appliedRound, appliedHidden = round, hidden
         updateBorder(tex .. (round and "UI-TargetingFrameDF1.blp" or "UI-TargetingFrameDF.blp"))
         local extension = setPortraitOverlap(round)
         if healthText then healthText:SetPoint("CENTER", PlayerFrameHealthBar, "CENTER", extension / 2, 0) end
@@ -41,7 +55,10 @@ DFRL:NewMod("Player", 1, function()
             primaryText:SetPoint("CENTER", primaryBar, "CENTER", extension / 2, 0)
         end
         for _, textures in ipairs(pulseTextures) do
-            if round then
+            if hidden then
+                textures.original:Hide()
+                textures.round:Hide()
+            elseif round then
                 textures.original:Hide()
                 textures.round:Show()
             else
@@ -64,22 +81,31 @@ DFRL:NewMod("Player", 1, function()
             or maximum - maximum ~= 0
             or type(powerType) ~= "number"
         then
-            primaryBar:Hide()
-            primaryText:SetText("")
+            if primaryBar:IsShown() then primaryBar:Hide() end
+            T.SetTextIfChanged(primaryText, "")
             setPowerShown(false)
             return
         end
         local color = type(ManaBarColor) == "table" and ManaBarColor[powerType]
+        local red, green, blue = 1, 1, 1
         if type(color) == "table" then
-            primaryBar:SetStatusBarColor(color.r, color.g, color.b)
-        else
-            primaryBar:SetStatusBarColor(1, 1, 1)
+            red, green, blue = color.r, color.g, color.b
         end
-        primaryBar:SetMinMaxValues(0, maximum)
-        primaryBar:SetValue(value)
-        primaryText:SetText(value)
+        local currentRed, currentGreen, currentBlue, currentAlpha = primaryBar:GetStatusBarColor()
+        if
+            not T.NearlyEqual(red, currentRed)
+            or not T.NearlyEqual(green, currentGreen)
+            or not T.NearlyEqual(blue, currentBlue)
+            or (currentAlpha and not T.NearlyEqual(currentAlpha, 1))
+        then
+            primaryBar:SetStatusBarColor(red, green, blue)
+        end
+        local minimum, currentMaximum = primaryBar:GetMinMaxValues()
+        if minimum ~= 0 or currentMaximum ~= maximum then primaryBar:SetMinMaxValues(0, maximum) end
+        if primaryBar:GetValue() ~= value then primaryBar:SetValue(value) end
+        T.SetTextIfChanged(primaryText, value)
         setPowerShown(true)
-        primaryBar:Show()
+        if not primaryBar:IsShown() then primaryBar:Show() end
     end
 
     local function CreateValueText(bar, size, y)
@@ -95,8 +121,8 @@ DFRL:NewMod("Player", 1, function()
 
     local function UpdateValues()
         if not initialized then return end
-        healthText:SetText(UnitHealth("player"))
-        if PlayerLevelText then PlayerLevelText:SetText(UnitLevel("player")) end
+        T.SetTextIfChanged(healthText, UnitHealth("player"))
+        if PlayerLevelText then T.SetTextIfChanged(PlayerLevelText, UnitLevel("player")) end
         UpdateHealthColor()
     end
 
@@ -148,16 +174,21 @@ DFRL:NewMod("Player", 1, function()
         round:SetAlpha(0)
         round:Hide()
         table.insert(pulseTextures, { original = texture, round = round })
-        local pulseTime = 0
+        local pulseTime, pulseAlpha = 0, 0
         overlay:SetScript("OnUpdate", function()
+            if DFRL.display.Get("hidePortraits") then return end
             local elapsed = arg1 or 0
             if active() then
                 pulseTime = math.mod(pulseTime + elapsed, 1)
                 texture:SetAlpha(0.5 + 0.5 * math.sin(pulseTime * 2 * math.pi))
             else
+                -- Keep native state detection at frame cadence without repainting
+                -- either inactive artwork after its original fade reaches zero.
+                if pulseAlpha == 0 then return end
                 texture:SetAlpha(math.max(0, texture:GetAlpha() - elapsed * 2))
             end
-            round:SetAlpha(texture:GetAlpha())
+            pulseAlpha = texture:GetAlpha()
+            round:SetAlpha(pulseAlpha)
         end)
     end
 
@@ -183,7 +214,7 @@ DFRL:NewMod("Player", 1, function()
             end
         end)
         local function UpdateResting()
-            if IsResting() then
+            if IsResting() and not DFRL.display.Get("hidePortraits") then
                 animation:Show()
             else
                 animation:Hide()
@@ -192,6 +223,7 @@ DFRL:NewMod("Player", 1, function()
         local events = CreateFrame("Frame")
         events:RegisterEvent("PLAYER_UPDATE_RESTING")
         events:SetScript("OnEvent", UpdateResting)
+        DFRL.display.Listen(UpdateResting)
         UpdateResting()
     end
 
@@ -258,6 +290,8 @@ DFRL:NewMod("Player", 1, function()
             T.SetFont(PlayerLevelText, 11, "NONE")
             PlayerLevelText:SetTextColor(1, 0.82, 0)
         end
+        T.BindUnitLabelVisibility(PlayerFrame.name, "showPlayerName")
+        T.BindUnitLabelVisibility(PlayerLevelText, "showPlayerLevel")
         -- Preserve the original addon status effects without stock overlays.
         _G.PlayerFrame_UpdateStatus = function() end
         for _, name in ipairs({

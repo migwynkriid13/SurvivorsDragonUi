@@ -256,9 +256,12 @@ DFRL:NewMod("Waypoints", 3, function()
         end
 
         local function PlacePin(pin, x, y)
-            pin:ClearAllPoints()
-            pin:SetPoint("CENTER", Minimap, "CENTER", x, y)
-            pin:Show()
+            if pin.drawnX ~= x or pin.drawnY ~= y then
+                pin:ClearAllPoints()
+                pin:SetPoint("CENTER", Minimap, "CENTER", x, y)
+                pin.drawnX, pin.drawnY = x, y
+            end
+            if not pin:IsShown() then pin:Show() end
             return Shown(pin:IsVisible()) == true
         end
 
@@ -404,6 +407,7 @@ DFRL:NewMod("Waypoints", 3, function()
 
     local function MakeHUD(tracker)
         tracker.entries, tracker.pins = {}, {}
+        tracker.emptyEntries = tracker.entries
         local hud = CreateFrame("Frame", tracker.frameName, UIParent)
         hud:SetWidth(HUD_WIDTH)
         hud:SetHeight(HUD_HEIGHT)
@@ -451,7 +455,7 @@ DFRL:NewMod("Waypoints", 3, function()
 
     local function HidePin(pin)
         if GameTooltip and GameTooltip:IsOwned(pin) then GameTooltip:Hide() end
-        pin:Hide()
+        if pin:IsShown() then pin:Hide() end
         pin.entry = nil
     end
     local function HidePins(tracker)
@@ -462,13 +466,17 @@ DFRL:NewMod("Waypoints", 3, function()
     local function Clear(tracker)
         if tracker.kind == "guardian" and DFRL.guardians then DFRL.guardians.Clear() end
         ClearMinimapPins(tracker.kind)
-        tracker.entries = {}
+        tracker.entries = tracker.emptyEntries
+        tracker.acceptedEntries, tracker.acceptedLairs, tracker.acceptedStamp = nil, nil, nil
         navigation.SetPoints(tracker.source, nil)
         tracker.selectedKey, tracker.selected, tracker.provisionalSelection = nil, nil, nil
         tracker.presentation = nil
-        tracker.hud:Hide()
-        tracker.pointer:Hide()
-        tracker.distanceText:SetText("")
+        if tracker.hudWanted ~= false then
+            tracker.hudWanted = false
+            tracker.hud:Hide()
+        end
+        if tracker.pointer:IsShown() then tracker.pointer:Hide() end
+        T.SetTextIfChanged(tracker.distanceText, "")
         HidePins(tracker)
     end
     local function ClearAll()
@@ -497,6 +505,19 @@ DFRL:NewMod("Waypoints", 3, function()
         -- prefixes are not run ids and cannot establish snapshot ordering.
         if type(list) ~= "table" or not Number(_G[tracker.source .. "_UPDATED"]) or list == tracker.blockedSnapshot then
             return
+        end
+        local stamp, received = _G[tracker.source .. "_UPDATED"], tracker.packetGeneration or 0
+        if
+            tracker.acceptedSnapshot == list
+            and tracker.acceptedStamp == stamp
+            and tracker.acceptedGeneration == received
+            and tracker.acceptedEntries
+        then
+            if tracker.kind == "guardian" and DFRL.guardians then
+                local context = Number(_G.AZS_ZONE_UPDATED) and _G.AZS_ZONE or nil
+                DFRL.guardians.AcceptLairs(tracker.acceptedLairs, stamp, received, context)
+            end
+            return tracker.acceptedEntries
         end
         local guardian = tracker.kind == "guardian"
         local result, seen, lairs = {}, {}, {}
@@ -549,8 +570,9 @@ DFRL:NewMod("Waypoints", 3, function()
             end
         end
         tracker.acceptedSnapshot = list
-        tracker.acceptedGeneration = tracker.packetGeneration or 0
+        tracker.acceptedGeneration, tracker.acceptedStamp, tracker.acceptedEntries = received, stamp, result
         if guardian and DFRL.guardians then
+            tracker.acceptedLairs = lairs
             local context = Number(_G.AZS_ZONE_UPDATED) and _G.AZS_ZONE or nil
             DFRL.guardians.AcceptLairs(lairs, _G.AZS_LAIRS_UPDATED, tracker.acceptedGeneration, context)
         end
@@ -676,12 +698,19 @@ DFRL:NewMod("Waypoints", 3, function()
                         pin.entry = entry
                         local tracked = entry.key == tracker.selectedKey
                         local size = tracked and 32 or 26
-                        pin:SetWidth(size)
-                        pin:SetHeight(size)
-                        pin:SetAlpha(tracked and 1 or 0.75)
-                        pin:ClearAllPoints()
-                        pin:SetPoint("CENTER", region, "TOPLEFT", x * width, -y * height)
-                        pin:Show()
+                        if pin.drawnSize ~= size then
+                            pin:SetWidth(size)
+                            pin:SetHeight(size)
+                            pin:SetAlpha(tracked and 1 or 0.75)
+                            pin.drawnSize = size
+                        end
+                        local drawnX, drawnY = x * width, -y * height
+                        if pin.drawnRegion ~= region or pin.drawnX ~= drawnX or pin.drawnY ~= drawnY then
+                            pin:ClearAllPoints()
+                            pin:SetPoint("CENTER", region, "TOPLEFT", drawnX, drawnY)
+                            pin.drawnRegion, pin.drawnX, pin.drawnY = region, drawnX, drawnY
+                        end
+                        if not pin:IsShown() then pin:Show() end
                         if GameTooltip and GameTooltip:IsOwned(pin) then PinTooltip(tracker, pin) end
                     end
                 end
@@ -741,11 +770,17 @@ DFRL:NewMod("Waypoints", 3, function()
     local function UpdateGuide(tracker, elapsed)
         if not DFRL.display.Get(tracker.displayKey) or not tracker.selected then
             tracker.presentation = nil
-            tracker.hud:Hide()
+            if tracker.hudWanted ~= false then
+                tracker.hudWanted = false
+                tracker.hud:Hide()
+            end
             return
         end
-        tracker.hud:Show()
-        if not tracker.hud:IsShown() then
+        if not tracker.hudWanted then
+            tracker.hudWanted = true
+            tracker.hud:Show()
+        end
+        if not tracker.hud:IsVisible() then
             tracker.presentation = nil
             return
         end
@@ -781,10 +816,13 @@ DFRL:NewMod("Waypoints", 3, function()
         if moving and metric and facing then
             -- Native heading is counterclockwise, destination bearing clockwise.
             local angle = bearing + facing
-            Rotate(tracker.pointer, angle)
-            tracker.pointer:Show()
+            if tracker.pointerAngle ~= angle then
+                Rotate(tracker.pointer, angle)
+                tracker.pointerAngle = angle
+            end
+            if not tracker.pointer:IsShown() then tracker.pointer:Show() end
         else
-            tracker.pointer:Hide()
+            if tracker.pointer:IsShown() then tracker.pointer:Hide() end
         end
         local text = distance and DFRL.locale.Native("common.yards", { n = math.floor(distance + 0.5) })
             or DFRL.locale.Text("On map")

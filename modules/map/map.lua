@@ -1,5 +1,5 @@
 DFRL:NewMod("Map", 1, function()
-    local texpath = "Interface\\AddOns\\SurvivorsDragonUi\\media\\tex\\minimap\\"
+    local texpath = DFRL:GetInfoOrCons("tex") .. "minimap\\"
     local defaults = { width = 180, height = 180, right = -8, top = -32, zoomX = -21, zoomY = 40, zoomScale = 0.8 }
     -- Export appearance geometry before layout restores any confirmed placement.
     DFRL.minimapDefaults = defaults

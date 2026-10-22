@@ -7,7 +7,7 @@ DFRL:NewMod("Bars", 1, function()
     local COOLDOWN_ZERO = 0.1
     local COOLDOWN_FINAL_WINDOW = 0.2
     local COOLDOWN_UNITS = { { 86400, "d" }, { 3600, "h" }, { 60, "m" }, { 1, "" } }
-    local TEX_PATH = "Interface\\AddOns\\SurvivorsDragonUi\\media\\tex\\actionbars\\"
+    local TEX_PATH = DFRL:GetInfoOrCons("tex") .. "actionbars\\"
     local defaults = {
         bottom = 55,
         topInset = 14,
@@ -16,7 +16,13 @@ DFRL:NewMod("Bars", 1, function()
         buttonGap = BUTTON_SPACING,
         width = BUTTON_COUNT * ActionButton1:GetWidth() + (BUTTON_COUNT - 1) * BUTTON_SPACING,
         height = ActionButton1:GetHeight(),
+        xpExtension = 8,
+        xpTop = -3,
+        xpInset = 9,
     }
+    -- The half-shell keeps sixteen transparent source rows below its silver
+    -- bevel, including in the taller joined-XP crop.
+    defaults.silverBottomInset = (defaults.height + 2 * defaults.topInset) * 16 / 128
     DFRL.actionBarDefaults = defaults
 
     local function DisableFrame(frame)
@@ -150,42 +156,122 @@ DFRL:NewMod("Bars", 1, function()
         -- space. Separate scaled caps can round to different screen rows.
         local artHeight = defaults.height + 2 * defaults.topInset
         local socketBottom = defaults.buttonWidth * 2 / 36
-        local topUV = (defaults.topInset - socketBottom) / artHeight
         local upper = bar:CreateTexture(nil, "BACKGROUND")
         upper:SetTexture(DFRL:GetInfoOrCons("tex") .. "jewelry\\SocketRail.tga")
         upper:SetPoint("TOPLEFT", bar, "TOPLEFT", -defaults.sideInset, defaults.buttonWidth * 40 / 36)
         upper:SetPoint("BOTTOMRIGHT", bar, "TOPRIGHT", defaults.sideInset, socketBottom)
         upper:SetTexCoord(0, 1200 / 2048, 0, 152 / 256)
         upper:Hide()
-        local active = false
-        function DFRL.SetJewelryBarShown(shown)
-            if active == shown then return end
-            active = shown
-            local top = shown and socketBottom or defaults.topInset
+        local jewelryShown, xpJoined = false, false
+        local tallyExtent = 0
+        local bottomRegion, bottomOffset
+        local function SilverBottom()
+            return -defaults.topInset - (xpJoined and defaults.xpExtension or 0) + defaults.silverBottomInset
+        end
+        local function UpdateBottomBound()
+            local region = DFRL.actionBarMoveRegion
+            if not region then return end
+            local bottom = xpJoined and -(defaults.topInset + defaults.xpExtension) or 0
+            if tallyExtent > 0 then bottom = math.min(bottom, SilverBottom() - tallyExtent) end
+            if bottomRegion == region and bottomOffset == bottom then return end
+            region:SetPoint("BOTTOMRIGHT", DFRL.mainBar, "BOTTOMRIGHT", defaults.sideInset, bottom)
+            bottomRegion, bottomOffset = region, bottom
+        end
+        function DFRL.GetActionBarSilverBottom() return SilverBottom() end
+        function DFRL.SetRunTallyBarExtent(extent)
+            tallyExtent = extent or 0
+            UpdateBottomBound()
+        end
+        local function UpdateBackground()
+            local top = jewelryShown and socketBottom or defaults.topInset
+            local bottom = -defaults.topInset - (xpJoined and defaults.xpExtension or 0)
+            local texture = TEX_PATH .. (xpJoined and "HDActionBarXP.tga" or "HDActionBar.tga")
+            local endUV = xpJoined and 144 / 256 or 1
+            local height = artHeight + (xpJoined and defaults.xpExtension or 0)
+            local topUV = jewelryShown and (defaults.topInset - socketBottom) / height * endUV or 0
+            left:SetTexture(texture)
+            right:SetTexture(texture)
             left:ClearAllPoints()
             left:SetPoint("TOPLEFT", bar, "TOPLEFT", -defaults.sideInset, top)
-            left:SetPoint("BOTTOMRIGHT", bar, "BOTTOM", 0, -defaults.topInset)
+            left:SetPoint("BOTTOMRIGHT", bar, "BOTTOM", 0, bottom)
             right:ClearAllPoints()
             right:SetPoint("TOPLEFT", bar, "TOP", 0, top)
-            right:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", defaults.sideInset, -defaults.topInset)
-            left:SetTexCoord(0, 1, shown and topUV or 0, 1)
-            right:SetTexCoord(1, 0, shown and topUV or 0, 1)
-            if shown then
+            right:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", defaults.sideInset, bottom)
+            left:SetTexCoord(0, 1, topUV, endUV)
+            right:SetTexCoord(1, 0, topUV, endUV)
+            if jewelryShown then
                 upper:Show()
             else
                 upper:Hide()
             end
         end
+        function DFRL.SetJewelryBarShown(shown)
+            if jewelryShown == shown then return end
+            jewelryShown = shown
+            UpdateBackground()
+        end
+        function DFRL.SetXPBarJoined(shown)
+            if xpJoined == shown then return end
+            xpJoined = shown
+            UpdateBackground()
+            UpdateBottomBound()
+            if DFRL.RefreshRunTallyAttachment then DFRL.RefreshRunTallyAttachment() end
+        end
+    end
+
+    local selectedButton
+    local function ClearSelection()
+        if selectedButton then selectedButton.DFRL_swapSelection:Hide() end
+        selectedButton = nil
+    end
+
+    local function SelectOrSwap(button)
+        if
+            type(PickupAction) ~= "function"
+            or type(PlaceAction) ~= "function"
+            or type(CursorHasSpell) ~= "function"
+            or type(CursorHasItem) ~= "function"
+            or CursorHasSpell()
+            or CursorHasItem()
+        then
+            ClearSelection()
+            return
+        end
+        local target = ActionButton_GetPagedID(button)
+        local source = selectedButton and ActionButton_GetPagedID(selectedButton)
+        if not HasAction(target) or source == target then
+            ClearSelection()
+            return
+        end
+        if not source then
+            selectedButton = button
+            button.DFRL_swapSelection:Show()
+            return
+        end
+        ClearSelection()
+        if not HasAction(source) then return end
+        -- Only this synchronous exchange uses the native cursor. Selection never
+        -- picks up an action, and a refused destination returns it to its source.
+        local success, message = pcall(function()
+            PickupAction(source)
+            if CursorHasSpell() then PlaceAction(target) end
+        end)
+        if CursorHasSpell() then PlaceAction(source) end
+        if not success then geterrorhandler()(message) end
     end
 
     local function StyleButton(button, index, bar)
-        -- Run abilities are assigned by the game. Block both drag directions and
-        -- the stock shift-click pickup; checkCursor 0 also prevents click-to-place.
-        -- Keep native activation, including registered right-clicks and key self-casts.
+        -- Never expose pickup or outside drops. Unlocked Shift-clicks select two
+        -- occupied native slots; ordinary clicks keep their original activation.
         button:RegisterForDrag()
         button:SetScript("OnDragStart", nil)
         button:SetScript("OnReceiveDrag", nil)
         button:SetScript("OnClick", function()
+            if arg1 == "LeftButton" and IsShiftKeyDown() and not DFRL.display.Get("lockActionButtons") then
+                SelectOrSwap(button)
+                return
+            end
+            ClearSelection()
             UseAction(ActionButton_GetPagedID(button), 0)
             ActionButton_UpdateState()
         end)
@@ -215,6 +301,15 @@ DFRL:NewMod("Bars", 1, function()
         highlight:SetBlendMode("ADD")
         highlight:SetVertexColor(1, 0.82, 0)
 
+        local selection = button:CreateTexture(nil, "OVERLAY")
+        selection:SetTexture(TEX_PATH .. "uiactionbariconframehighlight.tga")
+        selection:SetAllPoints(button)
+        selection:SetBlendMode("ADD")
+        selection:SetVertexColor(1, 0.82, 0)
+        selection:Hide()
+        button.DFRL_swapSelection = selection
+        button:SetScript("OnHide", ClearSelection)
+
         HideHotkey(button)
 
         local macro = _G[button:GetName() .. "Name"]
@@ -241,7 +336,7 @@ DFRL:NewMod("Bars", 1, function()
         local overlay = button.DFRL_cooldownNumber
         local slot = ActionButton_GetPagedID(button)
         if not button:IsVisible() or not HasAction(slot) or type(GetActionCooldown) ~= "function" then
-            overlay:Hide()
+            if overlay:IsShown() then overlay:Hide() end
             return
         end
 
@@ -255,24 +350,32 @@ DFRL:NewMod("Bars", 1, function()
             or not (duration > 0)
             or enabled ~= 1
         then
-            overlay:Hide()
+            if overlay:IsShown() then overlay:Hide() end
             return
         end
         local remaining = duration - (now - start)
         if not (remaining > 0 and remaining <= duration) then
-            overlay:Hide()
+            if overlay:IsShown() then overlay:Hide() end
             return
         end
 
-        overlay.text:SetText(FormatCooldown(remaining))
+        T.SetTextIfChanged(overlay.text, FormatCooldown(remaining))
+        local red, green, blue = 1, 1, 1
         if remaining < 1 then
-            overlay.text:SetTextColor(1, 85 / 255, 85 / 255)
+            green, blue = 85 / 255, 85 / 255
         elseif math.ceil(remaining) < 5 then
-            overlay.text:SetTextColor(1, 1, 85 / 255)
-        else
-            overlay.text:SetTextColor(1, 1, 1)
+            blue = 85 / 255
         end
-        overlay:Show()
+        local currentRed, currentGreen, currentBlue, currentAlpha = overlay.text:GetTextColor()
+        if
+            not T.NearlyEqual(currentRed, red)
+            or not T.NearlyEqual(currentGreen, green)
+            or not T.NearlyEqual(currentBlue, blue)
+            or (currentAlpha and not T.NearlyEqual(currentAlpha, 1))
+        then
+            overlay.text:SetTextColor(red, green, blue)
+        end
+        if not overlay:IsShown() then overlay:Show() end
         return remaining
     end
 
@@ -297,7 +400,8 @@ DFRL:NewMod("Bars", 1, function()
         local function ClearNumbers()
             finishing = false
             for _, button in ipairs(DFRL.actionButtons) do
-                button.DFRL_cooldownNumber:Hide()
+                local overlay = button.DFRL_cooldownNumber
+                if overlay:IsShown() then overlay:Hide() end
             end
         end
         local function RefreshNumbers()
@@ -400,6 +504,17 @@ DFRL:NewMod("Bars", 1, function()
         end
         _G.this = previousThis
         CreateCooldownNumbers(mainBar)
+        local selectionEvents = CreateFrame("Frame", nil, mainBar)
+        for _, name in ipairs({
+            "ACTIONBAR_SLOT_CHANGED",
+            "PLAYER_LEAVING_WORLD",
+            "PLAYER_ENTERING_WORLD",
+            "PLAYER_LOGOUT",
+        }) do
+            selectionEvents:RegisterEvent(name)
+        end
+        selectionEvents:SetScript("OnEvent", ClearSelection)
+        DFRL.display.Listen(ClearSelection)
         local moveRegion = CreateFrame("Frame", nil, mainBar)
         moveRegion:SetPoint("TOPLEFT", mainBar, "TOPLEFT", -defaults.sideInset, defaults.topInset)
         moveRegion:SetPoint("BOTTOMRIGHT", mainBar, "BOTTOMRIGHT", defaults.sideInset, 0)
@@ -410,6 +525,7 @@ DFRL:NewMod("Bars", 1, function()
         end, {
             region = moveRegion,
             onEdit = function(active)
+                ClearSelection()
                 if DFRL.SetJewelryEditing then DFRL.SetJewelryEditing(active) end
             end,
         })

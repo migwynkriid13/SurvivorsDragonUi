@@ -3,14 +3,34 @@
 DFRL:NewMod("ChatCapture", 0, function()
     DFRL.CleanerChat = DFRL.CleanerChat or {}
     local chat = DFRL.CleanerChat
-    local history = {}
+    local history, pending = {}, {}
+    local pendingBytes = 0
     local broadcastTime, broadcasts
 
-    -- Escaping pipes preserves color/link payloads through Copy's PlainText.
-    local function Escape(value)
+    local function Value(value)
         if value == nil then return "<nil>" end
         if value == "" then return "<empty>" end
-        return (string.gsub(tostring(value), "|", "||"))
+        return tostring(value)
+    end
+    local function Flush()
+        if table.getn(pending) == 0 then return end
+        table.insert(history, table.concat(pending, "\n"))
+        pending, pendingBytes = {}, 0
+    end
+    local function Append(line)
+        table.insert(pending, line)
+        pendingBytes = pendingBytes + string.len(line)
+        -- Compact each bounded batch once, without copying earlier history.
+        if table.getn(pending) >= 128 or pendingBytes >= 32768 then Flush() end
+    end
+    local function Export(text, plain)
+        if plain then
+            -- Copy's old escaped-pipe round trip also converted literal SOH.
+            if string.find(text, "\001", 1, true) then return (string.gsub(text, "\001", "|")) end
+        elseif string.find(text, "|", 1, true) then
+            return (string.gsub(text, "|", "||"))
+        end
+        return text
     end
     local function FrameName(frame) return frame.GetName and frame:GetName() or "<unnamed>" end
 
@@ -49,15 +69,16 @@ DFRL:NewMod("ChatCapture", 0, function()
         -- Preserve direct native writes in diagnostics even when another frame
         -- received the same text. Only the optional loot view collapses them.
         if first or not eventName or not string.find(eventName, "^CHAT_MSG_") then
-            table.insert(history, '[RAW] frame="' .. Escape(FrameName(frame)) .. '" "' .. Escape(text) .. '"')
+            Append('[RAW] frame="' .. Value(FrameName(frame)) .. '" "' .. Value(text) .. '"')
         end
         if first and DFRL.loot then DFRL.loot.Observe(text, eventName) end
     end
 
-    chat.GetCaptureText = function(states)
+    chat.GetCaptureText = function(states, plain)
+        Flush()
         local lines = {}
-        for _, line in ipairs(history) do
-            table.insert(lines, line)
+        for _, chunk in ipairs(history) do
+            table.insert(lines, Export(chunk, plain))
         end
         -- Some ports expose native history readers. Include their retained
         -- output separately, including writes that bypass the Lua hook.
@@ -71,7 +92,10 @@ DFRL:NewMod("ChatCapture", 0, function()
                         if readable and type(text) == "string" then
                             table.insert(
                                 lines,
-                                '[NATIVE] frame="' .. Escape(FrameName(frame)) .. '" "' .. Escape(text) .. '"'
+                                Export(
+                                    '[NATIVE] frame="' .. Value(FrameName(frame)) .. '" "' .. Value(text) .. '"',
+                                    plain
+                                )
                             )
                         end
                     end
@@ -134,16 +158,14 @@ DFRL:NewMod("ChatCapture", 0, function()
             return
         end
         local arguments = { arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9 }
-        local line = "[EVT] "
-            .. eventName
-            .. ' author="'
-            .. Escape(arguments[2])
-            .. '" msg="'
-            .. Escape(arguments[1])
-            .. '"'
+        local parts = { "[EVT] ", eventName, ' author="', Value(arguments[2]), '" msg="', Value(arguments[1]), '"' }
         for i = 3, 9 do
-            if arguments[i] ~= nil then line = line .. " arg" .. i .. '="' .. Escape(arguments[i]) .. '"' end
+            if arguments[i] ~= nil then
+                table.insert(parts, " arg" .. i .. '="')
+                table.insert(parts, Value(arguments[i]))
+                table.insert(parts, '"')
+            end
         end
-        table.insert(history, line)
+        Append(table.concat(parts))
     end)
 end)

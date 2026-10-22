@@ -66,20 +66,29 @@ DFRL:NewMod("RunTimers", 5, function()
         return texture
     end
 
-    local function Pill(name, fillName)
+    local function Pill(name, fillName, variableWidth)
         local frame = CreateFrame("Frame", name, UIParent)
         frame:SetWidth(BAR_WIDTH + 16)
         frame:SetHeight(31)
         frame:SetFrameStrata("HIGH")
         frame:EnableMouse(false)
+        local skin = {}
 
-        local backgroundLeft = Texture(frame, "BackgroundLeft", "BACKGROUND", 29, 18, 29 / 32, 18 / 32)
-        backgroundLeft:SetPoint("LEFT", frame, "LEFT", 6, 0)
-        local backgroundRight = Texture(frame, "BackgroundRight", "BACKGROUND", 29, 18, 29 / 32, 18 / 32)
-        backgroundRight:SetPoint("RIGHT", frame, "RIGHT", -6, 0)
-        local backgroundCenter = Texture(frame, "BackgroundCenter", "BACKGROUND", BAR_WIDTH - 54, 18, 1, 18 / 32)
-        backgroundCenter:SetPoint("LEFT", backgroundLeft, "RIGHT", 0, 0)
-        backgroundCenter:SetPoint("RIGHT", backgroundRight, "LEFT", 0, 0)
+        if variableWidth then
+            local backgroundLeft = Texture(frame, "BackgroundLeft", "BACKGROUND", 29, 18, 29 / 32, 18 / 32)
+            backgroundLeft:SetPoint("LEFT", frame, "LEFT", 6, 0)
+            local backgroundRight = Texture(frame, "BackgroundRight", "BACKGROUND", 29, 18, 29 / 32, 18 / 32)
+            backgroundRight:SetPoint("RIGHT", frame, "RIGHT", -6, 0)
+            local backgroundCenter = Texture(frame, "BackgroundCenter", "BACKGROUND", BAR_WIDTH - 54, 18, 1, 18 / 32)
+            backgroundCenter:SetPoint("LEFT", backgroundLeft, "RIGHT", 0, 0)
+            backgroundCenter:SetPoint("RIGHT", backgroundRight, "LEFT", 0, 0)
+            skin = { backgroundLeft, backgroundRight, backgroundCenter }
+        else
+            local background =
+                Texture(frame, "BackgroundFixed", "BACKGROUND", BAR_WIDTH + 4, 18, (BAR_WIDTH + 4) / 512, 18 / 32)
+            background:SetPoint("LEFT", frame, "LEFT", 6, 0)
+            table.insert(skin, background)
+        end
 
         local bar = CreateFrame("StatusBar", nil, frame)
         bar:SetHeight(15)
@@ -99,13 +108,16 @@ DFRL:NewMod("RunTimers", 5, function()
         local center = Texture(overlay, "BorderCenter", "OVERLAY", BAR_WIDTH - 54, 31, 1, 31 / 32)
         center:SetPoint("LEFT", left, "RIGHT", 0, 0)
         center:SetPoint("RIGHT", right, "LEFT", 0, 0)
+        table.insert(skin, left)
+        table.insert(skin, right)
+        table.insert(skin, center)
 
         local text = overlay:CreateFontString(nil, "OVERLAY")
         T.SetFont(text, 14, "OUTLINE")
         text:SetPoint("BOTTOM", frame, "TOP", 0, 2)
         text:SetTextColor(1, 1, 1)
         frame:Hide()
-        return frame, bar, text, overlay
+        return frame, bar, text, overlay, skin
     end
 
     -- Pooled cosmetic fill effects; native run data still controls progress.
@@ -185,15 +197,22 @@ DFRL:NewMod("RunTimers", 5, function()
                 return
             end
             local texture = piece.texture
-            texture:SetWidth(last - first)
-            texture:SetHeight(top - bottom)
+            local drawnWidth, drawnHeight = last - first, top - bottom
+            if piece.drawnWidth ~= drawnWidth then
+                texture:SetWidth(drawnWidth)
+                piece.drawnWidth = drawnWidth
+            end
+            if piece.drawnHeight ~= drawnHeight then
+                texture:SetHeight(drawnHeight)
+                piece.drawnHeight = drawnHeight
+            end
             texture:SetPoint("LEFT", bar, "LEFT", first, (bottom + top) / 2)
-            texture:SetTexCoord(
-                (first - left) / width,
-                (last - left) / width,
-                (y + height / 2 - top) / height,
-                (y + height / 2 - bottom) / height
-            )
+            local u1, u2 = (first - left) / width, (last - left) / width
+            local v1, v2 = (y + height / 2 - top) / height, (y + height / 2 - bottom) / height
+            if piece.u1 ~= u1 or piece.u2 ~= u2 or piece.v1 ~= v1 or piece.v2 ~= v2 then
+                texture:SetTexCoord(u1, u2, v1, v2)
+                piece.u1, piece.u2, piece.v1, piece.v2 = u1, u2, v1, v2
+            end
             texture:SetAlpha(alpha * 1.25)
             if not piece.shown then
                 texture:Show()
@@ -333,9 +352,17 @@ DFRL:NewMod("RunTimers", 5, function()
                 local first, last = math.max(0, left), math.min(filledWidth, left + FLOW_WIDTH)
                 if first < last then
                     local y = flow.y + 0.65 * math.sin(now * 1.7 + flow.phase)
-                    flow.texture:SetWidth(last - first)
+                    local drawnWidth = last - first
+                    if flow.drawnWidth ~= drawnWidth then
+                        flow.texture:SetWidth(drawnWidth)
+                        flow.drawnWidth = drawnWidth
+                    end
                     flow.texture:SetPoint("LEFT", bar, "LEFT", first, y)
-                    flow.texture:SetTexCoord((first - left) / FLOW_WIDTH, (last - left) / FLOW_WIDTH, 0, 1)
+                    local u1, u2 = (first - left) / FLOW_WIDTH, (last - left) / FLOW_WIDTH
+                    if flow.u1 ~= u1 or flow.u2 ~= u2 then
+                        flow.texture:SetTexCoord(u1, u2, 0, 1)
+                        flow.u1, flow.u2 = u1, u2
+                    end
                     if not flow.shown then
                         flow.texture:Show()
                         flow.shown = true
@@ -379,7 +406,7 @@ DFRL:NewMod("RunTimers", 5, function()
         showText = true,
     }
     local currentFont, fontDraft, fontEditor, fontSample, fontSampleClock, fontMenu
-    local faceLabel, sizeLabel, shadowControl, visibilityControl
+    local faceLabel, sizeLabel, shadowControl
     local displayControls, displayNumbers, outlineButtons, faceButtons, sctButtons = {}, {}, {}, {}, {}
     local incomingControl, sctDescription
     local sctSizeLabel
@@ -404,12 +431,22 @@ DFRL:NewMod("RunTimers", 5, function()
         if sctSizeLabel then
             sctSizeLabel:SetText(tostring(math.floor(DFRL.display.Get("sctScale") * 100 + 0.5)) .. "%")
         end
+        if fontEditor and fontEditor.tallyStyleButtons then
+            local selected = DFRL.display.Get("tallyStyle")
+            for id, button in pairs(fontEditor.tallyStyleButtons) do
+                button:SetSelected(id == selected)
+            end
+        end
         for key, label in pairs(displayNumbers) do
             label:SetText(tostring(DFRL.display.Get(key)))
         end
         for key, control in pairs(displayControls) do
             control:SetChecked(DFRL.display.Get(key))
-            if key == "attachJewelry" then
+            if key == "roundPlayerPortrait" or key == "playerPortrait3D" then
+                local enabled = not DFRL.display.Get("hidePortraits")
+                control:EnableMouse(enabled)
+                control:SetAlpha(enabled and 1 or 0.45)
+            elseif key == "attachJewelry" then
                 local enabled = DFRL.display.Get("equippedJewelry")
                 control:EnableMouse(enabled)
                 control:SetAlpha(enabled and 1 or 0.45)
@@ -532,32 +569,58 @@ DFRL:NewMod("RunTimers", 5, function()
     -- Both captions resolve the same face, including translated RUN fallback.
     local bossClock = NewClockLabel(bossText, "RUN")
     local function UpdateRunFontBounds()
-        local width = currentFont.showText and (runText:GetStringWidth() or 0) or 0
-        local overflow = math.max(0, (width + 8 - run:GetWidth()) / 2)
+        local width = runClock.visible and (runText:GetStringWidth() or 0) or 0
+        local bossWidth = bossClock.visible and (bossText:GetStringWidth() or 0) or 0
+        local overflow = math.max(0, (math.max(width, bossWidth) + 8 - run:GetWidth()) / 2)
         local pixel = math.max(runClock.pixel or 0, bossClock.pixel or 0)
-        local inset = runClock.endless and 5 * pixel or 0
+        local inset = runClock.visible and bossClock.visible and 5 * pixel or 0
         runText:ClearAllPoints()
         bossText:ClearAllPoints()
-        if runClock.endless then
-            local bossWidth = bossClock.visible and (bossText:GetStringWidth() or 0) or 0
+        if runClock.visible and bossClock.visible then
             -- Keep the captions apart at large font sizes or with wider translations.
             overflow = math.max(0, (width + bossWidth + 8 + 2 * inset - run:GetWidth()) / 2)
             runText:SetPoint("BOTTOMLEFT", run, "TOPLEFT", inset - overflow, 2)
+            bossText:SetPoint("BOTTOMRIGHT", run, "TOPRIGHT", overflow - inset, 2)
         else
             runText:SetPoint("BOTTOM", run, "TOP", 0, 2)
+            bossText:SetPoint("BOTTOM", run, "TOP", 0, 2)
         end
-        bossText:SetPoint("BOTTOMRIGHT", run, "TOPRIGHT", overflow - inset, 2)
         overflow = math.max(0, overflow - inset)
-        local top = currentFont.showText and currentFont.size + 4 + pixel or 0
+        local top = (runClock.visible or bossClock.visible) and currentFont.size + 4 + pixel or 0
         runMoveRegion:ClearAllPoints()
         runMoveRegion:SetPoint("TOPLEFT", run, "TOPLEFT", -overflow, top)
         runMoveRegion:SetPoint("BOTTOMRIGHT", run, "BOTTOMRIGHT", overflow, 0)
     end
 
+    local function SetClockLabelText(clock, text, visible)
+        if clock.source:GetText() ~= text then clock.source:SetText(text) end
+        clock.visible = visible
+        return RefreshClockLabel(clock)
+    end
+
+    local function RefreshTimerCaptions()
+        local mode = runClock.mode or "Regular"
+        local text = ""
+        if runClock.currentTime then
+            if DFRL.display.Get("runCurrent" .. mode) then text = runClock.currentTime end
+            if mode == "Regular" and DFRL.display.Get("runMaximumRegular") then
+                text = text ~= "" and text .. " / " .. runClock.maximumTime or runClock.maximumTime
+            end
+            if DFRL.display.Get("runText" .. mode) then
+                text = DFRL.locale.Text("RUN") .. (text ~= "" and " " .. text or "")
+            end
+        end
+        local changed = SetClockLabelText(runClock, text, text ~= "")
+        local countdown = bossClock.option and DFRL.display.Get(bossClock.option) and bossClock.countdown or ""
+        if SetClockLabelText(bossClock, countdown, countdown ~= "") then changed = true end
+        if changed then UpdateRunFontBounds() end
+    end
+
     local function PreviewFont(settings)
         currentFont = FontSettings(settings)
-        StyleClockLabel(runClock, currentFont, currentFont.showText)
-        StyleClockLabel(bossClock, currentFont, currentFont.showText and bossText:GetText() ~= "")
+        StyleClockLabel(runClock, currentFont, runClock.visible)
+        StyleClockLabel(bossClock, currentFont, bossClock.visible)
+        RefreshTimerCaptions()
         UpdateRunFontBounds()
         if not fontEditor then return end
         StyleClockLabel(fontSampleClock, currentFont, true)
@@ -570,42 +633,38 @@ DFRL:NewMod("RunTimers", 5, function()
         end
         sizeLabel:SetText(tostring(currentFont.size))
         shadowControl:SetChecked(currentFont.shadow)
-        visibilityControl:SetChecked(currentFont.showText)
     end
 
-    local function SetClockLabelText(clock, text, visible)
-        if clock.source:GetText() ~= text then clock.source:SetText(text) end
-        clock.visible = visible
-        return RefreshClockLabel(clock)
+    local function ClearClockCaptions()
+        runClock.mode, runClock.currentTime, runClock.maximumTime = nil, nil, nil
+        bossClock.option, bossClock.countdown = nil, nil
+        RefreshTimerCaptions()
     end
 
-    local function ClearEndlessCaption()
-        if not runClock.endless then return end
-        runClock.endless = false
-        SetClockLabelText(bossClock, "", false)
-        UpdateRunFontBounds()
-    end
-
-    local function UpdateClockCaptions(seconds, maximum, atLimit)
+    local function UpdateClockCaptions(seconds, maximum, acceptRun)
         -- The caller has already checked the native phase. Only received run
         -- flags select Endless; passing the zone limit or a boss death cannot.
         local state = AZS_RUN
-        local endless = type(state) == "table" and IsNumber(AZS_RUN_UPDATED) and state.endl == 1
-        local changed = runClock.endless ~= endless
-        runClock.endless = endless
-        local text = DFRL.locale.Text("RUN") .. " " .. Clock(seconds)
-        if not endless and not atLimit then text = text .. " / " .. Clock(maximum) end
-        if SetClockLabelText(runClock, text, currentFont.showText) then changed = true end
+        local received = acceptRun and type(state) == "table" and IsNumber(AZS_RUN_UPDATED)
+        local mode
+        if received and state.endl == 1 then
+            mode = "Endless"
+        elseif received and state.endl == 0 then
+            mode = "Regular"
+        end
+        runClock.mode, runClock.currentTime = mode, Clock(seconds)
+        runClock.maximumTime = mode ~= "Endless" and Clock(maximum) or nil
         local countdown = ""
-        if endless and IsNumber(state.nb) then
-            -- nb is the native remaining time, including pauses and each actual
-            -- spawn's new deadline. Never rebuild it from a fixed five minutes.
+        if mode and IsNumber(state.nb) then
+            -- Both modes supply pause-aware nb. Do not derive a countdown from
+            -- schedules, the zone limit, boss deaths or a private deadline.
             local remaining = math.ceil(state.nb)
             local time = string.format("%d:%02d", math.floor(remaining / 60), math.mod(remaining, 60))
             countdown = string.format(DFRL.locale.Text("BOSS IN: %s"), time)
         end
-        if SetClockLabelText(bossClock, countdown, currentFont.showText and countdown ~= "") then changed = true end
-        if changed then UpdateRunFontBounds() end
+        bossClock.option = countdown ~= "" and "bossCountdown" .. mode or nil
+        bossClock.countdown = countdown
+        RefreshTimerCaptions()
         if fontEditor and fontEditor:IsShown() then RefreshClockLabel(fontSampleClock) end
     end
 
@@ -643,6 +702,7 @@ DFRL:NewMod("RunTimers", 5, function()
         local screenWidth, screenHeight = T.GetLocalSize(UIParent)
         local scale =
             math.min(1, (screenWidth - 20) / fontEditor:GetWidth(), (screenHeight - 20) / fontEditor:GetHeight())
+        scale = scale * 0.85
         if scale > 0 and not T.NearlyEqual(fontEditor:GetScale(), scale) then fontEditor:SetScale(scale) end
     end
 
@@ -672,7 +732,12 @@ DFRL:NewMod("RunTimers", 5, function()
                 key = "units",
                 label = "Unit frames",
                 gapBefore = 8,
+                columns = 2,
                 options = {
+                    { "showPlayerName", "Show player name", "Show the name above the player frame." },
+                    { "showPlayerLevel", "Show player level", "Show the level above the player frame." },
+                    { "showTargetName", "Show target name", "Show the name above the target frame." },
+                    { "showTargetLevel", "Show target level", "Show the level above the target frame." },
                     { "classHealth", "Class-colored health", "Use your vanilla class color for player health." },
                     {
                         "healthLossAnimation",
@@ -680,6 +745,11 @@ DFRL:NewMod("RunTimers", 5, function()
                         "Show recently lost health fading out on unit frames.",
                     },
                     { "classResources", "Class resources", "Show power inside the player frame." },
+                    {
+                        "hidePortraits",
+                        "Hide portraits",
+                        "Show player, target and target-of-target as bars without portraits.",
+                    },
                     {
                         "roundPlayerPortrait",
                         "Round player portrait",
@@ -723,11 +793,39 @@ DFRL:NewMod("RunTimers", 5, function()
                 key = "abilities",
                 label = "Action bar",
                 options = {
+                    {
+                        "lockActionButtons",
+                        "Lock action buttons",
+                        "Off: Shift-click two occupied buttons to swap them.",
+                    },
                     { "cooldownNumbers", "Cooldown numbers", "Show countdowns on ability buttons." },
+                    { "attachXP", "Attach XP to action bar", "Off: move and resize the XP bar separately." },
                     {
                         "hideNativeBuild",
                         "Hide default jewelry / abilities",
                         "Off: show the game's original jewelry and ability rows.",
+                    },
+                },
+            },
+            {
+                key = "tally",
+                label = "Kills, Gold & Caches",
+                columns = 3,
+                rowHeight = 72,
+                stylePicker = true,
+                options = {
+                    {
+                        "attachTally",
+                        "Attach to action bar",
+                        "Off: move and resize kills, gold and cache cost separately.",
+                    },
+                    { "showTallyKills", "Show kills", "Show the number of enemies killed." },
+                    { "showTallyGold", "Show gold", "Show your current gold." },
+                    { "showTallyCache", "Show cache cost", "Show the next cache cost." },
+                    {
+                        "highlightAffordableCache",
+                        "Highlight affordable cache",
+                        "Brighten the gold text when you can afford the next cache.",
                     },
                 },
             },
@@ -776,6 +874,16 @@ DFRL:NewMod("RunTimers", 5, function()
             { value = "off", label = "Off" },
             { value = "default", label = "Game settings" },
         }
+        local timerModes = {
+            { label = "Regular runs", suffix = "Regular" },
+            { label = "Endless", suffix = "Endless" },
+        }
+        local timerOptions = {
+            { "runText", "Run text" },
+            { "runCurrent", "Current time" },
+            { "runMaximum", "Maximum zone time", regularOnly = true },
+            { "bossCountdown", "Boss countdown" },
+        }
         local combatFilters = {
             {
                 label = "Damage type",
@@ -801,6 +909,7 @@ DFRL:NewMod("RunTimers", 5, function()
         for _, entry in ipairs(fontFaces) do
             dropdownWidth = math.max(dropdownWidth, TextWidth(entry.label) + 36)
         end
+        local fontListWidth = dropdownWidth
         for _, entry in ipairs(categories) do
             sidebarWidth = math.max(sidebarWidth, TextWidth(entry.label) + 32)
         end
@@ -816,26 +925,43 @@ DFRL:NewMod("RunTimers", 5, function()
         end
         local hudOptionWidth = 0
         for _, category in ipairs(categories) do
+            local columns = category.stylePicker and 1 or category.columns or 1
             for _, entry in ipairs(category.options or {}) do
                 local controlsWidth = entry.step and 156 or 36
-                hudOptionWidth = math.max(
-                    hudOptionWidth,
-                    TextWidth(entry[2]) + controlsWidth,
-                    TextWidth(entry[3]) / 2 + controlsWidth
-                )
+                local optionWidth =
+                    math.max(TextWidth(entry[2]) + controlsWidth, TextWidth(entry[3]) / 2 + controlsWidth)
+                hudOptionWidth =
+                    math.max(hudOptionWidth, optionWidth * columns + gap * (columns - 1) + (columns == 1 and 24 or 0))
             end
         end
         local outlineWidth = 0
         for _, entry in ipairs(fontOutlines) do
             outlineWidth = math.max(outlineWidth, TextWidth(entry.label) + 24)
         end
+        local tallyStyleWidth = 0
+        for _, entry in ipairs(DFRL.tallyStyles or {}) do
+            tallyStyleWidth = math.max(tallyStyleWidth, TextWidth(entry.label) + 24)
+        end
+        local timerOptionWidth = 0
+        for _, entry in ipairs(timerOptions) do
+            timerOptionWidth = math.max(timerOptionWidth, TextWidth(entry[2]) + 36)
+        end
+        for _, entry in ipairs(timerModes) do
+            timerOptionWidth = math.max(timerOptionWidth, TextWidth(entry.label))
+        end
+        local timerSizeWidth = TextWidth("Size") + gap + 104
+        local tallyStyleHint = "Styles stay the same when attached or detached."
         local defaultsWidth = TextWidth("Addon defaults") + 24
         local instructions = "Drag frames to move. Drag corners to resize."
         local contentWidth = math.max(
             modeWidth * 3 + gap * 2,
             filterWidth * 2 + gap,
             filterHeadingWidth,
-            hudOptionWidth + 24,
+            hudOptionWidth,
+            timerOptionWidth * 2 + gap,
+            tallyStyleWidth * 2 + gap + 24,
+            TextWidth("Frame style") + 24,
+            TextWidth(tallyStyleHint) / 2 + 24,
             (TextWidth("SCT size") + gap + 136) * 2 + gap,
             labelWidth + gap + dropdownWidth,
             labelWidth + gap + outlineWidth * 3 + gap * 2,
@@ -844,14 +970,14 @@ DFRL:NewMod("RunTimers", 5, function()
         )
         local contentLeft = padding + sidebarWidth + 24
         local width = contentLeft + contentWidth + padding
-        dropdownWidth = contentWidth - labelWidth - gap
+        dropdownWidth = contentWidth - labelWidth - gap - gap * 3 - timerSizeWidth
 
         fontEditor = T.CreateEditorPanel(UIParent, width, 596)
         fontEditor:SetFrameStrata("TOOLTIP")
         fontEditor:SetFrameLevel(150)
         PlaceFontEditor()
         fontEditor:SetMovable(true)
-        if fontEditor.SetClampedToScreen then fontEditor:SetClampedToScreen(true) end
+        if fontEditor.SetClampedToScreen then fontEditor:SetClampedToScreen(false) end
         fontEditor:RegisterForDrag("LeftButton")
         fontEditor:SetScript("OnDragStart", function()
             if not fontDraft then return end
@@ -969,39 +1095,89 @@ DFRL:NewMod("RunTimers", 5, function()
         end
         local function CreateOptionsPage(category)
             local page = pages[category.key]
-            local scrollName = "SurvivorsDragonUi" .. category.key .. "OptionsScroll"
-            local scroll = CreateFrame("ScrollFrame", scrollName, page, "UIPanelScrollFrameTemplate")
-            scroll:SetPoint("TOPLEFT", page, "TOPLEFT", 0, 0)
-            scroll:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -24, 0)
-            local rowWidth, rowHeight = contentWidth - 24, 60
-            local content = CreateFrame("Frame", nil, scroll)
-            content:SetWidth(rowWidth)
-            content:SetHeight(table.getn(category.options) * rowHeight)
-            scroll:SetScrollChild(content)
-            local function ScrollOptions(direction)
-                local slider = _G[scrollName .. "ScrollBar"]
-                if not slider then return end
-                local low, high = slider:GetMinMaxValues()
-                local value = slider:GetValue() - (direction or arg1 or 0) * rowHeight
-                slider:SetValue(math.max(low, math.min(high, value)))
+            local columns, rowHeight = category.columns or 1, category.rowHeight or 60
+            local rowWidth = (contentWidth - gap * (columns - 1)) / columns
+            local content, scroll, ScrollOptions = page, nil, nil
+            if not category.columns then
+                local scrollName = "SurvivorsDragonUi" .. category.key .. "OptionsScroll"
+                scroll = CreateFrame("ScrollFrame", scrollName, page, "UIPanelScrollFrameTemplate")
+                scroll:SetPoint("TOPLEFT", page, "TOPLEFT", 0, 0)
+                scroll:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -24, 0)
+                rowWidth = contentWidth - 24
+                content = CreateFrame("Frame", nil, scroll)
+                content:SetWidth(rowWidth)
+                content:SetHeight(table.getn(category.options) * rowHeight)
+                scroll:SetScrollChild(content)
+                ScrollOptions = function(direction)
+                    local slider = _G[scrollName .. "ScrollBar"]
+                    if not slider then return end
+                    local low, high = slider:GetMinMaxValues()
+                    local value = slider:GetValue() - (direction or arg1 or 0) * rowHeight
+                    slider:SetValue(math.max(low, math.min(high, value)))
+                end
+                scroll:EnableMouseWheel(true)
+                scroll:SetScript("OnMouseWheel", ScrollOptions)
             end
-            scroll:EnableMouseWheel(true)
-            scroll:SetScript("OnMouseWheel", ScrollOptions)
             for index, entry in ipairs(category.options) do
+                local x = math.mod(index - 1, columns) * (rowWidth + gap)
+                local y = -math.floor((index - 1) / columns) * rowHeight
                 local control
                 if entry.step then
                     control = DisplayNumber(content, entry, rowWidth, rowHeight)
-                    control:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -(index - 1) * rowHeight)
                 else
-                    control = DisplayToggle(content, entry[1], entry[2], entry[3], -(index - 1) * rowHeight, rowWidth)
+                    control = DisplayToggle(content, entry[1], entry[2], entry[3], y, rowWidth)
                     control:SetHeight(rowHeight)
                     control.description:SetHeight(28)
                     control.description:SetJustifyV("TOP")
+                    if category.stylePicker then
+                        control.label:ClearAllPoints()
+                        control.label:SetPoint("TOPLEFT", control, "TOPLEFT", 32, -3)
+                        control.label:SetHeight(28)
+                        control.label:SetJustifyV("MIDDLE")
+                        control.description:ClearAllPoints()
+                        control.description:SetPoint("TOPLEFT", control, "TOPLEFT", 32, -32)
+                        control.description:SetHeight(36)
+                    end
                 end
-                control:EnableMouseWheel(true)
-                control:SetScript("OnMouseWheel", ScrollOptions)
+                control:SetPoint("TOPLEFT", content, "TOPLEFT", x, y)
+                if ScrollOptions then
+                    control:EnableMouseWheel(true)
+                    control:SetScript("OnMouseWheel", ScrollOptions)
+                end
             end
-            if scroll.UpdateScrollChildRect then scroll:UpdateScrollChildRect() end
+            if category.stylePicker then
+                local top = math.ceil(table.getn(category.options) / columns) * rowHeight + 8
+                local stylePageWidth = content:GetWidth()
+                local heading = FontEditorLabel(content, "Frame style", 0, -top, 12)
+                heading:SetTextColor(0.94, 0.79, 0.47)
+                local description = FontEditorLabel(content, tallyStyleHint, 0, -top - 22, 10)
+                description:SetWidth(stylePageWidth)
+                description:SetHeight(28)
+                description:SetJustifyH("LEFT")
+                description:SetJustifyV("TOP")
+                description:SetTextColor(0.59, 0.59, 0.56)
+                local styleWidth, pitch = (stylePageWidth - gap) / 2, 36
+                fontEditor.tallyStyleButtons = {}
+                for index, entry in ipairs(DFRL.tallyStyles or {}) do
+                    local id = entry.id
+                    local button = T.CreateEditorButton(content, entry.label, styleWidth, 30)
+                    button:SetPoint(
+                        "TOPLEFT",
+                        content,
+                        "TOPLEFT",
+                        math.mod(index - 1, 2) * (styleWidth + gap),
+                        -top - 58 - math.floor((index - 1) / 2) * pitch
+                    )
+                    button:SetScript("OnClick", function() DFRL.display.Set("tallyStyle", id) end)
+                    if ScrollOptions then
+                        button:EnableMouseWheel(true)
+                        button:SetScript("OnMouseWheel", ScrollOptions)
+                    end
+                    fontEditor.tallyStyleButtons[id] = button
+                end
+                content:SetHeight(top + 58 + math.ceil(table.getn(DFRL.tallyStyles or {}) / 2) * pitch)
+            end
+            if scroll and scroll.UpdateScrollChildRect then scroll:UpdateScrollChildRect() end
         end
         for _, category in ipairs(categories) do
             if category.options then CreateOptionsPage(category) end
@@ -1118,12 +1294,13 @@ DFRL:NewMod("RunTimers", 5, function()
         fontMenu:EnableMouse(true)
         fontMenu:SetScript("OnClick", function() fontMenu:Hide() end)
         fontMenu:Hide()
-        local fontList = T.CreateEditorPanel(fontMenu, dropdownWidth, table.getn(fontFaces) * 28 + 16)
+        fontListWidth = math.max(fontListWidth, dropdownWidth)
+        local fontList = T.CreateEditorPanel(fontMenu, fontListWidth, table.getn(fontFaces) * 28 + 16)
         fontList:SetFrameLevel(190)
         fontList:SetPoint("TOPLEFT", fontButton, "BOTTOMLEFT", 0, -4)
         for index, entry in ipairs(fontFaces) do
             local selectedFace = entry.face
-            local _, button = FontEditorButton(entry.label, dropdownWidth - 16, 8, -8 - (index - 1) * 28, function()
+            local _, button = FontEditorButton(entry.label, fontListWidth - 16, 8, -8 - (index - 1) * 28, function()
                 if not fontDraft then return end
                 fontDraft.face = selectedFace
                 PreviewFont(fontDraft)
@@ -1135,19 +1312,21 @@ DFRL:NewMod("RunTimers", 5, function()
             FinishFontEditorDrag()
             fontMenu:Hide()
         end)
-        FontEditorLabel(timer, "Size", 0, -104, 11)
-        FontEditorButton("-", 28, controlX, -96, function() ChangeSize(-1) end, timer)
-        sizeLabel = FontEditorLabel(timer, "", controlX + 42, -104)
-        FontEditorButton("+", 28, controlX + 76, -96, function() ChangeSize(1) end, timer)
-        FontEditorLabel(timer, "Outline", 0, -140, 11)
-        local outlineSize = (dropdownWidth - gap * 2) / 3
+        local sizeX = contentWidth - timerSizeWidth
+        FontEditorLabel(timer, "Size", sizeX, -66, 11)
+        sizeX = sizeX + TextWidth("Size") + gap
+        FontEditorButton("-", 28, sizeX, -58, function() ChangeSize(-1) end, timer)
+        sizeLabel = FontEditorLabel(timer, "", sizeX + 42, -66)
+        FontEditorButton("+", 28, sizeX + 76, -58, function() ChangeSize(1) end, timer)
+        FontEditorLabel(timer, "Outline", 0, -104, 11)
+        local outlineSize = (contentWidth - controlX - gap * 2) / 3
         for index, entry in ipairs(fontOutlines) do
             local value = entry.value
             local _, button = FontEditorButton(
                 entry.label,
                 outlineSize,
                 controlX + (index - 1) * (outlineSize + gap),
-                -132,
+                -96,
                 function()
                     if not fontDraft then return end
                     fontDraft.outline = value
@@ -1163,13 +1342,21 @@ DFRL:NewMod("RunTimers", 5, function()
             fontDraft.shadow = value
             PreviewFont(fontDraft)
         end)
-        shadowControl:SetPoint("TOPLEFT", timer, "TOPLEFT", 0, -176)
-        visibilityControl = T.CreateEditorToggle(timer, "Run text", nil, halfWidth, function(value)
-            if not fontDraft then return end
-            fontDraft.showText = value
-            PreviewFont(fontDraft)
-        end)
-        visibilityControl:SetPoint("TOPLEFT", timer, "TOPLEFT", halfWidth + gap, -176)
+        shadowControl:SetPoint("TOPLEFT", timer, "TOPLEFT", 0, -132)
+        for index, mode in ipairs(timerModes) do
+            local x = (index - 1) * (halfWidth + gap)
+            local heading = FontEditorLabel(timer, mode.label, x, -184, 12)
+            heading:SetTextColor(0.94, 0.79, 0.47)
+            local row = 0
+            for _, entry in ipairs(timerOptions) do
+                if not entry.regularOnly or mode.suffix == "Regular" then
+                    local y = -204 - row * 44
+                    local control = DisplayToggle(timer, entry[1] .. mode.suffix, entry[2], nil, y, halfWidth)
+                    control:SetPoint("TOPLEFT", timer, "TOPLEFT", x, y)
+                    row = row + 1
+                end
+            end
+        end
 
         divider = T.EditorDivider(fontEditor, width - padding * 2)
         divider:SetPoint("TOPLEFT", fontEditor, "TOPLEFT", padding, -532)
@@ -1231,8 +1418,8 @@ DFRL:NewMod("RunTimers", 5, function()
             UpdateRunFontBounds()
         end,
         onReset = function()
-            DFRL.display.Reset()
             _G.SurvivorsDragonUiRunFont = nil
+            DFRL.display.Reset()
             fontDraft = nil
             PreviewFont(nil)
             if fontEditor then fontEditor:Hide() end
@@ -1252,24 +1439,32 @@ DFRL:NewMod("RunTimers", 5, function()
         bossGroup:SetPoint("TOP", UIParent, "TOP", 0, -77)
     end)
 
-    local tally, tallyBar, tallyTitle, tallyOverlay = Pill("DFRL_RunTallyPill", "FillYellow")
+    local tally, tallyBar, tallyTitle, tallyOverlay, tallySkin = Pill("DFRL_RunTallyPill", "FillYellow", true)
     tallyBar:SetValue(1)
     tallyBar:SetAlpha(0.4)
     tallyTitle:Hide()
     local tallyFields = {}
-    local tallyAttached = false
-    local tallyRegistered = false
+    local tallyAttachment = {}
+    local visibleTallyFields, tallyPresentationDirty = 3, true
+    local goldField
     local fieldWidth = BAR_WIDTH / 3
     local counters = {
-        { key = "kills", label = "Enemies killed", icon = ATTACK_ICON },
-        { key = "gold", label = "Gold", icon = COINS_ICON },
-        { key = "chest", label = "Next cache cost (gold)", icon = CACHE_ICON },
+        { key = "kills", visibility = "showTallyKills", label = "Enemies killed", icon = ATTACK_ICON },
+        { key = "gold", visibility = "showTallyGold", label = "Gold", icon = COINS_ICON },
+        { key = "chest", visibility = "showTallyCache", label = "Next cache cost (gold)", icon = CACHE_ICON },
     }
     local function SetTallyFieldWidth(entry, width)
         entry.frame:SetWidth(width)
         -- Native FontStrings need an explicit width; opposing anchors alone
         -- do not resolve their width in the packaged client.
-        entry.text:SetWidth(width - 32)
+        local textWidth = math.max(1, math.min(64, width - 32))
+        entry.text:SetWidth(textWidth)
+        entry.content:SetWidth(22 + textWidth)
+        if entry.glow then
+            for _, glow in ipairs(entry.glow) do
+                glow:SetWidth(textWidth)
+            end
+        end
     end
     for index, counter in ipairs(counters) do
         local field = CreateFrame("Frame", nil, tallyOverlay)
@@ -1277,7 +1472,12 @@ DFRL:NewMod("RunTimers", 5, function()
         field:SetPoint("LEFT", tally, "LEFT", 8 + (index - 1) * fieldWidth, 0)
         field:EnableMouse(true)
 
-        local icon = field:CreateTexture(nil, "ARTWORK")
+        local content = CreateFrame("Frame", nil, field)
+        content:SetHeight(20)
+        content:SetPoint("CENTER", field, "CENTER", 0, 0)
+        content:EnableMouse(false)
+
+        local icon = content:CreateTexture(nil, "ARTWORK")
         icon:SetTexture(counter.icon)
         if counter.key == "gold" then
             -- CleanerChat's 64x64 atlas places gold in the top-left 32x32.
@@ -1285,16 +1485,160 @@ DFRL:NewMod("RunTimers", 5, function()
         end
         icon:SetWidth(18)
         icon:SetHeight(18)
-        icon:SetPoint("LEFT", field, "LEFT", 5, 0)
+        icon:SetPoint("LEFT", content, "LEFT", 0, 0)
 
-        local text = field:CreateFontString(nil, "OVERLAY")
+        local text = content:CreateFontString(nil, "OVERLAY")
         T.SetFont(text, 12, "OUTLINE")
         text:SetTextColor(1, 0.88, 0.55)
         text:SetHeight(18)
         text:SetPoint("LEFT", icon, "RIGHT", 4, 0)
         text:SetJustifyH("CENTER")
         text:SetJustifyV("MIDDLE")
-        local entry = { key = counter.key, label = counter.label, text = text, frame = field }
+        local entry = {
+            key = counter.key,
+            visibility = counter.visibility,
+            label = counter.label,
+            icon = icon,
+            text = text,
+            frame = field,
+            content = content,
+        }
+        if counter.key == "gold" then
+            local glowOpacity = 1.4
+            local glyphSpread = 1.25
+            entry.glowWidthScale = 1.65
+            entry.glow, entry.glowDirections = {}, {}
+            entry.glowLights = {
+                { anchor = content, centerX = -5, height = 26, sparkleSize = 5, radiusY = 9.5, offset = 0 },
+            }
+            for _, light in ipairs(entry.glowLights) do
+                local spotlight = content:CreateTexture(nil, "BACKGROUND")
+                spotlight:SetTexture(DFRL:GetInfoOrCons("tex") .. "tally\\AffordableGlow.tga")
+                spotlight:SetBlendMode("ADD")
+                spotlight:SetVertexColor(1, 0.86, 0.64, 0.16 * glowOpacity)
+                spotlight:SetHeight(light.height)
+                spotlight:SetPoint("CENTER", light.anchor, "CENTER", light.centerX, 0)
+                spotlight:Hide()
+                local rays = content:CreateTexture(nil, "BORDER")
+                rays:SetTexture(DFRL:GetInfoOrCons("tex") .. "tally\\AffordableRays.tga")
+                rays:SetBlendMode("ADD")
+                rays:SetVertexColor(1, 0.87, 0.66, 0.32 * glowOpacity)
+                rays:SetHeight(light.height)
+                rays:SetPoint("CENTER", light.anchor, "CENTER", light.centerX, 0)
+                rays:Hide()
+                light.spotlight, light.rays, light.sparkles = spotlight, rays, {}
+                for index = 1, 3 do
+                    local sparkle = content:CreateTexture(nil, "ARTWORK")
+                    sparkle:SetTexture(DFRL:GetInfoOrCons("tex") .. "tally\\AffordableSparkle.tga")
+                    sparkle:SetBlendMode("ADD")
+                    sparkle:SetVertexColor(1, 0.94, 0.78)
+                    sparkle:SetWidth(light.sparkleSize)
+                    sparkle:SetHeight(light.sparkleSize)
+                    sparkle:Hide()
+                    table.insert(light.sparkles, {
+                        texture = sparkle,
+                        offset = (index - 1) * 2 * math.pi / 3 + light.offset,
+                    })
+                end
+            end
+            for y = -1, 1 do
+                for x = -1, 1 do
+                    if x ~= 0 or y ~= 0 then
+                        local glow = content:CreateFontString(nil, "ARTWORK")
+                        T.SetFont(glow, 12, "")
+                        glow:SetTextColor(1, 0.91, 0.68)
+                        glow:SetAlpha(0.04 * glowOpacity)
+                        glow:SetHeight(18)
+                        glow:SetJustifyH("CENTER")
+                        glow:SetJustifyV("MIDDLE")
+                        glow:SetPoint("CENTER", text, "CENTER", x * 1.5 * glyphSpread, y * 1.5)
+                        glow:Hide()
+                        table.insert(entry.glow, glow)
+                        local length = math.sqrt(x * x + y * y)
+                        table.insert(entry.glowDirections, { x = x / length, y = y / length })
+                    end
+                end
+            end
+            local function PaintGlow()
+                local c, s = math.cos(entry.glowPhase), math.sin(entry.glowPhase)
+                local halfC, halfS = c / 2, s / 2
+                for index, glow in ipairs(entry.glow) do
+                    local direction = entry.glowDirections[index]
+                    local facing = math.max(0, c * direction.x - s * direction.y)
+                    glow:SetAlpha((0.04 + 0.14 * facing * facing * facing * facing) * glowOpacity)
+                end
+                for _, light in ipairs(entry.glowLights) do
+                    light.rays:SetTexCoord(
+                        0.5 - halfC - halfS,
+                        0.5 + halfS - halfC,
+                        0.5 - halfC + halfS,
+                        0.5 + halfS + halfC,
+                        0.5 + halfC - halfS,
+                        0.5 - halfS - halfC,
+                        0.5 + halfC + halfS,
+                        0.5 - halfS + halfC
+                    )
+                    for _, sparkle in ipairs(light.sparkles) do
+                        local twinkle = math.max(0, math.sin(entry.glowPhase * 3 + sparkle.offset * 0.7 + 0.8))
+                        local alpha = 0.55 * twinkle * twinkle * twinkle * twinkle
+                        if alpha > 0.01 then
+                            local angle = entry.glowPhase + sparkle.offset
+                            sparkle.texture:SetPoint(
+                                "CENTER",
+                                light.anchor,
+                                "CENTER",
+                                light.centerX + light.radiusX * math.cos(angle),
+                                -light.radiusY * math.sin(angle)
+                            )
+                            sparkle.texture:SetAlpha(alpha * glowOpacity)
+                            if not sparkle.shown then sparkle.texture:Show() end
+                            sparkle.shown = true
+                        elseif sparkle.shown then
+                            sparkle.texture:Hide()
+                            sparkle.shown = false
+                        end
+                    end
+                end
+            end
+            function entry.StopGlow()
+                if not entry.glowRunning then return end
+                entry.glowRunning = false
+                content:SetScript("OnUpdate", nil)
+                for _, light in ipairs(entry.glowLights) do
+                    light.rays:Hide()
+                    for _, sparkle in ipairs(light.sparkles) do
+                        sparkle.texture:Hide()
+                        sparkle.shown = false
+                    end
+                end
+                entry.glowAge, entry.glowPhase = nil, nil
+            end
+            local function AnimateGlow()
+                if not entry.affordable or not content:IsVisible() then
+                    entry.StopGlow()
+                    return
+                end
+                local elapsed = math.max(0, math.min(tonumber(arg1) or 0, 0.1))
+                entry.glowPhase = math.mod(entry.glowPhase + elapsed * 2 * math.pi / 4.8, 2 * math.pi)
+                entry.glowAge = entry.glowAge + elapsed
+                if entry.glowAge < 1 / 30 then return end
+                entry.glowAge = 0
+                PaintGlow()
+            end
+            function entry.StartGlow()
+                if entry.glowRunning or not entry.affordable or not content:IsVisible() then return end
+                entry.glowRunning = true
+                entry.glowAge, entry.glowPhase = 0, 0
+                PaintGlow()
+                for _, light in ipairs(entry.glowLights) do
+                    light.rays:Show()
+                end
+                content:SetScript("OnUpdate", AnimateGlow)
+            end
+            content:SetScript("OnShow", entry.StartGlow)
+            content:SetScript("OnHide", entry.StopGlow)
+            goldField = entry
+        end
         SetTallyFieldWidth(entry, fieldWidth)
         table.insert(tallyFields, entry)
         field:SetScript("OnEnter", function()
@@ -1315,34 +1659,186 @@ DFRL:NewMod("RunTimers", 5, function()
             divider:SetWidth(1)
             divider:SetHeight(15)
             divider:SetPoint("LEFT", field, "LEFT", 0, 0)
+            entry.divider = divider
         end
     end
 
-    function DFRL.AttachRunTally()
-        local xp = DFRL.xpBar
-        if not xp or not DFRL.mainBar then return false end
-        local width = xp:GetWidth()
-        if not IsNumber(width) or width <= 70 then return false end
-        -- Match XP's artwork width without making either group follow the
-        -- other's position. Maximum XP also cannot hide the tally.
-        tally:SetWidth(width)
-        if not tallyRegistered then
-            DFRL.layout.Register("runTally", tally, function()
-                tally:ClearAllPoints()
-                tally:SetPoint("TOP", UIParent, "BOTTOM", 0, 39)
-            end)
-            tallyRegistered = true
+    local function SetGoldHighlight(affordable)
+        if affordable then
+            local text = goldField.text:GetText() or ""
+            if goldField.glowText ~= text then
+                goldField.glowText = text
+                for _, glow in ipairs(goldField.glow) do
+                    glow:SetText(text)
+                end
+            end
+            local contentWidth = goldField.content:GetWidth()
+            local width = contentWidth * goldField.glowWidthScale
+            if not T.NearlyEqual(goldField.glowWidth, width) then
+                local light = goldField.glowLights[1]
+                light.spotlight:SetWidth(width)
+                light.rays:SetWidth(width)
+                light.radiusX = math.max(1, (contentWidth - light.sparkleSize) / 2 - math.abs(light.centerX))
+                goldField.glowWidth = width
+            end
+        end
+        if goldField.affordable == affordable then return end
+        goldField.affordable = affordable
+        for _, glow in ipairs(goldField.glow) do
+            if affordable then
+                glow:Show()
+            else
+                glow:SetText("")
+                glow:Hide()
+            end
+        end
+        if affordable then
+            for _, light in ipairs(goldField.glowLights) do
+                light.spotlight:Show()
+            end
+            goldField.StartGlow()
         else
-            DFRL.layout.Place("runTally", tally)
+            goldField.StopGlow()
+            for _, light in ipairs(goldField.glowLights) do
+                light.spotlight:Hide()
+            end
+            goldField.glowText, goldField.glowWidth = nil, nil
         end
-        local sectionWidth = (width - 16) / table.getn(tallyFields)
-        for index, entry in ipairs(tallyFields) do
-            SetTallyFieldWidth(entry, sectionWidth)
-            entry.frame:ClearAllPoints()
-            entry.frame:SetPoint("LEFT", tally, "LEFT", 8 + (index - 1) * sectionWidth, 0)
+    end
+
+    do
+        local detached = CreateFrame("Frame", "SurvivorsDragonUiDetachedRunTally", UIParent)
+        detached:SetHeight(tally:GetHeight())
+        detached:SetFrameStrata("HIGH")
+        detached:EnableMouse(false)
+        detached:Hide()
+        local docked, lastBottom, lastWidth, lastStyle, lastMask
+        local artwork = tally:CreateTexture(nil, "BACKGROUND")
+        artwork:SetTexCoord(0, DFRL.tallyStyleCanvas.right, 0, DFRL.tallyStyleCanvas.bottom)
+        artwork:SetPoint("TOPLEFT", tally, "TOPLEFT", 0, 0)
+        artwork:Hide()
+
+        function tallyAttachment.SetShown(shown)
+            tallyAttachment.shown = shown
+            if not tallyAttachment.ready then return end
+            local visible = shown and visibleTallyFields > 0
+            if docked or not visible then
+                detached:Hide()
+            else
+                detached:Show()
+            end
+            if visible then
+                tally:Show()
+            else
+                tally:Hide()
+            end
+            DFRL.SetRunTallyBarExtent(docked and visible and tally:GetHeight() or 0)
         end
-        tallyAttached = true
-        return true
+
+        function tallyAttachment.Refresh(force)
+            if not tallyAttachment.ready then return end
+            local joined = DFRL.display.Get("attachTally")
+            local bottom = joined and DFRL.GetActionBarSilverBottom() or nil
+            local style = DFRL.tallyStyleById[DFRL.display.Get("tallyStyle")]
+            local mask = ""
+            visibleTallyFields = 0
+            for _, entry in ipairs(tallyFields) do
+                entry.enabled = DFRL.display.Get(entry.visibility)
+                mask = mask .. (entry.enabled and "1" or "0")
+                if entry.enabled then visibleTallyFields = visibleTallyFields + 1 end
+            end
+            if not force and docked == joined and lastBottom == bottom and lastStyle == style and lastMask == mask then
+                return
+            end
+            tally:Hide()
+            docked, lastBottom, lastStyle, lastMask = joined, bottom, style, mask
+            local owner = joined and DFRL.mainBar or detached
+            if tally:GetParent() ~= owner then tally:SetParent(owner) end
+            tally:SetScale(1)
+            local strata = joined and "LOW" or "HIGH"
+            tally:SetFrameStrata(strata)
+            tallyBar:SetFrameStrata(strata)
+            tallyOverlay:SetFrameStrata(strata)
+            tally:SetFrameLevel(owner:GetFrameLevel() + 2)
+            tallyBar:SetFrameLevel(tally:GetFrameLevel() + 1)
+            tallyOverlay:SetFrameLevel(tallyBar:GetFrameLevel() + 1)
+            for _, texture in ipairs(tallySkin) do
+                texture:Hide()
+            end
+            tally:ClearAllPoints()
+            local artScale = lastWidth / DFRL.tallyStyleCanvas.width
+            local height = style.extent * artScale
+            tally:SetHeight(height)
+            detached:SetHeight(height)
+            if joined then
+                tally:SetPoint("TOP", owner, "BOTTOM", 0, bottom)
+            else
+                tally:SetPoint("TOPLEFT", owner, "TOPLEFT", 0, 0)
+            end
+            tallyBar:Hide()
+            artwork:SetTexture(DFRL:GetInfoOrCons("tex") .. "tally\\" .. style.texture)
+            artwork:SetWidth(lastWidth)
+            artwork:SetHeight(DFRL.tallyStyleCanvas.height * artScale)
+            artwork:Show()
+            local rowCenter, contentScale = style.contentY * artScale, style.contentScale
+            local divided = style.id == "silver" or style.id == "graphite"
+            local inset = divided and 8 or 40 * artScale
+            local sectionWidth = (lastWidth - 2 * inset) / math.max(1, visibleTallyFields)
+            local visibleIndex = 0
+            for _, entry in ipairs(tallyFields) do
+                entry.frame:SetFrameStrata(strata)
+                entry.frame:SetFrameLevel(tallyOverlay:GetFrameLevel() + 1)
+                entry.content:SetFrameStrata(strata)
+                entry.content:SetFrameLevel(entry.frame:GetFrameLevel() + 1)
+                entry.content:SetScale(contentScale)
+                if entry.enabled then
+                    SetTallyFieldWidth(entry, sectionWidth)
+                    entry.frame:ClearAllPoints()
+                    entry.frame:SetPoint("LEFT", tally, "TOPLEFT", inset + visibleIndex * sectionWidth, -rowCenter)
+                    entry.frame:Show()
+                else
+                    entry.frame:Hide()
+                end
+                if entry.divider then
+                    if entry.enabled and visibleIndex > 0 and divided then
+                        entry.divider:SetVertexColor(0.55, 0.56, 0.58, 0.6)
+                        entry.divider:Show()
+                    else
+                        entry.divider:Hide()
+                    end
+                end
+                if entry.enabled then visibleIndex = visibleIndex + 1 end
+            end
+            DFRL.layout.Place("runTally", detached)
+            tallyAttachment.SetShown(tallyAttachment.shown)
+        end
+        DFRL.RefreshRunTallyAttachment = tallyAttachment.Refresh
+
+        function DFRL.AttachRunTally()
+            local action = DFRL.actionBarDefaults
+            if not DFRL.mainBar or not action or not DFRL.GetActionBarSilverBottom then return false end
+            local width = DFRL.mainBar:GetWidth() + 2 * action.sideInset
+            if not IsNumber(width) or width <= 70 then return false end
+            local resized = lastWidth ~= width
+            if resized then
+                tally:SetWidth(width)
+                detached:SetWidth(width)
+                lastWidth = width
+            end
+            if not tallyAttachment.ready then
+                DFRL.layout.Register("runTally", detached, function()
+                    detached:ClearAllPoints()
+                    detached:SetPoint("TOP", UIParent, "BOTTOM", 0, math.max(39, detached:GetHeight()))
+                end, { onlyWhenShown = true, refreshDefault = true })
+                tallyAttachment.ready = true
+            end
+            tallyAttachment.Refresh(resized)
+            return true
+        end
+        DFRL.display.Listen(function()
+            tallyPresentationDirty = true
+            tallyAttachment.Refresh()
+        end)
     end
     DFRL.AttachRunTally()
 
@@ -1363,6 +1859,7 @@ DFRL:NewMod("RunTimers", 5, function()
     local zoneSequence, zoneRunPending
     local scheduleBarrier = -1
     local reloading = false
+    local render = { emptySchedule = {} }
     -- Only ReloadUI writes this handoff. Consume it once, keeping an initial
     -- nil phase from destroying it before the native API has replayed AZSRUN.
     local scheduleCache = _G.SurvivorsDragonUiBossSchedule
@@ -1397,14 +1894,19 @@ DFRL:NewMod("RunTimers", 5, function()
     end
 
     local function ClearTally()
-        tally:Hide()
-        for _, field in ipairs(tallyFields) do
-            field.text:SetText("")
+        if render.tallyShown then
+            render.tallyShown = false
+            tallyAttachment.SetShown(false)
         end
+        for _, field in ipairs(tallyFields) do
+            T.SetTextIfChanged(field.text, "")
+        end
+        SetGoldHighlight(false)
         Restore("tally")
     end
 
     local function UpdateTally()
+        tallyPresentationDirty = false
         local state = AZS_RUN
         -- Zero is a valid counter or free cache. Missing fields must not be
         -- replaced by invented values while the native overlay is hidden.
@@ -1417,23 +1919,28 @@ DFRL:NewMod("RunTimers", 5, function()
             ClearTally()
             return
         end
-        if not tallyAttached and not DFRL.AttachRunTally() then
+        if not tallyAttachment.ready and not DFRL.AttachRunTally() then
             ClearTally()
             return
         end
         for _, field in ipairs(tallyFields) do
-            field.text:SetText(tostring(math.floor(state[field.key])))
+            T.SetTextIfChanged(field.text, tostring(math.floor(state[field.key])))
         end
-        tally:Show()
+        SetGoldHighlight(DFRL.display.Get("highlightAffordableCache") and state.gold >= state.chest)
+        if not render.tallyShown then
+            render.tallyShown = true
+            tallyAttachment.SetShown(true)
+        end
         if not TakeOver("tally") then ClearTally() end
     end
 
     local function HideDebuff(icon)
         if GameTooltip and GameTooltip:IsOwned(icon) then GameTooltip:Hide() end
-        icon:Hide()
-        icon.texture:SetTexture(nil)
-        icon.count:SetText("")
-        icon.time:SetText("")
+        if icon:IsShown() then icon:Hide() end
+        if icon.iconPath or icon.effect then icon.texture:SetTexture(nil) end
+        icon.iconPath = nil
+        T.SetTextIfChanged(icon.count, "")
+        T.SetTextIfChanged(icon.time, "")
         icon.effect = nil
     end
 
@@ -1447,9 +1954,10 @@ DFRL:NewMod("RunTimers", 5, function()
     local function Retire(row)
         ClearDebuffs(row)
         row.frame:Hide()
-        row.name:SetText("")
-        row.health:SetText("")
-        row.bar:SetValue(0)
+        T.SetTextIfChanged(row.name, "")
+        T.SetTextIfChanged(row.health, "")
+        if row.value ~= 0 then row.bar:SetValue(0) end
+        row.value, row.layoutOffset = 0, nil
         row.id, row.key = nil, nil
         table.insert(spareRows, row)
     end
@@ -1459,11 +1967,20 @@ DFRL:NewMod("RunTimers", 5, function()
             Retire(row)
             activeRows[key] = nil
         end
-        rowOrder = {}
-        bossGroup:Hide()
+        for index in ipairs(rowOrder) do
+            rowOrder[index] = nil
+        end
+        table.setn(rowOrder, 0)
+        if render.bossShown then
+            render.bossShown = false
+            bossGroup:Hide()
+        end
+        render.rowsDirty, render.rowsPresentationDirty = nil, nil
     end
 
     local function ShowMarkerGlow(marker, shown)
+        if marker.glowShown == shown then return end
+        marker.glowShown = shown
         for _, glow in ipairs(marker.glow) do
             if shown then
                 glow.texture:Show()
@@ -1490,15 +2007,18 @@ DFRL:NewMod("RunTimers", 5, function()
 
     local function HideMarker(marker)
         HideMarkerTooltip(marker)
-        marker:Hide()
-        marker.check:Hide()
+        if marker:IsShown() then marker:Hide() end
+        if marker.check:IsShown() then marker.check:Hide() end
         ShowMarkerGlow(marker, false)
         marker.state = nil
     end
 
     local function ReleaseClock()
-        run:Hide()
-        ClearEndlessCaption()
+        if render.runShown then
+            render.runShown = false
+            run:Hide()
+        end
+        ClearClockCaptions()
         HideRunFlow()
         for _, marker in ipairs(markers) do
             HideMarker(marker)
@@ -1566,10 +2086,46 @@ DFRL:NewMod("RunTimers", 5, function()
     local function ScheduleSample(maximum, expected)
         local state = AZS_RUN
         if type(state) ~= "table" or state.fin ~= maximum or state.bt ~= expected then return nil end
-        for _, key in ipairs({ "t", "bs", "bk", "kills" }) do
-            if not IsNumber(state[key]) then return nil end
+        if not IsNumber(state.t) or not IsNumber(state.bs) or not IsNumber(state.bk) or not IsNumber(state.kills) then
+            return nil
         end
-        return { t = state.t, bs = state.bs, bk = state.bk, kills = state.kills }
+        local sample = render.sample
+        if
+            not sample
+            or sample.t ~= state.t
+            or sample.bs ~= state.bs
+            or sample.bk ~= state.bk
+            or sample.kills ~= state.kills
+        then
+            sample = { t = state.t, bs = state.bs, bk = state.bk, kills = state.kills }
+            render.sample = sample
+        end
+        return sample
+    end
+
+    local function AcceptedSchedule(source, maximum, expected, replay)
+        local key = replay and "replayValidation" or "nativeValidation"
+        local cache = render[key] or {}
+        render[key] = cache
+        if
+            cache.source ~= source
+            or cache.sequence ~= scheduleSequence
+            or cache.maximum ~= maximum
+            or cache.expected ~= expected
+            or not cache.read
+        then
+            cache.entries = ValidateSchedule(source, maximum, expected)
+            cache.spawned, cache.killed = 0, 0
+            if cache.entries then
+                for _, entry in ipairs(cache.entries) do
+                    if entry.state ~= "due" then cache.spawned = cache.spawned + 1 end
+                    if entry.state == "dead" then cache.killed = cache.killed + 1 end
+                end
+            end
+            cache.source, cache.sequence = source, scheduleSequence
+            cache.maximum, cache.expected, cache.read = maximum, expected, true
+        end
+        return cache.entries
     end
 
     local function ScheduleMarkers(maximum, phase)
@@ -1579,26 +2135,36 @@ DFRL:NewMod("RunTimers", 5, function()
         local entries
         -- After a known run boundary, retained native tables are not a fresh
         -- schedule. Packet order is recorded before reading the parsed tables.
-        if scheduleSequence > scheduleBarrier then entries = ValidateSchedule(AZS_SCHEDULE, maximum, expected) end
+        if scheduleSequence > scheduleBarrier then entries = AcceptedSchedule(AZS_SCHEDULE, maximum, expected) end
         if entries then
+            local cached = scheduleCache
             scheduleCache = nil
             if sample then
-                local spawned, killed = 0, 0
-                for _, entry in ipairs(entries) do
-                    if entry.state ~= "due" then spawned = spawned + 1 end
-                    if entry.state == "dead" then killed = killed + 1 end
-                end
+                local validation = render.nativeValidation
                 -- The two prefixes can arrive separately. Never stamp new run
                 -- counters onto old schedule states for the next reload.
-                if spawned == math.min(expected, sample.bs) and killed == math.min(expected, sample.bk) then
-                    scheduleCache = {
-                        version = 1,
-                        maximum = maximum,
-                        expected = expected,
-                        hero = UnitName("player"),
-                        entries = entries,
-                        sample = sample,
-                    }
+                if
+                    validation.spawned == math.min(expected, sample.bs)
+                    and validation.killed == math.min(expected, sample.bk)
+                then
+                    local hero = UnitName("player")
+                    if
+                        type(cached) == "table"
+                        and cached.entries == entries
+                        and cached.sample == sample
+                        and cached.hero == hero
+                    then
+                        scheduleCache = cached
+                    else
+                        scheduleCache = {
+                            version = 1,
+                            maximum = maximum,
+                            expected = expected,
+                            hero = hero,
+                            entries = entries,
+                            sample = sample,
+                        }
+                    end
                 end
             end
             return entries
@@ -1625,7 +2191,7 @@ DFRL:NewMod("RunTimers", 5, function()
             scheduleCache = nil
             return nil
         end
-        entries = ValidateSchedule(cache.entries, maximum, expected)
+        entries = AcceptedSchedule(cache.entries, maximum, expected, true)
         if not entries then
             scheduleCache = nil
             return nil
@@ -1636,6 +2202,7 @@ DFRL:NewMod("RunTimers", 5, function()
 
     local function InvalidateSchedule(sequence)
         scheduleCache = nil
+        render.nativeValidation, render.replayValidation, render.sample = nil, nil, nil
         scheduleBarrier = math.max(scheduleBarrier, sequence)
     end
 
@@ -1652,6 +2219,17 @@ DFRL:NewMod("RunTimers", 5, function()
                 marker:SetScript("OnLeave", function() HideMarkerTooltip(marker) end)
                 marker:SetScript("OnHide", function() HideMarkerTooltip(marker) end)
                 marker.glow = {}
+                marker.glowCardinal = CreateFrame("Frame", nil, marker)
+                marker.glowDiagonal = CreateFrame("Frame", nil, marker)
+                marker.glowCardinal:SetPoint("CENTER", marker, "CENTER", 0, 0)
+                marker.glowDiagonal:SetPoint("CENTER", marker, "CENTER", 0, 0)
+                marker.glowCardinal:SetWidth(2 * ACTIVE_GLOW_MIN_OFFSET)
+                marker.glowCardinal:SetHeight(2 * ACTIVE_GLOW_MIN_OFFSET)
+                marker.glowDiagonal:SetWidth(2 * ((1 / math.sqrt(2)) * ACTIVE_GLOW_MIN_OFFSET))
+                marker.glowDiagonal:SetHeight(2 * ((1 / math.sqrt(2)) * ACTIVE_GLOW_MIN_OFFSET))
+                marker.glowCardinal:Hide()
+                marker.glowDiagonal:Hide()
+                marker.glowOffset = ACTIVE_GLOW_MIN_OFFSET
                 -- Translucent copies trace the native skull silhouette. Their
                 -- offsets breathe inward/outward beneath the unchanged skull.
                 for x = -1, 1 do
@@ -1663,12 +2241,14 @@ DFRL:NewMod("RunTimers", 5, function()
                             glow:SetTexture(SKULL_ICON)
                             glow:SetWidth(MARKER_SIZE)
                             glow:SetHeight(MARKER_SIZE)
+                            local point = (y == 1 and "TOP" or y == -1 and "BOTTOM" or "")
+                                .. (x == 1 and "RIGHT" or x == -1 and "LEFT" or "")
                             glow:SetPoint(
                                 "CENTER",
-                                marker,
-                                "CENTER",
-                                dx * ACTIVE_GLOW_MIN_OFFSET,
-                                dy * ACTIVE_GLOW_MIN_OFFSET
+                                distance == 1 and marker.glowCardinal or marker.glowDiagonal,
+                                point,
+                                0,
+                                0
                             )
                             glow:SetVertexColor(1, 0.25, 0, 1)
                             glow:SetAlpha(ACTIVE_GLOW_MIN_ALPHA)
@@ -1695,11 +2275,14 @@ DFRL:NewMod("RunTimers", 5, function()
                 if GameTooltip and GameTooltip:IsOwned(marker) then ShowMarkerTooltip(marker) end
             end
             markerStates[index] = entry.state
-            marker:ClearAllPoints()
-            if at == maximum then
-                marker:SetPoint("RIGHT", runBar, "RIGHT", 0, 0)
-            else
-                marker:SetPoint("CENTER", runBar, "LEFT", BAR_WIDTH * at / maximum, 0)
+            if marker.at ~= at or marker.maximum ~= maximum then
+                marker:ClearAllPoints()
+                if at == maximum then
+                    marker:SetPoint("RIGHT", runBar, "RIGHT", 0, 0)
+                else
+                    marker:SetPoint("CENTER", runBar, "LEFT", BAR_WIDTH * at / maximum, 0)
+                end
+                marker.at, marker.maximum = at, maximum
             end
         end
         for index = table.getn(entries) + 1, table.getn(markers) do
@@ -1739,13 +2322,19 @@ DFRL:NewMod("RunTimers", 5, function()
                     end
                 end
                 if state == "up" then
+                    if marker.glowOffset ~= glowOffset then
+                        local cardinalSide, diagonalSide = 2 * glowOffset, 2 * ((1 / math.sqrt(2)) * glowOffset)
+                        marker.glowCardinal:SetWidth(cardinalSide)
+                        marker.glowCardinal:SetHeight(cardinalSide)
+                        marker.glowDiagonal:SetWidth(diagonalSide)
+                        marker.glowDiagonal:SetHeight(diagonalSide)
+                        marker.glowOffset = glowOffset
+                    end
                     for _, glow in ipairs(marker.glow) do
                         glow.texture:SetAlpha(glowAlpha)
-                        glow.texture:ClearAllPoints()
-                        glow.texture:SetPoint("CENTER", marker, "CENTER", glow.x * glowOffset, glow.y * glowOffset)
                     end
                 end
-                marker:Show()
+                if not marker:IsShown() then marker:Show() end
             else
                 HideMarker(marker)
             end
@@ -1764,8 +2353,12 @@ DFRL:NewMod("RunTimers", 5, function()
         -- are fighting; the full list also includes sleeping lairs on the map.
         -- Boss-only mode does not depend on the excluded guardian list.
         if type(bosses) ~= "table" or (showGuardians and type(guardians) ~= "table") then return nil end
-        local entries = {}
-        local seen = {}
+        local entries, seen = render.encounters or {}, render.encounterSeen or {}
+        render.encounters, render.encounterSeen = entries, seen
+        for key in pairs(seen) do
+            seen[key] = nil
+        end
+        local used = 0
         local function Append(list, kind)
             for _, entry in ipairs(list) do
                 if type(entry) ~= "table" then return false end
@@ -1787,19 +2380,20 @@ DFRL:NewMod("RunTimers", 5, function()
                     local key = kind .. ":" .. tostring(entry.id)
                     if seen[key] then return false end
                     seen[key] = true
-                    table.insert(entries, {
-                        key = key,
-                        id = entry.id,
-                        kind = kind,
-                        name = entry.name,
-                        hp = entry.hp,
-                        maximum = entry.hpm,
-                    })
+                    used = used + 1
+                    local copy = entries[used] or {}
+                    copy.key, copy.id, copy.kind = key, entry.id, kind
+                    copy.name, copy.hp, copy.maximum = entry.name, entry.hp, entry.hpm
+                    entries[used] = copy
                 end
             end
             return true
         end
         if not Append(bosses, "boss") or (showGuardians and not Append(guardians, "guardian")) then return nil end
+        for index = used + 1, table.getn(entries) do
+            entries[index] = nil
+        end
+        table.setn(entries, used)
         return entries, seen
     end
 
@@ -1906,6 +2500,7 @@ DFRL:NewMod("RunTimers", 5, function()
 
     local function UpdateDebuffs(row, enabled)
         local count = 0
+        local paint = bossGroup:IsVisible()
         local getter = _G.AZS_GetDebuffs
         if enabled and type(getter) == "function" then
             -- The getter owns timing and returns current effects for this exact
@@ -1915,27 +2510,41 @@ DFRL:NewMod("RunTimers", 5, function()
                 for _, effect in ipairs(effects) do
                     if type(effect) == "table" and type(effect.icon) == "string" and effect.icon ~= "" then
                         count = count + 1
-                        local icon = DebuffIcon(row, count)
-                        icon.effect = effect
-                        icon.texture:SetTexture(effect.icon)
-                        icon.count:SetText(
-                            IsNumber(effect.stacks) and effect.stacks > 1 and tostring(math.floor(effect.stacks)) or ""
-                        )
-                        local remaining = DebuffRemaining(effect)
-                        local text = ""
-                        if remaining then
-                            text = remaining >= 60 and (tostring(math.ceil(remaining / 60)) .. "m")
-                                or tostring(math.ceil(remaining))
+                        if paint then
+                            local icon = DebuffIcon(row, count)
+                            icon.effect = effect
+                            if icon.iconPath ~= effect.icon then
+                                local loaded = icon.texture:SetTexture(effect.icon)
+                                local assigned = icon.texture:GetTexture()
+                                local stem = string.gsub(effect.icon, "%.[^%.]*$", "")
+                                icon.iconPath = loaded ~= false
+                                        and (assigned == effect.icon or assigned == stem)
+                                        and effect.icon
+                                    or nil
+                            end
+                            T.SetTextIfChanged(
+                                icon.count,
+                                IsNumber(effect.stacks) and effect.stacks > 1 and tostring(math.floor(effect.stacks))
+                                    or ""
+                            )
+                            local remaining = DebuffRemaining(effect)
+                            local text = ""
+                            if remaining then
+                                text = remaining >= 60 and (tostring(math.ceil(remaining / 60)) .. "m")
+                                    or tostring(math.ceil(remaining))
+                            end
+                            T.SetTextIfChanged(icon.time, text)
+                            if not icon:IsShown() then icon:Show() end
+                            if GameTooltip and GameTooltip:IsOwned(icon) then DebuffTooltip(icon) end
                         end
-                        icon.time:SetText(text)
-                        icon:Show()
-                        if GameTooltip and GameTooltip:IsOwned(icon) then DebuffTooltip(icon) end
                     end
                 end
             end
         end
-        for index = count + 1, table.getn(row.debuffs) do
-            HideDebuff(row.debuffs[index])
+        if paint then
+            for index = count + 1, table.getn(row.debuffs) do
+                HideDebuff(row.debuffs[index])
+            end
         end
         return math.ceil(count / DEBUFF_COLUMNS) * (DEBUFF_SIZE + DEBUFF_GAP)
     end
@@ -1943,12 +2552,18 @@ DFRL:NewMod("RunTimers", 5, function()
     local function ReflowRows()
         local offset = 0
         for _, row in ipairs(rowOrder) do
-            row.frame:ClearAllPoints()
-            row.frame:SetPoint("TOP", bossGroup, "TOP", 0, -16 - offset)
+            if row.layoutOffset ~= offset then
+                row.frame:ClearAllPoints()
+                row.frame:SetPoint("TOP", bossGroup, "TOP", 0, -16 - offset)
+                row.layoutOffset = offset
+            end
             offset = offset + ROW_HEIGHT + (row.debuffHeight or 0)
         end
-        bossGroup:SetHeight(math.max(47, offset - 1))
-        DFRL.layout.Place("bossBars", bossGroup)
+        local height = math.max(47, offset - 1)
+        if not T.NearlyEqual(bossGroup:GetHeight(), height) then
+            bossGroup:SetHeight(height)
+            DFRL.layout.Place("bossBars", bossGroup)
+        end
     end
 
     local function UpdateDebuffRows(phase, reflow)
@@ -1958,7 +2573,14 @@ DFRL:NewMod("RunTimers", 5, function()
             if row.debuffHeight ~= height then reflow = true end
             row.debuffHeight = height
         end
-        if reflow then ReflowRows() end
+        if reflow or render.rowsDirty then
+            if bossGroup:IsVisible() then
+                ReflowRows()
+                render.rowsDirty = nil
+            else
+                render.rowsDirty = true
+            end
+        end
     end
 
     local function UpdateRows(phase)
@@ -1975,27 +2597,43 @@ DFRL:NewMod("RunTimers", 5, function()
             end
         end
         local count = table.getn(entries)
-        if count > 0 then
-            bossGroup:Show()
-        else
-            bossGroup:Hide()
+        local shown = count > 0
+        if render.bossShown ~= shown then
+            render.bossShown = shown
+            if shown then
+                bossGroup:Show()
+            else
+                bossGroup:Hide()
+            end
         end
-        rowOrder = {}
-        for _, entry in ipairs(entries) do
+        local paint = bossGroup:IsVisible()
+        render.rowsPresentationDirty = not paint and shown or nil
+        local reflow = count ~= table.getn(rowOrder)
+        for index, entry in ipairs(entries) do
             local row = activeRows[entry.key]
             if not row then
                 row = NewRow()
                 activeRows[entry.key] = row
+                reflow = true
             end
             row.key = entry.key
             row.id = entry.id
-            row.bar:SetValue(math.min(1, entry.hp / entry.maximum))
-            row.name:SetText(entry.name)
-            row.health:SetText(T.EncounterHealthText(entry.hp, entry.maximum))
-            row.frame:Show()
-            table.insert(rowOrder, row)
+            if paint then
+                local value = math.min(1, entry.hp / entry.maximum)
+                if row.value ~= value then row.bar:SetValue(value) end
+                row.value = value
+                T.SetTextIfChanged(row.name, entry.name)
+                T.SetTextIfChanged(row.health, T.EncounterHealthText(entry.hp, entry.maximum))
+                if not row.frame:IsShown() then row.frame:Show() end
+            end
+            if rowOrder[index] ~= row then reflow = true end
+            rowOrder[index] = row
         end
-        UpdateDebuffRows(phase, true)
+        for index = count + 1, table.getn(rowOrder) do
+            rowOrder[index] = nil
+        end
+        table.setn(rowOrder, count)
+        UpdateDebuffRows(phase, reflow)
         if not TakeOver("bosses") then
             ClearRows()
             Restore("bosses")
@@ -2004,6 +2642,7 @@ DFRL:NewMod("RunTimers", 5, function()
 
     DFRL.display.Listen(function()
         UpdateDisplayLabels()
+        RefreshTimerCaptions()
         refreshRows = true
         -- Clearing is immediate even outside a run; valid encounters will reflow
         -- on the next native HUD update without affecting clock takeover.
@@ -2055,17 +2694,35 @@ DFRL:NewMod("RunTimers", 5, function()
         if IsNumber(seconds) then previousTime = seconds end
         local scheduled = maximum and ScheduleMarkers(maximum, phase) or nil
         if IsNumber(seconds) and maximum then
-            runBar:SetMinMaxValues(0, maximum)
-            runBar:SetValue(math.min(maximum, seconds))
-            local atLimit = seconds >= maximum
-            SetRunAppearance(atLimit)
-            UpdateRunFlow(seconds, maximum)
-            UpdateClockCaptions(seconds, maximum, atLimit)
-            -- Missing schedule replay affects only spawn markers, never a clock
-            -- whose native elapsed time and duration have already recovered.
-            if refreshRows or not run:IsShown() or not scheduled then UpdateMarkers(maximum, scheduled or {}) end
-            UpdateMarkerStates(atLimit)
-            run:Show()
+            if not render.runShown then
+                render.runShown = true
+                run:Show()
+            end
+            if run:IsVisible() then
+                if render.runMaximum ~= maximum then runBar:SetMinMaxValues(0, maximum) end
+                local value = math.min(maximum, seconds)
+                if render.runValue ~= value then runBar:SetValue(value) end
+                render.runMaximum, render.runValue = maximum, value
+                local atLimit = seconds >= maximum
+                SetRunAppearance(atLimit)
+                UpdateRunFlow(seconds, maximum)
+                UpdateClockCaptions(seconds, maximum, not zoneRunPending)
+                -- Missing schedule replay affects only spawn markers, never a clock
+                -- whose native elapsed time and duration have already recovered.
+                if
+                    refreshRows
+                    or render.clockHidden
+                    or render.markerEntries ~= scheduled
+                    or render.markerMaximum ~= maximum
+                then
+                    UpdateMarkers(maximum, scheduled or render.emptySchedule)
+                    render.markerEntries, render.markerMaximum = scheduled, maximum
+                end
+                UpdateMarkerStates(atLimit)
+                render.clockHidden = nil
+            else
+                render.clockHidden = true
+            end
             if not TakeOver("clock") then ReleaseClock() end
         else
             ReleaseClock()
@@ -2087,6 +2744,7 @@ DFRL:NewMod("RunTimers", 5, function()
         end
         UpdateRunBoundary(phase)
         UpdateClock(phase)
+        if render.rowsPresentationDirty and bossGroup:IsVisible() then refreshRows = true end
         -- A missing zone/clock snapshot must not block valid counters or
         -- encounter lists from reconnecting to their own native HUD parts.
         if refreshRows then
@@ -2094,6 +2752,7 @@ DFRL:NewMod("RunTimers", 5, function()
             UpdateTally()
             UpdateRows(phase)
         else
+            if tallyPresentationDirty then UpdateTally() end
             -- Native remaining time is calculated on every getter call, even
             -- without a new AZSDEBUFFS packet and while the run is paused.
             UpdateDebuffRows(phase)
@@ -2152,6 +2811,7 @@ DFRL:NewMod("RunTimers", 5, function()
             packetSequence = packetSequence + 1
             if arg1 == "AZSZONE" then
                 zoneSequence = packetSequence
+                ClearClockCaptions()
             elseif arg1 == "AZSRUN" then
                 runSequence = packetSequence
             elseif arg1 == "AZSBOSSES" then

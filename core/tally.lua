@@ -1,0 +1,321 @@
+-- Selected tally artwork metadata and source notices.
+-- The texture's top edge is open: the action bar supplies the only top rim.
+-- Each TGA is 1024x128 with 600x128 content at 2x. Use UV 0,600/1024,0,1;
+-- artHeight is the full 64-unit texture canvas, height is the counter row,
+-- and extent includes the actual lower ornament. No font or source framework ships.
+-- contentY is the counter center below the shared seam; contentScale affects
+-- only its icons and numbers, never the frame artwork.
+-- Immutable sources, crops and preparation: third_party/Tally-ARTWORK.md.
+--
+-- Sources and notices:
+-- RothUI: zorker/rothui@9a9ce9744ce404991fc06066291614fe1765ee20
+-- https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/LICENSE.md
+-- MIT License, Copyright (c) 2011-2018 Erik Raetz.
+-- Diablo_III_UI: RickyElune/Diablo_III_UI@10aa68fef2bfa11bba0eab42baa952b700eb1be5
+-- https://github.com/RickyElune/Diablo_III_UI/blob/10aa68fef2bfa11bba0eab42baa952b700eb1be5/LICENSE.txt
+-- The MIT License, Copyright (c) 2017 Lars Norberg; original UI credited to galaxy119.
+--
+-- Permission is hereby granted, free of charge, to any person obtaining a copy
+-- of this software and associated documentation files (the "Software"), to deal
+-- in the Software without restriction, including without limitation the rights
+-- to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+-- copies of the Software, and to permit persons to whom the Software is
+-- furnished to do so, subject to the following conditions:
+-- The above copyright notice and this permission notice shall be included in
+-- all copies or substantial portions of the Software.
+-- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+-- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+-- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+-- AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+-- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+-- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+-- THE SOFTWARE.
+--
+-- ARPG: kyau/ARPG@9c53e246ff181d7259e3e355836044c5f8ade5be
+-- https://github.com/kyau/ARPG/blob/9c53e246ff181d7259e3e355836044c5f8ade5be/LICENSE
+-- GNU Lesser General Public License version 3, 29 June 2007.
+-- This prepared TopBar artwork is supplied with the same LGPL-3.0 terms where
+-- applicable. Pinned source and crop details: third_party/Tally-ARTWORK.md.
+-- The license is available at the pinned source above and https://www.gnu.org/licenses/lgpl-3.0.html.
+-- The work is distributed WITHOUT ANY WARRANTY; without even the implied
+-- warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+--
+-- Original Blizzard/Diablo artwork remains its owners' property; software
+-- licenses do not transfer ownership of inherited game artwork.
+
+-- Begin pinned ARPG LGPL-3 license text.
+--                    GNU LESSER GENERAL PUBLIC LICENSE
+--                        Version 3, 29 June 2007
+--
+--  Copyright (C) 2007 Free Software Foundation, Inc. <http://fsf.org/>
+--  Everyone is permitted to copy and distribute verbatim copies
+--  of this license document, but changing it is not allowed.
+--
+--
+--   This version of the GNU Lesser General Public License incorporates
+-- the terms and conditions of version 3 of the GNU General Public
+-- License, supplemented by the additional permissions listed below.
+--
+--   0. Additional Definitions.
+--
+--   As used herein, "this License" refers to version 3 of the GNU Lesser
+-- General Public License, and the "GNU GPL" refers to version 3 of the GNU
+-- General Public License.
+--
+--   "The Library" refers to a covered work governed by this License,
+-- other than an Application or a Combined Work as defined below.
+--
+--   An "Application" is any work that makes use of an interface provided
+-- by the Library, but which is not otherwise based on the Library.
+-- Defining a subclass of a class defined by the Library is deemed a mode
+-- of using an interface provided by the Library.
+--
+--   A "Combined Work" is a work produced by combining or linking an
+-- Application with the Library.  The particular version of the Library
+-- with which the Combined Work was made is also called the "Linked
+-- Version".
+--
+--   The "Minimal Corresponding Source" for a Combined Work means the
+-- Corresponding Source for the Combined Work, excluding any source code
+-- for portions of the Combined Work that, considered in isolation, are
+-- based on the Application, and not on the Linked Version.
+--
+--   The "Corresponding Application Code" for a Combined Work means the
+-- object code and/or source code for the Application, including any data
+-- and utility programs needed for reproducing the Combined Work from the
+-- Application, but excluding the System Libraries of the Combined Work.
+--
+--   1. Exception to Section 3 of the GNU GPL.
+--
+--   You may convey a covered work under sections 3 and 4 of this License
+-- without being bound by section 3 of the GNU GPL.
+--
+--   2. Conveying Modified Versions.
+--
+--   If you modify a copy of the Library, and, in your modifications, a
+-- facility refers to a function or data to be supplied by an Application
+-- that uses the facility (other than as an argument passed when the
+-- facility is invoked), then you may convey a copy of the modified
+-- version:
+--
+--    a) under this License, provided that you make a good faith effort to
+--    ensure that, in the event an Application does not supply the
+--    function or data, the facility still operates, and performs
+--    whatever part of its purpose remains meaningful, or
+--
+--    b) under the GNU GPL, with none of the additional permissions of
+--    this License applicable to that copy.
+--
+--   3. Object Code Incorporating Material from Library Header Files.
+--
+--   The object code form of an Application may incorporate material from
+-- a header file that is part of the Library.  You may convey such object
+-- code under terms of your choice, provided that, if the incorporated
+-- material is not limited to numerical parameters, data structure
+-- layouts and accessors, or small macros, inline functions and templates
+-- (ten or fewer lines in length), you do both of the following:
+--
+--    a) Give prominent notice with each copy of the object code that the
+--    Library is used in it and that the Library and its use are
+--    covered by this License.
+--
+--    b) Accompany the object code with a copy of the GNU GPL and this license
+--    document.
+--
+--   4. Combined Works.
+--
+--   You may convey a Combined Work under terms of your choice that,
+-- taken together, effectively do not restrict modification of the
+-- portions of the Library contained in the Combined Work and reverse
+-- engineering for debugging such modifications, if you also do each of
+-- the following:
+--
+--    a) Give prominent notice with each copy of the Combined Work that
+--    the Library is used in it and that the Library and its use are
+--    covered by this License.
+--
+--    b) Accompany the Combined Work with a copy of the GNU GPL and this license
+--    document.
+--
+--    c) For a Combined Work that displays copyright notices during
+--    execution, include the copyright notice for the Library among
+--    these notices, as well as a reference directing the user to the
+--    copies of the GNU GPL and this license document.
+--
+--    d) Do one of the following:
+--
+--        0) Convey the Minimal Corresponding Source under the terms of this
+--        License, and the Corresponding Application Code in a form
+--        suitable for, and under terms that permit, the user to
+--        recombine or relink the Application with a modified version of
+--        the Linked Version to produce a modified Combined Work, in the
+--        manner specified by section 6 of the GNU GPL for conveying
+--        Corresponding Source.
+--
+--        1) Use a suitable shared library mechanism for linking with the
+--        Library.  A suitable mechanism is one that (a) uses at run time
+--        a copy of the Library already present on the user's computer
+--        system, and (b) will operate properly with a modified version
+--        of the Library that is interface-compatible with the Linked
+--        Version.
+--
+--    e) Provide Installation Information, but only if you would otherwise
+--    be required to provide such information under section 6 of the
+--    GNU GPL, and only to the extent that such information is
+--    necessary to install and execute a modified version of the
+--    Combined Work produced by recombining or relinking the
+--    Application with a modified version of the Linked Version. (If
+--    you use option 4d0, the Installation Information must accompany
+--    the Minimal Corresponding Source and Corresponding Application
+--    Code. If you use option 4d1, you must provide the Installation
+--    Information in the manner specified by section 6 of the GNU GPL
+--    for conveying Corresponding Source.)
+--
+--   5. Combined Libraries.
+--
+--   You may place library facilities that are a work based on the
+-- Library side by side in a single library together with other library
+-- facilities that are not Applications and are not covered by this
+-- License, and convey such a combined library under terms of your
+-- choice, if you do both of the following:
+--
+--    a) Accompany the combined library with a copy of the same work based
+--    on the Library, uncombined with any other library facilities,
+--    conveyed under the terms of this License.
+--
+--    b) Give prominent notice with the combined library that part of it
+--    is a work based on the Library, and explaining where to find the
+--    accompanying uncombined form of the same work.
+--
+--   6. Revised Versions of the GNU Lesser General Public License.
+--
+--   The Free Software Foundation may publish revised and/or new versions
+-- of the GNU Lesser General Public License from time to time. Such new
+-- versions will be similar in spirit to the present version, but may
+-- differ in detail to address new problems or concerns.
+--
+--   Each version is given a distinguishing version number. If the
+-- Library as you received it specifies that a certain numbered version
+-- of the GNU Lesser General Public License "or any later version"
+-- applies to it, you have the option of following the terms and
+-- conditions either of that published version or of any later version
+-- published by the Free Software Foundation. If the Library as you
+-- received it does not specify a version number of the GNU Lesser
+-- General Public License, you may choose any version of the GNU Lesser
+-- General Public License ever published by the Free Software Foundation.
+--
+--   If the Library as you received it specifies that a proxy can decide
+-- whether future versions of the GNU Lesser General Public License shall
+-- apply, that proxy's public statement of acceptance of any version is
+-- permanent authorization for you to choose that version for the
+-- Library.
+-- End pinned ARPG LGPL-3 license text.
+
+DFRL.tallyStyleDefault = "gothic13"
+DFRL.tallyStyleCanvas = { width = 300, height = 64, right = 600 / 1024, bottom = 1 }
+DFRL.tallyStyles = {
+    {
+        id = "silver",
+        label = "Continuous silver",
+        texture = "silver.tga",
+        height = 27,
+        extent = 27,
+        artHeight = 64,
+        contentY = 13.5,
+        contentScale = 1,
+    },
+    {
+        id = "graphite",
+        label = "Soft graphite",
+        texture = "graphite.tga",
+        height = 27,
+        extent = 28,
+        artHeight = 64,
+        contentY = 13.5,
+        contentScale = 1,
+    },
+    {
+        id = "gothic01",
+        label = "Roth scrollwork",
+        texture = "gothic01.tga",
+        height = 36,
+        extent = 36,
+        artHeight = 64,
+        contentY = 10,
+        contentScale = 0.9,
+    },
+    {
+        id = "gothic02",
+        label = "Roth shrine",
+        texture = "gothic02.tga",
+        height = 36,
+        extent = 36,
+        artHeight = 64,
+        contentY = 12,
+        contentScale = 0.9,
+    },
+    {
+        id = "gothic03",
+        label = "Gothic cornerwork",
+        texture = "gothic03.tga",
+        height = 36,
+        extent = 36,
+        artHeight = 64,
+        contentY = 13,
+        contentScale = 0.95,
+    },
+    {
+        id = "gothic04",
+        label = "Iron sarcophagus",
+        texture = "gothic04.tga",
+        height = 36,
+        extent = 36,
+        artHeight = 64,
+        contentY = 16,
+        contentScale = 1,
+    },
+    {
+        id = "gothic07",
+        label = "Knotted iron",
+        texture = "gothic07.tga",
+        height = 36,
+        extent = 37,
+        artHeight = 64,
+        contentY = 16,
+        contentScale = 1,
+    },
+    {
+        id = "gothic10",
+        label = "ARPG carved cornice",
+        texture = "gothic10.tga",
+        height = 36,
+        extent = 40,
+        artHeight = 64,
+        contentY = 14,
+        contentScale = 1,
+    },
+    {
+        id = "gothic11",
+        label = "Gothic leaf corners",
+        texture = "gothic11.tga",
+        height = 36,
+        extent = 36,
+        artHeight = 64,
+        contentY = 13,
+        contentScale = 0.95,
+    },
+    {
+        id = "gothic13",
+        label = "Demon reliquary",
+        texture = "gothic13.tga",
+        height = 36,
+        extent = 39,
+        artHeight = 64,
+        contentY = 13,
+        contentScale = 0.95,
+    },
+}
+DFRL.tallyStyleById = {}
+for _, style in ipairs(DFRL.tallyStyles) do
+    DFRL.tallyStyleById[style.id] = style
+end

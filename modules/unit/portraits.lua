@@ -2,9 +2,10 @@ DFRL:NewMod("AnimatedPortraits", 2, function()
     local entries = {}
     local inWorld = UnitExists("player") and true or false
     -- Keep the legacy saved key; the choice now covers all three portraits.
-    local portraits3D = DFRL.display.Get("playerPortrait3D")
+    local portraitsHidden = DFRL.display.Get("hidePortraits")
+    local portraits3D = DFRL.display.Get("playerPortrait3D") and not portraitsHidden
 
-    local function RestoreStill(entry) entry.portrait:SetAlpha(entry.stillAlpha) end
+    local function RestoreStill(entry) entry.portrait:SetAlpha(portraitsHidden and 0 or entry.stillAlpha) end
 
     local function DropCopy(entry)
         entry.bound = false
@@ -58,6 +59,7 @@ DFRL:NewMod("AnimatedPortraits", 2, function()
             stillAlpha = portrait:GetAlpha(),
         }
         table.insert(entries, entry)
+        RestoreStill(entry)
         local success, model = pcall(CreateFrame, "PlayerModel", nil, owner)
         if not success or not model then return end
         entry.model = model
@@ -129,9 +131,10 @@ DFRL:NewMod("AnimatedPortraits", 2, function()
     CreatePortrait(TargetofTargetFrame, TargetofTargetPortrait, "targettarget")
 
     DFRL.display.Listen(function()
-        local enabled = DFRL.display.Get("playerPortrait3D")
-        if enabled == portraits3D then return end
-        portraits3D = enabled
+        local hidden = DFRL.display.Get("hidePortraits")
+        local enabled = DFRL.display.Get("playerPortrait3D") and not hidden
+        if enabled == portraits3D and hidden == portraitsHidden then return end
+        portraits3D, portraitsHidden = enabled, hidden
         for _, entry in ipairs(entries) do
             if enabled then
                 Bind(entry)

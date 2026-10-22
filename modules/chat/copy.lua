@@ -11,6 +11,7 @@ DFRL:NewMod("ChatCopy", 0, function()
 
     local function PlainText(text)
         if type(text) ~= "string" then text = tostring(text or "") end
+        if not string.find(text, "|", 1, true) and not string.find(text, "\001", 1, true) then return text end
         -- Protect escaped literal pipes before removing display-only markup.
         text = string.gsub(text, "||", "\001")
         text = string.gsub(text, "|H.-|h(.-)|h", "%1")
@@ -87,16 +88,39 @@ DFRL:NewMod("ChatCopy", 0, function()
         measure:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, 0)
         measure:Hide()
 
+        local textRevision = 0
+        local observedText = edit:GetText()
+        local measuredRevision, measuredWidth, measuredHeight, measuredScale
         local function ResizeText(text)
             local textWidth = frame:GetWidth() - 48
-            edit:SetWidth(textWidth)
-            measure:SetWidth(textWidth - 8)
+            local height, scale = frame:GetHeight(), frame:GetEffectiveScale()
+            if
+                measuredRevision == textRevision
+                and T.NearlyEqual(measuredWidth, textWidth)
+                and T.NearlyEqual(measuredHeight, height)
+                and T.NearlyEqual(measuredScale, scale)
+            then
+                return
+            end
+            if not T.NearlyEqual(edit:GetWidth(), textWidth) then edit:SetWidth(textWidth) end
+            if not T.NearlyEqual(measure:GetWidth(), textWidth - 8) then measure:SetWidth(textWidth - 8) end
             measure:SetText(text or "")
             local textHeight = measure:GetHeight() or 0
-            edit:SetHeight(math.max(frame:GetHeight() - 66, textHeight + 16))
+            -- The hidden measurer need not retain another complete snapshot.
+            measure:SetText("")
+            local editHeight = math.max(height - 66, textHeight + 16)
+            if not T.NearlyEqual(edit:GetHeight(), editHeight) then edit:SetHeight(editHeight) end
+            measuredRevision, measuredWidth, measuredHeight, measuredScale = textRevision, textWidth, height, scale
             if scroll.UpdateScrollChildRect then scroll:UpdateScrollChildRect() end
         end
-        edit:SetScript("OnTextChanged", function() ResizeText(this:GetText()) end)
+        edit:SetScript("OnTextChanged", function()
+            local text = this:GetText()
+            if observedText ~= text then
+                observedText = text
+                textRevision = textRevision + 1
+            end
+            ResizeText(text)
+        end)
 
         local function ScrollWheel(direction)
             local slider = _G.SurvivorsDragonUiChatCopyScrollScrollBar
@@ -115,6 +139,17 @@ DFRL:NewMod("ChatCopy", 0, function()
         frame.edit = edit
         frame.scroll = scroll
         frame.resizeText = ResizeText
+        frame.setText = function(text)
+            if edit:GetText() == text then
+                ResizeText(text)
+                return
+            end
+            -- Also invalidate clients whose SetText does not send OnTextChanged.
+            observedText = text
+            textRevision = textRevision + 1
+            edit:SetText(text)
+            ResizeText(text)
+        end
         _G.UISpecialFrames = _G.UISpecialFrames or {}
         table.insert(_G.UISpecialFrames, "SurvivorsDragonUiChatCopy")
         frame:Hide()
@@ -135,13 +170,12 @@ DFRL:NewMod("ChatCopy", 0, function()
         return frame
     end
 
-    function Chat.ShowCopy(text, title)
+    function Chat.ShowCopy(text, title, plainText)
         if not dialog then dialog = CreateDialog() end
-        local plain = PlainText(text)
+        local plain = plainText and text or PlainText(text)
         if plain == "" then plain = DFRL.locale.Text("No chat messages are available to copy.") end
         dialog.title:SetText(PlainText(title or "Copy chat history"))
-        dialog.edit:SetText(plain)
-        dialog.resizeText(plain)
+        dialog.setText(plain)
         dialog:Show()
         local slider = _G.SurvivorsDragonUiChatCopyScrollScrollBar
         if slider then slider:SetValue(0) end
@@ -155,7 +189,7 @@ DFRL:NewMod("ChatCopy", 0, function()
     _G.SLASH_SURVIVORSDRAGONUICOPY1 = "/copy"
     _G.SlashCmdList = _G.SlashCmdList or {}
     _G.SlashCmdList["SURVIVORSDRAGONUICOPY"] = function()
-        local text = Chat.GetCaptureText and Chat.GetCaptureText() or ""
-        Chat.ShowCopy(text, "Copy chat - raw messages and events")
+        local text = Chat.GetCaptureText and Chat.GetCaptureText(nil, true) or ""
+        Chat.ShowCopy(text, "Copy chat - raw messages and events", true)
     end
 end)

@@ -208,12 +208,13 @@ DFRL:NewMod("Class resources", 2, function()
     -- A separate, always-shown controller can recover while the row is hidden.
     local controller = CreateFrame("Frame")
     local elapsed = 0
-    controller:SetScript("OnUpdate", function()
+    local function Tick()
         elapsed = elapsed + (arg1 or 0)
         if elapsed < 0.1 then return end
         elapsed = 0
         Update()
-    end)
+    end
+    controller:SetScript("OnUpdate", Tick)
     for _, name in ipairs({
         "PLAYER_ENTERING_WORLD",
         "PLAYER_LEAVING_WORLD",
@@ -234,9 +235,12 @@ DFRL:NewMod("Class resources", 2, function()
     controller:SetScript("OnEvent", function()
         if event == "PLAYER_ENTERING_WORLD" then
             inWorld = true
+            elapsed = 0
+            controller:SetScript("OnUpdate", Tick)
             Update()
         elseif event == "PLAYER_LEAVING_WORLD" or event == "PLAYER_LOGOUT" then
             inWorld = false
+            controller:SetScript("OnUpdate", nil)
             retiredRun = _G.AZS_RUN
             if DFRL.playerResources then DFRL.playerResources.SetPrimary() end
             Clear()

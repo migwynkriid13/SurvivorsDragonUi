@@ -94,6 +94,21 @@ jobs:
           DEADCODE_OUTCOME: ${{ steps.deadcode.outcome }}
         run: python3 scripts/pr_quality.py summary
 
+      - name: Compare fixed timer artwork sampling
+        # Image sampling compares artwork only; no addon or game code runs.
+        # Keep this separate from the Lua static-analysis steps above.
+        run: python3 scripts/check_timer_background.py
+
+      - name: Check shared addon asset paths
+        run: python3 scripts/check_asset_paths.py
+
+      - name: Model native-base jewelry material ordering
+        run: python3 scripts/check_jewelry_batching.py
+
+      - name: Model candidate jewelry sampling arithmetic
+        # A standalone reference, not addon/client execution or pixel acceptance.
+        run: python3 scripts/check_jewelry_repeat_sampling.py | tee dist/pr-quality/jewelry-repeat-sampling.log
+
       - name: Upload formatting patches and analysis logs
         if: always() && steps.sources.outcome == 'success'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

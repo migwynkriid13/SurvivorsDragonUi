@@ -9,6 +9,13 @@ DFRL:NewMod("Display", 0, function()
         hidePetCounts = false,
         hidePetTimers = true,
         bossDebuffs = true,
+        runTextRegular = true,
+        runTextEndless = true,
+        runCurrentRegular = true,
+        runCurrentEndless = true,
+        runMaximumRegular = true,
+        bossCountdownEndless = true,
+        bossCountdownRegular = false,
         guardiansInBossBar = false,
         targetDebuffsOnTop = false,
         damageIcons = false,
@@ -22,12 +29,18 @@ DFRL:NewMod("Display", 0, function()
         sctMisses = true,
         sctClassColors = false,
         sctScale = 1,
+        hidePortraits = false,
+        showPlayerName = true,
+        showPlayerLevel = true,
+        showTargetName = true,
+        showTargetLevel = true,
         roundPlayerPortrait = false,
         playerPortrait3D = false, -- Legacy key; controls player, target and target-of-target.
         flipBuffs = false,
         classResources = false,
         classHealth = false,
         healthLossAnimation = true,
+        lockActionButtons = true,
         cooldownNumbers = true,
         cacheGuidance = true,
         guardianGuidance = true,
@@ -36,6 +49,13 @@ DFRL:NewMod("Display", 0, function()
         equippedJewelry = true,
         hideNativeBuild = true,
         attachJewelry = true,
+        attachXP = true,
+        attachTally = true,
+        tallyStyle = DFRL.tallyStyleDefault,
+        showTallyKills = true,
+        showTallyGold = true,
+        showTallyCache = true,
+        highlightAffordableCache = true,
     }
     DFRL.display = display
 
@@ -50,11 +70,20 @@ DFRL:NewMod("Display", 0, function()
         value = math.max(range.minimum, math.min(range.maximum, value))
         return range.integer and math.floor(value + 0.5) or value
     end
+    local function NormalizeTallyStyle(value)
+        if type(value) == "string" and DFRL.tallyStyleById[value] then return value end
+        return nil
+    end
     local function Read(source, key)
         local value
         if type(source) == "table" then value = source[key] end
         if ranges[key] then return NormalizeNumber(key, value) or defaults[key] end
+        if key == "tallyStyle" then return NormalizeTallyStyle(value) or defaults[key] end
         if type(value) == "boolean" then return value end
+        if key == "runTextRegular" or key == "runTextEndless" then
+            local legacy = _G.SurvivorsDragonUiRunFont
+            if type(legacy) == "table" and type(legacy.showText) == "boolean" then return legacy.showText end
+        end
         return defaults[key]
     end
     local function Normalize(source)
@@ -66,6 +95,13 @@ DFRL:NewMod("Display", 0, function()
             hidePetCounts = Read(source, "hidePetCounts"),
             hidePetTimers = Read(source, "hidePetTimers"),
             bossDebuffs = Read(source, "bossDebuffs"),
+            runTextRegular = Read(source, "runTextRegular"),
+            runTextEndless = Read(source, "runTextEndless"),
+            runCurrentRegular = Read(source, "runCurrentRegular"),
+            runCurrentEndless = Read(source, "runCurrentEndless"),
+            runMaximumRegular = Read(source, "runMaximumRegular"),
+            bossCountdownEndless = Read(source, "bossCountdownEndless"),
+            bossCountdownRegular = Read(source, "bossCountdownRegular"),
             guardiansInBossBar = Read(source, "guardiansInBossBar"),
             targetDebuffsOnTop = Read(source, "targetDebuffsOnTop"),
             damageIcons = Read(source, "damageIcons"),
@@ -79,12 +115,18 @@ DFRL:NewMod("Display", 0, function()
             sctMisses = Read(source, "sctMisses"),
             sctClassColors = Read(source, "sctClassColors"),
             sctScale = Read(source, "sctScale"),
+            hidePortraits = Read(source, "hidePortraits"),
+            showPlayerName = Read(source, "showPlayerName"),
+            showPlayerLevel = Read(source, "showPlayerLevel"),
+            showTargetName = Read(source, "showTargetName"),
+            showTargetLevel = Read(source, "showTargetLevel"),
             roundPlayerPortrait = Read(source, "roundPlayerPortrait"),
             playerPortrait3D = Read(source, "playerPortrait3D"),
             flipBuffs = Read(source, "flipBuffs"),
             classResources = Read(source, "classResources"),
             classHealth = Read(source, "classHealth"),
             healthLossAnimation = Read(source, "healthLossAnimation"),
+            lockActionButtons = Read(source, "lockActionButtons"),
             cooldownNumbers = Read(source, "cooldownNumbers"),
             cacheGuidance = Read(source, "cacheGuidance"),
             guardianGuidance = Read(source, "guardianGuidance"),
@@ -93,6 +135,13 @@ DFRL:NewMod("Display", 0, function()
             equippedJewelry = Read(source, "equippedJewelry"),
             hideNativeBuild = Read(source, "hideNativeBuild"),
             attachJewelry = Read(source, "attachJewelry"),
+            attachXP = Read(source, "attachXP"),
+            attachTally = Read(source, "attachTally"),
+            tallyStyle = Read(source, "tallyStyle"),
+            showTallyKills = Read(source, "showTallyKills"),
+            showTallyGold = Read(source, "showTallyGold"),
+            showTallyCache = Read(source, "showTallyCache"),
+            highlightAffordableCache = Read(source, "highlightAffordableCache"),
         }
     end
     local function Notify()
@@ -109,6 +158,9 @@ DFRL:NewMod("Display", 0, function()
         if not draft or defaults[key] == nil then return end
         if ranges[key] then
             value = NormalizeNumber(key, value)
+            if not value then return end
+        elseif key == "tallyStyle" then
+            value = NormalizeTallyStyle(value)
             if not value then return end
         elseif type(value) ~= "boolean" then
             return

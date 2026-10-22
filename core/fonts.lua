@@ -19,7 +19,14 @@ function DFRL.tools.SetFont(object, size, flags)
     -- A size derived from a not-yet-resolved native region can be zero. On the
     -- current client that frees a FontString's font instead of initializing it.
     if type(size) ~= "number" or size <= 0 or size - size ~= 0 then size = 12 end
-    return object:SetFont(defaultFace, size, flags or "")
+    flags = flags or ""
+    if object.GetFont then
+        local face, currentSize, currentFlags = object:GetFont()
+        if face == defaultFace and DFRL.tools.NearlyEqual(currentSize, size) and (currentFlags or "") == flags then
+            return true
+        end
+    end
+    return object:SetFont(defaultFace, size, flags)
 end
 
 -- Chat and run banners share the same resolved native face and styling.

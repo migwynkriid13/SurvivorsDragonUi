@@ -17,6 +17,10 @@ The file should be at `benilla-config/AddOns/SurvivorsDragonUi/SurvivorsDragonUi
 
 Type `/sdui` to open the editor.
 
+Action buttons start locked. Under **Action bar**, turn off **Lock action buttons** and click **Confirm** to allow rearranging. Shift-click two occupied buttons to swap their spells; spells cannot be dragged off the bar.
+
+XP starts attached beneath the action bar. Turn off **Attach XP to action bar** to move and resize it separately, then click **Confirm** to save.
+
 - Drag a frame to move it. Drag its corners to resize it. The grid and gold screen-center guides help line things up.
 - Use `/sdui lock` for move and resize handles with only the **Confirm** button. Use `/sdui` to return to the full editor.
 - Use **Layout** for positions and sizes, **HUD** for display options, **Combat text** for damage numbers, and **Run timer** for its text and font.
@@ -39,7 +43,7 @@ To use the game's damage numbers, choose **Game settings** under **Combat text**
 - Cache and guardian guides with distance, direction and world-map pins. Mirror each guide in `/sdui` → **HUD** to put its arrow on either side.
 - Minimap loot-pouch icons for nearby caches and gold skull medallions for all living guardians. Empty or dead lairs show no icon, and Guardian guidance hides the red flag. Guardian icons mark their lairs, including while they are fighting elsewhere.
 
-Player, target and target-of-target portraits use the original 2D images by default. **Experimental 3D portraits** in `/sdui` → **HUD** switches all three to 3D.
+Player, target and target-of-target portraits use the original 2D images by default. **Experimental 3D portraits** in `/sdui` → **Unit frames** switches all three to 3D. **Hide portraits** shows all three as bars without portrait pictures or rings; turn it off to restore your portrait choices.
 
 Supports all 14 game languages, including Czech.
 

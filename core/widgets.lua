@@ -37,6 +37,22 @@ function DFRL.tools.EncounterHealthText(current, maximum)
     return tostring(math.floor(current)) .. " / " .. tostring(math.floor(maximum))
 end
 
+-- Keep native caption text and Show/Hide decisions; mask only its effective alpha.
+function DFRL.tools.BindUnitLabelVisibility(label, key)
+    if not label then return end
+    local setAlpha, nativeAlpha = label.SetAlpha, label:GetAlpha()
+    local function Update()
+        local alpha = DFRL.display.Get(key) and nativeAlpha or 0
+        if not T.NearlyEqual(label:GetAlpha(), alpha) then setAlpha(label, alpha) end
+    end
+    label.SetAlpha = function(self, alpha)
+        nativeAlpha = alpha
+        return setAlpha(self, DFRL.display.Get(key) and alpha or 0)
+    end
+    DFRL.display.Listen(Update)
+    Update()
+end
+
 function DFRL.tools.GradientLine(frame)
     local width = (frame:GetWidth() - 10) / 2
     for _, side in ipairs({ "LEFT", "RIGHT" }) do
@@ -120,6 +136,50 @@ function DFRL.tools.CreateRoundPlayerRim(parent, owner, r, g, b, blendMode)
     return artwork
 end
 
+-- Close both ends with the existing straight metal edge, without the portrait ring.
+function DFRL.tools.CreatePortraitlessBorder(parent, healthBar, height)
+    local border = CreateFrame("Frame", nil, parent)
+    border:SetFrameLevel(healthBar:GetFrameLevel() + 2)
+    border:SetPoint("TOPLEFT", healthBar, "TOPLEFT", -6, 5)
+    border:SetPoint("TOPRIGHT", healthBar, "TOPRIGHT", 6, 5)
+    border:SetHeight(height + 9)
+    border:EnableMouse(false)
+    local path = DFRL:GetInfoOrCons("tex") .. "unitframes\\UI-TargetingFrameDF1.blp"
+    local function Piece(x, y, width, pieceHeight, mirrored)
+        local texture = border:CreateTexture(nil, "OVERLAY")
+        texture:SetTexture(path)
+        texture:SetTexCoord(
+            (mirrored and x + width or x) / 256,
+            (mirrored and x or x + width) / 256,
+            y / 128,
+            (y + pieceHeight) / 128
+        )
+        texture:SetWidth(width)
+        texture:SetHeight(pieceHeight)
+        return texture
+    end
+    for _, side in ipairs({ "LEFT", "RIGHT" }) do
+        local mirrored = side == "RIGHT"
+        local top = Piece(24, 29, 8, 5, mirrored)
+        top:SetPoint("TOP" .. side, border, "TOP" .. side, 0, 0)
+        local bottom = Piece(24, 63, 8, 4, mirrored)
+        bottom:SetPoint("BOTTOM" .. side, border, "BOTTOM" .. side, 0, 0)
+        -- Stretch only the uninterrupted side edge; the original lower span
+        -- includes the old resource divider's inward-facing stub.
+        local middle = Piece(24, 35, 8, 14, mirrored)
+        middle:SetPoint("TOP" .. side, top, "BOTTOM" .. side, 0, 0)
+        middle:SetPoint("BOTTOM" .. side, bottom, "TOP" .. side, 0, 0)
+    end
+    local top = Piece(32, 29, 104, 5)
+    top:SetPoint("TOPLEFT", border, "TOPLEFT", 8, 0)
+    top:SetPoint("TOPRIGHT", border, "TOPRIGHT", -8, 0)
+    local bottom = Piece(32, 63, 104, 4)
+    bottom:SetPoint("BOTTOMLEFT", border, "BOTTOMLEFT", 8, 0)
+    bottom:SetPoint("BOTTOMRIGHT", border, "BOTTOMRIGHT", -8, 0)
+    border:Hide()
+    return border
+end
+
 -- Reuse the original 256x128 portrait sheet. The full health opening remains
 -- the default; the player can restore its original health/power divider.
 function DFRL.tools.CreateUnitBorder(frame, healthBar, portraitTexture, background, texturePath, portraitSide)
@@ -127,9 +187,14 @@ function DFRL.tools.CreateUnitBorder(frame, healthBar, portraitTexture, backgrou
     local healthFill = DFRL.tools.LargeHealthFill
     local healthWidth, portraitInset, portraitOverlap = 122, 104, 15
     local powerInterior, roundRim
+    local portraitExtended
     local function SetPortraitOverlap(extended)
         -- The pointed player rim also needs a small underlap to close its seam.
-        local extension = extended and portraitOverlap or (mirrored and 2 or 0)
+        portraitExtended = extended
+        local extension = 0
+        if not DFRL.display.Get("hidePortraits") then
+            extension = extended and portraitOverlap or (mirrored and 2 or 0)
+        end
         healthBar:SetWidth(healthWidth + extension)
         healthBar:ClearAllPoints()
         if mirrored then
@@ -250,5 +315,21 @@ function DFRL.tools.CreateUnitBorder(frame, healthBar, portraitTexture, backgrou
         end
     end
     UpdateTexture(texturePath)
+    local portraitless = DFRL.tools.CreatePortraitlessBorder(frame, healthBar, 29)
+    local portraitsHidden
+    local function UpdatePortraitVisibility()
+        local hidden = DFRL.display.Get("hidePortraits")
+        if hidden == portraitsHidden then return end
+        portraitsHidden = hidden
+        SetPortraitOverlap(portraitExtended)
+        borderFrame:SetAlpha(hidden and 0 or 1)
+        if hidden then
+            portraitless:Show()
+        else
+            portraitless:Hide()
+        end
+    end
+    DFRL.display.Listen(UpdatePortraitVisibility)
+    UpdatePortraitVisibility()
     return UpdateTexture, SetPowerShown, SetPortraitOverlap
 end

@@ -90,11 +90,16 @@ DFRL:NewMod("NameplateStyle", 5, function()
 
     local function CopyNativeIcon(destination, source)
         if source and source:IsShown() and source:GetTexture() then
-            destination:SetTexture(source:GetTexture())
-            destination:SetTexCoord(source:GetTexCoord())
-            destination:Show()
+            local texture = source:GetTexture()
+            if destination:GetTexture() ~= texture then destination:SetTexture(texture) end
+            local a, b, c, d, e, f, g, h = source:GetTexCoord()
+            local da, db, dc, dd, de, df, dg, dh = destination:GetTexCoord()
+            if a ~= da or b ~= db or c ~= dc or d ~= dd or e ~= de or f ~= df or g ~= dg or h ~= dh then
+                destination:SetTexCoord(source:GetTexCoord())
+            end
+            if not destination:IsShown() then destination:Show() end
         else
-            destination:Hide()
+            if destination:IsShown() then destination:Hide() end
         end
     end
 
@@ -107,20 +112,29 @@ DFRL:NewMod("NameplateStyle", 5, function()
         -- client lifecycle. Suppress their pixels rather than changing data.
         if data.nativeRegions then
             for _, region in pairs(data.nativeRegions) do
-                if region and region.SetAlpha then region:SetAlpha(0) end
+                if region and region.SetAlpha and region:GetAlpha() ~= 0 then region:SetAlpha(0) end
             end
         end
         local nativeTexture = data.bar:GetStatusBarTexture()
-        if nativeTexture and nativeTexture.SetAlpha then nativeTexture:SetAlpha(0) end
+        if nativeTexture and nativeTexture.SetAlpha and nativeTexture:GetAlpha() ~= 0 then nativeTexture:SetAlpha(0) end
 
         local minimum, maximum = data.bar:GetMinMaxValues()
         local value = data.bar:GetValue()
         local red, green, blue = data.bar:GetStatusBarColor()
         red, green, blue = PlateColor(red, green, blue)
-        style.health:SetMinMaxValues(minimum, maximum)
-        style.health:SetValue(value)
-        style.health:SetStatusBarColor(red, green, blue, 1)
-        style.name:SetText(data.nameRegion:GetText() or "")
+        local oldMinimum, oldMaximum = style.health:GetMinMaxValues()
+        if oldMinimum ~= minimum or oldMaximum ~= maximum then style.health:SetMinMaxValues(minimum, maximum) end
+        if style.health:GetValue() ~= value then style.health:SetValue(value) end
+        local oldRed, oldGreen, oldBlue, oldAlpha = style.health:GetStatusBarColor()
+        if
+            not T.NearlyEqual(oldRed, red)
+            or not T.NearlyEqual(oldGreen, green)
+            or not T.NearlyEqual(oldBlue, blue)
+            or (oldAlpha and not T.NearlyEqual(oldAlpha, 1))
+        then
+            style.health:SetStatusBarColor(red, green, blue, 1)
+        end
+        T.SetTextIfChanged(style.name, data.nameRegion:GetText() or "")
 
         local regions = data.nativeRegions
         CopyNativeIcon(style.raid, regions and regions[6])
