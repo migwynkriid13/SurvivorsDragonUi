@@ -1509,24 +1509,14 @@ DFRL:NewMod("RunTimers", 5, function()
             entry.glowWidthScale = glowSpread
             entry.glow, entry.glowDirections = {}, {}
             entry.glowLights = {
-                { anchor = text, height = 20, sparkleSize = 5, radiusY = 7.2, offset = 0 },
-                {
-                    anchor = icon,
-                    width = 30 * glowSpread,
-                    height = 30,
-                    spotlightSize = 26,
-                    sparkleSize = 4,
-                    radiusX = 9.5 * glowSpread,
-                    radiusY = 9.5,
-                    offset = math.pi / 3,
-                },
+                { anchor = content, height = 26, sparkleSize = 5, radiusY = 9.5, offset = 0 },
             }
             for _, light in ipairs(entry.glowLights) do
                 local spotlight = content:CreateTexture(nil, "BACKGROUND")
                 spotlight:SetTexture(DFRL:GetInfoOrCons("tex") .. "tally\\AffordableGlow.tga")
                 spotlight:SetBlendMode("ADD")
                 spotlight:SetVertexColor(1, 0.86, 0.64, 0.16 * glowOpacity)
-                spotlight:SetHeight(light.spotlightSize or light.height)
+                spotlight:SetHeight(light.height)
                 spotlight:SetPoint("CENTER", light.anchor, "CENTER", 0, 0)
                 spotlight:Hide()
                 local rays = content:CreateTexture(nil, "BORDER")
@@ -1536,10 +1526,6 @@ DFRL:NewMod("RunTimers", 5, function()
                 rays:SetHeight(light.height)
                 rays:SetPoint("CENTER", light.anchor, "CENTER", 0, 0)
                 rays:Hide()
-                if light.width then
-                    spotlight:SetWidth(light.spotlightSize and light.spotlightSize * glowSpread or light.width)
-                    rays:SetWidth(light.width)
-                end
                 light.spotlight, light.rays, light.sparkles = spotlight, rays, {}
                 for index = 1, 3 do
                     local sparkle = content:CreateTexture(nil, "ARTWORK")
@@ -1592,7 +1578,7 @@ DFRL:NewMod("RunTimers", 5, function()
                         0.5 + halfC + halfS,
                         0.5 - halfS + halfC
                     )
-                    local radius = light.radiusX or math.max(1, (entry.glowWidth - light.sparkleSize) / 2)
+                    local radius = math.max(1, (entry.glowWidth - light.sparkleSize) / 2)
                     for _, sparkle in ipairs(light.sparkles) do
                         local twinkle = math.max(0, math.sin(entry.glowPhase * 3 + sparkle.offset * 0.7 + 0.8))
                         local alpha = 0.55 * twinkle * twinkle * twinkle * twinkle
@@ -1687,10 +1673,7 @@ DFRL:NewMod("RunTimers", 5, function()
                     glow:SetText(text)
                 end
             end
-            local boxWidth = goldField.text:GetWidth()
-            local glyphWidth = goldField.text:GetStringWidth() or 0
-            local width = math.min(boxWidth, (glyphWidth > 0 and glyphWidth or boxWidth) + 12)
-                * goldField.glowWidthScale
+            local width = goldField.content:GetWidth() * goldField.glowWidthScale
             if not T.NearlyEqual(goldField.glowWidth, width) then
                 goldField.glowLights[1].spotlight:SetWidth(width)
                 goldField.glowLights[1].rays:SetWidth(width)
