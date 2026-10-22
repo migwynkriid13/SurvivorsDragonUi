@@ -1453,18 +1453,80 @@ DFRL:NewMod("RunTimers", 5, function()
         { key = "gold", visibility = "showTallyGold", label = "Gold", icon = COINS_ICON },
         { key = "chest", visibility = "showTallyCache", label = "Next cache cost (gold)", icon = CACHE_ICON },
     }
-    local function SetTallyFieldWidth(entry, width)
-        entry.frame:SetWidth(width)
-        -- Native FontStrings need an explicit width; opposing anchors alone
-        -- do not resolve their width in the packaged client.
-        local textWidth = math.max(1, math.min(64, width - 32))
-        entry.text:SetWidth(textWidth)
-        entry.content:SetWidth(22 + textWidth)
-        if entry.glow then
-            for _, glow in ipairs(entry.glow) do
-                glow:SetWidth(textWidth)
+    local tallyMeasure = tallyOverlay:CreateFontString(nil, "OVERLAY")
+    tallyMeasure:Hide()
+    local function RefreshTallyGlowBounds(entry)
+        if not entry.glowLights then return end
+        local contentWidth = entry.content:GetWidth()
+        local width = contentWidth * entry.glowWidthScale
+        if not T.NearlyEqual(entry.glowWidth, width) then
+            local light = entry.glowLights[1]
+            light.spotlight:SetWidth(width)
+            light.rays:SetWidth(width)
+            light.radiusX = math.max(1, (contentWidth - light.sparkleSize) / 2 - math.abs(light.centerX))
+            entry.glowWidth = width
+        end
+    end
+    local function FitTallyField(entry)
+        if entry.enabled == false then return end
+        local value = entry.text:GetText() or ""
+        local scale = entry.content:GetScale()
+        if
+            entry.fitText == value
+            and T.NearlyEqual(entry.fitWidth, entry.fieldWidth)
+            and T.NearlyEqual(entry.fitScale, scale)
+        then
+            return
+        end
+        -- Measure the full integer without a constrained box adding an ellipsis.
+        -- Keep the icon and theme scale; only long numbers need a smaller font.
+        local available = math.max(1, (entry.fieldWidth - 2) / scale - 22)
+        local budget = math.max(1, available - 2)
+        local fontSize = 12
+        T.SetFont(tallyMeasure, fontSize, "OUTLINE")
+        tallyMeasure:SetText(value)
+        local measured = tallyMeasure:GetStringWidth() or 0
+        if value ~= "" and measured <= 0 then return end
+        if measured > budget then
+            fontSize = math.max(1, math.floor(fontSize * budget / measured))
+            T.SetFont(tallyMeasure, fontSize, "OUTLINE")
+            measured = tallyMeasure:GetStringWidth() or 0
+            while fontSize > 1 and measured > budget do
+                fontSize = fontSize - 1
+                T.SetFont(tallyMeasure, fontSize, "OUTLINE")
+                measured = tallyMeasure:GetStringWidth() or 0
             end
         end
+        if value ~= "" and measured <= 0 then return end
+        local baseline = math.max(1, math.min(64, entry.fieldWidth - 32))
+        local textWidth = math.max(1, math.min(baseline, available), math.ceil(measured) + 2)
+        if entry.fitFontSize ~= fontSize then
+            T.SetFont(entry.text, fontSize, "OUTLINE")
+            if entry.glow then
+                for _, glow in ipairs(entry.glow) do
+                    T.SetFont(glow, fontSize, "")
+                end
+            end
+            entry.fitFontSize = fontSize
+        end
+        if not T.NearlyEqual(entry.fitTextWidth, textWidth) then
+            -- The packaged client needs explicit FontString widths.
+            entry.text:SetWidth(textWidth)
+            entry.content:SetWidth(22 + textWidth)
+            if entry.glow then
+                for _, glow in ipairs(entry.glow) do
+                    glow:SetWidth(textWidth)
+                end
+            end
+            entry.fitTextWidth = textWidth
+        end
+        entry.fitText, entry.fitWidth, entry.fitScale = value, entry.fieldWidth, scale
+        RefreshTallyGlowBounds(entry)
+    end
+    local function SetTallyFieldWidth(entry, width)
+        entry.frame:SetWidth(width)
+        entry.fieldWidth = width
+        FitTallyField(entry)
     end
     for index, counter in ipairs(counters) do
         local field = CreateFrame("Frame", nil, tallyOverlay)
@@ -1672,15 +1734,7 @@ DFRL:NewMod("RunTimers", 5, function()
                     glow:SetText(text)
                 end
             end
-            local contentWidth = goldField.content:GetWidth()
-            local width = contentWidth * goldField.glowWidthScale
-            if not T.NearlyEqual(goldField.glowWidth, width) then
-                local light = goldField.glowLights[1]
-                light.spotlight:SetWidth(width)
-                light.rays:SetWidth(width)
-                light.radiusX = math.max(1, (contentWidth - light.sparkleSize) / 2 - math.abs(light.centerX))
-                goldField.glowWidth = width
-            end
+            RefreshTallyGlowBounds(goldField)
         end
         if goldField.affordable == affordable then return end
         goldField.affordable = affordable
@@ -1925,6 +1979,7 @@ DFRL:NewMod("RunTimers", 5, function()
         end
         for _, field in ipairs(tallyFields) do
             T.SetTextIfChanged(field.text, tostring(math.floor(state[field.key])))
+            FitTallyField(field)
         end
         SetGoldHighlight(DFRL.display.Get("highlightAffordableCache") and state.gold >= state.chest)
         if not render.tallyShown then
