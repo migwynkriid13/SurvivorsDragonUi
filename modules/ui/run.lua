@@ -1359,7 +1359,23 @@ DFRL:NewMod("RunTimers", 5, function()
         end
     end
 
+    local function HideMarkerTooltip(marker)
+        if GameTooltip and GameTooltip:IsOwned(marker) then GameTooltip:Hide() end
+    end
+
+    local function ShowMarkerTooltip(marker)
+        if not GameTooltip then return end
+        if not marker.name then
+            HideMarkerTooltip(marker)
+            return
+        end
+        GameTooltip:SetOwner(marker, "ANCHOR_BOTTOM")
+        GameTooltip:SetText(marker.name, 1, 0.82, 0)
+        GameTooltip:Show()
+    end
+
     local function HideMarker(marker)
+        HideMarkerTooltip(marker)
         marker:Hide()
         marker.check:Hide()
         ShowMarkerGlow(marker, false)
@@ -1425,6 +1441,7 @@ DFRL:NewMod("RunTimers", 5, function()
             table.insert(entries, {
                 index = entry.index,
                 at = entry.at,
+                name = type(entry.name) == "string" and entry.name ~= "" and entry.name or nil,
                 final = entry.final == 1 or entry.final == true,
                 state = entry.state,
             })
@@ -1518,6 +1535,9 @@ DFRL:NewMod("RunTimers", 5, function()
                 marker:SetWidth(MARKER_SIZE)
                 marker:SetHeight(MARKER_SIZE)
                 marker:EnableMouse(false)
+                marker:SetScript("OnEnter", function() ShowMarkerTooltip(marker) end)
+                marker:SetScript("OnLeave", function() HideMarkerTooltip(marker) end)
+                marker:SetScript("OnHide", function() HideMarkerTooltip(marker) end)
                 marker.glow = {}
                 -- Translucent copies trace the native skull silhouette. Their
                 -- offsets breathe inward/outward beneath the unchanged skull.
@@ -1555,6 +1575,11 @@ DFRL:NewMod("RunTimers", 5, function()
                 marker.check:SetPoint("BOTTOMRIGHT", marker, "BOTTOMRIGHT", 2, -1)
                 HideMarker(marker)
                 markers[index] = marker
+            end
+            if marker.name ~= entry.name then
+                marker.name = entry.name
+                marker:EnableMouse(marker.name ~= nil)
+                if GameTooltip and GameTooltip:IsOwned(marker) then ShowMarkerTooltip(marker) end
             end
             markerStates[index] = entry.state
             marker:ClearAllPoints()
