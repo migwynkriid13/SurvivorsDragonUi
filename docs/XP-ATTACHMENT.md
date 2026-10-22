@@ -3,7 +3,8 @@
 The selected design 01 extends the action bar's metal shell below its ability
 buttons. XP uses the existing purple six-unit fill inside that shell; its
 separate border is hidden. Its prepared fill retains the original shading and
-fading at 70% strength, with slightly rounded ends.
+fading at 70% strength, with slightly rounded ends and a subtle fade confined
+to the beginning to soften its outline.
 The walls and bottom bevel belong to the action bar,
 including when jewelry's upper rail is detached or disabled.
 

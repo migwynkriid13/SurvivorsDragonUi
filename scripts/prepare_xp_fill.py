@@ -28,6 +28,13 @@ def prepare(source, output):
     # Keep 70% of the original RGB shading and alpha fading. The remaining 30%
     # comes from the opaque reference; both share the original rounded outline.
     softened = Image.blend(original, uniform, 0.3)
+    # Soften only the leading outline: at most 18% extra transparency, fading
+    # smoothly to zero over the first 12 source columns. Keep all RGB intact.
+    for x in range(12):
+        opacity = 1 - 0.18 * (1 - x / 12) ** 2
+        for y in range(16):
+            color = softened.getpixel((x, y))
+            softened.putpixel((x, y), color[:3] + (round(color[3] * opacity),))
     output.parent.mkdir(parents=True, exist_ok=True)
     softened.save(output, compression=None)
 

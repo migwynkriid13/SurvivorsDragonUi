@@ -30,6 +30,7 @@ border and independent `xpBar` geometry remain available when detached;
 [XP-ATTACHMENT.md](XP-ATTACHMENT.md) describes the default joined shell.
 Both fill regions use the same prepared texture with the original shading
 and fading reduced by 30% overall. Slight rounding remains at both ends.
+A small extra alpha vignette softens only the beginning of the fill.
 
 Source research, precise upstream pins and artwork ownership are recorded in
 [XPBar-ANIMATION.md](../third_party/XPBar-ANIMATION.md). This is an adaptation of

@@ -42,6 +42,9 @@ rounded outline through normalized antialiasing in the outer six columns.
 The result blends 70% of the original source with 30% of that reference in
 every RGBA channel. Original horizontal shading and vertical alpha fading
 therefore remain at 70% strength; the ends stay slightly rounded.
+The requested slight vignette at the beginning adds at most 18% transparency
+at x=0, tapering quadratically to zero over the first 12 source columns. It
+changes alpha only, leaving all RGB and every column from x=12 onward intact.
 Both the status-bar fill and gained-region effect use this prepared texture;
 the latter retains ADD blending and its pale purple tint. The original source
 remains unchanged in the repository, outside the runtime manifest. The
