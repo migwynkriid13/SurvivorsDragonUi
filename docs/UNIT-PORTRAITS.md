@@ -1,6 +1,6 @@
 # Unit portraits
 
-**Hide portraits** in `/sdui` → **HUD** → **Unit frames** switches the player,
+**Hide portraits** in `/sdui` → **Unit frames** switches the player,
 target and target-of-target to closed health bars without their portrait
 pictures or gold rings. Names, levels and health values keep their native
 updates. The separately selected class resources remain available.
