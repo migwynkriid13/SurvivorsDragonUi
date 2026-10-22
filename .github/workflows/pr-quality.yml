@@ -102,16 +102,6 @@ jobs:
       - name: Model native-base jewelry material ordering
         run: python3 scripts/check_jewelry_batching.py
 
-      - name: Package the PR runtime payload without executing Lua
-        run: python3 scripts/package.py dist/SurvivorsDragonUi.zip
-
-      - name: Upload the PR addon ZIP
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: addon-pr-${{ github.event.pull_request.number }}
-          path: dist/SurvivorsDragonUi.zip
-          retention-days: 7
-
       - name: Upload formatting patches and analysis logs
         if: always() && steps.sources.outcome == 'success'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

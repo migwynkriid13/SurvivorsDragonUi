@@ -132,10 +132,12 @@ pagination or saved archive. Memory still necessarily grows with retained text.
 
 Checks run only in GitHub Actions: version gating, formatting, Lua static
 analysis, fractional timer-artwork sampling, a native-base batching reference
-model and runtime-manifest packaging. The extra checks read TGA pixels and model
+model and runtime-manifest validation. The extra checks read TGA pixels and model
 ordering only; they do not execute addon Lua or client code.
 No local tests, syntax checks,
 formatters, addon execution or game launches are part of this work.
+PR checks do not build an addon ZIP. Local installation copies the checked
+source files directly, retaining the legacy folder and loader identity.
 
 The source review covers unchanged values, reused rows, malformed reload
 handoffs, native unit aliases, receipt boundaries, hidden-to-visible transitions
