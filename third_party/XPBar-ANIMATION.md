@@ -35,14 +35,13 @@ code or new artwork imported:
 ## Reused artwork
 
 `media/tex/xprep/main.tga` is the original 512-by-16 RGBA source fill. At the
-user's request, `scripts/prepare_xp_fill.py` repeats its interior column x=384
-across a 512-by-16 uncompressed RGBA `main_uniform.tga`. Every horizontal
-position now has the same color profile and full interior opacity, removing
-the original left-side darkening while preserving the vertical bevel's color
-shading. The user's subsequent request restores the original slightly rounded
-ends: only the outer six columns on each side retain the source outline's
-antialiasing, normalized by each row's interior alpha. The body stays fully
-opaque, with no horizontal vignette or shell showing through it.
+user's request, `scripts/prepare_xp_fill.py` reduces its overall fading by 30%
+in a 512-by-16 uncompressed RGBA `main_soft.tga`. It constructs an opaque
+reference from interior column x=384, retaining the vertical bevel and original
+rounded outline through normalized antialiasing in the outer six columns.
+The result blends 70% of the original source with 30% of that reference in
+every RGBA channel. Original horizontal shading and vertical alpha fading
+therefore remain at 70% strength; the ends stay slightly rounded.
 Both the status-bar fill and gained-region effect use this prepared texture;
 the latter retains ADD blending and its pale purple tint. The original source
 remains unchanged in the repository, outside the runtime manifest. The

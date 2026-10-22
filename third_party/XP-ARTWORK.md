@@ -4,8 +4,8 @@ The user selected **01 — Continuous lower rail** from the
 [static comparison](../docs/designs/xp-attachment/comparison.png). The original
 action-bar walls continue around XP, with one lower bevel and no separate XP
 end caps. The purple fill profile, native gain spark and jewelry rail are reused.
-The later uniform-opacity request prepares the fill as described in
-[XPBar-ANIMATION.md](XPBar-ANIMATION.md), removing its horizontal vignette.
+The fill's overall fading is reduced by 30% as described in
+[XPBar-ANIMATION.md](XPBar-ANIMATION.md), retaining its slightly rounded ends.
 
 ## Selected source
 
@@ -45,7 +45,7 @@ The fill sits three units below the button bottoms, inset nine units from
 each artwork edge, above the lower bevel. Normal blending and purple tint stay.
 
 The selected shell TGA is the only attachment-specific texture in the runtime
-manifest. The prepared uniform fill separately replaces its original source
+manifest. The prepared softened fill separately replaces its original source
 in the ZIP. Original source textures remain unchanged in the repository;
 generators, research files and previews remain outside the ZIP.
 

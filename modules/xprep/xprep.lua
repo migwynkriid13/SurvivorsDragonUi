@@ -3,7 +3,7 @@
 -- remains Blizzard Entertainment's property; see third_party/XP-ARTWORK.md.
 DFRL:NewMod("Xprep", 1, function()
     local texpath = DFRL:GetInfoOrCons("tex") .. "xprep\\"
-    local fillTexture = texpath .. "main_uniform.tga"
+    local fillTexture = texpath .. "main_soft.tga"
     local defaults = { top = 49, height = 6, borderHeight = 12 }
     DFRL.xpBarDefaults = defaults
     KillFrame(MainMenuBarPerformanceBarFrame)

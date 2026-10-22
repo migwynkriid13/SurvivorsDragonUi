@@ -1,4 +1,4 @@
-"""Remove horizontal shading from the original XP fill using its native profile.
+"""Reduce the original XP fill's overall fading by thirty percent.
 
 Only image data is prepared; no addon or game code is loaded or executed.
 """
@@ -13,9 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def prepare(source, output):
     original = Image.open(source).convert("RGBA")
-    # Repeat one fully developed interior column, preserving its vertical bevel
-    # while removing horizontal darkening. Full interior opacity
-    # prevents the differently shaded shell from showing through the bevel.
+    # Construct an opaque reference with the original bevel and rounded ends.
     profile = original.crop((384, 0, 385, 16))
     uniform = profile.resize((512, 16), Image.Resampling.NEAREST)
     uniform.putalpha(255)
@@ -27,13 +25,16 @@ def prepare(source, output):
             color = uniform.getpixel((x, y))
             edge_alpha = min(255, round(original.getpixel((x, y))[3] * 255 / interior_alpha))
             uniform.putpixel((x, y), color[:3] + (edge_alpha,))
+    # Keep 70% of the original RGB shading and alpha fading. The remaining 30%
+    # comes from the opaque reference; both share the original rounded outline.
+    softened = Image.blend(original, uniform, 0.3)
     output.parent.mkdir(parents=True, exist_ok=True)
-    uniform.save(output, compression=None)
+    softened.save(output, compression=None)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", type=Path, default=ROOT / "media/tex/xprep/main.tga")
-    parser.add_argument("--output", type=Path, default=ROOT / "media/tex/xprep/main_uniform.tga")
+    parser.add_argument("--output", type=Path, default=ROOT / "media/tex/xprep/main_soft.tga")
     args = parser.parse_args()
     prepare(args.source, args.output)
