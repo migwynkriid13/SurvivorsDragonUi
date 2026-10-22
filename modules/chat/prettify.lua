@@ -141,7 +141,12 @@ local function HiddenAnnouncement(text)
         if CaptureFormat(plain, native) then return true end
         if string.sub(native, 1, 2) == "%s" and plain == string.gsub(native, "^%%s%s*", "") then return true end
     end
-    for _, key in ipairs({ "Swarm surrounds you!", "A stampede charges through!", "A wall of foes closes in!" }) do
+    for _, key in ipairs({
+        "Swarm surrounds you!",
+        "A stampede charges through!",
+        "A wall of foes closes in!",
+        "A pack hunts you!",
+    }) do
         if plain == DFRL.locale.Native(key) then return true end
     end
     if DFRL.locale.Match("{subtitle} — survive the onslaught!", plain) then return true end
