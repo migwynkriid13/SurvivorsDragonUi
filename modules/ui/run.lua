@@ -1689,7 +1689,8 @@ DFRL:NewMod("RunTimers", 5, function()
             end
             local boxWidth = goldField.text:GetWidth()
             local glyphWidth = goldField.text:GetStringWidth() or 0
-            local width = math.min(boxWidth, (glyphWidth > 0 and glyphWidth or boxWidth) + 12) * goldField.glowWidthScale
+            local width = math.min(boxWidth, (glyphWidth > 0 and glyphWidth or boxWidth) + 12)
+                * goldField.glowWidthScale
             if not T.NearlyEqual(goldField.glowWidth, width) then
                 goldField.glowLights[1].spotlight:SetWidth(width)
                 goldField.glowLights[1].rays:SetWidth(width)
