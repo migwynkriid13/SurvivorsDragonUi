@@ -34,11 +34,16 @@ code or new artwork imported:
 
 ## Reused artwork
 
-`media/tex/xprep/main.tga` is the existing 512-by-16 RGBA fill. The new gained
-region reuses its complete image, stretched only over the newly filled span,
-with ADD blending and a pale purple tint. The original file is unchanged.
-It remains covered by the project's existing author permission and license
-notice; no additional custom texture is redistributed.
+`media/tex/xprep/main.tga` is the original 512-by-16 RGBA source fill. At the
+user's request, `scripts/prepare_xp_fill.py` repeats its interior column x=384
+across a 512-by-16 uncompressed RGBA `main_uniform.tga`. Every horizontal
+position now has the same color and alpha profile, removing the original
+left-side darkening and end-cap fade while preserving the vertical bevel.
+Both the status-bar fill and gained-region effect use this prepared texture;
+the latter retains ADD blending and its pale purple tint. The original source
+remains unchanged in the repository, outside the runtime manifest. The
+prepared texture replaces it in the ZIP and retains the existing source
+permission, ownership and license notices.
 
 `Interface\CastingBar\UI-CastingBar-Spark` is a native Blizzard texture already
 used by the run-timer module. The native texture is referenced, not shipped.

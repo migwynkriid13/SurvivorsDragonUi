@@ -114,7 +114,7 @@
     "media/tex/waypoint/HudArrow.tga",
     "media/tex/waypoint/MapPin.tga",
     "media/tex/xprep/border_half.tga",
-    "media/tex/xprep/main.tga",
+    "media/tex/xprep/main_uniform.tga",
     "modules/bags/bags.lua",
     "modules/bars/bars.lua",
     "modules/bars/range.lua",

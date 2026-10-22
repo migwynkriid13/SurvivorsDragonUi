@@ -3,6 +3,7 @@
 -- remains Blizzard Entertainment's property; see third_party/XP-ARTWORK.md.
 DFRL:NewMod("Xprep", 1, function()
     local texpath = DFRL:GetInfoOrCons("tex") .. "xprep\\"
+    local fillTexture = texpath .. "main_uniform.tga"
     local defaults = { top = 49, height = 6, borderHeight = 12 }
     DFRL.xpBarDefaults = defaults
     KillFrame(MainMenuBarPerformanceBarFrame)
@@ -23,7 +24,7 @@ DFRL:NewMod("Xprep", 1, function()
     local bar = CreateFrame("StatusBar", "DFRL_XPBar", hud)
     bar:SetHeight(defaults.height)
     bar:SetFrameStrata("LOW")
-    bar:SetStatusBarTexture(texpath .. "main.tga")
+    bar:SetStatusBarTexture(fillTexture)
     bar:SetStatusBarColor(0.85, 0.4, 0.85)
     bar:EnableMouse(false)
     bar:Hide()
@@ -50,7 +51,7 @@ DFRL:NewMod("Xprep", 1, function()
     -- Two passive regions reuse the fill and the native spark already used by
     -- the run timer. Both stay below the original metal border.
     local gain = bar:CreateTexture(nil, "ARTWORK")
-    gain:SetTexture(texpath .. "main.tga")
+    gain:SetTexture(fillTexture)
     gain:SetBlendMode("ADD")
     gain:SetVertexColor(0.9, 0.55, 1)
     gain:SetHeight(defaults.height)
