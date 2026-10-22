@@ -171,7 +171,9 @@ DFRL:NewMod("RunBanners", 4, function()
         local original, hook = frame.AddMessage
         local function ReceiveLegacy(source, text, eventName, speaker, message)
             if eventName == "CHAT_MSG_RAID_BOSS_EMOTE" then
-                if companions[message] or not chat.FirstDelivery(source, text, eventName, speaker, message, "banners") then
+                if
+                    companions[message] or not chat.FirstDelivery(source, text, eventName, speaker, message, "banners")
+                then
                     return
                 end
             end

@@ -1938,9 +1938,7 @@ DFRL:NewMod("RunTimers", 5, function()
             if refreshRows or not run:IsShown() or not scheduled then UpdateMarkers(maximum, scheduled or {}) end
             UpdateMarkerStates(atLimit)
             run:Show()
-            if not TakeOver("clock") then
-                ReleaseClock()
-            end
+            if not TakeOver("clock") then ReleaseClock() end
         else
             ReleaseClock()
         end
