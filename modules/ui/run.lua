@@ -930,10 +930,8 @@ DFRL:NewMod("RunTimers", 5, function()
                 local controlsWidth = entry.step and 156 or 36
                 local optionWidth =
                     math.max(TextWidth(entry[2]) + controlsWidth, TextWidth(entry[3]) / 2 + controlsWidth)
-                hudOptionWidth = math.max(
-                    hudOptionWidth,
-                    optionWidth * columns + gap * (columns - 1) + (columns == 1 and 24 or 0)
-                )
+                hudOptionWidth =
+                    math.max(hudOptionWidth, optionWidth * columns + gap * (columns - 1) + (columns == 1 and 24 or 0))
             end
         end
         local outlineWidth = 0
