@@ -81,7 +81,9 @@ DFRL:NewMod("Player", 1, function()
         end
         local color = type(ManaBarColor) == "table" and ManaBarColor[powerType]
         local red, green, blue = 1, 1, 1
-        if type(color) == "table" then red, green, blue = color.r, color.g, color.b end
+        if type(color) == "table" then
+            red, green, blue = color.r, color.g, color.b
+        end
         local currentRed, currentGreen, currentBlue, currentAlpha = primaryBar:GetStatusBarColor()
         if
             not T.NearlyEqual(red, currentRed)

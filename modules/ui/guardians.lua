@@ -30,7 +30,9 @@ DFRL:NewMod("GuardianRoster", 2, function()
     local function Living(row) return row.state == "asleep" or row.state == "awake" end
     local function Copy(row, copy)
         copy = copy or {}
-        for key in pairs(copy) do copy[key] = nil end
+        for key in pairs(copy) do
+            copy[key] = nil
+        end
         for key, value in pairs(row) do
             copy[key] = value
         end
@@ -135,7 +137,9 @@ DFRL:NewMod("GuardianRoster", 2, function()
     end
 
     local function Health()
-        for id in pairs(healthSeen) do healthSeen[id] = nil end
+        for id in pairs(healthSeen) do
+            healthSeen[id] = nil
+        end
         local list
         if
             Number(_G.AZS_UNITS_UPDATED)
@@ -179,14 +183,18 @@ DFRL:NewMod("GuardianRoster", 2, function()
         counts.total, counts.living, counts.asleep, counts.fighting = 0, 0, 0, 0
         counts.returning, counts.due, counts.empty = 0, 0, 0
         if not Active() then
-            for index in ipairs(snapshot.rows) do snapshot.rows[index] = nil end
+            for index in ipairs(snapshot.rows) do
+                snapshot.rows[index] = nil
+            end
             table.setn(snapshot.rows, 0)
             snapshot.zone = nil
             return snapshot
         end
         snapshot.status = ready and "ready" or "unavailable"
         if not ready then
-            for index in ipairs(snapshot.rows) do snapshot.rows[index] = nil end
+            for index in ipairs(snapshot.rows) do
+                snapshot.rows[index] = nil
+            end
             table.setn(snapshot.rows, 0)
             snapshot.zone = nil
             return snapshot
@@ -220,7 +228,9 @@ DFRL:NewMod("GuardianRoster", 2, function()
             counts[row.status] = counts[row.status] + 1
             snapshot.rows[index] = row
         end
-        for index = table.getn(lairs) + 1, table.getn(snapshot.rows) do snapshot.rows[index] = nil end
+        for index = table.getn(lairs) + 1, table.getn(snapshot.rows) do
+            snapshot.rows[index] = nil
+        end
         table.setn(snapshot.rows, table.getn(lairs))
         return snapshot
     end

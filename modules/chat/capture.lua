@@ -92,7 +92,10 @@ DFRL:NewMod("ChatCapture", 0, function()
                         if readable and type(text) == "string" then
                             table.insert(
                                 lines,
-                                Export('[NATIVE] frame="' .. Value(FrameName(frame)) .. '" "' .. Value(text) .. '"', plain)
+                                Export(
+                                    '[NATIVE] frame="' .. Value(FrameName(frame)) .. '" "' .. Value(text) .. '"',
+                                    plain
+                                )
                             )
                         end
                     end
