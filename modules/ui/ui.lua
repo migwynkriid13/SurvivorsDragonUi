@@ -57,9 +57,7 @@ DFRL:NewMod("Ui", 5, function()
                         if texture == "Interface\\QuestFrame\\UI-QuestLog-Left" then
                             region:SetTexture(texpath .. "questlog_left.tga")
                         elseif texture == "Interface\\QuestFrame\\UI-QuestLog-Right" then
-                            region:SetTexture(
-                                texpath .. "questlog_right.tga"
-                            )
+                            region:SetTexture(texpath .. "questlog_right.tga")
                         end
                     end
                 end
@@ -74,33 +72,25 @@ DFRL:NewMod("Ui", 5, function()
 
             if not frame.customTopLeft then
                 frame.customTopLeft = frame:CreateTexture(nil, "OVERLAY")
-                frame.customTopLeft:SetTexture(
-                    texpath .. "paperdoll_top_left.tga"
-                )
+                frame.customTopLeft:SetTexture(texpath .. "paperdoll_top_left.tga")
                 frame.customTopLeft:SetWidth(256)
                 frame.customTopLeft:SetHeight(256)
                 frame.customTopLeft:SetPoint("TOPLEFT", frame, "TOPLEFT", -3, 0)
 
                 frame.customTopRight = frame:CreateTexture(nil, "OVERLAY")
-                frame.customTopRight:SetTexture(
-                    texpath .. "paperdoll_top_right.tga"
-                )
+                frame.customTopRight:SetTexture(texpath .. "paperdoll_top_right.tga")
                 frame.customTopRight:SetWidth(128)
                 frame.customTopRight:SetHeight(256)
                 frame.customTopRight:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -3, 0)
 
                 frame.customBottomLeft = frame:CreateTexture(nil, "OVERLAY")
-                frame.customBottomLeft:SetTexture(
-                    texpath .. "paperdoll_bot_left.tga"
-                )
+                frame.customBottomLeft:SetTexture(texpath .. "paperdoll_bot_left.tga")
                 frame.customBottomLeft:SetWidth(256)
                 frame.customBottomLeft:SetHeight(256)
                 frame.customBottomLeft:SetPoint("TOPLEFT", frame, "TOPLEFT", -3, -256)
 
                 frame.customBottomRight = frame:CreateTexture(nil, "OVERLAY")
-                frame.customBottomRight:SetTexture(
-                    texpath .. "paperdoll_bot_right.tga"
-                )
+                frame.customBottomRight:SetTexture(texpath .. "paperdoll_bot_right.tga")
                 frame.customBottomRight:SetWidth(128)
                 frame.customBottomRight:SetHeight(256)
                 frame.customBottomRight:SetPoint("TOPLEFT", frame, "TOPLEFT", 253, -256)

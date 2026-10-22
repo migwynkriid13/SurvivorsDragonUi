@@ -76,6 +76,28 @@ rim does not fully conceal the difference. No approximate native-circle
 replacement or prepared item images are included. Grouping preserves the native
 texture paths, including future or unknown valid paths, without an icon catalog.
 
+### Five different icons
+
+The remaining unique-image drawing cost is unresolved. The supplied executable
+stores `uv_clamp` as one material uniform at `0x5fb2f29`, applies that clamp at
+`0x5fb339e`, and samples the image at `0x5fb3442`. Each of the fourteen original
+bands has a different half-texel sampling window. Five distinct images therefore
+still require seventy texture/window states in this renderer. An atlas shares
+the image handle but cannot share those windows. A full quad or baked alpha mask
+changes the original hard boundaries or their filtering at fractional scales.
+
+Removing this cost exactly needs native support, such as a per-quad sampling
+window inside one batch or an equivalent compositor/mask API. The inspected
+addon interface exposes neither. This PR does not patch the client or present
+the remaining seventy draws as fixed.
+
+The follow-up nevertheless removes redundant work for every equipment
+combination: unrelated display previews retain unchanged row anchors and edit
+bounds, and inactive cooldowns skip their thirty-Hz paint traversal. Native
+equipment/cooldown retries remain at five Hz, and active cooldown painting keeps
+its original cadence and final clearing pass. These are update/layout savings,
+separate from the unresolved drawing cost.
+
 ## Timer rendering
 
 Fixed run and boss-health pills use one assembled background region in place of

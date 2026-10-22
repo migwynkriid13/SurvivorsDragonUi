@@ -69,6 +69,8 @@ DFRL:NewMod("Jewelry", 4, function()
     }
     local slots, slotsReady = {}, false
     local inWorld, editing, attached, elapsed, animationElapsed = true, false, false, 0, 0
+    local cooldownsActive = false
+    local displayGeometry = {}
     local hud = CreateFrame("Frame", "SurvivorsDragonUiJewelry", UIParent)
     hud:SetWidth(WIDTH)
     hud:SetHeight(HEIGHT)
@@ -502,6 +504,7 @@ DFRL:NewMod("Jewelry", 4, function()
     end
     local function Clear()
         formattedCache, cacheSize = {}, 0
+        cooldownsActive = false
         for _, slot in ipairs(slots) do
             ClearSlot(slot)
         end
@@ -554,8 +557,9 @@ DFRL:NewMod("Jewelry", 4, function()
         slot.start, slot.duration = start, duration
     end
     local function PaintCooldowns()
-        if not hud:IsVisible() then return end
+        if not cooldownsActive or not hud:IsVisible() then return end
         local now = type(GetTime) == "function" and GetTime() or nil
+        local active = false
         for _, slot in ipairs(slots) do
             local frame
             if slot.texture and Number(now) and slot.start and slot.duration then
@@ -573,7 +577,9 @@ DFRL:NewMod("Jewelry", 4, function()
                 slot.cooldown:Hide()
                 slot.painted = nil
             end
+            if slot.start or slot.painted then active = true end
         end
+        cooldownsActive = active
     end
     local function Refresh()
         if
@@ -588,6 +594,7 @@ DFRL:NewMod("Jewelry", 4, function()
             Clear()
             return
         end
+        cooldownsActive = false
         for _, slot in ipairs(slots) do
             local ok, texture = pcall(GetInventoryItemTexture, "player", slot.id)
             if ok and type(texture) == "string" and texture ~= "" then
@@ -599,6 +606,7 @@ DFRL:NewMod("Jewelry", 4, function()
                 ClearSlot(slot)
                 if ok and (texture == nil or texture == "") then slot.placeholder:Show() end
             end
+            if slot.start or slot.painted then cooldownsActive = true end
         end
         PaintIcons()
         if DFRL.display.Get("attachJewelry") then
@@ -612,24 +620,30 @@ DFRL:NewMod("Jewelry", 4, function()
         local docked = DFRL.display.Get("attachJewelry")
         if attached then
             local owner = docked and DFRL.mainBar or detached
-            if hud:GetParent() ~= owner then
+            local reparented = hud:GetParent() ~= owner
+            if reparented then
                 hud:Hide()
                 hud:SetParent(owner)
             end
-            hud:SetScale(docked and defaultScale or 1)
-            hud:SetFrameLevel(owner:GetFrameLevel() + 2)
-            artwork:SetFrameLevel(hud:GetFrameLevel() + 1)
-            hud:ClearAllPoints()
-            hud:SetPoint("TOP", owner, "TOP", 0, docked and (46.5 + RIM_SIZE * 20 / 36) or 0)
+            local scale, level = docked and defaultScale or 1, owner:GetFrameLevel() + 2
+            if not T.NearlyEqual(hud:GetScale(), scale) then hud:SetScale(scale) end
+            if hud:GetFrameLevel() ~= level then hud:SetFrameLevel(level) end
+            level = hud:GetFrameLevel()
+            if artwork:GetFrameLevel() ~= level + 1 then artwork:SetFrameLevel(level + 1) end
+            if reparented or displayGeometry.owner ~= owner or displayGeometry.docked ~= docked then
+                hud:ClearAllPoints()
+                hud:SetPoint("TOP", owner, "TOP", 0, docked and (46.5 + RIM_SIZE * 20 / 36) or 0)
+                displayGeometry.owner, displayGeometry.docked = owner, docked
+            end
             for _, slot in ipairs(slots) do
-                slot.button:SetFrameLevel(hud:GetFrameLevel() + 1)
+                if slot.button:GetFrameLevel() ~= level + 1 then slot.button:SetFrameLevel(level + 1) end
                 if docked then
-                    slot.socket:Hide()
+                    if slot.socket:IsShown() then slot.socket:Hide() end
                 else
-                    slot.socket:Show()
+                    if not slot.socket:IsShown() then slot.socket:Show() end
                 end
             end
-            overlay:SetFrameLevel(hud:GetFrameLevel() + 3)
+            if overlay:GetFrameLevel() ~= level + 3 then overlay:SetFrameLevel(level + 3) end
         end
         local region = DFRL.actionBarMoveRegion
         if region then
@@ -637,7 +651,13 @@ DFRL:NewMod("Jewelry", 4, function()
             if DFRL.display.Get("equippedJewelry") and docked then
                 top = math.max(top, actionDefaults.buttonWidth * 40 / 36)
             end
-            region:SetPoint("TOPLEFT", DFRL.mainBar, "TOPLEFT", -actionDefaults.sideInset, top)
+            if displayGeometry.region ~= region or displayGeometry.bar ~= DFRL.mainBar
+                or displayGeometry.sideInset ~= actionDefaults.sideInset or displayGeometry.top ~= top
+            then
+                region:SetPoint("TOPLEFT", DFRL.mainBar, "TOPLEFT", -actionDefaults.sideInset, top)
+                displayGeometry.region, displayGeometry.bar = region, DFRL.mainBar
+                displayGeometry.sideInset, displayGeometry.top = actionDefaults.sideInset, top
+            end
         end
         Refresh()
         PaintCooldowns()
@@ -699,7 +719,7 @@ DFRL:NewMod("Jewelry", 4, function()
         end
         if animationElapsed >= ANIMATION_INTERVAL then
             animationElapsed = 0
-            PaintCooldowns()
+            if cooldownsActive then PaintCooldowns() end
         end
     end)
     DFRL.display.Listen(UpdateDisplay)
