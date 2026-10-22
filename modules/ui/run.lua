@@ -526,22 +526,25 @@ DFRL:NewMod("RunTimers", 5, function()
     end
 
     local runClock = NewClockLabel(runText)
-    local bossClock = NewClockLabel(bossText, "Boss in: %s")
+    -- Both captions resolve the same face, including translated RUN fallback.
+    local bossClock = NewClockLabel(bossText, "RUN")
     local function UpdateRunFontBounds()
         local width = currentFont.showText and (runText:GetStringWidth() or 0) or 0
         local overflow = math.max(0, (width + 8 - run:GetWidth()) / 2)
+        local pixel = math.max(runClock.pixel or 0, bossClock.pixel or 0)
+        local inset = runClock.endless and 5 * pixel or 0
         runText:ClearAllPoints()
         bossText:ClearAllPoints()
         if runClock.endless then
             local bossWidth = bossClock.visible and (bossText:GetStringWidth() or 0) or 0
             -- Keep the captions apart at large font sizes or with wider translations.
-            overflow = math.max(0, (width + bossWidth + 8 - run:GetWidth()) / 2)
-            runText:SetPoint("BOTTOMLEFT", run, "TOPLEFT", -overflow, 2)
+            overflow = math.max(0, (width + bossWidth + 8 + 2 * inset - run:GetWidth()) / 2)
+            runText:SetPoint("BOTTOMLEFT", run, "TOPLEFT", inset - overflow, 2)
         else
             runText:SetPoint("BOTTOM", run, "TOP", 0, 2)
         end
-        bossText:SetPoint("BOTTOMRIGHT", run, "TOPRIGHT", overflow, 2)
-        local pixel = math.max(runClock.pixel or 0, bossClock.pixel or 0)
+        bossText:SetPoint("BOTTOMRIGHT", run, "TOPRIGHT", overflow - inset, 2)
+        overflow = math.max(0, overflow - inset)
         local top = currentFont.showText and currentFont.size + 4 + pixel or 0
         runMoveRegion:ClearAllPoints()
         runMoveRegion:SetPoint("TOPLEFT", run, "TOPLEFT", -overflow, top)
@@ -596,7 +599,7 @@ DFRL:NewMod("RunTimers", 5, function()
             -- spawn's new deadline. Never rebuild it from a fixed five minutes.
             local remaining = math.ceil(state.nb)
             local time = string.format("%d:%02d", math.floor(remaining / 60), math.mod(remaining, 60))
-            countdown = string.format(DFRL.locale.Text("Boss in: %s"), time)
+            countdown = string.format(DFRL.locale.Text("BOSS IN: %s"), time)
         end
         if SetClockLabelText(bossClock, countdown, currentFont.showText and countdown ~= "") then changed = true end
         if changed then UpdateRunFontBounds() end

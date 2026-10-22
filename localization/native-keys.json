@@ -10,6 +10,7 @@
   "New in your collection!",
   "already collected",
   "You have gained {damage}% damage, {health} maximum health and {regen} health per second.",
+  "Your damage over time spells now stack {n} times on one enemy.",
   "Your {class}s earn {xp} talent experience: 1 new talent point! Spend it in the armory.",
   "Your {class}s earn {xp} talent experience: {n} new talent points! Spend them in the armory.",
   "Your {class}s earn {xp} talent experience.",

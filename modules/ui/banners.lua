@@ -7,6 +7,7 @@ DFRL:NewMod("RunBanners", 4, function()
     local FADE_IN, HOLD, FADE_OUT = 0.15, 3.5, 0.6
     local GUARDIAN_SLAIN =
         "%s is slain! Its lair yields treasure and its strength, and the other guardians grow stronger."
+    local DOT_STACKS = "Your damage over time spells now stack {n} times on one enemy."
     local native = T.NewHudOwner("banners", "hudBanners")
     local controller = CreateFrame("Frame")
     local root = CreateFrame("Frame", nil, UIParent)
@@ -20,6 +21,9 @@ DFRL:NewMod("RunBanners", 4, function()
     local inWorld, active, faulted = true, false, false
     local registered, unregister, delivering
     local legacyFrame, legacyAdd, legacyHook
+    local errorFrame, errorAdd, errorHook
+    local pendingErrors, errorCount = {}, 0
+    local MAX_ERRORS = 32
     local age, painted = 0, 0
     local OnBanner, Refresh, Update
     local companions = {}
@@ -71,6 +75,7 @@ DFRL:NewMod("RunBanners", 4, function()
         DFRL.layout.Place("banners")
     end
     function banners.Clear()
+        pendingErrors, errorCount = {}, 0
         for index = 1, MAX_VISIBLE do
             local row = pool[index]
             row.label:Hide()
@@ -97,10 +102,50 @@ DFRL:NewMod("RunBanners", 4, function()
         if legacyFrame and legacyFrame.AddMessage == legacyHook then legacyFrame.AddMessage = legacyAdd end
         legacyFrame, legacyAdd, legacyHook = nil, nil, nil
     end
+    local function PlainText(text)
+        if type(text) ~= "string" or string.find(text, "|Huierror", 1, true) then return end
+        text = string.gsub(text, "|H.-|h(.-)|h", "%1")
+        text = string.gsub(text, "|c%x%x%x%x%x%x%x%x", "")
+        text = string.gsub(text, "|r", "")
+        text = string.gsub(text, "^[ \t]+", "")
+        return (string.gsub(text, "[ \t]+$", ""))
+    end
+    local function HasBanner(text)
+        local plain = PlainText(text)
+        if not plain or plain == "" then return false end
+        local function Matches(entry)
+            return entry and (PlainText(entry.text) == plain or PlainText(entry.originalText) == plain)
+        end
+        for index = 1, visibleCount do
+            if Matches(visible[index].entry) then return true end
+        end
+        for index = 1, queueCount do
+            if Matches(queue[index]) then return true end
+        end
+        return false
+    end
+    local function ShowError(entry)
+        return entry.add(entry.owner, entry.text, entry.r, entry.g, entry.b, entry.id, entry.hold)
+    end
+    local function FlushErrors(force)
+        if errorCount == 0 then return end
+        local pending, count = pendingErrors, errorCount
+        pendingErrors, errorCount = {}, 0
+        for index = 1, count do
+            local entry = pending[index]
+            if force or not HasBanner(entry.text) then ShowError(entry) end
+        end
+    end
+    local function ReleaseErrors()
+        if errorFrame and errorFrame.AddMessage == errorHook then errorFrame.AddMessage = errorAdd end
+        errorFrame, errorAdd, errorHook = nil, nil, nil
+        FlushErrors(true)
+    end
     local function Release()
         active = false
         root:Hide()
         ReleaseLegacy()
+        pcall(ReleaseErrors)
         if registered and not delivering then
             pcall(unregister, OnBanner)
             registered, unregister = nil, nil
@@ -136,9 +181,16 @@ DFRL:NewMod("RunBanners", 4, function()
         end
         return false
     end
-    local function Enqueue(text, boss, kind, id)
+    local function Enqueue(text, boss, kind, id, originalText)
         sequence = sequence + 1
-        local copy = { id = id, kind = kind, text = text, boss = boss, sequence = sequence }
+        local copy = {
+            id = id,
+            kind = kind,
+            text = text,
+            originalText = originalText,
+            boss = boss,
+            sequence = sequence,
+        }
         if queueCount == 0 and Push(copy, GetTime()) then return end
         if queueCount == MAX_QUEUE then
             table.remove(queue, 1)
@@ -166,7 +218,36 @@ DFRL:NewMod("RunBanners", 4, function()
             local ok, full = pcall(string.format, DFRL.locale.Native(GUARDIAN_SLAIN), entry.name)
             if ok then text = full end
         end
-        Enqueue(text, entry.boss == true, entry.kind, id)
+        Enqueue(text, entry.boss == true, entry.kind, id, entry.text)
+    end
+    function banners.RedirectChat(source, text, eventName, speaker, message)
+        if not active or not inWorld or not source or type(text) ~= "string" then return false end
+        if eventName == "CHAT_MSG_RAID_BOSS_EMOTE" then
+            -- The owned legacy bridge already forwards this whole native
+            -- event category to Banners. Suppress its regular-chat copy
+            -- regardless of wording, boss, mechanic or selected language.
+            return legacyFrame ~= nil and legacyHook ~= nil and legacyFrame.AddMessage == legacyHook
+        end
+        if eventName and eventName ~= "CHAT_MSG_SYSTEM" then return false end
+        local chat = DFRL.CleanerChat
+        if not chat or type(chat.FirstDelivery) ~= "function" then return false end
+        local plain = PlainText(text)
+        if not plain then return false end
+        local fields = DFRL.locale.Match(DOT_STACKS, plain)
+        if not fields or type(fields.n) ~= "string" or not string.find(fields.n, "^%d+$") then return false end
+        local function Redirect()
+            if chat.FirstDelivery(source, plain, eventName, speaker, message, "chat-banners") then
+                -- Forward this received display call, without inventing a
+                -- gameplay event or replaying earlier chat history.
+                Enqueue(plain, false, "chat")
+            end
+        end
+        local ok, failure = pcall(Redirect)
+        if not ok then
+            Failed(failure)
+            return false
+        end
+        return true
     end
     local function RedirectLegacy()
         local frame, chat = RaidBossEmoteFrame, DFRL.CleanerChat
@@ -201,6 +282,40 @@ DFRL:NewMod("RunBanners", 4, function()
         -- Retire only notices already visible at takeover; never replay them.
         if type(frame.Clear) == "function" then frame:Clear() end
     end
+    local function RedirectErrors()
+        local frame = UIErrorsFrame
+        if not frame or type(frame.AddMessage) ~= "function" or errorFrame == frame then return end
+        ReleaseErrors()
+        local original, hook = frame.AddMessage
+        hook = function(owner, text, r, g, b, id, hold)
+            if active and errorHook == hook and type(text) == "string" and text ~= "" then
+                if HasBanner(text) then return end
+                -- Wait until the next update so either native delivery order
+                -- can pair with an accepted banner. Unmatched errors stay native.
+                if errorCount == MAX_ERRORS then
+                    local oldest = table.remove(pendingErrors, 1)
+                    errorCount = errorCount - 1
+                    ShowError(oldest)
+                end
+                errorCount = errorCount + 1
+                pendingErrors[errorCount] = {
+                    add = original,
+                    owner = owner,
+                    text = text,
+                    r = r,
+                    g = g,
+                    b = b,
+                    id = id,
+                    hold = hold,
+                }
+                table.setn(pendingErrors, errorCount)
+                return
+            end
+            return original(owner, text, r, g, b, id, hold)
+        end
+        errorFrame, errorAdd, errorHook = frame, original, hook
+        frame.AddMessage = hook
+    end
     OnBanner = function(entry)
         delivering = true
         local ok, message = pcall(Receive, entry)
@@ -228,6 +343,7 @@ DFRL:NewMod("RunBanners", 4, function()
         end
         active = true
         RedirectLegacy()
+        RedirectErrors()
         root:Show()
         return true
     end
@@ -259,6 +375,7 @@ DFRL:NewMod("RunBanners", 4, function()
     end
     Update = function()
         local elapsed = tonumber(arg1) or 0
+        FlushErrors(not active)
         age, painted = age + elapsed, painted + elapsed
         if age >= 0.2 then
             age = 0

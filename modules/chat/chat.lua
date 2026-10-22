@@ -338,6 +338,21 @@ DFRL:NewMod("Chat", 1, function()
                 if chat.CaptureRaw then
                     chat.CaptureRaw(frame, text, state.eventContext, state.eventSpeaker, state.eventMessage)
                 end
+                local banners = DFRL.banners
+                if banners and banners.RedirectChat then
+                    local success, redirected = pcall(
+                        banners.RedirectChat,
+                        frame,
+                        text,
+                        state.eventContext,
+                        state.eventSpeaker,
+                        state.eventMessage
+                    )
+                    if success and redirected then
+                        state.eventHadSuppression = true
+                        return
+                    end
+                end
                 local displayed, kind = text, nil
                 if index ~= 2 and type(text) == "string" and chat.PrettifyMessage then
                     local success, formatted, messageKind =
