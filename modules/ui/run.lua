@@ -1505,11 +1505,11 @@ DFRL:NewMod("RunTimers", 5, function()
         }
         if counter.key == "gold" then
             local glowOpacity = 1.4
-            local glowSpread = 1.25
-            entry.glowWidthScale = glowSpread
+            local glyphSpread = 1.25
+            entry.glowWidthScale = 1.65
             entry.glow, entry.glowDirections = {}, {}
             entry.glowLights = {
-                { anchor = content, height = 26, sparkleSize = 5, radiusY = 9.5, offset = 0 },
+                { anchor = content, centerX = -5, height = 26, sparkleSize = 5, radiusY = 9.5, offset = 0 },
             }
             for _, light in ipairs(entry.glowLights) do
                 local spotlight = content:CreateTexture(nil, "BACKGROUND")
@@ -1517,14 +1517,14 @@ DFRL:NewMod("RunTimers", 5, function()
                 spotlight:SetBlendMode("ADD")
                 spotlight:SetVertexColor(1, 0.86, 0.64, 0.16 * glowOpacity)
                 spotlight:SetHeight(light.height)
-                spotlight:SetPoint("CENTER", light.anchor, "CENTER", 0, 0)
+                spotlight:SetPoint("CENTER", light.anchor, "CENTER", light.centerX, 0)
                 spotlight:Hide()
                 local rays = content:CreateTexture(nil, "BORDER")
                 rays:SetTexture(DFRL:GetInfoOrCons("tex") .. "tally\\AffordableRays.tga")
                 rays:SetBlendMode("ADD")
                 rays:SetVertexColor(1, 0.87, 0.66, 0.32 * glowOpacity)
                 rays:SetHeight(light.height)
-                rays:SetPoint("CENTER", light.anchor, "CENTER", 0, 0)
+                rays:SetPoint("CENTER", light.anchor, "CENTER", light.centerX, 0)
                 rays:Hide()
                 light.spotlight, light.rays, light.sparkles = spotlight, rays, {}
                 for index = 1, 3 do
@@ -1551,7 +1551,7 @@ DFRL:NewMod("RunTimers", 5, function()
                         glow:SetHeight(18)
                         glow:SetJustifyH("CENTER")
                         glow:SetJustifyV("MIDDLE")
-                        glow:SetPoint("CENTER", text, "CENTER", x * 1.5 * glowSpread, y * 1.5)
+                        glow:SetPoint("CENTER", text, "CENTER", x * 1.5 * glyphSpread, y * 1.5)
                         glow:Hide()
                         table.insert(entry.glow, glow)
                         local length = math.sqrt(x * x + y * y)
@@ -1578,7 +1578,6 @@ DFRL:NewMod("RunTimers", 5, function()
                         0.5 + halfC + halfS,
                         0.5 - halfS + halfC
                     )
-                    local radius = math.max(1, (entry.glowWidth - light.sparkleSize) / 2)
                     for _, sparkle in ipairs(light.sparkles) do
                         local twinkle = math.max(0, math.sin(entry.glowPhase * 3 + sparkle.offset * 0.7 + 0.8))
                         local alpha = 0.55 * twinkle * twinkle * twinkle * twinkle
@@ -1588,7 +1587,7 @@ DFRL:NewMod("RunTimers", 5, function()
                                 "CENTER",
                                 light.anchor,
                                 "CENTER",
-                                radius * math.cos(angle),
+                                light.centerX + light.radiusX * math.cos(angle),
                                 -light.radiusY * math.sin(angle)
                             )
                             sparkle.texture:SetAlpha(alpha * glowOpacity)
@@ -1673,10 +1672,13 @@ DFRL:NewMod("RunTimers", 5, function()
                     glow:SetText(text)
                 end
             end
-            local width = goldField.content:GetWidth() * goldField.glowWidthScale
+            local contentWidth = goldField.content:GetWidth()
+            local width = contentWidth * goldField.glowWidthScale
             if not T.NearlyEqual(goldField.glowWidth, width) then
-                goldField.glowLights[1].spotlight:SetWidth(width)
-                goldField.glowLights[1].rays:SetWidth(width)
+                local light = goldField.glowLights[1]
+                light.spotlight:SetWidth(width)
+                light.rays:SetWidth(width)
+                light.radiusX = math.max(1, (contentWidth - light.sparkleSize) / 2 - math.abs(light.centerX))
                 goldField.glowWidth = width
             end
         end
