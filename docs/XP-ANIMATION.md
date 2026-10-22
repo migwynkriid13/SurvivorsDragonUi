@@ -29,7 +29,8 @@ adds no asset, setting, SavedVariable or runtime dependency. The separate
 border and independent `xpBar` geometry remain available when detached;
 [XP-ATTACHMENT.md](XP-ATTACHMENT.md) describes the default joined shell.
 Both fill regions use the same prepared texture with constant horizontal color
-and alpha; the original left-side vignette and end-cap fading are removed.
+and full interior opacity. The original left-side vignette is removed, while
+the user's requested slight rounding remains at both ends.
 
 Source research, precise upstream pins and artwork ownership are recorded in
 [XPBar-ANIMATION.md](../third_party/XPBar-ANIMATION.md). This is an adaptation of

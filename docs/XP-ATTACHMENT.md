@@ -3,7 +3,8 @@
 The selected design 01 extends the action bar's metal shell below its ability
 buttons. XP uses the existing purple six-unit fill inside that shell; its
 separate border is hidden. Its prepared fill has uniform horizontal color and
-opacity, without the original left vignette. The walls and bottom bevel belong to the action bar,
+interior opacity, without the original left vignette, and slightly rounded ends.
+The walls and bottom bevel belong to the action bar,
 including when jewelry's upper rail is detached or disabled.
 
 `attachXP` is a normalized boolean in the existing display table, default true.
