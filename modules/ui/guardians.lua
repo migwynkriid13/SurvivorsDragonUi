@@ -12,6 +12,8 @@ DFRL:NewMod("GuardianRoster", 2, function()
     local droppedThroughRevision = 0
     local ready = false
     local MAX_SMOOTHING, MAX_CHANGES = 1.5, 64
+    local copiedFields = { "left", "x", "y", "z", "mx", "my" }
+    local health, healthSeen = {}, {}
 
     local function Number(value) return type(value) == "number" and value - value == 0 end
     local function Integer(value, minimum) return Number(value) and value >= minimum and value == math.floor(value) end
@@ -26,8 +28,9 @@ DFRL:NewMod("GuardianRoster", 2, function()
         return navigation and navigation.IsRunPhase(Native("AZS_GetPhase")) or false
     end
     local function Living(row) return row.state == "asleep" or row.state == "awake" end
-    local function Copy(row)
-        local copy = {}
+    local function Copy(row, copy)
+        copy = copy or {}
+        for key in pairs(copy) do copy[key] = nil end
         for key, value in pairs(row) do
             copy[key] = value
         end
@@ -72,12 +75,13 @@ DFRL:NewMod("GuardianRoster", 2, function()
             roster.Clear()
             return
         end
-        zone = nil
         if type(context) == "table" then
-            zone = {}
-            if type(context.zone) == "string" then zone.key = context.zone end
-            if type(context.zname) == "string" then zone.name = context.zname end
-            if Number(context.map) then zone.map = context.map end
+            zone = zone or {}
+            zone.key = type(context.zone) == "string" and context.zone or nil
+            zone.name = type(context.zname) == "string" and context.zname or nil
+            zone.map = Number(context.map) and context.map or nil
+        else
+            zone = nil
         end
         if ready and stamp == updated and packet == received then return end
         local nextLairs, previous, seen = {}, {}, {}
@@ -99,7 +103,7 @@ DFRL:NewMod("GuardianRoster", 2, function()
             seen[row.index] = true
             local copy = { index = row.index, id = row.id, state = row.state }
             if type(row.name) == "string" and row.name ~= "" then copy.name = row.name end
-            for _, key in ipairs({ "left", "x", "y", "z", "mx", "my" }) do
+            for _, key in ipairs(copiedFields) do
                 if Number(row[key]) then copy[key] = row[key] end
             end
             copy.key = tostring(row.index) .. ":" .. tostring(row.id)
@@ -131,52 +135,69 @@ DFRL:NewMod("GuardianRoster", 2, function()
     end
 
     local function Health()
-        if not Number(_G.AZS_UNITS_UPDATED) then return {} end
+        for id in pairs(healthSeen) do healthSeen[id] = nil end
+        local list
         if
-            unitGeneration == blockedUnitGeneration
-            and _G.AZS_UNITS == blockedUnits
-            and _G.AZS_UNITS_UPDATED == blockedUnitStamp
+            Number(_G.AZS_UNITS_UPDATED)
+            and not (
+                unitGeneration == blockedUnitGeneration
+                and _G.AZS_UNITS == blockedUnits
+                and _G.AZS_UNITS_UPDATED == blockedUnitStamp
+            )
         then
-            return {}
+            list = Native("AZS_GetGuardians")
         end
-        local list = Native("AZS_GetGuardians")
-        if type(list) ~= "table" then return {} end
-        local result, seen = {}, {}
-        for _, entry in ipairs(list) do
-            if type(entry) == "table" and Integer(entry.id, 1) then
-                local id = entry.id
-                if seen[id] then
-                    result[id] = nil
-                elseif Number(entry.hp) and entry.hp >= 0 and Number(entry.hpm) and entry.hpm > 0 then
-                    result[id] = { hp = entry.hp, maximum = entry.hpm }
+        if type(list) == "table" then
+            for _, entry in ipairs(list) do
+                if type(entry) == "table" and Integer(entry.id, 1) then
+                    local id = entry.id
+                    if healthSeen[id] then
+                        health[id] = nil
+                    elseif Number(entry.hp) and entry.hp >= 0 and Number(entry.hpm) and entry.hpm > 0 then
+                        local unit = health[id] or {}
+                        unit.hp, unit.maximum = entry.hp, entry.hpm
+                        health[id] = unit
+                    else
+                        health[id] = nil
+                    end
+                    healthSeen[id] = true
                 end
-                seen[id] = true
             end
         end
-        return result
+        for id in pairs(health) do
+            if not healthSeen[id] then health[id] = nil end
+        end
+        return health
     end
 
-    -- A fresh copy on every read prevents a future view from mutating the
-    -- accepted data used by other consumers. No UI clock advances gameplay.
-    function roster.GetSnapshot()
-        local snapshot = {
-            revision = revision,
-            generation = generation,
-            status = "inactive",
-            rows = {},
-            counts = { total = 0, living = 0, asleep = 0, fighting = 0, returning = 0, due = 0, empty = 0 },
-        }
-        if not Active() then return snapshot end
+    -- Callers may reuse their own copy; accepted private rows are never exposed.
+    -- No UI clock advances gameplay.
+    function roster.GetSnapshot(snapshot)
+        snapshot = snapshot or { rows = {}, counts = {} }
+        snapshot.revision, snapshot.generation, snapshot.status = revision, generation, "inactive"
+        local counts = snapshot.counts
+        counts.total, counts.living, counts.asleep, counts.fighting = 0, 0, 0, 0
+        counts.returning, counts.due, counts.empty = 0, 0, 0
+        if not Active() then
+            for index in ipairs(snapshot.rows) do snapshot.rows[index] = nil end
+            table.setn(snapshot.rows, 0)
+            snapshot.zone = nil
+            return snapshot
+        end
         snapshot.status = ready and "ready" or "unavailable"
-        if not ready then return snapshot end
-        if zone then snapshot.zone = Copy(zone) end
+        if not ready then
+            for index in ipairs(snapshot.rows) do snapshot.rows[index] = nil end
+            table.setn(snapshot.rows, 0)
+            snapshot.zone = nil
+            return snapshot
+        end
+        snapshot.zone = zone and Copy(zone, snapshot.zone) or nil
         local health = Health()
         local now = Native("AZS_GetRunTime")
         local gap = 0
         if clock and Number(now) and now >= clock then gap = math.min(MAX_SMOOTHING, now - clock) end
-        for _, entry in ipairs(lairs) do
-            local row = Copy(entry)
-            local counts = snapshot.counts
+        for index, entry in ipairs(lairs) do
+            local row = Copy(entry, snapshot.rows[index])
             counts.total = counts.total + 1
             if Living(row) then
                 row.status = row.state == "awake" and "fighting" or "asleep"
@@ -197,8 +218,10 @@ DFRL:NewMod("GuardianRoster", 2, function()
                 row.status = "empty"
             end
             counts[row.status] = counts[row.status] + 1
-            table.insert(snapshot.rows, row)
+            snapshot.rows[index] = row
         end
+        for index = table.getn(lairs) + 1, table.getn(snapshot.rows) do snapshot.rows[index] = nil end
+        table.setn(snapshot.rows, table.getn(lairs))
         return snapshot
     end
 

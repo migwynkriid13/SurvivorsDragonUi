@@ -10,6 +10,24 @@ function DFRL.tools.NearlyEqual(a, b)
         and math.abs(a - b) <= 0.000001 * math.max(1, math.abs(a), math.abs(b))
 end
 
+function DFRL.tools.SetTextIfChanged(label, text)
+    local language = DFRL.locale
+    local binding = language and language.labels[label]
+    local value = text
+    if binding then
+        binding.source = text
+        if type(text) == "string" then value = language.Text(text) end
+    end
+    if type(value) == "number" then value = tostring(value) end
+    if (label:GetText() or "") == (value or "") then return false end
+    if binding then
+        binding.original(label, value)
+    else
+        label:SetText(text)
+    end
+    return true
+end
+
 local function EdgeExtent(first, last, fallback)
     if type(first) == "number" and type(last) == "number" then
         local extent = last - first

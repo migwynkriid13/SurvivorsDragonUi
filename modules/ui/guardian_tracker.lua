@@ -26,6 +26,7 @@ DFRL:NewMod("GuardianTracker", 4, function()
     local WIDTH, ROW_HEIGHT = 128 + NAME_WIDTH + COLUMN_GAP + 2 * ROW_INSET, 26
     local width, statusWidth = WIDTH, 128
     local healthWidth = 0
+    local presentation = { snapshot = { rows = {}, counts = {} }, shown = false }
     local frame = CreateFrame("Frame", "DFRL_GuardianTracker", UIParent)
     frame:SetScale(DEFAULT_SCALE)
     frame:SetWidth(WIDTH)
@@ -100,16 +101,20 @@ DFRL:NewMod("GuardianTracker", 4, function()
         if GameTooltip and GameTooltip:IsOwned(owner) then GameTooltip:Hide() end
     end
     local function ClearRow(row)
-        row.bar:SetValue(0)
-        row.pill:Hide()
-        row:Hide()
+        if row.value ~= 0 then row.bar:SetValue(0) end
+        row.value = 0
+        if row.pill:IsShown() then row.pill:Hide() end
+        if row:IsShown() then row:Hide() end
     end
     local function Clear()
         HideTooltip(toggle)
         for _, row in ipairs(rows) do
             ClearRow(row)
         end
-        frame:Hide()
+        if presentation.shown then
+            presentation.shown = false
+            frame:Hide()
+        end
     end
 
     local function MakeRow()
@@ -162,7 +167,10 @@ DFRL:NewMod("GuardianTracker", 4, function()
     -- Measure the real game font across every caption translation, including
     -- populated format fields. Native guardian names remain bounded separately.
     local function CaptionWidth(source, first, size)
-        T.SetFont(measure, size or 12, "OUTLINE")
+        if presentation.measureSize ~= (size or 12) then
+            T.SetFont(measure, size or 12, "OUTLINE")
+            presentation.measureSize = size or 12
+        end
         local maximum = 0
         for _, catalog in pairs(DFRL.locale.data) do
             local text = catalog.ui[source] or source
@@ -181,25 +189,39 @@ DFRL:NewMod("GuardianTracker", 4, function()
         if titleWidth <= 0 then return false end
         width = math.max(WIDTH, statusWidth + NAME_WIDTH + COLUMN_GAP + 2 * ROW_INSET, titleWidth + 88)
         local resized = not T.NearlyEqual(width, frame:GetWidth())
-        title:SetWidth(width - 88)
-        frame:SetWidth(width)
-        header:SetWidth(width)
-        header:SetHeight(width / 8)
+        if presentation.measuredWidth ~= width then
+            title:SetWidth(width - 88)
+            frame:SetWidth(width)
+            header:SetWidth(width)
+            header:SetHeight(width / 8)
+            presentation.measuredWidth = width
+        end
         if resized then DFRL.layout.Place("guardianTracker", frame) end
         return true
     end
     local function Refresh()
         if not inWorld then return end
-        local snapshot = roster.GetSnapshot()
+        local snapshot = roster.GetSnapshot(presentation.snapshot)
         if snapshot.status ~= "ready" or not snapshot.rows[1] then
             Clear()
             return
         end
-        T.SetFont(measure, T.EncounterHealthStyle.fontSize, "OUTLINE")
+        if not presentation.shown then
+            presentation.shown = true
+            frame:Show()
+        end
+        if not frame:IsVisible() then return end
+        if presentation.measureSize ~= T.EncounterHealthStyle.fontSize then
+            T.SetFont(measure, T.EncounterHealthStyle.fontSize, "OUTLINE")
+            presentation.measureSize = T.EncounterHealthStyle.fontSize
+        end
         for _, entry in ipairs(snapshot.rows) do
             if entry.status == "fighting" and Number(entry.healthFraction) then
-                measure:SetText(T.EncounterHealthText(entry.hp, entry.maximum))
-                local measured = math.ceil(measure:GetStringWidth() or 0) + 16
+                local text = T.EncounterHealthText(entry.hp, entry.maximum)
+                local cached = presentation.healthText == text and presentation.healthMeasured
+                if not cached then measure:SetText(text) end
+                local measured = cached or math.ceil(measure:GetStringWidth() or 0) + 16
+                presentation.healthText, presentation.healthMeasured = text, measured
                 if measured > healthWidth then
                     healthWidth, dirty = measured, true
                 end
@@ -213,42 +235,50 @@ DFRL:NewMod("GuardianTracker", 4, function()
             dirty = false
         end
         UpdateToggle()
-        title:SetText(DFRL.locale.Text("GUARDIANS"))
+        T.SetTextIfChanged(title, DFRL.locale.Text("GUARDIANS"))
         local used = 0
         for _, entry in ipairs(snapshot.rows) do
             if expanded or entry.state == "asleep" or entry.state == "awake" then
                 used = used + 1
                 local row = rows[used] or MakeRow()
-                row:ClearAllPoints()
-                row:SetPoint("TOPLEFT", frame, "TOPLEFT", ROW_INSET, -(width / 8 + 6 + (used - 1) * ROW_HEIGHT))
-                row:SetWidth(width - 2 * ROW_INSET)
-                row.name:SetWidth(width - statusWidth - 2 * ROW_INSET - COLUMN_GAP)
-                row.name:SetText(entry.name or Format("Lair %d", entry.index))
-                row.status:SetWidth(statusWidth)
+                if row.layoutWidth ~= width or row.layoutIndex ~= used or row.statusWidth ~= statusWidth then
+                    row:ClearAllPoints()
+                    row:SetPoint("TOPLEFT", frame, "TOPLEFT", ROW_INSET, -(width / 8 + 6 + (used - 1) * ROW_HEIGHT))
+                    row:SetWidth(width - 2 * ROW_INSET)
+                    row.name:SetWidth(width - statusWidth - 2 * ROW_INSET - COLUMN_GAP)
+                    row.status:SetWidth(statusWidth)
+                    row.pill:SetWidth(statusWidth + 8)
+                    row.layoutWidth, row.layoutIndex, row.statusWidth = width, used, statusWidth
+                end
+                T.SetTextIfChanged(row.name, entry.name or Format("Lair %d", entry.index))
                 local color = colors[entry.status] or colors.empty
-                row.status:SetTextColor(color[1], color[2], color[3])
+                if row.color ~= color then
+                    row.status:SetTextColor(color[1], color[2], color[3])
+                    row.color = color
+                end
                 -- Only the native fighting state with valid current health gets a
                 -- bar. Every other state clears the old fill before showing text.
                 if entry.state == "awake" and Number(entry.healthFraction) then
-                    row.pill:SetWidth(statusWidth + 8)
-                    row.bar:SetValue(entry.healthFraction)
-                    row.health:SetText(Status(entry))
-                    row.status:Hide()
-                    row.pill:Show()
+                    if row.value ~= entry.healthFraction then row.bar:SetValue(entry.healthFraction) end
+                    row.value = entry.healthFraction
+                    T.SetTextIfChanged(row.health, Status(entry))
+                    if row.status:IsShown() then row.status:Hide() end
+                    if not row.pill:IsShown() then row.pill:Show() end
                 else
-                    row.bar:SetValue(0)
-                    row.pill:Hide()
-                    row.status:SetText(Status(entry))
-                    row.status:Show()
+                    if row.value ~= 0 then row.bar:SetValue(0) end
+                    row.value = 0
+                    if row.pill:IsShown() then row.pill:Hide() end
+                    T.SetTextIfChanged(row.status, Status(entry))
+                    if not row.status:IsShown() then row.status:Show() end
                 end
-                row:Show()
+                if not row:IsShown() then row:Show() end
             end
         end
         for index = used + 1, table.getn(rows) do
             ClearRow(rows[index])
         end
-        frame:SetHeight(width / 8 + 12 + used * ROW_HEIGHT)
-        frame:Show()
+        local height = width / 8 + 12 + used * ROW_HEIGHT
+        if not T.NearlyEqual(frame:GetHeight(), height) then frame:SetHeight(height) end
     end
     toggle:SetScript("OnClick", function()
         if editing or not inWorld then return end
@@ -287,6 +317,7 @@ DFRL:NewMod("GuardianTracker", 4, function()
         end,
     })
     DFRL.locale.Listen(function()
+        presentation.healthText, presentation.healthMeasured = nil, nil
         dirty = true
         Refresh()
     end)

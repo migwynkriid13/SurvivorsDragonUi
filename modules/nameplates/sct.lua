@@ -429,7 +429,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         -- Share root geometry only inside this synchronous pass. Show/health
         -- callbacks keep sampling afresh, including later in the same frame.
         -- Retry invalid geometry and retain each origin's last usable point.
-        local geometry = {}
+        local geometry = CustomEnabled() and {} or nil
         DiscoverPlates(force, now, geometry)
         -- Snapshot on every frame, rather than every tenth of a second: a
         -- one-shot enemy can disappear between two of the old scans.

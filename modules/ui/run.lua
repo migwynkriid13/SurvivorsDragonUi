@@ -1363,6 +1363,7 @@ DFRL:NewMod("RunTimers", 5, function()
     local zoneSequence, zoneRunPending
     local scheduleBarrier = -1
     local reloading = false
+    local render = { emptySchedule = {} }
     -- Only ReloadUI writes this handoff. Consume it once, keeping an initial
     -- nil phase from destroying it before the native API has replayed AZSRUN.
     local scheduleCache = _G.SurvivorsDragonUiBossSchedule
@@ -1397,9 +1398,12 @@ DFRL:NewMod("RunTimers", 5, function()
     end
 
     local function ClearTally()
-        tally:Hide()
+        if render.tallyShown then
+            render.tallyShown = false
+            tally:Hide()
+        end
         for _, field in ipairs(tallyFields) do
-            field.text:SetText("")
+            T.SetTextIfChanged(field.text, "")
         end
         Restore("tally")
     end
@@ -1422,18 +1426,22 @@ DFRL:NewMod("RunTimers", 5, function()
             return
         end
         for _, field in ipairs(tallyFields) do
-            field.text:SetText(tostring(math.floor(state[field.key])))
+            T.SetTextIfChanged(field.text, tostring(math.floor(state[field.key])))
         end
-        tally:Show()
+        if not render.tallyShown then
+            render.tallyShown = true
+            tally:Show()
+        end
         if not TakeOver("tally") then ClearTally() end
     end
 
     local function HideDebuff(icon)
         if GameTooltip and GameTooltip:IsOwned(icon) then GameTooltip:Hide() end
-        icon:Hide()
-        icon.texture:SetTexture(nil)
-        icon.count:SetText("")
-        icon.time:SetText("")
+        if icon:IsShown() then icon:Hide() end
+        if icon.iconPath or icon.effect then icon.texture:SetTexture(nil) end
+        icon.iconPath = nil
+        T.SetTextIfChanged(icon.count, "")
+        T.SetTextIfChanged(icon.time, "")
         icon.effect = nil
     end
 
@@ -1447,9 +1455,10 @@ DFRL:NewMod("RunTimers", 5, function()
     local function Retire(row)
         ClearDebuffs(row)
         row.frame:Hide()
-        row.name:SetText("")
-        row.health:SetText("")
-        row.bar:SetValue(0)
+        T.SetTextIfChanged(row.name, "")
+        T.SetTextIfChanged(row.health, "")
+        if row.value ~= 0 then row.bar:SetValue(0) end
+        row.value, row.layoutOffset = 0, nil
         row.id, row.key = nil, nil
         table.insert(spareRows, row)
     end
@@ -1459,11 +1468,18 @@ DFRL:NewMod("RunTimers", 5, function()
             Retire(row)
             activeRows[key] = nil
         end
-        rowOrder = {}
-        bossGroup:Hide()
+        for index in ipairs(rowOrder) do rowOrder[index] = nil end
+        table.setn(rowOrder, 0)
+        if render.bossShown then
+            render.bossShown = false
+            bossGroup:Hide()
+        end
+        render.rowsDirty, render.rowsPresentationDirty = nil, nil
     end
 
     local function ShowMarkerGlow(marker, shown)
+        if marker.glowShown == shown then return end
+        marker.glowShown = shown
         for _, glow in ipairs(marker.glow) do
             if shown then
                 glow.texture:Show()
@@ -1490,14 +1506,17 @@ DFRL:NewMod("RunTimers", 5, function()
 
     local function HideMarker(marker)
         HideMarkerTooltip(marker)
-        marker:Hide()
-        marker.check:Hide()
+        if marker:IsShown() then marker:Hide() end
+        if marker.check:IsShown() then marker.check:Hide() end
         ShowMarkerGlow(marker, false)
         marker.state = nil
     end
 
     local function ReleaseClock()
-        run:Hide()
+        if render.runShown then
+            render.runShown = false
+            run:Hide()
+        end
         ClearEndlessCaption()
         HideRunFlow()
         for _, marker in ipairs(markers) do
@@ -1566,10 +1585,36 @@ DFRL:NewMod("RunTimers", 5, function()
     local function ScheduleSample(maximum, expected)
         local state = AZS_RUN
         if type(state) ~= "table" or state.fin ~= maximum or state.bt ~= expected then return nil end
-        for _, key in ipairs({ "t", "bs", "bk", "kills" }) do
-            if not IsNumber(state[key]) then return nil end
+        if not IsNumber(state.t) or not IsNumber(state.bs) or not IsNumber(state.bk) or not IsNumber(state.kills) then
+            return nil
         end
-        return { t = state.t, bs = state.bs, bk = state.bk, kills = state.kills }
+        local sample = render.sample
+        if not sample or sample.t ~= state.t or sample.bs ~= state.bs or sample.bk ~= state.bk or sample.kills ~= state.kills then
+            sample = { t = state.t, bs = state.bs, bk = state.bk, kills = state.kills }
+            render.sample = sample
+        end
+        return sample
+    end
+
+    local function AcceptedSchedule(source, maximum, expected, replay)
+        local key = replay and "replayValidation" or "nativeValidation"
+        local cache = render[key] or {}
+        render[key] = cache
+        if cache.source ~= source or cache.sequence ~= scheduleSequence
+            or cache.maximum ~= maximum or cache.expected ~= expected or not cache.read
+        then
+            cache.entries = ValidateSchedule(source, maximum, expected)
+            cache.spawned, cache.killed = 0, 0
+            if cache.entries then
+                for _, entry in ipairs(cache.entries) do
+                    if entry.state ~= "due" then cache.spawned = cache.spawned + 1 end
+                    if entry.state == "dead" then cache.killed = cache.killed + 1 end
+                end
+            end
+            cache.source, cache.sequence = source, scheduleSequence
+            cache.maximum, cache.expected, cache.read = maximum, expected, true
+        end
+        return cache.entries
     end
 
     local function ScheduleMarkers(maximum, phase)
@@ -1579,26 +1624,28 @@ DFRL:NewMod("RunTimers", 5, function()
         local entries
         -- After a known run boundary, retained native tables are not a fresh
         -- schedule. Packet order is recorded before reading the parsed tables.
-        if scheduleSequence > scheduleBarrier then entries = ValidateSchedule(AZS_SCHEDULE, maximum, expected) end
+        if scheduleSequence > scheduleBarrier then entries = AcceptedSchedule(AZS_SCHEDULE, maximum, expected) end
         if entries then
+            local cached = scheduleCache
             scheduleCache = nil
             if sample then
-                local spawned, killed = 0, 0
-                for _, entry in ipairs(entries) do
-                    if entry.state ~= "due" then spawned = spawned + 1 end
-                    if entry.state == "dead" then killed = killed + 1 end
-                end
+                local validation = render.nativeValidation
                 -- The two prefixes can arrive separately. Never stamp new run
                 -- counters onto old schedule states for the next reload.
-                if spawned == math.min(expected, sample.bs) and killed == math.min(expected, sample.bk) then
-                    scheduleCache = {
-                        version = 1,
-                        maximum = maximum,
-                        expected = expected,
-                        hero = UnitName("player"),
-                        entries = entries,
-                        sample = sample,
-                    }
+                if validation.spawned == math.min(expected, sample.bs) and validation.killed == math.min(expected, sample.bk) then
+                    local hero = UnitName("player")
+                    if type(cached) == "table" and cached.entries == entries and cached.sample == sample and cached.hero == hero then
+                        scheduleCache = cached
+                    else
+                        scheduleCache = {
+                            version = 1,
+                            maximum = maximum,
+                            expected = expected,
+                            hero = hero,
+                            entries = entries,
+                            sample = sample,
+                        }
+                    end
                 end
             end
             return entries
@@ -1625,7 +1672,7 @@ DFRL:NewMod("RunTimers", 5, function()
             scheduleCache = nil
             return nil
         end
-        entries = ValidateSchedule(cache.entries, maximum, expected)
+        entries = AcceptedSchedule(cache.entries, maximum, expected, true)
         if not entries then
             scheduleCache = nil
             return nil
@@ -1636,6 +1683,7 @@ DFRL:NewMod("RunTimers", 5, function()
 
     local function InvalidateSchedule(sequence)
         scheduleCache = nil
+        render.nativeValidation, render.replayValidation, render.sample = nil, nil, nil
         scheduleBarrier = math.max(scheduleBarrier, sequence)
     end
 
@@ -1695,11 +1743,14 @@ DFRL:NewMod("RunTimers", 5, function()
                 if GameTooltip and GameTooltip:IsOwned(marker) then ShowMarkerTooltip(marker) end
             end
             markerStates[index] = entry.state
-            marker:ClearAllPoints()
-            if at == maximum then
-                marker:SetPoint("RIGHT", runBar, "RIGHT", 0, 0)
-            else
-                marker:SetPoint("CENTER", runBar, "LEFT", BAR_WIDTH * at / maximum, 0)
+            if marker.at ~= at or marker.maximum ~= maximum then
+                marker:ClearAllPoints()
+                if at == maximum then
+                    marker:SetPoint("RIGHT", runBar, "RIGHT", 0, 0)
+                else
+                    marker:SetPoint("CENTER", runBar, "LEFT", BAR_WIDTH * at / maximum, 0)
+                end
+                marker.at, marker.maximum = at, maximum
             end
         end
         for index = table.getn(entries) + 1, table.getn(markers) do
@@ -1745,7 +1796,7 @@ DFRL:NewMod("RunTimers", 5, function()
                         glow.texture:SetPoint("CENTER", marker, "CENTER", glow.x * glowOffset, glow.y * glowOffset)
                     end
                 end
-                marker:Show()
+                if not marker:IsShown() then marker:Show() end
             else
                 HideMarker(marker)
             end
@@ -1764,8 +1815,10 @@ DFRL:NewMod("RunTimers", 5, function()
         -- are fighting; the full list also includes sleeping lairs on the map.
         -- Boss-only mode does not depend on the excluded guardian list.
         if type(bosses) ~= "table" or (showGuardians and type(guardians) ~= "table") then return nil end
-        local entries = {}
-        local seen = {}
+        local entries, seen = render.encounters or {}, render.encounterSeen or {}
+        render.encounters, render.encounterSeen = entries, seen
+        for key in pairs(seen) do seen[key] = nil end
+        local used = 0
         local function Append(list, kind)
             for _, entry in ipairs(list) do
                 if type(entry) ~= "table" then return false end
@@ -1787,19 +1840,18 @@ DFRL:NewMod("RunTimers", 5, function()
                     local key = kind .. ":" .. tostring(entry.id)
                     if seen[key] then return false end
                     seen[key] = true
-                    table.insert(entries, {
-                        key = key,
-                        id = entry.id,
-                        kind = kind,
-                        name = entry.name,
-                        hp = entry.hp,
-                        maximum = entry.hpm,
-                    })
+                    used = used + 1
+                    local copy = entries[used] or {}
+                    copy.key, copy.id, copy.kind = key, entry.id, kind
+                    copy.name, copy.hp, copy.maximum = entry.name, entry.hp, entry.hpm
+                    entries[used] = copy
                 end
             end
             return true
         end
         if not Append(bosses, "boss") or (showGuardians and not Append(guardians, "guardian")) then return nil end
+        for index = used + 1, table.getn(entries) do entries[index] = nil end
+        table.setn(entries, used)
         return entries, seen
     end
 
@@ -1906,6 +1958,7 @@ DFRL:NewMod("RunTimers", 5, function()
 
     local function UpdateDebuffs(row, enabled)
         local count = 0
+        local paint = bossGroup:IsVisible()
         local getter = _G.AZS_GetDebuffs
         if enabled and type(getter) == "function" then
             -- The getter owns timing and returns current effects for this exact
@@ -1915,27 +1968,36 @@ DFRL:NewMod("RunTimers", 5, function()
                 for _, effect in ipairs(effects) do
                     if type(effect) == "table" and type(effect.icon) == "string" and effect.icon ~= "" then
                         count = count + 1
-                        local icon = DebuffIcon(row, count)
-                        icon.effect = effect
-                        icon.texture:SetTexture(effect.icon)
-                        icon.count:SetText(
-                            IsNumber(effect.stacks) and effect.stacks > 1 and tostring(math.floor(effect.stacks)) or ""
-                        )
-                        local remaining = DebuffRemaining(effect)
-                        local text = ""
-                        if remaining then
-                            text = remaining >= 60 and (tostring(math.ceil(remaining / 60)) .. "m")
-                                or tostring(math.ceil(remaining))
+                        if paint then
+                            local icon = DebuffIcon(row, count)
+                            icon.effect = effect
+                            if icon.iconPath ~= effect.icon then
+                                local loaded = icon.texture:SetTexture(effect.icon)
+                                local assigned = icon.texture:GetTexture()
+                                local stem = string.gsub(effect.icon, "%.[^%.]*$", "")
+                                icon.iconPath = loaded ~= false and (assigned == effect.icon or assigned == stem) and effect.icon or nil
+                            end
+                            T.SetTextIfChanged(icon.count,
+                                IsNumber(effect.stacks) and effect.stacks > 1 and tostring(math.floor(effect.stacks)) or ""
+                            )
+                            local remaining = DebuffRemaining(effect)
+                            local text = ""
+                            if remaining then
+                                text = remaining >= 60 and (tostring(math.ceil(remaining / 60)) .. "m")
+                                    or tostring(math.ceil(remaining))
+                            end
+                            T.SetTextIfChanged(icon.time, text)
+                            if not icon:IsShown() then icon:Show() end
+                            if GameTooltip and GameTooltip:IsOwned(icon) then DebuffTooltip(icon) end
                         end
-                        icon.time:SetText(text)
-                        icon:Show()
-                        if GameTooltip and GameTooltip:IsOwned(icon) then DebuffTooltip(icon) end
                     end
                 end
             end
         end
-        for index = count + 1, table.getn(row.debuffs) do
-            HideDebuff(row.debuffs[index])
+        if paint then
+            for index = count + 1, table.getn(row.debuffs) do
+                HideDebuff(row.debuffs[index])
+            end
         end
         return math.ceil(count / DEBUFF_COLUMNS) * (DEBUFF_SIZE + DEBUFF_GAP)
     end
@@ -1943,12 +2005,18 @@ DFRL:NewMod("RunTimers", 5, function()
     local function ReflowRows()
         local offset = 0
         for _, row in ipairs(rowOrder) do
-            row.frame:ClearAllPoints()
-            row.frame:SetPoint("TOP", bossGroup, "TOP", 0, -16 - offset)
+            if row.layoutOffset ~= offset then
+                row.frame:ClearAllPoints()
+                row.frame:SetPoint("TOP", bossGroup, "TOP", 0, -16 - offset)
+                row.layoutOffset = offset
+            end
             offset = offset + ROW_HEIGHT + (row.debuffHeight or 0)
         end
-        bossGroup:SetHeight(math.max(47, offset - 1))
-        DFRL.layout.Place("bossBars", bossGroup)
+        local height = math.max(47, offset - 1)
+        if not T.NearlyEqual(bossGroup:GetHeight(), height) then
+            bossGroup:SetHeight(height)
+            DFRL.layout.Place("bossBars", bossGroup)
+        end
     end
 
     local function UpdateDebuffRows(phase, reflow)
@@ -1958,7 +2026,14 @@ DFRL:NewMod("RunTimers", 5, function()
             if row.debuffHeight ~= height then reflow = true end
             row.debuffHeight = height
         end
-        if reflow then ReflowRows() end
+        if reflow or render.rowsDirty then
+            if bossGroup:IsVisible() then
+                ReflowRows()
+                render.rowsDirty = nil
+            else
+                render.rowsDirty = true
+            end
+        end
     end
 
     local function UpdateRows(phase)
@@ -1975,27 +2050,37 @@ DFRL:NewMod("RunTimers", 5, function()
             end
         end
         local count = table.getn(entries)
-        if count > 0 then
-            bossGroup:Show()
-        else
-            bossGroup:Hide()
+        local shown = count > 0
+        if render.bossShown ~= shown then
+            render.bossShown = shown
+            if shown then bossGroup:Show() else bossGroup:Hide() end
         end
-        rowOrder = {}
-        for _, entry in ipairs(entries) do
+        local paint = bossGroup:IsVisible()
+        render.rowsPresentationDirty = not paint and shown or nil
+        local reflow = count ~= table.getn(rowOrder)
+        for index, entry in ipairs(entries) do
             local row = activeRows[entry.key]
             if not row then
                 row = NewRow()
                 activeRows[entry.key] = row
+                reflow = true
             end
             row.key = entry.key
             row.id = entry.id
-            row.bar:SetValue(math.min(1, entry.hp / entry.maximum))
-            row.name:SetText(entry.name)
-            row.health:SetText(T.EncounterHealthText(entry.hp, entry.maximum))
-            row.frame:Show()
-            table.insert(rowOrder, row)
+            if paint then
+                local value = math.min(1, entry.hp / entry.maximum)
+                if row.value ~= value then row.bar:SetValue(value) end
+                row.value = value
+                T.SetTextIfChanged(row.name, entry.name)
+                T.SetTextIfChanged(row.health, T.EncounterHealthText(entry.hp, entry.maximum))
+                if not row.frame:IsShown() then row.frame:Show() end
+            end
+            if rowOrder[index] ~= row then reflow = true end
+            rowOrder[index] = row
         end
-        UpdateDebuffRows(phase, true)
+        for index = count + 1, table.getn(rowOrder) do rowOrder[index] = nil end
+        table.setn(rowOrder, count)
+        UpdateDebuffRows(phase, reflow)
         if not TakeOver("bosses") then
             ClearRows()
             Restore("bosses")
@@ -2055,17 +2140,30 @@ DFRL:NewMod("RunTimers", 5, function()
         if IsNumber(seconds) then previousTime = seconds end
         local scheduled = maximum and ScheduleMarkers(maximum, phase) or nil
         if IsNumber(seconds) and maximum then
-            runBar:SetMinMaxValues(0, maximum)
-            runBar:SetValue(math.min(maximum, seconds))
-            local atLimit = seconds >= maximum
-            SetRunAppearance(atLimit)
-            UpdateRunFlow(seconds, maximum)
-            UpdateClockCaptions(seconds, maximum, atLimit)
-            -- Missing schedule replay affects only spawn markers, never a clock
-            -- whose native elapsed time and duration have already recovered.
-            if refreshRows or not run:IsShown() or not scheduled then UpdateMarkers(maximum, scheduled or {}) end
-            UpdateMarkerStates(atLimit)
-            run:Show()
+            if not render.runShown then
+                render.runShown = true
+                run:Show()
+            end
+            if run:IsVisible() then
+                if render.runMaximum ~= maximum then runBar:SetMinMaxValues(0, maximum) end
+                local value = math.min(maximum, seconds)
+                if render.runValue ~= value then runBar:SetValue(value) end
+                render.runMaximum, render.runValue = maximum, value
+                local atLimit = seconds >= maximum
+                SetRunAppearance(atLimit)
+                UpdateRunFlow(seconds, maximum)
+                UpdateClockCaptions(seconds, maximum, atLimit)
+                -- Missing schedule replay affects only spawn markers, never a clock
+                -- whose native elapsed time and duration have already recovered.
+                if refreshRows or render.clockHidden or render.markerEntries ~= scheduled or render.markerMaximum ~= maximum then
+                    UpdateMarkers(maximum, scheduled or render.emptySchedule)
+                    render.markerEntries, render.markerMaximum = scheduled, maximum
+                end
+                UpdateMarkerStates(atLimit)
+                render.clockHidden = nil
+            else
+                render.clockHidden = true
+            end
             if not TakeOver("clock") then ReleaseClock() end
         else
             ReleaseClock()
@@ -2087,6 +2185,7 @@ DFRL:NewMod("RunTimers", 5, function()
         end
         UpdateRunBoundary(phase)
         UpdateClock(phase)
+        if render.rowsPresentationDirty and bossGroup:IsVisible() then refreshRows = true end
         -- A missing zone/clock snapshot must not block valid counters or
         -- encounter lists from reconnecting to their own native HUD parts.
         if refreshRows then

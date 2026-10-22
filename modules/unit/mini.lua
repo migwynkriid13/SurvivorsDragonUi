@@ -19,36 +19,48 @@ DFRL:NewMod("Mini", 1, function()
         return values
     end
 
+    local function SetHealthColor(bar, red, green, blue)
+        local currentRed, currentGreen, currentBlue, currentAlpha = bar:GetStatusBarColor()
+        if
+            not T.NearlyEqual(currentRed, red)
+            or not T.NearlyEqual(currentGreen, green)
+            or not T.NearlyEqual(currentBlue, blue)
+            or (currentAlpha and not T.NearlyEqual(currentAlpha, 1))
+        then
+            bar:SetStatusBarColor(red, green, blue)
+        end
+    end
+
     local function UpdateValues(values)
         local unit = values.unit
         if not UnitExists(unit) or (unit == "targettarget" and (UnitIsDead(unit) or UnitIsGhost(unit))) then
-            values.health:SetText("")
-            if values.mana then values.mana:SetText("") end
+            T.SetTextIfChanged(values.health, "")
+            if values.mana then T.SetTextIfChanged(values.mana, "") end
             return
         end
-        values.health:SetText(UnitHealth(unit))
+        T.SetTextIfChanged(values.health, UnitHealth(unit))
         if values.mana then
             if UnitManaMax(unit) > 0 then
-                values.mana:SetText(UnitMana(unit))
+                T.SetTextIfChanged(values.mana, UnitMana(unit))
             else
-                values.mana:SetText("")
+                T.SetTextIfChanged(values.mana, "")
             end
         end
         if unit == "targettarget" then
             if not UnitIsPlayer(unit) and UnitIsTapped(unit) and not UnitIsTappedByPlayer(unit) then
-                values.healthBar:SetStatusBarColor(0.5, 0.5, 0.5)
+                SetHealthColor(values.healthBar, 0.5, 0.5, 0.5)
                 return
             end
             local reaction = UnitReaction("player", unit)
             if reaction and reaction <= 3 then
-                values.healthBar:SetStatusBarColor(1, 0, 0)
+                SetHealthColor(values.healthBar, 1, 0, 0)
             elseif reaction == 4 then
-                values.healthBar:SetStatusBarColor(1, 1, 0)
+                SetHealthColor(values.healthBar, 1, 1, 0)
             else
-                values.healthBar:SetStatusBarColor(0, 1, 0)
+                SetHealthColor(values.healthBar, 0, 1, 0)
             end
         elseif string.find(unit, "party") then
-            values.healthBar:SetStatusBarColor(0, 1, 0)
+            SetHealthColor(values.healthBar, 0, 1, 0)
         end
     end
 
@@ -189,7 +201,7 @@ DFRL:NewMod("Mini", 1, function()
                     local preview, clipped = DFRL.locale.Preview(name, 8)
                     name = preview .. (clipped and "..." or "")
                 end
-                TargetofTargetFrame.name:SetText(name or DFRL.locale.Text("No target"))
+                T.SetTextIfChanged(TargetofTargetFrame.name, name or DFRL.locale.Text("No target"))
             end
             UpdateValues(target)
         end
@@ -259,6 +271,14 @@ DFRL:NewMod("Mini", 1, function()
             UpdateValues(values)
         end
     end
+    local unitEvents = {
+        UNIT_HEALTH = true,
+        UNIT_MANA = true,
+        UNIT_ENERGY = true,
+        UNIT_RAGE = true,
+        UNIT_FOCUS = true,
+        UNIT_FACTION = true,
+    }
     if table.getn(units) == 0 then return end
     local frame = CreateFrame("Frame")
     frame:RegisterEvent("PLAYER_ENTERING_WORLD")
@@ -272,6 +292,15 @@ DFRL:NewMod("Mini", 1, function()
     frame:RegisterEvent("PLAYER_TARGET_CHANGED")
     frame:RegisterEvent("UNIT_TARGET")
     frame:RegisterEvent("UNIT_FACTION")
-    frame:SetScript("OnEvent", UpdateAll)
+    frame:SetScript("OnEvent", function()
+        if unitEvents[event] and type(arg1) == "string" and arg1 ~= "" then
+            for _, values in ipairs(units) do
+                if values.unit == arg1 or UnitIsUnit(values.unit, arg1) then UpdateValues(values) end
+            end
+        else
+            -- Ownership and target transitions can invalidate several aliases.
+            UpdateAll()
+        end
+    end)
     UpdateAll()
 end)

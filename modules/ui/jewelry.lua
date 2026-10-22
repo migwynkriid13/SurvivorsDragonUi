@@ -86,6 +86,7 @@ DFRL:NewMod("Jewelry", 4, function()
 
     local function Number(value) return type(value) == "number" and value - value == 0 end
     local hoveredSlot, effectPanel, effectText, scanner, scannerParent
+    local effectSlot, effectValue, effectScale
     local SCANNER_NAME = "SurvivorsDragonUiJewelryScanner"
     local EFFECT_MAX_WIDTH, EFFECT_PADDING = 272, 10
     local EFFECT_PREFIXES = {
@@ -306,9 +307,10 @@ DFRL:NewMod("Jewelry", 4, function()
     local function HideTooltip(slot)
         if hoveredSlot ~= slot then return end
         hoveredSlot = nil
+        effectSlot, effectValue, effectScale = nil, nil, nil
         if effectPanel then
             effectPanel:Hide()
-            effectText:SetText("")
+            T.SetTextIfChanged(effectText, "")
         end
     end
     local function ShowTooltip(slot)
@@ -316,14 +318,20 @@ DFRL:NewMod("Jewelry", 4, function()
         hoveredSlot = slot
         local text = ReadEffects(slot)
         if not text then
+            effectSlot, effectValue, effectScale = nil, nil, nil
             if effectPanel then
                 effectPanel:Hide()
-                effectText:SetText("")
+                T.SetTextIfChanged(effectText, "")
             end
             return
         end
         local panel = GetEffectPanel()
-        effectText:SetText(text)
+        local scale = panel:GetEffectiveScale()
+        if effectSlot == slot and effectValue == text and T.NearlyEqual(effectScale, scale) then
+            if not panel:IsShown() then panel:Show() end
+            return
+        end
+        T.SetTextIfChanged(effectText, text)
         -- Native natural width is independent of the previous wrapping width,
         -- so the same pooled card can shrink and grow when changing items.
         local textWidth = effectText:GetStringWidth()
@@ -340,6 +348,7 @@ DFRL:NewMod("Jewelry", 4, function()
         panel:SetHeight(math.max(14, effectText:GetHeight()) + EFFECT_PADDING * 2)
         panel:ClearAllPoints()
         panel:SetPoint("BOTTOMLEFT", slot.button, "TOPLEFT", -EFFECT_PADDING, 12)
+        effectSlot, effectValue, effectScale = slot, text, scale
         panel:Show()
     end
     for index, name in ipairs(SLOT_NAMES) do
@@ -365,22 +374,25 @@ DFRL:NewMod("Jewelry", 4, function()
         -- Ordinary cropped texture strips leave real transparency outside the
         -- icon's circle, without a black corner cover or retail texture masks.
         for part = 1, 16 do
-            local top, bottom = (part - 1) * 2, part * 2
-            local edge = math.max(math.abs(top - 16), math.abs(bottom - 16))
-            local half = math.sqrt(math.max(0, 256 - edge * edge))
-            if half > 0 then
-                local strip = button:CreateTexture(nil, "ARTWORK")
-                strip:SetWidth(half * 2)
-                strip:SetHeight(2)
-                strip:SetPoint("TOPLEFT", button, "TOPLEFT", 16 - half, -top)
-                strip:SetTexCoord(
-                    iconInset + (16 - half) * iconSpan / ICON_SIZE,
-                    iconInset + (16 + half) * iconSpan / ICON_SIZE,
-                    iconInset + top * iconSpan / ICON_SIZE,
-                    iconInset + bottom * iconSpan / ICON_SIZE
-                )
-                strip:Hide()
-                table.insert(slot.strips, strip)
+            -- The two central rows share their width and one affine UV span.
+            if part ~= 9 then
+                local top, bottom = (part - 1) * 2, part == 8 and 18 or part * 2
+                local edge = math.max(math.abs(top - 16), math.abs(bottom - 16))
+                local half = math.sqrt(math.max(0, 256 - edge * edge))
+                if half > 0 then
+                    local strip = button:CreateTexture(nil, "ARTWORK")
+                    strip:SetWidth(half * 2)
+                    strip:SetHeight(bottom - top)
+                    strip:SetPoint("TOPLEFT", button, "TOPLEFT", 16 - half, -top)
+                    strip:SetTexCoord(
+                        iconInset + (16 - half) * iconSpan / ICON_SIZE,
+                        iconInset + (16 + half) * iconSpan / ICON_SIZE,
+                        iconInset + top * iconSpan / ICON_SIZE,
+                        iconInset + bottom * iconSpan / ICON_SIZE
+                    )
+                    strip:Hide()
+                    table.insert(slot.strips, strip)
+                end
             end
         end
         local cooldown = button:CreateTexture(nil, "OVERLAY")

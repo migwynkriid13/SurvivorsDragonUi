@@ -241,7 +241,7 @@ DFRL:NewMod("Bars", 1, function()
         local overlay = button.DFRL_cooldownNumber
         local slot = ActionButton_GetPagedID(button)
         if not button:IsVisible() or not HasAction(slot) or type(GetActionCooldown) ~= "function" then
-            overlay:Hide()
+            if overlay:IsShown() then overlay:Hide() end
             return
         end
 
@@ -255,24 +255,32 @@ DFRL:NewMod("Bars", 1, function()
             or not (duration > 0)
             or enabled ~= 1
         then
-            overlay:Hide()
+            if overlay:IsShown() then overlay:Hide() end
             return
         end
         local remaining = duration - (now - start)
         if not (remaining > 0 and remaining <= duration) then
-            overlay:Hide()
+            if overlay:IsShown() then overlay:Hide() end
             return
         end
 
-        overlay.text:SetText(FormatCooldown(remaining))
+        T.SetTextIfChanged(overlay.text, FormatCooldown(remaining))
+        local red, green, blue = 1, 1, 1
         if remaining < 1 then
-            overlay.text:SetTextColor(1, 85 / 255, 85 / 255)
+            green, blue = 85 / 255, 85 / 255
         elseif math.ceil(remaining) < 5 then
-            overlay.text:SetTextColor(1, 1, 85 / 255)
-        else
-            overlay.text:SetTextColor(1, 1, 1)
+            blue = 85 / 255
         end
-        overlay:Show()
+        local currentRed, currentGreen, currentBlue, currentAlpha = overlay.text:GetTextColor()
+        if
+            not T.NearlyEqual(currentRed, red)
+            or not T.NearlyEqual(currentGreen, green)
+            or not T.NearlyEqual(currentBlue, blue)
+            or (currentAlpha and not T.NearlyEqual(currentAlpha, 1))
+        then
+            overlay.text:SetTextColor(red, green, blue)
+        end
+        if not overlay:IsShown() then overlay:Show() end
         return remaining
     end
 
@@ -297,7 +305,8 @@ DFRL:NewMod("Bars", 1, function()
         local function ClearNumbers()
             finishing = false
             for _, button in ipairs(DFRL.actionButtons) do
-                button.DFRL_cooldownNumber:Hide()
+                local overlay = button.DFRL_cooldownNumber
+                if overlay:IsShown() then overlay:Hide() end
             end
         end
         local function RefreshNumbers()
