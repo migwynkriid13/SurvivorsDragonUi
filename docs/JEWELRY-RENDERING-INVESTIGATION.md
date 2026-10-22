@@ -30,11 +30,11 @@ use vertically flipped source images with negative V coordinates. The fourteen
 strips have seven symmetric width pairs. Giving each pair a separate,
 identical-pixel alias makes its horizontal clamp constant within that alias.
 
-| Five different icons | Visible texture regions | Material groups |
-| --- | ---: | ---: |
-| Current fourteen-strip renderer | 70 | 70 |
-| Vertical subdivision with seven aliases per icon | 210 | 35 |
-| Subdivision on both axes | 630 | 5 |
+| Five different icons                             | Visible texture regions | Material groups |
+| ------------------------------------------------ | ----------------------: | --------------: |
+| Current fourteen-strip renderer                  |                      70 |              70 |
+| Vertical subdivision with seven aliases per icon |                     210 |              35 |
+| Subdivision on both axes                         |                     630 |               5 |
 
 The candidate group counts assume their described alias handles and identical
 clamp states; they are not measurements of the live frame or total HUD. Extra
@@ -105,6 +105,15 @@ equivalence from two stated float32 interpolation models across all fourteen
 strips, scales from 0.4 through 3, physical pixel phases and translated origins.
 It reports arithmetic discrepancies without treating a UV tolerance as visual
 acceptance. It does not execute addon code, decode icons or emulate the GPU.
+
+Actions run [39805113860](https://github.com/migwynkriid13/SurvivorsDragonUi/actions/runs/39805113860)
+reported zero delta in 2,268 exact rational axis comparisons. Each of its four
+float32 models sampled 2,354,174 physical pixel centers. They reported nonzero
+coordinate differences, with the largest about 0.000483 source texels; even cuts
+derived from uploaded UV boundaries differed by up to about 0.000121 source
+texels. These are arithmetic differences in the stated CPU models, not observed
+visible errors or evidence of a performance regression. They prevent treating
+the exact-arithmetic identity alone as a pixel-parity result.
 
 No prepared native item images, alternate renderer, client changes or game
 execution are included. The five-different-icons rendering request remains
