@@ -651,8 +651,11 @@ DFRL:NewMod("Jewelry", 4, function()
             if DFRL.display.Get("equippedJewelry") and docked then
                 top = math.max(top, actionDefaults.buttonWidth * 40 / 36)
             end
-            if displayGeometry.region ~= region or displayGeometry.bar ~= DFRL.mainBar
-                or displayGeometry.sideInset ~= actionDefaults.sideInset or displayGeometry.top ~= top
+            if
+                displayGeometry.region ~= region
+                or displayGeometry.bar ~= DFRL.mainBar
+                or displayGeometry.sideInset ~= actionDefaults.sideInset
+                or displayGeometry.top ~= top
             then
                 region:SetPoint("TOPLEFT", DFRL.mainBar, "TOPLEFT", -actionDefaults.sideInset, top)
                 displayGeometry.region, displayGeometry.bar = region, DFRL.mainBar
