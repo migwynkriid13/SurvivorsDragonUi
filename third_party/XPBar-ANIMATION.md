@@ -27,7 +27,7 @@ The inspected XP paths below set the status-bar value directly; they do not
 supply the requested gradual XP fill. They were used for comparison, with no
 code or new artwork imported:
 
-- [NeticSoul/DragonUI mainbars](https://github.com/NeticSoul/DragonUI/blob/0b6439e402cdf5c488f515bb93431bc18403e4cf/DragonUI/modules/mainbars.lua), `UpdateCustomXpBar`: direct XP SetValue.
+- [NeticSoul/DragonUI mainbars](https://github.com/NeticSoul/DragonUI/blob/0b6439e402cdf5c488f515bb93431bc18403e4cf/DragonUI/modules/mainbars.lua), `UpdateDragonflightUIXPBar`: direct XP SetValue.
 - [Karl-HeinzSchneider/WoW-DragonflightUI status bar mixin](https://github.com/Karl-HeinzSchneider/WoW-DragonflightUI/blob/f59cbc3f7010ef692fb983c7c3c848c4b70f56ce/Mixin/Statusbar.mixin.lua): direct XP SetValue.
 - [Turtle-Dragonflight XP bar](https://github.com/DustinChecketts/Turtle-Dragonflight/blob/b2c62e9095e1c859bff0209db09f4ff5b9884f5a/tXPbar.lua): direct normalized XP SetValue.
 - [DragonflightUI-Reforged XP module](https://github.com/Stormhand-dev/DragonflightUI-Reforged/blob/2a8d2ffb3d9262f0d2af2071b9b47ef27f76f7f8/modules/xprep/xprep.lua): direct XP SetValue. Its XP texture family matches the destination's existing Reloaded foundation.

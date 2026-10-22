@@ -118,18 +118,19 @@ DFRL:NewMod("Xprep", 1, function()
         if not Number(level) or level < 1 then level = nil end
         desired = currentXP / maximumXP
         bar:SetMinMaxValues(0, 1)
-        local canAnimate = animate and not editing and attached and bar:IsVisible() and previousXP and previousLevel and level
+        local canAnimate = animate
+            and not editing
+            and attached
+            and bar:IsVisible()
+            and previousXP
+            and previousLevel
+            and level
         if canAnimate and level == previousLevel + 1 and not wrapping then
             -- One observed level transition: finish the known old bar, then show
             -- the received new-level fraction. Never invent intermediate levels.
             wrapping = true
             BeginGain(1)
-        elseif
-            canAnimate
-            and level == previousLevel
-            and maximumXP == previousMaximum
-            and currentXP >= previousXP
-        then
+        elseif canAnimate and level == previousLevel and maximumXP == previousMaximum and currentXP >= previousXP then
             if not wrapping and currentXP > previousXP then BeginGain(desired) end
         else
             StopAnimation()
