@@ -82,7 +82,8 @@ DFRL:NewMod("RunTimers", 5, function()
             backgroundCenter:SetPoint("LEFT", backgroundLeft, "RIGHT", 0, 0)
             backgroundCenter:SetPoint("RIGHT", backgroundRight, "LEFT", 0, 0)
         else
-            local background = Texture(frame, "BackgroundFixed", "BACKGROUND", BAR_WIDTH + 4, 18, (BAR_WIDTH + 4) / 512, 18 / 32)
+            local background =
+                Texture(frame, "BackgroundFixed", "BACKGROUND", BAR_WIDTH + 4, 18, (BAR_WIDTH + 4) / 512, 18 / 32)
             background:SetPoint("LEFT", frame, "LEFT", 6, 0)
         end
 

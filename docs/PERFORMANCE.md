@@ -62,6 +62,13 @@ addon Lua; these are source-model results, not measured GPU counters. Failed
 texture assignments retain that slot's last successful artwork; recycling never
 borrows another slot's old pixels.
 
+The first Actions run evaluated 541 five-slot equality/rank cases: 421 improved
+and 120 were unchanged in isolation. Three fixed peer scenarios had no modeled
+regression. In the fourth, seven later peers sharing the first jewelry texture,
+418 improved, 120 were unchanged and three increased by up to three runs. The
+model therefore demonstrates useful reductions without proving an improvement
+for every possible shared-layer composition.
+
 The native portrait conversion used by pet frames is not interchangeable here.
 The reviewed client masks portrait pixels before applying texture coordinates;
 the jewelry crop would enlarge that circle, and the partially transparent gold
