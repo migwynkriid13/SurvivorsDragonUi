@@ -1,29 +1,36 @@
 # Run banners
 
-`modules/ui/banners.lua` displays native banner events below the run timer. It
+`modules/ui/banners.lua` displays native notices in its own **Banners** frame. It
 uses the same resolved DEFAULT face, size 12, OUTLINE and black shadow as chat,
 through the shared helpers in `core/fonts.lua`. The supplied translated text is
 displayed unchanged. The native `boss` flag selects red text; other notices use
-gold. No icon, backdrop, sound, custom translation or gameplay lookup is added.
+gold. No icon, backdrop, sound or gameplay lookup is added. The Layout caption
+uses the existing fourteen-language source/runtime catalogs.
 
 ## Placement and lifetime
 
-Three passive pooled labels are attached six units below the run pill, centered
+Three passive pooled labels share an independent UIParent-owned root, centered
 in a 420-unit text column. Native wrapping and measured label height determine
 the space between rows. They fade in over 0.15 seconds and fade out over 0.6
 seconds after 3.5 seconds. UI time controls only their cosmetic lifetime.
 Cosmetic painting is limited to 30 Hz; ownership retries run at five Hz.
 
-The labels share the Run timer group's position, scale, Hide frame, drafts,
-Confirm, Cancel, discard and reset behavior. The edit region includes the
-reserved banner area and expands for taller measured messages. Timer font
-settings affect the timer captions only; banners retain chat's shared style.
-There is no new layout record or SavedVariable.
+Select **Banners** through `/sdui` or `/sdui lock` to move, scale or hide this
+group independently. The shared Layout editor supplies numeric coordinates,
+drafts, Confirm, Cancel, discard and both full resets. Only its confirmed
+geometry/visibility is saved under `SurvivorsDragonUiLayout.banners`; there is no
+new SavedVariable or persisted message data. Bounds fit the current stack with
+a 16-unit empty minimum. Timer font settings affect the timer captions only;
+banners retain chat's shared style.
 
-The default boss-health group starts below the reserved banner area. Its
-confirmed and draft geometry remains independent and is not rewritten. Existing
-custom boss positions may need to be moved with Layout. Full resets clear the
-banner rows and queue and use the new default spacing.
+The timer's original edit bounds and the boss group's original default top
+offset of 77 units are restored. Banners default to 130 units below the screen
+top, beneath the first default boss row. They reserve no space inside either
+group and do not rewrite confirmed or draft geometry. Their default top remains
+stable as measured text height changes; custom positions retain their shared
+Layout center semantics. Move the independent banners if a taller boss stack or
+a custom HUD position occupies the same area. Full resets clear notices and
+restore these independent defaults.
 
 Rows retain occurrence order. A session queue holds the latest 32 waiting
 publications; overflow retires its oldest waiting entry. The most recent 128
@@ -71,12 +78,14 @@ and dispatch. This addon does not install another raw event producer.
 
 ## Ownership and cleanup
 
-Native takeover requires initialized fonts, attachment to the run pill, a ready
-custom clock, all four public banner/HUD functions and successful callback
-registration. Only then is `AZS_SetHudShown("banners", false)` applied and checked
-through `AZS_IsHudShown("banners")`. Missing APIs or an unready/faulted view leave
-native visibility available. An intentionally hidden Run timer also hides its
-banner children, while their cosmetic lifetimes continue normally.
+Native takeover requires initialized fonts, the registered independent Layout
+root, all four public banner/HUD functions and successful callback registration.
+Only then is `AZS_SetHudShown("banners", false)` applied and checked through
+`AZS_IsHudShown("banners")`. Missing APIs or an unready/faulted view leave native
+visibility available. Registration no longer waits for a valid run clock, so
+opening notices can arrive before native run snapshots. Hiding the Run timer
+does not hide Banners; its own Hide frame choice applies while cosmetic
+lifetimes continue normally.
 
 `core/hud.lua` shares the capture/write/observe/release logic with loot notices.
 It distinguishes an uncaptured preference from an originally hidden preference,
@@ -84,11 +93,49 @@ guards synchronous CVar callbacks and retains later external `hudBanners`
 choices for restoration. The last visible external value also wins on release
 when native visibility no longer matches this addon's suppression.
 
-Clock release, world leave, logout and the wrapped real `ReloadUI` unregister
+World leave, logout and the wrapped real `ReloadUI` unregister
 the callback, clear the queue and labels, and restore the captured/latest native
 preference before reload saving. New `AZSZONE` messages clear transient notices
 without reading native tables before their parser. Both full resets clear them
-through the existing timer reset. No banner data is saved.
+through their own shared Layout reset callback. Clock release does not release
+this independent group. No banner data is saved.
+
+## Legacy raid-boss notices
+
+The large cream notices use a second native display surface. They are not the
+custom HUD controlled by `hudBanners`. Read-only extraction from the installed
+`Data/patch.MPQ` recovered:
+
+- `Interface\\FrameXML\\ChatFrame.lua`, 73,083 bytes, SHA-256
+  `f224ac3ec8805da02a8e1b8f70bb19fe956fc8c2b451a3692afc17c28f715f9d`.
+  Its lines 1453–1457 format the received raid-boss emote and call
+  `RaidBossEmoteFrame:AddMessage(body, info.r, info.g, info.b, 1.0)`.
+- `Interface\\FrameXML\\RaidWarning.xml`, 1,241 bytes, SHA-256
+  `9e5cba537a3cc0cf91b447ae30d60efe066abba3285b52f7b518c19094241860`.
+  It defines that separate native MessageFrame with `GameFontNormalHuge`.
+
+While the replacement is active, a reversible per-frame `AddMessage` wrapper
+redirects its already formatted text into the same bounded queue. This includes
+zone openings, waves, elite arrivals, lair returns and other legacy warnings.
+No notice is reconstructed from a zone subtitle, clock, chat history or gameplay
+state. Unknown native text stays unchanged. The two exact native templates for
+boss entry and guardian death already have official API publications; their
+legacy display companions are suppressed rather than shown a second time.
+Template matching uses the existing native catalogs in all fourteen languages,
+without entity-name lists, fuzzy wording or temporal pairing.
+
+The bridge reuses chat capture's delivery decision in a separate `banners`
+scope, with the originating chat frame as source. Duplicate deliveries across
+chat frames collapse, while repeated identical messages on the same frame stay
+distinct. The official API stream still uses only its native IDs. Ordinary
+chat, raw capture, monster yells and the separate raid-warning frame are not
+rewritten by this display wrapper.
+
+Takeover clears existing legacy messages when the native `Clear` method is
+available, without replaying them. Release restores the original `AddMessage`
+only if the wrapper still owns that slot. A later external wrapper is retained;
+an old wrapper in its chain becomes a pass-through after release. A failed
+redirect releases takeover and forwards the failed call to the native method.
 
 The native handler list is traversed directly. A rendering failure inside a
 callback releases native visibility immediately but defers unregistration to
@@ -114,10 +161,13 @@ Key retained REA Evidence IDs are
 compiler profile; original Win64 instructions govern argument interpretation.
 These addresses are evidence locations, not runtime hooks or callable APIs.
 
-The final native drawing consumer and complete event drain were not recovered.
-Static source and native instructions establish the API contract, not observed
-delivery or visual parity. Menu-only achievement JSON does not establish Lua
-callbacks outside an initialized game client.
+The original API recovery did not recover the final custom-HUD drawing consumer
+or complete event drain. The later legacy FrameXML extraction identifies the
+second surface separately. User screenshots establish successful custom rune,
+guardian and magnet notices alongside a remaining large native guardian notice;
+the bridge and independent layout changes still need in-game confirmation.
+Menu-only achievement JSON does not establish Lua callbacks outside an
+initialized game client.
 
 The TOC and `packaging/runtime-files.json` include the shared owner and banner
 module. Local tests, syntax checks, formatters and addon/game execution remain

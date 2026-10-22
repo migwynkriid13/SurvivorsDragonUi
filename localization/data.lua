@@ -2,6 +2,7 @@
 DFRL.locale.data = {
     en = {
         ui = {
+            ["Banners"] = "Banners",
             ["Boss in: %s"] = "Boss in: %s",
             ["You received"] = "You received",
             ["Loot notifications"] = "Loot notifications",
@@ -419,6 +420,7 @@ DFRL.locale.data = {
     },
     pl = {
         ui = {
+            ["Banners"] = "Banery",
             ["Boss in: %s"] = "Boss za: %s",
             ["You received"] = "Otrzymano",
             ["Loot notifications"] = "Powiadomienia o łupach",
@@ -860,6 +862,7 @@ DFRL.locale.data = {
     },
     cs = {
         ui = {
+            ["Banners"] = "Oznámení",
             ["Boss in: %s"] = "Boss za: %s",
             ["You received"] = "Získali jste",
             ["Loot notifications"] = "Oznámení o kořisti",
@@ -1752,6 +1755,7 @@ DFRL.locale.data = {
     },
     de = {
         ui = {
+            ["Banners"] = "Banner",
             ["Boss in: %s"] = "Boss in: %s",
             ["You received"] = "Ihr habt erhalten",
             ["Loot notifications"] = "Beutebenachrichtigungen",
@@ -2199,6 +2203,7 @@ DFRL.locale.data = {
     },
     pt = {
         ui = {
+            ["Banners"] = "Avisos",
             ["Boss in: %s"] = "Chefe em: %s",
             ["You received"] = "Você recebeu",
             ["Loot notifications"] = "Notificações de saque",
@@ -2631,6 +2636,7 @@ DFRL.locale.data = {
     },
     es = {
         ui = {
+            ["Banners"] = "Avisos",
             ["Boss in: %s"] = "Jefe en: %s",
             ["You received"] = "Has recibido",
             ["Loot notifications"] = "Notificaciones de botín",
@@ -3066,6 +3072,7 @@ DFRL.locale.data = {
     },
     fr = {
         ui = {
+            ["Banners"] = "Annonces",
             ["Boss in: %s"] = "Boss dans : %s",
             ["You received"] = "Vous avez reçu",
             ["Loot notifications"] = "Notifications de butin",
@@ -3528,6 +3535,7 @@ DFRL.locale.data = {
     },
     ro = {
         ui = {
+            ["Banners"] = "Anunțuri",
             ["Boss in: %s"] = "Boss în: %s",
             ["You received"] = "Ai primit",
             ["Loot notifications"] = "Notificări de pradă",
@@ -3960,6 +3968,7 @@ DFRL.locale.data = {
     },
     tr = {
         ui = {
+            ["Banners"] = "Duyurular",
             ["Boss in: %s"] = "Bossa kalan: %s",
             ["You received"] = "Aldın",
             ["Loot notifications"] = "Ganimet bildirimleri",
@@ -4389,6 +4398,7 @@ DFRL.locale.data = {
     },
     ru = {
         ui = {
+            ["Banners"] = "Объявления",
             ["Boss in: %s"] = "Босс через: %s",
             ["You received"] = "Вы получили",
             ["Loot notifications"] = "Уведомления о добыче",
@@ -4908,6 +4918,7 @@ DFRL.locale.data = {
     },
     uk = {
         ui = {
+            ["Banners"] = "Оголошення",
             ["Boss in: %s"] = "Бос через: %s",
             ["You received"] = "Ви отримали",
             ["Loot notifications"] = "Сповіщення про здобич",
@@ -5403,6 +5414,7 @@ DFRL.locale.data = {
     },
     zh = {
         ui = {
+            ["Banners"] = "通告",
             ["Boss in: %s"] = "首领出现倒计时：%s",
             ["You received"] = "你获得了",
             ["Loot notifications"] = "拾取通知",
@@ -5823,6 +5835,7 @@ DFRL.locale.data = {
     },
     ja = {
         ui = {
+            ["Banners"] = "通知",
             ["Boss in: %s"] = "ボス出現まで: %s",
             ["You received"] = "獲得しました",
             ["Loot notifications"] = "戦利品通知",
@@ -6276,6 +6289,7 @@ DFRL.locale.data = {
     },
     ko = {
         ui = {
+            ["Banners"] = "알림",
             ["Boss in: %s"] = "우두머리 등장까지: %s",
             ["You received"] = "획득한 아이템",
             ["Loot notifications"] = "전리품 알림",

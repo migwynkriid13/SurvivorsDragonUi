@@ -65,8 +65,10 @@ were changed for this update.
 The same embedded API adds `AZS_RegisterBannerHandler` and
 `AZS_UnregisterBannerHandler`, delivering banner tables with `id`, `kind`, `boss`,
 `name`, `text` and receipt `time` even when native banners are hidden.
-`AZS_BANNERS` retains the newest 20 entries. These are available for future banner
-work; the timer fix does not register a handler or replace native banners.
+`AZS_BANNERS` retains the newest 20 entries. The later replacement in
+[RUN-BANNERS.md](RUN-BANNERS.md) consumes future callbacks and also redirects the
+separate legacy `RaidBossEmoteFrame` display path. Its independent **Banners**
+Layout group leaves the timer bounds and original default boss position intact.
 
 Source fingerprint: installed `AzerothSurvivors.exe`, SHA-256
 `dc0040043fff7995a9137d96509c08debd1dbf8b0125a935273d718c66cb698b`.

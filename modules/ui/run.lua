@@ -543,14 +543,9 @@ DFRL:NewMod("RunTimers", 5, function()
         bossText:SetPoint("BOTTOMRIGHT", run, "TOPRIGHT", overflow, 2)
         local pixel = math.max(runClock.pixel or 0, bossClock.pixel or 0)
         local top = currentFont.showText and currentFont.size + 4 + pixel or 0
-        local bannerWidth, bannerHeight = 0, 0
-        if DFRL.banners then
-            bannerWidth, bannerHeight = DFRL.banners.GetBounds()
-        end
-        local side = math.max(overflow, (bannerWidth - run:GetWidth()) / 2)
         runMoveRegion:ClearAllPoints()
-        runMoveRegion:SetPoint("TOPLEFT", run, "TOPLEFT", -side, top)
-        runMoveRegion:SetPoint("BOTTOMRIGHT", run, "BOTTOMRIGHT", side, -bannerHeight)
+        runMoveRegion:SetPoint("TOPLEFT", run, "TOPLEFT", -overflow, top)
+        runMoveRegion:SetPoint("BOTTOMRIGHT", run, "BOTTOMRIGHT", overflow, 0)
     end
 
     local function PreviewFont(settings)
@@ -1096,7 +1091,6 @@ DFRL:NewMod("RunTimers", 5, function()
     end)
 
     PreviewFont(_G.SurvivorsDragonUiRunFont)
-    if DFRL.banners then DFRL.banners.Attach(run, UpdateRunFontBounds) end
     DFRL.layout.Register("runTimer", run, function()
         run:ClearAllPoints()
         run:SetPoint("TOP", UIParent, "TOP", 0, -30)
@@ -1109,7 +1103,6 @@ DFRL:NewMod("RunTimers", 5, function()
             UpdateRunFontBounds()
         end,
         onReset = function()
-            if DFRL.banners then DFRL.banners.Clear() end
             DFRL.display.Reset()
             _G.SurvivorsDragonUiRunFont = nil
             fontDraft = nil
@@ -1128,14 +1121,7 @@ DFRL:NewMod("RunTimers", 5, function()
     bossGroup:Hide()
     DFRL.layout.Register("bossBars", bossGroup, function()
         bossGroup:ClearAllPoints()
-        local bannerHeight = 0
-        if DFRL.banners then
-            local _
-            _, bannerHeight = DFRL.banners.GetBounds()
-        end
-        -- Reserve the attached banner area in defaults only. Confirmed and
-        -- draft encounter positions retain their independent layout geometry.
-        bossGroup:SetPoint("TOP", UIParent, "TOP", 0, -77 - bannerHeight)
+        bossGroup:SetPoint("TOP", UIParent, "TOP", 0, -77)
     end)
 
     local tally, tallyBar, tallyTitle, tallyOverlay = Pill("DFRL_RunTallyPill", "FillYellow")
@@ -1383,7 +1369,6 @@ DFRL:NewMod("RunTimers", 5, function()
     end
 
     local function ReleaseClock()
-        if DFRL.banners then DFRL.banners.SetClockReady(false) end
         run:Hide()
         ClearEndlessCaption()
         HideRunFlow()
@@ -1955,8 +1940,6 @@ DFRL:NewMod("RunTimers", 5, function()
             run:Show()
             if not TakeOver("clock") then
                 ReleaseClock()
-            elseif DFRL.banners then
-                DFRL.banners.SetClockReady(true)
             end
         else
             ReleaseClock()

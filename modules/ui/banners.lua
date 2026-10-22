@@ -1,23 +1,40 @@
--- Native translated banner events, attached to the run timer without saved state.
+-- Native translated notices with independent, geometry-only Layout controls.
 -- Public API and pinned executable evidence: docs/RUN-BANNERS.md.
 DFRL:NewMod("RunBanners", 4, function()
     local banners = {}
-    local WIDTH, RESERVED_HEIGHT, GAP = 420, 96, 6
+    local WIDTH, MIN_HEIGHT = 420, 16
     local MAX_VISIBLE, MAX_QUEUE, MAX_SEEN = 3, 32, 128
     local FADE_IN, HOLD, FADE_OUT = 0.15, 3.5, 0.6
     local native = T.NewHudOwner("banners", "hudBanners")
     local controller = CreateFrame("Frame")
     local root = CreateFrame("Frame", nil, UIParent)
     root:SetWidth(WIDTH)
-    root:SetHeight(RESERVED_HEIGHT)
+    root:SetHeight(MIN_HEIGHT)
+    root:SetFrameStrata("HIGH")
     root:EnableMouse(false)
     root:Hide()
     local pool, visible, queue, seen, seenOrder = {}, {}, {}, {}, {}
     local visibleCount, queueCount, seenCount, sequence = 0, 0, 0, 0
-    local inWorld, clockReady, attached, active, faulted = true, false, false, false, false
-    local registered, unregister, changedBounds, delivering
-    local age, painted, stackHeight = 0, 0, 0
+    local inWorld, active, faulted = true, false, false
+    local registered, unregister, delivering
+    local legacyFrame, legacyAdd, legacyHook
+    local age, painted = 0, 0
     local OnBanner, Refresh, Update
+    local companions = {}
+
+    -- These two legacy surfaces accompany official boss/guardian publications.
+    -- Select their display source by exact native template, never by an entity
+    -- name, inferred encounter state, approximate wording or a timing window.
+    for _, source in ipairs({
+        "%s enters the battlefield!",
+        "%s is slain! Its lair yields treasure and its strength, and the other guardians grow stronger.",
+    }) do
+        companions[source] = true
+        for _, catalog in pairs(DFRL.locale.data) do
+            local text = catalog.native[source]
+            if text then companions[text] = true end
+        end
+    end
 
     for index = 1, MAX_VISIBLE do
         local label = root:CreateFontString(nil, "OVERLAY")
@@ -39,10 +56,6 @@ DFRL:NewMod("RunBanners", 4, function()
             and type(AZS_IsHudShown) == "function"
             and type(AZS_SetHudShown) == "function"
     end
-    function banners.GetBounds()
-        if not Supported() then return 0, 0 end
-        return WIDTH, GAP + math.max(RESERVED_HEIGHT, stackHeight)
-    end
     local function Reflow()
         table.sort(visible, function(a, b) return a.sequence < b.sequence end)
         local height = 0
@@ -52,10 +65,8 @@ DFRL:NewMod("RunBanners", 4, function()
             row.label:SetPoint("TOP", root, "TOP", 0, -height)
             height = height + math.max(16, row.label:GetHeight()) + 4
         end
-        local previous = stackHeight
-        stackHeight = math.max(0, height - 4)
-        root:SetHeight(math.max(RESERVED_HEIGHT, stackHeight))
-        if previous ~= stackHeight and changedBounds then changedBounds() end
+        root:SetHeight(math.max(MIN_HEIGHT, height - 4))
+        DFRL.layout.Place("banners")
     end
     function banners.Clear()
         for index = 1, MAX_VISIBLE do
@@ -80,9 +91,14 @@ DFRL:NewMod("RunBanners", 4, function()
         table.setn(seenOrder, 0)
         Reflow()
     end
+    local function ReleaseLegacy()
+        if legacyFrame and legacyFrame.AddMessage == legacyHook then legacyFrame.AddMessage = legacyAdd end
+        legacyFrame, legacyAdd, legacyHook = nil, nil, nil
+    end
     local function Release()
         active = false
         root:Hide()
+        ReleaseLegacy()
         if registered and not delivering then
             pcall(unregister, OnBanner)
             registered, unregister = nil, nil
@@ -118,8 +134,20 @@ DFRL:NewMod("RunBanners", 4, function()
         end
         return false
     end
+    local function Enqueue(text, boss, kind, id)
+        sequence = sequence + 1
+        local copy = { id = id, kind = kind, text = text, boss = boss, sequence = sequence }
+        if queueCount == 0 and Push(copy, GetTime()) then return end
+        if queueCount == MAX_QUEUE then
+            table.remove(queue, 1)
+            queueCount = queueCount - 1
+        end
+        queueCount = queueCount + 1
+        queue[queueCount] = copy
+        table.setn(queue, queueCount)
+    end
     local function Receive(entry)
-        if not active or not inWorld or not clockReady or type(entry) ~= "table" then return end
+        if not active or not inWorld or type(entry) ~= "table" then return end
         local id = entry.id
         if type(id) ~= "number" or id < 0 or id - id ~= 0 or id ~= math.floor(id) or seen[id] then return end
         if type(entry.text) ~= "string" or entry.text == "" then return end
@@ -130,18 +158,39 @@ DFRL:NewMod("RunBanners", 4, function()
         seenCount = seenCount + 1
         seenOrder[seenCount], seen[id] = id, true
         table.setn(seenOrder, seenCount)
-        sequence = sequence + 1
-        -- The API shares its original table with history and every handler.
-        -- Copy it; identical text with different native ids remains distinct.
-        local copy = { id = id, kind = entry.kind, text = entry.text, boss = entry.boss == true, sequence = sequence }
-        if queueCount == 0 and Push(copy, GetTime()) then return end
-        if queueCount == MAX_QUEUE then
-            table.remove(queue, 1)
-            queueCount = queueCount - 1
+        -- Copy the API table; distinct ids with equal text remain distinct.
+        Enqueue(entry.text, entry.boss == true, entry.kind, id)
+    end
+    local function RedirectLegacy()
+        local frame, chat = RaidBossEmoteFrame, DFRL.CleanerChat
+        if not frame or type(frame.AddMessage) ~= "function" or not chat or type(chat.FirstDelivery) ~= "function" then
+            return
         end
-        queueCount = queueCount + 1
-        queue[queueCount] = copy
-        table.setn(queue, queueCount)
+        if legacyFrame == frame then return end
+        ReleaseLegacy()
+        local original, hook = frame.AddMessage
+        local function ReceiveLegacy(source, text, eventName, speaker, message)
+            if eventName == "CHAT_MSG_RAID_BOSS_EMOTE" then
+                if companions[message] or not chat.FirstDelivery(source, text, eventName, speaker, message, "banners") then
+                    return
+                end
+            end
+            -- Forward the already formatted native display call. Do not
+            -- reconstruct a notice from zone, chat history or gameplay.
+            Enqueue(text, false, "legacy")
+        end
+        hook = function(owner, text, r, g, b, id, addToStart)
+            if active and legacyHook == hook and type(text) == "string" and text ~= "" then
+                local ok, message = pcall(ReceiveLegacy, this or owner, text, event, arg2, arg1)
+                if ok then return end
+                Failed(message)
+            end
+            return original(owner, text, r, g, b, id, addToStart)
+        end
+        legacyFrame, legacyAdd, legacyHook = frame, original, hook
+        frame.AddMessage = hook
+        -- Retire only notices already visible at takeover; never replay them.
+        if type(frame.Clear) == "function" then frame:Clear() end
     end
     OnBanner = function(entry)
         delivering = true
@@ -151,7 +200,7 @@ DFRL:NewMod("RunBanners", 4, function()
         if not ok and geterrorhandler then geterrorhandler()(message) end
     end
     Refresh = function()
-        if not inWorld or not clockReady or not attached or faulted or not Supported() then
+        if not inWorld or faulted or not Supported() then
             if active or registered or native.IsCaptured() then Release() end
             return false
         end
@@ -169,6 +218,7 @@ DFRL:NewMod("RunBanners", 4, function()
             return false
         end
         active = true
+        RedirectLegacy()
         root:Show()
         return true
     end
@@ -213,22 +263,10 @@ DFRL:NewMod("RunBanners", 4, function()
         local ok, message = pcall(Update)
         if not ok then Failed(message) end
     end
-    function banners.Attach(frame, onBoundsChanged)
-        if attached then return end
-        root:SetParent(frame)
-        root:SetPoint("TOP", frame, "BOTTOM", 0, -GAP)
-        root:SetFrameStrata(frame:GetFrameStrata())
-        root:SetFrameLevel(frame:GetFrameLevel() + 2)
-        changedBounds, attached = onBoundsChanged, true
-        controller:SetScript("OnUpdate", inWorld and Tick or nil)
-        if changedBounds then changedBounds() end
-        Refresh()
-    end
-    function banners.SetClockReady(value)
-        if clockReady == value then return end
-        clockReady = value == true
-        Refresh()
-    end
+    DFRL.layout.Register("banners", root, function()
+        root:ClearAllPoints()
+        root:SetPoint("TOP", UIParent, "TOP", 0, -130)
+    end, { labelAbove = true, refreshDefault = true, onReset = banners.Clear })
     controller:RegisterEvent("PLAYER_ENTERING_WORLD")
     controller:RegisterEvent("PLAYER_LEAVING_WORLD")
     controller:RegisterEvent("PLAYER_LOGOUT")
@@ -238,10 +276,10 @@ DFRL:NewMod("RunBanners", 4, function()
         if event == "PLAYER_ENTERING_WORLD" then
             inWorld = true
             age, painted = 0, 0
-            controller:SetScript("OnUpdate", attached and Tick or nil)
+            controller:SetScript("OnUpdate", Tick)
             Refresh()
         elseif event == "PLAYER_LEAVING_WORLD" or event == "PLAYER_LOGOUT" then
-            inWorld, clockReady = false, false
+            inWorld = false
             controller:SetScript("OnUpdate", nil)
             Release()
         elseif event == "CHAT_MSG_ADDON" then
@@ -253,11 +291,13 @@ DFRL:NewMod("RunBanners", 4, function()
     if type(_G.ReloadUI) == "function" then
         local reloadUI = _G.ReloadUI
         _G.ReloadUI = function()
-            inWorld, clockReady = false, false
+            inWorld = false
             controller:SetScript("OnUpdate", nil)
             Release()
             return reloadUI()
         end
     end
     DFRL.banners = banners
+    controller:SetScript("OnUpdate", Tick)
+    Refresh()
 end)

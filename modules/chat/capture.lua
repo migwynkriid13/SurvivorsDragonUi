@@ -14,12 +14,14 @@ DFRL:NewMod("ChatCapture", 0, function()
     end
     local function FrameName(frame) return frame.GetName and frame:GetName() or "<unnamed>" end
 
-    local function FirstDelivery(frame, text, eventName, author, message)
+    local function FirstDelivery(frame, text, eventName, author, message, source)
         local now = GetTime()
         if now ~= broadcastTime then
             broadcastTime, broadcasts = now, {}
         end
-        local signature = tostring(eventName)
+        local signature = tostring(source)
+            .. "\001"
+            .. tostring(eventName)
             .. "\001"
             .. tostring(author)
             .. "\001"
@@ -39,6 +41,7 @@ DFRL:NewMod("ChatCapture", 0, function()
         delivery.maximum = count
         return true
     end
+    chat.FirstDelivery = FirstDelivery
 
     chat.CaptureRaw = function(frame, text, eventName, author, message)
         if type(text) ~= "string" then return end
