@@ -11,21 +11,28 @@ and thirty earlier geometric studies remain outside the runtime payload.
 
 The attached tally forms a continuous lower compartment, sharing the action
 bar's original bottom silver edge as its only top border. There is no gap,
-second top rail, mounting tab or leg. Detached mode retains the original gold
-pill. All three native icons remain unchanged. All thirty appearance
+second top rail, mounting tab or leg. Detached mode retains the selected frame
+and its content fit. All three native icons remain unchanged. All thirty appearance
 proposals, cursor preview images and research notes stay outside the shared
 runtime manifest. No source-addon framework, font, retail atlas API or dependency
 is imported.
 
 ## Runtime compartment assembly
 
-Attached mode hides the existing pill background, yellow fill and bezel,
-restoring them when detached. A single prepared legacy RGBA TGA starts at
+Both modes hide the existing pill background, yellow fill and bezel.
+While attached, a single prepared legacy RGBA TGA starts at
 `DFRL.GetActionBarSilverBottom()`, without a top-border texture of its own.
 `core/tally.lua` supplies the style registry and retains the required shipped
 source notices. Each 1024-by-128 canvas contains 600-by-128 pixels at double
 resolution; UV `(0,600/1024,0,1)` displays a 300-by-64 logical canvas. Actual
 lower extents are separate from transparent canvas padding.
+
+The affordability spotlight uses `media/tex/tally/AffordableGlow.tga`, an
+original 64-by-32 white RGBA ellipse mask prepared by
+`scripts/prepare_tally_highlight.py`. Its cubic radial alpha falloff contains
+no imported artwork. Eight low-opacity native DEFAULT glyph copies provide
+the text halo; the addon ships no font or replacement coin icon. The original
+counter text stays unchanged and there is no underline or pulse.
 
 Continuous silver's sides and lower edge use the unchanged bundled
 `media/tex/actionbars/HDActionBar.tga` half-shell. Each side samples source

@@ -101,7 +101,7 @@ appearance constants, not additional settings or saved fields.
 
 Each unscaled hover cell owns one passive content frame, centered with a zero
 anchor offset. Its native 18-unit icon, DEFAULT 12 text and affordability
-underline inherit the same scale. Explicit content width keeps the group
+glow inherit the same scale. Explicit content width keeps the group
 centered inside its enabled counter's share. Changing style applies this only
 through the cached attachment refresh. Detached mode retains the same style's
 content scale and center. The [static content preview](designs/tally-gothic/content-fit.png)
@@ -117,11 +117,23 @@ retaining native tally takeover for valid data so the default box stays hidden.
 
 The optional highlight compares only finite nonnegative native `AZS_RUN.gold`
 and `AZS_RUN.chest`, before display rounding. At or above the cache cost,
-including an explicit zero cost, the gold amount becomes pale gold with a fine
-gold underline. Below the cost it retains its regular color. No red/green,
-pulse, icon replacement or estimated cost is used. Turning the option off or
-clearing the tally removes the highlight immediately on the next phase-gated
-presentation update. Gold can be highlighted even when the cache cost is hidden.
+including an explicit zero cost, eight faint glyph copies form a steady halo
+around the amount, with a soft warm spotlight behind its digits. The original
+gold text color, font, outline and coin stay unchanged. There is no underline,
+pulse or red/green state. Gold can be highlighted even when the cache cost is hidden.
+
+The glyph copies and one spotlight texture are created once under the existing
+gold content frame and inherit its style fit and attached/detached scaling.
+The background stays within the explicit text box; glyph text and spotlight
+width are written only when changed. Turning the option off, losing
+affordability or clearing the tally hides both effects and clears copied text.
+The existing phase-gated presentation update supplies the state; no animation
+updater or gameplay clock is added. Hiding the gold field hides all its children.
+
+`scripts/prepare_tally_highlight.py` prepares the original 64-by-32 white RGBA
+ellipse mask in `media/tex/tally/AffordableGlow.tga`. A cubic radial falloff
+reaches transparent edges without a rectangular rim. Only that texture enters
+the runtime manifest; no font is shipped or counter icon changed.
 
 Display changes mark presentation dirty, so previews do not wait for another
 native packet while paused. Native reads still occur in the existing OnUpdate

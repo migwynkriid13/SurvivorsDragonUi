@@ -1460,6 +1460,11 @@ DFRL:NewMod("RunTimers", 5, function()
         local textWidth = math.max(1, math.min(64, width - 32))
         entry.text:SetWidth(textWidth)
         entry.content:SetWidth(22 + textWidth)
+        if entry.glow then
+            for _, glow in ipairs(entry.glow) do
+                glow:SetWidth(textWidth)
+            end
+        end
     end
     for index, counter in ipairs(counters) do
         local field = CreateFrame("Frame", nil, tallyOverlay)
@@ -1499,13 +1504,29 @@ DFRL:NewMod("RunTimers", 5, function()
             content = content,
         }
         if counter.key == "gold" then
-            local underline = content:CreateTexture(nil, "ARTWORK")
-            underline:SetTexture("Interface\\Buttons\\WHITE8X8")
-            underline:SetVertexColor(0.95, 0.74, 0.3, 0.85)
-            underline:SetHeight(1)
-            underline:SetPoint("TOP", text, "BOTTOM", 0, 0)
-            underline:Hide()
-            entry.underline = underline
+            local spotlight = content:CreateTexture(nil, "BACKGROUND")
+            spotlight:SetTexture(DFRL:GetInfoOrCons("tex") .. "tally\\AffordableGlow.tga")
+            spotlight:SetBlendMode("ADD")
+            spotlight:SetVertexColor(1, 0.86, 0.64, 0.16)
+            spotlight:SetHeight(20)
+            spotlight:SetPoint("CENTER", text, "CENTER", 0, 0)
+            spotlight:Hide()
+            entry.spotlight, entry.glow = spotlight, {}
+            for y = -1, 1 do
+                for x = -1, 1 do
+                    if x ~= 0 or y ~= 0 then
+                        local glow = content:CreateFontString(nil, "ARTWORK")
+                        T.SetFont(glow, 12, "")
+                        glow:SetTextColor(1, 0.91, 0.68, 0.1)
+                        glow:SetHeight(18)
+                        glow:SetJustifyH("CENTER")
+                        glow:SetJustifyV("MIDDLE")
+                        glow:SetPoint("CENTER", text, "CENTER", x * 1.5, y * 1.5)
+                        glow:Hide()
+                        table.insert(entry.glow, glow)
+                    end
+                end
+            end
             goldField = entry
         end
         SetTallyFieldWidth(entry, fieldWidth)
@@ -1533,19 +1554,37 @@ DFRL:NewMod("RunTimers", 5, function()
     end
 
     local function SetGoldHighlight(affordable)
-        if goldField.affordable ~= affordable then
-            goldField.affordable = affordable
+        if affordable then
+            local text = goldField.text:GetText() or ""
+            if goldField.glowText ~= text then
+                goldField.glowText = text
+                for _, glow in ipairs(goldField.glow) do
+                    glow:SetText(text)
+                end
+            end
+            local boxWidth = goldField.text:GetWidth()
+            local glyphWidth = goldField.text:GetStringWidth() or 0
+            local width = math.min(boxWidth, (glyphWidth > 0 and glyphWidth or boxWidth) + 12)
+            if not T.NearlyEqual(goldField.glowWidth, width) then
+                goldField.spotlight:SetWidth(width)
+                goldField.glowWidth = width
+            end
+        end
+        if goldField.affordable == affordable then return end
+        goldField.affordable = affordable
+        for _, glow in ipairs(goldField.glow) do
             if affordable then
-                goldField.text:SetTextColor(1, 0.98, 0.8)
+                glow:Show()
             else
-                goldField.text:SetTextColor(1, 0.88, 0.55)
+                glow:SetText("")
+                glow:Hide()
             end
         end
         if affordable then
-            goldField.underline:SetWidth(math.min(goldField.text:GetWidth(), goldField.text:GetStringWidth()))
-            goldField.underline:Show()
+            goldField.spotlight:Show()
         else
-            goldField.underline:Hide()
+            goldField.spotlight:Hide()
+            goldField.glowText, goldField.glowWidth = nil, nil
         end
     end
 
