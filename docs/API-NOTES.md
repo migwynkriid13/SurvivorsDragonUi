@@ -1,5 +1,20 @@
 # Official addon API integration — 2026-10-14
 
+## Supplied summon API reference — 2026-10-22
+
+The [latest supplied API reference](AzerothSurvivors-Addon-API-2026-10-22.txt)
+is preserved verbatim alongside the earlier Markdown and 2026-10-15 copies.
+The date records receipt; the supplied text does not identify a game version.
+It documents `AZS_GetSummons`, `AZS_GetSummonCount`, `AZS_GetSummonGroups`,
+`AZS_PETS` and the `AZSPETS` update prefix for every class and spec.
+
+The [summon API assessment](SUMMONS-API.md) explains the new counts, native
+icons and run-clock lifetimes, their limits, and the effect on our current pet
+frame and SCT filter. A summon tracker is now possible, but this documentation
+update adds no tracker or runtime dependency. The API does not identify the
+source of unattributed SELF combat messages, including the reported Imp
+Fireball. No existing API removal is stated in the supplied reference.
+
 ## Endless boss countdown — 2026-10-21
 
 After the native phase check, a received `AZS_RUN.endl == 1` switches the run
