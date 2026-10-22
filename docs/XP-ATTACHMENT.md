@@ -33,9 +33,11 @@ gain motion, rollover, spark, glow and stop/rebaseline lifecycle stay in place.
 Switching attachment clears the effect and snaps to current native XP. See
 [XP-ANIMATION.md](XP-ANIMATION.md).
 
-The outer XP width stays unchanged, preserving the tally's existing default
-width calculation. Tally geometry and static waypoint defaults stay independent.
-There is no position migration, gameplay save, new command or SavedVariable.
+The outer XP width stays unchanged. The tally's separate default-on attachment
+follows the action bar's visible silver edge and its actual joined-XP state;
+detached tally records stay independent. Static waypoint defaults are unchanged.
+See [TALLY-ATTACHMENT.md](TALLY-ATTACHMENT.md). There is no position migration,
+gameplay save, new command or SavedVariable.
 
 Artwork pins and preparation are in [XP-ARTWORK.md](../third_party/XP-ARTWORK.md).
 Only artwork preparation and source inspection were performed locally. Local

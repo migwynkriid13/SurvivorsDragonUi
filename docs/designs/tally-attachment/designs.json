@@ -1,0 +1,242 @@
+[
+  {
+    "id": "01",
+    "name": "Continuous silver",
+    "description": "One silver seam, straight sidewalls and a shallow dark lower chamber.",
+    "shape": "straight",
+    "accent": "#b6bcc4",
+    "image": "01.png"
+  },
+  {
+    "id": "02",
+    "name": "Soft graphite",
+    "description": "Shared silver top with gently rounded lower corners.",
+    "shape": "round",
+    "accent": "#a3aebc",
+    "image": "02.png"
+  },
+  {
+    "id": "03",
+    "name": "Clipped steel",
+    "description": "The same top edge, with clean diagonal lower corners.",
+    "shape": "chamfer",
+    "accent": "#c0c6ce",
+    "image": "03.png"
+  },
+  {
+    "id": "04",
+    "name": "Recessed bays",
+    "description": "Three inset counter bays inside one continuous outer shell.",
+    "shape": "inset",
+    "accent": "#a4adb8",
+    "image": "04.png"
+  },
+  {
+    "id": "05",
+    "name": "Fine ledger",
+    "description": "Very fine side and bottom lines around an open dark row.",
+    "shape": "minimal",
+    "accent": "#acb8c7",
+    "image": "05.png"
+  },
+  {
+    "id": "06",
+    "name": "Carved iron",
+    "description": "A heavier lower lip and worn metal along the bottom corners.",
+    "shape": "gothic",
+    "accent": "#a9a7a2",
+    "image": "06.png"
+  },
+  {
+    "id": "07",
+    "name": "Central point",
+    "description": "One joined compartment tapering to a shallow central point.",
+    "shape": "point",
+    "accent": "#aeb2b7",
+    "image": "07.png"
+  },
+  {
+    "id": "08",
+    "name": "Stepped ends",
+    "description": "Squared upper walls with compact steps at the lower ends.",
+    "shape": "step",
+    "accent": "#a9b1bc",
+    "image": "08.png"
+  },
+  {
+    "id": "09",
+    "name": "Gothic cornice",
+    "description": "A heavy carved lower cornice beneath the unchanged silver seam.",
+    "shape": "cornice",
+    "accent": "#b4afa4",
+    "image": "09.png"
+  },
+  {
+    "id": "10",
+    "name": "Triple scallop",
+    "description": "Three shallow scallops along a single continuous lower edge.",
+    "shape": "scallop",
+    "accent": "#abb2bc",
+    "image": "10.png"
+  },
+  {
+    "id": "11",
+    "name": "Central drop",
+    "description": "The middle counter sits in a slightly deeper part of the shell.",
+    "shape": "drop",
+    "accent": "#aeb6bf",
+    "image": "11.png"
+  },
+  {
+    "id": "12",
+    "name": "Fluted ash",
+    "description": "A dark straight chamber with fluting confined to its bottom lip.",
+    "shape": "fluted",
+    "accent": "#8d939c",
+    "image": "12.png"
+  },
+  {
+    "id": "13",
+    "name": "Bronze double lip",
+    "description": "Restrained bronze details appear only on the lower edge.",
+    "shape": "lowerdouble",
+    "accent": "#bda37c",
+    "image": "13.png"
+  },
+  {
+    "id": "14",
+    "name": "Curved basin",
+    "description": "A single shallow curved lower outline beneath all three counters.",
+    "shape": "bowl",
+    "accent": "#aeb9c0",
+    "image": "14.png"
+  },
+  {
+    "id": "15",
+    "name": "Descending chevron",
+    "description": "An angular lower edge drops gently below the gold counter.",
+    "shape": "chevron",
+    "accent": "#a4a9ad",
+    "image": "15.png"
+  },
+  {
+    "id": "16",
+    "name": "Silver three-bay",
+    "description": "Silver inner dividers meet the existing shared top edge.",
+    "shape": "bays",
+    "accent": "#b9c1c7",
+    "image": "16.png"
+  },
+  {
+    "id": "17",
+    "name": "Asymmetric pennant",
+    "description": "The lower contour descends on one side; the top stays continuous.",
+    "shape": "banner",
+    "accent": "#b4ada0",
+    "image": "17.png"
+  },
+  {
+    "id": "18",
+    "name": "Center step",
+    "description": "A wider lower center shelf creates a quiet stepped silhouette.",
+    "shape": "centerstep",
+    "accent": "#b0b6c0",
+    "image": "18.png"
+  },
+  {
+    "id": "19",
+    "name": "Gunmetal groove",
+    "description": "A recessed channel follows the inside of the lower silver lip.",
+    "shape": "groove",
+    "accent": "#939eaa",
+    "image": "19.png"
+  },
+  {
+    "id": "20",
+    "name": "Icon alcoves",
+    "description": "Small dark icon recesses sit inside the joined counter row.",
+    "shape": "alcove",
+    "accent": "#afb7be",
+    "image": "20.png"
+  },
+  {
+    "id": "21",
+    "name": "Copper taper",
+    "description": "Warm copper walls narrow toward the lower edge.",
+    "shape": "taper",
+    "accent": "#b48a67",
+    "image": "21.png"
+  },
+  {
+    "id": "22",
+    "name": "Blood iron",
+    "description": "A subdued crimson recess inside an uninterrupted iron shell.",
+    "shape": "recess",
+    "accent": "#a36c68",
+    "image": "22.png"
+  },
+  {
+    "id": "23",
+    "name": "Cobalt etching",
+    "description": "Blue steel with fine etching along the lower edge.",
+    "shape": "engraved",
+    "accent": "#7c9eb4",
+    "image": "23.png"
+  },
+  {
+    "id": "24",
+    "name": "Amethyst point",
+    "description": "A violet chamber ends in a short silver central spear.",
+    "shape": "spear",
+    "accent": "#a58cba",
+    "image": "24.png"
+  },
+  {
+    "id": "25",
+    "name": "Verdigris glass",
+    "description": "Three green glass recesses share the same outer metal shell.",
+    "shape": "glass",
+    "accent": "#82a99c",
+    "image": "25.png"
+  },
+  {
+    "id": "26",
+    "name": "Ivory ledger",
+    "description": "Pale stone inlays inside the shared silver compartment.",
+    "shape": "ivory",
+    "accent": "#c3b48e",
+    "image": "26.png"
+  },
+  {
+    "id": "27",
+    "name": "Undercut base",
+    "description": "A recessed bottom section leaves short solid lower corners.",
+    "shape": "undercut",
+    "accent": "#a7b2b9",
+    "image": "27.png"
+  },
+  {
+    "id": "28",
+    "name": "Broad bevel",
+    "description": "A broad lower bevel gives the common chamber a heavier foundation.",
+    "shape": "broad",
+    "accent": "#b5b5b8",
+    "image": "28.png"
+  },
+  {
+    "id": "29",
+    "name": "Open lower row",
+    "description": "A transparent row framed by the shared silver seam and a fine lower rail.",
+    "shape": "open",
+    "accent": "#a9b1bb",
+    "image": "29.png"
+  },
+  {
+    "id": "30",
+    "name": "Arched foundation",
+    "description": "Three connected arches shape the lower edge of the same shell.",
+    "shape": "arches",
+    "accent": "#b8aa91",
+    "image": "30.png"
+  }
+]

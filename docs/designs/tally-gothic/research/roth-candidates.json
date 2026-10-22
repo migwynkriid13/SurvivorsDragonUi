@@ -1,0 +1,859 @@
+[
+  {
+    "path": "wow6.0/oUF_Diablo/media/castbar.tga",
+    "local": "docs/designs/tally-gothic/research/originals/wow6.0__oUF_Diablo__media__castbar.tga",
+    "url": "https://raw.githubusercontent.com/zorker/rothui/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/castbar.tga",
+    "source_url": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/castbar.tga",
+    "canvas": [
+      512,
+      128
+    ],
+    "bbox": [
+      0,
+      23,
+      512,
+      107
+    ],
+    "sha256": "da058f8a764602f48a674600f92aafc3271a37e210c20bca0205566282513f29",
+    "id": "R01",
+    "name": "Scrollwork trough",
+    "rect": [
+      0,
+      58,
+      512,
+      107
+    ],
+    "kind": "lower compartment",
+    "idea": "Ornate bronze wings and grained trough; crop off upper rim and attach raw top of trough to the shared silver seam.",
+    "owner_source": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/core/lib.lua#L475-L529",
+    "owner_note": "Owning source inspected; full native texture assembly differs from proposed lower-only adaptation.",
+    "repo": "zorker/rothui",
+    "commit": "9a9ce9744ce404991fc06066291614fe1765ee20",
+    "format": "TGA",
+    "crop_basis": "Visually inspected image; pixel rectangle is proposed adaptation, not an asserted native atlas member.",
+    "rights": "Root LICENSE.md is MIT (c)2011\u20132018 Erik Raetz. archive/rBottomBarStyler/core.lua additionally retains a2010 three-clause BSD notice. No image-specific provenance or grant for underlying Diablo/Blizzard artwork was found; repository licensing does not establish ownership of inherited game art.",
+    "adaptation": "Keep raw original bytes. Crop and power-of-two-pad a selected legacy TGA or use verified UVs. No source-addon framework is needed. Preview only until selection."
+  },
+  {
+    "path": "wow6.0/oUF_Diablo/media/target.tga",
+    "url": "https://raw.githubusercontent.com/zorker/rothui/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/target.tga",
+    "source_url": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/target.tga",
+    "canvas": [
+      512,
+      128
+    ],
+    "bbox": [
+      0,
+      23,
+      512,
+      107
+    ],
+    "sha256": "9947eef32acfcd9e73608d42e4c7d6f6a786380390d16a6df41c8545864ab56b",
+    "id": "R02",
+    "name": "Double-rail trough",
+    "rect": [
+      0,
+      58,
+      512,
+      107
+    ],
+    "kind": "lower compartment",
+    "idea": "Retains native lower rail and power-row inset, with a visibly different bottom profile to castbar. Remove upper rim.",
+    "owner_source": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/units/target.lua#L34-L39",
+    "owner_note": "Owning source inspected; full native texture assembly differs from proposed lower-only adaptation.",
+    "repo": "zorker/rothui",
+    "commit": "9a9ce9744ce404991fc06066291614fe1765ee20",
+    "format": "TGA",
+    "crop_basis": "Visually inspected image; pixel rectangle is proposed adaptation, not an asserted native atlas member.",
+    "rights": "Root LICENSE.md is MIT (c)2011\u20132018 Erik Raetz. archive/rBottomBarStyler/core.lua additionally retains a2010 three-clause BSD notice. No image-specific provenance or grant for underlying Diablo/Blizzard artwork was found; repository licensing does not establish ownership of inherited game art.",
+    "adaptation": "Keep raw original bytes. Crop and power-of-two-pad a selected legacy TGA or use verified UVs. No source-addon framework is needed. Preview only until selection.",
+    "temporaryPreparationFile": "wow6.0__oUF_Diablo__media__target.tga",
+    "sourceRetention": "Temporary preparation record only; this file is not retained in the repository. Use the pinned source URL and crop record."
+  },
+  {
+    "path": "wow6.0/oUF_Diablo/media/targettarget.tga",
+    "local": "docs/designs/tally-gothic/research/originals/wow6.0__oUF_Diablo__media__targettarget.tga",
+    "url": "https://raw.githubusercontent.com/zorker/rothui/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/targettarget.tga",
+    "source_url": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/targettarget.tga",
+    "canvas": [
+      256,
+      128
+    ],
+    "bbox": [
+      0,
+      23,
+      256,
+      107
+    ],
+    "sha256": "d6aaefcf93d1351f0d2f305c1d53a17bbf458c7f9ec978350479a0253c3b7280",
+    "id": "R03",
+    "name": "Compact bronze shrine",
+    "rect": [
+      0,
+      58,
+      256,
+      107
+    ],
+    "kind": "lower compartment",
+    "idea": "Compact curved filigree and double lower rails; preserve end caps at fixed width while extending center.",
+    "owner_source": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/units/targettarget.lua#L34-L39",
+    "owner_note": "Owning source inspected; full native texture assembly differs from proposed lower-only adaptation.",
+    "repo": "zorker/rothui",
+    "commit": "9a9ce9744ce404991fc06066291614fe1765ee20",
+    "format": "TGA",
+    "crop_basis": "Visually inspected image; pixel rectangle is proposed adaptation, not an asserted native atlas member.",
+    "rights": "Root LICENSE.md is MIT (c)2011\u20132018 Erik Raetz. archive/rBottomBarStyler/core.lua additionally retains a2010 three-clause BSD notice. No image-specific provenance or grant for underlying Diablo/Blizzard artwork was found; repository licensing does not establish ownership of inherited game art.",
+    "adaptation": "Keep raw original bytes. Crop and power-of-two-pad a selected legacy TGA or use verified UVs. No source-addon framework is needed. Preview only until selection."
+  },
+  {
+    "path": "wow6.0/oUF_Diablo/media/demonic_fury_border.tga",
+    "local": "docs/designs/tally-gothic/research/originals/wow6.0__oUF_Diablo__media__demonic_fury_border.tga",
+    "url": "https://raw.githubusercontent.com/zorker/rothui/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/demonic_fury_border.tga",
+    "source_url": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/demonic_fury_border.tga",
+    "canvas": [
+      256,
+      32
+    ],
+    "bbox": [
+      0,
+      0,
+      256,
+      32
+    ],
+    "sha256": "a28efac16700fa8cc8f1ac87cb6324ea0464231de517402a84a655aa42db276c",
+    "id": "R04",
+    "name": "Angular bronze sarcophagus",
+    "rect": [
+      0,
+      16,
+      256,
+      32
+    ],
+    "kind": "lower border",
+    "idea": "Native angular lower rim and diamond corners; compose around a dark body, omitting original upper edge.",
+    "owner_source": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/core/bars.lua#L614-L620",
+    "owner_note": "Owning source inspected; full native texture assembly differs from proposed lower-only adaptation.",
+    "repo": "zorker/rothui",
+    "commit": "9a9ce9744ce404991fc06066291614fe1765ee20",
+    "format": "TGA",
+    "crop_basis": "Visually inspected image; pixel rectangle is proposed adaptation, not an asserted native atlas member.",
+    "rights": "Root LICENSE.md is MIT (c)2011\u20132018 Erik Raetz. archive/rBottomBarStyler/core.lua additionally retains a2010 three-clause BSD notice. No image-specific provenance or grant for underlying Diablo/Blizzard artwork was found; repository licensing does not establish ownership of inherited game art.",
+    "adaptation": "Keep raw original bytes. Crop and power-of-two-pad a selected legacy TGA or use verified UVs. No source-addon framework is needed. Preview only until selection."
+  },
+  {
+    "path": "wow6.0/oUF_Diablo/media/d3_altpower_border.tga",
+    "local": "docs/designs/tally-gothic/research/originals/wow6.0__oUF_Diablo__media__d3_altpower_border.tga",
+    "url": "https://raw.githubusercontent.com/zorker/rothui/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/d3_altpower_border.tga",
+    "source_url": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/d3_altpower_border.tga",
+    "canvas": [
+      512,
+      64
+    ],
+    "bbox": [
+      81,
+      4,
+      430,
+      61
+    ],
+    "sha256": "82f82660e992a7b5d8e4d3952589d4ae927fbbed5bbfc827e89ce90ce7981cff",
+    "id": "R05",
+    "name": "Gothic filigree frame",
+    "rect": [
+      81,
+      28,
+      430,
+      61
+    ],
+    "kind": "lower border",
+    "idea": "Gray-bronze fine corner scrollwork with transparent interior; use lower half under the seam.",
+    "owner_source": null,
+    "owner_note": "File exists in media library; no owning reference found in the targeted code inspected.",
+    "repo": "zorker/rothui",
+    "commit": "9a9ce9744ce404991fc06066291614fe1765ee20",
+    "format": "TGA",
+    "crop_basis": "Visually inspected image; pixel rectangle is proposed adaptation, not an asserted native atlas member.",
+    "rights": "Root LICENSE.md is MIT (c)2011\u20132018 Erik Raetz. archive/rBottomBarStyler/core.lua additionally retains a2010 three-clause BSD notice. No image-specific provenance or grant for underlying Diablo/Blizzard artwork was found; repository licensing does not establish ownership of inherited game art.",
+    "adaptation": "Keep raw original bytes. Crop and power-of-two-pad a selected legacy TGA or use verified UVs. No source-addon framework is needed. Preview only until selection."
+  },
+  {
+    "path": "wow6.0/oUF_Diablo/media/combo_back.tga",
+    "local": "docs/designs/tally-gothic/research/originals/wow6.0__oUF_Diablo__media__combo_back.tga",
+    "url": "https://raw.githubusercontent.com/zorker/rothui/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/combo_back.tga",
+    "source_url": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/combo_back.tga",
+    "canvas": [
+      64,
+      64
+    ],
+    "bbox": [
+      0,
+      12,
+      64,
+      52
+    ],
+    "sha256": "a80cbb2f6c3c05d3b5f337ca8434e786799f928cf7a036a3afdaadb5a33dd62b",
+    "id": "R06",
+    "name": "Dark slate trough",
+    "rect": [
+      0,
+      32,
+      64,
+      52
+    ],
+    "kind": "tileable lower compartment",
+    "idea": "Continuous blackened stone with a bronze lower line; the owning code stretches the64px tile.",
+    "owner_source": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/core/lib.lua#L192-L198",
+    "owner_note": "Owning source inspected; full native texture assembly differs from proposed lower-only adaptation.",
+    "repo": "zorker/rothui",
+    "commit": "9a9ce9744ce404991fc06066291614fe1765ee20",
+    "format": "TGA",
+    "crop_basis": "Visually inspected image; pixel rectangle is proposed adaptation, not an asserted native atlas member.",
+    "rights": "Root LICENSE.md is MIT (c)2011\u20132018 Erik Raetz. archive/rBottomBarStyler/core.lua additionally retains a2010 three-clause BSD notice. No image-specific provenance or grant for underlying Diablo/Blizzard artwork was found; repository licensing does not establish ownership of inherited game art.",
+    "adaptation": "Keep raw original bytes. Crop and power-of-two-pad a selected legacy TGA or use verified UVs. No source-addon framework is needed. Preview only until selection."
+  },
+  {
+    "path": "wow6.0/oUF_Diablo/media/combo_back2.tga",
+    "url": "https://raw.githubusercontent.com/zorker/rothui/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/combo_back2.tga",
+    "source_url": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/combo_back2.tga",
+    "canvas": [
+      64,
+      64
+    ],
+    "bbox": [
+      0,
+      12,
+      64,
+      52
+    ],
+    "sha256": "e036d480ece05b300a967ca1ea8908f391a61a83752b8fa6959767be1bf4a2b2",
+    "id": "R07",
+    "name": "Inset blackened panel",
+    "rect": [
+      0,
+      32,
+      64,
+      52
+    ],
+    "kind": "lower compartment",
+    "idea": "Closed dark inset panel with side walls and lower rim, distinctly unlike open combo_back.",
+    "owner_source": null,
+    "owner_note": "File exists in media library; no owning reference found in the targeted code inspected.",
+    "repo": "zorker/rothui",
+    "commit": "9a9ce9744ce404991fc06066291614fe1765ee20",
+    "format": "TGA",
+    "crop_basis": "Visually inspected image; pixel rectangle is proposed adaptation, not an asserted native atlas member.",
+    "rights": "Root LICENSE.md is MIT (c)2011\u20132018 Erik Raetz. archive/rBottomBarStyler/core.lua additionally retains a2010 three-clause BSD notice. No image-specific provenance or grant for underlying Diablo/Blizzard artwork was found; repository licensing does not establish ownership of inherited game art.",
+    "adaptation": "Keep raw original bytes. Crop and power-of-two-pad a selected legacy TGA or use verified UVs. No source-addon framework is needed. Preview only until selection.",
+    "temporaryPreparationFile": "wow6.0__oUF_Diablo__media__combo_back2.tga",
+    "sourceRetention": "Temporary preparation record only; this file is not retained in the repository. Use the pinned source URL and crop record."
+  },
+  {
+    "path": "wow6.0/oUF_Diablo/media/combo_bar_bg.tga",
+    "url": "https://raw.githubusercontent.com/zorker/rothui/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/combo_bar_bg.tga",
+    "source_url": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/combo_bar_bg.tga",
+    "canvas": [
+      64,
+      64
+    ],
+    "bbox": [
+      0,
+      12,
+      64,
+      52
+    ],
+    "sha256": "0266be7cf95ec19eb0f6c8748b8fc896e670ef6eeb5ee1dfaa0fea43c83464bd",
+    "id": "R08",
+    "name": "Steel-and-stone sill",
+    "rect": [
+      0,
+      32,
+      64,
+      52
+    ],
+    "kind": "tileable lower compartment",
+    "idea": "Grained gray stone with bright silver lower edge. Native class-resource backgrounds stretch this64px source.",
+    "owner_source": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/core/bars.lua#L151-L155",
+    "owner_note": "Owning source inspected; full native texture assembly differs from proposed lower-only adaptation.",
+    "repo": "zorker/rothui",
+    "commit": "9a9ce9744ce404991fc06066291614fe1765ee20",
+    "format": "TGA",
+    "crop_basis": "Visually inspected image; pixel rectangle is proposed adaptation, not an asserted native atlas member.",
+    "rights": "Root LICENSE.md is MIT (c)2011\u20132018 Erik Raetz. archive/rBottomBarStyler/core.lua additionally retains a2010 three-clause BSD notice. No image-specific provenance or grant for underlying Diablo/Blizzard artwork was found; repository licensing does not establish ownership of inherited game art.",
+    "adaptation": "Keep raw original bytes. Crop and power-of-two-pad a selected legacy TGA or use verified UVs. No source-addon framework is needed. Preview only until selection.",
+    "temporaryPreparationFile": "wow6.0__oUF_Diablo__media__combo_bar_bg.tga",
+    "sourceRetention": "Temporary preparation record only; this file is not retained in the repository. Use the pinned source URL and crop record."
+  },
+  {
+    "path": "wow6.0/oUF_Diablo/media/combo_bar_left.tga",
+    "local": "docs/designs/tally-gothic/research/originals/wow6.0__oUF_Diablo__media__combo_bar_left.tga",
+    "url": "https://raw.githubusercontent.com/zorker/rothui/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/combo_bar_left.tga",
+    "source_url": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/combo_bar_left.tga",
+    "canvas": [
+      64,
+      64
+    ],
+    "bbox": [
+      15,
+      8,
+      64,
+      55
+    ],
+    "sha256": "cdd49aa3e6222df4b5b3499e3e23ab4936ca6def64509524dd3872ff26ca7d05",
+    "id": "R09",
+    "name": "Bronze scroll terminators",
+    "rect": [
+      15,
+      8,
+      64,
+      55
+    ],
+    "kind": "side ornament",
+    "idea": "Use the matching right file as paired side scroll ends; no gap or top rail, dark body remains directly under seam.",
+    "owner_source": null,
+    "owner_note": "File exists in media library; targeted owning code uses the related combo_left/right files, not this brighter pair. Assembly here is inferred from inspected matching caps.",
+    "repo": "zorker/rothui",
+    "commit": "9a9ce9744ce404991fc06066291614fe1765ee20",
+    "format": "TGA",
+    "crop_basis": "Visually inspected image; pixel rectangle is proposed adaptation, not an asserted native atlas member.",
+    "rights": "Root LICENSE.md is MIT (c)2011\u20132018 Erik Raetz. archive/rBottomBarStyler/core.lua additionally retains a2010 three-clause BSD notice. No image-specific provenance or grant for underlying Diablo/Blizzard artwork was found; repository licensing does not establish ownership of inherited game art.",
+    "adaptation": "Keep raw original bytes. Crop and power-of-two-pad a selected legacy TGA or use verified UVs. No source-addon framework is needed. Preview only until selection."
+  },
+  {
+    "path": "wow6.0/oUF_Diablo/media/combo_left.tga",
+    "url": "https://raw.githubusercontent.com/zorker/rothui/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/combo_left.tga",
+    "source_url": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/combo_left.tga",
+    "canvas": [
+      64,
+      64
+    ],
+    "bbox": [
+      15,
+      8,
+      64,
+      55
+    ],
+    "sha256": "7292fd0559d56bc529fe6a4c6921728f0aaa016bdb8b5ae7cfa5ae396a928aad",
+    "id": "R10",
+    "name": "Aged gold terminators",
+    "rect": [
+      15,
+      8,
+      64,
+      55
+    ],
+    "kind": "side ornament",
+    "idea": "Darker ornamental cap pair than combo_bar_left; its right partner is combo_right.tga.",
+    "owner_source": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/core/lib.lua#L180-L191",
+    "owner_note": "Owning source inspected; full native texture assembly differs from proposed lower-only adaptation.",
+    "repo": "zorker/rothui",
+    "commit": "9a9ce9744ce404991fc06066291614fe1765ee20",
+    "format": "TGA",
+    "crop_basis": "Visually inspected image; pixel rectangle is proposed adaptation, not an asserted native atlas member.",
+    "rights": "Root LICENSE.md is MIT (c)2011\u20132018 Erik Raetz. archive/rBottomBarStyler/core.lua additionally retains a2010 three-clause BSD notice. No image-specific provenance or grant for underlying Diablo/Blizzard artwork was found; repository licensing does not establish ownership of inherited game art.",
+    "adaptation": "Keep raw original bytes. Crop and power-of-two-pad a selected legacy TGA or use verified UVs. No source-addon framework is needed. Preview only until selection.",
+    "temporaryPreparationFile": "wow6.0__oUF_Diablo__media__combo_left.tga",
+    "sourceRetention": "Temporary preparation record only; this file is not retained in the repository. Use the pinned source URL and crop record."
+  },
+  {
+    "path": "wow6.0/oUF_Diablo/media/d3_head_diablo.tga",
+    "url": "https://raw.githubusercontent.com/zorker/rothui/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/d3_head_diablo.tga",
+    "source_url": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/d3_head_diablo.tga",
+    "canvas": [
+      128,
+      64
+    ],
+    "bbox": [
+      14,
+      9,
+      114,
+      59
+    ],
+    "sha256": "e2ddf1e439956d0da5408d3873178845df2bf7e9e80e4916e134d850b80a752a",
+    "id": "R11",
+    "name": "Winged red demon",
+    "rect": [
+      14,
+      9,
+      114,
+      59
+    ],
+    "kind": "lower center ornament",
+    "idea": "Real winged red demon crest, mounted within/below lower border; keep the three counter icons untouched.",
+    "owner_source": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/units/target.lua#L242-L247",
+    "owner_note": "Owning source inspected; full native texture assembly differs from proposed lower-only adaptation.",
+    "repo": "zorker/rothui",
+    "commit": "9a9ce9744ce404991fc06066291614fe1765ee20",
+    "format": "TGA",
+    "crop_basis": "Visually inspected image; pixel rectangle is proposed adaptation, not an asserted native atlas member.",
+    "rights": "Root LICENSE.md is MIT (c)2011\u20132018 Erik Raetz. archive/rBottomBarStyler/core.lua additionally retains a2010 three-clause BSD notice. No image-specific provenance or grant for underlying Diablo/Blizzard artwork was found; repository licensing does not establish ownership of inherited game art.",
+    "adaptation": "Keep raw original bytes. Crop and power-of-two-pad a selected legacy TGA or use verified UVs. No source-addon framework is needed. Preview only until selection.",
+    "temporaryPreparationFile": "wow6.0__oUF_Diablo__media__d3_head_diablo.tga",
+    "sourceRetention": "Temporary preparation record only; this file is not retained in the repository. Use the pinned source URL and crop record."
+  },
+  {
+    "path": "wow6.0/oUF_Diablo/media/d3_head_skull.tga",
+    "local": "docs/designs/tally-gothic/research/originals/wow6.0__oUF_Diablo__media__d3_head_skull.tga",
+    "url": "https://raw.githubusercontent.com/zorker/rothui/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/d3_head_skull.tga",
+    "source_url": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/d3_head_skull.tga",
+    "canvas": [
+      128,
+      64
+    ],
+    "bbox": [
+      14,
+      10,
+      114,
+      51
+    ],
+    "sha256": "abe4ee4ee125f05f5f34a324ca61f736428a1c4c509b7d004857d2c30f4da3ad",
+    "id": "R12",
+    "name": "Winged bone skull",
+    "rect": [
+      14,
+      10,
+      114,
+      51
+    ],
+    "kind": "lower center ornament",
+    "idea": "Ivory skull and black wings form a substantially different centerpiece.",
+    "owner_source": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/units/target.lua#L240-L243",
+    "owner_note": "Owning source inspected; full native texture assembly differs from proposed lower-only adaptation.",
+    "repo": "zorker/rothui",
+    "commit": "9a9ce9744ce404991fc06066291614fe1765ee20",
+    "format": "TGA",
+    "crop_basis": "Visually inspected image; pixel rectangle is proposed adaptation, not an asserted native atlas member.",
+    "rights": "Root LICENSE.md is MIT (c)2011\u20132018 Erik Raetz. archive/rBottomBarStyler/core.lua additionally retains a2010 three-clause BSD notice. No image-specific provenance or grant for underlying Diablo/Blizzard artwork was found; repository licensing does not establish ownership of inherited game art.",
+    "adaptation": "Keep raw original bytes. Crop and power-of-two-pad a selected legacy TGA or use verified UVs. No source-addon framework is needed. Preview only until selection."
+  },
+  {
+    "path": "wow6.0/oUF_Diablo/media/d3_head_new.tga",
+    "url": "https://raw.githubusercontent.com/zorker/rothui/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/d3_head_new.tga",
+    "source_url": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/d3_head_new.tga",
+    "canvas": [
+      128,
+      64
+    ],
+    "bbox": [
+      12,
+      18,
+      115,
+      62
+    ],
+    "sha256": "b062ad532c63997f2cba03054ca1c58a4b7722f7db5b3b61ae6b83f5a4d1713e",
+    "id": "R13",
+    "name": "Black horned seal",
+    "rect": [
+      12,
+      18,
+      115,
+      62
+    ],
+    "kind": "lower center ornament",
+    "idea": "Dark bronze horned head from native elite decoration.",
+    "owner_source": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/units/target.lua#L251-L254",
+    "owner_note": "Owning source inspected; full native texture assembly differs from proposed lower-only adaptation.",
+    "repo": "zorker/rothui",
+    "commit": "9a9ce9744ce404991fc06066291614fe1765ee20",
+    "format": "TGA",
+    "crop_basis": "Visually inspected image; pixel rectangle is proposed adaptation, not an asserted native atlas member.",
+    "rights": "Root LICENSE.md is MIT (c)2011\u20132018 Erik Raetz. archive/rBottomBarStyler/core.lua additionally retains a2010 three-clause BSD notice. No image-specific provenance or grant for underlying Diablo/Blizzard artwork was found; repository licensing does not establish ownership of inherited game art.",
+    "adaptation": "Keep raw original bytes. Crop and power-of-two-pad a selected legacy TGA or use verified UVs. No source-addon framework is needed. Preview only until selection.",
+    "temporaryPreparationFile": "wow6.0__oUF_Diablo__media__d3_head_new.tga",
+    "sourceRetention": "Temporary preparation record only; this file is not retained in the repository. Use the pinned source URL and crop record."
+  },
+  {
+    "path": "wow6.0/oUF_Diablo/media/d3_head_elite.tga",
+    "url": "https://raw.githubusercontent.com/zorker/rothui/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/d3_head_elite.tga",
+    "source_url": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/d3_head_elite.tga",
+    "canvas": [
+      128,
+      64
+    ],
+    "bbox": [
+      14,
+      9,
+      114,
+      56
+    ],
+    "sha256": "9618268679eb42d012919d7b6c8f184af45bc9a3bedac7490b4a0adc316a215d",
+    "id": "R14",
+    "name": "Stone skull seal",
+    "rect": [
+      14,
+      9,
+      114,
+      56
+    ],
+    "kind": "lower center ornament",
+    "idea": "Gray sculpted skull with swept wing ornaments; no origin classification inferred from filename.",
+    "owner_source": null,
+    "owner_note": "File exists in media library; no owning reference found in the targeted code inspected.",
+    "repo": "zorker/rothui",
+    "commit": "9a9ce9744ce404991fc06066291614fe1765ee20",
+    "format": "TGA",
+    "crop_basis": "Visually inspected image; pixel rectangle is proposed adaptation, not an asserted native atlas member.",
+    "rights": "Root LICENSE.md is MIT (c)2011\u20132018 Erik Raetz. archive/rBottomBarStyler/core.lua additionally retains a2010 three-clause BSD notice. No image-specific provenance or grant for underlying Diablo/Blizzard artwork was found; repository licensing does not establish ownership of inherited game art.",
+    "adaptation": "Keep raw original bytes. Crop and power-of-two-pad a selected legacy TGA or use verified UVs. No source-addon framework is needed. Preview only until selection.",
+    "temporaryPreparationFile": "wow6.0__oUF_Diablo__media__d3_head_elite.tga",
+    "sourceRetention": "Temporary preparation record only; this file is not retained in the repository. Use the pinned source URL and crop record."
+  },
+  {
+    "path": "wow6.0/oUF_Diablo/media/d3_head_garg.tga",
+    "local": "docs/designs/tally-gothic/research/originals/wow6.0__oUF_Diablo__media__d3_head_garg.tga",
+    "url": "https://raw.githubusercontent.com/zorker/rothui/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/d3_head_garg.tga",
+    "source_url": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/d3_head_garg.tga",
+    "canvas": [
+      128,
+      64
+    ],
+    "bbox": [
+      14,
+      14,
+      114,
+      51
+    ],
+    "sha256": "4c1596ce85b4f17d60cf34750d6083190aa09be11860151ad6f146898e6b2c17",
+    "id": "R15",
+    "name": "Iron gargoyle seal",
+    "rect": [
+      14,
+      14,
+      114,
+      51
+    ],
+    "kind": "lower center ornament",
+    "idea": "Bright iron gargoyle with dark wings, useful on a charcoal body.",
+    "owner_source": null,
+    "owner_note": "File exists in media library; no owning reference found in the targeted code inspected.",
+    "repo": "zorker/rothui",
+    "commit": "9a9ce9744ce404991fc06066291614fe1765ee20",
+    "format": "TGA",
+    "crop_basis": "Visually inspected image; pixel rectangle is proposed adaptation, not an asserted native atlas member.",
+    "rights": "Root LICENSE.md is MIT (c)2011\u20132018 Erik Raetz. archive/rBottomBarStyler/core.lua additionally retains a2010 three-clause BSD notice. No image-specific provenance or grant for underlying Diablo/Blizzard artwork was found; repository licensing does not establish ownership of inherited game art.",
+    "adaptation": "Keep raw original bytes. Crop and power-of-two-pad a selected legacy TGA or use verified UVs. No source-addon framework is needed. Preview only until selection."
+  },
+  {
+    "path": "wow6.0/oUF_Diablo/media/vehiclebar.tga",
+    "local": "docs/designs/tally-gothic/research/originals/wow6.0__oUF_Diablo__media__vehiclebar.tga",
+    "url": "https://raw.githubusercontent.com/zorker/rothui/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/vehiclebar.tga",
+    "source_url": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/vehiclebar.tga",
+    "canvas": [
+      512,
+      256
+    ],
+    "bbox": [
+      4,
+      109,
+      509,
+      256
+    ],
+    "sha256": "79820fe4c777efcf8efcf213c6ca3de45137cc74adb27a0c2c4a6bc5510551b0",
+    "id": "R16",
+    "name": "Bronze acanthus skirt",
+    "rect": [
+      4,
+      233,
+      509,
+      256
+    ],
+    "kind": "lower border",
+    "idea": "Crop entirely below the baked empty-button row; use scrollwork feet as border ornament with no slots or icons.",
+    "owner_source": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/units/player.lua#L55-L66",
+    "owner_note": "Owning source inspected; full native texture assembly differs from proposed lower-only adaptation.",
+    "repo": "zorker/rothui",
+    "commit": "9a9ce9744ce404991fc06066291614fe1765ee20",
+    "format": "TGA",
+    "crop_basis": "Visually inspected image; pixel rectangle is proposed adaptation, not an asserted native atlas member.",
+    "rights": "Root LICENSE.md is MIT (c)2011\u20132018 Erik Raetz. archive/rBottomBarStyler/core.lua additionally retains a2010 three-clause BSD notice. No image-specific provenance or grant for underlying Diablo/Blizzard artwork was found; repository licensing does not establish ownership of inherited game art.",
+    "adaptation": "Keep raw original bytes. Crop and power-of-two-pad a selected legacy TGA or use verified UVs. No source-addon framework is needed. Preview only until selection."
+  },
+  {
+    "path": "wow6.0/oUF_Diablo/media/bar1.tga",
+    "url": "https://raw.githubusercontent.com/zorker/rothui/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/bar1.tga",
+    "source_url": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/bar1.tga",
+    "canvas": [
+      512,
+      256
+    ],
+    "bbox": [
+      0,
+      192,
+      512,
+      256
+    ],
+    "sha256": "6da207f888d60f2ea65462b5a4071df19492955898a8b4d64fa856750c3aaff1",
+    "id": "R17",
+    "name": "Rough stone lower plinth",
+    "rect": [
+      0,
+      235,
+      512,
+      256
+    ],
+    "kind": "lower border",
+    "idea": "Cut below the single baked button row so only rough stone slab and foot remain.",
+    "owner_source": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/units/player.lua#L55-L66",
+    "owner_note": "Owning source inspected; full native texture assembly differs from proposed lower-only adaptation.",
+    "repo": "zorker/rothui",
+    "commit": "9a9ce9744ce404991fc06066291614fe1765ee20",
+    "format": "TGA",
+    "crop_basis": "Visually inspected image; pixel rectangle is proposed adaptation, not an asserted native atlas member.",
+    "rights": "Root LICENSE.md is MIT (c)2011\u20132018 Erik Raetz. archive/rBottomBarStyler/core.lua additionally retains a2010 three-clause BSD notice. No image-specific provenance or grant for underlying Diablo/Blizzard artwork was found; repository licensing does not establish ownership of inherited game art.",
+    "adaptation": "Keep raw original bytes. Crop and power-of-two-pad a selected legacy TGA or use verified UVs. No source-addon framework is needed. Preview only until selection.",
+    "crop_sha256": "c571fcd60ad6578a49a1925feebfda0c2998855ac5615fd529328b55fd3c3030",
+    "temporaryPreparationFile": "wow6.0__oUF_Diablo__media__bar1.tga",
+    "sourceRetention": "Temporary preparation record only; this file is not retained in the repository. Use the pinned source URL and crop record."
+  },
+  {
+    "path": "wow6.0/oUF_Diablo/media/bar2.tga",
+    "url": "https://raw.githubusercontent.com/zorker/rothui/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/bar2.tga",
+    "source_url": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/bar2.tga",
+    "canvas": [
+      512,
+      256
+    ],
+    "bbox": [
+      0,
+      161,
+      512,
+      256
+    ],
+    "sha256": "4a069656d66748032ebb2ca3a6a982cd5956406441217874bd0811204b0871dc",
+    "id": "R18",
+    "name": "Layered stone plinth",
+    "rect": [
+      0,
+      235,
+      512,
+      256
+    ],
+    "kind": "lower border",
+    "idea": "Alternate native stone arrangement under the two-row source; source family overlaps bar1, not an independent origin.",
+    "owner_source": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/units/player.lua#L55-L66",
+    "owner_note": "Owning source inspected; full native texture assembly differs from proposed lower-only adaptation.",
+    "repo": "zorker/rothui",
+    "commit": "9a9ce9744ce404991fc06066291614fe1765ee20",
+    "format": "TGA",
+    "crop_basis": "Visually inspected image; pixel rectangle is proposed adaptation, not an asserted native atlas member.",
+    "rights": "Root LICENSE.md is MIT (c)2011\u20132018 Erik Raetz. archive/rBottomBarStyler/core.lua additionally retains a2010 three-clause BSD notice. No image-specific provenance or grant for underlying Diablo/Blizzard artwork was found; repository licensing does not establish ownership of inherited game art.",
+    "adaptation": "Keep raw original bytes. Crop and power-of-two-pad a selected legacy TGA or use verified UVs. No source-addon framework is needed. Preview only until selection.",
+    "crop_sha256": "2ade255c566c1ee752c8d210ed6ac64465df751875049132ffce3cf33a34e1b7",
+    "temporaryPreparationFile": "wow6.0__oUF_Diablo__media__bar2.tga",
+    "sourceRetention": "Temporary preparation record only; this file is not retained in the repository. Use the pinned source URL and crop record."
+  },
+  {
+    "path": "wow6.0/oUF_Diablo/media/bar3.tga",
+    "url": "https://raw.githubusercontent.com/zorker/rothui/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/bar3.tga",
+    "source_url": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/bar3.tga",
+    "canvas": [
+      512,
+      256
+    ],
+    "bbox": [
+      0,
+      128,
+      512,
+      256
+    ],
+    "sha256": "941ac0d7bb26ed76af29456ccc45e069c94157550db483c7bfddf2cccade9163",
+    "id": "R19",
+    "name": "Three-row stone base",
+    "rect": [
+      0,
+      235,
+      512,
+      256
+    ],
+    "kind": "lower border",
+    "idea": "Native base under three-row actionbar; examine against bar1 before selecting because bottom region may be shared.",
+    "owner_source": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/units/player.lua#L55-L66",
+    "owner_note": "Owning source inspected; full native texture assembly differs from proposed lower-only adaptation.",
+    "repo": "zorker/rothui",
+    "commit": "9a9ce9744ce404991fc06066291614fe1765ee20",
+    "format": "TGA",
+    "crop_basis": "Visually inspected image; pixel rectangle is proposed adaptation, not an asserted native atlas member.",
+    "rights": "Root LICENSE.md is MIT (c)2011\u20132018 Erik Raetz. archive/rBottomBarStyler/core.lua additionally retains a2010 three-clause BSD notice. No image-specific provenance or grant for underlying Diablo/Blizzard artwork was found; repository licensing does not establish ownership of inherited game art.",
+    "adaptation": "Keep raw original bytes. Crop and power-of-two-pad a selected legacy TGA or use verified UVs. No source-addon framework is needed. Preview only until selection.",
+    "crop_sha256": "2ade255c566c1ee752c8d210ed6ac64465df751875049132ffce3cf33a34e1b7",
+    "temporaryPreparationFile": "wow6.0__oUF_Diablo__media__bar3.tga",
+    "sourceRetention": "Temporary preparation record only; this file is not retained in the repository. Use the pinned source URL and crop record."
+  },
+  {
+    "path": "archive/rBottomBarStyler/d2tex/border_left.tga",
+    "local": "docs/designs/tally-gothic/research/originals/archive__rBottomBarStyler__d2tex__border_left.tga",
+    "url": "https://raw.githubusercontent.com/zorker/rothui/9a9ce9744ce404991fc06066291614fe1765ee20/archive/rBottomBarStyler/d2tex/border_left.tga",
+    "source_url": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/archive/rBottomBarStyler/d2tex/border_left.tga",
+    "canvas": [
+      1024,
+      512
+    ],
+    "bbox": [
+      381,
+      228,
+      1024,
+      512
+    ],
+    "sha256": "9606dd2ef8dc8f200cc34ef02634e327b067f24b76fa594f9bbe2fa8ea187f18",
+    "id": "R20",
+    "name": "D2 gray filigree lower frame",
+    "rect": [
+      381,
+      474,
+      1024,
+      512
+    ],
+    "kind": "lower border",
+    "idea": "Real interlaced gray Gothic stone lower rail and left corner; pair with separately supplied right-hand source.",
+    "owner_source": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/archive/rBottomBarStyler/core.lua#L480-L492",
+    "owner_note": "Full texture owning source inspected.",
+    "repo": "zorker/rothui",
+    "commit": "9a9ce9744ce404991fc06066291614fe1765ee20",
+    "format": "TGA",
+    "crop_basis": "Visually inspected image; pixel rectangle is proposed adaptation, not an asserted native atlas member.",
+    "rights": "Root LICENSE.md is MIT (c)2011\u20132018 Erik Raetz. archive/rBottomBarStyler/core.lua additionally retains a2010 three-clause BSD notice. No image-specific provenance or grant for underlying Diablo/Blizzard artwork was found; repository licensing does not establish ownership of inherited game art.",
+    "adaptation": "Keep raw original bytes. Crop and power-of-two-pad a selected legacy TGA or use verified UVs. No source-addon framework is needed. Preview only until selection."
+  },
+  {
+    "path": "archive/rBottomBarStyler/d2tex/border_right.tga",
+    "url": "https://raw.githubusercontent.com/zorker/rothui/9a9ce9744ce404991fc06066291614fe1765ee20/archive/rBottomBarStyler/d2tex/border_right.tga",
+    "source_url": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/archive/rBottomBarStyler/d2tex/border_right.tga",
+    "canvas": [
+      1024,
+      512
+    ],
+    "bbox": [
+      0,
+      228,
+      643,
+      512
+    ],
+    "sha256": "ff1484a62a8dc1cc1f200479924407fdef83e7d38ddfaea7ac552533000ee863",
+    "id": "R21",
+    "name": "D2 right filigree lower frame",
+    "rect": [
+      0,
+      474,
+      643,
+      512
+    ],
+    "kind": "lower border",
+    "idea": "Right half matching the D2 lower frame, offered as companion component rather than another independent origin.",
+    "owner_source": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/archive/rBottomBarStyler/core.lua#L480-L492",
+    "owner_note": "Full texture owning source inspected.",
+    "repo": "zorker/rothui",
+    "commit": "9a9ce9744ce404991fc06066291614fe1765ee20",
+    "format": "TGA",
+    "crop_basis": "Visually inspected image; pixel rectangle is proposed adaptation, not an asserted native atlas member.",
+    "rights": "Root LICENSE.md is MIT (c)2011\u20132018 Erik Raetz. archive/rBottomBarStyler/core.lua additionally retains a2010 three-clause BSD notice. No image-specific provenance or grant for underlying Diablo/Blizzard artwork was found; repository licensing does not establish ownership of inherited game art.",
+    "adaptation": "Keep raw original bytes. Crop and power-of-two-pad a selected legacy TGA or use verified UVs. No source-addon framework is needed. Preview only until selection.",
+    "temporaryPreparationFile": "archive__rBottomBarStyler__d2tex__border_right.tga",
+    "sourceRetention": "Temporary preparation record only; this file is not retained in the repository. Use the pinned source URL and crop record."
+  },
+  {
+    "path": "wow6.0/rTooltip/D3BackdropBorder.tga",
+    "url": "https://raw.githubusercontent.com/zorker/rothui/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/rTooltip/D3BackdropBorder.tga",
+    "source_url": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/rTooltip/D3BackdropBorder.tga",
+    "canvas": [
+      128,
+      16
+    ],
+    "bbox": [
+      0,
+      0,
+      128,
+      16
+    ],
+    "sha256": "271194273c3cc86df053a991f30cb4c9f6a784ab6673d7674dda9f13897d50ca",
+    "id": "R22",
+    "name": "D3 silver chipped-stone edge atlas",
+    "rect": [
+      0,
+      0,
+      128,
+      16
+    ],
+    "kind": "eight-piece edge atlas",
+    "idea": "Whole atlas only, not an isolated rail: assemble side and lower tiles/corners without top tiles. Silver stone differs from bronze archive edition.",
+    "owner_source": null,
+    "owner_note": "Archived media library file; no native owning source found in targeted inspection.",
+    "repo": "zorker/rothui",
+    "commit": "9a9ce9744ce404991fc06066291614fe1765ee20",
+    "format": "TGA",
+    "crop_basis": "Visually inspected image; pixel rectangle is proposed adaptation, not an asserted native atlas member.",
+    "rights": "Root LICENSE.md is MIT (c)2011\u20132018 Erik Raetz. archive/rBottomBarStyler/core.lua additionally retains a2010 three-clause BSD notice. No image-specific provenance or grant for underlying Diablo/Blizzard artwork was found; repository licensing does not establish ownership of inherited game art.",
+    "adaptation": "Keep raw original bytes. Crop and power-of-two-pad a selected legacy TGA or use verified UVs. No source-addon framework is needed. Preview only until selection.",
+    "temporaryPreparationFile": "wow6.0__rTooltip__D3BackdropBorder.tga",
+    "sourceRetention": "Temporary preparation record only; this file is not retained in the repository. Use the pinned source URL and crop record."
+  },
+  {
+    "path": "archive/rSetBackdrop/tga/diablo3_tooltip_border.tga",
+    "url": "https://raw.githubusercontent.com/zorker/rothui/9a9ce9744ce404991fc06066291614fe1765ee20/archive/rSetBackdrop/tga/diablo3_tooltip_border.tga",
+    "source_url": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/archive/rSetBackdrop/tga/diablo3_tooltip_border.tga",
+    "canvas": [
+      128,
+      16
+    ],
+    "bbox": [
+      0,
+      0,
+      128,
+      16
+    ],
+    "sha256": "27c8e54828ce62906da2051780cc9668e94cd0535bbb4b02e45f880553f846c4",
+    "id": "R23",
+    "name": "D3 blackened bronze edge atlas",
+    "rect": [
+      0,
+      0,
+      128,
+      16
+    ],
+    "kind": "eight-piece edge atlas",
+    "idea": "Whole native edgeFile atlas. Its code uses edgeSize16,inset3. Assemble sides/lower edge, leave top absent. Same bytes as earlier rBBS_Backdrop border_diablo; do not count as new artwork.",
+    "owner_source": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/archive/rSetBackdrop/config.lua#L60-L68",
+    "owner_note": "Full texture owning source inspected.",
+    "repo": "zorker/rothui",
+    "commit": "9a9ce9744ce404991fc06066291614fe1765ee20",
+    "format": "TGA",
+    "crop_basis": "Visually inspected image; pixel rectangle is proposed adaptation, not an asserted native atlas member.",
+    "rights": "Root LICENSE.md is MIT (c)2011\u20132018 Erik Raetz. archive/rBottomBarStyler/core.lua additionally retains a2010 three-clause BSD notice. No image-specific provenance or grant for underlying Diablo/Blizzard artwork was found; repository licensing does not establish ownership of inherited game art.",
+    "adaptation": "Keep raw original bytes. Crop and power-of-two-pad a selected legacy TGA or use verified UVs. No source-addon framework is needed. Preview only until selection.",
+    "temporaryPreparationFile": "archive__rSetBackdrop__tga__diablo3_tooltip_border.tga",
+    "sourceRetention": "Temporary preparation record only; this file is not retained in the repository. Use the pinned source URL and crop record."
+  },
+  {
+    "path": "archive/textures/backdrop-border/D3NormalTexture.tga",
+    "url": "https://raw.githubusercontent.com/zorker/rothui/9a9ce9744ce404991fc06066291614fe1765ee20/archive/textures/backdrop-border/D3NormalTexture.tga",
+    "source_url": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/archive/textures/backdrop-border/D3NormalTexture.tga",
+    "canvas": [
+      64,
+      64
+    ],
+    "bbox": [
+      0,
+      0,
+      64,
+      64
+    ],
+    "sha256": "bd56ad1ad8609b211aa758542e5898d96a0a1407c13fdd7537dca4cafb66c902",
+    "id": "R24",
+    "name": "D3 dark square metal frame",
+    "rect": [
+      0,
+      32,
+      64,
+      64
+    ],
+    "kind": "lower frame",
+    "idea": "Bottom half of dark beveled metal widget; can extend center while retaining beveled corners; not a whole-atlas crop.",
+    "owner_source": null,
+    "owner_note": "Archived media library file; no native owning source found in targeted inspection.",
+    "repo": "zorker/rothui",
+    "commit": "9a9ce9744ce404991fc06066291614fe1765ee20",
+    "format": "TGA",
+    "crop_basis": "Visually inspected image; pixel rectangle is proposed adaptation, not an asserted native atlas member.",
+    "rights": "Root LICENSE.md is MIT (c)2011\u20132018 Erik Raetz. archive/rBottomBarStyler/core.lua additionally retains a2010 three-clause BSD notice. No image-specific provenance or grant for underlying Diablo/Blizzard artwork was found; repository licensing does not establish ownership of inherited game art.",
+    "adaptation": "Keep raw original bytes. Crop and power-of-two-pad a selected legacy TGA or use verified UVs. No source-addon framework is needed. Preview only until selection.",
+    "temporaryPreparationFile": "archive__textures__backdrop-border__D3NormalTexture.tga",
+    "sourceRetention": "Temporary preparation record only; this file is not retained in the repository. Use the pinned source URL and crop record."
+  }
+]

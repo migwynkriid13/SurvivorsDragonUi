@@ -1,0 +1,1683 @@
+[
+  {
+    "id": "01",
+    "name": "Roth scrollwork",
+    "source": "RothUI \u00b7 castbar.tga",
+    "description": "Carved lower corners and the original grained bronze trough.",
+    "image": "01.png",
+    "imageXPoff": "01-xp-off.png",
+    "assets": [
+      {
+        "id": "R01",
+        "path": "wow6.0/oUF_Diablo/media/castbar.tga",
+        "local": "research/originals/wow6.0__oUF_Diablo__media__castbar.tga",
+        "url": "https://raw.githubusercontent.com/zorker/rothui/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/castbar.tga",
+        "source_url": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/castbar.tga",
+        "canvas": [
+          512,
+          128
+        ],
+        "bbox": [
+          0,
+          23,
+          512,
+          107
+        ],
+        "sha256": "da058f8a764602f48a674600f92aafc3271a37e210c20bca0205566282513f29",
+        "name": "Scrollwork trough",
+        "rect": [
+          0,
+          58,
+          512,
+          107
+        ],
+        "kind": "lower compartment",
+        "idea": "Ornate bronze wings and grained trough; crop off upper rim and attach raw top of trough to the shared silver seam.",
+        "owner_source": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/core/lib.lua#L475-L529",
+        "owner_note": "Owning source inspected; full native texture assembly differs from proposed lower-only adaptation.",
+        "repo": "zorker/rothui",
+        "commit": "9a9ce9744ce404991fc06066291614fe1765ee20",
+        "format": "TGA",
+        "crop_basis": "Visually inspected image; pixel rectangle is proposed adaptation, not an asserted native atlas member.",
+        "rights": "Root LICENSE.md is MIT (c)2011\u20132018 Erik Raetz. archive/rBottomBarStyler/core.lua additionally retains a2010 three-clause BSD notice. No image-specific provenance or grant for underlying Diablo/Blizzard artwork was found; repository licensing does not establish ownership of inherited game art.",
+        "adaptation": "Keep raw original bytes. Crop and power-of-two-pad a selected legacy TGA or use verified UVs. No source-addon framework is needed. Preview only until selection."
+      }
+    ]
+  },
+  {
+    "id": "02",
+    "name": "Roth shrine",
+    "source": "RothUI \u00b7 targettarget.tga",
+    "description": "The compact shrine frame, with its deeper carved lower rail.",
+    "image": "02.png",
+    "imageXPoff": "02-xp-off.png",
+    "assets": [
+      {
+        "id": "R03",
+        "path": "wow6.0/oUF_Diablo/media/targettarget.tga",
+        "local": "research/originals/wow6.0__oUF_Diablo__media__targettarget.tga",
+        "url": "https://raw.githubusercontent.com/zorker/rothui/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/targettarget.tga",
+        "source_url": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/targettarget.tga",
+        "canvas": [
+          256,
+          128
+        ],
+        "bbox": [
+          0,
+          23,
+          256,
+          107
+        ],
+        "sha256": "d6aaefcf93d1351f0d2f305c1d53a17bbf458c7f9ec978350479a0253c3b7280",
+        "name": "Compact bronze shrine",
+        "rect": [
+          0,
+          58,
+          256,
+          107
+        ],
+        "kind": "lower compartment",
+        "idea": "Compact curved filigree and double lower rails; preserve end caps at fixed width while extending center.",
+        "owner_source": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/units/targettarget.lua#L34-L39",
+        "owner_note": "Owning source inspected; full native texture assembly differs from proposed lower-only adaptation.",
+        "repo": "zorker/rothui",
+        "commit": "9a9ce9744ce404991fc06066291614fe1765ee20",
+        "format": "TGA",
+        "crop_basis": "Visually inspected image; pixel rectangle is proposed adaptation, not an asserted native atlas member.",
+        "rights": "Root LICENSE.md is MIT (c)2011\u20132018 Erik Raetz. archive/rBottomBarStyler/core.lua additionally retains a2010 three-clause BSD notice. No image-specific provenance or grant for underlying Diablo/Blizzard artwork was found; repository licensing does not establish ownership of inherited game art.",
+        "adaptation": "Keep raw original bytes. Crop and power-of-two-pad a selected legacy TGA or use verified UVs. No source-addon framework is needed. Preview only until selection."
+      }
+    ]
+  },
+  {
+    "id": "03",
+    "name": "Gothic cornerwork",
+    "source": "RothUI \u00b7 d3_altpower_border.tga",
+    "description": "Real etched Gothic corners and a thin continuous lower rim.",
+    "image": "03.png",
+    "imageXPoff": "03-xp-off.png",
+    "assets": [
+      {
+        "id": "R05",
+        "path": "wow6.0/oUF_Diablo/media/d3_altpower_border.tga",
+        "local": "research/originals/wow6.0__oUF_Diablo__media__d3_altpower_border.tga",
+        "url": "https://raw.githubusercontent.com/zorker/rothui/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/d3_altpower_border.tga",
+        "source_url": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/d3_altpower_border.tga",
+        "canvas": [
+          512,
+          64
+        ],
+        "bbox": [
+          81,
+          4,
+          430,
+          61
+        ],
+        "sha256": "82f82660e992a7b5d8e4d3952589d4ae927fbbed5bbfc827e89ce90ce7981cff",
+        "name": "Gothic filigree frame",
+        "rect": [
+          81,
+          28,
+          430,
+          61
+        ],
+        "kind": "lower border",
+        "idea": "Gray-bronze fine corner scrollwork with transparent interior; use lower half under the seam.",
+        "owner_source": null,
+        "owner_note": "File exists in media library; no owning reference found in the targeted code inspected.",
+        "repo": "zorker/rothui",
+        "commit": "9a9ce9744ce404991fc06066291614fe1765ee20",
+        "format": "TGA",
+        "crop_basis": "Visually inspected image; pixel rectangle is proposed adaptation, not an asserted native atlas member.",
+        "rights": "Root LICENSE.md is MIT (c)2011\u20132018 Erik Raetz. archive/rBottomBarStyler/core.lua additionally retains a2010 three-clause BSD notice. No image-specific provenance or grant for underlying Diablo/Blizzard artwork was found; repository licensing does not establish ownership of inherited game art.",
+        "adaptation": "Keep raw original bytes. Crop and power-of-two-pad a selected legacy TGA or use verified UVs. No source-addon framework is needed. Preview only until selection."
+      }
+    ]
+  },
+  {
+    "id": "04",
+    "name": "Iron sarcophagus",
+    "source": "RothUI \u00b7 demonic_fury_border.tga",
+    "description": "Angular stone-dark metal with the original diamond cornerwork.",
+    "image": "04.png",
+    "imageXPoff": "04-xp-off.png",
+    "assets": [
+      {
+        "id": "R04",
+        "path": "wow6.0/oUF_Diablo/media/demonic_fury_border.tga",
+        "local": "research/originals/wow6.0__oUF_Diablo__media__demonic_fury_border.tga",
+        "url": "https://raw.githubusercontent.com/zorker/rothui/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/demonic_fury_border.tga",
+        "source_url": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/demonic_fury_border.tga",
+        "canvas": [
+          256,
+          32
+        ],
+        "bbox": [
+          0,
+          0,
+          256,
+          32
+        ],
+        "sha256": "a28efac16700fa8cc8f1ac87cb6324ea0464231de517402a84a655aa42db276c",
+        "name": "Angular bronze sarcophagus",
+        "rect": [
+          0,
+          16,
+          256,
+          32
+        ],
+        "kind": "lower border",
+        "idea": "Native angular lower rim and diamond corners; compose around a dark body, omitting original upper edge.",
+        "owner_source": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/core/bars.lua#L614-L620",
+        "owner_note": "Owning source inspected; full native texture assembly differs from proposed lower-only adaptation.",
+        "repo": "zorker/rothui",
+        "commit": "9a9ce9744ce404991fc06066291614fe1765ee20",
+        "format": "TGA",
+        "crop_basis": "Visually inspected image; pixel rectangle is proposed adaptation, not an asserted native atlas member.",
+        "rights": "Root LICENSE.md is MIT (c)2011\u20132018 Erik Raetz. archive/rBottomBarStyler/core.lua additionally retains a2010 three-clause BSD notice. No image-specific provenance or grant for underlying Diablo/Blizzard artwork was found; repository licensing does not establish ownership of inherited game art.",
+        "adaptation": "Keep raw original bytes. Crop and power-of-two-pad a selected legacy TGA or use verified UVs. No source-addon framework is needed. Preview only until selection."
+      }
+    ]
+  },
+  {
+    "id": "05",
+    "name": "Diablo II silverwork",
+    "source": "RothUI \u00b7 d2tex/border_left.tga",
+    "description": "Original Diablo II silver scrollwork across the lower edge.",
+    "image": "05.png",
+    "imageXPoff": "05-xp-off.png",
+    "assets": [
+      {
+        "id": "R20",
+        "path": "archive/rBottomBarStyler/d2tex/border_left.tga",
+        "local": "research/originals/archive__rBottomBarStyler__d2tex__border_left.tga",
+        "url": "https://raw.githubusercontent.com/zorker/rothui/9a9ce9744ce404991fc06066291614fe1765ee20/archive/rBottomBarStyler/d2tex/border_left.tga",
+        "source_url": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/archive/rBottomBarStyler/d2tex/border_left.tga",
+        "canvas": [
+          1024,
+          512
+        ],
+        "bbox": [
+          381,
+          228,
+          1024,
+          512
+        ],
+        "sha256": "9606dd2ef8dc8f200cc34ef02634e327b067f24b76fa594f9bbe2fa8ea187f18",
+        "name": "D2 gray filigree lower frame",
+        "rect": [
+          381,
+          474,
+          1024,
+          512
+        ],
+        "kind": "lower border",
+        "idea": "Real interlaced gray Gothic stone lower rail and left corner; pair with separately supplied right-hand source.",
+        "owner_source": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/archive/rBottomBarStyler/core.lua#L480-L492",
+        "owner_note": "Full texture owning source inspected.",
+        "repo": "zorker/rothui",
+        "commit": "9a9ce9744ce404991fc06066291614fe1765ee20",
+        "format": "TGA",
+        "crop_basis": "Visually inspected image; pixel rectangle is proposed adaptation, not an asserted native atlas member.",
+        "rights": "Root LICENSE.md is MIT (c)2011\u20132018 Erik Raetz. archive/rBottomBarStyler/core.lua additionally retains a2010 three-clause BSD notice. No image-specific provenance or grant for underlying Diablo/Blizzard artwork was found; repository licensing does not establish ownership of inherited game art.",
+        "adaptation": "Keep raw original bytes. Crop and power-of-two-pad a selected legacy TGA or use verified UVs. No source-addon framework is needed. Preview only until selection."
+      }
+    ]
+  },
+  {
+    "id": "06",
+    "name": "Bone scrolls",
+    "source": "RothUI \u00b7 combo_bar_left.tga",
+    "description": "Carved bone-colored end scrolls around the textured stone channel.",
+    "image": "06.png",
+    "imageXPoff": "06-xp-off.png",
+    "assets": [
+      {
+        "id": "R09",
+        "path": "wow6.0/oUF_Diablo/media/combo_bar_left.tga",
+        "local": "research/originals/wow6.0__oUF_Diablo__media__combo_bar_left.tga",
+        "url": "https://raw.githubusercontent.com/zorker/rothui/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/combo_bar_left.tga",
+        "source_url": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/combo_bar_left.tga",
+        "canvas": [
+          64,
+          64
+        ],
+        "bbox": [
+          15,
+          8,
+          64,
+          55
+        ],
+        "sha256": "cdd49aa3e6222df4b5b3499e3e23ab4936ca6def64509524dd3872ff26ca7d05",
+        "name": "Bronze scroll terminators",
+        "rect": [
+          15,
+          8,
+          64,
+          55
+        ],
+        "kind": "side ornament",
+        "idea": "Use the matching right file as paired side scroll ends; no gap or top rail, dark body remains directly under seam.",
+        "owner_source": null,
+        "owner_note": "File exists in media library; targeted owning code uses the related combo_left/right files, not this brighter pair. Assembly here is inferred from inspected matching caps.",
+        "repo": "zorker/rothui",
+        "commit": "9a9ce9744ce404991fc06066291614fe1765ee20",
+        "format": "TGA",
+        "crop_basis": "Visually inspected image; pixel rectangle is proposed adaptation, not an asserted native atlas member.",
+        "rights": "Root LICENSE.md is MIT (c)2011\u20132018 Erik Raetz. archive/rBottomBarStyler/core.lua additionally retains a2010 three-clause BSD notice. No image-specific provenance or grant for underlying Diablo/Blizzard artwork was found; repository licensing does not establish ownership of inherited game art.",
+        "adaptation": "Keep raw original bytes. Crop and power-of-two-pad a selected legacy TGA or use verified UVs. No source-addon framework is needed. Preview only until selection."
+      },
+      {
+        "id": "R06",
+        "path": "wow6.0/oUF_Diablo/media/combo_back.tga",
+        "local": "research/originals/wow6.0__oUF_Diablo__media__combo_back.tga",
+        "url": "https://raw.githubusercontent.com/zorker/rothui/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/combo_back.tga",
+        "source_url": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/combo_back.tga",
+        "canvas": [
+          64,
+          64
+        ],
+        "bbox": [
+          0,
+          12,
+          64,
+          52
+        ],
+        "sha256": "a80cbb2f6c3c05d3b5f337ca8434e786799f928cf7a036a3afdaadb5a33dd62b",
+        "name": "Dark slate trough",
+        "rect": [
+          0,
+          32,
+          64,
+          52
+        ],
+        "kind": "tileable lower compartment",
+        "idea": "Continuous blackened stone with a bronze lower line; the owning code stretches the64px tile.",
+        "owner_source": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/core/lib.lua#L192-L198",
+        "owner_note": "Owning source inspected; full native texture assembly differs from proposed lower-only adaptation.",
+        "repo": "zorker/rothui",
+        "commit": "9a9ce9744ce404991fc06066291614fe1765ee20",
+        "format": "TGA",
+        "crop_basis": "Visually inspected image; pixel rectangle is proposed adaptation, not an asserted native atlas member.",
+        "rights": "Root LICENSE.md is MIT (c)2011\u20132018 Erik Raetz. archive/rBottomBarStyler/core.lua additionally retains a2010 three-clause BSD notice. No image-specific provenance or grant for underlying Diablo/Blizzard artwork was found; repository licensing does not establish ownership of inherited game art.",
+        "adaptation": "Keep raw original bytes. Crop and power-of-two-pad a selected legacy TGA or use verified UVs. No source-addon framework is needed. Preview only until selection."
+      }
+    ]
+  },
+  {
+    "id": "07",
+    "name": "Knotted iron",
+    "source": "RothUI \u00b7 d3_nameplate_border.tga",
+    "description": "Blackened knotwork and pointed metal ends from the older Diablo skin.",
+    "image": "07.png",
+    "imageXPoff": "07-xp-off.png",
+    "assets": [
+      {
+        "id": "R25",
+        "path": "wow4.0/rTextures/d3_nameplate_border.tga",
+        "local": "research/originals/wow4.0__rTextures__d3_nameplate_border.tga",
+        "url": "https://raw.githubusercontent.com/zorker/rothui/9a9ce9744ce404991fc06066291614fe1765ee20/wow4.0/rTextures/d3_nameplate_border.tga",
+        "canvas": [
+          256,
+          64
+        ],
+        "bbox": [
+          3,
+          9,
+          253,
+          51
+        ],
+        "name": "D3 knotted iron nameplate skirt",
+        "rect": [
+          3,
+          28,
+          253,
+          51
+        ],
+        "kind": "lower border",
+        "idea": "Gothic pointed ends and continuous braided knotwork below a black trough. Crop lower half to remove its native upper rim while retaining side points and lower rail. Distinct source beyond the prior eleven textures.",
+        "repo": "zorker/rothui",
+        "commit": "9a9ce9744ce404991fc06066291614fe1765ee20",
+        "source_url": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow4.0/rTextures/d3_nameplate_border.tga",
+        "format": "TGA",
+        "owner_source": null,
+        "owner_note": "Texture archive wow4.0/rTextures has no Lua/XML/TOC owner in the complete pinned tree. Proposed lower-only crop is an adaptation inferred from inspected pixels.",
+        "sha256": "48866e1f578f20abfe0eed34ee1925b65134f9a77b902912b974dd078504fdae",
+        "crop_basis": "Visually inspected image; pixel rectangle is proposed adaptation, not an asserted native atlas member.",
+        "rights": "Root LICENSE.md is MIT (c)2011\u20132018 Erik Raetz. archive/rBottomBarStyler/core.lua additionally retains a2010 three-clause BSD notice. No image-specific provenance or grant for underlying Diablo/Blizzard artwork was found; repository licensing does not establish ownership of inherited game art.",
+        "adaptation": "Keep raw original bytes. Crop and power-of-two-pad a selected legacy TGA or use verified UVs. No source-addon framework is needed. Preview only until selection."
+      }
+    ]
+  },
+  {
+    "id": "08",
+    "name": "Diablo I masonry",
+    "source": "RothUI \u00b7 Diablo1/bar.tga",
+    "description": "The original rough stone surface beneath a Gothic metal surround.",
+    "image": "08.png",
+    "imageXPoff": "08-xp-off.png",
+    "assets": [
+      {
+        "id": "D1",
+        "repo": "zorker/rothui",
+        "sha": "9a9ce9744ce404991fc06066291614fe1765ee20",
+        "path": "wow6.0/rBBS_Diablo1/media/bar.tga",
+        "url": "https://raw.githubusercontent.com/zorker/rothui/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/rBBS_Diablo1/media/bar.tga",
+        "local": "research/originals/zorker-rothui__bar__rBBS_Diablo1.tga",
+        "source_url": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/rBBS_Diablo1/media/bar.tga"
+      },
+      {
+        "id": "R05",
+        "path": "wow6.0/oUF_Diablo/media/d3_altpower_border.tga",
+        "local": "research/originals/wow6.0__oUF_Diablo__media__d3_altpower_border.tga",
+        "url": "https://raw.githubusercontent.com/zorker/rothui/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/d3_altpower_border.tga",
+        "source_url": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/d3_altpower_border.tga",
+        "canvas": [
+          512,
+          64
+        ],
+        "bbox": [
+          81,
+          4,
+          430,
+          61
+        ],
+        "sha256": "82f82660e992a7b5d8e4d3952589d4ae927fbbed5bbfc827e89ce90ce7981cff",
+        "name": "Gothic filigree frame",
+        "rect": [
+          81,
+          28,
+          430,
+          61
+        ],
+        "kind": "lower border",
+        "idea": "Gray-bronze fine corner scrollwork with transparent interior; use lower half under the seam.",
+        "owner_source": null,
+        "owner_note": "File exists in media library; no owning reference found in the targeted code inspected.",
+        "repo": "zorker/rothui",
+        "commit": "9a9ce9744ce404991fc06066291614fe1765ee20",
+        "format": "TGA",
+        "crop_basis": "Visually inspected image; pixel rectangle is proposed adaptation, not an asserted native atlas member.",
+        "rights": "Root LICENSE.md is MIT (c)2011\u20132018 Erik Raetz. archive/rBottomBarStyler/core.lua additionally retains a2010 three-clause BSD notice. No image-specific provenance or grant for underlying Diablo/Blizzard artwork was found; repository licensing does not establish ownership of inherited game art.",
+        "adaptation": "Keep raw original bytes. Crop and power-of-two-pad a selected legacy TGA or use verified UVs. No source-addon framework is needed. Preview only until selection."
+      }
+    ]
+  },
+  {
+    "id": "09",
+    "name": "Acanthus base",
+    "source": "RothUI \u00b7 vehiclebar.tga",
+    "description": "An actual bronze acanthus skirt under a charcoal stone channel.",
+    "image": "09.png",
+    "imageXPoff": "09-xp-off.png",
+    "assets": [
+      {
+        "id": "R16",
+        "path": "wow6.0/oUF_Diablo/media/vehiclebar.tga",
+        "local": "research/originals/wow6.0__oUF_Diablo__media__vehiclebar.tga",
+        "url": "https://raw.githubusercontent.com/zorker/rothui/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/vehiclebar.tga",
+        "source_url": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/vehiclebar.tga",
+        "canvas": [
+          512,
+          256
+        ],
+        "bbox": [
+          4,
+          109,
+          509,
+          256
+        ],
+        "sha256": "79820fe4c777efcf8efcf213c6ca3de45137cc74adb27a0c2c4a6bc5510551b0",
+        "name": "Bronze acanthus skirt",
+        "rect": [
+          4,
+          233,
+          509,
+          256
+        ],
+        "kind": "lower border",
+        "idea": "Crop entirely below the baked empty-button row; use scrollwork feet as border ornament with no slots or icons.",
+        "owner_source": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/units/player.lua#L55-L66",
+        "owner_note": "Owning source inspected; full native texture assembly differs from proposed lower-only adaptation.",
+        "repo": "zorker/rothui",
+        "commit": "9a9ce9744ce404991fc06066291614fe1765ee20",
+        "format": "TGA",
+        "crop_basis": "Visually inspected image; pixel rectangle is proposed adaptation, not an asserted native atlas member.",
+        "rights": "Root LICENSE.md is MIT (c)2011\u20132018 Erik Raetz. archive/rBottomBarStyler/core.lua additionally retains a2010 three-clause BSD notice. No image-specific provenance or grant for underlying Diablo/Blizzard artwork was found; repository licensing does not establish ownership of inherited game art.",
+        "adaptation": "Keep raw original bytes. Crop and power-of-two-pad a selected legacy TGA or use verified UVs. No source-addon framework is needed. Preview only until selection."
+      },
+      {
+        "id": "R06",
+        "path": "wow6.0/oUF_Diablo/media/combo_back.tga",
+        "local": "research/originals/wow6.0__oUF_Diablo__media__combo_back.tga",
+        "url": "https://raw.githubusercontent.com/zorker/rothui/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/combo_back.tga",
+        "source_url": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/combo_back.tga",
+        "canvas": [
+          64,
+          64
+        ],
+        "bbox": [
+          0,
+          12,
+          64,
+          52
+        ],
+        "sha256": "a80cbb2f6c3c05d3b5f337ca8434e786799f928cf7a036a3afdaadb5a33dd62b",
+        "name": "Dark slate trough",
+        "rect": [
+          0,
+          32,
+          64,
+          52
+        ],
+        "kind": "tileable lower compartment",
+        "idea": "Continuous blackened stone with a bronze lower line; the owning code stretches the64px tile.",
+        "owner_source": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/core/lib.lua#L192-L198",
+        "owner_note": "Owning source inspected; full native texture assembly differs from proposed lower-only adaptation.",
+        "repo": "zorker/rothui",
+        "commit": "9a9ce9744ce404991fc06066291614fe1765ee20",
+        "format": "TGA",
+        "crop_basis": "Visually inspected image; pixel rectangle is proposed adaptation, not an asserted native atlas member.",
+        "rights": "Root LICENSE.md is MIT (c)2011\u20132018 Erik Raetz. archive/rBottomBarStyler/core.lua additionally retains a2010 three-clause BSD notice. No image-specific provenance or grant for underlying Diablo/Blizzard artwork was found; repository licensing does not establish ownership of inherited game art.",
+        "adaptation": "Keep raw original bytes. Crop and power-of-two-pad a selected legacy TGA or use verified UVs. No source-addon framework is needed. Preview only until selection."
+      }
+    ]
+  },
+  {
+    "id": "10",
+    "name": "ARPG carved cornice",
+    "source": "ARPG \u00b7 TopBar.tga",
+    "description": "The original carved lower cornice around a textured Gothic channel.",
+    "image": "10.png",
+    "imageXPoff": "10-xp-off.png",
+    "assets": [
+      {
+        "id": "ARPG",
+        "repo": "kyau/ARPG",
+        "sha": "9c53e246ff181d7259e3e355836044c5f8ade5be",
+        "path": "Interface/AddOns/ARPG/Media/Textures/TopBar.tga",
+        "url": "https://raw.githubusercontent.com/kyau/ARPG/9c53e246ff181d7259e3e355836044c5f8ade5be/Interface/AddOns/ARPG/Media/Textures/TopBar.tga",
+        "local": "research/originals/kyau-ARPG__TopBar__Media.tga",
+        "source_url": "https://github.com/kyau/ARPG/blob/9c53e246ff181d7259e3e355836044c5f8ade5be/Interface/AddOns/ARPG/Media/Textures/TopBar.tga"
+      },
+      {
+        "id": "R06",
+        "path": "wow6.0/oUF_Diablo/media/combo_back.tga",
+        "local": "research/originals/wow6.0__oUF_Diablo__media__combo_back.tga",
+        "url": "https://raw.githubusercontent.com/zorker/rothui/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/combo_back.tga",
+        "source_url": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/combo_back.tga",
+        "canvas": [
+          64,
+          64
+        ],
+        "bbox": [
+          0,
+          12,
+          64,
+          52
+        ],
+        "sha256": "a80cbb2f6c3c05d3b5f337ca8434e786799f928cf7a036a3afdaadb5a33dd62b",
+        "name": "Dark slate trough",
+        "rect": [
+          0,
+          32,
+          64,
+          52
+        ],
+        "kind": "tileable lower compartment",
+        "idea": "Continuous blackened stone with a bronze lower line; the owning code stretches the64px tile.",
+        "owner_source": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/core/lib.lua#L192-L198",
+        "owner_note": "Owning source inspected; full native texture assembly differs from proposed lower-only adaptation.",
+        "repo": "zorker/rothui",
+        "commit": "9a9ce9744ce404991fc06066291614fe1765ee20",
+        "format": "TGA",
+        "crop_basis": "Visually inspected image; pixel rectangle is proposed adaptation, not an asserted native atlas member.",
+        "rights": "Root LICENSE.md is MIT (c)2011\u20132018 Erik Raetz. archive/rBottomBarStyler/core.lua additionally retains a2010 three-clause BSD notice. No image-specific provenance or grant for underlying Diablo/Blizzard artwork was found; repository licensing does not establish ownership of inherited game art.",
+        "adaptation": "Keep raw original bytes. Crop and power-of-two-pad a selected legacy TGA or use verified UVs. No source-addon framework is needed. Preview only until selection."
+      }
+    ]
+  },
+  {
+    "id": "11",
+    "name": "Gothic leaf corners",
+    "source": "Diablo III UI \u00b7 UIButton texture",
+    "description": "Existing leaf-etched side and lower corners, with the upper rim removed.",
+    "image": "11.png",
+    "imageXPoff": "11-xp-off.png",
+    "assets": [
+      {
+        "id": "N4",
+        "repo": "RickyElune/Diablo_III_UI",
+        "commit": "10aa68fef2bfa11bba0eab42baa952b700eb1be5",
+        "path": "media/UIButton_300x51_Normal.tga",
+        "originalFile": "docs/designs/tally-gothic/research/originals/RickyElune__media__UIButton_300x51_Normal.tga",
+        "sourceUrl": "https://github.com/RickyElune/Diablo_III_UI/blob/10aa68fef2bfa11bba0eab42baa952b700eb1be5/media/UIButton_300x51_Normal.tga",
+        "proposedCrop": [
+          88,
+          64,
+          424,
+          98
+        ],
+        "cropMeaning": "Inspected composition crop (pixels, right/bottom exclusive), not a claim of native UV metadata unless nativeRegion is supplied.",
+        "description": "Lower half of dark Gothic button; curved corner carvings. Full top is removed by crop.",
+        "owningCode": null,
+        "dimensions": [
+          512,
+          128
+        ],
+        "nontransparentBounds": [
+          88,
+          32,
+          424,
+          98
+        ],
+        "inspectedCrop": [
+          88,
+          64,
+          424,
+          98
+        ],
+        "local": "research/originals/RickyElune__media__UIButton_300x51_Normal.tga",
+        "rect": [
+          88,
+          64,
+          424,
+          98
+        ],
+        "source_url": "https://github.com/RickyElune/Diablo_III_UI/blob/10aa68fef2bfa11bba0eab42baa952b700eb1be5/media/UIButton_300x51_Normal.tga"
+      }
+    ]
+  },
+  {
+    "id": "12",
+    "name": "Dragon iron",
+    "source": "Diablo III UI \u00b7 target.tga",
+    "description": "Sculpted iron end ornaments and the source lower metal rail.",
+    "image": "12.png",
+    "imageXPoff": "12-xp-off.png",
+    "assets": [
+      {
+        "id": "N0",
+        "repo": "RickyElune/Diablo_III_UI",
+        "commit": "10aa68fef2bfa11bba0eab42baa952b700eb1be5",
+        "path": "media/target.tga",
+        "originalFile": "docs/designs/tally-gothic/research/originals/RickyElune__media__target.tga",
+        "sourceUrl": "https://github.com/RickyElune/Diablo_III_UI/blob/10aa68fef2bfa11bba0eab42baa952b700eb1be5/media/target.tga",
+        "proposedCrop": [
+          58,
+          60,
+          454,
+          106
+        ],
+        "cropMeaning": "Inspected composition crop (pixels, right/bottom exclusive), not a claim of native UV metadata unless nativeRegion is supplied.",
+        "description": "Gothic bronze/gold rail, side claws; elite/boss pendant. Full image has two baked bar outlines: use side ornament or one lower outline only to avoid second top border.",
+        "owningCode": {
+          "path": "units/target.lua",
+          "url": "https://github.com/RickyElune/Diablo_III_UI/blob/10aa68fef2bfa11bba0eab42baa952b700eb1be5/units/target.lua",
+          "notes": "createArtwork positions full texture plane on RareIcon; embeds/oUF/elements/rare.lua selects target/target_elite/target_boss by classification. No crop in owner."
+        },
+        "dimensions": [
+          512,
+          128
+        ],
+        "nontransparentBounds": [
+          58,
+          37,
+          454,
+          106
+        ],
+        "inspectedCrop": [
+          58,
+          60,
+          454,
+          106
+        ],
+        "local": "research/originals/RickyElune__media__target.tga",
+        "rect": [
+          58,
+          60,
+          454,
+          106
+        ],
+        "source_url": "https://github.com/RickyElune/Diablo_III_UI/blob/10aa68fef2bfa11bba0eab42baa952b700eb1be5/media/target.tga"
+      }
+    ]
+  },
+  {
+    "id": "13",
+    "name": "Demon reliquary",
+    "source": "Diablo III UI \u00b7 target_elite.tga",
+    "description": "A real demon pendant below the original copper-dark target-frame edging.",
+    "image": "13.png",
+    "imageXPoff": "13-xp-off.png",
+    "assets": [
+      {
+        "id": "N0",
+        "repo": "RickyElune/Diablo_III_UI",
+        "commit": "10aa68fef2bfa11bba0eab42baa952b700eb1be5",
+        "path": "media/target.tga",
+        "originalFile": "docs/designs/tally-gothic/research/originals/RickyElune__media__target.tga",
+        "sourceUrl": "https://github.com/RickyElune/Diablo_III_UI/blob/10aa68fef2bfa11bba0eab42baa952b700eb1be5/media/target.tga",
+        "proposedCrop": [
+          58,
+          60,
+          454,
+          106
+        ],
+        "cropMeaning": "Inspected composition crop (pixels, right/bottom exclusive), not a claim of native UV metadata unless nativeRegion is supplied.",
+        "description": "Gothic bronze/gold rail, side claws; elite/boss pendant. Full image has two baked bar outlines: use side ornament or one lower outline only to avoid second top border.",
+        "owningCode": {
+          "path": "units/target.lua",
+          "url": "https://github.com/RickyElune/Diablo_III_UI/blob/10aa68fef2bfa11bba0eab42baa952b700eb1be5/units/target.lua",
+          "notes": "createArtwork positions full texture plane on RareIcon; embeds/oUF/elements/rare.lua selects target/target_elite/target_boss by classification. No crop in owner."
+        },
+        "dimensions": [
+          512,
+          128
+        ],
+        "nontransparentBounds": [
+          58,
+          37,
+          454,
+          106
+        ],
+        "inspectedCrop": [
+          58,
+          60,
+          454,
+          106
+        ],
+        "local": "research/originals/RickyElune__media__target.tga",
+        "rect": [
+          58,
+          60,
+          454,
+          106
+        ],
+        "source_url": "https://github.com/RickyElune/Diablo_III_UI/blob/10aa68fef2bfa11bba0eab42baa952b700eb1be5/media/target.tga"
+      },
+      {
+        "id": "N1",
+        "repo": "RickyElune/Diablo_III_UI",
+        "commit": "10aa68fef2bfa11bba0eab42baa952b700eb1be5",
+        "path": "media/target_elite.tga",
+        "originalFile": "docs/designs/tally-gothic/research/originals/RickyElune__media__target_elite.tga",
+        "sourceUrl": "https://github.com/RickyElune/Diablo_III_UI/blob/10aa68fef2bfa11bba0eab42baa952b700eb1be5/media/target_elite.tga",
+        "proposedCrop": [
+          58,
+          60,
+          454,
+          128
+        ],
+        "cropMeaning": "Inspected composition crop (pixels, right/bottom exclusive), not a claim of native UV metadata unless nativeRegion is supplied.",
+        "description": "Gothic bronze/gold rail, side claws; elite/boss pendant. Full image has two baked bar outlines: use side ornament or one lower outline only to avoid second top border.",
+        "owningCode": {
+          "path": "units/target.lua",
+          "url": "https://github.com/RickyElune/Diablo_III_UI/blob/10aa68fef2bfa11bba0eab42baa952b700eb1be5/units/target.lua",
+          "notes": "createArtwork positions full texture plane on RareIcon; embeds/oUF/elements/rare.lua selects target/target_elite/target_boss by classification. No crop in owner."
+        },
+        "dimensions": [
+          512,
+          128
+        ],
+        "nontransparentBounds": [
+          58,
+          37,
+          454,
+          126
+        ],
+        "inspectedCrop": [
+          58,
+          60,
+          454,
+          128
+        ],
+        "local": "research/originals/RickyElune__media__target_elite.tga",
+        "rect": [
+          58,
+          60,
+          454,
+          128
+        ],
+        "source_url": "https://github.com/RickyElune/Diablo_III_UI/blob/10aa68fef2bfa11bba0eab42baa952b700eb1be5/media/target_elite.tga"
+      }
+    ]
+  },
+  {
+    "id": "14",
+    "name": "Spartan engraved bronze",
+    "source": "SpartanUI \u00b7 Classic DataBar",
+    "description": "The actual engraved bronze ends and textured lower bar.",
+    "image": "14.png",
+    "imageXPoff": "14-xp-off.png",
+    "assets": [
+      {
+        "id": "N11",
+        "repo": "spartanui-wow/SpartanUI",
+        "commit": "5515bca906287a190240a5d99cd40a938e76d1de",
+        "path": "Themes/Classic/Images/DataBar-Left.png",
+        "originalFile": "docs/designs/tally-gothic/research/originals/spartanui-wow__Themes__Classic__Images__DataBar-Left.png",
+        "sourceUrl": "https://github.com/spartanui-wow/SpartanUI/blob/5515bca906287a190240a5d99cd40a938e76d1de/Themes/Classic/Images/DataBar-Left.png",
+        "proposedCrop": [
+          0,
+          16,
+          51,
+          64
+        ],
+        "cropMeaning": "Inspected composition crop (pixels, right/bottom exclusive), not a claim of native UV metadata unless nativeRegion is supplied.",
+        "description": "Classic actual painted data-bar left; remove source top16px to make open-top lower compartment. Preserve detailed side/bottom artwork and own original counter icons.",
+        "owningCode": {
+          "path": "Themes/DataBarArt.lua",
+          "url": "https://github.com/spartanui-wow/SpartanUI/blob/5515bca906287a190240a5d99cd40a938e76d1de/Themes/DataBarArt.lua",
+          "notes": "Owner uses native full height64; left/right actual width51, center actual width231; centers repeat, ends retain aspect ratio. Proposed y16 crop removes own top trim."
+        },
+        "nativeRegion": [
+          0,
+          0,
+          51,
+          64
+        ],
+        "dimensions": [
+          64,
+          64
+        ],
+        "nontransparentBounds": [
+          0,
+          0,
+          64,
+          64
+        ],
+        "inspectedCrop": [
+          0,
+          16,
+          51,
+          64
+        ],
+        "local": "research/originals/spartanui-wow__Themes__Classic__Images__DataBar-Left.png",
+        "rect": [
+          0,
+          16,
+          51,
+          64
+        ],
+        "source_url": "https://github.com/spartanui-wow/SpartanUI/blob/5515bca906287a190240a5d99cd40a938e76d1de/Themes/Classic/Images/DataBar-Left.png"
+      },
+      {
+        "id": "N12",
+        "repo": "spartanui-wow/SpartanUI",
+        "commit": "5515bca906287a190240a5d99cd40a938e76d1de",
+        "path": "Themes/Classic/Images/DataBar-Center.png",
+        "originalFile": "docs/designs/tally-gothic/research/originals/Themes__Classic__Images__DataBar-Center.png",
+        "sourceUrl": "https://github.com/spartanui-wow/SpartanUI/blob/5515bca906287a190240a5d99cd40a938e76d1de/Themes/Classic/Images/DataBar-Center.png",
+        "proposedCrop": [
+          0,
+          16,
+          231,
+          64
+        ],
+        "cropMeaning": "Inspected composition crop (pixels, right/bottom exclusive), not a claim of native UV metadata unless nativeRegion is supplied.",
+        "description": "Classic actual painted data-bar center; remove source top16px to make open-top lower compartment. Preserve detailed side/bottom artwork and own original counter icons.",
+        "owningCode": {
+          "path": "Themes/DataBarArt.lua",
+          "url": "https://github.com/spartanui-wow/SpartanUI/blob/5515bca906287a190240a5d99cd40a938e76d1de/Themes/DataBarArt.lua",
+          "notes": "Owner uses native full height64; left/right actual width51, center actual width231; centers repeat, ends retain aspect ratio. Proposed y16 crop removes own top trim."
+        },
+        "nativeRegion": [
+          0,
+          0,
+          231,
+          64
+        ],
+        "dimensions": [
+          256,
+          64
+        ],
+        "nontransparentBounds": [
+          0,
+          0,
+          256,
+          64
+        ],
+        "inspectedCrop": [
+          0,
+          16,
+          231,
+          64
+        ],
+        "local": "research/originals/Themes__Classic__Images__DataBar-Center.png",
+        "rect": [
+          0,
+          16,
+          231,
+          64
+        ],
+        "source_url": "https://github.com/spartanui-wow/SpartanUI/blob/5515bca906287a190240a5d99cd40a938e76d1de/Themes/Classic/Images/DataBar-Center.png"
+      },
+      {
+        "id": "N13",
+        "repo": "spartanui-wow/SpartanUI",
+        "commit": "5515bca906287a190240a5d99cd40a938e76d1de",
+        "path": "Themes/Classic/Images/DataBar-Right.png",
+        "originalFile": "docs/designs/tally-gothic/research/originals/spartanui-wow__Themes__Classic__Images__DataBar-Right.png",
+        "sourceUrl": "https://github.com/spartanui-wow/SpartanUI/blob/5515bca906287a190240a5d99cd40a938e76d1de/Themes/Classic/Images/DataBar-Right.png",
+        "proposedCrop": [
+          0,
+          16,
+          51,
+          64
+        ],
+        "cropMeaning": "Inspected composition crop (pixels, right/bottom exclusive), not a claim of native UV metadata unless nativeRegion is supplied.",
+        "description": "Classic actual painted data-bar right; remove source top16px to make open-top lower compartment. Preserve detailed side/bottom artwork and own original counter icons.",
+        "owningCode": {
+          "path": "Themes/DataBarArt.lua",
+          "url": "https://github.com/spartanui-wow/SpartanUI/blob/5515bca906287a190240a5d99cd40a938e76d1de/Themes/DataBarArt.lua",
+          "notes": "Owner uses native full height64; left/right actual width51, center actual width231; centers repeat, ends retain aspect ratio. Proposed y16 crop removes own top trim."
+        },
+        "nativeRegion": [
+          0,
+          0,
+          51,
+          64
+        ],
+        "dimensions": [
+          64,
+          64
+        ],
+        "nontransparentBounds": [
+          0,
+          0,
+          64,
+          64
+        ],
+        "inspectedCrop": [
+          0,
+          16,
+          51,
+          64
+        ],
+        "local": "research/originals/spartanui-wow__Themes__Classic__Images__DataBar-Right.png",
+        "rect": [
+          0,
+          16,
+          51,
+          64
+        ],
+        "source_url": "https://github.com/spartanui-wow/SpartanUI/blob/5515bca906287a190240a5d99cd40a938e76d1de/Themes/Classic/Images/DataBar-Right.png"
+      }
+    ]
+  },
+  {
+    "id": "15",
+    "name": "Spartan tusk carving",
+    "source": "SpartanUI \u00b7 Tribal DataBar",
+    "description": "Real carved wood and tusks, toned toward aged Vanilla metal.",
+    "image": "15.png",
+    "imageXPoff": "15-xp-off.png",
+    "assets": [
+      {
+        "id": "N14",
+        "repo": "spartanui-wow/SpartanUI",
+        "commit": "5515bca906287a190240a5d99cd40a938e76d1de",
+        "path": "Themes/Tribal/images/DataBar-Left.png",
+        "originalFile": "docs/designs/tally-gothic/research/originals/spartanui-wow__Themes__Tribal__images__DataBar-Left.png",
+        "sourceUrl": "https://github.com/spartanui-wow/SpartanUI/blob/5515bca906287a190240a5d99cd40a938e76d1de/Themes/Tribal/images/DataBar-Left.png",
+        "proposedCrop": [
+          0,
+          16,
+          54,
+          64
+        ],
+        "cropMeaning": "Inspected composition crop (pixels, right/bottom exclusive), not a claim of native UV metadata unless nativeRegion is supplied.",
+        "description": "Tribal actual painted data-bar left; remove source top16px to make open-top lower compartment. Preserve detailed side/bottom artwork and own original counter icons.",
+        "owningCode": {
+          "path": "Themes/DataBarArt.lua",
+          "url": "https://github.com/spartanui-wow/SpartanUI/blob/5515bca906287a190240a5d99cd40a938e76d1de/Themes/DataBarArt.lua",
+          "notes": "Owner uses native full height64; left/right actual width54, center actual width207; centers repeat, ends retain aspect ratio. Proposed y16 crop removes own top trim."
+        },
+        "nativeRegion": [
+          0,
+          0,
+          54,
+          64
+        ],
+        "dimensions": [
+          64,
+          64
+        ],
+        "nontransparentBounds": [
+          0,
+          0,
+          64,
+          64
+        ],
+        "inspectedCrop": [
+          0,
+          16,
+          54,
+          64
+        ],
+        "local": "research/originals/spartanui-wow__Themes__Tribal__images__DataBar-Left.png",
+        "rect": [
+          0,
+          16,
+          54,
+          64
+        ],
+        "source_url": "https://github.com/spartanui-wow/SpartanUI/blob/5515bca906287a190240a5d99cd40a938e76d1de/Themes/Tribal/images/DataBar-Left.png"
+      },
+      {
+        "id": "N15",
+        "repo": "spartanui-wow/SpartanUI",
+        "commit": "5515bca906287a190240a5d99cd40a938e76d1de",
+        "path": "Themes/Tribal/images/DataBar-Center.png",
+        "originalFile": "docs/designs/tally-gothic/research/originals/spartanui-wow__Themes__Tribal__images__DataBar-Center.png",
+        "sourceUrl": "https://github.com/spartanui-wow/SpartanUI/blob/5515bca906287a190240a5d99cd40a938e76d1de/Themes/Tribal/images/DataBar-Center.png",
+        "proposedCrop": [
+          0,
+          16,
+          207,
+          64
+        ],
+        "cropMeaning": "Inspected composition crop (pixels, right/bottom exclusive), not a claim of native UV metadata unless nativeRegion is supplied.",
+        "description": "Tribal actual painted data-bar center; remove source top16px to make open-top lower compartment. Preserve detailed side/bottom artwork and own original counter icons.",
+        "owningCode": {
+          "path": "Themes/DataBarArt.lua",
+          "url": "https://github.com/spartanui-wow/SpartanUI/blob/5515bca906287a190240a5d99cd40a938e76d1de/Themes/DataBarArt.lua",
+          "notes": "Owner uses native full height64; left/right actual width54, center actual width207; centers repeat, ends retain aspect ratio. Proposed y16 crop removes own top trim."
+        },
+        "nativeRegion": [
+          0,
+          0,
+          207,
+          64
+        ],
+        "dimensions": [
+          256,
+          64
+        ],
+        "nontransparentBounds": [
+          0,
+          0,
+          256,
+          64
+        ],
+        "inspectedCrop": [
+          0,
+          16,
+          207,
+          64
+        ],
+        "local": "research/originals/spartanui-wow__Themes__Tribal__images__DataBar-Center.png",
+        "rect": [
+          0,
+          16,
+          207,
+          64
+        ],
+        "source_url": "https://github.com/spartanui-wow/SpartanUI/blob/5515bca906287a190240a5d99cd40a938e76d1de/Themes/Tribal/images/DataBar-Center.png"
+      },
+      {
+        "id": "N16",
+        "repo": "spartanui-wow/SpartanUI",
+        "commit": "5515bca906287a190240a5d99cd40a938e76d1de",
+        "path": "Themes/Tribal/images/DataBar-Right.png",
+        "originalFile": "docs/designs/tally-gothic/research/originals/spartanui-wow__Themes__Tribal__images__DataBar-Right.png",
+        "sourceUrl": "https://github.com/spartanui-wow/SpartanUI/blob/5515bca906287a190240a5d99cd40a938e76d1de/Themes/Tribal/images/DataBar-Right.png",
+        "proposedCrop": [
+          0,
+          16,
+          54,
+          64
+        ],
+        "cropMeaning": "Inspected composition crop (pixels, right/bottom exclusive), not a claim of native UV metadata unless nativeRegion is supplied.",
+        "description": "Tribal actual painted data-bar right; remove source top16px to make open-top lower compartment. Preserve detailed side/bottom artwork and own original counter icons.",
+        "owningCode": {
+          "path": "Themes/DataBarArt.lua",
+          "url": "https://github.com/spartanui-wow/SpartanUI/blob/5515bca906287a190240a5d99cd40a938e76d1de/Themes/DataBarArt.lua",
+          "notes": "Owner uses native full height64; left/right actual width54, center actual width207; centers repeat, ends retain aspect ratio. Proposed y16 crop removes own top trim."
+        },
+        "nativeRegion": [
+          0,
+          0,
+          54,
+          64
+        ],
+        "dimensions": [
+          64,
+          64
+        ],
+        "nontransparentBounds": [
+          0,
+          0,
+          64,
+          64
+        ],
+        "inspectedCrop": [
+          0,
+          16,
+          54,
+          64
+        ],
+        "local": "research/originals/spartanui-wow__Themes__Tribal__images__DataBar-Right.png",
+        "rect": [
+          0,
+          16,
+          54,
+          64
+        ],
+        "source_url": "https://github.com/spartanui-wow/SpartanUI/blob/5515bca906287a190240a5d99cd40a938e76d1de/Themes/Tribal/images/DataBar-Right.png"
+      }
+    ]
+  },
+  {
+    "id": "16",
+    "name": "Chiselled stone",
+    "source": "SpartanUI \u00b7 Shard DataBar",
+    "description": "The original cut stone endcaps, with a dark recessed center.",
+    "image": "16.png",
+    "imageXPoff": "16-xp-off.png",
+    "assets": [
+      {
+        "id": "N17",
+        "repo": "spartanui-wow/SpartanUI",
+        "commit": "5515bca906287a190240a5d99cd40a938e76d1de",
+        "path": "Themes/Shard/Images/DataBar-Left.png",
+        "originalFile": "docs/designs/tally-gothic/research/originals/spartanui-wow__Themes__Shard__Images__DataBar-Left.png",
+        "sourceUrl": "https://github.com/spartanui-wow/SpartanUI/blob/5515bca906287a190240a5d99cd40a938e76d1de/Themes/Shard/Images/DataBar-Left.png",
+        "proposedCrop": [
+          0,
+          16,
+          128,
+          64
+        ],
+        "cropMeaning": "Inspected composition crop (pixels, right/bottom exclusive), not a claim of native UV metadata unless nativeRegion is supplied.",
+        "description": "Shard actual painted data-bar left; remove source top16px to make open-top lower compartment. Preserve detailed side/bottom artwork and own original counter icons.",
+        "owningCode": {
+          "path": "Themes/DataBarArt.lua",
+          "url": "https://github.com/spartanui-wow/SpartanUI/blob/5515bca906287a190240a5d99cd40a938e76d1de/Themes/DataBarArt.lua",
+          "notes": "Owner uses native full height64; left/right actual width128, center actual width256; centers repeat, ends retain aspect ratio. Proposed y16 crop removes own top trim."
+        },
+        "nativeRegion": [
+          0,
+          0,
+          128,
+          64
+        ],
+        "dimensions": [
+          128,
+          64
+        ],
+        "nontransparentBounds": [
+          0,
+          0,
+          128,
+          64
+        ],
+        "inspectedCrop": [
+          0,
+          16,
+          128,
+          64
+        ],
+        "local": "research/originals/spartanui-wow__Themes__Shard__Images__DataBar-Left.png",
+        "rect": [
+          0,
+          16,
+          128,
+          64
+        ],
+        "source_url": "https://github.com/spartanui-wow/SpartanUI/blob/5515bca906287a190240a5d99cd40a938e76d1de/Themes/Shard/Images/DataBar-Left.png"
+      },
+      {
+        "id": "N18",
+        "repo": "spartanui-wow/SpartanUI",
+        "commit": "5515bca906287a190240a5d99cd40a938e76d1de",
+        "path": "Themes/Shard/Images/DataBar-Center.png",
+        "originalFile": "docs/designs/tally-gothic/research/originals/spartanui-wow__Themes__Shard__Images__DataBar-Center.png",
+        "sourceUrl": "https://github.com/spartanui-wow/SpartanUI/blob/5515bca906287a190240a5d99cd40a938e76d1de/Themes/Shard/Images/DataBar-Center.png",
+        "proposedCrop": [
+          0,
+          16,
+          256,
+          64
+        ],
+        "cropMeaning": "Inspected composition crop (pixels, right/bottom exclusive), not a claim of native UV metadata unless nativeRegion is supplied.",
+        "description": "Shard actual painted data-bar center; remove source top16px to make open-top lower compartment. Preserve detailed side/bottom artwork and own original counter icons.",
+        "owningCode": {
+          "path": "Themes/DataBarArt.lua",
+          "url": "https://github.com/spartanui-wow/SpartanUI/blob/5515bca906287a190240a5d99cd40a938e76d1de/Themes/DataBarArt.lua",
+          "notes": "Owner uses native full height64; left/right actual width128, center actual width256; centers repeat, ends retain aspect ratio. Proposed y16 crop removes own top trim."
+        },
+        "nativeRegion": [
+          0,
+          0,
+          256,
+          64
+        ],
+        "dimensions": [
+          256,
+          64
+        ],
+        "nontransparentBounds": [
+          0,
+          0,
+          256,
+          64
+        ],
+        "inspectedCrop": [
+          0,
+          16,
+          256,
+          64
+        ],
+        "local": "research/originals/spartanui-wow__Themes__Shard__Images__DataBar-Center.png",
+        "rect": [
+          0,
+          16,
+          256,
+          64
+        ],
+        "source_url": "https://github.com/spartanui-wow/SpartanUI/blob/5515bca906287a190240a5d99cd40a938e76d1de/Themes/Shard/Images/DataBar-Center.png"
+      },
+      {
+        "id": "N19",
+        "repo": "spartanui-wow/SpartanUI",
+        "commit": "5515bca906287a190240a5d99cd40a938e76d1de",
+        "path": "Themes/Shard/Images/DataBar-Right.png",
+        "originalFile": "docs/designs/tally-gothic/research/originals/spartanui-wow__Themes__Shard__Images__DataBar-Right.png",
+        "sourceUrl": "https://github.com/spartanui-wow/SpartanUI/blob/5515bca906287a190240a5d99cd40a938e76d1de/Themes/Shard/Images/DataBar-Right.png",
+        "proposedCrop": [
+          0,
+          16,
+          128,
+          64
+        ],
+        "cropMeaning": "Inspected composition crop (pixels, right/bottom exclusive), not a claim of native UV metadata unless nativeRegion is supplied.",
+        "description": "Shard actual painted data-bar right; remove source top16px to make open-top lower compartment. Preserve detailed side/bottom artwork and own original counter icons.",
+        "owningCode": {
+          "path": "Themes/DataBarArt.lua",
+          "url": "https://github.com/spartanui-wow/SpartanUI/blob/5515bca906287a190240a5d99cd40a938e76d1de/Themes/DataBarArt.lua",
+          "notes": "Owner uses native full height64; left/right actual width128, center actual width256; centers repeat, ends retain aspect ratio. Proposed y16 crop removes own top trim."
+        },
+        "nativeRegion": [
+          0,
+          0,
+          128,
+          64
+        ],
+        "dimensions": [
+          128,
+          64
+        ],
+        "nontransparentBounds": [
+          0,
+          0,
+          128,
+          64
+        ],
+        "inspectedCrop": [
+          0,
+          16,
+          128,
+          64
+        ],
+        "local": "research/originals/spartanui-wow__Themes__Shard__Images__DataBar-Right.png",
+        "rect": [
+          0,
+          16,
+          128,
+          64
+        ],
+        "source_url": "https://github.com/spartanui-wow/SpartanUI/blob/5515bca906287a190240a5d99cd40a938e76d1de/Themes/Shard/Images/DataBar-Right.png"
+      }
+    ]
+  },
+  {
+    "id": "17",
+    "name": "Black cathedral",
+    "source": "SpartanUI \u00b7 Midnight DataBar",
+    "description": "The Gothic tracery remains; purple is reduced to match gray Vanilla chrome.",
+    "image": "17.png",
+    "imageXPoff": "17-xp-off.png",
+    "assets": [
+      {
+        "id": "N20",
+        "repo": "spartanui-wow/SpartanUI",
+        "commit": "5515bca906287a190240a5d99cd40a938e76d1de",
+        "path": "Themes/Midnight/Images/DataBar-Left.png",
+        "originalFile": "docs/designs/tally-gothic/research/originals/spartanui-wow__Themes__Midnight__Images__DataBar-Left.png",
+        "sourceUrl": "https://github.com/spartanui-wow/SpartanUI/blob/5515bca906287a190240a5d99cd40a938e76d1de/Themes/Midnight/Images/DataBar-Left.png",
+        "proposedCrop": [
+          0,
+          16,
+          67,
+          64
+        ],
+        "cropMeaning": "Inspected composition crop (pixels, right/bottom exclusive), not a claim of native UV metadata unless nativeRegion is supplied.",
+        "description": "Midnight actual painted data-bar left; remove source top16px to make open-top lower compartment. Preserve detailed side/bottom artwork and own original counter icons.",
+        "owningCode": {
+          "path": "Themes/DataBarArt.lua",
+          "url": "https://github.com/spartanui-wow/SpartanUI/blob/5515bca906287a190240a5d99cd40a938e76d1de/Themes/DataBarArt.lua",
+          "notes": "Owner uses native full height64; left/right actual width67, center actual width239; centers repeat, ends retain aspect ratio. Proposed y16 crop removes own top trim."
+        },
+        "nativeRegion": [
+          0,
+          0,
+          67,
+          64
+        ],
+        "dimensions": [
+          128,
+          64
+        ],
+        "nontransparentBounds": [
+          0,
+          0,
+          128,
+          64
+        ],
+        "inspectedCrop": [
+          0,
+          16,
+          67,
+          64
+        ],
+        "local": "research/originals/spartanui-wow__Themes__Midnight__Images__DataBar-Left.png",
+        "rect": [
+          0,
+          16,
+          67,
+          64
+        ],
+        "source_url": "https://github.com/spartanui-wow/SpartanUI/blob/5515bca906287a190240a5d99cd40a938e76d1de/Themes/Midnight/Images/DataBar-Left.png"
+      },
+      {
+        "id": "N21",
+        "repo": "spartanui-wow/SpartanUI",
+        "commit": "5515bca906287a190240a5d99cd40a938e76d1de",
+        "path": "Themes/Midnight/Images/DataBar-Center.png",
+        "originalFile": "docs/designs/tally-gothic/research/originals/spartanui-wow__Themes__Midnight__Images__DataBar-Center.png",
+        "sourceUrl": "https://github.com/spartanui-wow/SpartanUI/blob/5515bca906287a190240a5d99cd40a938e76d1de/Themes/Midnight/Images/DataBar-Center.png",
+        "proposedCrop": [
+          0,
+          16,
+          239,
+          64
+        ],
+        "cropMeaning": "Inspected composition crop (pixels, right/bottom exclusive), not a claim of native UV metadata unless nativeRegion is supplied.",
+        "description": "Midnight actual painted data-bar center; remove source top16px to make open-top lower compartment. Preserve detailed side/bottom artwork and own original counter icons.",
+        "owningCode": {
+          "path": "Themes/DataBarArt.lua",
+          "url": "https://github.com/spartanui-wow/SpartanUI/blob/5515bca906287a190240a5d99cd40a938e76d1de/Themes/DataBarArt.lua",
+          "notes": "Owner uses native full height64; left/right actual width67, center actual width239; centers repeat, ends retain aspect ratio. Proposed y16 crop removes own top trim."
+        },
+        "nativeRegion": [
+          0,
+          0,
+          239,
+          64
+        ],
+        "dimensions": [
+          256,
+          64
+        ],
+        "nontransparentBounds": [
+          0,
+          0,
+          256,
+          64
+        ],
+        "inspectedCrop": [
+          0,
+          16,
+          239,
+          64
+        ],
+        "local": "research/originals/spartanui-wow__Themes__Midnight__Images__DataBar-Center.png",
+        "rect": [
+          0,
+          16,
+          239,
+          64
+        ],
+        "source_url": "https://github.com/spartanui-wow/SpartanUI/blob/5515bca906287a190240a5d99cd40a938e76d1de/Themes/Midnight/Images/DataBar-Center.png"
+      },
+      {
+        "id": "N22",
+        "repo": "spartanui-wow/SpartanUI",
+        "commit": "5515bca906287a190240a5d99cd40a938e76d1de",
+        "path": "Themes/Midnight/Images/DataBar-Right.png",
+        "originalFile": "docs/designs/tally-gothic/research/originals/spartanui-wow__Themes__Midnight__Images__DataBar-Right.png",
+        "sourceUrl": "https://github.com/spartanui-wow/SpartanUI/blob/5515bca906287a190240a5d99cd40a938e76d1de/Themes/Midnight/Images/DataBar-Right.png",
+        "proposedCrop": [
+          0,
+          16,
+          67,
+          64
+        ],
+        "cropMeaning": "Inspected composition crop (pixels, right/bottom exclusive), not a claim of native UV metadata unless nativeRegion is supplied.",
+        "description": "Midnight actual painted data-bar right; remove source top16px to make open-top lower compartment. Preserve detailed side/bottom artwork and own original counter icons.",
+        "owningCode": {
+          "path": "Themes/DataBarArt.lua",
+          "url": "https://github.com/spartanui-wow/SpartanUI/blob/5515bca906287a190240a5d99cd40a938e76d1de/Themes/DataBarArt.lua",
+          "notes": "Owner uses native full height64; left/right actual width67, center actual width239; centers repeat, ends retain aspect ratio. Proposed y16 crop removes own top trim."
+        },
+        "nativeRegion": [
+          0,
+          0,
+          67,
+          64
+        ],
+        "dimensions": [
+          128,
+          64
+        ],
+        "nontransparentBounds": [
+          0,
+          0,
+          128,
+          64
+        ],
+        "inspectedCrop": [
+          0,
+          16,
+          67,
+          64
+        ],
+        "local": "research/originals/spartanui-wow__Themes__Midnight__Images__DataBar-Right.png",
+        "rect": [
+          0,
+          16,
+          67,
+          64
+        ],
+        "source_url": "https://github.com/spartanui-wow/SpartanUI/blob/5515bca906287a190240a5d99cd40a938e76d1de/Themes/Midnight/Images/DataBar-Right.png"
+      }
+    ]
+  },
+  {
+    "id": "18",
+    "name": "Weathered steel",
+    "source": "SpartanUI \u00b7 Classic base-left1",
+    "description": "Actual worn metal and black curling linework, framed by Gothic corners.",
+    "image": "18.png",
+    "imageXPoff": "18-xp-off.png",
+    "assets": [
+      {
+        "id": "N23",
+        "repo": "spartanui-wow/SpartanUI",
+        "commit": "5515bca906287a190240a5d99cd40a938e76d1de",
+        "path": "Themes/Classic/Images/base-left1.blp",
+        "originalFile": "docs/designs/tally-gothic/research/originals/Themes__Classic__Images__base-left1.blp",
+        "sourceUrl": "https://github.com/spartanui-wow/SpartanUI/blob/5515bca906287a190240a5d99cd40a938e76d1de/Themes/Classic/Images/base-left1.blp",
+        "proposedCrop": [
+          0,
+          128,
+          512,
+          256
+        ],
+        "cropMeaning": "Inspected composition crop (pixels, right/bottom exclusive), not a claim of native UV metadata unless nativeRegion is supplied.",
+        "description": "Weathered grey stone/metal panel with black scrollwork near upperedge. Use fullwidth stone body; top128 crop removes its native bowed top silhouette.",
+        "owningCode": {
+          "path": "Themes/Classic/Style.lua",
+          "url": "https://github.com/spartanui-wow/SpartanUI/blob/5515bca906287a190240a5d99cd40a938e76d1de/Themes/Classic/Style.lua",
+          "notes": "CreateArtwork anchors separate full texture pieces to adjacent art halves. Crop is proposal adaptation only."
+        },
+        "dimensions": [
+          512,
+          256
+        ],
+        "nontransparentBounds": [
+          0,
+          102,
+          512,
+          256
+        ],
+        "inspectedCrop": [
+          0,
+          128,
+          512,
+          256
+        ],
+        "local": "research/originals/Themes__Classic__Images__base-left1.blp",
+        "rect": [
+          0,
+          128,
+          512,
+          256
+        ],
+        "source_url": "https://github.com/spartanui-wow/SpartanUI/blob/5515bca906287a190240a5d99cd40a938e76d1de/Themes/Classic/Images/base-left1.blp"
+      },
+      {
+        "id": "R05",
+        "path": "wow6.0/oUF_Diablo/media/d3_altpower_border.tga",
+        "local": "research/originals/wow6.0__oUF_Diablo__media__d3_altpower_border.tga",
+        "url": "https://raw.githubusercontent.com/zorker/rothui/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/d3_altpower_border.tga",
+        "source_url": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/d3_altpower_border.tga",
+        "canvas": [
+          512,
+          64
+        ],
+        "bbox": [
+          81,
+          4,
+          430,
+          61
+        ],
+        "sha256": "82f82660e992a7b5d8e4d3952589d4ae927fbbed5bbfc827e89ce90ce7981cff",
+        "name": "Gothic filigree frame",
+        "rect": [
+          81,
+          28,
+          430,
+          61
+        ],
+        "kind": "lower border",
+        "idea": "Gray-bronze fine corner scrollwork with transparent interior; use lower half under the seam.",
+        "owner_source": null,
+        "owner_note": "File exists in media library; no owning reference found in the targeted code inspected.",
+        "repo": "zorker/rothui",
+        "commit": "9a9ce9744ce404991fc06066291614fe1765ee20",
+        "format": "TGA",
+        "crop_basis": "Visually inspected image; pixel rectangle is proposed adaptation, not an asserted native atlas member.",
+        "rights": "Root LICENSE.md is MIT (c)2011\u20132018 Erik Raetz. archive/rBottomBarStyler/core.lua additionally retains a2010 three-clause BSD notice. No image-specific provenance or grant for underlying Diablo/Blizzard artwork was found; repository licensing does not establish ownership of inherited game art.",
+        "adaptation": "Keep raw original bytes. Crop and power-of-two-pad a selected legacy TGA or use verified UVs. No source-addon framework is needed. Preview only until selection."
+      }
+    ]
+  },
+  {
+    "id": "19",
+    "name": "Gargoyle crest",
+    "source": "RothUI \u00b7 castbar + d3_head_garg",
+    "description": "The original carved trough with its original-source gargoyle ornament.",
+    "image": "19.png",
+    "imageXPoff": "19-xp-off.png",
+    "assets": [
+      {
+        "id": "R01",
+        "path": "wow6.0/oUF_Diablo/media/castbar.tga",
+        "local": "research/originals/wow6.0__oUF_Diablo__media__castbar.tga",
+        "url": "https://raw.githubusercontent.com/zorker/rothui/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/castbar.tga",
+        "source_url": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/castbar.tga",
+        "canvas": [
+          512,
+          128
+        ],
+        "bbox": [
+          0,
+          23,
+          512,
+          107
+        ],
+        "sha256": "da058f8a764602f48a674600f92aafc3271a37e210c20bca0205566282513f29",
+        "name": "Scrollwork trough",
+        "rect": [
+          0,
+          58,
+          512,
+          107
+        ],
+        "kind": "lower compartment",
+        "idea": "Ornate bronze wings and grained trough; crop off upper rim and attach raw top of trough to the shared silver seam.",
+        "owner_source": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/core/lib.lua#L475-L529",
+        "owner_note": "Owning source inspected; full native texture assembly differs from proposed lower-only adaptation.",
+        "repo": "zorker/rothui",
+        "commit": "9a9ce9744ce404991fc06066291614fe1765ee20",
+        "format": "TGA",
+        "crop_basis": "Visually inspected image; pixel rectangle is proposed adaptation, not an asserted native atlas member.",
+        "rights": "Root LICENSE.md is MIT (c)2011\u20132018 Erik Raetz. archive/rBottomBarStyler/core.lua additionally retains a2010 three-clause BSD notice. No image-specific provenance or grant for underlying Diablo/Blizzard artwork was found; repository licensing does not establish ownership of inherited game art.",
+        "adaptation": "Keep raw original bytes. Crop and power-of-two-pad a selected legacy TGA or use verified UVs. No source-addon framework is needed. Preview only until selection."
+      },
+      {
+        "id": "R15",
+        "path": "wow6.0/oUF_Diablo/media/d3_head_garg.tga",
+        "local": "research/originals/wow6.0__oUF_Diablo__media__d3_head_garg.tga",
+        "url": "https://raw.githubusercontent.com/zorker/rothui/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/d3_head_garg.tga",
+        "source_url": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/d3_head_garg.tga",
+        "canvas": [
+          128,
+          64
+        ],
+        "bbox": [
+          14,
+          14,
+          114,
+          51
+        ],
+        "sha256": "4c1596ce85b4f17d60cf34750d6083190aa09be11860151ad6f146898e6b2c17",
+        "name": "Iron gargoyle seal",
+        "rect": [
+          14,
+          14,
+          114,
+          51
+        ],
+        "kind": "lower center ornament",
+        "idea": "Bright iron gargoyle with dark wings, useful on a charcoal body.",
+        "owner_source": null,
+        "owner_note": "File exists in media library; no owning reference found in the targeted code inspected.",
+        "repo": "zorker/rothui",
+        "commit": "9a9ce9744ce404991fc06066291614fe1765ee20",
+        "format": "TGA",
+        "crop_basis": "Visually inspected image; pixel rectangle is proposed adaptation, not an asserted native atlas member.",
+        "rights": "Root LICENSE.md is MIT (c)2011\u20132018 Erik Raetz. archive/rBottomBarStyler/core.lua additionally retains a2010 three-clause BSD notice. No image-specific provenance or grant for underlying Diablo/Blizzard artwork was found; repository licensing does not establish ownership of inherited game art.",
+        "adaptation": "Keep raw original bytes. Crop and power-of-two-pad a selected legacy TGA or use verified UVs. No source-addon framework is needed. Preview only until selection."
+      }
+    ]
+  },
+  {
+    "id": "20",
+    "name": "Bone reliquary",
+    "source": "RothUI \u00b7 shrine + d3_head_skull",
+    "description": "A Gothic shrine channel with bone scrolls and the source winged skull.",
+    "image": "20.png",
+    "imageXPoff": "20-xp-off.png",
+    "assets": [
+      {
+        "id": "R03",
+        "path": "wow6.0/oUF_Diablo/media/targettarget.tga",
+        "local": "research/originals/wow6.0__oUF_Diablo__media__targettarget.tga",
+        "url": "https://raw.githubusercontent.com/zorker/rothui/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/targettarget.tga",
+        "source_url": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/targettarget.tga",
+        "canvas": [
+          256,
+          128
+        ],
+        "bbox": [
+          0,
+          23,
+          256,
+          107
+        ],
+        "sha256": "d6aaefcf93d1351f0d2f305c1d53a17bbf458c7f9ec978350479a0253c3b7280",
+        "name": "Compact bronze shrine",
+        "rect": [
+          0,
+          58,
+          256,
+          107
+        ],
+        "kind": "lower compartment",
+        "idea": "Compact curved filigree and double lower rails; preserve end caps at fixed width while extending center.",
+        "owner_source": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/units/targettarget.lua#L34-L39",
+        "owner_note": "Owning source inspected; full native texture assembly differs from proposed lower-only adaptation.",
+        "repo": "zorker/rothui",
+        "commit": "9a9ce9744ce404991fc06066291614fe1765ee20",
+        "format": "TGA",
+        "crop_basis": "Visually inspected image; pixel rectangle is proposed adaptation, not an asserted native atlas member.",
+        "rights": "Root LICENSE.md is MIT (c)2011\u20132018 Erik Raetz. archive/rBottomBarStyler/core.lua additionally retains a2010 three-clause BSD notice. No image-specific provenance or grant for underlying Diablo/Blizzard artwork was found; repository licensing does not establish ownership of inherited game art.",
+        "adaptation": "Keep raw original bytes. Crop and power-of-two-pad a selected legacy TGA or use verified UVs. No source-addon framework is needed. Preview only until selection."
+      },
+      {
+        "id": "R12",
+        "path": "wow6.0/oUF_Diablo/media/d3_head_skull.tga",
+        "local": "research/originals/wow6.0__oUF_Diablo__media__d3_head_skull.tga",
+        "url": "https://raw.githubusercontent.com/zorker/rothui/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/d3_head_skull.tga",
+        "source_url": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/d3_head_skull.tga",
+        "canvas": [
+          128,
+          64
+        ],
+        "bbox": [
+          14,
+          10,
+          114,
+          51
+        ],
+        "sha256": "abe4ee4ee125f05f5f34a324ca61f736428a1c4c509b7d004857d2c30f4da3ad",
+        "name": "Winged bone skull",
+        "rect": [
+          14,
+          10,
+          114,
+          51
+        ],
+        "kind": "lower center ornament",
+        "idea": "Ivory skull and black wings form a substantially different centerpiece.",
+        "owner_source": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/units/target.lua#L240-L243",
+        "owner_note": "Owning source inspected; full native texture assembly differs from proposed lower-only adaptation.",
+        "repo": "zorker/rothui",
+        "commit": "9a9ce9744ce404991fc06066291614fe1765ee20",
+        "format": "TGA",
+        "crop_basis": "Visually inspected image; pixel rectangle is proposed adaptation, not an asserted native atlas member.",
+        "rights": "Root LICENSE.md is MIT (c)2011\u20132018 Erik Raetz. archive/rBottomBarStyler/core.lua additionally retains a2010 three-clause BSD notice. No image-specific provenance or grant for underlying Diablo/Blizzard artwork was found; repository licensing does not establish ownership of inherited game art.",
+        "adaptation": "Keep raw original bytes. Crop and power-of-two-pad a selected legacy TGA or use verified UVs. No source-addon framework is needed. Preview only until selection."
+      },
+      {
+        "id": "R09",
+        "path": "wow6.0/oUF_Diablo/media/combo_bar_left.tga",
+        "local": "research/originals/wow6.0__oUF_Diablo__media__combo_bar_left.tga",
+        "url": "https://raw.githubusercontent.com/zorker/rothui/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/combo_bar_left.tga",
+        "source_url": "https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/combo_bar_left.tga",
+        "canvas": [
+          64,
+          64
+        ],
+        "bbox": [
+          15,
+          8,
+          64,
+          55
+        ],
+        "sha256": "cdd49aa3e6222df4b5b3499e3e23ab4936ca6def64509524dd3872ff26ca7d05",
+        "name": "Bronze scroll terminators",
+        "rect": [
+          15,
+          8,
+          64,
+          55
+        ],
+        "kind": "side ornament",
+        "idea": "Use the matching right file as paired side scroll ends; no gap or top rail, dark body remains directly under seam.",
+        "owner_source": null,
+        "owner_note": "File exists in media library; targeted owning code uses the related combo_left/right files, not this brighter pair. Assembly here is inferred from inspected matching caps.",
+        "repo": "zorker/rothui",
+        "commit": "9a9ce9744ce404991fc06066291614fe1765ee20",
+        "format": "TGA",
+        "crop_basis": "Visually inspected image; pixel rectangle is proposed adaptation, not an asserted native atlas member.",
+        "rights": "Root LICENSE.md is MIT (c)2011\u20132018 Erik Raetz. archive/rBottomBarStyler/core.lua additionally retains a2010 three-clause BSD notice. No image-specific provenance or grant for underlying Diablo/Blizzard artwork was found; repository licensing does not establish ownership of inherited game art.",
+        "adaptation": "Keep raw original bytes. Crop and power-of-two-pad a selected legacy TGA or use verified UVs. No source-addon framework is needed. Preview only until selection."
+      }
+    ]
+  }
+]

@@ -15,6 +15,7 @@ core\hud.lua
 core\widgets.lua
 core\tooltips.lua
 core\editor.lua
+core\tally.lua
 core\display.lua
 core\layout.lua
 core\fstack.lua

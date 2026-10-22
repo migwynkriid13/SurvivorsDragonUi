@@ -20,6 +20,9 @@ DFRL:NewMod("Bars", 1, function()
         xpTop = -3,
         xpInset = 9,
     }
+    -- The half-shell keeps sixteen transparent source rows below its silver
+    -- bevel, including in the taller joined-XP crop.
+    defaults.silverBottomInset = (defaults.height + 2 * defaults.topInset) * 16 / 128
     DFRL.actionBarDefaults = defaults
 
     local function DisableFrame(frame)
@@ -160,6 +163,25 @@ DFRL:NewMod("Bars", 1, function()
         upper:SetTexCoord(0, 1200 / 2048, 0, 152 / 256)
         upper:Hide()
         local jewelryShown, xpJoined = false, false
+        local tallyExtent = 0
+        local bottomRegion, bottomOffset
+        local function SilverBottom()
+            return -defaults.topInset - (xpJoined and defaults.xpExtension or 0) + defaults.silverBottomInset
+        end
+        local function UpdateBottomBound()
+            local region = DFRL.actionBarMoveRegion
+            if not region then return end
+            local bottom = xpJoined and -(defaults.topInset + defaults.xpExtension) or 0
+            if tallyExtent > 0 then bottom = math.min(bottom, SilverBottom() - tallyExtent) end
+            if bottomRegion == region and bottomOffset == bottom then return end
+            region:SetPoint("BOTTOMRIGHT", DFRL.mainBar, "BOTTOMRIGHT", defaults.sideInset, bottom)
+            bottomRegion, bottomOffset = region, bottom
+        end
+        function DFRL.GetActionBarSilverBottom() return SilverBottom() end
+        function DFRL.SetRunTallyBarExtent(extent)
+            tallyExtent = extent or 0
+            UpdateBottomBound()
+        end
         local function UpdateBackground()
             local top = jewelryShown and socketBottom or defaults.topInset
             local bottom = -defaults.topInset - (xpJoined and defaults.xpExtension or 0)
@@ -192,11 +214,8 @@ DFRL:NewMod("Bars", 1, function()
             if xpJoined == shown then return end
             xpJoined = shown
             UpdateBackground()
-            local region = DFRL.actionBarMoveRegion
-            if region then
-                local bottom = shown and -(defaults.topInset + defaults.xpExtension) or 0
-                region:SetPoint("BOTTOMRIGHT", DFRL.mainBar, "BOTTOMRIGHT", defaults.sideInset, bottom)
-            end
+            UpdateBottomBound()
+            if DFRL.RefreshRunTallyAttachment then DFRL.RefreshRunTallyAttachment() end
         end
     end
 

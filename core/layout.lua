@@ -22,7 +22,7 @@ DFRL:NewMod("Layout", 0, function()
         actionBar = "Action bar",
         jewelryBar = "Equipped jewelry (detached)",
         xpBar = "XP (detached)",
-        runTally = "Kills / Gold / Cache",
+        runTally = "Kills / Gold / Cache (detached)",
         microMenu = "Micro menu",
         buffs = "Buffs",
         minimap = "Minimap",
