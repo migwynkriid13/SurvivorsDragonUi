@@ -4,12 +4,12 @@
 **Outline** and **Black shadow**. These choices apply to both timer captions.
 Below them, **Regular runs** and **Endless** each have four compact checkboxes:
 
-| Control | Regular runs | Endless |
-| --- | --- | --- |
-| Run text | On | On |
-| Current time | On | On |
-| Maximum zone time | On | Off |
-| Boss countdown | Off | On |
+| Control           | Regular runs | Endless |
+| ----------------- | ------------ | ------- |
+| Run text          | On           | On      |
+| Current time      | On           | On      |
+| Maximum zone time | On           | Off     |
+| Boss countdown    | Off          | On      |
 
 Each mode's **Run text** controls only its complete `RUN` caption. **Current
 time** and **Maximum zone time** independently choose the components of that

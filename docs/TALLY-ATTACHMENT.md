@@ -82,14 +82,14 @@ Each style supplies `contentY`, the counter center below the shared seam, and
 at the 300-unit artwork reference. Centers are UI layout reference units;
 screen displacement follows the inherited action-bar and UI scales.
 
-| Style | Center below seam | Content scale |
-| --- | --- | --- |
-| Demon reliquary | 13 | 95% |
-| Gothic leaf corners | 13 | 95% |
-| Gothic cornerwork | 13 | 95% |
-| Roth shrine | 12 | 90% |
-| Roth scrollwork | 10 | 90% |
-| ARPG carved cornice | 14 | 100% |
+| Style               | Center below seam | Content scale |
+| ------------------- | ----------------- | ------------- |
+| Demon reliquary     | 13                | 95%           |
+| Gothic leaf corners | 13                | 95%           |
+| Gothic cornerwork   | 13                | 95%           |
+| Roth shrine         | 12                | 90%           |
+| Roth scrollwork     | 10                | 90%           |
+| ARPG carved cornice | 14                | 100%          |
 
 Roth scrollwork and ARPG carved cornice have each moved another two reference
 units upward. Their existing content scales, native font, icon sizes and frame

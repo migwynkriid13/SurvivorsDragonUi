@@ -13,86 +13,28 @@
     "repo": "Gethe/wow-ui-textures",
     "commit": "e80e3278cc833c89e1f3fc79557b68315d750935",
     "era": "Dragonflight PTR10.0.0(45454) retained legacy textures, not claimed byte-identical1.12.1",
-    "paths": [
-      "MAINMENUBAR/UI-MainMenuBar-Dwarf.PNG",
-      "MAINMENUBAR/UI-MainMenuBar-EndCap-Dwarf.PNG"
-    ]
+    "paths": ["MAINMENUBAR/UI-MainMenuBar-Dwarf.PNG", "MAINMENUBAR/UI-MainMenuBar-EndCap-Dwarf.PNG"]
   },
   "body_rects": [
-    [
-      0,
-      213,
-      256,
-      256
-    ],
-    [
-      0,
-      149,
-      256,
-      192
-    ],
-    [
-      0,
-      85,
-      256,
-      128
-    ],
-    [
-      0,
-      21,
-      256,
-      64
-    ]
+    [0, 213, 256, 256],
+    [0, 149, 256, 192],
+    [0, 85, 256, 128],
+    [0, 21, 256, 64]
   ],
   "xp_rects": [
-    [
-      0,
-      203,
-      256,
-      213
-    ],
-    [
-      0,
-      139,
-      256,
-      149
-    ],
-    [
-      0,
-      75,
-      256,
-      85
-    ],
-    [
-      0,
-      11,
-      256,
-      21
-    ]
+    [0, 203, 256, 213],
+    [0, 139, 256, 149],
+    [0, 75, 256, 85],
+    [0, 11, 256, 21]
   ],
   "original_assembly": {
-    "bar": [
-      1024,
-      53
-    ],
-    "body": [
-      1024,
-      43
-    ],
-    "xp_border": [
-      1024,
-      10
-    ],
-    "gryphons": [
-      128,
-      128
-    ],
+    "bar": [1024, 53],
+    "body": [1024, 43],
+    "xp_border": [1024, 10],
+    "gryphons": [128, 128],
     "left_cap_center_x_from_bar_center": -544,
     "right_cap_center_x_from_bar_center": 544,
-    "output_canvas": [
-      1216,
-      128
-    ],
+    "output_canvas": [1216, 128],
     "bar_x": 96,
     "body_y": 85,
     "xp_y": 75,
@@ -104,20 +46,9 @@
     "width": 300,
     "height_without_xp": 43,
     "height_with_xp": 53,
-    "native_slot_x": [
-      6,
-      48,
-      90,
-      132,
-      174,
-      216,
-      258
-    ],
+    "native_slot_x": [6, 48, 90, 132, 174, 216, 258],
     "native_slot_y_from_body_top": 3,
-    "native_slot_size": [
-      36,
-      36
-    ]
+    "native_slot_size": [36, 36]
   },
   "local_extraction": {
     "archive": "local game archive: patch.MPQ",

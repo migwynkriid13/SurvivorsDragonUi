@@ -1552,7 +1552,11 @@ DFRL:NewMod("RunTimers", 5, function()
             else
                 detached:Show()
             end
-            if visible then tally:Show() else tally:Hide() end
+            if visible then
+                tally:Show()
+            else
+                tally:Hide()
+            end
             DFRL.SetRunTallyBarExtent(docked and visible and tally:GetHeight() or 0)
         end
 
@@ -1584,7 +1588,11 @@ DFRL:NewMod("RunTimers", 5, function()
             tallyBar:SetFrameLevel(tally:GetFrameLevel() + 1)
             tallyOverlay:SetFrameLevel(tallyBar:GetFrameLevel() + 1)
             for _, texture in ipairs(tallySkin) do
-                if joined then texture:Hide() else texture:Show() end
+                if joined then
+                    texture:Hide()
+                else
+                    texture:Show()
+                end
             end
             tally:ClearAllPoints()
             local artScale = lastWidth / DFRL.tallyStyleCanvas.width
