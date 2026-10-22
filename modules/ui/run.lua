@@ -753,6 +753,11 @@ DFRL:NewMod("RunTimers", 5, function()
                 key = "abilities",
                 label = "Action bar",
                 options = {
+                    {
+                        "lockActionButtons",
+                        "Lock action buttons",
+                        "Off: Shift-click two occupied buttons to swap them.",
+                    },
                     { "cooldownNumbers", "Cooldown numbers", "Show countdowns on ability buttons." },
                     {
                         "hideNativeBuild",

@@ -178,14 +178,59 @@ DFRL:NewMod("Bars", 1, function()
         end
     end
 
+    local selectedButton
+    local function ClearSelection()
+        if selectedButton then selectedButton.DFRL_swapSelection:Hide() end
+        selectedButton = nil
+    end
+
+    local function SelectOrSwap(button)
+        if
+            type(PickupAction) ~= "function"
+            or type(PlaceAction) ~= "function"
+            or type(CursorHasSpell) ~= "function"
+            or type(CursorHasItem) ~= "function"
+            or CursorHasSpell()
+            or CursorHasItem()
+        then
+            ClearSelection()
+            return
+        end
+        local target = ActionButton_GetPagedID(button)
+        local source = selectedButton and ActionButton_GetPagedID(selectedButton)
+        if not HasAction(target) or source == target then
+            ClearSelection()
+            return
+        end
+        if not source then
+            selectedButton = button
+            button.DFRL_swapSelection:Show()
+            return
+        end
+        ClearSelection()
+        if not HasAction(source) then return end
+        -- Only this synchronous exchange uses the native cursor. Selection never
+        -- picks up an action, and a refused destination returns it to its source.
+        local success, message = pcall(function()
+            PickupAction(source)
+            if CursorHasSpell() then PlaceAction(target) end
+        end)
+        if CursorHasSpell() then PlaceAction(source) end
+        if not success then geterrorhandler()(message) end
+    end
+
     local function StyleButton(button, index, bar)
-        -- Run abilities are assigned by the game. Block both drag directions and
-        -- the stock shift-click pickup; checkCursor 0 also prevents click-to-place.
-        -- Keep native activation, including registered right-clicks and key self-casts.
+        -- Never expose pickup or outside drops. Unlocked Shift-clicks select two
+        -- occupied native slots; ordinary clicks keep their original activation.
         button:RegisterForDrag()
         button:SetScript("OnDragStart", nil)
         button:SetScript("OnReceiveDrag", nil)
         button:SetScript("OnClick", function()
+            if arg1 == "LeftButton" and IsShiftKeyDown() and not DFRL.display.Get("lockActionButtons") then
+                SelectOrSwap(button)
+                return
+            end
+            ClearSelection()
             UseAction(ActionButton_GetPagedID(button), 0)
             ActionButton_UpdateState()
         end)
@@ -214,6 +259,15 @@ DFRL:NewMod("Bars", 1, function()
         highlight:SetAllPoints(button)
         highlight:SetBlendMode("ADD")
         highlight:SetVertexColor(1, 0.82, 0)
+
+        local selection = button:CreateTexture(nil, "OVERLAY")
+        selection:SetTexture(TEX_PATH .. "uiactionbariconframehighlight.tga")
+        selection:SetAllPoints(button)
+        selection:SetBlendMode("ADD")
+        selection:SetVertexColor(1, 0.82, 0)
+        selection:Hide()
+        button.DFRL_swapSelection = selection
+        button:SetScript("OnHide", ClearSelection)
 
         HideHotkey(button)
 
@@ -409,6 +463,12 @@ DFRL:NewMod("Bars", 1, function()
         end
         _G.this = previousThis
         CreateCooldownNumbers(mainBar)
+        local selectionEvents = CreateFrame("Frame", nil, mainBar)
+        for _, name in ipairs({ "ACTIONBAR_SLOT_CHANGED", "PLAYER_LEAVING_WORLD", "PLAYER_ENTERING_WORLD", "PLAYER_LOGOUT" }) do
+            selectionEvents:RegisterEvent(name)
+        end
+        selectionEvents:SetScript("OnEvent", ClearSelection)
+        DFRL.display.Listen(ClearSelection)
         local moveRegion = CreateFrame("Frame", nil, mainBar)
         moveRegion:SetPoint("TOPLEFT", mainBar, "TOPLEFT", -defaults.sideInset, defaults.topInset)
         moveRegion:SetPoint("BOTTOMRIGHT", mainBar, "BOTTOMRIGHT", defaults.sideInset, 0)
@@ -419,6 +479,7 @@ DFRL:NewMod("Bars", 1, function()
         end, {
             region = moveRegion,
             onEdit = function(active)
+                ClearSelection()
                 if DFRL.SetJewelryEditing then DFRL.SetJewelryEditing(active) end
             end,
         })

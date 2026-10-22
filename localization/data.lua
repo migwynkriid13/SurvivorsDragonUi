@@ -2,6 +2,8 @@
 DFRL.locale.data = {
     en = {
         ui = {
+            ["Lock action buttons"] = "Lock action buttons",
+            ["Off: Shift-click two occupied buttons to swap them."] = "Off: Shift-click two occupied buttons to swap them.",
             ["Rows"] = "Rows",
             ["Spacing"] = "Spacing",
             ["Arrange pet groups in one to six rows."] = "Arrange pet groups in one to six rows.",
@@ -448,6 +450,8 @@ DFRL.locale.data = {
     },
     pl = {
         ui = {
+            ["Lock action buttons"] = "Zablokuj przyciski akcji",
+            ["Off: Shift-click two occupied buttons to swap them."] = "Wyłączone: kliknij z Shiftem dwa zajęte przyciski, aby zamienić je miejscami.",
             ["Rows"] = "Wiersze",
             ["Spacing"] = "Odstępy",
             ["Arrange pet groups in one to six rows."] = "Ułóż grupy zwierzaków w jednym do sześciu wierszy.",
@@ -918,6 +922,8 @@ DFRL.locale.data = {
     },
     cs = {
         ui = {
+            ["Lock action buttons"] = "Zamknout tlačítka akcí",
+            ["Off: Shift-click two occupied buttons to swap them."] = "Vypnuto: kliknutím se Shiftem na dvě obsazená tlačítka je prohodíte.",
             ["Rows"] = "Řádky",
             ["Spacing"] = "Rozestupy",
             ["Arrange pet groups in one to six rows."] = "Uspořádat skupiny mazlíčků do jednoho až šesti řádků.",
@@ -1839,6 +1845,8 @@ DFRL.locale.data = {
     },
     de = {
         ui = {
+            ["Lock action buttons"] = "Aktionsbuttons sperren",
+            ["Off: Shift-click two occupied buttons to swap them."] = "Aus: Zwei belegte Buttons mit Umschalt anklicken, um sie zu tauschen.",
             ["Rows"] = "Reihen",
             ["Spacing"] = "Abstand",
             ["Arrange pet groups in one to six rows."] = "Begleitergruppen in einer bis sechs Reihen anordnen.",
@@ -2315,6 +2323,8 @@ DFRL.locale.data = {
     },
     pt = {
         ui = {
+            ["Lock action buttons"] = "Bloquear botões de ação",
+            ["Off: Shift-click two occupied buttons to swap them."] = "Desativado: clique com Shift em dois botões ocupados para trocá-los.",
             ["Rows"] = "Linhas",
             ["Spacing"] = "Espaçamento",
             ["Arrange pet groups in one to six rows."] = "Organizar grupos de ajudantes em uma a seis linhas.",
@@ -2776,6 +2786,8 @@ DFRL.locale.data = {
     },
     es = {
         ui = {
+            ["Lock action buttons"] = "Bloquear botones de acción",
+            ["Off: Shift-click two occupied buttons to swap them."] = "Desactivado: pulsa con Mayús dos botones ocupados para intercambiarlos.",
             ["Rows"] = "Filas",
             ["Spacing"] = "Separación",
             ["Arrange pet groups in one to six rows."] = "Organizar los grupos de mascotas en una a seis filas.",
@@ -3240,6 +3252,8 @@ DFRL.locale.data = {
     },
     fr = {
         ui = {
+            ["Lock action buttons"] = "Verrouiller les boutons d’action",
+            ["Off: Shift-click two occupied buttons to swap them."] = "Désactivé : cliquez avec Maj sur deux boutons occupés pour les échanger.",
             ["Rows"] = "Rangées",
             ["Spacing"] = "Espacement",
             ["Arrange pet groups in one to six rows."] = "Disposer les groupes de familiers sur une à six rangées.",
@@ -3731,6 +3745,8 @@ DFRL.locale.data = {
     },
     ro = {
         ui = {
+            ["Lock action buttons"] = "Blochează butoanele de acțiune",
+            ["Off: Shift-click two occupied buttons to swap them."] = "Dezactivat: apasă cu Shift pe două butoane ocupate pentru a le schimba între ele.",
             ["Rows"] = "Rânduri",
             ["Spacing"] = "Spațiere",
             ["Arrange pet groups in one to six rows."] = "Aranjează grupurile de companioni pe unul până la șase rânduri.",
@@ -4192,6 +4208,8 @@ DFRL.locale.data = {
     },
     tr = {
         ui = {
+            ["Lock action buttons"] = "Aksiyon düğmelerini kilitle",
+            ["Off: Shift-click two occupied buttons to swap them."] = "Kapalı: Dolu iki düğmeye Shift ile tıklayarak yerlerini değiştir.",
             ["Rows"] = "Satırlar",
             ["Spacing"] = "Aralık",
             ["Arrange pet groups in one to six rows."] = "Yoldaş gruplarını bir ila altı satıra yerleştir.",
@@ -4650,6 +4668,8 @@ DFRL.locale.data = {
     },
     ru = {
         ui = {
+            ["Lock action buttons"] = "Закрепить кнопки действий",
+            ["Off: Shift-click two occupied buttons to swap them."] = "Выкл.: нажмите с Shift две занятые кнопки, чтобы поменять их местами.",
             ["Rows"] = "Ряды",
             ["Spacing"] = "Интервал",
             ["Arrange pet groups in one to six rows."] = "Разместить группы питомцев в один–шесть рядов.",
@@ -5198,6 +5218,8 @@ DFRL.locale.data = {
     },
     uk = {
         ui = {
+            ["Lock action buttons"] = "Закріпити кнопки дій",
+            ["Off: Shift-click two occupied buttons to swap them."] = "Вимк.: натисніть із Shift дві зайняті кнопки, щоб поміняти їх місцями.",
             ["Rows"] = "Ряди",
             ["Spacing"] = "Відступ",
             ["Arrange pet groups in one to six rows."] = "Розмістити групи вихованців в один–шість рядів.",
@@ -5722,6 +5744,8 @@ DFRL.locale.data = {
     },
     zh = {
         ui = {
+            ["Lock action buttons"] = "锁定动作按钮",
+            ["Off: Shift-click two occupied buttons to swap them."] = "关闭：按住Shift点击两个已有技能的按钮以交换位置。",
             ["Rows"] = "行数",
             ["Spacing"] = "间距",
             ["Arrange pet groups in one to six rows."] = "将宠物组排列成一至六行。",
@@ -6171,6 +6195,8 @@ DFRL.locale.data = {
     },
     ja = {
         ui = {
+            ["Lock action buttons"] = "アクションボタンをロック",
+            ["Off: Shift-click two occupied buttons to swap them."] = "オフ：Shiftを押しながら使用中のボタンを2つクリックして入れ替えます。",
             ["Rows"] = "行数",
             ["Spacing"] = "間隔",
             ["Arrange pet groups in one to six rows."] = "ペットのグループを1～6行に配置。",
@@ -6653,6 +6679,8 @@ DFRL.locale.data = {
     },
     ko = {
         ui = {
+            ["Lock action buttons"] = "행동 단축 버튼 잠금",
+            ["Off: Shift-click two occupied buttons to swap them."] = "끔: Shift를 누른 채 사용 중인 버튼 두 개를 클릭하면 서로 바뀝니다.",
             ["Rows"] = "행 수",
             ["Spacing"] = "간격",
             ["Arrange pet groups in one to six rows."] = "소환수 그룹을 1~6행으로 배치합니다.",

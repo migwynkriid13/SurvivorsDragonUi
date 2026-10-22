@@ -17,6 +17,8 @@ The file should be at `benilla-config/AddOns/SurvivorsDragonUi/SurvivorsDragonUi
 
 Type `/sdui` to open the editor.
 
+Action buttons start locked. Under **Action bar**, turn off **Lock action buttons** and click **Confirm** to allow rearranging. Shift-click two occupied buttons to swap their spells; spells cannot be dragged off the bar.
+
 - Drag a frame to move it. Drag its corners to resize it. The grid and gold screen-center guides help line things up.
 - Use `/sdui lock` for move and resize handles with only the **Confirm** button. Use `/sdui` to return to the full editor.
 - Use **Layout** for positions and sizes, **HUD** for display options, **Combat text** for damage numbers, and **Run timer** for its text and font.
