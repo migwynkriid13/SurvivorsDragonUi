@@ -6,6 +6,7 @@ DFRL:NewMod("Navigation", 2, function()
     local phases = { playing = true, choosing = true, paused = true, victory = true }
     local minimapLevels = { cache = 10, guardian = 11, player = 12 }
     local identity, expected, realZone, arrow
+    local playerOverlay, playerTexture, playerSide, playerFacing
     local points = {}
     local samples, seen, width, height = {}, {}, nil, nil
 
@@ -263,5 +264,59 @@ DFRL:NewMod("Navigation", 2, function()
         local state = RunState()
         -- Both headings use native radians: north, counterclockwise.
         if state and Number(state.pf) then return state.pf, _G.AZS_RUN_UPDATED end
+    end
+    function navigation.UpdateMinimapPlayer(visible)
+        -- Older clients paint the native arrows inside the map, ignoring the
+        -- Model children's alpha and frame level. Redraw the native player art
+        -- above our pins there; keep its live Model facing as the source.
+        if not visible or not Minimap or type(Minimap.SetPlayerModel) == "function" then
+            if playerOverlay then playerOverlay:Hide() end
+            return
+        end
+        local facing = navigation.Heading()
+        local width, height = T.GetLocalSize(Minimap)
+        if not Number(facing) or not Number(width) or not Number(height) or width <= 0 or height <= 0 then
+            if playerOverlay then playerOverlay:Hide() end
+            return
+        end
+        if not playerOverlay then
+            playerOverlay = CreateFrame("Frame", nil, Minimap)
+            playerOverlay:EnableMouse(false)
+            playerTexture = playerOverlay:CreateTexture(nil, "OVERLAY")
+            playerTexture:SetTexture("Interface\\Minimap\\MinimapArrow")
+            playerTexture:SetAllPoints(playerOverlay)
+        end
+        local strata, level = Minimap:GetFrameStrata(), navigation.MinimapLevel("player")
+        if playerOverlay:GetFrameStrata() ~= strata then playerOverlay:SetFrameStrata(strata) end
+        if playerOverlay:GetFrameLevel() ~= level then playerOverlay:SetFrameLevel(level) end
+        local side = math.min(width, height)
+        if not T.NearlyEqual(playerSide, side) or not T.NearlyEqual(playerFacing, facing) then
+            -- Match the legacy renderer's native 33.6-pixel quad and rotating
+            -- authored centre offset, both measured against its 140.8 basis.
+            local scale, c, s = side / 140.8, math.cos(facing), math.sin(facing)
+            playerOverlay:SetWidth(33.6 * scale)
+            playerOverlay:SetHeight(33.6 * scale)
+            playerOverlay:ClearAllPoints()
+            playerOverlay:SetPoint(
+                "CENTER",
+                Minimap,
+                "CENTER",
+                (0.51 * c - 1.73 * s) * scale,
+                (0.51 * s + 1.73 * c) * scale
+            )
+            c, s = c / 2, -s / 2
+            playerTexture:SetTexCoord(
+                0.5 - c - s,
+                0.5 + s - c,
+                0.5 - c + s,
+                0.5 + s + c,
+                0.5 + c - s,
+                0.5 - s - c,
+                0.5 + c + s,
+                0.5 - s + c
+            )
+            playerSide, playerFacing = side, facing
+        end
+        playerOverlay:Show()
     end
 end)

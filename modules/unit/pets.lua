@@ -194,7 +194,7 @@ DFRL:NewMod("PetFrames", 4, function()
         circle.count:SetText(entry.count > 1 and ("x" .. entry.count) or "")
         if not circle.active then circle.frame:Show() end
         circle.active = true
-        if entry.permanent then
+        if entry.temporary == 0 then
             row.status:SetText("")
         elseif Number(entry.remaining) and entry.remaining >= 0 then
             row.status:SetText(Time(entry.remaining))
@@ -226,9 +226,9 @@ DFRL:NewMod("PetFrames", 4, function()
             Clear()
             return
         end
-        -- Copy every distinct group in native arrival order. Permanent members
-        -- stay separate; only a supplied type key combines temporary pets.
-        local entries, seen, temporary = {}, {}, {}
+        -- Combine each supplied type key in first-arrival order, counting all
+        -- members while timing only the temporary ones.
+        local entries, seen, groups = {}, {}, {}
         local count = 0
         for _, entry in ipairs(list) do
             if
@@ -244,29 +244,32 @@ DFRL:NewMod("PetFrames", 4, function()
                 return
             end
             seen[entry.id] = true
-            local key = entry.permanent ~= true and type(entry.key) == "string" and entry.key ~= "" and entry.key
-            local group = key and temporary[key]
-            local remaining = Number(entry.remaining) and entry.remaining >= 0 and entry.remaining or nil
-            if group then
-                group.count = group.count + 1
-                if group.remaining and remaining then
-                    group.remaining = math.min(group.remaining, remaining)
-                else
-                    group.remaining = nil
-                end
-            else
+            local key = type(entry.key) == "string" and entry.key ~= "" and entry.key
+            local group = key and groups[key]
+            if not group then
                 count = count + 1
                 group = {
                     id = entry.id,
                     name = entry.name,
                     icon = petIcons[entry.key]
                         or (type(entry.icon) == "string" and entry.icon ~= "" and entry.icon or nil),
-                    permanent = entry.permanent == true,
-                    remaining = remaining,
-                    count = 1,
+                    temporary = 0,
+                    count = 0,
                 }
                 entries[count] = group
-                if key then temporary[key] = group end
+                if key then groups[key] = group end
+            end
+            group.count = group.count + 1
+            if entry.permanent ~= true then
+                group.temporary = group.temporary + 1
+                local remaining = Number(entry.remaining) and entry.remaining >= 0 and entry.remaining or nil
+                if group.temporary == 1 then
+                    group.remaining = remaining
+                elseif group.remaining and remaining then
+                    group.remaining = math.min(group.remaining, remaining)
+                else
+                    group.remaining = nil
+                end
             end
         end
         if count == 0 then

@@ -120,6 +120,7 @@ DFRL:NewMod("Waypoints", 3, function()
             for _, tracker in ipairs(trackers) do
                 if not kind or tracker.kind == kind then RecyclePins(tracker, nil) end
             end
+            if not kind then navigation.UpdateMinimapPlayer(false) end
             if pendingZoom and (pendingZoom.retry or retryZoom) and not probing then RollbackZoom() end
         end
 
@@ -339,9 +340,12 @@ DFRL:NewMod("Waypoints", 3, function()
                     break
                 end
             end
+            local pinsVisible = false
             for _, tracker in ipairs(trackers) do
                 UpdateTrackerPins(tracker, scale, edge)
+                if next(tracker.minimapPins) then pinsVisible = true end
             end
+            navigation.UpdateMinimapPlayer(pinsVisible)
         end
 
         StopMinimapPins = function()
