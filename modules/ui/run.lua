@@ -409,7 +409,11 @@ DFRL:NewMod("RunTimers", 5, function()
         end
         for key, control in pairs(displayControls) do
             control:SetChecked(DFRL.display.Get(key))
-            if key == "attachJewelry" then
+            if key == "roundPlayerPortrait" or key == "playerPortrait3D" then
+                local enabled = not DFRL.display.Get("hidePortraits")
+                control:EnableMouse(enabled)
+                control:SetAlpha(enabled and 1 or 0.45)
+            elseif key == "attachJewelry" then
                 local enabled = DFRL.display.Get("equippedJewelry")
                 control:EnableMouse(enabled)
                 control:SetAlpha(enabled and 1 or 0.45)
@@ -680,6 +684,11 @@ DFRL:NewMod("RunTimers", 5, function()
                         "Show recently lost health fading out on unit frames.",
                     },
                     { "classResources", "Class resources", "Show power inside the player frame." },
+                    {
+                        "hidePortraits",
+                        "Hide portraits",
+                        "Show player, target and target-of-target as bars without portraits.",
+                    },
                     {
                         "roundPlayerPortrait",
                         "Round player portrait",
