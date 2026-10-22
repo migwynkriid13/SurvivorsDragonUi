@@ -860,10 +860,8 @@ DFRL:NewMod("RunTimers", 5, function()
             local columns = category.columns or 1
             for _, entry in ipairs(category.options or {}) do
                 local controlsWidth = entry.step and 156 or 36
-                local optionWidth = math.max(
-                    TextWidth(entry[2]) + controlsWidth,
-                    TextWidth(entry[3]) / 2 + controlsWidth
-                )
+                local optionWidth =
+                    math.max(TextWidth(entry[2]) + controlsWidth, TextWidth(entry[3]) / 2 + controlsWidth)
                 hudOptionWidth = math.max(
                     hudOptionWidth,
                     optionWidth * columns + gap * (columns - 1) + (category.columns and 0 or 24)
