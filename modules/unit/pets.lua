@@ -14,12 +14,25 @@ DFRL:NewMod("PetFrames", 4, function()
     root:SetFrameStrata("MEDIUM")
     root:EnableMouse(false)
     root:Hide()
-    local rows = {}
+    local rows, entries, seen, groups = {}, {}, {}, {}
     local inWorld, age, displayed = true, 0, false
     local received, blockedReceived = 0, -1
     local blockedPacket, blockedStamp
+    local acceptedPacket, acceptedStamp, acceptedReceived
+    local entryCount, hasTemporary = 0, false
+    local dirty, paintedScale = true, nil
 
     local function Number(value) return type(value) == "number" and value - value == 0 end
+    local function Wipe(target)
+        for key in pairs(target) do
+            target[key] = nil
+        end
+    end
+    local function Text(label, value)
+        if label.petText == value then return end
+        label:SetText(value)
+        label.petText = value
+    end
     local function Native(name)
         local getter = _G[name]
         if type(getter) ~= "function" then return end
@@ -44,7 +57,7 @@ DFRL:NewMod("PetFrames", 4, function()
         frame:SetPoint("TOPLEFT", root, "TOPLEFT", 0, 0)
         frame:EnableMouse(false)
         frame:Hide()
-        local row = { frame = frame }
+        local row = { frame = frame, index = index }
         row.name = Label(frame, 10)
         row.name:SetPoint("TOPLEFT", frame, "TOPLEFT", 48, -8)
         row.name:SetWidth(CELL_WIDTH - 50)
@@ -73,7 +86,12 @@ DFRL:NewMod("PetFrames", 4, function()
         rim:SetPoint("CENTER", frame, "TOPLEFT", CENTER_X, -CENTER_Y)
         -- A complete alpha-edged rim avoids clipping its gold contour into
         -- hard horizontal steps or retaining pieces of the old bar borders.
-        local circle = { frame = frame, strips = {} }
+        local portrait = frame:CreateTexture("SurvivorsDragonUiPetPortrait" .. row.index, "ARTWORK")
+        portrait:SetWidth(ICON_SIZE)
+        portrait:SetHeight(ICON_SIZE)
+        portrait:SetPoint("CENTER", frame, "TOPLEFT", CENTER_X, -CENTER_Y)
+        portrait:Hide()
+        local circle = { frame = frame, portrait = portrait, strips = {} }
         circle.count = Label(frame, 10)
         circle.count:SetJustifyH("RIGHT")
         circle.count:SetPoint("BOTTOMRIGHT", frame, "TOPLEFT", CENTER_X + RIM_SIZE / 2, -CENTER_Y - RIM_SIZE / 2)
@@ -81,7 +99,7 @@ DFRL:NewMod("PetFrames", 4, function()
         row.circle = circle
         return circle
     end
-    local function SetIcon(circle, icon, scale)
+    local function SetStripIcon(circle, icon, scale)
         local changed = not T.NearlyEqual(circle.scale, scale)
         if changed and icon then
             -- At most one physical pixel per icon strip. The complete rim
@@ -126,21 +144,57 @@ DFRL:NewMod("PetFrames", 4, function()
             circle.icon = icon
         end
     end
-    local function HideCircle(circle)
-        if not circle.active then return end
-        circle.frame:Hide()
+    local function ClearStrips(circle)
         for _, strip in ipairs(circle.strips) do
             strip:Hide()
             strip:SetTexture(nil)
         end
-        circle.count:SetText("")
-        circle.icon, circle.active = nil, false
+    end
+    local function BindPortrait(portrait, icon)
+        _G.SetPortraitToTexture(portrait:GetName(), icon)
+        local assigned = portrait:GetTexture()
+        local stem = string.gsub(icon, "%.[^%.]*$", "")
+        return assigned == icon or assigned == stem
+    end
+    local function ClearPortrait(circle)
+        circle.portrait:Hide()
+        circle.portrait:SetTexture(nil)
+        if circle.native then circle.icon = nil end
+        circle.native = false
+    end
+    local function SetIcon(circle, icon, scale)
+        -- The native circle is one cached image, rather than a visible region
+        -- for every horizontal pixel. Scaling needs no new portrait binding.
+        if icon and circle.native and circle.icon == icon then return end
+        if icon and circle.failedIcon ~= icon and type(_G.SetPortraitToTexture) == "function" then
+            local ok, bound = pcall(BindPortrait, circle.portrait, icon)
+            if ok and bound then
+                ClearStrips(circle)
+                circle.portrait:Show()
+                circle.native, circle.icon, circle.failedIcon = true, icon, nil
+                return
+            end
+            ClearPortrait(circle)
+            circle.failedIcon = icon
+        end
+        if circle.native then ClearPortrait(circle) end
+        -- Older clients without the global keep the same clipped appearance.
+        -- These regions are allocated only if the native path is unavailable.
+        SetStripIcon(circle, icon, scale)
+    end
+    local function HideCircle(circle)
+        if not circle.active then return end
+        circle.frame:Hide()
+        ClearPortrait(circle)
+        ClearStrips(circle)
+        Text(circle.count, "")
+        circle.icon, circle.active, circle.native, circle.failedIcon = nil, false, false, nil
     end
     local function HideRow(row)
         if not row.active then return end
         row.frame:Hide()
-        row.name:SetText("")
-        row.status:SetText("")
+        Text(row.name, "")
+        Text(row.status, "")
         if row.circle then HideCircle(row.circle) end
         row.id, row.active = nil, false
     end
@@ -161,16 +215,25 @@ DFRL:NewMod("PetFrames", 4, function()
         end
         return rowCount, cellWidth, spacing
     end
-    local function Clear()
-        if not displayed then
-            Bounds(0)
-            return
-        end
+    local function HideView()
+        if not displayed then return end
         for _, row in ipairs(rows) do
             HideRow(row)
         end
         root:Hide()
         displayed = false
+    end
+    local function Clear()
+        if not displayed and entryCount == 0 and not acceptedPacket and not dirty then return end
+        HideView()
+        for _, entry in ipairs(entries) do
+            Wipe(entry)
+        end
+        Wipe(seen)
+        Wipe(groups)
+        entryCount, hasTemporary = 0, false
+        acceptedPacket, acceptedStamp, acceptedReceived = nil, nil, nil
+        dirty, paintedScale = false, nil
         Bounds(0)
     end
     local function Retire()
@@ -194,7 +257,7 @@ DFRL:NewMod("PetFrames", 4, function()
         end
         local showName = not DFRL.display.Get("hidePetNames")
         local showTimer = not DFRL.display.Get("hidePetTimers") and entry.temporary > 0
-        row.name:SetText(showName and entry.name or "")
+        Text(row.name, showName and entry.name or "")
         if resized or row.showName ~= showName or row.showTimer ~= showTimer then
             row.name:ClearAllPoints()
             row.name:SetPoint("TOPLEFT", row.frame, "TOPLEFT", 48, showTimer and -8 or -16)
@@ -206,20 +269,77 @@ DFRL:NewMod("PetFrames", 4, function()
         end
         local circle = Circle(row)
         SetIcon(circle, entry.icon, scale)
-        circle.count:SetText(
+        Text(
+            circle.count,
             not DFRL.display.Get("hidePetCounts") and entry.count > 1 and ("x" .. entry.count) or ""
         )
         if not circle.active then circle.frame:Show() end
         circle.active = true
         if not showTimer then
-            row.status:SetText("")
+            Text(row.status, "")
         elseif Number(entry.remaining) and entry.remaining >= 0 then
-            row.status:SetText(Time(entry.remaining))
+            Text(row.status, Time(entry.remaining))
         else
-            row.status:SetText("--:--")
+            Text(row.status, "--:--")
         end
         if not row.active then row.frame:Show() end
         row.active = true
+    end
+    local function ReadRoster(list)
+        -- Combine each supplied type key in first-arrival order, counting all
+        -- members while timing only the temporary ones. Reuse our own scratch
+        -- tables; never retain or change the getter's normalized rows.
+        Wipe(seen)
+        Wipe(groups)
+        local count = 0
+        hasTemporary = false
+        for _, entry in ipairs(list) do
+            if
+                type(entry) ~= "table"
+                or not Number(entry.id)
+                or entry.id <= 0
+                or entry.id ~= math.floor(entry.id)
+                or seen[entry.id]
+                or type(entry.name) ~= "string"
+                or entry.name == ""
+            then
+                return false
+            end
+            seen[entry.id] = true
+            local key = type(entry.key) == "string" and entry.key ~= "" and entry.key
+            local group = key and groups[key]
+            if not group then
+                count = count + 1
+                group = entries[count]
+                if not group then
+                    group = {}
+                    table.insert(entries, group)
+                end
+                group.id, group.name = entry.id, entry.name
+                group.icon = petIcons[entry.key]
+                    or (type(entry.icon) == "string" and entry.icon ~= "" and entry.icon or nil)
+                group.temporary, group.count, group.remaining = 0, 0, nil
+                if key then groups[key] = group end
+            end
+            group.count = group.count + 1
+            if entry.permanent ~= true then
+                hasTemporary = true
+                group.temporary = group.temporary + 1
+                local remaining = Number(entry.remaining) and entry.remaining >= 0 and entry.remaining or nil
+                if group.temporary == 1 then
+                    group.remaining = remaining
+                elseif group.remaining and remaining then
+                    group.remaining = math.min(group.remaining, remaining)
+                else
+                    group.remaining = nil
+                end
+            end
+        end
+        for index = count + 1, table.getn(entries) do
+            if entries[index].id then Wipe(entries[index]) end
+        end
+        entryCount = count
+        return true
     end
     local function Refresh()
         if not inWorld then return end
@@ -238,78 +358,49 @@ DFRL:NewMod("PetFrames", 4, function()
             Clear()
             return
         end
-        local list = Native("AZS_GetSummons")
-        if type(list) ~= "table" then
-            Clear()
-            return
-        end
-        -- Combine each supplied type key in first-arrival order, counting all
-        -- members while timing only the temporary ones.
-        local entries, seen, groups = {}, {}, {}
-        local count = 0
-        for _, entry in ipairs(list) do
-            if
-                type(entry) ~= "table"
-                or not Number(entry.id)
-                or entry.id <= 0
-                or entry.id ~= math.floor(entry.id)
-                or seen[entry.id]
-                or type(entry.name) ~= "string"
-                or entry.name == ""
-            then
+        local changed = packet ~= acceptedPacket or stamp ~= acceptedStamp or received ~= acceptedReceived
+        local ticking = hasTemporary and not DFRL.display.Get("hidePetTimers") and root:IsShown()
+        -- A static or hidden view needs no clock reads. Visible countdowns
+        -- still sample the native pause-aware getter at the existing rate.
+        if changed or ticking then
+            dirty = true
+            local list = Native("AZS_GetSummons")
+            if type(list) ~= "table" or not ReadRoster(list) then
                 Clear()
                 return
             end
-            seen[entry.id] = true
-            local key = type(entry.key) == "string" and entry.key ~= "" and entry.key
-            local group = key and groups[key]
-            if not group then
-                count = count + 1
-                group = {
-                    id = entry.id,
-                    name = entry.name,
-                    icon = petIcons[entry.key]
-                        or (type(entry.icon) == "string" and entry.icon ~= "" and entry.icon or nil),
-                    temporary = 0,
-                    count = 0,
-                }
-                entries[count] = group
-                if key then groups[key] = group end
-            end
-            group.count = group.count + 1
-            if entry.permanent ~= true then
-                group.temporary = group.temporary + 1
-                local remaining = Number(entry.remaining) and entry.remaining >= 0 and entry.remaining or nil
-                if group.temporary == 1 then
-                    group.remaining = remaining
-                elseif group.remaining and remaining then
-                    group.remaining = math.min(group.remaining, remaining)
-                else
-                    group.remaining = nil
-                end
-            end
+            acceptedPacket, acceptedStamp, acceptedReceived = packet, stamp, received
         end
-        if count == 0 then
-            Clear()
+        if entryCount == 0 then
+            if dirty then
+                HideView()
+                Bounds(0)
+                dirty, paintedScale = false, nil
+            end
             return
         end
         local scale = root:GetEffectiveScale()
         if not Number(scale) or scale <= 0 then return end
-        local rowCount, cellWidth, spacing = Bounds(count)
-        local perRow, extra = math.floor(count / rowCount), math.mod(count, rowCount)
+        if not dirty and T.NearlyEqual(paintedScale, scale) then return end
+        local rowCount, cellWidth, spacing = Bounds(entryCount)
+        -- Placing changed bounds may also apply confirmed/draft scale.
+        scale = root:GetEffectiveScale()
+        if not Number(scale) or scale <= 0 then return end
+        local perRow, extra = math.floor(entryCount / rowCount), math.mod(entryCount, rowCount)
         local column, line = 0, 0
-        for index = 1, count do
+        for index = 1, entryCount do
             Paint(Row(index), entries[index], scale, column, line, cellWidth, spacing)
             column = column + 1
             if column == perRow + (line < extra and 1 or 0) then
                 column, line = 0, line + 1
             end
         end
-        for index = count + 1, table.getn(rows) do
+        for index = entryCount + 1, table.getn(rows) do
             HideRow(rows[index])
         end
-        root:Show()
+        if not displayed then root:Show() end
         displayed = true
+        dirty, paintedScale = false, scale
     end
     local controller = CreateFrame("Frame")
     local function Tick()
@@ -328,8 +419,11 @@ DFRL:NewMod("PetFrames", 4, function()
             root:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 2, -220)
         end
     end, { labelAbove = true, refreshDefault = true, onReset = Clear })
-    DFRL.locale.Listen(Refresh)
-    DFRL.display.Listen(function() age = 0.1 end)
+    DFRL.locale.Listen(function()
+        acceptedPacket = nil
+        dirty, age = true, 0.1
+    end)
+    DFRL.display.Listen(function() dirty, age = true, 0.1 end)
     for _, name in ipairs({ "PLAYER_ENTERING_WORLD", "PLAYER_LEAVING_WORLD", "PLAYER_LOGOUT", "CHAT_MSG_ADDON" }) do
         controller:RegisterEvent(name)
     end
