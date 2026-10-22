@@ -14,9 +14,11 @@ ROOT = Path(__file__).resolve().parents[1]
 def prepare(source, output):
     original = Image.open(source).convert("RGBA")
     # Repeat one fully developed interior column, preserving its vertical bevel
-    # and alpha profile while removing horizontal darkening and end-cap fading.
+    # while removing horizontal darkening and end-cap fading. Full opacity
+    # prevents the differently shaded shell from showing through the bevel.
     profile = original.crop((384, 0, 385, 16))
     uniform = profile.resize((512, 16), Image.Resampling.NEAREST)
+    uniform.putalpha(255)
     output.parent.mkdir(parents=True, exist_ok=True)
     uniform.save(output, compression=None)
 
