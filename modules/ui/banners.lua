@@ -5,6 +5,8 @@ DFRL:NewMod("RunBanners", 4, function()
     local WIDTH, MIN_HEIGHT = 420, 16
     local MAX_VISIBLE, MAX_QUEUE, MAX_SEEN = 3, 32, 128
     local FADE_IN, HOLD, FADE_OUT = 0.15, 3.5, 0.6
+    local GUARDIAN_SLAIN =
+        "%s is slain! Its lair yields treasure and its strength, and the other guardians grow stronger."
     local native = T.NewHudOwner("banners", "hudBanners")
     local controller = CreateFrame("Frame")
     local root = CreateFrame("Frame", nil, UIParent)
@@ -27,7 +29,7 @@ DFRL:NewMod("RunBanners", 4, function()
     -- name, inferred encounter state, approximate wording or a timing window.
     for _, source in ipairs({
         "%s enters the battlefield!",
-        "%s is slain! Its lair yields treasure and its strength, and the other guardians grow stronger.",
+        GUARDIAN_SLAIN,
     }) do
         companions[source] = true
         for _, catalog in pairs(DFRL.locale.data) do
@@ -159,7 +161,12 @@ DFRL:NewMod("RunBanners", 4, function()
         seenOrder[seenCount], seen[id] = id, true
         table.setn(seenOrder, seenCount)
         -- Copy the API table; distinct ids with equal text remain distinct.
-        Enqueue(entry.text, entry.boss == true, entry.kind, id)
+        local text = entry.text
+        if entry.kind == "guardian" and type(entry.name) == "string" and entry.name ~= "" then
+            local ok, full = pcall(string.format, DFRL.locale.Native(GUARDIAN_SLAIN), entry.name)
+            if ok then text = full end
+        end
+        Enqueue(text, entry.boss == true, entry.kind, id)
     end
     local function RedirectLegacy()
         local frame, chat = RaidBossEmoteFrame, DFRL.CleanerChat

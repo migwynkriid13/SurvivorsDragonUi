@@ -3,7 +3,8 @@
 `modules/ui/banners.lua` displays native notices in its own **Banners** frame. It
 uses the same resolved DEFAULT face, size 12, OUTLINE and black shadow as chat,
 through the shared helpers in `core/fonts.lua`. The supplied translated text is
-displayed unchanged. The native `boss` flag selects red text; other notices use
+displayed unchanged except for the requested full guardian-death wording below.
+The native `boss` flag selects red text; other notices use
 gold. No icon, backdrop, sound or gameplay lookup is added. The Layout caption
 uses the existing fourteen-language source/runtime catalogs.
 
@@ -123,6 +124,18 @@ boss entry and guardian death already have official API publications; their
 legacy display companions are suppressed rather than shown a second time.
 Template matching uses the existing native catalogs in all fourteen languages,
 without entity-name lists, fuzzy wording or temporal pairing.
+
+For a received official `kind == "guardian"` publication with a nonempty native
+`name`, the addon uses the original full guardian-death template from the same
+fourteen-language catalogs: **%s is slain! Its lair yields treasure and its
+strength, and the other guardians grow stronger.** Only the received guardian
+name fills its placeholder. This replaces the API's shortened **Its hoard and a
+level.** wording while preserving its native ID, boss flag, queue order and
+lifetime. Missing names or failed formatting retain the supplied API text.
+The same template constant identifies the suppressed legacy companion, so the
+middle-screen copy stays hidden and the full message appears only once in the
+custom Banners group. The native publication is not modified, and no gameplay
+event or reward is inferred.
 
 The bridge reuses chat capture's delivery decision in a separate `banners`
 scope, with the originating chat frame as source. Duplicate deliveries across
