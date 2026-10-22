@@ -30,8 +30,12 @@ native target availability and target-of-target updates remain authoritative.
 The shared `CreatePortraitlessBorder` helper closes both ends with mirrored
 pieces of the existing `UI-TargetingFrameDF1.blp` straight metal edge. Source
 columns 24–32 provide end caps; columns 32–136 provide horizontal spans. Rows
-29–34, 34–63 and 63–67 supply the top, side and bottom pieces. Corners keep their
-size while the straight spans follow each bar. No new asset is shipped.
+29–34 and 63–67 supply the top and bottom pieces. The sides stretch only the
+clean 35–49 span, excluding the old resource-divider stub from both mirrored
+ends. Corners keep their size while the straight spans follow each bar. This
+applies to player, target and target-of-target, independently of Class resources;
+the player's optional resource row and native values remain unchanged. No new
+asset is shipped.
 
 The ordinary portrait sheets are hidden while this border is active. The small
 target-of-target hides only its sheet strips, retaining its foreground health

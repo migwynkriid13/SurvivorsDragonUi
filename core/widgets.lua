@@ -148,7 +148,9 @@ function DFRL.tools.CreatePortraitlessBorder(parent, healthBar, height)
         top:SetPoint("TOP" .. side, border, "TOP" .. side, 0, 0)
         local bottom = Piece(24, 63, 8, 4, mirrored)
         bottom:SetPoint("BOTTOM" .. side, border, "BOTTOM" .. side, 0, 0)
-        local middle = Piece(24, 34, 8, 29, mirrored)
+        -- Stretch only the uninterrupted side edge; the original lower span
+        -- includes the old resource divider's inward-facing stub.
+        local middle = Piece(24, 35, 8, 14, mirrored)
         middle:SetPoint("TOP" .. side, top, "BOTTOM" .. side, 0, 0)
         middle:SetPoint("BOTTOM" .. side, bottom, "TOP" .. side, 0, 0)
     end
