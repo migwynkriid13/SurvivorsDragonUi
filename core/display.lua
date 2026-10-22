@@ -55,7 +55,7 @@ DFRL:NewMod("Display", 0, function()
         showTallyKills = true,
         showTallyGold = true,
         showTallyCache = true,
-        highlightAffordableCache = false,
+        highlightAffordableCache = true,
     }
     DFRL.display = display
 
