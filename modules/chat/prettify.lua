@@ -437,7 +437,10 @@ CleanerChat.PrettifyMessage = function(text, eventName, speaker, message)
     -- Recognize native self-loot on the system channel as well as loot events.
     if not eventName or eventName == "CHAT_MSG_LOOT" or eventName == "CHAT_MSG_SYSTEM" then
         local loot = CleanerChat.ParseLootMessage(text)
-        if loot then return loot.chatText end
+        if loot then
+            if loot.collection == "collected" then return nil, "hide" end
+            return loot.chatText
+        end
     end
     return text
 end
