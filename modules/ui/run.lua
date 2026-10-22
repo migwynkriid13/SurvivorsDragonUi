@@ -601,12 +601,14 @@ DFRL:NewMod("RunTimers", 5, function()
     local function RefreshTimerCaptions()
         local mode = runClock.mode or "Regular"
         local text = ""
-        if runClock.currentTime and DFRL.display.Get("runText" .. mode) then
+        if runClock.currentTime then
             if DFRL.display.Get("runCurrent" .. mode) then text = runClock.currentTime end
-            if DFRL.display.Get("runMaximum" .. mode) then
+            if mode == "Regular" and DFRL.display.Get("runMaximumRegular") then
                 text = text ~= "" and text .. " / " .. runClock.maximumTime or runClock.maximumTime
             end
-            if text ~= "" then text = DFRL.locale.Text("RUN") .. " " .. text end
+            if DFRL.display.Get("runText" .. mode) then
+                text = DFRL.locale.Text("RUN") .. (text ~= "" and " " .. text or "")
+            end
         end
         local changed = SetClockLabelText(runClock, text, text ~= "")
         local countdown = bossClock.option and DFRL.display.Get(bossClock.option) and bossClock.countdown or ""
@@ -650,7 +652,8 @@ DFRL:NewMod("RunTimers", 5, function()
         elseif received and state.endl == 0 then
             mode = "Regular"
         end
-        runClock.mode, runClock.currentTime, runClock.maximumTime = mode, Clock(seconds), Clock(maximum)
+        runClock.mode, runClock.currentTime = mode, Clock(seconds)
+        runClock.maximumTime = mode ~= "Endless" and Clock(maximum) or nil
         local countdown = ""
         if mode and IsNumber(state.nb) then
             -- Both modes supply pause-aware nb. Do not derive a countdown from
@@ -699,6 +702,7 @@ DFRL:NewMod("RunTimers", 5, function()
         local screenWidth, screenHeight = T.GetLocalSize(UIParent)
         local scale =
             math.min(1, (screenWidth - 20) / fontEditor:GetWidth(), (screenHeight - 20) / fontEditor:GetHeight())
+        scale = scale * 0.85
         if scale > 0 and not T.NearlyEqual(fontEditor:GetScale(), scale) then fontEditor:SetScale(scale) end
     end
 
@@ -807,6 +811,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 key = "tally",
                 label = "Kills, Gold & Caches",
                 columns = 3,
+                rowHeight = 72,
                 stylePicker = true,
                 options = {
                     {
@@ -876,7 +881,7 @@ DFRL:NewMod("RunTimers", 5, function()
         local timerOptions = {
             { "runText", "Run text" },
             { "runCurrent", "Current time" },
-            { "runMaximum", "Maximum zone time" },
+            { "runMaximum", "Maximum zone time", regularOnly = true },
             { "bossCountdown", "Boss countdown" },
         }
         local combatFilters = {
@@ -904,6 +909,7 @@ DFRL:NewMod("RunTimers", 5, function()
         for _, entry in ipairs(fontFaces) do
             dropdownWidth = math.max(dropdownWidth, TextWidth(entry.label) + 36)
         end
+        local fontListWidth = dropdownWidth
         for _, entry in ipairs(categories) do
             sidebarWidth = math.max(sidebarWidth, TextWidth(entry.label) + 32)
         end
@@ -919,14 +925,14 @@ DFRL:NewMod("RunTimers", 5, function()
         end
         local hudOptionWidth = 0
         for _, category in ipairs(categories) do
-            local columns = category.columns or 1
+            local columns = category.stylePicker and 1 or category.columns or 1
             for _, entry in ipairs(category.options or {}) do
                 local controlsWidth = entry.step and 156 or 36
                 local optionWidth =
                     math.max(TextWidth(entry[2]) + controlsWidth, TextWidth(entry[3]) / 2 + controlsWidth)
                 hudOptionWidth = math.max(
                     hudOptionWidth,
-                    optionWidth * columns + gap * (columns - 1) + (category.columns and 0 or 24)
+                    optionWidth * columns + gap * (columns - 1) + (columns == 1 and 24 or 0)
                 )
             end
         end
@@ -946,7 +952,7 @@ DFRL:NewMod("RunTimers", 5, function()
             timerOptionWidth = math.max(timerOptionWidth, TextWidth(entry.label))
         end
         local timerSizeWidth = TextWidth("Size") + gap + 104
-        local tallyStyleHint = "Styles apply while attached to the action bar."
+        local tallyStyleHint = "Styles stay the same when attached or detached."
         local defaultsWidth = TextWidth("Addon defaults") + 24
         local instructions = "Drag frames to move. Drag corners to resize."
         local contentWidth = math.max(
@@ -959,7 +965,7 @@ DFRL:NewMod("RunTimers", 5, function()
             TextWidth("Frame style") + 24,
             TextWidth(tallyStyleHint) / 2 + 24,
             (TextWidth("SCT size") + gap + 136) * 2 + gap,
-            labelWidth + gap + dropdownWidth + gap * 3 + timerSizeWidth,
+            labelWidth + gap + dropdownWidth,
             labelWidth + gap + outlineWidth * 3 + gap * 2,
             defaultsWidth * 2 + 140 + gap * 4,
             TextWidth(instructions)
@@ -1091,7 +1097,7 @@ DFRL:NewMod("RunTimers", 5, function()
         end
         local function CreateOptionsPage(category)
             local page = pages[category.key]
-            local columns, rowHeight = category.columns or 1, 60
+            local columns, rowHeight = category.columns or 1, category.rowHeight or 60
             local rowWidth = (contentWidth - gap * (columns - 1)) / columns
             local content, scroll, ScrollOptions = page, nil, nil
             if not category.columns then
@@ -1125,6 +1131,15 @@ DFRL:NewMod("RunTimers", 5, function()
                     control:SetHeight(rowHeight)
                     control.description:SetHeight(28)
                     control.description:SetJustifyV("TOP")
+                    if category.stylePicker then
+                        control.label:ClearAllPoints()
+                        control.label:SetPoint("TOPLEFT", control, "TOPLEFT", 32, -3)
+                        control.label:SetHeight(28)
+                        control.label:SetJustifyV("MIDDLE")
+                        control.description:ClearAllPoints()
+                        control.description:SetPoint("TOPLEFT", control, "TOPLEFT", 32, -32)
+                        control.description:SetHeight(36)
+                    end
                 end
                 control:SetPoint("TOPLEFT", content, "TOPLEFT", x, y)
                 if ScrollOptions then
@@ -1281,12 +1296,13 @@ DFRL:NewMod("RunTimers", 5, function()
         fontMenu:EnableMouse(true)
         fontMenu:SetScript("OnClick", function() fontMenu:Hide() end)
         fontMenu:Hide()
-        local fontList = T.CreateEditorPanel(fontMenu, dropdownWidth, table.getn(fontFaces) * 28 + 16)
+        fontListWidth = math.max(fontListWidth, dropdownWidth)
+        local fontList = T.CreateEditorPanel(fontMenu, fontListWidth, table.getn(fontFaces) * 28 + 16)
         fontList:SetFrameLevel(190)
         fontList:SetPoint("TOPLEFT", fontButton, "BOTTOMLEFT", 0, -4)
         for index, entry in ipairs(fontFaces) do
             local selectedFace = entry.face
-            local _, button = FontEditorButton(entry.label, dropdownWidth - 16, 8, -8 - (index - 1) * 28, function()
+            local _, button = FontEditorButton(entry.label, fontListWidth - 16, 8, -8 - (index - 1) * 28, function()
                 if not fontDraft then return end
                 fontDraft.face = selectedFace
                 PreviewFont(fontDraft)
@@ -1333,10 +1349,14 @@ DFRL:NewMod("RunTimers", 5, function()
             local x = (index - 1) * (halfWidth + gap)
             local heading = FontEditorLabel(timer, mode.label, x, -184, 12)
             heading:SetTextColor(0.94, 0.79, 0.47)
-            for row, entry in ipairs(timerOptions) do
-                local y = -204 - (row - 1) * 44
-                local control = DisplayToggle(timer, entry[1] .. mode.suffix, entry[2], nil, y, halfWidth)
-                control:SetPoint("TOPLEFT", timer, "TOPLEFT", x, y)
+            local row = 0
+            for _, entry in ipairs(timerOptions) do
+                if not entry.regularOnly or mode.suffix == "Regular" then
+                    local y = -204 - row * 44
+                    local control = DisplayToggle(timer, entry[1] .. mode.suffix, entry[2], nil, y, halfWidth)
+                    control:SetPoint("TOPLEFT", timer, "TOPLEFT", x, y)
+                    row = row + 1
+                end
             end
         end
 
@@ -1588,34 +1608,26 @@ DFRL:NewMod("RunTimers", 5, function()
             tallyBar:SetFrameLevel(tally:GetFrameLevel() + 1)
             tallyOverlay:SetFrameLevel(tallyBar:GetFrameLevel() + 1)
             for _, texture in ipairs(tallySkin) do
-                if joined then
-                    texture:Hide()
-                else
-                    texture:Show()
-                end
+                texture:Hide()
             end
             tally:ClearAllPoints()
             local artScale = lastWidth / DFRL.tallyStyleCanvas.width
-            local rowCenter, inset, contentScale
+            local height = style.extent * artScale
+            tally:SetHeight(height)
+            detached:SetHeight(height)
             if joined then
-                tally:SetHeight(style.extent * artScale)
                 tally:SetPoint("TOP", owner, "BOTTOM", 0, bottom)
-                tallyBar:Hide()
-                artwork:SetTexture(DFRL:GetInfoOrCons("tex") .. "tally\\" .. style.texture)
-                artwork:SetWidth(lastWidth)
-                artwork:SetHeight(DFRL.tallyStyleCanvas.height * artScale)
-                artwork:Show()
-                rowCenter = style.contentY * artScale
-                contentScale = style.contentScale
-                inset = (style.id == "silver" or style.id == "graphite") and 8 or 40 * artScale
             else
-                tally:SetHeight(detached:GetHeight())
                 tally:SetPoint("TOPLEFT", owner, "TOPLEFT", 0, 0)
-                tallyBar:Show()
-                artwork:Hide()
-                rowCenter, inset = tally:GetHeight() / 2, 8
-                contentScale = 1
             end
+            tallyBar:Hide()
+            artwork:SetTexture(DFRL:GetInfoOrCons("tex") .. "tally\\" .. style.texture)
+            artwork:SetWidth(lastWidth)
+            artwork:SetHeight(DFRL.tallyStyleCanvas.height * artScale)
+            artwork:Show()
+            local rowCenter, contentScale = style.contentY * artScale, style.contentScale
+            local divided = style.id == "silver" or style.id == "graphite"
+            local inset = divided and 8 or 40 * artScale
             local sectionWidth = (lastWidth - 2 * inset) / math.max(1, visibleTallyFields)
             local visibleIndex = 0
             for _, entry in ipairs(tallyFields) do
@@ -1633,13 +1645,8 @@ DFRL:NewMod("RunTimers", 5, function()
                     entry.frame:Hide()
                 end
                 if entry.divider then
-                    local divided = not joined or style.id == "silver" or style.id == "graphite"
                     if entry.enabled and visibleIndex > 0 and divided then
-                        if joined then
-                            entry.divider:SetVertexColor(0.55, 0.56, 0.58, 0.6)
-                        else
-                            entry.divider:SetVertexColor(0.9, 0.7, 0.3, 0.6)
-                        end
+                        entry.divider:SetVertexColor(0.55, 0.56, 0.58, 0.6)
                         entry.divider:Show()
                     else
                         entry.divider:Hide()
@@ -1647,6 +1654,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 end
                 if entry.enabled then visibleIndex = visibleIndex + 1 end
             end
+            DFRL.layout.Place("runTally", detached)
             tallyAttachment.SetShown(tallyAttachment.shown)
         end
         DFRL.RefreshRunTallyAttachment = tallyAttachment.Refresh
@@ -1665,8 +1673,8 @@ DFRL:NewMod("RunTimers", 5, function()
             if not tallyAttachment.ready then
                 DFRL.layout.Register("runTally", detached, function()
                     detached:ClearAllPoints()
-                    detached:SetPoint("TOP", UIParent, "BOTTOM", 0, 39)
-                end, { onlyWhenShown = true })
+                    detached:SetPoint("TOP", UIParent, "BOTTOM", 0, math.max(39, detached:GetHeight()))
+                end, { onlyWhenShown = true, refreshDefault = true })
                 tallyAttachment.ready = true
             end
             tallyAttachment.Refresh(resized)

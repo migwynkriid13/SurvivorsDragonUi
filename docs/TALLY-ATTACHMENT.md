@@ -26,11 +26,13 @@ Removed Acanthus base and Dragon iron choices fall back to Demon reliquary
 through the same registry validation.
 
 The five checkboxes occupy two rows, with three controls followed by two.
+Their translated captions and hints wrap within 72-unit rows instead of
+forcing the entire dialog wider.
 The style picker remains a full-width, two-column list below them. The page
 fits without scrolling and uses translated width measurement, selected button
 states and the shared footer. Attachment is moved here from Action bar.
-Styles apply to the attached lower compartment. Detaching retains the chosen
-style and restores the original gold pill without changing saved geometry.
+Styles apply both attached and detached. Detaching retains the same texture,
+content fit and dividers while restoring independent position and scale.
 
 Only the prepared compartment textures and shared registry enter the runtime
 manifest. `scripts/prepare_tally_styles.py` prepares uncompressed legacy RGBA
@@ -50,7 +52,7 @@ joined the shell. `SetXPBarJoined` refreshes attachment, including unavailable
 native XP. Detached XP does not move the tally.
 
 Every style begins at this edge and uses it as its only top border. The
-original pill background, yellow fill and bezel are hidden only while attached.
+original pill background, yellow fill and bezel stay hidden in both modes.
 The new texture has no upper rim, suspension bracket or gap. Artwork scales
 from the shared 300-unit reference width, and each style's real lower extent
 sets the action-bar edit bounds. Jewelry still owns the upper edit bound.
@@ -101,8 +103,8 @@ Each unscaled hover cell owns one passive content frame, centered with a zero
 anchor offset. Its native 18-unit icon, DEFAULT 12 text and affordability
 underline inherit the same scale. Explicit content width keeps the group
 centered inside its enabled counter's share. Changing style applies this only
-through the cached attachment refresh. Detached mode restores scale one and
-the original pill's 15.5-unit center. The [static content preview](designs/tally-gothic/content-fit.png)
+through the cached attachment refresh. Detached mode retains the same style's
+content scale and center. The [static content preview](designs/tally-gothic/content-fit.png)
 shows the prepared frames and chosen fit; it does not execute native rendering.
 
 ## Counter visibility and affordability
@@ -132,10 +134,16 @@ saved.
 
 The existing `runTally` key owns a UIParent root. Its confirmed/draft position,
 scale and hidden flag survive attached mode and apply again when detached.
-The original 31-unit pill and default top of 39 units remain. The translated
+The selected frame stays visible with identical content fit and divider rules.
+The root's height follows that style's lower extent so editing handles include
+its ornament. Its unsaved default top is at least 39 units above screen bottom,
+raised only when the selected extent needs more clearance. Shared default
+refresh keeps this placement centered while retaining existing top-left
+position and scale records without a geometry migration. The translated
 **Kills / Gold / Cache (detached)** Layout entry has handles only while its root
 is shown; selecting it does not force a hidden tally visible. Individual
-visibility and affordability controls also apply to this original pill.
+visibility and affordability controls apply in either attachment mode. No
+legacy pill or yellow fill is restored when detaching or changing styles.
 
 ## Proposal galleries and evidence
 

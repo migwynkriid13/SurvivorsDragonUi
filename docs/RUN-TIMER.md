@@ -2,19 +2,21 @@
 
 `/sdui` → **Run timer** places **Font** and **Size** on one row, followed by
 **Outline** and **Black shadow**. These choices apply to both timer captions.
-Below them, **Regular runs** and **Endless** each have four compact checkboxes:
+Below them, **Regular runs** has four compact checkboxes and **Endless** has
+three. Endless has no maximum zone time:
 
-| Control           | Regular runs | Endless |
-| ----------------- | ------------ | ------- |
-| Run text          | On           | On      |
-| Current time      | On           | On      |
-| Maximum zone time | On           | Off     |
-| Boss countdown    | Off          | On      |
+| Control           | Regular runs | Endless     |
+| ----------------- | ------------ | ----------- |
+| Run text          | On           | On          |
+| Current time      | On           | On          |
+| Maximum zone time | On           | Unavailable |
+| Boss countdown    | Off          | On          |
 
-Each mode's **Run text** controls only its complete `RUN` caption. **Current
-time** and **Maximum zone time** independently choose the components of that
-caption. Turning both components off leaves no `RUN` text. **Boss countdown**
-is independent and can remain visible with **Run text** off.
+Each mode's **Run text** controls only the translated `RUN` word. **Current
+time** independently controls elapsed time; **Maximum zone time** independently
+controls the regular run's limit. Turning both time components off with
+**Run text** on shows the `RUN` word alone. Turning every left-caption component
+off hides that caption. **Boss countdown** remains independent.
 
 All choices preview immediately and save only with Confirm. Cancel, world
 leave, logout and reload discard unconfirmed choices. Both full resets restore
@@ -24,7 +26,7 @@ the defaults above. Changing a choice does not move or scale the timer.
 
 The existing `SurvivorsDragonUiDisplay` table owns normalized
 `runTextRegular`, `runTextEndless`, `runCurrentRegular`, `runCurrentEndless`,
-`runMaximumRegular`, `runMaximumEndless`, `bossCountdownRegular` and
+`runMaximumRegular`, `bossCountdownRegular` and
 `bossCountdownEndless` booleans. Explicit valid choices are retained; missing or
 invalid values use the defaults above, with one compatibility exception.
 
@@ -33,7 +35,11 @@ For either missing or invalid `runText` choice, a valid boolean legacy
 An explicit new mode choice takes precedence. The legacy field no longer
 controls the boss countdown or acts as a shared master switch.
 
-All eight choices use the existing display draft, notification, Confirm,
+The obsolete `runMaximumEndless` field is no longer a supported setting. Any
+old saved value is ignored by the timer and omitted when the existing display
+normalizer saves confirmed choices.
+
+All seven choices use the existing display draft, notification, Confirm,
 discard and reset paths. The compact checkboxes have measured fourteen-language
 captions and no description rows. Font preferences retain their existing save.
 No SavedVariable, command or gameplay persistence is added.
@@ -64,15 +70,20 @@ a new zone and clock release.
 
 ## Caption placement
 
-With both components enabled, the run caption reads `RUN current / maximum`.
-With only **Current time**, it reads `RUN current`; with only **Maximum zone
-time**, it reads `RUN maximum`, without a slash. An explicitly enabled maximum
-stays in the caption at and beyond the zone limit. These choices apply
-independently in regular and Endless modes.
+With all regular-run components enabled, the left caption reads
+`RUN current / maximum`. Turning **Run text** off removes only the word,
+leaving `current / maximum`. One enabled time component appears without a
+slash: `RUN current` or `RUN maximum` with the word enabled, otherwise just
+`current` or `maximum`. An explicitly enabled regular maximum stays visible at
+and beyond the zone limit.
 
-When both captions are visible, `RUN` uses the pill's left edge and the boss
+Endless independently shows the `RUN` word and current time; it never shows a
+maximum zone time. A word-only caption is valid in either mode.
+
+When both captions are visible, the time caption uses the pill's left edge and the boss
 countdown uses its right edge. If only one caption is visible, it is centered;
-this includes a boss countdown shown while the run caption is off.
+this includes a boss-only display when **Run text** and **Current time** are
+off, with **Maximum zone time** also off for regular runs.
 
 Both labels reuse the pooled segmented renderer, including seconds raised one
 physical pixel. Measured overflow separates long translated captions and
