@@ -242,7 +242,9 @@ DFRL:NewMod("Navigation", 2, function()
         end
         local candidate = children[9]
         if candidate.GetFacing then
-            for index = 1, 8 do children[index]:SetAlpha(0) end
+            for index = 1, 8 do
+                children[index]:SetAlpha(0)
+            end
             return candidate
         end
     end

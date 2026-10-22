@@ -82,13 +82,7 @@ DFRL:NewMod("PetFrames", 4, function()
         local circle = { frame = frame, strips = {} }
         circle.count = Label(frame, 10)
         circle.count:SetJustifyH("RIGHT")
-        circle.count:SetPoint(
-            "BOTTOMRIGHT",
-            frame,
-            "TOPLEFT",
-            CENTER_X + RIM_SIZE / 2,
-            -CENTER_Y - RIM_SIZE / 2
-        )
+        circle.count:SetPoint("BOTTOMRIGHT", frame, "TOPLEFT", CENTER_X + RIM_SIZE / 2, -CENTER_Y - RIM_SIZE / 2)
         circle.count:SetHeight(14)
         row.circle = circle
         return circle
@@ -112,13 +106,7 @@ DFRL:NewMod("PetFrames", 4, function()
                         table.insert(circle.strips, strip)
                     end
                     strip:ClearAllPoints()
-                    strip:SetPoint(
-                        "TOPLEFT",
-                        circle.frame,
-                        "TOPLEFT",
-                        CENTER_X - half,
-                        -CENTER_Y + ICON_RADIUS - top
-                    )
+                    strip:SetPoint("TOPLEFT", circle.frame, "TOPLEFT", CENTER_X - half, -CENTER_Y + ICON_RADIUS - top)
                     strip:SetWidth(half * 2)
                     strip:SetHeight(step)
                     strip:SetTexCoord(
@@ -172,7 +160,9 @@ DFRL:NewMod("PetFrames", 4, function()
     end
     local function Clear()
         if not displayed then return end
-        for _, row in ipairs(rows) do HideRow(row) end
+        for _, row in ipairs(rows) do
+            HideRow(row)
+        end
         root:Hide()
         displayed = false
         Bounds(0)
@@ -279,8 +269,12 @@ DFRL:NewMod("PetFrames", 4, function()
         local scale = root:GetEffectiveScale()
         if not Number(scale) or scale <= 0 then return end
         Bounds(count)
-        for index = 1, count do Paint(Row(index), entries[index], scale) end
-        for index = count + 1, table.getn(rows) do HideRow(rows[index]) end
+        for index = 1, count do
+            Paint(Row(index), entries[index], scale)
+        end
+        for index = count + 1, table.getn(rows) do
+            HideRow(rows[index])
+        end
         root:Show()
         displayed = true
     end
