@@ -12,13 +12,19 @@ Detached artwork has a complete matching surround. The shared registry in
 `core/tally.lua` owns each mode's texture, full extent and counter center.
 `tallyAttachment.Refresh` selects these together whenever attachment or style
 changes, and retains the shared content scale, counter values and divider rules.
-The original attached textures and action-bar bounds remain unchanged.
+Action-bar bounds remain unchanged.
 
-The detached versions reflect the structural lower half above the counter
+Most detached versions reflect the structural lower half above the counter
 center, preserving its palette, source alpha and lower details. Iron sarcophagus
-uses its original complete frame instead, avoiding a doubled side-wall join.
-Demon reliquary reflects the plain structural frame before adding the lower
-pendant, so the pendant appears only at the bottom.
+keeps the entire attached frame at its original size beneath a six-unit top
+bevel sampled from its lower rim. Its long walls and lower cornerwork remain
+unchanged instead of switching to the differently scaled complete source frame.
+
+Demon reliquary restores the native upper halves of its wings instead of
+reflecting through their middle. A reflected lower rail closes the top, and
+the original pendant remains only below. Both modes mirror the left structural
+artwork and backing to the right, removing the darker right-edge join while
+retaining the original pendant pixels.
 
 | Style               | Detached extent | Counter center from top |
 | ------------------- | --------------- | ----------------------- |
@@ -27,11 +33,11 @@ pendant, so the pendant appears only at the bottom.
 | Roth scrollwork     | 52              | 26                      |
 | Roth shrine         | 48              | 24                      |
 | Gothic cornerwork   | 46              | 23                      |
-| Iron sarcophagus    | 40              | 20                      |
+| Iron sarcophagus    | 42              | 22                      |
 | Knotted iron        | 42              | 21                      |
 | ARPG carved cornice | 52              | 26                      |
 | Gothic leaf corners | 46              | 23                      |
-| Demon reliquary     | 50              | 24                      |
+| Demon reliquary     | 55              | 29                      |
 
 Measurements are in the existing 300-unit reference width. Every prepared TGA
 retains the 1024×128 canvas and the same 600×128 UV content region. Counter text
@@ -56,7 +62,7 @@ No new setting, command, SavedVariable or gameplay persistence is added.
 
 ## Artwork preparation
 
-`scripts/prepare_tally_variants.py` stages the two attached corrections, ten
+`scripts/prepare_tally_variants.py` stages the three attached corrections, ten
 detached TGAs and corresponding registry metadata. It reads the existing
 attached runtime artwork and style records as its baseline, without executing
 Lua or loading the addon. Pillow is a preparation-only dependency.

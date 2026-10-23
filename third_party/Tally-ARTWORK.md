@@ -23,7 +23,7 @@ RothUI source files are pinned to
 | Knotted iron        | [d3_nameplate_border.tga](https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow4.0/rTextures/d3_nameplate_border.tga), `(3,22,253,51)`.                                                                                                                                                                                                                                                                                           |
 | ARPG carved cornice | [kyau/ARPG TopBar.tga](https://github.com/kyau/ARPG/blob/9c53e246ff181d7259e3e355836044c5f8ade5be/Interface/AddOns/ARPG/Media/Textures/TopBar.tga), `(345,24,679,63)`, fitted to 300×40 units with saturation 0.45 and brightness 1.4.                                                                                                                                                                                                                         |
 | Gothic leaf corners | [Diablo_III_UI UIButton_300x51_Normal.tga](https://github.com/RickyElune/Diablo_III_UI/blob/10aa68fef2bfa11bba0eab42baa952b700eb1be5/media/UIButton_300x51_Normal.tga), `(88,64,424,98)`.                                                                                                                                                                                                                                                                      |
-| Demon reliquary     | [Diablo_III_UI target.tga](https://github.com/RickyElune/Diablo_III_UI/blob/10aa68fef2bfa11bba0eab42baa952b700eb1be5/media/target.tga): caps `(58,60,106,106)` and `(406,60,454,106)`; rail `(106,88,400,106)` at `(29,23)`, 242×14 units. [target_elite.tga](https://github.com/RickyElune/Diablo_III_UI/blob/10aa68fef2bfa11bba0eab42baa952b700eb1be5/media/target_elite.tga) footer `(208,100,304,128)` is centered at x150, y26, sized 48.222222×14 units. |
+| Demon reliquary     | [Diablo_III_UI target.tga](https://github.com/RickyElune/Diablo_III_UI/blob/10aa68fef2bfa11bba0eab42baa952b700eb1be5/media/target.tga): left cap `(58,60,106,106)`, mirrored for the right; rail `(106,88,400,106)` at `(29,23)`, 242×14 units. [target_elite.tga](https://github.com/RickyElune/Diablo_III_UI/blob/10aa68fef2bfa11bba0eab42baa952b700eb1be5/media/target_elite.tga) footer `(208,100,304,128)` is centered at x150, y26, sized 48.222222×14 units. |
 
 Knotted iron uses its native open upper walls and alpha, fitted to 300×37
 units with 30-source-pixel end caps. It has no projected top backing.
@@ -39,14 +39,26 @@ leave dividers to the live renderer.
 
 ## Detached surrounds
 
-The `_detached.tga` variants reflect each prepared frame's structural
+Most `_detached.tga` variants reflect each prepared frame's structural
 lower half above its counter center, retaining the source alpha and the
 original lower half. The matching upper corners and rail close the frame
-without a shared action-bar edge. Demon reliquary reflects its plain
-structural frame before the pendant is added, keeping that ornament below.
-Iron sarcophagus instead uses its original complete `demonic_fury_border.tga`
-crop `(0,0,256,32)`, fitted to 300×40 units with 27-source-pixel caps;
-its stone backing is clipped between the original upper and lower contour.
+without a shared action-bar edge.
+
+Iron sarcophagus keeps its complete attached artwork without resizing it,
+shifted down six units. Its top bevel reflects the attached pixel rectangle
+`(7,60,593,72)` into a 600×12 strip. The seven-pixel side inset matches the
+attached walls rather than the wider lower flare. This retains the long walls,
+lower cornerwork and interior instead of replacing them with a differently
+scaled full source frame.
+
+Demon reliquary restores its complete native left wing from `target.tga`
+`(58,40,106,106)`, fitted to 31×52 units, and mirrors it for the right wing.
+The existing lower rail moves down 16 units; its vertical reflection closes
+the top at `(29,0)`, 242×14 units. Both modes reflect the left structural
+artwork and backing horizontally to remove the darker right-side join.
+The unchanged `target_elite.tga` pendant is composited afterward at y26 when
+attached and y42 when detached, keeping it only on the lower edge.
+
 Per-mode texture, full extent and counter-center metadata are generated
 together in `core/tally.lua`. The existing palettes and notices apply to
 both variants. No counter icons or text are baked into either texture.

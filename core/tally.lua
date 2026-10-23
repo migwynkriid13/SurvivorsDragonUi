@@ -2,8 +2,8 @@
 -- Detached variants and edge corrections: scripts/prepare_tally_variants.py.
 -- Attached textures have an open top supplied by the action bar. Detached
 -- textures reflect the lower structural trim into a complete upper surround.
--- Iron sarcophagus uses its original closed source frame; the Demon reliquary
--- pendant remains only on the lower edge.
+-- Iron sarcophagus retains its attached frame beneath a matching top bevel.
+-- Demon reliquary restores its complete wings and keeps its pendant below.
 -- Each TGA is 1024x128 with 600x128 content at 2x. Use UV 0,600/1024,0,1;
 -- artHeight is the full 64-unit texture canvas, height is the counter row,
 -- and extent includes the complete contour for that mode. No font or source framework ships.
@@ -304,8 +304,8 @@ DFRL.tallyStyles = {
         contentScale = 1,
         detached = {
             texture = "gothic04_detached.tga",
-            extent = 40,
-            contentY = 20,
+            extent = 42,
+            contentY = 22,
         },
     },
     {
@@ -364,8 +364,8 @@ DFRL.tallyStyles = {
         contentScale = 0.95,
         detached = {
             texture = "gothic13_detached.tga",
-            extent = 50,
-            contentY = 24,
+            extent = 55,
+            contentY = 29,
         },
     },
 }

@@ -1,9 +1,4 @@
 {
-  "iron": {
-    "file": "wow6.0__oUF_Diablo__media__demonic_fury_border.tga",
-    "url": "https://raw.githubusercontent.com/zorker/rothui/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/demonic_fury_border.tga",
-    "sha256": "a28efac16700fa8cc8f1ac87cb6324ea0464231de517402a84a655aa42db276c"
-  },
   "body": {
     "file": "wow6.0__oUF_Diablo__media__combo_back.tga",
     "url": "https://raw.githubusercontent.com/zorker/rothui/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/combo_back.tga",
@@ -18,6 +13,11 @@
     "file": "RickyElune__media__target.tga",
     "url": "https://raw.githubusercontent.com/RickyElune/Diablo_III_UI/10aa68fef2bfa11bba0eab42baa952b700eb1be5/media/target.tga",
     "sha256": "5ee8a8703c7b1088ae46193a5837630971c5282e8e8d9407f90aa50fe3419464"
+  },
+  "pendant": {
+    "file": "RickyElune__media__target_elite.tga",
+    "url": "https://raw.githubusercontent.com/RickyElune/Diablo_III_UI/10aa68fef2bfa11bba0eab42baa952b700eb1be5/media/target_elite.tga",
+    "sha256": "e27bb2bfdb85e428c5928524dcbd83b8211c358f38cc2f54fcd621f3b04fee55"
   },
   "cornice": {
     "file": "kyau-ARPG__TopBar__Media.tga",

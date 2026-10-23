@@ -1,6 +1,6 @@
 """Prepare tally edge corrections and detached surrounds; never load addon code.
 
-Requires Pillow and the five pinned originals in third_party/tally-sources.json.
+Requires Pillow and the pinned originals in third_party/tally-sources.json.
 Existing attached artwork and core/tally.lua supply the unchanged style choices.
 Outputs are staged for review rather than overwriting the installed addon.
 """
@@ -60,15 +60,42 @@ def fill_inside(frame, body, height, project_top=False):
     return result
 
 
-def plain_reliquary(source, body):
+def mirror_sides(image):
+    result = image.copy()
+    result.paste(image.crop((0, 0, WIDTH // 2, image.height)).transpose(Image.Transpose.FLIP_LEFT_RIGHT),
+                 (WIDTH // 2, 0))
+    return result
+
+
+def reliquary(sources, body, detached):
+    # Restore the complete native wings above the attached crop instead of
+    # reflecting through their middle. Only the lower rail becomes a top rail.
+    rise = 16 if detached else 0
+    source = sources["reliquary"]
     frame = Image.new("RGBA", CANVAS)
-    for crop, x, y, width, height in (
-        ((58, 60, 106, 106), 0, 0, 31, 36),
-        ((406, 60, 454, 106), 269, 0, 31, 36),
-        ((106, 88, 400, 106), 29, 23, 242, 14),
-    ):
-        paste(frame, grade(source.crop(crop), .4, 1.2), x, y, width, height)
-    return fill_inside(frame, body, 36, project_top=True)
+    cap = grade(source.crop((58, 40 if detached else 60, 106, 106)), .4, 1.2)
+    paste(frame, cap, 0, 0, 31, 36 + rise)
+    rail = grade(source.crop((106, 88, 400, 106)), .4, 1.2)
+    paste(frame, rail, 29, 23 + rise, 242, 14)
+    if detached:
+        paste(frame, rail.transpose(Image.Transpose.FLIP_TOP_BOTTOM), 29, 0, 242, 14)
+    frame = mirror_sides(frame)
+    result = mirror_sides(fill_inside(frame, body, 36 + rise, project_top=not detached))
+    footer = grade(sources["pendant"].crop((208, 100, 304, 128)), .42, 1.25)
+    width = 62 * 14 / 18
+    paste(result, footer, 150 - width / 2, 26 + rise, width, 14)
+    return result
+
+
+def close_iron(image):
+    # The attached side walls and lower cornerwork stay at their original size.
+    # Inset the reflected bevel to meet those walls, rather than the lower flare.
+    upper = image.crop((7, 60, WIDTH - 7, 72)).transpose(Image.Transpose.FLIP_TOP_BOTTOM)
+    upper = upper.resize((WIDTH, 12), Image.Resampling.LANCZOS)
+    result = Image.new("RGBA", CANVAS)
+    result.alpha_composite(upper)
+    result.alpha_composite(image.crop((0, 0, WIDTH, 72)), (0, 12))
+    return result
 
 
 def repair_attached(sources):
@@ -113,15 +140,17 @@ def prepare(originals, output):
             image = Image.open(ROOT / "media/tex/tally" / texture).convert("RGBA")
         else:
             image.save(output / texture, compression=None)
-        if identifier == "gothic04":
-            frame = Image.new("RGBA", CANVAS)
-            slice_three(frame, grade(sources["iron"].crop((0, 0, 256, 32)), .38, 1.25), 40, 27)
-            detached = fill_inside(frame, body, 40)
-            extent, center = 40, 20
+        if identifier == "gothic13":
+            image = reliquary(sources, body, False)
+            image.save(output / texture, compression=None)
+            detached = reliquary(sources, body, True)
+            extent, center = detached.getbbox()[3] / SCALE, center_y + 16
+        elif identifier == "gothic04":
+            detached = close_iron(image)
+            extent, center = detached.getbbox()[3] / SCALE, center_y + 6
         else:
-            frame = plain_reliquary(sources["reliquary"], body) if identifier == "gothic13" else image
             start = round(center_y * SCALE)
-            upper = frame.crop((0, start, WIDTH, frame.getbbox()[3])).transpose(Image.Transpose.FLIP_TOP_BOTTOM)
+            upper = image.crop((0, start, WIDTH, image.getbbox()[3])).transpose(Image.Transpose.FLIP_TOP_BOTTOM)
             lower = image.crop((0, start, WIDTH, image.getbbox()[3]))
             detached = Image.new("RGBA", CANVAS)
             detached.alpha_composite(upper)
