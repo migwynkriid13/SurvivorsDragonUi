@@ -66,6 +66,13 @@ DFRL:NewMod("Layout", 0, function()
         end
         return copy
     end
+    function layout.Copy(source)
+        local copy = {}
+        for key, geometry in pairs(type(source) == "table" and source or {}) do
+            if type(key) == "string" then copy[key] = CopyGeometry(geometry) end
+        end
+        return copy
+    end
     local function LockFrame(frame)
         -- SetUserPlaced requires movability on 1.12. Clear native caching before
         -- locking the frame, so the explicit editor owns both movement and save.
@@ -711,13 +718,43 @@ DFRL:NewMod("Layout", 0, function()
             layout.Place(entry.key)
         end
     end
-    local function CloseEditing(save, restore)
-        if not editing then return end
-        -- Capture pointer geometry before deciding whether numeric input needs applying.
-        FinishDrag(activeDrag, save)
-        if save and coordinates and coordinates.dirty and not ApplyCoordinates() then
+    local function PrepareDraft()
+        FinishDrag(activeDrag, true)
+        if coordinates and coordinates.dirty and not ApplyCoordinates() then
             if showCoordinates then showCoordinates() end
             return
+        end
+        return true
+    end
+    function layout.Snapshot()
+        if not editing or not PrepareDraft() then return end
+        local copy = layout.Copy(draft)
+        -- Include untouched defaults as well as records for lazy windows.
+        for _, entry in ipairs(order) do
+            if not copy[entry.key] then copy[entry.key] = ReadGeometry(entry, ReadPosition(entry.frame)) end
+        end
+        return copy
+    end
+    function layout.Load(source)
+        if not editing then return end
+        FinishDrag(activeDrag, false)
+        draft = layout.Copy(source)
+        if coordinates then
+            ClearCoordinateFocus()
+            coordinates.dirty = false
+            coordinates.status:SetText("")
+        end
+        for _, entry in ipairs(order) do
+            layout.Place(entry.key)
+        end
+        if coordinates then RefreshCoordinates() end
+    end
+    local function CloseEditing(save, restore)
+        if not editing then return end
+        if save then
+            if not PrepareDraft() then return end
+        else
+            FinishDrag(activeDrag, false)
         end
         if save then _G.SurvivorsDragonUiLayout = draft end
         editing, draft = false, nil
@@ -727,6 +764,7 @@ DFRL:NewMod("Layout", 0, function()
             LockFrame(entry.frame)
             ShowHandle(entry, false)
         end
+        if DFRL.profiles then DFRL.profiles.FinishEdit(save) end
         if confirm then confirm:Hide() end
         handlesOnly = false
         if restore ~= false then
@@ -761,17 +799,14 @@ DFRL:NewMod("Layout", 0, function()
             RefreshCoordinates()
         end
         if not editing then
-            draft = {}
-            -- Preserve lazy-window records too, without aliasing committed data.
-            for key, geometry in pairs(Saved()) do
-                draft[key] = CopyGeometry(geometry)
-            end
+            draft = layout.Copy(Saved())
             editing = true
             for _, entry in ipairs(order) do
                 LockFrame(entry.frame)
                 layout.Place(entry.key)
                 if entry.options.onEdit then entry.options.onEdit(true) end
             end
+            if DFRL.profiles then DFRL.profiles.BeginEdit() end
         end
         UpdateGrid()
         if setEditorVisible then setEditorVisible(not handlesOnly) end
@@ -896,6 +931,13 @@ DFRL:NewMod("Layout", 0, function()
                     "Use /sdui to edit the layout, then click Confirm to save. /sdui reset restores default positions, sizes and visibility."
                 )
             )
+        end
+    end
+    if type(_G.ReloadUI) == "function" then
+        local reloadUI = _G.ReloadUI
+        _G.ReloadUI = function()
+            layout.CancelEdit()
+            return reloadUI()
         end
     end
 end)

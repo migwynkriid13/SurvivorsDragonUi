@@ -23,10 +23,12 @@ XP starts attached beneath the action bar. Turn off **Attach XP to action bar** 
 
 - Drag a frame to move it. Drag its corners to resize it. The grid and gold screen-center guides help line things up. **Tooltip** controls the native hover card; click its handle and use **Hide frame** under **Layout** to hide it.
 - Use `/sdui lock` for move and resize handles with only the **Confirm** button. Use `/sdui` to return to the full editor.
-- Use **Layout** for positions and sizes, **HUD** for display options, **Combat text** for damage numbers, and **Run timer** for its text and font.
+- Use **Layout** for positions and sizes, **Profiles** to save and load named setups, **HUD** for display options, **Combat text** for damage numbers, and **Run timer** for its text and font.
 - Click **Confirm** to save, or **Cancel** to undo your changes. Leaving the run or reloading also discards unsaved changes.
 
 **Addon defaults** or `/sdui reset` immediately resets your layout, display options, and timer font and text. Your combat-text mode stays unchanged.
+
+In **Profiles**, enter a name and click **Save new profile** to keep your current setup. Select a saved profile to load, overwrite or delete it. Click **Confirm** to keep profile changes, or **Cancel** to undo them. Resetting the addon keeps your saved profiles.
 
 To use the game's damage numbers, choose **Game settings** under **Combat text**, then enable **Show Target Damage** in the game options.
 
