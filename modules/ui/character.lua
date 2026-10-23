@@ -205,7 +205,8 @@ DFRL:NewMod("Character window", 6, function()
             offset = -9,
         },
     }
-    local qualityBorders = {}
+    local qualityBorders, itemButtons = {}, {}
+    DFRL.characterItemButtons = itemButtons
     local function HideQuality(button)
         local borders = qualityBorders[button]
         if not borders then return end
@@ -248,7 +249,8 @@ DFRL:NewMod("Character window", 6, function()
         border:Hide()
         return border
     end
-    local function AddQualityBorder(button)
+    local function RegisterItemButton(button)
+        table.insert(itemButtons, button)
         -- Keep the native palette and icon clear; brighten and widen only the rim.
         qualityBorders[button] = {
             QualityEdge(button, "BLEND", 1, 0),
@@ -268,7 +270,7 @@ DFRL:NewMod("Character window", 6, function()
         texture:SetPoint("TOPLEFT", button, "TOPLEFT", x, y)
         local normal = button:GetNormalTexture()
         if normal then normal:SetTexture(nil) end
-        AddQualityBorder(button)
+        RegisterItemButton(button)
     end
     for _, column in ipairs(slotColumns) do
         for index, name in ipairs(column.names) do
@@ -288,7 +290,7 @@ DFRL:NewMod("Character window", 6, function()
     end
     if CharacterAmmoSlot then
         Place(CharacterAmmoSlot, paper, 239, -WEAPON_TOP - 5, 27, 27)
-        AddQualityBorder(CharacterAmmoSlot)
+        RegisterItemButton(CharacterAmmoSlot)
     end
 
     local panel = CreateFrame("Frame", nil, paper)
