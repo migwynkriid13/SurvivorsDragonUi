@@ -36,7 +36,7 @@ This establishes the native encoding in the identified executable. It does not e
 
 ## Display preference
 
-The **Class resources** checkbox appears in the `/sdui` **HUD** tab alongside boss debuffs and independent Cache/Guardian guidance. It defaults **off**. Turning it off hides power and attached point artwork and restores full-height health without changing the player's confirmed geometry or the selected SCT mode. Changes preview live; **Confirm** alone saves the choice. World leave, logout and `/reload` discard unconfirmed changes and restore the last confirmed value.
+The **Class resources** checkbox appears in the `/sdui` **HUD** tab alongside boss debuffs and independent Cache/Guardian guidance. It defaults **off**. Turning it off hides player and party power bars, hides attached player point artwork and restores full-height health without changing confirmed geometry or the selected SCT mode. Changes preview live; **Confirm** alone saves the choice. World leave, logout and `/reload` discard unconfirmed changes and restore the last confirmed value.
 
 The choice remains the normalized `classResources` boolean in `SurvivorsDragonUiDisplay`. Missing or invalid values use `false`; confirmed existing choices remain in use. Both `/sdui reset` and **Addon defaults** restore class resources off through the shared full reset. The confirmed SCT mode and native incoming/self text choice remain unchanged after their editing drafts are discarded.
 
@@ -45,6 +45,19 @@ The choice remains the normalized `classResources` boolean in `SurvivorsDragonUi
 Health, primary power and secondary points belong to the player frame and follow its confirmed position and uniform scale. The existing 122-by-29 bar opening becomes a 19-pixel health fill above a 9-pixel resource fill at `(104, -54)` when enabled with valid native data; the original divider artwork separates the fills. Off or unavailable data restores the 29-pixel health fill. The primary bar shows current power against the native maximum range.
 
 The secondary display is parented to PlayerFrame at `(105, -68)` in the existing 120-by-32 row. It retains the original purple shard and red combo-point pixels. The numeric meter is 120 by 12, centered within that same row, and reuses the bundled primary-power fill with a native black background and white DEFAULT 10 outlined text. It has no independent layout group, edit handles or saved geometry. Confirm/discard/reset apply through the existing player layout and shared display preference flow. No extra commands, artwork files, captions, resource SavedVariables or gameplay persistence are introduced.
+
+The four native party frames follow the same display choice. Their native power
+bars and optional power text use the shared alpha mask, preserving native
+Show/Hide, latest alpha, values and updates while hidden. Off expands health
+from 11 units at center Y 10 to 17.5 units at Y 6.75, retaining the top edge and
+covering the former resource opening. A shared crop of the existing 128-by-64
+pet-frame border removes only its internal divider, retaining the portrait
+ring and outer border; target-of-target reuses that same crop. On restores the
+original party split and complete artwork without forcing a native power bar
+visible. Party unit buttons, portraits, names, tooltips, values, outer size,
+placement and scale are unchanged. The existing hint describes both player and
+party frames in all fourteen source/runtime catalogs. Pet-frame power remains
+independent.
 
 ## Referenced addon research
 

@@ -755,7 +755,7 @@ DFRL:NewMod("RunTimers", 5, function()
                         "Health loss animation",
                         "Show recently lost health fading out on unit frames.",
                     },
-                    { "classResources", "Class resources", "Show power inside the player frame." },
+                    { "classResources", "Class resources", "Show power in player and party frames." },
                     {
                         "hidePortraits",
                         "Hide portraits",

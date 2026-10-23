@@ -2,6 +2,24 @@ DFRL:NewMod("Mini", 1, function()
     local tex = DFRL:GetInfoOrCons("tex") .. "unitframes\\"
     local units = {}
 
+    -- The same health-only crop removes the old resource divider for both
+    -- target-of-target and party frames, retaining the ring and outer edge.
+    local function HealthOnlyBorder(parent, anchor, width, height, layer)
+        local scaleX, scaleY = width / 128, height / 64
+        local strips = {}
+        for _, crop in ipairs({ { 0, 0, 44, 64 }, { 44, 0, 84, 22 }, { 44, 34, 84, 30 }, { 114, 22, 14, 12 } }) do
+            local x, y, w, h = unpack(crop)
+            local strip = parent:CreateTexture(nil, layer)
+            strip:SetTexture(tex .. "pet")
+            strip:SetTexCoord(x / 128, (x + w) / 128, y / 64, (y + h) / 64)
+            strip:SetPoint("TOPLEFT", anchor, "TOPLEFT", x * scaleX, -y * scaleY)
+            strip:SetWidth(w * scaleX)
+            strip:SetHeight(h * scaleY)
+            table.insert(strips, strip)
+        end
+        return strips
+    end
+
     local function AddValues(frame, health, mana, unit)
         local values = { unit = unit, healthBar = health, manaBar = mana }
         values.health = health:CreateFontString(nil, "OVERLAY")
@@ -141,22 +159,13 @@ DFRL:NewMod("Mini", 1, function()
         end
         -- Preserve the original 128x64 portrait/border sheet at its existing size,
         -- omitting only the interior divider between the old health/power rows.
-        local scaleX = (TargetofTargetFrame:GetWidth() + 20) / 128
-        local scaleY = (TargetofTargetFrame:GetHeight() + 15) / 64
-        local borderStrips = {}
-        local function AddBorderStrip(x, y, width, height)
-            local strip = border:CreateTexture(nil, "OVERLAY")
-            strip:SetTexture(tex .. "pet")
-            strip:SetTexCoord(x / 128, (x + width) / 128, y / 64, (y + height) / 64)
-            strip:SetPoint("TOPLEFT", border, "TOPLEFT", x * scaleX, -y * scaleY)
-            strip:SetWidth(width * scaleX)
-            strip:SetHeight(height * scaleY)
-            table.insert(borderStrips, strip)
-        end
-        AddBorderStrip(0, 0, 44, 64)
-        AddBorderStrip(44, 0, 84, 22)
-        AddBorderStrip(44, 34, 84, 30)
-        AddBorderStrip(114, 22, 14, 12)
+        local borderStrips = HealthOnlyBorder(
+            border,
+            border,
+            TargetofTargetFrame:GetWidth() + 20,
+            TargetofTargetFrame:GetHeight() + 15,
+            "OVERLAY"
+        )
         if TargetFrame then
             TargetofTargetFrame:ClearAllPoints()
             TargetofTargetFrame:SetPoint("TOPLEFT", TargetFrame, "BOTTOM", 0, 20)
@@ -251,6 +260,7 @@ DFRL:NewMod("Mini", 1, function()
             border:SetPoint("CENTER", frame, "CENTER", 0, 0)
             border:SetWidth(128)
             border:SetHeight(64)
+            local healthOnlyBorder = HealthOnlyBorder(frame, border, 128, 64, "BORDER")
             local portrait = _G[prefix .. "Portrait"]
             if portrait then
                 portrait:SetHeight(35)
@@ -280,6 +290,24 @@ DFRL:NewMod("Mini", 1, function()
                 background:SetVertexColor(0.3, 0.3, 0.3, 0.5)
                 background:SetAllPoints(bar)
             end
+            -- Mask the native row rather than disabling its Show/Hide or value
+            -- updates, so preview, Cancel and later native refreshes coexist.
+            T.BindUnitLabelVisibility(mana, "classResources")
+            T.BindUnitLabelVisibility(_G[prefix .. "ManaBarText"], "classResources")
+            local resourcesShown
+            local function UpdateResources()
+                local shown = DFRL.display.Get("classResources")
+                if shown == resourcesShown then return end
+                resourcesShown = shown
+                health:SetHeight(shown and 11 or 17.5)
+                health:SetPoint("CENTER", frame, "CENTER", 15, shown and 10 or 6.75)
+                border:SetAlpha(shown and 1 or 0)
+                for _, strip in ipairs(healthOnlyBorder) do
+                    strip:SetAlpha(shown and 0 or 1)
+                end
+            end
+            DFRL.display.Listen(UpdateResources)
+            UpdateResources()
             if _G[prefix .. "HealthBarText"] then _G[prefix .. "HealthBarText"]:SetAlpha(0) end
             HookScript(health, "OnValueChanged", function() UpdateValues(values) end)
         end
