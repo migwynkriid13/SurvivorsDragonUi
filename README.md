@@ -6,10 +6,12 @@ A Dragonflight-style interface for Azeroth Survivors, with a movable HUD, combat
 
 1. Download [SurvivorsDragonUi.zip](https://github.com/migwynkriid13/SurvivorsDragonUi/releases/latest/download/SurvivorsDragonUi.zip).
 2. In the game, go to **Options → AddOns → Open AddOns Folder**.
-3. Extract the ZIP and put the `SurvivorsDragonUi` folder there. You can also place it manually in `benilla-config/AddOns/` beside the game.
+3. Extract the ZIP and put the `SurvivorsDragonUi` folder there. For manual installation on Windows, open the folder containing `AzerothSurvivors.exe`, then put the addon in `benilla-config/AddOns/`.
 4. Enable the addon and enter a run.
 
 The file should be at `benilla-config/AddOns/SurvivorsDragonUi/SurvivorsDragonUi.toc`.
+
+**Windows settings:** the game keeps addons, their saved data, options, key bindings, chat windows and camera settings in `benilla-config` beside `AzerothSurvivors.exe`. On the first launch after this folder change, the game copies addons and settings from older folders, keeping newer changes and filling in missing settings from the old data. Characters are unaffected.
 
 **Browser version:** open **Options → AddOns → install a .zip** and choose the downloaded ZIP.
 
