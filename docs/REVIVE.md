@@ -14,12 +14,12 @@ first and accepts received snapshots only in playing, choosing, paused, dead or
 victory. A finite `AZS_REVIVE_UPDATED` marks receipt; it is neither an event nor
 an expiry deadline.
 
-| Received fields | Display |
-| --- | --- |
-| `down == 1`, nonempty `by`, finite `share` | “NAME is bringing you back” and `share` |
-| `down == 1`, absent/empty `by`, finite `share` | “Downed — waiting for help” and `share` |
-| `down == 0`, nonempty `reviving`, finite `rshare` | “Bringing NAME back” and `rshare` |
-| Empty, idle, unsupported or invalid state | Hide and clear the custom view |
+| Received fields                                   | Display                                 |
+| ------------------------------------------------- | --------------------------------------- |
+| `down == 1`, nonempty `by`, finite `share`        | “NAME is bringing you back” and `share` |
+| `down == 1`, absent/empty `by`, finite `share`    | “Downed — waiting for help” and `share` |
+| `down == 0`, nonempty `reviving`, finite `rshare` | “Bringing NAME back” and `rshare`       |
+| Empty, idle, unsupported or invalid state         | Hide and clear the custom view          |
 
 Names are supplied display values. Numeric-looking names are converted with
 `tostring`, with no unit-token, GUID, class or party-roster inference. Numeric
