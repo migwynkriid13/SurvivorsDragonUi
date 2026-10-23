@@ -20,6 +20,7 @@ DFRL:NewMod("Layout", 0, function()
         tooltip = "Tooltip",
         bossBars = "Boss health",
         runTimer = "Run timer",
+        revive = "Revive",
         banners = "Banners",
         levelUp = "LEVEL UP",
         actionBar = "Action bar",
