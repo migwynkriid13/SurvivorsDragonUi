@@ -75,6 +75,13 @@ DFRL:NewMod("Tooltips", 2, function()
     root:SetScale(tooltip:GetEffectiveScale() / UIParent:GetEffectiveScale())
     root:EnableMouse(false)
 
+    local function IconOwner(buttons)
+        if not buttons then return end
+        for _, button in ipairs(buttons) do
+            if tooltip:IsOwned(button) then return button end
+        end
+    end
+
     local function PlaceTooltip()
         if not inWorld or editing or not root:IsShown() then
             if tooltip:IsShown() then tooltip:Hide() end
@@ -84,19 +91,15 @@ DFRL:NewMod("Tooltips", 2, function()
         local scale = root:GetEffectiveScale() / parent:GetEffectiveScale()
         if not T.NearlyEqual(tooltip:GetScale(), scale) then tooltip:SetScale(scale) end
         local anchor, target, targetPoint, offsetY = "BOTTOMRIGHT", root, "BOTTOMRIGHT", 0
-        -- Native ownership follows the hovered skill, including the seventh
-        -- button's slot-12 action. Other hovers keep their shared layout seat.
-        if DFRL.actionButtons then
-            for _, button in ipairs(DFRL.actionButtons) do
-                if tooltip:IsOwned(button) then
-                    if not button:IsVisible() then
-                        tooltip:Hide()
-                        return
-                    end
-                    anchor, target, targetPoint, offsetY = "BOTTOM", button, "TOP", 12
-                    break
-                end
+        -- Native ownership follows skill and character equipment icons.
+        -- Other hovers keep their shared layout seat.
+        local button = IconOwner(DFRL.actionButtons) or IconOwner(DFRL.characterItemButtons)
+        if button then
+            if not button:IsVisible() then
+                tooltip:Hide()
+                return
             end
+            anchor, target, targetPoint, offsetY = "BOTTOM", button, "TOP", 12
         end
         local point, relative, relativePoint, x, y
         if tooltip:GetNumPoints() == 1 then
