@@ -83,13 +83,28 @@ DFRL:NewMod("Tooltips", 2, function()
         local parent = tooltip:GetParent() or UIParent
         local scale = root:GetEffectiveScale() / parent:GetEffectiveScale()
         if not T.NearlyEqual(tooltip:GetScale(), scale) then tooltip:SetScale(scale) end
+        local anchor, target, targetPoint, offsetY = "BOTTOMRIGHT", root, "BOTTOMRIGHT", 0
+        -- Native ownership follows the hovered skill, including the seventh
+        -- button's slot-12 action. Other hovers keep their shared layout seat.
+        if DFRL.actionButtons then
+            for _, button in ipairs(DFRL.actionButtons) do
+                if tooltip:IsOwned(button) then
+                    if not button:IsVisible() then
+                        tooltip:Hide()
+                        return
+                    end
+                    anchor, target, targetPoint, offsetY = "BOTTOM", button, "TOP", 12
+                    break
+                end
+            end
+        end
         local point, relative, relativePoint, x, y
         if tooltip:GetNumPoints() == 1 then
             point, relative, relativePoint, x, y = tooltip:GetPoint(1)
         end
-        if point ~= "BOTTOMRIGHT" or relative ~= root or relativePoint ~= "BOTTOMRIGHT" or x ~= 0 or y ~= 0 then
+        if point ~= anchor or relative ~= target or relativePoint ~= targetPoint or x ~= 0 or y ~= offsetY then
             tooltip:ClearAllPoints()
-            tooltip:SetPoint("BOTTOMRIGHT", root, "BOTTOMRIGHT", 0, 0)
+            tooltip:SetPoint(anchor, target, targetPoint, 0, offsetY)
         end
     end
 
