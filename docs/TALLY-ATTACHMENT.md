@@ -20,18 +20,18 @@ uses its original complete frame instead, avoiding a doubled side-wall join.
 Demon reliquary reflects the plain structural frame before adding the lower
 pendant, so the pendant appears only at the bottom.
 
-| Style | Detached extent | Counter center from top |
-| --- | --- | --- |
-| Continuous silver | 27 | 13.5 |
-| Soft graphite | 29 | 14.5 |
-| Roth scrollwork | 52 | 26 |
-| Roth shrine | 48 | 24 |
-| Gothic cornerwork | 46 | 23 |
-| Iron sarcophagus | 40 | 20 |
-| Knotted iron | 42 | 21 |
-| ARPG carved cornice | 52 | 26 |
-| Gothic leaf corners | 46 | 23 |
-| Demon reliquary | 50 | 24 |
+| Style               | Detached extent | Counter center from top |
+| ------------------- | --------------- | ----------------------- |
+| Continuous silver   | 27              | 13.5                    |
+| Soft graphite       | 29              | 14.5                    |
+| Roth scrollwork     | 52              | 26                      |
+| Roth shrine         | 48              | 24                      |
+| Gothic cornerwork   | 46              | 23                      |
+| Iron sarcophagus    | 40              | 20                      |
+| Knotted iron        | 42              | 21                      |
+| ARPG carved cornice | 52              | 26                      |
+| Gothic leaf corners | 46              | 23                      |
+| Demon reliquary     | 50              | 24                      |
 
 Measurements are in the existing 300-unit reference width. Every prepared TGA
 retains the 1024×128 canvas and the same 600×128 UV content region. Counter text

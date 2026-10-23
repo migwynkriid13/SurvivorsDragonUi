@@ -170,8 +170,12 @@ end
 
 local function PlayerSay(text)
     local name, body
-    if type(_G.CHAT_SAY_GET) == "string" then name, body = CaptureFormat(text, _G.CHAT_SAY_GET .. "%s") end
-    if not name then name, body = CaptureFormat(text, "%s says: %s") end
+    if type(_G.CHAT_SAY_GET) == "string" then
+        name, body = CaptureFormat(text, _G.CHAT_SAY_GET .. "%s")
+    end
+    if not name then
+        name, body = CaptureFormat(text, "%s says: %s")
+    end
     if not name or not body then return text end
     -- Remove only the author's display brackets, retaining native player links,
     -- inline colors, language labels and the complete message body.
