@@ -2,6 +2,7 @@
 DFRL.locale.data = {
     en = {
         ui = {
+            ["Tooltip"] = "Tooltip",
             ["Regular runs"] = "Regular runs",
             ["Endless"] = "Endless",
             ["Current time"] = "Current time",
@@ -493,6 +494,7 @@ DFRL.locale.data = {
     },
     pl = {
         ui = {
+            ["Tooltip"] = "Podpowiedź",
             ["Regular runs"] = "Zwykłe rozgrywki",
             ["Endless"] = "Bez końca",
             ["Current time"] = "Bieżący czas",
@@ -1008,6 +1010,7 @@ DFRL.locale.data = {
     },
     cs = {
         ui = {
+            ["Tooltip"] = "Popisek",
             ["Regular runs"] = "Běžné hry",
             ["Endless"] = "Nekonečný režim",
             ["Current time"] = "Aktuální čas",
@@ -1974,6 +1977,7 @@ DFRL.locale.data = {
     },
     de = {
         ui = {
+            ["Tooltip"] = "Tooltip",
             ["Regular runs"] = "Reguläre Durchläufe",
             ["Endless"] = "Endlos",
             ["Current time"] = "Aktuelle Zeit",
@@ -2495,6 +2499,7 @@ DFRL.locale.data = {
     },
     pt = {
         ui = {
+            ["Tooltip"] = "Dica",
             ["Regular runs"] = "Partidas normais",
             ["Endless"] = "Infinito",
             ["Current time"] = "Tempo atual",
@@ -3001,6 +3006,7 @@ DFRL.locale.data = {
     },
     es = {
         ui = {
+            ["Tooltip"] = "Descripción emergente",
             ["Regular runs"] = "Partidas normales",
             ["Endless"] = "Infinito",
             ["Current time"] = "Tiempo actual",
@@ -3510,6 +3516,7 @@ DFRL.locale.data = {
     },
     fr = {
         ui = {
+            ["Tooltip"] = "Infobulle",
             ["Regular runs"] = "Parties normales",
             ["Endless"] = "Infini",
             ["Current time"] = "Temps actuel",
@@ -4046,6 +4053,7 @@ DFRL.locale.data = {
     },
     ro = {
         ui = {
+            ["Tooltip"] = "Indiciu",
             ["Regular runs"] = "Jocuri normale",
             ["Endless"] = "Infinit",
             ["Current time"] = "Timpul curent",
@@ -4552,6 +4560,7 @@ DFRL.locale.data = {
     },
     tr = {
         ui = {
+            ["Tooltip"] = "İpucu",
             ["Regular runs"] = "Normal turlar",
             ["Endless"] = "Sonsuz",
             ["Current time"] = "Geçen süre",
@@ -5055,6 +5064,7 @@ DFRL.locale.data = {
     },
     ru = {
         ui = {
+            ["Tooltip"] = "Подсказка",
             ["Regular runs"] = "Обычные забеги",
             ["Endless"] = "Бесконечный режим",
             ["Current time"] = "Текущее время",
@@ -5648,6 +5658,7 @@ DFRL.locale.data = {
     },
     uk = {
         ui = {
+            ["Tooltip"] = "Підказка",
             ["Regular runs"] = "Звичайні забіги",
             ["Endless"] = "Нескінченний режим",
             ["Current time"] = "Поточний час",
@@ -6217,6 +6228,7 @@ DFRL.locale.data = {
     },
     zh = {
         ui = {
+            ["Tooltip"] = "鼠标提示",
             ["Regular runs"] = "常规模式",
             ["Endless"] = "无尽模式",
             ["Current time"] = "当前时间",
@@ -6711,6 +6723,7 @@ DFRL.locale.data = {
     },
     ja = {
         ui = {
+            ["Tooltip"] = "ツールチップ",
             ["Regular runs"] = "通常プレイ",
             ["Endless"] = "エンドレス",
             ["Current time"] = "現在の時間",
@@ -7238,6 +7251,7 @@ DFRL.locale.data = {
     },
     ko = {
         ui = {
+            ["Tooltip"] = "툴팁",
             ["Regular runs"] = "일반 플레이",
             ["Endless"] = "무한 모드",
             ["Current time"] = "현재 시간",

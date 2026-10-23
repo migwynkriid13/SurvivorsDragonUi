@@ -66,6 +66,61 @@ DFRL:NewMod("Tooltips", 2, function()
     if not tooltip then return end
     local currentUnit
     local elapsed, inWorld = 0, true
+    local editing = false
+    -- A stable, passive edit region exists even when no native hover is shown.
+    -- Keep GameTooltip's parent and owner native; neither controls this handle.
+    local root = CreateFrame("Frame", nil, UIParent)
+    root:SetWidth(240)
+    root:SetHeight(64)
+    root:SetScale(tooltip:GetEffectiveScale() / UIParent:GetEffectiveScale())
+    root:EnableMouse(false)
+
+    local function PlaceTooltip()
+        if not inWorld or editing or not root:IsShown() then
+            if tooltip:IsShown() then tooltip:Hide() end
+            return
+        end
+        local parent = tooltip:GetParent() or UIParent
+        local scale = root:GetEffectiveScale() / parent:GetEffectiveScale()
+        if not T.NearlyEqual(tooltip:GetScale(), scale) then tooltip:SetScale(scale) end
+        local point, relative, relativePoint, x, y
+        if tooltip:GetNumPoints() == 1 then
+            point, relative, relativePoint, x, y = tooltip:GetPoint(1)
+        end
+        if point ~= "BOTTOMRIGHT" or relative ~= root or relativePoint ~= "BOTTOMRIGHT" or x ~= 0 or y ~= 0 then
+            tooltip:ClearAllPoints()
+            tooltip:SetPoint("BOTTOMRIGHT", root, "BOTTOMRIGHT", 0, 0)
+        end
+    end
+
+    DFRL.layout.Register("tooltip", root, function(frame)
+        frame:ClearAllPoints()
+        frame:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT", -13, 64)
+    end, {
+        onEdit = function(active)
+            editing = active
+            tooltip:Hide()
+        end,
+        onResize = function()
+            if tooltip:IsShown() then PlaceTooltip() end
+        end,
+        onReset = function() tooltip:Hide() end,
+    })
+    -- Visibility previews must clear the current hover, without revealing a
+    -- retired subject when the user unhides the group later.
+    HookScript(root, "OnHide", function() tooltip:Hide() end)
+    if tooltip.SetClampedToScreen then tooltip:SetClampedToScreen(true) end
+
+    -- SetOwner runs before native content builders. Preserve its owner and
+    -- return, but prevent owner-relative/cursor placement from reclaiming it.
+    local nativeSetOwner = tooltip.SetOwner
+    tooltip.SetOwner = function(self, owner, anchor, x, y)
+        return nativeSetOwner(self, owner, self == tooltip and inWorld and "ANCHOR_NONE" or anchor, x, y)
+    end
+    hooksecurefunc("GameTooltip_SetDefaultAnchor", function(frame)
+        if frame == tooltip then PlaceTooltip() end
+    end)
+    HookScript(tooltip, "OnTooltipSetDefaultAnchor", PlaceTooltip)
 
     local function Exists(unit)
         if type(unit) ~= "string" or type(UnitExists) ~= "function" then return false end
@@ -108,8 +163,12 @@ DFRL:NewMod("Tooltips", 2, function()
     DFRL.tools.StyleHoverCard(tooltip)
     HookScript(tooltip, "OnTooltipCleared", Clear)
     HookScript(tooltip, "OnHide", Clear)
-    HookScript(tooltip, "OnShow", Refresh)
+    HookScript(tooltip, "OnShow", function()
+        PlaceTooltip()
+        Refresh()
+    end)
     HookScript(tooltip, "OnUpdate", function()
+        PlaceTooltip()
         elapsed = elapsed + (type(arg1) == "number" and arg1 or 0)
         if elapsed < 0.2 then return end
         elapsed = 0

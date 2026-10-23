@@ -21,7 +21,7 @@ Action buttons start locked. Under **Action bar**, turn off **Lock action button
 
 XP starts attached beneath the action bar. Turn off **Attach XP to action bar** to move and resize it separately, then click **Confirm** to save.
 
-- Drag a frame to move it. Drag its corners to resize it. The grid and gold screen-center guides help line things up.
+- Drag a frame to move it. Drag its corners to resize it. The grid and gold screen-center guides help line things up. **Tooltip** controls the native hover card; click its handle and use **Hide frame** under **Layout** to hide it.
 - Use `/sdui lock` for move and resize handles with only the **Confirm** button. Use `/sdui` to return to the full editor.
 - Use **Layout** for positions and sizes, **HUD** for display options, **Combat text** for damage numbers, and **Run timer** for its text and font.
 - Click **Confirm** to save, or **Cancel** to undo your changes. Leaving the run or reloading also discards unsaved changes.
