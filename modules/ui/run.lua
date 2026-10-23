@@ -963,7 +963,7 @@ DFRL:NewMod("RunTimers", 5, function()
         local timerSizeWidth = TextWidth("Size") + gap + 104
         local tallyStyleHint = "Styles stay the same when attached or detached."
         local defaultsWidth = TextWidth("Addon defaults") + 24
-        local instructions = "Drag frames to move. Drag corners to resize."
+        local instructions = "Drag to move. Shift snaps to grid. Drag corners to resize."
         local contentWidth = math.max(
             modeWidth * 3 + gap * 2,
             filterWidth * 2 + gap,

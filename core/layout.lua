@@ -153,6 +153,12 @@ DFRL:NewMod("Layout", 0, function()
         end
         return width, height, scale
     end
+    local function CenterOffsets(frame, uiScale)
+        local screenWidth, screenHeight = T.GetLocalSize(UIParent)
+        local frameWidth, frameHeight = T.GetLocalSize(frame)
+        local ratio = Scale(frame) / uiScale
+        return (frameWidth * ratio - screenWidth) / 2, (screenHeight - frameHeight * ratio) / 2
+    end
     local function ReadPosition(frame)
         local width, height, uiScale = Viewport()
         local left, top, scale = frame:GetLeft(), frame:GetTop(), Scale(frame)
@@ -181,7 +187,7 @@ DFRL:NewMod("Layout", 0, function()
             frame:ClearAllPoints()
             frame:SetPoint("TOPLEFT", UIParent, "TOPLEFT", x, y)
         end
-        -- Native StartMoving marks the frame user-placed. Keep a single layout store.
+        -- Keep all editor movement in the shared layout store.
         LockFrame(frame)
     end
     local function CaptureAnchors(frame)
@@ -265,17 +271,19 @@ DFRL:NewMod("Layout", 0, function()
         ApplyVisibility(entry)
     end
     function layout.IsPlaced(key) return (entries[key] and entries[key].dragging) or Valid(GeometryStore()[key]) end
+    local UpdateMove
     local function FinishDrag(entry, capture)
         if not entry or not entry.dragging then return end
+        if capture and entry.moving then UpdateMove(entry) end
         entry.frame:StopMovingOrSizing()
         entry.dragging = false
         activeDrag = nil
         if capture then
-            local position = entry.resizePosition or ReadPosition(entry.frame)
+            local position = entry.pointerPosition or ReadPosition(entry.frame)
             local geometry = ReadGeometry(entry, position)
             if geometry and editing then draft[entry.key] = geometry end
         end
-        entry.resizing, entry.resizePosition = nil, nil
+        entry.moving, entry.resizing, entry.pointerPosition = nil, nil, nil
         LockFrame(entry.frame)
         layout.Place(entry.key)
         if capture and editing and coordinates and entry == selected then RefreshCoordinates() end
@@ -286,6 +294,53 @@ DFRL:NewMod("Layout", 0, function()
         local x, y = GetCursorPosition()
         if not width or not Number(x) or not Number(y) then return end
         return x / scale - (UIParent:GetLeft() or 0), y / scale - (UIParent:GetTop() or height)
+    end
+    local function SnapToGrid(value)
+        local cells = value / GRID_SPACING
+        return (cells < 0 and math.ceil(cells - 0.5) or math.floor(cells + 0.5)) * GRID_SPACING
+    end
+    UpdateMove = function(entry)
+        local start = entry.moving
+        local width, height, uiScale = Viewport()
+        local cursorX, cursorY = Cursor()
+        if not start or not width or not cursorX then return end
+        -- A viewport transition finishes the drag using its last valid position.
+        if
+            not T.NearlyEqual(width, start.width)
+            or not T.NearlyEqual(height, start.height)
+            or not T.NearlyEqual(uiScale, start.uiScale)
+        then
+            return
+        end
+        local x, y = start.x + cursorX - start.cursorX, start.y + cursorY - start.cursorY
+        if IsShiftKeyDown() then
+            local offsetX, offsetY = CenterOffsets(entry.frame, uiScale)
+            x = SnapToGrid(x + offsetX) - offsetX
+            y = SnapToGrid(y + offsetY) - offsetY
+        end
+        entry.pointerPosition = { x = x / width, y = y / height }
+        ApplyPosition(entry.frame, entry.pointerPosition)
+    end
+    local function BeginMove(entry)
+        if not ready or not inWorld or not editing then return end
+        FinishDrag(activeDrag, true)
+        SelectEntry(entry, true)
+        local width, height, uiScale = Viewport()
+        local cursorX, cursorY = Cursor()
+        local position = ReadPosition(entry.frame)
+        if not width or not cursorX or not position then return end
+        entry.moving = {
+            cursorX = cursorX,
+            cursorY = cursorY,
+            x = position.x * width,
+            y = position.y * height,
+            width = width,
+            height = height,
+            uiScale = uiScale,
+        }
+        entry.pointerPosition = position
+        entry.dragging, activeDrag = true, entry
+        UpdateMove(entry)
     end
     local function BeginResize(entry, corner)
         if not ready or not inWorld or not editing then return end
@@ -307,7 +362,7 @@ DFRL:NewMod("Layout", 0, function()
             height = frameHeight * scale,
             scale = LocalScale(entry.frame),
         }
-        entry.resizePosition = position
+        entry.pointerPosition = position
         entry.dragging, activeDrag = true, entry
     end
     local function UpdateResize(entry)
@@ -339,8 +394,8 @@ DFRL:NewMod("Layout", 0, function()
         -- Keep the opposite corner fixed throughout the resize.
         local x = right and start.x or start.x + start.width - newWidth
         local y = top and start.y - start.height + newHeight or start.y
-        entry.resizePosition = { x = x / width, y = y / height }
-        ApplyPosition(entry.frame, entry.resizePosition)
+        entry.pointerPosition = { x = x / width, y = y / height }
+        ApplyPosition(entry.frame, entry.pointerPosition)
     end
 
     local function MakeCorner(entry, corner)
@@ -395,14 +450,7 @@ DFRL:NewMod("Layout", 0, function()
         end
         label:SetTextColor(0.87, 0.73, 0.41)
         label:SetText(labels[entry.key] or entry.key)
-        handle:SetScript("OnDragStart", function()
-            if not ready or not inWorld or not editing then return end
-            FinishDrag(activeDrag, true)
-            SelectEntry(entry, true)
-            entry.dragging, activeDrag = true, entry
-            entry.frame:StartMoving()
-            LockFrame(entry.frame)
-        end)
+        handle:SetScript("OnDragStart", function() BeginMove(entry) end)
         handle:SetScript("OnClick", function() SelectEntry(entry, true) end)
         handle:SetScript("OnDragStop", function() FinishDrag(entry, true) end)
         handle:SetScript("OnMouseUp", function() FinishDrag(entry, true) end)
@@ -480,11 +528,8 @@ DFRL:NewMod("Layout", 0, function()
         local width, height, uiScale = Viewport()
         local position = ReadPosition(entry.frame)
         if not width or not position then return end
-        local screenWidth, screenHeight = T.GetLocalSize(UIParent)
-        local frameWidth, frameHeight = T.GetLocalSize(entry.frame)
-        local ratio = Scale(entry.frame) / uiScale
-        return position.x * width + frameWidth * ratio / 2 - screenWidth / 2,
-            position.y * height - frameHeight * ratio / 2 + screenHeight / 2
+        local offsetX, offsetY = CenterOffsets(entry.frame, uiScale)
+        return position.x * width + offsetX, position.y * height + offsetY
     end
     local function SetCoordinateText(field, text)
         -- Remember programmatic text before SetText, including delayed change events.
@@ -569,12 +614,10 @@ DFRL:NewMod("Layout", 0, function()
         else
             ApplySize(selected, { scale = selected.defaultScale * size / 100 })
         end
-        local screenWidth, screenHeight = T.GetLocalSize(UIParent)
-        local frameWidth, frameHeight = T.GetLocalSize(frame)
-        local ratio = Scale(frame) / uiScale
+        local offsetX, offsetY = CenterOffsets(frame, uiScale)
         local position = {
-            x = (x + screenWidth / 2 - frameWidth * ratio / 2) / width,
-            y = (y - screenHeight / 2 + frameHeight * ratio / 2) / height,
+            x = (x - offsetX) / width,
+            y = (y - offsetY) / height,
         }
         draft[selected.key] = ReadGeometry(selected, position)
         layout.Place(selected.key)
@@ -862,6 +905,7 @@ DFRL:NewMod("Layout", 0, function()
         lastWidth, lastHeight, lastScale = width, height, scale
         local enabled = inWorld and editing
         if activeDrag and not enabled then FinishDrag(activeDrag, false) end
+        if activeDrag and activeDrag.moving then UpdateMove(activeDrag) end
         if activeDrag and activeDrag.resizing then UpdateResize(activeDrag) end
         if needsDefaultPosition then
             needsDefaultPosition = false
