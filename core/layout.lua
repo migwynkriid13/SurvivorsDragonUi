@@ -10,8 +10,10 @@ DFRL:NewMod("Layout", 0, function()
     local coordinates, selected, RefreshCoordinates, SelectEntry
     local showCoordinates
     local confirmAnchor
-    local grid, gridWidth, gridHeight, gridScale
+    local grid, gridWidth, gridHeight, gridScale, gridFine
     local GRID_SPACING = 32
+    local SNAP_SPACING, SNAP_CAPTURE, SNAP_RELEASE = GRID_SPACING / 4, 8, 12
+    local SNAP_POINTS = { 1, 0, 2 }
     local labels = {
         playerFrame = "Player",
         targetFrame = "Target",
@@ -82,9 +84,54 @@ DFRL:NewMod("Layout", 0, function()
     end
     local function Scale(frame) return frame.GetEffectiveScale and frame:GetEffectiveScale() or 1 end
     local function LocalScale(frame) return frame.GetScale and frame:GetScale() or 1 end
+    local function HideSnapGuides()
+        if not grid or not grid.guides then return end
+        for _, guide in ipairs(grid.guides) do
+            if guide.shown then guide:Hide() end
+            guide.shown = false
+        end
+    end
+    local function ShowSnapGuides(x, y)
+        if not grid then return end
+        grid.guides = grid.guides or {}
+        local width, height = T.GetLocalSize(UIParent)
+        local pixel = 1 / Scale(UIParent)
+        for index = 1, 2 do
+            local guide = grid.guides[index]
+            if not guide then
+                guide = grid:CreateTexture(nil, "OVERLAY")
+                guide:SetTexture("Interface\\Buttons\\WHITE8X8")
+                guide:SetVertexColor(1, 0.83, 0.38, 0.95)
+                grid.guides[index] = guide
+            end
+            local vertical = index == 1
+            local value = vertical and x or y
+            if
+                guide.value ~= value
+                or guide.pixel ~= pixel
+                or guide.viewWidth ~= width
+                or guide.viewHeight ~= height
+            then
+                guide:ClearAllPoints()
+                guide:SetPoint(
+                    "CENTER",
+                    grid,
+                    "CENTER",
+                    vertical and x - width / 2 or 0,
+                    vertical and 0 or y + height / 2
+                )
+                guide:SetWidth(vertical and pixel or width)
+                guide:SetHeight(vertical and height or pixel)
+                guide.value, guide.pixel, guide.viewWidth, guide.viewHeight = value, pixel, width, height
+            end
+            if not guide.shown then guide:Show() end
+            guide.shown = true
+        end
+    end
     local function UpdateGrid()
         local width, height = T.GetLocalSize(UIParent)
         local scale = Scale(UIParent)
+        local fine = activeDrag and activeDrag.moving and IsShiftKeyDown() and true or false
         if not Number(width) or not Number(height) or not Number(scale) or width <= 0 or height <= 0 or scale <= 0 then
             if grid then grid:Hide() end
             return
@@ -102,12 +149,14 @@ DFRL:NewMod("Layout", 0, function()
             not T.NearlyEqual(width, gridWidth)
             or not T.NearlyEqual(height, gridHeight)
             or not T.NearlyEqual(scale, gridScale)
+            or gridFine ~= fine
         then
             local used, pixel = 0, 1 / scale
+            local spacing = fine and SNAP_SPACING or GRID_SPACING
             for axis = 1, 2 do
                 local vertical = axis == 1
                 local extent = vertical and width or height
-                local steps = math.floor(extent / (2 * GRID_SPACING))
+                local steps = math.floor(extent / (2 * spacing))
                 for step = -steps, steps do
                     used = used + 1
                     local line = grid.lines[used]
@@ -123,15 +172,19 @@ DFRL:NewMod("Layout", 0, function()
                         "CENTER",
                         grid,
                         "CENTER",
-                        vertical and step * GRID_SPACING or 0,
-                        vertical and 0 or step * GRID_SPACING
+                        vertical and step * spacing or 0,
+                        vertical and 0 or step * spacing
                     )
                     line:SetWidth(vertical and thickness or width)
                     line:SetHeight(vertical and height or thickness)
                     if center then
                         line:SetVertexColor(0.87, 0.73, 0.41, 0.8)
                     else
-                        line:SetVertexColor(0.75, 0.8, 0.85, math.mod(step, 4) == 0 and 0.28 or 0.13)
+                        local offset = step * spacing
+                        local alpha = math.mod(offset, GRID_SPACING * 4) == 0 and 0.28
+                            or math.mod(offset, GRID_SPACING) == 0 and 0.13
+                            or 0.05
+                        line:SetVertexColor(0.75, 0.8, 0.85, alpha)
                     end
                     line:Show()
                 end
@@ -139,7 +192,7 @@ DFRL:NewMod("Layout", 0, function()
             for index = used + 1, table.getn(grid.lines) do
                 grid.lines[index]:Hide()
             end
-            gridWidth, gridHeight, gridScale = width, height, scale
+            gridWidth, gridHeight, gridScale, gridFine = width, height, scale, fine
         end
         if not grid:IsShown() then grid:Show() end
     end
@@ -271,6 +324,9 @@ DFRL:NewMod("Layout", 0, function()
         ApplyVisibility(entry)
     end
     function layout.IsPlaced(key) return (entries[key] and entries[key].dragging) or Valid(GeometryStore()[key]) end
+    local function CanShowHandle(entry)
+        return entry.defaultPosition and (not entry.options.onlyWhenShown or entry.wantsShown)
+    end
     local UpdateMove
     local function FinishDrag(entry, capture)
         if not entry or not entry.dragging then return end
@@ -284,6 +340,7 @@ DFRL:NewMod("Layout", 0, function()
             if geometry and editing then draft[entry.key] = geometry end
         end
         entry.moving, entry.resizing, entry.pointerPosition = nil, nil, nil
+        HideSnapGuides()
         LockFrame(entry.frame)
         layout.Place(entry.key)
         if capture and editing and coordinates and entry == selected then RefreshCoordinates() end
@@ -296,8 +353,113 @@ DFRL:NewMod("Layout", 0, function()
         return x / scale - (UIParent:GetLeft() or 0), y / scale - (UIParent:GetTop() or height)
     end
     local function SnapToGrid(value)
-        local cells = value / GRID_SPACING
-        return (cells < 0 and math.ceil(cells - 0.5) or math.floor(cells + 0.5)) * GRID_SPACING
+        local cells = value / SNAP_SPACING
+        return (cells < 0 and math.ceil(cells - 0.5) or math.floor(cells + 0.5)) * SNAP_SPACING
+    end
+    local function EditBounds(entry, width, height, uiScale)
+        local region = entry.options.region or entry.frame
+        local position = ReadPosition(region)
+        local regionWidth, regionHeight = T.GetLocalSize(region)
+        if
+            not position
+            or not Number(regionWidth)
+            or not Number(regionHeight)
+            or regionWidth <= 0
+            or regionHeight <= 0
+        then
+            return
+        end
+        local ratio = Scale(region) / uiScale
+        return {
+            left = position.x * width,
+            top = position.y * height,
+            width = regionWidth * ratio,
+            height = regionHeight * ratio,
+        }
+    end
+    local function AxisPoint(rect, axis, point)
+        if axis == "x" then return rect.left + rect.width * point / 2 end
+        return rect.top - rect.height * point / 2
+    end
+    local function NearAxis(rect, target, axis, reach)
+        if axis == "x" then
+            return math.max(rect.top - rect.height - target.top, target.top - target.height - rect.top, 0) <= reach
+        end
+        return math.max(rect.left - target.left - target.width, target.left - rect.left - rect.width, 0) <= reach
+    end
+    local function SnapAxis(start, rect, axis, targets, screen)
+        local held = start.snaps[axis]
+        if held then
+            for _, target in ipairs(targets) do
+                if
+                    target.key == held.target
+                    and (target.key == "screen" or NearAxis(rect, target.rect, axis, GRID_SPACING * 4))
+                then
+                    local value = AxisPoint(target.rect, axis, held.point)
+                    local delta = value - AxisPoint(rect, axis, held.source)
+                    if math.abs(delta) <= SNAP_RELEASE then return delta, value end
+                    break
+                end
+            end
+            start.snaps[axis] = nil
+        end
+        local best, bestDistance, bestDelta, bestGuide
+        for _, target in ipairs(targets) do
+            for _, sourcePoint in ipairs(SNAP_POINTS) do
+                local source = AxisPoint(rect, axis, sourcePoint)
+                for _, targetPoint in ipairs(SNAP_POINTS) do
+                    -- Screen edges keep the complete frame inside the screen.
+                    local eligible = target.key == "screen" and sourcePoint == targetPoint
+                        or target.key ~= "screen" and NearAxis(rect, target.rect, axis, GRID_SPACING * 3)
+                    if eligible then
+                        local value = AxisPoint(target.rect, axis, targetPoint)
+                        local delta = value - source
+                        local distance = math.abs(delta)
+                        if distance <= SNAP_CAPTURE and (not best or distance < bestDistance) then
+                            best = { target = target.key, source = sourcePoint, point = targetPoint }
+                            bestDistance, bestDelta, bestGuide = distance, delta, value
+                        end
+                    end
+                end
+            end
+        end
+        if best then
+            start.snaps[axis] = best
+            return bestDelta, bestGuide
+        end
+        local origin = axis == "x" and screen.width / 2 or -screen.height / 2
+        for _, point in ipairs(SNAP_POINTS) do
+            local value = AxisPoint(rect, axis, point)
+            local snapped = SnapToGrid(value - origin) + origin
+            local delta = snapped - value
+            local distance = math.abs(delta)
+            if not bestDistance or distance < bestDistance then
+                bestDistance, bestDelta, bestGuide = distance, delta, snapped
+            end
+        end
+        return bestDelta, bestGuide
+    end
+    local function SnapMove(entry, start, x, y, width, height, uiScale)
+        local rect = EditBounds(entry, width, height, uiScale)
+        local owner = ReadPosition(entry.frame)
+        if not rect or not owner then
+            HideSnapGuides()
+            return x, y
+        end
+        rect.left, rect.top = rect.left + x - owner.x * width, rect.top + y - owner.y * height
+        local screenWidth, screenHeight = T.GetLocalSize(UIParent)
+        local screen = { left = 0, top = 0, width = screenWidth, height = screenHeight }
+        local targets = { { key = "screen", rect = screen } }
+        for _, other in ipairs(order) do
+            if other ~= entry and CanShowHandle(other) then
+                local bounds = EditBounds(other, width, height, uiScale)
+                if bounds then table.insert(targets, { key = other, rect = bounds }) end
+            end
+        end
+        local dx, guideX = SnapAxis(start, rect, "x", targets, screen)
+        local dy, guideY = SnapAxis(start, rect, "y", targets, screen)
+        ShowSnapGuides(guideX, guideY)
+        return x + dx, y + dy
     end
     UpdateMove = function(entry)
         local start = entry.moving
@@ -314,9 +476,10 @@ DFRL:NewMod("Layout", 0, function()
         end
         local x, y = start.x + cursorX - start.cursorX, start.y + cursorY - start.cursorY
         if IsShiftKeyDown() then
-            local offsetX, offsetY = CenterOffsets(entry.frame, uiScale)
-            x = SnapToGrid(x + offsetX) - offsetX
-            y = SnapToGrid(y + offsetY) - offsetY
+            x, y = SnapMove(entry, start, x, y, width, height, uiScale)
+        else
+            start.snaps.x, start.snaps.y = nil, nil
+            HideSnapGuides()
         end
         entry.pointerPosition = { x = x / width, y = y / height }
         ApplyPosition(entry.frame, entry.pointerPosition)
@@ -330,6 +493,7 @@ DFRL:NewMod("Layout", 0, function()
         local position = ReadPosition(entry.frame)
         if not width or not cursorX or not position then return end
         entry.moving = {
+            snaps = {},
             cursorX = cursorX,
             cursorY = cursorY,
             x = position.x * width,
@@ -929,7 +1093,7 @@ DFRL:NewMod("Layout", 0, function()
         UpdateGrid()
         for _, entry in ipairs(order) do
             local handle, region = entry.handle, entry.options.region or entry.frame
-            local shown = entry.defaultPosition and (not entry.options.onlyWhenShown or entry.wantsShown)
+            local shown = CanShowHandle(entry)
             if shown then
                 local ratio = Scale(region) / scale
                 local regionWidth, regionHeight = T.GetLocalSize(region)
