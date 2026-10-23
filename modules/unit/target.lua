@@ -140,7 +140,7 @@ DFRL:NewMod("Target", 1, function()
             SetHealthText("")
             return
         end
-        TargetFrameHealthBar:SetStatusBarColor()
+        TargetFrameHealthBar:SetStatusBarColor(1, 0, 0)
         if UnitIsDead("target") or UnitIsGhost("target") then
             SetHealthText("")
         else
