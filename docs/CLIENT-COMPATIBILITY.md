@@ -89,6 +89,24 @@ The integration follows the original [1.12.1 target-frame code](https://github.c
 
 The hook is feature-detected. The packaged game's FrameXML was not extracted, and live placement remains unverified; this contract comes from the pinned original source. No local checks or game execution were run.
 
+## Party target health
+
+The target module formerly forced every health-color write to red, including
+selected party heroes. It now uses one shared live-alias helper to distinguish
+the player and `party1` through `party4`. Both units must exist and native
+`UnitIsUnit` must return true or 1; names and class are not identity evidence.
+These aliases receive green health through native color writes and the
+existing target refresh path. Other Survivors targets retain enemy red.
+Target and world changes, health/faction updates and party membership changes
+refresh the choice without an idle updater or saved subject.
+
+Target-of-target uses the same party-alias helper before its existing reaction
+color choice. Its tapped-NPC gray, non-party reaction colors and dead/absent
+cleanup remain in place. Unit existence, native health values, target selection,
+clicks, portraits, visibility and geometry are unchanged. Native co-op color
+transitions still require in-game verification; local addon execution was not
+performed.
+
 ## Evidence limits
 
 The initial investigation and fixes used the supplied screenshots/changelog and read-only source inspection. The user subsequently authorized a full local validation pass on 2026-10-19. That pass compiled all tracked Lua with stock Lua 5.0.3, checked the package and formatting, and exercised actual modules through focused native-API adapters. It found and fixed an additional UTF-8 literal-matching defect; see the [validation report](VALIDATION-2026-10-19.md).

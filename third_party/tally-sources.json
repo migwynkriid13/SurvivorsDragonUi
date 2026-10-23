@@ -1,0 +1,27 @@
+{
+  "body": {
+    "file": "wow6.0__oUF_Diablo__media__combo_back.tga",
+    "url": "https://raw.githubusercontent.com/zorker/rothui/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/combo_back.tga",
+    "sha256": "a80cbb2f6c3c05d3b5f337ca8434e786799f928cf7a036a3afdaadb5a33dd62b"
+  },
+  "knotted": {
+    "file": "wow4.0__rTextures__d3_nameplate_border.tga",
+    "url": "https://raw.githubusercontent.com/zorker/rothui/9a9ce9744ce404991fc06066291614fe1765ee20/wow4.0/rTextures/d3_nameplate_border.tga",
+    "sha256": "48866e1f578f20abfe0eed34ee1925b65134f9a77b902912b974dd078504fdae"
+  },
+  "reliquary": {
+    "file": "RickyElune__media__target.tga",
+    "url": "https://raw.githubusercontent.com/RickyElune/Diablo_III_UI/10aa68fef2bfa11bba0eab42baa952b700eb1be5/media/target.tga",
+    "sha256": "5ee8a8703c7b1088ae46193a5837630971c5282e8e8d9407f90aa50fe3419464"
+  },
+  "pendant": {
+    "file": "RickyElune__media__target_elite.tga",
+    "url": "https://raw.githubusercontent.com/RickyElune/Diablo_III_UI/10aa68fef2bfa11bba0eab42baa952b700eb1be5/media/target_elite.tga",
+    "sha256": "e27bb2bfdb85e428c5928524dcbd83b8211c358f38cc2f54fcd621f3b04fee55"
+  },
+  "cornice": {
+    "file": "kyau-ARPG__TopBar__Media.tga",
+    "url": "https://raw.githubusercontent.com/kyau/ARPG/9c53e246ff181d7259e3e355836044c5f8ade5be/Interface/AddOns/ARPG/Media/Textures/TopBar.tga",
+    "sha256": "7d0a4121060d5a8a14c6322077380a101b9dd0733986b78528c5149eb0aca1e6"
+  }
+}

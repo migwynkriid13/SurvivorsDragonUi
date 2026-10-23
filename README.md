@@ -6,10 +6,12 @@ A Dragonflight-style interface for Azeroth Survivors, with a movable HUD, combat
 
 1. Download [SurvivorsDragonUi.zip](https://github.com/migwynkriid13/SurvivorsDragonUi/releases/latest/download/SurvivorsDragonUi.zip).
 2. In the game, go to **Options → AddOns → Open AddOns Folder**.
-3. Extract the ZIP and put the `SurvivorsDragonUi` folder there. You can also place it manually in `benilla-config/AddOns/` beside the game.
+3. Extract the ZIP and put the `SurvivorsDragonUi` folder there. For manual installation on Windows, open the folder containing `AzerothSurvivors.exe`, then put the addon in `benilla-config/AddOns/`.
 4. Enable the addon and enter a run.
 
 The file should be at `benilla-config/AddOns/SurvivorsDragonUi/SurvivorsDragonUi.toc`.
+
+**Windows settings:** the game keeps addons, their saved data, options, key bindings, chat windows and camera settings in `benilla-config` beside `AzerothSurvivors.exe`. On the first launch after this folder change, the game copies addons and settings from older folders, keeping newer changes and filling in missing settings from the old data. Characters are unaffected.
 
 **Browser version:** open **Options → AddOns → install a .zip** and choose the downloaded ZIP.
 
@@ -35,7 +37,7 @@ To use the game's damage numbers, choose **Game settings** under **Combat text**
 ## Features
 
 - Player and target frames, a seven-button action bar, equipped jewelry, XP, kills, gold and cache cost.
-- A run timer with boss markers, movable event banners and boss health bars. Move, resize or hide **Banners** through `/sdui` → **Layout**. Enable **Guardians in boss bar** in `/sdui` → **HUD** to include fighting guardians; it defaults off.
+- A run timer with boss markers, movable event banners and boss health bars. Move, resize or hide **Banners** through `/sdui` → **Layout**. Enable **Guardians in boss bar** in `/sdui` → **HUD** to include fighting guardians; it defaults off. **Revive** can show progress for reviving a friend or being revived. It defaults off; select **Revive** in **Layout**, clear **Hide frame** and Confirm to enable it. Move it there if the game's original bar covers it.
 - A guardian tracker with health bars during combat. Plus shows only living guardians; minus shows all lairs and respawn timers. Move, resize or hide it through `/sdui` → **Layout**.
 - Pet frames for up to eight active summons, with native names, icons and duration. Extra pets appear as a count. Move, resize or hide the whole **Pet frames** group through `/sdui` → **Layout**.
 - A movable **Level Up!** button for stored levels. Select it in `/sdui` → **Layout** to move or resize it, then **Confirm** to save.

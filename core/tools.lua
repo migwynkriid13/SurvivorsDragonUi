@@ -65,6 +65,19 @@ function DFRL.tools.GetPlayerClassColor()
     return classColors[class]
 end
 
+-- Match live native aliases; player names are not party identity.
+local playerAndPartyUnits = { "player", "party1", "party2", "party3", "party4" }
+function DFRL.tools.IsPlayerOrPartyUnit(unit)
+    if not UnitExists(unit) then return false end
+    for _, candidate in ipairs(playerAndPartyUnits) do
+        if UnitExists(candidate) then
+            local same = UnitIsUnit(unit, candidate)
+            if same == true or same == 1 then return true end
+        end
+    end
+    return false
+end
+
 function KillFrame(frame)
     if not frame then return end
     frame:Hide()

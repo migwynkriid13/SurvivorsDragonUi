@@ -1,9 +1,13 @@
 -- Selected tally artwork metadata and source notices.
--- The texture's top edge is open: the action bar supplies the only top rim.
+-- Detached variants and edge corrections: scripts/prepare_tally_variants.py.
+-- Attached textures have an open top supplied by the action bar. Detached
+-- textures reflect the lower structural trim into a complete upper surround.
+-- Iron sarcophagus retains its attached frame beneath a matching top bevel.
+-- Demon reliquary restores its complete wings and keeps its pendant below.
 -- Each TGA is 1024x128 with 600x128 content at 2x. Use UV 0,600/1024,0,1;
 -- artHeight is the full 64-unit texture canvas, height is the counter row,
--- and extent includes the actual lower ornament. No font or source framework ships.
--- contentY is the counter center below the shared seam; contentScale affects
+-- and extent includes the complete contour for that mode. No font or source framework ships.
+-- contentY is the counter center below the texture top; contentScale affects
 -- only its icons and numbers, never the frame artwork.
 -- Immutable sources, crops and preparation: third_party/Tally-ARTWORK.md.
 --
@@ -223,6 +227,11 @@ DFRL.tallyStyles = {
         artHeight = 64,
         contentY = 13.5,
         contentScale = 1,
+        detached = {
+            texture = "silver_detached.tga",
+            extent = 27,
+            contentY = 13.5,
+        },
     },
     {
         id = "graphite",
@@ -233,6 +242,11 @@ DFRL.tallyStyles = {
         artHeight = 64,
         contentY = 13.5,
         contentScale = 1,
+        detached = {
+            texture = "graphite_detached.tga",
+            extent = 29,
+            contentY = 14.5,
+        },
     },
     {
         id = "gothic01",
@@ -243,6 +257,11 @@ DFRL.tallyStyles = {
         artHeight = 64,
         contentY = 10,
         contentScale = 0.9,
+        detached = {
+            texture = "gothic01_detached.tga",
+            extent = 52,
+            contentY = 26,
+        },
     },
     {
         id = "gothic02",
@@ -253,6 +272,11 @@ DFRL.tallyStyles = {
         artHeight = 64,
         contentY = 12,
         contentScale = 0.9,
+        detached = {
+            texture = "gothic02_detached.tga",
+            extent = 48,
+            contentY = 24,
+        },
     },
     {
         id = "gothic03",
@@ -263,6 +287,11 @@ DFRL.tallyStyles = {
         artHeight = 64,
         contentY = 13,
         contentScale = 0.95,
+        detached = {
+            texture = "gothic03_detached.tga",
+            extent = 46,
+            contentY = 23,
+        },
     },
     {
         id = "gothic04",
@@ -273,6 +302,11 @@ DFRL.tallyStyles = {
         artHeight = 64,
         contentY = 16,
         contentScale = 1,
+        detached = {
+            texture = "gothic04_detached.tga",
+            extent = 42,
+            contentY = 22,
+        },
     },
     {
         id = "gothic07",
@@ -283,6 +317,11 @@ DFRL.tallyStyles = {
         artHeight = 64,
         contentY = 16,
         contentScale = 1,
+        detached = {
+            texture = "gothic07_detached.tga",
+            extent = 42,
+            contentY = 21,
+        },
     },
     {
         id = "gothic10",
@@ -293,6 +332,11 @@ DFRL.tallyStyles = {
         artHeight = 64,
         contentY = 14,
         contentScale = 1,
+        detached = {
+            texture = "gothic10_detached.tga",
+            extent = 52,
+            contentY = 26,
+        },
     },
     {
         id = "gothic11",
@@ -303,6 +347,11 @@ DFRL.tallyStyles = {
         artHeight = 64,
         contentY = 13,
         contentScale = 0.95,
+        detached = {
+            texture = "gothic11_detached.tga",
+            extent = 46,
+            contentY = 23,
+        },
     },
     {
         id = "gothic13",
@@ -313,6 +362,11 @@ DFRL.tallyStyles = {
         artHeight = 64,
         contentY = 13,
         contentScale = 0.95,
+        detached = {
+            texture = "gothic13_detached.tga",
+            extent = 55,
+            contentY = 29,
+        },
     },
 }
 DFRL.tallyStyleById = {}

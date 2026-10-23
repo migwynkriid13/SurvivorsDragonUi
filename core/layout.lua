@@ -20,6 +20,7 @@ DFRL:NewMod("Layout", 0, function()
         tooltip = "Tooltip",
         bossBars = "Boss health",
         runTimer = "Run timer",
+        revive = "Revive",
         banners = "Banners",
         levelUp = "LEVEL UP",
         actionBar = "Action bar",
@@ -49,7 +50,13 @@ DFRL:NewMod("Layout", 0, function()
     local function GeometryStore() return editing and draft or Saved() end
     local function IsHidden(entry)
         local geometry = GeometryStore()[entry.key]
-        return type(geometry) == "table" and geometry.hidden == true
+        if type(geometry) == "table" and type(geometry.hidden) == "boolean" then return geometry.hidden end
+        return entry.options.defaultHidden == true
+    end
+    local function SetHidden(entry, geometry, hidden)
+        -- Default-hidden groups need an explicit false to remember an opt-in.
+        geometry.hidden = nil
+        if hidden or entry.options.defaultHidden == true then geometry.hidden = hidden end
     end
     local function ApplyVisibility(entry)
         local shown = not IsHidden(entry) and entry.wantsShown
@@ -62,7 +69,7 @@ DFRL:NewMod("Layout", 0, function()
     local function CopyGeometry(geometry)
         if not Valid(geometry) then return end
         local copy = { x = geometry.x, y = geometry.y }
-        if geometry.hidden == true then copy.hidden = true end
+        if type(geometry.hidden) == "boolean" then copy.hidden = geometry.hidden end
         for _, field in ipairs({ "scale", "width", "height" }) do
             if Number(geometry[field]) then copy[field] = geometry[field] end
         end
@@ -293,7 +300,7 @@ DFRL:NewMod("Layout", 0, function()
     local function ReadGeometry(entry, position)
         if not position then return end
         local geometry = { x = position.x, y = position.y }
-        if IsHidden(entry) then geometry.hidden = true end
+        SetHidden(entry, geometry, IsHidden(entry))
         if entry.options.resize == "dimensions" then
             geometry.width, geometry.height = entry.frame:GetWidth(), entry.frame:GetHeight()
         else
@@ -891,7 +898,7 @@ DFRL:NewMod("Layout", 0, function()
                     coordinates.status:SetText("Frame position is not available yet.")
                     return
                 end
-                geometry.hidden = hidden or nil
+                SetHidden(selected, geometry, hidden)
                 draft[selected.key] = geometry
                 ApplyVisibility(selected)
                 coordinates.status:SetText("Preview. Confirm to save.")
