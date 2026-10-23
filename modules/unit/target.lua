@@ -18,10 +18,16 @@ DFRL:NewMod("Target", 1, function()
     TargetFrame:SetScale(1)
     TargetFrameHealthBar:SetScript("OnEnter", nil)
     TargetFrameHealthBar:SetScript("OnLeave", nil)
-    -- Survivors uses this frame for enemies; native health updates must keep it red.
+    -- Party heroes can be selected too. Keep native updates from painting a
+    -- live player/party alias red; other Survivors targets retain enemy red.
     local setHealthColor = TargetFrameHealthBar.SetStatusBarColor
-    TargetFrameHealthBar.SetStatusBarColor = function(bar) setHealthColor(bar, 1, 0, 0) end
-    TargetFrameHealthBar:SetStatusBarColor(1, 0, 0)
+    TargetFrameHealthBar.SetStatusBarColor = function(bar)
+        if T.IsPlayerOrPartyUnit("target") then
+            setHealthColor(bar, 0, 1, 0)
+        else
+            setHealthColor(bar, 1, 0, 0)
+        end
+    end
     local UpdateBorderTexture = T.CreateUnitBorder(
         TargetFrame,
         TargetFrameHealthBar,
@@ -134,6 +140,7 @@ DFRL:NewMod("Target", 1, function()
             SetHealthText("")
             return
         end
+        TargetFrameHealthBar:SetStatusBarColor()
         if UnitIsDead("target") or UnitIsGhost("target") then
             SetHealthText("")
         else
@@ -146,11 +153,17 @@ DFRL:NewMod("Target", 1, function()
     local frame = CreateFrame("Frame")
     frame:RegisterEvent("PLAYER_TARGET_CHANGED")
     frame:RegisterEvent("PLAYER_ENTERING_WORLD")
+    frame:RegisterEvent("PARTY_MEMBERS_CHANGED")
     frame:RegisterEvent("UNIT_HEALTH")
     frame:RegisterEvent("UNIT_FACTION")
     frame:RegisterEvent("UNIT_CLASSIFICATION_CHANGED")
     frame:SetScript("OnEvent", function()
-        if event == "PLAYER_TARGET_CHANGED" or event == "PLAYER_ENTERING_WORLD" or arg1 == "target" then
+        if
+            event == "PLAYER_TARGET_CHANGED"
+            or event == "PLAYER_ENTERING_WORLD"
+            or event == "PARTY_MEMBERS_CHANGED"
+            or arg1 == "target"
+        then
             UpdateTarget(event == "PLAYER_TARGET_CHANGED" or event == "PLAYER_ENTERING_WORLD")
         end
     end)

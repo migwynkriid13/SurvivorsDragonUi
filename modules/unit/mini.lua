@@ -70,7 +70,9 @@ DFRL:NewMod("Mini", 1, function()
                 return
             end
             local reaction = UnitReaction("player", unit)
-            if reaction and reaction <= 3 then
+            if T.IsPlayerOrPartyUnit(unit) then
+                SetHealthColor(values.healthBar, 0, 1, 0)
+            elseif reaction and reaction <= 3 then
                 SetHealthColor(values.healthBar, 1, 0, 0)
             elseif reaction == 4 then
                 SetHealthColor(values.healthBar, 1, 1, 0)
