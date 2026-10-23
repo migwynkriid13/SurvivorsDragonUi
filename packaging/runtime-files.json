@@ -11,6 +11,7 @@
     "core/hud.lua",
     "core/layout.lua",
     "core/localization.lua",
+    "core/profiles.lua",
     "core/tally.lua",
     "core/tools.lua",
     "core/tooltips.lua",

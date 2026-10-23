@@ -20,9 +20,11 @@ The original is hidden only after the replacement has been built and populated a
 
 ## Shared layout
 
-`levelUp` is an independent group in the existing layout registry, labeled **LEVEL UP**. Its default anchor is centered 190 UI units above the bottom of UIParent. Its width fits the new heading across all supported languages, while its compact backdrop fits only the active translation. The inner visual retains the requested 0.7 default scale. The icon, text, badge and gold frame scale together. The shared Layout scale stays relative to this design, so confirmed scale and position records remain unchanged.
+`levelUp` is an independent group in the existing layout registry, labeled **LEVEL UP**. Its default anchor is centered 190 UI units above the bottom of UIParent. The layout owner retains its multilingual width to preserve saved coordinates, while the shared editor's `region` uses the compact panel for its outline and corner grips. The edit box therefore fits the active-language popup instead of reserving empty space for the longest translation. Panel measurements refresh on edit entry and language changes even without waiting levels. The inner visual retains the requested 0.7 default scale. The icon, text, badge and gold frame scale together. The shared Layout scale stays relative to this design, so confirmed scale and position records remain unchanged.
 
 The existing editor owns dragging, corner resizing, numeric placement, Hide frame, Confirm, Cancel, both full resets and world/reload draft discard. Only confirmed geometry and optional visibility use `SurvivorsDragonUiLayout`; no SavedVariable, display setting or command is added. The layout handle remains available when no levels are waiting without showing invented counts or enabling a gameplay click. Its label sits above the box so it cannot overlap the real heading. Editing disables the button's click action.
+
+This group opts into shared `resizeToRegion` handling. Corner resizing measures the compact panel, including its inherited visual scale, and translates the layout owner by the region's measured offset. The opposite visible corner stays fixed as the popup scales; empty multilingual owner space does not slow the grip's movement. Other groups retain their existing owner-based resize math.
 
 ## Evidence limits
 

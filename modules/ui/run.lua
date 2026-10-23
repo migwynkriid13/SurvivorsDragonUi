@@ -635,6 +635,16 @@ DFRL:NewMod("RunTimers", 5, function()
         shadowControl:SetChecked(currentFont.shadow)
     end
 
+    DFRL.runFont = {
+        Copy = FontSettings,
+        Snapshot = function() return FontSettings(fontDraft or _G.SurvivorsDragonUiRunFont) end,
+        Load = function(settings)
+            if not fontDraft then return end
+            fontDraft = FontSettings(settings)
+            PreviewFont(fontDraft)
+        end,
+    }
+
     local function ClearClockCaptions()
         runClock.mode, runClock.currentTime, runClock.maximumTime = nil, nil, nil
         bossClock.option, bossClock.countdown = nil, nil
@@ -728,6 +738,7 @@ DFRL:NewMod("RunTimers", 5, function()
         local dropdownWidth, sidebarWidth, modeWidth = 0, 148, 0
         local categories = {
             { key = "layout", label = "Layout" },
+            { key = "profiles", label = "Profiles" },
             {
                 key = "units",
                 label = "Unit frames",
@@ -952,7 +963,7 @@ DFRL:NewMod("RunTimers", 5, function()
         local timerSizeWidth = TextWidth("Size") + gap + 104
         local tallyStyleHint = "Styles stay the same when attached or detached."
         local defaultsWidth = TextWidth("Addon defaults") + 24
-        local instructions = "Drag frames to move. Drag corners to resize."
+        local instructions = "Drag to move. Hold Shift to snap. Drag corners to resize."
         local contentWidth = math.max(
             modeWidth * 3 + gap * 2,
             filterWidth * 2 + gap,
@@ -966,6 +977,7 @@ DFRL:NewMod("RunTimers", 5, function()
             labelWidth + gap + dropdownWidth,
             labelWidth + gap + outlineWidth * 3 + gap * 2,
             defaultsWidth * 2 + 140 + gap * 4,
+            DFRL.profiles.MinimumWidth(TextWidth),
             TextWidth(instructions)
         )
         local contentLeft = padding + sidebarWidth + 24
@@ -1048,6 +1060,7 @@ DFRL:NewMod("RunTimers", 5, function()
         divider:SetPoint("TOPLEFT", fontEditor, "TOPLEFT", contentLeft, -116)
 
         DFRL.layout.CreateControls(pages.layout, contentWidth, function() SelectPage("layout") end)
+        DFRL.profiles.CreateControls(pages.profiles, contentWidth)
 
         local function DisplayToggle(parent, key, label, description, y, rowWidth)
             local control = T.CreateEditorToggle(

@@ -109,8 +109,8 @@ DFRL:NewMod("StoredLevels", 5, function()
     title:SetHeight(30)
 
     local function AlignContent()
-        -- Fit the backdrop to the active caption instead of the widest locale,
-        -- keeping the compact panel centered in the existing edit bounds.
+        -- Keep the active panel and its edit region centered inside the stable
+        -- multilingual layout owner, without moving confirmed coordinates.
         local measured = title:GetStringWidth()
         if type(measured) ~= "number" or measured <= 0 or measured - measured ~= 0 then return end
         local textWidth = math.ceil(measured) + 4
@@ -246,15 +246,21 @@ DFRL:NewMod("StoredLevels", 5, function()
         button:ClearAllPoints()
         button:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, 190)
     end, {
+        region = panel,
+        resizeToRegion = true,
         labelAbove = true,
         onEdit = function(active)
             editing = active
             hovered = false
             button:EnableMouse(not active)
+            AlignContent()
         end,
         onResize = AlignContent,
     })
-    DFRL.locale.Listen(Update)
+    DFRL.locale.Listen(function()
+        AlignContent()
+        Update()
+    end)
 
     local function Stop()
         inWorld = false

@@ -151,6 +151,13 @@ DFRL:NewMod("Display", 0, function()
     end
 
     function display.Get(key) return Read(draft or _G.SurvivorsDragonUiDisplay, key) end
+    function display.Copy(source) return Normalize(source) end
+    function display.Snapshot() return Normalize(draft or _G.SurvivorsDragonUiDisplay) end
+    function display.Load(source)
+        if not draft then return end
+        draft = Normalize(source)
+        Notify()
+    end
     function display.BeginEdit()
         if not draft then draft = Normalize(_G.SurvivorsDragonUiDisplay) end
     end

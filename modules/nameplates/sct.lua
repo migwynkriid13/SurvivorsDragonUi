@@ -1247,6 +1247,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     end
 
     function sct.GetMode() return ActiveMode() end
+    function sct.NormalizeMode(mode) return IsMode(mode) and mode or "default" end
     function sct.GetIncoming() return ReadIncoming() == "1" end
     function sct.BeginEdit()
         if not settingsDraft then settingsDraft = {} end
