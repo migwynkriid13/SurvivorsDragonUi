@@ -348,16 +348,19 @@ DFRL:NewMod("Layout", 0, function()
         SelectEntry(entry, true)
         local width, height, uiScale = Viewport()
         local x, y = Cursor()
+        local region = entry.options.resizeToRegion and entry.options.region or entry.frame
         local position = ReadPosition(entry.frame)
-        if not x or not position or not width then return end
-        local scale = Scale(entry.frame) / uiScale
-        local frameWidth, frameHeight = T.GetLocalSize(entry.frame)
+        local regionPosition = region == entry.frame and position or ReadPosition(region)
+        if not x or not position or not regionPosition or not width then return end
+        local scale = Scale(region) / uiScale
+        local frameWidth, frameHeight = T.GetLocalSize(region)
         entry.resizing = {
             corner = corner,
+            region = region,
             cursorX = x,
             cursorY = y,
-            x = position.x * width,
-            y = position.y * height,
+            x = regionPosition.x * width,
+            y = regionPosition.y * height,
             width = frameWidth * scale,
             height = frameHeight * scale,
             scale = LocalScale(entry.frame),
@@ -388,13 +391,20 @@ DFRL:NewMod("Layout", 0, function()
             local factor = 1 + (signX * dx * start.width + signY * dy * start.height) / diagonal
             ApplySize(entry, { scale = start.scale * factor })
         end
-        local ratio = Scale(entry.frame) / uiScale
-        local frameWidth, frameHeight = T.GetLocalSize(entry.frame)
+        local ratio = Scale(start.region) / uiScale
+        local frameWidth, frameHeight = T.GetLocalSize(start.region)
         local newWidth, newHeight = frameWidth * ratio, frameHeight * ratio
-        -- Keep the opposite corner fixed throughout the resize.
+        -- Keep the visible region's opposite corner fixed, translating its
+        -- layout owner by the measured offset instead of resizing empty bounds.
         local x = right and start.x or start.x + start.width - newWidth
         local y = top and start.y - start.height + newHeight or start.y
-        entry.pointerPosition = { x = x / width, y = y / height }
+        local ownerPosition = ReadPosition(entry.frame)
+        local regionPosition = start.region == entry.frame and ownerPosition or ReadPosition(start.region)
+        if not ownerPosition or not regionPosition then return end
+        entry.pointerPosition = {
+            x = x / width - (regionPosition.x - ownerPosition.x),
+            y = y / height - (regionPosition.y - ownerPosition.y),
+        }
         ApplyPosition(entry.frame, entry.pointerPosition)
     end
 

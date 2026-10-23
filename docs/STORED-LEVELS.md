@@ -24,6 +24,8 @@ The original is hidden only after the replacement has been built and populated a
 
 The existing editor owns dragging, corner resizing, numeric placement, Hide frame, Confirm, Cancel, both full resets and world/reload draft discard. Only confirmed geometry and optional visibility use `SurvivorsDragonUiLayout`; no SavedVariable, display setting or command is added. The layout handle remains available when no levels are waiting without showing invented counts or enabling a gameplay click. Its label sits above the box so it cannot overlap the real heading. Editing disables the button's click action.
 
+This group opts into shared `resizeToRegion` handling. Corner resizing measures the compact panel, including its inherited visual scale, and translates the layout owner by the region's measured offset. The opposite visible corner stays fixed as the popup scales; empty multilingual owner space does not slow the grip's movement. Other groups retain their existing owner-based resize math.
+
 ## Evidence limits
 
 The executable inspected for the API contract on 2026-10-20 has SHA-256 `96e24dcd0e53fc13a6fdef5826aa46f77a29aa1aad4abd585adf04e94b2756d3`. The user-requested **LEVEL UP** heading is addon wording, with thirteen translations in `localization/ui.tsv` and matching runtime entries. The removed native `Level Up!` and `LEVEL {n}` captions are no longer selected by this addon. Other generated text and the localization generator's reviewed source fingerprint are unchanged.

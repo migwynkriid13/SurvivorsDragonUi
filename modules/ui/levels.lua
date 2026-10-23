@@ -247,6 +247,7 @@ DFRL:NewMod("StoredLevels", 5, function()
         button:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, 190)
     end, {
         region = panel,
+        resizeToRegion = true,
         labelAbove = true,
         onEdit = function(active)
             editing = active
