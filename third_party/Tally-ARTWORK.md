@@ -3,7 +3,8 @@
 The ten shipped frames use the sources below. Pixel rectangles are
 `(left, top, right, bottom)`, with right and bottom excluded. The prepared
 1024×128 RGBA TGAs contain 600×128 pixels at double resolution, with an open
-top edge shared with the action bar. Crops are fitted to the frame and toned
+top edge shared with the action bar in attached mode. Each style also has a
+closed detached variant on the same canvas. Crops are fitted to the frame and toned
 toward gray; icons, counter text and fonts are not part of the artwork.
 
 ## Selected sources and crops
@@ -19,15 +20,42 @@ RothUI source files are pinned to
 | Roth shrine         | [targettarget.tga](https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/targettarget.tga): caps `(0,58,43,107)` and `(213,58,256,107)`; center strips `(43,58,213,80)` and `(43,99,213,107)`, omitting the internal divider.                                                                                                                                                                                 |
 | Gothic cornerwork   | [d3_altpower_border.tga](https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/d3_altpower_border.tga), `(81,28,430,61)`.                                                                                                                                                                                                                                                                                     |
 | Iron sarcophagus    | [demonic_fury_border.tga](https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/demonic_fury_border.tga), `(0,16,256,32)`; side samples `(4,16,12,24)` and `(244,16,252,24)`. Upper backing is inset 3.515625 units through its first 18 units.                                                                                                                                                               |
-| Knotted iron        | [d3_nameplate_border.tga](https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow4.0/rTextures/d3_nameplate_border.tga), `(3,28,253,51)`.                                                                                                                                                                                                                                                                                           |
-| ARPG carved cornice | [kyau/ARPG TopBar.tga](https://github.com/kyau/ARPG/blob/9c53e246ff181d7259e3e355836044c5f8ade5be/Interface/AddOns/ARPG/Media/Textures/TopBar.tga), `(325,24,699,63)`, fitted to 300×40 units with saturation 0.45 and brightness 1.4.                                                                                                                                                                                                                         |
+| Knotted iron        | [d3_nameplate_border.tga](https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow4.0/rTextures/d3_nameplate_border.tga), `(3,22,253,51)`.                                                                                                                                                                                                                                                                                           |
+| ARPG carved cornice | [kyau/ARPG TopBar.tga](https://github.com/kyau/ARPG/blob/9c53e246ff181d7259e3e355836044c5f8ade5be/Interface/AddOns/ARPG/Media/Textures/TopBar.tga), `(345,24,679,63)`, fitted to 300×40 units with saturation 0.45 and brightness 1.4.                                                                                                                                                                                                                         |
 | Gothic leaf corners | [Diablo_III_UI UIButton_300x51_Normal.tga](https://github.com/RickyElune/Diablo_III_UI/blob/10aa68fef2bfa11bba0eab42baa952b700eb1be5/media/UIButton_300x51_Normal.tga), `(88,64,424,98)`.                                                                                                                                                                                                                                                                      |
 | Demon reliquary     | [Diablo_III_UI target.tga](https://github.com/RickyElune/Diablo_III_UI/blob/10aa68fef2bfa11bba0eab42baa952b700eb1be5/media/target.tga): caps `(58,60,106,106)` and `(406,60,454,106)`; rail `(106,88,400,106)` at `(29,23)`, 242×14 units. [target_elite.tga](https://github.com/RickyElune/Diablo_III_UI/blob/10aa68fef2bfa11bba0eab42baa952b700eb1be5/media/target_elite.tga) footer `(208,100,304,128)` is centered at x150, y26, sized 48.222222×14 units. |
 
-The Gothic interiors reuse RothUI's
+Knotted iron uses its native open upper walls and alpha, fitted to 300×37
+units with 30-source-pixel end caps. It has no projected top backing.
+ARPG follows the source's curved shoulder with a mirrored alpha contour
+`(0,10), (3,9), (8,8), (13,6), (17,3), (20,0)` within the listed crop.
+This removes the upper side slabs while retaining the lower carved curls;
+its interior and remaining source alpha are preserved.
+
+The other Gothic interiors reuse RothUI's
 [combo_back.tga](https://github.com/zorker/rothui/blob/9a9ce9744ce404991fc06066291614fe1765ee20/wow6.0/oUF_Diablo/media/combo_back.tga),
 `(0,32,64,44)`, clipped inside each frame's silhouette. Silver and graphite
 leave dividers to the live renderer.
+
+## Detached surrounds
+
+The `_detached.tga` variants reflect each prepared frame's structural
+lower half above its counter center, retaining the source alpha and the
+original lower half. The matching upper corners and rail close the frame
+without a shared action-bar edge. Demon reliquary reflects its plain
+structural frame before the pendant is added, keeping that ornament below.
+Iron sarcophagus instead uses its original complete `demonic_fury_border.tga`
+crop `(0,0,256,32)`, fitted to 300×40 units with 27-source-pixel caps;
+its stone backing is clipped between the original upper and lower contour.
+Per-mode texture, full extent and counter-center metadata are generated
+together in `core/tally.lua`. The existing palettes and notices apply to
+both variants. No counter icons or text are baked into either texture.
+
+The reproducible preparation source is
+[`prepare_tally_variants.py`](../scripts/prepare_tally_variants.py). Its five
+original inputs, immutable URLs and SHA-256 fingerprints are recorded in
+[`tally-sources.json`](tally-sources.json). See
+[TALLY-ATTACHMENT.md](../docs/TALLY-ATTACHMENT.md) for the preparation command.
 
 ## Notices
 

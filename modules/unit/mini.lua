@@ -256,15 +256,20 @@ DFRL:NewMod("Mini", 1, function()
                 frame:SetPoint("LEFT", UIParent, "LEFT", 10, 220)
             end
             if _G[prefix .. "Texture"] then _G[prefix .. "Texture"]:SetAlpha(0) end
-            local border = frame:CreateTexture(nil, "BORDER")
+            local borderFrame = CreateFrame("Frame", nil, frame)
+            borderFrame:SetAllPoints(frame)
+            borderFrame:SetFrameLevel(math.max(health:GetFrameLevel(), mana:GetFrameLevel()) + 1)
+            values.health:SetParent(borderFrame)
+            local border = borderFrame:CreateTexture(nil, "BORDER")
             border:SetTexture(tex .. "pet")
             border:SetVertexColor(1, 1, 1, 1)
             border:SetPoint("CENTER", frame, "CENTER", 0, 0)
             border:SetWidth(128)
             border:SetHeight(64)
-            local healthOnlyBorder = HealthOnlyBorder(frame, border, 128, 64, "BORDER")
+            local healthOnlyBorder = HealthOnlyBorder(borderFrame, border, 128, 64, "BORDER")
             local portrait = _G[prefix .. "Portrait"]
             if portrait then
+                portrait:SetParent(borderFrame)
                 portrait:SetHeight(35)
                 portrait:SetWidth(35)
                 portrait:SetDrawLayer("BACKGROUND")
@@ -296,13 +301,19 @@ DFRL:NewMod("Mini", 1, function()
             -- updates, so preview, Cancel and later native refreshes coexist.
             T.BindUnitLabelVisibility(mana, "classResources")
             T.BindUnitLabelVisibility(_G[prefix .. "ManaBarText"], "classResources")
+            local healthWidth = health:GetWidth()
             local resourcesShown
             local function UpdateResources()
                 local shown = DFRL.display.Get("classResources")
                 if shown == resourcesShown then return end
                 resourcesShown = shown
+                -- Cover the lower portrait curve and the fill's shaded leading
+                -- edge beneath the rim, keeping the right edge and value fixed.
+                local extension = shown and 0 or 12
+                health:SetWidth(healthWidth + extension)
                 health:SetHeight(shown and 11 or 17.5)
-                health:SetPoint("CENTER", frame, "CENTER", 15, shown and 10 or 6.75)
+                health:SetPoint("CENTER", frame, "CENTER", 15 - extension / 2, shown and 10 or 6.75)
+                values.health:SetPoint("CENTER", health, "CENTER", extension / 2, 0)
                 border:SetAlpha(shown and 1 or 0)
                 for _, strip in ipairs(healthOnlyBorder) do
                     strip:SetAlpha(shown and 0 or 1)

@@ -191,7 +191,7 @@ DFRL:NewMod("Revive", 4, function()
         -- The received native bar is centered at bottom 38% with height 24.
         -- Match its center for comparison; Lua strata cannot suppress Bevy UI.
         root:SetPoint("BOTTOMLEFT", UIParent, "BOTTOM", -(root:GetWidth() - 56) / 2 - 4, (height or 768) * 0.38 - 3.5)
-    end, { labelAbove = true, refreshDefault = true, onReset = Clear })
+    end, { labelAbove = true, refreshDefault = true, defaultHidden = true, onReset = Clear })
     DFRL.locale.Listen(function()
         dirty, age = true, INTERVAL
     end)

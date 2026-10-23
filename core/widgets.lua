@@ -109,30 +109,43 @@ function DFRL.tools.CreateButton(parent, text, width, height)
     return button
 end
 
--- The large health fill and its damage-loss overlay share the same artwork crop.
+-- Keep the end bevel outside the fill; the metal frame supplies that edge.
+-- The large health fill and its damage-loss overlay share the same crop.
 DFRL.tools.LargeHealthFill = {
     texture = DFRL:GetInfoOrCons("tex") .. "unitframes\\healthDF2.tga",
-    texCoords = { 4.5 / 128, 123.5 / 128, 5 / 32, 25 / 32 },
+    texCoords = { 6.5 / 128, 121.5 / 128, 5 / 32, 25 / 32 },
 }
 
-function DFRL.tools.CreateRoundPlayerRim(parent, owner, r, g, b, blendMode)
+local function CreatePortraitRim(parent, owner, path, mirrored, r, g, b, blendMode)
     local artwork = CreateFrame("Frame", nil, parent)
     artwork:SetAllPoints(owner)
     artwork:EnableMouse(false)
-    local path = DFRL:GetInfoOrCons("tex") .. "unitframes\\UI-TargetingFrameDF1.blp"
+    local regions = {}
     -- The circular sheet retains the old divider at x152..154, y52..55.
     -- Omit that stub only; the half-texel margin keeps it out of filtering.
     for _, piece in ipairs({ { 0, 51.5, 104 }, { 51.5, 4, 101.5 }, { 55.5, 72.5, 104 } }) do
         local y, height, width = unpack(piece)
         local texture = artwork:CreateTexture(nil, "OVERLAY")
         texture:SetTexture(path)
-        texture:SetTexCoord(1, (256 - width) / 256, y / 128, (y + height) / 128)
+        if mirrored then
+            texture:SetTexCoord(1, (256 - width) / 256, y / 128, (y + height) / 128)
+            texture:SetPoint("TOPLEFT", owner, "TOPLEFT", 0, -y)
+        else
+            texture:SetTexCoord((256 - width) / 256, 1, y / 128, (y + height) / 128)
+            texture:SetPoint("TOPRIGHT", owner, "TOPRIGHT", 0, -y)
+        end
         texture:SetWidth(width)
         texture:SetHeight(height)
-        texture:SetPoint("TOPLEFT", owner, "TOPLEFT", 0, -y)
         texture:SetVertexColor(r or 1, g or 1, b or 1)
         if blendMode then texture:SetBlendMode(blendMode) end
+        table.insert(regions, texture)
     end
+    return artwork, regions
+end
+
+function DFRL.tools.CreateRoundPlayerRim(parent, owner, r, g, b, blendMode)
+    local path = DFRL:GetInfoOrCons("tex") .. "unitframes\\UI-TargetingFrameDF1.blp"
+    local artwork = CreatePortraitRim(parent, owner, path, true, r, g, b, blendMode)
     return artwork
 end
 
@@ -187,6 +200,7 @@ function DFRL.tools.CreateUnitBorder(frame, healthBar, portraitTexture, backgrou
     local healthFill = DFRL.tools.LargeHealthFill
     local healthWidth, portraitInset, portraitOverlap = 122, 104, 15
     local powerInterior, roundRim
+    local strips = {}
     local portraitExtended
     local function SetPortraitOverlap(extended)
         -- The pointed player rim also needs a small underlap to close its seam.
@@ -267,9 +281,15 @@ function DFRL.tools.CreateUnitBorder(frame, healthBar, portraitTexture, backgrou
     if mirrored then
         roundRim = DFRL.tools.CreateRoundPlayerRim(borderFrame, frame)
         roundRim:Hide()
+    else
+        local targetRim, regions = CreatePortraitRim(borderFrame, frame, texturePath, false)
+        targetRim:Show()
+        for _, region in ipairs(regions) do
+            table.insert(strips, region)
+        end
+        portraitTexture:SetAlpha(0)
     end
 
-    local strips = {}
     local function AddStrip(x, y, width, height)
         local strip = borderFrame:CreateTexture(nil, "OVERLAY")
         strip:SetWidth(width)
@@ -310,6 +330,7 @@ function DFRL.tools.CreateUnitBorder(frame, healthBar, portraitTexture, backgrou
 
     local function UpdateTexture(path)
         portraitTexture:SetTexture(path)
+        if not mirrored then portraitTexture:SetAlpha(0) end
         for _, strip in ipairs(strips) do
             strip:SetTexture(path)
         end

@@ -6,7 +6,7 @@
 
 The explicit profiles request adds one SavedVariable, `SurvivorsDragonUiProfiles`, containing a table keyed by the user-supplied name. Each record contains only:
 
-- `layout`: independent copies of confirmed or currently staged geometry and optional hidden flags, including registered defaults and retained lazy-window records.
+- `layout`: independent copies of confirmed or currently staged geometry and optional hidden flags, including registered defaults and retained lazy-window records. Explicit `hidden = false` is retained for opt-ins such as the default-hidden Revive group.
 - `display`: the existing normalized display options.
 - `runFont`: the existing normalized timer font settings.
 - `sctMode`: the existing addon combat-text mode, when that module is available.

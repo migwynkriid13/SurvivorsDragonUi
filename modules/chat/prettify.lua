@@ -1,7 +1,7 @@
 -- Selected incoming-message formats from CleanerChat's Output.lua,
 -- Experience.lua and Loot.lua, adapted for Lua 5.0 and native Survivors notices.
 -- Learned abilities remain visible with the explicitly requested compact label.
--- Unknown messages and player conversations keep their original text.
+-- Unknown messages and player conversation bodies keep their original text.
 -- This file defines helpers at load time rather than through NewMod. Use the
 -- same private globals as modules: the Lua 5.0 client has no native _G alias.
 setfenv(1, DFRL:GetEnv())
@@ -166,6 +166,19 @@ local function HiddenAnnouncement(text)
         or string.find(plain, "^[^\r\n]+ — survive the onslaught!$") ~= nil
         or string.find(plain, "^[^\r\n]+ – survive the onslaught!$") ~= nil
         or string.find(plain, "^[^\r\n]+ %- survive the onslaught!$") ~= nil
+end
+
+local function PlayerSay(text)
+    local name, body
+    if type(_G.CHAT_SAY_GET) == "string" then name, body = CaptureFormat(text, _G.CHAT_SAY_GET .. "%s") end
+    if not name then name, body = CaptureFormat(text, "%s says: %s") end
+    if not name or not body then return text end
+    -- Remove only the author's display brackets, retaining native player links,
+    -- inline colors, language labels and the complete message body.
+    name = string.gsub(name, "(|Hplayer:[^|]+|h)%[(.-)%](|h)", "%1%2%3")
+    name = string.gsub(name, "^(|c%x%x%x%x%x%x%x%x)%[([^%[%]]+)%](|r)$", "%1%2%3")
+    name = string.gsub(name, "^%[([^%[%]]+)%]$", "%1")
+    return name .. ": " .. body
 end
 
 local function NpcYell(text, speaker, message)
@@ -413,6 +426,7 @@ CleanerChat.PrettifyMessage = function(text, eventName, speaker, message)
     then
         return nil, "hide"
     end
+    if eventName == "CHAT_MSG_SAY" then return PlayerSay(text) end
     if eventName == "CHAT_MSG_MONSTER_YELL" then return NpcYell(text, speaker, message) end
     -- The caller supplies an event while native Lua chat handlers run. Direct
     -- client writes have no event; only anchored, recognizable notices match.

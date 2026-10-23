@@ -39,6 +39,12 @@ refreshing. Both resets clear the view and allow current valid state to repaint.
 
 ## Layout and native overlap
 
+The custom bar defaults off. In `/sdui` → **Layout**, select **Revive**, clear
+**Hide frame** and Confirm to enable it. Both full resets restore it to hidden.
+The existing hidden flag stores an explicit `false` for a confirmed opt-in,
+including profile copies, while missing visibility uses the group's default.
+No saved geometry is rewritten to change this default.
+
 One **Revive** group uses shared movement, proportional scale, numeric controls,
 hiding, profiles and Confirm-only geometry saving. Cancel, world/logout/reload
 discard and both resets remain owned by shared Layout. Its passive handle is

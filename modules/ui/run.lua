@@ -1807,6 +1807,7 @@ DFRL:NewMod("RunTimers", 5, function()
             local joined = DFRL.display.Get("attachTally")
             local bottom = joined and DFRL.GetActionBarSilverBottom() or nil
             local style = DFRL.tallyStyleById[DFRL.display.Get("tallyStyle")]
+            local appearance = not joined and style.detached or style
             local mask = ""
             visibleTallyFields = 0
             for _, entry in ipairs(tallyFields) do
@@ -1834,7 +1835,7 @@ DFRL:NewMod("RunTimers", 5, function()
             end
             tally:ClearAllPoints()
             local artScale = lastWidth / DFRL.tallyStyleCanvas.width
-            local height = style.extent * artScale
+            local height = appearance.extent * artScale
             tally:SetHeight(height)
             detached:SetHeight(height)
             if joined then
@@ -1843,11 +1844,11 @@ DFRL:NewMod("RunTimers", 5, function()
                 tally:SetPoint("TOPLEFT", owner, "TOPLEFT", 0, 0)
             end
             tallyBar:Hide()
-            artwork:SetTexture(DFRL:GetInfoOrCons("tex") .. "tally\\" .. style.texture)
+            artwork:SetTexture(DFRL:GetInfoOrCons("tex") .. "tally\\" .. appearance.texture)
             artwork:SetWidth(lastWidth)
             artwork:SetHeight(DFRL.tallyStyleCanvas.height * artScale)
             artwork:Show()
-            local rowCenter, contentScale = style.contentY * artScale, style.contentScale
+            local rowCenter, contentScale = appearance.contentY * artScale, style.contentScale
             local divided = style.id == "silver" or style.id == "graphite"
             local inset = divided and 8 or 40 * artScale
             local sectionWidth = (lastWidth - 2 * inset) / math.max(1, visibleTallyFields)
