@@ -200,6 +200,13 @@ DFRL:NewMod("Tooltips", 2, function()
     tooltip.SetOwner = function(self, owner, anchor, x, y)
         return nativeSetOwner(self, owner, self == tooltip and inWorld and "ANCHOR_NONE" or anchor, x, y)
     end
+    if type(tooltip.FadeOut) == "function" then
+        local nativeFadeOut = tooltip.FadeOut
+        tooltip.FadeOut = function(self)
+            if self == tooltip and inWorld then return self:Hide() end
+            return nativeFadeOut(self)
+        end
+    end
     hooksecurefunc("GameTooltip_SetDefaultAnchor", function(frame)
         if frame == tooltip then PlaceTooltip() end
     end)
@@ -251,6 +258,11 @@ DFRL:NewMod("Tooltips", 2, function()
         Refresh()
     end)
     HookScript(tooltip, "OnUpdate", function()
+        -- World hover loss can start a native fade without a Lua FadeOut call.
+        if currentUnit == "mouseover" and not Exists("mouseover") then
+            tooltip:Hide()
+            return
+        end
         PlaceTooltip()
         elapsed = elapsed + (type(arg1) == "number" and arg1 or 0)
         if elapsed < 0.2 then return end
