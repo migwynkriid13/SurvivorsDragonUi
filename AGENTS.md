@@ -9,6 +9,12 @@
 - Avoid marketing language, repeated caveats and long lists of internal details. Keep necessary limitations brief and accurate.
 - Preserve the `## Install` heading, working download links, commands and license credits.
 
+## Local workflow
+
+- Run StyLua and Prettier locally on edited Lua and Markdown/JSON/YAML files, using the repository configuration and pinned formatter versions.
+- Commit and push requested changes after local formatting. Do not wait for or poll GitHub Actions jobs or tests before finishing.
+- This supersedes the older instructions below that prohibit local formatting or require waiting for GitHub Actions. Local tests, standalone syntax/validation checks and addon/game execution remain unauthorized.
+
 ## Project rules
 
 - Skill, C character equipment, boss skull and kills/gold/cache-cost tooltips anchor directly above the hovered icon, including the seventh action button mapped to native slot 12 and all armor, jewelry, weapon, ranged/relic and ammo slots. Player buffs/debuffs, temporary weapon enchants, target and target-of-target auras and encounter debuff tooltips anchor below the icon so top-edge screen clamping does not place them over the buff row. Resolve native ownership through one shared helper using the existing action-button registry and the character module's registered equipment buttons; do not duplicate the slot lists. Register existing player aura/weapon-enchant buttons, discover native target and target-of-target aura button series once, and register pooled boss/guardian debuffs and run-bar skulls on creation through the shared icon registration helper. Counter fields retain their hover area and owner while anchoring to their actual icon texture; the cache heading omits the currency suffix in all fourteen source/runtime catalogs. Keep other native hovers at the saved Tooltip position. Preserve native content, owner, parent, fade and screen clamping, shared Tooltip scale/hiding, editor suppression and world cleanup. Hidden icons and closed character panes clear their tooltip. Add no setting, asset, SavedVariable or idle updater. No local checks or addon/game execution; use GitHub Actions.
