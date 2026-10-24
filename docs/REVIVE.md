@@ -37,13 +37,12 @@ reload and `AZSZONE` retire the visible state and block the old packet identity,
 stamp and delivery generation until a fresh delivery. World entry resumes
 refreshing. Both resets clear the view and allow current valid state to repaint.
 
-## Layout and native overlap
+## Layout and native replacement
 
-The custom bar defaults off. In `/sdui` → **Layout**, select **Revive**, clear
-**Hide frame** and Confirm to enable it. Both full resets restore it to hidden.
-The existing hidden flag stores an explicit `false` for a confirmed opt-in,
-including profile copies, while missing visibility uses the group's default.
-No saved geometry is rewritten to change this default.
+The custom bar defaults on, and both full resets restore that default. In
+`/sdui` → **Layout**, select **Revive** to move, resize or hide it. Missing
+visibility uses the visible default; existing confirmed hidden choices and
+profile copies are preserved. No saved geometry is rewritten.
 
 One **Revive** group uses shared movement, proportional scale, numeric controls,
 hiding, profiles and Confirm-only geometry saving. Cancel, world/logout/reload
@@ -51,8 +50,8 @@ discard and both resets remain owned by shared Layout. Its passive handle is
 available without an active revive. Only geometry and the existing optional
 hidden flag are saved; no revive data, setting or SavedVariable is added.
 
-The default places the pill at the recovered native bar's center for comparison,
-as requested. The original root is 300 × 24 native logical pixels, horizontally
+The default places the pill at the recovered native bar's center.
+The original root is 300 × 24 native logical pixels, horizontally
 centered with `left: 50%`, `margin-left: -150px`, and `bottom: 38%`. The custom
 pill starts at 300 × 31 addon units. Its bottom is offset by −3.5 units from
 38% of UIParent height to align their authored centers; the right-side
@@ -61,18 +60,24 @@ shared `refreshDefault` retains its default pill center while leaving confirmed
 and draft geometry intact. Physical pixel alignment across native and addon UI
 scales has not been tested.
 
-**This is a comparison overlay, not native suppression.** In the inspected
-0.113.0 EXE, `AZS_SetHudShown` exposes only clock, bosses, tally, build, banners,
-loot, meter, levels and flag. There is no revive control. The original
-`ReviveBar`, `ReviveFill` and `ReviveLine` are Bevy UI entities. FrameXML strata
-sort Lua quad batches; the native Bevy UI pass is later. Raising the custom
-frame's strata cannot be treated as covering that separate pass. The original
-bar can remain visible above the custom pill; move **Revive** in `/sdui` to
-compare them separately.
+The supplied 0.115.0 release notes add `AZS_SetHudShown("revive", false)`.
+Once valid received state is painted and the custom group is actually visible,
+the module uses the shared `NewHudOwner("revive")` helper to capture the native
+visibility through `AZS_IsHudShown("revive")`, hide the original and confirm the
+result. Stable snapshots still synchronize ownership, so hiding/unhiding the
+group or a changed native preference does not need another revive packet.
 
-The module neither writes an unsupported revive CVar nor claims ownership of
-the native bar. Clean replacement still needs a selective game-side visibility
-control while keeping revive packets available. No EXE patch is included.
+Hiding the custom group releases native ownership immediately. Idle or invalid
+state, inactive phases, zone changes, world leave, logout, reload and refresh
+errors also clear the view and restore the captured native preference. An
+originally hidden native bar stays hidden; a later visible external choice is
+preserved on release. No native preference snapshot is saved by the addon.
+
+Missing or unsupported native visibility APIs leave the original bar alone.
+Older clients can still show the custom overlay but cannot suppress the native
+bar; move or hide **Revive** through Layout if they overlap. The module uses
+only the official HUD getter/setter, with no direct revive CVar writes, strata
+workaround or client patch.
 
 ## Native and artwork evidence
 
