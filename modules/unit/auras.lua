@@ -25,7 +25,10 @@ DFRL:NewMod("Player Auras", 2, function()
     local entries = {}
     local function AddButton(name)
         local button = _G[name]
-        if button then table.insert(entries, { button = button, name = name }) end
+        if button then
+            table.insert(entries, { button = button, name = name })
+            T.RegisterTooltipIcon(button)
+        end
     end
     -- Native indices 0-15 are helpful auras; 16-23 are harmful auras.
     for i = 0, 23 do

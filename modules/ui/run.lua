@@ -2286,7 +2286,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 marker:EnableMouse(false)
                 marker:SetScript("OnEnter", function() ShowMarkerTooltip(marker) end)
                 marker:SetScript("OnLeave", function() HideMarkerTooltip(marker) end)
-                marker:SetScript("OnHide", function() HideMarkerTooltip(marker) end)
+                T.RegisterTooltipIcon(marker)
                 marker.glow = {}
                 marker.glowCardinal = CreateFrame("Frame", nil, marker)
                 marker.glowDiagonal = CreateFrame("Frame", nil, marker)
@@ -2563,6 +2563,7 @@ DFRL:NewMod("RunTimers", 5, function()
         icon:SetScript("OnLeave", function()
             if GameTooltip and GameTooltip:IsOwned(icon) then GameTooltip:Hide() end
         end)
+        T.RegisterTooltipIcon(icon)
         row.debuffs[index] = icon
         return icon
     end

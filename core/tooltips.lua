@@ -61,6 +61,15 @@ function DFRL.tools.CreateHoverCard(parent, width, height)
     return frame
 end
 
+local registeredIcons = {}
+function DFRL.tools.RegisterTooltipIcon(button)
+    if not button or registeredIcons[button] then return end
+    registeredIcons[button] = button
+    HookScript(button, "OnHide", function()
+        if GameTooltip and GameTooltip:IsOwned(button) then GameTooltip:Hide() end
+    end)
+end
+
 DFRL:NewMod("Tooltips", 2, function()
     local tooltip, bar = GameTooltip, GameTooltipStatusBar
     if not tooltip then return end
@@ -77,8 +86,18 @@ DFRL:NewMod("Tooltips", 2, function()
 
     local function IconOwner(buttons)
         if not buttons then return end
-        for _, button in ipairs(buttons) do
+        for _, button in pairs(buttons) do
             if tooltip:IsOwned(button) then return button end
+        end
+    end
+
+    -- Stock target aura buttons already exist when modules initialize.
+    -- Discover their actual extent once instead of repeating native slot counts.
+    for _, prefix in ipairs({ "TargetFrameBuff", "TargetFrameDebuff", "TargetofTargetFrameDebuff" }) do
+        local index = 1
+        while _G[prefix .. index] do
+            T.RegisterTooltipIcon(_G[prefix .. index])
+            index = index + 1
         end
     end
 
@@ -91,9 +110,11 @@ DFRL:NewMod("Tooltips", 2, function()
         local scale = root:GetEffectiveScale() / parent:GetEffectiveScale()
         if not T.NearlyEqual(tooltip:GetScale(), scale) then tooltip:SetScale(scale) end
         local anchor, target, targetPoint, offsetY = "BOTTOMRIGHT", root, "BOTTOMRIGHT", 0
-        -- Native ownership follows skill and character equipment icons.
+        -- Native ownership follows registered skill, equipment and HUD icons.
         -- Other hovers keep their shared layout seat.
-        local button = IconOwner(DFRL.actionButtons) or IconOwner(DFRL.characterItemButtons)
+        local button = IconOwner(DFRL.actionButtons)
+            or IconOwner(DFRL.characterItemButtons)
+            or IconOwner(registeredIcons)
         if button then
             if not button:IsVisible() then
                 tooltip:Hide()
