@@ -61,10 +61,11 @@ function DFRL.tools.CreateHoverCard(parent, width, height)
     return frame
 end
 
-local registeredIcons = {}
-function DFRL.tools.RegisterTooltipIcon(button)
+local registeredIcons, iconAnchors = {}, {}
+function DFRL.tools.RegisterTooltipIcon(button, icon)
     if not button or registeredIcons[button] then return end
     registeredIcons[button] = button
+    iconAnchors[button] = icon or button
     HookScript(button, "OnHide", function()
         if GameTooltip and GameTooltip:IsOwned(button) then GameTooltip:Hide() end
     end)
@@ -120,7 +121,7 @@ DFRL:NewMod("Tooltips", 2, function()
                 tooltip:Hide()
                 return
             end
-            anchor, target, targetPoint, offsetY = "BOTTOM", button, "TOP", 12
+            anchor, target, targetPoint, offsetY = "BOTTOM", iconAnchors[button] or button, "TOP", 12
         end
         local point, relative, relativePoint, x, y
         if tooltip:GetNumPoints() == 1 then

@@ -1464,7 +1464,7 @@ DFRL:NewMod("RunTimers", 5, function()
     local counters = {
         { key = "kills", visibility = "showTallyKills", label = "Enemies killed", icon = ATTACK_ICON },
         { key = "gold", visibility = "showTallyGold", label = "Gold", icon = COINS_ICON },
-        { key = "chest", visibility = "showTallyCache", label = "Next cache cost (gold)", icon = CACHE_ICON },
+        { key = "chest", visibility = "showTallyCache", label = "Next cache cost", icon = CACHE_ICON },
     }
     local tallyMeasure = tallyOverlay:CreateFontString(nil, "OVERLAY")
     tallyMeasure:Hide()
@@ -1723,9 +1723,7 @@ DFRL:NewMod("RunTimers", 5, function()
             GameTooltip:Show()
         end)
         field:SetScript("OnLeave", function() GameTooltip:Hide() end)
-        field:SetScript("OnHide", function()
-            if GameTooltip:IsOwned(this) then GameTooltip:Hide() end
-        end)
+        T.RegisterTooltipIcon(field, icon)
 
         if index > 1 then
             local divider = tallyOverlay:CreateTexture(nil, "ARTWORK")
