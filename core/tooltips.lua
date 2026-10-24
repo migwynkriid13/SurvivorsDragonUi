@@ -123,7 +123,9 @@ DFRL:NewMod("Tooltips", 2, function()
                 return
             end
             anchor, target, targetPoint, offsetY = "BOTTOM", iconAnchors[button] or button, "TOP", 12
-            if iconSides[button] == "below" then anchor, targetPoint, offsetY = "TOP", "BOTTOM", -12 end
+            if iconSides[button] == "below" then
+                anchor, targetPoint, offsetY = "TOP", "BOTTOM", -12
+            end
         end
         local point, relative, relativePoint, x, y
         if tooltip:GetNumPoints() == 1 then
