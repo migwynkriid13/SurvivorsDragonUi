@@ -1,7 +1,7 @@
 ## Interface: 11200
 ## Title: SurvivorsDragonUi
 ## Notes: HUD with seven action buttons, nameplate combat text, native run/boss bars and gold/kill/cache counters using AzerothSurvivors 0.87.0+ APIs.
-## Version: 3.2.32-survivors
+## Version: 3.2.33-survivors
 ## Author: migwynkriid and community contributors
 ## SavedVariables: SurvivorsDragonUiLayout, SurvivorsDragonUiSctMode, SurvivorsDragonUiRunFont, SurvivorsDragonUiDisplay, SurvivorsDragonUiBossSchedule, SurvivorsDragonUiProfiles
 
@@ -11,6 +11,7 @@ core\localization.lua
 localization\data.lua
 core\tools.lua
 core\fonts.lua
+core\cooldowns.lua
 core\hud.lua
 core\widgets.lua
 core\tooltips.lua
@@ -45,6 +46,7 @@ modules\menu\menu.lua
 modules\micro\micro.lua
 modules\ui\ui.lua
 modules\ui\character.lua
+modules\ui\demon_cooldown.lua
 modules\ui\jewelry.lua
 modules\ui\banners.lua
 modules\ui\revive.lua

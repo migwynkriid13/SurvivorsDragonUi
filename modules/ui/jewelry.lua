@@ -58,6 +58,7 @@ DFRL:NewMod("Jewelry", 4, function()
     local columnPitch = (actionDefaults.buttonWidth + actionDefaults.buttonGap) / defaultScale
     local socketSize = RIM_SIZE * 40 / 36
     local ANIMATION_INTERVAL = 1 / 30
+    local cooldowns = T.cooldowns
     local texturePath = DFRL:GetInfoOrCons("tex") .. "jewelry\\"
     local SLOT_NAMES = { "Finger0Slot", "Finger1Slot", "NeckSlot", "Trinket0Slot", "Trinket1Slot" }
     local EMPTY_TEXTURES = {
@@ -70,6 +71,7 @@ DFRL:NewMod("Jewelry", 4, function()
     local slots, slotsReady = {}, false
     local inWorld, editing, attached, elapsed, animationElapsed = true, false, false, 0, 0
     local cooldownsActive = false
+    local numberElapsed, finishing = 0, false
     local displayGeometry = {}
     local hud = CreateFrame("Frame", "SurvivorsDragonUiJewelry", UIParent)
     hud:SetWidth(WIDTH)
@@ -360,6 +362,7 @@ DFRL:NewMod("Jewelry", 4, function()
     local iconProbe = artwork:CreateTexture(nil, "ARTWORK")
     iconProbe:Hide()
     local iconParts, iconPool, iconsDirty = {}, {}, false
+    local iconSlots = {}
     for part = 1, 16 do
         local top, bottom = (part - 1) * 2, part * 2
         local edge = math.max(math.abs(top - 16), math.abs(bottom - 16))
@@ -391,7 +394,7 @@ DFRL:NewMod("Jewelry", 4, function()
     local function PaintIcons()
         if not iconsDirty then return end
         local groups, byTexture = {}, {}
-        for _, slot in ipairs(slots) do
+        for _, slot in ipairs(iconSlots) do
             if slot.artTexture then
                 local group = byTexture[slot.artTexture]
                 if not group then
@@ -446,15 +449,15 @@ DFRL:NewMod("Jewelry", 4, function()
         end
         iconsDirty = false
     end
-    for index, name in ipairs(SLOT_NAMES) do
+    local function CreateSocket(index, emptyTexture)
         local button = CreateFrame("Frame", nil, hud)
         button:SetWidth(ICON_SIZE)
         button:SetHeight(ICON_SIZE)
         button:SetPoint("TOPLEFT", hud, "TOPLEFT", WIDTH / 2 - ICON_SIZE / 2 + (index - 3) * columnPitch, -30.5)
-        button:EnableMouse(true)
-        local slot = { name = name, button = button }
+        button:EnableMouse(false)
+        local slot = { button = button }
         local placeholder = button:CreateTexture(nil, "ARTWORK")
-        placeholder:SetTexture(texturePath .. EMPTY_TEXTURES[index])
+        if emptyTexture then placeholder:SetTexture(texturePath .. emptyTexture) end
         placeholder:SetAllPoints(button)
         placeholder:Hide()
         slot.placeholder = placeholder
@@ -471,19 +474,32 @@ DFRL:NewMod("Jewelry", 4, function()
         cooldown:SetAllPoints(button)
         cooldown:Hide()
         slot.cooldown = cooldown
+        slot.numbers = cooldowns.Create(button, button:GetFrameLevel() + 4, defaultScale)
+        table.insert(iconSlots, slot)
+        return slot
+    end
+    for index, name in ipairs(SLOT_NAMES) do
+        local slot = CreateSocket(index, EMPTY_TEXTURES[index])
+        local button = slot.button
+        slot.name = name
+        button:EnableMouse(true)
         button:SetScript("OnEnter", function() ShowTooltip(slot) end)
         button:SetScript("OnLeave", function() HideTooltip(slot) end)
         button:SetScript("OnHide", function() HideTooltip(slot) end)
         -- These are read-only hover frames: no equipment-use, pickup or drag handlers.
         table.insert(slots, slot)
     end
+    -- The recurring demon has its own passive socket above the seventh action
+    -- button. It never replaces a worn trinket or becomes an inventory slot.
+    local demonSlot = CreateSocket(6)
+    demonSlot.button:Hide()
 
     -- Reuse one rim crop independently so socket spacing can match the buttons.
     local overlay = CreateFrame("Frame", nil, hud)
     overlay:SetAllPoints(hud)
     overlay:SetFrameLevel(hud:GetFrameLevel() + 3)
     overlay:EnableMouse(false)
-    for _, slot in ipairs(slots) do
+    for _, slot in ipairs(iconSlots) do
         local rim = overlay:CreateTexture(nil, "OVERLAY")
         rim:SetTexture(texturePath .. "Frame.tga")
         rim:SetWidth(RIM_SIZE * 72 / 86)
@@ -493,12 +509,49 @@ DFRL:NewMod("Jewelry", 4, function()
         -- centered in this square crop rather than the full source rectangle.
         -- Compensate the crop size to preserve the visible rim's diameter.
         rim:SetTexCoord(106 / 1024, 178 / 1024, 56 / 256, 128 / 256)
+        slot.rim = rim
+    end
+    demonSlot.rim:Hide()
+    local function ClearDemon()
+        if demonSlot.texture or demonSlot.artTexture then iconsDirty = true end
+        demonSlot.texture, demonSlot.artTexture, demonSlot.active = nil, nil, false
+        demonSlot.button:Hide()
+        demonSlot.rim:Hide()
+        demonSlot.socket:Hide()
+        demonSlot.numbers:Hide()
+    end
+    local function UpdateDemon()
+        local texture
+        if DFRL.demonCooldown then texture = DFRL.demonCooldown.Read() end
+        if not texture then
+            ClearDemon()
+            return
+        end
+        if demonSlot.texture ~= texture then
+            demonSlot.artTexture = nil
+            SetIcon(demonSlot, texture)
+        end
+        if not demonSlot.artTexture then
+            ClearDemon()
+            return
+        end
+        demonSlot.active = true
+        demonSlot.button:Show()
+        demonSlot.rim:Show()
+        if not DFRL.display.Get("attachJewelry") then demonSlot.socket:Show() end
+    end
+    local function ClearNumbers()
+        numberElapsed, finishing = 0, false
+        for _, slot in ipairs(iconSlots) do
+            if slot.numbers:IsShown() then slot.numbers:Hide() end
+        end
     end
     local function ClearSlot(slot)
         slot.placeholder:Hide()
         if slot.texture or slot.artTexture then iconsDirty = true end
         slot.texture, slot.artTexture = nil, nil
         slot.cooldown:Hide()
+        slot.numbers:Hide()
         slot.start, slot.duration, slot.painted = nil, nil, nil
         HideTooltip(slot)
     end
@@ -508,11 +561,14 @@ DFRL:NewMod("Jewelry", 4, function()
         for _, slot in ipairs(slots) do
             ClearSlot(slot)
         end
+        ClearDemon()
+        ClearNumbers()
         PaintIcons()
         hud:Hide()
         detached:Hide()
     end
     hud:SetScript("OnHide", function()
+        ClearNumbers()
         if DFRL.SetJewelryBarShown then DFRL.SetJewelryBarShown(false) end
         for _, slot in ipairs(slots) do
             HideTooltip(slot)
@@ -581,6 +637,28 @@ DFRL:NewMod("Jewelry", 4, function()
         end
         cooldownsActive = active
     end
+    local function PaintNumbers()
+        if not hud:IsVisible() or not DFRL.display.Get("cooldownNumbers") then
+            ClearNumbers()
+            return
+        end
+        local now = type(GetTime) == "function" and GetTime() or nil
+        finishing = false
+        for _, slot in ipairs(slots) do
+            local remaining
+            if slot.texture then UpdateCooldown(slot) end
+            if slot.texture and Number(now) and slot.start and slot.duration then
+                local left = slot.duration - (now - slot.start)
+                if left > 0 and left <= slot.duration then remaining = left end
+            end
+            local shown = cooldowns.Paint(slot.numbers, remaining)
+            if shown and shown <= cooldowns.finalWindow then finishing = true end
+        end
+        local texture, remaining
+        if demonSlot.active and DFRL.demonCooldown then texture, remaining = DFRL.demonCooldown.Read() end
+        local shown = cooldowns.Paint(demonSlot.numbers, texture == demonSlot.texture and remaining or nil)
+        if shown and shown <= cooldowns.finalWindow then finishing = true end
+    end
     local function Refresh()
         if
             not inWorld
@@ -608,6 +686,7 @@ DFRL:NewMod("Jewelry", 4, function()
             end
             if slot.start or slot.painted then cooldownsActive = true end
         end
+        UpdateDemon()
         PaintIcons()
         if DFRL.display.Get("attachJewelry") then
             detached:Hide()
@@ -635,9 +714,10 @@ DFRL:NewMod("Jewelry", 4, function()
                 hud:SetPoint("TOP", owner, "TOP", 0, docked and (46.5 + RIM_SIZE * 20 / 36) or 0)
                 displayGeometry.owner, displayGeometry.docked = owner, docked
             end
-            for _, slot in ipairs(slots) do
+            for _, slot in ipairs(iconSlots) do
                 if slot.button:GetFrameLevel() ~= level + 1 then slot.button:SetFrameLevel(level + 1) end
-                if docked then
+                if slot.numbers:GetFrameLevel() ~= level + 4 then slot.numbers:SetFrameLevel(level + 4) end
+                if docked or (slot == demonSlot and not demonSlot.active) then
                     if slot.socket:IsShown() then slot.socket:Hide() end
                 else
                     if not slot.socket:IsShown() then slot.socket:Show() end
@@ -664,6 +744,7 @@ DFRL:NewMod("Jewelry", 4, function()
         end
         Refresh()
         PaintCooldowns()
+        PaintNumbers()
         if DFRL.SetJewelryBarShown then DFRL.SetJewelryBarShown(docked and hud:IsVisible() and true or false) end
     end
     function DFRL.SetJewelryEditing(active)
@@ -680,9 +761,9 @@ DFRL:NewMod("Jewelry", 4, function()
         UpdateDisplay()
     end
     local detachedRegion = CreateFrame("Frame", nil, detached)
-    detachedRegion:SetWidth(socketSize + columnPitch * 4)
+    detachedRegion:SetWidth(socketSize + columnPitch * 5)
     detachedRegion:SetHeight(socketSize)
-    detachedRegion:SetPoint("TOP", detached, "TOP", 0, -(46.5 - socketSize / 2))
+    detachedRegion:SetPoint("TOP", detached, "TOP", columnPitch / 2, -(46.5 - socketSize / 2))
     DFRL.layout.Register("jewelryBar", detached, function()
         local artTop = actionDefaults.bottom + actionDefaults.height + actionDefaults.topInset
         local bottom = (artTop + 4) / defaultScale - (HEIGHT - 46.5 - socketSize / 2)
@@ -696,7 +777,9 @@ DFRL:NewMod("Jewelry", 4, function()
     controller:RegisterEvent("PLAYER_LOGOUT")
     controller:RegisterEvent("UNIT_INVENTORY_CHANGED")
     controller:RegisterEvent("BAG_UPDATE_COOLDOWN")
+    controller:RegisterEvent("CHAT_MSG_ADDON")
     controller:SetScript("OnEvent", function()
+        if DFRL.demonCooldown then DFRL.demonCooldown.Event(event, arg1) end
         if event == "PLAYER_LEAVING_WORLD" or event == "PLAYER_LOGOUT" then
             inWorld = false
             elapsed, animationElapsed = 0, 0
@@ -707,6 +790,9 @@ DFRL:NewMod("Jewelry", 4, function()
             Clear()
             Refresh()
             PaintCooldowns()
+            PaintNumbers()
+        elseif event == "CHAT_MSG_ADDON" then
+            if arg1 == "AZSPETS" or arg1 == "AZS" or arg1 == "AZSRUN" or arg1 == "AZSZONE" then elapsed = INTERVAL end
         elseif event ~= "UNIT_INVENTORY_CHANGED" or arg1 == "player" then
             elapsed = INTERVAL
         end
@@ -715,14 +801,20 @@ DFRL:NewMod("Jewelry", 4, function()
         if not inWorld or not DFRL.display.Get("equippedJewelry") then return end
         elapsed = elapsed + arg1
         animationElapsed = animationElapsed + arg1
+        numberElapsed = numberElapsed + arg1
         if elapsed >= INTERVAL then
             elapsed = 0
             Refresh()
             animationElapsed = ANIMATION_INTERVAL
+            numberElapsed = cooldowns.interval
         end
         if animationElapsed >= ANIMATION_INTERVAL then
             animationElapsed = 0
             if cooldownsActive then PaintCooldowns() end
+        end
+        if DFRL.display.Get("cooldownNumbers") and (finishing or numberElapsed >= cooldowns.interval) then
+            numberElapsed = 0
+            PaintNumbers()
         end
     end)
     DFRL.display.Listen(UpdateDisplay)

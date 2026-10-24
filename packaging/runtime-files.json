@@ -3,6 +3,7 @@
   "files": [
     "SurvivorsDragonUi.toc",
     "core/core.lua",
+    "core/cooldowns.lua",
     "core/display.lua",
     "core/editor.lua",
     "core/error.lua",
@@ -160,6 +161,7 @@
     "modules/nameplates/style.lua",
     "modules/ui/banners.lua",
     "modules/ui/character.lua",
+    "modules/ui/demon_cooldown.lua",
     "modules/ui/guardian_tracker.lua",
     "modules/ui/guardians.lua",
     "modules/ui/jewelry.lua",

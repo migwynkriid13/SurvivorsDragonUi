@@ -3,10 +3,7 @@ DFRL:NewMod("Bars", 1, function()
     local ACTION_SLOTS = { 1, 2, 3, 4, 5, 6, 12 }
     local BUTTON_COUNT = 7
     local BUTTON_SPACING = 6
-    local COOLDOWN_INTERVAL = 0.1
-    local COOLDOWN_ZERO = 0.1
-    local COOLDOWN_FINAL_WINDOW = 0.2
-    local COOLDOWN_UNITS = { { 86400, "d" }, { 3600, "h" }, { 60, "m" }, { 1, "" } }
+    local cooldowns = T.cooldowns
     local TEX_PATH = DFRL:GetInfoOrCons("tex") .. "actionbars\\"
     local defaults = {
         bottom = 55,
@@ -319,19 +316,6 @@ DFRL:NewMod("Bars", 1, function()
         macro:SetTextColor(1, 1, 1)
     end
 
-    -- Visual reference: Turtle Dragonflight by TheLinuxITGuy, with Shagu's
-    -- cooldown-number styling. This implementation reads only our seven native
-    -- action slots; it does not import their code or hook cooldowns globally.
-    -- https://github.com/DustinChecketts/Turtle-Dragonflight/tree/b2c62e9095e1c859bff0209db09f4ff5b9884f5a
-    local function FormatCooldown(remaining)
-        if remaining < COOLDOWN_ZERO then return "0" end
-        for _, unit in ipairs(COOLDOWN_UNITS) do
-            if remaining >= unit[1] or unit[1] == 1 then
-                return math.ceil(remaining / unit[1]) .. DFRL.locale.Text(unit[2])
-            end
-        end
-    end
-
     local function UpdateCooldownNumber(button, now)
         local overlay = button.DFRL_cooldownNumber
         local slot = ActionButton_GetPagedID(button)
@@ -359,40 +343,16 @@ DFRL:NewMod("Bars", 1, function()
             return
         end
 
-        T.SetTextIfChanged(overlay.text, FormatCooldown(remaining))
-        local red, green, blue = 1, 1, 1
-        if remaining < 1 then
-            green, blue = 85 / 255, 85 / 255
-        elseif math.ceil(remaining) < 5 then
-            blue = 85 / 255
-        end
-        local currentRed, currentGreen, currentBlue, currentAlpha = overlay.text:GetTextColor()
-        if
-            not T.NearlyEqual(currentRed, red)
-            or not T.NearlyEqual(currentGreen, green)
-            or not T.NearlyEqual(currentBlue, blue)
-            or (currentAlpha and not T.NearlyEqual(currentAlpha, 1))
-        then
-            overlay.text:SetTextColor(red, green, blue)
-        end
-        if not overlay:IsShown() then overlay:Show() end
-        return remaining
+        return cooldowns.Paint(overlay, remaining)
     end
 
     local function CreateCooldownNumbers(bar)
         for _, button in ipairs(DFRL.actionButtons) do
             local cooldown = _G[button:GetName() .. "Cooldown"]
-            local overlay = CreateFrame("Frame", nil, button)
-            overlay:SetAllPoints(button)
-            overlay:SetFrameLevel(math.max(button:GetFrameLevel(), cooldown and cooldown:GetFrameLevel() or 0) + 1)
-            overlay:EnableMouse(false)
-            overlay.text = overlay:CreateFontString(nil, "OVERLAY")
-            overlay.text:SetPoint("CENTER", overlay, "CENTER", 0, 0)
-            T.SetFont(overlay.text, math.min(14, button:GetHeight() * 0.64), "OUTLINE")
-            overlay.text:SetShadowColor(0, 0, 0, 1)
-            overlay.text:SetShadowOffset(1, -1)
-            overlay:Hide()
-            button.DFRL_cooldownNumber = overlay
+            button.DFRL_cooldownNumber = cooldowns.Create(
+                button,
+                math.max(button:GetFrameLevel(), cooldown and cooldown:GetFrameLevel() or 0) + 1
+            )
         end
 
         local active, finishing = true, false
@@ -413,7 +373,7 @@ DFRL:NewMod("Bars", 1, function()
             finishing = false
             for _, button in ipairs(DFRL.actionButtons) do
                 local remaining = UpdateCooldownNumber(button, now)
-                if remaining and remaining <= COOLDOWN_FINAL_WINDOW then finishing = true end
+                if remaining and remaining <= cooldowns.finalWindow then finishing = true end
             end
         end
 
@@ -440,7 +400,7 @@ DFRL:NewMod("Bars", 1, function()
             elapsed = elapsed + arg1
             -- Sample each rendered frame near expiration so a 100-ms periodic
             -- refresh does not skip the positive final-100-ms zero window.
-            if not finishing and elapsed < COOLDOWN_INTERVAL then return end
+            if not finishing and elapsed < cooldowns.interval then return end
             elapsed = 0
             RefreshNumbers()
         end)
