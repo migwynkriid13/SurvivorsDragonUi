@@ -72,6 +72,41 @@ function DFRL.tools.RegisterTooltipIcon(button, icon, side)
     end)
 end
 
+local function PositiveScale(value) return type(value) == "number" and value - value == 0 and value > 0 end
+
+function DFRL.tools.PlaceHoverAtCursor(frame)
+    if type(_G.GetCursorPosition) ~= "function" then return false end
+    local ok, cursorX, cursorY = pcall(_G.GetCursorPosition)
+    local scale, uiScale = frame:GetEffectiveScale(), UIParent:GetEffectiveScale()
+    if
+        not ok
+        or type(cursorX) ~= "number"
+        or cursorX - cursorX ~= 0
+        or type(cursorY) ~= "number"
+        or cursorY - cursorY ~= 0
+        or not PositiveScale(scale)
+        or not PositiveScale(uiScale)
+    then
+        return false
+    end
+    -- Cursor pixels and the relative frame's origin must use this card's scale.
+    local x = (cursorX - (UIParent:GetLeft() or 0) * uiScale) / scale + 12
+    local y = (cursorY - (UIParent:GetBottom() or 0) * uiScale) / scale + 12
+    local point, relative, relativePoint, previousX, previousY = frame:GetPoint(1)
+    if
+        frame:GetNumPoints() ~= 1
+        or point ~= "BOTTOMLEFT"
+        or relative ~= UIParent
+        or relativePoint ~= "BOTTOMLEFT"
+        or not T.NearlyEqual(previousX, x)
+        or not T.NearlyEqual(previousY, y)
+    then
+        frame:ClearAllPoints()
+        frame:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", x, y)
+    end
+    return true
+end
+
 DFRL:NewMod("Tooltips", 2, function()
     local tooltip, bar = GameTooltip, GameTooltipStatusBar
     if not tooltip then return end
@@ -117,11 +152,12 @@ DFRL:NewMod("Tooltips", 2, function()
         local button = IconOwner(DFRL.actionButtons)
             or IconOwner(DFRL.characterItemButtons)
             or IconOwner(registeredIcons)
+        if button and not button:IsVisible() then
+            tooltip:Hide()
+            return
+        end
+        if DFRL.display.Get("tooltipAtCursor") and T.PlaceHoverAtCursor(tooltip) then return end
         if button then
-            if not button:IsVisible() then
-                tooltip:Hide()
-                return
-            end
             anchor, target, targetPoint, offsetY = "BOTTOM", iconAnchors[button] or button, "TOP", 12
             if iconSides[button] == "below" then
                 anchor, targetPoint, offsetY = "TOP", "BOTTOM", -12
@@ -153,6 +189,9 @@ DFRL:NewMod("Tooltips", 2, function()
     -- Visibility previews must clear the current hover, without revealing a
     -- retired subject when the user unhides the group later.
     HookScript(root, "OnHide", function() tooltip:Hide() end)
+    DFRL.display.Listen(function()
+        if tooltip:IsShown() then PlaceTooltip() end
+    end)
     if tooltip.SetClampedToScreen then tooltip:SetClampedToScreen(true) end
 
     -- SetOwner runs before native content builders. Preserve its owner and

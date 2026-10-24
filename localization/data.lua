@@ -2,6 +2,8 @@
 DFRL.locale.data = {
     en = {
         ui = {
+            ["Tooltip at cursor"] = "Tooltip at cursor",
+            ["Follow the mouse cursor instead of the saved or icon position."] = "Follow the mouse cursor instead of the saved or icon position.",
             ["Next summon"] = "Next summon",
             ["Cooldown"] = "Cooldown",
             ["Ready"] = "Ready",
@@ -521,6 +523,8 @@ DFRL.locale.data = {
     },
     pl = {
         ui = {
+            ["Tooltip at cursor"] = "Podpowiedź przy kursorze",
+            ["Follow the mouse cursor instead of the saved or icon position."] = "Podążaj za kursorem zamiast używać zapisanej pozycji lub ikony.",
             ["Next summon"] = "Następne przywołanie",
             ["Cooldown"] = "Czas odnowienia",
             ["Ready"] = "Gotowe",
@@ -1064,6 +1068,8 @@ DFRL.locale.data = {
     },
     cs = {
         ui = {
+            ["Tooltip at cursor"] = "Popisek u kurzoru",
+            ["Follow the mouse cursor instead of the saved or icon position."] = "Sledovat kurzor místo uložené pozice nebo pozice ikony.",
             ["Next summon"] = "Další vyvolání",
             ["Cooldown"] = "Doba obnovy",
             ["Ready"] = "Připraveno",
@@ -2058,6 +2064,8 @@ DFRL.locale.data = {
     },
     de = {
         ui = {
+            ["Tooltip at cursor"] = "Tooltip am Mauszeiger",
+            ["Follow the mouse cursor instead of the saved or icon position."] = "Dem Mauszeiger statt der gespeicherten Position oder dem Symbol folgen.",
             ["Next summon"] = "Nächste Beschwörung",
             ["Cooldown"] = "Abklingzeit",
             ["Ready"] = "Bereit",
@@ -2607,6 +2615,8 @@ DFRL.locale.data = {
     },
     pt = {
         ui = {
+            ["Tooltip at cursor"] = "Dica no cursor",
+            ["Follow the mouse cursor instead of the saved or icon position."] = "Siga o cursor em vez da posição salva ou do ícone.",
             ["Next summon"] = "Próxima invocação",
             ["Cooldown"] = "Tempo de recarga",
             ["Ready"] = "Pronto",
@@ -3141,6 +3151,8 @@ DFRL.locale.data = {
     },
     es = {
         ui = {
+            ["Tooltip at cursor"] = "Descripción en el cursor",
+            ["Follow the mouse cursor instead of the saved or icon position."] = "Sigue al cursor en lugar de la posición guardada o del icono.",
             ["Next summon"] = "Próxima invocación",
             ["Cooldown"] = "Tiempo de reutilización",
             ["Ready"] = "Listo",
@@ -3678,6 +3690,8 @@ DFRL.locale.data = {
     },
     fr = {
         ui = {
+            ["Tooltip at cursor"] = "Infobulle au curseur",
+            ["Follow the mouse cursor instead of the saved or icon position."] = "Suivre le curseur au lieu de la position enregistrée ou de l’icône.",
             ["Next summon"] = "Prochaine invocation",
             ["Cooldown"] = "Temps de recharge",
             ["Ready"] = "Prêt",
@@ -4242,6 +4256,8 @@ DFRL.locale.data = {
     },
     ro = {
         ui = {
+            ["Tooltip at cursor"] = "Indiciu la cursor",
+            ["Follow the mouse cursor instead of the saved or icon position."] = "Urmează cursorul în locul poziției salvate sau al pictogramei.",
             ["Next summon"] = "Următoarea invocare",
             ["Cooldown"] = "Timp de reutilizare",
             ["Ready"] = "Gata",
@@ -4776,6 +4792,8 @@ DFRL.locale.data = {
     },
     tr = {
         ui = {
+            ["Tooltip at cursor"] = "İmleçte ipucu",
+            ["Follow the mouse cursor instead of the saved or icon position."] = "Kayıtlı konum veya simge yerine fare imlecini izle.",
             ["Next summon"] = "Sonraki çağırma",
             ["Cooldown"] = "Bekleme süresi",
             ["Ready"] = "Hazır",
@@ -5307,6 +5325,8 @@ DFRL.locale.data = {
     },
     ru = {
         ui = {
+            ["Tooltip at cursor"] = "Подсказка у курсора",
+            ["Follow the mouse cursor instead of the saved or icon position."] = "Следовать за курсором вместо сохранённой позиции или значка.",
             ["Next summon"] = "Следующий призыв",
             ["Cooldown"] = "Время восстановления",
             ["Ready"] = "Готово",
@@ -5928,6 +5948,8 @@ DFRL.locale.data = {
     },
     uk = {
         ui = {
+            ["Tooltip at cursor"] = "Підказка біля курсора",
+            ["Follow the mouse cursor instead of the saved or icon position."] = "Стежити за курсором замість збереженої позиції чи значка.",
             ["Next summon"] = "Наступний виклик",
             ["Cooldown"] = "Час відновлення",
             ["Ready"] = "Готово",
@@ -6525,6 +6547,8 @@ DFRL.locale.data = {
     },
     zh = {
         ui = {
+            ["Tooltip at cursor"] = "提示跟随鼠标",
+            ["Follow the mouse cursor instead of the saved or icon position."] = "跟随鼠标，而非使用已保存的位置或图标位置。",
             ["Next summon"] = "下次召唤",
             ["Cooldown"] = "冷却",
             ["Ready"] = "就绪",
@@ -7047,6 +7071,8 @@ DFRL.locale.data = {
     },
     ja = {
         ui = {
+            ["Tooltip at cursor"] = "カーソルにツールチップ",
+            ["Follow the mouse cursor instead of the saved or icon position."] = "保存位置やアイコンの位置ではなく、マウスカーソルに追従します。",
             ["Next summon"] = "次の召喚",
             ["Cooldown"] = "クールダウン",
             ["Ready"] = "使用可能",
@@ -7602,6 +7628,8 @@ DFRL.locale.data = {
     },
     ko = {
         ui = {
+            ["Tooltip at cursor"] = "커서에 툴팁 표시",
+            ["Follow the mouse cursor instead of the saved or icon position."] = "저장된 위치나 아이콘 위치 대신 마우스 커서를 따라갑니다.",
             ["Next summon"] = "다음 소환",
             ["Cooldown"] = "재사용 대기시간",
             ["Ready"] = "준비 완료",

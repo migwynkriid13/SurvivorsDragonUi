@@ -25,8 +25,9 @@ Move, resize, hide, Confirm, Cancel, profiles and both resets keep their existin
 ownership. New native auras do not need a separate layout path.
 
 Timer buttons have no cast, cancel-aura or other click action. Their hover uses
-shared `GameTooltip` and `RegisterTooltipIcon`, so it follows below the icon and the
-shared Tooltip scale/hiding, screen clamping and edit suppression. Hiding a
+shared `GameTooltip` and `RegisterTooltipIcon`. By default it follows below the
+icon; **Tooltip at cursor** uses the shared cursor placement instead. Both modes
+retain shared Tooltip scale/hiding, screen clamping and edit suppression. Hiding a
 timer or its group clears its hover. Native aura content, stacks, updates,
 input handlers and tooltips remain native.
 

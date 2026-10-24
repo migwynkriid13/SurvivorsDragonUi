@@ -819,6 +819,17 @@ DFRL:NewMod("RunTimers", 5, function()
                 },
             },
             {
+                key = "tooltip",
+                label = "Tooltip",
+                options = {
+                    {
+                        "tooltipAtCursor",
+                        "Tooltip at cursor",
+                        "Follow the mouse cursor instead of the saved or icon position.",
+                    },
+                },
+            },
+            {
                 key = "tally",
                 label = "Kills, Gold & Caches",
                 columns = 3,
