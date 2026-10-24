@@ -40,11 +40,7 @@ DFRL:NewMod("DemonCooldown", 3, function()
         local packet = _G[stream.name]
         local stamp = stream.stamp and _G[stream.stamp]
         if type(packet) ~= "table" or (stream.stamp and not Number(stamp)) then return end
-        if
-            packet == stream.blocked
-            and stamp == stream.blockedStamp
-            and stream.received == stream.blockedReceived
-        then
+        if packet == stream.blocked and stamp == stream.blockedStamp and stream.received == stream.blockedReceived then
             return
         end
         return packet, stamp
@@ -77,7 +73,9 @@ DFRL:NewMod("DemonCooldown", 3, function()
                 if selectedKind and selectedKind ~= pet.kind then return false end
                 selectedKind = pet.kind
                 if pet.id == summonId and pet.kind == kind then currentPresent = true end
-                if not birth or started > birth then newest, birth = pet, started end
+                if not birth or started > birth then
+                    newest, birth = pet, started
+                end
             end
         end
         if birthFloor and birth and birth < birthFloor then return false end

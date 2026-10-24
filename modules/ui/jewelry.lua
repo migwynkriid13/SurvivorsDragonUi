@@ -655,7 +655,9 @@ DFRL:NewMod("Jewelry", 4, function()
             if shown and shown <= cooldowns.finalWindow then finishing = true end
         end
         local texture, remaining
-        if demonSlot.active and DFRL.demonCooldown then texture, remaining = DFRL.demonCooldown.Read() end
+        if demonSlot.active and DFRL.demonCooldown then
+            texture, remaining = DFRL.demonCooldown.Read()
+        end
         local shown = cooldowns.Paint(demonSlot.numbers, texture == demonSlot.texture and remaining or nil)
         if shown and shown <= cooldowns.finalWindow then finishing = true end
     end
