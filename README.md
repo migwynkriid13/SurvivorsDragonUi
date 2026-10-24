@@ -36,7 +36,7 @@ To use the game's damage numbers, choose **Game settings** under **Combat text**
 
 ## Features
 
-- Player and target frames, a seven-button action bar, equipped jewelry, XP, kills, gold and cache cost.
+- Player and target frames, a seven-button action bar, equipped jewelry, XP, kills, gold and cache cost. On game 0.115.0 or newer, Buffs also shows talent and jewelry timers; hover an icon for its details.
 - A run timer with boss markers, movable event banners and boss health bars. Move, resize or hide **Banners** through `/sdui` → **Layout**. Enable **Guardians in boss bar** in `/sdui` → **HUD** to include fighting guardians; it defaults off. **Revive** shows progress for reviving a friend or being revived and defaults on. On game 0.115.0 or newer, it hides the original revive bar while visible. Move, resize or hide it through **Revive** in **Layout**.
 - A guardian tracker with health bars during combat. Plus shows only living guardians; minus shows all lairs and respawn timers. Move, resize or hide it through `/sdui` → **Layout**.
 - Pet frames for up to eight active summons, with native names, icons and duration. Extra pets appear as a count. Move, resize or hide the whole **Pet frames** group through `/sdui` → **Layout**.
