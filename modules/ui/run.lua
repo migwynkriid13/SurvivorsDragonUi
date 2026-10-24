@@ -2561,7 +2561,7 @@ DFRL:NewMod("RunTimers", 5, function()
         icon:SetScript("OnLeave", function()
             if GameTooltip and GameTooltip:IsOwned(icon) then GameTooltip:Hide() end
         end)
-        T.RegisterTooltipIcon(icon)
+        T.RegisterTooltipIcon(icon, nil, "below")
         row.debuffs[index] = icon
         return icon
     end
