@@ -6,84 +6,10 @@
 DFRL:NewMod("Revive", 4, function()
     if type(AZS_GetRevive) ~= "function" or type(AZS_GetPhase) ~= "function" then return end
     local path = DFRL:GetInfoOrCons("tex") .. "timer\\"
-    local INTERVAL, MIN_WIDTH = 0.1, 356
+    local INTERVAL, MIN_WIDTH, SMOOTH_TIME, FADE_TIME = 0.1, 356, 0.14, 0.18
+    local CROSS_COUNT, CROSS_PERIOD = 6, 0.7
     local native = T.NewHudOwner("revive")
     local phases = { playing = true, choosing = true, paused = true, dead = true, victory = true }
-    local root = CreateFrame("Frame", "SurvivorsDragonUiRevive", UIParent)
-    root:SetWidth(MIN_WIDTH)
-    root:SetHeight(56)
-    root:SetFrameStrata("HIGH")
-    root:EnableMouse(false)
-    root:Hide()
-    local pill = CreateFrame("Frame", nil, root)
-    pill:SetPoint("BOTTOMLEFT", root, "BOTTOMLEFT", 4, 0)
-    pill:SetPoint("BOTTOMRIGHT", root, "BOTTOMRIGHT", -52, 0)
-    pill:SetHeight(31)
-    pill:EnableMouse(false)
-
-    local function Texture(parent, name, layer, width, height, right, bottom)
-        local texture = parent:CreateTexture(nil, layer)
-        texture:SetTexture(path .. name .. ".tga")
-        texture:SetWidth(width)
-        texture:SetHeight(height)
-        texture:SetTexCoord(0, right, 0, bottom)
-        return texture
-    end
-    local backgroundLeft = Texture(pill, "BackgroundLeft", "BACKGROUND", 29, 18, 29 / 32, 18 / 32)
-    backgroundLeft:SetPoint("LEFT", pill, "LEFT", 6, 0)
-    local backgroundRight = Texture(pill, "BackgroundRight", "BACKGROUND", 29, 18, 29 / 32, 18 / 32)
-    backgroundRight:SetPoint("RIGHT", pill, "RIGHT", -6, 0)
-    local background = Texture(pill, "BackgroundCenter", "BACKGROUND", 230, 18, 1, 18 / 32)
-    background:SetPoint("LEFT", backgroundLeft, "RIGHT", 0, 0)
-    background:SetPoint("RIGHT", backgroundRight, "LEFT", 0, 0)
-    local bar = CreateFrame("StatusBar", nil, pill)
-    bar:SetPoint("LEFT", pill, "LEFT", 8, 0)
-    bar:SetPoint("RIGHT", pill, "RIGHT", -8, 0)
-    bar:SetHeight(15)
-    bar:SetMinMaxValues(0, 1)
-    bar:SetStatusBarTexture(path .. "FillWhite.tga")
-    bar:SetStatusBarColor(0.35, 0.76, 0.44, 1)
-    bar:SetValue(0)
-    bar:EnableMouse(false)
-    local overlay = CreateFrame("Frame", nil, pill)
-    overlay:SetAllPoints(pill)
-    overlay:SetFrameLevel(bar:GetFrameLevel() + 1)
-    overlay:EnableMouse(false)
-    local left = Texture(overlay, "BorderLeft", "OVERLAY", 35, 31, 35 / 64, 31 / 32)
-    left:SetPoint("LEFT", pill, "LEFT", 0, 0)
-    local right = Texture(overlay, "BorderRight", "OVERLAY", 35, 31, 35 / 64, 31 / 32)
-    right:SetPoint("RIGHT", pill, "RIGHT", 0, 0)
-    local center = Texture(overlay, "BorderCenter", "OVERLAY", 230, 31, 1, 31 / 32)
-    center:SetPoint("LEFT", left, "RIGHT", 0, 0)
-    center:SetPoint("RIGHT", right, "LEFT", 0, 0)
-    local spark = Texture(overlay, "Spark", "OVERLAY", 8, 32, 1, 1)
-    spark:SetBlendMode("ADD")
-    spark:Hide()
-
-    local function Label(size)
-        local label = overlay:CreateFontString(nil, "OVERLAY")
-        T.SetFont(label, size, "OUTLINE")
-        label:SetJustifyH("CENTER")
-        label:SetJustifyV("MIDDLE")
-        label:SetTextColor(1, 1, 1)
-        label:SetShadowColor(0, 0, 0, 1)
-        label:SetShadowOffset(1, -1)
-        return label
-    end
-    local caption = Label(14)
-    caption:SetPoint("BOTTOM", pill, "TOP", 0, 3)
-    caption:SetHeight(22)
-    local percent = Label(12)
-    percent:SetPoint("LEFT", pill, "RIGHT", 8, 0)
-    percent:SetWidth(40)
-    percent:SetHeight(22)
-    percent:SetTextColor(0.91, 0.81, 0.53)
-    local measure = Label(14)
-    measure:Hide()
-    local inWorld, age, received = true, 0, 0
-    local blockedPacket, blockedStamp, blockedReceived
-    local lastPacket, lastStamp, lastReceived, paintedProgress
-    local dirty, shown = true, false
 
     local function Number(value) return type(value) == "number" and value - value == 0 end
     local function Native(getter)
@@ -96,20 +22,205 @@ DFRL:NewMod("Revive", 4, function()
         if Number(value) then return tostring(value) end
         return ""
     end
-    local function Clear()
-        native.Release()
-        if shown then
+    local function Texture(parent, name, layer, width, height, right, bottom)
+        local texture = parent:CreateTexture(nil, layer)
+        texture:SetTexture(path .. name .. ".tga")
+        texture:SetWidth(width)
+        texture:SetHeight(height)
+        texture:SetTexCoord(0, right, 0, bottom)
+        return texture
+    end
+    local function NewView(parent, name)
+        local view = {}
+        local root = CreateFrame("Frame", name, parent)
+        view.frame = root
+        root:SetWidth(MIN_WIDTH)
+        root:SetHeight(56)
+        root:SetFrameStrata("HIGH")
+        root:EnableMouse(false)
+        root:Hide()
+        local pill = CreateFrame("Frame", nil, root)
+        pill:SetPoint("BOTTOMLEFT", root, "BOTTOMLEFT", 4, 0)
+        pill:SetPoint("BOTTOMRIGHT", root, "BOTTOMRIGHT", -52, 0)
+        pill:SetHeight(31)
+        pill:EnableMouse(false)
+        local backgroundLeft = Texture(pill, "BackgroundLeft", "BACKGROUND", 29, 18, 29 / 32, 18 / 32)
+        backgroundLeft:SetPoint("LEFT", pill, "LEFT", 6, 0)
+        local backgroundRight = Texture(pill, "BackgroundRight", "BACKGROUND", 29, 18, 29 / 32, 18 / 32)
+        backgroundRight:SetPoint("RIGHT", pill, "RIGHT", -6, 0)
+        local background = Texture(pill, "BackgroundCenter", "BACKGROUND", 230, 18, 1, 18 / 32)
+        background:SetPoint("LEFT", backgroundLeft, "RIGHT", 0, 0)
+        background:SetPoint("RIGHT", backgroundRight, "LEFT", 0, 0)
+        local bar = CreateFrame("StatusBar", nil, pill)
+        bar:SetPoint("LEFT", pill, "LEFT", 8, 0)
+        bar:SetPoint("RIGHT", pill, "RIGHT", -8, 0)
+        bar:SetHeight(15)
+        bar:SetMinMaxValues(0, 1)
+        bar:SetStatusBarTexture(path .. "FillWhite.tga")
+        bar:SetStatusBarColor(0.35, 0.76, 0.44, 1)
+        bar:SetValue(0)
+        bar:EnableMouse(false)
+        local overlay = CreateFrame("Frame", nil, pill)
+        overlay:SetAllPoints(pill)
+        overlay:SetFrameLevel(bar:GetFrameLevel() + 1)
+        overlay:EnableMouse(false)
+        local left = Texture(overlay, "BorderLeft", "OVERLAY", 35, 31, 35 / 64, 31 / 32)
+        left:SetPoint("LEFT", pill, "LEFT", 0, 0)
+        local right = Texture(overlay, "BorderRight", "OVERLAY", 35, 31, 35 / 64, 31 / 32)
+        right:SetPoint("RIGHT", pill, "RIGHT", 0, 0)
+        local center = Texture(overlay, "BorderCenter", "OVERLAY", 230, 31, 1, 31 / 32)
+        center:SetPoint("LEFT", left, "RIGHT", 0, 0)
+        center:SetPoint("RIGHT", right, "LEFT", 0, 0)
+        local spark = Texture(overlay, "Spark", "OVERLAY", 8, 32, 1, 1)
+        spark:SetBlendMode("ADD")
+        spark:Hide()
+        local crosses = {}
+        for index = 1, CROSS_COUNT do
+            local cross = {}
+            for part = 1, 2 do
+                local texture = overlay:CreateTexture(nil, "ARTWORK")
+                texture:SetTexture("Interface\\Buttons\\WHITE8X8")
+                texture:SetWidth(part == 1 and 6 or 2)
+                texture:SetHeight(part == 1 and 2 or 6)
+                texture:SetBlendMode("ADD")
+                texture:Hide()
+                cross[part] = texture
+            end
+            crosses[index] = cross
+        end
+        local function Label(size)
+            local label = overlay:CreateFontString(nil, "OVERLAY")
+            T.SetFont(label, size, "OUTLINE")
+            label:SetJustifyH("CENTER")
+            label:SetJustifyV("MIDDLE")
+            label:SetTextColor(1, 1, 1)
+            label:SetShadowColor(0, 0, 0, 1)
+            label:SetShadowOffset(1, -1)
+            return label
+        end
+        local caption = Label(14)
+        caption:SetPoint("BOTTOM", pill, "TOP", 0, 3)
+        caption:SetHeight(22)
+        local percent = Label(12)
+        percent:SetPoint("LEFT", pill, "RIGHT", 8, 0)
+        percent:SetWidth(40)
+        percent:SetHeight(22)
+        percent:SetTextColor(0.91, 0.81, 0.53)
+        local measure = Label(14)
+        measure:Hide()
+        local value, target, origin, identity, displayedPercent
+        local transition, fade, effectAge = 0, 0, 0
+        local dirty = true
+        local function Paint()
+            bar:SetValue(value)
+            local rounded = value == 1 and 100 or math.min(99, math.floor(value * 100 + 0.5))
+            if displayedPercent ~= nil then
+                rounded = math.max(displayedPercent - 1, math.min(displayedPercent + 1, rounded))
+            end
+            displayedPercent = rounded
+            T.SetTextIfChanged(percent, tostring(rounded) .. "%")
+            spark:ClearAllPoints()
+            spark:SetPoint("CENTER", pill, "LEFT", 8 + (root:GetWidth() - 72) * value, 0)
+            if value > 0 and value < 1 then
+                spark:Show()
+            else
+                spark:Hide()
+            end
+            dirty = false
+        end
+        function view.Clear()
+            if not view.active and value == nil then return end
             root:Hide()
-            spark:Hide()
+            root:SetAlpha(1)
             bar:SetValue(0)
+            spark:Hide()
+            for _, cross in ipairs(crosses) do
+                for _, texture in ipairs(cross) do
+                    texture:Hide()
+                end
+            end
             T.SetTextIfChanged(caption, "")
             T.SetTextIfChanged(percent, "")
+            value, target, origin, identity, displayedPercent = nil, nil, nil, nil, nil
+            transition, fade, effectAge, dirty = 0, 0, 0, true
+            view.active = false
         end
-        shown = false
-        paintedProgress, dirty = nil, true
+        function view.Set(text, progress, subject)
+            local fresh = identity ~= subject or value == nil
+            if T.SetTextIfChanged(caption, text) or dirty then
+                measure:SetText(text)
+                local width = math.max(MIN_WIDTH, math.ceil(measure:GetStringWidth() or 0) + 72)
+                if not T.NearlyEqual(width, root:GetWidth()) then
+                    root:SetWidth(width)
+                    if view.onResize then view.onResize() end
+                    dirty = true
+                end
+                caption:SetWidth(width - 56)
+            end
+            if fresh then
+                value, target, origin, identity = progress, progress, progress, subject
+                displayedPercent, transition, fade, effectAge, dirty = nil, 0, 0, 0, true
+                root:SetAlpha(0)
+            elseif target ~= progress then
+                origin, target, transition = value, progress, 0
+            end
+            view.active = true
+            if fresh then Paint() end
+            root:Show()
+        end
+        function view.Animate(elapsed)
+            if not view.active or not root:IsShown() then return end
+            fade = math.min(1, fade + elapsed / FADE_TIME)
+            root:SetAlpha(1 - (1 - fade) * (1 - fade))
+            if value ~= target then
+                transition = math.min(SMOOTH_TIME, transition + elapsed)
+                local nextValue = transition == SMOOTH_TIME and target
+                    or origin + (target - origin) * transition / SMOOTH_TIME
+                local step = math.max(-0.01, math.min(0.01, nextValue - value))
+                value = math.max(0, math.min(1, value + step))
+                dirty = true
+            end
+            if dirty then Paint() end
+            effectAge = effectAge + elapsed
+            local width = root:GetWidth() - 72
+            local filledRight = 8 + width * value
+            for index, cross in ipairs(crosses) do
+                local phase = math.mod(effectAge / CROSS_PERIOD + index / CROSS_COUNT, 1)
+                local x = 8 + width * (index - 0.5) / CROSS_COUNT
+                local y = math.mod(index, 2) == 0 and 2 or -2
+                local alpha = 0.45 + math.sin(phase * math.pi * 2) * 0.2
+                for part, texture in ipairs(cross) do
+                    local partWidth = part == 1 and 6 or 2
+                    local left = x - partWidth / 2
+                    local visibleWidth = math.min(partWidth, filledRight - left)
+                    if visibleWidth > 0 then
+                        texture:SetWidth(visibleWidth)
+                        texture:ClearAllPoints()
+                        texture:SetPoint("LEFT", pill, "LEFT", left, y)
+                        texture:SetVertexColor(0.58, 1, 0.74, alpha)
+                        texture:Show()
+                    else
+                        texture:Hide()
+                    end
+                end
+            end
+        end
+        return view
+    end
+
+    local view = NewView(UIParent, "SurvivorsDragonUiRevive")
+    local root = view.frame
+    local inWorld, age, received = true, 0, 0
+    local blockedPacket, blockedStamp, blockedReceived
+    local lastPacket, lastStamp, lastReceived
+    local dirty = true
+    local function Clear()
+        native.Release()
+        view.Clear()
+        dirty = true
     end
     local function SyncNative()
-        if inWorld and shown and root:IsShown() then
+        if inWorld and view.active and root:IsShown() then
             native.Acquire()
         else
             native.Release()
@@ -120,37 +231,9 @@ DFRL:NewMod("Revive", 4, function()
         lastPacket, lastStamp, lastReceived = nil, nil, nil
         Clear()
     end
-    local function Paint(text, progress)
-        if T.SetTextIfChanged(caption, text) or dirty then
-            measure:SetText(text)
-            local width = math.max(MIN_WIDTH, math.ceil(measure:GetStringWidth() or 0) + 72)
-            if not T.NearlyEqual(width, root:GetWidth()) then
-                root:SetWidth(width)
-                DFRL.layout.Place("revive", root)
-                paintedProgress = nil
-            end
-            caption:SetWidth(width - 56)
-        end
-        if paintedProgress ~= progress then
-            bar:SetValue(progress)
-            T.SetTextIfChanged(percent, tostring(math.floor(progress * 100 + 0.5)) .. "%")
-            spark:ClearAllPoints()
-            spark:SetPoint("CENTER", pill, "LEFT", 8 + (root:GetWidth() - 72) * progress, 0)
-            if progress > 0 and progress < 1 then
-                spark:Show()
-            else
-                spark:Hide()
-            end
-            paintedProgress = progress
-        end
-        if not shown then root:Show() end
-        shown = true
-        dirty = false
-    end
     local function Refresh()
         if not inWorld then return end
-        -- Phase is read before any retained revive snapshot. Timestamps are
-        -- receipt markers, not an expiry clock or custom event names.
+        -- Phase is read before retained snapshots. Receipt markers do not time a revive.
         if not phases[Native(_G.AZS_GetPhase)] then
             Retire()
             return
@@ -173,42 +256,50 @@ DFRL:NewMod("Revive", 4, function()
             Clear()
             return
         end
-        local text, progress
+        local text, progress, subject
         if state.down == 1 then
             local helper = Name(state.by)
-            text = helper ~= "" and string.format(DFRL.locale.Text("%s is bringing you back"), helper)
+            text = helper ~= "" and string.format(DFRL.locale.Text("%s is reviving you!"), helper)
                 or DFRL.locale.Text("Downed — waiting for help")
-            progress = state.share
+            progress, subject = state.share, "incoming:" .. helper
         elseif state.down == 0 and Name(state.reviving) ~= "" then
-            text = string.format(DFRL.locale.Text("Bringing %s back"), Name(state.reviving))
-            progress = state.rshare
+            local friend = Name(state.reviving)
+            text = string.format(DFRL.locale.Text("Reviving %s!"), friend)
+            progress, subject = state.rshare, "outgoing:" .. friend
         end
         if not text or not Number(progress) then
             Clear()
             return
         end
-        Paint(text, math.max(0, math.min(1, progress)))
-        lastPacket, lastStamp, lastReceived = packet, stamp, received
+        view.Set(text, math.max(0, math.min(1, progress)), subject)
+        lastPacket, lastStamp, lastReceived, dirty = packet, stamp, received, false
         SyncNative()
     end
     local controller = CreateFrame("Frame")
+    local function Step(elapsed)
+        if age >= INTERVAL then
+            age = 0
+            Refresh()
+        end
+        view.Animate(elapsed)
+    end
     local function Tick()
-        age = age + math.max(0, tonumber(arg1) or 0)
-        if age < INTERVAL then return end
-        age = 0
-        local ok, message = pcall(Refresh)
+        local elapsed = math.max(0, tonumber(arg1) or 0)
+        age = age + elapsed
+        if age < INTERVAL and (not view.active or not root:IsShown()) then return end
+        local ok, message = pcall(Step, elapsed)
         if not ok then
             Clear()
+            controller:SetScript("OnUpdate", nil)
             if geterrorhandler then geterrorhandler()(message) end
         end
     end
     DFRL.layout.Register("revive", root, function()
         root:ClearAllPoints()
         local _, height = T.GetLocalSize(UIParent)
-        -- The received native bar is centered at bottom 38% with height 24.
-        -- Keep the replacement pill centered on the original position.
         root:SetPoint("BOTTOMLEFT", UIParent, "BOTTOM", -(root:GetWidth() - 56) / 2 - 4, (height or 768) * 0.38 - 3.5)
     end, { labelAbove = true, refreshDefault = true, onReset = Clear })
+    view.onResize = function() DFRL.layout.Place("revive", root) end
     root:SetScript("OnShow", SyncNative)
     root:SetScript("OnHide", function() native.Release() end)
     DFRL.locale.Listen(function()
@@ -232,7 +323,6 @@ DFRL:NewMod("Revive", 4, function()
         elseif arg1 == "AZSREVIVE" then
             received, age = received + 1, INTERVAL
         end
-        -- Reading on the next OnUpdate lets the native packet parser finish.
     end)
     if type(_G.ReloadUI) == "function" then
         local reloadUI = _G.ReloadUI
