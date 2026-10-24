@@ -819,6 +819,17 @@ DFRL:NewMod("RunTimers", 5, function()
                 },
             },
             {
+                key = "tooltip",
+                label = "Tooltip",
+                options = {
+                    {
+                        "tooltipAtCursor",
+                        "Tooltip at cursor",
+                        "Follow the mouse cursor instead of the saved or icon position.",
+                    },
+                },
+            },
+            {
                 key = "tally",
                 label = "Kills, Gold & Caches",
                 columns = 3,
@@ -1464,7 +1475,7 @@ DFRL:NewMod("RunTimers", 5, function()
     local counters = {
         { key = "kills", visibility = "showTallyKills", label = "Enemies killed", icon = ATTACK_ICON },
         { key = "gold", visibility = "showTallyGold", label = "Gold", icon = COINS_ICON },
-        { key = "chest", visibility = "showTallyCache", label = "Next cache cost (gold)", icon = CACHE_ICON },
+        { key = "chest", visibility = "showTallyCache", label = "Next cache cost", icon = CACHE_ICON },
     }
     local tallyMeasure = tallyOverlay:CreateFontString(nil, "OVERLAY")
     tallyMeasure:Hide()
@@ -1723,9 +1734,7 @@ DFRL:NewMod("RunTimers", 5, function()
             GameTooltip:Show()
         end)
         field:SetScript("OnLeave", function() GameTooltip:Hide() end)
-        field:SetScript("OnHide", function()
-            if GameTooltip:IsOwned(this) then GameTooltip:Hide() end
-        end)
+        T.RegisterTooltipIcon(field, icon)
 
         if index > 1 then
             local divider = tallyOverlay:CreateTexture(nil, "ARTWORK")
@@ -2286,7 +2295,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 marker:EnableMouse(false)
                 marker:SetScript("OnEnter", function() ShowMarkerTooltip(marker) end)
                 marker:SetScript("OnLeave", function() HideMarkerTooltip(marker) end)
-                marker:SetScript("OnHide", function() HideMarkerTooltip(marker) end)
+                T.RegisterTooltipIcon(marker)
                 marker.glow = {}
                 marker.glowCardinal = CreateFrame("Frame", nil, marker)
                 marker.glowDiagonal = CreateFrame("Frame", nil, marker)
@@ -2563,6 +2572,7 @@ DFRL:NewMod("RunTimers", 5, function()
         icon:SetScript("OnLeave", function()
             if GameTooltip and GameTooltip:IsOwned(icon) then GameTooltip:Hide() end
         end)
+        T.RegisterTooltipIcon(icon, nil, "below")
         row.debuffs[index] = icon
         return icon
     end

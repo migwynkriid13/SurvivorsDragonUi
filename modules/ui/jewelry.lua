@@ -306,6 +306,21 @@ DFRL:NewMod("Jewelry", 4, function()
         end
         return effectPanel
     end
+    local function PlaceEffectTooltip(slot)
+        if DFRL.display.Get("tooltipAtCursor") and T.PlaceHoverAtCursor(effectPanel) then return end
+        local point, relative, relativePoint, x, y = effectPanel:GetPoint(1)
+        if
+            effectPanel:GetNumPoints() ~= 1
+            or point ~= "BOTTOMLEFT"
+            or relative ~= slot.button
+            or relativePoint ~= "TOPLEFT"
+            or x ~= -EFFECT_PADDING
+            or y ~= 12
+        then
+            effectPanel:ClearAllPoints()
+            effectPanel:SetPoint("BOTTOMLEFT", slot.button, "TOPLEFT", -EFFECT_PADDING, 12)
+        end
+    end
     local function HideTooltip(slot)
         if hoveredSlot ~= slot then return end
         hoveredSlot = nil
@@ -330,6 +345,7 @@ DFRL:NewMod("Jewelry", 4, function()
         local panel = GetEffectPanel()
         local scale = panel:GetEffectiveScale()
         if effectSlot == slot and effectValue == text and T.NearlyEqual(effectScale, scale) then
+            PlaceEffectTooltip(slot)
             if not panel:IsShown() then panel:Show() end
             return
         end
@@ -348,8 +364,7 @@ DFRL:NewMod("Jewelry", 4, function()
         -- The 1.12 client uses GetHeight rather than GetStringHeight.
         effectText:GetStringWidth()
         panel:SetHeight(math.max(14, effectText:GetHeight()) + EFFECT_PADDING * 2)
-        panel:ClearAllPoints()
-        panel:SetPoint("BOTTOMLEFT", slot.button, "TOPLEFT", -EFFECT_PADDING, 12)
+        PlaceEffectTooltip(slot)
         effectSlot, effectValue, effectScale = slot, text, scale
         panel:Show()
     end
@@ -713,6 +728,9 @@ DFRL:NewMod("Jewelry", 4, function()
     end)
     controller:SetScript("OnUpdate", function()
         if not inWorld or not DFRL.display.Get("equippedJewelry") then return end
+        if hoveredSlot and effectPanel and effectPanel:IsShown() and DFRL.display.Get("tooltipAtCursor") then
+            PlaceEffectTooltip(hoveredSlot)
+        end
         elapsed = elapsed + arg1
         animationElapsed = animationElapsed + arg1
         if elapsed >= INTERVAL then
@@ -725,6 +743,9 @@ DFRL:NewMod("Jewelry", 4, function()
             if cooldownsActive then PaintCooldowns() end
         end
     end)
-    DFRL.display.Listen(UpdateDisplay)
+    DFRL.display.Listen(function()
+        UpdateDisplay()
+        if hoveredSlot and effectPanel and effectPanel:IsShown() then PlaceEffectTooltip(hoveredSlot) end
+    end)
     UpdateDisplay()
 end)

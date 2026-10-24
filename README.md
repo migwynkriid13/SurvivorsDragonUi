@@ -23,7 +23,8 @@ Action buttons start locked. Under **Action bar**, turn off **Lock action button
 
 XP starts attached beneath the action bar. Turn off **Attach XP to action bar** to move and resize it separately, then click **Confirm** to save.
 
-- Drag a frame to move it. Hold **Shift** while dragging to align its edges or center with nearby frames, screen guides or the finer grid. Gold lines show the alignment. Drag its corners to resize it. Skill and character equipment tooltips appear above the icon you hover over. **Tooltip** controls the position of other native hover cards, and the size and visibility of all of them; click its handle and use **Hide frame** under **Layout** to hide them.
+- Drag a frame to move it. Hold **Shift** while dragging to align its edges or center with nearby frames, screen guides or the finer grid. Gold lines show the alignment. Drag its corners to resize it. Buff and debuff tooltips appear below their icons. Tooltips for skills, equipment, boss skulls and the kills, gold and cache-cost counters appear above their icons. **Tooltip** controls the position of other native hover cards, and the size and visibility of all of them; click its handle and use **Hide frame** under **Layout** to hide them.
+- Under **Tooltip**, enable **Tooltip at cursor** to make hover cards follow your mouse. It starts off; click **Confirm** to save.
 - Use `/sdui lock` for move and resize handles with only the **Confirm** button. Use `/sdui` to return to the full editor.
 - Use **Layout** for positions and sizes, **Profiles** to save and load named setups, **HUD** for display options, **Combat text** for damage numbers, and **Run timer** for its text and font.
 - Click **Confirm** to save, or **Cancel** to undo your changes. Leaving the run or reloading also discards unsaved changes.
@@ -36,8 +37,8 @@ To use the game's damage numbers, choose **Game settings** under **Combat text**
 
 ## Features
 
-- Player and target frames, a seven-button action bar, equipped jewelry, XP, kills, gold and cache cost.
-- A run timer with boss markers, movable event banners and boss health bars. Move, resize or hide **Banners** through `/sdui` → **Layout**. Enable **Guardians in boss bar** in `/sdui` → **HUD** to include fighting guardians; it defaults off. **Revive** can show progress for reviving a friend or being revived. It defaults off; select **Revive** in **Layout**, clear **Hide frame** and Confirm to enable it. Move it there if the game's original bar covers it.
+- Player and target frames, a seven-button action bar, equipped jewelry, XP, kills, gold and cache cost. On game 0.115.0 or newer, Buffs also shows talent and jewelry timers; hover an icon for its details.
+- A run timer with boss markers, movable event banners and boss health bars. Move, resize or hide **Banners** through `/sdui` → **Layout**. Enable **Guardians in boss bar** in `/sdui` → **HUD** to include fighting guardians; it defaults off. **Revive** shows progress for reviving a friend or being revived and defaults on. On game 0.115.0 or newer, it hides the original revive bar while visible. Move, resize or hide it through **Revive** in **Layout**.
 - A guardian tracker with health bars during combat. Plus shows only living guardians; minus shows all lairs and respawn timers. Move, resize or hide it through `/sdui` → **Layout**.
 - Pet frames for up to eight active summons, with native names, icons and duration. Extra pets appear as a count. Move, resize or hide the whole **Pet frames** group through `/sdui` → **Layout**.
 - A movable **Level Up!** button for stored levels. Select it in `/sdui` → **Layout** to move or resize it, then **Confirm** to save.

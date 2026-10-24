@@ -7,6 +7,7 @@ DFRL:NewMod("Revive", 4, function()
     if type(AZS_GetRevive) ~= "function" or type(AZS_GetPhase) ~= "function" then return end
     local path = DFRL:GetInfoOrCons("tex") .. "timer\\"
     local INTERVAL, MIN_WIDTH = 0.1, 356
+    local native = T.NewHudOwner("revive")
     local phases = { playing = true, choosing = true, paused = true, dead = true, victory = true }
     local root = CreateFrame("Frame", "SurvivorsDragonUiRevive", UIParent)
     root:SetWidth(MIN_WIDTH)
@@ -96,6 +97,7 @@ DFRL:NewMod("Revive", 4, function()
         return ""
     end
     local function Clear()
+        native.Release()
         if shown then
             root:Hide()
             spark:Hide()
@@ -105,6 +107,13 @@ DFRL:NewMod("Revive", 4, function()
         end
         shown = false
         paintedProgress, dirty = nil, true
+    end
+    local function SyncNative()
+        if inWorld and shown and root:IsShown() then
+            native.Acquire()
+        else
+            native.Release()
+        end
     end
     local function Retire()
         blockedPacket, blockedStamp, blockedReceived = _G.AZS_REVIVE, _G.AZS_REVIVE_UPDATED, received
@@ -155,7 +164,10 @@ DFRL:NewMod("Revive", 4, function()
             Clear()
             return
         end
-        if not dirty and packet == lastPacket and stamp == lastStamp and received == lastReceived then return end
+        if not dirty and packet == lastPacket and stamp == lastStamp and received == lastReceived then
+            SyncNative()
+            return
+        end
         local state = Native(_G.AZS_GetRevive)
         if type(state) ~= "table" then
             Clear()
@@ -177,21 +189,28 @@ DFRL:NewMod("Revive", 4, function()
         end
         Paint(text, math.max(0, math.min(1, progress)))
         lastPacket, lastStamp, lastReceived = packet, stamp, received
+        SyncNative()
     end
     local controller = CreateFrame("Frame")
     local function Tick()
         age = age + math.max(0, tonumber(arg1) or 0)
         if age < INTERVAL then return end
         age = 0
-        Refresh()
+        local ok, message = pcall(Refresh)
+        if not ok then
+            Clear()
+            if geterrorhandler then geterrorhandler()(message) end
+        end
     end
     DFRL.layout.Register("revive", root, function()
         root:ClearAllPoints()
         local _, height = T.GetLocalSize(UIParent)
         -- The received native bar is centered at bottom 38% with height 24.
-        -- Match its center for comparison; Lua strata cannot suppress Bevy UI.
+        -- Keep the replacement pill centered on the original position.
         root:SetPoint("BOTTOMLEFT", UIParent, "BOTTOM", -(root:GetWidth() - 56) / 2 - 4, (height or 768) * 0.38 - 3.5)
-    end, { labelAbove = true, refreshDefault = true, defaultHidden = true, onReset = Clear })
+    end, { labelAbove = true, refreshDefault = true, onReset = Clear })
+    root:SetScript("OnShow", SyncNative)
+    root:SetScript("OnHide", function() native.Release() end)
     DFRL.locale.Listen(function()
         dirty, age = true, INTERVAL
     end)
