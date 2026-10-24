@@ -3,8 +3,7 @@
 The selected design 01 places a white caption above
 the same rounded WidgetStatusBar bezel as the run timer. The fill is green, a
 spark follows reported progress, and a gold percentage sits to the right. The
-preview uses sample player names and approximate typography; the addon uses the
-resolved DEFAULT font. Both directions share one passive view.
+addon uses the resolved DEFAULT font. Both directions share one passive view.
 
 ## Received state
 
@@ -16,19 +15,39 @@ an expiry deadline.
 
 | Received fields                                   | Display                                 |
 | ------------------------------------------------- | --------------------------------------- |
-| `down == 1`, nonempty `by`, finite `share`        | “NAME is bringing you back” and `share` |
+| `down == 1`, nonempty `by`, finite `share`        | “NAME is reviving you!” and `share`     |
 | `down == 1`, absent/empty `by`, finite `share`    | “Downed — waiting for help” and `share` |
-| `down == 0`, nonempty `reviving`, finite `rshare` | “Bringing NAME back” and `rshare`       |
+| `down == 0`, nonempty `reviving`, finite `rshare` | “Reviving NAME!” and `rshare`           |
 | Empty, idle, unsupported or invalid state         | Hide and clear the custom view          |
 
 Names are supplied display values. Numeric-looking names are converted with
 `tostring`, with no unit-token, GUID, class or party-roster inference. Numeric
 zero is alive in Lua, so both `down` comparisons are explicit. Finite native
-progress is clamped to 0–1 and rounded to a whole percentage for the label.
-There is no countdown, interpolated revive clock, extrapolated progress, revive
-action or gameplay write.
+progress is clamped to 0–1. The fill and spark animate only between received
+values, targeting a 0.14-second transition. Each rendered update advances by at
+most one percentage point, and the rounded label changes by at most one; a low
+frame rate can extend the visual catch-up. The label reaches 100% only
+when the displayed and received values reach one. A fresh direction or supplied
+subject starts at its received value with a 0.18-second fade-in. Six pooled
+healing crosses stay at fixed positions across the pill, using native `WHITE8X8`
+textures. Each rectangle is clipped at the fill edge, so progress uncovers the
+marks without moving them. The pulse period is 0.7 seconds, twice the previous
+speed, with six marks replacing four for a denser pattern. Decorative fades and
+pulses use the full frame elapsed time. The marks remain visible at 100% until
+the native state clears the view. No health values or assets are added.
 
-The controller checks at most every 0.1 seconds. `CHAT_MSG_ADDON` with prefix
+The installed 0.115.0 native Lua defines `AZS_GetRevive()` as a direct return of
+`AZS_REVIVE`. Its documented fields are `down`, `share`, `by`, `reviving` and
+`rshare`; it does not supply a revive duration or start time. `AZSREVIVE` parses
+the received fields and stamps their receipt with `GetTime()`. Presentation
+animation uses frame elapsed time only between confirmed values; it never
+predicts future progress. Without a new sample, the fill settles at its latest
+received target. Idle, invalid or retired state clears immediately instead of
+waiting for an animation to complete. There is no countdown, extrapolated
+progress, revive action or gameplay write.
+
+The controller checks native snapshots at most every 0.1 seconds and animates
+visible artwork each frame. `CHAT_MSG_ADDON` with prefix
 `AZSREVIVE` schedules a deferred refresh after native parsing; it does not read
 the getter inside the event. The getter is fetched again for each changed
 snapshot, and its shared tables are never retained for mutation. Stable
@@ -97,10 +116,9 @@ Recovered target: Azeroth Survivors 0.113.0, EXE SHA-256
   and `ev_d423241cd9b7393c5c32b299490c918937e3f5a58fc829e10ec428f86d6743e4`.
   This is static pass-order evidence, not a runtime overlap capture.
 
-The two name-bearing captions reuse exact native wording from that target's
-fourteen embedded catalogs, changing only `{name}` to a Lua `%s` placeholder.
-The Layout caption and waiting caption have fourteen source TSV/runtime
-translations. Existing reviewed native catalogs, effects and aliases retain
+The user-selected captions are **Reviving %s!** and **%s is reviving you!**.
+Both name-bearing captions, the Layout caption and waiting caption have fourteen
+source TSV/runtime translations. Existing reviewed native catalogs, effects and aliases retain
 their original fingerprint. See [localization notes](LOCALIZATION.md).
 
 The bezel, background, white fill and spark reuse existing Blizzard artwork.
@@ -109,7 +127,10 @@ Exact texture source, crops, alpha and ownership are retained in
 Only the newly used existing `Spark.tga` joins the runtime manifest alongside
 the module. The selected preview and other developer files do not ship.
 
-Local addon checks, syntax checks, formatters, tests and game/addon execution
-were intentionally not run. GitHub Actions provides the permitted static
-checks. Native co-op behavior, visual coverage and physical scale alignment
-remain unverified in game.
+The user approved the appearance through a temporary two-direction sample loop.
+That loop, its sample names and its artificial completion hold are removed from
+the runtime module. Live progress uses only received native co-op snapshots.
+Edited Lua and Markdown receive the repository's pinned formatters; local tests,
+standalone syntax/validation checks and additional game execution were not run.
+GitHub Actions is not awaited or polled. Actual co-op event ordering and native
+completion/cancellation behavior remain unverified in game.
