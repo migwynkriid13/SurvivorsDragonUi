@@ -452,3 +452,13 @@ circles continue to reuse the jewelry rim. Chat artwork is also removed.
 The passive scroll indicator keeps its centered status text, and the gold
 tally keeps its number, hover and affordability effects without a coin image.
 The shared tally fitter reserves icon space only for fields that have an icon.
+
+The native minimap mail indicator is disabled through the shared unused-frame
+helper, including its events and later Show calls. Its bundled texture and
+custom positioning are removed.
+
+The arrowless minimap border still uses
+`media/tex/minimap/map_dragonflight_square2.tga`. Four passive texture sections
+retain the original border while replacing only the top-center arrow region
+with a plain span sampled from the same source. There is no separate
+arrowless image; the source texture, shadow and zone strip remain in use.
