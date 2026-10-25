@@ -11,8 +11,8 @@ inline HANDLE OpenLock(const std::filesystem::path& game) {
         FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
 }
 
-// Byte zero protects local activation. Shared game sessions never block the
-// independent background downloader on byte one.
+// An exclusive startup protects download, verification and activation. Once it
+// becomes a shared game session, further launches skip addon updates until exit.
 struct SessionLock {
     HANDLE file{INVALID_HANDLE_VALUE};
     OVERLAPPED range{};
@@ -43,19 +43,4 @@ struct SessionLock {
     SessionLock& operator=(const SessionLock&) = delete;
 };
 
-struct WorkerLock {
-    HANDLE file{INVALID_HANDLE_VALUE};
-    OVERLAPPED range{};
-    explicit WorkerLock(const std::filesystem::path& game) : file(OpenLock(game)) {
-        range.Offset = 1;
-        if (file != INVALID_HANDLE_VALUE && !LockFileEx(file,
-                LOCKFILE_EXCLUSIVE_LOCK | LOCKFILE_FAIL_IMMEDIATELY, 0, 1, 0, &range)) {
-            CloseHandle(file);
-            file = INVALID_HANDLE_VALUE;
-        }
-    }
-    ~WorkerLock() { if (file != INVALID_HANDLE_VALUE) CloseHandle(file); }
-    WorkerLock(const WorkerLock&) = delete;
-    WorkerLock& operator=(const WorkerLock&) = delete;
-};
 } // namespace sdui::detail

@@ -134,14 +134,11 @@ struct Install {
     ~Install() { std::error_code error; fs::remove_all(game, error); }
 };
 
-// Existing transaction cases model download completion followed by the next
-// startup. Production never invokes this combined test-only convenience path.
+// Exercise the production startup flow with an immediate fixture transport.
 std::string InstallRelease(const fs::path& game, const sdui::Download& transport,
                            const std::function<void()>& beforeActivate = {}) {
-    sdui::ApplyPending(game);
-    const auto result = sdui::StageUpdate(game, transport);
-    sdui::ApplyPending(game, beforeActivate);
-    return result;
+    return sdui::UpdateAtStartup(game, transport, sdui::StartupDownloadBudgetMs,
+                                [] { return std::uint64_t{}; }, beforeActivate);
 }
 
 void InstallAndLatest() {
@@ -287,15 +284,15 @@ void PathsAndHashes() {
     Check(sdui::SafeRelativePath("media/tex/actionbars/Gryphon.tga"), "Rejected runtime path");
 }
 
-void DeferredActivation() {
+void StagingAndRecovery() {
     Install install;
     Release first, second("second", 'b');
     sdui::StageUpdate(install.game, first.Transport());
-    Check(!fs::exists(install.live), "Background first download installed into a running game");
+    Check(!fs::exists(install.live), "Staging published an unactivated addon");
     sdui::ApplyPending(install.game);
     Check(Read(install.live / L"core/core.lua") == "first", "Offline activation failed");
     sdui::StageUpdate(install.game, second.Transport());
-    Check(Read(install.live / L"core/core.lua") == "first", "Background download changed active addon files");
+    Check(Read(install.live / L"core/core.lua") == "first", "Staging changed installed addon files");
     Check(sdui::StageUpdate(install.game, second.Transport()).starts_with("Already downloaded"),
           "Completed pending download not detected");
     Check(second.archiveRequests == 1, "Repeated pending ZIP download");
@@ -303,14 +300,17 @@ void DeferredActivation() {
     Write(pending / L"core/core.lua", "damage");
     Fails([&] { sdui::ApplyPending(install.game); });
     Check(Read(install.live / L"core/core.lua") == "first", "Damaged pending update activated");
-    sdui::StageUpdate(install.game, second.Transport());
-    sdui::ApplyPending(install.game);
-    Check(Read(install.live / L"core/core.lua") == "second", "Completed update not applied at next startup");
+    InstallRelease(install.game, second.Transport());
+    Check(Read(install.live / L"core/core.lua") == "second", "Completed update not activated");
     sdui::StageUpdate(install.game, first.Transport());
+    Write(pending / L".sdui-release.json", "broken receipt");
+    InstallRelease(install.game, first.Transport());
+    Check(Read(install.live / L"core/core.lua") == "first", "Corrupt pending receipt blocked online replacement");
+    sdui::StageUpdate(install.game, second.Transport());
     const auto work = install.work;
     fs::rename(pending, work);
     sdui::ApplyPending(install.game);
-    Check(Read(install.live / L"core/core.lua") == "first", "Completed interrupted staging not recovered");
+    Check(Read(install.live / L"core/core.lua") == "second", "Completed interrupted staging not recovered");
 }
 
 void RefuseDowngrade() {
@@ -337,51 +337,78 @@ void CanonicalFirstInstall() {
         Check(!fs::exists(install.live), "An incomplete addon directory appeared during download");
         return transport(url, limit);
     };
-    Check(sdui::StageUpdate(install.game, observe, true).starts_with("Installed: SurvivorsDragonUi"),
-          "Fresh download did not report its canonical installation");
+    Check(InstallRelease(install.game, observe).find("Activated downloaded addon") != std::string::npos,
+          "Startup did not report the fresh installation");
     Check(sdui::AddonDirectory(install.game) == install.live, "Wrong shared addon directory");
     Check(Read(install.live / L"core/core.lua") == "first", "Fresh download needs another launch to install");
     Check(fs::exists(install.live / L"SurvivorsDragonUi.toc"), "Canonical TOC missing");
     Check(!fs::exists(install.pending), "Fresh installation left a pending addon");
     Check(Read(install.live / L".sdui-release.json").find("build-") != std::string::npos,
           "Fresh installation lost its verified release receipt");
-    sdui::StageUpdate(install.game, second.Transport(), true);
-    Check(Read(install.live / L"core/core.lua") == "first", "First-install permission replaced an existing addon");
-    Check(fs::exists(install.pending / L"SurvivorsDragonUi.toc"), "Existing-addon update was not staged externally");
+    const auto secondTransport = second.Transport();
+    InstallRelease(install.game, [&](const auto& url, auto limit) {
+        Check(Read(install.live / L"core/core.lua") == "first", "Download changed the installed addon prematurely");
+        return secondTransport(url, limit);
+    });
+    Check(Read(install.live / L"core/core.lua") == "second", "Startup returned before the update was installed");
+    Check(!fs::exists(install.pending), "Startup left the new version waiting for another launch");
     for (const auto& entry : fs::directory_iterator(install.addons)) {
         const auto name = entry.path().filename();
         Check(name == L"SurvivorsDragonUi" || name == L"SurvivorsDragonUiX",
               "Updater exposed a temporary folder in AddOns");
     }
-    sdui::ApplyPending(install.game);
-    Check(Read(install.live / L"core/core.lua") == "second", "Externally staged update did not activate");
     Check(Read(install.backup / L"core/core.lua") == "first", "Rollback copy is not stored outside AddOns");
     Check(Read(install.addons / L"SurvivorsDragonUiX" / L"keep.lua") == "renamed user copy",
           "Renamed user addon was modified");
 }
 
-void FreshInstallRaceAndFailure() {
+void StartupDownloadDeadline() {
     Install install;
-    Release first;
+    Release first, second("second", 'b', true, "1.1.0-survivors");
     const sdui::Download offline = [](const auto&, auto) -> Bytes { throw std::runtime_error("offline"); };
-    Fails([&] { sdui::StageUpdate(install.game, offline, true); });
+    Fails([&] { InstallRelease(install.game, offline); });
     Check(!fs::exists(install.live), "Offline fresh install created a fake addon directory");
     Release corrupt;
     corrupt.zip.back() ^= 1;
-    Fails([&] { sdui::StageUpdate(install.game, corrupt.Transport(), true); });
+    Fails([&] { InstallRelease(install.game, corrupt.Transport()); });
     Check(!fs::exists(install.live), "Bad first download published an incomplete addon");
-    const auto transport = first.Transport();
-    const sdui::Download concurrent = [&](const auto& url, auto limit) {
-        if (url != sdui::ManifestUrl) {
-            Write(install.live / L"SurvivorsDragonUi.toc", "## Version: 1.0.0-survivors\n");
-            Write(install.live / L"core/core.lua", "installed while downloading");
-        }
-        return transport(url, limit);
+
+    // Advance a monotonic clock instead of sleeping. Metadata and ZIP must
+    // share one deadline; giving each request ten seconds would fail these cases.
+    const auto timed = [&](Release& release, std::uint64_t metadataMs, std::uint64_t zipMs) {
+        std::uint64_t tick = 500;
+        const auto deadline = tick + sdui::StartupDownloadBudgetMs;
+        const auto transport = release.Transport();
+        return sdui::UpdateAtStartup(install.game, [&](const auto& url, auto limit) {
+            tick += url == sdui::ManifestUrl ? metadataMs : zipMs;
+            return transport(url, limit);
+        }, deadline, [&] { return tick; });
     };
-    sdui::StageUpdate(install.game, concurrent, true);
-    Check(Read(install.live / L"core/core.lua") == "installed while downloading",
-          "Fresh installation overwrote a destination created during download");
-    Check(fs::exists(install.pending / L"SurvivorsDragonUi.toc"), "Racing download was not retained for a later launch");
+    Fails([&] { timed(first, 4500, 5500); });
+    Check(!fs::exists(install.live) && !fs::exists(install.pending) && !fs::exists(install.work),
+          "A first download finishing at the deadline was installed or staged");
+    const auto archives = first.archiveRequests;
+    Fails([&] { timed(first, 10000, 0); });
+    Check(first.archiveRequests == archives, "Expired metadata still started the ZIP download");
+    timed(first, 4000, 5999);
+    Check(Read(install.live / L"core/core.lua") == "first", "In-budget first install did not finish before startup returned");
+
+    Fails([&] { timed(second, 6000, 4001); });
+    Check(Read(install.live / L"core/core.lua") == "first", "Late update replaced the existing addon");
+    Check(!fs::exists(install.pending) && !fs::exists(install.work), "Late ZIP was retained for activation");
+    sdui::ApplyPending(install.game);
+    Check(Read(install.live / L"core/core.lua") == "first", "Timed-out download activated after startup");
+    timed(second, 6000, 3999);
+    Check(Read(install.live / L"core/core.lua") == "second", "In-budget update required another game launch");
+    Check(Read(install.backup / L"core/core.lua") == "first", "Startup update lost the rollback copy");
+    int requests{};
+    Fails([&] {
+        sdui::UpdateAtStartup(install.game, [&](const auto&, auto) -> Bytes {
+            ++requests;
+            return {};
+        }, 10000, [] { return std::uint64_t{10000}; });
+    });
+    Check(requests == 0, "An exhausted startup budget still made a request");
 }
 
 void LegacyFolderMigration() {
@@ -414,20 +441,23 @@ void RecoveryOutsideAddOns() {
           "External backup did not recreate the missing AddOns parent");
 }
 
-void IndependentLocks() {
+void SessionLocks() {
     Install install;
-    sdui::detail::SessionLock first(install.game);
-    Check(first.file != INVALID_HANDLE_VALUE && first.exclusive && first.Share(), "Cannot register first game session");
-    sdui::detail::SessionLock second(install.game);
-    Check(second.file != INVALID_HANDLE_VALUE && !second.exclusive, "Active game failed to prevent activation");
     {
-        sdui::detail::WorkerLock worker(install.game);
-        Check(worker.file != INVALID_HANDLE_VALUE, "Active sessions blocked the background downloader");
-        sdui::detail::WorkerLock duplicate(install.game);
-        Check(duplicate.file == INVALID_HANDLE_VALUE, "Duplicate downloader acquired staging lock");
+        sdui::detail::SessionLock first(install.game);
+        Check(first.file != INVALID_HANDLE_VALUE && first.exclusive, "Cannot acquire exclusive startup ownership");
+        HANDLE contender = sdui::detail::OpenLock(install.game);
+        OVERLAPPED range{};
+        Check(contender != INVALID_HANDLE_VALUE, "Cannot open competing startup lock");
+        const bool acquired = LockFileEx(contender, LOCKFILE_FAIL_IMMEDIATELY, 0, 1, 0, &range) != FALSE;
+        CloseHandle(contender);
+        Check(!acquired, "A competing game could start reading files during startup activation");
+        Check(first.Share(), "Cannot register first game session");
+        sdui::detail::SessionLock second(install.game);
+        Check(second.file != INVALID_HANDLE_VALUE && !second.exclusive, "Active game failed to prevent updates");
     }
-    sdui::detail::WorkerLock retry(install.game);
-    Check(retry.file != INVALID_HANDLE_VALUE, "Completed background worker did not release its lock");
+    sdui::detail::SessionLock next(install.game);
+    Check(next.file != INVALID_HANDLE_VALUE && next.exclusive, "Closed game sessions still prevent updates");
 }
 
 void ActualRelease(const fs::path& dist) {
@@ -438,9 +468,9 @@ void ActualRelease(const fs::path& dist) {
         ++archives;
         return BytesOf(Read(dist / L"SurvivorsDragonUi.zip"));
     };
-    sdui::StageUpdate(install.game, transport, true);
+    InstallRelease(install.game, transport);
     Check(fs::exists(install.live / L"SurvivorsDragonUi.toc"), "Actual release TOC is missing");
-    Check(sdui::StageUpdate(install.game, transport, true).starts_with("Already current"), "Actual release not current");
+    Check(InstallRelease(install.game, transport).starts_with("Already current"), "Actual release not current");
     Check(archives == 1, "Actual release ZIP downloaded twice");
     std::cout << "Installed and verified the complete release ZIP without executing Lua.\n";
 }
@@ -452,13 +482,13 @@ int main(int argc, char* argv[]) {
             ActualRelease(fs::absolute(argv[2]));
             return 0;
         }
-        DeferredActivation(); std::cout << "Background staging and offline next-launch activation\n";
+        StagingAndRecovery(); std::cout << "Verified staging, local activation and interrupted extraction recovery\n";
         CanonicalFirstInstall(); std::cout << "Canonical first install and updater storage outside AddOns\n";
-        FreshInstallRaceAndFailure(); std::cout << "Offline and concurrent first-install guards\n";
+        StartupDownloadDeadline(); std::cout << "Shared ten-second startup deadline, late-download refusal and same-launch activation\n";
         LegacyFolderMigration(); std::cout << "Legacy staging and backup folder migration\n";
         RecoveryOutsideAddOns(); std::cout << "Backup recovery without an existing AddOns parent\n";
         RefuseDowngrade(); std::cout << "Older remote and pending releases do not downgrade\n";
-        IndependentLocks(); std::cout << "Game sessions and background downloads use independent locks\n";
+        SessionLocks(); std::cout << "Exclusive startup and shared game sessions prevent live-file replacement\n";
         PathsAndHashes(); std::cout << "Paths and SHA-256\n";
         InstallAndLatest(); std::cout << "First install, latest detection, EXE independence and sibling isolation\n";
         UpdateAndRepair(); std::cout << "Update, stored ZIP and same-version repair\n";

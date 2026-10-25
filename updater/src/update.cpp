@@ -320,22 +320,6 @@ Manifest Ready(const fs::path& directory) {
     return manifest;
 }
 
-std::string FinishDownload(const Paths& paths, const Manifest& manifest, bool allowFirstInstall) {
-    if (allowFirstInstall && !fs::exists(paths.live)) {
-        // All bytes and the receipt are ready before the canonical directory
-        // appears. A concurrent destination is never removed or overwritten.
-        Ready(paths.pending);
-        fs::create_directories(paths.live.parent_path());
-        if (!MoveFileW(paths.pending.c_str(), paths.live.c_str())) {
-            // MoveFileW refuses an existing destination, including an empty
-            // directory created after the earlier existence check.
-            if (fs::exists(paths.live)) return "Downloaded; ready for the next launch: " + manifest.tag;
-            throw std::runtime_error("Cannot install SurvivorsDragonUi; verified download retained for the next launch");
-        }
-        return "Installed: SurvivorsDragonUi (" + manifest.tag + "). Enable it in the game's AddOns menu.";
-    }
-    return "Downloaded; ready for the next launch: " + manifest.tag;
-}
 } // namespace
 
 std::filesystem::path AddonDirectory(const std::filesystem::path& game) {
@@ -383,20 +367,23 @@ bool SafeRelativePath(const std::string& name) {
     return false;
 }
 
-std::string StageUpdate(const fs::path& game, const Download& download, bool allowFirstInstall) {
+std::string StageUpdate(const fs::path& game, const Download& download) {
     const Paths paths(game);
     const auto manifest = Parse(download(ManifestUrl, ManifestLimit));
     if (NewerInstalled(paths.live, manifest)) return "Installed addon is newer than the latest release; skipped.";
     if (Matches(paths.live, manifest)) return "Already current: " + manifest.tag;
-    if (fs::is_regular_file(paths.pending / L".sdui-release.json") && Matches(paths.pending, manifest)) {
-        if (allowFirstInstall && !fs::exists(paths.live)) return FinishDownload(paths, manifest, true);
-        return "Already downloaded; ready for the next launch: " + manifest.tag;
+    if (fs::is_regular_file(paths.pending / L".sdui-release.json")) {
+        try {
+            if (Ready(paths.pending).receipt == manifest.receipt) return "Already downloaded: " + manifest.tag;
+        } catch (const std::exception&) {
+            // An invalid receipt or file requires a fresh verified download.
+        }
     }
     const auto archiveUrl = std::wstring(L"https://github.com/migwynkriid13/SurvivorsDragonUi/releases/download/") +
         std::wstring(manifest.tag.begin(), manifest.tag.end()) + L"/SurvivorsDragonUi.zip";
     const auto zip = download(archiveUrl, ArchiveLimit);
-    // Network and extraction touch only private staging; the running game's
-    // addon and any previously completed pending update remain available.
+    // The game entrypoint is still held. Network and extraction touch only
+    // private staging, keeping the installed addon intact until activation.
     ClearTree(paths.work);
     fs::create_directories(paths.work);
     try {
@@ -410,7 +397,7 @@ std::string StageUpdate(const fs::path& game, const Download& download, bool all
         try { ClearTree(paths.work); } catch (...) {}
         throw;
     }
-    return FinishDownload(paths, manifest, allowFirstInstall);
+    return "Downloaded and verified: " + manifest.tag;
 }
 
 std::string ApplyPending(const fs::path& game, const std::function<void()>& beforeActivate) {
@@ -449,5 +436,23 @@ std::string ApplyPending(const fs::path& game, const std::function<void()>& befo
         throw;
     }
     return "Activated downloaded addon: " + manifest.tag;
+}
+
+std::string UpdateAtStartup(const fs::path& game, const Download& download,
+                           std::uint64_t deadline, const std::function<std::uint64_t()>& now,
+                           const std::function<void()>& beforeActivate) {
+    // Complete any interrupted local transaction even when this launch is offline.
+    // A corrupt old pending copy must not prevent downloading its replacement.
+    std::string recovery;
+    try { recovery = ApplyPending(game); }
+    catch (const std::exception& error) { recovery = std::string("Local recovery skipped: ") + error.what(); }
+    const auto result = StageUpdate(game, [&](const auto& url, auto limit) {
+        Require(now() < deadline, "Update download exceeded the 10-second startup limit");
+        auto bytes = download(url, limit);
+        // A late completion must not be extracted or activated after timeout.
+        Require(now() < deadline, "Update download exceeded the 10-second startup limit");
+        return bytes;
+    });
+    return result + "\n" + recovery + "\n" + ApplyPending(game, beforeActivate) + "\nStarting game.";
 }
 } // namespace sdui
