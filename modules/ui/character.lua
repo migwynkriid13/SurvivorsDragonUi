@@ -66,7 +66,7 @@ DFRL:NewMod("Character window", 6, function()
         "CharacterRangedDamageFrame",
     }
     local controller = CreateFrame("Frame")
-    local refreshing, tabsUpdating = false, false
+    local refreshing, tabsUpdating, statsQueued = false, false, false
     local wrapped = {}
 
     local function Cut(parent, sheet, left, top, right, bottom, width, height, layer)
@@ -80,11 +80,54 @@ DFRL:NewMod("Character window", 6, function()
         return texture
     end
 
+    local function SetWidth(frame, width)
+        if not T.NearlyEqual(frame:GetWidth(), width) then frame:SetWidth(width) end
+    end
+    local function SetHeight(frame, height)
+        if not T.NearlyEqual(frame:GetHeight(), height) then frame:SetHeight(height) end
+    end
+    local function SetLevel(frame, level)
+        if frame:GetFrameLevel() ~= level then frame:SetFrameLevel(level) end
+    end
+    local function Anchor(frame, point, parent, relativePoint, x, y)
+        local oldPoint, relative, oldRelativePoint, oldX, oldY
+        if frame.GetNumPoints and frame.GetPoint and frame:GetNumPoints() == 1 then
+            oldPoint, relative, oldRelativePoint, oldX, oldY = frame:GetPoint(1)
+        end
+        if
+            oldPoint ~= point
+            or relative ~= parent
+            or oldRelativePoint ~= relativePoint
+            or not T.NearlyEqual(oldX, x)
+            or not T.NearlyEqual(oldY, y)
+        then
+            frame:ClearAllPoints()
+            frame:SetPoint(point, parent, relativePoint, x, y)
+        end
+    end
+    local function Justify(label, side)
+        local current = label.GetJustifyH and label:GetJustifyH() or label.sduiCharacterJustify
+        if current ~= side then label:SetJustifyH(side) end
+        label.sduiCharacterJustify = side
+    end
+    local function TextChanged(cache, label)
+        local text = label:GetText() or ""
+        local font, size, flags = label:GetFont()
+        local scale = label:GetParent():GetEffectiveScale()
+        local changed = cache.label ~= label
+            or cache.text ~= text
+            or cache.font ~= font
+            or cache.size ~= size
+            or cache.flags ~= flags
+            or not T.NearlyEqual(cache.scale, scale)
+        cache.label, cache.text, cache.font, cache.size, cache.flags, cache.scale =
+            label, text, font, size, flags, scale
+        return changed
+    end
     local function Place(frame, parent, x, y, width, height)
-        frame:ClearAllPoints()
-        frame:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
-        if width then frame:SetWidth(width) end
-        if height then frame:SetHeight(height) end
+        Anchor(frame, "TOPLEFT", parent, "TOPLEFT", x, y)
+        if width then SetWidth(frame, width) end
+        if height then SetHeight(frame, height) end
     end
 
     local function HideStockArt(frame)
@@ -211,18 +254,28 @@ DFRL:NewMod("Character window", 6, function()
         local borders = qualityBorders[button]
         if not borders then return end
         for _, border in ipairs(borders) do
-            border:Hide()
+            if border:IsShown() then border:Hide() end
         end
+        borders.r, borders.g, borders.b = nil, nil, nil
         return borders
     end
     local function UpdateQuality(button)
-        local borders = HideQuality(button)
+        local borders = qualityBorders[button]
         if not borders then return end
-        if type(GetInventoryItemQuality) ~= "function" then return end
+        if type(GetInventoryItemQuality) ~= "function" then
+            HideQuality(button)
+            return
+        end
         local slot = button:GetID()
-        if not GetInventoryItemTexture("player", slot) then return end
+        if not GetInventoryItemTexture("player", slot) then
+            HideQuality(button)
+            return
+        end
         local quality = GetInventoryItemQuality("player", slot)
-        if type(quality) ~= "number" or quality < 2 then return end
+        if type(quality) ~= "number" or quality < 2 then
+            HideQuality(button)
+            return
+        end
         local r, g, b
         if type(GetItemQualityColor) == "function" then
             r, g, b = GetItemQualityColor(quality)
@@ -232,11 +285,26 @@ DFRL:NewMod("Character window", 6, function()
                 r, g, b = color.r, color.g, color.b
             end
         end
-        if type(r) ~= "number" or type(g) ~= "number" or type(b) ~= "number" then return end
-        for _, border in ipairs(borders) do
-            border:SetVertexColor(r, g, b, 1)
-            border:Show()
+        if type(r) ~= "number" or type(g) ~= "number" or type(b) ~= "number" then
+            HideQuality(button)
+            return
         end
+        for _, border in ipairs(borders) do
+            local oldR, oldG, oldB, oldA = borders.r, borders.g, borders.b, 1
+            if border.GetVertexColor then
+                oldR, oldG, oldB, oldA = border:GetVertexColor()
+            end
+            if
+                not T.NearlyEqual(oldR, r)
+                or not T.NearlyEqual(oldG, g)
+                or not T.NearlyEqual(oldB, b)
+                or not T.NearlyEqual(oldA, 1)
+            then
+                border:SetVertexColor(r, g, b, 1)
+            end
+            if not border:IsShown() then border:Show() end
+        end
+        borders.r, borders.g, borders.b = r, g, b
     end
 
     local function QualityEdge(button, blend, alpha, outset)
@@ -331,19 +399,29 @@ DFRL:NewMod("Character window", 6, function()
     rail:SetVertexColor(0, 0, 0, 0.65)
     rail:SetAllPoints(slider)
     local up, down, range = nil, nil, 0
-    local function SetScroll(value)
+    local scrollValue, upEnabled, downEnabled
+    local function SetScroll(value, force)
         value = math.max(0, math.min(range, value))
-        scroll:SetVerticalScroll(value)
+        local current = scroll.GetVerticalScroll and scroll:GetVerticalScroll() or scrollValue
+        if force or not T.NearlyEqual(current, value) then scroll:SetVerticalScroll(value) end
+        scrollValue = value
         if up then
-            if value > 0 then
-                up:Enable()
-            else
-                up:Disable()
+            local canUp, canDown = value > 0, value < range
+            if upEnabled ~= canUp then
+                if canUp then
+                    up:Enable()
+                else
+                    up:Disable()
+                end
+                upEnabled = canUp
             end
-            if value < range then
-                down:Enable()
-            else
-                down:Disable()
+            if downEnabled ~= canDown then
+                if canDown then
+                    down:Enable()
+                else
+                    down:Disable()
+                end
+                downEnabled = canDown
             end
         end
     end
@@ -367,53 +445,78 @@ DFRL:NewMod("Character window", 6, function()
     scroll:EnableMouseWheel(true)
     scroll:SetScript("OnMouseWheel", function() Step(-arg1 * 48) end)
 
+    local rowMetrics = {}
     local function StyleRow(row, x, y)
         local name = row:GetName()
         local label = row.label or (name and _G[name .. "Label"])
         local value = row.value or (name and _G[name .. "StatText"])
         if not label or not value then return 0 end
-        if not row.sduiCharacterFonts then
-            T.SetFont(label, 12)
-            T.SetFont(value, 12)
-            row.sduiCharacterFonts = true
+        local metrics = rowMetrics[row]
+        if not metrics then
+            metrics = { label = {}, value = {} }
+            rowMetrics[row] = metrics
         end
-        local valueWidth = math.min(COLUMN_WIDTH * 0.48, math.max(24, math.ceil(value:GetStringWidth()) + 2))
-        label:ClearAllPoints()
-        label:SetPoint("LEFT", row, "LEFT", 0, 0)
-        label:SetWidth(COLUMN_WIDTH - valueWidth - 8)
-        label:SetJustifyH("LEFT")
-        value:ClearAllPoints()
-        value:SetPoint("RIGHT", row, "RIGHT", 0, 0)
-        value:SetWidth(valueWidth)
-        value:SetJustifyH("RIGHT")
-        label:GetStringWidth()
-        value:GetStringWidth()
-        local height = math.max(16, label:GetHeight() + 2, value:GetHeight() + 2)
-        Place(row, row:GetParent(), x, -y, COLUMN_WIDTH, height)
-        row:SetFrameLevel(row:GetParent():GetFrameLevel() + 1)
+        if metrics.label.label ~= label then T.SetFont(label, 12) end
+        if metrics.value.label ~= value then T.SetFont(value, 12) end
+        local labelChanged, valueChanged = TextChanged(metrics.label, label), TextChanged(metrics.value, value)
+        local measure = not metrics.ready
+            or labelChanged
+            or valueChanged
+            or not T.NearlyEqual(label:GetWidth(), metrics.labelWidth)
+            or not T.NearlyEqual(value:GetWidth(), metrics.valueWidth)
+        if measure then
+            metrics.valueWidth = math.min(COLUMN_WIDTH * 0.48, math.max(24, math.ceil(value:GetStringWidth() or 0) + 2))
+            metrics.labelWidth = COLUMN_WIDTH - metrics.valueWidth - 8
+        end
+        Anchor(label, "LEFT", row, "LEFT", 0, 0)
+        SetWidth(label, metrics.labelWidth)
+        Justify(label, "LEFT")
+        Anchor(value, "RIGHT", row, "RIGHT", 0, 0)
+        SetWidth(value, metrics.valueWidth)
+        Justify(value, "RIGHT")
+        if measure then
+            local labelWidth, valueWidth = label:GetStringWidth() or 0, value:GetStringWidth() or 0
+            metrics.height = math.max(16, label:GetHeight() + 2, value:GetHeight() + 2)
+            metrics.ready = (metrics.label.text == "" or labelWidth > 0)
+                and (metrics.value.text == "" or valueWidth > 0)
+        end
+        -- Native AZS_UpdateMore resets row anchors on every update. Compare the
+        -- actual geometry even when text measurements are cached.
+        Place(row, row:GetParent(), x, -y, COLUMN_WIDTH)
+        SetLevel(row, row:GetParent():GetFrameLevel() + 1)
         local stat = name and _G[name .. "Stat"]
         if stat then
-            stat:SetFrameLevel(row:GetFrameLevel() + 1)
-            stat:SetWidth(valueWidth)
-            stat:SetHeight(height)
+            SetLevel(stat, row:GetFrameLevel() + 1)
+            SetWidth(stat, metrics.valueWidth)
+            SetHeight(stat, metrics.height)
         end
-        row:EnableMouse(true)
-        return height
+        if not metrics.mouseEnabled then
+            row:EnableMouse(true)
+            metrics.mouseEnabled = true
+        end
+        return metrics.height
     end
 
+    local function LayoutPair(first, second, y)
+        local height = StyleRow(first, 8, y)
+        if second then height = math.max(height, StyleRow(second, 8 + COLUMN_WIDTH + COLUMN_GAP, y)) end
+        SetHeight(first, height)
+        if second then SetHeight(second, height) end
+        return y + height
+    end
     local function LayoutRows(rows, y)
-        local visible = {}
+        local first
         for _, row in ipairs(rows) do
-            if row:IsShown() then table.insert(visible, row) end
+            if row:IsShown() then
+                if first then
+                    y = LayoutPair(first, row, y)
+                    first = nil
+                else
+                    first = row
+                end
+            end
         end
-        for index = 1, table.getn(visible), 2 do
-            local first, second = visible[index], visible[index + 1]
-            local height = StyleRow(first, 8, y)
-            if second then height = math.max(height, StyleRow(second, 8 + COLUMN_WIDTH + COLUMN_GAP, y)) end
-            first:SetHeight(height)
-            if second then second:SetHeight(height) end
-            y = y + height
-        end
+        if first then y = LayoutPair(first, nil, y) end
         return y
     end
 
@@ -421,18 +524,52 @@ DFRL:NewMod("Character window", 6, function()
         local _, _, number = string.find(row:GetName() or "", "(%d+)$")
         return tonumber(number) or 0
     end
+    local primaryRows, extraRows = {}, {}
+    local extraOwner, extraChildCount, extraChildren, extraTitle
+    local function MoreRows(more)
+        local count = more.GetNumChildren and more:GetNumChildren()
+        if more == extraOwner and count and count == extraChildCount then return extraRows end
+        local children = { more:GetChildren() }
+        local changed = more ~= extraOwner or not extraChildren or table.getn(children) ~= table.getn(extraChildren)
+        if not changed then
+            for index, child in ipairs(children) do
+                if extraChildren[index] ~= child then
+                    changed = true
+                    break
+                end
+            end
+        end
+        if changed then
+            for index = table.getn(extraRows), 1, -1 do
+                extraRows[index] = nil
+            end
+            for _, row in ipairs(children) do
+                if row.label and row.value then table.insert(extraRows, row) end
+            end
+            table.sort(extraRows, function(a, b) return RowIndex(a) < RowIndex(b) end)
+            extraChildren = children
+        end
+        extraOwner, extraChildCount = more, count
+        return extraRows
+    end
 
     local function RefreshStats()
         if refreshing or not paper:IsVisible() then return end
         refreshing = true
-        heading:SetText(CharacterFrameTab1 and CharacterFrameTab1:GetText() or CHARACTER or "")
+        T.SetTextIfChanged(heading, CharacterFrameTab1 and CharacterFrameTab1:GetText() or CHARACTER or "")
         Place(attributes, content, 0, 0, CONTENT_WIDTH)
-        local primary = {}
+        local used = 0
         for _, name in ipairs(primaryNames) do
             local row = _G[name]
-            if row then table.insert(primary, row) end
+            if row then
+                used = used + 1
+                primaryRows[used] = row
+            end
         end
-        attributes:SetHeight(math.max(60, LayoutRows(primary, 28) + 8))
+        for index = table.getn(primaryRows), used + 1, -1 do
+            primaryRows[index] = nil
+        end
+        SetHeight(attributes, math.max(60, LayoutRows(primaryRows, 28) + 8))
         local y = attributes:GetHeight() + 8
 
         -- Move the actual native container and its live rows. No AZS stat values,
@@ -441,31 +578,28 @@ DFRL:NewMod("Character window", 6, function()
         if more then
             if more:GetParent() ~= content then
                 more:SetParent(content)
-                more:SetFrameLevel(content:GetFrameLevel() + 1)
+                SetLevel(more, content:GetFrameLevel() + 1)
                 more:SetBackdrop(nil)
                 Card(more)
             end
             Place(more, content, 0, -y, CONTENT_WIDTH)
             local title = _G.AZSMoreStatsTitle
             if title then
-                T.SetFont(title, 12)
-                title:ClearAllPoints()
-                title:SetPoint("TOPLEFT", more, "TOPLEFT", 8, -8)
-                title:SetWidth(ROW_WIDTH)
-                title:SetJustifyH("LEFT")
+                if extraTitle ~= title then
+                    T.SetFont(title, 12)
+                    extraTitle = title
+                end
+                Anchor(title, "TOPLEFT", more, "TOPLEFT", 8, -8)
+                SetWidth(title, ROW_WIDTH)
+                Justify(title, "LEFT")
             end
-            local rows = {}
-            for _, row in ipairs({ more:GetChildren() }) do
-                if row.label and row.value then table.insert(rows, row) end
-            end
-            table.sort(rows, function(a, b) return RowIndex(a) < RowIndex(b) end)
-            more:SetHeight(math.max(60, LayoutRows(rows, 30) + 8))
+            SetHeight(more, math.max(60, LayoutRows(MoreRows(more), 30) + 8))
             if more:IsShown() then y = y + more:GetHeight() + 8 end
         end
 
         local resistances = CharacterResistanceFrame
         if resistances then
-            resistances:SetParent(content)
+            if resistances:GetParent() ~= content then resistances:SetParent(content) end
             Place(resistances, content, 8, -y, ROW_WIDTH, 34)
             for index = 1, 5 do
                 local row = _G["MagicResFrame" .. index]
@@ -473,20 +607,32 @@ DFRL:NewMod("Character window", 6, function()
             end
             if resistances:IsShown() then y = y + 38 end
         end
-        content:SetHeight(y)
-        range = math.max(0, y - scroll:GetHeight())
-        slider:SetMinMaxValues(0, range)
-        slider:SetValue(math.min(slider:GetValue(), range))
-        SetScroll(slider:GetValue())
+        local resized = not T.NearlyEqual(content:GetHeight(), y)
+        SetHeight(content, y)
+        local nextRange = math.max(0, y - scroll:GetHeight())
+        if not T.NearlyEqual(range, nextRange) then
+            range = nextRange
+            slider:SetMinMaxValues(0, range)
+        end
+        local value = slider:GetValue()
+        if value > range then slider:SetValue(range) end
+        SetScroll(slider:GetValue(), resized)
         refreshing = false
     end
 
+    local function CancelStats()
+        if not statsQueued then return end
+        statsQueued = false
+        controller:SetScript("OnUpdate", nil)
+    end
+    local function FlushStats()
+        CancelStats()
+        RefreshStats()
+    end
     local function QueueStats()
-        if not paper:IsVisible() then return end
-        controller:SetScript("OnUpdate", function()
-            controller:SetScript("OnUpdate", nil)
-            RefreshStats()
-        end)
+        if statsQueued or not paper:IsVisible() then return end
+        statsQueued = true
+        controller:SetScript("OnUpdate", FlushStats)
     end
 
     local function AttachNativeHooks()
@@ -544,7 +690,7 @@ DFRL:NewMod("Character window", 6, function()
             local tab = _G["CharacterFrameTab" .. index]
             if tab then
                 if hiddenTabs[index] then
-                    tab:Hide()
+                    if tab:IsShown() then tab:Hide() end
                 else
                     StyleTab(tab)
                 end
@@ -553,15 +699,14 @@ DFRL:NewMod("Character window", 6, function()
                     T.SetFont(text, 11)
                     local width = math.max(72, math.ceil(text:GetStringWidth()) + 30)
                     Place(tab, owner, x, -owner:GetHeight() - 1, width, 32)
-                    text:ClearAllPoints()
-                    text:SetPoint("CENTER", tab, "CENTER", 0, owner.selectedTab == index and -2 or 2)
+                    Anchor(text, "CENTER", tab, "CENTER", 0, owner.selectedTab == index and -2 or 2)
                     x = x + width + 2
                 end
             end
         end
         -- Preserve the stock content dimensions on non-character tabs, while
         -- allowing their translated native tab captions to fit underneath.
-        owner:SetWidth(paper:IsShown() and math.max(WIDTH, x) or math.max(384, x))
+        SetWidth(owner, paper:IsShown() and math.max(WIDTH, x) or math.max(384, x))
         tabsUpdating = false
     end
 
@@ -573,8 +718,8 @@ DFRL:NewMod("Character window", 6, function()
         }) do
             local widget = _G[name]
             if widget then
-                widget.Show = widget.Hide
-                widget:Hide()
+                if widget.Show ~= widget.Hide then widget.Show = widget.Hide end
+                if widget:IsShown() then widget:Hide() end
             end
         end
     end
@@ -594,39 +739,54 @@ DFRL:NewMod("Character window", 6, function()
         end
     end
 
+    HideHeaderContents()
+    local headerMetrics = { name = {}, level = {} }
     local function UpdateHeader()
+        if not owner:IsVisible() then return end
         HideHeaderContents()
         if not nameFrame or not nameText then return end
-        nameFrame:SetFrameLevel(owner:GetFrameLevel() + 2)
-        nameText:SetWidth(0)
-        local nameWidth = math.ceil(nameText:GetStringWidth())
-        local levelWidth, gap = 0, 0
-        if levelText then
-            levelText:SetWidth(0)
-            if paper:IsShown() then
-                levelWidth = math.ceil(levelText:GetStringWidth())
+        local nameChanged = TextChanged(headerMetrics.name, nameText)
+        local levelChanged = levelText and TextChanged(headerMetrics.level, levelText) or false
+        local shown, width = paper:IsShown() and true or false, owner:GetWidth()
+        if
+            not headerMetrics.ready
+            or nameChanged
+            or levelChanged
+            or headerMetrics.paperShown ~= shown
+            or not T.NearlyEqual(headerMetrics.width, width)
+        then
+            SetWidth(nameText, 0)
+            local nameWidth = math.ceil(nameText:GetStringWidth() or 0)
+            local levelWidth, gap = 0, 0
+            if levelText and shown then
+                SetWidth(levelText, 0)
+                levelWidth = math.ceil(levelText:GetStringWidth() or 0)
                 if nameWidth > 0 and levelWidth > 0 then gap = 3 end
-                levelText:Show()
+            end
+            local fit = math.min(1, (width - 72 - gap) / math.max(1, nameWidth + levelWidth))
+            headerMetrics.nameWidth, headerMetrics.levelWidth = nameWidth * fit, levelWidth * fit
+            headerMetrics.gap, headerMetrics.width, headerMetrics.paperShown = gap, width, shown
+            headerMetrics.ready = (headerMetrics.name.text == "" or nameWidth > 0)
+                and (not levelText or not shown or headerMetrics.level.text == "" or levelWidth > 0)
+        end
+        local nameWidth, levelWidth, gap = headerMetrics.nameWidth, headerMetrics.levelWidth, headerMetrics.gap
+        SetLevel(nameFrame, owner:GetFrameLevel() + 2)
+        Anchor(nameFrame, "TOP", owner, "TOP", -8, -3)
+        SetWidth(nameFrame, math.max(1, nameWidth + gap + levelWidth))
+        SetHeight(nameFrame, 16)
+        Anchor(nameText, "LEFT", nameFrame, "LEFT", 0, 0)
+        SetWidth(nameText, nameWidth)
+        if levelText then
+            Anchor(levelText, "LEFT", nameText, "RIGHT", gap, 0)
+            SetWidth(levelText, levelWidth)
+            if shown then
+                if not levelText:IsShown() then levelText:Show() end
             else
-                levelText:Hide()
+                if levelText:IsShown() then levelText:Hide() end
             end
         end
-        local fit = math.min(1, (owner:GetWidth() - 72 - gap) / math.max(1, nameWidth + levelWidth))
-        nameWidth, levelWidth = nameWidth * fit, levelWidth * fit
-        nameFrame:ClearAllPoints()
-        nameFrame:SetPoint("TOP", owner, "TOP", -8, -3)
-        nameFrame:SetWidth(math.max(1, nameWidth + gap + levelWidth))
-        nameFrame:SetHeight(16)
-        nameText:ClearAllPoints()
-        nameText:SetPoint("LEFT", nameFrame, "LEFT", 0, 0)
-        nameText:SetWidth(nameWidth)
-        if levelText then
-            levelText:ClearAllPoints()
-            levelText:SetPoint("LEFT", nameText, "RIGHT", gap, 0)
-            levelText:SetWidth(levelWidth)
-        end
-        nameText:Show()
-        nameFrame:Show()
+        if not nameText:IsShown() then nameText:Show() end
+        if not nameFrame:IsShown() then nameFrame:Show() end
     end
 
     local function InsetDefaultPosition()
@@ -646,8 +806,9 @@ DFRL:NewMod("Character window", 6, function()
 
     local function Apply()
         InsetDefaultPosition()
-        owner:SetWidth(paper:IsShown() and WIDTH or 384)
-        owner:SetHeight(paper:IsShown() and HEIGHT or 512)
+        SetWidth(owner, paper:IsShown() and WIDTH or 384)
+        SetHeight(owner, paper:IsShown() and HEIGHT or 512)
+        scrollValue = nil
         owner:SetHitRectInsets(0, 0, 0, 0)
         paper:SetHitRectInsets(0, 0, 0, 0)
         HideStockArt(owner)
@@ -705,13 +866,16 @@ DFRL:NewMod("Character window", 6, function()
     end)
     HookScript(owner, "OnShow", Apply)
     HookScript(owner, "OnEvent", UpdateHeader)
-    HookScript(owner, "OnHide", function() controller:SetScript("OnUpdate", nil) end)
+    HookScript(owner, "OnHide", CancelStats)
     HookScript(paper, "OnEvent", QueueStats)
-    HookScript(paper, "OnHide", UpdateHeader)
+    HookScript(paper, "OnHide", function()
+        CancelStats()
+        UpdateHeader()
+    end)
     controller:RegisterEvent("PLAYER_LEAVING_WORLD")
     controller:RegisterEvent("PLAYER_LOGOUT")
     controller:SetScript("OnEvent", function()
-        controller:SetScript("OnUpdate", nil)
+        CancelStats()
         slider:SetValue(0)
         for button in pairs(qualityBorders) do
             HideQuality(button)
