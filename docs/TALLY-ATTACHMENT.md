@@ -12,7 +12,10 @@ Detached artwork has a complete matching surround. The shared registry in
 `core/tally.lua` owns each mode's texture, full extent and counter center.
 `tallyAttachment.Refresh` selects these together whenever attachment or style
 changes, and retains the shared content scale, counter values and divider rules.
-Action-bar bounds remain unchanged.
+The tally creates only its frame, counter overlay and selected artwork; it has
+no hidden status bar, yellow fill, pill background, border pieces or title.
+Its existing frame name, initial dimensions, overlay level and layout lifecycle
+are retained.
 
 Most detached versions reflect the structural lower half above the counter
 center, preserving its palette, source alpha and lower details. Iron sarcophagus

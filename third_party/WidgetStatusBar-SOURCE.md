@@ -26,11 +26,10 @@ All coordinates below are pixels measured from the top-left of the sheet. Right 
 | BackgroundRight | 94, 192, 123, 210 | 29 × 18 | 32 × 32 | 0.90625 | 0.5625 |
 | BackgroundCenter | 0, 67, 64, 85 | 64 × 18 | 64 × 32 | 1.0 | 0.5625 |
 | FillBlue | 0, 87, 256, 102 | 256 × 15 | 256 × 16 | 1.0 | 0.9375 |
-| FillYellow | 0, 155, 256, 170 | 256 × 15 | 256 × 16 | 1.0 | 0.9375 |
 | FillWhite | 0, 138, 256, 153 | 256 × 15 | 256 × 16 | 1.0 | 0.9375 |
 | Spark | 75, 205, 83, 237 | 8 × 32 | 8 × 32 | 1.0 | 1.0 |
 
-The original atlas names use the `widgetstatusbar-` prefix: `borderleft`, `borderright`, `bordercenter`, `bgleft`, `bgright`, `bgcenter`, `fill-blue`, `fill-yellow`, `fill-white`, and `spark`.
+The retained crops' original atlas names use the `widgetstatusbar-` prefix: `borderleft`, `borderright`, `bordercenter`, `bgleft`, `bgright`, `bgcenter`, `fill-blue`, `fill-white`, and `spark`.
 
 ## Fixed-width pill background
 
@@ -45,5 +44,7 @@ columns at both joins have the same pixels. The composite keeps each cap's
 one-source-pixel-per-local-unit mapping and the same vertical crop. Native
 half-texel crop clamping therefore retains the original filtering at the
 outside edges and identical black samples at the internal joins, including
-under uniform Layout scaling. The variable-width tally retains its original
-three pieces. Border pieces stay separate because their joining rows differ.
+under uniform Layout scaling. Revive and the guardian tracker still use the
+separate background crops. Border pieces stay separate because their joining
+rows differ. The tally uses its selected frame artwork without a hidden pill
+background or status-bar fill.

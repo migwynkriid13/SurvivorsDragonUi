@@ -8,8 +8,6 @@ License: GPL-3.0, reproduced from the beta0.16 tag's repository LICENSE.
 Bundled unmodified textures, renamed for this addon:
   Kui_Media/t/bar.tga -> media/tex/nameplates/kui_bar.tga
   Kui_Nameplates/media/FrameGlow.tga -> media/tex/nameplates/kui_frame_glow.tga
-  Kui_Nameplates/media/target-glow.tga -> media/tex/nameplates/kui_target_glow.tga
-  Kui_Nameplates/media/targetarrows3.tga -> media/tex/nameplates/kui_target_arrows.tga
 
 Original source header:
 -- Kui_Nameplates

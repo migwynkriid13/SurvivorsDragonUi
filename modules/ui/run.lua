@@ -65,29 +65,15 @@ DFRL:NewMod("RunTimers", 5, function()
         return texture
     end
 
-    local function Pill(name, fillName, variableWidth)
+    local function Pill(name, fillName)
         local frame = CreateFrame("Frame", name, UIParent)
         frame:SetWidth(BAR_WIDTH + 16)
         frame:SetHeight(31)
         frame:SetFrameStrata("HIGH")
         frame:EnableMouse(false)
-        local skin = {}
-
-        if variableWidth then
-            local backgroundLeft = Texture(frame, "BackgroundLeft", "BACKGROUND", 29, 18, 29 / 32, 18 / 32)
-            backgroundLeft:SetPoint("LEFT", frame, "LEFT", 6, 0)
-            local backgroundRight = Texture(frame, "BackgroundRight", "BACKGROUND", 29, 18, 29 / 32, 18 / 32)
-            backgroundRight:SetPoint("RIGHT", frame, "RIGHT", -6, 0)
-            local backgroundCenter = Texture(frame, "BackgroundCenter", "BACKGROUND", BAR_WIDTH - 54, 18, 1, 18 / 32)
-            backgroundCenter:SetPoint("LEFT", backgroundLeft, "RIGHT", 0, 0)
-            backgroundCenter:SetPoint("RIGHT", backgroundRight, "LEFT", 0, 0)
-            skin = { backgroundLeft, backgroundRight, backgroundCenter }
-        else
-            local background =
-                Texture(frame, "BackgroundFixed", "BACKGROUND", BAR_WIDTH + 4, 18, (BAR_WIDTH + 4) / 512, 18 / 32)
-            background:SetPoint("LEFT", frame, "LEFT", 6, 0)
-            table.insert(skin, background)
-        end
+        local background =
+            Texture(frame, "BackgroundFixed", "BACKGROUND", BAR_WIDTH + 4, 18, (BAR_WIDTH + 4) / 512, 18 / 32)
+        background:SetPoint("LEFT", frame, "LEFT", 6, 0)
 
         local bar = CreateFrame("StatusBar", nil, frame)
         bar:SetHeight(15)
@@ -107,16 +93,12 @@ DFRL:NewMod("RunTimers", 5, function()
         local center = Texture(overlay, "BorderCenter", "OVERLAY", BAR_WIDTH - 54, 31, 1, 31 / 32)
         center:SetPoint("LEFT", left, "RIGHT", 0, 0)
         center:SetPoint("RIGHT", right, "LEFT", 0, 0)
-        table.insert(skin, left)
-        table.insert(skin, right)
-        table.insert(skin, center)
-
         local text = overlay:CreateFontString(nil, "OVERLAY")
         T.SetFont(text, 14, "OUTLINE")
         text:SetPoint("BOTTOM", frame, "TOP", 0, 2)
         text:SetTextColor(1, 1, 1)
         frame:Hide()
-        return frame, bar, text, overlay, skin
+        return frame, bar, text, overlay
     end
 
     -- Pooled cosmetic fill effects; native run data still controls progress.
@@ -1463,10 +1445,15 @@ DFRL:NewMod("RunTimers", 5, function()
         bossGroup:SetPoint("TOP", UIParent, "TOP", 0, -77)
     end)
 
-    local tally, tallyBar, tallyTitle, tallyOverlay, tallySkin = Pill("DFRL_RunTallyPill", "FillYellow", true)
-    tallyBar:SetValue(1)
-    tallyBar:SetAlpha(0.4)
-    tallyTitle:Hide()
+    local tally = CreateFrame("Frame", "DFRL_RunTallyPill", UIParent)
+    tally:SetWidth(BAR_WIDTH + 16)
+    tally:SetHeight(31)
+    tally:SetFrameStrata("HIGH")
+    tally:EnableMouse(false)
+    tally:Hide()
+    local tallyOverlay = CreateFrame("Frame", nil, tally)
+    tallyOverlay:SetAllPoints(tally)
+    tallyOverlay:SetFrameLevel(tally:GetFrameLevel() + 2)
     local tallyFields = {}
     local tallyAttachment = {}
     local visibleTallyFields, tallyPresentationDirty = 3, true
@@ -1838,14 +1825,9 @@ DFRL:NewMod("RunTimers", 5, function()
             tally:SetScale(1)
             local strata = joined and "LOW" or "HIGH"
             tally:SetFrameStrata(strata)
-            tallyBar:SetFrameStrata(strata)
             tallyOverlay:SetFrameStrata(strata)
             tally:SetFrameLevel(owner:GetFrameLevel() + 2)
-            tallyBar:SetFrameLevel(tally:GetFrameLevel() + 1)
-            tallyOverlay:SetFrameLevel(tallyBar:GetFrameLevel() + 1)
-            for _, texture in ipairs(tallySkin) do
-                texture:Hide()
-            end
+            tallyOverlay:SetFrameLevel(tally:GetFrameLevel() + 2)
             tally:ClearAllPoints()
             local artScale = lastWidth / DFRL.tallyStyleCanvas.width
             local height = appearance.extent * artScale
@@ -1856,7 +1838,6 @@ DFRL:NewMod("RunTimers", 5, function()
             else
                 tally:SetPoint("TOPLEFT", owner, "TOPLEFT", 0, 0)
             end
-            tallyBar:Hide()
             artwork:SetTexture(DFRL:GetInfoOrCons("tex") .. "tally\\" .. appearance.texture)
             artwork:SetWidth(lastWidth)
             artwork:SetHeight(DFRL.tallyStyleCanvas.height * artScale)
