@@ -1,0 +1,14 @@
+name: Build addon updater
+description: Build the standalone Windows x64 DLL and run isolated updater tests in CI.
+runs:
+  using: composite
+  steps:
+    - name: Configure Windows x64
+      shell: pwsh
+      run: cmake -S updater -B dist/updater-build -A x64
+    - name: Build the DLL and test programs
+      shell: pwsh
+      run: cmake --build dist/updater-build --config Release --parallel
+    - name: Test update transactions and DLL startup without running the game
+      shell: pwsh
+      run: ctest --test-dir dist/updater-build -C Release --output-on-failure

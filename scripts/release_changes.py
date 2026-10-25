@@ -1,4 +1,4 @@
-"""Gate release packaging on changes to the manifest's actual ZIP payload."""
+"""Gate releases on changes to the addon payload or optional updater."""
 
 import json
 import os
@@ -6,6 +6,15 @@ import re
 import subprocess
 
 from package import MANIFEST, SOURCE, runtime_files
+
+
+def updater_changed(changed):
+    return any(
+        name.startswith("updater/") or name in {
+            ".github/workflows/release.yml", "scripts/package.py", "scripts/release_changes.py"
+        }
+        for name in changed
+    )
 
 
 def git(*arguments):
@@ -51,7 +60,7 @@ def payload_changed():
     changed.discard("")
     changes = payload_changes(current, previous, changed)
     print(json.dumps(changes, indent=2))
-    return any(changes.values())
+    return any(changes.values()) or updater_changed(changed)
 
 
 def main():
@@ -62,8 +71,8 @@ def main():
     with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as summary:
         summary.write(
             "## Release payload\n\n"
-            + ("The installable payload changed; building one ZIP.\n" if changed else
-               "No packaged file or payload membership changed; ZIP and release skipped.\n")
+            + ("Addon or updater changed; building the ZIP and separate optional DLL.\n" if changed else
+               "No addon or updater changes; release skipped.\n")
         )
 
 

@@ -3,6 +3,7 @@ __MACOSX/
 __pycache__/
 *.pyc
 dist/
+/updater/build-local/
 *.zip
 
 # Keep artwork proposals, screenshots and research local.
