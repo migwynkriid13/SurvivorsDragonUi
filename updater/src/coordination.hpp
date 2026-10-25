@@ -11,7 +11,7 @@ inline HANDLE OpenLock(const std::filesystem::path& game) {
         FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
 }
 
-// An exclusive startup protects download, verification and activation. Once it
+// An exclusive startup protects download, extraction and activation. Once it
 // becomes a shared game session, further launches skip addon updates until exit.
 struct SessionLock {
     HANDLE file{INVALID_HANDLE_VALUE};

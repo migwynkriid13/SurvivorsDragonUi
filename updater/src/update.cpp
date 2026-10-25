@@ -1,5 +1,4 @@
 #include <windows.h>
-#include <bcrypt.h>
 #include <zlib.h>
 #include <nlohmann/json.hpp>
 
@@ -91,13 +90,11 @@ std::string Lower(std::string value) {
 
 struct File {
     std::size_t size{};
-    std::string hash;
 };
 using Files = std::map<std::string, File>;
 struct Manifest {
     Json receipt;
     std::string tag;
-    std::string archiveHash;
     std::size_t archiveSize{};
     Files files;
 };
@@ -187,20 +184,18 @@ Manifest Parse(const Bytes& bytes) {
     Require(result.tag.starts_with("build-") && Hex(result.tag.substr(6), 40), "Invalid release tag");
     const auto version = json.at("version").get<std::string>();
     Require(ParseVersion(version).has_value(), "Invalid addon version");
-    result.archiveHash = json.at("archive").at("sha256").get<std::string>();
     result.archiveSize = json.at("archive").at("size").get<std::size_t>();
-    Require(Hex(result.archiveHash, 64) && result.archiveSize > 0 &&
-            result.archiveSize <= ArchiveLimit, "Invalid archive identity");
+    Require(result.archiveSize > 0 && result.archiveSize <= ArchiveLimit, "Invalid archive size");
     const auto& files = json.at("files");
     Require(files.is_array() && !files.empty() && files.size() <= 4096, "Invalid file population");
     std::set<std::string> names;
     std::size_t total{};
     for (const auto& entry : files) {
         const auto name = entry.at("path").get<std::string>();
-        File file{entry.at("size").get<std::size_t>(), entry.at("sha256").get<std::string>()};
+        File file{entry.at("size").get<std::size_t>()};
         Require(SafeRelativePath(name) && names.insert(Lower(name)).second,
                 "Unsafe or duplicate manifest path");
-        Require(file.size <= FileLimit && Hex(file.hash, 64), "Invalid file identity");
+        Require(file.size <= FileLimit, "Invalid file size");
         total += file.size;
         Require(total <= TotalLimit, "Release exceeds expanded size limit");
         result.files.emplace(name, std::move(file));
@@ -232,8 +227,7 @@ std::string Name(const Bytes& bytes, std::size_t offset, std::size_t length) {
 // Read only ordinary single-disk ZIP entries produced by scripts/package.py.
 // The manifest is the complete allowlist; ZIP64, links and extra files are refused.
 void Extract(const Bytes& zip, const Manifest& manifest, const fs::path& stage) {
-    Require(zip.size() == manifest.archiveSize && Sha256(zip) == manifest.archiveHash,
-            "Archive SHA-256 mismatch");
+    Require(zip.size() == manifest.archiveSize, "Incomplete ZIP download");
     Require(zip.size() >= 22, "Truncated ZIP directory");
     auto end = zip.size() - 22;
     const auto earliest = end > 65535 ? end - 65535 : 0;
@@ -295,8 +289,7 @@ void Extract(const Bytes& zip, const Manifest& manifest, const fs::path& stage) 
                     "Incomplete or oversized ZIP entry");
         }
         output.resize(size);
-        Require(crc32(0, output.data(), static_cast<uInt>(output.size())) == crc &&
-                Sha256(output) == record->second.hash, "ZIP file checksum mismatch");
+        Require(crc32(0, output.data(), static_cast<uInt>(output.size())) == crc, "ZIP file CRC mismatch");
         Write(stage / fs::path(relative), output);
         cursor += 46 + nameSize + extraSize + commentSize;
         Require(cursor <= end, "ZIP directory overflow");
@@ -304,46 +297,30 @@ void Extract(const Bytes& zip, const Manifest& manifest, const fs::path& stage) 
     Require(cursor == end && seen.size() == manifest.files.size(), "Incomplete ZIP population");
 }
 
-bool Matches(const fs::path& live, const Manifest& manifest) {
-    for (const auto& [name, file] : manifest.files) {
-        const auto path = live / fs::path(name);
-        Guard(path);
-        if (!fs::is_regular_file(path) || fs::file_size(path) != file.size ||
-            Sha256(Read(path, FileLimit)) != file.hash) return false;
-    }
-    return true;
-}
-
 Manifest Ready(const fs::path& directory) {
     const auto manifest = Parse(Read(directory / L".sdui-release.json", ManifestLimit));
-    Require(Matches(directory, manifest), "Pending addon failed verification");
+    const auto toc = directory / L"SurvivorsDragonUi.toc";
+    Guard(toc);
+    Require(fs::is_regular_file(toc), "Downloaded addon is missing its TOC");
     return manifest;
+}
+
+bool SameRelease(const fs::path& directory, const Manifest& manifest) {
+    try {
+        // The receipt is written last, after extraction completes. Version
+        // detection reads only this marker and checks that the TOC still exists.
+        const auto installed = Ready(directory);
+        return installed.tag == manifest.tag &&
+               installed.receipt.at("version") == manifest.receipt.at("version");
+    } catch (const std::exception&) {
+        return false;
+    }
 }
 
 } // namespace
 
 std::filesystem::path AddonDirectory(const std::filesystem::path& game) {
     return game / L"benilla-config" / L"AddOns" / Addon;
-}
-
-std::string Sha256(std::span<const std::uint8_t> bytes) {
-    Require(bytes.size() <= TotalLimit, "Hash input exceeds size limit");
-    BCRYPT_ALG_HANDLE algorithm{};
-    Require(BCryptOpenAlgorithmProvider(&algorithm, BCRYPT_SHA256_ALGORITHM, nullptr, 0) >= 0,
-            "SHA-256 is unavailable");
-    std::array<std::uint8_t, 32> digest{};
-    const auto status = BCryptHash(algorithm, nullptr, 0, const_cast<PUCHAR>(bytes.data()),
-                                   static_cast<ULONG>(bytes.size()), digest.data(),
-                                   static_cast<ULONG>(digest.size()));
-    BCryptCloseAlgorithmProvider(algorithm, 0);
-    Require(status >= 0, "SHA-256 failed");
-    constexpr char hex[] = "0123456789abcdef";
-    std::string result;
-    for (const auto byte : digest) {
-        result += hex[byte >> 4];
-        result += hex[byte & 15];
-    }
-    return result;
 }
 
 bool SafeRelativePath(const std::string& name) {
@@ -371,14 +348,8 @@ std::string StageUpdate(const fs::path& game, const Download& download) {
     const Paths paths(game);
     const auto manifest = Parse(download(ManifestUrl, ManifestLimit));
     if (NewerInstalled(paths.live, manifest)) return "Installed addon is newer than the latest release; skipped.";
-    if (Matches(paths.live, manifest)) return "Already current: " + manifest.tag;
-    if (fs::is_regular_file(paths.pending / L".sdui-release.json")) {
-        try {
-            if (Ready(paths.pending).receipt == manifest.receipt) return "Already downloaded: " + manifest.tag;
-        } catch (const std::exception&) {
-            // An invalid receipt or file requires a fresh verified download.
-        }
-    }
+    if (SameRelease(paths.live, manifest)) return "Already current: " + manifest.tag;
+    if (SameRelease(paths.pending, manifest)) return "Already downloaded: " + manifest.tag;
     const auto archiveUrl = std::wstring(L"https://github.com/migwynkriid13/SurvivorsDragonUi/releases/download/") +
         std::wstring(manifest.tag.begin(), manifest.tag.end()) + L"/SurvivorsDragonUi.zip";
     const auto zip = download(archiveUrl, ArchiveLimit);
@@ -397,7 +368,7 @@ std::string StageUpdate(const fs::path& game, const Download& download) {
         try { ClearTree(paths.work); } catch (...) {}
         throw;
     }
-    return "Downloaded and verified: " + manifest.tag;
+    return "Downloaded and extracted: " + manifest.tag;
 }
 
 std::string ApplyPending(const fs::path& game, const std::function<void()>& beforeActivate) {
@@ -417,7 +388,7 @@ std::string ApplyPending(const fs::path& game, const std::function<void()>& befo
     }
     if (!fs::exists(paths.pending)) return "No downloaded addon update to activate.";
     const auto manifest = Ready(paths.pending);
-    if (NewerInstalled(paths.live, manifest) || Matches(paths.live, manifest)) {
+    if (NewerInstalled(paths.live, manifest) || SameRelease(paths.live, manifest)) {
         ClearTree(paths.pending);
         return "Kept the current addon; discarded a redundant or older pending update.";
     }

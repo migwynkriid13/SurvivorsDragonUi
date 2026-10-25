@@ -99,10 +99,12 @@ struct Release {
         zip = Zip(files, compressed);
         manifest = {{"schema", 1}, {"repository", "migwynkriid13/SurvivorsDragonUi"},
             {"tag", "build-" + std::string(40, commit)}, {"version", version},
-            {"archive", {{"size", zip.size()}, {"sha256", sdui::Sha256(zip)}}}, {"files", Json::array()}};
+            {"archive", {{"size", zip.size()}, {"sha256", std::string(64, '0')}}}, {"files", Json::array()}};
+        // Deliberately unused SHA values: the runtime must install and compare
+        // release markers without hashing the ZIP or the installed payload.
         for (const auto& [name, data] : files) {
             manifest["files"].push_back({{"path", name}, {"size", data.size()},
-                                       {"sha256", sdui::Sha256(BytesOf(data))}});
+                                       {"sha256", std::string(64, '0')}});
         }
     }
     sdui::Download Transport() {
@@ -162,7 +164,7 @@ void InstallAndLatest() {
     Check(Read(install.game / L"benilla-config/SavedVariables/keep.lua") == "settings", "Modified settings");
 }
 
-void UpdateAndRepair() {
+void UpdateAndMissingToc() {
     Install install;
     Release first, second("second", 'b', false);
     InstallRelease(install.game, first.Transport());
@@ -173,10 +175,36 @@ void UpdateAndRepair() {
     Check(!fs::exists(install.live / L"retired.lua"), "Retired runtime file survived");
     Write(install.live / L"core/core.lua", "damage");
     InstallRelease(install.game, second.Transport());
-    Check(Read(install.live / L"core/core.lua") == "second", "Same-version corruption not repaired");
+    Check(Read(install.live / L"core/core.lua") == "damage", "Current-version startup scanned or repaired local files");
+    Check(second.archiveRequests == 1, "Local changes caused a repeated ZIP download");
     fs::remove(install.live / L"SurvivorsDragonUi.toc");
     InstallRelease(install.game, second.Transport());
     Check(fs::exists(install.live / L"SurvivorsDragonUi.toc"), "Missing TOC not repaired");
+}
+
+void ReleaseMarkerFastPath() {
+    Install install;
+    Release first;
+    InstallRelease(install.game, first.Transport());
+    // Deny all sharing on a payload file: current-version startup must not open
+    // it for a hash, size check or content read, or start another ZIP download.
+    const auto file = CreateFileW((install.live / L"core/core.lua").c_str(), GENERIC_READ,
+        0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    Check(file != INVALID_HANDLE_VALUE, "Cannot lock the payload fixture against reads");
+    try {
+        Check(InstallRelease(install.game, first.Transport()).starts_with("Already current"),
+              "Current detection tried to read a payload file");
+    } catch (...) {
+        CloseHandle(file);
+        throw;
+    }
+    CloseHandle(file);
+    Check(first.archiveRequests == 1, "Current marker triggered another ZIP download");
+    fs::remove(install.live / L".sdui-release.json");
+    InstallRelease(install.game, first.Transport());
+    Check(first.archiveRequests == 2, "An untracked manual install did not acquire a release marker");
+    InstallRelease(install.game, first.Transport());
+    Check(first.archiveRequests == 2, "Restored release marker did not skip the ZIP");
 }
 
 void OfflineAndRecovery() {
@@ -209,20 +237,20 @@ void RejectBadDownloads() {
     const auto unchanged = [&] {
         Check(Read(install.live / L"core/core.lua") == "first", "Invalid download changed live files");
     };
-    Release corrupt("second", 'b');
-    corrupt.zip.back() ^= 1;
+    Release corrupt("second", 'b', false);
+    corrupt.zip[30 + std::string("SurvivorsDragonUi/SurvivorsDragonUi.toc").size()] ^= 1;
     Fails([&] { InstallRelease(install.game, corrupt.Transport()); }); unchanged();
     Release wrongFile("second", 'b');
-    wrongFile.manifest["files"][0]["sha256"] = std::string(64, '0');
+    wrongFile.manifest["files"][0]["size"] = 1;
     Fails([&] { InstallRelease(install.game, wrongFile.Transport()); }); unchanged();
     Release truncated("second", 'b');
     truncated.zip.resize(30);
-    truncated.manifest["archive"] = {{"size", truncated.zip.size()}, {"sha256", sdui::Sha256(truncated.zip)}};
+    truncated.manifest["archive"]["size"] = truncated.zip.size();
     Fails([&] { InstallRelease(install.game, truncated.Transport()); }); unchanged();
     Release extra("second", 'b');
     extra.files["../escape.lua"] = "escape";
     extra.zip = Zip(extra.files);
-    extra.manifest["archive"] = {{"size", extra.zip.size()}, {"sha256", sdui::Sha256(extra.zip)}};
+    extra.manifest["archive"]["size"] = extra.zip.size();
     Fails([&] { InstallRelease(install.game, extra.Transport()); }); unchanged();
     Check(!fs::exists(install.addons / L"escape.lua"), "Archive escaped the addon directory");
     Release unsafe("second", 'b');
@@ -274,9 +302,7 @@ void RejectReparsePoints() {
     fs::remove(install.live);
 }
 
-void PathsAndHashes() {
-    Check(sdui::Sha256(BytesOf("abc")) ==
-        "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad", "SHA-256 mismatch");
+void Paths() {
     for (const auto* name : {"../x", "a/../../x", "a\\b", "C:/x", "/x", "a:x", "a/", "a//b",
                              "CON", "a/NUL.lua", "a./x", ".sdui-release.json", "a/LPT1.txt"}) {
         Check(!sdui::SafeRelativePath(name), "Accepted unsafe Windows path");
@@ -297,9 +323,9 @@ void StagingAndRecovery() {
           "Completed pending download not detected");
     Check(second.archiveRequests == 1, "Repeated pending ZIP download");
     const auto pending = install.pending;
-    Write(pending / L"core/core.lua", "damage");
+    fs::remove(pending / L"SurvivorsDragonUi.toc");
     Fails([&] { sdui::ApplyPending(install.game); });
-    Check(Read(install.live / L"core/core.lua") == "first", "Damaged pending update activated");
+    Check(Read(install.live / L"core/core.lua") == "first", "Pending addon without its TOC activated");
     InstallRelease(install.game, second.Transport());
     Check(Read(install.live / L"core/core.lua") == "second", "Completed update not activated");
     sdui::StageUpdate(install.game, first.Transport());
@@ -344,7 +370,7 @@ void CanonicalFirstInstall() {
     Check(fs::exists(install.live / L"SurvivorsDragonUi.toc"), "Canonical TOC missing");
     Check(!fs::exists(install.pending), "Fresh installation left a pending addon");
     Check(Read(install.live / L".sdui-release.json").find("build-") != std::string::npos,
-          "Fresh installation lost its verified release receipt");
+          "Fresh installation lost its completed release receipt");
     const auto secondTransport = second.Transport();
     InstallRelease(install.game, [&](const auto& url, auto limit) {
         Check(Read(install.live / L"core/core.lua") == "first", "Download changed the installed addon prematurely");
@@ -472,7 +498,7 @@ void ActualRelease(const fs::path& dist) {
     Check(fs::exists(install.live / L"SurvivorsDragonUi.toc"), "Actual release TOC is missing");
     Check(InstallRelease(install.game, transport).starts_with("Already current"), "Actual release not current");
     Check(archives == 1, "Actual release ZIP downloaded twice");
-    std::cout << "Installed and verified the complete release ZIP without executing Lua.\n";
+    std::cout << "Installed the complete release ZIP without hashing payload files or executing Lua.\n";
 }
 } // namespace
 
@@ -482,18 +508,19 @@ int main(int argc, char* argv[]) {
             ActualRelease(fs::absolute(argv[2]));
             return 0;
         }
-        StagingAndRecovery(); std::cout << "Verified staging, local activation and interrupted extraction recovery\n";
+        StagingAndRecovery(); std::cout << "Completed staging, local activation and interrupted extraction recovery\n";
         CanonicalFirstInstall(); std::cout << "Canonical first install and updater storage outside AddOns\n";
         StartupDownloadDeadline(); std::cout << "Shared ten-second startup deadline, late-download refusal and same-launch activation\n";
         LegacyFolderMigration(); std::cout << "Legacy staging and backup folder migration\n";
         RecoveryOutsideAddOns(); std::cout << "Backup recovery without an existing AddOns parent\n";
         RefuseDowngrade(); std::cout << "Older remote and pending releases do not downgrade\n";
         SessionLocks(); std::cout << "Exclusive startup and shared game sessions prevent live-file replacement\n";
-        PathsAndHashes(); std::cout << "Paths and SHA-256\n";
+        Paths(); std::cout << "Safe relative paths\n";
         InstallAndLatest(); std::cout << "First install, latest detection, EXE independence and sibling isolation\n";
-        UpdateAndRepair(); std::cout << "Update, stored ZIP and same-version repair\n";
+        UpdateAndMissingToc(); std::cout << "Update, stored ZIP, metadata-only current detection and missing TOC recovery\n";
+        ReleaseMarkerFastPath(); std::cout << "Current release skips payload reads and restores a missing release marker once\n";
         OfflineAndRecovery(); std::cout << "Offline first/existing install and interrupted-swap recovery\n";
-        RejectBadDownloads(); std::cout << "Invalid hashes, ZIPs, paths, duplicates and size bounds\n";
+        RejectBadDownloads(); std::cout << "Invalid ZIP CRC, headers, paths, duplicates and size bounds\n";
         RollbackActivationFailure(); std::cout << "Activation rollback and retry\n";
         RejectReparsePoints(); std::cout << "Directory-link refusal\n";
         return 0;
