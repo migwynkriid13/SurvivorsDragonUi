@@ -24,7 +24,7 @@ FetchContent_Declare(zlib
 FetchContent_MakeAvailable(json zlib)
 
 add_library(updater_core STATIC src/update.cpp src/http.cpp)
-target_link_libraries(updater_core PUBLIC nlohmann_json::nlohmann_json zlibstatic bcrypt winhttp)
+target_link_libraries(updater_core PUBLIC nlohmann_json::nlohmann_json zlibstatic winhttp)
 configure_file(version.hpp.in "${CMAKE_CURRENT_BINARY_DIR}/version.hpp" @ONLY)
 target_include_directories(updater_core PUBLIC src "${CMAKE_CURRENT_BINARY_DIR}")
 configure_file(resources.rc.in "${CMAKE_CURRENT_BINARY_DIR}/updater-resources.rc" @ONLY)

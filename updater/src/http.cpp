@@ -1,6 +1,5 @@
 #include <windows.h>
 #include <winhttp.h>
-#include <process.h>
 
 #include "update.hpp"
 #include "coordination.hpp"
@@ -10,7 +9,6 @@
 #include <array>
 #include <atomic>
 #include <fstream>
-#include <memory>
 #include <stdexcept>
 
 namespace sdui {
@@ -31,7 +29,7 @@ void Check(BOOL success) {
 
 void Timeout(HINTERNET handle, std::uint64_t deadline) {
     const auto now = GetTickCount64();
-    if (now >= deadline) throw std::runtime_error("Update download time budget expired");
+    if (now >= deadline) throw std::runtime_error("Update download exceeded the 10-second startup limit");
     const auto timeout = static_cast<int>(std::min<std::uint64_t>(1500, deadline - now));
     Check(WinHttpSetTimeouts(handle, timeout, timeout, timeout, timeout));
 }
@@ -112,7 +110,7 @@ struct Request {
         const auto now = GetTickCount64();
         if (now >= deadline || WaitForSingleObject(state->completed,
                 static_cast<DWORD>(deadline - now)) != WAIT_OBJECT_0) {
-            throw std::runtime_error("Update download time budget expired");
+            throw std::runtime_error("Update download exceeded the 10-second startup limit");
         }
         if (state->error.load() || state->status.load() != expected) Check(FALSE);
     }
@@ -136,24 +134,6 @@ void Log(const std::filesystem::path& game, const std::string& message) noexcept
     } catch (...) {}
 }
 
-struct BackgroundWork { std::filesystem::path game; };
-
-unsigned __stdcall DownloadInBackground(void* context) noexcept {
-    std::unique_ptr<BackgroundWork> work(static_cast<BackgroundWork*>(context));
-    try {
-        detail::WorkerLock lock(work->game);
-        if (lock.file == INVALID_HANDLE_VALUE) return 0;
-        const auto deadline = GetTickCount64() + 12000;
-        Log(work->game, StageUpdate(work->game, [deadline](const auto& url, auto limit) {
-            return DownloadHttps(url, limit, deadline);
-        }));
-    } catch (const std::exception& error) {
-        Log(work->game, std::string("Background update skipped: ") + error.what());
-    } catch (...) {
-        Log(work->game, "Background update skipped: unexpected failure.");
-    }
-    return 0;
-}
 } // namespace
 
 Bytes DownloadHttps(const std::wstring& initial, std::size_t limit, std::uint64_t deadline) {
@@ -227,30 +207,30 @@ void InitializeUpdater() noexcept {
         const std::filesystem::path exe(std::wstring(executable.data(), length));
         if (CompareStringOrdinal(exe.filename().c_str(), -1, L"AzerothSurvivors.exe", -1, TRUE) != CSTR_EQUAL) return;
         game = exe.parent_path();
+        const auto deadline = GetTickCount64() + StartupDownloadBudgetMs;
         detail::SessionLock lock(game);
         if (lock.file == INVALID_HANDLE_VALUE) {
             Log(game, "Skipped: installation is not writable or cannot be locked.");
             return;
         }
         if (lock.exclusive) {
-            try { Log(game, ApplyPending(game)); }
+            Log(game, "Checking for an addon update before starting the game (10-second download limit).");
+            try {
+                Log(game, UpdateAtStartup(game, [deadline](const auto& url, auto limit) {
+                    return DownloadHttps(url, limit, deadline);
+                }, deadline, [] { return GetTickCount64(); }));
+            }
             catch (const std::exception& error) {
-                Log(game, std::string("Pending activation skipped: ") + error.what());
-            } catch (...) { Log(game, "Pending activation skipped: unexpected failure."); }
+                Log(game, std::string("Startup update skipped; starting game: ") + error.what());
+            } catch (...) { Log(game, "Startup update skipped; starting game: unexpected failure."); }
+        } else {
+            Log(game, "Skipped: another game instance is using the addon; starting game.");
         }
         if (!lock.KeepForGame()) {
             Log(game, "Skipped: cannot retain the game session lock.");
             return;
         }
-        auto work = std::make_unique<BackgroundWork>(BackgroundWork{game});
-        const auto worker = _beginthreadex(nullptr, 0, &DownloadInBackground, work.get(), 0, nullptr);
-        if (!worker) {
-            Log(game, "Skipped: cannot start optional background worker.");
-            return;
-        }
-        work.release();
-        CloseHandle(reinterpret_cast<HANDLE>(worker));
-        // Never join the downloader or wait for network activity at startup.
+        // No worker survives this startup. The bootstrap now resumes the EXE.
     } catch (...) {
         if (!game.empty()) Log(game, "Skipped: cannot initialize optional updater.");
     }

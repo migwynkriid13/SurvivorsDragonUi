@@ -1,5 +1,4 @@
 #include <windows.h>
-#include <bcrypt.h>
 #include <zlib.h>
 #include <nlohmann/json.hpp>
 
@@ -15,6 +14,7 @@
 #include <set>
 #include <stdexcept>
 #include <string_view>
+#include <utility>
 
 namespace sdui {
 namespace {
@@ -90,13 +90,11 @@ std::string Lower(std::string value) {
 
 struct File {
     std::size_t size{};
-    std::string hash;
 };
 using Files = std::map<std::string, File>;
 struct Manifest {
     Json receipt;
     std::string tag;
-    std::string archiveHash;
     std::size_t archiveSize{};
     Files files;
 };
@@ -147,15 +145,33 @@ bool NewerInstalled(const fs::path& live, const Manifest& manifest) {
 
 struct Paths {
     fs::path live, work, pending, backup;
+    fs::path legacyWork, legacyPending, legacyBackup;
     explicit Paths(const fs::path& game) {
         const auto addons = game / L"benilla-config" / L"AddOns";
-        live = addons / Addon;
-        work = addons / L".SurvivorsDragonUi-download";
-        pending = addons / L".SurvivorsDragonUi-update";
-        backup = addons / L".SurvivorsDragonUi-backup";
-        for (const auto* path : {&live, &work, &pending, &backup}) Guard(*path);
+        const auto storage = game / L"benilla-config" / L"SurvivorsDragonUi-updater";
+        live = AddonDirectory(game);
+        work = storage / L"download" / Addon;
+        pending = storage / L"pending" / Addon;
+        backup = storage / L"backup" / Addon;
+        legacyWork = addons / L".SurvivorsDragonUi-download";
+        legacyPending = addons / L".SurvivorsDragonUi-update";
+        legacyBackup = addons / L".SurvivorsDragonUi-backup";
+        for (const auto* path : {&live, &work, &pending, &backup, &legacyWork, &legacyPending, &legacyBackup}) Guard(*path);
     }
 };
+
+// Only startup with an exclusive session lock migrates the old updater paths.
+// Keep any existing destination intact rather than overwriting a second copy.
+void MigrateLegacy(const Paths& paths) {
+    for (const auto& [oldPath, newPath] : {
+            std::pair{paths.legacyWork, paths.work}, std::pair{paths.legacyPending, paths.pending},
+            std::pair{paths.legacyBackup, paths.backup}}) {
+        if (fs::exists(oldPath) && !fs::exists(newPath)) {
+            fs::create_directories(newPath.parent_path());
+            fs::rename(oldPath, newPath);
+        }
+    }
+}
 
 Manifest Parse(const Bytes& bytes) {
     Require(!bytes.empty() && bytes.size() <= ManifestLimit, "Invalid manifest size");
@@ -168,20 +184,18 @@ Manifest Parse(const Bytes& bytes) {
     Require(result.tag.starts_with("build-") && Hex(result.tag.substr(6), 40), "Invalid release tag");
     const auto version = json.at("version").get<std::string>();
     Require(ParseVersion(version).has_value(), "Invalid addon version");
-    result.archiveHash = json.at("archive").at("sha256").get<std::string>();
     result.archiveSize = json.at("archive").at("size").get<std::size_t>();
-    Require(Hex(result.archiveHash, 64) && result.archiveSize > 0 &&
-            result.archiveSize <= ArchiveLimit, "Invalid archive identity");
+    Require(result.archiveSize > 0 && result.archiveSize <= ArchiveLimit, "Invalid archive size");
     const auto& files = json.at("files");
     Require(files.is_array() && !files.empty() && files.size() <= 4096, "Invalid file population");
     std::set<std::string> names;
     std::size_t total{};
     for (const auto& entry : files) {
         const auto name = entry.at("path").get<std::string>();
-        File file{entry.at("size").get<std::size_t>(), entry.at("sha256").get<std::string>()};
+        File file{entry.at("size").get<std::size_t>()};
         Require(SafeRelativePath(name) && names.insert(Lower(name)).second,
                 "Unsafe or duplicate manifest path");
-        Require(file.size <= FileLimit && Hex(file.hash, 64), "Invalid file identity");
+        Require(file.size <= FileLimit, "Invalid file size");
         total += file.size;
         Require(total <= TotalLimit, "Release exceeds expanded size limit");
         result.files.emplace(name, std::move(file));
@@ -213,8 +227,7 @@ std::string Name(const Bytes& bytes, std::size_t offset, std::size_t length) {
 // Read only ordinary single-disk ZIP entries produced by scripts/package.py.
 // The manifest is the complete allowlist; ZIP64, links and extra files are refused.
 void Extract(const Bytes& zip, const Manifest& manifest, const fs::path& stage) {
-    Require(zip.size() == manifest.archiveSize && Sha256(zip) == manifest.archiveHash,
-            "Archive SHA-256 mismatch");
+    Require(zip.size() == manifest.archiveSize, "Incomplete ZIP download");
     Require(zip.size() >= 22, "Truncated ZIP directory");
     auto end = zip.size() - 22;
     const auto earliest = end > 65535 ? end - 65535 : 0;
@@ -276,8 +289,7 @@ void Extract(const Bytes& zip, const Manifest& manifest, const fs::path& stage) 
                     "Incomplete or oversized ZIP entry");
         }
         output.resize(size);
-        Require(crc32(0, output.data(), static_cast<uInt>(output.size())) == crc &&
-                Sha256(output) == record->second.hash, "ZIP file checksum mismatch");
+        Require(crc32(0, output.data(), static_cast<uInt>(output.size())) == crc, "ZIP file CRC mismatch");
         Write(stage / fs::path(relative), output);
         cursor += 46 + nameSize + extraSize + commentSize;
         Require(cursor <= end, "ZIP directory overflow");
@@ -285,35 +297,30 @@ void Extract(const Bytes& zip, const Manifest& manifest, const fs::path& stage) 
     Require(cursor == end && seen.size() == manifest.files.size(), "Incomplete ZIP population");
 }
 
-bool Matches(const fs::path& live, const Manifest& manifest) {
-    for (const auto& [name, file] : manifest.files) {
-        const auto path = live / fs::path(name);
-        Guard(path);
-        if (!fs::is_regular_file(path) || fs::file_size(path) != file.size ||
-            Sha256(Read(path, FileLimit)) != file.hash) return false;
-    }
-    return true;
+Manifest Ready(const fs::path& directory) {
+    const auto manifest = Parse(Read(directory / L".sdui-release.json", ManifestLimit));
+    const auto toc = directory / L"SurvivorsDragonUi.toc";
+    Guard(toc);
+    Require(fs::is_regular_file(toc), "Downloaded addon is missing its TOC");
+    return manifest;
 }
+
+bool SameRelease(const fs::path& directory, const Manifest& manifest) {
+    try {
+        // The receipt is written last, after extraction completes. Version
+        // detection reads only this marker and checks that the TOC still exists.
+        const auto installed = Ready(directory);
+        return installed.tag == manifest.tag &&
+               installed.receipt.at("version") == manifest.receipt.at("version");
+    } catch (const std::exception&) {
+        return false;
+    }
+}
+
 } // namespace
 
-std::string Sha256(std::span<const std::uint8_t> bytes) {
-    Require(bytes.size() <= TotalLimit, "Hash input exceeds size limit");
-    BCRYPT_ALG_HANDLE algorithm{};
-    Require(BCryptOpenAlgorithmProvider(&algorithm, BCRYPT_SHA256_ALGORITHM, nullptr, 0) >= 0,
-            "SHA-256 is unavailable");
-    std::array<std::uint8_t, 32> digest{};
-    const auto status = BCryptHash(algorithm, nullptr, 0, const_cast<PUCHAR>(bytes.data()),
-                                   static_cast<ULONG>(bytes.size()), digest.data(),
-                                   static_cast<ULONG>(digest.size()));
-    BCryptCloseAlgorithmProvider(algorithm, 0);
-    Require(status >= 0, "SHA-256 failed");
-    constexpr char hex[] = "0123456789abcdef";
-    std::string result;
-    for (const auto byte : digest) {
-        result += hex[byte >> 4];
-        result += hex[byte & 15];
-    }
-    return result;
+std::filesystem::path AddonDirectory(const std::filesystem::path& game) {
+    return game / L"benilla-config" / L"AddOns" / Addon;
 }
 
 bool SafeRelativePath(const std::string& name) {
@@ -341,15 +348,13 @@ std::string StageUpdate(const fs::path& game, const Download& download) {
     const Paths paths(game);
     const auto manifest = Parse(download(ManifestUrl, ManifestLimit));
     if (NewerInstalled(paths.live, manifest)) return "Installed addon is newer than the latest release; skipped.";
-    if (Matches(paths.live, manifest)) return "Already current: " + manifest.tag;
-    if (fs::is_regular_file(paths.pending / L".sdui-release.json") && Matches(paths.pending, manifest)) {
-        return "Already downloaded; ready for the next launch: " + manifest.tag;
-    }
+    if (SameRelease(paths.live, manifest)) return "Already current: " + manifest.tag;
+    if (SameRelease(paths.pending, manifest)) return "Already downloaded: " + manifest.tag;
     const auto archiveUrl = std::wstring(L"https://github.com/migwynkriid13/SurvivorsDragonUi/releases/download/") +
         std::wstring(manifest.tag.begin(), manifest.tag.end()) + L"/SurvivorsDragonUi.zip";
     const auto zip = download(archiveUrl, ArchiveLimit);
-    // Network and extraction touch only private staging; the running game's
-    // addon and any previously completed pending update remain available.
+    // The game entrypoint is still held. Network and extraction touch only
+    // private staging, keeping the installed addon intact until activation.
     ClearTree(paths.work);
     fs::create_directories(paths.work);
     try {
@@ -357,42 +362,68 @@ std::string StageUpdate(const fs::path& game, const Download& download) {
         const auto receipt = manifest.receipt.dump(2) + "\n";
         Write(paths.work / L".sdui-release.json", Bytes(receipt.begin(), receipt.end()));
         ClearTree(paths.pending);
+        fs::create_directories(paths.pending.parent_path());
         fs::rename(paths.work, paths.pending);
     } catch (...) {
         try { ClearTree(paths.work); } catch (...) {}
         throw;
     }
-    return "Downloaded; ready for the next launch: " + manifest.tag;
+    return "Downloaded and extracted: " + manifest.tag;
 }
 
 std::string ApplyPending(const fs::path& game, const std::function<void()>& beforeActivate) {
     const Paths paths(game);
+    MigrateLegacy(paths);
     // Recovery and activation have no transport parameter: they work offline.
-    if (!fs::exists(paths.live) && fs::exists(paths.backup)) fs::rename(paths.backup, paths.live);
+    if (!fs::exists(paths.live) && fs::exists(paths.backup)) {
+        fs::create_directories(paths.live.parent_path());
+        fs::rename(paths.backup, paths.live);
+    }
     // The receipt is written only after every extracted file has been flushed.
     // Recover a completed staging rename interrupted before it became pending.
     if (!fs::exists(paths.pending) && fs::is_regular_file(paths.work / L".sdui-release.json")) {
-        const auto ready = Parse(Read(paths.work / L".sdui-release.json", ManifestLimit));
-        Require(Matches(paths.work, ready), "Interrupted staging failed verification");
+        Ready(paths.work);
+        fs::create_directories(paths.pending.parent_path());
         fs::rename(paths.work, paths.pending);
     }
     if (!fs::exists(paths.pending)) return "No downloaded addon update to activate.";
-    const auto manifest = Parse(Read(paths.pending / L".sdui-release.json", ManifestLimit));
-    Require(Matches(paths.pending, manifest), "Pending addon failed verification");
-    if (NewerInstalled(paths.live, manifest) || Matches(paths.live, manifest)) {
+    const auto manifest = Ready(paths.pending);
+    if (NewerInstalled(paths.live, manifest) || SameRelease(paths.live, manifest)) {
         ClearTree(paths.pending);
         return "Kept the current addon; discarded a redundant or older pending update.";
     }
     ClearTree(paths.backup);
     const bool hadLive = fs::exists(paths.live);
-    if (hadLive) fs::rename(paths.live, paths.backup);
+    if (hadLive) {
+        fs::create_directories(paths.backup.parent_path());
+        fs::rename(paths.live, paths.backup);
+    }
     try {
         if (beforeActivate) beforeActivate();
+        fs::create_directories(paths.live.parent_path());
         fs::rename(paths.pending, paths.live);
     } catch (...) {
         if (hadLive) fs::rename(paths.backup, paths.live);
         throw;
     }
     return "Activated downloaded addon: " + manifest.tag;
+}
+
+std::string UpdateAtStartup(const fs::path& game, const Download& download,
+                           std::uint64_t deadline, const std::function<std::uint64_t()>& now,
+                           const std::function<void()>& beforeActivate) {
+    // Complete any interrupted local transaction even when this launch is offline.
+    // A corrupt old pending copy must not prevent downloading its replacement.
+    std::string recovery;
+    try { recovery = ApplyPending(game); }
+    catch (const std::exception& error) { recovery = std::string("Local recovery skipped: ") + error.what(); }
+    const auto result = StageUpdate(game, [&](const auto& url, auto limit) {
+        Require(now() < deadline, "Update download exceeded the 10-second startup limit");
+        auto bytes = download(url, limit);
+        // A late completion must not be extracted or activated after timeout.
+        Require(now() < deadline, "Update download exceeded the 10-second startup limit");
+        return bytes;
+    });
+    return result + "\n" + recovery + "\n" + ApplyPending(game, beforeActivate) + "\nStarting game.";
 }
 } // namespace sdui
