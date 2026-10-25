@@ -41,6 +41,10 @@ Fighting rows reuse the original timer `BorderLeft`, `BorderCenter`, `BorderRigh
 `BackgroundCenter` and `FillWhite` TGA files. Their exact crops, pinned mirror and
 Dragonflight atlas metadata are in [WidgetStatusBar-SOURCE.md](WidgetStatusBar-SOURCE.md).
 Bezel height is 22; fixed 25-by-22 end caps surround a stretched straight middle.
+The three pieces meet edge to edge, as in the regular boss pills. The former
+five-unit overlap at each join composited the borders' translucent shadows
+twice, producing black bands above, across and below the health fill. Removing
+that overlap retains the original texture pixels, outer dimensions and fill.
 The inner 11-unit health fill reads the exact spawn-matched native health
 fraction and uses the regular boss-bar tint `(0.86, 0.12, 0.1, 1)`. Its centred
 white DEFAULT 12 text shows current / maximum health, with the same floor-based
