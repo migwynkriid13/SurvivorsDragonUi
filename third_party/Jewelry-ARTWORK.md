@@ -20,6 +20,14 @@ Native item textures have nominal local size 32 by 32, centered in each rim at l
 
 `media/tex/jewelry/Cooldown.tga` is original generated geometry: an 8-by-8 atlas of 64 circular shade states, each 64 by 64 pixels on a transparent 512-by-512 canvas. State zero is clear, and states 1–63 cover increasing clockwise fractions of the circle, with transparent cell padding. The runtime selects a state from native inventory cooldown values and the native `GetTime` clock; it does not advance a private gameplay timer. The shade remains inside the icon circle, under its gold rim.
 
+Pet frames use a separate 72-by-72 crop at `(576, 56)` through `(648, 128)` in
+the same `Frame.blp` atlas. `prepare_pet_rim` copies the original first rim's
+RGB pixels and multiplies its alpha by an antialiased annular mask centered at
+`(36, 36)`, retaining the gold band while removing the baked inner and outer
+shadow. The circle has transparent padding inside its crop, avoiding a cut
+through the shadow at the right edge. The five original jewelry crops and the
+atlas dimensions remain unchanged; no new runtime file is added.
+
 ## Thin socket attachment
 
 `scripts/prepare_jewelry_sockets.py` reads the existing `media/tex/actionbars/HDActionBar.tga` as texture data, without importing or executing addon code. The original file and its existing upstream artwork attribution remain intact. At the native reference of 36-unit buttons, six-unit gaps and a 300-by-64 bar background, it copies the original 12-unit upper strip into one continuous 300-by-38 rail and extends it around five sockets. Each shape unites a 20-unit-radius circle with the bar below it, leaving a 13.7-unit-radius circular opening transparent. Distance to this shape's outer boundary selects the native border's original color and alpha rows, with no compressed bevel or opaque replacement stroke. The horizontal boundary starts at rail coordinate 33.5, matching source row 30 in the four-pixels-per-unit native composition with its 26-unit offset. Straight feet and gaps retain the same native rows directly, rather than being drawn as separate pieces. The bottom four image rows blend into the original lower background's row mapping. Bar material fills the inside of each bend, without a separate inner or lower curved line.

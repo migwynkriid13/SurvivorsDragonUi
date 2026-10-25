@@ -20,7 +20,13 @@ The native summon icon occupies the round portrait opening, with the same
 34-unit diameter, center, full-image crop and separate 39-unit gold rim. Wolf
 and Raptor retain their native pet-family icons. The gold rim reuses
 `media/tex/jewelry/Frame.blp`; the unused dedicated pet background and border
-are removed. Fonts, sizes, grouping, row arrangement and settings are unchanged.
+are removed. A separate crop at `(576, 56)` through `(648, 128)` keeps the gold
+pixels from the original rim and removes its inner and outer drop shadow with
+an antialiased annular alpha mask. Its complete circle stays inside the crop,
+so no square shadow edge is cut off on the right. The five jewelry crops are
+unchanged. `scripts/prepare_jewelry_art.py` prepares this crop in the existing
+atlas; no additional texture file is needed. Fonts, sizes, grouping, row
+arrangement and settings are unchanged.
 
 ## Round-icon rendering
 
