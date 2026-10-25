@@ -5,7 +5,7 @@ The joined XP shell reuses the bundled 512×128 RGBA
 `94e892425bd9010fb3813a6e6b87323d6ec86ccfe52c1cf06c8ec9935e1096f3`;
 its bytes match these pinned sources:
 
-- [alchem1ster/DragonflightReloaded, 49f20659cefcf621abd89fabb67f906b62ec7523](https://github.com/alchem1ster/DragonflightReloaded/blob/49f20659cefcf621abd89fabb67f906b62ec7523/media/tex/actionbars/HDActionBar.tga).
+- [alchem1ster's source repository, 49f20659cefcf621abd89fabb67f906b62ec7523](https://api.github.com/repositories/1001127409/contents/media/tex/actionbars/HDActionBar.tga?ref=49f20659cefcf621abd89fabb67f906b62ec7523).
 - [Stormhand-dev/DragonflightUI-Reforged, 2a8d2ffb3d9262f0d2af2071b9b47ef27f76f7f8](https://github.com/Stormhand-dev/DragonflightUI-Reforged/blob/2a8d2ffb3d9262f0d2af2071b9b47ef27f76f7f8/media/tex/actionbars/HDActionBar.tga).
 
 Existing source notices remain intact. The owner confirmed redistribution

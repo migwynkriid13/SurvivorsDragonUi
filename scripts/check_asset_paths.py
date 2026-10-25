@@ -7,8 +7,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PREFIX = r"Interface\\AddOns\\"
-PUBLIC_ROOT = PREFIX + r"SurvivorsDragonUi\\"
-LEGACY_ROOT = PREFIX + r"-DragonflightReloaded\\"
+ADDON_ROOT = PREFIX + r"SurvivorsDragonUi\\"
 
 
 def main():
@@ -18,9 +17,7 @@ def main():
     for name in lua_files:
         text = (ROOT / name).read_text()
         if name == "core/core.lua":
-            assert text.count(PREFIX) == text.count(PUBLIC_ROOT) == 1
-            legacy = text.replace(PUBLIC_ROOT, LEGACY_ROOT)
-            assert PUBLIC_ROOT not in legacy and legacy.count(LEGACY_ROOT) == 1
+            assert text.count(PREFIX) == text.count(ADDON_ROOT) == 1
         else:
             for line_number, line in enumerate(text.splitlines(), 1):
                 if PREFIX in line:
@@ -28,7 +25,6 @@ def main():
     if failures:
         raise SystemExit("\n".join(failures))
     print(f"All {len(lua_files)} runtime Lua sources use the single addon asset root.")
-    print("Public and legacy root translation remains confined to core/core.lua.")
 
 
 if __name__ == "__main__":
