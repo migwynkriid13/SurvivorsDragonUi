@@ -24,11 +24,10 @@ These references are pinned to Dragonflight `10.2.7 (54847)`, commit `88f272e94c
 
 The PNG originals were visually inspected before cropping. Original colors and transparency are retained. Outputs are uncompressed, 32-bit RGBA TGA files with power-of-two canvas dimensions. No addon or game code was executed during preparation.
 
-| Bundled file                        | Canvas  | Preparation                                                                                                             |
-| ----------------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `media/tex/waypoint/MapPin.tga`     | 32 × 32 | Complete original tracked minimap PNG, converted to TGA without cropping or rescaling.                                  |
-| `media/tex/waypoint/HudDiamond.tga` | 32 × 64 | Original navigation atlas pixel rectangle `[28, 0, 54, 37)`, placed at `(3, 13)` on a transparent canvas. No rescaling. |
-| `media/tex/waypoint/HudArrow.tga`   | 32 × 32 | Original navigation atlas pixel rectangle `[0, 35, 24, 55)`, placed at `(4, 6)` on a transparent canvas. No rescaling.  |
+| Bundled file                      | Canvas  | Preparation                                                                                                            |
+| --------------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `media/tex/waypoint/MapPin.tga`   | 32 × 32 | Complete original tracked minimap PNG, converted to TGA without cropping or rescaling.                                 |
+| `media/tex/waypoint/HudArrow.tga` | 32 × 32 | Original navigation atlas pixel rectangle `[0, 35, 24, 55)`, placed at `(4, 6)` on a transparent canvas. No rescaling. |
 
 Pixel rectangles use a top-left origin and exclusive right/bottom edges.
 
@@ -49,7 +48,7 @@ Original glyph pixels and alpha are retained without rescaling. Transparent sour
 | `media/tex/waypoint/GuardianFloating.tga` | 64 × 64         | `[0, 1, 62, 64)`    | 128 × 128     | Paste at `(1, 1)`; square region `[0, 0, 65, 65)`, UV `0..65/128` on each axis.     |
 | `media/tex/waypoint/CachePouch.tga`       | 128 × 128       | `[28, 7, 117, 124)` | 128 × 128     | Paste at `(15, 1)`; square region `[0, 0, 119, 119)`, UV `0..119/128` on each axis. |
 
-Square sampling preserves each glyph's proportions inside its 32-by-32 HUD icon field. All guardian views reuse this medallion and crop, including the 26-by-26 world-map pin. The separate `MapPin.tga` cache pin remains unchanged. `HudDiamond.tga` is retained as a source reference for the previous HUD, but is no longer used or included in the runtime manifest.
+Square sampling preserves each glyph's proportions inside its 32-by-32 HUD icon field. All guardian views reuse this medallion and crop, including the 26-by-26 world-map pin. The separate `MapPin.tga` cache pin remains unchanged.
 
 ## Drawing recommendations
 
