@@ -18,6 +18,31 @@ DFRL:NewMod("AnimatedPortraits", 2, function()
         if entry.model then entry.model:Hide() end
     end
 
+    local function PlaceViewport(entry)
+        local width, height = T.GetLocalSize(entry.portrait)
+        if type(width) ~= "number" or type(height) ~= "number" or width <= 2 or height <= 2 then
+            entry.viewportReady = false
+            return
+        end
+        if entry.viewportReady and T.NearlyEqual(entry.width, width) and T.NearlyEqual(entry.height, height) then
+            return
+        end
+        local diameter = math.min(width, height)
+        -- Every corner of this native rectangular viewport stays inside the
+        -- portrait circle, with one unit of diagonal clearance for the rim.
+        local side = (diameter - 2) / math.sqrt(2)
+        entry.model:SetWidth(side)
+        entry.model:SetHeight(side)
+        for _, strip in ipairs(entry.backdrop) do
+            local y1, y2 = (strip.index - 1) / 24, strip.index / 24
+            local edge = math.max(math.abs(2 * y1 - 1), math.abs(2 * y2 - 1))
+            strip.texture:SetWidth(diameter * math.sqrt(1 - edge * edge))
+            strip.texture:SetHeight(diameter / 24)
+            strip.texture:SetPoint("CENTER", entry.portrait, "CENTER", 0, diameter * (0.5 - (y1 + y2) / 2))
+        end
+        entry.width, entry.height, entry.viewportReady = width, height, true
+    end
+
     local function Bind(entry)
         if entry.binding or not entry.supported then return end
         if not portraits3D or not inWorld or not UnitExists(entry.unit) then
@@ -27,6 +52,7 @@ DFRL:NewMod("AnimatedPortraits", 2, function()
         entry.binding = true
         entry.bound = false
         RestoreStill(entry)
+        PlaceViewport(entry)
         -- SetUnit captures this token's current identity. Clear the previous copy first:
         -- a missing replacement must never leave the previous target in the portrait.
         local success = pcall(function()
@@ -68,23 +94,33 @@ DFRL:NewMod("AnimatedPortraits", 2, function()
             return
         end
 
-        -- Keep the native rectangular viewport at the existing portrait's bounds.
-        -- The client supplies its authored camera and animation; no guessed zoom,
-        -- model offsets, circular clipping or animation timers are substituted here.
+        -- The native viewport is rectangular. Contain it inside the portrait
+        -- circle; the client still supplies its authored camera and animation.
         success = pcall(function()
             model:Hide()
-            model:SetAllPoints(portrait)
+            model:SetPoint("CENTER", portrait, "CENTER", 0, 0)
             -- ARTWORK at the portrait's level stays above the extended health
             -- fill and below the existing gold OVERLAY artwork.
             model:SetFrameLevel(portrait:GetParent():GetFrameLevel())
             model:SetAlpha(1)
             model:EnableMouse(false)
+            -- Passive native texture strips form a round dark backing without
+            -- a square outside the portrait or a new bundled image.
+            entry.backdrop = {}
+            for index = 2, 23 do
+                local texture = model:CreateTexture(nil, "BACKGROUND")
+                texture:SetTexture("Interface\\Buttons\\WHITE8X8")
+                texture:SetVertexColor(0.015, 0.018, 0.022, 0.72)
+                table.insert(entry.backdrop, { texture = texture, index = index })
+            end
+            PlaceViewport(entry)
             model:SetScript("OnHide", function() DropCopy(entry) end)
             model:SetScript("OnShow", function() Bind(entry) end)
             model:SetScript("OnUpdate", function()
                 -- Ordinary updates precede model paint callbacks. Restore the still
                 -- every frame; only a current copy's callback may replace it again.
                 -- This also recovers when a client has the methods but no renderer.
+                PlaceViewport(entry)
                 RestoreStill(entry)
                 if entry.bound and (not portraits3D or not inWorld or not UnitExists(entry.unit)) then
                     Release(entry)
@@ -96,6 +132,7 @@ DFRL:NewMod("AnimatedPortraits", 2, function()
                 if
                     portraits3D
                     and entry.bound
+                    and entry.viewportReady
                     and not entry.binding
                     and inWorld
                     and UnitExists(entry.unit)

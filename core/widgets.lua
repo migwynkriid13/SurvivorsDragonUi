@@ -109,11 +109,11 @@ function DFRL.tools.CreateButton(parent, text, width, height)
     return button
 end
 
--- Keep the end bevel outside the fill; the metal frame supplies that edge.
--- The large health fill and its damage-loss overlay share the same crop.
+-- The prepared interior leaves native StatusBar UVs free to track health.
+-- The large health fill and its damage-loss overlay share the same artwork.
 DFRL.tools.LargeHealthFill = {
-    texture = DFRL:GetInfoOrCons("tex") .. "unitframes\\healthDF2.tga",
-    texCoords = { 6.5 / 128, 121.5 / 128, 5 / 32, 25 / 32 },
+    texture = DFRL:GetInfoOrCons("tex") .. "unitframes\\healthDF2Fill.blp",
+    texCoords = { 0, 1, 0, 1 },
 }
 
 local function CreatePortraitRim(parent, owner, path, mirrored, r, g, b, blendMode)
@@ -232,19 +232,13 @@ function DFRL.tools.CreateUnitBorder(frame, healthBar, portraitTexture, backgrou
         end
         return extension
     end
-    -- Keep the original shading, cropping off the texture's transparent padding.
+    -- Padding is removed in the prepared artwork; native fill coordinates
+    -- must remain untouched so health changes crop and size the bar together.
     healthBar:SetStatusBarTexture(healthFill.texture)
     healthBar:SetHeight(29)
     healthBar:SetFrameLevel(frame:GetFrameLevel() + 1)
     -- The target always overlaps its circular edge; the player opts in below.
     SetPortraitOverlap(not mirrored)
-
-    local function CropHealthFill()
-        local fill = healthBar:GetStatusBarTexture()
-        if fill then fill:SetTexCoord(unpack(healthFill.texCoords)) end
-    end
-    HookScript(healthBar, "OnValueChanged", CropHealthFill)
-    CropHealthFill()
 
     if not background then background = frame:CreateTexture(nil, "BACKGROUND") end
     background:SetTexture("Interface\\Buttons\\WHITE8X8")

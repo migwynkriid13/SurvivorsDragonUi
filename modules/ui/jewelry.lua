@@ -1,7 +1,7 @@
 -- Five equipped jewelry sockets, attached by default and optionally independent.
 --[[
 The selected thin-bezel design keeps the Blizzard gold circular rim artwork.
-SocketRail.tga joins all upper socket arches and straight spans in one texture
+SocketRail.blp joins all upper socket arches and straight spans in one texture
 using pixels from the existing HDActionBar.tga. The original bar texture is
 unchanged; only its narrow top strip switches while this jewelry row is visible.
 No extra inner or lower curved line is drawn beneath the gold circles.
@@ -500,7 +500,7 @@ DFRL:NewMod("Jewelry", 4, function()
     overlay:EnableMouse(false)
     for _, slot in ipairs(slots) do
         local rim = overlay:CreateTexture(nil, "OVERLAY")
-        rim:SetTexture(texturePath .. "Frame.tga")
+        rim:SetTexture(texturePath .. "Frame.blp")
         rim:SetWidth(RIM_SIZE * 72 / 86)
         rim:SetHeight(RIM_SIZE * 72 / 86)
         rim:SetPoint("CENTER", slot.button, "CENTER", 0, 0)

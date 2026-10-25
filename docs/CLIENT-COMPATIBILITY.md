@@ -2,21 +2,90 @@
 
 The reported regression followed the Azeroth Survivors client update. The supplied changelog identifies 0.101.0 as the move to a newer client and Lua 5.0 behavior. The screenshots show `SetText(): Font not set` in the player and target modules, an incomplete layout entry at `core/layout.lua:730`, and the client's 48 MB script-memory popup. They do not establish the exact engine commit packaged by the game or the allocation responsible for the memory popup.
 
-## FontString scale and error collectors
+## Texture loading after the 0.116 engine update
+
+The reported missing jewelry rims, rail, tally surrounds and `/sdui` borders
+match two constraints in the updated client. The pinned
+[Wenilla TGA loader](https://github.com/Arnesen/wenilla/blob/3426fd28c55b1d3dad22459d1a80e72a05a8006c/crates/benilla-formats/src/tga.rs)
+accepts power-of-two TGA dimensions strictly below 1024. Its truecolour decoder
+also requires the pixel depth minus the declared alpha bits to equal 24.
+An admitted header whose pixels fail decoding draws opaque white, explaining
+the coin square without requiring a Lua error. The same decoder error wording
+is present in the installed executable, SHA-256
+`507a791fad3aec59afb2f90d2737cdab4dbbe79b98c5e74d7699fe44bed16293`,
+whose embedded game version is 0.117.0.
+
+Twenty-six shipped sheets were 1024 or 2048 pixels wide: character chrome,
+the editor border and divider, the guardian header, jewelry rims and rail,
+and all twenty attached/detached tally styles. They now use uncompressed
+BLP2 Raw3 files with the required palette block, supported by the native
+[BLP reader](https://github.com/Arnesen/wenilla/blob/3426fd28c55b1d3dad22459d1a80e72a05a8006c/crates/benilla-blp/src/lib.rs).
+The conversion preserves every BGRA pixel, the original canvas dimensions
+and all runtime UVs and geometry. It performs no resizing or recompression.
+The original `Coins.tga` remains a TGA; only its descriptor changes from
+`0x20` to `0x28` to declare the eight alpha bits already in its pixels.
+
+Runtime filenames and the shared manifest name the BLP outputs. After
+regenerating the original TGA artwork, run
+`python3 scripts/prepare_client_textures.py` to repack oversized manifest
+inputs and align generated tally filenames. Source artwork and provenance
+remain unchanged. Original TGA files remain available in the parent Git
+revision for pixel comparison. A local rollback copy and conversion receipt
+are retained outside the runtime manifest.
+
+The local artwork comparison records identical pixel buffers and canvas sizes
+for all 26 BLP outputs against those backed-up TGAs. The coin differs at byte
+17 only. This is file-conversion evidence, not an in-game rendering result.
+
+Reload the UI to rebuild texture lookup state and load the changed filenames.
+No addon, game or local test suite was executed; restored appearance and any
+remaining health-bar mismatch require game-side confirmation.
+
+## Native health-fill coordinates
+
+The later player/target screenshot shows a separate compatibility problem.
+The original `healthDF2.tga` is a valid 128-by-32 image, but its padding was
+removed by setting UVs on the native StatusBar texture in `OnValueChanged`.
+Wenilla's
+[StatusBar update](https://github.com/Arnesen/wenilla/blob/3426fd28c55b1d3dad22459d1a80e72a05a8006c/crates/benilla-ui/src/script/statusbar.rs)
+writes the fill coordinates after callbacks, replacing that crop. Its
+[rectangle calculation](https://github.com/Arnesen/wenilla/blob/3426fd28c55b1d3dad22459d1a80e72a05a8006c/crates/benilla-ui/src/script/extract.rs)
+also uses those coordinates to size the fill. Disabling that behavior or
+continually reapplying the artwork crop would interfere with native health
+fractions.
+
+`scripts/prepare_client_textures.py` now copies the original interior pixels
+from rectangle `(6, 5, 122, 25)` into the 116-by-20 uncompressed
+`healthDF2Fill.blp`. These columns enclose the former half-texel horizontal
+sampling window; the twenty rows retain its original vertical crop. No pixels
+are resized, recolored or recompressed. The distinct filename avoids the
+loader preferring the original TGA over a BLP with the same basename.
+The original TGA remains a preparation input outside the runtime manifest.
+
+Player and target use this fill with native full UVs, and their shared
+damage-loss overlay uses the same prepared image. The old crop callback is
+removed. Native values, range changes, fill clipping, class/party colors,
+bar dimensions, borders, resource-row height and overlay fading keep their
+existing ownership. No updater or saved state is added. Exact filtering at
+the cropped edges and in-game appearance remain unverified; no local addon,
+game or test execution was performed.
+
+## FontString scale and Lua errors
 
 The Level Up measurement cache reads effective scale from the FontString's
 owning frame, matching the existing run-clock label renderer. The current
 client exposes `GetEffectiveScale` on frames, but the reported FontString call
 raised a nil-method error during Layout Ready and later stored-level updates.
 
-SurvivorsDragonUi leaves the global error handler to the game and installed
-collectors such as SurvivorBugs. Its caught module failures still call the
-current `geterrorhandler()`. The removed legacy handler replaced that global
-at file load and after every `ADDON_LOADED`, then printed directly to chat
-without forwarding errors. This prevented the enabled SurvivorBugs handler
-from recording them. Neither another collector nor a custom chat fallback is
-installed by this addon. Reloading the UI is required to replace already-loaded
-Lua and release that old handler.
+At the user's request, the original `core/error.lua` handler is restored and
+loads before the other addon files. It installs the global error handler at
+file load and after every `ADDON_LOADED`, printing the original red
+`DFRL: Error` messages directly to chat. Each distinct message appears twice,
+followed by one `ERROR SPAM THROTTLED` notice; later repeats stay hidden for
+the Lua session. Chat announcement filtering leaves these messages visible.
+Caught module failures still call the current `geterrorhandler()`. This
+restores the original behavior without forwarding to collectors such as
+SurvivorBugs. Reloading the UI is required to use the restored handler.
 
 ## Fonts and incomplete layout registration
 

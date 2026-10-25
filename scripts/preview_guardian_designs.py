@@ -4,6 +4,8 @@ from pathlib import Path
 import json
 from PIL import Image, ImageChops, ImageDraw, ImageFont
 
+from prepare_jewelry_art import rgba
+
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs/designs/guardian-tracker"
 TEX = ROOT / "media/tex"
@@ -48,13 +50,13 @@ DESIGNS = [
 
 
 def art(path, crop=None):
-    image = Image.open(TEX / path).convert("RGBA")
+    image = rgba(TEX / path)
     return image.crop(crop) if crop else image
 
 
 ICON = art("waypoint/GuardianFloating.tga", (0, 0, 65, 65))
-EDITOR = art("editor/border.tga")
-CHROME = art("character/Chrome.tga")
+EDITOR = art("editor/border.blp")
+CHROME = art("character/Chrome.blp")
 PARTS = art("character/Parts.tga")
 
 

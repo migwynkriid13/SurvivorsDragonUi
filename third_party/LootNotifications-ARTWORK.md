@@ -97,7 +97,7 @@ addon catalogs; item names and colors remain received game data.
 
 ## 03 · Plain addon metal
 
-This uses the existing `media/tex/character/Chrome.tga` 1024 × 256 sheet and its
+This uses the existing `media/tex/character/Chrome.blp` 1024 × 256 sheet and its
 verified eight corner/edge regions. The source pins, original BLP canvases,
 rectangles and ownership notices remain in [Character-ARTWORK.md](Character-ARTWORK.md).
 The static proposal reuses the shared `panel` assembly helper in

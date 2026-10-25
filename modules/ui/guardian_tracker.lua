@@ -47,7 +47,8 @@ DFRL:NewMod("GuardianTracker", 4, function()
     end
     local function Texture(parent, file, layer, w, h, right, bottom)
         local texture = parent:CreateTexture(nil, layer)
-        texture:SetTexture(path .. file .. ".tga")
+        local extension = file == "guardians\\Header" and ".blp" or ".tga"
+        texture:SetTexture(path .. file .. extension)
         texture:SetWidth(w)
         texture:SetHeight(h)
         texture:SetTexCoord(0, right or 1, 0, bottom or 1)

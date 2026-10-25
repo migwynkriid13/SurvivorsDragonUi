@@ -13,6 +13,9 @@ from pathlib import Path
 
 from PIL import Image, ImageChops, ImageDraw, ImageEnhance
 
+from prepare_client_textures import save_image
+from prepare_jewelry_art import rgba
+
 ROOT = Path(__file__).resolve().parents[1]
 SCALE = 2
 WIDTH = 600
@@ -137,12 +140,12 @@ def prepare(originals, output):
         center_y = float(re.search(r'^        contentY = ([\d.]+),', block, re.M).group(1))
         image = repaired.get(identifier)
         if image is None:
-            image = Image.open(ROOT / "media/tex/tally" / texture).convert("RGBA")
+            image = rgba(ROOT / "media/tex/tally" / texture)
         else:
-            image.save(output / texture, compression=None)
+            save_image(image, output / texture)
         if identifier == "gothic13":
             image = reliquary(sources, body, False)
-            image.save(output / texture, compression=None)
+            save_image(image, output / texture)
             detached = reliquary(sources, body, True)
             extent, center = detached.getbbox()[3] / SCALE, center_y + 16
         elif identifier == "gothic04":
@@ -156,8 +159,8 @@ def prepare(originals, output):
             detached.alpha_composite(upper)
             detached.alpha_composite(lower, (0, upper.height))
             extent, center = (upper.height + lower.height) / SCALE, upper.height / SCALE
-        name = identifier + "_detached.tga"
-        detached.save(output / name, compression=None)
+        name = identifier + "_detached.blp"
+        save_image(detached, output / name)
         entry = ("        detached = {\n"
                  '            texture = "' + name + '",\n'
                  "            extent = " + number(extent) + ",\n"
