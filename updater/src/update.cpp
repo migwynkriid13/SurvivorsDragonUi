@@ -8,8 +8,10 @@
 #include <algorithm>
 #include <array>
 #include <cctype>
+#include <charconv>
 #include <fstream>
 #include <map>
+#include <optional>
 #include <set>
 #include <stdexcept>
 #include <string_view>
@@ -99,6 +101,62 @@ struct Manifest {
     Files files;
 };
 
+using Version = std::array<std::uint32_t, 3>;
+std::optional<Version> ParseVersion(std::string_view text) {
+    constexpr std::string_view suffix = "-survivors";
+    if (!text.ends_with(suffix)) return std::nullopt;
+    text.remove_suffix(suffix.size());
+    Version parts{};
+    for (std::size_t i = 0; i < parts.size(); ++i) {
+        const auto dot = text.find('.');
+        const auto field = text.substr(0, dot);
+        const auto result = std::from_chars(field.data(), field.data() + field.size(), parts[i]);
+        if (field.empty() || result.ec != std::errc{} || result.ptr != field.data() + field.size()) return std::nullopt;
+        if (i + 1 < parts.size()) {
+            if (dot == std::string_view::npos) return std::nullopt;
+            text.remove_prefix(dot + 1);
+        } else if (dot != std::string_view::npos) return std::nullopt;
+    }
+    return parts;
+}
+
+bool NewerInstalled(const fs::path& live, const Manifest& manifest) {
+    const auto toc = live / L"SurvivorsDragonUi.toc";
+    Guard(toc);
+    if (!fs::is_regular_file(toc)) return false;
+    const auto bytes = Read(toc, ManifestLimit);
+    const std::string text(bytes.begin(), bytes.end());
+    std::size_t line{};
+    while (line < text.size()) {
+        const auto end = text.find('\n', line);
+        auto value = std::string_view(text).substr(line, end == std::string::npos ? end : end - line);
+        constexpr std::string_view prefix = "## Version:";
+        if (value.starts_with(prefix)) {
+            value.remove_prefix(prefix.size());
+            while (!value.empty() && (value.front() == ' ' || value.front() == '\t')) value.remove_prefix(1);
+            while (!value.empty() && (value.back() == '\r' || value.back() == ' ')) value.remove_suffix(1);
+            const auto current = ParseVersion(value);
+            const auto published = ParseVersion(manifest.receipt.at("version").get<std::string>());
+            return current && published && *current > *published;
+        }
+        if (end == std::string::npos) break;
+        line = end + 1;
+    }
+    return false;
+}
+
+struct Paths {
+    fs::path live, work, pending, backup;
+    explicit Paths(const fs::path& game) {
+        const auto addons = game / L"benilla-config" / L"AddOns";
+        live = addons / Addon;
+        work = addons / L".SurvivorsDragonUi-download";
+        pending = addons / L".SurvivorsDragonUi-update";
+        backup = addons / L".SurvivorsDragonUi-backup";
+        for (const auto* path : {&live, &work, &pending, &backup}) Guard(*path);
+    }
+};
+
 Manifest Parse(const Bytes& bytes) {
     Require(!bytes.empty() && bytes.size() <= ManifestLimit, "Invalid manifest size");
     const auto json = Json::parse(bytes);
@@ -109,8 +167,7 @@ Manifest Parse(const Bytes& bytes) {
     result.tag = json.at("tag").get<std::string>();
     Require(result.tag.starts_with("build-") && Hex(result.tag.substr(6), 40), "Invalid release tag");
     const auto version = json.at("version").get<std::string>();
-    Require(!version.empty() && version.size() < 100 &&
-            version.find_first_of("\r\n") == std::string::npos, "Invalid addon version");
+    Require(ParseVersion(version).has_value(), "Invalid addon version");
     result.archiveHash = json.at("archive").at("sha256").get<std::string>();
     result.archiveSize = json.at("archive").at("size").get<std::size_t>();
     Require(Hex(result.archiveHash, 64) && result.archiveSize > 0 &&
@@ -280,45 +337,62 @@ bool SafeRelativePath(const std::string& name) {
     return false;
 }
 
-std::string Update(const fs::path& game, const Download& download,
-                   const std::function<void()>& beforeActivate) {
-    const auto addons = game / L"benilla-config" / L"AddOns";
-    const auto live = addons / Addon;
-    const auto stage = addons / L".SurvivorsDragonUi-update";
-    const auto backup = addons / L".SurvivorsDragonUi-backup";
-    Guard(live);
-    Guard(stage);
-    Guard(backup);
-    // Recover the old complete tree before any network access, even offline.
-    if (!fs::exists(live) && fs::exists(backup)) fs::rename(backup, live);
+std::string StageUpdate(const fs::path& game, const Download& download) {
+    const Paths paths(game);
     const auto manifest = Parse(download(ManifestUrl, ManifestLimit));
-    if (Matches(live, manifest)) return "Already current: " + manifest.tag;
+    if (NewerInstalled(paths.live, manifest)) return "Installed addon is newer than the latest release; skipped.";
+    if (Matches(paths.live, manifest)) return "Already current: " + manifest.tag;
+    if (fs::is_regular_file(paths.pending / L".sdui-release.json") && Matches(paths.pending, manifest)) {
+        return "Already downloaded; ready for the next launch: " + manifest.tag;
+    }
     const auto archiveUrl = std::wstring(L"https://github.com/migwynkriid13/SurvivorsDragonUi/releases/download/") +
         std::wstring(manifest.tag.begin(), manifest.tag.end()) + L"/SurvivorsDragonUi.zip";
     const auto zip = download(archiveUrl, ArchiveLimit);
-    // Keep a complete existing install until all downloads and staging succeed.
-    ClearTree(stage);
-    fs::create_directories(stage);
+    // Network and extraction touch only private staging; the running game's
+    // addon and any previously completed pending update remain available.
+    ClearTree(paths.work);
+    fs::create_directories(paths.work);
     try {
-        Extract(zip, manifest, stage);
+        Extract(zip, manifest, paths.work);
         const auto receipt = manifest.receipt.dump(2) + "\n";
-        Write(stage / L".sdui-release.json", Bytes(receipt.begin(), receipt.end()));
-        ClearTree(backup);
-        const bool hadLive = fs::exists(live);
-        if (hadLive) fs::rename(live, backup);
-        try {
-            if (beforeActivate) beforeActivate();
-            fs::rename(stage, live);
-        } catch (...) {
-            if (hadLive) fs::rename(backup, live);
-            throw;
-        }
-        // Keep one previous complete version for manual rollback. Recovery uses
-        // it only if the live directory is absent; it never replaces a live tree.
+        Write(paths.work / L".sdui-release.json", Bytes(receipt.begin(), receipt.end()));
+        ClearTree(paths.pending);
+        fs::rename(paths.work, paths.pending);
     } catch (...) {
-        try { ClearTree(stage); } catch (...) {}
+        try { ClearTree(paths.work); } catch (...) {}
         throw;
     }
-    return "Installed: " + manifest.tag + " (" + manifest.receipt.at("version").get<std::string>() + ")";
+    return "Downloaded; ready for the next launch: " + manifest.tag;
+}
+
+std::string ApplyPending(const fs::path& game, const std::function<void()>& beforeActivate) {
+    const Paths paths(game);
+    // Recovery and activation have no transport parameter: they work offline.
+    if (!fs::exists(paths.live) && fs::exists(paths.backup)) fs::rename(paths.backup, paths.live);
+    // The receipt is written only after every extracted file has been flushed.
+    // Recover a completed staging rename interrupted before it became pending.
+    if (!fs::exists(paths.pending) && fs::is_regular_file(paths.work / L".sdui-release.json")) {
+        const auto ready = Parse(Read(paths.work / L".sdui-release.json", ManifestLimit));
+        Require(Matches(paths.work, ready), "Interrupted staging failed verification");
+        fs::rename(paths.work, paths.pending);
+    }
+    if (!fs::exists(paths.pending)) return "No downloaded addon update to activate.";
+    const auto manifest = Parse(Read(paths.pending / L".sdui-release.json", ManifestLimit));
+    Require(Matches(paths.pending, manifest), "Pending addon failed verification");
+    if (NewerInstalled(paths.live, manifest) || Matches(paths.live, manifest)) {
+        ClearTree(paths.pending);
+        return "Kept the current addon; discarded a redundant or older pending update.";
+    }
+    ClearTree(paths.backup);
+    const bool hadLive = fs::exists(paths.live);
+    if (hadLive) fs::rename(paths.live, paths.backup);
+    try {
+        if (beforeActivate) beforeActivate();
+        fs::rename(paths.pending, paths.live);
+    } catch (...) {
+        if (hadLive) fs::rename(paths.backup, paths.live);
+        throw;
+    }
+    return "Activated downloaded addon: " + manifest.tag;
 }
 } // namespace sdui

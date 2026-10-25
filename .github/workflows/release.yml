@@ -60,17 +60,34 @@ jobs:
         if: steps.payload.outputs.payload_changed == 'true'
         run: python scripts/package.py dist/SurvivorsDragonUi.zip
 
-      - name: Build and test the optional DLL
+      - name: Select the frozen optional DLL
+        id: binary
         if: steps.payload.outputs.payload_changed == 'true'
+        run: python updater/binary_release.py prepare
+
+      - name: Build and test the updater version once
+        if: steps.payload.outputs.payload_changed == 'true' && steps.binary.outputs.needs_build == 'true'
         uses: ./updater/build
 
-      - name: Prepare release manifest and checksums
-        if: steps.payload.outputs.payload_changed == 'true'
+      - name: Record the first updater binary
+        if: steps.payload.outputs.payload_changed == 'true' && steps.binary.outputs.needs_build == 'true'
         run: |
           set -euo pipefail
           cp dist/updater-build/Release/avrt.dll dist/avrt.dll
+          python updater/binary_release.py record
+
+      - name: Prepare release manifest and checksums
+        if: steps.payload.outputs.payload_changed == 'true'
+        env:
+          UPDATER_REUSED: ${{ steps.binary.outputs.reused }}
+        run: |
+          set -euo pipefail
           python updater/release_manifest.py dist/SurvivorsDragonUi.zip "$BUILD_SHA" --dll dist/avrt.dll
           python -B -m unittest discover -s updater/tests -p 'test_*.py' -v
+
+      - name: Freeze the tested updater binary for this version
+        if: steps.payload.outputs.payload_changed == 'true' && steps.binary.outputs.needs_build == 'true'
+        run: python updater/binary_release.py publish
 
       - name: Publish this commit's release
         if: steps.payload.outputs.payload_changed == 'true'
@@ -81,7 +98,7 @@ jobs:
           archive="dist/SurvivorsDragonUi.zip"
           notes="dist/release-notes.md"
           python scripts/release_notes.py "$BUILD_SHA" "$notes"
-          assets=("$archive" dist/avrt.dll dist/updater-manifest.json dist/SHA256SUMS.txt)
+          assets=("$archive" dist/avrt.dll dist/updater-manifest.json dist/updater-binary.json dist/SHA256SUMS.txt)
 
           if draft="$(gh release view "$tag" --json isDraft --jq '.isDraft' 2>/dev/null)"; then
             if [[ "$draft" == true ]]; then
@@ -90,7 +107,7 @@ jobs:
             fi
             echo 'Keeping the existing immutable release assets.'
           else
-            # All four assets are uploaded while hidden, then published together.
+            # All assets are uploaded while hidden, then published together.
             gh release create "$tag" "${assets[@]}" --draft \
               --target "$BUILD_SHA" \
               --title "SurvivorsDragonUi (${BUILD_SHA:0:7})" \

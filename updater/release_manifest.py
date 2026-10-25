@@ -51,7 +51,7 @@ def main():
     archive = arguments.archive
     manifest = archive.parent / "updater-manifest.json"
     manifest.write_text(json.dumps(build_manifest(archive, arguments.commit), indent=2) + "\n", encoding="utf-8")
-    artifacts = (archive, arguments.dll, manifest)
+    artifacts = (archive, arguments.dll, manifest, archive.parent / "updater-binary.json")
     (archive.parent / "SHA256SUMS.txt").write_text(
         "".join(hashlib.sha256(path.read_bytes()).hexdigest() + "  " + path.name + "\n" for path in artifacts),
         encoding="ascii",

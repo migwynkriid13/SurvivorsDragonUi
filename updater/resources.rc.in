@@ -4,8 +4,8 @@
 102 RCDATA "@CMAKE_CURRENT_SOURCE_DIR@/third_party/zlib-LICENSE.txt"
 
 1 VERSIONINFO
-FILEVERSION 1,0,0,0
-PRODUCTVERSION 1,0,0,0
+FILEVERSION @PROJECT_VERSION_MAJOR@,@PROJECT_VERSION_MINOR@,@PROJECT_VERSION_PATCH@,0
+PRODUCTVERSION @PROJECT_VERSION_MAJOR@,@PROJECT_VERSION_MINOR@,@PROJECT_VERSION_PATCH@,0
 FILETYPE VFT_DLL
 {
     BLOCK "StringFileInfo"
@@ -14,7 +14,7 @@ FILETYPE VFT_DLL
         {
             VALUE "FileDescription", "SurvivorsDragonUi optional addon updater\0"
             VALUE "ProductName", "SurvivorsDragonUi\0"
-            VALUE "FileVersion", "1.0.0\0"
+            VALUE "FileVersion", "@PROJECT_VERSION@\0"
             VALUE "OriginalFilename", "avrt.dll\0"
         }
     }

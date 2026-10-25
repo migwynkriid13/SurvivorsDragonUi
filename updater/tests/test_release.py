@@ -3,6 +3,7 @@
 import hashlib
 import importlib.util
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -14,6 +15,8 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
 from package import runtime_files
 from release_changes import payload_changes, updater_changed
+sys.path.insert(0, str(ROOT / "updater"))
+import binary_release
 
 spec = importlib.util.spec_from_file_location("release_manifest", ROOT / "updater/release_manifest.py")
 release = importlib.util.module_from_spec(spec)
@@ -22,6 +25,8 @@ spec.loader.exec_module(release)
 
 class ReleaseTests(unittest.TestCase):
     def test_native_reader_installs_actual_release(self):
+        if os.environ.get("UPDATER_REUSED") == "true":
+            self.skipTest("Frozen DLL reused without compiling; native reader runs in updater PR CI and initial publication")
         subprocess.run([
             str(ROOT / "dist/updater-build/Release/UpdaterTests.exe"),
             "--release", str(ROOT / "dist"),
@@ -37,6 +42,8 @@ class ReleaseTests(unittest.TestCase):
             self.assertTrue(all(name.startswith("SurvivorsDragonUi/") for name in package.namelist()))
             self.assertFalse(any(name.endswith(".dll") or "/updater/" in name for name in package.namelist()))
         self.assertTrue((archive.parent / "avrt.dll").is_file())
+        binary_release.verify(archive.parent / "avrt.dll", json.loads(
+            (archive.parent / "updater-binary.json").read_text(encoding="utf-8")))
         for line in (archive.parent / "SHA256SUMS.txt").read_text().splitlines():
             digest, name = line.split("  ", 1)
             self.assertEqual(digest, hashlib.sha256((archive.parent / name).read_bytes()).hexdigest())

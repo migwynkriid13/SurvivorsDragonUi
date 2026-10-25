@@ -33,6 +33,8 @@ jobs:
           python scripts/package.py dist/SurvivorsDragonUi.zip
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           Copy-Item dist/updater-build/Release/avrt.dll dist/avrt.dll
+          python updater/binary_release.py record --commit '${{ github.event.pull_request.head.sha }}'
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
           python updater/release_manifest.py dist/SurvivorsDragonUi.zip '${{ github.event.pull_request.head.sha }}' --dll dist/avrt.dll
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           python -B -m unittest discover -s updater/tests -p 'test_*.py' -v

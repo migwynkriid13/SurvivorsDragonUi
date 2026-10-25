@@ -1,12 +1,16 @@
 #include <windows.h>
 #include <winhttp.h>
+#include <process.h>
 
 #include "update.hpp"
+#include "coordination.hpp"
+#include "version.hpp"
 
 #include <algorithm>
 #include <array>
 #include <atomic>
 #include <fstream>
+#include <memory>
 #include <stdexcept>
 
 namespace sdui {
@@ -128,48 +132,32 @@ void Log(const std::filesystem::path& game, const std::string& message) noexcept
         const auto attributes = GetFileAttributesW(path.c_str());
         if (attributes != INVALID_FILE_ATTRIBUTES && (attributes & FILE_ATTRIBUTE_REPARSE_POINT)) return;
         std::ofstream output(path, std::ios::trunc);
-        output << "SurvivorsDragonUi updater 1.0.0\n" << message << '\n';
+        output << "SurvivorsDragonUi updater " SDUI_UPDATER_VERSION "\n" << message << '\n';
     } catch (...) {}
 }
 
-// Shared byte locks live until process exit, preventing later launches from
-// changing files while this game uses them. An exclusive startup lock permits
-// one updater; another launch waits only when an update is in progress.
-struct SessionLock {
-    HANDLE file{INVALID_HANDLE_VALUE};
-    OVERLAPPED range{};
-    bool exclusive{};
-    explicit SessionLock(const std::filesystem::path& game) {
-        const auto path = game / L"SurvivorsDragonUi-updater.lock";
-        const auto attributes = GetFileAttributesW(path.c_str());
-        if (attributes != INVALID_FILE_ATTRIBUTES && (attributes & FILE_ATTRIBUTE_REPARSE_POINT)) return;
-        file = CreateFileW(path.c_str(), GENERIC_READ | GENERIC_WRITE,
-                           FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_ALWAYS,
-                           FILE_ATTRIBUTE_NORMAL, nullptr);
-        if (file == INVALID_HANDLE_VALUE) return;
-        exclusive = LockFileEx(file, LOCKFILE_EXCLUSIVE_LOCK | LOCKFILE_FAIL_IMMEDIATELY,
-                                0, 1, 0, &range) != FALSE;
-        if (!exclusive && !LockFileEx(file, 0, 0, 1, 0, &range)) {
-            CloseHandle(file);
-            file = INVALID_HANDLE_VALUE;
-        }
+struct BackgroundWork { std::filesystem::path game; };
+
+unsigned __stdcall DownloadInBackground(void* context) noexcept {
+    std::unique_ptr<BackgroundWork> work(static_cast<BackgroundWork*>(context));
+    try {
+        detail::WorkerLock lock(work->game);
+        if (lock.file == INVALID_HANDLE_VALUE) return 0;
+        const auto deadline = GetTickCount64() + 12000;
+        Log(work->game, StageUpdate(work->game, [deadline](const auto& url, auto limit) {
+            return DownloadHttps(url, limit, deadline);
+        }));
+    } catch (const std::exception& error) {
+        Log(work->game, std::string("Background update skipped: ") + error.what());
+    } catch (...) {
+        Log(work->game, "Background update skipped: unexpected failure.");
     }
-    void KeepForGame() noexcept {
-        if (file == INVALID_HANDLE_VALUE) return;
-        if (exclusive) {
-            UnlockFileEx(file, 0, 1, 0, &range);
-            if (!LockFileEx(file, 0, 0, 1, 0, &range)) {
-                CloseHandle(file);
-                file = INVALID_HANDLE_VALUE;
-            }
-        }
-        // Intentionally retain the successful lock handle until process exit.
-    }
-};
+    return 0;
+}
 } // namespace
 
 Bytes DownloadHttps(const std::wstring& initial, std::size_t limit, std::uint64_t deadline) {
-    Internet session(WinHttpOpen(L"SurvivorsDragonUi-Updater/1.0",
+    Internet session(WinHttpOpen(SDUI_UPDATER_USER_AGENT,
         WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, WINHTTP_FLAG_ASYNC));
     Timeout(session.handle, deadline);
     DWORD protocols = WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_2;
@@ -239,26 +227,30 @@ void InitializeUpdater() noexcept {
         const std::filesystem::path exe(std::wstring(executable.data(), length));
         if (CompareStringOrdinal(exe.filename().c_str(), -1, L"AzerothSurvivors.exe", -1, TRUE) != CSTR_EQUAL) return;
         game = exe.parent_path();
-        SessionLock lock(game);
+        detail::SessionLock lock(game);
         if (lock.file == INVALID_HANDLE_VALUE) {
             Log(game, "Skipped: installation is not writable or cannot be locked.");
             return;
         }
         if (lock.exclusive) {
-            try {
-                const auto deadline = GetTickCount64() + 12000;
-                Log(game, Update(game, [deadline](const auto& url, auto limit) {
-                    return DownloadHttps(url, limit, deadline);
-                }));
-            } catch (const std::exception& error) {
-                Log(game, std::string("Skipped: ") + error.what() + ". Existing addon retained where available.");
-            } catch (...) {
-                Log(game, "Skipped: unexpected updater failure.");
-            }
-        } else {
-            Log(game, "Skipped: another game instance is using this installation.");
+            try { Log(game, ApplyPending(game)); }
+            catch (const std::exception& error) {
+                Log(game, std::string("Pending activation skipped: ") + error.what());
+            } catch (...) { Log(game, "Pending activation skipped: unexpected failure."); }
         }
-        lock.KeepForGame();
+        if (!lock.KeepForGame()) {
+            Log(game, "Skipped: cannot retain the game session lock.");
+            return;
+        }
+        auto work = std::make_unique<BackgroundWork>(BackgroundWork{game});
+        const auto worker = _beginthreadex(nullptr, 0, &DownloadInBackground, work.get(), 0, nullptr);
+        if (!worker) {
+            Log(game, "Skipped: cannot start optional background worker.");
+            return;
+        }
+        work.release();
+        CloseHandle(reinterpret_cast<HANDLE>(worker));
+        // Never join the downloader or wait for network activity at startup.
     } catch (...) {
         if (!game.empty()) Log(game, "Skipped: cannot initialize optional updater.");
     }

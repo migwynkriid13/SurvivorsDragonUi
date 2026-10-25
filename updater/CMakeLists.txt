@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.25)
-project(SurvivorsDragonUiUpdater VERSION 1.0.0 LANGUAGES C CXX)
+file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/VERSION" UPDATER_VERSION LIMIT_COUNT 1)
+project(SurvivorsDragonUiUpdater VERSION ${UPDATER_VERSION} LANGUAGES C CXX)
 
 if(NOT WIN32 OR NOT MSVC OR NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
     message(FATAL_ERROR "Build the Windows x64 updater with MSVC.")
@@ -24,7 +25,8 @@ FetchContent_MakeAvailable(json zlib)
 
 add_library(updater_core STATIC src/update.cpp src/http.cpp)
 target_link_libraries(updater_core PUBLIC nlohmann_json::nlohmann_json zlibstatic bcrypt winhttp)
-target_include_directories(updater_core PUBLIC src)
+configure_file(version.hpp.in "${CMAKE_CURRENT_BINARY_DIR}/version.hpp" @ONLY)
+target_include_directories(updater_core PUBLIC src "${CMAKE_CURRENT_BINARY_DIR}")
 configure_file(resources.rc.in "${CMAKE_CURRENT_BINARY_DIR}/updater-resources.rc" @ONLY)
 add_library(SurvivorsDragonUiUpdater SHARED src/dllmain.cpp src/avrt_proxy.cpp src/avrt_proxy.def
     "${CMAKE_CURRENT_BINARY_DIR}/updater-resources.rc")
