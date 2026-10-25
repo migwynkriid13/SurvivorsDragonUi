@@ -26,6 +26,7 @@ DFRL:NewMod("Mini", 1, function()
         T.SetFont(values.health, 9, "OUTLINE")
         values.health:SetPoint("CENTER", health, "CENTER", 0, 0)
         values.health:SetTextColor(1, 1, 1)
+        values.healthLabels = T.BindUnitHealthText(health, values.health, unit, unit == "targettarget")
         if mana then
             values.mana = mana:CreateFontString(nil, "OVERLAY")
             T.SetFont(values.mana, 8, "OUTLINE")
@@ -51,12 +52,11 @@ DFRL:NewMod("Mini", 1, function()
 
     local function UpdateValues(values)
         local unit = values.unit
+        values.healthLabels.Update()
         if not UnitExists(unit) or (unit == "targettarget" and (UnitIsDead(unit) or UnitIsGhost(unit))) then
-            T.SetTextIfChanged(values.health, "")
             if values.mana then T.SetTextIfChanged(values.mana, "") end
             return
         end
-        T.SetTextIfChanged(values.health, UnitHealth(unit))
         if values.mana then
             if UnitManaMax(unit) > 0 then
                 T.SetTextIfChanged(values.mana, UnitMana(unit))
@@ -185,6 +185,7 @@ DFRL:NewMod("Mini", 1, function()
         border:SetFrameLevel(TargetofTargetHealthBar:GetFrameLevel() + 2)
         border:SetAllPoints(TargetofTargetFrame)
         target.health:SetParent(border)
+        target.healthLabels.percentage:SetParent(border)
         if TargetofTargetTexture then
             TargetofTargetTexture:SetAlpha(0)
             TargetofTargetTexture:Hide()
@@ -291,6 +292,7 @@ DFRL:NewMod("Mini", 1, function()
             borderFrame:SetAllPoints(frame)
             borderFrame:SetFrameLevel(math.max(health:GetFrameLevel(), mana:GetFrameLevel()) + 1)
             values.health:SetParent(borderFrame)
+            values.healthLabels.percentage:SetParent(borderFrame)
             local border = borderFrame:CreateTexture(nil, "BORDER")
             border:SetTexture(tex .. "pet")
             border:SetVertexColor(1, 1, 1, 1)
@@ -344,7 +346,7 @@ DFRL:NewMod("Mini", 1, function()
                 health:SetWidth(healthWidth + extension)
                 health:SetHeight(shown and 11 or 17.5)
                 health:SetPoint("CENTER", frame, "CENTER", 15 - extension / 2, shown and 10 or 6.75)
-                values.health:SetPoint("CENTER", health, "CENTER", extension / 2, 0)
+                values.healthLabels.SetInsets(extension, 0, extension / 2)
                 border:SetAlpha(shown and 1 or 0)
                 for _, strip in ipairs(healthOnlyBorder) do
                     strip:SetAlpha(shown and 0 or 1)
@@ -364,6 +366,7 @@ DFRL:NewMod("Mini", 1, function()
     end
     local unitEvents = {
         UNIT_HEALTH = true,
+        UNIT_MAXHEALTH = true,
         UNIT_MANA = true,
         UNIT_ENERGY = true,
         UNIT_RAGE = true,
@@ -374,6 +377,7 @@ DFRL:NewMod("Mini", 1, function()
     local frame = CreateFrame("Frame")
     frame:RegisterEvent("PLAYER_ENTERING_WORLD")
     frame:RegisterEvent("UNIT_HEALTH")
+    frame:RegisterEvent("UNIT_MAXHEALTH")
     frame:RegisterEvent("UNIT_MANA")
     frame:RegisterEvent("UNIT_ENERGY")
     frame:RegisterEvent("UNIT_RAGE")

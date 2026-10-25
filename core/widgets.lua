@@ -37,6 +37,61 @@ function DFRL.tools.EncounterHealthText(current, maximum)
     return tostring(math.floor(current)) .. " / " .. tostring(math.floor(maximum))
 end
 
+-- Unit health labels share display choices without changing native bar values.
+function DFRL.tools.BindUnitHealthText(bar, label, unit, hideDead)
+    local percentage = label:GetParent():CreateFontString(nil, "OVERLAY")
+    local face, size, flags = label:GetFont()
+    percentage:SetFont(face, size, flags)
+    percentage:SetTextColor(1, 1, 1)
+    local labels = { percentage = percentage }
+    local leftInset, rightInset, centerOffset = 0, 0, 0
+    local splitLayout
+
+    function labels.Update()
+        local current, maximum
+        if UnitExists(unit) and not (hideDead and (UnitIsDead(unit) or UnitIsGhost(unit))) then
+            current = UnitHealth(unit)
+            if type(current) ~= "number" or current < 0 or current - current ~= 0 then current = nil end
+            if current and DFRL.display.Get("showHealthPercentage") then maximum = UnitHealthMax(unit) end
+        end
+        local valueText = current and DFRL.display.Get("showHealthValue") and tostring(current) or ""
+        local percentText = ""
+        if current and type(maximum) == "number" and maximum > 0 and maximum - maximum == 0 then
+            percentText = tostring(math.floor(math.min(1, current / maximum) * 100 + 0.5)) .. "%"
+        end
+        local split = valueText ~= "" and percentText ~= ""
+        if split ~= splitLayout then
+            splitLayout = split
+            label:ClearAllPoints()
+            percentage:ClearAllPoints()
+            if split then
+                label:SetPoint("LEFT", bar, "LEFT", leftInset + 4, 0)
+                label:SetJustifyH("LEFT")
+                percentage:SetPoint("RIGHT", bar, "RIGHT", -rightInset - 4, 0)
+                percentage:SetJustifyH("RIGHT")
+            else
+                label:SetPoint("CENTER", bar, "CENTER", centerOffset, 0)
+                label:SetJustifyH("CENTER")
+                percentage:SetPoint("CENTER", bar, "CENTER", centerOffset, 0)
+                percentage:SetJustifyH("CENTER")
+            end
+        end
+        T.SetTextIfChanged(label, valueText)
+        T.SetTextIfChanged(percentage, percentText)
+    end
+
+    function labels.SetInsets(left, right, center)
+        if left == leftInset and right == rightInset and center == centerOffset then return end
+        leftInset, rightInset, centerOffset = left, right, center
+        splitLayout = nil
+        labels.Update()
+    end
+
+    DFRL.display.Listen(labels.Update)
+    labels.Update()
+    return labels
+end
+
 -- Keep native caption text and Show/Hide decisions; mask only its effective alpha.
 function DFRL.tools.BindUnitLabelVisibility(label, key)
     if not label then return end
@@ -115,6 +170,7 @@ DFRL.tools.LargeHealthFill = {
     texture = DFRL:GetInfoOrCons("tex") .. "unitframes\\healthDF2Fill.blp",
     texCoords = { 0, 1, 0, 1 },
 }
+DFRL.tools.UnitPortraitOverlap = 15
 
 local function CreatePortraitRim(parent, owner, path, mirrored, r, g, b, blendMode)
     local artwork = CreateFrame("Frame", nil, parent)
@@ -198,7 +254,7 @@ end
 function DFRL.tools.CreateUnitBorder(frame, healthBar, portraitTexture, background, texturePath, portraitSide)
     local mirrored = portraitSide == "LEFT"
     local healthFill = DFRL.tools.LargeHealthFill
-    local healthWidth, portraitInset, portraitOverlap = 122, 104, 15
+    local healthWidth, portraitInset, portraitOverlap = 122, 104, T.UnitPortraitOverlap
     local powerInterior, roundRim
     local strips = {}
     local portraitExtended

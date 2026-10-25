@@ -41,6 +41,14 @@ Reload the UI to rebuild texture lookup state and load the changed filenames.
 No addon, game or local test suite was executed; restored appearance and any
 remaining health-bar mismatch require game-side confirmation.
 
+## Unit health labels
+
+The Unit frames page offers independent **Show health** and **Show health percentage** controls. Their normalized `showHealthValue` and `showHealthPercentage` booleans live in the existing display table, defaulting to true and false respectively for missing or invalid saves. The shared display lifecycle includes live preview, Confirm-only saving, Cancel/world/logout/reload discard, profiles and both resets.
+
+Player, target, target-of-target, party and native pet labels use `T.BindUnitHealthText` in `core/widgets.lua`. One enabled value stays at the existing centered health-label position. With both visible, current health anchors to the left and percentage to the right, respecting portrait/resource insets. Disabling both clears the text. Missing units and dead target/target-of-target units retain their existing clearing behavior. Boss and guardian bars retain their separate current / maximum labels.
+
+Percentages use native `UnitHealth` and `UnitHealthMax`, rounded to the nearest whole percent and bounded to 0–100. Unavailable, nonfinite or nonpositive maxima omit the percentage; an enabled health value then remains centered. Existing health/native refresh paths and `UNIT_MAXHEALTH` events refresh labels, with unchanged text and anchors skipped. No additional updater or native health override is added. Source TSV and runtime UI captions cover all fourteen languages. Appearance and runtime behavior remain unverified.
+
 ## Native health-fill coordinates
 
 The later player/target screenshot shows a separate compatibility problem.

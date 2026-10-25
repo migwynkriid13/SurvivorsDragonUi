@@ -76,6 +76,8 @@ Action buttons start locked. Under **Action bar**, turn off **Lock action button
 
 Portraits use 2D images by default. Under **Unit frames**, choose **Experimental 3D portraits** or **Hide portraits** for bars without portraits.
 
+**Show health** and **Show health percentage** choose the text on unit health bars. A single value is centered. Enable both for health on the left and percentage on the right, or disable both to hide the text.
+
 ### Profiles and tooltips
 
 Use **Profiles** to save a named setup, load it later, overwrite it or delete it. Confirm to keep profile changes; Cancel undoes them. Resetting the addon keeps saved profiles.
