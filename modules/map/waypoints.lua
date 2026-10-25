@@ -8,13 +8,7 @@ atlas were converted/cropped to TGA, preserving original colors and alpha:
 https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/MINIMAP/Minimap-Waypoint-MapPin-Tracked.PNG
 https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/Navigation/IngameNavigationUI.PNG
 
-Guardian artwork: Dragonflight 10.2.7.54847 VignetteKillElite, FileDataID
-1121272, atlas 647. The 1024x1024 atlas rectangle [265, 131, 329, 195) is
-preserved at 64x64 without rescaling; its native display override is 32x32:
-https://wago.tools/api/casc/1121272?version=10.2.7.54847
-https://wago.tools/db2/UiTextureAtlasMember/csv?build=10.2.7.54847
-
-Floating-label HUD glyphs are Blizzard game artwork from source commit
+Guardian medallion and cache HUD glyphs are Blizzard game artwork from source commit
 00197f223180323ea7297c0157edbd1a43d2f99f:
 Textures/Nameplates/Quests/Loot/loot_bag.tga (CachePouch.tga)
 Textures/Nameplates/Quests/Kill/kill_elite.tga (GuardianFloating.tga)
@@ -63,7 +57,6 @@ DFRL:NewMod("Waypoints", 3, function()
             frameName = "DFRL_GuardianWaypoint",
             title = "Guardian",
             defaultSide = "RIGHT",
-            mapArt = "Guardian.tga",
             hudArt = "GuardianFloating.tga",
             hudTexCoord = { 0, 65 / 128, 0, 65 / 128 },
         },
@@ -642,7 +635,8 @@ DFRL:NewMod("Waypoints", 3, function()
         pin:SetFrameLevel(mapLayer:GetFrameLevel() + 1)
         pin:RegisterForClicks("LeftButtonUp")
         local art = pin:CreateTexture(nil, "ARTWORK")
-        art:SetTexture(texturePath .. tracker.mapArt)
+        art:SetTexture(texturePath .. (tracker.mapArt or tracker.hudArt))
+        if not tracker.mapArt then art:SetTexCoord(unpack(tracker.hudTexCoord)) end
         art:SetAllPoints(pin)
         pin:SetScript("OnClick", function()
             if not pin.entry then return end
