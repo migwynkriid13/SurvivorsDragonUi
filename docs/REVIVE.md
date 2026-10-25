@@ -36,6 +36,12 @@ speed, with six marks replacing four for a denser pattern. Decorative fades and
 pulses use the full frame elapsed time. The marks remain visible at 100% until
 the native state clears the view. No health values or assets are added.
 
+The view retains authored cross widths and anchors between paints, updating
+geometry only when clipping or caption width changes. The same pulse colors
+continue at frame cadence. Completed fade-in stops rewriting full opacity;
+the fill, spark and visibility setters likewise skip unchanged values. Clearing
+and new subjects retain the original fade and percentage-step behavior.
+
 The installed 0.115.0 native Lua defines `AZS_GetRevive()` as a direct return of
 `AZS_REVIVE`. Its documented fields are `down`, `share`, `by`, `reviving` and
 `rshare`; it does not supply a revive duration or start time. `AZSREVIVE` parses

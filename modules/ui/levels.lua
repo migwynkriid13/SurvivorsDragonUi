@@ -108,11 +108,33 @@ DFRL:NewMod("StoredLevels", 5, function()
     title:SetWidth(width - PANEL_PADDING * 2 - TEXT_LEFT)
     title:SetHeight(30)
 
-    local function AlignContent()
+    local titleMetrics, badgeMetrics = {}, {}
+    local function TextWidth(label, metrics, force)
+        local text = label:GetText()
+        local face, size, flags = label:GetFont()
+        local scale = label:GetEffectiveScale()
+        if
+            not force
+            and metrics.text == text
+            and metrics.face == face
+            and metrics.size == size
+            and metrics.flags == flags
+            and metrics.scale == scale
+            and metrics.width
+        then
+            return metrics.width, false
+        end
+        local measured = label:GetStringWidth()
+        if type(measured) ~= "number" or measured <= 0 or measured - measured ~= 0 then return end
+        metrics.text, metrics.face, metrics.size, metrics.flags = text, face, size, flags
+        metrics.scale, metrics.width = scale, measured
+        return measured, true
+    end
+    local function AlignContent(force)
         -- Keep the active panel and its edit region centered inside the stable
         -- multilingual layout owner, without moving confirmed coordinates.
-        local measured = title:GetStringWidth()
-        if type(measured) ~= "number" or measured <= 0 or measured - measured ~= 0 then return end
+        local measured, changed = TextWidth(title, titleMetrics, force)
+        if not measured or not changed then return end
         local textWidth = math.ceil(measured) + 4
         local contentWidth = TEXT_LEFT + textWidth
         local panelWidth = contentWidth + PANEL_PADDING * 2
@@ -204,11 +226,14 @@ DFRL:NewMod("StoredLevels", 5, function()
         return checked and current == false
     end
 
+    local displayed, paintedCrop = false, nil
     local function Clear()
-        button:Hide()
-        highlight:Hide()
-        countText:SetText("")
-        icon:Hide()
+        -- Clear the requested visibility even when Layout already hides it.
+        if displayed or button:IsShown() then button:Hide() end
+        displayed = false
+        if highlight:IsShown() then highlight:Hide() end
+        T.SetTextIfChanged(countText, "")
+        if icon:IsShown() then icon:Hide() end
         RestoreNative()
     end
 
@@ -221,17 +246,25 @@ DFRL:NewMod("StoredLevels", 5, function()
         local _, class = UnitClass("player")
         local crop = CLASS_ICONS[class]
         if crop then
-            icon:SetTexCoord(unpack(crop))
-            icon:Show()
+            if paintedCrop ~= crop then
+                icon:SetTexCoord(unpack(crop))
+                paintedCrop = crop
+            end
+            if not icon:IsShown() then icon:Show() end
         else
-            icon:Hide()
+            if icon:IsShown() then icon:Hide() end
+            paintedCrop = nil
         end
-        countText:SetText(tostring(count))
-        local badgeWidth = math.max(20, math.ceil(countText:GetStringWidth() or 0) + 10)
-        badge:SetWidth(badgeWidth)
-        countText:SetWidth(badgeWidth - 8)
+        T.SetTextIfChanged(countText, tostring(count))
+        local measured, changed = TextWidth(countText, badgeMetrics)
+        if changed or not measured then
+            local badgeWidth = math.max(20, math.ceil(measured or 0) + 10)
+            if not T.NearlyEqual(badge:GetWidth(), badgeWidth) then badge:SetWidth(badgeWidth) end
+            if not T.NearlyEqual(countText:GetWidth(), badgeWidth - 8) then countText:SetWidth(badgeWidth - 8) end
+        end
         AlignContent()
-        button:Show()
+        if not displayed or not button:IsShown() then button:Show() end
+        displayed = true
         -- Construct and populate the replacement before suppressing native UI.
         -- Layout's Hide frame choice intentionally suppresses both versions.
         if not HideNative() then Clear() end
@@ -253,12 +286,12 @@ DFRL:NewMod("StoredLevels", 5, function()
             editing = active
             hovered = false
             button:EnableMouse(not active)
-            AlignContent()
+            AlignContent(true)
         end,
-        onResize = AlignContent,
+        onResize = function() AlignContent(true) end,
     })
     DFRL.locale.Listen(function()
-        AlignContent()
+        AlignContent(true)
         Update()
     end)
 

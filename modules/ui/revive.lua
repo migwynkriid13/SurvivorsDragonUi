@@ -109,22 +109,30 @@ DFRL:NewMod("Revive", 4, function()
         local measure = Label(14)
         measure:Hide()
         local value, target, origin, identity, displayedPercent
+        local paintedValue, sparkX
         local transition, fade, effectAge = 0, 0, 0
         local dirty = true
         local function Paint()
-            bar:SetValue(value)
+            if paintedValue ~= value then
+                bar:SetValue(value)
+                paintedValue = value
+            end
             local rounded = value == 1 and 100 or math.min(99, math.floor(value * 100 + 0.5))
             if displayedPercent ~= nil then
                 rounded = math.max(displayedPercent - 1, math.min(displayedPercent + 1, rounded))
             end
             displayedPercent = rounded
             T.SetTextIfChanged(percent, tostring(rounded) .. "%")
-            spark:ClearAllPoints()
-            spark:SetPoint("CENTER", pill, "LEFT", 8 + (root:GetWidth() - 72) * value, 0)
+            local x = 8 + (root:GetWidth() - 72) * value
+            if sparkX ~= x then
+                spark:ClearAllPoints()
+                spark:SetPoint("CENTER", pill, "LEFT", x, 0)
+                sparkX = x
+            end
             if value > 0 and value < 1 then
-                spark:Show()
+                if not spark:IsShown() then spark:Show() end
             else
-                spark:Hide()
+                if spark:IsShown() then spark:Hide() end
             end
             dirty = false
         end
@@ -133,6 +141,7 @@ DFRL:NewMod("Revive", 4, function()
             root:Hide()
             root:SetAlpha(1)
             bar:SetValue(0)
+            paintedValue = 0
             spark:Hide()
             for _, cross in ipairs(crosses) do
                 for _, texture in ipairs(cross) do
@@ -166,12 +175,14 @@ DFRL:NewMod("Revive", 4, function()
             end
             view.active = true
             if fresh then Paint() end
-            root:Show()
+            if not root:IsShown() then root:Show() end
         end
         function view.Animate(elapsed)
             if not view.active or not root:IsShown() then return end
-            fade = math.min(1, fade + elapsed / FADE_TIME)
-            root:SetAlpha(1 - (1 - fade) * (1 - fade))
+            if fade < 1 then
+                fade = math.min(1, fade + elapsed / FADE_TIME)
+                root:SetAlpha(1 - (1 - fade) * (1 - fade))
+            end
             if value ~= target then
                 transition = math.min(SMOOTH_TIME, transition + elapsed)
                 local nextValue = transition == SMOOTH_TIME and target
@@ -194,13 +205,22 @@ DFRL:NewMod("Revive", 4, function()
                     local left = x - partWidth / 2
                     local visibleWidth = math.min(partWidth, filledRight - left)
                     if visibleWidth > 0 then
-                        texture:SetWidth(visibleWidth)
-                        texture:ClearAllPoints()
-                        texture:SetPoint("LEFT", pill, "LEFT", left, y)
-                        texture:SetVertexColor(0.58, 1, 0.74, alpha)
-                        texture:Show()
+                        if texture.reviveWidth ~= visibleWidth then
+                            texture:SetWidth(visibleWidth)
+                            texture.reviveWidth = visibleWidth
+                        end
+                        if texture.reviveLeft ~= left then
+                            texture:ClearAllPoints()
+                            texture:SetPoint("LEFT", pill, "LEFT", left, y)
+                            texture.reviveLeft = left
+                        end
+                        if texture.reviveAlpha ~= alpha then
+                            texture:SetVertexColor(0.58, 1, 0.74, alpha)
+                            texture.reviveAlpha = alpha
+                        end
+                        if not texture:IsShown() then texture:Show() end
                     else
-                        texture:Hide()
+                        if texture:IsShown() then texture:Hide() end
                     end
                 end
             end

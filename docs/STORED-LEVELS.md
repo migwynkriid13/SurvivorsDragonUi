@@ -16,6 +16,13 @@ The replacement requires these functions, a recognized active run phase, a recei
 
 Data is read at most ten times a second. `AZSRUN` schedules a read on the next frame so native parsing can finish first. World leave retires the old run-table reference, so re-entry waits for a replacement snapshot. No count, level, queue or run snapshot is saved.
 
+Unchanged counts and class icons do not repeat text or crop writes. Text-width
+measurements are reused until text, font or effective scale changes; edit entry,
+resizing and language changes still force the compact panel measurement. The
+existing pulse and native visibility checks retain their cadence. Clearing the
+count also clears the group's requested visibility while Layout hides it, so
+unhiding cannot restore an expired stored-level button.
+
 The original is hidden only after the replacement has been built and populated and the supported HUD getter confirms suppression. Its captured visibility distinguishes an originally hidden preference from an uncaptured one. The addon restores it when data is unavailable, on world leave/logout and before the real ReloadUI call saves native preferences. Older builds retain their original UI.
 
 ## Shared layout

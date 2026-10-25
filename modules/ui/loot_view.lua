@@ -47,14 +47,20 @@ DFRL:NewMod("LootView", 4, function()
             card:SetPoint("BOTTOM", frame, "BOTTOM", 0, (index - 1) * STEP)
         end
     end
+    local function SetAlpha(card, alpha)
+        if card.paintedAlpha == alpha then return end
+        card:SetAlpha(alpha)
+        card.paintedAlpha = alpha
+    end
     local function Retire(card)
         card:Hide()
         card.entry, card.started, card.retryAt = nil, nil, nil
         card.icon:SetTexture(nil)
+        card.iconPath = nil
         card.icon:Hide()
         card.border:Hide()
         card.name:SetText("")
-        card:SetAlpha(0)
+        SetAlpha(card, 0)
     end
     local function Clear()
         for index = 1, LIMIT do
@@ -83,25 +89,48 @@ DFRL:NewMod("LootView", 4, function()
     local function Refresh(card)
         local entry = card.entry
         local r, g, b = Color(entry)
-        card.name:SetText(entry.name)
-        card.name:SetTextColor(r, g, b)
-        card.border:SetVertexColor(r, g, b, 1)
-        local hasIcon = entry.icon and card.icon:SetTexture(entry.icon) ~= false
+        T.SetTextIfChanged(card.name, entry.name)
+        if card.red ~= r or card.green ~= g or card.blue ~= b then
+            card.name:SetTextColor(r, g, b)
+            card.border:SetVertexColor(r, g, b, 1)
+            card.red, card.green, card.blue = r, g, b
+        end
+        local hasIcon = false
+        if entry.icon then
+            if card.iconPath == entry.icon then
+                hasIcon = true
+            else
+                card.iconPath = nil
+                local loaded = card.icon:SetTexture(entry.icon)
+                hasIcon = loaded ~= false
+                local assigned = card.icon:GetTexture()
+                local stem = type(entry.icon) == "string" and string.gsub(entry.icon, "%.[^%.]*$", "")
+                if
+                    hasIcon
+                    and (loaded == true or loaded == 1 or assigned == entry.icon or (stem and assigned == stem))
+                then
+                    card.iconPath = entry.icon
+                end
+            end
+        end
         if hasIcon then
-            card.icon:Show()
-            card.border:Show()
+            if not card.icon:IsShown() then card.icon:Show() end
+            if not card.border:IsShown() then card.border:Show() end
         else
-            card.icon:Hide()
-            card.border:Hide()
+            if card.icon:IsShown() then card.icon:Hide() end
+            if card.border:IsShown() then card.border:Hide() end
         end
         local left = hasIcon and 83 or 23
-        card.heading:ClearAllPoints()
-        card.heading:SetPoint("TOPLEFT", card, "TOPLEFT", left, -20)
-        card.heading:SetWidth(WIDTH - left - 26)
-        card.heading:SetText(DFRL.locale.Text("You received"))
-        card.name:ClearAllPoints()
-        card.name:SetPoint("TOPLEFT", card, "TOPLEFT", left, -40)
-        card.name:SetWidth(WIDTH - left - 26)
+        if card.textLeft ~= left then
+            card.heading:ClearAllPoints()
+            card.heading:SetPoint("TOPLEFT", card, "TOPLEFT", left, -20)
+            card.heading:SetWidth(WIDTH - left - 26)
+            card.name:ClearAllPoints()
+            card.name:SetPoint("TOPLEFT", card, "TOPLEFT", left, -40)
+            card.name:SetWidth(WIDTH - left - 26)
+            card.textLeft = left
+        end
+        T.SetTextIfChanged(card.heading, DFRL.locale.Text("You received"))
     end
     for index = 1, LIMIT do
         local card = CreateFrame("Frame", nil, frame)
@@ -143,7 +172,7 @@ DFRL:NewMod("LootView", 4, function()
             else
                 local alpha = math.min(1, math.max(0, elapsed / FADE_IN))
                 if elapsed > FADE_START then alpha = (LIFETIME - elapsed) / (LIFETIME - FADE_START) end
-                card:SetAlpha(alpha)
+                SetAlpha(card, alpha)
                 -- Exact item references sometimes acquire native metadata after
                 -- delivery. Retry for two seconds, never by a guessed item name.
                 if card.retryAt and now >= card.retryAt then
@@ -181,7 +210,7 @@ DFRL:NewMod("LootView", 4, function()
         visible[count] = card
         table.setn(visible, count)
         Reflow()
-        card:SetAlpha(0)
+        SetAlpha(card, 0)
         card:Show()
         frame:Show()
         animation:SetScript("OnUpdate", function()

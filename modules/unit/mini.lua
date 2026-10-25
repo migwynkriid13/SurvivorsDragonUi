@@ -86,27 +86,58 @@ DFRL:NewMod("Mini", 1, function()
 
     if PetFrame and PetFrameHealthBar and PetFrameManaBar then
         local pet = AddValues(PetFrame, PetFrameHealthBar, PetFrameManaBar, "pet")
+        local function CenterPet(region, x, y)
+            local point, relative, relativePoint, oldX, oldY = region:GetPoint(1)
+            if
+                region:GetNumPoints() == 1
+                and point == "CENTER"
+                and relative == PetFrame
+                and relativePoint == "CENTER"
+                and T.NearlyEqual(oldX, x)
+                and T.NearlyEqual(oldY, y)
+            then
+                return
+            end
+            region:ClearAllPoints()
+            region:SetPoint("CENTER", PetFrame, "CENTER", x, y)
+        end
+        local function PetBarTexture(bar, name)
+            local texture = bar:GetStatusBarTexture()
+            local path = tex .. name
+            if not texture or texture:GetTexture() ~= path then bar:SetStatusBarTexture(path) end
+        end
         local function UpdatePet()
             if PetFrameTexture then
-                PetFrameTexture:SetTexture(tex .. "pet")
-                PetFrameTexture:SetVertexColor(1, 1, 1, 1)
-                PetFrameTexture:SetDrawLayer("BACKGROUND")
+                local path = tex .. "pet"
+                if PetFrameTexture:GetTexture() ~= path then PetFrameTexture:SetTexture(path) end
+                local r, g, b, a
+                if PetFrameTexture.GetVertexColor then
+                    r, g, b, a = PetFrameTexture:GetVertexColor()
+                end
+                if
+                    not T.NearlyEqual(r, 1)
+                    or not T.NearlyEqual(g, 1)
+                    or not T.NearlyEqual(b, 1)
+                    or not T.NearlyEqual(a, 1)
+                then
+                    PetFrameTexture:SetVertexColor(1, 1, 1, 1)
+                end
+                if not PetFrameTexture.GetDrawLayer or PetFrameTexture:GetDrawLayer() ~= "BACKGROUND" then
+                    PetFrameTexture:SetDrawLayer("BACKGROUND")
+                end
             end
-            PetFrameHealthBar:SetStatusBarTexture(tex .. "UI-HUD-UnitFrame-TargetofTarget-PortraitOn-Bar-Health")
-            PetFrameHealthBar:SetHeight(13)
-            PetFrameHealthBar:ClearAllPoints()
-            PetFrameHealthBar:SetPoint("CENTER", PetFrame, "CENTER", 15, 3)
+            PetBarTexture(PetFrameHealthBar, "UI-HUD-UnitFrame-TargetofTarget-PortraitOn-Bar-Health")
+            if not T.NearlyEqual(PetFrameHealthBar:GetHeight(), 13) then PetFrameHealthBar:SetHeight(13) end
+            CenterPet(PetFrameHealthBar, 15, 3)
             local power = UnitPowerType("pet")
-            if power == 2 then
-                PetFrameManaBar:SetStatusBarTexture(tex .. "UI-HUD-UnitFrame-TargetofTarget-PortraitOn-Bar-Focus")
-            else
-                PetFrameManaBar:SetStatusBarTexture(tex .. "UI-HUD-UnitFrame-TargetofTarget-PortraitOn-Bar-Mana")
-            end
-            PetFrameManaBar:ClearAllPoints()
-            PetFrameManaBar:SetPoint("CENTER", PetFrame, "CENTER", 15, -7)
+            PetBarTexture(
+                PetFrameManaBar,
+                power == 2 and "UI-HUD-UnitFrame-TargetofTarget-PortraitOn-Bar-Focus"
+                    or "UI-HUD-UnitFrame-TargetofTarget-PortraitOn-Bar-Mana"
+            )
+            CenterPet(PetFrameManaBar, 15, -7)
             if PetName then
-                PetName:ClearAllPoints()
-                PetName:SetPoint("CENTER", PetFrame, "CENTER", 5, 16)
+                CenterPet(PetName, 5, 16)
                 T.SetFont(PetName, 10, "")
             end
             UpdateValues(pet)
