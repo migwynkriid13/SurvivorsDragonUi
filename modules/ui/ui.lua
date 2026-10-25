@@ -14,11 +14,8 @@ DFRL:NewMod("Ui", 5, function()
     -- close button
     do
         local closeButtonData = {
-            { "SpellBookFrame", "SpellBookCloseButton", -36, -15 },
-            { "QuestLogFrame", "QuestLogFrameCloseButton", -91, -15 },
             { "FriendsFrame", "FriendsFrameCloseButton", -36, -15 },
             { "HelpFrame", "HelpFrameCloseButton", -50, -10 },
-            { "QuestFrame", "QuestFrameCloseButton", -34, -22 },
             { "GuildMemberDetailFrame", "GuildMemberDetailCloseButton", -10, -10 },
         }
 
@@ -45,84 +42,6 @@ DFRL:NewMod("Ui", 5, function()
         end
     end
 
-    -- questlog
-    do
-        local questLogFrame = QuestLogFrame
-        if questLogFrame then
-            local regions = { questLogFrame:GetRegions() }
-            for _, region in ipairs(regions) do
-                if region:GetObjectType() == "Texture" then
-                    local texture = region:GetTexture()
-                    if texture then
-                        if texture == "Interface\\QuestFrame\\UI-QuestLog-Left" then
-                            region:SetTexture(texpath .. "questlog_left.tga")
-                        elseif texture == "Interface\\QuestFrame\\UI-QuestLog-Right" then
-                            region:SetTexture(texpath .. "questlog_right.tga")
-                        end
-                    end
-                end
-            end
-        end
-    end
-
-    -- spellbookframe
-    do
-        local function ApplyCustomTextures(frame)
-            if not frame then return end
-
-            if not frame.customTopLeft then
-                frame.customTopLeft = frame:CreateTexture(nil, "OVERLAY")
-                frame.customTopLeft:SetTexture(texpath .. "paperdoll_top_left.tga")
-                frame.customTopLeft:SetWidth(256)
-                frame.customTopLeft:SetHeight(256)
-                frame.customTopLeft:SetPoint("TOPLEFT", frame, "TOPLEFT", -3, 0)
-
-                frame.customTopRight = frame:CreateTexture(nil, "OVERLAY")
-                frame.customTopRight:SetTexture(texpath .. "paperdoll_top_right.tga")
-                frame.customTopRight:SetWidth(128)
-                frame.customTopRight:SetHeight(256)
-                frame.customTopRight:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -3, 0)
-
-                frame.customBottomLeft = frame:CreateTexture(nil, "OVERLAY")
-                frame.customBottomLeft:SetTexture(texpath .. "paperdoll_bot_left.tga")
-                frame.customBottomLeft:SetWidth(256)
-                frame.customBottomLeft:SetHeight(256)
-                frame.customBottomLeft:SetPoint("TOPLEFT", frame, "TOPLEFT", -3, -256)
-
-                frame.customBottomRight = frame:CreateTexture(nil, "OVERLAY")
-                frame.customBottomRight:SetTexture(texpath .. "paperdoll_bot_right.tga")
-                frame.customBottomRight:SetWidth(128)
-                frame.customBottomRight:SetHeight(256)
-                frame.customBottomRight:SetPoint("TOPLEFT", frame, "TOPLEFT", 253, -256)
-
-                for i = 1, 12 do
-                    local button = _G["SpellButton" .. i]
-                    if button then
-                        local bg = _G["SpellButton" .. i .. "Background"]
-                        if bg then
-                            bg:SetTexture(texpath .. "spell_bg.tga")
-                            bg:SetWidth(44)
-                            bg:SetHeight(44)
-                        end
-                        _G["SpellButton" .. i .. "SubSpellName"]:SetTextColor(0.9, 0.9, 0.8, 0.6)
-                    end
-                end
-            end
-        end
-
-        if SpellBookFrame then
-            HookScript(SpellBookFrame, "OnShow", function() ApplyCustomTextures(SpellBookFrame) end)
-        end
-
-        ApplyCustomTextures(SpellBookFrame)
-    end
-
-    if QuestTimerFrame and UIParent_ManageFramePositions then
-        hooksecurefunc("UIParent_ManageFramePositions", function()
-            QuestTimerFrame:ClearAllPoints()
-            QuestTimerFrame:SetPoint("TOPRIGHT", Minimap, "BOTTOMLEFT", -20, 40)
-        end)
-    end
     SetCVar("CameraDistanceMaxFactor", 3)
 
     local warning = CreateFrame("Frame", "DFRL_LowHpWarnFrame", UIParent)

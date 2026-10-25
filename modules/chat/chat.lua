@@ -13,7 +13,6 @@ DFRL:NewMod("Chat", 1, function()
         local WIDTH, HEIGHT = 520, 340
         local FOOTER_HEIGHT = 32
         local HOLD, FADE, SLIDE = 14, 0.6, 0.35
-        local tex = DFRL:GetInfoOrCons("tex") .. "chat\\"
         local states, selected = {}, nil
         local input = _G.ChatFrameEditBox or _G.ChatFrame1EditBox or ChatFrame1.editBox
         local RefreshFrames, SelectChat, PositionInput, UpdateIndicator
@@ -189,13 +188,8 @@ DFRL:NewMod("Chat", 1, function()
         indicator:SetPoint("TOPLEFT", root, "BOTTOMLEFT", 0, 0)
         indicator:SetFrameLevel(root:GetFrameLevel() + 5)
         local indicatorText = Label(indicator, "Scroll down for latest messages")
-        indicatorText:SetPoint("CENTER", indicator, "CENTER", -10, 0)
+        indicatorText:SetPoint("CENTER", indicator, "CENTER", 0, 0)
         indicatorText:SetTextColor(223 / 255, 186 / 255, 105 / 255)
-        local icon = indicator:CreateTexture(nil, "ARTWORK")
-        icon:SetTexture(tex .. "cleaner_snapToBottomIcon.tga")
-        icon:SetWidth(16)
-        icon:SetHeight(16)
-        icon:SetPoint("LEFT", indicatorText, "RIGHT", 6, 0)
         indicator:Hide()
         local indicatorShown = false
         local indicatorMessage = "Scroll down for latest messages"

@@ -10,7 +10,6 @@ DFRL:NewMod("RunTimers", 5, function()
     local CHECK_ICON = "Interface\\Buttons\\UI-CheckBox-Check"
     local ATTACK_ICON = "Interface\\Cursor\\Attack.blp"
     local CACHE_ICON = "Interface\\Cursor\\LootAll.blp"
-    local COINS_ICON = DFRL:GetInfoOrCons("tex") .. "chat\\cleaner_coins.tga"
     local MARKER_SIZE = 18
     local DEAD_MARKER_SCALE = 0.8
     local DEAD_MARKER_ALPHA = 0.7
@@ -1474,7 +1473,7 @@ DFRL:NewMod("RunTimers", 5, function()
     local fieldWidth = BAR_WIDTH / 3
     local counters = {
         { key = "kills", visibility = "showTallyKills", label = "Enemies killed", icon = ATTACK_ICON },
-        { key = "gold", visibility = "showTallyGold", label = "Gold", icon = COINS_ICON },
+        { key = "gold", visibility = "showTallyGold", label = "Gold" },
         { key = "chest", visibility = "showTallyCache", label = "Next cache cost", icon = CACHE_ICON },
     }
     local tallyMeasure = tallyOverlay:CreateFontString(nil, "OVERLAY")
@@ -1503,8 +1502,9 @@ DFRL:NewMod("RunTimers", 5, function()
             return
         end
         -- Measure the full integer without a constrained box adding an ellipsis.
-        -- Keep the icon and theme scale; only long numbers need a smaller font.
-        local available = math.max(1, (entry.fieldWidth - 2) / scale - 22)
+        -- Keep the theme scale; only long numbers need a smaller font.
+        local iconWidth = entry.icon and 22 or 0
+        local available = math.max(1, (entry.fieldWidth - 2) / scale - iconWidth)
         local budget = math.max(1, available - 2)
         local fontSize = 12
         T.SetFont(tallyMeasure, fontSize, "OUTLINE")
@@ -1536,7 +1536,7 @@ DFRL:NewMod("RunTimers", 5, function()
         if not T.NearlyEqual(entry.fitTextWidth, textWidth) then
             -- The packaged client needs explicit FontString widths.
             entry.text:SetWidth(textWidth)
-            entry.content:SetWidth(22 + textWidth)
+            entry.content:SetWidth(iconWidth + textWidth)
             if entry.glow then
                 for _, glow in ipairs(entry.glow) do
                     glow:SetWidth(textWidth)
@@ -1563,21 +1563,24 @@ DFRL:NewMod("RunTimers", 5, function()
         content:SetPoint("CENTER", field, "CENTER", 0, 0)
         content:EnableMouse(false)
 
-        local icon = content:CreateTexture(nil, "ARTWORK")
-        icon:SetTexture(counter.icon)
-        if counter.key == "gold" then
-            -- CleanerChat's 64x64 atlas places gold in the top-left 32x32.
-            icon:SetTexCoord(0, 0.5, 0, 0.5)
+        local icon
+        if counter.icon then
+            icon = content:CreateTexture(nil, "ARTWORK")
+            icon:SetTexture(counter.icon)
+            icon:SetWidth(18)
+            icon:SetHeight(18)
+            icon:SetPoint("LEFT", content, "LEFT", 0, 0)
         end
-        icon:SetWidth(18)
-        icon:SetHeight(18)
-        icon:SetPoint("LEFT", content, "LEFT", 0, 0)
 
         local text = content:CreateFontString(nil, "OVERLAY")
         T.SetFont(text, 12, "OUTLINE")
         text:SetTextColor(1, 0.88, 0.55)
         text:SetHeight(18)
-        text:SetPoint("LEFT", icon, "RIGHT", 4, 0)
+        if icon then
+            text:SetPoint("LEFT", icon, "RIGHT", 4, 0)
+        else
+            text:SetPoint("LEFT", content, "LEFT", 0, 0)
+        end
         text:SetJustifyH("CENTER")
         text:SetJustifyV("MIDDLE")
         local entry = {
@@ -1595,7 +1598,7 @@ DFRL:NewMod("RunTimers", 5, function()
             entry.glowWidthScale = 1.65
             entry.glow, entry.glowDirections = {}, {}
             entry.glowLights = {
-                { anchor = content, centerX = -5, height = 26, sparkleSize = 5, radiusY = 9.5, offset = 0 },
+                { anchor = content, centerX = 0, height = 26, sparkleSize = 5, radiusY = 9.5, offset = 0 },
             }
             for _, light in ipairs(entry.glowLights) do
                 local spotlight = content:CreateTexture(nil, "BACKGROUND")
@@ -1734,7 +1737,7 @@ DFRL:NewMod("RunTimers", 5, function()
             GameTooltip:Show()
         end)
         field:SetScript("OnLeave", function() GameTooltip:Hide() end)
-        T.RegisterTooltipIcon(field, icon)
+        T.RegisterTooltipIcon(field, icon or text)
 
         if index > 1 then
             local divider = tallyOverlay:CreateTexture(nil, "ARTWORK")

@@ -18,8 +18,9 @@ geometry remains independent of these defaults.
 
 The native summon icon occupies the round portrait opening, with the same
 34-unit diameter, center, full-image crop and separate 39-unit gold rim. Wolf
-and Raptor retain their native pet-family icons. Artwork, fonts, sizes,
-grouping, row arrangement and settings are unchanged.
+and Raptor retain their native pet-family icons. The gold rim reuses
+`media/tex/jewelry/Frame.tga`; the unused dedicated pet background and border
+are removed. Fonts, sizes, grouping, row arrangement and settings are unchanged.
 
 ## Round-icon rendering
 

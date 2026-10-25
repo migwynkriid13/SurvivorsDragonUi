@@ -33,6 +33,6 @@ preserved above; this notice does not supply or infer additional license terms.
 The bundled Ace, LibStub, LibSharedMedia, LibMoreEvents and LibEasing libraries
 are not incorporated into this port.
 
-The supplied Assets/coins.tga is bundled unchanged as
-media/tex/chat/cleaner_coins.tga. Its top-left gold quadrant is used by the
-current-gold tally, with the original atlas artwork and attribution retained.
+No supplied image assets are included. The integrated chat and current-gold
+tally use text without the original chat-control or coin artwork. The source
+and code attribution above remains applicable.
