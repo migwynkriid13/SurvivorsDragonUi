@@ -2,6 +2,22 @@
 
 The reported regression followed the Azeroth Survivors client update. The supplied changelog identifies 0.101.0 as the move to a newer client and Lua 5.0 behavior. The screenshots show `SetText(): Font not set` in the player and target modules, an incomplete layout entry at `core/layout.lua:730`, and the client's 48 MB script-memory popup. They do not establish the exact engine commit packaged by the game or the allocation responsible for the memory popup.
 
+## FontString scale and error collectors
+
+The Level Up measurement cache reads effective scale from the FontString's
+owning frame, matching the existing run-clock label renderer. The current
+client exposes `GetEffectiveScale` on frames, but the reported FontString call
+raised a nil-method error during Layout Ready and later stored-level updates.
+
+SurvivorsDragonUi leaves the global error handler to the game and installed
+collectors such as SurvivorBugs. Its caught module failures still call the
+current `geterrorhandler()`. The removed legacy handler replaced that global
+at file load and after every `ADDON_LOADED`, then printed directly to chat
+without forwarding errors. This prevented the enabled SurvivorBugs handler
+from recording them. Neither another collector nor a custom chat fallback is
+installed by this addon. Reloading the UI is required to replace already-loaded
+Lua and release that old handler.
+
 ## Fonts and incomplete layout registration
 
 The addon previously passed the literal filename `DEFAULT` to `SetFont` throughout its HUD, editor and chat. Current client code checks whether a font file loads, returns nil without changing the receiver when it does not, and rejects `SetText` on an uninitialized FontString. See the pinned [WeNilla font loader](https://github.com/Arnesen/wenilla/blob/6934a85c5da7/crates/benilla-ui/src/script/font_block.rs) and [FontString text binding](https://github.com/Arnesen/wenilla/blob/6934a85c5da7/crates/benilla-ui/src/script/region/text.rs). The same behavior remains in current BeNilla.

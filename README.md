@@ -1,68 +1,95 @@
 # SurvivorsDragonUi
 
-A Dragonflight-style interface for Azeroth Survivors, with a movable HUD, combat text and cache and guardian guides.
+[![For Azeroth Survivors](https://img.shields.io/badge/Azeroth_Survivors-UI_addon-c9a55c?style=flat-square&labelColor=25282d)](https://github.com/migwynkriid13/SurvivorsDragonUi/releases/latest)
+[![Latest release](https://img.shields.io/github/v/release/migwynkriid13/SurvivorsDragonUi?display_name=release&label=release&style=flat-square&color=7da380&labelColor=25282d)](https://github.com/migwynkriid13/SurvivorsDragonUi/releases/latest)
+[![Total downloads across all releases](https://img.shields.io/github/downloads/migwynkriid13/SurvivorsDragonUi/total?style=flat-square&label=total%20downloads&color=c9a55c&labelColor=25282d)](https://github.com/migwynkriid13/SurvivorsDragonUi/releases)
+[![14 languages](https://img.shields.io/badge/languages-14-829bb5?style=flat-square&labelColor=25282d)](docs/LOCALIZATION.md)
+
+A Dragonflight-style UI addon for **Azeroth Survivors**. It brings your action bar, run timer, boss health, guardian tracker and guides into a HUD you can move, resize and hide to suit your setup.
+
+[**Download the addon**](https://github.com/migwynkriid13/SurvivorsDragonUi/releases/latest/download/SurvivorsDragonUi.zip) · [Report a problem](https://github.com/migwynkriid13/SurvivorsDragonUi/issues)
+
+## In game
+
+[![In-game screenshots showing player and target frames, the action bar and counters, run and boss bars, guardian tracking, cache and guardian guides, and the Level Up button.](docs/screenshots/overview.png)](docs/screenshots/overview.png)
+
+Real screenshots from different moments in a run, arranged into one overview. [Open the full image](docs/screenshots/overview.png) or browse the [original screenshots](docs/screenshots/originals/).
+
+## What you get
+
+- **Your combat HUD:** player and target frames, a restyled character window, seven action buttons, equipped jewelry, buff timers, XP, kills, gold and cache cost.
+- **Run and boss tracking:** a run timer with boss markers, boss health bars, event banners and revive progress.
+- **Guardian tracking:** living guardians, respawn timers and health bars during fights. Use the tracker's plus/minus button to switch between living guardians and all lairs.
+- **Cache and guardian guides:** distance, direction arrows and map markers to help you find them.
+- **Level Up and summons:** a button for your stored levels, plus names, icons and durations for up to eight active summons. Extra summons appear as a count.
+- **Combat text and loot:** compact nameplates, optional custom damage numbers and retail-style loot popups. Already-collected drops are hidden from both popups and chat.
+- **Chat:** a transparent window, shorter game messages and mouse-wheel history.
+- **Layout editor:** move, resize or hide HUD groups, adjust tooltips and save named profiles. Supports all 14 game languages, including Czech.
 
 ## Install
 
-1. Download [SurvivorsDragonUi.zip](https://github.com/migwynkriid13/SurvivorsDragonUi/releases/latest/download/SurvivorsDragonUi.zip).
-2. In the game, go to **Options → AddOns → Open AddOns Folder**.
-3. Extract the ZIP and put the `SurvivorsDragonUi` folder there. For manual installation on Windows, open the folder containing `AzerothSurvivors.exe`, then put the addon in `benilla-config/AddOns/`.
-4. Enable the addon and enter a run.
+1. Download [SurvivorsDragonUi.zip](https://github.com/migwynkriid13/SurvivorsDragonUi/releases/latest/download/SurvivorsDragonUi.zip) from the latest release.
+2. In the game, open **Options → AddOns → Open AddOns Folder**.
+3. Extract the ZIP and put the `SurvivorsDragonUi` folder there.
+4. Enable the addon and enter a run. Type `/sdui` to set it up.
 
-The file should be at `benilla-config/AddOns/SurvivorsDragonUi/SurvivorsDragonUi.toc`.
+For a manual Windows install, open the folder containing `AzerothSurvivors.exe` and place the addon in `benilla-config/AddOns/`. The finished path should be:
 
-**Windows settings:** the game keeps addons, their saved data, options, key bindings, chat windows and camera settings in `benilla-config` beside `AzerothSurvivors.exe`. On the first launch after this folder change, the game copies addons and settings from older folders, keeping newer changes and filling in missing settings from the old data. Characters are unaffected.
+```text
+benilla-config/AddOns/SurvivorsDragonUi/SurvivorsDragonUi.toc
+```
 
-**Browser version:** open **Options → AddOns → install a .zip** and choose the downloaded ZIP.
+**Playing in a browser?** Open **Options → AddOns → install a .zip** and choose the downloaded ZIP.
 
-## Set up your UI
+<details>
+<summary>Windows settings and older installations</summary>
 
-Type `/sdui` to open the editor.
+The game keeps addons, addon data, options, key bindings, chat windows and camera settings in `benilla-config` beside `AzerothSurvivors.exe`. On the first launch after this folder change, it copies addons and settings from older folders, keeping newer changes and filling in missing settings. Characters are unaffected.
 
-Action buttons start locked. Under **Action bar**, turn off **Lock action buttons** and click **Confirm** to allow rearranging. Shift-click two occupied buttons to swap their spells; spells cannot be dragged off the bar.
+</details>
 
-XP starts attached beneath the action bar. Turn off **Attach XP to action bar** to move and resize it separately, then click **Confirm** to save.
+## Commands
 
-- Drag a frame to move it. Hold **Shift** while dragging to align its edges or center with nearby frames, screen guides or the finer grid. Gold lines show the alignment. Drag its corners to resize it. Buff and debuff tooltips appear below their icons. Tooltips for skills, equipment, boss skulls and the kills, gold and cache-cost counters appear above their icons. **Tooltip** controls the position of other native hover cards, and the size and visibility of all of them; click its handle and use **Hide frame** under **Layout** to hide them.
-- Under **Tooltip**, enable **Tooltip at cursor** to make hover cards follow your mouse. It starts off; click **Confirm** to save.
-- Use `/sdui lock` for move and resize handles with only the **Confirm** button. Use `/sdui` to return to the full editor.
-- Use **Layout** for positions and sizes, **Profiles** to save and load named setups, **HUD** for display options, **Combat text** for damage numbers, and **Run timer** for its text and font.
-- Click **Confirm** to save, or **Cancel** to undo your changes. Leaving the run or reloading also discards unsaved changes.
+| Command       | What it does                                                                                                                |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `/sdui`       | Opens the full UI editor.                                                                                                   |
+| `/sdui lock`  | Opens move and resize handles with a Confirm button.                                                                        |
+| `/sdui reset` | Immediately restores the default layout, display options and timer styling. Keeps saved profiles and your combat-text mode. |
+| `/copy`       | Opens copyable chat messages and diagnostics for bug reports.                                                               |
+| `/fstack`     | Toggles an inspector for the UI under your mouse.                                                                           |
 
-**Addon defaults** or `/sdui reset` immediately resets your layout, display options, and timer font and text. Your combat-text mode stays unchanged.
+For UI debugging, `/fstack on` and `/fstack off` set the inspector state, `/fstack next` and `/fstack prev` step through frames, and `/fstack focus` returns to the frame under your mouse.
 
-In **Profiles**, enter a name and click **Save new profile** to keep your current setup. Select a saved profile to load, overwrite or delete it. Click **Confirm** to keep profile changes, or **Cancel** to undo them. Resetting the addon keeps your saved profiles.
+## Make it yours
 
-To use the game's damage numbers, choose **Game settings** under **Combat text**, then enable **Show Target Damage** in the game options.
+Open `/sdui`, then drag a frame to move it or drag a corner to resize it. Hold **Shift** while dragging to line it up with other frames or the grid. Gold guides show the alignment. For exact positions, sizes or **Hide frame**, use **Layout**.
 
-## Features
+Click **Confirm** to save or **Cancel** to undo. Leaving the run or reloading also discards unsaved changes. **Addon defaults** resets the same options as `/sdui reset`.
 
-- Player and target frames, a seven-button action bar, equipped jewelry, XP, kills, gold and cache cost. On game 0.115.0 or newer, Buffs also shows talent and jewelry timers; hover an icon for its details.
-- A run timer with boss markers, movable event banners and boss health bars. Move, resize or hide **Banners** through `/sdui` → **Layout**. Enable **Guardians in boss bar** in `/sdui` → **HUD** to include fighting guardians; it defaults off. **Revive** shows progress for reviving a friend or being revived and defaults on. On game 0.115.0 or newer, it hides the original revive bar while visible. Move, resize or hide it through **Revive** in **Layout**.
-- A guardian tracker with health bars during combat. Plus shows only living guardians; minus shows all lairs and respawn timers. Move, resize or hide it through `/sdui` → **Layout**.
-- Pet frames for up to eight active summons, with native names, icons and duration. Extra pets appear as a count. Move, resize or hide the whole **Pet frames** group through `/sdui` → **Layout**.
-- A movable **Level Up!** button for stored levels. Select it in `/sdui` → **Layout** to move or resize it, then **Confirm** to save.
-- Compact nameplates and custom damage numbers with size, color and damage filters.
-- Retail-style loot popups for new drops, using WoW’s original font. Already-collected drops are hidden from both chat and popups. Move, resize or hide loot notifications through **Layout**.
-- Transparent chat with shorter game messages and mouse-wheel history.
-- Cache and guardian guides with distance, direction and world-map pins. Mirror each guide in `/sdui` → **HUD** to put its arrow on either side.
-- Minimap loot-pouch icons for nearby caches and gold skull medallions for all living guardians. Empty or dead lairs show no icon, and Guardian guidance hides the red flag. Guardian icons mark their lairs, including while they are fighting elsewhere.
+### Action bar and portraits
 
-Player, target and target-of-target portraits use the original 2D images by default. **Experimental 3D portraits** in `/sdui` → **Unit frames** switches all three to 3D. **Hide portraits** shows all three as bars without portrait pictures or rings; turn it off to restore your portrait choices.
+Action buttons start locked. Under **Action bar**, turn off **Lock action buttons** and confirm. You can then Shift-click two occupied buttons to swap their spells. **Show gryphons** adds ornaments at each end of the bar; it starts off. Turn off **Attach XP to action bar** to move the XP bar separately.
 
-Supports all 14 game languages, including Czech.
+Portraits use 2D images by default. Under **Unit frames**, choose **Experimental 3D portraits** or **Hide portraits** for bars without portraits.
 
-## Other commands
+### Profiles and tooltips
 
-- `/copy` opens chat messages and diagnostic text you can copy when reporting a problem.
-- `/fstack` inspects the UI under your mouse. Run it again to close it.
+Use **Profiles** to save a named setup, load it later, overwrite it or delete it. Confirm to keep profile changes; Cancel undoes them. Resetting the addon keeps saved profiles.
+
+Move the **Tooltip** handle to place regular hover cards. Its Layout controls also change tooltip size and visibility. **Tooltip at cursor** makes regular hover cards follow your mouse; it starts off. Skill, equipment, counter and boss-marker tooltips stay above their icons, while aura tooltips appear below theirs.
+
+### Combat text and run display
+
+Under **Combat text**, choose custom damage numbers, turn them off, or use **Game settings**. For the game's damage numbers, choose **Game settings**, then enable **Show Target Damage** in the game options.
+
+Use **Run timer** to change its text and font. Under **HUD**, **Guardians in boss bar** adds fighting guardians to the boss bars; it starts off. You can also mirror either guide to put its arrow on the other side.
 
 ## Help
 
-[Report a problem](https://github.com/migwynkriid13/SurvivorsDragonUi/issues) with your game version, addon version and a screenshot or error message.
+[Open an issue](https://github.com/migwynkriid13/SurvivorsDragonUi/issues) with your game version, addon version and a screenshot or error message. Use `/copy` when you need to include diagnostic text.
 
-Some features need a recent game build. The latest compatibility and minimap changes still need in-game testing. See [compatibility notes](docs/CLIENT-COMPATIBILITY.md) or the [technical docs](docs/) for details.
+Some features need a recent game build. Buff timers and replacement revive bars need game **0.115.0 or newer**. See the [compatibility notes](docs/CLIENT-COMPATIBILITY.md) for known client limits and changes that still need in-game testing, or browse the [technical docs](docs/).
 
 ## License and credits
 
-See [LICENSE](LICENSE) and [third-party credits](third_party/). Game artwork has separate terms from addon code.
+Original addon code and custom artwork by **guzruul**, with Azeroth Survivors adaptations maintained here. Code and custom textures have different permissions; see [LICENSE](LICENSE). Blizzard artwork and other reused material are credited in [third_party/](third_party/).

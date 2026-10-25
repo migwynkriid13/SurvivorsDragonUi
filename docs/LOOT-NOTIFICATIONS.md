@@ -99,6 +99,13 @@ or an OnUpdate handler. The selected `LootView` module attaches after the servic
 and Layout initialize. Attachment requires loaded card textures and usable fonts;
 until the registered renderer reports ready, native visibility is retained.
 
+Each pooled card retains its last successfully bound icon, color and text
+placement. Metadata retries keep their original timing, while unchanged results
+skip texture, text, color and anchor writes. Failed icon assignments remain
+retryable, and retiring a card clears its icon binding before reuse. Opacity is
+written only when the existing fade curve changes; the full-opacity hold and
+hidden-card retirement retain their original lifetimes.
+
 The view registers one object through `SetRenderer`:
 
 ```lua

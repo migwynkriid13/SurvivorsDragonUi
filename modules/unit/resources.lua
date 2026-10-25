@@ -134,10 +134,21 @@ DFRL:NewMod("Class resources", 2, function()
         return style, math.min(state.pv, state.pm), state.pm
     end
 
+    local function BindPoint(texture, style, crop)
+        local loaded = texture:SetTexture(style.texture)
+        texture:SetTexCoord(unpack(crop))
+        texture:SetWidth(style.width)
+        texture:SetHeight(style.height)
+        if loaded == false then return false end
+        local assigned = texture:GetTexture()
+        local stem = string.gsub(style.texture, "%.[^%.]*$", "")
+        return loaded == true or loaded == 1 or assigned == style.texture or assigned == stem
+    end
+
     local function HidePoints()
         for _, point in ipairs(points) do
-            point.empty:Hide()
-            point.full:Hide()
+            if point.empty:IsShown() then point.empty:Hide() end
+            if point.full:IsShown() then point.full:Hide() end
         end
     end
 
@@ -169,40 +180,42 @@ DFRL:NewMod("Class resources", 2, function()
         end
         if style == displayedStyle and current == displayedValue and total == displayedMaximum then return end
         if style.texture and total <= POINTS and total == math.floor(total) then
-            meter:Hide()
-            meterText:SetText("")
+            if meter:IsShown() then meter:Hide() end
+            T.SetTextIfChanged(meterText, "")
             for i, point in ipairs(points) do
-                point.empty:SetTexture(style.texture)
-                point.empty:SetTexCoord(unpack(style.empty))
-                point.full:SetTexture(style.texture)
-                point.full:SetTexCoord(unpack(style.full))
-                for _, texture in ipairs({ point.empty, point.full }) do
-                    texture:SetWidth(style.width)
-                    texture:SetHeight(style.height)
+                if point.style ~= style then
+                    point.style = nil
+                    local emptyLoaded = BindPoint(point.empty, style, style.empty)
+                    local fullLoaded = BindPoint(point.full, style, style.full)
+                    if emptyLoaded and fullLoaded then point.style = style end
                 end
                 if i <= total then
-                    point.empty:Show()
+                    if not point.empty:IsShown() then point.empty:Show() end
                 else
-                    point.empty:Hide()
+                    if point.empty:IsShown() then point.empty:Hide() end
                 end
                 if i <= current and i <= total then
-                    point.full:Show()
+                    if not point.full:IsShown() then point.full:Show() end
                 else
-                    point.full:Hide()
+                    if point.full:IsShown() then point.full:Hide() end
                 end
             end
         else
             -- Continuous procs, or point ranges beyond the existing artwork,
             -- retain their exact native range rather than assuming five points.
             HidePoints()
-            meter:SetStatusBarColor(unpack(style.color))
-            meter:SetMinMaxValues(0, total)
-            meter:SetValue(current)
-            meterText:SetText(tostring(current) .. " / " .. tostring(total))
-            meter:Show()
+            if meter.style ~= style then
+                meter:SetStatusBarColor(unpack(style.color))
+                meter.style = style
+            end
+            local minimum, maximum = meter:GetMinMaxValues()
+            if minimum ~= 0 or maximum ~= total then meter:SetMinMaxValues(0, total) end
+            if meter:GetValue() ~= current then meter:SetValue(current) end
+            T.SetTextIfChanged(meterText, tostring(current) .. " / " .. tostring(total))
+            if not meter:IsShown() then meter:Show() end
         end
         displayedStyle, displayedValue, displayedMaximum = style, current, total
-        row:Show()
+        if not row:IsShown() then row:Show() end
     end
 
     -- A separate, always-shown controller can recover while the row is hidden.

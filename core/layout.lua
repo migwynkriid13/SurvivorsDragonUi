@@ -12,8 +12,14 @@ DFRL:NewMod("Layout", 0, function()
     local confirmAnchor
     local grid, gridWidth, gridHeight, gridScale, gridFine
     local GRID_SPACING = 32
+    local EDITOR_INTERVAL = 0.1
     local SNAP_SPACING, SNAP_CAPTURE, SNAP_RELEASE = GRID_SPACING / 4, 8, 12
     local SNAP_POINTS = { 1, 0, 2 }
+    local editorAge, editorDirty = 0, true
+    local function RefreshEditorSoon()
+        editorDirty = true
+        if activeDrag and activeDrag.moving then activeDrag.moving.targetsDirty = true end
+    end
     local labels = {
         playerFrame = "Player",
         targetFrame = "Target",
@@ -337,7 +343,7 @@ DFRL:NewMod("Layout", 0, function()
     local UpdateMove
     local function FinishDrag(entry, capture)
         if not entry or not entry.dragging then return end
-        if capture and entry.moving then UpdateMove(entry) end
+        if capture and entry.moving then UpdateMove(entry, true) end
         entry.frame:StopMovingOrSizing()
         entry.dragging = false
         activeDrag = nil
@@ -350,6 +356,7 @@ DFRL:NewMod("Layout", 0, function()
         HideSnapGuides()
         LockFrame(entry.frame)
         layout.Place(entry.key)
+        RefreshEditorSoon()
         if capture and editing and coordinates and entry == selected then RefreshCoordinates() end
     end
 
@@ -363,7 +370,7 @@ DFRL:NewMod("Layout", 0, function()
         local cells = value / SNAP_SPACING
         return (cells < 0 and math.ceil(cells - 0.5) or math.floor(cells + 0.5)) * SNAP_SPACING
     end
-    local function EditBounds(entry, width, height, uiScale)
+    local function EditBounds(entry, width, height, uiScale, bounds)
         local region = entry.options.region or entry.frame
         local position = ReadPosition(region)
         local regionWidth, regionHeight = T.GetLocalSize(region)
@@ -377,12 +384,59 @@ DFRL:NewMod("Layout", 0, function()
             return
         end
         local ratio = Scale(region) / uiScale
-        return {
-            left = position.x * width,
-            top = position.y * height,
-            width = regionWidth * ratio,
-            height = regionHeight * ratio,
-        }
+        local left, top = position.x * width, position.y * height
+        local scaledWidth, scaledHeight = regionWidth * ratio, regionHeight * ratio
+        local changed = not T.NearlyEqual(bounds.left, left)
+            or not T.NearlyEqual(bounds.top, top)
+            or not T.NearlyEqual(bounds.width, scaledWidth)
+            or not T.NearlyEqual(bounds.height, scaledHeight)
+        bounds.left, bounds.top, bounds.width, bounds.height = left, top, scaledWidth, scaledHeight
+        return bounds, changed
+    end
+    local function RefreshSnapTargets(entry, start, width, height, uiScale)
+        local source = EditBounds(entry, width, height, uiScale, start.sourceBounds)
+        local owner = ReadPosition(entry.frame)
+        start.targetsAge, start.targetsDirty = 0, false
+        if not source or not owner then
+            if start.snapReady then start.targetRevision = start.targetRevision + 1 end
+            start.snapReady = false
+            return
+        end
+        -- Cache the visible region's offset from its owner, not its dragged
+        -- position. Moving the owner must not invalidate an unchanged shape.
+        local offsetX, offsetY = source.left - owner.x * width, source.top - owner.y * height
+        local changed = not start.snapReady
+            or not T.NearlyEqual(start.offsetX, offsetX)
+            or not T.NearlyEqual(start.offsetY, offsetY)
+            or not T.NearlyEqual(start.rect.width, source.width)
+            or not T.NearlyEqual(start.rect.height, source.height)
+        start.offsetX, start.offsetY = offsetX, offsetY
+        start.rect.width, start.rect.height = source.width, source.height
+        local screen = start.targets[1].rect
+        local screenWidth, screenHeight = T.GetLocalSize(UIParent)
+        if not T.NearlyEqual(screen.width, screenWidth) or not T.NearlyEqual(screen.height, screenHeight) then
+            changed = true
+        end
+        screen.width, screen.height = screenWidth, screenHeight
+        local used = 1
+        for _, other in ipairs(order) do
+            if other ~= entry and CanShowHandle(other) then
+                local index = used + 1
+                local target = start.targets[index]
+                if not target then
+                    target = { rect = {} }
+                    start.targets[index] = target
+                end
+                local bounds, resized = EditBounds(other, width, height, uiScale, target.rect)
+                if bounds then
+                    if target.key ~= other or resized then changed = true end
+                    target.key, used = other, index
+                end
+            end
+        end
+        if start.targetCount ~= used then changed = true end
+        start.targetCount, start.snapReady = used, true
+        if changed then start.targetRevision = start.targetRevision + 1 end
     end
     local function AxisPoint(rect, axis, point)
         if axis == "x" then return rect.left + rect.width * point / 2 end
@@ -394,10 +448,12 @@ DFRL:NewMod("Layout", 0, function()
         end
         return math.max(rect.left - target.left - target.width, target.left - rect.left - rect.width, 0) <= reach
     end
-    local function SnapAxis(start, rect, axis, targets, screen)
+    local function SnapAxis(start, rect, axis)
+        local targets, screen = start.targets, start.targets[1].rect
         local held = start.snaps[axis]
         if held then
-            for _, target in ipairs(targets) do
+            for index = 1, start.targetCount do
+                local target = targets[index]
                 if
                     target.key == held.target
                     and (target.key == "screen" or NearAxis(rect, target.rect, axis, GRID_SPACING * 4))
@@ -410,8 +466,9 @@ DFRL:NewMod("Layout", 0, function()
             end
             start.snaps[axis] = nil
         end
-        local best, bestDistance, bestDelta, bestGuide
-        for _, target in ipairs(targets) do
+        local bestTarget, bestSource, bestPoint, bestDistance, bestDelta, bestGuide
+        for index = 1, start.targetCount do
+            local target = targets[index]
             for _, sourcePoint in ipairs(SNAP_POINTS) do
                 local source = AxisPoint(rect, axis, sourcePoint)
                 for _, targetPoint in ipairs(SNAP_POINTS) do
@@ -422,16 +479,18 @@ DFRL:NewMod("Layout", 0, function()
                         local value = AxisPoint(target.rect, axis, targetPoint)
                         local delta = value - source
                         local distance = math.abs(delta)
-                        if distance <= SNAP_CAPTURE and (not best or distance < bestDistance) then
-                            best = { target = target.key, source = sourcePoint, point = targetPoint }
+                        if distance <= SNAP_CAPTURE and (not bestTarget or distance < bestDistance) then
+                            bestTarget, bestSource, bestPoint = target.key, sourcePoint, targetPoint
                             bestDistance, bestDelta, bestGuide = distance, delta, value
                         end
                     end
                 end
             end
         end
-        if best then
-            start.snaps[axis] = best
+        if bestTarget then
+            local heldPoint = start.snapPool[axis]
+            heldPoint.target, heldPoint.source, heldPoint.point = bestTarget, bestSource, bestPoint
+            start.snaps[axis] = heldPoint
             return bestDelta, bestGuide
         end
         local origin = axis == "x" and screen.width / 2 or -screen.height / 2
@@ -446,29 +505,19 @@ DFRL:NewMod("Layout", 0, function()
         end
         return bestDelta, bestGuide
     end
-    local function SnapMove(entry, start, x, y, width, height, uiScale)
-        local rect = EditBounds(entry, width, height, uiScale)
-        local owner = ReadPosition(entry.frame)
-        if not rect or not owner then
+    local function SnapMove(start, x, y)
+        if not start.snapReady then
             HideSnapGuides()
             return x, y
         end
-        rect.left, rect.top = rect.left + x - owner.x * width, rect.top + y - owner.y * height
-        local screenWidth, screenHeight = T.GetLocalSize(UIParent)
-        local screen = { left = 0, top = 0, width = screenWidth, height = screenHeight }
-        local targets = { { key = "screen", rect = screen } }
-        for _, other in ipairs(order) do
-            if other ~= entry and CanShowHandle(other) then
-                local bounds = EditBounds(other, width, height, uiScale)
-                if bounds then table.insert(targets, { key = other, rect = bounds }) end
-            end
-        end
-        local dx, guideX = SnapAxis(start, rect, "x", targets, screen)
-        local dy, guideY = SnapAxis(start, rect, "y", targets, screen)
+        local rect = start.rect
+        rect.left, rect.top = x + start.offsetX, y + start.offsetY
+        local dx, guideX = SnapAxis(start, rect, "x")
+        local dy, guideY = SnapAxis(start, rect, "y")
         ShowSnapGuides(guideX, guideY)
         return x + dx, y + dy
     end
-    UpdateMove = function(entry)
+    UpdateMove = function(entry, force)
         local start = entry.moving
         local width, height, uiScale = Viewport()
         local cursorX, cursorY = Cursor()
@@ -481,15 +530,33 @@ DFRL:NewMod("Layout", 0, function()
         then
             return
         end
+        local shift = IsShiftKeyDown() and true or false
+        start.targetsAge = start.targetsAge + (tonumber(arg1) or 0)
+        if shift and (force or start.targetsDirty or start.targetsAge >= EDITOR_INTERVAL) then
+            RefreshSnapTargets(entry, start, width, height, uiScale)
+        end
+        if
+            not force
+            and start.lastCursorX == cursorX
+            and start.lastCursorY == cursorY
+            and start.lastShift == shift
+            and start.lastRevision == start.targetRevision
+        then
+            return
+        end
         local x, y = start.x + cursorX - start.cursorX, start.y + cursorY - start.cursorY
-        if IsShiftKeyDown() then
-            x, y = SnapMove(entry, start, x, y, width, height, uiScale)
+        if shift then
+            x, y = SnapMove(start, x, y)
         else
             start.snaps.x, start.snaps.y = nil, nil
+            start.targetsDirty = true
             HideSnapGuides()
         end
-        entry.pointerPosition = { x = x / width, y = y / height }
+        entry.pointerPosition.x, entry.pointerPosition.y = x / width, y / height
         ApplyPosition(entry.frame, entry.pointerPosition)
+        start.lastCursorX, start.lastCursorY = cursorX, cursorY
+        start.lastShift, start.lastRevision = shift, start.targetRevision
+        return true
     end
     local function BeginMove(entry)
         if not ready or not inWorld or not editing then return end
@@ -501,6 +568,13 @@ DFRL:NewMod("Layout", 0, function()
         if not width or not cursorX or not position then return end
         entry.moving = {
             snaps = {},
+            snapPool = { x = {}, y = {} },
+            sourceBounds = {},
+            rect = {},
+            targets = { { key = "screen", rect = { left = 0, top = 0 } } },
+            targetsAge = 0,
+            targetsDirty = true,
+            targetRevision = 0,
             cursorX = cursorX,
             cursorY = cursorY,
             x = position.x * width,
@@ -511,7 +585,7 @@ DFRL:NewMod("Layout", 0, function()
         }
         entry.pointerPosition = position
         entry.dragging, activeDrag = true, entry
-        UpdateMove(entry)
+        UpdateMove(entry, true)
     end
     local function BeginResize(entry, corner)
         if not ready or not inWorld or not editing then return end
@@ -544,6 +618,7 @@ DFRL:NewMod("Layout", 0, function()
         local width, height, uiScale = Viewport()
         local cursorX, cursorY = Cursor()
         if not start or not width or not cursorX then return end
+        if start.lastCursorX == cursorX and start.lastCursorY == cursorY then return end
         local right = string.find(start.corner, "RIGHT") ~= nil
         local top = string.find(start.corner, "TOP") ~= nil
         local signX, signY = right and 1 or -1, top and 1 or -1
@@ -577,6 +652,8 @@ DFRL:NewMod("Layout", 0, function()
             y = y / height - (regionPosition.y - ownerPosition.y),
         }
         ApplyPosition(entry.frame, entry.pointerPosition)
+        start.lastCursorX, start.lastCursorY = cursorX, cursorY
+        return true
     end
 
     local function MakeCorner(entry, corner)
@@ -673,6 +750,30 @@ DFRL:NewMod("Layout", 0, function()
             entry.handle:Hide()
         end
     end
+    local function RefreshHandle(entry, scale)
+        local handle, region = entry.handle, entry.options.region or entry.frame
+        local shown = CanShowHandle(entry)
+        if shown then
+            local ratio = Scale(region) / scale
+            local regionWidth, regionHeight = T.GetLocalSize(region)
+            local handleWidth = math.max(12, regionWidth * ratio)
+            local handleHeight = math.max(12, regionHeight * ratio)
+            if entry.handleRegion ~= region then
+                handle:ClearAllPoints()
+                handle:SetPoint("TOPLEFT", region, "TOPLEFT", 0, 0)
+                entry.handleRegion = region
+            end
+            if entry.handleWidth ~= handleWidth then
+                handle:SetWidth(handleWidth)
+                entry.handleWidth = handleWidth
+            end
+            if entry.handleHeight ~= handleHeight then
+                handle:SetHeight(handleHeight)
+                entry.handleHeight = handleHeight
+            end
+        end
+        ShowHandle(entry, shown and true or false)
+    end
 
     function layout.Register(key, frame, defaultAnchor, options)
         if not frame or entries[key] then return end
@@ -692,11 +793,14 @@ DFRL:NewMod("Layout", 0, function()
         MakeHandle(entry)
         entries[key] = entry
         table.insert(order, entry)
+        RefreshEditorSoon()
         frame.Show = function(self)
+            if not entry.wantsShown then RefreshEditorSoon() end
             entry.wantsShown = true
             if not IsHidden(entry) then entry.nativeShow(self) end
         end
         frame.Hide = function(self)
+            if entry.wantsShown then RefreshEditorSoon() end
             entry.wantsShown = false
             entry.nativeHide(self)
         end
@@ -715,38 +819,55 @@ DFRL:NewMod("Layout", 0, function()
     local function SetCoordinateText(field, text)
         -- Remember programmatic text before SetText, including delayed change events.
         coordinates[field].layoutText = text
-        coordinates[field]:SetText(text)
+        T.SetTextIfChanged(coordinates[field], text)
     end
-    RefreshCoordinates = function()
+    local coordinateState = {}
+    RefreshCoordinates = function(force)
         if not coordinates or not selected then return end
-        coordinates.refreshing = true
         local x, y = CenterPosition(selected)
-        coordinates.label:SetText(labels[selected.key] or selected.key)
+        local dimensions = selected.options.resize == "dimensions"
+        local width = dimensions and selected.frame:GetWidth()
+            or LocalScale(selected.frame) / selected.defaultScale * 100
+        local height = selected.frame:GetHeight()
+        local hidden, language = IsHidden(selected), DFRL.locale.code
+        if
+            force == false
+            and coordinateState.entry == selected
+            and coordinateState.x == x
+            and coordinateState.y == y
+            and coordinateState.width == width
+            and coordinateState.height == height
+            and coordinateState.hidden == hidden
+            and coordinateState.language == language
+        then
+            return
+        end
+        coordinates.refreshing = true
+        T.SetTextIfChanged(coordinates.label, labels[selected.key] or selected.key)
         SetCoordinateText("x", x and string.format("%.2f", x) or "")
         SetCoordinateText("y", y and string.format("%.2f", y) or "")
         if not x then
             coordinates.unavailable = true
-            coordinates.status:SetText("Frame position is not available yet.")
+            T.SetTextIfChanged(coordinates.status, "Frame position is not available yet.")
         elseif coordinates.unavailable then
             coordinates.unavailable = false
-            coordinates.status:SetText("")
+            T.SetTextIfChanged(coordinates.status, "")
         end
-        local dimensions = selected.options.resize == "dimensions"
-        coordinates.sizeLabel:SetText(dimensions and "Width / Height (frame units)" or "Scale (%) - 40 to 300")
-        SetCoordinateText(
-            "width",
-            string.format(
-                "%.2f",
-                dimensions and selected.frame:GetWidth() or LocalScale(selected.frame) / selected.defaultScale * 100
-            )
+        T.SetTextIfChanged(
+            coordinates.sizeLabel,
+            dimensions and "Width / Height (frame units)" or "Scale (%) - 40 to 300"
         )
-        SetCoordinateText("height", string.format("%.2f", selected.frame:GetHeight()))
+        SetCoordinateText("width", string.format("%.2f", width))
+        SetCoordinateText("height", string.format("%.2f", height))
         if dimensions then
-            coordinates.height:Show()
+            if not coordinates.height:IsShown() then coordinates.height:Show() end
         else
-            coordinates.height:Hide()
+            if coordinates.height:IsShown() then coordinates.height:Hide() end
         end
-        coordinates.visibility:SetChecked(IsHidden(selected))
+        if coordinates.visibility.editorChecked ~= hidden then coordinates.visibility:SetChecked(hidden) end
+        coordinateState.entry, coordinateState.x, coordinateState.y = selected, x, y
+        coordinateState.width, coordinateState.height = width, height
+        coordinateState.hidden, coordinateState.language = hidden, language
         coordinates.dirty = false
         coordinates.refreshing = false
     end
@@ -802,6 +923,7 @@ DFRL:NewMod("Layout", 0, function()
         }
         draft[selected.key] = ReadGeometry(selected, position)
         layout.Place(selected.key)
+        RefreshEditorSoon()
         ClearCoordinateFocus()
         coordinates.status:SetText("Applied. Confirm to save.")
         coordinates.dirty = false
@@ -901,6 +1023,7 @@ DFRL:NewMod("Layout", 0, function()
                 SetHidden(selected, geometry, hidden)
                 draft[selected.key] = geometry
                 ApplyVisibility(selected)
+                RefreshEditorSoon()
                 coordinates.status:SetText("Preview. Confirm to save.")
             end
         )
@@ -915,9 +1038,9 @@ DFRL:NewMod("Layout", 0, function()
         local refreshElapsed = 0
         coordinates:SetScript("OnUpdate", function()
             refreshElapsed = refreshElapsed + (arg1 or 0)
-            if refreshElapsed < 0.1 then return end
+            if refreshElapsed < EDITOR_INTERVAL then return end
             refreshElapsed = 0
-            if not coordinates.dirty and not coordinates.focused then RefreshCoordinates() end
+            if not coordinates.dirty and not coordinates.focused then RefreshCoordinates(false) end
         end)
         coordinates:SetScript("OnShow", function()
             if not coordinates.dirty and not coordinates.focused then RefreshCoordinates() end
@@ -971,6 +1094,7 @@ DFRL:NewMod("Layout", 0, function()
         for _, entry in ipairs(order) do
             layout.Place(entry.key)
         end
+        RefreshEditorSoon()
         if coordinates then RefreshCoordinates() end
     end
     local function CloseEditing(save, restore)
@@ -1014,6 +1138,7 @@ DFRL:NewMod("Layout", 0, function()
     function layout.SetEditorVisibilityHandler(callback) setEditorVisible = callback end
     function layout.BeginEdit(onlyHandles)
         if not ready or not inWorld then return end
+        RefreshEditorSoon()
         local starting = not editing
         handlesOnly = onlyHandles == true
         if editing and handlesOnly and coordinates then
@@ -1076,6 +1201,7 @@ DFRL:NewMod("Layout", 0, function()
             -- captured during module initialization at the earlier scale.
             FinishDrag(activeDrag, true)
             RestoreDefaults()
+            RefreshEditorSoon()
         end
         if needsRestore then
             for _, entry in ipairs(order) do
@@ -1086,41 +1212,33 @@ DFRL:NewMod("Layout", 0, function()
         lastWidth, lastHeight, lastScale = width, height, scale
         local enabled = inWorld and editing
         if activeDrag and not enabled then FinishDrag(activeDrag, false) end
-        if activeDrag and activeDrag.moving then UpdateMove(activeDrag) end
-        if activeDrag and activeDrag.resizing then UpdateResize(activeDrag) end
+        local dragChanged
+        if activeDrag and activeDrag.moving then dragChanged = UpdateMove(activeDrag) end
+        if activeDrag and activeDrag.resizing then dragChanged = UpdateResize(activeDrag) end
         if needsDefaultPosition then
             needsDefaultPosition = false
             for _, entry in ipairs(order) do
-                if not entry.defaultPosition then layout.Place(entry.key) end
+                if not entry.defaultPosition then
+                    layout.Place(entry.key)
+                    if entry.defaultPosition then RefreshEditorSoon() end
+                end
             end
         end
         -- Settled groups need no handle reads or native visibility writes during
         -- gameplay. Viewport changes and unresolved defaults still run above.
         if not enabled then return end
-        UpdateGrid()
-        for _, entry in ipairs(order) do
-            local handle, region = entry.handle, entry.options.region or entry.frame
-            local shown = CanShowHandle(entry)
-            if shown then
-                local ratio = Scale(region) / scale
-                local regionWidth, regionHeight = T.GetLocalSize(region)
-                local handleWidth = math.max(12, regionWidth * ratio)
-                local handleHeight = math.max(12, regionHeight * ratio)
-                if entry.handleRegion ~= region then
-                    handle:ClearAllPoints()
-                    handle:SetPoint("TOPLEFT", region, "TOPLEFT", 0, 0)
-                    entry.handleRegion = region
-                end
-                if entry.handleWidth ~= handleWidth then
-                    handle:SetWidth(handleWidth)
-                    entry.handleWidth = handleWidth
-                end
-                if entry.handleHeight ~= handleHeight then
-                    handle:SetHeight(handleHeight)
-                    entry.handleHeight = handleHeight
-                end
+        editorAge = editorAge + (tonumber(arg1) or 0)
+        local fine = activeDrag and activeDrag.moving and IsShiftKeyDown() and true or false
+        if editorDirty or editorAge >= EDITOR_INTERVAL or gridFine ~= fine then
+            editorAge, editorDirty = 0, false
+            UpdateGrid()
+            for _, entry in ipairs(order) do
+                RefreshHandle(entry, scale)
             end
-            ShowHandle(entry, shown and true or false)
+        elseif dragChanged and activeDrag then
+            -- The dragged outline follows size changes at the render cadence;
+            -- other groups only need the bounded editor refresh above.
+            RefreshHandle(activeDrag, scale)
         end
     end)
     controller:RegisterEvent("PLAYER_LEAVING_WORLD")

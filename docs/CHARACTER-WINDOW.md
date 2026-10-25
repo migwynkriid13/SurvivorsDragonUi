@@ -47,8 +47,11 @@ opening the pane refreshes every border. The skin reads
 color globals as a fallback. It never infers rarity from the item's name or
 tooltip, recolors its icon or replaces native slot scripts. Borders hide on
 world leave/logout and no item data is saved. One shared hide path clears all
-three layers together before each native quality read, including missing,
-common-quality and empty-slot results.
+three layers together for missing, common-quality and empty-slot results.
+Valid updates retain already-correct visibility and RGB instead of hiding and
+repainting the three rims first. Actual texture colors are compared where the
+client supplies the getter; otherwise the last successful tint is reused and
+forgotten on clearing. Native reads and unknown-quality retries remain intact.
 
 ## Native behavior
 
@@ -81,11 +84,39 @@ children, retaining their numeric name order. Labels and values use DEFAULT,
 with wrapping and measured heights for long translated text. Native resistance
 controls remain available when the game shows them.
 
-Native stat updates queue one layout pass after the current UI callback. This
-allows the game to finish updating and translating its rows first. Work stops
-after the queued pass and while the window is hidden. The scroll position is
-session-only, clamped when the list shrinks and reset on world leave/logout.
-Missing native extra stats leave the primary panel usable.
+Native stat updates coalesce into one queued layout pass after the current UI
+callback, using one stable callback rather than replacing it for every request.
+This allows the game to finish updating and translating its rows first. Work
+stops after the queued pass and while the window is hidden. Hiding the pane or
+window and world cleanup cancel the request and clear its queued state, so
+reopening can schedule normally. The scroll position is session-only, clamped
+when the list shrinks and reset on world leave/logout. Missing native extra
+stats leave the primary panel usable.
+
+## Presentation caching
+
+Row text measurements are reused while their label/value text, FontStrings,
+font settings, effective parent scale and column widths match. Pending glyph
+measurements remain retryable. Visible rows are paired directly without a new
+compaction table. Primary-row storage is reused; extra rows are rediscovered
+and sorted when their native child structure changes, with the existing
+`GetChildren` path retained when a child-count getter is unavailable.
+
+The native game still rewrites extra-row anchors and the extra-card height on
+each stats update, even when displayed values are unchanged. The skin compares
+actual anchors, widths, heights and levels before writing, so those native
+resets are repaired while unchanged primary rows and text placement are left
+alone. Native text, conditional visibility and tooltip fields remain live.
+Category heights, scroll bounds, scroll offsets and arrow enablement only
+change when needed, with a forced offset refresh after content resizing or
+pane opening.
+
+The header reuses name and level-caption measurements while text, fonts,
+parent scale, pane and window width match. Native name/rank/level changes still
+invalidate measurement, and actual header placement and visibility are checked
+after native updates. Closed windows skip header work. The native model,
+camera, equipment updates and all three quality-rim passes remain unchanged.
+No polling loop, setting, asset or SavedVariable is added.
 
 The hidden tabs retain their native contents and scripts; C and any existing
 native key bindings still control their panes. Pet and any other available
@@ -116,13 +147,27 @@ were also read in the
 The packaged game's own additions take precedence over that stock reference.
 Raw executables, extracted game scripts and gameplay snapshots are not shipped.
 
+The 2026-10-25 performance follow-up also read the current installed executable
+without running it: 142,111,232 bytes, SHA-256
+`0258b8a43d9ba3170b15e5fc07a646a606eb2972a5dd6aa0e6349a07ec390e2c`.
+Its `AZS_Row` starts at offset `120805068`, `AZS_Update` at `120805431` and
+`AZS_UpdateMore` at `120808696`. The primary updater writes native text and
+tooltip fields; the extra updater also resets each visible row's anchors and
+the container height. Its `PaperDollFrame_OnEvent` at `120812574` refreshes
+stats on received `AZS` messages while visible. These source boundaries explain
+why cached measurements must still allow native geometry repairs; they do not
+establish an event rate or runtime FPS impact.
+
 ## Artwork and verification limits
 
 See [Character-ARTWORK.md](../third_party/Character-ARTWORK.md) for pinned
 Blizzard texture sources, source rectangles, attribution and preparation.
 Only the loaded module and used TGA files join the shared runtime manifest.
 
-Local tests, validation, syntax/formatting tools and addon/game execution were
-intentionally not run. The authorized GitHub Actions job checks formatting,
-local dead code and TOC metadata. Artwork inspection and those checks do not
-establish in-game appearance, model rendering, scrolling, input or tooltips.
+The performance follow-up was formatted locally with pinned StyLua 2.6.0 and
+Prettier 3.9.10. Source/diff inspection covered native anchor resets, text/font
+and scale changes, missing quality data, conditional rows, scroll clamping,
+pending refresh cancellation and reopening. Local tests, standalone syntax or
+validation checks and addon/game execution were not run. GitHub Actions was not
+awaited. In-game appearance, model rendering, scrolling, input, tooltips and FPS
+impact remain unverified.

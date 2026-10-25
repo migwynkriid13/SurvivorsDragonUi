@@ -53,7 +53,6 @@ def art(path, crop=None):
 
 
 ICON = art("waypoint/GuardianFloating.tga", (0, 0, 65, 65))
-STAR = art("waypoint/Guardian.tga")
 EDITOR = art("editor/border.tga")
 CHROME = art("character/Chrome.tga")
 PARTS = art("character/Parts.tga")
@@ -90,8 +89,8 @@ def line(image, x, y, w, color="#806744"):
     rect(image, (x, y, w, 0.6), color)
 
 
-def icon(image, x, y, size=28, star=False, opacity=1):
-    paste(image, STAR if star else ICON, (x, y, size, size), opacity)
+def icon(image, x, y, size=28, opacity=1):
+    paste(image, ICON, (x, y, size, size), opacity)
 
 
 def panel(image, x, y, w, h, kind="editor"):

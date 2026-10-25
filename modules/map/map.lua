@@ -108,14 +108,6 @@ DFRL:NewMod("Map", 1, function()
         button:Show()
     end
 
-    MiniMapMailFrame:ClearAllPoints()
-    MiniMapMailFrame:SetParent(Minimap)
-    MiniMapMailFrame:SetPoint("TOPLEFT", panel, "BOTTOMLEFT", -2, -1)
-    MiniMapMailIcon:SetTexture(texpath .. "mail.tga")
-    MiniMapMailIcon:SetWidth(32)
-    MiniMapMailIcon:SetHeight(32)
-    MiniMapMailBorder:Hide()
-
     MiniMapTrackingFrame:ClearAllPoints()
     MiniMapTrackingFrame:SetParent(Minimap)
     MiniMapTrackingFrame:SetPoint("TOPRIGHT", panel, "TOPLEFT", -15, 0)
@@ -128,7 +120,7 @@ DFRL:NewMod("Map", 1, function()
     DurabilityFrame.SetPoint = function() end
     DurabilityFrame:SetScale(0.7)
 
-    for _, name in ipairs({ "QuestWatchFrame", "QuestTimerFrame" }) do
+    for _, name in ipairs({ "QuestWatchFrame", "QuestTimerFrame", "MiniMapMailFrame" }) do
         PermanentlyDisableFrame(_G[name])
     end
 

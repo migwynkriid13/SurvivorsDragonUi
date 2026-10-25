@@ -90,3 +90,9 @@ caption or percentage; the unused earlier status captions were removed.
 The guardian header toggle adds localized **Show living guardians only** and
 **Show all lairs** tooltips in all fourteen UI catalogs. Its collapsed plus
 view contains living guardians; its expanded minus view contains all lairs; native names remain unchanged.
+
+The action-bar **Show gryphons** caption and its winged-ornament hint have
+source TSV entries and runtime UI entries in all fourteen languages. Only
+these two caption rows were added; native catalogs, effects and aliases
+remain unchanged. The existing editor measures both strings when sizing
+the Action bar page.

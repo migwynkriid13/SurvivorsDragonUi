@@ -138,7 +138,7 @@ shows only eligible common and epic drops, with no collection subtitle.
 
 Task-specific tree searches covered NeticSoul/DragonUI, PentSec/DragonUI,
 Karl-HeinzSchneider/WoW-DragonflightUI, Stormhand-dev/DragonflightUI-Reforged,
-ghbset/DragonUI_NewEra, mabu95/PhoUI and alchem1ster/DragonflightReloaded at
+ghbset/DragonUI_NewEra, mabu95/PhoUI and [alchem1ster's UI repository](https://api.github.com/repositories/1001127409) at
 resolved commits. The useful DragonUI item-card source and its owning code were
 inspected; other tree matches were discovery leads, not independently licensed
 designs. The companion pack and frame chrome were considered alongside existing

@@ -5,6 +5,12 @@ counter visibility and affordability highlight. The same style selection works
 in both modes. Changes preview through the existing display draft; Confirm saves,
 and Cancel, world leave, logout and reload discard unconfirmed changes.
 
+The gold counter retains its original 18-unit coin icon and four-unit gap
+beside the full native amount. The unchanged coin atlas lives in
+`media/tex/tally/Coins.tga`, using the original top-left gold crop. The shared
+fitter reserves its icon width, the tooltip anchors above the icon, and the
+affordability halo includes both the coin and amount with its original offset.
+
 ## Attached and detached artwork
 
 Attached artwork has an open top, sharing the action bar's lower silver edge.
@@ -12,7 +18,10 @@ Detached artwork has a complete matching surround. The shared registry in
 `core/tally.lua` owns each mode's texture, full extent and counter center.
 `tallyAttachment.Refresh` selects these together whenever attachment or style
 changes, and retains the shared content scale, counter values and divider rules.
-Action-bar bounds remain unchanged.
+The tally creates only its frame, counter overlay and selected artwork; it has
+no hidden status bar, yellow fill, pill background, border pieces or title.
+Its existing frame name, initial dimensions, overlay level and layout lifecycle
+are retained.
 
 Most detached versions reflect the structural lower half above the counter
 center, preserving its palette, source alpha and lower details. Iron sarcophagus

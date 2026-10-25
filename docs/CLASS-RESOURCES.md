@@ -20,6 +20,13 @@ The proc reader checks the native phase before reading the received run table an
 
 For `seal_fate` and `soul_fire`, a whole-number native maximum up to five selects that many sockets; complete points light directly from `pv`. The supplied example `proc=seal_fate, pv=3, pm=5` shows three filled points and two empty sockets. Zero retains the available empty sockets. Larger or nonintegral ranges use the numeric fill meter, preserving the game's range instead of imposing a five-point maximum. Bloodrage and Lightwell always use that fill meter. No retail typed `UnitPower` calls, target-dependent combo getter or divide-by-20 conversion supplies a proc value.
 
+Each point retains its bound style, crop and dimensions while count changes
+update only visibility. Style changes rebind both images; failed assignments
+leave the style unbound for the next changed-value refresh. Switching through
+the numeric meter, hiding or clearing the row retains valid prepared artwork.
+The numeric meter skips unchanged color, range, value and text writes without
+changing its native readings or accepted ranges.
+
 Player power, maximum-power and display-power events trigger primary reads. The independent controller polls every 0.1 seconds even while the display is hidden, covering delayed native player initialization and snapshot recovery. `AZSRUN` schedules a read on the next frame, after native parsing. There is no independent resource timer, spell-name matching, native-state mutation or gameplay persistence.
 
 Observed inactive phases and world leave/logout retire the current run-table reference; a later active phase needs a newly received table before the proc meter returns. Paused and choosing snapshots remain valid without a timeout. The API has no run id, so unobserved run boundaries remain a best-effort limitation. Turning the option off hides both displays, and world leave/logout also clears point textures and meter text. Primary power retains its separate native-unit lifecycle.
@@ -60,6 +67,12 @@ visible. Party unit buttons, portraits, names, tooltips, values, outer size,
 placement and scale are unchanged. The existing hint describes both player and
 party frames in all fourteen source/runtime catalogs. Pet-frame power remains
 independent.
+
+The native primary pet frame still runs the original `PetFrame_Update` first.
+Its addon styling then compares actual textures, tint, draw layer, height and
+anchors before writing. Native resets and Focus/Mana changes are repaired;
+unchanged refreshes do not reapply the complete style. This does not alter the
+separate summon roster or its portrait rendering.
 
 ## Referenced addon research
 

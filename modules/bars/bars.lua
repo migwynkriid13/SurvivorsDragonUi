@@ -8,6 +8,17 @@ DFRL:NewMod("Bars", 1, function()
     local COOLDOWN_FINAL_WINDOW = 0.2
     local COOLDOWN_UNITS = { { 86400, "d" }, { 3600, "h" }, { 60, "m" }, { 1, "" } }
     local TEX_PATH = DFRL:GetInfoOrCons("tex") .. "actionbars\\"
+    -- Dragonflight gryphon crop and source: third_party/XP-ARTWORK.md.
+    -- Retain retail proportions after trimming the atlas member's empty edges;
+    -- tuck the chest into the shell so the shorter bar has no side gap.
+    local ornament = {
+        width = 104.5 * 312 / 356,
+        height = 98 * 306 / 334,
+        overlap = 14 - 104.5 * 5 / 356,
+        bottom = -22 + 98 * 18 / 334,
+        endU = 312 / 512,
+        endV = 306 / 512,
+    }
     local defaults = {
         bottom = 55,
         topInset = 14,
@@ -163,25 +174,81 @@ DFRL:NewMod("Bars", 1, function()
         upper:SetTexCoord(0, 1200 / 2048, 0, 152 / 256)
         upper:Hide()
         local jewelryShown, xpJoined = false, false
+        local jewelryTop = defaults.topInset
+        local ornaments, ornamentsShown
         local tallyExtent = 0
-        local bottomRegion, bottomOffset
+        local boundRegion, boundSide, boundTop, boundBottom
         local function SilverBottom()
             return -defaults.topInset - (xpJoined and defaults.xpExtension or 0) + defaults.silverBottomInset
         end
-        local function UpdateBottomBound()
+        local function UpdateBounds()
             local region = DFRL.actionBarMoveRegion
             if not region then return end
+            local side, top = defaults.sideInset, jewelryTop
             local bottom = xpJoined and -(defaults.topInset + defaults.xpExtension) or 0
             if tallyExtent > 0 then bottom = math.min(bottom, SilverBottom() - tallyExtent) end
-            if bottomRegion == region and bottomOffset == bottom then return end
-            region:SetPoint("BOTTOMRIGHT", DFRL.mainBar, "BOTTOMRIGHT", defaults.sideInset, bottom)
-            bottomRegion, bottomOffset = region, bottom
+            if ornamentsShown then
+                side = math.max(side, ornament.width - ornament.overlap)
+                top = math.max(top, ornament.bottom + ornament.height - defaults.height)
+                bottom = math.min(bottom, ornament.bottom)
+            end
+            if boundRegion == region and boundSide == side and boundTop == top and boundBottom == bottom then return end
+            region:SetPoint("TOPLEFT", DFRL.mainBar, "TOPLEFT", -side, top)
+            region:SetPoint("BOTTOMRIGHT", DFRL.mainBar, "BOTTOMRIGHT", side, bottom)
+            boundRegion, boundSide, boundTop, boundBottom = region, side, top, bottom
+        end
+        DFRL.RefreshActionBarBounds = UpdateBounds
+        function DFRL.SetActionBarJewelryTop(top)
+            if jewelryTop == top then return end
+            jewelryTop = top
+            UpdateBounds()
         end
         function DFRL.GetActionBarSilverBottom() return SilverBottom() end
         function DFRL.SetRunTallyBarExtent(extent)
             tallyExtent = extent or 0
-            UpdateBottomBound()
+            UpdateBounds()
         end
+        local function UpdateOrnaments()
+            local shown = DFRL.display.Get("showGryphons")
+            if ornamentsShown == shown then return end
+            if shown and not ornaments then
+                ornaments = {}
+                for index, side in ipairs({ "LEFT", "RIGHT" }) do
+                    local texture = bar:CreateTexture(nil, "OVERLAY")
+                    texture:SetTexture(TEX_PATH .. "Gryphon.tga")
+                    texture:SetWidth(ornament.width)
+                    texture:SetHeight(ornament.height)
+                    local opposite = side == "LEFT" and "RIGHT" or "LEFT"
+                    texture:SetPoint(
+                        "BOTTOM" .. opposite,
+                        bar,
+                        "BOTTOM" .. side,
+                        index == 1 and ornament.overlap or -ornament.overlap,
+                        ornament.bottom
+                    )
+                    texture:SetTexCoord(
+                        index == 1 and 0 or ornament.endU,
+                        index == 1 and ornament.endU or 0,
+                        0,
+                        ornament.endV
+                    )
+                    table.insert(ornaments, texture)
+                end
+            end
+            if ornaments then
+                for _, texture in ipairs(ornaments) do
+                    if shown then
+                        texture:Show()
+                    else
+                        texture:Hide()
+                    end
+                end
+            end
+            ornamentsShown = shown
+            UpdateBounds()
+        end
+        DFRL.display.Listen(UpdateOrnaments)
+        UpdateOrnaments()
         local function UpdateBackground()
             local top = jewelryShown and socketBottom or defaults.topInset
             local bottom = -defaults.topInset - (xpJoined and defaults.xpExtension or 0)
@@ -214,7 +281,7 @@ DFRL:NewMod("Bars", 1, function()
             if xpJoined == shown then return end
             xpJoined = shown
             UpdateBackground()
-            UpdateBottomBound()
+            UpdateBounds()
             if DFRL.RefreshRunTallyAttachment then DFRL.RefreshRunTallyAttachment() end
         end
     end
@@ -519,6 +586,7 @@ DFRL:NewMod("Bars", 1, function()
         moveRegion:SetPoint("TOPLEFT", mainBar, "TOPLEFT", -defaults.sideInset, defaults.topInset)
         moveRegion:SetPoint("BOTTOMRIGHT", mainBar, "BOTTOMRIGHT", defaults.sideInset, 0)
         DFRL.actionBarMoveRegion = moveRegion
+        DFRL.RefreshActionBarBounds()
         DFRL.layout.Register("actionBar", mainBar, function()
             mainBar:ClearAllPoints()
             mainBar:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, defaults.bottom)

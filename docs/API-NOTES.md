@@ -189,7 +189,7 @@ Every live boss and engaged guardian has its own spawn-id key and health pill, w
 
 The addon hides `clock`, `bosses` and `tally` only after their replacements are ready; `bosses` includes guardians, so engaged guardians' health is also preserved in the replacement. The clock requires a valid phase, native elapsed time and native duration; its marker schedule is independent. It captures prior HUD visibility and restores it when a replacement's required native data is missing/invalid, on world leave and on logout. Saved game HUD settings are not treated as addon configuration.
 
-The replacement tally is one gold bar whose default placement is directly beneath the XP bar, with its default total outer width matching the seven-button action bar artwork and XP bar. Each of those three groups can be moved and uniformly resized independently, so user resizing can make their displayed widths differ. Three equal sections show centered numeric values with in-game icons and DEFAULT text for kills, current gold and the next cache's gold cost. These come directly from `AZS_RUN.kills`, `AZS_RUN.gold` and `AZS_RUN.chest`; `ck` counts opened caches and is not used as a price. All three required counters must be present and nonnegative; zero is valid. Missing fields release control of the native tally. Native `AZSRUN` messages and the existing 0.1-second poll refresh the values without inventing increments or timing out a paused run.
+The replacement tally is one gold bar whose default placement is directly beneath the XP bar, with its default total outer width matching the seven-button action bar artwork and XP bar. Each of those three groups can be moved and uniformly resized independently, so user resizing can make their displayed widths differ. Three equal sections show centered numeric values in DEFAULT text for kills, current gold and the next cache's gold cost. Kills and cache cost retain their native icons; current gold is number-only. These come directly from `AZS_RUN.kills`, `AZS_RUN.gold` and `AZS_RUN.chest`; `ck` counts opened caches and is not used as a price. All three required counters must be present and nonnegative; zero is valid. Missing fields release control of the native tally. Native `AZSRUN` messages and the existing 0.1-second poll refresh the values without inventing increments or timing out a paused run.
 
 Phase must be read before using retained tables, which can contain previous-run data outside a run. A nil clock before the first update leaves the original HUD available. Paused/unchanged native state is valid without repeated packets.
 
@@ -319,7 +319,7 @@ The client still [projects and collision-places native plates while tracking is 
 
 The run label is centered above the progress pill as `RUN elapsed / duration`, using native `Fonts\\SKURRI.TTF` at size 14 with normal `OUTLINE` and shadow. DEFAULT is initialized first so an unavailable native face leaves readable text. The default timer anchor moves from 38 to 30 pixels below the screen top, and its edit bounds include both the label and pill. Other UI keeps DEFAULT. The [base game's font source](https://github.com/samwhosung/benilla/blob/main/crates/benilla-app/src/ui_text/engine/faces.rs#L4-L11) lists Skurri among the client fonts; no custom font file is bundled, and loading in the packaged game has not been verified.
 
-Scheduled boss-spawn markers use `Interface\\TargetingFrame\\UI-TargetingFrame-Skull`. The kills tally uses the native enemy-hover sword cursor `Interface\\Cursor\\Attack.blp`; the cache-cost tally uses the native loot-pouch cursor `Interface\\Cursor\\LootAll.blp`, retaining its full artwork, including the cursor triangle. Both cursor paths follow the [base game's cursor source](https://github.com/samwhosung/benilla/blob/main/crates/benilla-app/src/cursor.rs). Current gold uses the top-left quadrant of the supplied unchanged `Assets/coins.tga`, bundled as `media/tex/chat/cleaner_coins.tga`, with `SetTexCoord(0, 0.5, 0, 0.5)`. Tally icons retain their existing 18-by-18 size and geometry, and the numbers still come from `AZS_RUN.kills`, `AZS_RUN.gold` and `AZS_RUN.chest`. Native schedule completeness and clock/marker readiness gates stay unchanged. Source attribution for the coin atlas remains in `third_party/CleanerChat-NOTICE.txt`. No tests, syntax checks, validation, addon execution or game startups were run for these edits.
+Scheduled boss-spawn markers use `Interface\\TargetingFrame\\UI-TargetingFrame-Skull`. The kills tally uses the native enemy-hover sword cursor `Interface\\Cursor\\Attack.blp`; the cache-cost tally uses the native loot-pouch cursor `Interface\\Cursor\\LootAll.blp`, retaining its full artwork, including the cursor triangle. Both cursor paths follow the [base game's cursor source](https://github.com/samwhosung/benilla/blob/main/crates/benilla-app/src/cursor.rs). Current gold is number-only, centered within its existing field; its tooltip anchors above the number and its affordability effects remain. Kills and cache-cost icons retain their existing 18-by-18 size and geometry, and the numbers still come from `AZS_RUN.kills`, `AZS_RUN.gold` and `AZS_RUN.chest`. Native schedule completeness and clock/marker readiness gates stay unchanged. No chat image assets remain. No tests, syntax checks, validation, addon execution or game startups were run for these edits.
 
 ## Mark official boss state — 2026-10-15
 
@@ -379,7 +379,7 @@ Each of the three native buttons now has local scale 1 and zero hit insets, with
 
 ## Original Main Menu artwork — 2026-10-15
 
-The third micro-menu button uses the gold WoW emblem from the exact original UI foundation, [dbtdsilva/-DragonflightReloaded commit 5c6a63fda03fe9b8fd8219e6c1f65c574679077a](https://github.com/dbtdsilva/-DragonflightReloaded/tree/5c6a63fda03fe9b8fd8219e6c1f65c574679077a). The three unmodified `media/tex/micromenu/color_micro/wow-*.tga` textures are restored directly from that snapshot. Its [original Main Menu mapping](https://github.com/dbtdsilva/-DragonflightReloaded/blob/5c6a63fda03fe9b8fd8219e6c1f65c574679077a/modules/micro/micro.lua#L444-L450) uses `wow-regular.tga` for normal, `wow-faded.tga` for pushed and `wow-highlight.tga` for hover, all cropped with `SetTexCoord(36 / 128, 86 / 128, 29 / 128, 98 / 128)`. Disabled artwork reuses the faded icon in grayscale, matching the talent button's disabled treatment while preserving native availability. Original artwork attribution remains in the shipped module and the repository's license remains unchanged.
+The third micro-menu button uses the gold WoW emblem from the exact original UI foundation, [dbtdsilva's source repository, commit 5c6a63fda03fe9b8fd8219e6c1f65c574679077a](https://api.github.com/repositories/1040377421/commits/5c6a63fda03fe9b8fd8219e6c1f65c574679077a). The three unmodified `media/tex/micromenu/color_micro/wow-*.tga` textures are restored directly from that snapshot. Its [original Main Menu mapping](https://api.github.com/repositories/1040377421/contents/modules/micro/micro.lua?ref=5c6a63fda03fe9b8fd8219e6c1f65c574679077a) uses `wow-regular.tga` for normal, `wow-faded.tga` for pushed and `wow-highlight.tga` for hover, all cropped with `SetTexCoord(36 / 128, 86 / 128, 29 / 128, 98 / 128)`. Disabled artwork reuses the faded icon in grayscale, matching the talent button's disabled treatment while preserving native availability. Original artwork attribution remains in the shipped module and the repository's license remains unchanged.
 
 The reduced menu had assigned the separate LFG eye to Main Menu; those unused eye textures remain removed. Only the three original emblem textures are added to the shared runtime manifest. All button states fill the corrected click rectangle, and Main Menu retains its existing custom menu toggle and shared layout geometry. Source artwork inspection used temporary PNG representations because the image viewer cannot decode TGA; the shipped original textures were not edited. No local validation, tests, syntax checks or addon/game execution were run; final in-game appearance remains unverified.
 
@@ -434,3 +434,54 @@ Addon captions and the existing 69 jewelry-effect templates now use the thirteen
 ## Empty equipped-jewelry sockets
 
 Empty equipment texture reads now show original gray necklace, ring or trinket silhouettes over subtle charcoal circles, using three generated uncompressed RGBA textures. The five native slot IDs, gold rims, attached/detached silver artwork, icon frame sizes, positions and existing display/layout controls are retained. Placeholders are separate from the native equipped texture field, so empty slots clear hover and cooldown state and do not read item effects or cooldowns. Actual item textures replace them through the existing five-Hz refresh. Failed reads, missing required APIs/player, disable and world cleanup retain the existing clear/hide behavior. There is no new setting, saved state, sample equipment or native character-screen artwork. Preparation and ownership are documented in [Jewelry-ARTWORK.md](../third_party/Jewelry-ARTWORK.md). Only image geometry was generated and previewed; no local checks or addon/game execution were run.
+
+## Native-window and unused-artwork cleanup
+
+The general UI module no longer skins the quest log or spellbook, adjusts
+their close buttons or repositions the quest timer. Their seven dedicated
+textures are removed. The game owns its talent window and opening functions;
+no addon talent window or header artwork ships. The unused cast-bar and bag artwork is also removed. Their small modules only disable native player/pet cast bars and backpack, bag-slot and keyring buttons.
+
+The micro menu keeps only Character, Talents and Main Menu. All seven files
+in its texture folder serve those three buttons: one character atlas and
+three state textures each for Talents and Main Menu. Extra local eye-button
+and talent-header textures are removed during installation cleanup.
+
+The unused dedicated pet background and border are removed; current summon
+circles continue to reuse the jewelry rim. Unused chat-control artwork is also
+removed. The passive scroll indicator keeps its centered status text. The gold
+tally retains its original coin atlas, relocated unchanged to
+`media/tex/tally/Coins.tga`, with the original gold crop, icon/number spacing,
+tooltip above the icon and affordability halo offset.
+The shared tally fitter reserves icon space only for fields that have an icon.
+
+The native minimap mail indicator is disabled through the shared unused-frame
+helper, including its events and later Show calls. Its bundled texture and
+custom positioning are removed.
+
+The arrowless minimap border still uses
+`media/tex/minimap/map_dragonflight_square2.tga`. Four passive texture sections
+retain the original border while replacing only the top-center arrow region
+with a plain span sampled from the same source. There is no separate
+arrowless image; the source texture, shadow and zone strip remain in use.
+
+## Optional action-bar gryphons
+
+**Show gryphons** in `/sdui` → **Action bar** starts off. The normalized
+`showGryphons` boolean lives in the existing display table, so preview,
+Confirm, Cancel, world/logout/reload discard, named profiles and both full
+resets use the same lifecycle as the other display choices.
+
+One cropped Dragonflight `Gryphon.tga` supplies both sides, with the right side mirrored.
+The pair is created only on first enable and inherits the action bar's
+movement, scale and hiding. It retains retail proportions, trims transparent
+atlas padding and overlaps the side trim to close the gap beside the bar.
+The native button frames remain in front of the decorative textures.
+The action-bar bounds helper combines the visible ornament extents with
+jewelry, XP and tally extents without changing the bar owner or saved
+geometry. Jewelry reports its upper extent through the same helper so
+changing its attachment cannot overwrite the ornament bounds.
+
+The caption and hint have source/runtime entries in all fourteen languages.
+No per-frame updater, extra layout key or SavedVariable is introduced.
+Artwork provenance is in [XP-ARTWORK.md](../third_party/XP-ARTWORK.md).
