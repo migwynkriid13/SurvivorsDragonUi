@@ -440,7 +440,7 @@ Empty equipment texture reads now show original gray necklace, ring or trinket s
 The general UI module no longer skins the quest log or spellbook, adjusts
 their close buttons or repositions the quest timer. Their seven dedicated
 textures are removed. The game owns its talent window and opening functions;
-no addon talent window or header artwork ships. The unused cast-bar artwork is also removed; the small cast module only disables native player and pet cast frames.
+no addon talent window or header artwork ships. The unused cast-bar and bag artwork is also removed. Their small modules only disable native player/pet cast bars and backpack, bag-slot and keyring buttons.
 
 The micro menu keeps only Character, Talents and Main Menu. All seven files
 in its texture folder serve those three buttons: one character atlas and
