@@ -10,6 +10,10 @@ on:
       - 'modules/**'
       - 'media/**'
       - 'packaging/runtime-files.json'
+      - 'updater/**'
+      - 'scripts/package.py'
+      - 'scripts/release_changes.py'
+      - '.github/workflows/release.yml'
   workflow_dispatch:
 
 permissions:
@@ -23,8 +27,11 @@ concurrency:
 jobs:
   release:
     if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
+    runs-on: windows-2025
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
     env:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
@@ -32,6 +39,10 @@ jobs:
     steps:
       - name: Check out the pushed commit
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        env:
+          GIT_CONFIG_COUNT: '1'
+          GIT_CONFIG_KEY_0: core.autocrlf
+          GIT_CONFIG_VALUE_0: 'false'
         with:
           ref: ${{ github.sha }}
           fetch-depth: 0
@@ -43,30 +54,66 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           BEFORE_SHA: ${{ github.event.before }}
           HEAD_SHA: ${{ github.sha }}
-        run: python3 scripts/release_changes.py
+        run: python scripts/release_changes.py
 
       - name: Package the addon
         if: steps.payload.outputs.payload_changed == 'true'
-        run: python3 scripts/package.py dist/SurvivorsDragonUi.zip
+        run: python scripts/package.py dist/SurvivorsDragonUi.zip
+
+      - name: Select the frozen optional DLL
+        id: binary
+        if: steps.payload.outputs.payload_changed == 'true'
+        run: python updater/binary_release.py prepare
+
+      - name: Build and test the updater version once
+        if: steps.payload.outputs.payload_changed == 'true' && steps.binary.outputs.needs_build == 'true'
+        uses: ./updater/build
+
+      - name: Record the first updater binary
+        if: steps.payload.outputs.payload_changed == 'true' && steps.binary.outputs.needs_build == 'true'
+        run: |
+          set -euo pipefail
+          cp dist/updater-build/Release/avrt.dll dist/avrt.dll
+          python updater/binary_release.py record
+
+      - name: Prepare release manifest and checksums
+        if: steps.payload.outputs.payload_changed == 'true'
+        env:
+          UPDATER_REUSED: ${{ steps.binary.outputs.reused }}
+        run: |
+          set -euo pipefail
+          python updater/release_manifest.py dist/SurvivorsDragonUi.zip "$BUILD_SHA" --dll dist/avrt.dll
+          python -B -m unittest discover -s updater/tests -p 'test_*.py' -v
+
+      - name: Freeze the tested updater binary for this version
+        if: steps.payload.outputs.payload_changed == 'true' && steps.binary.outputs.needs_build == 'true'
+        run: python updater/binary_release.py publish
 
       - name: Publish this commit's release
         if: steps.payload.outputs.payload_changed == 'true'
         shell: bash
         run: |
+          set -euo pipefail
           tag="build-$BUILD_SHA"
           archive="dist/SurvivorsDragonUi.zip"
           notes="dist/release-notes.md"
-          python3 scripts/release_notes.py "$BUILD_SHA" "$notes"
+          python scripts/release_notes.py "$BUILD_SHA" "$notes"
+          assets=("$archive" dist/avrt.dll dist/updater-manifest.json dist/updater-binary.json dist/SHA256SUMS.txt)
 
-          if gh release view "$tag" >/dev/null 2>&1; then
-            gh release upload "$tag" "$archive" --clobber
-            gh release edit "$tag" --notes-file "$notes"
+          if draft="$(gh release view "$tag" --json isDraft --jq '.isDraft' 2>/dev/null)"; then
+            if [[ "$draft" == true ]]; then
+              echo 'An unfinished draft exists; review it before rerunning.' >&2
+              exit 1
+            fi
+            echo 'Keeping the existing immutable release assets.'
           else
-            gh release create "$tag" "$archive" \
+            # All assets are uploaded while hidden, then published together.
+            gh release create "$tag" "${assets[@]}" --draft \
               --target "$BUILD_SHA" \
               --title "SurvivorsDragonUi (${BUILD_SHA:0:7})" \
               --notes-file "$notes" \
               --latest=false
+            gh release edit "$tag" --draft=false
           fi
 
           # A docs-only main push must not block this runtime build becoming

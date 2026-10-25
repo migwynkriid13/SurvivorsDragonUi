@@ -1,0 +1,5 @@
+LIBRARY avrt
+EXPORTS
+    AvSetMmThreadCharacteristicsW=SurvivorsDragonUiUpdaterAvSetMmThreadCharacteristicsW
+    AvSetMmThreadPriority=SurvivorsDragonUiUpdaterAvSetMmThreadPriority
+    AvRevertMmThreadCharacteristics=SurvivorsDragonUiUpdaterAvRevertMmThreadCharacteristics

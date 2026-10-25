@@ -1,0 +1,3 @@
+#pragma once
+#define SDUI_UPDATER_VERSION "@PROJECT_VERSION@"
+#define SDUI_UPDATER_USER_AGENT L"SurvivorsDragonUi-Updater/@PROJECT_VERSION@"
