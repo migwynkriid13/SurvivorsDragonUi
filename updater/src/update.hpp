@@ -17,8 +17,11 @@ inline constexpr std::size_t ArchiveLimit = 64 * 1024 * 1024;
 
 std::string Sha256(std::span<const std::uint8_t> bytes);
 bool SafeRelativePath(const std::string& name);
-// Background work writes only staging. It never replaces a running addon's files.
-std::string StageUpdate(const std::filesystem::path& game, const Download& download);
+std::filesystem::path AddonDirectory(const std::filesystem::path& game);
+// Existing addons are never replaced in the background. First-install permission
+// requires an exclusive startup session with no addon directory at that time.
+std::string StageUpdate(const std::filesystem::path& game, const Download& download,
+                        bool allowFirstInstall = false);
 // Startup activation uses local files only, with no network or worker wait.
 // Caller owns the exclusive session lock; the callback is a CI failure fixture.
 std::string ApplyPending(const std::filesystem::path& game,

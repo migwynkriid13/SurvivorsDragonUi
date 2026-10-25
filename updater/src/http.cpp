@@ -136,7 +136,10 @@ void Log(const std::filesystem::path& game, const std::string& message) noexcept
     } catch (...) {}
 }
 
-struct BackgroundWork { std::filesystem::path game; };
+struct BackgroundWork {
+    std::filesystem::path game;
+    bool allowFirstInstall{};
+};
 
 unsigned __stdcall DownloadInBackground(void* context) noexcept {
     std::unique_ptr<BackgroundWork> work(static_cast<BackgroundWork*>(context));
@@ -146,7 +149,7 @@ unsigned __stdcall DownloadInBackground(void* context) noexcept {
         const auto deadline = GetTickCount64() + 12000;
         Log(work->game, StageUpdate(work->game, [deadline](const auto& url, auto limit) {
             return DownloadHttps(url, limit, deadline);
-        }));
+        }, work->allowFirstInstall));
     } catch (const std::exception& error) {
         Log(work->game, std::string("Background update skipped: ") + error.what());
     } catch (...) {
@@ -238,11 +241,12 @@ void InitializeUpdater() noexcept {
                 Log(game, std::string("Pending activation skipped: ") + error.what());
             } catch (...) { Log(game, "Pending activation skipped: unexpected failure."); }
         }
+        const bool allowFirstInstall = lock.exclusive && !std::filesystem::exists(AddonDirectory(game));
         if (!lock.KeepForGame()) {
             Log(game, "Skipped: cannot retain the game session lock.");
             return;
         }
-        auto work = std::make_unique<BackgroundWork>(BackgroundWork{game});
+        auto work = std::make_unique<BackgroundWork>(BackgroundWork{game, allowFirstInstall});
         const auto worker = _beginthreadex(nullptr, 0, &DownloadInBackground, work.get(), 0, nullptr);
         if (!worker) {
             Log(game, "Skipped: cannot start optional background worker.");

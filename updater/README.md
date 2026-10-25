@@ -15,17 +15,19 @@ It contains no spider replacements, crab models, creature hooks, gameplay change
 
 ## What happens at startup
 
-The game never waits for an internet check or download. Startup activates only a complete update already downloaded on an earlier launch, then starts one detached background worker and resumes the EXE. There is no thread join or network request in the startup path. Local verification and the directory swap happen before the game can read addon files.
+The game never waits for an internet check or download. Startup activates any complete update already downloaded on an earlier launch, then starts one detached background worker and resumes the EXE. There is no thread join or network request in the startup path. Existing-addon replacement happens only during local startup activation.
 
-1. Acquire the local session lock. If no other game instance uses this addon folder, restore an interrupted swap and verify/apply any complete pending update, without network access. Otherwise keep using the current addon.
+1. Acquire the local session lock. If no other game instance uses this addon folder, migrate old updater folders out of `AddOns`, restore an interrupted swap and verify/apply any complete pending update, without network access. If the addon directory is still absent, grant this launch's worker permission to install the first copy. Other launches receive no first-install permission.
 2. Retain a shared session lock until process exit. A separate lock coordinates background downloads, so an existing game session does not block staging. Only one worker writes staging at a time.
 3. In the background, download the latest public release's `updater-manifest.json` over HTTPS. It identifies an immutable `build-<commit>` release, the TOC version, ZIP hash and complete file hashes.
 4. Compare the installed files with that manifest. Matching files skip the ZIP download. A complete pending download is reused. A missing folder, missing TOC or damaged file triggers installation or repair, even if the version label matches. A newer installed version is never replaced by an older published or pending version.
-5. Download `SurvivorsDragonUi.zip` from that exact release. Verify the archive SHA-256 and every file's path, size, CRC and SHA-256, then stage a complete pending copy. The running game's files stay intact. The next full game launch activates the download; `/reload` is not required or invoked by the updater.
+5. Download `SurvivorsDragonUi.zip` from that exact release. Verify the archive SHA-256 and every file's path, size, CRC and SHA-256, then stage a complete pending copy outside `AddOns`. If this worker has first-install permission and the canonical addon directory remains absent, atomically install the verified tree as `AddOns/SurvivorsDragonUi` immediately. An existing destination is never removed or overwritten by the worker. Updates and repairs of existing addons remain pending until the next full game launch.
 
 An offline connection, timeout, missing release, malformed manifest, corrupt archive or unwritable install skips the background update. Existing addon files and any complete pending update remain available. There is no background retry loop or idle polling; the next launch tries again. Downloads share a twelve-second network budget with shorter per-operation timeouts and asynchronous cancellation of slow requests. This budget runs on the background worker and does not delay game startup.
 
-A first download also takes effect on the next launch. Replacing the live folder during gameplay could mix Lua and artwork from different releases, so background work never activates files in the current session. A previously completed download can activate even when the next launch is offline. Two simultaneous startups may briefly coordinate local verification/activation, but neither waits for downloading.
+A first download creates the correctly named addon folder as soon as the complete download is ready. The updater does not force a native rescan, `/reload` or enable choice. If the game has already scanned addons, its UI may still need the next launch to discover the new installation. A game session that started with the addon installed keeps that version's files until it exits, even if someone renames or deletes its folder during downloading. A destination created during the download also stays intact.
+
+Replacing an existing addon during gameplay could mix Lua and artwork from different releases, so those updates activate at the next full launch. A previously completed download can activate even when that launch is offline. Two simultaneous startups may briefly coordinate local verification/activation, but neither waits for downloading.
 
 The updater compares addon release files, never EXE versions, hashes, timestamps or internal gameplay signatures. It resolves the game's current PE entrypoint from standard headers on each launch. It does not patch the EXE on disk, change environment variables, update itself or modify sibling addons, characters, preferences or SavedVariables. Its file identity and bootstrap API remain versioned independently from the addon TOC.
 
@@ -33,11 +35,24 @@ The updater compares addon release files, never EXE versions, hashes, timestamps
 
 `SurvivorsDragonUi-updater.log` beside the EXE reports local activation and then the background result. `SurvivorsDragonUi-updater.lock` coordinates game instances and download workers on separate byte ranges and contains no settings. The installed addon has a `.sdui-release.json` receipt; actual file hashes, rather than that receipt alone, decide whether it is current.
 
-Extraction uses `benilla-config/AddOns/.SurvivorsDragonUi-download/`. Only after all files are verified and flushed is a receipt written and the completed tree renamed to `.SurvivorsDragonUi-update/`. The last replaced addon is retained in `.SurvivorsDragonUi-backup/`. Only these three updater-owned folders and the exact `SurvivorsDragonUi` folder are managed. An interrupted partial extraction cannot activate. A completed extraction interrupted before its staging rename can recover locally on the next launch.
+Only the canonical `SurvivorsDragonUi` installation is created under `AddOns`. Updater storage lives beside `AddOns`, with the same canonical addon basename in every stage:
+
+```text
+benilla-config/
+  AddOns/SurvivorsDragonUi/
+  SurvivorsDragonUi-updater/
+    download/SurvivorsDragonUi/
+    pending/SurvivorsDragonUi/
+    backup/SurvivorsDragonUi/
+```
+
+Only after all extracted files are verified and flushed is a receipt written and the completed tree moved from `download` to `pending`. The previous complete addon is retained under `backup` when an existing installation is replaced. An interrupted partial extraction cannot activate. A completed extraction interrupted before its staging rename can recover locally on the next launch.
+
+Startup migrates version 1.0.0's `.SurvivorsDragonUi-download`, `.SurvivorsDragonUi-update` and `.SurvivorsDragonUi-backup` folders from `AddOns` into their new storage locations. Migration never overwrites an existing destination; conflicting copies are retained. Renamed user copies such as `SurvivorsDragonUiX` and other addons are untouched.
 
 A failed activation attempts immediate rollback and retains the pending copy for retry. If interruption or a filesystem error leaves only the backup, the next launch restores it before any network work. An activation whose rollback also fails can temporarily leave the addon unavailable; the log and backup remain for recovery.
 
-For manual rollback, close all game instances, remove the optional DLL, move the current addon aside and rename `.SurvivorsDragonUi-backup` to `SurvivorsDragonUi`. Removing only `avrt.dll` stops future automatic updates and leaves the installed addon available for manual updates.
+For manual rollback, close all game instances, remove the optional DLL, move the current addon aside and move `benilla-config/SurvivorsDragonUi-updater/backup/SurvivorsDragonUi` into `benilla-config/AddOns/`. Removing only `avrt.dll` stops future automatic updates and leaves the installed addon available for manual updates.
 
 Reparse points, directory links, unsafe Windows names, case collisions, unexpected ZIP members, encrypted entries, split archives and ZIP64 are refused. Limits are 1 MiB for metadata, 64 MiB for the archive, 32 MiB per expanded file, 256 MiB expanded in total and 4,096 files. Only HTTPS on GitHub's release hosts is accepted; certificate validation stays enabled and credentials/cookies are disabled. Hashes protect integrity against corruption and mismatched artifacts; the release repository and HTTPS transport remain the trust source.
 
@@ -47,13 +62,15 @@ The native startup handoff must restore the entrypoint and forward the real syst
 
 All updater code, dependencies, build instructions and tests live under `updater/`. CI uses Windows x64 MSVC with static runtime libraries. `VERSION` is the updater's independent version. The DLL has no external JSON or ZIP library requirement at runtime.
 
-The first main release builds and tests the updater once, then publishes its exact binary under the fixed, non-Latest release `updater-v1.0.0`. Every subsequent addon release downloads that same `avrt.dll` and `updater-binary.json`, verifies its SHA-256 and native source fingerprint, and attaches the same bytes to the new addon release. No compile/link step runs on the normal reuse path. The updater binary never follows game or addon version changes.
+A new updater version is built and tested once, then published under the fixed, non-Latest release `updater-v<version>`. Every subsequent addon release downloads that same `avrt.dll` and `updater-binary.json`, verifies its SHA-256 and native source fingerprint, and attaches the same bytes to the new addon release. No compile/link step runs on the normal reuse path. The updater binary never follows game or addon version changes.
 
 Native source changes require an explicit `updater/VERSION` bump to create a different updater binary. A changed source fingerprint, corrupt download, unfinished updater draft or service failure stops release packaging. A version tag whose release is missing also fails and requires restoring the original artifact. PR CI still compiles the source for review; those test binaries do not replace the published artifact.
 
+The canonical-folder first-install change uses updater 1.0.1. Users of 1.0.0 must replace their optional DLL once to get this behavior; the DLL does not update itself. Future addon releases reuse the frozen 1.0.1 binary until another explicit updater revision.
+
 Each addon release publishes five separate assets: `SurvivorsDragonUi.zip`, `avrt.dll`, `updater-manifest.json`, `updater-binary.json` and `SHA256SUMS.txt`. The existing runtime manifest still determines the ZIP; it contains neither the DLL nor updater sources. Release metadata is generated from that exact ZIP and source manifest. Assets upload to a draft before publication; successful releases are immutable on reruns. Older builds do not displace a newer Latest release. Updater-only changes require no addon TOC bump.
 
-CI fixtures cover background staging without live-file changes, local next-launch activation, offline startup, pending reuse and corruption, completed staging recovery, downgrade refusal, independent session/worker locks, first install, updates, same-version repair, interrupted transfers/swaps, activation rollback, invalid archives/paths, size bounds and linked addon directories. They also check that sibling addons, settings, the EXE and DLL remain unchanged. A separate tiny Windows test EXE checks the entrypoint handoff and system AVRT forwarding without starting the game or downloading an addon.
+CI fixtures cover an immediate complete first install under the exact canonical name, updater storage outside `AddOns`, destination races, offline first-install failure, legacy staging/backup migration, background updates without live-file changes, local next-launch activation, pending reuse/corruption, interrupted staging, downgrade refusal, independent session/worker locks, same-version repair, rollback, invalid archives/paths, size bounds and linked addon directories. They also check that sibling addons, settings, the EXE and DLL remain unchanged. A separate tiny Windows test EXE checks the entrypoint handoff and system AVRT forwarding without starting the game or downloading an addon.
 
 Python CI checks the actual ZIP, metadata, checksums, updater-only release gating and frozen-binary reuse, including failure without rebuilding when bytes or native sources differ. Updater PRs and the first binary publication also pass the complete release ZIP through the native installer in a temporary directory without loading Lua. Later addon releases reuse the frozen DLL and check the package/identity contract without recompiling the native test program.
 

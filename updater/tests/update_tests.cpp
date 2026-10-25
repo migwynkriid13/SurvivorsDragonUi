@@ -126,7 +126,10 @@ struct Install {
         L"-" + std::to_wstring(GetTickCount64()));
     fs::path addons = game / L"benilla-config" / L"AddOns";
     fs::path live = addons / L"SurvivorsDragonUi";
-    fs::path backup = addons / L".SurvivorsDragonUi-backup";
+    fs::path storage = game / L"benilla-config" / L"SurvivorsDragonUi-updater";
+    fs::path work = storage / L"download" / L"SurvivorsDragonUi";
+    fs::path pending = storage / L"pending" / L"SurvivorsDragonUi";
+    fs::path backup = storage / L"backup" / L"SurvivorsDragonUi";
     Install() { fs::create_directories(game); }
     ~Install() { std::error_code error; fs::remove_all(game, error); }
 };
@@ -196,6 +199,7 @@ void OfflineAndRecovery() {
     };
     Fails([&] { InstallRelease(install.game, interrupted); });
     Check(Read(install.live / L"core/core.lua") == "first", "Interrupted download damaged live files");
+    fs::create_directories(install.backup.parent_path());
     fs::rename(install.live, install.backup);
     Fails([&] { InstallRelease(install.game, offline); });
     Check(Read(install.live / L"core/core.lua") == "first", "Offline interrupted-swap recovery failed");
@@ -295,7 +299,7 @@ void DeferredActivation() {
     Check(sdui::StageUpdate(install.game, second.Transport()).starts_with("Already downloaded"),
           "Completed pending download not detected");
     Check(second.archiveRequests == 1, "Repeated pending ZIP download");
-    const auto pending = install.addons / L".SurvivorsDragonUi-update";
+    const auto pending = install.pending;
     Write(pending / L"core/core.lua", "damage");
     Fails([&] { sdui::ApplyPending(install.game); });
     Check(Read(install.live / L"core/core.lua") == "first", "Damaged pending update activated");
@@ -303,7 +307,7 @@ void DeferredActivation() {
     sdui::ApplyPending(install.game);
     Check(Read(install.live / L"core/core.lua") == "second", "Completed update not applied at next startup");
     sdui::StageUpdate(install.game, first.Transport());
-    const auto work = install.addons / L".SurvivorsDragonUi-download";
+    const auto work = install.work;
     fs::rename(pending, work);
     sdui::ApplyPending(install.game);
     Check(Read(install.live / L"core/core.lua") == "first", "Completed interrupted staging not recovered");
@@ -322,6 +326,92 @@ void RefuseDowngrade() {
     Write(install.live / L"core/core.lua", "manual latest");
     sdui::ApplyPending(install.game);
     Check(Read(install.live / L"core/core.lua") == "manual latest", "Stale pending update downgraded a manual install");
+}
+
+void CanonicalFirstInstall() {
+    Install install;
+    Release first, second("second", 'b', true, "1.1.0-survivors");
+    Write(install.addons / L"SurvivorsDragonUiX" / L"keep.lua", "renamed user copy");
+    const auto transport = first.Transport();
+    const sdui::Download observe = [&](const auto& url, auto limit) {
+        Check(!fs::exists(install.live), "An incomplete addon directory appeared during download");
+        return transport(url, limit);
+    };
+    Check(sdui::StageUpdate(install.game, observe, true).starts_with("Installed: SurvivorsDragonUi"),
+          "Fresh download did not report its canonical installation");
+    Check(sdui::AddonDirectory(install.game) == install.live, "Wrong shared addon directory");
+    Check(Read(install.live / L"core/core.lua") == "first", "Fresh download needs another launch to install");
+    Check(fs::exists(install.live / L"SurvivorsDragonUi.toc"), "Canonical TOC missing");
+    Check(!fs::exists(install.pending), "Fresh installation left a pending addon");
+    Check(Read(install.live / L".sdui-release.json").find("build-") != std::string::npos,
+          "Fresh installation lost its verified release receipt");
+    sdui::StageUpdate(install.game, second.Transport(), true);
+    Check(Read(install.live / L"core/core.lua") == "first", "First-install permission replaced an existing addon");
+    Check(fs::exists(install.pending / L"SurvivorsDragonUi.toc"), "Existing-addon update was not staged externally");
+    for (const auto& entry : fs::directory_iterator(install.addons)) {
+        const auto name = entry.path().filename();
+        Check(name == L"SurvivorsDragonUi" || name == L"SurvivorsDragonUiX",
+              "Updater exposed a temporary folder in AddOns");
+    }
+    sdui::ApplyPending(install.game);
+    Check(Read(install.live / L"core/core.lua") == "second", "Externally staged update did not activate");
+    Check(Read(install.backup / L"core/core.lua") == "first", "Rollback copy is not stored outside AddOns");
+    Check(Read(install.addons / L"SurvivorsDragonUiX" / L"keep.lua") == "renamed user copy",
+          "Renamed user addon was modified");
+}
+
+void FreshInstallRaceAndFailure() {
+    Install install;
+    Release first;
+    const sdui::Download offline = [](const auto&, auto) -> Bytes { throw std::runtime_error("offline"); };
+    Fails([&] { sdui::StageUpdate(install.game, offline, true); });
+    Check(!fs::exists(install.live), "Offline fresh install created a fake addon directory");
+    Release corrupt;
+    corrupt.zip.back() ^= 1;
+    Fails([&] { sdui::StageUpdate(install.game, corrupt.Transport(), true); });
+    Check(!fs::exists(install.live), "Bad first download published an incomplete addon");
+    const auto transport = first.Transport();
+    const sdui::Download concurrent = [&](const auto& url, auto limit) {
+        if (url != sdui::ManifestUrl) {
+            Write(install.live / L"SurvivorsDragonUi.toc", "## Version: 1.0.0-survivors\n");
+            Write(install.live / L"core/core.lua", "installed while downloading");
+        }
+        return transport(url, limit);
+    };
+    sdui::StageUpdate(install.game, concurrent, true);
+    Check(Read(install.live / L"core/core.lua") == "installed while downloading",
+          "Fresh installation overwrote a destination created during download");
+    Check(fs::exists(install.pending / L"SurvivorsDragonUi.toc"), "Racing download was not retained for a later launch");
+}
+
+void LegacyFolderMigration() {
+    Install install;
+    Release first;
+    sdui::StageUpdate(install.game, first.Transport());
+    fs::create_directories(install.addons);
+    const auto legacyPending = install.addons / L".SurvivorsDragonUi-update";
+    const auto legacyWork = install.addons / L".SurvivorsDragonUi-download";
+    fs::rename(install.pending, legacyPending);
+    Write(legacyWork / L"partial.lua", "interrupted old extraction");
+    sdui::ApplyPending(install.game);
+    Check(Read(install.live / L"core/core.lua") == "first", "Legacy pending update was not activated offline");
+    Check(!fs::exists(legacyPending) && !fs::exists(legacyWork), "Legacy updater folders remain under AddOns");
+    Check(Read(install.work / L"partial.lua") == "interrupted old extraction", "Legacy work was discarded instead of moved");
+    fs::remove_all(install.live);
+    const auto legacyBackup = install.addons / L".SurvivorsDragonUi-backup";
+    Write(legacyBackup / L"core/core.lua", "previous addon");
+    sdui::ApplyPending(install.game);
+    Check(Read(install.live / L"core/core.lua") == "previous addon", "Legacy backup failed offline recovery");
+    Check(!fs::exists(legacyBackup), "Legacy backup name was not retired");
+}
+
+void RecoveryOutsideAddOns() {
+    Install install;
+    Write(install.backup / L"core/core.lua", "previous complete addon");
+    Check(!fs::exists(install.addons), "Recovery fixture already has an AddOns parent");
+    sdui::ApplyPending(install.game);
+    Check(Read(install.live / L"core/core.lua") == "previous complete addon",
+          "External backup did not recreate the missing AddOns parent");
 }
 
 void IndependentLocks() {
@@ -348,9 +438,9 @@ void ActualRelease(const fs::path& dist) {
         ++archives;
         return BytesOf(Read(dist / L"SurvivorsDragonUi.zip"));
     };
-    InstallRelease(install.game, transport);
+    sdui::StageUpdate(install.game, transport, true);
     Check(fs::exists(install.live / L"SurvivorsDragonUi.toc"), "Actual release TOC is missing");
-    Check(InstallRelease(install.game, transport).starts_with("Already current"), "Actual release not current");
+    Check(sdui::StageUpdate(install.game, transport, true).starts_with("Already current"), "Actual release not current");
     Check(archives == 1, "Actual release ZIP downloaded twice");
     std::cout << "Installed and verified the complete release ZIP without executing Lua.\n";
 }
@@ -363,6 +453,10 @@ int main(int argc, char* argv[]) {
             return 0;
         }
         DeferredActivation(); std::cout << "Background staging and offline next-launch activation\n";
+        CanonicalFirstInstall(); std::cout << "Canonical first install and updater storage outside AddOns\n";
+        FreshInstallRaceAndFailure(); std::cout << "Offline and concurrent first-install guards\n";
+        LegacyFolderMigration(); std::cout << "Legacy staging and backup folder migration\n";
+        RecoveryOutsideAddOns(); std::cout << "Backup recovery without an existing AddOns parent\n";
         RefuseDowngrade(); std::cout << "Older remote and pending releases do not downgrade\n";
         IndependentLocks(); std::cout << "Game sessions and background downloads use independent locks\n";
         PathsAndHashes(); std::cout << "Paths and SHA-256\n";

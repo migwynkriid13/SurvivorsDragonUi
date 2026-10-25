@@ -39,7 +39,7 @@ For a manual Windows install, open the folder containing `AzerothSurvivors.exe` 
 benilla-config/AddOns/SurvivorsDragonUi/SurvivorsDragonUi.toc
 ```
 
-**Optional Windows auto-update:** Download [avrt.dll](https://github.com/migwynkriid13/SurvivorsDragonUi/releases/latest/download/avrt.dll) separately and place it beside `AzerothSurvivors.exe`. The game starts without waiting for internet or downloads. The DLL checks and downloads in the background; a completed install or update takes effect on the next launch. Without internet, it keeps your installed copy and skips the download. Enable the addon in **Options → AddOns** as usual.
+**Optional Windows auto-update:** Download [avrt.dll](https://github.com/migwynkriid13/SurvivorsDragonUi/releases/latest/download/avrt.dll) separately and place it beside `AzerothSurvivors.exe`. The game starts without waiting for internet or downloads. A first download installs straight into `benilla-config/AddOns/SurvivorsDragonUi` when complete; updates to an existing addon take effect on the next launch. Without internet, it keeps your installed copy and skips the download. Enable the addon in **Options → AddOns** as usual; restart if the game has already scanned addons before the first download finishes.
 
 The DLL updates only SurvivorsDragonUi and works independently of game versions. Every addon release includes the same separately built updater DLL. It cannot share the `avrt.dll` filename with Spiderless or another mod. Remove it to stop automatic updates; the addon stays installed. See [updater details and troubleshooting](updater/README.md).
 

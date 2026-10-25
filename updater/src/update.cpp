@@ -15,6 +15,7 @@
 #include <set>
 #include <stdexcept>
 #include <string_view>
+#include <utility>
 
 namespace sdui {
 namespace {
@@ -147,15 +148,33 @@ bool NewerInstalled(const fs::path& live, const Manifest& manifest) {
 
 struct Paths {
     fs::path live, work, pending, backup;
+    fs::path legacyWork, legacyPending, legacyBackup;
     explicit Paths(const fs::path& game) {
         const auto addons = game / L"benilla-config" / L"AddOns";
-        live = addons / Addon;
-        work = addons / L".SurvivorsDragonUi-download";
-        pending = addons / L".SurvivorsDragonUi-update";
-        backup = addons / L".SurvivorsDragonUi-backup";
-        for (const auto* path : {&live, &work, &pending, &backup}) Guard(*path);
+        const auto storage = game / L"benilla-config" / L"SurvivorsDragonUi-updater";
+        live = AddonDirectory(game);
+        work = storage / L"download" / Addon;
+        pending = storage / L"pending" / Addon;
+        backup = storage / L"backup" / Addon;
+        legacyWork = addons / L".SurvivorsDragonUi-download";
+        legacyPending = addons / L".SurvivorsDragonUi-update";
+        legacyBackup = addons / L".SurvivorsDragonUi-backup";
+        for (const auto* path : {&live, &work, &pending, &backup, &legacyWork, &legacyPending, &legacyBackup}) Guard(*path);
     }
 };
+
+// Only startup with an exclusive session lock migrates the old updater paths.
+// Keep any existing destination intact rather than overwriting a second copy.
+void MigrateLegacy(const Paths& paths) {
+    for (const auto& [oldPath, newPath] : {
+            std::pair{paths.legacyWork, paths.work}, std::pair{paths.legacyPending, paths.pending},
+            std::pair{paths.legacyBackup, paths.backup}}) {
+        if (fs::exists(oldPath) && !fs::exists(newPath)) {
+            fs::create_directories(newPath.parent_path());
+            fs::rename(oldPath, newPath);
+        }
+    }
+}
 
 Manifest Parse(const Bytes& bytes) {
     Require(!bytes.empty() && bytes.size() <= ManifestLimit, "Invalid manifest size");
@@ -294,7 +313,34 @@ bool Matches(const fs::path& live, const Manifest& manifest) {
     }
     return true;
 }
+
+Manifest Ready(const fs::path& directory) {
+    const auto manifest = Parse(Read(directory / L".sdui-release.json", ManifestLimit));
+    Require(Matches(directory, manifest), "Pending addon failed verification");
+    return manifest;
+}
+
+std::string FinishDownload(const Paths& paths, const Manifest& manifest, bool allowFirstInstall) {
+    if (allowFirstInstall && !fs::exists(paths.live)) {
+        // All bytes and the receipt are ready before the canonical directory
+        // appears. A concurrent destination is never removed or overwritten.
+        Ready(paths.pending);
+        fs::create_directories(paths.live.parent_path());
+        if (!MoveFileW(paths.pending.c_str(), paths.live.c_str())) {
+            // MoveFileW refuses an existing destination, including an empty
+            // directory created after the earlier existence check.
+            if (fs::exists(paths.live)) return "Downloaded; ready for the next launch: " + manifest.tag;
+            throw std::runtime_error("Cannot install SurvivorsDragonUi; verified download retained for the next launch");
+        }
+        return "Installed: SurvivorsDragonUi (" + manifest.tag + "). Enable it in the game's AddOns menu.";
+    }
+    return "Downloaded; ready for the next launch: " + manifest.tag;
+}
 } // namespace
+
+std::filesystem::path AddonDirectory(const std::filesystem::path& game) {
+    return game / L"benilla-config" / L"AddOns" / Addon;
+}
 
 std::string Sha256(std::span<const std::uint8_t> bytes) {
     Require(bytes.size() <= TotalLimit, "Hash input exceeds size limit");
@@ -337,12 +383,13 @@ bool SafeRelativePath(const std::string& name) {
     return false;
 }
 
-std::string StageUpdate(const fs::path& game, const Download& download) {
+std::string StageUpdate(const fs::path& game, const Download& download, bool allowFirstInstall) {
     const Paths paths(game);
     const auto manifest = Parse(download(ManifestUrl, ManifestLimit));
     if (NewerInstalled(paths.live, manifest)) return "Installed addon is newer than the latest release; skipped.";
     if (Matches(paths.live, manifest)) return "Already current: " + manifest.tag;
     if (fs::is_regular_file(paths.pending / L".sdui-release.json") && Matches(paths.pending, manifest)) {
+        if (allowFirstInstall && !fs::exists(paths.live)) return FinishDownload(paths, manifest, true);
         return "Already downloaded; ready for the next launch: " + manifest.tag;
     }
     const auto archiveUrl = std::wstring(L"https://github.com/migwynkriid13/SurvivorsDragonUi/releases/download/") +
@@ -357,37 +404,45 @@ std::string StageUpdate(const fs::path& game, const Download& download) {
         const auto receipt = manifest.receipt.dump(2) + "\n";
         Write(paths.work / L".sdui-release.json", Bytes(receipt.begin(), receipt.end()));
         ClearTree(paths.pending);
+        fs::create_directories(paths.pending.parent_path());
         fs::rename(paths.work, paths.pending);
     } catch (...) {
         try { ClearTree(paths.work); } catch (...) {}
         throw;
     }
-    return "Downloaded; ready for the next launch: " + manifest.tag;
+    return FinishDownload(paths, manifest, allowFirstInstall);
 }
 
 std::string ApplyPending(const fs::path& game, const std::function<void()>& beforeActivate) {
     const Paths paths(game);
+    MigrateLegacy(paths);
     // Recovery and activation have no transport parameter: they work offline.
-    if (!fs::exists(paths.live) && fs::exists(paths.backup)) fs::rename(paths.backup, paths.live);
+    if (!fs::exists(paths.live) && fs::exists(paths.backup)) {
+        fs::create_directories(paths.live.parent_path());
+        fs::rename(paths.backup, paths.live);
+    }
     // The receipt is written only after every extracted file has been flushed.
     // Recover a completed staging rename interrupted before it became pending.
     if (!fs::exists(paths.pending) && fs::is_regular_file(paths.work / L".sdui-release.json")) {
-        const auto ready = Parse(Read(paths.work / L".sdui-release.json", ManifestLimit));
-        Require(Matches(paths.work, ready), "Interrupted staging failed verification");
+        Ready(paths.work);
+        fs::create_directories(paths.pending.parent_path());
         fs::rename(paths.work, paths.pending);
     }
     if (!fs::exists(paths.pending)) return "No downloaded addon update to activate.";
-    const auto manifest = Parse(Read(paths.pending / L".sdui-release.json", ManifestLimit));
-    Require(Matches(paths.pending, manifest), "Pending addon failed verification");
+    const auto manifest = Ready(paths.pending);
     if (NewerInstalled(paths.live, manifest) || Matches(paths.live, manifest)) {
         ClearTree(paths.pending);
         return "Kept the current addon; discarded a redundant or older pending update.";
     }
     ClearTree(paths.backup);
     const bool hadLive = fs::exists(paths.live);
-    if (hadLive) fs::rename(paths.live, paths.backup);
+    if (hadLive) {
+        fs::create_directories(paths.backup.parent_path());
+        fs::rename(paths.live, paths.backup);
+    }
     try {
         if (beforeActivate) beforeActivate();
+        fs::create_directories(paths.live.parent_path());
         fs::rename(paths.pending, paths.live);
     } catch (...) {
         if (hadLive) fs::rename(paths.backup, paths.live);
