@@ -10,6 +10,7 @@ DFRL:NewMod("RunTimers", 5, function()
     local CHECK_ICON = "Interface\\Buttons\\UI-CheckBox-Check"
     local ATTACK_ICON = "Interface\\Cursor\\Attack.blp"
     local CACHE_ICON = "Interface\\Cursor\\LootAll.blp"
+    local COINS_ICON = DFRL:GetInfoOrCons("tex") .. "tally\\Coins.tga"
     local MARKER_SIZE = 18
     local DEAD_MARKER_SCALE = 0.8
     local DEAD_MARKER_ALPHA = 0.7
@@ -1461,7 +1462,7 @@ DFRL:NewMod("RunTimers", 5, function()
     local fieldWidth = BAR_WIDTH / 3
     local counters = {
         { key = "kills", visibility = "showTallyKills", label = "Enemies killed", icon = ATTACK_ICON },
-        { key = "gold", visibility = "showTallyGold", label = "Gold" },
+        { key = "gold", visibility = "showTallyGold", label = "Gold", icon = COINS_ICON },
         { key = "chest", visibility = "showTallyCache", label = "Next cache cost", icon = CACHE_ICON },
     }
     local tallyMeasure = tallyOverlay:CreateFontString(nil, "OVERLAY")
@@ -1555,6 +1556,10 @@ DFRL:NewMod("RunTimers", 5, function()
         if counter.icon then
             icon = content:CreateTexture(nil, "ARTWORK")
             icon:SetTexture(counter.icon)
+            if counter.key == "gold" then
+                -- The original 64x64 coin atlas places gold in the top-left 32x32.
+                icon:SetTexCoord(0, 0.5, 0, 0.5)
+            end
             icon:SetWidth(18)
             icon:SetHeight(18)
             icon:SetPoint("LEFT", content, "LEFT", 0, 0)
@@ -1586,7 +1591,7 @@ DFRL:NewMod("RunTimers", 5, function()
             entry.glowWidthScale = 1.65
             entry.glow, entry.glowDirections = {}, {}
             entry.glowLights = {
-                { anchor = content, centerX = 0, height = 26, sparkleSize = 5, radiusY = 9.5, offset = 0 },
+                { anchor = content, centerX = -5, height = 26, sparkleSize = 5, radiusY = 9.5, offset = 0 },
             }
             for _, light in ipairs(entry.glowLights) do
                 local spotlight = content:CreateTexture(nil, "BACKGROUND")

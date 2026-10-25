@@ -448,9 +448,11 @@ three state textures each for Talents and Main Menu. Extra local eye-button
 and talent-header textures are removed during installation cleanup.
 
 The unused dedicated pet background and border are removed; current summon
-circles continue to reuse the jewelry rim. Chat artwork is also removed.
-The passive scroll indicator keeps its centered status text, and the gold
-tally keeps its number, hover and affordability effects without a coin image.
+circles continue to reuse the jewelry rim. Unused chat-control artwork is also
+removed. The passive scroll indicator keeps its centered status text. The gold
+tally retains its original coin atlas, relocated unchanged to
+`media/tex/tally/Coins.tga`, with the original gold crop, icon/number spacing,
+tooltip above the icon and affordability halo offset.
 The shared tally fitter reserves icon space only for fields that have an icon.
 
 The native minimap mail indicator is disabled through the shared unused-frame

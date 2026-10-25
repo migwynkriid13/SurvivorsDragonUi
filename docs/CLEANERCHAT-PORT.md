@@ -53,7 +53,7 @@ Original Blizzard 1.12.1 implementation references: [chat dispatch](https://gith
 
 ## Source assets
 
-No chat artwork ships. The scroll indicator is text-only, and the current-gold tally shows its centered number without a coin image. Older chat controls, overlay and coin textures are removed from source and the runtime manifest. Native mouse-wheel scrolling, unread status, input, fading and incoming money notices retain their existing behavior. Code attribution remains in `third_party/CleanerChat-NOTICE.txt`.
+Chat uses no image assets, and its scroll indicator is text-only. The current-gold HUD tally retains the original coin atlas under `media/tex/tally/Coins.tga`, with its gold crop, number and affordability highlight. Older chat controls and overlay artwork remain removed. Native mouse-wheel scrolling, unread status, input, fading and incoming money notices retain their existing behavior. Attribution remains in `third_party/CleanerChat-NOTICE.txt`.
 
 ## Validation limit
 

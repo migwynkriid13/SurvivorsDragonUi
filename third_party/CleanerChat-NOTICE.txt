@@ -33,6 +33,8 @@ preserved above; this notice does not supply or infer additional license terms.
 The bundled Ace, LibStub, LibSharedMedia, LibMoreEvents and LibEasing libraries
 are not incorporated into this port.
 
-No supplied image assets are included. The integrated chat and current-gold
-tally use text without the original chat-control or coin artwork. The source
-and code attribution above remains applicable.
+The unchanged source coin atlas is retained as media/tex/tally/Coins.tga for
+the current-gold HUD counter. Its original gold crop is the top-left 32x32
+part of the 64x64 atlas. The integrated chat uses no image assets; its scroll
+indicator remains text-only. The source and code attribution above remains
+applicable.

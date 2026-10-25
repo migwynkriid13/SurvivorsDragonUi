@@ -5,6 +5,12 @@ counter visibility and affordability highlight. The same style selection works
 in both modes. Changes preview through the existing display draft; Confirm saves,
 and Cancel, world leave, logout and reload discard unconfirmed changes.
 
+The gold counter retains its original 18-unit coin icon and four-unit gap
+beside the full native amount. The unchanged coin atlas lives in
+`media/tex/tally/Coins.tga`, using the original top-left gold crop. The shared
+fitter reserves its icon width, the tooltip anchors above the icon, and the
+affordability halo includes both the coin and amount with its original offset.
+
 ## Attached and detached artwork
 
 Attached artwork has an open top, sharing the action bar's lower silver edge.
