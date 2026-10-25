@@ -8,16 +8,16 @@ DFRL:NewMod("Bars", 1, function()
     local COOLDOWN_FINAL_WINDOW = 0.2
     local COOLDOWN_UNITS = { { 86400, "d" }, { 3600, "h" }, { 60, "m" }, { 1, "" } }
     local TEX_PATH = DFRL:GetInfoOrCons("tex") .. "actionbars\\"
-    -- Original ornament source: dbtdsilva repository 1040377421, commit
-    -- 5c6a63fda03fe9b8fd8219e6c1f65c574679077a; third_party/XP-ARTWORK.md.
-    -- Original 180-unit canvas placement; nontransparent bounds from Wyvern.tga.
+    -- Dragonflight gryphon crop and source: third_party/XP-ARTWORK.md.
+    -- Retain retail proportions after trimming the atlas member's empty edges;
+    -- tuck the chest into the shell so the shorter bar has no side gap.
     local ornament = {
-        size = 180,
-        overlap = 45,
-        y = 10,
-        alphaLeft = 110 / 512,
-        alphaTop = 93 / 512,
-        alphaBottom = 405 / 512,
+        width = 104.5 * 312 / 356,
+        height = 98 * 306 / 334,
+        overlap = 14 - 104.5 * 5 / 356,
+        bottom = -22 + 98 * 18 / 334,
+        endU = 312 / 512,
+        endV = 306 / 512,
     }
     local defaults = {
         bottom = 55,
@@ -188,10 +188,9 @@ DFRL:NewMod("Bars", 1, function()
             local bottom = xpJoined and -(defaults.topInset + defaults.xpExtension) or 0
             if tallyExtent > 0 then bottom = math.min(bottom, SilverBottom() - tallyExtent) end
             if ornamentsShown then
-                side = math.max(side, ornament.size * (1 - ornament.alphaLeft) - ornament.overlap)
-                top = math.max(top, ornament.y + ornament.size * (0.5 - ornament.alphaTop) - defaults.height / 2)
-                bottom =
-                    math.min(bottom, defaults.height / 2 + ornament.y + ornament.size * (0.5 - ornament.alphaBottom))
+                side = math.max(side, ornament.width - ornament.overlap)
+                top = math.max(top, ornament.bottom + ornament.height - defaults.height)
+                bottom = math.min(bottom, ornament.bottom)
             end
             if boundRegion == region and boundSide == side and boundTop == top and boundBottom == bottom then return end
             region:SetPoint("TOPLEFT", DFRL.mainBar, "TOPLEFT", -side, top)
@@ -216,18 +215,23 @@ DFRL:NewMod("Bars", 1, function()
                 ornaments = {}
                 for index, side in ipairs({ "LEFT", "RIGHT" }) do
                     local texture = bar:CreateTexture(nil, "OVERLAY")
-                    texture:SetTexture(TEX_PATH .. "Wyvern.tga")
-                    texture:SetWidth(ornament.size)
-                    texture:SetHeight(ornament.size)
+                    texture:SetTexture(TEX_PATH .. "Gryphon.tga")
+                    texture:SetWidth(ornament.width)
+                    texture:SetHeight(ornament.height)
                     local opposite = side == "LEFT" and "RIGHT" or "LEFT"
                     texture:SetPoint(
-                        opposite,
+                        "BOTTOM" .. opposite,
                         bar,
-                        side,
+                        "BOTTOM" .. side,
                         index == 1 and ornament.overlap or -ornament.overlap,
-                        ornament.y
+                        ornament.bottom
                     )
-                    if index == 2 then texture:SetTexCoord(1, 0, 0, 1) end
+                    texture:SetTexCoord(
+                        index == 1 and 0 or ornament.endU,
+                        index == 1 and ornament.endU or 0,
+                        0,
+                        ornament.endV
+                    )
                     table.insert(ornaments, texture)
                 end
             end

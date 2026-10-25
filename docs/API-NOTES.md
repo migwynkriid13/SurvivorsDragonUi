@@ -472,9 +472,11 @@ arrowless image; the source texture, shadow and zone strip remain in use.
 Confirm, Cancel, world/logout/reload discard, named profiles and both full
 resets use the same lifecycle as the other display choices.
 
-One retained `Wyvern.tga` supplies both sides, with the right side mirrored.
+One cropped Dragonflight `Gryphon.tga` supplies both sides, with the right side mirrored.
 The pair is created only on first enable and inherits the action bar's
-movement, scale and hiding. Its original 180-unit canvas placement is kept.
+movement, scale and hiding. It retains retail proportions, trims transparent
+atlas padding and overlaps the side trim to close the gap beside the bar.
+The native button frames remain in front of the decorative textures.
 The action-bar bounds helper combines the visible ornament extents with
 jewelry, XP and tally extents without changing the bar owner or saved
 geometry. Jewelry reports its upper extent through the same helper so

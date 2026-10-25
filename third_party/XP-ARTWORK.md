@@ -26,18 +26,37 @@ and preparation in [XPBar-ANIMATION.md](XPBar-ANIMATION.md).
 
 ## Optional action-bar ornaments
 
-`media/tex/actionbars/Wyvern.tga` is an unchanged rename of the selected
-[original ornament file](https://api.github.com/repositories/1040377421/contents/media/tex/actionbars/WyvernNew.tga?ref=5c6a63fda03fe9b8fd8219e6c1f65c574679077a)
-from dbtdsilva's source repository, pinned to commit
-`5c6a63fda03fe9b8fd8219e6c1f65c574679077a`. Its Git blob is
-`7ffda45b7da232e968f972ff472947945725862c`, matching the retained source
-file. The unused alternate gryphon image is removed.
+`media/tex/actionbars/Gryphon.tga` replaces the previous wyvern ornament.
+It contains Blizzard's Dragonflight gryphon artwork, obtained from
+[s0h2x/pretty_actionbar's `assets/uiactionbar2x_new.blp`](https://github.com/s0h2x/pretty_actionbar/blob/f60a50a040e77751011c5afe7a51cd9df888e127/assets/uiactionbar2x_new.blp),
+commit `f60a50a040e77751011c5afe7a51cd9df888e127` (1.0.3, 2022-10-30).
+The source BLP's Git blob is `a8c965a45cbf2486a26bec8d51353a8c19946cf9`.
+This uses artwork only; no source addon code or dependencies are imported.
+Original World of Warcraft artwork remains Blizzard Entertainment's property;
+availability in a public addon does not transfer ownership.
 
-The original 512-by-512 RGBA canvas is displayed at 180 by 180 units,
-anchored 45 units inside each action-bar end and 10 units above its center,
-matching the pinned source placement. Only the right texture is mirrored.
-Nontransparent source bounds are `[110, 93, 388, 405)`; edit bounds include
-these visible extents rather than the transparent canvas padding. The
-file's colors, alpha and pixels are unchanged, and no faction selection or
-additional texture variant is used. The original artwork ownership and
-redistribution notice above remains applicable.
+The 512-by-2048 BLP2 sheet uses uncompressed BGRA pixels. The source
+[`ui-hud-actionbar-gryphon-thick-left` metadata](https://github.com/s0h2x/pretty_actionbar/blob/f60a50a040e77751011c5afe7a51cd9df888e127/utils/atlas.lua)
+selects `[1, 209, 357, 543)`, a 356-by-334 atlas member. Its visible bounds
+are `[39, 10, 351, 316)` within that member. The prepared texture decodes
+BGRA to RGBA, takes sheet pixels `[40, 219, 352, 525)` unchanged, and places
+that 312-by-306 crop at the top left of a transparent 512-by-512,
+uncompressed 32-bit TGA. Pixels, colors and alpha are not resampled or
+recolored. Only this selected gryphon is packaged; the right side mirrors it.
+
+Dragonflight's
+[`MainMenuBar.xml`, 10.0.2 build 47213](https://github.com/Gethe/wow-ui-source/blob/3601b934bca4a9cdf815fd483586a0e5608909ad/Interface/FrameXML/MainMenuBar.xml)
+defines gryphon end caps at 104.5 by 98 units, bottom-aligned 22 units below
+the bar. The runtime preserves those proportions after trimming: width is
+`104.5 * 312 / 356`, height is `98 * 306 / 334`, and the bottom is
+`-22 + 98 * 18 / 334`. Before trimming, each cap overlaps its bar end by
+14 units; the trimmed horizontal anchor is `14 - 104.5 * 5 / 356`.
+This tucks the chest into the shorter bar's side trim and leaves native
+button frames in front. UVs select only `0..312/512, 0..306/512` of the TGA.
+
+The existing default-off setting still creates two passive texture regions
+only on first enable, binds/crops each once and changes visibility only when
+the setting changes. The shared edit bounds include the trimmed visible
+extents alongside jewelry, XP and tally, without moving the bar owner or
+adding an updater. A static artwork comparison informed the fit; in-game
+appearance remains unverified.
