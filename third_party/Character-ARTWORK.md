@@ -46,7 +46,9 @@ BGRA decoder for uncompressed BLP2 encoding 3. It never runs addon code.
 Coordinates below are `(left, top, right, bottom)`, right/bottom excluded.
 All unoccupied destination pixels are transparent.
 
-### `media/tex/character/Chrome.tga`
+### `media/tex/character/Chrome.blp`
+
+The original TGA pixels are repacked losslessly in uncompressed BLP2 Raw3 for the updated client loader. The authoring script still produces the TGA input; run `scripts/prepare_client_textures.py` afterwards. See [Client compatibility](../docs/CLIENT-COMPATIBILITY.md).
 
 The 1024-by-256 sheet contains the eight pieces of the plain metal frame.
 Sources are `UI/uiframemetal2x.blp` (512 by 512),

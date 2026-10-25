@@ -72,7 +72,7 @@ DFRL:NewMod("Character window", 6, function()
     local function Cut(parent, sheet, left, top, right, bottom, width, height, layer)
         local texture = parent:CreateTexture(nil, layer or "BACKGROUND")
         texture.sduiCharacterArt = true
-        texture:SetTexture(path .. sheet .. ".tga")
+        texture:SetTexture(path .. sheet .. (sheet == "Chrome" and ".blp" or ".tga"))
         local size = sheets[sheet]
         texture:SetTexCoord(left / size[1], right / size[1], top / size[2], bottom / size[2])
         if width then texture:SetWidth(width) end

@@ -148,13 +148,14 @@ DFRL:NewMod("RunTimers", 5, function()
         end
         local foamGlow = NewFoam(0.3, 0.8, 1)
         local foamCrest = NewFoam(0.8, 0.96, 1)
+        local foamShoulders = { NewFoam(0.66, 0.92, 1), NewFoam(0.66, 0.92, 1) }
         local foamFlecks = {}
-        for index = 1, 8 do
+        for index = 1, 12 do
             local fleck = NewFoam(0.75, 0.94, 1)
             fleck.period = 0.7 + math.mod(index, 5) * 0.13
             fleck.phase = index * 0.618034
-            fleck.drift = 5 + math.mod(index, 3) * 2
-            fleck.y = (math.mod(index - 1, 3) - 1) * 3.6
+            fleck.drift = 7 + math.mod(index, 4) * 2.5
+            fleck.y = (math.mod(index - 1, 5) - 2) * 2.1
             foamFlecks[index] = fleck
         end
 
@@ -168,7 +169,7 @@ DFRL:NewMod("RunTimers", 5, function()
         end
 
         local function DrawFoam(piece, left, y, width, height, alpha, filledWidth)
-            local first, last = math.max(0, left), math.min(filledWidth, left + width)
+            local first, last = math.max(0, left), math.min(BAR_WIDTH, filledWidth + 6, left + width)
             local halfHeight = bar:GetHeight() / 2
             local bottom, top = math.max(-halfHeight, y - height / 2), math.min(halfHeight, y + height / 2)
             if first >= last or bottom >= top then
@@ -195,7 +196,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 texture:SetTexCoord(u1, u2, v1, v2)
                 piece.u1, piece.u2, piece.v1, piece.v2 = u1, u2, v1, v2
             end
-            texture:SetAlpha(alpha * 1.25)
+            texture:SetAlpha(math.min(1, math.max(0, alpha * 1.4)))
             if not piece.shown then
                 texture:Show()
                 piece.shown = true
@@ -203,26 +204,38 @@ DFRL:NewMod("RunTimers", 5, function()
         end
 
         local function UpdateBlueFoam(now, filledWidth)
-            -- A soft lip stays at the native fill edge while tiny puffs wash
-            -- back into the current. Every quad is cropped to the filled area.
-            DrawFoam(foamGlow, filledWidth - 6, 0, 8, 15, 0.32 + 0.07 * math.sin(now * 4.1), filledWidth)
+            -- A broad, uneven crest feathers past the native edge while
+            -- puffs wash back into the current, inside the metal pill.
+            DrawFoam(foamGlow, filledWidth - 11, 0, 17, 15, 0.42 + 0.08 * math.sin(now * 4.1), filledWidth)
             DrawFoam(
                 foamCrest,
-                filledWidth - 3.5,
-                0.4 * math.sin(now * 3.3),
-                4,
-                12,
-                0.52 + 0.1 * math.sin(now * 5.3),
+                filledWidth - 5 + 1.1 * math.sin(now * 4.7),
+                0.7 * math.sin(now * 3.3),
+                8,
+                13.5,
+                0.62 + 0.1 * math.sin(now * 5.3),
                 filledWidth
             )
+            for index, shoulder in ipairs(foamShoulders) do
+                local phase = now * (3.7 + index * 0.6) + index * 2.1
+                DrawFoam(
+                    shoulder,
+                    filledWidth - 5 + 1.2 * math.sin(phase),
+                    (index == 1 and -3.8 or 3.8) + 0.5 * math.sin(phase + 1),
+                    6,
+                    6.5,
+                    0.42 + 0.08 * math.sin(phase),
+                    filledWidth
+                )
+            end
             for index, fleck in ipairs(foamFlecks) do
                 local age = math.mod(now / fleck.period + fleck.phase, 1)
                 local swell = math.sin(age * math.pi)
-                local width = 2.4 + swell * 1.6
-                local height = 1.4 + math.mod(index, 3) * 0.4
+                local width = 3.2 + swell * 2.2
+                local height = 1.8 + math.mod(index, 3) * 0.5
                 local y = fleck.y + 1.1 * math.sin(age * 2 * math.pi + fleck.phase)
-                local left = filledWidth - 1 - age * fleck.drift - width / 2
-                DrawFoam(fleck, left, y, width, height, 0.72 * swell, filledWidth)
+                local left = filledWidth + 2.2 * (1 - age) - age * fleck.drift - width / 2
+                DrawFoam(fleck, left, y, width, height, 0.78 * swell, filledWidth)
             end
         end
 
@@ -750,7 +763,7 @@ DFRL:NewMod("RunTimers", 5, function()
                     },
                     {
                         "playerPortrait3D",
-                        "Experimental 3D portraits",
+                        "3D Portrait",
                         "Use 3D for player, target and target-of-target.",
                     },
                 },

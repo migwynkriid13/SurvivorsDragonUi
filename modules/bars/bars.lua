@@ -168,7 +168,7 @@ DFRL:NewMod("Bars", 1, function()
         local artHeight = defaults.height + 2 * defaults.topInset
         local socketBottom = defaults.buttonWidth * 2 / 36
         local upper = bar:CreateTexture(nil, "BACKGROUND")
-        upper:SetTexture(DFRL:GetInfoOrCons("tex") .. "jewelry\\SocketRail.tga")
+        upper:SetTexture(DFRL:GetInfoOrCons("tex") .. "jewelry\\SocketRail.blp")
         upper:SetPoint("TOPLEFT", bar, "TOPLEFT", -defaults.sideInset, defaults.buttonWidth * 40 / 36)
         upper:SetPoint("BOTTOMRIGHT", bar, "TOPRIGHT", defaults.sideInset, socketBottom)
         upper:SetTexCoord(0, 1200 / 2048, 0, 152 / 256)
