@@ -115,9 +115,12 @@ custom HUD controlled by `hudBanners`. Read-only extraction from the installed
   `9e5cba537a3cc0cf91b447ae30d60efe066abba3285b52f7b518c19094241860`.
   It defines that separate native MessageFrame with `GameFontNormalHuge`.
 
-While the replacement is active, a reversible per-frame `AddMessage` wrapper
-redirects its already formatted text into the same bounded queue. This includes
-zone openings, waves, elite arrivals, lair returns and other legacy warnings.
+While the replacement is active, both the regular-chat receipt of
+`CHAT_MSG_RAID_BOSS_EMOTE` and a reversible per-frame
+`RaidBossEmoteFrame:AddMessage` wrapper send already formatted text into the same
+bounded queue. The regular-chat path queues its received text instead of
+assuming the legacy wrapper already delivered it. This includes zone openings,
+waves, elite arrivals, lair returns and other legacy warnings.
 No notice is reconstructed from a zone subtitle, clock, chat history or gameplay
 state. Unknown native text stays unchanged. The two exact native templates for
 boss entry and guardian death already have official API publications; their
@@ -137,18 +140,30 @@ middle-screen copy stays hidden and the full message appears only once in the
 custom Banners group. The native publication is not modified, and no gameplay
 event or reward is inferred.
 
-The bridge reuses chat capture's delivery decision in a separate `banners`
-scope, with the originating chat frame as source. Duplicate deliveries across
-chat frames collapse, while repeated identical messages on the same frame stay
-distinct. The official API stream still uses only its native IDs. Ordinary
-chat, raw capture, monster yells and the separate raid-warning frame are not
-rewritten by this display wrapper.
+Both paths reuse chat capture's delivery decision in one `banners` scope, with
+the originating chat frame as source and a separate counter for each delivery
+surface. The matching legacy/chat pair and deliveries across chat frames
+collapse, while repeated identical messages on the same frame stay distinct.
+The official API stream still uses only its native IDs. Ordinary chat, raw
+capture, monster yells and the separate raid-warning frame retain their own
+paths.
 
-Takeover clears existing legacy messages when the native `Clear` method is
-available, without replaying them. Release restores the original `AddMessage`
-only if the wrapper still owns that slot. A later external wrapper is retained;
-an old wrapper in its chain becomes a pass-through after release. A failed
-redirect releases takeover and forwards the failed call to the native method.
+Takeover hides the legacy MessageFrame and clears its existing messages when
+the native `Clear` method is available, without replaying them. Reversible
+`Show`/`Hide` wrappers retain the prior or latest external visibility choice
+while keeping the native surface hidden. While both visibility methods remain
+owned, release clears suppressed native messages before restoring that visibility
+choice. It restores only owned methods. A later external wrapper is retained; an old wrapper
+in its chain becomes a pass-through after release. A failed redirect releases
+takeover and forwards the failed call to the native method.
+
+The reported opening capture contains `AZSZONE` before the raid-boss emote
+**The Defias Uprising — survive the onslaught!**, followed by its formatted
+`ChatFrame1` receipt. There is no `AZSBANNER` publication for that opening. This
+rules out zone cleanup erasing that occurrence and establishes an available
+formatted intake, but does not record whether the old legacy method wrapper
+ran. The shared intake removes that dependency without rebuilding a message
+from zone metadata or raw event placeholders.
 
 The native handler list is traversed directly. A rendering failure inside a
 callback releases native visibility immediately but defers unregistration to
@@ -183,7 +198,7 @@ Menu-only achievement JSON does not establish Lua callbacks outside an
 initialized game client.
 
 The TOC and `packaging/runtime-files.json` include the shared owner and banner
-module. Local tests, syntax checks, formatters and addon/game execution remain
+module. Edited sources use the pinned local StyLua and Prettier formatters.
+Local tests, standalone syntax checks and addon/game execution remain
 unauthorized and were not run. The existing PR GitHub Actions job supplies the
-authorized static checks; in-game placement, timing and lifecycle remain
-unverified.
+static checks; in-game placement, timing and lifecycle remain unverified.

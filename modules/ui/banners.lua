@@ -21,6 +21,7 @@ DFRL:NewMod("RunBanners", 4, function()
     local inWorld, active, faulted = true, false, false
     local registered, unregister, delivering
     local legacyFrame, legacyAdd, legacyHook
+    local legacyShow, legacyHide, legacyShowHook, legacyHideHook, legacyShown
     local errorFrame, errorAdd, errorHook
     local pendingErrors, errorCount = {}, 0
     local MAX_ERRORS = 32
@@ -100,8 +101,21 @@ DFRL:NewMod("RunBanners", 4, function()
         Reflow()
     end
     local function ReleaseLegacy()
-        if legacyFrame and legacyFrame.AddMessage == legacyHook then legacyFrame.AddMessage = legacyAdd end
+        local frame, add, hook = legacyFrame, legacyAdd, legacyHook
+        local show, hide, showHook, hideHook, wanted =
+            legacyShow, legacyHide, legacyShowHook, legacyHideHook, legacyShown
         legacyFrame, legacyAdd, legacyHook = nil, nil, nil
+        legacyShow, legacyHide, legacyShowHook, legacyHideHook, legacyShown = nil, nil, nil, nil, nil
+        if not frame then return end
+        local ownsVisibility = frame.Show == showHook and frame.Hide == hideHook
+        if frame.AddMessage == hook then frame.AddMessage = add end
+        if frame.Show == showHook then frame.Show = show end
+        if frame.Hide == hideHook then frame.Hide = hide end
+        if ownsVisibility then
+            if type(frame.Clear) == "function" then pcall(frame.Clear, frame) end
+            local shown = frame:IsShown()
+            if wanted and (not shown or shown == 0) then pcall(frame.Show, frame) end
+        end
     end
     local function PlainText(text)
         if type(text) ~= "string" or string.find(text, "|Huierror", 1, true) then return end
@@ -221,17 +235,37 @@ DFRL:NewMod("RunBanners", 4, function()
         end
         Enqueue(text, entry.boss == true, entry.kind, id, entry.text)
     end
+    local function ReceiveLegacy(source, text, eventName, speaker, message, surface)
+        local chat = DFRL.CleanerChat
+        if eventName == "CHAT_MSG_RAID_BOSS_EMOTE" then
+            if
+                companions[message]
+                or not chat.FirstDelivery(
+                    source,
+                    PlainText(text) or text,
+                    eventName,
+                    speaker,
+                    message,
+                    "banners",
+                    surface
+                )
+            then
+                return
+            end
+        end
+        -- Both surfaces supply the native handler's already formatted text.
+        Enqueue(text, false, "legacy")
+    end
     function banners.RedirectChat(source, text, eventName, speaker, message)
         if not banners.IsActive() or not source or type(text) ~= "string" then return false end
-        if eventName == "CHAT_MSG_RAID_BOSS_EMOTE" then
-            -- The owned legacy bridge already forwards this whole native
-            -- event category to Banners. Suppress its regular-chat copy
-            -- regardless of wording, boss, mechanic or selected language.
-            return legacyFrame ~= nil and legacyHook ~= nil and legacyFrame.AddMessage == legacyHook
-        end
-        if eventName and eventName ~= "CHAT_MSG_SYSTEM" then return false end
         local chat = DFRL.CleanerChat
         if not chat or type(chat.FirstDelivery) ~= "function" then return false end
+        if eventName == "CHAT_MSG_RAID_BOSS_EMOTE" then
+            local ok, failure = pcall(ReceiveLegacy, source, text, eventName, speaker, message, "chat")
+            if not ok then Failed(failure) end
+            return ok
+        end
+        if eventName and eventName ~= "CHAT_MSG_SYSTEM" then return false end
         local plain = PlainText(text)
         if not plain then return false end
         local fields = DFRL.locale.Match(DOT_STACKS, plain)
@@ -258,21 +292,9 @@ DFRL:NewMod("RunBanners", 4, function()
         if legacyFrame == frame then return end
         ReleaseLegacy()
         local original, hook = frame.AddMessage
-        local function ReceiveLegacy(source, text, eventName, speaker, message)
-            if eventName == "CHAT_MSG_RAID_BOSS_EMOTE" then
-                if
-                    companions[message] or not chat.FirstDelivery(source, text, eventName, speaker, message, "banners")
-                then
-                    return
-                end
-            end
-            -- Forward the already formatted native display call. Do not
-            -- reconstruct a notice from zone, chat history or gameplay.
-            Enqueue(text, false, "legacy")
-        end
         hook = function(owner, text, r, g, b, id, addToStart)
             if banners.IsActive() and legacyHook == hook and type(text) == "string" and text ~= "" then
-                local ok, message = pcall(ReceiveLegacy, this or owner, text, event, arg2, arg1)
+                local ok, message = pcall(ReceiveLegacy, this or owner, text, event, arg2, arg1, "legacy")
                 if ok then return end
                 Failed(message)
             end
@@ -280,6 +302,23 @@ DFRL:NewMod("RunBanners", 4, function()
         end
         legacyFrame, legacyAdd, legacyHook = frame, original, hook
         frame.AddMessage = hook
+        local show, hide, showHook, hideHook = frame.Show, frame.Hide
+        local shown = frame:IsShown()
+        legacyShow, legacyHide, legacyShown = show, hide, shown and shown ~= 0
+        showHook = function(owner)
+            if banners.IsActive() and legacyShowHook == showHook then
+                legacyShown = true
+                return hide(owner)
+            end
+            return show(owner)
+        end
+        hideHook = function(owner)
+            if banners.IsActive() and legacyHideHook == hideHook then legacyShown = false end
+            return hide(owner)
+        end
+        legacyShowHook, legacyHideHook = showHook, hideHook
+        frame.Show, frame.Hide = showHook, hideHook
+        hide(frame)
         -- Retire only notices already visible at takeover; never replay them.
         if type(frame.Clear) == "function" then frame:Clear() end
     end

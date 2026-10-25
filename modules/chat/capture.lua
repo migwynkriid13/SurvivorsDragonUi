@@ -34,7 +34,7 @@ DFRL:NewMod("ChatCapture", 0, function()
     end
     local function FrameName(frame) return frame.GetName and frame:GetName() or "<unnamed>" end
 
-    local function FirstDelivery(frame, text, eventName, author, message, source)
+    local function FirstDelivery(frame, text, eventName, author, message, source, surface)
         local now = GetTime()
         if now ~= broadcastTime then
             broadcastTime, broadcasts = now, {}
@@ -53,10 +53,17 @@ DFRL:NewMod("ChatCapture", 0, function()
             delivery = { counts = {}, maximum = 0 }
             broadcasts[signature] = delivery
         end
-        local count = (delivery.counts[frame] or 0) + 1
-        delivery.counts[frame] = count
+        local counts = delivery.counts
+        if surface then
+            delivery.surfaces = delivery.surfaces or {}
+            delivery.surfaces[surface] = delivery.surfaces[surface] or {}
+            counts = delivery.surfaces[surface]
+        end
+        local count = (counts[frame] or 0) + 1
+        counts[frame] = count
         -- Additional chat frames receive the same delivery. Repeated identical
         -- messages on one frame remain distinct, including in the same UI tick.
+        -- Optional surfaces pair that frame's legacy and regular-chat calls.
         if count <= delivery.maximum then return false end
         delivery.maximum = count
         return true
