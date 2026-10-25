@@ -37,12 +37,12 @@ DFRL:NewMod("Target", 1, function()
         "RIGHT"
     )
     local healthText = CreateValueText(TargetFrameHealthBar, 10)
-    local displayedHealth
-    local function SetHealthText(value)
-        if value == displayedHealth then return end
-        displayedHealth = value
-        healthText:SetText(value)
+    local healthLabels = T.BindUnitHealthText(TargetFrameHealthBar, healthText, "target", true)
+    local function UpdateHealthInsets()
+        healthLabels.SetInsets(0, DFRL.display.Get("hidePortraits") and 0 or T.UnitPortraitOverlap, 0)
     end
+    DFRL.display.Listen(UpdateHealthInsets)
+    UpdateHealthInsets()
 
     local function HidePowerBar()
         if TargetFrameManaBar then
@@ -136,16 +136,9 @@ DFRL:NewMod("Target", 1, function()
     _G.TargetFrame_CheckClassification = function() UpdateClassification(true) end
 
     local function UpdateTarget(forceBorder)
-        if not UnitExists("target") then
-            SetHealthText("")
-            return
-        end
+        healthLabels.Update()
+        if not UnitExists("target") then return end
         TargetFrameHealthBar:SetStatusBarColor(1, 0, 0)
-        if UnitIsDead("target") or UnitIsGhost("target") then
-            SetHealthText("")
-        else
-            SetHealthText(UnitHealth("target"))
-        end
         UpdateClassification(forceBorder)
     end
 
@@ -155,6 +148,7 @@ DFRL:NewMod("Target", 1, function()
     frame:RegisterEvent("PLAYER_ENTERING_WORLD")
     frame:RegisterEvent("PARTY_MEMBERS_CHANGED")
     frame:RegisterEvent("UNIT_HEALTH")
+    frame:RegisterEvent("UNIT_MAXHEALTH")
     frame:RegisterEvent("UNIT_FACTION")
     frame:RegisterEvent("UNIT_CLASSIFICATION_CHANGED")
     frame:SetScript("OnEvent", function()

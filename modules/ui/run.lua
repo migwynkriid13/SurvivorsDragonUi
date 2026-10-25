@@ -744,6 +744,8 @@ DFRL:NewMod("RunTimers", 5, function()
                     { "showPlayerLevel", "Show player level", "Show the level above the player frame." },
                     { "showTargetName", "Show target name", "Show the name above the target frame." },
                     { "showTargetLevel", "Show target level", "Show the level above the target frame." },
+                    { "showHealthValue", "Show health", "Show current health on unit health bars." },
+                    { "showHealthPercentage", "Show health percentage", "Show remaining health as a percentage." },
                     { "classHealth", "Class-colored health", "Use your vanilla class color for player health." },
                     {
                         "healthLossAnimation",

@@ -34,6 +34,8 @@ DFRL:NewMod("Display", 0, function()
         showPlayerLevel = true,
         showTargetName = true,
         showTargetLevel = true,
+        showHealthValue = true,
+        showHealthPercentage = false,
         roundPlayerPortrait = false,
         playerPortrait3D = false, -- Legacy key; controls player, target and target-of-target.
         flipBuffs = false,
@@ -122,6 +124,8 @@ DFRL:NewMod("Display", 0, function()
             showPlayerLevel = Read(source, "showPlayerLevel"),
             showTargetName = Read(source, "showTargetName"),
             showTargetLevel = Read(source, "showTargetLevel"),
+            showHealthValue = Read(source, "showHealthValue"),
+            showHealthPercentage = Read(source, "showHealthPercentage"),
             roundPlayerPortrait = Read(source, "roundPlayerPortrait"),
             playerPortrait3D = Read(source, "playerPortrait3D"),
             flipBuffs = Read(source, "flipBuffs"),

@@ -2,7 +2,7 @@ DFRL:NewMod("Player", 1, function()
     if not PlayerFrame or not PlayerFrameHealthBar then return end
 
     local tex = DFRL:GetInfoOrCons("tex") .. "unitframes\\"
-    local healthText
+    local healthLabels
     local primaryBar, primaryText, setPowerShown, setPortraitOverlap
     local updateBorder
     local pulseTextures = {}
@@ -45,7 +45,7 @@ DFRL:NewMod("Player", 1, function()
         appliedRound, appliedHidden = round, hidden
         updateBorder(tex .. (round and "UI-TargetingFrameDF1.blp" or "UI-TargetingFrameDF.blp"))
         local extension = setPortraitOverlap(round)
-        if healthText then healthText:SetPoint("CENTER", PlayerFrameHealthBar, "CENTER", extension / 2, 0) end
+        if healthLabels then healthLabels.SetInsets(extension, 0, extension / 2) end
         if PlayerFrame.name then
             PlayerFrame.name:SetPoint("BOTTOMLEFT", PlayerFrameHealthBar, "TOPLEFT", 2 + extension, 4)
             PlayerFrame.name:SetWidth(PlayerFrameHealthBar:GetWidth() - extension - 24)
@@ -121,7 +121,7 @@ DFRL:NewMod("Player", 1, function()
 
     local function UpdateValues()
         if not initialized then return end
-        T.SetTextIfChanged(healthText, UnitHealth("player"))
+        healthLabels.Update()
         if PlayerLevelText then T.SetTextIfChanged(PlayerLevelText, UnitLevel("player")) end
         UpdateHealthColor()
     end
@@ -267,7 +267,8 @@ DFRL:NewMod("Player", 1, function()
         primaryText:SetPoint("CENTER", primaryBar, "CENTER", 0, 0)
         primaryBar:Hide()
         if PlayerFrameHealthBarText then PlayerFrameHealthBarText:SetAlpha(0) end
-        healthText = CreateValueText(PlayerFrameHealthBar, 10, 0)
+        healthLabels =
+            T.BindUnitHealthText(PlayerFrameHealthBar, CreateValueText(PlayerFrameHealthBar, 10, 0), "player")
         if PlayerFrame.portrait then
             PlayerFrame.portrait:ClearAllPoints()
             PlayerFrame.portrait:SetPoint("TOPLEFT", PlayerFrame, "TOPLEFT", 42, -12)
@@ -320,6 +321,7 @@ DFRL:NewMod("Player", 1, function()
     local frame = CreateFrame("Frame")
     frame:RegisterEvent("PLAYER_ENTERING_WORLD")
     frame:RegisterEvent("UNIT_HEALTH")
+    frame:RegisterEvent("UNIT_MAXHEALTH")
     frame:RegisterEvent("UNIT_LEVEL")
     frame:RegisterEvent("PLAYER_LEVEL_UP")
     frame:SetScript("OnEvent", function()
