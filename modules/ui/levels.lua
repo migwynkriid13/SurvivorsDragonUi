@@ -112,7 +112,7 @@ DFRL:NewMod("StoredLevels", 5, function()
     local function TextWidth(label, metrics, force)
         local text = label:GetText()
         local face, size, flags = label:GetFont()
-        local scale = label:GetEffectiveScale()
+        local scale = label:GetParent():GetEffectiveScale()
         if
             not force
             and metrics.text == text

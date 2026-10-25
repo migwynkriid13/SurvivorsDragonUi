@@ -5,7 +5,6 @@
 ## Author: migwynkriid and community contributors
 ## SavedVariables: SurvivorsDragonUiLayout, SurvivorsDragonUiSctMode, SurvivorsDragonUiRunFont, SurvivorsDragonUiDisplay, SurvivorsDragonUiBossSchedule, SurvivorsDragonUiProfiles
 
-core\error.lua
 core\core.lua
 core\localization.lua
 localization\data.lua

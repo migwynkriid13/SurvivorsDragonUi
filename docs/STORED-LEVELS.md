@@ -19,6 +19,8 @@ Data is read at most ten times a second. `AZSRUN` schedules a read on the next f
 Unchanged counts and class icons do not repeat text or crop writes. Text-width
 measurements are reused until text, font or effective scale changes; edit entry,
 resizing and language changes still force the compact panel measurement. The
+scale comes from each FontString's owning frame, since the current client does
+not expose `GetEffectiveScale` on FontStrings. The
 existing pulse and native visibility checks retain their cadence. Clearing the
 count also clears the group's requested visibility while Layout hides it, so
 unhiding cannot restore an expired stored-level button.

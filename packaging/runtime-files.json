@@ -5,7 +5,6 @@
     "core/core.lua",
     "core/display.lua",
     "core/editor.lua",
-    "core/error.lua",
     "core/fonts.lua",
     "core/fstack.lua",
     "core/hud.lua",

@@ -121,7 +121,6 @@ local function HiddenAnnouncement(text)
     plain = string.gsub(plain, "|r", "")
     plain = string.gsub(plain, "^[ \t]+", "")
     plain = string.gsub(plain, "[ \t]+$", "")
-    if string.find(plain, "^DFRL: Error") then return false end
     if
         string.find(plain, " yells:", 1, true)
         or string.find(plain, " says:", 1, true)
