@@ -6,6 +6,7 @@ labels, panel backgrounds or ornaments are baked into the artwork.
 """
 
 import argparse
+import math
 import struct
 from pathlib import Path
 
@@ -26,12 +27,25 @@ def rgba(path):
     return Image.open(path).convert("RGBA")
 
 
+def prepare_pet_rim(canvas):
+    rim = canvas.crop((106, 56, 178, 128))
+    pixels = rim.load()
+    for y in range(72):
+        for x in range(72):
+            red, green, blue, alpha = pixels[x, y]
+            radius = math.hypot(x + 0.5 - 36, y + 0.5 - 36)
+            coverage = max(0, min(1, 35.5 - radius, radius - 26))
+            pixels[x, y] = (red, green, blue, round(alpha * coverage))
+    canvas.paste(rim, (576, 56))
+
+
 def prepare(sources, output):
     ring = rgba(sources / "bagborder2.blp")
     canvas = Image.new("RGBA", (1024, 256))
     rim = ring.resize((86, 86), Image.Resampling.LANCZOS)
     for index in range(5):
         canvas.alpha_composite(rim, (98 + index * 88, 50))
+    prepare_pet_rim(canvas)
     output.parent.mkdir(parents=True, exist_ok=True)
     canvas.save(output, compression=None)
 

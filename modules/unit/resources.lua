@@ -55,7 +55,6 @@ DFRL:NewMod("Class resources", 2, function()
     local procs = {
         seal_fate = styles.ROGUE,
         soul_fire = styles.WARLOCK,
-        bloodrage = { color = { 0.86, 0.12, 0.1 } },
         lightwell = { color = { 1, 0.82, 0 } },
     }
 

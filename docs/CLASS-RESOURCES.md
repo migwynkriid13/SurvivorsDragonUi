@@ -1,8 +1,8 @@
 # Class resources
 
-The **Class resources** checkbox in the `/sdui` **HUD** tab defaults off. The player frame normally has one uninterrupted health bar. Enabling the option integrates the current native active resource below health inside the original frame opening, with the game's class-proc meter attached below the frame when available. Target and target-of-target frames remain health-only.
+The **Class resources** checkbox in the `/sdui` **HUD** tab defaults off. The player frame normally has one uninterrupted health bar. Enabling the option integrates the current native active resource below health inside the original frame opening, with supported secondary class-proc meters attached below the frame when available. Warrior rage appears only inside the player frame. Target and target-of-target frames remain health-only.
 
-Rogue points and Warlock soul shards use the existing socket artwork. Bloodrage and Lightwell use a compact red or gold fill with current / maximum text. All four use the official proc values; none are inferred from active power, spell casts or combat messages.
+Rogue points and Warlock soul shards use the existing socket artwork. Lightwell uses a compact gold fill with current / maximum text. These secondary displays use the official proc values; none are inferred from active power, spell casts or combat messages. The `bloodrage` proc does not create another meter below the frame, avoiding a second rage display.
 
 ## Current native values
 
@@ -16,9 +16,9 @@ The game update supplied by the owner on 2026-10-20 adds three `AZS_RUN` fields:
 | `pv`   | Current meter value                                                             |
 | `pm`   | Full meter value                                                                |
 
-The proc reader checks the native phase before reading the received run table and requires a finite nonnegative `AZS_RUN_UPDATED`. It shares the existing active-phase definition: `playing`, `choosing`, `paused` and `victory`. The value must be finite and nonnegative, and the maximum finite and positive. A value above its maximum is clamped for display without changing the native table. Empty, unknown, missing or invalid proc data hides only the secondary display. Older builds without these fields retain their primary power bar but show no inferred proc meter.
+The proc reader checks the native phase before reading the received run table and requires a finite nonnegative `AZS_RUN_UPDATED`. It shares the existing active-phase definition: `playing`, `choosing`, `paused` and `victory`. The value must be finite and nonnegative, and the maximum finite and positive. A value above its maximum is clamped for display without changing the native table. Bloodrage, empty, unknown, missing or invalid proc data hides only the secondary display. Older builds without these fields retain their primary power bar but show no inferred proc meter.
 
-For `seal_fate` and `soul_fire`, a whole-number native maximum up to five selects that many sockets; complete points light directly from `pv`. The supplied example `proc=seal_fate, pv=3, pm=5` shows three filled points and two empty sockets. Zero retains the available empty sockets. Larger or nonintegral ranges use the numeric fill meter, preserving the game's range instead of imposing a five-point maximum. Bloodrage and Lightwell always use that fill meter. No retail typed `UnitPower` calls, target-dependent combo getter or divide-by-20 conversion supplies a proc value.
+For `seal_fate` and `soul_fire`, a whole-number native maximum up to five selects that many sockets; complete points light directly from `pv`. The supplied example `proc=seal_fate, pv=3, pm=5` shows three filled points and two empty sockets. Zero retains the available empty sockets. Larger or nonintegral ranges use the numeric fill meter, preserving the game's range instead of imposing a five-point maximum. Lightwell always uses that fill meter. No retail typed `UnitPower` calls, target-dependent combo getter or divide-by-20 conversion supplies a proc value.
 
 Each point retains its bound style, crop and dimensions while count changes
 update only visibility. Style changes rebind both images; failed assignments
