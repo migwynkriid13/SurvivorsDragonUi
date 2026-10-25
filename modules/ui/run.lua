@@ -809,6 +809,7 @@ DFRL:NewMod("RunTimers", 5, function()
                         "Off: Shift-click two occupied buttons to swap them.",
                     },
                     { "cooldownNumbers", "Cooldown numbers", "Show countdowns on ability buttons." },
+                    { "showGryphons", "Show gryphons", "Show winged ornaments at both ends of the action bar." },
                     { "attachXP", "Attach XP to action bar", "Off: move and resize the XP bar separately." },
                     {
                         "hideNativeBuild",

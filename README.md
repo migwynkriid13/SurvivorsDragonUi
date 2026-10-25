@@ -19,7 +19,7 @@ The file should be at `benilla-config/AddOns/SurvivorsDragonUi/SurvivorsDragonUi
 
 Type `/sdui` to open the editor.
 
-Action buttons start locked. Under **Action bar**, turn off **Lock action buttons** and click **Confirm** to allow rearranging. Shift-click two occupied buttons to swap their spells; spells cannot be dragged off the bar.
+Action buttons start locked. Under **Action bar**, turn off **Lock action buttons** and click **Confirm** to allow rearranging. Shift-click two occupied buttons to swap their spells; spells cannot be dragged off the bar. **Show gryphons** adds winged ornaments at both ends of the bar; it starts off.
 
 XP starts attached beneath the action bar. Turn off **Attach XP to action bar** to move and resize it separately, then click **Confirm** to save.
 

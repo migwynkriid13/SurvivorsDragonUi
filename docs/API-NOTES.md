@@ -462,3 +462,22 @@ The arrowless minimap border still uses
 retain the original border while replacing only the top-center arrow region
 with a plain span sampled from the same source. There is no separate
 arrowless image; the source texture, shadow and zone strip remain in use.
+
+## Optional action-bar gryphons
+
+**Show gryphons** in `/sdui` → **Action bar** starts off. The normalized
+`showGryphons` boolean lives in the existing display table, so preview,
+Confirm, Cancel, world/logout/reload discard, named profiles and both full
+resets use the same lifecycle as the other display choices.
+
+One retained `Wyvern.tga` supplies both sides, with the right side mirrored.
+The pair is created only on first enable and inherits the action bar's
+movement, scale and hiding. Its original 180-unit canvas placement is kept.
+The action-bar bounds helper combines the visible ornament extents with
+jewelry, XP and tally extents without changing the bar owner or saved
+geometry. Jewelry reports its upper extent through the same helper so
+changing its attachment cannot overwrite the ornament bounds.
+
+The caption and hint have source/runtime entries in all fourteen languages.
+No per-frame updater, extra layout key or SavedVariable is introduced.
+Artwork provenance is in [XP-ARTWORK.md](../third_party/XP-ARTWORK.md).

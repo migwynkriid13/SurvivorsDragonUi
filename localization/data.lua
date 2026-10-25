@@ -2,6 +2,8 @@
 DFRL.locale.data = {
     en = {
         ui = {
+            ["Show gryphons"] = "Show gryphons",
+            ["Show winged ornaments at both ends of the action bar."] = "Show winged ornaments at both ends of the action bar.",
             ["Tooltip at cursor"] = "Tooltip at cursor",
             ["Follow the mouse cursor instead of the saved or icon position."] = "Follow the mouse cursor instead of the saved or icon position.",
             ["Next summon"] = "Next summon",
@@ -523,6 +525,8 @@ DFRL.locale.data = {
     },
     pl = {
         ui = {
+            ["Show gryphons"] = "Pokaż gryfy",
+            ["Show winged ornaments at both ends of the action bar."] = "Pokaż skrzydlate ozdoby na obu końcach paska akcji.",
             ["Tooltip at cursor"] = "Podpowiedź przy kursorze",
             ["Follow the mouse cursor instead of the saved or icon position."] = "Podążaj za kursorem zamiast używać zapisanej pozycji lub ikony.",
             ["Next summon"] = "Następne przywołanie",
@@ -1068,6 +1072,8 @@ DFRL.locale.data = {
     },
     cs = {
         ui = {
+            ["Show gryphons"] = "Zobrazit gryfy",
+            ["Show winged ornaments at both ends of the action bar."] = "Zobrazit okřídlené ozdoby na obou koncích lišty schopností.",
             ["Tooltip at cursor"] = "Popisek u kurzoru",
             ["Follow the mouse cursor instead of the saved or icon position."] = "Sledovat kurzor místo uložené pozice nebo pozice ikony.",
             ["Next summon"] = "Další vyvolání",
@@ -2064,6 +2070,8 @@ DFRL.locale.data = {
     },
     de = {
         ui = {
+            ["Show gryphons"] = "Greifen anzeigen",
+            ["Show winged ornaments at both ends of the action bar."] = "Geflügelte Verzierungen an beiden Enden der Aktionsleiste anzeigen.",
             ["Tooltip at cursor"] = "Tooltip am Mauszeiger",
             ["Follow the mouse cursor instead of the saved or icon position."] = "Dem Mauszeiger statt der gespeicherten Position oder dem Symbol folgen.",
             ["Next summon"] = "Nächste Beschwörung",
@@ -2615,6 +2623,8 @@ DFRL.locale.data = {
     },
     pt = {
         ui = {
+            ["Show gryphons"] = "Mostrar grifos",
+            ["Show winged ornaments at both ends of the action bar."] = "Mostra adornos alados nas duas pontas da barra de ações.",
             ["Tooltip at cursor"] = "Dica no cursor",
             ["Follow the mouse cursor instead of the saved or icon position."] = "Siga o cursor em vez da posição salva ou do ícone.",
             ["Next summon"] = "Próxima invocação",
@@ -3151,6 +3161,8 @@ DFRL.locale.data = {
     },
     es = {
         ui = {
+            ["Show gryphons"] = "Mostrar grifos",
+            ["Show winged ornaments at both ends of the action bar."] = "Muestra adornos alados en ambos extremos de la barra de acción.",
             ["Tooltip at cursor"] = "Descripción en el cursor",
             ["Follow the mouse cursor instead of the saved or icon position."] = "Sigue al cursor en lugar de la posición guardada o del icono.",
             ["Next summon"] = "Próxima invocación",
@@ -3690,6 +3702,8 @@ DFRL.locale.data = {
     },
     fr = {
         ui = {
+            ["Show gryphons"] = "Afficher les griffons",
+            ["Show winged ornaments at both ends of the action bar."] = "Affiche les ornements ailés aux deux extrémités de la barre d’action.",
             ["Tooltip at cursor"] = "Infobulle au curseur",
             ["Follow the mouse cursor instead of the saved or icon position."] = "Suivre le curseur au lieu de la position enregistrée ou de l’icône.",
             ["Next summon"] = "Prochaine invocation",
@@ -4256,6 +4270,8 @@ DFRL.locale.data = {
     },
     ro = {
         ui = {
+            ["Show gryphons"] = "Arată grifonii",
+            ["Show winged ornaments at both ends of the action bar."] = "Arată ornamentele înaripate la ambele capete ale barei de acțiuni.",
             ["Tooltip at cursor"] = "Indiciu la cursor",
             ["Follow the mouse cursor instead of the saved or icon position."] = "Urmează cursorul în locul poziției salvate sau al pictogramei.",
             ["Next summon"] = "Următoarea invocare",
@@ -4792,6 +4808,8 @@ DFRL.locale.data = {
     },
     tr = {
         ui = {
+            ["Show gryphons"] = "Grifonları göster",
+            ["Show winged ornaments at both ends of the action bar."] = "Eylem çubuğunun iki ucunda kanatlı süslemeleri göster.",
             ["Tooltip at cursor"] = "İmleçte ipucu",
             ["Follow the mouse cursor instead of the saved or icon position."] = "Kayıtlı konum veya simge yerine fare imlecini izle.",
             ["Next summon"] = "Sonraki çağırma",
@@ -5325,6 +5343,8 @@ DFRL.locale.data = {
     },
     ru = {
         ui = {
+            ["Show gryphons"] = "Показывать грифонов",
+            ["Show winged ornaments at both ends of the action bar."] = "Показывать крылатые украшения по краям панели действий.",
             ["Tooltip at cursor"] = "Подсказка у курсора",
             ["Follow the mouse cursor instead of the saved or icon position."] = "Следовать за курсором вместо сохранённой позиции или значка.",
             ["Next summon"] = "Следующий призыв",
@@ -5948,6 +5968,8 @@ DFRL.locale.data = {
     },
     uk = {
         ui = {
+            ["Show gryphons"] = "Показувати грифонів",
+            ["Show winged ornaments at both ends of the action bar."] = "Показувати крилаті прикраси на обох кінцях панелі дій.",
             ["Tooltip at cursor"] = "Підказка біля курсора",
             ["Follow the mouse cursor instead of the saved or icon position."] = "Стежити за курсором замість збереженої позиції чи значка.",
             ["Next summon"] = "Наступний виклик",
@@ -6547,6 +6569,8 @@ DFRL.locale.data = {
     },
     zh = {
         ui = {
+            ["Show gryphons"] = "显示狮鹫",
+            ["Show winged ornaments at both ends of the action bar."] = "在动作条两端显示带翼装饰。",
             ["Tooltip at cursor"] = "提示跟随鼠标",
             ["Follow the mouse cursor instead of the saved or icon position."] = "跟随鼠标，而非使用已保存的位置或图标位置。",
             ["Next summon"] = "下次召唤",
@@ -7071,6 +7095,8 @@ DFRL.locale.data = {
     },
     ja = {
         ui = {
+            ["Show gryphons"] = "グリフォンを表示",
+            ["Show winged ornaments at both ends of the action bar."] = "アクションバーの両端に翼のある装飾を表示。",
             ["Tooltip at cursor"] = "カーソルにツールチップ",
             ["Follow the mouse cursor instead of the saved or icon position."] = "保存位置やアイコンの位置ではなく、マウスカーソルに追従します。",
             ["Next summon"] = "次の召喚",
@@ -7628,6 +7654,8 @@ DFRL.locale.data = {
     },
     ko = {
         ui = {
+            ["Show gryphons"] = "그리핀 표시",
+            ["Show winged ornaments at both ends of the action bar."] = "행동 단축바 양끝에 날개 장식을 표시합니다.",
             ["Tooltip at cursor"] = "커서에 툴팁 표시",
             ["Follow the mouse cursor instead of the saved or icon position."] = "저장된 위치나 아이콘 위치 대신 마우스 커서를 따라갑니다.",
             ["Next summon"] = "다음 소환",

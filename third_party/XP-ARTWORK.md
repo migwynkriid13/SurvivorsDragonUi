@@ -23,3 +23,21 @@ sixteen transparent source rows below it.
 
 The purple fill and native gain spark retain their original source credits
 and preparation in [XPBar-ANIMATION.md](XPBar-ANIMATION.md).
+
+## Optional action-bar ornaments
+
+`media/tex/actionbars/Wyvern.tga` is an unchanged rename of the selected
+[original ornament file](https://api.github.com/repositories/1040377421/contents/media/tex/actionbars/WyvernNew.tga?ref=5c6a63fda03fe9b8fd8219e6c1f65c574679077a)
+from dbtdsilva's source repository, pinned to commit
+`5c6a63fda03fe9b8fd8219e6c1f65c574679077a`. Its Git blob is
+`7ffda45b7da232e968f972ff472947945725862c`, matching the retained source
+file. The unused alternate gryphon image is removed.
+
+The original 512-by-512 RGBA canvas is displayed at 180 by 180 units,
+anchored 45 units inside each action-bar end and 10 units above its center,
+matching the pinned source placement. Only the right texture is mirrored.
+Nontransparent source bounds are `[110, 93, 388, 405)`; edit bounds include
+these visible extents rather than the transparent canvas padding. The
+file's colors, alpha and pixels are unchanged, and no faction selection or
+additional texture variant is used. The original artwork ownership and
+redistribution notice above remains applicable.
