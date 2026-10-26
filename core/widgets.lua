@@ -23,6 +23,29 @@ function DFRL.tools.StyleMinimapZoomButton(button, name, alignGlyph)
     end
 end
 
+function DFRL.tools.CreateDefeatedMarkerCheck(marker, size)
+    local check = marker:CreateTexture(nil, "OVERLAY")
+    check:SetTexture("Interface\\Buttons\\UI-CheckBox-Check")
+    check:SetVertexColor(0.2, 1, 0.2, 1)
+    check:SetWidth(size * 0.6)
+    check:SetHeight(size * 0.6)
+    check:SetPoint("BOTTOMRIGHT", marker, "BOTTOMRIGHT", 2, -1)
+    check:Hide()
+    return check
+end
+
+function DFRL.tools.StyleDefeatedMarker(icon, check, size, defeated)
+    local iconSize = size * (defeated and 0.8 or 1)
+    icon:SetWidth(iconSize)
+    icon:SetHeight(iconSize)
+    icon:SetAlpha(defeated and 0.7 or 1)
+    if defeated then
+        check:Show()
+    else
+        check:Hide()
+    end
+end
+
 -- Encounter health uses the same fill, label style and native values everywhere.
 DFRL.tools.EncounterHealthStyle = { red = 0.86, green = 0.12, blue = 0.1, alpha = 1, fontSize = 12 }
 
