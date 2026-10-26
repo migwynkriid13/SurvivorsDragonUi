@@ -278,9 +278,10 @@ DFRL:NewMod("Player", 1, function()
             T.BindUnitHealthText(PlayerFrameHealthBar, CreateValueText(PlayerFrameHealthBar, 10, 0), "player")
         if PlayerFrame.portrait then
             PlayerFrame.portrait:ClearAllPoints()
-            PlayerFrame.portrait:SetPoint("TOPLEFT", PlayerFrame, "TOPLEFT", 42, -12)
-            PlayerFrame.portrait:SetHeight(62)
-            PlayerFrame.portrait:SetWidth(62)
+            -- Keep the still and its derived 3D backing beneath the gold rim.
+            PlayerFrame.portrait:SetPoint("CENTER", PlayerFrame, "TOPLEFT", 73, -43)
+            PlayerFrame.portrait:SetHeight(58)
+            PlayerFrame.portrait:SetWidth(58)
         end
         -- Keep combat damage feedback from covering the portrait.
         PlayerFrame:UnregisterEvent("UNIT_COMBAT")
