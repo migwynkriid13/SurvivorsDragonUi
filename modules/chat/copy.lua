@@ -275,6 +275,7 @@ DFRL:NewMod("ChatCopy", 0, function()
     end
 
     function Chat.ShowCopy(text, title, plainText, snapshot)
+        if not Chat.IsCaptureEnabled() then return end
         if not dialog then dialog = CreateDialog() end
         dialog.title:SetText(PlainText(title or "Copy chat history"))
         dialog.setSource(snapshot or TextSource(plainText and (text or "") or PlainText(text)))
@@ -286,11 +287,34 @@ DFRL:NewMod("ChatCopy", 0, function()
         dialog.edit:HighlightText()
     end
 
+    Chat.ListenCapture(function(enabled)
+        if enabled or not dialog then return end
+        dialog:Hide()
+        dialog.setText("")
+    end)
+
     -- Register in real globals: module initialization uses DFRL's private env.
     -- This entry point does not depend on the visible chat frame's mouse hooks.
     _G.SLASH_SURVIVORSDRAGONUICOPY1 = "/copy"
     _G.SlashCmdList = _G.SlashCmdList or {}
-    _G.SlashCmdList["SURVIVORSDRAGONUICOPY"] = function()
+    _G.SlashCmdList["SURVIVORSDRAGONUICOPY"] = function(message)
+        local command = string.lower(string.gsub(message or "", "^%s*(.-)%s*$", "%1"))
+        local feedback
+        if command == "enable" then
+            Chat.SetCaptureEnabled(true)
+            feedback = "Copy enabled. New diagnostics will be collected."
+        elseif command == "disable" then
+            Chat.SetCaptureEnabled(false)
+            feedback = "Copy disabled. Captured diagnostics cleared."
+        elseif command ~= "" then
+            feedback = "Usage: /copy, /copy enable, /copy disable."
+        elseif not Chat.IsCaptureEnabled() then
+            feedback = "Copy is disabled. Use /copy enable to start collecting diagnostics."
+        end
+        if feedback then
+            if DEFAULT_CHAT_FRAME then DEFAULT_CHAT_FRAME:AddMessage(DFRL.locale.Text(feedback)) end
+            return
+        end
         local snapshot = Chat.NewCaptureSnapshot and Chat.NewCaptureSnapshot(nil, true) or TextSource("")
         snapshot.includeDiagnostics = true
         Chat.ShowCopy(nil, "Copy chat - raw messages and events", true, snapshot)

@@ -75,6 +75,13 @@ DFRL:NewMod("Waypoints", 3, function()
         if ok then return value end
     end
 
+    local function MinimapEntries(tracker)
+        if tracker.kind == "guardian" and DFRL.display.Get("keepDefeatedGuardianIcons") then
+            return tracker.acceptedMinimapEntries or tracker.entries
+        end
+        return tracker.entries
+    end
+
     local UpdateMinimapPins, ClearMinimapPins, DirtyMinimapScale, StopMinimapPins
     do
         local PIN_SIZE = 20
@@ -291,9 +298,9 @@ DFRL:NewMod("Waypoints", 3, function()
         local function UpdateTrackerPins(tracker, scale, edge)
             tracker.minimapCycle = tracker.minimapCycle + 1
             if scale and DFRL.display.Get(tracker.displayKey) then
-                for _, entry in ipairs(tracker.entries) do
+                for _, entry in ipairs(MinimapEntries(tracker)) do
                     local x, y = Offset(entry, scale)
-                    -- Every living guardian keeps its own distant indicator.
+                    -- Each accepted lair keeps its own distant indicator.
                     -- Off-map caches hide instead of piling up on the edge.
                     if x and tracker.kind == "guardian" then
                         local ratio = math.max(1, math.abs(x) / edge, math.abs(y) / edge)
@@ -331,7 +338,7 @@ DFRL:NewMod("Waypoints", 3, function()
             end
             local scale, edge
             for _, tracker in ipairs(trackers) do
-                if DFRL.display.Get(tracker.displayKey) and tracker.entries[1] then
+                if DFRL.display.Get(tracker.displayKey) and MinimapEntries(tracker)[1] then
                     scale, edge = Geometry()
                     break
                 end
@@ -461,6 +468,7 @@ DFRL:NewMod("Waypoints", 3, function()
         ClearMinimapPins(tracker.kind)
         tracker.entries = tracker.emptyEntries
         tracker.acceptedEntries, tracker.acceptedLairs, tracker.acceptedStamp = nil, nil, nil
+        tracker.acceptedMinimapEntries = nil
         navigation.SetPoints(tracker.source, nil)
         tracker.selectedKey, tracker.selected, tracker.provisionalSelection = nil, nil, nil
         tracker.presentation = nil
@@ -513,7 +521,7 @@ DFRL:NewMod("Waypoints", 3, function()
             return tracker.acceptedEntries
         end
         local guardian = tracker.kind == "guardian"
-        local result, seen, lairs = {}, {}, {}
+        local result, seen, lairs, minimap = {}, {}, {}, {}
         for _, entry in ipairs(list) do
             if type(entry) ~= "table" then return end
             -- Both occupied states mean a living guardian. Coordinates belong
@@ -549,7 +557,7 @@ DFRL:NewMod("Waypoints", 3, function()
                     seen[entry.id] = true
                 end
                 local key = guardian and (tostring(entry.index) .. ":" .. tostring(entry.id)) or tostring(entry.id)
-                table.insert(result, {
+                local point = {
                     key = key,
                     id = entry.id,
                     index = guardian and entry.index or nil,
@@ -559,11 +567,22 @@ DFRL:NewMod("Waypoints", 3, function()
                     y = entry.y,
                     mx = entry.mx,
                     my = entry.my,
+                }
+                table.insert(result, point)
+                if guardian then table.insert(minimap, point) end
+            elseif entry.state == "empty" and entry.id == 0 and Number(entry.x) and Number(entry.y) then
+                table.insert(minimap, {
+                    key = tostring(entry.index) .. ":0",
+                    x = entry.x,
+                    y = entry.y,
+                    mx = entry.mx,
+                    my = entry.my,
                 })
             end
         end
         tracker.acceptedSnapshot = list
         tracker.acceptedGeneration, tracker.acceptedStamp, tracker.acceptedEntries = received, stamp, result
+        tracker.acceptedMinimapEntries = guardian and minimap or nil
         if guardian and DFRL.guardians then
             tracker.acceptedLairs = lairs
             local context = Number(_G.AZS_ZONE_UPDATED) and _G.AZS_ZONE or nil

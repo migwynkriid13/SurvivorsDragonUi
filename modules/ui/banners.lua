@@ -2,9 +2,22 @@
 -- Public API and pinned executable evidence: docs/RUN-BANNERS.md.
 DFRL:NewMod("RunBanners", 4, function()
     local banners = {}
-    local diagnostic = { stage = "initializing", api = 0, legacy = 0, chat = 0, queued = 0 }
+    local chat = DFRL.CleanerChat
+    local diagnostic = {}
     DFRL.bannerDiagnostics = diagnostic
+    local function SetDiagnostic(key, value)
+        if chat.IsCaptureEnabled() then diagnostic[key] = value end
+    end
+    local function CountDiagnostic(key)
+        if chat.IsCaptureEnabled() then diagnostic[key] = (diagnostic[key] or 0) + 1 end
+    end
+    chat.ListenCapture(function()
+        for key in pairs(diagnostic) do
+            diagnostic[key] = nil
+        end
+    end)
     local function RememberFailure(message)
+        if not chat.IsCaptureEnabled() then return end
         local text = string.gsub(tostring(message), "[\r\n]", " ")
         if string.len(text) > 768 then
             local last = 768
@@ -46,47 +59,59 @@ DFRL:NewMod("RunBanners", 4, function()
     local companions = {}
 
     function DFRL.GetBannerDiagnostics()
-        local size = diagnostic.fontSize
+        if not chat.IsCaptureEnabled() then return "" end
+        local face, size
+        if pool[1] then
+            face, size = pool[1].label:GetFont()
+        end
         if type(size) == "number" then size = string.format("%.17g", size) end
+        local stage = diagnostic.stage or (faulted and "faulted" or active and "active" or "inactive")
         local enabled = DFRL.display and DFRL.display.Get("customBanners")
         local version
         if type(GetAddOnMetadata) == "function" then
             local ok, value = pcall(GetAddOnMetadata, "SurvivorsDragonUi", "Version")
             if ok then version = value end
         end
-        local lines = {
-            "[BANNERS] version=" .. tostring(version) .. " stage=" .. diagnostic.stage .. " enabled=" .. tostring(
-                enabled
-            ) .. " active=" .. tostring(active) .. " world=" .. tostring(inWorld) .. " handler=" .. tostring(
-                registered ~= nil
-            ) .. " faulted=" .. tostring(faulted) .. " shown=" .. tostring(root:IsShown()) .. " nativeHud=" .. tostring(
-                native.Read()
-            ) .. " legacyHook=" .. tostring(legacyFrame ~= nil and legacyFrame.AddMessage == legacyHook),
-            "[BANNERS] font="
-                .. tostring(diagnostic.fontFace)
-                .. " size="
-                .. tostring(size)
-                .. " register="
-                .. type(AZS_RegisterBannerHandler)
-                .. " unregister="
-                .. type(AZS_UnregisterBannerHandler)
-                .. " hudRead="
-                .. type(AZS_IsHudShown)
-                .. " hudWrite="
-                .. type(AZS_SetHudShown),
-            "[BANNERS] api="
-                .. diagnostic.api
-                .. " legacy="
-                .. diagnostic.legacy
-                .. " chat="
-                .. diagnostic.chat
-                .. " queued="
-                .. diagnostic.queued
-                .. " visible="
-                .. visibleCount
-                .. " waiting="
-                .. queueCount,
-        }
+        local lines =
+            {
+                "[BANNERS] version="
+                    .. tostring(version)
+                    .. " stage="
+                    .. stage
+                    .. " enabled="
+                    .. tostring(enabled)
+                    .. " active="
+                    .. tostring(active)
+                    .. " world="
+                    .. tostring(inWorld)
+                    .. " handler="
+                    .. tostring(registered ~= nil)
+                    .. " faulted="
+                    .. tostring(faulted)
+                    .. " shown="
+                    .. tostring(root:IsShown())
+                    .. " nativeHud="
+                    .. tostring(native.Read())
+                    .. " legacyHook="
+                    .. tostring(legacyFrame ~= nil and legacyFrame.AddMessage == legacyHook),
+                "[BANNERS] font=" .. tostring(face) .. " size=" .. tostring(size) .. " register=" .. type(
+                    AZS_RegisterBannerHandler
+                ) .. " unregister=" .. type(AZS_UnregisterBannerHandler) .. " hudRead=" .. type(
+                    AZS_IsHudShown
+                ) .. " hudWrite=" .. type(AZS_SetHudShown),
+                "[BANNERS] api="
+                    .. (diagnostic.api or 0)
+                    .. " legacy="
+                    .. (diagnostic.legacy or 0)
+                    .. " chat="
+                    .. (diagnostic.chat or 0)
+                    .. " queued="
+                    .. (diagnostic.queued or 0)
+                    .. " visible="
+                    .. visibleCount
+                    .. " waiting="
+                    .. queueCount,
+            }
         if diagnostic.failure then table.insert(lines, "[BANNERS] last failure=" .. diagnostic.failure) end
         return table.concat(lines, "\n")
     end
@@ -105,7 +130,7 @@ DFRL:NewMod("RunBanners", 4, function()
         end
     end
 
-    diagnostic.stage = "preparing-fonts"
+    SetDiagnostic("stage", "preparing-fonts")
     for index = 1, MAX_VISIBLE do
         local label = root:CreateFontString(nil, "OVERLAY")
         T.SetChatFont(label)
@@ -115,15 +140,14 @@ DFRL:NewMod("RunBanners", 4, function()
         label:SetJustifyV("TOP")
         label:Hide()
         local face, size = label:GetFont()
-        diagnostic.fontFace, diagnostic.fontSize = face, size
         if type(face) ~= "string" or face == "" or not T.NearlyEqual(size, 12) then
-            diagnostic.stage = "font-unavailable"
+            SetDiagnostic("stage", "font-unavailable")
             return
         end
         label:SetText("")
         pool[index] = { label = label }
     end
-    diagnostic.stage = "initializing-layout"
+    SetDiagnostic("stage", "initializing-layout")
 
     local function Supported()
         return type(AZS_RegisterBannerHandler) == "function"
@@ -225,7 +249,7 @@ DFRL:NewMod("RunBanners", 4, function()
         FlushErrors(true)
     end
     local function Release()
-        diagnostic.stage = "released"
+        SetDiagnostic("stage", "released")
         active = false
         root:Hide()
         ReleaseLegacy()
@@ -242,7 +266,7 @@ DFRL:NewMod("RunBanners", 4, function()
         RememberFailure(message)
         faulted = true
         Release()
-        diagnostic.stage = "faulted"
+        SetDiagnostic("stage", "faulted")
         if not delivering and geterrorhandler then geterrorhandler()(message) end
     end
     local function Push(entry, now)
@@ -268,7 +292,7 @@ DFRL:NewMod("RunBanners", 4, function()
         return false
     end
     local function Enqueue(text, boss, kind, id, originalText)
-        diagnostic.queued = diagnostic.queued + 1
+        CountDiagnostic("queued")
         sequence = sequence + 1
         local copy = {
             id = id,
@@ -329,7 +353,7 @@ DFRL:NewMod("RunBanners", 4, function()
         Enqueue(text, false, "legacy")
     end
     function banners.RedirectChat(source, text, eventName, speaker, message)
-        if eventName == "CHAT_MSG_RAID_BOSS_EMOTE" then diagnostic.chat = diagnostic.chat + 1 end
+        if eventName == "CHAT_MSG_RAID_BOSS_EMOTE" then CountDiagnostic("chat") end
         if not banners.IsActive() or not source or type(text) ~= "string" then return false end
         local chat = DFRL.CleanerChat
         if not chat or type(chat.FirstDelivery) ~= "function" then return false end
@@ -366,7 +390,7 @@ DFRL:NewMod("RunBanners", 4, function()
         ReleaseLegacy()
         local original, hook = frame.AddMessage
         hook = function(owner, text, r, g, b, id, addToStart)
-            diagnostic.legacy = diagnostic.legacy + 1
+            CountDiagnostic("legacy")
             if banners.IsActive() and legacyHook == hook and type(text) == "string" and text ~= "" then
                 local ok, message = pcall(ReceiveLegacy, this or owner, text, event, arg2, arg1, "legacy")
                 if ok then return end
@@ -431,7 +455,7 @@ DFRL:NewMod("RunBanners", 4, function()
         frame.AddMessage = hook
     end
     OnBanner = function(entry)
-        diagnostic.api = diagnostic.api + 1
+        CountDiagnostic("api")
         delivering = true
         local ok, message = pcall(Receive, entry)
         if not ok then Failed(message) end
@@ -442,10 +466,13 @@ DFRL:NewMod("RunBanners", 4, function()
         if delivering then return false end
         if not inWorld or not DFRL.display.Get("customBanners") or faulted or not Supported() then
             if active or registered or native.IsCaptured() then Release() end
-            diagnostic.stage = faulted and "faulted"
-                or not inWorld and "outside-world"
-                or not DFRL.display.Get("customBanners") and "disabled"
-                or "unsupported-api"
+            SetDiagnostic(
+                "stage",
+                faulted and "faulted"
+                    or not inWorld and "outside-world"
+                    or not DFRL.display.Get("customBanners") and "disabled"
+                    or "unsupported-api"
+            )
             return false
         end
         if registered and (registered ~= AZS_RegisterBannerHandler or unregister ~= AZS_UnregisterBannerHandler) then
@@ -454,7 +481,7 @@ DFRL:NewMod("RunBanners", 4, function()
         if not registered then
             local ok, failure = pcall(AZS_RegisterBannerHandler, OnBanner)
             if not ok then
-                diagnostic.stage = "registration-failed"
+                SetDiagnostic("stage", "registration-failed")
                 RememberFailure(failure)
                 return false
             end
@@ -463,14 +490,14 @@ DFRL:NewMod("RunBanners", 4, function()
         -- Registration and usable labels must precede native suppression.
         if not native.Acquire() then
             Release()
-            diagnostic.stage = "native-hud-unavailable"
+            SetDiagnostic("stage", "native-hud-unavailable")
             return false
         end
         active = true
         RedirectLegacy()
         RedirectErrors()
         root:Show()
-        diagnostic.stage = "active"
+        SetDiagnostic("stage", "active")
         return true
     end
     local function Paint(now)

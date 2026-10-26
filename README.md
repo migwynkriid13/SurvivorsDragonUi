@@ -39,9 +39,9 @@ For a manual Windows install, open the folder containing `AzerothSurvivors.exe` 
 benilla-config/AddOns/SurvivorsDragonUi/SurvivorsDragonUi.toc
 ```
 
-**Optional Windows auto-update:** Download [avrt.dll](https://github.com/migwynkriid13/SurvivorsDragonUi/releases/latest/download/avrt.dll) separately and place it beside `AzerothSurvivors.exe`. At each startup, the DLL allows up to 10 seconds to check for and download the latest addon. It checks the installed version without scanning addon files. A complete download is extracted and installed in `benilla-config/AddOns/SurvivorsDragonUi` before the game starts. If the connection fails or the download times out, the game starts with your installed copy and tries again next launch. Enable the addon in **Options → AddOns** as usual.
+**Optional Windows auto-update:** Download [avrt.dll](https://github.com/migwynkriid13/SurvivorsDragonUi/releases/latest/download/avrt.dll) and place it beside `AzerothSurvivors.exe`. It updates the addon before the game starts. If checking or downloading fails or takes more than 10 seconds, the game starts with your installed copy. Enable the addon in **Options → AddOns**.
 
-The DLL updates only SurvivorsDragonUi and works independently of game versions. Every addon release includes the same separately built updater DLL. It cannot share the `avrt.dll` filename with Spiderless or another mod. Remove it to stop automatic updates; the addon stays installed. See [updater details and troubleshooting](updater/README.md).
+Remove `avrt.dll` to stop automatic updates. It cannot be used alongside another mod that needs the same filename. See [details and troubleshooting](updater/README.md).
 
 **Playing in a browser?** Open **Options → AddOns → install a .zip** and choose the downloaded ZIP.
 
@@ -59,8 +59,10 @@ The game keeps addons, addon data, options, key bindings, chat windows and camer
 | `/sdui`       | Opens the full UI editor.                                                                                                   |
 | `/sdui lock`  | Opens move and resize handles with a Confirm button.                                                                        |
 | `/sdui reset` | Immediately restores the default layout, display options and timer styling. Keeps saved profiles and your combat-text mode. |
-| `/copy`       | Opens copyable chat messages and diagnostics for bug reports.                                                               |
+| `/copy`       | Opens copyable diagnostics after logging is enabled with `/copy enable`.                                                    |
 | `/fstack`     | Toggles an inspector for the UI under your mouse.                                                                           |
+
+Chat logging starts disabled on new installations and updates from older versions. Use `/copy enable` to start logging and `/copy disable` to stop it and clear captured text. Your enable/disable choice is saved; captured messages are never saved.
 
 For UI debugging, `/fstack on` and `/fstack off` set the inspector state, `/fstack next` and `/fstack prev` step through frames, and `/fstack focus` returns to the frame under your mouse.
 
@@ -88,11 +90,11 @@ Move the **Tooltip** handle to place regular hover cards. Its Layout controls al
 
 Under **Combat text**, choose custom damage numbers, turn them off, or use **Game settings**. For the game's damage numbers, choose **Game settings**, then enable **Show Target Damage** in the game options.
 
-Use **Run timer** to change its text and font. Under **HUD**, **Guardians in boss bar** adds fighting guardians to the boss bars; it starts off. You can also mirror either guide to put its arrow on the other side.
+Use **Run timer** to change its text and font. Under **HUD**, **Guardians in boss bar** adds fighting guardians to the boss bars; it starts off. You can also mirror either guide to put its arrow on the other side. Under **Minimap**, **Keep defeated guardian icons** keeps lair icons visible while guardians are down; it starts off.
 
 ## Help
 
-[Open an issue](https://github.com/migwynkriid13/SurvivorsDragonUi/issues) with your game version, addon version and a screenshot or error message. Use `/copy` when you need to include diagnostic text. It opens a small page with recent messages; use `<` and `>` to browse the rest. Banner status appears at the top.
+[Open an issue](https://github.com/migwynkriid13/SurvivorsDragonUi/issues) with your game version, addon version and a screenshot or error message. Use `/copy enable` before reproducing a problem, then `/copy` to include diagnostic text. It opens a small page with recent messages; use `<` and `>` to browse the rest. Banner status appears at the top.
 
 Some features need a recent game build. Buff timers and replacement revive bars need game **0.115.0 or newer**. See the [compatibility notes](docs/CLIENT-COMPATIBILITY.md) for known client limits and changes that still need in-game testing, or browse the [technical docs](docs/).
 
