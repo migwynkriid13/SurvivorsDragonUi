@@ -40,6 +40,7 @@ DFRL:NewMod("Layout", 0, function()
         cacheWaypoint = "Cache waypoint",
         guardianWaypoint = "Guardian waypoint",
         guardianTracker = "Guardian tracker",
+        damageMeter = "DPS meter",
         petFrames = "Pet frames",
         lootNotifications = "Loot notifications",
         menu = "Main menu",

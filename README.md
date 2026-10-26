@@ -22,7 +22,7 @@ Real screenshots from different moments in a run, arranged into one overview. [O
 - **Guardian tracking:** living guardians, respawn timers and health bars during fights. Use the tracker's plus/minus button to switch between living guardians and all lairs.
 - **Cache and guardian guides:** distance, direction arrows and map markers to help you find them.
 - **Level Up and summons:** a button for your stored levels, plus names, icons and durations for up to eight active summons. Extra summons appear as a count.
-- **Combat text and loot:** compact nameplates, optional custom damage numbers and retail-style loot popups. Already-collected drops are hidden from both popups and chat.
+- **Combat text, meters and loot:** compact nameplates, optional custom damage numbers, a DPS meter with The War Within artwork, and retail-style loot popups. Already-collected drops are hidden from both popups and chat.
 - **Chat:** a transparent window, shorter game messages and mouse-wheel history.
 - **Layout editor:** move, resize or hide HUD groups, adjust tooltips and save named profiles. Supports all 14 game languages, including Czech.
 
@@ -89,6 +89,8 @@ Move the **Tooltip** handle to place regular hover cards. Its Layout controls al
 ### Combat text and run display
 
 Under **Combat text**, choose custom damage numbers, turn them off, or use **Game settings**. For the game's damage numbers, choose **Game settings**, then enable **Show Target Damage** in the game options.
+
+The DPS meter shows the game's damage totals and average DPS by source. Click its heading to switch between Damage Done, Healing Done and Boss Damage; scroll for more sources. Move, scale or hide **DPS meter** under **Layout**. Details does not need to be installed.
 
 Use **Run timer** to change its text and font. Under **HUD**, **Guardians in boss bar** adds fighting guardians to the boss bars; it starts off. You can also mirror either guide to put its arrow on the other side. Under **Minimap**, **Keep defeated guardian icons** keeps lair icons visible while guardians are down; it starts off.
 

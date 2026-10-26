@@ -795,6 +795,14 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         return FALLBACK_ICON
     end
 
+    -- Native meter names can share the same metadata resolver without passing
+    -- through combat parsing, filtering, grouping or damage attribution.
+    function sct.GetSourceIcon(name)
+        if type(name) ~= "string" or name == "" then return end
+        local texture = CombatIcon({ spell = name })
+        if texture ~= FALLBACK_ICON then return texture end
+    end
+
     local function IconIdentityPart(value) return string.len(value) .. ":" .. value end
 
     local function QueueCombatText(info, now)
