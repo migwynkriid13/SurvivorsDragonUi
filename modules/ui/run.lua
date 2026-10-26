@@ -880,6 +880,17 @@ DFRL:NewMod("RunTimers", 5, function()
                 },
             },
             {
+                key = "minimap",
+                label = "Minimap",
+                options = {
+                    {
+                        "keepDefeatedGuardianIcons",
+                        "Keep defeated guardian icons",
+                        "Keep lair icons on the minimap while guardians are down.",
+                    },
+                },
+            },
+            {
                 key = "banners",
                 label = "Banners",
                 options = {

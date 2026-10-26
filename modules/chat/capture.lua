@@ -1,5 +1,5 @@
 -- Raw chat/event history adapted from CleanerChat's Filters/_Debug.lua.
--- Capture is always on for this UI session and never prints into visible chat.
+-- Diagnostic collection requires an explicit /copy enable choice.
 DFRL:NewMod("ChatCapture", 0, function()
     DFRL.CleanerChat = DFRL.CleanerChat or {}
     local chat = DFRL.CleanerChat
@@ -8,6 +8,11 @@ DFRL:NewMod("ChatCapture", 0, function()
     local PAGE_BYTES, NATIVE_READS = 6144, 64
     local hasCapture = false
     local broadcastTime, broadcasts
+    local captureEnabled = _G.SurvivorsDragonUiCopyEnabled == true
+    local captureGeneration, captureListeners = 0, {}
+
+    function chat.IsCaptureEnabled() return captureEnabled end
+    function chat.ListenCapture(callback) table.insert(captureListeners, callback) end
 
     local function Value(value)
         if value == nil then return "<nil>" end
@@ -102,13 +107,14 @@ DFRL:NewMod("ChatCapture", 0, function()
         local first = FirstDelivery(frame, text, eventName, author, message)
         -- Preserve direct native writes in diagnostics even when another frame
         -- received the same text. Only the optional loot view collapses them.
-        if first or not eventName or not string.find(eventName, "^CHAT_MSG_") then
+        if captureEnabled and (first or not eventName or not string.find(eventName, "^CHAT_MSG_")) then
             Append('[RAW] frame="' .. Value(FrameName(frame)) .. '" "' .. Value(text) .. '"')
         end
         if first and DFRL.loot then DFRL.loot.Observe(text, eventName) end
     end
 
     chat.GetCaptureText = function(states, plain)
+        if not captureEnabled then return "" end
         Flush()
         local lines = {}
         for _, chunk in ipairs(history) do
@@ -143,6 +149,8 @@ DFRL:NewMod("ChatCapture", 0, function()
     -- The dialog reads one retained chunk or a bounded native page at a time.
     -- Its archive boundary stays fixed while normal session capture continues.
     chat.NewCaptureSnapshot = function(states, plain)
+        if not captureEnabled then return { Read = function() return "", nil end } end
+        local generation = captureGeneration
         Flush()
         local archiveCount, native = table.getn(history), {}
         for i = 1, NUM_CHAT_WINDOWS or 7 do
@@ -160,7 +168,7 @@ DFRL:NewMod("ChatCapture", 0, function()
         end
         local snapshot = { first = archiveCount > 0 and { archive = archiveCount } or NativeCursor(1) }
         snapshot.Read = function(position)
-            if not position then return "", nil end
+            if not captureEnabled or generation ~= captureGeneration or not position then return "", nil end
             if position.archive then
                 local index = position.archive
                 local nextPosition = index > 1 and { archive = index - 1 } or NativeCursor(1)
@@ -219,8 +227,7 @@ DFRL:NewMod("ChatCapture", 0, function()
     end
 
     local collector = CreateFrame("Frame")
-    local allEvents = collector.RegisterAllEvents and pcall(collector.RegisterAllEvents, collector)
-    local registered = {}
+    local allEvents, registered = false, {}
     local function Watch(name)
         if type(name) == "string" and not registered[name] then
             if pcall(collector.RegisterEvent, collector, name) then registered[name] = true end
@@ -255,8 +262,27 @@ DFRL:NewMod("ChatCapture", 0, function()
             Watch(name)
         end
     end
-    if not allEvents then RegisterKnownEvents() end
+    local function StartCollector()
+        allEvents = collector.RegisterAllEvents and pcall(collector.RegisterAllEvents, collector)
+        if not allEvents then RegisterKnownEvents() end
+    end
+    function chat.SetCaptureEnabled(value)
+        value = value == true
+        _G.SurvivorsDragonUiCopyEnabled = value
+        if captureEnabled == value then return end
+        captureEnabled = value
+        captureGeneration = captureGeneration + 1
+        collector:UnregisterAllEvents()
+        allEvents, registered = false, {}
+        history, pending, pendingBytes, hasCapture = {}, {}, 0, false
+        if captureEnabled then StartCollector() end
+        for _, callback in ipairs(captureListeners) do
+            callback(captureEnabled)
+        end
+    end
+    if captureEnabled then StartCollector() end
     collector:SetScript("OnEvent", function()
+        if not captureEnabled then return end
         local eventName = event
         if not allEvents and eventName == "PLAYER_ENTERING_WORLD" then RegisterKnownEvents() end
         if
