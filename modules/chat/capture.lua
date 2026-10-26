@@ -5,6 +5,8 @@ DFRL:NewMod("ChatCapture", 0, function()
     local chat = DFRL.CleanerChat
     local history, pending = {}, {}
     local pendingBytes = 0
+    local PAGE_BYTES, NATIVE_READS = 6144, 64
+    local hasCapture = false
     local broadcastTime, broadcasts
 
     local function Value(value)
@@ -14,14 +16,39 @@ DFRL:NewMod("ChatCapture", 0, function()
     end
     local function Flush()
         if table.getn(pending) == 0 then return end
-        table.insert(history, table.concat(pending, "\n"))
+        table.insert(history, table.concat(pending))
         pending, pendingBytes = {}, 0
     end
+    local function AppendBytes(text)
+        local first, length = 1, string.len(text)
+        while first <= length do
+            local last = math.min(length, first + PAGE_BYTES - pendingBytes - 1)
+            local proposed = last
+            -- Keep every UTF-8 sequence on one page, including a large line.
+            for _ = 1, 3 do
+                if last < first or last == length then break end
+                local byte = string.byte(text, last + 1)
+                if byte < 128 or byte >= 192 then break end
+                last = last - 1
+            end
+            local following = last < length and string.byte(text, last + 1)
+            -- A longer continuation run is malformed: retain its raw bytes
+            -- at the proposed boundary instead of backtracking or stalling.
+            if following and following >= 128 and following < 192 then last = proposed end
+            if last < first then
+                Flush()
+            else
+                table.insert(pending, string.sub(text, first, last))
+                pendingBytes = pendingBytes + last - first + 1
+                first = last + 1
+                if pendingBytes == PAGE_BYTES then Flush() end
+            end
+        end
+    end
     local function Append(line)
-        table.insert(pending, line)
-        pendingBytes = pendingBytes + string.len(line)
-        -- Compact each bounded batch once, without copying earlier history.
-        if table.getn(pending) >= 128 or pendingBytes >= 32768 then Flush() end
+        if hasCapture then AppendBytes("\n") end
+        AppendBytes(line)
+        hasCapture = true
     end
     local function Export(text, plain)
         if plain then
@@ -97,6 +124,7 @@ DFRL:NewMod("ChatCapture", 0, function()
                     for j = 1, count do
                         local readable, text = pcall(frame.GetMessageInfo, frame, j)
                         if readable and type(text) == "string" then
+                            if table.getn(lines) > 0 then table.insert(lines, "\n") end
                             table.insert(
                                 lines,
                                 Export(
@@ -109,7 +137,85 @@ DFRL:NewMod("ChatCapture", 0, function()
                 end
             end
         end
-        return table.concat(lines, "\n")
+        return table.concat(lines)
+    end
+
+    -- The dialog reads one retained chunk or a bounded native page at a time.
+    -- Its archive boundary stays fixed while normal session capture continues.
+    chat.NewCaptureSnapshot = function(states, plain)
+        Flush()
+        local archiveCount, native = table.getn(history), {}
+        for i = 1, NUM_CHAT_WINDOWS or 7 do
+            local frame = states and states[i] and states[i].native or _G["ChatFrame" .. i]
+            if frame and frame.GetNumMessages and frame.GetMessageInfo then
+                local success, count = pcall(frame.GetNumMessages, frame)
+                if success and type(count) == "number" and count > 0 and count - count == 0 then
+                    table.insert(native, { frame = frame, count = math.floor(count) })
+                end
+            end
+        end
+        local function NativeCursor(index)
+            local entry = native[index]
+            if entry then return { native = index, message = entry.count } end
+        end
+        local snapshot = { first = archiveCount > 0 and { archive = archiveCount } or NativeCursor(1) }
+        snapshot.Read = function(position)
+            if not position then return "", nil end
+            if position.archive then
+                local index = position.archive
+                local nextPosition = index > 1 and { archive = index - 1 } or NativeCursor(1)
+                return Export(history[index], plain), nextPosition
+            end
+            local cursor = {
+                native = position.native,
+                message = position.message,
+                text = position.text,
+                last = position.last,
+            }
+            local parts, bytes, reads = {}, 0, 0
+            while cursor and bytes < PAGE_BYTES and reads < NATIVE_READS do
+                local entry = native[cursor.native]
+                if not cursor.text then
+                    reads = reads + 1
+                    local success, text = pcall(entry.frame.GetMessageInfo, entry.frame, cursor.message)
+                    if success and type(text) == "string" then
+                        cursor.text = Export(
+                            '[NATIVE] frame="' .. Value(FrameName(entry.frame)) .. '" "' .. Value(text) .. '"',
+                            plain
+                        )
+                        cursor.last = string.len(cursor.text)
+                    end
+                end
+                if cursor.text then
+                    local gap = table.getn(parts) > 0 and 1 or 0
+                    local first = math.max(1, cursor.last - (PAGE_BYTES - bytes - gap) + 1)
+                    local proposed = first
+                    for _ = 1, 3 do
+                        if first > cursor.last then break end
+                        local byte = string.byte(cursor.text, first)
+                        if byte < 128 or byte >= 192 then break end
+                        first = first + 1
+                    end
+                    local byte = first <= cursor.last and string.byte(cursor.text, first)
+                    if byte and byte >= 128 and byte < 192 then first = proposed end
+                    if first > cursor.last then
+                        if table.getn(parts) > 0 then break end
+                        first = proposed
+                    end
+                    table.insert(parts, 1, string.sub(cursor.text, first, cursor.last))
+                    bytes = bytes + cursor.last - first + 1 + gap
+                    if first > 1 then
+                        cursor.last = first - 1
+                        break
+                    end
+                end
+                cursor.text, cursor.last = nil, nil
+                cursor.message = cursor.message - 1
+                if cursor.message < 1 then cursor = NativeCursor(cursor.native + 1) end
+            end
+            return table.concat(parts, "\n"), cursor
+        end
+        return snapshot
     end
 
     local collector = CreateFrame("Frame")

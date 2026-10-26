@@ -8,6 +8,7 @@ DFRL:NewMod("ChatCopy", 0, function()
     local dialog
     local WIDTH = 600
     local HEIGHT = 400
+    local PAGE_BYTES = 6144
 
     local function PlainText(text)
         if type(text) ~= "string" then text = tostring(text or "") end
@@ -22,6 +23,47 @@ DFRL:NewMod("ChatCopy", 0, function()
         text = string.gsub(text, "|n", "\n")
         text = string.gsub(text, "\001", "|")
         return text
+    end
+
+    local function TextSource(text)
+        return {
+            first = { last = string.len(text) },
+            Read = function(position)
+                local last = position and position.last or 0
+                if last == 0 then return "", nil end
+                local first = math.max(1, last - PAGE_BYTES + 1)
+                local proposed = first
+                for _ = 1, 3 do
+                    if first > last then break end
+                    local byte = string.byte(text, first)
+                    if byte < 128 or byte >= 192 then break end
+                    first = first + 1
+                end
+                local byte = first <= last and string.byte(text, first)
+                if first > last or (byte and byte >= 128 and byte < 192) then first = proposed end
+                return string.sub(text, first, last), first > 1 and { last = first - 1 } or nil
+            end,
+        }
+    end
+
+    local function ShortDiagnostics(text)
+        if string.len(text) <= 1024 then return text end
+        local last = 1021
+        for _ = 1, 3 do
+            local byte = string.byte(text, last + 1)
+            if byte < 128 or byte >= 192 then break end
+            last = last - 1
+        end
+        local byte = string.byte(text, last + 1)
+        if byte >= 128 and byte < 192 then last = 1021 end
+        return string.sub(text, 1, last) .. "..."
+    end
+
+    local function BannerDiagnostics()
+        if type(DFRL.GetBannerDiagnostics) ~= "function" then return "[BANNERS] module unavailable" end
+        local success, text = pcall(DFRL.GetBannerDiagnostics)
+        if success and type(text) == "string" then return ShortDiagnostics(text) end
+        return ShortDiagnostics("[BANNERS] diagnostics unavailable: " .. tostring(text))
     end
 
     local function CreateDialog()
@@ -63,7 +105,7 @@ DFRL:NewMod("ChatCopy", 0, function()
         local scroll =
             CreateFrame("ScrollFrame", "SurvivorsDragonUiChatCopyScroll", frame, "UIPanelScrollFrameTemplate")
         scroll:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -36)
-        scroll:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -36, 46)
+        scroll:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -36, 78)
 
         local edit = CreateFrame("EditBox", "SurvivorsDragonUiChatCopyText", scroll)
         edit:SetMultiLine(true)
@@ -72,7 +114,7 @@ DFRL:NewMod("ChatCopy", 0, function()
         T.SetFont(edit, 12, "")
         edit:SetTextColor(0.94, 0.94, 0.94)
         edit:SetWidth(WIDTH - 48)
-        edit:SetHeight(HEIGHT - 66)
+        edit:SetHeight(HEIGHT - 98)
         edit:SetTextInsets(4, 4, 4, 4)
         edit:SetScript("OnEscapePressed", function() frame:Hide() end)
         scroll:SetScrollChild(edit)
@@ -108,7 +150,7 @@ DFRL:NewMod("ChatCopy", 0, function()
             local textHeight = measure:GetHeight() or 0
             -- The hidden measurer need not retain another complete snapshot.
             measure:SetText("")
-            local editHeight = math.max(height - 66, textHeight + 16)
+            local editHeight = math.max(height - 98, textHeight + 16)
             if not T.NearlyEqual(edit:GetHeight(), editHeight) then edit:SetHeight(editHeight) end
             measuredRevision, measuredWidth, measuredHeight, measuredScale = textRevision, textWidth, height, scale
             if scroll.UpdateScrollChildRect then scroll:UpdateScrollChildRect() end
@@ -133,7 +175,28 @@ DFRL:NewMod("ChatCopy", 0, function()
         scroll:SetScript("OnMouseWheel", ScrollWheel)
         edit:EnableMouseWheel(true)
         edit:SetScript("OnMouseWheel", ScrollWheel)
-        frame:SetScript("OnHide", function() edit:ClearFocus() end)
+        local previous = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+        previous:SetWidth(28)
+        previous:SetHeight(20)
+        previous:SetPoint("CENTER", frame, "BOTTOM", -48, 56)
+        previous:SetText("<")
+        local following = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+        following:SetWidth(28)
+        following:SetHeight(20)
+        following:SetPoint("CENTER", frame, "BOTTOM", 48, 56)
+        following:SetText(">")
+        local pageNumber = frame:CreateFontString(nil, "OVERLAY")
+        T.SetFont(pageNumber, 12, "")
+        pageNumber:SetPoint("CENTER", frame, "BOTTOM", 0, 56)
+        pageNumber:SetWidth(60)
+        pageNumber:SetHeight(20)
+        pageNumber:SetJustifyH("CENTER")
+
+        local source, positions, pages, page
+        frame:SetScript("OnHide", function()
+            edit:ClearFocus()
+            source, positions, pages, page = nil, nil, nil, nil
+        end)
 
         frame.title = title
         frame.edit = edit
@@ -149,6 +212,47 @@ DFRL:NewMod("ChatCopy", 0, function()
             textRevision = textRevision + 1
             edit:SetText(text)
             ResizeText(text)
+        end
+        local function ShowPage(index)
+            if not source or index < 1 or (index > 1 and not positions[index]) then return end
+            local entry = pages[index]
+            if not entry then
+                local text, nextPosition = source.Read(positions[index])
+                entry = { text = text or "", nextPosition = nextPosition }
+                pages[index] = entry
+                positions[index + 1] = nextPosition
+            end
+            page = index
+            local text = entry.text
+            if source.includeDiagnostics then text = BannerDiagnostics() .. "\n\n" .. text end
+            if text == "" then text = DFRL.locale.Text("No chat messages are available to copy.") end
+            frame.setText(text)
+            pageNumber:SetText(tostring(index))
+            if index > 1 then
+                previous:Enable()
+            else
+                previous:Disable()
+            end
+            if entry.nextPosition then
+                following:Enable()
+            else
+                following:Disable()
+            end
+            local slider = _G.SurvivorsDragonUiChatCopyScrollScrollBar
+            if slider then slider:SetValue(0) end
+            scroll:SetVerticalScroll(0)
+            edit:SetFocus()
+            edit:HighlightText()
+        end
+        previous:SetScript("OnClick", function()
+            if page then ShowPage(page - 1) end
+        end)
+        following:SetScript("OnClick", function()
+            if page then ShowPage(page + 1) end
+        end)
+        frame.setSource = function(value)
+            source, positions, pages = value, { value.first }, {}
+            ShowPage(1)
         end
         _G.UISpecialFrames = _G.UISpecialFrames or {}
         table.insert(_G.UISpecialFrames, "SurvivorsDragonUiChatCopy")
@@ -170,12 +274,10 @@ DFRL:NewMod("ChatCopy", 0, function()
         return frame
     end
 
-    function Chat.ShowCopy(text, title, plainText)
+    function Chat.ShowCopy(text, title, plainText, snapshot)
         if not dialog then dialog = CreateDialog() end
-        local plain = plainText and text or PlainText(text)
-        if plain == "" then plain = DFRL.locale.Text("No chat messages are available to copy.") end
         dialog.title:SetText(PlainText(title or "Copy chat history"))
-        dialog.setText(plain)
+        dialog.setSource(snapshot or TextSource(plainText and (text or "") or PlainText(text)))
         dialog:Show()
         local slider = _G.SurvivorsDragonUiChatCopyScrollScrollBar
         if slider then slider:SetValue(0) end
@@ -189,7 +291,8 @@ DFRL:NewMod("ChatCopy", 0, function()
     _G.SLASH_SURVIVORSDRAGONUICOPY1 = "/copy"
     _G.SlashCmdList = _G.SlashCmdList or {}
     _G.SlashCmdList["SURVIVORSDRAGONUICOPY"] = function()
-        local text = Chat.GetCaptureText and Chat.GetCaptureText(nil, true) or ""
-        Chat.ShowCopy(text, "Copy chat - raw messages and events", true)
+        local snapshot = Chat.NewCaptureSnapshot and Chat.NewCaptureSnapshot(nil, true) or TextSource("")
+        snapshot.includeDiagnostics = true
+        Chat.ShowCopy(nil, "Copy chat - raw messages and events", true, snapshot)
     end
 end)

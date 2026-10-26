@@ -92,7 +92,7 @@ Use **Run timer** to change its text and font. Under **HUD**, **Guardians in bos
 
 ## Help
 
-[Open an issue](https://github.com/migwynkriid13/SurvivorsDragonUi/issues) with your game version, addon version and a screenshot or error message. Use `/copy` when you need to include diagnostic text.
+[Open an issue](https://github.com/migwynkriid13/SurvivorsDragonUi/issues) with your game version, addon version and a screenshot or error message. Use `/copy` when you need to include diagnostic text. It opens a small page with recent messages; use `<` and `>` to browse the rest. Banner status appears at the top.
 
 Some features need a recent game build. Buff timers and replacement revive bars need game **0.115.0 or newer**. See the [compatibility notes](docs/CLIENT-COMPATIBILITY.md) for known client limits and changes that still need in-game testing, or browse the [technical docs](docs/).
 

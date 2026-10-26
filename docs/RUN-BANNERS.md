@@ -202,3 +202,23 @@ module. Edited sources use the pinned local StyLua and Prettier formatters.
 Local tests, standalone syntax checks and addon/game execution remain
 unauthorized and were not run. The existing PR GitHub Actions job supplies the
 static checks; in-game placement, timing and lifecycle remain unverified.
+
+## Font readiness and compact diagnostics
+
+The startup guard now compares the loaded font size with the shared finite-number
+tolerance. Previously it required `GetFont()` to return exactly `12`; a nearby
+floating-point result could silently return before the controller, handler and
+`DFRL.banners` were installed. When triggered, this prevents every banner intake,
+including the official API, regardless of the later redirect changes.
+
+The pinned native [font binding](https://github.com/samwhosung/benilla/blob/adbfedc3660d/crates/benilla-ui/src/script/font_block.rs)
+stores the script font height through the shared [screen-unit conversion](https://github.com/samwhosung/benilla/blob/adbfedc3660d/crates/benilla-ui/src/screencoord.rs),
+so an exact comparison is invalid. This fixes the source-contract mismatch;
+the installed executable has no matching engine checkout, and the reported
+session did not record its actual font-size readback.
+
+`/copy` pages include a small on-demand `[BANNERS]` summary: initialization stage,
+enabled/active/world state, handler and native-frame ownership, API availability,
+font face and a 17-significant-digit size, intake/queue counts and the latest
+caught failure. It is available even if font readiness stops module setup.
+These session-only fields add no message history, gameplay state or idle logging.
