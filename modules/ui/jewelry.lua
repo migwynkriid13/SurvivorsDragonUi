@@ -5,13 +5,18 @@ SocketRail.blp joins all upper socket arches and straight spans in one texture
 using pixels from the existing HDActionBar.tga. The original bar texture is
 unchanged; only its narrow top strip switches while this jewelry row is visible.
 No extra inner or lower curved line is drawn beneath the gold circles.
-SocketDetached.tga retains the silver-gray circle borders in detached mode.
-EmptyNeck.tga, EmptyRing.tga and EmptyTrinket.tga are original gray silhouettes.
+SocketDetached.blp retains the silver-gray circle borders in detached mode.
+EmptyNeck.blp, EmptyRing.blp and EmptyTrinket.blp use Blizzard's original
+paper-doll placeholders, fitted inside the circular rim without cropping.
 Texture conversion does not change the underlying artwork's ownership.
 No upstream Lua is imported. Sources and preparation: third_party/Jewelry-ARTWORK.md.
 
 Gold circular rim source: commit b8b35451d4621a8097e887385f72ec03e17765f1,
 Textures/bagborder2.blp; provenance is recorded in the document above.
+Empty-slot artwork: Gethe/wow-ui-textures, commit
+e80e3278cc833c89e1f3fc79557b68315d750935, PaperDoll/UI-PaperDoll-Slot-
+Finger.PNG, -Neck.PNG and -Trinket.PNG. World of Warcraft artwork remains
+copyright Blizzard Entertainment, distinct from the software license below.
 The transparent circular cooldown atlas is original generated geometry.
 
 Applicable source notices (Blizzard artwork is distinct from MIT software):
