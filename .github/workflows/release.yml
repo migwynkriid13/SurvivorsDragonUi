@@ -97,7 +97,7 @@ jobs:
           tag="build-$BUILD_SHA"
           archive="dist/SurvivorsDragonUi.zip"
           notes="dist/release-notes.md"
-          python scripts/release_notes.py "$BUILD_SHA" "$notes"
+          title="$(python scripts/release_notes.py "$BUILD_SHA" "$notes")"
           assets=("$archive" dist/avrt.dll dist/updater-manifest.json dist/updater-binary.json dist/SHA256SUMS.txt)
 
           if draft="$(gh release view "$tag" --json isDraft --jq '.isDraft' 2>/dev/null)"; then
@@ -106,11 +106,12 @@ jobs:
               exit 1
             fi
             echo 'Keeping the existing immutable release assets.'
+            gh release edit "$tag" --title "$title" --notes-file "$notes"
           else
             # All assets are uploaded while hidden, then published together.
             gh release create "$tag" "${assets[@]}" --draft \
               --target "$BUILD_SHA" \
-              --title "SurvivorsDragonUi (${BUILD_SHA:0:7})" \
+              --title "$title" \
               --notes-file "$notes" \
               --latest=false
             gh release edit "$tag" --draft=false

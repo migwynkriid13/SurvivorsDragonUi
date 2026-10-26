@@ -29,7 +29,7 @@ The ten seconds bound checking and downloading. ZIP extraction, filesystem opera
 
 A previously completed download can activate even when the next launch is offline. The updater does not force a native rescan, `/reload` or enable choice; enable the addon in the game's AddOns options as usual. An unreadable old pending receipt or missing pending TOC does not block a fresh online download. Changes or damage to other files after installation are not detected; reinstall manually if needed.
 
-The updater compares addon release tags and version metadata, never EXE versions, hashes, timestamps or internal gameplay signatures. It resolves the game's current PE entrypoint from standard headers on each launch. It does not patch the EXE on disk, change environment variables, update itself or modify sibling addons, characters, preferences or SavedVariables. Its file identity and bootstrap API remain versioned independently from the addon TOC.
+The updater compares addon release tags and version metadata, never EXE versions, hashes, timestamps or internal gameplay signatures. It resolves the game's current PE entrypoint from standard headers on each launch. It does not patch the EXE on disk, change environment variables, update itself or modify sibling addons, characters, preferences or SavedVariables. Its file identity and bootstrap API remain versioned independently from the addon TOC. Release titles and notes show the addon version for people; the DLL reads the manifest and its unchanged `build-<commit>` tag, full version and asset names. Changing those visible titles or notes does not require replacing the DLL.
 
 ## Local files and recovery
 
