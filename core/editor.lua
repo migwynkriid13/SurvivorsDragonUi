@@ -57,8 +57,7 @@ local path = DFRL:GetInfoOrCons("tex") .. "editor\\"
 
 local function Artwork(parent, file, layer, left, right, top, bottom)
     local texture = parent:CreateTexture(nil, layer)
-    local extension = (file == "border" or file == "divider") and ".blp" or ".tga"
-    texture:SetTexture(path .. file .. extension)
+    texture:SetTexture(path .. file .. ".blp")
     texture:SetTexCoord(left or 0, right or 1, top or 0, bottom or 1)
     return texture
 end

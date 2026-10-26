@@ -37,7 +37,7 @@ DFRL:NewMod("Class resources", 2, function()
     local styles = {
         WARLOCK = {
             color = { 0.55, 0.25, 1 },
-            texture = path .. "SoulShards.tga",
+            texture = path .. "SoulShards.blp",
             empty = { 1 / 256, 18 / 256, 38 / 64, 60 / 64 },
             full = { 23 / 256, 40 / 256, 25 / 64, 47 / 64 },
             width = 17,
@@ -45,7 +45,7 @@ DFRL:NewMod("Class resources", 2, function()
         },
         ROGUE = {
             color = { 1, 0, 0 },
-            texture = path .. "ComboPoints.tga",
+            texture = path .. "ComboPoints.blp",
             empty = { 29 / 128, 49 / 128, 66 / 128, 86 / 128 },
             full = { 29 / 128, 49 / 128, 44 / 128, 64 / 128 },
             width = 20,
@@ -88,7 +88,7 @@ DFRL:NewMod("Class resources", 2, function()
     meter:SetPoint("CENTER", row, "CENTER", 0, 0)
     meter:EnableMouse(false)
     meter:SetStatusBarTexture(
-        DFRL:GetInfoOrCons("tex") .. "unitframes\\UI-HUD-UnitFrame-Player-PortraitOn-Bar-Mana-Status.tga"
+        DFRL:GetInfoOrCons("tex") .. "unitframes\\UI-HUD-UnitFrame-Player-PortraitOn-Bar-Mana-Status.blp"
     )
     meter:SetMinMaxValues(0, 1)
     meter:SetValue(0)

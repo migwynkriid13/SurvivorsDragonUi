@@ -7,7 +7,7 @@ DFRL:NewMod("RangeIndicator", 1, function()
         local indicator = button.rangeIndicator
         if not indicator then
             indicator = button:CreateTexture(nil, "OVERLAY")
-            indicator:SetTexture(TEX_PATH .. "indicator_.tga")
+            indicator:SetTexture(TEX_PATH .. "indicator_.blp")
             indicator:SetVertexColor(1, 0, 0)
             indicator:SetAllPoints(button)
             indicator:Hide()

@@ -3,7 +3,7 @@
 -- remains Blizzard Entertainment's property; see third_party/XP-ARTWORK.md.
 DFRL:NewMod("Xprep", 1, function()
     local texpath = DFRL:GetInfoOrCons("tex") .. "xprep\\"
-    local fillTexture = texpath .. "main_soft.tga"
+    local fillTexture = texpath .. "main_soft.blp"
     local defaults = { top = 49, height = 6, borderHeight = 12 }
     DFRL.xpBarDefaults = defaults
     KillFrame(MainMenuBarPerformanceBarFrame)
@@ -36,13 +36,13 @@ DFRL:NewMod("Xprep", 1, function()
 
     -- Border halves stay inside the same horizontal bounds as the bar.
     local leftBorder = bar:CreateTexture(nil, "OVERLAY")
-    leftBorder:SetTexture(texpath .. "border_half.tga")
+    leftBorder:SetTexture(texpath .. "border_half.blp")
     leftBorder:SetPoint("LEFT", bar, "LEFT", 0, 0)
     leftBorder:SetPoint("RIGHT", bar, "CENTER", 0, 0)
     leftBorder:SetHeight(defaults.borderHeight)
 
     local rightBorder = bar:CreateTexture(nil, "OVERLAY")
-    rightBorder:SetTexture(texpath .. "border_half.tga")
+    rightBorder:SetTexture(texpath .. "border_half.blp")
     rightBorder:SetPoint("LEFT", bar, "CENTER", 0, 0)
     rightBorder:SetPoint("RIGHT", bar, "RIGHT", 0, 0)
     rightBorder:SetHeight(defaults.borderHeight)

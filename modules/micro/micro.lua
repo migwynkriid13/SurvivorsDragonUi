@@ -30,7 +30,7 @@ DFRL:NewMod("Micro", 1, function()
             -- artwork fills this whole button, so its hit rectangle must too.
             button:SetHitRectInsets(0, 0, 0, 0)
             if entry[1] == "CharacterMicroButton" then
-                local atlas = DFRL:GetInfoOrCons("tex") .. "micromenu\\uimicromenu2x.tga"
+                local atlas = DFRL:GetInfoOrCons("tex") .. "micromenu\\uimicromenu2x.blp"
                 button:SetNormalTexture(atlas)
                 local normal = button:GetNormalTexture()
                 if normal then normal:SetTexCoord(2 / 256, 37 / 256, 324 / 512, 372 / 512) end
@@ -45,11 +45,11 @@ DFRL:NewMod("Micro", 1, function()
                 if disabled then disabled:SetTexCoord(2 / 256, 37 / 256, 324 / 512, 372 / 512) end
             else
                 for _, state in ipairs({ { "Normal", "regular" }, { "Pushed", "faded" }, { "Highlight", "highlight" } }) do
-                    button["Set" .. state[1] .. "Texture"](button, path .. entry[2] .. "-" .. state[2] .. ".tga")
+                    button["Set" .. state[1] .. "Texture"](button, path .. entry[2] .. "-" .. state[2] .. ".blp")
                     local texture = button["Get" .. state[1] .. "Texture"](button)
                     if texture then texture:SetTexCoord(36 / 128, 86 / 128, 29 / 128, 98 / 128) end
                 end
-                button:SetDisabledTexture(path .. entry[2] .. "-faded.tga")
+                button:SetDisabledTexture(path .. entry[2] .. "-faded.blp")
                 local disabled = button:GetDisabledTexture()
                 if disabled then
                     disabled:SetTexCoord(36 / 128, 86 / 128, 29 / 128, 98 / 128)

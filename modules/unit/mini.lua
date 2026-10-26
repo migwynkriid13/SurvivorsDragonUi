@@ -221,7 +221,9 @@ DFRL:NewMod("Mini", 1, function()
             TargetofTargetBackground:ClearAllPoints()
             TargetofTargetBackground:SetAllPoints(TargetofTargetHealthBar)
         end
-        TargetofTargetHealthBar:SetStatusBarTexture(tex .. "UI-HUD-UnitFrame-TargetofTarget-PortraitOn-Bar-Health.tga")
+        TargetofTargetHealthBar:SetStatusBarTexture(
+            tex .. "UI-HUD-UnitFrame-TargetofTarget-PortraitOn-Bar-HealthFill.blp"
+        )
         TargetofTargetHealthBar:SetWidth(60)
         TargetofTargetHealthBar:SetHeight(16)
         TargetofTargetHealthBar:ClearAllPoints()
@@ -317,7 +319,7 @@ DFRL:NewMod("Mini", 1, function()
                 T.SetFont(name, 10, "")
             end
             health:SetStatusBarTexture(tex .. "UI-HUD-UnitFrame-TargetofTarget-PortraitOn-Bar-Health")
-            mana:SetStatusBarTexture(tex .. "UI-HUD-UnitFrame-Target-MinusMob-PortraitOn-Bar-Health-Status.tga")
+            mana:SetStatusBarTexture(tex .. "UI-HUD-UnitFrame-Target-MinusMob-PortraitOn-Bar-Health-Status.blp")
             health:SetHeight(11)
             health:ClearAllPoints()
             health:SetPoint("CENTER", frame, "CENTER", 15, 10)

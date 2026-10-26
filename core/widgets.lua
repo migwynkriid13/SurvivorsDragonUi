@@ -3,10 +3,10 @@ setfenv(1, DFRL:GetEnv())
 function DFRL.tools.StyleMinimapZoomButton(button, name, alignGlyph)
     local path = DFRL:GetInfoOrCons("tex") .. "minimap\\" .. name
     button:SetAlpha(1)
-    button:SetNormalTexture(path .. ".tga")
-    button:SetDisabledTexture(path .. "-disabled.tga")
-    button:SetHighlightTexture(path .. "-over.tga")
-    button:SetPushedTexture(path .. "-push.tga")
+    button:SetNormalTexture(path .. ".blp")
+    button:SetDisabledTexture(path .. "-disabled.blp")
+    button:SetHighlightTexture(path .. "-over.blp")
+    button:SetPushedTexture(path .. "-push.blp")
     if not alignGlyph then return end
     -- The normal plus glyph is two pixels left of the other 32px artwork states.
     local normalOffset = name == "ZoomIn32" and button:GetWidth() * 2 / 32 or 0
