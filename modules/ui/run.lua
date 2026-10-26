@@ -1018,7 +1018,10 @@ DFRL:NewMod("RunTimers", 5, function()
         local titleText = "SurvivorsDragonUi"
         if type(GetAddOnMetadata) == "function" then
             local ok, version = pcall(GetAddOnMetadata, "SurvivorsDragonUi", "Version")
-            if ok and type(version) == "string" and version ~= "" then titleText = titleText .. " " .. version end
+            if ok and type(version) == "string" then
+                local _, _, patch = string.find(version, "^%d+%.%d+%.(%d+)%-survivors$")
+                if patch then titleText = titleText .. " v" .. patch end
+            end
         end
         local title = FontEditorLabel(fontEditor, titleText, 0, 0, 17)
         title:ClearAllPoints()
