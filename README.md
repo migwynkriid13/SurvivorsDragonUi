@@ -2,7 +2,7 @@
 
 [![For Azeroth Survivors](https://img.shields.io/badge/Azeroth_Survivors-UI_addon-c9a55c?style=flat-square&labelColor=25282d)](https://github.com/migwynkriid13/SurvivorsDragonUi/releases/latest)
 [![Latest release](https://img.shields.io/github/v/release/migwynkriid13/SurvivorsDragonUi?display_name=release&label=release&style=flat-square&color=7da380&labelColor=25282d)](https://github.com/migwynkriid13/SurvivorsDragonUi/releases/latest)
-[![Total downloads across all releases](https://img.shields.io/github/downloads/migwynkriid13/SurvivorsDragonUi/total?style=flat-square&label=total%20downloads&color=c9a55c&labelColor=25282d)](https://github.com/migwynkriid13/SurvivorsDragonUi/releases)
+[![Combined SurvivorsDragonUi.zip and avrt.dll downloads across all releases](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fmigwynkriid13%2FSurvivorsDragonUi%2Fdownload-badge%2Fdownloads.json&style=flat-square&label=total%20downloads&color=c9a55c&labelColor=25282d)](https://github.com/migwynkriid13/SurvivorsDragonUi/releases)
 [![14 languages](https://img.shields.io/badge/languages-14-829bb5?style=flat-square&labelColor=25282d)](docs/LOCALIZATION.md)
 
 A Dragonflight-style UI addon for **Azeroth Survivors**. It brings your action bar, run timer, boss health, guardian tracker and guides into a HUD you can move, resize and hide to suit your setup.

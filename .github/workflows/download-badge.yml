@@ -1,0 +1,81 @@
+name: Update download badge
+
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/download-badge.yml']
+  workflow_run:
+    workflows: ['Package and release']
+    branches: [main]
+    types: [completed]
+  release:
+    types: [published, edited, deleted]
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: survivorsdragonui-download-badge
+  cancel-in-progress: false
+
+jobs:
+  update:
+    if: >-
+      (github.event_name != 'workflow_dispatch' || github.ref == 'refs/heads/main') &&
+      (github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Count the two installable assets across every release
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api --paginate --slurp "repos/$GH_REPO/releases?per_page=100" > "$RUNNER_TEMP/releases.json"
+          jq '
+            [ .[][] | select(.draft == false) | .assets[]
+              | select(.name == "SurvivorsDragonUi.zip" or .name == "avrt.dll")
+              | .download_count ] | (add // 0)
+            | {schemaVersion: 1, label: "total downloads", message: tostring}
+          ' "$RUNNER_TEMP/releases.json" > "$RUNNER_TEMP/downloads.json"
+
+      - name: Publish badge data on its own branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch=download-badge
+          head=''
+          if gh api "repos/$GH_REPO/git/ref/heads/$branch" > "$RUNNER_TEMP/badge-ref.json" 2> "$RUNNER_TEMP/badge-ref-error.txt"; then
+            head="$(jq -r '.object.sha' "$RUNNER_TEMP/badge-ref.json")"
+          elif [[ "$(cat "$RUNNER_TEMP/badge-ref-error.txt")" != *'HTTP 404'* ]]; then
+            cat "$RUNNER_TEMP/badge-ref-error.txt" >&2
+            exit 1
+          fi
+
+          tree="$(jq --null-input --rawfile badge "$RUNNER_TEMP/downloads.json" '
+            {tree: [{path: "downloads.json", mode: "100644", type: "blob", content: $badge}]}
+          ' | gh api --method POST "repos/$GH_REPO/git/trees" --input - --jq '.sha')"
+
+          if [[ -n "$head" ]]; then
+            current_tree="$(gh api "repos/$GH_REPO/git/commits/$head" --jq '.tree.sha')"
+            if [[ "$tree" == "$current_tree" ]]; then
+              echo 'The download total is unchanged.'
+              exit 0
+            fi
+          fi
+
+          commit="$(jq --null-input --arg tree "$tree" --arg head "$head" '
+            {message: "chore: update download badge", tree: $tree,
+             parents: (if $head == "" then [] else [$head] end)}
+          ' | gh api --method POST "repos/$GH_REPO/git/commits" --input - --jq '.sha')"
+
+          if [[ -n "$head" ]]; then
+            gh api --method PATCH "repos/$GH_REPO/git/refs/heads/$branch" -f sha="$commit" -F force=false
+          else
+            gh api --method POST "repos/$GH_REPO/git/refs" -f ref="refs/heads/$branch" -f sha="$commit"
+          fi
