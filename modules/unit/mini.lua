@@ -79,8 +79,8 @@ DFRL:NewMod("Mini", 1, function()
             else
                 SetHealthColor(values.healthBar, 0, 1, 0)
             end
-        elseif string.find(unit, "party") then
-            SetHealthColor(values.healthBar, 0, 1, 0)
+        elseif values.updateHealthColor then
+            values.updateHealthColor()
         end
     end
 
@@ -295,6 +295,7 @@ DFRL:NewMod("Mini", 1, function()
         local frame, health, mana = _G[prefix], _G[prefix .. "HealthBar"], _G[prefix .. "ManaBar"]
         if frame and health and mana then
             local values = AddValues(frame, health, nil, "party" .. i)
+            values.updateHealthColor = T.BindClassHealthColor(health, values.unit)
             if partyRoot then
                 -- Keep native row/pet anchors and visibility; the passive owner
                 -- supplies only the shared layout transform and hidden flag.

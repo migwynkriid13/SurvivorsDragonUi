@@ -78,7 +78,7 @@ Action buttons start locked. Under **Action bar**, turn off **Lock action button
 
 Portraits use 2D images by default. Under **Unit frames**, choose **Experimental 3D portraits** or **Hide portraits** for bars without portraits.
 
-**Show health** and **Show health percentage** choose the text on unit health bars. A single value is centered. Enable both for health on the left and percentage on the right, or disable both to hide the text.
+**Show health** and **Show health percentage** choose the text on unit health bars. A single value is centered. Enable both for health on the left and percentage on the right, or disable both to hide the text. **Class-colored health** uses each character's class color for player and party health bars.
 
 ### Profiles and tooltips
 

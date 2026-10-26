@@ -115,6 +115,12 @@ Player, target, target-of-target, party and native pet labels use `T.BindUnitHea
 
 Percentages use native `UnitHealth` and `UnitHealthMax`, rounded to the nearest whole percent and bounded to 0–100. Unavailable, nonfinite or nonpositive maxima omit the percentage; an enabled health value then remains centered. Existing health/native refresh paths and `UNIT_MAXHEALTH` events refresh labels, with unchanged text and anchors skipped. No additional updater or native health override is added. Source TSV and runtime UI captions cover all fourteen languages. Appearance and runtime behavior remain unverified.
 
+## Class-colored player and party health
+
+**Class-colored health** in `/sdui` → **Unit frames** applies the existing `classHealth` choice to the player and all four native party health bars. Each bar reads its own canonical class through native `UnitClass(unit)` and the shared original class palette, including the Shaman blue override. Missing class data and the disabled choice use the original green. The existing preview, Confirm, Cancel/world/logout/reload discard, profiles and both resets remain shared; no setting, SavedVariable or updater is added.
+
+`T.BindClassHealthColor` in `core/widgets.lua` shares the player's native recolor protection with party bars. It retains the original setter, compares actual RGBA before painting and refreshes its effective color from the existing native value/event paths and display listeners. Party roster changes refresh each slot's current class through the existing Mini event handler. Artwork, labels, geometry and resource presentation retain their existing ownership. Target, target-of-target, pet and encounter color rules remain separate. The edited sources were formatted locally with the pinned tools; no local tests, standalone validation or addon/game execution were run. Appearance remains unverified.
+
 ## Native health-fill coordinates
 
 The later player/target screenshot shows a separate compatibility problem.

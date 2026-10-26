@@ -9,33 +9,7 @@ DFRL:NewMod("Player", 1, function()
     local initialized = false
     local healthUnderlap = T.LargeHealthFill.underlap
 
-    local healthR, healthG, healthB = 0, 1, 0
-    local setHealthColor = PlayerFrameHealthBar.SetStatusBarColor
-    -- Native health updates also recolor this bar; keep the effective display choice.
-    PlayerFrameHealthBar.SetStatusBarColor = function(bar)
-        local red, green, blue, alpha = bar:GetStatusBarColor()
-        if
-            not T.NearlyEqual(red, healthR)
-            or not T.NearlyEqual(green, healthG)
-            or not T.NearlyEqual(blue, healthB)
-            or (alpha and not T.NearlyEqual(alpha, 1))
-        then
-            setHealthColor(bar, healthR, healthG, healthB)
-        end
-    end
-
-    local function UpdateHealthColor()
-        local color
-        if DFRL.display.Get("classHealth") then color = T.GetPlayerClassColor() end
-        if color then
-            healthR, healthG, healthB = unpack(color)
-        else
-            healthR, healthG, healthB = 0, 1, 0
-        end
-        -- Tint the shared shaded healthDF2 artwork; retain its crop and damage-loss overlay.
-        PlayerFrameHealthBar:SetStatusBarColor(healthR, healthG, healthB)
-    end
-    DFRL.display.Listen(UpdateHealthColor)
+    local UpdateHealthColor = T.BindClassHealthColor(PlayerFrameHealthBar, "player")
 
     local appliedRound, appliedHidden
     local function UpdatePortraitShape()
