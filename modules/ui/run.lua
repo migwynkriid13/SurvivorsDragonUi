@@ -1015,7 +1015,12 @@ DFRL:NewMod("RunTimers", 5, function()
         end)
         fontEditor:SetScript("OnDragStop", FinishFontEditorDrag)
         fontEditor:SetScript("OnShow", FitFontEditor)
-        local title = FontEditorLabel(fontEditor, "SurvivorsDragonUi", 0, 0, 17)
+        local titleText = "SurvivorsDragonUi"
+        if type(GetAddOnMetadata) == "function" then
+            local ok, version = pcall(GetAddOnMetadata, "SurvivorsDragonUi", "Version")
+            if ok and type(version) == "string" and version ~= "" then titleText = titleText .. " " .. version end
+        end
+        local title = FontEditorLabel(fontEditor, titleText, 0, 0, 17)
         title:ClearAllPoints()
         title:SetPoint("TOP", fontEditor, "TOP", 0, -18)
         title:SetTextColor(1, 0.84, 0.48)
