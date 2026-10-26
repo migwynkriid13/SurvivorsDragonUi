@@ -325,10 +325,13 @@ DFRL:NewMod("Mini", 1, function()
             mana:ClearAllPoints()
             mana:SetPoint("CENTER", frame, "CENTER", 15, 0.5)
             for _, bar in ipairs({ health, mana }) do
-                local background = bar:CreateTexture(nil, "BACKGROUND")
-                background:SetTexture(bar:GetStatusBarTexture():GetTexture())
-                background:SetVertexColor(0.3, 0.3, 0.3, 0.5)
-                background:SetAllPoints(bar)
+                local texture = bar:GetStatusBarTexture()
+                if texture then
+                    local background = bar:CreateTexture(nil, "BACKGROUND")
+                    background:SetTexture(texture:GetTexture())
+                    background:SetVertexColor(0.3, 0.3, 0.3, 0.5)
+                    background:SetAllPoints(bar)
+                end
             end
             -- Mask the native row rather than disabling its Show/Hide or value
             -- updates, so preview, Cancel and later native refreshes coexist.

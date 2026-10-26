@@ -364,9 +364,11 @@ DFRL:NewMod("Bars", 1, function()
 
         button:SetHighlightTexture(TEX_PATH .. "uiactionbariconframehighlight.tga")
         local highlight = button:GetHighlightTexture()
-        highlight:SetAllPoints(button)
-        highlight:SetBlendMode("ADD")
-        highlight:SetVertexColor(1, 0.82, 0)
+        if highlight then
+            highlight:SetAllPoints(button)
+            highlight:SetBlendMode("ADD")
+            highlight:SetVertexColor(1, 0.82, 0)
+        end
 
         local selection = button:CreateTexture(nil, "OVERLAY")
         selection:SetTexture(TEX_PATH .. "uiactionbariconframehighlight.tga")

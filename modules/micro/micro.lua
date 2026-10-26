@@ -32,13 +32,17 @@ DFRL:NewMod("Micro", 1, function()
             if entry[1] == "CharacterMicroButton" then
                 local atlas = DFRL:GetInfoOrCons("tex") .. "micromenu\\uimicromenu2x.tga"
                 button:SetNormalTexture(atlas)
-                button:GetNormalTexture():SetTexCoord(2 / 256, 37 / 256, 324 / 512, 372 / 512)
+                local normal = button:GetNormalTexture()
+                if normal then normal:SetTexCoord(2 / 256, 37 / 256, 324 / 512, 372 / 512) end
                 button:SetPushedTexture(atlas)
-                button:GetPushedTexture():SetTexCoord(82 / 256, 116 / 256, 216 / 512, 264 / 512)
+                local pushed = button:GetPushedTexture()
+                if pushed then pushed:SetTexCoord(82 / 256, 116 / 256, 216 / 512, 264 / 512) end
                 button:SetHighlightTexture(atlas)
-                button:GetHighlightTexture():SetTexCoord(82 / 256, 116 / 256, 216 / 512, 264 / 512)
+                local highlight = button:GetHighlightTexture()
+                if highlight then highlight:SetTexCoord(82 / 256, 116 / 256, 216 / 512, 264 / 512) end
                 button:SetDisabledTexture(atlas)
-                button:GetDisabledTexture():SetTexCoord(2 / 256, 37 / 256, 324 / 512, 372 / 512)
+                local disabled = button:GetDisabledTexture()
+                if disabled then disabled:SetTexCoord(2 / 256, 37 / 256, 324 / 512, 372 / 512) end
             else
                 for _, state in ipairs({ { "Normal", "regular" }, { "Pushed", "faded" }, { "Highlight", "highlight" } }) do
                     button["Set" .. state[1] .. "Texture"](button, path .. entry[2] .. "-" .. state[2] .. ".tga")
@@ -46,8 +50,11 @@ DFRL:NewMod("Micro", 1, function()
                     if texture then texture:SetTexCoord(36 / 128, 86 / 128, 29 / 128, 98 / 128) end
                 end
                 button:SetDisabledTexture(path .. entry[2] .. "-faded.tga")
-                button:GetDisabledTexture():SetTexCoord(36 / 128, 86 / 128, 29 / 128, 98 / 128)
-                button:GetDisabledTexture():SetDesaturated(1)
+                local disabled = button:GetDisabledTexture()
+                if disabled then
+                    disabled:SetTexCoord(36 / 128, 86 / 128, 29 / 128, 98 / 128)
+                    disabled:SetDesaturated(1)
+                end
             end
             for _, state in ipairs({ "Normal", "Pushed", "Highlight", "Disabled" }) do
                 local texture = button["Get" .. state .. "Texture"](button)

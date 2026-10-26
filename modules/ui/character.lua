@@ -391,8 +391,10 @@ DFRL:NewMod("Character window", 6, function()
     slider:SetValueStep(1)
     slider:SetThumbTexture("Interface\\Buttons\\UI-ScrollBar-Knob")
     local thumb = slider:GetThumbTexture()
-    thumb:SetWidth(18)
-    thumb:SetHeight(24)
+    if thumb then
+        thumb:SetWidth(18)
+        thumb:SetHeight(24)
+    end
     slider:SetValue(0)
     local rail = slider:CreateTexture(nil, "BACKGROUND")
     rail:SetTexture("Interface\\Buttons\\WHITE8X8")
@@ -829,11 +831,13 @@ DFRL:NewMod("Character window", 6, function()
             }) do
                 close["Set" .. entry[1] .. "Texture"](close, path .. "Close.tga")
                 local texture = close["Get" .. entry[1] .. "Texture"](close)
-                texture:SetTexCoord(entry[2] / 128, (entry[2] + 36) / 128, entry[3] / 128, (entry[3] + 38) / 128)
-                texture:ClearAllPoints()
-                texture:SetAllPoints(close)
+                if texture then
+                    texture:SetTexCoord(entry[2] / 128, (entry[2] + 36) / 128, entry[3] / 128, (entry[3] + 38) / 128)
+                    texture:ClearAllPoints()
+                    texture:SetAllPoints(close)
+                    if entry[1] == "Highlight" then texture:SetBlendMode("ADD") end
+                end
             end
-            close:GetHighlightTexture():SetBlendMode("ADD")
         end
         UpdateTabs()
         UpdateHeader()

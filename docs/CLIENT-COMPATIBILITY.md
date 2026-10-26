@@ -41,6 +41,27 @@ Reload the UI to rebuild texture lookup state and load the changed filenames.
 No addon, game or local test suite was executed; restored appearance and any
 remaining health-bar mismatch require game-side confirmation.
 
+## Missing native textures
+
+The reported `modules/micro/micro.lua:41` and `modules/ui/character.lua:832`
+errors came from styling a button-state texture without checking the native
+getter's result. A texture setter does not guarantee that the following
+getter returns a region. Both affected paths were present in addon
+`3.2.42-survivors`; these errors alone do not establish an older installation.
+
+Micro-menu and character close-button styling now check each returned texture
+before cropping, anchoring, desaturating or changing its blend mode. An
+unavailable state no longer aborts the rest of the module's setup. Available
+states keep their original artwork, coordinates and styling, and the
+character window's existing refresh continues to call the texture setters.
+Action-button highlights and the character scrollbar thumb are also checked
+before styling or sizing. Party-bar backgrounds are created only when the
+native fill texture exists. Missing textures no longer stop the remaining
+action-bar, character-window or party-frame setup; available textures retain
+their existing appearance and dimensions.
+No updater or saved state is added. The underlying load failure and in-game
+appearance remain unverified; no local tests or addon/game execution were run.
+
 ## Unit health labels
 
 The Unit frames page offers independent **Show health** and **Show health percentage** controls. Their normalized `showHealthValue` and `showHealthPercentage` booleans live in the existing display table, defaulting to true and false respectively for missing or invalid saves. The shared display lifecycle includes live preview, Confirm-only saving, Cancel/world/logout/reload discard, profiles and both resets.
