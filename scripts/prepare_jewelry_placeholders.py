@@ -47,9 +47,15 @@ def placeholder(source, art_size):
     bounds = (offset, offset, offset + art_size, offset + art_size)
     # Fill more of the opening with the painted ring and necklace, while the
     # trinket grows only slightly. Keep the full source interior and its ratio.
-    # Lift only the source's dark ground into the same charcoal recess, so
-    # the original square backdrop does not leave another visible frame.
-    image.paste(ImageChops.lighter(image.crop(bounds), artwork), (offset, offset))
+    # Brighten only pixels where the painted picture already rises above the
+    # charcoal ground, preserving the circle and empty background pixels.
+    ground = image.crop(bounds)
+    red, green, blue = ImageChops.subtract(artwork.convert("RGB"), ground.convert("RGB")).split()
+    paint_mask = ImageChops.lighter(ImageChops.lighter(red, green), blue).point(
+        lambda value: 255 if value else 0
+    )
+    artwork = ImageEnhance.Brightness(artwork).enhance(1.2)
+    image.paste(ImageChops.lighter(ground, artwork), (offset, offset), paint_mask)
     image.putalpha(alpha)
     return image
 
