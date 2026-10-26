@@ -68,7 +68,7 @@ For UI debugging, `/fstack on` and `/fstack off` set the inspector state, `/fsta
 
 ## Make it yours
 
-Open `/sdui`, then drag a frame to move it or drag a corner to resize it. Hold **Shift** while dragging to line it up with other frames or the grid. Gold guides show the alignment. For exact positions, sizes or **Hide frame**, use **Layout**.
+Open `/sdui`, then drag a frame to move it or drag a corner to resize it. **Party frames** moves the party together, with an outline available even when playing solo. Hold **Shift** while dragging to line it up with other frames or the grid. Gold guides show the alignment. For exact positions, sizes or **Hide frame**, use **Layout**.
 
 Click **Confirm** to save or **Cancel** to undo. Leaving the run or reloading also discards unsaved changes. **Addon defaults** resets the same options as `/sdui reset`.
 

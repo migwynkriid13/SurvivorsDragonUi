@@ -280,14 +280,31 @@ DFRL:NewMod("Mini", 1, function()
         UpdateTarget()
     end
 
+    local partyRoot, partyRegion
+    if PartyMemberFrame1 and PartyMemberFrame1HealthBar and PartyMemberFrame1ManaBar then
+        partyRoot = CreateFrame("Frame", "DFRL_PartyFrames", UIParent)
+        partyRoot:SetWidth(PartyMemberFrame1:GetWidth())
+        partyRoot:SetHeight(PartyMemberFrame1:GetHeight())
+        partyRoot:EnableMouse(false)
+        partyRegion = CreateFrame("Frame", nil, partyRoot)
+        partyRegion:EnableMouse(false)
+    end
+
     for i = 1, 4 do
         local prefix = "PartyMemberFrame" .. i
         local frame, health, mana = _G[prefix], _G[prefix .. "HealthBar"], _G[prefix .. "ManaBar"]
         if frame and health and mana then
             local values = AddValues(frame, health, nil, "party" .. i)
-            if i == 1 then
+            if partyRoot then
+                -- Keep native row/pet anchors and visibility; the passive owner
+                -- supplies only the shared layout transform and hidden flag.
+                frame:SetParent(partyRoot)
+                if frame.SetUserPlaced then frame:SetUserPlaced(false) end
+                frame:SetMovable(false)
+            end
+            if i == 1 and partyRoot then
                 frame:ClearAllPoints()
-                frame:SetPoint("LEFT", UIParent, "LEFT", 10, 220)
+                frame:SetPoint("TOPLEFT", partyRoot, "TOPLEFT", 0, 0)
             end
             if _G[prefix .. "Texture"] then _G[prefix .. "Texture"]:SetAlpha(0) end
             local borderFrame = CreateFrame("Frame", nil, frame)
@@ -301,6 +318,10 @@ DFRL:NewMod("Mini", 1, function()
             border:SetPoint("CENTER", frame, "CENTER", 0, 0)
             border:SetWidth(128)
             border:SetHeight(64)
+            if partyRegion then
+                if i == 1 then partyRegion:SetPoint("TOPLEFT", border, "TOPLEFT", 0, 0) end
+                partyRegion:SetPoint("BOTTOMRIGHT", border, "BOTTOMRIGHT", 0, 0)
+            end
             local healthOnlyBorder = HealthOnlyBorder(borderFrame, border, 128, 64, "BORDER")
             local portrait = _G[prefix .. "Portrait"]
             if portrait then
@@ -362,6 +383,14 @@ DFRL:NewMod("Mini", 1, function()
             if _G[prefix .. "HealthBarText"] then _G[prefix .. "HealthBarText"]:SetAlpha(0) end
             HookScript(health, "OnValueChanged", function() UpdateValues(values) end)
         end
+    end
+
+    if partyRoot then
+        if PartyMemberBackground then PartyMemberBackground:SetParent(partyRoot) end
+        DFRL.layout.Register("partyFrames", partyRoot, function()
+            partyRoot:ClearAllPoints()
+            partyRoot:SetPoint("LEFT", UIParent, "LEFT", 10, 220)
+        end, { region = partyRegion, resizeToRegion = true })
     end
 
     local function UpdateAll()

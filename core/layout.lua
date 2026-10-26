@@ -23,6 +23,7 @@ DFRL:NewMod("Layout", 0, function()
     local labels = {
         playerFrame = "Player",
         targetFrame = "Target",
+        partyFrames = "Party frames",
         tooltip = "Tooltip",
         bossBars = "Boss health",
         runTimer = "Run timer",
