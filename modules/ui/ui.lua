@@ -23,8 +23,8 @@ DFRL:NewMod("Ui", 5, function()
             table.insert(closeButtonData, { "ContainerFrame" .. i, "ContainerFrame" .. i .. "CloseButton", -8, -8 })
         end
 
-        local path = texpath .. "close_normal.tga"
-        local pathpushed = texpath .. "close_pushed.tga"
+        local path = texpath .. "close_normal.blp"
+        local pathpushed = texpath .. "close_pushed.blp"
 
         for _, data in ipairs(closeButtonData) do
             local frameName, buttonName, offsetX, offsetY = unpack(data)

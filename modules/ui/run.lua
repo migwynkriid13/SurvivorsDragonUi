@@ -10,7 +10,7 @@ DFRL:NewMod("RunTimers", 5, function()
     local CHECK_ICON = "Interface\\Buttons\\UI-CheckBox-Check"
     local ATTACK_ICON = "Interface\\Cursor\\Attack.blp"
     local CACHE_ICON = "Interface\\Cursor\\LootAll.blp"
-    local COINS_ICON = DFRL:GetInfoOrCons("tex") .. "tally\\Coins.tga"
+    local COINS_ICON = DFRL:GetInfoOrCons("tex") .. "tally\\Coins.blp"
     local MARKER_SIZE = 18
     local DEAD_MARKER_SCALE = 0.8
     local DEAD_MARKER_ALPHA = 0.7
@@ -59,7 +59,7 @@ DFRL:NewMod("RunTimers", 5, function()
 
     local function Texture(parent, name, layer, width, height, right, bottom)
         local texture = parent:CreateTexture(nil, layer)
-        texture:SetTexture(path .. name .. ".tga")
+        texture:SetTexture(path .. name .. ".blp")
         texture:SetWidth(width)
         texture:SetHeight(height)
         texture:SetTexCoord(0, right, 0, bottom)
@@ -81,7 +81,7 @@ DFRL:NewMod("RunTimers", 5, function()
         bar:SetPoint("LEFT", frame, "LEFT", 8, 0)
         bar:SetPoint("RIGHT", frame, "RIGHT", -8, 0)
         bar:SetMinMaxValues(0, 1)
-        bar:SetStatusBarTexture(path .. fillName .. ".tga")
+        bar:SetStatusBarTexture(path .. fillName .. ".blp")
         bar:SetValue(0)
 
         local overlay = CreateFrame("Frame", nil, frame)
@@ -105,7 +105,7 @@ DFRL:NewMod("RunTimers", 5, function()
     -- Pooled cosmetic fill effects; native run data still controls progress.
     local function AnimatedRunFill(bar)
         local runGlow = bar:CreateTexture(nil, "OVERLAY")
-        runGlow:SetTexture(path .. "FillWhite.tga")
+        runGlow:SetTexture(path .. "FillWhite.blp")
         runGlow:SetBlendMode("ADD")
         runGlow:SetAllPoints(bar)
         runGlow:SetVertexColor(0.65, 0.04, 0.055)
@@ -283,7 +283,7 @@ DFRL:NewMod("RunTimers", 5, function()
             if flowRed == atLimit then return end
             flowRed = atLimit
             if atLimit then HideBlueFoam() end
-            bar:SetStatusBarTexture(path .. (atLimit and "FillWhite" or "FillBlue") .. ".tga")
+            bar:SetStatusBarTexture(path .. (atLimit and "FillWhite" or "FillBlue") .. ".blp")
             bar:SetStatusBarColor(
                 atLimit and 0.72 or 1,
                 atLimit and 0.025 or 1,
@@ -1621,14 +1621,14 @@ DFRL:NewMod("RunTimers", 5, function()
             }
             for _, light in ipairs(entry.glowLights) do
                 local spotlight = content:CreateTexture(nil, "BACKGROUND")
-                spotlight:SetTexture(DFRL:GetInfoOrCons("tex") .. "tally\\AffordableGlow.tga")
+                spotlight:SetTexture(DFRL:GetInfoOrCons("tex") .. "tally\\AffordableGlow.blp")
                 spotlight:SetBlendMode("ADD")
                 spotlight:SetVertexColor(1, 0.86, 0.64, 0.16 * glowOpacity)
                 spotlight:SetHeight(light.height)
                 spotlight:SetPoint("CENTER", light.anchor, "CENTER", light.centerX, 0)
                 spotlight:Hide()
                 local rays = content:CreateTexture(nil, "BORDER")
-                rays:SetTexture(DFRL:GetInfoOrCons("tex") .. "tally\\AffordableRays.tga")
+                rays:SetTexture(DFRL:GetInfoOrCons("tex") .. "tally\\AffordableRays.blp")
                 rays:SetBlendMode("ADD")
                 rays:SetVertexColor(1, 0.87, 0.66, 0.32 * glowOpacity)
                 rays:SetHeight(light.height)
@@ -1637,7 +1637,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 light.spotlight, light.rays, light.sparkles = spotlight, rays, {}
                 for index = 1, 3 do
                     local sparkle = content:CreateTexture(nil, "ARTWORK")
-                    sparkle:SetTexture(DFRL:GetInfoOrCons("tex") .. "tally\\AffordableSparkle.tga")
+                    sparkle:SetTexture(DFRL:GetInfoOrCons("tex") .. "tally\\AffordableSparkle.blp")
                     sparkle:SetBlendMode("ADD")
                     sparkle:SetVertexColor(1, 0.94, 0.78)
                     sparkle:SetWidth(light.sparkleSize)

@@ -41,6 +41,51 @@ Reload the UI to rebuild texture lookup state and load the changed filenames.
 No addon, game or local test suite was executed; restored appearance and any
 remaining health-bar mismatch require game-side confirmation.
 
+## Browser and native artwork
+
+The browser report affects the remaining small TGAs as well as oversized
+artwork. Firefox's stored addon was `3.2.47-survivors`. Its action-bar
+background, blue timer fill, fixed timer background, cache-guide icon and coin
+atlas contained the same bytes as the working local installation. These files
+have power-of-two dimensions below 1024 and eight declared alpha bits. The
+screenshots retain the BLP jewelry rail and tally surround while the TGA
+action-bar material, timer pill, minimap trim and cache guide are absent.
+
+The public Wenilla [texture probe](https://github.com/Arnesen/wenilla/blob/3426fd28c55b1d3dad22459d1a80e72a05a8006c/crates/benilla-assets/src/world_assets/mod.rs#L230)
+reads a TGA header through `LooseFile::read_prefix`, whose
+[plain-file path](https://github.com/Arnesen/wenilla/blob/3426fd28c55b1d3dad22459d1a80e72a05a8006c/crates/benilla-formats/src/loose.rs#L148)
+uses `std::fs::File::open`. The site's browser addons are supplied through an
+in-memory `window.__wenilla_fs` bridge. This is a likely boundary for the
+TGA-only failure; the exact deployed engine revision and failing call were
+not established by runtime diagnostics.
+
+All 72 remaining bundled TGAs now have uncompressed BLP2 Raw3 runtime versions,
+using the same container and required palette block as the earlier oversized
+conversions. Browser and native clients use one package with explicit BLP
+filenames. There is no browser detection, texture fallback, extra updater or
+layout migration. The manifest excludes every TGA; the original inputs remain
+in the source checkout for preparation and provenance. Native game texture
+paths and metadata normalization retain their existing behavior.
+
+`scripts/prepare_client_textures.py` now repacks every manifest BLP with a TGA
+input, including the two RLE close-button images and three opaque 24-bit unit
+textures. It expands RLE without resampling, preserves each 32-bit alpha byte
+and adds opaque alpha to 24-bit pixels. Orientation is normalized to top-first
+BGRA, with unchanged dimensions, colors, crops and UVs. Its optional receipt
+records the dimensions and pixel-buffer SHA-256 for each conversion. The
+original coin remains the preparation input for `Coins.blp`; it is no longer
+rewritten during preparation.
+
+The original target-of-target `Health.blp` and `Health.tga` artwork have distinct
+callers. The converted TGA uses the separate `HealthFill.blp` suffix, preserving
+the existing BLP. The player/target `healthDF2Fill.blp` preparation below retains
+its original crop and pixels. Existing artwork generators can still write TGA
+inputs; run the shared preparation step before packaging.
+
+Version `3.2.48-survivors` contains this format-only compatibility change. The
+artwork preparation ran locally; no local test, standalone validation, addon
+or game execution was performed. Rendering in both clients remains unverified.
+
 ## Missing native textures
 
 The reported `modules/micro/micro.lua:41` and `modules/ui/character.lua:832`

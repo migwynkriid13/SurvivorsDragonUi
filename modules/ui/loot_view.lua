@@ -139,7 +139,7 @@ DFRL:NewMod("LootView", 4, function()
         card:EnableMouse(false)
         card:Hide()
         local background = card:CreateTexture(nil, "BACKGROUND")
-        if background:SetTexture(path .. "loot\\Toast.tga") == false then ready = false end
+        if background:SetTexture(path .. "loot\\Toast.blp") == false then ready = false end
         background:SetAllPoints(card)
         background:SetTexCoord(0, 276 / 512, 0, 96 / 128)
         card.icon = card:CreateTexture(nil, "ARTWORK")
@@ -147,7 +147,7 @@ DFRL:NewMod("LootView", 4, function()
         card.icon:SetHeight(50)
         card.icon:SetPoint("TOPLEFT", card, "TOPLEFT", 23, -24)
         card.border = card:CreateTexture(nil, "OVERLAY")
-        if card.border:SetTexture(path .. "character\\QualityBorder.tga") == false then ready = false end
+        if card.border:SetTexture(path .. "character\\QualityBorder.blp") == false then ready = false end
         card.border:SetWidth(58)
         card.border:SetHeight(58)
         card.border:SetPoint("CENTER", card.icon, "CENTER", 0, 0)

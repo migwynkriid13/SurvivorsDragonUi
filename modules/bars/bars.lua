@@ -147,14 +147,14 @@ DFRL:NewMod("Bars", 1, function()
 
     local function CreateBackground(bar)
         local left = bar:CreateTexture("DFRL_ActionBarLeftTexture", "BACKGROUND")
-        left:SetTexture(TEX_PATH .. "HDActionBar.tga")
+        left:SetTexture(TEX_PATH .. "HDActionBar.blp")
         left:SetPoint("LEFT", bar, "LEFT", -defaults.sideInset, 0)
         left:SetPoint("RIGHT", bar, "CENTER", 0, 0)
         left:SetPoint("TOP", bar, "TOP", 0, defaults.topInset)
         left:SetPoint("BOTTOM", bar, "BOTTOM", 0, -defaults.topInset)
 
         local right = bar:CreateTexture("DFRL_ActionBarRightTexture", "BACKGROUND")
-        right:SetTexture(TEX_PATH .. "HDActionBar.tga")
+        right:SetTexture(TEX_PATH .. "HDActionBar.blp")
         right:SetPoint("LEFT", bar, "CENTER", 0, 0)
         right:SetPoint("RIGHT", bar, "RIGHT", defaults.sideInset, 0)
         right:SetPoint("TOP", bar, "TOP", 0, defaults.topInset)
@@ -215,7 +215,7 @@ DFRL:NewMod("Bars", 1, function()
                 ornaments = {}
                 for index, side in ipairs({ "LEFT", "RIGHT" }) do
                     local texture = bar:CreateTexture(nil, "OVERLAY")
-                    texture:SetTexture(TEX_PATH .. "Gryphon.tga")
+                    texture:SetTexture(TEX_PATH .. "Gryphon.blp")
                     texture:SetWidth(ornament.width)
                     texture:SetHeight(ornament.height)
                     local opposite = side == "LEFT" and "RIGHT" or "LEFT"
@@ -252,7 +252,7 @@ DFRL:NewMod("Bars", 1, function()
         local function UpdateBackground()
             local top = jewelryShown and socketBottom or defaults.topInset
             local bottom = -defaults.topInset - (xpJoined and defaults.xpExtension or 0)
-            local texture = TEX_PATH .. (xpJoined and "HDActionBarXP.tga" or "HDActionBar.tga")
+            local texture = TEX_PATH .. (xpJoined and "HDActionBarXP.blp" or "HDActionBar.blp")
             local endUV = xpJoined and 144 / 256 or 1
             local height = artHeight + (xpJoined and defaults.xpExtension or 0)
             local topUV = jewelryShown and (defaults.topInset - socketBottom) / height * endUV or 0
@@ -351,7 +351,7 @@ DFRL:NewMod("Bars", 1, function()
         button:SetFrameLevel(4)
 
         local background = bar:CreateTexture("DFRL_ActionButtonBg" .. index, "BORDER")
-        background:SetTexture(TEX_PATH .. "HDActionBarBtn.tga")
+        background:SetTexture(TEX_PATH .. "HDActionBarBtn.blp")
         background:SetPoint("CENTER", button, "CENTER", 0, 0)
         background:SetWidth(button:GetWidth() + 5)
         background:SetHeight(button:GetHeight() + 5)
@@ -362,7 +362,7 @@ DFRL:NewMod("Bars", 1, function()
         border:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", 2, -2)
         button.DFRL_BorderOverlay = border
 
-        button:SetHighlightTexture(TEX_PATH .. "uiactionbariconframehighlight.tga")
+        button:SetHighlightTexture(TEX_PATH .. "uiactionbariconframehighlight.blp")
         local highlight = button:GetHighlightTexture()
         if highlight then
             highlight:SetAllPoints(button)
@@ -371,7 +371,7 @@ DFRL:NewMod("Bars", 1, function()
         end
 
         local selection = button:CreateTexture(nil, "OVERLAY")
-        selection:SetTexture(TEX_PATH .. "uiactionbariconframehighlight.tga")
+        selection:SetTexture(TEX_PATH .. "uiactionbariconframehighlight.blp")
         selection:SetAllPoints(button)
         selection:SetBlendMode("ADD")
         selection:SetVertexColor(1, 0.82, 0)

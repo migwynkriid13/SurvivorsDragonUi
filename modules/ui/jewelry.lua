@@ -61,11 +61,11 @@ DFRL:NewMod("Jewelry", 4, function()
     local texturePath = DFRL:GetInfoOrCons("tex") .. "jewelry\\"
     local SLOT_NAMES = { "Finger0Slot", "Finger1Slot", "NeckSlot", "Trinket0Slot", "Trinket1Slot" }
     local EMPTY_TEXTURES = {
-        "EmptyRing.tga",
-        "EmptyRing.tga",
-        "EmptyNeck.tga",
-        "EmptyTrinket.tga",
-        "EmptyTrinket.tga",
+        "EmptyRing.blp",
+        "EmptyRing.blp",
+        "EmptyNeck.blp",
+        "EmptyTrinket.blp",
+        "EmptyTrinket.blp",
     }
     local slots, slotsReady = {}, false
     local inWorld, editing, attached, elapsed, animationElapsed = true, false, false, 0, 0
@@ -474,7 +474,7 @@ DFRL:NewMod("Jewelry", 4, function()
         placeholder:Hide()
         slot.placeholder = placeholder
         local socket = hud:CreateTexture(nil, "BACKGROUND")
-        socket:SetTexture(texturePath .. "SocketDetached.tga")
+        socket:SetTexture(texturePath .. "SocketDetached.blp")
         socket:SetWidth(socketSize)
         socket:SetHeight(socketSize)
         socket:SetPoint("CENTER", button, "CENTER", 0, 0)
@@ -482,7 +482,7 @@ DFRL:NewMod("Jewelry", 4, function()
         socket:Hide()
         slot.socket = socket
         local cooldown = button:CreateTexture(nil, "OVERLAY")
-        cooldown:SetTexture(texturePath .. "Cooldown.tga")
+        cooldown:SetTexture(texturePath .. "Cooldown.blp")
         cooldown:SetAllPoints(button)
         cooldown:Hide()
         slot.cooldown = cooldown

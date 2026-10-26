@@ -72,7 +72,7 @@ DFRL:NewMod("Character window", 6, function()
     local function Cut(parent, sheet, left, top, right, bottom, width, height, layer)
         local texture = parent:CreateTexture(nil, layer or "BACKGROUND")
         texture.sduiCharacterArt = true
-        texture:SetTexture(path .. sheet .. (sheet == "Chrome" and ".blp" or ".tga"))
+        texture:SetTexture(path .. sheet .. ".blp")
         local size = sheets[sheet]
         texture:SetTexCoord(left / size[1], right / size[1], top / size[2], bottom / size[2])
         if width then texture:SetWidth(width) end
@@ -142,7 +142,7 @@ DFRL:NewMod("Character window", 6, function()
 
     local background = owner:CreateTexture(nil, "BACKGROUND")
     background.sduiCharacterArt = true
-    background:SetTexture(path .. "Background.tga")
+    background:SetTexture(path .. "Background.blp")
     background:SetTexCoord(0, 450 / 512, 0, 420 / 512)
     background:SetPoint("TOPLEFT", owner, "TOPLEFT", 0, -20)
     background:SetPoint("BOTTOMRIGHT", owner, "BOTTOMRIGHT", 0, 0)
@@ -309,7 +309,7 @@ DFRL:NewMod("Character window", 6, function()
 
     local function QualityEdge(button, blend, alpha, outset)
         local border = button:CreateTexture(nil, "OVERLAY")
-        border:SetTexture(path .. "QualityBorder.tga")
+        border:SetTexture(path .. "QualityBorder.blp")
         border:SetBlendMode(blend)
         border:SetAlpha(alpha)
         border:SetPoint("TOPLEFT", button, "TOPLEFT", -outset, outset)
@@ -660,7 +660,7 @@ DFRL:NewMod("Character window", 6, function()
         for _, entry in ipairs(tabStyles) do
             local texture = _G[name .. entry[1]]
             if texture then
-                texture:SetTexture(path .. "Tabs.tga")
+                texture:SetTexture(path .. "Tabs.blp")
                 texture:SetTexCoord(entry[2] / 64, entry[4] / 64, entry[3] / 256, entry[5] / 256)
                 texture:SetWidth(entry[6])
                 texture:SetHeight(entry[7])
@@ -672,7 +672,7 @@ DFRL:NewMod("Character window", 6, function()
             local texture = _G[name .. "Middle" .. entry[1]]
             local l, r = _G[name .. "Left" .. entry[1]], _G[name .. "Right" .. entry[1]]
             if texture and l and r then
-                texture:SetTexture(path .. "Tabs.tga")
+                texture:SetTexture(path .. "Tabs.blp")
                 texture:SetTexCoord(0, 1 / 64, entry[2] / 256, entry[3] / 256)
                 texture:ClearAllPoints()
                 texture:SetPoint("TOPLEFT", l, "TOPRIGHT", 0, 0)
@@ -829,7 +829,7 @@ DFRL:NewMod("Character window", 6, function()
                 { "Disabled", 0, 64 },
                 { "Highlight", 64, 64 },
             }) do
-                close["Set" .. entry[1] .. "Texture"](close, path .. "Close.tga")
+                close["Set" .. entry[1] .. "Texture"](close, path .. "Close.blp")
                 local texture = close["Get" .. entry[1] .. "Texture"](close)
                 if texture then
                     texture:SetTexCoord(entry[2] / 128, (entry[2] + 36) / 128, entry[3] / 128, (entry[3] + 38) / 128)

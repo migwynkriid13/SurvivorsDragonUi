@@ -43,8 +43,8 @@ DFRL:NewMod("Waypoints", 3, function()
             frameName = "DFRL_CacheWaypoint",
             title = "Cache",
             defaultSide = "LEFT",
-            mapArt = "MapPin.tga",
-            hudArt = "CachePouch.tga",
+            mapArt = "MapPin.blp",
+            hudArt = "CachePouch.blp",
             hudTexCoord = { 0, 119 / 128, 0, 119 / 128 },
         },
         {
@@ -57,7 +57,7 @@ DFRL:NewMod("Waypoints", 3, function()
             frameName = "DFRL_GuardianWaypoint",
             title = "Guardian",
             defaultSide = "RIGHT",
-            hudArt = "GuardianFloating.tga",
+            hudArt = "GuardianFloating.blp",
             hudTexCoord = { 0, 65 / 128, 0, 65 / 128 },
         },
     }
@@ -422,7 +422,7 @@ DFRL:NewMod("Waypoints", 3, function()
         marker:SetTexCoord(unpack(tracker.hudTexCoord))
         tracker.marker = marker
         local pointer = hud:CreateTexture(nil, "OVERLAY")
-        pointer:SetTexture(texturePath .. "HudArrow.tga")
+        pointer:SetTexture(texturePath .. "HudArrow.blp")
         pointer:SetWidth(POINTER_SIZE)
         pointer:SetHeight(POINTER_SIZE)
         pointer:Hide()

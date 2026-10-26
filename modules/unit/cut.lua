@@ -114,7 +114,7 @@ DFRL:NewMod("Cut-Out", 1, function()
                     texture:SetTexture(healthFill.texture)
                     texture:SetTexCoord(unpack(healthFill.texCoords))
                 else
-                    texture:SetTexture(tex .. "UI-HUD-UnitFrame-TargetofTarget-PortraitOn-Bar-Health.tga")
+                    texture:SetTexture(tex .. "UI-HUD-UnitFrame-TargetofTarget-PortraitOn-Bar-HealthFill.blp")
                 end
                 texture:SetVertexColor(1, 1, 1, 0.7)
                 local cutout = { bar = bar, texture = texture, unit = data[2] }
