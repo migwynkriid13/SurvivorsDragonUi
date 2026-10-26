@@ -192,6 +192,7 @@ end
 DFRL.tools.LargeHealthFill = {
     texture = DFRL:GetInfoOrCons("tex") .. "unitframes\\healthDF2Fill.blp",
     texCoords = { 0, 1, 0, 1 },
+    underlap = 1,
 }
 DFRL.tools.UnitPortraitOverlap = 15
 
@@ -229,11 +230,12 @@ function DFRL.tools.CreateRoundPlayerRim(parent, owner, r, g, b, blendMode)
 end
 
 -- Close both ends with the existing straight metal edge, without the portrait ring.
-function DFRL.tools.CreatePortraitlessBorder(parent, healthBar, height)
+function DFRL.tools.CreatePortraitlessBorder(parent, healthBar, height, underlap)
+    underlap = underlap or 0
     local border = CreateFrame("Frame", nil, parent)
     border:SetFrameLevel(healthBar:GetFrameLevel() + 2)
-    border:SetPoint("TOPLEFT", healthBar, "TOPLEFT", -6, 5)
-    border:SetPoint("TOPRIGHT", healthBar, "TOPRIGHT", 6, 5)
+    border:SetPoint("TOPLEFT", healthBar, "TOPLEFT", -6 + underlap, 5 - underlap)
+    border:SetPoint("TOPRIGHT", healthBar, "TOPRIGHT", 6 - underlap, 5 - underlap)
     border:SetHeight(height + 9)
     border:EnableMouse(false)
     local path = DFRL:GetInfoOrCons("tex") .. "unitframes\\UI-TargetingFrameDF1.blp"
@@ -277,8 +279,10 @@ end
 function DFRL.tools.CreateUnitBorder(frame, healthBar, portraitTexture, background, texturePath, portraitSide)
     local mirrored = portraitSide == "LEFT"
     local healthFill = DFRL.tools.LargeHealthFill
-    local healthWidth, portraitInset, portraitOverlap = 122, 104, T.UnitPortraitOverlap
-    local powerInterior, roundRim
+    local underlap = healthFill.underlap
+    local healthWidth, healthTop, portraitInset, portraitOverlap = 122, 34, 104, T.UnitPortraitOverlap
+    local dividerTop, dividerHeight = 51.5, 4
+    local powerDivider, roundRim
     local strips = {}
     local portraitExtended
     local function SetPortraitOverlap(extended)
@@ -288,17 +292,23 @@ function DFRL.tools.CreateUnitBorder(frame, healthBar, portraitTexture, backgrou
         if not DFRL.display.Get("hidePortraits") then
             extension = extended and portraitOverlap or (mirrored and 2 or 0)
         end
-        healthBar:SetWidth(healthWidth + extension)
+        healthBar:SetWidth(healthWidth + extension + 2 * underlap)
         healthBar:ClearAllPoints()
         if mirrored then
-            healthBar:SetPoint("TOPLEFT", frame, "TOPLEFT", portraitInset - extension, -34)
+            healthBar:SetPoint("TOPLEFT", frame, "TOPLEFT", portraitInset - extension - underlap, -healthTop + underlap)
         else
-            healthBar:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -(portraitInset - extension), -34)
+            healthBar:SetPoint(
+                "TOPRIGHT",
+                frame,
+                "TOPRIGHT",
+                -(portraitInset - extension) + underlap,
+                -healthTop + underlap
+            )
         end
-        if powerInterior then
-            powerInterior:SetWidth(healthBar:GetWidth())
-            powerInterior:ClearAllPoints()
-            powerInterior:SetPoint("TOPLEFT", healthBar, "TOPLEFT", 0, 0)
+        if powerDivider then
+            powerDivider:SetWidth(healthBar:GetWidth() - 2 * underlap)
+            powerDivider:ClearAllPoints()
+            powerDivider:SetPoint("TOPLEFT", healthBar, "TOPLEFT", underlap, healthTop - dividerTop - underlap)
         end
         if roundRim then
             if extended then
@@ -314,7 +324,8 @@ function DFRL.tools.CreateUnitBorder(frame, healthBar, portraitTexture, backgrou
     -- Padding is removed in the prepared artwork; native fill coordinates
     -- must remain untouched so health changes crop and size the bar together.
     healthBar:SetStatusBarTexture(healthFill.texture)
-    healthBar:SetHeight(29)
+    -- Bleed beneath the existing inner outline; keep the content center fixed.
+    healthBar:SetHeight(29 + 2 * underlap)
     healthBar:SetFrameLevel(frame:GetFrameLevel() + 1)
     -- The target always overlaps its circular edge; the player opts in below.
     SetPortraitOverlap(not mirrored)
@@ -339,11 +350,14 @@ function DFRL.tools.CreateUnitBorder(frame, healthBar, portraitTexture, backgrou
         frame.portrait:SetDrawLayer("ARTWORK")
     end
     if frame.sduiPortraitModel then frame.sduiPortraitModel:SetFrameLevel(borderFrame:GetFrameLevel()) end
-    portraitTexture:SetWidth(104)
+    -- The pointed rim starts at source x153. Its former x152 divider and
+    -- the neighboring filtered pixels must not cover the health opening.
+    local portraitWidth = mirrored and 102.5 or 104
+    portraitTexture:SetWidth(portraitWidth)
     portraitTexture:SetHeight(128)
     portraitTexture:ClearAllPoints()
     if mirrored then
-        portraitTexture:SetTexCoord(1, 152 / 256, 0, 1)
+        portraitTexture:SetTexCoord(1, (256 - portraitWidth) / 256, 0, 1)
         portraitTexture:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, 0)
     else
         portraitTexture:SetTexCoord(152 / 256, 1, 0, 1)
@@ -363,41 +377,53 @@ function DFRL.tools.CreateUnitBorder(frame, healthBar, portraitTexture, backgrou
         portraitTexture:SetAlpha(0)
     end
 
-    local function AddStrip(x, y, width, height)
+    local function AddStrip(x, y, width, height, sourceY)
+        sourceY = sourceY or y
         local strip = borderFrame:CreateTexture(nil, "OVERLAY")
         strip:SetWidth(width)
         strip:SetHeight(height)
         if mirrored then
-            strip:SetTexCoord((x + width) / 256, x / 256, y / 128, (y + height) / 128)
+            strip:SetTexCoord((x + width) / 256, x / 256, sourceY / 128, (sourceY + height) / 128)
             strip:SetPoint("TOPLEFT", frame, "TOPLEFT", 256 - x - width, -y)
         else
-            strip:SetTexCoord(x / 256, (x + width) / 256, y / 128, (y + height) / 128)
+            strip:SetTexCoord(x / 256, (x + width) / 256, sourceY / 128, (sourceY + height) / 128)
             strip:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -(256 - x - width), -y)
         end
         table.insert(strips, strip)
         return strip
     end
-    -- Retain top/bottom artwork and the outer end cap. The former horizontal
-    -- divider lies in the omitted interior (x30..152, y34..63).
+    -- Retain the corner contour through x32. Replace only the former divider
+    -- rows with a clean neighboring side-edge sample while resources are off.
     AddStrip(0, 0, 152, 34)
     AddStrip(0, 63, 152, 65)
-    AddStrip(0, 34, 30, 29)
+    AddStrip(0, healthTop, 33, dividerTop - healthTop)
+    local cleanEndCap = AddStrip(0, dividerTop, 33, dividerHeight, dividerTop - dividerHeight)
+    AddStrip(0, dividerTop + dividerHeight, 33, healthTop + 29 - dividerTop - dividerHeight)
 
+    local powerEndCap
     if mirrored then
-        powerInterior = AddStrip(30, 34, 122, 29)
-        powerInterior:Hide()
+        powerEndCap = AddStrip(0, dividerTop, 30, dividerHeight)
+        powerEndCap:Hide()
+        -- The shared end cap owns the corners in both modes; sample only the
+        -- divider here so enabling resources cannot paint those corners twice.
+        powerDivider = AddStrip(30, dividerTop, healthWidth, dividerHeight)
+        powerDivider:Hide()
     end
 
     local powerShown = false
     local function SetPowerShown(shown)
-        if not powerInterior or shown == powerShown then return end
+        if not powerDivider or shown == powerShown then return end
         powerShown = shown
         if shown then
-            healthBar:SetHeight(19)
-            powerInterior:Show()
+            healthBar:SetHeight(19 + 2 * underlap)
+            cleanEndCap:Hide()
+            powerEndCap:Show()
+            powerDivider:Show()
         else
-            healthBar:SetHeight(29)
-            powerInterior:Hide()
+            healthBar:SetHeight(29 + 2 * underlap)
+            powerEndCap:Hide()
+            cleanEndCap:Show()
+            powerDivider:Hide()
         end
     end
 
@@ -409,7 +435,7 @@ function DFRL.tools.CreateUnitBorder(frame, healthBar, portraitTexture, backgrou
         end
     end
     UpdateTexture(texturePath)
-    local portraitless = DFRL.tools.CreatePortraitlessBorder(frame, healthBar, 29)
+    local portraitless = DFRL.tools.CreatePortraitlessBorder(frame, healthBar, 29, underlap)
     local portraitsHidden
     local function UpdatePortraitVisibility()
         local hidden = DFRL.display.Get("hidePortraits")

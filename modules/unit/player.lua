@@ -7,6 +7,7 @@ DFRL:NewMod("Player", 1, function()
     local updateBorder
     local pulseTextures = {}
     local initialized = false
+    local healthUnderlap = T.LargeHealthFill.underlap
 
     local healthR, healthG, healthB = 0, 1, 0
     local setHealthColor = PlayerFrameHealthBar.SetStatusBarColor
@@ -45,13 +46,19 @@ DFRL:NewMod("Player", 1, function()
         appliedRound, appliedHidden = round, hidden
         updateBorder(tex .. (round and "UI-TargetingFrameDF1.blp" or "UI-TargetingFrameDF.blp"))
         local extension = setPortraitOverlap(round)
-        if healthLabels then healthLabels.SetInsets(extension, 0, extension / 2) end
+        if healthLabels then healthLabels.SetInsets(extension + healthUnderlap, healthUnderlap, extension / 2) end
         if PlayerFrame.name then
-            PlayerFrame.name:SetPoint("BOTTOMLEFT", PlayerFrameHealthBar, "TOPLEFT", 2 + extension, 4)
-            PlayerFrame.name:SetWidth(PlayerFrameHealthBar:GetWidth() - extension - 24)
+            PlayerFrame.name:SetPoint(
+                "BOTTOMLEFT",
+                PlayerFrameHealthBar,
+                "TOPLEFT",
+                2 + extension + healthUnderlap,
+                4 - healthUnderlap
+            )
+            PlayerFrame.name:SetWidth(PlayerFrameHealthBar:GetWidth() - 2 * healthUnderlap - extension - 24)
         end
         if primaryBar then
-            primaryBar:SetWidth(PlayerFrameHealthBar:GetWidth())
+            primaryBar:SetWidth(PlayerFrameHealthBar:GetWidth() - 2 * healthUnderlap)
             primaryText:SetPoint("CENTER", primaryBar, "CENTER", extension / 2, 0)
         end
         for _, textures in ipairs(pulseTextures) do
@@ -250,9 +257,9 @@ DFRL:NewMod("Player", 1, function()
         )
         HidePowerBar()
         primaryBar = CreateFrame("StatusBar", nil, PlayerFrame)
-        primaryBar:SetWidth(PlayerFrameHealthBar:GetWidth())
+        primaryBar:SetWidth(PlayerFrameHealthBar:GetWidth() - 2 * healthUnderlap)
         primaryBar:SetHeight(9)
-        primaryBar:SetPoint("TOPLEFT", PlayerFrameHealthBar, "TOPLEFT", 0, -20)
+        primaryBar:SetPoint("TOPLEFT", PlayerFrameHealthBar, "TOPLEFT", healthUnderlap, -20 - healthUnderlap)
         primaryBar:SetFrameLevel(PlayerFrameHealthBar:GetFrameLevel())
         primaryBar:SetStatusBarTexture(tex .. "UI-HUD-UnitFrame-Player-PortraitOn-Bar-Mana-Status.blp")
         primaryBar:SetMinMaxValues(0, 1)
@@ -280,7 +287,13 @@ DFRL:NewMod("Player", 1, function()
         if PlayerHitIndicator then PlayerHitIndicator:Hide() end
         if PlayerFrame.name then
             PlayerFrame.name:ClearAllPoints()
-            PlayerFrame.name:SetPoint("BOTTOMLEFT", PlayerFrameHealthBar, "TOPLEFT", 2, 4)
+            PlayerFrame.name:SetPoint(
+                "BOTTOMLEFT",
+                PlayerFrameHealthBar,
+                "TOPLEFT",
+                2 + healthUnderlap,
+                4 - healthUnderlap
+            )
             PlayerFrame.name:SetJustifyH("LEFT")
             T.SetFont(PlayerFrame.name, 11, "NONE")
             PlayerFrame.name:SetTextColor(1, 0.82, 0)

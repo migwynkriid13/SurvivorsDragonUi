@@ -138,11 +138,31 @@ The original TGA remains a preparation input outside the runtime manifest.
 
 Player and target use this fill with native full UVs, and their shared
 damage-loss overlay uses the same prepared image. The old crop callback is
-removed. Native values, range changes, fill clipping, class/party colors,
-bar dimensions, borders, resource-row height and overlay fading keep their
-existing ownership. No updater or saved state is added. Exact filtering at
-the cropped edges and in-game appearance remain unverified; no local addon,
-game or test execution was performed.
+removed. Native values, range changes, fill clipping, class/party colors
+and overlay fading keep their existing ownership.
+
+The later close-up also exposes two border-cut problems. The old outer-end
+strip stopped at source x30, dropping the rounded opening's contour through
+x32 while retaining part of the former resource divider. The side pieces now
+include that contour. With resources off, the four-unit divider span samples
+the clean neighboring edge at y47.5–51.5; with resources on, the player retains
+the original divider and its end. The pointed portrait's inner crop stops at
+x153.5, excluding the obsolete x152 divider and its filtered neighbors without
+moving the gold artwork.
+
+`T.LargeHealthFill.underlap` extends the native health rectangle by one UI unit
+on every side, beneath the original border. This closes the inner-edge gaps
+while the restored corner artwork shapes the visible fill. Health-label
+insets, player-name anchors, the original resource row/divider and portraitless
+borders compensate for that underlap, retaining their previous positions.
+The prepared fill pixels and full UVs are unchanged; damage loss follows the
+same expanded rectangle through its existing size hook. Outer frames, saved
+geometry, native health reads and the resource content split remain unchanged.
+
+No updater, asset or saved state is added. The source pixels and edited code
+were inspected and the Lua and Markdown were formatted with the pinned tools.
+Exact filtering and in-game appearance remain unverified; no local addon,
+game, test or standalone validation execution was performed.
 
 ## FontString scale and Lua errors
 
