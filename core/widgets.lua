@@ -61,7 +61,7 @@ function DFRL.tools.EncounterHealthText(current, maximum)
 end
 
 -- Preserve the effective class-health choice when native updates recolor a bar.
-function DFRL.tools.BindClassHealthColor(bar, unit, textures)
+function DFRL.tools.BindClassHealthColor(bar, unit)
     local healthR, healthG, healthB = 0, 1, 0
     local setColor = bar.SetStatusBarColor
     local function Apply()
@@ -83,11 +83,6 @@ function DFRL.tools.BindClassHealthColor(bar, unit, textures)
             healthR, healthG, healthB = unpack(color)
         else
             healthR, healthG, healthB = 0, 1, 0
-        end
-        if textures then
-            local path = color and textures.class or textures.default
-            local texture = bar:GetStatusBarTexture()
-            if not texture or texture:GetTexture() ~= path then bar:SetStatusBarTexture(path) end
         end
         Apply()
     end
