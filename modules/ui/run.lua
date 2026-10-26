@@ -7,13 +7,10 @@ DFRL:NewMod("RunTimers", 5, function()
     local DEBUFF_SIZE, DEBUFF_GAP = 18, 4
     local DEBUFF_COLUMNS = math.floor((BAR_WIDTH + DEBUFF_GAP) / (DEBUFF_SIZE + DEBUFF_GAP))
     local SKULL_ICON = "Interface\\TargetingFrame\\UI-TargetingFrame-Skull"
-    local CHECK_ICON = "Interface\\Buttons\\UI-CheckBox-Check"
     local ATTACK_ICON = "Interface\\Cursor\\Attack.blp"
     local CACHE_ICON = "Interface\\Cursor\\LootAll.blp"
     local COINS_ICON = DFRL:GetInfoOrCons("tex") .. "tally\\Coins.blp"
     local MARKER_SIZE = 18
-    local DEAD_MARKER_SCALE = 0.8
-    local DEAD_MARKER_ALPHA = 0.7
     local ACTIVE_GLOW_PERIOD = 2.4
     local ACTIVE_GLOW_MIN_ALPHA, ACTIVE_GLOW_MAX_ALPHA = 0.25, 0.5
     local ACTIVE_GLOW_MIN_OFFSET, ACTIVE_GLOW_MAX_OFFSET = 0.9, 4.55
@@ -2354,12 +2351,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 marker.skull = marker:CreateTexture(nil, "ARTWORK")
                 marker.skull:SetTexture(SKULL_ICON)
                 marker.skull:SetPoint("CENTER", marker, "CENTER", 0, 0)
-                marker.check = marker:CreateTexture(nil, "OVERLAY")
-                marker.check:SetTexture(CHECK_ICON)
-                marker.check:SetVertexColor(0.2, 1, 0.2, 1)
-                marker.check:SetWidth(MARKER_SIZE * 0.6)
-                marker.check:SetHeight(MARKER_SIZE * 0.6)
-                marker.check:SetPoint("BOTTOMRIGHT", marker, "BOTTOMRIGHT", 2, -1)
+                marker.check = T.CreateDefeatedMarkerCheck(marker, MARKER_SIZE)
                 HideMarker(marker)
                 markers[index] = marker
             end
@@ -2403,17 +2395,8 @@ DFRL:NewMod("RunTimers", 5, function()
             if state then
                 if marker.state ~= state then
                     marker.state = state
-                    local dead = state == "dead"
-                    local size = MARKER_SIZE * (dead and DEAD_MARKER_SCALE or 1)
-                    marker.skull:SetWidth(size)
-                    marker.skull:SetHeight(size)
-                    marker.skull:SetAlpha(dead and DEAD_MARKER_ALPHA or 1)
+                    T.StyleDefeatedMarker(marker.skull, marker.check, MARKER_SIZE, state == "dead")
                     ShowMarkerGlow(marker, state == "up")
-                    if dead then
-                        marker.check:Show()
-                    else
-                        marker.check:Hide()
-                    end
                 end
                 if state == "up" then
                     if marker.glowOffset ~= glowOffset then

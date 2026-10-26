@@ -109,6 +109,8 @@ DFRL:NewMod("Waypoints", 3, function()
             for key, pin in pairs(tracker.minimapPins) do
                 if not cycle or pin.cycle ~= cycle then
                     pin:Hide()
+                    if pin.check then pin.check:Hide() end
+                    pin.defeated = nil
                     pin.entryKey, pin.cycle = nil, nil
                     tracker.minimapPins[key] = nil
                     table.insert(tracker.minimapPool, pin)
@@ -248,10 +250,16 @@ DFRL:NewMod("Waypoints", 3, function()
             pin:SetHeight(size)
             pin:SetFrameLevel(navigation.MinimapLevel(tracker.kind))
             pin:EnableMouse(false)
-            local art = pin:CreateTexture(nil, "OVERLAY")
+            local art = pin:CreateTexture(nil, tracker.kind == "guardian" and "ARTWORK" or "OVERLAY")
             art:SetTexture(texturePath .. tracker.hudArt)
             art:SetTexCoord(unpack(tracker.hudTexCoord))
-            art:SetAllPoints(pin)
+            if tracker.kind == "guardian" then
+                art:SetPoint("CENTER", pin, "CENTER", 0, 0)
+                pin.art = art
+                pin.check = T.CreateDefeatedMarkerCheck(pin, size)
+            else
+                art:SetAllPoints(pin)
+            end
             return pin
         end
 
@@ -292,6 +300,13 @@ DFRL:NewMod("Waypoints", 3, function()
                 tracker.minimapPins[entry.key] = pin
             end
             pin.entryKey, pin.cycle = entry.key, tracker.minimapCycle
+            if tracker.kind == "guardian" then
+                local defeated = entry.state == "empty"
+                if pin.defeated ~= defeated then
+                    T.StyleDefeatedMarker(pin.art, pin.check, PIN_SIZE, defeated)
+                    pin.defeated = defeated
+                end
+            end
             return PlacePin(pin, x, y)
         end
 
@@ -573,6 +588,7 @@ DFRL:NewMod("Waypoints", 3, function()
             elseif entry.state == "empty" and entry.id == 0 and Number(entry.x) and Number(entry.y) then
                 table.insert(minimap, {
                     key = tostring(entry.index) .. ":0",
+                    state = entry.state,
                     x = entry.x,
                     y = entry.y,
                     mx = entry.mx,
