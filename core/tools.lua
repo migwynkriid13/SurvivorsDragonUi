@@ -59,11 +59,13 @@ local classColors = {
     WARRIOR = { 0.78, 0.61, 0.43 },
 }
 
-function DFRL.tools.GetPlayerClassColor()
+function DFRL.tools.GetUnitClassColor(unit)
     if type(UnitClass) ~= "function" then return end
-    local _, class = UnitClass("player")
+    local _, class = UnitClass(unit)
     return classColors[class]
 end
+
+function DFRL.tools.GetPlayerClassColor() return T.GetUnitClassColor("player") end
 
 -- Match live native aliases; player names are not party identity.
 local playerAndPartyUnits = { "player", "party1", "party2", "party3", "party4" }

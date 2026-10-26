@@ -55,13 +55,16 @@ The secondary display is parented to PlayerFrame at `(105, -68)` in the existing
 
 The four native party frames follow the same display choice. Their native power
 bars and optional power text use the shared alpha mask, preserving native
-Show/Hide, latest alpha, values and updates while hidden. Off expands health
+Show/Hide, latest alpha, values and updates while hidden. Off expands health content
 from 11 units at center Y 10 to 17.5 units at Y 6.75, retaining the top edge and
 covering the former resource opening. Its fill extends 12 units beneath the
 portrait's lower curve, retaining the original right edge and health-value
-position. A passive border/portrait layer stays above the fill. A shared crop of the existing 128-by-64
-pet-frame border removes only its internal divider, retaining the portrait
-ring and outer border; target-of-target reuses that same crop. On restores the
+position. A half-unit render underlap surrounds that content using the player's
+prepared neutral health fill, with label insets preserving their original anchors.
+A passive border/portrait layer stays above the fill. Party-only crops of the existing 128-by-64
+pet-frame border remove its internal divider, portrait-side stubs and stepped
+inner shadow while retaining the gold contour and complete rounded outer end.
+The target-of-target retains its original shared crop. On restores the
 original party split and complete artwork without forcing a native power bar
 visible. Party unit buttons, portraits, names, tooltips, values, outer size,
 placement and scale are unchanged. The existing hint describes both player and

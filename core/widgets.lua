@@ -60,6 +60,36 @@ function DFRL.tools.EncounterHealthText(current, maximum)
     return tostring(math.floor(current)) .. " / " .. tostring(math.floor(maximum))
 end
 
+-- Preserve the effective class-health choice when native updates recolor a bar.
+function DFRL.tools.BindClassHealthColor(bar, unit)
+    local healthR, healthG, healthB = 0, 1, 0
+    local setColor = bar.SetStatusBarColor
+    local function Apply()
+        local red, green, blue, alpha = bar:GetStatusBarColor()
+        if
+            not T.NearlyEqual(red, healthR)
+            or not T.NearlyEqual(green, healthG)
+            or not T.NearlyEqual(blue, healthB)
+            or (alpha and not T.NearlyEqual(alpha, 1))
+        then
+            setColor(bar, healthR, healthG, healthB)
+        end
+    end
+    bar.SetStatusBarColor = Apply
+    local function Update()
+        local color
+        if DFRL.display.Get("classHealth") then color = T.GetUnitClassColor(unit) end
+        if color then
+            healthR, healthG, healthB = unpack(color)
+        else
+            healthR, healthG, healthB = 0, 1, 0
+        end
+        Apply()
+    end
+    DFRL.display.Listen(Update)
+    return Update
+end
+
 -- Unit health labels share display choices without changing native bar values.
 function DFRL.tools.BindUnitHealthText(bar, label, unit, hideDead)
     local percentage = label:GetParent():CreateFontString(nil, "OVERLAY")

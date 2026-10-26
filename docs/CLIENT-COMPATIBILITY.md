@@ -115,6 +115,20 @@ Player, target, target-of-target, party and native pet labels use `T.BindUnitHea
 
 Percentages use native `UnitHealth` and `UnitHealthMax`, rounded to the nearest whole percent and bounded to 0–100. Unavailable, nonfinite or nonpositive maxima omit the percentage; an enabled health value then remains centered. Existing health/native refresh paths and `UNIT_MAXHEALTH` events refresh labels, with unchanged text and anchors skipped. No additional updater or native health override is added. Source TSV and runtime UI captions cover all fourteen languages. Appearance and runtime behavior remain unverified.
 
+## Class-colored player and party health
+
+**Class-colored health** in `/sdui` → **Unit frames** applies the existing `classHealth` choice to the player and all four native party health bars. Each bar reads its own canonical class through native `UnitClass(unit)` and the shared original class palette, including the Shaman blue override. Missing class data and the disabled choice use the original green. The existing preview, Confirm, Cancel/world/logout/reload discard, profiles and both resets remain shared; no setting, SavedVariable or updater is added.
+
+`T.BindClassHealthColor` in `core/widgets.lua` shares the player's native recolor protection with party bars. It retains the original setter, compares actual RGBA before painting and refreshes its effective color from the existing native value/event paths and display listeners. Party roster changes refresh each slot's current class through the existing Mini event handler. The original party `Health.blp` has baked green pixels, so multiplying it by a class color only darkens that green. Party bars now use the same neutral prepared `T.LargeHealthFill.texture` as the player in both color modes. This supersedes the intermediate switch between the original green fill and neutral target-of-target fill; disabling class colors restores green through the tint alone. Target, target-of-target, pet and encounter color rules remain separate.
+
+## Party health seams and corners
+
+Party bars reuse the player's prepared `healthDF2Fill.blp` with native full UVs, without a crop callback or changes to native fill-rectangle behavior. Their thinner metal edge uses half of `T.LargeHealthFill.underlap`: a 0.5-unit render extension on every side. The original health content centers and 11/17.5-unit resource split remain the reference geometry; label insets compensate for the extension so both health captions stay in their old positions. The health background uses the player's passive black native-texture treatment instead of repeating the old shaded green fill. Power artwork, values and positioning keep their existing behavior.
+
+With resources hidden, the party-only border pieces follow the actual gold portrait contour through source rows 26–34 instead of carrying old divider fragments past the ring. Single-row tips clamp their UVs to source pixel centers so neighboring divider pixels cannot filter back in. The top strip stops at source y18, removing the old rectangular shadow that stopped abruptly at y22. The outer end includes source x112–114's full rounded contour, replacing the obsolete divider rows y26–29 with the clean vertical edge at y22–25. Pieces meet edge to edge without overlapping alpha. Enabling resources restores the original complete border and divider. The target-of-target crop is unchanged.
+
+All artwork already ships in the shared runtime manifest; no file is generated or added. The original ring, outer frame, portrait, names, resource row, native values and saved layout remain owned by their existing widgets. Static source-artwork inspection and illustrative composites guided the crop; those composites do not establish in-game filtering. Edited Lua and Markdown were formatted with the pinned tools. No local tests, standalone validation or addon/game execution were run, and corrected in-game appearance remains unverified.
+
 ## Native health-fill coordinates
 
 The later player/target screenshot shows a separate compatibility problem.

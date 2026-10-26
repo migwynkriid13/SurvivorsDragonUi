@@ -1,17 +1,38 @@
 DFRL:NewMod("Mini", 1, function()
     local tex = DFRL:GetInfoOrCons("tex") .. "unitframes\\"
     local units = {}
+    local healthFill = T.LargeHealthFill
+    -- The compact one-unit metal edge needs half the large frame's underlap.
+    local healthUnderlap = healthFill.underlap / 2
+    local partyHealthCrops = {
+        { 0, 0, 44, 26 },
+        { 0, 26, 43, 1 },
+        { 0, 27, 44, 1 },
+        { 0, 28, 43, 1 },
+        { 0, 29, 42, 3 },
+        { 0, 32, 41, 2 },
+        { 0, 34, 40, 1 },
+        { 0, 35, 44, 29 },
+        { 44, 0, 84, 18 },
+        { 44, 34, 84, 30 },
+        { 112, 18, 16, 8 },
+        { 112, 26, 16, 3, 22 },
+        { 112, 29, 16, 5 },
+    }
 
-    -- The same health-only crop removes the old resource divider for both
-    -- target-of-target and party frames, retaining the ring and outer edge.
-    local function HealthOnlyBorder(parent, anchor, width, height, layer)
+    -- Keep the original target-of-target crop; party rows additionally trim the
+    -- portrait's divider stubs and retain the complete rounded outer end.
+    local function HealthOnlyBorder(parent, anchor, width, height, layer, crops)
         local scaleX, scaleY = width / 128, height / 64
         local strips = {}
-        for _, crop in ipairs({ { 0, 0, 44, 64 }, { 44, 0, 84, 22 }, { 44, 34, 84, 30 }, { 114, 22, 14, 12 } }) do
-            local x, y, w, h = unpack(crop)
+        for _, crop in ipairs(crops or { { 0, 0, 44, 64 }, { 44, 0, 84, 22 }, { 44, 34, 84, 30 }, { 114, 22, 14, 12 } }) do
+            local x, y, w, h, sourceY = unpack(crop)
+            sourceY = sourceY or y
+            -- One-row portrait tips must not filter the neighboring divider.
+            local tip = h == 1 and 0.5 or 0
             local strip = parent:CreateTexture(nil, layer)
             strip:SetTexture(tex .. "pet")
-            strip:SetTexCoord(x / 128, (x + w) / 128, y / 64, (y + h) / 64)
+            strip:SetTexCoord(x / 128, (x + w - tip) / 128, (sourceY + tip) / 64, (sourceY + h - tip) / 64)
             strip:SetPoint("TOPLEFT", anchor, "TOPLEFT", x * scaleX, -y * scaleY)
             strip:SetWidth(w * scaleX)
             strip:SetHeight(h * scaleY)
@@ -79,8 +100,8 @@ DFRL:NewMod("Mini", 1, function()
             else
                 SetHealthColor(values.healthBar, 0, 1, 0)
             end
-        elseif string.find(unit, "party") then
-            SetHealthColor(values.healthBar, 0, 1, 0)
+        elseif values.updateHealthColor then
+            values.updateHealthColor()
         end
     end
 
@@ -280,14 +301,32 @@ DFRL:NewMod("Mini", 1, function()
         UpdateTarget()
     end
 
+    local partyRoot, partyRegion
+    if PartyMemberFrame1 and PartyMemberFrame1HealthBar and PartyMemberFrame1ManaBar then
+        partyRoot = CreateFrame("Frame", "DFRL_PartyFrames", UIParent)
+        partyRoot:SetWidth(PartyMemberFrame1:GetWidth())
+        partyRoot:SetHeight(PartyMemberFrame1:GetHeight())
+        partyRoot:EnableMouse(false)
+        partyRegion = CreateFrame("Frame", nil, partyRoot)
+        partyRegion:EnableMouse(false)
+    end
+
     for i = 1, 4 do
         local prefix = "PartyMemberFrame" .. i
         local frame, health, mana = _G[prefix], _G[prefix .. "HealthBar"], _G[prefix .. "ManaBar"]
         if frame and health and mana then
             local values = AddValues(frame, health, nil, "party" .. i)
-            if i == 1 then
+            values.updateHealthColor = T.BindClassHealthColor(health, values.unit)
+            if partyRoot then
+                -- Keep native row/pet anchors and visibility; the passive owner
+                -- supplies only the shared layout transform and hidden flag.
+                frame:SetParent(partyRoot)
+                if frame.SetUserPlaced then frame:SetUserPlaced(false) end
+                frame:SetMovable(false)
+            end
+            if i == 1 and partyRoot then
                 frame:ClearAllPoints()
-                frame:SetPoint("LEFT", UIParent, "LEFT", 10, 220)
+                frame:SetPoint("TOPLEFT", partyRoot, "TOPLEFT", 0, 0)
             end
             if _G[prefix .. "Texture"] then _G[prefix .. "Texture"]:SetAlpha(0) end
             local borderFrame = CreateFrame("Frame", nil, frame)
@@ -301,7 +340,11 @@ DFRL:NewMod("Mini", 1, function()
             border:SetPoint("CENTER", frame, "CENTER", 0, 0)
             border:SetWidth(128)
             border:SetHeight(64)
-            local healthOnlyBorder = HealthOnlyBorder(borderFrame, border, 128, 64, "BORDER")
+            if partyRegion then
+                if i == 1 then partyRegion:SetPoint("TOPLEFT", border, "TOPLEFT", 0, 0) end
+                partyRegion:SetPoint("BOTTOMRIGHT", border, "BOTTOMRIGHT", 0, 0)
+            end
+            local healthOnlyBorder = HealthOnlyBorder(borderFrame, border, 128, 64, "BORDER", partyHealthCrops)
             local portrait = _G[prefix .. "Portrait"]
             if portrait then
                 portrait:SetParent(borderFrame)
@@ -318,7 +361,7 @@ DFRL:NewMod("Mini", 1, function()
                 name:SetDrawLayer("BORDER")
                 T.SetFont(name, 10, "")
             end
-            health:SetStatusBarTexture(tex .. "UI-HUD-UnitFrame-TargetofTarget-PortraitOn-Bar-Health")
+            health:SetStatusBarTexture(healthFill.texture)
             mana:SetStatusBarTexture(tex .. "UI-HUD-UnitFrame-Target-MinusMob-PortraitOn-Bar-Health-Status.blp")
             health:SetHeight(11)
             health:ClearAllPoints()
@@ -330,8 +373,13 @@ DFRL:NewMod("Mini", 1, function()
                 local texture = bar:GetStatusBarTexture()
                 if texture then
                     local background = bar:CreateTexture(nil, "BACKGROUND")
-                    background:SetTexture(texture:GetTexture())
-                    background:SetVertexColor(0.3, 0.3, 0.3, 0.5)
+                    if bar == health then
+                        background:SetTexture("Interface\\Buttons\\WHITE8X8")
+                        background:SetVertexColor(0, 0, 0, 0.6)
+                    else
+                        background:SetTexture(texture:GetTexture())
+                        background:SetVertexColor(0.3, 0.3, 0.3, 0.5)
+                    end
                     background:SetAllPoints(bar)
                 end
             end
@@ -345,13 +393,13 @@ DFRL:NewMod("Mini", 1, function()
                 local shown = DFRL.display.Get("classResources")
                 if shown == resourcesShown then return end
                 resourcesShown = shown
-                -- Cover the lower portrait curve and the fill's shaded leading
-                -- edge beneath the rim, keeping the right edge and value fixed.
+                -- Share the player's prepared fill beneath the existing metal
+                -- edge; compensate label insets to retain their old positions.
                 local extension = shown and 0 or 12
-                health:SetWidth(healthWidth + extension)
-                health:SetHeight(shown and 11 or 17.5)
+                health:SetWidth(healthWidth + extension + 2 * healthUnderlap)
+                health:SetHeight((shown and 11 or 17.5) + 2 * healthUnderlap)
                 health:SetPoint("CENTER", frame, "CENTER", 15 - extension / 2, shown and 10 or 6.75)
-                values.healthLabels.SetInsets(extension, 0, extension / 2)
+                values.healthLabels.SetInsets(extension + healthUnderlap, healthUnderlap, extension / 2)
                 border:SetAlpha(shown and 1 or 0)
                 for _, strip in ipairs(healthOnlyBorder) do
                     strip:SetAlpha(shown and 0 or 1)
@@ -362,6 +410,14 @@ DFRL:NewMod("Mini", 1, function()
             if _G[prefix .. "HealthBarText"] then _G[prefix .. "HealthBarText"]:SetAlpha(0) end
             HookScript(health, "OnValueChanged", function() UpdateValues(values) end)
         end
+    end
+
+    if partyRoot then
+        if PartyMemberBackground then PartyMemberBackground:SetParent(partyRoot) end
+        DFRL.layout.Register("partyFrames", partyRoot, function()
+            partyRoot:ClearAllPoints()
+            partyRoot:SetPoint("LEFT", UIParent, "LEFT", 10, 220)
+        end, { region = partyRegion, resizeToRegion = true })
     end
 
     local function UpdateAll()
