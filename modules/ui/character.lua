@@ -391,8 +391,10 @@ DFRL:NewMod("Character window", 6, function()
     slider:SetValueStep(1)
     slider:SetThumbTexture("Interface\\Buttons\\UI-ScrollBar-Knob")
     local thumb = slider:GetThumbTexture()
-    thumb:SetWidth(18)
-    thumb:SetHeight(24)
+    if thumb then
+        thumb:SetWidth(18)
+        thumb:SetHeight(24)
+    end
     slider:SetValue(0)
     local rail = slider:CreateTexture(nil, "BACKGROUND")
     rail:SetTexture("Interface\\Buttons\\WHITE8X8")
