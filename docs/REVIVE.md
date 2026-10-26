@@ -4,6 +4,8 @@ The selected design 01 places a white caption above
 the same rounded WidgetStatusBar bezel as the run timer. The fill is green, a
 spark follows reported progress, and a gold percentage sits to the right. The
 addon uses the resolved DEFAULT font. Both directions share one passive view.
+The bar appears only while reviving someone or being revived. Being downed
+without a helper shows no caption, bar or percentage.
 
 ## Received state
 
@@ -13,12 +15,12 @@ first and accepts received snapshots only in playing, choosing, paused, dead or
 victory. A finite `AZS_REVIVE_UPDATED` marks receipt; it is neither an event nor
 an expiry deadline.
 
-| Received fields                                   | Display                                 |
-| ------------------------------------------------- | --------------------------------------- |
-| `down == 1`, nonempty `by`, finite `share`        | “NAME is reviving you!” and `share`     |
-| `down == 1`, absent/empty `by`, finite `share`    | “Downed — waiting for help” and `share` |
-| `down == 0`, nonempty `reviving`, finite `rshare` | “Reviving NAME!” and `rshare`           |
-| Empty, idle, unsupported or invalid state         | Hide and clear the custom view          |
+| Received fields                                   | Display                                                 |
+| ------------------------------------------------- | ------------------------------------------------------- |
+| `down == 1`, nonempty `by`, finite `share`        | “NAME is reviving you!” and `share`                     |
+| `down == 1`, absent/empty `by`, finite `share`    | Hide the custom artwork and suppress the native display |
+| `down == 0`, nonempty `reviving`, finite `rshare` | “Reviving NAME!” and `rshare`                           |
+| Empty, idle, unsupported or invalid state         | Hide and clear the custom view                          |
 
 Names are supplied display values. Numeric-looking names are converted with
 `tostring`, with no unit-token, GUID, class or party-roster inference. Numeric
@@ -86,11 +88,15 @@ and draft geometry intact. Physical pixel alignment across native and addon UI
 scales has not been tested.
 
 The supplied 0.115.0 release notes add `AZS_SetHudShown("revive", false)`.
-Once valid received state is painted and the custom group is actually visible,
+For valid received state while the custom group is enabled,
 the module uses the shared `NewHudOwner("revive")` helper to capture the native
 visibility through `AZS_IsHudShown("revive")`, hide the original and confirm the
-result. Stable snapshots still synchronize ownership, so hiding/unhiding the
-group or a changed native preference does not need another revive packet.
+result. A downed-only snapshot keeps the passive layout root available but hides
+all artwork and stops its animation. Native suppression remains active so the
+original waiting display cannot reappear. A named helper restores the same
+progress artwork and fade-in. Stable snapshots still synchronize ownership, so
+hiding/unhiding the group or a changed native preference does not need another
+revive packet.
 
 Hiding the custom group releases native ownership immediately. Idle or invalid
 state, inactive phases, zone changes, world leave, logout, reload and refresh

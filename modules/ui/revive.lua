@@ -137,7 +137,7 @@ DFRL:NewMod("Revive", 4, function()
             dirty = false
         end
         function view.Clear()
-            if not view.active and value == nil then return end
+            if not view.active and not view.waiting and value == nil then return end
             root:Hide()
             root:SetAlpha(1)
             bar:SetValue(0)
@@ -152,7 +152,14 @@ DFRL:NewMod("Revive", 4, function()
             T.SetTextIfChanged(percent, "")
             value, target, origin, identity, displayedPercent = nil, nil, nil, nil, nil
             transition, fade, effectAge, dirty = 0, 0, 0, true
-            view.active = false
+            view.active, view.waiting = false, false
+        end
+        function view.Wait()
+            if view.waiting then return end
+            view.Clear()
+            view.waiting = true
+            pill:Hide()
+            root:Show()
         end
         function view.Set(text, progress, subject)
             local fresh = identity ~= subject or value == nil
@@ -173,7 +180,8 @@ DFRL:NewMod("Revive", 4, function()
             elseif target ~= progress then
                 origin, target, transition = value, progress, 0
             end
-            view.active = true
+            view.active, view.waiting = true, false
+            if not pill:IsShown() then pill:Show() end
             if fresh then Paint() end
             if not root:IsShown() then root:Show() end
         end
@@ -240,7 +248,7 @@ DFRL:NewMod("Revive", 4, function()
         dirty = true
     end
     local function SyncNative()
-        if inWorld and view.active and root:IsShown() then
+        if inWorld and (view.active or view.waiting) and root:IsShown() then
             native.Acquire()
         else
             native.Release()
@@ -276,22 +284,26 @@ DFRL:NewMod("Revive", 4, function()
             Clear()
             return
         end
-        local text, progress, subject
+        local text, progress, subject, waiting
         if state.down == 1 then
             local helper = Name(state.by)
-            text = helper ~= "" and string.format(DFRL.locale.Text("%s is reviving you!"), helper)
-                or DFRL.locale.Text("Downed — waiting for help")
+            waiting = helper == ""
+            if not waiting then text = string.format(DFRL.locale.Text("%s is reviving you!"), helper) end
             progress, subject = state.share, "incoming:" .. helper
         elseif state.down == 0 and Name(state.reviving) ~= "" then
             local friend = Name(state.reviving)
             text = string.format(DFRL.locale.Text("Reviving %s!"), friend)
             progress, subject = state.rshare, "outgoing:" .. friend
         end
-        if not text or not Number(progress) then
+        if (not text and not waiting) or not Number(progress) then
             Clear()
             return
         end
-        view.Set(text, math.max(0, math.min(1, progress)), subject)
+        if waiting then
+            view.Wait()
+        else
+            view.Set(text, math.max(0, math.min(1, progress)), subject)
+        end
         lastPacket, lastStamp, lastReceived, dirty = packet, stamp, received, false
         SyncNative()
     end
