@@ -1,6 +1,10 @@
 DFRL:NewMod("Mini", 1, function()
     local tex = DFRL:GetInfoOrCons("tex") .. "unitframes\\"
     local units = {}
+    local partyHealthTextures = {
+        default = tex .. "UI-HUD-UnitFrame-TargetofTarget-PortraitOn-Bar-Health.blp",
+        class = tex .. "UI-HUD-UnitFrame-TargetofTarget-PortraitOn-Bar-HealthFill.blp",
+    }
 
     -- The same health-only crop removes the old resource divider for both
     -- target-of-target and party frames, retaining the ring and outer edge.
@@ -295,7 +299,7 @@ DFRL:NewMod("Mini", 1, function()
         local frame, health, mana = _G[prefix], _G[prefix .. "HealthBar"], _G[prefix .. "ManaBar"]
         if frame and health and mana then
             local values = AddValues(frame, health, nil, "party" .. i)
-            values.updateHealthColor = T.BindClassHealthColor(health, values.unit)
+            values.updateHealthColor = T.BindClassHealthColor(health, values.unit, partyHealthTextures)
             if partyRoot then
                 -- Keep native row/pet anchors and visibility; the passive owner
                 -- supplies only the shared layout transform and hidden flag.
@@ -340,7 +344,7 @@ DFRL:NewMod("Mini", 1, function()
                 name:SetDrawLayer("BORDER")
                 T.SetFont(name, 10, "")
             end
-            health:SetStatusBarTexture(tex .. "UI-HUD-UnitFrame-TargetofTarget-PortraitOn-Bar-Health")
+            health:SetStatusBarTexture(partyHealthTextures.default)
             mana:SetStatusBarTexture(tex .. "UI-HUD-UnitFrame-Target-MinusMob-PortraitOn-Bar-Health-Status.blp")
             health:SetHeight(11)
             health:ClearAllPoints()
