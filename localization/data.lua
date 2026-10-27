@@ -2,6 +2,8 @@
 DFRL.locale.data = {
     en = {
         ui = {
+            ["MSBT-style scrolling"] = "MSBT-style scrolling",
+            ["Addon damage numbers scroll beside your character."] = "Addon damage numbers scroll beside your character.",
             ["Names only"] = "Names only",
             ["Hide health bars and keep names. Custom combat text still works."] = "Hide health bars and keep names. Custom combat text still works.",
             ["Nameplates"] = "Nameplates",
@@ -594,6 +596,8 @@ DFRL.locale.data = {
     },
     pl = {
         ui = {
+            ["MSBT-style scrolling"] = "Przewijanie w stylu MSBT",
+            ["Addon damage numbers scroll beside your character."] = "Obrażenia z dodatku przewijają się obok postaci.",
             ["Names only"] = "Same nazwy",
             ["Hide health bars and keep names. Custom combat text still works."] = "Ukryj paski zdrowia i zachowaj nazwy. Własny tekst walki nadal działa.",
             ["Nameplates"] = "Paski nazw",
@@ -1657,6 +1661,8 @@ DFRL.locale.data = {
     },
     cs = {
         ui = {
+            ["MSBT-style scrolling"] = "Posouvání ve stylu MSBT",
+            ["Addon damage numbers scroll beside your character."] = "Čísla poškození addonu se posouvají vedle postavy.",
             ["Names only"] = "Pouze jména",
             ["Hide health bars and keep names. Custom combat text still works."] = "Skrýt ukazatele zdraví a ponechat jména. Vlastní bojový text nadále funguje.",
             ["Nameplates"] = "Ukazatele jmen",
@@ -2723,6 +2729,8 @@ DFRL.locale.data = {
     },
     de = {
         ui = {
+            ["MSBT-style scrolling"] = "Scrollen im MSBT-Stil",
+            ["Addon damage numbers scroll beside your character."] = "Die Schadenszahlen des Addons scrollen neben deinem Charakter.",
             ["Names only"] = "Nur Namen",
             ["Hide health bars and keep names. Custom combat text still works."] = "Gesundheitsbalken ausblenden und Namen behalten. Eigener Kampftext funktioniert weiterhin.",
             ["Nameplates"] = "Namensplaketten",
@@ -3787,6 +3795,8 @@ DFRL.locale.data = {
     },
     pt = {
         ui = {
+            ["MSBT-style scrolling"] = "Rolagem no estilo MSBT",
+            ["Addon damage numbers scroll beside your character."] = "Os números de dano do addon rolam ao lado do personagem.",
             ["Names only"] = "Apenas nomes",
             ["Hide health bars and keep names. Custom combat text still works."] = "Ocultar barras de vida e manter os nomes. O texto de combate personalizado continua funcionando.",
             ["Nameplates"] = "Placas de nome",
@@ -4842,6 +4852,8 @@ DFRL.locale.data = {
     },
     es = {
         ui = {
+            ["MSBT-style scrolling"] = "Desplazamiento estilo MSBT",
+            ["Addon damage numbers scroll beside your character."] = "Los números de daño del addon se desplazan junto a tu personaje.",
             ["Names only"] = "Solo nombres",
             ["Hide health bars and keep names. Custom combat text still works."] = "Ocultar las barras de salud y mantener los nombres. El texto de combate personalizado sigue funcionando.",
             ["Nameplates"] = "Placas de nombre",
@@ -5901,6 +5913,8 @@ DFRL.locale.data = {
     },
     fr = {
         ui = {
+            ["MSBT-style scrolling"] = "Défilement de style MSBT",
+            ["Addon damage numbers scroll beside your character."] = "Les dégâts de l’addon défilent à côté du personnage.",
             ["Names only"] = "Noms uniquement",
             ["Hide health bars and keep names. Custom combat text still works."] = "Masquer les barres de vie et garder les noms. Le texte de combat personnalisé fonctionne toujours.",
             ["Nameplates"] = "Barres de nom",
@@ -6968,6 +6982,8 @@ DFRL.locale.data = {
     },
     ro = {
         ui = {
+            ["MSBT-style scrolling"] = "Derulare în stil MSBT",
+            ["Addon damage numbers scroll beside your character."] = "Numerele de daune ale addonului se derulează lângă personaj.",
             ["Names only"] = "Doar numele",
             ["Hide health bars and keep names. Custom combat text still works."] = "Ascunde barele de viață și păstrează numele. Textul de luptă personalizat funcționează în continuare.",
             ["Nameplates"] = "Bare de nume",
@@ -8018,6 +8034,8 @@ DFRL.locale.data = {
     },
     tr = {
         ui = {
+            ["MSBT-style scrolling"] = "MSBT tarzı kaydırma",
+            ["Addon damage numbers scroll beside your character."] = "Eklentinin hasar sayıları karakterinin yanında kayar.",
             ["Names only"] = "Yalnızca isimler",
             ["Hide health bars and keep names. Custom combat text still works."] = "Sağlık çubuklarını gizle, isimleri göster. Özel savaş metni çalışmaya devam eder.",
             ["Nameplates"] = "İsim plakaları",
@@ -8944,6 +8962,8 @@ DFRL.locale.data = {
     },
     ru = {
         ui = {
+            ["MSBT-style scrolling"] = "Прокрутка в стиле MSBT",
+            ["Addon damage numbers scroll beside your character."] = "Числа урона аддона прокручиваются рядом с персонажем.",
             ["Names only"] = "Только имена",
             ["Hide health bars and keep names. Custom combat text still works."] = "Скрыть полосы здоровья и оставить имена. Пользовательский текст боя продолжает работать.",
             ["Nameplates"] = "Индикаторы здоровья",
@@ -10089,6 +10109,8 @@ DFRL.locale.data = {
     },
     uk = {
         ui = {
+            ["MSBT-style scrolling"] = "Прокручування у стилі MSBT",
+            ["Addon damage numbers scroll beside your character."] = "Числа шкоди аддона прокручуються поруч із персонажем.",
             ["Names only"] = "Лише імена",
             ["Hide health bars and keep names. Custom combat text still works."] = "Приховати смуги здоров’я та залишити імена. Власний бойовий текст працює й надалі.",
             ["Nameplates"] = "Індикатори здоров’я",
@@ -11208,6 +11230,8 @@ DFRL.locale.data = {
     },
     zh = {
         ui = {
+            ["MSBT-style scrolling"] = "MSBT 风格滚动",
+            ["Addon damage numbers scroll beside your character."] = "插件伤害数字在角色旁边滚动显示。",
             ["Names only"] = "仅显示名称",
             ["Hide health bars and keep names. Custom combat text still works."] = "隐藏血条并保留名称。自定义战斗文字仍可正常使用。",
             ["Nameplates"] = "姓名板",
@@ -12254,6 +12278,8 @@ DFRL.locale.data = {
     },
     ja = {
         ui = {
+            ["MSBT-style scrolling"] = "MSBT風スクロール",
+            ["Addon damage numbers scroll beside your character."] = "アドオンのダメージ数値はキャラクターの横にスクロール表示されます。",
             ["Names only"] = "名前のみ",
             ["Hide health bars and keep names. Custom combat text still works."] = "体力バーを非表示にして名前を残します。カスタム戦闘テキストは引き続き機能します。",
             ["Nameplates"] = "ネームプレート",
@@ -13332,6 +13358,8 @@ DFRL.locale.data = {
     },
     ko = {
         ui = {
+            ["MSBT-style scrolling"] = "MSBT 스타일 스크롤",
+            ["Addon damage numbers scroll beside your character."] = "애드온 피해 수치가 캐릭터 옆에서 스크롤됩니다.",
             ["Names only"] = "이름만 표시",
             ["Hide health bars and keep names. Custom combat text still works."] = "체력 막대를 숨기고 이름을 유지합니다. 사용자 지정 전투 문자는 계속 작동합니다.",
             ["Nameplates"] = "이름표",

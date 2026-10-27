@@ -427,6 +427,44 @@ No asset, setting, SavedVariable, gameplay clock or updater is added, and the
 These changes were reviewed from source and formatted locally; appearance,
 failure recovery and performance remain unverified in the running client.
 
+## MSBT-style combat text — 2026-10-27
+
+The optional fixed outgoing stream shares the existing SCT controller,
+parser/intake, exact duplicate groups, active list and lazy text pool. Each
+label still uses its original two passive frames, FontString and optional icon;
+the shared root and all artwork are reused. There are zero additional combat
+frames, drawing regions, textures/materials, UV states, native events or
+updaters. Full bursts retain their existing grouping and 1.45-second lifetime,
+so peak active allocations can still grow with the actual event load.
+
+Only this style adds a newest-first spacing pass over active labels. It uses
+pooled scalar offsets, existing text scale/crit sizing and one exponential
+blend per update, with no per-frame table, glyph measurement or texture bind.
+The ordinary animation pass applies a changed-only curved center-relative anchor and
+reuses the existing changed-only scale/alpha writes and conditional measurement
+retry. The default enemy layout retains its original animation equations and
+does not run the spacing pass. Empty active lists skip the added work.
+
+MSBT-style text skips origin creation, per-plate SCT coordinate/health-loss
+sampling, per-hit plate discovery and origin resolution. The existing skin
+discovery and visible nameplate/filter presentation remain independent. With V
+off it also releases the native backing plate feed, so native projection and
+collision work are no longer forced by this style. V-visible plates keep native
+costs. Style transitions retire queued/active labels and matching state, reuse
+the pool and restore the current native V request without preference writes.
+
+The lazy Combat text page adds one standard checkbox: one button, four texture
+regions (box, mark, hover and divider) and one caption, using existing editor
+art. It joins the shared inactive-mode alpha/input guard. The checkbox sits beside SCT size, with the class-color control below it;
+all filters fit the existing page without enlarging the dialog or adding scrolling.
+
+Source/diff review and pinned formatting only; no local tests, standalone
+validation or addon/game execution. CI-only native mocks cover the production
+controller's defaults, fixed anchors, burst spacing, tracking handoff, cleanup
+and pool reuse. These source counts and authored assertions do not establish
+in-game layout, native-name restoration, visual parity or FPS. Behavior is in
+[API-NOTES.md](API-NOTES.md#msbt-style-combat-text--2026-10-27).
+
 ## Names-only nameplates — 2026-10-27
 
 The default-off `nameplatesNamesOnly` choice is cached by the existing SCT

@@ -46,10 +46,11 @@ An explicit Bash shell enables `pipefail`, so piping fixture/model output into
 
 ## UI work and cleanup tests
 
-`scripts/run_ui_contracts.py` runs eighteen scenarios in Lua 5.1 with fresh mock
+`scripts/run_ui_contracts.py` runs scenarios in Lua 5.1 with fresh mock
 state per scenario. Tests exercise the actual source, including the shared text
 helper, cooldown controller, range controller, HUD owner, loot intake and loot
-renderer, target-health owner, health labels and damage-loss animation. There is no copied cooldown algorithm, runtime test export, shipped
+renderer, target-health owner, health labels, damage-loss animation and SCT
+controller. There is no copied cooldown algorithm, runtime test export, shipped
 fixture, client-data reader or game process. AST selection extracts the original
 cooldown declarations and constants by their exact byte ranges; a missing or
 ambiguous declaration fails preparation.
@@ -78,6 +79,11 @@ The assertions cover:
 - Target changes, invalid publications, hiding and phase/zone/world retirement
   clear stale health and loss effects. Player targets retain native health and
   the existing label visibility settings.
+- SCT keeps over-enemy defaults and the display transaction, releases forced
+  plate tracking in MSBT-style mode with V off, uses fixed center-relative
+  outgoing anchors, spaces distinct burst lines and animates without enemy
+  projection. Style changes retire active and queued hits, and expiry/world
+  cleanup clears labels while retaining pool reuse and empty-list idling.
 
 The mocks implement only explicit API methods and record calls, allocation and
 effective parent visibility. An unsupported method fails rather than silently

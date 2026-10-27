@@ -279,6 +279,41 @@ V-off masking also hides the entire custom visual child explicitly, including it
 
 No tests, syntax checks, validation, addon execution or game startups were run; visual appearance and SCT coexistence remain unverified in the packaged game.
 
+## MSBT-style combat text — 2026-10-27
+
+`/sdui` → **Combat text** has **MSBT-style scrolling**, off by default. Missing
+or invalid `sctMSBTStyle` values normalize to false in the existing display
+table, preserving the current over-enemy style. Preview, Confirm-only saving,
+Cancel/world/logout/reload discard, profiles and both full resets share the
+existing display transaction. The checkbox dims and disables alongside the
+other settings when the effective mode is Off or Game settings. The Custom
+status description follows the selected style in all fourteen languages.
+
+The optional style sends outgoing damage and avoidance notices down a curved
+stream to the right of screen center. It reuses the current parser, exact
+duplicate grouping, unchanged numeric amounts, filters, icons, colors, size,
+crit/miss pop and 1.45-second lifetime. Pooled label offsets space simultaneous
+lines and ease older lines downward as new ones arrive; no extra hit cap,
+amount merging or replacement history is added. Incoming/self text retains
+its existing independent native control. This is an independently implemented
+outgoing style, not a port of another addon or its full notification system.
+
+The stream anchors directly to WorldFrame center, so it skips enemy-origin
+matching, health-loss sampling and combat-event plate discovery. It does not
+force native hostile plates on: with V off, the captured native HideNameplates
+restores normal overhead-name eligibility. Native name preferences still
+apply. With V on, nameplate styling, Names only and the bosses/guardians filter
+retain their current behavior. The default over-enemy style keeps its original
+tracking, matching and animation equations.
+
+Changing styles clears active/queued text and transient matching/color samples,
+then applies the current V request without writing `NAMEPLATES_ON` or native
+settings. A discarded preview does the same in reverse. World/logout cleanup
+and Lua 5.0 remembered queue sizes remain shared. No runtime test export, asset,
+new SavedVariable, event or updater is introduced. See
+[PERFORMANCE.md](PERFORMANCE.md#msbt-style-combat-text--2026-10-27) for costs
+and CI-only mocked coverage in [PR-CHECKS.md](PR-CHECKS.md).
+
 ## Names-only nameplates — 2026-10-27
 
 `/sdui` → **Nameplates** has **Names only**, off by default. The normalized
@@ -358,7 +393,7 @@ Known pooled plates already receive synchronous OnShow and OnValueChanged handli
 
 ## Invisible nameplate tracking for custom SCT — 2026-10-15
 
-The user reported that custom hits fell back to the center when native nameplates were hidden. Custom SCT separates V's requested visible state from the native tracking state: while custom text is active, it uses the original `ShowNameplates` to keep hostile plates live and their coordinates updating even when the user has chosen to hide the plates. `NAMEPLATES_ON` and the user's saved V preference remain unchanged. Selecting Off or Game settings in `/sdui` releases that tracking control and restore the originally requested native visibility. World leave and logout release it too; the selected SCT mode is saved separately and restored subject to current game settings on the next UI initialization.
+The user reported that custom hits fell back to the center when native nameplates were hidden. The default over-enemy SCT style separates V's requested visible state from the native tracking state: while that style is active, it uses the original `ShowNameplates` to keep hostile plates live and their coordinates updating even when the user has chosen to hide the plates. `NAMEPLATES_ON` and the user's saved V preference remain unchanged. Selecting MSBT-style scrolling, Off or Game settings in `/sdui` releases that tracking control and restore the originally requested native visibility. World leave and logout release it too; the selected SCT mode is saved separately and restored subject to current game settings on the next UI initialization.
 
 With V off, the addon disables draw layers on hostile plate frames and their descendants, including health-bar layers. It makes their hit rectangles empty through insets so invisible plates cannot receive clicks. It leaves the native mouse-enabled flag unchanged, preserving the client's freelook transitions. It does not hide the plate frames or change their alpha, so their native shown-state lifecycle and coordinate updates continue. Turning visible plates back on, changing out of custom mode, leaving the world or logging out restores the captured draw-layer and hit-rectangle state.
 

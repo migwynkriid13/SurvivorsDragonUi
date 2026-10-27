@@ -28,7 +28,11 @@ def main():
         result = subprocess.run(["lua5.1", "scripts/tests/fixtures/ui_spec.lua", str(seam)], cwd=SOURCE)
         if result.returncode:
             return result.returncode
-        return subprocess.run(["lua5.1", "scripts/tests/fixtures/ui_health_spec.lua"], cwd=SOURCE).returncode
+        for fixture in ("ui_health_spec.lua", "ui_sct_spec.lua"):
+            result = subprocess.run(["lua5.1", "scripts/tests/fixtures/" + fixture], cwd=SOURCE)
+            if result.returncode:
+                return result.returncode
+        return 0
 
 
 if __name__ == "__main__":

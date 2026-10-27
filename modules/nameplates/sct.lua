@@ -10,6 +10,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local FALLBACK_ICON = T.SourceIconFallback
     local ATTACK_ICON = "Interface\\Icons\\INV_Sword_04"
     local TEXT_DURATION = 1.45
+    local MSBT = { x = 160, top = 110, height = 220, curve = 48, spacing = 8, settle = 0.06 }
     local EVENT_SETTLE = 0.08
     local EVENT_FALLBACK_DELAY = 0.16
     local DUPLICATE_WINDOW = 0.075
@@ -71,6 +72,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local customEnabled, changingSettings = false, false
     local damageIcons = DFRL.display.Get("damageIcons")
     local nameplatesNamesOnly = DFRL.display.Get("nameplatesNamesOnly")
+    local msbtStyle = DFRL.display.Get("sctMSBTStyle")
     local textScale = DFRL.display.Get("sctScale")
     -- Keep V's visible request separate from the backing coordinate feed. The
     -- native verbs do not write FrameXML's saved NAMEPLATES_ON preference.
@@ -87,6 +89,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         and WorldFrame.SetHitRectInsets
 
     local function CustomEnabled() return customEnabled end
+    local function UsesPlateOrigins() return CustomEnabled() and not msbtStyle end
 
     local function IsFiniteNumber(value) return type(value) == "number" and value - value == 0 end
 
@@ -270,7 +273,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         data.presentationMasked = false
     end
     local function UpdatePresentation(plate, data, force)
-        local hiddenByV = CustomEnabled() and not enemyPlatesEnabled
+        local hiddenByV = UsesPlateOrigins() and not enemyPlatesEnabled
         local masked = trackingSupported
                 and inWorld
                 and (hiddenByV or plateFilter.enabled)
@@ -298,7 +301,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         data.presentationMasked = true
     end
     local function ApplyPlateTracking(force)
-        local wanted = enemyPlatesEnabled or (trackingSupported and inWorld and CustomEnabled())
+        local wanted = enemyPlatesEnabled or (trackingSupported and inWorld and UsesPlateOrigins())
         for plate, data in pairs(plates) do
             UpdatePresentation(plate, data)
         end
@@ -328,6 +331,8 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         text.sourceIsPet = nil
         text.color = nil
         text.needsMeasure = nil
+        text.scrollOffset, text.scrollY = nil, nil
+        text.anchorPoint, text.anchorX, text.anchorY = nil, nil, nil
         table.insert(textPool, text)
     end
 
@@ -350,7 +355,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     end
 
     local function IsShownEnemy(plate, data)
-        if not CustomEnabled() or not inWorld or not plate:IsShown() then return false end
+        if not UsesPlateOrigins() or not inWorld or not plate:IsShown() then return false end
         if plate.IsVisible and not plate:IsVisible() then return false end
         return IsEnemyPlate(data)
     end
@@ -560,7 +565,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         -- Share root geometry only inside this synchronous pass. Show/health
         -- callbacks keep sampling afresh, including later in the same frame.
         -- Retry invalid geometry and retain each origin's last usable point.
-        local geometry = CustomEnabled() and {} or nil
+        local geometry = UsesPlateOrigins() and {} or nil
         DiscoverPlates(force, now, geometry)
         -- Snapshot on every frame, rather than every tenth of a second: a
         -- one-shot enemy can disappear between two of the old scans.
@@ -1154,7 +1159,22 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         end
     end
 
+    local function PositionText(text, relativePoint, x, y)
+        if text.anchorPoint == relativePoint and text.anchorX == x and text.anchorY == y then return end
+        text.holder:SetPoint("CENTER", WorldFrame, relativePoint, x, y)
+        text.anchorPoint, text.anchorX, text.anchorY = relativePoint, x, y
+    end
+
     DFRL.display.Listen(function()
+        local scrolling = DFRL.display.Get("sctMSBTStyle")
+        if msbtStyle ~= scrolling then
+            msbtStyle = scrolling
+            -- Do not move old hits between unrelated coordinate systems, or
+            -- replay a queued enemy hit in the fixed screen stream.
+            ResetDisplay()
+            ApplyPlateTracking(false)
+            NotifySettings()
+        end
         nameplatesNamesOnly = DFRL.display.Get("nameplatesNamesOnly")
         local filtered = DFRL.display.Get("nameplatesBossGuardiansOnly")
         if plateFilter.enabled ~= filtered then
@@ -1264,16 +1284,21 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         local value = info.text or info.amount
         if not value then return end
         local text = AcquireText()
-        -- Snapshot the launch point; later native plate rearrangements must
-        -- never drag an already visible number across the screen.
+        -- The enemy layout snapshots its native launch point. The scrolling
+        -- layout uses offsets from screen center and needs no enemy position.
+        if msbtStyle then
+            x, y = MSBT.x, MSBT.top - 12
+        end
         text.x, text.y = x, y
         text.started = GetTime()
         text.impact = info.critical or info.kind == "miss"
         text.sizeScale = info.critical and 1.5 or 1
-        text.arcX = arcDirection * math.random(36, 64)
-        text.launch = math.random(105, 130)
-        text.gravity = text.launch + 65
-        arcDirection = -arcDirection
+        if not msbtStyle then
+            text.arcX = arcDirection * math.random(36, 64)
+            text.launch = math.random(105, 130)
+            text.gravity = text.launch + 65
+            arcDirection = -arcDirection
+        end
         local displayText = tostring(value)
         if info.kind == "miss" then displayText = DFRL.locale.CombatText(displayText) end
         text.label:SetText(displayText)
@@ -1297,7 +1322,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             text.holder:SetAlpha(1)
         end
         -- New holders have no anchor; ReleaseText cleared pooled holders.
-        text.holder:SetPoint("CENTER", WorldFrame, "BOTTOMLEFT", x, y + 12)
+        PositionText(text, msbtStyle and "CENTER" or "BOTTOMLEFT", x, y + 12)
         text.holder:Show()
         table.insert(activeTexts, text)
     end
@@ -1310,7 +1335,12 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             local age = now - entry.time
             local resolved = false
             if age >= EVENT_SETTLE then
-                local x, y = ResolveOrigin(entry.info, now, age >= EVENT_FALLBACK_DELAY)
+                local x, y
+                if msbtStyle then
+                    x, y = 0, 0
+                else
+                    x, y = ResolveOrigin(entry.info, now, age >= EVENT_FALLBACK_DELAY)
+                end
                 if x and y then
                     local group = entry.group
                     group.count = group.count + 1
@@ -1319,8 +1349,8 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                     resolved = true
                 end
             end
-            -- Match every original hit once in native message order, retaining
-            -- original amounts for health-loss consumption and plate identity.
+            -- Enemy text matches every original hit in native message order;
+            -- the fixed stream needs neither plate identity nor health loss.
             if not resolved then
                 kept = kept + 1
                 pending[kept] = entry
@@ -1362,8 +1392,33 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         table.setn(pendingGroups, kept)
     end
 
-    local function UpdateTexts(now)
+    local function PrepareScrollPositions(now, elapsed)
+        local ceiling
+        local blend = 1 - math.exp(-math.max(0, elapsed) / MSBT.settle)
+        -- Newest first: reserve room for each label's largest crit pop without
+        -- allocating lanes, dropping hits or changing their original lifetime.
+        for index = table.getn(activeTexts), 1, -1 do
+            local text = activeTexts[index]
+            local progress = (now - text.started) / TEXT_DURATION
+            if progress < 1 then
+                local halfHeight = 12 * textScale * text.sizeScale * (text.impact and 2 or 1)
+                local y = MSBT.top - MSBT.height * progress
+                local target = ceiling and math.min(y, ceiling - halfHeight - MSBT.spacing) or y
+                local offset = y - target
+                if text.scrollOffset then
+                    text.scrollOffset = text.scrollOffset + (offset - text.scrollOffset) * blend
+                else
+                    text.scrollOffset = offset
+                end
+                text.scrollY = y - text.scrollOffset
+                ceiling = text.scrollY - halfHeight
+            end
+        end
+    end
+
+    local function UpdateTexts(now, elapsed)
         local count = table.getn(activeTexts)
+        if msbtStyle and count > 0 then PrepareScrollPositions(now, elapsed) end
         local kept = 0
         for index = 1, count do
             local text = activeTexts[index]
@@ -1373,11 +1428,19 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             else
                 kept = kept + 1
                 activeTexts[kept] = text
-                -- Only the hit's own animation moves it from its launch point.
-                local x = text.x + text.arcX * progress
-                local y = text.y + 12 + text.launch * progress - text.gravity * progress * progress
+                local x, y, relativePoint
+                if msbtStyle then
+                    x = MSBT.x + MSBT.curve * 4 * progress * (1 - progress)
+                    y = text.scrollY
+                    relativePoint = "CENTER"
+                else
+                    -- Only the hit's own animation moves its native launch point.
+                    x = text.x + text.arcX * progress
+                    y = text.y + 12 + text.launch * progress - text.gravity * progress * progress
+                    relativePoint = "BOTTOMLEFT"
+                end
                 -- Replacing CENTER updates the existing anchor in place.
-                text.holder:SetPoint("CENTER", WorldFrame, "BOTTOMLEFT", x, y)
+                PositionText(text, relativePoint, x, y)
                 local scale = textScale * text.sizeScale
                 if text.impact and progress < 1 / 6 then
                     local pop = progress * 6
@@ -1426,7 +1489,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         -- Catch newly allocated plates before a lethal hit can retire them.
         -- Known plates already sample on show/health changes and every frame;
         -- refreshing the entire pack for each combat message multiplies UI work.
-        if WorldFrame and combatDiscoveryNeeded then
+        if UsesPlateOrigins() and WorldFrame and combatDiscoveryNeeded then
             combatDiscoveryNeeded = false
             DiscoverPlates(false, now)
         end
@@ -1637,7 +1700,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         if not CustomEnabled() then return end
         local now = GetTime()
         UpdatePending(now)
-        UpdateTexts(now)
+        UpdateTexts(now, arg1)
     end)
 
     hooksecurefunc("HideNameplates", function()

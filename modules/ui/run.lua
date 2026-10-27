@@ -453,7 +453,11 @@ DFRL:NewMod("RunTimers", 5, function()
             button:SetSelected(value == mode)
         end
         if mode == "on" then
-            sctDescription:SetText("Addon damage numbers follow enemies.")
+            if DFRL.display.Get("sctMSBTStyle") then
+                sctDescription:SetText("Addon damage numbers scroll beside your character.")
+            else
+                sctDescription:SetText("Addon damage numbers follow enemies.")
+            end
         elseif mode == "off" then
             sctDescription:SetText("Custom and native outgoing damage text are off.")
         else
@@ -1044,7 +1048,8 @@ DFRL:NewMod("RunTimers", 5, function()
         for _, entry in ipairs(modes) do
             modeWidth = math.max(modeWidth, TextWidth(entry.label) + 24)
         end
-        local filterWidth, filterHeadingWidth = TextWidth("Class-colored damage") + 36, 0
+        local filterWidth = math.max(TextWidth("Class-colored damage"), TextWidth("MSBT-style scrolling")) + 36
+        local filterHeadingWidth = 0
         for _, group in ipairs(combatFilters) do
             filterHeadingWidth = math.max(filterHeadingWidth, TextWidth(group.label))
             for _, entry in ipairs(group.entries) do
@@ -1407,7 +1412,8 @@ DFRL:NewMod("RunTimers", 5, function()
             control.label:ClearAllPoints()
             control.label:SetPoint("LEFT", control, "LEFT", 32, 0)
         end
-        CombatToggle("sctClassColors", "Class-colored damage", filterSize + gap, -182)
+        CombatToggle("sctMSBTStyle", "MSBT-style scrolling", filterSize + gap, -182)
+        CombatToggle("sctClassColors", "Class-colored damage", filterSize + gap, -218)
         divider = T.EditorDivider(combat, contentWidth)
         divider:SetPoint("TOPLEFT", combat, "TOPLEFT", 0, -282)
         for _, group in ipairs(combatFilters) do
