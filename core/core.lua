@@ -37,11 +37,21 @@ local function Initialize()
     end
     DFRL.modules = nil
     DFRL:UnregisterAllEvents()
+    DFRL:RegisterEvent("PLAYER_ENTERING_WORLD")
 end
 
 -- The port may load loose addons after stock FrameXML has already initialized.
 DFRL:RegisterEvent("ADDON_LOADED")
 DFRL:RegisterEvent("PLAYER_LOGIN")
 DFRL:SetScript("OnEvent", function()
-    if event == "PLAYER_LOGIN" or (event == "ADDON_LOADED" and arg1 == "SurvivorsDragonUi") then Initialize() end
+    if event == "PLAYER_LOGIN" or (event == "ADDON_LOADED" and arg1 == "SurvivorsDragonUi") then
+        Initialize()
+    elseif event == "PLAYER_ENTERING_WORLD" then
+        local chat = DEFAULT_CHAT_FRAME or ChatFrame1
+        if chat and type(chat.AddMessage) == "function" then
+            chat:AddMessage(DFRL.locale.Text("Write /sdui for SurvivorsDragonUI settings"), 1, 0.82, 0)
+            -- One reminder per UI load; zone transitions must not repeat it.
+            DFRL:UnregisterEvent("PLAYER_ENTERING_WORLD")
+        end
+    end
 end)
