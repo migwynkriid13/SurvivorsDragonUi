@@ -94,6 +94,32 @@ DFRL:NewMod("NameplateCombatText", 6, function()
 
     local function IsFiniteNumber(value) return type(value) == "number" and value - value == 0 end
 
+    -- Native plate ranges can pass through the unit's uint32 fields and float32
+    -- StatusBar storage. Index those exact representations, never a tolerance
+    -- or a percentage estimate of the full-precision publication.
+    local function PlateFloat(value)
+        local _, exponent = math.frexp(value)
+        if exponent > 128 then return end
+        local step = math.ldexp(1, math.max(exponent, -125) - 24)
+        local scaled = value / step
+        local integer = math.floor(scaled)
+        local fraction = scaled - integer
+        if fraction > 0.5 or (fraction == 0.5 and math.mod(integer, 2) == 1) then integer = integer + 1 end
+        if integer == 0 or (exponent == 128 and integer == 16777216) then return end
+        return integer * step
+    end
+    local function AddPlateMaximum(maxima, value, eligible)
+        if value and maxima[value] ~= false then maxima[value] = eligible end
+    end
+    local function IndexPlateMaximum(maxima, maximum, eligible)
+        AddPlateMaximum(maxima, maximum, eligible)
+        AddPlateMaximum(maxima, PlateFloat(maximum), eligible)
+        if maximum > 4294967295 then
+            AddPlateMaximum(maxima, 4294967295, eligible)
+            AddPlateMaximum(maxima, PlateFloat(4294967295), eligible)
+        end
+    end
+
     local plateFilter = {
         enabled = DFRL.display.Get("nameplatesBossGuardiansOnly"),
         names = {},
@@ -198,7 +224,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                     plateFilter.names[entry.name] = maxima
                 end
                 -- A published ordinary elite with the same signature is ambiguous.
-                if maxima[entry.hpm] ~= false then maxima[entry.hpm] = entry.kind ~= "elite" end
+                IndexPlateMaximum(maxima, entry.hpm, entry.kind ~= "elite")
             end
         end
         for name, maxima in pairs(plateFilter.names) do

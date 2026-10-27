@@ -137,15 +137,57 @@ Test("loss animation measures real damage above the 32 bit ceiling", function()
     assert(bar:GetValue() == 0 and loss:IsShown(), "valid zero HP was discarded")
 end)
 
-Test("same name target switches block retired health and reset the loss baseline", function()
-    local context, controller, bar, label, _, loss, animator = Target(70e12, 70e12)
+Test("same name target switches show current native health and block retired AZS health", function()
+    local context, controller, bar, label, percent, loss, animator = Target(70e12, 70e12)
     context:Publish(35e12, 70e12)
+    context.nativeHealth, context.nativeMaximum = 25, 100
     context:Event(controller, "PLAYER_TARGET_CHANGED")
+    assert(
+        label:GetText() == "25" and percent:GetText() == "25%" and bar:GetValue() == 0.25,
+        "selection waited for AZSTGT"
+    )
     context:Call(controller, "OnUpdate", 0.01)
-    assert(label:GetText() == "" and bar:GetValue() == 0, "old same-name health survived selection")
+    assert(
+        label:GetText() == "25" and bar:GetValue() == 0.25,
+        "retired same-name health replaced current native health"
+    )
+    assert(controller:GetScript("OnUpdate") == nil, "waiting selection added an idle poll")
     assert(not loss:IsShown() and animator:GetScript("OnUpdate") == nil, "old target loss survived selection")
     context:Publish(20e12, 70e12, 91)
     assert(label:GetText() == "20T" and not loss:IsShown(), "new spawn inherited old target loss")
+end)
+
+Test("native selection hands off to full precision without a false loss or capped overwrite", function()
+    local context, controller, bar, label, percent, loss = Target(70e12, 70e12)
+    context.targetName, context.nativeHealth, context.nativeMaximum = "New guardian", 750, 1000
+    context:Event(controller, "PLAYER_TARGET_CHANGED")
+    assert(label:GetText() == "750" and percent:GetText() == "75%" and bar:GetValue() == 0.75)
+    context:Publish(35e12, 70e12, 91, "Old guardian")
+    assert(
+        label:GetText() == "750" and bar:GetValue() == 0.75,
+        "late old-target packet blanked the current native unit"
+    )
+    context:Publish(35e12, 70e12, 92)
+    assert(label:GetText() == "35T" and percent:GetText() == "50%" and bar:GetValue() == 0.5)
+    assert(not loss:IsShown(), "source handoff was animated as damage")
+    context:ResetCounts()
+    bar:SetMinMaxValues(0, 1000)
+    bar:SetValue(1000)
+    assert(bar:GetValue() == 0.5 and not context.reads.health and not context.reads.maximum)
+    context:NoPresentationWrites()
+end)
+
+Test("provisional native target health rejects invalid values and maxima", function()
+    local context, controller, bar, label = Target(70e12, 70e12)
+    for _, values in ipairs({ { -1, 100 }, { math.huge, 100 }, { 0 / 0, 100 }, { 101, 100 }, { 20, 0 } }) do
+        context.nativeHealth, context.nativeMaximum = values[1], values[2]
+        context:Event(controller, "PLAYER_TARGET_CHANGED")
+        assert(label:GetText() == "" and bar:GetValue() == 0, "invalid provisional native health was displayed")
+    end
+    context.nativeHealth, context.nativeMaximum = 40, 100
+    bar:SetValue(40)
+    local value, maximum = context.env.T.GetUnitHealth("target")
+    assert(value == 40 and maximum == 100 and bar:GetValue() == 0.4, "ready native health did not update the selection")
 end)
 
 Test("invalid and mismatched publications cannot display another target's health", function()
@@ -164,6 +206,7 @@ Test("hidden targets skip publication reads and painting and resume with a fresh
     local context, controller, bar, label, _, loss = Target(70e12, 70e12)
     context.env.TargetFrame:Hide()
     context:ResetCounts()
+    context:Event(controller, "PLAYER_TARGET_CHANGED")
     context:Publish(35e12, 70e12)
     context:NoPresentationWrites()
     assert(not context.reads.health and not context.reads.maximum, "hidden target read native health")

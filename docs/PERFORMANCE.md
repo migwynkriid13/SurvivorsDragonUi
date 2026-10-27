@@ -52,6 +52,20 @@ history, saved state or native-table writes. Hidden targets retain receipt
 counts and boundary retirement only; they do not read/paint health, and Show
 accepts current state with a fresh loss baseline. Same-name selection changes
 require a fresh publication rather than guessing spawn identity from a name.
+Selection now arms an unsaved provisional flag: existing target/native-health
+callbacks can immediately paint validated `UnitHealth` / `UnitHealthMax` for the
+current unit until its full-precision packet arrives. This adds native getter
+reads only to that temporary source, not a reader, event, timer or idle poll.
+The accepted AZS source disables the fallback and advances the existing loss
+generation, so a precision/maximum change cannot create a false damage trail.
+Hide and world/zone/phase retirement disable it. Missing/invalid native values
+stay empty, and invalid packets after accepted AZS health never restore capped
+health. Native limits can affect the temporary selection values. Existing
+changed-only labels/fill and hidden guards are retained, with zero new frames,
+regions, artwork, settings or saved state. CI-only mocks cover immediate
+selection, namesakes/late packets, precision handoff, invalid native values and
+native capped writes after acceptance; no local execution or measured latency,
+FPS or visual-parity result is claimed.
 
 The existing native target StatusBar uses a 0–1 fraction, preserving UV ownership
 and artwork. Its two setter adapters compare actual native range/value before
@@ -278,11 +292,28 @@ retains at most 120 run seconds plus one boundary sample, and compresses flat
 intervals to their endpoints. Source identities remain exact name/proc pairs;
 new identities allocate once and reuse their numeric vectors. Left-boundary
 queries use binary search at the one-Hz presentation cadence. All skips history;
-The X captures all three native views once through the existing reader and keeps
+The X captures all four native views once through the existing reader and keeps
 one baseline/last-counter record per exact name/proc identity. It pools positive
 session rows and recalculates their totals/shares/order only when counters or
 native order change; unchanged counters refresh only native-time average rates.
 No native counter or table is modified.
+
+Party Damage reuses that fourth mode, existing packet intake, reader, session
+reset model, one-Hz presentation and lazy row pool. Native class keys share the
+existing class-color palette. Its only portrait discovery is a bounded five-unit
+pass during visible, icons-enabled party painting; it skips all spell/item icon
+resolution. Unit/name/native-frame-image and actual texture comparisons skip
+unchanged native portrait binding. Failures remain memoized until the identity
+or source image changes or the row retires; neutral fallback binding retains the
+existing retry rules. Icons-off, hidden/off views and retired rows skip that pass
+and binding; release clears the bounded metadata. All four views retain phase
+and received-publication gates. No frame, region, model, artwork, event, updater,
+setting or saved state is added. Native unit portraits occupy the existing icon
+and gold-rim regions, so the authored visible-region budget below is unchanged;
+neutral fallback can still use the existing more expensive strip path. Source
+review and formatting are the only local checks; CI-only mocks are authored for
+cycling, portraits, unchanged/hidden/off work, failure caching, reset metadata
+and world retirement. No measured CPU/GPU/FPS or live visual-parity claim follows.
 
 Hiding empties recent vectors once and stops observation; showing warms the
 window again. Disabling and run/world retirement drop all rate state; language
@@ -383,6 +414,19 @@ The Combat text mode selector and status description stay outside one passive se
 The shared editor availability helper now serves this group and the existing replacement-display dependents. It skips alpha/input writes when enabled state is unchanged. The existing SCT settings listener supplies the effective draft mode, including preview, profile loads, external mode changes, Confirm and discard. The lazy settings dialog adds one passive frame, zero texture regions, no animation, updater, game event, asset or SavedVariable. Source/diff inspection and pinned formatting only; local tests, standalone validation and addon/game execution were not run. Runtime appearance and interaction remain unverified.
 
 ## Guardian Show dead control — 2026-10-27
+
+Guardian minimap names reuse each existing passive pin and the shared native
+tooltip. Accepted minimap point copies carry only their received optional name.
+The existing ten-Hz/deferred waypoint refresh performs one cursor/minimap
+geometry sample when guardian pins exist, then tests their cached drawn centers
+only while the pointer is inside the map. The per-frame projection path adds no
+cursor reads. Unchanged pin/name/owner skips tooltip writes; hide/recycle clears
+only an owned hover, while hidden/editing tooltips stay suppressed. Native
+minimap click/wheel input remains available because pins keep mouse input off.
+No marker frame, texture, hit region, event, updater, artwork, setting or saved
+state is added; the existing native tooltip draws only during hover. This is
+source-level cost evidence, with CI-only mocked coverage and no measured FPS or
+live input/appearance result. See [GUARDIAN-TRACKER.md](GUARDIAN-TRACKER.md#minimap-names).
 
 The tracker's minus/plus header button, four native state-texture slots, tooltip
 handlers and optional glyph-alignment branch are removed. The existing minimap
@@ -490,13 +534,17 @@ their current lifecycles. Masked plates still skip the entire style refresh;
 showing again applies the current choice and current native state.
 
 No per-plate frame, drawing region, texture/material image, UV state, animation,
-event or updater is added. The existing label overlay moves from the cosmetic bar to
-its visual parent while retaining its anchors and frame level. Hiding the bar
-therefore leaves the name visible. The same allocated pool remains, but the
-custom skin draws only its existing name: the shadow, black background and
-health fill are hidden, together with any raid icon. Switching back restores
-those original regions without allocation or texture rebinding for the fixed
-artwork. The lazy settings dialog adds one standard checkbox: one button,
+event or updater is added. The name overlay anchors to its visual parent at the
+same one-unit inner inset, independently of a hidden cosmetic bar. Starting in
+names-only mode now omits the cosmetic StatusBar and the shadow, background,
+fill and raid-icon regions. They allocate once on the first eligible regular-bar
+refresh and remain pooled afterward. Filtered plates do not trigger that lazy
+allocation. Returning to Names only actually hides those existing regions and
+skips their updates; only the custom name draws. Switching back reuses the
+original art and pool without repeat allocation or fixed texture rebinding.
+Native source bars, collision placement and required SCT tracking remain live;
+this is not a zero-cost native renderer or a measured GPU saving. The lazy
+settings dialog adds one standard checkbox: one button,
 four texture regions (box, check, hover and divider) and two text regions,
 reusing existing art and drawing only while its page is visible.
 
@@ -524,8 +572,20 @@ texture, material or updater. It uses the current SCT controller's OnUpdate and
 existing message subscription. While enabled, phase/receipt retirement and the
 official unit-list index refresh run at five Hz. A matching source reference,
 timestamp and receipt generation skip index rebuilding. Accepted changes reuse
-exact-name/max-health buckets, with at most the native 40 entries; retired names
+exact-name/native-range buckets, with at most the native 40 entries; retired names
 are removed. Off clears the index and skips its native metadata reads.
+
+Accepted metadata now indexes at most four exact keys per entry: the original
+maximum, its float32 rounding, and (above the uint32 ceiling) that ceiling and
+its float32 rounding. These numeric aliases are computed only when the accepted
+publication changes, reusing the same buckets. Published elites mark collisions
+ambiguous across those aliases too. No per-plate conversion, name-only bypass,
+tolerance search, damage estimate, percentage-to-HP inference or new getter is
+added. Names-only labels no longer depend on health-widget anchors, and unused
+bar artwork remains unallocated until an eligible regular plate needs it.
+CI-only full-controller/style mocks cover both options together, native range
+representations, exclusions/ambiguity, mode/V changes, retirement, lazy pooling
+and unchanged writes. Local work is source/diff review and pinned formatting.
 
 Shown hostile plates add a cached-index lookup using their native name and, only
 for candidate names, raw health range. This stays in the existing native

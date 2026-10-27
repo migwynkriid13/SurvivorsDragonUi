@@ -1,0 +1,214 @@
+-- CI only: full production filter, masking and skin over explicit native plates.
+assert(_VERSION == "Lua 5.1", "nameplate fixtures require CI Lua 5.1")
+local SCT = dofile("scripts/tests/fixtures/ui_sct_helpers.lua")
+local function Plates()
+    local context = SCT(false, function(context, env)
+        context.settings.nameplatesNamesOnly = true
+        context.settings.nameplateFontSize = 9
+        context.settings.nameplatesBossGuardiansOnly = true
+        env.NAMEPLATES_ON = true
+        env.AZS_GetPhase = function() return context.phase or "playing" end
+        env.AZS_RUN, env.AZS_RUN_UPDATED = { t = 10 }, context.now
+        local function Write(object, name)
+            context.writes[name] = (context.writes[name] or 0) + 1
+            object.calls[name] = (object.calls[name] or 0) + 1
+        end
+        local function Native(object)
+            object.calls, object.layers = {}, {}
+            function object:GetObjectType() return self.kind end
+            function object:GetEffectiveScale() return 1 end
+            function object:GetLeft() return 0 end
+            function object:GetBottom() return 0 end
+            function object:GetCenter() return 200, 200 end
+            function object:GetTop() return 205 end
+            function object:GetChildren()
+                local children = {}
+                for _, child in ipairs(context.objects) do
+                    if child.parent == self and child.kind ~= "Texture" and child.kind ~= "FontString" then
+                        table.insert(children, child)
+                    end
+                end
+                return unpack(children)
+            end
+            function object:GetNumChildren() return select("#", self:GetChildren()) end
+            function object:GetRegions() return unpack(self.regions or {}) end
+            function object:GetHitRectInsets() return unpack(self.insets or { 0, 0, 0, 0 }) end
+            function object:SetHitRectInsets(...)
+                Write(self, "SetHitRectInsets")
+                self.insets = { ... }
+            end
+            function object:DisableDrawLayer(layer)
+                Write(self, "DisableDrawLayer")
+                self.layers[layer] = false
+            end
+            function object:EnableDrawLayer(layer)
+                Write(self, "EnableDrawLayer")
+                self.layers[layer] = true
+            end
+            function object:GetMinMaxValues() return self.minimum or 0, self.maximum or 100 end
+            function object:SetMinMaxValues(low, high)
+                Write(self, "SetMinMaxValues")
+                self.minimum, self.maximum = low, high
+            end
+            function object:GetValue() return self.value or 0 end
+            function object:SetValue(value)
+                Write(self, "SetValue")
+                self.value = value
+            end
+            function object:GetStatusBarColor() return unpack(self.color or { 1, 0, 0, 1 }) end
+            function object:SetStatusBarColor(...)
+                Write(self, "SetStatusBarColor")
+                self.color = { ... }
+            end
+            function object:SetStatusBarTexture(path)
+                self.fill = self.fill or self:CreateTexture(nil, "ARTWORK")
+                return self.fill:SetTexture(path)
+            end
+            function object:GetStatusBarTexture() return self.fill end
+            function object:GetTexCoord() return unpack(self.coords or { 0, 1, 0, 1 }) end
+            function object:SetTexCoord(...)
+                Write(self, "SetTexCoord")
+                self.coords = { ... }
+            end
+            return object
+        end
+        local create = context.Object
+        function context:Object(...) return Native(create(self, ...)) end
+        Native(env.WorldFrame)
+        function context:MakePlate(name, maximum)
+            local plate = env.CreateFrame("Frame", nil, env.WorldFrame)
+            plate:SetWidth(100)
+            plate:SetHeight(10)
+            local regions = {}
+            for index = 1, 6 do
+                regions[index] = index == 3 and plate:CreateFontString(nil, "OVERLAY")
+                    or plate:CreateTexture(nil, "ARTWORK")
+            end
+            plate.regions = regions
+            regions[1]:SetTexture("Interface\\Tooltips\\Nameplate-Border")
+            regions[3]:SetText(name)
+            regions[6]:Hide()
+            local bar = env.CreateFrame("StatusBar", nil, plate)
+            bar.minimum, bar.maximum, bar.value = 0, maximum, maximum
+            bar:SetStatusBarTexture("NativeHealth")
+            plate.nativeBar = bar
+            return plate
+        end
+        context.guardian = context:MakePlate("Hogger", 4294967296)
+        context.boss = context:MakePlate("Boss", 16777216)
+        context.ordinary = context:MakePlate("Ordinary", 4294967296)
+        context:Load("modules/nameplates/style.lua", "NameplateStyle")
+        local attach = env.T.NameplateStyle.Attach
+        env.T.NameplateStyle.Attach = function(plate, data)
+            attach(plate, data)
+            plate.fixture = data
+        end
+    end)
+    function context:Publish(entries)
+        self:Event(self.controller, "CHAT_MSG_ADDON", "AZSUNITS")
+        self.env.AZS_UNITS, self.env.AZS_UNITS_UPDATED = entries, self.now
+        self:Tick(0.21)
+    end
+    return context
+end
+local function Entries()
+    return {
+        { id = 10, kind = "guardian", name = "Hogger", hp = 70e12, hpm = 70e12 },
+        { id = 11, kind = "boss", name = "Boss", hp = 16777217, hpm = 16777217 },
+    }
+end
+
+local context = Plates()
+context:Tick(0.21)
+assert(not context.guardian.fixture.style.name:IsVisible(), "unpublished guardian bypassed the filter")
+context:Publish(Entries())
+local guardian, boss = context.guardian.fixture.style, context.boss.fixture.style
+assert(
+    guardian.name:IsVisible() and guardian.name:GetText() == "Hogger",
+    "capped guardian disappeared in names-only mode"
+)
+assert(boss.name:IsVisible(), "float-rounded boss maximum did not match")
+assert(not context.ordinary.fixture.style.name:IsVisible(), "ordinary enemy bypassed the filter")
+assert(
+    not guardian.health and not guardian.shadow and not guardian.background and not guardian.raid,
+    "names-only allocated unused bar artwork"
+)
+assert(context.guardian.nativeBar.maximum == 4294967296, "filter/style rewrote the native health range")
+context:ResetCounts()
+context:Tick(0.21)
+context:NoPresentationWrites()
+assert(not context.writes.SetValue and not context.writes.SetMinMaxValues and not context.writes.SetStatusBarColor)
+print("PASS both nameplate options preserve eligible names without bar allocation or unchanged writes")
+
+context.guardian.nativeBar.maximum = 4294967295
+context:Tick(0.21)
+assert(guardian.name:IsVisible(), "integer uint32 clamp did not match the published guardian")
+context.guardian.nativeBar.maximum = 4294967296
+context.boss.nativeBar.maximum = 16777220
+local rounded = Entries()
+rounded[2].hp, rounded[2].hpm = 16777219, 16777219
+context:Publish(rounded)
+assert(boss.name:IsVisible(), "float32 odd halfway rounding did not match")
+context.boss.nativeBar.maximum = 100
+context:Tick(0.21)
+assert(not boss.name:IsVisible(), "percentage-only bars were guessed as absolute health")
+context.boss.nativeBar.maximum = 16777216
+context:Publish(Entries())
+print("PASS native health representations preserve ties and reject guessed percentage matches")
+
+context:SetSetting("nameplatesNamesOnly", false)
+context:Tick(0.21)
+assert(
+    guardian.health and guardian.health:IsVisible() and guardian.shadow:IsVisible(),
+    "normal bars did not allocate on demand"
+)
+local allocated = #context.objects
+local writes = guardian.health.calls.SetValue or 0
+context:SetSetting("nameplatesNamesOnly", true)
+context:Tick(0.21)
+assert(
+    guardian.name:IsVisible()
+        and not guardian.health:IsVisible()
+        and not guardian.shadow:IsVisible()
+        and not guardian.background:IsVisible()
+)
+assert(
+    not guardian.raid:IsVisible() and #context.objects == allocated,
+    "names-only added artwork or retained a raid icon"
+)
+assert((guardian.health.calls.SetValue or 0) == writes, "names-only updated the cosmetic health fill")
+context:SetSetting("nameplatesNamesOnly", false)
+context:Tick(0.21)
+assert(#context.objects == allocated and guardian.health:IsVisible(), "normal mode did not reuse the pooled skin")
+print("PASS names-only transitions hide actual regions and reuse lazily allocated bars")
+
+local entries = Entries()
+entries[3] = { id = 12, kind = "elite", name = "Hogger", hp = 80e12, hpm = 80e12 }
+context:Publish(entries)
+assert(not guardian.name:IsVisible(), "ambiguous capped elite signature exposed a guardian name")
+context:Publish(Entries())
+assert(guardian.name:IsVisible(), "guardian did not recover after ambiguity was removed")
+context:SetSetting("nameplatesNamesOnly", true)
+context:SetSetting("nameplatesBossGuardiansOnly", false)
+context:Tick(0.21)
+assert(context.ordinary.fixture.style.name:IsVisible(), "disabling the filter did not restore ordinary names")
+context.env.HideNameplates()
+context:Tick(0.21)
+assert(not guardian.name:IsVisible(), "V-off leaked a custom guardian name")
+context.env.ShowNameplates()
+context:Tick(0.21)
+assert(guardian.name:IsVisible(), "V-on did not restore names-only mode")
+print("PASS ambiguity, filter preview and native V masking retain their lifecycles")
+
+context:SetSetting("nameplatesBossGuardiansOnly", true)
+context:Tick(0.21)
+context:Event(context.controller, "CHAT_MSG_ADDON", "AZSZONE")
+context:Tick(0.21)
+assert(not guardian.name:IsVisible(), "zone retirement reused an old guardian classification")
+context:Event(context.controller, "CHAT_MSG_ADDON", "AZSRUN")
+context:Publish(Entries())
+assert(
+    guardian.name:IsVisible() and not guardian.health:IsVisible(),
+    "fresh publications lost the names-only/filter combination"
+)
+print("PASS nameplate filter retirement waits for fresh run/unit publications")

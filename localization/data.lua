@@ -2,6 +2,7 @@
 DFRL.locale.data = {
     en = {
         ui = {
+            ["Party Damage"] = "Party Damage",
             ["Mark"] = "Mark",
             ["Marks"] = "Marks",
             ["SurvivorsDragonUI: /sdui for settings"] = "SurvivorsDragonUI: /sdui for settings",
@@ -602,6 +603,7 @@ DFRL.locale.data = {
     },
     pl = {
         ui = {
+            ["Party Damage"] = "Obrażenia drużyny",
             ["Mark"] = "Znak",
             ["Marks"] = "Znaki",
             ["SurvivorsDragonUI: /sdui for settings"] = "SurvivorsDragonUI: /sdui — ustawienia",
@@ -1673,6 +1675,7 @@ DFRL.locale.data = {
     },
     cs = {
         ui = {
+            ["Party Damage"] = "Poškození skupiny",
             ["Mark"] = "Známka",
             ["Marks"] = "Známky",
             ["SurvivorsDragonUI: /sdui for settings"] = "SurvivorsDragonUI: /sdui pro nastavení",
@@ -2747,6 +2750,7 @@ DFRL.locale.data = {
     },
     de = {
         ui = {
+            ["Party Damage"] = "Gruppenschaden",
             ["Mark"] = "Marke",
             ["Marks"] = "Marken",
             ["SurvivorsDragonUI: /sdui for settings"] = "SurvivorsDragonUI: /sdui für Einstellungen",
@@ -3819,6 +3823,7 @@ DFRL.locale.data = {
     },
     pt = {
         ui = {
+            ["Party Damage"] = "Dano do grupo",
             ["Mark"] = "Marca",
             ["Marks"] = "Marcas",
             ["SurvivorsDragonUI: /sdui for settings"] = "SurvivorsDragonUI: /sdui para configurações",
@@ -4882,6 +4887,7 @@ DFRL.locale.data = {
     },
     es = {
         ui = {
+            ["Party Damage"] = "Daño del grupo",
             ["Mark"] = "Marca",
             ["Marks"] = "Marcas",
             ["SurvivorsDragonUI: /sdui for settings"] = "SurvivorsDragonUI: /sdui para ajustes",
@@ -5949,6 +5955,7 @@ DFRL.locale.data = {
     },
     fr = {
         ui = {
+            ["Party Damage"] = "Dégâts du groupe",
             ["Mark"] = "Marque",
             ["Marks"] = "Marques",
             ["SurvivorsDragonUI: /sdui for settings"] = "SurvivorsDragonUI: /sdui pour les paramètres",
@@ -7024,6 +7031,7 @@ DFRL.locale.data = {
     },
     ro = {
         ui = {
+            ["Party Damage"] = "Daunele grupului",
             ["Mark"] = "Însemn",
             ["Marks"] = "Însemne",
             ["SurvivorsDragonUI: /sdui for settings"] = "SurvivorsDragonUI: /sdui pentru setări",
@@ -8082,6 +8090,7 @@ DFRL.locale.data = {
     },
     tr = {
         ui = {
+            ["Party Damage"] = "Grup hasarı",
             ["Mark"] = "Nişan",
             ["Marks"] = "Nişan",
             ["SurvivorsDragonUI: /sdui for settings"] = "SurvivorsDragonUI: ayarlar için /sdui",
@@ -9016,6 +9025,7 @@ DFRL.locale.data = {
     },
     ru = {
         ui = {
+            ["Party Damage"] = "Урон группы",
             ["Mark"] = "Знак",
             ["Marks"] = "Знаки",
             ["SurvivorsDragonUI: /sdui for settings"] = "SurvivorsDragonUI: /sdui для настроек",
@@ -10169,6 +10179,7 @@ DFRL.locale.data = {
     },
     uk = {
         ui = {
+            ["Party Damage"] = "Шкода групи",
             ["Mark"] = "Знак",
             ["Marks"] = "Знаки",
             ["SurvivorsDragonUI: /sdui for settings"] = "SurvivorsDragonUI: /sdui для налаштувань",
@@ -11296,6 +11307,7 @@ DFRL.locale.data = {
     },
     zh = {
         ui = {
+            ["Party Damage"] = "队伍伤害",
             ["Mark"] = "印记",
             ["Marks"] = "印记",
             ["SurvivorsDragonUI: /sdui for settings"] = "SurvivorsDragonUI: /sdui 打开设置",
@@ -12350,6 +12362,7 @@ DFRL.locale.data = {
     },
     ja = {
         ui = {
+            ["Party Damage"] = "パーティのダメージ",
             ["Mark"] = "マーク",
             ["Marks"] = "マーク",
             ["SurvivorsDragonUI: /sdui for settings"] = "SurvivorsDragonUI: /sdui で設定",
@@ -13436,6 +13449,7 @@ DFRL.locale.data = {
     },
     ko = {
         ui = {
+            ["Party Damage"] = "파티 피해",
             ["Mark"] = "징표",
             ["Marks"] = "징표",
             ["SurvivorsDragonUI: /sdui for settings"] = "SurvivorsDragonUI: /sdui로 설정 열기",

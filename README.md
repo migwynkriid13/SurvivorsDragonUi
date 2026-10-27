@@ -20,7 +20,7 @@ Real screenshots from different moments in a run, arranged into one overview. [O
 - **Your combat HUD:** player and target frames, a restyled character window, seven action buttons, equipped jewelry, buff timers, XP, kills, gold and cache cost.
 - **Run and boss tracking:** a run timer with boss markers, boss health bars, event banners and revive progress.
 - **Guardian tracking:** living guardians, respawn timers and health bars during fights. Use the tracker's plus/minus button to switch between living guardians and all lairs.
-- **Cache and guardian guides:** distance, direction arrows and map markers to help you find them.
+- **Cache and guardian guides:** distance, direction arrows and minimap markers to help you find them. Hover a guardian marker to see its name.
 - **Level Up and summons:** a button for your stored levels, plus names, icons and durations for up to eight active summons. Extra summons appear as a count.
 - **Combat text, meters and loot:** damage numbers over enemies or in an optional MSBT-style stream, a DPS meter with The War Within artwork and retail-style loot popups. Choose the text style in `/sdui` → **Combat text**. **Nameplates** offers font sizing, **Names only** and a bosses-and-guardians filter; keep V on to see names without bars. Already-collected items stay out of loot popups; chat shows them only when they award marks.
 - **Chat:** a transparent window, shorter game messages and mouse-wheel history.
@@ -90,7 +90,7 @@ Move the **Tooltip** handle to place regular hover cards. Its Layout controls al
 
 Under **Combat text**, choose custom damage numbers, turn them off, or use **Game settings**. For the game's damage numbers, choose **Game settings**, then enable **Show Target Damage** in the game options. All settings below the mode selector are dimmed and inactive unless **Custom** is selected; their values are kept.
 
-The DPS meter is off by default. Turn on **Enable damage meter** under **Damage meter** and Confirm to show the game's damage totals and average DPS by source. Click its heading to switch between Damage Done, Healing Done and Boss Damage; scroll for more sources. Choose 1 to 10 abilities and which numbers, icons, ranks and header values to show. Move, scale or hide **DPS meter** under **Layout**. Details does not need to be installed.
+The DPS meter is off by default. Turn on **Enable damage meter** under **Damage meter** and Confirm to show the game's damage totals and DPS. Click its heading to cycle through Damage Done, Healing Done, Boss Damage and Party Damage; scroll for more rows. Party Damage shows heroes with their native portraits during co-op. Choose 1 to 10 rows and which numbers, icons, ranks and header values to show. Move, scale or hide **DPS meter** under **Layout**. Details does not need to be installed.
 
 Use **Run timer** to change its text and font. Under **HUD**, **Guardians in boss bar** adds fighting guardians to the boss bars; it starts off. You can also mirror either guide to put its arrow on the other side. Under **Minimap**, **Keep defeated guardian icons** keeps lair icons visible while guardians are down; it starts off.
 

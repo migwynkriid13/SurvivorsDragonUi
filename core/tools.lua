@@ -59,10 +59,12 @@ local classColors = {
     WARRIOR = { 0.78, 0.61, 0.43 },
 }
 
+function DFRL.tools.GetClassColor(class) return type(class) == "string" and classColors[string.upper(class)] or nil end
+
 function DFRL.tools.GetUnitClassColor(unit)
     if type(UnitClass) ~= "function" then return end
     local _, class = UnitClass(unit)
-    return classColors[class]
+    return T.GetClassColor(class)
 end
 
 function DFRL.tools.GetPlayerClassColor() return T.GetUnitClassColor("player") end

@@ -1,5 +1,24 @@
 # Official addon API integration — 2026-10-14
 
+## Party meter — 2026-10-27
+
+Static reading of the installed 146,088,960-byte client, SHA-256
+`22f7938eb4f99f2857dc091b1c57c147bd848eaabfeaa81e444c0a3393ca8150`,
+confirms `AZS_GetPartyMeter()` returns `AZS_MeterTotals(AZS_PARTY)`.
+The embedded API describes one hero per row, most damage first:
+`name`, class key `class`, `dmg`, `dps`, `share`, `top` and `topdps`.
+`AZS_MeterTotals` sums the supplied damage and DPS fields without inventing a
+clock. The `AZSPARTY` parser publishes exactly those seven fields and stamps
+`AZS_PARTY_UPDATED`; the getter is documented as empty outside a party.
+
+SDUI adds this as the fourth meter view after Boss Damage. Hero portraits use
+the native `SetPortraitTexture` unit path after a unique current player/party
+name match; the meter's party API itself supplies no portrait path or unit ID.
+The native frame portrait image invalidates a cached binding when it changes.
+Unmatched/ambiguous identities stay neutral. Existing official reference copies
+are preserved verbatim; source inspection does not establish live co-op behavior.
+See [DAMAGE-METER.md](DAMAGE-METER.md#party-data-and-portraits).
+
 ## Supplied summon API reference — 2026-10-22
 
 The [latest supplied API reference](AzerothSurvivors-Addon-API-2026-10-22.txt)
@@ -334,8 +353,11 @@ font assignments remain retryable, including when a preview is discarded.
 
 Names only reuses each plate's current name label and native reaction color.
 It hides the custom health bar, black background, shadow and raid icon. The
-label's overlay is a sibling of the cosmetic health bar so hiding that bar
-does not hide its text. Turning the option off restores the original artwork,
+label's overlay anchors directly to the visual root's original one-unit inset,
+so its name has no dependency on a hidden cosmetic bar. Starting with Names only
+allocates no cosmetic StatusBar, shadow, background or raid texture; the first
+eligible regular-bar refresh creates those once. Later names-only transitions
+hide them and keep the pool for reuse. Turning the option off restores the original artwork,
 white name and current native health/raid state. Hidden or filtered plates
 defer all of this presentation until visible through the existing reader.
 
@@ -365,8 +387,14 @@ friendly plates keep their native Shift-V behavior.
 The existing SCT controller reads phase first and accepts only received
 `AZS_UNITS` publications. It keeps an unsaved index of exact native names and
 maximum health for `final`, `boss` and `guardian` entries, including sleeping
-guardians. Published ordinary `elite` entries with the same name and maximum
-health make that signature ambiguous and hide it. The complete list is validated
+guardians. Each accepted maximum indexes its original value and exact float32
+representation, plus the uint32 ceiling and its float32 representation when the
+full value exceeds 4,294,967,295. Float conversion rounds halfway ties to even;
+there is no epsilon match, inferred health or conversion of a percentage bar to
+absolute HP. This handles native plate storage that cannot retain the full
+published maximum, including the Names only/filter combination. Published
+ordinary `elite` entries colliding with any of those native representations
+make that signature ambiguous and hide it. The complete list is validated
 before replacing the index; failed or unavailable data hides hostile plates until
 usable data arrives or the option is turned off. Zone/world boundaries, terminal
 phases and observed native-clock rollback retire prior publications; receipts are
@@ -378,10 +406,18 @@ name and raw health range, but no supported spawn-ID binding; the reference
 [native plate implementation](https://github.com/samwhosung/benilla/blob/main/crates/benilla-ui/src/script/nameplate.rs)
 keeps its key inside the engine. An ordinary enemy absent from the published
 special-enemy list can still match a boss/guardian with the identical name and
-maximum health. Known ambiguous signatures are hidden, which can also hide a
-guardian. Percentage-only or otherwise unmatched bars stay hidden. No fuzzy
+native-representable maximum health. Known ambiguous signatures are hidden, which
+can also hide a guardian. Percentage-only or otherwise unmatched bars stay hidden. No fuzzy
 names, guessed unit tokens, health estimates or persistent identity registry are
 used; source compatibility does not prove the packaged client's rendering.
+
+The public engine's [plate state](https://github.com/samwhosung/benilla/blob/7c7a7f3e7ce168f819f676e6c2a423c6088731ca/crates/benilla-ui/src/script/nameplate.rs#L66-L75)
+describes raw unit-field health stored as float32. This is a compatibility lead,
+not a claim that the installed executable matches that upstream revision.
+CI-only mocks run the production SCT/filter and style together over capped,
+rounded and ambiguous native ranges, both mode switches, V masking, retirement
+and lazy artwork allocation. No local tests or live appearance/FPS measurement
+were performed.
 
 Excluded hostile plates reuse the existing recursive draw-layer/hit-rectangle
 mask and hide the complete custom visual child. Native plate shown state, alpha,

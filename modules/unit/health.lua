@@ -10,6 +10,7 @@ DFRL:NewMod("TargetHealth", 0, function()
     local received, retiredReceived, generation = 0, -1, 0
     local retired, retiredStamp, accepted, acceptedStamp
     local current, maximum, name, spawn
+    local provisional = false
     local setRange, setValue = bar.SetMinMaxValues, bar.SetValue
     local kinds = { final = true, boss = true, guardian = true, elite = true, normal = true }
 
@@ -28,6 +29,7 @@ DFRL:NewMod("TargetHealth", 0, function()
     end
     local function Retire()
         retired, retiredStamp, retiredReceived = _G.AZS_TARGET, _G.AZS_TARGET_UPDATED, received
+        provisional = false
         Clear()
     end
 
@@ -41,8 +43,14 @@ DFRL:NewMod("TargetHealth", 0, function()
             if not Enemy() then return UnitHealth("target"), UnitHealthMax("target"), generation end
             return nil, nil, generation
         end
-        if name == UnitName("target") then return current, maximum, generation end
+        if name and name == UnitName("target") then return current, maximum, generation end
         if not Enemy() then return UnitHealth("target"), UnitHealthMax("target"), generation end
+        -- Selection is immediate; the full-precision packet can arrive later.
+        -- Read this current unit, never the retired packet for a namesake.
+        if provisional then
+            local value, total = UnitHealth("target"), UnitHealthMax("target")
+            if Number(value) and Number(total) and total > 0 and value <= total then return value, total, generation end
+        end
         return nil, nil, generation
     end
 
@@ -112,6 +120,7 @@ DFRL:NewMod("TargetHealth", 0, function()
         if spawn ~= state.id or name ~= state.name then generation = generation + 1 end
         accepted, acceptedStamp = state, stamp
         current, maximum, name, spawn = state.hp, state.hpm, state.name, state.id
+        provisional = false
         Notify()
     end
     local function Schedule()
@@ -153,12 +162,14 @@ DFRL:NewMod("TargetHealth", 0, function()
         else
             inWorld = true
             Retire()
+            provisional = event == "PLAYER_TARGET_CHANGED"
             Notify()
             Schedule()
         end
     end)
     HookScript(TargetFrame, "OnHide", function()
         Cancel()
+        provisional = false
         Clear()
     end)
     HookScript(TargetFrame, "OnShow", Schedule)

@@ -8,7 +8,12 @@ updates. The separately selected class resources remain available.
 ## Target health and compact numbers
 
 Enemy targets use the official `AZS_TARGET.hp` and `hpm` publication for their
-health label, whole-number percentage, fill and damage-loss animation. This
+health label, whole-number percentage, fill and damage-loss animation once it
+arrives. Selecting a target first shows its validated current native
+`UnitHealth` / `UnitHealthMax` immediately, so the bar and labels do not stay
+empty while the packet is in transit. Those temporary numbers retain the
+client's native limits. Accepting the full-precision publication replaces that
+source and resets the loss baseline; the handoff never animates as damage. This
 avoids the legacy `UnitHealth` / `UnitHealthMax` unsigned 32-bit ceiling of
 4,294,967,295. The native StatusBar receives a 0–1 fraction and retains its own
 texture UV handling, geometry and clicks. Later native capped writes are
@@ -20,9 +25,13 @@ health, the enemy kind and positive spawn ID, and matches the exact native targe
 name. `AZSTGT` requests a single deferred read after the native parser. Target
 changes, zone/world retirement and inactive phases clear the old source and loss
 baseline; the retired table/stamp/receipt tuple cannot return. Switching between
-identically named creatures waits for a fresh target publication instead of
-treating a name match as a GUID. Missing or invalid enemy data leaves the health
-text empty and the fill at zero. Player/friendly targets retain native getters;
+identically named creatures still requires a fresh target publication instead
+of treating a name match as a GUID; only the newly selected native unit supplies
+temporary health. A late mismatched packet cannot replace that current unit's
+health. Invalid native health/maxima remain empty, and an invalid packet after
+an accepted AZS source clears it without reverting to capped values. World/zone
+retirement and inactive phases do not enable the selection fallback.
+Player/friendly targets retain native getters;
 clients without the phase API retain native health. An accepted AZS enemy
 publication stays authoritative when that creature becomes unattackable.
 

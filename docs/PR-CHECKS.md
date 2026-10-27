@@ -59,6 +59,10 @@ ambiguous declaration fails preparation.
 
 The assertions cover:
 
+- Source-extracted guardian minimap hover uses accepted names and scaled cached
+  pin bounds, skips unchanged tooltip writes, clears retired hovers and respects
+  foreign owners, Tooltip hiding, re-entry and Layout editing. Pins remain
+  mouse-transparent; mocks do not establish live minimap input behavior.
 - Unchanged cooldown values still read the native boundary but perform zero
   presentation writes and allocate no replacement objects.
 - Hidden/off cooldowns skip native reads and presentation; world retirement
@@ -81,15 +85,31 @@ The assertions cover:
 - Target changes, invalid publications, hiding and phase/zone/world retirement
   clear stale health and loss effects. Player targets retain native health and
   the existing label visibility settings.
+- New target selection immediately uses validated current native unit health
+  while awaiting `AZSTGT`, including same-name switches and late mismatched
+  packets. The full-precision handoff resets the loss baseline and prevents
+  later capped native writes from replacing accepted values. Invalid native
+  pairs stay empty; waiting adds no idle reader.
 - SCT keeps over-enemy defaults and the display transaction, releases forced
   plate tracking in MSBT-style mode with V off, uses fixed center-relative
   outgoing anchors, spaces distinct burst lines and animates without enemy
   projection. Style changes retire active and queued hits, and expiry/world
   cleanup clears labels while retaining pool reuse and empty-list idling.
+- Full SCT/filter and nameplate-style fixtures combine Names only with the
+  boss/guardian filter. They cover exact capped/float32 ranges and halfway
+  rounding, ordinary/ambiguous elite exclusion, percentage-only rejection,
+  both toggles, V and zone retirement, independent name visibility, lazy bar
+  allocation/reuse and no unchanged cosmetic writes. The scrolling and plate
+  fixtures share explicit native setup; production algorithms are not copied.
 - Native marks messages use exact templates in all fourteen catalogs. Tests
   preserve item links/colors and original amounts/totals, keep zero-reward
   duplicates hidden, leave conversations/unknown suffixes unchanged and reject
   collected conversions before popup delivery or item metadata reads.
+- The production meter cycles Party Damage after Boss Damage, reads native
+  player totals/rates, binds uniquely matched native unit portraits, and retains
+  class metadata across shared Reset deltas. Mocks cover unchanged/hidden/off
+  and icons-off work, missing APIs, ambiguous/replaced units, failed-portrait
+  caching and world retirement until a fresh `AZSPARTY` publication.
 
 The mocks implement only explicit API methods and record calls, allocation and
 effective parent visibility. An unsupported method fails rather than silently

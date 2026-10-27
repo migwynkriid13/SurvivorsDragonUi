@@ -69,6 +69,30 @@ layout handles still support editing. Existing
 guardian waypoints and map/minimap markers keep their appearance and independent
 guidance control.
 
+## Minimap names
+
+Hover a guardian medallion on the minimap to see its name. The name comes from
+the accepted native lair snapshot, including retained defeated markers when the
+game supplies a name. A missing name gets no invented replacement. This does
+not enable hover popups on the guardian tracker itself.
+
+Markers remain mouse-transparent. The existing ten-Hz/deferred waypoint refresh
+samples the native cursor once, converts it through minimap scale/center, and
+tests the already drawn 20-unit marker bounds. No mouse handler, click/wheel
+forwarder, new polling driver or extra hover frame is needed. The shared native
+`GameTooltip` keeps its normal styling and Layout placement. An unchanged
+pin/name skips tooltip writes; another owner's tooltip is never hidden or
+reclaimed. Leaving the marker, recycling, minimap hiding, guidance off and
+world/zone cleanup clear only this owned hover. Tooltip hiding and editing
+suppress it, and unhiding does not replay a prior hover before re-entry.
+
+Only accepted minimap point copies gain the optional native name; no new raw
+getter, translation, asset, setting, saved state or full world-map overlay is
+added. Pin OnHide clears an owned tooltip immediately. CI-only source-extracted
+mocks cover names, scaled hit bounds, unchanged writes, missing names, retiring
+pins, foreign ownership and Tooltip/editor suppression. Local work is source
+review and pinned formatting; live hover/input behavior remains unverified.
+
 ## Shared acceptance and cleanup
 
 `modules/ui/guardians.lua` registers `DFRL.guardians` before Waypoints initializes.

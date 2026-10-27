@@ -20,6 +20,7 @@ DFRL:NewMod("DamageMeter", 7, function()
         options[key] = DFRL.display.Get(setting)
     end
     local ICON_SIZE, RIM_SIZE = 26, 31
+    local PARTY_COLOR = { 0.6, 0.6, 0.6 }
     local UNKNOWN_ICON = T.SourceIconFallback
     local path = DFRL:GetInfoOrCons("tex")
     local native = T.NewHudOwner("meter", "hudMeter")
@@ -27,11 +28,19 @@ DFRL:NewMod("DamageMeter", 7, function()
         { getter = "AZS_GetMeter", prefix = "AZSMETER", title = "Damage Done", rate = "DPS" },
         { getter = "AZS_GetHealing", prefix = "AZSHEAL", title = "Healing Done", rate = "HPS", healing = true },
         { getter = "AZS_GetBossMeter", prefix = "AZSBOSSDMG", title = "Boss Damage", rate = "DPS" },
+        { getter = "AZS_GetPartyMeter", prefix = "AZSPARTY", title = "Party Damage", rate = "DPS", party = true },
     }
     local phases = { playing = true, choosing = true, paused = true, dead = true, victory = true }
     local mode, offset, age = 1, 0, 0.2
     local inWorld, editing, ready, faulted = true, false, true, false
     local rows, received, blocked = {}, {}, {}
+    local partyUnits = {
+        { unit = "player" },
+        { unit = "party1", portrait = "PartyMemberFrame1Portrait" },
+        { unit = "party2", portrait = "PartyMemberFrame2Portrait" },
+        { unit = "party3", portrait = "PartyMemberFrame3Portrait" },
+        { unit = "party4", portrait = "PartyMemberFrame4Portrait" },
+    }
     local dataDirty, dataValid = true, false
     local snapshot = { rows = {}, count = 0 }
     local rateSamples, rateSampledAt = {}, nil
@@ -143,6 +152,7 @@ DFRL:NewMod("DamageMeter", 7, function()
         if row.rim:IsShown() then row.rim:Hide() end
         ClearIconParts(row)
         row.iconPath, row.iconNative, row.nativeFailedIcon = nil, nil, nil
+        row.partyUnit, row.partyName, row.partySource, row.partyTexture = nil, nil, nil, nil
     end
     local function BindIcon(row, icon)
         if not icon then
@@ -232,6 +242,74 @@ DFRL:NewMod("DamageMeter", 7, function()
         end
         if usable then row.iconPath = icon end
         return usable
+    end
+    local function ClearPartyUnits()
+        for _, candidate in ipairs(partyUnits) do
+            candidate.name, candidate.class, candidate.texture = nil, nil, nil
+        end
+    end
+    local function ReadPartyUnits()
+        ClearPartyUnits()
+        if type(UnitExists) ~= "function" or type(UnitName) ~= "function" then return end
+        for _, candidate in ipairs(partyUnits) do
+            local exists = UnitExists(candidate.unit)
+            if exists == true or exists == 1 then
+                candidate.name = UnitName(candidate.unit)
+                if type(UnitClass) == "function" then
+                    local _, class = UnitClass(candidate.unit)
+                    candidate.class = type(class) == "string" and string.lower(class) or nil
+                end
+                local portrait
+                if candidate.unit == "player" then
+                    portrait = PlayerFrame and PlayerFrame.portrait
+                else
+                    portrait = _G[candidate.portrait]
+                end
+                if portrait and type(portrait.GetTexture) == "function" then
+                    candidate.texture = portrait:GetTexture()
+                end
+            end
+        end
+    end
+    local function BindPartyIcon(row, entry)
+        local match
+        for _, candidate in ipairs(partyUnits) do
+            if candidate.name == entry.name then
+                -- Names are only a bridge to a unique, currently published unit.
+                if match then
+                    match = nil
+                    break
+                end
+                match = candidate
+            end
+        end
+        if match and entry.class and match.class and string.lower(entry.class) ~= match.class then match = nil end
+        if not match then
+            if row.partyName then ClearIcon(row) end
+            return BindIcon(row, UNKNOWN_ICON)
+        end
+        if
+            row.partyUnit ~= match.unit
+            or row.partyName ~= match.name
+            or row.partySource ~= match.texture
+            or (row.partyTexture and row.icon:GetTexture() ~= row.partyTexture)
+        then
+            ClearIcon(row)
+            row.partyUnit, row.partyName, row.partySource = match.unit, match.name, match.texture
+            if type(_G.SetPortraitTexture) == "function" then
+                local ok, result = pcall(_G.SetPortraitTexture, row.icon:GetName(), match.unit)
+                local texture = row.icon:GetTexture()
+                if ok and result ~= false and texture then
+                    row.iconNative, row.partyTexture = true, texture
+                    if not row.icon:IsShown() then row.icon:Show() end
+                    return true
+                end
+                if texture then row.icon:SetTexture(nil) end
+            end
+        end
+        if row.partyTexture then return true end
+        -- Failed native bindings stay memoized until identity/artwork changes.
+        return BindIcon(row, UNKNOWN_ICON)
     end
     local function HideTooltip()
         if not hovered then return end
@@ -502,6 +580,7 @@ DFRL:NewMod("DamageMeter", 7, function()
     local function ClearRows()
         if presentation.cleared then return end
         HideTooltip()
+        ClearPartyUnits()
         for _, row in ipairs(rows) do
             ClearRow(row)
         end
@@ -631,6 +710,7 @@ DFRL:NewMod("DamageMeter", 7, function()
             copy.name, copy.dmg, copy.dps, copy.share, copy.proc =
                 entry.name, entry.dmg, sample.rate, entry.share, entry.proc
             copy.averageDps = sample.average
+            copy.class = modes[mode].party and type(entry.class) == "string" and entry.class or nil
             snapshot.rows[index] = copy
         end
         for index = count + 1, snapshot.count do
@@ -644,7 +724,15 @@ DFRL:NewMod("DamageMeter", 7, function()
     local function Draw()
         offset = math.max(0, math.min(offset, snapshot.count - visible))
         local maximum = snapshot.rows[1] and snapshot.rows[1].dmg or 0
-        local classColor = T.GetPlayerClassColor() or { 0.8, 0.63, 0.28 }
+        local party = modes[mode].party
+        local classColor = party and PARTY_COLOR or T.GetPlayerClassColor() or { 0.8, 0.63, 0.28 }
+        if party and options.icons then
+            if snapshot.count > 0 then
+                ReadPartyUnits()
+            else
+                ClearPartyUnits()
+            end
+        end
         for index = 1, visible do
             local entry = snapshot.rows[index + offset]
             if entry then
@@ -681,16 +769,30 @@ DFRL:NewMod("DamageMeter", 7, function()
                 if row.fraction ~= fraction then row.bar:SetValue(fraction) end
                 row.fraction = fraction
                 local r, g, b = unpack(classColor)
-                if entry.proc == 1 then
+                if party then
+                    local color = T.GetClassColor(entry.class)
+                    if color then
+                        r, g, b = unpack(color)
+                    else
+                        r, g, b = 0.6, 0.6, 0.6
+                    end
+                elseif entry.proc == 1 then
                     r, g, b = 0.25, 0.58, 1
                 end
                 if row.red ~= r or row.green ~= g or row.blue ~= b then row.bar:SetStatusBarColor(r, g, b) end
                 row.red, row.green, row.blue = r, g, b
                 if options.icons then
-                    local resolver = DFRL.sct and DFRL.sct.GetSourceIcon
-                    local icon = type(resolver) == "function" and resolver(entry.name, modes[mode].healing, entry.proc)
-                        or UNKNOWN_ICON
-                    if BindIcon(row, icon) then
+                    local bound
+                    if party then
+                        bound = BindPartyIcon(row, entry)
+                    else
+                        local resolver = DFRL.sct and DFRL.sct.GetSourceIcon
+                        local icon = type(resolver) == "function"
+                                and resolver(entry.name, modes[mode].healing, entry.proc)
+                            or UNKNOWN_ICON
+                        bound = BindIcon(row, icon)
+                    end
+                    if bound then
                         if not row.rim:IsShown() then row.rim:Show() end
                     else
                         if row.rim:IsShown() then row.rim:Hide() end
@@ -901,6 +1003,7 @@ DFRL:NewMod("DamageMeter", 7, function()
             ClearRow(rows[index])
         end
         if iconsWereShown and not options.icons then
+            ClearPartyUnits()
             for _, row in ipairs(rows) do
                 ClearIcon(row)
             end
