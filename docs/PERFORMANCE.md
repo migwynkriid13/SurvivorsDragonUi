@@ -449,6 +449,16 @@ Large-frame width reflows its shared health span and metal end position. Native 
 
 The extra pieces preserve portrait/cap proportions during horizontal extension and use the same source pixel regions without added effects or alpha overlap. Changed widths update the affected sizes/anchors; unchanged state skips them, and actual large-bar/divider anchors are compared before repair. Width changes reuse successful texture bindings. Hidden large frames defer their reflow until visible or required editor entry; inactive party rows update only required root/border bounds and defer caption/texture work until Show or editing. Ordinary unit events make only the existing visibility checks and small width/state comparisons before any reflow. Party resource-mode changes and width changes share one owner, so later native value events or preview changes cannot restore the old health span.
 
+The target's portrait-side fill overlap is reduced from 15 to seven UI units,
+moving its right edge eight units left while retaining the same far-left edge
+and health-label positions. The existing background and damage-loss texture
+follow the narrower native StatusBar rectangle. Portraitless mode and player
+geometry retain their previous spans. This reuses the existing geometry guards,
+settings listener and size-change callback, with no new region, asset, material,
+alpha pass, event, updater or allocation. The fill covers a narrower area, but
+source inspection and pinned formatting do not establish measured GPU/FPS or
+in-game alignment results.
+
 The player/target outline correction adds two passive, mouse-transparent frames and no texture regions. Their portrait-mode bounds come from data-only alpha inspection of the unchanged prepared 256-by-128 sheets: pointed `(21,4)-(222,78)`, round `(23,11)-(218,75)`, boss `(23,1)-(245,81)`, elite `(23,1)-(227,81)`, rare elite `(23,0)-(245,82)` and rare `(23,0)-(227,82)`. Hidden portraits anchor the edit region to the actual closed border and extend only for enabled name/level captions. Bounds are mirrored and derived from the native owner/width delta. Target bounds include currently shown aura buttons from the tooltip module’s existing one-time discovery; the grouped registry adds no second discovery scan. Only editing samples measure those aura rectangles, using each widget’s effective scale. Cached edge coordinates skip unchanged anchors. The existing ten-Hz editor sampling and fresh drag/snap samples invoke the optional bounds callback, retrying unavailable caption heights without an idle updater. The active resize cache also observes changed edit-region dimensions, so aura or caption reflow can update the held opposite edge even at a stationary cursor. No artwork, native click bounds or confirmed geometry is changed.
 
 Source/diff inspection and pinned formatting cover the geometry and shared save/discard paths. This is an explicit source-level drawing-cost increase for independent width, not measured FPS, GPU cost or pixel parity. No local tests, standalone validation or addon/game execution were run; packaged-client appearance and input remain unverified.

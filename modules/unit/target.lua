@@ -41,11 +41,9 @@ DFRL:NewMod("Target", 1, function()
     local healthLabels = T.BindUnitHealthText(TargetFrameHealthBar, healthText, "target", true)
     local function UpdateHealthInsets()
         local underlap = T.LargeHealthFill.underlap
-        healthLabels.SetInsets(
-            underlap,
-            (DFRL.display.Get("hidePortraits") and 0 or T.UnitPortraitOverlap) + underlap,
-            0
-        )
+        local portraitsHidden = DFRL.display.Get("hidePortraits")
+        local inset = portraitsHidden and 0 or T.TargetHealthPortraitInset
+        healthLabels.SetInsets(underlap, (portraitsHidden and 0 or T.UnitPortraitOverlap - inset) + underlap, inset / 2)
     end
     DFRL.display.Listen(UpdateHealthInsets)
     UpdateHealthInsets()
