@@ -22,6 +22,8 @@ DFRL:NewMod("Display", 0, function()
         customBanners = true,
         customRunTimer = true,
         customBossBars = true,
+        lootMode = "sdui",
+        lootShowMarks = true,
         petRows = 6,
         petSpacing = 4,
         hidePetNames = false,
@@ -111,11 +113,15 @@ DFRL:NewMod("Display", 0, function()
         if type(value) == "string" and DFRL.tallyStyleById[value] then return value end
         return nil
     end
+    local function NormalizeLootMode(value)
+        if value == "sdui" or value == "game" or value == "off" then return value end
+    end
     local function Read(source, key)
         local value
         if type(source) == "table" then value = source[key] end
         if ranges[key] then return NormalizeNumber(key, value) or defaults[key] end
         if key == "tallyStyle" then return NormalizeTallyStyle(value) or defaults[key] end
+        if key == "lootMode" then return NormalizeLootMode(value) or defaults[key] end
         if type(value) == "boolean" then return value end
         if key == "runTextRegular" or key == "runTextEndless" then
             local legacy = _G.SurvivorsDragonUiRunFont
@@ -145,6 +151,8 @@ DFRL:NewMod("Display", 0, function()
             customBanners = Read(source, "customBanners"),
             customRunTimer = Read(source, "customRunTimer"),
             customBossBars = Read(source, "customBossBars"),
+            lootMode = Read(source, "lootMode"),
+            lootShowMarks = Read(source, "lootShowMarks"),
             petRows = Read(source, "petRows"),
             petSpacing = Read(source, "petSpacing"),
             hidePetNames = Read(source, "hidePetNames"),
@@ -235,6 +243,9 @@ DFRL:NewMod("Display", 0, function()
             if not value then return end
         elseif key == "tallyStyle" then
             value = NormalizeTallyStyle(value)
+            if not value then return end
+        elseif key == "lootMode" then
+            value = NormalizeLootMode(value)
             if not value then return end
         elseif type(value) ~= "boolean" then
             return

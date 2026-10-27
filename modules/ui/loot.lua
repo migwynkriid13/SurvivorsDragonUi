@@ -6,6 +6,9 @@ DFRL:NewMod("LootNotifications", 0, function()
     local renderer
     local native = T.NewHudOwner("loot", "hudLoot")
     local inWorld, active = true, false
+    local mode, showMarks = DFRL.display.Get("lootMode"), DFRL.display.Get("lootShowMarks")
+    local retry = false
+    local SyncUpdates
     local queue, count, sequence, age = {}, 0, 0, 0
     local MAX_QUEUE = 32
     local controller = CreateFrame("Frame")
@@ -20,7 +23,7 @@ DFRL:NewMod("LootNotifications", 0, function()
     end
     local function Release()
         active = false
-        native.Release()
+        retry = not native.Release()
     end
     local function Ready()
         if not inWorld or not renderer then return false end
@@ -28,6 +31,12 @@ DFRL:NewMod("LootNotifications", 0, function()
         return ok and ready == true
     end
     local function Refresh()
+        if inWorld and mode ~= "sdui" then
+            if active or count > 0 then Clear() end
+            active = false
+            retry = not native.Acquire(mode == "game")
+            return false
+        end
         if not Ready() then
             if active or native.IsCaptured() then
                 Clear()
@@ -41,6 +50,7 @@ DFRL:NewMod("LootNotifications", 0, function()
             return false
         end
         active = true
+        retry = false
         return true
     end
 
@@ -100,13 +110,25 @@ DFRL:NewMod("LootNotifications", 0, function()
 
     function loot.IsActive() return active end
     function loot.Clear() Clear() end
+    function loot.IsMarkReward(entry)
+        return type(entry) == "table"
+            and entry.collection == "collected"
+            and type(entry.marks) == "string"
+            and string.find(entry.marks, "^%d+$") ~= nil
+            and string.find(entry.marks, "[1-9]") ~= nil
+    end
+    function loot.CanShow(entry)
+        return mode == "sdui"
+            and type(entry) == "table"
+            and (entry.collection ~= "collected" or (showMarks and loot.IsMarkReward(entry)))
+    end
     function loot.Observe(text, eventName)
         if not active or not inWorld then return end
         if eventName and eventName ~= "CHAT_MSG_LOOT" and eventName ~= "CHAT_MSG_SYSTEM" then return end
         local chat = DFRL.CleanerChat
         if not chat or type(chat.ParseLootMessage) ~= "function" then return end
         local ok, entry = pcall(chat.ParseLootMessage, text)
-        if not ok or type(entry) ~= "table" or entry.collection == "collected" then return end
+        if not ok or not loot.CanShow(entry) then return end
         if type(UnitClass) == "function" then
             local classOK, _, class = pcall(UnitClass, "player")
             if classOK and type(class) == "string" then entry.itemClass = string.lower(class) end
@@ -126,7 +148,9 @@ DFRL:NewMod("LootNotifications", 0, function()
         age = age + (tonumber(arg1) or 0)
         if age < 0.2 then return end
         age = 0
-        if not Refresh() then return end
+        local custom = Refresh()
+        SyncUpdates()
+        if not custom then return end
         local delivered = 0
         while count > 0 and delivered < 4 do
             local ok, accepted = pcall(renderer.Push, loot.Resolve(queue[1]))
@@ -134,7 +158,7 @@ DFRL:NewMod("LootNotifications", 0, function()
                 Clear()
                 Release()
                 renderer = nil
-                controller:SetScript("OnUpdate", nil)
+                SyncUpdates()
                 return
             end
             if accepted ~= true then return end
@@ -145,9 +169,14 @@ DFRL:NewMod("LootNotifications", 0, function()
         end
     end
 
+    SyncUpdates = function()
+        local update = inWorld and ((mode == "sdui" and renderer) or retry) and Update or nil
+        if controller:GetScript("OnUpdate") ~= update then controller:SetScript("OnUpdate", update) end
+    end
+
     function loot.SetRenderer(value)
         Clear()
-        Release()
+        if mode == "sdui" then Release() end
         renderer = nil
         if
             type(value) == "table"
@@ -158,9 +187,19 @@ DFRL:NewMod("LootNotifications", 0, function()
             renderer = value
         end
         age = 0
-        controller:SetScript("OnUpdate", inWorld and renderer and Update or nil)
-        return Refresh()
+        local custom = Refresh()
+        SyncUpdates()
+        return custom
     end
+
+    DFRL.display.Listen(function()
+        local selectedMode, selectedMarks = DFRL.display.Get("lootMode"), DFRL.display.Get("lootShowMarks")
+        if selectedMode == mode and selectedMarks == showMarks then return end
+        mode, showMarks, age = selectedMode, selectedMarks, 0
+        Clear()
+        Refresh()
+        SyncUpdates()
+    end)
 
     controller:RegisterEvent("PLAYER_ENTERING_WORLD")
     controller:RegisterEvent("PLAYER_LEAVING_WORLD")
@@ -170,25 +209,28 @@ DFRL:NewMod("LootNotifications", 0, function()
         if event == "PLAYER_ENTERING_WORLD" then
             inWorld = true
             age = 0
-            controller:SetScript("OnUpdate", renderer and Update or nil)
             Refresh()
+            SyncUpdates()
         elseif event == "PLAYER_LEAVING_WORLD" or event == "PLAYER_LOGOUT" then
             inWorld = false
-            controller:SetScript("OnUpdate", nil)
             Clear()
             Release()
+            SyncUpdates()
         elseif native.Observe(arg1) then
             Refresh()
+            SyncUpdates()
         end
     end)
     if type(_G.ReloadUI) == "function" then
         local reloadUI = _G.ReloadUI
         _G.ReloadUI = function()
             inWorld = false
-            controller:SetScript("OnUpdate", nil)
             Clear()
             Release()
+            SyncUpdates()
             return reloadUI()
         end
     end
+    if mode ~= "sdui" then Refresh() end
+    SyncUpdates()
 end)

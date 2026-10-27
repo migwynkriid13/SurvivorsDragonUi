@@ -26,15 +26,19 @@ local function Cooldowns()
     return context, bar, context:Controller("ACTIONBAR_UPDATE_COOLDOWN")
 end
 
-local function Loot()
+local function Loot(settings, nativeShown)
     local context = H.New()
     local env = context.env
+    if nativeShown ~= nil then context.nativeShown = nativeShown end
     env.DFRL.actionBarDefaults = { bottom = 55, height = 36, topInset = 14 }
     env.DFRL.CleanerChat = {
         ParseLootMessage = function(name)
+            if type(name) == "table" then return name end
             return { name = name, icon = "Interface\\Icons\\Test", iconSource = "native" }
         end,
     }
+    env.SurvivorsDragonUiDisplay = settings
+    context:Load("core/display.lua", "Display")
     context:Load("core/hud.lua")
     context:Load("modules/ui/loot.lua", "LootNotifications")
     context:Load("modules/ui/loot_view.lua", "LootView")
@@ -131,6 +135,153 @@ Test("loot cards reuse the bounded pool and clear retired bindings", function()
     Deliver(context, service, "Second")
     assert(first.entry and first.entry.name == "Second", "the free card was not reused")
     assert(table.getn(context.objects) == allocated, "loot pool grew on reuse")
+end)
+
+Test("loot defaults and all three modes use shared preview profiles Confirm Cancel and reset", function()
+    local context = H.New()
+    context:Load("core/display.lua", "Display")
+    local display = context.env.DFRL.display
+    assert(display.Get("lootMode") == "sdui" and display.Get("lootShowMarks") == true, "loot defaults changed")
+    local invalid = display.Copy({ lootMode = true, lootShowMarks = "false" })
+    assert(invalid.lootMode == "sdui" and invalid.lootShowMarks == true, "invalid loot preferences were accepted")
+    for _, mode in ipairs({ "game", "off", "sdui" }) do
+        display.BeginEdit()
+        display.Set("lootMode", mode)
+        display.Set("lootShowMarks", false)
+        assert(display.Get("lootMode") == mode and not context.env.SurvivorsDragonUiDisplay, "preview saved early")
+        display.FinishEdit(false)
+        assert(display.Get("lootMode") == "sdui" and display.Get("lootShowMarks"), "Cancel lost defaults")
+    end
+    display.BeginEdit()
+    display.Set("lootMode", "game")
+    display.Set("lootShowMarks", false)
+    display.Set("lootMode", "invalid")
+    assert(display.Get("lootMode") == "game", "invalid mode replaced the draft")
+    display.FinishEdit(true)
+    assert(context.env.SurvivorsDragonUiDisplay.lootMode == "game", "Confirm did not save the mode")
+    assert(context.env.SurvivorsDragonUiDisplay.lootShowMarks == false, "Confirm did not save marks")
+    display.BeginEdit()
+    display.Load({ lootMode = "off", lootShowMarks = true })
+    assert(display.Get("lootMode") == "off" and display.Get("lootShowMarks"), "profile preview lost loot settings")
+    display.FinishEdit(false)
+    assert(display.Get("lootMode") == "game" and not display.Get("lootShowMarks"), "profile Cancel lost saved loot")
+    display.Reset()
+    assert(display.Get("lootMode") == "sdui" and display.Get("lootShowMarks"), "full reset lost loot defaults")
+end)
+
+Test("Game and Off retire custom loot stop intake and preserve native preference through Cancel", function()
+    local context, service, animation = Loot()
+    local env, display = context.env, context.env.DFRL.display
+    Deliver(context, service, "Before mode change")
+    local parsed, metadata = 0, 0
+    env.DFRL.CleanerChat.ParseLootMessage = function() parsed = parsed + 1 end
+    env.GetItemInfo = function() metadata = metadata + 1 end
+    display.BeginEdit()
+    for _, mode in ipairs({ "game", "off", "game" }) do
+        display.Set("lootMode", mode)
+        assert(context.nativeShown == (mode == "game"), "native loot visibility differs from selected mode")
+        assert(not env.DFRL.loot.IsActive(), "native/off mode retained custom intake")
+        assert(not service:GetScript("OnUpdate") and not animation:GetScript("OnUpdate"), "settled mode kept polling")
+        for _, object in ipairs(context.objects) do
+            assert(not object.entry, "retired custom loot remained visible or queued")
+        end
+        context:ResetCounts()
+        env.DFRL.loot.Observe("Ignored", "CHAT_MSG_LOOT")
+        context:Call(service, "OnUpdate", 1)
+        context:NoPresentationWrites()
+    end
+    assert(parsed == 0 and metadata == 0, "native/off mode parsed or resolved custom loot")
+    display.FinishEdit(false)
+    assert(env.DFRL.loot.IsActive() and context.nativeShown == false, "Cancel did not restore SDUI ownership")
+    context:Event(service, "PLAYER_LEAVING_WORLD")
+    assert(context.nativeShown == true, "preview changed the native preference restored on world leave")
+end)
+
+Test("initial native/off modes defer card artwork and reuse it after first SDUI selection", function()
+    for _, mode in ipairs({ "game", "off" }) do
+        local context, service = Loot({ lootMode = mode })
+        for _, object in ipairs(context.objects) do
+            assert(object.kind ~= "Texture" and object.kind ~= "FontString", "native/off mode allocated popup artwork")
+        end
+        assert(context.nativeShown == (mode == "game") and not service:GetScript("OnUpdate"))
+        local display = context.env.DFRL.display
+        display.BeginEdit()
+        display.Set("lootMode", "sdui")
+        Deliver(context, service, "First SDUI item")
+        local allocated = table.getn(context.objects)
+        display.Set("lootMode", mode)
+        display.Set("lootMode", "sdui")
+        Deliver(context, service, "Reused SDUI item")
+        assert(table.getn(context.objects) == allocated, "switching modes rebuilt the popup pool")
+    end
+end)
+
+Test("Game preview enables a previously hidden native box without changing Cancel cleanup", function()
+    local context, service = Loot(nil, false)
+    local display = context.env.DFRL.display
+    display.BeginEdit()
+    display.Set("lootMode", "game")
+    assert(context.nativeShown == true, "Game mode did not explicitly enable native loot")
+    display.FinishEdit(false)
+    context:Event(service, "PLAYER_LEAVING_WORLD")
+    assert(context.nativeShown == false, "Cancel leaked a preview into the original hidden native preference")
+end)
+
+Test("native handoff failures retry only until accepted and preserve later external preferences", function()
+    local context, service = Loot()
+    local env, display = context.env, context.env.DFRL.display
+    local write, fail = env.AZS_SetHudShown, true
+    env.AZS_SetHudShown = function(part, shown)
+        if fail then return false end
+        write(part, shown)
+        context:Event(service, "CVAR_UPDATE", "hudLoot")
+    end
+    display.BeginEdit()
+    display.Set("lootMode", "game")
+    assert(not context.nativeShown and service:GetScript("OnUpdate"), "failed Game handoff stopped retrying")
+    fail = false
+    context:Call(service, "OnUpdate", 0.21)
+    assert(context.nativeShown and not service:GetScript("OnUpdate"), "successful native handoff retained polling")
+    context.nativeShown = false
+    context:Event(service, "CVAR_UPDATE", "hudLoot")
+    assert(context.nativeShown, "external change defeated the explicit Game choice")
+    context:Event(service, "PLAYER_LEAVING_WORLD")
+    assert(context.nativeShown == false, "cleanup lost the latest external native preference")
+end)
+
+Test("positive collected-item marks reuse the loot card and checkbox off rejects duplicates", function()
+    local context, service, animation = Loot()
+    local reward =
+        { name = "Footpad's Cover", collection = "collected", marks = "1", icon = "Test", iconSource = "native" }
+    Deliver(context, service, reward)
+    local card
+    for _, object in ipairs(context.objects) do
+        if object.entry then card = object end
+    end
+    assert(card and card.name:GetText() == "Footpad's Cover → +1 Mark", "conversion reward was not shown")
+    assert(card.entry.collection == "collected", "conversion masqueraded as a new item")
+    context.now = context.now + 0.5
+    context:Call(animation, "OnUpdate", 0.5)
+    context:ResetCounts()
+    context:Call(animation, "OnUpdate", 0.1)
+    context:NoPresentationWrites()
+    local allocated = table.getn(context.objects)
+    local display = context.env.DFRL.display
+    display.BeginEdit()
+    display.Set("lootShowMarks", false)
+    Deliver(context, service, reward)
+    assert(not card.entry and not animation:GetScript("OnUpdate"), "marks off retained or replayed a reward")
+    display.FinishEdit(false)
+    for _, marks in ipairs({ "0", "-1", "1.5", "abc" }) do
+        Deliver(context, service, { name = "Duplicate", collection = "collected", marks = marks })
+        assert(not card.entry, "invalid marks produced a loot card")
+    end
+    Deliver(context, service, { name = "Duplicate", collection = "collected" })
+    assert(not card.entry, "zero-reward duplicate became a popup")
+    reward.marks = "002"
+    Deliver(context, service, reward)
+    assert(card.entry and card.name:GetText() == "Footpad's Cover → +002 Marks", "marks amount/plural changed")
+    assert(table.getn(context.objects) == allocated, "marks rewards allocated another popup pool")
 end)
 
 Test("unchanged settled loot writes nothing and a full pool never allocates a fourth card", function()

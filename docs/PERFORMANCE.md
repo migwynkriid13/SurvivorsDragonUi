@@ -41,6 +41,45 @@ leave hundreds of expensive texture regions drawing continuously.
   GPU-memory, pixel-parity or FPS measurements. No local tests, standalone
   validation, addon execution or game launch is authorized for this audit.
 
+## Loot popup modes and marks — 2026-10-27
+
+The new Loot notifications page uses existing editor artwork: one category
+button, three mode buttons, one checkbox, a heading and a status description.
+The authored controls add 49 texture regions and eight FontStrings in the lazy
+dialog (category 12+1, mode buttons 33+3, checkbox 4+2, heading/description 0+2),
+plus the native scrolling template used by other single-column option pages.
+These allocate only when the editor is first opened, inherit its existing
+visibility and use existing material images; they add no gameplay updater.
+The selected-mode/checkbox comparisons, caption helper and shared dependency
+group skip unchanged selection, text, dimming and input writes. The marks
+control stays inactive at 0.45 alpha outside SDUI mode.
+
+Game/Off clear the existing queue/cards, reject intake before parsing or metadata
+resolution and detach the loot service updater after the native handoff. Only
+pending native visibility handoffs retry on the existing five-Hz controller.
+The shared HUD owner accepts true or false, retaining the original/latest
+external preference across mode previews and guarded synchronous callbacks;
+other owners still acquire hidden visibility by default. Getter matches skip
+setter writes. World/logout/reload cleanup retains its native restoration.
+
+Initial Game/Off creates only the existing non-rendering loot root/controller
+frames; three cards and their nine textures/six FontStrings defer until the
+first SDUI readiness request. Failed preparation stays unready without repeated
+allocation. Once built, the original three-card pool, crop, quality rim, icons,
+UVs, geometry and authored fades remain unchanged and reusable. Both non-custom
+modes actually hide all cards and stop cosmetic animation. Layout hiding remains
+separate: current expiry and bounded metadata retries continue without painting.
+
+Positive item conversions reuse the existing name region, showing the item and
+received marks amount. Only enabled SDUI conversion rewards pass shared
+service/view eligibility; other collected items stop before queue/metadata.
+One latest formatted reward label per card is cached and cleared on language
+change/retirement. No new drawing region, currency artwork, material, event,
+updater, gameplay counter/history or SavedVariable is added. The two normalized
+display choices use the existing profile/draft/reset paths. Source review,
+authored CI-only mocks and pinned formatting do not establish measured draw
+calls, GPU/FPS, native box behavior or in-game font/appearance parity.
+
 ## Target health and compact labels — 2026-10-27
 
 One non-rendering target-health controller accepts the official `AZS_TARGET`
@@ -847,13 +886,15 @@ Marks chat formatting runs only during the existing accepted native message
 path. It reuses cached named-field templates, retains original integer text and
 adds no balance getter, currency history, frame, drawing region, asset, event,
 updater or saved state. The collected-item parser supplies a positive reward
-only when that exact suffix matches; chat can display it while the unchanged
-loot service/view guards reject it before queueing and icon metadata work.
+only when that exact suffix matches; chat displays it independently of the popup
+mode. The shared loot service/view guard permits a conversion card only in SDUI
+mode with Show marks rewards on; other collected items stop before queueing and
+icon metadata work.
 Unknown text stays native. Extra compact chat lines use the native message
 pane/history and its existing fonts/fades; there is no separate marks view.
 Source/diff review and pinned formatting only; no local tests, standalone
 validation or addon/game execution. CI-only mocks cover both formats across
-all fourteen catalogs, link/color preservation and collected-popup exclusion.
+all fourteen catalogs, link/color preservation and marks-off popup exclusion.
 
 Diagnostic capture is opt-in and off by default. While enabled, the session
 archive retains original ordering, duplicate-delivery rules and literal markup

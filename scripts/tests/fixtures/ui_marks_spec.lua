@@ -99,9 +99,11 @@ Test("both marks producers match every shipped native language template", functi
     assert(languages == 14, "not all native language catalogs were exercised")
 end)
 
-Test("item conversions remain excluded from loot popups and metadata reads", function()
+Test("marks checkbox off excludes conversions before popup metadata reads", function()
     local context = Chat()
     local env = context.env
+    env.SurvivorsDragonUiDisplay = { lootShowMarks = false }
+    context:Load("core/display.lua", "Display")
     context:Load("core/hud.lua")
     context:Load("modules/ui/loot.lua", "LootNotifications")
     local delivered, metadataReads = 0, 0

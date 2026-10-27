@@ -113,7 +113,13 @@ The assertions cover:
 - Native marks messages use exact templates in all fourteen catalogs. Tests
   preserve item links/colors and original amounts/totals, keep zero-reward
   duplicates hidden, leave conversations/unknown suffixes unchanged and reject
-  collected conversions before popup delivery or item metadata reads.
+  collected conversions before popup delivery or item metadata reads when marks
+  rewards are off. Loot mode tests exercise the production display/service/view:
+  defaults and invalid preferences, all modes, preview/Confirm/Cancel, profiles,
+  resets, native visible/hidden ownership, failed handoff retries and synchronous
+  CVar callbacks, later external preferences, no Game/Off intake or idle updater,
+  deferred/reused card artwork, positive conversion labels and zero/invalid
+  rewards. No mock proves native box content or live font rendering.
 - The production meter cycles Party Damage after Boss Damage, reads native
   player totals/rates, binds uniquely matched native unit portraits, and retains
   class metadata across shared Reset deltas. Mocks cover unchanged/hidden/off

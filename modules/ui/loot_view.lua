@@ -17,7 +17,7 @@ DFRL:NewMod("LootView", 4, function()
     local BORDER_BOTTOM_INSET = 12
     local FADE_IN, FADE_START, LIFETIME = 0.2, 4.05, 5.55
     local pool, visible, count = {}, {}, 0
-    local ready, needsReflow = true, false
+    local ready, needsReflow, prepared = true, false, false
     local frame = CreateFrame("Frame", "DFRL_LootNotifications", UIParent)
     frame:SetWidth(WIDTH)
     frame:SetHeight(HEIGHT + (LIMIT - 1) * STEP)
@@ -56,14 +56,16 @@ DFRL:NewMod("LootView", 4, function()
         card.paintedAlpha = alpha
     end
     local function Retire(card)
-        card:Hide()
+        if not card then return end
+        if card:IsShown() then card:Hide() end
         card.entry, card.started, card.retryAt = nil, nil, nil
         card.presentationDirty = nil
-        card.icon:SetTexture(nil)
+        card.rewardText, card.rewardName, card.rewardMarks = nil, nil, nil
+        if card.icon:GetTexture() ~= nil then card.icon:SetTexture(nil) end
         card.iconPath = nil
-        card.icon:Hide()
-        card.border:Hide()
-        card.name:SetText("")
+        if card.icon:IsShown() then card.icon:Hide() end
+        if card.border:IsShown() then card.border:Hide() end
+        T.SetTextIfChanged(card.name, "")
         SetAlpha(card, 0)
     end
     local function Clear()
@@ -75,8 +77,8 @@ DFRL:NewMod("LootView", 4, function()
         end
         count = 0
         table.setn(visible, 0)
-        animation:SetScript("OnUpdate", nil)
-        frame:Hide()
+        if animation:GetScript("OnUpdate") then animation:SetScript("OnUpdate", nil) end
+        if frame:IsShown() then frame:Hide() end
     end
     local function Color(entry)
         if type(entry.color) == "string" and string.find(entry.color, "^%x%x%x%x%x%x%x%x$") then
@@ -95,7 +97,17 @@ DFRL:NewMod("LootView", 4, function()
         if not frame:IsVisible() then return end
         local entry = card.entry
         local r, g, b = Color(entry)
-        T.SetTextIfChanged(card.name, entry.name)
+        local label = entry.name
+        if loot.IsMarkReward(entry) then
+            if not card.rewardText or card.rewardName ~= entry.name or card.rewardMarks ~= entry.marks then
+                local unit = string.find(entry.marks, "^0*1$") and "Mark" or "Marks"
+                card.rewardText =
+                    string.format(DFRL.locale.Text("%s → +%s %s"), entry.name, entry.marks, DFRL.locale.Text(unit))
+                card.rewardName, card.rewardMarks = entry.name, entry.marks
+            end
+            label = card.rewardText
+        end
+        T.SetTextIfChanged(card.name, label)
         if card.red ~= r or card.green ~= g or card.blue ~= b then
             card.name:SetTextColor(r, g, b)
             card.border:SetVertexColor(r, g, b, 1)
@@ -139,31 +151,41 @@ DFRL:NewMod("LootView", 4, function()
         T.SetTextIfChanged(card.heading, DFRL.locale.Text("You received"))
         card.presentationDirty = nil
     end
-    for index = 1, LIMIT do
-        local card = CreateFrame("Frame", nil, frame)
-        card:SetWidth(WIDTH)
-        card:SetHeight(HEIGHT)
-        card:EnableMouse(false)
-        card:Hide()
-        local background = card:CreateTexture(nil, "BACKGROUND")
-        if background:SetTexture(path .. "loot\\Toast.blp") == false then ready = false end
-        background:SetAllPoints(card)
-        background:SetTexCoord(0, 276 / 512, 0, 96 / 128)
-        card.icon = card:CreateTexture(nil, "ARTWORK")
-        card.icon:SetWidth(50)
-        card.icon:SetHeight(50)
-        card.icon:SetPoint("TOPLEFT", card, "TOPLEFT", 23, -24)
-        card.border = card:CreateTexture(nil, "OVERLAY")
-        if card.border:SetTexture(path .. "character\\QualityBorder.blp") == false then ready = false end
-        card.border:SetWidth(58)
-        card.border:SetHeight(58)
-        card.border:SetPoint("CENTER", card.icon, "CENTER", 0, 0)
-        card.heading = Label(card, 12)
-        card.heading:SetTextColor(1, 0.82, 0)
-        card.heading:SetHeight(16)
-        card.name = Label(card, 14)
-        card.name:SetHeight(34)
-        pool[index] = card
+    local function PreparePool()
+        for index = 1, LIMIT do
+            local card = CreateFrame("Frame", nil, frame)
+            card:SetWidth(WIDTH)
+            card:SetHeight(HEIGHT)
+            card:EnableMouse(false)
+            card:Hide()
+            local background = card:CreateTexture(nil, "BACKGROUND")
+            if background:SetTexture(path .. "loot\\Toast.blp") == false then ready = false end
+            background:SetAllPoints(card)
+            background:SetTexCoord(0, 276 / 512, 0, 96 / 128)
+            card.icon = card:CreateTexture(nil, "ARTWORK")
+            card.icon:SetWidth(50)
+            card.icon:SetHeight(50)
+            card.icon:SetPoint("TOPLEFT", card, "TOPLEFT", 23, -24)
+            card.border = card:CreateTexture(nil, "OVERLAY")
+            if card.border:SetTexture(path .. "character\\QualityBorder.blp") == false then ready = false end
+            card.border:SetWidth(58)
+            card.border:SetHeight(58)
+            card.border:SetPoint("CENTER", card.icon, "CENTER", 0, 0)
+            card.heading = Label(card, 12)
+            card.heading:SetTextColor(1, 0.82, 0)
+            card.heading:SetHeight(16)
+            card.name = Label(card, 14)
+            card.name:SetHeight(34)
+            pool[index] = card
+        end
+    end
+    local function EnsurePool()
+        if not prepared then
+            prepared = true
+            local ok = pcall(PreparePool)
+            ready = ok and ready
+        end
+        return ready
     end
 
     local function Update()
@@ -200,8 +222,9 @@ DFRL:NewMod("LootView", 4, function()
         end
     end
     local function Push(entry)
-        -- Defence in depth: even a future producer cannot show collected loot.
-        if entry.collection == "collected" then return true end
+        -- Keep eligibility shared with intake, including positive conversion rewards.
+        if not loot.CanShow(entry) then return true end
+        if not EnsurePool() then return false end
         if count == LIMIT then return false end
         local card
         for index = 1, LIMIT do
@@ -248,6 +271,7 @@ DFRL:NewMod("LootView", 4, function()
     end, { labelAbove = true })
     DFRL.locale.Listen(function()
         for index = 1, count do
+            visible[index].rewardText = nil
             if not pcall(Refresh, visible[index]) then
                 ready = false
                 Clear()
@@ -255,5 +279,5 @@ DFRL:NewMod("LootView", 4, function()
             end
         end
     end)
-    loot.SetRenderer({ IsReady = function() return ready end, Push = Push, Clear = Clear })
+    loot.SetRenderer({ IsReady = EnsurePool, Push = Push, Clear = Clear })
 end)

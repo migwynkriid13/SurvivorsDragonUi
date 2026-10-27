@@ -1,5 +1,25 @@
 # Loot notifications
 
+`/sdui` → **Loot notifications** offers **SDUI**, **Game** and **Off**:
+
+- **SDUI** is the default and uses the silver cards described below.
+- **Game** explicitly enables the game's original loot boxes and stops SDUI intake.
+- **Off** hides both popup styles; loot still appears in chat.
+
+**Show marks rewards** is on by default. In SDUI mode, an already-collected item
+with a positive conversion reward can show `Item name → +1 Mark` on the existing
+card. The native amount is retained, including plural amounts. Duplicates with
+no positive reward remain excluded. Standalone earned-marks chat notices do not
+create a second popup for the same event. Game mode leaves popup content to the
+game. The checkbox retains its value but is dimmed and ignores input in Game/Off.
+
+`lootMode` (`sdui`, `game`, `off`) and `lootShowMarks` (boolean) use the existing
+display table. Missing/invalid values and both full resets restore SDUI and marks
+on. Shared live preview, Confirm, Cancel/world/logout/reload discard and profiles
+apply. Changing either choice retires queued/visible cards; old notices never
+replay when returning to SDUI. Move, scale and hide stay in the separate Layout
+group, and a Layout-hidden custom view does not turn native boxes back on.
+
 The user selected **02**, Blizzard's silver loot alert, with the retail-style
 gold **You received** heading and quality-colored item name. The slot header
 and collection subtitle are omitted. Both lines request the game's original
@@ -14,7 +34,10 @@ the runtime payload. Their earlier slot/status lines are not the selected view.
 
 ## Selected view
 
-`modules/ui/loot_view.lua` registers a real, passive three-card pool. Each card
+`modules/ui/loot_view.lua` registers a real, passive three-card pool, prepared
+once on the first SDUI readiness request. An initial Game/Off choice creates no
+card textures or labels. Preparation failures stay unready and preserve native
+fallback without allocating another pool. Each card
 uses the unmodified 276-by-96 silver LootToast crop, with a 50-by-50 native item
 icon when available and the existing quality rim. Names keep their received
 color; exact native item quality supplies a color only when the message has none.
@@ -23,12 +46,14 @@ Names may wrap within the native-style two-line name area. No tooltip, click
 handler, roll button, sound, collection subtitle or slot line is added.
 
 Explicit native **already collected** status is rejected before queueing,
-metadata resolution or sequence assignment. The view repeats that guard before
-accepting any entry. Regular chat hides that same explicit `collected`
+metadata resolution or sequence assignment unless SDUI mode's enabled marks
+option accepts a positive integer conversion. `IsMarkReward` and `CanShow`
+share that eligibility between intake and the view; collection identity stays
+`collected` and never becomes a new-item claim. Regular chat hides that explicit `collected`
 result unless a positive marks conversion was supplied. The conversion shows
 `+ [Item] +1 Mark` in chat, keeping native brackets, links and item color while
-omitting the collection suffix. It remains collected and never becomes an item
-popup. Zero-reward duplicates remain hidden; raw diagnostics retain the input.
+omitting the collection suffix, independently of the popup choice. Zero-reward
+duplicates remain hidden; raw diagnostics retain the input.
 Absent collection status stays unknown and is eligible; no collection database
 or item-name inference decides whether a drop is new.
 
@@ -52,7 +77,7 @@ The loot edit bounds stay 276 by 256, with additional cards stacking upward.
 Existing move, uniform resize, hide, Confirm, Cancel, discard and reset behavior
 applies. Existing confirmed/draft geometry is retained; both full resets use the
 new default. Only confirmed geometry uses the existing `SurvivorsDragonUiLayout`
-table. No new SavedVariable or display setting is introduced.
+table. The two display choices above add no SavedVariable.
 
 ## Shared message intake
 
@@ -127,8 +152,9 @@ return the boolean `true` only after the real view and its resources are ready.
 that occurrence. A false/nil return leaves it queued while the view is full.
 The renderer must not replace its registration from inside these callbacks.
 An exception in `Push` clears the view/queue, detaches the renderer and releases
-native visibility ownership. An unready renderer also releases ownership.
-`SetRenderer(nil)` explicitly detaches; `IsActive()` reports successful current
+SDUI native-visibility ownership. An unready SDUI renderer also releases it.
+`SetRenderer(nil)` explicitly detaches the custom renderer; a selected Game/Off
+mode still owns its explicit native visibility. `IsActive()` reports successful current
 takeover; `Clear()` clears queued and visible notices without changing the
 registered view or its readiness.
 
@@ -187,7 +213,23 @@ originally hidden choice and a later visible external value. World leave,
 logout, detach, unready/faulted views and the wrapped real `ReloadUI` clear
 transient data and release ownership. The reload wrapper restores native
 visibility before the game's normal save. World leave/logout/reload stop the
-update handler; world entry can reacquire an already registered, ready view.
+update handler; world entry reapplies the selected mode.
+
+The same owner now accepts an explicit target boolean: its existing argument-free
+`Acquire()` still means hidden, while loot's Game mode uses `Acquire(true)`.
+It retains the original/latest external preference across mode previews, so
+Cancel does not permanently enable a previously hidden native box. Failed
+handoffs retain the last and attempted owned states for restoration. Synchronous
+CVar callbacks remain guarded. No native visibility write occurs when the getter
+already matches. Game/Off detach the service updater after a successful handoff;
+only unsuccessful native handoffs retry on its existing 0.2-second controller.
+Both skip custom parsing, item metadata, queueing, card animation and painting.
+
+Accepted conversion cards reuse the original item icon/name/quality, card regions
+and lifetime. Their extra text is cached by item name/amount and invalidated on
+language change or retirement; no new icon, currency art, balance getter, saved
+reward history or independent marks popup is added. Failed optional icons retain
+the existing retry policy and hidden cards keep their original expiry behavior.
 
 Other HUD parts, compact chat, raw diagnostics, loot rewards and collection
 progress keep their existing ownership. No native frame is guessed, no globals
