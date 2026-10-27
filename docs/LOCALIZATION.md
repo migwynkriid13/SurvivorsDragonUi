@@ -19,7 +19,9 @@ width** controls and their hints have source TSV and runtime UI entries in all
 fourteen languages. They reuse shared editor styling, numeric display and
 multilingual width measurement, with native horizontal sliders for both widths.
 The guardian page reuses the existing **Guardian tracker** caption. Only these
-six UI captions were prepared; native text, icon aliases, effects
+five UI captions were prepared; both sliders share the same width hint. The
+obsolete guardian minimum-width hint is removed from source and runtime UI
+catalogs. Native text, icon aliases, effects
 and the older full-catalog source fingerprint are unchanged.
 
 The custom run-timer and boss-bar enable captions and their native-display

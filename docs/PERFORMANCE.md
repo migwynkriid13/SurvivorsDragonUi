@@ -248,14 +248,16 @@ remain unverified.
 `meterWidth`, `guardianWidth` and `meterFontSize` reuse display preview,
 normalization, profiles and reset/discard ownership. Width previews update root
 geometry and shared placement once; cached row/header geometry reflows only
-while visible. The guardian tracker preserves its measured content minimum and
-header height, widening the name column without remeasuring translated captions
+while visible. Both width sliders use 120–960 with a 240 default. The guardian
+tracker uses cached natural widths to compress its columns without a forced
+outer-width minimum, preserving the measured header height and keeping the
+25-unit health end caps edge to edge. It does not remeasure translated captions
 on slider motion. The meter caches applied width, font size, icon gutter and
 numeric-column count. Failed font changes remain pending for the existing
 visible refresh. Off/hidden views update required edit bounds without added
 font, row-anchor, header or icon work.
 
-The default HUD dimensions, fonts and drawing budget remain unchanged. The two
+Row heights, fonts and authored drawing-region counts remain unchanged. The two
 lazy editor sliders each author one native thumb and one track texture, four
 editor-only texture regions in total, plus their existing-style caption/value
 FontStrings. Hidden pages inherit native hiding. Their native value callbacks

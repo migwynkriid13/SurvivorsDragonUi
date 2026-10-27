@@ -4,9 +4,9 @@ DFRL:NewMod("Display", 0, function()
     local defaults = {
         meterEnabled = false,
         meterRows = 6,
-        meterWidth = 320,
+        meterWidth = 240,
         meterFontSize = 11,
-        guardianWidth = 286,
+        guardianWidth = 240,
         meterShowDamage = false,
         meterShowDps = true,
         meterShowPercentage = false,
@@ -80,9 +80,9 @@ DFRL:NewMod("Display", 0, function()
 
     local ranges = {
         meterRows = { minimum = 1, maximum = 10, integer = true },
-        meterWidth = { minimum = 240, maximum = 960, integer = true },
+        meterWidth = { minimum = 120, maximum = 960, integer = true },
         meterFontSize = { minimum = 8, maximum = 18, integer = true },
-        guardianWidth = { minimum = 240, maximum = 960, integer = true },
+        guardianWidth = { minimum = 120, maximum = 960, integer = true },
         sctScale = { minimum = 0.25, maximum = 2 },
         petRows = { minimum = 1, maximum = 6, integer = true },
         petSpacing = { minimum = 0, maximum = 60, integer = true },

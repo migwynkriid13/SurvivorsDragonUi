@@ -25,8 +25,8 @@ DFRL:NewMod("GuardianTracker", 4, function()
     local TOGGLE_SIZE, TOGGLE_INSET = 25.6, 11
     local WIDTH, ROW_HEIGHT = 128 + NAME_WIDTH + COLUMN_GAP + 2 * ROW_INSET, 26
     local requestedWidth = DFRL.display.Get("guardianWidth")
-    local minimumWidth, headerHeight = WIDTH, WIDTH / 8
-    local width, statusWidth = math.max(WIDTH, requestedWidth), 128
+    local preferredStatusWidth, headerHeight = 128, WIDTH / 8
+    local width, statusWidth = requestedWidth, 128
     local healthWidth = 0
     local presentation = { snapshot = { rows = {}, counts = {} }, shown = false }
     local frame = CreateFrame("Frame", "DFRL_GuardianTracker", UIParent)
@@ -185,21 +185,29 @@ DFRL:NewMod("GuardianTracker", 4, function()
         return math.ceil(maximum)
     end
     local function ApplyWidth()
-        width = math.max(minimumWidth, requestedWidth)
+        width = requestedWidth
+        local available = width - 2 * ROW_INSET - COLUMN_GAP
+        -- Compress both text columns below their natural width. The status
+        -- column plus its eight-unit pill allowance must span two 25-unit caps.
+        statusWidth = math.min(
+            preferredStatusWidth,
+            math.max(42, available * preferredStatusWidth / (NAME_WIDTH + preferredStatusWidth)),
+            available - 24
+        )
         if not T.NearlyEqual(width, frame:GetWidth()) then
             frame:SetWidth(width)
             DFRL.layout.Place("guardianTracker", frame)
         end
     end
     local function Measure()
-        statusWidth = math.max(128, healthWidth, CaptionWidth("Respawns in %s", "99:59") + 16)
+        preferredStatusWidth = math.max(128, healthWidth, CaptionWidth("Respawns in %s", "99:59") + 16)
         for _, source in pairs(captions) do
-            statusWidth = math.max(statusWidth, CaptionWidth(source) + 16)
+            preferredStatusWidth = math.max(preferredStatusWidth, CaptionWidth(source) + 16)
         end
         local titleWidth = CaptionWidth("GUARDIANS", nil, 14)
         if titleWidth <= 0 then return false end
-        minimumWidth = math.max(WIDTH, statusWidth + NAME_WIDTH + COLUMN_GAP + 2 * ROW_INSET, titleWidth + 88)
-        headerHeight = minimumWidth / 8
+        headerHeight = math.max(WIDTH, preferredStatusWidth + NAME_WIDTH + COLUMN_GAP + 2 * ROW_INSET, titleWidth + 88)
+            / 8
         ApplyWidth()
         return true
     end

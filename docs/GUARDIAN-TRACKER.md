@@ -58,17 +58,21 @@ pill's right offset at the default scale. The pill anchor and default calculatio
 share `HEALTH_RIGHT_OFFSET`; neither follows moved or resized minimap geometry.
 Width changes reapply this default edge only when no confirmed or draft position
 exists; custom positions stay independent.
-`/sdui` → **Guardian tracker** has a **Tracker width** slider from **240 to 960**.
-It sets a minimum width, leaving room for translated status captions and health
-values when they need more. The default minimum of **286** preserves the original
-automatic sizing. It widens the header and name column without scaling icons,
-fonts, rows or health bezels; the health column and the measured header height
-retain their original sizing. Proportional Layout resizing remains available.
+`/sdui` → **Guardian tracker** has a **Tracker width** slider from **120 to 960**,
+with **240** as the default. It sets the actual width without scaling icons,
+fonts or rows. Cached natural caption/health widths guide the two text columns:
+wide layouts retain the status column's natural width and give extra space to
+names; narrower layouts compress both columns. Long text can clip at small
+widths instead of forcing the tracker wider. Names retain at least 24 units;
+the status column retains at least 42 units plus its eight-unit pill allowance,
+so the two 25-unit health end caps never overlap. The measured header height
+retains its existing sizing. Proportional Layout resizing remains available.
 
 The slider previews live and saves only with Confirm. Cancel, world/logout/reload
 discard, profiles and both full resets use the shared display lifecycle.
 `guardianWidth` is a finite, clamped/rounded integer in the existing display
-table. Missing/invalid values and resets use 286. Its one-unit native slider and
+table. Missing/invalid values and resets use 240, preserving explicit saved width
+choices. Its one-unit native slider and
 value label reuse the meter's shared control factory and callback guard. A width
 preview reuses cached caption/health requirements; it never starts a metadata
 scan. Hidden views update required root geometry only, deferring header/row
