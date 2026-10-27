@@ -167,6 +167,7 @@ DFRL:NewMod("StoredLevels", 5, function()
     end)
     button:SetScript("OnLeave", function() hovered = false end)
     button:SetScript("OnShow", function()
+        elapsed = INTERVAL
         pulseElapsed = 0
         glow:SetAlpha(0.25)
         highlight:SetAlpha(0.1)
@@ -181,6 +182,7 @@ DFRL:NewMod("StoredLevels", 5, function()
     -- This updater runs only while the real button is visible with waiting
     -- levels. Hidden groups and cleanup stop it through normal frame visibility.
     button:SetScript("OnUpdate", function()
+        if not button:IsVisible() then return end
         pulseElapsed = pulseElapsed + math.min(tonumber(arg1) or 0, 0.1)
         if pulseElapsed >= PULSE_PERIOD then pulseElapsed = pulseElapsed - PULSE_PERIOD end
         local pulse = 0.5 - 0.5 * math.cos(pulseElapsed * 2 * math.pi / PULSE_PERIOD)
@@ -243,27 +245,32 @@ DFRL:NewMod("StoredLevels", 5, function()
             Clear()
             return
         end
-        local _, class = UnitClass("player")
-        local crop = CLASS_ICONS[class]
-        if crop then
-            if paintedCrop ~= crop then
-                icon:SetTexCoord(unpack(crop))
-                paintedCrop = crop
+        local paint = not DFRL.layout.IsHidden("levelUp") and UIParent:IsVisible()
+        if paint then
+            local _, class = UnitClass("player")
+            local crop = CLASS_ICONS[class]
+            if crop then
+                if paintedCrop ~= crop then
+                    icon:SetTexCoord(unpack(crop))
+                    paintedCrop = crop
+                end
+                if not icon:IsShown() then icon:Show() end
+            else
+                if icon:IsShown() then icon:Hide() end
+                paintedCrop = nil
             end
-            if not icon:IsShown() then icon:Show() end
-        else
-            if icon:IsShown() then icon:Hide() end
-            paintedCrop = nil
         end
-        T.SetTextIfChanged(countText, tostring(count))
-        local measured, changed = TextWidth(countText, badgeMetrics)
-        if changed or not measured then
-            local badgeWidth = math.max(20, math.ceil(measured or 0) + 10)
-            if not T.NearlyEqual(badge:GetWidth(), badgeWidth) then badge:SetWidth(badgeWidth) end
-            if not T.NearlyEqual(countText:GetWidth(), badgeWidth - 8) then countText:SetWidth(badgeWidth - 8) end
+        if paint or editing then
+            T.SetTextIfChanged(countText, tostring(count))
+            local measured, changed = TextWidth(countText, badgeMetrics)
+            if changed or not measured then
+                local badgeWidth = math.max(20, math.ceil(measured or 0) + 10)
+                if not T.NearlyEqual(badge:GetWidth(), badgeWidth) then badge:SetWidth(badgeWidth) end
+                if not T.NearlyEqual(countText:GetWidth(), badgeWidth - 8) then countText:SetWidth(badgeWidth - 8) end
+            end
+            AlignContent()
         end
-        AlignContent()
-        if not displayed or not button:IsShown() then button:Show() end
+        if not displayed then button:Show() end
         displayed = true
         -- Construct and populate the replacement before suppressing native UI.
         -- Layout's Hide frame choice intentionally suppresses both versions.

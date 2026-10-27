@@ -3,7 +3,18 @@ DFRL:NewMod("RangeIndicator", 1, function()
     local INDICATOR_ALPHA = 0.5
     local UPDATE_INTERVAL = 0.1
 
+    local function ClearIndicator(button)
+        local indicator = button.rangeIndicator
+        if not indicator or (not indicator.showing and not indicator:IsShown()) then return end
+        if type(UIFrameFadeRemoveFrame) == "function" then UIFrameFadeRemoveFrame(indicator) end
+        indicator.showing = false
+        indicator:Hide()
+    end
     local function UpdateButton(button)
+        if not button:IsVisible() then
+            ClearIndicator(button)
+            return
+        end
         local indicator = button.rangeIndicator
         if not indicator then
             indicator = button:CreateTexture(nil, "OVERLAY")
@@ -12,6 +23,7 @@ DFRL:NewMod("RangeIndicator", 1, function()
             indicator:SetAllPoints(button)
             indicator:Hide()
             button.rangeIndicator = indicator
+            HookScript(button, "OnHide", function() ClearIndicator(button) end)
         end
 
         local outOfRange = button:IsVisible()
@@ -40,11 +52,29 @@ DFRL:NewMod("RangeIndicator", 1, function()
     events:RegisterEvent("SPELLS_CHANGED")
     events:SetScript("OnEvent", UpdateIndicators)
     local elapsed = 0
-    events:SetScript("OnUpdate", function()
+    local function Tick()
         elapsed = elapsed + arg1
         if elapsed >= UPDATE_INTERVAL then
             elapsed = 0
             UpdateIndicators()
         end
+    end
+    local hooked
+    local function SyncUpdates()
+        local visible = DFRL.mainBar and DFRL.mainBar:IsVisible()
+        events:SetScript("OnUpdate", visible and Tick or nil)
+        if visible then
+            elapsed = UPDATE_INTERVAL
+        else
+            UpdateIndicators()
+        end
+    end
+    DFRL.layout.ListenVisibility("actionBar", function()
+        if DFRL.mainBar and not hooked then
+            hooked = true
+            HookScript(DFRL.mainBar, "OnShow", SyncUpdates)
+            HookScript(DFRL.mainBar, "OnHide", SyncUpdates)
+        end
+        SyncUpdates()
     end)
 end)

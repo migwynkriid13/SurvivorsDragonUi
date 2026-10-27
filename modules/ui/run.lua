@@ -400,6 +400,7 @@ DFRL:NewMod("RunTimers", 5, function()
     local currentFont, fontDraft, fontEditor, fontSample, fontSampleClock, fontMenu
     local faceLabel, sizeLabel, shadowControl
     local displayControls, displayNumbers, outlineButtons, faceButtons, sctButtons = {}, {}, {}, {}, {}
+    local dependentSettings = {}
     local incomingControl, sctDescription
     local sctSizeLabel
 
@@ -430,7 +431,7 @@ DFRL:NewMod("RunTimers", 5, function()
             end
         end
         for key, label in pairs(displayNumbers) do
-            label:SetText(tostring(DFRL.display.Get(key)))
+            T.SetTextIfChanged(label, tostring(DFRL.display.Get(key)))
         end
         for key, control in pairs(displayControls) do
             control:SetChecked(DFRL.display.Get(key))
@@ -443,6 +444,18 @@ DFRL:NewMod("RunTimers", 5, function()
                 control:EnableMouse(enabled)
                 control:SetAlpha(enabled and 1 or 0.45)
             end
+        end
+        for key, group in pairs(dependentSettings) do
+            local enabled = DFRL.display.Get(key)
+            if group.enabled ~= enabled then
+                group.enabled = enabled
+                if group.frame then group.frame:SetAlpha(enabled and 1 or 0.45) end
+                for _, control in ipairs(group.controls) do
+                    control:EnableMouse(enabled)
+                    if not group.frame then control:SetAlpha(enabled and 1 or 0.45) end
+                end
+            end
+            if not enabled and key == "customRunTimer" and fontMenu and fontMenu:IsShown() then fontMenu:Hide() end
         end
     end
 
@@ -685,6 +698,7 @@ DFRL:NewMod("RunTimers", 5, function()
         local button = T.CreateEditorButton(parent, text, width, 28)
         button:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
         button:SetScript("OnClick", callback)
+        if parent.editorSettingsGroup then table.insert(parent.editorSettingsGroup.controls, button) end
         return button.label, button
     end
 
@@ -781,9 +795,27 @@ DFRL:NewMod("RunTimers", 5, function()
             {
                 key = "bosses",
                 label = "Boss bars",
+                master = "customBossBars",
                 options = {
+                    { "customBossBars", "Enable custom boss bars", "Off: use the game's original boss bars." },
                     { "bossDebuffs", "Boss debuffs", "Effects on boss and guardian health bars." },
                     { "guardiansInBossBar", "Guardians in boss bar", "Off: show only bosses in the boss bar." },
+                },
+            },
+            {
+                key = "meter",
+                label = "Damage meter",
+                columns = 2,
+                options = {
+                    { "meterEnabled", "Enable damage meter", "Show the custom damage meter. Off by default." },
+                    { "meterRows", "Abilities shown", "Show 1 to 10 abilities at a time.", step = 1 },
+                    { "meterShowDamage", "Ability damage", "Show each ability's damage or healing total." },
+                    { "meterShowDps", "Ability DPS", "Show DPS per ability, or HPS for healing." },
+                    { "meterShowPercentage", "Ability percentage", "Show each ability's share of the total." },
+                    { "meterShowIcons", "Ability icons", "Show spell icons inside gold rings." },
+                    { "meterShowRanks", "Ability ranks", "Show each ability's position in the list." },
+                    { "meterShowTotal", "Header total", "Show total damage or healing in the header." },
+                    { "meterShowTotalDps", "Header DPS", "Show total DPS or HPS in the header." },
                 },
             },
             {
@@ -995,7 +1027,9 @@ DFRL:NewMod("RunTimers", 5, function()
             labelWidth + gap + outlineWidth * 3 + gap * 2,
             defaultsWidth * 2 + 140 + gap * 4,
             DFRL.profiles.MinimumWidth(TextWidth),
-            TextWidth(instructions)
+            TextWidth(instructions),
+            TextWidth("Enable custom run timer") + 36,
+            TextWidth("Off: use the game's original timer.") / 2 + 36
         )
         local contentLeft = padding + sidebarWidth + 24
         local width = contentLeft + contentWidth + padding
@@ -1032,10 +1066,11 @@ DFRL:NewMod("RunTimers", 5, function()
         hint:SetPoint("TOP", fontEditor, "TOP", 0, -49)
         hint:SetTextColor(0.75, 0.73, 0.67)
 
+        local sidebarTop, footerTop, sidebarInset, categoryGap = 68, 532, 4, 4
         local sidebar = CreateFrame("Frame", nil, fontEditor)
-        sidebar:SetPoint("TOPLEFT", fontEditor, "TOPLEFT", padding - 6, -76)
+        sidebar:SetPoint("TOPLEFT", fontEditor, "TOPLEFT", padding - 6, -sidebarTop)
         sidebar:SetWidth(sidebarWidth + 12)
-        sidebar:SetHeight(448)
+        sidebar:SetHeight(footerTop - sidebarTop)
         sidebar:EnableMouse(false)
         local sidebarFill = sidebar:CreateTexture(nil, "BACKGROUND")
         sidebarFill:SetTexture("Interface\\Buttons\\WHITE8X8")
@@ -1045,8 +1080,8 @@ DFRL:NewMod("RunTimers", 5, function()
         separator:SetTexture("Interface\\Buttons\\WHITE8X8")
         separator:SetVertexColor(0.45, 0.38, 0.23, 0.5)
         separator:SetWidth(1)
-        separator:SetPoint("TOPLEFT", fontEditor, "TOPLEFT", contentLeft - 12, -76)
-        separator:SetPoint("BOTTOMLEFT", fontEditor, "TOPLEFT", contentLeft - 12, -524)
+        separator:SetPoint("TOPLEFT", fontEditor, "TOPLEFT", contentLeft - 12, -sidebarTop)
+        separator:SetPoint("BOTTOMLEFT", fontEditor, "TOPLEFT", contentLeft - 12, -footerTop)
         local pages, categoryButtons = {}, {}
         local function SelectPage(key)
             if fontMenu then fontMenu:Hide() end
@@ -1060,12 +1095,12 @@ DFRL:NewMod("RunTimers", 5, function()
             end
         end
         local modeSize = (contentWidth - gap * 2) / 3
-        local sidebarY, categoryGaps = -6, 0
+        local sidebarY, categoryGaps = -sidebarInset, 0
         for _, entry in ipairs(categories) do
             categoryGaps = categoryGaps + (entry.gapBefore or 0)
         end
         local categoryPitch =
-            math.min(42, math.floor((sidebar:GetHeight() - 12 - categoryGaps + 6) / table.getn(categories)))
+            math.min(42, (sidebar:GetHeight() - sidebarInset * 2 - categoryGaps + categoryGap) / table.getn(categories))
         for _, entry in ipairs(categories) do
             local key = entry.key
             local page = CreateFrame("Frame", nil, fontEditor)
@@ -1074,7 +1109,7 @@ DFRL:NewMod("RunTimers", 5, function()
             page:SetHeight(396)
             page:SetFrameLevel(152)
             pages[key] = page
-            local button = T.CreateEditorCategory(sidebar, entry.label, sidebarWidth, categoryPitch - 6)
+            local button = T.CreateEditorCategory(sidebar, entry.label, sidebarWidth, categoryPitch - categoryGap)
             sidebarY = sidebarY - (entry.gapBefore or 0)
             button:SetPoint("TOPLEFT", sidebar, "TOPLEFT", 6, sidebarY)
             sidebarY = sidebarY - categoryPitch
@@ -1097,6 +1132,7 @@ DFRL:NewMod("RunTimers", 5, function()
             )
             control:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, y)
             displayControls[key] = control
+            if parent.editorSettingsGroup then table.insert(parent.editorSettingsGroup.controls, control) end
             return control
         end
         local function DisplayNumber(parent, entry, width, height)
@@ -1133,6 +1169,11 @@ DFRL:NewMod("RunTimers", 5, function()
         end
         local function CreateOptionsPage(category)
             local page = pages[category.key]
+            local dependents
+            if category.master then
+                dependents = { controls = {} }
+                dependentSettings[category.master] = dependents
+            end
             local columns, rowHeight = category.columns or 1, category.rowHeight or 60
             local rowWidth = (contentWidth - gap * (columns - 1)) / columns
             local content, scroll, ScrollOptions = page, nil, nil
@@ -1178,6 +1219,7 @@ DFRL:NewMod("RunTimers", 5, function()
                     end
                 end
                 control:SetPoint("TOPLEFT", content, "TOPLEFT", x, y)
+                if dependents and entry[1] ~= category.master then table.insert(dependents.controls, control) end
                 if ScrollOptions then
                     control:EnableMouseWheel(true)
                     control:SetScript("OnMouseWheel", ScrollOptions)
@@ -1304,16 +1346,34 @@ DFRL:NewMod("RunTimers", 5, function()
         end
 
         local timer = pages.timer
-        local caption = FontEditorLabel(timer, "Timer label preview", 0, 0, 9)
+        local timerTop = 60
+        local timerEnabled = DisplayToggle(
+            timer,
+            "customRunTimer",
+            "Enable custom run timer",
+            "Off: use the game's original timer.",
+            0,
+            contentWidth
+        )
+        timerEnabled:SetHeight(52)
+        timerEnabled.description:SetHeight(28)
+        local timerPage = timer
+        timer = CreateFrame("Frame", nil, timerPage)
+        timer:SetAllPoints(timerPage)
+        timer:EnableMouse(false)
+        local timerSettings = { frame = timer, controls = {} }
+        timer.editorSettingsGroup = timerSettings
+        dependentSettings.customRunTimer = timerSettings
+        local caption = FontEditorLabel(timer, "Timer label preview", 0, -timerTop, 9)
         caption:SetTextColor(0.75, 0.73, 0.67)
         fontSample = FontEditorLabel(timer, DFRL.locale.Text("RUN") .. " 02:34 / 20:00", 0, 0)
         fontSample:ClearAllPoints()
-        fontSample:SetPoint("TOP", timer, "TOP", 0, -16)
+        fontSample:SetPoint("TOP", timer, "TOP", 0, -16 - timerTop)
         fontSampleClock = NewClockLabel(fontSample)
         local controlX = labelWidth + gap
-        FontEditorLabel(timer, "Font", 0, -66, 11)
+        FontEditorLabel(timer, "Font", 0, -66 - timerTop, 11)
         local fontButton
-        faceLabel, fontButton = FontEditorButton("", dropdownWidth, controlX, -58, function()
+        faceLabel, fontButton = FontEditorButton("", dropdownWidth, controlX, -58 - timerTop, function()
             if not fontDraft then return end
             if fontMenu:IsShown() then
                 fontMenu:Hide()
@@ -1351,12 +1411,12 @@ DFRL:NewMod("RunTimers", 5, function()
             fontMenu:Hide()
         end)
         local sizeX = contentWidth - timerSizeWidth
-        FontEditorLabel(timer, "Size", sizeX, -66, 11)
+        FontEditorLabel(timer, "Size", sizeX, -66 - timerTop, 11)
         sizeX = sizeX + TextWidth("Size") + gap
-        FontEditorButton("-", 28, sizeX, -58, function() ChangeSize(-1) end, timer)
-        sizeLabel = FontEditorLabel(timer, "", sizeX + 42, -66)
-        FontEditorButton("+", 28, sizeX + 76, -58, function() ChangeSize(1) end, timer)
-        FontEditorLabel(timer, "Outline", 0, -104, 11)
+        FontEditorButton("-", 28, sizeX, -58 - timerTop, function() ChangeSize(-1) end, timer)
+        sizeLabel = FontEditorLabel(timer, "", sizeX + 42, -66 - timerTop)
+        FontEditorButton("+", 28, sizeX + 76, -58 - timerTop, function() ChangeSize(1) end, timer)
+        FontEditorLabel(timer, "Outline", 0, -104 - timerTop, 11)
         local outlineSize = (contentWidth - controlX - gap * 2) / 3
         for index, entry in ipairs(fontOutlines) do
             local value = entry.value
@@ -1364,7 +1424,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 entry.label,
                 outlineSize,
                 controlX + (index - 1) * (outlineSize + gap),
-                -96,
+                -96 - timerTop,
                 function()
                     if not fontDraft then return end
                     fontDraft.outline = value
@@ -1380,16 +1440,18 @@ DFRL:NewMod("RunTimers", 5, function()
             fontDraft.shadow = value
             PreviewFont(fontDraft)
         end)
-        shadowControl:SetPoint("TOPLEFT", timer, "TOPLEFT", 0, -132)
+        table.insert(timerSettings.controls, shadowControl)
+        shadowControl:SetPoint("TOPLEFT", timer, "TOPLEFT", 0, -132 - timerTop)
         for index, mode in ipairs(timerModes) do
             local x = (index - 1) * (halfWidth + gap)
-            local heading = FontEditorLabel(timer, mode.label, x, -184, 12)
+            local heading = FontEditorLabel(timer, mode.label, x, -184 - timerTop, 12)
             heading:SetTextColor(0.94, 0.79, 0.47)
             local row = 0
             for _, entry in ipairs(timerOptions) do
                 if not entry.regularOnly or mode.suffix == "Regular" then
-                    local y = -204 - row * 44
+                    local y = -204 - timerTop - row * 32
                     local control = DisplayToggle(timer, entry[1] .. mode.suffix, entry[2], nil, y, halfWidth)
+                    control:SetHeight(28)
                     control:SetPoint("TOPLEFT", timer, "TOPLEFT", x, y)
                     row = row + 1
                 end
@@ -1397,7 +1459,7 @@ DFRL:NewMod("RunTimers", 5, function()
         end
 
         divider = T.EditorDivider(fontEditor, width - padding * 2)
-        divider:SetPoint("TOPLEFT", fontEditor, "TOPLEFT", padding, -532)
+        divider:SetPoint("TOPLEFT", fontEditor, "TOPLEFT", padding, -footerTop)
         local footer = CreateFrame("Frame", nil, fontEditor)
         footer:SetWidth(width - padding * 2)
         footer:SetHeight(30)
@@ -1957,7 +2019,7 @@ DFRL:NewMod("RunTimers", 5, function()
     local zoneSequence, zoneRunPending
     local scheduleBarrier = -1
     local reloading = false
-    local render = { emptySchedule = {} }
+    local render = { emptySchedule = {}, readPending = true }
     -- Only ReloadUI writes this handoff. Consume it once, keeping an initial
     -- nil phase from destroying it before the native API has replayed AZSRUN.
     local scheduleCache = _G.SurvivorsDragonUiBossSchedule
@@ -1968,6 +2030,13 @@ DFRL:NewMod("RunTimers", 5, function()
         if value == false or value == 0 or value == "0" then return false end
         return nil
     end
+    local function WriteNative(part, shown)
+        if render.applyingNative or type(AZS_SetHudShown) ~= "function" then return false end
+        render.applyingNative = true
+        local ok = pcall(AZS_SetHudShown, part, shown)
+        render.applyingNative = false
+        return ok
+    end
 
     local function TakeOver(part)
         if type(AZS_SetHudShown) ~= "function" or type(AZS_IsHudShown) ~= "function" then return false end
@@ -1977,7 +2046,7 @@ DFRL:NewMod("RunTimers", 5, function()
         if shown == nil then return false end
         if not nativeParts[part] then nativeParts[part] = { shown = shown } end
         if shown then
-            ok = pcall(AZS_SetHudShown, part, false)
+            ok = WriteNative(part, false)
             if not ok then return false end
             local checked, now = pcall(AZS_IsHudShown, part)
             return checked and Shown(now) == false
@@ -1987,8 +2056,14 @@ DFRL:NewMod("RunTimers", 5, function()
 
     local function Restore(part)
         local original = nativeParts[part]
-        if not original or type(AZS_SetHudShown) ~= "function" then return end
-        if pcall(AZS_SetHudShown, part, original.shown) then nativeParts[part] = nil end
+        if not original or type(AZS_IsHudShown) ~= "function" then return end
+        local ok, shown = pcall(AZS_IsHudShown, part)
+        if not ok or Shown(shown) == nil then return end
+        if Shown(shown) ~= original.shown then
+            if not WriteNative(part, original.shown) then return end
+            ok, shown = pcall(AZS_IsHudShown, part)
+        end
+        if ok and Shown(shown) == original.shown then nativeParts[part] = nil end
     end
 
     local function ClearTally()
@@ -2021,17 +2096,22 @@ DFRL:NewMod("RunTimers", 5, function()
             ClearTally()
             return
         end
-        for _, field in ipairs(tallyFields) do
-            T.SetTextIfChanged(field.text, tostring(math.floor(state[field.key])))
-            FitTallyField(field)
-        end
-        SetGoldHighlight(DFRL.display.Get("highlightAffordableCache") and state.gold >= state.chest)
         if not render.tallyShown then
             render.tallyShown = true
             tallyAttachment.SetShown(true)
         end
+        if tally:IsVisible() then
+            for _, field in ipairs(tallyFields) do
+                T.SetTextIfChanged(field.text, tostring(math.floor(state[field.key])))
+                FitTallyField(field)
+            end
+            SetGoldHighlight(DFRL.display.Get("highlightAffordableCache") and state.gold >= state.chest)
+        end
         if not TakeOver("tally") then ClearTally() end
     end
+    HookScript(tally, "OnShow", function()
+        tallyPresentationDirty, render.readPending = true, true
+    end)
 
     local function HideDebuff(icon)
         if GameTooltip and GameTooltip:IsOwned(icon) then GameTooltip:Hide() end
@@ -2049,6 +2129,14 @@ DFRL:NewMod("RunTimers", 5, function()
         end
         row.debuffHeight = 0
     end
+    HookScript(bossGroup, "OnHide", function()
+        for _, row in pairs(activeRows) do
+            ClearDebuffs(row)
+        end
+    end)
+    HookScript(bossGroup, "OnShow", function()
+        refreshRows, render.readPending = true, true
+    end)
 
     local function Retire(row)
         ClearDebuffs(row)
@@ -2125,10 +2213,41 @@ DFRL:NewMod("RunTimers", 5, function()
         Restore("clock")
     end
 
+    local function SyncReplacements()
+        local clock = DFRL.display.Get("customRunTimer")
+        local bosses = DFRL.display.Get("customBossBars")
+        if render.customClock ~= clock then
+            render.customClock = clock
+            if not clock then
+                -- Explicit opt-out turns the matching native setting back on,
+                -- including when it was hidden before this Lua session.
+                nativeParts.clock = { shown = true }
+                scheduleCache = nil
+                ReleaseClock()
+            end
+            refreshRows, render.readPending = true, true
+        end
+        if render.customBosses ~= bosses then
+            render.customBosses = bosses
+            if not bosses then
+                nativeParts.bosses = { shown = true }
+                ClearRows()
+                Restore("bosses")
+            end
+            refreshRows, render.readPending = true, true
+        end
+    end
+
     local function ReleaseHUD()
-        ReleaseClock()
-        ClearTally()
-        ClearRows()
+        if not render.hudReleased then
+            ReleaseClock()
+            ClearTally()
+            ClearRows()
+            render.hudReleased = true
+        else
+            Restore("clock")
+            Restore("tally")
+        end
         Restore("bosses")
         previousTime = nil
         previousZone = nil
@@ -2587,6 +2706,7 @@ DFRL:NewMod("RunTimers", 5, function()
     local function UpdateDebuffs(row, enabled)
         local count = 0
         local paint = bossGroup:IsVisible()
+        if not paint then return row.debuffHeight or 0 end
         local getter = _G.AZS_GetDebuffs
         if enabled and type(getter) == "function" then
             -- The getter owns timing and returns current effects for this exact
@@ -2653,6 +2773,7 @@ DFRL:NewMod("RunTimers", 5, function()
     end
 
     local function UpdateDebuffRows(phase, reflow)
+        if not bossGroup:IsVisible() then return end
         local enabled = phase ~= "ready" and phase ~= "dead" and DFRL.display.Get("bossDebuffs")
         for _, row in ipairs(rowOrder) do
             local height = UpdateDebuffs(row, enabled)
@@ -2670,6 +2791,10 @@ DFRL:NewMod("RunTimers", 5, function()
     end
 
     local function UpdateRows(phase)
+        if not render.customBosses then
+            Restore("bosses")
+            return
+        end
         local entries, seen = EncounterRows()
         if not entries then
             ClearRows()
@@ -2694,6 +2819,13 @@ DFRL:NewMod("RunTimers", 5, function()
         end
         local paint = bossGroup:IsVisible()
         render.rowsPresentationDirty = not paint and shown or nil
+        if not paint then
+            if not TakeOver("bosses") then
+                ClearRows()
+                Restore("bosses")
+            end
+            return
+        end
         local reflow = count ~= table.getn(rowOrder)
         for index, entry in ipairs(entries) do
             local row = activeRows[entry.key]
@@ -2727,6 +2859,7 @@ DFRL:NewMod("RunTimers", 5, function()
     end
 
     DFRL.display.Listen(function()
+        SyncReplacements()
         UpdateDisplayLabels()
         RefreshTimerCaptions()
         refreshRows = true
@@ -2769,6 +2902,10 @@ DFRL:NewMod("RunTimers", 5, function()
     end
 
     local function UpdateClock(phase)
+        if not render.customClock then
+            Restore("clock")
+            return
+        end
         local seconds = Read("AZS_GetRunTime")
         local maximum = RunLength()
         local zone = type(AZS_ZONE) == "table" and AZS_ZONE.zone or nil
@@ -2828,8 +2965,9 @@ DFRL:NewMod("RunTimers", 5, function()
             ReleaseHUD()
             return
         end
+        render.hudReleased = false
         UpdateRunBoundary(phase)
-        UpdateClock(phase)
+        if refreshRows or run:IsVisible() then UpdateClock(phase) end
         if render.rowsPresentationDirty and bossGroup:IsVisible() then refreshRows = true end
         -- A missing zone/clock snapshot must not block valid counters or
         -- encounter lists from reconnecting to their own native HUD parts.
@@ -2851,8 +2989,9 @@ DFRL:NewMod("RunTimers", 5, function()
             -- Refresh from native data before the client saves addon variables.
             -- Repeated reloads can hand off an accepted cached schedule too.
             local ok = pcall(Update)
-            local phase = Read("AZS_GetPhase")
-            local maximum, expected = RunLength(), ExpectedBosses()
+            local phase = render.customClock and Read("AZS_GetPhase") or nil
+            local maximum = render.customClock and RunLength() or nil
+            local expected = render.customClock and ExpectedBosses() or nil
             local sample = maximum and expected and ScheduleSample(maximum, expected) or nil
             _G.SurvivorsDragonUiBossSchedule = nil
             if
@@ -2875,6 +3014,7 @@ DFRL:NewMod("RunTimers", 5, function()
     reader:RegisterEvent("PLAYER_ENTERING_WORLD")
     reader:RegisterEvent("PLAYER_LEAVING_WORLD")
     reader:RegisterEvent("PLAYER_LOGOUT")
+    reader:RegisterEvent("CVAR_UPDATE")
     reader:SetScript("OnEvent", function()
         if event == "PLAYER_LEAVING_WORLD" or event == "PLAYER_LOGOUT" then
             if not reloading then
@@ -2887,7 +3027,22 @@ DFRL:NewMod("RunTimers", 5, function()
         end
         if event == "PLAYER_ENTERING_WORLD" then
             inWorld = true
+            -- Native preferences can be reloaded independently of addon drafts.
+            if not render.customClock then nativeParts.clock = { shown = true } end
+            if not render.customBosses then nativeParts.bosses = { shown = true } end
             refreshRows = true
+        elseif event == "CVAR_UPDATE" then
+            if render.applyingNative or type(arg1) ~= "string" then return end
+            local name = string.lower(arg1)
+            if name == "hudclock" and not render.customClock then
+                nativeParts.clock = { shown = true }
+            elseif name == "hudbosses" and not render.customBosses then
+                nativeParts.bosses = { shown = true }
+            else
+                return
+            end
+            refreshRows, render.readPending = true, true
+            return
         elseif event == "CHAT_MSG_ADDON" then
             if arg1 == "AZSDEBUFFS" then
                 refreshRows = true
@@ -2903,7 +3058,7 @@ DFRL:NewMod("RunTimers", 5, function()
             elseif arg1 == "AZSBOSSES" then
                 scheduleSequence = packetSequence
             end
-            refreshRows = true
+            refreshRows, render.readPending = true, true
             -- The native parser may run after this handler. Read all prefixes
             -- on the next frame so cache decisions see their parsed values.
             return
@@ -2911,14 +3066,19 @@ DFRL:NewMod("RunTimers", 5, function()
         Update()
     end)
     reader:SetScript("OnUpdate", function()
-        -- List/marker refreshes are throttled; boss-state packets refresh them
-        -- immediately. The pause-aware native clock is read every frame.
+        -- Visible clock/debuff effects retain frame cadence. Hidden clock work
+        -- uses the existing ten-Hz lifecycle poll or a deferred native publication.
         pollAge = pollAge + (tonumber(arg1) or 0)
+        if not run:IsVisible() and not bossGroup:IsVisible() and not render.readPending and pollAge < 0.1 then
+            return
+        end
+        render.readPending = false
         if pollAge >= 0.1 then
             pollAge = 0
             refreshRows = true
         end
         Update()
     end)
+    SyncReplacements()
     Update()
 end)

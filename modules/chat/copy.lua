@@ -277,6 +277,10 @@ DFRL:NewMod("ChatCopy", 0, function()
     function Chat.ShowCopy(text, title, plainText, snapshot)
         if not Chat.IsCaptureEnabled() then return end
         if not dialog then dialog = CreateDialog() end
+        if DFRL.layout.IsHidden("copyWindow") then
+            dialog:Show()
+            return
+        end
         dialog.title:SetText(PlainText(title or "Copy chat history"))
         dialog.setSource(snapshot or TextSource(plainText and (text or "") or PlainText(text)))
         dialog:Show()
@@ -313,6 +317,10 @@ DFRL:NewMod("ChatCopy", 0, function()
         end
         if feedback then
             if DEFAULT_CHAT_FRAME then DEFAULT_CHAT_FRAME:AddMessage(DFRL.locale.Text(feedback)) end
+            return
+        end
+        if DFRL.layout.IsHidden("copyWindow") then
+            Chat.ShowCopy()
             return
         end
         local snapshot = Chat.NewCaptureSnapshot and Chat.NewCaptureSnapshot(nil, true) or TextSource("")

@@ -139,7 +139,7 @@ DFRL:NewMod("Tooltips", 2, function()
     end
 
     local function PlaceTooltip()
-        if not inWorld or editing or not root:IsShown() then
+        if not inWorld or editing or not root:IsVisible() then
             if tooltip:IsShown() then tooltip:Hide() end
             return
         end
@@ -258,6 +258,7 @@ DFRL:NewMod("Tooltips", 2, function()
         Refresh()
     end)
     HookScript(tooltip, "OnUpdate", function()
+        if not tooltip:IsVisible() then return end
         -- World hover loss can start a native fade without a Lua FadeOut call.
         if currentUnit == "mouseover" and not Exists("mouseover") then
             tooltip:Hide()

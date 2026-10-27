@@ -75,6 +75,7 @@ DFRL:NewMod("Jewelry", 4, function()
     local slots, slotsReady = {}, false
     local inWorld, editing, attached, elapsed, animationElapsed = true, false, false, 0, 0
     local cooldownsActive = false
+    local shownWanted, wantedDocked, SyncUpdates, cleared = false, nil, nil, true
     local displayGeometry = {}
     local hud = CreateFrame("Frame", "SurvivorsDragonUiJewelry", UIParent)
     hud:SetWidth(WIDTH)
@@ -523,6 +524,9 @@ DFRL:NewMod("Jewelry", 4, function()
         HideTooltip(slot)
     end
     local function Clear()
+        if cleared then return end
+        cleared = true
+        shownWanted, wantedDocked = false, nil
         formattedCache, cacheSize = {}, 0
         cooldownsActive = false
         for _, slot in ipairs(slots) do
@@ -533,12 +537,15 @@ DFRL:NewMod("Jewelry", 4, function()
         detached:Hide()
     end
     hud:SetScript("OnHide", function()
+        if SyncUpdates then SyncUpdates() end
         if DFRL.SetJewelryBarShown then DFRL.SetJewelryBarShown(false) end
         for _, slot in ipairs(slots) do
             HideTooltip(slot)
         end
     end)
     hud:SetScript("OnShow", function()
+        elapsed, animationElapsed = INTERVAL, ANIMATION_INTERVAL
+        if SyncUpdates then SyncUpdates() end
         if DFRL.SetJewelryBarShown then DFRL.SetJewelryBarShown(DFRL.display.Get("attachJewelry")) end
     end)
     local function ResolveSlots()
@@ -601,12 +608,35 @@ DFRL:NewMod("Jewelry", 4, function()
         end
         cooldownsActive = active
     end
+    local function CanPaint()
+        local docked = DFRL.display.Get("attachJewelry")
+        local owner = docked and DFRL.mainBar or UIParent
+        return inWorld
+            and attached
+            and DFRL.display.Get("equippedJewelry")
+            and not DFRL.layout.IsHidden(docked and "actionBar" or "jewelryBar")
+            and owner
+            and owner:IsVisible()
+    end
     local function Refresh()
+        if not inWorld or not attached or not DFRL.display.Get("equippedJewelry") then
+            Clear()
+            return
+        end
+        local docked = DFRL.display.Get("attachJewelry")
+        if not shownWanted or wantedDocked ~= docked then
+            cleared = false
+            shownWanted, wantedDocked = true, docked
+            if docked then
+                detached:Hide()
+            else
+                detached:Show()
+            end
+            hud:Show()
+        end
+        if not CanPaint() then return end
         if
-            not inWorld
-            or not attached
-            or not DFRL.display.Get("equippedJewelry")
-            or type(UnitExists) ~= "function"
+            type(UnitExists) ~= "function"
             or not UnitExists("player")
             or type(GetInventoryItemTexture) ~= "function"
             or not ResolveSlots()
@@ -629,12 +659,6 @@ DFRL:NewMod("Jewelry", 4, function()
             if slot.start or slot.painted then cooldownsActive = true end
         end
         PaintIcons()
-        if DFRL.display.Get("attachJewelry") then
-            detached:Hide()
-        else
-            detached:Show()
-        end
-        hud:Show()
     end
     local function UpdateDisplay()
         local docked = DFRL.display.Get("attachJewelry")
@@ -642,6 +666,7 @@ DFRL:NewMod("Jewelry", 4, function()
             local owner = docked and DFRL.mainBar or detached
             local reparented = hud:GetParent() ~= owner
             if reparented then
+                shownWanted = false
                 hud:Hide()
                 hud:SetParent(owner)
             end
@@ -674,6 +699,7 @@ DFRL:NewMod("Jewelry", 4, function()
         end
         Refresh()
         PaintCooldowns()
+        if SyncUpdates then SyncUpdates() end
         if DFRL.SetJewelryBarShown then DFRL.SetJewelryBarShown(docked and hud:IsVisible() and true or false) end
     end
     function DFRL.SetJewelryEditing(active)
@@ -721,8 +747,8 @@ DFRL:NewMod("Jewelry", 4, function()
             elapsed = INTERVAL
         end
     end)
-    controller:SetScript("OnUpdate", function()
-        if not inWorld or not DFRL.display.Get("equippedJewelry") then return end
+    local function Tick()
+        if not CanPaint() then return end
         if hoveredSlot and effectPanel and effectPanel:IsShown() and DFRL.display.Get("tooltipAtCursor") then
             PlaceEffectTooltip(hoveredSlot)
         end
@@ -737,7 +763,14 @@ DFRL:NewMod("Jewelry", 4, function()
             animationElapsed = 0
             if cooldownsActive then PaintCooldowns() end
         end
-    end)
+    end
+    SyncUpdates = function() controller:SetScript("OnUpdate", CanPaint() and Tick or nil) end
+    local function VisibilityChanged()
+        elapsed, animationElapsed = INTERVAL, ANIMATION_INTERVAL
+        SyncUpdates()
+    end
+    DFRL.layout.ListenVisibility("actionBar", VisibilityChanged)
+    DFRL.layout.ListenVisibility("jewelryBar", VisibilityChanged)
     DFRL.display.Listen(function()
         UpdateDisplay()
         if hoveredSlot and effectPanel and effectPanel:IsShown() then PlaceEffectTooltip(hoveredSlot) end

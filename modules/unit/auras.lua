@@ -3,6 +3,8 @@ DFRL:NewMod("Player Auras", 2, function()
 
     local iconSize, gap, rowGap, columns = 28, 3, 14, 6
     local flipped = DFRL.display.Get("flipBuffs")
+    local inWorld, editing, age, received = true, false, 0, 0
+    local observePending = false
     local width = columns * iconSize + (columns - 1) * gap
     local container = CreateFrame("Frame", "DFRL_PlayerAuras", UIParent)
     local function PlaceDefault()
@@ -96,15 +98,19 @@ DFRL:NewMod("Player Auras", 2, function()
 
     local previousRows
     local function Layout(force)
+        local paint = container:IsVisible()
+        if not paint and not editing then return end
         -- The native enchant update re-anchors BuffFrame even when no aura changes.
         -- Restore its container anchor each time, independently of icon reflow.
-        for _, frame in ipairs(nativeFrames) do
-            PlaceNativeFrame(frame)
+        if paint then
+            for _, frame in ipairs(nativeFrames) do
+                PlaceNativeFrame(frame)
+            end
         end
         local slot = 0
         for _, entry in ipairs(entries) do
             if entry.button:IsShown() then
-                if force or entry.slot ~= slot then
+                if paint and (force or entry.slot ~= slot) then
                     SizeButton(entry)
                     entry.button:ClearAllPoints()
                     local column = math.mod(slot, columns) * (iconSize + gap)
@@ -131,7 +137,6 @@ DFRL:NewMod("Player Auras", 2, function()
 
     local timers, hovered = {}, nil
     local controller = CreateFrame("Frame")
-    local inWorld, editing, age, received = true, false, 0, 0
     local blockedPacket, blockedStamp, blockedReceived
     local blockedRun, blockedRunStamp
     local phases = { playing = true, choosing = true, paused = true, victory = true }
@@ -189,6 +194,7 @@ DFRL:NewMod("Player Auras", 2, function()
         return entry
     end
     local function HideTimer(entry)
+        if not entry.name and not entry.texture and not entry.button:IsShown() then return end
         entry.button:Hide()
         entry.icon:SetTexture(nil)
         T.SetTextIfChanged(entry.duration, "")
@@ -202,6 +208,7 @@ DFRL:NewMod("Player Auras", 2, function()
         Layout(false)
     end
     local function RetireTimers()
+        observePending = false
         blockedPacket, blockedStamp, blockedReceived = _G.AZS_TIMERS, _G.AZS_TIMERS_UPDATED, received
         blockedRun, blockedRunStamp = _G.AZS_RUN, _G.AZS_RUN_UPDATED
         controller:SetScript("OnUpdate", nil)
@@ -290,10 +297,13 @@ DFRL:NewMod("Player Auras", 2, function()
         age = age + math.max(0, tonumber(arg1) or 0)
         if age < 0.1 then return end
         age = 0
+        observePending = false
         if not RefreshTimers() then controller:SetScript("OnUpdate", nil) end
     end
-    local function WakeTimers()
+    local function WakeTimers(observe)
         if not inWorld then return end
+        observePending = observePending or observe == true
+        if not container:IsVisible() and not observePending then return end
         age = 0.1
         controller:SetScript("OnUpdate", Tick)
     end
@@ -320,16 +330,20 @@ DFRL:NewMod("Player Auras", 2, function()
         onEdit = function(active)
             editing = active
             HideHover()
+            if active then Layout(true) end
         end,
         onReset = function()
             ClearTimers()
             WakeTimers()
         end,
     })
-    HookScript(container, "OnShow", WakeTimers)
+    HookScript(container, "OnShow", function()
+        Layout(true)
+        WakeTimers()
+    end)
     HookScript(container, "OnHide", function()
-        HideHover()
-        controller:SetScript("OnUpdate", nil)
+        ClearTimers()
+        if not observePending then controller:SetScript("OnUpdate", nil) end
     end)
     DFRL.locale.Listen(function()
         if hovered and GameTooltip and GameTooltip:IsOwned(hovered.button) and GameTooltip:IsShown() then
@@ -351,9 +365,9 @@ DFRL:NewMod("Player Auras", 2, function()
             WakeTimers()
         elseif arg1 == "AZSTIMERS" then
             received = received + 1
-            WakeTimers()
+            WakeTimers(true)
         elseif arg1 == "AZSRUN" then
-            WakeTimers()
+            WakeTimers(true)
         end
         -- Defer getters until the native API frame has parsed the addon line.
     end)

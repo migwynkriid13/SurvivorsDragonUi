@@ -57,7 +57,7 @@ forgotten on clearing. Native reads and unknown-quality retries remain intact.
 
 `modules/ui/character.lua` retains `CharacterFrame`, `PaperDollFrame`, the
 existing `CharacterModelFrame` and every native equipment button. It does not
-replace `ToggleCharacter`, key bindings, the micro-menu click, close/Escape
+replace `ToggleCharacter`, key bindings, close/Escape
 handling, equipment events, pickup/drop/click handlers, cooldowns or tooltip
 scripts. It changes their appearance and geometry. The model keeps its native
 unit binding, rotation, equipment updates and camera; no portrait model or

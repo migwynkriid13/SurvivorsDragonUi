@@ -48,11 +48,18 @@ rendering every frame, even after Lua roster/text updates were cached. The
 native path removes this persistent strip composition and uses one portrait
 region per displayed group. Older clients that lack the global, raise an
 error or fail to assign the requested texture path lazily use the existing
-strip renderer instead. Failed paths are not retried every refresh; a different
+strip renderer instead. Failed native paths are not retried every refresh; a different
 icon can use the native path again. Retirement hides and clears both paths and
 resets the icon cache. Binding verification accepts the original path or the
 extension-stripped form returned by the legacy `GetTexture()` API. Failed
 attempts clear the hidden portrait before fallback, including partial writes.
+
+The compatibility renderer caches each successfully bound strip. A failed strip
+stays retryable through the existing tenth-second controller, even for static
+groups with timers hidden; successful strips are not rebound while retrying.
+An incomplete icon stays hidden until every required strip has loaded. A scale
+change reuses successful bindings while changing only the clipping geometry.
+Retirement clears both the successful bindings and the native-failure cache.
 
 ## Native data and lifecycle
 
@@ -89,7 +96,11 @@ For a mixed group, only temporary members contribute to the earliest timer;
 one unavailable member leaves that timer unknown.
 
 Names, counts and status labels call `SetText` only when the displayed string
-changes. The root's Show/Hide calls occur only on visibility transitions.
+changes. The root's Show/Hide calls occur only on visibility transitions. Hidden
+groups still accept roster changes and update shared edit bounds, but skip row
+creation, icon binding and label painting. Showing the group invalidates its
+presentation through the existing controller, using the accepted roster and
+native timer data.
 The shared layout wrapper continues to own the Hide frame setting, so hiding
 and unhiding the group preserves its active roster and editor behavior.
 
@@ -108,8 +119,9 @@ The roster supplies no per-summon health, power, unit token, target or damage
 identity. This feature changes neither the pet-damage filter nor SCT icons.
 There is no documented pets/summons HUD visibility part to take over.
 
-Local tests, syntax checks, formatting tools and addon/game execution were not
-run. GitHub Actions supplies static checks; static artwork previews do not
+The 2026-10-26 follow-up used source/history review and pinned local formatting.
+No local tests, syntax checks or addon/game execution were run. GitHub Actions
+supplies the repository's static checks; static artwork previews do not
 establish live client rendering or native replay behavior.
 
 The first update-only optimization did not recover FPS in the supplied native

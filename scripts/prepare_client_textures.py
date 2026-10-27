@@ -21,8 +21,104 @@ TGA_SOURCES = {
 }
 
 
+def blp_bgra_levels(data):
+    """Read Raw1/Raw3 pixels using the native decoder's palette/alpha layout."""
+    if len(data) < 1172 or data[:4] != b"BLP2" or data[8] not in (1, 3):
+        raise ValueError("Expected Raw1 or Raw3 BLP2")
+    width, height = struct.unpack_from("<II", data, 12)
+    if width <= 0 or height <= 0 or data[9] not in (0, 1, 4, 8):
+        raise ValueError("Invalid BLP dimensions or alpha precision")
+    offsets = struct.unpack_from("<16I", data, 20)
+    sizes = struct.unpack_from("<16I", data, 84)
+    levels = []
+    for level, (offset, size) in enumerate(zip(offsets, sizes)):
+        if not size:
+            if any(sizes[level:]):
+                raise ValueError("Noncontiguous BLP mip levels")
+            break
+        count = max(1, width >> level) * max(1, height >> level)
+        required = count * 4 if data[8] == 3 else count + (count * data[9] + 7) // 8
+        if offset < 1172 or size < required or offset + size > len(data):
+            raise ValueError("Invalid BLP pixel span")
+        if data[8] == 3:
+            levels.append(data[offset:offset + count * 4])
+            continue
+        pixels = bytearray(count * 4)
+        for index in range(count):
+            color = 148 + data[offset + index] * 4
+            if data[9] == 0:
+                alpha = 255
+            elif data[9] == 8:
+                alpha = data[offset + count + index]
+            else:
+                bit = index * data[9]
+                value = (data[offset + count + bit // 8] >> (bit % 8)) & ((1 << data[9]) - 1)
+                alpha = value * (255 // ((1 << data[9]) - 1))
+            pixels[index * 4:index * 4 + 4] = data[color:color + 3] + bytes((alpha,))
+        levels.append(bytes(pixels))
+    if not levels:
+        raise ValueError("Missing BLP base level")
+    return width, height, levels
+
+
+def lossless_palette(data):
+    """Use Raw1 only when one exact RGB palette fits every existing mip level.
+
+    Wenilla reads RGB from the BGRA palette and alpha from a separate 0/1/8-bit
+    block. Do not quantize colors, alpha or transparent pixels. The decoder and
+    byte layout are pinned in docs/CLIENT-COMPATIBILITY.md.
+    """
+    if len(data) < 1172 or data[:4] != b"BLP2" or data[8] != 3:
+        return data
+    width, height, levels = blp_bgra_levels(data)
+    colors = {}
+    for pixels in levels:
+        for position in range(0, len(pixels), 4):
+            color = pixels[position:position + 3]
+            if color not in colors:
+                if len(colors) == 256:
+                    return data
+                colors[color] = len(colors)
+    alpha = b"".join(pixels[3::4] for pixels in levels)
+    if all(value == 255 for value in alpha):
+        alpha_bits = 0
+    elif all(value in (0, 255) for value in alpha):
+        alpha_bits = 1
+    else:
+        alpha_bits = 8
+    header = bytearray(data[:148]) + bytearray(1024)
+    header[8:11] = bytes((1, alpha_bits, 0))
+    header[20:148] = bytes(128)
+    for color, index in colors.items():
+        header[148 + index * 4:152 + index * 4] = color + b"\xff"
+
+    body = bytearray()
+    for level, pixels in enumerate(levels):
+        indices = bytes(colors[pixels[position:position + 3]] for position in range(0, len(pixels), 4))
+        alpha = pixels[3::4]
+        if alpha_bits == 0:
+            packed = b""
+        elif alpha_bits == 8:
+            packed = alpha
+        else:
+            packed = bytearray((len(alpha) + 7) // 8)
+            for position, value in enumerate(alpha):
+                if value:
+                    packed[position // 8] |= 1 << (position % 8)
+        payload = indices + packed
+        struct.pack_into("<I", header, 20 + level * 4, len(header) + len(body))
+        struct.pack_into("<I", header, 84 + level * 4, len(payload))
+        body.extend(payload)
+    converted = bytes(header + body)
+    if len(converted) >= len(data):
+        return data
+    if blp_bgra_levels(converted) != (width, height, levels):
+        raise ValueError("Palette conversion changed pixels, alpha or mip levels")
+    return converted
+
+
 def blp_from_bgra(width, height, pixels):
-    """Wrap top-down BGRA8 pixels in the native uncompressed BLP2 container."""
+    """Wrap top-down BGRA8 pixels in a Raw3 intermediate, without resampling."""
     size = width * height * 4
     if len(pixels) != size:
         raise ValueError("BGRA pixel span does not match its dimensions")
@@ -108,7 +204,7 @@ def save_image(image, path):
         temporary = io.BytesIO()
         image.convert("RGBA").save(temporary, format="TGA", compression=None)
         converted, _ = blp_from_tga(temporary.getvalue())
-        path.write_bytes(converted)
+        path.write_bytes(lossless_palette(converted))
     else:
         image.save(path, compression=None)
 
@@ -149,7 +245,23 @@ def prepare():
     registry.write_text(text)
 
     health_fill = prepare_health_fill()
-    return {"converted": records, "health_fill": health_fill}
+    palettes = []
+    for name in manifest["files"]:
+        if not name.endswith(".blp"):
+            continue
+        destination = ROOT / name
+        original = destination.read_bytes()
+        converted = lossless_palette(original)
+        if converted == original:
+            continue
+        destination.write_bytes(converted)
+        width, height = struct.unpack_from("<II", original, 12)
+        offset = struct.unpack_from("<I", original, 20)[0]
+        palettes.append({"destination": name, "width": width, "height": height,
+                         "alpha_bits": converted[9], "before_bytes": len(original),
+                         "after_bytes": len(converted),
+                         "bgra_sha256": hashlib.sha256(original[offset:offset + width * height * 4]).hexdigest()})
+    return {"converted": records, "health_fill": health_fill, "palettes": palettes}
 
 
 if __name__ == "__main__":
@@ -160,4 +272,6 @@ if __name__ == "__main__":
     if args.receipt:
         args.receipt.write_text(json.dumps(receipt, indent=2) + "\n")
     print(json.dumps({"converted_files": len(receipt["converted"]),
-                      "health_fill": receipt["health_fill"]}))
+                      "health_fill": receipt["health_fill"],
+                      "palette_files": len(receipt["palettes"]),
+                      "palette_saved_bytes": sum(row["before_bytes"] - row["after_bytes"] for row in receipt["palettes"])}))

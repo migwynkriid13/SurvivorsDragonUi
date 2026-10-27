@@ -22,7 +22,7 @@ Real screenshots from different moments in a run, arranged into one overview. [O
 - **Guardian tracking:** living guardians, respawn timers and health bars during fights. Use the tracker's plus/minus button to switch between living guardians and all lairs.
 - **Cache and guardian guides:** distance, direction arrows and map markers to help you find them.
 - **Level Up and summons:** a button for your stored levels, plus names, icons and durations for up to eight active summons. Extra summons appear as a count.
-- **Combat text and loot:** compact nameplates, optional custom damage numbers and retail-style loot popups. Already-collected drops are hidden from both popups and chat.
+- **Combat text, meters and loot:** compact nameplates, optional custom damage numbers, a DPS meter with The War Within artwork, and retail-style loot popups. Already-collected drops are hidden from both popups and chat.
 - **Chat:** a transparent window, shorter game messages and mouse-wheel history.
 - **Layout editor:** move, resize or hide HUD groups, adjust tooltips and save named profiles. Supports all 14 game languages, including Czech.
 
@@ -68,7 +68,7 @@ For UI debugging, `/fstack on` and `/fstack off` set the inspector state, `/fsta
 
 ## Make it yours
 
-Open `/sdui`, then drag a frame to move it or drag a corner to resize it. **Party frames** moves the party together, with an outline available even when playing solo. Hold **Shift** while dragging to line it up with other frames or the grid. Gold guides show the alignment. For exact positions, sizes or **Hide frame**, use **Layout**.
+Open `/sdui` or click the gold Dragonflight glyph beside the minimap, then drag a frame to move it or drag a corner to resize it. **Party frames** moves the party together, with an outline available even when playing solo. Hold **Shift** while dragging to line it up with other frames or the grid. Gold guides show the alignment. For exact positions, sizes or **Hide frame**, use **Layout**.
 
 Click **Confirm** to save or **Cancel** to undo. Leaving the run or reloading also discards unsaved changes. **Addon defaults** resets the same options as `/sdui reset`.
 
@@ -89,6 +89,8 @@ Move the **Tooltip** handle to place regular hover cards. Its Layout controls al
 ### Combat text and run display
 
 Under **Combat text**, choose custom damage numbers, turn them off, or use **Game settings**. For the game's damage numbers, choose **Game settings**, then enable **Show Target Damage** in the game options.
+
+The DPS meter is off by default. Turn on **Enable damage meter** under **Damage meter** and Confirm to show the game's damage totals and average DPS by source. Click its heading to switch between Damage Done, Healing Done and Boss Damage; scroll for more sources. Choose 1 to 10 abilities and which numbers, icons, ranks and header values to show. Move, scale or hide **DPS meter** under **Layout**. Details does not need to be installed.
 
 Use **Run timer** to change its text and font. Under **HUD**, **Guardians in boss bar** adds fighting guardians to the boss bars; it starts off. You can also mirror either guide to put its arrow on the other side. Under **Minimap**, **Keep defeated guardian icons** keeps lair icons visible while guardians are down; it starts off.
 

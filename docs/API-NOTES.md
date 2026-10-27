@@ -227,7 +227,7 @@ No documented run identifier exists, so these fields cannot prove run identity. 
 
 ## Independent layout geometry — 2026-10-15
 
-The user replaced the modifier-key trigger with explicit layout edit mode. `/sdui` opens editing; repeated calls keep it open. Left-dragging a group's body moves it and left-dragging a corner icon resizes it while editing is active. Outlines and corner icons remain visible until editing ends, including for hidden HUD groups without showing inactive targets or encounters. A single centered Confirm button stays above the handles. The remaining groups include independent player/target frames, boss-health group, run timer, action bar, XP, kills/gold/cache tally, micro menu, buffs, minimap and chat, plus the main menu and Copy window while open. Cast-bar and quest-watch displays are removed rather than registered for layout editing.
+The user replaced the modifier-key trigger with explicit layout edit mode. `/sdui` opens editing; repeated calls keep it open. Left-dragging a group's body moves it and left-dragging a corner icon resizes it while editing is active. Outlines and corner icons remain visible until editing ends, including for hidden HUD groups without showing inactive targets or encounters. A single centered Confirm button stays above the handles. The remaining groups include independent player/target frames, boss-health group, run timer, action bar, XP, kills/gold/cache tally, buffs, minimap and chat, plus the main menu and Copy window while open. Cast-bar and quest-watch displays are removed rather than registered for layout editing.
 
 HUD groups resize by uniform scale, retaining their artwork proportions. Chat and Copy instead change actual width and height to update wrapping and the viewport, while fonts retain their normal size. The defaults remain defined in code, with XP beneath the action bar and tally beneath XP at matching artwork widths; moving or resizing one never changes another. Boss health rows remain together in their own group, independently of the timer.
 
@@ -442,10 +442,15 @@ their close buttons or repositions the quest timer. Their seven dedicated
 textures are removed. The game owns its talent window and opening functions;
 no addon talent window or header artwork ships. The unused cast-bar and bag artwork is also removed. Their small modules only disable native player/pet cast bars and backpack, bag-slot and keyring buttons.
 
-The micro menu keeps only Character, Talents and Main Menu. All seven files
-in its texture folder serve those three buttons: one character atlas and
-three state textures each for Talents and Main Menu. Extra local eye-button
-and talent-header textures are removed during installation cleanup.
+The micro menu is removed, including its module, layout group, translated
+editor caption and seven runtime textures plus their TGA preparation inputs.
+The general UI module disables all eight native micro buttons, including later
+Show attempts, without creating a replacement container or updater. Native
+Character and Talents windows remain available through their key bindings;
+Escape retains the existing main-menu behavior. The menu no longer writes
+the removed button's pressed state. Existing player/talent pulse suppression
+is retained independently of the removed skin. The dated micro-menu styling
+notes above describe the earlier implementation and are superseded by this removal.
 
 The unused dedicated pet background and border are removed; current summon
 circles continue to reuse the jewelry rim. Unused chat-control artwork is also

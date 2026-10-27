@@ -14,6 +14,12 @@ Language is session-only. No setting, command, profile, SavedVariable, client pr
 
 ## Display text
 
+The custom run-timer and boss-bar enable captions and their native-display
+hints have source TSV and runtime UI entries in all fourteen languages. Only
+these four caption entries were added; native catalogs, effects and aliases
+are unchanged. Existing measured controls size the boss page and timer master
+switch, with two hint lines reserved above the timer styling controls.
+
 The **Guardians in boss bar** caption and its boss-only hint have source TSV and
 runtime UI entries in all fourteen languages. Only these new caption entries
 were generated; the reviewed native catalogs, effects and aliases are unchanged.
@@ -61,6 +67,25 @@ All addon UI captions have Czech source entries, with native `@key` references w
 Optional custom SCT icons use exact Czech names derived only from the official `ability.*.name` fields and native keys matching the already verified custom-talent names. The 112 official ability-name keys and 345 verified custom-talent keys produce 449 non-identity alias groups; two identity-only groups need no alias. These aliases connect to existing English display metadata; they do not invent spell IDs, icons, schools or learned state. Different canonical names sharing one Czech name remain candidates, and differing icons remain ambiguous within each generated source tier. Live spellbook/aura/talent observations keep their existing priority. Unknown names retain the existing fallback. Only Czech receives this additional alias table; see [SCT-ICONS.md](SCT-ICONS.md) for the underlying metadata and limitations.
 
 ## Source and maintenance
+
+The meter's **Melee** icon matches the exact native `Melee` caption in all
+fourteen languages. These UI/native entries and `localization/native-keys.json`
+reuse the installed executable's dictionaries, read as data on 2026-10-26 from
+SHA-256 `291c281bd0a4255fdb3d04b2e442121e2df144f388f16de086b430e875aaad08`.
+Catalogs were matched by their existing exact `class.warrior.name` identity;
+no translated spell name, fuzzy match or runtime binary access is introduced.
+Other native entries, effect templates, aliases and the generator's older source
+fingerprint remain unchanged.
+
+The 2026-10-27 healing-icon follow-up selects the same executable's exact
+`Regeneration`, `Leech`, `Healing on Kill`, `Level Up` and `Soul Link` captions in all fourteen
+languages. `ui.tsv` references those native keys with `@key` cells, and
+`native-keys.json` plus the UI/native runtime sections retain them for regeneration.
+`scripts/extract_meter_healing_icons.py` reads the reviewed producer/icon pairs
+and matches embedded catalogs by existing `class.warrior.name` identity. Only
+these selected captions are added; the general generator's pinned older native
+catalogs, effect templates and spell-name aliases stay unchanged. The mapping
+selects display metadata without translating or rewriting native meter rows.
 
 The stored-level button uses the user-requested **LEVEL UP** heading through `localization/ui.tsv` and the matching fourteen runtime UI entries. This is addon wording rather than a native caption. The former `Level Up!` and `LEVEL {n}` selections were removed with the current-level subtitle. See [STORED-LEVELS.md](STORED-LEVELS.md); other generated catalogs and the generator's reviewed source fingerprint are unchanged.
 

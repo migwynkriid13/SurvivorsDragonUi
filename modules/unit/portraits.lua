@@ -5,17 +5,20 @@ DFRL:NewMod("AnimatedPortraits", 2, function()
     local portraitsHidden = DFRL.display.Get("hidePortraits")
     local portraits3D = DFRL.display.Get("playerPortrait3D") and not portraitsHidden
 
-    local function RestoreStill(entry) entry.portrait:SetAlpha(portraitsHidden and 0 or entry.stillAlpha) end
+    local function RestoreStill(entry)
+        local alpha = portraitsHidden and 0 or entry.stillAlpha
+        if entry.portrait:GetAlpha() ~= alpha then entry.portrait:SetAlpha(alpha) end
+    end
 
     local function DropCopy(entry)
         entry.bound = false
         RestoreStill(entry)
-        if entry.model then pcall(entry.model.ClearModel, entry.model) end
+        if entry.model and not entry.copyCleared then entry.copyCleared = pcall(entry.model.ClearModel, entry.model) end
     end
 
     local function Release(entry)
         DropCopy(entry)
-        if entry.model then entry.model:Hide() end
+        if entry.model and entry.model:IsShown() then entry.model:Hide() end
     end
 
     local function PlaceViewport(entry)
@@ -45,12 +48,13 @@ DFRL:NewMod("AnimatedPortraits", 2, function()
 
     local function Bind(entry)
         if entry.binding or not entry.supported then return end
-        if not portraits3D or not inWorld or not UnitExists(entry.unit) then
+        if not portraits3D or not inWorld or not entry.owner:IsVisible() or not UnitExists(entry.unit) then
             Release(entry)
             return
         end
         entry.binding = true
         entry.bound = false
+        entry.copyCleared = false
         RestoreStill(entry)
         PlaceViewport(entry)
         -- SetUnit captures this token's current identity. Clear the previous copy first:
@@ -117,6 +121,7 @@ DFRL:NewMod("AnimatedPortraits", 2, function()
             model:SetScript("OnHide", function() DropCopy(entry) end)
             model:SetScript("OnShow", function() Bind(entry) end)
             model:SetScript("OnUpdate", function()
+                if not model:IsVisible() then return end
                 -- Ordinary updates precede model paint callbacks. Restore the still
                 -- every frame; only a current copy's callback may replace it again.
                 -- This also recovers when a client has the methods but no renderer.
@@ -147,6 +152,9 @@ DFRL:NewMod("AnimatedPortraits", 2, function()
             return
         end
         entry.supported = true
+        HookScript(owner, "OnShow", function()
+            if not model:IsShown() then Bind(entry) end
+        end)
         -- A late player-border initialization can raise the still after this
         -- copy was created. The border may align its level without rebinding it.
         owner.sduiPortraitModel = model

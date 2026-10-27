@@ -2,6 +2,69 @@
 
 The reported regression followed the Azeroth Survivors client update. The supplied changelog identifies 0.101.0 as the move to a newer client and Lua 5.0 behavior. The screenshots show `SetText(): Font not set` in the player and target modules, an incomplete layout entry at `core/layout.lua:730`, and the client's 48 MB script-memory popup. They do not establish the exact engine commit packaged by the game or the allocation responsible for the memory popup.
 
+## Exact lossless palettes — 2026-10-27
+
+Runtime artwork now uses BLP2 Raw1 where one palette can represent every RGB
+value exactly, retaining a separate full-precision alpha block. The remaining
+prepared textures keep Raw3. This supersedes the Raw3-only preparation policy
+described in the earlier compatibility history below; native/browser runtime
+paths remain explicit `.blp` files in one shared package.
+
+The pinned Wenilla
+[Raw1 decoder](https://github.com/Arnesen/wenilla/blob/3426fd28c55b1d3dad22459d1a80e72a05a8006c/crates/benilla-blp/src/lib.rs#L372-L412)
+reads a 256-entry BGRA palette, one byte per pixel of color indices, and a
+separate alpha block. Zero alpha bits means every pixel is opaque. One-bit
+alpha is used only when every original byte is exactly 0 or 255, packed least
+significant bit first. All other alpha bytes are stored unchanged at eight bits.
+The palette's own alpha bytes do not replace that block. Both Raw1 and Raw3
+retain the required 1,024-byte palette area after the 148-byte header.
+
+`scripts/prepare_client_textures.py` indexes exact BGR triples across every mip
+level, including RGB under fully transparent pixels. More than 256 distinct
+colors or a file that would not become smaller retains its original encoding.
+No color quantization, alpha approximation, trimming, resizing or mip removal
+is allowed. The converter decodes its result and compares every BGRA byte before
+accepting a palette. Its final manifest pass also covers prepared BLP files
+without a same-name TGA, and `save_image` uses the same policy. The original
+target-of-target Health BLP remains intact; HealthFill retains the distinct
+converted-TGA path and the large health fill keeps its exact source crop.
+
+The shared authoring reader used by jewelry/tally preparation also decodes Raw1
+explicitly. Pillow's installed BLP reader reads palette alpha instead of the
+separate alpha block, so it must not be used to decode these prepared files.
+The existing DXT source-decoding path is unchanged.
+
+Exactly 48 files changed: seven have fully opaque alpha, three have binary alpha,
+and 38 retain arbitrary eight-bit alpha. They all retain their original single
+mip level. Independent integer-based reconstruction, following the pinned native
+layout, matched every original BGRA and alpha byte; the shared authoring reader
+matched those originals too. The other 60 BLP files and all 72 TGA preparation
+inputs stayed byte-identical. The manifest, filenames, Lua, UVs, canvases, native
+values, fonts and geometry are unchanged.
+
+| Measurement                                                   |           Before |            After |
+| ------------------------------------------------------------- | ---------------: | ---------------: |
+| Runtime BLP files                                             | 26,788,520 bytes | 23,427,192 bytes |
+| Complete runtime ZIP, measured in memory with DEFLATE level 9 |  2,110,316 bytes |  2,076,700 bytes |
+
+That saves 3,361,328 bytes (3.21 MiB) after extraction and 33,616 bytes
+(32.8 KiB, 1.59%) in the ZIP. Its current 108 images are 48 Raw1, 54 Raw3 and
+six unchanged original DXT5 files. These are file-size results, not memory/FPS
+measurements: the reference
+[UI sprite path](https://github.com/Arnesen/wenilla/blob/3426fd28c55b1d3dad22459d1a80e72a05a8006c/crates/benilla-assets/src/world_assets/mod.rs#L643-L670)
+decodes interface textures to RGBA before uploading them. Palette packing does
+not change the decoded dimensions, sampling or number of drawn regions, and
+does not require GPU block-compression support.
+
+The local backup and per-file pixel/alpha hashes are under
+`validation/local-backups/lossless-palette-20261027/`, outside the runtime payload.
+The original inputs and their upstream provenance are retained. Data-only asset
+preparation and byte comparisons were performed; no addon/game execution or
+local test suite was run. Raw1 is accepted by the referenced shared decoder,
+including the browser's BLP path, avoiding the earlier TGA header-probe boundary.
+Actual packaged native/browser rendering remains unverified; the exact deployed
+engine revisions are not established by this conversion.
+
 ## Texture loading after the 0.116 engine update
 
 The reported missing jewelry rims, rail, tally surrounds and `/sdui` borders

@@ -105,7 +105,7 @@ DFRL:NewMod("Class resources", 2, function()
     meter:Hide()
 
     local inWorld, retiredRun = true, nil
-    local displayedStyle, displayedValue, displayedMaximum
+    local displayedStyle, displayedValue, displayedMaximum, bindingPending
     local function IsNumber(value) return type(value) == "number" and value >= 0 and value - value == 0 end
     local function ReadPrimary()
         -- Native unit getters stay current across reload and power-type changes,
@@ -116,7 +116,7 @@ DFRL:NewMod("Class resources", 2, function()
         return value, maximum, power
     end
 
-    local function ReadSecondary()
+    local function ReadSecondary(paint)
         if type(_G.AZS_GetPhase) ~= "function" or not DFRL.navigation then return end
         local ok, phase = pcall(_G.AZS_GetPhase)
         if not ok then return end
@@ -124,6 +124,7 @@ DFRL:NewMod("Class resources", 2, function()
             retiredRun = _G.AZS_RUN
             return
         end
+        if not paint then return end
         local state = _G.AZS_RUN
         if type(state) ~= "table" or state == retiredRun or not IsNumber(_G.AZS_RUN_UPDATED) then return end
         -- The native proc identifies the meter and publishes its own range.
@@ -154,6 +155,7 @@ DFRL:NewMod("Class resources", 2, function()
     local function Clear()
         row:Hide()
         displayedStyle, displayedValue, displayedMaximum = nil, nil, nil
+        bindingPending = nil
         HidePoints()
         meter:Hide()
         meterText:SetText("")
@@ -162,31 +164,45 @@ DFRL:NewMod("Class resources", 2, function()
     end
 
     local function Update()
+        -- Phase retirement remains live while the player's presentation is hidden.
+        local style, current, total
+        if inWorld then
+            style, current, total = ReadSecondary(PlayerFrame:IsVisible() and DFRL.display.Get("classResources"))
+        end
+        if not PlayerFrame:IsVisible() then return end
         local enabled = inWorld and UnitExists("player") and DFRL.display.Get("classResources")
         local value, maximum, power
         if enabled then
             value, maximum, power = ReadPrimary()
         end
         if DFRL.playerResources then DFRL.playerResources.SetPrimary(value, maximum, power) end
-        -- Observe phase boundaries even while the display option is off.
-        local style, current, total
-        if inWorld then
-            style, current, total = ReadSecondary()
-        end
         if not enabled or not style then
             if displayedStyle then Clear() end
             return
         end
-        if style == displayedStyle and current == displayedValue and total == displayedMaximum then return end
+        if
+            not bindingPending
+            and style == displayedStyle
+            and current == displayedValue
+            and total == displayedMaximum
+        then
+            return
+        end
+        bindingPending = nil
         if style.texture and total <= POINTS and total == math.floor(total) then
             if meter:IsShown() then meter:Hide() end
             T.SetTextIfChanged(meterText, "")
             for i, point in ipairs(points) do
                 if point.style ~= style then
                     point.style = nil
-                    local emptyLoaded = BindPoint(point.empty, style, style.empty)
-                    local fullLoaded = BindPoint(point.full, style, style.full)
-                    if emptyLoaded and fullLoaded then point.style = style end
+                    if point.emptyStyle ~= style and BindPoint(point.empty, style, style.empty) then
+                        point.emptyStyle = style
+                    end
+                    if point.fullStyle ~= style and BindPoint(point.full, style, style.full) then
+                        point.fullStyle = style
+                    end
+                    if point.emptyStyle == style and point.fullStyle == style then point.style = style end
+                    if not point.style then bindingPending = true end
                 end
                 if i <= total then
                     if not point.empty:IsShown() then point.empty:Show() end
@@ -265,5 +281,6 @@ DFRL:NewMod("Class resources", 2, function()
     end)
 
     DFRL.display.Listen(Update)
+    HookScript(PlayerFrame, "OnShow", Update)
     Update()
 end)

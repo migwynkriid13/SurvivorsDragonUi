@@ -1,3 +1,40 @@
+DFRL:NewMod("Native micro buttons", 1, function()
+    local quietButtons = {}
+    for _, name in ipairs({ "TalentMicroButton", "PlayerFrame" }) do
+        local button = _G[name]
+        if button then
+            quietButtons[button] = true
+            if type(ButtonPulse_StopPulse) == "function" then ButtonPulse_StopPulse(button) end
+            button:UnlockHighlight()
+        end
+    end
+    if next(quietButtons) then
+        local setButtonPulse = _G.SetButtonPulse
+        if type(setButtonPulse) == "function" then
+            _G.SetButtonPulse = function(button, duration, pulseRate)
+                if quietButtons[button] then return end
+                return setButtonPulse(button, duration, pulseRate)
+            end
+        end
+    end
+    for _, name in ipairs({
+        "CharacterMicroButton",
+        "TalentMicroButton",
+        "MainMenuMicroButton",
+        "SpellbookMicroButton",
+        "WorldMapMicroButton",
+        "QuestLogMicroButton",
+        "SocialsMicroButton",
+        "HelpMicroButton",
+    }) do
+        PermanentlyDisableFrame(_G[name])
+    end
+    if MicroButtonPortrait then
+        MicroButtonPortrait:Hide()
+        MicroButtonPortrait.Show = MicroButtonPortrait.Hide
+    end
+end)
+
 DFRL:NewMod("Ui", 5, function()
     -- locals
     local texpath = DFRL:GetInfoOrCons("tex") .. "ui\\"
@@ -71,7 +108,7 @@ DFRL:NewMod("Ui", 5, function()
         local maximum = UnitHealthMax("player")
         local health = maximum > 0 and UnitHealth("player") / maximum * 100 or 100
         if health > 70 or UnitIsDeadOrGhost("player") then
-            warning:Hide()
+            if warning:IsShown() then warning:Hide() end
             pulse = 0
         else
             local intensity = math.max(0, math.min(1, (70 - health) / 70))
@@ -81,7 +118,7 @@ DFRL:NewMod("Ui", 5, function()
             edges.BOTTOM:SetGradientAlpha("VERTICAL", 1, 0, 0, alpha, 1, 0, 0, 0)
             edges.LEFT:SetGradientAlpha("HORIZONTAL", 1, 0, 0, alpha, 1, 0, 0, 0)
             edges.RIGHT:SetGradientAlpha("HORIZONTAL", 1, 0, 0, 0, 1, 0, 0, alpha)
-            warning:Show()
+            if not warning:IsShown() then warning:Show() end
         end
         elapsed = 0
     end)

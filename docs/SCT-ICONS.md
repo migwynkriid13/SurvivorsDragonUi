@@ -7,15 +7,35 @@ Custom SCT resolves icons through one exact-name path for every class. Native co
 1. A valid native player spellbook texture.
 2. An actually observed native aura texture, from a received phase-gated official `AZS_DEBUFFS` snapshot or a current target/mouseover debuff.
 3. The generated complete native ability and custom talent catalogs, plus the reviewed fixed native damage effects.
-4. A learned standard native talent's texture.
-5. An unambiguous generated spell-database texture for the client's locale. When the name alone conflicts, refine only this tier with the combat message's parsed damage school.
-6. The existing question mark when no usable mapping exists.
+4. Exact native general-jewelry/amulet metadata in the active language, including English source captions.
+5. A learned standard native talent's texture.
+6. An unambiguous generated spell-database texture for the client's locale. When the name alone conflicts, refine only this tier with the combat message's parsed damage school.
+7. Exact native item-info / equipped-item metadata for otherwise unresolved names, with shared cached successes and throttled retries.
+8. The shared question mark when no usable mapping exists.
 
 All keys are exact native names. There are no spell-specific or class-specific conditions in the resolver. Live spellbook and observed aura metadata retain priority over the generated catalog. Question-mark textures are rejected as successful lookups. Conflicting icons within a source tier are stored as `false`, which retains the fallback instead of borrowing an arbitrary icon from a weaker source. The database tier alone can narrow its own conflicting rows by the actual canonical damage school. A conflict that remains within that school still returns the fallback; this refinement never overrides ambiguity in a stronger native source. Actual aura and learned talent observations use separate caches, so different talent artwork cannot veto an observed debuff.
 
 The generated file covers all 355 current custom talent records across nine classes and 27 trees, all 113 native ability records, and six reviewed fixed-effect sites. The talent table supplies 346 names (345 resolved and one ambiguous); the ability table supplies 113 resolved names; the fixed-effect table supplies five resolved names. Together they cover 454 distinct names in one native game lookup tier. A conflict in any table, or different native icons for the same exact name across tables, remains a conflict in that tier. The supplied spell database contains 22,357 rows and 11,001 named English icon groups: 9,930 resolve to one icon and 1,071 are ambiguous. Other locale slots were empty in these packaged inputs and remain empty in the output; live native sources still match their own localized names. The generated school index contains 1,460 name/school pairs for names that are ambiguous across the full database: 504 resolve to one icon and 956 remain ambiguous. Every matching row participates; there is no ability or class whitelist. This coverage does not establish a complete list of every effect reachable through variable or indirect native calls.
 
 ## Runtime behavior
+
+The meter calls this same resolver through `sct.GetSourceIcon`; it has no
+separate item/spell scan or learned-item registry. Generated general-item data,
+live native item lookup, ambiguity handling and the unknown-icon constant are
+shared by both consumers. Item cache misses remain retryable without a new
+event or updater. The native record join and eight-repository research are in
+[SOURCE-ICONS.md](SOURCE-ICONS.md). The meter alone wraps the resolved image in
+its existing circular gold rim; SCT keeps its own icon renderer and visibility.
+
+The optional Healing Done context of `sct.GetSourceIcon(name, healing, proc)`
+also recognizes the exact native Regeneration, Leech, Healing on Kill, Level Up
+and Soul Link records when their proc flag is off. Their icons come from reviewed
+native producer instructions, with all fourteen exact captions cached by the
+active language; see [DAMAGE-METER.md](DAMAGE-METER.md#native-healing-icons).
+This class-independent healing-category context is applied before the common
+`CombatIcon` lookup. Named healing spells, item sources and damage/boss views
+otherwise share the same resolver and ambiguity handling. No class-specific
+branch or guessed healing spell icon is added.
 
 The selected Czech game catalog adds exact-name candidates in `localization/data.lua` through its optional `spellNames` field. `scripts/generate_localization.py` derives them from official `ability.*.name` entries and literal native keys matching the verified custom-talent names in `SpellIconCatalog.game`. It does not reverse-map arbitrary catalog values: an armor-set caption such as English `Wrath` has a different Czech grammatical form from the actual ability. The generator reads the existing generated icon module as text metadata, never as Lua code, and leaves the pinned icon tables unchanged.
 

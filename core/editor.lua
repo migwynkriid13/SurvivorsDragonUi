@@ -149,7 +149,22 @@ function DFRL.tools.CreateEditorButton(parent, text, width, height, primary)
     selected:SetAlpha(primary and 0.2 or 0.15)
     selected:Hide()
     Hover(button, 4, 0.45)
-    button.label = Label(button, 12, text)
+    -- Keep inset fills and choice textures below captions on native clients.
+    local captions = CreateFrame("Frame", nil, button)
+    captions:SetAllPoints(button)
+    captions:EnableMouse(false)
+    local function CaptionLayer()
+        local level, strata = button:GetFrameLevel() + 1, button:GetFrameStrata()
+        if captions:GetFrameLevel() ~= level then captions:SetFrameLevel(level) end
+        if captions:GetFrameStrata() ~= strata then captions:SetFrameStrata(strata) end
+    end
+    local setLevel = button.SetFrameLevel
+    button.SetFrameLevel = function(self, level)
+        setLevel(self, level)
+        CaptionLayer()
+    end
+    CaptionLayer()
+    button.label = Label(captions, 12, text)
     button.label:SetPoint("CENTER", button, "CENTER", 0, 0)
     button.label:SetWidth(math.max(1, width - 12))
     button.label:SetHeight(16)

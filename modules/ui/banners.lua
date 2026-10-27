@@ -156,8 +156,24 @@ DFRL:NewMod("RunBanners", 4, function()
             and type(AZS_SetHudShown) == "function"
     end
     function banners.IsActive() return active and inWorld and DFRL.display.Get("customBanners") end
+    local needsReflow = false
+    local function Present(row)
+        if row.presented or not root:IsVisible() then return end
+        row.label:SetText(row.entry.text)
+        if row.entry.boss then
+            row.label:SetTextColor(1, 0.25, 0.18)
+        else
+            row.label:SetTextColor(1, 0.82, 0)
+        end
+        row.label:SetAlpha(0)
+        row.alpha = 0
+        row.label:Show()
+        row.presented, needsReflow = true, true
+    end
     local function Reflow()
+        needsReflow = true
         table.sort(visible, function(a, b) return a.sequence < b.sequence end)
+        if not root:IsVisible() then return end
         local height = 0
         for index = 1, visibleCount do
             local row = visible[index]
@@ -167,6 +183,7 @@ DFRL:NewMod("RunBanners", 4, function()
         end
         root:SetHeight(math.max(MIN_HEIGHT, height - 4))
         DFRL.layout.Place("banners")
+        needsReflow = false
     end
     function banners.Clear()
         pendingErrors, errorCount = {}, 0
@@ -175,6 +192,7 @@ DFRL:NewMod("RunBanners", 4, function()
             row.label:Hide()
             row.label:SetText("")
             row.entry, row.sequence, row.started = nil, nil, nil
+            row.presented, row.alpha = nil, nil
         end
         for index = 1, visibleCount do
             visible[index] = nil
@@ -274,14 +292,7 @@ DFRL:NewMod("RunBanners", 4, function()
             local row = pool[index]
             if not row.entry then
                 row.entry, row.sequence, row.started = entry, entry.sequence, now
-                row.label:SetText(entry.text)
-                if entry.boss then
-                    row.label:SetTextColor(1, 0.25, 0.18)
-                else
-                    row.label:SetTextColor(1, 0.82, 0)
-                end
-                row.label:SetAlpha(0)
-                row.label:Show()
+                Present(row)
                 visibleCount = visibleCount + 1
                 visible[visibleCount] = row
                 table.setn(visible, visibleCount)
@@ -493,10 +504,11 @@ DFRL:NewMod("RunBanners", 4, function()
             SetDiagnostic("stage", "native-hud-unavailable")
             return false
         end
+        local opening = not active
         active = true
         RedirectLegacy()
         RedirectErrors()
-        root:Show()
+        if opening then root:Show() end
         SetDiagnostic("stage", "active")
         return true
     end
@@ -509,16 +521,22 @@ DFRL:NewMod("RunBanners", 4, function()
                 row.label:Hide()
                 row.label:SetText("")
                 row.entry, row.sequence, row.started = nil, nil, nil
+                row.presented, row.alpha = nil, nil
                 table.remove(visible, index)
                 visibleCount = visibleCount - 1
                 table.setn(visible, visibleCount)
                 moved = true
             else
-                row.label:SetAlpha(math.min(1, elapsed / FADE_IN, (HOLD + FADE_OUT - elapsed) / FADE_OUT))
+                if root:IsVisible() then
+                    Present(row)
+                    local alpha = math.min(1, elapsed / FADE_IN, (HOLD + FADE_OUT - elapsed) / FADE_OUT)
+                    if row.alpha ~= alpha then row.label:SetAlpha(alpha) end
+                    row.alpha = alpha
+                end
                 index = index + 1
             end
         end
-        if moved then Reflow() end
+        if moved or (needsReflow and root:IsVisible()) then Reflow() end
         while queueCount > 0 and visibleCount < MAX_VISIBLE do
             if not Push(queue[1], now) then break end
             table.remove(queue, 1)
@@ -542,6 +560,10 @@ DFRL:NewMod("RunBanners", 4, function()
         local ok, message = pcall(Update)
         if not ok then Failed(message) end
     end
+    HookScript(root, "OnShow", function()
+        local ok, message = pcall(Paint, GetTime())
+        if not ok then Failed(message) end
+    end)
     DFRL.layout.Register("banners", root, function()
         root:ClearAllPoints()
         root:SetPoint("TOP", UIParent, "TOP", 0, -130)

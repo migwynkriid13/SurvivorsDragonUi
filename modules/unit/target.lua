@@ -22,6 +22,7 @@ DFRL:NewMod("Target", 1, function()
     -- live player/party alias red; other Survivors targets retain enemy red.
     local setHealthColor = TargetFrameHealthBar.SetStatusBarColor
     TargetFrameHealthBar.SetStatusBarColor = function(bar)
+        if not TargetFrame:IsVisible() then return end
         if T.IsPlayerOrPartyUnit("target") then
             setHealthColor(bar, 0, 1, 0)
         else
@@ -72,7 +73,7 @@ DFRL:NewMod("Target", 1, function()
             button:SetPoint("TOPLEFT", relative, "TOPLEFT", 0, button:GetHeight() + gap)
         end
         local function PlaceTargetDebuffs()
-            if not debuffsOnTop or not TargetFrameDebuff1 then return end
+            if not TargetFrame:IsVisible() or not debuffsOnTop or not TargetFrameDebuff1 then return end
             TargetFrameDebuff1:SetPoint("TOPLEFT", TargetFrame, "TOPLEFT", 5, TargetFrameDebuff1:GetHeight() + 4)
             local hasTargetOfTarget = TargetofTargetFrame and TargetofTargetFrame:IsShown()
             local wrap = hasTargetOfTarget and 5 or 6
@@ -83,6 +84,7 @@ DFRL:NewMod("Target", 1, function()
             if TargetFrameBuff1 then TargetFrameBuff1:SetPoint("TOPLEFT", TargetFrame, "BOTTOMLEFT", 5, 32) end
         end
         hooksecurefunc("TargetDebuffButton_Update", PlaceTargetDebuffs)
+        HookScript(TargetFrame, "OnShow", function() _G.TargetDebuffButton_Update() end)
         DFRL.display.Listen(function()
             local value = DFRL.display.Get("targetDebuffsOnTop")
             if value == debuffsOnTop then return end
@@ -119,6 +121,7 @@ DFRL:NewMod("Target", 1, function()
 
     local borderTexture
     local function UpdateClassification(force)
+        if not TargetFrame:IsVisible() then return end
         local classification = UnitClassification("target")
         local texture = "UI-TargetingFrameDF1.blp"
         if classification == "worldboss" then
@@ -141,6 +144,7 @@ DFRL:NewMod("Target", 1, function()
     _G.TargetFrame_CheckClassification = function() UpdateClassification(true) end
 
     local function UpdateTarget(forceBorder)
+        if not TargetFrame:IsVisible() then return end
         healthLabels.Update()
         if not UnitExists("target") then return end
         TargetFrameHealthBar:SetStatusBarColor(1, 0, 0)
@@ -148,6 +152,7 @@ DFRL:NewMod("Target", 1, function()
     end
 
     HookScript(TargetFrameHealthBar, "OnValueChanged", function() UpdateTarget() end)
+    HookScript(TargetFrame, "OnShow", function() UpdateTarget(true) end)
     local frame = CreateFrame("Frame")
     frame:RegisterEvent("PLAYER_TARGET_CHANGED")
     frame:RegisterEvent("PLAYER_ENTERING_WORLD")

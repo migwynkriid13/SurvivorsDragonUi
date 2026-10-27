@@ -42,7 +42,7 @@ DFRL:NewMod("Mini", 1, function()
     end
 
     local function AddValues(frame, health, mana, unit)
-        local values = { unit = unit, healthBar = health, manaBar = mana }
+        local values = { frame = frame, unit = unit, healthBar = health, manaBar = mana }
         values.health = health:CreateFontString(nil, "OVERLAY")
         T.SetFont(values.health, 9, "OUTLINE")
         values.health:SetPoint("CENTER", health, "CENTER", 0, 0)
@@ -72,6 +72,7 @@ DFRL:NewMod("Mini", 1, function()
     end
 
     local function UpdateValues(values)
+        if not values.frame:IsVisible() then return end
         local unit = values.unit
         values.healthLabels.Update()
         if not UnitExists(unit) or (unit == "targettarget" and (UnitIsDead(unit) or UnitIsGhost(unit))) then
@@ -128,6 +129,7 @@ DFRL:NewMod("Mini", 1, function()
             if not texture or texture:GetTexture() ~= path then bar:SetStatusBarTexture(path) end
         end
         local function UpdatePet()
+            if not PetFrame:IsVisible() then return end
             if PetFrameTexture then
                 local path = tex .. "pet"
                 if PetFrameTexture:GetTexture() ~= path then PetFrameTexture:SetTexture(path) end
@@ -180,6 +182,7 @@ DFRL:NewMod("Mini", 1, function()
         end end
         HookScript(PetFrameHealthBar, "OnValueChanged", function() UpdateValues(pet) end)
         HookScript(PetFrameManaBar, "OnValueChanged", function() UpdateValues(pet) end)
+        HookScript(PetFrame, "OnShow", UpdatePet)
         UpdatePet()
     end
 
@@ -280,6 +283,7 @@ DFRL:NewMod("Mini", 1, function()
             T.SetFont(TargetofTargetFrame.name, 9, "")
         end
         local function UpdateTarget()
+            if not TargetofTargetFrame:IsVisible() then return end
             if TargetofTargetFrame.name and UnitExists("targettarget") then
                 local name = UnitName("targettarget")
                 if name then
@@ -298,6 +302,7 @@ DFRL:NewMod("Mini", 1, function()
             end
         end
         HookScript(TargetofTargetHealthBar, "OnValueChanged", function() UpdateValues(target) end)
+        HookScript(TargetofTargetFrame, "OnShow", UpdateTarget)
         UpdateTarget()
     end
 
@@ -424,6 +429,10 @@ DFRL:NewMod("Mini", 1, function()
         for _, values in ipairs(units) do
             UpdateValues(values)
         end
+    end
+    for _, values in ipairs(units) do
+        local record = values
+        HookScript(record.frame, "OnShow", function() UpdateValues(record) end)
     end
     local unitEvents = {
         UNIT_HEALTH = true,

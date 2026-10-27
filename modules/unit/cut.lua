@@ -22,6 +22,7 @@ DFRL:NewMod("Cut-Out", 1, function()
     end
 
     local function PlaceLoss(cutout)
+        if not cutout.bar:IsVisible() then return end
         if not cutout.startFraction or not cutout.widthFraction then return end
         local width = cutout.bar:GetWidth()
         if width <= 0 then return end
@@ -38,7 +39,7 @@ DFRL:NewMod("Cut-Out", 1, function()
         while i <= table.getn(fading) do
             local cutout = fading[i]
             local elapsed = now - cutout.fadeStart
-            if elapsed >= 0.5 or not cutout.texture:IsShown() then
+            if elapsed >= 0.5 or not cutout.texture:IsVisible() then
                 cutout.texture:Hide()
                 cutout.fading = nil
                 table.remove(fading, i)
@@ -53,6 +54,7 @@ DFRL:NewMod("Cut-Out", 1, function()
     local function Update(cutout)
         if
             not animationEnabled
+            or not cutout.bar:IsVisible()
             or not UnitExists(cutout.unit)
             or UnitIsDead(cutout.unit)
             or UnitIsGhost(cutout.unit)
@@ -120,7 +122,16 @@ DFRL:NewMod("Cut-Out", 1, function()
                 local cutout = { bar = bar, texture = texture, unit = data[2] }
                 table.insert(cutouts, cutout)
                 Reset(cutout)
+                HookScript(bar, "OnHide", function()
+                    Reset(cutout)
+                    for index = table.getn(fading), 1, -1 do
+                        if fading[index] == cutout then table.remove(fading, index) end
+                    end
+                    cutout.fading = nil
+                    if table.getn(fading) == 0 then frame:SetScript("OnUpdate", nil) end
+                end)
                 HookScript(bar, "OnValueChanged", function() Update(cutout) end)
+                HookScript(bar, "OnShow", function() Reset(cutout) end)
                 HookScript(bar, "OnSizeChanged", function() PlaceLoss(cutout) end)
             end
         end

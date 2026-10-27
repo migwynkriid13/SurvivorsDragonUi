@@ -2,7 +2,18 @@
 DFRL:NewMod("Display", 0, function()
     local display, listeners, draft = {}, {}, nil
     local defaults = {
+        meterEnabled = false,
+        meterRows = 6,
+        meterShowDamage = false,
+        meterShowDps = true,
+        meterShowPercentage = false,
+        meterShowIcons = true,
+        meterShowRanks = false,
+        meterShowTotal = true,
+        meterShowTotalDps = true,
         customBanners = true,
+        customRunTimer = true,
+        customBossBars = true,
         petRows = 6,
         petSpacing = 4,
         hidePetNames = false,
@@ -65,6 +76,7 @@ DFRL:NewMod("Display", 0, function()
     DFRL.display = display
 
     local ranges = {
+        meterRows = { minimum = 1, maximum = 10, integer = true },
         sctScale = { minimum = 0.25, maximum = 2 },
         petRows = { minimum = 1, maximum = 6, integer = true },
         petSpacing = { minimum = 0, maximum = 60, integer = true },
@@ -93,7 +105,18 @@ DFRL:NewMod("Display", 0, function()
     end
     local function Normalize(source)
         return {
+            meterEnabled = Read(source, "meterEnabled"),
+            meterRows = Read(source, "meterRows"),
+            meterShowDamage = Read(source, "meterShowDamage"),
+            meterShowDps = Read(source, "meterShowDps"),
+            meterShowPercentage = Read(source, "meterShowPercentage"),
+            meterShowIcons = Read(source, "meterShowIcons"),
+            meterShowRanks = Read(source, "meterShowRanks"),
+            meterShowTotal = Read(source, "meterShowTotal"),
+            meterShowTotalDps = Read(source, "meterShowTotalDps"),
             customBanners = Read(source, "customBanners"),
+            customRunTimer = Read(source, "customRunTimer"),
+            customBossBars = Read(source, "customBossBars"),
             petRows = Read(source, "petRows"),
             petSpacing = Read(source, "petSpacing"),
             hidePetNames = Read(source, "hidePetNames"),

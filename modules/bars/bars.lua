@@ -474,7 +474,7 @@ DFRL:NewMod("Bars", 1, function()
             end
         end
         local function RefreshNumbers()
-            if not active or not DFRL.display.Get("cooldownNumbers") then
+            if not active or not bar:IsVisible() or not DFRL.display.Get("cooldownNumbers") then
                 ClearNumbers()
                 return
             end
@@ -505,7 +505,7 @@ DFRL:NewMod("Bars", 1, function()
             RefreshNumbers()
         end)
         controller:SetScript("OnUpdate", function()
-            if not active or not DFRL.display.Get("cooldownNumbers") then return end
+            if not active or not bar:IsVisible() or not DFRL.display.Get("cooldownNumbers") then return end
             elapsed = elapsed + arg1
             -- Sample each rendered frame near expiration so a 100-ms periodic
             -- refresh does not skip the positive final-100-ms zero window.

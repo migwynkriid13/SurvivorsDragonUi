@@ -101,11 +101,12 @@ DFRL:NewMod("Player", 1, function()
     end
 
     local function UpdateValues()
-        if not initialized then return end
+        if not initialized or not healthLabels or not PlayerFrame:IsVisible() then return end
         healthLabels.Update()
         if PlayerLevelText then T.SetTextIfChanged(PlayerLevelText, UnitLevel("player")) end
         UpdateHealthColor()
     end
+    HookScript(PlayerFrame, "OnShow", UpdateValues)
 
     local function HidePowerBar()
         if PlayerFrameManaBar then
@@ -157,6 +158,7 @@ DFRL:NewMod("Player", 1, function()
         table.insert(pulseTextures, { original = texture, round = round })
         local pulseTime, pulseAlpha = 0, 0
         overlay:SetScript("OnUpdate", function()
+            if not PlayerFrame:IsVisible() then return end
             if DFRL.display.Get("hidePortraits") then return end
             local elapsed = arg1 or 0
             if active() then
@@ -184,6 +186,7 @@ DFRL:NewMod("Player", 1, function()
         local tick, index = 0, 0
         texture:SetTexCoord(0, 60 / 512, 0, 60 / 512)
         animation:SetScript("OnUpdate", function()
+            if not animation:IsVisible() then return end
             tick = tick + (arg1 or 0)
             if tick >= 0.05 then
                 local steps = math.floor(tick / 0.05)

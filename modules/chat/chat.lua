@@ -111,6 +111,7 @@ DFRL:NewMod("Chat", 1, function()
             return not state.scrolled
         end
         local function FadeSettings(state, held)
+            if not root:IsVisible() then return end
             local frame = state.native
             if not state.fadeConfigured then
                 if frame.SetTimeVisible then frame:SetTimeVisible(HOLD) end
@@ -147,6 +148,7 @@ DFRL:NewMod("Chat", 1, function()
             end
         end
         local function PositionNative(state, now, refresh)
+            if not root:IsVisible() then return end
             local frame = state.native
             local progress = state.slideStart and Clamp((now - state.slideStart) / SLIDE, 0, 1) or 1
             local shift = -12 * (1 - progress) * (1 - progress) * (1 - progress)
@@ -195,6 +197,7 @@ DFRL:NewMod("Chat", 1, function()
         local indicatorMessage = "Scroll down for latest messages"
 
         UpdateIndicator = function(atBottom)
+            if not root:IsVisible() then return end
             if atBottom == nil and selected then atBottom = AtBottom(selected) end
             if selected and not atBottom and not focused then
                 local message = selected.unread and "Unread messages" or "Scroll down for latest messages"
@@ -232,8 +235,9 @@ DFRL:NewMod("Chat", 1, function()
             UpdateIndicator()
         end
         local function NoticeMessage(state)
-            state.slideStart = GetTime()
-            state.lastActivity = state.slideStart
+            local now = GetTime()
+            state.lastActivity = now
+            state.slideStart = root:IsVisible() and now or nil
             if state ~= selected or not AtBottom(state) then state.unread = true end
             if UpdateIndicator then UpdateIndicator() end
         end
@@ -304,6 +308,7 @@ DFRL:NewMod("Chat", 1, function()
             native:SetScript("OnMouseWheel", function() Scroll(state, arg1 or 0) end)
             local setAlpha = native.SetAlpha
             native.SetAlpha = function(frame)
+                if not root:IsVisible() then return end
                 local alpha = state == selected and (state.visualAlpha or 1) or 0
                 if frame:GetAlpha() ~= alpha then setAlpha(frame, alpha) end
             end
@@ -531,6 +536,7 @@ DFRL:NewMod("Chat", 1, function()
         HideControl(ChatFrameMenuButton)
         local refresh = 0
         root:SetScript("OnUpdate", function()
+            if not root:IsVisible() then return end
             local now, elapsed = GetTime(), arg1 or 0
             -- Only wheel navigation uncovers retained history. Hover and input
             -- focus never rearm lines or hold their fading.
@@ -571,6 +577,20 @@ DFRL:NewMod("Chat", 1, function()
                     PositionNative(state, now, true)
                 end
             end
+        end)
+        HookScript(root, "OnHide", function()
+            for _, state in pairs(states) do
+                state.slideStart, state.revealStart = nil, nil
+            end
+        end)
+        HookScript(root, "OnShow", function()
+            ReadDimensions()
+            for _, state in pairs(states) do
+                state.visualAlpha = 1
+                state.native:SetAlpha(1)
+                PositionNative(state, GetTime(), true)
+            end
+            UpdateIndicator()
         end)
         DFRL.layout.Register("chat", root, nil, {
             region = moveRegion,

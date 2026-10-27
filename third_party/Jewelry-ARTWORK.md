@@ -12,7 +12,7 @@ Original World of Warcraft artwork remains copyright Blizzard Entertainment. The
 
 ## Preparation and transparency
 
-`scripts/prepare_jewelry_art.py` reads `bagborder2.blp` from a scratch directory supplied with `--sources`. Pillow decodes the image, with a BGRA decoder for uncompressed BLP2 encoding 3 when needed. This tool prepares image assets without loading or executing addon code.
+`scripts/prepare_jewelry_art.py` reads `bagborder2.blp` from a scratch directory supplied with `--sources`. A shared Raw1/Raw3 decoder preserves indexed colors and the separate alpha block; Pillow handles the other source formats. Pillow's own Raw1 path is not used because it omits that alpha block. This tool prepares image assets without loading or executing addon code.
 
 `media/tex/jewelry/Frame.blp` contains five gold rims on a transparent 1024-by-256, uncompressed BLP2 Raw3 canvas. The original TGA pixels are repacked without resampling for the updated client loader; see [Client compatibility](../docs/CLIENT-COMPATIBILITY.md). The runtime reuses the first rim's centered pixel rectangle `(106, 56)` through `(178, 128)` independently for all five sockets, with UV bounds `106 / 1024`, `178 / 1024`, `56 / 256`, `128 / 256`. This trims the previous 86-pixel crop's uneven transparent padding. Each 72-pixel crop occupies `43 * 72 / 86`, or 36, local units, preserving its visible artwork size. The jewelry frame scale remains the native action-button width divided by 43, inherited alongside the action bar's scale. At the 36-unit button reference, the cropped texture occupies about 30.14 units and its visible gold diameter is about 29 units. Each rim shares its icon frame's center anchor; the continuous rail's socket centers use the corresponding bar coordinates. Per-slot placement matches button center spacing and spans buttons 2 through 6; it does not stretch the baked five-rim row.
 
@@ -28,17 +28,25 @@ shadow. The circle has transparent padding inside its crop, avoiding a cut
 through the shadow at the right edge. The five original jewelry crops and the
 atlas dimensions remain unchanged; no new runtime file is added.
 
+The damage meter reuses that same prepared pet-rim crop for its circular source
+icons: a 31-unit gold rim surrounds a 26-unit native circular icon at the existing
+row icon center. It retains the original gold RGB/alpha, without a quality tint
+or another prepared image. Legacy fallback strips clip only the source icon;
+the complete ring is never sliced. The five jewelry crops and their original
+fourteen-strip icon sampling remain unchanged. See
+[DAMAGE-METER.md](../docs/DAMAGE-METER.md).
+
 ## Thin socket attachment
 
 `scripts/prepare_jewelry_sockets.py` reads the existing `media/tex/actionbars/HDActionBar.tga` as texture data, without importing or executing addon code. The original file and its existing upstream artwork attribution remain intact. At the native reference of 36-unit buttons, six-unit gaps and a 300-by-64 bar background, it copies the original 12-unit upper strip into one continuous 300-by-38 rail and extends it around five sockets. Each shape unites a 20-unit-radius circle with the bar below it, leaving a 13.7-unit-radius circular opening transparent. Distance to this shape's outer boundary selects the native border's original color and alpha rows, with no compressed bevel or opaque replacement stroke. The horizontal boundary starts at rail coordinate 33.5, matching source row 30 in the four-pixels-per-unit native composition with its 26-unit offset. Straight feet and gaps retain the same native rows directly, rather than being drawn as separate pieces. The bottom four image rows blend into the original lower background's row mapping. Bar material fills the inside of each bend, without a separate inner or lower curved line.
 
 `media/tex/jewelry/SocketRail.blp` is a 2048-by-256 uncompressed BLP2 Raw3 canvas, preserving the original RGBA pixels. Its upper-left 1200-by-152 rectangle contains the complete rail, prepared at four pixels per UI unit for a nominal 300-by-38 display; the remaining pixels are clear. Runtime UVs are `0`, `1200 / 2048`, `0`, `152 / 256`. One bar-owned texture spans from six units outside each side of the bar, with its top 40 units above the button tops and bottom two units above them. The sockets and straight spans therefore share one sampling rectangle and anchor space. The existing bar backgrounds draw below the narrow replacement strip. The complete original backgrounds return when jewelry is unavailable or hidden. All seven button positions and button artwork are unchanged.
 
-The seven used TGA files ship through the runtime manifest. Source BLPs, sample item icons and previews are excluded. Static image preparation does not establish packaged-client rendering; runtime appearance remains unverified.
+The seven prepared BLP files ship through the runtime manifest. TGA preparation inputs, original source BLPs, sample item icons and previews are excluded. Static image preparation does not establish packaged-client rendering; runtime appearance remains unverified.
 
 ## Detached silver outline
 
-The same preparation script also writes `media/tex/jewelry/SocketDetached.tga`, an uncompressed 256-by-256 RGBA canvas with a 160-by-160 occupied rectangle at its upper-left. A complete 20-unit-radius circle uses the same native border profile and 13.7-unit-radius transparent opening as the attached sockets. There are no feet or horizontal bar spans. Each of the five detached slots reuses this crop at 40 by 40 units at the native button reference. The gray texture sits behind the unchanged item icon and gold rim, preserving the silver-gray outline around the entire circle. The rail is restored to the original bar artwork while detached; neither the original action-bar source nor item artwork is modified. This fourth used TGA is included in the shared runtime manifest.
+The same preparation script also writes `media/tex/jewelry/SocketDetached.tga`, an uncompressed 256-by-256 RGBA canvas with a 160-by-160 occupied rectangle at its upper-left. A complete 20-unit-radius circle uses the same native border profile and 13.7-unit-radius transparent opening as the attached sockets. There are no feet or horizontal bar spans. Each of the five detached slots reuses this crop at 40 by 40 units at the native button reference. The gray texture sits behind the unchanged item icon and gold rim, preserving the silver-gray outline around the entire circle. The rail is restored to the original bar artwork while detached; neither the original action-bar source nor item artwork is modified. The prepared `SocketDetached.blp` is included in the shared runtime manifest; its TGA remains a preparation input. Exact palette packing preserves its full canvas and alpha.
 
 ## Original WoW empty-slot pictures
 
