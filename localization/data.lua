@@ -2,7 +2,7 @@
 DFRL.locale.data = {
     en = {
         ui = {
-            ["Write /sdui for SurvivorsDragonUI settings"] = "Write /sdui for SurvivorsDragonUI settings",
+            ["SurvivorsDragonUI: /sdui for settings"] = "SurvivorsDragonUI: /sdui for settings",
             ["Change name text size, including Names only."] = "Change name text size, including Names only.",
             ["MSBT-style scrolling"] = "MSBT-style scrolling",
             ["Addon damage numbers scroll beside your character."] = "Addon damage numbers scroll beside your character.",
@@ -598,7 +598,7 @@ DFRL.locale.data = {
     },
     pl = {
         ui = {
-            ["Write /sdui for SurvivorsDragonUI settings"] = "Wpisz /sdui, aby otworzyć ustawienia SurvivorsDragonUI",
+            ["SurvivorsDragonUI: /sdui for settings"] = "SurvivorsDragonUI: /sdui — ustawienia",
             ["Change name text size, including Names only."] = "Zmień rozmiar nazw, także w trybie Same nazwy.",
             ["MSBT-style scrolling"] = "Przewijanie w stylu MSBT",
             ["Addon damage numbers scroll beside your character."] = "Obrażenia z dodatku przewijają się obok postaci.",
@@ -1665,7 +1665,7 @@ DFRL.locale.data = {
     },
     cs = {
         ui = {
-            ["Write /sdui for SurvivorsDragonUI settings"] = "Napište /sdui pro otevření nastavení SurvivorsDragonUI",
+            ["SurvivorsDragonUI: /sdui for settings"] = "SurvivorsDragonUI: /sdui pro nastavení",
             ["Change name text size, including Names only."] = "Změnit velikost jmen, také v režimu Pouze jména.",
             ["MSBT-style scrolling"] = "Posouvání ve stylu MSBT",
             ["Addon damage numbers scroll beside your character."] = "Čísla poškození addonu se posouvají vedle postavy.",
@@ -2735,7 +2735,7 @@ DFRL.locale.data = {
     },
     de = {
         ui = {
-            ["Write /sdui for SurvivorsDragonUI settings"] = "Gib /sdui ein, um die Einstellungen von SurvivorsDragonUI zu öffnen",
+            ["SurvivorsDragonUI: /sdui for settings"] = "SurvivorsDragonUI: /sdui für Einstellungen",
             ["Change name text size, including Names only."] = "Textgröße der Namen ändern, auch bei Nur Namen.",
             ["MSBT-style scrolling"] = "Scrollen im MSBT-Stil",
             ["Addon damage numbers scroll beside your character."] = "Die Schadenszahlen des Addons scrollen neben deinem Charakter.",
@@ -3803,7 +3803,7 @@ DFRL.locale.data = {
     },
     pt = {
         ui = {
-            ["Write /sdui for SurvivorsDragonUI settings"] = "Digite /sdui para abrir as configurações do SurvivorsDragonUI",
+            ["SurvivorsDragonUI: /sdui for settings"] = "SurvivorsDragonUI: /sdui para configurações",
             ["Change name text size, including Names only."] = "Alterar o tamanho dos nomes, inclusive no modo Apenas nomes.",
             ["MSBT-style scrolling"] = "Rolagem no estilo MSBT",
             ["Addon damage numbers scroll beside your character."] = "Os números de dano do addon rolam ao lado do personagem.",
@@ -4862,7 +4862,7 @@ DFRL.locale.data = {
     },
     es = {
         ui = {
-            ["Write /sdui for SurvivorsDragonUI settings"] = "Escribe /sdui para abrir los ajustes de SurvivorsDragonUI",
+            ["SurvivorsDragonUI: /sdui for settings"] = "SurvivorsDragonUI: /sdui para ajustes",
             ["Change name text size, including Names only."] = "Cambiar el tamaño de los nombres, también en el modo Solo nombres.",
             ["MSBT-style scrolling"] = "Desplazamiento estilo MSBT",
             ["Addon damage numbers scroll beside your character."] = "Los números de daño del addon se desplazan junto a tu personaje.",
@@ -5925,7 +5925,7 @@ DFRL.locale.data = {
     },
     fr = {
         ui = {
-            ["Write /sdui for SurvivorsDragonUI settings"] = "Tapez /sdui pour ouvrir les paramètres de SurvivorsDragonUI",
+            ["SurvivorsDragonUI: /sdui for settings"] = "SurvivorsDragonUI: /sdui pour les paramètres",
             ["Change name text size, including Names only."] = "Modifier la taille des noms, y compris en mode Noms uniquement.",
             ["MSBT-style scrolling"] = "Défilement de style MSBT",
             ["Addon damage numbers scroll beside your character."] = "Les dégâts de l’addon défilent à côté du personnage.",
@@ -6996,7 +6996,7 @@ DFRL.locale.data = {
     },
     ro = {
         ui = {
-            ["Write /sdui for SurvivorsDragonUI settings"] = "Scrie /sdui pentru a deschide setările SurvivorsDragonUI",
+            ["SurvivorsDragonUI: /sdui for settings"] = "SurvivorsDragonUI: /sdui pentru setări",
             ["Change name text size, including Names only."] = "Schimbă mărimea numelor, inclusiv în modul Doar numele.",
             ["MSBT-style scrolling"] = "Derulare în stil MSBT",
             ["Addon damage numbers scroll beside your character."] = "Numerele de daune ale addonului se derulează lângă personaj.",
@@ -8050,7 +8050,7 @@ DFRL.locale.data = {
     },
     tr = {
         ui = {
-            ["Write /sdui for SurvivorsDragonUI settings"] = "SurvivorsDragonUI ayarlarını açmak için /sdui yaz",
+            ["SurvivorsDragonUI: /sdui for settings"] = "SurvivorsDragonUI: ayarlar için /sdui",
             ["Change name text size, including Names only."] = "Yalnızca isimler modunda da isim yazısının boyutunu değiştir.",
             ["MSBT-style scrolling"] = "MSBT tarzı kaydırma",
             ["Addon damage numbers scroll beside your character."] = "Eklentinin hasar sayıları karakterinin yanında kayar.",
@@ -8980,7 +8980,7 @@ DFRL.locale.data = {
     },
     ru = {
         ui = {
-            ["Write /sdui for SurvivorsDragonUI settings"] = "Введите /sdui, чтобы открыть настройки SurvivorsDragonUI",
+            ["SurvivorsDragonUI: /sdui for settings"] = "SurvivorsDragonUI: /sdui для настроек",
             ["Change name text size, including Names only."] = "Изменить размер имён, в том числе в режиме «Только имена».",
             ["MSBT-style scrolling"] = "Прокрутка в стиле MSBT",
             ["Addon damage numbers scroll beside your character."] = "Числа урона аддона прокручиваются рядом с персонажем.",
@@ -10129,7 +10129,7 @@ DFRL.locale.data = {
     },
     uk = {
         ui = {
-            ["Write /sdui for SurvivorsDragonUI settings"] = "Введіть /sdui, щоб відкрити налаштування SurvivorsDragonUI",
+            ["SurvivorsDragonUI: /sdui for settings"] = "SurvivorsDragonUI: /sdui для налаштувань",
             ["Change name text size, including Names only."] = "Змінити розмір імен, зокрема в режимі «Лише імена».",
             ["MSBT-style scrolling"] = "Прокручування у стилі MSBT",
             ["Addon damage numbers scroll beside your character."] = "Числа шкоди аддона прокручуються поруч із персонажем.",
@@ -11252,7 +11252,7 @@ DFRL.locale.data = {
     },
     zh = {
         ui = {
-            ["Write /sdui for SurvivorsDragonUI settings"] = "输入 /sdui 打开 SurvivorsDragonUI 设置",
+            ["SurvivorsDragonUI: /sdui for settings"] = "SurvivorsDragonUI: /sdui 打开设置",
             ["Change name text size, including Names only."] = "更改名称文字大小，也适用于仅显示名称模式。",
             ["MSBT-style scrolling"] = "MSBT 风格滚动",
             ["Addon damage numbers scroll beside your character."] = "插件伤害数字在角色旁边滚动显示。",
@@ -12302,7 +12302,7 @@ DFRL.locale.data = {
     },
     ja = {
         ui = {
-            ["Write /sdui for SurvivorsDragonUI settings"] = "/sdui と入力すると SurvivorsDragonUI の設定を開けます",
+            ["SurvivorsDragonUI: /sdui for settings"] = "SurvivorsDragonUI: /sdui で設定",
             ["Change name text size, including Names only."] = "名前のみモードも含め、名前の文字サイズを変更します。",
             ["MSBT-style scrolling"] = "MSBT風スクロール",
             ["Addon damage numbers scroll beside your character."] = "アドオンのダメージ数値はキャラクターの横にスクロール表示されます。",
@@ -13384,7 +13384,7 @@ DFRL.locale.data = {
     },
     ko = {
         ui = {
-            ["Write /sdui for SurvivorsDragonUI settings"] = "SurvivorsDragonUI 설정을 열려면 /sdui를 입력하세요",
+            ["SurvivorsDragonUI: /sdui for settings"] = "SurvivorsDragonUI: /sdui로 설정 열기",
             ["Change name text size, including Names only."] = "이름만 표시 모드에서도 이름 글자 크기를 변경합니다.",
             ["MSBT-style scrolling"] = "MSBT 스타일 스크롤",
             ["Addon damage numbers scroll beside your character."] = "애드온 피해 수치가 캐릭터 옆에서 스크롤됩니다.",

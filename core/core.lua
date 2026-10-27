@@ -49,7 +49,7 @@ DFRL:SetScript("OnEvent", function()
     elseif event == "PLAYER_ENTERING_WORLD" then
         local chat = DEFAULT_CHAT_FRAME or ChatFrame1
         if chat and type(chat.AddMessage) == "function" then
-            chat:AddMessage(DFRL.locale.Text("Write /sdui for SurvivorsDragonUI settings"), 1, 0.82, 0)
+            chat:AddMessage(DFRL.locale.Text("SurvivorsDragonUI: /sdui for settings"), 1, 0.82, 0)
             -- One reminder per UI load; zone transitions must not repeat it.
             DFRL:UnregisterEvent("PLAYER_ENTERING_WORLD")
         end

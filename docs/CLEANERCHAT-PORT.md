@@ -48,7 +48,7 @@ Rendering stays with the native frames, preserving their output even when a writ
 The [benilla message-frame API](https://github.com/samwhosung/benilla/blob/main/crates/benilla-ui/src/script/messageframe/scrolling.rs) exposes native fade and scroll controls. Its [message-frame state](https://github.com/samwhosung/benilla/blob/main/crates/benilla-ui/src/widget/kinds/messageframe.rs) rearms displayed-line fade timers on scroll. The addon reveals without copying or rewriting messages: Down at the bottom, or Down followed by Up elsewhere, restores the same scroll position and refreshes displayed lines. Only mouse-wheel scrolling calls this reveal path. Hover and input focus do not change native fading; scrolling back pauses it for reading, and returning to the bottom resumes the normal hold and fade. Optional methods are feature-detected; these primary-source references do not establish the exact packaged client's implementation. Native history is preserved: the addon does not call `SetMaxLines`, which clears that history in the referenced implementation.
 
 After login or `/reload`, the first world-entry event prints
-`Write /sdui for SurvivorsDragonUI settings` in the default native chat frame,
+`SurvivorsDragonUI: /sdui for settings` in the default native chat frame,
 using the current language catalog. The existing core frame unregisters that
 event after delivery, so zone transitions do not repeat the reminder. If chat
 is unavailable, it retries on the next world-entry event without polling.
