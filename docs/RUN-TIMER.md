@@ -185,11 +185,12 @@ countdown uses its right edge. If only one caption is visible, it is centered;
 this includes a boss-only display when **Run text** and **Current time** are
 off, with **Maximum zone time** also off for regular runs.
 
-Both labels reuse the pooled segmented renderer, including seconds raised one
-physical pixel. Measured overflow separates long translated captions and
-extends only the shared edit bounds; it does not resize the pill or save new
-geometry. Font, visibility, native clock takeover, fill animation, boss markers
-and the reload-only schedule handoff retain their existing ownership.
+Both labels and the font preview reuse the pooled segmented renderer, with
+minutes, colon and seconds on the same baseline. Measured overflow separates
+long translated captions and extends only the shared edit bounds; it does not
+resize the pill or save new geometry. Font, visibility, native clock takeover,
+fill animation, boss markers and the reload-only schedule handoff retain their
+existing ownership.
 
 ## Evidence
 

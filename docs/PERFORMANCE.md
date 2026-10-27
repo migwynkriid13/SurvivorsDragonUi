@@ -432,6 +432,13 @@ Row handles update normalized display drafts. DPS retains 1–10 rows; boss/guar
 
 Run timer width reflows the existing 27 flow textures and 28 red glints without additional regions. Flow speed, temporal phases, pulse equations, opacity and cadence remain unchanged; spatial spacing, span, foam clipping and scheduled skull positions use the actual fill width. Native health/status-bar UV ownership and artwork crops are preserved. Wider visible fills cover more pixels; these source-level changes do not establish equal GPU cost or FPS. Revive invalidates its spark/cross geometry on width changes, retaining the existing animation lifecycle.
 
+Run-timer captions and the font preview align every pooled text segment to the
+same baseline. Removing the seconds' one-pixel lift also removes its extra edit-bound
+height. The existing text/font/scale cache, hidden guards and segment pool remain;
+there is no added region, texture/material, alpha pass, allocation or updater.
+This is source-level alignment evidence, without local execution or measured
+GPU/FPS or in-game appearance results.
+
 All resizing uses the existing editor controller, unchanged-pointer guards and final release sample. Root height changes from row/debuff reflow also invalidate the active opposite-edge calculation. Grid preference, row counts, widths and font size retain shared Confirm/Cancel/discard/profile/reset behavior, without a new SavedVariable or idle updater. Local work was limited to source inspection and pinned formatting; appearance, animation, input and renderer performance remain unverified.
 
 ## Unit health width handles — 2026-10-27

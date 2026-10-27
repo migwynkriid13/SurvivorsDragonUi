@@ -562,7 +562,7 @@ DFRL:NewMod("RunTimers", 5, function()
         if text ~= "" and (width <= 0 or height <= 0) then return end
         local pixel = 1 / scale
         local used, cursor = 0, 1
-        local function Part(first, last, raised)
+        local function Part(first, last)
             if last < first then return end
             used = used + 1
             local label = clock.parts[used]
@@ -583,7 +583,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 x = x - (clock.ruler:GetStringWidth() or 0)
             end
             label:ClearAllPoints()
-            label:SetPoint("BOTTOMLEFT", source, "BOTTOMLEFT", x, raised and pixel or 0)
+            label:SetPoint("BOTTOMLEFT", source, "BOTTOMLEFT", x, 0)
             label:SetHeight(height)
             label:SetText(string.sub(text, first, last))
             if clock.visible then
@@ -595,11 +595,11 @@ DFRL:NewMod("RunTimers", 5, function()
         while cursor <= string.len(text) do
             local first, last = string.find(text, "%d+:%d%d", cursor)
             if not first then
-                Part(cursor, string.len(text), false)
+                Part(cursor, string.len(text))
                 break
             end
-            Part(cursor, last - 2, false)
-            Part(last - 1, last, true)
+            Part(cursor, last - 2)
+            Part(last - 1, last)
             cursor = last + 1
         end
         for index = used + 1, table.getn(clock.parts) do
@@ -643,7 +643,7 @@ DFRL:NewMod("RunTimers", 5, function()
             bossText:SetPoint("BOTTOM", run, "TOP", 0, 2)
         end
         overflow = math.max(0, overflow - inset)
-        local top = (runClock.visible or bossClock.visible) and currentFont.size + 4 + pixel or 0
+        local top = (runClock.visible or bossClock.visible) and currentFont.size + 4 or 0
         runMoveRegion:ClearAllPoints()
         runMoveRegion:SetPoint("TOPLEFT", run, "TOPLEFT", -overflow, top)
         runMoveRegion:SetPoint("BOTTOMRIGHT", run, "BOTTOMRIGHT", overflow, 0)
