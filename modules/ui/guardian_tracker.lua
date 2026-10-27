@@ -2,8 +2,6 @@
 Guardian tracker artwork is copyright Blizzard Entertainment.
 Header source: NeticSoul/DragonUI commit 5aefa049d22ba1a9e968b433d96eed7be86d6ac9,
 DragonUI/Textures/UI/QuestTracker.BLP, 1024x512, rectangle (11,247,571,317).
-The header toggle reuses the existing minimap ZoomIn32/ZoomOut32 normal,
-pressed, hover and disabled artwork through the common styling helper.
 https://github.com/NeticSoul/DragonUI/blob/5aefa049d22ba1a9e968b433d96eed7be86d6ac9/DragonUI/Textures/UI/QuestTracker.BLP
 The source's third-party notices identify RetailUI as an artwork conduit;
 Blizzard textures are excluded from its software MIT license and included for
@@ -17,12 +15,13 @@ DFRL:NewMod("GuardianTracker", 4, function()
     if not roster or not minimapDefaults then return end
     local path = DFRL:GetInfoOrCons("tex")
     local rows = {}
-    local inWorld, editing, dirty, age = true, false, true, 0
-    local expanded = true
+    local inWorld, dirty, age = true, true, 0
+    local showDead = DFRL.display.Get("guardianShowDead")
     local DEFAULT_SCALE = 0.85
     local ROW_INSET, NAME_WIDTH, COLUMN_GAP = 12, 120, 16 * 0.9
     local HEALTH_RIGHT_OFFSET = 4
-    local TOGGLE_SIZE, TOGGLE_INSET = 25.6, 11
+    local TITLE_LEFT = 44
+    local TITLE_PADDING = TITLE_LEFT + ROW_INSET
     local WIDTH, ROW_HEIGHT = 128 + NAME_WIDTH + COLUMN_GAP + 2 * ROW_INSET, 26
     local requestedWidth = DFRL.display.Get("guardianWidth")
     local preferredStatusWidth, headerHeight = 128, WIDTH / 8
@@ -61,19 +60,8 @@ DFRL:NewMod("GuardianTracker", 4, function()
     local icon = Texture(frame, "waypoint\\GuardianFloating", "ARTWORK", 28, 28, 65 / 128, 65 / 128)
     icon:SetPoint("TOPLEFT", frame, "TOPLEFT", 9, -6)
     local title = Label(frame, 14)
-    title:SetPoint("TOPLEFT", frame, "TOPLEFT", 44, -8)
+    title:SetPoint("TOPLEFT", frame, "TOPLEFT", TITLE_LEFT, -8)
     title:SetHeight(23)
-    local toggle = CreateFrame("Button", nil, frame)
-    toggle:SetWidth(TOGGLE_SIZE)
-    toggle:SetHeight(TOGGLE_SIZE)
-    toggle:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -TOGGLE_INSET, -7)
-    toggle:RegisterForClicks("LeftButtonUp")
-    local toggleExpanded
-    local function UpdateToggle()
-        if toggleExpanded == expanded then return end
-        T.StyleMinimapZoomButton(toggle, expanded and "ZoomOut32" or "ZoomIn32", true)
-        toggleExpanded = expanded
-    end
     local measure = Label(frame, 12)
     measure:Hide()
 
@@ -99,9 +87,6 @@ DFRL:NewMod("GuardianTracker", 4, function()
         end
         return DFRL.locale.Text(captions[entry.status] or "Empty")
     end
-    local function HideTooltip(owner)
-        if GameTooltip and GameTooltip:IsOwned(owner) then GameTooltip:Hide() end
-    end
     local function ClearRow(row)
         if row.value ~= 0 then row.bar:SetValue(0) end
         row.value = 0
@@ -109,7 +94,6 @@ DFRL:NewMod("GuardianTracker", 4, function()
         if row:IsShown() then row:Hide() end
     end
     local function Clear()
-        HideTooltip(toggle)
         for _, row in ipairs(rows) do
             ClearRow(row)
         end
@@ -206,8 +190,11 @@ DFRL:NewMod("GuardianTracker", 4, function()
         end
         local titleWidth = CaptionWidth("GUARDIANS", nil, 14)
         if titleWidth <= 0 then return false end
-        headerHeight = math.max(WIDTH, preferredStatusWidth + NAME_WIDTH + COLUMN_GAP + 2 * ROW_INSET, titleWidth + 88)
-            / 8
+        headerHeight = math.max(
+            WIDTH,
+            preferredStatusWidth + NAME_WIDTH + COLUMN_GAP + 2 * ROW_INSET,
+            titleWidth + TITLE_PADDING
+        ) / 8
         ApplyWidth()
         return true
     end
@@ -247,7 +234,7 @@ DFRL:NewMod("GuardianTracker", 4, function()
             dirty = false
         end
         if presentation.measuredWidth ~= width then
-            title:SetWidth(width - 88)
+            title:SetWidth(width - TITLE_PADDING)
             header:SetWidth(width)
             presentation.measuredWidth = width
         end
@@ -255,11 +242,10 @@ DFRL:NewMod("GuardianTracker", 4, function()
             header:SetHeight(headerHeight)
             presentation.headerHeight = headerHeight
         end
-        UpdateToggle()
         T.SetTextIfChanged(title, DFRL.locale.Text("GUARDIANS"))
         local used = 0
         for _, entry in ipairs(snapshot.rows) do
-            if expanded or entry.state == "asleep" or entry.state == "awake" then
+            if showDead or entry.state == "asleep" or entry.state == "awake" then
                 used = used + 1
                 local row = rows[used] or MakeRow()
                 if
@@ -307,19 +293,6 @@ DFRL:NewMod("GuardianTracker", 4, function()
         local height = headerHeight + 12 + used * ROW_HEIGHT
         if not T.NearlyEqual(frame:GetHeight(), height) then frame:SetHeight(height) end
     end
-    toggle:SetScript("OnClick", function()
-        if editing or not inWorld then return end
-        expanded = not expanded
-        HideTooltip(toggle)
-        Refresh()
-    end)
-    toggle:SetScript("OnEnter", function()
-        if editing or not GameTooltip then return end
-        GameTooltip:SetOwner(toggle, "ANCHOR_LEFT")
-        GameTooltip:SetText(DFRL.locale.Text(expanded and "Show living guardians only" or "Show all lairs"))
-        GameTooltip:Show()
-    end)
-    toggle:SetScript("OnLeave", function() HideTooltip(toggle) end)
     DFRL.layout.Register("guardianTracker", frame, function()
         -- Match the health pill's right edge to the default minimap right edge.
         local right = minimapDefaults.right / DEFAULT_SCALE + ROW_INSET - HEALTH_RIGHT_OFFSET
@@ -328,20 +301,7 @@ DFRL:NewMod("GuardianTracker", 4, function()
     end, {
         labelAbove = true,
         refreshDefault = true,
-        onEdit = function(active)
-            editing = active
-            HideTooltip(toggle)
-            toggle:EnableMouse(not active)
-            if active then
-                toggle:Disable()
-            else
-                toggle:Enable()
-            end
-        end,
-        onReset = function()
-            expanded = true
-            Refresh()
-        end,
+        onReset = Refresh,
     })
     DFRL.locale.Listen(function()
         presentation.healthText, presentation.healthMeasured = nil, nil
@@ -364,11 +324,13 @@ DFRL:NewMod("GuardianTracker", 4, function()
     end
     DFRL.display.Listen(function()
         local selected = DFRL.display.Get("guardianWidth")
-        if selected == requestedWidth then return end
-        requestedWidth, age = selected, 0.1
+        local selectedShowDead = DFRL.display.Get("guardianShowDead")
+        local widthChanged = selected ~= requestedWidth
+        if not widthChanged and selectedShowDead == showDead then return end
+        requestedWidth, showDead, age = selected, selectedShowDead, 0.1
         -- Root geometry belongs to editing even when the presentation is hidden.
         -- Caption measurement and row/header drawing keep their deferred lifecycle.
-        ApplyWidth()
+        if widthChanged then ApplyWidth() end
     end)
     controller:SetScript("OnEvent", function()
         inWorld = event == "PLAYER_ENTERING_WORLD"

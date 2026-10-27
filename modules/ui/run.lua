@@ -839,6 +839,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 key = "guardians",
                 label = "Guardian tracker",
                 options = {
+                    { "guardianShowDead", "Show dead", "Show defeated guardians and their respawn timers." },
                     {
                         "guardianWidth",
                         "Tracker width",

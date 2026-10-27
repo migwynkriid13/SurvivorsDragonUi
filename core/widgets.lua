@@ -1,26 +1,12 @@
 setfenv(1, DFRL:GetEnv())
 
-function DFRL.tools.StyleMinimapZoomButton(button, name, alignGlyph)
+function DFRL.tools.StyleMinimapZoomButton(button, name)
     local path = DFRL:GetInfoOrCons("tex") .. "minimap\\" .. name
     button:SetAlpha(1)
     button:SetNormalTexture(path .. ".blp")
     button:SetDisabledTexture(path .. "-disabled.blp")
     button:SetHighlightTexture(path .. "-over.blp")
     button:SetPushedTexture(path .. "-push.blp")
-    if not alignGlyph then return end
-    -- The normal plus glyph is two pixels left of the other 32px artwork states.
-    local normalOffset = name == "ZoomIn32" and button:GetWidth() * 2 / 32 or 0
-    for index, texture in ipairs({
-        button:GetNormalTexture(),
-        button:GetPushedTexture(),
-        button:GetHighlightTexture(),
-        button:GetDisabledTexture(),
-    }) do
-        local x = index == 1 and normalOffset or 0
-        texture:ClearAllPoints()
-        texture:SetPoint("TOPLEFT", button, "TOPLEFT", x, 0)
-        texture:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", x, 0)
-    end
 end
 
 function DFRL.tools.CreateDefeatedMarkerCheck(marker, size)

@@ -160,9 +160,10 @@ rows optimistically use the same caption and green color. The tracker
 uses shared boss-bar current / maximum health formatting instead of a Fighting
 caption or percentage; the unused earlier status captions were removed.
 
-The guardian header toggle adds localized **Show living guardians only** and
-**Show all lairs** tooltips in all fourteen UI catalogs. Its collapsed plus
-view contains living guardians; its expanded minus view contains all lairs; native names remain unchanged.
+The guardian settings page adds **Show dead** and its hint in all fourteen
+source/runtime UI catalogs. It defaults on and replaces the header button's
+session-only filter. The unused **Show living guardians only** and **Show all
+lairs** captions are removed. Native row names and status captions are unchanged.
 
 The action-bar **Show gryphons** caption and its winged-ornament hint have
 source TSV entries and runtime UI entries in all fourteen languages. Only

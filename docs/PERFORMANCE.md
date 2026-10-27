@@ -269,6 +269,23 @@ measurement. Cached text/value formatting and the native one-Hz rate samples
 remain intact. These are source-level observations; pinned local formatting
 does not establish runtime appearance, input behavior, FPS or GPU results.
 
+## Guardian Show dead control — 2026-10-27
+
+The tracker's minus/plus header button, four native state-texture slots, tooltip
+handlers and optional glyph-alignment branch are removed. The existing minimap
+zoom controls retain their artwork and styling. A standard shared-editor checkbox
+owns the default-on `guardianShowDead` display choice, with normal preview,
+Confirm/Cancel/discard, profiles and reset handling. The title reclaims the old
+button space without another frame, texture or font.
+
+Changes coalesce into the existing visible tenth-second view refresh. Off
+compacts only the presented rows to native `asleep` / `awake` entries and clears
+retired health fills. Hidden views skip the refresh and retain a pending current
+choice for showing again. The complete accepted roster, health joins, native
+countdowns and independent guidance retain their existing ownership. No new
+updater, game event, asset or SavedVariable is added. These are source-level
+drawing/lifecycle observations, without measured FPS or in-game input proof.
+
 ## Source-icon language coverage — 2026-10-27
 
 The shared SCT/meter icon resolver now receives generated exact-name aliases
