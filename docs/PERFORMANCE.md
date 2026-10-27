@@ -265,6 +265,12 @@ The extra pieces preserve portrait/cap proportions during horizontal extension a
 
 Source/diff inspection and pinned formatting cover the geometry and shared save/discard paths. This is an explicit source-level drawing-cost increase for independent width, not measured FPS, GPU cost or pixel parity. No local tests, standalone validation or addon/game execution were run; packaged-client appearance and input remain unverified.
 
+## Combat-text editor availability — 2026-10-27
+
+The Combat text mode selector and status description stay outside one passive settings parent. When effective SCT mode is Off or Game settings, that parent uses the existing 0.45 alpha and every control below it disables mouse input: incoming/self text, damage icons, size buttons, class colors and all filter checkboxes. Headings, separators, labels and values inherit the same dimming. Custom restores the parent to full alpha and reenables its controls. All existing preference values are preserved, including the native incoming/self choice; availability itself writes no gameplay/native setting.
+
+The shared editor availability helper now serves this group and the existing replacement-display dependents. It skips alpha/input writes when enabled state is unchanged. The existing SCT settings listener supplies the effective draft mode, including preview, profile loads, external mode changes, Confirm and discard. The lazy settings dialog adds one passive frame, zero texture regions, no animation, updater, game event, asset or SavedVariable. Source/diff inspection and pinned formatting only; local tests, standalone validation and addon/game execution were not run. Runtime appearance and interaction remain unverified.
+
 ## Guardian Show dead control — 2026-10-27
 
 The tracker's minus/plus header button, four native state-texture slots, tooltip

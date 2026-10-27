@@ -88,7 +88,7 @@ Move the **Tooltip** handle to place regular hover cards. Its Layout controls al
 
 ### Combat text and run display
 
-Under **Combat text**, choose custom damage numbers, turn them off, or use **Game settings**. For the game's damage numbers, choose **Game settings**, then enable **Show Target Damage** in the game options.
+Under **Combat text**, choose custom damage numbers, turn them off, or use **Game settings**. For the game's damage numbers, choose **Game settings**, then enable **Show Target Damage** in the game options. All settings below the mode selector are dimmed and inactive unless **Custom** is selected; their values are kept.
 
 The DPS meter is off by default. Turn on **Enable damage meter** under **Damage meter** and Confirm to show the game's damage totals and average DPS by source. Click its heading to switch between Damage Done, Healing Done and Boss Damage; scroll for more sources. Choose 1 to 10 abilities and which numbers, icons, ranks and header values to show. Move, scale or hide **DPS meter** under **Layout**. Details does not need to be installed.
 

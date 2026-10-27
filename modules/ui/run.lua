@@ -436,6 +436,16 @@ DFRL:NewMod("RunTimers", 5, function()
     local incomingControl, sctDescription
     local sctSizeLabel
 
+    local function SetSettingsEnabled(group, enabled)
+        if not group or group.enabled == enabled then return end
+        group.enabled = enabled
+        if group.frame then group.frame:SetAlpha(enabled and 1 or 0.45) end
+        for _, control in ipairs(group.controls) do
+            control:EnableMouse(enabled)
+            if not group.frame then control:SetAlpha(enabled and 1 or 0.45) end
+        end
+    end
+
     local function UpdateSctLabels()
         if not incomingControl or not DFRL.sct then return end
         local mode = DFRL.sct.GetMode()
@@ -450,6 +460,7 @@ DFRL:NewMod("RunTimers", 5, function()
             sctDescription:SetText("Native outgoing text follows Show Target Damage.")
         end
         incomingControl:SetChecked(DFRL.sct.GetIncoming())
+        SetSettingsEnabled(fontEditor and fontEditor.combatSettings, mode == "on")
     end
 
     local function UpdateDisplayLabels()
@@ -480,14 +491,7 @@ DFRL:NewMod("RunTimers", 5, function()
         end
         for key, group in pairs(dependentSettings) do
             local enabled = DFRL.display.Get(key)
-            if group.enabled ~= enabled then
-                group.enabled = enabled
-                if group.frame then group.frame:SetAlpha(enabled and 1 or 0.45) end
-                for _, control in ipairs(group.controls) do
-                    control:EnableMouse(enabled)
-                    if not group.frame then control:SetAlpha(enabled and 1 or 0.45) end
-                end
-            end
+            SetSettingsEnabled(group, enabled)
             if not enabled and key == "customRunTimer" and fontMenu and fontMenu:IsShown() then fontMenu:Hide() end
         end
     end
@@ -1322,6 +1326,13 @@ DFRL:NewMod("RunTimers", 5, function()
         sctDescription:SetJustifyH("LEFT")
         sctDescription:SetJustifyV("TOP")
         sctDescription:SetTextColor(0.75, 0.73, 0.67)
+        local combatPage = combat
+        combat = CreateFrame("Frame", nil, combatPage)
+        combat:SetAllPoints(combatPage)
+        combat:EnableMouse(false)
+        local combatSettings = { frame = combat, controls = {} }
+        fontEditor.combatSettings = combatSettings
+        combat.editorSettingsGroup = combatSettings
         divider = T.EditorDivider(combat, contentWidth)
         divider:SetPoint("TOPLEFT", combat, "TOPLEFT", 0, -104)
         local combatToggleWidth = (contentWidth - gap) / 2
@@ -1334,6 +1345,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 if DFRL.sct then DFRL.sct.SetIncoming(value) end
             end
         )
+        table.insert(combatSettings.controls, incomingControl)
         incomingControl:SetPoint("TOPLEFT", combat, "TOPLEFT", 0, -112)
         local iconControl = DisplayToggle(
             combat,
