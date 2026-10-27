@@ -26,7 +26,8 @@ DFRL:NewMod("Minimap Buttons", 3, function()
             return
         end
         local scale = mapScale / buttonScale
-        local halfWidth, halfHeight = (width / 2 + edge) * scale, (height / 2 + edge) * scale
+        local allowance = button == launcher and 0 or edge
+        local halfWidth, halfHeight = (width / 2 + allowance) * scale, (height / 2 + allowance) * scale
         local divisor = math.max(math.abs(x) / halfWidth, math.abs(y) / halfHeight)
         return x / divisor, y / divisor
     end

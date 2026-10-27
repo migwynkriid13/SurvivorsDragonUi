@@ -7,7 +7,8 @@ color. Hover changes only that texture's alpha; there is no separate glow region
 or animation. The translated **Layout** caption and `/sdui` command identify the
 action in its tooltip.
 
-The launcher starts at the bottom-left corner and can be dragged around the square
+The launcher's center starts exactly on the minimap's bottom-left corner, where
+the two edges meet, with no outward offset. It can be dragged around the square
 edge. Its edge position is session-only. The minimap's existing Layout group owns
 its movement, scale and hiding; the launcher adds no saved state or Layout group.
 Clicking uses `layout.BeginEdit`, preserving the same preview, Confirm, Cancel,
@@ -28,8 +29,9 @@ button's click, tooltip, drag handlers, visibility and saved angle owner. Surviv
 Bugs itself is not edited.
 
 The shared projection intersects the requested direction with a rectangle whose
-half-width and half-height are the live map dimensions divided by two, plus an
-eight-unit border allowance. Convert those bounds from map scale to the button's
+half-width and half-height are the live map dimensions divided by two. External
+buttons retain an eight-unit border allowance; our glyph uses zero allowance so
+its center lies on the map's actual edges. Convert those bounds from map scale to the button's
 effective scale. Dividing both coordinates by the larger normalized distance
 places the center on a straight side, including the square corners. Apply the
 same helper to our launcher, old circular buttons and already square-aware ones.
