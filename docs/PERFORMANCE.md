@@ -41,6 +41,33 @@ leave hundreds of expensive texture regions drawing continuously.
   GPU-memory, pixel-parity or FPS measurements. No local tests, standalone
   validation, addon execution or game launch is authorized for this audit.
 
+## Player absorbs — 2026-10-27
+
+The player absorb segment shares the existing ten-Hz player-resource controller
+and its deferred `AZSRUN` reads. One phase/publication gate supplies both
+absorbs and the optional secondary resource; shield display stays independent
+of **Class resources**. Phase/zone/world retirement blocks the retired
+table/stamp/receipt tuple. Hidden frames retain only phase retirement, clear
+their absorb fractions on Hide and perform no shield reads or presentation.
+
+The first valid positive shield lazily allocates one mouse-transparent frame
+and one texture region, reusing `LargeHealthFill` with full UVs. Successful
+texture binding is cached; failed assignments remain retryable through the
+same reader. Anchors and width change only when their effective geometry
+changes; dual vertical anchors follow the resource row's health-height change
+without a new updater. Health-size callbacks reflow retained fractions only
+while visible. Zero, invalid or retired data hides the region once.
+
+There is at most one extra visible region and one additional tinted alpha
+pass over the existing health opening. The segment can overlap the health
+fill at full health or when the shield would exceed its right edge; it is
+clamped to one bar and stays beneath the border and labels. No new texture
+file, material image, animation, event subscription, gameplay history or saved
+state is introduced. These are source-level costs, not measured draw calls,
+GPU memory, pixel parity or FPS results. Only local formatting and source/diff
+review were performed; addon/game execution remains unverified. See
+[player absorbs](UNIT-PORTRAITS.md#player-absorbs) for the data and geometry.
+
 ## Lossless palette packing — 2026-10-27
 
 Forty-eight prepared BLPs now use exact indexed RGB plus separate alpha instead
@@ -370,6 +397,36 @@ No asset, setting, SavedVariable, gameplay clock or updater is added, and the
 These changes were reviewed from source and formatted locally; appearance,
 failure recovery and performance remain unverified in the running client.
 
+## Boss and guardian nameplate filter — 2026-10-27
+
+The default-off `nameplatesBossGuardiansOnly` option adds no gameplay frame,
+texture, material or updater. It uses the current SCT controller's OnUpdate and
+existing message subscription. While enabled, phase/receipt retirement and the
+official unit-list index refresh run at five Hz. A matching source reference,
+timestamp and receipt generation skip index rebuilding. Accepted changes reuse
+exact-name/max-health buckets, with at most the native 40 entries; retired names
+are removed. Off clears the index and skips its native metadata reads.
+
+Shown hostile plates add a cached-index lookup using their native name and, only
+for candidate names, raw health range. This stays in the existing native
+show/health hooks and per-frame plate scan so reuse cannot carry stale styling.
+Native-hidden plates return before filter/style work. Filtered plates reuse the
+existing transition-only recursive draw-layer and hit-rectangle masking; their
+complete custom visual child stays hidden and skips skin updates. SCT's native
+position/health sampling and full combat-text animations continue unchanged.
+No per-frame table, string formatting, texture bind or new artwork is introduced
+by the filter. Existing pooled skins remain allocated; excluded skins contribute
+no visible custom regions. This does not remove native plate collision work.
+
+The existing lazy settings dialog adds one category button (12 texture regions
+and one caption) and one checkbox row (four texture regions and two captions).
+These reuse the editor artwork and draw only with their shown editor parents;
+no new material or per-plate region is added. The maximum added allocation is
+16 texture regions and three FontStrings after opening the editor. Source
+counts are not measured draw calls, FPS, GPU memory or visual parity. The
+anonymous-plate identity limit and snapshot policy are documented in
+[API-NOTES.md](API-NOTES.md#boss-and-guardian-nameplate-filter--2026-10-27).
+
 ## What changes
 
 - Text and DEFAULT font helpers compare current widget values before writing.
@@ -590,9 +647,18 @@ retains more text. See [CLEANERCHAT-PORT.md](CLEANERCHAT-PORT.md).
 ## Verification limits
 
 Checks run only in GitHub Actions: version gating, formatting, Lua static
-analysis, fractional timer-artwork sampling, a native-base batching reference
-model and runtime-manifest validation. The extra checks read TGA pixels and model
-ordering only; they do not execute addon Lua or client code.
+analysis, package/asset ownership and duplicate inventories, checker regression
+fixtures, fractional timer-artwork sampling and the jewelry reference models.
+The payload report compares file counts, bytes and deterministic in-memory ZIP
+sizes. The source and artwork checks do not execute addon Lua or client code.
+The separately authorized mocked UI step loads selected production Lua in CI
+to assert cooldown/range write budgets, hidden work, loot pool reuse/expiry and
+failure cleanup with native-HUD restoration. It observes mock calls and objects,
+not the client's renderer. Configuration/registration source contracts report
+orphan candidates and reject newly orphaned settings/captions and concrete schema,
+shared-API or callback mistakes. No local test or game execution is authorized.
+See [PR checks](PR-CHECKS.md) for enforced failures, dynamic-ownership evidence,
+preparation-input retention and the limits of exported-helper candidates.
 Pinned StyLua and Prettier formatting is allowed locally. No local tests,
 syntax checks, addon execution or game launches are part of this work.
 PR checks do not build an addon ZIP. Current local implementation is edited

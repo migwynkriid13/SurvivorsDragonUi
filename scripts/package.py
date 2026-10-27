@@ -24,10 +24,16 @@ def runtime_files():
         raise ValueError("Runtime manifest files must be a list of paths")
     if len(files) != len(set(files)):
         raise ValueError("Duplicate file in runtime manifest")
+    portable_paths = {}
     for name in files:
         path = Path(name)
-        if path.is_absolute() or ".." in path.parts or path.as_posix() != name:
+        if path.is_absolute() or ".." in path.parts or path.as_posix() != name or "\\" in name or ":" in name:
             raise ValueError("Invalid runtime manifest path: " + name)
+        for prefix in (path, *path.parents):
+            label = prefix.as_posix()
+            previous = portable_paths.setdefault(label.casefold(), label)
+            if previous != label:
+                raise ValueError("Case-colliding runtime paths: " + previous + " and " + label)
         source_file = SOURCE / path
         if source_file.resolve(strict=True) != source_file:
             raise ValueError("Runtime manifest paths must not contain symlinks: " + name)

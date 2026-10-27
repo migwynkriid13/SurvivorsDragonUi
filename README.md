@@ -22,7 +22,7 @@ Real screenshots from different moments in a run, arranged into one overview. [O
 - **Guardian tracking:** living guardians, respawn timers and health bars during fights. Use the tracker's plus/minus button to switch between living guardians and all lairs.
 - **Cache and guardian guides:** distance, direction arrows and map markers to help you find them.
 - **Level Up and summons:** a button for your stored levels, plus names, icons and durations for up to eight active summons. Extra summons appear as a count.
-- **Combat text, meters and loot:** compact nameplates, optional custom damage numbers, a DPS meter with The War Within artwork, and retail-style loot popups. Already-collected drops are hidden from both popups and chat.
+- **Combat text, meters and loot:** compact nameplates with an optional bosses-and-guardians filter in `/sdui` → **Nameplates**, custom damage numbers, a DPS meter with The War Within artwork, and retail-style loot popups. Already-collected drops are hidden from both popups and chat.
 - **Chat:** a transparent window, shorter game messages and mouse-wheel history.
 - **Layout editor:** move, resize or hide HUD groups, adjust tooltips and save named profiles. Supports all 14 game languages, including Czech.
 

@@ -279,6 +279,45 @@ V-off masking also hides the entire custom visual child explicitly, including it
 
 No tests, syntax checks, validation, addon execution or game startups were run; visual appearance and SCT coexistence remain unverified in the packaged game.
 
+## Boss and guardian nameplate filter — 2026-10-27
+
+`/sdui` → **Nameplates** has **Only bosses and guardians**, off by default.
+The normalized `nameplatesBossGuardiansOnly` boolean uses the existing display
+table, live preview, Confirm-only saving, Cancel/world/logout/reload discard,
+profiles and both full resets. It works in every SCT mode and independently of
+boss bars and guardian guidance. V still controls requested enemy-plate visibility;
+friendly plates keep their native Shift-V behavior.
+
+The existing SCT controller reads phase first and accepts only received
+`AZS_UNITS` publications. It keeps an unsaved index of exact native names and
+maximum health for `final`, `boss` and `guardian` entries, including sleeping
+guardians. Published ordinary `elite` entries with the same name and maximum
+health make that signature ambiguous and hide it. The complete list is validated
+before replacing the index; failed or unavailable data hides hostile plates until
+usable data arrives or the option is turned off. Zone/world boundaries, terminal
+phases and observed native-clock rollback retire prior publications; receipts are
+read only on the existing deferred OnUpdate, at five Hz. Unchanged publications
+reuse the index, and disabling skips these phase/table reads and clears it.
+
+This is a display filter with an identity limit. Anonymous plates expose their
+name and raw health range, but no supported spawn-ID binding; the reference
+[native plate implementation](https://github.com/samwhosung/benilla/blob/main/crates/benilla-ui/src/script/nameplate.rs)
+keeps its key inside the engine. An ordinary enemy absent from the published
+special-enemy list can still match a boss/guardian with the identical name and
+maximum health. Known ambiguous signatures are hidden, which can also hide a
+guardian. Percentage-only or otherwise unmatched bars stay hidden. No fuzzy
+names, guessed unit tokens, health estimates or persistent identity registry are
+used; source compatibility does not prove the packaged client's rendering.
+
+Excluded hostile plates reuse the existing recursive draw-layer/hit-rectangle
+mask and hide the complete custom visual child. Native plate shown state, alpha,
+mouse-enabled flag, data and coordinates remain native. Custom SCT still samples
+ordinary enemies and retains every hit's original matching and animation.
+Unmasking restores captured draw layers and click bounds. No asset, event,
+updater, SavedVariable or client change is added. Verification was source/diff
+review and pinned formatting only; local tests, standalone validation and
+addon/game execution were not run.
+
 ## First-allocation nameplate flash — 2026-10-15
 
 The user reported a brief stock-nameplate flash on spawning mobs, both before the custom nameplate style and with V off. The current public client source has a matching first-allocation timing gap: [Lua ticking runs in UiInput and painting follows VPlateSet](https://github.com/samwhosung/benilla/blob/358731f95a7eab43861e250280856ecf5d90741d/crates/benilla-app/src/ui_script/mod.rs#L373-L392), while [native plate generation runs after UiInput](https://github.com/samwhosung/benilla/blob/358731f95a7eab43861e250280856ecf5d90741d/crates/benilla-app/src/vplates.rs#L650-L658). A brand-new plate can therefore be drawn before the addon's next OnUpdate discovers, skins and masks it. This source ordering matches the report; it does not establish the exact packaged client's runtime behavior.

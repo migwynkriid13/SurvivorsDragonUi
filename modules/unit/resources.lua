@@ -105,6 +105,8 @@ DFRL:NewMod("Class resources", 2, function()
     meter:Hide()
 
     local inWorld, retiredRun = true, nil
+    local retiredStamp, retiredReceived
+    local runReceived = 0
     local displayedStyle, displayedValue, displayedMaximum, bindingPending
     local function IsNumber(value) return type(value) == "number" and value >= 0 and value - value == 0 end
     local function ReadPrimary()
@@ -116,17 +118,24 @@ DFRL:NewMod("Class resources", 2, function()
         return value, maximum, power
     end
 
-    local function ReadSecondary(paint)
+    local function RetireRun()
+        retiredRun, retiredStamp, retiredReceived = _G.AZS_RUN, _G.AZS_RUN_UPDATED, runReceived
+    end
+    local function ReadRun(paint)
         if type(_G.AZS_GetPhase) ~= "function" or not DFRL.navigation then return end
         local ok, phase = pcall(_G.AZS_GetPhase)
-        if not ok then return end
-        if not DFRL.navigation.IsRunPhase(phase) then
-            retiredRun = _G.AZS_RUN
+        if not ok or not DFRL.navigation.IsRunPhase(phase) then
+            RetireRun()
             return
         end
         if not paint then return end
-        local state = _G.AZS_RUN
-        if type(state) ~= "table" or state == retiredRun or not IsNumber(_G.AZS_RUN_UPDATED) then return end
+        local state, stamp = _G.AZS_RUN, _G.AZS_RUN_UPDATED
+        if type(state) ~= "table" or not IsNumber(stamp) then return end
+        if state == retiredRun and stamp == retiredStamp and runReceived == retiredReceived then return end
+        return state
+    end
+    local function ReadSecondary(state)
+        if not state then return end
         -- The native proc identifies the meter and publishes its own range.
         -- Empty, unknown or missing fields never fall back to active power.
         local style = procs[state.proc]
@@ -165,15 +174,23 @@ DFRL:NewMod("Class resources", 2, function()
 
     local function Update()
         -- Phase retirement remains live while the player's presentation is hidden.
-        local style, current, total
-        if inWorld then
-            style, current, total = ReadSecondary(PlayerFrame:IsVisible() and DFRL.display.Get("classResources"))
-        end
+        local state
+        if inWorld then state = ReadRun(PlayerFrame:IsVisible()) end
         if not PlayerFrame:IsVisible() then return end
-        local enabled = inWorld and UnitExists("player") and DFRL.display.Get("classResources")
+        local exists = inWorld and UnitExists("player")
+        if DFRL.playerResources then
+            if exists and state then
+                DFRL.playerResources.SetAbsorb(state.sh, state.hp, state.hpm)
+            else
+                DFRL.playerResources.SetAbsorb()
+            end
+        end
+        local enabled = exists and DFRL.display.Get("classResources")
+        local style, current, total
         local value, maximum, power
         if enabled then
             value, maximum, power = ReadPrimary()
+            style, current, total = ReadSecondary(state)
         end
         if DFRL.playerResources then DFRL.playerResources.SetPrimary(value, maximum, power) end
         if not enabled or not style then
@@ -269,12 +286,22 @@ DFRL:NewMod("Class resources", 2, function()
         elseif event == "PLAYER_LEAVING_WORLD" or event == "PLAYER_LOGOUT" then
             inWorld = false
             controller:SetScript("OnUpdate", nil)
-            retiredRun = _G.AZS_RUN
-            if DFRL.playerResources then DFRL.playerResources.SetPrimary() end
+            RetireRun()
+            if DFRL.playerResources then
+                DFRL.playerResources.SetAbsorb()
+                DFRL.playerResources.SetPrimary()
+            end
             Clear()
         elseif event == "CHAT_MSG_ADDON" then
             -- Read after the native parser has replaced the run snapshot.
-            if arg1 == "AZSRUN" then elapsed = 0.1 end
+            if arg1 == "AZSRUN" then
+                runReceived = runReceived + 1
+                elapsed = 0.1
+            elseif arg1 == "AZSZONE" then
+                RetireRun()
+                if DFRL.playerResources then DFRL.playerResources.SetAbsorb() end
+                elapsed = 0.1
+            end
         elseif arg1 == "player" then
             Update()
         end

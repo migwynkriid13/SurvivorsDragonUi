@@ -5,6 +5,31 @@ target and target-of-target to closed health bars without their portrait
 pictures or gold rings. Names, levels and health values keep their native
 updates. The separately selected class resources remain available.
 
+## Player absorbs
+
+The player health bar shows active absorbs automatically as a pale-blue
+segment. There is no separate setting, and **Class resources** can stay off.
+The segment starts after current health when there is room. When health plus
+the shield exceeds maximum health, it moves left inside the bar so the shield
+is still visible at full health. Its width represents shield / maximum health,
+capped at one full bar. Existing health labels continue to show health only.
+
+The shared player-resource reader uses the official `AZS_RUN.sh`, `hp` and
+`hpm` fields after checking `AZS_GetPhase()` and a published `AZS_RUN_UPDATED`.
+It never derives absorbs from buffs, spell descriptions or combat text. Zero,
+missing or invalid shield/health data clears the segment. Inactive phases,
+new zones and world cleanup retire the previous run publication; the same
+table/stamp/receipt tuple stays blocked until native data changes. Hidden
+player frames clear the segment and defer presentation until visible again.
+Run packets request a deferred read through the existing resource controller.
+
+The segment inherits the actual health rectangle, including width handles,
+portrait modes and the optional resource row's height. It lazily reuses the
+prepared health-fill image below the gold border and health text, leaving
+native StatusBar UVs, values and clicks unchanged. No setting, artwork,
+SavedVariable, event subscription or updater is added. Appearance and live
+shield changes remain unverified in-game.
+
 ## Names, levels and editor layout
 
 **Show player name**, **Show player level**, **Show target name** and

@@ -153,6 +153,7 @@ DFRL:NewMod("Target", 1, function()
     local function UpdateTarget(forceBorder)
         if not TargetFrame:IsVisible() then return end
         ResizeHealth()
+        if DFRL.targetHealth then DFRL.targetHealth.Refresh() end
         healthLabels.Update()
         if not UnitExists("target") then return end
         TargetFrameHealthBar:SetStatusBarColor(1, 0, 0)
@@ -160,6 +161,7 @@ DFRL:NewMod("Target", 1, function()
     end
 
     HookScript(TargetFrameHealthBar, "OnValueChanged", function() UpdateTarget() end)
+    if DFRL.targetHealth then DFRL.targetHealth.Listen(function() UpdateTarget() end) end
     HookScript(TargetFrame, "OnShow", function() UpdateTarget(true) end)
     local frame = CreateFrame("Frame")
     frame:RegisterEvent("PLAYER_TARGET_CHANGED")

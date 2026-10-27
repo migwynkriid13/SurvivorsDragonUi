@@ -16,6 +16,7 @@
 - Commit and push requested changes after local formatting. Do not wait for or poll GitHub Actions jobs or tests before finishing.
 - Use `SurvivorsDragonUi` for the installed folder, TOC basename, load-event name and shared asset root. Install runtime files without rewriting this identity.
 - This supersedes the older instructions below that prohibit local formatting or require waiting for GitHub Actions. Local tests, standalone syntax/validation checks and addon/game execution remain unauthorized.
+- The user authorized CI-only mocked UI lifecycle tests and source contract checks. The separate UI test step may load selected production Lua against explicit fake native boundaries to check unchanged/hidden work, pooling and cleanup, without launching the game or reading client files. This supersedes the older CI addon-execution ban only for these mocked tests. Keep local tests and addon/game execution unauthorized, add no runtime test hook or shipped fixture, and retain the existing required job name. Use `docs/PR-CHECKS.md` for scope and evidence limits; newly orphaned settings/captions fail against the PR merge base, while pre-existing candidates and unresolved dynamic references stay visible for review.
 
 ## Project rules
 

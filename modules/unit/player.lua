@@ -67,6 +67,67 @@ DFRL:NewMod("Player", 1, function()
     DFRL.display.Listen(UpdatePortraitShape)
 
     DFRL.playerResources = DFRL.playerResources or {}
+    local absorbOverlay, absorbTexture, absorbBound
+    local absorbStart, absorbFraction, absorbLeft
+    local function ClearAbsorb()
+        absorbStart, absorbFraction = nil, nil
+        if absorbOverlay and absorbOverlay:IsShown() then absorbOverlay:Hide() end
+    end
+    local function PlaceAbsorb()
+        if not absorbFraction or not PlayerFrameHealthBar:IsVisible() then return end
+        local width = PlayerFrameHealthBar:GetWidth()
+        if width <= 0 then return end
+        if not absorbOverlay then
+            absorbOverlay = CreateFrame("Frame", nil, PlayerFrameHealthBar)
+            absorbOverlay:SetAllPoints(PlayerFrameHealthBar)
+            absorbOverlay:SetFrameLevel(PlayerFrameHealthBar:GetFrameLevel() + 1)
+            absorbOverlay:EnableMouse(false)
+            absorbOverlay:Hide()
+            absorbTexture = absorbOverlay:CreateTexture(nil, "OVERLAY")
+            absorbTexture:SetVertexColor(0.65, 0.85, 1, 0.8)
+        end
+        if not absorbBound then
+            local fill = T.LargeHealthFill
+            local loaded = absorbTexture:SetTexture(fill.texture)
+            local assigned = absorbTexture:GetTexture()
+            local stem = string.gsub(fill.texture, "%.[^%.]*$", "")
+            absorbBound = loaded ~= false
+                and (loaded == true or loaded == 1 or assigned == fill.texture or assigned == stem)
+            if not absorbBound then return end
+            absorbTexture:SetTexCoord(unpack(fill.texCoords))
+        end
+        local left, span = width * absorbStart, width * absorbFraction
+        if not T.NearlyEqual(absorbLeft, left) then
+            absorbTexture:ClearAllPoints()
+            absorbTexture:SetPoint("TOPLEFT", absorbOverlay, "TOPLEFT", left, 0)
+            absorbTexture:SetPoint("BOTTOMLEFT", absorbOverlay, "BOTTOMLEFT", left, 0)
+            absorbLeft = left
+        end
+        if not T.NearlyEqual(absorbTexture:GetWidth(), span) then absorbTexture:SetWidth(span) end
+        if not absorbOverlay:IsShown() then absorbOverlay:Show() end
+    end
+    DFRL.playerResources.SetAbsorb = function(value, health, maximum)
+        if
+            type(value) ~= "number"
+            or value <= 0
+            or value - value ~= 0
+            or type(health) ~= "number"
+            or health <= 0
+            or health - health ~= 0
+            or type(maximum) ~= "number"
+            or maximum <= 0
+            or maximum - maximum ~= 0
+        then
+            ClearAbsorb()
+            return
+        end
+        if not initialized or not PlayerFrame:IsVisible() then return end
+        absorbFraction = math.min(value / maximum, 1)
+        -- Follow current health when space permits; slide back inside the bar
+        -- for overflow so a shield remains visible even at full health.
+        absorbStart = math.min(health / maximum, 1 - absorbFraction)
+        PlaceAbsorb()
+    end
     DFRL.playerResources.SetPrimary = function(value, maximum, powerType)
         if not primaryBar then return end
         if
@@ -282,6 +343,8 @@ DFRL:NewMod("Player", 1, function()
         if PlayerFrameHealthBarText then PlayerFrameHealthBarText:SetAlpha(0) end
         healthLabels =
             T.BindUnitHealthText(PlayerFrameHealthBar, CreateValueText(PlayerFrameHealthBar, 10, 0), "player")
+        HookScript(PlayerFrameHealthBar, "OnSizeChanged", PlaceAbsorb)
+        HookScript(PlayerFrameHealthBar, "OnHide", ClearAbsorb)
         if PlayerFrame.portrait then
             PlayerFrame.portrait:ClearAllPoints()
             -- Keep the still and its derived 3D backing beneath the gold rim.

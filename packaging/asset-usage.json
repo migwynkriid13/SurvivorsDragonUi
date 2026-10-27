@@ -1,0 +1,49 @@
+{
+  "format_version": 1,
+  "dynamic_roots": {
+    "core/editor.lua": "editor",
+    "modules/ui/character.lua": "character",
+    "modules/ui/guardian_tracker.lua": "",
+    "modules/ui/meter.lua": "meter",
+    "modules/ui/revive.lua": "timer",
+    "modules/ui/run.lua": "timer",
+    "modules/unit/mini.lua": "unitframes",
+    "modules/unit/player.lua": "unitframes"
+  },
+  "data_roots": {
+    "core/tally.lua": {
+      "root": "tally",
+      "consumer": "modules/ui/run.lua",
+      "member": "DFRL.tallyStyleById"
+    }
+  },
+  "families": [
+    {
+      "source": "modules/map/map.lua",
+      "call": "DFRL.tools.StyleMinimapZoomButton",
+      "helper": "core/widgets.lua",
+      "definition": "DFRL.tools.StyleMinimapZoomButton",
+      "root": "minimap",
+      "stems": ["ZoomIn32", "ZoomOut32"],
+      "suffixes": [".blp", "-disabled.blp", "-over.blp", "-push.blp"]
+    }
+  ],
+  "source_assets": {
+    "media/tex/timer/WidgetStatusBar.png": {
+      "output": "media/tex/timer/BackgroundFixed.blp",
+      "reason": "Original Blizzard source sheet; provenance and crops are in third_party/WidgetStatusBar-SOURCE.md."
+    },
+    "media/tex/timer/WidgetStatusBar.tga": {
+      "output": "media/tex/timer/BackgroundFixed.blp",
+      "reason": "Lossless authoring copy of the original timer sheet, retained with its original canvas and alpha."
+    },
+    "media/tex/unitframes/healthDF2.tga": {
+      "output": "media/tex/unitframes/healthDF2Fill.blp",
+      "reason": "Source of the exact health-fill crop in scripts/prepare_client_textures.py."
+    },
+    "media/tex/xprep/main.tga": {
+      "output": "media/tex/xprep/main_soft.blp",
+      "reason": "Original XP fill used to prepare main_soft; see third_party/XPBar-ANIMATION.md."
+    }
+  }
+}

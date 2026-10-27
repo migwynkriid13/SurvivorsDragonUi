@@ -830,6 +830,17 @@ DFRL:NewMod("RunTimers", 5, function()
                 },
             },
             {
+                key = "nameplates",
+                label = "Nameplates",
+                options = {
+                    {
+                        "nameplatesBossGuardiansOnly",
+                        "Only bosses and guardians",
+                        "Hide ordinary enemy nameplates. V still shows or hides nameplates.",
+                    },
+                },
+            },
+            {
                 key = "bosses",
                 label = "Boss bars",
                 master = "customBossBars",

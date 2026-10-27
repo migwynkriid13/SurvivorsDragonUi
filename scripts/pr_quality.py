@@ -1,8 +1,8 @@
 """Read-only PR version, formatting and local dead-code checks for GitHub CI.
 
-Every tracked Lua source and owned Markdown/JSON/YAML file is checked on every
-PR push. No Lua file is loaded or executed. Reports and suggested formatting
-patches go to dist/.
+Every tracked Lua source and owned Markdown/JSON/YAML/CI JavaScript file is
+checked on every PR push. No Lua file is loaded or executed. Reports and
+suggested formatting patches go to dist/.
 """
 
 import difflib
@@ -21,14 +21,14 @@ from release_changes import payload_changes
 
 REPORTS = Path("dist/pr-quality")
 MANIFEST = REPORTS / "source-files.json"
-PRETTIER_SUFFIXES = {".json", ".md", ".markdown", ".yaml", ".yml"}
+PRETTIER_SUFFIXES = {".json", ".md", ".markdown", ".yaml", ".yml", ".cjs"}
 # Keep the owner's supplied API reference verbatim and upstream attribution
 # untouched. These exclusions do not omit any addon Lua sources.
 VERBATIM_TEXT = {
     "docs/AzerothSurvivors-Addon-API.md",
     "third_party/WidgetStatusBar-SOURCE.md",
 }
-DEAD_CODE_WARNINGS = ("211", "213", "231", "241", "311", "331", "511", "512")
+DEAD_CODE_WARNINGS = ("211", "213", "231", "241", "311", "314", "321", "331", "341", "511", "512")
 
 
 def git(*arguments):
@@ -61,14 +61,16 @@ def collect():
         summary.write(
             "## PR code quality\n\n"
             f"Checking all {len(files['lua'])} tracked Lua file(s) and "
-            f"{len(files['prettier'])} owned Markdown/JSON/YAML file(s).\n\n"
+            f"{len(files['prettier'])} owned text/CI JavaScript file(s).\n\n"
             "The complete codebase is checked on every PR push, including unchanged "
-            "files. No addon or game code is executed.\n\n"
+            "files. Formatting and static analysis do not execute addon Lua; "
+            "the mocked UI lifecycle step is separate. No game starts.\n\n"
             "Formatting preserves the verbatim API reference "
             "`docs/AzerothSurvivors-Addon-API.md` and upstream attribution "
             "`third_party/WidgetStatusBar-SOURCE.md` without rewriting them.\n\n"
             "Dead-code analysis covers unused locals/loop variables, unused local "
-            "assignments and unreachable or single-iteration loops. It does not prove "
+            "assignments, overwritten table fields, uninitialized locals and "
+            "unreachable or single-iteration loops. It does not prove "
             "that dynamically registered globals, callbacks or assets are unused. "
             "Unused callback arguments and dynamic WoW/DFRL globals are excluded.\n"
         )
@@ -206,9 +208,17 @@ def dead_code(files):
 def summary():
     checks = (
         ("TOC version increment", "VERSION_OUTCOME"),
-        ("Markdown / JSON / YAML formatting", "PRETTIER_OUTCOME"),
+        ("Owned text / JavaScript formatting", "PRETTIER_OUTCOME"),
         ("Lua formatting", "STYLUA_OUTCOME"),
         ("Local Lua dead code", "DEADCODE_OUTCOME"),
+        ("CI checker regression fixtures", "FIXTURES_OUTCOME"),
+        ("Runtime assets and package hygiene", "HYGIENE_OUTCOME"),
+        ("Settings, captions and callback contracts", "CONTRACTS_OUTCOME"),
+        ("Mocked UI write budgets and cleanup", "UILIFECYCLE_OUTCOME"),
+        ("Timer artwork sampling", "TIMER_OUTCOME"),
+        ("Shared asset root", "ASSETROOT_OUTCOME"),
+        ("Jewelry material ordering model", "BATCHING_OUTCOME"),
+        ("Jewelry sampling model", "SAMPLING_OUTCOME"),
     )
     statuses = {
         "success": "Passed",
@@ -226,7 +236,8 @@ def summary():
     sections.append(
         "\nAll configured checks report before the final result is enforced. "
         "A skipped or incomplete check can indicate a setup failure; inspect its "
-        "workflow step. No addon or game code is executed.\n\n"
+        "workflow step. Static checks parse sources; the separate mocked UI step "
+        "runs selected production Lua against fake native boundaries. No game starts.\n\n"
         "Logs and suggested formatting patches are collected below. "
         "Download the `pr-quality` artifact for the full reports if a section "
         "is truncated.\n\n"
@@ -236,12 +247,15 @@ def summary():
         ("prettier.log", "No formatting diagnostics emitted."),
         ("stylua.log", "No formatting diagnostics emitted."),
         ("dead-code.log", "No configured dead-code warnings emitted."),
+        ("fixtures.log", "No checker fixture results emitted."),
+        ("runtime-hygiene.log", "No runtime inventory results emitted."),
+        ("addon-contracts.log", "No addon source contract results emitted."),
+        ("ui-lifecycle.log", "No mocked UI contract results emitted."),
         ("prettier.patch", "No formatting differences."),
         ("stylua.patch", "No formatting differences."),
     )
-    # Six sections at <=120 KiB each plus fixed headings stay below 800 KiB,
-    # leaving ample space below GitHub's 1 MiB per-step summary limit.
-    section_limit = 120 * 1024
+    # Ten bounded sections leave space below the 1 MiB per-step summary limit.
+    section_limit = 80 * 1024
     for name, empty_message in report_files:
         path = REPORTS / name
         content = (

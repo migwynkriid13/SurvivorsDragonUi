@@ -89,6 +89,131 @@ DFRL:NewMod("NameplateCombatText", 6, function()
 
     local function IsFiniteNumber(value) return type(value) == "number" and value - value == 0 end
 
+    local plateFilter = {
+        enabled = DFRL.display.Get("nameplatesBossGuardiansOnly"),
+        names = {},
+        sequence = 0,
+        units = 0,
+        run = 0,
+        barrier = -1,
+        age = 0.2,
+    }
+    function plateFilter.Clear(barrier)
+        for name in pairs(plateFilter.names) do
+            plateFilter.names[name] = nil
+        end
+        plateFilter.source, plateFilter.stamp, plateFilter.accepted = nil, nil, nil
+        if barrier then plateFilter.barrier = barrier end
+    end
+    function plateFilter.Receipt(prefix)
+        if prefix ~= "AZSUNITS" and prefix ~= "AZSZONE" and prefix ~= "AZSRUN" then return end
+        plateFilter.sequence = plateFilter.sequence + 1
+        if prefix == "AZSUNITS" then
+            plateFilter.units = plateFilter.sequence
+        elseif prefix == "AZSRUN" then
+            plateFilter.run = plateFilter.sequence
+        else
+            plateFilter.Clear(plateFilter.sequence)
+            plateFilter.zone = plateFilter.sequence
+            plateFilter.time = nil
+        end
+    end
+    function plateFilter.Update(elapsed)
+        if not plateFilter.enabled then return end
+        plateFilter.age = plateFilter.age + (tonumber(elapsed) or 0)
+        if plateFilter.age < 0.2 then return end
+        plateFilter.age = 0
+        -- Only the existing deferred reader observes packets after native parsing.
+        if plateFilter.zone then
+            if plateFilter.run <= plateFilter.zone then return end
+            plateFilter.zone = nil
+        end
+        local ok, phase
+        if type(_G.AZS_GetPhase) == "function" then
+            ok, phase = pcall(_G.AZS_GetPhase)
+        end
+        if not ok or (phase ~= "playing" and phase ~= "choosing" and phase ~= "paused" and phase ~= "victory") then
+            plateFilter.Clear(plateFilter.sequence)
+            plateFilter.time = nil
+            return
+        end
+        local nativeTime = type(_G.AZS_RUN) == "table" and _G.AZS_RUN.t or nil
+        if IsFiniteNumber(nativeTime) and IsFiniteNumber(_G.AZS_RUN_UPDATED) then
+            if plateFilter.time and nativeTime < plateFilter.time then plateFilter.Clear(plateFilter.run) end
+            plateFilter.time = nativeTime
+        end
+        local entries, stamp = _G.AZS_UNITS, _G.AZS_UNITS_UPDATED
+        if
+            plateFilter.units <= plateFilter.barrier
+            or not IsFiniteNumber(stamp)
+            or stamp < 0
+            or type(entries) ~= "table"
+            or table.getn(entries) > 40
+        then
+            plateFilter.Clear()
+            return
+        end
+        if
+            plateFilter.source == entries
+            and plateFilter.stamp == stamp
+            and plateFilter.accepted == plateFilter.units
+        then
+            return
+        end
+        for _, entry in ipairs(entries) do
+            if
+                type(entry) ~= "table"
+                or (entry.kind ~= "final" and entry.kind ~= "boss" and entry.kind ~= "guardian" and entry.kind ~= "elite")
+                or not IsFiniteNumber(entry.id)
+                or entry.id <= 0
+                or entry.id ~= math.floor(entry.id)
+                or type(entry.name) ~= "string"
+                or entry.name == ""
+                or not IsFiniteNumber(entry.hp)
+                or not IsFiniteNumber(entry.hpm)
+                or entry.hpm <= 0
+                or entry.hp < 0
+                or entry.hp > entry.hpm
+            then
+                plateFilter.Clear()
+                return
+            end
+        end
+        -- Reuse each exact-name bucket while replacing the complete publication.
+        for _, maxima in pairs(plateFilter.names) do
+            for maximum in pairs(maxima) do
+                maxima[maximum] = nil
+            end
+        end
+        for _, entry in ipairs(entries) do
+            if entry.hp > 0 then
+                local maxima = plateFilter.names[entry.name]
+                if not maxima then
+                    maxima = {}
+                    plateFilter.names[entry.name] = maxima
+                end
+                -- A published ordinary elite with the same signature is ambiguous.
+                if maxima[entry.hpm] ~= false then maxima[entry.hpm] = entry.kind ~= "elite" end
+            end
+        end
+        for name, maxima in pairs(plateFilter.names) do
+            if not next(maxima) then plateFilter.names[name] = nil end
+        end
+        plateFilter.source, plateFilter.stamp, plateFilter.accepted = entries, stamp, plateFilter.units
+    end
+    function plateFilter.Matches(data)
+        local name = data.nameRegion and data.nameRegion:GetText()
+        local maxima = name and plateFilter.names[name]
+        if not maxima then return false end
+        local minimum, maximum = data.bar:GetMinMaxValues()
+        -- Anonymous plates expose no spawn ID; never equate percentage bars to HP.
+        return minimum == 0 and maxima[maximum] == true
+    end
+    DFRL.locale.Listen(function()
+        plateFilter.Clear()
+        plateFilter.age = 0.2
+    end)
+
     local function IsEnemyPlate(data)
         if not data.bar or not data.bar.GetStatusBarColor then return false end
         local red, green, blue = data.bar:GetStatusBarColor()
@@ -144,11 +269,12 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         data.presentationMasked = false
     end
     local function UpdatePresentation(plate, data, force)
+        local hiddenByV = CustomEnabled() and not enemyPlatesEnabled
         local masked = trackingSupported
                 and inWorld
-                and CustomEnabled()
-                and not enemyPlatesEnabled
+                and (hiddenByV or plateFilter.enabled)
                 and IsEnemyPlate(data)
+                and (hiddenByV or not plateFilter.Matches(data))
             or false
         if data.presentationMasked == masked and not force then return end
         if not masked then
@@ -323,6 +449,10 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     end
 
     local function RefreshPlate(plate, data, now, forcePresentation, geometry)
+        if not plate:IsShown() then
+            RetirePlate(plate)
+            return
+        end
         UpdatePresentation(plate, data, forcePresentation)
         -- Hidden tracking still samples native data, but its skin has no pixels
         -- to refresh. Unmasking updates the skin in this same callback.
@@ -1024,6 +1154,14 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     end
 
     DFRL.display.Listen(function()
+        local filtered = DFRL.display.Get("nameplatesBossGuardiansOnly")
+        if plateFilter.enabled ~= filtered then
+            plateFilter.enabled = filtered
+            plateFilter.Clear()
+            plateFilter.time = nil
+            plateFilter.age = 0.2
+            ApplyPlateTracking(false)
+        end
         textScale = DFRL.display.Get("sctScale")
         local enabled = DFRL.display.Get("damageIcons")
         local iconsChanged = damageIcons ~= enabled
@@ -1440,6 +1578,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         local eventTime = T.NameplateCombatEventHandlers[event] and GetTime() or nil
         if event == "PLAYER_ENTERING_WORLD" then
             inWorld = true
+            plateFilter.age = 0.2
             iconSourcesDirty.talents, iconSourcesDirty.debuffs = true, true
             iconSourcesDirty.target, iconSourcesDirty.mouseover = true, true
             enemyPlatesEnabled = _G.NAMEPLATES_ON and true or false
@@ -1447,6 +1586,8 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         elseif event == "PLAYER_LEAVING_WORLD" or event == "PLAYER_LOGOUT" then
             sct.FinishEdit(false)
             inWorld = false
+            plateFilter.Clear(plateFilter.sequence)
+            plateFilter.time, plateFilter.zone = nil, nil
             for _, data in pairs(plates) do
                 RestorePresentation(data)
             end
@@ -1466,6 +1607,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         elseif event == "UNIT_AURA" then
             if arg1 == "target" or arg1 == "mouseover" then iconSourcesDirty[arg1] = true end
         elseif event == "CHAT_MSG_ADDON" then
+            plateFilter.Receipt(arg1)
             if arg1 == "AZSDEBUFFS" then
                 iconSourcesDirty.debuffs = true
             elseif arg1 == "AZSZONE" then
@@ -1484,6 +1626,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         -- Observe outgoing CVar changes without writing; the independent
         -- incoming/self global is read only for its editor control.
         SyncGameSettings(false)
+        plateFilter.Update(arg1)
         ScanPlates(false)
         -- Native plate allocation follows this update. The first accepted hit
         -- in the next event batch must inspect that roster, even if GetTime

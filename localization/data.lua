@@ -2,6 +2,9 @@
 DFRL.locale.data = {
     en = {
         ui = {
+            ["Nameplates"] = "Nameplates",
+            ["Only bosses and guardians"] = "Only bosses and guardians",
+            ["Hide ordinary enemy nameplates. V still shows or hides nameplates."] = "Hide ordinary enemy nameplates. V still shows or hides nameplates.",
             ["Reset statistics"] = "Reset statistics",
             ["Clear damage and healing. Start again from zero."] = "Clear damage and healing. Start again from zero.",
             ["DPS window"] = "DPS window",
@@ -589,6 +592,9 @@ DFRL.locale.data = {
     },
     pl = {
         ui = {
+            ["Nameplates"] = "Paski nazw",
+            ["Only bosses and guardians"] = "Tylko bossowie i strażnicy",
+            ["Hide ordinary enemy nameplates. V still shows or hides nameplates."] = "Ukryj paski nazw zwykłych wrogów. V nadal włącza lub wyłącza paski nazw.",
             ["Reset statistics"] = "Wyzeruj statystyki",
             ["Clear damage and healing. Start again from zero."] = "Wyczyść obrażenia i leczenie. Zacznij ponownie od zera.",
             ["DPS window"] = "Okno DPS",
@@ -1647,6 +1653,9 @@ DFRL.locale.data = {
     },
     cs = {
         ui = {
+            ["Nameplates"] = "Ukazatele jmen",
+            ["Only bosses and guardians"] = "Pouze bossové a strážci",
+            ["Hide ordinary enemy nameplates. V still shows or hides nameplates."] = "Skrýt ukazatele běžných nepřátel. V nadále zobrazuje nebo skrývá ukazatele.",
             ["Reset statistics"] = "Vynulovat statistiky",
             ["Clear damage and healing. Start again from zero."] = "Vymazat poškození a léčení. Začít znovu od nuly.",
             ["DPS window"] = "Okno DPS",
@@ -2708,6 +2717,9 @@ DFRL.locale.data = {
     },
     de = {
         ui = {
+            ["Nameplates"] = "Namensplaketten",
+            ["Only bosses and guardians"] = "Nur Bosse und Wächter",
+            ["Hide ordinary enemy nameplates. V still shows or hides nameplates."] = "Namensplaketten gewöhnlicher Gegner ausblenden. V zeigt oder verbirgt weiterhin Namensplaketten.",
             ["Reset statistics"] = "Statistik zurücksetzen",
             ["Clear damage and healing. Start again from zero."] = "Schaden und Heilung löschen. Wieder bei null beginnen.",
             ["DPS window"] = "DPS-Zeitfenster",
@@ -3767,6 +3779,9 @@ DFRL.locale.data = {
     },
     pt = {
         ui = {
+            ["Nameplates"] = "Placas de nome",
+            ["Only bosses and guardians"] = "Apenas chefes e guardiões",
+            ["Hide ordinary enemy nameplates. V still shows or hides nameplates."] = "Ocultar placas de inimigos comuns. V continua mostrando ou ocultando as placas.",
             ["Reset statistics"] = "Redefinir estatísticas",
             ["Clear damage and healing. Start again from zero."] = "Limpar dano e cura. Recomeçar do zero.",
             ["DPS window"] = "Janela de DPS",
@@ -4817,6 +4832,9 @@ DFRL.locale.data = {
     },
     es = {
         ui = {
+            ["Nameplates"] = "Placas de nombre",
+            ["Only bosses and guardians"] = "Solo jefes y guardianes",
+            ["Hide ordinary enemy nameplates. V still shows or hides nameplates."] = "Ocultar placas de enemigos comunes. V sigue mostrando u ocultando las placas.",
             ["Reset statistics"] = "Reiniciar estadísticas",
             ["Clear damage and healing. Start again from zero."] = "Borrar daño y sanación. Empezar de cero.",
             ["DPS window"] = "Ventana de DPS",
@@ -5871,6 +5889,9 @@ DFRL.locale.data = {
     },
     fr = {
         ui = {
+            ["Nameplates"] = "Barres de nom",
+            ["Only bosses and guardians"] = "Boss et gardiens uniquement",
+            ["Hide ordinary enemy nameplates. V still shows or hides nameplates."] = "Masquer les barres des ennemis ordinaires. V affiche ou masque toujours les barres.",
             ["Reset statistics"] = "Réinitialiser les statistiques",
             ["Clear damage and healing. Start again from zero."] = "Effacer les dégâts et les soins. Repartir de zéro.",
             ["DPS window"] = "Fenêtre de DPS",
@@ -6933,6 +6954,9 @@ DFRL.locale.data = {
     },
     ro = {
         ui = {
+            ["Nameplates"] = "Bare de nume",
+            ["Only bosses and guardians"] = "Doar boși și gardieni",
+            ["Hide ordinary enemy nameplates. V still shows or hides nameplates."] = "Ascunde barele inamicilor obișnuiți. V afișează sau ascunde în continuare barele.",
             ["Reset statistics"] = "Resetează statisticile",
             ["Clear damage and healing. Start again from zero."] = "Șterge daunele și vindecarea. Începe din nou de la zero.",
             ["DPS window"] = "Interval DPS",
@@ -7978,6 +8002,9 @@ DFRL.locale.data = {
     },
     tr = {
         ui = {
+            ["Nameplates"] = "İsim plakaları",
+            ["Only bosses and guardians"] = "Yalnızca bosslar ve muhafızlar",
+            ["Hide ordinary enemy nameplates. V still shows or hides nameplates."] = "Sıradan düşmanların isim plakalarını gizle. V, plakaları göstermeye veya gizlemeye devam eder.",
             ["Reset statistics"] = "İstatistikleri sıfırla",
             ["Clear damage and healing. Start again from zero."] = "Hasarı ve iyileştirmeyi temizle. Sıfırdan başla.",
             ["DPS window"] = "DPS aralığı",
@@ -8899,6 +8926,9 @@ DFRL.locale.data = {
     },
     ru = {
         ui = {
+            ["Nameplates"] = "Индикаторы здоровья",
+            ["Only bosses and guardians"] = "Только боссы и стражи",
+            ["Hide ordinary enemy nameplates. V still shows or hides nameplates."] = "Скрыть индикаторы обычных врагов. V по-прежнему показывает или скрывает индикаторы.",
             ["Reset statistics"] = "Сбросить статистику",
             ["Clear damage and healing. Start again from zero."] = "Очистить урон и исцеление. Начать заново с нуля.",
             ["DPS window"] = "Окно УВС",
@@ -10039,6 +10069,9 @@ DFRL.locale.data = {
     },
     uk = {
         ui = {
+            ["Nameplates"] = "Індикатори здоров’я",
+            ["Only bosses and guardians"] = "Лише боси та вартові",
+            ["Hide ordinary enemy nameplates. V still shows or hides nameplates."] = "Приховати індикатори звичайних ворогів. V і далі показує або приховує індикатори.",
             ["Reset statistics"] = "Скинути статистику",
             ["Clear damage and healing. Start again from zero."] = "Очистити шкоду та зцілення. Почати знову з нуля.",
             ["DPS window"] = "Вікно ШЗС",
@@ -11153,6 +11186,9 @@ DFRL.locale.data = {
     },
     zh = {
         ui = {
+            ["Nameplates"] = "姓名板",
+            ["Only bosses and guardians"] = "仅显示首领和守护者",
+            ["Hide ordinary enemy nameplates. V still shows or hides nameplates."] = "隐藏普通敌人的姓名板。V键仍可显示或隐藏姓名板。",
             ["Reset statistics"] = "重置统计",
             ["Clear damage and healing. Start again from zero."] = "清除伤害和治疗统计，从零重新开始。",
             ["DPS window"] = "DPS 窗口",
@@ -12194,6 +12230,9 @@ DFRL.locale.data = {
     },
     ja = {
         ui = {
+            ["Nameplates"] = "ネームプレート",
+            ["Only bosses and guardians"] = "ボスとガーディアンのみ",
+            ["Hide ordinary enemy nameplates. V still shows or hides nameplates."] = "通常の敵のネームプレートを非表示にします。Vキーで引き続き表示を切り替えられます。",
             ["Reset statistics"] = "統計をリセット",
             ["Clear damage and healing. Start again from zero."] = "ダメージと回復の統計を消去し、ゼロから始めます。",
             ["DPS window"] = "DPSの集計期間",
@@ -13267,6 +13306,9 @@ DFRL.locale.data = {
     },
     ko = {
         ui = {
+            ["Nameplates"] = "이름표",
+            ["Only bosses and guardians"] = "우두머리와 수호자만",
+            ["Hide ordinary enemy nameplates. V still shows or hides nameplates."] = "일반 적의 이름표를 숨깁니다. V 키로 이름표를 표시하거나 숨길 수 있습니다.",
             ["Reset statistics"] = "통계 초기화",
             ["Clear damage and healing. Start again from zero."] = "피해와 치유 통계를 지우고 0부터 다시 시작합니다.",
             ["DPS window"] = "DPS 집계 구간",

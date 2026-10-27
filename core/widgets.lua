@@ -43,7 +43,31 @@ function DFRL.tools.StyleEncounterHealth(bar, label)
 end
 
 function DFRL.tools.EncounterHealthText(current, maximum)
-    return tostring(math.floor(current)) .. " / " .. tostring(math.floor(maximum))
+    return T.CompactHealth(current) .. " / " .. T.CompactHealth(maximum)
+end
+
+-- Retail-style decimal tiers; presentation only, never a health calculation.
+function DFRL.tools.CompactHealth(value)
+    local divisor, suffix
+    if value >= 1000000000000 then
+        divisor, suffix = 1000000000000, "T"
+    elseif value >= 1000000000 then
+        divisor, suffix = 1000000000, "B"
+    elseif value >= 1000000 then
+        divisor, suffix = 1000000, "M"
+    elseif value >= 1000 then
+        divisor, suffix = 1000, "K"
+    else
+        return string.format("%.0f", math.floor(value))
+    end
+    local scaled = math.floor(value / (divisor / 10)) / 10
+    return string.format(scaled == math.floor(scaled) and "%.0f" or "%.1f", scaled) .. suffix
+end
+
+function DFRL.tools.GetUnitHealth(unit, currentOnly)
+    if unit == "target" and DFRL.targetHealth then return DFRL.targetHealth.Get() end
+    if currentOnly then return UnitHealth(unit) end
+    return UnitHealth(unit), UnitHealthMax(unit)
 end
 
 -- Preserve the effective class-health choice when native updates recolor a bar.
@@ -77,7 +101,7 @@ function DFRL.tools.BindClassHealthColor(bar, unit)
     return Update
 end
 
--- Unit health labels share display choices without changing native bar values.
+-- Unit health labels and loss fractions share the target's accepted health source.
 function DFRL.tools.BindUnitHealthText(bar, label, unit, hideDead)
     local percentage = label:GetParent():CreateFontString(nil, "OVERLAY")
     local face, size, flags = label:GetFont()
@@ -86,19 +110,31 @@ function DFRL.tools.BindUnitHealthText(bar, label, unit, hideDead)
     local labels = { percentage = percentage }
     local leftInset, rightInset, centerOffset = 0, 0, 0
     local splitLayout
+    local previousCurrent, previousMaximum, previousValueShown, previousPercentShown
+    local valueText, percentText = "", ""
 
     function labels.Update()
         if not bar:IsVisible() then return end
         local current, maximum
+        local valueShown = DFRL.display.Get("showHealthValue")
+        local percentShown = DFRL.display.Get("showHealthPercentage")
         if UnitExists(unit) and not (hideDead and (UnitIsDead(unit) or UnitIsGhost(unit))) then
-            current = UnitHealth(unit)
+            current, maximum = T.GetUnitHealth(unit, not percentShown)
             if type(current) ~= "number" or current < 0 or current - current ~= 0 then current = nil end
-            if current and DFRL.display.Get("showHealthPercentage") then maximum = UnitHealthMax(unit) end
         end
-        local valueText = current and DFRL.display.Get("showHealthValue") and tostring(current) or ""
-        local percentText = ""
-        if current and type(maximum) == "number" and maximum > 0 and maximum - maximum == 0 then
-            percentText = tostring(math.floor(math.min(1, current / maximum) * 100 + 0.5)) .. "%"
+        if
+            current ~= previousCurrent
+            or maximum ~= previousMaximum
+            or valueShown ~= previousValueShown
+            or percentShown ~= previousPercentShown
+        then
+            previousCurrent, previousMaximum = current, maximum
+            previousValueShown, previousPercentShown = valueShown, percentShown
+            valueText = current and valueShown and T.CompactHealth(current) or ""
+            percentText = ""
+            if current and percentShown and type(maximum) == "number" and maximum > 0 and maximum - maximum == 0 then
+                percentText = tostring(math.floor(math.min(1, current / maximum) * 100 + 0.5)) .. "%"
+            end
         end
         local split = valueText ~= "" and percentText ~= ""
         if split ~= splitLayout then
