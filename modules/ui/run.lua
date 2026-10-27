@@ -431,7 +431,14 @@ DFRL:NewMod("RunTimers", 5, function()
             end
         end
         for key, label in pairs(displayNumbers) do
-            T.SetTextIfChanged(label, tostring(DFRL.display.Get(key)))
+            local value = DFRL.display.Get(key)
+            T.SetTextIfChanged(label, tostring(value))
+            local slider = label.editorSlider
+            if slider and not T.NearlyEqual(slider:GetValue(), value) then
+                slider.editorSyncing = true
+                slider:SetValue(value)
+                slider.editorSyncing = nil
+            end
         end
         for key, control in pairs(displayControls) do
             control:SetChecked(DFRL.display.Get(key))
@@ -809,6 +816,16 @@ DFRL:NewMod("RunTimers", 5, function()
                 options = {
                     { "meterEnabled", "Enable damage meter", "Show the custom damage meter. Off by default." },
                     { "meterRows", "Abilities shown", "Show 1 to 10 abilities at a time.", step = 1 },
+                    {
+                        "meterWidth",
+                        "Meter width",
+                        "Change width without scaling rows or icons.",
+                        slider = true,
+                        minimum = 240,
+                        maximum = 960,
+                        step = 1,
+                    },
+                    { "meterFontSize", "Font size", "Change meter text without scaling the frame.", step = 1 },
                     { "meterShowDamage", "Ability damage", "Show each ability's damage or healing total." },
                     { "meterShowDps", "Ability DPS", "Show DPS per ability, or HPS for healing." },
                     { "meterShowPercentage", "Ability percentage", "Show each ability's share of the total." },
@@ -816,6 +833,21 @@ DFRL:NewMod("RunTimers", 5, function()
                     { "meterShowRanks", "Ability ranks", "Show each ability's position in the list." },
                     { "meterShowTotal", "Header total", "Show total damage or healing in the header." },
                     { "meterShowTotalDps", "Header DPS", "Show total DPS or HPS in the header." },
+                },
+            },
+            {
+                key = "guardians",
+                label = "Guardian tracker",
+                options = {
+                    {
+                        "guardianWidth",
+                        "Tracker width",
+                        "Minimum width; status text can make it wider.",
+                        slider = true,
+                        minimum = 240,
+                        maximum = 960,
+                        step = 1,
+                    },
                 },
             },
             {
@@ -1167,6 +1199,61 @@ DFRL:NewMod("RunTimers", 5, function()
             displayNumbers[entry[1]] = value
             return control
         end
+        local function DisplaySlider(parent, entry, width, height)
+            local control = CreateFrame("Frame", nil, parent)
+            control:SetWidth(width)
+            control:SetHeight(height)
+            local label = FontEditorLabel(control, entry[2], 0, -7, 12)
+            label:SetWidth(width - 156)
+            label:SetHeight(16)
+            label:SetJustifyH("LEFT")
+            local description = FontEditorLabel(control, entry[3], 0, -24, 10)
+            description:SetTextColor(0.59, 0.59, 0.56)
+            description:SetWidth(width - 156)
+            description:SetHeight(28)
+            description:SetJustifyH("LEFT")
+            description:SetJustifyV("TOP")
+            local value = FontEditorLabel(control, "", 0, 0, 12)
+            value:ClearAllPoints()
+            value:SetPoint("TOPRIGHT", control, "TOPRIGHT", -44, -5)
+            value:SetWidth(64)
+            value:SetHeight(16)
+            value:SetJustifyH("CENTER")
+            local slider = CreateFrame("Slider", nil, control)
+            slider:SetOrientation("HORIZONTAL")
+            slider:SetWidth(140)
+            slider:SetHeight(18)
+            slider:SetPoint("TOPRIGHT", control, "TOPRIGHT", -6, -29)
+            slider:SetMinMaxValues(entry.minimum, entry.maximum)
+            slider:SetValueStep(entry.step)
+            slider:SetThumbTexture("Interface\\Buttons\\WHITE8X8")
+            local thumb = slider:GetThumbTexture()
+            if thumb then
+                thumb:SetWidth(10)
+                thumb:SetHeight(18)
+                thumb:SetVertexColor(0.82, 0.66, 0.29, 1)
+            end
+            local track = slider:CreateTexture(nil, "BACKGROUND")
+            track:SetTexture("Interface\\Buttons\\WHITE8X8")
+            track:SetVertexColor(0.32, 0.27, 0.16, 1)
+            track:SetPoint("LEFT", slider, "LEFT", 0, 0)
+            track:SetPoint("RIGHT", slider, "RIGHT", 0, 0)
+            track:SetHeight(3)
+            value.editorSlider = slider
+            displayNumbers[entry[1]] = value
+            slider:SetScript("OnValueChanged", function()
+                if slider.editorSyncing then return end
+                local selected = slider:GetValue()
+                local rounded = entry.minimum + math.floor((selected - entry.minimum) / entry.step + 0.5) * entry.step
+                if not T.NearlyEqual(selected, rounded) then
+                    slider.editorSyncing = true
+                    slider:SetValue(rounded)
+                    slider.editorSyncing = nil
+                end
+                DFRL.display.Set(entry[1], rounded)
+            end)
+            return control
+        end
         local function CreateOptionsPage(category)
             local page = pages[category.key]
             local dependents
@@ -1201,7 +1288,9 @@ DFRL:NewMod("RunTimers", 5, function()
                 local x = math.mod(index - 1, columns) * (rowWidth + gap)
                 local y = -math.floor((index - 1) / columns) * rowHeight
                 local control
-                if entry.step then
+                if entry.slider then
+                    control = DisplaySlider(content, entry, rowWidth, rowHeight)
+                elseif entry.step then
                     control = DisplayNumber(content, entry, rowWidth, rowHeight)
                 else
                     control = DisplayToggle(content, entry[1], entry[2], entry[3], y, rowWidth)

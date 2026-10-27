@@ -58,8 +58,24 @@ pill's right offset at the default scale. The pill anchor and default calculatio
 share `HEALTH_RIGHT_OFFSET`; neither follows moved or resized minimap geometry.
 Width changes reapply this default edge only when no confirmed or draft position
 exists; custom positions stay independent.
-The tracker adds no display setting,
-command, alert, sound, SavedVariable or dependency. Its header toggle choice is
+`/sdui` → **Guardian tracker** has a **Tracker width** slider from **240 to 960**.
+It sets a minimum width, leaving room for translated status captions and health
+values when they need more. The default minimum of **286** preserves the original
+automatic sizing. It widens the header and name column without scaling icons,
+fonts, rows or health bezels; the health column and the measured header height
+retain their original sizing. Proportional Layout resizing remains available.
+
+The slider previews live and saves only with Confirm. Cancel, world/logout/reload
+discard, profiles and both full resets use the shared display lifecycle.
+`guardianWidth` is a finite, clamped/rounded integer in the existing display
+table. Missing/invalid values and resets use 286. Its one-unit native slider and
+value label reuse the meter's shared control factory and callback guard. A width
+preview reuses cached caption/health requirements; it never starts a metadata
+scan. Hidden views update required root geometry only, deferring header/row
+painting to the existing controller. No new command, alert, sound, SavedVariable,
+dependency or updater is added.
+
+Its header toggle choice is
 session-only and starts expanded on reload; it survives run/world changes within
 the session. Both shared resets restore expanded. The button is disabled during
 layout editing so it does not interfere with dragging. Collapsing or filtering

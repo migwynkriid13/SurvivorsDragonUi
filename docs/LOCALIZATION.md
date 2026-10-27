@@ -14,6 +14,14 @@ Language is session-only. No setting, command, profile, SavedVariable, client pr
 
 ## Display text
 
+The meter's **Font size**, **Meter width** and the guardian tracker's **Tracker
+width** controls and their hints have source TSV and runtime UI entries in all
+fourteen languages. They reuse shared editor styling, numeric display and
+multilingual width measurement, with native horizontal sliders for both widths.
+The guardian page reuses the existing **Guardian tracker** caption. Only these
+six UI captions were prepared; native text, icon aliases, effects
+and the older full-catalog source fingerprint are unchanged.
+
 The custom run-timer and boss-bar enable captions and their native-display
 hints have source TSV and runtime UI entries in all fourteen languages. Only
 these four caption entries were added; native catalogs, effects and aliases

@@ -2,7 +2,8 @@
 -- media/tex/meter/LICENSE.txt. Pinned source: third_party/DetailsTWW-ARTWORK.md.
 -- The existing gold ring retains third_party/Jewelry-ARTWORK.md's provenance.
 DFRL:NewMod("DamageMeter", 7, function()
-    local WIDTH, HEADER, ROW_HEIGHT, FOOTER = 320, 32, 32, 32
+    local HEADER, ROW_HEIGHT, FOOTER = 32, 32, 32
+    local width, fontSize = DFRL.display.Get("meterWidth"), DFRL.display.Get("meterFontSize")
     local enabled = DFRL.display.Get("meterEnabled")
     local visible = DFRL.display.Get("meterRows")
     local optionKeys = {
@@ -39,7 +40,7 @@ DFRL:NewMod("DamageMeter", 7, function()
     local hovered
     local root = CreateFrame("Frame", "DFRL_DamageMeter", UIParent)
     root:SetScale(0.8)
-    root:SetWidth(WIDTH)
+    root:SetWidth(width)
     root:SetHeight(HEADER + visible * ROW_HEIGHT + FOOTER)
     root:SetFrameStrata("MEDIUM")
     root:EnableMouse(true)
@@ -107,6 +108,13 @@ DFRL:NewMod("DamageMeter", 7, function()
         label:SetShadowColor(0, 0, 0, 1)
         label:SetShadowOffset(1, -1)
         return label
+    end
+    local function SizeLabel(label, size, height)
+        T.SetFont(label, size, "")
+        local _, applied = label:GetFont()
+        if not T.NearlyEqual(applied, size) then return false end
+        if height and not T.NearlyEqual(label:GetHeight(), height) then label:SetHeight(height) end
+        return true
     end
     local function Texture(parent, name, layer)
         local texture = parent:CreateTexture(nil, layer)
@@ -256,15 +264,15 @@ DFRL:NewMod("DamageMeter", 7, function()
     end
     local header = CreateFrame("Button", nil, root)
     header:SetPoint("TOPLEFT", root, "TOPLEFT", 0, 0)
-    header:SetWidth(WIDTH)
+    header:SetWidth(width)
     header:SetHeight(HEADER)
     header:RegisterForClicks("LeftButtonUp", "RightButtonUp")
     local artwork = Texture(header, "Header", "BACKGROUND")
     artwork:SetAllPoints(header)
-    local total = Label(header, 13)
+    local total = Label(header, fontSize + 2)
     total:SetPoint("LEFT", header, "LEFT", 14, 1)
-    total:SetWidth(WIDTH - 52)
-    total:SetHeight(20)
+    total:SetWidth(width - 52)
+    total:SetHeight(fontSize + 9)
     total:SetTextColor(1, 0.82, 0)
     local function DrawHeader(amount, rate)
         amount = options.total and amount or nil
@@ -285,29 +293,45 @@ DFRL:NewMod("DamageMeter", 7, function()
         presentation.headerMode, presentation.headerLanguage, presentation.headerRevision =
             mode, language, optionsRevision
     end
-    local nextView = Label(header, 14, "RIGHT")
+    local nextView = Label(header, fontSize + 3, "RIGHT")
     nextView:SetPoint("RIGHT", header, "RIGHT", -12, 1)
     nextView:SetWidth(20)
-    nextView:SetHeight(20)
+    nextView:SetHeight(fontSize + 9)
     nextView:SetText(">")
     nextView:SetTextColor(1, 0.82, 0)
 
-    local status = Label(root, 12, "CENTER")
+    local status = Label(root, fontSize + 1, "CENTER")
     status:SetPoint("TOPLEFT", root, "TOPLEFT", 12, -HEADER - 12)
-    status:SetWidth(WIDTH - 24)
+    status:SetWidth(width - 24)
     status:SetHeight(64)
+
+    local presentationWidth, presentationFontSize = width, fontSize
+    local function PreparePresentation()
+        if presentationWidth ~= width then
+            header:SetWidth(width)
+            total:SetWidth(width - 52)
+            status:SetWidth(width - 24)
+            presentationWidth = width
+        end
+        if presentationFontSize ~= fontSize then
+            local totalSized = SizeLabel(total, fontSize + 2, fontSize + 9)
+            local nextSized = SizeLabel(nextView, fontSize + 3, fontSize + 9)
+            local statusSized = SizeLabel(status, fontSize + 1)
+            if totalSized and nextSized and statusSized then presentationFontSize = fontSize end
+        end
+    end
 
     local function Row(index)
         if rows[index] then return rows[index] end
         local row = CreateFrame("Frame", nil, root)
         row:SetPoint("TOPLEFT", root, "TOPLEFT", 8, -HEADER - (index - 1) * ROW_HEIGHT)
-        row:SetWidth(WIDTH - 16)
+        row:SetWidth(width - 16)
         row:SetHeight(ROW_HEIGHT)
         row:EnableMouse(not editing)
         local background = Texture(row, "Background", "BACKGROUND")
         row.background = background
         background:SetPoint("LEFT", row, "LEFT", 32, 0)
-        background:SetWidth(WIDTH - 48)
+        background:SetWidth(width - 48)
         background:SetHeight(ROW_HEIGHT)
         local bar = CreateFrame("StatusBar", nil, row)
         bar:SetAllPoints(background)
@@ -320,15 +344,16 @@ DFRL:NewMod("DamageMeter", 7, function()
         labels:SetAllPoints(row)
         labels:SetFrameLevel(bar:GetFrameLevel() + 1)
         labels:EnableMouse(false)
-        row.name = Label(labels, 11)
+        row.name = Label(labels, fontSize)
         row.name:SetPoint("TOPLEFT", labels, "TOPLEFT", 35, 1)
-        row.name:SetWidth(WIDTH - 232)
-        row.name:SetHeight(16)
-        row.value = Label(labels, 11, "RIGHT")
+        row.name:SetWidth(width - 232)
+        row.name:SetHeight(fontSize + 5)
+        row.value = Label(labels, fontSize, "RIGHT")
         row.value:SetPoint("TOPRIGHT", labels, "TOPRIGHT", -2, 1)
         row.value:SetWidth(174)
-        row.value:SetHeight(16)
+        row.value:SetHeight(fontSize + 5)
         row.layoutIcons, row.valueColumns = true, 3
+        row.layoutFontSize = fontSize
         row.iconParts = {}
         row.icon = row:CreateTexture("SurvivorsDragonUiMeterIcon" .. index, "ARTWORK")
         row.icon:SetPoint("LEFT", row, "LEFT", 0, 0)
@@ -353,17 +378,35 @@ DFRL:NewMod("DamageMeter", 7, function()
     Row(1)
     local function LayoutRow(row)
         local columns = (options.damage and 1 or 0) + (options.dps and 1 or 0) + (options.percentage and 1 or 0)
-        if row.layoutIcons == options.icons and row.valueColumns == columns then return end
+        if
+            row.layoutIcons == options.icons
+            and row.valueColumns == columns
+            and row.layoutWidth == width
+            and row.layoutFontSize == fontSize
+        then
+            return
+        end
         local nameLeft = options.icons and 35 or 3
+        if row.layoutWidth ~= width then row:SetWidth(width - 16) end
+        if row.layoutIcons ~= options.icons or row.layoutWidth ~= width then
+            row.background:SetWidth(options.icons and width - 48 or width - 16)
+        end
         if row.layoutIcons ~= options.icons then
             row.background:ClearAllPoints()
             row.background:SetPoint("LEFT", row, "LEFT", options.icons and 32 or 0, 0)
-            row.background:SetWidth(options.icons and WIDTH - 48 or WIDTH - 16)
             row.name:ClearAllPoints()
             row.name:SetPoint("TOPLEFT", row.name:GetParent(), "TOPLEFT", nameLeft, 1)
         end
-        local valueWidth = columns * 58
-        local nameWidth = WIDTH - 16 - nameLeft - 2 - (columns > 0 and valueWidth + 5 or 0)
+        if row.layoutFontSize ~= fontSize then
+            local nameSized = SizeLabel(row.name, fontSize, fontSize + 5)
+            local valueSized = SizeLabel(row.value, fontSize, fontSize + 5)
+            if nameSized and valueSized then row.layoutFontSize = fontSize end
+        end
+        -- Retain the original 58-unit columns at size 11, reserving name room
+        -- when large text and all numeric columns meet a narrow viewport.
+        local available = width - 16 - nameLeft - 2
+        local valueWidth = math.min(columns * math.ceil(58 * fontSize / 11), available - 5 - 48)
+        local nameWidth = available - (columns > 0 and valueWidth + 5 or 0)
         if not T.NearlyEqual(row.name:GetWidth(), nameWidth) then row.name:SetWidth(nameWidth) end
         if not T.NearlyEqual(row.value:GetWidth(), math.max(1, valueWidth)) then
             row.value:SetWidth(math.max(1, valueWidth))
@@ -374,6 +417,7 @@ DFRL:NewMod("DamageMeter", 7, function()
             row.value:Hide()
         end
         row.layoutIcons, row.valueColumns = options.icons, columns
+        row.layoutWidth = width
     end
     local function ClearRow(row)
         if not row or not row.active then return end
@@ -591,6 +635,7 @@ DFRL:NewMod("DamageMeter", 7, function()
         local valid, message = Read(paint)
         dataDirty = false
         SetShown(true)
+        if root:IsVisible() then PreparePresentation() end
         if valid then
             if root:IsVisible() then
                 Draw()
@@ -674,6 +719,8 @@ DFRL:NewMod("DamageMeter", 7, function()
         local enable = DFRL.display.Get("meterEnabled")
         local enabledChanged = enabled ~= enable
         local count = DFRL.display.Get("meterRows")
+        local selectedWidth, selectedFontSize = DFRL.display.Get("meterWidth"), DFRL.display.Get("meterFontSize")
+        local widthChanged, fontChanged = width ~= selectedWidth, fontSize ~= selectedFontSize
         local changed, iconsWereShown = false, options.icons
         for key, setting in pairs(optionKeys) do
             local value = DFRL.display.Get(setting)
@@ -681,9 +728,12 @@ DFRL:NewMod("DamageMeter", 7, function()
                 options[key], changed = value, true
             end
         end
-        if visible == count and not changed and not enabledChanged then return end
+        if visible == count and not changed and not enabledChanged and not widthChanged and not fontChanged then
+            return
+        end
         HideTooltip()
         enabled = enable
+        width, fontSize = selectedWidth, selectedFontSize
         if changed then optionsRevision = optionsRevision + 1 end
         visible, age = count, 0.2
         offset = math.max(0, math.min(offset, snapshot.count - visible))
@@ -696,10 +746,12 @@ DFRL:NewMod("DamageMeter", 7, function()
             end
         end
         local height = HEADER + visible * ROW_HEIGHT + FOOTER
+        if widthChanged then root:SetWidth(width) end
         if not T.NearlyEqual(root:GetHeight(), height) then
             root:SetHeight(height)
-            DFRL.layout.Place("damageMeter")
+            widthChanged = true
         end
+        if widthChanged then DFRL.layout.Place("damageMeter") end
         if not enabled or enabledChanged then Invalidate() end
         UpdateController()
     end)

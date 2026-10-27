@@ -24,13 +24,15 @@ DFRL:NewMod("GuardianTracker", 4, function()
     local HEALTH_RIGHT_OFFSET = 4
     local TOGGLE_SIZE, TOGGLE_INSET = 25.6, 11
     local WIDTH, ROW_HEIGHT = 128 + NAME_WIDTH + COLUMN_GAP + 2 * ROW_INSET, 26
-    local width, statusWidth = WIDTH, 128
+    local requestedWidth = DFRL.display.Get("guardianWidth")
+    local minimumWidth, headerHeight = WIDTH, WIDTH / 8
+    local width, statusWidth = math.max(WIDTH, requestedWidth), 128
     local healthWidth = 0
     local presentation = { snapshot = { rows = {}, counts = {} }, shown = false }
     local frame = CreateFrame("Frame", "DFRL_GuardianTracker", UIParent)
     frame:SetScale(DEFAULT_SCALE)
-    frame:SetWidth(WIDTH)
-    frame:SetHeight(WIDTH / 8 + 5 * ROW_HEIGHT + 12)
+    frame:SetWidth(width)
+    frame:SetHeight(headerHeight + 5 * ROW_HEIGHT + 12)
     frame:SetFrameStrata("MEDIUM")
     frame:EnableMouse(false)
     frame:Hide()
@@ -53,7 +55,7 @@ DFRL:NewMod("GuardianTracker", 4, function()
         texture:SetTexCoord(0, right or 1, 0, bottom or 1)
         return texture
     end
-    local header = Texture(frame, "guardians\\Header", "BACKGROUND", WIDTH, WIDTH / 8, 560 / 1024, 70 / 128)
+    local header = Texture(frame, "guardians\\Header", "BACKGROUND", width, headerHeight, 560 / 1024, 70 / 128)
     header:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, 0)
     header:SetAlpha(0.8)
     local icon = Texture(frame, "waypoint\\GuardianFloating", "ARTWORK", 28, 28, 65 / 128, 65 / 128)
@@ -182,6 +184,13 @@ DFRL:NewMod("GuardianTracker", 4, function()
         end
         return math.ceil(maximum)
     end
+    local function ApplyWidth()
+        width = math.max(minimumWidth, requestedWidth)
+        if not T.NearlyEqual(width, frame:GetWidth()) then
+            frame:SetWidth(width)
+            DFRL.layout.Place("guardianTracker", frame)
+        end
+    end
     local function Measure()
         statusWidth = math.max(128, healthWidth, CaptionWidth("Respawns in %s", "99:59") + 16)
         for _, source in pairs(captions) do
@@ -189,16 +198,9 @@ DFRL:NewMod("GuardianTracker", 4, function()
         end
         local titleWidth = CaptionWidth("GUARDIANS", nil, 14)
         if titleWidth <= 0 then return false end
-        width = math.max(WIDTH, statusWidth + NAME_WIDTH + COLUMN_GAP + 2 * ROW_INSET, titleWidth + 88)
-        local resized = not T.NearlyEqual(width, frame:GetWidth())
-        if presentation.measuredWidth ~= width then
-            title:SetWidth(width - 88)
-            frame:SetWidth(width)
-            header:SetWidth(width)
-            header:SetHeight(width / 8)
-            presentation.measuredWidth = width
-        end
-        if resized then DFRL.layout.Place("guardianTracker", frame) end
+        minimumWidth = math.max(WIDTH, statusWidth + NAME_WIDTH + COLUMN_GAP + 2 * ROW_INSET, titleWidth + 88)
+        headerHeight = minimumWidth / 8
+        ApplyWidth()
         return true
     end
     local function Refresh()
@@ -236,6 +238,15 @@ DFRL:NewMod("GuardianTracker", 4, function()
             end
             dirty = false
         end
+        if presentation.measuredWidth ~= width then
+            title:SetWidth(width - 88)
+            header:SetWidth(width)
+            presentation.measuredWidth = width
+        end
+        if presentation.headerHeight ~= headerHeight then
+            header:SetHeight(headerHeight)
+            presentation.headerHeight = headerHeight
+        end
         UpdateToggle()
         T.SetTextIfChanged(title, DFRL.locale.Text("GUARDIANS"))
         local used = 0
@@ -243,14 +254,20 @@ DFRL:NewMod("GuardianTracker", 4, function()
             if expanded or entry.state == "asleep" or entry.state == "awake" then
                 used = used + 1
                 local row = rows[used] or MakeRow()
-                if row.layoutWidth ~= width or row.layoutIndex ~= used or row.statusWidth ~= statusWidth then
+                if
+                    row.layoutWidth ~= width
+                    or row.layoutIndex ~= used
+                    or row.statusWidth ~= statusWidth
+                    or row.headerHeight ~= headerHeight
+                then
                     row:ClearAllPoints()
-                    row:SetPoint("TOPLEFT", frame, "TOPLEFT", ROW_INSET, -(width / 8 + 6 + (used - 1) * ROW_HEIGHT))
+                    row:SetPoint("TOPLEFT", frame, "TOPLEFT", ROW_INSET, -(headerHeight + 6 + (used - 1) * ROW_HEIGHT))
                     row:SetWidth(width - 2 * ROW_INSET)
                     row.name:SetWidth(width - statusWidth - 2 * ROW_INSET - COLUMN_GAP)
                     row.status:SetWidth(statusWidth)
                     row.pill:SetWidth(statusWidth + 8)
                     row.layoutWidth, row.layoutIndex, row.statusWidth = width, used, statusWidth
+                    row.headerHeight = headerHeight
                 end
                 T.SetTextIfChanged(row.name, entry.name or Format("Lair %d", entry.index))
                 local color = colors[entry.status] or colors.empty
@@ -279,7 +296,7 @@ DFRL:NewMod("GuardianTracker", 4, function()
         for index = used + 1, table.getn(rows) do
             ClearRow(rows[index])
         end
-        local height = width / 8 + 12 + used * ROW_HEIGHT
+        local height = headerHeight + 12 + used * ROW_HEIGHT
         if not T.NearlyEqual(frame:GetHeight(), height) then frame:SetHeight(height) end
     end
     toggle:SetScript("OnClick", function()
@@ -337,6 +354,14 @@ DFRL:NewMod("GuardianTracker", 4, function()
     local function SyncUpdates()
         controller:SetScript("OnUpdate", inWorld and not DFRL.layout.IsHidden("guardianTracker") and Tick or nil)
     end
+    DFRL.display.Listen(function()
+        local selected = DFRL.display.Get("guardianWidth")
+        if selected == requestedWidth then return end
+        requestedWidth, age = selected, 0.1
+        -- Root geometry belongs to editing even when the presentation is hidden.
+        -- Caption measurement and row/header drawing keep their deferred lifecycle.
+        ApplyWidth()
+    end)
     controller:SetScript("OnEvent", function()
         inWorld = event == "PLAYER_ENTERING_WORLD"
         if inWorld then

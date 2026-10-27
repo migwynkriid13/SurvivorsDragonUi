@@ -27,17 +27,40 @@ total** and **Header DPS** control the summary; turning both off shows the curre
 view name. Both header fields start on. All seven options use the same preview, Confirm,
 Cancel, profile and reset behavior. Healing uses healing totals and HPS.
 Hover still provides the full name and numbers when row values are hidden.
+Drag **Meter width** from **240 to 960** under **Damage meter** to change its
+width without scaling rows or icons; its default is **320**.
+**Font size** changes meter text from **8 to 18**, with **11** as the default.
+Both controls preview live and use the same
+Confirm, Cancel, profile, discard and reset behavior as the other meter options.
 Move, scale or hide **DPS meter** through `/sdui` → **Layout**, then Confirm.
 Geometry and hiding also work
 with named profiles, Cancel, `/sdui lock` and both full resets.
 
-The default scale remains **0.8**. The base width is **320** UI units, reduced
-from 400 by 20%, without changing row height, icon sizes or fonts. Its bottom-right
+The default scale remains **0.8** and the default width is **320** UI units.
+Width and text size are independent of that scale. Its bottom-right
 corner sits at the screen's bottom-right corner with no offset. Shared layout
 registration captures this scale before applying saved geometry. These defaults
 apply to unset geometry and both full resets; existing confirmed/draft positions
 and scales keep using the shared layout rules. The default corner stays fixed
-when the ability count changes, without an updater or geometry migration.
+when the ability count or width changes, without an updater or geometry migration.
+
+`meterWidth` and `meterFontSize` are finite, clamped/rounded integers in the
+existing display table. Missing or invalid values and both full resets use
+their defaults. The owning display normalization also copies them into named
+profiles. No new SavedVariable or geometry migration is needed. The native
+horizontal width slider uses one-unit steps and a current-value label; preview
+synchronization guards its synchronous value callback. Proportional Layout
+resizing is unchanged.
+
+Row height, circular icons and gold rims remain 32, 26 and 31 units. Header
+text retains its original size offsets above the selected row font. Numeric
+column widths follow font size and enabled columns, reserving at least 48 units
+for names at the narrowest widths. Very large text with all numeric columns can
+still clip; the full native name and values remain available on hover. Wider
+meters or fewer numeric fields provide more name space. Text sizes and row
+widths update only on effective changes; failed font-size changes stay retryable.
+Hidden/off views defer row/header presentation until visible; the shared editor
+still receives required root-width changes.
 
 ## Native data
 

@@ -243,6 +243,30 @@ pinned formatting only; no addon/client execution, local test or standalone
 validation was run. Live appearance, FPS, draw calls and GPU-memory behavior
 remain unverified.
 
+## Meter text size and width sliders — 2026-10-27
+
+`meterWidth`, `guardianWidth` and `meterFontSize` reuse display preview,
+normalization, profiles and reset/discard ownership. Width previews update root
+geometry and shared placement once; cached row/header geometry reflows only
+while visible. The guardian tracker preserves its measured content minimum and
+header height, widening the name column without remeasuring translated captions
+on slider motion. The meter caches applied width, font size, icon gutter and
+numeric-column count. Failed font changes remain pending for the existing
+visible refresh. Off/hidden views update required edit bounds without added
+font, row-anchor, header or icon work.
+
+The default HUD dimensions, fonts and drawing budget remain unchanged. The two
+lazy editor sliders each author one native thumb and one track texture, four
+editor-only texture regions in total, plus their existing-style caption/value
+FontStrings. Hidden pages inherit native hiding. Their native value callbacks
+round to integer units, skip unchanged writes and guard programmatic updates;
+no updater, game event or asset is added. Native StatusBar UVs, row height,
+26-unit meter circles and 31-unit gold rims are preserved. Font changes resize text
+boxes and numeric-column space without rebuilding circles or adding text
+measurement. Cached text/value formatting and the native one-Hz rate samples
+remain intact. These are source-level observations; pinned local formatting
+does not establish runtime appearance, input behavior, FPS or GPU results.
+
 ## Source-icon language coverage — 2026-10-27
 
 The shared SCT/meter icon resolver now receives generated exact-name aliases
