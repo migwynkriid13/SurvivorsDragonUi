@@ -294,14 +294,44 @@ end
 
 -- Reuse the original 256x128 portrait sheet. The full health opening remains
 -- the default; the player can restore its original health/power divider.
+local function UnitPoint(region, point, owner, x, y)
+    local current, relative, relativePoint, oldX, oldY = region:GetPoint(1)
+    if
+        region:GetNumPoints() == 1
+        and current == point
+        and (relative == owner or relative == owner:GetName())
+        and relativePoint == point
+        and T.NearlyEqual(oldX, x)
+        and T.NearlyEqual(oldY, y)
+    then
+        return
+    end
+    region:ClearAllPoints()
+    region:SetPoint(point, owner, point, x, y)
+end
+
 function DFRL.tools.CreateUnitBorder(frame, healthBar, portraitTexture, background, texturePath, portraitSide)
     local mirrored = portraitSide == "LEFT"
     local healthFill = DFRL.tools.LargeHealthFill
     local underlap = healthFill.underlap
     local healthWidth, healthTop, portraitInset, portraitOverlap = 122, 34, 104, T.UnitPortraitOverlap
+    local defaultWidth, widthDelta = frame:GetWidth(), 0
     local dividerTop, dividerHeight = 51.5, 4
     local powerDivider, roundRim
     local strips = {}
+    local widthPieces = {}
+    local portraitPoints = {}
+    if not mirrored and frame.portrait then
+        for index = 1, frame.portrait:GetNumPoints() do
+            local point, relative, relativePoint, x, y = frame.portrait:GetPoint(index)
+            if relative == frame or relative == frame:GetName() then
+                relativePoint = relativePoint or point
+                local factor = string.find(relativePoint, "RIGHT") and 0
+                    or (string.find(relativePoint, "LEFT") and 1 or 0.5)
+                if factor > 0 then table.insert(portraitPoints, { point, relativePoint, x or 0, y or 0, factor }) end
+            end
+        end
+    end
     local portraitExtended
     local function SetPortraitOverlap(extended)
         -- The pointed player rim also needs a small underlap to close its seam.
@@ -310,23 +340,17 @@ function DFRL.tools.CreateUnitBorder(frame, healthBar, portraitTexture, backgrou
         if not DFRL.display.Get("hidePortraits") then
             extension = extended and portraitOverlap or (mirrored and 2 or 0)
         end
-        healthBar:SetWidth(healthWidth + extension + 2 * underlap)
-        healthBar:ClearAllPoints()
+        local width = healthWidth + widthDelta + extension + 2 * underlap
+        if not T.NearlyEqual(healthBar:GetWidth(), width) then healthBar:SetWidth(width) end
         if mirrored then
-            healthBar:SetPoint("TOPLEFT", frame, "TOPLEFT", portraitInset - extension - underlap, -healthTop + underlap)
+            UnitPoint(healthBar, "TOPLEFT", frame, portraitInset - extension - underlap, -healthTop + underlap)
         else
-            healthBar:SetPoint(
-                "TOPRIGHT",
-                frame,
-                "TOPRIGHT",
-                -(portraitInset - extension) + underlap,
-                -healthTop + underlap
-            )
+            UnitPoint(healthBar, "TOPRIGHT", frame, -(portraitInset - extension) + underlap, -healthTop + underlap)
         end
         if powerDivider then
-            powerDivider:SetWidth(healthBar:GetWidth() - 2 * underlap)
-            powerDivider:ClearAllPoints()
-            powerDivider:SetPoint("TOPLEFT", healthBar, "TOPLEFT", underlap, healthTop - dividerTop - underlap)
+            local dividerWidth = healthBar:GetWidth() - 2 * underlap
+            if not T.NearlyEqual(powerDivider:GetWidth(), dividerWidth) then powerDivider:SetWidth(dividerWidth) end
+            UnitPoint(powerDivider, "TOPLEFT", healthBar, underlap, healthTop - dividerTop - underlap)
         end
         if roundRim then
             if extended then
@@ -395,7 +419,7 @@ function DFRL.tools.CreateUnitBorder(frame, healthBar, portraitTexture, backgrou
         portraitTexture:SetAlpha(0)
     end
 
-    local function AddStrip(x, y, width, height, sourceY)
+    local function AddStrip(x, y, width, height, sourceY, stretch)
         sourceY = sourceY or y
         local strip = borderFrame:CreateTexture(nil, "OVERLAY")
         strip:SetWidth(width)
@@ -408,12 +432,21 @@ function DFRL.tools.CreateUnitBorder(frame, healthBar, portraitTexture, backgrou
             strip:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -(256 - x - width), -y)
         end
         table.insert(strips, strip)
+        if stretch ~= "divider" then
+            table.insert(
+                widthPieces,
+                { texture = strip, x = 256 - x - width, y = -y, width = width, stretch = stretch }
+            )
+        end
         return strip
     end
     -- Retain the corner contour through x32. Replace only the former divider
     -- rows with a clean neighboring side-edge sample while resources are off.
-    AddStrip(0, 0, 152, 34)
-    AddStrip(0, 63, 152, 65)
+    -- Keep the outer cap and portrait at native size; only straight spans stretch.
+    AddStrip(0, 0, 33, 34)
+    AddStrip(33, 0, 119, 34, nil, true)
+    AddStrip(0, 63, 33, 65)
+    AddStrip(33, 63, 119, 65, nil, true)
     AddStrip(0, healthTop, 33, dividerTop - healthTop)
     local cleanEndCap = AddStrip(0, dividerTop, 33, dividerHeight, dividerTop - dividerHeight)
     AddStrip(0, dividerTop + dividerHeight, 33, healthTop + 29 - dividerTop - dividerHeight)
@@ -424,7 +457,7 @@ function DFRL.tools.CreateUnitBorder(frame, healthBar, portraitTexture, backgrou
         powerEndCap:Hide()
         -- The shared end cap owns the corners in both modes; sample only the
         -- divider here so enabling resources cannot paint those corners twice.
-        powerDivider = AddStrip(30, dividerTop, healthWidth, dividerHeight)
+        powerDivider = AddStrip(30, dividerTop, healthWidth, dividerHeight, nil, "divider")
         powerDivider:Hide()
     end
 
@@ -469,5 +502,22 @@ function DFRL.tools.CreateUnitBorder(frame, healthBar, portraitTexture, backgrou
     end
     DFRL.display.Listen(UpdatePortraitVisibility)
     UpdatePortraitVisibility()
-    return UpdateTexture, SetPowerShown, SetPortraitOverlap
+    local function ResizeHealth()
+        if not frame:IsVisible() and not DFRL.layout.IsEditing() then return false end
+        local delta = frame:GetWidth() - defaultWidth
+        if T.NearlyEqual(widthDelta, delta) then return false end
+        widthDelta = delta
+        local extension = SetPortraitOverlap(portraitExtended)
+        for _, piece in ipairs(widthPieces) do
+            local width = piece.width + (piece.stretch and delta or 0)
+            local x = piece.x + (piece.stretch and 0 or delta)
+            if not T.NearlyEqual(piece.texture:GetWidth(), width) then piece.texture:SetWidth(width) end
+            UnitPoint(piece.texture, mirrored and "TOPLEFT" or "TOPRIGHT", frame, mirrored and x or -x, piece.y)
+        end
+        for _, point in ipairs(portraitPoints) do
+            frame.portrait:SetPoint(point[1], frame, point[2], point[3] + delta * point[5], point[4])
+        end
+        return true, extension
+    end
+    return UpdateTexture, SetPowerShown, SetPortraitOverlap, ResizeHealth
 end

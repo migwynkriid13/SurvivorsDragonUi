@@ -13,8 +13,10 @@ DFRL:NewMod("Mini", 1, function()
         { 0, 32, 41, 2 },
         { 0, 34, 40, 1 },
         { 0, 35, 44, 29 },
-        { 44, 0, 84, 18 },
-        { 44, 34, 84, 30 },
+        { 44, 0, 68, 18 },
+        { 112, 0, 16, 18 },
+        { 44, 34, 68, 30 },
+        { 112, 34, 16, 30 },
         { 112, 18, 16, 8 },
         { 112, 26, 16, 3, 22 },
         { 112, 29, 16, 5 },
@@ -22,9 +24,9 @@ DFRL:NewMod("Mini", 1, function()
 
     -- Keep the original target-of-target crop; party rows additionally trim the
     -- portrait's divider stubs and retain the complete rounded outer end.
-    local function HealthOnlyBorder(parent, anchor, width, height, layer, crops)
+    local function HealthOnlyBorder(parent, anchor, width, height, layer, crops, elastic)
         local scaleX, scaleY = width / 128, height / 64
-        local strips = {}
+        local strips, pieces = {}, elastic and {} or nil
         for _, crop in ipairs(crops or { { 0, 0, 44, 64 }, { 44, 0, 84, 22 }, { 44, 34, 84, 30 }, { 114, 22, 14, 12 } }) do
             local x, y, w, h, sourceY = unpack(crop)
             sourceY = sourceY or y
@@ -37,8 +39,22 @@ DFRL:NewMod("Mini", 1, function()
             strip:SetWidth(w * scaleX)
             strip:SetHeight(h * scaleY)
             table.insert(strips, strip)
+            if elastic then table.insert(pieces, { texture = strip, x = x, y = -y * scaleY, width = w * scaleX }) end
         end
-        return strips
+        if not elastic then return strips end
+        local applied = 0
+        local function Resize(delta)
+            if T.NearlyEqual(applied, delta) then return end
+            applied = delta
+            for _, piece in ipairs(pieces) do
+                local x = piece.x * scaleX + (piece.x >= 112 and delta or 0)
+                local w = piece.width + (piece.x >= 44 and piece.x < 112 and delta or 0)
+                if not T.NearlyEqual(piece.texture:GetWidth(), w) then piece.texture:SetWidth(w) end
+                piece.texture:ClearAllPoints()
+                piece.texture:SetPoint("TOPLEFT", anchor, "TOPLEFT", x, piece.y)
+            end
+        end
+        return strips, Resize
     end
 
     local function AddValues(frame, health, mana, unit)
@@ -73,6 +89,7 @@ DFRL:NewMod("Mini", 1, function()
 
     local function UpdateValues(values)
         if not values.frame:IsVisible() then return end
+        if values.resize then values.resize() end
         local unit = values.unit
         values.healthLabels.Update()
         if not UnitExists(unit) or (unit == "targettarget" and (UnitIsDead(unit) or UnitIsGhost(unit))) then
@@ -310,6 +327,7 @@ DFRL:NewMod("Mini", 1, function()
     if PartyMemberFrame1 and PartyMemberFrame1HealthBar and PartyMemberFrame1ManaBar then
         partyRoot = CreateFrame("Frame", "DFRL_PartyFrames", UIParent)
         partyRoot:SetWidth(PartyMemberFrame1:GetWidth())
+        partyRoot.defaultWidth = partyRoot:GetWidth()
         partyRoot:SetHeight(PartyMemberFrame1:GetHeight())
         partyRoot:EnableMouse(false)
         partyRegion = CreateFrame("Frame", nil, partyRoot)
@@ -339,9 +357,9 @@ DFRL:NewMod("Mini", 1, function()
             borderFrame:SetFrameLevel(math.max(health:GetFrameLevel(), mana:GetFrameLevel()) + 1)
             values.health:SetParent(borderFrame)
             values.healthLabels.percentage:SetParent(borderFrame)
-            local border = borderFrame:CreateTexture(nil, "BORDER")
-            border:SetTexture(tex .. "pet")
-            border:SetVertexColor(1, 1, 1, 1)
+            local defaultWidth = frame:GetWidth()
+            local border = CreateFrame("Frame", nil, borderFrame)
+            border:EnableMouse(false)
             border:SetPoint("CENTER", frame, "CENTER", 0, 0)
             border:SetWidth(128)
             border:SetHeight(64)
@@ -349,7 +367,13 @@ DFRL:NewMod("Mini", 1, function()
                 if i == 1 then partyRegion:SetPoint("TOPLEFT", border, "TOPLEFT", 0, 0) end
                 partyRegion:SetPoint("BOTTOMRIGHT", border, "BOTTOMRIGHT", 0, 0)
             end
-            local healthOnlyBorder = HealthOnlyBorder(borderFrame, border, 128, 64, "BORDER", partyHealthCrops)
+            local fullBorder, resizeFullBorder = HealthOnlyBorder(borderFrame, border, 128, 64, "BORDER", {
+                { 0, 0, 44, 64 },
+                { 44, 0, 68, 64 },
+                { 112, 0, 16, 64 },
+            }, true)
+            local healthOnlyBorder, resizeHealthBorder =
+                HealthOnlyBorder(borderFrame, border, 128, 64, "BORDER", partyHealthCrops, true)
             local portrait = _G[prefix .. "Portrait"]
             if portrait then
                 portrait:SetParent(borderFrame)
@@ -357,7 +381,7 @@ DFRL:NewMod("Mini", 1, function()
                 portrait:SetWidth(35)
                 portrait:SetDrawLayer("BACKGROUND")
                 portrait:ClearAllPoints()
-                portrait:SetPoint("CENTER", frame, "CENTER", -40, 8.25)
+                portrait:SetPoint("CENTER", border, "LEFT", 24, 8.25)
             end
             local name = _G[prefix .. "Name"]
             if name then
@@ -392,25 +416,52 @@ DFRL:NewMod("Mini", 1, function()
             -- updates, so preview, Cancel and later native refreshes coexist.
             T.BindUnitLabelVisibility(mana, "classResources")
             T.BindUnitLabelVisibility(_G[prefix .. "ManaBarText"], "classResources")
-            local healthWidth = health:GetWidth()
-            local resourcesShown
+            local healthWidth, manaWidth = health:GetWidth(), mana:GetWidth()
+            if i == 1 and partyRoot then partyRoot.minWidth = partyRoot.defaultWidth - math.max(0, healthWidth - 40) end
+            local nameWidth = name and name:GetWidth()
+            local resourcesShown, appliedDelta
             local function UpdateResources()
                 local shown = DFRL.display.Get("classResources")
-                if shown == resourcesShown then return end
-                resourcesShown = shown
+                local delta = partyRoot and partyRoot:GetWidth() - partyRoot.defaultWidth or 0
+                -- Row/root bounds remain available to the shared editor while
+                -- invisible native rows defer their texture and caption work.
+                if not T.NearlyEqual(frame:GetWidth(), defaultWidth + delta) then
+                    frame:SetWidth(defaultWidth + delta)
+                end
+                if not T.NearlyEqual(border:GetWidth(), 128 + delta) then border:SetWidth(128 + delta) end
+                if resourcesShown ~= nil and not frame:IsVisible() and not DFRL.layout.IsEditing() then return end
+                if shown == resourcesShown and T.NearlyEqual(appliedDelta, delta) then return end
+                local modeChanged = resourcesShown ~= shown
+                resourcesShown, appliedDelta = shown, delta
+                resizeFullBorder(delta)
+                resizeHealthBorder(delta)
+                if name then
+                    local width = math.max(1, nameWidth + delta)
+                    if not T.NearlyEqual(name:GetWidth(), width) then name:SetWidth(width) end
+                end
+                if not T.NearlyEqual(mana:GetWidth(), manaWidth + delta) then mana:SetWidth(manaWidth + delta) end
                 -- Share the player's prepared fill beneath the existing metal
                 -- edge; compensate label insets to retain their old positions.
                 local extension = shown and 0 or 12
-                health:SetWidth(healthWidth + extension + 2 * healthUnderlap)
-                health:SetHeight((shown and 11 or 17.5) + 2 * healthUnderlap)
-                health:SetPoint("CENTER", frame, "CENTER", 15 - extension / 2, shown and 10 or 6.75)
+                local width = healthWidth + delta + extension + 2 * healthUnderlap
+                local height = (shown and 11 or 17.5) + 2 * healthUnderlap
+                if not T.NearlyEqual(health:GetWidth(), width) then health:SetWidth(width) end
+                if not T.NearlyEqual(health:GetHeight(), height) then health:SetHeight(height) end
+                if modeChanged then
+                    health:SetPoint("CENTER", frame, "CENTER", 15 - extension / 2, shown and 10 or 6.75)
+                end
                 values.healthLabels.SetInsets(extension + healthUnderlap, healthUnderlap, extension / 2)
-                border:SetAlpha(shown and 1 or 0)
+                for _, strip in ipairs(fullBorder) do
+                    local alpha = shown and 1 or 0
+                    if strip:GetAlpha() ~= alpha then strip:SetAlpha(alpha) end
+                end
                 for _, strip in ipairs(healthOnlyBorder) do
-                    strip:SetAlpha(shown and 0 or 1)
+                    local alpha = shown and 0 or 1
+                    if strip:GetAlpha() ~= alpha then strip:SetAlpha(alpha) end
                 end
             end
             DFRL.display.Listen(UpdateResources)
+            values.resize = UpdateResources
             UpdateResources()
             if _G[prefix .. "HealthBarText"] then _G[prefix .. "HealthBarText"]:SetAlpha(0) end
             HookScript(health, "OnValueChanged", function() UpdateValues(values) end)
@@ -419,10 +470,27 @@ DFRL:NewMod("Mini", 1, function()
 
     if partyRoot then
         if PartyMemberBackground then PartyMemberBackground:SetParent(partyRoot) end
+        local function ResizeParty()
+            for _, values in ipairs(units) do
+                if values.resize then values.resize() end
+            end
+        end
+        HookScript(partyRoot, "OnShow", ResizeParty)
         DFRL.layout.Register("partyFrames", partyRoot, function()
             partyRoot:ClearAllPoints()
             partyRoot:SetPoint("LEFT", UIParent, "LEFT", 10, 220)
-        end, { region = partyRegion, resizeToRegion = true })
+        end, {
+            region = partyRegion,
+            resizeToRegion = true,
+            edgeWidth = true,
+            edgeRegion = partyRegion,
+            minWidth = partyRoot.minWidth,
+            maxWidth = partyRoot.defaultWidth + 800,
+            onEdit = function(active)
+                if active then ResizeParty() end
+            end,
+            onResize = ResizeParty,
+        })
     end
 
     local function UpdateAll()

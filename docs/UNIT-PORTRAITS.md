@@ -40,11 +40,23 @@ copies and rejects late model callbacks. Still portraits remain transparent,
 including when model creation is unsupported. Showing portraits restores the
 chosen still or 3D model behavior through the existing readiness gates.
 
-Unit roots, saved and draft positions, scales and native handlers remain intact.
+Unit roots retain native handlers and the existing saved/draft position and scale rules. Independent health widths use the same Layout records.
 The large bars remove only the overlap beneath the absent portrait, preserving
 their outer edge and original label area. The optional player resource row and
 existing damage-loss fractions follow the health span. Health fills, values,
 native target availability and target-of-target updates remain authoritative.
+
+## Health width handles
+
+Player, Target and Party frames have left/right side handles in Layout. Dragging changes the horizontal health span; it does not scale the portrait, gold end caps, bar height, fonts, aura icons or models. The existing corner handles still scale proportionally. Party's width applies to all four native rows together, including their edit outline while inactive. Its native row/pet anchor chains and unit clicks stay intact.
+
+The shared Layout root stores `width` beside its position/scale. Let `delta` be the chosen root width minus its original native width. Player and target content becomes `122 + delta`, with their existing portrait overlap and one-unit render underlap added separately. The player keeps its portrait-side inset; the target mirrors it. Source columns 0–33 keep the outer cap's native size while columns 33–152 extend the straight horizontal artwork. The portraits and their original rim crops retain their sizes. The target still follows its rim even when its native anchor was expressed from the root center or left side. The player's status pulse and resting animation stay with its fixed portrait area rather than shifting to the widened root center.
+
+**Hide portraits** continues to remove only the existing overlap and display the shared closed border attached to the actual health rectangle. It does not reset the chosen width. Pointed and round player rims, native 2D/optional 3D portraits, health values/percentages, names, levels and damage-loss fractions keep their existing owners. A shown resource strip follows the health span at its original height. No target-of-target or pet-frame width control is added.
+
+Party's 128-unit artwork is split at columns 44 and 112: the portrait portion and outer end retain their size, and the middle span takes `delta`. Its existing health-only artwork retains the exact divider-removal crops, splitting only the top/bottom horizontal spans at column 112. The native 35-unit portrait stays at its original position relative to that fixed portrait portion. Native health/resource values remain unchanged; optional resource strips follow the wider housing. Names gain the same horizontal room without changing their fonts.
+
+Player/target limits leave at least 64 units of original health content; party limits leave at least 40 before its existing resource-off extension. Each group allows up to 800 units beyond its native root width. Defaults and both resets retain the original dimensions. Side dragging holds the opposite health edge fixed; shared Confirm, Cancel/world/logout/reload discard and profiles keep their established behavior. Width changes use existing Layout callbacks and unit events, without a new preference, SavedVariable, asset or updater. Hidden presentation defers until Show, with required edit geometry refreshed on editor entry; inactive party bounds still fit all four rows.
 
 ## Artwork
 

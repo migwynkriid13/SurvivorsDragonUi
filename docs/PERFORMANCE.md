@@ -255,6 +255,16 @@ Run timer width reflows the existing 27 flow textures and 28 red glints without 
 
 All resizing uses the existing editor controller, unchanged-pointer guards and final release sample. Root height changes from row/debuff reflow also invalidate the active opposite-edge calculation. Grid preference, row counts, widths and font size retain shared Confirm/Cancel/discard/profile/reset behavior, without a new SavedVariable or idle updater. Local work was limited to source inspection and pinned formatting; appearance, animation, input and renderer performance remain unverified.
 
+## Unit health width handles — 2026-10-27
+
+Player, target and party add six editor-only one-texture side marks. Their anchor can use the native health bar or existing multi-row edit region independently of the Layout owner's dimensions. Width remains in the existing Layout record and uses existing resize/editor/Show/unit-event paths, with no asset, SavedVariable or new updater. Portrait/model dimensions, health heights, animation timing and native values remain unchanged; the existing Cut-Out size callback reflows retained loss fractions.
+
+Large-frame width reflows its shared health span and metal end position. Native StatusBar UVs remain untouched. Each large top/bottom artwork region becomes a fixed cap plus a straight span: two additional allocated/visible regions per large frame. Party's full resource-mode sheet becomes three pieces (one previously), and each health-only top/bottom span splits at the fixed outer cap, raising that variant from thirteen to fifteen pieces. Both party variants are allocated during the existing four-row setup, adding four allocated regions per row; only the selected variant has nonzero alpha, adding two visible regions per active row. Across player, target and four party rows this is twenty extra allocated artwork regions, up to twelve extra visible artwork regions, plus six editor-only marks. Four passive party anchors replace their old single-texture anchors; they have no updater or input.
+
+The extra pieces preserve portrait/cap proportions during horizontal extension and use the same source pixel regions without added effects or alpha overlap. Changed widths update the affected sizes/anchors; unchanged state skips them, and actual large-bar/divider anchors are compared before repair. Width changes reuse successful texture bindings. Hidden large frames defer their reflow until visible or required editor entry; inactive party rows update only required root/border bounds and defer caption/texture work until Show or editing. Ordinary unit events make only the existing visibility checks and small width/state comparisons before any reflow. Party resource-mode changes and width changes share one owner, so later native value events or preview changes cannot restore the old health span.
+
+Source/diff inspection and pinned formatting cover the geometry and shared save/discard paths. This is an explicit source-level drawing-cost increase for independent width, not measured FPS, GPU cost or pixel parity. No local tests, standalone validation or addon/game execution were run; packaged-client appearance and input remain unverified.
+
 ## Guardian Show dead control — 2026-10-27
 
 The tracker's minus/plus header button, four native state-texture slots, tooltip
