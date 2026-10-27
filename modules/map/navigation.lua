@@ -72,7 +72,7 @@ DFRL:NewMod("Navigation", 2, function()
         local ok, x, y = pcall(GetPlayerMapPosition, "player")
         if ok and Coordinates(x, y) and (x ~= 0 or y ~= 0) then return x, y end
     end
-    function navigation.Project(target)
+    local function Project(target)
         local zone = Context()
         if not zone or type(target) ~= "table" then return end
         if type(GetWorldLocMapPosition) == "function" then
@@ -182,7 +182,7 @@ DFRL:NewMod("Navigation", 2, function()
         if not x then return end
         local targetX, targetY = target.mx, target.my
         if type(GetWorldLocMapPosition) == "function" then
-            local projectedX, projectedY = navigation.Project(target)
+            local projectedX, projectedY = Project(target)
             if projectedX then
                 targetX, targetY = projectedX, projectedY
             end

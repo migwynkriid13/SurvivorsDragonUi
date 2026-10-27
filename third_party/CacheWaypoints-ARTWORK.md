@@ -1,6 +1,6 @@
 # Cache and guardian waypoint artwork
 
-The tracked-map and navigation textures use Blizzard World of Warcraft artwork downloaded from the Gethe UI texture mirror on 2026-10-15. The guardian gold-dragon/skull medallion comes from the pinned game-art source below and is shared by the HUD, minimap, world map and tracker header. The cache chest is the separate user-supplied artwork documented below. These icons are not generated approximations.
+The tracked-map and navigation textures use Blizzard World of Warcraft artwork downloaded from the Gethe UI texture mirror on 2026-10-15. The guardian gold-dragon/skull medallion comes from the pinned game-art source below and is shared by the HUD, minimap and tracker header. The cache chest is the separate user-supplied artwork documented below. These icons are not generated approximations.
 
 Original artwork and World of Warcraft are copyright Blizzard Entertainment. The mirror provides access to the source files; this attribution does not assert a separate redistribution license.
 
@@ -24,7 +24,7 @@ These references are pinned to Dragonflight `10.2.7 (54847)`, commit `88f272e94c
 
 The PNG originals were visually inspected before cropping. Original colors and transparency are retained. Outputs are uncompressed, 32-bit RGBA TGA files with power-of-two canvas dimensions. No addon or game code was executed during preparation.
 
-| Bundled file                      | Canvas  | Preparation                                                                                                            |
+| Preparation input                 | Canvas  | Preparation                                                                                                            |
 | --------------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------- |
 | `media/tex/waypoint/MapPin.tga`   | 32 × 32 | Complete original tracked minimap PNG, converted to TGA without cropping or rescaling.                                 |
 | `media/tex/waypoint/HudArrow.tga` | 32 × 32 | Original navigation atlas pixel rectangle `[0, 35, 24, 55)`, placed at `(4, 6)` on a transparent canvas. No rescaling. |
@@ -46,8 +46,7 @@ cropping, scaling, recoloring or alpha changes. Every decoded RGB/alpha byte
 matches the source, and full `0..1` UVs display it at the existing HUD/minimap/
 counter sizes of 32/16/18 units. It replaces the former HUD/minimap pouch and
 native tally loot cursor. `CachePouch.blp` is removed from the runtime manifest;
-the old TGA preparation input is retained. The world-map cache diamond is
-unchanged. The local asset receipt and retired BLP backup are under
+the old TGA preparation input is retained. The full world-map overlay and runtime diamond have been removed. The local asset receipt and retired BLP backup are under
 `/tmp/sdui-cache-chest-20261027/`; this is image-data evidence, not game execution.
 
 ## Guardian and former cache HUD artwork
@@ -67,7 +66,7 @@ Original glyph pixels and alpha are retained without rescaling. Transparent sour
 | `media/tex/waypoint/GuardianFloating.tga` | 64 × 64         | `[0, 1, 62, 64)`    | 128 × 128     | Paste at `(1, 1)`; square region `[0, 0, 65, 65)`, UV `0..65/128` on each axis.     |
 | `media/tex/waypoint/CachePouch.tga`       | 128 × 128       | `[28, 7, 117, 124)` | 128 × 128     | Paste at `(15, 1)`; square region `[0, 0, 119, 119)`, UV `0..119/128` on each axis. |
 
-Square sampling preserves each glyph's proportions inside its 32-by-32 HUD icon field. All guardian views reuse this medallion and crop, including the 26-by-26 world-map pin. The separate `MapPin.tga` cache pin remains unchanged.
+Square sampling preserves each glyph's proportions inside its 32-by-32 HUD icon field. Guardian HUD, minimap and tracker views reuse this medallion and crop. `MapPin.tga` is retained only as a historical preparation input; its BLP, world-map drawing and click/hover code are removed.
 
 ## Drawing recommendations
 
@@ -76,10 +75,9 @@ Square sampling preserves each glyph's proportions inside its 32-by-32 HUD icon 
 - Guardian HUD marker: draw `GuardianFloating.tga` in a 32-by-32 field with `SetTexCoord(0, 65 / 128, 0, 65 / 128)`. Keep the gold dragon and skull upright.
 - Place a left-aligned DEFAULT 13 destination title above DEFAULT 15 distance beside the icon, with outline and black shadow. Rotate the arrow in place to the right of the text.
 - Direction arrow: retain the full original `HudArrow.tga`. The selected preview has a 19-pixel-wide visible arrow; increase that visible width by 20% to 22.8. The original source glyph is 24 pixels wide on a 32-pixel canvas, so draw the full texture at `19 * 1.2 * 32 / 24 = 30.4` square. Its artwork points upward at zero rotation and is centered at `(16, 16)`. Both guides share this size and the existing supported texture-coordinate rotation, without assuming retail `Texture:SetRotation`.
-- World-map cache pin: keep the full `MapPin.tga`, with its centered diamond and transparent padding. World-map guardian pin: reuse `GuardianFloating.tga` with its existing `0..65/128` crop on both axes. Existing 26-by-26 map pin bounds, selection and tooltip behavior remain unchanged.
 - Default anchors use the midpoint of the combined DEFAULT action-bar artwork and XP border height from static addon-owned appearance metadata. Cache is left and Guardian right with an eight-unit gap beyond the artwork. Uniform HUD scaling preserves the 190:46 proportions; confirmed independent geometry stays in use.
 - Addon texture paths use `Interface\\AddOns\\SurvivorsDragonUi\\media\\tex\\waypoint\\` with the filenames above.
 
 These assets provide artwork only. They do not add native waypoint APIs, enemy/cache coordinates, or world-to-screen projection capabilities to the 1.12 client.
 
-The minimap guardian and available-cache markers also reuse their floating HUD glyphs: `GuardianFloating.blp` with the `0..65/128` crop, and `Chest.blp` with full `0..1` coordinates, drawn at 20 by 20 local units for each guardian and 16 by 16 for caches. The world-map guardian pin reuses the same medallion and crop; the cache world-map pin retains its separate diamond texture. The same chest also serves the bottom cache-cost counter; no per-view image is needed.
+The minimap guardian and available-cache markers also reuse their floating HUD glyphs: `GuardianFloating.blp` with the `0..65/128` crop, and `Chest.blp` with full `0..1` coordinates, drawn at 20 by 20 local units for each guardian and 16 by 16 for caches. There are no full world-map pins. The same chest also serves the bottom cache-cost counter; no per-view image is needed.
