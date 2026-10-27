@@ -5,6 +5,12 @@ combat text calls `CombatIcon`; the meter's `sct.GetSourceIcon` entry point adds
 its exact healing-category/Melee context and calls that same resolver. The
 meter owns circular drawing and gold rims, with no second item/spell scanner.
 
+All fourteen game catalogs now supply exact ability/talent aliases to that same
+resolver. The Portuguese report exposed a Czech-only preparation path; see
+[LOCALIZATION.md](LOCALIZATION.md#source-icon-languages--2026-10-27) for the
+installed-client source, language populations and AzerothSurvivorsRE leads.
+The item tier, lookup order, native values and rendering remain unchanged.
+
 The reported **The Eye of Hakkar** was missing because its damage is named after
 an item. The spell/talent/database lookup had no item-name tier, and the meter
 hid the rim whenever that resolver returned no icon. The installed native

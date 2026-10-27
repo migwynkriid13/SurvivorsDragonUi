@@ -243,6 +243,23 @@ pinned formatting only; no addon/client execution, local test or standalone
 validation was run. Live appearance, FPS, draw calls and GPU-memory behavior
 remain unverified.
 
+## Source-icon language coverage — 2026-10-27
+
+The shared SCT/meter icon resolver now receives generated exact-name aliases
+for all fourteen game languages, extending the former Czech-only data path.
+The generated data contains 5,667 non-identity alias groups; English has an
+empty table. This adds resident Lua tables/strings at load time. Each lookup
+still reads only the selected language and its candidate list through the
+existing resolver; there is no per-hit catalog build or cross-language scan.
+
+No renderer, frame, texture, material, UV, alpha, animation or binding path
+changes. Native circles, fallback pools and gold rims keep their existing
+region counts and binding caches. Disabled/hidden meters and disabled icons
+still skip resolution. No updater, event, setting, asset or saved state is
+added. These are source-level cost observations, without an FPS/GPU claim or
+local execution. Alias provenance and remaining limits are in
+[LOCALIZATION.md](LOCALIZATION.md#source-icon-languages--2026-10-27).
+
 ## Pet re-audit — 2026-10-26
 
 Rechecking `c2a7c98` against the current owner found two remaining gaps in the
