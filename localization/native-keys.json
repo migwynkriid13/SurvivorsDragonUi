@@ -31,5 +31,7 @@
   "Leech",
   "Healing on Kill",
   "Level Up",
-  "Soul Link"
+  "Soul Link",
+  "marks.gained",
+  "marks.earned"
 ]

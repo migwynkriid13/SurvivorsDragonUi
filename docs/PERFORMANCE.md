@@ -41,6 +41,116 @@ leave hundreds of expensive texture regions drawing continuously.
   GPU-memory, pixel-parity or FPS measurements. No local tests, standalone
   validation, addon execution or game launch is authorized for this audit.
 
+## Loot popup modes and marks — 2026-10-27
+
+The new Loot notifications page uses existing editor artwork: one category
+button, three mode buttons, one checkbox, a heading and a status description.
+The authored controls add 49 texture regions and eight FontStrings in the lazy
+dialog (category 12+1, mode buttons 33+3, checkbox 4+2, heading/description 0+2),
+plus the native scrolling template used by other single-column option pages.
+These allocate only when the editor is first opened, inherit its existing
+visibility and use existing material images; they add no gameplay updater.
+The selected-mode/checkbox comparisons, caption helper and shared dependency
+group skip unchanged selection, text, dimming and input writes. The marks
+control stays inactive at 0.45 alpha outside SDUI mode.
+
+Game/Off clear the existing queue/cards, reject intake before parsing or metadata
+resolution and detach the loot service updater after the native handoff. Only
+pending native visibility handoffs retry on the existing five-Hz controller.
+The shared HUD owner accepts true or false, retaining the original/latest
+external preference across mode previews and guarded synchronous callbacks;
+other owners still acquire hidden visibility by default. Getter matches skip
+setter writes. World/logout/reload cleanup retains its native restoration.
+
+Initial Game/Off creates only the existing non-rendering loot root/controller
+frames; three cards and their nine textures/six FontStrings defer until the
+first SDUI readiness request. Failed preparation stays unready without repeated
+allocation. Once built, the original three-card pool, crop, quality rim, icons,
+UVs, geometry and authored fades remain unchanged and reusable. Both non-custom
+modes actually hide all cards and stop cosmetic animation. Layout hiding remains
+separate: current expiry and bounded metadata retries continue without painting.
+
+Positive item conversions reuse the existing name region, showing the item and
+received marks amount. Only enabled SDUI conversion rewards pass shared
+service/view eligibility; other collected items stop before queue/metadata.
+One latest formatted reward label per card is cached and cleared on language
+change/retirement. No new drawing region, currency artwork, material, event,
+updater, gameplay counter/history or SavedVariable is added. The two normalized
+display choices use the existing profile/draft/reset paths. Source review,
+authored CI-only mocks and pinned formatting do not establish measured draw
+calls, GPU/FPS, native box behavior or in-game font/appearance parity.
+
+## Target health and compact labels — 2026-10-27
+
+One non-rendering target-health controller accepts the official `AZS_TARGET`
+publication for the label, percentage, fill and existing damage-loss texture.
+Its new `CHAT_MSG_ADDON` subscription coalesces target/run/zone receipts into a
+single deferred callback, detached immediately after reading. Target/world
+events and Show/Hide own invalidation. It has no idle poll, new gameplay clock,
+history, saved state or native-table writes. Hidden targets retain receipt
+counts and boundary retirement only; they do not read/paint health, and Show
+accepts current state with a fresh loss baseline. Same-name selection changes
+require a fresh publication rather than guessing spawn identity from a name.
+Selection now arms an unsaved provisional flag: existing target/native-health
+callbacks can immediately paint validated `UnitHealth` / `UnitHealthMax` for the
+current unit until its full-precision packet arrives. This adds native getter
+reads only to that temporary source, not a reader, event, timer or idle poll.
+The accepted AZS source disables the fallback and advances the existing loss
+generation, so a precision/maximum change cannot create a false damage trail.
+Hide and world/zone/phase retirement disable it. Missing/invalid native values
+stay empty, and invalid packets after accepted AZS health never restore capped
+health. Native limits can affect the temporary selection values. Existing
+changed-only labels/fill and hidden guards are retained, with zero new frames,
+regions, artwork, settings or saved state. CI-only mocks cover immediate
+selection, namesakes/late packets, precision handoff, invalid native values and
+native capped writes after acceptance; no local execution or measured latency,
+FPS or visual-parity result is claimed.
+
+The existing native target StatusBar uses a 0–1 fraction, preserving UV ownership
+and artwork. Its two setter adapters compare actual native range/value before
+writing, including after native resets, and guard synchronous value callbacks.
+Labels share the full source and cache formatted text by current/maximum health
+and effective visibility choices. The common health formatter adds fixed
+K/M/B/T display tiers without changing counters, percentage math or loss
+fractions. Player/party/pet health sources remain native, and percentage-off
+labels still skip their native maximum-health getter.
+
+Loss retirement removes the effect from its existing animation list immediately
+on target/spawn/max changes, hiding, world leave or logout. Its original
+half-second fade and fill geometry remain intact. The owner adds one passive
+frame, zero drawing regions, zero textures/materials and no new alpha pass;
+existing labels, health fill and loss texture are reused. There is no local
+test or addon/game execution. These are source-level costs and authored CI mock
+assertions, not measured GPU/FPS or visual-parity results. See
+[target health](UNIT-PORTRAITS.md#target-health-and-compact-numbers).
+
+## Player absorbs — 2026-10-27
+
+The player absorb segment shares the existing ten-Hz player-resource controller
+and its deferred `AZSRUN` reads. One phase/publication gate supplies both
+absorbs and the optional secondary resource; shield display stays independent
+of **Class resources**. Phase/zone/world retirement blocks the retired
+table/stamp/receipt tuple. Hidden frames retain only phase retirement, clear
+their absorb fractions on Hide and perform no shield reads or presentation.
+
+The first valid positive shield lazily allocates one mouse-transparent frame
+and one texture region, reusing `LargeHealthFill` with full UVs. Successful
+texture binding is cached; failed assignments remain retryable through the
+same reader. Anchors and width change only when their effective geometry
+changes; dual vertical anchors follow the resource row's health-height change
+without a new updater. Health-size callbacks reflow retained fractions only
+while visible. Zero, invalid or retired data hides the region once.
+
+There is at most one extra visible region and one additional tinted alpha
+pass over the existing health opening. The segment can overlap the health
+fill at full health or when the shield would exceed its right edge; it is
+clamped to one bar and stays beneath the border and labels. No new texture
+file, material image, animation, event subscription, gameplay history or saved
+state is introduced. These are source-level costs, not measured draw calls,
+GPU memory, pixel parity or FPS results. Only local formatting and source/diff
+review were performed; addon/game execution remains unverified. See
+[player absorbs](UNIT-PORTRAITS.md#player-absorbs) for the data and geometry.
+
 ## Lossless palette packing — 2026-10-27
 
 Forty-eight prepared BLPs now use exact indexed RGB plus separate alpha instead
@@ -190,6 +300,18 @@ decorative updater; their game-owned window/keyboard behavior stays intact.
 
 ## Meter drawing audit — 2026-10-26
 
+Ability names and numeric row values now use DEFAULT/OUTLINE plus the shared
+black chat shadow at `(1, -1)`, matching guardian/chat text. Each label retains
+its font flags so existing size-change retries preserve the outline and require
+both size and flags to match before caching success. Shadow setup reuses the
+shared changed-only helper during label creation. There is no new per-refresh
+font/shadow write, measurement, frame, FontString, texture, updater or saved state.
+The existing two FontStrings per row remain; outlined glyphs cover additional
+pixels, so unchanged region counts do not establish equal GPU cost or FPS.
+Meter header styling, row geometry, font-size preferences and hidden/off guards
+remain unchanged. Source/diff review and pinned formatting only; no local tests,
+standalone validation or addon/game execution.
+
 The custom meter now defaults off through `meterEnabled`. Off hides/clears the
 view, releases its native HUD preference and detaches its existing OnUpdate;
 no meter/phase getters, icon work or drawing run. Off also unsubscribes from native
@@ -209,11 +331,28 @@ retains at most 120 run seconds plus one boundary sample, and compresses flat
 intervals to their endpoints. Source identities remain exact name/proc pairs;
 new identities allocate once and reuse their numeric vectors. Left-boundary
 queries use binary search at the one-Hz presentation cadence. All skips history;
-The X captures all three native views once through the existing reader and keeps
+The X captures all four native views once through the existing reader and keeps
 one baseline/last-counter record per exact name/proc identity. It pools positive
 session rows and recalculates their totals/shares/order only when counters or
 native order change; unchanged counters refresh only native-time average rates.
 No native counter or table is modified.
+
+Party Damage reuses that fourth mode, existing packet intake, reader, session
+reset model, one-Hz presentation and lazy row pool. Native class keys share the
+existing class-color palette. Its only portrait discovery is a bounded five-unit
+pass during visible, icons-enabled party painting; it skips all spell/item icon
+resolution. Unit/name/native-frame-image and actual texture comparisons skip
+unchanged native portrait binding. Failures remain memoized until the identity
+or source image changes or the row retires; neutral fallback binding retains the
+existing retry rules. Icons-off, hidden/off views and retired rows skip that pass
+and binding; release clears the bounded metadata. All four views retain phase
+and received-publication gates. No frame, region, model, artwork, event, updater,
+setting or saved state is added. Native unit portraits occupy the existing icon
+and gold-rim regions, so the authored visible-region budget below is unchanged;
+neutral fallback can still use the existing more expensive strip path. Source
+review and formatting are the only local checks; CI-only mocks are authored for
+cycling, portraits, unchanged/hidden/off work, failure caching, reset metadata
+and world retirement. No measured CPU/GPU/FPS or live visual-parity claim follows.
 
 Hiding empties recent vectors once and stops observation; showing warms the
 window again. Disabling and run/world retirement drop all rate state; language
@@ -315,6 +454,48 @@ The shared editor availability helper now serves this group and the existing rep
 
 ## Guardian Show dead control — 2026-10-27
 
+Boss bars and Guardian tracker each have default-on current/maximum-health
+checkboxes in the existing lazy settings dialog. Four standard checkbox rows
+reuse its native control/label/hint construction; no encounter frame, font
+region, artwork, material, alpha pass, event or updater is added. Both values
+off empties and actually hides each existing health label while native fills
+continue unchanged. One value alone omits the slash. Shared formatting caches
+only the latest enabled values per label, so changing a disabled value performs
+no formatting or presentation write. Actual label text/visibility comparisons
+still repair retired pooled labels.
+
+Guardian health-width measurements retain one latest text/width record per
+copied roster slot, prune retired slots and clear on option, scale, language and
+view retirement. Unavailable glyph widths retry. With both values off the
+tracker skips health formatting/measurement; its minimum pill width and
+non-overlapping end caps remain intact. Hidden views defer all presentation
+through their existing guards/controllers. The four booleans use the current
+display table and normal draft/profile/reset paths, without another
+SavedVariable. CI-only helper/display mocks are authored; local work is source
+review and pinned formatting, without measured draw-call/FPS or live appearance
+claims.
+
+Guardian minimap names reuse each existing passive pin and the shared native
+tooltip. Accepted minimap point copies carry only their received optional name.
+The existing ten-Hz/deferred waypoint refresh performs one cursor/minimap
+geometry sample when guardian pins exist, then tests their cached drawn centers
+only while the pointer is inside the map. The per-frame projection path adds no
+cursor reads. Unchanged pin/name/owner skips tooltip content writes; hide/recycle clears
+only an owned hover, while hidden/editing tooltips stay suppressed. Native
+minimap click/wheel input remains available because pins keep mouse input off.
+No marker frame, texture, hit region, event, updater, artwork, setting or saved
+state is added; the existing native tooltip draws only during hover. Guardian
+pins register their cursor placement once in the existing icon-owner registry.
+The shared visible-tooltip updater samples the cursor and uses the existing
+scale-aware, changed-only cursor anchor regardless of the global cursor option;
+it does not fight the saved bottom-right Layout seat. Other owners keep their
+saved/icon/global-cursor behavior. This adds registry metadata and an existing
+owner-hide hook per pooled pin, with no additional positioning frame or updater.
+The hide hook checks actual shown state so cleanup does not repeat Hide writes.
+Source-extracted placement mocks cover this owner-specific routing. This is
+source-level cost evidence, with CI-only mocked coverage and no measured FPS or
+live input/appearance result. See [GUARDIAN-TRACKER.md](GUARDIAN-TRACKER.md#minimap-names).
+
 The tracker's minus/plus header button, four native state-texture slots, tooltip
 handlers and optional glyph-alignment branch are removed. The existing minimap
 zoom controls retain their artwork and styling. A standard shared-editor checkbox
@@ -369,6 +550,135 @@ No asset, setting, SavedVariable, gameplay clock or updater is added, and the
 34-unit circle, 39-unit rim, exact UVs and native data ownership are preserved.
 These changes were reviewed from source and formatted locally; appearance,
 failure recovery and performance remain unverified in the running client.
+
+## MSBT-style combat text — 2026-10-27
+
+The optional fixed outgoing stream shares the existing SCT controller,
+parser/intake, exact duplicate groups, active list and lazy text pool. Each
+label still uses its original two passive frames, FontString and optional icon;
+the shared root and all artwork are reused. There are zero additional combat
+frames, drawing regions, textures/materials, UV states, native events or
+updaters. Full bursts retain their existing grouping and 1.45-second lifetime,
+so peak active allocations can still grow with the actual event load.
+
+Only this style adds a newest-first spacing pass over active labels. It uses
+pooled scalar offsets, existing text scale/crit sizing and one exponential
+blend per update, with no per-frame table, glyph measurement or texture bind.
+The ordinary animation pass applies a changed-only curved center-relative anchor and
+reuses the existing changed-only scale/alpha writes and conditional measurement
+retry. The default enemy layout retains its original animation equations and
+does not run the spacing pass. Empty active lists skip the added work.
+
+MSBT-style text skips origin creation, per-plate SCT coordinate/health-loss
+sampling, per-hit plate discovery and origin resolution. The existing skin
+discovery and visible nameplate/filter presentation remain independent. With V
+off it also releases the native backing plate feed, so native projection and
+collision work are no longer forced by this style. V-visible plates keep native
+costs. Style transitions retire queued/active labels and matching state, reuse
+the pool and restore the current native V request without preference writes.
+
+The lazy Combat text page adds one standard checkbox: one button, four texture
+regions (box, mark, hover and divider) and one caption, using existing editor
+art. It joins the shared inactive-mode alpha/input guard. The checkbox sits beside SCT size, with the class-color control below it;
+all filters fit the existing page without enlarging the dialog or adding scrolling.
+
+Source/diff review and pinned formatting only; no local tests, standalone
+validation or addon/game execution. CI-only native mocks cover the production
+controller's defaults, fixed anchors, burst spacing, tracking handoff, cleanup
+and pool reuse. These source counts and authored assertions do not establish
+in-game layout, native-name restoration, visual parity or FPS. Behavior is in
+[API-NOTES.md](API-NOTES.md#msbt-style-combat-text--2026-10-27).
+
+## Names-only nameplates — 2026-10-27
+
+The default-off `nameplatesNamesOnly` choice is cached by the existing SCT
+display listener and consumed by its existing visible-plate refresh. Each
+style reuses its name label, remembers its color and changes visibility only
+when the effective mode changes. Names-only updates copy changed native names
+and reaction colors, then skip cosmetic health range/value/color writes and
+raid-icon lookup/binding. Native health-loss matching, coordinate sampling,
+collision placement, V/Shift-V ownership and the boss/guardian filter keep
+their current lifecycles. Masked plates still skip the entire style refresh;
+showing again applies the current choice and current native state.
+
+No per-plate frame, drawing region, texture/material image, UV state, animation,
+event or updater is added. The name overlay anchors to its visual parent at the
+same one-unit inner inset, independently of a hidden cosmetic bar. Starting in
+names-only mode now omits the cosmetic StatusBar and the shadow, background,
+fill and raid-icon regions. They allocate once on the first eligible regular-bar
+refresh and remain pooled afterward. Filtered plates do not trigger that lazy
+allocation. Returning to Names only actually hides those existing regions and
+skips their updates; only the custom name draws. Switching back reuses the
+original art and pool without repeat allocation or fixed texture rebinding.
+Native source bars, collision placement and required SCT tracking remain live;
+this is not a zero-cost native renderer or a measured GPU saving. The lazy
+settings dialog adds one standard checkbox: one button,
+four texture regions (box, check, hover and divider) and two text regions,
+reusing existing art and drawing only while its page is visible.
+
+The nameplate **Font size** row reuses the numeric editor control and cached
+display listener. A shown label changes its font and proportional text-box
+width/height only when the effective size changes; failed font assignments
+remain retryable without caching success. Masked plates defer the work until
+shown. No text measurement, new plate region, native geometry change, event
+or updater is added. Larger glyphs cover more screen pixels and can require
+additional native glyph-atlas entries; this is not an FPS or memory saving.
+The lazy editor adds one container, two styled buttons and their two caption
+frames: 22 existing-art texture regions and five FontStrings after opening it.
+Those controls draw only with the Nameplates settings page.
+
+These are source-level work and visible-region observations, not measured
+draw calls, GPU memory, FPS or native world-text parity. Source/diff review and
+pinned formatting only; no local tests, standalone validation or addon/game
+execution. Settings and behavior are documented in
+[API-NOTES.md](API-NOTES.md#names-only-nameplates--2026-10-27).
+
+## Boss and guardian nameplate filter — 2026-10-27
+
+The default-off `nameplatesBossGuardiansOnly` option adds no gameplay frame,
+texture, material or updater. It uses the current SCT controller's OnUpdate and
+existing message subscription. While enabled, phase/receipt retirement and the
+official unit-list index refresh run at five Hz. A matching source reference,
+timestamp and receipt generation skip index rebuilding. Accepted changes reuse
+exact-name/native-range buckets, with at most the native 40 entries; retired names
+are removed. Off clears the index and skips its native metadata reads.
+
+Accepted metadata indexes the original maximum, its float32 rounding and the
+native ceil/uint32-clamped maximum with its float32 rounding. Whole-number
+publications below 2^23 also index an upper ceiling only where a fractional
+float32 actor maximum can serialize to that integer: all integers below 2^22,
+and even half-ties below 2^23. This retains at most four distinct exact keys per
+entry; it is not a per-plate tolerance search or a carried-forward identity.
+The sleeping-to-awake conversion changes accepted display metadata only. These
+numeric aliases are computed only when the accepted publication changes, reusing
+the same buckets. Published elites mark collisions
+ambiguous across those aliases too. No per-plate conversion, name-only bypass,
+tolerance search, damage estimate, percentage-to-HP inference or new getter is
+added. Names-only labels no longer depend on health-widget anchors, and unused
+bar artwork remains unallocated until an eligible regular plate needs it.
+CI-only full-controller/style mocks cover both options together, native range
+representations, wake ceilings/serialization boundaries, exclusions/ambiguity, mode/V changes, retirement, lazy pooling
+and unchanged writes. Local work is source/diff review and pinned formatting.
+
+Shown hostile plates add a cached-index lookup using their native name and, only
+for candidate names, raw health range. This stays in the existing native
+show/health hooks and per-frame plate scan so reuse cannot carry stale styling.
+Native-hidden plates return before filter/style work. Filtered plates reuse the
+existing transition-only recursive draw-layer and hit-rectangle masking; their
+complete custom visual child stays hidden and skips skin updates. SCT's native
+position/health sampling and full combat-text animations continue unchanged.
+No per-frame table, string formatting, texture bind or new artwork is introduced
+by the filter. Existing pooled skins remain allocated; excluded skins contribute
+no visible custom regions. This does not remove native plate collision work.
+
+The existing lazy settings dialog adds one category button (12 texture regions
+and one caption) and one checkbox row (four texture regions and two captions).
+These reuse the editor artwork and draw only with their shown editor parents;
+no new material or per-plate region is added. The maximum added allocation is
+16 texture regions and three FontStrings after opening the editor. Source
+counts are not measured draw calls, FPS, GPU memory or visual parity. The
+anonymous-plate identity limit and snapshot policy are documented in
+[API-NOTES.md](API-NOTES.md#boss-and-guardian-nameplate-filter--2026-10-27).
 
 ## What changes
 
@@ -572,6 +882,20 @@ GitHub Actions enforces the single shared root across runtime Lua sources.
 
 ## Full chat history
 
+Marks chat formatting runs only during the existing accepted native message
+path. It reuses cached named-field templates, retains original integer text and
+adds no balance getter, currency history, frame, drawing region, asset, event,
+updater or saved state. The collected-item parser supplies a positive reward
+only when that exact suffix matches; chat displays it independently of the popup
+mode. The shared loot service/view guard permits a conversion card only in SDUI
+mode with Show marks rewards on; other collected items stop before queueing and
+icon metadata work.
+Unknown text stays native. Extra compact chat lines use the native message
+pane/history and its existing fonts/fades; there is no separate marks view.
+Source/diff review and pinned formatting only; no local tests, standalone
+validation or addon/game execution. CI-only mocks cover both formats across
+all fourteen catalogs, link/color preservation and marks-off popup exclusion.
+
 Diagnostic capture is opt-in and off by default. While enabled, the session
 archive retains original ordering, duplicate-delivery rules and literal markup
 without a retention cap. Completed chunks are joined once; appending does not
@@ -590,9 +914,18 @@ retains more text. See [CLEANERCHAT-PORT.md](CLEANERCHAT-PORT.md).
 ## Verification limits
 
 Checks run only in GitHub Actions: version gating, formatting, Lua static
-analysis, fractional timer-artwork sampling, a native-base batching reference
-model and runtime-manifest validation. The extra checks read TGA pixels and model
-ordering only; they do not execute addon Lua or client code.
+analysis, package/asset ownership and duplicate inventories, checker regression
+fixtures, fractional timer-artwork sampling and the jewelry reference models.
+The payload report compares file counts, bytes and deterministic in-memory ZIP
+sizes. The source and artwork checks do not execute addon Lua or client code.
+The separately authorized mocked UI step loads selected production Lua in CI
+to assert cooldown/range write budgets, hidden work, loot pool reuse/expiry and
+failure cleanup with native-HUD restoration. It observes mock calls and objects,
+not the client's renderer. Configuration/registration source contracts report
+orphan candidates and reject newly orphaned settings/captions and concrete schema,
+shared-API or callback mistakes. No local test or game execution is authorized.
+See [PR checks](PR-CHECKS.md) for enforced failures, dynamic-ownership evidence,
+preparation-input retention and the limits of exported-helper candidates.
 Pinned StyLua and Prettier formatting is allowed locally. No local tests,
 syntax checks, addon execution or game launches are part of this work.
 PR checks do not build an addon ZIP. Current local implementation is edited

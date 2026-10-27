@@ -26,7 +26,6 @@ The PNG originals were visually inspected before cropping. Original colors and t
 
 | Preparation input                 | Canvas  | Preparation                                                                                                            |
 | --------------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `media/tex/waypoint/MapPin.tga`   | 32 × 32 | Complete original tracked minimap PNG, converted to TGA without cropping or rescaling.                                 |
 | `media/tex/waypoint/HudArrow.tga` | 32 × 32 | Original navigation atlas pixel rectangle `[0, 35, 24, 55)`, placed at `(4, 6)` on a transparent canvas. No rescaling. |
 
 Pixel rectangles use a top-left origin and exclusive right/bottom edges.
@@ -46,7 +45,7 @@ cropping, scaling, recoloring or alpha changes. Every decoded RGB/alpha byte
 matches the source, and full `0..1` UVs display it at the existing HUD/minimap/
 counter sizes of 32/16/18 units. It replaces the former HUD/minimap pouch and
 native tally loot cursor. `CachePouch.blp` is removed from the runtime manifest;
-the old TGA preparation input is retained. The full world-map overlay and runtime diamond have been removed. The local asset receipt and retired BLP backup are under
+the unused `CachePouch.tga` preparation input is also removed. The full world-map overlay and runtime diamond have been removed. The local asset receipt and retired BLP backup are under
 `/tmp/sdui-cache-chest-20261027/`; this is image-data evidence, not game execution.
 
 ## Guardian and former cache HUD artwork
@@ -61,12 +60,11 @@ DragonUI core code is copyright 2026 NeticSoul and DragonUI contributors under M
 
 Original glyph pixels and alpha are retained without rescaling. Transparent source padding is cropped, then the glyph is centered inside a square transparent sampling region with at least one pixel of padding. Both outputs use uncompressed 32-bit RGBA TGA on power-of-two canvases:
 
-| Bundled file                              | Original canvas | Source rectangle    | Output canvas | Placement and sampling                                                              |
-| ----------------------------------------- | --------------- | ------------------- | ------------- | ----------------------------------------------------------------------------------- |
-| `media/tex/waypoint/GuardianFloating.tga` | 64 × 64         | `[0, 1, 62, 64)`    | 128 × 128     | Paste at `(1, 1)`; square region `[0, 0, 65, 65)`, UV `0..65/128` on each axis.     |
-| `media/tex/waypoint/CachePouch.tga`       | 128 × 128       | `[28, 7, 117, 124)` | 128 × 128     | Paste at `(15, 1)`; square region `[0, 0, 119, 119)`, UV `0..119/128` on each axis. |
+| Bundled file                              | Original canvas | Source rectangle | Output canvas | Placement and sampling                                                          |
+| ----------------------------------------- | --------------- | ---------------- | ------------- | ------------------------------------------------------------------------------- |
+| `media/tex/waypoint/GuardianFloating.tga` | 64 × 64         | `[0, 1, 62, 64)` | 128 × 128     | Paste at `(1, 1)`; square region `[0, 0, 65, 65)`, UV `0..65/128` on each axis. |
 
-Square sampling preserves each glyph's proportions inside its 32-by-32 HUD icon field. Guardian HUD, minimap and tracker views reuse this medallion and crop. `MapPin.tga` is retained only as a historical preparation input; its BLP, world-map drawing and click/hover code are removed.
+Square sampling preserves the guardian glyph's proportions inside its 32-by-32 HUD icon field. Guardian HUD, minimap and tracker views reuse this medallion and crop. The obsolete `MapPin.tga` preparation input is removed along with its earlier BLP and world-map drawing and click/hover code. Public source links above retain the provenance of the retired artwork.
 
 ## Drawing recommendations
 

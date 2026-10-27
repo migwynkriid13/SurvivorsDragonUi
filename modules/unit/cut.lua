@@ -10,13 +10,26 @@ DFRL:NewMod("Cut-Out", 1, function()
     local initialized = false
     local animationEnabled = DFRL.display.Get("healthLossAnimation")
 
-    local function ReadValue(cutout) return UnitHealth(cutout.unit), UnitHealthMax(cutout.unit) end
+    local function ReadValue(cutout) return T.GetUnitHealth(cutout.unit) end
+
+    local function Stop(cutout)
+        if cutout.texture:IsShown() then cutout.texture:Hide() end
+        cutout.startFraction, cutout.widthFraction = nil, nil
+        if cutout.fading then
+            for index = table.getn(fading), 1, -1 do
+                if fading[index] == cutout then table.remove(fading, index) end
+            end
+            cutout.fading = nil
+            if table.getn(fading) == 0 then frame:SetScript("OnUpdate", nil) end
+        end
+    end
 
     local function Reset(cutout)
-        cutout.texture:Hide()
-        cutout.startFraction, cutout.widthFraction = nil, nil
-        cutout.lastValue, cutout.lastMax = ReadValue(cutout)
-        if cutout.lastMax and cutout.lastMax > 0 then
+        Stop(cutout)
+        cutout.lastValue, cutout.lastMax, cutout.generation = nil, nil, nil
+        if not cutout.bar:IsVisible() then return end
+        cutout.lastValue, cutout.lastMax, cutout.generation = ReadValue(cutout)
+        if cutout.lastValue and cutout.lastMax and cutout.lastMax > 0 then
             cutout.lastValue = math.max(0, math.min(cutout.lastValue, cutout.lastMax))
         end
     end
@@ -62,8 +75,15 @@ DFRL:NewMod("Cut-Out", 1, function()
             Reset(cutout)
             return
         end
-        local current, maximum = ReadValue(cutout)
-        if maximum <= 0 or maximum ~= cutout.lastMax or not cutout.lastValue then
+        local current, maximum, generation = ReadValue(cutout)
+        if
+            not current
+            or not maximum
+            or maximum <= 0
+            or maximum ~= cutout.lastMax
+            or generation ~= cutout.generation
+            or not cutout.lastValue
+        then
             Reset(cutout)
             return
         end
@@ -122,28 +142,33 @@ DFRL:NewMod("Cut-Out", 1, function()
                 local cutout = { bar = bar, texture = texture, unit = data[2] }
                 table.insert(cutouts, cutout)
                 Reset(cutout)
-                HookScript(bar, "OnHide", function()
-                    Reset(cutout)
-                    for index = table.getn(fading), 1, -1 do
-                        if fading[index] == cutout then table.remove(fading, index) end
-                    end
-                    cutout.fading = nil
-                    if table.getn(fading) == 0 then frame:SetScript("OnUpdate", nil) end
-                end)
+                HookScript(bar, "OnHide", function() Reset(cutout) end)
                 HookScript(bar, "OnValueChanged", function() Update(cutout) end)
                 HookScript(bar, "OnShow", function() Reset(cutout) end)
                 HookScript(bar, "OnSizeChanged", function() PlaceLoss(cutout) end)
+                if cutout.unit == "target" and DFRL.targetHealth then
+                    DFRL.targetHealth.Listen(function() Update(cutout) end)
+                end
             end
         end
-        frame:UnregisterEvent("PLAYER_ENTERING_WORLD")
     end
 
     frame:RegisterEvent("PLAYER_ENTERING_WORLD")
     frame:RegisterEvent("PLAYER_TARGET_CHANGED")
     frame:RegisterEvent("UNIT_TARGET")
+    frame:RegisterEvent("PLAYER_LEAVING_WORLD")
+    frame:RegisterEvent("PLAYER_LOGOUT")
     frame:SetScript("OnEvent", function()
         if event == "PLAYER_ENTERING_WORLD" then
             Initialize()
+            for _, cutout in ipairs(cutouts) do
+                Reset(cutout)
+            end
+        elseif event == "PLAYER_LEAVING_WORLD" or event == "PLAYER_LOGOUT" then
+            for _, cutout in ipairs(cutouts) do
+                Stop(cutout)
+                cutout.lastValue, cutout.lastMax, cutout.generation = nil, nil, nil
+            end
         elseif event == "PLAYER_TARGET_CHANGED" or (event == "UNIT_TARGET" and arg1 == "target") then
             for _, cutout in ipairs(cutouts) do
                 if cutout.unit == "targettarget" or (cutout.unit == "target" and event == "PLAYER_TARGET_CHANGED") then

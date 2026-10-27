@@ -10,6 +10,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local FALLBACK_ICON = T.SourceIconFallback
     local ATTACK_ICON = "Interface\\Icons\\INV_Sword_04"
     local TEXT_DURATION = 1.45
+    local MSBT = { x = 160, top = 110, height = 220, curve = 48, spacing = 8, settle = 0.06 }
     local EVENT_SETTLE = 0.08
     local EVENT_FALLBACK_DELAY = 0.16
     local DUPLICATE_WINDOW = 0.075
@@ -70,6 +71,9 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local function ActiveMode() return settingsDraft and settingsDraft.mode or sctMode end
     local customEnabled, changingSettings = false, false
     local damageIcons = DFRL.display.Get("damageIcons")
+    local nameplatesNamesOnly = DFRL.display.Get("nameplatesNamesOnly")
+    local nameplateFontSize = DFRL.display.Get("nameplateFontSize")
+    local msbtStyle = DFRL.display.Get("sctMSBTStyle")
     local textScale = DFRL.display.Get("sctScale")
     -- Keep V's visible request separate from the backing coordinate feed. The
     -- native verbs do not write FrameXML's saved NAMEPLATES_ON preference.
@@ -86,8 +90,169 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         and WorldFrame.SetHitRectInsets
 
     local function CustomEnabled() return customEnabled end
+    local function UsesPlateOrigins() return CustomEnabled() and not msbtStyle end
 
     local function IsFiniteNumber(value) return type(value) == "number" and value - value == 0 end
+
+    -- Plate ranges pass through native ceiling/uint32 fields and float32 storage.
+    -- Index their exact encodings, never a tolerance or a percentage estimate.
+    local function PlateFloat(value)
+        local _, exponent = math.frexp(value)
+        if exponent > 128 then return end
+        local step = math.ldexp(1, math.max(exponent, -125) - 24)
+        local scaled = value / step
+        local integer = math.floor(scaled)
+        local fraction = scaled - integer
+        if fraction > 0.5 or (fraction == 0.5 and math.mod(integer, 2) == 1) then integer = integer + 1 end
+        if integer == 0 or (exponent == 128 and integer == 16777216) then return end
+        return integer * step
+    end
+    local function AddPlateMaximum(maxima, value, eligible)
+        if value and maxima[value] ~= false then maxima[value] = eligible end
+    end
+    local function IndexPlateMaximum(maxima, maximum, eligible)
+        AddPlateMaximum(maxima, maximum, eligible)
+        AddPlateMaximum(maxima, PlateFloat(maximum), eligible)
+        local unitMaximum = math.min(4294967295, math.ceil(maximum))
+        AddPlateMaximum(maxima, unitMaximum, eligible)
+        AddPlateMaximum(maxima, PlateFloat(unitMaximum), eligible)
+        -- AZSUNITS serializes actor float32 maxima to zero decimal places, but
+        -- waking guardians publish ceilf(maximum) to UNIT_FIELD_MAXHEALTH.
+        -- A rounded integer can therefore encode a fractional maximum just above
+        -- it. Such a float32 exists below 2^22, or at an even tie below 2^23;
+        -- above that, float32 has no fractional maximum that rounds to this integer.
+        if
+            maximum == math.floor(maximum)
+            and (maximum < 4194304 or (maximum < 8388608 and math.mod(maximum, 2) == 0))
+        then
+            AddPlateMaximum(maxima, maximum + 1, eligible)
+        end
+    end
+
+    local plateFilter = {
+        enabled = DFRL.display.Get("nameplatesBossGuardiansOnly"),
+        names = {},
+        sequence = 0,
+        units = 0,
+        run = 0,
+        barrier = -1,
+        age = 0.2,
+    }
+    function plateFilter.Clear(barrier)
+        for name in pairs(plateFilter.names) do
+            plateFilter.names[name] = nil
+        end
+        plateFilter.source, plateFilter.stamp, plateFilter.accepted = nil, nil, nil
+        if barrier then plateFilter.barrier = barrier end
+    end
+    function plateFilter.Receipt(prefix)
+        if prefix ~= "AZSUNITS" and prefix ~= "AZSZONE" and prefix ~= "AZSRUN" then return end
+        plateFilter.sequence = plateFilter.sequence + 1
+        if prefix == "AZSUNITS" then
+            plateFilter.units = plateFilter.sequence
+        elseif prefix == "AZSRUN" then
+            plateFilter.run = plateFilter.sequence
+        else
+            plateFilter.Clear(plateFilter.sequence)
+            plateFilter.zone = plateFilter.sequence
+            plateFilter.time = nil
+        end
+    end
+    function plateFilter.Update(elapsed)
+        if not plateFilter.enabled then return end
+        plateFilter.age = plateFilter.age + (tonumber(elapsed) or 0)
+        if plateFilter.age < 0.2 then return end
+        plateFilter.age = 0
+        -- Only the existing deferred reader observes packets after native parsing.
+        if plateFilter.zone then
+            if plateFilter.run <= plateFilter.zone then return end
+            plateFilter.zone = nil
+        end
+        local ok, phase
+        if type(_G.AZS_GetPhase) == "function" then
+            ok, phase = pcall(_G.AZS_GetPhase)
+        end
+        if not ok or (phase ~= "playing" and phase ~= "choosing" and phase ~= "paused" and phase ~= "victory") then
+            plateFilter.Clear(plateFilter.sequence)
+            plateFilter.time = nil
+            return
+        end
+        local nativeTime = type(_G.AZS_RUN) == "table" and _G.AZS_RUN.t or nil
+        if IsFiniteNumber(nativeTime) and IsFiniteNumber(_G.AZS_RUN_UPDATED) then
+            if plateFilter.time and nativeTime < plateFilter.time then plateFilter.Clear(plateFilter.run) end
+            plateFilter.time = nativeTime
+        end
+        local entries, stamp = _G.AZS_UNITS, _G.AZS_UNITS_UPDATED
+        if
+            plateFilter.units <= plateFilter.barrier
+            or not IsFiniteNumber(stamp)
+            or stamp < 0
+            or type(entries) ~= "table"
+            or table.getn(entries) > 40
+        then
+            plateFilter.Clear()
+            return
+        end
+        if
+            plateFilter.source == entries
+            and plateFilter.stamp == stamp
+            and plateFilter.accepted == plateFilter.units
+        then
+            return
+        end
+        for _, entry in ipairs(entries) do
+            if
+                type(entry) ~= "table"
+                or (entry.kind ~= "final" and entry.kind ~= "boss" and entry.kind ~= "guardian" and entry.kind ~= "elite")
+                or not IsFiniteNumber(entry.id)
+                or entry.id <= 0
+                or entry.id ~= math.floor(entry.id)
+                or type(entry.name) ~= "string"
+                or entry.name == ""
+                or not IsFiniteNumber(entry.hp)
+                or not IsFiniteNumber(entry.hpm)
+                or entry.hpm <= 0
+                or entry.hp < 0
+                or entry.hp > entry.hpm
+            then
+                plateFilter.Clear()
+                return
+            end
+        end
+        -- Reuse each exact-name bucket while replacing the complete publication.
+        for _, maxima in pairs(plateFilter.names) do
+            for maximum in pairs(maxima) do
+                maxima[maximum] = nil
+            end
+        end
+        for _, entry in ipairs(entries) do
+            if entry.hp > 0 then
+                local maxima = plateFilter.names[entry.name]
+                if not maxima then
+                    maxima = {}
+                    plateFilter.names[entry.name] = maxima
+                end
+                -- A published ordinary elite with the same signature is ambiguous.
+                IndexPlateMaximum(maxima, entry.hpm, entry.kind ~= "elite")
+            end
+        end
+        for name, maxima in pairs(plateFilter.names) do
+            if not next(maxima) then plateFilter.names[name] = nil end
+        end
+        plateFilter.source, plateFilter.stamp, plateFilter.accepted = entries, stamp, plateFilter.units
+    end
+    function plateFilter.Matches(data)
+        local name = data.nameRegion and data.nameRegion:GetText()
+        local maxima = name and plateFilter.names[name]
+        if not maxima then return false end
+        local minimum, maximum = data.bar:GetMinMaxValues()
+        -- Anonymous plates expose no spawn ID; never equate percentage bars to HP.
+        return minimum == 0 and maxima[maximum] == true
+    end
+    DFRL.locale.Listen(function()
+        plateFilter.Clear()
+        plateFilter.age = 0.2
+    end)
 
     local function IsEnemyPlate(data)
         if not data.bar or not data.bar.GetStatusBarColor then return false end
@@ -144,11 +309,12 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         data.presentationMasked = false
     end
     local function UpdatePresentation(plate, data, force)
+        local hiddenByV = UsesPlateOrigins() and not enemyPlatesEnabled
         local masked = trackingSupported
                 and inWorld
-                and CustomEnabled()
-                and not enemyPlatesEnabled
+                and (hiddenByV or plateFilter.enabled)
                 and IsEnemyPlate(data)
+                and (hiddenByV or not plateFilter.Matches(data))
             or false
         if data.presentationMasked == masked and not force then return end
         if not masked then
@@ -171,7 +337,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         data.presentationMasked = true
     end
     local function ApplyPlateTracking(force)
-        local wanted = enemyPlatesEnabled or (trackingSupported and inWorld and CustomEnabled())
+        local wanted = enemyPlatesEnabled or (trackingSupported and inWorld and UsesPlateOrigins())
         for plate, data in pairs(plates) do
             UpdatePresentation(plate, data)
         end
@@ -201,6 +367,8 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         text.sourceIsPet = nil
         text.color = nil
         text.needsMeasure = nil
+        text.scrollOffset, text.scrollY = nil, nil
+        text.anchorPoint, text.anchorX, text.anchorY = nil, nil, nil
         table.insert(textPool, text)
     end
 
@@ -223,7 +391,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     end
 
     local function IsShownEnemy(plate, data)
-        if not CustomEnabled() or not inWorld or not plate:IsShown() then return false end
+        if not UsesPlateOrigins() or not inWorld or not plate:IsShown() then return false end
         if plate.IsVisible and not plate:IsVisible() then return false end
         return IsEnemyPlate(data)
     end
@@ -323,10 +491,16 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     end
 
     local function RefreshPlate(plate, data, now, forcePresentation, geometry)
+        if not plate:IsShown() then
+            RetirePlate(plate)
+            return
+        end
         UpdatePresentation(plate, data, forcePresentation)
         -- Hidden tracking still samples native data, but its skin has no pixels
         -- to refresh. Unmasking updates the skin in this same callback.
-        if plateStyle and not data.presentationMasked then plateStyle.Update(plate, data) end
+        if plateStyle and not data.presentationMasked then
+            plateStyle.Update(plate, data, nameplatesNamesOnly, nameplateFontSize)
+        end
         if not IsShownEnemy(plate, data) then
             RetirePlate(plate)
             return
@@ -429,7 +603,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         -- Share root geometry only inside this synchronous pass. Show/health
         -- callbacks keep sampling afresh, including later in the same frame.
         -- Retry invalid geometry and retain each origin's last usable point.
-        local geometry = CustomEnabled() and {} or nil
+        local geometry = UsesPlateOrigins() and {} or nil
         DiscoverPlates(force, now, geometry)
         -- Snapshot on every frame, rather than every tenth of a second: a
         -- one-shot enemy can disappear between two of the old scans.
@@ -1023,7 +1197,32 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         end
     end
 
+    local function PositionText(text, relativePoint, x, y)
+        if text.anchorPoint == relativePoint and text.anchorX == x and text.anchorY == y then return end
+        text.holder:SetPoint("CENTER", WorldFrame, relativePoint, x, y)
+        text.anchorPoint, text.anchorX, text.anchorY = relativePoint, x, y
+    end
+
     DFRL.display.Listen(function()
+        local scrolling = DFRL.display.Get("sctMSBTStyle")
+        if msbtStyle ~= scrolling then
+            msbtStyle = scrolling
+            -- Do not move old hits between unrelated coordinate systems, or
+            -- replay a queued enemy hit in the fixed screen stream.
+            ResetDisplay()
+            ApplyPlateTracking(false)
+            NotifySettings()
+        end
+        nameplatesNamesOnly = DFRL.display.Get("nameplatesNamesOnly")
+        nameplateFontSize = DFRL.display.Get("nameplateFontSize")
+        local filtered = DFRL.display.Get("nameplatesBossGuardiansOnly")
+        if plateFilter.enabled ~= filtered then
+            plateFilter.enabled = filtered
+            plateFilter.Clear()
+            plateFilter.time = nil
+            plateFilter.age = 0.2
+            ApplyPlateTracking(false)
+        end
         textScale = DFRL.display.Get("sctScale")
         local enabled = DFRL.display.Get("damageIcons")
         local iconsChanged = damageIcons ~= enabled
@@ -1124,16 +1323,21 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         local value = info.text or info.amount
         if not value then return end
         local text = AcquireText()
-        -- Snapshot the launch point; later native plate rearrangements must
-        -- never drag an already visible number across the screen.
+        -- The enemy layout snapshots its native launch point. The scrolling
+        -- layout uses offsets from screen center and needs no enemy position.
+        if msbtStyle then
+            x, y = MSBT.x, MSBT.top - 12
+        end
         text.x, text.y = x, y
         text.started = GetTime()
         text.impact = info.critical or info.kind == "miss"
         text.sizeScale = info.critical and 1.5 or 1
-        text.arcX = arcDirection * math.random(36, 64)
-        text.launch = math.random(105, 130)
-        text.gravity = text.launch + 65
-        arcDirection = -arcDirection
+        if not msbtStyle then
+            text.arcX = arcDirection * math.random(36, 64)
+            text.launch = math.random(105, 130)
+            text.gravity = text.launch + 65
+            arcDirection = -arcDirection
+        end
         local displayText = tostring(value)
         if info.kind == "miss" then displayText = DFRL.locale.CombatText(displayText) end
         text.label:SetText(displayText)
@@ -1157,7 +1361,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             text.holder:SetAlpha(1)
         end
         -- New holders have no anchor; ReleaseText cleared pooled holders.
-        text.holder:SetPoint("CENTER", WorldFrame, "BOTTOMLEFT", x, y + 12)
+        PositionText(text, msbtStyle and "CENTER" or "BOTTOMLEFT", x, y + 12)
         text.holder:Show()
         table.insert(activeTexts, text)
     end
@@ -1170,7 +1374,12 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             local age = now - entry.time
             local resolved = false
             if age >= EVENT_SETTLE then
-                local x, y = ResolveOrigin(entry.info, now, age >= EVENT_FALLBACK_DELAY)
+                local x, y
+                if msbtStyle then
+                    x, y = 0, 0
+                else
+                    x, y = ResolveOrigin(entry.info, now, age >= EVENT_FALLBACK_DELAY)
+                end
                 if x and y then
                     local group = entry.group
                     group.count = group.count + 1
@@ -1179,8 +1388,8 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                     resolved = true
                 end
             end
-            -- Match every original hit once in native message order, retaining
-            -- original amounts for health-loss consumption and plate identity.
+            -- Enemy text matches every original hit in native message order;
+            -- the fixed stream needs neither plate identity nor health loss.
             if not resolved then
                 kept = kept + 1
                 pending[kept] = entry
@@ -1222,8 +1431,33 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         table.setn(pendingGroups, kept)
     end
 
-    local function UpdateTexts(now)
+    local function PrepareScrollPositions(now, elapsed)
+        local ceiling
+        local blend = 1 - math.exp(-math.max(0, elapsed) / MSBT.settle)
+        -- Newest first: reserve room for each label's largest crit pop without
+        -- allocating lanes, dropping hits or changing their original lifetime.
+        for index = table.getn(activeTexts), 1, -1 do
+            local text = activeTexts[index]
+            local progress = (now - text.started) / TEXT_DURATION
+            if progress < 1 then
+                local halfHeight = 12 * textScale * text.sizeScale * (text.impact and 2 or 1)
+                local y = MSBT.top - MSBT.height * progress
+                local target = ceiling and math.min(y, ceiling - halfHeight - MSBT.spacing) or y
+                local offset = y - target
+                if text.scrollOffset then
+                    text.scrollOffset = text.scrollOffset + (offset - text.scrollOffset) * blend
+                else
+                    text.scrollOffset = offset
+                end
+                text.scrollY = y - text.scrollOffset
+                ceiling = text.scrollY - halfHeight
+            end
+        end
+    end
+
+    local function UpdateTexts(now, elapsed)
         local count = table.getn(activeTexts)
+        if msbtStyle and count > 0 then PrepareScrollPositions(now, elapsed) end
         local kept = 0
         for index = 1, count do
             local text = activeTexts[index]
@@ -1233,11 +1467,19 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             else
                 kept = kept + 1
                 activeTexts[kept] = text
-                -- Only the hit's own animation moves it from its launch point.
-                local x = text.x + text.arcX * progress
-                local y = text.y + 12 + text.launch * progress - text.gravity * progress * progress
+                local x, y, relativePoint
+                if msbtStyle then
+                    x = MSBT.x + MSBT.curve * 4 * progress * (1 - progress)
+                    y = text.scrollY
+                    relativePoint = "CENTER"
+                else
+                    -- Only the hit's own animation moves its native launch point.
+                    x = text.x + text.arcX * progress
+                    y = text.y + 12 + text.launch * progress - text.gravity * progress * progress
+                    relativePoint = "BOTTOMLEFT"
+                end
                 -- Replacing CENTER updates the existing anchor in place.
-                text.holder:SetPoint("CENTER", WorldFrame, "BOTTOMLEFT", x, y)
+                PositionText(text, relativePoint, x, y)
                 local scale = textScale * text.sizeScale
                 if text.impact and progress < 1 / 6 then
                     local pop = progress * 6
@@ -1286,7 +1528,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         -- Catch newly allocated plates before a lethal hit can retire them.
         -- Known plates already sample on show/health changes and every frame;
         -- refreshing the entire pack for each combat message multiplies UI work.
-        if WorldFrame and combatDiscoveryNeeded then
+        if UsesPlateOrigins() and WorldFrame and combatDiscoveryNeeded then
             combatDiscoveryNeeded = false
             DiscoverPlates(false, now)
         end
@@ -1440,6 +1682,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         local eventTime = T.NameplateCombatEventHandlers[event] and GetTime() or nil
         if event == "PLAYER_ENTERING_WORLD" then
             inWorld = true
+            plateFilter.age = 0.2
             iconSourcesDirty.talents, iconSourcesDirty.debuffs = true, true
             iconSourcesDirty.target, iconSourcesDirty.mouseover = true, true
             enemyPlatesEnabled = _G.NAMEPLATES_ON and true or false
@@ -1447,6 +1690,8 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         elseif event == "PLAYER_LEAVING_WORLD" or event == "PLAYER_LOGOUT" then
             sct.FinishEdit(false)
             inWorld = false
+            plateFilter.Clear(plateFilter.sequence)
+            plateFilter.time, plateFilter.zone = nil, nil
             for _, data in pairs(plates) do
                 RestorePresentation(data)
             end
@@ -1466,6 +1711,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         elseif event == "UNIT_AURA" then
             if arg1 == "target" or arg1 == "mouseover" then iconSourcesDirty[arg1] = true end
         elseif event == "CHAT_MSG_ADDON" then
+            plateFilter.Receipt(arg1)
             if arg1 == "AZSDEBUFFS" then
                 iconSourcesDirty.debuffs = true
             elseif arg1 == "AZSZONE" then
@@ -1484,6 +1730,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         -- Observe outgoing CVar changes without writing; the independent
         -- incoming/self global is read only for its editor control.
         SyncGameSettings(false)
+        plateFilter.Update(arg1)
         ScanPlates(false)
         -- Native plate allocation follows this update. The first accepted hit
         -- in the next event batch must inspect that roster, even if GetTime
@@ -1492,7 +1739,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         if not CustomEnabled() then return end
         local now = GetTime()
         UpdatePending(now)
-        UpdateTexts(now)
+        UpdateTexts(now, arg1)
     end)
 
     hooksecurefunc("HideNameplates", function()

@@ -1,7 +1,7 @@
--- Shared ownership of a native HUD preference while its replacement is ready.
+-- Shared temporary ownership of native HUD visibility; replacements default off.
 function DFRL.tools.NewHudOwner(part, cvar)
     local owner = {}
-    local preference, applying
+    local preference, applying, applied, previous
 
     local function Shown(value)
         if value == true or value == 1 or value == "1" then return true end
@@ -20,23 +20,28 @@ function DFRL.tools.NewHudOwner(part, cvar)
         return ok
     end
     function owner.IsCaptured() return preference ~= nil end
-    function owner.Acquire()
+    function owner.Acquire(visible)
+        visible = visible == true
         if type(AZS_SetHudShown) ~= "function" then return false end
         local shown = owner.Read()
         if shown == nil then return false end
         if preference == nil then preference = shown end
-        if shown and (not Write(false) or owner.Read() ~= false) then return false end
+        if shown ~= visible then
+            previous, applied = shown, visible
+            if not Write(visible) or owner.Read() ~= visible then return false end
+        end
+        applied, previous = visible, nil
         return true
     end
     function owner.Release()
         if preference == nil then return true end
         local current = owner.Read()
         if current == nil then return false end
-        -- Restore only our suppression; a later visible external choice wins.
-        if current == false and current ~= preference then
+        -- Restore only our owned state, including an unfinished mode handoff.
+        if (current == applied or current == previous) and current ~= preference then
             if not Write(preference) or owner.Read() ~= preference then return false end
         end
-        preference = nil
+        preference, applied, previous = nil, nil, nil
         return true
     end
     function owner.Observe(name)

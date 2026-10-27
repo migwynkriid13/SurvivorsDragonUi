@@ -159,6 +159,7 @@
     "modules/ui/ui.lua",
     "modules/unit/auras.lua",
     "modules/unit/cut.lua",
+    "modules/unit/health.lua",
     "modules/unit/mini.lua",
     "modules/unit/pets.lua",
     "modules/unit/player.lua",

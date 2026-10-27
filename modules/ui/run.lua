@@ -453,7 +453,11 @@ DFRL:NewMod("RunTimers", 5, function()
             button:SetSelected(value == mode)
         end
         if mode == "on" then
-            sctDescription:SetText("Addon damage numbers follow enemies.")
+            if DFRL.display.Get("sctMSBTStyle") then
+                sctDescription:SetText("Addon damage numbers scroll beside your character.")
+            else
+                sctDescription:SetText("Addon damage numbers follow enemies.")
+            end
         elseif mode == "off" then
             sctDescription:SetText("Custom and native outgoing damage text are off.")
         else
@@ -473,12 +477,22 @@ DFRL:NewMod("RunTimers", 5, function()
                 button:SetSelected(id == selected)
             end
         end
+        if fontEditor and fontEditor.displayModes then
+            for key, group in pairs(fontEditor.displayModes) do
+                local selected = DFRL.display.Get(key)
+                for id, button in pairs(group.buttons) do
+                    if button.editorSelected ~= (id == selected) then button:SetSelected(id == selected) end
+                end
+                T.SetTextIfChanged(group.description, group.descriptions[selected])
+            end
+        end
         for key, label in pairs(displayNumbers) do
             local value = DFRL.display.Get(key)
             T.SetTextIfChanged(label, label.formatValue and label.formatValue(value) or tostring(value))
         end
         for key, control in pairs(displayControls) do
-            control:SetChecked(DFRL.display.Get(key))
+            local checked = DFRL.display.Get(key)
+            if control.editorChecked ~= checked then control:SetChecked(checked) end
             if key == "roundPlayerPortrait" or key == "playerPortrait3D" then
                 local enabled = not DFRL.display.Get("hidePortraits")
                 control:EnableMouse(enabled)
@@ -491,6 +505,7 @@ DFRL:NewMod("RunTimers", 5, function()
         end
         for key, group in pairs(dependentSettings) do
             local enabled = DFRL.display.Get(key)
+            if group.value then enabled = enabled == group.value end
             SetSettingsEnabled(group, enabled)
             if not enabled and key == "customRunTimer" and fontMenu and fontMenu:IsShown() then fontMenu:Hide() end
         end
@@ -830,11 +845,35 @@ DFRL:NewMod("RunTimers", 5, function()
                 },
             },
             {
+                key = "nameplates",
+                label = "Nameplates",
+                options = {
+                    {
+                        "nameplateFontSize",
+                        "Font size",
+                        "Change name text size, including Names only.",
+                        step = 1,
+                    },
+                    {
+                        "nameplatesNamesOnly",
+                        "Names only",
+                        "Hide health bars and keep names. Custom combat text still works.",
+                    },
+                    {
+                        "nameplatesBossGuardiansOnly",
+                        "Only bosses and guardians",
+                        "Hide ordinary enemy nameplates. V still shows or hides nameplates.",
+                    },
+                },
+            },
+            {
                 key = "bosses",
                 label = "Boss bars",
                 master = "customBossBars",
                 options = {
                     { "customBossBars", "Enable custom boss bars", "Off: use the game's original boss bars." },
+                    { "bossShowCurrentHealth", "Show current health", "Show current health on health bars." },
+                    { "bossShowMaximumHealth", "Show maximum health", "Show maximum health on health bars." },
                     { "bossDebuffs", "Boss debuffs", "Effects on boss and guardian health bars." },
                     { "guardiansInBossBar", "Guardians in boss bar", "Off: show only bosses in the boss bar." },
                 },
@@ -864,10 +903,30 @@ DFRL:NewMod("RunTimers", 5, function()
                 },
             },
             {
+                key = "loot",
+                label = "Loot notifications",
+                master = "lootMode",
+                masterValue = "sdui",
+                mode = {
+                    key = "lootMode",
+                    label = "Loot popups",
+                    values = {
+                        { "sdui", "SDUI", "SDUI loot popups." },
+                        { "game", "Game", "The game's original loot popups." },
+                        { "off", "Off", "Loot appears in chat only." },
+                    },
+                },
+                options = {
+                    { "lootShowMarks", "Show marks rewards", "Show marks from already-collected items." },
+                },
+            },
+            {
                 key = "guardians",
                 label = "Guardian tracker",
                 options = {
                     { "guardianShowDead", "Show dead", "Show defeated guardians and their respawn timers." },
+                    { "guardianShowCurrentHealth", "Show current health", "Show current health on health bars." },
+                    { "guardianShowMaximumHealth", "Show maximum health", "Show maximum health on health bars." },
                 },
             },
             {
@@ -1028,7 +1087,8 @@ DFRL:NewMod("RunTimers", 5, function()
         for _, entry in ipairs(modes) do
             modeWidth = math.max(modeWidth, TextWidth(entry.label) + 24)
         end
-        local filterWidth, filterHeadingWidth = TextWidth("Class-colored damage") + 36, 0
+        local filterWidth = math.max(TextWidth("Class-colored damage"), TextWidth("MSBT-style scrolling")) + 36
+        local filterHeadingWidth = 0
         for _, group in ipairs(combatFilters) do
             filterHeadingWidth = math.max(filterHeadingWidth, TextWidth(group.label))
             for _, entry in ipairs(group.entries) do
@@ -1044,6 +1104,13 @@ DFRL:NewMod("RunTimers", 5, function()
                     math.max(TextWidth(entry[2]) + controlsWidth, TextWidth(entry[3]) / 2 + controlsWidth)
                 hudOptionWidth =
                     math.max(hudOptionWidth, optionWidth * columns + gap * (columns - 1) + (columns == 1 and 24 or 0))
+            end
+            if category.mode then
+                hudOptionWidth = math.max(hudOptionWidth, TextWidth(category.mode.label) + 24)
+                for _, entry in ipairs(category.mode.values) do
+                    hudOptionWidth = math.max(hudOptionWidth, 3 * (TextWidth(entry[2]) + 24) + gap * 2 + 24)
+                    hudOptionWidth = math.max(hudOptionWidth, TextWidth(entry[3]) / 2 + 24)
+                end
             end
         end
         local outlineWidth = 0
@@ -1225,10 +1292,11 @@ DFRL:NewMod("RunTimers", 5, function()
             local page = pages[category.key]
             local dependents
             if category.master then
-                dependents = { controls = {} }
+                dependents = { controls = {}, value = category.masterValue }
                 dependentSettings[category.master] = dependents
             end
             local columns, rowHeight = category.columns or 1, category.rowHeight or 60
+            local modeHeight = category.mode and 112 or 0
             local rowWidth = (contentWidth - gap * (columns - 1)) / columns
             local content, scroll, ScrollOptions = page, nil, nil
             if not category.columns then
@@ -1239,7 +1307,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 rowWidth = contentWidth - 24
                 content = CreateFrame("Frame", nil, scroll)
                 content:SetWidth(rowWidth)
-                content:SetHeight(table.getn(category.options) * rowHeight)
+                content:SetHeight(modeHeight + table.getn(category.options) * rowHeight)
                 scroll:SetScrollChild(content)
                 ScrollOptions = function(direction)
                     local slider = _G[scrollName .. "ScrollBar"]
@@ -1253,7 +1321,7 @@ DFRL:NewMod("RunTimers", 5, function()
             end
             for index, entry in ipairs(category.options) do
                 local x = math.mod(index - 1, columns) * (rowWidth + gap)
-                local y = -math.floor((index - 1) / columns) * rowHeight
+                local y = -modeHeight - math.floor((index - 1) / columns) * rowHeight
                 local control
                 if entry.step then
                     control = DisplayNumber(content, entry, rowWidth, rowHeight)
@@ -1278,6 +1346,27 @@ DFRL:NewMod("RunTimers", 5, function()
                     control:EnableMouseWheel(true)
                     control:SetScript("OnMouseWheel", ScrollOptions)
                 end
+            end
+            if category.mode then
+                local mode = category.mode
+                local heading = FontEditorLabel(content, mode.label, 0, -4, 12)
+                heading:SetTextColor(0.94, 0.79, 0.47)
+                local group = { buttons = {}, descriptions = {} }
+                fontEditor.displayModes = fontEditor.displayModes or {}
+                fontEditor.displayModes[mode.key] = group
+                local buttonWidth = (rowWidth - gap * 2) / 3
+                for index, entry in ipairs(mode.values) do
+                    local id = entry[1]
+                    local button = T.CreateEditorButton(content, entry[2], buttonWidth, 30)
+                    button:SetPoint("TOPLEFT", content, "TOPLEFT", (index - 1) * (buttonWidth + gap), -28)
+                    button:SetScript("OnClick", function() DFRL.display.Set(mode.key, id) end)
+                    group.buttons[id], group.descriptions[id] = button, entry[3]
+                end
+                group.description = FontEditorLabel(content, "", 0, -68, 10)
+                group.description:SetWidth(rowWidth)
+                group.description:SetHeight(36)
+                group.description:SetJustifyV("TOP")
+                group.description:SetTextColor(0.59, 0.59, 0.56)
             end
             if category.stylePicker then
                 local top = math.ceil(table.getn(category.options) / columns) * rowHeight + 8
@@ -1391,7 +1480,8 @@ DFRL:NewMod("RunTimers", 5, function()
             control.label:ClearAllPoints()
             control.label:SetPoint("LEFT", control, "LEFT", 32, 0)
         end
-        CombatToggle("sctClassColors", "Class-colored damage", filterSize + gap, -182)
+        CombatToggle("sctMSBTStyle", "MSBT-style scrolling", filterSize + gap, -182)
+        CombatToggle("sctClassColors", "Class-colored damage", filterSize + gap, -218)
         divider = T.EditorDivider(combat, contentWidth)
         divider:SetPoint("TOPLEFT", combat, "TOPLEFT", 0, -282)
         for _, group in ipairs(combatFilters) do
@@ -2227,7 +2317,7 @@ DFRL:NewMod("RunTimers", 5, function()
         ClearDebuffs(row)
         row.frame:Hide()
         T.SetTextIfChanged(row.name, "")
-        T.SetTextIfChanged(row.health, "")
+        T.SetEncounterHealthText(row.health, nil, nil, false, false)
         if row.value ~= 0 then row.bar:SetValue(0) end
         row.value, row.layoutOffset = 0, nil
         row.id, row.key = nil, nil
@@ -3005,7 +3095,13 @@ DFRL:NewMod("RunTimers", 5, function()
                 if row.value ~= value then row.bar:SetValue(value) end
                 row.value = value
                 T.SetTextIfChanged(row.name, entry.name)
-                T.SetTextIfChanged(row.health, T.EncounterHealthText(entry.hp, entry.maximum))
+                T.SetEncounterHealthText(
+                    row.health,
+                    entry.hp,
+                    entry.maximum,
+                    DFRL.display.Get("bossShowCurrentHealth"),
+                    DFRL.display.Get("bossShowMaximumHealth")
+                )
                 if not row.frame:IsShown() then row.frame:Show() end
             end
             if rowOrder[index] ~= row then reflow = true end

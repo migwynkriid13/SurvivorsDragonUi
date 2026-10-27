@@ -86,6 +86,7 @@ DFRL:NewMod("Waypoints", 3, function()
         local outdoorDiameter = { 14, 12, 10, 8, 6, 4 }
         local indoorDiameter = { 300, 240, 180, 120, 80, 50 }
         local originalFlag
+        local hoveredPin, hoveredName
         local mode, modeDirty, probing, reloading = nil, true, false, false
         local pendingZoom, RollbackZoom
         for _, tracker in ipairs(trackers) do
@@ -97,6 +98,83 @@ DFRL:NewMod("Waypoints", 3, function()
             if value == false or value == 0 or value == "0" then return false end
         end
 
+        local function HideGuardianTooltip(pin)
+            if pin and hoveredPin ~= pin then return end
+            if hoveredPin and GameTooltip and GameTooltip:IsOwned(hoveredPin) and GameTooltip:IsShown() then
+                GameTooltip:Hide()
+            end
+            hoveredPin, hoveredName = nil, nil
+        end
+
+        local function UpdateGuardianTooltip()
+            local tracker = trackers[2]
+            if not GameTooltip or not next(tracker.minimapPins) or type(_G.GetCursorPosition) ~= "function" then
+                HideGuardianTooltip()
+                return
+            end
+            if DFRL.layout.IsEditing() or DFRL.layout.IsHidden("tooltip") then
+                if hoveredPin and GameTooltip:IsOwned(hoveredPin) and GameTooltip:IsShown() then GameTooltip:Hide() end
+                return
+            end
+            local cursorX, cursorY = _G.GetCursorPosition()
+            local centerX, centerY = Minimap:GetCenter()
+            local scale = Minimap:GetEffectiveScale()
+            local width, height = T.GetLocalSize(Minimap)
+            if
+                not Number(cursorX)
+                or not Number(cursorY)
+                or not Number(centerX)
+                or not Number(centerY)
+                or not Number(scale)
+                or scale <= 0
+                or not Number(width)
+                or not Number(height)
+                or width <= 0
+                or height <= 0
+            then
+                HideGuardianTooltip()
+                return
+            end
+            local x, y = cursorX / scale - centerX, cursorY / scale - centerY
+            if math.abs(x) > width / 2 or math.abs(y) > height / 2 then
+                HideGuardianTooltip()
+                return
+            end
+            local hit
+            for _, entry in ipairs(MinimapEntries(tracker)) do
+                local pin = tracker.minimapPins[entry.key]
+                if
+                    pin
+                    and pin.guardianName
+                    and pin:IsVisible()
+                    and Number(pin.drawnX)
+                    and Number(pin.drawnY)
+                    and math.abs(x - pin.drawnX) <= PIN_SIZE / 2
+                    and math.abs(y - pin.drawnY) <= PIN_SIZE / 2
+                then
+                    hit = pin
+                    break
+                end
+            end
+            if not hit then
+                HideGuardianTooltip()
+                return
+            end
+            if hit == hoveredPin then
+                -- A native/foreign owner or a hidden tooltip must not be reclaimed.
+                if not GameTooltip:IsOwned(hit) or not GameTooltip:IsVisible() then return end
+                if hoveredName == hit.guardianName then return end
+            else
+                HideGuardianTooltip()
+                if GameTooltip:IsVisible() and not GameTooltip:IsOwned(Minimap) then return end
+                hoveredPin = hit
+                GameTooltip:SetOwner(hit, "ANCHOR_NONE")
+            end
+            GameTooltip:SetText(hit.guardianName, 1, 0.82, 0)
+            hoveredName = hit.guardianName
+            if not GameTooltip:IsVisible() then GameTooltip:Show() end
+        end
+
         local function FlagShown()
             if type(_G.AZS_IsHudShown) ~= "function" then return end
             local ok, value = pcall(_G.AZS_IsHudShown, "flag")
@@ -106,10 +184,12 @@ DFRL:NewMod("Waypoints", 3, function()
         local function RecyclePins(tracker, cycle)
             for key, pin in pairs(tracker.minimapPins) do
                 if not cycle or pin.cycle ~= cycle then
+                    HideGuardianTooltip(pin)
                     pin:Hide()
                     if pin.check then pin.check:Hide() end
                     pin.defeated = nil
                     pin.entryKey, pin.cycle = nil, nil
+                    pin.guardianName = nil
                     tracker.minimapPins[key] = nil
                     table.insert(tracker.minimapPool, pin)
                 end
@@ -255,6 +335,8 @@ DFRL:NewMod("Waypoints", 3, function()
                 art:SetPoint("CENTER", pin, "CENTER", 0, 0)
                 pin.art = art
                 pin.check = T.CreateDefeatedMarkerCheck(pin, size)
+                pin:SetScript("OnHide", function() HideGuardianTooltip(this) end)
+                T.RegisterTooltipIcon(pin, nil, "cursor")
             else
                 art:SetAllPoints(pin)
             end
@@ -299,6 +381,7 @@ DFRL:NewMod("Waypoints", 3, function()
             end
             pin.entryKey, pin.cycle = entry.key, tracker.minimapCycle
             if tracker.kind == "guardian" then
+                pin.guardianName = entry.name
                 local defeated = entry.state == "empty"
                 if pin.defeated ~= defeated then
                     T.StyleDefeatedMarker(pin.art, pin.check, PIN_SIZE, defeated)
@@ -331,7 +414,7 @@ DFRL:NewMod("Waypoints", 3, function()
             RecyclePins(tracker, tracker.minimapCycle)
         end
 
-        UpdateMinimapPins = function()
+        UpdateMinimapPins = function(checkHover)
             if not inWorld or reloading then
                 ClearMinimapPins()
                 RestoreNativeFlag()
@@ -366,6 +449,7 @@ DFRL:NewMod("Waypoints", 3, function()
                 if next(tracker.minimapPins) then pinsVisible = true end
             end
             navigation.UpdateMinimapPlayer(pinsVisible)
+            if checkHover then UpdateGuardianTooltip() end
         end
 
         StopMinimapPins = function()
@@ -568,6 +652,7 @@ DFRL:NewMod("Waypoints", 3, function()
                     id = entry.id,
                     index = guardian and entry.index or nil,
                     state = guardian and entry.state or nil,
+                    name = guardian and type(entry.name) == "string" and entry.name ~= "" and entry.name or nil,
                     x = entry.x,
                     y = entry.y,
                     mx = entry.mx,
@@ -579,6 +664,7 @@ DFRL:NewMod("Waypoints", 3, function()
                 table.insert(minimap, {
                     key = tostring(entry.index) .. ":0",
                     state = entry.state,
+                    name = type(entry.name) == "string" and entry.name ~= "" and entry.name or nil,
                     x = entry.x,
                     y = entry.y,
                     mx = entry.mx,
@@ -864,7 +950,7 @@ DFRL:NewMod("Waypoints", 3, function()
                 if refreshed or tracker.hud:IsVisible() then UpdateGuide(tracker, elapsed) end
             end
         end
-        if refreshed or (Minimap and Minimap:IsVisible()) then UpdateMinimapPins() end
+        if refreshed or (Minimap and Minimap:IsVisible()) then UpdateMinimapPins(refreshed) end
     end)
     DFRL.display.Listen(function()
         -- Visibility drafts do not retire snapshots, selections or calibration.
@@ -873,7 +959,7 @@ DFRL:NewMod("Waypoints", 3, function()
             UpdateGuide(tracker)
         end
         if not DFRL.display.Get("guardianGuidance") then ClearMinimapPins("guardian", true) end
-        UpdateMinimapPins()
+        UpdateMinimapPins(true)
     end)
     if type(_G.ReloadUI) == "function" then
         local reloadUI = _G.ReloadUI

@@ -17,13 +17,27 @@ with valid current health. Resting guardians are labelled **Alive**. When the
 native respawn countdown reaches zero, the row optimistically displays **Alive**
 in the same green instead of Due. This caption does not change native occupancy,
 the Show dead filter or health availability. Combat bars
-show native current / maximum health with the regular boss-bar red fill and white
+show native current / maximum health by default with the regular boss-bar red fill and white
 DEFAULT 12 text. Both views share `core/widgets.lua` style/text helpers; the
 tracker has no Fighting caption or percentage. Missing health stays text-only,
 and a prior bar is cleared when its row stops fighting or is filtered out.
 
+**Show current health** and **Show maximum health** in **Guardian tracker** are
+both on by default. Both on shows `current / maximum`; either alone shows its
+value without a slash. Both off hides only the health text, preserving the fill
+and other guardian status captions. Boss bars has an independent pair of controls.
+The normalized `guardianShowCurrentHealth` / `guardianShowMaximumHealth` booleans
+use the existing display table, live preview, Confirm, Cancel/discard, profiles
+and both full resets. Missing or invalid values and resets use true.
+
+Health text caches use only the latest effective values. Width measurements
+reuse one current entry per copied roster slot and retry unavailable metrics;
+option, scale and language changes discard them. Both values off skips health
+formatting and measurement and actually hides the existing health label.
+The pill's two end caps keep their minimum non-overlapping span.
+
 The separate boss-health group shows only bosses by default. Enable
-**Guardians in boss bar** in `/sdui` → **HUD** to include fighting guardians. This
+**Guardians in boss bar** in `/sdui` → **Boss bars** to include fighting guardians. This
 does not change target health, the tracker, guidance or map markers.
 `guardiansInBossBar` is a normalized boolean in the existing
 `SurvivorsDragonUiDisplay` table; missing or invalid values use `false`. Existing
@@ -68,6 +82,37 @@ header and rows remain click-through, with mouse-wheel input for viewport scroll
 layout handles still support editing. Existing
 guardian waypoints and map/minimap markers keep their appearance and independent
 guidance control.
+
+## Minimap names
+
+Hover a guardian medallion on the minimap to see its name beside the cursor. The name comes from
+the accepted native lair snapshot, including retained defeated markers when the
+game supplies a name. A missing name gets no invented replacement. This does
+not enable hover popups on the guardian tracker itself.
+
+Markers remain mouse-transparent. The existing ten-Hz/deferred waypoint refresh
+samples the native cursor once, converts it through minimap scale/center, and
+tests the already drawn 20-unit marker bounds. No mouse handler, click/wheel
+forwarder, new polling driver or extra hover frame is needed. The shared native
+`GameTooltip` keeps its normal styling and Layout scale/visibility. Guardian pins
+register once with the existing icon-owner registry's `cursor` placement, so
+the shared tooltip controller uses `PlaceHoverAtCursor` even when the global
+Tooltip at cursor option is off. Other tooltip owners retain their own choices.
+The existing visible-tooltip updater follows the pointer with changed-only
+anchors and native screen clamping; no second positioning driver is added.
+An unchanged pin/name skips content writes; another owner's tooltip is never hidden or
+reclaimed. Leaving the marker, recycling, minimap hiding, guidance off and
+world/zone cleanup clear only this owned hover. Tooltip hiding and editing
+suppress it, and unhiding does not replay a prior hover before re-entry.
+
+Only accepted minimap point copies gain the optional native name; no new raw
+getter, translation, asset, setting, saved state or full world-map overlay is
+added. Pin OnHide clears an owned tooltip immediately. CI-only source-extracted
+mocks cover names, scaled hit bounds, unchanged writes, missing names, retiring
+pins, foreign ownership and Tooltip/editor suppression. Placement mocks use the
+production owner-routing functions and verify the guardian cursor override plus
+ordinary Layout/icon/global-cursor behavior. Local work is source
+review and pinned formatting; live hover/input behavior remains unverified.
 
 ## Shared acceptance and cleanup
 

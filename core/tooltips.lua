@@ -70,7 +70,7 @@ function DFRL.tools.RegisterTooltipIcon(button, icon, side)
     iconAnchors[button] = icon or button
     iconSides[button] = side
     HookScript(button, "OnHide", function()
-        if GameTooltip and GameTooltip:IsOwned(button) then GameTooltip:Hide() end
+        if GameTooltip and GameTooltip:IsOwned(button) and GameTooltip:IsShown() then GameTooltip:Hide() end
     end)
 end
 
@@ -167,7 +167,12 @@ DFRL:NewMod("Tooltips", 2, function()
             tooltip:Hide()
             return
         end
-        if DFRL.display.Get("tooltipAtCursor") and T.PlaceHoverAtCursor(tooltip) then return end
+        if
+            (DFRL.display.Get("tooltipAtCursor") or (button and iconSides[button] == "cursor"))
+            and T.PlaceHoverAtCursor(tooltip)
+        then
+            return
+        end
         if button then
             anchor, target, targetPoint, offsetY = "BOTTOM", iconAnchors[button] or button, "TOP", 12
             if iconSides[button] == "below" then

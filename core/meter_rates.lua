@@ -58,7 +58,7 @@ function DFRL.tools.NewMeterSession()
         for order, entry in ipairs(source) do
             local record = Record(state, entry)
             if record.last and entry.dmg < record.last then regressed = true end
-            if record.last ~= entry.dmg or record.order ~= order then changed = true end
+            if record.last ~= entry.dmg or record.order ~= order or record.class ~= entry.class then changed = true end
             record.seen = serial
         end
         for _, kinds in pairs(state.sources) do
@@ -84,12 +84,13 @@ function DFRL.tools.NewMeterSession()
         local count, amount = 0, 0
         for order, entry in ipairs(source) do
             local record = Record(state, entry)
-            record.last, record.order = entry.dmg, order
+            record.last, record.order, record.class = entry.dmg, order, entry.class
             local delta = math.max(0, entry.dmg - record.base)
             if delta > 0 then
                 count, amount = count + 1, amount + delta
                 local row = state.rows[count] or {}
                 row.name, row.proc, row.order = entry.name, entry.proc, order
+                row.class = entry.class
                 row.dmg, row.dps = delta, elapsed and delta / elapsed or nil
                 state.rows[count] = row
             end

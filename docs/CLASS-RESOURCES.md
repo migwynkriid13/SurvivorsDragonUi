@@ -29,7 +29,9 @@ changing its native readings or accepted ranges.
 
 Player power, maximum-power and display-power events trigger primary reads. The independent controller polls every 0.1 seconds even while the display is hidden, covering delayed native player initialization and snapshot recovery. `AZSRUN` schedules a read on the next frame, after native parsing. There is no independent resource timer, spell-name matching, native-state mutation or gameplay persistence.
 
-Observed inactive phases and world leave/logout retire the current run-table reference; a later active phase needs a newly received table before the proc meter returns. Paused and choosing snapshots remain valid without a timeout. The API has no run id, so unobserved run boundaries remain a best-effort limitation. Turning the option off hides both displays, and world leave/logout also clears point textures and meter text. Primary power retains its separate native-unit lifecycle.
+Observed inactive phases, new zones and world leave/logout retire the current run table, update stamp and receipt count; a later active phase needs a changed publication before the proc meter returns. Paused and choosing snapshots remain valid without a timeout. The API has no run id, so unobserved run boundaries remain a best-effort limitation. Turning the option off hides both resource displays, and world leave/logout also clears point textures and meter text. Primary power retains its separate native-unit lifecycle.
+
+The same controller and phase/publication gate now feed [player absorbs](UNIT-PORTRAITS.md#player-absorbs) independently of the Class resources choice. Hiding the player skips shield and resource presentation while retaining phase retirement; showing it reads current native data. No polling loop or event subscription is added.
 
 ## Historical native game-code verification — 2026-10-16
 

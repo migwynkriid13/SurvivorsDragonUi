@@ -10,6 +10,8 @@ DFRL:NewMod("Display", 0, function()
         bossRows = 0,
         guardianRows = 0,
         guardianShowDead = true,
+        guardianShowCurrentHealth = true,
+        guardianShowMaximumHealth = true,
         meterShowDamage = false,
         meterShowDps = true,
         meterShowPercentage = false,
@@ -20,12 +22,16 @@ DFRL:NewMod("Display", 0, function()
         customBanners = true,
         customRunTimer = true,
         customBossBars = true,
+        lootMode = "sdui",
+        lootShowMarks = true,
         petRows = 6,
         petSpacing = 4,
         hidePetNames = false,
         hidePetCounts = false,
         hidePetTimers = true,
         bossDebuffs = true,
+        bossShowCurrentHealth = true,
+        bossShowMaximumHealth = true,
         runTextRegular = true,
         runTextEndless = true,
         runCurrentRegular = true,
@@ -34,6 +40,9 @@ DFRL:NewMod("Display", 0, function()
         bossCountdownEndless = true,
         bossCountdownRegular = false,
         guardiansInBossBar = false,
+        nameplatesBossGuardiansOnly = false,
+        nameplatesNamesOnly = false,
+        nameplateFontSize = 9,
         targetDebuffsOnTop = false,
         damageIcons = false,
         sctNormalHits = true,
@@ -45,6 +54,7 @@ DFRL:NewMod("Display", 0, function()
         sctReflectedDamage = true,
         sctMisses = true,
         sctClassColors = false,
+        sctMSBTStyle = false,
         sctScale = 1,
         hidePortraits = false,
         showPlayerName = true,
@@ -85,6 +95,7 @@ DFRL:NewMod("Display", 0, function()
         meterRows = { minimum = 1, maximum = 10, integer = true },
         bossRows = { minimum = 0, maximum = 40, integer = true },
         meterFontSize = { minimum = 8, maximum = 18, integer = true },
+        nameplateFontSize = { minimum = 6, maximum = 32, integer = true },
         meterDpsWindow = { minimum = 5, maximum = 120, integer = true },
         guardianRows = { minimum = 0, maximum = 40, integer = true },
         sctScale = { minimum = 0.25, maximum = 2 },
@@ -102,11 +113,15 @@ DFRL:NewMod("Display", 0, function()
         if type(value) == "string" and DFRL.tallyStyleById[value] then return value end
         return nil
     end
+    local function NormalizeLootMode(value)
+        if value == "sdui" or value == "game" or value == "off" then return value end
+    end
     local function Read(source, key)
         local value
         if type(source) == "table" then value = source[key] end
         if ranges[key] then return NormalizeNumber(key, value) or defaults[key] end
         if key == "tallyStyle" then return NormalizeTallyStyle(value) or defaults[key] end
+        if key == "lootMode" then return NormalizeLootMode(value) or defaults[key] end
         if type(value) == "boolean" then return value end
         if key == "runTextRegular" or key == "runTextEndless" then
             local legacy = _G.SurvivorsDragonUiRunFont
@@ -124,6 +139,8 @@ DFRL:NewMod("Display", 0, function()
             bossRows = Read(source, "bossRows"),
             guardianRows = Read(source, "guardianRows"),
             guardianShowDead = Read(source, "guardianShowDead"),
+            guardianShowCurrentHealth = Read(source, "guardianShowCurrentHealth"),
+            guardianShowMaximumHealth = Read(source, "guardianShowMaximumHealth"),
             meterShowDamage = Read(source, "meterShowDamage"),
             meterShowDps = Read(source, "meterShowDps"),
             meterShowPercentage = Read(source, "meterShowPercentage"),
@@ -134,12 +151,16 @@ DFRL:NewMod("Display", 0, function()
             customBanners = Read(source, "customBanners"),
             customRunTimer = Read(source, "customRunTimer"),
             customBossBars = Read(source, "customBossBars"),
+            lootMode = Read(source, "lootMode"),
+            lootShowMarks = Read(source, "lootShowMarks"),
             petRows = Read(source, "petRows"),
             petSpacing = Read(source, "petSpacing"),
             hidePetNames = Read(source, "hidePetNames"),
             hidePetCounts = Read(source, "hidePetCounts"),
             hidePetTimers = Read(source, "hidePetTimers"),
             bossDebuffs = Read(source, "bossDebuffs"),
+            bossShowCurrentHealth = Read(source, "bossShowCurrentHealth"),
+            bossShowMaximumHealth = Read(source, "bossShowMaximumHealth"),
             runTextRegular = Read(source, "runTextRegular"),
             runTextEndless = Read(source, "runTextEndless"),
             runCurrentRegular = Read(source, "runCurrentRegular"),
@@ -148,6 +169,9 @@ DFRL:NewMod("Display", 0, function()
             bossCountdownEndless = Read(source, "bossCountdownEndless"),
             bossCountdownRegular = Read(source, "bossCountdownRegular"),
             guardiansInBossBar = Read(source, "guardiansInBossBar"),
+            nameplatesBossGuardiansOnly = Read(source, "nameplatesBossGuardiansOnly"),
+            nameplatesNamesOnly = Read(source, "nameplatesNamesOnly"),
+            nameplateFontSize = Read(source, "nameplateFontSize"),
             targetDebuffsOnTop = Read(source, "targetDebuffsOnTop"),
             damageIcons = Read(source, "damageIcons"),
             sctNormalHits = Read(source, "sctNormalHits"),
@@ -159,6 +183,7 @@ DFRL:NewMod("Display", 0, function()
             sctReflectedDamage = Read(source, "sctReflectedDamage"),
             sctMisses = Read(source, "sctMisses"),
             sctClassColors = Read(source, "sctClassColors"),
+            sctMSBTStyle = Read(source, "sctMSBTStyle"),
             sctScale = Read(source, "sctScale"),
             hidePortraits = Read(source, "hidePortraits"),
             showPlayerName = Read(source, "showPlayerName"),
@@ -218,6 +243,9 @@ DFRL:NewMod("Display", 0, function()
             if not value then return end
         elseif key == "tallyStyle" then
             value = NormalizeTallyStyle(value)
+            if not value then return end
+        elseif key == "lootMode" then
+            value = NormalizeLootMode(value)
             if not value then return end
         elseif type(value) ~= "boolean" then
             return

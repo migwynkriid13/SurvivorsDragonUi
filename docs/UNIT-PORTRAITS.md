@@ -5,6 +5,86 @@ target and target-of-target to closed health bars without their portrait
 pictures or gold rings. Names, levels and health values keep their native
 updates. The separately selected class resources remain available.
 
+## Target health and compact numbers
+
+Enemy targets use the official `AZS_TARGET.hp` and `hpm` publication for their
+health label, whole-number percentage, fill and damage-loss animation once it
+arrives. Selecting a target first shows its validated current native
+`UnitHealth` / `UnitHealthMax` immediately, so the bar and labels do not stay
+empty while the packet is in transit. Those temporary numbers retain the
+client's native limits. Accepting the full-precision publication replaces that
+source and resets the loss baseline; the handoff never animates as damage. This
+avoids the legacy `UnitHealth` / `UnitHealthMax` unsigned 32-bit ceiling of
+4,294,967,295. The native StatusBar receives a 0–1 fraction and retains its own
+texture UV handling, geometry and clicks. Later native capped writes are
+translated through the same accepted health source.
+
+`modules/unit/health.lua` owns one current publication. It checks the native
+phase first, requires a published timestamp, validates finite current/maximum
+health, the enemy kind and positive spawn ID, and matches the exact native target
+name. `AZSTGT` requests a single deferred read after the native parser. Target
+changes, zone/world retirement and inactive phases clear the old source and loss
+baseline; the retired table/stamp/receipt tuple cannot return. Switching between
+identically named creatures still requires a fresh target publication instead
+of treating a name match as a GUID; only the newly selected native unit supplies
+temporary health. A late mismatched packet cannot replace that current unit's
+health. Invalid native health/maxima remain empty, and an invalid packet after
+an accepted AZS source clears it without reverting to capped values. World/zone
+retirement and inactive phases do not enable the selection fallback.
+Player/friendly targets retain native getters;
+clients without the phase API retain native health. An accepted AZS enemy
+publication stays authoritative when that creature becomes unattackable.
+
+Hidden targets cancel pending reads and active loss, skip health presentation
+and resume from the current publication with a new loss baseline. Changed
+maximum health or spawn identity also resets the effect. Damage still uses the
+original full counters and the existing half-second fade, never abbreviated
+text or combat messages.
+
+Unit-health labels and boss/guardian current/maximum labels share K, M, B and T
+for thousands, millions, billions and trillions. Examples are `1.2K`, `15.1B`
+and `70T`; values below 1,000 remain whole numbers. Formatting truncates to at
+most one decimal and removes a trailing `.0`, so `999,999` stays `999.9K` until
+the actual million boundary. T remains the largest suffix. Percentages and bar
+fractions always use full health values.
+
+Retail exposes a [configurable number formatter](https://github.com/Gethe/wow-ui-source/blob/live/Interface/AddOns/Blizzard_APIDocumentationGenerated/StringUtilDocumentation.lua)
+with [magnitude breakpoints](https://github.com/Gethe/wow-ui-source/blob/live/Interface/AddOns/Blizzard_APIDocumentationGenerated/AbbreviatedNumberFormatterAPIDocumentation.lua).
+This legacy-compatible adaptation uses the requested fixed K/M/B/T tiers and
+precision; it does not import retail APIs or locale-dependent suffix catalogs.
+The installed client's embedded `AZSTGT` parser was inspected read-only and
+still parses `AZS_TARGET` fields through `tonumber`, without a 32-bit conversion.
+Its executable SHA-256 was
+`522e1c831b3b4627875a28a1030368ef9d2e7f98c5606c34cb30448d3b7d776e`.
+Only source review and pinned formatting were performed locally. CI-only mocks
+are authored separately; actual client rendering and event order remain
+unverified.
+
+## Player absorbs
+
+The player health bar shows active absorbs automatically as a pale-blue
+segment. There is no separate setting, and **Class resources** can stay off.
+The segment starts after current health when there is room. When health plus
+the shield exceeds maximum health, it moves left inside the bar so the shield
+is still visible at full health. Its width represents shield / maximum health,
+capped at one full bar. Existing health labels continue to show health only.
+
+The shared player-resource reader uses the official `AZS_RUN.sh`, `hp` and
+`hpm` fields after checking `AZS_GetPhase()` and a published `AZS_RUN_UPDATED`.
+It never derives absorbs from buffs, spell descriptions or combat text. Zero,
+missing or invalid shield/health data clears the segment. Inactive phases,
+new zones and world cleanup retire the previous run publication; the same
+table/stamp/receipt tuple stays blocked until native data changes. Hidden
+player frames clear the segment and defer presentation until visible again.
+Run packets request a deferred read through the existing resource controller.
+
+The segment inherits the actual health rectangle, including width handles,
+portrait modes and the optional resource row's height. It lazily reuses the
+prepared health-fill image below the gold border and health text, leaving
+native StatusBar UVs, values and clicks unchanged. No setting, artwork,
+SavedVariable, event subscription or updater is added. Appearance and live
+shield changes remain unverified in-game.
+
 ## Names, levels and editor layout
 
 **Show player name**, **Show player level**, **Show target name** and

@@ -34,18 +34,9 @@ DFRL:NewMod("NameplateStyle", 5, function()
         return label
     end
 
-    local function Attach(plate, data)
-        if data.style or not data.bar or not data.nameRegion then return end
-
-        -- Keep the native frame's geometry, mouse state and health data intact.
-        -- SCT samples that frame independently of this presentation-only child.
-        local visual = CreateFrame("Frame", nil, plate)
-        visual:SetPoint("CENTER", data.bar, "CENTER", 0, 0)
-        visual:SetWidth(WIDTH)
-        visual:SetHeight(HEIGHT)
-        visual:SetFrameLevel(plate:GetFrameLevel() + 1)
-        visual:EnableMouse(false)
-
+    local function EnsureHealth(style)
+        if style.health then return end
+        local visual, overlay = style.visual, style.overlay
         local shadow = visual:CreateTexture(nil, "BACKGROUND")
         shadow:SetTexture(path .. "kui_frame_glow.blp")
         shadow:SetTexCoord(0, 0.469, 0, 0.625)
@@ -65,26 +56,41 @@ DFRL:NewMod("NameplateStyle", 5, function()
         health:EnableMouse(false)
         health:SetStatusBarTexture(path .. "kui_bar.blp")
 
-        local overlay = CreateFrame("Frame", nil, health)
-        overlay:SetAllPoints(health)
-        overlay:SetFrameLevel(health:GetFrameLevel() + 1)
-        overlay:EnableMouse(false)
-
-        local name = CreateLabel(overlay, "CENTER")
-        name:SetPoint("BOTTOM", health, "TOP", 0.5, -TEXT_OFFSET)
-        name:SetWidth(WIDTH * 2)
-
         local raid = overlay:CreateTexture(nil, "OVERLAY")
-        raid:SetPoint("LEFT", health, "RIGHT", 8, 0)
+        raid:SetPoint("LEFT", overlay, "RIGHT", 8, 0)
         raid:SetWidth(30)
         raid:SetHeight(30)
         raid:Hide()
+        style.shadow, style.background, style.health, style.raid = shadow, background, health, raid
+    end
+
+    local function Attach(plate, data)
+        if data.style or not data.bar or not data.nameRegion then return end
+
+        -- Keep native geometry/data intact; names have no hidden-bar dependency.
+        local visual = CreateFrame("Frame", nil, plate)
+        visual:SetPoint("CENTER", data.bar, "CENTER", 0, 0)
+        visual:SetWidth(WIDTH)
+        visual:SetHeight(HEIGHT)
+        visual:SetFrameLevel(plate:GetFrameLevel() + 1)
+        visual:EnableMouse(false)
+        local overlay = CreateFrame("Frame", nil, visual)
+        overlay:SetPoint("TOPLEFT", visual, "TOPLEFT", 1, -1)
+        overlay:SetPoint("BOTTOMRIGHT", visual, "BOTTOMRIGHT", -1, 1)
+        overlay:SetFrameLevel(visual:GetFrameLevel() + 2)
+        overlay:EnableMouse(false)
+
+        local name = CreateLabel(overlay, "CENTER")
+        name:SetPoint("BOTTOM", overlay, "TOP", 0.5, -TEXT_OFFSET)
+        name:SetWidth(WIDTH * 2)
 
         data.style = {
             visual = visual,
-            health = health,
+            overlay = overlay,
             name = name,
-            raid = raid,
+            nameRed = 1,
+            nameGreen = 1,
+            nameBlue = 1,
         }
     end
 
@@ -103,10 +109,25 @@ DFRL:NewMod("NameplateStyle", 5, function()
         end
     end
 
-    local function Update(plate, data)
+    local function Update(plate, data, namesOnly, fontSize)
         if not plate:IsShown() then return end
         local style = data.style
         if not style then return end
+
+        if style.fontSize ~= fontSize then
+            style.fontSize = nil
+            local ready = T.SetFont(style.name, fontSize, "OUTLINE")
+            -- Preserve the original text box proportions and bottom anchor,
+            -- without resizing the native plate or its health/click geometry.
+            -- Failed native font assignments stay retryable on visible refresh.
+            if ready then
+                local ratio = fontSize / FONT_SIZE
+                local width, height = WIDTH * 2 * ratio, 10 * ratio
+                if not T.NearlyEqual(style.name:GetWidth(), width) then style.name:SetWidth(width) end
+                if not T.NearlyEqual(style.name:GetHeight(), height) then style.name:SetHeight(height) end
+                style.fontSize = fontSize
+            end
+        end
 
         -- Native regions retain their contents and shown state for SCT and the
         -- client lifecycle. Suppress their pixels rather than changing data.
@@ -118,9 +139,43 @@ DFRL:NewMod("NameplateStyle", 5, function()
         local nativeTexture = data.bar:GetStatusBarTexture()
         if nativeTexture and nativeTexture.SetAlpha and nativeTexture:GetAlpha() ~= 0 then nativeTexture:SetAlpha(0) end
 
+        if style.namesOnly ~= namesOnly then
+            if namesOnly then
+                if style.health then
+                    if style.shadow:IsShown() then style.shadow:Hide() end
+                    if style.background:IsShown() then style.background:Hide() end
+                    if style.health:IsShown() then style.health:Hide() end
+                    if style.raid:IsShown() then style.raid:Hide() end
+                end
+            else
+                EnsureHealth(style)
+                if not style.shadow:IsShown() then style.shadow:Show() end
+                if not style.background:IsShown() then style.background:Show() end
+                if not style.health:IsShown() then style.health:Show() end
+            end
+            style.namesOnly = namesOnly
+        end
+
+        local red, green, blue = data.bar:GetStatusBarColor()
+        local nameRed, nameGreen, nameBlue = 1, 1, 1
+        if namesOnly then
+            nameRed, nameGreen, nameBlue = red, green, blue
+        end
+        if
+            not T.NearlyEqual(style.nameRed, nameRed)
+            or not T.NearlyEqual(style.nameGreen, nameGreen)
+            or not T.NearlyEqual(style.nameBlue, nameBlue)
+        then
+            style.name:SetTextColor(nameRed, nameGreen, nameBlue, 1)
+            style.nameRed, style.nameGreen, style.nameBlue = nameRed, nameGreen, nameBlue
+        end
+        T.SetTextIfChanged(style.name, data.nameRegion:GetText() or "")
+        -- The native bar remains live for SCT health-loss matching. Only its
+        -- custom presentation skips value/range writes and raid-icon binding.
+        if namesOnly then return end
+
         local minimum, maximum = data.bar:GetMinMaxValues()
         local value = data.bar:GetValue()
-        local red, green, blue = data.bar:GetStatusBarColor()
         red, green, blue = PlateColor(red, green, blue)
         local oldMinimum, oldMaximum = style.health:GetMinMaxValues()
         if oldMinimum ~= minimum or oldMaximum ~= maximum then style.health:SetMinMaxValues(minimum, maximum) end
@@ -134,8 +189,6 @@ DFRL:NewMod("NameplateStyle", 5, function()
         then
             style.health:SetStatusBarColor(red, green, blue, 1)
         end
-        T.SetTextIfChanged(style.name, data.nameRegion:GetText() or "")
-
         local regions = data.nativeRegions
         CopyNativeIcon(style.raid, regions and regions[6])
     end

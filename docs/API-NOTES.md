@@ -1,5 +1,24 @@
 # Official addon API integration — 2026-10-14
 
+## Party meter — 2026-10-27
+
+Static reading of the installed 146,088,960-byte client, SHA-256
+`22f7938eb4f99f2857dc091b1c57c147bd848eaabfeaa81e444c0a3393ca8150`,
+confirms `AZS_GetPartyMeter()` returns `AZS_MeterTotals(AZS_PARTY)`.
+The embedded API describes one hero per row, most damage first:
+`name`, class key `class`, `dmg`, `dps`, `share`, `top` and `topdps`.
+`AZS_MeterTotals` sums the supplied damage and DPS fields without inventing a
+clock. The `AZSPARTY` parser publishes exactly those seven fields and stamps
+`AZS_PARTY_UPDATED`; the getter is documented as empty outside a party.
+
+SDUI adds this as the fourth meter view after Boss Damage. Hero portraits use
+the native `SetPortraitTexture` unit path after a unique current player/party
+name match; the meter's party API itself supplies no portrait path or unit ID.
+The native frame portrait image invalidates a cached binding when it changes.
+Unmatched/ambiguous identities stay neutral. Existing official reference copies
+are preserved verbatim; source inspection does not establish live co-op behavior.
+See [DAMAGE-METER.md](DAMAGE-METER.md#party-data-and-portraits).
+
 ## Supplied summon API reference — 2026-10-22
 
 The [latest supplied API reference](AzerothSurvivors-Addon-API-2026-10-22.txt)
@@ -279,6 +298,165 @@ V-off masking also hides the entire custom visual child explicitly, including it
 
 No tests, syntax checks, validation, addon execution or game startups were run; visual appearance and SCT coexistence remain unverified in the packaged game.
 
+## MSBT-style combat text — 2026-10-27
+
+`/sdui` → **Combat text** has **MSBT-style scrolling**, off by default. Missing
+or invalid `sctMSBTStyle` values normalize to false in the existing display
+table, preserving the current over-enemy style. Preview, Confirm-only saving,
+Cancel/world/logout/reload discard, profiles and both full resets share the
+existing display transaction. The checkbox dims and disables alongside the
+other settings when the effective mode is Off or Game settings. The Custom
+status description follows the selected style in all fourteen languages.
+
+The optional style sends outgoing damage and avoidance notices down a curved
+stream to the right of screen center. It reuses the current parser, exact
+duplicate grouping, unchanged numeric amounts, filters, icons, colors, size,
+crit/miss pop and 1.45-second lifetime. Pooled label offsets space simultaneous
+lines and ease older lines downward as new ones arrive; no extra hit cap,
+amount merging or replacement history is added. Incoming/self text retains
+its existing independent native control. This is an independently implemented
+outgoing style, not a port of another addon or its full notification system.
+
+The stream anchors directly to WorldFrame center, so it skips enemy-origin
+matching, health-loss sampling and combat-event plate discovery. It does not
+force native hostile plates on: with V off, the captured native HideNameplates
+restores normal overhead-name eligibility. Native name preferences still
+apply. With V on, nameplate styling, Names only and the bosses/guardians filter
+retain their current behavior. The default over-enemy style keeps its original
+tracking, matching and animation equations.
+
+Changing styles clears active/queued text and transient matching/color samples,
+then applies the current V request without writing `NAMEPLATES_ON` or native
+settings. A discarded preview does the same in reverse. World/logout cleanup
+and Lua 5.0 remembered queue sizes remain shared. No runtime test export, asset,
+new SavedVariable, event or updater is introduced. See
+[PERFORMANCE.md](PERFORMANCE.md#msbt-style-combat-text--2026-10-27) for costs
+and CI-only mocked coverage in [PR-CHECKS.md](PR-CHECKS.md).
+
+## Names-only nameplates — 2026-10-27
+
+`/sdui` → **Nameplates** has **Names only**, off by default. The normalized
+`nameplatesNamesOnly` boolean lives in the existing display table and shares
+live preview, Confirm-only saving, Cancel/world/logout/reload discard, profiles
+and both full resets. It works in every SCT mode. V still shows or hides enemy
+names, Shift-V retains friendly visibility and **Only bosses and guardians**
+continues to exclude ordinary enemy plates.
+
+**Font size** in the same category changes the custom name label in both
+regular and names-only plates. `nameplateFontSize` defaults to the original 9,
+rounds/clamps finite values to 6–32 and shares the same display transaction,
+profiles and resets. The label keeps DEFAULT/OUTLINE, its original bottom
+anchor and proportional text-box dimensions. Native plate/bar/click geometry,
+SCT positions and world-rendered overhead names are unchanged. Masked plates
+defer the font update; unchanged successful assignments skip writes and failed
+font assignments remain retryable, including when a preview is discarded.
+
+Names only reuses each plate's current name label and native reaction color.
+It hides the custom health bar, black background, shadow and raid icon. The
+label's overlay anchors directly to the visual root's original one-unit inset,
+so its name has no dependency on a hidden cosmetic bar. Starting with Names only
+allocates no cosmetic StatusBar, shadow, background or raid texture; the first
+eligible regular-bar refresh creates those once. Later names-only transitions
+hide them and keep the pool for reuse. Turning the option off restores the original artwork,
+white name and current native health/raid state. Hidden or filtered plates
+defer all of this presentation until visible through the existing reader.
+
+The native plate and native health bar keep their original geometry, alpha,
+shown state, mouse behavior, values and names. SCT still reads the same
+positions and health-loss evidence; the V-off tracking mask and its empty
+click rectangle are unchanged. These are names on native nameplates, with
+their existing range and collision stacking, rather than the world-rendered
+overhead text. No client config key or native preference is changed.
+
+Both captions are present in all fourteen source/runtime UI catalogs. The
+existing settings page adds one standard checkbox; no per-plate frame/drawing
+region, asset, event, updater or SavedVariable is added. Verification
+was source/diff review and pinned formatting only; local tests, standalone
+validation and addon/game execution were not run. See the source-level drawing
+costs in [PERFORMANCE.md](PERFORMANCE.md#names-only-nameplates--2026-10-27).
+
+## Boss and guardian nameplate filter — 2026-10-27
+
+`/sdui` → **Nameplates** has **Only bosses and guardians**, off by default.
+The normalized `nameplatesBossGuardiansOnly` boolean uses the existing display
+table, live preview, Confirm-only saving, Cancel/world/logout/reload discard,
+profiles and both full resets. It works in every SCT mode and independently of
+boss bars and guardian guidance. V still controls requested enemy-plate visibility;
+friendly plates keep their native Shift-V behavior.
+
+The existing SCT controller reads phase first and accepts only received
+`AZS_UNITS` publications. It keeps an unsaved index of exact native names and
+maximum health for `final`, `boss` and `guardian` entries, including sleeping
+guardians. Each accepted maximum indexes its original value and exact float32
+representation, plus its native ceil/uint32-clamped value and that value's
+float32 representation. Float conversion rounds halfway ties to even.
+The retained Rust formatter also uses
+[half-to-even precision rounding](https://doc.rust-lang.org/std/fmt/index.html#precision).
+
+Waking guardians rescale their actor health before publishing native unit
+fields. The unit maximum uses `ceilf`, while the encounter-list formatter emits
+whole numbers. For example, actor maximum `1234.25` can arrive as `hpm = 1234`
+but produce a native bar maximum of `1235`. The former exact-equality filter
+rejected that signature. The index now also includes the upper unit ceiling
+when a float32 value above the published integer can round to that integer:
+below 2^22, or at an even half-tie below 2^23. At and above 2^23 no fractional
+float32 maximum exists, so no extra integer is accepted. This is a bounded
+serialization preimage, not a general plus/minus-one or epsilon match. An
+explicit fractional publication also indexes its direct ceiling. All aliases
+are prepared only when the accepted publication changes, in both sleeping and
+awake states; no previous plate identity is carried across a mismatch.
+
+Static inspection of the installed executable on 2026-10-27, SHA-256
+`22f7938eb4f99f2857dc091b1c57c147bd848eaabfeaa81e444c0a3393ca8150`,
+locates the guardian health/max block at VA `0x145c21c7c` (file `0x5c2107c`). It
+loads actor fields `+0x160/+0x164`, calls import `ceilf` through
+`0x145febc63`, and publishes descriptor fields 28/22 with uint32 saturation.
+This rechecks the conversion lead in AzerothSurvivorsRE's
+`docs/analysis/guardian-target-health-2026-10-23.md` against the installed file.
+Its retained `gameplay/client/addon_lists.rs` and historical native
+`0.109.0/addon-bridge` producer evidence supply the zero-decimal encounter-format
+lead; this inspection does not execute either game or establish the reported
+live guardian's actual values.
+
+There is no inferred health or conversion of a percentage bar to absolute HP.
+This handles native plate storage that cannot retain the full published maximum,
+including the Names only/filter combination and waking conversion. Published
+ordinary `elite` entries colliding with any of those native representations
+make that signature ambiguous and hide it. The complete list is validated
+before replacing the index; failed or unavailable data hides hostile plates until
+usable data arrives or the option is turned off. Zone/world boundaries, terminal
+phases and observed native-clock rollback retire prior publications; receipts are
+read only on the existing deferred OnUpdate, at five Hz. Unchanged publications
+reuse the index, and disabling skips these phase/table reads and clears it.
+
+This is a display filter with an identity limit. Anonymous plates expose their
+name and raw health range, but no supported spawn-ID binding; the reference
+[native plate implementation](https://github.com/samwhosung/benilla/blob/main/crates/benilla-ui/src/script/nameplate.rs)
+keeps its key inside the engine. An ordinary enemy absent from the published
+special-enemy list can still match a boss/guardian with the identical name and
+native-representable maximum health. Known ambiguous signatures are hidden, which
+can also hide a guardian. Percentage-only or otherwise unmatched bars stay hidden. No fuzzy
+names, guessed unit tokens, health estimates or persistent identity registry are
+used; source compatibility does not prove the packaged client's rendering.
+
+The public engine's [plate state](https://github.com/samwhosung/benilla/blob/7c7a7f3e7ce168f819f676e6c2a423c6088731ca/crates/benilla-ui/src/script/nameplate.rs#L66-L75)
+describes raw unit-field health stored as float32. This is a compatibility lead,
+not a claim that the installed executable matches that upstream revision.
+CI-only mocks run the production SCT/filter and style together over capped,
+rounded, sleeping-to-awake ceiling and ambiguous native ranges, both mode
+switches, V masking, retirement and lazy artwork allocation. They reject
+out-of-preimage integers and percentage guesses. No local tests or live appearance/FPS measurement
+were performed.
+
+Excluded hostile plates reuse the existing recursive draw-layer/hit-rectangle
+mask and hide the complete custom visual child. Native plate shown state, alpha,
+mouse-enabled flag, data and coordinates remain native. Custom SCT still samples
+ordinary enemies and retains every hit's original matching and animation.
+Unmasking restores captured draw layers and click bounds. No asset, event,
+updater, SavedVariable or client change is added. Verification was source/diff
+review and pinned formatting only; local tests, standalone validation and
+addon/game execution were not run.
+
 ## First-allocation nameplate flash — 2026-10-15
 
 The user reported a brief stock-nameplate flash on spawning mobs, both before the custom nameplate style and with V off. The current public client source has a matching first-allocation timing gap: [Lua ticking runs in UiInput and painting follows VPlateSet](https://github.com/samwhosung/benilla/blob/358731f95a7eab43861e250280856ecf5d90741d/crates/benilla-app/src/ui_script/mod.rs#L373-L392), while [native plate generation runs after UiInput](https://github.com/samwhosung/benilla/blob/358731f95a7eab43861e250280856ecf5d90741d/crates/benilla-app/src/vplates.rs#L650-L658). A brand-new plate can therefore be drawn before the addon's next OnUpdate discovers, skins and masks it. This source ordering matches the report; it does not establish the exact packaged client's runtime behavior.
@@ -289,7 +467,7 @@ Known pooled plates already receive synchronous OnShow and OnValueChanged handli
 
 ## Invisible nameplate tracking for custom SCT — 2026-10-15
 
-The user reported that custom hits fell back to the center when native nameplates were hidden. Custom SCT separates V's requested visible state from the native tracking state: while custom text is active, it uses the original `ShowNameplates` to keep hostile plates live and their coordinates updating even when the user has chosen to hide the plates. `NAMEPLATES_ON` and the user's saved V preference remain unchanged. Selecting Off or Game settings in `/sdui` releases that tracking control and restore the originally requested native visibility. World leave and logout release it too; the selected SCT mode is saved separately and restored subject to current game settings on the next UI initialization.
+The user reported that custom hits fell back to the center when native nameplates were hidden. The default over-enemy SCT style separates V's requested visible state from the native tracking state: while that style is active, it uses the original `ShowNameplates` to keep hostile plates live and their coordinates updating even when the user has chosen to hide the plates. `NAMEPLATES_ON` and the user's saved V preference remain unchanged. Selecting MSBT-style scrolling, Off or Game settings in `/sdui` releases that tracking control and restore the originally requested native visibility. World leave and logout release it too; the selected SCT mode is saved separately and restored subject to current game settings on the next UI initialization.
 
 With V off, the addon disables draw layers on hostile plate frames and their descendants, including health-bar layers. It makes their hit rectangles empty through insets so invisible plates cannot receive clicks. It leaves the native mouse-enabled flag unchanged, preserving the client's freelook transitions. It does not hide the plate frames or change their alpha, so their native shown-state lifecycle and coordinate updates continue. Turning visible plates back on, changing out of custom mode, leaving the world or logging out restores the captured draw-layer and hit-rectangle state.
 

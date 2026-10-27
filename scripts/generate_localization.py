@@ -15,8 +15,9 @@ ROOT = Path(__file__).resolve().parents[1]
 # Physical order of the reviewed embedded catalogs; TSV columns have their own
 # named headers so an inserted native language cannot shift existing captions.
 CODES = ["en", "pl", "cs", "de", "pt", "es", "fr", "ro", "tr", "ru", "uk", "zh", "ja", "ko"]
-SOURCE_SHA256 = "6382e9ae654295293b82d48fb07a1aa999132775bda10c6c6f80d973d2c1ddfb"
+SOURCE_SHA256 = "22f7938eb4f99f2857dc091b1c57c147bd848eaabfeaa81e444c0a3393ca8150"
 SPELL_NAMES_SHA256 = "80ac3217660a02020b3e09f1ce93bfaa6ba89abd9a9d62405b9f70114fd6d46c"
+MARKS_KEYS = ("marks.gained", "marks.earned")
 
 
 def lua_string(text):
@@ -128,6 +129,43 @@ def refresh_spell_names(client, metadata):
     print("Prepared spell-name aliases for " + str(len(counts)) + " languages from client SHA-256 " + SPELL_NAMES_SHA256)
 
 
+def refresh_marks(client, metadata):
+    """Add only reviewed marks templates; preserve all other runtime catalogs."""
+    from generate_loot_icons import Native
+
+    catalogs = Native(client, SOURCE_SHA256).catalogs()
+    output = ROOT / "localization/data.lua"
+    source = output.read_text(encoding="utf-8")
+    prepared = {}
+
+    def replace(match):
+        code, body = match[1], match[2]
+        if code not in catalogs or code in prepared:
+            raise ValueError("Review runtime languages before preparing marks captions.")
+        values = {key: catalogs[code][key] for key in MARKS_KEYS}
+        prepared[code] = values
+
+        def native_block(native):
+            entries = native[1]
+            for key in MARKS_KEYS:
+                entries = re.sub(r"^            \[" + re.escape(lua_string(key)) + r"\] = .*\n", "", entries, flags=re.MULTILINE)
+            additions = "".join("            [" + lua_string(key) + "] = " + lua_string(value) + ",\n" for key, value in values.items())
+            return "        native = {\n" + additions + entries + "        },"
+
+        body, count = re.subn(r"^        native = \{\n(.*?)^        \},", native_block, body, count=1, flags=re.MULTILINE | re.DOTALL)
+        if count != 1:
+            raise ValueError("Missing native caption section for " + code)
+        return "    " + code + " = {\n" + body + "    },"
+
+    result = re.sub(r"^    (\w+) = \{\n(.*?)^    \},$", replace, source, flags=re.MULTILINE | re.DOTALL)
+    if set(prepared) != set(CODES):
+        raise ValueError("Review the fourteen-language marks catalog population.")
+    output.write_text(result, encoding="utf-8")
+    if metadata:
+        metadata.write_text(json.dumps({"source_sha256": SOURCE_SHA256, "catalogs": prepared}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    print("Prepared marks templates for " + str(len(prepared)) + " languages from client SHA-256 " + SOURCE_SHA256)
+
+
 def generate(client):
     catalogs, seen = [], set()
     with client.open("rb") as stream, mmap.mmap(stream.fileno(), 0, access=mmap.ACCESS_READ) as data:
@@ -200,10 +238,14 @@ def generate(client):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--client", type=Path, required=True)
-    parser.add_argument("--refresh-spell-names-only", action="store_true", help="Refresh icon aliases from the separately pinned current client without replacing captions/effects.")
-    parser.add_argument("--metadata", type=Path, help="Optional data-preparation receipt for the icon-alias refresh.")
+    refresh = parser.add_mutually_exclusive_group()
+    refresh.add_argument("--refresh-spell-names-only", action="store_true", help="Refresh icon aliases from the separately pinned client without replacing captions/effects.")
+    refresh.add_argument("--refresh-marks-only", action="store_true", help="Refresh only the two native marks templates from the reviewed Heroic update.")
+    parser.add_argument("--metadata", type=Path, help="Optional data-preparation receipt for a targeted refresh.")
     arguments = parser.parse_args()
-    if arguments.refresh_spell_names_only:
+    if arguments.refresh_marks_only:
+        refresh_marks(arguments.client, arguments.metadata)
+    elif arguments.refresh_spell_names_only:
         refresh_spell_names(arguments.client, arguments.metadata)
     else:
         generate(arguments.client)

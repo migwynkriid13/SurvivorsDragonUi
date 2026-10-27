@@ -10,7 +10,7 @@ the shared Cancel/discard/profile paths; both full resets turn it off. Turning
 it off hides and clears the custom view and restores the native HUD preference
 captured by the replacement. It does not force the game's own meter setting off.
 
-Click its heading to cycle through Damage Done, Healing Done and Boss Damage;
+Click its heading to cycle through Damage Done, Healing Done, Boss Damage and Party Damage;
 right-click goes backwards. The gold header shows **Total** and **DPS** (or **HPS**
 for healing), replacing the view name and the former footer text. Hover over the
 header to see the current view. The small gold **X** resets statistics in every
@@ -29,11 +29,17 @@ view name. Both header fields start on. All seven options use the same preview, 
 Cancel, profile and reset behavior. Healing uses healing totals and HPS.
 Hover still provides the full name and numbers when row values are hidden.
 
+**Party Damage** lists heroes during co-op, with each hero's class color and
+native unit portrait inside the same gold ring. It uses the game's player
+totals and DPS; the **DPS window** setting applies to Damage Done. The row/icon
+options and scrolling also apply to party rows. Older clients without the
+party getter skip that view.
+
 **Damage Done** shows rolling DPS over the last **10 run seconds** by default.
 Under **DPS window**, use the minus/plus buttons for **5–120 seconds**, in
 five-second steps. Below five, **All** selects the whole-run average. Hover over
 the header or a source to see its whole-run average alongside recent DPS.
-The **X** purges all existing Damage Done, Healing Done and Boss Damage statistics
+The **X** purges all existing Damage Done, Healing Done, Boss Damage and Party Damage statistics
 from this meter and starts again from zero. It clears totals, source rows, shares,
 rankings, scroll position and displayed/recent rates together. Existing effects
 or pets remain in game; their later damage or healing counts as new activity.
@@ -43,6 +49,11 @@ tooltips use only damage since the reset. The window choice retains the shared
 preview, Confirm, Cancel, profile and full-reset paths.
 
 Use the left/right side handles on **DPS meter** in Layout to change its width without scaling rows or icons. Top/bottom handles change **Abilities shown**, using the same 1–10 limit as the settings control. Corner handles retain proportional scaling. **Font size** remains under Damage meter, from **8 to 18**, default **11**. All changes preview and use Confirm, Cancel, profiles, discard and resets.
+
+Ability names and row values use the resolved native DEFAULT font with OUTLINE,
+matching guardian/chat text, and the shared chat shadow: black at `(1, -1)`.
+The outline stays applied when changing font size, loading profiles or resetting.
+The gold header retains its original styling.
 
 The default scale remains **0.8** and width **240** UI units, with side-width limits **120–960**. Its bottom-right corner sits at the screen's bottom-right corner with no offset. Shared layout registration captures this scale before applying saved geometry. Defaults apply to unset geometry and both full resets; confirmed/draft positions and scales retain the shared rules. The default corner stays fixed when the ability count changes. Active side dragging holds the opposite edge fixed.
 
@@ -97,7 +108,7 @@ meter-window Reset does not reset the API totals; there is no official setter
 for clearing these counters.
 
 `NewMeterSession` therefore captures exact name/proc counter baselines for all
-three views through their existing getters, once in the deferred visible refresh
+four views through their existing getters, once in the deferred visible refresh
 after the X is clicked. Subsequent rows contain only positive counter deltas.
 Their sum becomes the displayed total; shares and descending rankings use those
 deltas, with native order as the tie-breaker. Proc identity, source names and
@@ -168,14 +179,47 @@ Packet handlers record receipt only: getters are read after parsing in OnUpdate,
 at most five times a second. Paused data has no artificial expiry. Missing native
 replay after reload can leave an empty view waiting; no resync API is invented.
 
-The displayed sources belong to the local player's native meter. This is not a
-party leaderboard or a port of Details' combat parser. Proc rows keep the native
-blue distinction; other rows use the shared player-class palette. Icons use SCT's
+Damage, healing and boss sources belong to the local player's native meter.
+Party Damage shows the game's per-hero counters instead. This is not a port of
+Details' combat parser. Proc rows keep the native
+blue distinction; other ability rows use the shared player-class palette. Ability icons use SCT's
 existing exact-name metadata resolver independently of SCT's display mode or
-filters. Ambiguous/missing icons are omitted. Source icons are circular and use
+filters. Ambiguous/missing icons use the shared neutral question mark. Source icons are circular and use
 the existing gold jewelry ring, matching the reference skin's round presentation.
 The skin's retail class/spec portraits would misidentify per-source rows and are
 not imported.
+
+### Party data and portraits
+
+`AZS_GetPartyMeter()` supplies `{ name, class, dmg, dps, share, top, topdps }`
+rows and the summed party total/rate. Only the published name, class, damage,
+rate and share are consumed; no spell breakdown or attribution is invented.
+The existing controller handles `AZSPARTY` receipts and defers its getter until
+after native parsing, with the same phase, empty-publication and world/zone
+retirement gates. Readiness, native HUD ownership, one-Hz displayed rates and
+the five-Hz visible reader are shared. X baselines this fourth view along with
+the other three; its post-reset rates use native seconds since Reset. Class
+metadata survives session deltas, including metadata-only changes.
+
+While visible with icons enabled, one fixed five-unit pass reads `player` and
+`party1`–`party4`. An exact, unique current `UnitName` match, with compatible
+native class keys when available, permits `SetPortraitTexture` on the row's
+existing named texture. This is the native unit-portrait path used by party
+frames, independent of whether those frames are shown. The current native
+frame's portrait image is a change token, not a source of damage ownership.
+Reordering or replacing party units rebinds the matched portrait; ambiguous,
+missing or unsupported units use the shared neutral icon. No hero name is sent
+to the spell/item icon resolver.
+
+Successful portraits skip repeat binding until their unit/name/source image
+or actual assigned texture changes. Failed native bindings stay memoized until
+that identity/image changes or the row retires. The neutral icon retains its
+existing native-circle/strip fallback and retry rules. Icons off, hidden/off
+meters and retired rows perform no portrait lookup/binding; retirement clears
+the bounded unit metadata. No portrait model, frame, region, asset, event,
+updater or SavedVariable is added. The source API was read from the installed
+client as recorded in [API-NOTES.md](API-NOTES.md); live co-op appearance and
+input remain unverified. The lifecycle fixture is CI-only.
 
 The ring reuses the pet frames' prepared 72-by-72 region at `(576, 56)` through
 `(648, 128)` in `media/tex/jewelry/Frame.blp`, with its original gold color and
