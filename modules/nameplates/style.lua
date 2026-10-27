@@ -65,7 +65,8 @@ DFRL:NewMod("NameplateStyle", 5, function()
         health:EnableMouse(false)
         health:SetStatusBarTexture(path .. "kui_bar.blp")
 
-        local overlay = CreateFrame("Frame", nil, health)
+        -- Names must stay visible when only the cosmetic health bar is hidden.
+        local overlay = CreateFrame("Frame", nil, visual)
         overlay:SetAllPoints(health)
         overlay:SetFrameLevel(health:GetFrameLevel() + 1)
         overlay:EnableMouse(false)
@@ -82,9 +83,15 @@ DFRL:NewMod("NameplateStyle", 5, function()
 
         data.style = {
             visual = visual,
+            shadow = shadow,
+            background = background,
             health = health,
             name = name,
             raid = raid,
+            namesOnly = false,
+            nameRed = 1,
+            nameGreen = 1,
+            nameBlue = 1,
         }
     end
 
@@ -103,7 +110,7 @@ DFRL:NewMod("NameplateStyle", 5, function()
         end
     end
 
-    local function Update(plate, data)
+    local function Update(plate, data, namesOnly)
         if not plate:IsShown() then return end
         local style = data.style
         if not style then return end
@@ -118,9 +125,40 @@ DFRL:NewMod("NameplateStyle", 5, function()
         local nativeTexture = data.bar:GetStatusBarTexture()
         if nativeTexture and nativeTexture.SetAlpha and nativeTexture:GetAlpha() ~= 0 then nativeTexture:SetAlpha(0) end
 
+        if style.namesOnly ~= namesOnly then
+            style.namesOnly = namesOnly
+            if namesOnly then
+                style.shadow:Hide()
+                style.background:Hide()
+                style.health:Hide()
+                if style.raid:IsShown() then style.raid:Hide() end
+            else
+                style.shadow:Show()
+                style.background:Show()
+                style.health:Show()
+            end
+        end
+
+        local red, green, blue = data.bar:GetStatusBarColor()
+        local nameRed, nameGreen, nameBlue = 1, 1, 1
+        if namesOnly then
+            nameRed, nameGreen, nameBlue = red, green, blue
+        end
+        if
+            not T.NearlyEqual(style.nameRed, nameRed)
+            or not T.NearlyEqual(style.nameGreen, nameGreen)
+            or not T.NearlyEqual(style.nameBlue, nameBlue)
+        then
+            style.name:SetTextColor(nameRed, nameGreen, nameBlue, 1)
+            style.nameRed, style.nameGreen, style.nameBlue = nameRed, nameGreen, nameBlue
+        end
+        T.SetTextIfChanged(style.name, data.nameRegion:GetText() or "")
+        -- The native bar remains live for SCT health-loss matching. Only its
+        -- custom presentation skips value/range writes and raid-icon binding.
+        if namesOnly then return end
+
         local minimum, maximum = data.bar:GetMinMaxValues()
         local value = data.bar:GetValue()
-        local red, green, blue = data.bar:GetStatusBarColor()
         red, green, blue = PlateColor(red, green, blue)
         local oldMinimum, oldMaximum = style.health:GetMinMaxValues()
         if oldMinimum ~= minimum or oldMaximum ~= maximum then style.health:SetMinMaxValues(minimum, maximum) end
@@ -134,8 +172,6 @@ DFRL:NewMod("NameplateStyle", 5, function()
         then
             style.health:SetStatusBarColor(red, green, blue, 1)
         end
-        T.SetTextIfChanged(style.name, data.nameRegion:GetText() or "")
-
         local regions = data.nativeRegions
         CopyNativeIcon(style.raid, regions and regions[6])
     end

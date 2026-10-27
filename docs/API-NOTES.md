@@ -279,6 +279,36 @@ V-off masking also hides the entire custom visual child explicitly, including it
 
 No tests, syntax checks, validation, addon execution or game startups were run; visual appearance and SCT coexistence remain unverified in the packaged game.
 
+## Names-only nameplates — 2026-10-27
+
+`/sdui` → **Nameplates** has **Names only**, off by default. The normalized
+`nameplatesNamesOnly` boolean lives in the existing display table and shares
+live preview, Confirm-only saving, Cancel/world/logout/reload discard, profiles
+and both full resets. It works in every SCT mode. V still shows or hides enemy
+names, Shift-V retains friendly visibility and **Only bosses and guardians**
+continues to exclude ordinary enemy plates.
+
+Names only reuses each plate's current name label and native reaction color.
+It hides the custom health bar, black background, shadow and raid icon. The
+label's overlay is a sibling of the cosmetic health bar so hiding that bar
+does not hide its text. Turning the option off restores the original artwork,
+white name and current native health/raid state. Hidden or filtered plates
+defer all of this presentation until visible through the existing reader.
+
+The native plate and native health bar keep their original geometry, alpha,
+shown state, mouse behavior, values and names. SCT still reads the same
+positions and health-loss evidence; the V-off tracking mask and its empty
+click rectangle are unchanged. These are names on native nameplates, with
+their existing range and collision stacking, rather than the world-rendered
+overhead text. No client config key or native preference is changed.
+
+Both captions are present in all fourteen source/runtime UI catalogs. The
+existing settings page adds one standard checkbox; no per-plate frame/drawing
+region, asset, event, updater or SavedVariable is added. Verification
+was source/diff review and pinned formatting only; local tests, standalone
+validation and addon/game execution were not run. See the source-level drawing
+costs in [PERFORMANCE.md](PERFORMANCE.md#names-only-nameplates--2026-10-27).
+
 ## Boss and guardian nameplate filter — 2026-10-27
 
 `/sdui` → **Nameplates** has **Only bosses and guardians**, off by default.

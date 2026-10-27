@@ -427,6 +427,35 @@ No asset, setting, SavedVariable, gameplay clock or updater is added, and the
 These changes were reviewed from source and formatted locally; appearance,
 failure recovery and performance remain unverified in the running client.
 
+## Names-only nameplates — 2026-10-27
+
+The default-off `nameplatesNamesOnly` choice is cached by the existing SCT
+display listener and consumed by its existing visible-plate refresh. Each
+style reuses its name label, remembers its color and changes visibility only
+when the effective mode changes. Names-only updates copy changed native names
+and reaction colors, then skip cosmetic health range/value/color writes and
+raid-icon lookup/binding. Native health-loss matching, coordinate sampling,
+collision placement, V/Shift-V ownership and the boss/guardian filter keep
+their current lifecycles. Masked plates still skip the entire style refresh;
+showing again applies the current choice and current native state.
+
+No per-plate frame, drawing region, texture/material image, UV state, animation,
+event or updater is added. The existing label overlay moves from the cosmetic bar to
+its visual parent while retaining its anchors and frame level. Hiding the bar
+therefore leaves the name visible. The same allocated pool remains, but the
+custom skin draws only its existing name: the shadow, black background and
+health fill are hidden, together with any raid icon. Switching back restores
+those original regions without allocation or texture rebinding for the fixed
+artwork. The lazy settings dialog adds one standard checkbox: one button,
+four texture regions (box, check, hover and divider) and two text regions,
+reusing existing art and drawing only while its page is visible.
+
+These are source-level work and visible-region observations, not measured
+draw calls, GPU memory, FPS or native world-text parity. Source/diff review and
+pinned formatting only; no local tests, standalone validation or addon/game
+execution. Settings and behavior are documented in
+[API-NOTES.md](API-NOTES.md#names-only-nameplates--2026-10-27).
+
 ## Boss and guardian nameplate filter — 2026-10-27
 
 The default-off `nameplatesBossGuardiansOnly` option adds no gameplay frame,

@@ -70,6 +70,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local function ActiveMode() return settingsDraft and settingsDraft.mode or sctMode end
     local customEnabled, changingSettings = false, false
     local damageIcons = DFRL.display.Get("damageIcons")
+    local nameplatesNamesOnly = DFRL.display.Get("nameplatesNamesOnly")
     local textScale = DFRL.display.Get("sctScale")
     -- Keep V's visible request separate from the backing coordinate feed. The
     -- native verbs do not write FrameXML's saved NAMEPLATES_ON preference.
@@ -456,7 +457,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         UpdatePresentation(plate, data, forcePresentation)
         -- Hidden tracking still samples native data, but its skin has no pixels
         -- to refresh. Unmasking updates the skin in this same callback.
-        if plateStyle and not data.presentationMasked then plateStyle.Update(plate, data) end
+        if plateStyle and not data.presentationMasked then plateStyle.Update(plate, data, nameplatesNamesOnly) end
         if not IsShownEnemy(plate, data) then
             RetirePlate(plate)
             return
@@ -1154,6 +1155,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     end
 
     DFRL.display.Listen(function()
+        nameplatesNamesOnly = DFRL.display.Get("nameplatesNamesOnly")
         local filtered = DFRL.display.Get("nameplatesBossGuardiansOnly")
         if plateFilter.enabled ~= filtered then
             plateFilter.enabled = filtered

@@ -2,6 +2,8 @@
 DFRL.locale.data = {
     en = {
         ui = {
+            ["Names only"] = "Names only",
+            ["Hide health bars and keep names. Custom combat text still works."] = "Hide health bars and keep names. Custom combat text still works.",
             ["Nameplates"] = "Nameplates",
             ["Only bosses and guardians"] = "Only bosses and guardians",
             ["Hide ordinary enemy nameplates. V still shows or hides nameplates."] = "Hide ordinary enemy nameplates. V still shows or hides nameplates.",
@@ -592,6 +594,8 @@ DFRL.locale.data = {
     },
     pl = {
         ui = {
+            ["Names only"] = "Same nazwy",
+            ["Hide health bars and keep names. Custom combat text still works."] = "Ukryj paski zdrowia i zachowaj nazwy. Własny tekst walki nadal działa.",
             ["Nameplates"] = "Paski nazw",
             ["Only bosses and guardians"] = "Tylko bossowie i strażnicy",
             ["Hide ordinary enemy nameplates. V still shows or hides nameplates."] = "Ukryj paski nazw zwykłych wrogów. V nadal włącza lub wyłącza paski nazw.",
@@ -1653,6 +1657,8 @@ DFRL.locale.data = {
     },
     cs = {
         ui = {
+            ["Names only"] = "Pouze jména",
+            ["Hide health bars and keep names. Custom combat text still works."] = "Skrýt ukazatele zdraví a ponechat jména. Vlastní bojový text nadále funguje.",
             ["Nameplates"] = "Ukazatele jmen",
             ["Only bosses and guardians"] = "Pouze bossové a strážci",
             ["Hide ordinary enemy nameplates. V still shows or hides nameplates."] = "Skrýt ukazatele běžných nepřátel. V nadále zobrazuje nebo skrývá ukazatele.",
@@ -2717,6 +2723,8 @@ DFRL.locale.data = {
     },
     de = {
         ui = {
+            ["Names only"] = "Nur Namen",
+            ["Hide health bars and keep names. Custom combat text still works."] = "Gesundheitsbalken ausblenden und Namen behalten. Eigener Kampftext funktioniert weiterhin.",
             ["Nameplates"] = "Namensplaketten",
             ["Only bosses and guardians"] = "Nur Bosse und Wächter",
             ["Hide ordinary enemy nameplates. V still shows or hides nameplates."] = "Namensplaketten gewöhnlicher Gegner ausblenden. V zeigt oder verbirgt weiterhin Namensplaketten.",
@@ -3779,6 +3787,8 @@ DFRL.locale.data = {
     },
     pt = {
         ui = {
+            ["Names only"] = "Apenas nomes",
+            ["Hide health bars and keep names. Custom combat text still works."] = "Ocultar barras de vida e manter os nomes. O texto de combate personalizado continua funcionando.",
             ["Nameplates"] = "Placas de nome",
             ["Only bosses and guardians"] = "Apenas chefes e guardiões",
             ["Hide ordinary enemy nameplates. V still shows or hides nameplates."] = "Ocultar placas de inimigos comuns. V continua mostrando ou ocultando as placas.",
@@ -4832,6 +4842,8 @@ DFRL.locale.data = {
     },
     es = {
         ui = {
+            ["Names only"] = "Solo nombres",
+            ["Hide health bars and keep names. Custom combat text still works."] = "Ocultar las barras de salud y mantener los nombres. El texto de combate personalizado sigue funcionando.",
             ["Nameplates"] = "Placas de nombre",
             ["Only bosses and guardians"] = "Solo jefes y guardianes",
             ["Hide ordinary enemy nameplates. V still shows or hides nameplates."] = "Ocultar placas de enemigos comunes. V sigue mostrando u ocultando las placas.",
@@ -5889,6 +5901,8 @@ DFRL.locale.data = {
     },
     fr = {
         ui = {
+            ["Names only"] = "Noms uniquement",
+            ["Hide health bars and keep names. Custom combat text still works."] = "Masquer les barres de vie et garder les noms. Le texte de combat personnalisé fonctionne toujours.",
             ["Nameplates"] = "Barres de nom",
             ["Only bosses and guardians"] = "Boss et gardiens uniquement",
             ["Hide ordinary enemy nameplates. V still shows or hides nameplates."] = "Masquer les barres des ennemis ordinaires. V affiche ou masque toujours les barres.",
@@ -6954,6 +6968,8 @@ DFRL.locale.data = {
     },
     ro = {
         ui = {
+            ["Names only"] = "Doar numele",
+            ["Hide health bars and keep names. Custom combat text still works."] = "Ascunde barele de viață și păstrează numele. Textul de luptă personalizat funcționează în continuare.",
             ["Nameplates"] = "Bare de nume",
             ["Only bosses and guardians"] = "Doar boși și gardieni",
             ["Hide ordinary enemy nameplates. V still shows or hides nameplates."] = "Ascunde barele inamicilor obișnuiți. V afișează sau ascunde în continuare barele.",
@@ -8002,6 +8018,8 @@ DFRL.locale.data = {
     },
     tr = {
         ui = {
+            ["Names only"] = "Yalnızca isimler",
+            ["Hide health bars and keep names. Custom combat text still works."] = "Sağlık çubuklarını gizle, isimleri göster. Özel savaş metni çalışmaya devam eder.",
             ["Nameplates"] = "İsim plakaları",
             ["Only bosses and guardians"] = "Yalnızca bosslar ve muhafızlar",
             ["Hide ordinary enemy nameplates. V still shows or hides nameplates."] = "Sıradan düşmanların isim plakalarını gizle. V, plakaları göstermeye veya gizlemeye devam eder.",
@@ -8926,6 +8944,8 @@ DFRL.locale.data = {
     },
     ru = {
         ui = {
+            ["Names only"] = "Только имена",
+            ["Hide health bars and keep names. Custom combat text still works."] = "Скрыть полосы здоровья и оставить имена. Пользовательский текст боя продолжает работать.",
             ["Nameplates"] = "Индикаторы здоровья",
             ["Only bosses and guardians"] = "Только боссы и стражи",
             ["Hide ordinary enemy nameplates. V still shows or hides nameplates."] = "Скрыть индикаторы обычных врагов. V по-прежнему показывает или скрывает индикаторы.",
@@ -10069,6 +10089,8 @@ DFRL.locale.data = {
     },
     uk = {
         ui = {
+            ["Names only"] = "Лише імена",
+            ["Hide health bars and keep names. Custom combat text still works."] = "Приховати смуги здоров’я та залишити імена. Власний бойовий текст працює й надалі.",
             ["Nameplates"] = "Індикатори здоров’я",
             ["Only bosses and guardians"] = "Лише боси та вартові",
             ["Hide ordinary enemy nameplates. V still shows or hides nameplates."] = "Приховати індикатори звичайних ворогів. V і далі показує або приховує індикатори.",
@@ -11186,6 +11208,8 @@ DFRL.locale.data = {
     },
     zh = {
         ui = {
+            ["Names only"] = "仅显示名称",
+            ["Hide health bars and keep names. Custom combat text still works."] = "隐藏血条并保留名称。自定义战斗文字仍可正常使用。",
             ["Nameplates"] = "姓名板",
             ["Only bosses and guardians"] = "仅显示首领和守护者",
             ["Hide ordinary enemy nameplates. V still shows or hides nameplates."] = "隐藏普通敌人的姓名板。V键仍可显示或隐藏姓名板。",
@@ -12230,6 +12254,8 @@ DFRL.locale.data = {
     },
     ja = {
         ui = {
+            ["Names only"] = "名前のみ",
+            ["Hide health bars and keep names. Custom combat text still works."] = "体力バーを非表示にして名前を残します。カスタム戦闘テキストは引き続き機能します。",
             ["Nameplates"] = "ネームプレート",
             ["Only bosses and guardians"] = "ボスとガーディアンのみ",
             ["Hide ordinary enemy nameplates. V still shows or hides nameplates."] = "通常の敵のネームプレートを非表示にします。Vキーで引き続き表示を切り替えられます。",
@@ -13306,6 +13332,8 @@ DFRL.locale.data = {
     },
     ko = {
         ui = {
+            ["Names only"] = "이름만 표시",
+            ["Hide health bars and keep names. Custom combat text still works."] = "체력 막대를 숨기고 이름을 유지합니다. 사용자 지정 전투 문자는 계속 작동합니다.",
             ["Nameplates"] = "이름표",
             ["Only bosses and guardians"] = "우두머리와 수호자만",
             ["Hide ordinary enemy nameplates. V still shows or hides nameplates."] = "일반 적의 이름표를 숨깁니다. V 키로 이름표를 표시하거나 숨길 수 있습니다.",

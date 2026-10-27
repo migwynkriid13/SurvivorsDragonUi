@@ -834,6 +834,11 @@ DFRL:NewMod("RunTimers", 5, function()
                 label = "Nameplates",
                 options = {
                     {
+                        "nameplatesNamesOnly",
+                        "Names only",
+                        "Hide health bars and keep names. Custom combat text still works.",
+                    },
+                    {
                         "nameplatesBossGuardiansOnly",
                         "Only bosses and guardians",
                         "Hide ordinary enemy nameplates. V still shows or hides nameplates.",
