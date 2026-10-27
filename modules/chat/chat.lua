@@ -68,6 +68,30 @@ DFRL:NewMod("Chat", 1, function()
                 and T.NearlyEqual(currentX, x)
                 and T.NearlyEqual(currentY, y)
         end
+        local function LockNativeMovement(frame)
+            -- FloatingChatFrameTemplate gives the message pane a full-size
+            -- TitleRegion. Its native drag path is separate from SetMovable;
+            -- only the shared Layout handles may move the chat container.
+            local title = frame.GetTitleRegion and frame:GetTitleRegion()
+            if
+                title
+                and (
+                    not HasAnchor(title, "TOPLEFT", frame, "TOPLEFT", 0, 0)
+                    or title:GetWidth() ~= 0
+                    or title:GetHeight() ~= 0
+                )
+            then
+                frame:StopMovingOrSizing()
+                title:ClearAllPoints()
+                title:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, 0)
+                title:SetWidth(0)
+                title:SetHeight(0)
+            end
+            if frame.IsMovable and Flag(frame:IsMovable()) then
+                frame:StopMovingOrSizing()
+                frame:SetMovable(false)
+            end
+        end
 
         local regularNotices = {
             COMBAT_XP_GAIN = true,
@@ -156,6 +180,7 @@ DFRL:NewMod("Chat", 1, function()
             -- Native window events can replace presentation settings. Recheck
             -- them at the existing refresh points, outside the slide hot path.
             if refresh then
+                LockNativeMovement(frame)
                 state.anchored = HasAnchor(frame, "TOPLEFT", root, "TOPLEFT", 3, y)
                 state.positionY = state.anchored and y or nil
                 state.width, state.height = frame:GetWidth(), frame:GetHeight()
@@ -294,6 +319,7 @@ DFRL:NewMod("Chat", 1, function()
             -- Only approved message categories are formatted. Rendering still
             -- uses the actual native frame, with raw-text fallback on failure.
             native:SetParent(root)
+            LockNativeMovement(native)
             PositionNative(state, GetTime(), true)
             FadeSettings(state, false)
             -- SetMaxLines clears the native ring; preserve existing history.
@@ -452,7 +478,6 @@ DFRL:NewMod("Chat", 1, function()
             }) do
                 HideControl(_G["ChatFrame" .. index .. suffix])
             end
-            if native.SetMovable then native:SetMovable(false) end
             -- Preserve FrameXML's resize capability; /sdui owns the container
             -- dimensions and the native mouse resize controls stay hidden.
             if native.SetResizable then native:SetResizable(true) end

@@ -12,6 +12,7 @@ localization\data.lua
 core\tools.lua
 core\fonts.lua
 core\hud.lua
+core\meter_rates.lua
 core\widgets.lua
 core\tooltips.lua
 core\editor.lua

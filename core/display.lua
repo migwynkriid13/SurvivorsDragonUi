@@ -6,6 +6,7 @@ DFRL:NewMod("Display", 0, function()
         meterRows = 6,
         layoutShowGrid = true,
         meterFontSize = 11,
+        meterDpsWindow = 10,
         bossRows = 0,
         guardianRows = 0,
         guardianShowDead = true,
@@ -84,6 +85,7 @@ DFRL:NewMod("Display", 0, function()
         meterRows = { minimum = 1, maximum = 10, integer = true },
         bossRows = { minimum = 0, maximum = 40, integer = true },
         meterFontSize = { minimum = 8, maximum = 18, integer = true },
+        meterDpsWindow = { minimum = 5, maximum = 120, integer = true },
         guardianRows = { minimum = 0, maximum = 40, integer = true },
         sctScale = { minimum = 0.25, maximum = 2 },
         petRows = { minimum = 1, maximum = 6, integer = true },
@@ -91,6 +93,7 @@ DFRL:NewMod("Display", 0, function()
     }
     local function NormalizeNumber(key, value)
         if type(value) ~= "number" or value - value ~= 0 then return nil end
+        if key == "meterDpsWindow" and value == 0 then return 0 end
         local range = ranges[key]
         value = math.max(range.minimum, math.min(range.maximum, value))
         return range.integer and math.floor(value + 0.5) or value
@@ -117,6 +120,7 @@ DFRL:NewMod("Display", 0, function()
             meterRows = Read(source, "meterRows"),
             layoutShowGrid = Read(source, "layoutShowGrid"),
             meterFontSize = Read(source, "meterFontSize"),
+            meterDpsWindow = Read(source, "meterDpsWindow"),
             bossRows = Read(source, "bossRows"),
             guardianRows = Read(source, "guardianRows"),
             guardianShowDead = Read(source, "guardianShowDead"),

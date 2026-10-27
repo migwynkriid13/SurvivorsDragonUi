@@ -178,7 +178,7 @@ remain in place; this is not a claim that every remaining cost is eliminated.
 | Minimap and waypoint guides                             | `modules/map/map.lua`, `buttons.lua`, `navigation.lua`, `waypoints.lua`: reusable accepted snapshots/pins and native direction/position sampling; skip unchanged clock labels and button anchors. The transparent glyph adds one texture, no idle polling or extra hover region; its pointer updater exists only while dragging. Square-edge adaptation runs on foreign placement calls or map/show/load events. See `MINIMAP-BUTTONS.md`. |
 | SCT and nameplates                                      | `modules/nameplates/sct.lua`, `style.lua`: event-batch discovery plus independent frame discovery, preserved matching/animation, cached metadata and unchanged native styling.                                                                                                                                                                                                                                                             |
 | Layout/editor, tooltips, chat, Copy, menu and inspector | `core/layout.lua`, `editor.lua`, `tooltips.lua`, `fstack.lua`, `modules/chat/*`, `modules/menu/menu.lua`: bounded edit sampling, passive/pool reuse, owner/scale-aware hover work, native chat/fades, retained opt-in diagnostics and hidden inspector shutdown.                                                                                                                                                                           |
-| Meter and general warning overlay                       | `modules/ui/meter.lua`, `modules/ui/ui.lua`: native circles, one-Hz native rate display with five-Hz data observation, visibility/change guards, transition-only warning visibility and preserved gradient animation.                                                                                                                                                                                                                      |
+| Meter and general warning overlay                       | `modules/ui/meter.lua`, `modules/ui/ui.lua`: native circles, one-Hz rate display with five-Hz data observation, visibility/change guards, transition-only warning visibility and preserved gradient animation.                                                                                                                                                                                                                             |
 
 Native aura/timer rows (`modules/unit/auras.lua`) retain changed-slot reflow,
 hidden timer shutdown and required repair of native buff/enchant anchors.
@@ -201,12 +201,42 @@ with CVar observation until its captured preference is released. The initial rea
 allocated for reuse, with no visible drawing cost. Live enable/disable, profiles,
 Confirm/Cancel/discard and both resets share the existing display lifecycle.
 
+Damage Done now derives rolling DPS from native cumulative snapshots and run
+seconds, defaulting to ten seconds. The existing five-Hz reader observes complete
+sources even on another visible meter tab; no event, frame or updater is added.
+`core/meter_rates.lua` caps each header/source series at 604 timestamp/value pairs,
+retains at most 120 run seconds plus one boundary sample, and compresses flat
+intervals to their endpoints. Source identities remain exact name/proc pairs;
+new identities allocate once and reuse their numeric vectors. Left-boundary
+queries use binary search at the one-Hz presentation cadence. All skips history;
+The X captures all three native views once through the existing reader and keeps
+one baseline/last-counter record per exact name/proc identity. It pools positive
+session rows and recalculates their totals/shares/order only when counters or
+native order change; unchanged counters refresh only native-time average rates.
+No native counter or table is modified.
+
+Hiding empties recent vectors once and stops observation; showing warms the
+window again. Disabling and run/world retirement drop all rate state; language
+changes rebase an active reset session. Repeated retirement of an empty model allocates nothing. Pause leaves the
+native time coordinate unchanged. Window choices reuse normalized display drafts,
+profiles and resets. The window row reuses existing editor controls. The old
+rate-only Reset DPS settings action is removed. The header arrow FontString is
+replaced by one native button using three already-bundled Close.blp states:
+normal, pressed and additive hover. One image draws normally, with a second only
+on hover; native button state handling needs no Lua updater or cosmetic polling.
+The texture is bound once, retains its source proportions and inherits meter
+scale/hiding. This adds one normal HUD texture region and removes one label,
+without adding an image file or saved state. Rate text/tooltips still skip
+unchanged writes; reset clears rows/icons/hovers and both rate caches immediately.
+These bounds are source-level cost evidence; CPU time, gameplay behavior and FPS
+remain unmeasured. See [DAMAGE-METER.md](DAMAGE-METER.md).
+
 The meter's normal circular path uses six native icon regions plus six existing
 ring regions. With its header, row backgrounds and fills, the full six-row view
-has 25 authored texture regions, excluding text, native internal regions,
+has 26 authored texture regions normally, excluding the transient hover, text, native internal regions,
 tooltips and other HUD owners. The configurable one-to-ten row limit defaults
-to six; a fully populated native view has `1 + 4n` authored texture regions,
-so ten rows use 41. One seeded row checks renderer readiness; additional rows
+to six; a fully populated native view has `2 + 4n` authored texture regions,
+so ten rows use 42. One seeded row checks renderer readiness; additional rows
 are allocated only when requested visible sources need them. Shrinking the
 view retires surplus rows immediately and retains the pool for reuse.
 No strip pool is allocated on the native path.
@@ -214,8 +244,8 @@ No strip pool is allocated on the native path.
 Meter DPS, icons and both header fields default on; ability damage, percentage
 and ranks default off. Turning **Ability icons** off
 clears pooled icon bindings, hides icons/rims and skips icon resolution and binding
-in subsequent paints, leaving `1 + 2n` authored texture regions in a populated
-view (13 at six rows, 21 at ten). Pools remain allocated for reuse. Disabled
+in subsequent paints, leaving `2 + 2n` authored texture regions in a populated
+view (14 at six rows, 22 at ten), plus the transient reset-button hover. Pools remain allocated for reuse. Disabled
 row values do not trigger formatting when their native values change. Column
 widths and the icon gutter reflow only for effective option changes; header
 text is cached by its visible values, view, language and options revision.
@@ -388,6 +418,17 @@ four map-only captions are removed from the runtime payload/catalogs. Read-only
 map context, coordinate projection and scale calibration remain private
 navigation helpers for HUD/minimap guidance; they allocate no world-map UI.
 These source-level region and work reductions are not measured FPS results.
+
+Native chat movement is retired by collapsing the inherited full-size title
+region and keeping the message pane non-movable. Attachment and existing native
+event/selection/Show/one-second presentation refreshes compare the current
+title-region anchors, size and movable flag; unchanged state causes no writes.
+This stops active native movement only when repairing those inputs, before the
+normal anchor cache is refreshed. It adds no region, texture, event, pointer
+poll or updater, and leaves per-frame slide work, native links/wheel input,
+hidden-view policy and shared Layout movement/resizing unchanged. Native chat
+remains resizable behind its hidden controls. Source review is not live input
+or FPS evidence.
 
 ## Jewelry rendering
 

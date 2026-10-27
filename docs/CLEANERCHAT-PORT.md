@@ -4,6 +4,24 @@ The supplied CleanerChat 2.44 source targets Interface 30300. SurvivorsDragonUi 
 
 ## Presentation and incoming text
 
+Chat moves and resizes only through the shared `/sdui` or `/sdui lock` handles.
+The native message pane's inherited full-size `TitleRegion` is collapsed to
+zero width and height, and the pane remains non-movable. This removes the
+engine-owned drag surface that could move the pane before its next anchor
+refresh snapped it back. The shared chat container retains its normal editor
+movement, dimension controls, Confirm, Cancel, profiles and discard behavior.
+Native mouse input, hyperlinks, wheel scrolling and text input remain active.
+
+Movement ownership is set during attachment and compared against actual native
+state at the existing presentation refresh points: native chat-window events,
+selection, Show and the one-second refresh. An unexpected restored drag region
+is stopped and collapsed before anchors are checked. The slide animation does
+not poll or rewrite it. All eight native resize controls stay hidden and native
+`SetResizable(true)` remains, avoiding the earlier FrameXML resize error. No
+FrameXML global is replaced and no setting, SavedVariable, overlay or updater
+is added. Manual source review and pinned formatting do not establish live input
+behavior; local tests and addon/game execution were not run.
+
 The chat window defaults to 520 by 340 pixels, with a default bottom-left position, 20 pixels from the left edge and 40 pixels above the bottom edge to keep the input and scroll indicator onscreen. It uses the game's DEFAULT font at 12 pixels with an outline, fully transparent backgrounds (opacity 0) and a stripped native input skin. `/sdui` enters layout editing: left-drag its body to move it or a corner icon to change its actual dimensions, updating native message wrapping without scaling fonts. The centered Confirm button saves the pending geometry and locks it again. All native and custom chat tabs, the Combat Log tab and the Copy button stay hidden. The message pane, input and scroll indicator have no background textures, and the copy dialog has a transparent fill. New activity slides the message pane into position over 0.35 seconds. Native message lines remain visible for 14 seconds before a 0.6-second fade. Only the mouse wheel over the chat area reveals retained faded messages; hovering, layout editing/moving/resizing and input show/hide/focus do not reveal history or pause fading. New messages still display normally. Revealing old, faded history fades the pane in over 0.6 seconds, without restarting that intro on each wheel notch. Fading stays paused while wheel-scrolled back for reading and resumes when the wheel returns to the bottom. The passive scroll indicator shows centered `Scroll down for latest messages` or unread-status text while viewing history, without an image or clickable snap-to-bottom action. `/copy` opens the Copy dialog.
 
 The primary `ChatFrame1` receives regular chat and game notices while preserving native channel membership and routing. Combat-log groups for attacks, damage, healing, auras and deaths are removed from the visible regular chat, including subscriptions saved by the earlier all-groups setup. XP, honor, reputation, tradeskill and item-enchantment notices remain in regular chat. The separate native Combat Log frame keeps its subscriptions and unmodified text, with its tab hidden. When logging is enabled, the diagnostic archive captures combat events independently, without adding them to regular chat. Presentation animation does not authorize additional message-formatting changes.

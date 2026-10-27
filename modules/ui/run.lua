@@ -475,7 +475,7 @@ DFRL:NewMod("RunTimers", 5, function()
         end
         for key, label in pairs(displayNumbers) do
             local value = DFRL.display.Get(key)
-            T.SetTextIfChanged(label, tostring(value))
+            T.SetTextIfChanged(label, label.formatValue and label.formatValue(value) or tostring(value))
         end
         for key, control in pairs(displayControls) do
             control:SetChecked(DFRL.display.Get(key))
@@ -847,6 +847,13 @@ DFRL:NewMod("RunTimers", 5, function()
                     { "meterEnabled", "Enable damage meter", "Show the custom damage meter. Off by default." },
                     { "meterRows", "Abilities shown", "Show 1 to 10 abilities at a time.", step = 1 },
                     { "meterFontSize", "Font size", "Change meter text without scaling the frame.", step = 1 },
+                    {
+                        "meterDpsWindow",
+                        "DPS window",
+                        "Damage Done: recent seconds, or All.",
+                        step = 5,
+                        format = function(value) return value == 0 and DFRL.locale.Text("All") or tostring(value) end,
+                    },
                     { "meterShowDamage", "Ability damage", "Show each ability's damage or healing total." },
                     { "meterShowDps", "Ability DPS", "Show DPS per ability, or HPS for healing." },
                     { "meterShowPercentage", "Ability percentage", "Show each ability's share of the total." },
@@ -1198,10 +1205,11 @@ DFRL:NewMod("RunTimers", 5, function()
                 local step = direction * entry.step
                 local button = T.CreateEditorButton(control, direction < 0 and "-" or "+", 28, 28)
                 button:SetPoint("TOPRIGHT", control, "TOPRIGHT", direction < 0 and -108 or 0, -8)
-                button:SetScript(
-                    "OnClick",
-                    function() DFRL.display.Set(entry[1], DFRL.display.Get(entry[1]) + step) end
-                )
+                button:SetScript("OnClick", function()
+                    local value = DFRL.display.Get(entry[1]) + step
+                    if entry[1] == "meterDpsWindow" and value < 0 then return end
+                    DFRL.display.Set(entry[1], value)
+                end)
             end
             local value = FontEditorLabel(control, "", 0, 0, 12)
             value:ClearAllPoints()
@@ -1209,6 +1217,7 @@ DFRL:NewMod("RunTimers", 5, function()
             value:SetWidth(64)
             value:SetHeight(16)
             value:SetJustifyH("CENTER")
+            value.formatValue = entry.format
             displayNumbers[entry[1]] = value
             return control
         end
