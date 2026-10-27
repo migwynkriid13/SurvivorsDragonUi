@@ -19,7 +19,7 @@ local function Target(current, maximum)
     env.UnitExists = function(unit) return unit == "player" or (unit == "target" and context.targetExists) end
     env.UnitName = function() return context.targetName end
     env.UnitIsPlayer = function() return context.playerTarget end
-    env.UnitCanAttack = function() return not context.playerTarget end
+    env.UnitCanAttack = function() return not context.playerTarget and not context.friendlyTarget end
     env.UnitIsDead = function(unit) return unit == "target" and context.dead end
     env.UnitIsGhost = function() return false end
     env.UnitHealth = function()
@@ -101,6 +101,12 @@ Test("large target labels percentage and fill share the AZS publication", functi
     assert(hp == 15107393536 and maximum == 18407319552, "display abbreviation changed actual health")
     assert(not context.reads.health and not context.reads.maximum, "enemy health fell back to UNIT getters")
     assert(controller:GetScript("OnUpdate") == nil, "settled target kept an idle reader")
+    context.friendlyTarget = true
+    bar:SetValue(4294967295)
+    assert(
+        context.env.T.NearlyEqual(bar:GetValue(), 15107393536 / 18407319552),
+        "unattackable guardian lost AZS health"
+    )
 end)
 
 Test("native capped writes cannot replace the true fraction or repaint unchanged content", function()
@@ -184,6 +190,7 @@ Test("phase zone and world retirement clear target values and active loss", func
     context:Event(controller, "PLAYER_LEAVING_WORLD")
     assert(label:GetText() == "" and not loss:IsShown() and animator:GetScript("OnUpdate") == nil)
     context:Event(controller, "PLAYER_ENTERING_WORLD")
+    context:Event(animator, "PLAYER_ENTERING_WORLD")
     context:Call(controller, "OnUpdate", 0.01)
     assert(label:GetText() == "", "world entry accepted a retired publication")
 end)
@@ -197,6 +204,10 @@ Test("player targets retain native health and visibility controls", function()
     assert(label:GetText() == "" and percent:GetText() == "50%")
     context:SetSetting("showHealthPercentage", false)
     assert(label:GetText() == "" and percent:GetText() == "")
+    context.playerTarget, context.friendlyTarget, context.phase = false, true, "ready"
+    context:SetSetting("showHealthValue", true)
+    context:SetSetting("showHealthPercentage", true)
+    assert(label:GetText() == "500" and percent:GetText() == "50%", "friendly target lost native health outside a run")
 end)
 
 print("PASS " .. passed .. " target health scenarios")

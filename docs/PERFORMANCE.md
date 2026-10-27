@@ -41,6 +41,36 @@ leave hundreds of expensive texture regions drawing continuously.
   GPU-memory, pixel-parity or FPS measurements. No local tests, standalone
   validation, addon execution or game launch is authorized for this audit.
 
+## Target health and compact labels — 2026-10-27
+
+One non-rendering target-health controller accepts the official `AZS_TARGET`
+publication for the label, percentage, fill and existing damage-loss texture.
+Its new `CHAT_MSG_ADDON` subscription coalesces target/run/zone receipts into a
+single deferred callback, detached immediately after reading. Target/world
+events and Show/Hide own invalidation. It has no idle poll, new gameplay clock,
+history, saved state or native-table writes. Hidden targets retain receipt
+counts and boundary retirement only; they do not read/paint health, and Show
+accepts current state with a fresh loss baseline. Same-name selection changes
+require a fresh publication rather than guessing spawn identity from a name.
+
+The existing native target StatusBar uses a 0–1 fraction, preserving UV ownership
+and artwork. Its two setter adapters compare actual native range/value before
+writing, including after native resets, and guard synchronous value callbacks.
+Labels share the full source and cache formatted text by current/maximum health
+and effective visibility choices. The common health formatter adds fixed
+K/M/B/T display tiers without changing counters, percentage math or loss
+fractions. Player/party/pet health sources remain native, and percentage-off
+labels still skip their native maximum-health getter.
+
+Loss retirement removes the effect from its existing animation list immediately
+on target/spawn/max changes, hiding, world leave or logout. Its original
+half-second fade and fill geometry remain intact. The owner adds one passive
+frame, zero drawing regions, zero textures/materials and no new alpha pass;
+existing labels, health fill and loss texture are reused. There is no local
+test or addon/game execution. These are source-level costs and authored CI mock
+assertions, not measured GPU/FPS or visual-parity results. See
+[target health](UNIT-PORTRAITS.md#target-health-and-compact-numbers).
+
 ## Player absorbs — 2026-10-27
 
 The player absorb segment shares the existing ten-Hz player-resource controller

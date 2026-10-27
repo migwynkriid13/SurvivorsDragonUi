@@ -5,6 +5,52 @@ target and target-of-target to closed health bars without their portrait
 pictures or gold rings. Names, levels and health values keep their native
 updates. The separately selected class resources remain available.
 
+## Target health and compact numbers
+
+Enemy targets use the official `AZS_TARGET.hp` and `hpm` publication for their
+health label, whole-number percentage, fill and damage-loss animation. This
+avoids the legacy `UnitHealth` / `UnitHealthMax` unsigned 32-bit ceiling of
+4,294,967,295. The native StatusBar receives a 0–1 fraction and retains its own
+texture UV handling, geometry and clicks. Later native capped writes are
+translated through the same accepted health source.
+
+`modules/unit/health.lua` owns one current publication. It checks the native
+phase first, requires a published timestamp, validates finite current/maximum
+health, the enemy kind and positive spawn ID, and matches the exact native target
+name. `AZSTGT` requests a single deferred read after the native parser. Target
+changes, zone/world retirement and inactive phases clear the old source and loss
+baseline; the retired table/stamp/receipt tuple cannot return. Switching between
+identically named creatures waits for a fresh target publication instead of
+treating a name match as a GUID. Missing or invalid enemy data leaves the health
+text empty and the fill at zero. Player/friendly targets retain native getters;
+clients without the phase API retain native health. An accepted AZS enemy
+publication stays authoritative when that creature becomes unattackable.
+
+Hidden targets cancel pending reads and active loss, skip health presentation
+and resume from the current publication with a new loss baseline. Changed
+maximum health or spawn identity also resets the effect. Damage still uses the
+original full counters and the existing half-second fade, never abbreviated
+text or combat messages.
+
+Unit-health labels and boss/guardian current/maximum labels share K, M, B and T
+for thousands, millions, billions and trillions. Examples are `1.2K`, `15.1B`
+and `70T`; values below 1,000 remain whole numbers. Formatting truncates to at
+most one decimal and removes a trailing `.0`, so `999,999` stays `999.9K` until
+the actual million boundary. T remains the largest suffix. Percentages and bar
+fractions always use full health values.
+
+Retail exposes a [configurable number formatter](https://github.com/Gethe/wow-ui-source/blob/live/Interface/AddOns/Blizzard_APIDocumentationGenerated/StringUtilDocumentation.lua)
+with [magnitude breakpoints](https://github.com/Gethe/wow-ui-source/blob/live/Interface/AddOns/Blizzard_APIDocumentationGenerated/AbbreviatedNumberFormatterAPIDocumentation.lua).
+This legacy-compatible adaptation uses the requested fixed K/M/B/T tiers and
+precision; it does not import retail APIs or locale-dependent suffix catalogs.
+The installed client's embedded `AZSTGT` parser was inspected read-only and
+still parses `AZS_TARGET` fields through `tonumber`, without a 32-bit conversion.
+Its executable SHA-256 was
+`522e1c831b3b4627875a28a1030368ef9d2e7f98c5606c34cb30448d3b7d776e`.
+Only source review and pinned formatting were performed locally. CI-only mocks
+are authored separately; actual client rendering and event order remain
+unverified.
+
 ## Player absorbs
 
 The player health bar shows active absorbs automatically as a pale-blue

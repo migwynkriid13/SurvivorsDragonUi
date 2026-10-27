@@ -37,7 +37,10 @@ DFRL:NewMod("TargetHealth", 0, function()
         if type(_G.AZS_GetPhase) ~= "function" or UnitIsPlayer("target") then
             return UnitHealth("target"), UnitHealthMax("target"), generation
         end
-        if not Phase() then return nil, nil, generation end
+        if not Phase() then
+            if not Enemy() then return UnitHealth("target"), UnitHealthMax("target"), generation end
+            return nil, nil, generation
+        end
         if name == UnitName("target") then return current, maximum, generation end
         if not Enemy() then return UnitHealth("target"), UnitHealthMax("target"), generation end
         return nil, nil, generation

@@ -151,7 +151,6 @@ DFRL:NewMod("Cut-Out", 1, function()
                 end
             end
         end
-        frame:UnregisterEvent("PLAYER_ENTERING_WORLD")
     end
 
     frame:RegisterEvent("PLAYER_ENTERING_WORLD")
@@ -162,6 +161,9 @@ DFRL:NewMod("Cut-Out", 1, function()
     frame:SetScript("OnEvent", function()
         if event == "PLAYER_ENTERING_WORLD" then
             Initialize()
+            for _, cutout in ipairs(cutouts) do
+                Reset(cutout)
+            end
         elseif event == "PLAYER_LEAVING_WORLD" or event == "PLAYER_LOGOUT" then
             for _, cutout in ipairs(cutouts) do
                 Stop(cutout)
