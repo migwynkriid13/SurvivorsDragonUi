@@ -2,6 +2,8 @@
 DFRL.locale.data = {
     en = {
         ui = {
+            ["Mark"] = "Mark",
+            ["Marks"] = "Marks",
             ["SurvivorsDragonUI: /sdui for settings"] = "SurvivorsDragonUI: /sdui for settings",
             ["Change name text size, including Names only."] = "Change name text size, including Names only.",
             ["MSBT-style scrolling"] = "MSBT-style scrolling",
@@ -389,6 +391,8 @@ DFRL.locale.data = {
             ["Soul Link"] = "Soul Link",
         },
         native = {
+            ["marks.gained"] = "+{n} marks",
+            ["marks.earned"] = "You earn {n} marks ({total} in all).",
             ["Melee"] = "Melee",
             ["Your damage over time spells now stack {n} times on one enemy."] = "Your damage over time spells now stack {n} times on one enemy.",
             ["%s approaches!"] = "%s approaches!",
@@ -598,6 +602,8 @@ DFRL.locale.data = {
     },
     pl = {
         ui = {
+            ["Mark"] = "Znak",
+            ["Marks"] = "Znaki",
             ["SurvivorsDragonUI: /sdui for settings"] = "SurvivorsDragonUI: /sdui — ustawienia",
             ["Change name text size, including Names only."] = "Zmień rozmiar nazw, także w trybie Same nazwy.",
             ["MSBT-style scrolling"] = "Przewijanie w stylu MSBT",
@@ -985,6 +991,8 @@ DFRL.locale.data = {
             ["Soul Link"] = "Więź Dusz",
         },
         native = {
+            ["marks.gained"] = "Znaki: +{n}",
+            ["marks.earned"] = "Zdobywasz znaki: {n} (łącznie {total}).",
             ["Melee"] = "Wręcz",
             ["Your damage over time spells now stack {n} times on one enemy."] = "Twoje zaklęcia obrażeń w czasie kumulują się teraz {n} razy na jednym wrogu.",
             ["%s approaches!"] = "%s nadciąga!",
@@ -1665,6 +1673,8 @@ DFRL.locale.data = {
     },
     cs = {
         ui = {
+            ["Mark"] = "Známka",
+            ["Marks"] = "Známky",
             ["SurvivorsDragonUI: /sdui for settings"] = "SurvivorsDragonUI: /sdui pro nastavení",
             ["Change name text size, including Names only."] = "Změnit velikost jmen, také v režimu Pouze jména.",
             ["MSBT-style scrolling"] = "Posouvání ve stylu MSBT",
@@ -2052,6 +2062,8 @@ DFRL.locale.data = {
             ["Soul Link"] = "Pouto duší",
         },
         native = {
+            ["marks.gained"] = "Známky: +{n}",
+            ["marks.earned"] = "Získáváš známky: {n} (celkem {total}).",
             ["Melee"] = "Zblízka",
             ["Your damage over time spells now stack {n} times on one enemy."] = "Tvá kouzla poškození v čase se teď na jednom nepříteli sčítají {n}krát.",
             ["%s approaches!"] = "%s se blíží!",
@@ -2735,6 +2747,8 @@ DFRL.locale.data = {
     },
     de = {
         ui = {
+            ["Mark"] = "Marke",
+            ["Marks"] = "Marken",
             ["SurvivorsDragonUI: /sdui for settings"] = "SurvivorsDragonUI: /sdui für Einstellungen",
             ["Change name text size, including Names only."] = "Textgröße der Namen ändern, auch bei Nur Namen.",
             ["MSBT-style scrolling"] = "Scrollen im MSBT-Stil",
@@ -3122,6 +3136,8 @@ DFRL.locale.data = {
             ["Soul Link"] = "Seelenverbindung",
         },
         native = {
+            ["marks.gained"] = "+{n} Marken",
+            ["marks.earned"] = "Du erhältst {n} Marken (insgesamt {total}).",
             ["Melee"] = "Nahkampf",
             ["Your damage over time spells now stack {n} times on one enemy."] = "Deine Zauber für Schaden über Zeit stapeln sich jetzt {n}-mal auf einem Feind.",
             ["%s approaches!"] = "%s naht!",
@@ -3803,6 +3819,8 @@ DFRL.locale.data = {
     },
     pt = {
         ui = {
+            ["Mark"] = "Marca",
+            ["Marks"] = "Marcas",
             ["SurvivorsDragonUI: /sdui for settings"] = "SurvivorsDragonUI: /sdui para configurações",
             ["Change name text size, including Names only."] = "Alterar o tamanho dos nomes, inclusive no modo Apenas nomes.",
             ["MSBT-style scrolling"] = "Rolagem no estilo MSBT",
@@ -4190,6 +4208,8 @@ DFRL.locale.data = {
             ["Soul Link"] = "Vínculo de Alma",
         },
         native = {
+            ["marks.gained"] = "+{n} marcas",
+            ["marks.earned"] = "Você ganha {n} marcas ({total} no total).",
             ["Melee"] = "Corpo a corpo",
             ["Your damage over time spells now stack {n} times on one enemy."] = "Seus feitiços de dano periódico agora acumulam {n} vezes em um inimigo.",
             ["%s approaches!"] = "%s se aproxima!",
@@ -4862,6 +4882,8 @@ DFRL.locale.data = {
     },
     es = {
         ui = {
+            ["Mark"] = "Marca",
+            ["Marks"] = "Marcas",
             ["SurvivorsDragonUI: /sdui for settings"] = "SurvivorsDragonUI: /sdui para ajustes",
             ["Change name text size, including Names only."] = "Cambiar el tamaño de los nombres, también en el modo Solo nombres.",
             ["MSBT-style scrolling"] = "Desplazamiento estilo MSBT",
@@ -5249,6 +5271,8 @@ DFRL.locale.data = {
             ["Soul Link"] = "Vínculo de alma",
         },
         native = {
+            ["marks.gained"] = "+{n} marcas",
+            ["marks.earned"] = "Ganas {n} marcas ({total} en total).",
             ["Melee"] = "Cuerpo a cuerpo",
             ["Your damage over time spells now stack {n} times on one enemy."] = "Tus hechizos de daño en el tiempo se acumulan ahora {n} veces sobre un enemigo.",
             ["%s approaches!"] = "¡%s se acerca!",
@@ -5925,6 +5949,8 @@ DFRL.locale.data = {
     },
     fr = {
         ui = {
+            ["Mark"] = "Marque",
+            ["Marks"] = "Marques",
             ["SurvivorsDragonUI: /sdui for settings"] = "SurvivorsDragonUI: /sdui pour les paramètres",
             ["Change name text size, including Names only."] = "Modifier la taille des noms, y compris en mode Noms uniquement.",
             ["MSBT-style scrolling"] = "Défilement de style MSBT",
@@ -6312,6 +6338,8 @@ DFRL.locale.data = {
             ["Soul Link"] = "Lien spirituel",
         },
         native = {
+            ["marks.gained"] = "+{n} marques",
+            ["marks.earned"] = "Vous gagnez {n} marques ({total} au total).",
             ["Melee"] = "Mêlée",
             ["Your damage over time spells now stack {n} times on one enemy."] = "Vos sorts de dégâts sur la durée se cumulent désormais {n} fois sur un même ennemi.",
             ["%s approaches!"] = "%s approche !",
@@ -6996,6 +7024,8 @@ DFRL.locale.data = {
     },
     ro = {
         ui = {
+            ["Mark"] = "Însemn",
+            ["Marks"] = "Însemne",
             ["SurvivorsDragonUI: /sdui for settings"] = "SurvivorsDragonUI: /sdui pentru setări",
             ["Change name text size, including Names only."] = "Schimbă mărimea numelor, inclusiv în modul Doar numele.",
             ["MSBT-style scrolling"] = "Derulare în stil MSBT",
@@ -7383,6 +7413,8 @@ DFRL.locale.data = {
             ["Soul Link"] = "Legătura sufletelor",
         },
         native = {
+            ["marks.gained"] = "+{n} însemne",
+            ["marks.earned"] = "Câștigi {n} însemne ({total} în total).",
             ["Melee"] = "Corp la corp",
             ["Your damage over time spells now stack {n} times on one enemy."] = "Vrăjile tale de daune în timp se cumulează acum de {n} ori pe un inamic.",
             ["%s approaches!"] = "%s se apropie!",
@@ -8050,6 +8082,8 @@ DFRL.locale.data = {
     },
     tr = {
         ui = {
+            ["Mark"] = "Nişan",
+            ["Marks"] = "Nişan",
             ["SurvivorsDragonUI: /sdui for settings"] = "SurvivorsDragonUI: ayarlar için /sdui",
             ["Change name text size, including Names only."] = "Yalnızca isimler modunda da isim yazısının boyutunu değiştir.",
             ["MSBT-style scrolling"] = "MSBT tarzı kaydırma",
@@ -8437,6 +8471,8 @@ DFRL.locale.data = {
             ["Soul Link"] = "Soul Link",
         },
         native = {
+            ["marks.gained"] = "+{n} nişan",
+            ["marks.earned"] = "{n} nişan kazandın (toplam {total}).",
             ["Melee"] = "Yakın Dövüş",
             ["Your damage over time spells now stack {n} times on one enemy."] = "Zamanla hasar veren büyülerin artık bir düşman üzerinde {n} kez birikiyor.",
             ["%s approaches!"] = "%s yaklaşıyor!",
@@ -8980,6 +9016,8 @@ DFRL.locale.data = {
     },
     ru = {
         ui = {
+            ["Mark"] = "Знак",
+            ["Marks"] = "Знаки",
             ["SurvivorsDragonUI: /sdui for settings"] = "SurvivorsDragonUI: /sdui для настроек",
             ["Change name text size, including Names only."] = "Изменить размер имён, в том числе в режиме «Только имена».",
             ["MSBT-style scrolling"] = "Прокрутка в стиле MSBT",
@@ -9367,6 +9405,8 @@ DFRL.locale.data = {
             ["Soul Link"] = "Связь душ",
         },
         native = {
+            ["marks.gained"] = "Знаки: +{n}",
+            ["marks.earned"] = "Вы получаете знаки: {n} (всего {total}).",
             ["Melee"] = "Ближний бой",
             ["Your damage over time spells now stack {n} times on one enemy."] = "Ваши заклинания периодического урона теперь складываются {n} раз на одном враге.",
             ["%s approaches!"] = "%s приближается!",
@@ -10129,6 +10169,8 @@ DFRL.locale.data = {
     },
     uk = {
         ui = {
+            ["Mark"] = "Знак",
+            ["Marks"] = "Знаки",
             ["SurvivorsDragonUI: /sdui for settings"] = "SurvivorsDragonUI: /sdui для налаштувань",
             ["Change name text size, including Names only."] = "Змінити розмір імен, зокрема в режимі «Лише імена».",
             ["MSBT-style scrolling"] = "Прокручування у стилі MSBT",
@@ -10516,6 +10558,8 @@ DFRL.locale.data = {
             ["Soul Link"] = "Зв'язок душ",
         },
         native = {
+            ["marks.gained"] = "Знаки +{n}",
+            ["marks.earned"] = "Ви отримуєте знаки: {n} (усього {total}).",
             ["Melee"] = "Ближній бій",
             ["Your damage over time spells now stack {n} times on one enemy."] = "Ваші закляття періодичної шкоди тепер накопичуються {n} разів на одному ворогові.",
             ["%s approaches!"] = "%s наближається!",
@@ -11252,6 +11296,8 @@ DFRL.locale.data = {
     },
     zh = {
         ui = {
+            ["Mark"] = "印记",
+            ["Marks"] = "印记",
             ["SurvivorsDragonUI: /sdui for settings"] = "SurvivorsDragonUI: /sdui 打开设置",
             ["Change name text size, including Names only."] = "更改名称文字大小，也适用于仅显示名称模式。",
             ["MSBT-style scrolling"] = "MSBT 风格滚动",
@@ -11639,6 +11685,8 @@ DFRL.locale.data = {
             ["Soul Link"] = "灵魂链接",
         },
         native = {
+            ["marks.gained"] = "+{n}印记",
+            ["marks.earned"] = "你获得了{n}枚印记（共{total}枚）。",
             ["Melee"] = "近战",
             ["Your damage over time spells now stack {n} times on one enemy."] = "你的持续伤害法术现在可以在一个敌人身上叠加{n}次。",
             ["%s approaches!"] = "%s正在逼近！",
@@ -12302,6 +12350,8 @@ DFRL.locale.data = {
     },
     ja = {
         ui = {
+            ["Mark"] = "マーク",
+            ["Marks"] = "マーク",
             ["SurvivorsDragonUI: /sdui for settings"] = "SurvivorsDragonUI: /sdui で設定",
             ["Change name text size, including Names only."] = "名前のみモードも含め、名前の文字サイズを変更します。",
             ["MSBT-style scrolling"] = "MSBT風スクロール",
@@ -12689,6 +12739,8 @@ DFRL.locale.data = {
             ["Soul Link"] = "ソウルリンク",
         },
         native = {
+            ["marks.gained"] = "+{n}マーク",
+            ["marks.earned"] = "{n}マークを獲得（合計{total}）。",
             ["Melee"] = "近接",
             ["Your damage over time spells now stack {n} times on one enemy."] = "継続ダメージ呪文が1体の敵に{n}回まで重なるようになりました。",
             ["%s approaches!"] = "%sが迫ってくる！",
@@ -13384,6 +13436,8 @@ DFRL.locale.data = {
     },
     ko = {
         ui = {
+            ["Mark"] = "징표",
+            ["Marks"] = "징표",
             ["SurvivorsDragonUI: /sdui for settings"] = "SurvivorsDragonUI: /sdui로 설정 열기",
             ["Change name text size, including Names only."] = "이름만 표시 모드에서도 이름 글자 크기를 변경합니다.",
             ["MSBT-style scrolling"] = "MSBT 스타일 스크롤",
@@ -13771,6 +13825,8 @@ DFRL.locale.data = {
             ["Soul Link"] = "영혼 연결",
         },
         native = {
+            ["marks.gained"] = "징표 +{n}",
+            ["marks.earned"] = "징표 {n}개를 얻었습니다 (총 {total}개).",
             ["Melee"] = "근접",
             ["Your damage over time spells now stack {n} times on one enemy."] = "이제 지속 피해 주문이 적 하나에 {n}번 중첩됩니다.",
             ["%s approaches!"] = "%s이(가) 다가옵니다!",

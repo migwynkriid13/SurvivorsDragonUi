@@ -749,6 +749,18 @@ GitHub Actions enforces the single shared root across runtime Lua sources.
 
 ## Full chat history
 
+Marks chat formatting runs only during the existing accepted native message
+path. It reuses cached named-field templates, retains original integer text and
+adds no balance getter, currency history, frame, drawing region, asset, event,
+updater or saved state. The collected-item parser supplies a positive reward
+only when that exact suffix matches; chat can display it while the unchanged
+loot service/view guards reject it before queueing and icon metadata work.
+Unknown text stays native. Extra compact chat lines use the native message
+pane/history and its existing fonts/fades; there is no separate marks view.
+Source/diff review and pinned formatting only; no local tests, standalone
+validation or addon/game execution. CI-only mocks cover both formats across
+all fourteen catalogs, link/color preservation and collected-popup exclusion.
+
 Diagnostic capture is opt-in and off by default. While enabled, the session
 archive retains original ordering, duplicate-delivery rules and literal markup
 without a retention cap. Completed chunks are joined once; appending does not

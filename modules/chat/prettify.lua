@@ -15,8 +15,41 @@ local YELLOW = "|cffffb226"
 local WHITE = "|cfffafafa"
 local GRAY = "|cff787878"
 local RED = "|cffcc1a1a"
--- Every prettified gain joins '+' directly to its value or item label.
+-- Existing gains join '+' directly to their value; marks use the requested spacing.
 local PLUS = GREEN .. "+|r"
+
+local function StripColors(text)
+    text = string.gsub(text, "|c%x%x%x%x%x%x%x%x", "")
+    return (string.gsub(text, "|r", ""))
+end
+
+local function MarkCounts(text, earned)
+    local values = DFRL.locale.Match(earned and "marks.earned" or "marks.gained", text)
+    local amount, total
+    if values then
+        amount, total = values.n, values.total
+    elseif earned then
+        local _, _, n, balance = string.find(text, "^You earn (%d+) marks %((%d+) in all%)%.$")
+        amount, total = n, balance
+    else
+        local _, _, n = string.find(text, "^%+(%d+) marks$")
+        amount = n
+    end
+    if type(amount) ~= "string" or not string.find(amount, "^%d+$") then return nil end
+    if earned and (type(total) ~= "string" or not string.find(total, "^%d+$")) then return nil end
+    return amount, total
+end
+
+local function MarkGain(amount, spaced)
+    local unit = string.find(amount, "^0*1$") and "Mark" or "Marks"
+    return PLUS .. (spaced and " " or "") .. WHITE .. amount .. "|r " .. YELLOW .. DFRL.locale.Text(unit) .. "|r"
+end
+
+local function MarksMessage(text)
+    local amount, total = MarkCounts(StripColors(text), true)
+    if not amount then return nil end
+    return MarkGain(amount, true) .. " - " .. YELLOW .. DFRL.locale.Text("Total") .. "|r " .. WHITE .. total .. "|r"
+end
 
 local patternCharacters = {
     ["^"] = true,
@@ -373,19 +406,28 @@ function CleanerChat.ParseLootMessage(text)
 
     -- Collection status is part of native self-loot text. Recognize both known
     -- statuses while preserving their wording and any existing suffix colors.
-    local collection, collectionText
-    local plainSuffix = string.gsub(suffix, "|c%x%x%x%x%x%x%x%x", "")
-    plainSuffix = string.gsub(plainSuffix, "|r", "")
+    local collection, collectionText, marks
+    local plainSuffix = StripColors(suffix)
     if plainSuffix == "." then
         suffix = ""
     elseif plainSuffix ~= "" then
         local statusColor
         local normalized = string.gsub(plainSuffix, "^%s+", "")
+        normalized = string.gsub(normalized, "%s+$", "")
         normalized = string.gsub(normalized, "%.$", "")
         local collected = "(" .. DFRL.locale.Native("already collected") .. ")"
-        if normalized == collected or string.find(plainSuffix, "^%s+%(already collected%)%.?$") then
+        if string.sub(normalized, 1, string.len(collected)) ~= collected then collected = "(already collected)" end
+        if string.sub(normalized, 1, string.len(collected)) == collected then
+            local reward = string.sub(normalized, string.len(collected) + 1)
+            if reward ~= "" then
+                if not string.find(reward, "^%s+") then return nil end
+                local amount = MarkCounts((string.gsub(reward, "^%s+", "")), false)
+                if not amount then return nil end
+                if string.find(amount, "[1-9]") then marks = amount end
+            end
             statusColor = GRAY
             collection = "collected"
+            collectionText = collected
         elseif
             normalized == DFRL.locale.Native("New in your collection!")
             or string.find(plainSuffix, "^%s+New in your collection!$")
@@ -395,7 +437,7 @@ function CleanerChat.ParseLootMessage(text)
         else
             return nil
         end
-        collectionText = normalized
+        collectionText = collectionText or normalized
         if suffix == plainSuffix then suffix = statusColor .. suffix .. "|r" end
     end
     local label = ItemLabel(item)
@@ -411,7 +453,8 @@ function CleanerChat.ParseLootMessage(text)
         color = color,
         collection = collection,
         collectionText = collectionText,
-        chatText = PLUS .. label .. suffix,
+        marks = marks,
+        chatText = marks and (PLUS .. " " .. item .. " " .. MarkGain(marks, false)) or (PLUS .. label .. suffix),
     }
 end
 
@@ -460,9 +503,11 @@ CleanerChat.PrettifyMessage = function(text, eventName, speaker, message)
     end
     -- Recognize native self-loot on the system channel as well as loot events.
     if not eventName or eventName == "CHAT_MSG_LOOT" or eventName == "CHAT_MSG_SYSTEM" then
+        result = MarksMessage(text)
+        if result then return result end
         local loot = CleanerChat.ParseLootMessage(text)
         if loot then
-            if loot.collection == "collected" then return nil, "hide" end
+            if loot.collection == "collected" and not loot.marks then return nil, "hide" end
             return loot.chatText
         end
     end

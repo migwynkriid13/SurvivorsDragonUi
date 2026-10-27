@@ -4,6 +4,27 @@ SurvivorsDragonUi includes English, Polish, Czech (**Čeština**), German, Brazi
 
 ## Following the game
 
+The Heroic/marks update adds the native `marks.gained` and `marks.earned`
+templates. They were read as data from the installed executable, SHA-256
+`22f7938eb4f99f2857dc091b1c57c147bd848eaabfeaa81e444c0a3393ca8150`,
+with fourteen catalogs of 3,187 keys in the existing reviewed language order.
+English supplies `+{n} marks` and `You earn {n} marks ({total} in all).`;
+some languages put the currency name before its amount. The shared named-field
+matcher consumes each exact native template, with an anchored English fallback.
+The compact `Mark`/`Marks` captions reuse the existing fourteen-language UI path.
+
+The full generator's source pin now targets that executable. Only the two marks
+templates were prepared for this change; other native/UI captions, effects and
+spell aliases retain their existing source versions. Both native keys are in
+`native-keys.json`. Reproduce this targeted preparation without regenerating
+unrelated catalogs:
+
+```sh
+python3 -B scripts/generate_localization.py \
+  --client /path/to/AzerothSurvivors.exe \
+  --refresh-marks-only --metadata /tmp/sdui-marks-native.json
+```
+
 The initial fallback is the native `GetLocale()` value, with aliases for the supported language codes, including `csCZ` → `cs`. This alone does not establish the language selected by the game's fourteen-language picker: the inspected [base-client implementation](https://github.com/samwhosung/benilla/blob/main/crates/benilla-ui/src/script/client.rs) reads the older client locale table.
 
 The authoritative addon-visible evidence is the game's localized text published in the official `AZS_ZONE` snapshot. For each candidate catalog, compare the exact `zname` and `zsub` associated with the stable `zone` key and `cname` associated with the stable `class` key. Select the unique highest-scoring catalog. Shared proper names alone can tie; a tie or unfamiliar wording retains the existing fallback rather than choosing a language arbitrarily. The normal localized zone subtitle distinguishes the catalogs without deriving anything from an enemy or item name.

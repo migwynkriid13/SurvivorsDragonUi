@@ -24,8 +24,11 @@ handler, roll button, sound, collection subtitle or slot line is added.
 
 Explicit native **already collected** status is rejected before queueing,
 metadata resolution or sequence assignment. The view repeats that guard before
-accepting any entry. Regular chat also hides that same explicit `collected`
-result from the shared parser; raw diagnostics retain the original input.
+accepting any entry. Regular chat hides that same explicit `collected`
+result unless a positive marks conversion was supplied. The conversion shows
+`+ [Item] +1 Mark` in chat, keeping native brackets, links and item color while
+omitting the collection suffix. It remains collected and never becomes an item
+popup. Zero-reward duplicates remain hidden; raw diagnostics retain the input.
 Absent collection status stays unknown and is eligible; no collection database
 or item-name inference decides whether a drop is new.
 
@@ -70,6 +73,8 @@ An accepted record contains:
 - `collection`: `collected`, `new`, or absent when no status was supplied.
 - `collectionText`: the supplied localized status without color markup or the
   final sentence period. Collected parentheses remain part of the supplied text.
+- `marks`: the received positive integer text from a collected item's marks
+  suffix, when supplied. It is not a queried balance or an inferred reward.
 - `chatText`: the exact compact chat result, including its existing plus prefix.
 
 Unknown suffixes still decline the match. Item and collection state are copied

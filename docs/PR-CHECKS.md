@@ -86,6 +86,10 @@ The assertions cover:
   outgoing anchors, spaces distinct burst lines and animates without enemy
   projection. Style changes retire active and queued hits, and expiry/world
   cleanup clears labels while retaining pool reuse and empty-list idling.
+- Native marks messages use exact templates in all fourteen catalogs. Tests
+  preserve item links/colors and original amounts/totals, keep zero-reward
+  duplicates hidden, leave conversations/unknown suffixes unchanged and reject
+  collected conversions before popup delivery or item metadata reads.
 
 The mocks implement only explicit API methods and record calls, allocation and
 effective parent visibility. An unsupported method fails rather than silently
