@@ -1,5 +1,8 @@
 {
   "format_version": 1,
+  "reference_lua": {
+    "modules/chat/filters.lua": "Retained broad legacy chat formatter for source reference only; modules/chat/prettify.lua implements the approved live behavior. See docs/CLEANERCHAT-PORT.md."
+  },
   "dynamic_roots": {
     "core/editor.lua": "editor",
     "modules/ui/character.lua": "character",

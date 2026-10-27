@@ -13,12 +13,57 @@ import zipfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import package
-from check_runtime_hygiene import check_assets, compare_payload, parse_sources, zip_bytes
+from check_runtime_hygiene import check_assets, check_lua_sources, compare_payload, parse_sources, zip_bytes
 from pr_quality import DEAD_CODE_WARNINGS
 
 
 def rules():
-    return {"dynamic_roots": {}, "data_roots": {}, "families": [], "source_assets": {}}
+    return {"dynamic_roots": {}, "data_roots": {}, "families": [], "source_assets": {}, "reference_lua": {}}
+
+
+class LuaSourceClassificationTests(unittest.TestCase):
+    def test_legacy_references_and_test_tooling_do_not_require_toc_entries(self):
+        policy = rules()
+        policy["reference_lua"]["modules/chat/filters.lua"] = "Legacy formatter retained as reference; prettify.lua is live."
+        tracked = {"core/live.lua", "modules/chat/filters.lua", "tests/layout_geometry.lua",
+                   "scripts/tests/fixtures/ui_spec.lua", "scripts/reference/helper.lua"}
+        failures = check_lua_sources({"core/live.lua"}, tracked, {"core/live.lua": {}}, policy)
+        self.assertEqual(failures, [])
+
+    def test_ordinary_unloaded_lua_still_fails(self):
+        for name in ("modules/unloaded.lua", "core/unloaded.lua", "unexpected.lua"):
+            with self.subTest(name=name):
+                failures = check_lua_sources(set(), {name}, {}, rules())
+                self.assertEqual(failures, [name + ": tracked addon Lua is not loaded by the TOC"])
+
+    def test_development_and_reference_lua_cannot_enter_the_payload(self):
+        for name in ("tests/layout_geometry.lua", "scripts/tests/fixtures/ui_spec.lua",
+                     "scripts/helper.lua", "modules/chat/filters.lua"):
+            with self.subTest(name=name):
+                policy = rules()
+                if name == "modules/chat/filters.lua":
+                    policy["reference_lua"][name] = "Retained legacy source."
+                failures = check_lua_sources({name}, {name}, {name: {}}, policy)
+                self.assertTrue(any("must not be packaged" in row for row in failures))
+
+    def test_reference_classifications_require_a_current_lua_file_and_reason(self):
+        for name, tracked, reason in (
+            ("modules/missing.lua", set(), "Missing source."),
+            ("modules/legacy.txt", {"modules/legacy.txt"}, "Wrong type."),
+            ("modules/legacy.lua", {"modules/legacy.lua"}, " "),
+            ("modules/legacy.lua", {"modules/legacy.lua"}, {}),
+        ):
+            with self.subTest(name=name, reason=reason):
+                policy = rules()
+                policy["reference_lua"][name] = reason
+                failures = check_lua_sources(set(), tracked, {}, policy)
+                self.assertTrue(any("invalid reference-Lua classification" in row for row in failures))
+
+    def test_a_reference_cannot_be_used_as_loaded_artwork_evidence(self):
+        policy = rules()
+        policy["reference_lua"]["modules/legacy.lua"] = "Retained legacy source."
+        failures = check_lua_sources(set(), {"modules/legacy.lua"}, {"modules/legacy.lua": {}}, policy)
+        self.assertTrue(any("must not be loaded as runtime source" in row for row in failures))
 
 
 class AssetInventoryTests(unittest.TestCase):
@@ -57,6 +102,16 @@ class AssetInventoryTests(unittest.TestCase):
     def test_only_loaded_lua_can_own_artwork(self):
         failures, _ = self.scan('', [], tracked=["modules/retired.lua"])
         self.assertTrue(any("not loaded by the TOC" in row for row in failures))
+
+    def test_reference_and_test_sources_do_not_keep_unused_artwork_alive(self):
+        policy = rules()
+        policy["reference_lua"]["modules/chat/filters.lua"] = "Retained legacy formatter."
+        texture = "media/tex/meter/Old.blp"
+        failures, used = self.scan('', [texture], policy,
+                                   tracked=[texture, "modules/chat/filters.lua", "tests/layout_geometry.lua"])
+        self.assertEqual(len(failures), 1)
+        self.assertIn("no reference in loaded Lua", failures[0])
+        self.assertEqual(used[texture], [])
 
     def test_authoring_input_is_retained_but_extra_binary_is_rejected(self):
         failures, _ = self.scan(

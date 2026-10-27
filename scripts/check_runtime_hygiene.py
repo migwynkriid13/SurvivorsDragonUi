@@ -15,6 +15,7 @@ from package import ADDON_DIRECTORY, SOURCE, runtime_files
 
 REPORTS = SOURCE / "dist/pr-quality"
 TEXTURES = "media/tex/"
+DEVELOPMENT_LUA_ROOTS = ("scripts/", "tests/")
 
 
 def git(*arguments):
@@ -33,13 +34,33 @@ def normalized(value):
     return value.replace("\\", "/")
 
 
+def check_lua_sources(files, tracked, inventory, rules):
+    """Separate runtime Lua from tooling/tests and documented source references."""
+    failures = []
+    references = rules.get("reference_lua", {})
+    for name, reason in references.items():
+        if PurePosixPath(name).suffix != ".lua" or name not in tracked or not isinstance(reason, str) or not reason.strip():
+            failures.append(f"{name}: stale or invalid reference-Lua classification")
+        if name in inventory:
+            failures.append(f"{name}: reference-only Lua must not be loaded as runtime source")
+    for name in sorted(files | tracked):
+        if PurePosixPath(name).suffix != ".lua":
+            continue
+        if name.startswith(DEVELOPMENT_LUA_ROOTS) or name in references:
+            if name in files:
+                failures.append(f"{name}: development/reference Lua must not be packaged or loaded by the TOC")
+        elif name not in files:
+            failures.append(f"{name}: tracked addon Lua is not loaded by the TOC")
+    return failures
+
+
 def check_assets(files, tracked, inventory, rules):
     """Require literal evidence in loaded Lua, with explicit dynamic families.
 
     This is a syntactic ownership check, not a claim that a path is reachable.
     A comment, document or manifest entry alone cannot keep a texture alive.
     """
-    failures = []
+    failures = check_lua_sources(files, tracked, inventory, rules)
     used = {name: [] for name in sorted(files) if name.endswith(".blp")}
     values = {name: {row["value"] for row in data["strings"]} for name, data in inventory.items()}
 
@@ -113,8 +134,6 @@ def check_assets(files, tracked, inventory, rules):
             failures.append(f"{name}: no reference in loaded Lua; remove the asset and manifest entry or document its dynamic owner")
     for name in sorted(tracked):
         path = PurePosixPath(name)
-        if path.suffix == ".lua" and name not in files and not name.startswith("scripts/tests/fixtures/"):
-            failures.append(f"{name}: tracked addon Lua is not loaded by the TOC")
         if not name.startswith("media/") or name in files:
             continue
         if path.suffix.lower() == ".tga" and str(path.with_suffix(".blp")) in used:

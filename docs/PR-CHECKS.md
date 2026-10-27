@@ -15,7 +15,9 @@ branch protection by itself.
   overwritten table fields, uninitialized locals and unreachable code. Native
   callback arguments and dynamic game globals remain outside this warning set.
 - A duplicate, unsafe, missing, symlinked or case-colliding package path; disagreement
-  between the runtime manifest and TOC; or tracked addon Lua left outside the TOC.
+  between the runtime manifest and TOC; or tracked runtime Lua left outside the TOC.
+- Test/tooling or reference-only Lua entering the payload/TOC, or an invalid
+  reference-source classification with a missing file, non-Lua path or empty reason.
 - An unexpected payload file. The addon ZIP contains Lua, BLP artwork, its TOC
   and the required artwork license. Tools, test fixtures, documentation and
   authoring inputs stay out of it.
@@ -123,6 +125,17 @@ deleting preferences, captions or code.
 
 ## Asset ownership
 
+Lua under `scripts/` and `tests/` is development source and does not need TOC
+entries. Deliberately retained legacy Lua elsewhere is classified by exact path
+and a nonempty reason in `packaging/asset-usage.json` → `reference_lua`.
+`modules/chat/filters.lua` is the retained broad formatter; the loaded
+`modules/chat/prettify.lua` implements current behavior. All other tracked Lua
+must remain in the runtime manifest and TOC. These classifications do not skip
+formatting or static Lua analysis, do not provide texture-ownership evidence and
+fail if development/reference Lua enters the payload. A stale or invalid
+reference classification also fails. No historical geometry fixture or legacy
+formatter is loaded into the addon to satisfy the inventory.
+
 `scripts/lua_inventory.cjs` uses pinned luaparse 0.3.1 to parse loaded Lua as data.
 Comments and developer documents cannot keep a runtime texture alive. The
 inventory resolves full local filenames and unique relative filenames in their
@@ -175,7 +188,10 @@ The checker fixtures cover comments masquerading as references, native textures,
 missing/case-mismatched paths, same-named sheets, removed dynamic consumers,
 authoring-input retention, stale rules, unsafe/case-colliding/symlinked package
 paths, TOC drift, deterministic ZIP membership, new duplicate payloads and the
-configured dead-code warning policy. Source-checker fixtures execute only tooling
+configured dead-code warning policy. Source-classification fixtures cover the
+historical geometry test, retained formatter, ordinary unloaded runtime Lua,
+accidental development/reference payload entries, stale reasons/files and
+unreferenced artwork despite retained source. Source-checker fixtures execute only tooling
 against synthetic source/data; the parser never loads those Lua chunks. Separate
 mutation fixtures verify that orphan regressions, duplicate keys, misspelled APIs,
 broken callbacks and stale/ambiguous production seams are rejected.
