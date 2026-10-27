@@ -41,6 +41,23 @@ leave hundreds of expensive texture regions drawing continuously.
   GPU-memory, pixel-parity or FPS measurements. No local tests, standalone
   validation, addon execution or game launch is authorized for this audit.
 
+## Lossless palette packing — 2026-10-27
+
+Forty-eight prepared BLPs now use exact indexed RGB plus separate alpha instead
+of Raw3. All decoded pixels, including RGB under zero alpha, canvas dimensions,
+mips, UVs, layers and draw-region counts are preserved. The existing six DXT5
+images remain byte-identical; no lossy recompression is introduced. Preparation
+uses the same BLP path for native and browser clients and adds no runtime code,
+texture, updater or package member. See [client compatibility](CLIENT-COMPATIBILITY.md#exact-lossless-palettes--2026-10-27)
+for decoder evidence, byte-comparison results and the format rule.
+
+The 108 runtime textures drop from 25.55 to 22.34 MiB on disk, saving 3.21 MiB.
+The complete runtime ZIP drops from 2.013 to 1.980 MiB: only 32.8 KiB, because
+DEFLATE already compresses the original pixels well. These are data-only file
+measurements. The reference UI renderer expands palette files into RGBA, so
+this change makes no GPU-memory, draw-call or FPS improvement claim. Native and
+browser rendering have not been executed locally.
+
 ## Layout hiding audit — 2026-10-27
 
 The independent custom run-timer and boss-bar enable switches are stronger

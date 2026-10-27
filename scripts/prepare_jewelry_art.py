@@ -7,23 +7,21 @@ labels, panel backgrounds or ornaments are baked into the artwork.
 
 import argparse
 import math
-import struct
 from pathlib import Path
 
 from PIL import Image, ImageDraw
+
+from prepare_client_textures import blp_bgra_levels
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def rgba(path):
     data = path.read_bytes()
-    # Pillow does not decode this uncompressed BLP2 variant itself.
-    if len(data) >= 148 and data[:4] == b"BLP2" and data[8] == 3:
-        width, height = struct.unpack_from("<II", data, 12)
-        offset = struct.unpack_from("<I", data, 20)[0]
-        return Image.frombytes(
-            "RGBA", (width, height), data[offset : offset + width * height * 4], "raw", "BGRA"
-        )
+    # Pillow's Raw1 path omits the separate alpha block; Raw3 is unsupported.
+    if len(data) >= 148 and data[:4] == b"BLP2" and data[8] in (1, 3):
+        width, height, levels = blp_bgra_levels(data)
+        return Image.frombytes("RGBA", (width, height), levels[0], "raw", "BGRA")
     return Image.open(path).convert("RGBA")
 
 

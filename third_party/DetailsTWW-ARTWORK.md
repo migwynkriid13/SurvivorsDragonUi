@@ -47,8 +47,10 @@ manifest. Decoded RGBA SHA-256 values:
 | `Background.tga` | `b2a94f8fde2559cb2ede6c17d08b31b35dc671bf9712c8c7b7f08149d5dc87eb` |
 
 Run `python3 scripts/prepare_client_textures.py` after regenerating the TGAs. The
-existing converter writes lossless uncompressed BLP2 Raw3 with its required
-palette block. Native and browser clients receive the same prepared files.
+converter writes lossless BLP2 Raw1 when one exact RGB palette fits all pixels,
+with alpha retained separately; otherwise it keeps Raw3. Both encodings include
+the required palette block. The bar now uses Raw1; header and background remain
+Raw3. Native and browser clients receive the same prepared files.
 Container conversion preserves every decoded pixel and the full original UVs;
 it does not undo compression already present in the author's source BLP.
 
