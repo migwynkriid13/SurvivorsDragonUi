@@ -5,10 +5,9 @@ DFRL:NewMod("RunTimers", 5, function()
     local BAR_WIDTH = 280
     local ROW_HEIGHT = 48
     local DEBUFF_SIZE, DEBUFF_GAP = 18, 4
-    local DEBUFF_COLUMNS = math.floor((BAR_WIDTH + DEBUFF_GAP) / (DEBUFF_SIZE + DEBUFF_GAP))
     local SKULL_ICON = "Interface\\TargetingFrame\\UI-TargetingFrame-Skull"
     local ATTACK_ICON = "Interface\\Cursor\\Attack.blp"
-    local CACHE_ICON = "Interface\\Cursor\\LootAll.blp"
+    local CACHE_ICON = DFRL:GetInfoOrCons("tex") .. "waypoint\\Chest.blp"
     local COINS_ICON = DFRL:GetInfoOrCons("tex") .. "tally\\Coins.blp"
     local MARKER_SIZE = 18
     local ACTIVE_GLOW_PERIOD = 2.4
@@ -95,12 +94,21 @@ DFRL:NewMod("RunTimers", 5, function()
         T.SetFont(text, 14, "OUTLINE")
         text:SetPoint("BOTTOM", frame, "TOP", 0, 2)
         text:SetTextColor(1, 1, 1)
+        frame.paintedWidth = BAR_WIDTH
+        function frame.RefreshWidth()
+            local width = frame:GetWidth() - 16
+            if T.NearlyEqual(frame.paintedWidth, width) then return end
+            -- Stretch the original background sample; StatusBar owns fill UVs.
+            background:SetWidth(width + 4)
+            frame.paintedWidth = width
+        end
         frame:Hide()
         return frame, bar, text, overlay
     end
 
     -- Pooled cosmetic fill effects; native run data still controls progress.
     local function AnimatedRunFill(bar)
+        local dynamicWidth, dynamicSpacing, dynamicSpan = BAR_WIDTH, FLOW_SPACING, FLOW_SPAN
         local runGlow = bar:CreateTexture(nil, "OVERLAY")
         runGlow:SetTexture(path .. "FillWhite.blp")
         runGlow:SetBlendMode("ADD")
@@ -124,7 +132,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 texture:Hide()
                 table.insert(runFlows, {
                     texture = texture,
-                    offset = (index - 1) * FLOW_SPACING + (lane - 1) * FLOW_WIDTH / 3,
+                    offset = (index - 1) * dynamicSpacing + (lane - 1) * FLOW_WIDTH / 3,
                     speed = FLOW_SPEED + (lane - 2) * 6,
                     y = (lane - 2) * 4,
                     phase = lane * 1.7 + index * 1.2,
@@ -166,7 +174,7 @@ DFRL:NewMod("RunTimers", 5, function()
         end
 
         local function DrawFoam(piece, left, y, width, height, alpha, filledWidth)
-            local first, last = math.max(0, left), math.min(BAR_WIDTH, filledWidth + 6, left + width)
+            local first, last = math.max(0, left), math.min(dynamicWidth, filledWidth + 6, left + width)
             local halfHeight = bar:GetHeight() / 2
             local bottom, top = math.max(-halfHeight, y - height / 2), math.min(halfHeight, y + height / 2)
             if first >= last or bottom >= top then
@@ -239,8 +247,8 @@ DFRL:NewMod("RunTimers", 5, function()
         local redSparkles = {}
         local sparklesShown = false
         for index = 1, 28 do
-            local center = (index - 0.5) * BAR_WIDTH / 28
-            local left, right = math.max(0, center - 7), math.min(BAR_WIDTH, center + 7)
+            local center = (index - 0.5) * dynamicWidth / 28
+            local left, right = math.max(0, center - 7), math.min(dynamicWidth, center + 7)
             local texture = bar:CreateTexture(nil, "OVERLAY")
             texture:SetTexture("Interface\\CastingBar\\UI-CastingBar-Spark")
             texture:SetBlendMode("ADD")
@@ -258,7 +266,30 @@ DFRL:NewMod("RunTimers", 5, function()
             }
         end
 
+        local function ResizeEffects()
+            local width = bar.layoutWidth or BAR_WIDTH
+            if T.NearlyEqual(dynamicWidth, width) then return end
+            dynamicWidth = width
+            dynamicSpacing = (width + FLOW_WIDTH) / 5 / 1.7
+            dynamicSpan = dynamicSpacing * FLOW_COUNT
+            for index, flow in ipairs(runFlows) do
+                local lane = math.floor((index - 1) / FLOW_COUNT) + 1
+                local slot = math.mod(index - 1, FLOW_COUNT)
+                flow.offset = slot * dynamicSpacing + (lane - 1) * FLOW_WIDTH / 3
+            end
+            for index, sparkle in ipairs(redSparkles) do
+                local center = (index - 0.5) * width / 28
+                local left, right = math.max(0, center - 7), math.min(width, center + 7)
+                sparkle.texture:SetWidth(right - left)
+                sparkle.texture:ClearAllPoints()
+                sparkle.texture:SetPoint("LEFT", bar, "LEFT", left, (math.mod(index - 1, 3) - 1) * 3)
+                sparkle.texture:SetTexCoord((left - center + 7) / 14, (right - center + 7) / 14, 0, 1)
+            end
+            flowUpdatedAt = nil
+        end
+
         local function SetRunAppearance(atLimit)
+            ResizeEffects()
             if glowShown ~= atLimit then
                 if atLimit then
                     runGlow:Show()
@@ -317,6 +348,7 @@ DFRL:NewMod("RunTimers", 5, function()
         end
 
         local function UpdateRunFlow(seconds, maximum)
+            ResizeEffects()
             if seconds == 0 then
                 HideRunFlow()
                 return
@@ -330,15 +362,15 @@ DFRL:NewMod("RunTimers", 5, function()
             if flowRed then
                 -- Keep the full red fill alive everywhere: overlapping stationary
                 -- glints twinkle independently, with no gaps between passing waves.
-                -- Geometry is fixed at creation; only alpha changes during updates.
+                -- Width changes reflow geometry once; ordinary updates change alpha.
                 for _, sparkle in ipairs(redSparkles) do
                     local pulse = 0.5 + 0.5 * math.sin(now * 2 * math.pi / sparkle.period + sparkle.phase)
                     sparkle.texture:SetAlpha((0.22 + 0.68 * pulse * pulse * pulse) * RED_SPARKLE_OPACITY)
                 end
                 return
             end
-            local filledWidth = BAR_WIDTH * math.min(1, seconds / maximum)
-            local span = FLOW_SPAN
+            local filledWidth = dynamicWidth * math.min(1, seconds / maximum)
+            local span = dynamicSpan
             for _, flow in ipairs(runFlows) do
                 local left = math.mod(now * flow.speed + flow.offset, span) - FLOW_WIDTH
                 local first, last = math.max(0, left), math.min(filledWidth, left + FLOW_WIDTH)
@@ -404,6 +436,16 @@ DFRL:NewMod("RunTimers", 5, function()
     local incomingControl, sctDescription
     local sctSizeLabel
 
+    local function SetSettingsEnabled(group, enabled)
+        if not group or group.enabled == enabled then return end
+        group.enabled = enabled
+        if group.frame then group.frame:SetAlpha(enabled and 1 or 0.45) end
+        for _, control in ipairs(group.controls) do
+            control:EnableMouse(enabled)
+            if not group.frame then control:SetAlpha(enabled and 1 or 0.45) end
+        end
+    end
+
     local function UpdateSctLabels()
         if not incomingControl or not DFRL.sct then return end
         local mode = DFRL.sct.GetMode()
@@ -418,6 +460,7 @@ DFRL:NewMod("RunTimers", 5, function()
             sctDescription:SetText("Native outgoing text follows Show Target Damage.")
         end
         incomingControl:SetChecked(DFRL.sct.GetIncoming())
+        SetSettingsEnabled(fontEditor and fontEditor.combatSettings, mode == "on")
     end
 
     local function UpdateDisplayLabels()
@@ -431,7 +474,8 @@ DFRL:NewMod("RunTimers", 5, function()
             end
         end
         for key, label in pairs(displayNumbers) do
-            T.SetTextIfChanged(label, tostring(DFRL.display.Get(key)))
+            local value = DFRL.display.Get(key)
+            T.SetTextIfChanged(label, label.formatValue and label.formatValue(value) or tostring(value))
         end
         for key, control in pairs(displayControls) do
             control:SetChecked(DFRL.display.Get(key))
@@ -447,14 +491,7 @@ DFRL:NewMod("RunTimers", 5, function()
         end
         for key, group in pairs(dependentSettings) do
             local enabled = DFRL.display.Get(key)
-            if group.enabled ~= enabled then
-                group.enabled = enabled
-                if group.frame then group.frame:SetAlpha(enabled and 1 or 0.45) end
-                for _, control in ipairs(group.controls) do
-                    control:EnableMouse(enabled)
-                    if not group.frame then control:SetAlpha(enabled and 1 or 0.45) end
-                end
-            end
+            SetSettingsEnabled(group, enabled)
             if not enabled and key == "customRunTimer" and fontMenu and fontMenu:IsShown() then fontMenu:Hide() end
         end
     end
@@ -809,6 +846,14 @@ DFRL:NewMod("RunTimers", 5, function()
                 options = {
                     { "meterEnabled", "Enable damage meter", "Show the custom damage meter. Off by default." },
                     { "meterRows", "Abilities shown", "Show 1 to 10 abilities at a time.", step = 1 },
+                    { "meterFontSize", "Font size", "Change meter text without scaling the frame.", step = 1 },
+                    {
+                        "meterDpsWindow",
+                        "DPS window",
+                        "Damage Done: recent seconds, or All.",
+                        step = 5,
+                        format = function(value) return value == 0 and DFRL.locale.Text("All") or tostring(value) end,
+                    },
                     { "meterShowDamage", "Ability damage", "Show each ability's damage or healing total." },
                     { "meterShowDps", "Ability DPS", "Show DPS per ability, or HPS for healing." },
                     { "meterShowPercentage", "Ability percentage", "Show each ability's share of the total." },
@@ -816,6 +861,13 @@ DFRL:NewMod("RunTimers", 5, function()
                     { "meterShowRanks", "Ability ranks", "Show each ability's position in the list." },
                     { "meterShowTotal", "Header total", "Show total damage or healing in the header." },
                     { "meterShowTotalDps", "Header DPS", "Show total DPS or HPS in the header." },
+                },
+            },
+            {
+                key = "guardians",
+                label = "Guardian tracker",
+                options = {
+                    { "guardianShowDead", "Show dead", "Show defeated guardians and their respawn timers." },
                 },
             },
             {
@@ -1012,7 +1064,7 @@ DFRL:NewMod("RunTimers", 5, function()
         local timerSizeWidth = TextWidth("Size") + gap + 104
         local tallyStyleHint = "Styles stay the same when attached or detached."
         local defaultsWidth = TextWidth("Addon defaults") + 24
-        local instructions = "Drag to move. Hold Shift to snap. Drag corners to resize."
+        local instructions = "Drag to move. Shift snaps. Corners scale; sides resize."
         local contentWidth = math.max(
             modeWidth * 3 + gap * 2,
             filterWidth * 2 + gap,
@@ -1153,10 +1205,11 @@ DFRL:NewMod("RunTimers", 5, function()
                 local step = direction * entry.step
                 local button = T.CreateEditorButton(control, direction < 0 and "-" or "+", 28, 28)
                 button:SetPoint("TOPRIGHT", control, "TOPRIGHT", direction < 0 and -108 or 0, -8)
-                button:SetScript(
-                    "OnClick",
-                    function() DFRL.display.Set(entry[1], DFRL.display.Get(entry[1]) + step) end
-                )
+                button:SetScript("OnClick", function()
+                    local value = DFRL.display.Get(entry[1]) + step
+                    if entry[1] == "meterDpsWindow" and value < 0 then return end
+                    DFRL.display.Set(entry[1], value)
+                end)
             end
             local value = FontEditorLabel(control, "", 0, 0, 12)
             value:ClearAllPoints()
@@ -1164,6 +1217,7 @@ DFRL:NewMod("RunTimers", 5, function()
             value:SetWidth(64)
             value:SetHeight(16)
             value:SetJustifyH("CENTER")
+            value.formatValue = entry.format
             displayNumbers[entry[1]] = value
             return control
         end
@@ -1281,6 +1335,13 @@ DFRL:NewMod("RunTimers", 5, function()
         sctDescription:SetJustifyH("LEFT")
         sctDescription:SetJustifyV("TOP")
         sctDescription:SetTextColor(0.75, 0.73, 0.67)
+        local combatPage = combat
+        combat = CreateFrame("Frame", nil, combatPage)
+        combat:SetAllPoints(combatPage)
+        combat:EnableMouse(false)
+        local combatSettings = { frame = combat, controls = {} }
+        fontEditor.combatSettings = combatSettings
+        combat.editorSettingsGroup = combatSettings
         divider = T.EditorDivider(combat, contentWidth)
         divider:SetPoint("TOPLEFT", combat, "TOPLEFT", 0, -104)
         local combatToggleWidth = (contentWidth - gap) / 2
@@ -1293,6 +1354,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 if DFRL.sct then DFRL.sct.SetIncoming(value) end
             end
         )
+        table.insert(combatSettings.controls, incomingControl)
         incomingControl:SetPoint("TOPLEFT", combat, "TOPLEFT", 0, -112)
         local iconControl = DisplayToggle(
             combat,
@@ -1511,8 +1573,12 @@ DFRL:NewMod("RunTimers", 5, function()
         run:SetPoint("TOP", UIParent, "TOP", 0, -30)
     end, {
         region = runMoveRegion,
+        edgeWidth = true,
+        minWidth = 120,
+        maxWidth = 1200,
         onEdit = EditRunFont,
         onResize = function()
+            runBar.layoutWidth = run:GetWidth() - 16
             RefreshClockLabel(runClock)
             RefreshClockLabel(bossClock)
             UpdateRunFontBounds()
@@ -1531,13 +1597,32 @@ DFRL:NewMod("RunTimers", 5, function()
     -- Its bounds include the first name and every stacked health pill.
     local bossGroup = CreateFrame("Frame", "DFRL_BossHealthGroup", UIParent)
     bossGroup:SetWidth(BAR_WIDTH + 16)
-    bossGroup:SetHeight(47)
+    bossGroup:SetHeight(math.max(47, DFRL.display.Get("bossRows") * ROW_HEIGHT - 1))
     bossGroup:SetFrameStrata("HIGH")
     bossGroup:Hide()
     DFRL.layout.Register("bossBars", bossGroup, function()
         bossGroup:ClearAllPoints()
         bossGroup:SetPoint("TOP", UIParent, "TOP", 0, -77)
-    end)
+    end, {
+        edgeWidth = true,
+        minWidth = 120,
+        maxWidth = 1200,
+        onResize = function() bossGroup.widthDirty = true end,
+        onHeightDrag = function(height, start)
+            start.rows = start.rows
+                or math.max(
+                    1,
+                    DFRL.display.Get("bossRows") > 0 and DFRL.display.Get("bossRows") or bossGroup.visibleRows or 1
+                )
+            DFRL.display.Set(
+                "bossRows",
+                math.max(1, start.rows + math.floor((height - start.frameHeight) / ROW_HEIGHT + 0.5))
+            )
+        end,
+        onMouseWheel = function(direction)
+            if bossGroup.ScrollRows then bossGroup.ScrollRows(direction) end
+        end,
+    })
 
     local tally = CreateFrame("Frame", "DFRL_RunTallyPill", UIParent)
     tally:SetWidth(BAR_WIDTH + 16)
@@ -2019,7 +2104,7 @@ DFRL:NewMod("RunTimers", 5, function()
     local zoneSequence, zoneRunPending
     local scheduleBarrier = -1
     local reloading = false
-    local render = { emptySchedule = {}, readPending = true }
+    local render = { emptySchedule = {}, readPending = true, unitSequence = 0, unitBarrier = -1 }
     -- Only ReloadUI writes this handoff. Consume it once, keeping an initial
     -- nil phase from destroying it before the native API has replayed AZSRUN.
     local scheduleCache = _G.SurvivorsDragonUiBossSchedule
@@ -2163,6 +2248,32 @@ DFRL:NewMod("RunTimers", 5, function()
             bossGroup:Hide()
         end
         render.rowsDirty, render.rowsPresentationDirty = nil, nil
+        render.bossOffset, render.bossCount, bossGroup.visibleRows = 0, 0, 0
+        if render.visibleBosses then
+            for key in pairs(render.visibleBosses) do
+                render.visibleBosses[key] = nil
+            end
+        end
+    end
+
+    local function RetireEncounters(sequence)
+        if sequence > render.unitBarrier then
+            render.unitBarrier, refreshRows = sequence, true
+        end
+        if render.encountersRetired then return end
+        ClearRows()
+        if render.encounters then
+            for index in ipairs(render.encounters) do
+                render.encounters[index] = nil
+            end
+            table.setn(render.encounters, 0)
+        end
+        if render.encounterSeen then
+            for key in pairs(render.encounterSeen) do
+                render.encounterSeen[key] = nil
+            end
+        end
+        render.encountersRetired, refreshRows = true, true
     end
 
     local function ShowMarkerGlow(marker, shown)
@@ -2488,14 +2599,15 @@ DFRL:NewMod("RunTimers", 5, function()
                 if GameTooltip and GameTooltip:IsOwned(marker) then ShowMarkerTooltip(marker) end
             end
             markerStates[index] = entry.state
-            if marker.at ~= at or marker.maximum ~= maximum then
+            local width = runBar.layoutWidth or BAR_WIDTH
+            if marker.at ~= at or marker.maximum ~= maximum or marker.width ~= width then
                 marker:ClearAllPoints()
                 if at == maximum then
                     marker:SetPoint("RIGHT", runBar, "RIGHT", 0, 0)
                 else
-                    marker:SetPoint("CENTER", runBar, "LEFT", BAR_WIDTH * at / maximum, 0)
+                    marker:SetPoint("CENTER", runBar, "LEFT", width * at / maximum, 0)
                 end
-                marker.at, marker.maximum = at, maximum
+                marker.at, marker.maximum, marker.width = at, maximum, width
             end
         end
         for index = table.getn(entries) + 1, table.getn(markers) do
@@ -2545,7 +2657,10 @@ DFRL:NewMod("RunTimers", 5, function()
         end
     end
 
-    local function EncounterRows()
+    local function EncounterRows(phase)
+        -- Same-VM retries retain AZS_UNITS and its old finite timestamp.
+        -- A terminal/ready phase or retired publication cannot own new rows.
+        if phase == "dead" or phase == "ready" or render.unitSequence <= render.unitBarrier then return nil end
         -- The API initializes its unit table to {} in each new Lua VM.
         -- Until an actual unit snapshot arrives after /reload, an empty
         -- getter result does not mean the native encounters disappeared.
@@ -2559,6 +2674,9 @@ DFRL:NewMod("RunTimers", 5, function()
         if type(bosses) ~= "table" or (showGuardians and type(guardians) ~= "table") then return nil end
         local entries, seen = render.encounters or {}, render.encounterSeen or {}
         render.encounters, render.encounterSeen = entries, seen
+        -- A fresh candidate may fail validation after partially copying rows;
+        -- the next retirement must clear those copies as well.
+        render.encountersRetired = nil
         for key in pairs(seen) do
             seen[key] = nil
         end
@@ -2652,7 +2770,20 @@ DFRL:NewMod("RunTimers", 5, function()
 
     local function DebuffIcon(row, index)
         local icon = row.debuffs[index]
-        if icon then return icon end
+        if icon then
+            if icon.columns ~= row.columns then
+                icon:ClearAllPoints()
+                icon:SetPoint(
+                    "TOPLEFT",
+                    row.frame,
+                    "BOTTOMLEFT",
+                    8 + math.mod(index - 1, row.columns) * (DEBUFF_SIZE + DEBUFF_GAP),
+                    -DEBUFF_GAP - math.floor((index - 1) / row.columns) * (DEBUFF_SIZE + DEBUFF_GAP)
+                )
+                icon.columns = row.columns
+            end
+            return icon
+        end
         icon = CreateFrame("Frame", nil, row.frame)
         icon:SetWidth(DEBUFF_SIZE)
         icon:SetHeight(DEBUFF_SIZE)
@@ -2660,9 +2791,10 @@ DFRL:NewMod("RunTimers", 5, function()
             "TOPLEFT",
             row.frame,
             "BOTTOMLEFT",
-            8 + math.mod(index - 1, DEBUFF_COLUMNS) * (DEBUFF_SIZE + DEBUFF_GAP),
-            -DEBUFF_GAP - math.floor((index - 1) / DEBUFF_COLUMNS) * (DEBUFF_SIZE + DEBUFF_GAP)
+            8 + math.mod(index - 1, row.columns) * (DEBUFF_SIZE + DEBUFF_GAP),
+            -DEBUFF_GAP - math.floor((index - 1) / row.columns) * (DEBUFF_SIZE + DEBUFF_GAP)
         )
+        icon.columns = row.columns
         icon:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8" })
         icon:SetBackdropColor(0, 0, 0, 1)
         -- Reuse straight metal strips from the pill artwork, keeping squared
@@ -2752,7 +2884,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 HideDebuff(row.debuffs[index])
             end
         end
-        return math.ceil(count / DEBUFF_COLUMNS) * (DEBUFF_SIZE + DEBUFF_GAP)
+        return math.ceil(count / row.columns) * (DEBUFF_SIZE + DEBUFF_GAP)
     end
 
     local function ReflowRows()
@@ -2765,7 +2897,8 @@ DFRL:NewMod("RunTimers", 5, function()
             end
             offset = offset + ROW_HEIGHT + (row.debuffHeight or 0)
         end
-        local height = math.max(47, offset - 1)
+        local capacity = DFRL.display.Get("bossRows")
+        local height = math.max(47, offset - 1 + math.max(0, capacity - table.getn(rowOrder)) * ROW_HEIGHT)
         if not T.NearlyEqual(bossGroup:GetHeight(), height) then
             bossGroup:SetHeight(height)
             DFRL.layout.Place("bossBars", bossGroup)
@@ -2795,9 +2928,9 @@ DFRL:NewMod("RunTimers", 5, function()
             Restore("bosses")
             return
         end
-        local entries, seen = EncounterRows()
+        local entries, seen = EncounterRows(phase)
         if not entries then
-            ClearRows()
+            if not render.encountersRetired then ClearRows() end
             Restore("bosses")
             return
         end
@@ -2808,6 +2941,12 @@ DFRL:NewMod("RunTimers", 5, function()
             end
         end
         local count = table.getn(entries)
+        local capacity = DFRL.display.Get("bossRows")
+        render.bossCount = count
+        render.bossOffset = math.min(render.bossOffset or 0, math.max(0, count - (capacity > 0 and capacity or count)))
+        local first = render.bossOffset + 1
+        local last = capacity > 0 and math.min(count, render.bossOffset + capacity) or count
+        bossGroup.visibleRows = math.max(0, last - first + 1)
         local shown = count > 0
         if render.bossShown ~= shown then
             render.bossShown = shown
@@ -2826,8 +2965,25 @@ DFRL:NewMod("RunTimers", 5, function()
             end
             return
         end
-        local reflow = count ~= table.getn(rowOrder)
-        for index, entry in ipairs(entries) do
+        -- Keep complete validated native entries, but allocate/paint only the viewport.
+        local visible = render.visibleBosses or {}
+        render.visibleBosses = visible
+        for key in pairs(visible) do
+            visible[key] = nil
+        end
+        for index = first, last do
+            visible[entries[index].key] = true
+        end
+        for key, row in pairs(activeRows) do
+            if not visible[key] then
+                Retire(row)
+                activeRows[key] = nil
+            end
+        end
+        local reflow = bossGroup.visibleRows ~= table.getn(rowOrder)
+        for sourceIndex = first, last do
+            local entry = entries[sourceIndex]
+            local index = sourceIndex - first + 1
             local row = activeRows[entry.key]
             if not row then
                 row = NewRow()
@@ -2837,6 +2993,14 @@ DFRL:NewMod("RunTimers", 5, function()
             row.key = entry.key
             row.id = entry.id
             if paint then
+                local width = bossGroup:GetWidth()
+                if not T.NearlyEqual(row.frame:GetWidth(), width) then row.frame:SetWidth(width) end
+                row.frame.RefreshWidth()
+                if not T.NearlyEqual(row.name:GetWidth(), width - 16) then row.name:SetWidth(width - 16) end
+                local columns = math.max(1, math.floor((width - 16 + DEBUFF_GAP) / (DEBUFF_SIZE + DEBUFF_GAP)))
+                if row.columns ~= columns then
+                    row.columns, reflow = columns, true
+                end
                 local value = math.min(1, entry.hp / entry.maximum)
                 if row.value ~= value then row.bar:SetValue(value) end
                 row.value = value
@@ -2847,10 +3011,10 @@ DFRL:NewMod("RunTimers", 5, function()
             if rowOrder[index] ~= row then reflow = true end
             rowOrder[index] = row
         end
-        for index = count + 1, table.getn(rowOrder) do
+        for index = bossGroup.visibleRows + 1, table.getn(rowOrder) do
             rowOrder[index] = nil
         end
-        table.setn(rowOrder, count)
+        table.setn(rowOrder, bossGroup.visibleRows)
         UpdateDebuffRows(phase, reflow)
         if not TakeOver("bosses") then
             ClearRows()
@@ -2858,16 +3022,43 @@ DFRL:NewMod("RunTimers", 5, function()
         end
     end
 
+    function bossGroup.ScrollRows(direction)
+        local capacity = DFRL.display.Get("bossRows")
+        if capacity <= 0 then return end
+        local offset = math.max(
+            0,
+            math.min(
+                math.max(0, (render.bossCount or 0) - capacity),
+                (render.bossOffset or 0) - (tonumber(direction) or 0)
+            )
+        )
+        if render.bossOffset ~= offset then
+            render.bossOffset, refreshRows, render.readPending = offset, true, true
+        end
+    end
+    bossGroup:EnableMouseWheel(true)
+    bossGroup:SetScript("OnMouseWheel", function() bossGroup.ScrollRows(arg1) end)
+
     DFRL.display.Listen(function()
         SyncReplacements()
         UpdateDisplayLabels()
         RefreshTimerCaptions()
         refreshRows = true
+        local capacity = DFRL.display.Get("bossRows")
+        if render.bossCapacity ~= capacity then
+            render.bossCapacity, render.bossOffset = capacity, 0
+            local height = math.max(47, (capacity > 0 and capacity or render.bossCount or 0) * ROW_HEIGHT - 1)
+            if not T.NearlyEqual(bossGroup:GetHeight(), height) then
+                bossGroup:SetHeight(height)
+                DFRL.layout.Place("bossBars", bossGroup)
+            end
+        end
         -- Clearing is immediate even outside a run; valid encounters will reflow
         -- on the next native HUD update without affecting clock takeover.
         for _, row in pairs(activeRows) do
             ClearDebuffs(row)
         end
+        render.rowsDirty = true
     end)
 
     -- Keep boundary and clock work in separate closures. Lua 5.0 permits only
@@ -2878,6 +3069,7 @@ DFRL:NewMod("RunTimers", 5, function()
         local zoneBoundary = zoneSequence
         if zoneBoundary then
             InvalidateSchedule(zoneBoundary)
+            RetireEncounters(zoneBoundary)
             zoneSequence = nil
             zoneRunPending = zoneBoundary
             previousPhase, previousNativeTime = nil, nil
@@ -2894,7 +3086,12 @@ DFRL:NewMod("RunTimers", 5, function()
             )
         then
             InvalidateSchedule(runSequence)
+            RetireEncounters(runSequence)
         end
+        -- Death is the native run phase, not temporary co-op downed health.
+        -- Reject late inactive-run units, but preserve publications after a new
+        -- zone while its matching run packet has yet to replace the old phase.
+        if not zoneRunPending and (phase == "dead" or phase == "ready") then RetireEncounters(packetSequence) end
         if not zoneRunPending then
             previousPhase = phase
             if IsNumber(nativeTime) then previousNativeTime = nativeTime end
@@ -2922,6 +3119,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 run:Show()
             end
             if run:IsVisible() then
+                run.RefreshWidth()
                 if render.runMaximum ~= maximum then runBar:SetMinMaxValues(0, maximum) end
                 local value = math.min(maximum, seconds)
                 if render.runValue ~= value then runBar:SetValue(value) end
@@ -2937,9 +3135,11 @@ DFRL:NewMod("RunTimers", 5, function()
                     or render.clockHidden
                     or render.markerEntries ~= scheduled
                     or render.markerMaximum ~= maximum
+                    or render.markerWidth ~= (runBar.layoutWidth or BAR_WIDTH)
                 then
                     UpdateMarkers(maximum, scheduled or render.emptySchedule)
                     render.markerEntries, render.markerMaximum = scheduled, maximum
+                    render.markerWidth = runBar.layoutWidth or BAR_WIDTH
                 end
                 UpdateMarkerStates(atLimit)
                 render.clockHidden = nil
@@ -2962,6 +3162,7 @@ DFRL:NewMod("RunTimers", 5, function()
         local phase = Read("AZS_GetPhase")
         if not PHASES[phase] then
             if phase ~= nil then InvalidateSchedule(packetSequence) end
+            if previousPhase then RetireEncounters(packetSequence) end
             ReleaseHUD()
             return
         end
@@ -2971,6 +3172,9 @@ DFRL:NewMod("RunTimers", 5, function()
         if render.rowsPresentationDirty and bossGroup:IsVisible() then refreshRows = true end
         -- A missing zone/clock snapshot must not block valid counters or
         -- encounter lists from reconnecting to their own native HUD parts.
+        if bossGroup.widthDirty then
+            refreshRows, bossGroup.widthDirty = true, nil
+        end
         if refreshRows then
             refreshRows = false
             UpdateTally()
@@ -3022,6 +3226,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 _G.SurvivorsDragonUiBossSchedule = nil
             end
             inWorld = false
+            RetireEncounters(packetSequence)
             ReleaseHUD()
             return
         end
@@ -3057,6 +3262,8 @@ DFRL:NewMod("RunTimers", 5, function()
                 runSequence = packetSequence
             elseif arg1 == "AZSBOSSES" then
                 scheduleSequence = packetSequence
+            elseif arg1 == "AZSUNITS" then
+                render.unitSequence = packetSequence
             end
             refreshRows, render.readPending = true, true
             -- The native parser may run after this handler. Read all prefixes

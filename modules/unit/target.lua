@@ -29,7 +29,7 @@ DFRL:NewMod("Target", 1, function()
             setHealthColor(bar, 1, 0, 0)
         end
     end
-    local UpdateBorderTexture = T.CreateUnitBorder(
+    local UpdateBorderTexture, _, _, resizeHealth, editRegion = T.CreateUnitBorder(
         TargetFrame,
         TargetFrameHealthBar,
         TargetFrameTexture,
@@ -110,9 +110,16 @@ DFRL:NewMod("Target", 1, function()
         T.SetFont(TargetFrame.name, 11, "")
         TargetFrame.name:SetTextColor(1, 0.82, 0)
     end
+    local defaultWidth = TargetFrame:GetWidth()
+    local nameWidth = TargetFrame.name and TargetFrame.name:GetWidth()
+    local function ResizeHealth()
+        if resizeHealth() and TargetFrame.name then
+            TargetFrame.name:SetWidth(math.max(1, nameWidth + TargetFrame:GetWidth() - defaultWidth))
+        end
+    end
     if TargetLevelText then
         TargetLevelText:ClearAllPoints()
-        TargetLevelText:SetPoint("CENTER", TargetFrame, "CENTER", -102, 25)
+        TargetLevelText:SetPoint("CENTER", TargetFrame, "LEFT", defaultWidth / 2 - 102, 25)
         T.SetFont(TargetLevelText, 11, "")
         TargetLevelText:SetTextColor(1, 0.82, 0)
     end
@@ -145,6 +152,7 @@ DFRL:NewMod("Target", 1, function()
 
     local function UpdateTarget(forceBorder)
         if not TargetFrame:IsVisible() then return end
+        ResizeHealth()
         healthLabels.Update()
         if not UnitExists("target") then return end
         TargetFrameHealthBar:SetStatusBarColor(1, 0, 0)
@@ -173,5 +181,18 @@ DFRL:NewMod("Target", 1, function()
     end)
     UpdateClassification()
     UpdateTarget()
-    DFRL.layout.Register("targetFrame", TargetFrame)
+    editRegion.includeFrames = function() return T.GetUnitAuraIcons("target") end
+    DFRL.layout.Register("targetFrame", TargetFrame, nil, {
+        region = editRegion,
+        resizeToRegion = true,
+        refreshRegion = editRegion.Refresh,
+        edgeWidth = true,
+        edgeRegion = editRegion,
+        minWidth = defaultWidth - 58,
+        maxWidth = defaultWidth + 800,
+        onResize = ResizeHealth,
+        onEdit = function(active)
+            if active then ResizeHealth() end
+        end,
+    })
 end)

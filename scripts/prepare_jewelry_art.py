@@ -37,6 +37,18 @@ def prepare_pet_rim(canvas):
     canvas.paste(rim, (576, 56))
 
 
+def prepare_quality_rim(canvas):
+    """Add a tintable copy; retain the stock gold and pet/meter crops exactly."""
+    rim = canvas.crop((106, 56, 178, 128))
+    pixels = rim.load()
+    for y in range(72):
+        for x in range(72):
+            red, green, blue, alpha = pixels[x, y]
+            value = max(red, green, blue)
+            pixels[x, y] = (value, value, value, alpha)
+    canvas.paste(rim, (664, 56))
+
+
 def prepare(sources, output):
     ring = rgba(sources / "bagborder2.blp")
     canvas = Image.new("RGBA", (1024, 256))
@@ -44,6 +56,7 @@ def prepare(sources, output):
     for index in range(5):
         canvas.alpha_composite(rim, (98 + index * 88, 50))
     prepare_pet_rim(canvas)
+    prepare_quality_rim(canvas)
     output.parent.mkdir(parents=True, exist_ok=True)
     canvas.save(output, compression=None)
 

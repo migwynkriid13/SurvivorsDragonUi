@@ -16,6 +16,20 @@ Original World of Warcraft artwork remains copyright Blizzard Entertainment. The
 
 `media/tex/jewelry/Frame.blp` contains five gold rims on a transparent 1024-by-256, uncompressed BLP2 Raw3 canvas. The original TGA pixels are repacked without resampling for the updated client loader; see [Client compatibility](../docs/CLIENT-COMPATIBILITY.md). The runtime reuses the first rim's centered pixel rectangle `(106, 56)` through `(178, 128)` independently for all five sockets, with UV bounds `106 / 1024`, `178 / 1024`, `56 / 256`, `128 / 256`. This trims the previous 86-pixel crop's uneven transparent padding. Each 72-pixel crop occupies `43 * 72 / 86`, or 36, local units, preserving its visible artwork size. The jewelry frame scale remains the native action-button width divided by 43, inherited alongside the action bar's scale. At the 36-unit button reference, the cropped texture occupies about 30.14 units and its visible gold diameter is about 29 units. Each rim shares its icon frame's center anchor; the continuous rail's socket centers use the corresponding bar coordinates. Per-slot placement matches button center spacing and spans buttons 2 through 6; it does not stretch the baked five-rim row.
 
+Equipped rarity uses a neutral copy at `(664,56)-(736,128)` in the same atlas.
+`prepare_quality_rim` copies the original `(106,56)-(178,128)` crop without
+resampling, replacing each RGB triplet with its greatest channel in all three
+channels and retaining every alpha byte. This preserves the original highlight
+and shadow structure without the yellow cast when applying native rarity RGB.
+Empty or unresolved slots use the unchanged original gold crop. The five rim
+regions retain their sizes, centers and layers; the silver sockets, pet/meter
+crop and every pixel outside the new neutral rectangle stay unchanged. The
+runtime atlas retains its original canvas, mip membership and lossless BLP2
+encoding through `prepare_client_textures.py`, with no new runtime file. A local
+pixel-comparison and conversion receipt is retained at
+`/tmp/sdui-jewelry-rarity-20261027/receipt.json`, alongside the original BLP and
+full-canvas TGA preparation input. This is asset-data evidence, not a game test.
+
 Native item textures have nominal local size 32 by 32, centered in each rim at local vertical center 46.5. Horizontal pitch is `(button width + button gap) / default jewelry scale`, centered in the existing 317-by-88 anchor frame. Each icon uses 14 nonempty horizontal texture strips from a 16-strip circle partition. Strip widths use the narrower circular boundary at their two edges, so no texture extends beyond the circle. The centered source UV span is `1 / 1.05`, from `1 / 42` through `41 / 42` on each axis (approximately 2.38% through 97.62%). This gives exactly 5% added magnification instead of the former `58 / 64` span's approximately 10.34%, without changing icon or rim dimensions. Each strip maps into that same square span, preserving the source image's proportions in attached and detached modes. Texture strips are allocated lazily in one shared pool and rebound only when the native item-texture roster changes; their original geometry and UV windows remain unchanged. This leaves real transparency outside the icon, without opaque black corner covers or a retail mask API.
 
 `media/tex/jewelry/Cooldown.tga` is original generated geometry: an 8-by-8 atlas of 64 circular shade states, each 64 by 64 pixels on a transparent 512-by-512 canvas. State zero is clear, and states 1–63 cover increasing clockwise fractions of the circle, with transparent cell padding. The runtime selects a state from native inventory cooldown values and the native `GetTime` clock; it does not advance a private gameplay timer. The shade remains inside the icon circle, under its gold rim.

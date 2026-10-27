@@ -4,7 +4,7 @@ DFRL:NewMod("Player", 1, function()
     local tex = DFRL:GetInfoOrCons("tex") .. "unitframes\\"
     local healthLabels
     local primaryBar, primaryText, setPowerShown, setPortraitOverlap
-    local updateBorder
+    local updateBorder, resizeHealth, editRegion
     local pulseTextures = {}
     local initialized = false
     local healthUnderlap = T.LargeHealthFill.underlap
@@ -12,6 +12,37 @@ DFRL:NewMod("Player", 1, function()
     local UpdateHealthColor = T.BindClassHealthColor(PlayerFrameHealthBar, "player")
 
     local appliedRound, appliedHidden
+    local appliedExtension
+    local function UpdateHealthWidth(extension)
+        extension = extension or setPortraitOverlap(appliedRound)
+        if healthLabels then healthLabels.SetInsets(extension + healthUnderlap, healthUnderlap, extension / 2) end
+        if PlayerFrame.name then
+            if appliedExtension ~= extension then
+                PlayerFrame.name:SetPoint(
+                    "BOTTOMLEFT",
+                    PlayerFrameHealthBar,
+                    "TOPLEFT",
+                    2 + extension + healthUnderlap,
+                    4 - healthUnderlap
+                )
+            end
+            local width = PlayerFrameHealthBar:GetWidth() - 2 * healthUnderlap - extension - 24
+            if not T.NearlyEqual(PlayerFrame.name:GetWidth(), width) then PlayerFrame.name:SetWidth(width) end
+        end
+        if primaryBar then
+            local width = PlayerFrameHealthBar:GetWidth() - 2 * healthUnderlap
+            if not T.NearlyEqual(primaryBar:GetWidth(), width) then primaryBar:SetWidth(width) end
+            if appliedExtension ~= extension then
+                primaryText:SetPoint("CENTER", primaryBar, "CENTER", extension / 2, 0)
+            end
+        end
+        appliedExtension = extension
+    end
+    local function ResizeHealth()
+        if not resizeHealth then return end
+        local changed, extension = resizeHealth()
+        if changed then UpdateHealthWidth(extension) end
+    end
     local function UpdatePortraitShape()
         if not updateBorder then return end
         local round = DFRL.display.Get("roundPlayerPortrait")
@@ -19,22 +50,7 @@ DFRL:NewMod("Player", 1, function()
         if round == appliedRound and hidden == appliedHidden then return end
         appliedRound, appliedHidden = round, hidden
         updateBorder(tex .. (round and "UI-TargetingFrameDF1.blp" or "UI-TargetingFrameDF.blp"))
-        local extension = setPortraitOverlap(round)
-        if healthLabels then healthLabels.SetInsets(extension + healthUnderlap, healthUnderlap, extension / 2) end
-        if PlayerFrame.name then
-            PlayerFrame.name:SetPoint(
-                "BOTTOMLEFT",
-                PlayerFrameHealthBar,
-                "TOPLEFT",
-                2 + extension + healthUnderlap,
-                4 - healthUnderlap
-            )
-            PlayerFrame.name:SetWidth(PlayerFrameHealthBar:GetWidth() - 2 * healthUnderlap - extension - 24)
-        end
-        if primaryBar then
-            primaryBar:SetWidth(PlayerFrameHealthBar:GetWidth() - 2 * healthUnderlap)
-            primaryText:SetPoint("CENTER", primaryBar, "CENTER", extension / 2, 0)
-        end
+        UpdateHealthWidth()
         for _, textures in ipairs(pulseTextures) do
             if hidden then
                 textures.original:Hide()
@@ -102,6 +118,7 @@ DFRL:NewMod("Player", 1, function()
 
     local function UpdateValues()
         if not initialized or not healthLabels or not PlayerFrame:IsVisible() then return end
+        ResizeHealth()
         healthLabels.Update()
         if PlayerLevelText then T.SetTextIfChanged(PlayerLevelText, UnitLevel("player")) end
         UpdateHealthColor()
@@ -145,7 +162,13 @@ DFRL:NewMod("Player", 1, function()
         overlay:SetFrameStrata("MEDIUM")
         local texture = overlay:CreateTexture(nil, "OVERLAY")
         texture:SetTexture(tex .. "UI-Player-Status.blp")
-        texture:SetPoint("CENTER", PlayerFrame, "CENTER", 45, -21)
+        texture:SetPoint(
+            "CENTER",
+            PlayerFrame,
+            "TOPLEFT",
+            PlayerFrame:GetWidth() / 2 + 45,
+            -PlayerFrame:GetHeight() / 2 - 21
+        )
         texture:SetVertexColor(r, g, b)
         texture:SetBlendMode("ADD")
         texture:SetAlpha(0)
@@ -177,7 +200,13 @@ DFRL:NewMod("Player", 1, function()
 
     local function CreateRestingAnimation()
         local animation = CreateFrame("Frame", nil, PlayerFrame)
-        animation:SetPoint("CENTER", PlayerFrame, "CENTER", -20, 30)
+        animation:SetPoint(
+            "CENTER",
+            PlayerFrame,
+            "TOPLEFT",
+            PlayerFrame:GetWidth() / 2 - 20,
+            -PlayerFrame:GetHeight() / 2 + 30
+        )
         animation:SetWidth(24)
         animation:SetHeight(24)
         local texture = animation:CreateTexture(nil, "OVERLAY")
@@ -224,7 +253,7 @@ DFRL:NewMod("Player", 1, function()
             highlight:SetAlpha(0)
             highlight:Hide()
         end
-        updateBorder, setPowerShown, setPortraitOverlap = T.CreateUnitBorder(
+        updateBorder, setPowerShown, setPortraitOverlap, resizeHealth, editRegion = T.CreateUnitBorder(
             PlayerFrame,
             PlayerFrameHealthBar,
             PlayerFrameTexture,
@@ -306,7 +335,19 @@ DFRL:NewMod("Player", 1, function()
         CreateRestingAnimation()
         FixPlayerClick()
         UpdateValues()
-        DFRL.layout.Register("playerFrame", PlayerFrame)
+        DFRL.layout.Register("playerFrame", PlayerFrame, nil, {
+            region = editRegion,
+            resizeToRegion = true,
+            refreshRegion = editRegion.Refresh,
+            edgeWidth = true,
+            edgeRegion = editRegion,
+            minWidth = PlayerFrame:GetWidth() - 58,
+            maxWidth = PlayerFrame:GetWidth() + 800,
+            onResize = ResizeHealth,
+            onEdit = function(active)
+                if active then ResizeHealth() end
+            end,
+        })
     end
 
     local frame = CreateFrame("Frame")

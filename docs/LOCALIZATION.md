@@ -14,6 +14,8 @@ Language is session-only. No setting, command, profile, SavedVariable, client pr
 
 ## Display text
 
+The meter's **Font size** and its hint remain translated in all fourteen source/runtime UI catalogs. **Show grid**, its hint and the revised Layout drag instructions also have all fourteen translations. The removed meter/tracker width sliders' three captions are absent from both source and runtime UI catalogs. Native catalogs, spell aliases, effects and the older full-catalog fingerprint are unchanged by these editor-caption updates.
+
 The custom run-timer and boss-bar enable captions and their native-display
 hints have source TSV and runtime UI entries in all fourteen languages. Only
 these four caption entries were added; native catalogs, effects and aliases
@@ -64,7 +66,45 @@ The installed client inspected on 2026-10-20 contains fourteen complete JSON dic
 
 All addon UI captions have Czech source entries, with native `@key` references where the game supplies an exact caption. The 24 compact-effect override rows also include Czech; the remaining effect outputs reuse the native compact modifier captions. The native Czech cap markers are ` (max.)` and `{mods} (max.)`, and its rate suffix is `, nejvýš {n}krát za sekundu`. They are copied with the templates rather than translated from English at runtime. The previous thirteen languages' selected native entries, 69 effect input templates and cap/rate text were unchanged in the new executable.
 
-Optional custom SCT icons use exact Czech names derived only from the official `ability.*.name` fields and native keys matching the already verified custom-talent names. The 112 official ability-name keys and 345 verified custom-talent keys produce 449 non-identity alias groups; two identity-only groups need no alias. These aliases connect to existing English display metadata; they do not invent spell IDs, icons, schools or learned state. Different canonical names sharing one Czech name remain candidates, and differing icons remain ambiguous within each generated source tier. Live spellbook/aura/talent observations keep their existing priority. Unknown names retain the existing fallback. Only Czech receives this additional alias table; see [SCT-ICONS.md](SCT-ICONS.md) for the underlying metadata and limitations.
+The original Czech icon integration supplied 449 non-identity alias groups from official ability-name keys and verified custom-talent keys. The shared alias preparation now covers every supported language, as described below.
+
+## Source-icon languages — 2026-10-27
+
+The Portuguese report showed working native meter totals and bars but question marks for translated abilities. Only Czech had a `spellNames` table; the packaged spell database has English names, and `GetLocale()` can differ from the game's picker. The shared SCT/meter resolver already reads aliases from the effective game language at lookup time. Supplying the missing tables fixes that metadata gap without changing native row names, values or language detection.
+
+`scripts/generate_localization.py` now generates exact aliases for all fourteen catalogs. Selection remains limited to official `ability.*.name` fields and literal keys matching verified custom talents in `SpellIconCatalog.game`. It never reverse-maps arbitrary catalog values. Each translated name retains every canonical English candidate, including an identity candidate when another name shares it; conflicting icon choices remain ambiguous. Live spellbook/aura/talent observations retain their priority. Unknown or ambiguous names retain the shared question mark.
+
+| Catalog | Non-identity alias groups | Groups with multiple English candidates |
+| ------- | ------------------------- | --------------------------------------- |
+| en      | 0                         | 0                                       |
+| pl      | 446                       | 4                                       |
+| cs      | 449                       | 0                                       |
+| de      | 441                       | 0                                       |
+| pt      | 447                       | 2                                       |
+| es      | 448                       | 0                                       |
+| fr      | 429                       | 2                                       |
+| ro      | 442                       | 5                                       |
+| tr      | 321                       | 1                                       |
+| ru      | 448                       | 3                                       |
+| uk      | 448                       | 3                                       |
+| zh      | 450                       | 1                                       |
+| ja      | 449                       | 2                                       |
+| ko      | 449                       | 2                                       |
+
+The installed executable, SHA-256 `80ac3217660a02020b3e09f1ce93bfaa6ba89abd9a9d62405b9f70114fd6d46c`, supplies these aliases. Its exact Portuguese pairs include `Dor Lancinante` → `Searing Pain`, `Seta Sombria` → `Shadow Bolt`, `Fogo do Inferno` → `Hellfire` and `Espiral da Morte` → `Death Coil`; each English name has a verified native ability icon in the existing catalog. Czech's group count is unchanged, with eleven translated labels refreshed to this client's wording. Other UI/native captions, effects, caps/rate text and the generator's original full-catalog fingerprint are preserved.
+
+The bounded refresh reuses the item generator's hash-guarded native catalog reader. It replaces only `spellNames` blocks and requires all fourteen runtime language sections. Full generation also emits every language's aliases; run the bounded refresh afterward when retaining the separately pinned current alias source:
+
+```sh
+python3 -B scripts/generate_localization.py \
+  --client /path/to/AzerothSurvivors.exe \
+  --refresh-spell-names-only \
+  --metadata /tmp/source-icon-languages.json
+```
+
+AzerothSurvivorsRE's `docs/analysis/run-meters-0.105.0.md` and `gameplay/addon_meters.rs::source_name` lead to localized ability/literal-talent names before wire publication. Its `docs/analysis/localization-loader-0.119.0.md` describes selected-language lookup with English fallback and external overrides. The retained `0.120.2/embedded-api.lua` meter parser still publishes names, amounts, rates, shares and proc flags without icons. These historical references guide the fix; the installed executable above supplies the actual translated data. Custom external translations or future wording can remain unresolved because the API supplies no stable spell key/icon for those rows.
+
+Source/data preparation, manual diffs and pinned formatting do not establish in-game appearance or native-speaker approval; no local tests, standalone validation or addon/game execution was performed. See [SCT-ICONS.md](SCT-ICONS.md) for source-tier behavior and [PERFORMANCE.md](PERFORMANCE.md#source-icon-language-coverage--2026-10-27) for costs.
 
 ## Source and maintenance
 
@@ -112,9 +152,10 @@ rows optimistically use the same caption and green color. The tracker
 uses shared boss-bar current / maximum health formatting instead of a Fighting
 caption or percentage; the unused earlier status captions were removed.
 
-The guardian header toggle adds localized **Show living guardians only** and
-**Show all lairs** tooltips in all fourteen UI catalogs. Its collapsed plus
-view contains living guardians; its expanded minus view contains all lairs; native names remain unchanged.
+The guardian settings page adds **Show dead** and its hint in all fourteen
+source/runtime UI catalogs. It defaults on and replaces the header button's
+session-only filter. The unused **Show living guardians only** and **Show all
+lairs** captions are removed. Native row names and status captions are unchanged.
 
 The action-bar **Show gryphons** caption and its winged-ornament hint have
 source TSV entries and runtime UI entries in all fourteen languages. Only

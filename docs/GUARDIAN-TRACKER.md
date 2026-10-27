@@ -1,27 +1,22 @@
 # Guardian tracker
 
 The tracker uses selected design **04**: the published quest-tracker header above
-an open list. A minus/plus toggle occupies the old count position; no alive count
-is displayed. The icons reuse the minimap's gold plus/minus artwork and state
-textures. **Plus** means collapsed and shows only accepted living guardians
-(`asleep` or `awake`), including every guardian in combat. **Minus** means expanded
-and shows all accepted lairs, including respawn timers and empty rows. Both
-modes retain native order. With accepted lairs but no living guardians, collapsed
-mode keeps its header available so the user can expand it. The view hides when
-no accepted lairs exist. Full roster data, timers and guidance data are retained
-underneath this display filter.
+an open list. The header contains its medallion and **GUARDIANS** title, with no
+alive count or minus/plus button. The title uses the space previously reserved
+for the button.
 
-The normal plus artwork has a two-source-pixel left inset relative to the minus
-and other plus states. The shared styling helper's optional glyph alignment
-corrects that single texture by `2 / 32` of the button width. Toggle/header/root
-anchors and the hit box stay fixed through collapse, expansion, hover and press;
-the full texture canvas and other state positions are preserved.
+`/sdui` → **Guardian tracker** has **Show dead**, on by default. On shows all
+accepted lairs, including respawn timers, due and empty rows. Off shows only
+native `asleep` or `awake` guardians, including every guardian in combat. Both
+choices retain native order. With accepted lairs but no living guardians, the
+filtered view keeps its header; the view hides when no accepted lairs exist.
+Full roster data, timers and guidance data remain underneath this display filter.
 
 Design **09** supplies timer-bezel health bars only for native `awake` guardians
 with valid current health. Resting guardians are labelled **Alive**. When the
 native respawn countdown reaches zero, the row optimistically displays **Alive**
 in the same green instead of Due. This caption does not change native occupancy,
-the collapsed filter or health availability. Combat bars
+the Show dead filter or health availability. Combat bars
 show native current / maximum health with the regular boss-bar red fill and white
 DEFAULT 12 text. Both views share `core/widgets.lua` style/text helpers; the
 tracker has no Fighting caption or percentage. Missing health stays text-only,
@@ -58,15 +53,19 @@ pill's right offset at the default scale. The pill anchor and default calculatio
 share `HEALTH_RIGHT_OFFSET`; neither follows moved or resized minimap geometry.
 Width changes reapply this default edge only when no confirmed or draft position
 exists; custom positions stay independent.
-The tracker adds no display setting,
-command, alert, sound, SavedVariable or dependency. Its header toggle choice is
-session-only and starts expanded on reload; it survives run/world changes within
-the session. Both shared resets restore expanded. The button is disabled during
-layout editing so it does not interfere with dragging. Collapsing or filtering
-clears pooled row health, then fits the frame to visible rows; the header icon
-changes between minus and plus immediately. Guardian rows are mouse-transparent
-and have no hover popups. The header toggle retains its explanatory tooltip and
-the shared layout handles still support editing. Existing
+The Layout left/right side handles set width from **120 to 960**, with **240** as the default, without scaling icons, fonts or rows. Corner handles still scale proportionally. Cached natural caption/health widths guide the columns: wide layouts retain the status column's natural width and give extra space to names; narrow layouts compress both. Long text can clip at small widths. Names retain at least 24 units; status retains at least 42 plus its eight-unit pill allowance, so the two 25-unit end caps never overlap. The measured header height retains its existing sizing.
+
+Top/bottom handles choose 1–40 visible slots; scroll over the tracker or its editor outline for further rows. The `guardianRows` display preference defaults to zero, retaining the original automatic full list, including after resets. Only the selected slice is painted; the complete accepted native roster and countdowns remain available. An explicit slot count retains the selected viewport height even with fewer accepted rows.
+
+Width is stored with the existing Layout geometry; the old `guardianWidth` display field and settings slider are removed. Row capacity uses existing display normalization. Both use shared preview, Confirm, Cancel/world/logout/reload discard, profiles and full resets. Width previews reuse cached caption/health requirements, without a metadata scan. Hidden views update required root geometry only, deferring row/header painting to the existing controller. No new command, alert, sound, SavedVariable, dependency or updater is added.
+
+`guardianShowDead` is a normalized boolean in the existing display table. Missing
+or invalid values and both full resets use true; explicit false choices remain
+false. It previews through the existing view controller, saves only with Confirm,
+discards with Cancel/world/logout/reload and participates in profiles. Filtering
+clears removed pooled-row health and fits the frame to the remaining rows. The
+header and rows remain click-through, with mouse-wheel input for viewport scrolling and no tracker hover popups. Shared
+layout handles still support editing. Existing
 guardian waypoints and map/minimap markers keep their appearance and independent
 guidance control.
 
@@ -159,13 +158,13 @@ values and selections in the previews are samples. The preview font substitutes
 for DEFAULT and does not establish game glyph metrics.
 
 The runtime manifest adds `modules/ui/guardians.lua` before the waypoint reader,
-`modules/ui/guardian_tracker.lua` after it, and the selected `guardians/Header.tga` crop. The toggle reuses already-shipped
-minimap textures through the shared styling helper. Existing timer textures supply the health bezels. `core/layout.lua` adds the
+`modules/ui/guardian_tracker.lua` after it, and the selected `guardians/Header.blp` crop.
+Existing timer textures supply the health bezels. `core/layout.lua` adds the
 translated group label; the source and generated catalogs include nine tracker
 captions in all fourteen languages. The version advances once from `3.2.19-survivors` to
 `3.2.20-survivors` for the shipped Lua change. The gallery, renderer and research
-notes remain outside `packaging/runtime-files.json`. Only the selected header crop joins the runtime payload; the minimap state
-textures already ship. Source sheets and
+notes remain outside `packaging/runtime-files.json`. Only the selected header crop joins the runtime payload.
+Minimap state textures remain for native zoom controls. Source sheets and
 comparison designs remain outside it.
 
 The currently installed executable could not be read by the existing pinned
@@ -174,7 +173,7 @@ from the TSV into the existing fourteen UI sections, preserving all reviewed
 native/effect/identity catalogs and aliases. No new client source or catalog order
 is accepted. A later full generation still uses the documented pinned client.
 
-No local validation, tests, syntax checks, formatting tools, addon execution or
-game startup are authorized or run. Artwork decoding and static compositions are
-design preparation. Only the existing GitHub Actions static checks are used for
-code verification; they do not establish packaged-game behaviour.
+Source/diff inspection, data preparation and pinned formatting only. No local
+tests, standalone syntax/validation checks, addon execution or game startup were
+run. Artwork decoding and static compositions are design preparation. GitHub
+Actions static checks do not establish packaged-game behaviour.

@@ -1,6 +1,7 @@
 """Prepare Lua text data from embedded JSON catalogs, without running the client.
 
 Usage: python scripts/generate_localization.py --client PATH_TO_CLIENT
+Use --refresh-spell-names-only for the separately pinned current icon aliases.
 This is a data-generation tool, not a formatter, syntax check or runtime test.
 """
 import argparse
@@ -15,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 # named headers so an inserted native language cannot shift existing captions.
 CODES = ["en", "pl", "cs", "de", "pt", "es", "fr", "ro", "tr", "ru", "uk", "zh", "ja", "ko"]
 SOURCE_SHA256 = "6382e9ae654295293b82d48fb07a1aa999132775bda10c6c6f80d973d2c1ddfb"
+SPELL_NAMES_SHA256 = "80ac3217660a02020b3e09f1ce93bfaa6ba89abd9a9d62405b9f70114fd6d46c"
 
 
 def lua_string(text):
@@ -66,7 +68,7 @@ def icon_name(literal):
     return "".join(result)
 
 
-def czech_spell_names(english, catalog):
+def spell_names(english, catalog):
     """Alias only official ability names and already verified custom talents."""
     source = (ROOT / "modules/nameplates/icons.lua").read_text(encoding="utf-8")
     block = re.search(r"^    game = \{\n(.*?)^    \},", source, re.MULTILINE | re.DOTALL)
@@ -83,6 +85,47 @@ def czech_spell_names(english, catalog):
     # Exact English names already resolve directly. Keep an identity candidate
     # when another canonical name shares it, so its icon cannot hide a conflict.
     return {name: sorted(aliases) for name, aliases in sorted(groups.items()) if aliases != {name}}
+
+
+def spell_names_block(names):
+    if not names:
+        return "        spellNames = {},\n"
+    result = ["        spellNames = {"]
+    for name, aliases in names.items():
+        result.append("            [" + lua_string(name) + "] = { " + ", ".join(lua_string(alias) for alias in aliases) + " },")
+    result.append("        },")
+    return "\n".join(result) + "\n"
+
+
+def refresh_spell_names(client, metadata):
+    """Refresh only icon aliases from the reviewed current client, as data.
+
+    Keep the separately sourced UI/native captions and effect templates intact.
+    The shared pinned PE reader supplies the same fourteen catalogs as items.
+    """
+    from generate_loot_icons import Native
+
+    catalogs = Native(client, SPELL_NAMES_SHA256).catalogs()
+    output = ROOT / "localization/data.lua"
+    source = output.read_text(encoding="utf-8")
+    counts = {}
+
+    def replace(match):
+        code, body = match[1], match[2]
+        if code not in catalogs or code in counts:
+            raise ValueError("Review the runtime language sections before refreshing icon aliases.")
+        body = re.sub(r"^        spellNames = \{(?:\},\n|\n.*?^        \},\n)", "", body, flags=re.MULTILINE | re.DOTALL)
+        names = spell_names(catalogs["en"], catalogs[code])
+        counts[code] = {"groups": len(names), "merged": sum(len(aliases) > 1 for aliases in names.values())}
+        return "    " + code + " = {\n" + body + spell_names_block(names) + "    },"
+
+    result = re.sub(r"^    (\w+) = \{\n(.*?)^    \},$", replace, source, flags=re.MULTILINE | re.DOTALL)
+    if set(counts) != set(CODES):
+        raise ValueError("Review the runtime language population before refreshing icon aliases.")
+    output.write_text(result, encoding="utf-8")
+    if metadata:
+        metadata.write_text(json.dumps({"source_sha256": SPELL_NAMES_SHA256, "catalogs": counts}, indent=2) + "\n", encoding="utf-8")
+    print("Prepared spell-name aliases for " + str(len(counts)) + " languages from client SHA-256 " + SPELL_NAMES_SHA256)
 
 
 def generate(client):
@@ -147,11 +190,7 @@ def generate(client):
                 raise ValueError("Review changed native value fields for " + code + " effect " + str(number))
             result.append("            { " + lua_string(source) + ", " + lua_string(output) + " },")
         result.extend(["        },", "        caps = { " + lua_string(catalog[" (max)"]) + ", " + lua_string(catalog["{mods} (max)"].replace("{mods}", "")) + " },", "        rate = " + lua_string(catalog[", at most {n} times a second"]) + ","])
-        if code == "cs":
-            result.append("        spellNames = {")
-            for name, aliases in czech_spell_names(english, catalog).items():
-                result.append("            [" + lua_string(name) + "] = { " + ", ".join(lua_string(alias) for alias in aliases) + " },")
-            result.append("        },")
+        result.append(spell_names_block(spell_names(english, catalog)).rstrip("\n"))
         result.append("    },")
     result.append("}")
     (ROOT / "localization/data.lua").write_text("\n".join(result) + "\n", encoding="utf-8")
@@ -161,4 +200,10 @@ def generate(client):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--client", type=Path, required=True)
-    generate(parser.parse_args().client)
+    parser.add_argument("--refresh-spell-names-only", action="store_true", help="Refresh icon aliases from the separately pinned current client without replacing captions/effects.")
+    parser.add_argument("--metadata", type=Path, help="Optional data-preparation receipt for the icon-alias refresh.")
+    arguments = parser.parse_args()
+    if arguments.refresh_spell_names_only:
+        refresh_spell_names(arguments.client, arguments.metadata)
+    else:
+        generate(arguments.client)

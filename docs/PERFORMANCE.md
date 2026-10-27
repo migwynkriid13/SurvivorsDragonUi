@@ -68,6 +68,16 @@ tally/guardian work and failed native-preference restoration remain necessary.
 These switches reuse the current reader without adding an updater; see
 [RUN-TIMER.md](RUN-TIMER.md).
 
+Boss encounter retirement also uses that reader. Native `dead`/`ready` phases,
+new-zone receipts, clock rollback and world cleanup clear active rows, debuffs,
+hovers and copied entries once. Subsequent retired refreshes skip encounter
+getters and repeated cleanup until a fresh `AZSUNITS` receipt is eligible.
+Two session-only receipt counters and one flag add no event, updater, region,
+texture/material state or saved data. Existing native visibility restoration
+remains retryable; this is source-level lifecycle evidence, without measured
+FPS or live death/retry proof. See the boss-health lifecycle in
+[RUN-TIMER.md](RUN-TIMER.md#boss-health-on-death-and-restart).
+
 All 24 Layout groups were traced in the installed addon checkout. Layout uses
 native `Hide`, so the group and its descendants leave visible rendering. Hiding
 does not unload pooled regions or unregister the game's own event handlers.
@@ -82,32 +92,32 @@ therefore detach even when their conditional root was already hidden. Actual
 `IsVisible` guards also account for hidden ancestors; requested Show state is
 kept separately so normal native state can resume on showing.
 
-| Layout key          | Hidden presentation and retained work                                                                                                                                                                                                                                                                                                                                          |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `playerFrame`       | Custom health/level/color hooks, resource painting, portrait copy binding and cosmetic animations skip hidden work. Native unit events/values and secondary-resource phase retirement remain; Show refreshes current presentation.                                                                                                                                             |
-| `targetFrame`       | Custom values, classification artwork and aura-anchor repairs defer until visible. Native target/death/aura state stays owned by the game; Show forces current styling and aura layout.                                                                                                                                                                                        |
-| `partyFrames`       | Custom labels/colors skip invisible rows and refresh on Show. Native roster, unit values and shared edit bounds remain.                                                                                                                                                                                                                                                        |
-| `buffs`             | Hiding clears custom timer rows/hovers and stops cosmetic ticking. Native packets may request one deferred phase/receipt check, without hidden timer getters or painting. Icon/font/anchor repair resumes on Show. Hidden edit entry may count slots for handle bounds. Native buffs/enchants remain native.                                                                   |
-| `actionBar`         | Native buttons remain native. Custom cooldown numbers skip hidden getter/paint work; range polling detaches, existing indicators/fades clear, and hidden buttons allocate no indicator. Attached XP/jewelry/tally follow this owner.                                                                                                                                           |
-| `runTimer`          | Hidden fill, caption, markers, foam and sparkle writes stop. Native clock/schedule validation and HUD ownership use the existing ten-Hz poll or deferred publication; visible clock effects retain frame cadence. HUD release paints cleanup once while failed native restorations can retry.                                                                                  |
-| `bossBars`          | Hidden health/debuff text, icon allocation, timing getters and reflow stop. Existing hovers/debuff rows clear once on Hide. Native encounter validation, row retirement and takeover remain, including a valid empty boss list; Show requests fresh rows.                                                                                                                      |
-| `runTally`          | Hidden counter formatting/measurement and glow preparation stop. Native counter validation/takeover and attachment metadata remain; Show requests fresh presentation.                                                                                                                                                                                                          |
-| `xpBar`             | Native XP/level events still coalesce the latest tuple. Hidden gain animation stops and detaches, final private bar writes defer, and requested visibility changes only on transitions. Show restores the latest fraction and schedules a fresh instant read.                                                                                                                  |
-| `jewelryBar`        | Its existing polling controller detaches behind the active hidden Layout owner. Hidden inventory/cooldown reads, icon composition and cosmetic cooldown painting stop; visible recovery retries metadata. Attachment changes and world cleanup remain. Exact fourteen-strip sampling is unchanged.                                                                             |
-| `minimap`           | Clock painting stops with its hidden parent. The glyph launcher stops its active drag and clears its hover; square-edge button projection/reflow stops until shown. Custom pins skip hidden styling/projection/facing work, while required native guardian-flag ownership/restoration continues at the existing lifecycle poll. The independent visible world map still works. |
-| `cacheWaypoint`     | Hidden guide interpolation, distance formatting, arrow rotation and facing samples stop. Native destination acceptance/selection, world cleanup and independently visible map pins remain.                                                                                                                                                                                     |
-| `guardianWaypoint`  | Same visibility boundary as cache guidance; accepted lairs still feed the guardian data foundation independently of this HUD's visibility.                                                                                                                                                                                                                                     |
-| `guardianTracker`   | Layout-hidden policy detaches its pure view controller before roster copying, measurements or row painting. The separate guardian foundation continues accepting native state. Show uses a fresh snapshot.                                                                                                                                                                     |
-| `damageMeter`       | Layout-hidden mode validates newly published native data without copying view rows or sampling displayed rates, retaining phase retirement and takeover checks. Showing rebuilds from the getter. Feature-off remains stricter: no meter subscription, collection, getters or idle updater, apart from a pending native-preference restoration.                                |
-| `petFrames`         | Hidden/static groups skip timer sampling and all row/icon painting. New native roster receipts, phase retirement and changed edit bounds remain. Show refreshes current timing through the existing controller. The separate native primary pet retains its native ownership.                                                                                                  |
-| `revive`            | Hidden progress/identity state stays current without glyph measurement, text/bar/cross/spark writes or cosmetic animation. Show requests a fresh deferred read. Existing native-HUD release while Layout-hidden remains; no revive time is invented.                                                                                                                           |
-| `levelUp`           | Hidden class icon, count formatting/measurement, content alignment and pulse painting stop. Native stored-level validity/takeover remains. Hidden editor bounds still measure the active-language panel; Show refreshes current data.                                                                                                                                          |
-| `lootNotifications` | Hidden labels/icons/colors, alpha animation and card reflow defer. Original lifetimes, bounded exact-reference metadata retries and queue retirement continue, so expired cards cannot reappear. Show expires old cards before painting.                                                                                                                                       |
-| `banners`           | Hidden labels/colors, alpha animation and reflow defer. Native registration, preference ownership, delivery deduplication, queue promotion and original expiry cadence remain. Show retires expired rows before painting current notices.                                                                                                                                      |
-| `chat`              | Its cosmetic updater inherits native hiding; native hooks skip hidden font/geometry/indicator work. Show repairs native presentation. Native messages, level/stat batching, history, opt-in capture and the separately parented command input remain available.                                                                                                                |
-| `copyWindow`        | No idle updater. Opening while Layout-hidden only establishes the lazy edit owner/requested visibility; it skips archive-page preparation and invisible focus. Existing close cleanup and capture policy remain.                                                                                                                                                               |
-| `menu`              | No idle updater or hidden decorative controller. Game-owned commands/window actions keep their existing behavior.                                                                                                                                                                                                                                                              |
-| `tooltip`           | Hide clears the current native hover immediately. Hidden ancestry prevents positioning/styling updates; no subject is forced visible on Show. Native content/owner and separate private readers stay native.                                                                                                                                                                   |
+| Layout key          | Hidden presentation and retained work                                                                                                                                                                                                                                                                                                                                             |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `playerFrame`       | Custom health/level/color hooks, resource painting, portrait copy binding and cosmetic animations skip hidden work. Native unit events/values and secondary-resource phase retirement remain; Show refreshes current presentation.                                                                                                                                                |
+| `targetFrame`       | Custom values, classification artwork and aura-anchor repairs defer until visible. Native target/death/aura state stays owned by the game; Show forces current styling and aura layout.                                                                                                                                                                                           |
+| `partyFrames`       | Custom labels/colors skip invisible rows and refresh on Show. Native roster, unit values and shared edit bounds remain.                                                                                                                                                                                                                                                           |
+| `buffs`             | Hiding clears custom timer rows/hovers and stops cosmetic ticking. Native packets may request one deferred phase/receipt check, without hidden timer getters or painting. Icon/font/anchor repair resumes on Show. Hidden edit entry may count slots for handle bounds. Native buffs/enchants remain native.                                                                      |
+| `actionBar`         | Native buttons remain native. Custom cooldown numbers skip hidden getter/paint work; range polling detaches, existing indicators/fades clear, and hidden buttons allocate no indicator. Attached XP/jewelry/tally follow this owner.                                                                                                                                              |
+| `runTimer`          | Hidden fill, caption, markers, foam and sparkle writes stop. Native clock/schedule validation and HUD ownership use the existing ten-Hz poll or deferred publication; visible clock effects retain frame cadence. HUD release paints cleanup once while failed native restorations can retry.                                                                                     |
+| `bossBars`          | Hidden health/debuff text, icon allocation, timing getters and reflow stop. Existing hovers/debuff rows clear once on Hide. Native encounter validation, row retirement and takeover remain, including a valid empty boss list; Show requests fresh rows.                                                                                                                         |
+| `runTally`          | Hidden counter formatting/measurement and glow preparation stop. Native counter validation/takeover and attachment metadata remain; Show requests fresh presentation.                                                                                                                                                                                                             |
+| `xpBar`             | Native XP/level events still coalesce the latest tuple. Hidden gain animation stops and detaches, final private bar writes defer, and requested visibility changes only on transitions. Show restores the latest fraction and schedules a fresh instant read.                                                                                                                     |
+| `jewelryBar`        | Its existing polling controller detaches behind the active hidden Layout owner. Hidden inventory/cooldown reads, icon composition and cosmetic cooldown painting stop; visible recovery retries metadata. Attachment changes and world cleanup remain. Exact fourteen-strip sampling is unchanged.                                                                                |
+| `minimap`           | Clock painting stops with its hidden parent. The glyph launcher stops its active drag and clears its hover; square-edge button projection/reflow stops until shown. Custom pins skip hidden styling/projection/facing work, while required native guardian-flag ownership/restoration continues at the existing lifecycle poll. The addon creates no full world-map presentation. |
+| `cacheWaypoint`     | Hidden guide interpolation, distance formatting, arrow rotation and facing samples stop. Native destination acceptance/selection, world cleanup and independently visible minimap markers remain.                                                                                                                                                                                 |
+| `guardianWaypoint`  | Same visibility boundary as cache guidance; accepted lairs still feed the guardian data foundation independently of this HUD's visibility.                                                                                                                                                                                                                                        |
+| `guardianTracker`   | Layout-hidden policy detaches its pure view controller before roster copying, measurements or row painting. The separate guardian foundation continues accepting native state. Show uses a fresh snapshot.                                                                                                                                                                        |
+| `damageMeter`       | Layout-hidden mode validates newly published native data without copying view rows or sampling displayed rates, retaining phase retirement and takeover checks. Showing rebuilds from the getter. Feature-off remains stricter: no meter subscription, collection, getters or idle updater, apart from a pending native-preference restoration.                                   |
+| `petFrames`         | Hidden/static groups skip timer sampling and all row/icon painting. New native roster receipts, phase retirement and changed edit bounds remain. Show refreshes current timing through the existing controller. The separate native primary pet retains its native ownership.                                                                                                     |
+| `revive`            | Hidden progress/identity state stays current without glyph measurement, text/bar/cross/spark writes or cosmetic animation. Show requests a fresh deferred read. Existing native-HUD release while Layout-hidden remains; no revive time is invented.                                                                                                                              |
+| `levelUp`           | Hidden class icon, count formatting/measurement, content alignment and pulse painting stop. Native stored-level validity/takeover remains. Hidden editor bounds still measure the active-language panel; Show refreshes current data.                                                                                                                                             |
+| `lootNotifications` | Hidden labels/icons/colors, alpha animation and card reflow defer. Original lifetimes, bounded exact-reference metadata retries and queue retirement continue, so expired cards cannot reappear. Show expires old cards before painting.                                                                                                                                          |
+| `banners`           | Hidden labels/colors, alpha animation and reflow defer. Native registration, preference ownership, delivery deduplication, queue promotion and original expiry cadence remain. Show retires expired rows before painting current notices.                                                                                                                                         |
+| `chat`              | Its cosmetic updater inherits native hiding; native hooks skip hidden font/geometry/indicator work. Show repairs native presentation. Native messages, level/stat batching, history, opt-in capture and the separately parented command input remain available.                                                                                                                   |
+| `copyWindow`        | No idle updater. Opening while Layout-hidden only establishes the lazy edit owner/requested visibility; it skips archive-page preparation and invisible focus. Existing close cleanup and capture policy remain.                                                                                                                                                                  |
+| `menu`              | No idle updater or hidden decorative controller. Game-owned commands/window actions keep their existing behavior.                                                                                                                                                                                                                                                                 |
+| `tooltip`           | Hide clears the current native hover immediately. Hidden ancestry prevents positioning/styling updates; no subject is forced visible on Show. Native content/owner and separate private readers stay native.                                                                                                                                                                      |
 
 The shared grid, handles and numeric/editor bounds remain active while editing,
 including for hidden elements: they are the controls needed to show them again.
@@ -165,10 +175,10 @@ remain in place; this is not a claim that every remaining cost is eliminated.
 | Character and equipment                                 | `modules/ui/character.lua`: coalesced deferred work, measurement/discovery caches, actual native anchor repair and the three authored quality-rim passes.                                                                                                                                                                                                                                                                                  |
 | Revive, stored levels, loot and banners                 | `modules/ui/revive.lua`, `levels.lua`, `loot_view.lua`, `banners.lua`: passive pools, changed-only presentation, requested visibility, bounded view queues and required hidden lifetime/ownership cleanup.                                                                                                                                                                                                                                 |
 | Action bar, range and XP                                | `modules/bars/bars.lua`, `range.lua`, `modules/xprep/xprep.lua`: shared controllers, event-driven work, transition-only range fades, final cooldown sampling and pending-only XP animation.                                                                                                                                                                                                                                                |
-| Minimap, guides and map markers                         | `modules/map/map.lua`, `buttons.lua`, `navigation.lua`, `waypoints.lua`: reusable accepted snapshots/pins and native direction/position sampling; skip unchanged clock labels and button anchors. The transparent glyph adds one texture, no idle polling or extra hover region; its pointer updater exists only while dragging. Square-edge adaptation runs on foreign placement calls or map/show/load events. See `MINIMAP-BUTTONS.md`. |
+| Minimap and waypoint guides                             | `modules/map/map.lua`, `buttons.lua`, `navigation.lua`, `waypoints.lua`: reusable accepted snapshots/pins and native direction/position sampling; skip unchanged clock labels and button anchors. The transparent glyph adds one texture, no idle polling or extra hover region; its pointer updater exists only while dragging. Square-edge adaptation runs on foreign placement calls or map/show/load events. See `MINIMAP-BUTTONS.md`. |
 | SCT and nameplates                                      | `modules/nameplates/sct.lua`, `style.lua`: event-batch discovery plus independent frame discovery, preserved matching/animation, cached metadata and unchanged native styling.                                                                                                                                                                                                                                                             |
 | Layout/editor, tooltips, chat, Copy, menu and inspector | `core/layout.lua`, `editor.lua`, `tooltips.lua`, `fstack.lua`, `modules/chat/*`, `modules/menu/menu.lua`: bounded edit sampling, passive/pool reuse, owner/scale-aware hover work, native chat/fades, retained opt-in diagnostics and hidden inspector shutdown.                                                                                                                                                                           |
-| Meter and general warning overlay                       | `modules/ui/meter.lua`, `modules/ui/ui.lua`: native circles, one-Hz native rate display with five-Hz data observation, visibility/change guards, transition-only warning visibility and preserved gradient animation.                                                                                                                                                                                                                      |
+| Meter and general warning overlay                       | `modules/ui/meter.lua`, `modules/ui/ui.lua`: native circles, one-Hz rate display with five-Hz data observation, visibility/change guards, transition-only warning visibility and preserved gradient animation.                                                                                                                                                                                                                             |
 
 Native aura/timer rows (`modules/unit/auras.lua`) retain changed-slot reflow,
 hidden timer shutdown and required repair of native buff/enchant anchors.
@@ -191,12 +201,42 @@ with CVar observation until its captured preference is released. The initial rea
 allocated for reuse, with no visible drawing cost. Live enable/disable, profiles,
 Confirm/Cancel/discard and both resets share the existing display lifecycle.
 
+Damage Done now derives rolling DPS from native cumulative snapshots and run
+seconds, defaulting to ten seconds. The existing five-Hz reader observes complete
+sources even on another visible meter tab; no event, frame or updater is added.
+`core/meter_rates.lua` caps each header/source series at 604 timestamp/value pairs,
+retains at most 120 run seconds plus one boundary sample, and compresses flat
+intervals to their endpoints. Source identities remain exact name/proc pairs;
+new identities allocate once and reuse their numeric vectors. Left-boundary
+queries use binary search at the one-Hz presentation cadence. All skips history;
+The X captures all three native views once through the existing reader and keeps
+one baseline/last-counter record per exact name/proc identity. It pools positive
+session rows and recalculates their totals/shares/order only when counters or
+native order change; unchanged counters refresh only native-time average rates.
+No native counter or table is modified.
+
+Hiding empties recent vectors once and stops observation; showing warms the
+window again. Disabling and run/world retirement drop all rate state; language
+changes rebase an active reset session. Repeated retirement of an empty model allocates nothing. Pause leaves the
+native time coordinate unchanged. Window choices reuse normalized display drafts,
+profiles and resets. The window row reuses existing editor controls. The old
+rate-only Reset DPS settings action is removed. The header arrow FontString is
+replaced by one native button using three already-bundled Close.blp states:
+normal, pressed and additive hover. One image draws normally, with a second only
+on hover; native button state handling needs no Lua updater or cosmetic polling.
+The texture is bound once, retains its source proportions and inherits meter
+scale/hiding. This adds one normal HUD texture region and removes one label,
+without adding an image file or saved state. Rate text/tooltips still skip
+unchanged writes; reset clears rows/icons/hovers and both rate caches immediately.
+These bounds are source-level cost evidence; CPU time, gameplay behavior and FPS
+remain unmeasured. See [DAMAGE-METER.md](DAMAGE-METER.md).
+
 The meter's normal circular path uses six native icon regions plus six existing
 ring regions. With its header, row backgrounds and fills, the full six-row view
-has 25 authored texture regions, excluding text, native internal regions,
+has 26 authored texture regions normally, excluding the transient hover, text, native internal regions,
 tooltips and other HUD owners. The configurable one-to-ten row limit defaults
-to six; a fully populated native view has `1 + 4n` authored texture regions,
-so ten rows use 41. One seeded row checks renderer readiness; additional rows
+to six; a fully populated native view has `2 + 4n` authored texture regions,
+so ten rows use 42. One seeded row checks renderer readiness; additional rows
 are allocated only when requested visible sources need them. Shrinking the
 view retires surplus rows immediately and retains the pool for reuse.
 No strip pool is allocated on the native path.
@@ -204,8 +244,8 @@ No strip pool is allocated on the native path.
 Meter DPS, icons and both header fields default on; ability damage, percentage
 and ranks default off. Turning **Ability icons** off
 clears pooled icon bindings, hides icons/rims and skips icon resolution and binding
-in subsequent paints, leaving `1 + 2n` authored texture regions in a populated
-view (13 at six rows, 21 at ten). Pools remain allocated for reuse. Disabled
+in subsequent paints, leaving `2 + 2n` authored texture regions in a populated
+view (14 at six rows, 22 at ten), plus the transient reset-button hover. Pools remain allocated for reuse. Disabled
 row values do not trigger formatting when their native values change. Column
 widths and the icon gutter reflow only for effective option changes; header
 text is cached by its visible values, view, language and options revision.
@@ -242,6 +282,72 @@ unstaged, uncommitted and unpushed. Local work used source/history review and
 pinned formatting only; no addon/client execution, local test or standalone
 validation was run. Live appearance, FPS, draw calls and GPU-memory behavior
 remain unverified.
+
+## Side resizing, row viewports and text size — 2026-10-27
+
+Six Layout groups add twenty editor-only center-edge marks: two horizontal for run timer, boss health, Revive, meter, Chat and guardians, plus two vertical for the four row views. Each is one existing native solid texture under the hidden shared handle, with no asset or additional controller. The two obsolete settings sliders and their four thumb/track textures are removed. **Show grid** uses one existing-style lazy editor checkbox; off hides the complete grid and guide parent and skips grid geometry sampling. Shift alignment still uses the existing active-drag calculations.
+
+Width lives in shared Layout geometry. Meter and guardian roots default to 240 and allow 120–960 without scaling row height, icons or fonts. Cached natural tracker text widths compress its columns safely; native health end caps retain their 50-unit combined span. Meter geometry caches width, font size, icon gutter and numeric-column count. Failed font changes remain retryable. Hidden/off views accept required edit bounds while deferring row/header/font/icon presentation. Meter resizing never enables native reads or packet intake while off.
+
+Row handles update normalized display drafts. DPS retains 1–10 rows; boss/guardian capacity defaults to the existing automatic full list, with explicit 1–40-slot viewports and session-only scroll offsets. Native snapshots remain complete. Only viewport rows are painted; retired rows clear health, debuffs and hovers before pooling. Boss debuffs preserve their icon dimensions and reanchor only when their width-derived column count changes. Chat keeps its existing native dimension and content ownership.
+
+Run timer width reflows the existing 27 flow textures and 28 red glints without additional regions. Flow speed, temporal phases, pulse equations, opacity and cadence remain unchanged; spatial spacing, span, foam clipping and scheduled skull positions use the actual fill width. Native health/status-bar UV ownership and artwork crops are preserved. Wider visible fills cover more pixels; these source-level changes do not establish equal GPU cost or FPS. Revive invalidates its spark/cross geometry on width changes, retaining the existing animation lifecycle.
+
+All resizing uses the existing editor controller, unchanged-pointer guards and final release sample. Root height changes from row/debuff reflow also invalidate the active opposite-edge calculation. Grid preference, row counts, widths and font size retain shared Confirm/Cancel/discard/profile/reset behavior, without a new SavedVariable or idle updater. Local work was limited to source inspection and pinned formatting; appearance, animation, input and renderer performance remain unverified.
+
+## Unit health width handles — 2026-10-27
+
+Player, target and party add six editor-only one-texture side marks. Player/target marks anchor to their compact border edit regions; party uses its existing multi-row region independently of the Layout owner's dimensions. Width remains in the existing Layout record and uses existing resize/editor/Show/unit-event paths, with no asset, SavedVariable or new updater. Portrait/model dimensions, health heights, animation timing and native values remain unchanged; the existing Cut-Out size callback reflows retained loss fractions.
+
+Large-frame width reflows its shared health span and metal end position. Native StatusBar UVs remain untouched. Each large top/bottom artwork region becomes a fixed cap plus a straight span: two additional allocated/visible regions per large frame. Party's full resource-mode sheet becomes three pieces (one previously), and each health-only top/bottom span splits at the fixed outer cap, raising that variant from thirteen to fifteen pieces. Both party variants are allocated during the existing four-row setup, adding four allocated regions per row; only the selected variant has nonzero alpha, adding two visible regions per active row. Across player, target and four party rows this is twenty extra allocated artwork regions, up to twelve extra visible artwork regions, plus six editor-only marks. Four passive party anchors replace their old single-texture anchors; they have no updater or input.
+
+The extra pieces preserve portrait/cap proportions during horizontal extension and use the same source pixel regions without added effects or alpha overlap. Changed widths update the affected sizes/anchors; unchanged state skips them, and actual large-bar/divider anchors are compared before repair. Width changes reuse successful texture bindings. Hidden large frames defer their reflow until visible or required editor entry; inactive party rows update only required root/border bounds and defer caption/texture work until Show or editing. Ordinary unit events make only the existing visibility checks and small width/state comparisons before any reflow. Party resource-mode changes and width changes share one owner, so later native value events or preview changes cannot restore the old health span.
+
+The player/target outline correction adds two passive, mouse-transparent frames and no texture regions. Their portrait-mode bounds come from data-only alpha inspection of the unchanged prepared 256-by-128 sheets: pointed `(21,4)-(222,78)`, round `(23,11)-(218,75)`, boss `(23,1)-(245,81)`, elite `(23,1)-(227,81)`, rare elite `(23,0)-(245,82)` and rare `(23,0)-(227,82)`. Hidden portraits anchor the edit region to the actual closed border and extend only for enabled name/level captions. Bounds are mirrored and derived from the native owner/width delta. Target bounds include currently shown aura buttons from the tooltip module’s existing one-time discovery; the grouped registry adds no second discovery scan. Only editing samples measure those aura rectangles, using each widget’s effective scale. Cached edge coordinates skip unchanged anchors. The existing ten-Hz editor sampling and fresh drag/snap samples invoke the optional bounds callback, retrying unavailable caption heights without an idle updater. The active resize cache also observes changed edit-region dimensions, so aura or caption reflow can update the held opposite edge even at a stationary cursor. No artwork, native click bounds or confirmed geometry is changed.
+
+Source/diff inspection and pinned formatting cover the geometry and shared save/discard paths. This is an explicit source-level drawing-cost increase for independent width, not measured FPS, GPU cost or pixel parity. No local tests, standalone validation or addon/game execution were run; packaged-client appearance and input remain unverified.
+
+## Combat-text editor availability — 2026-10-27
+
+The Combat text mode selector and status description stay outside one passive settings parent. When effective SCT mode is Off or Game settings, that parent uses the existing 0.45 alpha and every control below it disables mouse input: incoming/self text, damage icons, size buttons, class colors and all filter checkboxes. Headings, separators, labels and values inherit the same dimming. Custom restores the parent to full alpha and reenables its controls. All existing preference values are preserved, including the native incoming/self choice; availability itself writes no gameplay/native setting.
+
+The shared editor availability helper now serves this group and the existing replacement-display dependents. It skips alpha/input writes when enabled state is unchanged. The existing SCT settings listener supplies the effective draft mode, including preview, profile loads, external mode changes, Confirm and discard. The lazy settings dialog adds one passive frame, zero texture regions, no animation, updater, game event, asset or SavedVariable. Source/diff inspection and pinned formatting only; local tests, standalone validation and addon/game execution were not run. Runtime appearance and interaction remain unverified.
+
+## Guardian Show dead control — 2026-10-27
+
+The tracker's minus/plus header button, four native state-texture slots, tooltip
+handlers and optional glyph-alignment branch are removed. The existing minimap
+zoom controls retain their artwork and styling. A standard shared-editor checkbox
+owns the default-on `guardianShowDead` display choice, with normal preview,
+Confirm/Cancel/discard, profiles and reset handling. The title reclaims the old
+button space without another frame, texture or font.
+
+Changes coalesce into the existing visible tenth-second view refresh. Off
+compacts only the presented rows to native `asleep` / `awake` entries and clears
+retired health fills. Hidden views skip the refresh and retain a pending current
+choice for showing again. The complete accepted roster, health joins, native
+countdowns and independent guidance retain their existing ownership. No new
+updater, game event, asset or SavedVariable is added. These are source-level
+drawing/lifecycle observations, without measured FPS or in-game input proof.
+
+## Source-icon language coverage — 2026-10-27
+
+The shared SCT/meter icon resolver now receives generated exact-name aliases
+for all fourteen game languages, extending the former Czech-only data path.
+The generated data contains 5,667 non-identity alias groups; English has an
+empty table. This adds resident Lua tables/strings at load time. Each lookup
+still reads only the selected language and its candidate list through the
+existing resolver; there is no per-hit catalog build or cross-language scan.
+
+No renderer, frame, texture, material, UV, alpha, animation or binding path
+changes. Native circles, fallback pools and gold rims keep their existing
+region counts and binding caches. Disabled/hidden meters and disabled icons
+still skip resolution. No updater, event, setting, asset or saved state is
+added. These are source-level cost observations, without an FPS/GPU claim or
+local execution. Alias provenance and remaining limits are in
+[LOCALIZATION.md](LOCALIZATION.md#source-icon-languages--2026-10-27).
+
+Accepted pet publications now contribute exact localized name/path metadata to the shared SCT/meter resolver after the pet reader's full validation. A changed publication adds one pass over its already copied display groups; timer-only updates do not repeat it. Cache hits add one name lookup before generated catalogs and can avoid weaker item/database lookups. There is no new native getter, event, updater, bitmap, frame or drawing region. The meter's existing refresh replaces a bound question mark when the path becomes available, retaining binding caches, circular masking and all off/hidden/icon-off guards. Only unsaved display names/paths remain after despawn, with zone/language/world cleanup; no summon IDs, timing, damage or roster history is learned. Source inspection and pinned formatting do not establish in-game appearance or FPS.
 
 ## Pet re-audit — 2026-10-26
 
@@ -296,6 +402,34 @@ failure recovery and performance remain unverified in the running client.
 - Jewelry hover cards retain native retries and only repeat layout when their
   text, owner or effective scale changes.
 
+The cache guide, minimap markers and bottom cache-cost counter share the supplied
+32-by-32 `waypoint/Chest.blp`, preserving their existing 32-, 16- and 18-unit
+regions respectively. Full UVs retain the source chest and transparency without
+cropping or baking another image. Textures still bind only when their existing
+views/pins are created. Region counts, visible bounds, polling, hidden-view
+guards stay unchanged; no updater or rendering pass is added. Lossless
+source-pixel comparison does not establish in-game appearance or FPS.
+
+The full world-map overlay is removed: no lazy map-layer frame, per-destination
+button/texture pools, map click/hover handlers, tracked-pin styling or
+`WORLD_MAP_UPDATE` subscription remain. Its periodic map traversal, closed-map
+pin cleanup and map-tooltip refresh work are gone. The retired diamond BLP and
+four map-only captions are removed from the runtime payload/catalogs. Read-only
+map context, coordinate projection and scale calibration remain private
+navigation helpers for HUD/minimap guidance; they allocate no world-map UI.
+These source-level region and work reductions are not measured FPS results.
+
+Native chat movement is retired by collapsing the inherited full-size title
+region and keeping the message pane non-movable. Attachment and existing native
+event/selection/Show/one-second presentation refreshes compare the current
+title-region anchors, size and movable flag; unchanged state causes no writes.
+This stops active native movement only when repairing those inputs, before the
+normal anchor cache is refreshed. It adds no region, texture, event, pointer
+poll or updater, and leaves per-frame slide work, native links/wheel input,
+hidden-view policy and shared Layout movement/resizing unchanged. Native chat
+remains resizable behind its hidden controls. Source review is not live input
+or FPS evidence.
+
 ## Jewelry rendering
 
 Jewelry keeps its existing magnified icon crop and stepped circular outline:
@@ -307,7 +441,21 @@ by exact texture path, then strip, then slot. Equal images with the same UV
 window are adjacent for native batching. Their slot-relative anchors, dimensions,
 crop and order within each icon stay the same. The icons cannot overlap: their
 32-unit canvases have at least 43 units between centers, including while detached.
-Cooldowns and gold rims retain their original layers above the icons.
+Cooldowns and circular rims retain their original layers above the icons.
+
+Equipped rarity adds one optional inventory-quality read per populated slot to
+the existing five-Hz equipment refresh. Native color lookup retries missing
+metadata and otherwise runs only when quality changes; empty slots skip it.
+The same five rim regions use a neutral shaded copy at `(664,56)-(736,128)`
+inside the existing atlas and change vertex tint only when RGB changes. Stock
+and neutral UVs switch only on known-rarity availability. Empty slots restore
+the original gold crop and white vertex tint. The pooled effects card changes
+text color before its unchanged-text measurement shortcut, without adding text
+regions or remeasuring for color alone. Hidden/off views stop these reads and
+writes through their existing controller. Atlas dimensions, file count,
+fourteen icon strips, alpha coverage, material texture and visible-region count
+stay unchanged; mixed empty/equipped slots can use two rim UV windows. No GPU
+or FPS result is inferred from these source counts.
 
 The base renderer additionally sorts equal-texture quads using an unstable
 native-style sort. For an isolated batch of two equal icons, that sort leaves

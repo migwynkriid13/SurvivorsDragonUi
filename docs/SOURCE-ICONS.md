@@ -5,6 +5,12 @@ combat text calls `CombatIcon`; the meter's `sct.GetSourceIcon` entry point adds
 its exact healing-category/Melee context and calls that same resolver. The
 meter owns circular drawing and gold rims, with no second item/spell scanner.
 
+All fourteen game catalogs now supply exact ability/talent aliases to that same
+resolver. The Portuguese report exposed a Czech-only preparation path; see
+[LOCALIZATION.md](LOCALIZATION.md#source-icon-languages--2026-10-27) for the
+installed-client source, language populations and AzerothSurvivorsRE leads.
+Existing spell/item priorities, native values and rendering are preserved; accepted summon metadata now joins the observed-name tiers described below.
+
 The reported **The Eye of Hakkar** was missing because its damage is named after
 an item. The spell/talent/database lookup had no item-name tier, and the meter
 hid the rim whenever that resolver returned no icon. The installed native
@@ -67,6 +73,18 @@ python3 scripts/generate_source_item_icons.py \
   --output modules/nameplates/source_icons.lua \
   --metadata /tmp/source-item-icons.json
 ```
+
+## Accepted summon portraits
+
+The Russian report showed Pit Lord, Felhunter and Imp as question marks in the meter while the pet tracker already displayed their portraits. The tracker reads exact localized `name` / `icon` fields from the official `AZS_GetSummons` roster; the spell/item resolver previously had no access to those pairs. The owner-supplied [summon API reference](AzerothSurvivors-Addon-API-2026-10-22.txt) documents these fields for every class and spec.
+
+After the pet reader passes its existing native phase, packet/stamp and complete roster-validation gates, a changed accepted publication passes its display groups to `sct.LearnSummonIcon`. It uses each group's exact localized name and the same resolved path its portrait uses, including the existing Wolf/Raptor family choices. Invalid/partial snapshots admit no metadata. Timer-only refreshes do not repeat this learning loop. Neither the meter nor SCT adds a summon getter, event subscription, roster scan or polling loop.
+
+The single shared resolver owns this unsaved name/icon cache and uses the existing `LearnSpellTexture` helper to normalize paths, reject unknown art and retain conflicting names as ambiguous. Exact learned pet names follow native spellbook and observed aura metadata, before generated catalogs. Stronger ambiguity is preserved; an ambiguous pet name remains neutral instead of selecting an arbitrary creature. The meter still calls only `sct.GetSourceIcon`, independently of SCT filters and mode.
+
+Only names and paths are retained. Spawn IDs, counts, durations, targets, health, damage and roster rows are not stored in the cache. Metadata remains available after despawning so existing native meter rows can retain their portraits. New zone, effective-language change, world leave and logout clear it. A pet never observed by the current addon session has no inferred portrait and keeps the existing fallback until authoritative metadata is available.
+
+The meter's existing visible five-Hz refresh already resolves icons again, so a question-mark row can use a newly learned pair without another publication or updater. Off/hidden meters and icon-disabled rows keep their existing no-resolver rules. Pet metadata admission belongs to the independent accepted pet view, even when the meter is off. Circular masking, gold rings, texture binding retries and the native/strip compatibility paths are unchanged, with no new regions or artwork.
 
 ## Lookup, retries and cleanup
 

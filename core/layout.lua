@@ -168,6 +168,10 @@ DFRL:NewMod("Layout", 0, function()
         end
     end
     local function UpdateGrid()
+        if DFRL.display and not DFRL.display.Get("layoutShowGrid") then
+            if grid and grid:IsShown() then grid:Hide() end
+            return
+        end
         local width, height = T.GetLocalSize(UIParent)
         local scale = Scale(UIParent)
         local fine = activeDrag and activeDrag.moving and IsShiftKeyDown() and true or false
@@ -315,6 +319,15 @@ DFRL:NewMod("Layout", 0, function()
                     and Clamp(geometry.scale, entry.defaultScale * 0.4, entry.defaultScale * 3)
                 or entry.defaultScale
             if not T.NearlyEqual(oldScale, scale) then frame:SetScale(scale) end
+            if options.edgeWidth then
+                local fallback = entry.resizing and entry.resizing.frameWidth
+                    or (type(options.defaultWidth) == "function" and options.defaultWidth())
+                    or entry.defaultWidth
+                local requested = geometry.width
+                local width = Number(requested) and Clamp(requested, options.minWidth or 120, options.maxWidth or 1200)
+                    or fallback
+                if not T.NearlyEqual(oldWidth, width) then frame:SetWidth(width) end
+            end
         end
         if
             options.onResize
@@ -337,6 +350,17 @@ DFRL:NewMod("Layout", 0, function()
             geometry.width, geometry.height = entry.frame:GetWidth(), entry.frame:GetHeight()
         else
             geometry.scale = LocalScale(entry.frame)
+            if entry.options.edgeWidth then
+                local stored = GeometryStore()[entry.key]
+                -- Caption-fitted views stay automatic until a side width is chosen.
+                if
+                    not entry.options.defaultWidth
+                    or (entry.resizing and entry.resizing.axis == "width")
+                    or (Valid(stored) and Number(stored.width))
+                then
+                    geometry.width = entry.frame:GetWidth()
+                end
+            end
         end
         return geometry
     end
@@ -366,10 +390,20 @@ DFRL:NewMod("Layout", 0, function()
     local function CanShowHandle(entry)
         return entry.defaultPosition and (not entry.options.onlyWhenShown or entry.wantsShown)
     end
-    local UpdateMove
+    function layout.Width(key, fallback)
+        local entry = entries[key]
+        if entry and entry.resizing then return entry.frame:GetWidth() end
+        local geometry = GeometryStore()[key]
+        if entry and Valid(geometry) and Number(geometry.width) then
+            return Clamp(geometry.width, entry.options.minWidth or 120, entry.options.maxWidth or 1200)
+        end
+        return fallback
+    end
+    local UpdateMove, UpdateResize
     local function FinishDrag(entry, capture)
         if not entry or not entry.dragging then return end
         if capture and entry.moving then UpdateMove(entry, true) end
+        if capture and entry.resizing then UpdateResize(entry, true) end
         entry.frame:StopMovingOrSizing()
         entry.dragging = false
         activeDrag = nil
@@ -397,6 +431,7 @@ DFRL:NewMod("Layout", 0, function()
         return (cells < 0 and math.ceil(cells - 0.5) or math.floor(cells + 0.5)) * SNAP_SPACING
     end
     local function EditBounds(entry, width, height, uiScale, bounds)
+        if entry.options.refreshRegion then entry.options.refreshRegion() end
         local region = entry.options.region or entry.frame
         local position = ReadPosition(region)
         local regionWidth, regionHeight = T.GetLocalSize(region)
@@ -588,6 +623,7 @@ DFRL:NewMod("Layout", 0, function()
         if not ready or not inWorld or not editing then return end
         FinishDrag(activeDrag, true)
         SelectEntry(entry, true)
+        if entry.options.refreshRegion then entry.options.refreshRegion() end
         local width, height, uiScale = Viewport()
         local cursorX, cursorY = Cursor()
         local position = ReadPosition(entry.frame)
@@ -613,13 +649,14 @@ DFRL:NewMod("Layout", 0, function()
         entry.dragging, activeDrag = true, entry
         UpdateMove(entry, true)
     end
-    local function BeginResize(entry, corner)
+    local function BeginResize(entry, corner, axis)
         if not ready or not inWorld or not editing then return end
         FinishDrag(activeDrag, true)
         SelectEntry(entry, true)
+        if entry.options.refreshRegion then entry.options.refreshRegion() end
         local width, height, uiScale = Viewport()
         local x, y = Cursor()
-        local region = entry.options.resizeToRegion and entry.options.region or entry.frame
+        local region = not axis and entry.options.resizeToRegion and entry.options.region or entry.frame
         local position = ReadPosition(entry.frame)
         local regionPosition = region == entry.frame and position or ReadPosition(region)
         if not x or not position or not regionPosition or not width then return end
@@ -627,6 +664,7 @@ DFRL:NewMod("Layout", 0, function()
         local frameWidth, frameHeight = T.GetLocalSize(region)
         entry.resizing = {
             corner = corner,
+            axis = axis,
             region = region,
             cursorX = x,
             cursorY = y,
@@ -635,25 +673,53 @@ DFRL:NewMod("Layout", 0, function()
             width = frameWidth * scale,
             height = frameHeight * scale,
             scale = LocalScale(entry.frame),
+            frameWidth = entry.frame:GetWidth(),
+            frameHeight = entry.frame:GetHeight(),
+            viewWidth = width,
+            viewHeight = height,
+            uiScale = uiScale,
         }
         entry.pointerPosition = position
         entry.dragging, activeDrag = true, entry
     end
-    local function UpdateResize(entry)
+    UpdateResize = function(entry, force)
         local start = entry.resizing
         local width, height, uiScale = Viewport()
         local cursorX, cursorY = Cursor()
         if not start or not width or not cursorX then return end
-        if start.lastCursorX == cursorX and start.lastCursorY == cursorY then return end
+        if
+            not T.NearlyEqual(width, start.viewWidth)
+            or not T.NearlyEqual(height, start.viewHeight)
+            or not T.NearlyEqual(uiScale, start.uiScale)
+        then
+            return
+        end
+        local regionWidth, regionHeight = T.GetLocalSize(start.region)
+        if
+            not force
+            and start.lastCursorX == cursorX
+            and start.lastCursorY == cursorY
+            and start.lastWidth == entry.frame:GetWidth()
+            and start.lastHeight == entry.frame:GetHeight()
+            and T.NearlyEqual(start.lastRegionWidth, regionWidth)
+            and T.NearlyEqual(start.lastRegionHeight, regionHeight)
+        then
+            return
+        end
+        if entry.options.refreshRegion then entry.options.refreshRegion() end
         local right = string.find(start.corner, "RIGHT") ~= nil
         local top = string.find(start.corner, "TOP") ~= nil
         local signX, signY = right and 1 or -1, top and 1 or -1
         local dx, dy = cursorX - start.cursorX, cursorY - start.cursorY
-        if entry.options.resize == "dimensions" then
+        if start.axis == "height" and entry.options.onHeightDrag then
+            local ratio = Scale(entry.frame) / uiScale
+            entry.options.onHeightDrag((start.height + signY * dy) / ratio, start)
+        elseif entry.options.resize == "dimensions" or start.axis == "width" then
             local ratio = Scale(entry.frame) / uiScale
             ApplySize(entry, {
-                width = (start.width + signX * dx) / ratio,
-                height = (start.height + signY * dy) / ratio,
+                scale = start.scale,
+                width = start.axis == "height" and start.frameWidth or (start.width + signX * dx) / ratio,
+                height = start.axis == "width" and start.frameHeight or (start.height + signY * dy) / ratio,
             })
         else
             -- Project the pointer onto the corner diagonal, preserving artwork
@@ -661,15 +727,15 @@ DFRL:NewMod("Layout", 0, function()
             local diagonal = start.width * start.width + start.height * start.height
             if diagonal <= 0 then return end
             local factor = 1 + (signX * dx * start.width + signY * dy * start.height) / diagonal
-            ApplySize(entry, { scale = start.scale * factor })
+            ApplySize(entry, { scale = start.scale * factor, width = start.frameWidth })
         end
         local ratio = Scale(start.region) / uiScale
         local frameWidth, frameHeight = T.GetLocalSize(start.region)
         local newWidth, newHeight = frameWidth * ratio, frameHeight * ratio
         -- Keep the visible region's opposite corner fixed, translating its
         -- layout owner by the measured offset instead of resizing empty bounds.
-        local x = right and start.x or start.x + start.width - newWidth
-        local y = top and start.y - start.height + newHeight or start.y
+        local x = start.axis == "height" and start.x or (right and start.x or start.x + start.width - newWidth)
+        local y = start.axis == "width" and start.y or (top and start.y - start.height + newHeight or start.y)
         local ownerPosition = ReadPosition(entry.frame)
         local regionPosition = start.region == entry.frame and ownerPosition or ReadPosition(start.region)
         if not ownerPosition or not regionPosition then return end
@@ -679,7 +745,29 @@ DFRL:NewMod("Layout", 0, function()
         }
         ApplyPosition(entry.frame, entry.pointerPosition)
         start.lastCursorX, start.lastCursorY = cursorX, cursorY
+        start.lastWidth, start.lastHeight = entry.frame:GetWidth(), entry.frame:GetHeight()
+        start.lastRegionWidth, start.lastRegionHeight = T.GetLocalSize(start.region)
         return true
+    end
+
+    local function MakeEdge(entry, point, axis)
+        local grip = CreateFrame("Button", nil, entry.handle)
+        grip:SetWidth(axis == "width" and 14 or 20)
+        grip:SetHeight(axis == "width" and 20 or 14)
+        grip:SetPoint("CENTER", entry.options.edgeRegion or entry.frame, point, 0, 0)
+        grip:SetFrameLevel(entry.handle:GetFrameLevel() + 2)
+        local mark = grip:CreateTexture(nil, "OVERLAY")
+        mark:SetTexture("Interface\\Buttons\\WHITE8X8")
+        mark:SetVertexColor(0.87, 0.73, 0.41, 1)
+        mark:SetWidth(axis == "width" and 3 or 14)
+        mark:SetHeight(axis == "width" and 14 or 3)
+        mark:SetPoint("CENTER", grip, "CENTER", 0, 0)
+        grip:RegisterForDrag("LeftButton")
+        grip:SetScript("OnDragStart", function() BeginResize(entry, point, axis) end)
+        grip:SetScript("OnDragStop", function() FinishDrag(entry, true) end)
+        grip:SetScript("OnMouseUp", function() FinishDrag(entry, true) end)
+        grip:SetScript("OnHide", function() FinishDrag(entry, true) end)
+        grip:EnableMouse(true)
     end
 
     local function MakeCorner(entry, corner)
@@ -764,6 +852,14 @@ DFRL:NewMod("Layout", 0, function()
         for _, corner in ipairs({ "TOPLEFT", "TOPRIGHT", "BOTTOMLEFT", "BOTTOMRIGHT" }) do
             MakeCorner(entry, corner)
         end
+        if entry.options.edgeWidth or entry.options.edgeHandles then
+            MakeEdge(entry, "LEFT", "width")
+            MakeEdge(entry, "RIGHT", "width")
+        end
+        if entry.options.onHeightDrag or entry.options.edgeHandles then
+            MakeEdge(entry, "TOP", "height")
+            MakeEdge(entry, "BOTTOM", "height")
+        end
     end
 
     local function ShowHandle(entry, shown)
@@ -780,6 +876,7 @@ DFRL:NewMod("Layout", 0, function()
         local handle, region = entry.handle, entry.options.region or entry.frame
         local shown = CanShowHandle(entry)
         if shown then
+            if entry.options.refreshRegion then entry.options.refreshRegion() end
             local ratio = Scale(region) / scale
             local regionWidth, regionHeight = T.GetLocalSize(region)
             local handleWidth = math.max(12, regionWidth * ratio)
@@ -856,6 +953,7 @@ DFRL:NewMod("Layout", 0, function()
             or LocalScale(selected.frame) / selected.defaultScale * 100
         local height = selected.frame:GetHeight()
         local hidden, language = IsHidden(selected), DFRL.locale.code
+        local gridShown = DFRL.display.Get("layoutShowGrid")
         if
             force == false
             and coordinateState.entry == selected
@@ -865,6 +963,7 @@ DFRL:NewMod("Layout", 0, function()
             and coordinateState.height == height
             and coordinateState.hidden == hidden
             and coordinateState.language == language
+            and coordinateState.gridShown == gridShown
         then
             return
         end
@@ -891,9 +990,11 @@ DFRL:NewMod("Layout", 0, function()
             if coordinates.height:IsShown() then coordinates.height:Hide() end
         end
         if coordinates.visibility.editorChecked ~= hidden then coordinates.visibility:SetChecked(hidden) end
+        if coordinates.grid.editorChecked ~= gridShown then coordinates.grid:SetChecked(gridShown) end
         coordinateState.entry, coordinateState.x, coordinateState.y = selected, x, y
         coordinateState.width, coordinateState.height = width, height
         coordinateState.hidden, coordinateState.language = hidden, language
+        coordinateState.gridShown = gridShown
         coordinates.dirty = false
         coordinates.refreshing = false
     end
@@ -940,7 +1041,7 @@ DFRL:NewMod("Layout", 0, function()
         if dimensions then
             ApplySize(selected, { width = size, height = sizeHeight })
         else
-            ApplySize(selected, { scale = selected.defaultScale * size / 100 })
+            ApplySize(selected, { scale = selected.defaultScale * size / 100, width = frame:GetWidth() })
         end
         local offsetX, offsetY = CenterOffsets(frame, uiScale)
         local position = {
@@ -1055,10 +1156,23 @@ DFRL:NewMod("Layout", 0, function()
         )
         visibility:SetPoint("TOPLEFT", coordinates, "TOPLEFT", 0, -156)
         coordinates.visibility = visibility
+        coordinates.grid = T.CreateEditorToggle(
+            coordinates,
+            "Show grid",
+            "Show the alignment grid while editing.",
+            width,
+            function(shown) DFRL.display.Set("layoutShowGrid", shown) end
+        )
+        coordinates.grid:SetPoint("TOPLEFT", coordinates, "TOPLEFT", 0, -204)
+        DFRL.display.Listen(function()
+            RefreshEditorSoon()
+            if editing then UpdateGrid() end
+            if coordinates and not coordinates.dirty and not coordinates.focused then RefreshCoordinates(false) end
+        end)
         local apply = T.CreateEditorButton(coordinates, "Apply position / size", width, 28)
-        apply:SetPoint("TOPLEFT", coordinates, "TOPLEFT", 0, -204)
+        apply:SetPoint("TOPLEFT", coordinates, "TOPLEFT", 0, -252)
         apply:SetScript("OnClick", ApplyCoordinates)
-        coordinates.status = Text("", -242, 10)
+        coordinates.status = Text("", -290, 10)
         coordinates.status:SetWidth(width)
         coordinates.status:SetHeight(18)
         local refreshElapsed = 0
@@ -1255,7 +1369,7 @@ DFRL:NewMod("Layout", 0, function()
         if not enabled then return end
         editorAge = editorAge + (tonumber(arg1) or 0)
         local fine = activeDrag and activeDrag.moving and IsShiftKeyDown() and true or false
-        if editorDirty or editorAge >= EDITOR_INTERVAL or gridFine ~= fine then
+        if editorDirty or editorAge >= EDITOR_INTERVAL or (DFRL.display.Get("layoutShowGrid") and gridFine ~= fine) then
             editorAge, editorDirty = 0, false
             UpdateGrid()
             for _, entry in ipairs(order) do

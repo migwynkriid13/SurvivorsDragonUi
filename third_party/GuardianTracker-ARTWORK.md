@@ -77,52 +77,22 @@ and tools stay outside the ZIP. Native retail atlas APIs or dependencies are not
 used. Artwork inspection and static compositions do not establish packaged-game
 rendering. No local checks or addon/game execution were run.
 
-## Minus/plus control
+## Shared minimap control artwork
 
-The header reuses exactly the addon's existing gold minimap controls. The source
-is the already-shipped `media/tex/minimap/` artwork at base commit
-`8779289c7ba30ac9be424d7a396628f5cda13ea1`:
+The tracker has no minus/plus header control. Its Show dead choice is a shared
+editor checkbox. Existing minimap zoom controls retain the inherited artwork
+from base commit `8779289c7ba30ac9be424d7a396628f5cda13ea1`:
 
 - Plus: [ZoomIn32.tga](https://github.com/migwynkriid13/SurvivorsDragonUi/blob/8779289c7ba30ac9be424d7a396628f5cda13ea1/media/tex/minimap/ZoomIn32.tga),
   with `ZoomIn32-push.tga`, `ZoomIn32-over.tga` and `ZoomIn32-disabled.tga`.
 - Minus: [ZoomOut32.tga](https://github.com/migwynkriid13/SurvivorsDragonUi/blob/8779289c7ba30ac9be424d7a396628f5cda13ea1/media/tex/minimap/ZoomOut32.tga),
   with `ZoomOut32-push.tga`, `ZoomOut32-over.tga` and `ZoomOut32-disabled.tga`.
 
-All eight 32-by-32 TGA canvases were visually inspected, including their
-transparency. Their full texture regions are reused without any crop, conversion,
-recolouring or new texture file. Existing artwork notices and project permission
-remain applicable; no new expansion provenance is inferred for these inherited
-images. `T.StyleMinimapZoomButton` supplies the same normal, pressed, hover and
-disabled paths for both minimap buttons and the tracker. The tracker draws at
-25.6 by 25.6, keeping its button in the former count position. Minimap placement,
-scale, native zoom actions and state handling stay unchanged.
-The tracker toggle inherits the tracker's smaller default scale. The tracker
-places its health pills' right edge beneath the default minimap right edge,
-using shared minimap appearance metadata and independent UIParent anchors.
-The default root compensates for the row inset and health pill's right offset.
-Text-driven width changes retain that edge only for an unpositioned tracker;
-confirmed and draft placements remain independent.
-
-The normal `ZoomIn32.tga` plus glyph is two source pixels left of the other
-states: its bright-gold horizontal bounds are `[3, 25)`, compared with `[5, 27)`
-for the minus and pressed plus. The tracker's optional glyph alignment shifts
-only that normal plus texture right by `button width * 2 / 32` (1.6 local units
-at width 25.6). Both full-canvas anchors receive the same offset, preserving its
-size, UVs and artwork. Other states use zero offset; every reassignment first
-clears old texture anchors. The button, hit box, header and root anchors remain
-fixed. Native minimap buttons retain their existing style and state handling.
-
-**Plus means collapsed:** show only living guardians, including combat guardians.
-**Minus means expanded:** show every accepted lair, including respawn timers, due
-and empty rows. Native due rows display **Alive** in the resting guardian green;
-this optimistic caption supplies no health or change to native occupancy/filtering.
-Mode changes compact the rows in native order without clearing
-accepted data or selections. A collapsed list with no living guardians keeps its
-header and plus button so it can be expanded.
-
-The button is disabled during layout editing and has translated action hints.
-Its session-only state adds no setting or SavedVariable, and both shared resets
-restore expanded mode. Only effective mode changes reassign the texture states.
-The atlas minus/plus candidate was superseded by this explicit request and is not
-included in source or runtime payload. No new control artwork or dependency is
-introduced; the selected quest-tracker header remains the sole new texture.
+The eight full source canvases and their ownership notices remain applicable;
+no new expansion provenance is inferred for these inherited images. Their
+prepared BLP counterparts remain in the runtime manifest for the minimap.
+`T.StyleMinimapZoomButton` retains normal, pressed, hover and disabled paths for
+native zoom buttons. The retired tracker-only glyph-offset branch is removed;
+minimap placement, scale, zoom actions and texture-state geometry are unchanged.
+The quest-tracker header and existing timer-bezel textures retain the source
+records above. No new control artwork or dependency is introduced.

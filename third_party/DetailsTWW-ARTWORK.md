@@ -60,6 +60,31 @@ asset root. See [DAMAGE-METER.md](../docs/DAMAGE-METER.md) for data and lifecycl
 boundaries. No in-game appearance or compatibility claim follows from inspecting
 the source artwork.
 
+## Header reset X
+
+The header's former `>` FontString is replaced by the existing Blizzard gold X
+in `media/tex/character/Close.blp`; no new image or manifest member is added.
+Its prepared 128-by-128 sheet, upstream ownership and complete notices are in
+[Character-ARTWORK.md](Character-ARTWORK.md#mediatexcharacterclosetga).
+The pinned source is DragonUI `6d9cc95eedd1de78fab3b965683df13421e21604`,
+`DragonUI/Textures/UI/redbutton2x.blp` (256 by 128). Its owning
+[`ModernizeCloseButton`](https://github.com/NeticSoul/DragonUI/blob/6d9cc95eedd1de78fab3b965683df13421e21604/DragonUI/modules/characterpanel/chrome.lua)
+maps normal `(39,1)-(75,39)`, pressed `(39,81)-(75,119)` and highlight
+`(115,1)-(151,39)`; the highlight uses ADD. These correspond to prepared-sheet
+rectangles `(0,0)-(36,38)`, `(64,0)-(100,38)` and `(64,64)-(100,102)`.
+Blizzard's [10.2.7 close-button template](https://github.com/Gethe/wow-ui-source/blob/6b65c2922baca3db5a28fb39b69c95cef1047bec/Interface/AddOns/Blizzard_SharedXML/Mainline/SharedUIPanelTemplates.xml)
+independently identifies the RedButton Exit normal/pressed/disabled atlas family
+and additive highlight. This is shared panel art, not an expansion-exclusive X.
+
+The meter draws it 16 units wide by `16 * 38 / 36` high, preserving source
+proportions, centered at the old arrow's right-side position. The native button
+selects its cached states; no animation/updater, tinting or repeated binding is
+added. Clicking performs only the requested statistics purge, without a close
+handler. Its label/hint use all fourteen UI catalogs. Blizzard retains ownership;
+existing addon MIT notices do not separately license its art. Static inspection
+compared the bundled normal/pressed sheets and this prepared state sheet against
+a neutral background; it does not establish in-game size/input behavior.
+
 ## Native healing source icons
 
 The shared source metadata also references native general-jewelry/amulet icons,

@@ -162,6 +162,7 @@ DFRL:NewMod("Revive", 4, function()
             pill:Hide()
             root:Show()
         end
+        function view.Resize() dirty = true end
         function view.Set(text, progress, subject)
             local fresh = identity ~= subject or value == nil
             local requested = view.active or view.waiting
@@ -190,14 +191,15 @@ DFRL:NewMod("Revive", 4, function()
                 local measured = measure:GetStringWidth()
                 measuredWidth = Number(measured) and measured > 0 and measured or nil
                 measuredText, measuredFace, measuredSize, measuredFlags, measuredScale = text, face, size, flags, scale
-                local width = math.max(MIN_WIDTH, math.ceil(measuredWidth or 0) + 72)
-                if not T.NearlyEqual(width, root:GetWidth()) then
-                    root:SetWidth(width)
-                    if view.onResize then view.onResize() end
-                    dirty = true
-                end
-                caption:SetWidth(width - 56)
+                view.naturalWidth = math.max(MIN_WIDTH, math.ceil(measuredWidth or 0) + 72)
             end
+            local width = DFRL.layout.Width("revive", view.naturalWidth or MIN_WIDTH)
+            if not T.NearlyEqual(width, root:GetWidth()) then
+                root:SetWidth(width)
+                if view.onResize then view.onResize() end
+                dirty = true
+            end
+            if not T.NearlyEqual(caption:GetWidth(), width - 56) then caption:SetWidth(width - 56) end
             if fresh then
                 value, target, origin, identity = progress, progress, progress, subject
                 displayedPercent, transition, fade, effectAge, dirty = nil, 0, 0, 0, true
@@ -358,8 +360,13 @@ DFRL:NewMod("Revive", 4, function()
     end, {
         labelAbove = true,
         refreshDefault = true,
+        edgeWidth = true,
+        minWidth = 160,
+        maxWidth = 1200,
+        defaultWidth = function() return view.naturalWidth or MIN_WIDTH end,
         onReset = Clear,
         onResize = function()
+            view.Resize()
             dirty, age = true, INTERVAL
         end,
     })

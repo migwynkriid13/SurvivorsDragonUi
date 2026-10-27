@@ -116,7 +116,7 @@ saved or replayed. Empty groups expose only the normal layout editing handles,
 without fictional pets. Existing translations and native names are unchanged.
 
 The roster supplies no per-summon health, power, unit token, target or damage
-identity. This feature changes neither the pet-damage filter nor SCT icons.
+identity. Pet-damage filtering and damage attribution remain independent. Changed accepted publications also pass each display group’s exact name/icon pair to the shared SCT/meter resolver; this supplies display metadata only, including the existing Hunter family icon choices.
 There is no documented pets/summons HUD visibility part to take over.
 
 The 2026-10-26 follow-up used source/history review and pinned local formatting.
@@ -135,3 +135,5 @@ separate runs, not raw-frame percentiles or a controlled per-widget profile.
 They strongly support persistent strip rendering as the sustained FPS cost.
 The world-entry stall remains, and native GPU out-of-memory crashes have not
 been established as fixed.
+
+The 2026-10-27 source-icon follow-up reuses this reader after full roster validation. It learns only on changed accepted publications, not timer-only reads, and creates no new getter, scan, event, updater or drawing region. The shared resolver retains only unsaved name/path pairs until zone, language or world cleanup, allowing meter rows to keep known pet art after despawn. Source/diff inspection and pinned formatting were performed; the supplied Russian screenshots establish the original mismatch, while the correction remains unverified in-game.

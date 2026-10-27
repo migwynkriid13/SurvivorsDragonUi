@@ -13,7 +13,8 @@ captured by the replacement. It does not force the game's own meter setting off.
 Click its heading to cycle through Damage Done, Healing Done and Boss Damage;
 right-click goes backwards. The gold header shows **Total** and **DPS** (or **HPS**
 for healing), replacing the view name and the former footer text. Hover over the
-header to see the current view. Missing data displays `--` for both values.
+header to see the current view. The small gold **X** resets statistics in every
+view; it never closes the meter. Missing data displays `--` for both values.
 Under `/sdui` → **Damage meter**, set **Abilities shown** from **1 to 10**;
 the default is **6**. The number previews immediately and saves with Confirm.
 Cancel, world/logout/reload discard, profiles and both resets use the shared
@@ -27,17 +28,38 @@ total** and **Header DPS** control the summary; turning both off shows the curre
 view name. Both header fields start on. All seven options use the same preview, Confirm,
 Cancel, profile and reset behavior. Healing uses healing totals and HPS.
 Hover still provides the full name and numbers when row values are hidden.
-Move, scale or hide **DPS meter** through `/sdui` → **Layout**, then Confirm.
-Geometry and hiding also work
-with named profiles, Cancel, `/sdui lock` and both full resets.
 
-The default scale remains **0.8**. The base width is **320** UI units, reduced
-from 400 by 20%, without changing row height, icon sizes or fonts. Its bottom-right
-corner sits at the screen's bottom-right corner with no offset. Shared layout
-registration captures this scale before applying saved geometry. These defaults
-apply to unset geometry and both full resets; existing confirmed/draft positions
-and scales keep using the shared layout rules. The default corner stays fixed
-when the ability count changes, without an updater or geometry migration.
+**Damage Done** shows rolling DPS over the last **10 run seconds** by default.
+Under **DPS window**, use the minus/plus buttons for **5–120 seconds**, in
+five-second steps. Below five, **All** selects the whole-run average. Hover over
+the header or a source to see its whole-run average alongside recent DPS.
+The **X** purges all existing Damage Done, Healing Done and Boss Damage statistics
+from this meter and starts again from zero. It clears totals, source rows, shares,
+rankings, scroll position and displayed/recent rates together. Existing effects
+or pets remain in game; their later damage or healing counts as new activity.
+The reset is session-only and immediate, independent of Confirm. There is no
+separate Reset DPS settings button. After resetting, **All** and the average DPS
+tooltips use only damage since the reset. The window choice retains the shared
+preview, Confirm, Cancel, profile and full-reset paths.
+
+Use the left/right side handles on **DPS meter** in Layout to change its width without scaling rows or icons. Top/bottom handles change **Abilities shown**, using the same 1–10 limit as the settings control. Corner handles retain proportional scaling. **Font size** remains under Damage meter, from **8 to 18**, default **11**. All changes preview and use Confirm, Cancel, profiles, discard and resets.
+
+The default scale remains **0.8** and width **240** UI units, with side-width limits **120–960**. Its bottom-right corner sits at the screen's bottom-right corner with no offset. Shared layout registration captures this scale before applying saved geometry. Defaults apply to unset geometry and both full resets; confirmed/draft positions and scales retain the shared rules. The default corner stays fixed when the ability count changes. Active side dragging holds the opposite edge fixed.
+
+Width now lives beside scale and position in the existing Layout record. The obsolete `meterWidth` display field and slider are removed. `meterFontSize` remains a finite, clamped/rounded display integer; both normalizers participate in named profiles and the existing save/discard lifecycle. No new SavedVariable or geometry migration is needed. Hidden/off views accept required root geometry but defer presentation, and resizing never starts native collection while the meter is off.
+
+Row height, circular icons and gold rims remain 32, 26 and 31 units. Header
+text retains its original size offsets above the selected row font. Numeric
+column widths follow font size and enabled columns, reserving at least 48 units
+for names at the narrowest widths. Very large text with all numeric columns can
+still clip; the full native name and values remain available on hover. Wider
+meters or fewer numeric fields provide more name space. Text sizes and row
+widths update only on effective changes; failed font-size changes stay retryable.
+Hidden/off views defer row/header presentation until visible; the shared editor
+still receives required root-width changes.
+The readiness row and lazy rows start with positive label widths even at 120;
+column reflow then applies the existing name-space reservation. Defaults apply
+to missing/invalid values and resets, preserving explicit saved width choices.
 
 ## Native data
 
@@ -68,25 +90,74 @@ The owner-supplied [2026-10-22 API reference](AzerothSurvivors-Addon-API-2026-10
 defines `AZS_GetMeter()`, `AZS_GetHealing()` and `AZS_GetBossMeter()`. Each returns
 `lines, total, rate`; rows supply `name`, `dmg`, `dps`, `share` and `proc`.
 
-Damage and healing cover the whole run. Their rates are the game's averages over
-its pause-aware run clock. Boss Damage covers the native current/last boss fight.
-The renderer does not divide damage by UI time, estimate hits from combat text,
-implement rolling DPS, subtract local reset baselines or fabricate fight segments.
-The native meter window's Reset does not reset these API totals.
+Before a local reset, damage/healing totals and native shares/order cover the
+whole run. Boss Damage covers the native current/last boss fight. Healing and
+Boss Damage retain supplied native rates until a local reset. The game's own
+meter-window Reset does not reset the API totals; there is no official setter
+for clearing these counters.
 
-The header and source-row DPS/HPS values, including row tooltips, sample the
-native rates once per second. Totals, shares, bars and interaction retain their
-existing five-Hz refresh. A newly seen source displays its first native rate
-immediately; sampled row rates follow the exact source name and native proc flag
-rather than a pooled row or list position. UI time controls this display cadence
-only and never calculates DPS. View changes, invalid data, world cleanup and
-resets clear the samples; a regressing native total refreshes them immediately
-so an earlier boss fight's rates are not reused after its total resets.
+`NewMeterSession` therefore captures exact name/proc counter baselines for all
+three views through their existing getters, once in the deferred visible refresh
+after the X is clicked. Subsequent rows contain only positive counter deltas.
+Their sum becomes the displayed total; shares and descending rankings use those
+deltas, with native order as the tie-breaker. Proc identity, source names and
+native tables are never changed. Post-reset averages, including healing and boss
+rates, divide these deltas by `max(native run seconds since Reset, 1)`.
+Unavailable clocks leave rates unavailable. Missing/unpublished views stay gated
+and baseline their first accepted snapshot, so switching views cannot restore old
+values. No getter is called directly from the click handler.
+
+A new native boss-fight counter population is already fresh and uses zero
+baselines. Damage/healing regressions conservatively rebase the affected view.
+Language changes rebase a reset session; hiding and view changes retain its
+baselines. World/run retirement, disabling and full resets discard session data.
+No baseline, damage record or reset session is saved or included in profiles.
+
+Damage Done uses complete cumulative `AZS_GetMeter()` snapshots and published
+`AZS_RUN.t` run seconds. Its rolling header and per-source rate are
+`(damage now - damage at window start) / observed run seconds`, interpolating the
+left boundary between accepted samples. The denominator grows from the first
+observed sample up to the chosen window. Less than one observed run second shows
+`--`; missing clock data also leaves recent DPS unavailable. Pausing does not
+advance the window. UI `GetTime()` controls only display cadence, never the rate
+denominator. No SCT hits, combat events, wall-clock combat time or inferred fight
+segments enter the calculation.
+
+`core/meter_rates.lua` keeps bounded, session-only cumulative samples for the
+header and exact source-name/proc identities. Observation uses the existing
+five-Hz controller, continuing Damage Done sampling while another meter view is
+visible. A gap over two run seconds discards the recent window; showing after
+hiding starts a new observation window. Clock/total/source-counter regression or
+a disappearing source retires recent history. New runs, world cleanup, language
+changes, full resets, disabling and the X clear it too. All skips recent history
+and uses the native run average before a reset, or the session average afterwards.
+No recent samples or reset baselines are collected while hidden/off.
+
+The window lives in the existing normalized display table as `meterDpsWindow`:
+default ten, zero for All, otherwise a finite rounded/clamped integer `5..120`.
+Missing or invalid values and both full resets use ten. Named profiles copy the
+same normalized setting, with no new SavedVariable. Reset baselines/history are
+never saved or included in profiles.
+
+Header and row DPS/HPS plus average tooltips are presented at one Hz; totals,
+shares, bars and input retain five-Hz updates. New sources obtain their current
+rate immediately when a sufficient window exists. Rate samples follow exact
+name/proc identity, independently of row pooling, scrolling or native sorting.
+View changes and invalid data clear presentation samples; rate-history retirement
+and regressing native totals refresh them immediately. Changing the window
+refreshes rates through the existing controller, without resetting damage totals.
+
+The behavior follows the referenced
+[AZSSpellMeter window modes](https://github.com/kex0/AZSSpellMeter/blob/efabc6cd4e85ac9d0b6dd5ba62a37b5cc8dd6f64/AZSSpellMeter.lua#L574-L657)
+and [KeijinUI's recent-DPS display](https://github.com/KeijinDE/KeijinUI_modern-as-ui/blob/v4.3.2/KeijinUI/Statistics.lua#L416-L442).
+Their runtime code is not imported; native data ownership and the addon lifecycle
+remain local to this implementation.
 
 The phase is read before any retained meter data. `ready` clears the view;
 `playing`, `choosing`, `paused`, `dead` and `victory` can display valid data.
-Each selected snapshot must have finite nonnegative totals, rates, row amounts
-and shares, with shares at most one. Source order and names remain native.
+Each native snapshot must have finite nonnegative totals, rates, row amounts
+and shares, with shares at most one. Source names remain native; before Reset,
+source order remains native too.
 Rows are copied for display; native tables are never modified.
 
 Initially a nonempty valid getter result can recover a view whose packet arrived
@@ -218,7 +289,8 @@ replacement while its valid native takeover remains active.
 
 Layout-hidden meter groups retain phase retirement and native ownership. They
 validate selected-view data only after a native publication, without copying
-view rows or sampling displayed rates. Showing reads current native data again.
+view rows or sampling displayed rates. Hiding clears recent cumulative samples;
+showing reads current native data and warms the rolling window again.
 They skip cosmetic row formatting, icon lookup/binding, tooltip repaint and bar work.
 Requested root visibility changes only on transitions. Repeated unavailable
 reads do not keep clearing an already-cleared view. Visible rows cache formatted
@@ -230,8 +302,8 @@ The `meterRows` integer belongs to the existing `SurvivorsDragonUiDisplay`
 table. Its normalizer clamps finite values to `1..10` and rounds to an integer;
 missing/invalid values and both resets use six. Profile snapshots copy the
 normalized count with the other display choices, without a new SavedVariable.
-Only the visible row limit changes: native source order, complete totals, rates
-and the overflow scroll list remain intact.
+Only the visible row limit changes: complete selected-session totals, source
+rankings and the overflow scroll list remain intact.
 
 The seven `meterShowDamage`, `meterShowDps`, `meterShowPercentage`,
 `meterShowIcons`, `meterShowRanks`, `meterShowTotal` and `meterShowTotalDps`

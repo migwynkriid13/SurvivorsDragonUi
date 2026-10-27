@@ -62,6 +62,8 @@ function DFRL.tools.CreateHoverCard(parent, width, height)
 end
 
 local registeredIcons, iconAnchors, iconSides = {}, {}, {}
+local unitAuraIcons = {}
+function DFRL.tools.GetUnitAuraIcons(unit) return unitAuraIcons[unit] end
 function DFRL.tools.RegisterTooltipIcon(button, icon, side)
     if not button or registeredIcons[button] then return end
     registeredIcons[button] = button
@@ -130,10 +132,19 @@ DFRL:NewMod("Tooltips", 2, function()
 
     -- Stock target aura buttons already exist when modules initialize.
     -- Discover their actual extent once instead of repeating native slot counts.
-    for _, prefix in ipairs({ "TargetFrameBuff", "TargetFrameDebuff", "TargetofTargetFrameDebuff" }) do
+    for _, source in ipairs({
+        { "TargetFrameBuff", "target" },
+        { "TargetFrameDebuff", "target" },
+        { "TargetofTargetFrameDebuff", "targettarget" },
+    }) do
+        local prefix, unit = source[1], source[2]
+        local buttons = unitAuraIcons[unit] or {}
+        unitAuraIcons[unit] = buttons
         local index = 1
         while _G[prefix .. index] do
-            T.RegisterTooltipIcon(_G[prefix .. index], nil, "below")
+            local button = _G[prefix .. index]
+            T.RegisterTooltipIcon(button, nil, "below")
+            table.insert(buttons, button)
             index = index + 1
         end
     end

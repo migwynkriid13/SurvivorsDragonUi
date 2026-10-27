@@ -146,3 +146,7 @@ Edited Lua and Markdown receive the repository's pinned formatters; local tests,
 standalone syntax/validation checks and additional game execution were not run.
 GitHub Actions is not awaited or polled. Actual co-op event ordering and native
 completion/cancellation behavior remain unverified in game.
+
+## Independent width
+
+Revive's Layout outline has left/right center handles for width only (160–1200 local units); corner handles retain proportional scaling. Until a width is chosen, the original 356-unit minimum and caption-based fitting remain. A chosen width is stored with position/scale in the existing Layout record, using Confirm, Cancel/discard, profiles and both resets. Caption width follows that choice. The native fill, spark and authored cross animation use the actual root width minus the original 72-unit inset; a size transition dirties the view even when native progress is unchanged. No new effect, asset or updater is added, and hidden presentation stays deferred. Runtime appearance and input remain unverified.

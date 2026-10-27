@@ -1,22 +1,22 @@
 -- Official cache and occupied guardian-lair snapshots supply these waypoints.
 --[[
-Original artwork is owned by Blizzard Entertainment. The Gethe archive is a public extraction of World of Warcraft client UI assets; it does not grant a new license to Blizzard artwork.
+The navigation and guardian artwork is owned by Blizzard Entertainment. The Gethe archive is a public extraction of World of Warcraft client UI assets; it does not grant a new license to Blizzard artwork.
 
-Cache/navigation artwork: retail 9.2.7 (45114), Gethe mirror commit
-d23deaf8f44a7d280dc974a5c9d5321c013db59b. The tracked map pin and navigation
-atlas were converted/cropped to TGA, preserving original colors and alpha:
-https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/MINIMAP/Minimap-Waypoint-MapPin-Tracked.PNG
+Navigation artwork: retail 9.2.7 (45114), Gethe mirror commit
+d23deaf8f44a7d280dc974a5c9d5321c013db59b. The navigation atlas was cropped
+to TGA, preserving original colors and alpha:
 https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/Navigation/IngameNavigationUI.PNG
 
-Guardian medallion and cache HUD glyphs are Blizzard game artwork from source commit
+Guardian medallion artwork is Blizzard game artwork from source commit
 00197f223180323ea7297c0157edbd1a43d2f99f:
-Textures/Nameplates/Quests/Loot/loot_bag.tga (CachePouch.tga)
 Textures/Nameplates/Quests/Kill/kill_elite.tga (GuardianFloating.tga)
 Source provenance and license: third_party/CacheWaypoints-ARTWORK.md.
 The upstream LICENSE excludes World of Warcraft artwork from its core MIT
 license: game textures are copyright Blizzard Entertainment and included only
 for use with the game. No upstream Lua is imported.
 
+The cache HUD, minimap and tally reuse the user's supplied chest.tga, prepared
+losslessly as Chest.blp. Its original pixels and alpha are retained.
 Detailed preparation: third_party/CacheWaypoints-ARTWORK.md.
 ]]
 DFRL:NewMod("Waypoints", 3, function()
@@ -43,9 +43,8 @@ DFRL:NewMod("Waypoints", 3, function()
             frameName = "DFRL_CacheWaypoint",
             title = "Cache",
             defaultSide = "LEFT",
-            mapArt = "MapPin.blp",
-            hudArt = "CachePouch.blp",
-            hudTexCoord = { 0, 119 / 128, 0, 119 / 128 },
+            hudArt = "Chest.blp",
+            hudTexCoord = { 0, 1, 0, 1 },
         },
         {
             kind = "guardian",
@@ -64,7 +63,6 @@ DFRL:NewMod("Waypoints", 3, function()
     local identity
     local runWasActive = false
     local inWorld, dirty, age = true, true, 0
-    local mapLayer, mapRegion
 
     local function Number(value) return type(value) == "number" and value - value == 0 end
     local function Integer(value, minimum) return Number(value) and value >= minimum and value == math.floor(value) end
@@ -425,7 +423,7 @@ DFRL:NewMod("Waypoints", 3, function()
     end
 
     local function MakeHUD(tracker)
-        tracker.entries, tracker.pins = {}, {}
+        tracker.entries = {}
         tracker.emptyEntries = tracker.entries
         local hud = CreateFrame("Frame", tracker.frameName, UIParent)
         hud:SetWidth(HUD_WIDTH)
@@ -435,7 +433,7 @@ DFRL:NewMod("Waypoints", 3, function()
         hud:Hide()
         FloatingRail(hud)
         local marker = hud:CreateTexture(nil, "ARTWORK")
-        marker:SetTexture(texturePath .. (tracker.hudArt or tracker.mapArt))
+        marker:SetTexture(texturePath .. tracker.hudArt)
         marker:SetWidth(32)
         marker:SetHeight(32)
         marker:SetTexCoord(unpack(tracker.hudTexCoord))
@@ -472,16 +470,6 @@ DFRL:NewMod("Waypoints", 3, function()
         MakeHUD(tracker)
     end
 
-    local function HidePin(pin)
-        if GameTooltip and GameTooltip:IsOwned(pin) then GameTooltip:Hide() end
-        if pin:IsShown() then pin:Hide() end
-        pin.entry = nil
-    end
-    local function HidePins(tracker)
-        for _, pin in ipairs(tracker.pins) do
-            HidePin(pin)
-        end
-    end
     local function Clear(tracker)
         if tracker.kind == "guardian" and DFRL.guardians then DFRL.guardians.Clear() end
         ClearMinimapPins(tracker.kind)
@@ -497,7 +485,6 @@ DFRL:NewMod("Waypoints", 3, function()
         end
         if tracker.pointer:IsShown() then tracker.pointer:Hide() end
         T.SetTextIfChanged(tracker.distanceText, "")
-        HidePins(tracker)
     end
     local function ClearAll()
         for _, tracker in ipairs(trackers) do
@@ -580,7 +567,6 @@ DFRL:NewMod("Waypoints", 3, function()
                     key = key,
                     id = entry.id,
                     index = guardian and entry.index or nil,
-                    name = guardian and entry.name or nil,
                     state = guardian and entry.state or nil,
                     x = entry.x,
                     y = entry.y,
@@ -641,117 +627,6 @@ DFRL:NewMod("Waypoints", 3, function()
             tracker.provisionalSelection = tracker.selected ~= nil
         end
         tracker.selectedKey = tracker.selected and tracker.selected.key or nil
-    end
-
-    local function PinTooltip(tracker, pin)
-        local entry = pin.entry
-        if not entry or not GameTooltip then return end
-        GameTooltip:SetText(DFRL.locale.Text(tracker.title), 1, 0.9, 0.58)
-        if tracker.kind == "guardian" then
-            if type(entry.name) == "string" and entry.name ~= "" then GameTooltip:AddLine(entry.name, 1, 1, 1) end
-            GameTooltip:AddLine(
-                DFRL.locale.Text(entry.state == "awake" and "Fighting; marker shows its lair" or "Waiting at its lair"),
-                0.8,
-                0.8,
-                0.8
-            )
-        end
-        GameTooltip:AddLine(
-            DFRL.locale.Text(entry.key == tracker.selectedKey and "Tracking this waypoint" or "Click to track"),
-            1,
-            1,
-            1
-        )
-        GameTooltip:Show()
-    end
-
-    local function MapPin(tracker, index)
-        local pin = tracker.pins[index]
-        if pin then return pin end
-        pin = CreateFrame("Button", nil, mapLayer)
-        pin:SetWidth(26)
-        pin:SetHeight(26)
-        pin:SetFrameLevel(mapLayer:GetFrameLevel() + 1)
-        pin:RegisterForClicks("LeftButtonUp")
-        local art = pin:CreateTexture(nil, "ARTWORK")
-        art:SetTexture(texturePath .. (tracker.mapArt or tracker.hudArt))
-        if not tracker.mapArt then art:SetTexCoord(unpack(tracker.hudTexCoord)) end
-        art:SetAllPoints(pin)
-        pin:SetScript("OnClick", function()
-            if not pin.entry then return end
-            tracker.selectedKey = pin.entry.key
-            tracker.provisionalSelection = nil
-            dirty = true
-        end)
-        pin:SetScript("OnEnter", function()
-            if not pin.entry or not GameTooltip then return end
-            GameTooltip:SetOwner(pin, "ANCHOR_RIGHT")
-            PinTooltip(tracker, pin)
-        end)
-        pin:SetScript("OnLeave", function()
-            if GameTooltip and GameTooltip:IsOwned(pin) then GameTooltip:Hide() end
-        end)
-        tracker.pins[index] = pin
-        return pin
-    end
-
-    local function UpdateMap()
-        local region = WorldMapDetailFrame or WorldMapButton
-        local parent = WorldMapButton or region
-        if not region or not parent or not WorldMapFrame or not WorldMapFrame:IsVisible() then
-            for _, tracker in ipairs(trackers) do
-                HidePins(tracker)
-            end
-            return
-        end
-        if not mapLayer then
-            mapLayer = CreateFrame("Frame", nil, parent)
-            mapLayer:SetFrameLevel(parent:GetFrameLevel() + 10)
-            mapLayer:EnableMouse(false)
-        end
-        if mapRegion ~= region then
-            mapRegion = region
-            mapLayer:SetAllPoints(region)
-        end
-        local width, height = region:GetWidth(), region:GetHeight()
-        if not Number(width) or not Number(height) or width <= 0 or height <= 0 then
-            for _, tracker in ipairs(trackers) do
-                HidePins(tracker)
-            end
-            return
-        end
-        for _, tracker in ipairs(trackers) do
-            local index = 0
-            if DFRL.display.Get(tracker.displayKey) then
-                for _, entry in ipairs(tracker.entries) do
-                    local x, y = navigation.Project(entry)
-                    if x then
-                        index = index + 1
-                        local pin = MapPin(tracker, index)
-                        pin.entry = entry
-                        local tracked = entry.key == tracker.selectedKey
-                        local size = tracked and 32 or 26
-                        if pin.drawnSize ~= size then
-                            pin:SetWidth(size)
-                            pin:SetHeight(size)
-                            pin:SetAlpha(tracked and 1 or 0.75)
-                            pin.drawnSize = size
-                        end
-                        local drawnX, drawnY = x * width, -y * height
-                        if pin.drawnRegion ~= region or pin.drawnX ~= drawnX or pin.drawnY ~= drawnY then
-                            pin:ClearAllPoints()
-                            pin:SetPoint("CENTER", region, "TOPLEFT", drawnX, drawnY)
-                            pin.drawnRegion, pin.drawnX, pin.drawnY = region, drawnX, drawnY
-                        end
-                        if not pin:IsShown() then pin:Show() end
-                        if GameTooltip and GameTooltip:IsOwned(pin) then PinTooltip(tracker, pin) end
-                    end
-                end
-            end
-            for unused = index + 1, table.getn(tracker.pins) do
-                HidePin(tracker.pins[unused])
-            end
-        end
     end
 
     local function Rotate(texture, angle)
@@ -841,7 +716,7 @@ DFRL:NewMod("Waypoints", 3, function()
         local playing = Native("AZS_GetPhase") == "playing"
         local moving = east and (east ~= 0 or north ~= 0)
         local bearing = moving and metric and math.atan2(east, north) or nil
-        -- Only the paint values blend. Selection and map pins keep native data,
+        -- Only the paint values blend. Selection and minimap pins keep native data,
         -- and interpolation stops at each received sample without prediction.
         distance = Blend(presentation, "distance", distance, stamp, elapsed, false, playing)
         bearing = Blend(presentation, "bearing", bearing, stamp, elapsed, true, playing)
@@ -911,7 +786,6 @@ DFRL:NewMod("Waypoints", 3, function()
         for _, tracker in ipairs(trackers) do
             Choose(tracker)
         end
-        UpdateMap()
     end
 
     local controller = CreateFrame("Frame", "DFRL_CacheWaypointReader", UIParent)
@@ -920,7 +794,6 @@ DFRL:NewMod("Waypoints", 3, function()
         "PLAYER_ENTERING_WORLD",
         "PLAYER_LEAVING_WORLD",
         "PLAYER_LOGOUT",
-        "WORLD_MAP_UPDATE",
         "ZONE_CHANGED_NEW_AREA",
         "ZONE_CHANGED_INDOORS",
         "ZONE_CHANGED",
@@ -973,7 +846,7 @@ DFRL:NewMod("Waypoints", 3, function()
                 if not received then return end
             end
         end
-        -- Defer reads until the native parser and map event handlers finish.
+        -- Defer reads until the native parser and zone/minimap handlers finish.
         dirty = true
     end)
     controller:SetScript("OnUpdate", function()
@@ -995,7 +868,6 @@ DFRL:NewMod("Waypoints", 3, function()
     end)
     DFRL.display.Listen(function()
         -- Visibility drafts do not retire snapshots, selections or calibration.
-        UpdateMap()
         for _, tracker in ipairs(trackers) do
             LayoutHUD(tracker)
             UpdateGuide(tracker)

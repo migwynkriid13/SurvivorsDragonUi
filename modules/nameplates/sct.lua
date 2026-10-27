@@ -597,6 +597,22 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         end
     end
 
+    -- The accepted pet view supplies exact native localized names and its
+    -- resolved portrait paths; the shared resolver owns only display metadata.
+    local summonIcons, summonLanguage = {}, nil
+    local function ClearSummonIcons()
+        summonIcons, summonLanguage = {}, nil
+    end
+    local function SummonIcons()
+        if summonLanguage ~= DFRL.locale.code then
+            ClearSummonIcons()
+            summonLanguage = DFRL.locale.code
+        end
+        return summonIcons
+    end
+    function sct.LearnSummonIcon(name, texture) LearnSpellTexture(SummonIcons(), name, texture) end
+    DFRL.locale.Listen(ClearSummonIcons)
+
     local itemIcons, itemRetryAt, equipmentScanAt, itemLanguage = {}, {}, nil, nil
     local function ClearItemIcons()
         itemIcons, itemRetryAt, equipmentScanAt, itemLanguage = {}, {}, nil, nil
@@ -667,6 +683,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     end
     local function ResetLearnedSpellTextures()
         ClearItemIcons()
+        ClearSummonIcons()
         auraSpellTextures, talentSpellTextures = {}, {}
         iconSourcesDirty = { talents = true, debuffs = true, target = true, mouseover = true }
         iconScanAt = nil
@@ -849,6 +866,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                 local aliases = spellNames and spellNames[info.spell]
                 -- Observed auras outrank catalog and talent artwork. Preserve
                 -- ambiguity within each tier instead of choosing a random icon.
+                if texture == nil then texture = SummonIcons()[info.spell] end
                 if texture == nil then texture = NativeGameTexture(info.spell, aliases) end
                 if texture == nil then texture = NativeItemIcon(info.spell) end
                 if texture == nil then texture = talentSpellTextures[info.spell] end
@@ -1451,6 +1469,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             if arg1 == "AZSDEBUFFS" then
                 iconSourcesDirty.debuffs = true
             elseif arg1 == "AZSZONE" then
+                ClearSummonIcons()
                 iconSourcesDirty.debuffs = true
             end
         elseif event == "CVAR_UPDATE" then
