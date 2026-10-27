@@ -1,6 +1,6 @@
 -- Official cache and occupied guardian-lair snapshots supply these waypoints.
 --[[
-Original artwork is owned by Blizzard Entertainment. The Gethe archive is a public extraction of World of Warcraft client UI assets; it does not grant a new license to Blizzard artwork.
+The tracked map pin, navigation and guardian artwork is owned by Blizzard Entertainment. The Gethe archive is a public extraction of World of Warcraft client UI assets; it does not grant a new license to Blizzard artwork.
 
 Cache/navigation artwork: retail 9.2.7 (45114), Gethe mirror commit
 d23deaf8f44a7d280dc974a5c9d5321c013db59b. The tracked map pin and navigation
@@ -8,15 +8,16 @@ atlas were converted/cropped to TGA, preserving original colors and alpha:
 https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/MINIMAP/Minimap-Waypoint-MapPin-Tracked.PNG
 https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/Navigation/IngameNavigationUI.PNG
 
-Guardian medallion and cache HUD glyphs are Blizzard game artwork from source commit
+Guardian medallion artwork is Blizzard game artwork from source commit
 00197f223180323ea7297c0157edbd1a43d2f99f:
-Textures/Nameplates/Quests/Loot/loot_bag.tga (CachePouch.tga)
 Textures/Nameplates/Quests/Kill/kill_elite.tga (GuardianFloating.tga)
 Source provenance and license: third_party/CacheWaypoints-ARTWORK.md.
 The upstream LICENSE excludes World of Warcraft artwork from its core MIT
 license: game textures are copyright Blizzard Entertainment and included only
 for use with the game. No upstream Lua is imported.
 
+The cache HUD, minimap and tally reuse the user's supplied chest.tga, prepared
+losslessly as Chest.blp. Its original pixels and alpha are retained.
 Detailed preparation: third_party/CacheWaypoints-ARTWORK.md.
 ]]
 DFRL:NewMod("Waypoints", 3, function()
@@ -44,8 +45,8 @@ DFRL:NewMod("Waypoints", 3, function()
             title = "Cache",
             defaultSide = "LEFT",
             mapArt = "MapPin.blp",
-            hudArt = "CachePouch.blp",
-            hudTexCoord = { 0, 119 / 128, 0, 119 / 128 },
+            hudArt = "Chest.blp",
+            hudTexCoord = { 0, 1, 0, 1 },
         },
         {
             kind = "guardian",

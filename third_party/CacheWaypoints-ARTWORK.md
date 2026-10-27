@@ -1,6 +1,6 @@
 # Cache and guardian waypoint artwork
 
-The icon files contain actual Blizzard World of Warcraft waypoint artwork. Cache/navigation textures were downloaded from the Gethe UI texture mirror on 2026-10-15. The guardian gold-dragon/skull medallion comes from the pinned game-art source below and is shared by the HUD, minimap, world map and tracker header. They are not generated approximations.
+The tracked-map and navigation textures use Blizzard World of Warcraft artwork downloaded from the Gethe UI texture mirror on 2026-10-15. The guardian gold-dragon/skull medallion comes from the pinned game-art source below and is shared by the HUD, minimap, world map and tracker header. The cache chest is the separate user-supplied artwork documented below. These icons are not generated approximations.
 
 Original artwork and World of Warcraft are copyright Blizzard Entertainment. The mirror provides access to the source files; this attribution does not assert a separate redistribution license.
 
@@ -31,7 +31,26 @@ The PNG originals were visually inspected before cropping. Original colors and t
 
 Pixel rectangles use a top-left origin and exclusive right/bottom edges.
 
-## Floating-label HUD icons
+## User-supplied cache chest
+
+The user supplied `/Users/sebastijan/Downloads/chest.tga` on 2026-10-27 and
+selected it for the cache guidance HUD, bottom cache-cost counter and minimap.
+Its source SHA-256 is
+`7417f8036d48a5df64497673f5fa93b07f907d978b0e347bbe35fec604caae1b`.
+The 32-by-32 RGBA original is retained byte-for-byte as
+`media/tex/waypoint/Chest.tga`, outside the runtime manifest. No further upstream
+source is established for that supplied file.
+
+`scripts/prepare_client_textures.py` prepares the shared `Chest.blp` without
+cropping, scaling, recoloring or alpha changes. Every decoded RGB/alpha byte
+matches the source, and full `0..1` UVs display it at the existing HUD/minimap/
+counter sizes of 32/16/18 units. It replaces the former HUD/minimap pouch and
+native tally loot cursor. `CachePouch.blp` is removed from the runtime manifest;
+the old TGA preparation input is retained. The world-map cache diamond is
+unchanged. The local asset receipt and retired BLP backup are under
+`/tmp/sdui-cache-chest-20261027/`; this is image-data evidence, not game execution.
+
+## Guardian and former cache HUD artwork
 
 The selected HUD design uses actual Blizzard game textures distributed by [NeticSoul/DragonUI](https://github.com/NeticSoul/DragonUI/tree/00197f223180323ea7297c0157edbd1a43d2f99f), pinned to commit `00197f223180323ea7297c0157edbd1a43d2f99f`:
 
@@ -53,7 +72,7 @@ Square sampling preserves each glyph's proportions inside its 32-by-32 HUD icon 
 ## Drawing recommendations
 
 - Floating waypoint guides default to 190 by 46 with transparent backgrounds and only a fine muted-gold stripe along the bottom. Draw the stripe at 190 by 1 using native `Interface\\Buttons\\WHITE8X8`, ordinary `BLEND` and `SetVertexColor(186 / 255, 148 / 255, 87 / 255, 85 / 255)`. Keep the stripe's bottom-left anchor at the HUD's bottom-left corner. Do not draw a dark fill, enclosing border or native vertex gradient. The previous `FloatingRail.tga` is removed from the source and runtime manifest. Existing timer artwork and its [WidgetStatusBar attribution](WidgetStatusBar-SOURCE.md) remain unchanged.
-- Cache HUD marker: draw `CachePouch.tga` in a 32-by-32 field with `SetTexCoord(0, 119 / 128, 0, 119 / 128)`. Keep the loot pouch upright.
+- Cache HUD marker: draw `Chest.blp` in its existing 32-by-32 field with `SetTexCoord(0, 1, 0, 1)`. Keep the chest upright.
 - Guardian HUD marker: draw `GuardianFloating.tga` in a 32-by-32 field with `SetTexCoord(0, 65 / 128, 0, 65 / 128)`. Keep the gold dragon and skull upright.
 - Place a left-aligned DEFAULT 13 destination title above DEFAULT 15 distance beside the icon, with outline and black shadow. Rotate the arrow in place to the right of the text.
 - Direction arrow: retain the full original `HudArrow.tga`. The selected preview has a 19-pixel-wide visible arrow; increase that visible width by 20% to 22.8. The original source glyph is 24 pixels wide on a 32-pixel canvas, so draw the full texture at `19 * 1.2 * 32 / 24 = 30.4` square. Its artwork points upward at zero rotation and is centered at `(16, 16)`. Both guides share this size and the existing supported texture-coordinate rotation, without assuming retail `Texture:SetRotation`.
@@ -63,4 +82,4 @@ Square sampling preserves each glyph's proportions inside its 32-by-32 HUD icon 
 
 These assets provide artwork only. They do not add native waypoint APIs, enemy/cache coordinates, or world-to-screen projection capabilities to the 1.12 client.
 
-The minimap guardian and available-cache markers also reuse the floating HUD glyphs above: `GuardianFloating.tga` with the `0..65/128` crop, and `CachePouch.tga` with `0..119/128`, drawn at 20 by 20 local units for each guardian and 16 by 16 for caches. The world-map guardian pin reuses the same medallion and crop; the cache world-map pin retains its separate diamond texture. No additional artwork is needed.
+The minimap guardian and available-cache markers also reuse their floating HUD glyphs: `GuardianFloating.blp` with the `0..65/128` crop, and `Chest.blp` with full `0..1` coordinates, drawn at 20 by 20 local units for each guardian and 16 by 16 for caches. The world-map guardian pin reuses the same medallion and crop; the cache world-map pin retains its separate diamond texture. The same chest also serves the bottom cache-cost counter; no per-view image is needed.

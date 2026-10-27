@@ -7,7 +7,7 @@ DFRL:NewMod("RunTimers", 5, function()
     local DEBUFF_SIZE, DEBUFF_GAP = 18, 4
     local SKULL_ICON = "Interface\\TargetingFrame\\UI-TargetingFrame-Skull"
     local ATTACK_ICON = "Interface\\Cursor\\Attack.blp"
-    local CACHE_ICON = "Interface\\Cursor\\LootAll.blp"
+    local CACHE_ICON = DFRL:GetInfoOrCons("tex") .. "waypoint\\Chest.blp"
     local COINS_ICON = DFRL:GetInfoOrCons("tex") .. "tally\\Coins.blp"
     local MARKER_SIZE = 18
     local ACTIVE_GLOW_PERIOD = 2.4
@@ -2095,7 +2095,7 @@ DFRL:NewMod("RunTimers", 5, function()
     local zoneSequence, zoneRunPending
     local scheduleBarrier = -1
     local reloading = false
-    local render = { emptySchedule = {}, readPending = true }
+    local render = { emptySchedule = {}, readPending = true, unitSequence = 0, unitBarrier = -1 }
     -- Only ReloadUI writes this handoff. Consume it once, keeping an initial
     -- nil phase from destroying it before the native API has replayed AZSRUN.
     local scheduleCache = _G.SurvivorsDragonUiBossSchedule
@@ -2245,6 +2245,26 @@ DFRL:NewMod("RunTimers", 5, function()
                 render.visibleBosses[key] = nil
             end
         end
+    end
+
+    local function RetireEncounters(sequence)
+        if sequence > render.unitBarrier then
+            render.unitBarrier, refreshRows = sequence, true
+        end
+        if render.encountersRetired then return end
+        ClearRows()
+        if render.encounters then
+            for index in ipairs(render.encounters) do
+                render.encounters[index] = nil
+            end
+            table.setn(render.encounters, 0)
+        end
+        if render.encounterSeen then
+            for key in pairs(render.encounterSeen) do
+                render.encounterSeen[key] = nil
+            end
+        end
+        render.encountersRetired, refreshRows = true, true
     end
 
     local function ShowMarkerGlow(marker, shown)
@@ -2628,7 +2648,10 @@ DFRL:NewMod("RunTimers", 5, function()
         end
     end
 
-    local function EncounterRows()
+    local function EncounterRows(phase)
+        -- Same-VM retries retain AZS_UNITS and its old finite timestamp.
+        -- A terminal/ready phase or retired publication cannot own new rows.
+        if phase == "dead" or phase == "ready" or render.unitSequence <= render.unitBarrier then return nil end
         -- The API initializes its unit table to {} in each new Lua VM.
         -- Until an actual unit snapshot arrives after /reload, an empty
         -- getter result does not mean the native encounters disappeared.
@@ -2642,6 +2665,9 @@ DFRL:NewMod("RunTimers", 5, function()
         if type(bosses) ~= "table" or (showGuardians and type(guardians) ~= "table") then return nil end
         local entries, seen = render.encounters or {}, render.encounterSeen or {}
         render.encounters, render.encounterSeen = entries, seen
+        -- A fresh candidate may fail validation after partially copying rows;
+        -- the next retirement must clear those copies as well.
+        render.encountersRetired = nil
         for key in pairs(seen) do
             seen[key] = nil
         end
@@ -2893,9 +2919,9 @@ DFRL:NewMod("RunTimers", 5, function()
             Restore("bosses")
             return
         end
-        local entries, seen = EncounterRows()
+        local entries, seen = EncounterRows(phase)
         if not entries then
-            ClearRows()
+            if not render.encountersRetired then ClearRows() end
             Restore("bosses")
             return
         end
@@ -3034,6 +3060,7 @@ DFRL:NewMod("RunTimers", 5, function()
         local zoneBoundary = zoneSequence
         if zoneBoundary then
             InvalidateSchedule(zoneBoundary)
+            RetireEncounters(zoneBoundary)
             zoneSequence = nil
             zoneRunPending = zoneBoundary
             previousPhase, previousNativeTime = nil, nil
@@ -3050,7 +3077,12 @@ DFRL:NewMod("RunTimers", 5, function()
             )
         then
             InvalidateSchedule(runSequence)
+            RetireEncounters(runSequence)
         end
+        -- Death is the native run phase, not temporary co-op downed health.
+        -- Reject late inactive-run units, but preserve publications after a new
+        -- zone while its matching run packet has yet to replace the old phase.
+        if not zoneRunPending and (phase == "dead" or phase == "ready") then RetireEncounters(packetSequence) end
         if not zoneRunPending then
             previousPhase = phase
             if IsNumber(nativeTime) then previousNativeTime = nativeTime end
@@ -3121,6 +3153,7 @@ DFRL:NewMod("RunTimers", 5, function()
         local phase = Read("AZS_GetPhase")
         if not PHASES[phase] then
             if phase ~= nil then InvalidateSchedule(packetSequence) end
+            if previousPhase then RetireEncounters(packetSequence) end
             ReleaseHUD()
             return
         end
@@ -3184,6 +3217,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 _G.SurvivorsDragonUiBossSchedule = nil
             end
             inWorld = false
+            RetireEncounters(packetSequence)
             ReleaseHUD()
             return
         end
@@ -3219,6 +3253,8 @@ DFRL:NewMod("RunTimers", 5, function()
                 runSequence = packetSequence
             elseif arg1 == "AZSBOSSES" then
                 scheduleSequence = packetSequence
+            elseif arg1 == "AZSUNITS" then
+                render.unitSequence = packetSequence
             end
             refreshRows, render.readPending = true, true
             -- The native parser may run after this handler. Read all prefixes

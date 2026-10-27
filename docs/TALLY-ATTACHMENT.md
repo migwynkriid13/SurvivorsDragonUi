@@ -12,6 +12,11 @@ preparation input retains the original pixels. The shared
 fitter reserves its icon width, the tooltip anchors above the icon, and the
 affordability halo includes both the coin and amount with its original offset.
 
+The cache-cost counter uses the supplied chest artwork from
+`media/tex/waypoint/Chest.blp`, shared with cache guidance and minimap markers.
+It retains its 18-unit icon, full texture coordinates, four-unit text gap,
+native `AZS_RUN.chest` value and tooltip above the icon.
+
 ## Attached and detached artwork
 
 Attached artwork has an open top, sharing the action bar's lower silver edge.

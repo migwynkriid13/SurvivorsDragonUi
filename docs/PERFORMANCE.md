@@ -68,6 +68,16 @@ tally/guardian work and failed native-preference restoration remain necessary.
 These switches reuse the current reader without adding an updater; see
 [RUN-TIMER.md](RUN-TIMER.md).
 
+Boss encounter retirement also uses that reader. Native `dead`/`ready` phases,
+new-zone receipts, clock rollback and world cleanup clear active rows, debuffs,
+hovers and copied entries once. Subsequent retired refreshes skip encounter
+getters and repeated cleanup until a fresh `AZSUNITS` receipt is eligible.
+Two session-only receipt counters and one flag add no event, updater, region,
+texture/material state or saved data. Existing native visibility restoration
+remains retryable; this is source-level lifecycle evidence, without measured
+FPS or live death/retry proof. See the boss-health lifecycle in
+[RUN-TIMER.md](RUN-TIMER.md#boss-health-on-death-and-restart).
+
 All 24 Layout groups were traced in the installed addon checkout. Layout uses
 native `Hide`, so the group and its descendants leave visible rendering. Hiding
 does not unload pooled regions or unregister the game's own event handlers.
@@ -362,6 +372,15 @@ failure recovery and performance remain unverified in the running client.
 - Jewelry hover cards retain native retries and only repeat layout when their
   text, owner or effective scale changes.
 
+The cache guide, minimap markers and bottom cache-cost counter share the supplied
+32-by-32 `waypoint/Chest.blp`, preserving their existing 32-, 16- and 18-unit
+regions respectively. Full UVs retain the source chest and transparency without
+cropping or baking another image. Textures still bind only when their existing
+views/pins are created. Region counts, visible bounds, polling, hidden-view
+guards and world-map diamonds stay unchanged; no updater or rendering pass is
+added. Lossless source-pixel comparison does not establish in-game appearance
+or FPS.
+
 ## Jewelry rendering
 
 Jewelry keeps its existing magnified icon crop and stepped circular outline:
@@ -373,7 +392,21 @@ by exact texture path, then strip, then slot. Equal images with the same UV
 window are adjacent for native batching. Their slot-relative anchors, dimensions,
 crop and order within each icon stay the same. The icons cannot overlap: their
 32-unit canvases have at least 43 units between centers, including while detached.
-Cooldowns and gold rims retain their original layers above the icons.
+Cooldowns and circular rims retain their original layers above the icons.
+
+Equipped rarity adds one optional inventory-quality read per populated slot to
+the existing five-Hz equipment refresh. Native color lookup retries missing
+metadata and otherwise runs only when quality changes; empty slots skip it.
+The same five rim regions use a neutral shaded copy at `(664,56)-(736,128)`
+inside the existing atlas and change vertex tint only when RGB changes. Stock
+and neutral UVs switch only on known-rarity availability. Empty slots restore
+the original gold crop and white vertex tint. The pooled effects card changes
+text color before its unchanged-text measurement shortcut, without adding text
+regions or remeasuring for color alone. Hidden/off views stop these reads and
+writes through their existing controller. Atlas dimensions, file count,
+fourteen icon strips, alpha coverage, material texture and visible-region count
+stay unchanged; mixed empty/equipped slots can use two rim UV windows. No GPU
+or FPS result is inferred from these source counts.
 
 The base renderer additionally sorts equal-texture quads using an unstable
 native-style sort. For an isolated batch of two equal icons, that sort leaves

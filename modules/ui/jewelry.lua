@@ -1,6 +1,7 @@
 -- Five equipped jewelry sockets, attached by default and optionally independent.
 --[[
-The selected thin-bezel design keeps the Blizzard gold circular rim artwork.
+The selected thin-bezel design keeps the Blizzard circular rim artwork, with
+native rarity colors for equipped items and the original gold for empty slots.
 SocketRail.blp joins all upper socket arches and straight spans in one texture
 using pixels from the existing HDActionBar.tga. The original bar texture is
 unchanged; only its narrow top strip switches while this jewelry row is visible.
@@ -302,7 +303,6 @@ DFRL:NewMod("Jewelry", 4, function()
             effectPanel:Hide()
             effectText = effectPanel:CreateFontString(nil, "OVERLAY")
             T.SetFont(effectText, 13, "")
-            effectText:SetTextColor(0, 1, 0)
             effectText:SetShadowColor(0, 0, 0, 1)
             effectText:SetShadowOffset(1, -1)
             effectText:SetJustifyH("LEFT")
@@ -349,6 +349,13 @@ DFRL:NewMod("Jewelry", 4, function()
             return
         end
         local panel = GetEffectPanel()
+        local red, green, blue = slot.qualityR or 0, slot.qualityG or 1, slot.qualityB or 0
+        -- Color is independent of text/measurements: replacing an item can
+        -- change its rarity without changing the native effect description.
+        if panel.qualityR ~= red or panel.qualityG ~= green or panel.qualityB ~= blue then
+            effectText:SetTextColor(red, green, blue)
+            panel.qualityR, panel.qualityG, panel.qualityB = red, green, blue
+        end
         local scale = panel:GetEffectiveScale()
         if effectSlot == slot and effectValue == text and T.NearlyEqual(effectScale, scale) then
             PlaceEffectTooltip(slot)
@@ -514,6 +521,58 @@ DFRL:NewMod("Jewelry", 4, function()
         -- centered in this square crop rather than the full source rectangle.
         -- Compensate the crop size to preserve the visible rim's diameter.
         rim:SetTexCoord(106 / 1024, 178 / 1024, 56 / 256, 128 / 256)
+        slot.rim = rim
+    end
+    local function SetQuality(slot, quality, red, green, blue)
+        if (slot.qualityR ~= nil) ~= (red ~= nil) then
+            -- The neutral copy keeps the same shading and alpha without
+            -- multiplying rarity colors by the stock gold's yellow channels.
+            local left = red ~= nil and 664 or 106
+            slot.rim:SetTexCoord(left / 1024, (left + 72) / 1024, 56 / 256, 128 / 256)
+        end
+        if
+            (slot.qualityR or 1) ~= (red or 1)
+            or (slot.qualityG or 1) ~= (green or 1)
+            or (slot.qualityB or 1) ~= (blue or 1)
+        then
+            slot.rim:SetVertexColor(red or 1, green or 1, blue or 1, 1)
+        end
+        slot.quality, slot.qualityR, slot.qualityG, slot.qualityB = quality, red, green, blue
+    end
+    local function UpdateQuality(slot)
+        if type(GetInventoryItemQuality) == "function" then
+            local ok, quality = pcall(GetInventoryItemQuality, "player", slot.id)
+            if ok and Number(quality) and quality >= 0 and quality == math.floor(quality) then
+                if slot.quality == quality and slot.qualityR ~= nil then return end
+                local red, green, blue
+                if type(GetItemQualityColor) == "function" then
+                    ok, red, green, blue = pcall(GetItemQualityColor, quality)
+                else
+                    local color = _G["ITEM_QUALITY" .. quality .. "_COLOR"]
+                    if type(color) == "table" then
+                        red, green, blue = color.r, color.g, color.b
+                    end
+                end
+                if
+                    ok
+                    and Number(red)
+                    and red >= 0
+                    and red <= 1
+                    and Number(green)
+                    and green >= 0
+                    and green <= 1
+                    and Number(blue)
+                    and blue >= 0
+                    and blue <= 1
+                then
+                    SetQuality(slot, quality, red, green, blue)
+                    return
+                end
+            end
+        end
+        -- Unavailable metadata retries at the existing equipment cadence.
+        -- Never retain another item's rarity or suppress an otherwise valid icon.
+        SetQuality(slot)
     end
     local function ClearSlot(slot)
         slot.placeholder:Hide()
@@ -521,6 +580,7 @@ DFRL:NewMod("Jewelry", 4, function()
         slot.texture, slot.artTexture = nil, nil
         slot.cooldown:Hide()
         slot.start, slot.duration, slot.painted = nil, nil, nil
+        SetQuality(slot)
         HideTooltip(slot)
     end
     local function Clear()
@@ -650,6 +710,7 @@ DFRL:NewMod("Jewelry", 4, function()
             if ok and type(texture) == "string" and texture ~= "" then
                 slot.placeholder:Hide()
                 if slot.texture ~= texture then SetIcon(slot, texture) end
+                UpdateQuality(slot)
                 UpdateCooldown(slot)
                 if hoveredSlot == slot then ShowTooltip(slot) end
             else
