@@ -44,6 +44,11 @@ preview, Confirm, Cancel, profile and full-reset paths.
 
 Use the left/right side handles on **DPS meter** in Layout to change its width without scaling rows or icons. Top/bottom handles change **Abilities shown**, using the same 1–10 limit as the settings control. Corner handles retain proportional scaling. **Font size** remains under Damage meter, from **8 to 18**, default **11**. All changes preview and use Confirm, Cancel, profiles, discard and resets.
 
+Ability names and row values use the resolved native DEFAULT font with OUTLINE,
+matching guardian/chat text, and the shared chat shadow: black at `(1, -1)`.
+The outline stays applied when changing font size, loading profiles or resetting.
+The gold header retains its original styling.
+
 The default scale remains **0.8** and width **240** UI units, with side-width limits **120–960**. Its bottom-right corner sits at the screen's bottom-right corner with no offset. Shared layout registration captures this scale before applying saved geometry. Defaults apply to unset geometry and both full resets; confirmed/draft positions and scales retain the shared rules. The default corner stays fixed when the ability count changes. Active side dragging holds the opposite edge fixed.
 
 Width now lives beside scale and position in the existing Layout record. The obsolete `meterWidth` display field and slider are removed. `meterFontSize` remains a finite, clamped/rounded display integer; both normalizers participate in named profiles and the existing save/discard lifecycle. No new SavedVariable or geometry migration is needed. Hidden/off views accept required root geometry but defer presentation, and resizing never starts native collection while the meter is off.

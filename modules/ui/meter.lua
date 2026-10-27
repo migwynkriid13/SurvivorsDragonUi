@@ -106,21 +106,22 @@ DFRL:NewMod("DamageMeter", 7, function()
         end
         return text ~= "" and text or DFRL.locale.Text(modes[mode].title)
     end
-    local function Label(parent, size, justify)
+    local function Label(parent, size, justify, flags)
         local label = parent:CreateFontString(nil, "OVERLAY")
-        T.SetFont(label, size, "")
+        label.meterFontFlags = flags or ""
+        T.SetFont(label, size, label.meterFontFlags)
         if not label:GetFont() then ready = false end
         label:SetJustifyH(justify or "LEFT")
         label:SetJustifyV("MIDDLE")
         label:SetTextColor(1, 1, 1)
-        label:SetShadowColor(0, 0, 0, 1)
-        label:SetShadowOffset(1, -1)
+        T.SetChatShadow(label)
         return label
     end
     local function SizeLabel(label, size, height)
-        T.SetFont(label, size, "")
-        local _, applied = label:GetFont()
-        if not T.NearlyEqual(applied, size) then return false end
+        local flags = label.meterFontFlags or ""
+        T.SetFont(label, size, flags)
+        local _, applied, appliedFlags = label:GetFont()
+        if not T.NearlyEqual(applied, size) or (appliedFlags or "") ~= flags then return false end
         if height and not T.NearlyEqual(label:GetHeight(), height) then label:SetHeight(height) end
         return true
     end
@@ -410,11 +411,11 @@ DFRL:NewMod("DamageMeter", 7, function()
         labels:SetAllPoints(row)
         labels:SetFrameLevel(bar:GetFrameLevel() + 1)
         labels:EnableMouse(false)
-        row.name = Label(labels, fontSize)
+        row.name = Label(labels, fontSize, "LEFT", "OUTLINE")
         row.name:SetPoint("TOPLEFT", labels, "TOPLEFT", 35, 1)
         row.name:SetWidth(math.max(1, width - 232))
         row.name:SetHeight(fontSize + 5)
-        row.value = Label(labels, fontSize, "RIGHT")
+        row.value = Label(labels, fontSize, "RIGHT", "OUTLINE")
         row.value:SetPoint("TOPRIGHT", labels, "TOPRIGHT", -2, 1)
         row.value:SetWidth(174)
         row.value:SetHeight(fontSize + 5)

@@ -247,6 +247,18 @@ decorative updater; their game-owned window/keyboard behavior stays intact.
 
 ## Meter drawing audit — 2026-10-26
 
+Ability names and numeric row values now use DEFAULT/OUTLINE plus the shared
+black chat shadow at `(1, -1)`, matching guardian/chat text. Each label retains
+its font flags so existing size-change retries preserve the outline and require
+both size and flags to match before caching success. Shadow setup reuses the
+shared changed-only helper during label creation. There is no new per-refresh
+font/shadow write, measurement, frame, FontString, texture, updater or saved state.
+The existing two FontStrings per row remain; outlined glyphs cover additional
+pixels, so unchanged region counts do not establish equal GPU cost or FPS.
+Meter header styling, row geometry, font-size preferences and hidden/off guards
+remain unchanged. Source/diff review and pinned formatting only; no local tests,
+standalone validation or addon/game execution.
+
 The custom meter now defaults off through `meterEnabled`. Off hides/clears the
 view, releases its native HUD preference and detaches its existing OnUpdate;
 no meter/phase getters, icon work or drawing run. Off also unsubscribes from native
