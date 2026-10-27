@@ -110,10 +110,25 @@ DFRL:NewMod("NameplateStyle", 5, function()
         end
     end
 
-    local function Update(plate, data, namesOnly)
+    local function Update(plate, data, namesOnly, fontSize)
         if not plate:IsShown() then return end
         local style = data.style
         if not style then return end
+
+        if style.fontSize ~= fontSize then
+            style.fontSize = nil
+            local ready = T.SetFont(style.name, fontSize, "OUTLINE")
+            -- Preserve the original text box proportions and bottom anchor,
+            -- without resizing the native plate or its health/click geometry.
+            -- Failed native font assignments stay retryable on visible refresh.
+            if ready then
+                local ratio = fontSize / FONT_SIZE
+                local width, height = WIDTH * 2 * ratio, 10 * ratio
+                if not T.NearlyEqual(style.name:GetWidth(), width) then style.name:SetWidth(width) end
+                if not T.NearlyEqual(style.name:GetHeight(), height) then style.name:SetHeight(height) end
+                style.fontSize = fontSize
+            end
+        end
 
         -- Native regions retain their contents and shown state for SCT and the
         -- client lifecycle. Suppress their pixels rather than changing data.

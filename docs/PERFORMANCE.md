@@ -488,6 +488,17 @@ artwork. The lazy settings dialog adds one standard checkbox: one button,
 four texture regions (box, check, hover and divider) and two text regions,
 reusing existing art and drawing only while its page is visible.
 
+The nameplate **Font size** row reuses the numeric editor control and cached
+display listener. A shown label changes its font and proportional text-box
+width/height only when the effective size changes; failed font assignments
+remain retryable without caching success. Masked plates defer the work until
+shown. No text measurement, new plate region, native geometry change, event
+or updater is added. Larger glyphs cover more screen pixels and can require
+additional native glyph-atlas entries; this is not an FPS or memory saving.
+The lazy editor adds one container, two styled buttons and their two caption
+frames: 22 existing-art texture regions and five FontStrings after opening it.
+Those controls draw only with the Nameplates settings page.
+
 These are source-level work and visible-region observations, not measured
 draw calls, GPU memory, FPS or native world-text parity. Source/diff review and
 pinned formatting only; no local tests, standalone validation or addon/game

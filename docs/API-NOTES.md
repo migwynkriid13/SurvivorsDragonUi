@@ -323,6 +323,15 @@ and both full resets. It works in every SCT mode. V still shows or hides enemy
 names, Shift-V retains friendly visibility and **Only bosses and guardians**
 continues to exclude ordinary enemy plates.
 
+**Font size** in the same category changes the custom name label in both
+regular and names-only plates. `nameplateFontSize` defaults to the original 9,
+rounds/clamps finite values to 6–32 and shares the same display transaction,
+profiles and resets. The label keeps DEFAULT/OUTLINE, its original bottom
+anchor and proportional text-box dimensions. Native plate/bar/click geometry,
+SCT positions and world-rendered overhead names are unchanged. Masked plates
+defer the font update; unchanged successful assignments skip writes and failed
+font assignments remain retryable, including when a preview is discarded.
+
 Names only reuses each plate's current name label and native reaction color.
 It hides the custom health bar, black background, shadow and raid icon. The
 label's overlay is a sibling of the cosmetic health bar so hiding that bar

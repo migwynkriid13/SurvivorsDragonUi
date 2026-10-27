@@ -838,6 +838,12 @@ DFRL:NewMod("RunTimers", 5, function()
                 label = "Nameplates",
                 options = {
                     {
+                        "nameplateFontSize",
+                        "Font size",
+                        "Change name text size, including Names only.",
+                        step = 1,
+                    },
+                    {
                         "nameplatesNamesOnly",
                         "Names only",
                         "Hide health bars and keep names. Custom combat text still works.",

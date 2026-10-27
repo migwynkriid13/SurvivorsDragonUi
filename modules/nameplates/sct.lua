@@ -72,6 +72,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local customEnabled, changingSettings = false, false
     local damageIcons = DFRL.display.Get("damageIcons")
     local nameplatesNamesOnly = DFRL.display.Get("nameplatesNamesOnly")
+    local nameplateFontSize = DFRL.display.Get("nameplateFontSize")
     local msbtStyle = DFRL.display.Get("sctMSBTStyle")
     local textScale = DFRL.display.Get("sctScale")
     -- Keep V's visible request separate from the backing coordinate feed. The
@@ -462,7 +463,9 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         UpdatePresentation(plate, data, forcePresentation)
         -- Hidden tracking still samples native data, but its skin has no pixels
         -- to refresh. Unmasking updates the skin in this same callback.
-        if plateStyle and not data.presentationMasked then plateStyle.Update(plate, data, nameplatesNamesOnly) end
+        if plateStyle and not data.presentationMasked then
+            plateStyle.Update(plate, data, nameplatesNamesOnly, nameplateFontSize)
+        end
         if not IsShownEnemy(plate, data) then
             RetirePlate(plate)
             return
@@ -1176,6 +1179,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             NotifySettings()
         end
         nameplatesNamesOnly = DFRL.display.Get("nameplatesNamesOnly")
+        nameplateFontSize = DFRL.display.Get("nameplateFontSize")
         local filtered = DFRL.display.Get("nameplatesBossGuardiansOnly")
         if plateFilter.enabled ~= filtered then
             plateFilter.enabled = filtered

@@ -2,6 +2,7 @@
 DFRL.locale.data = {
     en = {
         ui = {
+            ["Change name text size, including Names only."] = "Change name text size, including Names only.",
             ["MSBT-style scrolling"] = "MSBT-style scrolling",
             ["Addon damage numbers scroll beside your character."] = "Addon damage numbers scroll beside your character.",
             ["Names only"] = "Names only",
@@ -596,6 +597,7 @@ DFRL.locale.data = {
     },
     pl = {
         ui = {
+            ["Change name text size, including Names only."] = "Zmień rozmiar nazw, także w trybie Same nazwy.",
             ["MSBT-style scrolling"] = "Przewijanie w stylu MSBT",
             ["Addon damage numbers scroll beside your character."] = "Obrażenia z dodatku przewijają się obok postaci.",
             ["Names only"] = "Same nazwy",
@@ -1661,6 +1663,7 @@ DFRL.locale.data = {
     },
     cs = {
         ui = {
+            ["Change name text size, including Names only."] = "Změnit velikost jmen, také v režimu Pouze jména.",
             ["MSBT-style scrolling"] = "Posouvání ve stylu MSBT",
             ["Addon damage numbers scroll beside your character."] = "Čísla poškození addonu se posouvají vedle postavy.",
             ["Names only"] = "Pouze jména",
@@ -2729,6 +2732,7 @@ DFRL.locale.data = {
     },
     de = {
         ui = {
+            ["Change name text size, including Names only."] = "Textgröße der Namen ändern, auch bei Nur Namen.",
             ["MSBT-style scrolling"] = "Scrollen im MSBT-Stil",
             ["Addon damage numbers scroll beside your character."] = "Die Schadenszahlen des Addons scrollen neben deinem Charakter.",
             ["Names only"] = "Nur Namen",
@@ -3795,6 +3799,7 @@ DFRL.locale.data = {
     },
     pt = {
         ui = {
+            ["Change name text size, including Names only."] = "Alterar o tamanho dos nomes, inclusive no modo Apenas nomes.",
             ["MSBT-style scrolling"] = "Rolagem no estilo MSBT",
             ["Addon damage numbers scroll beside your character."] = "Os números de dano do addon rolam ao lado do personagem.",
             ["Names only"] = "Apenas nomes",
@@ -4852,6 +4857,7 @@ DFRL.locale.data = {
     },
     es = {
         ui = {
+            ["Change name text size, including Names only."] = "Cambiar el tamaño de los nombres, también en el modo Solo nombres.",
             ["MSBT-style scrolling"] = "Desplazamiento estilo MSBT",
             ["Addon damage numbers scroll beside your character."] = "Los números de daño del addon se desplazan junto a tu personaje.",
             ["Names only"] = "Solo nombres",
@@ -5913,6 +5919,7 @@ DFRL.locale.data = {
     },
     fr = {
         ui = {
+            ["Change name text size, including Names only."] = "Modifier la taille des noms, y compris en mode Noms uniquement.",
             ["MSBT-style scrolling"] = "Défilement de style MSBT",
             ["Addon damage numbers scroll beside your character."] = "Les dégâts de l’addon défilent à côté du personnage.",
             ["Names only"] = "Noms uniquement",
@@ -6982,6 +6989,7 @@ DFRL.locale.data = {
     },
     ro = {
         ui = {
+            ["Change name text size, including Names only."] = "Schimbă mărimea numelor, inclusiv în modul Doar numele.",
             ["MSBT-style scrolling"] = "Derulare în stil MSBT",
             ["Addon damage numbers scroll beside your character."] = "Numerele de daune ale addonului se derulează lângă personaj.",
             ["Names only"] = "Doar numele",
@@ -8034,6 +8042,7 @@ DFRL.locale.data = {
     },
     tr = {
         ui = {
+            ["Change name text size, including Names only."] = "Yalnızca isimler modunda da isim yazısının boyutunu değiştir.",
             ["MSBT-style scrolling"] = "MSBT tarzı kaydırma",
             ["Addon damage numbers scroll beside your character."] = "Eklentinin hasar sayıları karakterinin yanında kayar.",
             ["Names only"] = "Yalnızca isimler",
@@ -8962,6 +8971,7 @@ DFRL.locale.data = {
     },
     ru = {
         ui = {
+            ["Change name text size, including Names only."] = "Изменить размер имён, в том числе в режиме «Только имена».",
             ["MSBT-style scrolling"] = "Прокрутка в стиле MSBT",
             ["Addon damage numbers scroll beside your character."] = "Числа урона аддона прокручиваются рядом с персонажем.",
             ["Names only"] = "Только имена",
@@ -10109,6 +10119,7 @@ DFRL.locale.data = {
     },
     uk = {
         ui = {
+            ["Change name text size, including Names only."] = "Змінити розмір імен, зокрема в режимі «Лише імена».",
             ["MSBT-style scrolling"] = "Прокручування у стилі MSBT",
             ["Addon damage numbers scroll beside your character."] = "Числа шкоди аддона прокручуються поруч із персонажем.",
             ["Names only"] = "Лише імена",
@@ -11230,6 +11241,7 @@ DFRL.locale.data = {
     },
     zh = {
         ui = {
+            ["Change name text size, including Names only."] = "更改名称文字大小，也适用于仅显示名称模式。",
             ["MSBT-style scrolling"] = "MSBT 风格滚动",
             ["Addon damage numbers scroll beside your character."] = "插件伤害数字在角色旁边滚动显示。",
             ["Names only"] = "仅显示名称",
@@ -12278,6 +12290,7 @@ DFRL.locale.data = {
     },
     ja = {
         ui = {
+            ["Change name text size, including Names only."] = "名前のみモードも含め、名前の文字サイズを変更します。",
             ["MSBT-style scrolling"] = "MSBT風スクロール",
             ["Addon damage numbers scroll beside your character."] = "アドオンのダメージ数値はキャラクターの横にスクロール表示されます。",
             ["Names only"] = "名前のみ",
@@ -13358,6 +13371,7 @@ DFRL.locale.data = {
     },
     ko = {
         ui = {
+            ["Change name text size, including Names only."] = "이름만 표시 모드에서도 이름 글자 크기를 변경합니다.",
             ["MSBT-style scrolling"] = "MSBT 스타일 스크롤",
             ["Addon damage numbers scroll beside your character."] = "애드온 피해 수치가 캐릭터 옆에서 스크롤됩니다.",
             ["Names only"] = "이름만 표시",
