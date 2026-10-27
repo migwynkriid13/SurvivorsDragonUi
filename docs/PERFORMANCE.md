@@ -41,6 +41,21 @@ leave hundreds of expensive texture regions drawing continuously.
   GPU-memory, pixel-parity or FPS measurements. No local tests, standalone
   validation, addon execution or game launch is authorized for this audit.
 
+## Native cursor replacement — 2026-10-27
+
+The user-selected early Dragonflight hand uses one cached native 32-by-32
+cursor, zero addon-visible regions and one event-only frame. It reuses the
+existing UI monitor; no OnUpdate handler or pointer-position poll is added.
+The client overwrites the displayed world mode each frame, so the hand must be
+reasserted each active frame. The client caches the image by path and skips
+unchanged window-cursor assignments. Mouse-look skips application, failed
+bindings share a one-second retry boundary, and world leave/logout release
+ownership. Native cursor API wrappers retain their arguments and complete
+return tuples; only those external calls allocate vararg tables. The user
+explicitly chose replacement of contextual attack/loot/spell cursor pictures.
+See [CURSOR.md](CURSOR.md) for source evidence, exact CPU/allocation boundaries
+and remaining runtime limits. No FPS or GPU improvement is claimed.
+
 ## Lossless palette packing — 2026-10-27
 
 Forty-eight prepared BLPs now use exact indexed RGB plus separate alpha instead

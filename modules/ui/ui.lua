@@ -101,8 +101,10 @@ DFRL:NewMod("Ui", 5, function()
         edges[side] = texture
     end
     local elapsed, pulse = 0, 0
+    local updateCursor = DFRL.cursor and DFRL.cursor.Update
     local monitor = CreateFrame("Frame")
     monitor:SetScript("OnUpdate", function()
+        if updateCursor then updateCursor() end
         elapsed = elapsed + arg1
         if elapsed < 0.05 then return end
         local maximum = UnitHealthMax("player")
