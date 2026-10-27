@@ -4,6 +4,7 @@
   "end.damage_dealt",
   "end.damage_taken",
   "Damage",
+  "Melee",
   "Gold",
   "Regen",
   "You receive loot:",
@@ -25,5 +26,10 @@
   "%s is slain! Its lair yields treasure and its strength, and the other guardians grow stronger.",
   "{subtitle} — survive the onslaught!",
   "options.cancel",
-  "picker.options"
+  "picker.options",
+  "Regeneration",
+  "Leech",
+  "Healing on Kill",
+  "Level Up",
+  "Soul Link"
 ]

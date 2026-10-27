@@ -23,6 +23,7 @@ core\fstack.lua
 
 modules\nameplates\style.lua
 modules\nameplates\icons.lua
+modules\nameplates\source_icons.lua
 modules\nameplates\parser.lua
 modules\nameplates\sct.lua
 modules\bars\bars.lua
@@ -37,13 +38,13 @@ modules\chat\copy.lua
 modules\chat\chat.lua
 modules\bags\bags.lua
 modules\map\map.lua
+modules\map\buttons.lua
 modules\map\navigation.lua
 modules\ui\guardians.lua
 modules\map\waypoints.lua
 modules\ui\guardian_tracker.lua
 modules\ui\meter.lua
 modules\menu\menu.lua
-modules\micro\micro.lua
 modules\ui\ui.lua
 modules\ui\character.lua
 modules\ui\jewelry.lua

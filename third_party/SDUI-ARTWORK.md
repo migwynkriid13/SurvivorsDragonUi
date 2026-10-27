@@ -86,6 +86,19 @@ The 64-by-32 destination contains two 30-by-29 cells from the 128-by-256
 
 ## Format and shipped attribution
 
+Editor button captions use one passive child frame above the button's fill,
+border and hover/selected artwork. The existing FontString, font, colors,
+anchors and hit area remain; explicit button-level changes also place this
+caption layer above it. This prevents the inset fill band from crossing the
+text without removing the authored textures or adding artwork/updaters.
+
+The category sidebar spans editor y=68 through the shared footer divider at
+y=532, with four-unit top/bottom padding and four-unit row gaps. Its pitch uses
+the available height without rounding away spare space, retaining the two
+existing section gaps and all measured translated widths. With sixteen
+categories this gives 23.75-unit buttons instead of 20. The main panel, right
+pages, footer controls and saved HUD geometry are unchanged.
+
 The editor keeps its 24-unit panel corners, stretched straight edges and six-unit
 fill inset. Jewelry hovers now use the separate native-tooltip skin described in
 [Tooltip-STYLE.md](Tooltip-STYLE.md), without this editor border, divider or the

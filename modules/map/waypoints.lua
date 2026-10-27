@@ -339,7 +339,6 @@ DFRL:NewMod("Waypoints", 3, function()
                 RestoreNativeFlag()
                 return
             end
-            navigation.StyleMinimap()
             -- Flag ownership does not depend on a destination or its geometry:
             -- empty/dead lairs and snapshot refreshes must never restore it.
             if DFRL.display.Get("guardianGuidance") then
@@ -351,6 +350,11 @@ DFRL:NewMod("Waypoints", 3, function()
                 ClearMinimapPins()
                 return
             end
+            if not Minimap or not Minimap:IsVisible() then
+                ClearMinimapPins()
+                return
+            end
+            navigation.StyleMinimap()
             local scale, edge
             for _, tracker in ipairs(trackers) do
                 if DFRL.display.Get(tracker.displayKey) and MinimapEntries(tracker)[1] then
@@ -694,7 +698,7 @@ DFRL:NewMod("Waypoints", 3, function()
     local function UpdateMap()
         local region = WorldMapDetailFrame or WorldMapButton
         local parent = WorldMapButton or region
-        if not region or not parent or not WorldMapFrame or not WorldMapFrame:IsShown() then
+        if not region or not parent or not WorldMapFrame or not WorldMapFrame:IsVisible() then
             for _, tracker in ipairs(trackers) do
                 HidePins(tracker)
             end
@@ -976,16 +980,18 @@ DFRL:NewMod("Waypoints", 3, function()
         local elapsed = tonumber(arg1) or 0
         if not Number(elapsed) or elapsed < 0 then elapsed = 0 end
         age = age + elapsed
+        local refreshed = false
         if dirty or age >= 0.1 then
             dirty, age = false, 0
             Refresh()
+            refreshed = true
         end
         if inWorld then
             for _, tracker in ipairs(trackers) do
-                UpdateGuide(tracker, elapsed)
+                if refreshed or tracker.hud:IsVisible() then UpdateGuide(tracker, elapsed) end
             end
         end
-        UpdateMinimapPins()
+        if refreshed or (Minimap and Minimap:IsVisible()) then UpdateMinimapPins() end
     end)
     DFRL.display.Listen(function()
         -- Visibility drafts do not retire snapshots, selections or calibration.

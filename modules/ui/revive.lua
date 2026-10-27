@@ -112,6 +112,7 @@ DFRL:NewMod("Revive", 4, function()
         local paintedValue, sparkX
         local transition, fade, effectAge = 0, 0, 0
         local dirty = true
+        local measuredText, measuredFace, measuredSize, measuredFlags, measuredScale, measuredWidth
         local function Paint()
             if paintedValue ~= value then
                 bar:SetValue(value)
@@ -163,9 +164,33 @@ DFRL:NewMod("Revive", 4, function()
         end
         function view.Set(text, progress, subject)
             local fresh = identity ~= subject or value == nil
-            if T.SetTextIfChanged(caption, text) or dirty then
+            local requested = view.active or view.waiting
+            if DFRL.layout.IsHidden("revive") or not UIParent:IsVisible() then
+                value, target, origin, identity = progress, progress, progress, subject
+                displayedPercent, transition, dirty = nil, 0, true
+                if fresh then
+                    fade, effectAge = 0, 0
+                end
+                view.active, view.waiting = true, false
+                if not requested then root:Show() end
+                return
+            end
+            T.SetTextIfChanged(caption, text)
+            local face, size, flags = measure:GetFont()
+            local scale = measure:GetParent():GetEffectiveScale()
+            if
+                measuredText ~= text
+                or measuredFace ~= face
+                or measuredSize ~= size
+                or measuredFlags ~= flags
+                or measuredScale ~= scale
+                or not measuredWidth
+            then
                 measure:SetText(text)
-                local width = math.max(MIN_WIDTH, math.ceil(measure:GetStringWidth() or 0) + 72)
+                local measured = measure:GetStringWidth()
+                measuredWidth = Number(measured) and measured > 0 and measured or nil
+                measuredText, measuredFace, measuredSize, measuredFlags, measuredScale = text, face, size, flags, scale
+                local width = math.max(MIN_WIDTH, math.ceil(measuredWidth or 0) + 72)
                 if not T.NearlyEqual(width, root:GetWidth()) then
                     root:SetWidth(width)
                     if view.onResize then view.onResize() end
@@ -182,11 +207,11 @@ DFRL:NewMod("Revive", 4, function()
             end
             view.active, view.waiting = true, false
             if not pill:IsShown() then pill:Show() end
-            if fresh then Paint() end
-            if not root:IsShown() then root:Show() end
+            if dirty then Paint() end
+            if not requested then root:Show() end
         end
         function view.Animate(elapsed)
-            if not view.active or not root:IsShown() then return end
+            if not view.active or not root:IsVisible() then return end
             if fade < 1 then
                 fade = math.min(1, fade + elapsed / FADE_TIME)
                 root:SetAlpha(1 - (1 - fade) * (1 - fade))
@@ -318,7 +343,7 @@ DFRL:NewMod("Revive", 4, function()
     local function Tick()
         local elapsed = math.max(0, tonumber(arg1) or 0)
         age = age + elapsed
-        if age < INTERVAL and (not view.active or not root:IsShown()) then return end
+        if age < INTERVAL and (not view.active or not root:IsVisible()) then return end
         local ok, message = pcall(Step, elapsed)
         if not ok then
             Clear()
@@ -330,9 +355,19 @@ DFRL:NewMod("Revive", 4, function()
         root:ClearAllPoints()
         local _, height = T.GetLocalSize(UIParent)
         root:SetPoint("BOTTOMLEFT", UIParent, "BOTTOM", -(root:GetWidth() - 56) / 2 - 4, (height or 768) * 0.38 - 3.5)
-    end, { labelAbove = true, refreshDefault = true, onReset = Clear })
+    end, {
+        labelAbove = true,
+        refreshDefault = true,
+        onReset = Clear,
+        onResize = function()
+            dirty, age = true, INTERVAL
+        end,
+    })
     view.onResize = function() DFRL.layout.Place("revive", root) end
-    root:SetScript("OnShow", SyncNative)
+    root:SetScript("OnShow", function()
+        dirty, age = true, INTERVAL
+        SyncNative()
+    end)
     root:SetScript("OnHide", function() native.Release() end)
     DFRL.locale.Listen(function()
         dirty, age = true, INTERVAL

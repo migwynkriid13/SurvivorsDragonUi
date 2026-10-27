@@ -65,6 +65,7 @@ function DFRL.tools.BindClassHealthColor(bar, unit)
     local healthR, healthG, healthB = 0, 1, 0
     local setColor = bar.SetStatusBarColor
     local function Apply()
+        if not bar:IsVisible() then return end
         local red, green, blue, alpha = bar:GetStatusBarColor()
         if
             not T.NearlyEqual(red, healthR)
@@ -101,6 +102,7 @@ function DFRL.tools.BindUnitHealthText(bar, label, unit, hideDead)
     local splitLayout
 
     function labels.Update()
+        if not bar:IsVisible() then return end
         local current, maximum
         if UnitExists(unit) and not (hideDead and (UnitIsDead(unit) or UnitIsGhost(unit))) then
             current = UnitHealth(unit)

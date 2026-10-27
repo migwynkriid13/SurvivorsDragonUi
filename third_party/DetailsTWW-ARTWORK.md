@@ -27,6 +27,10 @@ The SDUI renderer retains the 32-unit header and row step, drawing native
 per-source labels above the textured rails. It uses the resolved game DEFAULT
 font and shared class palette, with the game's explicit proc tint. It does not
 pretend that retail Details class/spec portraits identify these native sources.
+Source icons instead use the existing jewelry atlas's prepared gold ring and
+native circular rendering, with a clipped fallback for older clients; see
+[Jewelry-ARTWORK.md](Jewelry-ARTWORK.md). No additional image is imported or
+regenerated for those rings.
 
 ## Preparation
 
@@ -53,3 +57,13 @@ The runtime manifest adds only the three prepared images, their MIT notice and
 asset root. See [DAMAGE-METER.md](../docs/DAMAGE-METER.md) for data and lifecycle
 boundaries. No in-game appearance or compatibility claim follows from inspecting
 the source artwork.
+
+## Native healing source icons
+
+The shared source metadata also references native general-jewelry/amulet icons,
+including Hakkar's `INV_Jewelry_Necklace_22`. These paths are independently
+extracted from the installed game and shared with SCT; public addons supply
+research evidence only. No public Lua implementation or icon bitmap was copied.
+See [SOURCE-ICONS.md](../docs/SOURCE-ICONS.md).
+
+The healing meter references the installed client’s original Blizzard icons by native `Interface\\Icons` paths: `Spell_Nature_Rejuvenation`, `Spell_Shadow_LifeDrain02`, `Spell_Shadow_DeathPact`, `Spell_Holy_HolyBolt` and `Spell_Shadow_GatherShadows`. These are separate from the skin author’s MIT-licensed header/bar/background artwork; no icon bitmap is copied into the addon. The exact native producer pairs, executable fingerprint and data-only extraction are recorded in [DAMAGE-METER.md](../docs/DAMAGE-METER.md#native-healing-icons). The existing gold ring and circular renderer are reused.

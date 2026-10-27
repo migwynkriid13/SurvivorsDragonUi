@@ -28,6 +28,14 @@ shadow. The circle has transparent padding inside its crop, avoiding a cut
 through the shadow at the right edge. The five original jewelry crops and the
 atlas dimensions remain unchanged; no new runtime file is added.
 
+The damage meter reuses that same prepared pet-rim crop for its circular source
+icons: a 31-unit gold rim surrounds a 26-unit native circular icon at the existing
+row icon center. It retains the original gold RGB/alpha, without a quality tint
+or another prepared image. Legacy fallback strips clip only the source icon;
+the complete ring is never sliced. The five jewelry crops and their original
+fourteen-strip icon sampling remain unchanged. See
+[DAMAGE-METER.md](../docs/DAMAGE-METER.md).
+
 ## Thin socket attachment
 
 `scripts/prepare_jewelry_sockets.py` reads the existing `media/tex/actionbars/HDActionBar.tga` as texture data, without importing or executing addon code. The original file and its existing upstream artwork attribution remain intact. At the native reference of 36-unit buttons, six-unit gaps and a 300-by-64 bar background, it copies the original 12-unit upper strip into one continuous 300-by-38 rail and extends it around five sockets. Each shape unites a 20-unit-radius circle with the bar below it, leaving a 13.7-unit-radius circular opening transparent. Distance to this shape's outer boundary selects the native border's original color and alpha rows, with no compressed bevel or opaque replacement stroke. The horizontal boundary starts at rail coordinate 33.5, matching source row 30 in the four-pixels-per-unit native composition with its 26-unit offset. Straight feet and gaps retain the same native rows directly, rather than being drawn as separate pieces. The bottom four image rows blend into the original lower background's row mapping. Bar material fills the inside of each bend, without a separate inner or lower curved line.

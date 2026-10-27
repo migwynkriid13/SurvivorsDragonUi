@@ -202,7 +202,7 @@ DFRL:NewMod("GuardianTracker", 4, function()
         return true
     end
     local function Refresh()
-        if not inWorld then return end
+        if not inWorld or DFRL.layout.IsHidden("guardianTracker") or not UIParent:IsVisible() then return end
         local snapshot = roster.GetSnapshot(presentation.snapshot)
         if snapshot.status ~= "ready" or not snapshot.rows[1] then
             Clear()
@@ -327,6 +327,16 @@ DFRL:NewMod("GuardianTracker", 4, function()
     controller:RegisterEvent("PLAYER_ENTERING_WORLD")
     controller:RegisterEvent("PLAYER_LEAVING_WORLD")
     controller:RegisterEvent("PLAYER_LOGOUT")
+    local function Tick()
+        if not inWorld then return end
+        age = age + (tonumber(arg1) or 0)
+        if age < 0.1 then return end
+        age = 0
+        Refresh()
+    end
+    local function SyncUpdates()
+        controller:SetScript("OnUpdate", inWorld and not DFRL.layout.IsHidden("guardianTracker") and Tick or nil)
+    end
     controller:SetScript("OnEvent", function()
         inWorld = event == "PLAYER_ENTERING_WORLD"
         if inWorld then
@@ -335,12 +345,11 @@ DFRL:NewMod("GuardianTracker", 4, function()
             healthWidth = 0
             Clear()
         end
+        SyncUpdates()
     end)
-    controller:SetScript("OnUpdate", function()
-        if not inWorld then return end
-        age = age + (tonumber(arg1) or 0)
-        if age < 0.1 then return end
-        age = 0
-        Refresh()
+    DFRL.layout.ListenVisibility("guardianTracker", function(permitted)
+        dirty, age = true, 0.1
+        SyncUpdates()
+        if permitted then Refresh() end
     end)
 end)

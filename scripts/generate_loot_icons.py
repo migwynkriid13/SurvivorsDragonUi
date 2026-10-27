@@ -24,9 +24,9 @@ CODES = ("en", "pl", "cs", "de", "pt", "es", "fr", "ro", "tr", "ru", "uk", "zh",
 
 
 class Native:
-    def __init__(self, path):
+    def __init__(self, path, source_sha256=SOURCE_SHA256):
         self.raw = path.read_bytes()
-        if hashlib.sha256(self.raw).hexdigest() != SOURCE_SHA256:
+        if hashlib.sha256(self.raw).hexdigest() != source_sha256:
             raise ValueError("Review the changed executable before updating native offsets")
         pe = self.number(0x3C, "I")
         optional = pe + 24

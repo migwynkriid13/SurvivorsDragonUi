@@ -26,6 +26,7 @@ DFRL:NewMod("Xprep", 1, function()
     bar:SetFrameStrata("LOW")
     bar:SetStatusBarTexture(fillTexture)
     bar:SetStatusBarColor(0.85, 0.4, 0.85)
+    bar:SetMinMaxValues(0, 1)
     bar:EnableMouse(false)
     bar:Hide()
 
@@ -79,13 +80,17 @@ DFRL:NewMod("Xprep", 1, function()
         origin, destination, gainStart, age, duration, fadeAge = nil, nil, nil, nil, nil, nil
         wrapping = false
         displayed = desired
-        bar:SetValue(displayed)
-        gain:Hide()
-        spark:Hide()
+        if bar:IsVisible() then bar:SetValue(displayed) end
+        if gain:IsShown() then gain:Hide() end
+        if spark:IsShown() then spark:Hide() end
         if not pending then events:SetScript("OnUpdate", nil) end
     end
 
+    local requestedShown, requestedDocked
     local function ShowXP(shown)
+        shown = shown and attached and true or false
+        if requestedShown == shown and requestedDocked == docked then return end
+        requestedShown, requestedDocked = shown, docked
         if shown and attached then
             if docked then
                 detached:Hide()
@@ -107,6 +112,7 @@ DFRL:NewMod("Xprep", 1, function()
         local joined = DFRL.display.Get("attachXP")
         if docked == joined then return false end
         StopAnimation()
+        requestedShown = nil
         hud:Hide()
         docked = joined
         local owner = joined and DFRL.mainBar or detached
@@ -179,7 +185,6 @@ DFRL:NewMod("Xprep", 1, function()
         currentXP = math.min(currentXP, maximumXP)
         if not Number(level) or level < 1 then level = nil end
         desired = currentXP / maximumXP
-        bar:SetMinMaxValues(0, 1)
         local canAnimate = animate
             and not editing
             and attached
@@ -252,6 +257,7 @@ DFRL:NewMod("Xprep", 1, function()
 
     bar:SetScript("OnHide", StopAnimation)
     bar:SetScript("OnShow", function()
+        bar:SetValue(desired)
         pending, instant = true, true
         events:SetScript("OnUpdate", OnUpdate)
     end)

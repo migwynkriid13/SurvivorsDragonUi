@@ -27,12 +27,6 @@ DFRL:NewMod("Menu", 1, function()
     local quit = T.CreateButton(menu, "Exit Game", 140, 30)
     quit:SetPoint("TOP", previous, "BOTTOM", 0, -5)
     quit:SetScript("OnClick", function() Quit() end)
-    menu:SetScript("OnShow", function()
-        if MainMenuMicroButton then MainMenuMicroButton:SetButtonState("PUSHED", 1) end
-    end)
-    menu:SetScript("OnHide", function()
-        if MainMenuMicroButton then MainMenuMicroButton:SetButtonState("NORMAL") end
-    end)
     local function CloseOptions()
         if optionsFrame and optionsFrame:IsShown() then
             if BenillaOptionsFrameCloseButton then

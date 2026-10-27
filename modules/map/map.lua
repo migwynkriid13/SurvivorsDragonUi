@@ -82,10 +82,11 @@ DFRL:NewMod("Map", 1, function()
     timeText:SetText(date("%H:%M"))
     local nextClockUpdate = 0
     timeFrame:SetScript("OnUpdate", function()
+        if not timeFrame:IsVisible() then return end
         local now = GetTime()
         if now >= nextClockUpdate then
             nextClockUpdate = now + 5
-            timeText:SetText(date("%H:%M"))
+            T.SetTextIfChanged(timeText, date("%H:%M"))
         end
     end)
     timeFrame:SetScript("OnEnter", function()

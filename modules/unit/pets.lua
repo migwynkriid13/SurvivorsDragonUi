@@ -101,6 +101,7 @@ DFRL:NewMod("PetFrames", 4, function()
     end
     local function SetStripIcon(circle, icon, scale)
         local changed = not T.NearlyEqual(circle.scale, scale)
+        if icon and not changed and circle.icon == icon then return true end
         if changed and icon then
             -- At most one physical pixel per icon strip. The complete rim
             -- covers this clip edge without slicing the rim artwork itself.
@@ -131,23 +132,43 @@ DFRL:NewMod("PetFrames", 4, function()
             end
             circle.used, circle.scale = used, scale
         end
-        if changed or circle.icon ~= icon then
-            for index, strip in ipairs(circle.strips) do
-                if icon and index <= (circle.used or 0) then
-                    strip:SetTexture(icon)
-                    strip:Show()
-                else
-                    strip:Hide()
-                    strip:SetTexture(nil)
+        local usable = true
+        local stem = icon and string.gsub(icon, "%.[^%.]*$", "")
+        for index, strip in ipairs(circle.strips) do
+            if icon and index <= (circle.used or 0) then
+                if strip.boundTexture ~= icon then
+                    strip.boundTexture = nil
+                    local loaded = strip:SetTexture(icon)
+                    local assigned = strip:GetTexture()
+                    if loaded ~= false and (loaded == true or loaded == 1 or assigned == icon or assigned == stem) then
+                        strip.boundTexture = icon
+                    else
+                        strip:SetTexture(nil)
+                    end
                 end
+                if not strip.boundTexture then usable = false end
+            else
+                if strip.boundTexture then strip:SetTexture(nil) end
+                strip.boundTexture = nil
+                if strip:IsShown() then strip:Hide() end
             end
-            circle.icon = icon
         end
+        for index = 1, icon and (circle.used or 0) or 0 do
+            local strip = circle.strips[index]
+            if usable then
+                if not strip:IsShown() then strip:Show() end
+            elseif strip:IsShown() then
+                strip:Hide()
+            end
+        end
+        circle.icon = usable and icon or nil
+        return usable
     end
     local function ClearStrips(circle)
         for _, strip in ipairs(circle.strips) do
-            strip:Hide()
-            strip:SetTexture(nil)
+            if strip:IsShown() then strip:Hide() end
+            if strip.boundTexture then strip:SetTexture(nil) end
+            strip.boundTexture = nil
         end
     end
     local function BindPortrait(portrait, icon)
@@ -165,14 +186,14 @@ DFRL:NewMod("PetFrames", 4, function()
     local function SetIcon(circle, icon, scale)
         -- The native circle is one cached image, rather than a visible region
         -- for every horizontal pixel. Scaling needs no new portrait binding.
-        if icon and circle.native and circle.icon == icon then return end
+        if icon and circle.native and circle.icon == icon then return true end
         if icon and circle.failedIcon ~= icon and type(_G.SetPortraitToTexture) == "function" then
             local ok, bound = pcall(BindPortrait, circle.portrait, icon)
             if ok and bound then
                 ClearStrips(circle)
                 circle.portrait:Show()
                 circle.native, circle.icon, circle.failedIcon = true, icon, nil
-                return
+                return true
             end
             ClearPortrait(circle)
             circle.failedIcon = icon
@@ -180,7 +201,7 @@ DFRL:NewMod("PetFrames", 4, function()
         if circle.native then ClearPortrait(circle) end
         -- Older clients without the global keep the same clipped appearance.
         -- These regions are allocated only if the native path is unavailable.
-        SetStripIcon(circle, icon, scale)
+        return SetStripIcon(circle, icon, scale)
     end
     local function HideCircle(circle)
         if not circle.active then return end
@@ -266,7 +287,7 @@ DFRL:NewMod("PetFrames", 4, function()
             row.showName, row.showTimer = showName, showTimer
         end
         local circle = Circle(row)
-        SetIcon(circle, entry.icon, scale)
+        local usable = SetIcon(circle, entry.icon, scale)
         Text(circle.count, not DFRL.display.Get("hidePetCounts") and entry.count > 1 and ("x" .. entry.count) or "")
         if not circle.active then circle.frame:Show() end
         circle.active = true
@@ -279,6 +300,7 @@ DFRL:NewMod("PetFrames", 4, function()
         end
         if not row.active then row.frame:Show() end
         row.active = true
+        return usable
     end
     local function ReadRoster(list)
         -- Combine each supplied type key in first-arrival order, counting all
@@ -354,7 +376,7 @@ DFRL:NewMod("PetFrames", 4, function()
             return
         end
         local changed = packet ~= acceptedPacket or stamp ~= acceptedStamp or received ~= acceptedReceived
-        local ticking = hasTemporary and not DFRL.display.Get("hidePetTimers") and root:IsShown()
+        local ticking = hasTemporary and not DFRL.display.Get("hidePetTimers") and root:IsVisible()
         -- A static or hidden view needs no clock reads. Visible countdowns
         -- still sample the native pause-aware getter at the existing rate.
         if changed or ticking then
@@ -374,6 +396,8 @@ DFRL:NewMod("PetFrames", 4, function()
             end
             return
         end
+        if not displayed then root:Show() end
+        displayed = true
         local scale = root:GetEffectiveScale()
         if not Number(scale) or scale <= 0 then return end
         if not dirty and T.NearlyEqual(paintedScale, scale) then return end
@@ -381,10 +405,15 @@ DFRL:NewMod("PetFrames", 4, function()
         -- Placing changed bounds may also apply confirmed/draft scale.
         scale = root:GetEffectiveScale()
         if not Number(scale) or scale <= 0 then return end
+        if not root:IsVisible() then
+            dirty, paintedScale = false, scale
+            return
+        end
         local perRow, extra = math.floor(entryCount / rowCount), math.mod(entryCount, rowCount)
         local column, line = 0, 0
+        local retry = false
         for index = 1, entryCount do
-            Paint(Row(index), entries[index], scale, column, line, cellWidth, spacing)
+            if not Paint(Row(index), entries[index], scale, column, line, cellWidth, spacing) then retry = true end
             column = column + 1
             if column == perRow + (line < extra and 1 or 0) then
                 column, line = 0, line + 1
@@ -393,9 +422,7 @@ DFRL:NewMod("PetFrames", 4, function()
         for index = entryCount + 1, table.getn(rows) do
             HideRow(rows[index])
         end
-        if not displayed then root:Show() end
-        displayed = true
-        dirty, paintedScale = false, scale
+        dirty, paintedScale = retry, scale
     end
     local controller = CreateFrame("Frame")
     local function Tick()
@@ -404,6 +431,9 @@ DFRL:NewMod("PetFrames", 4, function()
         age = 0
         Refresh()
     end
+    root:SetScript("OnShow", function()
+        dirty, age = true, 0.1
+    end)
     DFRL.layout.Register("petFrames", root, function()
         root:ClearAllPoints()
         if PlayerFrame and PlayerFrame.portrait then

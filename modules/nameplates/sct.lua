@@ -7,7 +7,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local ParseCombatEvent = T.ParseNameplateCombatEvent
     local plateStyle = T.NameplateStyle
     local BORDER = "Interface\\Tooltips\\Nameplate-Border"
-    local FALLBACK_ICON = "Interface\\Icons\\INV_Misc_QuestionMark"
+    local FALLBACK_ICON = T.SourceIconFallback
     local ATTACK_ICON = "Interface\\Icons\\INV_Sword_04"
     local TEXT_DURATION = 1.45
     local EVENT_SETTLE = 0.08
@@ -531,6 +531,14 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         return key
     end
 
+    local function AutoAttackIcon()
+        if type(GetInventoryItemTexture) == "function" then
+            local ok, texture = pcall(GetInventoryItemTexture, "player", 16)
+            if ok and TextureKey(texture) then return texture end
+        end
+        return ATTACK_ICON
+    end
+
     local function GeneratedTexture(source, name, aliases)
         local texture = source[name]
         if not aliases or texture == false then return texture end
@@ -589,7 +597,76 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         end
     end
 
+    local itemIcons, itemRetryAt, equipmentScanAt, itemLanguage = {}, {}, nil, nil
+    local function ClearItemIcons()
+        itemIcons, itemRetryAt, equipmentScanAt, itemLanguage = {}, {}, nil, nil
+    end
+    local function ItemTexture(value)
+        if type(value) ~= "string" or value == "" then return end
+        local path = string.gsub(value, "/", "\\")
+        if not string.find(string.lower(path), "^interface\\icons\\") then
+            if
+                not string.find(path, "^INV_")
+                and not string.find(path, "^Spell_")
+                and not string.find(path, "^Ability_")
+                and not string.find(path, "^Trade_")
+            then
+                return
+            end
+            path = "Interface\\Icons\\" .. path
+        end
+        if string.find(string.lower(path), "inv_misc_questionmark", 1, true) then return end
+        path = string.gsub(path, "%.[bB][lL][pP]$", "")
+        path = string.gsub(path, "%.[tT][gG][aA]$", "")
+        return path
+    end
+    local function RememberItem(name, texture)
+        local path = ItemTexture(texture)
+        if not path then return end
+        LearnSpellTexture(itemIcons, name, path)
+        return itemIcons[name] or nil
+    end
+    local function ItemInfo(reference)
+        local name, _, _, _, _, _, _, _, ninth, tenth = GetItemInfo(reference)
+        return name, ItemTexture(tenth) or ItemTexture(ninth)
+    end
+    local function ItemIcon(name)
+        if itemLanguage ~= DFRL.locale.code then
+            ClearItemIcons()
+            itemLanguage = DFRL.locale.code
+        end
+        if itemIcons[name] ~= nil then return itemIcons[name] or nil end
+        local now = GetTime()
+        if itemRetryAt[name] and now < itemRetryAt[name] then return end
+        itemRetryAt[name] = now + 1
+        if type(GetItemInfo) == "function" then
+            local ok, resolved, texture = pcall(ItemInfo, name)
+            if ok and resolved == name then
+                local path = RememberItem(name, texture)
+                if path then return path end
+            end
+        end
+        if
+            (not equipmentScanAt or now < equipmentScanAt or now - equipmentScanAt >= 1)
+            and type(GetInventoryItemLink) == "function"
+            and type(GetInventoryItemTexture) == "function"
+        then
+            equipmentScanAt = now
+            for slot = 1, 19 do
+                local ok, link = pcall(GetInventoryItemLink, "player", slot)
+                if ok and type(link) == "string" then
+                    local _, _, itemName = string.find(link, "|h%[(.-)%]|h")
+                    if itemName then
+                        local loaded, texture = pcall(GetInventoryItemTexture, "player", slot)
+                        if loaded then RememberItem(itemName, texture) end
+                    end
+                end
+            end
+        end
+        return itemIcons[name] or nil
+    end
     local function ResetLearnedSpellTextures()
+        ClearItemIcons()
         auraSpellTextures, talentSpellTextures = {}, {}
         iconSourcesDirty = { talents = true, debuffs = true, target = true, mouseover = true }
         iconScanAt = nil
@@ -747,6 +824,12 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         end
     end
 
+    local function NativeItemIcon(name)
+        local catalogs = T.SourceItemIconCatalog
+        local catalog = catalogs and (catalogs[DFRL.locale.code] or catalogs.en)
+        return catalog and catalog[name]
+    end
+
     local function CombatIcon(info)
         if info.spell and info.spell ~= "" then
             local texture = spellTextures[info.spell]
@@ -767,6 +850,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                 -- Observed auras outrank catalog and talent artwork. Preserve
                 -- ambiguity within each tier instead of choosing a random icon.
                 if texture == nil then texture = NativeGameTexture(info.spell, aliases) end
+                if texture == nil then texture = NativeItemIcon(info.spell) end
                 if texture == nil then texture = talentSpellTextures[info.spell] end
                 if texture == nil then
                     local database, schools = localeIconTextures, localeSchoolIconTextures
@@ -789,18 +873,45 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                     end
                 end
             end
+            if texture == nil then texture = ItemIcon(info.spell) end
             return texture or FALLBACK_ICON
         end
-        if info.damageType == "autoattack" then return GetInventoryItemTexture("player", 16) or ATTACK_ICON end
+        if info.damageType == "autoattack" then return AutoAttackIcon() end
         return FALLBACK_ICON
+    end
+
+    -- Exact native healing records: docs/DAMAGE-METER.md; shared across classes.
+    local healingSourceIcons = {
+        ["Regeneration"] = "Interface\\Icons\\Spell_Nature_Rejuvenation",
+        ["Leech"] = "Interface\\Icons\\Spell_Shadow_LifeDrain02",
+        ["Healing on Kill"] = "Interface\\Icons\\Spell_Shadow_DeathPact",
+        ["Level Up"] = "Interface\\Icons\\Spell_Holy_HolyBolt",
+        ["Soul Link"] = "Interface\\Icons\\Spell_Shadow_GatherShadows",
+    }
+    local healingNames, healingLanguage = {}, false
+    local function NativeHealingIcon(name)
+        local code = DFRL.locale.code
+        if healingLanguage ~= code then
+            healingNames = {}
+            for caption, texture in pairs(healingSourceIcons) do
+                LearnSpellTexture(healingNames, caption, texture)
+                LearnSpellTexture(healingNames, DFRL.locale.Native(caption), texture)
+            end
+            healingLanguage = code
+        end
+        return healingNames[name]
     end
 
     -- Native meter names can share the same metadata resolver without passing
     -- through combat parsing, filtering, grouping or damage attribution.
-    function sct.GetSourceIcon(name)
-        if type(name) ~= "string" or name == "" then return end
-        local texture = CombatIcon({ spell = name })
-        if texture ~= FALLBACK_ICON then return texture end
+    function sct.GetSourceIcon(name, healing, proc)
+        if type(name) ~= "string" or name == "" then return FALLBACK_ICON end
+        if healing and proc ~= 1 then
+            local texture = NativeHealingIcon(name)
+            if texture ~= nil then return texture or FALLBACK_ICON end
+        end
+        if name == "Melee" or name == DFRL.locale.Native("Melee") then return AutoAttackIcon() end
+        return CombatIcon({ spell = name })
     end
 
     local function IconIdentityPart(value) return string.len(value) .. ":" .. value end

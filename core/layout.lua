@@ -1,6 +1,6 @@
 -- Layout geometry and visibility; the timer owns its separate font preference.
 DFRL:NewMod("Layout", 0, function()
-    local layout, entries, order = {}, {}, {}
+    local layout, entries, order, visibilityListeners = {}, {}, {}, {}
     DFRL.layout = layout
     local ready, inWorld, needsRestore = false, true, false
     local needsDefaultPosition = false
@@ -34,7 +34,6 @@ DFRL:NewMod("Layout", 0, function()
         jewelryBar = "Equipped jewelry (detached)",
         xpBar = "XP (detached)",
         runTally = "Kills / Gold / Cache (detached)",
-        microMenu = "Micro menu",
         buffs = "Buffs",
         minimap = "Minimap",
         cacheWaypoint = "Cache waypoint",
@@ -61,17 +60,42 @@ DFRL:NewMod("Layout", 0, function()
         if type(geometry) == "table" and type(geometry.hidden) == "boolean" then return geometry.hidden end
         return entry.options.defaultHidden == true
     end
+    function layout.IsEditing() return editing end
+    function layout.IsHidden(key)
+        if entries[key] then return IsHidden(entries[key]) end
+        local geometry = GeometryStore()[key]
+        return type(geometry) == "table" and geometry.hidden == true
+    end
+    function layout.ListenVisibility(key, callback)
+        local listeners = visibilityListeners[key]
+        if not listeners then
+            listeners = {}
+            visibilityListeners[key] = listeners
+        end
+        table.insert(listeners, callback)
+        if entries[key] then callback(not IsHidden(entries[key])) end
+    end
     local function SetHidden(entry, geometry, hidden)
         -- Default-hidden groups need an explicit false to remember an opt-in.
         geometry.hidden = nil
         if hidden or entry.options.defaultHidden == true then geometry.hidden = hidden end
     end
     local function ApplyVisibility(entry)
-        local shown = not IsHidden(entry) and entry.wantsShown
+        local permitted = not IsHidden(entry)
+        local shown = permitted and entry.wantsShown
         if shown and not entry.frame:IsShown() then
             entry.nativeShow(entry.frame)
         elseif not shown and entry.frame:IsShown() then
             entry.nativeHide(entry.frame)
+        end
+        if entry.visibilityPolicy ~= permitted then
+            entry.visibilityPolicy = permitted
+            local listeners = visibilityListeners[entry.key]
+            if listeners then
+                for _, callback in ipairs(listeners) do
+                    callback(permitted)
+                end
+            end
         end
     end
     local function CopyGeometry(geometry)

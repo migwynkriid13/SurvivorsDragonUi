@@ -17,7 +17,7 @@ DFRL:NewMod("LootView", 4, function()
     local BORDER_BOTTOM_INSET = 12
     local FADE_IN, FADE_START, LIFETIME = 0.2, 4.05, 5.55
     local pool, visible, count = {}, {}, 0
-    local ready = true
+    local ready, needsReflow = true, false
     local frame = CreateFrame("Frame", "DFRL_LootNotifications", UIParent)
     frame:SetWidth(WIDTH)
     frame:SetHeight(HEIGHT + (LIMIT - 1) * STEP)
@@ -41,11 +41,14 @@ DFRL:NewMod("LootView", 4, function()
         return label
     end
     local function Reflow()
+        needsReflow = true
+        if not frame:IsVisible() then return end
         for index = 1, count do
             local card = visible[index]
             card:ClearAllPoints()
             card:SetPoint("BOTTOM", frame, "BOTTOM", 0, (index - 1) * STEP)
         end
+        needsReflow = false
     end
     local function SetAlpha(card, alpha)
         if card.paintedAlpha == alpha then return end
@@ -55,6 +58,7 @@ DFRL:NewMod("LootView", 4, function()
     local function Retire(card)
         card:Hide()
         card.entry, card.started, card.retryAt = nil, nil, nil
+        card.presentationDirty = nil
         card.icon:SetTexture(nil)
         card.iconPath = nil
         card.icon:Hide()
@@ -87,6 +91,8 @@ DFRL:NewMod("LootView", 4, function()
         return 1, 1, 1
     end
     local function Refresh(card)
+        card.presentationDirty = true
+        if not frame:IsVisible() then return end
         local entry = card.entry
         local r, g, b = Color(entry)
         T.SetTextIfChanged(card.name, entry.name)
@@ -131,6 +137,7 @@ DFRL:NewMod("LootView", 4, function()
             card.textLeft = left
         end
         T.SetTextIfChanged(card.heading, DFRL.locale.Text("You received"))
+        card.presentationDirty = nil
     end
     for index = 1, LIMIT do
         local card = CreateFrame("Frame", nil, frame)
@@ -170,9 +177,12 @@ DFRL:NewMod("LootView", 4, function()
                 count = count - 1
                 changed = true
             else
-                local alpha = math.min(1, math.max(0, elapsed / FADE_IN))
-                if elapsed > FADE_START then alpha = (LIFETIME - elapsed) / (LIFETIME - FADE_START) end
-                SetAlpha(card, alpha)
+                if frame:IsVisible() then
+                    if card.presentationDirty then Refresh(card) end
+                    local alpha = math.min(1, math.max(0, elapsed / FADE_IN))
+                    if elapsed > FADE_START then alpha = (LIFETIME - elapsed) / (LIFETIME - FADE_START) end
+                    SetAlpha(card, alpha)
+                end
                 -- Exact item references sometimes acquire native metadata after
                 -- delivery. Retry for two seconds, never by a guessed item name.
                 if card.retryAt and now >= card.retryAt then
@@ -182,10 +192,8 @@ DFRL:NewMod("LootView", 4, function()
                 end
             end
         end
-        if changed then
-            table.setn(visible, count)
-            Reflow()
-        end
+        if changed then table.setn(visible, count) end
+        if changed or (needsReflow and frame:IsVisible()) then Reflow() end
         if count == 0 then
             animation:SetScript("OnUpdate", nil)
             frame:Hide()
@@ -210,9 +218,13 @@ DFRL:NewMod("LootView", 4, function()
         visible[count] = card
         table.setn(visible, count)
         Reflow()
-        SetAlpha(card, 0)
+        if frame:IsVisible() then
+            SetAlpha(card, 0)
+        else
+            card.paintedAlpha = nil
+        end
         card:Show()
-        frame:Show()
+        if count == 1 then frame:Show() end
         animation:SetScript("OnUpdate", function()
             if not pcall(Update) then
                 ready = false
@@ -221,6 +233,12 @@ DFRL:NewMod("LootView", 4, function()
         end)
         return true
     end
+    HookScript(frame, "OnShow", function()
+        if not pcall(Update) then
+            ready = false
+            Clear()
+        end
+    end)
     layout.Register("lootNotifications", frame, function()
         -- Align the visible silver rim, above the crop's bottom padding, with
         -- the default action artwork top. Keep both groups independently movable.
