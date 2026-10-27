@@ -29,7 +29,7 @@ DFRL:NewMod("Target", 1, function()
             setHealthColor(bar, 1, 0, 0)
         end
     end
-    local UpdateBorderTexture, _, _, resizeHealth = T.CreateUnitBorder(
+    local UpdateBorderTexture, _, _, resizeHealth, editRegion = T.CreateUnitBorder(
         TargetFrame,
         TargetFrameHealthBar,
         TargetFrameTexture,
@@ -181,9 +181,13 @@ DFRL:NewMod("Target", 1, function()
     end)
     UpdateClassification()
     UpdateTarget()
+    editRegion.includeFrames = function() return T.GetUnitAuraIcons("target") end
     DFRL.layout.Register("targetFrame", TargetFrame, nil, {
+        region = editRegion,
+        resizeToRegion = true,
+        refreshRegion = editRegion.Refresh,
         edgeWidth = true,
-        edgeRegion = TargetFrameHealthBar,
+        edgeRegion = editRegion,
         minWidth = defaultWidth - 58,
         maxWidth = defaultWidth + 800,
         onResize = ResizeHealth,

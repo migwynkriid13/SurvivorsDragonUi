@@ -458,8 +458,10 @@ DFRL:NewMod("Character window", 6, function()
             metrics = { label = {}, value = {} }
             rowMetrics[row] = metrics
         end
-        if metrics.label.label ~= label then T.SetFont(label, 12) end
-        if metrics.value.label ~= value then T.SetFont(value, 12) end
+        -- Compare actual fonts as well as row identity after native updates.
+        -- SetFont skips the native write when the requested style still matches.
+        T.SetFont(label, 12)
+        T.SetFont(value, 12)
         local labelChanged, valueChanged = TextChanged(metrics.label, label), TextChanged(metrics.value, value)
         local measure = not metrics.ready
             or labelChanged
@@ -527,7 +529,7 @@ DFRL:NewMod("Character window", 6, function()
         return tonumber(number) or 0
     end
     local primaryRows, extraRows = {}, {}
-    local extraOwner, extraChildCount, extraChildren, extraTitle
+    local extraOwner, extraChildCount, extraChildren
     local function MoreRows(more)
         local count = more.GetNumChildren and more:GetNumChildren()
         if more == extraOwner and count and count == extraChildCount then return extraRows end
@@ -587,10 +589,7 @@ DFRL:NewMod("Character window", 6, function()
             Place(more, content, 0, -y, CONTENT_WIDTH)
             local title = _G.AZSMoreStatsTitle
             if title then
-                if extraTitle ~= title then
-                    T.SetFont(title, 12)
-                    extraTitle = title
-                end
+                T.SetFont(title, 12)
                 Anchor(title, "TOPLEFT", more, "TOPLEFT", 8, -8)
                 SetWidth(title, ROW_WIDTH)
                 Justify(title, "LEFT")
@@ -843,7 +842,10 @@ DFRL:NewMod("Character window", 6, function()
         UpdateHeader()
         RefreshQuality()
         AttachNativeHooks()
-        QueueStats()
+        -- Show handlers have finished the native opening updates. Style now so
+        -- the first visible paint cannot show the native one-column sizing.
+        -- Ordinary native stat changes still use the coalesced deferred hook.
+        FlushStats()
     end
 
     for _, name in ipairs(panes) do

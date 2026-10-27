@@ -386,6 +386,15 @@ DFRL:NewMod("PetFrames", 4, function()
                 Clear()
                 return
             end
+            -- Admit metadata only after the complete native roster passes its
+            -- existing validation. Timers do not relearn unchanged portraits.
+            local source = DFRL.sct
+            if changed and source and type(source.LearnSummonIcon) == "function" then
+                for index = 1, entryCount do
+                    local entry = entries[index]
+                    source.LearnSummonIcon(entry.name, entry.icon)
+                end
+            end
             acceptedPacket, acceptedStamp, acceptedReceived = packet, stamp, received
         end
         if entryCount == 0 then

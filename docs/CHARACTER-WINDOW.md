@@ -84,10 +84,14 @@ children, retaining their numeric name order. Labels and values use DEFAULT,
 with wrapping and measured heights for long translated text. Native resistance
 controls remain available when the game shows them.
 
-Native stat updates coalesce into one queued layout pass after the current UI
-callback, using one stable callback rather than replacing it for every request.
-This allows the game to finish updating and translating its rows first. Work
-stops after the queued pass and while the window is hidden. Hiding the pane or
+Ordinary native stat updates coalesce into one queued layout pass after the
+current UI callback, using one stable callback rather than replacing it for
+every request. This lets the game finish updating and translating its rows
+first. Opening the character pane/window instead flushes that pass at the end
+of the existing Show handler, after its native callback. The first visible
+paint therefore receives the prepared two-column layout instead of briefly
+showing the native Run Stats sizing. Work stops after the queued pass and while
+the window is hidden. Hiding the pane or
 window and world cleanup cancel the request and clear its queued state, so
 reopening can schedule normally. The scroll position is session-only, clamped
 when the list shrinks and reset on world leave/logout. Missing native extra
@@ -103,7 +107,10 @@ and sorted when their native child structure changes, with the existing
 `GetChildren` path retained when a child-count getter is unavailable.
 
 The native game still rewrites extra-row anchors and the extra-card height on
-each stats update, even when displayed values are unchanged. The skin compares
+each stats update, even when displayed values are unchanged. Rows and the Run
+Stats title also pass through the shared font helper on refresh: it compares
+their actual current face, size and flags, skipping matching font writes rather
+than treating a retained FontString identity as proof of its style. The skin compares
 actual anchors, widths, heights and levels before writing, so those native
 resets are repaired while unchanged primary rows and text placement are left
 alone. Native text, conditional visibility and tooltip fields remain live.
@@ -171,3 +178,5 @@ pending refresh cancellation and reopening. Local tests, standalone syntax or
 validation checks and addon/game execution were not run. GitHub Actions was not
 awaited. In-game appearance, model rendering, scrolling, input, tooltips and FPS
 impact remain unverified.
+
+The 2026-10-27 opening-size correction uses the existing synchronous Show hooks and the existing flush/cancel function. It adds no polling, frame, region, asset or saved state. Opening may run the cached layout once for the pane and once for its owner after each native callback; ordinary stat updates remain coalesced. Local work was limited to source/diff inspection, data-only native-source reading and pinned formatting. The reporter's size-jump symptom and its correction have not been exercised in-game.

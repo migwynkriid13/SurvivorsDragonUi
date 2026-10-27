@@ -431,6 +431,7 @@ DFRL:NewMod("Layout", 0, function()
         return (cells < 0 and math.ceil(cells - 0.5) or math.floor(cells + 0.5)) * SNAP_SPACING
     end
     local function EditBounds(entry, width, height, uiScale, bounds)
+        if entry.options.refreshRegion then entry.options.refreshRegion() end
         local region = entry.options.region or entry.frame
         local position = ReadPosition(region)
         local regionWidth, regionHeight = T.GetLocalSize(region)
@@ -622,6 +623,7 @@ DFRL:NewMod("Layout", 0, function()
         if not ready or not inWorld or not editing then return end
         FinishDrag(activeDrag, true)
         SelectEntry(entry, true)
+        if entry.options.refreshRegion then entry.options.refreshRegion() end
         local width, height, uiScale = Viewport()
         local cursorX, cursorY = Cursor()
         local position = ReadPosition(entry.frame)
@@ -651,6 +653,7 @@ DFRL:NewMod("Layout", 0, function()
         if not ready or not inWorld or not editing then return end
         FinishDrag(activeDrag, true)
         SelectEntry(entry, true)
+        if entry.options.refreshRegion then entry.options.refreshRegion() end
         local width, height, uiScale = Viewport()
         local x, y = Cursor()
         local region = not axis and entry.options.resizeToRegion and entry.options.region or entry.frame
@@ -691,15 +694,19 @@ DFRL:NewMod("Layout", 0, function()
         then
             return
         end
+        local regionWidth, regionHeight = T.GetLocalSize(start.region)
         if
             not force
             and start.lastCursorX == cursorX
             and start.lastCursorY == cursorY
             and start.lastWidth == entry.frame:GetWidth()
             and start.lastHeight == entry.frame:GetHeight()
+            and T.NearlyEqual(start.lastRegionWidth, regionWidth)
+            and T.NearlyEqual(start.lastRegionHeight, regionHeight)
         then
             return
         end
+        if entry.options.refreshRegion then entry.options.refreshRegion() end
         local right = string.find(start.corner, "RIGHT") ~= nil
         local top = string.find(start.corner, "TOP") ~= nil
         local signX, signY = right and 1 or -1, top and 1 or -1
@@ -739,6 +746,7 @@ DFRL:NewMod("Layout", 0, function()
         ApplyPosition(entry.frame, entry.pointerPosition)
         start.lastCursorX, start.lastCursorY = cursorX, cursorY
         start.lastWidth, start.lastHeight = entry.frame:GetWidth(), entry.frame:GetHeight()
+        start.lastRegionWidth, start.lastRegionHeight = T.GetLocalSize(start.region)
         return true
     end
 
@@ -868,6 +876,7 @@ DFRL:NewMod("Layout", 0, function()
         local handle, region = entry.handle, entry.options.region or entry.frame
         local shown = CanShowHandle(entry)
         if shown then
+            if entry.options.refreshRegion then entry.options.refreshRegion() end
             local ratio = Scale(region) / scale
             local regionWidth, regionHeight = T.GetLocalSize(region)
             local handleWidth = math.max(12, regionWidth * ratio)

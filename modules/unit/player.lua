@@ -4,7 +4,7 @@ DFRL:NewMod("Player", 1, function()
     local tex = DFRL:GetInfoOrCons("tex") .. "unitframes\\"
     local healthLabels
     local primaryBar, primaryText, setPowerShown, setPortraitOverlap
-    local updateBorder, resizeHealth
+    local updateBorder, resizeHealth, editRegion
     local pulseTextures = {}
     local initialized = false
     local healthUnderlap = T.LargeHealthFill.underlap
@@ -253,7 +253,7 @@ DFRL:NewMod("Player", 1, function()
             highlight:SetAlpha(0)
             highlight:Hide()
         end
-        updateBorder, setPowerShown, setPortraitOverlap, resizeHealth = T.CreateUnitBorder(
+        updateBorder, setPowerShown, setPortraitOverlap, resizeHealth, editRegion = T.CreateUnitBorder(
             PlayerFrame,
             PlayerFrameHealthBar,
             PlayerFrameTexture,
@@ -336,8 +336,11 @@ DFRL:NewMod("Player", 1, function()
         FixPlayerClick()
         UpdateValues()
         DFRL.layout.Register("playerFrame", PlayerFrame, nil, {
+            region = editRegion,
+            resizeToRegion = true,
+            refreshRegion = editRegion.Refresh,
             edgeWidth = true,
-            edgeRegion = PlayerFrameHealthBar,
+            edgeRegion = editRegion,
             minWidth = PlayerFrame:GetWidth() - 58,
             maxWidth = PlayerFrame:GetWidth() + 800,
             onResize = ResizeHealth,
