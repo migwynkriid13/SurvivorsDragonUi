@@ -4,9 +4,10 @@ DFRL:NewMod("Display", 0, function()
     local defaults = {
         meterEnabled = false,
         meterRows = 6,
-        meterWidth = 240,
+        layoutShowGrid = true,
         meterFontSize = 11,
-        guardianWidth = 240,
+        bossRows = 0,
+        guardianRows = 0,
         guardianShowDead = true,
         meterShowDamage = false,
         meterShowDps = true,
@@ -81,9 +82,9 @@ DFRL:NewMod("Display", 0, function()
 
     local ranges = {
         meterRows = { minimum = 1, maximum = 10, integer = true },
-        meterWidth = { minimum = 120, maximum = 960, integer = true },
+        bossRows = { minimum = 0, maximum = 40, integer = true },
         meterFontSize = { minimum = 8, maximum = 18, integer = true },
-        guardianWidth = { minimum = 120, maximum = 960, integer = true },
+        guardianRows = { minimum = 0, maximum = 40, integer = true },
         sctScale = { minimum = 0.25, maximum = 2 },
         petRows = { minimum = 1, maximum = 6, integer = true },
         petSpacing = { minimum = 0, maximum = 60, integer = true },
@@ -114,9 +115,10 @@ DFRL:NewMod("Display", 0, function()
         return {
             meterEnabled = Read(source, "meterEnabled"),
             meterRows = Read(source, "meterRows"),
-            meterWidth = Read(source, "meterWidth"),
+            layoutShowGrid = Read(source, "layoutShowGrid"),
             meterFontSize = Read(source, "meterFontSize"),
-            guardianWidth = Read(source, "guardianWidth"),
+            bossRows = Read(source, "bossRows"),
+            guardianRows = Read(source, "guardianRows"),
             guardianShowDead = Read(source, "guardianShowDead"),
             meterShowDamage = Read(source, "meterShowDamage"),
             meterShowDps = Read(source, "meterShowDps"),

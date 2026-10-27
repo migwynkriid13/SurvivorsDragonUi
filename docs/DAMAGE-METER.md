@@ -27,30 +27,11 @@ total** and **Header DPS** control the summary; turning both off shows the curre
 view name. Both header fields start on. All seven options use the same preview, Confirm,
 Cancel, profile and reset behavior. Healing uses healing totals and HPS.
 Hover still provides the full name and numbers when row values are hidden.
-Drag **Meter width** from **120 to 960** under **Damage meter** to change its
-width without scaling rows or icons; its default is **240**.
-**Font size** changes meter text from **8 to 18**, with **11** as the default.
-Both controls preview live and use the same
-Confirm, Cancel, profile, discard and reset behavior as the other meter options.
-Move, scale or hide **DPS meter** through `/sdui` → **Layout**, then Confirm.
-Geometry and hiding also work
-with named profiles, Cancel, `/sdui lock` and both full resets.
+Use the left/right side handles on **DPS meter** in Layout to change its width without scaling rows or icons. Top/bottom handles change **Abilities shown**, using the same 1–10 limit as the settings control. Corner handles retain proportional scaling. **Font size** remains under Damage meter, from **8 to 18**, default **11**. All changes preview and use Confirm, Cancel, profiles, discard and resets.
 
-The default scale remains **0.8** and the default width is **240** UI units.
-Width and text size are independent of that scale. Its bottom-right
-corner sits at the screen's bottom-right corner with no offset. Shared layout
-registration captures this scale before applying saved geometry. These defaults
-apply to unset geometry and both full resets; existing confirmed/draft positions
-and scales keep using the shared layout rules. The default corner stays fixed
-when the ability count or width changes, without an updater or geometry migration.
+The default scale remains **0.8** and width **240** UI units, with side-width limits **120–960**. Its bottom-right corner sits at the screen's bottom-right corner with no offset. Shared layout registration captures this scale before applying saved geometry. Defaults apply to unset geometry and both full resets; confirmed/draft positions and scales retain the shared rules. The default corner stays fixed when the ability count changes. Active side dragging holds the opposite edge fixed.
 
-`meterWidth` and `meterFontSize` are finite, clamped/rounded integers in the
-existing display table. Missing or invalid values and both full resets use
-their defaults. The owning display normalization also copies them into named
-profiles. No new SavedVariable or geometry migration is needed. The native
-horizontal width slider uses one-unit steps and a current-value label; preview
-synchronization guards its synchronous value callback. Proportional Layout
-resizing is unchanged.
+Width now lives beside scale and position in the existing Layout record. The obsolete `meterWidth` display field and slider are removed. `meterFontSize` remains a finite, clamped/rounded display integer; both normalizers participate in named profiles and the existing save/discard lifecycle. No new SavedVariable or geometry migration is needed. Hidden/off views accept required root geometry but defer presentation, and resizing never starts native collection while the meter is off.
 
 Row height, circular icons and gold rims remain 32, 26 and 31 units. Header
 text retains its original size offsets above the selected row font. Numeric

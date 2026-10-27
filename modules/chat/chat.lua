@@ -595,6 +595,7 @@ DFRL:NewMod("Chat", 1, function()
         DFRL.layout.Register("chat", root, nil, {
             region = moveRegion,
             resize = "dimensions",
+            edgeHandles = true,
             minWidth = 240,
             minHeight = 120,
             maxWidth = 2400,

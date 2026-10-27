@@ -3,7 +3,7 @@
 -- The existing gold ring retains third_party/Jewelry-ARTWORK.md's provenance.
 DFRL:NewMod("DamageMeter", 7, function()
     local HEADER, ROW_HEIGHT, FOOTER = 32, 32, 32
-    local width, fontSize = DFRL.display.Get("meterWidth"), DFRL.display.Get("meterFontSize")
+    local width, fontSize = 240, DFRL.display.Get("meterFontSize")
     local enabled = DFRL.display.Get("meterEnabled")
     local visible = DFRL.display.Get("meterRows")
     local optionKeys = {
@@ -699,6 +699,15 @@ DFRL:NewMod("DamageMeter", 7, function()
     end, {
         labelAbove = true,
         refreshDefault = true,
+        edgeWidth = true,
+        minWidth = 120,
+        maxWidth = 960,
+        onHeightDrag = function(height)
+            DFRL.display.Set("meterRows", math.floor((height - HEADER - FOOTER) / ROW_HEIGHT + 0.5))
+        end,
+        onResize = function(frame)
+            width, age = frame:GetWidth(), 0.2
+        end,
         onEdit = function(active)
             editing, age = active, 0.2
             HideTooltip()
@@ -719,8 +728,8 @@ DFRL:NewMod("DamageMeter", 7, function()
         local enable = DFRL.display.Get("meterEnabled")
         local enabledChanged = enabled ~= enable
         local count = DFRL.display.Get("meterRows")
-        local selectedWidth, selectedFontSize = DFRL.display.Get("meterWidth"), DFRL.display.Get("meterFontSize")
-        local widthChanged, fontChanged = width ~= selectedWidth, fontSize ~= selectedFontSize
+        local selectedFontSize = DFRL.display.Get("meterFontSize")
+        local fontChanged = fontSize ~= selectedFontSize
         local changed, iconsWereShown = false, options.icons
         for key, setting in pairs(optionKeys) do
             local value = DFRL.display.Get(setting)
@@ -728,12 +737,10 @@ DFRL:NewMod("DamageMeter", 7, function()
                 options[key], changed = value, true
             end
         end
-        if visible == count and not changed and not enabledChanged and not widthChanged and not fontChanged then
-            return
-        end
+        if visible == count and not changed and not enabledChanged and not fontChanged then return end
         HideTooltip()
         enabled = enable
-        width, fontSize = selectedWidth, selectedFontSize
+        fontSize = selectedFontSize
         if changed then optionsRevision = optionsRevision + 1 end
         visible, age = count, 0.2
         offset = math.max(0, math.min(offset, snapshot.count - visible))
@@ -746,12 +753,10 @@ DFRL:NewMod("DamageMeter", 7, function()
             end
         end
         local height = HEADER + visible * ROW_HEIGHT + FOOTER
-        if widthChanged then root:SetWidth(width) end
         if not T.NearlyEqual(root:GetHeight(), height) then
             root:SetHeight(height)
-            widthChanged = true
+            DFRL.layout.Place("damageMeter")
         end
-        if widthChanged then DFRL.layout.Place("damageMeter") end
         if not enabled or enabledChanged then Invalidate() end
         UpdateController()
     end)

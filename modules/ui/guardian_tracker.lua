@@ -23,17 +23,18 @@ DFRL:NewMod("GuardianTracker", 4, function()
     local TITLE_LEFT = 44
     local TITLE_PADDING = TITLE_LEFT + ROW_INSET
     local WIDTH, ROW_HEIGHT = 128 + NAME_WIDTH + COLUMN_GAP + 2 * ROW_INSET, 26
-    local requestedWidth = DFRL.display.Get("guardianWidth")
+    local visibleRows, rowOffset = DFRL.display.Get("guardianRows"), 0
     local preferredStatusWidth, headerHeight = 128, WIDTH / 8
-    local width, statusWidth = requestedWidth, 128
+    local width, statusWidth = 240, 128
     local healthWidth = 0
     local presentation = { snapshot = { rows = {}, counts = {} }, shown = false }
     local frame = CreateFrame("Frame", "DFRL_GuardianTracker", UIParent)
     frame:SetScale(DEFAULT_SCALE)
     frame:SetWidth(width)
-    frame:SetHeight(headerHeight + 5 * ROW_HEIGHT + 12)
+    frame:SetHeight(headerHeight + (visibleRows > 0 and visibleRows or 5) * ROW_HEIGHT + 12)
     frame:SetFrameStrata("MEDIUM")
     frame:EnableMouse(false)
+    frame:EnableMouseWheel(true)
     frame:Hide()
 
     local function Label(parent, size, justify)
@@ -94,6 +95,14 @@ DFRL:NewMod("GuardianTracker", 4, function()
         if row:IsShown() then row:Hide() end
     end
     local function Clear()
+        rowOffset = 0
+        presentation.filteredCount = 0
+        if presentation.filtered then
+            for index in ipairs(presentation.filtered) do
+                presentation.filtered[index] = nil
+            end
+            table.setn(presentation.filtered, 0)
+        end
         for _, row in ipairs(rows) do
             ClearRow(row)
         end
@@ -169,7 +178,7 @@ DFRL:NewMod("GuardianTracker", 4, function()
         return math.ceil(maximum)
     end
     local function ApplyWidth()
-        width = requestedWidth
+        width = frame:GetWidth()
         local available = width - 2 * ROW_INSET - COLUMN_GAP
         -- Compress both text columns below their natural width. The status
         -- column plus its eight-unit pill allowance must span two 25-unit caps.
@@ -178,10 +187,6 @@ DFRL:NewMod("GuardianTracker", 4, function()
             math.max(42, available * preferredStatusWidth / (NAME_WIDTH + preferredStatusWidth)),
             available - 24
         )
-        if not T.NearlyEqual(width, frame:GetWidth()) then
-            frame:SetWidth(width)
-            DFRL.layout.Place("guardianTracker", frame)
-        end
     end
     local function Measure()
         preferredStatusWidth = math.max(128, healthWidth, CaptionWidth("Respawns in %s", "99:59") + 16)
@@ -243,9 +248,25 @@ DFRL:NewMod("GuardianTracker", 4, function()
             presentation.headerHeight = headerHeight
         end
         T.SetTextIfChanged(title, DFRL.locale.Text("GUARDIANS"))
-        local used = 0
+        local filtered, count = presentation.filtered or {}, 0
+        presentation.filtered = filtered
         for _, entry in ipairs(snapshot.rows) do
             if showDead or entry.state == "asleep" or entry.state == "awake" then
+                count = count + 1
+                filtered[count] = entry
+            end
+        end
+        for index = count + 1, table.getn(filtered) do
+            filtered[index] = nil
+        end
+        table.setn(filtered, count)
+        presentation.filteredCount = count
+        local capacity = visibleRows > 0 and visibleRows or count
+        rowOffset = math.max(0, math.min(rowOffset, count - capacity))
+        local used = 0
+        for index = rowOffset + 1, math.min(count, rowOffset + capacity) do
+            local entry = filtered[index]
+            if entry then
                 used = used + 1
                 local row = rows[used] or MakeRow()
                 if
@@ -290,9 +311,18 @@ DFRL:NewMod("GuardianTracker", 4, function()
         for index = used + 1, table.getn(rows) do
             ClearRow(rows[index])
         end
-        local height = headerHeight + 12 + used * ROW_HEIGHT
+        local height = headerHeight + 12 + (visibleRows > 0 and visibleRows or used) * ROW_HEIGHT
         if not T.NearlyEqual(frame:GetHeight(), height) then frame:SetHeight(height) end
     end
+    local function ScrollRows(direction)
+        if visibleRows == 0 then return end
+        rowOffset = math.max(
+            0,
+            math.min(rowOffset - (tonumber(direction) or 0), (presentation.filteredCount or 0) - visibleRows)
+        )
+        age = 0.1
+    end
+    frame:SetScript("OnMouseWheel", function() ScrollRows(arg1) end)
     DFRL.layout.Register("guardianTracker", frame, function()
         -- Match the health pill's right edge to the default minimap right edge.
         local right = minimapDefaults.right / DEFAULT_SCALE + ROW_INSET - HEALTH_RIGHT_OFFSET
@@ -301,6 +331,23 @@ DFRL:NewMod("GuardianTracker", 4, function()
     end, {
         labelAbove = true,
         refreshDefault = true,
+        edgeWidth = true,
+        minWidth = 120,
+        maxWidth = 960,
+        onResize = function()
+            local scale = frame:GetEffectiveScale()
+            if presentation.resizeScale ~= scale then
+                presentation.resizeScale = scale
+                presentation.healthText, presentation.healthMeasured = nil, nil
+                dirty = true
+            end
+            ApplyWidth()
+            age = 0.1
+        end,
+        onHeightDrag = function(height)
+            DFRL.display.Set("guardianRows", math.max(1, math.floor((height - headerHeight - 12) / ROW_HEIGHT + 0.5)))
+        end,
+        onMouseWheel = ScrollRows,
         onReset = Refresh,
     })
     DFRL.locale.Listen(function()
@@ -323,14 +370,14 @@ DFRL:NewMod("GuardianTracker", 4, function()
         controller:SetScript("OnUpdate", inWorld and not DFRL.layout.IsHidden("guardianTracker") and Tick or nil)
     end
     DFRL.display.Listen(function()
-        local selected = DFRL.display.Get("guardianWidth")
+        local selected = DFRL.display.Get("guardianRows")
         local selectedShowDead = DFRL.display.Get("guardianShowDead")
-        local widthChanged = selected ~= requestedWidth
-        if not widthChanged and selectedShowDead == showDead then return end
-        requestedWidth, showDead, age = selected, selectedShowDead, 0.1
-        -- Root geometry belongs to editing even when the presentation is hidden.
-        -- Caption measurement and row/header drawing keep their deferred lifecycle.
-        if widthChanged then ApplyWidth() end
+        if selected == visibleRows and selectedShowDead == showDead then return end
+        visibleRows, showDead, age, rowOffset = selected, selectedShowDead, 0.1, 0
+        local height = headerHeight
+            + 12
+            + (visibleRows > 0 and visibleRows or (presentation.filteredCount or 5)) * ROW_HEIGHT
+        if not T.NearlyEqual(frame:GetHeight(), height) then frame:SetHeight(height) end
     end)
     controller:SetScript("OnEvent", function()
         inWorld = event == "PLAYER_ENTERING_WORLD"

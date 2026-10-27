@@ -243,31 +243,17 @@ pinned formatting only; no addon/client execution, local test or standalone
 validation was run. Live appearance, FPS, draw calls and GPU-memory behavior
 remain unverified.
 
-## Meter text size and width sliders — 2026-10-27
+## Side resizing, row viewports and text size — 2026-10-27
 
-`meterWidth`, `guardianWidth` and `meterFontSize` reuse display preview,
-normalization, profiles and reset/discard ownership. Width previews update root
-geometry and shared placement once; cached row/header geometry reflows only
-while visible. Both width sliders use 120–960 with a 240 default. The guardian
-tracker uses cached natural widths to compress its columns without a forced
-outer-width minimum, preserving the measured header height and keeping the
-25-unit health end caps edge to edge. It does not remeasure translated captions
-on slider motion. The meter caches applied width, font size, icon gutter and
-numeric-column count. Failed font changes remain pending for the existing
-visible refresh. Off/hidden views update required edit bounds without added
-font, row-anchor, header or icon work.
+Six Layout groups add twenty editor-only center-edge marks: two horizontal for run timer, boss health, Revive, meter, Chat and guardians, plus two vertical for the four row views. Each is one existing native solid texture under the hidden shared handle, with no asset or additional controller. The two obsolete settings sliders and their four thumb/track textures are removed. **Show grid** uses one existing-style lazy editor checkbox; off hides the complete grid and guide parent and skips grid geometry sampling. Shift alignment still uses the existing active-drag calculations.
 
-Row heights, fonts and authored drawing-region counts remain unchanged. The two
-lazy editor sliders each author one native thumb and one track texture, four
-editor-only texture regions in total, plus their existing-style caption/value
-FontStrings. Hidden pages inherit native hiding. Their native value callbacks
-round to integer units, skip unchanged writes and guard programmatic updates;
-no updater, game event or asset is added. Native StatusBar UVs, row height,
-26-unit meter circles and 31-unit gold rims are preserved. Font changes resize text
-boxes and numeric-column space without rebuilding circles or adding text
-measurement. Cached text/value formatting and the native one-Hz rate samples
-remain intact. These are source-level observations; pinned local formatting
-does not establish runtime appearance, input behavior, FPS or GPU results.
+Width lives in shared Layout geometry. Meter and guardian roots default to 240 and allow 120–960 without scaling row height, icons or fonts. Cached natural tracker text widths compress its columns safely; native health end caps retain their 50-unit combined span. Meter geometry caches width, font size, icon gutter and numeric-column count. Failed font changes remain retryable. Hidden/off views accept required edit bounds while deferring row/header/font/icon presentation. Meter resizing never enables native reads or packet intake while off.
+
+Row handles update normalized display drafts. DPS retains 1–10 rows; boss/guardian capacity defaults to the existing automatic full list, with explicit 1–40-slot viewports and session-only scroll offsets. Native snapshots remain complete. Only viewport rows are painted; retired rows clear health, debuffs and hovers before pooling. Boss debuffs preserve their icon dimensions and reanchor only when their width-derived column count changes. Chat keeps its existing native dimension and content ownership.
+
+Run timer width reflows the existing 27 flow textures and 28 red glints without additional regions. Flow speed, temporal phases, pulse equations, opacity and cadence remain unchanged; spatial spacing, span, foam clipping and scheduled skull positions use the actual fill width. Native health/status-bar UV ownership and artwork crops are preserved. Wider visible fills cover more pixels; these source-level changes do not establish equal GPU cost or FPS. Revive invalidates its spark/cross geometry on width changes, retaining the existing animation lifecycle.
+
+All resizing uses the existing editor controller, unchanged-pointer guards and final release sample. Root height changes from row/debuff reflow also invalidate the active opposite-edge calculation. Grid preference, row counts, widths and font size retain shared Confirm/Cancel/discard/profile/reset behavior, without a new SavedVariable or idle updater. Local work was limited to source inspection and pinned formatting; appearance, animation, input and renderer performance remain unverified.
 
 ## Guardian Show dead control — 2026-10-27
 

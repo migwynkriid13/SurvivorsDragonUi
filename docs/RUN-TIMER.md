@@ -36,6 +36,18 @@ All choices preview immediately and save only with Confirm. Cancel, world
 leave, logout and reload discard unconfirmed choices. Both full resets restore
 the defaults above. Changing a choice does not move or scale the timer.
 
+## Width and encounter rows
+
+The Run timer and Boss health Layout outlines have left/right center handles for width only, preserving font, icon and health-pill height. Their 296-unit outer defaults and 280-unit fills stay unchanged; side widths range from 120 to 1200, independent of proportional corner scaling. Width is saved in the existing Layout geometry with normal Confirm, Cancel/discard, profiles and reset behavior.
+
+The run fill uses `runBar.layoutWidth`, derived from the actual root width minus its original sixteen-unit inset. Every scheduled skull uses `width * nativeSpawnTime / nativeRunLength`; the final skull stays at the fill's right edge. Width is part of the marker cache key. Native health, boss state and native time still own the values and marker state. Native StatusBar UV writes remain untouched.
+
+The existing 27 flow regions retain their speed, lane, phase and update interval; their spacing and wrap span reflow to the new width. Blue foam clips against the resized native progress boundary. The 28 red glints redistribute across that width only on a width transition, preserving pulse periods, phases, alpha and authored artwork. A wider bar does not allocate additional effects or alter native timing. Hidden views defer this cosmetic reflow until visible.
+
+Boss health also has top/bottom handles for 1–40 viewport slots, with mouse-wheel access to further validated native entries. The `bossRows` display preference defaults to zero (automatic full list), copied by profiles and restored on resets. Full encounter validation and native HUD ownership remain intact. Visible health rows use the current group width, preserve end caps and text size, and wrap their eighteen-unit debuffs into the available columns. Debuff height remains part of the measured outline. No data, health value or boss is fabricated to fill empty viewport slots.
+
+Source inspection and pinned formatting do not establish animation appearance, input behavior, native rendering or FPS in the packaged client. No local tests or game execution were run.
+
 ## Replacement switches and native settings
 
 The existing display normalizer also owns `customRunTimer` and

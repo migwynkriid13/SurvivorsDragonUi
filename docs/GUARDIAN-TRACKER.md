@@ -53,33 +53,18 @@ pill's right offset at the default scale. The pill anchor and default calculatio
 share `HEALTH_RIGHT_OFFSET`; neither follows moved or resized minimap geometry.
 Width changes reapply this default edge only when no confirmed or draft position
 exists; custom positions stay independent.
-`/sdui` → **Guardian tracker** has a **Tracker width** slider from **120 to 960**,
-with **240** as the default. It sets the actual width without scaling icons,
-fonts or rows. Cached natural caption/health widths guide the two text columns:
-wide layouts retain the status column's natural width and give extra space to
-names; narrower layouts compress both columns. Long text can clip at small
-widths instead of forcing the tracker wider. Names retain at least 24 units;
-the status column retains at least 42 units plus its eight-unit pill allowance,
-so the two 25-unit health end caps never overlap. The measured header height
-retains its existing sizing. Proportional Layout resizing remains available.
+The Layout left/right side handles set width from **120 to 960**, with **240** as the default, without scaling icons, fonts or rows. Corner handles still scale proportionally. Cached natural caption/health widths guide the columns: wide layouts retain the status column's natural width and give extra space to names; narrow layouts compress both. Long text can clip at small widths. Names retain at least 24 units; status retains at least 42 plus its eight-unit pill allowance, so the two 25-unit end caps never overlap. The measured header height retains its existing sizing.
 
-The slider previews live and saves only with Confirm. Cancel, world/logout/reload
-discard, profiles and both full resets use the shared display lifecycle.
-`guardianWidth` is a finite, clamped/rounded integer in the existing display
-table. Missing/invalid values and resets use 240, preserving explicit saved width
-choices. Its one-unit native slider and
-value label reuse the meter's shared control factory and callback guard. A width
-preview reuses cached caption/health requirements; it never starts a metadata
-scan. Hidden views update required root geometry only, deferring header/row
-painting to the existing controller. No new command, alert, sound, SavedVariable,
-dependency or updater is added.
+Top/bottom handles choose 1–40 visible slots; scroll over the tracker or its editor outline for further rows. The `guardianRows` display preference defaults to zero, retaining the original automatic full list, including after resets. Only the selected slice is painted; the complete accepted native roster and countdowns remain available. An explicit slot count retains the selected viewport height even with fewer accepted rows.
+
+Width is stored with the existing Layout geometry; the old `guardianWidth` display field and settings slider are removed. Row capacity uses existing display normalization. Both use shared preview, Confirm, Cancel/world/logout/reload discard, profiles and full resets. Width previews reuse cached caption/health requirements, without a metadata scan. Hidden views update required root geometry only, deferring row/header painting to the existing controller. No new command, alert, sound, SavedVariable, dependency or updater is added.
 
 `guardianShowDead` is a normalized boolean in the existing display table. Missing
 or invalid values and both full resets use true; explicit false choices remain
 false. It previews through the existing view controller, saves only with Confirm,
 discards with Cancel/world/logout/reload and participates in profiles. Filtering
 clears removed pooled-row health and fits the frame to the remaining rows. The
-header and rows stay mouse-transparent, with no tracker hover popups. Shared
+header and rows remain click-through, with mouse-wheel input for viewport scrolling and no tracker hover popups. Shared
 layout handles still support editing. Existing
 guardian waypoints and map/minimap markers keep their appearance and independent
 guidance control.

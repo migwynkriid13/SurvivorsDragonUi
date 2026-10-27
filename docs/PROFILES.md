@@ -23,6 +23,8 @@ Layout captures pending valid numeric text and finishes pointer editing before a
 
 The shared layout session begins and finishes the profile transaction once. All record copies and new saves stay in memory until the existing Confirm action succeeds. Saved profiles survive both full-reset entry points; pending profile edits are discarded on reset. `core/profiles.lua` is included in the shared TOC and runtime manifest. No command, asset, external dependency or gameplay persistence is added.
 
+Layout side widths are copied alongside position, scale and hidden state. The default-on grid preference and meter/boss/guardian row capacities use the existing normalized display snapshot. Boss/guardian zero capacity retains automatic full-list sizing; positive values define a scrollable viewport. Scroll offsets remain session-only. Loading a profile without these choices uses their defaults, and Cancel restores the previous width and row choices through the same shared owners.
+
 ## Verification boundary
 
-Source and diff inspection only. Local checks, formatters, syntax checks, tests and addon/game execution remain unauthorized and were intentionally not run. GitHub Actions supplies the authorized static checks. Packaged-client rendering and interaction remain unverified.
+Source and diff inspection plus pinned StyLua/Prettier formatting only. Local tests, standalone syntax/validation and addon/game execution were not run. GitHub Actions supplies static checks and was not awaited or polled. Packaged-client rendering and interaction remain unverified.

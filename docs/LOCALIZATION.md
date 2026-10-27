@@ -14,15 +14,7 @@ Language is session-only. No setting, command, profile, SavedVariable, client pr
 
 ## Display text
 
-The meter's **Font size**, **Meter width** and the guardian tracker's **Tracker
-width** controls and their hints have source TSV and runtime UI entries in all
-fourteen languages. They reuse shared editor styling, numeric display and
-multilingual width measurement, with native horizontal sliders for both widths.
-The guardian page reuses the existing **Guardian tracker** caption. Only these
-five UI captions were prepared; both sliders share the same width hint. The
-obsolete guardian minimum-width hint is removed from source and runtime UI
-catalogs. Native text, icon aliases, effects
-and the older full-catalog source fingerprint are unchanged.
+The meter's **Font size** and its hint remain translated in all fourteen source/runtime UI catalogs. **Show grid**, its hint and the revised Layout drag instructions also have all fourteen translations. The removed meter/tracker width sliders' three captions are absent from both source and runtime UI catalogs. Native catalogs, spell aliases, effects and the older full-catalog fingerprint are unchanged by these editor-caption updates.
 
 The custom run-timer and boss-bar enable captions and their native-display
 hints have source TSV and runtime UI entries in all fourteen languages. Only
