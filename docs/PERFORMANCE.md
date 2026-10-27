@@ -432,6 +432,13 @@ Row handles update normalized display drafts. DPS retains 1–10 rows; boss/guar
 
 Run timer width reflows the existing 27 flow textures and 28 red glints without additional regions. Flow speed, temporal phases, pulse equations, opacity and cadence remain unchanged; spatial spacing, span, foam clipping and scheduled skull positions use the actual fill width. Native health/status-bar UV ownership and artwork crops are preserved. Wider visible fills cover more pixels; these source-level changes do not establish equal GPU cost or FPS. Revive invalidates its spark/cross geometry on width changes, retaining the existing animation lifecycle.
 
+Run-timer captions and the font preview align every pooled text segment to the
+same baseline. Removing the seconds' one-pixel lift also removes its extra edit-bound
+height. The existing text/font/scale cache, hidden guards and segment pool remain;
+there is no added region, texture/material, alpha pass, allocation or updater.
+This is source-level alignment evidence, without local execution or measured
+GPU/FPS or in-game appearance results.
+
 All resizing uses the existing editor controller, unchanged-pointer guards and final release sample. Root height changes from row/debuff reflow also invalidate the active opposite-edge calculation. Grid preference, row counts, widths and font size retain shared Confirm/Cancel/discard/profile/reset behavior, without a new SavedVariable or idle updater. Local work was limited to source inspection and pinned formatting; appearance, animation, input and renderer performance remain unverified.
 
 ## Unit health width handles — 2026-10-27
@@ -441,6 +448,16 @@ Player, target and party add six editor-only one-texture side marks. Player/targ
 Large-frame width reflows its shared health span and metal end position. Native StatusBar UVs remain untouched. Each large top/bottom artwork region becomes a fixed cap plus a straight span: two additional allocated/visible regions per large frame. Party's full resource-mode sheet becomes three pieces (one previously), and each health-only top/bottom span splits at the fixed outer cap, raising that variant from thirteen to fifteen pieces. Both party variants are allocated during the existing four-row setup, adding four allocated regions per row; only the selected variant has nonzero alpha, adding two visible regions per active row. Across player, target and four party rows this is twenty extra allocated artwork regions, up to twelve extra visible artwork regions, plus six editor-only marks. Four passive party anchors replace their old single-texture anchors; they have no updater or input.
 
 The extra pieces preserve portrait/cap proportions during horizontal extension and use the same source pixel regions without added effects or alpha overlap. Changed widths update the affected sizes/anchors; unchanged state skips them, and actual large-bar/divider anchors are compared before repair. Width changes reuse successful texture bindings. Hidden large frames defer their reflow until visible or required editor entry; inactive party rows update only required root/border bounds and defer caption/texture work until Show or editing. Ordinary unit events make only the existing visibility checks and small width/state comparisons before any reflow. Party resource-mode changes and width changes share one owner, so later native value events or preview changes cannot restore the old health span.
+
+The target's portrait-side fill overlap is reduced from 15 to seven UI units,
+moving its right edge eight units left while retaining the same far-left edge
+and health-label positions. The existing background and damage-loss texture
+follow the narrower native StatusBar rectangle. Portraitless mode and player
+geometry retain their previous spans. This reuses the existing geometry guards,
+settings listener and size-change callback, with no new region, asset, material,
+alpha pass, event, updater or allocation. The fill covers a narrower area, but
+source inspection and pinned formatting do not establish measured GPU/FPS or
+in-game alignment results.
 
 The player/target outline correction adds two passive, mouse-transparent frames and no texture regions. Their portrait-mode bounds come from data-only alpha inspection of the unchanged prepared 256-by-128 sheets: pointed `(21,4)-(222,78)`, round `(23,11)-(218,75)`, boss `(23,1)-(245,81)`, elite `(23,1)-(227,81)`, rare elite `(23,0)-(245,82)` and rare `(23,0)-(227,82)`. Hidden portraits anchor the edit region to the actual closed border and extend only for enabled name/level captions. Bounds are mirrored and derived from the native owner/width delta. Target bounds include currently shown aura buttons from the tooltip module’s existing one-time discovery; the grouped registry adds no second discovery scan. Only editing samples measure those aura rectangles, using each widget’s effective scale. Cached edge coordinates skip unchanged anchors. The existing ten-Hz editor sampling and fresh drag/snap samples invoke the optional bounds callback, retrying unavailable caption heights without an idle updater. The active resize cache also observes changed edit-region dimensions, so aura or caption reflow can update the held opposite edge even at a stationary cursor. No artwork, native click bounds or confirmed geometry is changed.
 

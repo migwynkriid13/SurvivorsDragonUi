@@ -274,6 +274,7 @@ DFRL.tools.LargeHealthFill = {
     underlap = 1,
 }
 DFRL.tools.UnitPortraitOverlap = 15
+DFRL.tools.TargetHealthPortraitInset = 8
 
 local function CreatePortraitRim(parent, owner, path, mirrored, r, g, b, blendMode)
     local artwork = CreateFrame("Frame", nil, parent)
@@ -400,7 +401,8 @@ function DFRL.tools.CreateUnitBorder(frame, healthBar, portraitTexture, backgrou
     local mirrored = portraitSide == "LEFT"
     local healthFill = DFRL.tools.LargeHealthFill
     local underlap = healthFill.underlap
-    local healthWidth, healthTop, portraitInset, portraitOverlap = 122, 34, 104, T.UnitPortraitOverlap
+    local healthWidth, healthTop, portraitInset = 122, 34, 104
+    local portraitOverlap = T.UnitPortraitOverlap - (mirrored and 0 or T.TargetHealthPortraitInset)
     local defaultWidth, widthDelta = frame:GetWidth(), 0
     local dividerTop, dividerHeight = 51.5, 4
     local powerDivider, roundRim
@@ -457,7 +459,7 @@ function DFRL.tools.CreateUnitBorder(frame, healthBar, portraitTexture, backgrou
     -- Bleed beneath the existing inner outline; keep the content center fixed.
     healthBar:SetHeight(29 + 2 * underlap)
     healthBar:SetFrameLevel(frame:GetFrameLevel() + 1)
-    -- The target always overlaps its circular edge; the player opts in below.
+    -- Keep a smaller target overlap beneath the rim; the player opts in below.
     SetPortraitOverlap(not mirrored)
 
     if not background then background = frame:CreateTexture(nil, "BACKGROUND") end
