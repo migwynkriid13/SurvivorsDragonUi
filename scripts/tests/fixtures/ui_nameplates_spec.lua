@@ -140,6 +140,48 @@ context:NoPresentationWrites()
 assert(not context.writes.SetValue and not context.writes.SetMinMaxValues and not context.writes.SetStatusBarColor)
 print("PASS both nameplate options preserve eligible names without bar allocation or unchanged writes")
 
+local waking = Entries()
+waking[1].hp, waking[1].hpm, waking[1].state = 1234, 1234, 0
+context.guardian.nativeBar.maximum, context.guardian.nativeBar.value = 1234, 1234
+context:Publish(waking)
+assert(guardian.name:IsVisible(), "sleeping guardian did not match its published maximum")
+-- The actor's 1234.25 maximum serializes as 1234, while engagement writes ceilf=1235.
+context.guardian.nativeBar.maximum, context.guardian.nativeBar.value = 1235, 1200
+context:Tick(0.21)
+assert(guardian.name:IsVisible(), "native wake conversion hid a guardian before the next publication")
+waking[1].hp, waking[1].state = 1200, 1
+context:Publish(waking)
+assert(guardian.name:IsVisible(), "awake guardian lost its rounded/ceiling health match")
+assert(not guardian.health and not guardian.shadow, "combat allocated unused names-only bar artwork")
+context:ResetCounts()
+context:Tick(0.21)
+context:NoPresentationWrites()
+
+for _, representation in ipairs({
+    { 1234.25, 1235, true },
+    { 4194304, 4194305, true }, -- 4194304.5 rounds to the even integer, then ceilings up.
+    { 4194305, 4194306, false }, -- The upper float32 half-tie rounds away from this odd integer.
+    { 8388608, 8388609, false }, -- No float32 fractional values remain at this magnitude.
+    { 1234, 1236, false },
+    { 1234, 100, false },
+}) do
+    local publication = Entries()
+    publication[1].hp, publication[1].hpm, publication[1].state = 1000, representation[1], 1
+    context.guardian.nativeBar.maximum = representation[2]
+    context:Publish(publication)
+    assert(guardian.name:IsVisible() == representation[3], "wake conversion accepted an invalid native encoding")
+end
+waking[3] = { id = 12, kind = "elite", name = "Hogger", hp = 1200, hpm = 1235 }
+context.guardian.nativeBar.maximum = 1235
+context:Publish(waking)
+assert(not guardian.name:IsVisible(), "wake conversion bypassed a known elite ambiguity")
+waking[3] = nil
+context:Publish(waking)
+assert(guardian.name:IsVisible(), "guardian did not recover after a converted-signature ambiguity retired")
+context.guardian.nativeBar.maximum, context.guardian.nativeBar.value = 4294967296, 4294967296
+context:Publish(Entries())
+print("PASS sleeping-to-awake guardians retain exact serialized/ceiling signatures without fuzzy or percentage matches")
+
 context.guardian.nativeBar.maximum = 4294967295
 context:Tick(0.21)
 assert(guardian.name:IsVisible(), "integer uint32 clamp did not match the published guardian")

@@ -31,17 +31,25 @@ def main():
         guardian_hover = "local hoveredPin, hoveredName\n" + extract_source("modules/map/waypoints.lua", [
             "PIN_SIZE", "Number", "HideGuardianTooltip", "UpdateGuardianTooltip",
         ])
+        guardian_placement = "local tooltip, root = GameTooltip, tooltipRoot\nlocal inWorld, editing = true, false\n" + extract_source("core/tooltips.lua", [
+            "IconOwner", "PlaceTooltip",
+        ])
     except RuntimeError as error:
         print(error, file=sys.stderr)
         return 1
     with tempfile.TemporaryDirectory(prefix="sdui-ui-contracts-") as folder:
+        placement = Path(folder) / "guardian-placement-source.lua"
+        placement.write_text(guardian_placement, encoding="utf-8")
         for name, source, fixture in (
             ("cooldown-source.lua", cooldown, "ui_spec.lua"),
             ("guardian-hover-source.lua", guardian_hover, "ui_guardian_hover_spec.lua"),
         ):
             seam = Path(folder) / name
             seam.write_text(source, encoding="utf-8")
-            result = subprocess.run(["lua5.1", "scripts/tests/fixtures/" + fixture, str(seam)], cwd=SOURCE)
+            command = ["lua5.1", "scripts/tests/fixtures/" + fixture, str(seam)]
+            if fixture == "ui_guardian_hover_spec.lua":
+                command.append(str(placement))
+            result = subprocess.run(command, cwd=SOURCE)
             if result.returncode:
                 return result.returncode
         for fixture in ("ui_health_spec.lua", "ui_sct_spec.lua", "ui_nameplates_spec.lua", "ui_marks_spec.lua", "ui_meter_party_spec.lua"):

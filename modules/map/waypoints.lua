@@ -336,6 +336,7 @@ DFRL:NewMod("Waypoints", 3, function()
                 pin.art = art
                 pin.check = T.CreateDefeatedMarkerCheck(pin, size)
                 pin:SetScript("OnHide", function() HideGuardianTooltip(this) end)
+                T.RegisterTooltipIcon(pin, nil, "cursor")
             else
                 art:SetAllPoints(pin)
             end

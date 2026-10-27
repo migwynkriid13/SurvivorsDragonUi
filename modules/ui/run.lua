@@ -861,6 +861,8 @@ DFRL:NewMod("RunTimers", 5, function()
                 master = "customBossBars",
                 options = {
                     { "customBossBars", "Enable custom boss bars", "Off: use the game's original boss bars." },
+                    { "bossShowCurrentHealth", "Show current health", "Show current health on health bars." },
+                    { "bossShowMaximumHealth", "Show maximum health", "Show maximum health on health bars." },
                     { "bossDebuffs", "Boss debuffs", "Effects on boss and guardian health bars." },
                     { "guardiansInBossBar", "Guardians in boss bar", "Off: show only bosses in the boss bar." },
                 },
@@ -894,6 +896,8 @@ DFRL:NewMod("RunTimers", 5, function()
                 label = "Guardian tracker",
                 options = {
                     { "guardianShowDead", "Show dead", "Show defeated guardians and their respawn timers." },
+                    { "guardianShowCurrentHealth", "Show current health", "Show current health on health bars." },
+                    { "guardianShowMaximumHealth", "Show maximum health", "Show maximum health on health bars." },
                 },
             },
             {
@@ -2255,7 +2259,7 @@ DFRL:NewMod("RunTimers", 5, function()
         ClearDebuffs(row)
         row.frame:Hide()
         T.SetTextIfChanged(row.name, "")
-        T.SetTextIfChanged(row.health, "")
+        T.SetEncounterHealthText(row.health, nil, nil, false, false)
         if row.value ~= 0 then row.bar:SetValue(0) end
         row.value, row.layoutOffset = 0, nil
         row.id, row.key = nil, nil
@@ -3033,7 +3037,13 @@ DFRL:NewMod("RunTimers", 5, function()
                 if row.value ~= value then row.bar:SetValue(value) end
                 row.value = value
                 T.SetTextIfChanged(row.name, entry.name)
-                T.SetTextIfChanged(row.health, T.EncounterHealthText(entry.hp, entry.maximum))
+                T.SetEncounterHealthText(
+                    row.health,
+                    entry.hp,
+                    entry.maximum,
+                    DFRL.display.Get("bossShowCurrentHealth"),
+                    DFRL.display.Get("bossShowMaximumHealth")
+                )
                 if not row.frame:IsShown() then row.frame:Show() end
             end
             if rowOrder[index] ~= row then reflow = true end

@@ -6,6 +6,18 @@ matching game option is turned back on too. **Boss bars** has an independent
 **Enable custom boss bars** switch, also on by default; turning it off restores
 the game's boss and guardian health bars.
 
+**Boss bars** also has **Show current health** and **Show maximum health**, both
+on by default. Together they show `current / maximum`; either value alone has no
+slash, and turning both off hides the health text while keeping the fill. These
+choices apply to every row in this view, including enabled guardian rows. The
+Guardian tracker has its own independent pair.
+
+The normalized `bossShowCurrentHealth` / `bossShowMaximumHealth` booleans use the
+existing display table and shared preview, Confirm, Cancel/discard, profiles and
+both full resets. Missing or invalid values and resets use true. The shared
+encounter formatter retains compact K/M/B/T numbers, caches only each label's
+current effective values and checks actual text/visibility before writing.
+
 When either switch is off, the settings underneath it are dimmed and inactive.
 The timer's preview, font controls and both mode columns fade together; an open
 font menu closes. Their selected values are kept and become available again

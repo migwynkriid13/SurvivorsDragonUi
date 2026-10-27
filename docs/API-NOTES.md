@@ -388,11 +388,39 @@ The existing SCT controller reads phase first and accepts only received
 `AZS_UNITS` publications. It keeps an unsaved index of exact native names and
 maximum health for `final`, `boss` and `guardian` entries, including sleeping
 guardians. Each accepted maximum indexes its original value and exact float32
-representation, plus the uint32 ceiling and its float32 representation when the
-full value exceeds 4,294,967,295. Float conversion rounds halfway ties to even;
-there is no epsilon match, inferred health or conversion of a percentage bar to
-absolute HP. This handles native plate storage that cannot retain the full
-published maximum, including the Names only/filter combination. Published
+representation, plus its native ceil/uint32-clamped value and that value's
+float32 representation. Float conversion rounds halfway ties to even.
+The retained Rust formatter also uses
+[half-to-even precision rounding](https://doc.rust-lang.org/std/fmt/index.html#precision).
+
+Waking guardians rescale their actor health before publishing native unit
+fields. The unit maximum uses `ceilf`, while the encounter-list formatter emits
+whole numbers. For example, actor maximum `1234.25` can arrive as `hpm = 1234`
+but produce a native bar maximum of `1235`. The former exact-equality filter
+rejected that signature. The index now also includes the upper unit ceiling
+when a float32 value above the published integer can round to that integer:
+below 2^22, or at an even half-tie below 2^23. At and above 2^23 no fractional
+float32 maximum exists, so no extra integer is accepted. This is a bounded
+serialization preimage, not a general plus/minus-one or epsilon match. An
+explicit fractional publication also indexes its direct ceiling. All aliases
+are prepared only when the accepted publication changes, in both sleeping and
+awake states; no previous plate identity is carried across a mismatch.
+
+Static inspection of the installed executable on 2026-10-27, SHA-256
+`22f7938eb4f99f2857dc091b1c57c147bd848eaabfeaa81e444c0a3393ca8150`,
+locates the guardian health/max block at VA `0x145c21c7c` (file `0x5c2107c`). It
+loads actor fields `+0x160/+0x164`, calls import `ceilf` through
+`0x145febc63`, and publishes descriptor fields 28/22 with uint32 saturation.
+This rechecks the conversion lead in AzerothSurvivorsRE's
+`docs/analysis/guardian-target-health-2026-10-23.md` against the installed file.
+Its retained `gameplay/client/addon_lists.rs` and historical native
+`0.109.0/addon-bridge` producer evidence supply the zero-decimal encounter-format
+lead; this inspection does not execute either game or establish the reported
+live guardian's actual values.
+
+There is no inferred health or conversion of a percentage bar to absolute HP.
+This handles native plate storage that cannot retain the full published maximum,
+including the Names only/filter combination and waking conversion. Published
 ordinary `elite` entries colliding with any of those native representations
 make that signature ambiguous and hide it. The complete list is validated
 before replacing the index; failed or unavailable data hides hostile plates until
@@ -415,8 +443,9 @@ The public engine's [plate state](https://github.com/samwhosung/benilla/blob/7c7
 describes raw unit-field health stored as float32. This is a compatibility lead,
 not a claim that the installed executable matches that upstream revision.
 CI-only mocks run the production SCT/filter and style together over capped,
-rounded and ambiguous native ranges, both mode switches, V masking, retirement
-and lazy artwork allocation. No local tests or live appearance/FPS measurement
+rounded, sleeping-to-awake ceiling and ambiguous native ranges, both mode
+switches, V masking, retirement and lazy artwork allocation. They reject
+out-of-preimage integers and percentage guesses. No local tests or live appearance/FPS measurement
 were performed.
 
 Excluded hostile plates reuse the existing recursive draw-layer/hit-rectangle

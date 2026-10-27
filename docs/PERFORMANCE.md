@@ -415,16 +415,45 @@ The shared editor availability helper now serves this group and the existing rep
 
 ## Guardian Show dead control — 2026-10-27
 
+Boss bars and Guardian tracker each have default-on current/maximum-health
+checkboxes in the existing lazy settings dialog. Four standard checkbox rows
+reuse its native control/label/hint construction; no encounter frame, font
+region, artwork, material, alpha pass, event or updater is added. Both values
+off empties and actually hides each existing health label while native fills
+continue unchanged. One value alone omits the slash. Shared formatting caches
+only the latest enabled values per label, so changing a disabled value performs
+no formatting or presentation write. Actual label text/visibility comparisons
+still repair retired pooled labels.
+
+Guardian health-width measurements retain one latest text/width record per
+copied roster slot, prune retired slots and clear on option, scale, language and
+view retirement. Unavailable glyph widths retry. With both values off the
+tracker skips health formatting/measurement; its minimum pill width and
+non-overlapping end caps remain intact. Hidden views defer all presentation
+through their existing guards/controllers. The four booleans use the current
+display table and normal draft/profile/reset paths, without another
+SavedVariable. CI-only helper/display mocks are authored; local work is source
+review and pinned formatting, without measured draw-call/FPS or live appearance
+claims.
+
 Guardian minimap names reuse each existing passive pin and the shared native
 tooltip. Accepted minimap point copies carry only their received optional name.
 The existing ten-Hz/deferred waypoint refresh performs one cursor/minimap
 geometry sample when guardian pins exist, then tests their cached drawn centers
 only while the pointer is inside the map. The per-frame projection path adds no
-cursor reads. Unchanged pin/name/owner skips tooltip writes; hide/recycle clears
+cursor reads. Unchanged pin/name/owner skips tooltip content writes; hide/recycle clears
 only an owned hover, while hidden/editing tooltips stay suppressed. Native
 minimap click/wheel input remains available because pins keep mouse input off.
 No marker frame, texture, hit region, event, updater, artwork, setting or saved
-state is added; the existing native tooltip draws only during hover. This is
+state is added; the existing native tooltip draws only during hover. Guardian
+pins register their cursor placement once in the existing icon-owner registry.
+The shared visible-tooltip updater samples the cursor and uses the existing
+scale-aware, changed-only cursor anchor regardless of the global cursor option;
+it does not fight the saved bottom-right Layout seat. Other owners keep their
+saved/icon/global-cursor behavior. This adds registry metadata and an existing
+owner-hide hook per pooled pin, with no additional positioning frame or updater.
+The hide hook checks actual shown state so cleanup does not repeat Hide writes.
+Source-extracted placement mocks cover this owner-specific routing. This is
 source-level cost evidence, with CI-only mocked coverage and no measured FPS or
 live input/appearance result. See [GUARDIAN-TRACKER.md](GUARDIAN-TRACKER.md#minimap-names).
 
@@ -575,16 +604,21 @@ timestamp and receipt generation skip index rebuilding. Accepted changes reuse
 exact-name/native-range buckets, with at most the native 40 entries; retired names
 are removed. Off clears the index and skips its native metadata reads.
 
-Accepted metadata now indexes at most four exact keys per entry: the original
-maximum, its float32 rounding, and (above the uint32 ceiling) that ceiling and
-its float32 rounding. These numeric aliases are computed only when the accepted
-publication changes, reusing the same buckets. Published elites mark collisions
+Accepted metadata indexes the original maximum, its float32 rounding and the
+native ceil/uint32-clamped maximum with its float32 rounding. Whole-number
+publications below 2^23 also index an upper ceiling only where a fractional
+float32 actor maximum can serialize to that integer: all integers below 2^22,
+and even half-ties below 2^23. This retains at most four distinct exact keys per
+entry; it is not a per-plate tolerance search or a carried-forward identity.
+The sleeping-to-awake conversion changes accepted display metadata only. These
+numeric aliases are computed only when the accepted publication changes, reusing
+the same buckets. Published elites mark collisions
 ambiguous across those aliases too. No per-plate conversion, name-only bypass,
 tolerance search, damage estimate, percentage-to-HP inference or new getter is
 added. Names-only labels no longer depend on health-widget anchors, and unused
 bar artwork remains unallocated until an eligible regular plate needs it.
 CI-only full-controller/style mocks cover both options together, native range
-representations, exclusions/ambiguity, mode/V changes, retirement, lazy pooling
+representations, wake ceilings/serialization boundaries, exclusions/ambiguity, mode/V changes, retirement, lazy pooling
 and unchanged writes. Local work is source/diff review and pinned formatting.
 
 Shown hostile plates add a cached-index lookup using their native name and, only

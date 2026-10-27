@@ -17,6 +17,8 @@ DFRL:NewMod("GuardianTracker", 4, function()
     local rows = {}
     local inWorld, dirty, age = true, true, 0
     local showDead = DFRL.display.Get("guardianShowDead")
+    local showCurrent = DFRL.display.Get("guardianShowCurrentHealth")
+    local showMaximum = DFRL.display.Get("guardianShowMaximumHealth")
     local DEFAULT_SCALE = 0.85
     local ROW_INSET, NAME_WIDTH, COLUMN_GAP = 12, 120, 16 * 0.9
     local HEALTH_RIGHT_OFFSET = 4
@@ -84,18 +86,20 @@ DFRL:NewMod("GuardianTracker", 4, function()
     local function Status(entry)
         if entry.status == "returning" then return Format("Respawns in %s", Time(entry.remaining)) end
         if entry.status == "fighting" and Number(entry.healthFraction) then
-            return T.EncounterHealthText(entry.hp, entry.maximum)
+            return T.EncounterHealthText(entry.hp, entry.maximum, showCurrent, showMaximum)
         end
         return DFRL.locale.Text(captions[entry.status] or "Empty")
     end
     local function ClearRow(row)
         if row.value ~= 0 then row.bar:SetValue(0) end
         row.value = 0
+        T.SetEncounterHealthText(row.health, nil, nil, false, false)
         if row.pill:IsShown() then row.pill:Hide() end
         if row:IsShown() then row:Hide() end
     end
     local function Clear()
         rowOffset = 0
+        presentation.healthLabels, healthWidth, dirty = nil, 0, true
         presentation.filteredCount = 0
         if presentation.filtered then
             for index in ipairs(presentation.filtered) do
@@ -215,20 +219,32 @@ DFRL:NewMod("GuardianTracker", 4, function()
             frame:Show()
         end
         if not frame:IsVisible() then return end
-        if presentation.measureSize ~= T.EncounterHealthStyle.fontSize then
+        if (showCurrent or showMaximum) and presentation.measureSize ~= T.EncounterHealthStyle.fontSize then
             T.SetFont(measure, T.EncounterHealthStyle.fontSize, "OUTLINE")
             presentation.measureSize = T.EncounterHealthStyle.fontSize
         end
-        for _, entry in ipairs(snapshot.rows) do
-            if entry.status == "fighting" and Number(entry.healthFraction) then
-                local text = T.EncounterHealthText(entry.hp, entry.maximum)
-                local cached = presentation.healthText == text and presentation.healthMeasured
-                if not cached then measure:SetText(text) end
-                local measured = cached or math.ceil(measure:GetStringWidth() or 0) + 16
-                presentation.healthText, presentation.healthMeasured = text, measured
-                if measured > healthWidth then
-                    healthWidth, dirty = measured, true
+        if showCurrent or showMaximum then
+            local labels = presentation.healthLabels or {}
+            presentation.healthLabels = labels
+            for index, entry in ipairs(snapshot.rows) do
+                if entry.status == "fighting" and Number(entry.healthFraction) then
+                    local cache = labels[index] or {}
+                    labels[index] = cache
+                    local text = T.EncounterHealthText(entry.hp, entry.maximum, showCurrent, showMaximum, cache)
+                    if cache.measuredText ~= text or not cache.measured then
+                        T.SetTextIfChanged(measure, text)
+                        local measured = measure:GetStringWidth() or 0
+                        cache.measuredText, cache.measured = text, measured > 0 and math.ceil(measured) + 16 or nil
+                    end
+                    if cache.measured and cache.measured > healthWidth then
+                        healthWidth, dirty = cache.measured, true
+                    end
+                else
+                    labels[index] = nil
                 end
+            end
+            for index in pairs(labels) do
+                if index > table.getn(snapshot.rows) then labels[index] = nil end
             end
         end
         if dirty then
@@ -295,13 +311,14 @@ DFRL:NewMod("GuardianTracker", 4, function()
                 if entry.state == "awake" and Number(entry.healthFraction) then
                     if row.value ~= entry.healthFraction then row.bar:SetValue(entry.healthFraction) end
                     row.value = entry.healthFraction
-                    T.SetTextIfChanged(row.health, Status(entry))
+                    T.SetEncounterHealthText(row.health, entry.hp, entry.maximum, showCurrent, showMaximum)
                     if row.status:IsShown() then row.status:Hide() end
                     if not row.pill:IsShown() then row.pill:Show() end
                 else
                     if row.value ~= 0 then row.bar:SetValue(0) end
                     row.value = 0
                     if row.pill:IsShown() then row.pill:Hide() end
+                    T.SetEncounterHealthText(row.health, nil, nil, false, false)
                     T.SetTextIfChanged(row.status, Status(entry))
                     if not row.status:IsShown() then row.status:Show() end
                 end
@@ -338,7 +355,7 @@ DFRL:NewMod("GuardianTracker", 4, function()
             local scale = frame:GetEffectiveScale()
             if presentation.resizeScale ~= scale then
                 presentation.resizeScale = scale
-                presentation.healthText, presentation.healthMeasured = nil, nil
+                presentation.healthLabels, healthWidth = nil, 0
                 dirty = true
             end
             ApplyWidth()
@@ -351,7 +368,7 @@ DFRL:NewMod("GuardianTracker", 4, function()
         onReset = Refresh,
     })
     DFRL.locale.Listen(function()
-        presentation.healthText, presentation.healthMeasured = nil, nil
+        presentation.healthLabels, healthWidth = nil, 0
         dirty = true
         Refresh()
     end)
@@ -372,12 +389,20 @@ DFRL:NewMod("GuardianTracker", 4, function()
     DFRL.display.Listen(function()
         local selected = DFRL.display.Get("guardianRows")
         local selectedShowDead = DFRL.display.Get("guardianShowDead")
-        if selected == visibleRows and selectedShowDead == showDead then return end
-        visibleRows, showDead, age, rowOffset = selected, selectedShowDead, 0.1, 0
-        local height = headerHeight
-            + 12
-            + (visibleRows > 0 and visibleRows or (presentation.filteredCount or 5)) * ROW_HEIGHT
-        if not T.NearlyEqual(frame:GetHeight(), height) then frame:SetHeight(height) end
+        local selectedCurrent = DFRL.display.Get("guardianShowCurrentHealth")
+        local selectedMaximum = DFRL.display.Get("guardianShowMaximumHealth")
+        if selectedCurrent ~= showCurrent or selectedMaximum ~= showMaximum then
+            showCurrent, showMaximum = selectedCurrent, selectedMaximum
+            presentation.healthLabels, healthWidth = nil, 0
+            dirty, age = true, 0.1
+        end
+        if selected ~= visibleRows or selectedShowDead ~= showDead then
+            visibleRows, showDead, age, rowOffset = selected, selectedShowDead, 0.1, 0
+            local height = headerHeight
+                + 12
+                + (visibleRows > 0 and visibleRows or (presentation.filteredCount or 5)) * ROW_HEIGHT
+            if not T.NearlyEqual(frame:GetHeight(), height) then frame:SetHeight(height) end
+        end
     end)
     controller:SetScript("OnEvent", function()
         inWorld = event == "PLAYER_ENTERING_WORLD"

@@ -94,9 +94,8 @@ DFRL:NewMod("NameplateCombatText", 6, function()
 
     local function IsFiniteNumber(value) return type(value) == "number" and value - value == 0 end
 
-    -- Native plate ranges can pass through the unit's uint32 fields and float32
-    -- StatusBar storage. Index those exact representations, never a tolerance
-    -- or a percentage estimate of the full-precision publication.
+    -- Plate ranges pass through native ceiling/uint32 fields and float32 storage.
+    -- Index their exact encodings, never a tolerance or a percentage estimate.
     local function PlateFloat(value)
         local _, exponent = math.frexp(value)
         if exponent > 128 then return end
@@ -114,9 +113,19 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local function IndexPlateMaximum(maxima, maximum, eligible)
         AddPlateMaximum(maxima, maximum, eligible)
         AddPlateMaximum(maxima, PlateFloat(maximum), eligible)
-        if maximum > 4294967295 then
-            AddPlateMaximum(maxima, 4294967295, eligible)
-            AddPlateMaximum(maxima, PlateFloat(4294967295), eligible)
+        local unitMaximum = math.min(4294967295, math.ceil(maximum))
+        AddPlateMaximum(maxima, unitMaximum, eligible)
+        AddPlateMaximum(maxima, PlateFloat(unitMaximum), eligible)
+        -- AZSUNITS serializes actor float32 maxima to zero decimal places, but
+        -- waking guardians publish ceilf(maximum) to UNIT_FIELD_MAXHEALTH.
+        -- A rounded integer can therefore encode a fractional maximum just above
+        -- it. Such a float32 exists below 2^22, or at an even tie below 2^23;
+        -- above that, float32 has no fractional maximum that rounds to this integer.
+        if
+            maximum == math.floor(maximum)
+            and (maximum < 4194304 or (maximum < 8388608 and math.mod(maximum, 2) == 0))
+        then
+            AddPlateMaximum(maxima, maximum + 1, eligible)
         end
     end
 

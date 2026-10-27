@@ -42,8 +42,33 @@ function DFRL.tools.StyleEncounterHealth(bar, label)
     label:SetTextColor(1, 1, 1)
 end
 
-function DFRL.tools.EncounterHealthText(current, maximum)
-    return T.CompactHealth(current) .. " / " .. T.CompactHealth(maximum)
+function DFRL.tools.EncounterHealthText(current, maximum, showCurrent, showMaximum, cache)
+    if showCurrent == false then current = nil end
+    if showMaximum == false then maximum = nil end
+    if
+        cache
+        and cache.encounterText ~= nil
+        and cache.encounterCurrent == current
+        and cache.encounterMaximum == maximum
+    then
+        return cache.encounterText
+    end
+    local text = current and T.CompactHealth(current) or ""
+    if maximum then text = text .. (current and " / " or "") .. T.CompactHealth(maximum) end
+    if cache then
+        cache.encounterCurrent, cache.encounterMaximum, cache.encounterText = current, maximum, text
+    end
+    return text
+end
+
+function DFRL.tools.SetEncounterHealthText(label, current, maximum, showCurrent, showMaximum)
+    local text = T.EncounterHealthText(current, maximum, showCurrent, showMaximum, label)
+    T.SetTextIfChanged(label, text)
+    if text == "" then
+        if label:IsShown() then label:Hide() end
+    elseif not label:IsShown() then
+        label:Show()
+    end
 end
 
 -- Retail-style decimal tiers; presentation only, never a health calculation.

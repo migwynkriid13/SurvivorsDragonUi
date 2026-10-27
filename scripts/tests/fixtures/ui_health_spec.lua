@@ -93,6 +93,84 @@ Test("health labels use decimal K M B T tiers without changing the counters", fu
     assert(context.env.T.EncounterHealthText(35e12, 70e12) == "35T / 70T")
 end)
 
+Test("boss and guardian health choices default on and share display transactions", function()
+    local context = H.New()
+    context:Load("core/display.lua", "Display")
+    local display = context.env.DFRL.display
+    local keys = {
+        "bossShowCurrentHealth",
+        "bossShowMaximumHealth",
+        "guardianShowCurrentHealth",
+        "guardianShowMaximumHealth",
+    }
+    for _, key in ipairs(keys) do
+        assert(display.Get(key) == true, key .. " did not default on")
+        assert(display.Copy({ [key] = "false" })[key] == true, key .. " accepted an invalid boolean")
+        assert(display.Copy({ [key] = false })[key] == false, key .. " lost explicit false")
+        display.BeginEdit()
+        display.Set(key, false)
+        assert(display.Get(key) == false and not context.env.SurvivorsDragonUiDisplay, "preview saved early")
+        for _, other in ipairs(keys) do
+            if other ~= key then assert(display.Get(other) == true, "health choices were coupled") end
+        end
+        display.FinishEdit(false)
+        assert(display.Get(key) == true, "Cancel lost the saved choice")
+        display.BeginEdit()
+        display.Set(key, false)
+        display.FinishEdit(true)
+        assert(context.env.SurvivorsDragonUiDisplay[key] == false, "Confirm lost the choice")
+        display.BeginEdit()
+        display.Load({ [key] = true })
+        assert(display.Get(key) == true, "profile preview lost the choice")
+        display.FinishEdit(false)
+        assert(display.Get(key) == false, "profile discard lost the saved choice")
+        display.Reset()
+        for _, resetKey in ipairs(keys) do
+            assert(display.Get(resetKey) == true, "reset did not restore both health values")
+        end
+    end
+end)
+
+Test("encounter health labels hide the slash and skip disabled or unchanged formatting", function()
+    local context = H.New()
+    context:Load("core/widgets.lua")
+    local tools = context.env.T
+    local label = context.env.UIParent:CreateFontString(nil, "OVERLAY")
+    local compact, calls = tools.CompactHealth, 0
+    tools.CompactHealth = function(value)
+        calls = calls + 1
+        return compact(value)
+    end
+    local allocated = table.getn(context.objects)
+    for _, choice in ipairs({
+        { true, true, "35T / 70T", 2 },
+        { true, false, "35T", 1 },
+        { false, true, "70T", 1 },
+        { false, false, "", 0 },
+    }) do
+        calls = 0
+        tools.SetEncounterHealthText(label, 35e12, 70e12, choice[1], choice[2])
+        assert(label:GetText() == choice[3], "encounter health separator differs")
+        assert(label:IsShown() == (choice[1] or choice[2]), "empty health label still draws")
+        assert(calls == choice[4], "disabled health was formatted")
+        context:ResetCounts()
+        calls = 0
+        tools.SetEncounterHealthText(label, 35e12, 70e12, choice[1], choice[2])
+        context:NoPresentationWrites()
+        assert(calls == 0, "unchanged health was formatted")
+    end
+    tools.SetEncounterHealthText(label, 35e12, 70e12, false, true)
+    context:ResetCounts()
+    calls = 0
+    tools.SetEncounterHealthText(label, 30e12, 70e12, false, true)
+    context:NoPresentationWrites()
+    assert(calls == 0, "hidden current health invalidated maximum-only text")
+    label:SetText("")
+    tools.SetEncounterHealthText(label, 30e12, 70e12, false, true)
+    assert(label:GetText() == "70T", "pooled label retirement stranded cached text")
+    assert(table.getn(context.objects) == allocated, "health choices allocated drawing regions")
+end)
+
 Test("large target labels percentage and fill share the AZS publication", function()
     local context, controller, bar, label, percent = Target(15107393536, 18407319552)
     assert(label:GetText() == "15.1B" and percent:GetText() == "82%", "labels used capped UNIT health")

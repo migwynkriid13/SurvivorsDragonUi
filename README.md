@@ -20,7 +20,7 @@ Real screenshots from different moments in a run, arranged into one overview. [O
 - **Your combat HUD:** player and target frames, a restyled character window, seven action buttons, equipped jewelry, buff timers, XP, kills, gold and cache cost.
 - **Run and boss tracking:** a run timer with boss markers, boss health bars, event banners and revive progress.
 - **Guardian tracking:** living guardians, respawn timers and health bars during fights. Use the tracker's plus/minus button to switch between living guardians and all lairs.
-- **Cache and guardian guides:** distance, direction arrows and minimap markers to help you find them. Hover a guardian marker to see its name.
+- **Cache and guardian guides:** distance, direction arrows and minimap markers to help you find them. Hover a guardian marker to see its name beside the cursor.
 - **Level Up and summons:** a button for your stored levels, plus names, icons and durations for up to eight active summons. Extra summons appear as a count.
 - **Combat text, meters and loot:** damage numbers over enemies or in an optional MSBT-style stream, a DPS meter with The War Within artwork and retail-style loot popups. Choose the text style in `/sdui` → **Combat text**. **Nameplates** offers font sizing, **Names only** and a bosses-and-guardians filter; keep V on to see names without bars. Already-collected items stay out of loot popups; chat shows them only when they award marks.
 - **Chat:** a transparent window, shorter game messages and mouse-wheel history.

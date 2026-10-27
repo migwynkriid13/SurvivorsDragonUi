@@ -46,6 +46,39 @@ local function Fixture()
     local chunk = assert(loadfile(arg[1]))
     setfenv(chunk, env)
     state.Update, state.pin, state.minimap, state.tooltip = chunk(), pin, minimap, tooltip
+    local parent, root = {}, {}
+    function parent:GetEffectiveScale() return 1 end
+    function root:GetEffectiveScale() return 1 end
+    function root:IsVisible() return not state.hidden end
+    function tooltip:GetParent() return parent end
+    function tooltip:GetScale() return 1 end
+    function tooltip:GetNumPoints() return self.point and 1 or 0 end
+    function tooltip:GetPoint() return unpack(self.point or {}) end
+    function tooltip:ClearAllPoints()
+        self.point = nil
+        state.writes = state.writes + 1
+    end
+    function tooltip:SetPoint(...)
+        self.point = { ... }
+        state.writes = state.writes + 1
+    end
+    env.UIParent, env.tooltipRoot = parent, root
+    env.registeredIcons, env.iconAnchors, env.iconSides = { [pin] = pin }, {}, { [pin] = "cursor" }
+    env.T.NearlyEqual = function(a, b) return a == b end
+    env.T.PlaceHoverAtCursor = function(frame)
+        assert(frame == tooltip, "cursor helper received a different tooltip")
+        state.cursorPlacements = (state.cursorPlacements or 0) + 1
+        return true
+    end
+    env.DFRL.display = {
+        Get = function(key)
+            assert(key == "tooltipAtCursor", "unexpected cursor placement setting")
+            return state.cursorPreference
+        end,
+    }
+    local placement = assert(loadfile(arg[2]))
+    setfenv(placement, env)
+    state.Place, state.env = placement(), env
     return state
 end
 
@@ -107,3 +140,27 @@ state.editing = true
 state.Update()
 assert(not state.tooltip.shown, "Layout editing retained a guardian hover")
 print("PASS guardian hover respects Tooltip hiding, re-entry and editing")
+
+state = Fixture()
+state.Update()
+state.Place()
+assert(state.cursorPlacements == 1 and not state.tooltip.point, "guardian tooltip used the bottom-right Layout seat")
+state.writes = 0
+state.Place()
+assert(state.cursorPlacements == 2 and state.writes == 0, "guardian placement fought the shared cursor helper")
+state.tooltip.owner = {}
+state.Place()
+assert(state.tooltip.point[1] == "BOTTOMRIGHT" and state.tooltip.point[2] == state.env.tooltipRoot)
+assert(state.cursorPlacements == 2, "ordinary Layout tooltip was forced to the cursor")
+local icon = { IsVisible = function() return true end }
+state.env.registeredIcons[icon], state.env.iconSides[icon] = icon, "above"
+state.tooltip.owner = icon
+state.Place()
+assert(state.tooltip.point[1] == "BOTTOM" and state.tooltip.point[2] == icon, "ordinary icon lost its own anchor")
+state.cursorPreference = true
+state.Place()
+assert(state.cursorPlacements == 3, "global cursor preference no longer applied to ordinary icons")
+state.cursorPreference, state.tooltip.owner, state.pin.visible = false, state.pin, false
+state.Place()
+assert(not state.tooltip.shown and state.cursorPlacements == 3, "hidden guardian owner kept a cursor tooltip")
+print("PASS shared tooltip controller forces only guardian pins to the cursor and preserves ordinary placement")

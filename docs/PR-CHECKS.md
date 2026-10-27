@@ -59,10 +59,18 @@ ambiguous declaration fails preparation.
 
 The assertions cover:
 
+- Boss/guardian current and maximum health defaults, independent preview,
+  Confirm/Cancel, profile discard and reset use the real display module. Shared
+  encounter-label mocks cover all four combinations, slash visibility, actual
+  label hiding, disabled/unchanged formatting, pooled text restoration and no
+  added drawing objects. These do not prove native rendering or font geometry.
 - Source-extracted guardian minimap hover uses accepted names and scaled cached
   pin bounds, skips unchanged tooltip writes, clears retired hovers and respects
   foreign owners, Tooltip hiding, re-entry and Layout editing. Pins remain
-  mouse-transparent; mocks do not establish live minimap input behavior.
+  mouse-transparent. Source-extracted shared tooltip placement also verifies
+  guardian cursor routing with the global option off and preserves ordinary
+  Layout/icon/global-cursor behavior. Mocks do not establish live minimap input
+  or cursor pixel placement.
 - Unchanged cooldown values still read the native boundary but perform zero
   presentation writes and allocate no replacement objects.
 - Hidden/off cooldowns skip native reads and presentation; world retirement
@@ -97,7 +105,8 @@ The assertions cover:
   cleanup clears labels while retaining pool reuse and empty-list idling.
 - Full SCT/filter and nameplate-style fixtures combine Names only with the
   boss/guardian filter. They cover exact capped/float32 ranges and halfway
-  rounding, ordinary/ambiguous elite exclusion, percentage-only rejection,
+  rounding, sleeping-to-awake ceiling conversion and its float32 serialization
+  boundaries, ordinary/ambiguous elite exclusion, percentage-only rejection,
   both toggles, V and zone retirement, independent name visibility, lazy bar
   allocation/reuse and no unchanged cosmetic writes. The scrolling and plate
   fixtures share explicit native setup; production algorithms are not copied.
