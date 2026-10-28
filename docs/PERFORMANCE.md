@@ -138,6 +138,16 @@ still repairs native resets or failed assignments. Missing distances retain
 their translated On map caption, zero remains a valid value, and retirement
 clears the record. CI-only extracted coverage asserts these boundaries.
 
+### Shown nameplate sampling
+
+The historical native-plate registry still owns discovery and reuse hooks, but
+the per-frame refresh walks a separate shown set maintained by those same native
+Show/Hide callbacks. Hidden peak-pool entries no longer incur recurring shown
+checks or retirement lookups. Forced discovery resynchronizes existing entries
+on recovery. Live discovery/projection cadence, recent retired origins and
+lethal-hit matching remain unchanged; no native roster is capped or discarded.
+CI-only production fixtures assert hidden-pool idling and reuse on Show.
+
 ## Loot popup modes and marks — 2026-10-27
 
 The new Loot notifications page uses existing editor artwork: one category

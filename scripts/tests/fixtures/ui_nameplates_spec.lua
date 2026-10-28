@@ -16,6 +16,10 @@ local function Plates()
         local function Native(object)
             object.calls, object.layers = {}, {}
             function object:GetObjectType() return self.kind end
+            function object:IsShown()
+                self.shownReads = (self.shownReads or 0) + 1
+                return self.shown
+            end
             function object:GetEffectiveScale() return 1 end
             function object:GetLeft() return 0 end
             function object:GetBottom() return 0 end
@@ -250,6 +254,20 @@ assert(guardian.name:IsVisible(), "V-on did not restore names-only mode")
 assert(context.guardian.layers.ARTWORK == false, "V unmask restored native artwork behind the skin")
 assert(context.guardian.nativeBar.layers.ARTWORK == false, "V unmask restored the native health image")
 print("PASS ambiguity, filter preview and native V masking retain their lifecycles")
+
+context.ordinary:Hide()
+context.ordinary.shownReads = 0
+context:Tick(0.21)
+context:Tick(0.21)
+assert(context.ordinary.shownReads == 0, "per-frame sampling still traversed a hidden pooled plate")
+local ordinarySkin = context.ordinary.fixture.style
+context.ordinary:Show()
+context:Tick(0.21)
+assert(
+    context.ordinary.fixture.style == ordinarySkin and ordinarySkin.name:IsVisible(),
+    "shown plate did not rejoin its existing skin"
+)
+print("PASS hidden native plates leave the sampling set and rejoin through the existing show hook")
 
 context:SetSetting("nameplatesBossGuardiansOnly", true)
 context:Tick(0.21)

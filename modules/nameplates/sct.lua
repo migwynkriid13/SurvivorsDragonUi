@@ -44,6 +44,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     end
 
     local plates = {}
+    local shownPlates = {}
     local origins = {}
     local activeTexts = {}
     local textPool = {}
@@ -517,6 +518,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local function RefreshPlate(plate, data, now, forcePresentation, geometry)
         if not inWorld then return end
         if not plate:IsShown() then
+            shownPlates[plate] = nil
             RetirePlate(plate)
             return
         end
@@ -554,7 +556,16 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     end
 
     local function DiscoverPlate(plate, now, geometry)
-        if not plate or not plate.GetRegions or plates[plate] then return end
+        if not plate or not plate.GetRegions then return end
+        if plates[plate] then
+            if plate:IsShown() then
+                shownPlates[plate] = plates[plate]
+            else
+                shownPlates[plate] = nil
+                RetirePlate(plate)
+            end
+            return
+        end
         local border, glow, name, level, skull, raid = plate:GetRegions()
         local regions = { border, glow, name, level, skull, raid }
         local hasBorder = false
@@ -596,11 +607,16 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         if not name or not bar then return end
         local data = { nameRegion = name, bar = bar, nativeRegions = regions, presentation = {} }
         plates[plate] = data
+        if plate:IsShown() then shownPlates[plate] = data end
         -- Build the skin before the first recursive mask so V-off tracking
         -- covers every visual child without touching the SCT data sources.
         if plateStyle then plateStyle.Attach(plate, data) end
-        HookScript(plate, "OnHide", function() RetirePlate(plate) end)
+        HookScript(plate, "OnHide", function()
+            shownPlates[plate] = nil
+            RetirePlate(plate)
+        end)
         HookScript(plate, "OnShow", function()
+            shownPlates[plate] = data
             RetirePlate(plate)
             -- Revisit descendants on reuse, including children added while hidden.
             RefreshPlate(plate, data, GetTime(), true)
@@ -633,7 +649,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         DiscoverPlates(force, now, geometry)
         -- Snapshot on every frame, rather than every tenth of a second: a
         -- one-shot enemy can disappear between two of the old scans.
-        for plate, data in pairs(plates) do
+        for plate, data in pairs(shownPlates) do
             RefreshPlate(plate, data, now, force, geometry)
         end
         for index = table.getn(origins), 1, -1 do
