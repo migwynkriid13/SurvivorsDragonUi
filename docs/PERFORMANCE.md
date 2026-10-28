@@ -596,6 +596,11 @@ No drawing, intake identity or queue-limit behavior changes.
 
 ### Rounded waypoint labels
 
+The waypoint HUDs no longer allocate or draw their decorative bottom stripes.
+Removing the shared `FloatingRail` helper and its construction call removes one
+`WHITE8X8` texture region per guide, two across Cache and Guardian. This is a
+source-level region reduction, with no measured GPU or FPS result.
+
 Each guide caches only its latest rounded yard value, language and formatted
 caption. Per-frame interpolation and rotation stay unchanged; stationary values
 skip translated formatting and its temporary field table. Actual text comparison

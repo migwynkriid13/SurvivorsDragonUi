@@ -523,17 +523,6 @@ DFRL:NewMod("Waypoints", 3, function()
         end
     end
 
-    local function FloatingRail(hud)
-        -- Keep only the thin gold stripe beneath the floating icon and text.
-        local rail = hud:CreateTexture(nil, "BACKGROUND")
-        rail:SetTexture("Interface\\Buttons\\WHITE8X8")
-        rail:SetWidth(HUD_WIDTH)
-        rail:SetHeight(1)
-        rail:SetPoint("BOTTOMLEFT", hud, "BOTTOMLEFT", 0, 0)
-        rail:SetBlendMode("BLEND")
-        rail:SetVertexColor(186 / 255, 148 / 255, 87 / 255, 85 / 255)
-    end
-
     local function RegisterHUD(tracker)
         if tracker.registered then return true end
         DFRL.layout.Register(tracker.layoutKey, tracker.hud, function()
@@ -577,7 +566,6 @@ DFRL:NewMod("Waypoints", 3, function()
         hud:SetFrameStrata("HIGH")
         hud:EnableMouse(false)
         hud:Hide()
-        FloatingRail(hud)
         local marker = hud:CreateTexture(nil, "ARTWORK")
         marker:SetTexture(texturePath .. tracker.hudArt)
         marker:SetWidth(32)
