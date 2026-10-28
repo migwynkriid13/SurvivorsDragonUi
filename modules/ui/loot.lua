@@ -153,7 +153,7 @@ DFRL:NewMod("LootNotifications", 0, function()
         if not custom then return end
         local delivered = 0
         while count > 0 and delivered < 4 do
-            local ok, accepted = pcall(renderer.Push, loot.Resolve(queue[1]))
+            local ok, accepted = pcall(renderer.Push, queue[1])
             if not ok then
                 Clear()
                 Release()

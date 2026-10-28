@@ -234,6 +234,7 @@ DFRL:NewMod("LootView", 4, function()
             end
         end
         if not card then return false end
+        entry = loot.Resolve(entry)
         card.entry, card.started = entry, GetTime()
         card.retryAt = entry.itemReference and entry.iconSource ~= "native" and card.started + 0.2 or nil
         Refresh(card)

@@ -306,6 +306,30 @@ Test("unchanged settled loot writes nothing and a full pool never allocates a fo
     assert(table.getn(context.objects) == allocated, "a full loot pool allocated more regions")
 end)
 
+Test("a full loot pool defers queued metadata resolution until delivery", function()
+    local context, service, animation = Loot()
+    local reads = 0
+    context.env.GetItemInfo = function()
+        reads = reads + 1
+        return "Native item", nil, 3, nil, nil, nil, nil, "INVTYPE_HEAD", "Interface\\Icons\\NativeItem"
+    end
+    for index = 1, 3 do
+        Deliver(context, service, { name = "Item " .. index, itemReference = "item:" .. index })
+    end
+    assert(reads == 3, "accepted cards did not resolve their native metadata")
+    local queued = { name = "Queued item", itemReference = "item:4" }
+    Deliver(context, service, queued)
+    for _ = 1, 5 do
+        context:Call(service, "OnUpdate", 0.2)
+    end
+    assert(reads == 3, "a full pool repeatedly resolved its waiting head")
+    assert(queued.icon == nil, "resolution mutated the intake entry")
+    context.now = context.now + 10
+    context:Call(animation, "OnUpdate", 0.1)
+    context:Call(service, "OnUpdate", 0.2)
+    assert(reads == 4, "freed capacity did not resolve the queued item exactly once")
+end)
+
 Test("hidden loot stops cosmetic writes but expires before being shown again", function()
     local context, service, animation = Loot()
     context:SetLayoutHidden(true)

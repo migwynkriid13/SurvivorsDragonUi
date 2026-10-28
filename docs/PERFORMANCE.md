@@ -119,6 +119,16 @@ The source priority, ambiguity, original grouping identity and icon pools remain
 unchanged. CI-only controller coverage includes meter-only lookup while SCT is
 off, several missing names, delayed artwork readiness and world retirement.
 
+### Loot backpressure
+
+Loot resolves native/catalog item metadata only after its existing three-card
+view accepts capacity. A full pool retains the original queued head without
+repeated copying or item queries every fifth second. Accepted cards still retain
+their existing bounded metadata retries, expiry and pool reuse. Resolution now
+also occurs inside the protected delivery call. CI-only lifecycle coverage checks
+three occupied cards, unchanged queued work and the first delivery after expiry.
+No drawing, intake identity or queue-limit behavior changes.
+
 ## Loot popup modes and marks — 2026-10-27
 
 The new Loot notifications page uses existing editor artwork: one category
