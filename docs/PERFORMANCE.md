@@ -1097,6 +1097,25 @@ test or addon/game execution. These are source-level costs and authored CI mock
 assertions, not measured GPU/FPS or visual-parity results. See
 [target health](UNIT-PORTRAITS.md#target-health-and-compact-numbers).
 
+Guardian and boss portrait classification also reuses this accepted target
+publication: one session-only copied kind is cleared with the health source.
+The existing target listener selects the already-bundled silver winged sheet
+for guardians and gold winged sheet for bosses/final bosses. Its guarded kind
+accessor checks current unit/name/phase without `UnitHealth` or `UnitHealthMax`
+reads; accepted special kinds skip the native classification lookup. Other
+targets retain native classification artwork. Hidden target refreshes return
+before either lookup, and unchanged classifications retain successful texture
+bindings; forced native rebuilds still repair the border.
+
+This adds zero frames, drawing regions, assets, events, updaters, settings or
+SavedVariables. The existing three portrait-rim and seven health-border strips,
+256-by-128 sheets, UVs, layers, alpha overdraw and classification-specific edit
+bounds are unchanged. **Hide portraits** uses the existing closed border, and
+Performance Mode retains the same static winged artwork. CI-only coverage
+asserts publication retirement, guardian/boss/final selection, native fallback,
+hidden idling and unchanged/forced bindings. These are source/lifecycle
+contracts, not measured draw-call, GPU/FPS or in-game visual-parity evidence.
+
 ## Player absorbs — 2026-10-27
 
 The player absorb segment shares the existing ten-Hz player-resource controller

@@ -9,7 +9,7 @@ DFRL:NewMod("TargetHealth", 0, function()
     local inWorld, pending, painting = true, false, false
     local received, retiredReceived, generation = 0, -1, 0
     local retired, retiredStamp, accepted, acceptedStamp
-    local current, maximum, name, spawn
+    local current, maximum, name, spawn, kind
     local provisional = false
     local setRange, setValue = bar.SetMinMaxValues, bar.SetValue
     local kinds = { final = true, boss = true, guardian = true, elite = true, normal = true }
@@ -24,7 +24,7 @@ DFRL:NewMod("TargetHealth", 0, function()
         return UnitExists("target") and not UnitIsPlayer("target") and UnitCanAttack("player", "target")
     end
     local function Clear()
-        accepted, acceptedStamp, current, maximum, name, spawn = nil, nil, nil, nil, nil, nil
+        accepted, acceptedStamp, current, maximum, name, spawn, kind = nil, nil, nil, nil, nil, nil, nil
         generation = generation + 1
     end
     local function Retire()
@@ -52,6 +52,19 @@ DFRL:NewMod("TargetHealth", 0, function()
             if Number(value) and Number(total) and total > 0 and value <= total then return value, total, generation end
         end
         return nil, nil, generation
+    end
+
+    function health.GetKind()
+        if
+            kind
+            and inWorld
+            and UnitExists("target")
+            and not UnitIsPlayer("target")
+            and name == UnitName("target")
+            and Phase()
+        then
+            return kind
+        end
     end
 
     function health.Listen(callback) table.insert(listeners, callback) end
@@ -119,7 +132,7 @@ DFRL:NewMod("TargetHealth", 0, function()
         end
         if spawn ~= state.id or name ~= state.name then generation = generation + 1 end
         accepted, acceptedStamp = state, stamp
-        current, maximum, name, spawn = state.hp, state.hpm, state.name, state.id
+        current, maximum, name, spawn, kind = state.hp, state.hpm, state.name, state.id, state.kind
         provisional = false
         Notify()
     end

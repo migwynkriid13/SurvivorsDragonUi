@@ -61,10 +61,11 @@ local function Target(current, maximum)
     end
     assert(loss, "missing production loss texture")
     local animator = context:Controller("UNIT_TARGET")
-    function context:Publish(hp, hpm, id, name)
+    function context:Publish(hp, hpm, id, name, kind)
         -- Deliver the event before native parsing, then replace the table before OnUpdate.
         self:Event(controller, "CHAT_MSG_ADDON", "AZSTGT")
-        env.AZS_TARGET = { kind = "guardian", id = id or 90, name = name or self.targetName, hp = hp, hpm = hpm }
+        env.AZS_TARGET =
+            { kind = kind or "guardian", id = id or 90, name = name or self.targetName, hp = hp, hpm = hpm }
         env.AZS_TARGET_UPDATED = self.now
         self:Call(controller, "OnUpdate", 0.01)
     end
@@ -72,6 +73,43 @@ local function Target(current, maximum)
     context:ResetCounts()
     return context, controller, bar, label, labels.percentage, loss, animator
 end
+
+Test("target kind shares accepted publications without native health reads or new objects", function()
+    local context = Target(70e12, 70e12)
+    local health = context.env.DFRL.targetHealth
+    local allocated = table.getn(context.objects)
+    assert(health.GetKind() == "guardian", "validated guardian kind was not exposed")
+    -- Accepted display metadata is copied, not read again from the mutable native table.
+    context.env.AZS_TARGET.kind = "boss"
+    assert(health.GetKind() == "guardian", "unpublished native mutation replaced accepted kind")
+    for _, kind in ipairs({ "boss", "final", "elite", "normal", "guardian" }) do
+        context:Publish(70e12, 70e12, 90, nil, kind)
+        context:ResetCounts()
+        assert(health.GetKind() == kind, "accepted kind did not follow the publication")
+        assert(not context.reads.health and not context.reads.maximum, "kind lookup sampled native health")
+        context:NoPresentationWrites()
+    end
+    assert(table.getn(context.objects) == allocated, "kind lookup allocated UI objects")
+    context.targetName = "Another enemy"
+    assert(health.GetKind() == nil, "kind lookup crossed a native target-name mismatch")
+    context.targetName = "Gurubashi Champion"
+    context.targetExists = false
+    assert(health.GetKind() == nil, "missing target retained an enemy kind")
+    context.targetExists, context.playerTarget = true, true
+    assert(health.GetKind() == nil, "player target inherited an enemy kind")
+end)
+
+Test("target kind changes only after deferred parsing of a new publication", function()
+    local context, controller = Target(70e12, 70e12)
+    local health = context.env.DFRL.targetHealth
+    context:Event(controller, "CHAT_MSG_ADDON", "AZSTGT")
+    context.env.AZS_TARGET = { kind = "boss", id = 90, name = context.targetName, hp = 70e12, hpm = 70e12 }
+    context.env.AZS_TARGET_UPDATED = context.now
+    assert(health.GetKind() == "guardian", "packet receipt read kind before native parsing settled")
+    context:Call(controller, "OnUpdate", 0.01)
+    assert(health.GetKind() == "boss", "deferred publication did not update accepted kind")
+    assert(controller:GetScript("OnUpdate") == nil, "kind change added an idle reader")
+end)
 
 Test("health labels use decimal K M B T tiers without changing the counters", function()
     local context = Target(70e12, 70e12)
@@ -220,11 +258,13 @@ Test("same name target switches show current native health and block retired AZS
     context:Publish(35e12, 70e12)
     context.nativeHealth, context.nativeMaximum = 25, 100
     context:Event(controller, "PLAYER_TARGET_CHANGED")
+    assert(context.env.DFRL.targetHealth.GetKind() == nil, "selection reused a retired namesake kind")
     assert(
         label:GetText() == "25" and percent:GetText() == "25%" and bar:GetValue() == 0.25,
         "selection waited for AZSTGT"
     )
     context:Call(controller, "OnUpdate", 0.01)
+    assert(context.env.DFRL.targetHealth.GetKind() == nil, "retired publication restored a namesake kind")
     assert(
         label:GetText() == "25" and bar:GetValue() == 0.25,
         "retired same-name health replaced current native health"
@@ -232,6 +272,7 @@ Test("same name target switches show current native health and block retired AZS
     assert(controller:GetScript("OnUpdate") == nil, "waiting selection added an idle poll")
     assert(not loss:IsShown() and animator:GetScript("OnUpdate") == nil, "old target loss survived selection")
     context:Publish(20e12, 70e12, 91)
+    assert(context.env.DFRL.targetHealth.GetKind() == "guardian", "fresh selection did not accept its kind")
     assert(label:GetText() == "20T" and not loss:IsShown(), "new spawn inherited old target loss")
 end)
 
@@ -271,26 +312,34 @@ end)
 Test("invalid and mismatched publications cannot display another target's health", function()
     local context, _, bar, label, percent = Target(70e12, 70e12)
     context:Publish(35e12, 70e12, 91, "Other guardian")
+    assert(context.env.DFRL.targetHealth.GetKind() == nil, "mismatched publication retained enemy kind")
     assert(label:GetText() == "" and percent:GetText() == "" and bar:GetValue() == 0)
     for _, hp in ipairs({ -1, math.huge, 0 / 0, 71e12 }) do
         context:Publish(hp, 70e12)
+        assert(context.env.DFRL.targetHealth.GetKind() == nil, "invalid health retained accepted kind")
         assert(label:GetText() == "" and bar:GetValue() == 0, "invalid HP was accepted")
     end
     context:Publish(35e12, 0)
+    assert(context.env.DFRL.targetHealth.GetKind() == nil, "invalid maximum retained accepted kind")
     assert(label:GetText() == "" and bar:GetValue() == 0, "zero maximum was accepted")
+    context:Publish(35e12, 70e12, 90, nil, "unknown")
+    assert(context.env.DFRL.targetHealth.GetKind() == nil, "unknown target kind was accepted")
 end)
 
 Test("hidden targets skip publication reads and painting and resume with a fresh baseline", function()
     local context, controller, bar, label, _, loss = Target(70e12, 70e12)
     context.env.TargetFrame:Hide()
+    assert(context.env.DFRL.targetHealth.GetKind() == nil, "hidden target retained accepted kind")
     context:ResetCounts()
     context:Event(controller, "PLAYER_TARGET_CHANGED")
     context:Publish(35e12, 70e12)
+    assert(context.env.DFRL.targetHealth.GetKind() == nil, "hidden packet accepted enemy kind")
     context:NoPresentationWrites()
     assert(not context.reads.health and not context.reads.maximum, "hidden target read native health")
     assert(controller:GetScript("OnUpdate") == nil, "hidden target kept a reader")
     context.env.TargetFrame:Show()
     context:Call(controller, "OnUpdate", 0.01)
+    assert(context.env.DFRL.targetHealth.GetKind() == "guardian", "shown target did not recover current kind")
     assert(label:GetText() == "35T" and bar:GetValue() == 0.5 and not loss:IsShown())
 end)
 
@@ -298,10 +347,12 @@ Test("phase zone and world retirement clear target values and active loss", func
     local context, controller, bar, label, _, loss, animator = Target(70e12, 70e12)
     context:Publish(35e12, 70e12)
     context:Event(controller, "CHAT_MSG_ADDON", "AZSZONE")
+    assert(context.env.DFRL.targetHealth.GetKind() == nil, "zone receipt retained old target kind")
     context:Call(controller, "OnUpdate", 0.01)
     assert(label:GetText() == "" and bar:GetValue() == 0 and not loss:IsShown(), "zone reused old health")
     context:Publish(70e12, 70e12)
     context.phase = "dead"
+    assert(context.env.DFRL.targetHealth.GetKind() == nil, "inactive phase exposed accepted enemy kind")
     context:Event(controller, "CHAT_MSG_ADDON", "AZSRUN")
     context:Call(controller, "OnUpdate", 0.01)
     assert(label:GetText() == "" and bar:GetValue() == 0, "dead phase retained enemy health")
@@ -309,11 +360,16 @@ Test("phase zone and world retirement clear target values and active loss", func
     context:Publish(70e12, 70e12)
     context:Publish(35e12, 70e12)
     context:Event(controller, "PLAYER_LEAVING_WORLD")
+    assert(context.env.DFRL.targetHealth.GetKind() == nil, "world retirement retained old target kind")
     assert(label:GetText() == "" and not loss:IsShown() and animator:GetScript("OnUpdate") == nil)
     context:Event(controller, "PLAYER_ENTERING_WORLD")
     context:Event(animator, "PLAYER_ENTERING_WORLD")
     context:Call(controller, "OnUpdate", 0.01)
+    assert(context.env.DFRL.targetHealth.GetKind() == nil, "world entry accepted a retired enemy kind")
     assert(label:GetText() == "", "world entry accepted a retired publication")
+    context:Publish(70e12, 70e12)
+    context:Event(controller, "PLAYER_LOGOUT")
+    assert(context.env.DFRL.targetHealth.GetKind() == nil, "logout retained accepted enemy kind")
 end)
 
 Test("player targets retain native health and visibility controls", function()

@@ -5,6 +5,32 @@ target and target-of-target to closed health bars without their portrait
 pictures or gold rings. Names, levels and health values keep their native
 updates. The separately selected class resources remain available.
 
+## Guardian and boss dragons
+
+Guardian targets use the silver winged dragon. Bosses and the final boss use
+the gold winged dragon. These are the already-bundled
+`UI-TargetingFrame-RareElite.blp` and `UI-TargetingFrame-Boss.blp` sheets;
+the portrait, health bar, width handles and native clicks keep their existing
+geometry. **Hide portraits** hides the dragon with the rest of the portrait
+border. The static artwork stays the same in Performance Mode.
+
+The existing target-health owner copies `AZS_TARGET.kind` only after accepting
+the phase, publication, name, spawn ID and health fields. Its `GetKind()`
+accessor supplies that accepted kind to the existing border refresh without
+reading health again. Selection, invalid packets, hiding and zone/world
+retirement clear it; inactive phases, player targets and a mismatched native
+name cannot return an old kind. The existing deferred `AZSTGT` read/listener
+updates the border when the current publication arrives. Other targets and
+targets waiting for an accepted kind retain the native classification artwork.
+No name matching outside this owner or inferred boss/guardian identity is added.
+
+The classification cache still binds textures only when the selected sheet
+changes or a native rebuild requires repair. It reuses the existing rim/health
+border strips, alpha bounds and hidden lifecycle, with no new region, asset,
+event, updater, setting or saved state. CI-only mocks cover accepted kind
+retirement and border selection; local source review and pinned formatting do
+not establish native event order or in-game appearance.
+
 ## Target health and compact numbers
 
 Enemy targets use the official `AZS_TARGET.hp` and `hpm` publication for their

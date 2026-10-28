@@ -135,16 +135,25 @@ DFRL:NewMod("Target", 1, function()
     local borderTexture
     local function UpdateClassification(force)
         if not TargetFrame:IsVisible() then return end
-        local classification = UnitClassification("target")
+        local kind = DFRL.targetHealth and DFRL.targetHealth.GetKind()
         local texture = "UI-TargetingFrameDF1.blp"
-        if classification == "worldboss" then
-            texture = "UI-TargetingFrame-Boss.blp"
-        elseif classification == "rareelite" then
+        if kind == "guardian" then
             texture = "UI-TargetingFrame-RareElite.blp"
-        elseif classification == "elite" then
-            texture = "UI-TargetingFrame-Elite.blp"
-        elseif classification == "rare" then
-            texture = "UI-TargetingFrame-Rare.blp"
+        elseif kind == "boss" or kind == "final" then
+            texture = "UI-TargetingFrame-Boss.blp"
+        else
+            -- Ordinary targets retain native classification art. Only accepted
+            -- target publications distinguish guardians from bosses.
+            local classification = UnitClassification("target")
+            if classification == "worldboss" then
+                texture = "UI-TargetingFrame-Boss.blp"
+            elseif classification == "rareelite" then
+                texture = "UI-TargetingFrame-RareElite.blp"
+            elseif classification == "elite" then
+                texture = "UI-TargetingFrame-Elite.blp"
+            elseif classification == "rare" then
+                texture = "UI-TargetingFrame-Rare.blp"
+            end
         end
         local path = tex .. texture
         -- Health events can arrive through both the native bar and UNIT_HEALTH.

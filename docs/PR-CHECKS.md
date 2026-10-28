@@ -87,6 +87,11 @@ The assertions cover:
   portrait variants, restore the retained artwork on option changes and skip
   unchanged writes. These assertions distinguish shown state from alpha; they
   do not measure the packaged renderer's submitted quads or GPU time.
+  Target classification mocks also cover accepted guardian silver wings,
+  boss/final gold wings, native artwork fallback, unchanged/forced bindings and
+  hidden reads/writes. Full target-health mocks cover accepted-kind copying and
+  retirement through the existing deferred publication lifecycle. Both reuse
+  the bundled border sheets without extra regions or runtime test hooks.
 - Performance follow-up fixtures also exercise production banner detach/retry,
   Layout handle preparation/failure, unchanged meter publications with changing
   rates, shown-plate sampling, shared navigation reads, tooltip content/owner
