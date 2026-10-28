@@ -491,7 +491,7 @@ DFRL:NewMod("Waypoints", 3, function()
             else
                 RestoreNativeFlag()
             end
-            if not navigation.IsRunPhase(Native("AZS_GetPhase")) then
+            if not navigation.IsRunPhase(navigation.Phase()) then
                 ClearMinimapPins()
                 return
             end
@@ -864,7 +864,7 @@ DFRL:NewMod("Waypoints", 3, function()
             tracker.presentation = presentation
         end
         presentation.east, presentation.north = east, north
-        local playing = Native("AZS_GetPhase") == "playing"
+        local playing = navigation.Phase() == "playing"
         local moving = east and (east ~= 0 or north ~= 0)
         local bearing = moving and metric and math.atan2(east, north) or nil
         -- Only the paint values blend. Selection and minimap pins keep native data,
@@ -899,7 +899,7 @@ DFRL:NewMod("Waypoints", 3, function()
             ClearAll()
             return
         end
-        local phase = Native("AZS_GetPhase")
+        local phase = navigation.Phase()
         if not navigation.IsRunPhase(phase) then
             if runWasActive and (phase == "ready" or phase == "dead") then
                 RetireSnapshots(true)
@@ -1000,7 +1000,7 @@ DFRL:NewMod("Waypoints", 3, function()
         -- Defer reads until the native parser and zone/minimap handlers finish.
         dirty = true
     end)
-    controller:SetScript("OnUpdate", function()
+    local function UpdateWaypoints()
         local elapsed = tonumber(arg1) or 0
         if not Number(elapsed) or elapsed < 0 then elapsed = 0 end
         age = age + elapsed
@@ -1016,8 +1016,9 @@ DFRL:NewMod("Waypoints", 3, function()
             end
         end
         if refreshed or (Minimap and Minimap:IsVisible()) then UpdateMinimapPins(refreshed) end
-    end)
-    DFRL.display.Listen(function()
+    end
+    controller:SetScript("OnUpdate", function() navigation.WithSample(UpdateWaypoints) end)
+    local function UpdateDisplay()
         -- Visibility drafts do not retire snapshots, selections or calibration.
         showGuardianTimers = DFRL.display.Get("guardianMinimapTimers")
         for _, tracker in ipairs(trackers) do
@@ -1026,7 +1027,8 @@ DFRL:NewMod("Waypoints", 3, function()
         end
         if not DFRL.display.Get("guardianGuidance") then ClearMinimapPins("guardian", true) end
         UpdateMinimapPins(true)
-    end)
+    end
+    DFRL.display.Listen(function() navigation.WithSample(UpdateDisplay) end)
     if type(_G.ReloadUI) == "function" then
         local reloadUI = _G.ReloadUI
         _G.ReloadUI = function()

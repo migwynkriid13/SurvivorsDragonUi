@@ -202,3 +202,135 @@ assert(not tracker.minimapPins[entry.key], "failed text assignment retained a pa
 Paint(true, 1)
 assert(tracker.minimapPins[entry.key].timer:GetText() == "0:24", "failed timer text was not retried")
 print("PASS guardian timer defaults, drafts, native timing, idle work, lazy pooling and retirement")
+
+do
+    local navigationContext = H.New()
+    local native = navigationContext.env
+    local currentPhase, browsing, mapName, playerX, playerY = "playing", false, "CurrentZone", 0.5, 0.5
+    local facing, facingReady, positionReady = 0.25, true, true
+    local reads = {}
+    local function Read(key) reads[key] = (reads[key] or 0) + 1 end
+    native.AZS_GetPhase = function()
+        Read("phase")
+        return currentPhase
+    end
+    native.AZS_RUN = { px = 0, py = 0, pf = 0.75 }
+    native.AZS_RUN_UPDATED = 12
+    native.AZS_ZONE = { zone = "CurrentZone", map = 1 }
+    native.AZS_ZONE_UPDATED = 2
+    native.GetRealZoneText = function()
+        Read("context")
+        return "CurrentZone"
+    end
+    native.GetMapInfo = function()
+        Read("map")
+        return mapName, 1000, 500
+    end
+    native.GetCurrentMapContinent = function()
+        Read("continent")
+        return 1
+    end
+    native.GetCurrentMapZone = function()
+        Read("zone")
+        return 1
+    end
+    native.SetMapToCurrentZone = function()
+        Read("setMap")
+        mapName = "CurrentZone"
+    end
+    native.GetPlayerMapPosition = function()
+        Read("position")
+        if positionReady then return playerX, playerY end
+        return 0, 0
+    end
+    native.GetWorldLocMapPosition = function(map, x, y)
+        Read("project")
+        assert(map == 1, "projection changed the accepted native map")
+        return 0.5 - y / 1000, 0.5 - x / 500
+    end
+    native.WorldMapFrame = { IsShown = function() return browsing end }
+    local player = {
+        GetModel = function() return "Interface\\Minimap\\MinimapArrow" end,
+        GetFacing = function()
+            Read("heading")
+            if facingReady then return facing end
+        end,
+    }
+    native.Minimap = { GetChildren = function() return player end }
+    navigationContext:Load("modules/map/navigation.lua", "Navigation")
+    local nav = native.DFRL.navigation
+    local destination = { x = 100, y = -100, mx = 0.6, my = 0.3 }
+    nav.SetPoints("AZS_CHESTS", { destination })
+    nav.Position()
+    reads = {}
+    nav.BeginSample()
+    for _ = 1, 12 do
+        local east, north, distance, metric, stamp = nav.GuideDelta(destination)
+        assert(math.abs(east - 100) < 0.00001 and math.abs(north - 100) < 0.00001, "shared map delta moved")
+        assert(metric and distance > 141 and distance < 142 and stamp == nil, "map source gained a sampled stamp")
+        assert(nav.Heading() == facing, "native heading changed")
+        assert(nav.Phase() == "playing", "guide phase changed")
+    end
+    nav.EndSample()
+    for _, key in ipairs({ "phase", "context", "map", "continent", "zone", "position", "heading" }) do
+        assert(reads[key] == 1, key .. " was sampled separately for repeated guides and pins")
+    end
+    assert(not reads.setMap, "shared reads moved the current map again")
+    playerX, facing = 0.55, 0.5
+    nav.BeginSample()
+    local east = nav.GuideDelta(destination)
+    assert(math.abs(east - 50) < 0.00001 and nav.Heading() == 0.5, "next frame reused old native movement")
+    nav.EndSample()
+
+    browsing, mapName, facingReady = true, "AnotherZone", false
+    reads = {}
+    nav.BeginSample()
+    local worldEast, worldNorth, _, worldMetric, worldStamp = nav.GuideDelta(destination)
+    local fallbackFacing, fallbackStamp = nav.Heading()
+    assert(
+        worldEast == 100 and worldNorth == 100 and worldMetric and worldStamp == 12,
+        "foreign map lost official fallback"
+    )
+    assert(fallbackFacing == 0.75 and fallbackStamp == 12, "heading fallback lost its native stamp")
+    assert(not reads.setMap and not reads.position, "browsing another map changed or sampled that sheet")
+    native.AZS_RUN.px, native.AZS_RUN_UPDATED = 20, 13
+    local _, retainedNorth, _, _, retainedStamp = nav.Delta(destination)
+    assert(retainedNorth == 100 and retainedStamp == 12, "one sample mixed native run publications")
+    nav.EndSample()
+    nav.BeginSample()
+    local _, freshNorth, _, _, freshStamp = nav.Delta(destination)
+    assert(freshNorth == 80 and freshStamp == 13, "next sample retained a retired run tuple")
+    nav.EndSample()
+
+    browsing, mapName, positionReady, facingReady = false, "CurrentZone", false, true
+    nav.BeginSample()
+    nav.GuideDelta(destination)
+    positionReady = true
+    assert(select(5, nav.GuideDelta(destination)) == 13, "missing position retried within one frame")
+    nav.EndSample()
+    nav.BeginSample()
+    assert(select(5, nav.GuideDelta(destination)) == nil, "missing position did not retry next frame")
+    nav.EndSample()
+    currentPhase = "dead"
+    nav.Reset()
+    nav.BeginSample()
+    assert(nav.GuideDelta(destination) == nil, "retired phase retained sampled navigation")
+    nav.EndSample()
+    currentPhase = "playing"
+    assert(nav.Position() ~= nil, "ordinary reads retained the completed sample")
+    local failed, failure = pcall(nav.WithSample, function()
+        nav.Position()
+        error("injected navigation sample failure")
+    end)
+    assert(
+        not failed and string.find(failure, "injected navigation sample failure", 1, true),
+        "sample swallowed a callback failure"
+    )
+    local sampledPosition = reads.position or 0
+    playerX = 0.65
+    assert(
+        nav.Position() == playerX and reads.position == sampledPosition + 1,
+        "failed sample left ordinary reads cached"
+    )
+    print("PASS navigation shares synchronous native samples and preserves browsing, fallbacks, stamps and retries")
+end

@@ -9,27 +9,74 @@ DFRL:NewMod("Navigation", 2, function()
     local playerOverlay, playerTexture, playerSide, playerFacing
     local points = {}
     local samples, seen, width, height = {}, {}, nil, nil
+    local sampling, frameSample = false, {}
+    local runSample = {}
 
     local function Number(value) return type(value) == "number" and value - value == 0 end
     local function Coordinates(x, y) return Number(x) and Number(y) and x >= 0 and x <= 1 and y >= 0 and y <= 1 end
     function navigation.IsRunPhase(phase) return phases[phase] == true end
     function navigation.MinimapLevel(kind) return Minimap:GetFrameLevel() + minimapLevels[kind] end
-    function navigation.Reset()
+    local function ClearSample()
+        for key in pairs(frameSample) do
+            frameSample[key] = nil
+        end
+    end
+    function navigation.BeginSample()
+        -- Guides and pins share only this synchronous controller pass. Missing
+        -- native values retry on its next pass; ordinary callers stay fresh.
+        ClearSample()
+        sampling = true
+    end
+    function navigation.EndSample() sampling = false end
+    function navigation.WithSample(callback)
+        navigation.BeginSample()
+        local ok, failure = pcall(callback)
+        navigation.EndSample()
+        if not ok then error(failure) end
+    end
+    local function ResetCalibration()
         identity, expected, realZone, arrow = nil, nil, nil, nil
         samples, seen, width, height = {}, {}, nil, nil
     end
-    function navigation.SetPoints(key, list) points[key] = list end
-    local function RunState()
-        if type(_G.AZS_GetPhase) ~= "function" then return end
-        local ok, phase = pcall(_G.AZS_GetPhase)
-        if not ok or not navigation.IsRunPhase(phase) then return end
-        local state = _G.AZS_RUN
-        if type(state) == "table" and Number(_G.AZS_RUN_UPDATED) then return state end
+    function navigation.Reset()
+        ResetCalibration()
+        ClearSample()
     end
-    local function Context()
-        if type(_G.AZS_GetPhase) ~= "function" then return end
-        local ok, phase = pcall(_G.AZS_GetPhase)
-        if not ok or not navigation.IsRunPhase(phase) then return end
+    function navigation.SetPoints(key, list)
+        if points[key] ~= list then frameSample.metricRead = nil end
+        points[key] = list
+    end
+    function navigation.Phase()
+        if sampling and frameSample.phaseRead then return frameSample.phase end
+        local phase
+        if type(_G.AZS_GetPhase) == "function" then
+            local ok, value = pcall(_G.AZS_GetPhase)
+            if ok then phase = value end
+        end
+        if sampling then
+            frameSample.phaseRead, frameSample.phase = true, phase
+        end
+        return phase
+    end
+    local function ReadRunState()
+        if not navigation.IsRunPhase(navigation.Phase()) then return end
+        local state = _G.AZS_RUN
+        if type(state) == "table" and Number(_G.AZS_RUN_UPDATED) then return state, _G.AZS_RUN_UPDATED end
+    end
+    local function RunState()
+        if sampling and frameSample.runRead then return frameSample.run, frameSample.runStamp end
+        local state, stamp = ReadRunState()
+        if sampling then
+            if state then
+                runSample.px, runSample.py, runSample.pf = state.px, state.py, state.pf
+                state = runSample
+            end
+            frameSample.runRead, frameSample.run, frameSample.runStamp = true, state, stamp
+        end
+        return state, stamp
+    end
+    local function ReadContext()
+        if not navigation.IsRunPhase(navigation.Phase()) then return end
         local zone = _G.AZS_ZONE
         if
             type(zone) ~= "table"
@@ -43,20 +90,49 @@ DFRL:NewMod("Navigation", 2, function()
         local current = zone.zone .. ":" .. tostring(zone.map) .. ":" .. tostring(_G.AZS_ZONE_UPDATED)
         local name = type(GetRealZoneText) == "function" and GetRealZoneText() or nil
         if current ~= identity or name ~= realZone then
-            navigation.Reset()
+            ResetCalibration()
             identity, realZone = current, name
         end
         return zone
     end
+    local function Context()
+        if sampling and frameSample.contextRead then return frameSample.context end
+        local zone = ReadContext()
+        if sampling then
+            frameSample.contextRead, frameSample.context = true, zone
+        end
+        return zone
+    end
+    local function MapInfo()
+        if sampling and frameSample.mapRead then
+            return frameSample.mapName, frameSample.mapWidth, frameSample.mapHeight
+        end
+        local name, w, h
+        if type(GetMapInfo) == "function" then
+            local ok, mapName, mapWidth, mapHeight = pcall(GetMapInfo)
+            if ok then
+                name, w, h = mapName, mapWidth, mapHeight
+            end
+        end
+        if sampling then
+            frameSample.mapRead = true
+            frameSample.mapName, frameSample.mapWidth, frameSample.mapHeight = name, w, h
+        end
+        return name, w, h
+    end
     local function Selection()
-        if type(GetMapInfo) ~= "function" then return end
-        local ok, name = pcall(GetMapInfo)
-        if not ok or type(name) ~= "string" or name == "" then return end
+        if sampling and frameSample.selectionRead then return frameSample.selection end
+        local name = MapInfo()
+        if type(name) ~= "string" or name == "" then return end
         local continent = type(GetCurrentMapContinent) == "function" and GetCurrentMapContinent() or nil
         local zone = type(GetCurrentMapZone) == "function" and GetCurrentMapZone() or nil
-        return name .. ":" .. tostring(continent) .. ":" .. tostring(zone)
+        local selected = name .. ":" .. tostring(continent) .. ":" .. tostring(zone)
+        if sampling then
+            frameSample.selectionRead, frameSample.selection = true, selected
+        end
+        return selected
     end
-    function navigation.Position()
+    local function ReadPosition()
         if not Context() or type(GetPlayerMapPosition) ~= "function" then return end
         local selected = Selection()
         local browsing = WorldMapFrame and WorldMapFrame:IsShown()
@@ -64,6 +140,7 @@ DFRL:NewMod("Navigation", 2, function()
             if type(SetMapToCurrentZone) ~= "function" then return end
             local ok = pcall(SetMapToCurrentZone)
             if not ok then return end
+            frameSample.mapRead, frameSample.selectionRead = nil, nil
             selected = Selection()
             expected = selected
         end
@@ -71,6 +148,14 @@ DFRL:NewMod("Navigation", 2, function()
         if not expected or selected ~= expected then return end
         local ok, x, y = pcall(GetPlayerMapPosition, "player")
         if ok and Coordinates(x, y) and (x ~= 0 or y ~= 0) then return x, y end
+    end
+    function navigation.Position()
+        if sampling and frameSample.positionRead then return frameSample.x, frameSample.y end
+        local x, y = ReadPosition()
+        if sampling then
+            frameSample.positionRead, frameSample.x, frameSample.y = true, x, y
+        end
+        return x, y
     end
     local function Project(target)
         local zone = Context()
@@ -139,7 +224,7 @@ DFRL:NewMod("Navigation", 2, function()
             end
         end
     end
-    function navigation.Metric()
+    local function ReadMetric()
         local zone = Context()
         if not zone or not expected or Selection() ~= expected then return end
         if (not width or not height) and type(GetWorldLocMapPosition) == "function" then
@@ -165,16 +250,28 @@ DFRL:NewMod("Navigation", 2, function()
         end
         if width and height then return width, height end
     end
-    local function Aspect()
-        if type(GetMapInfo) == "function" then
-            local ok, _, w, h = pcall(GetMapInfo)
-            if ok and Number(w) and Number(h) and w > 0 and h > 0 then return w / h end
+    function navigation.Metric()
+        if sampling and frameSample.metricRead then return frameSample.width, frameSample.height end
+        local w, h = ReadMetric()
+        if sampling then
+            frameSample.metricRead, frameSample.width, frameSample.height = true, w, h
         end
+        return w, h
+    end
+    local function ReadAspect()
+        local _, w, h = MapInfo()
+        if Number(w) and Number(h) and w > 0 and h > 0 then return w / h end
         if WorldMapDetailFrame and WorldMapDetailFrame.GetWidth and WorldMapDetailFrame.GetHeight then
             local w, h = WorldMapDetailFrame:GetWidth(), WorldMapDetailFrame:GetHeight()
             if Number(w) and Number(h) and w > 0 and h > 0 then return w / h end
         end
         return 1
+    end
+    local function Aspect()
+        if sampling and frameSample.aspect then return frameSample.aspect end
+        local aspect = ReadAspect()
+        if sampling then frameSample.aspect = aspect end
+        return aspect
     end
     local function MapDelta(target)
         if type(target) ~= "table" then return end
@@ -197,12 +294,12 @@ DFRL:NewMod("Navigation", 2, function()
     end
     function navigation.Delta(target)
         if type(target) ~= "table" then return end
-        local state = RunState()
+        local state, stamp = RunState()
         if state and Number(state.px) and Number(state.py) and Number(target.x) and Number(target.y) then
             -- Official world coordinates work without a map sheet or calibration,
             -- including instances. The stamp identifies sampled HUD presentation.
             local east, north = state.py - target.y, target.x - state.px
-            return east, north, math.sqrt(east * east + north * north), true, _G.AZS_RUN_UPDATED
+            return east, north, math.sqrt(east * east + north * north), true, stamp
         end
         return MapDelta(target)
     end
@@ -255,7 +352,7 @@ DFRL:NewMod("Navigation", 2, function()
         if arrow:GetFrameStrata() ~= strata then arrow:SetFrameStrata(strata) end
         if arrow:GetFrameLevel() < level then arrow:SetFrameLevel(level) end
     end
-    function navigation.Heading()
+    local function ReadHeading()
         if not arrow then arrow = PlayerArrow() end
         if arrow and arrow.GetFacing then
             local ok, facing = pcall(arrow.GetFacing, arrow)
@@ -263,9 +360,17 @@ DFRL:NewMod("Navigation", 2, function()
             if ok and Number(facing) then return facing end
         end
         arrow = nil
-        local state = RunState()
+        local state, stamp = RunState()
         -- Both headings use native radians: north, counterclockwise.
-        if state and Number(state.pf) then return state.pf, _G.AZS_RUN_UPDATED end
+        if state and Number(state.pf) then return state.pf, stamp end
+    end
+    function navigation.Heading()
+        if sampling and frameSample.headingRead then return frameSample.facing, frameSample.headingStamp end
+        local facing, stamp = ReadHeading()
+        if sampling then
+            frameSample.headingRead, frameSample.facing, frameSample.headingStamp = true, facing, stamp
+        end
+        return facing, stamp
     end
     function navigation.UpdateMinimapPlayer(visible)
         -- Older clients paint the native arrows inside the map, ignoring the

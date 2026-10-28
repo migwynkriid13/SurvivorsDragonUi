@@ -85,6 +85,19 @@ hidden or foreign-owned tooltips are never replayed. One bounded record per
 pooled icon adds no region, event, updater or saved data. CI-only extracted
 production coverage asserts these transitions without renderer measurements.
 
+### Shared frame navigation reads
+
+The existing waypoint frame/display callbacks share one lazy synchronous native
+sample for phase, zone/map context, player position, metric, aspect and heading.
+Both guides and every minimap pin retain per-frame projection and the original
+interpolation equations. Separate calls outside that callback stay fresh; the
+next callback retries unavailable data. Read-only map browsing, calibration,
+native run-coordinate/stamp fallbacks and hidden guards remain authoritative.
+One reused scalar record adds no updater, region or gameplay history. Protected
+sample cleanup also releases the record after a native/widget error. CI-only
+coverage checks repeated consumers, new-frame movement, map ownership, failures
+and retirement. This is native-call reduction, not a changed drawing budget.
+
 ## Loot popup modes and marks — 2026-10-27
 
 The new Loot notifications page uses existing editor artwork: one category
