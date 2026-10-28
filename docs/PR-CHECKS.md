@@ -92,6 +92,15 @@ The assertions cover:
   hidden reads/writes. Full target-health mocks cover accepted-kind copying and
   retirement through the existing deferred publication lifecycle. Both reuse
   the bundled border sheets without extra regions or runtime test hooks.
+  Immediate-border cases select known guardian/boss/final artwork during
+  `PLAYER_TARGET_CHANGED`, before a target packet or the next update. They
+  exercise exact name/maximum aliases, sleeping/waking guardians, namesake elite
+  and clamped-value collisions, atomic invalid-roster rejection, authoritative
+  target precedence, copied metadata reuse, pending-parser stability, hidden
+  receipt settlement and zone/world/phase/language/run-rollback retirement.
+  The nameplate fixture also checks string-kind collisions in the shared
+  production maximum-alias helper; no local execution or live latency claim is
+  implied by these authored CI cases.
 - Performance follow-up fixtures also exercise production banner detach/retry,
   Layout handle preparation/failure, unchanged meter publications with changing
   rates, shown-plate sampling, shared navigation reads, tooltip content/owner

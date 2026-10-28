@@ -98,41 +98,6 @@ DFRL:NewMod("NameplateCombatText", 6, function()
 
     local function IsFiniteNumber(value) return type(value) == "number" and value - value == 0 end
 
-    -- Plate ranges pass through native ceiling/uint32 fields and float32 storage.
-    -- Index their exact encodings, never a tolerance or a percentage estimate.
-    local function PlateFloat(value)
-        local _, exponent = math.frexp(value)
-        if exponent > 128 then return end
-        local step = math.ldexp(1, math.max(exponent, -125) - 24)
-        local scaled = value / step
-        local integer = math.floor(scaled)
-        local fraction = scaled - integer
-        if fraction > 0.5 or (fraction == 0.5 and math.mod(integer, 2) == 1) then integer = integer + 1 end
-        if integer == 0 or (exponent == 128 and integer == 16777216) then return end
-        return integer * step
-    end
-    local function AddPlateMaximum(maxima, value, eligible)
-        if value and maxima[value] ~= false then maxima[value] = eligible end
-    end
-    local function IndexPlateMaximum(maxima, maximum, eligible)
-        AddPlateMaximum(maxima, maximum, eligible)
-        AddPlateMaximum(maxima, PlateFloat(maximum), eligible)
-        local unitMaximum = math.min(4294967295, math.ceil(maximum))
-        AddPlateMaximum(maxima, unitMaximum, eligible)
-        AddPlateMaximum(maxima, PlateFloat(unitMaximum), eligible)
-        -- AZSUNITS serializes actor float32 maxima to zero decimal places, but
-        -- waking guardians publish ceilf(maximum) to UNIT_FIELD_MAXHEALTH.
-        -- A rounded integer can therefore encode a fractional maximum just above
-        -- it. Such a float32 exists below 2^22, or at an even tie below 2^23;
-        -- above that, float32 has no fractional maximum that rounds to this integer.
-        if
-            maximum == math.floor(maximum)
-            and (maximum < 4194304 or (maximum < 8388608 and math.mod(maximum, 2) == 0))
-        then
-            AddPlateMaximum(maxima, maximum + 1, eligible)
-        end
-    end
-
     local plateFilter = {
         enabled = DFRL.display.Get("nameplatesBossGuardiansOnly"),
         names = {},
@@ -237,7 +202,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                     plateFilter.names[entry.name] = maxima
                 end
                 -- A published ordinary elite with the same signature is ambiguous.
-                IndexPlateMaximum(maxima, entry.hpm, entry.kind ~= "elite")
+                T.IndexUnitMaximum(maxima, entry.hpm, entry.kind ~= "elite")
             end
         end
         for name, maxima in pairs(plateFilter.names) do

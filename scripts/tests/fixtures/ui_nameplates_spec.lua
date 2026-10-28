@@ -141,6 +141,19 @@ local function Entries()
 end
 
 local context = Plates()
+local aliases = {}
+context.env.T.IndexUnitMaximum(aliases, 16777217, "guardian")
+context.env.T.IndexUnitMaximum(aliases, 16777217, "guardian")
+assert(aliases[16777216] == "guardian", "same-kind float32 alias became ambiguous")
+context.env.T.IndexUnitMaximum(aliases, 16777216, "boss")
+assert(aliases[16777216] == false, "different kinds sharing float32 storage were not rejected")
+assert(aliases[16777217] == "guardian", "collision erased an unrelated exact maximum")
+context.env.T.IndexUnitMaximum(aliases, 16777217, "guardian")
+assert(aliases[16777216] == false, "same-kind reinsertion reclaimed a collided alias")
+context.env.T.IndexUnitMaximum(aliases, 70e12, "guardian")
+context.env.T.IndexUnitMaximum(aliases, 80e12, "boss")
+assert(aliases[4294967295] == false and aliases[4294967296] == false, "clamped kind aliases lost ambiguity")
+print("PASS shared maximum aliases preserve kind conflicts across native float32 and clamped representations")
 context:Tick(0.21)
 assert(not context.guardian.fixture.style.name:IsVisible(), "unpublished guardian bypassed the filter")
 context.env.WorldFrame.childrenReads, context.guardian.childrenReads = 0, 0

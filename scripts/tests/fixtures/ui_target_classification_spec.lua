@@ -11,7 +11,7 @@ env.UnitClassification = function(unit)
     return context.classification
 end
 env.DFRL.targetHealth = {
-    GetKind = function()
+    GetBorderKind = function()
         context.reads.kind = (context.reads.kind or 0) + 1
         return context.kind
     end,

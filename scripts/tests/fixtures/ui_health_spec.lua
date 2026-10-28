@@ -19,6 +19,7 @@ local function Target(current, maximum)
     env.UnitExists = function(unit) return unit == "player" or (unit == "target" and context.targetExists) end
     env.UnitName = function() return context.targetName end
     env.UnitIsPlayer = function() return context.playerTarget end
+    env.UnitPlayerControlled = function() return context.controlledTarget end
     env.UnitCanAttack = function() return not context.playerTarget and not context.friendlyTarget end
     env.UnitIsDead = function(unit) return unit == "target" and context.dead end
     env.UnitIsGhost = function() return false end
@@ -31,6 +32,7 @@ local function Target(current, maximum)
         return context.nativeMaximum
     end
     env.AZS_GetPhase = function() return context.phase end
+    env.AZS_UnitKind = function() error("border matching must not consult the stale-name target helper") end
     local target = env.CreateFrame("Frame", "TargetFrame", env.UIParent)
     local bar = env.CreateFrame("StatusBar", "TargetFrameHealthBar", target)
     bar.minimum, bar.maximum, bar.value = 0, 4294967295, 4294967295
@@ -69,10 +71,301 @@ local function Target(current, maximum)
         env.AZS_TARGET_UPDATED = self.now
         self:Call(controller, "OnUpdate", 0.01)
     end
+    function context:PublishUnits(rows, defer)
+        self:Event(controller, "CHAT_MSG_ADDON", "AZSUNITS")
+        env.AZS_UNITS, env.AZS_UNITS_UPDATED = rows, self.now
+        if not defer then self:Call(controller, "OnUpdate", 0.01) end
+    end
     context:Publish(current, maximum)
     context:ResetCounts()
     return context, controller, bar, label, labels.percentage, loss, animator
 end
+
+local function Encounter(kind, id, name, maximum, current, state)
+    return { kind = kind, id = id, name = name, hp = current or maximum, hpm = maximum, state = state or 0 }
+end
+
+local function Border(context)
+    local env = context.env
+    env.tex = "Interface\\AddOns\\SurvivorsDragonUi\\media\\tex\\unitframes\\"
+    env.UnitClassification = function()
+        context.reads.classification = (context.reads.classification or 0) + 1
+        return "elite"
+    end
+    env.UpdateBorderTexture = function(path)
+        context.borderPath = path
+        context.borderBindings = (context.borderBindings or 0) + 1
+    end
+    -- Keep the production cache and choice logic, with only native drawing replaced.
+    local file = assert(io.open("modules/unit/target.lua", "r"))
+    local source = file:read("*a")
+    file:close()
+    local first = assert(string.find(source, "    local borderTexture", 1, true))
+    local last = assert(string.find(source, "    _G.TargetFrame_CheckClassification", first, true))
+    local chunk = assert(loadstring(string.sub(source, first, last - 1) .. "\nreturn UpdateClassification"))
+    setfenv(chunk, env)
+    local update = chunk()
+    env.DFRL.targetHealth.Listen(update)
+    return update
+end
+
+Test("known encounter borders select synchronously before the next target publication", function()
+    local context, controller, bar, label, _, loss = Target(70e12, 70e12)
+    local env = context.env
+    Border(context)
+    context:PublishUnits({
+        Encounter("guardian", 101, "Sleeping guardian", 1234),
+        Encounter("boss", 102, "Known boss", 20000),
+        Encounter("final", 103, "Known final", 40000),
+    })
+    for _, row in ipairs({
+        { "Sleeping guardian", 1235, "UI-TargetingFrame-RareElite.blp" },
+        { "Known boss", 20000, "UI-TargetingFrame-Boss.blp" },
+        { "Known final", 40000, "UI-TargetingFrame-Boss.blp" },
+    }) do
+        context.targetName, context.nativeHealth, context.nativeMaximum = row[1], row[2] / 2, row[2]
+        context.friendlyTarget = row[1] == "Sleeping guardian"
+        context:Event(controller, "PLAYER_TARGET_CHANGED")
+        assert(context.borderPath == env.tex .. row[3], "known dragon waited for AZSTGT or OnUpdate")
+        assert(env.DFRL.targetHealth.GetKind() == nil, "cosmetic roster match became accepted target identity")
+        assert(bar:GetValue() == 0.5 and label:GetText() ~= "70T", "roster supplied target health")
+        assert(not loss:IsShown(), "cosmetic match changed the health-loss baseline")
+    end
+    context:Publish(18000, 40000, 103, nil, "normal")
+    assert(env.DFRL.targetHealth.GetBorderKind() == "normal", "roster overrode an authoritative target kind")
+    assert(context.borderPath == env.tex .. "UI-TargetingFrame-Elite.blp", "accepted normal kept a guessed boss border")
+end)
+
+Test("roster matching uses exact shared maxima and rejects namesake ambiguity", function()
+    local context, controller = Target(70e12, 70e12)
+    local env, health = context.env, context.env.DFRL.targetHealth
+    context.nativeHealth, context.nativeMaximum = 500, 1235
+    context:Event(controller, "PLAYER_TARGET_CHANGED")
+    local name = context.targetName
+    for _, maximum in ipairs({ 1234.25, 1234 }) do
+        context:PublishUnits({ Encounter("guardian", 101, name, maximum), Encounter("elite", 102, name, 500) })
+        assert(health.GetBorderKind() == "guardian", "sleeping/waking native maximum lost its exact alias")
+        context.nativeMaximum = 500
+        assert(health.GetBorderKind() == nil, "ordinary namesake elite inherited a guardian border")
+        context.nativeMaximum = 1235
+    end
+    context:PublishUnits({ Encounter("guardian", 101, name, 1234.25), Encounter("elite", 102, name, 1235) })
+    assert(health.GetBorderKind() == nil, "collided native maximum was assigned a guardian kind")
+    context.nativeMaximum = 4294967295
+    context:PublishUnits({ Encounter("guardian", 101, name, 70e12), Encounter("boss", 102, name, 80e12) })
+    assert(health.GetBorderKind() == nil, "uint32-clamped guardian/boss collision chose an arbitrary dragon")
+    context:PublishUnits({ Encounter("guardian", 101, name, 70e12), Encounter("elite", 102, name, 80e12) })
+    assert(health.GetBorderKind() == nil, "clamped elite collision did not block a guardian border")
+    context.nativeMaximum = 100
+    context:PublishUnits({ Encounter("guardian", 101, name, 20000) })
+    assert(health.GetBorderKind() == nil, "percentage-only or unknown maximum matched a guardian")
+    context.nativeMaximum, context.targetName = 20000, "Unknown creature"
+    assert(health.GetBorderKind() == nil, "unknown native name matched a known encounter")
+    context.targetName, context.playerTarget = name, true
+    assert(health.GetBorderKind() == nil, "player target inherited roster artwork")
+    context.playerTarget, context.controlledTarget = false, true
+    assert(health.GetBorderKind() == nil, "player-controlled target inherited roster artwork")
+end)
+
+Test("cosmetic roster copying is atomic and caches unchanged native publications", function()
+    local context, controller = Target(70e12, 70e12)
+    local env, health = context.env, context.env.DFRL.targetHealth
+    context.nativeHealth, context.nativeMaximum = 500, 1000
+    context:Event(controller, "PLAYER_TARGET_CHANGED")
+    local index, calls = env.T.IndexUnitMaximum, 0
+    env.T.IndexUnitMaximum = function(maxima, maximum, value)
+        calls = calls + 1
+        return index(maxima, maximum, value)
+    end
+    local rows = { Encounter("guardian", 101, context.targetName, 1000) }
+    context:PublishUnits(rows)
+    assert(health.GetBorderKind() == "guardian", "valid roster was not copied")
+    local indexed, allocated = calls, table.getn(context.objects)
+    local _, _, generation = health.Get()
+    rows[1].kind = "boss"
+    for _ = 1, 4 do
+        assert(health.GetBorderKind() == "guardian", "unpublished native row mutation changed copied kind")
+    end
+    local _, _, afterGeneration = health.Get()
+    assert(calls == indexed and indexed > 0, "unchanged lookup rebuilt native-maximum aliases")
+    assert(generation == afterGeneration, "cosmetic lookup changed target health generation")
+    assert(table.getn(context.objects) == allocated, "roster lookup allocated UI objects")
+
+    local malformed = {
+        { Encounter("guardian", 101, context.targetName, 1000), Encounter("boss", 101, "Duplicate id", 2000) },
+        { Encounter("guardian", 101, context.targetName, 1000), Encounter("unknown", 102, "Unknown kind", 2000) },
+        { Encounter("guardian", 101, context.targetName, 1000), Encounter("elite", 102, "Bad health", 2000, 2001) },
+        { Encounter("guardian", 101, context.targetName, 1000), Encounter("elite", 102, "Bad maximum", 0) },
+        {
+            Encounter("guardian", 101, context.targetName, 1000),
+            Encounter("elite", 102, "Nonfinite health", 2000, 0 / 0),
+        },
+        { Encounter("guardian", 101, context.targetName, 1000), Encounter("elite", 102, "", 2000) },
+    }
+    local oversized = {}
+    for id = 1, 41 do
+        oversized[id] = Encounter("guardian", id, context.targetName, 1000)
+    end
+    table.insert(malformed, oversized)
+    for _, invalid in ipairs(malformed) do
+        context:PublishUnits(invalid)
+        assert(health.GetBorderKind() == nil, "partially valid or oversized roster leaked a cosmetic kind")
+    end
+end)
+
+Test("unit receipts stay deferred and refresh a retired target without another target packet", function()
+    local context, controller = Target(70e12, 70e12)
+    local env, health = context.env, context.env.DFRL.targetHealth
+    Border(context)
+    context.nativeHealth, context.nativeMaximum = 500, 1000
+    context:Event(controller, "PLAYER_TARGET_CHANGED")
+    context:Call(controller, "OnUpdate", 0.01)
+    assert(health.GetKind() == nil, "fixture accepted a retired target publication")
+    context:PublishUnits({ Encounter("guardian", 101, context.targetName, 1000) }, true)
+    assert(health.GetBorderKind() == nil, "unit receipt read pending native parser state")
+    context:Call(controller, "OnUpdate", 0.01)
+    assert(
+        context.borderPath == env.tex .. "UI-TargetingFrame-RareElite.blp",
+        "new roster did not refresh retired target border"
+    )
+    context:PublishUnits({ Encounter("boss", 101, context.targetName, 1000) })
+    assert(
+        context.borderPath == env.tex .. "UI-TargetingFrame-Boss.blp",
+        "unchanged target packet blocked a roster border change"
+    )
+    assert(
+        health.GetKind() == nil and controller:GetScript("OnUpdate") == nil,
+        "cosmetic update accepted target identity or kept an idle reader"
+    )
+end)
+
+Test("copied provisional borders survive pending unit and run packets without rebuilding aliases", function()
+    local context, controller = Target(70e12, 70e12)
+    local env, health = context.env, context.env.DFRL.targetHealth
+    Border(context)
+    context.nativeHealth, context.nativeMaximum = 500, 1000
+    context:Event(controller, "PLAYER_TARGET_CHANGED")
+    context:PublishUnits({ Encounter("guardian", 101, context.targetName, 1000) })
+    local index, calls = env.T.IndexUnitMaximum, 0
+    env.T.IndexUnitMaximum = function(maxima, maximum, value)
+        calls = calls + 1
+        return index(maxima, maximum, value)
+    end
+    context:Event(controller, "CHAT_MSG_ADDON", "AZSRUN")
+    env.AZS_RUN, env.AZS_RUN_UPDATED = { t = 6 }, context.now
+    assert(health.GetBorderKind() == "guardian", "pending run packet flashed the fallback border")
+    assert(calls == 0, "pending run packet rebuilt a copied roster")
+    context:Call(controller, "OnUpdate", 0.01)
+    assert(health.GetBorderKind() == "guardian" and calls == 0, "ordinary run update rebuilt or lost the roster")
+
+    context:PublishUnits({ Encounter("boss", 101, context.targetName, 1000) }, true)
+    assert(health.GetBorderKind() == "guardian", "pending units replaced the copied guardian before parser settlement")
+    assert(
+        calls == 0 and context.borderPath == env.tex .. "UI-TargetingFrame-RareElite.blp",
+        "pending units rebuilt or flashed the border"
+    )
+    context:Call(controller, "OnUpdate", 0.01)
+    assert(health.GetBorderKind() == "boss" and calls == 1, "settled roster did not replace its cosmetic kind once")
+    assert(context.borderPath == env.tex .. "UI-TargetingFrame-Boss.blp", "settled roster did not refresh the dragon")
+
+    context:Event(controller, "CHAT_MSG_ADDON", "AZSZONE")
+    assert(health.GetBorderKind() == nil, "zone receipt retained the old copied border before settlement")
+    assert(calls == 1, "zone receipt read or re-indexed pending native data")
+end)
+
+Test("hidden unit receipts settle without reading roster fields or native target health", function()
+    local context, controller = Target(70e12, 70e12)
+    local env, health = context.env, context.env.DFRL.targetHealth
+    Border(context)
+    env.TargetFrame:Hide()
+    local row, reads = Encounter("guardian", 101, context.targetName, 1000), 0
+    local proxy = setmetatable({}, {
+        __index = function(_, key)
+            reads = reads + 1
+            return row[key]
+        end,
+    })
+    context:ResetCounts()
+    context:PublishUnits({ proxy }, true)
+    assert(controller:GetScript("OnUpdate"), "hidden receipt had no parser-readiness handoff")
+    context:Call(controller, "OnUpdate", 0.01)
+    assert(
+        reads == 0 and not context.reads.health and not context.reads.maximum,
+        "hidden receipt inspected roster or native health"
+    )
+    assert(health.GetBorderKind() == nil, "hidden target performed cosmetic matching")
+    assert(controller:GetScript("OnUpdate") == nil, "hidden receipt left an idle worker")
+    env.TargetFrame:Show()
+    context.nativeHealth, context.nativeMaximum = 500, 1000
+    context:Event(controller, "PLAYER_TARGET_CHANGED")
+    assert(
+        context.borderPath == env.tex .. "UI-TargetingFrame-RareElite.blp",
+        "first visible selection waited for a new roster packet"
+    )
+end)
+
+Test("hiding after a unit receipt preserves the deferred handoff for the next selection", function()
+    local context, controller = Target(70e12, 70e12)
+    local env, health = context.env, context.env.DFRL.targetHealth
+    Border(context)
+    context.nativeHealth, context.nativeMaximum = 500, 1000
+    context:Event(controller, "PLAYER_TARGET_CHANGED")
+    context:PublishUnits({ Encounter("guardian", 101, context.targetName, 1000) })
+    context:PublishUnits({ Encounter("boss", 101, context.targetName, 1000) }, true)
+    env.TargetFrame:Hide()
+    assert(controller:GetScript("OnUpdate"), "target hide cancelled a pending unit-parser handoff")
+    context:ResetCounts()
+    context:Call(controller, "OnUpdate", 0.01)
+    assert(not context.reads.health and not context.reads.maximum, "hidden handoff sampled target health")
+    assert(controller:GetScript("OnUpdate") == nil, "hidden handoff kept an idle reader")
+    env.TargetFrame:Show()
+    context:Event(controller, "PLAYER_TARGET_CHANGED")
+    assert(health.GetKind() == nil, "show accepted the old target publication")
+    assert(
+        context.borderPath == env.tex .. "UI-TargetingFrame-Boss.blp",
+        "visible selection lost the settled hidden roster"
+    )
+end)
+
+Test("zone world phase language and run rollback retire cosmetic roster evidence", function()
+    local context, controller = Target(70e12, 70e12)
+    local env, health = context.env, context.env.DFRL.targetHealth
+    context.nativeHealth, context.nativeMaximum = 500, 1000
+    context:Event(controller, "PLAYER_TARGET_CHANGED")
+    local function Fresh()
+        context:PublishUnits({ Encounter("guardian", 101, context.targetName, 1000) })
+        assert(health.GetBorderKind() == "guardian", "fresh roster did not cross its retirement barrier")
+    end
+    Fresh()
+    context:Event(controller, "CHAT_MSG_ADDON", "AZSZONE")
+    context:Call(controller, "OnUpdate", 0.01)
+    assert(health.GetBorderKind() == nil, "zone retirement reused old roster")
+    Fresh()
+    context:NotifyLocale()
+    assert(health.GetBorderKind() == nil, "language change reused old localized names")
+    Fresh()
+    context.phase = "ready"
+    context:Event(controller, "CHAT_MSG_ADDON", "AZSRUN")
+    context:Call(controller, "OnUpdate", 0.01)
+    context.phase = "playing"
+    assert(health.GetBorderKind() == nil, "active phase resurrected retired roster")
+    Fresh()
+    env.AZS_RUN, env.AZS_RUN_UPDATED = { t = 50 }, context.now
+    context:Event(controller, "CHAT_MSG_ADDON", "AZSRUN")
+    context:Call(controller, "OnUpdate", 0.01)
+    env.AZS_RUN = { t = 1 }
+    context:Event(controller, "CHAT_MSG_ADDON", "AZSRUN")
+    context:Call(controller, "OnUpdate", 0.01)
+    assert(health.GetBorderKind() == nil, "run-clock rollback reused prior-run roster")
+    Fresh()
+    context:Event(controller, "PLAYER_LEAVING_WORLD")
+    context:Event(controller, "PLAYER_ENTERING_WORLD")
+    context:Call(controller, "OnUpdate", 0.01)
+    assert(health.GetBorderKind() == nil, "world entry reused a retired encounter roster")
+    Fresh()
+    context:Event(controller, "PLAYER_LOGOUT")
+    assert(health.GetBorderKind() == nil, "logout retained cosmetic roster evidence")
+end)
 
 Test("target kind shares accepted publications without native health reads or new objects", function()
     local context = Target(70e12, 70e12)

@@ -14,22 +14,52 @@ the portrait, health bar, width handles and native clicks keep their existing
 geometry. **Hide portraits** hides the dragon with the rest of the portrait
 border. The static artwork stays the same in Performance Mode.
 
-The existing target-health owner copies `AZS_TARGET.kind` only after accepting
-the phase, publication, name, spawn ID and health fields. Its `GetKind()`
-accessor supplies that accepted kind to the existing border refresh without
-reading health again. Selection, invalid packets, hiding and zone/world
-retirement clear it; inactive phases, player targets and a mismatched native
-name cannot return an old kind. The existing deferred `AZSTGT` read/listener
-updates the border when the current publication arrives. Other targets and
-targets waiting for an accepted kind retain the native classification artwork.
-No name matching outside this owner or inferred boss/guardian identity is added.
+Known guardians and bosses select their dragon immediately on target selection,
+without waiting for the next `AZSTGT` health packet. The target-health owner's
+separate `GetBorderKind()` lookup uses the current target's exact localized name
+and native maximum health against the received `AZS_UNITS` encounter roster.
+The complete roster is validated before copying cosmetic kind/maximum metadata;
+it is bounded to forty entries and rejects duplicate IDs, malformed fields and
+known guardian/boss/elite collisions. Only living published entries participate.
+Sleeping guardians remain eligible even while they cannot be attacked.
+
+Maximum matching reuses `T.IndexUnitMaximum`, shared with the nameplate filter:
+original and exactly rounded float32 values, native ceiling/uint32-clamped
+values and their float32 storage, plus the bounded upper-ceiling publication
+preimage. There is no tolerance, percentage estimate or name-only match.
+Unknown, absent or ambiguous signatures retain native classification artwork
+until a valid target publication identifies them. A roster match is cosmetic
+evidence, not a spawn-ID binding; an unlisted ordinary enemy with the same name
+and native maximum cannot be distinguished by these APIs.
+
+The existing target-health owner still copies authoritative `AZS_TARGET.kind`
+only after accepting the phase, publication, name, spawn ID and health fields.
+`GetKind()` retains that strict contract, and its result takes precedence over
+the cosmetic roster lookup. Selection, invalid packets and hiding clear the
+accepted target source without discarding the current-run roster, allowing
+immediate retargeting. Cosmetic matching never supplies health, assigns spawn
+identity, changes the damage-loss baseline or reuses a retired target packet.
+The official `AZS_UnitKind` helper is not a shortcut here: its same-name target
+path can still read the previous `AZS_TARGET` publication.
+
+`AZSUNITS` and `AZSRUN` receipts use the existing controller's one deferred
+callback. It settles parser readiness and checks phase/run rollback even when
+hidden, then skips hidden roster/target reads. The first visible selection can
+prepare already-received metadata synchronously. Table/stamp/receipt caches
+prevent unchanged alias rebuilding; a copied roster remains stable while
+ordinary packets are pending. Zone/world retirement, inactive phases, observed
+run-clock rollback and language changes discard the roster and block its old
+publication. New roster data refreshes the existing border listener even when
+the target packet has not changed. No polling loop or separate controller is
+added.
 
 The classification cache still binds textures only when the selected sheet
 changes or a native rebuild requires repair. It reuses the existing rim/health
 border strips, alpha bounds and hidden lifecycle, with no new region, asset,
-event, updater, setting or saved state. CI-only mocks cover accepted kind
-retirement and border selection; local source review and pinned formatting do
-not establish native event order or in-game appearance.
+event, updater, setting or saved state. CI-only mocks cover immediate selection,
+packet handoffs, exact aliases/collisions, hidden recovery, retirement and
+accepted target precedence. Local source review and pinned formatting do not
+establish native event order or in-game appearance.
 
 ## Target health and compact numbers
 

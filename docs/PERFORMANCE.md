@@ -1097,23 +1097,45 @@ test or addon/game execution. These are source-level costs and authored CI mock
 assertions, not measured GPU/FPS or visual-parity results. See
 [target health](UNIT-PORTRAITS.md#target-health-and-compact-numbers).
 
-Guardian and boss portrait classification also reuses this accepted target
-publication: one session-only copied kind is cleared with the health source.
-The existing target listener selects the already-bundled silver winged sheet
-for guardians and gold winged sheet for bosses/final bosses. Its guarded kind
-accessor checks current unit/name/phase without `UnitHealth` or `UnitHealthMax`
-reads; accepted special kinds skip the native classification lookup. Other
-targets retain native classification artwork. Hidden target refreshes return
-before either lookup, and unchanged classifications retain successful texture
-bindings; forced native rebuilds still repair the border.
+Guardian and boss portrait classification uses a separate cosmetic roster path
+to avoid waiting for a new target-health packet. A bounded forty-entry
+`AZS_UNITS` publication is validated atomically, then indexed by exact localized
+name and native maximum-health representations. `T.IndexUnitMaximum` now owns
+the existing exact float32/ceiling/uint32/publication-preimage rules for both
+this index and the nameplate filter; their encoding math is unchanged. Ordinary
+elite entries block collided signatures. Only kind and maximum aliases are
+copied, with no health/spawn identity acceptance, per-target history or native
+table writes. Source table/stamp/parsed-receipt caches skip unchanged rebuilds
+and cache invalid publications until new evidence arrives. Existing name buckets
+are reused while accepted rosters change.
+
+On target selection, `GetBorderKind()` first uses any authoritative accepted
+target kind. Otherwise, one current native name/maximum sample can match the
+known roster immediately through the existing target listener. The maximum
+read is confined to this unresolved cosmetic path; accepted target kinds keep
+the original no-extra-health-read path. No text, font, geometry or texture work
+is added to unchanged classifications. Native rebuilds still force repair.
+Copied matches stay stable while ordinary unit/run packets are pending; raw
+roster parsing and alias rebuilding wait for the existing deferred callback.
+Unknown or ambiguous matches retain native artwork pending target confirmation.
+
+Hidden targets skip cosmetic matching, roster validation and target-health
+reads. Unit/run receipts may arm one callback on the existing controller solely
+to settle parser readiness and observe phase/run rollback, then detach again.
+Selection/Hide retain current-run roster metadata for immediate reuse; zone,
+world, inactive-phase, observed run rollback and language boundaries clear it
+and block the old publication. A newly accepted roster notifies the existing
+target listener even if the health publication is unchanged. This adds no idle
+worker, new event registration or controller.
 
 This adds zero frames, drawing regions, assets, events, updaters, settings or
 SavedVariables. The existing three portrait-rim and seven health-border strips,
 256-by-128 sheets, UVs, layers, alpha overdraw and classification-specific edit
 bounds are unchanged. **Hide portraits** uses the existing closed border, and
 Performance Mode retains the same static winged artwork. CI-only coverage
-asserts publication retirement, guardian/boss/final selection, native fallback,
-hidden idling and unchanged/forced bindings. These are source/lifecycle
+asserts immediate guardian/boss/final selection before `AZSTGT`, shared maximum
+aliases and collision rejection, parser handoffs, publication retirement,
+native fallback, hidden idling and unchanged/forced bindings. These are source/lifecycle
 contracts, not measured draw-call, GPU/FPS or in-game visual-parity evidence.
 
 ## Player absorbs — 2026-10-27

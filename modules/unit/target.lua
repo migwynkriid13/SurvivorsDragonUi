@@ -135,15 +135,14 @@ DFRL:NewMod("Target", 1, function()
     local borderTexture
     local function UpdateClassification(force)
         if not TargetFrame:IsVisible() then return end
-        local kind = DFRL.targetHealth and DFRL.targetHealth.GetKind()
+        local kind = DFRL.targetHealth and DFRL.targetHealth.GetBorderKind()
         local texture = "UI-TargetingFrameDF1.blp"
         if kind == "guardian" then
             texture = "UI-TargetingFrame-RareElite.blp"
         elseif kind == "boss" or kind == "final" then
             texture = "UI-TargetingFrame-Boss.blp"
         else
-            -- Ordinary targets retain native classification art. Only accepted
-            -- target publications distinguish guardians from bosses.
+            -- Ordinary or ambiguous targets retain native classification art.
             local classification = UnitClassification("target")
             if classification == "worldboss" then
                 texture = "UI-TargetingFrame-Boss.blp"
