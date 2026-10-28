@@ -173,9 +173,8 @@ DFRL:NewMod("RunTimers", 5, function()
             end
         end
 
-        local function DrawFoam(piece, left, y, width, height, alpha, filledWidth)
+        local function DrawFoam(piece, left, y, width, height, alpha, filledWidth, halfHeight)
             local first, last = math.max(0, left), math.min(dynamicWidth, filledWidth + 6, left + width)
-            local halfHeight = bar:GetHeight() / 2
             local bottom, top = math.max(-halfHeight, y - height / 2), math.min(halfHeight, y + height / 2)
             if first >= last or bottom >= top then
                 if piece.shown then
@@ -211,7 +210,8 @@ DFRL:NewMod("RunTimers", 5, function()
         local function UpdateBlueFoam(now, filledWidth)
             -- A broad, uneven crest feathers past the native edge while
             -- puffs wash back into the current, inside the metal pill.
-            DrawFoam(foamGlow, filledWidth - 11, 0, 17, 15, 0.42 + 0.08 * math.sin(now * 4.1), filledWidth)
+            local halfHeight = bar:GetHeight() / 2
+            DrawFoam(foamGlow, filledWidth - 11, 0, 17, 15, 0.42 + 0.08 * math.sin(now * 4.1), filledWidth, halfHeight)
             DrawFoam(
                 foamCrest,
                 filledWidth - 5 + 1.1 * math.sin(now * 4.7),
@@ -219,7 +219,8 @@ DFRL:NewMod("RunTimers", 5, function()
                 8,
                 13.5,
                 0.62 + 0.1 * math.sin(now * 5.3),
-                filledWidth
+                filledWidth,
+                halfHeight
             )
             for index, shoulder in ipairs(foamShoulders) do
                 local phase = now * (3.7 + index * 0.6) + index * 2.1
@@ -230,7 +231,8 @@ DFRL:NewMod("RunTimers", 5, function()
                     6,
                     6.5,
                     0.42 + 0.08 * math.sin(phase),
-                    filledWidth
+                    filledWidth,
+                    halfHeight
                 )
             end
             for index, fleck in ipairs(foamFlecks) do
@@ -240,7 +242,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 local height = 1.8 + math.mod(index, 3) * 0.5
                 local y = fleck.y + 1.1 * math.sin(age * 2 * math.pi + fleck.phase)
                 local left = filledWidth + 2.2 * (1 - age) - age * fleck.drift - width / 2
-                DrawFoam(fleck, left, y, width, height, 0.78 * swell, filledWidth)
+                DrawFoam(fleck, left, y, width, height, 0.78 * swell, filledWidth, halfHeight)
             end
         end
 
