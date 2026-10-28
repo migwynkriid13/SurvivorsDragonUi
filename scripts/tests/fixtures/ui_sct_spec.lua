@@ -247,4 +247,41 @@ Test("source lookup scans one spellbook per publication generation across SCT an
     assert(context.bookScans == 4, "world retirement retained an accepted spellbook generation")
 end)
 
+Test("production combat parser reuses capture descriptors without sharing event results", function()
+    local context = H.New()
+    local env = context.env
+    env.getglobal = function(name) return env[name] end
+    env.UnitName = function(unit) return unit == "player" and "Player" or "Pet" end
+    env.COMBATHITOTHEROTHER = "%s hits %s for %d."
+    env.SPELLLOGSELFOTHER = "Your %s hits %s for %d."
+    env.SPELLLOGOTHEROTHER = "%s's %s hits %s for %d."
+    env.PERIODICAURADAMAGEOTHEROTHER = "%s takes %d %s damage from %s's %s."
+    env.SPELL_SCHOOL3_CAP = "Nature"
+    local copies, insert = 0, env.table.insert
+    env.table.insert = function(...)
+        copies = copies + 1
+        return insert(...)
+    end
+    context:Load("modules/nameplates/parser.lua")
+    local parse = env.DFRL.tools.ParseNameplateCombatEvent
+    local player = assert(parse("CHAT_MSG_SPELL_SELF_DAMAGE", "Your Bolt hits Enemy for 11."))
+    local first = assert(parse("CHAT_MSG_SPELL_PET_DAMAGE", "Pet's Bolt hits Enemy for 17."))
+    local prepared = copies
+    local second = assert(parse("CHAT_MSG_SPELL_PET_DAMAGE", "Pet's Bolt hits Other for 19."))
+    assert(copies == prepared, "pet event rebuilt an unchanged source-prefix descriptor")
+    assert(player.amount == 11 and not player.sourceIsPet, "pet descriptor changed the self-message fields")
+    assert(first.sourceName == "Pet" and first.spell == "Bolt" and first.amount == 17 and first.sourceIsPet)
+    assert(second.targetName == "Other" and second.amount == 19, "reused descriptor changed capture order")
+    assert(first ~= second and first.targetName == "Enemy", "capture reuse aliased separate event results")
+    local melee = assert(parse("CHAT_MSG_COMBAT_PET_HITS", "Pet hits Enemy for 23."))
+    assert(melee.sourceIsPet and melee.amount == 23 and melee.damageType == "autoattack")
+    local periodic =
+        assert(parse("CHAT_MSG_SPELL_PERIODIC_CREATURE_DAMAGE", "Enemy takes 29 Nature damage from Pet's Thorns."))
+    assert(periodic.sourceIsPet and periodic.periodic and periodic.school == "Nature" and periodic.amount == 29)
+    assert(
+        not parse("CHAT_MSG_SPELL_PERIODIC_CREATURE_DAMAGE", "Enemy takes 29 Nature damage from Stranger's Thorns."),
+        "descriptor reuse lost periodic ownership validation"
+    )
+end)
+
 print("PASS " .. passed .. " SCT lifecycle contracts")

@@ -114,11 +114,32 @@ end
 
 -- PET combat categories are already restricted to units owned by the player.
 -- Their wording uses OTHEROTHER rather than SELFOTHER, with the source first.
+local captureFields = {
+    target = { "targetName" },
+    melee = { "targetName", "amount" },
+    meleeSchool = { "targetName", "amount", "school" },
+    spell = { "spell", "targetName", "amount" },
+    spellSchool = { "spell", "targetName", "amount", "school" },
+    spellMiss = { "spell", "targetName" },
+    targetSpell = { "targetName", "spell" },
+    targetSourceSpell = { "targetName", "sourceName", "spell" },
+    targetSchool = { "targetName", "school" },
+    targetSourceSchool = { "targetName", "sourceName", "school" },
+    auraStack = { "targetName", "spell", "stack" },
+    periodic = { "targetName", "amount", "school", "spell" },
+    periodicSource = { "targetName", "amount", "school", "sourceName", "spell" },
+    shield = { "amount", "school", "targetName" },
+    shieldSource = { "sourceName", "amount", "school", "targetName" },
+}
 local function CaptureOutgoing(message, stem, fields, pet)
     if not pet then return CaptureGlobal(message, stem .. "SELFOTHER", fields) end
-    local namedFields = { "sourceName" }
-    for index = 1, table.getn(fields) do
-        table.insert(namedFields, fields[index])
+    local namedFields = fields.pet
+    if not namedFields then
+        namedFields = { "sourceName" }
+        for index = 1, table.getn(fields) do
+            table.insert(namedFields, fields[index])
+        end
+        fields.pet = namedFields
     end
     return CaptureGlobal(message, stem .. "OTHEROTHER", namedFields)
 end
@@ -187,13 +208,13 @@ local spellMissPatterns = {
 }
 
 local function ParseMeleeHit(message, pet)
-    local data = CaptureOutgoing(message, "COMBATHIT", { "targetName", "amount" }, pet)
+    local data = CaptureOutgoing(message, "COMBATHIT", captureFields.melee, pet)
     if data then return Damage(data, "autoattack") end
-    data = CaptureOutgoing(message, "COMBATHITCRIT", { "targetName", "amount" }, pet)
+    data = CaptureOutgoing(message, "COMBATHITCRIT", captureFields.melee, pet)
     if data then return Damage(data, "autoattack", 1) end
-    data = CaptureOutgoing(message, "COMBATHITSCHOOL", { "targetName", "amount", "school" }, pet)
+    data = CaptureOutgoing(message, "COMBATHITSCHOOL", captureFields.meleeSchool, pet)
     if data then return Damage(data, "autoattack") end
-    data = CaptureOutgoing(message, "COMBATHITCRITSCHOOL", { "targetName", "amount", "school" }, pet)
+    data = CaptureOutgoing(message, "COMBATHITCRITSCHOOL", captureFields.meleeSchool, pet)
     if data then return Damage(data, "autoattack", 1) end
     return nil
 end
@@ -201,40 +222,40 @@ end
 local function ParseMeleeMiss(message, pet)
     for index = 1, table.getn(meleeMissPatterns) do
         local pattern = meleeMissPatterns[index]
-        local data = CaptureOutgoing(message, pattern[1], { "targetName" }, pet)
+        local data = CaptureOutgoing(message, pattern[1], captureFields.target, pet)
         if data then return Miss(data, pattern[2], "autoattack") end
     end
     return nil
 end
 
 local function ParseSpell(message, pet)
-    local data = CaptureOutgoing(message, "SPELLLOGCRIT", { "spell", "targetName", "amount" }, pet)
+    local data = CaptureOutgoing(message, "SPELLLOGCRIT", captureFields.spell, pet)
     if data then return Damage(data, "ability", 1) end
-    data = CaptureOutgoing(message, "SPELLLOG", { "spell", "targetName", "amount" }, pet)
+    data = CaptureOutgoing(message, "SPELLLOG", captureFields.spell, pet)
     if data then return Damage(data, "ability") end
-    data = CaptureOutgoing(message, "SPELLLOGCRITSCHOOL", { "spell", "targetName", "amount", "school" }, pet)
+    data = CaptureOutgoing(message, "SPELLLOGCRITSCHOOL", captureFields.spellSchool, pet)
     if data then return Damage(data, "spell", 1) end
-    data = CaptureOutgoing(message, "SPELLLOGSCHOOL", { "spell", "targetName", "amount", "school" }, pet)
+    data = CaptureOutgoing(message, "SPELLLOGSCHOOL", captureFields.spellSchool, pet)
     if data then return Damage(data, "spell") end
-    data = CaptureOutgoing(message, "SPELLSPLITDAMAGE", { "spell", "targetName", "amount" }, pet)
+    data = CaptureOutgoing(message, "SPELLSPLITDAMAGE", captureFields.spell, pet)
     if data then return Damage(data, "spell") end
 
     for index = 1, table.getn(spellMissPatterns) do
         local pattern = spellMissPatterns[index]
-        data = CaptureOutgoing(message, pattern[1], { "spell", "targetName" }, pet)
+        data = CaptureOutgoing(message, pattern[1], captureFields.spellMiss, pet)
         if data then return Miss(data, pattern[2], pattern[3]) end
     end
     -- These native immunity families put the target before the source.
     if pet then
-        data = CaptureGlobal(message, "IMMUNESPELLOTHEROTHER", { "targetName", "sourceName", "spell" })
+        data = CaptureGlobal(message, "IMMUNESPELLOTHEROTHER", captureFields.targetSourceSpell)
     else
-        data = CaptureGlobal(message, "IMMUNESPELLSELFOTHER", { "targetName", "spell" })
+        data = CaptureGlobal(message, "IMMUNESPELLSELFOTHER", captureFields.targetSpell)
     end
     if data then return Miss(data, "IMMUNE", "spell") end
     if pet then
-        data = CaptureGlobal(message, "IMMUNEDAMAGECLASSOTHEROTHER", { "targetName", "sourceName", "school" })
+        data = CaptureGlobal(message, "IMMUNEDAMAGECLASSOTHEROTHER", captureFields.targetSourceSchool)
     else
-        data = CaptureGlobal(message, "IMMUNEDAMAGECLASSSELFOTHER", { "targetName", "school" })
+        data = CaptureGlobal(message, "IMMUNEDAMAGECLASSSELFOTHER", captureFields.targetSchool)
     end
     if data then return Miss(data, "IMMUNE", "spell") end
     return nil
@@ -243,33 +264,29 @@ end
 local function ParsePeriodic(message)
     -- Aura applications provide identity metadata for later periodic ticks.
     -- The stacked form must come first so its count is not part of the spell.
-    local data = CaptureGlobal(message, "AURAAPPLICATIONADDEDOTHERHARMFUL", { "targetName", "spell", "stack" })
-    if not data then data = CaptureGlobal(message, "AURAADDEDOTHERHARMFUL", { "targetName", "spell" }) end
+    local data = CaptureGlobal(message, "AURAAPPLICATIONADDEDOTHERHARMFUL", captureFields.auraStack)
+    if not data then data = CaptureGlobal(message, "AURAADDEDOTHERHARMFUL", captureFields.targetSpell) end
     if data then
         data.kind = "aura"
         return data
     end
 
-    data = CaptureGlobal(message, "PERIODICAURADAMAGESELFOTHER", { "targetName", "amount", "school", "spell" })
+    data = CaptureGlobal(message, "PERIODICAURADAMAGESELFOTHER", captureFields.periodic)
     if data then return Damage(data, "spell", nil, 1) end
     -- Periodic categories describe the victim, so OTHEROTHER may be another
     -- player's damage. Require a known player/pet source in the sentence.
-    data = CaptureGlobal(
-        message,
-        "PERIODICAURADAMAGEOTHEROTHER",
-        { "targetName", "amount", "school", "sourceName", "spell" }
-    )
+    data = CaptureGlobal(message, "PERIODICAURADAMAGEOTHEROTHER", captureFields.periodicSource)
     if IsKnownOwnedSource(data) then return Damage(data, "spell", nil, 1) end
-    data = CaptureGlobal(message, "SPELLLOGABSORBSELFOTHER", { "spell", "targetName" })
+    data = CaptureGlobal(message, "SPELLLOGABSORBSELFOTHER", captureFields.spellMiss)
     if data then return Miss(data, "ABSORB", "periodic", 1) end
     return nil
 end
 
 local function ParseDamageShield(message)
     -- Native shield messages do not identify the originating aura.
-    local data = CaptureGlobal(message, "DAMAGESHIELDSELFOTHER", { "amount", "school", "targetName" })
+    local data = CaptureGlobal(message, "DAMAGESHIELDSELFOTHER", captureFields.shield)
     if data then return Damage(data, "reflected", nil, nil, 1) end
-    data = CaptureGlobal(message, "DAMAGESHIELDOTHEROTHER", { "sourceName", "amount", "school", "targetName" })
+    data = CaptureGlobal(message, "DAMAGESHIELDOTHEROTHER", captureFields.shieldSource)
     if IsKnownOwnedSource(data) then return Damage(data, "reflected", nil, nil, 1) end
     -- Native SPELLLOGMISS packets share the damageshield category.
     data = ParseSpell(message)

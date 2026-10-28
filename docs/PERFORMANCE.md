@@ -204,6 +204,15 @@ reallocate every tick. CI-only full Layout mocks cover first preparation, reuse,
 late registration, drafts, cleanup and allocation failure. Authored grip geometry
 and input remain unchanged, with no runtime test hook or additional controller.
 
+### Combat parser descriptors
+
+Fixed native capture-field descriptors allocate once at source load. Their
+pet-source prefix form prepares lazily once per descriptor, instead of copying
+the same fields for every attempted combat pattern. Successful events retain
+their own independent captures/results and original localized pattern, school,
+amount and ownership validation. CI-only production parsing checks player/pet,
+melee/periodic and foreign-source cases without shared-result aliasing.
+
 ## Loot popup modes and marks — 2026-10-27
 
 The new Loot notifications page uses existing editor artwork: one category
