@@ -53,7 +53,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local pendingGroups = {}
     local intakeBuckets = {}
     local spellTextures = {}
-    local missingSpellTextures = {}
+    local spellTexturesDirty, spellTexturesRetryAt = true, nil
     local recentDamage = {}
     local discoveredChildren = 0
     local combatDiscoveryNeeded = true
@@ -881,7 +881,13 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         end
         return itemIcons[name] or nil
     end
+    local function DirtySpellTextures()
+        if not spellTexturesDirty then spellTextures = {} end
+        spellTexturesDirty, spellTexturesRetryAt = true, nil
+    end
+    DFRL.locale.Listen(DirtySpellTextures)
     local function ResetLearnedSpellTextures()
+        DirtySpellTextures()
         ClearItemIcons()
         ClearSummonIcons()
         auraSpellTextures, talentSpellTextures = {}, {}
@@ -1019,9 +1025,9 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         end
     end
 
-    local function RebuildSpellTextures(keepMisses)
-        spellTextures = {}
-        if not keepMisses then missingSpellTextures = {} end
+    local function RebuildSpellTextures()
+        if not spellTexturesDirty and not spellTexturesRetryAt then return end
+        if spellTexturesRetryAt and GetTime() < spellTexturesRetryAt then return end
         if
             type(_G.GetNumSpellTabs) ~= "function"
             or type(_G.GetSpellTabInfo) ~= "function"
@@ -1030,15 +1036,22 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         then
             return
         end
+        local rebuilt, pendingMetadata = {}, false
         local book = BOOKTYPE_SPELL or "spell"
         for tab = 1, GetNumSpellTabs() or 0 do
             local _, _, offset, count = GetSpellTabInfo(tab)
             for index = (offset or 0) + 1, (offset or 0) + (count or 0) do
                 local name = GetSpellName(index, book)
                 local texture = GetSpellTexture(index, book)
-                if name and TextureKey(texture) then spellTextures[name] = texture end
+                if name and TextureKey(texture) then
+                    rebuilt[name] = texture
+                else
+                    pendingMetadata = true
+                end
             end
         end
+        spellTextures, spellTexturesDirty = rebuilt, false
+        spellTexturesRetryAt = pendingMetadata and GetTime() + 1 or nil
     end
 
     local function NativeItemIcon(name)
@@ -1049,12 +1062,8 @@ DFRL:NewMod("NameplateCombatText", 6, function()
 
     local function CombatIcon(info)
         if info.spell and info.spell ~= "" then
+            RebuildSpellTextures()
             local texture = spellTextures[info.spell]
-            if not texture and not missingSpellTextures[info.spell] then
-                RebuildSpellTextures(true)
-                texture = spellTextures[info.spell]
-                missingSpellTextures[info.spell] = not texture
-            end
             if not texture then
                 RefreshLearnedSpellTextures()
                 texture = auraSpellTextures[info.spell]
@@ -1760,6 +1769,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         local eventTime = T.NameplateCombatEventHandlers[event] and GetTime() or nil
         if event == "PLAYER_ENTERING_WORLD" then
             inWorld = true
+            DirtySpellTextures()
             plateFilter.age = 0.2
             iconSourcesDirty.talents, iconSourcesDirty.debuffs = true, true
             iconSourcesDirty.target, iconSourcesDirty.mouseover = true, true
@@ -1778,8 +1788,8 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             ResetDisplay()
             ResetLearnedSpellTextures()
         elseif event == "SPELLS_CHANGED" then
+            DirtySpellTextures()
             iconSourcesDirty.talents = true
-            if CustomEnabled() and damageIcons then RebuildSpellTextures() end
         elseif event == "CHARACTER_POINTS_CHANGED" then
             iconSourcesDirty.talents = true
         elseif event == "PLAYER_TARGET_CHANGED" then

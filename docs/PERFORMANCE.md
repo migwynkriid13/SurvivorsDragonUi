@@ -108,6 +108,17 @@ visibility, scale and anchor checks still run at their existing cadence. CI-only
 placement assertions cover the single-owner check and replaced-owner fallback.
 No new registry, event, region or drawing pass is introduced.
 
+### Shared spellbook generations
+
+SCT and meter source resolution share one lazy complete spellbook scan after an
+existing spell/world/language invalidation. Different non-book names use that
+same result instead of each rebuilding the book before catalog lookup. Incomplete
+native slot metadata retries at most once per second through actual consumers;
+missing APIs and failed scans remain retryable. Off/hidden consumers add no scan.
+The source priority, ambiguity, original grouping identity and icon pools remain
+unchanged. CI-only controller coverage includes meter-only lookup while SCT is
+off, several missing names, delayed artwork readiness and world retirement.
+
 ## Loot popup modes and marks — 2026-10-27
 
 The new Loot notifications page uses existing editor artwork: one category

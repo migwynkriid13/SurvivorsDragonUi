@@ -202,4 +202,49 @@ Test("scrolling expires, reuses its pool and remains idle with no active labels"
     context:NoPresentationWrites()
 end)
 
+Test("source lookup scans one spellbook per publication generation across SCT and meter callers", function()
+    local context = SCT(true, function(current, env)
+        env.DFRL.locale.code, env.DFRL.locale.data = "en", { en = {} }
+        env.DFRL.locale.Native = function(value) return value end
+        env.T.SpellIconCatalog = {
+            game = {
+                PassiveA = "Interface\\Icons\\Spell_Nature_Thorns",
+                PassiveB = "Interface\\Icons\\Spell_Fire_Fire",
+            },
+        }
+        current.bookName, current.bookTexture = "BookSpell", "Interface\\Icons\\Spell_Holy_HolyBolt"
+        env.GetNumSpellTabs = function()
+            current.bookScans = (current.bookScans or 0) + 1
+            return 1
+        end
+        env.GetSpellTabInfo = function() return "Book", nil, 0, 1 end
+        env.GetSpellName = function() return current.bookName end
+        env.GetSpellTexture = function() return current.bookTexture end
+    end)
+    local source = context.env.DFRL.sct
+    assert(not context.bookScans, "icons-off initialization scanned the spellbook")
+    assert(source.GetSourceIcon("PassiveA") == "Interface\\Icons\\Spell_Nature_Thorns")
+    assert(source.GetSourceIcon("PassiveB") == "Interface\\Icons\\Spell_Fire_Fire")
+    assert(source.GetSourceIcon("BookSpell") == context.bookTexture)
+    assert(context.bookScans == 1, "non-spellbook names each rebuilt the same book")
+    source.BeginEdit()
+    source.SetMode("off")
+    source.FinishEdit(true)
+    context.bookName, context.bookTexture = "NewSpell", nil
+    context:Event(context.controller, "SPELLS_CHANGED")
+    assert(context.bookScans == 1, "an inactive source publication scanned eagerly")
+    assert(source.GetSourceIcon("NewSpell") == context.env.T.SourceIconFallback, "missing art was cached as ready")
+    source.GetSourceIcon("PassiveA")
+    assert(context.bookScans == 2, "incomplete metadata retried for every source name")
+    context.bookTexture = "Interface\\Icons\\Spell_Frost_FrostBolt02"
+    context:Tick(1.01)
+    assert(source.GetSourceIcon("NewSpell") == context.bookTexture, "meter-only lookup did not retry missing art")
+    source.GetSourceIcon("PassiveB")
+    assert(context.bookScans == 3, "successful metadata retry did not settle the generation")
+    context:Event(context.controller, "PLAYER_LEAVING_WORLD")
+    context:Event(context.controller, "PLAYER_ENTERING_WORLD")
+    source.GetSourceIcon("NewSpell")
+    assert(context.bookScans == 4, "world retirement retained an accepted spellbook generation")
+end)
+
 print("PASS " .. passed .. " SCT lifecycle contracts")
