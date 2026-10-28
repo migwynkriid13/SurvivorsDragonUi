@@ -86,6 +86,8 @@ local function Affixes()
     env.run.affixes = c.view
     env.runClock, env.bossClock = { visible = true, pixel = 1 }, { visible = false, pixel = 1 }
     env.runText, env.bossText = c.owner:CreateFontString(), c.owner:CreateFontString()
+    env.runText:SetHeight(14)
+    env.bossText:SetHeight(14)
     function env.runText:GetStringWidth() return c.runWidth end
     function env.bossText:GetStringWidth() return c.bossWidth end
     env.runMoveRegion = env.CreateFrame("Frame", nil, c.owner)
@@ -123,9 +125,9 @@ Test("native order places icons left of the run text with the shadow-free rim an
     assert(
         c.view.root.point[1] == "BOTTOMLEFT"
             and c.view.root.point[3] == "TOPLEFT"
-            and c.view.root.point[4] == 0
-            and c.view.root.point[5] == 2,
-        "default icons are not above the bar on its left"
+            and c.view.root.point[4] == 11
+            and c.view.root.point[5] == -2,
+        "attached icons are not inset with their center aligned to the caption"
     )
     assert(first.rim.uv[1] == 576 / 1024 and first.rim.uv[2] == 648 / 1024, "rim differs from the shadow-free crop")
     assert(first.rim.color[1] == 237 / 255 and first.rim.color[2] == 35 / 255 and first.rim.color[3] == 38 / 255)
@@ -134,6 +136,9 @@ Test("native order places icons left of the run text with the shadow-free rim an
     c:Update(true)
     c:NoPresentationWrites()
     assert(not c.reads.labels, "unchanged publication rebuilt tooltip text")
+    c:Publish("sanguine")
+    c:Update(true)
+    assert(c.view.root.point[4] == 18, "a single attached icon still hugs the pill's left edge")
 end)
 
 Test("both captions center the attached row and reserve a gap even with wide labels", function()
@@ -144,8 +149,8 @@ Test("both captions center the attached row and reserve a gap even with wide lab
     c:Update(true)
     local root, runLabel, bossLabel = c.view.root, c.env.runText, c.env.bossText
     assert(
-        root.point[1] == "BOTTOM" and root.point[3] == "TOP" and root.point[4] == 0,
-        "two captions did not center the affixes"
+        root.point[1] == "BOTTOM" and root.point[3] == "TOP" and root.point[4] == 0 and root.point[5] == -2,
+        "two captions did not center the affixes horizontally and vertically"
     )
     local first = (296 - c.view.width) / 2
     local last = (296 + c.view.width) / 2
