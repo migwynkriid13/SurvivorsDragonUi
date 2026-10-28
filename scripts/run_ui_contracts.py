@@ -45,6 +45,12 @@ def main():
         debuff_tooltip = extract_source("modules/ui/run.lua", ["IsNumber", "Clock", "Permanent", "DebuffRemaining", "DebuffTooltip"])
         navigation_distance = extract_source("modules/map/waypoints.lua", ["UpdateDistance"])
         xp_glow = extract_source("modules/xprep/xprep.lua", ["PaintGlow"])
+        sct_queue = extract_source("modules/nameplates/sct.lua", [
+            "FALLBACK_ICON", "EVENT_SETTLE", "EVENT_FALLBACK_DELAY", "DUPLICATE_WINDOW", "DAMAGE_COLORS",
+            "DAMAGE_SAMPLE_LIMIT", "DAMAGE_SAMPLE_TIME", "DAMAGE_SAMPLE_MINIMUM", "STRONG_DAMAGE_RATIO",
+            "TextureKey", "IconIdentityPart", "DamageColor", "QueueCombatText", "UpdatePending", "HandleCombatEvent",
+        ])
+        sct_queue = sct_queue.rsplit("\nreturn ", 1)[0] + "\nreturn { Queue = QueueCombatText, Update = UpdatePending, Handle = HandleCombatEvent }\n"
         run_foam = extract_source("modules/ui/run.lua", ["DrawFoam", "UpdateBlueFoam"])
         run_captions = extract_source("modules/ui/run.lua", [
             "IsNumber", "Clock", "ApplyFont", "NewClockLabel", "RefreshClockLabel", "StyleClockLabel",
@@ -65,6 +71,7 @@ def main():
             ("debuff-tooltip-source.lua", debuff_tooltip, "ui_debuff_tooltip_spec.lua"),
             ("navigation-distance-source.lua", navigation_distance, "ui_navigation_distance_spec.lua"),
             ("xp-glow-source.lua", xp_glow, "ui_xp_perf_spec.lua"),
+            ("sct-queue-source.lua", sct_queue, "ui_sct_queue_perf_spec.lua"),
             ("run-foam-source.lua", run_foam, "ui_run_foam_perf_spec.lua"),
             ("run-captions-source.lua", run_captions, "ui_run_captions_perf_spec.lua"),
         ):

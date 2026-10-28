@@ -1344,8 +1344,15 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             table.insert(pendingGroups, group)
             if byAmount then byAmount[info.amount] = group end
         end
-        group.remaining = group.remaining + 1
-        table.insert(pending, { info = info, time = now, group = group })
+        if msbtStyle then
+            -- The fixed stream has no per-hit origin to resolve. Retain the
+            -- latest member's original age gate without storing each arrival.
+            group.count = group.count + 1
+            group.lastArrival = math.max(group.lastArrival or now, now)
+        else
+            group.remaining = group.remaining + 1
+            table.insert(pending, { info = info, time = now, group = group })
+        end
     end
 
     local function UpdateIcon(text)
@@ -1650,7 +1657,11 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                 end
                 group.bucket, group.identity = nil, nil
             end
-            if group.remaining == 0 and not group.bucket then
+            if
+                group.remaining == 0
+                and not group.bucket
+                and (not group.lastArrival or now - group.lastArrival >= EVENT_SETTLE)
+            then
                 -- Every display keeps its resolved centroid for the full arc.
                 DisplayDamage(group.info, group.x / group.count, group.y / group.count)
             else
