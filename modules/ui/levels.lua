@@ -223,16 +223,19 @@ DFRL:NewMod("StoredLevels", 5, function()
         -- An unknown HUD part returns nil on older clients. Never claim takeover.
         if not ok or type(shown) ~= "boolean" then return false end
         if nativePreference == nil then nativePreference = shown end
-        if shown and not pcall(AZS_SetHudShown, "levels", false) then return false end
+        if not shown then return true end
+        if not pcall(AZS_SetHudShown, "levels", false) then return false end
         local checked, current = pcall(AZS_IsHudShown, "levels")
         return checked and current == false
     end
 
     local displayed, paintedCrop = false, nil
+    local displayedCount, displayedText
     local function Clear()
         -- Clear the requested visibility even when Layout already hides it.
         if displayed or button:IsShown() then button:Hide() end
         displayed = false
+        displayedCount, displayedText = nil, nil
         if highlight:IsShown() then highlight:Hide() end
         T.SetTextIfChanged(countText, "")
         if icon:IsShown() then icon:Hide() end
@@ -261,7 +264,10 @@ DFRL:NewMod("StoredLevels", 5, function()
             end
         end
         if paint or editing then
-            T.SetTextIfChanged(countText, tostring(count))
+            if displayedCount ~= count then
+                displayedText, displayedCount = tostring(count), count
+            end
+            T.SetTextIfChanged(countText, displayedText)
             local measured, changed = TextWidth(countText, badgeMetrics)
             if changed or not measured then
                 local badgeWidth = math.max(20, math.ceil(measured or 0) + 10)

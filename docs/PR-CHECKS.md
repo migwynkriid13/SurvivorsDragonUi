@@ -59,6 +59,14 @@ ambiguous declaration fails preparation.
 
 The assertions cover:
 
+- Cadence-cleanup production mocks cover event-driven low-health eligibility
+  with unchanged active pulse equations, idle versus editing Layout geometry,
+  settled language/cooldown detachment and rearming, actual tooltip/target color
+  repair, hidden minimap-clock recovery, dirty aura layout with native anchor
+  repair, duration/pet/level/lair caption reuse, idle SCT/Chat, lazy guardian
+  clock reads and ten-Hz/deferred/fresh-hover boss-debuff work. Clock tests keep
+  raw native phase/time/ownership and original effect inputs. These are CI-only
+  call/lifecycle contracts and do not establish rendered parity or FPS gains.
 - Extracted production unit-border transitions actually hide inactive party and
   portrait variants, restore the retained artwork on option changes and skip
   unchanged writes. These assertions distinguish shown state from alpha; they

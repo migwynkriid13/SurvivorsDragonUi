@@ -69,10 +69,10 @@ local function Clock()
     local chunk = assert(loadfile(assert(arg[1], "missing extracted UpdateClock source")))
     setfenv(chunk, env)
     local update = chunk()
-    function context:Sample(seconds, phase)
+    function context:Sample(seconds, phase, refresh)
         self.seconds = seconds
         -- The existing outer controller consumes row refreshes after UpdateClock.
-        env.refreshRows = false
+        env.refreshRows = refresh and true or false
         update(phase or "playing")
     end
     return context, env
@@ -85,7 +85,8 @@ do
     end
     assert(context.writes.value == 1 and env.runBar.value == 10, "one native second repainted the fill every frame")
     assert(context.writes.range == 1 and env.runBar.maximum == 960, "unchanged maximum rewrote the range")
-    assert(context.reads.time == 60 and context.reads.length == 60 and context.reads.ownership == 60)
+    assert(context.reads.time == 60 and context.reads.length == 1 and context.reads.ownership == 60)
+    assert(context.reads.schedule == 1, "one refresh scope repeatedly traversed its schedule")
     assert(#context.flows == 60 and #context.captions == 60 and #context.states == 60, "presentation cadence changed")
     for index, flow in ipairs(context.flows) do
         assert(flow.value == 10 and flow.maximum == 960, "effect clipping did not follow the stepped native fill")
@@ -141,7 +142,7 @@ do
     context:Sample(2.2)
     context.hidden = true
     context:ResetPerf()
-    context:Sample(50.7)
+    context:Sample(50.7, nil, true)
     assert(not context.writes.value and not context.writes.range, "hidden clock wrote its fill")
     assert(#context.flows == 0 and #context.captions == 0 and #context.appearance == 0 and #context.states == 0)
     assert(#context.markers == 0 and env.render.clockHidden and env.runBar.value == 2, "hidden clock painted effects")
@@ -156,7 +157,7 @@ do
     assert(#context.markers == 1 and context.markers[1].entries == context.schedule, "Show lost schedule recovery")
     context:ResetPerf()
     context.maximum = 1200
-    context:Sample(50.91)
+    context:Sample(50.91, nil, true)
     assert(context.writes.range == 1 and not context.writes.value and env.runBar.maximum == 1200)
     assert(
         context.flows[1].value == 50 and context.flows[1].maximum == 1200,
@@ -177,4 +178,29 @@ do
 end
 print(
     "PASS hidden and disabled progress stays idle, showing uses current native time and maximum changes remain authoritative"
+)
+
+do
+    local context, env = Clock()
+    context:Sample(1)
+    context:ResetPerf()
+    context.maximum, context.schedule = 1200, { { index = 1, at = 1200 } }
+    context:Sample(1.01)
+    assert(not context.reads.length and not context.reads.schedule and env.runBar.maximum == 960)
+    assert(context.reads.time == 1 and context.reads.ownership == 1, "data caching delayed raw time or ownership")
+    context:Sample(1.02, nil, true)
+    assert(context.reads.length == 1 and context.reads.schedule == 1 and env.runBar.maximum == 1200)
+    assert(context.markers[#context.markers].entries == context.schedule, "deferred data did not replace the cache")
+    context:ResetPerf()
+    context:Sample(1.02, "paused")
+    assert(context.reads.length == 1 and context.reads.schedule == 1, "phase change retained schedule sampling")
+    context.maximum = nil
+    context:Sample(1.02, nil, true)
+    assert(context.released, "missing duration retained a visible clock")
+    context.maximum = 900
+    context:Sample(1.03, nil, true)
+    assert(env.runBar.maximum == 900, "existing retry scope did not recover duration")
+end
+print(
+    "PASS duration and schedule reuse their refresh scope while phases, deferred reads and missing-data retries remain fresh"
 )

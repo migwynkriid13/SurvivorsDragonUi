@@ -1,5 +1,26 @@
 DFRL:NewMod("Map", 1, function()
     local texpath = DFRL:GetInfoOrCons("tex") .. "minimap\\"
+    local function WatchClock(frame, label)
+        local elapsed = 0
+        local function Refresh()
+            if frame:IsVisible() then T.SetTextIfChanged(label, date("%H:%M")) end
+        end
+        local function Tick()
+            elapsed = elapsed + math.max(0, tonumber(arg1) or 0)
+            if elapsed < 5 then return end
+            elapsed = 0
+            Refresh()
+        end
+        local function Start()
+            if not frame:IsVisible() then return end
+            elapsed = 0
+            frame:SetScript("OnUpdate", Tick)
+            Refresh()
+        end
+        frame:SetScript("OnShow", Start)
+        frame:SetScript("OnHide", function() frame:SetScript("OnUpdate", nil) end)
+        Start()
+    end
     local defaults = { width = 180, height = 180, right = -8, top = -32, zoomX = -21, zoomY = 40, zoomScale = 0.8 }
     -- Export appearance geometry before layout restores any confirmed placement.
     DFRL.minimapDefaults = defaults
@@ -79,16 +100,7 @@ DFRL:NewMod("Map", 1, function()
     timeText:SetPoint("CENTER", timeFrame, "CENTER", 0, 0)
     T.SetFont(timeText, 10, "")
     timeText:SetTextColor(1, 1, 1, 1)
-    timeText:SetText(date("%H:%M"))
-    local nextClockUpdate = 0
-    timeFrame:SetScript("OnUpdate", function()
-        if not timeFrame:IsVisible() then return end
-        local now = GetTime()
-        if now >= nextClockUpdate then
-            nextClockUpdate = now + 5
-            T.SetTextIfChanged(timeText, date("%H:%M"))
-        end
-    end)
+    WatchClock(timeFrame, timeText)
     timeFrame:SetScript("OnEnter", function()
         GameTooltip:SetOwner(this, "ANCHOR_BOTTOMLEFT")
         GameTooltip:AddLine("Local time: " .. date("%H:%M"), 1, 1, 1)

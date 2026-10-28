@@ -8,6 +8,10 @@ This is an independent implementation inside `modules/bars/bars.lua`, with no im
 
 Each refresh rereads native start, duration and enabled state instead of retaining its own cooldown countdown. Missing, disabled, expired or unusable timing and empty/hidden buttons hide their labels. World leave/logout clear the numbers; world entry rereads current native values. The code does not modify native cooldowns, hook the global cooldown renderer, touch encounter debuff timers or persist gameplay state.
 
+Disabled, hidden and out-of-world states detach the existing callback. Native
+events, Show and display changes rearm it through the same controller. Enabled
+readiness retries and final-window sampling retain their original cadence.
+
 Each of the seven overlays caches only its latest rounded caption value, unit and language. Repeated samples in the same display bucket reuse that string instead of localizing and joining it again. Native timing reads, the final-window cadence and immediate event refreshes continue unchanged. Every refresh still compares actual text, color and visibility, so native resets and failed text writes remain retryable. Disable, bar hiding and world cleanup clear the caption caches with the labels. The cache contains no start, duration or remaining-time history and adds no frame, drawing region, asset or saved data.
 
 The **Cooldown numbers** checkbox in `/sdui` → **HUD** defaults on. It uses the existing `SurvivorsDragonUiDisplay` preference table, storing only the normalized boolean `cooldownNumbers`; missing or invalid values use on. Previously confirmed boolean choices remain in effect until changed or reset. Clicking previews immediately and turning it off clears the labels, resets the final-window sampling flag and skips periodic native cooldown reads. Confirm alone saves; world leave/logout/reload discard drafts, and `/sdui reset` or **Addon defaults** restore on through the shared display reset. It uses the existing shared editor and footer. No commands, assets or separate SavedVariables are added.

@@ -94,6 +94,15 @@ unverified.
 
 ## Update work
 
+Native duration and schedule validation reuse the existing ten-Hz/deferred
+publication refresh. Phase changes, run/schedule retirement and reload invalidate
+that cache. Raw run time, phase/rollback checks, clock HUD ownership and authored
+animation retain their existing frame cadence while the clock is visible.
+Boss debuffs read current native effects at ten Hz or a deferred publication;
+hovering samples phase/effects immediately before opening the tooltip. Removed
+slots clear before opening and changed debuff height reflows at that point.
+No private countdown supplies remaining time.
+
 The progress fill advances in whole native run-second steps instead of changing
 every rendered frame. Native pause/choice states therefore freeze progress;
 native corrections and duration changes still take effect, and reaching the

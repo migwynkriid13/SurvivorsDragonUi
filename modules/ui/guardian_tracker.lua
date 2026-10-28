@@ -114,8 +114,18 @@ DFRL:NewMod("GuardianTracker", 4, function()
         end
         return row.statusText
     end
+    local function LairName(entry, row)
+        if entry.name then return entry.name end
+        local language = DFRL.locale.code
+        if row.lairIndex ~= entry.index or row.lairLanguage ~= language or row.lairText == nil then
+            local text = Format("Lair %d", entry.index)
+            row.lairIndex, row.lairLanguage, row.lairText = entry.index, language, text
+        end
+        return row.lairText
+    end
     local function ClearRow(row)
         ClearStatus(row)
+        row.lairIndex, row.lairLanguage, row.lairText = nil, nil, nil
         if row.value ~= 0 then row.bar:SetValue(0) end
         row.value = 0
         T.SetEncounterHealthText(row.health, nil, nil, false, false)
@@ -325,7 +335,7 @@ DFRL:NewMod("GuardianTracker", 4, function()
                     row.layoutWidth, row.layoutIndex, row.statusWidth = width, used, statusWidth
                     row.headerHeight = headerHeight
                 end
-                T.SetTextIfChanged(row.name, entry.name or Format("Lair %d", entry.index))
+                T.SetTextIfChanged(row.name, LairName(entry, row))
                 local color = colors[entry.status] or colors.empty
                 if row.color ~= color then
                     row.status:SetTextColor(color[1], color[2], color[3])

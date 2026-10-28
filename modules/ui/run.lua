@@ -2841,6 +2841,7 @@ DFRL:NewMod("RunTimers", 5, function()
     end
 
     local function ReleaseClock()
+        render.clockRead, render.clockMaximum, render.clockSchedule, render.clockPhase = nil, nil, nil, nil
         run.affixes:Clear()
         if render.runShown then
             render.runShown = false
@@ -3063,6 +3064,7 @@ DFRL:NewMod("RunTimers", 5, function()
     local function InvalidateSchedule(sequence)
         scheduleCache = nil
         render.nativeValidation, render.replayValidation, render.sample = nil, nil, nil
+        render.clockRead = nil
         scheduleBarrier = math.max(scheduleBarrier, sequence)
     end
 
@@ -3375,7 +3377,8 @@ DFRL:NewMod("RunTimers", 5, function()
         icon.time:SetPoint("TOP", icon, "TOP", 0, -1)
         icon:EnableMouse(true)
         icon:SetScript("OnEnter", function()
-            if not GameTooltip or not icon.effect then return end
+            if row.RefreshDebuffs then row.RefreshDebuffs(row) end
+            if not GameTooltip or not icon:IsVisible() or not icon.effect then return end
             GameTooltip:SetOwner(icon, "ANCHOR_BOTTOMRIGHT")
             DebuffTooltip(icon, true)
         end)
@@ -3458,10 +3461,21 @@ DFRL:NewMod("RunTimers", 5, function()
         end
     end
 
+    local function RefreshDebuffHover(row)
+        local phase = Read("AZS_GetPhase")
+        local enabled = PHASES[phase] and phase ~= "ready" and phase ~= "dead" and DFRL.display.Get("bossDebuffs")
+        local height = UpdateDebuffs(row, enabled)
+        if row.debuffHeight ~= height then
+            row.debuffHeight = height
+            ReflowRows()
+        end
+    end
+
     local function UpdateDebuffRows(phase, reflow)
         if not bossGroup:IsVisible() then return end
         local enabled = phase ~= "ready" and phase ~= "dead" and DFRL.display.Get("bossDebuffs")
         for _, row in ipairs(rowOrder) do
+            row.RefreshDebuffs = RefreshDebuffHover
             local height = UpdateDebuffs(row, enabled)
             if row.debuffHeight ~= height then reflow = true end
             row.debuffHeight = height
@@ -3665,7 +3679,6 @@ DFRL:NewMod("RunTimers", 5, function()
             return
         end
         local seconds = Read("AZS_GetRunTime")
-        local maximum = RunLength()
         local zone = type(AZS_ZONE) == "table" and AZS_ZONE.zone or nil
         if previousZone ~= zone or (previousTime and IsNumber(seconds) and seconds < previousTime) then
             ClearRows()
@@ -3673,7 +3686,15 @@ DFRL:NewMod("RunTimers", 5, function()
         end
         previousZone = zone
         if IsNumber(seconds) then previousTime = seconds end
-        local scheduled = maximum and ScheduleMarkers(maximum, phase) or nil
+        -- Duration and schedule publications use the existing ten-Hz/deferred
+        -- reader. Raw native time, ownership and animated effects retain frames.
+        if refreshRows or not render.clockRead or render.clockPhase ~= phase then
+            local maximum = RunLength()
+            local scheduled = maximum and ScheduleMarkers(maximum, phase) or nil
+            render.clockMaximum, render.clockSchedule = maximum, scheduled
+            render.clockPhase, render.clockRead = phase, true
+        end
+        local maximum, scheduled = render.clockMaximum, render.clockSchedule
         if IsNumber(seconds) and maximum then
             if not render.runShown then
                 render.runShown = true
@@ -3744,9 +3765,6 @@ DFRL:NewMod("RunTimers", 5, function()
             UpdateRows(phase)
         else
             if tallyPresentationDirty then UpdateTally() end
-            -- Native remaining time is calculated on every getter call, even
-            -- without a new AZSDEBUFFS packet and while the run is paused.
-            UpdateDebuffRows(phase)
         end
     end
 
@@ -3755,6 +3773,7 @@ DFRL:NewMod("RunTimers", 5, function()
         _G.ReloadUI = function()
             -- Refresh from native data before the client saves addon variables.
             -- Repeated reloads can hand off an accepted cached schedule too.
+            refreshRows = true
             local ok = pcall(Update)
             local phase = render.customClock and Read("AZS_GetPhase") or nil
             local maximum = render.customClock and RunLength() or nil
@@ -3814,7 +3833,7 @@ DFRL:NewMod("RunTimers", 5, function()
             return
         elseif event == "CHAT_MSG_ADDON" then
             if arg1 == "AZSDEBUFFS" then
-                refreshRows = true
+                refreshRows, render.readPending = true, true
                 return
             end
             if arg1 ~= "AZSZONE" and arg1 ~= "AZSRUN" and arg1 ~= "AZSBOSSES" and arg1 ~= "AZSUNITS" then return end
@@ -3838,8 +3857,8 @@ DFRL:NewMod("RunTimers", 5, function()
         Update()
     end)
     reader:SetScript("OnUpdate", function()
-        -- Visible clock/debuff effects retain frame cadence. Hidden clock work
-        -- uses the existing ten-Hz lifecycle poll or a deferred native publication.
+        -- Visible groups retain frame-cadence phase/boundary detection. Debuffs
+        -- use native timing at ten Hz, deferred publications and immediate hover.
         pollAge = pollAge + (tonumber(arg1) or 0)
         if not run:IsVisible() and not bossGroup:IsVisible() and not render.readPending and pollAge < 0.1 then
             return

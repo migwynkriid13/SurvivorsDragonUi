@@ -1676,8 +1676,9 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     end
 
     local function UpdatePending(now)
+        local count, groupCount = table.getn(pending), table.getn(pendingGroups)
+        if count == 0 and groupCount == 0 then return end
         originIndex.ClearQueries()
-        local count = table.getn(pending)
         local kept = 0
         for index = 1, count do
             local entry = pending[index]
@@ -1714,7 +1715,6 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         -- to this completed synchronous pass, never another frame or callback.
         originIndex.ClearQueries()
 
-        local groupCount = table.getn(pendingGroups)
         kept = 0
         for index = 1, groupCount do
             local group = pendingGroups[index]
@@ -1774,7 +1774,8 @@ DFRL:NewMod("NameplateCombatText", 6, function()
 
     local function UpdateTexts(now, elapsed)
         local count = table.getn(activeTexts)
-        if msbtStyle and count > 0 then PrepareScrollPositions(now, elapsed) end
+        if count == 0 then return end
+        if msbtStyle then PrepareScrollPositions(now, elapsed) end
         local kept = 0
         for index = 1, count do
             local text = activeTexts[index]

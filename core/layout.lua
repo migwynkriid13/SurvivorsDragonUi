@@ -1333,10 +1333,26 @@ DFRL:NewMod("Layout", 0, function()
 
     local controller = CreateFrame("Frame", nil, UIParent)
     local lastWidth, lastHeight, lastScale
+    local viewportAge = 0
     controller:SetScript("OnUpdate", function()
         if not ready then return end
+        local enabled = inWorld and editing
+        viewportAge = viewportAge + (tonumber(arg1) or 0)
+        -- Editing, unresolved placement and the first world sample retain frame
+        -- cadence. Settled gameplay only needs to notice viewport changes at 10 Hz.
+        if
+            not enabled
+            and not activeDrag
+            and not needsRestore
+            and not needsDefaultPosition
+            and lastWidth
+            and viewportAge < EDITOR_INTERVAL
+        then
+            return
+        end
         local width, height, scale = Viewport()
         if not width then return end
+        viewportAge = 0
         if
             not lastWidth
             or not T.NearlyEqual(width, lastWidth)
@@ -1357,7 +1373,6 @@ DFRL:NewMod("Layout", 0, function()
             needsRestore = false
         end
         lastWidth, lastHeight, lastScale = width, height, scale
-        local enabled = inWorld and editing
         if activeDrag and not enabled then FinishDrag(activeDrag, false) end
         local dragChanged
         if activeDrag and activeDrag.moving then dragChanged = UpdateMove(activeDrag) end

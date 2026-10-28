@@ -229,6 +229,7 @@ DFRL:NewMod("PetFrames", 4, function()
         circle.icon, circle.active, circle.native, circle.failedIcon = nil, false, false, nil
     end
     local function HideRow(row)
+        row.timerSecond, row.timerText, row.countValue, row.countText = nil, nil, nil, nil
         if not row.active then return end
         row.frame:Hide()
         Text(row.name, "")
@@ -292,6 +293,22 @@ DFRL:NewMod("PetFrames", 4, function()
         local rounded = math.ceil(seconds)
         return string.format("%d:%02d", math.floor(rounded / 60), math.mod(rounded, 60))
     end
+    local function TimerText(row, remaining, enabled)
+        local second = enabled and Number(remaining) and remaining >= 0 and math.ceil(remaining) or nil
+        local state = enabled and (second or "missing") or false
+        if row.timerSecond ~= state or row.timerText == nil then
+            local text = not enabled and "" or (second and Time(second) or "--:--")
+            row.timerSecond, row.timerText = state, text
+        end
+        return row.timerText
+    end
+    local function CountText(row, count, enabled)
+        local value = enabled and count > 1 and count or nil
+        if row.countValue ~= value or row.countText == nil then
+            row.countValue, row.countText = value, value and ("x" .. value) or ""
+        end
+        return row.countText
+    end
     local function Paint(row, entry, scale, column, line, cellWidth, spacing)
         row.id = entry.id
         local x, y = column * (cellWidth + spacing), -line * (CELL_HEIGHT + spacing)
@@ -316,16 +333,10 @@ DFRL:NewMod("PetFrames", 4, function()
         end
         local circle = Circle(row)
         local usable = SetIcon(circle, entry.icon, scale)
-        Text(circle.count, not DFRL.display.Get("hidePetCounts") and entry.count > 1 and ("x" .. entry.count) or "")
+        Text(circle.count, CountText(row, entry.count, not DFRL.display.Get("hidePetCounts")))
         if not circle.active then circle.frame:Show() end
         circle.active = true
-        if not showTimer then
-            Text(row.status, "")
-        elseif Number(entry.remaining) and entry.remaining >= 0 then
-            Text(row.status, Time(entry.remaining))
-        else
-            Text(row.status, "--:--")
-        end
+        Text(row.status, TimerText(row, entry.remaining, showTimer))
         if not row.active then row.frame:Show() end
         row.active = true
         return usable

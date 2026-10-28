@@ -46,8 +46,31 @@ function DFRL.tools.StyleHoverCard(frame, red, green, blue)
         frame:SetBackdrop(BACKDROP)
         frame.sduiHoverSkin = true
     end
-    frame:SetBackdropColor(0.04, 0.04, 0.08, 0.98)
-    frame:SetBackdropBorderColor(red or BORDER_R, green or BORDER_G, blue or BORDER_B, 1)
+    local r, g, b, a
+    if frame.GetBackdropColor then
+        r, g, b, a = frame:GetBackdropColor()
+    end
+    if
+        not T.NearlyEqual(r, 0.04)
+        or not T.NearlyEqual(g, 0.04)
+        or not T.NearlyEqual(b, 0.08)
+        or not T.NearlyEqual(a, 0.98)
+    then
+        frame:SetBackdropColor(0.04, 0.04, 0.08, 0.98)
+    end
+    red, green, blue = red or BORDER_R, green or BORDER_G, blue or BORDER_B
+    r, g, b, a = nil, nil, nil, nil
+    if frame.GetBackdropBorderColor then
+        r, g, b, a = frame:GetBackdropBorderColor()
+    end
+    if
+        not T.NearlyEqual(r, red)
+        or not T.NearlyEqual(g, green)
+        or not T.NearlyEqual(b, blue)
+        or not T.NearlyEqual(a, 1)
+    then
+        frame:SetBackdropBorderColor(red, green, blue, 1)
+    end
 end
 
 function DFRL.tools.CreateHoverCard(parent, width, height)
@@ -253,12 +276,22 @@ DFRL:NewMod("Tooltips", 2, function()
     end
     local function Refresh()
         if not tooltip:IsVisible() then return end
-        if bar then bar:Hide() end
+        if bar and bar:IsShown() then bar:Hide() end
         if inWorld and Exists(currentUnit) then
             local red, green, blue = UnitColor(currentUnit)
             DFRL.tools.StyleHoverCard(tooltip, red, green, blue)
             red, green, blue = PlayerColor(currentUnit)
-            if red and GameTooltipTextLeft1 then GameTooltipTextLeft1:SetTextColor(red, green, blue) end
+            if red and GameTooltipTextLeft1 then
+                local r, g, b, a = GameTooltipTextLeft1:GetTextColor()
+                if
+                    not T.NearlyEqual(r, red)
+                    or not T.NearlyEqual(g, green)
+                    or not T.NearlyEqual(b, blue)
+                    or (a and not T.NearlyEqual(a, 1))
+                then
+                    GameTooltipTextLeft1:SetTextColor(red, green, blue)
+                end
+            end
         else
             DFRL.tools.StyleHoverCard(tooltip)
         end
@@ -266,7 +299,7 @@ DFRL:NewMod("Tooltips", 2, function()
     local function Clear()
         currentUnit, lastIconOwner, elapsed = nil, nil, 0
         DFRL.tools.StyleHoverCard(tooltip)
-        if bar then bar:Hide() end
+        if bar and bar:IsShown() then bar:Hide() end
     end
 
     DFRL.tools.StyleHoverCard(tooltip)
@@ -290,7 +323,7 @@ DFRL:NewMod("Tooltips", 2, function()
         Refresh()
     end)
     if bar then
-        bar:Hide()
+        if bar:IsShown() then bar:Hide() end
         -- Native unit builders can show it again on every hover rebuild.
         HookScript(bar, "OnShow", function() bar:Hide() end)
     end

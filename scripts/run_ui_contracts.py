@@ -60,12 +60,25 @@ def main():
             "SetClockLabelText", "RefreshTimerCaptions", "ClearClockCaptions", "UpdateClockCaptions",
         ])
         run_captions = run_captions.rsplit("\nreturn ", 1)[0] + "\nreturn { New = NewClockLabel, Update = UpdateClockCaptions, Refresh = RefreshTimerCaptions, Style = StyleClockLabel, Clear = ClearClockCaptions }\n"
+        minimap_clock = extract_source("modules/map/map.lua", ["WatchClock"])
+        aura_layout = extract_source("modules/unit/auras.lua", ["PlaceNativeFrame", "Layout"])
+        aura_duration = extract_source("modules/unit/auras.lua", ["Time", "SetTimerDuration"])
+        pet_captions = extract_source("modules/unit/pets.lua", ["Number", "Time", "TimerText", "CountText", "HideRow"])
+        pet_captions = pet_captions.rsplit("\nreturn ", 1)[0] + "\nreturn { Timer = TimerText, Count = CountText, Hide = HideRow }\n"
+        chat_idle = extract_source("modules/chat/chat.lua", ["HOLD", "FADE", "FadeSettings"])
+        run_debuff_cadence = extract_source("modules/ui/run.lua", [
+            "IsNumber", "HideDebuff", "Permanent", "DebuffRemaining", "DebuffIcon", "UpdateDebuffs",
+            "ReflowRows", "RefreshDebuffHover", "UpdateDebuffRows", "Update",
+        ])
+        run_debuff_cadence = run_debuff_cadence.rsplit("\nreturn ", 1)[0] + "\nreturn { Update = Update, Rows = UpdateDebuffRows }\n"
     except RuntimeError as error:
         print(error, file=sys.stderr)
         return 1
     with tempfile.TemporaryDirectory(prefix="sdui-ui-contracts-") as folder:
         placement = Path(folder) / "guardian-placement-source.lua"
         placement.write_text(guardian_placement, encoding="utf-8")
+        aura_duration_source = Path(folder) / "aura-duration-source.lua"
+        aura_duration_source.write_text(aura_duration, encoding="utf-8")
         for name, source, fixture in (
             ("cooldown-source.lua", cooldown, "ui_spec.lua"),
             ("guardian-hover-source.lua", guardian_hover, "ui_guardian_hover_spec.lua"),
@@ -79,12 +92,19 @@ def main():
             ("run-progress-source.lua", run_progress, "ui_run_progress_perf_spec.lua"),
             ("run-affixes-source.lua", run_affixes, "ui_run_affixes_spec.lua"),
             ("run-captions-source.lua", run_captions, "ui_run_captions_perf_spec.lua"),
+            ("minimap-clock-source.lua", minimap_clock, "ui_idle_clock_spec.lua"),
+            ("aura-layout-source.lua", aura_layout, "ui_aura_layout_perf_spec.lua"),
+            ("pet-captions-source.lua", pet_captions, "ui_pet_caption_perf_spec.lua"),
+            ("chat-idle-source.lua", chat_idle, "ui_chat_idle_perf_spec.lua"),
+            ("run-debuff-cadence-source.lua", run_debuff_cadence, "ui_run_debuff_cadence_spec.lua"),
         ):
             seam = Path(folder) / name
             seam.write_text(source, encoding="utf-8")
             command = ["lua5.1", "scripts/tests/fixtures/" + fixture, str(seam)]
             if fixture == "ui_guardian_hover_spec.lua":
                 command.append(str(placement))
+            if fixture == "ui_aura_layout_perf_spec.lua":
+                command.append(str(aura_duration_source))
             if fixture == "ui_border_spec.lua":
                 for name, body in (("border-portraits-source.lua", border_portraits), ("border-mini-source.lua", border_mini)):
                     source_file = Path(folder) / name
@@ -93,7 +113,7 @@ def main():
             result = subprocess.run(command, cwd=SOURCE)
             if result.returncode:
                 return result.returncode
-        for fixture in ("ui_health_spec.lua", "ui_sct_spec.lua", "ui_nameplates_spec.lua", "ui_marks_spec.lua", "ui_meter_party_spec.lua", "ui_banners_perf_spec.lua", "ui_layout_spec.lua", "ui_pets_totems_spec.lua", "ui_guardian_tracker_perf_spec.lua", "ui_revive_perf_spec.lua"):
+        for fixture in ("ui_health_spec.lua", "ui_sct_spec.lua", "ui_nameplates_spec.lua", "ui_marks_spec.lua", "ui_meter_party_spec.lua", "ui_banners_perf_spec.lua", "ui_layout_spec.lua", "ui_pets_totems_spec.lua", "ui_guardian_tracker_perf_spec.lua", "ui_revive_perf_spec.lua", "ui_core_idle_cadence_spec.lua", "ui_cooldown_lifecycle_spec.lua", "ui_tooltip_style_perf_spec.lua", "ui_target_color_perf_spec.lua", "ui_passive_cadence_spec.lua"):
             result = subprocess.run(["lua5.1", "scripts/tests/fixtures/" + fixture], cwd=SOURCE)
             if result.returncode:
                 return result.returncode

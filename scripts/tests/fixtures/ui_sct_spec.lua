@@ -202,6 +202,26 @@ Test("scrolling expires, reuses its pool and remains idle with no active labels"
     context:NoPresentationWrites()
 end)
 
+Test("empty SCT queues skip remembered-size writes and resume for new hits", function()
+    local context = SCT(true)
+    local writes = 0
+    local setn = context.env.table.setn
+    context.env.table.setn = function(list, count)
+        writes = writes + 1
+        setn(list, count)
+    end
+    context:Tick(0.016)
+    assert(writes == 0, "empty queue/text passes still rewrote remembered lengths")
+    context:Hit(111)
+    writes = 0
+    context:Tick(0.1)
+    assert(writes > 0 and context:Labels()[1]:GetText() == "111", "a new hit did not resume queue processing")
+    context:Tick(1.5)
+    writes = 0
+    context:Tick(0.016)
+    assert(writes == 0 and #context:Labels() == 0, "retired queues did not return to the idle path")
+end)
+
 Test("source lookup scans one spellbook per publication generation across SCT and meter callers", function()
     local context = SCT(true, function(current, env)
         env.DFRL.locale.code, env.DFRL.locale.data = "en", { en = {} }

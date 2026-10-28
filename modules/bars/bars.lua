@@ -476,7 +476,12 @@ DFRL:NewMod("Bars", 1, function()
 
         local active, finishing = true, false
         local elapsed = 0
+        local controller, running, TickNumbers
         local function ClearNumbers()
+            if running then
+                controller:SetScript("OnUpdate", nil)
+                running = false
+            end
             finishing = false
             for _, button in ipairs(DFRL.actionButtons) do
                 local overlay = button.DFRL_cooldownNumber
@@ -490,6 +495,10 @@ DFRL:NewMod("Bars", 1, function()
                 ClearNumbers()
                 return
             end
+            if not running then
+                controller:SetScript("OnUpdate", TickNumbers)
+                running = true
+            end
             local now = GetTime()
             finishing = false
             for _, button in ipairs(DFRL.actionButtons) do
@@ -500,7 +509,7 @@ DFRL:NewMod("Bars", 1, function()
 
         -- One updater serves the whole bar. Text inherits each button's scale,
         -- alpha and visibility, while its stock swipe and click scripts stay intact.
-        local controller = CreateFrame("Frame", nil, bar)
+        controller = CreateFrame("Frame", nil, bar)
         controller:RegisterEvent("ACTIONBAR_UPDATE_COOLDOWN")
         controller:RegisterEvent("ACTIONBAR_SLOT_CHANGED")
         controller:RegisterEvent("PLAYER_ENTERING_WORLD")
@@ -516,7 +525,7 @@ DFRL:NewMod("Bars", 1, function()
             elapsed = 0
             RefreshNumbers()
         end)
-        controller:SetScript("OnUpdate", function()
+        TickNumbers = function()
             if not active or not bar:IsVisible() or not DFRL.display.Get("cooldownNumbers") then return end
             elapsed = elapsed + arg1
             -- Sample each rendered frame near expiration so a 100-ms periodic
@@ -524,7 +533,7 @@ DFRL:NewMod("Bars", 1, function()
             if not finishing and elapsed < COOLDOWN_INTERVAL then return end
             elapsed = 0
             RefreshNumbers()
-        end)
+        end
         controller:SetScript("OnHide", ClearNumbers)
         controller:SetScript("OnShow", RefreshNumbers)
         DFRL.display.Listen(RefreshNumbers)

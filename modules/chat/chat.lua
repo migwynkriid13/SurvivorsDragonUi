@@ -135,6 +135,7 @@ DFRL:NewMod("Chat", 1, function()
             return not state.scrolled
         end
         local function FadeSettings(state, held)
+            if state.fadeConfigured and state.held == held then return end
             if not root:IsVisible() then return end
             local frame = state.native
             if not state.fadeConfigured then

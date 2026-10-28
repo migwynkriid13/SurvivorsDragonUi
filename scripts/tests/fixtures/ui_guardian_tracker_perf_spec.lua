@@ -22,7 +22,9 @@ local function Tracker()
     env.DFRL.locale.code = "en"
     env.DFRL.locale.data = {
         en = { ui = {} },
-        fr = { ui = { ["Respawns in %s"] = "Retour dans %s", Alive = "Vivant", Empty = "Vide" } },
+        fr = {
+            ui = { ["Respawns in %s"] = "Retour dans %s", ["Lair %d"] = "Repaire %d", Alive = "Vivant", Empty = "Vide" },
+        },
     }
     env.DFRL.locale.Text = function(source)
         if source == "Respawns in %s" or source == "Alive" or source == "Empty" then
@@ -38,6 +40,9 @@ local function Tracker()
         if format == "%d:%02d" then context.reads.clockFormats = (context.reads.clockFormats or 0) + 1 end
         if format == "Respawns in %s" or format == "Retour dans %s" then
             context.reads.captionFormats = (context.reads.captionFormats or 0) + 1
+        end
+        if format == "Lair %d" or format == "Repaire %d" then
+            context.reads.nameFormats = (context.reads.nameFormats or 0) + 1
         end
         return string.format(format, ...)
     end
@@ -222,3 +227,31 @@ do
     assert(not row.health:IsShown() and row.bar.value == 0.5, "both health choices failed to hide only the label")
 end
 print("PASS guardian status caching preserves the shared health branch, values and independent health controls")
+
+do
+    local context, row = Tracker()
+    context.entry.name = nil
+    context:Tick()
+    assert(row.name:GetText() == "Lair 1" and context.reads.nameFormats == 1)
+    context:ResetCounts()
+    context:Tick()
+    assert(not context.reads.nameFormats, "unchanged unnamed lair was reformatted")
+    row.name.text = "native reset"
+    context:Tick()
+    assert(row.name:GetText() == "Lair 1" and not context.reads.nameFormats)
+    context.entry.index = 2
+    context:Tick()
+    assert(row.name:GetText() == "Lair 2" and context.reads.nameFormats == 1)
+    context.env.DFRL.locale.code = "fr"
+    context:NotifyLocale()
+    assert(row.name:GetText() == "Repaire 2", "language change retained the old fallback name")
+    context.entry.index, context.failText = 3, "Repaire 3"
+    assert(not pcall(function() context:Tick() end), "injected name setter failure was swallowed")
+    context:ResetCounts()
+    context:Tick()
+    assert(row.name:GetText() == "Repaire 3" and not context.reads.nameFormats, "failed fallback text did not retry")
+    context.entries = {}
+    context:Tick()
+    assert(row.lairText == nil, "retired row retained its fallback caption cache")
+end
+print("PASS guardian fallback names cache by lair and language while actual text repairs and retirement remain intact")
