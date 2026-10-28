@@ -301,6 +301,19 @@ decorative updater; their game-owned window/keyboard behavior stays intact.
 
 ## Meter drawing audit — 2026-10-26
 
+Each meter rail now has a two-unit black outline. One additional pooled texture
+per row reuses `meter/Background.blp`, cropped to its lower eighteen source rows
+and tinted black. The original background and native StatusBar pixels/UVs stay
+unchanged. The outline uses BACKGROUND and the original background uses BORDER,
+keeping their order independent of native equal-texture sorting. Two permanent
+anchors follow the existing background's width/icon-gutter changes without new
+layout sampling or refresh writes. This adds one texture region and a cropped
+UV/material state per allocated row, plus a thin visible alpha edge around each
+shown rail; the opaque original rail covers its interior. Existing lazy row
+pooling, hiding/off behavior and cleanup own it. No asset, frame, event, updater,
+setting or SavedVariable is added. Source review and pinned formatting do not
+establish in-game appearance or a measured GPU/FPS result.
+
 Ability names and numeric row values now use DEFAULT/OUTLINE plus the shared
 black chat shadow at `(1, -1)`, matching guardian/chat text. Each label retains
 its font flags so existing size-change retries preserve the outline and require
@@ -373,10 +386,10 @@ remain unmeasured. See [DAMAGE-METER.md](DAMAGE-METER.md).
 
 The meter's normal circular path uses six native icon regions plus six existing
 ring regions. With its header, row backgrounds and fills, the full six-row view
-has 26 authored texture regions normally, excluding the transient hover, text, native internal regions,
+has 32 authored texture regions normally, excluding the transient hover, text, native internal regions,
 tooltips and other HUD owners. The configurable one-to-ten row limit defaults
-to six; a fully populated native view has `2 + 4n` authored texture regions,
-so ten rows use 42. One seeded row checks renderer readiness; additional rows
+to six; a fully populated native view has `2 + 5n` authored texture regions,
+so ten rows use 52. One seeded row checks renderer readiness; additional rows
 are allocated only when requested visible sources need them. Shrinking the
 view retires surplus rows immediately and retains the pool for reuse.
 No strip pool is allocated on the native path.
@@ -384,19 +397,20 @@ No strip pool is allocated on the native path.
 Meter DPS, icons and both header fields default on; ability damage, percentage
 and ranks default off. Turning **Ability icons** off
 clears pooled icon bindings, hides icons/rims and skips icon resolution and binding
-in subsequent paints, leaving `2 + 2n` authored texture regions in a populated
-view (14 at six rows, 22 at ten), plus the transient reset-button hover. Pools remain allocated for reuse. Disabled
+in subsequent paints, leaving `2 + 3n` authored texture regions in a populated
+view (20 at six rows, 32 at ten), plus the transient reset-button hover. Pools remain allocated for reuse. Disabled
 row values do not trigger formatting when their native values change. Column
 widths and the icon gutter reflow only for effective option changes; header
 text is cached by its visible values, view, language and options revision.
 These are source-level cost controls, without a measured FPS claim.
 
 The compatibility path is deliberately more expensive: at effective scale one,
-each 26-unit icon uses 24 nonempty strips. Six such rows have 163 visible
-authored texture regions and 169 allocated regions including their six hidden
+each 26-unit icon uses 24 nonempty strips. Including the header and normal X,
+six such outlined rows have 170 visible
+authored texture regions and 176 allocated regions including their six hidden
 named portraits. These are construction counts, not measured material batches
 or GPU draw calls. For a freshly populated ten-row fallback view the equivalent
-counts are 271 visible / 281 allocated at scale one. Retained pools can have
+counts are 282 visible / 292 allocated at scale one. Retained pools can have
 additional hidden regions after reducing the count or scale. Different scales
 change the lazy fallback pool. Keep the
 native cached image as the preferred path; do not treat updater caching alone

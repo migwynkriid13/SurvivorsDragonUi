@@ -4,6 +4,10 @@ The meter uses the original Details! **The War Within** header, progress-bar and
 background artwork in a native SurvivorsDragonUi window. Details and its skin
 addon do not need to be installed.
 
+Each bar has a two-unit black outline to separate its rounded rail from busy
+backgrounds. It reuses the existing background image beneath the original
+artwork and follows the bar's width, icon gutter and Layout scale.
+
 The custom meter is **off by default**. Turn on **Enable damage meter** under
 `/sdui` → **Damage meter**, then Confirm. The switch previews live and follows
 the shared Cancel/discard/profile paths; both full resets turn it off. Turning
