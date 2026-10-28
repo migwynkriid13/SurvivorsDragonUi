@@ -170,6 +170,10 @@ The assertions cover:
   final-window sampling with the exact positive-zero boundary.
 - Hidden/off cooldowns skip native reads and presentation; world retirement
   clears overlays and suspends reads, and world entry resumes them.
+- Native ability Model mocks cover Performance Mode's completion-flash guard,
+  unfinished swipes, active-flash cleanup, mode exit without stale replay,
+  numbers-off independence and preserved native timing/animation handlers.
+  They do not establish the packaged client's live rendering or FPS.
 - Range indicators reuse their texture, avoid restarting unchanged fades and
   detach their polling and clear effects when the action bar hides. One lazy
   target sample serves each pass while visible buttons retain independent

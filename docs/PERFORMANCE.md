@@ -159,7 +159,7 @@ source/runtime catalogs and reserves its own row above the category buttons.
 | Run timer                   | Keep native whole-second progress and current labels, static blue/red fill and informative skull/check markers. Skip flow, foam, sparkle, red-glint and skull-halo animation. The 72-texture decorative fill pool is prepared only if normal mode needs it, then retained for reuse. Required native phase, ownership, schedule and encounter work keeps its existing lifecycle. |
 | Cache tally                 | Refresh kills and gold numbers once every five UI seconds. Keep cache cost at its normal cadence. Clear the affordable-cache gold halo, rays and sparkles and detach its animation worker.                                                                                                                                                                                       |
 | XP                          | Snap the fill to received XP, clear gain/spark artwork and detach completed effect work. Existing deferred native reads remain.                                                                                                                                                                                                                                                  |
-| Abilities and stored levels | Clear cooldown-number overlays and detach their timing worker. Hide level-button glow/highlight layers and detach the pulse worker; retain its static gold artwork, count and click behavior.                                                                                                                                                                                    |
+| Abilities and stored levels | Clear cooldown-number overlays and detach their timing worker. Suppress the seven native ability-ready flashes while retaining unfinished cooldown swipes. Hide level-button glow/highlight layers and detach the pulse worker; retain its static gold artwork, count and click behavior.                                                                                        |
 | Notifications and revive    | Loot cards and banners stay opaque until their original expiry; hidden notices still retire. Revive displays received fill/percentage directly without smoothing, fade, spark or pulsing crosses, using its existing ten-Hz state reader.                                                                                                                                        |
 | Action range                | Keep the current out-of-range warning static and remove any active native fade on a mode transition.                                                                                                                                                                                                                                                                             |
 
@@ -170,6 +170,20 @@ notification expiry, data gates, native HUD ownership and cleanup stay active.
 Navigation direction, custom combat-text travel, meaningful native cooldown
 swipes and jewelry cooldown progress retain their functional motion. This mode
 does not change native gameplay values, incoming combat feedback or game effects.
+
+Ability-ready suppression wraps only the seven existing cooldown Models'
+`OnUpdateModel` handlers, using their native timing fields to hide at completion
+before the finishing sequence starts. The original callbacks own every
+unfinished swipe and all normal-mode behavior. The existing display listener
+clears a flash already running on mode entry and caches the selected mode;
+mode exit leaves retired flashes hidden until the next native timer rearms.
+This remains independent of the retained Cooldown numbers choice. There are at
+most seven wrappers and one existing-Model list, with no new frame, region,
+asset, event, polling or updater. Native timer setup, animation-finished handling
+and input remain unchanged. Unfinished native drawing stays present; hidden
+completion Models skip their finishing animation. These are source-level
+costs, not measured GPU/FPS results. See [ability cooldowns](ABILITY-COOLDOWNS.md)
+for pinned native sources and CI-only coverage.
 
 SCT caches the selected grouping window through the existing display listener.
 Each new identified damage group receives its fixed inclusive deadline from
