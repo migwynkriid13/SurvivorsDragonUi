@@ -46,6 +46,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local plates = {}
     local shownPlates = {}
     local origins = {}
+    local originIndex = { names = {} }
     local activeTexts = {}
     local textPool = {}
     local textRoot
@@ -443,6 +444,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         pendingGroups = {}
         intakeBuckets = {}
         origins = {}
+        originIndex.names = {}
         recentDamage = {}
         for _, data in pairs(plates) do
             data.origin = nil
@@ -593,6 +595,12 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             origin = { name = name, live = true, lastSeen = now }
             data.origin = origin
             table.insert(origins, origin)
+            local named = originIndex.names[name]
+            if not named then
+                named = {}
+                originIndex.names[name] = named
+            end
+            table.insert(named, origin)
         end
         origin.lastSeen = now
         SamplePosition(plate, origin, now, geometry)
@@ -699,6 +707,11 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         for index = table.getn(origins), 1, -1 do
             local origin = origins[index]
             if not origin.live and now - (origin.hiddenAt or origin.lastSeen) > RECENT_PLATE_TIME then
+                local named = originIndex.names[origin.name]
+                for candidate = table.getn(named), 1, -1 do
+                    if named[candidate] == origin then table.remove(named, candidate) end
+                end
+                if table.getn(named) == 0 then originIndex.names[origin.name] = nil end
                 table.remove(origins, index)
             end
         end
@@ -715,11 +728,11 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         local candidateCount, lossCount, exactCount = 0, 0, 0
         local candidateOrigin, lossOrigin, exactOrigin
         local candidateX, candidateY, lossX, lossY = 0, 0, 0, 0
-        for index = 1, table.getn(origins) do
-            local origin = origins[index]
+        local named = originIndex.names[info.targetName]
+        for index = 1, named and table.getn(named) or 0 do
+            local origin = named[index]
             if
-                origin.name == info.targetName
-                and origin.x
+                origin.x
                 and origin.y
                 and origin.positionAt
                 and now - origin.positionAt <= RECENT_PLATE_TIME

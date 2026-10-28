@@ -1,7 +1,7 @@
 -- CI only: full production filter, masking and skin over explicit native plates.
 assert(_VERSION == "Lua 5.1", "nameplate fixtures require CI Lua 5.1")
 local SCT = dofile("scripts/tests/fixtures/ui_sct_helpers.lua")
-local function Plates()
+local function Plates(setup)
     local context = SCT(false, function(context, env)
         context.settings.nameplatesNamesOnly = true
         context.settings.nameplateFontSize = 9
@@ -23,7 +23,7 @@ local function Plates()
             function object:GetEffectiveScale() return 1 end
             function object:GetLeft() return 0 end
             function object:GetBottom() return 0 end
-            function object:GetCenter() return 200, 200 end
+            function object:GetCenter() return self.centerX or 200, 200 end
             function object:GetTop() return 205 end
             function object:GetChildren()
                 self.childrenReads = (self.childrenReads or 0) + 1
@@ -124,6 +124,7 @@ local function Plates()
             attach(plate, data)
             plate.fixture = data
         end
+        if setup then setup(context, env) end
     end)
     function context:Publish(entries)
         self:Event(self.controller, "CHAT_MSG_ADDON", "AZSUNITS")
@@ -333,3 +334,75 @@ context:Event(context.controller, "PLAYER_ENTERING_WORLD")
 context:Tick(0.21)
 assert(context.guardian.layers.ARTWORK == false, "world recovery did not reacquire native layer suppression")
 print("PASS native-owner layers suppress extraction and restore their captured state without hiding source regions")
+
+do
+    local matching = Plates(function(current, env)
+        env.T.ParseNameplateCombatEvent = function(_, message)
+            return {
+                kind = "damage",
+                damageType = "autoattack",
+                sourceName = "Player",
+                targetName = current.targetName,
+                amount = tonumber(message),
+            }
+        end
+    end)
+    local function DamageLabel(amount)
+        local found, count = nil, 0
+        for _, label in ipairs(matching:Labels()) do
+            if label:GetText() == tostring(amount) then
+                found, count = label, count + 1
+            end
+        end
+        return found, count
+    end
+    local shared, unrelated = {}, {}
+    for index = 1, 3 do
+        shared[index] = matching:MakePlate("Shared", 1000)
+        shared[index].centerX = index == 1 and 1024 or 1e-13
+        for other = 1, 12 do
+            local name = index == 1 and other == 1 and "dirty" or "Other" .. index .. ":" .. other
+            table.insert(unrelated, matching:MakePlate(name, 1000))
+        end
+    end
+    matching:Tick(0)
+    local first, second, third = shared[1].fixture.origin, shared[2].fixture.origin, shared[3].fixture.origin
+    local master, named, masterReads, namedReads = nil, nil, 0, 0
+    local firstMaster, secondMaster = matching.guardian.fixture.origin, matching.boss.fixture.origin
+    local getn = matching.env.table.getn
+    matching.env.table.getn = function(list)
+        if list[1] == firstMaster and list[2] == secondMaster then
+            master, masterReads = list, masterReads + 1
+        elseif list[1] == first and list[2] == second then
+            named, namedReads = list, namedReads + 1
+        end
+        return getn(list)
+    end
+    matching.targetName = "Shared"
+    matching:Hit(211)
+    matching:Tick(0.17)
+    assert(masterReads == 1 and namedReads == 1, "one hit still scanned the unrelated origin catalog")
+    assert(named[1] == first and named[2] == second and named[3] == third, "same-name creation order changed")
+    assert(
+        DamageLabel(211).parent.parent.anchor.x == ((1024 + 1e-13) + 1e-13) / 3,
+        "ambiguous centroid arithmetic changed order"
+    )
+    shared[1].nativeBar.value = 900
+    matching:Call(shared[1].nativeBar, "OnValueChanged")
+    matching:Hit(100)
+    matching:Tick(0.09)
+    assert(DamageLabel(100).parent.parent.anchor.x == 1024, "unique exact loss did not keep its own origin")
+    assert(first.lossRemaining == 0, "the matched original hit did not consume its loss")
+    shared[1].nativeBar.value, shared[2].nativeBar.value = 800, 900
+    matching:Call(shared[1].nativeBar, "OnValueChanged")
+    matching:Call(shared[2].nativeBar, "OnValueChanged")
+    matching:Hit(100)
+    matching:Tick(0.09)
+    local _, count = DamageLabel(100)
+    assert(count == 1, "ambiguous loss resolved before the original fallback deadline")
+    matching:Tick(0.08)
+    local label
+    label, count = DamageLabel(100)
+    assert(count == 2 and label.parent.parent.anchor.x == (1024 + 1e-13) / 2, "loss ambiguity changed")
+    print("PASS SCT matching visits only exact-name origins and preserves ordered centroids, loss and deadlines")
+end
