@@ -28,9 +28,10 @@ leave hundreds of expensive texture regions drawing continuously.
   SavedVariable or idle updater. Record the static behavior and source-level
   costs in the owning developer docs, with meaningful CI-only lifecycle coverage
   where appropriate; local tests and addon/game execution remain unauthorized.
-- SCT is explicitly exempt from Performance Mode: preserve its existing motion,
-  fall, critical pop, fade and selected MSBT style. Do not add a static override
-  or retire its active hits just because Performance Mode changes.
+- SCT keeps its existing motion, fall, critical pop, fade and selected MSBT
+  style in Performance Mode. Only duplicate grouping changes: 300 ms while
+  enabled, with the original 75 ms otherwise. Do not add a static override or
+  retire its active hits just because Performance Mode changes.
 - Prefer one cached native image when its appearance matches the request.
   Pet and meter circles use named `SetPortraitToTexture` images, with the gold
   rim separate. Bind only on icon changes; scale inheritance needs no rebinding.
@@ -151,10 +152,11 @@ source/runtime catalogs and reserves its own row above the category buttons.
 | Owner                       | While Performance Mode is on                                                                                                                                                                                                                                                                                                                                                     |
 | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Chat                        | Keep native expiry at its original deadline with zero fade duration, so messages disappear instantly; scrolling back still holds lines. Snap reveal opacity and message-slide geometry, and clear active reveal/slide state. Native messages, history, links and input remain current.                                                                                           |
+| SCT                         | Use a fixed 300 ms outgoing duplicate-grouping window instead of the normal 75 ms. Preserve matching, amounts, motion, critical pop, fade, full lifetime and the selected enemy/MSBT style.                                                                                                                                                                                      |
 | Unit frames                 | Hide player absorbs and player/target/target-of-target damage trails, reset trail baselines, and use the existing 2D still portraits. Party has no custom loss overlay. Hide combat/rest rim glows; keep a static resting symbol and a static low-health warning at the current health-derived strength.                                                                         |
 | Resources                   | Skip absorb snapshot/field work when Class resources is also off; keep native phase/receipt retirement and selected resource values.                                                                                                                                                                                                                                             |
 | Run timer                   | Keep native whole-second progress and current labels, static blue/red fill and informative skull/check markers. Skip flow, foam, sparkle, red-glint and skull-halo animation. The 72-texture decorative fill pool is prepared only if normal mode needs it, then retained for reuse. Required native phase, ownership, schedule and encounter work keeps its existing lifecycle. |
-| Cache tally                 | Clear the affordable-cache gold halo, rays and sparkles and detach its animation worker. Keep current gold and cache cost.                                                                                                                                                                                                                                                       |
+| Cache tally                 | Refresh kills and gold numbers once every five UI seconds. Keep cache cost at its normal cadence. Clear the affordable-cache gold halo, rays and sparkles and detach its animation worker.                                                                                                                                                                                       |
 | XP                          | Snap the fill to received XP, clear gain/spark artwork and detach completed effect work. Existing deferred native reads remain.                                                                                                                                                                                                                                                  |
 | Abilities and stored levels | Clear cooldown-number overlays and detach their timing worker. Hide level-button glow/highlight layers and detach the pulse worker; retain its static gold artwork, count and click behavior.                                                                                                                                                                                    |
 | Notifications and revive    | Loot cards and banners stay opaque until their original expiry; hidden notices still retire. Revive displays received fill/percentage directly without smoothing, fade, spark or pulsing crosses, using its existing ten-Hz state reader.                                                                                                                                        |
@@ -167,6 +169,46 @@ notification expiry, data gates, native HUD ownership and cleanup stay active.
 Navigation direction, custom combat-text travel, meaningful native cooldown
 swipes and jewelry cooldown progress retain their functional motion. This mode
 does not change native gameplay values, incoming combat feedback or game effects.
+
+SCT caches the selected grouping window through the existing display listener.
+Each new identified damage group receives its fixed inclusive deadline from
+the first hit; joining hits never extend it. Only identical attack/amount
+identities collapse, without adding their values. Misses, aura notices and
+unidentified attacks gain no new hold. The original 80 ms per-hit settling and
+160 ms enemy-position fallback gates remain, so 300 ms limits admission rather
+than total display latency. Both enemy and MSBT-style SCT use the selected
+window; native incoming text remains independent.
+
+An actual window change closes intake on every queued group and clears its
+bucket index, while retaining all pending hits and active text. Existing
+matching/settling finishes those groups without mixing new arrivals across
+mode changes. Preview, Cancel, profiles and resets restore the selected window
+through the shared lifecycle. Active animation and normal-mode equations are
+unchanged; no per-hit setting lookup, frame, region, asset, event, updater or
+SavedVariable is added. More identical arrivals can share a label, but visible
+region savings depend on the hit stream; this is not measured FPS/GPU evidence.
+
+Only the kills/gold number presentation uses the five-second cadence. The initial
+valid display paints immediately, then changing packets, styles and widths
+cannot refresh those numbers early. Cache cost, native phase/data validation,
+HUD ownership and the shared reader keep their existing cadence. One unsaved
+last-paint timestamp uses `GetTime()` for display scheduling only; it never
+supplies gameplay time or counters. Between due samples, kills/gold skip number
+formatting and text assignment, while the existing fit helper can refit the
+retained text after a width/style change or retry missing metrics.
+
+Actual Performance Mode transitions, tally retirement and existing zone/new-run
+or native-clock rollback boundaries reset that presentation timestamp. Routine
+attachment/style Hide/Show cycles do not reset it. Hidden tallies perform no
+number formatting, text updates or cadence-clock read; required native data
+validation and HUD ownership remain active. Elapsed hidden time naturally makes
+the next visible sample due after five seconds. Disabling Performance Mode
+restores current numbers through the next normal refresh, including preview,
+Cancel, profiles and resets. There is no new event, updater, region, asset,
+setting or SavedVariable. CI-only extracted production cases cover the exact
+five-second boundary, unaffected normal/cache-cost refresh, mode changes,
+hidden recovery, refitting and retirement; they are not local execution or
+measured FPS evidence.
 
 The new editor control uses one standard button, four existing editor textures
 and one caption. No gameplay frame, drawing region, texture file, event, updater
@@ -762,7 +804,8 @@ The following changes remove specific avoidable work:
   style/mode/world lifecycle.
 - MSBT arrivals increment their existing duplicate group directly and retain
   the maximum member receipt. The original subtraction-based 80 ms age gate
-  and inclusive 75 ms intake window determine emission, including out-of-order
+  and inclusive intake window (75 ms normally, 300 ms in Performance Mode)
+  determine emission, including out-of-order
   receipts and floating-point boundaries. Stream mode no longer allocates or
   revisits a pending record for each original hit. Every original color sample
   and icon identity still runs; first-hit values/style and default over-enemy

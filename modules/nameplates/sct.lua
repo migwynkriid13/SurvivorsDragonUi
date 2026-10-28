@@ -14,6 +14,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local EVENT_SETTLE = 0.08
     local EVENT_FALLBACK_DELAY = 0.16
     local DUPLICATE_WINDOW = 0.075
+    local PERFORMANCE_DUPLICATE_WINDOW = 0.3
     local RECENT_PLATE_TIME = 0.65
     local LOSS_TIME = 0.25
     local DAMAGE_COLORS = {
@@ -79,6 +80,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local nameplateFontSize = DFRL.display.Get("nameplateFontSize")
     local msbtStyle = DFRL.display.Get("sctMSBTStyle")
     local textScale = DFRL.display.Get("sctScale")
+    local duplicateWindow = DFRL.display.Get("performanceMode") and PERFORMANCE_DUPLICATE_WINDOW or DUPLICATE_WINDOW
     -- Keep V's visible request separate from the backing coordinate feed. The
     -- native verbs do not write FrameXML's saved NAMEPLATES_ON preference.
     local enemyPlatesEnabled = NAMEPLATES_ON and true or false
@@ -1457,6 +1459,20 @@ DFRL:NewMod("NameplateCombatText", 6, function()
 
     local function IconIdentityPart(value) return string.len(value) .. ":" .. value end
 
+    local function SyncDuplicateWindow()
+        local window = DFRL.display.Get("performanceMode") and PERFORMANCE_DUPLICATE_WINDOW or DUPLICATE_WINDOW
+        if duplicateWindow == window then return end
+        duplicateWindow = window
+        -- Finish old intake under its existing matching/settle gates. Keep
+        -- queued hits and active motion, without joining across mode changes.
+        for _, group in ipairs(pendingGroups) do
+            group.bucket, group.identity = nil, nil
+        end
+        for identity in pairs(intakeBuckets) do
+            intakeBuckets[identity] = nil
+        end
+    end
+
     local function QueueCombatText(info, now)
         local identity, byAmount, group
         if info.kind == "damage" then
@@ -1489,7 +1505,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                     byAmount = {}
                     intakeBuckets[identity] = byAmount
                 end
-                -- The first hit fixes the inclusive 75 ms deadline. Joining
+                -- The first hit fixes the selected inclusive deadline. Joining
                 -- hits never slide it forward or change the original amount.
                 group = byAmount[info.amount]
                 if group and (now < group.time or now > group.closesAt) then group = nil end
@@ -1500,7 +1516,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             group = {
                 info = info,
                 time = now,
-                closesAt = now + DUPLICATE_WINDOW,
+                closesAt = now + duplicateWindow,
                 bucket = byAmount,
                 identity = identity,
                 remaining = 0,
@@ -1617,6 +1633,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     end
 
     DFRL.display.Listen(function()
+        SyncDuplicateWindow()
         local scrolling = DFRL.display.Get("sctMSBTStyle")
         if msbtStyle ~= scrolling then
             msbtStyle = scrolling

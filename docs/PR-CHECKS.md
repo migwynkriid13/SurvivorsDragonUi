@@ -129,6 +129,11 @@ The assertions cover:
   Source-extracted SCT queue cases retain original metadata/color intake,
   amount/critical/icon identities, inclusive intake and subtraction-based
   settle boundaries while checking that MSBT stores no per-hit pending record.
+  Grouping cases retain the original 75 ms normal path and cover Performance
+  Mode's fixed inclusive 300 ms window in both SCT styles, exact duplicate
+  identities without sums, old/new intake separation and active animation
+  surviving preview/Cancel window changes. Matching and settling keep their
+  original gates. These are CI-only source/lifecycle assertions.
   Default per-hit matching/fallback remains covered. Extraction keeps complete
   multi-variable constant declarations once, with uniqueness regression cases.
 
@@ -339,6 +344,10 @@ decoration, static blue/red fills and restoration of the original effect pool.
 Related production mocks cover notification expiry, revive progress, static
 range feedback and skull-glow transitions. These fixtures run only in CI and
 were not run locally; they do not measure frame rate or verify native rendering.
+
+Extracted tally cases cover five-second kills/gold presentation, unchanged
+normal/cache-cost cadence, retained-text fitting, hidden recovery, mode changes
+and existing native run/tally retirement boundaries. These remain CI-only.
 
 Banner cases include the former
 fade-out window and hidden-born rows, preserving original receipt lifetimes.

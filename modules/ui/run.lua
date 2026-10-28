@@ -19,6 +19,7 @@ DFRL:NewMod("RunTimers", 5, function()
     local FLOW_COUNT = math.ceil((BAR_WIDTH + FLOW_WIDTH) / FLOW_SPACING)
     local FLOW_SPAN = FLOW_SPACING * FLOW_COUNT
     local RED_SPARKLE_OPACITY = 0.85
+    local TALLY_COUNTER_INTERVAL = 5
     local performanceMode = DFRL.display.Get("performanceMode")
     local PHASES = {
         ready = true,
@@ -2735,6 +2736,7 @@ DFRL:NewMod("RunTimers", 5, function()
     end
 
     local function ClearTally()
+        render.tallyCountersAt = nil
         if render.tallyShown then
             render.tallyShown = false
             tallyAttachment.SetShown(false)
@@ -2744,6 +2746,18 @@ DFRL:NewMod("RunTimers", 5, function()
         end
         SetGoldHighlight(false)
         Restore("tally")
+    end
+
+    local function TallyCountersDue()
+        if not performanceMode then
+            render.tallyCountersAt = nil
+            return true
+        end
+        local now = GetTime()
+        local previous = render.tallyCountersAt
+        if previous and now >= previous and now - previous < TALLY_COUNTER_INTERVAL then return false end
+        render.tallyCountersAt = now
+        return true
     end
 
     local function UpdateTally()
@@ -2769,8 +2783,11 @@ DFRL:NewMod("RunTimers", 5, function()
             tallyAttachment.SetShown(true)
         end
         if tally:IsVisible() then
+            local refreshCounters = TallyCountersDue()
             for _, field in ipairs(tallyFields) do
-                T.SetTextIfChanged(field.text, tostring(math.floor(state[field.key])))
+                if refreshCounters or (field.key ~= "kills" and field.key ~= "gold") then
+                    T.SetTextIfChanged(field.text, tostring(math.floor(state[field.key])))
+                end
                 FitTallyField(field)
             end
             SetGoldHighlight(DFRL.display.Get("highlightAffordableCache") and state.gold >= state.chest)
@@ -3696,6 +3713,7 @@ DFRL:NewMod("RunTimers", 5, function()
         local performance = DFRL.display.Get("performanceMode")
         if performanceMode ~= performance then
             performanceMode = performance
+            render.tallyCountersAt = nil
             runEffects.staticAtLimit = nil
             HideRunFlow()
             if performance then
@@ -3738,6 +3756,7 @@ DFRL:NewMod("RunTimers", 5, function()
         local nativeTime = type(AZS_RUN) == "table" and AZS_RUN.t or nil
         local zoneBoundary = zoneSequence
         if zoneBoundary then
+            render.tallyCountersAt = nil
             InvalidateSchedule(zoneBoundary)
             RetireEncounters(zoneBoundary)
             zoneSequence = nil
@@ -3747,7 +3766,10 @@ DFRL:NewMod("RunTimers", 5, function()
         -- Zone, schedule and run prefixes can land in different frames. Do not
         -- mistake the first new clock sample for another boundary and reject
         -- a schedule already received after AZSZONE.
-        if zoneRunPending and runSequence > zoneRunPending then zoneRunPending = nil end
+        if zoneRunPending and runSequence > zoneRunPending then
+            render.tallyCountersAt = nil
+            zoneRunPending = nil
+        end
         if
             not zoneRunPending
             and (
@@ -3755,6 +3777,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 or (previousNativeTime and IsNumber(nativeTime) and nativeTime < previousNativeTime)
             )
         then
+            render.tallyCountersAt = nil
             InvalidateSchedule(runSequence)
             RetireEncounters(runSequence)
             run.affixes:Clear(true)

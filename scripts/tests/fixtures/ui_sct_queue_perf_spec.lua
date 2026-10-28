@@ -1,9 +1,10 @@
 -- CI only: exact production SCT intake/queues over explicit metadata/origin sinks.
 local H = dofile("scripts/tests/fixtures/ui_helpers.lua")
 assert(_VERSION == "Lua 5.1", "SCT queue fixtures require CI Lua 5.1")
-local function Queues(scrolling)
+local function Queues(scrolling, performance)
     local context = H.New()
     local env = context.env
+    context.settings.performanceMode = performance == true
     env.msbtStyle, env.inWorld = scrolling, true
     env.pending, env.pendingGroups, env.intakeBuckets, env.recentDamage = {}, {}, {}, {}
     -- Origin matching/cache behavior is covered by the production plate fixture.
@@ -37,6 +38,10 @@ local function Queues(scrolling)
     local chunk = assert(loadfile(assert(arg[1], "missing extracted SCT queue source")))
     setfenv(chunk, env)
     context.queue = chunk()
+    function context:Mode(value)
+        self.settings.performanceMode = value
+        self.queue.SyncWindow()
+    end
     function context:Hit(amount, now, critical, icon)
         local info = {
             kind = "damage",
@@ -198,3 +203,120 @@ do
     end
 end
 print("PASS damage-color keys preserve every component, empty field and separator byte without an intake table")
+
+for _, scrolling in ipairs({ false, true }) do
+    local context, env = Queues(scrolling, true)
+    context.resolve = true
+    local first = context:Hit(100, 20)
+    local group = assert(env.pendingGroups[1])
+    local closesAt = group.closesAt
+    assert(closesAt == 20 + 0.3, "Performance Mode did not open a 300 ms window")
+    context:Hit(100, 20.25)
+    context:Hit(100, closesAt)
+    assert(#env.pendingGroups == 1 and group.closesAt == closesAt, "inclusive duplicates extended or split the window")
+    context:Hit(100, closesAt + 0.001)
+    assert(#env.pendingGroups == 2, "a hit after 300 ms joined the expired group")
+    context.queue.Update(closesAt)
+    assert(#context.displays == 0, "inclusive intake or the last hit's settle gate was bypassed")
+    context.queue.Update(20.39)
+    assert(#context.displays == 1 and context.displays[1].info == first, "the wider group lost its first-hit record")
+    assert(group.count == 3 and first.amount == 100, "Performance Mode summed or dropped identical native hits")
+    local nextGroup = assert(env.pendingGroups[1])
+    context.queue.Update(nextGroup.closesAt + 0.09)
+    assert(#context.displays == 2 and not next(env.intakeBuckets), "wider intake retained expired ownership")
+    assert(context.icons == 4, "wider grouping skipped original icon/color intake")
+    if scrolling then
+        assert(#env.pending == 0 and #context.origins == 0, "MSBT acquired per-hit origin work")
+    else
+        assert(#env.pending == 0 and #context.origins == 4, "enemy SCT skipped an original match")
+    end
+end
+print("PASS both SCT styles use a fixed inclusive 300 ms Performance Mode window without summing")
+
+for _, scrolling in ipairs({ false, true }) do
+    local context, env = Queues(scrolling, true)
+    context.resolve = true
+    local first = context:Hit(100, 25)
+    local amount = context:Hit(200, 25)
+    local critical = context:Hit(100, 25, true)
+    local icon = context:Hit(100, 25, nil, "Interface\\Icons\\Spell_Fire_Fire")
+    assert(#env.pendingGroups == 4, "Performance Mode merged distinct amount/critical/icon identities")
+    context.queue.Update(25.39)
+    assert(#context.displays == 4, "Performance Mode dropped distinct groups")
+    for index, info in ipairs({ first, amount, critical, icon }) do
+        assert(context.displays[index].info == info, "Performance Mode changed first-hit display order")
+    end
+end
+print("PASS Performance Mode retains distinct original values, critical flags and resolved icons")
+
+for _, scrolling in ipairs({ false, true }) do
+    local context, env = Queues(scrolling)
+    context.resolve = true
+    local first = context:Hit(100, 30)
+    local old = assert(env.pendingGroups[1])
+    assert(old.closesAt == 30 + 0.075, "normal mode lost its original 75 ms deadline")
+    local pending = #env.pending
+    context:Mode(true)
+    assert(not old.bucket and not next(env.intakeBuckets), "mode preview kept the old intake open")
+    assert(
+        #env.pending == pending and old.info == first and old.closesAt == 30 + 0.075,
+        "mode preview retired or retimed original hits"
+    )
+    local performance = context:Hit(100, 30.02)
+    local wider = assert(env.pendingGroups[2])
+    assert(#env.pendingGroups == 2 and wider.closesAt == 30.02 + 0.3, "new hits joined the old mode's window")
+    context:Mode(true)
+    assert(wider.bucket, "an unchanged mode notification closed current intake")
+    context.queue.Update(30.101)
+    assert(#context.displays == 1 and context.displays[1].info == first, "mode preview dropped the settled old group")
+    context:Mode(false)
+    assert(not wider.bucket and wider.closesAt == 30.02 + 0.3, "Cancel rewrote or retained the wider intake")
+    local normal = context:Hit(100, 30.12)
+    local restored = assert(env.pendingGroups[2])
+    assert(restored.closesAt == 30.12 + 0.075, "Cancel did not restore the normal deadline")
+    context:Mode(false)
+    assert(restored.bucket, "an unchanged normal-mode notification closed current intake")
+    context.queue.Update(30.201)
+    assert(
+        #context.displays == 3 and context.displays[2].info == performance and context.displays[3].info == normal,
+        "mode changes dropped hits or cross-joined windows"
+    )
+    assert(not next(env.intakeBuckets), "mode changes retained an intake owner")
+end
+print("PASS mode preview and Cancel settle old intake without dropping hits or changing normal deadlines")
+
+for _, scrolling in ipairs({ false, true }) do
+    local context, env = Queues(scrolling, true)
+    context.resolve = true
+    context:Hit(100, 40)
+    context:Hit(100, 40.301)
+    local older, newer = env.pendingGroups[1], env.pendingGroups[2]
+    assert(
+        older.bucket and newer.bucket and older.bucket == newer.bucket,
+        "fixture needs an overwritten old bucket owner"
+    )
+    context:Mode(false)
+    assert(
+        not older.bucket and not newer.bucket and not next(env.intakeBuckets),
+        "mode change missed an overwritten pending group"
+    )
+    context.queue.Update(40.5)
+    assert(#context.displays == 2 and #env.pendingGroups == 0, "an overwritten pending group retained a stale hold")
+end
+print("PASS mode transitions close every pending intake, including overwritten bucket references")
+
+for _, scrolling in ipairs({ false, true }) do
+    local context = Queues(scrolling, true)
+    context.resolve = true
+    local miss = { kind = "miss", text = "MISS", targetName = "Enemy" }
+    local unknown = { kind = "damage", damageType = "spell", amount = 100, targetName = "Enemy" }
+    context.queue.Queue(miss, 45)
+    context.queue.Queue(unknown, 45)
+    context.queue.Update(45.081)
+    assert(#context.displays == 2, "non-groupable text acquired the Performance Mode grouping hold")
+    assert(
+        context.displays[1].info == miss and context.displays[2].info == unknown,
+        "non-groupable text changed identity"
+    )
+end
+print("PASS non-groupable SCT keeps the existing settle timing in Performance Mode")

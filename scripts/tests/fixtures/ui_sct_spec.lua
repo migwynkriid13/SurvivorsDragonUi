@@ -164,6 +164,47 @@ Test("changing style retires active and queued hits without replay", function()
     assert(not context.backing and context.env.NAMEPLATES_ON == nil, "switch back changed the visible V preference")
 end)
 
+Test("Performance Mode changes grouping without retiring or restarting active SCT", function()
+    for _, scrolling in ipairs({ false, true }) do
+        local context = SCT(scrolling)
+        context:Hit(111)
+        context:Tick(0.2)
+        local first = assert(context:Labels()[1], "normal SCT did not display its original hit")
+        local holder = first.parent.parent
+        local coordinateSystem = holder.anchor.point
+        local allocated = #context.objects
+        context:SetSetting("performanceMode", true)
+        assert(
+            context:Labels()[1] == first and #context.objects == allocated,
+            "Performance Mode retired or replaced active text"
+        )
+        assert(holder.anchor.point == coordinateSystem, "Performance Mode changed SCT coordinates")
+        context:Hit(222)
+        context:Tick(0.1)
+        context:Hit(222)
+        context:Tick(0.101)
+        assert(#context:Labels() == 1 and context:Labels()[1] == first, "wider intake displayed before 300 ms")
+        context:SetSetting("performanceMode", false)
+        assert(context:Labels()[1] == first, "Cancel retired active SCT")
+        context:Tick(0.081)
+        local values = {}
+        for _, label in ipairs(context:Labels()) do
+            values[label:GetText()] = label
+        end
+        assert(
+            values["111"] == first and values["222"] and not values["444"],
+            "mode change dropped queued text or summed duplicates"
+        )
+        context:Tick(1.2)
+        assert(
+            #context:Labels() == 1 and context:Labels()[1]:GetText() == "222",
+            "mode changes restarted an active hit's lifetime"
+        )
+        context:Tick(0.3)
+        assert(#context:Labels() == 0, "settled queued text did not keep its original full display lifetime")
+    end
+end)
+
 Test("scrolling mode previews reuse and retire the same Layout owner", function()
     local context = SCT(true)
     local sct, root = context.env.DFRL.sct, context.scrollRoot
