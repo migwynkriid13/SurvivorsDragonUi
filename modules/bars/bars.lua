@@ -392,11 +392,21 @@ DFRL:NewMod("Bars", 1, function()
     -- cooldown-number styling. This implementation reads only our seven native
     -- action slots; it does not import their code or hook cooldowns globally.
     -- https://github.com/DustinChecketts/Turtle-Dragonflight/tree/b2c62e9095e1c859bff0209db09f4ff5b9884f5a
-    local function FormatCooldown(remaining)
+    local function FormatCooldown(remaining, overlay)
         if remaining < COOLDOWN_ZERO then return "0" end
         for _, unit in ipairs(COOLDOWN_UNITS) do
             if remaining >= unit[1] or unit[1] == 1 then
-                return math.ceil(remaining / unit[1]) .. DFRL.locale.Text(unit[2])
+                local value, language = math.ceil(remaining / unit[1]), DFRL.locale.code
+                if
+                    overlay.cooldownValue ~= value
+                    or overlay.cooldownUnit ~= unit[2]
+                    or overlay.cooldownLanguage ~= language
+                then
+                    local text = value .. DFRL.locale.Text(unit[2])
+                    overlay.cooldownValue, overlay.cooldownUnit, overlay.cooldownLanguage = value, unit[2], language
+                    overlay.cooldownText = text
+                end
+                return overlay.cooldownText
             end
         end
     end
@@ -428,7 +438,7 @@ DFRL:NewMod("Bars", 1, function()
             return
         end
 
-        T.SetTextIfChanged(overlay.text, FormatCooldown(remaining))
+        T.SetTextIfChanged(overlay.text, FormatCooldown(remaining, overlay))
         local red, green, blue = 1, 1, 1
         if remaining < 1 then
             green, blue = 85 / 255, 85 / 255
@@ -471,6 +481,8 @@ DFRL:NewMod("Bars", 1, function()
             for _, button in ipairs(DFRL.actionButtons) do
                 local overlay = button.DFRL_cooldownNumber
                 if overlay:IsShown() then overlay:Hide() end
+                overlay.cooldownValue, overlay.cooldownUnit, overlay.cooldownLanguage, overlay.cooldownText =
+                    nil, nil, nil, nil
             end
         end
         local function RefreshNumbers()

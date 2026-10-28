@@ -9,7 +9,7 @@ local function Test(name, callback)
     print("PASS " .. name)
 end
 
-local function Cooldowns()
+local function Cooldowns(setup)
     local context = H.New()
     local env = context.env
     context.settings.cooldownNumbers = true
@@ -20,6 +20,7 @@ local function Cooldowns()
         button.slot = index
         env.DFRL.actionButtons[index] = button
     end
+    if setup then setup(context, env) end
     local chunk = assert(loadfile(assert(arg[1], "missing extracted cooldown source")))
     setfenv(chunk, env)
     chunk()(bar)
@@ -65,6 +66,106 @@ Test("unchanged cooldowns do no presentation writes or allocations", function()
     context:NoPresentationWrites()
     assert(context.reads.cooldown == 7, "the native cooldown read must still run")
     assert(table.getn(context.objects) == allocated, "cooldown objects were reallocated")
+end)
+
+Test("cooldown captions cache only their displayed unit, value and language", function()
+    local context, _, controller = Cooldowns(function(current, env)
+        current.duration = 120
+        env.DFRL.locale.code = "en"
+        env.DFRL.locale.Text = function(unit)
+            current.reads.captions = (current.reads.captions or 0) + 1
+            return unit == "m" and env.DFRL.locale.code == "de" and "Min" or unit
+        end
+        env.GetActionCooldown = function()
+            current.reads.cooldown = (current.reads.cooldown or 0) + 1
+            return 1, current.duration, 1
+        end
+    end)
+    local overlay = context.env.DFRL.actionButtons[1].DFRL_cooldownNumber
+    assert(overlay.text:GetText() == "2m" and context.reads.captions == 7)
+    context:ResetCounts()
+    context.now = 2.05
+    context:Event(controller, "ACTIONBAR_UPDATE_COOLDOWN")
+    assert(
+        context.reads.cooldown == 7 and not context.reads.captions,
+        "cached captions skipped timing or repeated formatting"
+    )
+    context:NoPresentationWrites()
+    overlay.text.text, overlay.text.textColor = "native reset", { 0, 0, 0, 1 }
+    context:ResetCounts()
+    context:Event(controller, "ACTIONBAR_UPDATE_COOLDOWN")
+    assert(
+        not context.reads.captions and context.writes.SetText == 1 and context.writes.SetTextColor == 1,
+        "caption reuse hid actual native text or color restoration"
+    )
+    context.env.DFRL.locale.code = "de"
+    context:ResetCounts()
+    context:Event(controller, "ACTIONBAR_UPDATE_COOLDOWN")
+    assert(overlay.text:GetText() == "2Min" and context.reads.captions == 7, "language change reused an old suffix")
+    context.duration = 7200
+    context:ResetCounts()
+    context:Event(controller, "ACTIONBAR_UPDATE_COOLDOWN")
+    assert(overlay.text:GetText() == "2h" and context.reads.captions == 7, "the same rounded value reused another unit")
+    context.duration = 61
+    context:ResetCounts()
+    context:Event(controller, "ACTIONBAR_UPDATE_COOLDOWN")
+    assert(overlay.text:GetText() == "60" and context.reads.captions == 7, "unit transition reused a minute caption")
+    context.duration = 10
+    context:Event(controller, "ACTIONBAR_SLOT_CHANGED", 1)
+    assert(overlay.text:GetText() == "9", "native replacement retained a cached numeric caption")
+    context:SetSetting("cooldownNumbers", false)
+    assert(overlay.cooldownText == nil and overlay.cooldownValue == nil, "disable retained caption state")
+    context:ResetCounts()
+    context:SetSetting("cooldownNumbers", true)
+    assert(
+        context.reads.cooldown == 7 and context.reads.captions == 7,
+        "reenabling did not reread and rebuild captions"
+    )
+end)
+
+Test("cached cooldown captions retry failed native text writes", function()
+    local context, _, controller = Cooldowns(function(current, env)
+        env.DFRL.locale.code = "en"
+        env.DFRL.locale.Text = function(unit)
+            current.reads.captions = (current.reads.captions or 0) + 1
+            return unit == "m" and env.DFRL.locale.code == "de" and "Min" or unit
+        end
+        env.GetActionCooldown = function()
+            current.reads.cooldown = (current.reads.cooldown or 0) + 1
+            return 1, 120, 1
+        end
+    end)
+    local overlay = context.env.DFRL.actionButtons[1].DFRL_cooldownNumber
+    context.env.DFRL.locale.code, context.failText = "de", "2Min"
+    local success = pcall(function() context:Event(controller, "ACTIONBAR_UPDATE_COOLDOWN") end)
+    assert(not success and overlay.text:GetText() == "2m", "injected native setter failure did not reach the caption")
+    context:ResetCounts()
+    context:Event(controller, "ACTIONBAR_UPDATE_COOLDOWN")
+    assert(
+        overlay.text:GetText() == "2Min" and context.reads.cooldown == 7 and context.reads.captions == 6,
+        "a failed native write prevented retry or repeated successful formatting"
+    )
+end)
+
+Test("cooldown caption reuse retains every-frame final-window reads and exact zero threshold", function()
+    local context, _, controller = Cooldowns(function(current, env)
+        current.now = 1
+        env.GetActionCooldown = function()
+            current.reads.cooldown = (current.reads.cooldown or 0) + 1
+            return 1, 0.1, 1
+        end
+    end)
+    local overlay = context.env.DFRL.actionButtons[1].DFRL_cooldownNumber
+    assert(overlay.text:GetText() == "1", "exactly100ms no longer displayed1")
+    context:ResetCounts()
+    context:Call(controller, "OnUpdate", 0.001)
+    assert(context.reads.cooldown == 7, "the final-window refresh was throttled by caption reuse")
+    context.now = 1.001
+    context:Call(controller, "OnUpdate", 0.001)
+    assert(overlay.text:GetText() == "0" and context.reads.cooldown == 14, "positive final-zero sampling changed")
+    context.now = 1.2
+    context:Call(controller, "OnUpdate", 0.001)
+    assert(not overlay:IsShown() and context.reads.cooldown == 21, "expiration lost its final native sample")
 end)
 
 Test("hidden and disabled cooldowns skip reads and painting", function()
