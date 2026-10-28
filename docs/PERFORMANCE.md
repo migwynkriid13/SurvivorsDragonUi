@@ -41,6 +41,24 @@ leave hundreds of expensive texture regions drawing continuously.
   GPU-memory, pixel-parity or FPS measurements. No local tests, standalone
   validation, addon execution or game launch is authorized for this audit.
 
+## Full performance follow-up — 2026-10-28
+
+### Inactive unit borders
+
+Party resource and health-only borders now use real Hide/Show transitions for
+their inactive strips. With resources on, fifteen health-only strips per shown
+party row leave extraction instead of remaining shown at zero alpha; resources
+off hides the three-piece alternative. The replaced native party sheet is also
+hidden. Player/target portraitless borders, target-of-target strips and the
+player's alternative pointed rim use the same actual visibility boundary.
+Original pixels, crops, geometry and pools remain unchanged.
+
+This separates visually transparent regions from renderer-submitted regions:
+the inspected public engine extracts zero-alpha textures, whereas hidden regions
+are excluded. CI-only extracted production transitions assert hiding, restoration
+and unchanged-state idling. No local tests, addon execution or measured GPU/FPS
+result is claimed; the packaged renderer's exact revision remains unverified.
+
 ## Loot popup modes and marks — 2026-10-27
 
 The new Loot notifications page uses existing editor artwork: one category

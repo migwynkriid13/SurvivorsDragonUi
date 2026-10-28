@@ -39,6 +39,9 @@ def main():
         guardian_placement = "local tooltip, root = GameTooltip, tooltipRoot\nlocal inWorld, editing = true, false\n" + extract_source("core/tooltips.lua", [
             "IconOwner", "PlaceTooltip",
         ])
+        border_modes = "local resourcesShown, appliedDelta\n" + extract_source("modules/unit/mini.lua", ["UpdateResources"])
+        border_portraits = "local portraitsHidden\n" + extract_source("core/widgets.lua", ["UpdatePortraitVisibility"])
+        border_mini = "local portraitsHidden\n" + extract_source("modules/unit/mini.lua", ["UpdatePortraitVisibility"])
     except RuntimeError as error:
         print(error, file=sys.stderr)
         return 1
@@ -49,12 +52,18 @@ def main():
             ("cooldown-source.lua", cooldown, "ui_spec.lua"),
             ("guardian-hover-source.lua", guardian_hover, "ui_guardian_hover_spec.lua"),
             ("guardian-timers-source.lua", guardian_timers, "ui_guardian_timer_spec.lua"),
+            ("border-modes-source.lua", border_modes, "ui_border_spec.lua"),
         ):
             seam = Path(folder) / name
             seam.write_text(source, encoding="utf-8")
             command = ["lua5.1", "scripts/tests/fixtures/" + fixture, str(seam)]
             if fixture == "ui_guardian_hover_spec.lua":
                 command.append(str(placement))
+            if fixture == "ui_border_spec.lua":
+                for name, body in (("border-portraits-source.lua", border_portraits), ("border-mini-source.lua", border_mini)):
+                    source_file = Path(folder) / name
+                    source_file.write_text(body, encoding="utf-8")
+                    command.append(str(source_file))
             result = subprocess.run(command, cwd=SOURCE)
             if result.returncode:
                 return result.returncode

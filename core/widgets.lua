@@ -443,11 +443,11 @@ function DFRL.tools.CreateUnitBorder(frame, healthBar, portraitTexture, backgrou
         end
         if roundRim then
             if extended then
-                portraitTexture:SetAlpha(0)
-                roundRim:Show()
+                if portraitTexture:IsShown() then portraitTexture:Hide() end
+                if not roundRim:IsShown() then roundRim:Show() end
             else
-                portraitTexture:SetAlpha(1)
-                roundRim:Hide()
+                if not portraitTexture:IsShown() then portraitTexture:Show() end
+                if roundRim:IsShown() then roundRim:Hide() end
             end
         end
         if RefreshEditRegion then RefreshEditRegion() end
@@ -506,7 +506,7 @@ function DFRL.tools.CreateUnitBorder(frame, healthBar, portraitTexture, backgrou
         for _, region in ipairs(regions) do
             table.insert(strips, region)
         end
-        portraitTexture:SetAlpha(0)
+        portraitTexture:Hide()
     end
 
     local function AddStrip(x, y, width, height, sourceY, stretch)
@@ -631,7 +631,7 @@ function DFRL.tools.CreateUnitBorder(frame, healthBar, portraitTexture, backgrou
     editRegion.Refresh = RefreshEditRegion
     local function UpdateTexture(path)
         portraitTexture:SetTexture(path)
-        if not mirrored then portraitTexture:SetAlpha(0) end
+        if not mirrored and portraitTexture:IsShown() then portraitTexture:Hide() end
         for _, strip in ipairs(strips) do
             strip:SetTexture(path)
         end
@@ -649,11 +649,12 @@ function DFRL.tools.CreateUnitBorder(frame, healthBar, portraitTexture, backgrou
         end
         portraitsHidden = hidden
         SetPortraitOverlap(portraitExtended)
-        borderFrame:SetAlpha(hidden and 0 or 1)
         if hidden then
-            portraitless:Show()
+            if borderFrame:IsShown() then borderFrame:Hide() end
+            if not portraitless:IsShown() then portraitless:Show() end
         else
-            portraitless:Hide()
+            if not borderFrame:IsShown() then borderFrame:Show() end
+            if portraitless:IsShown() then portraitless:Hide() end
         end
     end
     DFRL.display.Listen(UpdatePortraitVisibility)

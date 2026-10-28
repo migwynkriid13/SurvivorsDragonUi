@@ -59,6 +59,11 @@ ambiguous declaration fails preparation.
 
 The assertions cover:
 
+- Extracted production unit-border transitions actually hide inactive party and
+  portrait variants, restore the retained artwork on option changes and skip
+  unchanged writes. These assertions distinguish shown state from alpha; they
+  do not measure the packaged renderer's submitted quads or GPU time.
+
 - Boss/guardian current and maximum health defaults, independent preview,
   Confirm/Cancel, profile discard and reset use the real display module. Shared
   encounter-label mocks cover all four combinations, slash visibility, actual
