@@ -1474,7 +1474,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     end
 
     local function QueueCombatText(info, now)
-        local identity, byAmount, group
+        local identity, byAmount, group, bucketKey
         if info.kind == "damage" then
             -- Resolve once even when icons are hidden, so identity and the
             -- eventual displayed icon cannot change while this hit waits.
@@ -1505,27 +1505,41 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                     byAmount = {}
                     intakeBuckets[identity] = byAmount
                 end
-                -- The first hit fixes the selected inclusive deadline. Joining
-                -- hits never slide it forward or change the original amount.
-                group = byAmount[info.amount]
+                -- Performance Mode sums this attack's amounts. Normal mode
+                -- still collapses only exact duplicates. Preserve each hit.
+                bucketKey = info.amount
+                if duplicateWindow == PERFORMANCE_DUPLICATE_WINDOW then bucketKey = false end
+                group = byAmount[bucketKey]
                 if group and (now < group.time or now > group.closesAt) then group = nil end
+                if group and group.displayAmount then
+                    local total = group.displayAmount + info.amount
+                    if IsFiniteNumber(total) then
+                        group.displayAmount = total
+                    else
+                        -- Keep both original finite hits when a display sum
+                        -- cannot be represented, rather than painting infinity.
+                        group = nil
+                    end
+                end
             end
         end
         if not group then
-            -- The first original hit owns the unchanged value and styling.
+            -- The first hit owns styling; the optional total is display-only.
             group = {
                 info = info,
                 time = now,
                 closesAt = now + duplicateWindow,
                 bucket = byAmount,
+                bucketKey = bucketKey,
                 identity = identity,
+                displayAmount = byAmount and duplicateWindow == PERFORMANCE_DUPLICATE_WINDOW and info.amount or nil,
                 remaining = 0,
                 count = 0,
                 x = 0,
                 y = 0,
             }
             table.insert(pendingGroups, group)
-            if byAmount then byAmount[info.amount] = group end
+            if byAmount then byAmount[bucketKey] = group end
         end
         if msbtStyle then
             -- The fixed stream has no per-hit origin to resolve. Retain the
@@ -1740,11 +1754,11 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         return strong and DAMAGE_COLORS.strong or DAMAGE_COLORS.normal
     end
 
-    local function DisplayDamage(info, x, y)
+    local function DisplayDamage(info, x, y, displayAmount)
         -- Filter only after every original hit has consumed its matching and
         -- color evidence, including members of a visually collapsed group.
         if not ShouldShowText(info) then return end
-        local value = info.text or info.amount
+        local value = displayAmount or info.text or info.amount
         if not value then return end
         local text = AcquireText()
         -- The enemy layout snapshots its native launch point. The scrolling
@@ -1837,8 +1851,8 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             if bucket and (now < group.time or now > group.closesAt) then
                 -- A newer group may already own this key while the old one
                 -- finishes matching. Retire only this group's own intake.
-                if bucket[group.info.amount] == group then
-                    bucket[group.info.amount] = nil
+                if bucket[group.bucketKey] == group then
+                    bucket[group.bucketKey] = nil
                     if not next(bucket) and intakeBuckets[group.identity] == bucket then
                         intakeBuckets[group.identity] = nil
                     end
@@ -1851,7 +1865,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                 and (not group.lastArrival or now - group.lastArrival >= EVENT_SETTLE)
             then
                 -- Every display keeps its resolved centroid for the full arc.
-                DisplayDamage(group.info, group.x / group.count, group.y / group.count)
+                DisplayDamage(group.info, group.x / group.count, group.y / group.count, group.displayAmount)
             else
                 kept = kept + 1
                 pendingGroups[kept] = group

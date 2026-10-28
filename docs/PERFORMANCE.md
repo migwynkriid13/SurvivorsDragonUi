@@ -29,8 +29,9 @@ leave hundreds of expensive texture regions drawing continuously.
   costs in the owning developer docs, with meaningful CI-only lifecycle coverage
   where appropriate; local tests and addon/game execution remain unauthorized.
 - SCT keeps its existing motion, fall, critical pop, fade and selected MSBT
-  style in Performance Mode. Only duplicate grouping changes: 300 ms while
-  enabled, with the original 75 ms otherwise. Do not add a static override or
+  style in Performance Mode. Only grouping changes: sum same-attack damage in
+  300 ms while enabled, with the original 75 ms exact-amount duplicate
+  suppression otherwise. Do not add a static override or
   retire its active hits just because Performance Mode changes.
 - Prefer one cached native image when its appearance matches the request.
   Pet and meter circles use named `SetPortraitToTexture` images, with the gold
@@ -152,7 +153,7 @@ source/runtime catalogs and reserves its own row above the category buttons.
 | Owner                       | While Performance Mode is on                                                                                                                                                                                                                                                                                                                                                     |
 | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Chat                        | Keep native expiry at its original deadline with zero fade duration, so messages disappear instantly; scrolling back still holds lines. Snap reveal opacity and message-slide geometry, and clear active reveal/slide state. Native messages, history, links and input remain current.                                                                                           |
-| SCT                         | Use a fixed 300 ms outgoing duplicate-grouping window instead of the normal 75 ms. Preserve matching, amounts, motion, critical pop, fade, full lifetime and the selected enemy/MSBT style.                                                                                                                                                                                      |
+| SCT                         | Sum same-attack outgoing damage within a fixed 300 ms window; normal mode keeps 75 ms exact-amount duplicate suppression. Preserve original per-hit matching, critical/source separation, motion, fade, full lifetime and the selected enemy/MSBT style.                                                                                                                         |
 | Unit frames                 | Hide player absorbs and player/target/target-of-target damage trails, reset trail baselines, and use the existing 2D still portraits. Party has no custom loss overlay. Hide combat/rest rim glows; keep a static resting symbol and a static low-health warning at the current health-derived strength.                                                                         |
 | Resources                   | Skip absorb snapshot/field work when Class resources is also off; keep native phase/receipt retirement and selected resource values.                                                                                                                                                                                                                                             |
 | Run timer                   | Keep native whole-second progress and current labels, static blue/red fill and informative skull/check markers. Skip flow, foam, sparkle, red-glint and skull-halo animation. The 72-texture decorative fill pool is prepared only if normal mode needs it, then retained for reuse. Required native phase, ownership, schedule and encounter work keeps its existing lifecycle. |
@@ -172,9 +173,13 @@ does not change native gameplay values, incoming combat feedback or game effects
 
 SCT caches the selected grouping window through the existing display listener.
 Each new identified damage group receives its fixed inclusive deadline from
-the first hit; joining hits never extend it. Only identical attack/amount
-identities collapse, without adding their values. Misses, aura notices and
-unidentified attacks gain no new hold. The original 80 ms per-hit settling and
+the first hit; joining hits never extend it. Performance Mode sums amounts for
+the same identified attack: `20 + 100` displays `120`, and `100 + 100` displays
+`200`. Normal mode retains exact-amount duplicate suppression, so those cases
+remain separate `20`/`100` labels or one unchanged `100` respectively. Source,
+pet, damage type, school, critical status and resolved icon remain separate
+identity fields in both modes. Misses, aura notices and unidentified attacks
+gain no new hold. The original 80 ms per-hit settling and
 160 ms enemy-position fallback gates remain, so 300 ms limits admission rather
 than total display latency. Both enemy and MSBT-style SCT use the selected
 window; native incoming text remains independent.
@@ -182,10 +187,17 @@ window; native incoming text remains independent.
 An actual window change closes intake on every queued group and clears its
 bucket index, while retaining all pending hits and active text. Existing
 matching/settling finishes those groups without mixing new arrivals across
-mode changes. Preview, Cancel, profiles and resets restore the selected window
+mode changes. Each group retains its creation mode's total or duplicate value.
+Preview, Cancel, profiles and resets restore the selected window
 through the shared lifecycle. Active animation and normal-mode equations are
 unchanged; no per-hit setting lookup, frame, region, asset, event, updater or
-SavedVariable is added. More identical arrivals can share a label, but visible
+SavedVariable is added. The total lives only on the existing pending group and
+is passed to the renderer as an optional value override; original hit amounts,
+color samples and loss consumption are untouched. A stored bucket key keeps
+cleanup independent of the changing total, including when a newer group owns
+the same attack. Unrepresentable numeric totals split into separate groups
+instead of painting infinity. No per-hit display-copy table is allocated.
+More same-attack arrivals can share a label, but visible
 region savings depend on the hit stream; this is not measured FPS/GPU evidence.
 
 Only the kills/gold number presentation uses the five-second cadence. The initial

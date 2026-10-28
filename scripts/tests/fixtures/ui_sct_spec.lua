@@ -192,16 +192,81 @@ Test("Performance Mode changes grouping without retiring or restarting active SC
             values[label:GetText()] = label
         end
         assert(
-            values["111"] == first and values["222"] and not values["444"],
-            "mode change dropped queued text or summed duplicates"
+            values["111"] == first and values["444"] and not values["222"],
+            "mode change dropped queued text or lost its Performance Mode sum"
         )
         context:Tick(1.2)
         assert(
-            #context:Labels() == 1 and context:Labels()[1]:GetText() == "222",
+            #context:Labels() == 1 and context:Labels()[1]:GetText() == "444",
             "mode changes restarted an active hit's lifetime"
         )
         context:Tick(0.3)
         assert(#context:Labels() == 0, "settled queued text did not keep its original full display lifetime")
+    end
+end)
+
+Test("Performance Mode renders summed damage while restored normal mode keeps exact-amount duplicates", function()
+    for _, scrolling in ipairs({ false, true }) do
+        local context = SCT(scrolling, function(setup) setup.settings.performanceMode = true end)
+        context:Hit(20)
+        context:Tick(0.1)
+        context:Hit(100)
+        context:Tick(0.201)
+        local summed = assert(context:Labels()[1], "Performance Mode did not render a settled sum")
+        assert(#context:Labels() == 1 and summed:GetText() == "120", "20 and 100 did not render as one 120")
+        local holder = summed.parent.parent
+        assert(holder.anchor.point == (scrolling and "CENTER" or "BOTTOMLEFT"), "summing changed SCT coordinates")
+        context:Tick(0.2)
+        context:SetSetting("performanceMode", false)
+        assert(
+            context:Labels()[1] == summed and summed:GetText() == "120",
+            "normal-mode restoration rewrote active sum"
+        )
+        context:Hit(20)
+        context:Hit(100)
+        context:Hit(100)
+        context:Tick(0.2)
+        local values = {}
+        for _, label in ipairs(context:Labels()) do
+            values[label:GetText()] = label
+        end
+        assert(
+            #context:Labels() == 3 and values["120"] == summed and values["20"] and values["100"] and not values["200"],
+            "normal mode summed distinct amounts or stopped exact-amount duplicate suppression"
+        )
+        context:Tick(1.26)
+        assert(#context:Labels() == 2 and not summed:IsVisible(), "sum lifetime was restarted by the mode transition")
+        context:Tick(0.3)
+        assert(#context:Labels() == 0, "normal groups lost their full original display lifetime")
+    end
+end)
+
+Test("Performance Mode sums keep critical filters independent", function()
+    for _, scrolling in ipairs({ false, true }) do
+        local context = SCT(scrolling, function(setup) setup.settings.performanceMode = true end)
+        context:Hit(20)
+        context:Hit(100)
+        context.critical = true
+        context:Hit(40)
+        context:Hit(60)
+        context:Tick(0.301)
+        local values = {}
+        for _, label in ipairs(context:Labels()) do
+            values[label:GetText()] = label
+        end
+        assert(
+            #context:Labels() == 2 and values["120"] and values["100"] and not values["220"],
+            "critical and normal sums merged"
+        )
+        context:SetSetting("sctNormalHits", false)
+        assert(
+            #context:Labels() == 1 and context:Labels()[1] == values["100"],
+            "normal filter removed or retained the wrong sum"
+        )
+        context:SetSetting("sctNormalHits", true)
+        assert(#context:Labels() == 1, "filter restoration replayed a retired sum")
+        context:SetSetting("sctCriticalHits", false)
+        assert(#context:Labels() == 0, "critical filter did not retire its active sum")
     end
 end)
 

@@ -130,8 +130,11 @@ The assertions cover:
   amount/critical/icon identities, inclusive intake and subtraction-based
   settle boundaries while checking that MSBT stores no per-hit pending record.
   Grouping cases retain the original 75 ms normal path and cover Performance
-  Mode's fixed inclusive 300 ms window in both SCT styles, exact duplicate
-  identities without sums, old/new intake separation and active animation
+  Mode's fixed inclusive 300 ms window in both SCT styles, same-attack sums
+  (`20 + 100 = 120`, including equal amounts), unchanged normal duplicate
+  suppression, preserved original per-hit values, separate critical/source/icon
+  identities, numeric overflow splitting, stable bucket cleanup,
+  old/new intake separation and active animation
   surviving preview/Cancel window changes. Matching and settling keep their
   original gates. These are CI-only source/lifecycle assertions.
   Default per-hit matching/fallback remains covered. Extraction keeps complete

@@ -23,7 +23,9 @@ local function Queues(scrolling, performance)
         table.insert(context.origins, { info = info, now = now, fallback = fallback })
         if context.resolve or fallback then return info.fixtureX or 4, info.fixtureY or 6 end
     end
-    env.DisplayDamage = function(info, x, y) table.insert(context.displays, { info = info, x = x, y = y }) end
+    env.DisplayDamage = function(info, x, y, displayAmount)
+        table.insert(context.displays, { info = info, x = x, y = y, displayAmount = displayAmount })
+    end
     -- Production Lua 5.0 queues remember their size after compaction.
     local insert, remove = env.table.insert, env.table.remove
     env.table.insert = function(list, ...)
@@ -52,6 +54,22 @@ local function Queues(scrolling, performance)
             critical = critical,
             fixtureIcon = icon,
         }
+        self.queue.Handle("TEST_COMBAT", info, now)
+        return info
+    end
+    function context:AbilityHit(amount, now, changes)
+        local info = {
+            kind = "damage",
+            damageType = "spell",
+            school = "Fire",
+            spell = "Ability A",
+            sourceName = "Player",
+            targetName = "Enemy",
+            amount = amount,
+        }
+        for key, value in pairs(changes or {}) do
+            info[key] = value
+        end
         self.queue.Handle("TEST_COMBAT", info, now)
         return info
     end
@@ -220,7 +238,8 @@ for _, scrolling in ipairs({ false, true }) do
     assert(#context.displays == 0, "inclusive intake or the last hit's settle gate was bypassed")
     context.queue.Update(20.39)
     assert(#context.displays == 1 and context.displays[1].info == first, "the wider group lost its first-hit record")
-    assert(group.count == 3 and first.amount == 100, "Performance Mode summed or dropped identical native hits")
+    assert(group.count == 3 and first.amount == 100, "Performance Mode changed or dropped original native hits")
+    assert(context.displays[1].displayAmount == 300, "Performance Mode did not sum all equal hits")
     local nextGroup = assert(env.pendingGroups[1])
     context.queue.Update(nextGroup.closesAt + 0.09)
     assert(#context.displays == 2 and not next(env.intakeBuckets), "wider intake retained expired ownership")
@@ -231,7 +250,7 @@ for _, scrolling in ipairs({ false, true }) do
         assert(#env.pending == 0 and #context.origins == 4, "enemy SCT skipped an original match")
     end
 end
-print("PASS both SCT styles use a fixed inclusive 300 ms Performance Mode window without summing")
+print("PASS both SCT styles sum equal hits inside a fixed inclusive 300 ms Performance Mode window")
 
 for _, scrolling in ipairs({ false, true }) do
     local context, env = Queues(scrolling, true)
@@ -240,14 +259,165 @@ for _, scrolling in ipairs({ false, true }) do
     local amount = context:Hit(200, 25)
     local critical = context:Hit(100, 25, true)
     local icon = context:Hit(100, 25, nil, "Interface\\Icons\\Spell_Fire_Fire")
-    assert(#env.pendingGroups == 4, "Performance Mode merged distinct amount/critical/icon identities")
+    assert(#env.pendingGroups == 3, "Performance Mode failed to combine amounts or merged critical/icon identities")
     context.queue.Update(25.39)
-    assert(#context.displays == 4, "Performance Mode dropped distinct groups")
-    for index, info in ipairs({ first, amount, critical, icon }) do
+    assert(#context.displays == 3, "Performance Mode dropped distinct groups")
+    for index, info in ipairs({ first, critical, icon }) do
         assert(context.displays[index].info == info, "Performance Mode changed first-hit display order")
     end
+    assert(context.displays[1].displayAmount == 300 and first.amount == 100 and amount.amount == 200)
+    assert(context.displays[2].displayAmount == 100 and context.displays[3].displayAmount == 100)
 end
-print("PASS Performance Mode retains distinct original values, critical flags and resolved icons")
+print("PASS Performance Mode sums different amounts while retaining critical and resolved-icon identities")
+
+for _, scrolling in ipairs({ false, true }) do
+    local context, env = Queues(scrolling, true)
+    context.resolve = true
+    local first = context:AbilityHit(20, 50, { fixtureX = 2, fixtureY = 4 })
+    local color, icon = first.color, first.iconTexture
+    local second = context:AbilityHit(100, 50.2, { fixtureX = 10, fixtureY = 12 })
+    local group = assert(env.pendingGroups[1])
+    assert(
+        #env.pendingGroups == 1 and group.closesAt == 50 + 0.3,
+        "different amounts split or extended the ability window"
+    )
+    assert(
+        group.bucketKey == false and group.displayAmount == 120,
+        "Performance Mode did not retain a stable sum bucket"
+    )
+    context.queue.Update(50.381)
+    local displayed = assert(context.displays[1])
+    assert(#context.displays == 1 and displayed.displayAmount == 120, "Ability A did not display 20 + 100 as 120")
+    assert(
+        displayed.info == first and first.amount == 20 and second.amount == 100,
+        "display total overwrote a native hit"
+    )
+    assert(first.color == color and first.iconTexture == icon, "display sum changed first-hit styling")
+    local samples
+    for _, value in pairs(env.recentDamage) do
+        assert(not samples, "same-ability damage samples split unexpectedly")
+        samples = value
+    end
+    assert(
+        samples and #samples == 2 and samples[1].amount == 20 and samples[2].amount == 100,
+        "color history received an aggregate instead of original hits"
+    )
+    assert(
+        context.icons == 2 and not next(env.intakeBuckets),
+        "summed intake skipped metadata or leaked its false-key bucket"
+    )
+    if scrolling then
+        assert(#context.origins == 0 and displayed.x == 0 and displayed.y == 0, "MSBT sum acquired enemy origin work")
+    else
+        assert(
+            #context.origins == 2 and context.origins[1].info == first and context.origins[2].info == second,
+            "enemy sum skipped original matching order"
+        )
+        assert(
+            context.origins[1].info.amount == 20 and context.origins[2].info.amount == 100,
+            "enemy matching consumed the display sum"
+        )
+        assert(displayed.x == 6 and displayed.y == 8, "sum replaced the original unweighted hit centroid")
+    end
+end
+print("PASS Performance Mode displays Ability A 20 + 100 as 120 while original matching and metadata stay intact")
+
+for _, scrolling in ipairs({ false, true }) do
+    local context = Queues(scrolling, true)
+    context.resolve = true
+    local first = context:AbilityHit(100, 70)
+    local second = context:AbilityHit(100, 70.05)
+    context.queue.Update(70.39)
+    assert(
+        #context.displays == 1 and context.displays[1].displayAmount == 200,
+        "equal 100 hits were suppressed instead of summed as 200"
+    )
+    assert(first.amount == 100 and second.amount == 100, "equal-hit sum overwrote original amounts")
+end
+print("PASS Performance Mode sums equal 100 hits as 200 in both styles")
+
+for _, scrolling in ipairs({ false, true }) do
+    local context, env = Queues(scrolling)
+    context.resolve = true
+    local first = context:AbilityHit(20, 55)
+    local second = context:AbilityHit(100, 55)
+    local duplicate = context:AbilityHit(100, 55.01)
+    assert(#env.pendingGroups == 2, "normal mode changed exact-amount grouping")
+    context.queue.Update(55.101)
+    assert(#context.displays == 2, "normal mode summed distinct amounts or duplicated identical amounts")
+    assert(
+        context.displays[1].info == first and context.displays[2].info == second,
+        "normal mode changed original display order"
+    )
+    assert(
+        context.displays[1].displayAmount == nil and context.displays[2].displayAmount == nil,
+        "normal mode received a sum override"
+    )
+    assert(
+        first.amount == 20 and second.amount == 100 and duplicate.amount == 100,
+        "normal mode changed original hit values"
+    )
+end
+print("PASS normal SCT keeps 20 and 100 separate and still collapses duplicate 100 values")
+
+for _, scrolling in ipairs({ false, true }) do
+    local context, env = Queues(scrolling, true)
+    context.resolve = true
+    local first = context:AbilityHit(20, 60)
+    context:AbilityHit(100, 60.01)
+    local separated = {}
+    for _, changes in ipairs({
+        { spell = "Ability B" },
+        { sourceName = "Other source" },
+        { sourceIsPet = true },
+        { school = "Nature" },
+        { damageType = "periodic" },
+        { critical = true },
+        { fixtureIcon = "Interface\\Icons\\Spell_Fire_Fire" },
+    }) do
+        table.insert(separated, context:AbilityHit(10, 60.02, changes))
+    end
+    assert(
+        #env.pendingGroups == 8,
+        "Performance Mode combined different ability/source/category/critical/icon identities"
+    )
+    context.queue.Update(60.401)
+    assert(#context.displays == 8 and context.displays[1].info == first and context.displays[1].displayAmount == 120)
+    for index, info in ipairs(separated) do
+        assert(
+            context.displays[index + 1].info == info and context.displays[index + 1].displayAmount == 10,
+            "a distinct identity entered another ability's total"
+        )
+    end
+    assert(
+        context.icons == 9 and not next(env.intakeBuckets),
+        "separated sums skipped original metadata or retained intake"
+    )
+end
+print("PASS Performance Mode keeps ability, source, pet, school, category, critical and icon identities separate")
+
+for _, scrolling in ipairs({ false, true }) do
+    local context, env = Queues(scrolling, true)
+    context.resolve = true
+    local first = context:AbilityHit(1e308, 65)
+    local second = context:AbilityHit(1e308, 65.01)
+    local older, newer = env.pendingGroups[1], env.pendingGroups[2]
+    assert(older and newer and older.bucket == newer.bucket, "nonfinite sum did not split into finite groups")
+    assert(older.bucketKey == false and newer.bucketKey == false, "overflow split lost the stable false-key identity")
+    context.queue.Update(65.305)
+    assert(
+        #context.displays == 1 and context.displays[1].displayAmount == 1e308,
+        "overflow split emitted a nonfinite or wrong total"
+    )
+    assert(newer.bucket and newer.bucket[newer.bucketKey] == newer, "older sum cleanup deleted a newer intake owner")
+    context.queue.Update(65.401)
+    assert(
+        #context.displays == 2 and context.displays[2].displayAmount == 1e308 and not next(env.intakeBuckets),
+        "finite split lost a hit or leaked an intake owner"
+    )
+    assert(first.amount == 1e308 and second.amount == 1e308, "overflow handling mutated original values")
+end
+print("PASS nonfinite totals split safely and old false-key groups cannot retire a newer owner")
 
 for _, scrolling in ipairs({ false, true }) do
     local context, env = Queues(scrolling)
@@ -262,7 +432,8 @@ for _, scrolling in ipairs({ false, true }) do
         #env.pending == pending and old.info == first and old.closesAt == 30 + 0.075,
         "mode preview retired or retimed original hits"
     )
-    local performance = context:Hit(100, 30.02)
+    local performance = context:Hit(20, 30.02)
+    local addition = context:Hit(100, 30.03)
     local wider = assert(env.pendingGroups[2])
     assert(#env.pendingGroups == 2 and wider.closesAt == 30.02 + 0.3, "new hits joined the old mode's window")
     context:Mode(true)
@@ -281,6 +452,13 @@ for _, scrolling in ipairs({ false, true }) do
         #context.displays == 3 and context.displays[2].info == performance and context.displays[3].info == normal,
         "mode changes dropped hits or cross-joined windows"
     )
+    assert(
+        context.displays[1].displayAmount == nil
+            and context.displays[2].displayAmount == 120
+            and context.displays[3].displayAmount == nil,
+        "mode changes rewrote created-mode sum/dedup behavior"
+    )
+    assert(performance.amount == 20 and addition.amount == 100, "Cancel rewrote an original summed hit")
     assert(not next(env.intakeBuckets), "mode changes retained an intake owner")
 end
 print("PASS mode preview and Cancel settle old intake without dropping hits or changing normal deadlines")
