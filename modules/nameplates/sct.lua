@@ -46,7 +46,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local plates = {}
     local shownPlates = {}
     local origins = {}
-    local originIndex = { names = {} }
+    local originIndex = { names = {}, dirty = {} }
     local activeTexts = {}
     local textPool = {}
     local textRoot
@@ -444,7 +444,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         pendingGroups = {}
         intakeBuckets = {}
         origins = {}
-        originIndex.names = {}
+        originIndex.names, originIndex.dirty = {}, {}
         recentDamage = {}
         for _, data in pairs(plates) do
             data.origin = nil
@@ -704,16 +704,38 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         for plate, data in pairs(shownPlates) do
             RefreshPlate(plate, data, now, force, geometry)
         end
-        for index = table.getn(origins), 1, -1 do
+        local count, kept = table.getn(origins), 0
+        for index = 1, count do
             local origin = origins[index]
             if not origin.live and now - (origin.hiddenAt or origin.lastSeen) > RECENT_PLATE_TIME then
-                local named = originIndex.names[origin.name]
-                for candidate = table.getn(named), 1, -1 do
-                    if named[candidate] == origin then table.remove(named, candidate) end
-                end
-                if table.getn(named) == 0 then originIndex.names[origin.name] = nil end
-                table.remove(origins, index)
+                originIndex.dirty[origin.name] = true
+            else
+                kept = kept + 1
+                if kept ~= index then origins[kept] = origin end
             end
+        end
+        for index = kept + 1, count do
+            origins[index] = nil
+        end
+        if kept ~= count then table.setn(origins, kept) end
+        -- Keep the same creation order in each exact-name index. A mass
+        -- retirement compacts each affected bucket once, without shifting tails.
+        for name in pairs(originIndex.dirty) do
+            local named = originIndex.names[name]
+            count, kept = table.getn(named), 0
+            for index = 1, count do
+                local origin = named[index]
+                if origin.live or now - (origin.hiddenAt or origin.lastSeen) <= RECENT_PLATE_TIME then
+                    kept = kept + 1
+                    if kept ~= index then named[kept] = origin end
+                end
+            end
+            for index = kept + 1, count do
+                named[index] = nil
+            end
+            table.setn(named, kept)
+            if kept == 0 then originIndex.names[name] = nil end
+            originIndex.dirty[name] = nil
         end
     end
 

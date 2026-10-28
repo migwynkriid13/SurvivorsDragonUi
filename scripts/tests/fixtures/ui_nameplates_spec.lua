@@ -405,4 +405,54 @@ do
     label, count = DamageLabel(100)
     assert(count == 2 and label.parent.parent.anchor.x == (1024 + 1e-13) / 2, "loss ambiguity changed")
     print("PASS SCT matching visits only exact-name origins and preserves ordered centroids, loss and deadlines")
+
+    -- Zero is exact here so the strict 0.65-second retention boundary is tested
+    -- without adding two nonzero floating-point timestamps first.
+    matching.now = 0
+    matching:Tick(0)
+    shared[2]:Hide()
+    shared[2].regions[3]:SetText("Renamed")
+    shared[2]:Show()
+    assert(shared[2].fixture.origin ~= second and second.name == "Shared" and not second.live)
+    for index, plate in ipairs(unrelated) do
+        if math.mod(index, 2) == 1 then plate:Hide() end
+    end
+    matching:Tick(0)
+    local originalCount, expected = getn(master), {}
+    for _, origin in ipairs(master) do
+        if origin.live then table.insert(expected, origin) end
+    end
+    local remove = matching.env.table.remove
+    matching.env.table.remove = function(list, index)
+        assert(list ~= master and list ~= named, "origin retirement shifted a tail with table.remove")
+        return remove(list, index)
+    end
+    matching:Tick(0.65)
+    assert(getn(master) == originalCount and getn(named) == 3, "recent incarnations retired at the inclusive boundary")
+    matching:Tick(0.001)
+    assert(getn(master) == #expected and master[#expected + 1] == nil, "master origins retained a stale tail or size")
+    for index, origin in ipairs(expected) do
+        assert(master[index] == origin, "mixed mass retirement changed surviving creation order")
+    end
+    assert(named[1] == first and named[2] == third and named[3] == nil and getn(named) == 2)
+    matching.targetName = "dirty"
+    matching:Hit(399)
+    matching:Tick(0.17)
+    assert(DamageLabel(399).parent.parent.anchor.x == 800, "an emptied native-name bucket retained an old origin")
+
+    shared[1].centerX = 500
+    shared[3].regions[3]:SetText("Other occupant")
+    matching:SetSetting("sctMSBTStyle", true)
+    matching:SetSetting("sctMSBTStyle", false)
+    matching.targetName = "Shared"
+    matching:Hit(401)
+    matching:Tick(0.09)
+    assert(DamageLabel(401).parent.parent.anchor.x == 500, "style reset retained a previous origin index")
+    matching:Event(matching.controller, "PLAYER_LEAVING_WORLD")
+    shared[1].regions[3]:SetText("New world occupant")
+    matching:Event(matching.controller, "PLAYER_ENTERING_WORLD")
+    matching:Hit(402)
+    matching:Tick(0.17)
+    assert(DamageLabel(402).parent.parent.anchor.x == 800, "world cleanup retained an origin-name index")
+    print("PASS SCT mass retirement is stable, keeps recent reuse and clears name indices on style/world retirement")
 end
