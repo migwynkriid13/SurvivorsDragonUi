@@ -213,6 +213,16 @@ their own independent captures/results and original localized pattern, school,
 amount and ownership validation. CI-only production parsing checks player/pet,
 melee/periodic and foreign-source cases without shared-result aliasing.
 
+### XP fade geometry
+
+The existing gain/spark renderer caches its owned anchors, widths, crop and alpha
+independently. A stationary final fade now changes only its two alpha values;
+actual width/progress changes retain the original gain bounds and clipped spark.
+Show/Hide comparisons preserve pooled reuse and the final clearing pass. Timing,
+easing, native XP reads, source images, layers and region count stay unchanged.
+CI-only extracted production coverage checks fades, resizing, end clipping and
+zero-alpha retirement, without a GPU/FPS claim.
+
 ## Loot popup modes and marks — 2026-10-27
 
 The new Loot notifications page uses existing editor artwork: one category

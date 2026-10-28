@@ -44,6 +44,7 @@ def main():
         border_mini = "local portraitsHidden\n" + extract_source("modules/unit/mini.lua", ["UpdatePortraitVisibility"])
         debuff_tooltip = extract_source("modules/ui/run.lua", ["IsNumber", "Clock", "Permanent", "DebuffRemaining", "DebuffTooltip"])
         navigation_distance = extract_source("modules/map/waypoints.lua", ["UpdateDistance"])
+        xp_glow = extract_source("modules/xprep/xprep.lua", ["PaintGlow"])
     except RuntimeError as error:
         print(error, file=sys.stderr)
         return 1
@@ -57,6 +58,7 @@ def main():
             ("border-modes-source.lua", border_modes, "ui_border_spec.lua"),
             ("debuff-tooltip-source.lua", debuff_tooltip, "ui_debuff_tooltip_spec.lua"),
             ("navigation-distance-source.lua", navigation_distance, "ui_navigation_distance_spec.lua"),
+            ("xp-glow-source.lua", xp_glow, "ui_xp_perf_spec.lua"),
         ):
             seam = Path(folder) / name
             seam.write_text(source, encoding="utf-8")

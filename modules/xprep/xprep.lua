@@ -142,25 +142,45 @@ DFRL:NewMod("Xprep", 1, function()
         local width = T.GetLocalSize(bar)
         local left, right = (gainStart or displayed) * width, displayed * width
         if right > left and alpha > 0 then
-            gain:ClearAllPoints()
-            gain:SetPoint("LEFT", bar, "LEFT", left, 0)
-            gain:SetWidth(right - left)
-            gain:SetAlpha(alpha * 0.65)
-            gain:Show()
+            if gain.drawnLeft ~= left then
+                gain:SetPoint("LEFT", bar, "LEFT", left, 0)
+                gain.drawnLeft = left
+            end
+            if gain.drawnWidth ~= right - left then
+                gain:SetWidth(right - left)
+                gain.drawnWidth = right - left
+            end
+            if gain.drawnAlpha ~= alpha * 0.65 then
+                gain:SetAlpha(alpha * 0.65)
+                gain.drawnAlpha = alpha * 0.65
+            end
+            if not gain:IsShown() then gain:Show() end
         else
-            gain:Hide()
+            if gain:IsShown() then gain:Hide() end
         end
         -- Crop the moving spark at the bar's ends instead of leaking past them.
         local sparkLeft, sparkRight = math.max(0, right - 6), math.min(width, right + 6)
         if sparkRight > sparkLeft and displayed > 0 and alpha > 0 then
-            spark:ClearAllPoints()
-            spark:SetPoint("LEFT", bar, "LEFT", sparkLeft, 0)
-            spark:SetWidth(sparkRight - sparkLeft)
-            spark:SetTexCoord((sparkLeft - right + 6) / 12, (sparkRight - right + 6) / 12, 0, 1)
-            spark:SetAlpha(alpha)
-            spark:Show()
+            if spark.drawnLeft ~= sparkLeft then
+                spark:SetPoint("LEFT", bar, "LEFT", sparkLeft, 0)
+                spark.drawnLeft = sparkLeft
+            end
+            if spark.drawnWidth ~= sparkRight - sparkLeft then
+                spark:SetWidth(sparkRight - sparkLeft)
+                spark.drawnWidth = sparkRight - sparkLeft
+            end
+            local firstU, lastU = (sparkLeft - right + 6) / 12, (sparkRight - right + 6) / 12
+            if spark.firstU ~= firstU or spark.lastU ~= lastU then
+                spark:SetTexCoord(firstU, lastU, 0, 1)
+                spark.firstU, spark.lastU = firstU, lastU
+            end
+            if spark.drawnAlpha ~= alpha then
+                spark:SetAlpha(alpha)
+                spark.drawnAlpha = alpha
+            end
+            if not spark:IsShown() then spark:Show() end
         else
-            spark:Hide()
+            if spark:IsShown() then spark:Hide() end
         end
     end
 
