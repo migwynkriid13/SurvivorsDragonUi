@@ -456,3 +456,127 @@ do
     assert(DamageLabel(402).parent.parent.anchor.x == 800, "world cleanup retained an origin-name index")
     print("PASS SCT mass retirement is stable, keeps recent reuse and clears name indices on style/world retirement")
 end
+
+do
+    local cached = Plates(function(current, env)
+        env.DFRL.locale.CombatText = function(value) return value end
+        env.T.ParseNameplateCombatEvent = function(_, message)
+            return {
+                kind = current.hitKind or "damage",
+                damageType = "autoattack",
+                sourceName = "Player",
+                targetName = current.targetName,
+                amount = tonumber(message),
+                text = current.hitKind == "miss" and "MISS" or nil,
+            }
+        end
+    end)
+    local function Label(value)
+        local found, count = nil, 0
+        for _, label in ipairs(cached:Labels()) do
+            if label:GetText() == tostring(value) then
+                found, count = label, count + 1
+            end
+        end
+        return found, count
+    end
+    local first, second = cached:MakePlate("Cache", 1000), cached:MakePlate("Cache", 1000)
+    first.centerX, second.centerX = 100, 300
+    cached:Tick(0)
+    local firstOrigin, secondOrigin = first.fixture.origin, second.fixture.origin
+    local scans, widths = 0, 0
+    local getn, getWidth = cached.env.table.getn, cached.env.WorldFrame.GetWidth
+    cached.env.table.getn = function(list)
+        if list[1] == firstOrigin and list[2] == secondOrigin then scans = scans + 1 end
+        return getn(list)
+    end
+    cached.env.WorldFrame.GetWidth = function(self)
+        widths = widths + 1
+        return getWidth(self)
+    end
+    cached.targetName = "Missing"
+    for index = 1, 20 do
+        cached:Hit(201)
+    end
+    cached:Tick(0.17)
+    assert(
+        widths == 2 and Label(201).parent.parent.anchor.x == 800,
+        "repeated no-match hits repeated native fallback reads"
+    )
+    local before = widths
+    cached:Hit(201)
+    cached:Tick(0.17)
+    assert(widths - before == 2, "another matching pass reused the previous fallback query")
+    cached.targetName = "Cache"
+    for index = 1, 20 do
+        cached:Hit(202)
+    end
+    cached:Tick(0.17)
+    assert(
+        scans == 1 and Label(202).parent.parent.anchor.x == 200,
+        "identical ambiguous hits repeated their candidate scan"
+    )
+
+    before = scans
+    cached:Hit(203)
+    cached:Hit(204)
+    cached.hitKind = "miss"
+    cached:Hit(204)
+    cached.hitKind = nil
+    cached:Tick(0.17)
+    assert(
+        scans - before == 3 and Label(203) and Label(204) and Label("MISS"),
+        "amount or kind queries shared an answer"
+    )
+    cached.targetName = "Missing"
+    cached:Hit(205)
+    cached.targetName = "Cache"
+    cached:Hit(205)
+    cached:Tick(0.17)
+    assert(Label(205).parent.parent.anchor.x == 500, "distinct native names shared a cached fallback")
+
+    cached:Hit(206)
+    cached.now = cached.now + 0.09
+    cached:Hit(206)
+    before = scans
+    cached:Tick(0.09)
+    local _, count = Label(206)
+    assert(scans - before == 2 and count == 1, "fallback-enabled and waiting queries shared an answer")
+    before = scans
+    cached:Tick(0.08)
+    _, count = Label(206)
+    assert(scans - before == 1 and count == 2, "a cached nil result survived into the next matching pass")
+
+    first.nativeBar.value, second.nativeBar.value = 900, 800
+    cached:Call(first.nativeBar, "OnValueChanged")
+    cached:Call(second.nativeBar, "OnValueChanged")
+    for index = 1, 3 do
+        cached:Hit(100)
+    end
+    before = scans
+    cached:Tick(0.09)
+    assert(scans - before == 3, "consumed loss reused an already stale matching result")
+    assert(
+        firstOrigin.lossRemaining == 0 and secondOrigin.lossRemaining == 0,
+        "an original hit skipped loss consumption"
+    )
+    assert(
+        Label(100).parent.parent.anchor.x == (100 + 300 + 300) / 3,
+        "loss invalidation changed the original centroid"
+    )
+
+    before = widths
+    for index = 1, 65 do
+        cached.targetName = "Missing" .. index
+        cached:Hit(207)
+    end
+    cached:Hit(207)
+    cached.targetName = "Missing1"
+    cached:Hit(207)
+    cached:Tick(0.17)
+    assert(widths - before == 67, "query capacity changed fallback behavior or omitted the first cached name")
+    assert(Label(207).parent.parent.anchor.x == 800, "cache capacity dropped or moved an original hit")
+    print(
+        "PASS SCT pass-local queries reuse no-match/ambiguity, separate exact keys and retire at loss/pass boundaries"
+    )
+end

@@ -46,7 +46,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local plates = {}
     local shownPlates = {}
     local origins = {}
-    local originIndex = { names = {}, dirty = {} }
+    local originIndex = { names = {}, dirty = {}, queries = {}, queryPool = {}, queryCount = 0, lossRevision = 0 }
     local activeTexts = {}
     local textPool = {}
     local textRoot
@@ -445,6 +445,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         intakeBuckets = {}
         origins = {}
         originIndex.names, originIndex.dirty = {}, {}
+        originIndex.ClearQueries()
         recentDamage = {}
         for _, data in pairs(plates) do
             data.origin = nil
@@ -739,14 +740,65 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         end
     end
 
+    function originIndex.ClearQueries()
+        if originIndex.queryCount == 0 then
+            originIndex.lossRevision = 0
+            return
+        end
+        for name in pairs(originIndex.queries) do
+            originIndex.queries[name] = nil
+        end
+        for index = 1, originIndex.queryCount do
+            local record = originIndex.queryPool[index]
+            record.kind, record.amount, record.fallback, record.revision = nil, nil, nil, nil
+            record.x, record.y, record.origin = nil, nil, nil
+        end
+        originIndex.queryCount, originIndex.lossRevision = 0, 0
+    end
+
+    function originIndex.RememberQuery(info, fallback, revision, x, y, origin)
+        -- Consumed loss already invalidated this result; do not store an answer
+        -- that cannot be reused by the next original hit.
+        if revision ~= originIndex.lossRevision then return x, y, origin end
+        local record = originIndex.queries[info.targetName]
+        if not record then
+            -- Cache only the latest exact query per name, with bounded reused
+            -- records. Extra names retain the original resolver path.
+            if originIndex.queryCount == 64 then return x, y, origin end
+            originIndex.queryCount = originIndex.queryCount + 1
+            record = originIndex.queryPool[originIndex.queryCount] or {}
+            originIndex.queryPool[originIndex.queryCount] = record
+            originIndex.queries[info.targetName] = record
+        end
+        record.kind, record.amount, record.fallback, record.revision = info.kind, info.amount, fallback, revision
+        record.x, record.y, record.origin = x, y, origin
+        return x, y, origin
+    end
+
     local function UseLoss(origin, info)
         if info.kind ~= "damage" then return end
-        if origin.absoluteHealth then origin.lossRemaining = math.max(0, (origin.lossRemaining or 0) - info.amount) end
+        if origin.absoluteHealth then
+            local remaining = origin.lossRemaining or 0
+            origin.lossRemaining = math.max(0, remaining - info.amount)
+            if origin.lossRemaining ~= remaining then originIndex.lossRevision = originIndex.lossRevision + 1 end
+        end
         -- Percentage bars cannot be consumed by absolute amounts. Their loss
         -- remains timing evidence for the whole short combat-message burst.
     end
 
     local function ResolveOrigin(info, now, allowFallback)
+        local revision = originIndex.lossRevision
+        local record = originIndex.queries[info.targetName]
+        if
+            record
+            and record.kind == info.kind
+            and record.amount == info.amount
+            and record.fallback == allowFallback
+            and record.revision == revision
+        then
+            if record.origin then UseLoss(record.origin, info) end
+            return record.x, record.y, record.origin
+        end
         local candidateCount, lossCount, exactCount = 0, 0, 0
         local candidateOrigin, lossOrigin, exactOrigin
         local candidateX, candidateY, lossX, lossY = 0, 0, 0, 0
@@ -793,16 +845,32 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         end
         if origin then
             UseLoss(origin, info)
-            return origin.x, origin.y, origin
+            return originIndex.RememberQuery(info, allowFallback, revision, origin.x, origin.y, origin)
         end
-        if not allowFallback then return nil end
+        if not allowFallback then return originIndex.RememberQuery(info, false, revision) end
         -- The 1.12 chat API has no destination GUID. Keep every event visible,
         -- even when it cannot distinguish identical names or no plate was
         -- rendered before a lethal hit. A shared origin avoids claiming
         -- an arbitrary enemy is the exact destination.
-        if lossCount > 0 then return lossX / lossCount, lossY / lossCount, nil end
-        if candidateCount > 0 then return candidateX / candidateCount, candidateY / candidateCount, nil end
-        return WorldFrame:GetWidth() * 0.5, WorldFrame:GetHeight() * 0.58, nil
+        if lossCount > 0 then
+            return originIndex.RememberQuery(info, true, revision, lossX / lossCount, lossY / lossCount)
+        end
+        if candidateCount > 0 then
+            return originIndex.RememberQuery(
+                info,
+                true,
+                revision,
+                candidateX / candidateCount,
+                candidateY / candidateCount
+            )
+        end
+        return originIndex.RememberQuery(
+            info,
+            true,
+            revision,
+            WorldFrame:GetWidth() * 0.5,
+            WorldFrame:GetHeight() * 0.58
+        )
     end
 
     local auraSpellTextures, talentSpellTextures = {}, {}
@@ -1607,6 +1675,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     end
 
     local function UpdatePending(now)
+        originIndex.ClearQueries()
         local count = table.getn(pending)
         local kept = 0
         for index = 1, count do
@@ -1640,6 +1709,9 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         end
         -- Lua 5.0 insert/getn remembers a size independently of cleared slots.
         table.setn(pending, kept)
+        -- Presentation below can call native methods. Match reuse belongs only
+        -- to this completed synchronous pass, never another frame or callback.
+        originIndex.ClearQueries()
 
         local groupCount = table.getn(pendingGroups)
         kept = 0
