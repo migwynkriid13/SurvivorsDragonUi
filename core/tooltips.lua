@@ -113,6 +113,7 @@ DFRL:NewMod("Tooltips", 2, function()
     local tooltip, bar = GameTooltip, GameTooltipStatusBar
     if not tooltip then return end
     local currentUnit
+    local lastIconOwner
     local elapsed, inWorld = 0, true
     local editing = false
     -- A stable, passive edit region exists even when no native hover is shown.
@@ -160,9 +161,11 @@ DFRL:NewMod("Tooltips", 2, function()
         local anchor, target, targetPoint, offsetY = "BOTTOMRIGHT", root, "BOTTOMRIGHT", 0
         -- Native ownership follows registered skill, equipment and HUD icons.
         -- Other hovers keep their shared layout seat.
-        local button = IconOwner(DFRL.actionButtons)
-            or IconOwner(DFRL.characterItemButtons)
-            or IconOwner(registeredIcons)
+        local button = lastIconOwner
+        if not button or not tooltip:IsOwned(button) then
+            button = IconOwner(DFRL.actionButtons) or IconOwner(DFRL.characterItemButtons) or IconOwner(registeredIcons)
+            lastIconOwner = button
+        end
         if button and not button:IsVisible() then
             tooltip:Hide()
             return
@@ -261,7 +264,7 @@ DFRL:NewMod("Tooltips", 2, function()
         end
     end
     local function Clear()
-        currentUnit, elapsed = nil, 0
+        currentUnit, lastIconOwner, elapsed = nil, nil, 0
         DFRL.tools.StyleHoverCard(tooltip)
         if bar then bar:Hide() end
     end

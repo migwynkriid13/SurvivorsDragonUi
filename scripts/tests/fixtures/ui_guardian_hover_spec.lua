@@ -8,7 +8,10 @@ local function Fixture()
     function minimap:GetCenter() return 0, 0 end
     function minimap:GetEffectiveScale() return 1.5 end
     local tooltip = { shown = false }
-    function tooltip:IsOwned(owner) return self.owner == owner end
+    function tooltip:IsOwned(owner)
+        state.ownerReads = (state.ownerReads or 0) + 1
+        return self.owner == owner
+    end
     function tooltip:IsShown() return self.shown end
     function tooltip:IsVisible() return self.shown end
     function tooltip:SetOwner(owner)
@@ -143,11 +146,17 @@ print("PASS guardian hover respects Tooltip hiding, re-entry and editing")
 
 state = Fixture()
 state.Update()
+state.env.DFRL.actionButtons = {}
+for index = 1, 20 do
+    state.env.DFRL.actionButtons[index] = {}
+end
 state.Place()
 assert(state.cursorPlacements == 1 and not state.tooltip.point, "guardian tooltip used the bottom-right Layout seat")
 state.writes = 0
+state.ownerReads = 0
 state.Place()
 assert(state.cursorPlacements == 2 and state.writes == 0, "guardian placement fought the shared cursor helper")
+assert(state.ownerReads == 1, "a stable tooltip owner rescanned the icon registries")
 state.tooltip.owner = {}
 state.Place()
 assert(state.tooltip.point[1] == "BOTTOMRIGHT" and state.tooltip.point[2] == state.env.tooltipRoot)

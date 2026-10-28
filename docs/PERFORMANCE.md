@@ -98,6 +98,16 @@ sample cleanup also releases the record after a native/widget error. CI-only
 coverage checks repeated consumers, new-frame movement, map ownership, failures
 and retirement. This is native-call reduction, not a changed drawing budget.
 
+### Stable shared tooltip owners
+
+Shared tooltip placement first checks its last accepted icon with native IsOwned.
+An unchanged owner skips action/equipment/registered-icon traversals; a mismatch
+uses the original discovery order. Clear/Hide retires the cached owner, while
+foreign owners and native resets remain observable. Cursor motion, current
+visibility, scale and anchor checks still run at their existing cadence. CI-only
+placement assertions cover the single-owner check and replaced-owner fallback.
+No new registry, event, region or drawing pass is introduced.
+
 ## Loot popup modes and marks — 2026-10-27
 
 The new Loot notifications page uses existing editor artwork: one category
