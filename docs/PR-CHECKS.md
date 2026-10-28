@@ -73,6 +73,10 @@ The assertions cover:
   minimap-size sharing, including unavailable and insufficient geometry retry.
   Extracted timer foam also checks one native height sample per paint while
   retaining the original clipping geometry and UVs at different authored heights.
+  Production clock-progress cases cover unchanged writes within a native second,
+  whole-second steps, native pauses/corrections, exact fractional completion,
+  maximum changes and hidden recovery. They keep raw caption/marker inputs
+  separate from the stepped flow/foam clipping boundary.
   Timer-caption mocks cover unchanged/disabled formatting, current-value option
   previews, language/mode changes, scale and missing-metric retries, font preview,
   retirement and repeated empty-clock idling. They use the production label
