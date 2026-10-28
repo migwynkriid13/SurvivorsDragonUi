@@ -42,6 +42,211 @@ DFRL:NewMod("RunTimers", 5, function()
         return nil
     end
 
+    local function CreateRunAffixes(owner)
+        local size, gap = 22, 5
+        local definitions = {
+            bolstering = {
+                name = "Bolstering",
+                hint = "A death makes the enemies near it tougher and stronger, stacking.",
+                left = 0,
+            },
+            sanguine = {
+                name = "Sanguine",
+                hint = "A slain elite leaves a pool that heals enemies standing in it.",
+                left = 64 / 256,
+            },
+            explosive = {
+                name = "Explosive",
+                hint = "Orbs come out of the horde: only direct hits hurt them, so kill them before they burst.",
+                left = 128 / 256,
+            },
+        }
+        -- Affix artwork copyright Blizzard Entertainment; third_party/HeroicAffixes-ARTWORK.md.
+        local atlas = path .. "Affixes.blp"
+        local rimPath = DFRL:GetInfoOrCons("tex") .. "jewelry\\Frame.blp"
+        local view = { rows = {}, keys = {}, seen = {}, count = 0, width = 0, inset = 0, received = 0 }
+        local function HideHover(row)
+            if GameTooltip and GameTooltip:IsOwned(row) then GameTooltip:Hide() end
+        end
+        local function ShowHover(row)
+            if
+                not GameTooltip
+                or not row:IsVisible()
+                or not row.title
+                or DFRL.layout.IsEditing()
+                or DFRL.layout.IsHidden("tooltip")
+            then
+                return
+            end
+            GameTooltip:SetOwner(row, "ANCHOR_BOTTOM")
+            GameTooltip:SetText(row.title, 1, 0.82, 0)
+            if row.hint then GameTooltip:AddLine(row.hint, 1, 1, 1, true) end
+            GameTooltip:Show()
+        end
+        local function Bind(texture, wanted)
+            if texture.affixPath == wanted then return true end
+            local loaded = texture:SetTexture(wanted)
+            local assigned = texture:GetTexture()
+            local stem = string.gsub(wanted, "%.[^%.]*$", "")
+            if loaded ~= false and (loaded == true or loaded == 1 or assigned == wanted or assigned == stem) then
+                texture.affixPath = wanted
+                return true
+            end
+            texture.affixPath = nil
+            if assigned then texture:SetTexture(nil) end
+            return false
+        end
+        local function Row(index)
+            local row = view.rows[index]
+            if row then return row end
+            row = CreateFrame("Frame", nil, owner)
+            row:SetWidth(size)
+            row:SetHeight(size)
+            row:EnableMouse(false)
+            row:Hide()
+            row.icon = row:CreateTexture(nil, "ARTWORK")
+            row.icon:SetWidth(size * 34 / 39)
+            row.icon:SetHeight(size * 34 / 39)
+            row.icon:SetPoint("CENTER", row, "CENTER", 0, 0)
+            row.rim = row:CreateTexture(nil, "OVERLAY")
+            row.rim:SetWidth(size)
+            row.rim:SetHeight(size)
+            row.rim:SetPoint("CENTER", row, "CENTER", 0, 0)
+            row.rim:SetTexCoord(664 / 1024, 736 / 1024, 56 / 256, 128 / 256)
+            row.rim:SetVertexColor(237 / 255, 35 / 255, 38 / 255, 1)
+            row:SetScript("OnEnter", function() ShowHover(row) end)
+            row:SetScript("OnLeave", function() HideHover(row) end)
+            T.RegisterTooltipIcon(row, row.icon, "below")
+            table.insert(view.rows, row)
+            return row
+        end
+        local function HideRow(row)
+            HideHover(row)
+            if row:IsShown() then row:Hide() end
+            if row.active then row:EnableMouse(false) end
+            row.active, row.key, row.title, row.hint = false, nil, nil, nil
+        end
+        function view:Clear(retire)
+            if retire then
+                self.blockedPacket, self.blockedStamp = _G.AZS_ZONE, _G.AZS_ZONE_UPDATED
+                self.blockedReceived = self.received
+            end
+            if self.count == 0 and not self.packet and not self.retry then return end
+            for _, row in ipairs(self.rows) do
+                HideRow(row)
+            end
+            for key in pairs(self.keys) do
+                self.keys[key] = nil
+            end
+            for key in pairs(self.seen) do
+                self.seen[key] = nil
+            end
+            local changed = self.inset ~= 0
+            self.count, self.width, self.inset, self.retry = 0, 0, 0, false
+            self.packet, self.stamp, self.acceptedReceived, self.text, self.language = nil, nil, nil, nil, nil
+            if changed and self.onBounds then self.onBounds() end
+        end
+        function view:ZoneChanged()
+            self.received = self.received + 1
+            self:Clear()
+        end
+        function view:Update(allowed, retry)
+            if not allowed then
+                if self.packet then self:Clear() end
+                return
+            end
+            if not owner:IsVisible() then return end
+            local packet, stamp = _G.AZS_ZONE, _G.AZS_ZONE_UPDATED
+            if
+                type(packet) ~= "table"
+                or not IsNumber(stamp)
+                or not IsNumber(packet.heroic)
+                or packet.heroic <= 0
+                or packet.heroic ~= math.floor(packet.heroic)
+                or type(packet.affixes) ~= "string"
+                or packet.affixes == ""
+                or (
+                    packet == self.blockedPacket
+                    and stamp == self.blockedStamp
+                    and self.received == self.blockedReceived
+                )
+            then
+                if self.packet then self:Clear() end
+                return
+            end
+            local language = DFRL.locale.code
+            if
+                self.packet == packet
+                and self.stamp == stamp
+                and self.acceptedReceived == self.received
+                and self.text == packet.affixes
+                and self.language == language
+                and (not self.retry or not retry)
+            then
+                return
+            end
+            for key in pairs(self.seen) do
+                self.seen[key] = nil
+            end
+            local count = 0
+            for key in string.gfind(packet.affixes, "[^,]+") do
+                if not self.seen[key] then
+                    count = count + 1
+                    self.keys[count], self.seen[key] = key, true
+                end
+            end
+            for index = count + 1, self.count do
+                self.keys[index] = nil
+            end
+            local width = count > 0 and count * size + (count - 1) * gap or 0
+            local boundsChanged = self.width ~= width
+            self.count, self.width, self.inset = count, width, count > 0 and size + 3 or 0
+            self.retry = false
+            for index = 1, count do
+                local key = self.keys[index]
+                local definition = definitions[key]
+                local row = Row(index)
+                local title = definition and DFRL.locale.Native(definition.name) or key
+                local hint = definition and DFRL.locale.Native(definition.hint) or nil
+                if row.key ~= key or row.title ~= title or row.hint ~= hint then
+                    HideHover(row)
+                    row.key, row.title, row.hint = key, title, hint
+                end
+                local x = (index - (count + 1) / 2) * (size + gap)
+                if row.x ~= x then
+                    row:ClearAllPoints()
+                    row:SetPoint("TOP", owner, "BOTTOM", x, -3)
+                    row.x = x
+                end
+                local wanted = definition and atlas or SKULL_ICON
+                local iconReady = Bind(row.icon, wanted)
+                local rimReady = Bind(row.rim, rimPath)
+                local left = definition and definition.left or 0
+                if row.uvKey ~= key then
+                    row.icon:SetTexCoord(left, definition and left + 64 / 256 or 1, 0, 1)
+                    row.uvKey = key
+                end
+                if iconReady and rimReady then
+                    if not row.active then
+                        row:EnableMouse(true)
+                        row:Show()
+                        row.active = true
+                    end
+                else
+                    HideRow(row)
+                    self.retry = true
+                end
+            end
+            for index = count + 1, table.getn(self.rows) do
+                HideRow(self.rows[index])
+            end
+            self.packet, self.stamp, self.acceptedReceived = packet, stamp, self.received
+            self.text, self.language = packet.affixes, language
+            if boundsChanged and self.onBounds then self.onBounds() end
+        end
+        return view
+    end
+
     local function RunLength()
         local maximum = Read("AZS_GetRunLength")
         if IsNumber(maximum) and maximum > 0 then return maximum end
@@ -404,6 +609,7 @@ DFRL:NewMod("RunTimers", 5, function()
     end
 
     local run, runBar, runText, overlay = Pill("DFRL_RunTimerPill", "FillBlue")
+    run.affixes = CreateRunAffixes(run)
     local bossText = overlay:CreateFontString(nil, "OVERLAY")
     T.SetFont(bossText, 14, "OUTLINE")
     bossText:SetTextColor(1, 1, 1)
@@ -647,8 +853,13 @@ DFRL:NewMod("RunTimers", 5, function()
         overflow = math.max(0, overflow - inset)
         local top = (runClock.visible or bossClock.visible) and currentFont.size + 4 or 0
         runMoveRegion:ClearAllPoints()
+        overflow = math.max(overflow, (run.affixes.width - run:GetWidth()) / 2)
         runMoveRegion:SetPoint("TOPLEFT", run, "TOPLEFT", -overflow, top)
-        runMoveRegion:SetPoint("BOTTOMRIGHT", run, "BOTTOMRIGHT", overflow, 0)
+        runMoveRegion:SetPoint("BOTTOMRIGHT", run, "BOTTOMRIGHT", overflow, -run.affixes.inset)
+    end
+    run.affixes.onBounds = function()
+        UpdateRunFontBounds()
+        DFRL.layout.Place("bossBars")
     end
 
     local function SetClockLabelText(clock, text, visible)
@@ -1740,8 +1951,10 @@ DFRL:NewMod("RunTimers", 5, function()
     bossGroup:Hide()
     DFRL.layout.Register("bossBars", bossGroup, function()
         bossGroup:ClearAllPoints()
-        bossGroup:SetPoint("TOP", UIParent, "TOP", 0, -77)
+        local affixSpace = run.affixes.inset > 0 and run.affixes.inset + 8 or 0
+        bossGroup:SetPoint("TOP", UIParent, "TOP", 0, -77 - affixSpace)
     end, {
+        refreshDefault = true,
         edgeWidth = true,
         minWidth = 120,
         maxWidth = 1200,
@@ -2451,6 +2664,7 @@ DFRL:NewMod("RunTimers", 5, function()
     end
 
     local function ReleaseClock()
+        run.affixes:Clear()
         if render.runShown then
             render.runShown = false
             run:Hide()
@@ -2489,6 +2703,7 @@ DFRL:NewMod("RunTimers", 5, function()
     end
 
     local function ReleaseHUD()
+        run.affixes:Clear(true)
         if not render.hudReleased then
             ReleaseClock()
             ClearTally()
@@ -3254,6 +3469,7 @@ DFRL:NewMod("RunTimers", 5, function()
         then
             InvalidateSchedule(runSequence)
             RetireEncounters(runSequence)
+            run.affixes:Clear(true)
         end
         -- Death is the native run phase, not temporary co-op downed health.
         -- Reject late inactive-run units, but preserve publications after a new
@@ -3295,6 +3511,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 SetRunAppearance(atLimit)
                 UpdateRunFlow(seconds, maximum)
                 UpdateClockCaptions(seconds, maximum, not zoneRunPending)
+                run.affixes:Update(not zoneRunPending, refreshRows)
                 -- Missing schedule replay affects only spawn markers, never a clock
                 -- whose native elapsed time and duration have already recovered.
                 if
@@ -3376,6 +3593,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 _G.SurvivorsDragonUiBossSchedule = scheduleCache
             end
             reloading = true
+            run.affixes:Clear(true)
             return reloadUI()
         end
     end
@@ -3424,6 +3642,7 @@ DFRL:NewMod("RunTimers", 5, function()
             packetSequence = packetSequence + 1
             if arg1 == "AZSZONE" then
                 zoneSequence = packetSequence
+                run.affixes:ZoneChanged()
                 ClearClockCaptions()
             elseif arg1 == "AZSRUN" then
                 runSequence = packetSequence

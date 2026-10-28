@@ -1759,3 +1759,46 @@ load the production controller against explicit fake native snapshots to cover
 mixed/independent feeds, validation, timer readiness, pauses, changed-only work,
 hiding, settings, pooling and cleanup. Local source/diff review and pinned
 formatting do not establish live behavior, drawing submissions or FPS/GPU gains.
+
+## Heroic affix row — 2026-10-28
+
+The selected #04 affix row shares the run timer's existing phase-first reader,
+zone/run receipt handshake, deferred packet handling and tenth-second retry
+gate. It adds no event registration, updater, animation, setting or saved state.
+A visible accepted zone snapshot is parsed only when its identity, receipt,
+list bytes or language change. Static rows skip text lookup, anchors, UVs,
+visibility and texture writes; failed artwork remains retryable at ten Hz.
+Hidden owners allocate no affix rows and do no affix painting or metadata work.
+Zone/run/world retirement clears identities and owned hovers; Layout hiding
+inherits native visibility and the shared tooltip registry's cleanup.
+
+Each represented kind lazily allocates one mouse-enabled hover frame and two
+Texture regions, with no FontString. The chosen three kinds therefore cost at
+most three frames and six visible textures when all three are actually
+published. Frame and rim diameter is 22 units; the icon is `22 * 34 / 39`, with
+five-unit gaps and a three-unit offset below the bar. The existing Layout
+region adds the row's 25-unit vertical inset and includes any horizontal
+overflow without changing the saved timer geometry. Frames and successful
+artwork bindings remain pooled across publications and toggles.
+The same count/bounds transition refreshes only the default boss placement,
+reserving 33 units for the row and first boss caption; saved/draft positions
+remain authoritative. There is no per-frame placement or new layout polling.
+
+One new 256-by-64 lossless BLP atlas holds the three circular icons. Each icon
+uses its fixed 64-square UV cell; the red rim reuses the neutral jewelry crop
+at `(664,56)-(736,128)` in the existing atlas and the same native RGB tint
+path as jewelry. There is no native-circle call, strip fallback, changing UV
+animation or extra per-icon glow. Icon/rim alpha overlap, small persistent
+regions, texture/material differences and distinct UV clamps retain their
+normal renderer costs. Sharing an atlas does not establish batching or reduced
+draw submissions. No GPU-memory, live FPS or pixel-parity result is claimed.
+
+Eight CI-only scenarios extract the actual affix-view factory and use the
+production tooltip registry with explicit fake native widgets. They cover
+order/centering, exact rim crop/tint, unchanged and hidden work, malformed and
+unknown keys, receipt retirement, asset failure cadence, pooling, owned/foreign
+hover cleanup and all fourteen native name/description catalogs. The parent
+timer's event integration was source-reviewed; these mocks do not establish
+live delivery or the packaged Lua VM. Local work was source/diff inspection,
+image-data preparation and pinned formatting, without local tests, standalone
+validation or addon/game execution.

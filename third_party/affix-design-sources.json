@@ -98,8 +98,8 @@
     {
       "number": 4,
       "title": "Rally and rupture",
-      "treatment": "red_metal",
-      "outline": "red icon outline",
+      "treatment": "jewelry_red",
+      "outline": "neutral jewelry rim tinted red",
       "sources": {
         "Bolstering": {
           "file": "third_party/sources/affixes/Ability_Warrior_RallyingCry.PNG",

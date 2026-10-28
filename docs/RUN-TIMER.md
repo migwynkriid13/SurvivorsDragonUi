@@ -48,6 +48,50 @@ All choices preview immediately and save only with Confirm. Cancel, world
 leave, logout and reload discard unconfirmed choices. Both full resets restore
 the defaults above. Changing a choice does not move or scale the timer.
 
+## Heroic affixes
+
+On the 0.125.0 API, the run timer shows the current run's Heroic affixes in one
+centered row beneath the bar. The selected **04 Rally and rupture** pictures
+use the same neutral circular rim as equipped jewelry, tinted red while
+retaining its original shading and alpha. There is no added flat outline.
+Hovering an icon shows the game's name and description in the active language.
+The run timer's existing move, scale, width and Hide frame controls own the row;
+its Layout outline includes the icons without changing saved geometry.
+Unpositioned boss bars reserve 33 more units below their usual 77-unit default
+while the affix row is present, keeping the first boss name clear. Confirmed
+and draft boss positions retain their shared Layout ownership.
+
+The view reads only received `AZS_ZONE.heroic`, `AZS_ZONE.affixes` and
+`AZS_ZONE_UPDATED` after the timer controller's phase check. It preserves the
+published English-key order and does not calculate a rotation from difficulty,
+date or zone. Empty, unavailable or non-Heroic snapshots hide the row. Unknown
+future keys retain their exact label and use the native skull inside the same
+rim, without borrowing another affix's description. Duplicate keys display once.
+
+`AZSZONE` clears old presentation and schedules acceptance after native parsing
+and the existing new-run handshake. Observed run regressions, inactive phases,
+world leave/logout and reload retire the accepted snapshot. A retained old
+packet stays blocked until its identity/stamp changes or a fresh zone receipt
+arrives. Disabling the custom timer hides its affixes, while re-enabling can use
+the current run's snapshot. Shared tooltip hiding/editing/placement and owned
+hover cleanup apply; polling never reclaims a foreign tooltip.
+
+Each kind lazily adds one 22-unit hover frame and two textures: its prepared
+circular image and the existing jewelry rim. Five-unit gaps and a three-unit
+top offset center the row on the bar. One 256-by-64 lossless BLP atlas holds
+the three selected images; the separate rim uses `(664,56)-(736,128)` from
+`jewelry/Frame.blp` and RGB `(237,35,38)/255`. No label, animation, updater,
+event registration, setting or SavedVariable is added. Hidden rows allocate
+and paint nothing; successful bindings, labels, UVs and anchors are reused.
+Failed artwork retries only on the existing tenth-second refresh.
+
+[Artwork sources and preparation](../third_party/HeroicAffixes-ARTWORK.md#selected-04-and-runtime-preparation)
+and [PERFORMANCE.md](PERFORMANCE.md#heroic-affix-row--2026-10-28) record the
+source-level costs. CI-only mocks cover the extracted production view and
+shared tooltip registry. Local work used source/diff review, artwork preparation
+and pinned formatting; live delivery, hover appearance and rendering remain
+unverified.
+
 ## Update work
 
 Caption formatting keeps only the latest rounded native times and final labels.

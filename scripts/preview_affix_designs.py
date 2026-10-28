@@ -28,7 +28,7 @@ DESIGNS = [
     ("Familiar affix marks", "cutout", "ability_toughness", "Spell_Shadow_BloodBoil", "Spell_Fire_FelFlameRing_RED"),
     ("Battle cry", "round", "Ability_Warrior_BattleShout", "Spell_DeathKnight_BloodBoil", "Ability_FelArakkoa_FelDetonation_Red"),
     ("Command and blood", "cutout", "Ability_Warrior_CommandingShout", "Ability_DeathKnight_RoilingBlood", "Ability_FelArakkoa_FelDetonation_Green"),
-    ("Rally and rupture", "gold", "Ability_Warrior_RallyingCry", "Ability_IronMaidens_BloodRitual", "Ability_IronMaidens_DetonationSequence"),
+    ("Rally and rupture", "jewelry_red", "Ability_Warrior_RallyingCry", "Ability_IronMaidens_BloodRitual", "Ability_IronMaidens_DetonationSequence"),
     ("Dragon fire", "cutout", "Ability_Warrior_DragonRoar", "Ability_IronMaidens_CorruptedBlood", "Ability_Hunter_ExplosiveShot"),
     ("Rage and ritual", "round", "Ability_Warrior_InnerRage", "Ability_IronMaidens_MaraksBloodcalling", "Spell_Fire_Fireball"),
     ("Shield and burst", "silver", "Ability_Warrior_ShieldWall", "Ability_IronMaidens_WhirlofBlood", "Spell_Fire_SelfDestruct"),
@@ -86,11 +86,12 @@ def round_mask(size, feather=0):
     return mask.resize((size, size), Image.Resampling.LANCZOS)
 
 
-def rim(size):
+def rim(size, jewelry=False):
     # The existing pet crop keeps its round contour without square shadows.
     width, height, levels = blp_bgra_levels((ROOT / "media/tex/jewelry/Frame.blp").read_bytes())
     image = Image.frombytes("RGBA", (width, height), levels[0], "raw", "BGRA")
-    image = image.crop((576, 56, 648, 128)).resize((size, size), Image.Resampling.LANCZOS)
+    rectangle = (664, 56, 736, 128) if jewelry else (576, 56, 648, 128)
+    image = image.crop(rectangle).resize((size, size), Image.Resampling.LANCZOS)
     red, green, blue, alpha = image.split()
     light = ImageChops.lighter(ImageChops.lighter(red, green), blue)
     image = Image.merge("RGBA", tuple(light.point(lambda value, channel=channel: round(value * channel / 255))
@@ -143,13 +144,13 @@ def symbol(name, style, size=112):
         source.putdata(rgba)
     mask = round_mask(size, 11 if style == "cutout" else 0)
     source.putalpha(ImageChops.multiply(source.getchannel("A"), mask))
-    if style in ("gold", "silver"):
+    if style in ("gold", "silver", "jewelry_red"):
         canvas = Image.new("RGBA", (size, size))
         icon_size = round(size * 34 / 39)
         icon = source.resize((icon_size, icon_size), Image.Resampling.LANCZOS)
         margin = (size - icon_size) // 2
         canvas.alpha_composite(icon, (margin, margin))
-        canvas.alpha_composite(rim(size))
+        canvas.alpha_composite(rim(size, style == "jewelry_red"))
         return canvas
     return source
 
@@ -197,7 +198,7 @@ def card(number, title, style, icons):
         x = 450 + (index - 1) * 78
         image.alpha_composite(icon.resize((64, 64), Image.Resampling.LANCZOS), (x - 32, 174))
         draw.text((x, 263), LABELS[index], font=font(13), fill=(236, 234, 225), anchor="mm")
-    treatment = {"cutout": "Transparent artwork / red silhouette outline", "round": "Round icons / red outline", "gold": "Metal rim / red outline", "silver": "Metal rim / red outline", "cutout_rim": "01 transparent artwork / red circular rim"}[style]
+    treatment = {"cutout": "Transparent artwork / red silhouette outline", "round": "Round icons / red outline", "gold": "Metal rim / red outline", "silver": "Metal rim / red outline", "jewelry_red": "Selected 04 / jewelry ring tinted red", "cutout_rim": "01 transparent artwork / red circular rim"}[style]
     draw.text((450, 318), treatment, font=font(20), fill=(214, 221, 219), anchor="mm")
     draw.text((450, 349), "STATIC PROPOSAL  /  all three shown for comparison", font=font(13), fill=(133, 150, 149), anchor="mm")
     return image
@@ -211,7 +212,7 @@ def html(records):
         cards.append(f'<article id="design-{number}"><h2>{number:02d} — {item["title"]}</h2><a href="{number:02d}.png"><img src="{number:02d}.png" alt="{item["title"]}: Bolstering, Sanguine, Explosive"></a><div class="transparent"><img src="{number:02d}-icons.png" alt="Transparent icon artwork"></div><p>Source artwork: {links}</p></article>')
     return '''<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>21 red-outlined Heroic affix icon proposals</title><style>
     *{box-sizing:border-box}body{margin:0;background:#101718;color:#e9efed;font:16px system-ui}header{padding:28px;max-width:1250px;margin:auto}h1{margin:0 0 12px}p{line-height:1.6}a{color:#e1c28a}main{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,460px),1fr));gap:22px;max-width:1500px;padding:0 24px 40px;margin:auto}article{border:1px solid #3b4845;border-radius:14px;overflow:hidden;background:#1b2526}h2{font-size:19px;margin:18px}article>a>img{display:block;width:100%}.transparent{margin:12px 18px;background:repeating-conic-gradient(#687268 0 25%,#43524a 0 50%) 50%/20px 20px;border-radius:8px;padding:8px;text-align:center}.transparent img{display:block;width:min(100%,400px);height:auto;margin:auto}article p{margin:18px;font-size:13px}.hint{color:#a9bbb4}button{background:#e1c28a;border:0;border-radius:7px;padding:9px 14px;font:inherit;cursor:pointer}
-    </style><header><h1>21 red-outlined Heroic affix icon designs</h1><p>Sets <b>01–20</b> now have red outlines. <b><a href="#design-21">21</a></b> uses #01’s transparent artwork inside red circular rims. Every set shows <b>Bolstering → Sanguine → Explosive</b>, centered below the same timer. No square backgrounds. The second strip exposes actual transparency.</p><p class="hint">Custom visual proposals using Blizzard artwork from the verified Shadowlands 9.2.7 texture mirror. These are not official retail affix sets or game captures. The three icons are shown together for comparison; the game will show only the run’s published affixes.</p><button onclick="document.querySelectorAll('.transparent').forEach(e=>e.style.background=e.style.background?'':'#d1d5cf')">Toggle transparency background</button><p><a href="overview.png">All twenty-one overview</a> · <a href="ARTWORK.md">Source and adaptation notes</a></p></header><main>''' + "\n".join(cards) + "</main></html>\n"
+    </style><header><h1>21 red-outlined Heroic affix icon designs</h1><p><b>Selected: <a href="#design-4">04 Rally and rupture</a></b>, with the actual jewelry rim tinted red and no extra flat outline. <a href="selected.png">Open selected preview</a>.</p><p>Sets <b>01–20</b> have red borders. <b><a href="#design-21">21</a></b> uses #01’s transparent artwork inside red circular rims. Every set shows <b>Bolstering → Sanguine → Explosive</b>, centered below the same timer. No square backgrounds. The second strip exposes actual transparency.</p><p class="hint">Custom visual proposals using Blizzard artwork from the verified Shadowlands 9.2.7 texture mirror. These are not official retail affix sets or game captures. The three icons are shown together for comparison; the game shows only the run’s published affixes.</p><button onclick="document.querySelectorAll('.transparent').forEach(e=>e.style.background=e.style.background?'':'#d1d5cf')">Toggle transparency background</button><p><a href="overview.png">All twenty-one overview</a> · <a href="ARTWORK.md">Source and adaptation notes</a></p></header><main>''' + "\n".join(cards) + "</main></html>\n"
 
 
 def main():
@@ -223,7 +224,7 @@ def main():
     records, cards = [], []
     for number, (title, style, *names) in enumerate(DESIGNS, 1):
         icons = [symbol(name, style) for name in names]
-        if style != "cutout_rim":
+        if style not in ("cutout_rim", "jewelry_red"):
             icons = [red_outline(icon) for icon in icons]
         strip = Image.new("RGBA", (448, 144))
         for index, icon in enumerate(icons):
@@ -231,9 +232,11 @@ def main():
         strip.save(OUTPUT / f"{number:02d}-icons.png")
         preview = card(number, title, style, icons)
         preview.save(OUTPUT / f"{number:02d}.png")
+        if number == 4:
+            preview.save(OUTPUT / "selected.png")
         cards.append(preview)
         records.append({"number": number, "title": title, "treatment": "red_metal" if style in ("gold", "silver") else style,
-                        "outline": "red circular rim around original 01 transparent artwork" if style == "cutout_rim" else "red icon outline",
+                        "outline": "neutral jewelry rim tinted red" if style == "jewelry_red" else "red circular rim around original 01 transparent artwork" if style == "cutout_rim" else "red icon outline",
                         "sources": {key: metadata[name] for key, name in zip(LABELS, names)}})
     overview = Image.new("RGB", (2400, math.ceil(len(cards) / 4) * 247), (19, 24, 25))
     for index, preview in enumerate(cards):

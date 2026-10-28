@@ -308,3 +308,15 @@ removal; hidden allocation/polling; shared display settings; receipt retirement;
 world/reload/reset cleanup and row-pool reuse. Metadata learning runs only for
 changed accepted publications. The fixture and runner remain outside the
 runtime manifest, run only in CI and do not prove live delivery or rendering.
+
+## Heroic affix view scenarios
+
+`ui_run_affixes_spec.lua` uses the extracted production `CreateRunAffixes`
+factory, shared tooltip registry and generated native captions against fake
+widgets/snapshots. Eight scenarios cover ordered centering, the exact neutral
+jewelry crop and red tint, hidden/unchanged work, missing or non-Heroic data,
+unknown keys, receipt retirement, retry cadence, pool reuse, editing/Tooltip
+visibility, foreign ownership and all fourteen native name/description sets.
+The existing required job runs the fixture; it is not shipped or run locally.
+This isolates the view boundary, rather than executing the full timer/game or
+proving native packet delivery and appearance.

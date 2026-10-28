@@ -18,6 +18,13 @@ CODES = ["en", "pl", "cs", "de", "pt", "es", "fr", "ro", "tr", "ru", "uk", "zh",
 SOURCE_SHA256 = "22f7938eb4f99f2857dc091b1c57c147bd848eaabfeaa81e444c0a3393ca8150"
 SPELL_NAMES_SHA256 = "80ac3217660a02020b3e09f1ce93bfaa6ba89abd9a9d62405b9f70114fd6d46c"
 MARKS_KEYS = ("marks.gained", "marks.earned")
+AFFIXES_SHA256 = "08f8c58d6967b94598c56b822a1e6b323a52924a299a6df70ef6055ca839b8cd"
+AFFIX_KEYS = (
+    "Bolstering", "Sanguine", "Explosive",
+    "A death makes the enemies near it tougher and stronger, stacking.",
+    "A slain elite leaves a pool that heals enemies standing in it.",
+    "Orbs come out of the horde: only direct hits hurt them, so kill them before they burst.",
+)
 
 
 def lua_string(text):
@@ -129,11 +136,11 @@ def refresh_spell_names(client, metadata):
     print("Prepared spell-name aliases for " + str(len(counts)) + " languages from client SHA-256 " + SPELL_NAMES_SHA256)
 
 
-def refresh_marks(client, metadata):
-    """Add only reviewed marks templates; preserve all other runtime catalogs."""
+def refresh_native_templates(client, metadata, keys, fingerprint, subject):
+    """Prepare reviewed native captions without replacing unrelated catalogs."""
     from generate_loot_icons import Native
 
-    catalogs = Native(client, SOURCE_SHA256).catalogs()
+    catalogs = Native(client, fingerprint).catalogs()
     output = ROOT / "localization/data.lua"
     source = output.read_text(encoding="utf-8")
     prepared = {}
@@ -141,13 +148,13 @@ def refresh_marks(client, metadata):
     def replace(match):
         code, body = match[1], match[2]
         if code not in catalogs or code in prepared:
-            raise ValueError("Review runtime languages before preparing marks captions.")
-        values = {key: catalogs[code][key] for key in MARKS_KEYS}
+            raise ValueError("Review runtime languages before preparing " + subject + " captions.")
+        values = {key: catalogs[code][key] for key in keys}
         prepared[code] = values
 
         def native_block(native):
             entries = native[1]
-            for key in MARKS_KEYS:
+            for key in keys:
                 entries = re.sub(r"^            \[" + re.escape(lua_string(key)) + r"\] = .*\n", "", entries, flags=re.MULTILINE)
             additions = "".join("            [" + lua_string(key) + "] = " + lua_string(value) + ",\n" for key, value in values.items())
             return "        native = {\n" + additions + entries + "        },"
@@ -159,11 +166,19 @@ def refresh_marks(client, metadata):
 
     result = re.sub(r"^    (\w+) = \{\n(.*?)^    \},$", replace, source, flags=re.MULTILINE | re.DOTALL)
     if set(prepared) != set(CODES):
-        raise ValueError("Review the fourteen-language marks catalog population.")
+        raise ValueError("Review the fourteen-language " + subject + " catalog population.")
     output.write_text(result, encoding="utf-8")
     if metadata:
-        metadata.write_text(json.dumps({"source_sha256": SOURCE_SHA256, "catalogs": prepared}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    print("Prepared marks templates for " + str(len(prepared)) + " languages from client SHA-256 " + SOURCE_SHA256)
+        metadata.write_text(json.dumps({"source_sha256": fingerprint, "catalogs": prepared}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    print("Prepared " + subject + " templates for " + str(len(prepared)) + " languages from client SHA-256 " + fingerprint)
+
+
+def refresh_marks(client, metadata):
+    refresh_native_templates(client, metadata, MARKS_KEYS, SOURCE_SHA256, "marks")
+
+
+def refresh_affixes(client, metadata):
+    refresh_native_templates(client, metadata, AFFIX_KEYS, AFFIXES_SHA256, "affix")
 
 
 def generate(client):
@@ -241,9 +256,12 @@ if __name__ == "__main__":
     refresh = parser.add_mutually_exclusive_group()
     refresh.add_argument("--refresh-spell-names-only", action="store_true", help="Refresh icon aliases from the separately pinned client without replacing captions/effects.")
     refresh.add_argument("--refresh-marks-only", action="store_true", help="Refresh only the two native marks templates from the reviewed Heroic update.")
+    refresh.add_argument("--refresh-affixes-only", action="store_true", help="Prepare the six reviewed native affix names/descriptions from 0.125.0.")
     parser.add_argument("--metadata", type=Path, help="Optional data-preparation receipt for a targeted refresh.")
     arguments = parser.parse_args()
-    if arguments.refresh_marks_only:
+    if arguments.refresh_affixes_only:
+        refresh_affixes(arguments.client, arguments.metadata)
+    elif arguments.refresh_marks_only:
         refresh_marks(arguments.client, arguments.metadata)
     elif arguments.refresh_spell_names_only:
         refresh_spell_names(arguments.client, arguments.metadata)

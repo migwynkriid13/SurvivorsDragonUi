@@ -12,7 +12,9 @@ comma-separated string of English keys, such as `sanguine,explosive`, in native
 order regardless of UI language. Empty means no affixes in the received
 snapshot; nil means unavailable. Display labels can be localized separately;
 unknown keys must remain acceptable. There is no affix getter or live mechanic
-timer. This change documents the fields without adding an affix display.
+timer. The run timer's centered affix row now uses the received list with the
+selected #04 artwork and red-tinted jewelry rims. Hover text uses the native
+names/descriptions in all fourteen catalogs. See [RUN-TIMER.md](RUN-TIMER.md#heroic-affixes).
 
 `AZSTOTEMS` publishes `AZS_TOTEMS` and its `AZS_TOTEMS_UPDATED` receipt stamp.
 `AZS_GetTotems([key])` returns fresh rows grouped by exact ability key, with

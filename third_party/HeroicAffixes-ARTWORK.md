@@ -4,8 +4,9 @@ Twenty-one numbered proposals show Bolstering, Sanguine and Explosive together,
 centered below the same sample run timer. Sets 01–20 use different trios of real
 WoW pictures, now with red outlines. Set 21 repeats 01's original transparent
 symbols inside thin red circular rims. These are custom visual associations,
-not a claim that Blizzard used these sets for Mythic+ affixes. No affix display
-or new runtime asset is installed by this design study.
+not a claim that Blizzard used these sets for Mythic+ affixes. The user selected
+**04 Rally and rupture**, with the existing jewelry rim tinted red, for the
+runtime affix row. The other proposals remain design references.
 
 The local [gallery](../docs/designs/heroic-affixes/index.html),
 [overview](../docs/designs/heroic-affixes/overview.png) and five comparison sheets
@@ -62,11 +63,15 @@ an opaque square backing or a square border.
   original source transparency or a retail mask API.
 - **Round:** an antialiased circular alpha mask removes the square corners.
   RGB and native interior shading are retained.
-- **Metal rim:** the former gold/silver proposals now reuse the existing SDUI
+- **Metal rim:** the unselected former gold/silver proposals reuse the existing SDUI
   pet rim, `(576, 56, 648, 128)` in `media/tex/jewelry/Frame.blp`, tinted red
   through its maximum RGB channel while retaining the authored alpha and
   highlight structure. This crop excludes the square jewelry shadows. The
   underlying source notices remain in [Jewelry-ARTWORK.md](Jewelry-ARTWORK.md).
+- **Selected 04:** the original neutral jewelry crop at
+  `(664,56)-(736,128)` receives the same RGB vertex multiplication as the
+  existing jewelry quality-color path, with red `(237,35,38)/255`. The full
+  native alpha and metal shading remain, without another silhouette outline.
 - **Red outlines, sets 01–20:** the 112-pixel artwork receives five pixels of
   clear padding. Its alpha at or above 56 defines support; a nine-pixel maximum
   filter expands that support by four pixels. Subtracting the support and
@@ -83,6 +88,30 @@ from the sample timer. All twenty-one composed proposals and their regenerated
 overview were inspected as images. Source images, the preparation script,
 receipts and previews remain outside `packaging/runtime-files.json`.
 
+## Selected 04 and runtime preparation
+
+The selected pictures are `ICONS/Ability_Warrior_RallyingCry.PNG` for Bolstering,
+`ICONS/Ability_IronMaidens_BloodRitual.PNG` for Sanguine and
+`ICONS/Ability_IronMaidens_DetonationSequence.PNG` for Explosive, from the pinned
+9.2.7 mirror above. These are user-selected display symbols, with no attack,
+damage or mechanic ownership implied. Their original bytes and hashes remain
+in the source manifest.
+
+`scripts/prepare_affix_art.py` reads proposal 04 from the shared design list,
+removes each four-pixel source margin, retains the full interior's proportions
+and alpha, and applies an antialiased circle. It packs three 64-square cells
+at x=0,64,128 on one transparent 256-by-64 canvas. Only the resulting
+`media/tex/timer/Affixes.blp` joins the runtime manifest. Lossless BLP conversion
+uses the existing client-format preparer, without color quantization or a
+runtime mask/portrait dependency. No source image, generator, preview or
+external font is shipped.
+
+[affix-selected-art.json](affix-selected-art.json) records the exact source
+crops, native atlas cells, original/final hashes and the reused neutral jewelry
+rim/tint. The ring stays a separate cached image, preserving the source alpha
+and native vertex-color behavior. The run module's artwork notice retains
+Blizzard ownership; no upstream addon software is copied.
+
 ## Rights and limits
 
 World of Warcraft artwork is copyright Blizzard Entertainment. Public hosting
@@ -91,7 +120,8 @@ blanket redistribution grant for Blizzard textures. Existing ring notices do
 not relicense the underlying Blizzard images. No source-addon implementation
 or external font is imported into the runtime.
 
-No runtime texture conversion, local tests, syntax/standalone validation,
-addon execution or game startup was performed. These proposals do not prove
+Only static artwork preparation and source review were performed locally;
+no local tests, syntax/standalone validation, addon execution or game startup
+was performed. These proposals do not prove
 packaged-client rendering, hover behavior, pixel parity or rendering cost.
-The selected proposal will need its own runtime preparation and lifecycle work.
+CI-only mocks cover the production affix view's lifecycle and work boundaries.
