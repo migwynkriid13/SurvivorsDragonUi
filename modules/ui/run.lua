@@ -659,19 +659,52 @@ DFRL:NewMod("RunTimers", 5, function()
 
     local function RefreshTimerCaptions()
         local mode = runClock.mode or "Regular"
-        local text = ""
-        if runClock.currentTime then
-            if DFRL.display.Get("runCurrent" .. mode) then text = runClock.currentTime end
-            if mode == "Regular" and DFRL.display.Get("runMaximumRegular") then
-                text = text ~= "" and text .. " / " .. runClock.maximumTime or runClock.maximumTime
+        local currentEnabled = DFRL.display.Get("runCurrent" .. mode)
+        local maximumEnabled = mode == "Regular" and DFRL.display.Get("runMaximumRegular")
+        local textEnabled = DFRL.display.Get("runText" .. mode)
+        local countdownEnabled = bossClock.option and DFRL.display.Get(bossClock.option) or false
+        local hasTime = runClock.seconds ~= nil
+        local seconds = currentEnabled and runClock.seconds or nil
+        local maximum = maximumEnabled and runClock.maximum or nil
+        local remaining = countdownEnabled and bossClock.remaining or nil
+        local language = DFRL.locale.code
+        local cache = runClock.captionCache or {}
+        runClock.captionCache = cache
+        if
+            not cache.ready
+            or cache.mode ~= runClock.mode
+            or cache.hasTime ~= hasTime
+            or cache.seconds ~= seconds
+            or cache.maximum ~= maximum
+            or cache.remaining ~= remaining
+            or cache.currentEnabled ~= currentEnabled
+            or cache.maximumEnabled ~= maximumEnabled
+            or cache.textEnabled ~= textEnabled
+            or cache.countdownEnabled ~= countdownEnabled
+            or cache.language ~= language
+        then
+            local text, countdown = "", ""
+            if hasTime then
+                if seconds ~= nil then text = Clock(seconds) end
+                if maximum ~= nil then
+                    local limit = Clock(maximum)
+                    text = text ~= "" and text .. " / " .. limit or limit
+                end
+                if textEnabled then text = DFRL.locale.Text("RUN") .. (text ~= "" and " " .. text or "") end
             end
-            if DFRL.display.Get("runText" .. mode) then
-                text = DFRL.locale.Text("RUN") .. (text ~= "" and " " .. text or "")
+            if remaining ~= nil then
+                local time = string.format("%d:%02d", math.floor(remaining / 60), math.mod(remaining, 60))
+                countdown = string.format(DFRL.locale.Text("BOSS IN: %s"), time)
             end
+            cache.text, cache.countdown = text, countdown
+            cache.mode, cache.hasTime, cache.seconds, cache.maximum, cache.remaining =
+                runClock.mode, hasTime, seconds, maximum, remaining
+            cache.currentEnabled, cache.maximumEnabled, cache.textEnabled, cache.countdownEnabled =
+                currentEnabled, maximumEnabled, textEnabled, countdownEnabled
+            cache.language, cache.ready = language, true
         end
-        local changed = SetClockLabelText(runClock, text, text ~= "")
-        local countdown = bossClock.option and DFRL.display.Get(bossClock.option) and bossClock.countdown or ""
-        if SetClockLabelText(bossClock, countdown, countdown ~= "") then changed = true end
+        local changed = SetClockLabelText(runClock, cache.text, cache.text ~= "")
+        if SetClockLabelText(bossClock, cache.countdown, cache.countdown ~= "") then changed = true end
         if changed then UpdateRunFontBounds() end
     end
 
@@ -705,8 +738,18 @@ DFRL:NewMod("RunTimers", 5, function()
     }
 
     local function ClearClockCaptions()
-        runClock.mode, runClock.currentTime, runClock.maximumTime = nil, nil, nil
-        bossClock.option, bossClock.countdown = nil, nil
+        local cache = runClock.captionCache
+        if
+            runClock.mode ~= nil
+            or runClock.seconds ~= nil
+            or runClock.maximum ~= nil
+            or bossClock.remaining ~= nil
+            or (cache and (cache.text ~= "" or cache.countdown ~= ""))
+        then
+            runClock.captionCache = nil
+        end
+        runClock.mode, runClock.seconds, runClock.maximum = nil, nil, nil
+        bossClock.option, bossClock.remaining = nil, nil
         RefreshTimerCaptions()
     end
 
@@ -721,18 +764,16 @@ DFRL:NewMod("RunTimers", 5, function()
         elseif received and state.endl == 0 then
             mode = "Regular"
         end
-        runClock.mode, runClock.currentTime = mode, Clock(seconds)
-        runClock.maximumTime = mode ~= "Endless" and Clock(maximum) or nil
-        local countdown = ""
+        runClock.mode, runClock.seconds = mode, math.floor(seconds)
+        runClock.maximum = mode ~= "Endless" and math.floor(maximum) or nil
+        local remaining
         if mode and IsNumber(state.nb) then
             -- Both modes supply pause-aware nb. Do not derive a countdown from
             -- schedules, the zone limit, boss deaths or a private deadline.
-            local remaining = math.ceil(state.nb)
-            local time = string.format("%d:%02d", math.floor(remaining / 60), math.mod(remaining, 60))
-            countdown = string.format(DFRL.locale.Text("BOSS IN: %s"), time)
+            remaining = math.ceil(state.nb)
         end
-        bossClock.option = countdown ~= "" and "bossCountdown" .. mode or nil
-        bossClock.countdown = countdown
+        bossClock.option = remaining ~= nil and "bossCountdown" .. mode or nil
+        bossClock.remaining = remaining
         RefreshTimerCaptions()
         if fontEditor and fontEditor:IsShown() then RefreshClockLabel(fontSampleClock) end
     end

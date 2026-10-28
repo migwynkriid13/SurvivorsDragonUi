@@ -48,6 +48,23 @@ All choices preview immediately and save only with Confirm. Cancel, world
 leave, logout and reload discard unconfirmed choices. Both full resets restore
 the defaults above. Changing a choice does not move or scale the timer.
 
+## Update work
+
+Caption formatting keeps only the latest rounded native times and final labels.
+Unchanged values, options and language reuse those labels; disabled components
+skip formatting. Option previews rebuild immediately from the latest native
+values, while the existing visible refresh still checks scale and retries
+unavailable font metrics. Retirement clears the accepted inputs without
+recreating an already-empty formatting record on every poll.
+The formatting record uses `captionCache`; the original `caption` field remains
+the optional string used for localized font fallback during construction and
+font previews.
+
+Each blue-foam paint shares one current bar-height sample across its sixteen
+pieces. Clipping, UVs, artwork and animation cadence remain unchanged. These
+reduce source-level CPU work; the controlled timer-off result and remaining
+native rendering leads are recorded in [PERFORMANCE.md](PERFORMANCE.md#movement-stutter-investigation--2026-10-28).
+
 ## Width and encounter rows
 
 The Run timer and Boss health Layout outlines have left/right center handles for width only, preserving font, icon and health-pill height. Their 296-unit outer defaults and 280-unit fills stay unchanged; side widths range from 120 to 1200, independent of proportional corner scaling. Width is saved in the existing Layout geometry with normal Confirm, Cancel/discard, profiles and reset behavior.

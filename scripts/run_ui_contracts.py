@@ -46,6 +46,11 @@ def main():
         navigation_distance = extract_source("modules/map/waypoints.lua", ["UpdateDistance"])
         xp_glow = extract_source("modules/xprep/xprep.lua", ["PaintGlow"])
         run_foam = extract_source("modules/ui/run.lua", ["DrawFoam", "UpdateBlueFoam"])
+        run_captions = extract_source("modules/ui/run.lua", [
+            "IsNumber", "Clock", "ApplyFont", "NewClockLabel", "RefreshClockLabel", "StyleClockLabel",
+            "SetClockLabelText", "RefreshTimerCaptions", "ClearClockCaptions", "UpdateClockCaptions",
+        ])
+        run_captions = run_captions.rsplit("\nreturn ", 1)[0] + "\nreturn { New = NewClockLabel, Update = UpdateClockCaptions, Refresh = RefreshTimerCaptions, Style = StyleClockLabel, Clear = ClearClockCaptions }\n"
     except RuntimeError as error:
         print(error, file=sys.stderr)
         return 1
@@ -61,6 +66,7 @@ def main():
             ("navigation-distance-source.lua", navigation_distance, "ui_navigation_distance_spec.lua"),
             ("xp-glow-source.lua", xp_glow, "ui_xp_perf_spec.lua"),
             ("run-foam-source.lua", run_foam, "ui_run_foam_perf_spec.lua"),
+            ("run-captions-source.lua", run_captions, "ui_run_captions_perf_spec.lua"),
         ):
             seam = Path(folder) / name
             seam.write_text(source, encoding="utf-8")
