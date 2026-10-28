@@ -106,8 +106,13 @@ end
             return json.loads(result.stdout)
         body = 'local function Paint() return "unchanged" end'
         self.assertEqual(extract('-- čínština\n' + body, ["Paint"]), body + '\nreturn Paint\n')
+        constants = 'local LEFT, RIGHT = 1, 2'
+        self.assertEqual(extract(constants, ["RIGHT"]), constants + '\nreturn RIGHT\n')
+        self.assertEqual(extract(constants, ["RIGHT", "LEFT"]), constants + '\nreturn LEFT\n')
         with self.assertRaises(subprocess.CalledProcessError):
             extract(body + '\n' + body, ["Paint"])
+        with self.assertRaises(subprocess.CalledProcessError):
+            extract(constants + '\n' + constants, ["RIGHT"])
 
 
 if __name__ == "__main__":

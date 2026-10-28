@@ -308,18 +308,23 @@ function extract(source, names) {
   const tree = parse(source);
   const found = new Map(names.map((name) => [name, []]));
   walk(tree, (node) => {
-    const name =
+    const declared =
       node.type === 'FunctionDeclaration' && node.isLocal
-        ? node.identifier?.name
-        : node.type === 'LocalStatement' && node.variables.length === 1
-          ? node.variables[0].name
-          : null;
-    if (found.has(name)) found.get(name).push(node);
+        ? [node.identifier?.name]
+        : node.type === 'LocalStatement'
+          ? node.variables.map((variable) => variable.name)
+          : [];
+    for (const name of declared) {
+      if (found.has(name)) found.get(name).push(node);
+    }
   });
   const chunks = [];
+  const included = new Set();
   for (const [name, nodes] of found) {
     if (nodes.length !== 1)
       throw Error(`UI test seam ${name}: expected one production declaration, got ${nodes.length}`);
+    if (included.has(nodes[0])) continue;
+    included.add(nodes[0]);
     chunks.push(
       Buffer.from(source, 'utf8')
         .subarray(...nodes[0].range)
