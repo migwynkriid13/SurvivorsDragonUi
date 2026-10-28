@@ -781,6 +781,40 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local iconTooltip, iconTooltipParent
     local ICON_SCAN_INTERVAL = 0.35
     local ICON_DEBUFF_LIMIT = 16
+    -- Accepted metadata changes retire this bounded generation of final answers.
+    local SOURCE_ICON_CACHE_LIMIT = 256
+    local resolvedIcons, resolvedIconOrder = {}, {}
+    local resolvedIconCount, resolvedIconNext, resolvedIconLanguage = 0, 0, nil
+
+    local function ClearResolvedIcons()
+        if resolvedIconCount == 0 then return end
+        resolvedIcons, resolvedIconOrder = {}, {}
+        resolvedIconCount, resolvedIconNext = 0, 0
+    end
+    local function RememberResolvedIcon(name, school, texture)
+        local key = school or false
+        local bySchool = resolvedIcons[name]
+        local record = bySchool and bySchool[key]
+        if not record then
+            resolvedIconNext = math.mod(resolvedIconNext, SOURCE_ICON_CACHE_LIMIT) + 1
+            local retired = resolvedIconOrder[resolvedIconNext]
+            if retired then
+                local previous = resolvedIcons[retired.name]
+                previous[retired.school] = nil
+                if not next(previous) then resolvedIcons[retired.name] = nil end
+                bySchool = resolvedIcons[name]
+            else
+                resolvedIconCount = resolvedIconCount + 1
+            end
+            bySchool = bySchool or {}
+            resolvedIcons[name] = bySchool
+            record = { name = name, school = key }
+            bySchool[key], resolvedIconOrder[resolvedIconNext] = record, record
+        end
+        record.texture = texture or FALLBACK_ICON
+        record.missingAt = texture == nil and GetTime() or nil
+        return record.texture
+    end
 
     local function TextureKey(texture)
         if type(texture) ~= "string" or texture == "" then return nil end
@@ -855,6 +889,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         else
             cache[name] = texture
         end
+        if cache[name] ~= previous then ClearResolvedIcons() end
     end
 
     -- The accepted pet view supplies exact native localized names and its
@@ -862,6 +897,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local summonIcons, summonLanguage = {}, nil
     local function ClearSummonIcons()
         summonIcons, summonLanguage = {}, nil
+        ClearResolvedIcons()
     end
     local function SummonIcons()
         if summonLanguage ~= DFRL.locale.code then
@@ -876,6 +912,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local itemIcons, itemRetryAt, equipmentScanAt, itemLanguage = {}, {}, nil, nil
     local function ClearItemIcons()
         itemIcons, itemRetryAt, equipmentScanAt, itemLanguage = {}, {}, nil, nil
+        ClearResolvedIcons()
     end
     local function ItemTexture(value)
         if type(value) ~= "string" or value == "" then return end
@@ -944,6 +981,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local function DirtySpellTextures()
         if not spellTexturesDirty then spellTextures = {} end
         spellTexturesDirty, spellTexturesRetryAt = true, nil
+        ClearResolvedIcons()
     end
     DFRL.locale.Listen(DirtySpellTextures)
     local function ResetLearnedSpellTextures()
@@ -1112,6 +1150,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         end
         spellTextures, spellTexturesDirty = rebuilt, false
         spellTexturesRetryAt = pendingMetadata and GetTime() + 1 or nil
+        ClearResolvedIcons()
     end
 
     local function NativeItemIcon(name)
@@ -1122,10 +1161,22 @@ DFRL:NewMod("NameplateCombatText", 6, function()
 
     local function CombatIcon(info)
         if info.spell and info.spell ~= "" then
+            if resolvedIconLanguage ~= DFRL.locale.code then
+                ClearResolvedIcons()
+                resolvedIconLanguage = DFRL.locale.code
+            end
             RebuildSpellTextures()
             local texture = spellTextures[info.spell]
             if not texture then
                 RefreshLearnedSpellTextures()
+                local bySchool = resolvedIcons[info.spell]
+                local record = bySchool and bySchool[info.school or false]
+                if record then
+                    local now = record.missingAt and GetTime()
+                    if not now or (now >= record.missingAt and now - record.missingAt < 1) then
+                        return record.texture
+                    end
+                end
                 texture = auraSpellTextures[info.spell]
                 -- The game's picker can differ from GetLocale(). Read its
                 -- current optional aliases only for generated metadata tiers.
@@ -1159,9 +1210,10 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                         end
                     end
                 end
+                if texture == nil then texture = ItemIcon(info.spell) end
+                return RememberResolvedIcon(info.spell, info.school, texture)
             end
-            if texture == nil then texture = ItemIcon(info.spell) end
-            return texture or FALLBACK_ICON
+            return texture
         end
         if info.damageType == "autoattack" then return AutoAttackIcon() end
         return FALLBACK_ICON

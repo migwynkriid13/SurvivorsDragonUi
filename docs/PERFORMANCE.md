@@ -223,6 +223,22 @@ easing, native XP reads, source images, layers and region count stay unchanged.
 CI-only extracted production coverage checks fades, resizing, end clipping and
 zero-alpha retirement, without a GPU/FPS claim.
 
+### Final source-icon answers
+
+The shared resolver retains at most 256 final exact-name/school answers in a
+FIFO generation, skipping repeated lower-tier alias/catalog/path resolution.
+Existing dirty scans and pending native retries run before cache hits. Accepted
+learned values/conflicts and existing spellbook, item, summon, language and world
+resets retire the generation; authoritative ambiguity is retained. Unknown
+answers expire after one second so native metadata can recover. Direct spellbook
+hits and current native Melee/equipment artwork retain their own paths.
+
+This adds bounded unsaved display metadata, not gameplay data or drawing regions.
+Consumers keep their hidden/off/icon-off guards and texture assignment retries.
+CI-only controller scenarios cover school refinement, meter ambiguity, stronger
+metadata, failures/recovery, language/world retirement, weapon changes and FIFO
+eviction. Existing learned-talent lifetime and source priority remain unchanged.
+
 ## Loot popup modes and marks — 2026-10-27
 
 The new Loot notifications page uses existing editor artwork: one category

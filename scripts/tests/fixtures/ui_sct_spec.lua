@@ -284,4 +284,160 @@ Test("production combat parser reuses capture descriptors without sharing event 
     )
 end)
 
+Test("final icon cache preserves stronger metadata, ambiguity, language and native equipment", function()
+    local context = SCT(true, function(current, env)
+        current.settings.damageIcons = true
+        env.DFRL.locale.code = "en"
+        env.DFRL.locale.data = {
+            en = { spellNames = { Alias = { "Generated" } } },
+            de = { spellNames = { Alias = { "Other" } } },
+        }
+        env.DFRL.locale.Native = function(value) return value end
+        current.catalogReads = {}
+        env.T.SpellIconCatalog = {
+            locales = { enUS = { Ambiguous = false } },
+            schools = {
+                enUS = {
+                    Nature = { Ambiguous = "Interface\\Icons\\Spell_Nature_Lightning" },
+                    Fire = { Ambiguous = "Interface\\Icons\\Spell_Fire_FireBolt02" },
+                },
+            },
+            game = setmetatable({}, {
+                __index = function(_, name)
+                    current.catalogReads[name] = (current.catalogReads[name] or 0) + 1
+                    if name == "Generated" then return "Interface\\Icons\\Spell_Nature_Thorns" end
+                    if name == "Other" then return "Interface\\Icons\\Spell_Fire_Fire" end
+                end,
+            }),
+        }
+        env.GetNumSpellTabs = function() return 0 end
+        env.GetSpellTabInfo, env.GetSpellName, env.GetSpellTexture = function() end, function() end, function() end
+        env.AZS_GetPhase = function() return "playing" end
+        env.AZS_DEBUFFS, env.AZS_DEBUFFS_UPDATED = {}, current.now
+        env.GetInventoryItemTexture = function(_, slot)
+            assert(slot == 16, "known source triggered an equipment scan")
+            return current.weapon
+        end
+        env.T.ParseNameplateCombatEvent = function(_, message)
+            return {
+                kind = "damage",
+                damageType = "spell",
+                spell = "Ambiguous",
+                school = current.school,
+                sourceName = "Player",
+                targetName = "Enemy",
+                amount = tonumber(message),
+            }
+        end
+    end)
+    local source = context.env.DFRL.sct
+    assert(source.GetSourceIcon("Generated") == "Interface\\Icons\\Spell_Nature_Thorns")
+    source.GetSourceIcon("Generated")
+    assert(context.catalogReads.Generated == 1, "unchanged final icon repeated its catalog traversal")
+    assert(source.GetSourceIcon("Ambiguous") == context.env.T.SourceIconFallback)
+    context.school = "Nature"
+    context:Hit(1)
+    context:Tick(0.1)
+    context.school = "Fire"
+    context:Hit(2)
+    context:Tick(0.1)
+    local schoolIcons = {}
+    for _, label in ipairs(context:Labels()) do
+        for _, object in ipairs(context.objects) do
+            if object.kind == "Texture" and object.parent == label.parent then
+                schoolIcons[label:GetText()] = object:GetTexture()
+            end
+        end
+    end
+    assert(
+        schoolIcons["1"] == "Interface\\Icons\\Spell_Nature_Lightning",
+        "school-free ambiguity hid a refined Nature icon"
+    )
+    assert(schoolIcons["2"] == "Interface\\Icons\\Spell_Fire_FireBolt02", "cached Nature artwork crossed into Fire")
+    assert(
+        source.GetSourceIcon("Ambiguous") == context.env.T.SourceIconFallback,
+        "school refinement leaked into the meter"
+    )
+    source.LearnSummonIcon("Generated", "Interface\\Icons\\Spell_Shadow_SummonImp")
+    assert(
+        source.GetSourceIcon("Generated") == "Interface\\Icons\\Spell_Shadow_SummonImp",
+        "cached catalog outranked new summon metadata"
+    )
+    source.LearnSummonIcon("Generated", "Interface\\Icons\\Spell_Shadow_SummonVoidWalker")
+    assert(source.GetSourceIcon("Generated") == context.env.T.SourceIconFallback, "cache lost summon ambiguity")
+    context.env.AZS_DEBUFFS = { { name = "Generated", icon = "Interface\\Icons\\Spell_Holy_HolyBolt" } }
+    context:Event(context.controller, "CHAT_MSG_ADDON", "AZSDEBUFFS")
+    context:Tick(0.36)
+    assert(
+        source.GetSourceIcon("Generated") == "Interface\\Icons\\Spell_Holy_HolyBolt",
+        "cached ambiguity overrode a stronger observed aura"
+    )
+    assert(source.GetSourceIcon("Alias") == "Interface\\Icons\\Spell_Nature_Thorns")
+    context.env.DFRL.locale.code = "de"
+    context:NotifyLocale()
+    assert(
+        source.GetSourceIcon("Alias") == "Interface\\Icons\\Spell_Fire_Fire",
+        "language change retained an old alias result"
+    )
+    context.weapon = "Interface\\Icons\\INV_Sword_04"
+    assert(source.GetSourceIcon("Melee") == context.weapon)
+    context.weapon = "Interface\\Icons\\INV_Axe_01"
+    assert(source.GetSourceIcon("Melee") == context.weapon, "cache retained an unequipped melee image")
+    context:Event(context.controller, "PLAYER_LEAVING_WORLD")
+    context:Event(context.controller, "PLAYER_ENTERING_WORLD")
+    context.env.AZS_DEBUFFS = {}
+    assert(
+        source.GetSourceIcon("Generated") == "Interface\\Icons\\Spell_Nature_Thorns",
+        "world retirement retained learned or resolved metadata"
+    )
+end)
+
+Test("unknown icon retry remains one second and final cache evicts old identities", function()
+    local context = SCT(true, function(current, env)
+        env.DFRL.locale.code, env.DFRL.locale.data = "en", { en = {} }
+        env.DFRL.locale.Native = function(value) return value end
+        current.catalogReads = {}
+        env.T.SpellIconCatalog = {
+            game = setmetatable({}, {
+                __index = function(_, name)
+                    current.catalogReads[name] = (current.catalogReads[name] or 0) + 1
+                    if string.find(name, "^Source%d+$") then return "Interface\\Icons\\Spell_Nature_Thorns" end
+                end,
+            }),
+        }
+        env.GetNumSpellTabs = function() return 0 end
+        env.GetSpellTabInfo, env.GetSpellName, env.GetSpellTexture = function() end, function() end, function() end
+        env.AZS_GetPhase = function() return "playing" end
+        env.AZS_DEBUFFS, env.AZS_DEBUFFS_UPDATED = {}, current.now
+        env.GetItemInfo = function(name)
+            current.itemReads = (current.itemReads or 0) + 1
+            if current.itemReady then
+                return name, nil, nil, nil, nil, nil, nil, nil, "Interface\\Icons\\INV_Misc_Orb_01"
+            end
+            error("native item metadata is not ready")
+        end
+    end)
+    local source = context.env.DFRL.sct
+    assert(source.GetSourceIcon("Mystery") == context.env.T.SourceIconFallback)
+    source.GetSourceIcon("Mystery")
+    context:Tick(0.5)
+    source.GetSourceIcon("Mystery")
+    assert(context.itemReads == 1 and context.catalogReads.Mystery == 1, "unknown lookup repeated before retry time")
+    context.itemReady = true
+    context:Tick(0.51)
+    assert(
+        source.GetSourceIcon("Mystery") == "Interface\\Icons\\INV_Misc_Orb_01",
+        "negative final cache blocked metadata retry"
+    )
+    source.GetSourceIcon("Mystery")
+    assert(context.itemReads == 2, "settled item metadata repeated a native lookup")
+    for index = 1, 257 do
+        source.GetSourceIcon("Source" .. index)
+    end
+    source.GetSourceIcon("Source257")
+    assert(context.catalogReads.Source257 == 1, "newest icon result was not retained")
+    source.GetSourceIcon("Source1")
+    assert(context.catalogReads.Source1 == 2, "resolved identity cache grew without eviction")
+end)
+
 print("PASS " .. passed .. " SCT lifecycle contracts")
