@@ -118,6 +118,25 @@ class-amulet name or future effect. Other exact native metadata can fill those
 gaps; genuinely unavailable sources keep the neutral fallback and remain
 retryable.
 
+## Spellbook preparation
+
+The shared resolver prepares a dirty native spellbook in chunks of at most four tab/slot/validation steps through
+the existing eligible SCT frame callback. A provisional table stays private until
+the generation completes. Book, language, world and getter changes retire stale
+preparation; no additional updater or saved cache is introduced.
+
+Real combat and visible meter consumers retain a fresh synchronous completion
+fallback when no usable complete generation exists. They never consume a partial
+table, wait for background work, or substitute a weaker icon because preparation
+is unfinished. Original source priority, duplicate-group identity, counts and
+animation lifetime remain. Custom SCT needs this metadata even when visual icons
+are off, because the icon forms part of its exact attack identity. Game/Off and
+hidden MSBT do not warm in the background; meter-only consumers remain on demand.
+
+This reduces optional preparation bursts when frames are available before the
+first real lookup; a cold lookup can still scan the full native book. The exact
+scope and CI-only coverage are recorded in [PERFORMANCE.md](PERFORMANCE.md).
+
 ## Verification boundary
 
 Public/native source inspection, data preparation, manual diffs and pinned

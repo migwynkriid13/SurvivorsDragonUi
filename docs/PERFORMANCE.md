@@ -45,6 +45,81 @@ leave hundreds of expensive texture regions drawing continuously.
   GPU-memory, pixel-parity or FPS measurements. No local tests, standalone
   validation, addon execution or game launch is authorized for this audit.
 
+## Projection reuse and metadata preparation — 2026-10-28
+
+The two changes in this pass share one commit. They reduce duplicate native
+projection calls and spread optional spellbook preparation over existing frame
+callbacks, while preserving current positions, native gameplay data and the
+icons used to identify duplicate combat text.
+
+### Waypoint projection cache
+
+Player position and heading still update at the existing frame cadence. Only a
+successful destination projection can be reused, and only within one synchronous
+`navigation.WithSample` callback. Equal accepted world-coordinate tuples share a
+result even when the HUD and a minimap pin hold different point records. Missing,
+zero, failed or uncertain projections remain retryable. Calls outside a shared
+sample keep their original fresh-read behavior.
+
+The cache is limited to the currently accepted destination rosters supplied by
+`navigation.SetPoints`; roster changes and navigation retirement release prior
+entries. Its coordinate index and records are reused so a settled frame does
+not allocate a new table per pin. Context, getter and map-selection changes
+invalidate reuse, and the existing map-recovery path invalidates the sample
+when it changes selection. No map movement or full-map listener is added.
+
+The boundary is deliberately synchronous. Public benilla's
+[`GetWorldLocMapPosition`](https://github.com/samwhosung/benilla/blob/cdebda36fb4c611ad0a8c35ddc45bf53e4ff1c60/crates/benilla-ui/src/script/worldmap.rs#L884-L911)
+uses the selected continent/zone/direct-area and a host projector. The projector
+can be replaced without changing the Lua function or exposing a revision.
+Map-name equality therefore does not prove that a successful result can survive
+into the next game frame. This implementation does not retain cross-frame
+projection answers or introduce a periodic stale-result window.
+
+For a destination consumed **k** times in a shared callback, successful native
+projection calls fall from **k** to **one**. Distinct destinations still need
+fresh projections each callback. Frame motion, interpolation, map browsing,
+instance/world-coordinate fallback, minimap zoom, timers and native flag
+ownership keep their existing behavior. This is a duplicate-call reduction,
+not a lower projection or drawing rate.
+
+### Chunked spellbook preparation
+
+The existing SCT controller prepares native spellbook metadata in small chunks
+rather than scanning the complete book from settings/mode readiness. Normal
+preparation performs at most **four work steps per rendered callback**: a tab
+header, a spell-name/texture pair or a final shape-validation step. It therefore
+visits at most four spell slots; empty tabs cannot create an unbounded loop. It uses
+one provisional generation and publishes only a completed result; partial data
+cannot become authoritative for icon priority or exact duplicate grouping.
+Native book/language/world changes and getter changes cancel stale preparation.
+Incomplete warm metadata remains private and retries after one second. Optional
+read failures back off without interrupting active text or queued-hit delivery.
+
+An actual SCT or meter consumer still needs an authoritative current result.
+If preparation has not produced a usable complete generation, that call discards
+unfinished work and performs the existing fresh synchronous traversal. It does
+not hold a hit, extend the grouping window, choose a weaker icon while warming
+or shorten any animation. The fallback is necessary: this change does **not**
+claim a strict four-slot bound for every possible icon lookup.
+
+Preparation runs only through the existing eligible SCT controller. Custom SCT
+also resolves icons with visual damage icons off because the resolved icon is
+part of duplicate identity. Game/Off and hidden MSBT do no background preparation;
+a visible meter can still resolve through the shared on-demand path. Completed
+work becomes idle, and missing native metadata retains the existing bounded
+retry behavior. No new updater, event, SavedVariable, learned registry, gameplay
+history, drawing region or asset is added.
+
+CI-only production mocks cover repeated projections, equal-coordinate records,
+map/getter/roster/pass changes, failure/readiness recovery and fresh player
+movement. Resolver mocks cover four-slot preparation, atomic publication,
+invalidation, missing metadata, first-use completion and unchanged hit/icon
+identity. They are authored for GitHub Actions and were not run locally. Local
+work uses source review and pinned formatting only; no local tests, standalone
+validation, addon/game execution or runtime probes ran. No FPS, CPU-time,
+draw-call or visual-parity measurement is claimed.
+
 ## Remaining frame work — 2026-10-28
 
 A second pass reviews every frame path and the interval-gated controllers listed

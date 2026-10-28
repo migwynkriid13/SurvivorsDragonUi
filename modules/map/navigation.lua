@@ -11,9 +11,41 @@ DFRL:NewMod("Navigation", 2, function()
     local samples, seen, width, height = {}, {}, nil, nil
     local sampling, frameSample = false, {}
     local runSample = {}
+    local projections, projectionRows, projectionCells = {}, {}, {}
+    local projectionDirty, projectionPass = true, 0
 
     local function Number(value) return type(value) == "number" and value - value == 0 end
     local function Coordinates(x, y) return Number(x) and Number(y) and x >= 0 and x <= 1 and y >= 0 and y <= 1 end
+    local function ClearProjections()
+        for x, row in pairs(projections) do
+            for y, cell in pairs(row) do
+                row[y] = nil
+                cell.pass, cell.map, cell.getter, cell.selection, cell.u, cell.v = nil, nil, nil, nil, nil, nil
+                table.insert(projectionCells, cell)
+            end
+            projections[x] = nil
+            table.insert(projectionRows, row)
+        end
+        projectionDirty, projectionPass = true, projectionPass + 1
+    end
+    local function IndexProjections()
+        if not projectionDirty then return end
+        for _, list in pairs(points) do
+            if type(list) == "table" then
+                for _, point in ipairs(list) do
+                    if type(point) == "table" and Number(point.x) and Number(point.y) then
+                        local row = projections[point.x]
+                        if not row then
+                            row = table.remove(projectionRows) or {}
+                            projections[point.x] = row
+                        end
+                        if not row[point.y] then row[point.y] = table.remove(projectionCells) or {} end
+                    end
+                end
+            end
+        end
+        projectionDirty = false
+    end
     function navigation.IsRunPhase(phase) return phases[phase] == true end
     function navigation.MinimapLevel(kind) return Minimap:GetFrameLevel() + minimapLevels[kind] end
     function navigation.MinimapSize(minimum)
@@ -40,6 +72,7 @@ DFRL:NewMod("Navigation", 2, function()
         -- Guides and pins share only this synchronous controller pass. Missing
         -- native values retry on its next pass; ordinary callers stay fresh.
         ClearSample()
+        projectionPass = projectionPass + 1
         sampling = true
     end
     function navigation.EndSample() sampling = false end
@@ -50,6 +83,7 @@ DFRL:NewMod("Navigation", 2, function()
         if not ok then error(failure) end
     end
     local function ResetCalibration()
+        ClearProjections()
         identity, expected, realZone, arrow = nil, nil, nil, nil
         samples, seen, width, height = {}, {}, nil, nil
     end
@@ -58,7 +92,10 @@ DFRL:NewMod("Navigation", 2, function()
         ClearSample()
     end
     function navigation.SetPoints(key, list)
-        if points[key] ~= list then frameSample.metricRead = nil end
+        if points[key] ~= list then
+            frameSample.metricRead = nil
+            ClearProjections()
+        end
         points[key] = list
     end
     function navigation.Phase()
@@ -156,6 +193,7 @@ DFRL:NewMod("Navigation", 2, function()
             local ok = pcall(SetMapToCurrentZone)
             if not ok then return end
             frameSample.mapRead, frameSample.selectionRead = nil, nil
+            projectionPass = projectionPass + 1
             selected = Selection()
             expected = selected
         end
@@ -172,15 +210,44 @@ DFRL:NewMod("Navigation", 2, function()
         end
         return x, y
     end
+    local function ProjectWorld(map, x, y)
+        local getter = GetWorldLocMapPosition
+        if type(getter) ~= "function" then return end
+        local cell, selected
+        if sampling then
+            IndexProjections()
+            local row = projections[x]
+            cell = row and row[y]
+            if cell then selected = Selection() end
+            if
+                cell
+                and selected
+                and cell.pass == projectionPass
+                and cell.map == map
+                and cell.getter == getter
+                and cell.selection == selected
+            then
+                return cell.u, cell.v
+            end
+        end
+        -- Projection also depends on a native catalog/direct-area selection
+        -- with no complete Lua revision. Reuse only within this callback.
+        local ok, u, v = pcall(getter, map, x, y)
+        if ok and Coordinates(u, v) and (u ~= 0 or v ~= 0) then
+            if cell and selected then
+                cell.pass, cell.map, cell.getter, cell.selection = projectionPass, map, getter, selected
+                cell.u, cell.v = u, v
+            end
+            return u, v
+        end
+    end
     local function Project(target)
         local zone = Context()
         if not zone or type(target) ~= "table" then return end
         if type(GetWorldLocMapPosition) == "function" then
             if not Number(target.x) or not Number(target.y) then return end
-            -- This native getter checks the world map id and projects onto the
-            -- displayed sheet without changing the user's selected map.
-            local ok, x, y = pcall(GetWorldLocMapPosition, zone.map, target.x, target.y)
-            if ok and Coordinates(x, y) and (x ~= 0 or y ~= 0) then return x, y end
+            local x, y = ProjectWorld(zone.map, target.x, target.y)
+            if x then return x, y end
         end
         -- An unavailable native projection must not discard official map
         -- coordinates on the confirmed current-zone sheet.
@@ -213,10 +280,7 @@ DFRL:NewMod("Navigation", 2, function()
             Sample(point)
         end
     end
-    local function WorldPoint(map, x, y)
-        local ok, mx, my = pcall(GetWorldLocMapPosition, map, x, y)
-        if ok and Coordinates(mx, my) and (mx ~= 0 or my ~= 0) then return mx, my end
-    end
+    local function WorldPoint(map, x, y) return ProjectWorld(map, x, y) end
     local function Measure(point, map)
         if type(point) ~= "table" then return end
         if not Number(point.x) or not Number(point.y) then return end

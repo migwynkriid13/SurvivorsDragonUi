@@ -56,6 +56,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local intakeBuckets = {}
     local spellTextures = {}
     local spellTexturesDirty, spellTexturesRetryAt = true, nil
+    local spellTextureScan = {}
     local recentDamage = {}
     local discoveredChildren = 0
     local combatDiscoveryNeeded = true
@@ -435,6 +436,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     end
 
     local function ResetDisplay()
+        spellTextureScan.work, spellTextureScan.warmRetryAt = nil, nil
         for index = table.getn(activeTexts), 1, -1 do
             ReleaseText(activeTexts[index])
             activeTexts[index] = nil
@@ -1098,6 +1100,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local function DirtySpellTextures()
         if not spellTexturesDirty then spellTextures = {} end
         spellTexturesDirty, spellTexturesRetryAt = true, nil
+        spellTextureScan.source, spellTextureScan.work, spellTextureScan.warmRetryAt = nil, nil, nil
         ClearResolvedIcons()
     end
     DFRL.locale.Listen(DirtySpellTextures)
@@ -1240,33 +1243,150 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         end
     end
 
-    local function RebuildSpellTextures()
+    local function SpellTextureSourceMatches(source)
+        return source
+            and source.tabCount == _G.GetNumSpellTabs
+            and source.tabInfo == _G.GetSpellTabInfo
+            and source.name == _G.GetSpellName
+            and source.texture == _G.GetSpellTexture
+            and source.book == (BOOKTYPE_SPELL or "spell")
+            and source.language == DFRL.locale.code
+    end
+
+    local function CurrentSpellTextureWork(work)
+        return spellTextureScan.work == work
+            and spellTextureScan.source == work.source
+            and SpellTextureSourceMatches(work.source)
+    end
+
+    local function AdvanceSpellTextures(work, limit)
+        local source, steps = work.source, 0
+        if work.tabs == nil then
+            local tabs = source.tabCount()
+            if not CurrentSpellTextureWork(work) then return "changed" end
+            if not IsFiniteNumber(tabs) or tabs < 0 then
+                work.tabs, work.pendingMetadata = 0, true
+            else
+                work.tabs = math.floor(tabs)
+            end
+        end
+        while not limit or steps < limit do
+            if work.tab <= work.tabs then
+                if work.slot == nil then
+                    local _, _, offset, count = source.tabInfo(work.tab)
+                    if not CurrentSpellTextureWork(work) then return "changed" end
+                    if not IsFiniteNumber(offset) or not IsFiniteNumber(count) then work.pendingMetadata = true end
+                    offset, count = offset or 0, count or 0
+                    work.headers[work.tab] = { offset = offset, count = count }
+                    if not IsFiniteNumber(offset) or not IsFiniteNumber(count) or count < 0 then
+                        work.pendingMetadata = true
+                        work.tab = work.tab + 1
+                    elseif count < 1 then
+                        work.tab = work.tab + 1
+                    else
+                        work.slot, work.last = offset + 1, offset + count
+                    end
+                else
+                    local name = source.name(work.slot, source.book)
+                    local texture = source.texture(work.slot, source.book)
+                    if not CurrentSpellTextureWork(work) then return "changed" end
+                    if name and TextureKey(texture) then
+                        work.textures[name] = texture
+                    else
+                        work.pendingMetadata = true
+                    end
+                    work.slot = work.slot + 1
+                    if work.slot > work.last then
+                        work.tab, work.slot = work.tab + 1, nil
+                    end
+                end
+            elseif not limit or work.pendingMetadata then
+                return "complete"
+            elseif work.verify == nil then
+                local tabs = source.tabCount() or 0
+                if not CurrentSpellTextureWork(work) or tabs ~= work.tabs then return "changed" end
+                work.verify = 1
+            elseif work.verify <= work.tabs then
+                local _, _, offset, count = source.tabInfo(work.verify)
+                if not CurrentSpellTextureWork(work) then return "changed" end
+                local header = work.headers[work.verify]
+                if (offset or 0) ~= header.offset or (count or 0) ~= header.count then return "changed" end
+                work.verify = work.verify + 1
+            else
+                return "complete"
+            end
+            steps = steps + 1
+        end
+    end
+
+    local function RebuildSpellTextures(limit, restarted)
+        local source = spellTextureScan.source
+        if not SpellTextureSourceMatches(source) then
+            DirtySpellTextures()
+            source = {
+                tabCount = _G.GetNumSpellTabs,
+                tabInfo = _G.GetSpellTabInfo,
+                name = _G.GetSpellName,
+                texture = _G.GetSpellTexture,
+                book = BOOKTYPE_SPELL or "spell",
+                language = DFRL.locale.code,
+            }
+            spellTextureScan.source = source
+        end
         if not spellTexturesDirty and not spellTexturesRetryAt then return end
-        if spellTexturesRetryAt and GetTime() < spellTexturesRetryAt then return end
+        local warmRetryAt = limit and spellTextureScan.warmRetryAt
+        if spellTexturesRetryAt or warmRetryAt then
+            local now = GetTime()
+            if (spellTexturesRetryAt and now < spellTexturesRetryAt) or (warmRetryAt and now < warmRetryAt) then
+                return
+            end
+        end
         if
-            type(_G.GetNumSpellTabs) ~= "function"
-            or type(_G.GetSpellTabInfo) ~= "function"
-            or type(_G.GetSpellName) ~= "function"
-            or type(_G.GetSpellTexture) ~= "function"
+            type(source.tabCount) ~= "function"
+            or type(source.tabInfo) ~= "function"
+            or type(source.name) ~= "function"
+            or type(source.texture) ~= "function"
         then
             return
         end
-        local rebuilt, pendingMetadata = {}, false
-        local book = BOOKTYPE_SPELL or "spell"
-        for tab = 1, GetNumSpellTabs() or 0 do
-            local _, _, offset, count = GetSpellTabInfo(tab)
-            for index = (offset or 0) + 1, (offset or 0) + (count or 0) do
-                local name = GetSpellName(index, book)
-                local texture = GetSpellTexture(index, book)
-                if name and TextureKey(texture) then
-                    rebuilt[name] = texture
-                else
-                    pendingMetadata = true
-                end
-            end
+        -- A real icon consumer must see a fresh, complete traversal. Never use
+        -- earlier provisional slots for first-hit priority or grouping identity.
+        if not limit then spellTextureScan.work = nil end
+        local work = spellTextureScan.work
+        if not work then
+            work = { source = source, tab = 1, textures = {}, headers = {} }
+            spellTextureScan.work = work
         end
-        spellTextures, spellTexturesDirty = rebuilt, false
-        spellTexturesRetryAt = pendingMetadata and GetTime() + 1 or nil
+        local ok, result = pcall(AdvanceSpellTextures, work, limit)
+        if not ok then
+            spellTextureScan.work = nil
+            -- Optional warming must not turn an unavailable getter into frame
+            -- error spam. A real consumer still retries immediately, as before.
+            if limit then
+                spellTextureScan.warmRetryAt = GetTime() + 1
+                return
+            end
+            error(result)
+        end
+        if result == "changed" then
+            DirtySpellTextures()
+            if not limit then
+                if restarted then error("spellbook metadata changed during icon lookup") end
+                return RebuildSpellTextures(nil, true)
+            end
+            return
+        end
+        if result ~= "complete" then return end
+        spellTextureScan.work = nil
+        if limit and work.pendingMetadata then
+            -- Missing early artwork may become ready during later chunks. Keep
+            -- this generation provisional; a consumer rereads it synchronously.
+            spellTextureScan.warmRetryAt = GetTime() + 1
+            return
+        end
+        spellTextures, spellTexturesDirty = work.textures, false
+        spellTexturesRetryAt = work.pendingMetadata and GetTime() + 1 or nil
+        spellTextureScan.warmRetryAt = nil
         ClearResolvedIcons()
     end
 
@@ -1556,7 +1676,6 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         local enabled = DFRL.display.Get("damageIcons")
         local iconsChanged = damageIcons ~= enabled
         damageIcons = enabled
-        if iconsChanged and damageIcons and CustomEnabled() then RebuildSpellTextures() end
         for index = table.getn(activeTexts), 1, -1 do
             local text = activeTexts[index]
             if not ShouldShowText(text) then
@@ -1952,7 +2071,6 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         ResetDisplay()
         SyncScrollRoot()
         ApplyPlateTracking(true)
-        if CustomEnabled() and damageIcons then RebuildSpellTextures() end
         -- Plate appearance stays active even while combat text is disabled.
         ScanPlates(true)
         NotifySettings()
@@ -2050,6 +2168,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             if arg1 == "AZSDEBUFFS" then
                 iconSourcesDirty.debuffs = true
             elseif arg1 == "AZSZONE" then
+                DirtySpellTextures()
                 ClearSummonIcons()
                 iconSourcesDirty.debuffs = true
             end
@@ -2072,6 +2191,9 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         -- still has this update's value; later hits can share the discovery.
         combatDiscoveryNeeded = true
         if not CustomEnabled() then return end
+        -- Group identity needs the same resolver even with damage icons hidden.
+        -- One tab-header or slot pair consumes a step; empty tabs stay bounded.
+        RebuildSpellTextures(4)
         local now = GetTime()
         UpdatePending(now)
         UpdateTexts(now, arg1)

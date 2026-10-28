@@ -59,6 +59,13 @@ ambiguous declaration fails preparation.
 
 The assertions cover:
 
+- Projection/metadata cases exercise production navigation cache boundaries and
+  resolver preparation: successful same-pass reuse, exact coordinate identity,
+  accepted-roster retirement, map/getter changes, failed projection recovery,
+  fresh frame motion, bounded tab/slot/validation chunks, atomic publication, dirty/language/world
+  invalidation and fresh synchronous first-use completion. They preserve the
+  absence of new runtime test hooks and remain CI-only, without live FPS claims.
+
 - The remaining-frame pass adds CI-only cases for the default-off minimap clock,
   centered zone text and display transactions; selective final-window cooldown
   reads; strict SCT retirement deadlines and native raid-icon UV forms; dirty
