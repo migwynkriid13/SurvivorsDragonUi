@@ -74,6 +74,17 @@ without changing custom art or allocation. CI-only production nameplate mocks
 cover data/shown-state retention, V transitions, prior disabled bits and cleanup.
 The source does not establish packaged-client drawing or measured FPS.
 
+### Encounter tooltip content
+
+Hovered encounter debuffs cache the displayed name, stack count, dispel caption,
+permanence, rounded remaining/duration, language and effective scale. Native
+debuff timing still updates at the original cadence; unchanged tooltip content
+skips SetText/AddLine/Show and their native clear/rebuild/size work. Cursor and
+shared placement continue independently. Re-entry rebuilds after native SetOwner;
+hidden or foreign-owned tooltips are never replayed. One bounded record per
+pooled icon adds no region, event, updater or saved data. CI-only extracted
+production coverage asserts these transitions without renderer measurements.
+
 ## Loot popup modes and marks — 2026-10-27
 
 The new Loot notifications page uses existing editor artwork: one category

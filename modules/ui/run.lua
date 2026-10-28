@@ -2294,6 +2294,7 @@ DFRL:NewMod("RunTimers", 5, function()
     end)
 
     local function HideDebuff(icon)
+        icon.tooltipDrawn = nil
         if GameTooltip and GameTooltip:IsOwned(icon) then GameTooltip:Hide() end
         if icon:IsShown() then icon:Hide() end
         if icon.iconPath or icon.effect then icon.texture:SetTexture(nil) end
@@ -2834,33 +2835,54 @@ DFRL:NewMod("RunTimers", 5, function()
         if not Permanent(effect) and IsNumber(effect.remaining) then return effect.remaining end
     end
 
-    local function DebuffTooltip(icon)
+    local function DebuffTooltip(icon, opening)
         local effect = icon.effect
-        if not GameTooltip or not effect then return end
-        GameTooltip:SetText(
-            type(effect.name) == "string" and effect.name ~= "" and effect.name or DFRL.locale.Text("Debuff"),
-            1,
-            1,
-            1
-        )
-        if IsNumber(effect.stacks) and effect.stacks > 1 then
-            GameTooltip:AddLine(DFRL.locale.Text("Stacks: ") .. tostring(math.floor(effect.stacks)), 1, 1, 1)
-        end
-        if type(effect.dispelType) == "string" and effect.dispelType ~= "" then
-            GameTooltip:AddLine(DFRL.locale.Text(effect.dispelType), 0.65, 0.8, 1)
-        end
+        if not GameTooltip or not effect or not GameTooltip:IsOwned(icon) then return end
+        if not opening and not GameTooltip:IsVisible() then return end
+        local permanent = Permanent(effect)
         local remaining = DebuffRemaining(effect)
-        if Permanent(effect) then
+        remaining = remaining and math.ceil(remaining) or nil
+        local duration = not permanent
+                and IsNumber(effect.duration)
+                and effect.duration > 0
+                and math.ceil(effect.duration)
+            or nil
+        local stacks = IsNumber(effect.stacks) and effect.stacks > 1 and math.floor(effect.stacks) or nil
+        local name = type(effect.name) == "string" and effect.name ~= "" and effect.name or nil
+        local dispel = type(effect.dispelType) == "string" and effect.dispelType ~= "" and effect.dispelType or nil
+        local language, scale = DFRL.locale.code, GameTooltip:GetEffectiveScale()
+        local cached = icon.tooltipCache
+        if
+            not opening
+            and icon.tooltipDrawn
+            and cached
+            and cached.name == name
+            and cached.stacks == stacks
+            and cached.dispel == dispel
+            and cached.permanent == permanent
+            and cached.remaining == remaining
+            and cached.duration == duration
+            and cached.language == language
+            and T.NearlyEqual(cached.scale, scale)
+        then
+            return
+        end
+        GameTooltip:SetText(name or DFRL.locale.Text("Debuff"), 1, 1, 1)
+        if stacks then GameTooltip:AddLine(DFRL.locale.Text("Stacks: ") .. tostring(stacks), 1, 1, 1) end
+        if dispel then GameTooltip:AddLine(DFRL.locale.Text(dispel), 0.65, 0.8, 1) end
+        if permanent then
             GameTooltip:AddLine(DFRL.locale.Text("No expiration"), 1, 0.85, 0.4)
         elseif remaining then
-            GameTooltip:AddLine(DFRL.locale.Text("Remaining: ") .. Clock(math.ceil(remaining)), 1, 0.85, 0.4)
+            GameTooltip:AddLine(DFRL.locale.Text("Remaining: ") .. Clock(remaining), 1, 0.85, 0.4)
         else
             GameTooltip:AddLine(DFRL.locale.Text("Remaining time unavailable"), 0.7, 0.7, 0.7)
         end
-        if not Permanent(effect) and IsNumber(effect.duration) and effect.duration > 0 then
-            GameTooltip:AddLine(DFRL.locale.Text("Duration: ") .. Clock(math.ceil(effect.duration)), 0.8, 0.8, 0.8)
-        end
+        if duration then GameTooltip:AddLine(DFRL.locale.Text("Duration: ") .. Clock(duration), 0.8, 0.8, 0.8) end
         GameTooltip:Show()
+        cached = cached or {}
+        cached.name, cached.stacks, cached.dispel, cached.permanent = name, stacks, dispel, permanent
+        cached.remaining, cached.duration, cached.language, cached.scale = remaining, duration, language, scale
+        icon.tooltipCache, icon.tooltipDrawn = cached, GameTooltip:IsVisible() and true or nil
     end
 
     local function DebuffIcon(row, index)
@@ -2920,9 +2942,10 @@ DFRL:NewMod("RunTimers", 5, function()
         icon:SetScript("OnEnter", function()
             if not GameTooltip or not icon.effect then return end
             GameTooltip:SetOwner(icon, "ANCHOR_BOTTOMRIGHT")
-            DebuffTooltip(icon)
+            DebuffTooltip(icon, true)
         end)
         icon:SetScript("OnLeave", function()
+            icon.tooltipDrawn = nil
             if GameTooltip and GameTooltip:IsOwned(icon) then GameTooltip:Hide() end
         end)
         T.RegisterTooltipIcon(icon, nil, "below")
