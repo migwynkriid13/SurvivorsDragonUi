@@ -6,6 +6,15 @@ local function Near(actual, expected, message)
     assert(type(actual) == "number" and math.abs(actual - expected) < 0.0000001, message)
 end
 
+local function Composite(texel, vertex, backing)
+    local alpha = texel[4] * vertex[4]
+    return {
+        texel[1] * vertex[1] * alpha + backing[1] * (1 - alpha),
+        texel[2] * vertex[2] * alpha + backing[2] * (1 - alpha),
+        texel[3] * vertex[3] * alpha + backing[3] * (1 - alpha),
+    }
+end
+
 local function New(performance)
     local context = H.New()
     local env = context.env
@@ -31,6 +40,11 @@ local function New(performance)
             color(self, ...)
             self.vertex = { ... }
         end
+        function object:CreateTexture(name, layer)
+            local texture = context:Object("Texture", name, self)
+            texture.drawLayer = layer
+            return texture
+        end
         return object
     end
     local chunk = assert(loadfile(assert(arg[1], "missing extracted boss health-loss source")))
@@ -41,6 +55,7 @@ local function New(performance)
     function context:Row()
         local frame = env.CreateFrame("Frame", nil, env.UIParent)
         local bar = env.CreateFrame("StatusBar", nil, frame)
+        local overlay = env.CreateFrame("Frame", nil, frame)
         bar:SetWidth(280)
         bar:SetHeight(15)
         local width = bar.GetWidth
@@ -48,7 +63,7 @@ local function New(performance)
             context.reads.width = (context.reads.width or 0) + 1
             return width(self)
         end
-        return { frame = frame, bar = bar }
+        return { frame = frame, bar = bar, overlay = overlay }
     end
     function context:Observe(row, value, maximum, key, name)
         controller:Observe(row, value, maximum or 1000, key or "boss:71", name or "Edwin VanCleef")
@@ -95,13 +110,31 @@ do
     context:Observe(row, 0.8)
     local texture = assert(row.lossTexture, "first decrease did not prepare the loss region")
     local started = context.now
-    assert(#context.objects == allocated + 1 and texture:GetParent() == row.bar, "loss prepared more than one region")
+    assert(
+        #context.objects == allocated + 1 and texture:GetParent() == row.overlay,
+        "loss did not reuse the existing plain overlay for one independent region"
+    )
     assert(texture:IsShown() and row.lossReady and controller.count == 1)
+    assert(texture.drawLayer == "BACKGROUND", "loss artwork drew above the existing bezel or health label")
     assert(texture:GetTexture() == "timer\\FillWhite.blp", "loss did not reuse the bundled fill")
-    Near(texture.vertex[1], 235 / 255, "crimson tint red channel changed")
-    Near(texture.vertex[2], 65 / 255, "crimson tint green channel changed")
-    Near(texture.vertex[3], 51 / 255, "crimson tint blue channel changed")
-    Near(texture.vertex[4], 0.74, "crimson echo opacity changed")
+    Near(texture.vertex[1], 235 / 255 * 0.74, "crimson brightness red channel changed")
+    Near(texture.vertex[2], 65 / 255 * 0.74, "crimson brightness green channel changed")
+    Near(texture.vertex[3], 51 / 255 * 0.74, "crimson brightness blue channel changed")
+    Near(texture.vertex[4], 1, "crimson echo allowed the underlying native fill to show through")
+    -- Native fill can still occupy a newly lost section until its deferred
+    -- update. One opaque loss texel must not split into bright-over-red and
+    -- dark-over-black portions, while preserving the selected preview's
+    -- original 0.74-alpha appearance over the empty black section.
+    for _, shade in ipairs({ 0.35, 0.7, 1 }) do
+        local texel = { shade, shade, shade, 1 }
+        local overBlack = Composite(texel, texture.vertex, { 0, 0, 0 })
+        local overNative = Composite(texel, texture.vertex, { 0.86, 0.12, 0.1 })
+        local intended = Composite(texel, { 235 / 255, 65 / 255, 51 / 255, 0.74 }, { 0, 0, 0 })
+        for channel = 1, 3 do
+            Near(overNative[channel], overBlack[channel], "native red created a second visible loss tone")
+            Near(overBlack[channel], intended[channel], "opaque loss changed the selected preview's brightness")
+        end
+    end
     Near(texture:GetWidth(), 280 * 0.2, "initial loss width did not cover the missing section")
     assert(texture.uv[1] == 0 and texture.uv[2] == 1 and texture.uv[3] == 0 and texture.uv[4] == 15 / 16)
 

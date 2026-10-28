@@ -480,7 +480,7 @@ DFRL:NewMod("RunTimers", 5, function()
             if not IsNumber(width) or width <= 0 then return end
             local texture = row.lossTexture
             if not texture then
-                texture = row.bar:CreateTexture(nil, "OVERLAY")
+                texture = row.overlay:CreateTexture(nil, "BACKGROUND")
                 texture:Hide()
                 row.lossTexture = texture
             end
@@ -500,7 +500,9 @@ DFRL:NewMod("RunTimers", 5, function()
                     return
                 end
                 texture:SetTexCoord(0, 1, 0, 15 / 16)
-                texture:SetVertexColor(235 / 255, 65 / 255, 51 / 255, 0.74)
+                -- Bake the preview's opacity against black into the tint. A
+                -- translucent strip over native red and black looks split.
+                texture:SetVertexColor(235 / 255 * 0.74, 65 / 255 * 0.74, 51 / 255 * 0.74, 1)
                 row.lossReady = true
             end
             local left, span = width * row.lossTo, width * (edge - row.lossTo)
@@ -3490,7 +3492,7 @@ DFRL:NewMod("RunTimers", 5, function()
         local health = rowOverlay:CreateFontString(nil, "OVERLAY")
         health:SetPoint("CENTER", frame, "CENTER", 0, 0)
         T.StyleEncounterHealth(bar, health)
-        return { frame = frame, bar = bar, name = name, health = health, debuffs = {} }
+        return { frame = frame, bar = bar, overlay = rowOverlay, name = name, health = health, debuffs = {} }
     end
 
     local function Permanent(effect) return effect.permanent == true or effect.permanent == 1 end

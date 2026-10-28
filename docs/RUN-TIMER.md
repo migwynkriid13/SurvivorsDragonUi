@@ -141,15 +141,19 @@ afterimage catches up over 950 ms. Performance Mode keeps the immediate health
 update and hides the afterimage. These rules also apply to enabled guardian rows
 in the boss-bar view; the separate Guardian tracker is unchanged.
 
-The trailing edge uses `(1 - elapsed / 0.95)^1.45` easing, the existing white
-WidgetStatusBar fill tinted RGB `(235,65,51)/255`, and 0.74 opacity. Only the
-recently lost section is drawn. Another decrease samples the current eased edge
-before extending one trail, so rapid damage never restores an already-drained
+The trailing edge uses `(1 - elapsed / 0.95)^1.45` easing and the existing white
+WidgetStatusBar fill. Its intended RGB `(235,65,51)/255` tint and 0.74 preview
+brightness are combined into one opaque tint. The strip therefore keeps the
+same shaded appearance over native red or black underneath, instead of looking
+like two differently bright loss bars. Only the recently lost section is drawn.
+Another decrease samples the current eased edge before extending one trail,
+so rapid damage never restores an already-drained
 peak or allocates a per-hit effect. These are changes between accepted native
 health publications, not reconstructed individual combat hits.
 
 One texture is prepared lazily on a row's first visible normal-mode decrease,
-below its existing gold bezel and health text, and reused with the pooled row.
+on its existing plain overlay's BACKGROUND layer, below the gold bezel and health
+text and above the native health fill. It is reused with the pooled row.
 It stretches the same fill through the loss section as the selected simulation.
 Successful artwork binding, tint and UV setup happen once; failed bindings retry
 only while the trail is active. Active anchors and width follow the native bar's

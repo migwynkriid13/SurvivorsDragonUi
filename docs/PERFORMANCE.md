@@ -253,7 +253,12 @@ The selected **04 Crimson echo** adds at most one lazily prepared FillWhite
 texture per pooled boss-bar row, including guardian rows in this view. Each
 existing base pill retains its five regions; one extra region and its material/
 UV state are visible only during an active normal-mode loss trail. The strip
-overlaps only the recently lost section, beneath existing bezel/text artwork.
+uses the existing plain overlay's BACKGROUND layer, above the native health fill
+and beneath bezel/text artwork. It covers only the recently lost section.
+The preview's 0.74 brightness is baked into its crimson tint with opaque vertex
+alpha, so native fill underneath cannot brighten one section and make it look
+like a second trail. No backing region, mask, extra pass or native fill/UV
+override is added.
 Retired and completed effects are actually hidden, while their texture remains
 available for reuse. Performance Mode prepares nothing and draws no loss strip.
 
