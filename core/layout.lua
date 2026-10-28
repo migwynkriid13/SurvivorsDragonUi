@@ -40,6 +40,7 @@ DFRL:NewMod("Layout", 0, function()
         guardianWaypoint = "Guardian waypoint",
         guardianTracker = "Guardian tracker",
         damageMeter = "DPS meter",
+        sctMSBT = "MSBT-style scrolling",
         petFrames = "Pet frames",
         lootNotifications = "Loot notifications",
         menu = "Main menu",

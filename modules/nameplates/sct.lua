@@ -48,6 +48,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local activeTexts = {}
     local textPool = {}
     local textRoot
+    local scrollRoot, scrollEnabled, scrollHidden
     local pending = {}
     local pendingGroups = {}
     local intakeBuckets = {}
@@ -89,7 +90,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         and WorldFrame.GetHitRectInsets
         and WorldFrame.SetHitRectInsets
 
-    local function CustomEnabled() return customEnabled end
+    local function CustomEnabled() return customEnabled and (not msbtStyle or not scrollHidden) end
     local function UsesPlateOrigins() return CustomEnabled() and not msbtStyle end
 
     local function IsFiniteNumber(value) return type(value) == "number" and value - value == 0 end
@@ -368,7 +369,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         text.color = nil
         text.needsMeasure = nil
         text.scrollOffset, text.scrollY = nil, nil
-        text.anchorPoint, text.anchorX, text.anchorY = nil, nil, nil
+        text.anchorRoot, text.anchorPoint, text.anchorX, text.anchorY = nil, nil, nil, nil
         table.insert(textPool, text)
     end
 
@@ -1198,9 +1199,66 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     end
 
     local function PositionText(text, relativePoint, x, y)
-        if text.anchorPoint == relativePoint and text.anchorX == x and text.anchorY == y then return end
-        text.holder:SetPoint("CENTER", WorldFrame, relativePoint, x, y)
-        text.anchorPoint, text.anchorX, text.anchorY = relativePoint, x, y
+        local root = msbtStyle and scrollRoot or WorldFrame
+        if
+            text.anchorRoot == root
+            and text.anchorPoint == relativePoint
+            and text.anchorX == x
+            and text.anchorY == y
+        then
+            return
+        end
+        text.holder:SetPoint("CENTER", root, relativePoint, x, y)
+        text.anchorRoot, text.anchorPoint, text.anchorX, text.anchorY = root, relativePoint, x, y
+    end
+
+    local function EnsureTextRoot()
+        if not textRoot then
+            -- Keep the growing hit pool out of the native discovery roster.
+            textRoot = CreateFrame("Frame", nil, WorldFrame)
+            textRoot:SetAllPoints(WorldFrame)
+            textRoot:SetFrameStrata("HIGH")
+            textRoot:SetFrameLevel(WorldFrame:GetFrameLevel())
+            textRoot:EnableMouse(false)
+        end
+        return textRoot
+    end
+
+    local function SyncScrollRoot()
+        local enabled = inWorld and customEnabled and msbtStyle
+        if enabled and not scrollRoot then
+            scrollRoot = CreateFrame("Frame", nil, EnsureTextRoot())
+            scrollRoot:Hide()
+            scrollRoot:SetFrameStrata("HIGH")
+            scrollRoot:SetFrameLevel(textRoot:GetFrameLevel())
+            scrollRoot:SetWidth(240)
+            scrollRoot:SetHeight(MSBT.height)
+            scrollRoot:EnableMouse(false)
+            DFRL.layout.Register("sctMSBT", scrollRoot, function()
+                scrollRoot:ClearAllPoints()
+                scrollRoot:SetPoint("CENTER", WorldFrame, "CENTER", MSBT.x, MSBT.top - MSBT.height / 2)
+            end, {
+                onlyWhenShown = true,
+                onResize = function()
+                    if not scrollRoot:IsVisible() then return end
+                    for _, text in ipairs(activeTexts) do
+                        FitText(text)
+                    end
+                end,
+            })
+            DFRL.layout.ListenVisibility("sctMSBT", function(shown)
+                scrollHidden = not shown
+                if scrollHidden then ResetDisplay() end
+            end)
+        end
+        if scrollRoot and scrollEnabled ~= enabled then
+            scrollEnabled = enabled
+            if enabled then
+                scrollRoot:Show()
+            else
+                scrollRoot:Hide()
+            end
+        end
     end
 
     DFRL.display.Listen(function()
@@ -1210,6 +1268,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             -- Do not move old hits between unrelated coordinate systems, or
             -- replay a queued enemy hit in the fixed screen stream.
             ResetDisplay()
+            SyncScrollRoot()
             ApplyPlateTracking(false)
             NotifySettings()
         end
@@ -1243,17 +1302,9 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         -- Every displayed hit/group gets its full lifetime, including in AoE.
         -- The pool grows to peak concurrency; active entries are never evicted.
         local text = table.remove(textPool)
+        local parent = msbtStyle and scrollRoot or EnsureTextRoot()
         if not text then
-            if not textRoot then
-                -- Native child-count queries copy the direct-child list. Keep
-                -- the growing hit pool out of the nameplate discovery roster.
-                textRoot = CreateFrame("Frame", nil, WorldFrame)
-                textRoot:SetAllPoints(WorldFrame)
-                textRoot:SetFrameStrata("HIGH")
-                textRoot:SetFrameLevel(WorldFrame:GetFrameLevel())
-                textRoot:EnableMouse(false)
-            end
-            local holder = CreateFrame("Frame", nil, textRoot)
+            local holder = CreateFrame("Frame", nil, parent)
             holder:Hide()
             holder:SetWidth(1)
             holder:SetHeight(1)
@@ -1280,6 +1331,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             -- name here made fallback hits grow another name during crit pop.
             text = { holder = holder, visual = visual, label = label, icon = icon }
         end
+        if text.holder:GetParent() ~= parent then text.holder:SetParent(parent) end
         return text
     end
 
@@ -1324,9 +1376,9 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         if not value then return end
         local text = AcquireText()
         -- The enemy layout snapshots its native launch point. The scrolling
-        -- layout uses offsets from screen center and needs no enemy position.
+        -- layout uses offsets from its movable owner and needs no enemy position.
         if msbtStyle then
-            x, y = MSBT.x, MSBT.top - 12
+            x, y = 0, MSBT.height / 2 - 12
         end
         text.x, text.y = x, y
         text.started = GetTime()
@@ -1441,7 +1493,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             local progress = (now - text.started) / TEXT_DURATION
             if progress < 1 then
                 local halfHeight = 12 * textScale * text.sizeScale * (text.impact and 2 or 1)
-                local y = MSBT.top - MSBT.height * progress
+                local y = MSBT.height / 2 - MSBT.height * progress
                 local target = ceiling and math.min(y, ceiling - halfHeight - MSBT.spacing) or y
                 local offset = y - target
                 if text.scrollOffset then
@@ -1469,7 +1521,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                 activeTexts[kept] = text
                 local x, y, relativePoint
                 if msbtStyle then
-                    x = MSBT.x + MSBT.curve * 4 * progress * (1 - progress)
+                    x = MSBT.curve * 4 * progress * (1 - progress)
                     y = text.scrollY
                     relativePoint = "CENTER"
                 else
@@ -1618,6 +1670,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         _G.SurvivorsDragonUiSctMode = sctMode
         customEnabled = enabled
         ResetDisplay()
+        SyncScrollRoot()
         ApplyPlateTracking(true)
         if CustomEnabled() and damageIcons then RebuildSpellTextures() end
         -- Plate appearance stays active even while combat text is disabled.
@@ -1690,6 +1743,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         elseif event == "PLAYER_LEAVING_WORLD" or event == "PLAYER_LOGOUT" then
             sct.FinishEdit(false)
             inWorld = false
+            SyncScrollRoot()
             plateFilter.Clear(plateFilter.sequence)
             plateFilter.time, plateFilter.zone = nil, nil
             for _, data in pairs(plates) do

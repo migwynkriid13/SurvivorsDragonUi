@@ -31,6 +31,11 @@ def main():
         guardian_hover = "local hoveredPin, hoveredName\n" + extract_source("modules/map/waypoints.lua", [
             "PIN_SIZE", "Number", "HideGuardianTooltip", "UpdateGuardianTooltip",
         ])
+        guardian_timers = "local hoveredPin, hoveredName\n" + extract_source("modules/map/waypoints.lua", [
+            "PIN_SIZE", "Number", "Native", "MinimapEntries", "Shown", "HideGuardianTooltip",
+            "HideGuardianTimer", "UpdateGuardianTimer", "RecyclePins", "MakeMinimapPin", "PlacePin",
+            "Offset", "DrawTrackedPin", "UpdateTrackerPins",
+        ])
         guardian_placement = "local tooltip, root = GameTooltip, tooltipRoot\nlocal inWorld, editing = true, false\n" + extract_source("core/tooltips.lua", [
             "IconOwner", "PlaceTooltip",
         ])
@@ -43,6 +48,7 @@ def main():
         for name, source, fixture in (
             ("cooldown-source.lua", cooldown, "ui_spec.lua"),
             ("guardian-hover-source.lua", guardian_hover, "ui_guardian_hover_spec.lua"),
+            ("guardian-timers-source.lua", guardian_timers, "ui_guardian_timer_spec.lua"),
         ):
             seam = Path(folder) / name
             seam.write_text(source, encoding="utf-8")

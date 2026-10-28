@@ -43,6 +43,7 @@ Test("scrolling keeps native V ownership and default text keeps its native coord
     scrolling.env.HideNameplates()
     assert(not scrolling.backing, "V off did not release native plates")
     local enemy = SCT(false)
+    assert(not enemy.scrollRoot, "default SCT allocated an unused scrolling owner")
     assert(enemy.backing and enemy.env.NAMEPLATES_ON == nil, "default SCT lost invisible tracking")
     enemy:Hit(111)
     enemy:Tick(0.2)
@@ -63,7 +64,11 @@ Test("fixed scrolling separates a burst and animates without enemy projection", 
     local values = {}
     for _, label in ipairs(labels) do
         local anchor = label.parent.parent.anchor
-        assert(anchor.point == "CENTER" and anchor.x > 0, "outgoing text is not right of screen center")
+        assert(
+            anchor.point == "CENTER" and anchor.relative == context.scrollRoot,
+            "scrolling bypassed its Layout owner"
+        )
+        assert(context.scrollRoot.anchor.x == 160, "the default stream moved from the right of screen center")
         assert(not rows[anchor.y], "simultaneous scrolling labels share a row")
         rows[anchor.y] = true
         values[label:GetText()] = true
@@ -73,6 +78,76 @@ Test("fixed scrolling separates a burst and animates without enemy projection", 
     local x, y = holder.anchor.x, holder.anchor.y
     context:Tick(0.2)
     assert(holder.anchor.x > x and holder.anchor.y < y, "the stream did not curve outward and scroll down")
+end)
+
+Test("scrolling Layout owner exists before combat and carries active hits through movement", function()
+    local context = SCT(true)
+    local root = assert(context.scrollRoot, "MSBT cannot be moved before its first hit")
+    assert(root:IsShown() and context.scrollOptions.onlyWhenShown, "inactive style can expose a handle")
+    assert(root:GetWidth() == 240 and root:GetHeight() == 220, "unexpected stream edit bounds")
+    assert(root.anchor.y == 0, "the default vertical stream position changed")
+    context:Hit(111)
+    context:Tick(0.1)
+    local label = assert(context:Labels()[1])
+    local holder = label.parent.parent
+    assert(holder:GetParent() == root, "hits do not inherit Layout visibility and scale")
+    root:SetPoint("CENTER", context.env.WorldFrame, "CENTER", -300, 75)
+    root:SetScale(1.5)
+    context.scrollOptions.onResize()
+    context:ResetCounts()
+    context:Tick(0)
+    assert(holder.anchor.relative == root and root.anchor.x == -300, "animation overwrote the moved owner")
+    context:NoPresentationWrites()
+    assert((context.writes.SetParent or 0) == 0, "animation reparents unchanged hits")
+end)
+
+Test("hidden scrolling clears active and queued hits and skips intake until new visible hits", function()
+    local context = SCT(true)
+    context:Hit(111)
+    context:Tick(0.1)
+    context:Hit(222)
+    context:SetScrollHidden(true)
+    assert(#context:Labels() == 0, "Layout hiding retained scrolling text")
+    local allocated = #context.objects
+    context:ResetCounts()
+    context:Hit(333)
+    context:Tick(0.2)
+    context:NoPresentationWrites()
+    assert(#context.objects == allocated, "hidden scrolling allocated text")
+    context:SetScrollHidden(false)
+    context:Tick(0.2)
+    assert(#context:Labels() == 0, "unhiding replayed retired hits")
+    context:Hit(444)
+    context:Tick(0.1)
+    assert(context:Labels()[1]:GetText() == "444", "new visible hits did not resume")
+end)
+
+Test("pooled hits leave the scrolling owner for enemy text and reuse it when scrolling resumes", function()
+    local context = SCT(true)
+    local root = context.scrollRoot
+    context:Hit(111)
+    context:Tick(0.1)
+    local holder = context:Labels()[1].parent.parent
+    context:SetSetting("sctMSBTStyle", false)
+    assert(not root:IsShown(), "over-enemy text retained an active scrolling owner")
+    context:SetScrollHidden(true)
+    context:Hit(222)
+    context:Tick(0.2)
+    local label = assert(context:Labels()[1], "scrolling visibility suppressed enemy text")
+    assert(
+        label.parent.parent == holder and holder:GetParent() ~= root,
+        "enemy text did not reuse and reparent its pool"
+    )
+    assert(holder.anchor.relative == context.env.WorldFrame, "enemy coordinates inherited scrolling geometry")
+    context:SetSetting("sctMSBTStyle", true)
+    context:SetScrollHidden(false)
+    context:Hit(333)
+    context:Tick(0.1)
+    assert(
+        context.scrollRoot == root and context:Labels()[1].parent.parent == holder,
+        "switching allocated replacements"
+    )
+    assert(holder:GetParent() == root and holder.anchor.relative == root, "scrolling did not reclaim its pooled holder")
 end)
 
 Test("changing style retires active and queued hits without replay", function()
@@ -87,6 +162,20 @@ Test("changing style retires active and queued hits without replay", function()
     assert(#context:Labels() == 0, "an old queued hit replayed in the new style")
     context:SetSetting("sctMSBTStyle", true)
     assert(not context.backing and context.env.NAMEPLATES_ON == nil, "switch back changed the visible V preference")
+end)
+
+Test("scrolling mode previews reuse and retire the same Layout owner", function()
+    local context = SCT(true)
+    local sct, root = context.env.DFRL.sct, context.scrollRoot
+    sct.BeginEdit()
+    sct.SetMode("off")
+    assert(not root:IsShown(), "Off preview retained the scrolling handle owner")
+    sct.FinishEdit(false)
+    assert(root:IsShown() and context.scrollRoot == root, "Cancel did not restore the same scrolling owner")
+    sct.BeginEdit()
+    sct.SetMode("off")
+    sct.FinishEdit(true)
+    assert(not root:IsShown() and context.env.SurvivorsDragonUiSctMode == "off", "Confirm did not retire scrolling")
 end)
 
 Test("scrolling expires, reuses its pool and remains idle with no active labels", function()
@@ -107,6 +196,7 @@ Test("scrolling expires, reuses its pool and remains idle with no active labels"
     assert(#context:Labels() == 1 and #context.objects == allocated, "scrolling did not reuse its pool")
     context:Event(context.controller, "PLAYER_LEAVING_WORLD")
     assert(#context:Labels() == 0 and not context.backing, "world cleanup retained text or forced tracking")
+    assert(not context.scrollRoot:IsShown(), "world cleanup retained the scrolling handle owner")
     context:ResetCounts()
     context:Tick(0.2)
     context:NoPresentationWrites()

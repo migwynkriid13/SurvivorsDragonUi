@@ -35,6 +35,10 @@ Language is session-only. No setting, command, profile, SavedVariable, client pr
 
 ## Display text
 
+**Show guardian timers** and its defeated-icon/respawn hint have source TSV and
+runtime UI entries in all fourteen languages. Only these addon captions were
+prepared; native catalogs, effects, spell aliases and their source pins are unchanged.
+
 The meter's **Font size** and its hint remain translated in all fourteen source/runtime UI catalogs. **Show grid**, its hint and the revised Layout drag instructions also have all fourteen translations. The removed meter/tracker width sliders' three captions are absent from both source and runtime UI catalogs. Native catalogs, spell aliases, effects and the older full-catalog fingerprint are unchanged by these editor-caption updates.
 
 The custom run-timer and boss-bar enable captions and their native-display

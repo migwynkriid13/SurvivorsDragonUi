@@ -317,7 +317,22 @@ amount merging or replacement history is added. Incoming/self text retains
 its existing independent native control. This is an independently implemented
 outgoing style, not a port of another addon or its full notification system.
 
-The stream anchors directly to WorldFrame center, so it skips enemy-origin
+The stream uses the `sctMSBT` Layout owner, defaulting to the same position right
+of WorldFrame center. With Custom and MSBT-style scrolling enabled, its outline
+is available in `/sdui` and `/sdui lock` before the first combat hit. Dragging,
+corner scaling, Shift alignment, numeric position/scale and Hide frame reuse the
+shared Layout controls. Only Confirm saves its geometry in
+`SurvivorsDragonUiLayout`; Cancel, world/logout/reload discard, profiles and both
+resets use the existing lifecycle. Disabling the style or Custom mode retires
+the owner request and its handle while retaining confirmed geometry.
+
+Pooled hit holders inherit the scrolling owner's position, scale and visibility.
+Over-enemy hits return to their original parent and WorldFrame anchors when
+reused, so the scrolling layout cannot affect them. Layout hiding clears active
+and queued scrolling hits and skips intake, icon lookup, animation and text
+measurement until new visible hits arrive. Unhiding never replays old hits.
+
+The movable stream still skips enemy-origin
 matching, health-loss sampling and combat-event plate discovery. It does not
 force native hostile plates on: with V off, the captured native HideNameplates
 restores normal overhead-name eligibility. Native name preferences still

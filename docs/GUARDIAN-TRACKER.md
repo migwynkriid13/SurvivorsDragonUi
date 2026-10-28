@@ -83,6 +83,42 @@ layout handles still support editing. Existing
 guardian waypoints and map/minimap markers keep their appearance and independent
 guidance control.
 
+## Minimap timers
+
+In `/sdui` → **Minimap**, enable **Show guardian timers** to see the respawn
+countdown below each defeated guardian icon. It is off by default. Enabling it
+also keeps defeated icons visible; **Guardian guidance** must remain on.
+Turning it off leaves **Keep defeated guardian icons** in control of those icons.
+Living guardians and lairs with unknown respawn times have no timer.
+
+Each countdown uses gold DEFAULT 8.6 outlined text with a black shadow, centered
+one unit below its existing 20-unit icon. Its explicit 64-by-15 text box is
+required by this client's FontString layout; it does not enlarge the pin or its
+hover bounds. Font readiness accepts a resolved native face with the requested
+size and outline, using the same readback rule as meter labels instead of
+requiring the requested font alias to round-trip unchanged.
+It shows `m:ss`, including `0:00` when
+the native countdown is due; zero does not invent a returned guardian. The
+existing guardian roster's accepted run-clock anchor supplies the same bounded,
+pause-aware remaining time as the tracker, without reading guardian health.
+Missing or regressed run time retains the received countdown.
+
+The normalized `guardianMinimapTimers` boolean lives in the existing display
+table. Missing/invalid choices and both full resets use false. Shared live
+preview, Confirm-only saving, Cancel/world/logout/reload discard and profiles
+apply normally. Its caption and hint have all fourteen source/runtime translations.
+Only accepted empty-lair minimap copies gain the received non-negative `left`.
+
+One label is allocated lazily per pooled pin only when a valid enabled timer is
+first shown. The ten-Hz/deferred refresh samples the official run time once for
+visible countdown candidates; per-frame projection does no timer work. Formatting
+and text writes occur only when the displayed second changes. Disabled/hidden
+timers skip clock reads, formatting and allocation. Recycle, unknown countdowns,
+living replacements and roster retirement clear the old label. No texture,
+asset, frame, event, updater or SavedVariable is added. CI-only mocks cover these
+boundaries, explicit text dimensions and resolved font paths; local work uses
+source review and pinned formatting without game execution.
+
 ## Minimap names
 
 Hover a guardian medallion on the minimap to see its name beside the cursor. The name comes from
@@ -105,9 +141,9 @@ reclaimed. Leaving the marker, recycling, minimap hiding, guidance off and
 world/zone cleanup clear only this owned hover. Tooltip hiding and editing
 suppress it, and unhiding does not replay a prior hover before re-entry.
 
-Only accepted minimap point copies gain the optional native name; no new raw
-getter, translation, asset, setting, saved state or full world-map overlay is
-added. Pin OnHide clears an owned tooltip immediately. CI-only source-extracted
+Hover names use only the optional native name in accepted minimap point copies;
+they add no raw getter, translation, asset, setting, saved state or full
+world-map overlay. Pin OnHide clears an owned tooltip immediately. CI-only source-extracted
 mocks cover names, scaled hit bounds, unchanged writes, missing names, retiring
 pins, foreign ownership and Tooltip/editor suppression. Placement mocks use the
 production owner-routing functions and verify the guardian cursor override plus
@@ -184,6 +220,9 @@ The native stamp and packet generation, not GetTime receipt rounding, identify a
 new sample. There is no wall-clock countdown, respawn-period guess or invented
 progress fraction. A cosmetic zero remains `returning` until native `left == 0`
 confirms `due`; a return requires an actual occupied snapshot.
+`Remaining(left, now)` shares that calculation with accepted minimap copies,
+returning nil for an unready roster or unknown/negative `left`; the caller samples
+official run time once without requesting a health-bearing snapshot.
 
 `GetChanges(afterRevision, afterGeneration)` returns copied observations since a
 consumer's cursor, with `revision`, `generation`, `entries`, `reset` and, for a
