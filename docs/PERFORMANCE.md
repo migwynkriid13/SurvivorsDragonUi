@@ -188,7 +188,7 @@ remains retryable; this is source-level lifecycle evidence, without measured
 FPS or live death/retry proof. See the boss-health lifecycle in
 [RUN-TIMER.md](RUN-TIMER.md#boss-health-on-death-and-restart).
 
-All 24 Layout groups were traced in the installed addon checkout. Layout uses
+All 25 current Layout groups were traced in the installed addon checkout. Layout uses
 native `Hide`, so the group and its descendants leave visible rendering. Hiding
 does not unload pooled regions or unregister the game's own event handlers.
 The fixes below stop addon presentation work that previously continued in
@@ -218,6 +218,7 @@ kept separately so normal native state can resume on showing.
 | `cacheWaypoint`     | Hidden guide interpolation, distance formatting, arrow rotation and facing samples stop. Native destination acceptance/selection, world cleanup and independently visible minimap markers remain.                                                                                                                                                                                 |
 | `guardianWaypoint`  | Same visibility boundary as cache guidance; accepted lairs still feed the guardian data foundation independently of this HUD's visibility.                                                                                                                                                                                                                                        |
 | `guardianTracker`   | Layout-hidden policy detaches its pure view controller before roster copying, measurements or row painting. The separate guardian foundation continues accepting native state. Show uses a fresh snapshot.                                                                                                                                                                        |
+| `sctMSBT`           | Hiding clears active/queued scrolling hits and skips intake, resolver work, animation and measurement. Showing admits new hits only. The stream owner and its edit handle retire when Custom or MSBT-style turns off; over-enemy text uses its original parent and WorldFrame anchors.                                                                                            |
 | `damageMeter`       | Layout-hidden mode validates newly published native data without copying view rows or sampling displayed rates, retaining phase retirement and takeover checks. Showing rebuilds from the getter. Feature-off remains stricter: no meter subscription, collection, getters or idle updater, apart from a pending native-preference restoration.                                   |
 | `petFrames`         | Hidden/static groups skip timer sampling and all row/icon painting. New native roster receipts, phase retirement and changed edit bounds remain. Show refreshes current timing through the existing controller. The separate native primary pet retains its native ownership.                                                                                                     |
 | `revive`            | Hidden progress/identity state stays current without glyph measurement, text/bar/cross/spark writes or cosmetic animation. Show requests a fresh deferred read. Existing native-HUD release while Layout-hidden remains; no revive time is invented.                                                                                                                              |
@@ -469,6 +470,44 @@ The Combat text mode selector and status description stay outside one passive se
 
 The shared editor availability helper now serves this group and the existing replacement-display dependents. It skips alpha/input writes when enabled state is unchanged. The existing SCT settings listener supplies the effective draft mode, including preview, profile loads, external mode changes, Confirm and discard. The lazy settings dialog adds one passive frame, zero texture regions, no animation, updater, game event, asset or SavedVariable. Source/diff inspection and pinned formatting only; local tests, standalone validation and addon/game execution were not run. Runtime appearance and interaction remain unverified.
 
+## Guardian minimap timers — 2026-10-28
+
+The default-off **Show guardian timers** checkbox uses the existing editor row
+factory and display draft/profile/reset lifecycle. Enabling it retains defeated
+minimap pins independently of the existing keep-icons choice. Guardian guidance,
+native phase, minimap visibility and accepted-snapshot gates still apply.
+
+Each existing pooled guardian pin gains at most one lazy FontString after its
+first valid enabled countdown. Off by default allocates no timer labels. With
+the option on, each visible known defeated lair adds one gold DEFAULT 8.6 outlined
+text region and its black shadow below the icon. These glyphs add persistent
+text/alpha drawing; existing medallion/check textures, UVs, materials, bounds and
+mouse transparency stay unchanged. No image, texture region, marker frame,
+event, updater or SavedVariable is added.
+Each label receives an explicit 64-by-15 text box once at construction, since
+this client does not supply an automatic width for its single center anchor.
+The box leaves pin geometry and cached hover bounds unchanged. Font readiness
+uses native face availability plus matching size/outline, like meter labels,
+without requiring the requested alias and resolved font path to be identical.
+
+The existing ten-Hz/deferred pin refresh samples `AZS_GetRunTime` at most once
+when enabled countdown candidates can be drawn. The shared roster's `Remaining`
+helper reuses its accepted run-clock anchor and 1.5-second smoothing bound;
+minimap timers do not call the roster's health-bearing snapshot getter.
+Per-frame projection skips timer work. Rounded-second caches skip repeated
+formatting and native text writes; font readback retains failed assignments for
+retry. Hidden/off/guidance-disabled paths skip timer sampling, formatting and
+allocation. Retiring/recycling pins, unknown times and living replacements hide
+and clear old labels; retained pins reuse their labels after showing again.
+
+The two new UI captions have all fourteen source/runtime translations. CI-only
+production-roster/source-extracted pin mocks cover defaults and drafts, native
+pause/choice/regression timing, unknown times, hidden/off work, unchanged writes,
+lazy pooling, explicit text dimensions, resolved font paths, font retries and
+retirement. Local work is source/diff review and
+pinned formatting only. These source costs do not establish live minimap
+appearance, draw calls, GPU memory or FPS.
+
 ## Guardian Show dead control — 2026-10-27
 
 Boss bars and Guardian tracker each have default-on current/maximum-health
@@ -570,13 +609,28 @@ failure recovery and performance remain unverified in the running client.
 
 ## MSBT-style combat text — 2026-10-27
 
-The optional fixed outgoing stream shares the existing SCT controller,
+The optional outgoing stream shares the existing SCT controller,
 parser/intake, exact duplicate groups, active list and lazy text pool. Each
-label still uses its original two passive frames, FontString and optional icon;
-the shared root and all artwork are reused. There are zero additional combat
-frames, drawing regions, textures/materials, UV states, native events or
-updaters. Full bursts retain their existing grouping and 1.45-second lifetime,
+label still uses its original two passive frames, FontString and optional icon.
+The movable stream adds one passive `sctMSBT` owner lazily on first effective
+Custom/MSBT enable and reuses it afterward. This owner has no drawing regions.
+Its shared editor handle adds one button, four corner buttons, 24 solid-texture
+corner marks, one FontString and the standard native border. Those regions draw
+only while editing the enabled style. There is no new gameplay texture/material,
+UV state, asset, native event, updater or SavedVariable. Full bursts retain their
+existing grouping and 1.45-second lifetime,
 so peak active allocations can still grow with the actual event load.
+
+Holders inherit the owner's movement, scale and visibility; animation anchors
+remain local without per-frame owner geometry reads. Layout scaling refits only
+active, visible labels through `onResize`. Holder parent changes occur only on
+pool acquisition across styles, restoring the original parent for enemy text.
+Default coordinates, curve, spacing and cadence remain unchanged. Layout hiding
+retires active/queued hits and skips hidden intake, resolver work and animation;
+unhiding admits only new hits. The cached visibility policy uses the existing
+listener, and mode/world transitions retire the owner request and edit handle.
+Geometry/visibility use the existing Layout/profile store and shared discard
+paths, with no new gameplay persistence.
 
 Only this style adds a newest-first spacing pass over active labels. It uses
 pooled scalar offsets, existing text scale/crit sizing and one exponential
@@ -601,8 +655,9 @@ all filters fit the existing page without enlarging the dialog or adding scrolli
 
 Source/diff review and pinned formatting only; no local tests, standalone
 validation or addon/game execution. CI-only native mocks cover the production
-controller's defaults, fixed anchors, burst spacing, tracking handoff, cleanup
-and pool reuse. These source counts and authored assertions do not establish
+controller's defaults, movable-owner anchoring, burst spacing, tracking handoff,
+hidden retirement, mode previews, cleanup and pool reparenting/reuse. These
+source counts and authored assertions do not establish
 in-game layout, native-name restoration, visual parity or FPS. Behavior is in
 [API-NOTES.md](API-NOTES.md#msbt-style-combat-text--2026-10-27).
 

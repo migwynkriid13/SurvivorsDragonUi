@@ -1028,6 +1028,11 @@ DFRL:NewMod("RunTimers", 5, function()
                         "Keep defeated guardian icons",
                         "Keep lair icons on the minimap while guardians are down.",
                     },
+                    {
+                        "guardianMinimapTimers",
+                        "Show guardian timers",
+                        "Keep defeated icons and show respawn times below them.",
+                    },
                 },
             },
             {

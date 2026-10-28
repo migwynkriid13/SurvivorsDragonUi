@@ -174,6 +174,14 @@ DFRL:NewMod("GuardianRoster", 2, function()
         return health
     end
 
+    -- Both tracker rows and minimap pins use the same accepted run-clock anchor.
+    function roster.Remaining(left, now)
+        if not ready or not Number(left) or left < 0 then return end
+        local gap = 0
+        if clock and Number(now) and now >= clock then gap = math.min(MAX_SMOOTHING, now - clock) end
+        return math.max(0, left - gap)
+    end
+
     -- Callers may reuse their own copy; accepted private rows are never exposed.
     -- No UI clock advances gameplay.
     function roster.GetSnapshot(snapshot)
@@ -202,8 +210,6 @@ DFRL:NewMod("GuardianRoster", 2, function()
         snapshot.zone = zone and Copy(zone, snapshot.zone) or nil
         local health = Health()
         local now = Native("AZS_GetRunTime")
-        local gap = 0
-        if clock and Number(now) and now >= clock then gap = math.min(MAX_SMOOTHING, now - clock) end
         for index, entry in ipairs(lairs) do
             local row = Copy(entry, snapshot.rows[index])
             counts.total = counts.total + 1
@@ -217,7 +223,7 @@ DFRL:NewMod("GuardianRoster", 2, function()
                 end
             elseif Number(row.left) and row.left > 0 then
                 row.status = "returning"
-                row.remaining = math.max(0, row.left - gap)
+                row.remaining = roster.Remaining(row.left, now)
             elseif row.left == 0 then
                 -- Due is confirmed by the native snapshot. A cosmetic zero
                 -- above never invents a return, spawn, or state transition.

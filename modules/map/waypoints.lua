@@ -63,6 +63,7 @@ DFRL:NewMod("Waypoints", 3, function()
     local identity
     local runWasActive = false
     local inWorld, dirty, age = true, true, 0
+    local showGuardianTimers = DFRL.display.Get("guardianMinimapTimers")
 
     local function Number(value) return type(value) == "number" and value - value == 0 end
     local function Integer(value, minimum) return Number(value) and value >= minimum and value == math.floor(value) end
@@ -74,7 +75,7 @@ DFRL:NewMod("Waypoints", 3, function()
     end
 
     local function MinimapEntries(tracker)
-        if tracker.kind == "guardian" and DFRL.display.Get("keepDefeatedGuardianIcons") then
+        if tracker.kind == "guardian" and (DFRL.display.Get("keepDefeatedGuardianIcons") or showGuardianTimers) then
             return tracker.acceptedMinimapEntries or tracker.entries
         end
         return tracker.entries
@@ -181,10 +182,60 @@ DFRL:NewMod("Waypoints", 3, function()
             if ok then return Shown(value) end
         end
 
+        local function HideGuardianTimer(pin)
+            if not pin.timer then return end
+            if pin.timer:IsShown() then pin.timer:Hide() end
+            T.SetTextIfChanged(pin.timer, "")
+            pin.timerSecond = nil
+        end
+
+        local function UpdateGuardianTimer(pin, entry, now)
+            local roster = DFRL.guardians
+            local remaining = showGuardianTimers
+                and entry.state == "empty"
+                and roster
+                and roster.Remaining(entry.left, now)
+            if not Number(remaining) then
+                HideGuardianTimer(pin)
+                return
+            end
+            local label = pin.timer
+            if not label then
+                label = pin:CreateFontString(nil, "OVERLAY")
+                pin.timer = label
+                label:Hide()
+                label:SetPoint("TOP", pin, "BOTTOM", 0, -1)
+                -- This client does not give single-anchor FontStrings an automatic width.
+                label:SetWidth(64)
+                label:SetHeight(15)
+                label:SetJustifyH("CENTER")
+                label:SetTextColor(1, 0.82, 0)
+                T.SetChatShadow(label)
+            end
+            if not pin.timerFontReady then
+                T.SetFont(label, 8.6, "OUTLINE")
+                local face, size, flags = label:GetFont()
+                -- Like meter labels, accept the native face returned after SetFont;
+                -- the client may resolve the requested face to its actual font path.
+                pin.timerFontReady = type(face) == "string"
+                    and face ~= ""
+                    and T.NearlyEqual(size, 8.6)
+                    and (flags or "") == "OUTLINE"
+                if not pin.timerFontReady then return end
+            end
+            local second = math.ceil(remaining)
+            if pin.timerSecond ~= second then
+                T.SetTextIfChanged(label, string.format("%d:%02d", math.floor(second / 60), math.mod(second, 60)))
+                pin.timerSecond = second
+            end
+            if not label:IsShown() then label:Show() end
+        end
+
         local function RecyclePins(tracker, cycle)
             for key, pin in pairs(tracker.minimapPins) do
                 if not cycle or pin.cycle ~= cycle then
                     HideGuardianTooltip(pin)
+                    HideGuardianTimer(pin)
                     pin:Hide()
                     if pin.check then pin.check:Hide() end
                     pin.defeated = nil
@@ -373,7 +424,7 @@ DFRL:NewMod("Waypoints", 3, function()
             if Number(x) and Number(y) then return x, y end
         end
 
-        local function DrawTrackedPin(tracker, entry, x, y)
+        local function DrawTrackedPin(tracker, entry, x, y, refreshTimers, now)
             local pin = tracker.minimapPins[entry.key]
             if not pin then
                 pin = table.remove(tracker.minimapPool) or MakeMinimapPin(tracker)
@@ -388,12 +439,15 @@ DFRL:NewMod("Waypoints", 3, function()
                     pin.defeated = defeated
                 end
             end
-            return PlacePin(pin, x, y)
+            local visible = PlacePin(pin, x, y)
+            if visible and tracker.kind == "guardian" and refreshTimers then UpdateGuardianTimer(pin, entry, now) end
+            return visible
         end
 
-        local function UpdateTrackerPins(tracker, scale, edge)
+        local function UpdateTrackerPins(tracker, scale, edge, refreshTimers)
             tracker.minimapCycle = tracker.minimapCycle + 1
             if scale and DFRL.display.Get(tracker.displayKey) then
+                local now
                 for _, entry in ipairs(MinimapEntries(tracker)) do
                     local x, y = Offset(entry, scale)
                     -- Each accepted lair keeps its own distant indicator.
@@ -403,7 +457,17 @@ DFRL:NewMod("Waypoints", 3, function()
                         x, y = x / ratio, y / ratio
                     end
                     if x and (tracker.kind == "guardian" or (math.abs(x) <= edge and math.abs(y) <= edge)) then
-                        local drawOK, drawn = pcall(DrawTrackedPin, tracker, entry, x, y)
+                        if
+                            refreshTimers
+                            and showGuardianTimers
+                            and entry.state == "empty"
+                            and Number(entry.left)
+                            and entry.left >= 0
+                            and now == nil
+                        then
+                            now = Native("AZS_GetRunTime") or false
+                        end
+                        local drawOK, drawn = pcall(DrawTrackedPin, tracker, entry, x, y, refreshTimers, now)
                         if not drawOK or not drawn then
                             local pin = tracker.minimapPins[entry.key]
                             if pin then pin.cycle = nil end
@@ -445,7 +509,7 @@ DFRL:NewMod("Waypoints", 3, function()
             end
             local pinsVisible = false
             for _, tracker in ipairs(trackers) do
-                UpdateTrackerPins(tracker, scale, edge)
+                UpdateTrackerPins(tracker, scale, edge, checkHover)
                 if next(tracker.minimapPins) then pinsVisible = true end
             end
             navigation.UpdateMinimapPlayer(pinsVisible)
@@ -665,6 +729,7 @@ DFRL:NewMod("Waypoints", 3, function()
                     key = tostring(entry.index) .. ":0",
                     state = entry.state,
                     name = type(entry.name) == "string" and entry.name ~= "" and entry.name or nil,
+                    left = Number(entry.left) and entry.left >= 0 and entry.left or nil,
                     x = entry.x,
                     y = entry.y,
                     mx = entry.mx,
@@ -954,6 +1019,7 @@ DFRL:NewMod("Waypoints", 3, function()
     end)
     DFRL.display.Listen(function()
         -- Visibility drafts do not retire snapshots, selections or calibration.
+        showGuardianTimers = DFRL.display.Get("guardianMinimapTimers")
         for _, tracker in ipairs(trackers) do
             LayoutHUD(tracker)
             UpdateGuide(tracker)

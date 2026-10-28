@@ -47,6 +47,11 @@ local function SCT(scrolling, setup)
             context.writes.SetScale = (context.writes.SetScale or 0) + 1
             self.scale = value
         end
+        object.SetParent = function(self, value)
+            context.writes.SetParent = (context.writes.SetParent or 0) + 1
+            self.parent = value
+            context:Visibility()
+        end
         return object
     end
     env.WorldFrame = env.CreateFrame("Frame", "WorldFrame", env.UIParent)
@@ -74,6 +79,20 @@ local function SCT(scrolling, setup)
             amount = tonumber(message),
             critical = context.critical,
         }
+    end
+    local register, listen = env.DFRL.layout.Register, env.DFRL.layout.ListenVisibility
+    env.DFRL.layout.Register = function(name, frame, anchor, options)
+        assert(name == "sctMSBT", "unexpected scrolling Layout group")
+        context.scrollRoot, context.scrollOptions = frame, options
+        register(name, frame, anchor)
+    end
+    env.DFRL.layout.ListenVisibility = function(name, callback)
+        context.scrollVisibility = callback
+        listen(name, callback)
+    end
+    function context:SetScrollHidden(hidden)
+        self:SetLayoutHidden(hidden)
+        self.scrollVisibility(not hidden)
     end
     if setup then setup(context, env) end
     context:Load("modules/nameplates/sct.lua", "NameplateCombatText")

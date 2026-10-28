@@ -64,6 +64,10 @@ The assertions cover:
   encounter-label mocks cover all four combinations, slash visibility, actual
   label hiding, disabled/unchanged formatting, pooled text restoration and no
   added drawing objects. These do not prove native rendering or font geometry.
+- Guardian minimap timer mocks load the production roster and extracted pin
+  functions to cover default-off drafts/profiles/reset, native pause-aware
+  countdowns, unchanged/hidden/off work, lazy label pooling, font retry and retirement.
+  These checks do not establish live minimap appearance or rendering cost.
 - Source-extracted guardian minimap hover uses accepted names and scaled cached
   pin bounds, skips unchanged tooltip writes, clears retired hovers and respects
   foreign owners, Tooltip hiding, re-entry and Layout editing. Pins remain
@@ -99,10 +103,15 @@ The assertions cover:
   later capped native writes from replacing accepted values. Invalid native
   pairs stay empty; waiting adds no idle reader.
 - SCT keeps over-enemy defaults and the display transaction, releases forced
-  plate tracking in MSBT-style mode with V off, uses fixed center-relative
-  outgoing anchors, spaces distinct burst lines and animates without enemy
-  projection. Style changes retire active and queued hits, and expiry/world
-  cleanup clears labels while retaining pool reuse and empty-list idling.
+  plate tracking in MSBT-style mode with V off, uses outgoing anchors relative
+  to a movable Layout owner, spaces distinct burst lines
+  and animates without enemy projection. Mocks cover registration before combat,
+  parent/anchor inheritance after movement and scale, hidden intake/queue
+  retirement without replay, mode preview/discard and pool reparenting between
+  styles. Style changes retire active and queued hits, and expiry/world cleanup
+  clears labels and the owner request while retaining pool reuse and empty-list
+  idling. These mocks do not exercise native dragging or independently retest
+  the shared Layout save/profile transaction.
 - Full SCT/filter and nameplate-style fixtures combine Names only with the
   boss/guardian filter. They cover exact capped/float32 ranges and halfway
   rounding, sleeping-to-awake ceiling conversion and its float32 serialization

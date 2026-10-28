@@ -14,6 +14,23 @@ Grid fallback chooses the closest edge/center alignment on the eight-unit subdiv
 
 Only an active Shift-drag measures snap targets; free movement does not scan them. The release handler applies the current cursor/modifier state before capturing the position, including a release between update frames. A viewport/scale transition finishes at the last valid position. Releasing Shift, ending the drag or closing editing clears the guides and magnetic hold. Movement remains a draft until Confirm; Cancel, world/logout/reload discard and both resets use the existing lifecycle. Profiles retain snapped geometry through the same normalized coordinates, without extra layout fields.
 
+## MSBT-style scrolling
+
+With **Custom** and **MSBT-style scrolling** enabled in **Combat text**, the
+**MSBT-style scrolling** outline appears in both `/sdui` and `/sdui lock`, even
+before a hit arrives. Drag it to move the outgoing stream, or use its numeric
+position and scale in **Layout**. Corner handles scale the whole stream; **SCT
+size** retains its existing control over individual labels. Confirm saves the
+layout. Cancel, world/logout/reload discard, profiles and both resets use the
+shared lifecycle.
+
+The `sctMSBT` owner defaults to a 240-by-220 edit box centered 160 units right of
+WorldFrame center. Its caption reuses all fourteen existing translations of
+**MSBT-style scrolling**. Its handle and snap target retire when the style or
+Custom mode turns off. **Hide frame** clears active/queued scrolling hits and
+skips hidden intake and painting; only new hits appear after unhiding. Saved
+scrolling geometry never moves or hides over-enemy combat text.
+
 ## Width and row handles
 
 Run timer, Boss health, Revive, DPS meter, Chat and Guardian tracker have handles at the center of their left and right sides. These change width only, keeping fonts, icons and row heights at their current scale. HUD corners still scale proportionally; Chat retains its existing corner dimension resizing. The opposite edge stays fixed during side dragging, and release samples the current pointer before saving the draft.
