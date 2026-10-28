@@ -262,7 +262,7 @@ DFRL:NewMod("Chat", 1, function()
         local function NoticeMessage(state)
             local now = GetTime()
             state.lastActivity = now
-            state.slideStart = root:IsVisible() and now or nil
+            state.slideStart = state == selected and root:IsVisible() and now or nil
             if state ~= selected or not AtBottom(state) then state.unread = true end
             if UpdateIndicator then UpdateIndicator() end
         end
@@ -577,7 +577,9 @@ DFRL:NewMod("Chat", 1, function()
                     if state.visualAlpha == 1 then state.revealStart = nil end
                 end
                 if state.slideStart then
-                    PositionNative(state, now)
+                    -- Other native panes keep their messages and unread state,
+                    -- but only the selected pane needs animated geometry.
+                    if state == selected then PositionNative(state, now) end
                     if now - state.slideStart >= SLIDE then state.slideStart = nil end
                 end
                 FadeSettings(state, state == selected and held)
