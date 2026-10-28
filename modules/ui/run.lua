@@ -443,6 +443,133 @@ DFRL:NewMod("RunTimers", 5, function()
         return frame, bar, text, overlay
     end
 
+    local function CreateBossHealthLoss()
+        local loss = { active = {}, count = 0 }
+        local duration = 0.95
+
+        local function Edge(row, now)
+            local age = now - row.lossStart
+            if age < 0 or age >= duration then return row.lossTo end
+            return row.lossTo + (row.lossFrom - row.lossTo) * (1 - age / duration) ^ 1.45
+        end
+
+        function loss:Clear(row)
+            if row.lossTexture and row.lossTexture:IsShown() then row.lossTexture:Hide() end
+            if self.active[row] then
+                self.active[row] = nil
+                self.count = self.count - 1
+            end
+            row.lossValue, row.lossMaximum, row.lossKey, row.lossName = nil, nil, nil, nil
+            row.lossFrom, row.lossTo, row.lossStart = nil, nil, nil
+        end
+
+        function loss:ClearAll(rows)
+            if rows then
+                for _, row in pairs(rows) do
+                    self:Clear(row)
+                end
+            else
+                for row in pairs(self.active) do
+                    self:Clear(row)
+                end
+            end
+        end
+
+        local function Paint(row, edge)
+            local width = row.bar:GetWidth()
+            if not IsNumber(width) or width <= 0 then return end
+            local texture = row.lossTexture
+            if not texture then
+                texture = row.bar:CreateTexture(nil, "OVERLAY")
+                texture:Hide()
+                row.lossTexture = texture
+            end
+            if not row.lossReady then
+                local wanted = path .. "FillWhite.blp"
+                local loaded = texture:SetTexture(wanted)
+                local assigned = texture:GetTexture()
+                if
+                    loaded == false
+                    or not (
+                        loaded == true
+                        or loaded == 1
+                        or assigned == wanted
+                        or assigned == string.sub(wanted, 1, -5)
+                    )
+                then
+                    return
+                end
+                texture:SetTexCoord(0, 1, 0, 15 / 16)
+                texture:SetVertexColor(235 / 255, 65 / 255, 51 / 255, 0.74)
+                row.lossReady = true
+            end
+            local left, span = width * row.lossTo, width * (edge - row.lossTo)
+            if not T.NearlyEqual(row.lossLeft, left) then
+                texture:ClearAllPoints()
+                texture:SetPoint("TOPLEFT", row.bar, "TOPLEFT", left, 0)
+                texture:SetPoint("BOTTOMLEFT", row.bar, "BOTTOMLEFT", left, 0)
+                row.lossLeft = left
+            end
+            if not T.NearlyEqual(row.lossWidth, span) then
+                texture:SetWidth(span)
+                row.lossWidth = span
+            end
+            if not texture:IsShown() then texture:Show() end
+        end
+
+        function loss:Observe(row, value, maximum, key, name)
+            if performanceMode or not row.bar:IsVisible() then
+                self:Clear(row)
+                return
+            end
+            local previous = row.lossValue
+            if
+                row.lossKey ~= key
+                or row.lossName ~= name
+                or row.lossMaximum ~= maximum
+                or (previous and value > previous)
+            then
+                self:Clear(row)
+                previous = nil
+            end
+            row.lossValue, row.lossMaximum, row.lossKey, row.lossName = value, maximum, key, name
+            if not previous or value >= previous then return end
+            local now = GetTime()
+            -- Continue from the currently visible edge, never an old peak.
+            local edge = self.active[row] and math.max(previous, Edge(row, now)) or previous
+            row.lossFrom, row.lossTo, row.lossStart = edge, value, now
+            if not self.active[row] then
+                self.active[row] = true
+                self.count = self.count + 1
+            end
+            Paint(row, edge)
+        end
+
+        function loss:Update()
+            if self.count == 0 then return end
+            if performanceMode then
+                self:ClearAll()
+                return
+            end
+            local now = GetTime()
+            for row in pairs(self.active) do
+                if not row.bar:IsVisible() or now < row.lossStart then
+                    self:Clear(row)
+                elseif now - row.lossStart >= duration then
+                    -- Keep the current accepted baseline after the trail ends.
+                    if row.lossTexture and row.lossTexture:IsShown() then row.lossTexture:Hide() end
+                    self.active[row] = nil
+                    self.count = self.count - 1
+                    row.lossFrom, row.lossTo, row.lossStart = nil, nil, nil
+                else
+                    Paint(row, Edge(row, now))
+                end
+            end
+        end
+
+        return loss
+    end
+
     -- Pooled cosmetic fill effects; native run data still controls progress.
     local function AnimatedRunFill(bar)
         local dynamicWidth, dynamicSpacing, dynamicSpan = BAR_WIDTH, FLOW_SPACING, FLOW_SPAN
@@ -2688,6 +2815,7 @@ DFRL:NewMod("RunTimers", 5, function()
         unitBarrier = -1,
         activeMarkers = {},
         activeMarkerCount = 0,
+        bossLoss = CreateBossHealthLoss(),
     }
     -- Only ReloadUI writes this handoff. Consume it once, keeping an initial
     -- nil phase from destroying it before the native API has replayed AZSRUN.
@@ -2816,6 +2944,7 @@ DFRL:NewMod("RunTimers", 5, function()
         row.debuffHeight = 0
     end
     HookScript(bossGroup, "OnHide", function()
+        render.bossLoss:ClearAll(activeRows)
         for _, row in pairs(activeRows) do
             ClearDebuffs(row)
         end
@@ -2825,6 +2954,7 @@ DFRL:NewMod("RunTimers", 5, function()
     end)
 
     local function Retire(row)
+        render.bossLoss:Clear(row)
         ClearDebuffs(row)
         row.frame:Hide()
         T.SetTextIfChanged(row.name, "")
@@ -3677,6 +3807,7 @@ DFRL:NewMod("RunTimers", 5, function()
                     DFRL.display.Get("bossShowMaximumHealth")
                 )
                 if not row.frame:IsShown() then row.frame:Show() end
+                render.bossLoss:Observe(row, value, entry.maximum, entry.key, entry.name)
             end
             if rowOrder[index] ~= row then reflow = true end
             rowOrder[index] = row
@@ -3713,6 +3844,7 @@ DFRL:NewMod("RunTimers", 5, function()
         local performance = DFRL.display.Get("performanceMode")
         if performanceMode ~= performance then
             performanceMode = performance
+            render.bossLoss:ClearAll(activeRows)
             render.tallyCountersAt = nil
             runEffects.staticAtLimit = nil
             HideRunFlow()
@@ -3885,6 +4017,7 @@ DFRL:NewMod("RunTimers", 5, function()
         else
             if tallyPresentationDirty then UpdateTally() end
         end
+        render.bossLoss:Update()
     end
 
     if type(_G.ReloadUI) == "function" then
@@ -3910,6 +4043,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 _G.SurvivorsDragonUiBossSchedule = scheduleCache
             end
             reloading = true
+            render.bossLoss:ClearAll(activeRows)
             run.affixes:Clear(true)
             return reloadUI()
         end

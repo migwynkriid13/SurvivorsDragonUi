@@ -133,6 +133,42 @@ pieces. Clipping, UVs, artwork and animation cadence remain unchanged. These
 reduce source-level CPU work; the controlled timer-off result and remaining
 native rendering leads are recorded in [PERFORMANCE.md](PERFORMANCE.md#movement-stutter-investigation--2026-10-28).
 
+## Boss health loss
+
+Normal mode uses the selected **04 Crimson echo** treatment: received damage
+immediately changes the red fill and health number, while a subdued crimson
+afterimage catches up over 950 ms. Performance Mode keeps the immediate health
+update and hides the afterimage. These rules also apply to enabled guardian rows
+in the boss-bar view; the separate Guardian tracker is unchanged.
+
+The trailing edge uses `(1 - elapsed / 0.95)^1.45` easing, the existing white
+WidgetStatusBar fill tinted RGB `(235,65,51)/255`, and 0.74 opacity. Only the
+recently lost section is drawn. Another decrease samples the current eased edge
+before extending one trail, so rapid damage never restores an already-drained
+peak or allocates a per-hit effect. These are changes between accepted native
+health publications, not reconstructed individual combat hits.
+
+One texture is prepared lazily on a row's first visible normal-mode decrease,
+below its existing gold bezel and health text, and reused with the pooled row.
+It stretches the same fill through the loss section as the selected simulation.
+Successful artwork binding, tint and UV setup happen once; failed bindings retry
+only while the trail is active. Active anchors and width follow the native bar's
+current dimensions and skip unchanged writes. No new frame, asset, setting,
+SavedVariable, event or updater is added. The existing HUD reader paints only
+active trails; an empty effect set returns before UI-clock or geometry reads.
+
+Hiding, retirement, row reuse, changed identity/name/maximum, healing, reload and
+actual Performance Mode transitions clear the trail and its comparison baseline.
+Showing a row or leaving Performance Mode starts with current health, without
+replaying hidden or suppressed loss. World/run retirement and disabling custom
+boss bars use their existing row cleanup. Health captions, debuffs, viewport,
+native health and native HUD ownership keep their existing behavior.
+
+[WidgetStatusBar attribution](../third_party/WidgetStatusBar-SOURCE.md) and
+[rendering costs](PERFORMANCE.md#boss-health-loss--2026-10-28) describe the reused
+artwork and limits. CI-only mocks cover production effect and row lifecycles;
+local work uses source review and pinned formatting, without tests or game runs.
+
 ## Width and encounter rows
 
 The Run timer and Boss health Layout outlines have left/right center handles for width only, preserving font, icon and health-pill height. Their 296-unit outer defaults and 280-unit fills stay unchanged; side widths range from 120 to 1200, independent of proportional corner scaling. Width is saved in the existing Layout geometry with normal Confirm, Cancel/discard, profiles and reset behavior.

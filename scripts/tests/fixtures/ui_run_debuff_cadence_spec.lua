@@ -8,7 +8,7 @@ context.settings.bossDebuffs, context.settings.bossRows = true, 0
 context.effects = { { spell = 17, name = "Effect", icon = "SpellIcon", stacks = 2, remaining = 61, duration = 90 } }
 env.inWorld = true
 env.PHASES = { ready = true, playing = true, choosing = true, paused = true, dead = true }
-env.render = {}
+env.render = { bossLoss = { Update = function() context.reads.loss = (context.reads.loss or 0) + 1 end } }
 env.DEBUFF_SIZE, env.DEBUFF_GAP, env.ROW_HEIGHT = 16, 3, 32
 env.bossGroup = env.CreateFrame("Frame", nil, env.UIParent)
 env.run = env.CreateFrame("Frame", nil, env.UIParent)
@@ -76,6 +76,7 @@ for _ = 1, 40 do
 end
 assert(not context.reads.debuffs and not context.reads.tally, "frame-only clock updates traversed boss debuffs")
 assert(context.reads.phase == 40 and context.reads.boundary == 40 and context.reads.clock == 40)
+assert(context.reads.loss == 40, "frame controller skipped active boss-loss presentation")
 context.effects[1].remaining = 60
 Refresh()
 assert(context.reads.debuffs == 1 and icon.time:GetText() == "1m", "refresh did not read current native timing")

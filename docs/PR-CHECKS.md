@@ -145,6 +145,15 @@ The assertions cover:
   encounter-label mocks cover all four combinations, slash visibility, actual
   label hiding, disabled/unchanged formatting, pooled text restoration and no
   added drawing objects. These do not prove native rendering or font geometry.
+- Boss Crimson echo cases extract the production loss controller, row refresh
+  and retirement. They cover immediate native fill/text, one lazy reused loss
+  region, selected easing/tint/opacity, rapid-loss coalescing without replay,
+  resizing, unchanged writes, failed artwork retry, shared active time samples
+  and idle completion. Healing, maximum/name/identity changes, hidden recovery,
+  pooled retirement and Performance Mode clear effects and old baselines;
+  Performance Mode allocates no loss artwork or cosmetic clock work. The
+  existing HUD-controller case also asserts frame-cadence loss updates. These
+  are CI-only mocked contracts, authored without local execution or live FPS proof.
 - Full production guardian tracker mocks cover status-caption reuse, native
   rounding boundaries, static statuses, language changes, actual text resets,
   failed setters, hidden work, pooled-row reuse, options/world cleanup and

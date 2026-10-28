@@ -92,6 +92,8 @@ def main():
             "ReflowRows", "RefreshDebuffHover", "UpdateDebuffRows", "Update",
         ])
         run_debuff_cadence = run_debuff_cadence.rsplit("\nreturn ", 1)[0] + "\nreturn { Update = Update, Rows = UpdateDebuffRows }\n"
+        run_boss_health_loss = extract_source("modules/ui/run.lua", ["CreateBossHealthLoss", "Retire", "UpdateRows"])
+        run_boss_health_loss = run_boss_health_loss.rsplit("\nreturn ", 1)[0] + "\nreturn { New = CreateBossHealthLoss, Rows = UpdateRows, Retire = Retire }\n"
     except RuntimeError as error:
         print(error, file=sys.stderr)
         return 1
@@ -125,6 +127,7 @@ def main():
             ("chat-performance-source.lua", chat_performance, "ui_performance_mode_spec.lua"),
             ("run-marker-source.lua", run_markers, "ui_run_marker_perf_spec.lua"),
             ("run-debuff-cadence-source.lua", run_debuff_cadence, "ui_run_debuff_cadence_spec.lua"),
+            ("run-boss-health-loss-source.lua", run_boss_health_loss, "ui_run_boss_health_loss_spec.lua"),
         ):
             seam = Path(folder) / name
             seam.write_text(source, encoding="utf-8")
