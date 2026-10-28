@@ -69,12 +69,39 @@ The assertions cover:
   caches, loot backpressure, parser descriptors and XP fade geometry. Extracted
   helpers retain explicit fake native boundaries; full controllers still load
   only in CI. These assert call/object/lifecycle behavior, not rendering or FPS.
+  Movement follow-ups cover incremental target-change discovery and synchronous
+  minimap-size sharing, including unavailable and insufficient geometry retry.
+  Extracted timer foam also checks one native height sample per paint while
+  retaining the original clipping geometry and UVs at different authored heights.
+  Timer-caption mocks cover unchanged/disabled formatting, current-value option
+  previews, language/mode changes, scale and missing-metric retries, font preview,
+  retirement and repeated empty-clock idling. They use the production label
+  constructor and non-default font styling after formatting, preserving the
+  separate string/nil font caption and formatting-cache owners.
+  Full nameplate mocks also cover exact-name origin indexing, stable ordered
+  retirement, loss ambiguity, native reuse, strict expiry and index cleanup.
+  Pass-local query cases cover repeated no-match/ambiguous results, exact
+  name/kind/amount/fallback separation, consumed-loss invalidation, fresh passes
+  and cache overflow without dropped hits. Color-key cases preserve the four
+  original fields and separators without the former temporary concatenation table.
+  Source-extracted SCT queue cases retain original metadata/color intake,
+  amount/critical/icon identities, inclusive intake and subtraction-based
+  settle boundaries while checking that MSBT stores no per-hit pending record.
+  Default per-hit matching/fallback remains covered. Extraction keeps complete
+  multi-variable constant declarations once, with uniqueness regression cases.
 
 - Boss/guardian current and maximum health defaults, independent preview,
   Confirm/Cancel, profile discard and reset use the real display module. Shared
   encounter-label mocks cover all four combinations, slash visibility, actual
   label hiding, disabled/unchanged formatting, pooled text restoration and no
   added drawing objects. These do not prove native rendering or font geometry.
+- Full production guardian tracker mocks cover status-caption reuse, native
+  rounding boundaries, static statuses, language changes, actual text resets,
+  failed setters, hidden work, pooled-row reuse, options/world cleanup and
+  unchanged health controls. Revive production mocks cover caption/percentage
+  reuse, hidden formatting, identity/language/retirement, actual text repair,
+  measurement readiness, native progress and shared animation-width reads.
+  These are CI-only call/lifecycle assertions, without live rendering evidence.
 - Guardian minimap timer mocks load the production roster and extracted pin
   functions to cover default-off drafts/profiles/reset, native pause-aware
   countdowns, unchanged/hidden/off work, lazy label pooling, font retry and retirement.
@@ -87,11 +114,17 @@ The assertions cover:
   Layout/icon/global-cursor behavior. Mocks do not establish live minimap input
   or cursor pixel placement.
 - Unchanged cooldown values still read the native boundary but perform zero
-  presentation writes and allocate no replacement objects.
+  presentation writes and allocate no replacement objects. Caption-cache cases
+  also check unchanged localization, rounded-value/unit/language changes,
+  actual native text/color repair, failed setter retries and every-frame
+  final-window sampling with the exact positive-zero boundary.
 - Hidden/off cooldowns skip native reads and presentation; world retirement
   clears overlays and suspends reads, and world entry resumes them.
 - Range indicators reuse their texture, avoid restarting unchanged fades and
-  detach their polling and clear effects when the action bar hides.
+  detach their polling and clear effects when the action bar hides. One lazy
+  target sample serves each pass while visible buttons retain independent
+  range reads; missing/friendly/hostile transitions and hidden allocation/cleanup
+  use fresh native boundaries.
 - Loot cards clear retired text/icon bindings and reuse the original three-card
   pool. Settled updates perform zero presentation writes, and a full pool does
   not allocate a fourth card.

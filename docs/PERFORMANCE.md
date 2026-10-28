@@ -41,6 +41,471 @@ leave hundreds of expensive texture regions drawing continuously.
   GPU-memory, pixel-parity or FPS measurements. No local tests, standalone
   validation, addon execution or game launch is authorized for this audit.
 
+## Movement stutter investigation — 2026-10-28
+
+**Latest measured outcome:** the longer normal run still stutters and worsens
+with encounter activity. Median logged mean/p95 windows rise from 22.29/42.34 ms
+at native journal seconds 120–240 to 29.76/58.37 ms at 480–600; GPU UI remains
+about 0.08 ms. These intervals precede the authorized macOS stack samples.
+The earlier short complete-configuration capture showed partial early-run
+recovery (17.62/25.49 ms versus 19.89/33.50 ms), which does not establish a
+mid/late-run fix. Addon-disabled controls were 16.67/about 17–18 ms. The earlier
+17.53 ms result was specifically with SCT Off. Individual changes remain
+untimed, and the MSBT-only optimization is inactive in over-enemy style.
+
+The user repeated four fresh runs in one client session, **OFF / ON / OFF / ON**,
+with ten seconds standing still followed by twenty seconds circling after
+loading settled. The installed Diagnostics journal, last written at 13:53:20
+GMT, contains the complete recording at `t=1.2–243.0` (physical CSV lines
+75959–76188). The file appends older recordings. These mode labels come from the
+user's sequence; the CSV records neither addon enablement nor loaded revision.
+
+Identify each first movement by at least 0.5 native coordinate units of
+horizontal displacement. Use the preceding ten seconds for standing and the
+following twenty seconds for movement, excluding loading and inactive-world
+coordinates. Each standing interval contains nine logged windows and each
+moving interval twenty. Results below are medians of the journal's one-second
+`mean_ms` and `p95_ms` windows, not reconstructed frame-level percentiles.
+
+| Run   | First movement (`t`) | Still mean (ms) | Moving mean (ms) | Moving window p95 (ms) |
+| ----- | -------------------- | --------------- | ---------------- | ---------------------- |
+| OFF 1 | 39.8                 | 16.67           | 16.67            | 17.89                  |
+| ON 1  | 93.6                 | 16.69           | 19.13            | 30.52                  |
+| OFF 2 | 155.8                | 16.67           | 16.67            | 17.27                  |
+| ON 2  | 213.5                | 16.66           | 19.97            | 31.72                  |
+
+This reproduces a movement/active-encounter slowdown in both addon-on runs.
+Median moving `gpu_ui` stays about 0.08–0.09 ms in every run; median moving
+whole-process `cpu_ms` is about 31 ms off and 39–41 ms on. This supports a
+CPU-side investigation, including native UI work. The journal cannot isolate
+Lua, native layout, world work or scheduling. Its CPU clocks are not wall frame
+times, and residency counts are not draw calls. The earlier uncontrolled
+`t=1.1–515.1` recording was inconclusive and is superseded by this comparison.
+
+Movement coincides with `streamed` rising from one native entity to about eighty
+in all four runs, so it also starts encounter/publication work. The final ON
+tail stays slower after the player stops while those entities remain. Movement
+is the observed activation boundary, not an established sole continuing cause.
+Encounter populations and starting resident entity counts are still not exact
+matches between runs.
+
+The persisted configuration inspected after the capture selects Custom SCT,
+default over-enemy style and V-off enemy plates; the meter is default-off. In
+that configuration `UsesPlateOrigins` keeps the native backing nameplate feed
+enabled despite hiding its pixels. The public engine's disabled-plate gate skips
+native unit projection, sorting and overlap work; hiding drawing layers does
+not skip that CPU path. SDUI also samples shown origins every frame. This is a
+source-supported suspect, not per-subsystem timing or proof of the installed
+engine's exact revision. The existing MSBT-style option releases that forced
+feed with V off while preserving custom damage text, allowing a narrower user
+comparison without changing native preferences or adding profiling hooks.
+That comparison still retains the controller's per-frame child-count discovery
+check and ordinary visible HUD work; it does not disable the whole module.
+
+The subsequent user comparison, written at 14:08:39 GMT, records
+`t=1.2–225.4` (CSV lines 76189–76397). Persisted settings confirm Custom SCT,
+MSBT on, both native plate toggles off, meter off and damage icons off. The
+preview/Confirm source path clears old SCT state and releases the backing plate
+feed; no other SDUI module requests that feed. This comparison does not show a
+clear improvement, weakening forced enemy tracking as a sufficient explanation.
+
+The settings period is stationary. The last ten seconds before the first step
+(`161.5–170.5`) have median logged mean/p95 windows of 16.72/19.26 ms. A first
+step at `171.5` activates the encounter, followed by unchanged player and focus
+coordinates from `175.5–203.4`; that active stationary stretch still has median
+windows of 21.88/43.00 ms. Sustained circle-like changes occur only at
+`204.4–221.3` (seventeen logged windows), with medians of 24.49/39.70 ms. Do not
+label the first twenty or thirty seconds after the initial step as continuous
+circling. Encounter populations grow beyond the earlier four-run windows, so
+the trials do not establish a causal performance difference between SCT styles.
+Recorded GPU UI time remains around 0.08 ms during the active portions.
+
+The End Run boundary has only one non-exit window (`224.4`, mean 17.81 ms), with
+streamed entities dropping to zero and resident entities falling from roughly
+35,000 to 995. It cannot establish a settled post-run improvement or identify an
+addon component; ending the run also removes native encounter/world work.
+MSBT retains parsing, queues, text animation and crit-scale changes. An existing
+Combat text **Off** comparison, with the other choices held fixed, can separate
+that remaining custom SCT path from other active HUD/controller costs without
+introducing runtime profiling hooks. The journal does not time individual
+callbacks, and no specific cause or measured fix has been established.
+
+The next user recording, written at 14:18:27 GMT, has Custom SCT **Off**, MSBT
+retained and both native plate toggles off (`t=1.7–93.6`, CSV lines 76398–76485).
+It contains a clear first movement at `44.0`, circling through `66.2` and a
+stationary active encounter at `67.2–92.5`. Using the same preceding-ten and
+following-twenty-second rule gives median logged mean/p95 windows of
+16.67/17.35 ms before movement and 19.80/35.82 ms during movement. The subsequent
+stationary encounter has medians of 18.32/28.87 ms. Moving whole-process CPU has
+a median of 38.97 ms and GPU UI remains about 0.08 ms. Resident entity/material
+counts resemble the earlier full-addon-OFF cases, strengthening the residual
+SDUI work lead without proving exact scene equivalence.
+
+Custom SCT parsing, animated text and forced enemy tracking are therefore not
+necessary to reproduce this slowdown. Their individual costs remain unmeasured;
+do not attribute the current issue to crit scaling from these trials. The next
+prepared comparison changes only `customRunTimer` to false, retaining SCT Off
+and the other display choices. The existing native clock handoff separates the
+custom timer's animation/caption/controller work from the remaining addon.
+
+The timer-off comparison, written at 14:24:57 GMT, keeps SCT Off and the other
+choices fixed while setting `customRunTimer=false` (`t=1.1–77.2`, CSV lines
+76486–76560). First movement is `33.7`, continuous circles extend through `64.0`
+and stationary active-encounter samples cover `65.0–75.1`. In the first twenty
+moving windows, median logged mean/p95 improves from 19.80/35.82 ms with the
+timer on to 16.68/17.39 ms with it off. Mean window time improves from 20.38 to
+17.13 ms, and median whole-process CPU from 38.97 to 29.34 ms. Post-movement
+median mean/p95 windows are 16.70/18.55 ms. GPU UI remains about 0.08 ms. Native
+entity medians are slightly higher in the timer-off moving interval, not lower.
+
+This is strong localization to the custom timer path, returning near the
+full-addon-OFF frame windows in one comparison. It is not a repeated causal
+proof of any particular Lua call or renderer mechanism. The timer switch also
+changes native clock ownership and reader cadence, so attribution must retain
+those boundaries rather than naming the foam alone.
+
+The inspected public renderer has two relevant CPU mechanisms:
+
+- Cropped UV bounds participate in the material identity. Each previously
+  unseen four-float clamp key allocates material state; the cache clears above
+  256 keys. Timer foam/ripples and the native StatusBar's smooth fill crop change
+  those bounds while advancing. See the
+  [material key and cache](https://github.com/samwhosung/benilla/blob/cb949ba1a51011061667a078ed7812ab954ce4a4/crates/benilla-app/src/ui_pass.rs#L1004-L1093).
+- Changing crop or dimensions defeats the retained translation shortcut and
+  rewrites mesh attributes. The source explicitly notes that modifying one UI
+  mesh activates asset-change probes across world `Mesh3d` rows. See the
+  [mesh rewrite path](https://github.com/samwhosung/benilla/blob/cb949ba1a51011061667a078ed7812ab954ce4a4/crates/benilla-app/src/ui_pass.rs#L1131-L1183).
+
+These are plausible explanations for CPU-side cost with low recorded GPU UI
+time, not measured attribution in the packaged client. The journal's resident
+entity count is not a `Mesh3d` row count. Its `mats` column counts world-model
+materials, not these UI clamp-cache entries; its large cross-run change does
+not measure UI material churn. The packaged renderer revision remains unknown.
+
+An exact-asset escape was inspected and rejected: both shipped 256-by-16 fills
+vary horizontally on every row. Decoded runtime BLP pixels match the retained
+TGAs, so a one-column replacement would remove authored detail. No replacement
+asset was prepared. Eight-corner UVs, repeat flags and native clipping have no
+verified equivalent escape from these material/mesh paths. Do not change
+sampling, cadence, native StatusBar UV ownership or independent effects to
+claim an addon-side fix. Narrowing UI material/mesh invalidation is an engine
+lead; it does not establish a shippable fix for this installed client.
+
+After that recording, the two bounded timer source changes below were applied
+locally and source-reviewed, without running the CI-only mocks. The next
+prepared comparison reenables the custom timer while disabling its existing
+Regular/Endless word, current, maximum and boss-countdown caption options. SCT
+remains Off. This retains the fill, foam, marker animation, native values and
+cadence while removing timer glyph presentation. It is a diagnostic settings
+change; neither those source changes nor the animated-artwork attribution has
+a subsequent measured result yet.
+
+The resulting captions-off recording, written at 14:50:00 GMT, spans
+`t=1.1–93.9` (CSV lines 76561–76651). It confirms timer On, SCT Off and all
+caption components disabled. Movement starts at `40.2` and continues through
+`72.6`, followed by stationary active-encounter samples at `73.6–92.9`. In the
+first twenty moving windows, median mean/p95 is 17.73/25.44 ms and median
+whole-process CPU 33.73 ms. This is partial recovery against the earlier
+captions-on result (19.80/35.82 ms, CPU 38.97 ms), but remains above timer Off
+(16.68/17.39 ms, CPU 29.34 ms). Entity counts closely match timer Off and GPU UI
+stays about 0.08 ms. Post-movement median mean/p95 is 17.47/23.31 ms.
+
+This comparison also introduces the two bounded timer source changes, so it
+cannot assign the improvement to hiding captions alone or quantify either
+source fix separately. The missing run-time text is intentional in this trial.
+The prepared follow-up restores the original Regular/Endless caption choices
+with the same updated code, timer On and SCT Off; no further runtime edits are
+introduced between those two captures.
+
+The user's subsequent text-restored attempt exposed a regression in that local
+caption-cache change: the formatting table reused `runClock.caption`, which
+already holds the optional font-localization caption. Non-default font setup
+therefore passed a table to `string.find` at `ApplyFont`, interrupting custom
+timer setup/update and leaving the native clock and missing custom boss markers.
+That attempt is invalid as a custom-timer performance comparison. Post-change
+comparisons remain provisional until the complete custom view is verified;
+they do not establish a successful optimization.
+
+The formatting state now uses independent `runClock.captionCache`; the original
+string/nil `caption` metadata stays exclusively with font setup. The CI-only
+fixture now extracts the actual `NewClockLabel` constructor, checks both font
+captions survive formatting, and exercises Skurri styling after cache creation.
+Source review and pinned formatting were completed; no local test or game run
+was performed. Custom timer/captions remain enabled for a visual recovery check
+before collecting another performance comparison.
+
+After the field-collision repair, the user explicitly confirmed that the custom
+timer, time text and boss markers were restored with no Lua errors. The valid
+recording written at 15:02:15 GMT spans `t=1.3–86.0` (CSV lines 76733–76814).
+The preceding `t=1.2–83.9` attempt (lines 76652–76732) is the failed display
+capture and is excluded. The captions-off capture also remains unsuitable for
+attributing either optimization independently.
+
+In the valid restored-view run, first movement is `40.0` and circling continues
+through `72.3`, followed by stationary samples at `73.3–84.4`. The same first
+twenty-window comparison has median mean/p95 of 17.53/24.44 ms and median
+whole-process CPU 34.09 ms. This improves against the earlier valid timer-on
+result of 19.80/35.82 ms and CPU 38.97 ms, while retaining a gap from timer Off
+at 16.68/17.39 ms and CPU 29.34 ms. Pre-movement median mean is 16.67 ms and
+post-movement 17.72 ms. Entity counts are comparable; GPU UI remains about
+0.08 ms. This supports partial recovery with the combined local changes, not
+individual component timing or elimination of the reported stutter.
+
+The diagnostic settings are then retired: the original Custom SCT mode and
+over-enemy style are restored, with the custom timer and its original caption
+choices enabled. Native enemy/friendly plate preferences remain off and the
+meter remains at its original disabled value. No new runtime edits separate the
+restored-timer capture from the pending complete-configuration observation.
+The complete configuration has not yet been measured with these changes.
+
+The complete-configuration recording written at 15:12:56 GMT spans
+`t=1.1–84.1` (CSV lines 76815–76895), with Custom SCT, over-enemy style and the
+custom timer/captions enabled. First movement is `46.2`, circling continues
+through `68.8`, and stationary encounter samples cover `69.8–82.0`. The first
+twenty moving windows have median mean/p95 of 19.89/33.50 ms and whole-process
+CPU 39.23 ms. Those results remain in the initial full-addon-ON range
+(19.13–19.97 ms, p95 30.52–31.72 ms), rather than returning to full-addon-OFF
+(16.67 ms, p95 17.27–17.89 ms). Post-movement median mean remains 18.20 ms.
+This is not a successful normal-configuration stutter fix.
+
+Entity and world-material counts closely match the first full-addon-OFF run,
+while recorded GPU UI stays about 0.08 ms. The short native Mac trials support
+continued CPU/native-work investigation. They do not cover browser execution,
+late-run populations or an enabled damage meter, and they cannot attribute the
+cost of SCT independently from native backing-plate work.
+
+### Released-addon and browser reports
+
+The user separately relayed browser mid/late-run stutter as mobs/damage grow,
+and reports from two PC players that the game is smoother without the addon.
+The verified latest public release at this point is
+[3.2.57](https://github.com/migwynkriid13/SurvivorsDragonUi/releases/tag/build-b70cbf444e7ade2aaed7d1faf415fbe0746df021),
+published at 12:14:01 UTC and pinned to
+`b70cbf444e7ade2aaed7d1faf415fbe0746df021`. It does not contain the original
+performance PR or these local follow-ups. The local caption-cache regression
+therefore cannot explain those released-addon reports. These are qualitative
+reports, not instrumented browser or late-run measurements.
+
+Source inspection at that release identifies retained-pool plate scanning,
+per-hit all-origin matching, distinct-name spellbook rebuilding, uncached final
+source resolution, parser descriptors and recurring complete meter processing.
+The original performance branch already reduces several of those paths; the
+additional indexed matching, stable retirement and stream queue work below
+address further source-level scaling. Icon resolution can still be required
+with icons hidden because exact duplicate identity includes its received art.
+Ambiguity still considers every eligible same-name candidate.
+
+An enabled meter processes complete source lists independently of its one-to-ten
+visible rows. Its rolling history already uses bounded separate time/value
+arrays and lossless flat-interval compression; 604 pairs per series is a
+worst-case capacity for changing counters, not an unchanged-plateau leak. The
+default-off meter detaches collection and cannot explain this default-off
+capture. Neither native portraits nor the SCT pool are established lifetime
+leaks: portrait images are path-cached and text pools track peak concurrency,
+with retired labels cleared and hidden.
+
+The inspected native and browser forks also share a world-size-dependent CPU
+path through Bevy 0.18.1. Updating an existing animated UI mesh queues a
+[modified asset event](https://github.com/bevyengine/bevy/blob/v0.18.1/crates/bevy_asset/src/assets.rs#L382-L390).
+If any mesh changed, even a 2D UI mesh, Bevy's
+[3D mesh change tracker](https://github.com/bevyengine/bevy/blob/v0.18.1/crates/bevy_mesh/src/components.rs#L127-L145)
+probes every `Mesh3d` handle. Both inspected forks retain this path without a
+browser guard. This establishes a plausible coupling between animated UI and
+larger world populations, not its measured contribution or the deployed
+clients' exact engine revisions. Browser event-loop differences alone do not
+prove an additional browser-specific defect.
+
+### Short capture after additional scaling changes
+
+The next completed recording, written at 15:45:23 GMT, spans `t=1.1–83.1`
+(CSV lines 76896–76975). The user explicitly confirmed that outgoing custom
+damage text, the custom timer/text and boss markers all worked without Lua
+errors. Saved settings retain Custom SCT, over-enemy style, custom timer and
+captions enabled; the meter remains off.
+
+Movement starts at `22.5`. The first twenty moving windows have median
+mean/p95 of 17.62/25.49 ms and whole-process CPU 34.96 ms, compared with
+19.89/33.50 ms and CPU 39.23 ms in the preceding complete-configuration trial.
+Counted entity medians are higher, not lower, and GPU UI remains about 0.08 ms.
+This supports partial early-run recovery with the additional origin lookup and
+retirement changes, without assigning a per-function saving or eliminating the
+gap from addon Off. The MSBT-only change cannot explain this trial's result.
+
+Only two settled samples precede movement; a forced ten-second pre-window
+would include loading spikes. The final stationary tail has five samples and
+the entire recording includes only about one minute after first movement.
+It does not establish the requested mid/late-run behavior. A subsequent
+recording began appending during analysis; its incomplete loading/menu rows
+are excluded from the completed trial above. No further runtime or settings
+edits separate those recordings.
+
+For the next user-requested longer run, the saved setup was inspected with the
+game closed: Custom SCT in over-enemy style, damage icons on, custom timer and
+original captions on, custom boss bars on, meter off, visible enemy/friendly
+plates off and FPS journaling on. These values already matched the chosen
+setup, so no redundant preference writes were needed. Damage icons differ from
+the earlier icon-off controls; this is a longer workload observation, not a
+directly matched icon-off performance comparison. No runtime source changes
+were made while preparing it.
+
+### Longer normal run and macOS sampling
+
+Two short intervening recordings span CSV lines 76976–76987 (`t=1.3–16.2`)
+and 76988–77027 (`t=1.1–44.6`). The longer recording starts at physical line
+77028, `t=1.1`; the read-only snapshot at 16:18:22 GMT extends through line
+78240, `t=1241.9`. Do not combine these launches into one time coordinate.
+The user reported pronounced stutter during the longer run. This is the
+icon-enabled normal configuration described above, with the meter off.
+
+| Native journal seconds | Windows | Median mean (ms) | Median window p95 (ms) | Median whole-process CPU (ms) | Median GPU UI (ms) | Median streamed entities |
+| ---------------------- | ------- | ---------------- | ---------------------- | ----------------------------- | ------------------ | ------------------------ |
+| 120–240                | 118     | 22.29            | 42.34                  | 42.98                         | 0.08               | 105                      |
+| 240–360                | 118     | 25.88            | 48.42                  | 49.75                         | 0.08               | 118                      |
+| 360–480                | 117     | 28.25            | 53.92                  | 54.59                         | 0.08               | 135                      |
+| 480–600                | 117     | 29.76            | 58.37                  | 56.97                         | 0.08               | 153                      |
+
+These fixed intervals exclude startup and precede both stack samples. They
+show worsening in this run alongside increased native streamed populations;
+they do not separate addon work from native combat/world work or establish
+SCT, cooldowns or icons as the cause. Median total GPU time stays about
+1.00–1.05 ms. CPU-side preparation and frame pacing remain the stronger lead,
+without ruling out work outside the recorded GPU spans. Resident entity
+counts are not enemy counts or `Mesh3d` row counts.
+
+The user explicitly authorized five seconds of read-only OS stack sampling.
+Two five-second samples of the running game were taken at 16:08:16 and
+16:13:43 GMT, with 10 ms and 20 ms intervals respectively. The second retried
+the first oversized output with in-memory reduction. Both sent the report to
+`/dev/stdout`; no report file or runtime Lua hook was created. The host reports
+Wine 11.13 running the Windows executable through x86-64 Rosetta translation.
+The game main-thread frames are predominantly unnamed Rosetta JIT/unknown
+addresses, so these samples do not attribute cost to Lua, cooldowns, SCT or a
+specific renderer function. Recursive Wine dispatcher counts are not usable
+subsystem CPU percentages. Sampling can perturb frame pacing; later spikes
+must not be presented as an uncontaminated before/after measurement.
+
+The user declined temporary callback timing probes. Investigation therefore
+remains source-only apart from the completed OS samples and read-only journal
+inspection. No timing command, saved diagnostic state or background updater
+was added.
+
+Source follow-ups remove specific avoidable work:
+
+- Moving minimap pins replace their existing CENTER anchor directly, removing
+  one ClearAllPoints call per moved pin. The legacy player-arrow overlay
+  separates size from heading changes: a fixed-size turn skips two size writes
+  and ClearAllPoints, while size-only changes skip unchanged rotation UVs.
+  Settled overlay visibility also skips writes. Positions, rotation equations,
+  update cadence and native model ownership remain unchanged.
+- Minimap size is shared lazily across pin, hover and legacy-arrow work within
+  each existing synchronous callback. Invalid or insufficient bounds remain
+  retryable in that callback; later callbacks sample afresh. This avoids repeated
+  native geometry reads after pin writes, which can otherwise drain pending
+  native layout work on the inspected engine. Settled native flag suppression
+  uses its first actual false read and retains readback after setter calls.
+  CI-only native-boundary mocks cover size sharing and readiness recovery.
+- Each cooldown-number overlay retains only its latest rounded caption value,
+  unit, language and text. Unchanged display buckets skip localization and string
+  joining while all seven native timing reads, immediate event passes and the
+  required final-200-ms frame cadence remain. Actual text/color/visibility
+  comparisons still repair native changes and retry failed setters. The existing
+  hide/disable/world cleanup clears these seven bounded caption caches; no
+  cooldown start, duration or remaining-time history is retained. CI-only
+  production-controller mocks cover reuse, same-value unit changes, language,
+  setter failure and the exact positive final-zero threshold. This does not
+  reduce native-swipe work or establish measured stutter recovery.
+- Range-indicator passes sample target existence/hostility lazily once across
+  visible buttons and read each button's visibility once. Seven visible buttons
+  therefore use at most one UnitExists and one UnitCanAttack call instead of
+  seven each, while their seven independent IsActionInRange results remain.
+  The two scalar results live only within that synchronous pass; later events
+  and ten-Hz ticks read fresh state. Hidden buttons retain cleanup and skip
+  artwork allocation and target/range reads. CI-only production mocks cover
+  missing/friendly/hostile transitions, independent ranges and hidden recovery.
+- Native chat panes retain their subscriptions, messages, unread tracking and
+  level/stat intake. Only selected visible chat activity starts the existing
+  0.35-second slide. Deselected panes expire any outstanding slide deadline
+  without animated anchors; selected slides retain their final settled sample.
+  Selection, native-event and one-second geometry repair remain available.
+- Target changes retain synchronous nameplate refresh and target-aura
+  invalidation, but use count-based incremental discovery. An unchanged native
+  child count skips full WorldFrame enumeration and recursive V/filter remasking.
+  Newly appended native slots remain discoverable immediately; OnShow, mode and
+  world transitions retain required forced checks. A CI-only production mock
+  covers unchanged and newly allocated rosters; it was not run locally.
+- Matching indexes references to the existing live/recent origins by exact
+  received name. Uncached hits visit only their matching-name array, preserving
+  relative creation order, centroid arithmetic, health-loss consumption,
+  ambiguity and the original timing rules. Identical-name packs still inspect
+  every eligible candidate; no hit, origin or lifetime is capped.
+- Within one pending-hit matching pass, identical queries can reuse the same
+  unresolved result, exact origin or ambiguous centroid. The key compares the
+  exact received target name, kind, amount and fallback eligibility at the same
+  sampled time. Any effective health-loss consumption invalidates prior results;
+  every matched original hit still calls UseLoss. Only the latest tuple per name
+  occupies one of at most 64 reusable records, and overflow uses the unchanged
+  resolver. References clear before presentation, between passes and on display
+  retirement. This bounds the optimization's scratch space without capping
+  combat intake, names, origins or text. Repeated unchanged ambiguous queries
+  can share one candidate traversal; distinct queries and changing loss evidence
+  retain their required scans. No measured saving is established yet.
+- Recent-origin retirement stable-compacts the master array and each affected
+  name array once. This avoids repeated survivor shifts during mixed bulk
+  expiry, preserving relative order, Lua 5.0 remembered lengths and the strict
+  greater-than-0.65-second boundary. The index adds references, not duplicate
+  origin records or additional gameplay history, and clears on the existing
+  style/mode/world lifecycle.
+- MSBT arrivals increment their existing duplicate group directly and retain
+  the maximum member receipt. The original subtraction-based 80 ms age gate
+  and inclusive 75 ms intake window determine emission, including out-of-order
+  receipts and floating-point boundaries. Stream mode no longer allocates or
+  revisits a pending record for each original hit. Every original color sample
+  and icon identity still runs; first-hit values/style and default over-enemy
+  matching/fallback remain. This has no subsequent live performance result.
+- Normal-hit color keys concatenate their original four string fields and
+  separators directly, avoiding one temporary four-entry table per qualifying
+  original hit. Every original sample still enters the same eight-sample color
+  history in receipt order, including visually collapsed duplicates. Parser,
+  history and default pending records still allocate; this is not an
+  allocation-free SCT path.
+- Shared local-size reads call GetWidth/GetHeight only when their corresponding
+  edge extent is unresolved. Resolved rectangles skip two unnecessary native
+  geometry reads, retaining independent fallback for either axis.
+- Blue foam shares one current authored bar-height sample across its sixteen
+  pieces per existing paint pass. This removes fifteen duplicate native calls
+  without changing clipping, UVs or temporal equations. The inspected getter
+  reads an authored height directly; this is not avoided layout resolution.
+- Timer captions retain rounded native inputs separately from the final two
+  display strings. One bounded cache follows mode, effective options and
+  language; unchanged displayed values reuse formatting and disabled components
+  skip it. Previews rebuild immediately from retained inputs. Per-frame scale
+  checks and unavailable-font-metric retries remain in the existing presentation
+  helper. Retirement invalidates active data once, retaining settled empty state
+  on repeated clears. CI-only extracted-production mocks cover both timer
+  changes; neither reduction establishes a measured fix for the timer slowdown.
+- Revive retains one latest subject/direction and language caption, plus its
+  latest displayed percentage string. Hidden presentation defers caption
+  formatting; visible unchanged captions/percentages skip localization and
+  string construction while actual text comparisons and failed-write retries
+  remain. Clear invalidates the bounded caches. The native progress source,
+  smoothing and percentage-step equations, fade and cross pulses are unchanged.
+- A revive animation callback shares one current root-width sample between
+  dirty fill/spark painting and its existing cross loop, removing one duplicate
+  native width read on dirty frames. Standalone paints read current width.
+- Guardian tracker rows cache their latest received key/status, rounded native
+  respawn second, language and status text. Unchanged tenth-second samples skip
+  clock/status formatting without changing native time or static captions.
+  Health presentation, row retirement, visibility, language and relevant options
+  invalidate the cache; actual text comparisons retain retries and restoration.
+  Boss and guardian health fills and health-caption caches already skip
+  unchanged work. These views do not allocate the timer's foam/flow effects;
+  the shared native rendering costs of changing fills remain unresolved.
+
+These edits reduce source-level work without adding regions, events, updaters,
+assets or saved state. Pinned formatting and source review do not establish a
+stutter fix; no local tests, standalone validation or addon/game execution were
+performed. No before/after measurement of these edits is established.
+
 ## Full performance follow-up — 2026-10-28
 
 ### Inactive unit borders
