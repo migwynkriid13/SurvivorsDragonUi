@@ -25,15 +25,42 @@ DFRL:NewMod("DamageMeter", 7, function()
     local path = DFRL:GetInfoOrCons("tex")
     local native = T.NewHudOwner("meter", "hudMeter")
     local modes = {
-        { getter = "AZS_GetMeter", prefix = "AZSMETER", title = "Damage Done", rate = "DPS" },
-        { getter = "AZS_GetHealing", prefix = "AZSHEAL", title = "Healing Done", rate = "HPS", healing = true },
-        { getter = "AZS_GetBossMeter", prefix = "AZSBOSSDMG", title = "Boss Damage", rate = "DPS" },
-        { getter = "AZS_GetPartyMeter", prefix = "AZSPARTY", title = "Party Damage", rate = "DPS", party = true },
+        {
+            getter = "AZS_GetMeter",
+            stamp = "AZS_METER_UPDATED",
+            prefix = "AZSMETER",
+            title = "Damage Done",
+            rate = "DPS",
+        },
+        {
+            getter = "AZS_GetHealing",
+            stamp = "AZS_HEALING_UPDATED",
+            prefix = "AZSHEAL",
+            title = "Healing Done",
+            rate = "HPS",
+            healing = true,
+        },
+        {
+            getter = "AZS_GetBossMeter",
+            stamp = "AZS_BOSSMETER_UPDATED",
+            prefix = "AZSBOSSDMG",
+            title = "Boss Damage",
+            rate = "DPS",
+        },
+        {
+            getter = "AZS_GetPartyMeter",
+            stamp = "AZS_PARTY_UPDATED",
+            prefix = "AZSPARTY",
+            title = "Party Damage",
+            rate = "DPS",
+            party = true,
+        },
     }
     local phases = { playing = true, choosing = true, paused = true, dead = true, victory = true }
     local mode, offset, age = 1, 0, 0.2
     local inWorld, editing, ready, faulted = true, false, true, false
     local rows, received, blocked = {}, {}, {}
+    local receipts, publications, publicationSequence = {}, {}, 0
     local partyUnits = {
         { unit = "player" },
         { unit = "party1", portrait = "PartyMemberFrame1Portrait" },
@@ -592,6 +619,7 @@ DFRL:NewMod("DamageMeter", 7, function()
             ClearRow(row)
         end
         snapshot.count, snapshot.total, snapshot.rate, snapshot.averageRate = 0, nil, nil, nil
+        snapshot.source, snapshot.publication = nil, nil
         ClearSamples()
         for key in pairs(snapshot.rows) do
             snapshot.rows[key] = nil
@@ -613,6 +641,7 @@ DFRL:NewMod("DamageMeter", 7, function()
         Release()
         for index = 1, table.getn(modes) do
             received[index], blocked[index] = nil, true
+            publications[index] = nil
         end
         T.SetTextIfChanged(total, "")
         T.SetTextIfChanged(status, "")
@@ -628,11 +657,30 @@ DFRL:NewMod("DamageMeter", 7, function()
     local function ReadNative(index)
         local selected = modes[index]
         local getter = _G[selected.getter]
-        if type(getter) ~= "function" then return nil, nil, nil, "Meter data is unavailable." end
+        if type(getter) ~= "function" then
+            publications[index] = nil
+            return nil, nil, nil, "Meter data is unavailable."
+        end
         if blocked[index] and not received[index] then return end
         local ok, source, amount, rate = pcall(getter)
         if not ok or type(source) ~= "table" or not Number(amount) or not Number(rate) then
+            publications[index] = nil
             return nil, nil, nil, "Meter data is unavailable."
+        end
+        local publication = publications[index]
+        local stamp, receipt = _G[selected.stamp], receipts[index] or 0
+        -- The native parser replaces these lists on publication. Receipts also
+        -- invalidate in-place/same-timestamp deliveries; getters still run so
+        -- native rates and the run clock remain live between publications.
+        if
+            publication
+            and publication.getter == getter
+            and publication.source == source
+            and publication.stamp == stamp
+            and publication.receipt == receipt
+            and publication.amount == amount
+        then
+            return source, amount, rate, nil, publication.revision
         end
         local count = 0
         for _, entry in ipairs(source) do
@@ -645,6 +693,7 @@ DFRL:NewMod("DamageMeter", 7, function()
                 or not Number(entry.share)
                 or entry.share > 1
             then
+                publications[index] = nil
                 return nil, nil, nil, "Meter data is unavailable."
             end
             count = count + 1
@@ -652,40 +701,49 @@ DFRL:NewMod("DamageMeter", 7, function()
         -- Fresh empty getter tables after reload are not received snapshots.
         if count == 0 and not received[index] then return end
         received[index], blocked[index] = true, nil
-        return source, amount, rate
+        publicationSequence = publicationSequence + 1
+        publication = publication or {}
+        publication.getter, publication.source, publication.stamp = getter, source, stamp
+        publication.receipt, publication.amount, publication.revision = receipt, amount, publicationSequence
+        publications[index] = publication
+        return source, amount, rate, nil, publication.revision
     end
-    local function ObserveDamage(source, amount, rate)
+    local function ObserveDamage(source, amount, rate, publication)
         if not source then
-            source, amount, rate = ReadNative(1)
+            local _
+            source, amount, rate, _, publication = ReadNative(1)
             if not source then
                 dps.Suspend()
                 return
             end
-            source, amount, rate = session.Apply(1, source, amount, rate, RunSeconds())
+            source, amount, rate = session.Apply(1, source, amount, rate, RunSeconds(), publication)
         end
-        if not dps.Observe(RunSeconds(), source, amount, rate) then dps.Suspend() end
+        if not dps.Observe(RunSeconds(), source, amount, rate, publication) then dps.Suspend() end
     end
     local function Read(paint)
-        local source, amount, rate, message = ReadNative(mode)
+        local source, amount, rate, message, publication = ReadNative(mode)
         if not source then return false, message end
         dataValid = true
         if not paint then
             dps.Suspend()
             return true
         end
-        source, amount, rate = session.Apply(mode, source, amount, rate, RunSeconds())
+        local nativeSource = source
+        source, amount, rate = session.Apply(mode, source, amount, rate, RunSeconds(), publication)
         local count = table.getn(source)
         local revision = dps.revision
-        if mode == 1 then ObserveDamage(source, amount, rate) end
+        if mode == 1 then ObserveDamage(source, amount, rate, publication) end
         if revision ~= dps.revision then ClearSamples() end
         -- Native run seconds own the rate window; UI time only limits repaint.
         local now = GetTime()
-        if
-            not rateSampledAt
+        local sampleRates = not rateSampledAt
             or now < rateSampledAt
             or now - rateSampledAt >= 1
             or (snapshot.total and amount < snapshot.total)
-        then
+        if sampleRates then
+            for _, entry in ipairs(nativeSource) do
+                if not Number(entry.dps) then return false, "Meter data is unavailable." end
+            end
             if mode == 1 then
                 snapshot.rate, snapshot.averageRate = dps.Header(rate)
             else
@@ -693,13 +751,20 @@ DFRL:NewMod("DamageMeter", 7, function()
             end
             rateSampledAt = now
         end
+        local countersChanged = snapshot.publication ~= publication or snapshot.source ~= source
+        if not countersChanged and not sampleRates then return true end
         for index, entry in ipairs(source) do
-            local samples = rateSamples[entry.name]
+            local copy = snapshot.rows[index] or {}
+            if countersChanged then
+                copy.name, copy.dmg, copy.share, copy.proc = entry.name, entry.dmg, entry.share, entry.proc
+                copy.class = modes[mode].party and type(entry.class) == "string" and entry.class or nil
+            end
+            local samples = rateSamples[copy.name]
             if not samples then
                 samples = {}
-                rateSamples[entry.name] = samples
+                rateSamples[copy.name] = samples
             end
-            local proc = entry.proc == 1
+            local proc = copy.proc == 1
             local sample = samples[proc]
             if not sample then
                 sample = {}
@@ -707,24 +772,23 @@ DFRL:NewMod("DamageMeter", 7, function()
             end
             if sample.epoch ~= rateSampledAt then
                 if mode == 1 then
-                    sample.rate, sample.average = dps.Row(entry.name, entry.proc, entry.dps)
+                    sample.rate, sample.average = dps.Row(copy.name, copy.proc, entry.dps)
                 else
                     sample.rate, sample.average = entry.dps, nil
                 end
                 sample.epoch = rateSampledAt
             end
-            local copy = snapshot.rows[index] or {}
-            copy.name, copy.dmg, copy.dps, copy.share, copy.proc =
-                entry.name, entry.dmg, sample.rate, entry.share, entry.proc
-            copy.averageDps = sample.average
-            copy.class = modes[mode].party and type(entry.class) == "string" and entry.class or nil
+            copy.dps, copy.averageDps = sample.rate, sample.average
             snapshot.rows[index] = copy
         end
-        for index = count + 1, snapshot.count do
-            snapshot.rows[index] = nil
+        if countersChanged then
+            for index = count + 1, snapshot.count do
+                snapshot.rows[index] = nil
+            end
+            table.setn(snapshot.rows, count)
+            snapshot.count, snapshot.total = count, amount
+            snapshot.source, snapshot.publication = source, publication
         end
-        table.setn(snapshot.rows, count)
-        snapshot.count, snapshot.total = count, amount
         presentation.cleared = false
         return true
     end
@@ -862,8 +926,8 @@ DFRL:NewMod("DamageMeter", 7, function()
             -- One deferred capture clears every view, including unselected ones.
             -- Unavailable/unpublished views baseline their first accepted snapshot.
             for index = 1, table.getn(modes) do
-                local source, amount, rate = ReadNative(index)
-                if source then session.Apply(index, source, amount, rate, time) end
+                local source, amount, rate, _, publication = ReadNative(index)
+                if source then session.Apply(index, source, amount, rate, time, publication) end
             end
             resetPending = false
         end
@@ -1093,6 +1157,7 @@ DFRL:NewMod("DamageMeter", 7, function()
                 for index, entry in ipairs(modes) do
                     if arg1 == entry.prefix then
                         received[index] = true
+                        receipts[index] = (receipts[index] or 0) + 1
                         if index == mode then dataDirty = true end
                     end
                 end

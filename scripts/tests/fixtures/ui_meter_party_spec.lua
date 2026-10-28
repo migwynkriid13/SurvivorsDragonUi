@@ -107,21 +107,38 @@ local function Meter()
     env.SetPortraitToTexture = function(name, texture) env[name]:SetTexture(texture) end
     env.AZS_GetPhase = function() return context.phase end
     env.AZS_RUN, env.AZS_RUN_UPDATED = { t = 10 }, context.now
-    local damage = { { name = "Sinister Strike", dmg = 100, dps = 10, share = 1, proc = 0 } }
+    context.damage = { { name = "Sinister Strike", dmg = 100, dps = 10, share = 1, proc = 0 } }
+    context.healing, context.boss = context.damage, context.damage
     context.party = {
         { name = "Friend", class = "mage", dmg = 200, dps = 20, share = 2 / 3 },
         { name = "Me", class = "rogue", dmg = 100, dps = 10, share = 1 / 3 },
     }
-    env.AZS_GetMeter = function() return damage, 100, 10 end
-    env.AZS_GetHealing = function() return damage, 100, 10 end
-    env.AZS_GetBossMeter = function() return damage, 100, 10 end
-    env.AZS_GetPartyMeter = function()
-        Count("reads", "party")
+    local function Totals(source)
         local total, rate = 0, 0
-        for _, line in ipairs(context.party) do
+        for _, line in ipairs(source) do
             total, rate = total + line.dmg, rate + line.dps
         end
-        return context.party, total, rate
+        return source, total, rate
+    end
+    env.AZS_GetMeter = function()
+        Count("reads", "damage")
+        local source, total = Totals(context.damage)
+        return source, total, total / math.max(1, env.AZS_RUN.t)
+    end
+    env.AZS_GetHealing = function() return Totals(context.healing) end
+    env.AZS_GetBossMeter = function() return Totals(context.boss) end
+    env.AZS_GetPartyMeter = function()
+        Count("reads", "party")
+        return Totals(context.party)
+    end
+    local stamps = {
+        AZSMETER = "AZS_METER_UPDATED",
+        AZSHEAL = "AZS_HEALING_UPDATED",
+        AZSBOSSDMG = "AZS_BOSSMETER_UPDATED",
+        AZSPARTY = "AZS_PARTY_UPDATED",
+    }
+    for _, name in pairs(stamps) do
+        env[name] = context.now
     end
     env.DFRL.sct = {
         GetSourceIcon = function()
@@ -147,6 +164,20 @@ local function Meter()
     function context:Cycle(direction)
         self:Call(self.header, "OnClick", direction or "LeftButton")
         self:Tick()
+    end
+    function context:Publish(prefix, stamp)
+        env[stamps[prefix]] = stamp or self.now
+        self:Event(self.controller, "CHAT_MSG_ADDON", prefix)
+    end
+    function context:WatchCounters(line)
+        return setmetatable({}, {
+            __index = function(_, key)
+                if key == "name" or key == "proc" or key == "share" or key == "class" then
+                    Count("reads", "counterFields")
+                end
+                return line[key]
+            end,
+        })
     end
     function context:Party()
         self:Tick()
@@ -242,11 +273,13 @@ Test("shared Reset includes party counters and preserves class metadata without 
     assert(not context:Row(1).active, "baseline capture restored pre-reset party damage")
     context.party[1].dmg, context.party[2].dmg = 230, 110
     context.env.AZS_RUN.t = 12
+    context:Publish("AZSPARTY")
     context:Tick()
     local entry = context:Row(1).entry
     assert(entry.dmg == 30 and entry.dps == 15 and entry.class == "mage", "party deltas/rates/class changed")
     assert(context.party[1].dmg == 230 and context.party[1].share == 2 / 3 and not context.party[1].order)
     context.party[1].class = "MAGE"
+    context:Publish("AZSPARTY")
     context:Tick()
     assert(context:Row(1).entry.class == "MAGE", "unchanged counters hid a class-metadata update")
     context:Event(context.controller, "PLAYER_LEAVING_WORLD")
@@ -257,6 +290,103 @@ Test("shared Reset includes party counters and preserves class metadata without 
     context:Event(context.controller, "CHAT_MSG_ADDON", "AZSPARTY")
     context:Tick()
     assert(context.reads.party == 1 and context:Row(1).entry.dmg == 230)
+end)
+
+Test("unchanged meter publications skip counter traversal while native time keeps sampling", function()
+    local context = Meter()
+    context.damage = { context:WatchCounters(context.damage[1]) }
+    context:Tick()
+    context:ResetCounts()
+    for _ = 1, 6 do
+        context.env.AZS_RUN.t = context.env.AZS_RUN.t + 0.21
+        context:Tick()
+    end
+    assert(context.reads.damage == 6, "cached counters stopped the official getter")
+    assert(not context.reads.counterFields, "unchanged publications retraversed immutable counter fields")
+    assert(context:Row(1).entry.dps == 0, "unchanged counters stopped the rolling native-time window")
+    context.env.DFRL.ResetMeterStats()
+    context:Tick()
+    context:ResetCounts()
+    context:Tick()
+    assert(not context.reads.counterFields, "settled Reset baselines rescanned unchanged counter metadata")
+end)
+
+Test("same-table same-stamp receipts refresh order, class and validation", function()
+    local context = Meter()
+    context:Party()
+    local stamp = context.env.AZS_PARTY_UPDATED
+    context.party[1].dmg, context.party[2].dmg = 150, 150
+    context.party[1].share, context.party[2].share = 0.5, 0.5
+    context.party[1], context.party[2] = context.party[2], context.party[1]
+    context.party[1].class = "ROGUE"
+    context:Publish("AZSPARTY", stamp)
+    context:Tick()
+    assert(context:Row(1).entry.name == "Me" and context:Row(1).entry.class == "ROGUE")
+    context.party[1].share = 2
+    context:Publish("AZSPARTY", stamp)
+    context:Tick()
+    assert(not context:Row(1).active, "same-stamp receipt bypassed validation")
+    context.party[1].share = 0.5
+    context:Publish("AZSPARTY", stamp)
+    context:Tick()
+    assert(context:Row(1).active, "a corrected same-stamp receipt did not recover")
+    context.party = {}
+    context:Publish("AZSPARTY", stamp)
+    context:Tick()
+    assert(not context:Row(1).active and not context:Row(2).active, "empty publication retained counter rows")
+end)
+
+Test("native healing and boss rates stay live without counter publications", function()
+    local context = Meter()
+    context.healing = { { name = "Regeneration", dmg = 100, dps = 10, share = 1, proc = 0 } }
+    context.boss = { { name = "Sinister Strike", dmg = 100, dps = 10, share = 1, proc = 0 } }
+    context:Tick()
+    context:Cycle()
+    context:SetSetting("meterShowTotalDps", true)
+    context.healing[1].dps = 25
+    for _ = 1, 5 do
+        context:Tick()
+    end
+    assert(context:Row(1).entry.dps == 25 and context.title:GetText() == "HPS: 25")
+    context:Cycle()
+    context.boss[1].dps = 40
+    for _ = 1, 5 do
+        context:Tick()
+    end
+    assert(context:Row(1).entry.dps == 40 and context.title:GetText() == "DPS: 40")
+end)
+
+Test("source and stamp changes invalidate cached counters without a receipt", function()
+    local context = Meter()
+    context:Party()
+    context.party = { { name = "Replacement", class = "priest", dmg = 300, dps = 30, share = 1 } }
+    context:Tick()
+    assert(context:Row(1).entry.name == "Replacement" and not context:Row(2).active)
+    context.party[1].class = "PRIEST"
+    context.env.AZS_PARTY_UPDATED = context.now
+    context:Tick()
+    assert(context:Row(1).entry.class == "PRIEST", "stamp change retained stale counter metadata")
+    context.party[1].class = "priest"
+    context.env.AZS_GetPartyMeter = function() return context.party, 300, 30 end
+    context:Tick()
+    assert(context:Row(1).entry.class == "priest", "getter replacement retained stale validation")
+end)
+
+Test("publication-cached rolling samples retain gaps, regressions and source retirement", function()
+    local context = Meter()
+    local model = context.env.T.NewMeterDps(10)
+    local source = { { name = "Strike", dmg = 100, dps = 10, share = 1, proc = 0 } }
+    assert(model.Observe(10, source, 100, 10, 1))
+    assert(model.Observe(11, source, 100, 10, 1) and model.Header(10) == 0)
+    source[1].dmg = 200
+    assert(model.Observe(12, source, 200, 20, 2) and model.Header(20) == 50)
+    assert(model.Observe(15, source, 200, 20, 2) and model.Header(20) == nil)
+    assert(model.Observe(16, source, 200, 20, 2) and model.Header(20) == 0)
+    assert(model.Observe(8, source, 200, 20, 2) and model.Header(20) == nil)
+    assert(model.Observe(9, source, 200, 20, 2) and model.Row("Strike", 0, 20) == 0)
+    source = {}
+    assert(model.Observe(10, source, 0, 0, 3) and model.Header(0) == nil)
+    assert(model.Observe(11, source, 0, 0, 3) and model.Header(0) == 0)
 end)
 
 print("PASS " .. passed .. " party meter contracts")

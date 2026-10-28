@@ -159,6 +159,24 @@ new event or updater. Enabled views keep their original polling, expiry and
 cosmetic cadence, including hidden notice retirement. CI-only production
 coverage checks enable/disable, failed cleanup retries and dispatch failure.
 
+### Meter publication work
+
+The visible meter distinguishes accepted counter publications from changing
+native rates. Getter identity, returned source, native stamp, total and a
+monotonic receipt generation invalidate counter validation/copying, including
+same-table/same-stamp deliveries. Official getters and five-Hz native-time
+observations remain active; one-Hz row/header rate updates remain independent.
+Session comparison and immutable name/order/class/share copying skip settled
+publications. The bounded rolling ring still samples cached counters, preserving
+pauses, interpolation, warmup, gaps and regressions. Reset, language/off/world
+retirement and empty-publication gates retain their existing ownership.
+
+This independently applies FieldKit's separation of publication and rate work,
+with the installed native parser's list-replacement/stamp contract and our
+stronger receipt gates. CI-only production fixtures cover invalid/replaced
+sources, same-stamp receipts, native changing rates and all reset/retirement
+boundaries. No native gameplay table is changed and no drawing region is removed.
+
 ## Loot popup modes and marks — 2026-10-27
 
 The new Loot notifications page uses existing editor artwork: one category
