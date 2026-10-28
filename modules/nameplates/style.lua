@@ -109,7 +109,7 @@ DFRL:NewMod("NameplateStyle", 5, function()
         end
     end
 
-    local function Update(plate, data, namesOnly, fontSize)
+    local function Update(plate, data, namesOnly, fontSize, sample)
         if not plate:IsShown() then return end
         local style = data.style
         if not style then return end
@@ -156,7 +156,12 @@ DFRL:NewMod("NameplateStyle", 5, function()
             style.namesOnly = namesOnly
         end
 
-        local red, green, blue = data.bar:GetStatusBarColor()
+        local red, green, blue
+        if sample then
+            red, green, blue = sample.red, sample.green, sample.blue
+        else
+            red, green, blue = data.bar:GetStatusBarColor()
+        end
         local nameRed, nameGreen, nameBlue = 1, 1, 1
         if namesOnly then
             nameRed, nameGreen, nameBlue = red, green, blue
@@ -169,13 +174,24 @@ DFRL:NewMod("NameplateStyle", 5, function()
             style.name:SetTextColor(nameRed, nameGreen, nameBlue, 1)
             style.nameRed, style.nameGreen, style.nameBlue = nameRed, nameGreen, nameBlue
         end
-        T.SetTextIfChanged(style.name, data.nameRegion:GetText() or "")
+        local name
+        if sample then
+            name = sample.name
+        else
+            name = data.nameRegion:GetText()
+        end
+        T.SetTextIfChanged(style.name, name or "")
         -- The native bar remains live for SCT health-loss matching. Only its
         -- custom presentation skips value/range writes and raid-icon binding.
         if namesOnly then return end
 
-        local minimum, maximum = data.bar:GetMinMaxValues()
-        local value = data.bar:GetValue()
+        local minimum, maximum, value
+        if sample then
+            minimum, maximum, value = sample.minimum, sample.maximum, sample.value
+        else
+            minimum, maximum = data.bar:GetMinMaxValues()
+            value = data.bar:GetValue()
+        end
         red, green, blue = PlateColor(red, green, blue)
         local oldMinimum, oldMaximum = style.health:GetMinMaxValues()
         if oldMinimum ~= minimum or oldMaximum ~= maximum then style.health:SetMinMaxValues(minimum, maximum) end

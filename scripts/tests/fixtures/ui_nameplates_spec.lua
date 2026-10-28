@@ -50,12 +50,18 @@ local function Plates()
                 self.layers[layer] = true
             end
             function object:IsDrawLayerEnabled(layer) return self.layers[layer] ~= false end
-            function object:GetMinMaxValues() return self.minimum or 0, self.maximum or 100 end
+            function object:GetMinMaxValues()
+                self.rangeReads = (self.rangeReads or 0) + 1
+                return self.minimum or 0, self.maximum or 100
+            end
             function object:SetMinMaxValues(low, high)
                 Write(self, "SetMinMaxValues")
                 self.minimum, self.maximum = low, high
             end
-            function object:GetValue() return self.value or 0 end
+            function object:GetValue()
+                self.valueReads = (self.valueReads or 0) + 1
+                return self.value or 0
+            end
             function object:SetValue(value)
                 Write(self, "SetValue")
                 self.value = value
@@ -151,6 +157,18 @@ context:NoPresentationWrites()
 assert(not context.writes.SetValue and not context.writes.SetMinMaxValues and not context.writes.SetStatusBarColor)
 print("PASS both nameplate options preserve eligible names without bar allocation or unchanged writes")
 
+context.guardian.nativeBar.rangeReads, context.guardian.nativeBar.valueReads = 0, 0
+context:Tick(0.21)
+assert(context.guardian.nativeBar.rangeReads == 1, "filter and SCT sampled the same native range twice")
+assert(context.guardian.nativeBar.valueReads == 1, "SCT health sampling lost its native value")
+context:SetSetting("sctMSBTStyle", true)
+context.guardian.nativeBar.rangeReads, context.guardian.nativeBar.valueReads = 0, 0
+context:Tick(0.21)
+assert(context.guardian.nativeBar.rangeReads == 1, "names-only filtering did not use its one required range")
+assert(context.guardian.nativeBar.valueReads == 0, "names-only scrolling added unnecessary native health reads")
+context:SetSetting("sctMSBTStyle", false)
+print("PASS one synchronous sample supplies filter, skin and matching without adding disabled reads")
+
 local waking = Entries()
 waking[1].hp, waking[1].hpm, waking[1].state = 1234, 1234, 0
 context.guardian.nativeBar.maximum, context.guardian.nativeBar.value = 1234, 1234
@@ -217,6 +235,12 @@ assert(
 )
 local allocated = #context.objects
 local writes = guardian.health.calls.SetValue or 0
+context.guardian.nativeBar.rangeReads, context.guardian.nativeBar.valueReads = 0, 0
+context:Tick(0.21)
+assert(
+    context.guardian.nativeBar.rangeReads == 1 and context.guardian.nativeBar.valueReads == 1,
+    "regular skin and matching duplicated native health reads"
+)
 context:SetSetting("nameplatesNamesOnly", true)
 context:Tick(0.21)
 assert(

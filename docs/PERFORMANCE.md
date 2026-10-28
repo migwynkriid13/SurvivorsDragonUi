@@ -177,6 +177,16 @@ stronger receipt gates. CI-only production fixtures cover invalid/replaced
 sources, same-stamp receipts, native changing rates and all reset/retirement
 boundaries. No native gameplay table is changed and no drawing region is removed.
 
+### Shared plate samples
+
+One reusable lazy scratch tuple within each synchronous plate refresh now feeds
+the filter, skin and SCT matching. Names, reaction colors, health range and value
+are read only as required, avoiding duplicate native calls for the same pass.
+Names-only/MSBT paths retain their health-read skips; filtered skins still defer
+their cosmetic reads. The next refresh and native reuse callbacks sample afresh,
+and retirement clears scratch data. CI-only fixtures assert single reads and the
+disabled paths. Native health, matching cadence and all artwork stay unchanged.
+
 ## Loot popup modes and marks — 2026-10-27
 
 The new Loot notifications page uses existing editor artwork: one category

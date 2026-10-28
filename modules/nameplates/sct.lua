@@ -243,11 +243,42 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         end
         plateFilter.source, plateFilter.stamp, plateFilter.accepted = entries, stamp, plateFilter.units
     end
-    function plateFilter.Matches(data)
-        local name = data.nameRegion and data.nameRegion:GetText()
+    local function PlateName(data, sample)
+        if not sample then return data.nameRegion and data.nameRegion:GetText() end
+        if not sample.nameRead then
+            sample.name = data.nameRegion and data.nameRegion:GetText()
+            sample.nameRead = true
+        end
+        return sample.name
+    end
+    local function PlateRange(data, sample)
+        if not sample then return data.bar:GetMinMaxValues() end
+        if not sample.rangeRead then
+            sample.minimum, sample.maximum = data.bar:GetMinMaxValues()
+            sample.rangeRead = true
+        end
+        return sample.minimum, sample.maximum
+    end
+    local function PlateValue(data, sample)
+        if not sample.valueRead then
+            sample.value = data.bar:GetValue()
+            sample.valueRead = true
+        end
+        return sample.value
+    end
+    local function PlateColor(data, sample)
+        if not sample then return data.bar:GetStatusBarColor() end
+        if not sample.colorRead then
+            sample.red, sample.green, sample.blue = data.bar:GetStatusBarColor()
+            sample.colorRead = true
+        end
+        return sample.red, sample.green, sample.blue
+    end
+    function plateFilter.Matches(data, sample)
+        local name = PlateName(data, sample)
         local maxima = name and plateFilter.names[name]
         if not maxima then return false end
-        local minimum, maximum = data.bar:GetMinMaxValues()
+        local minimum, maximum = PlateRange(data, sample)
         -- Anonymous plates expose no spawn ID; never equate percentage bars to HP.
         return minimum == 0 and maxima[maximum] == true
     end
@@ -256,9 +287,9 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         plateFilter.age = 0.2
     end)
 
-    local function IsEnemyPlate(data)
+    local function IsEnemyPlate(data, sample)
         if not data.bar or not data.bar.GetStatusBarColor then return false end
-        local red, green, blue = data.bar:GetStatusBarColor()
+        local red, green, blue = PlateColor(data, sample)
         if not red or not green or not blue then return false end
         -- Ignore green/blue friendly plates requested by Shift-V.
         return not (green > red + 0.1 and green > blue + 0.1) and not (blue > red + 0.1 and blue > green + 0.1)
@@ -329,17 +360,22 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             if retiring then state.skinned = nil end
             MaskFrame(frame, state, false)
         end
-        if retiring then data.nativeLayersSuppressed = nil end
+        if retiring then
+            data.nativeLayersSuppressed = nil
+            for key in pairs(data.sample) do
+                data.sample[key] = nil
+            end
+        end
         if plateStyle then plateStyle.SetMasked(data, false) end
         data.presentationMasked = false
     end
-    local function UpdatePresentation(plate, data, force)
+    local function UpdatePresentation(plate, data, force, sample)
         local hiddenByV = UsesPlateOrigins() and not enemyPlatesEnabled
         local masked = trackingSupported
                 and inWorld
                 and (hiddenByV or plateFilter.enabled)
-                and IsEnemyPlate(data)
-                and (hiddenByV or not plateFilter.Matches(data))
+                and IsEnemyPlate(data, sample)
+                and (hiddenByV or not plateFilter.Matches(data, sample))
             or false
         if data.presentationMasked == masked and not force then return end
         if not masked then
@@ -415,10 +451,10 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         combatDiscoveryNeeded = true
     end
 
-    local function IsShownEnemy(plate, data)
+    local function IsShownEnemy(plate, data, sample)
         if not UsesPlateOrigins() or not inWorld or not plate:IsShown() then return false end
         if plate.IsVisible and not plate:IsVisible() then return false end
-        return IsEnemyPlate(data)
+        return IsEnemyPlate(data, sample)
     end
 
     local function SampleWorldGeometry(geometry)
@@ -478,10 +514,10 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         origin.positionAt = now
     end
 
-    local function SampleHealth(data, origin, now)
+    local function SampleHealth(data, origin, now, sample)
         if not data.bar.GetValue or not data.bar.GetMinMaxValues then return end
-        local minimum, maximum = data.bar:GetMinMaxValues()
-        local value = data.bar:GetValue()
+        local minimum, maximum = PlateRange(data, sample)
+        local value = PlateValue(data, sample)
         if not maximum or not minimum or not value or maximum <= minimum then return end
         value = math.max(minimum, math.min(value, maximum))
         if origin.health and origin.maximum == maximum and origin.minimum == minimum then
@@ -523,17 +559,25 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             return
         end
         SuppressNativeLayers(plate, data)
-        UpdatePresentation(plate, data, forcePresentation)
+        local sample = data.sample
+        sample.nameRead, sample.rangeRead, sample.valueRead, sample.colorRead = false, false, false, false
+        UpdatePresentation(plate, data, forcePresentation, sample)
         -- Hidden tracking still samples native data, but its skin has no pixels
         -- to refresh. Unmasking updates the skin in this same callback.
         if plateStyle and not data.presentationMasked then
-            plateStyle.Update(plate, data, nameplatesNamesOnly, nameplateFontSize)
+            PlateName(data, sample)
+            PlateColor(data, sample)
+            if not nameplatesNamesOnly then
+                PlateRange(data, sample)
+                PlateValue(data, sample)
+            end
+            plateStyle.Update(plate, data, nameplatesNamesOnly, nameplateFontSize, sample)
         end
-        if not IsShownEnemy(plate, data) then
+        if not IsShownEnemy(plate, data, sample) then
             RetirePlate(plate)
             return
         end
-        local name = data.nameRegion and data.nameRegion:GetText()
+        local name = PlateName(data, sample)
         if not name or name == "" then
             RetirePlate(plate)
             return
@@ -552,7 +596,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         end
         origin.lastSeen = now
         SamplePosition(plate, origin, now, geometry)
-        SampleHealth(data, origin, now)
+        SampleHealth(data, origin, now, sample)
     end
 
     local function DiscoverPlate(plate, now, geometry)
@@ -605,7 +649,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             end
         end
         if not name or not bar then return end
-        local data = { nameRegion = name, bar = bar, nativeRegions = regions, presentation = {} }
+        local data = { nameRegion = name, bar = bar, nativeRegions = regions, presentation = {}, sample = {} }
         plates[plate] = data
         if plate:IsShown() then shownPlates[plate] = data end
         -- Build the skin before the first recursive mask so V-off tracking
