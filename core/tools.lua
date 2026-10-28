@@ -28,12 +28,11 @@ function DFRL.tools.SetTextIfChanged(label, text)
     return true
 end
 
-local function EdgeExtent(first, last, fallback)
+local function EdgeExtent(first, last)
     if type(first) == "number" and type(last) == "number" then
         local extent = last - first
         if extent > 0 and extent - extent == 0 then return extent end
     end
-    return fallback
 end
 
 -- Native size getters return an authored local size when set, but an already
@@ -42,7 +41,10 @@ end
 function DFRL.tools.GetLocalSize(frame)
     local left, right = frame:GetLeft(), frame:GetRight()
     local bottom, top = frame:GetBottom(), frame:GetTop()
-    return EdgeExtent(left, right, frame:GetWidth()), EdgeExtent(bottom, top, frame:GetHeight())
+    local width, height = EdgeExtent(left, right), EdgeExtent(bottom, top)
+    if not width then width = frame:GetWidth() end
+    if not height then height = frame:GetHeight() end
+    return width, height
 end
 
 -- Original 1.12.1 FrameXML/Fonts.xml RAID_CLASS_COLORS:
