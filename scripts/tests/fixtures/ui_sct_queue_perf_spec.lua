@@ -177,3 +177,24 @@ do
     assert(group.count == 2 and group.remaining == 0 and not next(env.intakeBuckets))
 end
 print("PASS default SCT retains original per-hit pending records, ordered matching, fallback age and centroid")
+
+do
+    local context, env = Queues(true)
+    for index, values in ipairs({
+        { sourceName = "Player", damageType = "spell", school = "Fire", spell = "Flame" },
+        { damageType = "autoattack" },
+        { sourceName = "Player\031Pet", damageType = "periodic", school = "Shadow", spell = "Pain" },
+    }) do
+        values.kind, values.targetName, values.amount = "damage", "Enemy", 300 + index
+        context.queue.Handle("TEST_COMBAT", values, 10)
+        local key = table.concat(
+            { values.sourceName or "", values.damageType or "", values.school or "", values.spell or "" },
+            "\031"
+        )
+        assert(
+            env.recentDamage[key] and env.recentDamage[key][1].amount == values.amount,
+            "direct concatenation changed a damage-color key"
+        )
+    end
+end
+print("PASS damage-color keys preserve every component, empty field and separator byte without an intake table")

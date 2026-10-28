@@ -1597,12 +1597,13 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         if info.kind ~= "damage" then return DAMAGE_COLORS.strong end
         if info.critical then return DAMAGE_COLORS.critical end
         if info.damageType ~= "autoattack" and (not info.spell or info.spell == "") then return DAMAGE_COLORS.normal end
-        local key = table.concat({
-            info.sourceName or "",
-            info.damageType or "",
-            info.school or "",
-            info.spell or "",
-        }, "\031")
+        local key = (info.sourceName or "")
+            .. "\031"
+            .. (info.damageType or "")
+            .. "\031"
+            .. (info.school or "")
+            .. "\031"
+            .. (info.spell or "")
         local samples = recentDamage[key]
         if not samples then
             samples = {}
