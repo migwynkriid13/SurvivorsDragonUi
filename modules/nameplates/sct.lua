@@ -1906,7 +1906,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             iconSourcesDirty.talents = true
         elseif event == "PLAYER_TARGET_CHANGED" then
             iconSourcesDirty.target = true
-            ScanPlates(true)
+            ScanPlates(false)
         elseif event == "UPDATE_MOUSEOVER_UNIT" then
             iconSourcesDirty.mouseover = true
         elseif event == "UNIT_AURA" then

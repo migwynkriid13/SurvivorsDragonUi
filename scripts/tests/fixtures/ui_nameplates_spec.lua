@@ -26,6 +26,7 @@ local function Plates()
             function object:GetCenter() return 200, 200 end
             function object:GetTop() return 205 end
             function object:GetChildren()
+                self.childrenReads = (self.childrenReads or 0) + 1
                 local children = {}
                 for _, child in ipairs(context.objects) do
                     if child.parent == self and child.kind ~= "Texture" and child.kind ~= "FontString" then
@@ -34,7 +35,15 @@ local function Plates()
                 end
                 return unpack(children)
             end
-            function object:GetNumChildren() return select("#", self:GetChildren()) end
+            function object:GetNumChildren()
+                local count = 0
+                for _, child in ipairs(context.objects) do
+                    if child.parent == self and child.kind ~= "Texture" and child.kind ~= "FontString" then
+                        count = count + 1
+                    end
+                end
+                return count
+            end
             function object:GetRegions() return unpack(self.regions or {}) end
             function object:GetHitRectInsets() return unpack(self.insets or { 0, 0, 0, 0 }) end
             function object:SetHitRectInsets(...)
@@ -133,6 +142,15 @@ end
 local context = Plates()
 context:Tick(0.21)
 assert(not context.guardian.fixture.style.name:IsVisible(), "unpublished guardian bypassed the filter")
+context.env.WorldFrame.childrenReads, context.guardian.childrenReads = 0, 0
+context:Event(context.controller, "PLAYER_TARGET_CHANGED")
+assert(context.env.WorldFrame.childrenReads == 0, "target change forced a complete native child enumeration")
+assert(context.guardian.childrenReads == 0, "target change recursively revisited an unchanged plate mask")
+context.extra = context:MakePlate("Late", 1000)
+context:Event(context.controller, "PLAYER_TARGET_CHANGED")
+assert(context.extra.fixture, "incremental target discovery missed a newly allocated native plate")
+assert(context.env.WorldFrame.childrenReads == 1, "new native children were not discovered incrementally")
+print("PASS target changes refresh current plates without forcing unchanged discovery or recursive masks")
 context:Publish(Entries())
 local guardian, boss = context.guardian.fixture.style, context.boss.fixture.style
 assert(
