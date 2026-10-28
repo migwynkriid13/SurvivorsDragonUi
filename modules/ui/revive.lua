@@ -109,6 +109,7 @@ DFRL:NewMod("Revive", 4, function()
         local measure = Label(14)
         measure:Hide()
         local value, target, origin, identity, displayedPercent
+        local captionIdentity, captionLanguage, captionText, percentText
         local paintedValue, sparkX
         local transition, fade, effectAge = 0, 0, 0
         local dirty = true
@@ -122,8 +123,9 @@ DFRL:NewMod("Revive", 4, function()
             if displayedPercent ~= nil then
                 rounded = math.max(displayedPercent - 1, math.min(displayedPercent + 1, rounded))
             end
+            if displayedPercent ~= rounded or not percentText then percentText = tostring(rounded) .. "%" end
             displayedPercent = rounded
-            T.SetTextIfChanged(percent, tostring(rounded) .. "%")
+            T.SetTextIfChanged(percent, percentText)
             local x = 8 + (root:GetWidth() - 72) * value
             if sparkX ~= x then
                 spark:ClearAllPoints()
@@ -138,6 +140,7 @@ DFRL:NewMod("Revive", 4, function()
             dirty = false
         end
         function view.Clear()
+            captionIdentity, captionLanguage, captionText, percentText = nil, nil, nil, nil
             if not view.active and not view.waiting and value == nil then return end
             root:Hide()
             root:SetAlpha(1)
@@ -163,7 +166,7 @@ DFRL:NewMod("Revive", 4, function()
             root:Show()
         end
         function view.Resize() dirty = true end
-        function view.Set(text, progress, subject)
+        function view.Set(person, progress, subject, template)
             local fresh = identity ~= subject or value == nil
             local requested = view.active or view.waiting
             if DFRL.layout.IsHidden("revive") or not UIParent:IsVisible() then
@@ -176,6 +179,12 @@ DFRL:NewMod("Revive", 4, function()
                 if not requested then root:Show() end
                 return
             end
+            local language = DFRL.locale.code
+            if captionIdentity ~= subject or captionLanguage ~= language or not captionText then
+                local text = string.format(DFRL.locale.Text(template), person)
+                captionIdentity, captionLanguage, captionText = subject, language, text
+            end
+            local text = captionText
             T.SetTextIfChanged(caption, text)
             local face, size, flags = measure:GetFont()
             local scale = measure:GetParent():GetEffectiveScale()
@@ -311,25 +320,27 @@ DFRL:NewMod("Revive", 4, function()
             Clear()
             return
         end
-        local text, progress, subject, waiting
+        local template, person, progress, subject, waiting
         if state.down == 1 then
             local helper = Name(state.by)
             waiting = helper == ""
-            if not waiting then text = string.format(DFRL.locale.Text("%s is reviving you!"), helper) end
+            if not waiting then
+                template, person = "%s is reviving you!", helper
+            end
             progress, subject = state.share, "incoming:" .. helper
         elseif state.down == 0 and Name(state.reviving) ~= "" then
             local friend = Name(state.reviving)
-            text = string.format(DFRL.locale.Text("Reviving %s!"), friend)
+            template, person = "Reviving %s!", friend
             progress, subject = state.rshare, "outgoing:" .. friend
         end
-        if (not text and not waiting) or not Number(progress) then
+        if (not template and not waiting) or not Number(progress) then
             Clear()
             return
         end
         if waiting then
             view.Wait()
         else
-            view.Set(text, math.max(0, math.min(1, progress)), subject)
+            view.Set(person, math.max(0, math.min(1, progress)), subject, template)
         end
         lastPacket, lastStamp, lastReceived, dirty = packet, stamp, received, false
         SyncNative()
