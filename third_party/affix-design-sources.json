@@ -1,0 +1,572 @@
+{
+  "source_commit": "d23deaf8f44a7d280dc974a5c9d5321c013db59b",
+  "build": "9.2.7 (45114)",
+  "timer_marker": {
+    "file": "third_party/sources/affixes/UI-TargetingFrame-Skull.PNG",
+    "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/TARGETINGFRAME/UI-TargetingFrame-Skull.PNG",
+    "sha256": "f7e505de5b03823becf34c2999bba2b4720051f50f3828c1a0e9c050171852d8",
+    "canvas": [32, 32]
+  },
+  "designs": [
+    {
+      "number": 1,
+      "title": "Familiar affix marks",
+      "treatment": "cutout",
+      "sources": {
+        "Bolstering": {
+          "file": "third_party/sources/affixes/ability_toughness.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/ability_toughness.PNG",
+          "sha256": "b005ef3f01df06bb653eb13b758850a4c21f9f405d050fab36599195a8f78850",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        },
+        "Sanguine": {
+          "file": "third_party/sources/affixes/Spell_Shadow_BloodBoil.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/Spell_Shadow_BloodBoil.PNG",
+          "sha256": "306d52df68c2f6a05428634562fca23e1878132046d3be2ec8fd2a249e32529c",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        },
+        "Explosive": {
+          "file": "third_party/sources/affixes/Spell_Fire_FelFlameRing_RED.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/Spell_Fire_FelFlameRing_RED.PNG",
+          "sha256": "aeb12e112e91804d8608a427e1b4772c1cdaf7f40a69392649268dd31d018466",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        }
+      }
+    },
+    {
+      "number": 2,
+      "title": "Battle cry",
+      "treatment": "round",
+      "sources": {
+        "Bolstering": {
+          "file": "third_party/sources/affixes/Ability_Warrior_BattleShout.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/Ability_Warrior_BattleShout.PNG",
+          "sha256": "02f690c88e55d5fc9fee75f1ca236ae8b3e122ea93a1fec4e4c902ed7eb2d0d6",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        },
+        "Sanguine": {
+          "file": "third_party/sources/affixes/Spell_DeathKnight_BloodBoil.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/Spell_DeathKnight_BloodBoil.PNG",
+          "sha256": "daac5b899f444c07a68374922afb3d0b74c4ec9c94f77e607ca08c0520e86610",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        },
+        "Explosive": {
+          "file": "third_party/sources/affixes/Ability_FelArakkoa_FelDetonation_Red.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/Ability_FelArakkoa_FelDetonation_Red.PNG",
+          "sha256": "dc6c07215c1e5bb31cbbc4237467a54843d127fc1c17a2828bef201a256e9985",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        }
+      }
+    },
+    {
+      "number": 3,
+      "title": "Command and blood",
+      "treatment": "cutout",
+      "sources": {
+        "Bolstering": {
+          "file": "third_party/sources/affixes/Ability_Warrior_CommandingShout.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/Ability_Warrior_CommandingShout.PNG",
+          "sha256": "a4001bdaed92b0525ab697f6409fe42e1e1b8f110ad3b7f1305f978473aaf8c8",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        },
+        "Sanguine": {
+          "file": "third_party/sources/affixes/Ability_DeathKnight_RoilingBlood.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/Ability_DeathKnight_RoilingBlood.PNG",
+          "sha256": "5dbf1091b00370509c4b0d5ce5e52f0552831847bf3dabc6c00623c63d296f3c",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        },
+        "Explosive": {
+          "file": "third_party/sources/affixes/Ability_FelArakkoa_FelDetonation_Green.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/Ability_FelArakkoa_FelDetonation_Green.PNG",
+          "sha256": "24e907e464be22fdaf46e585703c8d36b4b6dbf13cb90fa2bf54a38a080adaae",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        }
+      }
+    },
+    {
+      "number": 4,
+      "title": "Rally and rupture",
+      "treatment": "gold",
+      "sources": {
+        "Bolstering": {
+          "file": "third_party/sources/affixes/Ability_Warrior_RallyingCry.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/Ability_Warrior_RallyingCry.PNG",
+          "sha256": "e97154194c4efa551489e522cc2687e842da8be7c7671818497d49d6504ebc32",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        },
+        "Sanguine": {
+          "file": "third_party/sources/affixes/Ability_IronMaidens_BloodRitual.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/Ability_IronMaidens_BloodRitual.PNG",
+          "sha256": "13393f6f05c874534ccb149cd24239a5b653c3145cd757a8fe82ff8d145e0165",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        },
+        "Explosive": {
+          "file": "third_party/sources/affixes/Ability_IronMaidens_DetonationSequence.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/Ability_IronMaidens_DetonationSequence.PNG",
+          "sha256": "52127a1f070af29d48df67b4514e521fd128b165943b10c09972afbe7469c188",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        }
+      }
+    },
+    {
+      "number": 5,
+      "title": "Dragon fire",
+      "treatment": "cutout",
+      "sources": {
+        "Bolstering": {
+          "file": "third_party/sources/affixes/Ability_Warrior_DragonRoar.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/Ability_Warrior_DragonRoar.PNG",
+          "sha256": "93bb071c3967e762f9078a737e8a276ec792b1f4ca38b4f6f01dda5f09c0677a",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        },
+        "Sanguine": {
+          "file": "third_party/sources/affixes/Ability_IronMaidens_CorruptedBlood.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/Ability_IronMaidens_CorruptedBlood.PNG",
+          "sha256": "6d3a047f81ce4023d35e9c143290edec494cfcbbbbfcd1144363e39dfb4b7b48",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        },
+        "Explosive": {
+          "file": "third_party/sources/affixes/Ability_Hunter_ExplosiveShot.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/Ability_Hunter_ExplosiveShot.PNG",
+          "sha256": "7cef29426397087b37944758fb88433f1ea8ea8ac90991b06f52b3bf51391be4",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        }
+      }
+    },
+    {
+      "number": 6,
+      "title": "Rage and ritual",
+      "treatment": "round",
+      "sources": {
+        "Bolstering": {
+          "file": "third_party/sources/affixes/Ability_Warrior_InnerRage.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/Ability_Warrior_InnerRage.PNG",
+          "sha256": "2425ee04c82ea1796ad11074346fa9293375b2c5914c7515dc9fd38850aa61a3",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        },
+        "Sanguine": {
+          "file": "third_party/sources/affixes/Ability_IronMaidens_MaraksBloodcalling.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/Ability_IronMaidens_MaraksBloodcalling.PNG",
+          "sha256": "ac94c9082ff6b6863458a8c3c558a1cfcbbb2b54b6d23ed4cfe13f725b30a862",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        },
+        "Explosive": {
+          "file": "third_party/sources/affixes/Spell_Fire_Fireball.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/Spell_Fire_Fireball.PNG",
+          "sha256": "991545520b0e153504eabed3b63fc7951efc978a57b3e125e1c37b325a38c083",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        }
+      }
+    },
+    {
+      "number": 7,
+      "title": "Shield and burst",
+      "treatment": "silver",
+      "sources": {
+        "Bolstering": {
+          "file": "third_party/sources/affixes/Ability_Warrior_ShieldWall.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/Ability_Warrior_ShieldWall.PNG",
+          "sha256": "c257d185b2c8d30c9a20b46c1254b535c997ba44384cf8647e4286a20ba0c2f3",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        },
+        "Sanguine": {
+          "file": "third_party/sources/affixes/Ability_IronMaidens_WhirlofBlood.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/Ability_IronMaidens_WhirlofBlood.PNG",
+          "sha256": "47257648e73f075929d8f1f78769854ba7b250702bec63d0574f61da1cbeaa65",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        },
+        "Explosive": {
+          "file": "third_party/sources/affixes/Spell_Fire_SelfDestruct.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/Spell_Fire_SelfDestruct.PNG",
+          "sha256": "23d7323a939a7bb6ce993eb061cd4d3c409dd94681154c2f02014bef31191505",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        }
+      }
+    },
+    {
+      "number": 8,
+      "title": "Strength and flame",
+      "treatment": "cutout",
+      "sources": {
+        "Bolstering": {
+          "file": "third_party/sources/affixes/Ability_Warrior_StrengthOfArms.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/Ability_Warrior_StrengthOfArms.PNG",
+          "sha256": "b40d3b281c6edc31517e540d406aa631dea6e189e7a588633c887bac08aafd21",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        },
+        "Sanguine": {
+          "file": "third_party/sources/affixes/Ability_Rogue_BloodSplatter.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/Ability_Rogue_BloodSplatter.PNG",
+          "sha256": "1ed0a2114405e5224d7a54397f3c1b3673f3bee73e847cff6228dac5b3a28b36",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        },
+        "Explosive": {
+          "file": "third_party/sources/affixes/SPELL_FIRE_INCINERATE.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/SPELL_FIRE_INCINERATE.PNG",
+          "sha256": "b4254af59890939dc65581bb69497c473c6ca4af805412418c8975c3b9e3ae98",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        }
+      }
+    },
+    {
+      "number": 9,
+      "title": "Stone guardian",
+      "treatment": "round",
+      "sources": {
+        "Bolstering": {
+          "file": "third_party/sources/affixes/Ability_Warrior_StalwartProtector.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/Ability_Warrior_StalwartProtector.PNG",
+          "sha256": "c3f6099f3939c85d20ccc15d5236859437a1dbeea577e8be45b12776ce1642b4",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        },
+        "Sanguine": {
+          "file": "third_party/sources/affixes/Ability_Rogue_HungerforBlood.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/Ability_Rogue_HungerforBlood.PNG",
+          "sha256": "37b8f6b65c85a27ae05ae70e2287eb5cb7ff5e96bd6547f7f02d8c0d266b88c6",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        },
+        "Explosive": {
+          "file": "third_party/sources/affixes/Spell_Fire_FlameBolt.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/Spell_Fire_FlameBolt.PNG",
+          "sha256": "3f052e0ea0aaec40546d997da336f0834ff4efac9234d3e4ab0b41c9f971a9ec",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        }
+      }
+    },
+    {
+      "number": 10,
+      "title": "Steel and shadow",
+      "treatment": "gold",
+      "sources": {
+        "Bolstering": {
+          "file": "third_party/sources/affixes/Ability_Warrior_ShieldMastery.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/Ability_Warrior_ShieldMastery.PNG",
+          "sha256": "07e6ee0364901fe7b876a68630f9385a196838c0a71e620bff0c317f24182e9a",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        },
+        "Sanguine": {
+          "file": "third_party/sources/affixes/Ability_Warrior_BloodBath.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/Ability_Warrior_BloodBath.PNG",
+          "sha256": "e45d31a786d64b78414a9cac241cf06100cbf2d4a2294987e8401ee4d84cb4af",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        },
+        "Explosive": {
+          "file": "third_party/sources/affixes/Sha_Spell_Fire_Fireball02_nightmare.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/Sha_Spell_Fire_Fireball02_nightmare.PNG",
+          "sha256": "3d07f351d6b61928ecfa7f85374a65159466eb3fd3974b68b413dcbbae6b2b31",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        }
+      }
+    },
+    {
+      "number": 11,
+      "title": "Sacred oath",
+      "treatment": "cutout",
+      "sources": {
+        "Bolstering": {
+          "file": "third_party/sources/affixes/Spell_Holy_WordFortitude.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/Spell_Holy_WordFortitude.PNG",
+          "sha256": "544f208d5088e85112a5e25005090003d2b9219e7bcdeb3ba55facd46fcf066a",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        },
+        "Sanguine": {
+          "file": "third_party/sources/affixes/Ability_Warrior_BloodFrenzy.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/Ability_Warrior_BloodFrenzy.PNG",
+          "sha256": "38fccdd8bc2523e758b1028086b9af14433b35ba6a9721280388bbfa0de57de3",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        },
+        "Explosive": {
+          "file": "third_party/sources/affixes/INV_Misc_Bomb_02.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/INV_Misc_Bomb_02.PNG",
+          "sha256": "b700ac16cd9734204456cf6c099f1d0c9e774d0a10669ceac1e22bd631c1324e",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        }
+      }
+    },
+    {
+      "number": 12,
+      "title": "Golden kings",
+      "treatment": "round",
+      "sources": {
+        "Bolstering": {
+          "file": "third_party/sources/affixes/Spell_Holy_GreaterBlessingofKings.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/Spell_Holy_GreaterBlessingofKings.PNG",
+          "sha256": "57ccc98d449d52f9cd2a9a87bd20693615592eb42b2fb287a85e8182fbaee044",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        },
+        "Sanguine": {
+          "file": "third_party/sources/affixes/Ability_Warrior_BloodNova.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/Ability_Warrior_BloodNova.PNG",
+          "sha256": "56828a5f6f767109ef074ecf49e367f8584a6da848d9b597a048f7ed25456920",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        },
+        "Explosive": {
+          "file": "third_party/sources/affixes/INV_Misc_Bomb_04.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/INV_Misc_Bomb_04.PNG",
+          "sha256": "4affa7890dcadb94c919273fbc8112ffae0fdd7147808bff30dc580bac018e9f",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        }
+      }
+    },
+    {
+      "number": 13,
+      "title": "Sanctuary",
+      "treatment": "silver",
+      "sources": {
+        "Bolstering": {
+          "file": "third_party/sources/affixes/Spell_Holy_GreaterBlessingofSanctuary.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/Spell_Holy_GreaterBlessingofSanctuary.PNG",
+          "sha256": "b4d80d694c133d4f1a9d04b6f9583bfdd7bd1bf150af92782edd7cbfdf62f249",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        },
+        "Sanguine": {
+          "file": "third_party/sources/affixes/Ability_Warrior_Bloodsurge.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/Ability_Warrior_Bloodsurge.PNG",
+          "sha256": "8afdf468c9742b7315aafb259c5627d1ade564581a444cfc37c62683739724aa",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        },
+        "Explosive": {
+          "file": "third_party/sources/affixes/INV_Misc_Bomb_06.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/INV_Misc_Bomb_06.PNG",
+          "sha256": "7f8e635761b57d1aa48f4267fc59d11007e29d8c725824296a3687627b451556",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        }
+      }
+    },
+    {
+      "number": 14,
+      "title": "Bloodlust",
+      "treatment": "cutout",
+      "sources": {
+        "Bolstering": {
+          "file": "third_party/sources/affixes/Spell_Nature_BloodLust.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/Spell_Nature_BloodLust.PNG",
+          "sha256": "517384b9dcca7f13ff039209a448a9504511980f594aa176ed972fca437ea03b",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        },
+        "Sanguine": {
+          "file": "third_party/sources/affixes/Ability_Warrior_Trauma.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/Ability_Warrior_Trauma.PNG",
+          "sha256": "e2c2b641daefecaa847a44aabca00aad2bc9a6245f6dc86ebed1725c7410a1c0",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        },
+        "Explosive": {
+          "file": "third_party/sources/affixes/INV_Misc_Bomb_09.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/INV_Misc_Bomb_09.PNG",
+          "sha256": "df3fa7a7dea0cf61e200a9ffc1641c1ccd3c7e2b25f89e45f547e916d3ce9554",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        }
+      }
+    },
+    {
+      "number": 15,
+      "title": "Earthen power",
+      "treatment": "cutout",
+      "sources": {
+        "Bolstering": {
+          "file": "third_party/sources/affixes/Spell_Nature_Strength.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/Spell_Nature_Strength.PNG",
+          "sha256": "33b893d169880eefa7fa922fc81be5a57193d47bb683b1f7fc92800571be62c1",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        },
+        "Sanguine": {
+          "file": "third_party/sources/affixes/Ability_Racial_BloodRage.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/Ability_Racial_BloodRage.PNG",
+          "sha256": "d7031f8066e11c35fd2c38358967fca0d5051f49403269697b6b602807a31762",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        },
+        "Explosive": {
+          "file": "third_party/sources/affixes/Ability_Mage_LivingBomb.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/Ability_Mage_LivingBomb.PNG",
+          "sha256": "555fb0be97fd32a8b38304100cd8a4ebf61c87fcdb40c08cf98d7995c256bfe1",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        }
+      }
+    },
+    {
+      "number": 16,
+      "title": "War horn",
+      "treatment": "cutout",
+      "sources": {
+        "Bolstering": {
+          "file": "third_party/sources/affixes/INV_Misc_Horn_02.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/INV_Misc_Horn_02.PNG",
+          "sha256": "b301a81d2e0d7b80a4ff26cb72b772af1eed1e4bb9094fe1a18bd5c145ee3f04",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        },
+        "Sanguine": {
+          "file": "third_party/sources/affixes/Spell_Shadow_LifeDrain02.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/Spell_Shadow_LifeDrain02.PNG",
+          "sha256": "88aa8df39e8d317a35967c261aad654f6d93be2d912f1666cf1a487d6730b806",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        },
+        "Explosive": {
+          "file": "third_party/sources/affixes/Ability_Rhyolith_Immolation.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/Ability_Rhyolith_Immolation.PNG",
+          "sha256": "3b2eec0fe0ede08f740a0580984615e378608e4a187d80c1cbeb970a869def08",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        }
+      }
+    },
+    {
+      "number": 17,
+      "title": "Predator",
+      "treatment": "round",
+      "sources": {
+        "Bolstering": {
+          "file": "third_party/sources/affixes/Ability_Druid_ChallangingRoar.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/Ability_Druid_ChallangingRoar.PNG",
+          "sha256": "ce5933a5d9b0fb99401dac4cfc0ac2b7ec8afc07a06f129d8a94911f85110104",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        },
+        "Sanguine": {
+          "file": "third_party/sources/affixes/Spell_Shadow_LifeDrain.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/Spell_Shadow_LifeDrain.PNG",
+          "sha256": "ce187f7444e6af4dcaaedcf0f1adc46338605db64aa3b66946a4ef7acf26f849",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        },
+        "Explosive": {
+          "file": "third_party/sources/affixes/INV_Azeriteexplosion.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/INV_Azeriteexplosion.PNG",
+          "sha256": "42feacdbf53145629c4d0472f6e50bd3af054482edbc3b6d148ca64a0aa18bc4",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        }
+      }
+    },
+    {
+      "number": 18,
+      "title": "Titan",
+      "treatment": "silver",
+      "sources": {
+        "Bolstering": {
+          "file": "third_party/sources/affixes/Ability_Racial_Avatar.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/Ability_Racial_Avatar.PNG",
+          "sha256": "f6779c6a2546cb821c19a678f5ce062485c209d4a9b2f3a0a5913616b8f27ec1",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        },
+        "Sanguine": {
+          "file": "third_party/sources/affixes/Spell_Deathknight_BloodPresence.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/Spell_Deathknight_BloodPresence.PNG",
+          "sha256": "bbb3f5934cdf4bc89bda873cd90cfe5fcbcf01220f73d4dae1278d99a2f5f841",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        },
+        "Explosive": {
+          "file": "third_party/sources/affixes/Ability_Xavius_TormentingDetonation.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/Ability_Xavius_TormentingDetonation.PNG",
+          "sha256": "36c9d5a92b12aef4ec458a53ebefa9d42eaddc699181579fd645465ee738c3e9",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        }
+      }
+    },
+    {
+      "number": 19,
+      "title": "Red crystal",
+      "treatment": "cutout",
+      "sources": {
+        "Bolstering": {
+          "file": "third_party/sources/affixes/Ability_Warrior_FocusedRage.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/Ability_Warrior_FocusedRage.PNG",
+          "sha256": "0f7f5ee280138ca4ed4abf95a3f93b367e6f2d3cc744e65db5be84c2ad7a4666",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        },
+        "Sanguine": {
+          "file": "third_party/sources/affixes/INV_Misc_Gem_Bloodstone_01.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/INV_Misc_Gem_Bloodstone_01.PNG",
+          "sha256": "5bac401e61c363933a1a2ba0ee1f74c94cace1cb74b8f588fc9a7a61d2e23024",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        },
+        "Explosive": {
+          "file": "third_party/sources/affixes/6BF_Explosive_Shard.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/6BF_Explosive_Shard.PNG",
+          "sha256": "db980fbbe56ed437f9ff1182589b96fe4aca117dcdce677a51f69fa448906987",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        }
+      }
+    },
+    {
+      "number": 20,
+      "title": "Wild sigils",
+      "treatment": "round",
+      "sources": {
+        "Bolstering": {
+          "file": "third_party/sources/affixes/Ability_Druid_Enrage.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/Ability_Druid_Enrage.PNG",
+          "sha256": "d46becf0893d2eb22b2d0921e37d4c8a902107c19b7be64404f051159e992b37",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        },
+        "Sanguine": {
+          "file": "third_party/sources/affixes/Ability_Skeer_BloodLetting.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/Ability_Skeer_BloodLetting.PNG",
+          "sha256": "ddd7dc41589a3a37efa1bc738cc226f14628ab16d6898ddffcaa23f24a8b0b74",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        },
+        "Explosive": {
+          "file": "third_party/sources/affixes/ABILITY_MONK_CHIEXPLOSION.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/ABILITY_MONK_CHIEXPLOSION.PNG",
+          "sha256": "04a1109314f12f73a65a797c9b3c72630809a2ee8e86a76ddce6bc12e916d12b",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        }
+      }
+    }
+  ]
+}
