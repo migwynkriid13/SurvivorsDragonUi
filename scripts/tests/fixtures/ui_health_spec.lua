@@ -138,7 +138,7 @@ end)
 
 Test("roster matching uses exact shared maxima and rejects namesake ambiguity", function()
     local context, controller = Target(70e12, 70e12)
-    local env, health = context.env, context.env.DFRL.targetHealth
+    local health = context.env.DFRL.targetHealth
     context.nativeHealth, context.nativeMaximum = 500, 1235
     context:Event(controller, "PLAYER_TARGET_CHANGED")
     local name = context.targetName

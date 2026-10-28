@@ -232,10 +232,12 @@ for _, scrolling in ipairs({ false, true }) do
     context:Hit(100, 20.25)
     context:Hit(100, closesAt)
     assert(#env.pendingGroups == 1 and group.closesAt == closesAt, "inclusive duplicates extended or split the window")
-    context:Hit(100, closesAt + 0.001)
-    assert(#env.pendingGroups == 2, "a hit after 300 ms joined the expired group")
+    -- Sample the boundary before the later receipt; a reversed clock would
+    -- deliberately retire that later group's intake instead.
     context.queue.Update(closesAt)
     assert(#context.displays == 0, "inclusive intake or the last hit's settle gate was bypassed")
+    context:Hit(100, closesAt + 0.001)
+    assert(#env.pendingGroups == 2, "a hit after 300 ms joined the expired group")
     context.queue.Update(20.39)
     assert(#context.displays == 1 and context.displays[1].info == first, "the wider group lost its first-hit record")
     assert(group.count == 3 and first.amount == 100, "Performance Mode changed or dropped original native hits")
