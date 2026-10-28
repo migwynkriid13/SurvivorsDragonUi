@@ -476,7 +476,7 @@ DFRL:NewMod("RunTimers", 5, function()
         end
 
         local function Paint(row, edge)
-            local width = row.bar:GetWidth()
+            local width = T.GetLocalSize(row.bar)
             if not IsNumber(width) or width <= 0 then return end
             local texture = row.lossTexture
             if not texture then

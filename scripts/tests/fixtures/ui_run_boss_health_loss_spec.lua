@@ -61,7 +61,29 @@ local function New(performance)
         local width = bar.GetWidth
         function bar:GetWidth()
             context.reads.width = (context.reads.width or 0) + 1
-            return width(self)
+            -- Opposite anchors size this axis in production. Its raw native
+            -- getter returns the resolved span without undoing effective scale.
+            return width(self) * (context.uiScale or 1) * (context.groupScale or 1)
+        end
+        function bar:GetLeft()
+            context.reads.edges = (context.reads.edges or 0) + 1
+            if context.unresolvedEdges then return end
+            return (context.physicalLeft or 137) / ((context.uiScale or 1) * (context.groupScale or 1))
+        end
+        function bar:GetRight()
+            context.reads.edges = (context.reads.edges or 0) + 1
+            if context.unresolvedEdges then return end
+            return (context.physicalLeft or 137) / ((context.uiScale or 1) * (context.groupScale or 1)) + width(self)
+        end
+        function bar:GetBottom()
+            context.reads.edges = (context.reads.edges or 0) + 1
+            if context.unresolvedEdges then return end
+            return (context.physicalBottom or 91) / ((context.uiScale or 1) * (context.groupScale or 1))
+        end
+        function bar:GetTop()
+            context.reads.edges = (context.reads.edges or 0) + 1
+            if context.unresolvedEdges then return end
+            return (context.physicalBottom or 91) / ((context.uiScale or 1) * (context.groupScale or 1)) + 15
         end
         return { frame = frame, bar = bar, overlay = overlay }
     end
@@ -92,6 +114,73 @@ do
     assert(not row.lossTexture, "leaving Performance Mode replayed a previous decrease")
     context:Observe(row, 0.6)
     assert(row.lossTexture and controller.count == 1, "normal mode did not arm a future loss")
+end
+
+-- H.New loads the actual core/tools.lua, including EdgeExtent and GetLocalSize.
+-- Model the native distinction between anchor-sized raw getters and local edge
+-- coordinates here instead of replacing that production geometry helper.
+for _, uiScale in ipairs({ 0.64, 0.9, 1, 1.2 }) do
+    for _, groupScale in ipairs({ 0.4, 1, 1.5, 3 }) do
+        local context, env, controller = New()
+        context.uiScale, context.groupScale = uiScale, groupScale
+        local row = context:Row()
+        local allocated = #context.objects
+        local started = context.now
+        local function Bounds(value, edge, localWidth)
+            local scale = context.uiScale * context.groupScale
+            local texture = assert(row.lossTexture)
+            assert(texture.point[1] == "BOTTOMLEFT" and texture.point[2] == row.bar)
+            local left = (context.physicalLeft or 137) + texture.point[4] * scale
+            local right = left + texture:GetWidth() * scale
+            local nativeHealthEdge = (context.physicalLeft or 137) + localWidth * value * scale
+            local echoEdge = (context.physicalLeft or 137) + localWidth * edge * scale
+            Near(left, nativeHealthEdge, "scaled loss started inside the remaining native health fill")
+            Near(right, echoEdge, "scaled loss ended before or after the selected echo edge")
+            Near(texture:GetWidth(), localWidth * (edge - value), "loss width applied effective scale twice")
+            assert(
+                #context.objects == allocated + 1 and controller.count == 1,
+                "scaled loss replaced its single region"
+            )
+        end
+
+        Near(row.bar:GetWidth(), 280 * uiScale * groupScale, "fixture lost the native anchor-sized raw getter")
+        context:Observe(row, 1)
+        context:ResetCounts()
+        context:Observe(row, 0.8)
+        Bounds(0.8, 1, 280)
+        assert(
+            context.reads.edges == 4 and not context.reads.width,
+            "resolved loss geometry did not use production local edges"
+        )
+
+        context.now = started + 0.475
+        controller:Update()
+        local edge = 0.8 + 0.2 * 0.5 ^ 1.45
+        Bounds(0.8, edge, 280)
+        row.bar:SetWidth(420)
+        controller:Update()
+        Bounds(0.8, edge, 420)
+
+        context.groupScale = groupScale == 3 and 0.4 or 3
+        context:ResetCounts()
+        controller:Update()
+        Bounds(0.8, edge, 420)
+        context:NoPresentationWrites()
+        assert(not context.reads.width, "scale-only change fell back to the already scaled raw width")
+
+        context:Observe(row, 0.6)
+        Bounds(0.6, edge, 420)
+        Near(row.lossFrom, edge, "scale or resize resurrected a drained loss during rapid retargeting")
+        controller:ClearAll()
+        context:ResetCounts()
+        controller:Update()
+        assert(not next(context.reads), "settled scaled loss retained edge or cosmetic time queries")
+        env.performanceMode = true
+        context:Observe(row, 0.5)
+        controller:Update()
+        context:NoPresentationWrites()
+        assert(not next(context.reads), "Performance Mode sampled scaled loss geometry")
+    end
 end
 
 do
@@ -233,7 +322,7 @@ do
     end
     local allocated = #context.objects
     context:Observe(row, 1)
-    context.missingWidth = true
+    context.missingWidth, context.unresolvedEdges = true, true
     context:Observe(row, 0.8)
     assert(controller.count == 1 and not row.lossTexture, "missing metrics prepared unusable loss artwork")
     context.missingWidth = nil

@@ -156,8 +156,13 @@ on its existing plain overlay's BACKGROUND layer, below the gold bezel and healt
 text and above the native health fill. It is reused with the pooled row.
 It stretches the same fill through the loss section as the selected simulation.
 Successful artwork binding, tint and UV setup happen once; failed bindings retry
-only while the trail is active. Active anchors and width follow the native bar's
-current dimensions and skip unchanged writes. No new frame, asset, setting,
+only while the trail is active. Active anchors and width use the shared
+`T.GetLocalSize` edge measurement and skip unchanged writes. The native bar is
+sized by opposite anchors: its raw `GetWidth` can already contain effective
+scale, so using that raw span for local offsets places a trail inside the real
+fill. Edge-derived local width keeps the trail's left boundary at current health
+through UI/group scale and width changes, without changing native fill geometry
+or UVs. No new frame, asset, setting,
 SavedVariable, event or updater is added. The existing HUD reader paints only
 active trails; an empty effect set returns before UI-clock or geometry reads.
 

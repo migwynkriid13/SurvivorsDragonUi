@@ -311,6 +311,15 @@ The shared `GetLocalSize` helper now measures rendered local bounds from right-m
 
 The committed [geometry regression](../tests/layout_geometry.lua) passes 73 assertions across four UI scales and four group scales. The prior layout implementation fails 41 of those assertions. It covers action/chat outlines, chat footer bounds, numeric centers, corner resizing and confirmed-position preservation. The earlier geometry adapter assumed uniformly local size getters and missed this native distinction; the new fixture explicitly models both getter paths.
 
+The boss-health loss strip also uses `T.GetLocalSize` for its anchor-sized
+StatusBar. Its earlier raw-width calculation applied effective scale twice,
+placing the strip inside the remaining fill and leaving red health visible
+after it. The existing XP effect already used the shared helper for the same
+coordinate boundary. CI-only boss-loss cases now model an anchor-sized bar whose
+raw width contains scale while its edge extent remains local, covering UI/group
+scales, resizing and rapid decreases. Native fill ownership, UVs and values are
+unchanged; source-calibrated geometry does not prove live rendering.
+
 ## Defaults shifting after a new run
 
 The owner reported that Addon defaults looked correct, but the run timer, chat, micro menu, minimap and waypoint HUDs shifted left/up after ending the run and entering again, without making further edits. The account save file contained the reset correctly: empty layout geometry and cleared display/timer-font choices. An empty layout is the intended saved representation of code-defined defaults.

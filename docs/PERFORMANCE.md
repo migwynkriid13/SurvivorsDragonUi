@@ -267,8 +267,12 @@ uses one bounded trail per row, with rapid decreases coalesced from its current
 edge. The existing HUD reader visits only active trails; idle effects return
 before clock, geometry and paint work. Binding/tint/UV setup is cached, failed
 bindings remain retryable during active effects, and geometry/visibility writes
-skip unchanged values. Width changes use the native bar dimensions without
-another updater or an effect pool proportional to hit count.
+skip unchanged values. Active geometry uses the existing `T.GetLocalSize`
+helper's local edge extents, avoiding the client's already-scaled raw width for
+this anchor-sized StatusBar. Those edge reads occur only for active loss strips;
+idle, hidden and Performance Mode paths retain their early exits. Width and
+UI/group scale changes keep the loss strip against the actual health boundary,
+without another updater or an effect pool proportional to hit count.
 
 Hide, retirement/reuse, identity/name/maximum changes, healing, reload and actual
 Performance Mode changes clear effects and comparison baselines. Show and mode

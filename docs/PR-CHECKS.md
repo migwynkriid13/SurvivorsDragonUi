@@ -150,6 +150,7 @@ The assertions cover:
   region on the existing plain overlay, selected easing/brightness, rapid-loss
   coalescing without replay,
   equal trail composition over red and black backings with opaque vertex alpha,
+  anchor-sized native width/edge differences across UI/group scales,
   resizing, unchanged writes, failed artwork retry, shared active time samples
   and idle completion. Healing, maximum/name/identity changes, hidden recovery,
   pooled retirement and Performance Mode clear effects and old baselines;
