@@ -1,9 +1,10 @@
 # Minimap buttons
 
 The gold Dragonflight glyph beside the minimap opens the existing `/sdui` editor.
-It has no button border, circular frame or backdrop. Its one glyph texture uses
-additive blending, so the source image's black backing contributes no visible
-color. Hover changes only that texture's alpha; there is no separate glow region
+It uses the selected **05 Small square button** background: a compact dark plate
+with a gold edge, centered behind the unchanged glyph. The background is static;
+the glyph uses additive blending, so its source image's black backing contributes
+no visible color. Hover changes only the glyph's alpha, without a separate glow
 or animation. The translated **Layout** caption and `/sdui` command identify the
 action in its tooltip.
 
@@ -70,10 +71,16 @@ Arbitrary UIParent-owned buttons, non-center anchors and engine controls absent
 from the Lua frame tree are outside this adapter. Required native controls and
 guardian/cache/player pins retain their existing placement and input.
 
-The new renderer allocates one button and one texture, bound once. It adds no
+The launcher allocates one button and two textures, bound once. The background
+uses the exact `(0,3)-(29,29)` region of Blizzard's 32-square normal button image,
+displayed at 37 by 33 units to match the chosen preview. The glyph and native
+input bounds remain 34-square. This adds one persistent background region and
+its normal alpha overlap beneath the glyph; it adds no animation or recurring
+texture/geometry work. Both textures inherit minimap hiding and scale, and the
+same static artwork remains in Performance Mode. It adds no
 idle updater, gameplay reads, logs, SavedVariable or runtime library. Hook records
-are allocated once per eligible external button. Its full-resolution TGA is a
-preparation input; only the prepared BLP enters the runtime manifest. See
+are allocated once per eligible external button. Full-resolution TGAs are
+preparation inputs; only the prepared BLPs enter the runtime manifest. See
 [artwork provenance](../third_party/MinimapGlyph-ARTWORK.md).
 
 The source and image were inspected, and edited Lua/Markdown/JSON were formatted

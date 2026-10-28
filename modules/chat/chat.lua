@@ -136,14 +136,16 @@ DFRL:NewMod("Chat", 1, function()
             return not state.scrolled
         end
         local function FadeSettings(state, held)
-            held = performanceMode or held
-            if state.fadeConfigured and state.held == held then return end
+            local duration = performanceMode and 0 or FADE
+            if state.fadeConfigured and state.fadeDuration == duration and state.held == held then return end
             if not root:IsVisible() then return end
             local frame = state.native
-            if not state.fadeConfigured then
-                if frame.SetTimeVisible then frame:SetTimeVisible(HOLD) end
-                if frame.SetFadeDuration then frame:SetFadeDuration(FADE) end
-                state.fadeConfigured = true
+            if not state.fadeConfigured or state.fadeDuration ~= duration then
+                -- Keep the same total lifetime; Performance Mode replaces
+                -- only the final fade with an instant native disappearance.
+                if frame.SetTimeVisible then frame:SetTimeVisible(performanceMode and HOLD + FADE or HOLD) end
+                if frame.SetFadeDuration then frame:SetFadeDuration(duration) end
+                state.fadeConfigured, state.fadeDuration = true, duration
             end
             if state.held ~= held then
                 if frame.SetFading then frame:SetFading(not held) end

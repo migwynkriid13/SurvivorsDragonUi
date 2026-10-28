@@ -179,9 +179,9 @@ do
     local display = env.DFRL.display
     env.root = env.CreateFrame("Frame", nil, env.UIParent)
     local native = env.CreateFrame("Frame", nil, env.root)
-    local faded, scrolls = nil, 0
-    function native:SetTimeVisible(value) assert(value == 14) end
-    function native:SetFadeDuration(value) assert(value == 0.6) end
+    local faded, scrolls, timeVisible, fadeDuration = nil, 0, nil, nil
+    function native:SetTimeVisible(value) timeVisible = value end
+    function native:SetFadeDuration(value) fadeDuration = value end
     function native:SetFading(value) faded = value end
     function native:AtBottom() return true end
     function native:ScrollDown() scrolls = scrolls + 1 end
@@ -207,12 +207,16 @@ do
     setfenv(chunk, env)
     local chat = chunk()
     chat.Fade(env.selected, false)
-    assert(faded == true)
+    assert(faded == true and timeVisible == 14 and fadeDuration == 0.6)
     display.BeginEdit()
     display.Set("performanceMode", true)
     assert(
-        faded == false and env.selected.visualAlpha == 1 and native:GetAlpha() == 1,
-        "Performance Mode left Chat fading"
+        faded == true
+            and math.abs(timeVisible - 14.6) < 0.000001
+            and fadeDuration == 0
+            and env.selected.visualAlpha == 1
+            and native:GetAlpha() == 1,
+        "Performance Mode stopped Chat expiry or retained its native fade"
     )
     assert(not env.selected.slideStart and not env.selected.revealStart, "Performance Mode retained active Chat motion")
     local allocated = #context.objects
@@ -226,11 +230,15 @@ do
     )
     env.root:Hide()
     display.FinishEdit(false)
-    assert(faded == false, "hidden mode exit performed native fade work")
+    assert(fadeDuration == 0, "hidden mode exit performed native fade work")
     env.root:Show()
     chat.Fade(env.selected, false)
     assert(
-        faded == true and not env.selected.slideStart and not env.selected.revealStart,
+        faded == true
+            and timeVisible == 14
+            and fadeDuration == 0.6
+            and not env.selected.slideStart
+            and not env.selected.revealStart,
         "mode exit replayed old Chat motion"
     )
     chat.Notice(env.selected)
@@ -240,5 +248,5 @@ do
     )
 end
 print(
-    "PASS extracted Chat toggle stops native fading and active motion, keeps wheel history and restores future effects"
+    "PASS extracted Chat toggle keeps instant native expiry and wheel history, settles motion and restores future effects"
 )
