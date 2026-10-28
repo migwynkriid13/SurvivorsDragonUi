@@ -64,7 +64,114 @@ DFRL:NewMod("RunTimers", 5, function()
         -- Affix artwork copyright Blizzard Entertainment; third_party/HeroicAffixes-ARTWORK.md.
         local atlas = path .. "Affixes.blp"
         local rimPath = DFRL:GetInfoOrCons("tex") .. "jewelry\\Frame.blp"
-        local view = { rows = {}, keys = {}, seen = {}, count = 0, width = 0, inset = 0, received = 0 }
+        local view = { rows = {}, keys = {}, seen = {}, count = 0, width = 0, received = 0 }
+        local detached = CreateFrame("Frame", nil, UIParent)
+        detached:SetWidth(size * 3 + gap * 2)
+        detached:SetHeight(size)
+        detached:SetFrameStrata("HIGH")
+        detached:EnableMouse(false)
+        detached:Hide()
+        local root = CreateFrame("Frame", nil, owner)
+        root:SetWidth(size * 3 + gap * 2)
+        root:SetHeight(size)
+        root:EnableMouse(false)
+        root:Hide()
+        view.root, view.detached = root, detached
+        HookScript(root, "OnShow", function() view.presentationDirty = true end)
+        function view:HeaderWidth()
+            if self.attached then return self.width end
+            if not DFRL.layout.IsHidden("heroicAffixes") and not DFRL.layout.IsPlaced("heroicAffixes") then
+                local ratio = detached:GetEffectiveScale() / owner:GetEffectiveScale()
+                return IsNumber(ratio) and ratio > 0 and self.width * ratio or 0
+            end
+            return 0
+        end
+        function view:Anchor(frame, force)
+            local ratio = owner:GetEffectiveScale() / frame:GetEffectiveScale()
+            if not IsNumber(ratio) or ratio <= 0 then return end
+            local point, target, x = "BOTTOM", "TOP", 0
+            if not self.bothCaptions then
+                point, target = "BOTTOMLEFT", "TOPLEFT"
+                x = math.min(0, (owner:GetWidth() - (self.captionWidth or 0)) / 2 - 8 - frame:GetWidth() / ratio)
+                x = x * ratio
+            end
+            local y = 2 * ratio
+            if
+                force
+                or frame.affixPoint ~= point
+                or not T.NearlyEqual(frame.affixX, x)
+                or not T.NearlyEqual(frame.affixY, y)
+            then
+                frame:ClearAllPoints()
+                frame:SetPoint(point, owner, target, x, y)
+                frame.affixPoint, frame.affixX, frame.affixY = point, x, y
+            end
+        end
+        function view:Place()
+            if self.attached then
+                self:Anchor(root)
+            elseif self.registered then
+                DFRL.layout.Place("heroicAffixes")
+            end
+        end
+        function view:Context(runVisible, bossVisible, captionWidth)
+            local both = runVisible and bossVisible and true or false
+            local width, scale = owner:GetWidth(), owner:GetEffectiveScale()
+            if
+                self.bothCaptions ~= both
+                or self.captionWidth ~= captionWidth
+                or self.ownerWidth ~= width
+                or not T.NearlyEqual(self.ownerScale, scale)
+            then
+                self.bothCaptions, self.captionWidth, self.ownerWidth, self.ownerScale =
+                    both, captionWidth, width, scale
+                self:Place()
+            end
+        end
+        function view:SyncAttachment()
+            local attached = DFRL.display.Get("attachAffixes")
+            if self.attached == attached then return end
+            if root:IsShown() then root:Hide() end
+            self.attached = attached
+            local seat = attached and owner or detached
+            if root:GetParent() ~= seat then root:SetParent(seat) end
+            if not T.NearlyEqual(root:GetScale(), 1) then root:SetScale(1) end
+            local level = seat:GetFrameLevel() + 1
+            if root:GetFrameLevel() ~= level then root:SetFrameLevel(level) end
+            for _, row in ipairs(self.rows) do
+                if row:GetFrameLevel() ~= level + 1 then row:SetFrameLevel(level + 1) end
+            end
+            root.affixPoint, root.affixX, root.affixY = nil, nil, nil
+            if attached then
+                detached:Hide()
+            else
+                root:ClearAllPoints()
+                root:SetPoint("TOPLEFT", detached, "TOPLEFT", 0, 0)
+                detached:Show()
+            end
+            self.presentationDirty = true
+            self:Place()
+            if self.count > 0 then root:Show() end
+            if self.onBounds then self.onBounds() end
+        end
+        function view:RegisterLayout()
+            self.registered = true
+            DFRL.layout.Register("heroicAffixes", detached, function(frame) self:Anchor(frame, true) end, {
+                onlyWhenShown = true,
+                refreshDefault = true,
+                onEdit = function()
+                    self.presentationDirty = true
+                    if self.onBounds then self.onBounds() end
+                end,
+                onResize = function()
+                    if self.onBounds then self.onBounds() end
+                end,
+            })
+            DFRL.layout.ListenVisibility("heroicAffixes", function()
+                self.presentationDirty = true
+                if self.onBounds then self.onBounds() end
+            end)
+        end
         local function HideHover(row)
             if GameTooltip and GameTooltip:IsOwned(row) then GameTooltip:Hide() end
         end
@@ -99,7 +206,7 @@ DFRL:NewMod("RunTimers", 5, function()
         local function Row(index)
             local row = view.rows[index]
             if row then return row end
-            row = CreateFrame("Frame", nil, owner)
+            row = CreateFrame("Frame", nil, root)
             row:SetWidth(size)
             row:SetHeight(size)
             row:EnableMouse(false)
@@ -112,7 +219,7 @@ DFRL:NewMod("RunTimers", 5, function()
             row.rim:SetWidth(size)
             row.rim:SetHeight(size)
             row.rim:SetPoint("CENTER", row, "CENTER", 0, 0)
-            row.rim:SetTexCoord(664 / 1024, 736 / 1024, 56 / 256, 128 / 256)
+            row.rim:SetTexCoord(576 / 1024, 648 / 1024, 56 / 256, 128 / 256)
             row.rim:SetVertexColor(237 / 255, 35 / 255, 38 / 255, 1)
             row:SetScript("OnEnter", function() ShowHover(row) end)
             row:SetScript("OnLeave", function() HideHover(row) end)
@@ -132,6 +239,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 self.blockedReceived = self.received
             end
             if self.count == 0 and not self.packet and not self.retry then return end
+            if root:IsShown() then root:Hide() end
             for _, row in ipairs(self.rows) do
                 HideRow(row)
             end
@@ -141,8 +249,8 @@ DFRL:NewMod("RunTimers", 5, function()
             for key in pairs(self.seen) do
                 self.seen[key] = nil
             end
-            local changed = self.inset ~= 0
-            self.count, self.width, self.inset, self.retry = 0, 0, 0, false
+            local changed = self.width ~= 0
+            self.count, self.width, self.retry = 0, 0, false
             self.packet, self.stamp, self.acceptedReceived, self.text, self.language = nil, nil, nil, nil, nil
             if changed and self.onBounds then self.onBounds() end
         end
@@ -155,7 +263,8 @@ DFRL:NewMod("RunTimers", 5, function()
                 if self.packet then self:Clear() end
                 return
             end
-            if not owner:IsVisible() then return end
+            local seat = self.attached and owner or detached
+            if not seat:IsVisible() then return end
             local packet, stamp = _G.AZS_ZONE, _G.AZS_ZONE_UPDATED
             if
                 type(packet) ~= "table"
@@ -181,6 +290,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 and self.acceptedReceived == self.received
                 and self.text == packet.affixes
                 and self.language == language
+                and not self.presentationDirty
                 and (not self.retry or not retry)
             then
                 return
@@ -200,7 +310,18 @@ DFRL:NewMod("RunTimers", 5, function()
             end
             local width = count > 0 and count * size + (count - 1) * gap or 0
             local boundsChanged = self.width ~= width
-            self.count, self.width, self.inset = count, width, count > 0 and size + 3 or 0
+            self.count, self.width = count, width
+            if boundsChanged then
+                local frameWidth = math.max(size, width)
+                if not T.NearlyEqual(root:GetWidth(), frameWidth) then root:SetWidth(frameWidth) end
+                if not T.NearlyEqual(detached:GetWidth(), frameWidth) then detached:SetWidth(frameWidth) end
+                self:Place()
+            end
+            if count > 0 then
+                if not root:IsShown() then root:Show() end
+            elseif root:IsShown() then
+                root:Hide()
+            end
             self.retry = false
             for index = 1, count do
                 local key = self.keys[index]
@@ -212,10 +333,10 @@ DFRL:NewMod("RunTimers", 5, function()
                     HideHover(row)
                     row.key, row.title, row.hint = key, title, hint
                 end
-                local x = (index - (count + 1) / 2) * (size + gap)
+                local x = (index - 1) * (size + gap)
                 if row.x ~= x then
                     row:ClearAllPoints()
-                    row:SetPoint("TOP", owner, "BOTTOM", x, -3)
+                    row:SetPoint("LEFT", root, "LEFT", x, 0)
                     row.x = x
                 end
                 local wanted = definition and atlas or SKULL_ICON
@@ -241,9 +362,10 @@ DFRL:NewMod("RunTimers", 5, function()
                 HideRow(self.rows[index])
             end
             self.packet, self.stamp, self.acceptedReceived = packet, stamp, self.received
-            self.text, self.language = packet.affixes, language
+            self.text, self.language, self.presentationDirty = packet.affixes, language, false
             if boundsChanged and self.onBounds then self.onBounds() end
         end
+        view:SyncAttachment()
         return view
     end
 
@@ -836,31 +958,66 @@ DFRL:NewMod("RunTimers", 5, function()
     local function UpdateRunFontBounds()
         local width = runClock.visible and (runText:GetStringWidth() or 0) or 0
         local bossWidth = bossClock.visible and (bossText:GetStringWidth() or 0) or 0
-        local overflow = math.max(0, (math.max(width, bossWidth) + 8 - run:GetWidth()) / 2)
+        local frameWidth = run:GetWidth()
+        local overflow = math.max(0, (math.max(width, bossWidth) + 8 - frameWidth) / 2)
         local pixel = math.max(runClock.pixel or 0, bossClock.pixel or 0)
         local inset = runClock.visible and bossClock.visible and 5 * pixel or 0
+        local affixWidth = run.affixes:HeaderWidth()
+        local left, right = 0, 0
+        if runClock.visible and bossClock.visible then
+            if affixWidth > 0 then
+                left = math.min(inset, (frameWidth - affixWidth) / 2 - 8 - width)
+                right = math.max(-inset, (affixWidth - frameWidth) / 2 + 8 + bossWidth)
+                overflow = math.max(0, -left, right)
+            else
+                overflow = math.max(0, (width + bossWidth + 8 + 2 * inset - frameWidth) / 2)
+                left, right = inset - overflow, overflow - inset
+                overflow = math.max(0, overflow - inset)
+            end
+        end
+        local top = (runClock.visible or bossClock.visible) and currentFont.size + 4 or 0
+        local leftOverflow, rightOverflow = overflow, overflow
+        if run.affixes.attached and run.affixes.width > 0 then
+            top = math.max(top, 24)
+            if runClock.visible and bossClock.visible then
+                leftOverflow = math.max(leftOverflow, (run.affixes.width - frameWidth) / 2)
+                rightOverflow = math.max(rightOverflow, (run.affixes.width - frameWidth) / 2)
+            else
+                leftOverflow =
+                    math.max(leftOverflow, run.affixes.width + 8 - (frameWidth - math.max(width, bossWidth)) / 2)
+            end
+        end
+        run.affixes:Context(runClock.visible, bossClock.visible, math.max(width, bossWidth))
+        local bounds = runClock.bounds or {}
+        runClock.bounds = bounds
+        local both = runClock.visible and bossClock.visible and true or false
+        if
+            bounds.ready
+            and bounds.both == both
+            and bounds.left == left
+            and bounds.right == right
+            and bounds.top == top
+            and bounds.leftOverflow == leftOverflow
+            and bounds.rightOverflow == rightOverflow
+        then
+            return
+        end
+        bounds.ready, bounds.both, bounds.left, bounds.right, bounds.top = true, both, left, right, top
+        bounds.leftOverflow, bounds.rightOverflow = leftOverflow, rightOverflow
         runText:ClearAllPoints()
         bossText:ClearAllPoints()
-        if runClock.visible and bossClock.visible then
-            -- Keep the captions apart at large font sizes or with wider translations.
-            overflow = math.max(0, (width + bossWidth + 8 + 2 * inset - run:GetWidth()) / 2)
-            runText:SetPoint("BOTTOMLEFT", run, "TOPLEFT", inset - overflow, 2)
-            bossText:SetPoint("BOTTOMRIGHT", run, "TOPRIGHT", overflow - inset, 2)
+        if both then
+            runText:SetPoint("BOTTOMLEFT", run, "TOPLEFT", left, 2)
+            bossText:SetPoint("BOTTOMRIGHT", run, "TOPRIGHT", right, 2)
         else
             runText:SetPoint("BOTTOM", run, "TOP", 0, 2)
             bossText:SetPoint("BOTTOM", run, "TOP", 0, 2)
         end
-        overflow = math.max(0, overflow - inset)
-        local top = (runClock.visible or bossClock.visible) and currentFont.size + 4 or 0
         runMoveRegion:ClearAllPoints()
-        overflow = math.max(overflow, (run.affixes.width - run:GetWidth()) / 2)
-        runMoveRegion:SetPoint("TOPLEFT", run, "TOPLEFT", -overflow, top)
-        runMoveRegion:SetPoint("BOTTOMRIGHT", run, "BOTTOMRIGHT", overflow, -run.affixes.inset)
+        runMoveRegion:SetPoint("TOPLEFT", run, "TOPLEFT", -leftOverflow, top)
+        runMoveRegion:SetPoint("BOTTOMRIGHT", run, "BOTTOMRIGHT", rightOverflow, 0)
     end
-    run.affixes.onBounds = function()
-        UpdateRunFontBounds()
-        DFRL.layout.Place("bossBars")
-    end
+    run.affixes.onBounds = UpdateRunFontBounds
 
     local function SetClockLabelText(clock, text, visible)
         if clock.source:GetText() ~= text then clock.source:SetText(text) end
@@ -1407,6 +1564,7 @@ DFRL:NewMod("RunTimers", 5, function()
             DFRL.profiles.MinimumWidth(TextWidth),
             TextWidth(instructions),
             TextWidth("Enable custom run timer") + 36,
+            TextWidth("Attach affixes to run timer") * 2 + gap + 72,
             TextWidth("Off: use the game's original timer.") / 2 + 36
         )
         local contentLeft = padding + sidebarWidth + 24
@@ -1853,6 +2011,10 @@ DFRL:NewMod("RunTimers", 5, function()
         end)
         table.insert(timerSettings.controls, shadowControl)
         shadowControl:SetPoint("TOPLEFT", timer, "TOPLEFT", 0, -132 - timerTop)
+        local attachAffixes =
+            DisplayToggle(timer, "attachAffixes", "Attach affixes to run timer", nil, -132 - timerTop, halfWidth)
+        attachAffixes:SetHeight(28)
+        attachAffixes:SetPoint("TOPLEFT", timer, "TOPLEFT", halfWidth + gap, -132 - timerTop)
         for index, mode in ipairs(timerModes) do
             local x = (index - 1) * (halfWidth + gap)
             local heading = FontEditorLabel(timer, mode.label, x, -184 - timerTop, 12)
@@ -1942,6 +2104,8 @@ DFRL:NewMod("RunTimers", 5, function()
         end,
     })
 
+    run.affixes:RegisterLayout()
+
     -- Encounters share a movable group, independent of the run clock.
     -- Its bounds include the first name and every stacked health pill.
     local bossGroup = CreateFrame("Frame", "DFRL_BossHealthGroup", UIParent)
@@ -1951,10 +2115,8 @@ DFRL:NewMod("RunTimers", 5, function()
     bossGroup:Hide()
     DFRL.layout.Register("bossBars", bossGroup, function()
         bossGroup:ClearAllPoints()
-        local affixSpace = run.affixes.inset > 0 and run.affixes.inset + 8 or 0
-        bossGroup:SetPoint("TOP", UIParent, "TOP", 0, -77 - affixSpace)
+        bossGroup:SetPoint("TOP", UIParent, "TOP", 0, -77)
     end, {
-        refreshDefault = true,
         edgeWidth = true,
         minWidth = 120,
         maxWidth = 1200,
@@ -3423,6 +3585,7 @@ DFRL:NewMod("RunTimers", 5, function()
 
     DFRL.display.Listen(function()
         SyncReplacements()
+        run.affixes:SyncAttachment()
         UpdateDisplayLabels()
         RefreshTimerCaptions()
         refreshRows = true
@@ -3504,14 +3667,14 @@ DFRL:NewMod("RunTimers", 5, function()
             if run:IsVisible() then
                 run.RefreshWidth()
                 if render.runMaximum ~= maximum then runBar:SetMinMaxValues(0, maximum) end
-                local value = math.min(maximum, seconds)
+                local atLimit = seconds >= maximum
+                -- Whole native seconds avoid per-frame fill/crop rewrites.
+                local value = atLimit and maximum or math.floor(seconds)
                 if render.runValue ~= value then runBar:SetValue(value) end
                 render.runMaximum, render.runValue = maximum, value
-                local atLimit = seconds >= maximum
                 SetRunAppearance(atLimit)
-                UpdateRunFlow(seconds, maximum)
+                UpdateRunFlow(value, maximum)
                 UpdateClockCaptions(seconds, maximum, not zoneRunPending)
-                run.affixes:Update(not zoneRunPending, refreshRows)
                 -- Missing schedule replay affects only spawn markers, never a clock
                 -- whose native elapsed time and duration have already recovered.
                 if
@@ -3530,6 +3693,7 @@ DFRL:NewMod("RunTimers", 5, function()
             else
                 render.clockHidden = true
             end
+            run.affixes:Update(not zoneRunPending, refreshRows)
             if not TakeOver("clock") then ReleaseClock() end
         else
             ReleaseClock()

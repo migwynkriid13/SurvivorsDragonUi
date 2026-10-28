@@ -36,6 +36,9 @@ leave hundreds of expensive texture regions drawing continuously.
   cooldown sampling, model-paint readiness and native geometry repair are
   deliberate exceptions to idle throttling. Do not invent a gameplay clock,
   drop combat events, truncate diagnostics or cap native rosters to save work.
+  The user-requested run-progress exception uses whole native run-second steps
+  for the fill and its decorative clipping edge; temporal effect cadence stays
+  unchanged. See the one-second progress entry below.
 - Record visible/allocated regions and material/UV-clamp implications separately
   from CPU calls. Source counts and reference models are not live draw-call,
   GPU-memory, pixel-parity or FPS measurements. No local tests, standalone
@@ -389,7 +392,27 @@ remains source-only apart from the completed OS samples and read-only journal
 inspection. No timing command, saved diagnostic state or background updater
 was added.
 
-Source follow-ups remove specific avoidable work:
+### One-second run progress — user-requested cadence change
+
+The progress StatusBar now writes whole native run seconds instead of a new
+fractional value every rendered frame. At a steady 60 FPS this reduces normal
+advancing fill-value writes from about 60 per second to one, without changing
+the reader or inventing a gameplay clock. Native pauses stop the sampled native
+coordinate. Initial/current-state recovery, native time corrections and
+duration changes remain immediate; a reached limit uses its exact native value,
+including fractional maxima. Hidden views still skip fill painting.
+
+The same stepped value bounds the existing flow and foam so their fill edge
+cannot continue crawling between one-second steps. Their temporal phase and
+30-Hz cap remain, as do the original caption, schedule and marker inputs.
+Moving textures, foam, glows and the native renderer's persistent drawing costs
+remain; this does not make the whole timer render only once per second.
+The source reduction is not a measured FPS or stutter result. Local work uses
+source review and pinned formatting, with coverage authored for CI only.
+
+### Other source follow-ups
+
+The following changes remove specific avoidable work:
 
 - Moving minimap pins replace their existing CENTER anchor directly, removing
   one ClearAllPoints call per moved pin. The legacy player-arrow overlay

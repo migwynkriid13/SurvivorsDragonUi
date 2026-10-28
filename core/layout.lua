@@ -27,6 +27,7 @@ DFRL:NewMod("Layout", 0, function()
         tooltip = "Tooltip",
         bossBars = "Boss health",
         runTimer = "Run timer",
+        heroicAffixes = "Heroic affixes",
         revive = "Revive",
         banners = "Banners",
         levelUp = "LEVEL UP",

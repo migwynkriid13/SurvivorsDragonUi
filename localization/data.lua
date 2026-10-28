@@ -2,6 +2,8 @@
 DFRL.locale.data = {
     en = {
         ui = {
+            ["Heroic affixes"] = "Heroic affixes",
+            ["Attach affixes to run timer"] = "Attach affixes to run timer",
             ["Loot popups"] = "Loot popups",
             ["SDUI"] = "SDUI",
             ["Game"] = "Game",
@@ -624,6 +626,8 @@ DFRL.locale.data = {
     },
     pl = {
         ui = {
+            ["Heroic affixes"] = "Afiksy heroiczne",
+            ["Attach affixes to run timer"] = "Przypnij afiksy do licznika czasu",
             ["Loot popups"] = "Okienka łupów",
             ["SDUI"] = "SDUI",
             ["Game"] = "Gra",
@@ -1717,6 +1721,8 @@ DFRL.locale.data = {
     },
     cs = {
         ui = {
+            ["Heroic affixes"] = "Heroické afixy",
+            ["Attach affixes to run timer"] = "Připojit afixy k časovači běhu",
             ["Loot popups"] = "Okna kořisti",
             ["SDUI"] = "SDUI",
             ["Game"] = "Hra",
@@ -2813,6 +2819,8 @@ DFRL.locale.data = {
     },
     de = {
         ui = {
+            ["Heroic affixes"] = "Heroische Affixe",
+            ["Attach affixes to run timer"] = "Affixe am Lauftimer befestigen",
             ["Loot popups"] = "Beutefenster",
             ["SDUI"] = "SDUI",
             ["Game"] = "Spiel",
@@ -3907,6 +3915,8 @@ DFRL.locale.data = {
     },
     pt = {
         ui = {
+            ["Heroic affixes"] = "Afixos Heroicos",
+            ["Attach affixes to run timer"] = "Anexar afixos ao cronômetro",
             ["Loot popups"] = "Pop-ups de saque",
             ["SDUI"] = "SDUI",
             ["Game"] = "Jogo",
@@ -4992,6 +5002,8 @@ DFRL.locale.data = {
     },
     es = {
         ui = {
+            ["Heroic affixes"] = "Afijos heroicos",
+            ["Attach affixes to run timer"] = "Anclar afijos al temporizador",
             ["Loot popups"] = "Ventanas de botín",
             ["SDUI"] = "SDUI",
             ["Game"] = "Juego",
@@ -6081,6 +6093,8 @@ DFRL.locale.data = {
     },
     fr = {
         ui = {
+            ["Heroic affixes"] = "Affixes héroïques",
+            ["Attach affixes to run timer"] = "Attacher les affixes au chronomètre",
             ["Loot popups"] = "Fenêtres de butin",
             ["SDUI"] = "SDUI",
             ["Game"] = "Jeu",
@@ -7178,6 +7192,8 @@ DFRL.locale.data = {
     },
     ro = {
         ui = {
+            ["Heroic affixes"] = "Afixe eroice",
+            ["Attach affixes to run timer"] = "Atașează afixele la cronometrul cursei",
             ["Loot popups"] = "Ferestre de pradă",
             ["SDUI"] = "SDUI",
             ["Game"] = "Joc",
@@ -8258,6 +8274,8 @@ DFRL.locale.data = {
     },
     tr = {
         ui = {
+            ["Heroic affixes"] = "Heroik ekler",
+            ["Attach affixes to run timer"] = "Ekleri koşu sayacına bağla",
             ["Loot popups"] = "Ganimet pencereleri",
             ["SDUI"] = "SDUI",
             ["Game"] = "Oyun",
@@ -9214,6 +9232,8 @@ DFRL.locale.data = {
     },
     ru = {
         ui = {
+            ["Heroic affixes"] = "Героические модификаторы",
+            ["Attach affixes to run timer"] = "Прикрепить модификаторы к таймеру забега",
             ["Loot popups"] = "Окна добычи",
             ["SDUI"] = "SDUI",
             ["Game"] = "Игра",
@@ -10389,6 +10409,8 @@ DFRL.locale.data = {
     },
     uk = {
         ui = {
+            ["Heroic affixes"] = "Героїчні афікси",
+            ["Attach affixes to run timer"] = "Прикріпити афікси до таймера забігу",
             ["Loot popups"] = "Вікна здобичі",
             ["SDUI"] = "SDUI",
             ["Game"] = "Гра",
@@ -11538,6 +11560,8 @@ DFRL.locale.data = {
     },
     zh = {
         ui = {
+            ["Heroic affixes"] = "英雄词缀",
+            ["Attach affixes to run timer"] = "将词缀附着到计时条",
             ["Loot popups"] = "拾取弹窗",
             ["SDUI"] = "SDUI",
             ["Game"] = "游戏",
@@ -12614,6 +12638,8 @@ DFRL.locale.data = {
     },
     ja = {
         ui = {
+            ["Heroic affixes"] = "ヒロイックのアフィックス",
+            ["Attach affixes to run timer"] = "アフィックスをランタイマーに固定",
             ["Loot popups"] = "戦利品ポップアップ",
             ["SDUI"] = "SDUI",
             ["Game"] = "ゲーム",
@@ -13722,6 +13748,8 @@ DFRL.locale.data = {
     },
     ko = {
         ui = {
+            ["Heroic affixes"] = "영웅 속성",
+            ["Attach affixes to run timer"] = "속성을 진행 타이머에 고정",
             ["Loot popups"] = "전리품 팝업",
             ["SDUI"] = "SDUI",
             ["Game"] = "게임",

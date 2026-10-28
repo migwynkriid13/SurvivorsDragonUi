@@ -94,6 +94,14 @@ unverified.
 
 ## Update work
 
+The progress fill advances in whole native run-second steps instead of changing
+every rendered frame. Native pause/choice states therefore freeze progress;
+native corrections and duration changes still take effect, and reaching the
+limit fills the bar exactly even when that limit includes a fractional second.
+The existing decorative flow/foam animation keeps its cadence and clips to the
+same stepped fill edge. Captions, boss scheduling and marker state continue
+using their original native inputs. No private timer or updater is added.
+
 Caption formatting keeps only the latest rounded native times and final labels.
 Unchanged values, options and language reuse those labels; disabled components
 skip formatting. Option previews rebuild immediately from the latest native
