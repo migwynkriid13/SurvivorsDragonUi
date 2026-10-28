@@ -263,3 +263,15 @@ the correct pixels. They also cannot measure live draw calls, GPU memory or FPS.
 Use source review for ownership/lifecycle changes and a separate in-game check
 when authorized. Local work remains limited to source review and pinned
 formatting; these regression tests and audits run in GitHub Actions.
+
+## Pet and totem controller scenarios
+
+`ui_pets_totems_spec.lua` loads the production PetFrames module against fake
+native getters, snapshots, phase and run time. It covers unchanged grouped pets
+alongside grouped totems; deferred reads; exact published names/icons/counts;
+future keys/caps; missing and malformed independent feeds; no timer before run
+clock readiness; pause/choosing behavior; zero-time counts retained until native
+removal; hidden allocation/polling; shared display settings; receipt retirement;
+world/reload/reset cleanup and row-pool reuse. Metadata learning runs only for
+changed accepted publications. The fixture and runner remain outside the
+runtime manifest, run only in CI and do not prove live delivery or rendering.

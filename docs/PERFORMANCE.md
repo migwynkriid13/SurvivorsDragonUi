@@ -1260,3 +1260,32 @@ handoffs, native unit aliases, receipt boundaries, hidden-to-visible transitions
 and failed texture assignment retries. Static checks do not establish in-game
 pixel parity, an FPS improvement or resolution of the separate world-entry
 stall and GPU out-of-memory reports. Those require new user-recorded captures.
+
+## Totems in Pet frames — 0.125.0, 2026-10-28
+
+The pet controller now accepts the separate official totem feed through its
+existing tenth-second update and CHAT_MSG_ADDON listener. Each stream owns a
+small descriptor and reusable copied group tables, with independent receipt,
+validation and retirement gates. Only changed publications and visible enabled
+temporary timers call that stream's getter. The totem count is copied directly;
+there is no expansion into individual rows or countdown-based count mutation.
+A native run-time readiness read accompanies eligible totem timer refreshes;
+hidden/timer-disabled groups skip that extra read. Static packet/stamp global
+names are prepared once, and unchanged publications do not relearn icon metadata.
+
+Each additional visible totem kind uses the existing lazy pet row: two passive
+frames, two row labels and a count label, one native portrait texture and one
+gold rim texture on the successful native path. These are additional visible
+regions proportional to represented kinds, independent of the number of totems
+within each kind. The existing lazy strip compatibility path retains its
+scale-dependent region/overdraw cost and failure retries. Geometry, UVs,
+layers, alpha, portrait binding cache and gold artwork are unchanged. Retired
+rows return to the same pool; hidden snapshots allocate no row or artwork.
+
+No controller, event registration, runtime module, asset, setting or
+SavedVariable is added. The feed has no individual identity, health, damage or
+pulse information; no such history is retained or inferred. CI-only scenarios
+load the production controller against explicit fake native snapshots to cover
+mixed/independent feeds, validation, timer readiness, pauses, changed-only work,
+hiding, settings, pooling and cleanup. Local source/diff review and pinned
+formatting do not establish live behavior, drawing submissions or FPS/GPU gains.
