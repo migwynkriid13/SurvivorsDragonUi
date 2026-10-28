@@ -495,7 +495,7 @@ do
         return getWidth(self)
     end
     cached.targetName = "Missing"
-    for index = 1, 20 do
+    for _ = 1, 20 do
         cached:Hit(201)
     end
     cached:Tick(0.17)
@@ -508,7 +508,7 @@ do
     cached:Tick(0.17)
     assert(widths - before == 2, "another matching pass reused the previous fallback query")
     cached.targetName = "Cache"
-    for index = 1, 20 do
+    for _ = 1, 20 do
         cached:Hit(202)
     end
     cached:Tick(0.17)
@@ -550,7 +550,7 @@ do
     first.nativeBar.value, second.nativeBar.value = 900, 800
     cached:Call(first.nativeBar, "OnValueChanged")
     cached:Call(second.nativeBar, "OnValueChanged")
-    for index = 1, 3 do
+    for _ = 1, 3 do
         cached:Hit(100)
     end
     before = scans

@@ -287,6 +287,7 @@ end)
 Test("final icon cache preserves stronger metadata, ambiguity, language and native equipment", function()
     local context = SCT(true, function(current, env)
         current.settings.damageIcons = true
+        current.settings.sctDirectDamage = true
         env.DFRL.locale.code = "en"
         env.DFRL.locale.data = {
             en = { spellNames = { Alias = { "Generated" } } },
