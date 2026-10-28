@@ -38,6 +38,7 @@ local function Fixture()
         MinimapEntries = function() return entries end,
         GetCursorPosition = function() return state.cursorX, state.cursorY end,
         T = { GetLocalSize = function() return 100, 100 end },
+        navigation = { MinimapSize = function() return 100, 100 end },
         DFRL = {
             layout = {
                 IsEditing = function() return state.editing end,

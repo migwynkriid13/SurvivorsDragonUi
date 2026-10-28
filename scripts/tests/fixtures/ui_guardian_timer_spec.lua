@@ -259,6 +259,35 @@ do
     native.Minimap = { GetChildren = function() return player end }
     navigationContext:Load("modules/map/navigation.lua", "Navigation")
     local nav = native.DFRL.navigation
+    local minimapWidth, minimapHeight = 100, 100
+    native.T.GetLocalSize = function(frame)
+        assert(frame == native.Minimap, "minimap sampling read another frame")
+        Read("minimapSize")
+        return minimapWidth, minimapHeight
+    end
+    nav.BeginSample()
+    assert(nav.MinimapSize(20) == 100, "usable native minimap bounds were rejected")
+    minimapWidth = 120
+    assert(nav.MinimapSize() == 100 and reads.minimapSize == 1, "one callback mixed minimap sizes")
+    nav.EndSample()
+    nav.BeginSample()
+    assert(nav.MinimapSize() == 120 and reads.minimapSize == 2, "next callback retained old minimap bounds")
+    nav.EndSample()
+    minimapWidth, minimapHeight = nil, nil
+    nav.BeginSample()
+    assert(nav.MinimapSize() == nil, "missing minimap bounds were invented")
+    minimapWidth, minimapHeight = 10, 10
+    assert(nav.MinimapSize(20) == 10, "missing bounds did not retry in the same callback")
+    minimapWidth, minimapHeight = 100, 100
+    assert(nav.MinimapSize(20) == 100, "too-small bounds did not retry in the same callback")
+    minimapWidth, minimapHeight = 140, 140
+    assert(nav.MinimapSize(120) == 140, "a stricter caller retained insufficient cached bounds")
+    nav.EndSample()
+    minimapWidth = 160
+    assert(nav.MinimapSize() == 160, "unsampled geometry retained a prior callback")
+    minimapWidth = 180
+    assert(nav.MinimapSize() == 180, "ordinary geometry reads were cached across callbacks")
+    print("PASS minimap size sharing, callback boundaries and unavailable/insufficient geometry retry")
     local destination = { x = 100, y = -100, mx = 0.6, my = 0.3 }
     nav.SetPoints("AZS_CHESTS", { destination })
     nav.Position()

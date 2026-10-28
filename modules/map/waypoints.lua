@@ -120,7 +120,7 @@ DFRL:NewMod("Waypoints", 3, function()
             local cursorX, cursorY = _G.GetCursorPosition()
             local centerX, centerY = Minimap:GetCenter()
             local scale = Minimap:GetEffectiveScale()
-            local width, height = T.GetLocalSize(Minimap)
+            local width, height = navigation.MinimapSize()
             if
                 not Number(cursorX)
                 or not Number(cursorY)
@@ -406,7 +406,7 @@ DFRL:NewMod("Waypoints", 3, function()
             if not Minimap then return end
             local visibleOK, visible = pcall(Minimap.IsVisible, Minimap)
             if not visibleOK or Shown(visible) ~= true then return end
-            local sizeOK, width, height = pcall(T.GetLocalSize, Minimap)
+            local sizeOK, width, height = pcall(navigation.MinimapSize, PIN_SIZE)
             if not sizeOK or not Number(width) or not Number(height) or width <= PIN_SIZE or height <= PIN_SIZE then
                 return
             end

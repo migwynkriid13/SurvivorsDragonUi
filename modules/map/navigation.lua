@@ -16,6 +16,21 @@ DFRL:NewMod("Navigation", 2, function()
     local function Coordinates(x, y) return Number(x) and Number(y) and x >= 0 and x <= 1 and y >= 0 and y <= 1 end
     function navigation.IsRunPhase(phase) return phases[phase] == true end
     function navigation.MinimapLevel(kind) return Minimap:GetFrameLevel() + minimapLevels[kind] end
+    function navigation.MinimapSize(minimum)
+        minimum = minimum or 0
+        local w, h = frameSample.minimapWidth, frameSample.minimapHeight
+        if sampling and Number(w) and Number(h) and w > minimum and h > minimum then return w, h end
+        if sampling then
+            frameSample.minimapWidth, frameSample.minimapHeight = nil, nil
+        end
+        w, h = T.GetLocalSize(Minimap)
+        -- Cache usable geometry only; missing/tiny native bounds can recover
+        -- later in this same callback without waiting for another frame.
+        if sampling and Number(w) and Number(h) and w > minimum and h > minimum then
+            frameSample.minimapWidth, frameSample.minimapHeight = w, h
+        end
+        return w, h
+    end
     local function ClearSample()
         for key in pairs(frameSample) do
             frameSample[key] = nil
@@ -381,7 +396,7 @@ DFRL:NewMod("Navigation", 2, function()
             return
         end
         local facing = navigation.Heading()
-        local width, height = T.GetLocalSize(Minimap)
+        local width, height = navigation.MinimapSize()
         if not Number(facing) or not Number(width) or not Number(height) or width <= 0 or height <= 0 then
             if playerOverlay and playerOverlay:IsShown() then playerOverlay:Hide() end
             return
