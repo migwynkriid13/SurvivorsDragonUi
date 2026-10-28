@@ -63,6 +63,12 @@ The assertions cover:
   portrait variants, restore the retained artwork on option changes and skip
   unchanged writes. These assertions distinguish shown state from alpha; they
   do not measure the packaged renderer's submitted quads or GPU time.
+- Performance follow-up fixtures also exercise production banner detach/retry,
+  Layout handle preparation/failure, unchanged meter publications with changing
+  rates, shown-plate sampling, shared navigation reads, tooltip content/owner
+  caches, loot backpressure, parser descriptors and XP fade geometry. Extracted
+  helpers retain explicit fake native boundaries; full controllers still load
+  only in CI. These assert call/object/lifecycle behavior, not rendering or FPS.
 
 - Boss/guardian current and maximum health defaults, independent preview,
   Confirm/Cancel, profile discard and reset use the real display module. Shared

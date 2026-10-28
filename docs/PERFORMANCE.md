@@ -1125,19 +1125,58 @@ SHA-256 is `e069bf3152f8d8f7160d66388907fc181c733bd170aa150d3b7ff7adf251e048`.
 The shader starts near 100,342,970 and identifies `shaders/ui_quad.wgsl`.
 
 The public native-base
-[UI renderer](https://github.com/samwhosung/benilla/blob/main/crates/benilla-app/src/ui_pass.rs)
+[UI renderer](https://github.com/samwhosung/benilla/blob/289b0ec5f64d7f58fa1a3f3b2347c0a056afba77/crates/benilla-app/src/ui_pass.rs#L947)
 groups contiguous quads with the same texture and material, including their UV
 clamp. The native-base
-[layer ordering](https://github.com/samwhosung/benilla/blob/main/crates/benilla-ui/src/order.rs)
+[layer ordering](https://github.com/samwhosung/benilla/blob/289b0ec5f64d7f58fa1a3f3b2347c0a056afba77/crates/benilla-ui/src/order.rs)
 and
-[texture sort](https://github.com/samwhosung/benilla/blob/main/crates/benilla-ui/src/script/layer_batch.rs)
+[texture sort](https://github.com/samwhosung/benilla/blob/289b0ec5f64d7f58fa1a3f3b2347c0a056afba77/crates/benilla-ui/src/script/layer_batch.rs)
 can further permute equal-texture quads across all owners sharing a flat
 stratum, level and layer. Owner creation order alone cannot guarantee a batch.
 Its
-[extraction code](https://github.com/samwhosung/benilla/blob/main/crates/benilla-app/src/ui_script/extract/mod.rs)
+[extraction code](https://github.com/samwhosung/benilla/blob/289b0ec5f64d7f58fa1a3f3b2347c0a056afba77/crates/benilla-app/src/ui_script/extract/mod.rs#L137)
 defines cropped half-texel clamps. These sources explain the proposed batching
 and the reason to retain every jewelry strip boundary. They do not establish
 the complete packaged renderer's identity or a measured performance result.
+
+### Submitted regions and engine boundaries — 2026-10-28
+
+Count allocated regions, shown regions, nonzero-alpha regions and submitted
+quads separately. The inspected native-base extractor skips hidden regions and
+disabled owner layers, but still emits zero-alpha textures. Its fragment shader
+samples before applying tint alpha. Thus earlier authored visible-region counts
+describe the artwork, not a guarantee that transparent alternatives contribute
+no rendering work. The unit-border and nameplate-layer fixes above remove those
+specific submissions; retained hidden pools still occupy resident objects.
+See [hidden/alpha extraction](https://github.com/samwhosung/benilla/blob/289b0ec5f64d7f58fa1a3f3b2347c0a056afba77/crates/benilla-ui/src/script/extract.rs#L218)
+and [texture sampling](https://github.com/samwhosung/benilla/blob/289b0ec5f64d7f58fa1a3f3b2347c0a056afba77/crates/benilla-app/src/shaders/ui_quad.wgsl#L124).
+
+SCT's authored crit pop retains its continuous inner scale and required refit.
+Current benilla SetScale invalidates subtree layout and global text-measurement
+tracking; the next sweep checks all nonempty FontStrings and remeasures only
+stale entries. Wenilla retains that path. Glyph bitmaps cache by integer device
+pixel size, so fractional scaling does not rasterize every glyph every frame.
+No verified addon API scales an already rasterized label with identical output;
+an engine-side narrower invalidation remains a separate investigation.
+See [scale invalidation](https://github.com/samwhosung/benilla/blob/289b0ec5f64d7f58fa1a3f3b2347c0a056afba77/crates/benilla-ui/src/script/model.rs#L1796),
+[measurement sweep](https://github.com/samwhosung/benilla/blob/289b0ec5f64d7f58fa1a3f3b2347c0a056afba77/crates/benilla-ui/src/script/layout.rs#L2047)
+and [wenilla's equivalent](https://github.com/Arnesen/wenilla/blob/d68dcc539460e8fc5169105c790443489d91ca76/crates/benilla-ui/src/script/model.rs#L1979).
+
+Animated UV windows can create new material keys, but the inspected material
+cache clears above 256 entries before a rebuild and prunes removed images. This
+establishes possible churn, not an unbounded material leak. Native OUTLINE is
+baked into glyph atlas cells, while shadow emits another glyph pass. Required
+shadows, jewelry's fourteen crops, independent timer effects and full SCT
+lifetimes retain their authored drawing cost. Competitor hit caps, summed hits
+and simpler artwork change those behaviors and are not equivalent fixes.
+See [material lifetime](https://github.com/samwhosung/benilla/blob/289b0ec5f64d7f58fa1a3f3b2347c0a056afba77/crates/benilla-app/src/ui_pass.rs#L1004),
+[outline baking](https://github.com/Arnesen/wenilla/blob/d68dcc539460e8fc5169105c790443489d91ca76/crates/benilla-app/src/ui_text/outline.rs#L1)
+and [shadow emission](https://github.com/samwhosung/benilla/blob/289b0ec5f64d7f58fa1a3f3b2347c0a056afba77/crates/benilla-app/src/ui_script/extract/text.rs#L215).
+
+These immutable public revisions explain the opportunities and limits. They do
+not establish the installed package's revision, live CPU/GPU cost or resolution
+of the reported stalls/out-of-memory behavior. No engine source or packaged
+client is changed by this addon PR.
 
 ## Shared addon identity
 
