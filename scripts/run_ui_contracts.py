@@ -47,11 +47,11 @@ def main():
         waypoint_frame = extract_source("modules/map/waypoints.lua", ["Number", "Rotate", "WrapAngle", "Blend", "UpdateGuide"])
         xp_glow = extract_source("modules/xprep/xprep.lua", ["PaintGlow"])
         sct_queue = extract_source("modules/nameplates/sct.lua", [
-            "FALLBACK_ICON", "EVENT_SETTLE", "EVENT_FALLBACK_DELAY", "DUPLICATE_WINDOW", "DAMAGE_COLORS",
+            "FALLBACK_ICON", "EVENT_SETTLE", "EVENT_FALLBACK_DELAY", "DUPLICATE_WINDOW", "PERFORMANCE_DUPLICATE_WINDOW", "duplicateWindow", "DAMAGE_COLORS",
             "DAMAGE_SAMPLE_LIMIT", "DAMAGE_SAMPLE_TIME", "DAMAGE_SAMPLE_MINIMUM", "STRONG_DAMAGE_RATIO",
-            "TextureKey", "IconIdentityPart", "DamageColor", "QueueCombatText", "UpdatePending", "HandleCombatEvent",
+            "IsFiniteNumber", "TextureKey", "IconIdentityPart", "DamageColor", "SyncDuplicateWindow", "QueueCombatText", "UpdatePending", "HandleCombatEvent",
         ])
-        sct_queue = sct_queue.rsplit("\nreturn ", 1)[0] + "\nreturn { Queue = QueueCombatText, Update = UpdatePending, Handle = HandleCombatEvent }\n"
+        sct_queue = sct_queue.rsplit("\nreturn ", 1)[0] + "\nreturn { Queue = QueueCombatText, Update = UpdatePending, Handle = HandleCombatEvent, SyncWindow = SyncDuplicateWindow }\n"
         run_foam = extract_source("modules/ui/run.lua", ["DrawFoam", "UpdateBlueFoam"])
         run_static = extract_source("modules/ui/run.lua", [
             "BAR_WIDTH", "FLOW_WIDTH", "FLOW_SPEED", "FLOW_INTERVAL", "FLOW_SPACING", "FLOW_COUNT", "FLOW_SPAN",
@@ -66,6 +66,10 @@ def main():
             "SetClockLabelText", "RefreshTimerCaptions", "ClearClockCaptions", "UpdateClockCaptions",
         ])
         run_captions = run_captions.rsplit("\nreturn ", 1)[0] + "\nreturn { New = NewClockLabel, Update = UpdateClockCaptions, Refresh = RefreshTimerCaptions, Style = StyleClockLabel, Clear = ClearClockCaptions }\n"
+        tally_counters = extract_source("modules/ui/run.lua", [
+            "TALLY_COUNTER_INTERVAL", "IsNumber", "TallyCountersDue", "ClearTally", "UpdateTally", "UpdateRunBoundary",
+        ])
+        tally_counters = tally_counters.rsplit("\nreturn ", 1)[0] + "\nreturn { Update = UpdateTally, Clear = ClearTally, Boundary = UpdateRunBoundary }\n"
         minimap_clock = extract_source("modules/map/map.lua", ["WatchClock"])
         player_pulse = extract_source("modules/unit/player.lua", ["CreatePulse"])
         aura_layout = extract_source("modules/unit/auras.lua", ["PlaceNativeFrame", "Layout"])
@@ -111,6 +115,7 @@ def main():
             ("run-progress-source.lua", run_progress, "ui_run_progress_perf_spec.lua"),
             ("run-affixes-source.lua", run_affixes, "ui_run_affixes_spec.lua"),
             ("run-captions-source.lua", run_captions, "ui_run_captions_perf_spec.lua"),
+            ("tally-counters-source.lua", tally_counters, "ui_tally_counter_cadence_spec.lua"),
             ("minimap-clock-source.lua", minimap_clock, "ui_idle_clock_spec.lua"),
             ("player-pulse-source.lua", player_pulse, "ui_player_pulse_perf_spec.lua"),
             ("aura-layout-source.lua", aura_layout, "ui_aura_layout_perf_spec.lua"),
@@ -136,7 +141,7 @@ def main():
             result = subprocess.run(command, cwd=SOURCE)
             if result.returncode:
                 return result.returncode
-        for fixture in ("ui_health_spec.lua", "ui_sct_spec.lua", "ui_nameplates_spec.lua", "ui_marks_spec.lua", "ui_meter_party_spec.lua", "ui_banners_perf_spec.lua", "ui_layout_spec.lua", "ui_pets_totems_spec.lua", "ui_guardian_tracker_perf_spec.lua", "ui_revive_perf_spec.lua", "ui_core_idle_cadence_spec.lua", "ui_cooldown_lifecycle_spec.lua", "ui_tooltip_style_perf_spec.lua", "ui_target_color_perf_spec.lua", "ui_passive_cadence_spec.lua", "ui_projection_cache_perf_spec.lua", "ui_sct_metadata_perf_spec.lua"):
+        for fixture in ("ui_health_spec.lua", "ui_sct_spec.lua", "ui_nameplates_spec.lua", "ui_marks_spec.lua", "ui_meter_party_spec.lua", "ui_banners_perf_spec.lua", "ui_layout_spec.lua", "ui_pets_totems_spec.lua", "ui_guardian_tracker_perf_spec.lua", "ui_revive_perf_spec.lua", "ui_core_idle_cadence_spec.lua", "ui_cooldown_lifecycle_spec.lua", "ui_tooltip_style_perf_spec.lua", "ui_target_color_perf_spec.lua", "ui_target_classification_spec.lua", "ui_passive_cadence_spec.lua", "ui_projection_cache_perf_spec.lua", "ui_sct_metadata_perf_spec.lua"):
             result = subprocess.run(["lua5.1", "scripts/tests/fixtures/" + fixture], cwd=SOURCE)
             if result.returncode:
                 return result.returncode

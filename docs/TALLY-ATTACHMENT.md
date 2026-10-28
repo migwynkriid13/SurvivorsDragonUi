@@ -1,5 +1,12 @@
 # Tally attachment and appearance
 
+With **Performance Mode** on, the kill and gold numbers refresh every five
+seconds. Cache cost keeps its normal refresh speed. Turning Performance Mode
+off restores the usual updates. The first display and a new run use current
+values immediately; changing the style or attachment does not restart the
+five-second interval. These are display changes only: native counters, cache
+affordability data and HUD ownership remain current.
+
 The **Kills, Gold & Caches** page in `/sdui` owns the selected style, attachment,
 counter visibility and affordability highlight. The same style selection works
 in both modes. Changes preview through the existing display draft; Confirm saves,

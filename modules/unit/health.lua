@@ -9,8 +9,13 @@ DFRL:NewMod("TargetHealth", 0, function()
     local inWorld, pending, painting = true, false, false
     local received, retiredReceived, generation = 0, -1, 0
     local retired, retiredStamp, accepted, acceptedStamp
-    local current, maximum, name, spawn
+    local current, maximum, name, spawn, kind
     local provisional = false
+    local unitNames, unitSeen = {}, {}
+    local unitSource, unitStamp, unitAccepted
+    local unitReceived, unitParsed = 0, 0
+    local blockedUnits, blockedUnitStamp, blockedUnitReceipt
+    local runTime, boundaryPending
     local setRange, setValue = bar.SetMinMaxValues, bar.SetValue
     local kinds = { final = true, boss = true, guardian = true, elite = true, normal = true }
 
@@ -24,13 +29,100 @@ DFRL:NewMod("TargetHealth", 0, function()
         return UnitExists("target") and not UnitIsPlayer("target") and UnitCanAttack("player", "target")
     end
     local function Clear()
-        accepted, acceptedStamp, current, maximum, name, spawn = nil, nil, nil, nil, nil, nil
+        accepted, acceptedStamp, current, maximum, name, spawn, kind = nil, nil, nil, nil, nil, nil, nil
         generation = generation + 1
     end
     local function Retire()
         retired, retiredStamp, retiredReceived = _G.AZS_TARGET, _G.AZS_TARGET_UPDATED, received
         provisional = false
         Clear()
+    end
+
+    local function ClearRoster()
+        local changed = unitAccepted ~= nil
+        for unitName in pairs(unitNames) do
+            unitNames[unitName] = nil
+        end
+        for id in pairs(unitSeen) do
+            unitSeen[id] = nil
+        end
+        unitSource, unitStamp, unitAccepted = nil, nil, nil
+        return changed
+    end
+    local function RetireRoster()
+        blockedUnits, blockedUnitStamp, blockedUnitReceipt = _G.AZS_UNITS, _G.AZS_UNITS_UPDATED, unitReceived
+        return ClearRoster()
+    end
+    local function ObserveRun()
+        local run = _G.AZS_RUN
+        if type(run) ~= "table" or not Number(_G.AZS_RUN_UPDATED) or not Number(run.t) then return false end
+        local changed = runTime and run.t < runTime and RetireRoster() or false
+        runTime = run.t
+        return changed
+    end
+    local function PrepareRoster()
+        if unitReceived ~= unitParsed or boundaryPending then return false end
+        local source, stamp = _G.AZS_UNITS, _G.AZS_UNITS_UPDATED
+        if source == blockedUnits and stamp == blockedUnitStamp and unitReceived == blockedUnitReceipt then
+            return false
+        end
+        if source == unitSource and stamp == unitStamp and unitParsed == unitAccepted then return false end
+        for id in pairs(unitSeen) do
+            unitSeen[id] = nil
+        end
+        local valid = type(source) == "table" and Number(stamp) and table.getn(source) <= 40
+        if valid then
+            for _, entry in ipairs(source) do
+                if
+                    type(entry) ~= "table"
+                    or (entry.kind ~= "final" and entry.kind ~= "boss" and entry.kind ~= "guardian" and entry.kind ~= "elite")
+                    or not Number(entry.id)
+                    or entry.id <= 0
+                    or entry.id ~= math.floor(entry.id)
+                    or unitSeen[entry.id]
+                    or type(entry.name) ~= "string"
+                    or entry.name == ""
+                    or not Number(entry.hp)
+                    or not Number(entry.hpm)
+                    or entry.hpm <= 0
+                    or entry.hp > entry.hpm
+                then
+                    valid = false
+                    break
+                end
+                unitSeen[entry.id] = true
+            end
+        end
+        -- Keep the previous publication intact until the entire list is checked.
+        for _, maxima in pairs(unitNames) do
+            for value in pairs(maxima) do
+                maxima[value] = nil
+            end
+        end
+        if valid then
+            for _, entry in ipairs(source) do
+                if entry.hp > 0 then
+                    local maxima = unitNames[entry.name]
+                    if not maxima then
+                        maxima = {}
+                        unitNames[entry.name] = maxima
+                    end
+                    local borderKind = false
+                    if entry.kind == "guardian" then
+                        borderKind = "guardian"
+                    elseif entry.kind == "boss" or entry.kind == "final" then
+                        borderKind = "boss"
+                    end
+                    T.IndexUnitMaximum(maxima, entry.hpm, borderKind)
+                end
+            end
+        end
+        for unitName, maxima in pairs(unitNames) do
+            if not next(maxima) then unitNames[unitName] = nil end
+        end
+        -- Cache invalid publications too; a later table/stamp/receipt retries them.
+        unitSource, unitStamp, unitAccepted = source, stamp, unitParsed
+        return true
     end
 
     function health.Get()
@@ -52,6 +144,47 @@ DFRL:NewMod("TargetHealth", 0, function()
             if Number(value) and Number(total) and total > 0 and value <= total then return value, total, generation end
         end
         return nil, nil, generation
+    end
+
+    function health.GetKind()
+        if
+            kind
+            and inWorld
+            and UnitExists("target")
+            and not UnitIsPlayer("target")
+            and name == UnitName("target")
+            and Phase()
+        then
+            return kind
+        end
+    end
+
+    function health.GetBorderKind()
+        if not TargetFrame:IsVisible() then return end
+        local acceptedKind = health.GetKind()
+        if acceptedKind then return acceptedKind end
+        if not Phase() then
+            RetireRoster()
+            runTime = nil
+            return
+        end
+        if
+            not UnitExists("target")
+            or UnitIsPlayer("target")
+            or (type(UnitPlayerControlled) == "function" and UnitPlayerControlled("target"))
+        then
+            return
+        end
+        -- A packet being parsed cannot replace the copied roster. Keep its
+        -- current cosmetic match until the existing deferred reader settles it.
+        if not boundaryPending then ObserveRun() end
+        PrepareRoster()
+        local maxima = unitNames[UnitName("target")]
+        if not maxima then return end
+        local nativeMaximum = UnitHealthMax("target")
+        if not Number(nativeMaximum) or nativeMaximum <= 0 then return end
+        local borderKind = maxima[nativeMaximum]
+        if borderKind then return borderKind end
     end
 
     function health.Listen(callback) table.insert(listeners, callback) end
@@ -87,15 +220,25 @@ DFRL:NewMod("TargetHealth", 0, function()
     local function Read()
         controller:SetScript("OnUpdate", nil)
         pending = false
+        unitParsed, boundaryPending = unitReceived, false
         if not Phase() then
+            RetireRoster()
+            runTime = nil
             Retire()
             Notify()
             return
         end
+        local rosterChanged = ObserveRun()
         if not TargetFrame:IsVisible() then return end
+        rosterChanged = PrepareRoster() or rosterChanged
         local state, stamp = _G.AZS_TARGET, _G.AZS_TARGET_UPDATED
-        if state == accepted and stamp == acceptedStamp then return end
-        if state == retired and stamp == retiredStamp and received == retiredReceived then return end
+        if
+            (state == accepted and stamp == acceptedStamp)
+            or (state == retired and stamp == retiredStamp and received == retiredReceived)
+        then
+            if rosterChanged then Notify() end
+            return
+        end
         if
             type(state) ~= "table"
             or not Number(stamp)
@@ -119,12 +262,12 @@ DFRL:NewMod("TargetHealth", 0, function()
         end
         if spawn ~= state.id or name ~= state.name then generation = generation + 1 end
         accepted, acceptedStamp = state, stamp
-        current, maximum, name, spawn = state.hp, state.hpm, state.name, state.id
+        current, maximum, name, spawn, kind = state.hp, state.hpm, state.name, state.id, state.kind
         provisional = false
         Notify()
     end
-    local function Schedule()
-        if pending or not inWorld or not TargetFrame:IsVisible() then return end
+    local function Schedule(retirementOnly)
+        if pending or not inWorld or (not TargetFrame:IsVisible() and not retirementOnly) then return end
         pending = true
         controller:SetScript("OnUpdate", Read)
     end
@@ -147,20 +290,33 @@ DFRL:NewMod("TargetHealth", 0, function()
             if arg1 == "AZSTGT" then
                 received = received + 1
                 Schedule()
+            elseif arg1 == "AZSUNITS" then
+                unitReceived = unitReceived + 1
+                Schedule(true)
             elseif arg1 == "AZSZONE" then
+                boundaryPending = true
+                RetireRoster()
+                runTime = nil
                 Retire()
                 Notify()
-                Schedule()
+                Schedule(true)
             elseif arg1 == "AZSRUN" then
-                Schedule()
+                boundaryPending = true
+                Schedule(true)
             end
         elseif event == "PLAYER_LEAVING_WORLD" or event == "PLAYER_LOGOUT" then
             inWorld = false
             Cancel()
+            RetireRoster()
+            runTime = nil
             Retire()
             Notify()
         else
             inWorld = true
+            if event == "PLAYER_ENTERING_WORLD" then
+                RetireRoster()
+                runTime = nil
+            end
             Retire()
             provisional = event == "PLAYER_TARGET_CHANGED"
             Notify()
@@ -168,10 +324,15 @@ DFRL:NewMod("TargetHealth", 0, function()
         end
     end)
     HookScript(TargetFrame, "OnHide", function()
-        Cancel()
+        if unitReceived == unitParsed and not boundaryPending then Cancel() end
         provisional = false
         Clear()
     end)
     HookScript(TargetFrame, "OnShow", Schedule)
+    DFRL.locale.Listen(function()
+        RetireRoster()
+        Notify()
+        Schedule()
+    end)
     Schedule()
 end)

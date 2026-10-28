@@ -459,8 +459,37 @@ DFRL:NewMod("Bars", 1, function()
     end
 
     local function CreateCooldownNumbers(bar)
+        local performanceMode
+        local cooldowns = {}
+        local function HideReadyCooldown(cooldown)
+            if cooldown.stopping ~= 1 then
+                local start, duration = cooldown.start, cooldown.duration
+                if
+                    cooldown.stopping ~= 0
+                    or type(start) ~= "number"
+                    or not (start > 0)
+                    or type(duration) ~= "number"
+                    or not (duration > 0)
+                    or not ((GetTime() - start) / duration >= 1)
+                then
+                    return false
+                end
+            end
+            if cooldown:IsShown() then cooldown:Hide() end
+            return true
+        end
         for _, button in ipairs(DFRL.actionButtons) do
             local cooldown = _G[button:GetName() .. "Cooldown"]
+            local updateModel = cooldown and cooldown:GetScript("OnUpdateModel")
+            if type(updateModel) == "function" then
+                table.insert(cooldowns, cooldown)
+                -- The stock Model scrubs sequence 0 for the swipe, then starts
+                -- sequence 1 for the ready flash. Stop before that handoff.
+                cooldown:SetScript("OnUpdateModel", function()
+                    if performanceMode and HideReadyCooldown(cooldown) then return end
+                    updateModel()
+                end)
+            end
             local overlay = CreateFrame("Frame", nil, button)
             overlay:SetAllPoints(button)
             overlay:SetFrameLevel(math.max(button:GetFrameLevel(), cooldown and cooldown:GetFrameLevel() or 0) + 1)
@@ -492,12 +521,16 @@ DFRL:NewMod("Bars", 1, function()
             end
         end
         local function RefreshNumbers(finalOnly)
-            if
-                not active
-                or not bar:IsVisible()
-                or DFRL.display.Get("performanceMode")
-                or not DFRL.display.Get("cooldownNumbers")
-            then
+            local selected = DFRL.display.Get("performanceMode")
+            if performanceMode ~= selected then
+                performanceMode = selected
+                if performanceMode then
+                    for _, cooldown in ipairs(cooldowns) do
+                        HideReadyCooldown(cooldown)
+                    end
+                end
+            end
+            if not active or not bar:IsVisible() or performanceMode or not DFRL.display.Get("cooldownNumbers") then
                 ClearNumbers()
                 return
             end
@@ -536,12 +569,7 @@ DFRL:NewMod("Bars", 1, function()
             RefreshNumbers()
         end)
         TickNumbers = function()
-            if
-                not active
-                or not bar:IsVisible()
-                or DFRL.display.Get("performanceMode")
-                or not DFRL.display.Get("cooldownNumbers")
-            then
+            if not active or not bar:IsVisible() or performanceMode or not DFRL.display.Get("cooldownNumbers") then
                 return
             end
             elapsed = elapsed + arg1

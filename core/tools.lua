@@ -10,6 +10,42 @@ function DFRL.tools.NearlyEqual(a, b)
         and math.abs(a - b) <= 0.000001 * math.max(1, math.abs(a), math.abs(b))
 end
 
+-- Native unit maxima pass through ceiling/uint32 fields and float32 storage.
+-- Share these exact encodings between cosmetic target and nameplate matching.
+local function UnitMaximumFloat(value)
+    local _, exponent = math.frexp(value)
+    if exponent > 128 then return end
+    local step = math.ldexp(1, math.max(exponent, -125) - 24)
+    local scaled = value / step
+    local integer = math.floor(scaled)
+    local fraction = scaled - integer
+    if fraction > 0.5 or (fraction == 0.5 and math.mod(integer, 2) == 1) then integer = integer + 1 end
+    if integer == 0 or (exponent == 128 and integer == 16777216) then return end
+    return integer * step
+end
+local function AddUnitMaximum(maxima, maximum, value)
+    if not maximum or maxima[maximum] == false then return end
+    local previous = maxima[maximum]
+    if previous ~= nil and previous ~= value then
+        maxima[maximum] = false
+    else
+        maxima[maximum] = value
+    end
+end
+function DFRL.tools.IndexUnitMaximum(maxima, maximum, value)
+    AddUnitMaximum(maxima, maximum, value)
+    AddUnitMaximum(maxima, UnitMaximumFloat(maximum), value)
+    local unitMaximum = math.min(4294967295, math.ceil(maximum))
+    AddUnitMaximum(maxima, unitMaximum, value)
+    AddUnitMaximum(maxima, UnitMaximumFloat(unitMaximum), value)
+    -- AZSUNITS serializes float32 maxima to zero decimal places, while waking
+    -- guardians publish ceilf(maximum) to UNIT_FIELD_MAXHEALTH. Only these
+    -- whole-number publications can encode a fractional value just above them.
+    if maximum == math.floor(maximum) and (maximum < 4194304 or (maximum < 8388608 and math.mod(maximum, 2) == 0)) then
+        AddUnitMaximum(maxima, maximum + 1, value)
+    end
+end
+
 function DFRL.tools.SetTextIfChanged(label, text)
     local language = DFRL.locale
     local binding = language and language.labels[label]

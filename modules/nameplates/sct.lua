@@ -14,6 +14,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local EVENT_SETTLE = 0.08
     local EVENT_FALLBACK_DELAY = 0.16
     local DUPLICATE_WINDOW = 0.075
+    local PERFORMANCE_DUPLICATE_WINDOW = 0.3
     local RECENT_PLATE_TIME = 0.65
     local LOSS_TIME = 0.25
     local DAMAGE_COLORS = {
@@ -79,6 +80,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local nameplateFontSize = DFRL.display.Get("nameplateFontSize")
     local msbtStyle = DFRL.display.Get("sctMSBTStyle")
     local textScale = DFRL.display.Get("sctScale")
+    local duplicateWindow = DFRL.display.Get("performanceMode") and PERFORMANCE_DUPLICATE_WINDOW or DUPLICATE_WINDOW
     -- Keep V's visible request separate from the backing coordinate feed. The
     -- native verbs do not write FrameXML's saved NAMEPLATES_ON preference.
     local enemyPlatesEnabled = NAMEPLATES_ON and true or false
@@ -97,41 +99,6 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local function UsesPlateOrigins() return CustomEnabled() and not msbtStyle end
 
     local function IsFiniteNumber(value) return type(value) == "number" and value - value == 0 end
-
-    -- Plate ranges pass through native ceiling/uint32 fields and float32 storage.
-    -- Index their exact encodings, never a tolerance or a percentage estimate.
-    local function PlateFloat(value)
-        local _, exponent = math.frexp(value)
-        if exponent > 128 then return end
-        local step = math.ldexp(1, math.max(exponent, -125) - 24)
-        local scaled = value / step
-        local integer = math.floor(scaled)
-        local fraction = scaled - integer
-        if fraction > 0.5 or (fraction == 0.5 and math.mod(integer, 2) == 1) then integer = integer + 1 end
-        if integer == 0 or (exponent == 128 and integer == 16777216) then return end
-        return integer * step
-    end
-    local function AddPlateMaximum(maxima, value, eligible)
-        if value and maxima[value] ~= false then maxima[value] = eligible end
-    end
-    local function IndexPlateMaximum(maxima, maximum, eligible)
-        AddPlateMaximum(maxima, maximum, eligible)
-        AddPlateMaximum(maxima, PlateFloat(maximum), eligible)
-        local unitMaximum = math.min(4294967295, math.ceil(maximum))
-        AddPlateMaximum(maxima, unitMaximum, eligible)
-        AddPlateMaximum(maxima, PlateFloat(unitMaximum), eligible)
-        -- AZSUNITS serializes actor float32 maxima to zero decimal places, but
-        -- waking guardians publish ceilf(maximum) to UNIT_FIELD_MAXHEALTH.
-        -- A rounded integer can therefore encode a fractional maximum just above
-        -- it. Such a float32 exists below 2^22, or at an even tie below 2^23;
-        -- above that, float32 has no fractional maximum that rounds to this integer.
-        if
-            maximum == math.floor(maximum)
-            and (maximum < 4194304 or (maximum < 8388608 and math.mod(maximum, 2) == 0))
-        then
-            AddPlateMaximum(maxima, maximum + 1, eligible)
-        end
-    end
 
     local plateFilter = {
         enabled = DFRL.display.Get("nameplatesBossGuardiansOnly"),
@@ -237,7 +204,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                     plateFilter.names[entry.name] = maxima
                 end
                 -- A published ordinary elite with the same signature is ambiguous.
-                IndexPlateMaximum(maxima, entry.hpm, entry.kind ~= "elite")
+                T.IndexUnitMaximum(maxima, entry.hpm, entry.kind ~= "elite")
             end
         end
         for name, maxima in pairs(plateFilter.names) do
@@ -1492,8 +1459,22 @@ DFRL:NewMod("NameplateCombatText", 6, function()
 
     local function IconIdentityPart(value) return string.len(value) .. ":" .. value end
 
+    local function SyncDuplicateWindow()
+        local window = DFRL.display.Get("performanceMode") and PERFORMANCE_DUPLICATE_WINDOW or DUPLICATE_WINDOW
+        if duplicateWindow == window then return end
+        duplicateWindow = window
+        -- Finish old intake under its existing matching/settle gates. Keep
+        -- queued hits and active motion, without joining across mode changes.
+        for _, group in ipairs(pendingGroups) do
+            group.bucket, group.identity = nil, nil
+        end
+        for identity in pairs(intakeBuckets) do
+            intakeBuckets[identity] = nil
+        end
+    end
+
     local function QueueCombatText(info, now)
-        local identity, byAmount, group
+        local identity, byAmount, group, bucketKey
         if info.kind == "damage" then
             -- Resolve once even when icons are hidden, so identity and the
             -- eventual displayed icon cannot change while this hit waits.
@@ -1524,27 +1505,41 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                     byAmount = {}
                     intakeBuckets[identity] = byAmount
                 end
-                -- The first hit fixes the inclusive 75 ms deadline. Joining
-                -- hits never slide it forward or change the original amount.
-                group = byAmount[info.amount]
+                -- Performance Mode sums this attack's amounts. Normal mode
+                -- still collapses only exact duplicates. Preserve each hit.
+                bucketKey = info.amount
+                if duplicateWindow == PERFORMANCE_DUPLICATE_WINDOW then bucketKey = false end
+                group = byAmount[bucketKey]
                 if group and (now < group.time or now > group.closesAt) then group = nil end
+                if group and group.displayAmount then
+                    local total = group.displayAmount + info.amount
+                    if IsFiniteNumber(total) then
+                        group.displayAmount = total
+                    else
+                        -- Keep both original finite hits when a display sum
+                        -- cannot be represented, rather than painting infinity.
+                        group = nil
+                    end
+                end
             end
         end
         if not group then
-            -- The first original hit owns the unchanged value and styling.
+            -- The first hit owns styling; the optional total is display-only.
             group = {
                 info = info,
                 time = now,
-                closesAt = now + DUPLICATE_WINDOW,
+                closesAt = now + duplicateWindow,
                 bucket = byAmount,
+                bucketKey = bucketKey,
                 identity = identity,
+                displayAmount = byAmount and duplicateWindow == PERFORMANCE_DUPLICATE_WINDOW and info.amount or nil,
                 remaining = 0,
                 count = 0,
                 x = 0,
                 y = 0,
             }
             table.insert(pendingGroups, group)
-            if byAmount then byAmount[info.amount] = group end
+            if byAmount then byAmount[bucketKey] = group end
         end
         if msbtStyle then
             -- The fixed stream has no per-hit origin to resolve. Retain the
@@ -1652,6 +1647,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     end
 
     DFRL.display.Listen(function()
+        SyncDuplicateWindow()
         local scrolling = DFRL.display.Get("sctMSBTStyle")
         if msbtStyle ~= scrolling then
             msbtStyle = scrolling
@@ -1758,11 +1754,11 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         return strong and DAMAGE_COLORS.strong or DAMAGE_COLORS.normal
     end
 
-    local function DisplayDamage(info, x, y)
+    local function DisplayDamage(info, x, y, displayAmount)
         -- Filter only after every original hit has consumed its matching and
         -- color evidence, including members of a visually collapsed group.
         if not ShouldShowText(info) then return end
-        local value = info.text or info.amount
+        local value = displayAmount or info.text or info.amount
         if not value then return end
         local text = AcquireText()
         -- The enemy layout snapshots its native launch point. The scrolling
@@ -1855,8 +1851,8 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             if bucket and (now < group.time or now > group.closesAt) then
                 -- A newer group may already own this key while the old one
                 -- finishes matching. Retire only this group's own intake.
-                if bucket[group.info.amount] == group then
-                    bucket[group.info.amount] = nil
+                if bucket[group.bucketKey] == group then
+                    bucket[group.bucketKey] = nil
                     if not next(bucket) and intakeBuckets[group.identity] == bucket then
                         intakeBuckets[group.identity] = nil
                     end
@@ -1869,7 +1865,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                 and (not group.lastArrival or now - group.lastArrival >= EVENT_SETTLE)
             then
                 -- Every display keeps its resolved centroid for the full arc.
-                DisplayDamage(group.info, group.x / group.count, group.y / group.count)
+                DisplayDamage(group.info, group.x / group.count, group.y / group.count, group.displayAmount)
             else
                 kept = kept + 1
                 pendingGroups[kept] = group

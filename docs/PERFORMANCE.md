@@ -28,9 +28,11 @@ leave hundreds of expensive texture regions drawing continuously.
   SavedVariable or idle updater. Record the static behavior and source-level
   costs in the owning developer docs, with meaningful CI-only lifecycle coverage
   where appropriate; local tests and addon/game execution remain unauthorized.
-- SCT is explicitly exempt from Performance Mode: preserve its existing motion,
-  fall, critical pop, fade and selected MSBT style. Do not add a static override
-  or retire its active hits just because Performance Mode changes.
+- SCT keeps its existing motion, fall, critical pop, fade and selected MSBT
+  style in Performance Mode. Only grouping changes: sum same-attack damage in
+  300 ms while enabled, with the original 75 ms exact-amount duplicate
+  suppression otherwise. Do not add a static override or
+  retire its active hits just because Performance Mode changes.
 - Prefer one cached native image when its appearance matches the request.
   Pet and meter circles use named `SetPortraitToTexture` images, with the gold
   rim separate. Bind only on icon changes; scale inheritance needs no rebinding.
@@ -151,12 +153,13 @@ source/runtime catalogs and reserves its own row above the category buttons.
 | Owner                       | While Performance Mode is on                                                                                                                                                                                                                                                                                                                                                     |
 | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Chat                        | Keep native expiry at its original deadline with zero fade duration, so messages disappear instantly; scrolling back still holds lines. Snap reveal opacity and message-slide geometry, and clear active reveal/slide state. Native messages, history, links and input remain current.                                                                                           |
+| SCT                         | Sum same-attack outgoing damage within a fixed 300 ms window; normal mode keeps 75 ms exact-amount duplicate suppression. Preserve original per-hit matching, critical/source separation, motion, fade, full lifetime and the selected enemy/MSBT style.                                                                                                                         |
 | Unit frames                 | Hide player absorbs and player/target/target-of-target damage trails, reset trail baselines, and use the existing 2D still portraits. Party has no custom loss overlay. Hide combat/rest rim glows; keep a static resting symbol and a static low-health warning at the current health-derived strength.                                                                         |
 | Resources                   | Skip absorb snapshot/field work when Class resources is also off; keep native phase/receipt retirement and selected resource values.                                                                                                                                                                                                                                             |
 | Run timer                   | Keep native whole-second progress and current labels, static blue/red fill and informative skull/check markers. Skip flow, foam, sparkle, red-glint and skull-halo animation. The 72-texture decorative fill pool is prepared only if normal mode needs it, then retained for reuse. Required native phase, ownership, schedule and encounter work keeps its existing lifecycle. |
-| Cache tally                 | Clear the affordable-cache gold halo, rays and sparkles and detach its animation worker. Keep current gold and cache cost.                                                                                                                                                                                                                                                       |
+| Cache tally                 | Refresh kills and gold numbers once every five UI seconds. Keep cache cost at its normal cadence. Clear the affordable-cache gold halo, rays and sparkles and detach its animation worker.                                                                                                                                                                                       |
 | XP                          | Snap the fill to received XP, clear gain/spark artwork and detach completed effect work. Existing deferred native reads remain.                                                                                                                                                                                                                                                  |
-| Abilities and stored levels | Clear cooldown-number overlays and detach their timing worker. Hide level-button glow/highlight layers and detach the pulse worker; retain its static gold artwork, count and click behavior.                                                                                                                                                                                    |
+| Abilities and stored levels | Clear cooldown-number overlays and detach their timing worker. Suppress the seven native ability-ready flashes while retaining unfinished cooldown swipes. Hide level-button glow/highlight layers and detach the pulse worker; retain its static gold artwork, count and click behavior.                                                                                        |
 | Notifications and revive    | Loot cards and banners stay opaque until their original expiry; hidden notices still retire. Revive displays received fill/percentage directly without smoothing, fade, spark or pulsing crosses, using its existing ten-Hz state reader.                                                                                                                                        |
 | Action range                | Keep the current out-of-range warning static and remove any active native fade on a mode transition.                                                                                                                                                                                                                                                                             |
 
@@ -167,6 +170,71 @@ notification expiry, data gates, native HUD ownership and cleanup stay active.
 Navigation direction, custom combat-text travel, meaningful native cooldown
 swipes and jewelry cooldown progress retain their functional motion. This mode
 does not change native gameplay values, incoming combat feedback or game effects.
+
+Ability-ready suppression wraps only the seven existing cooldown Models'
+`OnUpdateModel` handlers, using their native timing fields to hide at completion
+before the finishing sequence starts. The original callbacks own every
+unfinished swipe and all normal-mode behavior. The existing display listener
+clears a flash already running on mode entry and caches the selected mode;
+mode exit leaves retired flashes hidden until the next native timer rearms.
+This remains independent of the retained Cooldown numbers choice. There are at
+most seven wrappers and one existing-Model list, with no new frame, region,
+asset, event, polling or updater. Native timer setup, animation-finished handling
+and input remain unchanged. Unfinished native drawing stays present; hidden
+completion Models skip their finishing animation. These are source-level
+costs, not measured GPU/FPS results. See [ability cooldowns](ABILITY-COOLDOWNS.md)
+for pinned native sources and CI-only coverage.
+
+SCT caches the selected grouping window through the existing display listener.
+Each new identified damage group receives its fixed inclusive deadline from
+the first hit; joining hits never extend it. Performance Mode sums amounts for
+the same identified attack: `20 + 100` displays `120`, and `100 + 100` displays
+`200`. Normal mode retains exact-amount duplicate suppression, so those cases
+remain separate `20`/`100` labels or one unchanged `100` respectively. Source,
+pet, damage type, school, critical status and resolved icon remain separate
+identity fields in both modes. Misses, aura notices and unidentified attacks
+gain no new hold. The original 80 ms per-hit settling and
+160 ms enemy-position fallback gates remain, so 300 ms limits admission rather
+than total display latency. Both enemy and MSBT-style SCT use the selected
+window; native incoming text remains independent.
+
+An actual window change closes intake on every queued group and clears its
+bucket index, while retaining all pending hits and active text. Existing
+matching/settling finishes those groups without mixing new arrivals across
+mode changes. Each group retains its creation mode's total or duplicate value.
+Preview, Cancel, profiles and resets restore the selected window
+through the shared lifecycle. Active animation and normal-mode equations are
+unchanged; no per-hit setting lookup, frame, region, asset, event, updater or
+SavedVariable is added. The total lives only on the existing pending group and
+is passed to the renderer as an optional value override; original hit amounts,
+color samples and loss consumption are untouched. A stored bucket key keeps
+cleanup independent of the changing total, including when a newer group owns
+the same attack. Unrepresentable numeric totals split into separate groups
+instead of painting infinity. No per-hit display-copy table is allocated.
+More same-attack arrivals can share a label, but visible
+region savings depend on the hit stream; this is not measured FPS/GPU evidence.
+
+Only the kills/gold number presentation uses the five-second cadence. The initial
+valid display paints immediately, then changing packets, styles and widths
+cannot refresh those numbers early. Cache cost, native phase/data validation,
+HUD ownership and the shared reader keep their existing cadence. One unsaved
+last-paint timestamp uses `GetTime()` for display scheduling only; it never
+supplies gameplay time or counters. Between due samples, kills/gold skip number
+formatting and text assignment, while the existing fit helper can refit the
+retained text after a width/style change or retry missing metrics.
+
+Actual Performance Mode transitions, tally retirement and existing zone/new-run
+or native-clock rollback boundaries reset that presentation timestamp. Routine
+attachment/style Hide/Show cycles do not reset it. Hidden tallies perform no
+number formatting, text updates or cadence-clock read; required native data
+validation and HUD ownership remain active. Elapsed hidden time naturally makes
+the next visible sample due after five seconds. Disabling Performance Mode
+restores current numbers through the next normal refresh, including preview,
+Cancel, profiles and resets. There is no new event, updater, region, asset,
+setting or SavedVariable. CI-only extracted production cases cover the exact
+five-second boundary, unaffected normal/cache-cost refresh, mode changes,
+hidden recovery, refitting and retirement; they are not local execution or
+measured FPS evidence.
 
 The new editor control uses one standard button, four existing editor textures
 and one caption. No gameplay frame, drawing region, texture file, event, updater
@@ -762,7 +830,8 @@ The following changes remove specific avoidable work:
   style/mode/world lifecycle.
 - MSBT arrivals increment their existing duplicate group directly and retain
   the maximum member receipt. The original subtraction-based 80 ms age gate
-  and inclusive 75 ms intake window determine emission, including out-of-order
+  and inclusive intake window (75 ms normally, 300 ms in Performance Mode)
+  determine emission, including out-of-order
   receipts and floating-point boundaries. Stream mode no longer allocates or
   revisits a pending record for each original hit. Every original color sample
   and icon identity still runs; first-hit values/style and default over-enemy
@@ -1096,6 +1165,47 @@ existing labels, health fill and loss texture are reused. There is no local
 test or addon/game execution. These are source-level costs and authored CI mock
 assertions, not measured GPU/FPS or visual-parity results. See
 [target health](UNIT-PORTRAITS.md#target-health-and-compact-numbers).
+
+Guardian and boss portrait classification uses a separate cosmetic roster path
+to avoid waiting for a new target-health packet. A bounded forty-entry
+`AZS_UNITS` publication is validated atomically, then indexed by exact localized
+name and native maximum-health representations. `T.IndexUnitMaximum` now owns
+the existing exact float32/ceiling/uint32/publication-preimage rules for both
+this index and the nameplate filter; their encoding math is unchanged. Ordinary
+elite entries block collided signatures. Only kind and maximum aliases are
+copied, with no health/spawn identity acceptance, per-target history or native
+table writes. Source table/stamp/parsed-receipt caches skip unchanged rebuilds
+and cache invalid publications until new evidence arrives. Existing name buckets
+are reused while accepted rosters change.
+
+On target selection, `GetBorderKind()` first uses any authoritative accepted
+target kind. Otherwise, one current native name/maximum sample can match the
+known roster immediately through the existing target listener. The maximum
+read is confined to this unresolved cosmetic path; accepted target kinds keep
+the original no-extra-health-read path. No text, font, geometry or texture work
+is added to unchanged classifications. Native rebuilds still force repair.
+Copied matches stay stable while ordinary unit/run packets are pending; raw
+roster parsing and alias rebuilding wait for the existing deferred callback.
+Unknown or ambiguous matches retain native artwork pending target confirmation.
+
+Hidden targets skip cosmetic matching, roster validation and target-health
+reads. Unit/run receipts may arm one callback on the existing controller solely
+to settle parser readiness and observe phase/run rollback, then detach again.
+Selection/Hide retain current-run roster metadata for immediate reuse; zone,
+world, inactive-phase, observed run rollback and language boundaries clear it
+and block the old publication. A newly accepted roster notifies the existing
+target listener even if the health publication is unchanged. This adds no idle
+worker, new event registration or controller.
+
+This adds zero frames, drawing regions, assets, events, updaters, settings or
+SavedVariables. The existing three portrait-rim and seven health-border strips,
+256-by-128 sheets, UVs, layers, alpha overdraw and classification-specific edit
+bounds are unchanged. **Hide portraits** uses the existing closed border, and
+Performance Mode retains the same static winged artwork. CI-only coverage
+asserts immediate guardian/boss/final selection before `AZSTGT`, shared maximum
+aliases and collision rejection, parser handoffs, publication retirement,
+native fallback, hidden idling and unchanged/forced bindings. These are source/lifecycle
+contracts, not measured draw-call, GPU/FPS or in-game visual-parity evidence.
 
 ## Player absorbs — 2026-10-27
 

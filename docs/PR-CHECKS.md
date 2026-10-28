@@ -87,6 +87,20 @@ The assertions cover:
   portrait variants, restore the retained artwork on option changes and skip
   unchanged writes. These assertions distinguish shown state from alpha; they
   do not measure the packaged renderer's submitted quads or GPU time.
+  Target classification mocks also cover accepted guardian silver wings,
+  boss/final gold wings, native artwork fallback, unchanged/forced bindings and
+  hidden reads/writes. Full target-health mocks cover accepted-kind copying and
+  retirement through the existing deferred publication lifecycle. Both reuse
+  the bundled border sheets without extra regions or runtime test hooks.
+  Immediate-border cases select known guardian/boss/final artwork during
+  `PLAYER_TARGET_CHANGED`, before a target packet or the next update. They
+  exercise exact name/maximum aliases, sleeping/waking guardians, namesake elite
+  and clamped-value collisions, atomic invalid-roster rejection, authoritative
+  target precedence, copied metadata reuse, pending-parser stability, hidden
+  receipt settlement and zone/world/phase/language/run-rollback retirement.
+  The nameplate fixture also checks string-kind collisions in the shared
+  production maximum-alias helper; no local execution or live latency claim is
+  implied by these authored CI cases.
 - Performance follow-up fixtures also exercise production banner detach/retry,
   Layout handle preparation/failure, unchanged meter publications with changing
   rates, shown-plate sampling, shared navigation reads, tooltip content/owner
@@ -115,6 +129,14 @@ The assertions cover:
   Source-extracted SCT queue cases retain original metadata/color intake,
   amount/critical/icon identities, inclusive intake and subtraction-based
   settle boundaries while checking that MSBT stores no per-hit pending record.
+  Grouping cases retain the original 75 ms normal path and cover Performance
+  Mode's fixed inclusive 300 ms window in both SCT styles, same-attack sums
+  (`20 + 100 = 120`, including equal amounts), unchanged normal duplicate
+  suppression, preserved original per-hit values, separate critical/source/icon
+  identities, numeric overflow splitting, stable bucket cleanup,
+  old/new intake separation and active animation
+  surviving preview/Cancel window changes. Matching and settling keep their
+  original gates. These are CI-only source/lifecycle assertions.
   Default per-hit matching/fallback remains covered. Extraction keeps complete
   multi-variable constant declarations once, with uniqueness regression cases.
 
@@ -148,6 +170,10 @@ The assertions cover:
   final-window sampling with the exact positive-zero boundary.
 - Hidden/off cooldowns skip native reads and presentation; world retirement
   clears overlays and suspends reads, and world entry resumes them.
+- Native ability Model mocks cover Performance Mode's completion-flash guard,
+  unfinished swipes, active-flash cleanup, mode exit without stale replay,
+  numbers-off independence and preserved native timing/animation handlers.
+  They do not establish the packaged client's live rendering or FPS.
 - Range indicators reuse their texture, avoid restarting unchanged fades and
   detach their polling and clear effects when the action bar hides. One lazy
   target sample serves each pass while visible buttons retain independent
@@ -325,6 +351,10 @@ decoration, static blue/red fills and restoration of the original effect pool.
 Related production mocks cover notification expiry, revive progress, static
 range feedback and skull-glow transitions. These fixtures run only in CI and
 were not run locally; they do not measure frame rate or verify native rendering.
+
+Extracted tally cases cover five-second kills/gold presentation, unchanged
+normal/cache-cost cadence, retained-text fitting, hidden recovery, mode changes
+and existing native run/tally retirement boundaries. These remain CI-only.
 
 Banner cases include the former
 fade-out window and hidden-born rows, preserving original receipt lifetimes.
