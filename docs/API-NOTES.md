@@ -1,5 +1,36 @@
 # Official addon API integration — 2026-10-14
 
+## Heroic affixes and totems — 0.125.0, 2026-10-28
+
+The [supplied 0.125.0 reference](AzerothSurvivors-Addon-API-0.125.0-2026-10-28.txt)
+is preserved verbatim. Its evidence paths and reproduction commands refer to
+the source reconstruction checkout described in that text. This addon change
+uses the supplied contract; it does not repeat that investigation or its tests.
+
+`AZSZONE` supplies `AZS_ZONE.heroic` and the new `AZS_ZONE.affixes`. Affixes are one
+comma-separated string of English keys, such as `sanguine,explosive`, in native
+order regardless of UI language. Empty means no affixes in the received
+snapshot; nil means unavailable. Display labels can be localized separately;
+unknown keys must remain acceptable. There is no affix getter or live mechanic
+timer. The run timer's centered affix row now uses the received list with the
+selected #04 artwork and red-tinted jewelry rims. Hover text uses the native
+names/descriptions in all fourteen catalogs. See [RUN-TIMER.md](RUN-TIMER.md#heroic-affixes).
+
+`AZSTOTEMS` publishes `AZS_TOTEMS` and its `AZS_TOTEMS_UPDATED` receipt stamp.
+`AZS_GetTotems([key])` returns fresh rows grouped by exact ability key, with
+localized name, native icon, spell ID, count, cap, duration and the next expiry
+as `remaining`. `AZS_GetTotemCount([key])` sums counts; table length counts
+kinds. Keys currently include `searing_totem` and `magma_totem`, but SDUI accepts
+any valid published key and does not hardcode their cap, icon or duration.
+
+The [Pet frames group](PET-FRAMES.md#totems--01250) uses those rows alongside
+the separate summon feed. Its optional countdown waits for a valid native
+`AZS_GetRunTime()`, follows native pauses, and never decrements a published
+count on local expiry. The deadline describes the next existing totem to
+expire, not the next summon. No individual totem IDs, health, positions, pulse
+times or combat ownership are supplied. Local work is source review and pinned
+formatting; CI-only controller scenarios are authored but not run locally.
+
 ## Party meter — 2026-10-27
 
 Static reading of the installed 146,088,960-byte client, SHA-256
@@ -29,8 +60,8 @@ It documents `AZS_GetSummons`, `AZS_GetSummonCount`, `AZS_GetSummonGroups`,
 
 The [summon API assessment](SUMMONS-API.md) explains the new counts, native
 icons and run-clock lifetimes, their limits, and the effect on our current pet
-frame and SCT filter. The [pet-frame group](PET-FRAMES.md) now uses this roster
-for up to eight names, native icons and lifetimes. The API does not identify the
+frame and SCT filter. The [pet-frame group](PET-FRAMES.md) uses this roster
+for grouped names, counts, native icons and optional lifetimes. The API does not identify the
 source of unattributed SELF combat messages, including the reported Imp
 Fireball. No existing API removal is stated in the supplied reference.
 
@@ -299,6 +330,9 @@ V-off masking also hides the entire custom visual child explicitly, including it
 No tests, syntax checks, validation, addon execution or game startups were run; visual appearance and SCT coexistence remain unverified in the packaged game.
 
 ## MSBT-style combat text — 2026-10-27
+
+Performance Mode leaves SCT unchanged, including its selected style, normal
+motion, critical pop, fade, matching and native plate ownership.
 
 `/sdui` → **Combat text** has **MSBT-style scrolling**, off by default. Missing
 or invalid `sctMSBTStyle` values normalize to false in the existing display

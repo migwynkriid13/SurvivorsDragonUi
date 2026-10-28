@@ -392,11 +392,21 @@ DFRL:NewMod("Bars", 1, function()
     -- cooldown-number styling. This implementation reads only our seven native
     -- action slots; it does not import their code or hook cooldowns globally.
     -- https://github.com/DustinChecketts/Turtle-Dragonflight/tree/b2c62e9095e1c859bff0209db09f4ff5b9884f5a
-    local function FormatCooldown(remaining)
+    local function FormatCooldown(remaining, overlay)
         if remaining < COOLDOWN_ZERO then return "0" end
         for _, unit in ipairs(COOLDOWN_UNITS) do
             if remaining >= unit[1] or unit[1] == 1 then
-                return math.ceil(remaining / unit[1]) .. DFRL.locale.Text(unit[2])
+                local value, language = math.ceil(remaining / unit[1]), DFRL.locale.code
+                if
+                    overlay.cooldownValue ~= value
+                    or overlay.cooldownUnit ~= unit[2]
+                    or overlay.cooldownLanguage ~= language
+                then
+                    local text = value .. DFRL.locale.Text(unit[2])
+                    overlay.cooldownValue, overlay.cooldownUnit, overlay.cooldownLanguage = value, unit[2], language
+                    overlay.cooldownText = text
+                end
+                return overlay.cooldownText
             end
         end
     end
@@ -428,7 +438,7 @@ DFRL:NewMod("Bars", 1, function()
             return
         end
 
-        T.SetTextIfChanged(overlay.text, FormatCooldown(remaining))
+        T.SetTextIfChanged(overlay.text, FormatCooldown(remaining, overlay))
         local red, green, blue = 1, 1, 1
         if remaining < 1 then
             green, blue = 85 / 255, 85 / 255
@@ -466,29 +476,50 @@ DFRL:NewMod("Bars", 1, function()
 
         local active, finishing = true, false
         local elapsed = 0
+        local controller, running, TickNumbers
         local function ClearNumbers()
+            if running then
+                controller:SetScript("OnUpdate", nil)
+                running = false
+            end
             finishing = false
             for _, button in ipairs(DFRL.actionButtons) do
                 local overlay = button.DFRL_cooldownNumber
                 if overlay:IsShown() then overlay:Hide() end
+                overlay.cooldownValue, overlay.cooldownUnit, overlay.cooldownLanguage, overlay.cooldownText =
+                    nil, nil, nil, nil
+                overlay.finishing = nil
             end
         end
-        local function RefreshNumbers()
-            if not active or not bar:IsVisible() or not DFRL.display.Get("cooldownNumbers") then
+        local function RefreshNumbers(finalOnly)
+            if
+                not active
+                or not bar:IsVisible()
+                or DFRL.display.Get("performanceMode")
+                or not DFRL.display.Get("cooldownNumbers")
+            then
                 ClearNumbers()
                 return
+            end
+            if not running then
+                controller:SetScript("OnUpdate", TickNumbers)
+                running = true
             end
             local now = GetTime()
             finishing = false
             for _, button in ipairs(DFRL.actionButtons) do
-                local remaining = UpdateCooldownNumber(button, now)
-                if remaining and remaining <= COOLDOWN_FINAL_WINDOW then finishing = true end
+                local overlay = button.DFRL_cooldownNumber
+                if not finalOnly or overlay.finishing then
+                    local remaining = UpdateCooldownNumber(button, now)
+                    overlay.finishing = remaining and remaining <= COOLDOWN_FINAL_WINDOW or false
+                end
+                if overlay.finishing then finishing = true end
             end
         end
 
         -- One updater serves the whole bar. Text inherits each button's scale,
         -- alpha and visibility, while its stock swipe and click scripts stay intact.
-        local controller = CreateFrame("Frame", nil, bar)
+        controller = CreateFrame("Frame", nil, bar)
         controller:RegisterEvent("ACTIONBAR_UPDATE_COOLDOWN")
         controller:RegisterEvent("ACTIONBAR_SLOT_CHANGED")
         controller:RegisterEvent("PLAYER_ENTERING_WORLD")
@@ -504,15 +535,25 @@ DFRL:NewMod("Bars", 1, function()
             elapsed = 0
             RefreshNumbers()
         end)
-        controller:SetScript("OnUpdate", function()
-            if not active or not bar:IsVisible() or not DFRL.display.Get("cooldownNumbers") then return end
+        TickNumbers = function()
+            if
+                not active
+                or not bar:IsVisible()
+                or DFRL.display.Get("performanceMode")
+                or not DFRL.display.Get("cooldownNumbers")
+            then
+                return
+            end
             elapsed = elapsed + arg1
-            -- Sample each rendered frame near expiration so a 100-ms periodic
-            -- refresh does not skip the positive final-100-ms zero window.
-            if not finishing and elapsed < COOLDOWN_INTERVAL then return end
-            elapsed = 0
-            RefreshNumbers()
-        end)
+            if elapsed >= COOLDOWN_INTERVAL then
+                elapsed = 0
+                RefreshNumbers()
+            elseif finishing then
+                -- Only final-window buttons need frame samples. Keep the full
+                -- bar's independent 100-ms clock so other slots cannot starve.
+                RefreshNumbers(true)
+            end
+        end
         controller:SetScript("OnHide", ClearNumbers)
         controller:SetScript("OnShow", RefreshNumbers)
         DFRL.display.Listen(RefreshNumbers)

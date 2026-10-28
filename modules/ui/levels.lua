@@ -162,32 +162,48 @@ DFRL:NewMod("StoredLevels", 5, function()
     highlight:SetBlendMode("ADD")
     highlight:Hide()
     local pulseElapsed, hovered = 0, false
-    button:SetScript("OnEnter", function()
-        if not editing then hovered = true end
-    end)
-    button:SetScript("OnLeave", function() hovered = false end)
-    button:SetScript("OnShow", function()
-        elapsed = INTERVAL
-        pulseElapsed = 0
-        glow:SetAlpha(0.25)
-        highlight:SetAlpha(0.1)
-        glow:Show()
-        highlight:Show()
-    end)
-    button:SetScript("OnHide", function()
-        pulseElapsed, hovered = 0, false
-        glow:Hide()
-        highlight:Hide()
-    end)
-    -- This updater runs only while the real button is visible with waiting
-    -- levels. Hidden groups and cleanup stop it through normal frame visibility.
-    button:SetScript("OnUpdate", function()
+    local performanceMode = DFRL.display.Get("performanceMode")
+    local function AnimatePulse()
         if not button:IsVisible() then return end
         pulseElapsed = pulseElapsed + math.min(tonumber(arg1) or 0, 0.1)
         if pulseElapsed >= PULSE_PERIOD then pulseElapsed = pulseElapsed - PULSE_PERIOD end
         local pulse = 0.5 - 0.5 * math.cos(pulseElapsed * 2 * math.pi / PULSE_PERIOD)
         glow:SetAlpha(0.25 + 0.65 * pulse)
         highlight:SetAlpha((hovered and 0.3 or 0.1) + 0.4 * pulse)
+    end
+    local function RefreshEffects()
+        pulseElapsed = 0
+        if performanceMode or not button:IsVisible() then
+            button:SetScript("OnUpdate", nil)
+            if glow:IsShown() then glow:Hide() end
+            if highlight:IsShown() then highlight:Hide() end
+            return
+        end
+        glow:SetAlpha(0.25)
+        highlight:SetAlpha(0.1)
+        glow:Show()
+        highlight:Show()
+        button:SetScript("OnUpdate", AnimatePulse)
+    end
+    button:SetScript("OnEnter", function()
+        if not editing then hovered = true end
+    end)
+    button:SetScript("OnLeave", function() hovered = false end)
+    button:SetScript("OnShow", function()
+        elapsed = INTERVAL
+        RefreshEffects()
+    end)
+    button:SetScript("OnHide", function()
+        pulseElapsed, hovered = 0, false
+        button:SetScript("OnUpdate", nil)
+        glow:Hide()
+        highlight:Hide()
+    end)
+    DFRL.display.Listen(function()
+        local enabled = DFRL.display.Get("performanceMode")
+        if performanceMode == enabled then return end
+        performanceMode = enabled
+        RefreshEffects()
     end)
 
     local function PositiveInteger(value)
@@ -223,16 +239,19 @@ DFRL:NewMod("StoredLevels", 5, function()
         -- An unknown HUD part returns nil on older clients. Never claim takeover.
         if not ok or type(shown) ~= "boolean" then return false end
         if nativePreference == nil then nativePreference = shown end
-        if shown and not pcall(AZS_SetHudShown, "levels", false) then return false end
+        if not shown then return true end
+        if not pcall(AZS_SetHudShown, "levels", false) then return false end
         local checked, current = pcall(AZS_IsHudShown, "levels")
         return checked and current == false
     end
 
     local displayed, paintedCrop = false, nil
+    local displayedCount, displayedText
     local function Clear()
         -- Clear the requested visibility even when Layout already hides it.
         if displayed or button:IsShown() then button:Hide() end
         displayed = false
+        displayedCount, displayedText = nil, nil
         if highlight:IsShown() then highlight:Hide() end
         T.SetTextIfChanged(countText, "")
         if icon:IsShown() then icon:Hide() end
@@ -261,7 +280,10 @@ DFRL:NewMod("StoredLevels", 5, function()
             end
         end
         if paint or editing then
-            T.SetTextIfChanged(countText, tostring(count))
+            if displayedCount ~= count then
+                displayedText, displayedCount = tostring(count), count
+            end
+            T.SetTextIfChanged(countText, displayedText)
             local measured, changed = TextWidth(countText, badgeMetrics)
             if changed or not measured then
                 local badgeWidth = math.max(20, math.ceil(measured or 0) + 10)
@@ -302,13 +324,20 @@ DFRL:NewMod("StoredLevels", 5, function()
         Update()
     end)
 
+    local controller = CreateFrame("Frame", nil, UIParent)
+    local function Tick()
+        elapsed = elapsed + (tonumber(arg1) or 0)
+        if elapsed < INTERVAL then return end
+        elapsed = 0
+        Update()
+    end
     local function Stop()
         inWorld = false
+        controller:SetScript("OnUpdate", nil)
         retiredRun = AZS_RUN
         Clear()
     end
 
-    local controller = CreateFrame("Frame", nil, UIParent)
     controller:RegisterEvent("CHAT_MSG_ADDON")
     controller:RegisterEvent("PLAYER_ENTERING_WORLD")
     controller:RegisterEvent("PLAYER_LEAVING_WORLD")
@@ -319,17 +348,13 @@ DFRL:NewMod("StoredLevels", 5, function()
         elseif event == "PLAYER_ENTERING_WORLD" then
             inWorld = true
             elapsed = INTERVAL
+            controller:SetScript("OnUpdate", Tick)
         elseif event == "CHAT_MSG_ADDON" and arg1 == "AZSRUN" then
             -- Read on the next frame, after the native parser replaces AZS_RUN.
             elapsed = INTERVAL
         end
     end)
-    controller:SetScript("OnUpdate", function()
-        elapsed = elapsed + (tonumber(arg1) or 0)
-        if elapsed < INTERVAL then return end
-        elapsed = 0
-        Update()
-    end)
+    controller:SetScript("OnUpdate", Tick)
     if type(_G.ReloadUI) == "function" then
         local reloadUI = _G.ReloadUI
         _G.ReloadUI = function()

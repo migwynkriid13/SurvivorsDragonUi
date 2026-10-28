@@ -26,6 +26,28 @@ The chat window defaults to 520 by 340 pixels, with a default bottom-left positi
 
 The primary `ChatFrame1` receives regular chat and game notices while preserving native channel membership and routing. Combat-log groups for attacks, damage, healing, auras and deaths are removed from the visible regular chat, including subscriptions saved by the earlier all-groups setup. XP, honor, reputation, tradeskill and item-enchantment notices remain in regular chat. The separate native Combat Log frame keeps its subscriptions and unmodified text, with its tab hidden. When logging is enabled, the diagnostic archive captures combat events independently, without adding them to regular chat. Presentation animation does not authorize additional message-formatting changes.
 
+Performance Mode keeps native message expiry enabled at the bottom of chat.
+Lines stay fully visible for 14.6 seconds, then disappear instantly with native
+fade duration zero, retaining the normal 14-second hold plus 0.6-second fade's
+total lifetime. Wheel-scrolled history still pauses expiry; returning to the
+bottom resumes it. Native history, links and input remain intact. The mode also
+settles slides and reveals immediately. Disabling it restores the 14-second
+hold and 0.6-second fade through the shared settings preview/discard listener.
+The existing fade owner caches the effective duration, defers hidden changes
+and retries failed configuration writes; no timer, frame, event, updater,
+message copy or saved state is added.
+
+The inspected public native-base
+[fade setters and retirement branch](https://github.com/samwhosung/benilla/blob/cdebda36fb4c611ad0a8c35ddc45bf53e4ff1c60/crates/benilla-ui/src/widget/kinds/messageframe.rs#L622)
+support zero-duration disappearance when the visible countdown expires. Its
+setters also reconfigure currently displayed lines, so mode transitions retain
+that native rearming behavior rather than inventing per-message ages. This
+source is not proof of the installed package's exact renderer. CI-only
+production-boundary fixtures cover the expiry settings, unchanged idle work,
+wheel holds, hidden restoration, failed handoff retries and preview/Cancel
+restoration. Local work used source review and pinned formatting only; those
+fixtures were not run locally and live appearance remains unverified.
+
 `modules/chat/prettify.lua` applies only the explicitly requested formats, using the supplied source's `Core/API/Output.lua`, `Core/Common/Colors.lua`, `Experience.lua` and `Loot.lua`:
 
 - The level and its immediately following native stat notice are combined into one chat message: `Level 16: +3% Damage, +9 HP, +0.08 HP/sec`. The level stays amber, adapting `levelup_ding`, with green gain signs/labels and white numeric values from `levelup_stat`/`levelup_hp`. Percentages and decimal values are retained rather than rounded. Each native frame briefly holds a recognized level announcement for up to 0.25 seconds; a matching adjacent stat notice is merged, while an intervening message or elapsed delay flushes the standalone level first. Levels without gains remain visible. Native metadata/order are retained. The diagnostic archive captures the original inputs before this coalescing; an available native-history snapshot can also contain the resulting displayed line.

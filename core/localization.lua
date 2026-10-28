@@ -167,6 +167,14 @@ DFRL:NewMod("Language", -1, function()
     local pending = not language.ObserveZone()
     local elapsed = 0
     local observer = CreateFrame("Frame")
+    local function Tick()
+        if not pending then return end
+        elapsed = elapsed + (tonumber(arg1) or 0)
+        if elapsed < 0.2 then return end
+        elapsed = 0
+        pending = not language.ObserveZone()
+        if not pending then observer:SetScript("OnUpdate", nil) end
+    end
     observer:RegisterEvent("PLAYER_ENTERING_WORLD")
     observer:RegisterEvent("PLAYER_LEAVING_WORLD")
     observer:RegisterEvent("PLAYER_LOGOUT")
@@ -174,15 +182,11 @@ DFRL:NewMod("Language", -1, function()
     observer:SetScript("OnEvent", function()
         if event == "PLAYER_LEAVING_WORLD" or event == "PLAYER_LOGOUT" then
             pending = false
+            observer:SetScript("OnUpdate", nil)
         elseif event == "PLAYER_ENTERING_WORLD" or arg1 == "AZSZONE" then
             pending, elapsed = true, 0
+            observer:SetScript("OnUpdate", Tick)
         end
     end)
-    observer:SetScript("OnUpdate", function()
-        if not pending then return end
-        elapsed = elapsed + (tonumber(arg1) or 0)
-        if elapsed < 0.2 then return end
-        elapsed = 0
-        pending = not language.ObserveZone()
-    end)
+    if pending then observer:SetScript("OnUpdate", Tick) end
 end)

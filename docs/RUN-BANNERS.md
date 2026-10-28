@@ -16,6 +16,12 @@ the space between rows. They fade in over 0.15 seconds and fade out over 0.6
 seconds after 3.5 seconds. UI time controls only their cosmetic lifetime.
 Cosmetic painting is limited to 30 Hz; ownership retries run at five Hz.
 
+With **PERFORMANCE MODE** on, every custom banner appears fully opaque and
+disappears at its original expiry without either fade. This also applies to
+queued promotions and notices first received while hidden. Changing the mode
+updates currently visible rows immediately; it does not restart their lifetime
+or replay retired notices. Hidden rows still expire normally.
+
 Select **Banners** through `/sdui` or `/sdui lock` to move, scale or hide this
 group independently. The shared Layout editor supplies numeric coordinates,
 drafts, Confirm, Cancel, discard and both full resets. Only its confirmed

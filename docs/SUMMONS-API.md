@@ -7,9 +7,8 @@ The earlier Markdown and 2026-10-15 reference copies remain unchanged.
 
 This gives SurvivorsDragonUi the data needed for a summon tracker across every
 class and spec. The supplied contract states no removal of an API we currently
-use. Its initial import was documentation only. The subsequent user-requested
-[pet-frame group](PET-FRAMES.md) now displays up to eight summons with native
-names/icons and lifetimes, plus an overflow count.
+use. The [pet-frame group](PET-FRAMES.md) displays grouped summons and totem
+kinds with native names/icons, counts and optional lifetimes.
 
 ## What the new API provides
 
@@ -42,13 +41,36 @@ Elementals and Warlock demons, including Legion Gate's lesser demons, Felguard,
 Pit Lord, Infernal and Doomguard. The cosmetic Rewards-page companion is
 explicitly excluded.
 
+## Totem API addition — 0.125.0, 2026-10-28
+
+The [supplied 0.125.0 reference](AzerothSurvivors-Addon-API-0.125.0-2026-10-28.txt)
+adds a separate `AZSTOTEMS` / `AZS_TOTEMS` feed with `AZS_GetTotems([key])` and
+`AZS_GetTotemCount([key])`. It reports the selected hero's totems by kind, with
+published count/cap, localized name, icon, duration and earliest remaining
+lifetime. Totems are not part of `AZS_PETS`; their count cannot be obtained by
+expanding the summon filter. The optional filter matches only the exact key.
+
+The [current Pet frames group](PET-FRAMES.md) combines summons by native type
+key and includes totem kinds through the same icon/name/count/timer renderer.
+It pools rows for all accepted groups and shares existing settings and Layout
+storage. Permanent-only groups have no timer text, and missing temporary timing
+remains unknown.
+
+Totem countdowns wait for native run time and follow the getter's pause-aware
+remaining lifetime. Reaching zero does not remove or decrement a still-published
+group. Each stream's snapshot/receipt/retirement gates work independently;
+missing totem support preserves valid pets. This adds no unit-token mapping,
+per-hit ownership, private clock or saved gameplay state. Local work is source
+review and pinned formatting; production-controller scenarios remain CI-only.
+
 ## What the pet-frame group uses
 
-The group shows each visible member's own icon, translated name and remaining
-time. Only explicit permanence shows **Permanent**; missing timing remains
-unknown. Native icon paths avoid bundled creature artwork, guessed spell icons
-or a separate creature catalog. Eight passive rows share one Layout group;
-there is no per-creature saved state.
+The group shows each native type's icon, translated name and count, with an
+optional earliest temporary lifetime. Only explicit permanence excludes a
+summon from timing; missing timing remains unknown. Native icon paths avoid
+bundled creature artwork, guessed spell icons or a separate creature catalog.
+Passive rows are pooled for all accepted groups in one Layout group; there is
+no per-creature saved state.
 
 The supplied reference ties remaining time to `AZS_GetRunTime()`. That preserves
 the game's pause and card-choice timing without estimating duration from casts,
@@ -79,8 +101,8 @@ unit token.
 The summon tracker preserves the native pet frame's information. Replacing
 that frame with roster data alone would lose its available health and power
 display; the roster cannot reconstruct those values. The user chose names,
-icons and duration with an eight-frame cap and reported that summons are
-immortal. Immortality supplies neither health values nor a permanence flag.
+icons, counts and optional duration, and reported that summons are immortal.
+Immortality supplies neither health values nor a permanence flag.
 
 ## Effect on Pet damage and SCT icons
 
@@ -128,7 +150,8 @@ stored level-ups, banner callbacks and class-proc fields. Several already have
 dedicated integration notes; their presence here is not evidence that they
 were all introduced with summons.
 
-No local tests, syntax checks, formatting tools, addon execution or game startup
-were run for this update. GitHub Actions provides the authorized static checks.
+Local work uses source/diff review and pinned StyLua/Prettier formatting. No
+local tests, syntax checks, addon execution or game startup were run. GitHub
+Actions provides the authorized static checks and mocked controller scenarios.
 Summon publication, pause behavior, reload replay and rendering in the packaged
 game remain unverified.

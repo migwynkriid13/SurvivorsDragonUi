@@ -16,6 +16,48 @@ anchor is eight units below the player portrait and ten units to its left,
 falling back to the player frame or UIParent when needed. Confirmed and draft
 geometry remains independent of these defaults.
 
+## Totems — 0.125.0
+
+Totems share this group and all its existing controls with Hunter pets,
+Warlock demons and other summons. Each received totem kind uses the same
+gold-rimmed native icon, localized name, `xN` count for more than one, optional
+timer, row arrangement and Layout behavior. Summon groups retain their arrival
+order, followed by totem kinds in their native order. The two feeds remain
+separate even if their keys or names coincide.
+
+`AZS_GetTotems()` supplies already grouped kinds through `AZSTOTEMS`,
+`AZS_TOTEMS` and `AZS_TOTEMS_UPDATED`. SDUI copies each unique nonempty key,
+name, native icon and positive integer count, requiring a valid published cap
+at least as large as that count. It does not hardcode kinds, cap, spell IDs,
+artwork or durations. The cap is metadata for validation; the existing count
+badge keeps the pet display's `xN` form. The native feed supplies no individual
+IDs, so no individual totem frames or identities are manufactured.
+
+The optional timer shows the getter's earliest expiry for that kind, rounded
+up like pet timers. It stays `--:--` until `AZS_GetRunTime()` is available and
+finite, even if the getter computed a value against its pre-run zero fallback.
+No UI clock is subtracted from a raw deadline. Reaching zero keeps the native
+count until a new snapshot changes it. Duration can describe a different
+captured instance than the earliest expiry; neither is used to infer other
+totems' lifetimes or the next summon.
+
+Each feed has its own receipt generation, accepted packet and retirement gate.
+Missing, blocked or malformed totem data clears only totems, and the same is
+true for pets. New zone, inactive phase, world leave, logout and reload retire
+both streams. Packet events defer native reads to the existing tenth-second
+controller. Unchanged hidden/static groups do no getter reads; visible enabled
+timers sample only streams containing temporary entries. Changed accepted
+totem names/icons also use the same shared source-icon metadata path as pets,
+without changing combat attribution.
+
+The [complete supplied reference](AzerothSurvivors-Addon-API-0.125.0-2026-10-28.txt)
+also documents Heroic affixes. CI-only scenarios cover the production pet
+controller with fake native boundaries, including mixed feeds, counts, timer
+readiness, pauses, hidden work and retirement. No local tests, standalone
+validation or addon/game execution were run for this integration.
+
+## Shared artwork
+
 The native summon icon occupies the round portrait opening, with the same
 34-unit diameter, center, full-image crop and separate 39-unit gold rim. Wolf
 and Raptor retain their native pet-family icons. The gold rim reuses
@@ -63,24 +105,24 @@ Retirement clears both the successful bindings and the native-failure cache.
 
 ## Native data and lifecycle
 
-`modules/unit/pets.lua` feature-detects `AZS_GetPhase` and `AZS_GetSummons`.
-It reads phase before inspecting roster tables and requires the native
-`AZS_PETS_UPDATED` receipt stamp plus a roster table. A missing API, invalid
-snapshot or inactive phase leaves this group unavailable without affecting
-other frames. The existing native primary-pet health/power frame stays intact;
-the new roster does not map summon IDs to the single `pet` unit token.
+`modules/unit/pets.lua` feature-detects `AZS_GetPhase` and each feed's getter.
+It reads phase before inspecting roster tables and requires each feed's native
+receipt stamp plus a roster table. A missing API or invalid snapshot removes
+only that feed; an inactive phase retires both. The existing native primary-pet
+health/power frame stays intact; the new roster does not map summon IDs to the
+single `pet` unit token.
 
-Missing names or invalid/duplicate IDs reject the view until a usable snapshot
-arrives. Native list entries are never mutated or retained. Display groups,
+Missing names or invalid/duplicate summon IDs reject that feed until a usable
+snapshot arrives. Native list entries are never mutated or retained. Display groups,
 duplicate-ID tracking and the type-key lookup reuse session-only tables.
 Retired groups release names, icons and timing references while their empty
 tables and passive frames remain available for reuse. Missing icons leave an
 empty portrait opening; no creature model or health data is invented.
 
 The controller retains its phase-first check and detects roster changes through
-packet identity, receipt stamp and `AZSPETS` receipt generation. Unchanged
-static groups reuse their accepted display data instead of calling
-`AZS_GetSummons()` and rebuilding the view on each periodic check. Settings
+packet identity, receipt stamp and each stream's receipt generation. Unchanged
+static groups reuse their accepted display data instead of calling native
+getters and rebuilding the view on each periodic check. Settings
 previews reflow those cached groups; localization requests a deferred native
 refresh. A changed effective scale only rebuilds clipping for the compatibility
 strip renderer; the native portrait scales through its parent.
@@ -104,11 +146,12 @@ native timer data.
 The shared layout wrapper continues to own the Hide frame setting, so hiding
 and unhiding the group preserves its active roster and editor behavior.
 
-`AZSPETS`, `AZSRUN` and `AZSZONE` schedule reads for the next OnUpdate, after
-native parsing. New-zone, inactive-phase, world-leave and logout cleanup retire
-the current packet/stamp and receipt generation. The same retained packet
-cannot reactivate rows until its identity/stamp changes or a fresh `AZSPETS`
-receipt occurs. Paused and choosing phases keep valid data without a timeout.
+`AZSPETS`, `AZSTOTEMS`, `AZSRUN` and `AZSZONE` schedule reads for the next
+OnUpdate, after native parsing. New-zone, inactive-phase, world-leave and logout
+cleanup retire each current packet/stamp and receipt generation. The same
+retained packet cannot reactivate that stream's rows until its identity/stamp
+changes or a fresh corresponding receipt occurs. Paused and choosing phases
+keep valid data without a timeout.
 World leave/logout and the wrapped ReloadUI stop updates and clear accepted
 roster caches, row identity, text and icon references. Full layout resets clear
 the view; its next native refresh can repopulate current summons. Nothing is

@@ -83,14 +83,49 @@ DFRL:NewMod("GuardianTracker", 4, function()
         empty = { 0.61, 0.67, 0.65 },
     }
     local captions = { asleep = "Alive", fighting = "Alive", due = "Alive", empty = "Empty" }
-    local function Status(entry)
-        if entry.status == "returning" then return Format("Respawns in %s", Time(entry.remaining)) end
+    local function ClearStatus(row)
+        if row.statusText == nil then return end
+        row.statusIdentity, row.statusKind, row.statusSecond, row.statusLanguage, row.statusText =
+            nil, nil, nil, nil, nil
+    end
+    local function ClearStatuses()
+        for _, row in ipairs(rows) do
+            ClearStatus(row)
+        end
+    end
+    local function Status(entry, row)
         if entry.status == "fighting" and Number(entry.healthFraction) then
             return T.EncounterHealthText(entry.hp, entry.maximum, showCurrent, showMaximum)
         end
-        return DFRL.locale.Text(captions[entry.status] or "Empty")
+        local second = entry.status == "returning" and math.max(0, math.ceil(entry.remaining)) or nil
+        local language = DFRL.locale.code
+        if
+            row.statusIdentity ~= entry.key
+            or row.statusKind ~= entry.status
+            or row.statusSecond ~= second
+            or row.statusLanguage ~= language
+            or row.statusText == nil
+        then
+            local text = entry.status == "returning" and Format("Respawns in %s", Time(second))
+                or DFRL.locale.Text(captions[entry.status] or "Empty")
+            row.statusIdentity, row.statusKind, row.statusSecond, row.statusLanguage =
+                entry.key, entry.status, second, language
+            row.statusText = text
+        end
+        return row.statusText
+    end
+    local function LairName(entry, row)
+        if entry.name then return entry.name end
+        local language = DFRL.locale.code
+        if row.lairIndex ~= entry.index or row.lairLanguage ~= language or row.lairText == nil then
+            local text = Format("Lair %d", entry.index)
+            row.lairIndex, row.lairLanguage, row.lairText = entry.index, language, text
+        end
+        return row.lairText
     end
     local function ClearRow(row)
+        ClearStatus(row)
+        row.lairIndex, row.lairLanguage, row.lairText = nil, nil, nil
         if row.value ~= 0 then row.bar:SetValue(0) end
         row.value = 0
         T.SetEncounterHealthText(row.health, nil, nil, false, false)
@@ -300,7 +335,7 @@ DFRL:NewMod("GuardianTracker", 4, function()
                     row.layoutWidth, row.layoutIndex, row.statusWidth = width, used, statusWidth
                     row.headerHeight = headerHeight
                 end
-                T.SetTextIfChanged(row.name, entry.name or Format("Lair %d", entry.index))
+                T.SetTextIfChanged(row.name, LairName(entry, row))
                 local color = colors[entry.status] or colors.empty
                 if row.color ~= color then
                     row.status:SetTextColor(color[1], color[2], color[3])
@@ -309,6 +344,7 @@ DFRL:NewMod("GuardianTracker", 4, function()
                 -- Only the native fighting state with valid current health gets a
                 -- bar. Every other state clears the old fill before showing text.
                 if entry.state == "awake" and Number(entry.healthFraction) then
+                    ClearStatus(row)
                     if row.value ~= entry.healthFraction then row.bar:SetValue(entry.healthFraction) end
                     row.value = entry.healthFraction
                     T.SetEncounterHealthText(row.health, entry.hp, entry.maximum, showCurrent, showMaximum)
@@ -319,7 +355,7 @@ DFRL:NewMod("GuardianTracker", 4, function()
                     row.value = 0
                     if row.pill:IsShown() then row.pill:Hide() end
                     T.SetEncounterHealthText(row.health, nil, nil, false, false)
-                    T.SetTextIfChanged(row.status, Status(entry))
+                    T.SetTextIfChanged(row.status, Status(entry, row))
                     if not row.status:IsShown() then row.status:Show() end
                 end
                 if not row:IsShown() then row:Show() end
@@ -368,6 +404,7 @@ DFRL:NewMod("GuardianTracker", 4, function()
         onReset = Refresh,
     })
     DFRL.locale.Listen(function()
+        ClearStatuses()
         presentation.healthLabels, healthWidth = nil, 0
         dirty = true
         Refresh()
@@ -392,11 +429,13 @@ DFRL:NewMod("GuardianTracker", 4, function()
         local selectedCurrent = DFRL.display.Get("guardianShowCurrentHealth")
         local selectedMaximum = DFRL.display.Get("guardianShowMaximumHealth")
         if selectedCurrent ~= showCurrent or selectedMaximum ~= showMaximum then
+            ClearStatuses()
             showCurrent, showMaximum = selectedCurrent, selectedMaximum
             presentation.healthLabels, healthWidth = nil, 0
             dirty, age = true, 0.1
         end
         if selected ~= visibleRows or selectedShowDead ~= showDead then
+            ClearStatuses()
             visibleRows, showDead, age, rowOffset = selected, selectedShowDead, 0.1, 0
             local height = headerHeight
                 + 12
@@ -415,6 +454,7 @@ DFRL:NewMod("GuardianTracker", 4, function()
         SyncUpdates()
     end)
     DFRL.layout.ListenVisibility("guardianTracker", function(permitted)
+        ClearStatuses()
         dirty, age = true, 0.1
         SyncUpdates()
         if permitted then Refresh() end

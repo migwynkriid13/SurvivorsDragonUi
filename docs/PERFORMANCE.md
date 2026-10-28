@@ -2,7 +2,8 @@
 
 The October 2026 performance work removes repeated presentation writes while
 retaining native data, pause-aware timing, saved preferences and artwork.
-It adds no gameplay clock, setting, SavedVariable or native client dependency.
+It adds no gameplay clock or native client dependency. Display choices use the
+existing saved display table; the optional minimap clock below defaults off.
 
 ## Mandatory rule for all drawing and assets
 
@@ -11,6 +12,25 @@ including new features. Review two separate costs: recurring Lua/native work
 and what stays visible in the renderer every frame. A cached updater can still
 leave hundreds of expensive texture regions drawing continuously.
 
+- Every new or changed feature with applicable addon-owned cosmetic animation
+  must include a Performance Mode equivalent in the same change. Reuse the
+  existing default-off `performanceMode` display choice and shared listeners,
+  preview, Confirm, discard, profiles and resets. Prefer useful static or
+  instant presentation; actually hide optional decorative regions and skip
+  their animation math, writes and cosmetic workers. Avoid preparing unused
+  animation artwork while the static path is selected; reuse any prepared pool.
+  Mode/visibility/world transitions must clear or settle active and queued
+  effects, reject late animation callbacks and avoid replaying expired effects
+  when normal presentation returns. Preserve individual saved choices, native
+  information, timing, ownership, input, readiness retries and notification
+  expiry. Native gameplay effects, active dragging and required navigation
+  projection retain their own ownership. Add no separate performance setting,
+  SavedVariable or idle updater. Record the static behavior and source-level
+  costs in the owning developer docs, with meaningful CI-only lifecycle coverage
+  where appropriate; local tests and addon/game execution remain unauthorized.
+- SCT is explicitly exempt from Performance Mode: preserve its existing motion,
+  fall, critical pop, fade and selected MSBT style. Do not add a static override
+  or retire its active hits just because Performance Mode changes.
 - Prefer one cached native image when its appearance matches the request.
   Pet and meter circles use named `SetPortraitToTexture` images, with the gold
   rim separate. Bind only on icon changes; scale inheritance needs no rebinding.
@@ -36,10 +56,963 @@ leave hundreds of expensive texture regions drawing continuously.
   cooldown sampling, model-paint readiness and native geometry repair are
   deliberate exceptions to idle throttling. Do not invent a gameplay clock,
   drop combat events, truncate diagnostics or cap native rosters to save work.
+  The user-requested run-progress exception uses whole native run-second steps
+  for the fill and its decorative clipping edge; temporal effect cadence stays
+  unchanged. See the one-second progress entry below.
 - Record visible/allocated regions and material/UV-clamp implications separately
   from CPU calls. Source counts and reference models are not live draw-call,
   GPU-memory, pixel-parity or FPS measurements. No local tests, standalone
   validation, addon execution or game launch is authorized for this audit.
+
+## Projection reuse and metadata preparation — 2026-10-28
+
+The two changes in this pass share one commit. They reduce duplicate native
+projection calls and spread optional spellbook preparation over existing frame
+callbacks, while preserving current positions, native gameplay data and the
+icons used to identify duplicate combat text.
+
+### Waypoint projection cache
+
+Player position and heading still update at the existing frame cadence. Only a
+successful destination projection can be reused, and only within one synchronous
+`navigation.WithSample` callback. Equal accepted world-coordinate tuples share a
+result even when the HUD and a minimap pin hold different point records. Missing,
+zero, failed or uncertain projections remain retryable. Calls outside a shared
+sample keep their original fresh-read behavior.
+
+The cache is limited to the currently accepted destination rosters supplied by
+`navigation.SetPoints`; roster changes and navigation retirement release prior
+entries. Its coordinate index and records are reused so a settled frame does
+not allocate a new table per pin. Context, getter and map-selection changes
+invalidate reuse, and the existing map-recovery path invalidates the sample
+when it changes selection. No map movement or full-map listener is added.
+
+The boundary is deliberately synchronous. Public benilla's
+[`GetWorldLocMapPosition`](https://github.com/samwhosung/benilla/blob/cdebda36fb4c611ad0a8c35ddc45bf53e4ff1c60/crates/benilla-ui/src/script/worldmap.rs#L884-L911)
+uses the selected continent/zone/direct-area and a host projector. The projector
+can be replaced without changing the Lua function or exposing a revision.
+Map-name equality therefore does not prove that a successful result can survive
+into the next game frame. This implementation does not retain cross-frame
+projection answers or introduce a periodic stale-result window.
+
+For a destination consumed **k** times in a shared callback, successful native
+projection calls fall from **k** to **one**. Distinct destinations still need
+fresh projections each callback. Frame motion, interpolation, map browsing,
+instance/world-coordinate fallback, minimap zoom, timers and native flag
+ownership keep their existing behavior. This is a duplicate-call reduction,
+not a lower projection or drawing rate.
+
+### Chunked spellbook preparation
+
+The existing SCT controller prepares native spellbook metadata in small chunks
+rather than scanning the complete book from settings/mode readiness. Normal
+preparation performs at most **four work steps per rendered callback**: a tab
+header, a spell-name/texture pair or a final shape-validation step. It therefore
+visits at most four spell slots; empty tabs cannot create an unbounded loop. It uses
+one provisional generation and publishes only a completed result; partial data
+cannot become authoritative for icon priority or exact duplicate grouping.
+Native book/language/world changes and getter changes cancel stale preparation.
+Incomplete warm metadata remains private and retries after one second. Optional
+read failures back off without interrupting active text or queued-hit delivery.
+
+An actual SCT or meter consumer still needs an authoritative current result.
+If preparation has not produced a usable complete generation, that call discards
+unfinished work and performs the existing fresh synchronous traversal. It does
+not hold a hit, extend the grouping window, choose a weaker icon while warming
+or shorten any animation. The fallback is necessary: this change does **not**
+claim a strict four-slot bound for every possible icon lookup.
+
+Preparation runs only through the existing eligible SCT controller. Custom SCT
+also resolves icons with visual damage icons off because the resolved icon is
+part of duplicate identity. Game/Off and hidden MSBT do no background preparation;
+a visible meter can still resolve through the shared on-demand path. Completed
+work becomes idle, and missing native metadata retains the existing bounded
+retry behavior. No new updater, event, SavedVariable, learned registry, gameplay
+history, drawing region or asset is added.
+
+CI-only production mocks cover repeated projections, equal-coordinate records,
+map/getter/roster/pass changes, failure/readiness recovery and fresh player
+movement. Resolver mocks cover four-slot preparation, atomic publication,
+invalidation, missing metadata, first-use completion and unchanged hit/icon
+identity. They are authored for GitHub Actions and were not run locally. Local
+work uses source review and pinned formatting only; no local tests, standalone
+validation, addon/game execution or runtime probes ran. No FPS, CPU-time,
+draw-call or visual-parity measurement is claimed.
+
+## Optional Performance Mode — 2026-10-28
+
+The checkbox above **Layout** uses normalized default-false `performanceMode`
+in the existing display table. Missing and invalid values and both full resets
+leave it off. Preview, Confirm, Cancel, world/logout/reload discard and profiles
+use the shared display transaction. Individual effect, portrait and cooldown
+choices are retained. The sidebar measures the caption across all fourteen
+source/runtime catalogs and reserves its own row above the category buttons.
+
+| Owner                       | While Performance Mode is on                                                                                                                                                                                                                                                                                                                                                     |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Chat                        | Keep native expiry at its original deadline with zero fade duration, so messages disappear instantly; scrolling back still holds lines. Snap reveal opacity and message-slide geometry, and clear active reveal/slide state. Native messages, history, links and input remain current.                                                                                           |
+| Unit frames                 | Hide player absorbs and player/target/target-of-target damage trails, reset trail baselines, and use the existing 2D still portraits. Party has no custom loss overlay. Hide combat/rest rim glows; keep a static resting symbol and a static low-health warning at the current health-derived strength.                                                                         |
+| Resources                   | Skip absorb snapshot/field work when Class resources is also off; keep native phase/receipt retirement and selected resource values.                                                                                                                                                                                                                                             |
+| Run timer                   | Keep native whole-second progress and current labels, static blue/red fill and informative skull/check markers. Skip flow, foam, sparkle, red-glint and skull-halo animation. The 72-texture decorative fill pool is prepared only if normal mode needs it, then retained for reuse. Required native phase, ownership, schedule and encounter work keeps its existing lifecycle. |
+| Cache tally                 | Clear the affordable-cache gold halo, rays and sparkles and detach its animation worker. Keep current gold and cache cost.                                                                                                                                                                                                                                                       |
+| XP                          | Snap the fill to received XP, clear gain/spark artwork and detach completed effect work. Existing deferred native reads remain.                                                                                                                                                                                                                                                  |
+| Abilities and stored levels | Clear cooldown-number overlays and detach their timing worker. Hide level-button glow/highlight layers and detach the pulse worker; retain its static gold artwork, count and click behavior.                                                                                                                                                                                    |
+| Notifications and revive    | Loot cards and banners stay opaque until their original expiry; hidden notices still retire. Revive displays received fill/percentage directly without smoothing, fade, spark or pulsing crosses, using its existing ten-Hz state reader.                                                                                                                                        |
+| Action range                | Keep the current out-of-range warning static and remove any active native fade on a mode transition.                                                                                                                                                                                                                                                                             |
+
+Changing the mode clears or settles currently active effects immediately. Turning
+it off restores the saved individual choices from current native state, without
+replaying old XP or damage-loss effects. Hidden presentation stays deferred;
+notification expiry, data gates, native HUD ownership and cleanup stay active.
+Navigation direction, custom combat-text travel, meaningful native cooldown
+swipes and jewelry cooldown progress retain their functional motion. This mode
+does not change native gameplay values, incoming combat feedback or game effects.
+
+The new editor control uses one standard button, four existing editor textures
+and one caption. No gameplay frame, drawing region, texture file, event, updater
+or SavedVariable is added. Existing effect pools stay allocated after use for
+reuse; suppressed textures are actually hidden, rather than left at zero alpha.
+Static fills, borders, text, jewelry strips and other retained artwork still
+have a persistent drawing cost. Skipped animation callbacks and hidden regions
+are source-level evidence only; this work does not establish FPS/GPU gains or
+live appearance. Local work uses source review and pinned formatting; mocked
+coverage is authored for CI only and has not been run locally.
+
+## Remaining frame work — 2026-10-28
+
+A second pass reviews every frame path and the interval-gated controllers listed
+in the cadence inventory. All fixes from this pass, including the requested
+minimap clock option, belong to one commit. The reductions below supersede the
+corresponding retained-work descriptions from the preceding pass. They do not
+lower authored animation cadence or replace native gameplay time.
+
+| Path                        | Before this pass                                                                                       | After this pass                                                                                                                                                                                                                                                                                                                                   |
+| --------------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Minimap local clock         | A visible frame callback and one date read every five seconds                                          | **Off by default**, with no clock callback or date reads. `/sdui` → Minimap → **Show clock** enables the original five-second reader only while visible. Off centers the existing zone button/text in the top panel; on restores its original left position beside the clock.                                                                     |
+| SCT origin retirement       | Walk the complete live/recent catalog every frame                                                      | Skip that walk until the earliest real retirement is strictly older than the original 0.65 seconds, then stable-compact and retain the next deadline. Shown-plate sampling, matching, every original hit and active text motion retain frame cadence.                                                                                             |
+| Nameplate raid-icon copying | Two native source texture reads per refresh and two UV reads when copying                              | One texture and one UV sample, retaining four/eight-coordinate forms, actual destination comparisons and retry.                                                                                                                                                                                                                                   |
+| Final cooldown numbers      | All seven buttons reread every frame when any is in the positive final 200 ms                          | Only the **m** already-finishing buttons receive intervening frame reads. All seven retain an independent ten-Hz full pass and immediate cooldown/slot events. Store only final-window flags, never a private completion clock or cached native timing.                                                                                           |
+| Boss skulls                 | Reconcile all historical marker slots and compute the pulse every frame, including when none is active | Reconcile on received state/native-limit changes. Only active marker references animate each frame. No marker time/cosine/pool traversal when none is active; unchanged alpha skips eight writes. Keep all eight glow copies and both cardinal/diagonal dimensions.                                                                               |
+| Revive crosses              | Recompute all twelve clipping edges/positions and six pulse phases every active frame                  | Cache geometry until actual width or smoothed fill changes; calculate pulse only for crosses with visible parts. Visible pulse equations, frame smoothing/fade, native progress and cleanup remain.                                                                                                                                               |
+| Loot cards                  | Traverse populated cards every frame, including a settled full-opacity hold                            | During a settled hold, wait until the existing fade, metadata-retry or expiry deadline before traversing cards. Sample root visibility once per callback, reuse one protected updater, and invalidate the wait on new cards/Show. Active fades keep frames; hidden cards still expire.                                                            |
+| Player combat/rest rims     | Native eligibility and display reads every frame, even after inactive alpha reached zero               | Existing overlay frames observe combat/rest/world events plus Show/display recovery; eligibility reads happen on those transitions. Detach after the original inactive fade reaches zero. Active pulse and fade equations remain frame-driven; both rim variants must actually reach zero before detaching, including a failed round-alpha retry. |
+| Settled Layout editor       | Viewport reads every frame while editing                                                               | Ten-Hz viewport/handle samples while settled; invalidation, initial/unresolved placement, active input and final release remain immediate/frame-driven. Carry accumulated elapsed into handle cadence.                                                                                                                                            |
+| Active Layout input         | Repeated viewport samples in controller/cursor/move/resize/position helpers                            | Pass the current synchronous viewport tuple through the drag math. The base no-Shift move path uses one tuple instead of three while stationary or four while moving. Shift-snap candidates and centered-position reads share the tuple too. Final release samples current state afresh.                                                          |
+| Waypoint HUD math           | Recompute bearing and settled angular interpolation every frame                                        | Recompute bearing only when its current native vector changes; completed interpolation reuses its current result while accepting the latest stamp. Native position/heading reads, projection, active interpolation, pause/regression handling and final samples retain cadence.                                                                   |
+| Idle Chat native time       | `GetTime` every visible frame                                                                          | Read once per one-second geometry pass while settled, or lazily once per active animation/message-batching callback. Native alpha repair remains: its existing wrapper already compares actual alpha before a native write.                                                                                                                       |
+| Shared tooltip owner        | Non-icon hovers can call native `IsOwned` once per registered/action/equipment icon each frame         | Verify a directly observed `SetOwner` owner once, then use Lua identity comparisons for registry lookup. Replaced or unobserved native owners retain the original discovery fallback. Cursor/visibility/scale/anchor checks remain frame-driven. Player styling shares one class-color sample instead of reading it twice.                        |
+| Guardian health snapshots   | Read/validate native guardian health even with no living lair                                          | Defer that read until the first living lair; returning/empty-only snapshots do no health getter/list work. Living health remains current.                                                                                                                                                                                                         |
+| Stored levels               | Out-of-world callback kept reaching the ten-Hz guard/update                                            | Detach on world leave/logout and rearm on entry; live ten-Hz native state and frame pulse remain.                                                                                                                                                                                                                                                 |
+| Resources                   | Two player-visibility samples per native pass                                                          | One synchronous sample shared by data-read eligibility and presentation. Native events/ten-Hz fallback remain.                                                                                                                                                                                                                                    |
+
+The minimap choice is normalized as default-false `minimapShowClock` in the
+existing display table. Preview, Confirm-only saving, Cancel/world/logout/reload
+discard, profiles and both full resets use the shared display lifecycle. No new
+SavedVariable, gameplay clock, drawing region or asset is added. The caption and
+hint have all fourteen source/runtime translations. Hiding or disabling the
+clock clears only its owned hover and detaches its worker; Show with the option
+on takes a fresh local-time sample.
+
+Combat/rest event evidence comes from public benilla
+[`field_watch.rs` at cdebda36](https://github.com/samwhosung/benilla/blob/cdebda36fb4c611ad0a8c35ddc45bf53e4ff1c60/crates/benilla-app/src/field_watch.rs#L808-L822)
+for both combat edges and
+[the resting edges](https://github.com/samwhosung/benilla/blob/cdebda36fb4c611ad0a8c35ddc45bf53e4ff1c60/crates/benilla-app/src/field_watch.rs#L935-L948).
+The addon already uses the resting event. Public source is event-contract
+evidence, not verification of the packaged executable's exact revision or live
+performance.
+
+### Reviewed paths that retain their cadence
+
+- Visible run/boss readers retain raw native phase/time, rollback/boundary and
+  HUD ownership checks every frame. The one-second fill and ten-Hz/deferred
+  duration/schedule/encounter/debuff readers remain separate.
+- Current waypoint/minimap position and heading projection remain frame-driven;
+  guardian hover/timer checks remain ten Hz. The launcher samples only during
+  active dragging, including a final release sample.
+- Optional 3D portrait viewport/readiness and native model-paint handshakes remain
+  frame-driven. They establish when the native model can replace its still image;
+  native model animation is not controlled by addon polling.
+- Active health-loss/XP effects and stored-level pulses retain their equations
+  and frame cadence. Loss/XP callbacks already detach on completion. Chat keeps
+  scroll/unread/native visibility repair; its native alpha setter was already
+  guarded, so no second cache suppresses the required reveal animation.
+- Native aura-anchor repair follows actual native callbacks. Icon traversal is
+  already dirty-driven; active official timer and decimal hover reads stay ten
+  Hz, with static/paused/hidden retirement.
+- Timer flow/foam/red glints, cache affordability glow, jewelry cooldowns and
+  banner fades remain capped at thirty Hz. Warning gradients and the resting
+  flipbook remain twenty Hz only while active.
+- Resources, pets, normal cooldowns, guardian tracker and encounter fallback reads
+  remain ten Hz. Meter, jewelry metadata, loot service, banner readiness and
+  tooltip styling remain five Hz; meter rates stay one Hz. Required phase,
+  publication, native ownership and failed-read readiness work is retained.
+- Jewelry cursor placement runs only for a visible hovered card. Its exact
+  fourteen-strip icons, original rims and five-distinct-icon cost remain;
+  this pass does not replace artwork or claim a smaller drawing budget.
+
+CI-only production/extracted-source cases cover the new setting and lifecycle,
+selective final cooldown sampling, strict SCT retirement, raid UV arity,
+marker-state/halo transitions, loot hold and hidden expiry, Revive geometry,
+player pulse events/failure recovery, Layout sample sharing/final release,
+waypoint interpolation, lazy chat time and observed/replaced tooltip owners.
+No local tests, standalone validation, addon/game execution or runtime probes
+ran. Local evidence is source review and pinned formatting; active pixels still
+render each game frame. These call/work reductions do not establish measured
+CPU milliseconds, GPU draw calls, pixel parity, FPS gains or a resolved stutter.
+
+## Cadence cleanup — 2026-10-28
+
+The user requested a review of every frame-driven and periodic path, removing
+unnecessary work without changing authored visuals or gameplay, with all fixes
+from this pass in one commit. This supersedes the earlier one-finding-per-commit
+instruction for this pass only. It does not authorize dropping combat hits,
+guessing timers, weakening native ownership or changing animation equations.
+
+Rates below describe Lua/native calls and presentation updates. Visible artwork
+still participates in rendering every game frame. A per-frame callback follows
+actual FPS rather than a fixed 60 Hz; interval gates can run less often under
+load, and native events can request additional refreshes.
+
+| Owner                     | Removed work and retained behavior                                                                                                                                                                                                                                                                                                                 |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Low-health warning        | Native player health/max-health and death/world events determine eligibility and current intensity. Healthy/dead/out-of-world states detach the updater instead of reading health twenty times per second. Only an active warning runs the original 50-ms pulse integration and four gradient writes; healing and retirement clear it immediately. |
+| Layout                    | Settled gameplay samples viewport geometry at ten Hz instead of every rendered frame. Initial/unresolved placement, restoration, editing, drag/resize and final release samples retain frame/immediate behavior. Grid/handle/coordinate cadence and Shift alignment remain.                                                                        |
+| Language discovery        | Successful discovery detaches its callback; existing world/zone events restart the original five-Hz readiness retry, and leave/logout detaches.                                                                                                                                                                                                    |
+| Cooldown numbers          | Disabled, hidden and out-of-world states detach the existing callback. Show, display and world/native cooldown events rearm it. Enabled native timing retries remain at ten Hz, and the required final-200-ms seven-button frame sampling is unchanged.                                                                                            |
+| Tooltip and target colors | Compare actual native colors before writing, after resolving the owning friendly/enemy target rule. Missing tooltip color getters keep the original write fallback. Native resets and failed assignments remain repairable. Hiding an already-hidden tooltip health bar skips the extra Hide.                                                      |
+| Minimap clock             | Accumulated frame elapsed replaces a native GetTime call each frame. The existing five-second date check remains; Hide detaches and Show samples immediately. Unchanged minutes still skip text writes.                                                                                                                                            |
+| Native aura layout        | Native enchant callbacks still repair actual BuffFrame/enchant anchors each time. Icon-slot traversal/reflow is dirty-driven by Show/Hide, received timer visibility, forced native positioning and editing. Forced geometry/font repair and hidden editor bounds remain.                                                                          |
+| Received aura countdowns  | Cache each displayed ceil-rounded duration string, retain actual-text comparisons and failed-setter retries, and Show timer buttons only on transitions. Ten-Hz native timing and hovered decimal-duration tooltip updates remain.                                                                                                                 |
+| Pet/summon/totem captions | Existing rows retain only their latest rounded countdown/count strings. Repeated tenth-second samples skip formatting/concatenation; hidden/missing/zero values and retirement remain distinct. Native feed validation, timing getters, roster counts and metadata/icon retries remain.                                                            |
+| Run length and schedule   | Reuse duration/schedule validation within the existing ten-Hz/deferred-publication scope; phase changes, schedule/run boundaries and reload force fresh acceptance. Raw native run time, phase/rollback checks and native clock ownership retain frame cadence. Exact one-second fill progress and authored decoration remain.                     |
+| Boss debuffs              | Remove per-frame getter/list/format traversal between normal refreshes. Existing ten-Hz/deferred-publication updates read current native remaining values; hovering performs a fresh native phase/effect read before opening and reflows changed height immediately. No countdown is extrapolated.                                                 |
+| Guardian snapshots        | Sample native run time lazily once when the first returning lair needs it; no countdown-clock getter when none is returning. Native health and phase gates remain.                                                                                                                                                                                 |
+| Guardian tracker          | Cache fallback unnamed-lair captions by received index/language, retaining actual label comparison and clearing on row retirement. Existing status/health caches and ten-Hz native snapshots remain.                                                                                                                                               |
+| Stored levels             | Reuse the latest count string. An already-hidden native HUD needs one actual read instead of two; true visibility still uses setter/readback and retries. The original visible pulse remains per frame.                                                                                                                                            |
+| SCT                       | Empty pending/group and active-text passes skip bookkeeping/compaction. Per-hit and frame native mode checks, required plate discovery, all matching, crit/refit/motion/fade and metadata readiness remain.                                                                                                                                        |
+| Chat                      | A settled fade configuration/held state returns before repeated native visibility reads. Existing invalidation, selected-pane movement, native messages, geometry repair and failed-operation retries remain.                                                                                                                                      |
+
+This pass adds no gameplay history, saved preference, drawing region or asset.
+It reuses existing controllers; low-health eligibility adds native events to its
+existing monitor. Source reductions are conditional call/work reductions, not
+measured CPU milliseconds, GPU draw calls, FPS or proof that stutter is solved.
+
+### Paths deliberately retained
+
+Every path in the preceding cadence inventory was reviewed. The remaining work
+has an active visual, native-data, ownership or readiness purpose:
+
+| Area                                               | Cadence and reason retained                                                                                                                                                                                                                                                                                     |
+| -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| SCT and backing nameplates                         | Render-frame discovery, shown origins, pending matching and active label motion/scale/fade. Enemy-only visibility hooks do not prove every native/friendly feed transition. Native CVar polling also catches unreported changes; weakening it could duplicate native/custom text. Empty work now exits earlier. |
+| Waypoint HUD, minimap pins and legacy player arrow | Frame interpolation/projection uses current native position/heading. Shared synchronous sampling and changed-only anchors/UVs already avoid duplicate writes. The ten-Hz reader retains selection, receipt/phase retirement, flag ownership, hover tests and timer refreshes.                                   |
+| Run timer and boss health                          | Visible readers retain frame phase/boundary/native-clock/ownership checks. Fill values use whole native seconds. Flow/foam/red glints remain capped at thirty Hz; active boss-skull halo geometry/alpha retain frame cadence. Encounter rows, counters and debuffs use ten-Hz/deferred native refreshes.        |
+| Revive                                             | Ten-Hz receipt/phase/native ownership plus frame-driven active smoothing, fade, spark and six cross pulses. Caption/percentage/width caches from the prior pass remain.                                                                                                                                         |
+| Stored levels/player effects                       | Ten-Hz stored-level validity/native ownership; visible level pulse and player combat/rest rim pulses retain frames. Resting flipbook remains twenty Hz. Completed inactive fades already stop writes.                                                                                                           |
+| Optional 3D portraits                              | Frame/model-paint readiness preserves native camera/animation and still-image fallback. Removing the handshake could blank portraits on unsupported or not-yet-painted clients.                                                                                                                                 |
+| Health-loss and XP effects                         | Frame updates exist only for active loss/gain/fade animation and detach on completion. Target health and XP reads are coalesced next-frame native/event work, not additional idle pollers.                                                                                                                      |
+| Resources, absorbs and pets                        | Ten-Hz native phase/current values/readiness; power events and feed receipts can refresh earlier. Hidden views retain retirement while skipping presentation/timer-only reads. Unreported native changes and failed icon/style readiness still need fallback.                                                   |
+| Native buffs/received timers                       | Native anchor repair follows native resets; timing uses the official getter at ten Hz while active. Hovered tooltips display tenths, so their required timing refresh stays. Paused/static/hidden timers already stop or defer work.                                                                            |
+| Jewelry                                            | Five-Hz native equipment/cooldown and metadata readiness; active exact 64-cell cooldown painting at thirty Hz, cursor placement only while hovered. Fourteen-strip icon sampling and original rims remain.                                                                                                      |
+| Loot                                               | Five-Hz service/readiness/native ownership and bounded queue delivery, populated frame fades/expiry, bounded five-Hz metadata retry. Hidden cards must expire and free capacity; empty cosmetic pools already detach.                                                                                           |
+| Banners                                            | Five-Hz registration/ownership/readiness, next-frame pending native errors and original thirty-Hz fade/expiry/promotion. Settled disabled/faulted cleanup already detaches.                                                                                                                                     |
+| Damage meter                                       | Five-Hz native publication/readiness/ownership and one-Hz rate presentation. Off detaches; hidden views skip rows/rates/icon work. Accepted counter processing already has publication caches.                                                                                                                  |
+| Chat/tooltip/character                             | Visible chat slides/reveals and cursor tooltip placement need frames; chat geometry repair stays one Hz and tooltip styling five Hz. Character stats already coalesce to a next-frame flush only after relevant events while open. Capture/Copy remain opt-in/event/user driven.                                |
+| Editing and diagnostics                            | Active Layout/minimap-launcher drag stays per frame with final sample. Settled editor/coordinates remain ten Hz; fstack stays five Hz only while explicitly enabled.                                                                                                                                            |
+| Other modules/native work                          | Menu, font resolution, display/profile controls, static catalogs and bootstrap are event/initialization driven. Omitted cast/bag/micro frames remain suppressed. Native action swipes/usability, model animation, incoming combat text and range fade-manager animation retain their engine schedules.          |
+
+Independent source reviews cover lifecycle, hidden recovery, native reset/color
+ownership, getter failures, Lua 5.0 remembered queue sizes and new seam/mock
+dependencies. CI-only production/extracted-source fixtures cover these changes;
+none was executed locally. Only source review and pinned formatting ran locally.
+
+## Movement stutter investigation — 2026-10-28
+
+**Latest measured outcome:** the longer normal run still stutters and worsens
+with encounter activity. Median logged mean/p95 windows rise from 22.29/42.34 ms
+at native journal seconds 120–240 to 29.76/58.37 ms at 480–600; GPU UI remains
+about 0.08 ms. These intervals precede the authorized macOS stack samples.
+The earlier short complete-configuration capture showed partial early-run
+recovery (17.62/25.49 ms versus 19.89/33.50 ms), which does not establish a
+mid/late-run fix. Addon-disabled controls were 16.67/about 17–18 ms. The earlier
+17.53 ms result was specifically with SCT Off. Individual changes remain
+untimed, and the MSBT-only optimization is inactive in over-enemy style.
+
+The user repeated four fresh runs in one client session, **OFF / ON / OFF / ON**,
+with ten seconds standing still followed by twenty seconds circling after
+loading settled. The installed Diagnostics journal, last written at 13:53:20
+GMT, contains the complete recording at `t=1.2–243.0` (physical CSV lines
+75959–76188). The file appends older recordings. These mode labels come from the
+user's sequence; the CSV records neither addon enablement nor loaded revision.
+
+Identify each first movement by at least 0.5 native coordinate units of
+horizontal displacement. Use the preceding ten seconds for standing and the
+following twenty seconds for movement, excluding loading and inactive-world
+coordinates. Each standing interval contains nine logged windows and each
+moving interval twenty. Results below are medians of the journal's one-second
+`mean_ms` and `p95_ms` windows, not reconstructed frame-level percentiles.
+
+| Run   | First movement (`t`) | Still mean (ms) | Moving mean (ms) | Moving window p95 (ms) |
+| ----- | -------------------- | --------------- | ---------------- | ---------------------- |
+| OFF 1 | 39.8                 | 16.67           | 16.67            | 17.89                  |
+| ON 1  | 93.6                 | 16.69           | 19.13            | 30.52                  |
+| OFF 2 | 155.8                | 16.67           | 16.67            | 17.27                  |
+| ON 2  | 213.5                | 16.66           | 19.97            | 31.72                  |
+
+This reproduces a movement/active-encounter slowdown in both addon-on runs.
+Median moving `gpu_ui` stays about 0.08–0.09 ms in every run; median moving
+whole-process `cpu_ms` is about 31 ms off and 39–41 ms on. This supports a
+CPU-side investigation, including native UI work. The journal cannot isolate
+Lua, native layout, world work or scheduling. Its CPU clocks are not wall frame
+times, and residency counts are not draw calls. The earlier uncontrolled
+`t=1.1–515.1` recording was inconclusive and is superseded by this comparison.
+
+Movement coincides with `streamed` rising from one native entity to about eighty
+in all four runs, so it also starts encounter/publication work. The final ON
+tail stays slower after the player stops while those entities remain. Movement
+is the observed activation boundary, not an established sole continuing cause.
+Encounter populations and starting resident entity counts are still not exact
+matches between runs.
+
+The persisted configuration inspected after the capture selects Custom SCT,
+default over-enemy style and V-off enemy plates; the meter is default-off. In
+that configuration `UsesPlateOrigins` keeps the native backing nameplate feed
+enabled despite hiding its pixels. The public engine's disabled-plate gate skips
+native unit projection, sorting and overlap work; hiding drawing layers does
+not skip that CPU path. SDUI also samples shown origins every frame. This is a
+source-supported suspect, not per-subsystem timing or proof of the installed
+engine's exact revision. The existing MSBT-style option releases that forced
+feed with V off while preserving custom damage text, allowing a narrower user
+comparison without changing native preferences or adding profiling hooks.
+That comparison still retains the controller's per-frame child-count discovery
+check and ordinary visible HUD work; it does not disable the whole module.
+
+The subsequent user comparison, written at 14:08:39 GMT, records
+`t=1.2–225.4` (CSV lines 76189–76397). Persisted settings confirm Custom SCT,
+MSBT on, both native plate toggles off, meter off and damage icons off. The
+preview/Confirm source path clears old SCT state and releases the backing plate
+feed; no other SDUI module requests that feed. This comparison does not show a
+clear improvement, weakening forced enemy tracking as a sufficient explanation.
+
+The settings period is stationary. The last ten seconds before the first step
+(`161.5–170.5`) have median logged mean/p95 windows of 16.72/19.26 ms. A first
+step at `171.5` activates the encounter, followed by unchanged player and focus
+coordinates from `175.5–203.4`; that active stationary stretch still has median
+windows of 21.88/43.00 ms. Sustained circle-like changes occur only at
+`204.4–221.3` (seventeen logged windows), with medians of 24.49/39.70 ms. Do not
+label the first twenty or thirty seconds after the initial step as continuous
+circling. Encounter populations grow beyond the earlier four-run windows, so
+the trials do not establish a causal performance difference between SCT styles.
+Recorded GPU UI time remains around 0.08 ms during the active portions.
+
+The End Run boundary has only one non-exit window (`224.4`, mean 17.81 ms), with
+streamed entities dropping to zero and resident entities falling from roughly
+35,000 to 995. It cannot establish a settled post-run improvement or identify an
+addon component; ending the run also removes native encounter/world work.
+MSBT retains parsing, queues, text animation and crit-scale changes. An existing
+Combat text **Off** comparison, with the other choices held fixed, can separate
+that remaining custom SCT path from other active HUD/controller costs without
+introducing runtime profiling hooks. The journal does not time individual
+callbacks, and no specific cause or measured fix has been established.
+
+The next user recording, written at 14:18:27 GMT, has Custom SCT **Off**, MSBT
+retained and both native plate toggles off (`t=1.7–93.6`, CSV lines 76398–76485).
+It contains a clear first movement at `44.0`, circling through `66.2` and a
+stationary active encounter at `67.2–92.5`. Using the same preceding-ten and
+following-twenty-second rule gives median logged mean/p95 windows of
+16.67/17.35 ms before movement and 19.80/35.82 ms during movement. The subsequent
+stationary encounter has medians of 18.32/28.87 ms. Moving whole-process CPU has
+a median of 38.97 ms and GPU UI remains about 0.08 ms. Resident entity/material
+counts resemble the earlier full-addon-OFF cases, strengthening the residual
+SDUI work lead without proving exact scene equivalence.
+
+Custom SCT parsing, animated text and forced enemy tracking are therefore not
+necessary to reproduce this slowdown. Their individual costs remain unmeasured;
+do not attribute the current issue to crit scaling from these trials. The next
+prepared comparison changes only `customRunTimer` to false, retaining SCT Off
+and the other display choices. The existing native clock handoff separates the
+custom timer's animation/caption/controller work from the remaining addon.
+
+The timer-off comparison, written at 14:24:57 GMT, keeps SCT Off and the other
+choices fixed while setting `customRunTimer=false` (`t=1.1–77.2`, CSV lines
+76486–76560). First movement is `33.7`, continuous circles extend through `64.0`
+and stationary active-encounter samples cover `65.0–75.1`. In the first twenty
+moving windows, median logged mean/p95 improves from 19.80/35.82 ms with the
+timer on to 16.68/17.39 ms with it off. Mean window time improves from 20.38 to
+17.13 ms, and median whole-process CPU from 38.97 to 29.34 ms. Post-movement
+median mean/p95 windows are 16.70/18.55 ms. GPU UI remains about 0.08 ms. Native
+entity medians are slightly higher in the timer-off moving interval, not lower.
+
+This is strong localization to the custom timer path, returning near the
+full-addon-OFF frame windows in one comparison. It is not a repeated causal
+proof of any particular Lua call or renderer mechanism. The timer switch also
+changes native clock ownership and reader cadence, so attribution must retain
+those boundaries rather than naming the foam alone.
+
+The inspected public renderer has two relevant CPU mechanisms:
+
+- Cropped UV bounds participate in the material identity. Each previously
+  unseen four-float clamp key allocates material state; the cache clears above
+  256 keys. Timer foam/ripples and the native StatusBar's smooth fill crop change
+  those bounds while advancing. See the
+  [material key and cache](https://github.com/samwhosung/benilla/blob/cb949ba1a51011061667a078ed7812ab954ce4a4/crates/benilla-app/src/ui_pass.rs#L1004-L1093).
+- Changing crop or dimensions defeats the retained translation shortcut and
+  rewrites mesh attributes. The source explicitly notes that modifying one UI
+  mesh activates asset-change probes across world `Mesh3d` rows. See the
+  [mesh rewrite path](https://github.com/samwhosung/benilla/blob/cb949ba1a51011061667a078ed7812ab954ce4a4/crates/benilla-app/src/ui_pass.rs#L1131-L1183).
+
+These are plausible explanations for CPU-side cost with low recorded GPU UI
+time, not measured attribution in the packaged client. The journal's resident
+entity count is not a `Mesh3d` row count. Its `mats` column counts world-model
+materials, not these UI clamp-cache entries; its large cross-run change does
+not measure UI material churn. The packaged renderer revision remains unknown.
+
+An exact-asset escape was inspected and rejected: both shipped 256-by-16 fills
+vary horizontally on every row. Decoded runtime BLP pixels match the retained
+TGAs, so a one-column replacement would remove authored detail. No replacement
+asset was prepared. Eight-corner UVs, repeat flags and native clipping have no
+verified equivalent escape from these material/mesh paths. Do not change
+sampling, cadence, native StatusBar UV ownership or independent effects to
+claim an addon-side fix. Narrowing UI material/mesh invalidation is an engine
+lead; it does not establish a shippable fix for this installed client.
+
+After that recording, the two bounded timer source changes below were applied
+locally and source-reviewed, without running the CI-only mocks. The next
+prepared comparison reenables the custom timer while disabling its existing
+Regular/Endless word, current, maximum and boss-countdown caption options. SCT
+remains Off. This retains the fill, foam, marker animation, native values and
+cadence while removing timer glyph presentation. It is a diagnostic settings
+change; neither those source changes nor the animated-artwork attribution has
+a subsequent measured result yet.
+
+The resulting captions-off recording, written at 14:50:00 GMT, spans
+`t=1.1–93.9` (CSV lines 76561–76651). It confirms timer On, SCT Off and all
+caption components disabled. Movement starts at `40.2` and continues through
+`72.6`, followed by stationary active-encounter samples at `73.6–92.9`. In the
+first twenty moving windows, median mean/p95 is 17.73/25.44 ms and median
+whole-process CPU 33.73 ms. This is partial recovery against the earlier
+captions-on result (19.80/35.82 ms, CPU 38.97 ms), but remains above timer Off
+(16.68/17.39 ms, CPU 29.34 ms). Entity counts closely match timer Off and GPU UI
+stays about 0.08 ms. Post-movement median mean/p95 is 17.47/23.31 ms.
+
+This comparison also introduces the two bounded timer source changes, so it
+cannot assign the improvement to hiding captions alone or quantify either
+source fix separately. The missing run-time text is intentional in this trial.
+The prepared follow-up restores the original Regular/Endless caption choices
+with the same updated code, timer On and SCT Off; no further runtime edits are
+introduced between those two captures.
+
+The user's subsequent text-restored attempt exposed a regression in that local
+caption-cache change: the formatting table reused `runClock.caption`, which
+already holds the optional font-localization caption. Non-default font setup
+therefore passed a table to `string.find` at `ApplyFont`, interrupting custom
+timer setup/update and leaving the native clock and missing custom boss markers.
+That attempt is invalid as a custom-timer performance comparison. Post-change
+comparisons remain provisional until the complete custom view is verified;
+they do not establish a successful optimization.
+
+The formatting state now uses independent `runClock.captionCache`; the original
+string/nil `caption` metadata stays exclusively with font setup. The CI-only
+fixture now extracts the actual `NewClockLabel` constructor, checks both font
+captions survive formatting, and exercises Skurri styling after cache creation.
+Source review and pinned formatting were completed; no local test or game run
+was performed. Custom timer/captions remain enabled for a visual recovery check
+before collecting another performance comparison.
+
+After the field-collision repair, the user explicitly confirmed that the custom
+timer, time text and boss markers were restored with no Lua errors. The valid
+recording written at 15:02:15 GMT spans `t=1.3–86.0` (CSV lines 76733–76814).
+The preceding `t=1.2–83.9` attempt (lines 76652–76732) is the failed display
+capture and is excluded. The captions-off capture also remains unsuitable for
+attributing either optimization independently.
+
+In the valid restored-view run, first movement is `40.0` and circling continues
+through `72.3`, followed by stationary samples at `73.3–84.4`. The same first
+twenty-window comparison has median mean/p95 of 17.53/24.44 ms and median
+whole-process CPU 34.09 ms. This improves against the earlier valid timer-on
+result of 19.80/35.82 ms and CPU 38.97 ms, while retaining a gap from timer Off
+at 16.68/17.39 ms and CPU 29.34 ms. Pre-movement median mean is 16.67 ms and
+post-movement 17.72 ms. Entity counts are comparable; GPU UI remains about
+0.08 ms. This supports partial recovery with the combined local changes, not
+individual component timing or elimination of the reported stutter.
+
+The diagnostic settings are then retired: the original Custom SCT mode and
+over-enemy style are restored, with the custom timer and its original caption
+choices enabled. Native enemy/friendly plate preferences remain off and the
+meter remains at its original disabled value. No new runtime edits separate the
+restored-timer capture from the pending complete-configuration observation.
+The complete configuration has not yet been measured with these changes.
+
+The complete-configuration recording written at 15:12:56 GMT spans
+`t=1.1–84.1` (CSV lines 76815–76895), with Custom SCT, over-enemy style and the
+custom timer/captions enabled. First movement is `46.2`, circling continues
+through `68.8`, and stationary encounter samples cover `69.8–82.0`. The first
+twenty moving windows have median mean/p95 of 19.89/33.50 ms and whole-process
+CPU 39.23 ms. Those results remain in the initial full-addon-ON range
+(19.13–19.97 ms, p95 30.52–31.72 ms), rather than returning to full-addon-OFF
+(16.67 ms, p95 17.27–17.89 ms). Post-movement median mean remains 18.20 ms.
+This is not a successful normal-configuration stutter fix.
+
+Entity and world-material counts closely match the first full-addon-OFF run,
+while recorded GPU UI stays about 0.08 ms. The short native Mac trials support
+continued CPU/native-work investigation. They do not cover browser execution,
+late-run populations or an enabled damage meter, and they cannot attribute the
+cost of SCT independently from native backing-plate work.
+
+### Released-addon and browser reports
+
+The user separately relayed browser mid/late-run stutter as mobs/damage grow,
+and reports from two PC players that the game is smoother without the addon.
+The verified latest public release at this point is
+[3.2.57](https://github.com/migwynkriid13/SurvivorsDragonUi/releases/tag/build-b70cbf444e7ade2aaed7d1faf415fbe0746df021),
+published at 12:14:01 UTC and pinned to
+`b70cbf444e7ade2aaed7d1faf415fbe0746df021`. It does not contain the original
+performance PR or these local follow-ups. The local caption-cache regression
+therefore cannot explain those released-addon reports. These are qualitative
+reports, not instrumented browser or late-run measurements.
+
+Source inspection at that release identifies retained-pool plate scanning,
+per-hit all-origin matching, distinct-name spellbook rebuilding, uncached final
+source resolution, parser descriptors and recurring complete meter processing.
+The original performance branch already reduces several of those paths; the
+additional indexed matching, stable retirement and stream queue work below
+address further source-level scaling. Icon resolution can still be required
+with icons hidden because exact duplicate identity includes its received art.
+Ambiguity still considers every eligible same-name candidate.
+
+An enabled meter processes complete source lists independently of its one-to-ten
+visible rows. Its rolling history already uses bounded separate time/value
+arrays and lossless flat-interval compression; 604 pairs per series is a
+worst-case capacity for changing counters, not an unchanged-plateau leak. The
+default-off meter detaches collection and cannot explain this default-off
+capture. Neither native portraits nor the SCT pool are established lifetime
+leaks: portrait images are path-cached and text pools track peak concurrency,
+with retired labels cleared and hidden.
+
+The inspected native and browser forks also share a world-size-dependent CPU
+path through Bevy 0.18.1. Updating an existing animated UI mesh queues a
+[modified asset event](https://github.com/bevyengine/bevy/blob/v0.18.1/crates/bevy_asset/src/assets.rs#L382-L390).
+If any mesh changed, even a 2D UI mesh, Bevy's
+[3D mesh change tracker](https://github.com/bevyengine/bevy/blob/v0.18.1/crates/bevy_mesh/src/components.rs#L127-L145)
+probes every `Mesh3d` handle. Both inspected forks retain this path without a
+browser guard. This establishes a plausible coupling between animated UI and
+larger world populations, not its measured contribution or the deployed
+clients' exact engine revisions. Browser event-loop differences alone do not
+prove an additional browser-specific defect.
+
+### Short capture after additional scaling changes
+
+The next completed recording, written at 15:45:23 GMT, spans `t=1.1–83.1`
+(CSV lines 76896–76975). The user explicitly confirmed that outgoing custom
+damage text, the custom timer/text and boss markers all worked without Lua
+errors. Saved settings retain Custom SCT, over-enemy style, custom timer and
+captions enabled; the meter remains off.
+
+Movement starts at `22.5`. The first twenty moving windows have median
+mean/p95 of 17.62/25.49 ms and whole-process CPU 34.96 ms, compared with
+19.89/33.50 ms and CPU 39.23 ms in the preceding complete-configuration trial.
+Counted entity medians are higher, not lower, and GPU UI remains about 0.08 ms.
+This supports partial early-run recovery with the additional origin lookup and
+retirement changes, without assigning a per-function saving or eliminating the
+gap from addon Off. The MSBT-only change cannot explain this trial's result.
+
+Only two settled samples precede movement; a forced ten-second pre-window
+would include loading spikes. The final stationary tail has five samples and
+the entire recording includes only about one minute after first movement.
+It does not establish the requested mid/late-run behavior. A subsequent
+recording began appending during analysis; its incomplete loading/menu rows
+are excluded from the completed trial above. No further runtime or settings
+edits separate those recordings.
+
+For the next user-requested longer run, the saved setup was inspected with the
+game closed: Custom SCT in over-enemy style, damage icons on, custom timer and
+original captions on, custom boss bars on, meter off, visible enemy/friendly
+plates off and FPS journaling on. These values already matched the chosen
+setup, so no redundant preference writes were needed. Damage icons differ from
+the earlier icon-off controls; this is a longer workload observation, not a
+directly matched icon-off performance comparison. No runtime source changes
+were made while preparing it.
+
+### Longer normal run and macOS sampling
+
+Two short intervening recordings span CSV lines 76976–76987 (`t=1.3–16.2`)
+and 76988–77027 (`t=1.1–44.6`). The longer recording starts at physical line
+77028, `t=1.1`; the read-only snapshot at 16:18:22 GMT extends through line
+78240, `t=1241.9`. Do not combine these launches into one time coordinate.
+The user reported pronounced stutter during the longer run. This is the
+icon-enabled normal configuration described above, with the meter off.
+
+| Native journal seconds | Windows | Median mean (ms) | Median window p95 (ms) | Median whole-process CPU (ms) | Median GPU UI (ms) | Median streamed entities |
+| ---------------------- | ------- | ---------------- | ---------------------- | ----------------------------- | ------------------ | ------------------------ |
+| 120–240                | 118     | 22.29            | 42.34                  | 42.98                         | 0.08               | 105                      |
+| 240–360                | 118     | 25.88            | 48.42                  | 49.75                         | 0.08               | 118                      |
+| 360–480                | 117     | 28.25            | 53.92                  | 54.59                         | 0.08               | 135                      |
+| 480–600                | 117     | 29.76            | 58.37                  | 56.97                         | 0.08               | 153                      |
+
+These fixed intervals exclude startup and precede both stack samples. They
+show worsening in this run alongside increased native streamed populations;
+they do not separate addon work from native combat/world work or establish
+SCT, cooldowns or icons as the cause. Median total GPU time stays about
+1.00–1.05 ms. CPU-side preparation and frame pacing remain the stronger lead,
+without ruling out work outside the recorded GPU spans. Resident entity
+counts are not enemy counts or `Mesh3d` row counts.
+
+The user explicitly authorized five seconds of read-only OS stack sampling.
+Two five-second samples of the running game were taken at 16:08:16 and
+16:13:43 GMT, with 10 ms and 20 ms intervals respectively. The second retried
+the first oversized output with in-memory reduction. Both sent the report to
+`/dev/stdout`; no report file or runtime Lua hook was created. The host reports
+Wine 11.13 running the Windows executable through x86-64 Rosetta translation.
+The game main-thread frames are predominantly unnamed Rosetta JIT/unknown
+addresses, so these samples do not attribute cost to Lua, cooldowns, SCT or a
+specific renderer function. Recursive Wine dispatcher counts are not usable
+subsystem CPU percentages. Sampling can perturb frame pacing; later spikes
+must not be presented as an uncontaminated before/after measurement.
+
+The user declined temporary callback timing probes. Investigation therefore
+remains source-only apart from the completed OS samples and read-only journal
+inspection. No timing command, saved diagnostic state or background updater
+was added.
+
+### One-second run progress — user-requested cadence change
+
+The progress StatusBar now writes whole native run seconds instead of a new
+fractional value every rendered frame. At a steady 60 FPS this reduces normal
+advancing fill-value writes from about 60 per second to one, without changing
+the reader or inventing a gameplay clock. Native pauses stop the sampled native
+coordinate. Initial/current-state recovery, native time corrections and
+duration changes remain immediate; a reached limit uses its exact native value,
+including fractional maxima. Hidden views still skip fill painting.
+
+The same stepped value bounds the existing flow and foam so their fill edge
+cannot continue crawling between one-second steps. Their temporal phase and
+30-Hz cap remain, as do the original caption, schedule and marker inputs.
+Moving textures, foam, glows and the native renderer's persistent drawing costs
+remain; this does not make the whole timer render only once per second.
+The source reduction is not a measured FPS or stutter result. Local work uses
+source review and pinned formatting, with coverage authored for CI only.
+
+### Other source follow-ups
+
+The following changes remove specific avoidable work:
+
+- Moving minimap pins replace their existing CENTER anchor directly, removing
+  one ClearAllPoints call per moved pin. The legacy player-arrow overlay
+  separates size from heading changes: a fixed-size turn skips two size writes
+  and ClearAllPoints, while size-only changes skip unchanged rotation UVs.
+  Settled overlay visibility also skips writes. Positions, rotation equations,
+  update cadence and native model ownership remain unchanged.
+- Minimap size is shared lazily across pin, hover and legacy-arrow work within
+  each existing synchronous callback. Invalid or insufficient bounds remain
+  retryable in that callback; later callbacks sample afresh. This avoids repeated
+  native geometry reads after pin writes, which can otherwise drain pending
+  native layout work on the inspected engine. Settled native flag suppression
+  uses its first actual false read and retains readback after setter calls.
+  CI-only native-boundary mocks cover size sharing and readiness recovery.
+- Each cooldown-number overlay retains only its latest rounded caption value,
+  unit, language and text. Unchanged display buckets skip localization and string
+  joining while all seven native timing reads, immediate event passes and the
+  required final-200-ms frame cadence remain. Actual text/color/visibility
+  comparisons still repair native changes and retry failed setters. The existing
+  hide/disable/world cleanup clears these seven bounded caption caches; no
+  cooldown start, duration or remaining-time history is retained. CI-only
+  production-controller mocks cover reuse, same-value unit changes, language,
+  setter failure and the exact positive final-zero threshold. This does not
+  reduce native-swipe work or establish measured stutter recovery.
+- Range-indicator passes sample target existence/hostility lazily once across
+  visible buttons and read each button's visibility once. Seven visible buttons
+  therefore use at most one UnitExists and one UnitCanAttack call instead of
+  seven each, while their seven independent IsActionInRange results remain.
+  The two scalar results live only within that synchronous pass; later events
+  and ten-Hz ticks read fresh state. Hidden buttons retain cleanup and skip
+  artwork allocation and target/range reads. CI-only production mocks cover
+  missing/friendly/hostile transitions, independent ranges and hidden recovery.
+- Native chat panes retain their subscriptions, messages, unread tracking and
+  level/stat intake. Only selected visible chat activity starts the existing
+  0.35-second slide. Deselected panes expire any outstanding slide deadline
+  without animated anchors; selected slides retain their final settled sample.
+  Selection, native-event and one-second geometry repair remain available.
+- Target changes retain synchronous nameplate refresh and target-aura
+  invalidation, but use count-based incremental discovery. An unchanged native
+  child count skips full WorldFrame enumeration and recursive V/filter remasking.
+  Newly appended native slots remain discoverable immediately; OnShow, mode and
+  world transitions retain required forced checks. A CI-only production mock
+  covers unchanged and newly allocated rosters; it was not run locally.
+- Matching indexes references to the existing live/recent origins by exact
+  received name. Uncached hits visit only their matching-name array, preserving
+  relative creation order, centroid arithmetic, health-loss consumption,
+  ambiguity and the original timing rules. Identical-name packs still inspect
+  every eligible candidate; no hit, origin or lifetime is capped.
+- Within one pending-hit matching pass, identical queries can reuse the same
+  unresolved result, exact origin or ambiguous centroid. The key compares the
+  exact received target name, kind, amount and fallback eligibility at the same
+  sampled time. Any effective health-loss consumption invalidates prior results;
+  every matched original hit still calls UseLoss. Only the latest tuple per name
+  occupies one of at most 64 reusable records, and overflow uses the unchanged
+  resolver. References clear before presentation, between passes and on display
+  retirement. This bounds the optimization's scratch space without capping
+  combat intake, names, origins or text. Repeated unchanged ambiguous queries
+  can share one candidate traversal; distinct queries and changing loss evidence
+  retain their required scans. No measured saving is established yet.
+- Recent-origin retirement stable-compacts the master array and each affected
+  name array once. This avoids repeated survivor shifts during mixed bulk
+  expiry, preserving relative order, Lua 5.0 remembered lengths and the strict
+  greater-than-0.65-second boundary. The index adds references, not duplicate
+  origin records or additional gameplay history, and clears on the existing
+  style/mode/world lifecycle.
+- MSBT arrivals increment their existing duplicate group directly and retain
+  the maximum member receipt. The original subtraction-based 80 ms age gate
+  and inclusive 75 ms intake window determine emission, including out-of-order
+  receipts and floating-point boundaries. Stream mode no longer allocates or
+  revisits a pending record for each original hit. Every original color sample
+  and icon identity still runs; first-hit values/style and default over-enemy
+  matching/fallback remain. This has no subsequent live performance result.
+- Normal-hit color keys concatenate their original four string fields and
+  separators directly, avoiding one temporary four-entry table per qualifying
+  original hit. Every original sample still enters the same eight-sample color
+  history in receipt order, including visually collapsed duplicates. Parser,
+  history and default pending records still allocate; this is not an
+  allocation-free SCT path.
+- Shared local-size reads call GetWidth/GetHeight only when their corresponding
+  edge extent is unresolved. Resolved rectangles skip two unnecessary native
+  geometry reads, retaining independent fallback for either axis.
+- Blue foam shares one current authored bar-height sample across its sixteen
+  pieces per existing paint pass. This removes fifteen duplicate native calls
+  without changing clipping, UVs or temporal equations. The inspected getter
+  reads an authored height directly; this is not avoided layout resolution.
+- Timer captions retain rounded native inputs separately from the final two
+  display strings. One bounded cache follows mode, effective options and
+  language; unchanged displayed values reuse formatting and disabled components
+  skip it. Previews rebuild immediately from retained inputs. Per-frame scale
+  checks and unavailable-font-metric retries remain in the existing presentation
+  helper. Retirement invalidates active data once, retaining settled empty state
+  on repeated clears. CI-only extracted-production mocks cover both timer
+  changes; neither reduction establishes a measured fix for the timer slowdown.
+- Revive retains one latest subject/direction and language caption, plus its
+  latest displayed percentage string. Hidden presentation defers caption
+  formatting; visible unchanged captions/percentages skip localization and
+  string construction while actual text comparisons and failed-write retries
+  remain. Clear invalidates the bounded caches. The native progress source,
+  smoothing and percentage-step equations, fade and cross pulses are unchanged.
+- A revive animation callback shares one current root-width sample between
+  dirty fill/spark painting and its existing cross loop, removing one duplicate
+  native width read on dirty frames. Standalone paints read current width.
+- Guardian tracker rows cache their latest received key/status, rounded native
+  respawn second, language and status text. Unchanged tenth-second samples skip
+  clock/status formatting without changing native time or static captions.
+  Health presentation, row retirement, visibility, language and relevant options
+  invalidate the cache; actual text comparisons retain retries and restoration.
+  Boss and guardian health fills and health-caption caches already skip
+  unchanged work. These views do not allocate the timer's foam/flow effects;
+  the shared native rendering costs of changing fills remain unresolved.
+
+These edits reduce source-level work without adding regions, events, updaters,
+assets or saved state. Pinned formatting and source review do not establish a
+stutter fix; no local tests, standalone validation or addon/game execution were
+performed. No before/after measurement of these edits is established.
+
+## Full performance follow-up — 2026-10-28
+
+### Inactive unit borders
+
+Party resource and health-only borders now use real Hide/Show transitions for
+their inactive strips. With resources on, fifteen health-only strips per shown
+party row leave extraction instead of remaining shown at zero alpha; resources
+off hides the three-piece alternative. The replaced native party sheet is also
+hidden. Player/target portraitless borders, target-of-target strips and the
+player's alternative pointed rim use the same actual visibility boundary.
+Original pixels, crops, geometry and pools remain unchanged.
+
+This separates visually transparent regions from renderer-submitted regions:
+the inspected public engine extracts zero-alpha textures, whereas hidden regions
+are excluded. CI-only extracted production transitions assert hiding, restoration
+and unchanged-state idling. No local tests, addon execution or measured GPU/FPS
+result is claimed; the packaged renderer's exact revision remains unverified.
+
+### Native nameplate layers
+
+Supported native plate and health-bar owners now disable their own drawing
+layers instead of making source regions transparent. Native region shown bits,
+names, health, raid-icon metadata and input remain available; the custom child
+keeps its own enabled layers. One captured layer state serves permanent skin
+suppression and temporary recursive V/filter masking, so unmasking cannot expose
+the native art. World/logout/reload retirement restores the captured bits.
+Clients without owner-layer support retain the former alpha fallback.
+
+This removes submitted native texture regions on the inspected engine path,
+without changing custom art or allocation. CI-only production nameplate mocks
+cover data/shown-state retention, V transitions, prior disabled bits and cleanup.
+The source does not establish packaged-client drawing or measured FPS.
+
+### Encounter tooltip content
+
+Hovered encounter debuffs cache the displayed name, stack count, dispel caption,
+permanence, rounded remaining/duration, language and effective scale. Native
+debuff timing still updates at the original cadence; unchanged tooltip content
+skips SetText/AddLine/Show and their native clear/rebuild/size work. Cursor and
+shared placement continue independently. Re-entry rebuilds after native SetOwner;
+hidden or foreign-owned tooltips are never replayed. One bounded record per
+pooled icon adds no region, event, updater or saved data. CI-only extracted
+production coverage asserts these transitions without renderer measurements.
+
+### Shared frame navigation reads
+
+The existing waypoint frame/display callbacks share one lazy synchronous native
+sample for phase, zone/map context, player position, metric, aspect and heading.
+Both guides and every minimap pin retain per-frame projection and the original
+interpolation equations. Separate calls outside that callback stay fresh; the
+next callback retries unavailable data. Read-only map browsing, calibration,
+native run-coordinate/stamp fallbacks and hidden guards remain authoritative.
+One reused scalar record adds no updater, region or gameplay history. Protected
+sample cleanup also releases the record after a native/widget error. CI-only
+coverage checks repeated consumers, new-frame movement, map ownership, failures
+and retirement. This is native-call reduction, not a changed drawing budget.
+
+### Stable shared tooltip owners
+
+Shared tooltip placement first checks its last accepted icon with native IsOwned.
+An unchanged owner skips action/equipment/registered-icon traversals; a mismatch
+uses the original discovery order. Clear/Hide retires the cached owner, while
+foreign owners and native resets remain observable. Cursor motion, current
+visibility, scale and anchor checks still run at their existing cadence. CI-only
+placement assertions cover the single-owner check and replaced-owner fallback.
+No new registry, event, region or drawing pass is introduced.
+
+### Shared spellbook generations
+
+SCT and meter source resolution share one lazy complete spellbook scan after an
+existing spell/world/language invalidation. Different non-book names use that
+same result instead of each rebuilding the book before catalog lookup. Incomplete
+native slot metadata retries at most once per second through actual consumers;
+missing APIs and failed scans remain retryable. Off/hidden consumers add no scan.
+The source priority, ambiguity, original grouping identity and icon pools remain
+unchanged. CI-only controller coverage includes meter-only lookup while SCT is
+off, several missing names, delayed artwork readiness and world retirement.
+
+### Loot backpressure
+
+Loot resolves native/catalog item metadata only after its existing three-card
+view accepts capacity. A full pool retains the original queued head without
+repeated copying or item queries every fifth second. Accepted cards still retain
+their existing bounded metadata retries, expiry and pool reuse. Resolution now
+also occurs inside the protected delivery call. CI-only lifecycle coverage checks
+three occupied cards, unchanged queued work and the first delivery after expiry.
+No drawing, intake identity or queue-limit behavior changes.
+
+### Rounded waypoint labels
+
+The waypoint HUDs no longer allocate or draw their decorative bottom stripes.
+Removing the shared `FloatingRail` helper and its construction call removes one
+`WHITE8X8` texture region per guide, two across Cache and Guardian. This is a
+source-level region reduction, with no measured GPU or FPS result.
+
+Each guide caches only its latest rounded yard value, language and formatted
+caption. Per-frame interpolation and rotation stay unchanged; stationary values
+skip translated formatting and its temporary field table. Actual text comparison
+still repairs native resets or failed assignments. Missing distances retain
+their translated On map caption, zero remains a valid value, and retirement
+clears the record. CI-only extracted coverage asserts these boundaries.
+
+### Shown nameplate sampling
+
+The historical native-plate registry still owns discovery and reuse hooks, but
+the per-frame refresh walks a separate shown set maintained by those same native
+Show/Hide callbacks. Hidden peak-pool entries no longer incur recurring shown
+checks or retirement lookups. Forced discovery resynchronizes existing entries
+on recovery. Live discovery/projection cadence, recent retired origins and
+lethal-hit matching remain unchanged; no native roster is capped or discarded.
+CI-only production fixtures assert hidden-pool idling and reuse on Show.
+
+### Settled disabled banners
+
+Disabled, faulted or unsupported banners detach their existing update callback
+after native restoration and handler unregistration settle. Pending cleanup
+retains its existing fifth-second retry; failed unregistration remains pending,
+and native dispatch still defers handler-list mutation. Existing settings,
+world, CVar and run/zone receipt callbacks restore readiness checks without a
+new event or updater. Enabled views keep their original polling, expiry and
+cosmetic cadence, including hidden notice retirement. CI-only production
+coverage checks enable/disable, failed cleanup retries and dispatch failure.
+
+### Meter publication work
+
+The visible meter distinguishes accepted counter publications from changing
+native rates. Getter identity, returned source, native stamp, total and a
+monotonic receipt generation invalidate counter validation/copying, including
+same-table/same-stamp deliveries. Official getters and five-Hz native-time
+observations remain active; one-Hz row/header rate updates remain independent.
+Session comparison and immutable name/order/class/share copying skip settled
+publications. The bounded rolling ring still samples cached counters, preserving
+pauses, interpolation, warmup, gaps and regressions. Reset, language/off/world
+retirement and empty-publication gates retain their existing ownership.
+
+This independently applies FieldKit's separation of publication and rate work,
+with the installed native parser's list-replacement/stamp contract and our
+stronger receipt gates. CI-only production fixtures cover invalid/replaced
+sources, same-stamp receipts, native changing rates and all reset/retirement
+boundaries. No native gameplay table is changed and no drawing region is removed.
+
+### Shared plate samples
+
+One reusable lazy scratch tuple within each synchronous plate refresh now feeds
+the filter, skin and SCT matching. Names, reaction colors, health range and value
+are read only as required, avoiding duplicate native calls for the same pass.
+Names-only/MSBT paths retain their health-read skips; filtered skins still defer
+their cosmetic reads. The next refresh and native reuse callbacks sample afresh,
+and retirement clears scratch data. CI-only fixtures assert single reads and the
+disabled paths. Native health, matching cadence and all artwork stay unchanged.
+
+### Lazy Layout handles
+
+Group registration keeps required geometry, visibility wrappers and editor
+availability, while deferring its handle, label, four corner grips and optional
+side grips until the first eligible edit refresh. Each ordinary handle's 24
+corner textures and five buttons therefore stay unallocated for groups never
+edited. Prepared handles remain pooled for later edits. This is a startup/resident
+allocation reduction, not a gameplay draw-count reduction or a saving after all
+handles have been used.
+
+Unprepared groups remain safe through Confirm/Cancel/reset/world cleanup; hidden
+groups stay selectable and conditional groups use the existing eligibility rule.
+Partial native preparation stays hidden, publishes no handle and does not
+reallocate every tick. CI-only full Layout mocks cover first preparation, reuse,
+late registration, drafts, cleanup and allocation failure. Authored grip geometry
+and input remain unchanged, with no runtime test hook or additional controller.
+
+### Combat parser descriptors
+
+Fixed native capture-field descriptors allocate once at source load. Their
+pet-source prefix form prepares lazily once per descriptor, instead of copying
+the same fields for every attempted combat pattern. Successful events retain
+their own independent captures/results and original localized pattern, school,
+amount and ownership validation. CI-only production parsing checks player/pet,
+melee/periodic and foreign-source cases without shared-result aliasing.
+
+### XP fade geometry
+
+The existing gain/spark renderer caches its owned anchors, widths, crop and alpha
+independently. A stationary final fade now changes only its two alpha values;
+actual width/progress changes retain the original gain bounds and clipped spark.
+Show/Hide comparisons preserve pooled reuse and the final clearing pass. Timing,
+easing, native XP reads, source images, layers and region count stay unchanged.
+CI-only extracted production coverage checks fades, resizing, end clipping and
+zero-alpha retirement, without a GPU/FPS claim.
+
+### Final source-icon answers
+
+The shared resolver retains at most 256 final exact-name/school answers in a
+FIFO generation, skipping repeated lower-tier alias/catalog/path resolution.
+Existing dirty scans and pending native retries run before cache hits. Accepted
+learned values/conflicts and existing spellbook, item, summon, language and world
+resets retire the generation; authoritative ambiguity is retained. Unknown
+answers expire after one second so native metadata can recover. Direct spellbook
+hits and current native Melee/equipment artwork retain their own paths.
+
+This adds bounded unsaved display metadata, not gameplay data or drawing regions.
+Consumers keep their hidden/off/icon-off guards and texture assignment retries.
+CI-only controller scenarios cover school refinement, meter ambiguity, stronger
+metadata, failures/recovery, language/world retirement, weapon changes and FIFO
+eviction. Existing learned-talent lifetime and source priority remain unchanged.
 
 ## Loot popup modes and marks — 2026-10-27
 
@@ -277,19 +1250,19 @@ The audit covers the following drawing/update owners, including their native
 ownership and cleanup boundaries. Existing authored animation and native work
 remain in place; this is not a claim that every remaining cost is eliminated.
 
-| Frame group                                             | Owners and preserved performance boundary                                                                                                                                                                                                                                                                                                                                                                                                  |
-| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Pet summons and native primary pet                      | `modules/unit/pets.lua`, `modules/unit/mini.lua`: native cached circles, receipt/roster reuse, visible timer reads and actual native-state repair.                                                                                                                                                                                                                                                                                         |
-| Equipped jewelry                                        | `modules/ui/jewelry.lua`: original fourteen-strip UVs, grouped texture order, unchanged layout, idle cooldown gating and metadata retries.                                                                                                                                                                                                                                                                                                 |
-| Run/boss/tally, guardian tracker                        | `modules/ui/run.lua`, `modules/ui/guardians.lua`, `modules/ui/guardian_tracker.lua`: receipt-based schedules/copies, pooled rows, hidden cosmetic guards, fixed pill backgrounds, retained marker/foam/glow equations and edge-to-edge bezel joins.                                                                                                                                                                                        |
-| Player/target/party, resources and portraits            | `modules/unit/player.lua`, `target.lua`, `mini.lua`, `resources.lua`, `portraits.lua`, `core/widgets.lua`: shared styling, completed fades, changed styles, exact native-unit routing, native health and model-paint evidence.                                                                                                                                                                                                             |
-| Character and equipment                                 | `modules/ui/character.lua`: coalesced deferred work, measurement/discovery caches, actual native anchor repair and the three authored quality-rim passes.                                                                                                                                                                                                                                                                                  |
-| Revive, stored levels, loot and banners                 | `modules/ui/revive.lua`, `levels.lua`, `loot_view.lua`, `banners.lua`: passive pools, changed-only presentation, requested visibility, bounded view queues and required hidden lifetime/ownership cleanup.                                                                                                                                                                                                                                 |
-| Action bar, range and XP                                | `modules/bars/bars.lua`, `range.lua`, `modules/xprep/xprep.lua`: shared controllers, event-driven work, transition-only range fades, final cooldown sampling and pending-only XP animation.                                                                                                                                                                                                                                                |
-| Minimap and waypoint guides                             | `modules/map/map.lua`, `buttons.lua`, `navigation.lua`, `waypoints.lua`: reusable accepted snapshots/pins and native direction/position sampling; skip unchanged clock labels and button anchors. The transparent glyph adds one texture, no idle polling or extra hover region; its pointer updater exists only while dragging. Square-edge adaptation runs on foreign placement calls or map/show/load events. See `MINIMAP-BUTTONS.md`. |
-| SCT and nameplates                                      | `modules/nameplates/sct.lua`, `style.lua`: event-batch discovery plus independent frame discovery, preserved matching/animation, cached metadata and unchanged native styling.                                                                                                                                                                                                                                                             |
-| Layout/editor, tooltips, chat, Copy, menu and inspector | `core/layout.lua`, `editor.lua`, `tooltips.lua`, `fstack.lua`, `modules/chat/*`, `modules/menu/menu.lua`: bounded edit sampling, passive/pool reuse, owner/scale-aware hover work, native chat/fades, retained opt-in diagnostics and hidden inspector shutdown.                                                                                                                                                                           |
-| Meter and general warning overlay                       | `modules/ui/meter.lua`, `modules/ui/ui.lua`: native circles, one-Hz rate display with five-Hz data observation, visibility/change guards, transition-only warning visibility and preserved gradient animation.                                                                                                                                                                                                                             |
+| Frame group                                             | Owners and preserved performance boundary                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Pet summons and native primary pet                      | `modules/unit/pets.lua`, `modules/unit/mini.lua`: native cached circles, receipt/roster reuse, visible timer reads and actual native-state repair.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| Equipped jewelry                                        | `modules/ui/jewelry.lua`: original fourteen-strip UVs, grouped texture order, unchanged layout, idle cooldown gating and metadata retries.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| Run/boss/tally, guardian tracker                        | `modules/ui/run.lua`, `modules/ui/guardians.lua`, `modules/ui/guardian_tracker.lua`: receipt-based schedules/copies, pooled rows, hidden cosmetic guards, fixed pill backgrounds, retained marker/foam/glow equations and edge-to-edge bezel joins.                                                                                                                                                                                                                                                                                                                                                                                                  |
+| Player/target/party, resources and portraits            | `modules/unit/player.lua`, `target.lua`, `mini.lua`, `resources.lua`, `portraits.lua`, `core/widgets.lua`: shared styling, completed fades, changed styles, exact native-unit routing, native health and model-paint evidence.                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| Character and equipment                                 | `modules/ui/character.lua`: coalesced deferred work, measurement/discovery caches, actual native anchor repair and the three authored quality-rim passes.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| Revive, stored levels, loot and banners                 | `modules/ui/revive.lua`, `levels.lua`, `loot_view.lua`, `banners.lua`: passive pools, changed-only presentation, requested visibility, bounded view queues and required hidden lifetime/ownership cleanup.                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| Action bar, range and XP                                | `modules/bars/bars.lua`, `range.lua`, `modules/xprep/xprep.lua`: shared controllers, event-driven work, transition-only range fades, final cooldown sampling and pending-only XP animation.                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| Minimap and waypoint guides                             | `modules/map/map.lua`, `buttons.lua`, `navigation.lua`, `waypoints.lua`: reusable accepted snapshots/pins and native direction/position sampling; skip unchanged clock labels and button anchors. The gold glyph and selected static square background use two bound-once textures: one added persistent background region/UV clamp and normal alpha overlap beneath the glyph, with no idle polling or extra hover region. Both inherit hiding/scale and stay static in Performance Mode; the pointer updater exists only while dragging. Square-edge adaptation runs on foreign placement calls or map/show/load events. See `MINIMAP-BUTTONS.md`. |
+| SCT and nameplates                                      | `modules/nameplates/sct.lua`, `style.lua`: event-batch discovery plus independent frame discovery, preserved matching/animation, cached metadata and unchanged native styling.                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| Layout/editor, tooltips, chat, Copy, menu and inspector | `core/layout.lua`, `editor.lua`, `tooltips.lua`, `fstack.lua`, `modules/chat/*`, `modules/menu/menu.lua`: bounded edit sampling, passive/pool reuse, owner/scale-aware hover work, native chat/fades, retained opt-in diagnostics and hidden inspector shutdown.                                                                                                                                                                                                                                                                                                                                                                                     |
+| Meter and general warning overlay                       | `modules/ui/meter.lua`, `modules/ui/ui.lua`: native circles, one-Hz rate display with five-Hz data observation, visibility/change guards, transition-only warning visibility and preserved gradient animation.                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 
 Native aura/timer rows (`modules/unit/auras.lua`) retain changed-slot reflow,
 hidden timer shutdown and required repair of native buff/enchant anchors.
@@ -943,19 +1916,58 @@ SHA-256 is `e069bf3152f8d8f7160d66388907fc181c733bd170aa150d3b7ff7adf251e048`.
 The shader starts near 100,342,970 and identifies `shaders/ui_quad.wgsl`.
 
 The public native-base
-[UI renderer](https://github.com/samwhosung/benilla/blob/main/crates/benilla-app/src/ui_pass.rs)
+[UI renderer](https://github.com/samwhosung/benilla/blob/289b0ec5f64d7f58fa1a3f3b2347c0a056afba77/crates/benilla-app/src/ui_pass.rs#L947)
 groups contiguous quads with the same texture and material, including their UV
 clamp. The native-base
-[layer ordering](https://github.com/samwhosung/benilla/blob/main/crates/benilla-ui/src/order.rs)
+[layer ordering](https://github.com/samwhosung/benilla/blob/289b0ec5f64d7f58fa1a3f3b2347c0a056afba77/crates/benilla-ui/src/order.rs)
 and
-[texture sort](https://github.com/samwhosung/benilla/blob/main/crates/benilla-ui/src/script/layer_batch.rs)
+[texture sort](https://github.com/samwhosung/benilla/blob/289b0ec5f64d7f58fa1a3f3b2347c0a056afba77/crates/benilla-ui/src/script/layer_batch.rs)
 can further permute equal-texture quads across all owners sharing a flat
 stratum, level and layer. Owner creation order alone cannot guarantee a batch.
 Its
-[extraction code](https://github.com/samwhosung/benilla/blob/main/crates/benilla-app/src/ui_script/extract/mod.rs)
+[extraction code](https://github.com/samwhosung/benilla/blob/289b0ec5f64d7f58fa1a3f3b2347c0a056afba77/crates/benilla-app/src/ui_script/extract/mod.rs#L137)
 defines cropped half-texel clamps. These sources explain the proposed batching
 and the reason to retain every jewelry strip boundary. They do not establish
 the complete packaged renderer's identity or a measured performance result.
+
+### Submitted regions and engine boundaries — 2026-10-28
+
+Count allocated regions, shown regions, nonzero-alpha regions and submitted
+quads separately. The inspected native-base extractor skips hidden regions and
+disabled owner layers, but still emits zero-alpha textures. Its fragment shader
+samples before applying tint alpha. Thus earlier authored visible-region counts
+describe the artwork, not a guarantee that transparent alternatives contribute
+no rendering work. The unit-border and nameplate-layer fixes above remove those
+specific submissions; retained hidden pools still occupy resident objects.
+See [hidden/alpha extraction](https://github.com/samwhosung/benilla/blob/289b0ec5f64d7f58fa1a3f3b2347c0a056afba77/crates/benilla-ui/src/script/extract.rs#L218)
+and [texture sampling](https://github.com/samwhosung/benilla/blob/289b0ec5f64d7f58fa1a3f3b2347c0a056afba77/crates/benilla-app/src/shaders/ui_quad.wgsl#L124).
+
+SCT's authored crit pop retains its continuous inner scale and required refit.
+Current benilla SetScale invalidates subtree layout and global text-measurement
+tracking; the next sweep checks all nonempty FontStrings and remeasures only
+stale entries. Wenilla retains that path. Glyph bitmaps cache by integer device
+pixel size, so fractional scaling does not rasterize every glyph every frame.
+No verified addon API scales an already rasterized label with identical output;
+an engine-side narrower invalidation remains a separate investigation.
+See [scale invalidation](https://github.com/samwhosung/benilla/blob/289b0ec5f64d7f58fa1a3f3b2347c0a056afba77/crates/benilla-ui/src/script/model.rs#L1796),
+[measurement sweep](https://github.com/samwhosung/benilla/blob/289b0ec5f64d7f58fa1a3f3b2347c0a056afba77/crates/benilla-ui/src/script/layout.rs#L2047)
+and [wenilla's equivalent](https://github.com/Arnesen/wenilla/blob/d68dcc539460e8fc5169105c790443489d91ca76/crates/benilla-ui/src/script/model.rs#L1979).
+
+Animated UV windows can create new material keys, but the inspected material
+cache clears above 256 entries before a rebuild and prunes removed images. This
+establishes possible churn, not an unbounded material leak. Native OUTLINE is
+baked into glyph atlas cells, while shadow emits another glyph pass. Required
+shadows, jewelry's fourteen crops, independent timer effects and full SCT
+lifetimes retain their authored drawing cost. Competitor hit caps, summed hits
+and simpler artwork change those behaviors and are not equivalent fixes.
+See [material lifetime](https://github.com/samwhosung/benilla/blob/289b0ec5f64d7f58fa1a3f3b2347c0a056afba77/crates/benilla-app/src/ui_pass.rs#L1004),
+[outline baking](https://github.com/Arnesen/wenilla/blob/d68dcc539460e8fc5169105c790443489d91ca76/crates/benilla-app/src/ui_text/outline.rs#L1)
+and [shadow emission](https://github.com/samwhosung/benilla/blob/289b0ec5f64d7f58fa1a3f3b2347c0a056afba77/crates/benilla-app/src/ui_script/extract/text.rs#L215).
+
+These immutable public revisions explain the opportunities and limits. They do
+not establish the installed package's revision, live CPU/GPU cost or resolution
+of the reported stalls/out-of-memory behavior. No engine source or packaged
+client is changed by this addon PR.
 
 ## Shared addon identity
 
@@ -1023,3 +2035,75 @@ handoffs, native unit aliases, receipt boundaries, hidden-to-visible transitions
 and failed texture assignment retries. Static checks do not establish in-game
 pixel parity, an FPS improvement or resolution of the separate world-entry
 stall and GPU out-of-memory reports. Those require new user-recorded captures.
+
+## Totems in Pet frames — 0.125.0, 2026-10-28
+
+The pet controller now accepts the separate official totem feed through its
+existing tenth-second update and CHAT_MSG_ADDON listener. Each stream owns a
+small descriptor and reusable copied group tables, with independent receipt,
+validation and retirement gates. Only changed publications and visible enabled
+temporary timers call that stream's getter. The totem count is copied directly;
+there is no expansion into individual rows or countdown-based count mutation.
+A native run-time readiness read accompanies eligible totem timer refreshes;
+hidden/timer-disabled groups skip that extra read. Static packet/stamp global
+names are prepared once, and unchanged publications do not relearn icon metadata.
+
+Each additional visible totem kind uses the existing lazy pet row: two passive
+frames, two row labels and a count label, one native portrait texture and one
+gold rim texture on the successful native path. These are additional visible
+regions proportional to represented kinds, independent of the number of totems
+within each kind. The existing lazy strip compatibility path retains its
+scale-dependent region/overdraw cost and failure retries. Geometry, UVs,
+layers, alpha, portrait binding cache and gold artwork are unchanged. Retired
+rows return to the same pool; hidden snapshots allocate no row or artwork.
+
+No controller, event registration, runtime module, asset, setting or
+SavedVariable is added. The feed has no individual identity, health, damage or
+pulse information; no such history is retained or inferred. CI-only scenarios
+load the production controller against explicit fake native snapshots to cover
+mixed/independent feeds, validation, timer readiness, pauses, changed-only work,
+hiding, settings, pooling and cleanup. Local source/diff review and pinned
+formatting do not establish live behavior, drawing submissions or FPS/GPU gains.
+
+## Heroic affix row — 2026-10-28
+
+The selected #04 affix row shares the run timer's existing phase-first reader,
+zone/run receipt handshake, deferred packet handling and tenth-second retry
+gate. It adds no event registration, updater, animation, setting or saved state.
+A visible accepted zone snapshot is parsed only when its identity, receipt,
+list bytes or language change. Static rows skip text lookup, anchors, UVs,
+visibility and texture writes; failed artwork remains retryable at ten Hz.
+Hidden owners allocate no affix rows and do no affix painting or metadata work.
+Zone/run/world retirement clears identities and owned hovers; Layout hiding
+inherits native visibility and the shared tooltip registry's cleanup.
+
+Each represented kind lazily allocates one mouse-enabled hover frame and two
+Texture regions, with no FontString. The chosen three kinds therefore cost at
+most three frames and six visible textures when all three are actually
+published. Frame and rim diameter is 22 units; the icon is `22 * 34 / 39`, with
+five-unit gaps and a three-unit offset below the bar. The existing Layout
+region adds the row's 25-unit vertical inset and includes any horizontal
+overflow without changing the saved timer geometry. Frames and successful
+artwork bindings remain pooled across publications and toggles.
+The same count/bounds transition refreshes only the default boss placement,
+reserving 33 units for the row and first boss caption; saved/draft positions
+remain authoritative. There is no per-frame placement or new layout polling.
+
+One new 256-by-64 lossless BLP atlas holds the three circular icons. Each icon
+uses its fixed 64-square UV cell; the red rim reuses the neutral jewelry crop
+at `(664,56)-(736,128)` in the existing atlas and the same native RGB tint
+path as jewelry. There is no native-circle call, strip fallback, changing UV
+animation or extra per-icon glow. Icon/rim alpha overlap, small persistent
+regions, texture/material differences and distinct UV clamps retain their
+normal renderer costs. Sharing an atlas does not establish batching or reduced
+draw submissions. No GPU-memory, live FPS or pixel-parity result is claimed.
+
+Eight CI-only scenarios extract the actual affix-view factory and use the
+production tooltip registry with explicit fake native widgets. They cover
+order/centering, exact rim crop/tint, unchanged and hidden work, malformed and
+unknown keys, receipt retirement, asset failure cadence, pooling, owned/foreign
+hover cleanup and all fourteen native name/description catalogs. The parent
+timer's event integration was source-reviewed; these mocks do not establish
+live delivery or the packaged Lua VM. Local work was source/diff inspection,
+image-data preparation and pinned formatting, without local tests, standalone
+validation or addon/game execution.

@@ -2,6 +2,7 @@
 DFRL:NewMod("Display", 0, function()
     local display, listeners, draft = {}, {}, nil
     local defaults = {
+        performanceMode = false,
         meterEnabled = false,
         meterRows = 6,
         layoutShowGrid = true,
@@ -21,6 +22,7 @@ DFRL:NewMod("Display", 0, function()
         meterShowTotalDps = true,
         customBanners = true,
         customRunTimer = true,
+        attachAffixes = true,
         customBossBars = true,
         lootMode = "sdui",
         lootShowMarks = true,
@@ -77,6 +79,7 @@ DFRL:NewMod("Display", 0, function()
         guardianGuidance = true,
         keepDefeatedGuardianIcons = false,
         guardianMinimapTimers = false,
+        minimapShowClock = false,
         mirrorCacheWaypoint = false,
         mirrorGuardianWaypoint = false,
         equippedJewelry = true,
@@ -132,6 +135,7 @@ DFRL:NewMod("Display", 0, function()
     end
     local function Normalize(source)
         return {
+            performanceMode = Read(source, "performanceMode"),
             meterEnabled = Read(source, "meterEnabled"),
             meterRows = Read(source, "meterRows"),
             layoutShowGrid = Read(source, "layoutShowGrid"),
@@ -151,6 +155,7 @@ DFRL:NewMod("Display", 0, function()
             meterShowTotalDps = Read(source, "meterShowTotalDps"),
             customBanners = Read(source, "customBanners"),
             customRunTimer = Read(source, "customRunTimer"),
+            attachAffixes = Read(source, "attachAffixes"),
             customBossBars = Read(source, "customBossBars"),
             lootMode = Read(source, "lootMode"),
             lootShowMarks = Read(source, "lootShowMarks"),
@@ -207,6 +212,7 @@ DFRL:NewMod("Display", 0, function()
             guardianGuidance = Read(source, "guardianGuidance"),
             keepDefeatedGuardianIcons = Read(source, "keepDefeatedGuardianIcons"),
             guardianMinimapTimers = Read(source, "guardianMinimapTimers"),
+            minimapShowClock = Read(source, "minimapShowClock"),
             mirrorCacheWaypoint = Read(source, "mirrorCacheWaypoint"),
             mirrorGuardianWaypoint = Read(source, "mirrorGuardianWaypoint"),
             equippedJewelry = Read(source, "equippedJewelry"),

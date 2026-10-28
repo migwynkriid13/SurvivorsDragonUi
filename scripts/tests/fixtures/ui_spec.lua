@@ -9,7 +9,7 @@ local function Test(name, callback)
     print("PASS " .. name)
 end
 
-local function Cooldowns()
+local function Cooldowns(setup)
     local context = H.New()
     local env = context.env
     context.settings.cooldownNumbers = true
@@ -20,6 +20,7 @@ local function Cooldowns()
         button.slot = index
         env.DFRL.actionButtons[index] = button
     end
+    if setup then setup(context, env) end
     local chunk = assert(loadfile(assert(arg[1], "missing extracted cooldown source")))
     setfenv(chunk, env)
     chunk()(bar)
@@ -65,6 +66,106 @@ Test("unchanged cooldowns do no presentation writes or allocations", function()
     context:NoPresentationWrites()
     assert(context.reads.cooldown == 7, "the native cooldown read must still run")
     assert(table.getn(context.objects) == allocated, "cooldown objects were reallocated")
+end)
+
+Test("cooldown captions cache only their displayed unit, value and language", function()
+    local context, _, controller = Cooldowns(function(current, env)
+        current.duration = 120
+        env.DFRL.locale.code = "en"
+        env.DFRL.locale.Text = function(unit)
+            current.reads.captions = (current.reads.captions or 0) + 1
+            return unit == "m" and env.DFRL.locale.code == "de" and "Min" or unit
+        end
+        env.GetActionCooldown = function()
+            current.reads.cooldown = (current.reads.cooldown or 0) + 1
+            return 1, current.duration, 1
+        end
+    end)
+    local overlay = context.env.DFRL.actionButtons[1].DFRL_cooldownNumber
+    assert(overlay.text:GetText() == "2m" and context.reads.captions == 7)
+    context:ResetCounts()
+    context.now = 2.05
+    context:Event(controller, "ACTIONBAR_UPDATE_COOLDOWN")
+    assert(
+        context.reads.cooldown == 7 and not context.reads.captions,
+        "cached captions skipped timing or repeated formatting"
+    )
+    context:NoPresentationWrites()
+    overlay.text.text, overlay.text.textColor = "native reset", { 0, 0, 0, 1 }
+    context:ResetCounts()
+    context:Event(controller, "ACTIONBAR_UPDATE_COOLDOWN")
+    assert(
+        not context.reads.captions and context.writes.SetText == 1 and context.writes.SetTextColor == 1,
+        "caption reuse hid actual native text or color restoration"
+    )
+    context.env.DFRL.locale.code = "de"
+    context:ResetCounts()
+    context:Event(controller, "ACTIONBAR_UPDATE_COOLDOWN")
+    assert(overlay.text:GetText() == "2Min" and context.reads.captions == 7, "language change reused an old suffix")
+    context.duration = 7200
+    context:ResetCounts()
+    context:Event(controller, "ACTIONBAR_UPDATE_COOLDOWN")
+    assert(overlay.text:GetText() == "2h" and context.reads.captions == 7, "the same rounded value reused another unit")
+    context.duration = 61
+    context:ResetCounts()
+    context:Event(controller, "ACTIONBAR_UPDATE_COOLDOWN")
+    assert(overlay.text:GetText() == "60" and context.reads.captions == 7, "unit transition reused a minute caption")
+    context.duration = 10
+    context:Event(controller, "ACTIONBAR_SLOT_CHANGED", 1)
+    assert(overlay.text:GetText() == "9", "native replacement retained a cached numeric caption")
+    context:SetSetting("cooldownNumbers", false)
+    assert(overlay.cooldownText == nil and overlay.cooldownValue == nil, "disable retained caption state")
+    context:ResetCounts()
+    context:SetSetting("cooldownNumbers", true)
+    assert(
+        context.reads.cooldown == 7 and context.reads.captions == 7,
+        "reenabling did not reread and rebuild captions"
+    )
+end)
+
+Test("cached cooldown captions retry failed native text writes", function()
+    local context, _, controller = Cooldowns(function(current, env)
+        env.DFRL.locale.code = "en"
+        env.DFRL.locale.Text = function(unit)
+            current.reads.captions = (current.reads.captions or 0) + 1
+            return unit == "m" and env.DFRL.locale.code == "de" and "Min" or unit
+        end
+        env.GetActionCooldown = function()
+            current.reads.cooldown = (current.reads.cooldown or 0) + 1
+            return 1, 120, 1
+        end
+    end)
+    local overlay = context.env.DFRL.actionButtons[1].DFRL_cooldownNumber
+    context.env.DFRL.locale.code, context.failText = "de", "2Min"
+    local success = pcall(function() context:Event(controller, "ACTIONBAR_UPDATE_COOLDOWN") end)
+    assert(not success and overlay.text:GetText() == "2m", "injected native setter failure did not reach the caption")
+    context:ResetCounts()
+    context:Event(controller, "ACTIONBAR_UPDATE_COOLDOWN")
+    assert(
+        overlay.text:GetText() == "2Min" and context.reads.cooldown == 7 and context.reads.captions == 6,
+        "a failed native write prevented retry or repeated successful formatting"
+    )
+end)
+
+Test("cooldown caption reuse retains every-frame final-window reads and exact zero threshold", function()
+    local context, _, controller = Cooldowns(function(current, env)
+        current.now = 1
+        env.GetActionCooldown = function()
+            current.reads.cooldown = (current.reads.cooldown or 0) + 1
+            return 1, 0.1, 1
+        end
+    end)
+    local overlay = context.env.DFRL.actionButtons[1].DFRL_cooldownNumber
+    assert(overlay.text:GetText() == "1", "exactly100ms no longer displayed1")
+    context:ResetCounts()
+    context:Call(controller, "OnUpdate", 0.001)
+    assert(context.reads.cooldown == 7, "the final-window refresh was throttled by caption reuse")
+    context.now = 1.001
+    context:Call(controller, "OnUpdate", 0.001)
+    assert(overlay.text:GetText() == "0" and context.reads.cooldown == 14, "positive final-zero sampling changed")
+    context.now = 1.2
+    context:Call(controller, "OnUpdate", 0.001)
+    assert(not overlay:IsShown() and context.reads.cooldown == 21, "expiration lost its final native sample")
 end)
 
 Test("hidden and disabled cooldowns skip reads and painting", function()
@@ -116,6 +217,168 @@ Test("range indicators reuse their texture and never restart an unchanged fade",
     assert(not texture:IsShown() and not texture.showing, "hidden range effect was not cleared")
 end)
 
+Test("range passes share fresh target reads and retain each visible button's range", function()
+    local context = H.New()
+    local env = context.env
+    local bar = env.CreateFrame("Frame", nil, env.UIParent)
+    local buttons = {}
+    context.rangeValues = {}
+    for index = 1, 7 do
+        local button = env.CreateFrame("Button", nil, bar)
+        button.slot = index
+        if index <= 2 then button:Hide() end
+        local nativeVisible = button.IsVisible
+        function button:IsVisible()
+            if not context.changingVisibility then context.reads.visibility = (context.reads.visibility or 0) + 1 end
+            return nativeVisible(self)
+        end
+        buttons[index], context.rangeValues[index] = button, 0
+    end
+    env.DFRL.mainBar, env.DFRL.actionButtons = bar, buttons
+    env.UnitExists = function(unit)
+        assert(unit == "target")
+        context.reads.target = (context.reads.target or 0) + 1
+        return context.hasTarget ~= false
+    end
+    env.UnitCanAttack = function(unit, target)
+        assert(unit == "player" and target == "target")
+        context.reads.attack = (context.reads.attack or 0) + 1
+        return context.attackable ~= false
+    end
+    env.IsActionInRange = function(slot)
+        context.reads.range = (context.reads.range or 0) + 1
+        return context.rangeValues[slot]
+    end
+    context:Load("modules/bars/range.lua", "RangeIndicator")
+    local controller = context:Controller("PLAYER_TARGET_CHANGED")
+    context:Event(controller, "PLAYER_TARGET_CHANGED")
+    assert(not buttons[1].rangeIndicator and not buttons[2].rangeIndicator, "hidden buttons allocated range artwork")
+    local allocated = table.getn(context.objects)
+    context:ResetCounts()
+    context:Event(controller, "PLAYER_TARGET_CHANGED")
+    context:NoPresentationWrites()
+    assert(context.reads.visibility == 7, "a range pass repeated button visibility reads")
+    assert(context.reads.target == 1 and context.reads.attack == 1, "visible buttons repeated shared target reads")
+    assert(context.reads.range == 5 and table.getn(context.objects) == allocated, "per-button range checks changed")
+
+    context.hasTarget = false
+    context:ResetCounts()
+    context:Event(controller, "PLAYER_TARGET_CHANGED")
+    assert(
+        context.reads.target == 1 and not context.reads.attack and not context.reads.range,
+        "missing target was resampled"
+    )
+    assert(context.writes.UIFrameFadeOut == 5, "target loss did not retire each active range fade")
+    context:ResetCounts()
+    context:Event(controller, "PLAYER_TARGET_CHANGED")
+    context:NoPresentationWrites()
+    assert(context.reads.target == 1 and not context.reads.attack and not context.reads.range)
+
+    context.hasTarget, context.attackable = true, false
+    context:ResetCounts()
+    context:Event(controller, "SPELLS_CHANGED")
+    context:NoPresentationWrites()
+    assert(
+        context.reads.target == 1 and context.reads.attack == 1 and not context.reads.range,
+        "friendly target used ranges"
+    )
+    context.attackable, context.rangeValues[3] = true, 1
+    context:ResetCounts()
+    context:Event(controller, "ACTIONBAR_SLOT_CHANGED")
+    assert(context.reads.target == 1 and context.reads.attack == 1 and context.reads.range == 5)
+    assert(not buttons[3].rangeIndicator.showing and buttons[4].rangeIndicator.showing, "button ranges were shared")
+    buttons[1]:Show()
+    context:Event(controller, "PLAYER_TARGET_CHANGED")
+    assert(buttons[1].rangeIndicator and not buttons[2].rangeIndicator, "visible recovery did not allocate lazily")
+
+    bar:Hide()
+    assert(controller:GetScript("OnUpdate") == nil, "hidden bar kept range polling")
+    allocated = table.getn(context.objects)
+    context:ResetCounts()
+    context:Event(controller, "PLAYER_TARGET_CHANGED")
+    context:NoPresentationWrites()
+    assert(
+        not context.reads.target and not context.reads.attack and not context.reads.range,
+        "hidden pass read its target"
+    )
+    assert(table.getn(context.objects) == allocated, "hidden range cleanup allocated artwork")
+    for _, button in ipairs(buttons) do
+        local indicator = button.rangeIndicator
+        assert(
+            not indicator or (not indicator.showing and not indicator:IsShown()),
+            "hidden range fade survived cleanup"
+        )
+    end
+end)
+
+Test("performance mode replaces range fades with static warnings and restores normal fades", function()
+    local context = H.New()
+    local env = context.env
+    local bar = env.CreateFrame("Frame", nil, env.UIParent)
+    local button = env.CreateFrame("Button", nil, bar)
+    button.slot = 1
+    env.DFRL.mainBar, env.DFRL.actionButtons = bar, { button }
+    context:Load("modules/bars/range.lua", "RangeIndicator")
+    local controller = context:Controller("PLAYER_TARGET_CHANGED")
+    context:Event(controller, "PLAYER_TARGET_CHANGED")
+    assert(context.writes.UIFrameFadeIn == 1, "normal range warning did not start its fade")
+    context:ResetCounts()
+    context:SetSetting("performanceMode", true)
+    local indicator = button.rangeIndicator
+    assert(indicator:IsShown() and indicator:GetAlpha() == 0.5, "static mode lost the range warning")
+    assert(context.writes.UIFrameFadeRemoveFrame == 1, "active native fade was not removed")
+    assert(not context.writes.UIFrameFadeIn and not context.writes.UIFrameFadeOut, "static mode started a fade")
+    local allocated = #context.objects
+    context:ResetCounts()
+    context:Event(controller, "PLAYER_TARGET_CHANGED")
+    context:NoPresentationWrites()
+    context.inRange = true
+    context:Event(controller, "PLAYER_TARGET_CHANGED")
+    assert(not indicator:IsShown() and not context.writes.UIFrameFadeOut, "static warning faded instead of hiding")
+    context.inRange = false
+    context:Event(controller, "PLAYER_TARGET_CHANGED")
+    context:ResetCounts()
+    context:SetSetting("performanceMode", false)
+    assert(context.writes.UIFrameFadeIn == 1 and #context.objects == allocated, "normal fade did not reuse the warning")
+    bar:Hide()
+    context:ResetCounts()
+    context:SetSetting("performanceMode", true)
+    assert(not indicator:IsShown() and controller:GetScript("OnUpdate") == nil, "hidden bar resumed range work")
+    context:NoPresentationWrites()
+end)
+
+Test("performance mode keeps loot opaque until the original expiry and resumes in-flight fades", function()
+    local context, service, animation = Loot({ performanceMode = true })
+    Deliver(context, service, "Static loot")
+    local card
+    for _, object in ipairs(context.objects) do
+        if object.entry and object.entry.name == "Static loot" then card = object end
+    end
+    assert(card and card:GetAlpha() == 1, "static loot started transparent")
+    local started, allocated = card.started, #context.objects
+    context.now = started + 4.2
+    context:ResetCounts()
+    context:Call(animation, "OnUpdate", 4.2)
+    context:NoPresentationWrites()
+    assert(card:GetAlpha() == 1, "static loot faded before expiry")
+    local display = context.env.DFRL.display
+    display.BeginEdit()
+    display.Set("performanceMode", false)
+    assert(card:GetAlpha() > 0 and card:GetAlpha() < 1, "normal mode did not restore the current fade-out")
+    local faded = card:GetAlpha()
+    display.Set("performanceMode", true)
+    assert(card:GetAlpha() == 1 and card.started == started, "mode preview restarted the loot lifetime")
+    display.Set("performanceMode", false)
+    assert(card:GetAlpha() == faded, "normal fade resumed from a different lifetime")
+    display.FinishEdit(false)
+    context:SetLayoutHidden(true)
+    context.now = started + 5.56
+    context:Call(animation, "OnUpdate", 1.36)
+    context:SetLayoutHidden(false)
+    assert(not card.entry and not animation:GetScript("OnUpdate"), "hidden static loot replayed after expiry")
+    assert(#context.objects == allocated, "loot mode previews allocated replacement cards")
+end)
+
 Test("loot cards reuse the bounded pool and clear retired bindings", function()
     local context, service, animation = Loot()
     Deliver(context, service, "First")
@@ -135,6 +398,48 @@ Test("loot cards reuse the bounded pool and clear retired bindings", function()
     Deliver(context, service, "Second")
     assert(first.entry and first.entry.name == "Second", "the free card was not reused")
     assert(table.getn(context.objects) == allocated, "loot pool grew on reuse")
+end)
+
+Test("loot holds skip card traversal until fade or retry and reuse one animation callback", function()
+    local context, service, animation = Loot()
+    Deliver(context, service, "First")
+    local callback = animation:GetScript("OnUpdate")
+    Deliver(context, service, "Second")
+    Deliver(context, service, "Third")
+    assert(callback == animation:GetScript("OnUpdate"), "each accepted card allocated a new animation callback")
+    local root = context.env.DFRL_LootNotifications
+    local visible = root.IsVisible
+    function root:IsVisible()
+        context.reads.lootVisibility = (context.reads.lootVisibility or 0) + 1
+        return visible(self)
+    end
+    context.now = context.now + 0.3
+    context:Call(animation, "OnUpdate", 0.3)
+    context:ResetCounts()
+    for _ = 1, 30 do
+        context.now = context.now + 0.01
+        context:Call(animation, "OnUpdate", 0.01)
+    end
+    assert(context.reads.lootVisibility == 30, "settled cards repeated root visibility reads within each frame")
+    context:NoPresentationWrites()
+    local cards = {}
+    for _, object in ipairs(context.objects) do
+        if object.entry and object.entry.name then cards[#cards + 1] = object end
+    end
+    assert(#cards == 3 and cards[1]:GetAlpha() == 1 and cards[2]:GetAlpha() == 1 and cards[3]:GetAlpha() == 1)
+    context.now = cards[1].started + 4.2
+    context:ResetCounts()
+    context:Call(animation, "OnUpdate", 3.6)
+    local alpha = (5.55 - (context.now - cards[1].started)) / 1.5
+    assert(math.abs(cards[1]:GetAlpha() - alpha) < 1e-12, "first fading frame lost its original alpha equation")
+    assert(context.writes.SetAlpha == 3, "settled hold failed to wake when fade began")
+    context:SetLayoutHidden(true)
+    context.now = cards[1].started + 5.56
+    context:Call(animation, "OnUpdate", 1.36)
+    assert(not animation:GetScript("OnUpdate"), "hidden deadline did not retire the cards")
+    for _, card in ipairs(cards) do
+        assert(not card.entry, "hidden hold replayed expired loot")
+    end
 end)
 
 Test("loot defaults and all three modes use shared preview profiles Confirm Cancel and reset", function()
@@ -304,6 +609,30 @@ Test("unchanged settled loot writes nothing and a full pool never allocates a fo
     end
     assert(active == 3, "loot pool did not preserve its three-card bound")
     assert(table.getn(context.objects) == allocated, "a full loot pool allocated more regions")
+end)
+
+Test("a full loot pool defers queued metadata resolution until delivery", function()
+    local context, service, animation = Loot()
+    local reads = 0
+    context.env.GetItemInfo = function()
+        reads = reads + 1
+        return "Native item", nil, 3, nil, nil, nil, nil, "INVTYPE_HEAD", "Interface\\Icons\\NativeItem"
+    end
+    for index = 1, 3 do
+        Deliver(context, service, { name = "Item " .. index, itemReference = "item:" .. index })
+    end
+    assert(reads == 3, "accepted cards did not resolve their native metadata")
+    local queued = { name = "Queued item", itemReference = "item:4" }
+    Deliver(context, service, queued)
+    for _ = 1, 5 do
+        context:Call(service, "OnUpdate", 0.2)
+    end
+    assert(reads == 3, "a full pool repeatedly resolved its waiting head")
+    assert(queued.icon == nil, "resolution mutated the intake entry")
+    context.now = context.now + 10
+    context:Call(animation, "OnUpdate", 0.1)
+    context:Call(service, "OnUpdate", 0.2)
+    assert(reads == 4, "freed capacity did not resolve the queued item exactly once")
 end)
 
 Test("hidden loot stops cosmetic writes but expires before being shown again", function()

@@ -278,7 +278,11 @@ DFRL:NewMod("Mini", 1, function()
             if hidden == portraitsHidden then return end
             portraitsHidden = hidden
             for _, strip in ipairs(borderStrips) do
-                strip:SetAlpha(hidden and 0 or 1)
+                if hidden then
+                    if strip:IsShown() then strip:Hide() end
+                elseif not strip:IsShown() then
+                    strip:Show()
+                end
             end
             if hidden then
                 portraitless:Show()
@@ -351,7 +355,11 @@ DFRL:NewMod("Mini", 1, function()
                 frame:ClearAllPoints()
                 frame:SetPoint("TOPLEFT", partyRoot, "TOPLEFT", 0, 0)
             end
-            if _G[prefix .. "Texture"] then _G[prefix .. "Texture"]:SetAlpha(0) end
+            local nativeTexture = _G[prefix .. "Texture"]
+            if nativeTexture then
+                nativeTexture:Hide()
+                nativeTexture.Show = nativeTexture.Hide
+            end
             local borderFrame = CreateFrame("Frame", nil, frame)
             borderFrame:SetAllPoints(frame)
             borderFrame:SetFrameLevel(math.max(health:GetFrameLevel(), mana:GetFrameLevel()) + 1)
@@ -452,12 +460,18 @@ DFRL:NewMod("Mini", 1, function()
                 end
                 values.healthLabels.SetInsets(extension + healthUnderlap, healthUnderlap, extension / 2)
                 for _, strip in ipairs(fullBorder) do
-                    local alpha = shown and 1 or 0
-                    if strip:GetAlpha() ~= alpha then strip:SetAlpha(alpha) end
+                    if shown then
+                        if not strip:IsShown() then strip:Show() end
+                    elseif strip:IsShown() then
+                        strip:Hide()
+                    end
                 end
                 for _, strip in ipairs(healthOnlyBorder) do
-                    local alpha = shown and 0 or 1
-                    if strip:GetAlpha() ~= alpha then strip:SetAlpha(alpha) end
+                    if shown then
+                        if strip:IsShown() then strip:Hide() end
+                    elseif not strip:IsShown() then
+                        strip:Show()
+                    end
                 end
             end
             DFRL.display.Listen(UpdateResources)

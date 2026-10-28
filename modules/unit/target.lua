@@ -23,10 +23,18 @@ DFRL:NewMod("Target", 1, function()
     local setHealthColor = TargetFrameHealthBar.SetStatusBarColor
     TargetFrameHealthBar.SetStatusBarColor = function(bar)
         if not TargetFrame:IsVisible() then return end
+        local red, green, blue = 1, 0, 0
         if T.IsPlayerOrPartyUnit("target") then
-            setHealthColor(bar, 0, 1, 0)
-        else
-            setHealthColor(bar, 1, 0, 0)
+            red, green = 0, 1
+        end
+        local currentRed, currentGreen, currentBlue, currentAlpha = bar:GetStatusBarColor()
+        if
+            not T.NearlyEqual(currentRed, red)
+            or not T.NearlyEqual(currentGreen, green)
+            or not T.NearlyEqual(currentBlue, blue)
+            or (currentAlpha and not T.NearlyEqual(currentAlpha, 1))
+        then
+            setHealthColor(bar, red, green, blue)
         end
     end
     local UpdateBorderTexture, _, _, resizeHealth, editRegion = T.CreateUnitBorder(

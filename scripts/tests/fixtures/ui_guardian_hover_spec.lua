@@ -8,7 +8,10 @@ local function Fixture()
     function minimap:GetCenter() return 0, 0 end
     function minimap:GetEffectiveScale() return 1.5 end
     local tooltip = { shown = false }
-    function tooltip:IsOwned(owner) return self.owner == owner end
+    function tooltip:IsOwned(owner)
+        state.ownerReads = (state.ownerReads or 0) + 1
+        return self.owner == owner
+    end
     function tooltip:IsShown() return self.shown end
     function tooltip:IsVisible() return self.shown end
     function tooltip:SetOwner(owner)
@@ -35,6 +38,7 @@ local function Fixture()
         MinimapEntries = function() return entries end,
         GetCursorPosition = function() return state.cursorX, state.cursorY end,
         T = { GetLocalSize = function() return 100, 100 end },
+        navigation = { MinimapSize = function() return 100, 100 end },
         DFRL = {
             layout = {
                 IsEditing = function() return state.editing end,
@@ -143,11 +147,17 @@ print("PASS guardian hover respects Tooltip hiding, re-entry and editing")
 
 state = Fixture()
 state.Update()
+state.env.DFRL.actionButtons = {}
+for index = 1, 20 do
+    state.env.DFRL.actionButtons[index] = {}
+end
 state.Place()
 assert(state.cursorPlacements == 1 and not state.tooltip.point, "guardian tooltip used the bottom-right Layout seat")
 state.writes = 0
+state.ownerReads = 0
 state.Place()
 assert(state.cursorPlacements == 2 and state.writes == 0, "guardian placement fought the shared cursor helper")
+assert(state.ownerReads == 1, "a stable tooltip owner rescanned the icon registries")
 state.tooltip.owner = {}
 state.Place()
 assert(state.tooltip.point[1] == "BOTTOMRIGHT" and state.tooltip.point[2] == state.env.tooltipRoot)
@@ -164,3 +174,30 @@ state.cursorPreference, state.tooltip.owner, state.pin.visible = false, state.pi
 state.Place()
 assert(not state.tooltip.shown and state.cursorPlacements == 3, "hidden guardian owner kept a cursor tooltip")
 print("PASS shared tooltip controller forces only guardian pins to the cursor and preserves ordinary placement")
+
+state = Fixture()
+local worldOwner = {}
+state.tooltip.owner, state.tooltip.shown = worldOwner, true
+state.env.currentOwner = worldOwner
+state.env.DFRL.actionButtons, state.env.DFRL.characterItemButtons = {}, {}
+for index = 1, 24 do
+    state.env.DFRL.actionButtons[index] = {}
+    state.env.DFRL.characterItemButtons[index] = {}
+end
+state.ownerReads = 0
+state.Place()
+assert(state.ownerReads == 1, "an observed world owner repeated native IsOwned for every icon")
+assert(state.tooltip.point[1] == "BOTTOMRIGHT", "observed foreign owner lost the Layout seat")
+local button = { IsVisible = function() return true end }
+state.env.DFRL.actionButtons[1] = button
+state.tooltip.owner = button
+state.ownerReads = 0
+state.Place()
+assert(
+    state.ownerReads > 1 and state.tooltip.point[2] == button,
+    "unreported native owner replacement skipped discovery"
+)
+state.ownerReads = 0
+state.Place()
+assert(state.ownerReads == 1, "recovered native owner did not use the single verified owner check")
+print("PASS observed foreign owner uses one native ownership read and unreported changes retain discovery")

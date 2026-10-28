@@ -18,6 +18,8 @@ DFRL:NewMod("LootView", 4, function()
     local FADE_IN, FADE_START, LIFETIME = 0.2, 4.05, 5.55
     local pool, visible, count = {}, {}, 0
     local ready, needsReflow, prepared = true, false, false
+    local nextUpdateAt
+    local performanceMode = DFRL.display.Get("performanceMode")
     local frame = CreateFrame("Frame", "DFRL_LootNotifications", UIParent)
     frame:SetWidth(WIDTH)
     frame:SetHeight(HEIGHT + (LIMIT - 1) * STEP)
@@ -76,6 +78,7 @@ DFRL:NewMod("LootView", 4, function()
             visible[index] = nil
         end
         count = 0
+        nextUpdateAt = nil
         table.setn(visible, 0)
         if animation:GetScript("OnUpdate") then animation:SetScript("OnUpdate", nil) end
         if frame:IsShown() then frame:Hide() end
@@ -190,6 +193,9 @@ DFRL:NewMod("LootView", 4, function()
 
     local function Update()
         local now, changed = GetTime(), false
+        local paint = frame:IsVisible()
+        if nextUpdateAt and now < nextUpdateAt and not (needsReflow and paint) then return end
+        local nextAt, animating
         for index = count, 1, -1 do
             local card = visible[index]
             local elapsed = now - card.started
@@ -199,11 +205,23 @@ DFRL:NewMod("LootView", 4, function()
                 count = count - 1
                 changed = true
             else
-                if frame:IsVisible() then
+                if paint then
                     if card.presentationDirty then Refresh(card) end
-                    local alpha = math.min(1, math.max(0, elapsed / FADE_IN))
-                    if elapsed > FADE_START then alpha = (LIFETIME - elapsed) / (LIFETIME - FADE_START) end
+                    local alpha = 1
+                    if not performanceMode then
+                        alpha = math.min(1, math.max(0, elapsed / FADE_IN))
+                        if elapsed > FADE_START then alpha = (LIFETIME - elapsed) / (LIFETIME - FADE_START) end
+                    end
                     SetAlpha(card, alpha)
+                    if not performanceMode and (elapsed < FADE_IN or elapsed > FADE_START) then
+                        animating = true
+                    else
+                        local fadeAt = card.started + (performanceMode and LIFETIME or FADE_START)
+                        nextAt = nextAt and math.min(nextAt, fadeAt) or fadeAt
+                    end
+                else
+                    local expiresAt = card.started + LIFETIME
+                    nextAt = nextAt and math.min(nextAt, expiresAt) or expiresAt
                 end
                 -- Exact item references sometimes acquire native metadata after
                 -- delivery. Retry for two seconds, never by a guessed item name.
@@ -212,6 +230,7 @@ DFRL:NewMod("LootView", 4, function()
                     card.retryAt = elapsed < 2 and card.entry.iconSource ~= "native" and now + 0.2 or nil
                     Refresh(card)
                 end
+                if card.retryAt then nextAt = nextAt and math.min(nextAt, card.retryAt) or card.retryAt end
             end
         end
         if changed then table.setn(visible, count) end
@@ -219,6 +238,13 @@ DFRL:NewMod("LootView", 4, function()
         if count == 0 then
             animation:SetScript("OnUpdate", nil)
             frame:Hide()
+        end
+        nextUpdateAt = not animating and nextAt or nil
+    end
+    local function Tick()
+        if not pcall(Update) then
+            ready = false
+            Clear()
         end
     end
     local function Push(entry)
@@ -234,7 +260,9 @@ DFRL:NewMod("LootView", 4, function()
             end
         end
         if not card then return false end
+        entry = loot.Resolve(entry)
         card.entry, card.started = entry, GetTime()
+        nextUpdateAt = nil
         card.retryAt = entry.itemReference and entry.iconSource ~= "native" and card.started + 0.2 or nil
         Refresh(card)
         count = count + 1
@@ -242,21 +270,17 @@ DFRL:NewMod("LootView", 4, function()
         table.setn(visible, count)
         Reflow()
         if frame:IsVisible() then
-            SetAlpha(card, 0)
+            SetAlpha(card, performanceMode and 1 or 0)
         else
             card.paintedAlpha = nil
         end
         card:Show()
         if count == 1 then frame:Show() end
-        animation:SetScript("OnUpdate", function()
-            if not pcall(Update) then
-                ready = false
-                Clear()
-            end
-        end)
+        if not animation:GetScript("OnUpdate") then animation:SetScript("OnUpdate", Tick) end
         return true
     end
     HookScript(frame, "OnShow", function()
+        nextUpdateAt = nil
         if not pcall(Update) then
             ready = false
             Clear()
@@ -278,6 +302,13 @@ DFRL:NewMod("LootView", 4, function()
                 return
             end
         end
+    end)
+    DFRL.display.Listen(function()
+        local enabled = DFRL.display.Get("performanceMode")
+        if performanceMode == enabled then return end
+        performanceMode = enabled
+        nextUpdateAt = nil
+        Tick()
     end)
     loot.SetRenderer({ IsReady = EnsurePool, Push = Push, Clear = Clear })
 end)

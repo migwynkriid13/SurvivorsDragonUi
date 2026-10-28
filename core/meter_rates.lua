@@ -42,7 +42,9 @@ function DFRL.tools.NewMeterSession()
         views, active, resetAt = {}, true, nil
     end
     function session.IsReset() return active end
-    function session.Apply(index, source, total, rate, time)
+    -- The visible reader supplies a fresh token for each validated publication.
+    -- Callers without one retain the complete counter comparison on every read.
+    function session.Apply(index, source, total, rate, time, publication)
         if not active then return source, total, rate end
         if Number(time) then
             if resetAt and time < resetAt then session.Reset() end
@@ -55,15 +57,19 @@ function DFRL.tools.NewMeterSession()
         end
         local serial, regressed = state.serial + 1, total < state.total
         local changed = state.amount == nil or total ~= state.total
-        for order, entry in ipairs(source) do
-            local record = Record(state, entry)
-            if record.last and entry.dmg < record.last then regressed = true end
-            if record.last ~= entry.dmg or record.order ~= order or record.class ~= entry.class then changed = true end
-            record.seen = serial
-        end
-        for _, kinds in pairs(state.sources) do
-            for _, record in pairs(kinds) do
-                if record.seen ~= serial then regressed = true end
+        if not publication or publication ~= state.publication then
+            for order, entry in ipairs(source) do
+                local record = Record(state, entry)
+                if record.last and entry.dmg < record.last then regressed = true end
+                if record.last ~= entry.dmg or record.order ~= order or record.class ~= entry.class then
+                    changed = true
+                end
+                record.seen = serial
+            end
+            for _, kinds in pairs(state.sources) do
+                for _, record in pairs(kinds) do
+                    if record.seen ~= serial then regressed = true end
+                end
             end
         end
         if regressed then
@@ -74,6 +80,7 @@ function DFRL.tools.NewMeterSession()
             changed = true
         end
         local elapsed = Number(time) and resetAt and math.max(1, time - resetAt) or nil
+        state.publication = publication
         if not changed then
             for _, row in ipairs(state.rows) do
                 row.dps = elapsed and row.dmg / elapsed or nil
@@ -113,7 +120,7 @@ function DFRL.tools.NewMeterDps(window)
     local STEP, CAPACITY, MAX_WINDOW = 0.2, 604, 120
     local model = { window = window, revision = 0, valid = false }
     local sources, seen = {}, {}
-    local lastTime, lastTotal, sampledAt, startedAt
+    local lastTime, lastTotal, sampledAt, startedAt, lastPublication
     local function Number(value) return type(value) == "number" and value - value == 0 and value >= 0 end
     local function Series() return { times = {}, values = {}, first = 1, count = 0 } end
     local header = Series()
@@ -172,7 +179,7 @@ function DFRL.tools.NewMeterDps(window)
     function model.Clear()
         if not lastTime and not next(seen) then return end
         sources, seen, header = {}, {}, Series()
-        lastTime, lastTotal, sampledAt, startedAt = nil, nil, nil, nil
+        lastTime, lastTotal, sampledAt, startedAt, lastPublication = nil, nil, nil, nil, nil
         model.valid = false
         model.revision = model.revision + 1
     end
@@ -194,59 +201,73 @@ function DFRL.tools.NewMeterDps(window)
         if value == 0 then model.Suspend() end
     end
     function model.NeedsRead() return model.window > 0 end
-    function model.Observe(time, lines, total, nativeRate)
+    function model.Observe(time, lines, total, nativeRate, publication)
         if not Number(time) or not Number(total) or not Number(nativeRate) or type(lines) ~= "table" then
             return false
         end
-        for name in pairs(seen) do
-            seen[name] = nil
-        end
         local regressed = (lastTime and time < lastTime) or (lastTotal and total < lastTotal)
-        for _, entry in ipairs(lines) do
-            if
-                type(entry) ~= "table"
-                or type(entry.name) ~= "string"
-                or entry.name == ""
-                or not Number(entry.dmg)
-                or not Number(entry.dps)
-                or not Number(entry.share)
-                or entry.share > 1
-            then
-                return false
+        local publicationChanged = not publication or publication ~= lastPublication
+        if publicationChanged then
+            for name in pairs(seen) do
+                seen[name] = nil
             end
-            local kind = entry.proc == 1 and 1 or 0
-            local bit = kind + 1
-            local flags = seen[entry.name] or 0
-            if flags == bit or flags == 3 then return false end
-            seen[entry.name] = flags + bit
-            local series = sources[entry.name] and sources[entry.name][kind]
-            if series and entry.dmg < series.value then regressed = true end
-        end
-        for name, kinds in pairs(sources) do
-            for kind in pairs(kinds) do
-                if seen[name] ~= kind + 1 and seen[name] ~= 3 then regressed = true end
+            for _, entry in ipairs(lines) do
+                if
+                    type(entry) ~= "table"
+                    or type(entry.name) ~= "string"
+                    or entry.name == ""
+                    or not Number(entry.dmg)
+                    or not Number(entry.dps)
+                    or not Number(entry.share)
+                    or entry.share > 1
+                then
+                    return false
+                end
+                local kind = entry.proc == 1 and 1 or 0
+                local bit = kind + 1
+                local flags = seen[entry.name] or 0
+                if flags == bit or flags == 3 then return false end
+                seen[entry.name] = flags + bit
+                local series = sources[entry.name] and sources[entry.name][kind]
+                if series and entry.dmg < series.value then regressed = true end
+            end
+            for name, kinds in pairs(sources) do
+                for kind in pairs(kinds) do
+                    if seen[name] ~= kind + 1 and seen[name] ~= 3 then regressed = true end
+                end
             end
         end
-        if regressed then model.Clear() end
+        if regressed then
+            model.Clear()
+            publicationChanged = true
+        end
         -- Never bridge unobserved time after hiding, lost updates or a view gap.
         if lastTime and time - lastTime > 2 then model.Suspend() end
         local beginning = not startedAt
         local sample = model.window > 0 and (not sampledAt or time == sampledAt or time - sampledAt >= STEP)
-        for _, entry in ipairs(lines) do
-            local kinds = sources[entry.name]
-            if not kinds then
-                kinds = {}
-                sources[entry.name] = kinds
+        if publicationChanged then
+            for _, entry in ipairs(lines) do
+                local kinds = sources[entry.name]
+                if not kinds then
+                    kinds = {}
+                    sources[entry.name] = kinds
+                end
+                local kind = entry.proc == 1 and 1 or 0
+                local series = kinds[kind]
+                if not series then
+                    series = Series()
+                    kinds[kind] = series
+                    if not beginning and model.window > 0 then Push(series, lastTime, 0) end
+                end
+                series.value = entry.dmg
+                if sample then Push(series, time, entry.dmg) end
             end
-            local kind = entry.proc == 1 and 1 or 0
-            local series = kinds[kind]
-            if not series then
-                series = Series()
-                kinds[kind] = series
-                if not beginning and model.window > 0 then Push(series, lastTime, 0) end
+        elseif sample then
+            for _, kinds in pairs(sources) do
+                for _, series in pairs(kinds) do
+                    Push(series, time, series.value)
+                end
             end
-            series.value = entry.dmg
-            if sample then Push(series, time, entry.dmg) end
         end
         header.value = total
         if sample then
@@ -255,6 +276,7 @@ function DFRL.tools.NewMeterDps(window)
             if beginning then startedAt = time end
         end
         lastTime, lastTotal, model.valid = time, total, true
+        lastPublication = publication
         return true
     end
     local function Rate(series, nativeAverage)

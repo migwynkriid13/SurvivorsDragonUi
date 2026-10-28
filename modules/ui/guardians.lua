@@ -208,12 +208,13 @@ DFRL:NewMod("GuardianRoster", 2, function()
             return snapshot
         end
         snapshot.zone = zone and Copy(zone, snapshot.zone) or nil
-        local health = Health()
-        local now = Native("AZS_GetRunTime")
+        local health
+        local now, clockRead
         for index, entry in ipairs(lairs) do
             local row = Copy(entry, snapshot.rows[index])
             counts.total = counts.total + 1
             if Living(row) then
+                if not health then health = Health() end
                 row.status = row.state == "awake" and "fighting" or "asleep"
                 counts.living = counts.living + 1
                 local unit = health[row.id]
@@ -222,6 +223,9 @@ DFRL:NewMod("GuardianRoster", 2, function()
                     row.healthFraction = math.max(0, math.min(1, unit.hp / unit.maximum))
                 end
             elseif Number(row.left) and row.left > 0 then
+                if not clockRead then
+                    now, clockRead = Native("AZS_GetRunTime"), true
+                end
                 row.status = "returning"
                 row.remaining = roster.Remaining(row.left, now)
             elseif row.left == 0 then

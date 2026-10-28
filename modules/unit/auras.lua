@@ -96,7 +96,7 @@ DFRL:NewMod("Player Auras", 2, function()
         end
     end
 
-    local previousRows
+    local previousRows, layoutDirty = nil, true
     local function Layout(force)
         local paint = container:IsVisible()
         if not paint and not editing then return end
@@ -107,6 +107,7 @@ DFRL:NewMod("Player Auras", 2, function()
                 PlaceNativeFrame(frame)
             end
         end
+        if not force and not layoutDirty and not editing then return end
         local slot = 0
         for _, entry in ipairs(entries) do
             if entry.button:IsShown() then
@@ -133,6 +134,7 @@ DFRL:NewMod("Player Auras", 2, function()
             previousRows = rows
             DFRL.layout.Place("buffs", container)
         end
+        layoutDirty = false
     end
 
     local timers, hovered = {}, nil
@@ -185,7 +187,9 @@ DFRL:NewMod("Player Auras", 2, function()
             Tooltip(entry)
         end)
         button:SetScript("OnLeave", HideHover)
+        button:SetScript("OnShow", function() layoutDirty = true end)
         button:SetScript("OnHide", function()
+            layoutDirty = true
             if hovered == entry then HideHover() end
         end)
         T.RegisterTooltipIcon(button, nil, "below")
@@ -199,6 +203,7 @@ DFRL:NewMod("Player Auras", 2, function()
         entry.icon:SetTexture(nil)
         T.SetTextIfChanged(entry.duration, "")
         entry.name, entry.kind, entry.wait, entry.remaining, entry.ready, entry.texture = nil, nil, nil, nil, nil, nil
+        entry.durationSecond, entry.durationText = nil, nil
     end
     local function ClearTimers()
         HideHover()
@@ -223,6 +228,14 @@ DFRL:NewMod("Player Auras", 2, function()
         local seconds = math.ceil(value)
         if seconds < 60 then return tostring(seconds) end
         return string.format("%d:%02d", math.floor(seconds / 60), math.mod(seconds, 60))
+    end
+    local function SetTimerDuration(entry, remaining)
+        local second = math.ceil(remaining)
+        if entry.durationSecond ~= second or entry.durationText == nil then
+            local text = Time(second)
+            entry.durationSecond, entry.durationText = second, text
+        end
+        T.SetTextIfChanged(entry.duration, entry.durationText)
     end
     local function RefreshTimers()
         if not inWorld then return end
@@ -279,8 +292,8 @@ DFRL:NewMod("Player Auras", 2, function()
             if entry.ready ~= timer.ready then entry.icon:SetAlpha(timer.ready and 1 or 0.65) end
             entry.name, entry.kind, entry.wait = timer.name, timer.kind, timer.duration
             entry.remaining, entry.ready = timer.remaining, timer.ready
-            T.SetTextIfChanged(entry.duration, Time(timer.remaining))
-            entry.button:Show()
+            SetTimerDuration(entry, timer.remaining)
+            if not entry.button:IsShown() then entry.button:Show() end
             ticking = ticking or not timer.ready
             count = index
         end
@@ -309,8 +322,14 @@ DFRL:NewMod("Player Auras", 2, function()
     end
 
     for _, entry in ipairs(entries) do
-        HookScript(entry.button, "OnShow", function() Layout(false) end)
-        HookScript(entry.button, "OnHide", function() Layout(false) end)
+        HookScript(entry.button, "OnShow", function()
+            layoutDirty = true
+            Layout(false)
+        end)
+        HookScript(entry.button, "OnHide", function()
+            layoutDirty = true
+            Layout(false)
+        end)
     end
     -- Duration settings rewrite the native second buff row and debuff anchors.
     -- Force those anchors back even when the visible buttons have not changed.

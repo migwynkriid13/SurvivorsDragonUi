@@ -175,17 +175,20 @@ DFRL:NewMod("Class resources", 2, function()
     local function Update()
         -- Phase retirement remains live while the player's presentation is hidden.
         local state
-        if inWorld then state = ReadRun(PlayerFrame:IsVisible()) end
-        if not PlayerFrame:IsVisible() then return end
+        local visible = PlayerFrame:IsVisible()
+        local classEnabled = DFRL.display.Get("classResources")
+        local absorbEnabled = not DFRL.display.Get("performanceMode")
+        if inWorld then state = ReadRun(visible and (classEnabled or absorbEnabled)) end
+        if not visible then return end
         local exists = inWorld and UnitExists("player")
         if DFRL.playerResources then
-            if exists and state then
+            if absorbEnabled and exists and state then
                 DFRL.playerResources.SetAbsorb(state.sh, state.hp, state.hpm)
             else
                 DFRL.playerResources.SetAbsorb()
             end
         end
-        local enabled = exists and DFRL.display.Get("classResources")
+        local enabled = exists and classEnabled
         local style, current, total
         local value, maximum, power
         if enabled then

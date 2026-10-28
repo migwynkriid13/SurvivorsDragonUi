@@ -5,7 +5,7 @@ Cache and guardian waypoints add independent guidance HUDs and minimap markers u
 ## Player behavior
 
 - Each guide selects a nearby destination automatically when the player's location can be read. While position data is unavailable, the first available destination keeps that overlay visible with "On map"; automatic selection retries until it can choose a nearby one. A resolved cache selection stays until the cache is opened or disappears; a guardian selection stays until that guardian's occupied-lair identity disappears. The cache and guardian selections remain independent; there is no full world-map overlay or click-to-track control.
-- Each waypoint has its own horizontal floating-label guide, 190 by 46 at its default size. An upright 32-by-32 icon sits beside two left-aligned text lines: the full Cache or Guardian title in DEFAULT 13 above distance in DEFAULT 15. The guardian HUD uses the gold-dragon/skull medallion `GuardianFloating.tga`, and the cache HUD uses the supplied `Chest.blp`. A fine muted-gold stripe sits along the bottom. The icon and text have transparent backgrounds, with no rectangular fill or enclosing border.
+- Each waypoint has its own horizontal floating-label guide, 190 by 46 at its default size. An upright 32-by-32 icon sits beside two left-aligned text lines: the full Cache or Guardian title in DEFAULT 13 above distance in DEFAULT 15. The guardian HUD uses the gold-dragon/skull medallion `GuardianFloating.tga`, and the cache HUD uses the supplied `Chest.blp`. The icon and text have transparent backgrounds, with no bottom stripe, rectangular fill or enclosing border.
 - Cache defaults to the left of that action-bar/XP stack and **Guardian** to the right, vertically centered on its combined artwork span with an eight-unit horizontal gap beyond the artwork edges. Registration waits for the bar/XP appearance metadata, after which shared layout handling converts these defaults to independent UIParent positions. Confirmed custom positions remain in use, and unrelated layout stays untouched.
 - The full native navigation arrow from `HudArrow.tga` rotates in place to the right of the text by default. Its visible width is `19 * 1.2 = 22.8`, 20% larger than the selected floating-label preview. The original texture has a 24-pixel-wide glyph on a 32-pixel canvas, so the full canvas draws at `19 * 1.2 * 32 / 24 = 30.4` square; the icon and text stay upright. Both guides show straight-line horizontal distance in yards from native world coordinates when available, otherwise when native map geometry establishes the scale.
 - **Mirror cache waypoint** and **Mirror guardian waypoint** in `/sdui` → **HUD** independently move each arrow to the left and its icon to the right, with right-aligned text between them. Leave a mirror option off for an arrow on the right. Both default off and preview immediately, including while guidance is hidden. Confirm saves the choice; Cancel, world leave/logout/reload discard drafts, and both full resets turn mirroring off. Either combination is supported, including both arrows on the same side. Mirroring preserves the guide's position, scale, shape, distance and direction.
@@ -46,8 +46,8 @@ resets. No additional SavedVariable or layout record is introduced.
 One `LayoutHUD` helper reflects the existing children within the same 190-by-46
 frame only when its effective mirror choice changes. The arrow pivot moves from
 x=163 to x=27; icon and text anchors reflect across the frame, retaining their
-sizes and vertical offsets. The two text lines change justification; glyphs,
-icon artwork and the bottom stripe stay upright. Native bearing/facing and arrow
+sizes and vertical offsets. The two text lines change justification; glyphs
+and icon artwork stay upright. Native bearing/facing and arrow
 UV rotation stay unchanged. The per-frame direction updater rotates the arrow
 without overwriting its selected side. Accepted snapshots, selections, map and
 minimap pins, calibration and interpolation state remain independent of mirroring.
@@ -79,8 +79,6 @@ The 0.102.0 HUD API allows hiding the native flag through `AZS_SetHudShown("flag
 ## Artwork and limits
 
 Guardians use `GuardianFloating.blp`, the gold-dragon/skull medallion shared by their HUD, minimap and tracker header, with the existing `0..65/128` crop on each axis. The supplied `Chest.blp` serves the cache HUD, minimap markers and bottom cache-cost counter with full `0..1` texture coordinates, and `HudArrow.blp` supplies the rotating direction arrow. The retired full world-map overlay and diamond runtime asset are removed. See [CacheWaypoints-ARTWORK.md](../third_party/CacheWaypoints-ARTWORK.md) for source artwork and preparation details.
-
-The continuous one-pixel gold stripe uses the native `WHITE8X8` texture with a uniform color and ordinary alpha blending. Its position, RGB `(186, 148, 87)` and alpha `85 / 255` preserve the former rail's baseline while the rectangular dark fill is removed. See the artwork notes for drawing details.
 
 This implements minimap markers and HUD guidance. It does not project icons above caches or guardians in the 3D world; no such camera/projection API is documented. It also does not calculate walkable routes, account for walls or provide vertical navigation. Guardian guidance does not track a moving guardian beyond the fixed lair coordinates exposed by the API.
 

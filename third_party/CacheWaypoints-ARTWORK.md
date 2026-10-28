@@ -68,7 +68,7 @@ Square sampling preserves the guardian glyph's proportions inside its 32-by-32 H
 
 ## Drawing recommendations
 
-- Floating waypoint guides default to 190 by 46 with transparent backgrounds and only a fine muted-gold stripe along the bottom. Draw the stripe at 190 by 1 using native `Interface\\Buttons\\WHITE8X8`, ordinary `BLEND` and `SetVertexColor(186 / 255, 148 / 255, 87 / 255, 85 / 255)`. Keep the stripe's bottom-left anchor at the HUD's bottom-left corner. Do not draw a dark fill, enclosing border or native vertex gradient. The previous `FloatingRail.tga` is removed from the source and runtime manifest. Existing timer artwork and its [WidgetStatusBar attribution](WidgetStatusBar-SOURCE.md) remain unchanged.
+- Floating waypoint guides default to 190 by 46 with transparent backgrounds. Draw the icon, text and arrow without a bottom stripe, dark fill, enclosing border or native vertex gradient. The previous `FloatingRail.tga` is removed from the source and runtime manifest. Existing timer artwork and its [WidgetStatusBar attribution](WidgetStatusBar-SOURCE.md) remain unchanged.
 - Cache HUD marker: draw `Chest.blp` in its existing 32-by-32 field with `SetTexCoord(0, 1, 0, 1)`. Keep the chest upright.
 - Guardian HUD marker: draw `GuardianFloating.tga` in a 32-by-32 field with `SetTexCoord(0, 65 / 128, 0, 65 / 128)`. Keep the gold dragon and skull upright.
 - Place a left-aligned DEFAULT 13 destination title above DEFAULT 15 distance beside the icon, with outline and black shadow. Rotate the arrow in place to the right of the text.

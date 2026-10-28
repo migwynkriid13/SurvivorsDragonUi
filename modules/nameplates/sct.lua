@@ -44,7 +44,9 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     end
 
     local plates = {}
+    local shownPlates = {}
     local origins = {}
+    local originIndex = { names = {}, dirty = {}, queries = {}, queryPool = {}, queryCount = 0, lossRevision = 0 }
     local activeTexts = {}
     local textPool = {}
     local textRoot
@@ -53,7 +55,8 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local pendingGroups = {}
     local intakeBuckets = {}
     local spellTextures = {}
-    local missingSpellTextures = {}
+    local spellTexturesDirty, spellTexturesRetryAt = true, nil
+    local spellTextureScan = {}
     local recentDamage = {}
     local discoveredChildren = 0
     local combatDiscoveryNeeded = true
@@ -242,11 +245,42 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         end
         plateFilter.source, plateFilter.stamp, plateFilter.accepted = entries, stamp, plateFilter.units
     end
-    function plateFilter.Matches(data)
-        local name = data.nameRegion and data.nameRegion:GetText()
+    local function PlateName(data, sample)
+        if not sample then return data.nameRegion and data.nameRegion:GetText() end
+        if not sample.nameRead then
+            sample.name = data.nameRegion and data.nameRegion:GetText()
+            sample.nameRead = true
+        end
+        return sample.name
+    end
+    local function PlateRange(data, sample)
+        if not sample then return data.bar:GetMinMaxValues() end
+        if not sample.rangeRead then
+            sample.minimum, sample.maximum = data.bar:GetMinMaxValues()
+            sample.rangeRead = true
+        end
+        return sample.minimum, sample.maximum
+    end
+    local function PlateValue(data, sample)
+        if not sample.valueRead then
+            sample.value = data.bar:GetValue()
+            sample.valueRead = true
+        end
+        return sample.value
+    end
+    local function PlateColor(data, sample)
+        if not sample then return data.bar:GetStatusBarColor() end
+        if not sample.colorRead then
+            sample.red, sample.green, sample.blue = data.bar:GetStatusBarColor()
+            sample.colorRead = true
+        end
+        return sample.red, sample.green, sample.blue
+    end
+    function plateFilter.Matches(data, sample)
+        local name = PlateName(data, sample)
         local maxima = name and plateFilter.names[name]
         if not maxima then return false end
-        local minimum, maximum = data.bar:GetMinMaxValues()
+        local minimum, maximum = PlateRange(data, sample)
         -- Anonymous plates expose no spawn ID; never equate percentage bars to HP.
         return minimum == 0 and maxima[maximum] == true
     end
@@ -255,25 +289,17 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         plateFilter.age = 0.2
     end)
 
-    local function IsEnemyPlate(data)
+    local function IsEnemyPlate(data, sample)
         if not data.bar or not data.bar.GetStatusBarColor then return false end
-        local red, green, blue = data.bar:GetStatusBarColor()
+        local red, green, blue = PlateColor(data, sample)
         if not red or not green or not blue then return false end
         -- Ignore green/blue friendly plates requested by Shift-V.
         return not (green > red + 0.1 and green > blue + 0.1) and not (blue > red + 0.1 and blue > green + 0.1)
     end
     local function MaskFrame(frame, state, masked)
-        if
-            not frame.DisableDrawLayer
-            or not frame.EnableDrawLayer
-            or not frame.GetHitRectInsets
-            or not frame.SetHitRectInsets
-        then
-            return
-        end
-        if masked and not state.masked then
-            local left, right, top, bottom = frame:GetHitRectInsets()
-            state.insets = { left or 0, right or 0, top or 0, bottom or 0 }
+        if not frame.DisableDrawLayer or not frame.EnableDrawLayer then return end
+        local hideLayers = masked or state.skinned
+        if hideLayers and not state.layers then
             state.layers = {}
             for _, layer in ipairs(drawLayers) do
                 -- Stock anonymous plate frames start with all layers enabled.
@@ -286,11 +312,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                 state.layers[layer] = enabled
                 frame:DisableDrawLayer(layer)
             end
-            -- An empty mouse rectangle survives native freelook flag changes.
-            -- Leave the native mouse-enabled state, size and position intact.
-            frame:SetHitRectInsets(1000000, 1000000, 1000000, 1000000)
-            state.masked = true
-        elseif not masked and state.masked then
+        elseif not hideLayers and state.layers then
             for _, layer in ipairs(drawLayers) do
                 if state.layers[layer] then
                     frame:EnableDrawLayer(layer)
@@ -298,24 +320,64 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                     frame:DisableDrawLayer(layer)
                 end
             end
+            state.layers = nil
+        end
+        if not frame.GetHitRectInsets or not frame.SetHitRectInsets then return end
+        if masked and not state.masked then
+            local left, right, top, bottom = frame:GetHitRectInsets()
+            state.insets = { left or 0, right or 0, top or 0, bottom or 0 }
+            -- An empty mouse rectangle survives native freelook flag changes.
+            -- Leave the native mouse-enabled state, size and position intact.
+            frame:SetHitRectInsets(1000000, 1000000, 1000000, 1000000)
+            state.masked = true
+        elseif not masked and state.masked then
             frame:SetHitRectInsets(state.insets[1], state.insets[2], state.insets[3], state.insets[4])
-            state.masked, state.layers, state.insets = nil, nil, nil
+            state.masked, state.insets = nil, nil
         end
     end
-    local function RestorePresentation(data)
+    local function SuppressNativeLayers(plate, data)
+        if data.nativeLayersSuppressed or not data.style then return end
+        if
+            not plate.DisableDrawLayer
+            or not plate.EnableDrawLayer
+            or not data.bar.DisableDrawLayer
+            or not data.bar.EnableDrawLayer
+        then
+            return
+        end
+        local function Suppress(owner)
+            local state = data.presentation[owner] or {}
+            data.presentation[owner] = state
+            state.skinned = true
+            MaskFrame(owner, state, state.masked)
+        end
+        -- Draw layers belong only to these native owners. The separate skin
+        -- children stay enabled, while native values and region shown bits live on.
+        Suppress(plate)
+        Suppress(data.bar)
+        data.nativeLayersSuppressed = true
+    end
+    local function RestorePresentation(data, retiring)
         for frame, state in pairs(data.presentation) do
+            if retiring then state.skinned = nil end
             MaskFrame(frame, state, false)
+        end
+        if retiring then
+            data.nativeLayersSuppressed = nil
+            for key in pairs(data.sample) do
+                data.sample[key] = nil
+            end
         end
         if plateStyle then plateStyle.SetMasked(data, false) end
         data.presentationMasked = false
     end
-    local function UpdatePresentation(plate, data, force)
+    local function UpdatePresentation(plate, data, force, sample)
         local hiddenByV = UsesPlateOrigins() and not enemyPlatesEnabled
         local masked = trackingSupported
                 and inWorld
                 and (hiddenByV or plateFilter.enabled)
-                and IsEnemyPlate(data)
-                and (hiddenByV or not plateFilter.Matches(data))
+                and IsEnemyPlate(data, sample)
+                and (hiddenByV or not plateFilter.Matches(data, sample))
             or false
         if data.presentationMasked == masked and not force then return end
         if not masked then
@@ -374,6 +436,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     end
 
     local function ResetDisplay()
+        spellTextureScan.work, spellTextureScan.warmRetryAt = nil, nil
         for index = table.getn(activeTexts), 1, -1 do
             ReleaseText(activeTexts[index])
             activeTexts[index] = nil
@@ -383,6 +446,9 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         pendingGroups = {}
         intakeBuckets = {}
         origins = {}
+        originIndex.names, originIndex.dirty = {}, {}
+        originIndex.retiredAt = nil
+        originIndex.ClearQueries()
         recentDamage = {}
         for _, data in pairs(plates) do
             data.origin = nil
@@ -391,10 +457,10 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         combatDiscoveryNeeded = true
     end
 
-    local function IsShownEnemy(plate, data)
+    local function IsShownEnemy(plate, data, sample)
         if not UsesPlateOrigins() or not inWorld or not plate:IsShown() then return false end
         if plate.IsVisible and not plate:IsVisible() then return false end
-        return IsEnemyPlate(data)
+        return IsEnemyPlate(data, sample)
     end
 
     local function SampleWorldGeometry(geometry)
@@ -454,10 +520,10 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         origin.positionAt = now
     end
 
-    local function SampleHealth(data, origin, now)
+    local function SampleHealth(data, origin, now, sample)
         if not data.bar.GetValue or not data.bar.GetMinMaxValues then return end
-        local minimum, maximum = data.bar:GetMinMaxValues()
-        local value = data.bar:GetValue()
+        local minimum, maximum = PlateRange(data, sample)
+        local value = PlateValue(data, sample)
         if not maximum or not minimum or not value or maximum <= minimum then return end
         value = math.max(minimum, math.min(value, maximum))
         if origin.health and origin.maximum == maximum and origin.minimum == minimum then
@@ -488,25 +554,39 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         -- resets or reuses this frame. Active text keeps this incarnation.
         origin.live = false
         origin.hiddenAt = GetTime()
+        if not originIndex.retiredAt or origin.hiddenAt < originIndex.retiredAt then
+            originIndex.retiredAt = origin.hiddenAt
+        end
         data.origin = nil
     end
 
     local function RefreshPlate(plate, data, now, forcePresentation, geometry)
+        if not inWorld then return end
         if not plate:IsShown() then
+            shownPlates[plate] = nil
             RetirePlate(plate)
             return
         end
-        UpdatePresentation(plate, data, forcePresentation)
+        SuppressNativeLayers(plate, data)
+        local sample = data.sample
+        sample.nameRead, sample.rangeRead, sample.valueRead, sample.colorRead = false, false, false, false
+        UpdatePresentation(plate, data, forcePresentation, sample)
         -- Hidden tracking still samples native data, but its skin has no pixels
         -- to refresh. Unmasking updates the skin in this same callback.
         if plateStyle and not data.presentationMasked then
-            plateStyle.Update(plate, data, nameplatesNamesOnly, nameplateFontSize)
+            PlateName(data, sample)
+            PlateColor(data, sample)
+            if not nameplatesNamesOnly then
+                PlateRange(data, sample)
+                PlateValue(data, sample)
+            end
+            plateStyle.Update(plate, data, nameplatesNamesOnly, nameplateFontSize, sample)
         end
-        if not IsShownEnemy(plate, data) then
+        if not IsShownEnemy(plate, data, sample) then
             RetirePlate(plate)
             return
         end
-        local name = data.nameRegion and data.nameRegion:GetText()
+        local name = PlateName(data, sample)
         if not name or name == "" then
             RetirePlate(plate)
             return
@@ -522,14 +602,29 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             origin = { name = name, live = true, lastSeen = now }
             data.origin = origin
             table.insert(origins, origin)
+            local named = originIndex.names[name]
+            if not named then
+                named = {}
+                originIndex.names[name] = named
+            end
+            table.insert(named, origin)
         end
         origin.lastSeen = now
         SamplePosition(plate, origin, now, geometry)
-        SampleHealth(data, origin, now)
+        SampleHealth(data, origin, now, sample)
     end
 
     local function DiscoverPlate(plate, now, geometry)
-        if not plate or not plate.GetRegions or plates[plate] then return end
+        if not plate or not plate.GetRegions then return end
+        if plates[plate] then
+            if plate:IsShown() then
+                shownPlates[plate] = plates[plate]
+            else
+                shownPlates[plate] = nil
+                RetirePlate(plate)
+            end
+            return
+        end
         local border, glow, name, level, skull, raid = plate:GetRegions()
         local regions = { border, glow, name, level, skull, raid }
         local hasBorder = false
@@ -569,13 +664,18 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             end
         end
         if not name or not bar then return end
-        local data = { nameRegion = name, bar = bar, nativeRegions = regions, presentation = {} }
+        local data = { nameRegion = name, bar = bar, nativeRegions = regions, presentation = {}, sample = {} }
         plates[plate] = data
+        if plate:IsShown() then shownPlates[plate] = data end
         -- Build the skin before the first recursive mask so V-off tracking
         -- covers every visual child without touching the SCT data sources.
         if plateStyle then plateStyle.Attach(plate, data) end
-        HookScript(plate, "OnHide", function() RetirePlate(plate) end)
+        HookScript(plate, "OnHide", function()
+            shownPlates[plate] = nil
+            RetirePlate(plate)
+        end)
         HookScript(plate, "OnShow", function()
+            shownPlates[plate] = data
             RetirePlate(plate)
             -- Revisit descendants on reuse, including children added while hidden.
             RefreshPlate(plate, data, GetTime(), true)
@@ -608,33 +708,121 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         DiscoverPlates(force, now, geometry)
         -- Snapshot on every frame, rather than every tenth of a second: a
         -- one-shot enemy can disappear between two of the old scans.
-        for plate, data in pairs(plates) do
+        for plate, data in pairs(shownPlates) do
             RefreshPlate(plate, data, now, force, geometry)
         end
-        for index = table.getn(origins), 1, -1 do
+        local count, kept = table.getn(origins), 0
+        -- Live origins never expire. Only revisit the catalog after its earliest
+        -- real retirement can pass the original strict retention boundary.
+        if not originIndex.retiredAt or now - originIndex.retiredAt <= RECENT_PLATE_TIME then return end
+        originIndex.retiredAt = nil
+        for index = 1, count do
             local origin = origins[index]
             if not origin.live and now - (origin.hiddenAt or origin.lastSeen) > RECENT_PLATE_TIME then
-                table.remove(origins, index)
+                originIndex.dirty[origin.name] = true
+            else
+                kept = kept + 1
+                if kept ~= index then origins[kept] = origin end
+                if not origin.live then
+                    local retiredAt = origin.hiddenAt or origin.lastSeen
+                    if not originIndex.retiredAt or retiredAt < originIndex.retiredAt then
+                        originIndex.retiredAt = retiredAt
+                    end
+                end
             end
         end
+        for index = kept + 1, count do
+            origins[index] = nil
+        end
+        if kept ~= count then table.setn(origins, kept) end
+        -- Keep the same creation order in each exact-name index. A mass
+        -- retirement compacts each affected bucket once, without shifting tails.
+        for name in pairs(originIndex.dirty) do
+            local named = originIndex.names[name]
+            count, kept = table.getn(named), 0
+            for index = 1, count do
+                local origin = named[index]
+                if origin.live or now - (origin.hiddenAt or origin.lastSeen) <= RECENT_PLATE_TIME then
+                    kept = kept + 1
+                    if kept ~= index then named[kept] = origin end
+                end
+            end
+            for index = kept + 1, count do
+                named[index] = nil
+            end
+            table.setn(named, kept)
+            if kept == 0 then originIndex.names[name] = nil end
+            originIndex.dirty[name] = nil
+        end
+    end
+
+    function originIndex.ClearQueries()
+        if originIndex.queryCount == 0 then
+            originIndex.lossRevision = 0
+            return
+        end
+        for name in pairs(originIndex.queries) do
+            originIndex.queries[name] = nil
+        end
+        for index = 1, originIndex.queryCount do
+            local record = originIndex.queryPool[index]
+            record.kind, record.amount, record.fallback, record.revision = nil, nil, nil, nil
+            record.x, record.y, record.origin = nil, nil, nil
+        end
+        originIndex.queryCount, originIndex.lossRevision = 0, 0
+    end
+
+    function originIndex.RememberQuery(info, fallback, revision, x, y, origin)
+        -- Consumed loss already invalidated this result; do not store an answer
+        -- that cannot be reused by the next original hit.
+        if revision ~= originIndex.lossRevision then return x, y, origin end
+        local record = originIndex.queries[info.targetName]
+        if not record then
+            -- Cache only the latest exact query per name, with bounded reused
+            -- records. Extra names retain the original resolver path.
+            if originIndex.queryCount == 64 then return x, y, origin end
+            originIndex.queryCount = originIndex.queryCount + 1
+            record = originIndex.queryPool[originIndex.queryCount] or {}
+            originIndex.queryPool[originIndex.queryCount] = record
+            originIndex.queries[info.targetName] = record
+        end
+        record.kind, record.amount, record.fallback, record.revision = info.kind, info.amount, fallback, revision
+        record.x, record.y, record.origin = x, y, origin
+        return x, y, origin
     end
 
     local function UseLoss(origin, info)
         if info.kind ~= "damage" then return end
-        if origin.absoluteHealth then origin.lossRemaining = math.max(0, (origin.lossRemaining or 0) - info.amount) end
+        if origin.absoluteHealth then
+            local remaining = origin.lossRemaining or 0
+            origin.lossRemaining = math.max(0, remaining - info.amount)
+            if origin.lossRemaining ~= remaining then originIndex.lossRevision = originIndex.lossRevision + 1 end
+        end
         -- Percentage bars cannot be consumed by absolute amounts. Their loss
         -- remains timing evidence for the whole short combat-message burst.
     end
 
     local function ResolveOrigin(info, now, allowFallback)
+        local revision = originIndex.lossRevision
+        local record = originIndex.queries[info.targetName]
+        if
+            record
+            and record.kind == info.kind
+            and record.amount == info.amount
+            and record.fallback == allowFallback
+            and record.revision == revision
+        then
+            if record.origin then UseLoss(record.origin, info) end
+            return record.x, record.y, record.origin
+        end
         local candidateCount, lossCount, exactCount = 0, 0, 0
         local candidateOrigin, lossOrigin, exactOrigin
         local candidateX, candidateY, lossX, lossY = 0, 0, 0, 0
-        for index = 1, table.getn(origins) do
-            local origin = origins[index]
+        local named = originIndex.names[info.targetName]
+        for index = 1, named and table.getn(named) or 0 do
+            local origin = named[index]
             if
-                origin.name == info.targetName
-                and origin.x
+                origin.x
                 and origin.y
                 and origin.positionAt
                 and now - origin.positionAt <= RECENT_PLATE_TIME
@@ -673,16 +861,32 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         end
         if origin then
             UseLoss(origin, info)
-            return origin.x, origin.y, origin
+            return originIndex.RememberQuery(info, allowFallback, revision, origin.x, origin.y, origin)
         end
-        if not allowFallback then return nil end
+        if not allowFallback then return originIndex.RememberQuery(info, false, revision) end
         -- The 1.12 chat API has no destination GUID. Keep every event visible,
         -- even when it cannot distinguish identical names or no plate was
         -- rendered before a lethal hit. A shared origin avoids claiming
         -- an arbitrary enemy is the exact destination.
-        if lossCount > 0 then return lossX / lossCount, lossY / lossCount, nil end
-        if candidateCount > 0 then return candidateX / candidateCount, candidateY / candidateCount, nil end
-        return WorldFrame:GetWidth() * 0.5, WorldFrame:GetHeight() * 0.58, nil
+        if lossCount > 0 then
+            return originIndex.RememberQuery(info, true, revision, lossX / lossCount, lossY / lossCount)
+        end
+        if candidateCount > 0 then
+            return originIndex.RememberQuery(
+                info,
+                true,
+                revision,
+                candidateX / candidateCount,
+                candidateY / candidateCount
+            )
+        end
+        return originIndex.RememberQuery(
+            info,
+            true,
+            revision,
+            WorldFrame:GetWidth() * 0.5,
+            WorldFrame:GetHeight() * 0.58
+        )
     end
 
     local auraSpellTextures, talentSpellTextures = {}, {}
@@ -696,6 +900,40 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local iconTooltip, iconTooltipParent
     local ICON_SCAN_INTERVAL = 0.35
     local ICON_DEBUFF_LIMIT = 16
+    -- Accepted metadata changes retire this bounded generation of final answers.
+    local SOURCE_ICON_CACHE_LIMIT = 256
+    local resolvedIcons, resolvedIconOrder = {}, {}
+    local resolvedIconCount, resolvedIconNext, resolvedIconLanguage = 0, 0, nil
+
+    local function ClearResolvedIcons()
+        if resolvedIconCount == 0 then return end
+        resolvedIcons, resolvedIconOrder = {}, {}
+        resolvedIconCount, resolvedIconNext = 0, 0
+    end
+    local function RememberResolvedIcon(name, school, texture)
+        local key = school or false
+        local bySchool = resolvedIcons[name]
+        local record = bySchool and bySchool[key]
+        if not record then
+            resolvedIconNext = math.mod(resolvedIconNext, SOURCE_ICON_CACHE_LIMIT) + 1
+            local retired = resolvedIconOrder[resolvedIconNext]
+            if retired then
+                local previous = resolvedIcons[retired.name]
+                previous[retired.school] = nil
+                if not next(previous) then resolvedIcons[retired.name] = nil end
+                bySchool = resolvedIcons[name]
+            else
+                resolvedIconCount = resolvedIconCount + 1
+            end
+            bySchool = bySchool or {}
+            resolvedIcons[name] = bySchool
+            record = { name = name, school = key }
+            bySchool[key], resolvedIconOrder[resolvedIconNext] = record, record
+        end
+        record.texture = texture or FALLBACK_ICON
+        record.missingAt = texture == nil and GetTime() or nil
+        return record.texture
+    end
 
     local function TextureKey(texture)
         if type(texture) ~= "string" or texture == "" then return nil end
@@ -770,6 +1008,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         else
             cache[name] = texture
         end
+        if cache[name] ~= previous then ClearResolvedIcons() end
     end
 
     -- The accepted pet view supplies exact native localized names and its
@@ -777,6 +1016,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local summonIcons, summonLanguage = {}, nil
     local function ClearSummonIcons()
         summonIcons, summonLanguage = {}, nil
+        ClearResolvedIcons()
     end
     local function SummonIcons()
         if summonLanguage ~= DFRL.locale.code then
@@ -791,6 +1031,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local itemIcons, itemRetryAt, equipmentScanAt, itemLanguage = {}, {}, nil, nil
     local function ClearItemIcons()
         itemIcons, itemRetryAt, equipmentScanAt, itemLanguage = {}, {}, nil, nil
+        ClearResolvedIcons()
     end
     local function ItemTexture(value)
         if type(value) ~= "string" or value == "" then return end
@@ -856,7 +1097,15 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         end
         return itemIcons[name] or nil
     end
+    local function DirtySpellTextures()
+        if not spellTexturesDirty then spellTextures = {} end
+        spellTexturesDirty, spellTexturesRetryAt = true, nil
+        spellTextureScan.source, spellTextureScan.work, spellTextureScan.warmRetryAt = nil, nil, nil
+        ClearResolvedIcons()
+    end
+    DFRL.locale.Listen(DirtySpellTextures)
     local function ResetLearnedSpellTextures()
+        DirtySpellTextures()
         ClearItemIcons()
         ClearSummonIcons()
         auraSpellTextures, talentSpellTextures = {}, {}
@@ -994,26 +1243,151 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         end
     end
 
-    local function RebuildSpellTextures(keepMisses)
-        spellTextures = {}
-        if not keepMisses then missingSpellTextures = {} end
+    local function SpellTextureSourceMatches(source)
+        return source
+            and source.tabCount == _G.GetNumSpellTabs
+            and source.tabInfo == _G.GetSpellTabInfo
+            and source.name == _G.GetSpellName
+            and source.texture == _G.GetSpellTexture
+            and source.book == (BOOKTYPE_SPELL or "spell")
+            and source.language == DFRL.locale.code
+    end
+
+    local function CurrentSpellTextureWork(work)
+        return spellTextureScan.work == work
+            and spellTextureScan.source == work.source
+            and SpellTextureSourceMatches(work.source)
+    end
+
+    local function AdvanceSpellTextures(work, limit)
+        local source, steps = work.source, 0
+        if work.tabs == nil then
+            local tabs = source.tabCount()
+            if not CurrentSpellTextureWork(work) then return "changed" end
+            if not IsFiniteNumber(tabs) or tabs < 0 then
+                work.tabs, work.pendingMetadata = 0, true
+            else
+                work.tabs = math.floor(tabs)
+            end
+        end
+        while not limit or steps < limit do
+            if work.tab <= work.tabs then
+                if work.slot == nil then
+                    local _, _, offset, count = source.tabInfo(work.tab)
+                    if not CurrentSpellTextureWork(work) then return "changed" end
+                    if not IsFiniteNumber(offset) or not IsFiniteNumber(count) then work.pendingMetadata = true end
+                    offset, count = offset or 0, count or 0
+                    work.headers[work.tab] = { offset = offset, count = count }
+                    if not IsFiniteNumber(offset) or not IsFiniteNumber(count) or count < 0 then
+                        work.pendingMetadata = true
+                        work.tab = work.tab + 1
+                    elseif count < 1 then
+                        work.tab = work.tab + 1
+                    else
+                        work.slot, work.last = offset + 1, offset + count
+                    end
+                else
+                    local name = source.name(work.slot, source.book)
+                    local texture = source.texture(work.slot, source.book)
+                    if not CurrentSpellTextureWork(work) then return "changed" end
+                    if name and TextureKey(texture) then
+                        work.textures[name] = texture
+                    else
+                        work.pendingMetadata = true
+                    end
+                    work.slot = work.slot + 1
+                    if work.slot > work.last then
+                        work.tab, work.slot = work.tab + 1, nil
+                    end
+                end
+            elseif not limit or work.pendingMetadata then
+                return "complete"
+            elseif work.verify == nil then
+                local tabs = source.tabCount() or 0
+                if not CurrentSpellTextureWork(work) or tabs ~= work.tabs then return "changed" end
+                work.verify = 1
+            elseif work.verify <= work.tabs then
+                local _, _, offset, count = source.tabInfo(work.verify)
+                if not CurrentSpellTextureWork(work) then return "changed" end
+                local header = work.headers[work.verify]
+                if (offset or 0) ~= header.offset or (count or 0) ~= header.count then return "changed" end
+                work.verify = work.verify + 1
+            else
+                return "complete"
+            end
+            steps = steps + 1
+        end
+    end
+
+    local function RebuildSpellTextures(limit, restarted)
+        local source = spellTextureScan.source
+        if not SpellTextureSourceMatches(source) then
+            DirtySpellTextures()
+            source = {
+                tabCount = _G.GetNumSpellTabs,
+                tabInfo = _G.GetSpellTabInfo,
+                name = _G.GetSpellName,
+                texture = _G.GetSpellTexture,
+                book = BOOKTYPE_SPELL or "spell",
+                language = DFRL.locale.code,
+            }
+            spellTextureScan.source = source
+        end
+        if not spellTexturesDirty and not spellTexturesRetryAt then return end
+        local warmRetryAt = limit and spellTextureScan.warmRetryAt
+        if spellTexturesRetryAt or warmRetryAt then
+            local now = GetTime()
+            if (spellTexturesRetryAt and now < spellTexturesRetryAt) or (warmRetryAt and now < warmRetryAt) then
+                return
+            end
+        end
         if
-            type(_G.GetNumSpellTabs) ~= "function"
-            or type(_G.GetSpellTabInfo) ~= "function"
-            or type(_G.GetSpellName) ~= "function"
-            or type(_G.GetSpellTexture) ~= "function"
+            type(source.tabCount) ~= "function"
+            or type(source.tabInfo) ~= "function"
+            or type(source.name) ~= "function"
+            or type(source.texture) ~= "function"
         then
             return
         end
-        local book = BOOKTYPE_SPELL or "spell"
-        for tab = 1, GetNumSpellTabs() or 0 do
-            local _, _, offset, count = GetSpellTabInfo(tab)
-            for index = (offset or 0) + 1, (offset or 0) + (count or 0) do
-                local name = GetSpellName(index, book)
-                local texture = GetSpellTexture(index, book)
-                if name and TextureKey(texture) then spellTextures[name] = texture end
-            end
+        -- A real icon consumer must see a fresh, complete traversal. Never use
+        -- earlier provisional slots for first-hit priority or grouping identity.
+        if not limit then spellTextureScan.work = nil end
+        local work = spellTextureScan.work
+        if not work then
+            work = { source = source, tab = 1, textures = {}, headers = {} }
+            spellTextureScan.work = work
         end
+        local ok, result = pcall(AdvanceSpellTextures, work, limit)
+        if not ok then
+            spellTextureScan.work = nil
+            -- Optional warming must not turn an unavailable getter into frame
+            -- error spam. A real consumer still retries immediately, as before.
+            if limit then
+                spellTextureScan.warmRetryAt = GetTime() + 1
+                return
+            end
+            error(result)
+        end
+        if result == "changed" then
+            DirtySpellTextures()
+            if not limit then
+                if restarted then error("spellbook metadata changed during icon lookup") end
+                return RebuildSpellTextures(nil, true)
+            end
+            return
+        end
+        if result ~= "complete" then return end
+        spellTextureScan.work = nil
+        if limit and work.pendingMetadata then
+            -- Missing early artwork may become ready during later chunks. Keep
+            -- this generation provisional; a consumer rereads it synchronously.
+            spellTextureScan.warmRetryAt = GetTime() + 1
+            return
+        end
+        spellTextures, spellTexturesDirty = work.textures, false
+        spellTexturesRetryAt = work.pendingMetadata and GetTime() + 1 or nil
+        spellTextureScan.warmRetryAt = nil
+        ClearResolvedIcons()
     end
 
     local function NativeItemIcon(name)
@@ -1024,14 +1398,22 @@ DFRL:NewMod("NameplateCombatText", 6, function()
 
     local function CombatIcon(info)
         if info.spell and info.spell ~= "" then
-            local texture = spellTextures[info.spell]
-            if not texture and not missingSpellTextures[info.spell] then
-                RebuildSpellTextures(true)
-                texture = spellTextures[info.spell]
-                missingSpellTextures[info.spell] = not texture
+            if resolvedIconLanguage ~= DFRL.locale.code then
+                ClearResolvedIcons()
+                resolvedIconLanguage = DFRL.locale.code
             end
+            RebuildSpellTextures()
+            local texture = spellTextures[info.spell]
             if not texture then
                 RefreshLearnedSpellTextures()
+                local bySchool = resolvedIcons[info.spell]
+                local record = bySchool and bySchool[info.school or false]
+                if record then
+                    local now = record.missingAt and GetTime()
+                    if not now or (now >= record.missingAt and now - record.missingAt < 1) then
+                        return record.texture
+                    end
+                end
                 texture = auraSpellTextures[info.spell]
                 -- The game's picker can differ from GetLocale(). Read its
                 -- current optional aliases only for generated metadata tiers.
@@ -1065,9 +1447,10 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                         end
                     end
                 end
+                if texture == nil then texture = ItemIcon(info.spell) end
+                return RememberResolvedIcon(info.spell, info.school, texture)
             end
-            if texture == nil then texture = ItemIcon(info.spell) end
-            return texture or FALLBACK_ICON
+            return texture
         end
         if info.damageType == "autoattack" then return AutoAttackIcon() end
         return FALLBACK_ICON
@@ -1163,8 +1546,15 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             table.insert(pendingGroups, group)
             if byAmount then byAmount[info.amount] = group end
         end
-        group.remaining = group.remaining + 1
-        table.insert(pending, { info = info, time = now, group = group })
+        if msbtStyle then
+            -- The fixed stream has no per-hit origin to resolve. Retain the
+            -- latest member's original age gate without storing each arrival.
+            group.count = group.count + 1
+            group.lastArrival = math.max(group.lastArrival or now, now)
+        else
+            group.remaining = group.remaining + 1
+            table.insert(pending, { info = info, time = now, group = group })
+        end
     end
 
     local function UpdateIcon(text)
@@ -1286,7 +1676,6 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         local enabled = DFRL.display.Get("damageIcons")
         local iconsChanged = damageIcons ~= enabled
         damageIcons = enabled
-        if iconsChanged and damageIcons and CustomEnabled() then RebuildSpellTextures() end
         for index = table.getn(activeTexts), 1, -1 do
             local text = activeTexts[index]
             if not ShouldShowText(text) then
@@ -1341,12 +1730,13 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         if info.kind ~= "damage" then return DAMAGE_COLORS.strong end
         if info.critical then return DAMAGE_COLORS.critical end
         if info.damageType ~= "autoattack" and (not info.spell or info.spell == "") then return DAMAGE_COLORS.normal end
-        local key = table.concat({
-            info.sourceName or "",
-            info.damageType or "",
-            info.school or "",
-            info.spell or "",
-        }, "\031")
+        local key = (info.sourceName or "")
+            .. "\031"
+            .. (info.damageType or "")
+            .. "\031"
+            .. (info.school or "")
+            .. "\031"
+            .. (info.spell or "")
         local samples = recentDamage[key]
         if not samples then
             samples = {}
@@ -1419,7 +1809,9 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     end
 
     local function UpdatePending(now)
-        local count = table.getn(pending)
+        local count, groupCount = table.getn(pending), table.getn(pendingGroups)
+        if count == 0 and groupCount == 0 then return end
+        originIndex.ClearQueries()
         local kept = 0
         for index = 1, count do
             local entry = pending[index]
@@ -1452,8 +1844,10 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         end
         -- Lua 5.0 insert/getn remembers a size independently of cleared slots.
         table.setn(pending, kept)
+        -- Presentation below can call native methods. Match reuse belongs only
+        -- to this completed synchronous pass, never another frame or callback.
+        originIndex.ClearQueries()
 
-        local groupCount = table.getn(pendingGroups)
         kept = 0
         for index = 1, groupCount do
             local group = pendingGroups[index]
@@ -1469,7 +1863,11 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                 end
                 group.bucket, group.identity = nil, nil
             end
-            if group.remaining == 0 and not group.bucket then
+            if
+                group.remaining == 0
+                and not group.bucket
+                and (not group.lastArrival or now - group.lastArrival >= EVENT_SETTLE)
+            then
                 -- Every display keeps its resolved centroid for the full arc.
                 DisplayDamage(group.info, group.x / group.count, group.y / group.count)
             else
@@ -1509,7 +1907,8 @@ DFRL:NewMod("NameplateCombatText", 6, function()
 
     local function UpdateTexts(now, elapsed)
         local count = table.getn(activeTexts)
-        if msbtStyle and count > 0 then PrepareScrollPositions(now, elapsed) end
+        if count == 0 then return end
+        if msbtStyle then PrepareScrollPositions(now, elapsed) end
         local kept = 0
         for index = 1, count do
             local text = activeTexts[index]
@@ -1672,7 +2071,6 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         ResetDisplay()
         SyncScrollRoot()
         ApplyPlateTracking(true)
-        if CustomEnabled() and damageIcons then RebuildSpellTextures() end
         -- Plate appearance stays active even while combat text is disabled.
         ScanPlates(true)
         NotifySettings()
@@ -1735,6 +2133,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         local eventTime = T.NameplateCombatEventHandlers[event] and GetTime() or nil
         if event == "PLAYER_ENTERING_WORLD" then
             inWorld = true
+            DirtySpellTextures()
             plateFilter.age = 0.2
             iconSourcesDirty.talents, iconSourcesDirty.debuffs = true, true
             iconSourcesDirty.target, iconSourcesDirty.mouseover = true, true
@@ -1747,19 +2146,19 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             plateFilter.Clear(plateFilter.sequence)
             plateFilter.time, plateFilter.zone = nil, nil
             for _, data in pairs(plates) do
-                RestorePresentation(data)
+                RestorePresentation(data, true)
             end
             ApplyPlateTracking(true)
             ResetDisplay()
             ResetLearnedSpellTextures()
         elseif event == "SPELLS_CHANGED" then
+            DirtySpellTextures()
             iconSourcesDirty.talents = true
-            if CustomEnabled() and damageIcons then RebuildSpellTextures() end
         elseif event == "CHARACTER_POINTS_CHANGED" then
             iconSourcesDirty.talents = true
         elseif event == "PLAYER_TARGET_CHANGED" then
             iconSourcesDirty.target = true
-            ScanPlates(true)
+            ScanPlates(false)
         elseif event == "UPDATE_MOUSEOVER_UNIT" then
             iconSourcesDirty.mouseover = true
         elseif event == "UNIT_AURA" then
@@ -1769,6 +2168,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             if arg1 == "AZSDEBUFFS" then
                 iconSourcesDirty.debuffs = true
             elseif arg1 == "AZSZONE" then
+                DirtySpellTextures()
                 ClearSummonIcons()
                 iconSourcesDirty.debuffs = true
             end
@@ -1791,6 +2191,9 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         -- still has this update's value; later hits can share the discovery.
         combatDiscoveryNeeded = true
         if not CustomEnabled() then return end
+        -- Group identity needs the same resolver even with damage icons hidden.
+        -- One tab-header or slot pair consumes a step; empty tabs stay bounded.
+        RebuildSpellTextures(4)
         local now = GetTime()
         UpdatePending(now)
         UpdateTexts(now, arg1)
@@ -1813,6 +2216,10 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         _G.ReloadUI = function()
             -- Restore native preview values before ReloadUI can serialize them.
             sct.FinishEdit(false)
+            inWorld = false
+            for _, data in pairs(plates) do
+                RestorePresentation(data, true)
+            end
             return reloadUI()
         end
     end

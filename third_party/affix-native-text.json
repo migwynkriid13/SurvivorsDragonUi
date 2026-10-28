@@ -1,0 +1,117 @@
+{
+  "source_sha256": "08f8c58d6967b94598c56b822a1e6b323a52924a299a6df70ef6055ca839b8cd",
+  "catalogs": {
+    "en": {
+      "Bolstering": "Bolstering",
+      "Sanguine": "Sanguine",
+      "Explosive": "Explosive",
+      "A death makes the enemies near it tougher and stronger, stacking.": "A death makes the enemies near it tougher and stronger, stacking.",
+      "A slain elite leaves a pool that heals enemies standing in it.": "A slain elite leaves a pool that heals enemies standing in it.",
+      "Orbs come out of the horde: only direct hits hurt them, so kill them before they burst.": "Orbs come out of the horde: only direct hits hurt them, so kill them before they burst."
+    },
+    "pl": {
+      "Bolstering": "Wzmacniający",
+      "Sanguine": "Krwawy",
+      "Explosive": "Wybuchowy",
+      "A death makes the enemies near it tougher and stronger, stacking.": "Każda śmierć czyni pobliskich wrogów twardszymi i silniejszymi, kumulując się.",
+      "A slain elite leaves a pool that heals enemies standing in it.": "Zabita elita zostawia kałużę, która leczy stojących w niej wrogów.",
+      "Orbs come out of the horde: only direct hits hurt them, so kill them before they burst.": "Z hordy wychodzą kule: ranią je tylko bezpośrednie trafienia, więc zniszcz je, zanim wybuchną."
+    },
+    "cs": {
+      "Bolstering": "Posilující",
+      "Sanguine": "Krvavý",
+      "Explosive": "Výbušný",
+      "A death makes the enemies near it tougher and stronger, stacking.": "Každá smrt učiní okolní nepřátele odolnějšími a silnějšími, kumulativně.",
+      "A slain elite leaves a pool that heals enemies standing in it.": "Zabitá elita zanechá kaluž, která léčí nepřátele stojící v ní.",
+      "Orbs come out of the horde: only direct hits hurt them, so kill them before they burst.": "Z hordy vycházejí koule: zraňují je jen přímé zásahy, tak je znič, než vybuchnou."
+    },
+    "de": {
+      "Bolstering": "Anstachelnd",
+      "Sanguine": "Blutig",
+      "Explosive": "Explosiv",
+      "A death makes the enemies near it tougher and stronger, stacking.": "Ein Tod macht Gegner in der Nähe zäher und stärker, stapelbar.",
+      "A slain elite leaves a pool that heals enemies standing in it.": "Ein getöteter Elitegegner hinterlässt eine Lache, die Gegner darin heilt.",
+      "Orbs come out of the horde: only direct hits hurt them, so kill them before they burst.": "Aus der Horde kommen Kugeln: Nur direkte Treffer schaden ihnen, also zerstöre sie, bevor sie platzen."
+    },
+    "pt": {
+      "Bolstering": "Fortalecente",
+      "Sanguine": "Sanguíneo",
+      "Explosive": "Explosivo",
+      "A death makes the enemies near it tougher and stronger, stacking.": "Cada morte deixa os inimigos próximos mais resistentes e mais fortes, acumulando.",
+      "A slain elite leaves a pool that heals enemies standing in it.": "Um elite morto deixa uma poça que cura os inimigos dentro dela.",
+      "Orbs come out of the horde: only direct hits hurt them, so kill them before they burst.": "Orbes saem da horda: só golpes diretos os ferem, então destrua-os antes que explodam."
+    },
+    "es": {
+      "Bolstering": "Reforzante",
+      "Sanguine": "Sanguinario",
+      "Explosive": "Explosivo",
+      "A death makes the enemies near it tougher and stronger, stacking.": "Cada muerte hace más duros y fuertes a los enemigos cercanos, de forma acumulable.",
+      "A slain elite leaves a pool that heals enemies standing in it.": "Un élite abatido deja un charco que cura a los enemigos que están en él.",
+      "Orbs come out of the horde: only direct hits hurt them, so kill them before they burst.": "De la horda salen orbes: solo los golpes directos les hacen daño, así que destrúyelos antes de que estallen."
+    },
+    "fr": {
+      "Bolstering": "Galvanisant",
+      "Sanguine": "Sanguin",
+      "Explosive": "Explosif",
+      "A death makes the enemies near it tougher and stronger, stacking.": "Une mort rend les ennemis proches plus résistants et plus forts, cumulable.",
+      "A slain elite leaves a pool that heals enemies standing in it.": "Une élite tuée laisse une flaque qui soigne les ennemis qui s'y tiennent.",
+      "Orbs come out of the horde: only direct hits hurt them, so kill them before they burst.": "Des orbes sortent de la horde : seuls les coups directs les blessent, alors détruisez-les avant qu'ils n'éclatent."
+    },
+    "ro": {
+      "Bolstering": "Întăritor",
+      "Sanguine": "Sângeros",
+      "Explosive": "Exploziv",
+      "A death makes the enemies near it tougher and stronger, stacking.": "O moarte îi face pe inamicii din jur mai rezistenți și mai puternici, cumulativ.",
+      "A slain elite leaves a pool that heals enemies standing in it.": "O elită ucisă lasă o baltă care vindecă inamicii din ea.",
+      "Orbs come out of the horde: only direct hits hurt them, so kill them before they burst.": "Din hoardă ies globuri: doar loviturile directe le rănesc, așa că distruge-le înainte să explodeze."
+    },
+    "tr": {
+      "Bolstering": "Güçlendiren",
+      "Sanguine": "Kanlı",
+      "Explosive": "Patlayıcı",
+      "A death makes the enemies near it tougher and stronger, stacking.": "Her ölüm yakındaki düşmanları daha dayanıklı ve güçlü yapar, birikerek.",
+      "A slain elite leaves a pool that heals enemies standing in it.": "Öldürülen bir elit, içinde duran düşmanları iyileştiren bir gölcük bırakır.",
+      "Orbs come out of the horde: only direct hits hurt them, so kill them before they burst.": "Sürüden küreler çıkar: onlara yalnızca doğrudan vuruşlar işler, patlamadan önce yok et."
+    },
+    "ru": {
+      "Bolstering": "Усиливающий",
+      "Sanguine": "Кровавый",
+      "Explosive": "Взрывной",
+      "A death makes the enemies near it tougher and stronger, stacking.": "Каждая смерть делает ближайших врагов крепче и сильнее, эффект суммируется.",
+      "A slain elite leaves a pool that heals enemies standing in it.": "Убитый элитный враг оставляет лужу, которая исцеляет врагов в ней.",
+      "Orbs come out of the horde: only direct hits hurt them, so kill them before they burst.": "Из орды появляются сферы: им вредят только прямые удары, так что уничтожьте их, пока они не взорвались."
+    },
+    "uk": {
+      "Bolstering": "Підсилювальний",
+      "Sanguine": "Кривавий",
+      "Explosive": "Вибуховий",
+      "A death makes the enemies near it tougher and stronger, stacking.": "Смерть ворога робить ворогів поруч міцнішими й сильнішими, і це накопичується.",
+      "A slain elite leaves a pool that heals enemies standing in it.": "Убитий елітний ворог залишає калюжу, що зцілює ворогів, які в ній стоять.",
+      "Orbs come out of the horde: only direct hits hurt them, so kill them before they burst.": "З орди з'являються сфери: їм шкодять лише прямі удари, тож знищте їх, поки вони не вибухнули."
+    },
+    "zh": {
+      "Bolstering": "激励",
+      "Sanguine": "血池",
+      "Explosive": "易爆",
+      "A death makes the enemies near it tougher and stronger, stacking.": "敌人死亡时，使附近的敌人更坚韧、更强大，可叠加。",
+      "A slain elite leaves a pool that heals enemies standing in it.": "被击杀的精英会留下一滩血池，治疗站在其中的敌人。",
+      "Orbs come out of the horde: only direct hits hurt them, so kill them before they burst.": "敌群中会出现宝珠：只有直接攻击能伤害它们，在它们爆炸前将其消灭。"
+    },
+    "ja": {
+      "Bolstering": "強化",
+      "Sanguine": "血溜まり",
+      "Explosive": "爆発",
+      "A death makes the enemies near it tougher and stronger, stacking.": "敵が倒れると、近くの敵が頑丈かつ強くなります。効果は重複します。",
+      "A slain elite leaves a pool that heals enemies standing in it.": "倒されたエリートが血溜まりを残し、その中に立つ敵を回復します。",
+      "Orbs come out of the horde: only direct hits hurt them, so kill them before they burst.": "群れからオーブが出現します：直接攻撃しか効かないので、弾ける前に倒しましょう。"
+    },
+    "ko": {
+      "Bolstering": "강화",
+      "Sanguine": "피웅덩이",
+      "Explosive": "폭발",
+      "A death makes the enemies near it tougher and stronger, stacking.": "적이 죽으면 근처의 적이 더 강인하고 강해지며, 중첩됩니다.",
+      "A slain elite leaves a pool that heals enemies standing in it.": "처치된 정예가 웅덩이를 남겨, 그 안에 선 적을 치유합니다.",
+      "Orbs come out of the horde: only direct hits hurt them, so kill them before they burst.": "적 무리에서 구슬이 나옵니다: 직접 공격만 통하니 터지기 전에 처치하세요."
+    }
+  }
+}

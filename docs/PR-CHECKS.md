@@ -59,11 +59,77 @@ ambiguous declaration fails preparation.
 
 The assertions cover:
 
+- Projection/metadata cases exercise production navigation cache boundaries and
+  resolver preparation: successful same-pass reuse, exact coordinate identity,
+  accepted-roster retirement, map/getter changes, failed projection recovery,
+  fresh frame motion, bounded tab/slot/validation chunks, atomic publication, dirty/language/world
+  invalidation and fresh synchronous first-use completion. They preserve the
+  absence of new runtime test hooks and remain CI-only, without live FPS claims.
+
+- The remaining-frame pass adds CI-only cases for the default-off minimap clock,
+  centered zone text and display transactions; selective final-window cooldown
+  reads; strict SCT retirement deadlines and native raid-icon UV forms; dirty
+  boss marker reconciliation with exact active halos; settled loot hold/hidden
+  expiry; Revive clipping reuse; event-driven player pulses; shared Layout
+  samples/final release; unchanged waypoint math with active interpolation;
+  lazy Chat time and observed/unreported tooltip owners. These fixtures are
+  authored for CI and were not run locally; no live rendering/FPS is inferred.
+
+- Cadence-cleanup production mocks cover event-driven low-health eligibility
+  with unchanged active pulse equations, idle versus editing Layout geometry,
+  settled language/cooldown detachment and rearming, actual tooltip/target color
+  repair, hidden minimap-clock recovery, dirty aura layout with native anchor
+  repair, duration/pet/level/lair caption reuse, idle SCT/Chat, lazy guardian
+  clock reads and ten-Hz/deferred/fresh-hover boss-debuff work. Clock tests keep
+  raw native phase/time/ownership and original effect inputs. These are CI-only
+  call/lifecycle contracts and do not establish rendered parity or FPS gains.
+- Extracted production unit-border transitions actually hide inactive party and
+  portrait variants, restore the retained artwork on option changes and skip
+  unchanged writes. These assertions distinguish shown state from alpha; they
+  do not measure the packaged renderer's submitted quads or GPU time.
+- Performance follow-up fixtures also exercise production banner detach/retry,
+  Layout handle preparation/failure, unchanged meter publications with changing
+  rates, shown-plate sampling, shared navigation reads, tooltip content/owner
+  caches, loot backpressure, parser descriptors and XP fade geometry. Extracted
+  helpers retain explicit fake native boundaries; full controllers still load
+  only in CI. These assert call/object/lifecycle behavior, not rendering or FPS.
+  Movement follow-ups cover incremental target-change discovery and synchronous
+  minimap-size sharing, including unavailable and insufficient geometry retry.
+  Extracted timer foam also checks one native height sample per paint while
+  retaining the original clipping geometry and UVs at different authored heights.
+  Production clock-progress cases cover unchanged writes within a native second,
+  whole-second steps, native pauses/corrections, exact fractional completion,
+  maximum changes and hidden recovery. They keep raw caption/marker inputs
+  separate from the stepped flow/foam clipping boundary.
+  Timer-caption mocks cover unchanged/disabled formatting, current-value option
+  previews, language/mode changes, scale and missing-metric retries, font preview,
+  retirement and repeated empty-clock idling. They use the production label
+  constructor and non-default font styling after formatting, preserving the
+  separate string/nil font caption and formatting-cache owners.
+  Full nameplate mocks also cover exact-name origin indexing, stable ordered
+  retirement, loss ambiguity, native reuse, strict expiry and index cleanup.
+  Pass-local query cases cover repeated no-match/ambiguous results, exact
+  name/kind/amount/fallback separation, consumed-loss invalidation, fresh passes
+  and cache overflow without dropped hits. Color-key cases preserve the four
+  original fields and separators without the former temporary concatenation table.
+  Source-extracted SCT queue cases retain original metadata/color intake,
+  amount/critical/icon identities, inclusive intake and subtraction-based
+  settle boundaries while checking that MSBT stores no per-hit pending record.
+  Default per-hit matching/fallback remains covered. Extraction keeps complete
+  multi-variable constant declarations once, with uniqueness regression cases.
+
 - Boss/guardian current and maximum health defaults, independent preview,
   Confirm/Cancel, profile discard and reset use the real display module. Shared
   encounter-label mocks cover all four combinations, slash visibility, actual
   label hiding, disabled/unchanged formatting, pooled text restoration and no
   added drawing objects. These do not prove native rendering or font geometry.
+- Full production guardian tracker mocks cover status-caption reuse, native
+  rounding boundaries, static statuses, language changes, actual text resets,
+  failed setters, hidden work, pooled-row reuse, options/world cleanup and
+  unchanged health controls. Revive production mocks cover caption/percentage
+  reuse, hidden formatting, identity/language/retirement, actual text repair,
+  measurement readiness, native progress and shared animation-width reads.
+  These are CI-only call/lifecycle assertions, without live rendering evidence.
 - Guardian minimap timer mocks load the production roster and extracted pin
   functions to cover default-off drafts/profiles/reset, native pause-aware
   countdowns, unchanged/hidden/off work, lazy label pooling, font retry and retirement.
@@ -76,11 +142,17 @@ The assertions cover:
   Layout/icon/global-cursor behavior. Mocks do not establish live minimap input
   or cursor pixel placement.
 - Unchanged cooldown values still read the native boundary but perform zero
-  presentation writes and allocate no replacement objects.
+  presentation writes and allocate no replacement objects. Caption-cache cases
+  also check unchanged localization, rounded-value/unit/language changes,
+  actual native text/color repair, failed setter retries and every-frame
+  final-window sampling with the exact positive-zero boundary.
 - Hidden/off cooldowns skip native reads and presentation; world retirement
   clears overlays and suspends reads, and world entry resumes them.
 - Range indicators reuse their texture, avoid restarting unchanged fades and
-  detach their polling and clear effects when the action bar hides.
+  detach their polling and clear effects when the action bar hides. One lazy
+  target sample serves each pass while visible buttons retain independent
+  range reads; missing/friendly/hostile transitions and hidden allocation/cleanup
+  use fresh native boundaries.
 - Loot cards clear retired text/icon bindings and reuse the original three-card
   pool. Settled updates perform zero presentation writes, and a full pool does
   not allocate a fourth card.
@@ -246,9 +318,44 @@ broken callbacks and stale/ambiguous production seams are rejected.
 
 ## What still needs the client
 
+Performance Mode fixtures exercise the production display/profile transaction,
+native Chat fade/slide owners, XP, cooldown-number and stored-level controllers,
+and the static low-health warning. Extracted timer ownership checks cover lazy
+decoration, static blue/red fills and restoration of the original effect pool.
+Related production mocks cover notification expiry, revive progress, static
+range feedback and skull-glow transitions. These fixtures run only in CI and
+were not run locally; they do not measure frame rate or verify native rendering.
+
+Banner cases include the former
+fade-out window and hidden-born rows, preserving original receipt lifetimes.
+
 Static checks cannot prove that a shared callback is reached, native publications
 arrive in the expected order, hidden views remain idle, or textures render with
 the correct pixels. They also cannot measure live draw calls, GPU memory or FPS.
 Use source review for ownership/lifecycle changes and a separate in-game check
 when authorized. Local work remains limited to source review and pinned
 formatting; these regression tests and audits run in GitHub Actions.
+
+## Pet and totem controller scenarios
+
+`ui_pets_totems_spec.lua` loads the production PetFrames module against fake
+native getters, snapshots, phase and run time. It covers unchanged grouped pets
+alongside grouped totems; deferred reads; exact published names/icons/counts;
+future keys/caps; missing and malformed independent feeds; no timer before run
+clock readiness; pause/choosing behavior; zero-time counts retained until native
+removal; hidden allocation/polling; shared display settings; receipt retirement;
+world/reload/reset cleanup and row-pool reuse. Metadata learning runs only for
+changed accepted publications. The fixture and runner remain outside the
+runtime manifest, run only in CI and do not prove live delivery or rendering.
+
+## Heroic affix view scenarios
+
+`ui_run_affixes_spec.lua` uses the extracted production `CreateRunAffixes`
+factory, shared tooltip registry and generated native captions against fake
+widgets/snapshots. Eight scenarios cover ordered centering, the exact neutral
+jewelry crop and red tint, hidden/unchanged work, missing or non-Heroic data,
+unknown keys, receipt retirement, retry cadence, pool reuse, editing/Tooltip
+visibility, foreign ownership and all fourteen native name/description sets.
+The existing required job runs the fixture; it is not shipped or run locally.
+This isolates the view boundary, rather than executing the full timer/game or
+proving native packet delivery and appearance.

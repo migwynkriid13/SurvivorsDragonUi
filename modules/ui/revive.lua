@@ -8,6 +8,7 @@ DFRL:NewMod("Revive", 4, function()
     local path = DFRL:GetInfoOrCons("tex") .. "timer\\"
     local INTERVAL, MIN_WIDTH, SMOOTH_TIME, FADE_TIME = 0.1, 356, 0.14, 0.18
     local CROSS_COUNT, CROSS_PERIOD = 6, 0.7
+    local performanceMode = DFRL.display.Get("performanceMode")
     local native = T.NewHudOwner("revive")
     local phases = { playing = true, choosing = true, paused = true, dead = true, victory = true }
 
@@ -109,22 +110,29 @@ DFRL:NewMod("Revive", 4, function()
         local measure = Label(14)
         measure:Hide()
         local value, target, origin, identity, displayedPercent
+        local captionIdentity, captionLanguage, captionText, percentText
         local paintedValue, sparkX
         local transition, fade, effectAge = 0, 0, 0
         local dirty = true
         local measuredText, measuredFace, measuredSize, measuredFlags, measuredScale, measuredWidth
-        local function Paint()
+        local function Paint(width)
             if paintedValue ~= value then
                 bar:SetValue(value)
                 paintedValue = value
             end
             local rounded = value == 1 and 100 or math.min(99, math.floor(value * 100 + 0.5))
-            if displayedPercent ~= nil then
+            if displayedPercent ~= nil and not performanceMode then
                 rounded = math.max(displayedPercent - 1, math.min(displayedPercent + 1, rounded))
             end
+            if displayedPercent ~= rounded or not percentText then percentText = tostring(rounded) .. "%" end
             displayedPercent = rounded
-            T.SetTextIfChanged(percent, tostring(rounded) .. "%")
-            local x = 8 + (root:GetWidth() - 72) * value
+            T.SetTextIfChanged(percent, percentText)
+            if performanceMode then
+                if spark:IsShown() then spark:Hide() end
+                dirty = false
+                return
+            end
+            local x = 8 + ((width or root:GetWidth()) - 72) * value
             if sparkX ~= x then
                 spark:ClearAllPoints()
                 spark:SetPoint("CENTER", pill, "LEFT", x, 0)
@@ -138,6 +146,7 @@ DFRL:NewMod("Revive", 4, function()
             dirty = false
         end
         function view.Clear()
+            captionIdentity, captionLanguage, captionText, percentText = nil, nil, nil, nil
             if not view.active and not view.waiting and value == nil then return end
             root:Hide()
             root:SetAlpha(1)
@@ -145,6 +154,7 @@ DFRL:NewMod("Revive", 4, function()
             paintedValue = 0
             spark:Hide()
             for _, cross in ipairs(crosses) do
+                cross.geometryWidth, cross.geometryRight = nil, nil
                 for _, texture in ipairs(cross) do
                     texture:Hide()
                 end
@@ -163,7 +173,23 @@ DFRL:NewMod("Revive", 4, function()
             root:Show()
         end
         function view.Resize() dirty = true end
-        function view.Set(text, progress, subject)
+        function view.SetPerformance()
+            transition, effectAge = 0, 0
+            if performanceMode then
+                fade = 1
+                value, origin = target, target
+                if root:GetAlpha() ~= 1 then root:SetAlpha(1) end
+                if spark:IsShown() then spark:Hide() end
+                for _, cross in ipairs(crosses) do
+                    for _, texture in ipairs(cross) do
+                        if texture:IsShown() then texture:Hide() end
+                    end
+                end
+            end
+            displayedPercent, dirty = nil, true
+            if view.active and root:IsVisible() then Paint() end
+        end
+        function view.Set(person, progress, subject, template)
             local fresh = identity ~= subject or value == nil
             local requested = view.active or view.waiting
             if DFRL.layout.IsHidden("revive") or not UIParent:IsVisible() then
@@ -176,6 +202,12 @@ DFRL:NewMod("Revive", 4, function()
                 if not requested then root:Show() end
                 return
             end
+            local language = DFRL.locale.code
+            if captionIdentity ~= subject or captionLanguage ~= language or not captionText then
+                local text = string.format(DFRL.locale.Text(template), person)
+                captionIdentity, captionLanguage, captionText = subject, language, text
+            end
+            local text = captionText
             T.SetTextIfChanged(caption, text)
             local face, size, flags = measure:GetFont()
             local scale = measure:GetParent():GetEffectiveScale()
@@ -203,9 +235,13 @@ DFRL:NewMod("Revive", 4, function()
             if fresh then
                 value, target, origin, identity = progress, progress, progress, subject
                 displayedPercent, transition, fade, effectAge, dirty = nil, 0, 0, 0, true
-                root:SetAlpha(0)
+                root:SetAlpha(performanceMode and 1 or 0)
             elseif target ~= progress then
                 origin, target, transition = value, progress, 0
+            end
+            if performanceMode then
+                value, target, origin = progress, progress, progress
+                fade, dirty = 1, true
             end
             view.active, view.waiting = true, false
             if not pill:IsShown() then pill:Show() end
@@ -213,7 +249,7 @@ DFRL:NewMod("Revive", 4, function()
             if not requested then root:Show() end
         end
         function view.Animate(elapsed)
-            if not view.active or not root:IsVisible() then return end
+            if performanceMode or not view.active or not root:IsVisible() then return end
             if fade < 1 then
                 fade = math.min(1, fade + elapsed / FADE_TIME)
                 root:SetAlpha(1 - (1 - fade) * (1 - fade))
@@ -226,29 +262,43 @@ DFRL:NewMod("Revive", 4, function()
                 value = math.max(0, math.min(1, value + step))
                 dirty = true
             end
-            if dirty then Paint() end
+            local width = root:GetWidth()
+            if dirty then Paint(width) end
             effectAge = effectAge + elapsed
-            local width = root:GetWidth() - 72
+            width = width - 72
             local filledRight = 8 + width * value
             for index, cross in ipairs(crosses) do
-                local phase = math.mod(effectAge / CROSS_PERIOD + index / CROSS_COUNT, 1)
-                local x = 8 + width * (index - 0.5) / CROSS_COUNT
-                local y = math.mod(index, 2) == 0 and 2 or -2
-                local alpha = 0.45 + math.sin(phase * math.pi * 2) * 0.2
-                for part, texture in ipairs(cross) do
-                    local partWidth = part == 1 and 6 or 2
-                    local left = x - partWidth / 2
-                    local visibleWidth = math.min(partWidth, filledRight - left)
-                    if visibleWidth > 0 then
-                        if texture.reviveWidth ~= visibleWidth then
-                            texture:SetWidth(visibleWidth)
-                            texture.reviveWidth = visibleWidth
+                if cross.geometryWidth ~= width or cross.geometryRight ~= filledRight then
+                    local x = 8 + width * (index - 0.5) / CROSS_COUNT
+                    local y = math.mod(index, 2) == 0 and 2 or -2
+                    cross.visible = false
+                    for part, texture in ipairs(cross) do
+                        local partWidth = part == 1 and 6 or 2
+                        local left = x - partWidth / 2
+                        local visibleWidth = math.min(partWidth, filledRight - left)
+                        texture.reviveVisible = visibleWidth > 0
+                        if texture.reviveVisible then
+                            cross.visible = true
+                            if texture.reviveWidth ~= visibleWidth then
+                                texture:SetWidth(visibleWidth)
+                                texture.reviveWidth = visibleWidth
+                            end
+                            if texture.reviveLeft ~= left then
+                                texture:ClearAllPoints()
+                                texture:SetPoint("LEFT", pill, "LEFT", left, y)
+                                texture.reviveLeft = left
+                            end
                         end
-                        if texture.reviveLeft ~= left then
-                            texture:ClearAllPoints()
-                            texture:SetPoint("LEFT", pill, "LEFT", left, y)
-                            texture.reviveLeft = left
-                        end
+                    end
+                    cross.geometryWidth, cross.geometryRight = width, filledRight
+                end
+                local alpha
+                if cross.visible then
+                    local phase = math.mod(effectAge / CROSS_PERIOD + index / CROSS_COUNT, 1)
+                    alpha = 0.45 + math.sin(phase * math.pi * 2) * 0.2
+                end
+                for _, texture in ipairs(cross) do
+                    if texture.reviveVisible then
                         if texture.reviveAlpha ~= alpha then
                             texture:SetVertexColor(0.58, 1, 0.74, alpha)
                             texture.reviveAlpha = alpha
@@ -311,25 +361,27 @@ DFRL:NewMod("Revive", 4, function()
             Clear()
             return
         end
-        local text, progress, subject, waiting
+        local template, person, progress, subject, waiting
         if state.down == 1 then
             local helper = Name(state.by)
             waiting = helper == ""
-            if not waiting then text = string.format(DFRL.locale.Text("%s is reviving you!"), helper) end
+            if not waiting then
+                template, person = "%s is reviving you!", helper
+            end
             progress, subject = state.share, "incoming:" .. helper
         elseif state.down == 0 and Name(state.reviving) ~= "" then
             local friend = Name(state.reviving)
-            text = string.format(DFRL.locale.Text("Reviving %s!"), friend)
+            template, person = "Reviving %s!", friend
             progress, subject = state.rshare, "outgoing:" .. friend
         end
-        if (not text and not waiting) or not Number(progress) then
+        if (not template and not waiting) or not Number(progress) then
             Clear()
             return
         end
         if waiting then
             view.Wait()
         else
-            view.Set(text, math.max(0, math.min(1, progress)), subject)
+            view.Set(person, math.max(0, math.min(1, progress)), subject, template)
         end
         lastPacket, lastStamp, lastReceived, dirty = packet, stamp, received, false
         SyncNative()
@@ -345,7 +397,7 @@ DFRL:NewMod("Revive", 4, function()
     local function Tick()
         local elapsed = math.max(0, tonumber(arg1) or 0)
         age = age + elapsed
-        if age < INTERVAL and (not view.active or not root:IsVisible()) then return end
+        if age < INTERVAL and (performanceMode or not view.active or not root:IsVisible()) then return end
         local ok, message = pcall(Step, elapsed)
         if not ok then
             Clear()
@@ -377,6 +429,13 @@ DFRL:NewMod("Revive", 4, function()
     end)
     root:SetScript("OnHide", function() native.Release() end)
     DFRL.locale.Listen(function()
+        dirty, age = true, INTERVAL
+    end)
+    DFRL.display.Listen(function()
+        local enabled = DFRL.display.Get("performanceMode")
+        if performanceMode == enabled then return end
+        performanceMode = enabled
+        view.SetPerformance()
         dirty, age = true, INTERVAL
     end)
     for _, name in ipairs({ "PLAYER_ENTERING_WORLD", "PLAYER_LEAVING_WORLD", "PLAYER_LOGOUT", "CHAT_MSG_ADDON" }) do

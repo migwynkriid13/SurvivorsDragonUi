@@ -4,6 +4,11 @@ SurvivorsDragonUi includes English, Polish, Czech (**Čeština**), German, Brazi
 
 ## Following the game
 
+The default-off **PERFORMANCE MODE** checkbox uses the standard editor caption
+binding and width measurement. Its source row and all fourteen runtime UI entries
+are added together; native catalogs, spell aliases and effect templates are
+unchanged by this setting.
+
 The Heroic/marks update adds the native `marks.gained` and `marks.earned`
 templates. They were read as data from the installed executable, SHA-256
 `22f7938eb4f99f2857dc091b1c57c147bd848eaabfeaa81e444c0a3393ca8150`,
@@ -187,3 +192,22 @@ source TSV entries and runtime UI entries in all fourteen languages. Only
 these two caption rows were added; native catalogs, effects and aliases
 remain unchanged. The existing editor measures both strings when sizing
 the Action bar page.
+
+## Heroic affix tooltip text — 0.125.0, 2026-10-28
+
+The selected affix row uses the native names Bolstering, Sanguine and Explosive
+and their three native descriptions, in all fourteen catalogs. The exact six
+keys are in `localization/native-keys.json`; no guessed retail mechanics or
+handwritten translations replace the game's text. English wire keys remain
+independent of translated labels. Unknown keys keep their received spelling
+and have no invented description.
+
+`scripts/generate_localization.py --refresh-affixes-only` imports only these
+six native entries from the installed 0.125.0 executable pinned at SHA-256
+`08f8c58d6967b94598c56b822a1e6b323a52924a299a6df70ef6055ca839b8cd`.
+The data-only receipt is `third_party/affix-native-text.json`. Unrelated native,
+UI, effects and spell-name sections retain their existing sources. The same
+targeted preparation helper also serves the prior marks import with its
+original keys/fingerprint. This extraction did not run game or addon code;
+local source review and pinned formatting do not establish live translation
+selection or tooltip rendering.

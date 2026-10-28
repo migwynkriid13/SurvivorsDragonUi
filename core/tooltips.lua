@@ -46,8 +46,31 @@ function DFRL.tools.StyleHoverCard(frame, red, green, blue)
         frame:SetBackdrop(BACKDROP)
         frame.sduiHoverSkin = true
     end
-    frame:SetBackdropColor(0.04, 0.04, 0.08, 0.98)
-    frame:SetBackdropBorderColor(red or BORDER_R, green or BORDER_G, blue or BORDER_B, 1)
+    local r, g, b, a
+    if frame.GetBackdropColor then
+        r, g, b, a = frame:GetBackdropColor()
+    end
+    if
+        not T.NearlyEqual(r, 0.04)
+        or not T.NearlyEqual(g, 0.04)
+        or not T.NearlyEqual(b, 0.08)
+        or not T.NearlyEqual(a, 0.98)
+    then
+        frame:SetBackdropColor(0.04, 0.04, 0.08, 0.98)
+    end
+    red, green, blue = red or BORDER_R, green or BORDER_G, blue or BORDER_B
+    r, g, b, a = nil, nil, nil, nil
+    if frame.GetBackdropBorderColor then
+        r, g, b, a = frame:GetBackdropBorderColor()
+    end
+    if
+        not T.NearlyEqual(r, red)
+        or not T.NearlyEqual(g, green)
+        or not T.NearlyEqual(b, blue)
+        or not T.NearlyEqual(a, 1)
+    then
+        frame:SetBackdropBorderColor(red, green, blue, 1)
+    end
 end
 
 function DFRL.tools.CreateHoverCard(parent, width, height)
@@ -113,6 +136,7 @@ DFRL:NewMod("Tooltips", 2, function()
     local tooltip, bar = GameTooltip, GameTooltipStatusBar
     if not tooltip then return end
     local currentUnit
+    local lastIconOwner, currentOwner
     local elapsed, inWorld = 0, true
     local editing = false
     -- A stable, passive edit region exists even when no native hover is shown.
@@ -123,10 +147,10 @@ DFRL:NewMod("Tooltips", 2, function()
     root:SetScale(tooltip:GetEffectiveScale() / UIParent:GetEffectiveScale())
     root:EnableMouse(false)
 
-    local function IconOwner(buttons)
+    local function IconOwner(buttons, owner)
         if not buttons then return end
         for _, button in pairs(buttons) do
-            if tooltip:IsOwned(button) then return button end
+            if (owner and button == owner) or (not owner and tooltip:IsOwned(button)) then return button end
         end
     end
 
@@ -160,9 +184,18 @@ DFRL:NewMod("Tooltips", 2, function()
         local anchor, target, targetPoint, offsetY = "BOTTOMRIGHT", root, "BOTTOMRIGHT", 0
         -- Native ownership follows registered skill, equipment and HUD icons.
         -- Other hovers keep their shared layout seat.
-        local button = IconOwner(DFRL.actionButtons)
-            or IconOwner(DFRL.characterItemButtons)
-            or IconOwner(registeredIcons)
+        local owner = currentOwner
+        if owner and not tooltip:IsOwned(owner) then
+            owner, currentOwner = nil, nil
+        end
+        local button = lastIconOwner
+        if not button or (owner and button ~= owner) or (not owner and not tooltip:IsOwned(button)) then
+            button = IconOwner(DFRL.actionButtons, owner)
+                or IconOwner(DFRL.characterItemButtons, owner)
+                or IconOwner(registeredIcons, owner)
+            lastIconOwner = button
+        end
+        if button then currentOwner = button end
         if button and not button:IsVisible() then
             tooltip:Hide()
             return
@@ -214,7 +247,9 @@ DFRL:NewMod("Tooltips", 2, function()
     -- return, but prevent owner-relative/cursor placement from reclaiming it.
     local nativeSetOwner = tooltip.SetOwner
     tooltip.SetOwner = function(self, owner, anchor, x, y)
-        return nativeSetOwner(self, owner, self == tooltip and inWorld and "ANCHOR_NONE" or anchor, x, y)
+        local result = nativeSetOwner(self, owner, self == tooltip and inWorld and "ANCHOR_NONE" or anchor, x, y)
+        if self == tooltip then currentOwner = owner end
+        return result
     end
     if type(tooltip.FadeOut) == "function" then
         local nativeFadeOut = tooltip.FadeOut
@@ -241,7 +276,7 @@ DFRL:NewMod("Tooltips", 2, function()
     end
     local function UnitColor(unit)
         local red, green, blue = PlayerColor(unit)
-        if red then return red, green, blue end
+        if red then return red, green, blue, true end
         local reaction = type(UnitReaction) == "function" and UnitReaction(unit, "player")
         if type(reaction) ~= "number" then return BORDER_R, BORDER_G, BORDER_B end
         if reaction >= 5 then return 0.2, 0.8, 0.2 end
@@ -250,20 +285,29 @@ DFRL:NewMod("Tooltips", 2, function()
     end
     local function Refresh()
         if not tooltip:IsVisible() then return end
-        if bar then bar:Hide() end
+        if bar and bar:IsShown() then bar:Hide() end
         if inWorld and Exists(currentUnit) then
-            local red, green, blue = UnitColor(currentUnit)
+            local red, green, blue, player = UnitColor(currentUnit)
             DFRL.tools.StyleHoverCard(tooltip, red, green, blue)
-            red, green, blue = PlayerColor(currentUnit)
-            if red and GameTooltipTextLeft1 then GameTooltipTextLeft1:SetTextColor(red, green, blue) end
+            if player and GameTooltipTextLeft1 then
+                local r, g, b, a = GameTooltipTextLeft1:GetTextColor()
+                if
+                    not T.NearlyEqual(r, red)
+                    or not T.NearlyEqual(g, green)
+                    or not T.NearlyEqual(b, blue)
+                    or (a and not T.NearlyEqual(a, 1))
+                then
+                    GameTooltipTextLeft1:SetTextColor(red, green, blue)
+                end
+            end
         else
             DFRL.tools.StyleHoverCard(tooltip)
         end
     end
     local function Clear()
-        currentUnit, elapsed = nil, 0
+        currentUnit, lastIconOwner, currentOwner, elapsed = nil, nil, nil, 0
         DFRL.tools.StyleHoverCard(tooltip)
-        if bar then bar:Hide() end
+        if bar and bar:IsShown() then bar:Hide() end
     end
 
     DFRL.tools.StyleHoverCard(tooltip)
@@ -287,7 +331,7 @@ DFRL:NewMod("Tooltips", 2, function()
         Refresh()
     end)
     if bar then
-        bar:Hide()
+        if bar:IsShown() then bar:Hide() end
         -- Native unit builders can show it again on every hover rebuild.
         HookScript(bar, "OnShow", function() bar:Hide() end)
     end

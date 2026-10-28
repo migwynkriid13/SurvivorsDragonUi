@@ -95,13 +95,17 @@ DFRL:NewMod("NameplateStyle", 5, function()
     end
 
     local function CopyNativeIcon(destination, source)
-        if source and source:IsShown() and source:GetTexture() then
-            local texture = source:GetTexture()
+        local texture = source and source:IsShown() and source:GetTexture()
+        if texture then
             if destination:GetTexture() ~= texture then destination:SetTexture(texture) end
             local a, b, c, d, e, f, g, h = source:GetTexCoord()
             local da, db, dc, dd, de, df, dg, dh = destination:GetTexCoord()
             if a ~= da or b ~= db or c ~= dc or d ~= dd or e ~= de or f ~= df or g ~= dg or h ~= dh then
-                destination:SetTexCoord(source:GetTexCoord())
+                if e == nil then
+                    destination:SetTexCoord(a, b, c, d)
+                else
+                    destination:SetTexCoord(a, b, c, d, e, f, g, h)
+                end
             end
             if not destination:IsShown() then destination:Show() end
         else
@@ -109,7 +113,7 @@ DFRL:NewMod("NameplateStyle", 5, function()
         end
     end
 
-    local function Update(plate, data, namesOnly, fontSize)
+    local function Update(plate, data, namesOnly, fontSize, sample)
         if not plate:IsShown() then return end
         local style = data.style
         if not style then return end
@@ -129,14 +133,14 @@ DFRL:NewMod("NameplateStyle", 5, function()
             end
         end
 
-        -- Native regions retain their contents and shown state for SCT and the
-        -- client lifecycle. Suppress their pixels rather than changing data.
-        if data.nativeRegions then
+        -- Older clients without owner-layer masking retain the alpha fallback.
+        -- Supported clients suppress extraction, preserving native shown/data bits.
+        if not data.nativeLayersSuppressed and data.nativeRegions then
             for _, region in pairs(data.nativeRegions) do
                 if region and region.SetAlpha and region:GetAlpha() ~= 0 then region:SetAlpha(0) end
             end
         end
-        local nativeTexture = data.bar:GetStatusBarTexture()
+        local nativeTexture = not data.nativeLayersSuppressed and data.bar:GetStatusBarTexture()
         if nativeTexture and nativeTexture.SetAlpha and nativeTexture:GetAlpha() ~= 0 then nativeTexture:SetAlpha(0) end
 
         if style.namesOnly ~= namesOnly then
@@ -156,7 +160,12 @@ DFRL:NewMod("NameplateStyle", 5, function()
             style.namesOnly = namesOnly
         end
 
-        local red, green, blue = data.bar:GetStatusBarColor()
+        local red, green, blue
+        if sample then
+            red, green, blue = sample.red, sample.green, sample.blue
+        else
+            red, green, blue = data.bar:GetStatusBarColor()
+        end
         local nameRed, nameGreen, nameBlue = 1, 1, 1
         if namesOnly then
             nameRed, nameGreen, nameBlue = red, green, blue
@@ -169,13 +178,24 @@ DFRL:NewMod("NameplateStyle", 5, function()
             style.name:SetTextColor(nameRed, nameGreen, nameBlue, 1)
             style.nameRed, style.nameGreen, style.nameBlue = nameRed, nameGreen, nameBlue
         end
-        T.SetTextIfChanged(style.name, data.nameRegion:GetText() or "")
+        local name
+        if sample then
+            name = sample.name
+        else
+            name = data.nameRegion:GetText()
+        end
+        T.SetTextIfChanged(style.name, name or "")
         -- The native bar remains live for SCT health-loss matching. Only its
         -- custom presentation skips value/range writes and raid-icon binding.
         if namesOnly then return end
 
-        local minimum, maximum = data.bar:GetMinMaxValues()
-        local value = data.bar:GetValue()
+        local minimum, maximum, value
+        if sample then
+            minimum, maximum, value = sample.minimum, sample.maximum, sample.value
+        else
+            minimum, maximum = data.bar:GetMinMaxValues()
+            value = data.bar:GetValue()
+        end
         red, green, blue = PlateColor(red, green, blue)
         local oldMinimum, oldMaximum = style.health:GetMinMaxValues()
         if oldMinimum ~= minimum or oldMaximum ~= maximum then style.health:SetMinMaxValues(minimum, maximum) end

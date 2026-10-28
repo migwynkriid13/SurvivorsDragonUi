@@ -3,7 +3,9 @@ DFRL:NewMod("AnimatedPortraits", 2, function()
     local inWorld = UnitExists("player") and true or false
     -- Keep the legacy saved key; the choice now covers all three portraits.
     local portraitsHidden = DFRL.display.Get("hidePortraits")
-    local portraits3D = DFRL.display.Get("playerPortrait3D") and not portraitsHidden
+    local portraits3D = DFRL.display.Get("playerPortrait3D")
+        and not portraitsHidden
+        and not DFRL.display.Get("performanceMode")
 
     local function RestoreStill(entry)
         local alpha = portraitsHidden and 0 or entry.stillAlpha
@@ -177,7 +179,7 @@ DFRL:NewMod("AnimatedPortraits", 2, function()
 
     DFRL.display.Listen(function()
         local hidden = DFRL.display.Get("hidePortraits")
-        local enabled = DFRL.display.Get("playerPortrait3D") and not hidden
+        local enabled = DFRL.display.Get("playerPortrait3D") and not hidden and not DFRL.display.Get("performanceMode")
         if enabled == portraits3D and hidden == portraitsHidden then return end
         portraits3D, portraitsHidden = enabled, hidden
         for _, entry in ipairs(entries) do

@@ -102,26 +102,79 @@ DFRL:NewMod("Ui", 5, function()
     end
     local elapsed, pulse = 0, 0
     local monitor = CreateFrame("Frame")
-    monitor:SetScript("OnUpdate", function()
+    local inWorld, running, intensity = true, false, nil
+    local performanceMode = DFRL.display.Get("performanceMode")
+    local paintedAlpha
+    local function StopWarning()
+        if running then monitor:SetScript("OnUpdate", nil) end
+        if warning:IsShown() then warning:Hide() end
+        running, intensity, elapsed, pulse, paintedAlpha = false, nil, 0, 0, nil
+    end
+    local function PaintWarning(alpha)
+        if paintedAlpha == alpha then return end
+        edges.TOP:SetGradientAlpha("VERTICAL", 1, 0, 0, 0, 1, 0, 0, alpha)
+        edges.BOTTOM:SetGradientAlpha("VERTICAL", 1, 0, 0, alpha, 1, 0, 0, 0)
+        edges.LEFT:SetGradientAlpha("HORIZONTAL", 1, 0, 0, alpha, 1, 0, 0, 0)
+        edges.RIGHT:SetGradientAlpha("HORIZONTAL", 1, 0, 0, 0, 1, 0, 0, alpha)
+        if not warning:IsShown() then warning:Show() end
+        paintedAlpha = alpha
+    end
+    local function AnimateWarning()
+        if not running or not inWorld then return end
         elapsed = elapsed + arg1
         if elapsed < 0.05 then return end
+        pulse = pulse + elapsed * (1 + 7 * intensity)
+        local alpha = 0.7 * (0.1 + 0.9 * intensity) * (0.3 + 0.7 * (sin(pulse) + 1) / 2)
+        PaintWarning(alpha)
+        elapsed = 0
+    end
+    local function UpdateWarning()
+        if not inWorld then return end
         local maximum = UnitHealthMax("player")
         local health = maximum > 0 and UnitHealth("player") / maximum * 100 or 100
         if health > 70 or UnitIsDeadOrGhost("player") then
-            if warning:IsShown() then warning:Hide() end
-            pulse = 0
+            StopWarning()
         else
-            local intensity = math.max(0, math.min(1, (70 - health) / 70))
-            pulse = pulse + elapsed * (1 + 7 * intensity)
-            local alpha = 0.7 * (0.1 + 0.9 * intensity) * (0.3 + 0.7 * (sin(pulse) + 1) / 2)
-            edges.TOP:SetGradientAlpha("VERTICAL", 1, 0, 0, 0, 1, 0, 0, alpha)
-            edges.BOTTOM:SetGradientAlpha("VERTICAL", 1, 0, 0, alpha, 1, 0, 0, 0)
-            edges.LEFT:SetGradientAlpha("HORIZONTAL", 1, 0, 0, alpha, 1, 0, 0, 0)
-            edges.RIGHT:SetGradientAlpha("HORIZONTAL", 1, 0, 0, 0, 1, 0, 0, alpha)
-            if not warning:IsShown() then warning:Show() end
+            intensity = math.max(0, math.min(1, (70 - health) / 70))
+            if performanceMode then
+                PaintWarning(0.7 * (0.1 + 0.9 * intensity))
+            elseif not running then
+                running = true
+                monitor:SetScript("OnUpdate", AnimateWarning)
+            end
         end
-        elapsed = 0
+    end
+    for _, name in ipairs({
+        "UNIT_HEALTH",
+        "UNIT_MAXHEALTH",
+        "PLAYER_DEAD",
+        "PLAYER_ALIVE",
+        "PLAYER_UNGHOST",
+        "PLAYER_ENTERING_WORLD",
+        "PLAYER_LEAVING_WORLD",
+        "PLAYER_LOGOUT",
+    }) do
+        monitor:RegisterEvent(name)
+    end
+    monitor:SetScript("OnEvent", function()
+        if event == "PLAYER_LEAVING_WORLD" or event == "PLAYER_LOGOUT" then
+            inWorld = false
+            StopWarning()
+        elseif event == "PLAYER_ENTERING_WORLD" then
+            inWorld = true
+            UpdateWarning()
+        elseif (event ~= "UNIT_HEALTH" and event ~= "UNIT_MAXHEALTH") or arg1 == "player" then
+            UpdateWarning()
+        end
     end)
+    DFRL.display.Listen(function()
+        local enabled = DFRL.display.Get("performanceMode")
+        if enabled == performanceMode then return end
+        performanceMode = enabled
+        StopWarning()
+        UpdateWarning()
+    end)
+    UpdateWarning()
 end)
 
 -- The native build is renderer-owned; control it through the official HUD API.

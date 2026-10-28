@@ -15,11 +15,28 @@ DFRL:NewMod("PetFrames", 4, function()
     root:EnableMouse(false)
     root:Hide()
     local rows, entries, seen, groups = {}, {}, {}, {}
+    local feeds = {
+        {
+            packetName = "AZS_PETS",
+            stampName = "AZS_PETS_UPDATED",
+            getter = "AZS_GetSummons",
+            entries = {},
+            received = 0,
+            blockedReceived = -1,
+            count = 0,
+        },
+        {
+            packetName = "AZS_TOTEMS",
+            stampName = "AZS_TOTEMS_UPDATED",
+            getter = "AZS_GetTotems",
+            entries = {},
+            received = 0,
+            blockedReceived = -1,
+            count = 0,
+        },
+    }
     local inWorld, age, displayed = true, 0, false
-    local received, blockedReceived = 0, -1
-    local blockedPacket, blockedStamp
-    local acceptedPacket, acceptedStamp, acceptedReceived
-    local entryCount, hasTemporary = 0, false
+    local entryCount = 0
     local dirty, paintedScale = true, nil
 
     local function Number(value) return type(value) == "number" and value - value == 0 end
@@ -212,6 +229,7 @@ DFRL:NewMod("PetFrames", 4, function()
         circle.icon, circle.active, circle.native, circle.failedIcon = nil, false, false, nil
     end
     local function HideRow(row)
+        row.timerSecond, row.timerText, row.countValue, row.countText = nil, nil, nil, nil
         if not row.active then return end
         row.frame:Hide()
         Text(row.name, "")
@@ -242,27 +260,54 @@ DFRL:NewMod("PetFrames", 4, function()
         root:Hide()
         displayed = false
     end
-    local function Clear()
-        if not displayed and entryCount == 0 and not acceptedPacket and not dirty then return end
-        HideView()
-        for _, entry in ipairs(entries) do
+    local function ClearFeed(feed)
+        for _, entry in ipairs(feed.entries) do
             Wipe(entry)
         end
+        feed.count, feed.hasTemporary = 0, false
+        feed.packet, feed.stamp, feed.acceptedReceived = nil, nil, nil
+    end
+    local function Clear()
+        if not displayed and entryCount == 0 and not dirty and not feeds[1].packet and not feeds[2].packet then
+            return
+        end
+        HideView()
+        for _, feed in ipairs(feeds) do
+            ClearFeed(feed)
+        end
+        Wipe(entries)
         Wipe(seen)
         Wipe(groups)
-        entryCount, hasTemporary = 0, false
-        acceptedPacket, acceptedStamp, acceptedReceived = nil, nil, nil
+        entryCount = 0
         dirty, paintedScale = false, nil
         Bounds(0)
     end
     local function Retire()
-        blockedPacket, blockedStamp = _G.AZS_PETS, _G.AZS_PETS_UPDATED
-        blockedReceived = received
+        for _, feed in ipairs(feeds) do
+            feed.blockedPacket, feed.blockedStamp = _G[feed.packetName], _G[feed.stampName]
+            feed.blockedReceived = feed.received
+        end
         Clear()
     end
     local function Time(seconds)
         local rounded = math.ceil(seconds)
         return string.format("%d:%02d", math.floor(rounded / 60), math.mod(rounded, 60))
+    end
+    local function TimerText(row, remaining, enabled)
+        local second = enabled and Number(remaining) and remaining >= 0 and math.ceil(remaining) or nil
+        local state = enabled and (second or "missing") or false
+        if row.timerSecond ~= state or row.timerText == nil then
+            local text = not enabled and "" or (second and Time(second) or "--:--")
+            row.timerSecond, row.timerText = state, text
+        end
+        return row.timerText
+    end
+    local function CountText(row, count, enabled)
+        local value = enabled and count > 1 and count or nil
+        if row.countValue ~= value or row.countText == nil then
+            row.countValue, row.countText = value, value and ("x" .. value) or ""
+        end
+        return row.countText
     end
     local function Paint(row, entry, scale, column, line, cellWidth, spacing)
         row.id = entry.id
@@ -288,28 +333,23 @@ DFRL:NewMod("PetFrames", 4, function()
         end
         local circle = Circle(row)
         local usable = SetIcon(circle, entry.icon, scale)
-        Text(circle.count, not DFRL.display.Get("hidePetCounts") and entry.count > 1 and ("x" .. entry.count) or "")
+        Text(circle.count, CountText(row, entry.count, not DFRL.display.Get("hidePetCounts")))
         if not circle.active then circle.frame:Show() end
         circle.active = true
-        if not showTimer then
-            Text(row.status, "")
-        elseif Number(entry.remaining) and entry.remaining >= 0 then
-            Text(row.status, Time(entry.remaining))
-        else
-            Text(row.status, "--:--")
-        end
+        Text(row.status, TimerText(row, entry.remaining, showTimer))
         if not row.active then row.frame:Show() end
         row.active = true
         return usable
     end
-    local function ReadRoster(list)
+    local function ReadRoster(list, feed)
         -- Combine each supplied type key in first-arrival order, counting all
         -- members while timing only the temporary ones. Reuse our own scratch
         -- tables; never retain or change the getter's normalized rows.
         Wipe(seen)
         Wipe(groups)
+        local roster = feed.entries
         local count = 0
-        hasTemporary = false
+        feed.hasTemporary = false
         for _, entry in ipairs(list) do
             if
                 type(entry) ~= "table"
@@ -327,10 +367,10 @@ DFRL:NewMod("PetFrames", 4, function()
             local group = key and groups[key]
             if not group then
                 count = count + 1
-                group = entries[count]
+                group = roster[count]
                 if not group then
                     group = {}
-                    table.insert(entries, group)
+                    table.insert(roster, group)
                 end
                 group.id, group.name = entry.id, entry.name
                 group.icon = petIcons[entry.key]
@@ -340,7 +380,7 @@ DFRL:NewMod("PetFrames", 4, function()
             end
             group.count = group.count + 1
             if entry.permanent ~= true then
-                hasTemporary = true
+                feed.hasTemporary = true
                 group.temporary = group.temporary + 1
                 local remaining = Number(entry.remaining) and entry.remaining >= 0 and entry.remaining or nil
                 if group.temporary == 1 then
@@ -352,11 +392,86 @@ DFRL:NewMod("PetFrames", 4, function()
                 end
             end
         end
-        for index = count + 1, table.getn(entries) do
-            if entries[index].id then Wipe(entries[index]) end
+        for index = count + 1, table.getn(roster) do
+            if roster[index].id then Wipe(roster[index]) end
         end
-        entryCount = count
+        feed.count = count
         return true
+    end
+    local function ReadTotems(list, feed)
+        Wipe(seen)
+        local clock = not DFRL.display.Get("hidePetTimers")
+            and not DFRL.layout.IsHidden("petFrames")
+            and Native("AZS_GetRunTime")
+        local clockReady = Number(clock) and clock >= 0
+        local count = 0
+        for _, entry in ipairs(list) do
+            if
+                type(entry) ~= "table"
+                or type(entry.key) ~= "string"
+                or entry.key == ""
+                or seen[entry.key]
+                or type(entry.name) ~= "string"
+                or entry.name == ""
+                or not Number(entry.count)
+                or entry.count <= 0
+                or entry.count ~= math.floor(entry.count)
+                or not Number(entry.cap)
+                or entry.cap < entry.count
+                or entry.cap ~= math.floor(entry.cap)
+            then
+                return false
+            end
+            seen[entry.key] = true
+            count = count + 1
+            local group = feed.entries[count]
+            if not group then
+                group = {}
+                table.insert(feed.entries, group)
+            end
+            group.id, group.name = entry.key, entry.name
+            group.icon = type(entry.icon) == "string" and entry.icon ~= "" and entry.icon or nil
+            group.count, group.temporary = entry.count, entry.count
+            group.remaining = clockReady and Number(entry.remaining) and entry.remaining >= 0 and entry.remaining or nil
+        end
+        for index = count + 1, table.getn(feed.entries) do
+            if feed.entries[index].id then Wipe(feed.entries[index]) end
+        end
+        feed.count, feed.hasTemporary = count, count > 0
+        return true
+    end
+    local function RefreshFeed(feed)
+        local packet, stamp = _G[feed.packetName], _G[feed.stampName]
+        if
+            type(_G[feed.getter]) ~= "function"
+            or type(packet) ~= "table"
+            or not Number(stamp)
+            or (packet == feed.blockedPacket and stamp == feed.blockedStamp and feed.received == feed.blockedReceived)
+        then
+            if feed.packet or feed.count > 0 then
+                ClearFeed(feed)
+                dirty = true
+            end
+            return
+        end
+        local changed = packet ~= feed.packet or stamp ~= feed.stamp or feed.received ~= feed.acceptedReceived
+        local ticking = feed.hasTemporary and not DFRL.display.Get("hidePetTimers") and root:IsVisible()
+        if not changed and not ticking then return end
+        dirty = true
+        local list = Native(feed.getter)
+        local reader = feed == feeds[1] and ReadRoster or ReadTotems
+        if type(list) ~= "table" or not reader(list, feed) then
+            ClearFeed(feed)
+            return
+        end
+        local source = DFRL.sct
+        if changed and source and type(source.LearnSummonIcon) == "function" then
+            for index = 1, feed.count do
+                local entry = feed.entries[index]
+                source.LearnSummonIcon(entry.name, entry.icon)
+            end
+        end
+        feed.packet, feed.stamp, feed.acceptedReceived = packet, stamp, feed.received
     end
     local function Refresh()
         if not inWorld then return end
@@ -366,36 +481,18 @@ DFRL:NewMod("PetFrames", 4, function()
             Retire()
             return
         end
-        local packet, stamp = _G.AZS_PETS, _G.AZS_PETS_UPDATED
-        if type(packet) ~= "table" or not Number(stamp) then
-            Clear()
-            return
+        for _, feed in ipairs(feeds) do
+            RefreshFeed(feed)
         end
-        if packet == blockedPacket and stamp == blockedStamp and received == blockedReceived then
-            Clear()
-            return
-        end
-        local changed = packet ~= acceptedPacket or stamp ~= acceptedStamp or received ~= acceptedReceived
-        local ticking = hasTemporary and not DFRL.display.Get("hidePetTimers") and root:IsVisible()
-        -- A static or hidden view needs no clock reads. Visible countdowns
-        -- still sample the native pause-aware getter at the existing rate.
-        if changed or ticking then
-            dirty = true
-            local list = Native("AZS_GetSummons")
-            if type(list) ~= "table" or not ReadRoster(list) then
-                Clear()
-                return
-            end
-            -- Admit metadata only after the complete native roster passes its
-            -- existing validation. Timers do not relearn unchanged portraits.
-            local source = DFRL.sct
-            if changed and source and type(source.LearnSummonIcon) == "function" then
-                for index = 1, entryCount do
-                    local entry = entries[index]
-                    source.LearnSummonIcon(entry.name, entry.icon)
+        if dirty then
+            Wipe(entries)
+            entryCount = 0
+            for _, feed in ipairs(feeds) do
+                for index = 1, feed.count do
+                    entryCount = entryCount + 1
+                    entries[entryCount] = feed.entries[index]
                 end
             end
-            acceptedPacket, acceptedStamp, acceptedReceived = packet, stamp, received
         end
         if entryCount == 0 then
             if dirty then
@@ -454,7 +551,9 @@ DFRL:NewMod("PetFrames", 4, function()
         end
     end, { labelAbove = true, refreshDefault = true, onReset = Clear })
     DFRL.locale.Listen(function()
-        acceptedPacket = nil
+        for _, feed in ipairs(feeds) do
+            feed.packet = nil
+        end
         dirty, age = true, 0.1
     end)
     DFRL.display.Listen(function()
@@ -474,8 +573,9 @@ DFRL:NewMod("PetFrames", 4, function()
         elseif arg1 == "AZSZONE" then
             Retire()
             age = 0.1
-        elseif arg1 == "AZSPETS" then
-            received = received + 1
+        elseif arg1 == "AZSPETS" or arg1 == "AZSTOTEMS" then
+            local feed = arg1 == "AZSPETS" and feeds[1] or feeds[2]
+            feed.received = feed.received + 1
             age = 0.1
         elseif arg1 == "AZSRUN" then
             age = 0.1

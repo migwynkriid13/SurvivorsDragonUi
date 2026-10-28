@@ -1,0 +1,282 @@
+# Heroic affixes and totems: addon API reference for 0.125.0
+
+This reference describes the **installed original game's API**, recovered from
+0.125.0, SHA-256
+`08f8c58d6967b94598c56b822a1e6b323a52924a299a6df70ef6055ca839b8cd`
+(146,320,384 bytes). It investigates the supplied addon release item only.
+It does not replace the last whole-image audit or claim a completed 0.125.0
+`execheck`. No game, addon or server was launched, and nothing was compiled.
+
+The exact [embedded Lua](evidence/0.125.0/embedded-api.lua), its
+[extraction binding](evidence/0.125.0/addon-api-extract.json) and the
+[native code/data manifest](evidence/0.125.0/addon-api/manifest.json) support
+the contracts below. Source reconstruction remains separate under
+[finding #284](../CURRENT-STATE.md#gap-284).
+
+## Read the active Heroic affixes
+
+```lua
+local heroic = AZS_ZONE and AZS_ZONE.heroic;
+local affixes = AZS_ZONE and AZS_ZONE.affixes;
+-- Example: affixes == "sanguine,explosive"
+```
+
+`AZSZONE` is an incoming addon-message prefix. Its generic parser replaces
+`AZS_ZONE` and sets `AZS_ZONE_UPDATED = GetTime()`. The `heroic` and new
+`affixes` fields are emitted by the zone publisher; `heroic` is the numeric
+rank, and `affixes` is **one comma-separated string**, not a Lua table.
+The native publisher joins the run's actual affix vector in its stored order.
+Its recovered enum mapping is:
+
+| Key | Display meaning |
+| --- | --- |
+| `bolstering` | Bolstering |
+| `sanguine` | Sanguine |
+| `explosive` | Explosive |
+
+These keys are English regardless of UI language. Localize your display labels
+separately, and accept unknown keys for compatibility with later versions.
+An empty native vector produces `affixes=""`. Before a zone snapshot, or on an
+older API that does not emit the field, it can be `nil`. Neither an empty string
+nor numeric zero is false in Lua: test the content explicitly.
+
+There is no `AZS_GetAffixes()` or `AZS_HasAffix()` in this embedded API. A small
+addon helper can supply the latter:
+
+```lua
+local function HasAffix(wanted)
+    local text = AZS_ZONE and AZS_ZONE.affixes;
+    if type(text) ~= "string" then return false; end
+    for key in string.gfind(text, "[^,]+") do
+        if key == wanted then return true; end
+    end
+    return false;
+end
+
+-- HasAffix("sanguine")
+```
+
+Read the published list instead of calculating affixes from the date, difficulty
+or zone. This interface exposes the active selection; it does not expose an
+affix's live pools, orbs, stack counts, positions or mechanic timers.
+
+## Read the hero's totems
+
+| Call | Result |
+| --- | --- |
+| `AZS_GetTotems()` | Array with one row per currently represented totem kind |
+| `AZS_GetTotems("searing_totem")` | Array filtered to that exact key |
+| `AZS_GetTotems("magma_totem")` | Array filtered to that exact key |
+| `AZS_GetTotemCount()` | Sum of all represented live counts |
+| `AZS_GetTotemCount("searing_totem")` | Count for that exact key |
+| `AZS_GetTotemCount("magma_totem")` | Count for that exact key |
+
+The filter is optional and case sensitive. It matches **only the ability key**;
+it does not accept the localized name, spell ID, an elemental slot or `"fire"`.
+No match returns an empty array or count `0`. A filtered getter still returns
+an array: use `[1]` to obtain its row. Every getter call creates fresh output
+tables. `table.getn(AZS_GetTotems())` counts kinds, not individual totems.
+
+```lua
+if type(AZS_GetTotems) == "function" then
+    local searing = AZS_GetTotems("searing_totem")[1];
+    if searing then
+        local count = searing.count;
+        local cap = searing.cap;
+        local secondsUntilFirstExpires = searing.remaining;
+        -- Example label: string.format("%d/%d  %.1fs", count, cap,
+        --                              secondsUntilFirstExpires)
+    end
+end
+```
+
+Each returned row has named fields:
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `key` | string | Stable English ability key |
+| `spell` | number | Ability's spell ID |
+| `name` | string | Localized ability name, English fallback |
+| `icon` | string | Texture path including `Interface\Icons\` |
+| `count` | number | Active totems of this kind at the last snapshot |
+| `cap` | number | Published per-kind cap; **40** in this EXE |
+| `duration` | number | Representative captured ability duration, in seconds |
+| `remaining` | number | Seconds until the **soonest current totem of this kind expires**, clamped to zero |
+
+The current catalog descriptors used by this feed include:
+
+| Key | Spell ID | English fallback name | Icon |
+| --- | ---: | --- | --- |
+| `searing_totem` | 3599 | Searing Totem | `Interface\Icons\Spell_Fire_SearingTotem` |
+| `magma_totem` | 8190 | Magma Totem | `Interface\Icons\Spell_Fire_SelfDestruct` |
+
+Use each row's published cap/icon/name/duration rather than hardcoding those
+values. `duration` is computed from the **first active captured instance** in
+the kind's group, whereas the expiry is the **minimum deadline across that
+group**. They need not refer to the same individual when captured modifiers
+differ. The native duration calculation is the definition's base duration
+times `1.4f`, times captured factors at instance offsets `0x20` and `0x48`;
+the totem catalog's base durations are 12 and 15 seconds. These base values
+are not the API's final duration.
+
+The publisher traverses the selected hero's totem collection, admits only
+`ends > runTime`, groups by equal key length/bytes, increments the group count
+and takes the minimum expiry. Group order follows the first active encounter;
+it is not a documented fixed Searing/Magma order. Kinds without live totems
+are omitted, so absence gives no cap metadata. This is the selected hero's
+feed, including a recipient-swapped snapshot in co-op; it is not a party-wide
+totem census. Boss wards and ordinary pets use other collections.
+
+The API does not return individual totem GUIDs, positions, health, targets,
+individual expiry lists, pulse times or the time until the next summon.
+`AZS_GetSummons()` / `AZS_GetSummonCount()` read `AZS_PETS`, a separate feed;
+use the new totem accessors for totems. No totem mutation, recall or request
+function is present in the recovered Lua.
+
+## Raw data and clocks
+
+`AZS_TOTEMS` is the current raw array. Its field names differ from the getter:
+
+```lua
+-- Raw row:
+-- { key, spell, count, cap, ends, dur, icon, name } -- named fields
+-- ends: absolute run-clock deadline; dur: duration in seconds
+-- Getter maps dur -> duration and computes ends -> remaining.
+```
+
+The actual wire format is positional:
+
+```text
+key,spell,count,cap,ends,dur,icon,name;key,spell,count,cap,ends,dur,icon,name
+```
+
+`AZS_List()` converts numeric fields with `tonumber(v) or v`; an empty payload
+becomes an empty list. `AZS_GetTotems()` copies `icon` unchanged, including an
+empty string if one is received. Treat the raw tables as read-only snapshots:
+both `AZS_TOTEMS` and `AZS_ZONE` are **replaced**, not updated in place.
+
+`remaining = max(0, ends - (AZS_GetRunTime() or 0))`.
+`AZS_GetRunTime()` uses `AZS_RUN.t` and advances it with
+`GetTime() - AZS_RUN_UPDATED` only while `AZS_RUN.ph == "playing"`.
+Other phases hold the received run time. Never subtract `GetTime()` directly
+from `ends`: they are different clocks. The `*_UPDATED` values are local
+receipt timestamps, not run seconds or event names.
+
+Getter calculations do not remove rows or decrement counts when a timer reaches
+zero. Those changes require a new native snapshot. Before `AZSRUN` arrives the
+getter uses run time zero; a timer display should wait for a non-nil
+`AZS_GetRunTime()`. Fresh bootstrap initializes the raw tables, but does not
+explicitly clear old `*_UPDATED` globals if re-evaluated in the same VM.
+Timestamp existence alone therefore does not prove valid current data.
+
+## Quick in-game checks
+
+These are commands for the addon author to run in the original game; they
+were not executed during this static investigation:
+
+```text
+/run DEFAULT_CHAT_FRAME:AddMessage("Totem API: "..type(AZS_GetTotems))
+/run DEFAULT_CHAT_FRAME:AddMessage("Affixes: "..tostring(AZS_ZONE and AZS_ZONE.affixes))
+/run DEFAULT_CHAT_FRAME:AddMessage("Totems: "..tostring(AZS_GetTotemCount and AZS_GetTotemCount()))
+/run for i,t in ipairs(AZS_GetTotems and AZS_GetTotems() or {}) do DEFAULT_CHAT_FRAME:AddMessage(string.format("%s %d/%d %.1fs",t.key,t.count,t.cap,t.remaining)) end
+```
+
+`function` confirms the getter exists. An empty affix string means no affixes
+in the received zone snapshot; `nil` means that field is unavailable. A zero
+count alone cannot distinguish no live totems from no received totem snapshot.
+
+## React to updates
+
+The transport is ordinary `CHAT_MSG_ADDON`, with prefix in `arg1` and payload
+in `arg2`. The API provides no `AZS_TOTEMS_UPDATED` event and no totem-specific
+handler registration. The native local publisher polls at a **0.2-second gate**
+and suppresses payloads whose bytes match its cached value. A constant snapshot
+need not generate repeated messages. This is a publisher gate, not a guaranteed
+five-events-per-second delivery rate or a measured network latency.
+
+Use the client's legacy `event` / `arg1` globals. Mark the display dirty in
+`OnEvent`, then read the API on the next `OnUpdate` so the API frame's event
+ordering is immaterial. The following addon skeleton also refreshes a running
+countdown at 10 Hz; `RenderTotems` represents the addon's own view update:
+
+```lua
+local f = CreateFrame("Frame");
+local dirty, elapsed = true, 0;
+f:RegisterEvent("CHAT_MSG_ADDON");
+f:SetScript("OnEvent", function()
+    if event == "CHAT_MSG_ADDON" and
+       (arg1 == "AZSTOTEMS" or arg1 == "AZSRUN" or arg1 == "AZSZONE") then
+        dirty = true;
+    end
+end);
+f:SetScript("OnUpdate", function()
+    elapsed = elapsed + (arg1 or 0);
+    if elapsed < 0.1 then return; end
+    elapsed = 0;
+    if type(AZS_GetTotems) ~= "function" or
+       type(AZS_GetRunTime) ~= "function" then return; end
+    if not dirty and AZS_GetPhase() ~= "playing" then return; end
+    dirty = false;
+    local rows = AZS_GetTotems();
+    local clockReady = AZS_GetRunTime() ~= nil;
+    -- RenderTotems(rows, clockReady);
+end);
+```
+
+If an addon needs the exact arriving snapshot inside its event handler, it can
+instead parse its own `arg2` with `AZS_List(arg2, { "key", "spell", "count",
+"cap", "ends", "dur", "icon", "name" })`; do not replace the game's handler
+or assign to its global snapshots. There is no Lua resend/subscription request
+in this API. Late-load/ReloadUI cache resends and actual end/new-run clearing
+were not executed in this investigation; handle unavailable/last-received data
+without manufacturing counts.
+
+## Recovery, source connection and validation
+
+| Native owner | Recovered boundary |
+| --- | --- |
+| `145b25f20..145b26846` | Twenty-prefix snapshot constructor; AZSZONE first and AZSTOTEMS after AZSPETS |
+| `145c06860..145c072c6` | Heroic rank and actual English affix-vector publication |
+| `145c093a0..145c09650` | Active totem grouping/count/minimum deadline |
+| `145cd5c00..145cd5f40` | Eight-field row, cap 40, captured duration, icon/localized name |
+| `145af0c40..145af0e62` | Recipient-locale snapshot wrapper |
+| `145bfdea0..145bfe2ab` | Local/remote hero selection, swap/snapshot/restore |
+| `145c55e24..145c55e5c` | Recipient vector fields at `+5c0/+5d0` exchanged with Game fields `+638/+648`, including the totem allocation/pointer/count |
+| `145b63ff0..145b64028` | Local 0.2-second publisher gate |
+| `145b64646..145b647e6` | Per-prefix changed-byte suppression/publication |
+
+Before native expansion, source review identified the existing benilla
+FrameXML/`CHAT_MSG_ADDON` boundary and reconstruction owners:
+`gameplay/client/addon_bootstrap.rs`, `addon_scalars.rs`, `addon_feed.rs`,
+`gameplay/client.rs`, `gameplay/client/coop_feed.rs`,
+`gameplay/mechanics/addon_lists.rs` and `player_abilities/behavior/totems.rs`.
+The bootstrap still embeds the earlier 0.115.0 Lua; local/remote snapshot paths
+lack AZSTOTEMS and zone serialization lacks the new fields. Existing totem and
+Heroic mechanics remain useful source; the newly recovered publisher/accessor
+connection is missing, rather than those mechanics having been lost. This
+investigation makes no gameplay source changes.
+
+Reproduction from the checkout root:
+
+```sh
+python3 -B scripts/register-target.py --inspect-installed
+python3 -B scripts/register-target.py --check
+python3 -B scripts/check-addon-api-0.125.0.py
+lua scripts/check-addon-totem-api-0.125.0.lua
+```
+
+Identity/resource verification passes. The evidence checker verifies the exact
+embedded Lua plus 27 native code/literal ranges and curated result hashes.
+The exact embedded Lua passes **33 assertions** in installed Lua 5.5.0 with a
+stub clock/frame host and a `table.getn` compatibility shim; this is not a test
+in the game's actual Lua VM. Six selected native owners have journaled Ghidra
+pseudocode, checked against original Win64 instruction bytes. The poll/cache
+excerpts are separately bound original-byte disassembly.
+
+The global reconstruction-coverage check rejects the newly installed 0.125.0
+against the existing 0.123.0 whole-image registers. That is a pending full target
+refresh, separate from this requested API investigation. **0.125.0 AS-only
+module coverage is unavailable**; the prior 66/66 partial-source and 12/66
+bounded-contract counts belong to 0.123.0. No whole-file census, application
+compilation, live event delivery, game/addon rendering or original/rebuilt
+parity validation was performed here.

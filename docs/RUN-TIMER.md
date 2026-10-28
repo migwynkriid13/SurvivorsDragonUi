@@ -48,6 +48,91 @@ All choices preview immediately and save only with Confirm. Cancel, world
 leave, logout and reload discard unconfirmed choices. Both full resets restore
 the defaults above. Changing a choice does not move or scale the timer.
 
+## Heroic affixes
+
+On the 0.125.0 API, the run timer shows the current run's Heroic affixes in one
+centered row beneath the bar. The selected **04 Rally and rupture** pictures
+use the same neutral circular rim as equipped jewelry, tinted red while
+retaining its original shading and alpha. There is no added flat outline.
+Hovering an icon shows the game's name and description in the active language.
+The run timer's existing move, scale, width and Hide frame controls own the row;
+its Layout outline includes the icons without changing saved geometry.
+Unpositioned boss bars reserve 33 more units below their usual 77-unit default
+while the affix row is present, keeping the first boss name clear. Confirmed
+and draft boss positions retain their shared Layout ownership.
+
+The view reads only received `AZS_ZONE.heroic`, `AZS_ZONE.affixes` and
+`AZS_ZONE_UPDATED` after the timer controller's phase check. It preserves the
+published English-key order and does not calculate a rotation from difficulty,
+date or zone. Empty, unavailable or non-Heroic snapshots hide the row. Unknown
+future keys retain their exact label and use the native skull inside the same
+rim, without borrowing another affix's description. Duplicate keys display once.
+
+`AZSZONE` clears old presentation and schedules acceptance after native parsing
+and the existing new-run handshake. Observed run regressions, inactive phases,
+world leave/logout and reload retire the accepted snapshot. A retained old
+packet stays blocked until its identity/stamp changes or a fresh zone receipt
+arrives. Disabling the custom timer hides its affixes, while re-enabling can use
+the current run's snapshot. Shared tooltip hiding/editing/placement and owned
+hover cleanup apply; polling never reclaims a foreign tooltip.
+
+Each kind lazily adds one 22-unit hover frame and two textures: its prepared
+circular image and the existing jewelry rim. Five-unit gaps and a three-unit
+top offset center the row on the bar. One 256-by-64 lossless BLP atlas holds
+the three selected images; the separate rim uses `(664,56)-(736,128)` from
+`jewelry/Frame.blp` and RGB `(237,35,38)/255`. No label, animation, updater,
+event registration, setting or SavedVariable is added. Hidden rows allocate
+and paint nothing; successful bindings, labels, UVs and anchors are reused.
+Failed artwork retries only on the existing tenth-second refresh.
+
+[Artwork sources and preparation](../third_party/HeroicAffixes-ARTWORK.md#selected-04-and-runtime-preparation)
+and [PERFORMANCE.md](PERFORMANCE.md#heroic-affix-row--2026-10-28) record the
+source-level costs. CI-only mocks cover the extracted production view and
+shared tooltip registry. Local work used source/diff review, artwork preparation
+and pinned formatting; live delivery, hover appearance and rendering remain
+unverified.
+
+## Update work
+
+With **PERFORMANCE MODE** on, regular progress uses the plain blue fill and
+the red Endless state keeps only its plain red fill. Both skip every decorative
+fill layer: foam, right-moving streaks, flecks, sparkles, red glints and glow.
+Enabling the mode hides any already-active layers immediately. Native progress
+continues in whole-second steps; captions and informative markers remain.
+Turning the mode off restores the original effects from current state.
+
+Native duration and schedule validation reuse the existing ten-Hz/deferred
+publication refresh. Phase changes, run/schedule retirement and reload invalidate
+that cache. Raw run time, phase/rollback checks, clock HUD ownership and authored
+animation retain their existing frame cadence while the clock is visible.
+Boss debuffs read current native effects at ten Hz or a deferred publication;
+hovering samples phase/effects immediately before opening the tooltip. Removed
+slots clear before opening and changed debuff height reflows at that point.
+No private countdown supplies remaining time.
+
+The progress fill advances in whole native run-second steps instead of changing
+every rendered frame. Native pause/choice states therefore freeze progress;
+native corrections and duration changes still take effect, and reaching the
+limit fills the bar exactly even when that limit includes a fractional second.
+The existing decorative flow/foam animation keeps its cadence and clips to the
+same stepped fill edge. Captions, boss scheduling and marker state continue
+using their original native inputs. No private timer or updater is added.
+
+Caption formatting keeps only the latest rounded native times and final labels.
+Unchanged values, options and language reuse those labels; disabled components
+skip formatting. Option previews rebuild immediately from the latest native
+values, while the existing visible refresh still checks scale and retries
+unavailable font metrics. Retirement clears the accepted inputs without
+recreating an already-empty formatting record on every poll.
+The formatting record uses `captionCache`; the original `caption` field remains
+the optional string used for localized font fallback during construction and
+font previews.
+
+Each blue-foam paint shares one current bar-height sample across its sixteen
+pieces. Clipping, UVs, artwork and animation cadence remain unchanged. These
+reduce source-level CPU work; the controlled timer-off result and remaining
+native rendering leads are recorded in [PERFORMANCE.md](PERFORMANCE.md#movement-stutter-investigation--2026-10-28).
+
 ## Width and encounter rows
 
 The Run timer and Boss health Layout outlines have left/right center handles for width only, preserving font, icon and health-pill height. Their 296-unit outer defaults and 280-unit fills stay unchanged; side widths range from 120 to 1200, independent of proportional corner scaling. Width is saved in the existing Layout geometry with normal Confirm, Cancel/discard, profiles and reset behavior.

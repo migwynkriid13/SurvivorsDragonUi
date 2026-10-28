@@ -44,6 +44,15 @@ continue at frame cadence. Completed fade-in stops rewriting full opacity;
 the fill, spark and visibility setters likewise skip unchanged values. Clearing
 and new subjects retain the original fade and percentage-step behavior.
 
+The view caches only the latest subject/direction, language and translated
+caption, plus the latest displayed percentage string. New native progress still
+updates normally, but unchanged text skips formatting. Hidden views defer
+caption formatting until visible. Actual label comparisons retain failed-write
+retries and repair external text changes. Clear invalidates these display
+caches. Each animation pass samples the current root width once for its dirty
+fill/spark paint and six cross positions; standalone paints still read current
+width. No effect, clipping equation, smoothing step or update cadence changes.
+
 The installed 0.115.0 native Lua defines `AZS_GetRevive()` as a direct return of
 `AZS_REVIVE`. Its documented fields are `down`, `share`, `by`, `reviving` and
 `rshare`; it does not supply a revive duration or start time. `AZSREVIVE` parses

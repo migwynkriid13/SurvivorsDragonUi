@@ -17,6 +17,7 @@ DFRL:NewMod("Chat", 1, function()
         local input = _G.ChatFrameEditBox or _G.ChatFrame1EditBox or ChatFrame1.editBox
         local RefreshFrames, SelectChat, PositionInput, UpdateIndicator
         local focused = false
+        local performanceMode = DFRL.display.Get("performanceMode")
 
         local root = CreateFrame("Frame", "SurvivorsDragonUiChat", UIParent)
         root:SetWidth(WIDTH)
@@ -135,12 +136,16 @@ DFRL:NewMod("Chat", 1, function()
             return not state.scrolled
         end
         local function FadeSettings(state, held)
+            local duration = performanceMode and 0 or FADE
+            if state.fadeConfigured and state.fadeDuration == duration and state.held == held then return end
             if not root:IsVisible() then return end
             local frame = state.native
-            if not state.fadeConfigured then
-                if frame.SetTimeVisible then frame:SetTimeVisible(HOLD) end
-                if frame.SetFadeDuration then frame:SetFadeDuration(FADE) end
-                state.fadeConfigured = true
+            if not state.fadeConfigured or state.fadeDuration ~= duration then
+                -- Keep the same total lifetime; Performance Mode replaces
+                -- only the final fade with an instant native disappearance.
+                if frame.SetTimeVisible then frame:SetTimeVisible(performanceMode and HOLD + FADE or HOLD) end
+                if frame.SetFadeDuration then frame:SetFadeDuration(duration) end
+                state.fadeConfigured, state.fadeDuration = true, duration
             end
             if state.held ~= held then
                 if frame.SetFading then frame:SetFading(not held) end
@@ -164,7 +169,7 @@ DFRL:NewMod("Chat", 1, function()
             local now = GetTime()
             if state then
                 local lastVisible = math.max(state.lastActivity or 0, state.lastReveal or 0)
-                if now - lastVisible >= HOLD + FADE then
+                if not performanceMode and now - lastVisible >= HOLD + FADE then
                     state.revealStart, state.visualAlpha = now, 0
                 end
                 state.lastReveal = now
@@ -174,7 +179,8 @@ DFRL:NewMod("Chat", 1, function()
         local function PositionNative(state, now, refresh)
             if not root:IsVisible() then return end
             local frame = state.native
-            local progress = state.slideStart and Clamp((now - state.slideStart) / SLIDE, 0, 1) or 1
+            local progress = not performanceMode and state.slideStart and Clamp((now - state.slideStart) / SLIDE, 0, 1)
+                or 1
             local shift = -12 * (1 - progress) * (1 - progress) * (1 - progress)
             local y, width, height = -5 + shift, rootWidth - 6, rootHeight - 5
             -- Native window events can replace presentation settings. Recheck
@@ -262,7 +268,7 @@ DFRL:NewMod("Chat", 1, function()
         local function NoticeMessage(state)
             local now = GetTime()
             state.lastActivity = now
-            state.slideStart = root:IsVisible() and now or nil
+            state.slideStart = not performanceMode and state == selected and root:IsVisible() and now or nil
             if state ~= selected or not AtBottom(state) then state.unread = true end
             if UpdateIndicator then UpdateIndicator() end
         end
@@ -560,14 +566,15 @@ DFRL:NewMod("Chat", 1, function()
         SelectChat(states[1])
         HideControl(ChatFrameMenuButton)
         local refresh = 0
-        root:SetScript("OnUpdate", function()
+        local function UpdateChat()
             if not root:IsVisible() then return end
-            local now, elapsed = GetTime(), arg1 or 0
+            local now, elapsed = nil, arg1 or 0
             -- Only wheel navigation uncovers retained history. Hover and input
             -- focus never rearm lines or hold their fading.
             local atBottom = not selected or AtBottom(selected)
             local held = not atBottom
             for _, state in pairs(states) do
+                if state.pendingLevel or state.revealStart or state.slideStart then now = now or GetTime() end
                 if state.pendingLevel and now >= state.pendingLevel.deadline then
                     state.FlushLevel()
                     if state == selected then atBottom = nil end
@@ -577,7 +584,9 @@ DFRL:NewMod("Chat", 1, function()
                     if state.visualAlpha == 1 then state.revealStart = nil end
                 end
                 if state.slideStart then
-                    PositionNative(state, now)
+                    -- Other native panes keep their messages and unread state,
+                    -- but only the selected pane needs animated geometry.
+                    if state == selected then PositionNative(state, now) end
                     if now - state.slideStart >= SLIDE then state.slideStart = nil end
                 end
                 FadeSettings(state, state == selected and held)
@@ -595,11 +604,27 @@ DFRL:NewMod("Chat", 1, function()
             refresh = refresh + elapsed
             if refresh >= 1 then
                 refresh = 0
+                now = now or GetTime()
                 ReadDimensions()
                 PositionInput()
                 RefreshFrames()
                 for _, state in pairs(states) do
                     PositionNative(state, now, true)
+                end
+            end
+        end
+        root:SetScript("OnUpdate", UpdateChat)
+        DFRL.display.Listen(function()
+            local enabled = DFRL.display.Get("performanceMode")
+            if performanceMode == enabled then return end
+            performanceMode = enabled
+            for _, state in pairs(states) do
+                state.slideStart, state.revealStart = nil, nil
+                state.visualAlpha = 1
+                if root:IsVisible() then
+                    state.native:SetAlpha(1)
+                    PositionNative(state, 0)
+                    FadeSettings(state, state == selected and not AtBottom(state))
                 end
             end
         end)

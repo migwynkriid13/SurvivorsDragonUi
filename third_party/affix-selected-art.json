@@ -1,0 +1,33 @@
+{
+  "proposal": 4,
+  "title": "Rally and rupture",
+  "source_commit": "d23deaf8f44a7d280dc974a5c9d5321c013db59b",
+  "destination": "media/tex/timer/Affixes.blp",
+  "canvas": [256, 64],
+  "sources": [
+    {
+      "source": "third_party/sources/affixes/Ability_Warrior_RallyingCry.PNG",
+      "source_sha256": "e97154194c4efa551489e522cc2687e842da8be7c7671818497d49d6504ebc32",
+      "crop": [4, 4, 60, 60],
+      "destination": [0, 0, 64, 64]
+    },
+    {
+      "source": "third_party/sources/affixes/Ability_IronMaidens_BloodRitual.PNG",
+      "source_sha256": "13393f6f05c874534ccb149cd24239a5b653c3145cd757a8fe82ff8d145e0165",
+      "crop": [4, 4, 60, 60],
+      "destination": [64, 0, 128, 64]
+    },
+    {
+      "source": "third_party/sources/affixes/Ability_IronMaidens_DetonationSequence.PNG",
+      "source_sha256": "52127a1f070af29d48df67b4514e521fd128b165943b10c09972afbe7469c188",
+      "crop": [4, 4, 60, 60],
+      "destination": [128, 0, 192, 64]
+    }
+  ],
+  "ring": {
+    "source": "media/tex/jewelry/Frame.blp",
+    "crop": [664, 56, 736, 128],
+    "vertex_color": [0.9294117647058824, 0.13725490196078433, 0.14901960784313725, 1]
+  },
+  "sha256": "09a6a26a99a2e919fe562ad206b265ef3e74527539e1d4968539e92e748e6209"
+}

@@ -120,7 +120,7 @@ DFRL:NewMod("Waypoints", 3, function()
             local cursorX, cursorY = _G.GetCursorPosition()
             local centerX, centerY = Minimap:GetCenter()
             local scale = Minimap:GetEffectiveScale()
-            local width, height = T.GetLocalSize(Minimap)
+            local width, height = navigation.MinimapSize()
             if
                 not Number(cursorX)
                 or not Number(cursorY)
@@ -266,10 +266,9 @@ DFRL:NewMod("Waypoints", 3, function()
             local shown = FlagShown()
             if shown == nil then return false end
             if originalFlag == nil then originalFlag = shown end
-            if shown then
-                local ok = pcall(_G.AZS_SetHudShown, "flag", false)
-                if not ok then return false end
-            end
+            if not shown then return true end
+            local ok = pcall(_G.AZS_SetHudShown, "flag", false)
+            if not ok then return false end
             return FlagShown() == false
         end
 
@@ -396,7 +395,6 @@ DFRL:NewMod("Waypoints", 3, function()
 
         local function PlacePin(pin, x, y)
             if pin.drawnX ~= x or pin.drawnY ~= y then
-                pin:ClearAllPoints()
                 pin:SetPoint("CENTER", Minimap, "CENTER", x, y)
                 pin.drawnX, pin.drawnY = x, y
             end
@@ -408,7 +406,7 @@ DFRL:NewMod("Waypoints", 3, function()
             if not Minimap then return end
             local visibleOK, visible = pcall(Minimap.IsVisible, Minimap)
             if not visibleOK or Shown(visible) ~= true then return end
-            local sizeOK, width, height = pcall(T.GetLocalSize, Minimap)
+            local sizeOK, width, height = pcall(navigation.MinimapSize, PIN_SIZE)
             if not sizeOK or not Number(width) or not Number(height) or width <= PIN_SIZE or height <= PIN_SIZE then
                 return
             end
@@ -491,7 +489,7 @@ DFRL:NewMod("Waypoints", 3, function()
             else
                 RestoreNativeFlag()
             end
-            if not navigation.IsRunPhase(Native("AZS_GetPhase")) then
+            if not navigation.IsRunPhase(navigation.Phase()) then
                 ClearMinimapPins()
                 return
             end
@@ -523,17 +521,6 @@ DFRL:NewMod("Waypoints", 3, function()
             ClearMinimapPins()
             RestoreNativeFlag()
         end
-    end
-
-    local function FloatingRail(hud)
-        -- Keep only the thin gold stripe beneath the floating icon and text.
-        local rail = hud:CreateTexture(nil, "BACKGROUND")
-        rail:SetTexture("Interface\\Buttons\\WHITE8X8")
-        rail:SetWidth(HUD_WIDTH)
-        rail:SetHeight(1)
-        rail:SetPoint("BOTTOMLEFT", hud, "BOTTOMLEFT", 0, 0)
-        rail:SetBlendMode("BLEND")
-        rail:SetVertexColor(186 / 255, 148 / 255, 87 / 255, 85 / 255)
     end
 
     local function RegisterHUD(tracker)
@@ -579,7 +566,6 @@ DFRL:NewMod("Waypoints", 3, function()
         hud:SetFrameStrata("HIGH")
         hud:EnableMouse(false)
         hud:Hide()
-        FloatingRail(hud)
         local marker = hud:CreateTexture(nil, "ARTWORK")
         marker:SetTexture(texturePath .. tracker.hudArt)
         marker:SetWidth(32)
@@ -627,6 +613,7 @@ DFRL:NewMod("Waypoints", 3, function()
         navigation.SetPoints(tracker.source, nil)
         tracker.selectedKey, tracker.selected, tracker.provisionalSelection = nil, nil, nil
         tracker.presentation = nil
+        tracker.distanceValue, tracker.distanceLanguage, tracker.distanceLabel = nil, nil, nil
         if tracker.hudWanted ~= false then
             tracker.hudWanted = false
             tracker.hud:Hide()
@@ -812,6 +799,9 @@ DFRL:NewMod("Waypoints", 3, function()
             local interval = stamp - value.stamp
             value.from, value.target, value.age = value.current, target, 0
             value.duration = math.max(0, math.min(interval, 0.5))
+        elseif value.age >= value.duration then
+            value.stamp = stamp
+            return value.current
         end
         value.stamp = stamp
         value.age = math.min(value.age + elapsed, value.duration)
@@ -824,6 +814,19 @@ DFRL:NewMod("Waypoints", 3, function()
         end
         if angular then value.current = WrapAngle(value.current) end
         return value.current
+    end
+
+    local function UpdateDistance(tracker, distance)
+        local rounded = distance and math.floor(distance + 0.5) or false
+        local language = DFRL.locale.code
+        if tracker.distanceValue ~= rounded or tracker.distanceLanguage ~= language or not tracker.distanceLabel then
+            tracker.distanceLabel = rounded and DFRL.locale.Native("common.yards", { n = rounded })
+                or DFRL.locale.Text("On map")
+            tracker.distanceValue, tracker.distanceLanguage = rounded, language
+        end
+        if tracker.distanceText:GetText() ~= tracker.distanceLabel then
+            tracker.distanceText:SetText(tracker.distanceLabel)
+        end
     end
 
     local function UpdateGuide(tracker, elapsed)
@@ -864,9 +867,16 @@ DFRL:NewMod("Waypoints", 3, function()
             tracker.presentation = presentation
         end
         presentation.east, presentation.north = east, north
-        local playing = Native("AZS_GetPhase") == "playing"
+        local playing = navigation.Phase() == "playing"
         local moving = east and (east ~= 0 or north ~= 0)
-        local bearing = moving and metric and math.atan2(east, north) or nil
+        local bearing
+        if moving and metric then
+            if presentation.bearingEast ~= east or presentation.bearingNorth ~= north then
+                presentation.bearingTarget = math.atan2(east, north)
+                presentation.bearingEast, presentation.bearingNorth = east, north
+            end
+            bearing = presentation.bearingTarget
+        end
         -- Only the paint values blend. Selection and minimap pins keep native data,
         -- and interpolation stops at each received sample without prediction.
         distance = Blend(presentation, "distance", distance, stamp, elapsed, false, playing)
@@ -883,9 +893,7 @@ DFRL:NewMod("Waypoints", 3, function()
         else
             if tracker.pointer:IsShown() then tracker.pointer:Hide() end
         end
-        local text = distance and DFRL.locale.Native("common.yards", { n = math.floor(distance + 0.5) })
-            or DFRL.locale.Text("On map")
-        if tracker.distanceText:GetText() ~= text then tracker.distanceText:SetText(text) end
+        UpdateDistance(tracker, distance)
     end
 
     local function Refresh()
@@ -899,7 +907,7 @@ DFRL:NewMod("Waypoints", 3, function()
             ClearAll()
             return
         end
-        local phase = Native("AZS_GetPhase")
+        local phase = navigation.Phase()
         if not navigation.IsRunPhase(phase) then
             if runWasActive and (phase == "ready" or phase == "dead") then
                 RetireSnapshots(true)
@@ -1000,7 +1008,7 @@ DFRL:NewMod("Waypoints", 3, function()
         -- Defer reads until the native parser and zone/minimap handlers finish.
         dirty = true
     end)
-    controller:SetScript("OnUpdate", function()
+    local function UpdateWaypoints()
         local elapsed = tonumber(arg1) or 0
         if not Number(elapsed) or elapsed < 0 then elapsed = 0 end
         age = age + elapsed
@@ -1016,8 +1024,9 @@ DFRL:NewMod("Waypoints", 3, function()
             end
         end
         if refreshed or (Minimap and Minimap:IsVisible()) then UpdateMinimapPins(refreshed) end
-    end)
-    DFRL.display.Listen(function()
+    end
+    controller:SetScript("OnUpdate", function() navigation.WithSample(UpdateWaypoints) end)
+    local function UpdateDisplay()
         -- Visibility drafts do not retire snapshots, selections or calibration.
         showGuardianTimers = DFRL.display.Get("guardianMinimapTimers")
         for _, tracker in ipairs(trackers) do
@@ -1026,7 +1035,8 @@ DFRL:NewMod("Waypoints", 3, function()
         end
         if not DFRL.display.Get("guardianGuidance") then ClearMinimapPins("guardian", true) end
         UpdateMinimapPins(true)
-    end)
+    end
+    DFRL.display.Listen(function() navigation.WithSample(UpdateDisplay) end)
     if type(_G.ReloadUI) == "function" then
         local reloadUI = _G.ReloadUI
         _G.ReloadUI = function()
