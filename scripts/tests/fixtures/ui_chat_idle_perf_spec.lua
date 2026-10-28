@@ -34,7 +34,7 @@ state.native = {
 apply(state, false)
 assert(reads == 1 and writes == 3 and state.fadeConfigured and state.held == false)
 reads, writes = 0, 0
-for index = 1, 100 do
+for _ = 1, 100 do
     apply(state, false)
 end
 assert(reads == 0 and writes == 0, "settled chat fade state kept reading native visibility")

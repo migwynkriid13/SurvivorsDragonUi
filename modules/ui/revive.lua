@@ -271,7 +271,7 @@ DFRL:NewMod("Revive", 4, function()
                     local phase = math.mod(effectAge / CROSS_PERIOD + index / CROSS_COUNT, 1)
                     alpha = 0.45 + math.sin(phase * math.pi * 2) * 0.2
                 end
-                for part, texture in ipairs(cross) do
+                for _, texture in ipairs(cross) do
                     if texture.reviveVisible then
                         if texture.reviveAlpha ~= alpha then
                             texture:SetVertexColor(0.58, 1, 0.74, alpha)
