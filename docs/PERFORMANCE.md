@@ -187,6 +187,23 @@ their cosmetic reads. The next refresh and native reuse callbacks sample afresh,
 and retirement clears scratch data. CI-only fixtures assert single reads and the
 disabled paths. Native health, matching cadence and all artwork stay unchanged.
 
+### Lazy Layout handles
+
+Group registration keeps required geometry, visibility wrappers and editor
+availability, while deferring its handle, label, four corner grips and optional
+side grips until the first eligible edit refresh. Each ordinary handle's 24
+corner textures and five buttons therefore stay unallocated for groups never
+edited. Prepared handles remain pooled for later edits. This is a startup/resident
+allocation reduction, not a gameplay draw-count reduction or a saving after all
+handles have been used.
+
+Unprepared groups remain safe through Confirm/Cancel/reset/world cleanup; hidden
+groups stay selectable and conditional groups use the existing eligibility rule.
+Partial native preparation stays hidden, publishes no handle and does not
+reallocate every tick. CI-only full Layout mocks cover first preparation, reuse,
+late registration, drafts, cleanup and allocation failure. Authored grip geometry
+and input remain unchanged, with no runtime test hook or additional controller.
+
 ## Loot popup modes and marks — 2026-10-27
 
 The new Loot notifications page uses existing editor artwork: one category

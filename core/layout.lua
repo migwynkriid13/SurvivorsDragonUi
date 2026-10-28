@@ -751,12 +751,12 @@ DFRL:NewMod("Layout", 0, function()
         return true
     end
 
-    local function MakeEdge(entry, point, axis)
-        local grip = CreateFrame("Button", nil, entry.handle)
+    local function MakeEdge(entry, handle, point, axis)
+        local grip = CreateFrame("Button", nil, handle)
         grip:SetWidth(axis == "width" and 14 or 20)
         grip:SetHeight(axis == "width" and 20 or 14)
         grip:SetPoint("CENTER", entry.options.edgeRegion or entry.frame, point, 0, 0)
-        grip:SetFrameLevel(entry.handle:GetFrameLevel() + 2)
+        grip:SetFrameLevel(handle:GetFrameLevel() + 2)
         local mark = grip:CreateTexture(nil, "OVERLAY")
         mark:SetTexture("Interface\\Buttons\\WHITE8X8")
         mark:SetVertexColor(0.87, 0.73, 0.41, 1)
@@ -771,15 +771,15 @@ DFRL:NewMod("Layout", 0, function()
         grip:EnableMouse(true)
     end
 
-    local function MakeCorner(entry, corner)
-        local grip = CreateFrame("Button", nil, entry.handle)
+    local function MakeCorner(entry, handle, corner)
+        local grip = CreateFrame("Button", nil, handle)
         grip:SetWidth(14)
         grip:SetHeight(14)
-        grip:SetFrameLevel(entry.handle:GetFrameLevel() + 2)
+        grip:SetFrameLevel(handle:GetFrameLevel() + 2)
         local right = string.find(corner, "RIGHT") ~= nil
         local top = string.find(corner, "TOP") ~= nil
         local signX, signY = right and -1 or 1, top and -1 or 1
-        grip:SetPoint("CENTER", entry.handle, corner, -signX * 4, -signY * 4)
+        grip:SetPoint("CENTER", handle, corner, -signX * 4, -signY * 4)
         -- Draw three nested corner marks with vanilla's solid texture, so the
         -- resize icons need no modern texture APIs or extra assets.
         for index = 0, 2 do
@@ -806,6 +806,9 @@ DFRL:NewMod("Layout", 0, function()
     end
 
     local function MakeHandle(entry)
+        -- A failed native preparation stays hidden and unready. Retrying the
+        -- allocation every editor sample would grow an unusable partial pool.
+        entry.handleAttempted = true
         local handle = CreateFrame("Button", nil, UIParent)
         handle:Hide()
         handle:SetFrameStrata("TOOLTIP")
@@ -848,23 +851,22 @@ DFRL:NewMod("Layout", 0, function()
         end
         handle:EnableMouse(false)
         handle:Hide()
-        entry.handle = handle
-        entry.handleShown = false
         for _, corner in ipairs({ "TOPLEFT", "TOPRIGHT", "BOTTOMLEFT", "BOTTOMRIGHT" }) do
-            MakeCorner(entry, corner)
+            MakeCorner(entry, handle, corner)
         end
         if entry.options.edgeWidth or entry.options.edgeHandles then
-            MakeEdge(entry, "LEFT", "width")
-            MakeEdge(entry, "RIGHT", "width")
+            MakeEdge(entry, handle, "LEFT", "width")
+            MakeEdge(entry, handle, "RIGHT", "width")
         end
         if entry.options.onHeightDrag or entry.options.edgeHandles then
-            MakeEdge(entry, "TOP", "height")
-            MakeEdge(entry, "BOTTOM", "height")
+            MakeEdge(entry, handle, "TOP", "height")
+            MakeEdge(entry, handle, "BOTTOM", "height")
         end
+        entry.handle, entry.handleShown = handle, false
     end
 
     local function ShowHandle(entry, shown)
-        if entry.handleShown == shown then return end
+        if not entry.handle or entry.handleShown == shown then return end
         entry.handleShown = shown
         entry.handle:EnableMouse(shown)
         if shown then
@@ -874,9 +876,13 @@ DFRL:NewMod("Layout", 0, function()
         end
     end
     local function RefreshHandle(entry, scale)
-        local handle, region = entry.handle, entry.options.region or entry.frame
         local shown = CanShowHandle(entry)
         if shown then
+            if not entry.handle then
+                if entry.handleAttempted then return end
+                MakeHandle(entry)
+            end
+            local handle, region = entry.handle, entry.options.region or entry.frame
             if entry.options.refreshRegion then entry.options.refreshRegion() end
             local ratio = Scale(region) / scale
             local regionWidth, regionHeight = T.GetLocalSize(region)
@@ -909,12 +915,11 @@ DFRL:NewMod("Layout", 0, function()
         -- Preserve the module's requested visibility, including conditional frames.
         entry.nativeShow, entry.nativeHide = frame.Show, frame.Hide
         entry.wantsShown = frame:IsShown() and true or false
-        -- Complete the handle before publishing the entry to the update loop or
-        -- replacing native visibility methods. A setup error must not leave a
-        -- half-registered entry whose handle is nil on every following frame.
+        -- Finish required geometry before replacing native visibility methods.
+        -- Editor-only handles prepare on their first eligible edit refresh;
+        -- ordinary placement and cleanup never require their artwork.
         entry.defaultAnchor(frame)
         LockFrame(frame)
-        MakeHandle(entry)
         entries[key] = entry
         table.insert(order, entry)
         RefreshEditorSoon()
