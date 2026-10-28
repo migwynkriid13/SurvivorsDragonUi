@@ -173,6 +173,7 @@ do
     context:Publish({ down = 1, by = "Alice", share = 0.2504 })
     context:ResetPerf()
     context:Tick(0.01)
+    assert(context.reads.rootWidth == 1, "dirty paint and crosses repeated the same root width read")
     assert(
         context.percentFormats == 0 and context.percent:GetText() == "25%",
         "small smoothing steps reformatted percent"
@@ -188,7 +189,7 @@ do
         "catch-up skipped its one-point step"
     )
 end
-print("PASS Revive preserves cross clipping, smoothing and percentage steps")
+print("PASS Revive shares width only within animation and preserves cross clipping, smoothing and percentage steps")
 
 do
     local context = Revive()

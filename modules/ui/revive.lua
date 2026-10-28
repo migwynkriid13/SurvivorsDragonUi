@@ -114,7 +114,7 @@ DFRL:NewMod("Revive", 4, function()
         local transition, fade, effectAge = 0, 0, 0
         local dirty = true
         local measuredText, measuredFace, measuredSize, measuredFlags, measuredScale, measuredWidth
-        local function Paint()
+        local function Paint(width)
             if paintedValue ~= value then
                 bar:SetValue(value)
                 paintedValue = value
@@ -126,7 +126,7 @@ DFRL:NewMod("Revive", 4, function()
             if displayedPercent ~= rounded or not percentText then percentText = tostring(rounded) .. "%" end
             displayedPercent = rounded
             T.SetTextIfChanged(percent, percentText)
-            local x = 8 + (root:GetWidth() - 72) * value
+            local x = 8 + ((width or root:GetWidth()) - 72) * value
             if sparkX ~= x then
                 spark:ClearAllPoints()
                 spark:SetPoint("CENTER", pill, "LEFT", x, 0)
@@ -235,9 +235,10 @@ DFRL:NewMod("Revive", 4, function()
                 value = math.max(0, math.min(1, value + step))
                 dirty = true
             end
-            if dirty then Paint() end
+            local width = root:GetWidth()
+            if dirty then Paint(width) end
             effectAge = effectAge + elapsed
-            local width = root:GetWidth() - 72
+            width = width - 72
             local filledRight = 8 + width * value
             for index, cross in ipairs(crosses) do
                 local phase = math.mod(effectAge / CROSS_PERIOD + index / CROSS_COUNT, 1)
