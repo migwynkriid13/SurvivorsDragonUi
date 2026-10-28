@@ -157,6 +157,7 @@ source/runtime catalogs and reserves its own row above the category buttons.
 | Unit frames                 | Hide player absorbs and player/target/target-of-target damage trails, reset trail baselines, and use the existing 2D still portraits. Party has no custom loss overlay. Hide combat/rest rim glows; keep a static resting symbol and a static low-health warning at the current health-derived strength.                                                                         |
 | Resources                   | Skip absorb snapshot/field work when Class resources is also off; keep native phase/receipt retirement and selected resource values.                                                                                                                                                                                                                                             |
 | Run timer                   | Keep native whole-second progress and current labels, static blue/red fill and informative skull/check markers. Skip flow, foam, sparkle, red-glint and skull-halo animation. The 72-texture decorative fill pool is prepared only if normal mode needs it, then retained for reuse. Required native phase, ownership, schedule and encounter work keeps its existing lifecycle. |
+| Boss bars                   | Keep native fill and health text instant. Hide the Crimson echo loss strip, clear its baseline and active state, and skip effect time/geometry work. Rows first used in this mode do not prepare a loss texture.                                                                                                                                                                 |
 | Cache tally                 | Refresh kills and gold numbers once every five UI seconds. Keep cache cost at its normal cadence. Clear the affordable-cache gold halo, rays and sparkles and detach its animation worker.                                                                                                                                                                                       |
 | XP                          | Snap the fill to received XP, clear gain/spark artwork and detach completed effect work. Existing deferred native reads remain.                                                                                                                                                                                                                                                  |
 | Abilities and stored levels | Clear cooldown-number overlays and detach their timing worker. Suppress the seven native ability-ready flashes while retaining unfinished cooldown swipes. Hide level-button glow/highlight layers and detach the pulse worker; retain its static gold artwork, count and click behavior.                                                                                        |
@@ -245,6 +246,42 @@ have a persistent drawing cost. Skipped animation callbacks and hidden regions
 are source-level evidence only; this work does not establish FPS/GPU gains or
 live appearance. Local work uses source review and pinned formatting; mocked
 coverage is authored for CI only and has not been run locally.
+
+## Boss health loss — 2026-10-28
+
+The selected **04 Crimson echo** adds at most one lazily prepared FillWhite
+texture per pooled boss-bar row, including guardian rows in this view. Each
+existing base pill retains its five regions; one extra region and its material/
+UV state are visible only during an active normal-mode loss trail. The strip
+uses the existing plain overlay's BACKGROUND layer, above the native health fill
+and beneath bezel/text artwork. It covers only the recently lost section.
+The preview's 0.74 brightness is baked into its crimson tint with opaque vertex
+alpha, so native fill underneath cannot brighten one section and make it look
+like a second trail. No backing region, mask, extra pass or native fill/UV
+override is added.
+Retired and completed effects are actually hidden, while their texture remains
+available for reuse. Performance Mode prepares nothing and draws no loss strip.
+
+Actual native fill and labels update immediately. A cosmetic 950 ms eased edge
+uses one bounded trail per row, with rapid decreases coalesced from its current
+edge. The existing HUD reader visits only active trails; idle effects return
+before clock, geometry and paint work. Binding/tint/UV setup is cached, failed
+bindings remain retryable during active effects, and geometry/visibility writes
+skip unchanged values. Active geometry uses the existing `T.GetLocalSize`
+helper's local edge extents, avoiding the client's already-scaled raw width for
+this anchor-sized StatusBar. Those edge reads occur only for active loss strips;
+idle, hidden and Performance Mode paths retain their early exits. Width and
+UI/group scale changes keep the loss strip against the actual health boundary,
+without another updater or an effect pool proportional to hit count.
+
+Hide, retirement/reuse, identity/name/maximum changes, healing, reload and actual
+Performance Mode changes clear effects and comparison baselines. Show and mode
+exit accept current health without hidden-time replay. Existing run/world and
+custom-view cleanup retain native health, debuffs and HUD ownership. The
+production helper and its real row lifecycle have authored CI-only mocks; no
+local tests or addon/game execution ran. Region counts and source review do not
+establish live draw calls, GPU cost, FPS or visual parity. See
+[RUN-TIMER.md](RUN-TIMER.md#boss-health-loss).
 
 ## Remaining frame work — 2026-10-28
 

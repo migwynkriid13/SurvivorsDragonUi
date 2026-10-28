@@ -3,7 +3,16 @@ local H = dofile("scripts/tests/fixtures/ui_helpers.lua")
 assert(_VERSION == "Lua 5.1", "tally cadence fixtures require CI Lua 5.1")
 local context = H.New()
 local env = context.env
-env.render, env.markers, env.runEffects = {}, {}, {}
+env.activeRows, env.markers, env.runEffects = {}, {}, {}
+context.lossClears = 0
+env.render = {
+    bossLoss = {
+        ClearAll = function(_, rows)
+            assert(rows == env.activeRows, "mode transition did not clear the current boss rows")
+            context.lossClears = context.lossClears + 1
+        end,
+    },
+}
 env.performanceMode = false
 context.settings.performanceMode = false
 context.settings.highlightAffordableCache = true
@@ -83,8 +92,13 @@ local transition = assert(loadstring("return function()\n" .. string.sub(source,
 setfenv(transition, env)
 transition = transition()
 local function Mode(value)
+    local previous, cleared = env.performanceMode, context.lossClears
     context.settings.performanceMode = value
     transition()
+    assert(
+        context.lossClears == cleared + (previous ~= value and 1 or 0),
+        "boss loss must clear only on actual Performance Mode transitions"
+    )
 end
 
 Values(10.9, 200.8, 300.7)
