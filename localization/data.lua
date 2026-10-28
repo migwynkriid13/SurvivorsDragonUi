@@ -2,6 +2,7 @@
 DFRL.locale.data = {
     en = {
         ui = {
+            ["PERFORMANCE MODE"] = "PERFORMANCE MODE",
             ["Show clock"] = "Show clock",
             ["Show local time beside the minimap zone name."] = "Show local time beside the minimap zone name.",
             ["Heroic affixes"] = "Heroic affixes",
@@ -628,6 +629,7 @@ DFRL.locale.data = {
     },
     pl = {
         ui = {
+            ["PERFORMANCE MODE"] = "TRYB WYDAJNOŚCI",
             ["Show clock"] = "Pokaż zegar",
             ["Show local time beside the minimap zone name."] = "Pokaż czas lokalny obok nazwy obszaru minimapy.",
             ["Heroic affixes"] = "Afiksy heroiczne",
@@ -1725,6 +1727,7 @@ DFRL.locale.data = {
     },
     cs = {
         ui = {
+            ["PERFORMANCE MODE"] = "REŽIM VÝKONU",
             ["Show clock"] = "Zobrazit hodiny",
             ["Show local time beside the minimap zone name."] = "Zobrazit místní čas vedle názvu oblasti na minimapě.",
             ["Heroic affixes"] = "Heroické afixy",
@@ -2825,6 +2828,7 @@ DFRL.locale.data = {
     },
     de = {
         ui = {
+            ["PERFORMANCE MODE"] = "LEISTUNGSMODUS",
             ["Show clock"] = "Uhr anzeigen",
             ["Show local time beside the minimap zone name."] = "Ortszeit neben dem Gebietsnamen der Minikarte anzeigen.",
             ["Heroic affixes"] = "Heroische Affixe",
@@ -3923,6 +3927,7 @@ DFRL.locale.data = {
     },
     pt = {
         ui = {
+            ["PERFORMANCE MODE"] = "MODO DE DESEMPENHO",
             ["Show clock"] = "Mostrar relógio",
             ["Show local time beside the minimap zone name."] = "Mostrar a hora local ao lado do nome da área do minimapa.",
             ["Heroic affixes"] = "Afixos Heroicos",
@@ -5012,6 +5017,7 @@ DFRL.locale.data = {
     },
     es = {
         ui = {
+            ["PERFORMANCE MODE"] = "MODO DE RENDIMIENTO",
             ["Show clock"] = "Mostrar reloj",
             ["Show local time beside the minimap zone name."] = "Mostrar la hora local junto al nombre de la zona del minimapa.",
             ["Heroic affixes"] = "Afijos heroicos",
@@ -6105,6 +6111,7 @@ DFRL.locale.data = {
     },
     fr = {
         ui = {
+            ["PERFORMANCE MODE"] = "MODE PERFORMANCE",
             ["Show clock"] = "Afficher l’horloge",
             ["Show local time beside the minimap zone name."] = "Afficher l’heure locale à côté du nom de zone de la minicarte.",
             ["Heroic affixes"] = "Affixes héroïques",
@@ -7206,6 +7213,7 @@ DFRL.locale.data = {
     },
     ro = {
         ui = {
+            ["PERFORMANCE MODE"] = "MOD DE PERFORMANȚĂ",
             ["Show clock"] = "Arată ceasul",
             ["Show local time beside the minimap zone name."] = "Arată ora locală lângă numele zonei de pe minihartă.",
             ["Heroic affixes"] = "Afixe eroice",
@@ -8290,6 +8298,7 @@ DFRL.locale.data = {
     },
     tr = {
         ui = {
+            ["PERFORMANCE MODE"] = "PERFORMANS MODU",
             ["Show clock"] = "Saati göster",
             ["Show local time beside the minimap zone name."] = "Mini haritadaki bölge adının yanında yerel saati göster.",
             ["Heroic affixes"] = "Heroik ekler",
@@ -9250,6 +9259,7 @@ DFRL.locale.data = {
     },
     ru = {
         ui = {
+            ["PERFORMANCE MODE"] = "РЕЖИМ ПРОИЗВОДИТЕЛЬНОСТИ",
             ["Show clock"] = "Показывать часы",
             ["Show local time beside the minimap zone name."] = "Показывать местное время рядом с названием зоны на мини-карте.",
             ["Heroic affixes"] = "Героические модификаторы",
@@ -10429,6 +10439,7 @@ DFRL.locale.data = {
     },
     uk = {
         ui = {
+            ["PERFORMANCE MODE"] = "РЕЖИМ ПРОДУКТИВНОСТІ",
             ["Show clock"] = "Показувати годинник",
             ["Show local time beside the minimap zone name."] = "Показувати місцевий час поруч із назвою зони на мінікарті.",
             ["Heroic affixes"] = "Героїчні афікси",
@@ -11582,6 +11593,7 @@ DFRL.locale.data = {
     },
     zh = {
         ui = {
+            ["PERFORMANCE MODE"] = "性能模式",
             ["Show clock"] = "显示时钟",
             ["Show local time beside the minimap zone name."] = "在小地图区域名称旁显示本地时间。",
             ["Heroic affixes"] = "英雄词缀",
@@ -12662,6 +12674,7 @@ DFRL.locale.data = {
     },
     ja = {
         ui = {
+            ["PERFORMANCE MODE"] = "パフォーマンスモード",
             ["Show clock"] = "時計を表示",
             ["Show local time beside the minimap zone name."] = "ミニマップのエリア名の横に現地時刻を表示します。",
             ["Heroic affixes"] = "ヒロイックのアフィックス",
@@ -13774,6 +13787,7 @@ DFRL.locale.data = {
     },
     ko = {
         ui = {
+            ["PERFORMANCE MODE"] = "성능 모드",
             ["Show clock"] = "시계 표시",
             ["Show local time beside the minimap zone name."] = "미니맵 지역 이름 옆에 현지 시간을 표시합니다.",
             ["Heroic affixes"] = "영웅 속성",

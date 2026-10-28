@@ -137,6 +137,39 @@ end
 do
     local context = Revive()
     context:Publish({ down = 1, by = "Alice", share = 0.25 })
+    context:Tick(0.2)
+    context:SetSetting("performanceMode", true)
+    assert(context.root:GetAlpha() == 1 and not context.spark:IsShown(), "static revive kept its fade or spark")
+    for _, texture in ipairs(context.crosses) do
+        assert(not texture:IsShown(), "static revive kept a pulsing cross")
+    end
+    local allocated = #context.objects
+    context:Publish({ down = 1, by = "Alice", share = 0.85 })
+    assert(context.bar.value == 0.85 and context.percent:GetText() == "85%", "static revive retained smoothed progress")
+    context:ResetPerf()
+    context:Tick(0.01)
+    assert(context.pulses == 0 and context.clipCalculations == 0, "static revive retained frame animation math")
+    context:NoPresentationWrites()
+    context:Hidden(true)
+    context:ResetPerf()
+    context:Publish({ down = 1, by = "Bob", share = 0.9 })
+    assert(context.formats == 0 and context.percentFormats == 0, "hidden static revive formatted new state")
+    context:Hidden(false)
+    context:Tick(0)
+    assert(context.caption:GetText() == "Bob is reviving you!" and context.percent:GetText() == "90%")
+    context:SetSetting("performanceMode", false)
+    context:ResetPerf()
+    context:Tick(0.01)
+    assert(context.pulses > 0 and context.spark:IsShown(), "normal revive did not resume its original effects")
+    assert(#context.objects == allocated, "revive mode changes rebuilt the view")
+end
+print(
+    "PASS static revive stops fade, smoothing and cross pulses while keeping fresh native progress and hidden recovery"
+)
+
+do
+    local context = Revive()
+    context:Publish({ down = 1, by = "Alice", share = 0.25 })
     assert(context.caption:GetText() == "Alice is reviving you!" and context.percent:GetText() == "25%")
     context:ResetPerf()
     context:Publish({ down = 1, by = "Alice", share = 0.2504 })

@@ -12,6 +12,25 @@ including new features. Review two separate costs: recurring Lua/native work
 and what stays visible in the renderer every frame. A cached updater can still
 leave hundreds of expensive texture regions drawing continuously.
 
+- Every new or changed feature with applicable addon-owned cosmetic animation
+  must include a Performance Mode equivalent in the same change. Reuse the
+  existing default-off `performanceMode` display choice and shared listeners,
+  preview, Confirm, discard, profiles and resets. Prefer useful static or
+  instant presentation; actually hide optional decorative regions and skip
+  their animation math, writes and cosmetic workers. Avoid preparing unused
+  animation artwork while the static path is selected; reuse any prepared pool.
+  Mode/visibility/world transitions must clear or settle active and queued
+  effects, reject late animation callbacks and avoid replaying expired effects
+  when normal presentation returns. Preserve individual saved choices, native
+  information, timing, ownership, input, readiness retries and notification
+  expiry. Native gameplay effects, active dragging and required navigation
+  projection retain their own ownership. Add no separate performance setting,
+  SavedVariable or idle updater. Record the static behavior and source-level
+  costs in the owning developer docs, with meaningful CI-only lifecycle coverage
+  where appropriate; local tests and addon/game execution remain unauthorized.
+- SCT is explicitly exempt from Performance Mode: preserve its existing motion,
+  fall, critical pop, fade and selected MSBT style. Do not add a static override
+  or retire its active hits just because Performance Mode changes.
 - Prefer one cached native image when its appearance matches the request.
   Pet and meter circles use named `SetPortraitToTexture` images, with the gold
   rim separate. Bind only on icon changes; scale inheritance needs no rebinding.
@@ -119,6 +138,45 @@ identity. They are authored for GitHub Actions and were not run locally. Local
 work uses source review and pinned formatting only; no local tests, standalone
 validation, addon/game execution or runtime probes ran. No FPS, CPU-time,
 draw-call or visual-parity measurement is claimed.
+
+## Optional Performance Mode — 2026-10-28
+
+The checkbox above **Layout** uses normalized default-false `performanceMode`
+in the existing display table. Missing and invalid values and both full resets
+leave it off. Preview, Confirm, Cancel, world/logout/reload discard and profiles
+use the shared display transaction. Individual effect, portrait and cooldown
+choices are retained. The sidebar measures the caption across all fourteen
+source/runtime catalogs and reserves its own row above the category buttons.
+
+| Owner                       | While Performance Mode is on                                                                                                                                                                                                                                                                                                                                                     |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Chat                        | Disable native message fading, snap reveal opacity and message-slide geometry, and clear active reveal/slide state. Native messages, scrolling, links and input remain current.                                                                                                                                                                                                  |
+| Unit frames                 | Hide player absorbs and player/target/target-of-target damage trails, reset trail baselines, and use the existing 2D still portraits. Party has no custom loss overlay. Hide combat/rest rim glows; keep a static resting symbol and a static low-health warning at the current health-derived strength.                                                                         |
+| Resources                   | Skip absorb snapshot/field work when Class resources is also off; keep native phase/receipt retirement and selected resource values.                                                                                                                                                                                                                                             |
+| Run timer                   | Keep native whole-second progress and current labels, static blue/red fill and informative skull/check markers. Skip flow, foam, sparkle, red-glint and skull-halo animation. The 72-texture decorative fill pool is prepared only if normal mode needs it, then retained for reuse. Required native phase, ownership, schedule and encounter work keeps its existing lifecycle. |
+| Cache tally                 | Clear the affordable-cache gold halo, rays and sparkles and detach its animation worker. Keep current gold and cache cost.                                                                                                                                                                                                                                                       |
+| XP                          | Snap the fill to received XP, clear gain/spark artwork and detach completed effect work. Existing deferred native reads remain.                                                                                                                                                                                                                                                  |
+| Abilities and stored levels | Clear cooldown-number overlays and detach their timing worker. Hide level-button glow/highlight layers and detach the pulse worker; retain its static gold artwork, count and click behavior.                                                                                                                                                                                    |
+| Notifications and revive    | Loot cards and banners stay opaque until their original expiry; hidden notices still retire. Revive displays received fill/percentage directly without smoothing, fade, spark or pulsing crosses, using its existing ten-Hz state reader.                                                                                                                                        |
+| Action range                | Keep the current out-of-range warning static and remove any active native fade on a mode transition.                                                                                                                                                                                                                                                                             |
+
+Changing the mode clears or settles currently active effects immediately. Turning
+it off restores the saved individual choices from current native state, without
+replaying old XP or damage-loss effects. Hidden presentation stays deferred;
+notification expiry, data gates, native HUD ownership and cleanup stay active.
+Navigation direction, custom combat-text travel, meaningful native cooldown
+swipes and jewelry cooldown progress retain their functional motion. This mode
+does not change native gameplay values, incoming combat feedback or game effects.
+
+The new editor control uses one standard button, four existing editor textures
+and one caption. No gameplay frame, drawing region, texture file, event, updater
+or SavedVariable is added. Existing effect pools stay allocated after use for
+reuse; suppressed textures are actually hidden, rather than left at zero alpha.
+Static fills, borders, text, jewelry strips and other retained artwork still
+have a persistent drawing cost. Skipped animation callbacks and hidden regions
+are source-level evidence only; this work does not establish FPS/GPU gains or
+live appearance. Local work uses source review and pinned formatting; mocked
+coverage is authored for CI only and has not been run locally.
 
 ## Remaining frame work — 2026-10-28
 

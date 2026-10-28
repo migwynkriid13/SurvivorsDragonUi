@@ -53,6 +53,11 @@ def main():
         ])
         sct_queue = sct_queue.rsplit("\nreturn ", 1)[0] + "\nreturn { Queue = QueueCombatText, Update = UpdatePending, Handle = HandleCombatEvent }\n"
         run_foam = extract_source("modules/ui/run.lua", ["DrawFoam", "UpdateBlueFoam"])
+        run_static = extract_source("modules/ui/run.lua", [
+            "BAR_WIDTH", "FLOW_WIDTH", "FLOW_SPEED", "FLOW_INTERVAL", "FLOW_SPACING", "FLOW_COUNT", "FLOW_SPAN",
+            "RED_SPARKLE_OPACITY", "AnimatedRunFill", "runEffects", "SetRunAppearance", "HideRunFlow", "UpdateRunFlow",
+        ])
+        run_static = run_static.rsplit("\nreturn ", 1)[0] + "\nreturn { Appearance = SetRunAppearance, Hide = HideRunFlow, Update = UpdateRunFlow, effects = runEffects }\n"
         run_progress = extract_source("modules/ui/run.lua", ["IsNumber", "UpdateClock"])
         run_affixes = 'local path = "Interface\\\\AddOns\\\\SurvivorsDragonUi\\\\media\\\\tex\\\\timer\\\\"\n' + extract_source("modules/ui/run.lua", ["SKULL_ICON", "IsNumber", "CreateRunAffixes", "UpdateRunFontBounds"])
         run_affixes = run_affixes.rsplit("\nreturn ", 1)[0] + "\nreturn { New = CreateRunAffixes, Bounds = UpdateRunFontBounds }\n"
@@ -69,6 +74,9 @@ def main():
         pet_captions = pet_captions.rsplit("\nreturn ", 1)[0] + "\nreturn { Timer = TimerText, Count = CountText, Hide = HideRow }\n"
         chat_idle = extract_source("modules/chat/chat.lua", ["HOLD", "FADE", "FadeSettings"])
         chat_frame = extract_source("modules/chat/chat.lua", ["UpdateChat"])
+        chat_performance = extract_source("modules/chat/chat.lua", [
+            "HOLD", "FADE", "SLIDE", "AtBottom", "FadeSettings", "Rearm", "Reveal", "PositionNative", "NoticeMessage",
+        ])
         run_markers = extract_source("modules/ui/run.lua", [
             "MARKER_SIZE", "ACTIVE_GLOW_PERIOD", "ACTIVE_GLOW_MIN_ALPHA", "ACTIVE_GLOW_MAX_ALPHA",
             "ACTIVE_GLOW_MIN_OFFSET", "ACTIVE_GLOW_MAX_OFFSET", "ShowMarkerGlow", "HideMarkerTooltip",
@@ -99,6 +107,7 @@ def main():
             ("xp-glow-source.lua", xp_glow, "ui_xp_perf_spec.lua"),
             ("sct-queue-source.lua", sct_queue, "ui_sct_queue_perf_spec.lua"),
             ("run-foam-source.lua", run_foam, "ui_run_foam_perf_spec.lua"),
+            ("run-static-source.lua", run_static, "ui_run_static_mode_spec.lua"),
             ("run-progress-source.lua", run_progress, "ui_run_progress_perf_spec.lua"),
             ("run-affixes-source.lua", run_affixes, "ui_run_affixes_spec.lua"),
             ("run-captions-source.lua", run_captions, "ui_run_captions_perf_spec.lua"),
@@ -108,6 +117,7 @@ def main():
             ("pet-captions-source.lua", pet_captions, "ui_pet_caption_perf_spec.lua"),
             ("chat-idle-source.lua", chat_idle, "ui_chat_idle_perf_spec.lua"),
             ("chat-frame-source.lua", chat_frame, "ui_chat_frame_perf_spec.lua"),
+            ("chat-performance-source.lua", chat_performance, "ui_performance_mode_spec.lua"),
             ("run-marker-source.lua", run_markers, "ui_run_marker_perf_spec.lua"),
             ("run-debuff-cadence-source.lua", run_debuff_cadence, "ui_run_debuff_cadence_spec.lua"),
         ):

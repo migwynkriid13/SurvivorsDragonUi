@@ -71,6 +71,7 @@ DFRL:NewMod("Xprep", 1, function()
     local displayed, desired = 0, 0
     local origin, destination, gainStart, age, duration, fadeAge
     local wrapping, pending, instant = false, false, false
+    local performanceMode = DFRL.display.Get("performanceMode")
     local events = CreateFrame("Frame")
     local OnUpdate
 
@@ -80,7 +81,7 @@ DFRL:NewMod("Xprep", 1, function()
         origin, destination, gainStart, age, duration, fadeAge = nil, nil, nil, nil, nil, nil
         wrapping = false
         displayed = desired
-        if bar:IsVisible() then bar:SetValue(displayed) end
+        if bar:IsVisible() and bar:GetValue() ~= displayed then bar:SetValue(displayed) end
         if gain:IsShown() then gain:Hide() end
         if spark:IsShown() then spark:Hide() end
         if not pending then events:SetScript("OnUpdate", nil) end
@@ -206,6 +207,7 @@ DFRL:NewMod("Xprep", 1, function()
         if not Number(level) or level < 1 then level = nil end
         desired = currentXP / maximumXP
         local canAnimate = animate
+            and not performanceMode
             and not editing
             and attached
             and bar:IsVisible()
@@ -314,7 +316,11 @@ DFRL:NewMod("Xprep", 1, function()
     end
 
     DFRL.display.Listen(function()
-        if UpdateAttachment() then UpdateXP(false) end
+        local enabled = DFRL.display.Get("performanceMode")
+        local changed = performanceMode ~= enabled
+        performanceMode = enabled
+        if changed then StopAnimation() end
+        if UpdateAttachment() or changed then UpdateXP(false) end
     end)
     events:RegisterEvent("PLAYER_ENTERING_WORLD")
     events:RegisterEvent("PLAYER_LEAVING_WORLD")

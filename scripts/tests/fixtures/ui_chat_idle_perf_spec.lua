@@ -52,4 +52,17 @@ local success = pcall(apply, state, false)
 assert(not success and not state.fadeConfigured and state.held == nil, "failed native setup was cached")
 apply(state, false)
 assert(state.fadeConfigured and state.held == false and writes == 5, "failed native setup did not retry")
+env.performanceMode = true
+expectedFading, writes = false, 0
+apply(state, false)
+assert(state.held == true and writes == 1, "Performance Mode left native chat fading enabled")
+reads, writes = 0, 0
+for _ = 1, 100 do
+    apply(state, false)
+end
+assert(reads == 0 and writes == 0, "Performance Mode repeated a settled native fade handoff")
+env.performanceMode = false
+expectedFading = true
+apply(state, false)
+assert(state.held == false and writes == 1, "disabling Performance Mode did not restore native chat fading")
 print("PASS settled chat skips native visibility reads and preserves hidden handoffs and failed configuration retries")

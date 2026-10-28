@@ -72,6 +72,8 @@ Open `/sdui` or click the gold Dragonflight glyph beside the minimap, then drag 
 
 Click **Confirm** to save or **Cancel** to undo. Leaving the run or reloading also discards unsaved changes. **Addon defaults** resets the same options as `/sdui reset`.
 
+**PERFORMANCE MODE**, above **Layout**, starts off. Turn it on for static portraits and HUD effects, chat and banners without fading, and no cooldown numbers. Combat text keeps its usual motion and selected style. Your individual choices return when you turn it off.
+
 ### Action bar and portraits
 
 Action buttons start locked. Under **Action bar**, turn off **Lock action buttons** and confirm. You can then Shift-click two occupied buttons to swap their spells. **Show gryphons** adds ornaments at each end of the bar; it starts off. Turn off **Attach XP to action bar** to move the XP bar separately.

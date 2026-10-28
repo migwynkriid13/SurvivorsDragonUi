@@ -146,6 +146,27 @@ assert(not next(context.reads), "settled native limit repeated marker cleanup")
 update(false)
 assert(env.render.activeMarkerCount == 1 and env.markers[2]:IsShown(), "time correction did not restore schedule state")
 
+env.performanceMode, env.render.markerStatesDirty = true, true
+context:ResetCounts()
+update(false)
+assert(env.markers[2]:IsShown() and not env.markers[2].check:IsShown(), "static mode lost the living skull state")
+assert(env.render.activeMarkerCount == 0 and not context.reads.clock and not context.reads.pulses)
+for _, glow in ipairs(env.markers[2].glow) do
+    assert(not glow.texture:IsShown(), "static mode retained a red skull halo")
+end
+context:ResetCounts()
+for _ = 1, 60 do
+    update(false)
+end
+context:NoPresentationWrites()
+assert(not next(context.reads), "static skulls retained frame animation work")
+env.performanceMode, env.render.markerStatesDirty = false, true
+update(false)
+assert(
+    env.render.activeMarkerCount == 1 and env.markers[2].glow[1].texture:IsShown(),
+    "disabling performance mode did not restore the unchanged living skull halo"
+)
+
 env.markerStates[2], env.render.markerStatesDirty = nil, true
 update(false)
 assert(not env.markers[2]:IsShown() and env.render.activeMarkerCount == 0)

@@ -114,6 +114,23 @@ do
     end
     assert(label and button:IsVisible() and context.nativeShown == false)
     assert(context.reads.hud == 2, "initial takeover did not read back the setter")
+    assert(button:GetScript("OnUpdate"), "normal stored-level pulse did not start")
+    context:SetSetting("performanceMode", true)
+    assert(button:IsVisible() and label:GetText() == "3", "Performance Mode hid the stored-level information")
+    assert(not button:GetScript("OnUpdate"), "Performance Mode retained the stored-level pulse")
+    for _, object in ipairs(context.objects) do
+        if object.kind == "Texture" and (object.texture or ""):find("Glow.blp", 1, true) then
+            assert(not object:IsShown(), "Performance Mode retained the gold halo")
+        end
+    end
+    context:ResetCounts()
+    context:Call(button, "OnUpdate", 0.5)
+    context:NoPresentationWrites()
+    context:SetLayoutHidden(true)
+    context:SetSetting("performanceMode", false)
+    assert(not button:GetScript("OnUpdate"), "hidden mode exit restarted the stored-level pulse")
+    context:SetLayoutHidden(false)
+    assert(button:GetScript("OnUpdate"), "Show did not restore the configured stored-level pulse")
     local function Tick() context:Call(controller, "OnUpdate", 0.1) end
     context:ResetCounts()
     for _ = 1, 10 do

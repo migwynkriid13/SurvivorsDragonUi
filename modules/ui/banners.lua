@@ -55,6 +55,8 @@ DFRL:NewMod("RunBanners", 4, function()
     local pendingErrors, errorCount = {}, 0
     local MAX_ERRORS = 32
     local age, painted = 0, 0
+    local performanceMode = DFRL.display.Get("performanceMode")
+    local nextPaintAt
     local OnBanner, Refresh, Update, SyncUpdates
     local companions = {}
 
@@ -165,8 +167,9 @@ DFRL:NewMod("RunBanners", 4, function()
         else
             row.label:SetTextColor(1, 0.82, 0)
         end
-        row.label:SetAlpha(0)
-        row.alpha = 0
+        local alpha = performanceMode and 1 or 0
+        row.label:SetAlpha(alpha)
+        row.alpha = alpha
         row.label:Show()
         row.presented, needsReflow = true, true
     end
@@ -205,6 +208,7 @@ DFRL:NewMod("RunBanners", 4, function()
             seenOrder[index] = nil
         end
         visibleCount, queueCount, seenCount = 0, 0, 0
+        nextPaintAt = nil
         table.setn(visible, 0)
         table.setn(queue, 0)
         table.setn(seenOrder, 0)
@@ -299,6 +303,7 @@ DFRL:NewMod("RunBanners", 4, function()
                 visible[visibleCount] = row
                 table.setn(visible, visibleCount)
                 Reflow()
+                nextPaintAt = nil
                 return true
             end
         end
@@ -521,6 +526,7 @@ DFRL:NewMod("RunBanners", 4, function()
         return ready
     end
     local function Paint(now)
+        local nextAt
         local index, moved = 1, false
         while index <= visibleCount do
             local row = visible[index]
@@ -537,20 +543,27 @@ DFRL:NewMod("RunBanners", 4, function()
             else
                 if root:IsVisible() then
                     Present(row)
-                    local alpha = math.min(1, elapsed / FADE_IN, (HOLD + FADE_OUT - elapsed) / FADE_OUT)
+                    local alpha = performanceMode and 1
+                        or math.min(1, elapsed / FADE_IN, (HOLD + FADE_OUT - elapsed) / FADE_OUT)
                     if row.alpha ~= alpha then row.label:SetAlpha(alpha) end
                     row.alpha = alpha
                 end
+                local expiresAt = row.started + HOLD + FADE_OUT
+                nextAt = nextAt and math.min(nextAt, expiresAt) or expiresAt
                 index = index + 1
             end
         end
         if moved or (needsReflow and root:IsVisible()) then Reflow() end
+        local promoted = false
         while queueCount > 0 and visibleCount < MAX_VISIBLE do
             if not Push(queue[1], now) then break end
+            promoted = true
             table.remove(queue, 1)
             queueCount = queueCount - 1
             table.setn(queue, queueCount)
         end
+        -- Include newly promoted rows in the next retirement deadline sample.
+        nextPaintAt = not (moved or promoted) and nextAt or nil
     end
     Update = function()
         local elapsed = tonumber(arg1) or 0
@@ -562,7 +575,9 @@ DFRL:NewMod("RunBanners", 4, function()
         end
         if not active or visibleCount == 0 or painted < 1 / 30 then return end
         painted = 0
-        Paint(GetTime())
+        local now = GetTime()
+        if performanceMode and nextPaintAt and now < nextPaintAt then return end
+        Paint(now)
     end
     local function Tick()
         local ok, message = pcall(Update)
@@ -582,7 +597,16 @@ DFRL:NewMod("RunBanners", 4, function()
         root:ClearAllPoints()
         root:SetPoint("TOP", UIParent, "TOP", 0, -130)
     end, { labelAbove = true, refreshDefault = true, onReset = banners.Clear })
-    DFRL.display.Listen(Refresh)
+    DFRL.display.Listen(function()
+        local enabled = DFRL.display.Get("performanceMode")
+        if performanceMode ~= enabled then
+            performanceMode = enabled
+            nextPaintAt = nil
+            local ok, message = pcall(Paint, GetTime())
+            if not ok then Failed(message) end
+        end
+        Refresh()
+    end)
     controller:RegisterEvent("PLAYER_ENTERING_WORLD")
     controller:RegisterEvent("PLAYER_LEAVING_WORLD")
     controller:RegisterEvent("PLAYER_LOGOUT")

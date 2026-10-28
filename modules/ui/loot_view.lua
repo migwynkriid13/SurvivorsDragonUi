@@ -19,6 +19,7 @@ DFRL:NewMod("LootView", 4, function()
     local pool, visible, count = {}, {}, 0
     local ready, needsReflow, prepared = true, false, false
     local nextUpdateAt
+    local performanceMode = DFRL.display.Get("performanceMode")
     local frame = CreateFrame("Frame", "DFRL_LootNotifications", UIParent)
     frame:SetWidth(WIDTH)
     frame:SetHeight(HEIGHT + (LIMIT - 1) * STEP)
@@ -206,13 +207,16 @@ DFRL:NewMod("LootView", 4, function()
             else
                 if paint then
                     if card.presentationDirty then Refresh(card) end
-                    local alpha = math.min(1, math.max(0, elapsed / FADE_IN))
-                    if elapsed > FADE_START then alpha = (LIFETIME - elapsed) / (LIFETIME - FADE_START) end
+                    local alpha = 1
+                    if not performanceMode then
+                        alpha = math.min(1, math.max(0, elapsed / FADE_IN))
+                        if elapsed > FADE_START then alpha = (LIFETIME - elapsed) / (LIFETIME - FADE_START) end
+                    end
                     SetAlpha(card, alpha)
-                    if elapsed < FADE_IN or elapsed > FADE_START then
+                    if not performanceMode and (elapsed < FADE_IN or elapsed > FADE_START) then
                         animating = true
                     else
-                        local fadeAt = card.started + FADE_START
+                        local fadeAt = card.started + (performanceMode and LIFETIME or FADE_START)
                         nextAt = nextAt and math.min(nextAt, fadeAt) or fadeAt
                     end
                 else
@@ -266,7 +270,7 @@ DFRL:NewMod("LootView", 4, function()
         table.setn(visible, count)
         Reflow()
         if frame:IsVisible() then
-            SetAlpha(card, 0)
+            SetAlpha(card, performanceMode and 1 or 0)
         else
             card.paintedAlpha = nil
         end
@@ -298,6 +302,13 @@ DFRL:NewMod("LootView", 4, function()
                 return
             end
         end
+    end)
+    DFRL.display.Listen(function()
+        local enabled = DFRL.display.Get("performanceMode")
+        if performanceMode == enabled then return end
+        performanceMode = enabled
+        nextUpdateAt = nil
+        Tick()
     end)
     loot.SetRenderer({ IsReady = EnsurePool, Push = Push, Clear = Clear })
 end)

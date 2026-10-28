@@ -94,6 +94,13 @@ unverified.
 
 ## Update work
 
+With **PERFORMANCE MODE** on, regular progress uses the plain blue fill and
+the red Endless state keeps only its plain red fill. Both skip every decorative
+fill layer: foam, right-moving streaks, flecks, sparkles, red glints and glow.
+Enabling the mode hides any already-active layers immediately. Native progress
+continues in whole-second steps; captions and informative markers remain.
+Turning the mode off restores the original effects from current state.
+
 Native duration and schedule validation reuse the existing ten-Hz/deferred
 publication refresh. Phase changes, run/schedule retirement and reload invalidate
 that cache. Raw run time, phase/rollback checks, clock HUD ownership and authored

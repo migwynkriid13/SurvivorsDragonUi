@@ -106,6 +106,41 @@ do
 end
 print("PASS low-health warning uses native events and only animates eligible warnings at its existing20Hz")
 
+do
+    local context = Warning()
+    context.health = 35
+    context:Event(context.controller, "UNIT_HEALTH", "player")
+    context:Tick(0.05)
+    context:SetSetting("performanceMode", true)
+    assert(
+        context.warning:IsShown() and not context.controller:GetScript("OnUpdate"),
+        "Performance Mode lost static low-health feedback or retained pulse work"
+    )
+    assert(math.abs(context.top.gradient[9] - 0.7 * 0.55) < 1e-12, "static warning changed native health intensity")
+    context:ResetCounts()
+    context:Tick(10)
+    context:NoPresentationWrites()
+    assert(not next(context.reads), "static low-health warning polled native health")
+    context.health = 28
+    context:Event(context.controller, "UNIT_HEALTH", "player")
+    assert(math.abs(context.top.gradient[9] - 0.7 * 0.64) < 1e-12, "static warning ignored a new native health value")
+    assert(not context.controller:GetScript("OnUpdate"), "static health update restarted warning animation")
+    context:SetSetting("performanceMode", false)
+    assert(context.controller:GetScript("OnUpdate"), "normal warning pulse did not resume")
+    context:SetSetting("performanceMode", true)
+    context.health = 100
+    context:Event(context.controller, "UNIT_HEALTH", "player")
+    assert(
+        not context.warning:IsShown() and not context.controller:GetScript("OnUpdate"),
+        "healthy native state retained a static warning"
+    )
+    context:Event(context.controller, "PLAYER_LEAVING_WORLD")
+    context:ResetCounts()
+    context:Tick(10)
+    assert(not next(context.reads) and not next(context.writes), "static warning survived world retirement")
+end
+print("PASS Performance Mode keeps event-driven static low-health feedback and restores normal pulse eligibility")
+
 local function Language(settled)
     local context = H.New()
     local env = context.env

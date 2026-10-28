@@ -19,6 +19,7 @@ DFRL:NewMod("RunTimers", 5, function()
     local FLOW_COUNT = math.ceil((BAR_WIDTH + FLOW_WIDTH) / FLOW_SPACING)
     local FLOW_SPAN = FLOW_SPACING * FLOW_COUNT
     local RED_SPARKLE_OPACITY = 0.85
+    local performanceMode = DFRL.display.Get("performanceMode")
     local PHASES = {
         ready = true,
         playing = true,
@@ -625,7 +626,7 @@ DFRL:NewMod("RunTimers", 5, function()
             flowUpdatedAt = nil
         end
 
-        local function SetRunAppearance(atLimit)
+        local function SetAnimatedAppearance(atLimit, force)
             ResizeEffects()
             if glowShown ~= atLimit then
                 if atLimit then
@@ -645,7 +646,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 end
                 sparklesShown = atLimit
             end
-            if flowRed == atLimit then return end
+            if flowRed == atLimit and not force then return end
             flowRed = atLimit
             if atLimit then HideBlueFoam() end
             bar:SetStatusBarTexture(path .. (atLimit and "FillWhite" or "FillBlue") .. ".blp")
@@ -663,7 +664,7 @@ DFRL:NewMod("RunTimers", 5, function()
             end
         end
 
-        local function HideRunFlow()
+        local function HideAnimatedFlow()
             flowUpdatedAt = nil
             HideBlueFoam()
             if glowShown then
@@ -684,10 +685,10 @@ DFRL:NewMod("RunTimers", 5, function()
             end
         end
 
-        local function UpdateRunFlow(seconds, maximum)
+        local function UpdateAnimatedFlow(seconds, maximum)
             ResizeEffects()
             if seconds == 0 then
-                HideRunFlow()
+                HideAnimatedFlow()
                 return
             end
             -- UI time only moves decoration; native elapsed time owns the fill.
@@ -735,7 +736,7 @@ DFRL:NewMod("RunTimers", 5, function()
             end
             UpdateBlueFoam(now, filledWidth)
         end
-        return SetRunAppearance, HideRunFlow, UpdateRunFlow
+        return SetAnimatedAppearance, HideAnimatedFlow, UpdateAnimatedFlow
     end
 
     local run, runBar, runText, overlay = Pill("DFRL_RunTimerPill", "FillBlue")
@@ -745,7 +746,36 @@ DFRL:NewMod("RunTimers", 5, function()
     bossText:SetTextColor(1, 1, 1)
     bossText:SetJustifyH("RIGHT")
     bossText:SetText("")
-    local SetRunAppearance, HideRunFlow, UpdateRunFlow = AnimatedRunFill(runBar)
+    -- Static mode never prepares the decorative texture pool. Normal mode
+    -- prepares it on the first visible clock and retains it across previews.
+    local runEffects = {}
+    local function SetRunAppearance(atLimit)
+        if performanceMode then
+            if runEffects.staticAtLimit ~= atLimit then
+                runBar:SetStatusBarTexture(path .. (atLimit and "FillWhite" or "FillBlue") .. ".blp")
+                runBar:SetStatusBarColor(
+                    atLimit and 0.72 or 1,
+                    atLimit and 0.025 or 1,
+                    atLimit and 0.045 or 1,
+                    atLimit and 0.9 or 1
+                )
+                runEffects.staticAtLimit = atLimit
+                runEffects.restoreAppearance = true
+            end
+            return
+        end
+        if not runEffects.Appearance then
+            runEffects.Appearance, runEffects.Hide, runEffects.Update = AnimatedRunFill(runBar)
+        end
+        runEffects.Appearance(atLimit, runEffects.restoreAppearance)
+        runEffects.restoreAppearance = nil
+    end
+    local function HideRunFlow()
+        if runEffects.Hide then runEffects.Hide() end
+    end
+    local function UpdateRunFlow(seconds, maximum)
+        if not performanceMode and runEffects.Update then runEffects.Update(seconds, maximum) end
+    end
 
     local runMoveRegion = CreateFrame("Frame", nil, run)
     local fontFaces = {
@@ -1516,6 +1546,7 @@ DFRL:NewMod("RunTimers", 5, function()
         for _, entry in ipairs(categories) do
             sidebarWidth = math.max(sidebarWidth, TextWidth(entry.label) + 32)
         end
+        sidebarWidth = math.max(sidebarWidth, TextWidth("PERFORMANCE MODE") + 36)
         for _, entry in ipairs(modes) do
             modeWidth = math.max(modeWidth, TextWidth(entry.label) + 24)
         end
@@ -1647,12 +1678,25 @@ DFRL:NewMod("RunTimers", 5, function()
             end
         end
         local modeSize = (contentWidth - gap * 2) / 3
-        local sidebarY, categoryGaps = -sidebarInset, 0
+        local performance = T.CreateEditorToggle(
+            sidebar,
+            "PERFORMANCE MODE",
+            nil,
+            sidebarWidth,
+            function(value) DFRL.display.Set("performanceMode", value) end
+        )
+        performance:SetHeight(36)
+        performance:SetPoint("TOPLEFT", sidebar, "TOPLEFT", 6, -sidebarInset)
+        performance.label:SetPoint("TOPLEFT", performance, "TOPLEFT", 32, -10)
+        displayControls.performanceMode = performance
+        local sidebarY, categoryGaps = -sidebarInset - 40, 0
         for _, entry in ipairs(categories) do
             categoryGaps = categoryGaps + (entry.gapBefore or 0)
         end
-        local categoryPitch =
-            math.min(42, (sidebar:GetHeight() - sidebarInset * 2 - categoryGaps + categoryGap) / table.getn(categories))
+        local categoryPitch = math.min(
+            42,
+            (sidebar:GetHeight() - sidebarInset * 2 - 40 - categoryGaps + categoryGap) / table.getn(categories)
+        )
         for _, entry in ipairs(categories) do
             local key = entry.key
             local page = CreateFrame("Frame", nil, fontEditor)
@@ -2403,7 +2447,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 entry.glowAge, entry.glowPhase = nil, nil
             end
             local function AnimateGlow()
-                if not entry.affordable or not content:IsVisible() then
+                if performanceMode or not entry.affordable or not content:IsVisible() then
                     entry.StopGlow()
                     return
                 end
@@ -2415,7 +2459,9 @@ DFRL:NewMod("RunTimers", 5, function()
                 PaintGlow()
             end
             function entry.StartGlow()
-                if entry.glowRunning or not entry.affordable or not content:IsVisible() then return end
+                if performanceMode or entry.glowRunning or not entry.affordable or not content:IsVisible() then
+                    return
+                end
                 entry.glowRunning = true
                 entry.glowAge, entry.glowPhase = 0, 0
                 PaintGlow()
@@ -2451,6 +2497,7 @@ DFRL:NewMod("RunTimers", 5, function()
     end
 
     local function SetGoldHighlight(affordable)
+        affordable = not performanceMode and affordable
         if affordable then
             local text = goldField.text:GetText() or ""
             if goldField.glowText ~= text then
@@ -3175,10 +3222,10 @@ DFRL:NewMod("RunTimers", 5, function()
                 if state then
                     if marker.state ~= state then
                         T.StyleDefeatedMarker(marker.skull, marker.check, MARKER_SIZE, state == "dead")
-                        ShowMarkerGlow(marker, state == "up")
                         marker.state = state
                     end
-                    if state == "up" then
+                    ShowMarkerGlow(marker, state == "up" and not performanceMode)
+                    if state == "up" and not performanceMode then
                         count = count + 1
                         render.activeMarkers[count] = marker
                     end
@@ -3646,6 +3693,22 @@ DFRL:NewMod("RunTimers", 5, function()
     bossGroup:SetScript("OnMouseWheel", function() bossGroup.ScrollRows(arg1) end)
 
     DFRL.display.Listen(function()
+        local performance = DFRL.display.Get("performanceMode")
+        if performanceMode ~= performance then
+            performanceMode = performance
+            runEffects.staticAtLimit = nil
+            HideRunFlow()
+            if performance then
+                SetGoldHighlight(false)
+                for _, marker in ipairs(markers) do
+                    ShowMarkerGlow(marker, false)
+                end
+            end
+            render.markerStatesDirty = true
+            if run:IsVisible() and render.runMaximum then
+                SetRunAppearance((render.runValue or 0) >= render.runMaximum)
+            end
+        end
         SyncReplacements()
         run.affixes:SyncAttachment()
         UpdateDisplayLabels()

@@ -318,6 +318,17 @@ broken callbacks and stale/ambiguous production seams are rejected.
 
 ## What still needs the client
 
+Performance Mode fixtures exercise the production display/profile transaction,
+native Chat fade/slide owners, XP, cooldown-number and stored-level controllers,
+and the static low-health warning. Extracted timer ownership checks cover lazy
+decoration, static blue/red fills and restoration of the original effect pool.
+Related production mocks cover notification expiry, revive progress, static
+range feedback and skull-glow transitions. These fixtures run only in CI and
+were not run locally; they do not measure frame rate or verify native rendering.
+
+Banner cases include the former
+fade-out window and hidden-born rows, preserving original receipt lifetimes.
+
 Static checks cannot prove that a shared callback is reached, native publications
 arrive in the expected order, hidden views remain idle, or textures render with
 the correct pixels. They also cannot measure live draw calls, GPU memory or FPS.

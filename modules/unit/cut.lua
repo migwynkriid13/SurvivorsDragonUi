@@ -8,7 +8,7 @@ DFRL:NewMod("Cut-Out", 1, function()
     local cutouts, fading = {}, {}
     local frame = CreateFrame("Frame")
     local initialized = false
-    local animationEnabled = DFRL.display.Get("healthLossAnimation")
+    local animationEnabled = DFRL.display.Get("healthLossAnimation") and not DFRL.display.Get("performanceMode")
 
     local function ReadValue(cutout) return T.GetUnitHealth(cutout.unit) end
 
@@ -27,7 +27,7 @@ DFRL:NewMod("Cut-Out", 1, function()
     local function Reset(cutout)
         Stop(cutout)
         cutout.lastValue, cutout.lastMax, cutout.generation = nil, nil, nil
-        if not cutout.bar:IsVisible() then return end
+        if not animationEnabled or not cutout.bar:IsVisible() then return end
         cutout.lastValue, cutout.lastMax, cutout.generation = ReadValue(cutout)
         if cutout.lastValue and cutout.lastMax and cutout.lastMax > 0 then
             cutout.lastValue = math.max(0, math.min(cutout.lastValue, cutout.lastMax))
@@ -110,7 +110,7 @@ DFRL:NewMod("Cut-Out", 1, function()
     end
 
     DFRL.display.Listen(function()
-        local enabled = DFRL.display.Get("healthLossAnimation")
+        local enabled = DFRL.display.Get("healthLossAnimation") and not DFRL.display.Get("performanceMode")
         if enabled == animationEnabled then return end
         animationEnabled = enabled
         frame:SetScript("OnUpdate", nil)

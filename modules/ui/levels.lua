@@ -162,32 +162,48 @@ DFRL:NewMod("StoredLevels", 5, function()
     highlight:SetBlendMode("ADD")
     highlight:Hide()
     local pulseElapsed, hovered = 0, false
-    button:SetScript("OnEnter", function()
-        if not editing then hovered = true end
-    end)
-    button:SetScript("OnLeave", function() hovered = false end)
-    button:SetScript("OnShow", function()
-        elapsed = INTERVAL
-        pulseElapsed = 0
-        glow:SetAlpha(0.25)
-        highlight:SetAlpha(0.1)
-        glow:Show()
-        highlight:Show()
-    end)
-    button:SetScript("OnHide", function()
-        pulseElapsed, hovered = 0, false
-        glow:Hide()
-        highlight:Hide()
-    end)
-    -- This updater runs only while the real button is visible with waiting
-    -- levels. Hidden groups and cleanup stop it through normal frame visibility.
-    button:SetScript("OnUpdate", function()
+    local performanceMode = DFRL.display.Get("performanceMode")
+    local function AnimatePulse()
         if not button:IsVisible() then return end
         pulseElapsed = pulseElapsed + math.min(tonumber(arg1) or 0, 0.1)
         if pulseElapsed >= PULSE_PERIOD then pulseElapsed = pulseElapsed - PULSE_PERIOD end
         local pulse = 0.5 - 0.5 * math.cos(pulseElapsed * 2 * math.pi / PULSE_PERIOD)
         glow:SetAlpha(0.25 + 0.65 * pulse)
         highlight:SetAlpha((hovered and 0.3 or 0.1) + 0.4 * pulse)
+    end
+    local function RefreshEffects()
+        pulseElapsed = 0
+        if performanceMode or not button:IsVisible() then
+            button:SetScript("OnUpdate", nil)
+            if glow:IsShown() then glow:Hide() end
+            if highlight:IsShown() then highlight:Hide() end
+            return
+        end
+        glow:SetAlpha(0.25)
+        highlight:SetAlpha(0.1)
+        glow:Show()
+        highlight:Show()
+        button:SetScript("OnUpdate", AnimatePulse)
+    end
+    button:SetScript("OnEnter", function()
+        if not editing then hovered = true end
+    end)
+    button:SetScript("OnLeave", function() hovered = false end)
+    button:SetScript("OnShow", function()
+        elapsed = INTERVAL
+        RefreshEffects()
+    end)
+    button:SetScript("OnHide", function()
+        pulseElapsed, hovered = 0, false
+        button:SetScript("OnUpdate", nil)
+        glow:Hide()
+        highlight:Hide()
+    end)
+    DFRL.display.Listen(function()
+        local enabled = DFRL.display.Get("performanceMode")
+        if performanceMode == enabled then return end
+        performanceMode = enabled
+        RefreshEffects()
     end)
 
     local function PositiveInteger(value)

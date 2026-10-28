@@ -4,6 +4,11 @@ SurvivorsDragonUi includes English, Polish, Czech (**Čeština**), German, Brazi
 
 ## Following the game
 
+The default-off **PERFORMANCE MODE** checkbox uses the standard editor caption
+binding and width measurement. Its source row and all fourteen runtime UI entries
+are added together; native catalogs, spell aliases and effect templates are
+unchanged by this setting.
+
 The Heroic/marks update adds the native `marks.gained` and `marks.earned`
 templates. They were read as data from the installed executable, SHA-256
 `22f7938eb4f99f2857dc091b1c57c147bd848eaabfeaa81e444c0a3393ca8150`,

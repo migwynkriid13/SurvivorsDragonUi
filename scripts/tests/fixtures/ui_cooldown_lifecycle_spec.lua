@@ -103,6 +103,25 @@ starts[3], durations[3] = context.now, 0.05
 context:Event(controller, "ACTIONBAR_UPDATE_COOLDOWN")
 assert(context.reads.cooldown == 21, "native cooldown event stopped refreshing the full bar immediately")
 assert(env.DFRL.actionButtons[3].DFRL_cooldownNumber.text:GetText() == "0")
+context:SetSetting("performanceMode", true)
+assert(context.settings.cooldownNumbers == true, "Performance Mode rewrote the cooldown choice")
+assert(not controller:GetScript("OnUpdate"), "Performance Mode retained cooldown-number polling")
+for _, button in ipairs(env.DFRL.actionButtons) do
+    assert(not button.DFRL_cooldownNumber:IsShown(), "Performance Mode left a cooldown number visible")
+    assert(button.DFRL_cooldownNumber.finishing == nil, "Performance Mode retained final-window state")
+end
+context:ResetCounts()
+context:Event(controller, "ACTIONBAR_UPDATE_COOLDOWN")
+context:Call(controller, "OnUpdate", 1)
+assert(
+    not context.reads.cooldown and not controller:GetScript("OnUpdate"),
+    "Performance Mode read native number timing"
+)
+context:SetSetting("performanceMode", false)
+assert(
+    controller:GetScript("OnUpdate") and context.reads.cooldown == 7,
+    "Performance Mode exit did not read current cooldowns"
+)
 bar:Hide()
 for _, button in ipairs(env.DFRL.actionButtons) do
     assert(button.DFRL_cooldownNumber.finishing == nil, "hidden cooldown retained final-window state")

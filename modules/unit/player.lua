@@ -11,7 +11,7 @@ DFRL:NewMod("Player", 1, function()
 
     local UpdateHealthColor = T.BindClassHealthColor(PlayerFrameHealthBar, "player")
 
-    local appliedRound, appliedHidden
+    local appliedRound, appliedHidden, appliedPerformance
     local appliedExtension
     local function UpdateHealthWidth(extension)
         extension = extension or setPortraitOverlap(appliedRound)
@@ -47,12 +47,13 @@ DFRL:NewMod("Player", 1, function()
         if not updateBorder then return end
         local round = DFRL.display.Get("roundPlayerPortrait")
         local hidden = DFRL.display.Get("hidePortraits")
-        if round == appliedRound and hidden == appliedHidden then return end
-        appliedRound, appliedHidden = round, hidden
+        local performance = DFRL.display.Get("performanceMode")
+        if round == appliedRound and hidden == appliedHidden and performance == appliedPerformance then return end
+        appliedRound, appliedHidden, appliedPerformance = round, hidden, performance
         updateBorder(tex .. (round and "UI-TargetingFrameDF1.blp" or "UI-TargetingFrameDF.blp"))
         UpdateHealthWidth()
         for _, textures in ipairs(pulseTextures) do
-            if hidden then
+            if hidden or performance then
                 textures.original:Hide()
                 textures.round:Hide()
             elseif round then
@@ -67,6 +68,7 @@ DFRL:NewMod("Player", 1, function()
     DFRL.display.Listen(UpdatePortraitShape)
 
     DFRL.playerResources = DFRL.playerResources or {}
+    local performanceMode = DFRL.display.Get("performanceMode")
     local absorbOverlay, absorbTexture, absorbBound
     local absorbStart, absorbFraction, absorbLeft
     local function ClearAbsorb()
@@ -74,7 +76,7 @@ DFRL:NewMod("Player", 1, function()
         if absorbOverlay and absorbOverlay:IsShown() then absorbOverlay:Hide() end
     end
     local function PlaceAbsorb()
-        if not absorbFraction or not PlayerFrameHealthBar:IsVisible() then return end
+        if performanceMode or not absorbFraction or not PlayerFrameHealthBar:IsVisible() then return end
         local width = PlayerFrameHealthBar:GetWidth()
         if width <= 0 then return end
         if not absorbOverlay then
@@ -108,7 +110,8 @@ DFRL:NewMod("Player", 1, function()
     end
     DFRL.playerResources.SetAbsorb = function(value, health, maximum)
         if
-            type(value) ~= "number"
+            performanceMode
+            or type(value) ~= "number"
             or value <= 0
             or value - value ~= 0
             or type(health) ~= "number"
@@ -128,6 +131,12 @@ DFRL:NewMod("Player", 1, function()
         absorbStart = math.min(health / maximum, 1 - absorbFraction)
         PlaceAbsorb()
     end
+    DFRL.display.Listen(function()
+        local enabled = DFRL.display.Get("performanceMode")
+        if enabled == performanceMode then return end
+        performanceMode = enabled
+        ClearAbsorb()
+    end)
     DFRL.playerResources.SetPrimary = function(value, maximum, powerType)
         if not primaryBar then return end
         if
@@ -265,6 +274,15 @@ DFRL:NewMod("Player", 1, function()
         end
         local function RefreshPulse()
             portraitsShown = not DFRL.display.Get("hidePortraits")
+            if performanceMode then
+                StopUpdates()
+                pulseTime, pulseAlpha, enabled = 0, 0, false
+                if texture:GetAlpha() ~= 0 then texture:SetAlpha(0) end
+                if round:GetAlpha() ~= 0 then round:SetAlpha(0) end
+                if texture:IsShown() then texture:Hide() end
+                if round:IsShown() then round:Hide() end
+                return
+            end
             if not inWorld or not PlayerFrame:IsVisible() or not portraitsShown then
                 StopUpdates()
                 return
@@ -314,7 +332,7 @@ DFRL:NewMod("Player", 1, function()
         texture:SetAllPoints(animation)
         local tick, index = 0, 0
         texture:SetTexCoord(0, 60 / 512, 0, 60 / 512)
-        animation:SetScript("OnUpdate", function()
+        local function AnimateResting()
             if not animation:IsVisible() then return end
             tick = tick + (arg1 or 0)
             if tick >= 0.05 then
@@ -325,12 +343,18 @@ DFRL:NewMod("Player", 1, function()
                 local y = math.floor(index / 6) * 60 / 512
                 texture:SetTexCoord(x, x + 60 / 512, y, y + 60 / 512)
             end
-        end)
+        end
         local function UpdateResting()
+            local update = not performanceMode and AnimateResting or nil
+            if animation:GetScript("OnUpdate") ~= update then animation:SetScript("OnUpdate", update) end
+            if performanceMode and (tick ~= 0 or index ~= 0) then
+                tick, index = 0, 0
+                texture:SetTexCoord(0, 60 / 512, 0, 60 / 512)
+            end
             if IsResting() and not DFRL.display.Get("hidePortraits") then
-                animation:Show()
+                if not animation:IsShown() then animation:Show() end
             else
-                animation:Hide()
+                if animation:IsShown() then animation:Hide() end
             end
         end
         local events = CreateFrame("Frame")

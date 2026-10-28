@@ -2,6 +2,7 @@
 DFRL:NewMod("Display", 0, function()
     local display, listeners, draft = {}, {}, nil
     local defaults = {
+        performanceMode = false,
         meterEnabled = false,
         meterRows = 6,
         layoutShowGrid = true,
@@ -134,6 +135,7 @@ DFRL:NewMod("Display", 0, function()
     end
     local function Normalize(source)
         return {
+            performanceMode = Read(source, "performanceMode"),
             meterEnabled = Read(source, "meterEnabled"),
             meterRows = Read(source, "meterRows"),
             layoutShowGrid = Read(source, "layoutShowGrid"),

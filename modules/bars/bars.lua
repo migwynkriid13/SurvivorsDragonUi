@@ -492,7 +492,12 @@ DFRL:NewMod("Bars", 1, function()
             end
         end
         local function RefreshNumbers(finalOnly)
-            if not active or not bar:IsVisible() or not DFRL.display.Get("cooldownNumbers") then
+            if
+                not active
+                or not bar:IsVisible()
+                or DFRL.display.Get("performanceMode")
+                or not DFRL.display.Get("cooldownNumbers")
+            then
                 ClearNumbers()
                 return
             end
@@ -531,7 +536,14 @@ DFRL:NewMod("Bars", 1, function()
             RefreshNumbers()
         end)
         TickNumbers = function()
-            if not active or not bar:IsVisible() or not DFRL.display.Get("cooldownNumbers") then return end
+            if
+                not active
+                or not bar:IsVisible()
+                or DFRL.display.Get("performanceMode")
+                or not DFRL.display.Get("cooldownNumbers")
+            then
+                return
+            end
             elapsed = elapsed + arg1
             if elapsed >= COOLDOWN_INTERVAL then
                 elapsed = 0

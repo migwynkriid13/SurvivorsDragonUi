@@ -17,6 +17,7 @@ DFRL:NewMod("Chat", 1, function()
         local input = _G.ChatFrameEditBox or _G.ChatFrame1EditBox or ChatFrame1.editBox
         local RefreshFrames, SelectChat, PositionInput, UpdateIndicator
         local focused = false
+        local performanceMode = DFRL.display.Get("performanceMode")
 
         local root = CreateFrame("Frame", "SurvivorsDragonUiChat", UIParent)
         root:SetWidth(WIDTH)
@@ -135,6 +136,7 @@ DFRL:NewMod("Chat", 1, function()
             return not state.scrolled
         end
         local function FadeSettings(state, held)
+            held = performanceMode or held
             if state.fadeConfigured and state.held == held then return end
             if not root:IsVisible() then return end
             local frame = state.native
@@ -165,7 +167,7 @@ DFRL:NewMod("Chat", 1, function()
             local now = GetTime()
             if state then
                 local lastVisible = math.max(state.lastActivity or 0, state.lastReveal or 0)
-                if now - lastVisible >= HOLD + FADE then
+                if not performanceMode and now - lastVisible >= HOLD + FADE then
                     state.revealStart, state.visualAlpha = now, 0
                 end
                 state.lastReveal = now
@@ -175,7 +177,8 @@ DFRL:NewMod("Chat", 1, function()
         local function PositionNative(state, now, refresh)
             if not root:IsVisible() then return end
             local frame = state.native
-            local progress = state.slideStart and Clamp((now - state.slideStart) / SLIDE, 0, 1) or 1
+            local progress = not performanceMode and state.slideStart and Clamp((now - state.slideStart) / SLIDE, 0, 1)
+                or 1
             local shift = -12 * (1 - progress) * (1 - progress) * (1 - progress)
             local y, width, height = -5 + shift, rootWidth - 6, rootHeight - 5
             -- Native window events can replace presentation settings. Recheck
@@ -263,7 +266,7 @@ DFRL:NewMod("Chat", 1, function()
         local function NoticeMessage(state)
             local now = GetTime()
             state.lastActivity = now
-            state.slideStart = state == selected and root:IsVisible() and now or nil
+            state.slideStart = not performanceMode and state == selected and root:IsVisible() and now or nil
             if state ~= selected or not AtBottom(state) then state.unread = true end
             if UpdateIndicator then UpdateIndicator() end
         end
@@ -609,6 +612,20 @@ DFRL:NewMod("Chat", 1, function()
             end
         end
         root:SetScript("OnUpdate", UpdateChat)
+        DFRL.display.Listen(function()
+            local enabled = DFRL.display.Get("performanceMode")
+            if performanceMode == enabled then return end
+            performanceMode = enabled
+            for _, state in pairs(states) do
+                state.slideStart, state.revealStart = nil, nil
+                state.visualAlpha = 1
+                if root:IsVisible() then
+                    state.native:SetAlpha(1)
+                    PositionNative(state, 0)
+                    FadeSettings(state, state == selected and not AtBottom(state))
+                end
+            end
+        end)
         HookScript(root, "OnHide", function()
             for _, state in pairs(states) do
                 state.slideStart, state.revealStart = nil, nil

@@ -8,6 +8,7 @@ DFRL:NewMod("Revive", 4, function()
     local path = DFRL:GetInfoOrCons("tex") .. "timer\\"
     local INTERVAL, MIN_WIDTH, SMOOTH_TIME, FADE_TIME = 0.1, 356, 0.14, 0.18
     local CROSS_COUNT, CROSS_PERIOD = 6, 0.7
+    local performanceMode = DFRL.display.Get("performanceMode")
     local native = T.NewHudOwner("revive")
     local phases = { playing = true, choosing = true, paused = true, dead = true, victory = true }
 
@@ -120,12 +121,17 @@ DFRL:NewMod("Revive", 4, function()
                 paintedValue = value
             end
             local rounded = value == 1 and 100 or math.min(99, math.floor(value * 100 + 0.5))
-            if displayedPercent ~= nil then
+            if displayedPercent ~= nil and not performanceMode then
                 rounded = math.max(displayedPercent - 1, math.min(displayedPercent + 1, rounded))
             end
             if displayedPercent ~= rounded or not percentText then percentText = tostring(rounded) .. "%" end
             displayedPercent = rounded
             T.SetTextIfChanged(percent, percentText)
+            if performanceMode then
+                if spark:IsShown() then spark:Hide() end
+                dirty = false
+                return
+            end
             local x = 8 + ((width or root:GetWidth()) - 72) * value
             if sparkX ~= x then
                 spark:ClearAllPoints()
@@ -167,6 +173,22 @@ DFRL:NewMod("Revive", 4, function()
             root:Show()
         end
         function view.Resize() dirty = true end
+        function view.SetPerformance()
+            transition, effectAge = 0, 0
+            if performanceMode then
+                fade = 1
+                value, origin = target, target
+                if root:GetAlpha() ~= 1 then root:SetAlpha(1) end
+                if spark:IsShown() then spark:Hide() end
+                for _, cross in ipairs(crosses) do
+                    for _, texture in ipairs(cross) do
+                        if texture:IsShown() then texture:Hide() end
+                    end
+                end
+            end
+            displayedPercent, dirty = nil, true
+            if view.active and root:IsVisible() then Paint() end
+        end
         function view.Set(person, progress, subject, template)
             local fresh = identity ~= subject or value == nil
             local requested = view.active or view.waiting
@@ -213,9 +235,13 @@ DFRL:NewMod("Revive", 4, function()
             if fresh then
                 value, target, origin, identity = progress, progress, progress, subject
                 displayedPercent, transition, fade, effectAge, dirty = nil, 0, 0, 0, true
-                root:SetAlpha(0)
+                root:SetAlpha(performanceMode and 1 or 0)
             elseif target ~= progress then
                 origin, target, transition = value, progress, 0
+            end
+            if performanceMode then
+                value, target, origin = progress, progress, progress
+                fade, dirty = 1, true
             end
             view.active, view.waiting = true, false
             if not pill:IsShown() then pill:Show() end
@@ -223,7 +249,7 @@ DFRL:NewMod("Revive", 4, function()
             if not requested then root:Show() end
         end
         function view.Animate(elapsed)
-            if not view.active or not root:IsVisible() then return end
+            if performanceMode or not view.active or not root:IsVisible() then return end
             if fade < 1 then
                 fade = math.min(1, fade + elapsed / FADE_TIME)
                 root:SetAlpha(1 - (1 - fade) * (1 - fade))
@@ -371,7 +397,7 @@ DFRL:NewMod("Revive", 4, function()
     local function Tick()
         local elapsed = math.max(0, tonumber(arg1) or 0)
         age = age + elapsed
-        if age < INTERVAL and (not view.active or not root:IsVisible()) then return end
+        if age < INTERVAL and (performanceMode or not view.active or not root:IsVisible()) then return end
         local ok, message = pcall(Step, elapsed)
         if not ok then
             Clear()
@@ -403,6 +429,13 @@ DFRL:NewMod("Revive", 4, function()
     end)
     root:SetScript("OnHide", function() native.Release() end)
     DFRL.locale.Listen(function()
+        dirty, age = true, INTERVAL
+    end)
+    DFRL.display.Listen(function()
+        local enabled = DFRL.display.Get("performanceMode")
+        if performanceMode == enabled then return end
+        performanceMode = enabled
+        view.SetPerformance()
         dirty, age = true, INTERVAL
     end)
     for _, name in ipairs({ "PLAYER_ENTERING_WORLD", "PLAYER_LEAVING_WORLD", "PLAYER_LOGOUT", "CHAT_MSG_ADDON" }) do

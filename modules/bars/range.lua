@@ -2,6 +2,7 @@ DFRL:NewMod("RangeIndicator", 1, function()
     local TEX_PATH = DFRL:GetInfoOrCons("tex") .. "actionbars\\"
     local INDICATOR_ALPHA = 0.5
     local UPDATE_INTERVAL = 0.1
+    local performanceMode = DFRL.display.Get("performanceMode")
 
     local function ClearIndicator(button)
         local indicator = button.rangeIndicator
@@ -31,6 +32,16 @@ DFRL:NewMod("RangeIndicator", 1, function()
             targetRead = true
         end
         local outOfRange = canAttack and IsActionInRange(ActionButton_GetPagedID(button)) == 0
+        if performanceMode then
+            if outOfRange then
+                if indicator:GetAlpha() ~= INDICATOR_ALPHA then indicator:SetAlpha(INDICATOR_ALPHA) end
+                if not indicator:IsShown() then indicator:Show() end
+            elseif indicator:IsShown() then
+                indicator:Hide()
+            end
+            indicator.showing = outOfRange and true or false
+            return targetRead, canAttack
+        end
         if outOfRange and not indicator.showing then
             UIFrameFadeIn(indicator, 0.2, 0, INDICATOR_ALPHA)
             indicator.showing = true
@@ -48,6 +59,17 @@ DFRL:NewMod("RangeIndicator", 1, function()
             targetRead, canAttack = UpdateButton(button, targetRead, canAttack)
         end
     end
+    DFRL.display.Listen(function()
+        local enabled = DFRL.display.Get("performanceMode")
+        if performanceMode == enabled then return end
+        performanceMode = enabled
+        if DFRL.actionButtons then
+            for _, button in ipairs(DFRL.actionButtons) do
+                ClearIndicator(button)
+            end
+        end
+        UpdateIndicators()
+    end)
 
     local events = CreateFrame("Frame")
     events:RegisterEvent("PLAYER_TARGET_CHANGED")

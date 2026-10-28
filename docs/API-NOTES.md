@@ -331,6 +331,9 @@ No tests, syntax checks, validation, addon execution or game startups were run; 
 
 ## MSBT-style combat text — 2026-10-27
 
+Performance Mode leaves SCT unchanged, including its selected style, normal
+motion, critical pop, fade, matching and native plate ownership.
+
 `/sdui` → **Combat text** has **MSBT-style scrolling**, off by default. Missing
 or invalid `sctMSBTStyle` values normalize to false in the existing display
 table, preserving the current over-enemy style. Preview, Confirm-only saving,

@@ -311,6 +311,74 @@ Test("range passes share fresh target reads and retain each visible button's ran
     end
 end)
 
+Test("performance mode replaces range fades with static warnings and restores normal fades", function()
+    local context = H.New()
+    local env = context.env
+    local bar = env.CreateFrame("Frame", nil, env.UIParent)
+    local button = env.CreateFrame("Button", nil, bar)
+    button.slot = 1
+    env.DFRL.mainBar, env.DFRL.actionButtons = bar, { button }
+    context:Load("modules/bars/range.lua", "RangeIndicator")
+    local controller = context:Controller("PLAYER_TARGET_CHANGED")
+    context:Event(controller, "PLAYER_TARGET_CHANGED")
+    assert(context.writes.UIFrameFadeIn == 1, "normal range warning did not start its fade")
+    context:ResetCounts()
+    context:SetSetting("performanceMode", true)
+    local indicator = button.rangeIndicator
+    assert(indicator:IsShown() and indicator:GetAlpha() == 0.5, "static mode lost the range warning")
+    assert(context.writes.UIFrameFadeRemoveFrame == 1, "active native fade was not removed")
+    assert(not context.writes.UIFrameFadeIn and not context.writes.UIFrameFadeOut, "static mode started a fade")
+    local allocated = #context.objects
+    context:ResetCounts()
+    context:Event(controller, "PLAYER_TARGET_CHANGED")
+    context:NoPresentationWrites()
+    context.inRange = true
+    context:Event(controller, "PLAYER_TARGET_CHANGED")
+    assert(not indicator:IsShown() and not context.writes.UIFrameFadeOut, "static warning faded instead of hiding")
+    context.inRange = false
+    context:Event(controller, "PLAYER_TARGET_CHANGED")
+    context:ResetCounts()
+    context:SetSetting("performanceMode", false)
+    assert(context.writes.UIFrameFadeIn == 1 and #context.objects == allocated, "normal fade did not reuse the warning")
+    bar:Hide()
+    context:ResetCounts()
+    context:SetSetting("performanceMode", true)
+    assert(not indicator:IsShown() and controller:GetScript("OnUpdate") == nil, "hidden bar resumed range work")
+    context:NoPresentationWrites()
+end)
+
+Test("performance mode keeps loot opaque until the original expiry and resumes in-flight fades", function()
+    local context, service, animation = Loot({ performanceMode = true })
+    Deliver(context, service, "Static loot")
+    local card
+    for _, object in ipairs(context.objects) do
+        if object.entry and object.entry.name == "Static loot" then card = object end
+    end
+    assert(card and card:GetAlpha() == 1, "static loot started transparent")
+    local started, allocated = card.started, #context.objects
+    context.now = started + 4.2
+    context:ResetCounts()
+    context:Call(animation, "OnUpdate", 4.2)
+    context:NoPresentationWrites()
+    assert(card:GetAlpha() == 1, "static loot faded before expiry")
+    local display = context.env.DFRL.display
+    display.BeginEdit()
+    display.Set("performanceMode", false)
+    assert(card:GetAlpha() > 0 and card:GetAlpha() < 1, "normal mode did not restore the current fade-out")
+    local faded = card:GetAlpha()
+    display.Set("performanceMode", true)
+    assert(card:GetAlpha() == 1 and card.started == started, "mode preview restarted the loot lifetime")
+    display.Set("performanceMode", false)
+    assert(card:GetAlpha() == faded, "normal fade resumed from a different lifetime")
+    display.FinishEdit(false)
+    context:SetLayoutHidden(true)
+    context.now = started + 5.56
+    context:Call(animation, "OnUpdate", 1.36)
+    context:SetLayoutHidden(false)
+    assert(not card.entry and not animation:GetScript("OnUpdate"), "hidden static loot replayed after expiry")
+    assert(#context.objects == allocated, "loot mode previews allocated replacement cards")
+end)
+
 Test("loot cards reuse the bounded pool and clear retired bindings", function()
     local context, service, animation = Loot()
     Deliver(context, service, "First")
