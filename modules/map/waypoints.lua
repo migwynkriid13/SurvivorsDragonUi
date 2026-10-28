@@ -266,10 +266,9 @@ DFRL:NewMod("Waypoints", 3, function()
             local shown = FlagShown()
             if shown == nil then return false end
             if originalFlag == nil then originalFlag = shown end
-            if shown then
-                local ok = pcall(_G.AZS_SetHudShown, "flag", false)
-                if not ok then return false end
-            end
+            if not shown then return true end
+            local ok = pcall(_G.AZS_SetHudShown, "flag", false)
+            if not ok then return false end
             return FlagShown() == false
         end
 
