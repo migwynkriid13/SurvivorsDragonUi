@@ -55,7 +55,7 @@ DFRL:NewMod("RunBanners", 4, function()
     local pendingErrors, errorCount = {}, 0
     local MAX_ERRORS = 32
     local age, painted = 0, 0
-    local OnBanner, Refresh, Update
+    local OnBanner, Refresh, Update, SyncUpdates
     local companions = {}
 
     function DFRL.GetBannerDiagnostics()
@@ -273,8 +273,9 @@ DFRL:NewMod("RunBanners", 4, function()
         ReleaseLegacy()
         pcall(ReleaseErrors)
         if registered and not delivering then
-            pcall(unregister, OnBanner)
-            registered, unregister = nil, nil
+            if pcall(unregister, OnBanner) then
+                registered, unregister = nil, nil
+            end
         end
         -- A broken view must never prevent restoring the native preference.
         pcall(banners.Clear)
@@ -284,6 +285,7 @@ DFRL:NewMod("RunBanners", 4, function()
         RememberFailure(message)
         faulted = true
         Release()
+        if SyncUpdates then SyncUpdates() end
         SetDiagnostic("stage", "faulted")
         if not delivering and geterrorhandler then geterrorhandler()(message) end
     end
@@ -473,7 +475,7 @@ DFRL:NewMod("RunBanners", 4, function()
         delivering = false
         if not ok and geterrorhandler then geterrorhandler()(message) end
     end
-    Refresh = function()
+    local function RefreshState()
         if delivering then return false end
         if not inWorld or not DFRL.display.Get("customBanners") or faulted or not Supported() then
             if active or registered or native.IsCaptured() then Release() end
@@ -488,6 +490,7 @@ DFRL:NewMod("RunBanners", 4, function()
         end
         if registered and (registered ~= AZS_RegisterBannerHandler or unregister ~= AZS_UnregisterBannerHandler) then
             Release()
+            if registered then return false end
         end
         if not registered then
             local ok, failure = pcall(AZS_RegisterBannerHandler, OnBanner)
@@ -511,6 +514,11 @@ DFRL:NewMod("RunBanners", 4, function()
         if opening then root:Show() end
         SetDiagnostic("stage", "active")
         return true
+    end
+    Refresh = function()
+        local ready = RefreshState()
+        SyncUpdates()
+        return ready
     end
     local function Paint(now)
         local index, moved = 1, false
@@ -560,6 +568,12 @@ DFRL:NewMod("RunBanners", 4, function()
         local ok, message = pcall(Update)
         if not ok then Failed(message) end
     end
+    SyncUpdates = function()
+        local pending = registered or native.IsCaptured() or errorCount > 0
+        local enabled = inWorld and DFRL.display.Get("customBanners") and not faulted and Supported()
+        local update = (pending or enabled) and Tick or nil
+        if controller:GetScript("OnUpdate") ~= update then controller:SetScript("OnUpdate", update) end
+    end
     HookScript(root, "OnShow", function()
         local ok, message = pcall(Paint, GetTime())
         if not ok then Failed(message) end
@@ -578,14 +592,15 @@ DFRL:NewMod("RunBanners", 4, function()
         if event == "PLAYER_ENTERING_WORLD" then
             inWorld = true
             age, painted = 0, 0
-            controller:SetScript("OnUpdate", Tick)
             Refresh()
         elseif event == "PLAYER_LEAVING_WORLD" or event == "PLAYER_LOGOUT" then
             inWorld = false
             controller:SetScript("OnUpdate", nil)
             Release()
+            SyncUpdates()
         elseif event == "CHAT_MSG_ADDON" then
             if arg1 == "AZSZONE" then banners.Clear() end
+            if arg1 == "AZSZONE" or arg1 == "AZSRUN" then Refresh() end
         elseif native.Observe(arg1) then
             Refresh()
         end
@@ -601,6 +616,5 @@ DFRL:NewMod("RunBanners", 4, function()
     end
     banners.GetDiagnostics = DFRL.GetBannerDiagnostics
     DFRL.banners = banners
-    controller:SetScript("OnUpdate", Tick)
     Refresh()
 end)

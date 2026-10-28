@@ -148,6 +148,17 @@ on recovery. Live discovery/projection cadence, recent retired origins and
 lethal-hit matching remain unchanged; no native roster is capped or discarded.
 CI-only production fixtures assert hidden-pool idling and reuse on Show.
 
+### Settled disabled banners
+
+Disabled, faulted or unsupported banners detach their existing update callback
+after native restoration and handler unregistration settle. Pending cleanup
+retains its existing fifth-second retry; failed unregistration remains pending,
+and native dispatch still defers handler-list mutation. Existing settings,
+world, CVar and run/zone receipt callbacks restore readiness checks without a
+new event or updater. Enabled views keep their original polling, expiry and
+cosmetic cadence, including hidden notice retirement. CI-only production
+coverage checks enable/disable, failed cleanup retries and dispatch failure.
+
 ## Loot popup modes and marks — 2026-10-27
 
 The new Loot notifications page uses existing editor artwork: one category
