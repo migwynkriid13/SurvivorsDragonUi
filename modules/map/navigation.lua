@@ -377,13 +377,13 @@ DFRL:NewMod("Navigation", 2, function()
         -- Model children's alpha and frame level. Redraw the native player art
         -- above our pins there; keep its live Model facing as the source.
         if not visible or not Minimap or type(Minimap.SetPlayerModel) == "function" then
-            if playerOverlay then playerOverlay:Hide() end
+            if playerOverlay and playerOverlay:IsShown() then playerOverlay:Hide() end
             return
         end
         local facing = navigation.Heading()
         local width, height = T.GetLocalSize(Minimap)
         if not Number(facing) or not Number(width) or not Number(height) or width <= 0 or height <= 0 then
-            if playerOverlay then playerOverlay:Hide() end
+            if playerOverlay and playerOverlay:IsShown() then playerOverlay:Hide() end
             return
         end
         if not playerOverlay then
@@ -397,13 +397,16 @@ DFRL:NewMod("Navigation", 2, function()
         if playerOverlay:GetFrameStrata() ~= strata then playerOverlay:SetFrameStrata(strata) end
         if playerOverlay:GetFrameLevel() ~= level then playerOverlay:SetFrameLevel(level) end
         local side = math.min(width, height)
-        if not T.NearlyEqual(playerSide, side) or not T.NearlyEqual(playerFacing, facing) then
+        local resized = not T.NearlyEqual(playerSide, side)
+        local turned = not T.NearlyEqual(playerFacing, facing)
+        if resized or turned then
             -- Match the legacy renderer's native 33.6-pixel quad and rotating
             -- authored centre offset, both measured against its 140.8 basis.
             local scale, c, s = side / 140.8, math.cos(facing), math.sin(facing)
-            playerOverlay:SetWidth(33.6 * scale)
-            playerOverlay:SetHeight(33.6 * scale)
-            playerOverlay:ClearAllPoints()
+            if resized then
+                playerOverlay:SetWidth(33.6 * scale)
+                playerOverlay:SetHeight(33.6 * scale)
+            end
             playerOverlay:SetPoint(
                 "CENTER",
                 Minimap,
@@ -411,19 +414,21 @@ DFRL:NewMod("Navigation", 2, function()
                 (0.51 * c - 1.73 * s) * scale,
                 (0.51 * s + 1.73 * c) * scale
             )
-            c, s = c / 2, -s / 2
-            playerTexture:SetTexCoord(
-                0.5 - c - s,
-                0.5 + s - c,
-                0.5 - c + s,
-                0.5 + s + c,
-                0.5 + c - s,
-                0.5 - s - c,
-                0.5 + c + s,
-                0.5 - s + c
-            )
+            if turned then
+                c, s = c / 2, -s / 2
+                playerTexture:SetTexCoord(
+                    0.5 - c - s,
+                    0.5 + s - c,
+                    0.5 - c + s,
+                    0.5 + s + c,
+                    0.5 + c - s,
+                    0.5 - s - c,
+                    0.5 + c + s,
+                    0.5 - s + c
+                )
+            end
             playerSide, playerFacing = side, facing
         end
-        playerOverlay:Show()
+        if not playerOverlay:IsShown() then playerOverlay:Show() end
     end
 end)

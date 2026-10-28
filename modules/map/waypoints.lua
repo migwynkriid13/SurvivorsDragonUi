@@ -396,7 +396,6 @@ DFRL:NewMod("Waypoints", 3, function()
 
         local function PlacePin(pin, x, y)
             if pin.drawnX ~= x or pin.drawnY ~= y then
-                pin:ClearAllPoints()
                 pin:SetPoint("CENTER", Minimap, "CENTER", x, y)
                 pin.drawnX, pin.drawnY = x, y
             end
