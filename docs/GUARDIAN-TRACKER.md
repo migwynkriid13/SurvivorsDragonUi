@@ -36,6 +36,13 @@ option, scale and language changes discard them. Both values off skips health
 formatting and measurement and actually hides the existing health label.
 The pill's two end caps keep their minimum non-overlapping span.
 
+Each existing row also caches its latest status caption by received lair key,
+status, rounded native respawn second and language. Repeated tenth-second
+refreshes within one displayed second reuse the string. Row retirement, health
+presentation, visibility, language and relevant option changes clear that cache;
+actual label comparisons still repair changed or failed native text writes.
+Health formatting, native countdowns, row order and update cadence stay intact.
+
 The separate boss-health group shows only bosses by default. Enable
 **Guardians in boss bar** in `/sdui` → **Boss bars** to include fighting guardians. This
 does not change target health, the tracker, guidance or map markers.
