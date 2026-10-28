@@ -627,6 +627,7 @@ DFRL:NewMod("Waypoints", 3, function()
         navigation.SetPoints(tracker.source, nil)
         tracker.selectedKey, tracker.selected, tracker.provisionalSelection = nil, nil, nil
         tracker.presentation = nil
+        tracker.distanceValue, tracker.distanceLanguage, tracker.distanceLabel = nil, nil, nil
         if tracker.hudWanted ~= false then
             tracker.hudWanted = false
             tracker.hud:Hide()
@@ -826,6 +827,19 @@ DFRL:NewMod("Waypoints", 3, function()
         return value.current
     end
 
+    local function UpdateDistance(tracker, distance)
+        local rounded = distance and math.floor(distance + 0.5) or false
+        local language = DFRL.locale.code
+        if tracker.distanceValue ~= rounded or tracker.distanceLanguage ~= language or not tracker.distanceLabel then
+            tracker.distanceLabel = rounded and DFRL.locale.Native("common.yards", { n = rounded })
+                or DFRL.locale.Text("On map")
+            tracker.distanceValue, tracker.distanceLanguage = rounded, language
+        end
+        if tracker.distanceText:GetText() ~= tracker.distanceLabel then
+            tracker.distanceText:SetText(tracker.distanceLabel)
+        end
+    end
+
     local function UpdateGuide(tracker, elapsed)
         if not DFRL.display.Get(tracker.displayKey) or not tracker.selected then
             tracker.presentation = nil
@@ -883,9 +897,7 @@ DFRL:NewMod("Waypoints", 3, function()
         else
             if tracker.pointer:IsShown() then tracker.pointer:Hide() end
         end
-        local text = distance and DFRL.locale.Native("common.yards", { n = math.floor(distance + 0.5) })
-            or DFRL.locale.Text("On map")
-        if tracker.distanceText:GetText() ~= text then tracker.distanceText:SetText(text) end
+        UpdateDistance(tracker, distance)
     end
 
     local function Refresh()

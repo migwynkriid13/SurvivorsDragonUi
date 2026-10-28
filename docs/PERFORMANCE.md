@@ -129,6 +129,15 @@ also occurs inside the protected delivery call. CI-only lifecycle coverage check
 three occupied cards, unchanged queued work and the first delivery after expiry.
 No drawing, intake identity or queue-limit behavior changes.
 
+### Rounded waypoint labels
+
+Each guide caches only its latest rounded yard value, language and formatted
+caption. Per-frame interpolation and rotation stay unchanged; stationary values
+skip translated formatting and its temporary field table. Actual text comparison
+still repairs native resets or failed assignments. Missing distances retain
+their translated On map caption, zero remains a valid value, and retirement
+clears the record. CI-only extracted coverage asserts these boundaries.
+
 ## Loot popup modes and marks — 2026-10-27
 
 The new Loot notifications page uses existing editor artwork: one category
