@@ -249,6 +249,16 @@ context:Event(controller, "PLAYER_LEAVING_WORLD")
 context:Event(controller, "PLAYER_ENTERING_WORLD")
 context:ResetCounts()
 bar:Show()
+-- The fixture shows the owner once; recovery must add no cosmetic writes.
+assert(context.writes.Show == 1, "world/show recovery showed extra cooldown presentation")
+for method, count in pairs(context.writes) do
+    assert(method == "Show" and count == 1, "world/show recovery wrote " .. method)
+end
+assert(
+    not context.reads.cooldown and not controller:GetScript("OnUpdate"),
+    "world/show recovery polled Performance Mode numbers"
+)
+context:ResetCounts()
 context:SetSetting("performanceMode", true)
 context:Event(controller, "ACTIONBAR_UPDATE_COOLDOWN")
 assert(
