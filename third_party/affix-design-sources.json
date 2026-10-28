@@ -12,6 +12,7 @@
       "number": 1,
       "title": "Familiar affix marks",
       "treatment": "cutout",
+      "outline": "red icon outline",
       "sources": {
         "Bolstering": {
           "file": "third_party/sources/affixes/ability_toughness.PNG",
@@ -40,6 +41,7 @@
       "number": 2,
       "title": "Battle cry",
       "treatment": "round",
+      "outline": "red icon outline",
       "sources": {
         "Bolstering": {
           "file": "third_party/sources/affixes/Ability_Warrior_BattleShout.PNG",
@@ -68,6 +70,7 @@
       "number": 3,
       "title": "Command and blood",
       "treatment": "cutout",
+      "outline": "red icon outline",
       "sources": {
         "Bolstering": {
           "file": "third_party/sources/affixes/Ability_Warrior_CommandingShout.PNG",
@@ -95,7 +98,8 @@
     {
       "number": 4,
       "title": "Rally and rupture",
-      "treatment": "gold",
+      "treatment": "red_metal",
+      "outline": "red icon outline",
       "sources": {
         "Bolstering": {
           "file": "third_party/sources/affixes/Ability_Warrior_RallyingCry.PNG",
@@ -124,6 +128,7 @@
       "number": 5,
       "title": "Dragon fire",
       "treatment": "cutout",
+      "outline": "red icon outline",
       "sources": {
         "Bolstering": {
           "file": "third_party/sources/affixes/Ability_Warrior_DragonRoar.PNG",
@@ -152,6 +157,7 @@
       "number": 6,
       "title": "Rage and ritual",
       "treatment": "round",
+      "outline": "red icon outline",
       "sources": {
         "Bolstering": {
           "file": "third_party/sources/affixes/Ability_Warrior_InnerRage.PNG",
@@ -179,7 +185,8 @@
     {
       "number": 7,
       "title": "Shield and burst",
-      "treatment": "silver",
+      "treatment": "red_metal",
+      "outline": "red icon outline",
       "sources": {
         "Bolstering": {
           "file": "third_party/sources/affixes/Ability_Warrior_ShieldWall.PNG",
@@ -208,6 +215,7 @@
       "number": 8,
       "title": "Strength and flame",
       "treatment": "cutout",
+      "outline": "red icon outline",
       "sources": {
         "Bolstering": {
           "file": "third_party/sources/affixes/Ability_Warrior_StrengthOfArms.PNG",
@@ -236,6 +244,7 @@
       "number": 9,
       "title": "Stone guardian",
       "treatment": "round",
+      "outline": "red icon outline",
       "sources": {
         "Bolstering": {
           "file": "third_party/sources/affixes/Ability_Warrior_StalwartProtector.PNG",
@@ -263,7 +272,8 @@
     {
       "number": 10,
       "title": "Steel and shadow",
-      "treatment": "gold",
+      "treatment": "red_metal",
+      "outline": "red icon outline",
       "sources": {
         "Bolstering": {
           "file": "third_party/sources/affixes/Ability_Warrior_ShieldMastery.PNG",
@@ -292,6 +302,7 @@
       "number": 11,
       "title": "Sacred oath",
       "treatment": "cutout",
+      "outline": "red icon outline",
       "sources": {
         "Bolstering": {
           "file": "third_party/sources/affixes/Spell_Holy_WordFortitude.PNG",
@@ -320,6 +331,7 @@
       "number": 12,
       "title": "Golden kings",
       "treatment": "round",
+      "outline": "red icon outline",
       "sources": {
         "Bolstering": {
           "file": "third_party/sources/affixes/Spell_Holy_GreaterBlessingofKings.PNG",
@@ -347,7 +359,8 @@
     {
       "number": 13,
       "title": "Sanctuary",
-      "treatment": "silver",
+      "treatment": "red_metal",
+      "outline": "red icon outline",
       "sources": {
         "Bolstering": {
           "file": "third_party/sources/affixes/Spell_Holy_GreaterBlessingofSanctuary.PNG",
@@ -376,6 +389,7 @@
       "number": 14,
       "title": "Bloodlust",
       "treatment": "cutout",
+      "outline": "red icon outline",
       "sources": {
         "Bolstering": {
           "file": "third_party/sources/affixes/Spell_Nature_BloodLust.PNG",
@@ -404,6 +418,7 @@
       "number": 15,
       "title": "Earthen power",
       "treatment": "cutout",
+      "outline": "red icon outline",
       "sources": {
         "Bolstering": {
           "file": "third_party/sources/affixes/Spell_Nature_Strength.PNG",
@@ -432,6 +447,7 @@
       "number": 16,
       "title": "War horn",
       "treatment": "cutout",
+      "outline": "red icon outline",
       "sources": {
         "Bolstering": {
           "file": "third_party/sources/affixes/INV_Misc_Horn_02.PNG",
@@ -460,6 +476,7 @@
       "number": 17,
       "title": "Predator",
       "treatment": "round",
+      "outline": "red icon outline",
       "sources": {
         "Bolstering": {
           "file": "third_party/sources/affixes/Ability_Druid_ChallangingRoar.PNG",
@@ -487,7 +504,8 @@
     {
       "number": 18,
       "title": "Titan",
-      "treatment": "silver",
+      "treatment": "red_metal",
+      "outline": "red icon outline",
       "sources": {
         "Bolstering": {
           "file": "third_party/sources/affixes/Ability_Racial_Avatar.PNG",
@@ -516,6 +534,7 @@
       "number": 19,
       "title": "Red crystal",
       "treatment": "cutout",
+      "outline": "red icon outline",
       "sources": {
         "Bolstering": {
           "file": "third_party/sources/affixes/Ability_Warrior_FocusedRage.PNG",
@@ -544,6 +563,7 @@
       "number": 20,
       "title": "Wild sigils",
       "treatment": "round",
+      "outline": "red icon outline",
       "sources": {
         "Bolstering": {
           "file": "third_party/sources/affixes/Ability_Druid_Enrage.PNG",
@@ -563,6 +583,35 @@
           "file": "third_party/sources/affixes/ABILITY_MONK_CHIEXPLOSION.PNG",
           "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/ABILITY_MONK_CHIEXPLOSION.PNG",
           "sha256": "04a1109314f12f73a65a797c9b3c72630809a2ee8e86a76ddce6bc12e916d12b",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        }
+      }
+    },
+    {
+      "number": 21,
+      "title": "01 transparent + red circle",
+      "treatment": "cutout_rim",
+      "outline": "red circular rim around original 01 transparent artwork",
+      "sources": {
+        "Bolstering": {
+          "file": "third_party/sources/affixes/ability_toughness.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/ability_toughness.PNG",
+          "sha256": "b005ef3f01df06bb653eb13b758850a4c21f9f405d050fab36599195a8f78850",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        },
+        "Sanguine": {
+          "file": "third_party/sources/affixes/Spell_Shadow_BloodBoil.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/Spell_Shadow_BloodBoil.PNG",
+          "sha256": "306d52df68c2f6a05428634562fca23e1878132046d3be2ec8fd2a249e32529c",
+          "canvas": [64, 64],
+          "crop": [4, 4, 60, 60]
+        },
+        "Explosive": {
+          "file": "third_party/sources/affixes/Spell_Fire_FelFlameRing_RED.PNG",
+          "url": "https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/Spell_Fire_FelFlameRing_RED.PNG",
+          "sha256": "aeb12e112e91804d8608a427e1b4772c1cdaf7f40a69392649268dd31d018466",
           "canvas": [64, 64],
           "crop": [4, 4, 60, 60]
         }

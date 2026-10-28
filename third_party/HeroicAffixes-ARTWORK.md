@@ -1,13 +1,14 @@
 # Heroic affix icon proposals
 
-Twenty numbered proposals show Bolstering, Sanguine and Explosive together,
-centered below the same sample run timer. Each proposal uses a different trio
-of real WoW pictures. These are custom visual associations, not a claim that
-Blizzard used these twenty sets for Mythic+ affixes. No affix display or new
-runtime asset is installed by this design study.
+Twenty-one numbered proposals show Bolstering, Sanguine and Explosive together,
+centered below the same sample run timer. Sets 01–20 use different trios of real
+WoW pictures, now with red outlines. Set 21 repeats 01's original transparent
+symbols inside thin red circular rims. These are custom visual associations,
+not a claim that Blizzard used these sets for Mythic+ affixes. No affix display
+or new runtime asset is installed by this design study.
 
 The local [gallery](../docs/designs/heroic-affixes/index.html),
-[overview](../docs/designs/heroic-affixes/overview.png) and four comparison sheets
+[overview](../docs/designs/heroic-affixes/overview.png) and five comparison sheets
 are retained in the existing ignored design-document directory. Every proposal
 also has a full-size PNG and a separate transparent three-icon strip. The
 gallery can switch the transparency sample to a light background. These are
@@ -26,7 +27,7 @@ origin is claimed. The mirror's
 [README](https://github.com/Gethe/wow-ui-textures/blob/d23deaf8f44a7d280dc974a5c9d5321c013db59b/README.md)
 states that its PNG files were converted from client BLP artwork.
 
-[affix-design-sources.json](affix-design-sources.json) records all twenty sets,
+[affix-design-sources.json](affix-design-sources.json) records all twenty-one sets,
 each exact filename, immutable raw-file URL, original byte SHA-256, canvas size
 and source crop. The original bytes remain in `sources/affixes/` separately
 from adapted previews. The sample skulls use that same commit's
@@ -60,16 +61,25 @@ an opaque square backing or a square border.
   the cropped square's edges. This is an adapted glow/cutout treatment, not
   original source transparency or a retail mask API.
 - **Round:** an antialiased circular alpha mask removes the square corners.
-  RGB and native interior shading are retained. There is no rim or added box.
-- **Gold:** the circular icon reuses the existing SDUI pet rim, the exact
-  `(576, 56, 648, 128)` crop in `media/tex/jewelry/Frame.blp`.
-- **Silver:** the circular icon reuses the existing neutral jewelry rim,
-  `(664, 56, 736, 128)` in that atlas. Its original highlight/alpha structure
-  is retained. Both existing rim preparations and source notices remain in
-  [Jewelry-ARTWORK.md](Jewelry-ARTWORK.md).
+  RGB and native interior shading are retained.
+- **Metal rim:** the former gold/silver proposals now reuse the existing SDUI
+  pet rim, `(576, 56, 648, 128)` in `media/tex/jewelry/Frame.blp`, tinted red
+  through its maximum RGB channel while retaining the authored alpha and
+  highlight structure. This crop excludes the square jewelry shadows. The
+  underlying source notices remain in [Jewelry-ARTWORK.md](Jewelry-ARTWORK.md).
+- **Red outlines, sets 01–20:** the 112-pixel artwork receives five pixels of
+  clear padding. Its alpha at or above 56 defines support; a nine-pixel maximum
+  filter expands that support by four pixels. Subtracting the support and
+  applying a 0.55-pixel antialias blur produces the outline, composed behind
+  the original artwork in RGB `(237, 35, 38)` without an opaque backing.
+- **Red circle, set 21:** the original transparent 01 artwork scales to 82%
+  within the same clear canvas. A separate antialiased circular outline, four
+  pixels thick on the 112-pixel preparation canvas, surrounds it. The inside
+  and outside stay transparent wherever the original symbol has no pixels;
+  no silhouette outline or metallic background is added to this variant.
 
 The full-size transparent strips make the adaptations inspectable separately
-from the sample timer. All twenty composed proposals and their regenerated
+from the sample timer. All twenty-one composed proposals and their regenerated
 overview were inspected as images. Source images, the preparation script,
 receipts and previews remain outside `packaging/runtime-files.json`.
 
