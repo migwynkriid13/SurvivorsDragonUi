@@ -45,6 +45,7 @@ local function Plates()
                 Write(self, "EnableDrawLayer")
                 self.layers[layer] = true
             end
+            function object:IsDrawLayerEnabled(layer) return self.layers[layer] ~= false end
             function object:GetMinMaxValues() return self.minimum or 0, self.maximum or 100 end
             function object:SetMinMaxValues(low, high)
                 Write(self, "SetMinMaxValues")
@@ -96,6 +97,7 @@ local function Plates()
         end
         context.guardian = context:MakePlate("Hogger", 4294967296)
         context.boss = context:MakePlate("Boss", 16777216)
+        context.boss.layers.HIGHLIGHT = false
         context.ordinary = context:MakePlate("Ordinary", 4294967296)
         context:Load("modules/nameplates/style.lua", "NameplateStyle")
         local attach = env.T.NameplateStyle.Attach
@@ -134,6 +136,11 @@ assert(
     "names-only allocated unused bar artwork"
 )
 assert(context.guardian.nativeBar.maximum == 4294967296, "filter/style rewrote the native health range")
+assert(context.guardian.regions[3]:IsShown(), "layer suppression changed native name shown-state")
+assert(context.guardian.regions[1]:GetAlpha() == 1, "layer suppression still used transparent native quads")
+assert(context.guardian.nativeBar.fill:GetAlpha() == 1, "native fill still used alpha-only suppression")
+assert(context.guardian.layers.ARTWORK == false and context.guardian.nativeBar.layers.ARTWORK == false)
+assert(guardian.visual.layers.ARTWORK ~= false, "native layer suppression disabled the custom child")
 context:ResetCounts()
 context:Tick(0.21)
 context:NoPresentationWrites()
@@ -240,6 +247,8 @@ assert(not guardian.name:IsVisible(), "V-off leaked a custom guardian name")
 context.env.ShowNameplates()
 context:Tick(0.21)
 assert(guardian.name:IsVisible(), "V-on did not restore names-only mode")
+assert(context.guardian.layers.ARTWORK == false, "V unmask restored native artwork behind the skin")
+assert(context.guardian.nativeBar.layers.ARTWORK == false, "V unmask restored the native health image")
 print("PASS ambiguity, filter preview and native V masking retain their lifecycles")
 
 context:SetSetting("nameplatesBossGuardiansOnly", true)
@@ -254,3 +263,13 @@ assert(
     "fresh publications lost the names-only/filter combination"
 )
 print("PASS nameplate filter retirement waits for fresh run/unit publications")
+
+context:Event(context.controller, "PLAYER_LEAVING_WORLD")
+assert(context.guardian.layers.ARTWORK == true, "world cleanup retained the native plate layer mask")
+assert(context.guardian.nativeBar.layers.ARTWORK == true, "world cleanup retained the native fill mask")
+assert(context.boss.layers.HIGHLIGHT == false, "cleanup enabled a previously disabled native layer")
+assert(context.guardian.regions[3]:IsShown(), "cleanup changed native shown-state")
+context:Event(context.controller, "PLAYER_ENTERING_WORLD")
+context:Tick(0.21)
+assert(context.guardian.layers.ARTWORK == false, "world recovery did not reacquire native layer suppression")
+print("PASS native-owner layers suppress extraction and restore their captured state without hiding source regions")

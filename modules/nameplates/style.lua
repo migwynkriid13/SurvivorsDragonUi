@@ -129,14 +129,14 @@ DFRL:NewMod("NameplateStyle", 5, function()
             end
         end
 
-        -- Native regions retain their contents and shown state for SCT and the
-        -- client lifecycle. Suppress their pixels rather than changing data.
-        if data.nativeRegions then
+        -- Older clients without owner-layer masking retain the alpha fallback.
+        -- Supported clients suppress extraction, preserving native shown/data bits.
+        if not data.nativeLayersSuppressed and data.nativeRegions then
             for _, region in pairs(data.nativeRegions) do
                 if region and region.SetAlpha and region:GetAlpha() ~= 0 then region:SetAlpha(0) end
             end
         end
-        local nativeTexture = data.bar:GetStatusBarTexture()
+        local nativeTexture = not data.nativeLayersSuppressed and data.bar:GetStatusBarTexture()
         if nativeTexture and nativeTexture.SetAlpha and nativeTexture:GetAlpha() ~= 0 then nativeTexture:SetAlpha(0) end
 
         if style.namesOnly ~= namesOnly then

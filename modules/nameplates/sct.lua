@@ -263,17 +263,9 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         return not (green > red + 0.1 and green > blue + 0.1) and not (blue > red + 0.1 and blue > green + 0.1)
     end
     local function MaskFrame(frame, state, masked)
-        if
-            not frame.DisableDrawLayer
-            or not frame.EnableDrawLayer
-            or not frame.GetHitRectInsets
-            or not frame.SetHitRectInsets
-        then
-            return
-        end
-        if masked and not state.masked then
-            local left, right, top, bottom = frame:GetHitRectInsets()
-            state.insets = { left or 0, right or 0, top or 0, bottom or 0 }
+        if not frame.DisableDrawLayer or not frame.EnableDrawLayer then return end
+        local hideLayers = masked or state.skinned
+        if hideLayers and not state.layers then
             state.layers = {}
             for _, layer in ipairs(drawLayers) do
                 -- Stock anonymous plate frames start with all layers enabled.
@@ -286,11 +278,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                 state.layers[layer] = enabled
                 frame:DisableDrawLayer(layer)
             end
-            -- An empty mouse rectangle survives native freelook flag changes.
-            -- Leave the native mouse-enabled state, size and position intact.
-            frame:SetHitRectInsets(1000000, 1000000, 1000000, 1000000)
-            state.masked = true
-        elseif not masked and state.masked then
+        elseif not hideLayers and state.layers then
             for _, layer in ipairs(drawLayers) do
                 if state.layers[layer] then
                     frame:EnableDrawLayer(layer)
@@ -298,14 +286,49 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                     frame:DisableDrawLayer(layer)
                 end
             end
+            state.layers = nil
+        end
+        if not frame.GetHitRectInsets or not frame.SetHitRectInsets then return end
+        if masked and not state.masked then
+            local left, right, top, bottom = frame:GetHitRectInsets()
+            state.insets = { left or 0, right or 0, top or 0, bottom or 0 }
+            -- An empty mouse rectangle survives native freelook flag changes.
+            -- Leave the native mouse-enabled state, size and position intact.
+            frame:SetHitRectInsets(1000000, 1000000, 1000000, 1000000)
+            state.masked = true
+        elseif not masked and state.masked then
             frame:SetHitRectInsets(state.insets[1], state.insets[2], state.insets[3], state.insets[4])
-            state.masked, state.layers, state.insets = nil, nil, nil
+            state.masked, state.insets = nil, nil
         end
     end
-    local function RestorePresentation(data)
+    local function SuppressNativeLayers(plate, data)
+        if data.nativeLayersSuppressed or not data.style then return end
+        if
+            not plate.DisableDrawLayer
+            or not plate.EnableDrawLayer
+            or not data.bar.DisableDrawLayer
+            or not data.bar.EnableDrawLayer
+        then
+            return
+        end
+        local function Suppress(owner)
+            local state = data.presentation[owner] or {}
+            data.presentation[owner] = state
+            state.skinned = true
+            MaskFrame(owner, state, state.masked)
+        end
+        -- Draw layers belong only to these native owners. The separate skin
+        -- children stay enabled, while native values and region shown bits live on.
+        Suppress(plate)
+        Suppress(data.bar)
+        data.nativeLayersSuppressed = true
+    end
+    local function RestorePresentation(data, retiring)
         for frame, state in pairs(data.presentation) do
+            if retiring then state.skinned = nil end
             MaskFrame(frame, state, false)
         end
+        if retiring then data.nativeLayersSuppressed = nil end
         if plateStyle then plateStyle.SetMasked(data, false) end
         data.presentationMasked = false
     end
@@ -492,10 +515,12 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     end
 
     local function RefreshPlate(plate, data, now, forcePresentation, geometry)
+        if not inWorld then return end
         if not plate:IsShown() then
             RetirePlate(plate)
             return
         end
+        SuppressNativeLayers(plate, data)
         UpdatePresentation(plate, data, forcePresentation)
         -- Hidden tracking still samples native data, but its skin has no pixels
         -- to refresh. Unmasking updates the skin in this same callback.
@@ -1747,7 +1772,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             plateFilter.Clear(plateFilter.sequence)
             plateFilter.time, plateFilter.zone = nil, nil
             for _, data in pairs(plates) do
-                RestorePresentation(data)
+                RestorePresentation(data, true)
             end
             ApplyPlateTracking(true)
             ResetDisplay()
@@ -1813,6 +1838,10 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         _G.ReloadUI = function()
             -- Restore native preview values before ReloadUI can serialize them.
             sct.FinishEdit(false)
+            inWorld = false
+            for _, data in pairs(plates) do
+                RestorePresentation(data, true)
+            end
             return reloadUI()
         end
     end

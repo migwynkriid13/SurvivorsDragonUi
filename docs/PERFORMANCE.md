@@ -59,6 +59,21 @@ are excluded. CI-only extracted production transitions assert hiding, restoratio
 and unchanged-state idling. No local tests, addon execution or measured GPU/FPS
 result is claimed; the packaged renderer's exact revision remains unverified.
 
+### Native nameplate layers
+
+Supported native plate and health-bar owners now disable their own drawing
+layers instead of making source regions transparent. Native region shown bits,
+names, health, raid-icon metadata and input remain available; the custom child
+keeps its own enabled layers. One captured layer state serves permanent skin
+suppression and temporary recursive V/filter masking, so unmasking cannot expose
+the native art. World/logout/reload retirement restores the captured bits.
+Clients without owner-layer support retain the former alpha fallback.
+
+This removes submitted native texture regions on the inspected engine path,
+without changing custom art or allocation. CI-only production nameplate mocks
+cover data/shown-state retention, V transitions, prior disabled bits and cleanup.
+The source does not establish packaged-client drawing or measured FPS.
+
 ## Loot popup modes and marks — 2026-10-27
 
 The new Loot notifications page uses existing editor artwork: one category
