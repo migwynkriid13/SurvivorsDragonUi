@@ -10,10 +10,10 @@ DFRL:NewMod("RangeIndicator", 1, function()
         indicator.showing = false
         indicator:Hide()
     end
-    local function UpdateButton(button)
+    local function UpdateButton(button, targetRead, canAttack)
         if not button:IsVisible() then
             ClearIndicator(button)
-            return
+            return targetRead, canAttack
         end
         local indicator = button.rangeIndicator
         if not indicator then
@@ -26,10 +26,11 @@ DFRL:NewMod("RangeIndicator", 1, function()
             HookScript(button, "OnHide", function() ClearIndicator(button) end)
         end
 
-        local outOfRange = button:IsVisible()
-            and UnitExists("target")
-            and UnitCanAttack("player", "target")
-            and IsActionInRange(ActionButton_GetPagedID(button)) == 0
+        if not targetRead then
+            canAttack = UnitExists("target") and UnitCanAttack("player", "target")
+            targetRead = true
+        end
+        local outOfRange = canAttack and IsActionInRange(ActionButton_GetPagedID(button)) == 0
         if outOfRange and not indicator.showing then
             UIFrameFadeIn(indicator, 0.2, 0, INDICATOR_ALPHA)
             indicator.showing = true
@@ -37,12 +38,14 @@ DFRL:NewMod("RangeIndicator", 1, function()
             UIFrameFadeOut(indicator, 0.2, INDICATOR_ALPHA, 0)
             indicator.showing = false
         end
+        return targetRead, canAttack
     end
 
     local function UpdateIndicators()
         if not DFRL.actionButtons then return end
+        local targetRead, canAttack = false, nil
         for _, button in ipairs(DFRL.actionButtons) do
-            UpdateButton(button)
+            targetRead, canAttack = UpdateButton(button, targetRead, canAttack)
         end
     end
 

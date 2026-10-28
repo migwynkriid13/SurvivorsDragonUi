@@ -217,6 +217,100 @@ Test("range indicators reuse their texture and never restart an unchanged fade",
     assert(not texture:IsShown() and not texture.showing, "hidden range effect was not cleared")
 end)
 
+Test("range passes share fresh target reads and retain each visible button's range", function()
+    local context = H.New()
+    local env = context.env
+    local bar = env.CreateFrame("Frame", nil, env.UIParent)
+    local buttons = {}
+    context.rangeValues = {}
+    for index = 1, 7 do
+        local button = env.CreateFrame("Button", nil, bar)
+        button.slot = index
+        if index <= 2 then button:Hide() end
+        local nativeVisible = button.IsVisible
+        function button:IsVisible()
+            if not context.changingVisibility then context.reads.visibility = (context.reads.visibility or 0) + 1 end
+            return nativeVisible(self)
+        end
+        buttons[index], context.rangeValues[index] = button, 0
+    end
+    env.DFRL.mainBar, env.DFRL.actionButtons = bar, buttons
+    env.UnitExists = function(unit)
+        assert(unit == "target")
+        context.reads.target = (context.reads.target or 0) + 1
+        return context.hasTarget ~= false
+    end
+    env.UnitCanAttack = function(unit, target)
+        assert(unit == "player" and target == "target")
+        context.reads.attack = (context.reads.attack or 0) + 1
+        return context.attackable ~= false
+    end
+    env.IsActionInRange = function(slot)
+        context.reads.range = (context.reads.range or 0) + 1
+        return context.rangeValues[slot]
+    end
+    context:Load("modules/bars/range.lua", "RangeIndicator")
+    local controller = context:Controller("PLAYER_TARGET_CHANGED")
+    context:Event(controller, "PLAYER_TARGET_CHANGED")
+    assert(not buttons[1].rangeIndicator and not buttons[2].rangeIndicator, "hidden buttons allocated range artwork")
+    local allocated = table.getn(context.objects)
+    context:ResetCounts()
+    context:Event(controller, "PLAYER_TARGET_CHANGED")
+    context:NoPresentationWrites()
+    assert(context.reads.visibility == 7, "a range pass repeated button visibility reads")
+    assert(context.reads.target == 1 and context.reads.attack == 1, "visible buttons repeated shared target reads")
+    assert(context.reads.range == 5 and table.getn(context.objects) == allocated, "per-button range checks changed")
+
+    context.hasTarget = false
+    context:ResetCounts()
+    context:Event(controller, "PLAYER_TARGET_CHANGED")
+    assert(
+        context.reads.target == 1 and not context.reads.attack and not context.reads.range,
+        "missing target was resampled"
+    )
+    assert(context.writes.UIFrameFadeOut == 5, "target loss did not retire each active range fade")
+    context:ResetCounts()
+    context:Event(controller, "PLAYER_TARGET_CHANGED")
+    context:NoPresentationWrites()
+    assert(context.reads.target == 1 and not context.reads.attack and not context.reads.range)
+
+    context.hasTarget, context.attackable = true, false
+    context:ResetCounts()
+    context:Event(controller, "SPELLS_CHANGED")
+    context:NoPresentationWrites()
+    assert(
+        context.reads.target == 1 and context.reads.attack == 1 and not context.reads.range,
+        "friendly target used ranges"
+    )
+    context.attackable, context.rangeValues[3] = true, 1
+    context:ResetCounts()
+    context:Event(controller, "ACTIONBAR_SLOT_CHANGED")
+    assert(context.reads.target == 1 and context.reads.attack == 1 and context.reads.range == 5)
+    assert(not buttons[3].rangeIndicator.showing and buttons[4].rangeIndicator.showing, "button ranges were shared")
+    buttons[1]:Show()
+    context:Event(controller, "PLAYER_TARGET_CHANGED")
+    assert(buttons[1].rangeIndicator and not buttons[2].rangeIndicator, "visible recovery did not allocate lazily")
+
+    bar:Hide()
+    assert(controller:GetScript("OnUpdate") == nil, "hidden bar kept range polling")
+    allocated = table.getn(context.objects)
+    context:ResetCounts()
+    context:Event(controller, "PLAYER_TARGET_CHANGED")
+    context:NoPresentationWrites()
+    assert(
+        not context.reads.target and not context.reads.attack and not context.reads.range,
+        "hidden pass read its target"
+    )
+    assert(table.getn(context.objects) == allocated, "hidden range cleanup allocated artwork")
+    for _, button in ipairs(buttons) do
+        local indicator = button.rangeIndicator
+        assert(
+            not indicator or (not indicator.showing and not indicator:IsShown()),
+            "hidden range fade survived cleanup"
+        )
+    end
+end)
+
 Test("loot cards reuse the bounded pool and clear retired bindings", function()
     local context, service, animation = Loot()
     Deliver(context, service, "First")
