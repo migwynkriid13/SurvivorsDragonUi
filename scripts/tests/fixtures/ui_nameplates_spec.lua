@@ -260,6 +260,28 @@ assert(
     context.guardian.nativeBar.rangeReads == 1 and context.guardian.nativeBar.valueReads == 1,
     "regular skin and matching duplicated native health reads"
 )
+local raidSource, textureReads, coordinateReads = context.guardian.regions[6], 0, 0
+raidSource:SetTexture("NativeRaid")
+raidSource.coords = { 0.1, 0.2, 0.3, 0.4 }
+raidSource:Show()
+local getTexture, getTexCoord = raidSource.GetTexture, raidSource.GetTexCoord
+function raidSource:GetTexture()
+    textureReads = textureReads + 1
+    return getTexture(self)
+end
+function raidSource:GetTexCoord()
+    coordinateReads = coordinateReads + 1
+    return getTexCoord(self)
+end
+context:Tick(0.21)
+assert(textureReads == 1 and coordinateReads == 1, "native raid icon was sampled repeatedly in one frame")
+assert(guardian.raid.texture == "NativeRaid" and #guardian.raid.coords == 4)
+raidSource.coords = { 0, 0, 0, 1, 1, 0, 1, 1 }
+context:Tick(0.21)
+assert(#guardian.raid.coords == 8 and guardian.raid.coords[8] == 1, "rotated native raid UVs lost their arity")
+guardian.raid.texture = "native reset"
+context:Tick(0.21)
+assert(guardian.raid.texture == "NativeRaid", "native icon sampling hid texture restoration")
 context:SetSetting("nameplatesNamesOnly", true)
 context:Tick(0.21)
 assert(
@@ -406,14 +428,39 @@ do
     assert(count == 2 and label.parent.parent.anchor.x == (1024 + 1e-13) / 2, "loss ambiguity changed")
     print("PASS SCT matching visits only exact-name origins and preserves ordered centroids, loss and deadlines")
 
+    local liveReads = 0
+    for _, origin in ipairs(master) do
+        local live = origin.live
+        origin.live = nil
+        setmetatable(origin, {
+            __index = function(_, key)
+                if key == "live" then
+                    liveReads = liveReads + 1
+                    return live
+                end
+            end,
+            __newindex = function(object, key, value)
+                if key == "live" then
+                    live = value
+                else
+                    rawset(object, key, value)
+                end
+            end,
+        })
+    end
+    matching:Tick(0.016)
+    assert(liveReads == 0, "idle SCT still traversed the live-origin catalog for retirement")
+
     -- Zero is exact here so the strict 0.65-second retention boundary is tested
     -- without adding two nonzero floating-point timestamps first.
     matching.now = 0
     matching:Tick(0)
+    assert(liveReads == 0, "new retirement scanned origins before any retention deadline")
     shared[2]:Hide()
     shared[2].regions[3]:SetText("Renamed")
     shared[2]:Show()
     assert(shared[2].fixture.origin ~= second and second.name == "Shared" and not second.live)
+    liveReads = 0
     for index, plate in ipairs(unrelated) do
         if math.mod(index, 2) == 1 then plate:Hide() end
     end
@@ -422,14 +469,17 @@ do
     for _, origin in ipairs(master) do
         if origin.live then table.insert(expected, origin) end
     end
+    liveReads = 0
     local remove = matching.env.table.remove
     matching.env.table.remove = function(list, index)
         assert(list ~= master and list ~= named, "origin retirement shifted a tail with table.remove")
         return remove(list, index)
     end
     matching:Tick(0.65)
+    assert(liveReads == 0, "inclusive retirement boundary still traversed the full origin catalog")
     assert(getn(master) == originalCount and getn(named) == 3, "recent incarnations retired at the inclusive boundary")
     matching:Tick(0.001)
+    assert(liveReads > 0, "expired origins were not reconsidered after their strict retention boundary")
     assert(getn(master) == #expected and master[#expected + 1] == nil, "master origins retained a stale tail or size")
     for index, origin in ipairs(expected) do
         assert(master[index] == origin, "mixed mass retirement changed surviving creation order")

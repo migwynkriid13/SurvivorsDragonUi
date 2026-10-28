@@ -61,7 +61,10 @@ local body = string.sub(source, constantsStart, constantsEnd - 1)
 env.tooltip, env.inWorld, env.currentUnit = frame, true, "target"
 env.bar = env.CreateFrame("StatusBar", nil, env.UIParent)
 env.GameTooltipTextLeft1 = env.CreateFrame("FontString", nil, frame)
-env.UnitIsPlayer = function(unit) return unit == "target" end
+env.UnitIsPlayer = function(unit)
+    context.reads.player = (context.reads.player or 0) + 1
+    return unit == "target"
+end
 env.UnitClass = function() return "Mage", "MAGE" end
 env.RAID_CLASS_COLORS = { MAGE = { r = 0.41, g = 0.8, b = 0.94 } }
 local chunk = assert(loadstring(body, "@production-tooltip-refresh"))
@@ -71,6 +74,7 @@ refresh()
 context:ResetCounts()
 refresh()
 assert(not next(context.writes), "unchanged tooltip refresh repeated style/title/hidden-bar writes")
+assert(context.reads.player == 1, "tooltip refresh sampled the same player identity twice")
 env.GameTooltipTextLeft1.textColor = { 1, 1, 1, 0.5 }
 env.bar:Show()
 context:ResetCounts()

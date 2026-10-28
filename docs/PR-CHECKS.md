@@ -59,6 +59,15 @@ ambiguous declaration fails preparation.
 
 The assertions cover:
 
+- The remaining-frame pass adds CI-only cases for the default-off minimap clock,
+  centered zone text and display transactions; selective final-window cooldown
+  reads; strict SCT retirement deadlines and native raid-icon UV forms; dirty
+  boss marker reconciliation with exact active halos; settled loot hold/hidden
+  expiry; Revive clipping reuse; event-driven player pulses; shared Layout
+  samples/final release; unchanged waypoint math with active interpolation;
+  lazy Chat time and observed/unreported tooltip owners. These fixtures are
+  authored for CI and were not run locally; no live rendering/FPS is inferred.
+
 - Cadence-cleanup production mocks cover event-driven low-health eligibility
   with unchanged active pulse equations, idle versus editing Layout geometry,
   settled language/cooldown detachment and rearming, actual tooltip/target color

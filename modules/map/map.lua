@@ -1,7 +1,8 @@
 DFRL:NewMod("Map", 1, function()
     local texpath = DFRL:GetInfoOrCons("tex") .. "minimap\\"
-    local function WatchClock(frame, label)
+    local function WatchClock(frame, label, zoneButton, zoneText, panel)
         local elapsed = 0
+        local enabled
         local function Refresh()
             if frame:IsVisible() then T.SetTextIfChanged(label, date("%H:%M")) end
         end
@@ -12,14 +13,38 @@ DFRL:NewMod("Map", 1, function()
             Refresh()
         end
         local function Start()
-            if not frame:IsVisible() then return end
+            if not enabled or not frame:IsVisible() then return end
             elapsed = 0
             frame:SetScript("OnUpdate", Tick)
             Refresh()
         end
         frame:SetScript("OnShow", Start)
-        frame:SetScript("OnHide", function() frame:SetScript("OnUpdate", nil) end)
-        Start()
+        frame:SetScript("OnHide", function()
+            frame:SetScript("OnUpdate", nil)
+            if GameTooltip and GameTooltip:IsOwned(frame) then GameTooltip:Hide() end
+        end)
+        local function UpdateChoice()
+            local shown = DFRL.display.Get("minimapShowClock")
+            if enabled == shown then return end
+            enabled, elapsed = shown, 0
+            zoneButton:ClearAllPoints()
+            if shown then
+                zoneButton:SetPoint("LEFT", panel, "LEFT", 4, -3)
+                zoneText:SetJustifyH("LEFT")
+                if not frame:IsShown() then
+                    frame:Show()
+                else
+                    Start()
+                end
+            else
+                frame:SetScript("OnUpdate", nil)
+                if frame:IsShown() then frame:Hide() end
+                zoneButton:SetPoint("CENTER", panel, "CENTER", 0, -3)
+                zoneText:SetJustifyH("CENTER")
+            end
+        end
+        DFRL.display.Listen(UpdateChoice)
+        UpdateChoice()
     end
     local defaults = { width = 180, height = 180, right = -8, top = -32, zoomX = -21, zoomY = 40, zoomScale = 0.8 }
     -- Export appearance geometry before layout restores any confirmed placement.
@@ -100,13 +125,15 @@ DFRL:NewMod("Map", 1, function()
     timeText:SetPoint("CENTER", timeFrame, "CENTER", 0, 0)
     T.SetFont(timeText, 10, "")
     timeText:SetTextColor(1, 1, 1, 1)
-    WatchClock(timeFrame, timeText)
+    WatchClock(timeFrame, timeText, MinimapZoneTextButton, MinimapZoneText, panel)
     timeFrame:SetScript("OnEnter", function()
         GameTooltip:SetOwner(this, "ANCHOR_BOTTOMLEFT")
         GameTooltip:AddLine("Local time: " .. date("%H:%M"), 1, 1, 1)
         GameTooltip:Show()
     end)
-    timeFrame:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    timeFrame:SetScript("OnLeave", function()
+        if GameTooltip:IsOwned(this) then GameTooltip:Hide() end
+    end)
 
     MinimapZoomIn:ClearAllPoints()
     MinimapZoomIn:SetParent(Minimap)

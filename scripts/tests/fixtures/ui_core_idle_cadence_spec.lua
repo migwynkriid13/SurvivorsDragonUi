@@ -225,10 +225,17 @@ do
     assert(context.reads.viewport, "world restore waited for idle sampling")
     layout.BeginEdit(true)
     context:ResetCounts()
+    context:Tick(0.001)
+    assert(context.reads.viewport == 1, "dirty editor did not sample viewport immediately")
+    context:ResetCounts()
     for _ = 1, 4 do
         context:Tick(0.001)
     end
-    assert(context.reads.viewport >= 4, "active editing lost frame-cadence viewport checks")
+    assert(not context.reads.viewport, "settled editing retained frame-cadence viewport reads")
+    context:Tick(0.09)
+    assert(not context.reads.viewport, "settled editor refreshed before100ms")
+    context:Tick(0.01)
+    assert(context.reads.viewport == 1, "settled editor lost its100ms refresh")
     layout.CancelEdit()
 
     local frame = context.env.CreateFrame("Frame", nil, context.env.UIParent)
@@ -253,7 +260,9 @@ do
     assert(handle, "missing production Layout move handle")
     context:Call(handle, "OnDragStart")
     context.cursorX = 205
+    context:ResetCounts()
     context:Tick(0.001)
+    assert(context.reads.viewport == 1, "active drag did not share its fresh frame viewport sample")
     assert(math.abs(frame.left - 65) < 1e-9, "active drag waited for idle sampling")
     context.cursorX = 209
     context:Call(handle, "OnDragStop")

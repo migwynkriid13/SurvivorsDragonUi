@@ -2,6 +2,8 @@
 DFRL.locale.data = {
     en = {
         ui = {
+            ["Show clock"] = "Show clock",
+            ["Show local time beside the minimap zone name."] = "Show local time beside the minimap zone name.",
             ["Heroic affixes"] = "Heroic affixes",
             ["Attach affixes to run timer"] = "Attach affixes to run timer",
             ["Loot popups"] = "Loot popups",
@@ -626,6 +628,8 @@ DFRL.locale.data = {
     },
     pl = {
         ui = {
+            ["Show clock"] = "Pokaż zegar",
+            ["Show local time beside the minimap zone name."] = "Pokaż czas lokalny obok nazwy obszaru minimapy.",
             ["Heroic affixes"] = "Afiksy heroiczne",
             ["Attach affixes to run timer"] = "Przypnij afiksy do licznika czasu",
             ["Loot popups"] = "Okienka łupów",
@@ -1721,6 +1725,8 @@ DFRL.locale.data = {
     },
     cs = {
         ui = {
+            ["Show clock"] = "Zobrazit hodiny",
+            ["Show local time beside the minimap zone name."] = "Zobrazit místní čas vedle názvu oblasti na minimapě.",
             ["Heroic affixes"] = "Heroické afixy",
             ["Attach affixes to run timer"] = "Připojit afixy k časovači běhu",
             ["Loot popups"] = "Okna kořisti",
@@ -2819,6 +2825,8 @@ DFRL.locale.data = {
     },
     de = {
         ui = {
+            ["Show clock"] = "Uhr anzeigen",
+            ["Show local time beside the minimap zone name."] = "Ortszeit neben dem Gebietsnamen der Minikarte anzeigen.",
             ["Heroic affixes"] = "Heroische Affixe",
             ["Attach affixes to run timer"] = "Affixe am Lauftimer befestigen",
             ["Loot popups"] = "Beutefenster",
@@ -3915,6 +3923,8 @@ DFRL.locale.data = {
     },
     pt = {
         ui = {
+            ["Show clock"] = "Mostrar relógio",
+            ["Show local time beside the minimap zone name."] = "Mostrar a hora local ao lado do nome da área do minimapa.",
             ["Heroic affixes"] = "Afixos Heroicos",
             ["Attach affixes to run timer"] = "Anexar afixos ao cronômetro",
             ["Loot popups"] = "Pop-ups de saque",
@@ -5002,6 +5012,8 @@ DFRL.locale.data = {
     },
     es = {
         ui = {
+            ["Show clock"] = "Mostrar reloj",
+            ["Show local time beside the minimap zone name."] = "Mostrar la hora local junto al nombre de la zona del minimapa.",
             ["Heroic affixes"] = "Afijos heroicos",
             ["Attach affixes to run timer"] = "Anclar afijos al temporizador",
             ["Loot popups"] = "Ventanas de botín",
@@ -6093,6 +6105,8 @@ DFRL.locale.data = {
     },
     fr = {
         ui = {
+            ["Show clock"] = "Afficher l’horloge",
+            ["Show local time beside the minimap zone name."] = "Afficher l’heure locale à côté du nom de zone de la minicarte.",
             ["Heroic affixes"] = "Affixes héroïques",
             ["Attach affixes to run timer"] = "Attacher les affixes au chronomètre",
             ["Loot popups"] = "Fenêtres de butin",
@@ -7192,6 +7206,8 @@ DFRL.locale.data = {
     },
     ro = {
         ui = {
+            ["Show clock"] = "Arată ceasul",
+            ["Show local time beside the minimap zone name."] = "Arată ora locală lângă numele zonei de pe minihartă.",
             ["Heroic affixes"] = "Afixe eroice",
             ["Attach affixes to run timer"] = "Atașează afixele la cronometrul cursei",
             ["Loot popups"] = "Ferestre de pradă",
@@ -8274,6 +8290,8 @@ DFRL.locale.data = {
     },
     tr = {
         ui = {
+            ["Show clock"] = "Saati göster",
+            ["Show local time beside the minimap zone name."] = "Mini haritadaki bölge adının yanında yerel saati göster.",
             ["Heroic affixes"] = "Heroik ekler",
             ["Attach affixes to run timer"] = "Ekleri koşu sayacına bağla",
             ["Loot popups"] = "Ganimet pencereleri",
@@ -9232,6 +9250,8 @@ DFRL.locale.data = {
     },
     ru = {
         ui = {
+            ["Show clock"] = "Показывать часы",
+            ["Show local time beside the minimap zone name."] = "Показывать местное время рядом с названием зоны на мини-карте.",
             ["Heroic affixes"] = "Героические модификаторы",
             ["Attach affixes to run timer"] = "Прикрепить модификаторы к таймеру забега",
             ["Loot popups"] = "Окна добычи",
@@ -10409,6 +10429,8 @@ DFRL.locale.data = {
     },
     uk = {
         ui = {
+            ["Show clock"] = "Показувати годинник",
+            ["Show local time beside the minimap zone name."] = "Показувати місцевий час поруч із назвою зони на мінікарті.",
             ["Heroic affixes"] = "Героїчні афікси",
             ["Attach affixes to run timer"] = "Прикріпити афікси до таймера забігу",
             ["Loot popups"] = "Вікна здобичі",
@@ -11560,6 +11582,8 @@ DFRL.locale.data = {
     },
     zh = {
         ui = {
+            ["Show clock"] = "显示时钟",
+            ["Show local time beside the minimap zone name."] = "在小地图区域名称旁显示本地时间。",
             ["Heroic affixes"] = "英雄词缀",
             ["Attach affixes to run timer"] = "将词缀附着到计时条",
             ["Loot popups"] = "拾取弹窗",
@@ -12638,6 +12662,8 @@ DFRL.locale.data = {
     },
     ja = {
         ui = {
+            ["Show clock"] = "時計を表示",
+            ["Show local time beside the minimap zone name."] = "ミニマップのエリア名の横に現地時刻を表示します。",
             ["Heroic affixes"] = "ヒロイックのアフィックス",
             ["Attach affixes to run timer"] = "アフィックスをランタイマーに固定",
             ["Loot popups"] = "戦利品ポップアップ",
@@ -13748,6 +13774,8 @@ DFRL.locale.data = {
     },
     ko = {
         ui = {
+            ["Show clock"] = "시계 표시",
+            ["Show local time beside the minimap zone name."] = "미니맵 지역 이름 옆에 현지 시간을 표시합니다.",
             ["Heroic affixes"] = "영웅 속성",
             ["Attach affixes to run timer"] = "속성을 진행 타이머에 고정",
             ["Loot popups"] = "전리품 팝업",

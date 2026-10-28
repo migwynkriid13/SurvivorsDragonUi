@@ -257,8 +257,10 @@ DFRL:NewMod("Layout", 0, function()
         local ratio = Scale(frame) / uiScale
         return (frameWidth * ratio - screenWidth) / 2, (screenHeight - frameHeight * ratio) / 2
     end
-    local function ReadPosition(frame)
-        local width, height, uiScale = Viewport()
+    local function ReadPosition(frame, width, height, uiScale)
+        if not width then
+            width, height, uiScale = Viewport()
+        end
         local left, top, scale = frame:GetLeft(), frame:GetTop(), Scale(frame)
         if not width or not Number(left) or not Number(top) or not Number(scale) or scale <= 0 then return end
         return {
@@ -266,8 +268,10 @@ DFRL:NewMod("Layout", 0, function()
             y = (top * scale - (UIParent:GetTop() or height) * uiScale) / (height * uiScale),
         }
     end
-    local function ApplyPosition(frame, position)
-        local width, height, uiScale = Viewport()
+    local function ApplyPosition(frame, position, width, height, uiScale)
+        if not width then
+            width, height, uiScale = Viewport()
+        end
         local scale = Scale(frame)
         if not width or not Valid(position) or not Number(scale) or scale <= 0 then return end
         local x, y = position.x * width * uiScale / scale, position.y * height * uiScale / scale
@@ -422,8 +426,10 @@ DFRL:NewMod("Layout", 0, function()
         if capture and editing and coordinates and entry == selected then RefreshCoordinates() end
     end
 
-    local function Cursor()
-        local width, height, scale = Viewport()
+    local function Cursor(width, height, scale)
+        if not width then
+            width, height, scale = Viewport()
+        end
         local x, y = GetCursorPosition()
         if not width or not Number(x) or not Number(y) then return end
         return x / scale - (UIParent:GetLeft() or 0), y / scale - (UIParent:GetTop() or height)
@@ -435,7 +441,7 @@ DFRL:NewMod("Layout", 0, function()
     local function EditBounds(entry, width, height, uiScale, bounds)
         if entry.options.refreshRegion then entry.options.refreshRegion() end
         local region = entry.options.region or entry.frame
-        local position = ReadPosition(region)
+        local position = ReadPosition(region, width, height, uiScale)
         local regionWidth, regionHeight = T.GetLocalSize(region)
         if
             not position
@@ -458,7 +464,7 @@ DFRL:NewMod("Layout", 0, function()
     end
     local function RefreshSnapTargets(entry, start, width, height, uiScale)
         local source = EditBounds(entry, width, height, uiScale, start.sourceBounds)
-        local owner = ReadPosition(entry.frame)
+        local owner = ReadPosition(entry.frame, width, height, uiScale)
         start.targetsAge, start.targetsDirty = 0, false
         if not source or not owner then
             if start.snapReady then start.targetRevision = start.targetRevision + 1 end
@@ -580,10 +586,12 @@ DFRL:NewMod("Layout", 0, function()
         ShowSnapGuides(guideX, guideY)
         return x + dx, y + dy
     end
-    UpdateMove = function(entry, force)
+    UpdateMove = function(entry, force, width, height, uiScale)
         local start = entry.moving
-        local width, height, uiScale = Viewport()
-        local cursorX, cursorY = Cursor()
+        if not width then
+            width, height, uiScale = Viewport()
+        end
+        local cursorX, cursorY = Cursor(width, height, uiScale)
         if not start or not width or not cursorX then return end
         -- A viewport transition finishes the drag using its last valid position.
         if
@@ -616,7 +624,7 @@ DFRL:NewMod("Layout", 0, function()
             HideSnapGuides()
         end
         entry.pointerPosition.x, entry.pointerPosition.y = x / width, y / height
-        ApplyPosition(entry.frame, entry.pointerPosition)
+        ApplyPosition(entry.frame, entry.pointerPosition, width, height, uiScale)
         start.lastCursorX, start.lastCursorY = cursorX, cursorY
         start.lastShift, start.lastRevision = shift, start.targetRevision
         return true
@@ -627,8 +635,8 @@ DFRL:NewMod("Layout", 0, function()
         SelectEntry(entry, true)
         if entry.options.refreshRegion then entry.options.refreshRegion() end
         local width, height, uiScale = Viewport()
-        local cursorX, cursorY = Cursor()
-        local position = ReadPosition(entry.frame)
+        local cursorX, cursorY = Cursor(width, height, uiScale)
+        local position = ReadPosition(entry.frame, width, height, uiScale)
         if not width or not cursorX or not position then return end
         entry.moving = {
             snaps = {},
@@ -649,7 +657,7 @@ DFRL:NewMod("Layout", 0, function()
         }
         entry.pointerPosition = position
         entry.dragging, activeDrag = true, entry
-        UpdateMove(entry, true)
+        UpdateMove(entry, true, width, height, uiScale)
     end
     local function BeginResize(entry, corner, axis)
         if not ready or not inWorld or not editing then return end
@@ -657,10 +665,10 @@ DFRL:NewMod("Layout", 0, function()
         SelectEntry(entry, true)
         if entry.options.refreshRegion then entry.options.refreshRegion() end
         local width, height, uiScale = Viewport()
-        local x, y = Cursor()
+        local x, y = Cursor(width, height, uiScale)
         local region = not axis and entry.options.resizeToRegion and entry.options.region or entry.frame
-        local position = ReadPosition(entry.frame)
-        local regionPosition = region == entry.frame and position or ReadPosition(region)
+        local position = ReadPosition(entry.frame, width, height, uiScale)
+        local regionPosition = region == entry.frame and position or ReadPosition(region, width, height, uiScale)
         if not x or not position or not regionPosition or not width then return end
         local scale = Scale(region) / uiScale
         local frameWidth, frameHeight = T.GetLocalSize(region)
@@ -684,10 +692,12 @@ DFRL:NewMod("Layout", 0, function()
         entry.pointerPosition = position
         entry.dragging, activeDrag = true, entry
     end
-    UpdateResize = function(entry, force)
+    UpdateResize = function(entry, force, width, height, uiScale)
         local start = entry.resizing
-        local width, height, uiScale = Viewport()
-        local cursorX, cursorY = Cursor()
+        if not width then
+            width, height, uiScale = Viewport()
+        end
+        local cursorX, cursorY = Cursor(width, height, uiScale)
         if not start or not width or not cursorX then return end
         if
             not T.NearlyEqual(width, start.viewWidth)
@@ -738,14 +748,15 @@ DFRL:NewMod("Layout", 0, function()
         -- layout owner by the measured offset instead of resizing empty bounds.
         local x = start.axis == "height" and start.x or (right and start.x or start.x + start.width - newWidth)
         local y = start.axis == "width" and start.y or (top and start.y - start.height + newHeight or start.y)
-        local ownerPosition = ReadPosition(entry.frame)
-        local regionPosition = start.region == entry.frame and ownerPosition or ReadPosition(start.region)
+        local ownerPosition = ReadPosition(entry.frame, width, height, uiScale)
+        local regionPosition = start.region == entry.frame and ownerPosition
+            or ReadPosition(start.region, width, height, uiScale)
         if not ownerPosition or not regionPosition then return end
         entry.pointerPosition = {
             x = x / width - (regionPosition.x - ownerPosition.x),
             y = y / height - (regionPosition.y - ownerPosition.y),
         }
-        ApplyPosition(entry.frame, entry.pointerPosition)
+        ApplyPosition(entry.frame, entry.pointerPosition, width, height, uiScale)
         start.lastCursorX, start.lastCursorY = cursorX, cursorY
         start.lastWidth, start.lastHeight = entry.frame:GetWidth(), entry.frame:GetHeight()
         start.lastRegionWidth, start.lastRegionHeight = T.GetLocalSize(start.region)
@@ -941,7 +952,7 @@ DFRL:NewMod("Layout", 0, function()
     -- Coordinates use UIParent units and the frame's center, independent of its scale.
     local function CenterPosition(entry)
         local width, height, uiScale = Viewport()
-        local position = ReadPosition(entry.frame)
+        local position = ReadPosition(entry.frame, width, height, uiScale)
         if not width or not position then return end
         local offsetX, offsetY = CenterOffsets(entry.frame, uiScale)
         return position.x * width + offsetX, position.y * height + offsetY
@@ -1338,20 +1349,21 @@ DFRL:NewMod("Layout", 0, function()
         if not ready then return end
         local enabled = inWorld and editing
         viewportAge = viewportAge + (tonumber(arg1) or 0)
-        -- Editing, unresolved placement and the first world sample retain frame
-        -- cadence. Settled gameplay only needs to notice viewport changes at 10 Hz.
+        -- Active input, unresolved placement and the first world sample retain
+        -- frame cadence. Settled editing/gameplay use the existing 10-Hz sample.
         if
-            not enabled
-            and not activeDrag
+            not activeDrag
             and not needsRestore
             and not needsDefaultPosition
             and lastWidth
             and viewportAge < EDITOR_INTERVAL
+            and (not enabled or not editorDirty)
         then
             return
         end
         local width, height, scale = Viewport()
         if not width then return end
+        local sampleElapsed = viewportAge
         viewportAge = 0
         if
             not lastWidth
@@ -1375,8 +1387,10 @@ DFRL:NewMod("Layout", 0, function()
         lastWidth, lastHeight, lastScale = width, height, scale
         if activeDrag and not enabled then FinishDrag(activeDrag, false) end
         local dragChanged
-        if activeDrag and activeDrag.moving then dragChanged = UpdateMove(activeDrag) end
-        if activeDrag and activeDrag.resizing then dragChanged = UpdateResize(activeDrag) end
+        if activeDrag and activeDrag.moving then dragChanged = UpdateMove(activeDrag, false, width, height, scale) end
+        if activeDrag and activeDrag.resizing then
+            dragChanged = UpdateResize(activeDrag, false, width, height, scale)
+        end
         if needsDefaultPosition then
             needsDefaultPosition = false
             for _, entry in ipairs(order) do
@@ -1389,7 +1403,7 @@ DFRL:NewMod("Layout", 0, function()
         -- Settled groups need no handle reads or native visibility writes during
         -- gameplay. Viewport changes and unresolved defaults still run above.
         if not enabled then return end
-        editorAge = editorAge + (tonumber(arg1) or 0)
+        editorAge = editorAge + sampleElapsed
         local fine = activeDrag and activeDrag.moving and IsShiftKeyDown() and true or false
         if editorDirty or editorAge >= EDITOR_INTERVAL or (DFRL.display.Get("layoutShowGrid") and gridFine ~= fine) then
             editorAge, editorDirty = 0, false

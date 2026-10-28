@@ -70,6 +70,43 @@ context.now = 1.2
 context:Call(controller, "OnUpdate", 0.001)
 assert(context.reads.cooldown == 14 and not overlay:IsShown(), "expiration skipped its final sample")
 assert(controller:GetScript("OnUpdate"), "visible enabled cooldowns stopped observing future native cooldowns")
+
+local durations, starts = { 0.15, 0.25, 10, 10, 10, 10, 10 }, {}
+env.GetActionCooldown = function(slot)
+    context.reads.cooldown = (context.reads.cooldown or 0) + 1
+    return starts[slot] or 1, durations[slot], 1
+end
+context.now = 1
+context:Event(controller, "ACTIONBAR_UPDATE_COOLDOWN")
+context:ResetCounts()
+context.now = 1.02
+context:Call(controller, "OnUpdate", 0.02)
+assert(context.reads.cooldown == 1, "one expiring slot resampled all seven native cooldowns")
+context.now = 1.06
+context:Call(controller, "OnUpdate", 0.04)
+assert(context.reads.cooldown == 2, "partial final-window reads repeated unrelated cooldowns")
+context.now = 1.11
+context:Call(controller, "OnUpdate", 0.05)
+assert(context.reads.cooldown == 9, "finishing samples starved the full-bar100ms fallback")
+assert(overlay.text:GetText() == "0", "selective final sampling skipped the positive zero window")
+context.now = 1.12
+context:Call(controller, "OnUpdate", 0.01)
+assert(context.reads.cooldown == 11, "a newly finishing second slot missed frame sampling")
+durations[2] = 10
+context.now = 1.13
+context:Call(controller, "OnUpdate", 0.01)
+assert(context.reads.cooldown == 13, "finishing native replacement was not freshly sampled")
+context.now = 1.14
+context:Call(controller, "OnUpdate", 0.01)
+assert(context.reads.cooldown == 14, "a replaced long cooldown retained finishing-only sampling")
+starts[3], durations[3] = context.now, 0.05
+context:Event(controller, "ACTIONBAR_UPDATE_COOLDOWN")
+assert(context.reads.cooldown == 21, "native cooldown event stopped refreshing the full bar immediately")
+assert(env.DFRL.actionButtons[3].DFRL_cooldownNumber.text:GetText() == "0")
+bar:Hide()
+for _, button in ipairs(env.DFRL.actionButtons) do
+    assert(button.DFRL_cooldownNumber.finishing == nil, "hidden cooldown retained final-window state")
+end
 print(
-    "PASS cooldown callbacks detach while disabled/hidden/retired and retain immediate recovery and final-window reads"
+    "PASS cooldown callbacks detach while inactive; selective frame reads preserve full-bar fallback, native events and final-zero timing"
 )

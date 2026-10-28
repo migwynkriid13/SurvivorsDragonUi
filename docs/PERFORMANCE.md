@@ -2,7 +2,8 @@
 
 The October 2026 performance work removes repeated presentation writes while
 retaining native data, pause-aware timing, saved preferences and artwork.
-It adds no gameplay clock, setting, SavedVariable or native client dependency.
+It adds no gameplay clock or native client dependency. Display choices use the
+existing saved display table; the optional minimap clock below defaults off.
 
 ## Mandatory rule for all drawing and assets
 
@@ -43,6 +44,88 @@ leave hundreds of expensive texture regions drawing continuously.
   from CPU calls. Source counts and reference models are not live draw-call,
   GPU-memory, pixel-parity or FPS measurements. No local tests, standalone
   validation, addon execution or game launch is authorized for this audit.
+
+## Remaining frame work — 2026-10-28
+
+A second pass reviews every frame path and the interval-gated controllers listed
+in the cadence inventory. All fixes from this pass, including the requested
+minimap clock option, belong to one commit. The reductions below supersede the
+corresponding retained-work descriptions from the preceding pass. They do not
+lower authored animation cadence or replace native gameplay time.
+
+| Path                        | Before this pass                                                                                       | After this pass                                                                                                                                                                                                                                                                                                                                   |
+| --------------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Minimap local clock         | A visible frame callback and one date read every five seconds                                          | **Off by default**, with no clock callback or date reads. `/sdui` → Minimap → **Show clock** enables the original five-second reader only while visible. Off centers the existing zone button/text in the top panel; on restores its original left position beside the clock.                                                                     |
+| SCT origin retirement       | Walk the complete live/recent catalog every frame                                                      | Skip that walk until the earliest real retirement is strictly older than the original 0.65 seconds, then stable-compact and retain the next deadline. Shown-plate sampling, matching, every original hit and active text motion retain frame cadence.                                                                                             |
+| Nameplate raid-icon copying | Two native source texture reads per refresh and two UV reads when copying                              | One texture and one UV sample, retaining four/eight-coordinate forms, actual destination comparisons and retry.                                                                                                                                                                                                                                   |
+| Final cooldown numbers      | All seven buttons reread every frame when any is in the positive final 200 ms                          | Only the **m** already-finishing buttons receive intervening frame reads. All seven retain an independent ten-Hz full pass and immediate cooldown/slot events. Store only final-window flags, never a private completion clock or cached native timing.                                                                                           |
+| Boss skulls                 | Reconcile all historical marker slots and compute the pulse every frame, including when none is active | Reconcile on received state/native-limit changes. Only active marker references animate each frame. No marker time/cosine/pool traversal when none is active; unchanged alpha skips eight writes. Keep all eight glow copies and both cardinal/diagonal dimensions.                                                                               |
+| Revive crosses              | Recompute all twelve clipping edges/positions and six pulse phases every active frame                  | Cache geometry until actual width or smoothed fill changes; calculate pulse only for crosses with visible parts. Visible pulse equations, frame smoothing/fade, native progress and cleanup remain.                                                                                                                                               |
+| Loot cards                  | Traverse populated cards every frame, including a settled full-opacity hold                            | During a settled hold, wait until the existing fade, metadata-retry or expiry deadline before traversing cards. Sample root visibility once per callback, reuse one protected updater, and invalidate the wait on new cards/Show. Active fades keep frames; hidden cards still expire.                                                            |
+| Player combat/rest rims     | Native eligibility and display reads every frame, even after inactive alpha reached zero               | Existing overlay frames observe combat/rest/world events plus Show/display recovery; eligibility reads happen on those transitions. Detach after the original inactive fade reaches zero. Active pulse and fade equations remain frame-driven; both rim variants must actually reach zero before detaching, including a failed round-alpha retry. |
+| Settled Layout editor       | Viewport reads every frame while editing                                                               | Ten-Hz viewport/handle samples while settled; invalidation, initial/unresolved placement, active input and final release remain immediate/frame-driven. Carry accumulated elapsed into handle cadence.                                                                                                                                            |
+| Active Layout input         | Repeated viewport samples in controller/cursor/move/resize/position helpers                            | Pass the current synchronous viewport tuple through the drag math. The base no-Shift move path uses one tuple instead of three while stationary or four while moving. Shift-snap candidates and centered-position reads share the tuple too. Final release samples current state afresh.                                                          |
+| Waypoint HUD math           | Recompute bearing and settled angular interpolation every frame                                        | Recompute bearing only when its current native vector changes; completed interpolation reuses its current result while accepting the latest stamp. Native position/heading reads, projection, active interpolation, pause/regression handling and final samples retain cadence.                                                                   |
+| Idle Chat native time       | `GetTime` every visible frame                                                                          | Read once per one-second geometry pass while settled, or lazily once per active animation/message-batching callback. Native alpha repair remains: its existing wrapper already compares actual alpha before a native write.                                                                                                                       |
+| Shared tooltip owner        | Non-icon hovers can call native `IsOwned` once per registered/action/equipment icon each frame         | Verify a directly observed `SetOwner` owner once, then use Lua identity comparisons for registry lookup. Replaced or unobserved native owners retain the original discovery fallback. Cursor/visibility/scale/anchor checks remain frame-driven. Player styling shares one class-color sample instead of reading it twice.                        |
+| Guardian health snapshots   | Read/validate native guardian health even with no living lair                                          | Defer that read until the first living lair; returning/empty-only snapshots do no health getter/list work. Living health remains current.                                                                                                                                                                                                         |
+| Stored levels               | Out-of-world callback kept reaching the ten-Hz guard/update                                            | Detach on world leave/logout and rearm on entry; live ten-Hz native state and frame pulse remain.                                                                                                                                                                                                                                                 |
+| Resources                   | Two player-visibility samples per native pass                                                          | One synchronous sample shared by data-read eligibility and presentation. Native events/ten-Hz fallback remain.                                                                                                                                                                                                                                    |
+
+The minimap choice is normalized as default-false `minimapShowClock` in the
+existing display table. Preview, Confirm-only saving, Cancel/world/logout/reload
+discard, profiles and both full resets use the shared display lifecycle. No new
+SavedVariable, gameplay clock, drawing region or asset is added. The caption and
+hint have all fourteen source/runtime translations. Hiding or disabling the
+clock clears only its owned hover and detaches its worker; Show with the option
+on takes a fresh local-time sample.
+
+Combat/rest event evidence comes from public benilla
+[`field_watch.rs` at cdebda36](https://github.com/samwhosung/benilla/blob/cdebda36fb4c611ad0a8c35ddc45bf53e4ff1c60/crates/benilla-app/src/field_watch.rs#L808-L822)
+for both combat edges and
+[the resting edges](https://github.com/samwhosung/benilla/blob/cdebda36fb4c611ad0a8c35ddc45bf53e4ff1c60/crates/benilla-app/src/field_watch.rs#L935-L948).
+The addon already uses the resting event. Public source is event-contract
+evidence, not verification of the packaged executable's exact revision or live
+performance.
+
+### Reviewed paths that retain their cadence
+
+- Visible run/boss readers retain raw native phase/time, rollback/boundary and
+  HUD ownership checks every frame. The one-second fill and ten-Hz/deferred
+  duration/schedule/encounter/debuff readers remain separate.
+- Current waypoint/minimap position and heading projection remain frame-driven;
+  guardian hover/timer checks remain ten Hz. The launcher samples only during
+  active dragging, including a final release sample.
+- Optional 3D portrait viewport/readiness and native model-paint handshakes remain
+  frame-driven. They establish when the native model can replace its still image;
+  native model animation is not controlled by addon polling.
+- Active health-loss/XP effects and stored-level pulses retain their equations
+  and frame cadence. Loss/XP callbacks already detach on completion. Chat keeps
+  scroll/unread/native visibility repair; its native alpha setter was already
+  guarded, so no second cache suppresses the required reveal animation.
+- Native aura-anchor repair follows actual native callbacks. Icon traversal is
+  already dirty-driven; active official timer and decimal hover reads stay ten
+  Hz, with static/paused/hidden retirement.
+- Timer flow/foam/red glints, cache affordability glow, jewelry cooldowns and
+  banner fades remain capped at thirty Hz. Warning gradients and the resting
+  flipbook remain twenty Hz only while active.
+- Resources, pets, normal cooldowns, guardian tracker and encounter fallback reads
+  remain ten Hz. Meter, jewelry metadata, loot service, banner readiness and
+  tooltip styling remain five Hz; meter rates stay one Hz. Required phase,
+  publication, native ownership and failed-read readiness work is retained.
+- Jewelry cursor placement runs only for a visible hovered card. Its exact
+  fourteen-strip icons, original rims and five-distinct-icon cost remain;
+  this pass does not replace artwork or claim a smaller drawing budget.
+
+CI-only production/extracted-source cases cover the new setting and lifecycle,
+selective final cooldown sampling, strict SCT retirement, raid UV arity,
+marker-state/halo transitions, loot hold and hidden expiry, Revive geometry,
+player pulse events/failure recovery, Layout sample sharing/final release,
+waypoint interpolation, lazy chat time and observed/replaced tooltip owners.
+No local tests, standalone validation, addon/game execution or runtime probes
+ran. Local evidence is source review and pinned formatting; active pixels still
+render each game frame. These call/work reductions do not establish measured
+CPU milliseconds, GPU draw calls, pixel parity, FPS gains or a resolved stutter.
 
 ## Cadence cleanup — 2026-10-28
 

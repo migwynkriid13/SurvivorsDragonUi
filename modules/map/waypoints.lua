@@ -799,6 +799,9 @@ DFRL:NewMod("Waypoints", 3, function()
             local interval = stamp - value.stamp
             value.from, value.target, value.age = value.current, target, 0
             value.duration = math.max(0, math.min(interval, 0.5))
+        elseif value.age >= value.duration then
+            value.stamp = stamp
+            return value.current
         end
         value.stamp = stamp
         value.age = math.min(value.age + elapsed, value.duration)
@@ -866,7 +869,14 @@ DFRL:NewMod("Waypoints", 3, function()
         presentation.east, presentation.north = east, north
         local playing = navigation.Phase() == "playing"
         local moving = east and (east ~= 0 or north ~= 0)
-        local bearing = moving and metric and math.atan2(east, north) or nil
+        local bearing
+        if moving and metric then
+            if presentation.bearingEast ~= east or presentation.bearingNorth ~= north then
+                presentation.bearingTarget = math.atan2(east, north)
+                presentation.bearingEast, presentation.bearingNorth = east, north
+            end
+            bearing = presentation.bearingTarget
+        end
         -- Only the paint values blend. Selection and minimap pins keep native data,
         -- and interpolation stops at each received sample without prediction.
         distance = Blend(presentation, "distance", distance, stamp, elapsed, false, playing)

@@ -332,6 +332,48 @@ Test("loot cards reuse the bounded pool and clear retired bindings", function()
     assert(table.getn(context.objects) == allocated, "loot pool grew on reuse")
 end)
 
+Test("loot holds skip card traversal until fade or retry and reuse one animation callback", function()
+    local context, service, animation = Loot()
+    Deliver(context, service, "First")
+    local callback = animation:GetScript("OnUpdate")
+    Deliver(context, service, "Second")
+    Deliver(context, service, "Third")
+    assert(callback == animation:GetScript("OnUpdate"), "each accepted card allocated a new animation callback")
+    local root = context.env.DFRL_LootNotifications
+    local visible = root.IsVisible
+    function root:IsVisible()
+        context.reads.lootVisibility = (context.reads.lootVisibility or 0) + 1
+        return visible(self)
+    end
+    context.now = context.now + 0.3
+    context:Call(animation, "OnUpdate", 0.3)
+    context:ResetCounts()
+    for _ = 1, 30 do
+        context.now = context.now + 0.01
+        context:Call(animation, "OnUpdate", 0.01)
+    end
+    assert(context.reads.lootVisibility == 30, "settled cards repeated root visibility reads within each frame")
+    context:NoPresentationWrites()
+    local cards = {}
+    for _, object in ipairs(context.objects) do
+        if object.entry and object.entry.name then cards[#cards + 1] = object end
+    end
+    assert(#cards == 3 and cards[1]:GetAlpha() == 1 and cards[2]:GetAlpha() == 1 and cards[3]:GetAlpha() == 1)
+    context.now = cards[1].started + 4.2
+    context:ResetCounts()
+    context:Call(animation, "OnUpdate", 3.6)
+    local alpha = (5.55 - (context.now - cards[1].started)) / 1.5
+    assert(math.abs(cards[1]:GetAlpha() - alpha) < 1e-12, "first fading frame lost its original alpha equation")
+    assert(context.writes.SetAlpha == 3, "settled hold failed to wake when fade began")
+    context:SetLayoutHidden(true)
+    context.now = cards[1].started + 5.56
+    context:Call(animation, "OnUpdate", 1.36)
+    assert(not animation:GetScript("OnUpdate"), "hidden deadline did not retire the cards")
+    for _, card in ipairs(cards) do
+        assert(not card.entry, "hidden hold replayed expired loot")
+    end
+end)
+
 Test("loot defaults and all three modes use shared preview profiles Confirm Cancel and reset", function()
     local context = H.New()
     context:Load("core/display.lua", "Display")

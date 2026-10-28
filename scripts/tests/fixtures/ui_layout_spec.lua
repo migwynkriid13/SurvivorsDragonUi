@@ -103,6 +103,31 @@ for _, object in ipairs(context.objects) do
 end
 assert(grips == 8, "first preparation lost a corner or width/height grip")
 assert(layout.Snapshot().first.hidden, "draft lost saved hidden geometry")
+local cursorX, cursorY = 200, 200
+env.GetCursorPosition = function() return cursorX, cursorY end
+local nativeWidth = env.UIParent.GetWidth
+local viewportReads = 0
+function env.UIParent:GetWidth()
+    viewportReads = viewportReads + 1
+    return nativeWidth(self)
+end
+context:Call(controller, "OnUpdate", 0.05)
+assert(viewportReads == 0, "settled editor sampled viewport geometry every frame")
+context:Call(controller, "OnUpdate", 0.05)
+assert(viewportReads == 1, "settled editor lost its ten-Hz refresh")
+local initialLeft = first:GetLeft()
+context:Call(handles[1], "OnDragStart")
+viewportReads = 0
+context:Call(controller, "OnUpdate", 0.01)
+assert(viewportReads == 1, "stationary drag reread the viewport after the controller sample")
+cursorX = cursorX + 20
+viewportReads = 0
+context:Call(controller, "OnUpdate", 0.01)
+assert(viewportReads == 1, "moving drag repeated viewport reads for cursor/position work")
+assert(env.T.NearlyEqual(first:GetLeft(), initialLeft + 20), "shared viewport changed drag coordinates")
+cursorX = cursorX + 15
+context:Call(handles[1], "OnMouseUp")
+assert(env.T.NearlyEqual(first:GetLeft(), initialLeft + 35), "release skipped its fresh final cursor sample")
 second:Show()
 Tick()
 assert(#Handles() == 2, "newly eligible conditional group did not prepare")

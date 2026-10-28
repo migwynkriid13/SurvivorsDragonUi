@@ -59,3 +59,14 @@ Visible tooltip color maintenance is limited to the existing tooltip's five-Hz u
 The source commit, adapted behavior and shipped MIT notice are recorded in [Tooltip-STYLE.md](../third_party/Tooltip-STYLE.md). Native Blizzard artwork remains distinct from the source project's software license. The editor's own diamond-metal artwork and appearance are unchanged.
 
 The cursor-option and immediate-dismissal changes received source review and local formatting with the repository configuration and pinned StyLua/Prettier versions. No local tests, standalone syntax/validation checks or addon/game execution were run. GitHub Actions provides the PR static checks; its results are not awaited during delivery. Native rendering, cursor placement at different scales, hover dismissal, event ordering and profile persistence remain unverified in game.
+
+## Observed owner sampling
+
+The shared `SetOwner` wrapper retains only its directly received owner in session
+memory. Visible placement verifies that owner through native `IsOwned` before
+using identity comparisons in the existing icon registries, avoiding a native
+ownership call per icon for ordinary non-icon hovers. An unobserved or replaced
+native owner uses the original discovery fallback. Clear/Hide retire the
+reference; no unit identity is inferred from tooltip text. Cursor/scale/visibility
+repair and the five-Hz style cadence remain. Styling shares the existing resolved
+player color for border and title, avoiding a second native class sample.

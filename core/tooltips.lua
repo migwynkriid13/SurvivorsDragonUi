@@ -136,7 +136,7 @@ DFRL:NewMod("Tooltips", 2, function()
     local tooltip, bar = GameTooltip, GameTooltipStatusBar
     if not tooltip then return end
     local currentUnit
-    local lastIconOwner
+    local lastIconOwner, currentOwner
     local elapsed, inWorld = 0, true
     local editing = false
     -- A stable, passive edit region exists even when no native hover is shown.
@@ -147,10 +147,10 @@ DFRL:NewMod("Tooltips", 2, function()
     root:SetScale(tooltip:GetEffectiveScale() / UIParent:GetEffectiveScale())
     root:EnableMouse(false)
 
-    local function IconOwner(buttons)
+    local function IconOwner(buttons, owner)
         if not buttons then return end
         for _, button in pairs(buttons) do
-            if tooltip:IsOwned(button) then return button end
+            if (owner and button == owner) or (not owner and tooltip:IsOwned(button)) then return button end
         end
     end
 
@@ -184,11 +184,18 @@ DFRL:NewMod("Tooltips", 2, function()
         local anchor, target, targetPoint, offsetY = "BOTTOMRIGHT", root, "BOTTOMRIGHT", 0
         -- Native ownership follows registered skill, equipment and HUD icons.
         -- Other hovers keep their shared layout seat.
+        local owner = currentOwner
+        if owner and not tooltip:IsOwned(owner) then
+            owner, currentOwner = nil, nil
+        end
         local button = lastIconOwner
-        if not button or not tooltip:IsOwned(button) then
-            button = IconOwner(DFRL.actionButtons) or IconOwner(DFRL.characterItemButtons) or IconOwner(registeredIcons)
+        if not button or (owner and button ~= owner) or (not owner and not tooltip:IsOwned(button)) then
+            button = IconOwner(DFRL.actionButtons, owner)
+                or IconOwner(DFRL.characterItemButtons, owner)
+                or IconOwner(registeredIcons, owner)
             lastIconOwner = button
         end
+        if button then currentOwner = button end
         if button and not button:IsVisible() then
             tooltip:Hide()
             return
@@ -240,7 +247,9 @@ DFRL:NewMod("Tooltips", 2, function()
     -- return, but prevent owner-relative/cursor placement from reclaiming it.
     local nativeSetOwner = tooltip.SetOwner
     tooltip.SetOwner = function(self, owner, anchor, x, y)
-        return nativeSetOwner(self, owner, self == tooltip and inWorld and "ANCHOR_NONE" or anchor, x, y)
+        local result = nativeSetOwner(self, owner, self == tooltip and inWorld and "ANCHOR_NONE" or anchor, x, y)
+        if self == tooltip then currentOwner = owner end
+        return result
     end
     if type(tooltip.FadeOut) == "function" then
         local nativeFadeOut = tooltip.FadeOut
@@ -267,7 +276,7 @@ DFRL:NewMod("Tooltips", 2, function()
     end
     local function UnitColor(unit)
         local red, green, blue = PlayerColor(unit)
-        if red then return red, green, blue end
+        if red then return red, green, blue, true end
         local reaction = type(UnitReaction) == "function" and UnitReaction(unit, "player")
         if type(reaction) ~= "number" then return BORDER_R, BORDER_G, BORDER_B end
         if reaction >= 5 then return 0.2, 0.8, 0.2 end
@@ -278,10 +287,9 @@ DFRL:NewMod("Tooltips", 2, function()
         if not tooltip:IsVisible() then return end
         if bar and bar:IsShown() then bar:Hide() end
         if inWorld and Exists(currentUnit) then
-            local red, green, blue = UnitColor(currentUnit)
+            local red, green, blue, player = UnitColor(currentUnit)
             DFRL.tools.StyleHoverCard(tooltip, red, green, blue)
-            red, green, blue = PlayerColor(currentUnit)
-            if red and GameTooltipTextLeft1 then
+            if player and GameTooltipTextLeft1 then
                 local r, g, b, a = GameTooltipTextLeft1:GetTextColor()
                 if
                     not T.NearlyEqual(r, red)
@@ -297,7 +305,7 @@ DFRL:NewMod("Tooltips", 2, function()
         end
     end
     local function Clear()
-        currentUnit, lastIconOwner, elapsed = nil, nil, 0
+        currentUnit, lastIconOwner, currentOwner, elapsed = nil, nil, nil, 0
         DFRL.tools.StyleHoverCard(tooltip)
         if bar and bar:IsShown() then bar:Hide() end
     end

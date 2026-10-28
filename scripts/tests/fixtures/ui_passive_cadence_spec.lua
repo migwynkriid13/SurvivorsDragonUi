@@ -13,7 +13,10 @@ do
         return now
     end
     env.AZS_UNITS, env.AZS_UNITS_UPDATED = {}, 1
-    env.AZS_GetGuardians = function() return { { id = 7, hp = 50, hpm = 100 } } end
+    env.AZS_GetGuardians = function()
+        context.reads.guardians = (context.reads.guardians or 0) + 1
+        return { { id = 7, hp = 50, hpm = 100 } }
+    end
     context:Load("modules/ui/guardians.lua", "GuardianRoster")
     local roster = env.DFRL.guardians
     roster.AcceptLairs({
@@ -24,6 +27,7 @@ do
     local snapshot = roster.GetSnapshot()
     assert(not context.reads.clock, "a roster without returning lairs sampled a countdown clock")
     assert(snapshot.rows[1].hp == 50 and snapshot.rows[1].healthFraction == 0.5)
+    assert(context.reads.guardians == 1, "living guardians lost native health sampling")
     assert(snapshot.rows[2].status == "due" and snapshot.rows[2].remaining == 0)
     roster.AcceptLairs({
         { index = 1, id = 0, state = "empty", left = 20 },
@@ -33,6 +37,7 @@ do
     context:ResetCounts()
     snapshot = roster.GetSnapshot(snapshot)
     assert(context.reads.clock == 1, "returning lairs sampled independent native clocks")
+    assert(not context.reads.guardians, "empty/returning lairs queried an unused guardian health list")
     assert(snapshot.rows[1].remaining == 19 and snapshot.rows[2].remaining == 29)
     phase = "paused"
     context:ResetCounts()
@@ -146,9 +151,12 @@ do
     Tick()
     assert(label:GetText() == "4" and context.reads.formats == 1, "Show did not present the latest native count")
     context:Event(controller, "PLAYER_LEAVING_WORLD")
+    assert(not controller:GetScript("OnUpdate"), "stored levels retained their out-of-world updater")
     context:ResetCounts()
     Tick()
     assert(not context.reads.phase and not context.reads.levels and not context.reads.formats)
+    context:Event(controller, "PLAYER_ENTERING_WORLD")
+    assert(controller:GetScript("OnUpdate"), "stored levels did not rearm on world entry")
 end
 print(
     "PASS stored levels cache numeric captions, retain actual-state repair and preserve native takeover readback/retry"

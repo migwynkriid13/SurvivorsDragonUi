@@ -308,13 +308,20 @@ DFRL:NewMod("StoredLevels", 5, function()
         Update()
     end)
 
+    local controller = CreateFrame("Frame", nil, UIParent)
+    local function Tick()
+        elapsed = elapsed + (tonumber(arg1) or 0)
+        if elapsed < INTERVAL then return end
+        elapsed = 0
+        Update()
+    end
     local function Stop()
         inWorld = false
+        controller:SetScript("OnUpdate", nil)
         retiredRun = AZS_RUN
         Clear()
     end
 
-    local controller = CreateFrame("Frame", nil, UIParent)
     controller:RegisterEvent("CHAT_MSG_ADDON")
     controller:RegisterEvent("PLAYER_ENTERING_WORLD")
     controller:RegisterEvent("PLAYER_LEAVING_WORLD")
@@ -325,17 +332,13 @@ DFRL:NewMod("StoredLevels", 5, function()
         elseif event == "PLAYER_ENTERING_WORLD" then
             inWorld = true
             elapsed = INTERVAL
+            controller:SetScript("OnUpdate", Tick)
         elseif event == "CHAT_MSG_ADDON" and arg1 == "AZSRUN" then
             -- Read on the next frame, after the native parser replaces AZS_RUN.
             elapsed = INTERVAL
         end
     end)
-    controller:SetScript("OnUpdate", function()
-        elapsed = elapsed + (tonumber(arg1) or 0)
-        if elapsed < INTERVAL then return end
-        elapsed = 0
-        Update()
-    end)
+    controller:SetScript("OnUpdate", Tick)
     if type(_G.ReloadUI) == "function" then
         local reloadUI = _G.ReloadUI
         _G.ReloadUI = function()

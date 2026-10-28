@@ -148,6 +148,7 @@ DFRL:NewMod("Revive", 4, function()
             paintedValue = 0
             spark:Hide()
             for _, cross in ipairs(crosses) do
+                cross.geometryWidth, cross.geometryRight = nil, nil
                 for _, texture in ipairs(cross) do
                     texture:Hide()
                 end
@@ -241,24 +242,37 @@ DFRL:NewMod("Revive", 4, function()
             width = width - 72
             local filledRight = 8 + width * value
             for index, cross in ipairs(crosses) do
-                local phase = math.mod(effectAge / CROSS_PERIOD + index / CROSS_COUNT, 1)
-                local x = 8 + width * (index - 0.5) / CROSS_COUNT
-                local y = math.mod(index, 2) == 0 and 2 or -2
-                local alpha = 0.45 + math.sin(phase * math.pi * 2) * 0.2
+                if cross.geometryWidth ~= width or cross.geometryRight ~= filledRight then
+                    local x = 8 + width * (index - 0.5) / CROSS_COUNT
+                    local y = math.mod(index, 2) == 0 and 2 or -2
+                    cross.visible = false
+                    for part, texture in ipairs(cross) do
+                        local partWidth = part == 1 and 6 or 2
+                        local left = x - partWidth / 2
+                        local visibleWidth = math.min(partWidth, filledRight - left)
+                        texture.reviveVisible = visibleWidth > 0
+                        if texture.reviveVisible then
+                            cross.visible = true
+                            if texture.reviveWidth ~= visibleWidth then
+                                texture:SetWidth(visibleWidth)
+                                texture.reviveWidth = visibleWidth
+                            end
+                            if texture.reviveLeft ~= left then
+                                texture:ClearAllPoints()
+                                texture:SetPoint("LEFT", pill, "LEFT", left, y)
+                                texture.reviveLeft = left
+                            end
+                        end
+                    end
+                    cross.geometryWidth, cross.geometryRight = width, filledRight
+                end
+                local alpha
+                if cross.visible then
+                    local phase = math.mod(effectAge / CROSS_PERIOD + index / CROSS_COUNT, 1)
+                    alpha = 0.45 + math.sin(phase * math.pi * 2) * 0.2
+                end
                 for part, texture in ipairs(cross) do
-                    local partWidth = part == 1 and 6 or 2
-                    local left = x - partWidth / 2
-                    local visibleWidth = math.min(partWidth, filledRight - left)
-                    if visibleWidth > 0 then
-                        if texture.reviveWidth ~= visibleWidth then
-                            texture:SetWidth(visibleWidth)
-                            texture.reviveWidth = visibleWidth
-                        end
-                        if texture.reviveLeft ~= left then
-                            texture:ClearAllPoints()
-                            texture:SetPoint("LEFT", pill, "LEFT", left, y)
-                            texture.reviveLeft = left
-                        end
+                    if texture.reviveVisible then
                         if texture.reviveAlpha ~= alpha then
                             texture:SetVertexColor(0.58, 1, 0.74, alpha)
                             texture.reviveAlpha = alpha

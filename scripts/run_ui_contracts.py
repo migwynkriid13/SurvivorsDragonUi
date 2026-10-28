@@ -44,6 +44,7 @@ def main():
         border_mini = "local portraitsHidden\n" + extract_source("modules/unit/mini.lua", ["UpdatePortraitVisibility"])
         debuff_tooltip = extract_source("modules/ui/run.lua", ["IsNumber", "Clock", "Permanent", "DebuffRemaining", "DebuffTooltip"])
         navigation_distance = extract_source("modules/map/waypoints.lua", ["UpdateDistance"])
+        waypoint_frame = extract_source("modules/map/waypoints.lua", ["Number", "Rotate", "WrapAngle", "Blend", "UpdateGuide"])
         xp_glow = extract_source("modules/xprep/xprep.lua", ["PaintGlow"])
         sct_queue = extract_source("modules/nameplates/sct.lua", [
             "FALLBACK_ICON", "EVENT_SETTLE", "EVENT_FALLBACK_DELAY", "DUPLICATE_WINDOW", "DAMAGE_COLORS",
@@ -61,11 +62,19 @@ def main():
         ])
         run_captions = run_captions.rsplit("\nreturn ", 1)[0] + "\nreturn { New = NewClockLabel, Update = UpdateClockCaptions, Refresh = RefreshTimerCaptions, Style = StyleClockLabel, Clear = ClearClockCaptions }\n"
         minimap_clock = extract_source("modules/map/map.lua", ["WatchClock"])
+        player_pulse = extract_source("modules/unit/player.lua", ["CreatePulse"])
         aura_layout = extract_source("modules/unit/auras.lua", ["PlaceNativeFrame", "Layout"])
         aura_duration = extract_source("modules/unit/auras.lua", ["Time", "SetTimerDuration"])
         pet_captions = extract_source("modules/unit/pets.lua", ["Number", "Time", "TimerText", "CountText", "HideRow"])
         pet_captions = pet_captions.rsplit("\nreturn ", 1)[0] + "\nreturn { Timer = TimerText, Count = CountText, Hide = HideRow }\n"
         chat_idle = extract_source("modules/chat/chat.lua", ["HOLD", "FADE", "FadeSettings"])
+        chat_frame = extract_source("modules/chat/chat.lua", ["UpdateChat"])
+        run_markers = extract_source("modules/ui/run.lua", [
+            "MARKER_SIZE", "ACTIVE_GLOW_PERIOD", "ACTIVE_GLOW_MIN_ALPHA", "ACTIVE_GLOW_MAX_ALPHA",
+            "ACTIVE_GLOW_MIN_OFFSET", "ACTIVE_GLOW_MAX_OFFSET", "ShowMarkerGlow", "HideMarkerTooltip",
+            "HideMarker", "UpdateMarkerStates",
+        ])
+        run_markers = run_markers.rsplit("\nreturn ", 1)[0] + "\nreturn { Update = UpdateMarkerStates, Hide = HideMarker }\n"
         run_debuff_cadence = extract_source("modules/ui/run.lua", [
             "IsNumber", "HideDebuff", "Permanent", "DebuffRemaining", "DebuffIcon", "UpdateDebuffs",
             "ReflowRows", "RefreshDebuffHover", "UpdateDebuffRows", "Update",
@@ -86,6 +95,7 @@ def main():
             ("border-modes-source.lua", border_modes, "ui_border_spec.lua"),
             ("debuff-tooltip-source.lua", debuff_tooltip, "ui_debuff_tooltip_spec.lua"),
             ("navigation-distance-source.lua", navigation_distance, "ui_navigation_distance_spec.lua"),
+            ("waypoint-frame-source.lua", waypoint_frame, "ui_waypoint_frame_perf_spec.lua"),
             ("xp-glow-source.lua", xp_glow, "ui_xp_perf_spec.lua"),
             ("sct-queue-source.lua", sct_queue, "ui_sct_queue_perf_spec.lua"),
             ("run-foam-source.lua", run_foam, "ui_run_foam_perf_spec.lua"),
@@ -93,9 +103,12 @@ def main():
             ("run-affixes-source.lua", run_affixes, "ui_run_affixes_spec.lua"),
             ("run-captions-source.lua", run_captions, "ui_run_captions_perf_spec.lua"),
             ("minimap-clock-source.lua", minimap_clock, "ui_idle_clock_spec.lua"),
+            ("player-pulse-source.lua", player_pulse, "ui_player_pulse_perf_spec.lua"),
             ("aura-layout-source.lua", aura_layout, "ui_aura_layout_perf_spec.lua"),
             ("pet-captions-source.lua", pet_captions, "ui_pet_caption_perf_spec.lua"),
             ("chat-idle-source.lua", chat_idle, "ui_chat_idle_perf_spec.lua"),
+            ("chat-frame-source.lua", chat_frame, "ui_chat_frame_perf_spec.lua"),
+            ("run-marker-source.lua", run_markers, "ui_run_marker_perf_spec.lua"),
             ("run-debuff-cadence-source.lua", run_debuff_cadence, "ui_run_debuff_cadence_spec.lua"),
         ):
             seam = Path(folder) / name

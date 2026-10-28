@@ -561,14 +561,15 @@ DFRL:NewMod("Chat", 1, function()
         SelectChat(states[1])
         HideControl(ChatFrameMenuButton)
         local refresh = 0
-        root:SetScript("OnUpdate", function()
+        local function UpdateChat()
             if not root:IsVisible() then return end
-            local now, elapsed = GetTime(), arg1 or 0
+            local now, elapsed = nil, arg1 or 0
             -- Only wheel navigation uncovers retained history. Hover and input
             -- focus never rearm lines or hold their fading.
             local atBottom = not selected or AtBottom(selected)
             local held = not atBottom
             for _, state in pairs(states) do
+                if state.pendingLevel or state.revealStart or state.slideStart then now = now or GetTime() end
                 if state.pendingLevel and now >= state.pendingLevel.deadline then
                     state.FlushLevel()
                     if state == selected then atBottom = nil end
@@ -598,6 +599,7 @@ DFRL:NewMod("Chat", 1, function()
             refresh = refresh + elapsed
             if refresh >= 1 then
                 refresh = 0
+                now = now or GetTime()
                 ReadDimensions()
                 PositionInput()
                 RefreshFrames()
@@ -605,7 +607,8 @@ DFRL:NewMod("Chat", 1, function()
                     PositionNative(state, now, true)
                 end
             end
-        end)
+        end
+        root:SetScript("OnUpdate", UpdateChat)
         HookScript(root, "OnHide", function()
             for _, state in pairs(states) do
                 state.slideStart, state.revealStart = nil, nil

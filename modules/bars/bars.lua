@@ -488,9 +488,10 @@ DFRL:NewMod("Bars", 1, function()
                 if overlay:IsShown() then overlay:Hide() end
                 overlay.cooldownValue, overlay.cooldownUnit, overlay.cooldownLanguage, overlay.cooldownText =
                     nil, nil, nil, nil
+                overlay.finishing = nil
             end
         end
-        local function RefreshNumbers()
+        local function RefreshNumbers(finalOnly)
             if not active or not bar:IsVisible() or not DFRL.display.Get("cooldownNumbers") then
                 ClearNumbers()
                 return
@@ -502,8 +503,12 @@ DFRL:NewMod("Bars", 1, function()
             local now = GetTime()
             finishing = false
             for _, button in ipairs(DFRL.actionButtons) do
-                local remaining = UpdateCooldownNumber(button, now)
-                if remaining and remaining <= COOLDOWN_FINAL_WINDOW then finishing = true end
+                local overlay = button.DFRL_cooldownNumber
+                if not finalOnly or overlay.finishing then
+                    local remaining = UpdateCooldownNumber(button, now)
+                    overlay.finishing = remaining and remaining <= COOLDOWN_FINAL_WINDOW or false
+                end
+                if overlay.finishing then finishing = true end
             end
         end
 
@@ -528,11 +533,14 @@ DFRL:NewMod("Bars", 1, function()
         TickNumbers = function()
             if not active or not bar:IsVisible() or not DFRL.display.Get("cooldownNumbers") then return end
             elapsed = elapsed + arg1
-            -- Sample each rendered frame near expiration so a 100-ms periodic
-            -- refresh does not skip the positive final-100-ms zero window.
-            if not finishing and elapsed < COOLDOWN_INTERVAL then return end
-            elapsed = 0
-            RefreshNumbers()
+            if elapsed >= COOLDOWN_INTERVAL then
+                elapsed = 0
+                RefreshNumbers()
+            elseif finishing then
+                -- Only final-window buttons need frame samples. Keep the full
+                -- bar's independent 100-ms clock so other slots cannot starve.
+                RefreshNumbers(true)
+            end
         end
         controller:SetScript("OnHide", ClearNumbers)
         controller:SetScript("OnShow", RefreshNumbers)

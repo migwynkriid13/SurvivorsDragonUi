@@ -74,6 +74,18 @@ local function Revive()
         if type(value) == "number" then context.percentFormats = (context.percentFormats or 0) + 1 end
         return tostring(value)
     end
+    env.math = {}
+    for name, value in pairs(math) do
+        env.math[name] = value
+    end
+    env.math.min = function(...)
+        context.clipCalculations = (context.clipCalculations or 0) + 1
+        return math.min(...)
+    end
+    env.math.sin = function(...)
+        context.pulses = (context.pulses or 0) + 1
+        return math.sin(...)
+    end
     env.AZS_GetPhase = function() return context.phase or "playing" end
     env.AZS_GetRevive = function() return env.AZS_REVIVE end
     env.geterrorhandler = function()
@@ -104,6 +116,7 @@ local function Revive()
     function context:ResetPerf()
         self:ResetCounts()
         self.formats, self.percentFormats = 0, 0
+        self.clipCalculations, self.pulses = 0, 0
     end
     function context:Tick(elapsed)
         self.now = self.now + elapsed
@@ -190,6 +203,35 @@ do
     )
 end
 print("PASS Revive shares width only within animation and preserves cross clipping, smoothing and percentage steps")
+
+do
+    local context = Revive()
+    context:Publish({ down = 1, by = "Alice", share = 0.25 })
+    context:Tick(0.25)
+    context:ResetPerf()
+    context:Tick(0.01)
+    assert(context.clipCalculations == 0, "settled revive progress recomputed cross clipping")
+    assert(context.pulses == 2, "covered crosses computed invisible pulses or visible pulses stopped")
+    assert(not context.writes.SetWidth and not context.writes.SetPoint, "settled cross geometry was rewritten")
+    assert(context.writes.SetVertexColor == 4, "visible cross rectangles lost their per-frame pulse")
+    context:Publish({ down = 1, by = "Alice", share = 1 })
+    for _ = 1, 76 do
+        context:Tick(0.01)
+    end
+    assert(context.bar.value == 1, "cross geometry caching changed native progress catch-up")
+    context:ResetPerf()
+    context:Tick(0.01)
+    assert(context.clipCalculations == 0 and context.pulses == 6 and context.writes.SetVertexColor == 12)
+    context:Publish({ down = 1, by = "", share = 1 })
+    context:Publish({ down = 1, by = "Alice", share = 0 })
+    context:ResetPerf()
+    context:Tick(0.01)
+    assert(context.pulses == 0, "empty progress calculated pulses for covered crosses")
+    for _, texture in ipairs(context.crosses) do
+        assert(not texture:IsShown(), "reused cross retained visible state at empty progress")
+    end
+end
+print("PASS Revive reuses settled cross geometry and animates only uncovered marks without changing pulse cadence")
 
 do
     local context = Revive()

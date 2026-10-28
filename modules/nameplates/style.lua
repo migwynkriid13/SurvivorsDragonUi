@@ -95,13 +95,17 @@ DFRL:NewMod("NameplateStyle", 5, function()
     end
 
     local function CopyNativeIcon(destination, source)
-        if source and source:IsShown() and source:GetTexture() then
-            local texture = source:GetTexture()
+        local texture = source and source:IsShown() and source:GetTexture()
+        if texture then
             if destination:GetTexture() ~= texture then destination:SetTexture(texture) end
             local a, b, c, d, e, f, g, h = source:GetTexCoord()
             local da, db, dc, dd, de, df, dg, dh = destination:GetTexCoord()
             if a ~= da or b ~= db or c ~= dc or d ~= dd or e ~= de or f ~= df or g ~= dg or h ~= dh then
-                destination:SetTexCoord(source:GetTexCoord())
+                if e == nil then
+                    destination:SetTexCoord(a, b, c, d)
+                else
+                    destination:SetTexCoord(a, b, c, d, e, f, g, h)
+                end
             end
             if not destination:IsShown() then destination:Show() end
         else

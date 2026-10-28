@@ -14,6 +14,19 @@ its movement, scale and hiding; the launcher adds no saved state or Layout group
 Clicking uses `layout.BeginEdit`, preserving the same preview, Confirm, Cancel,
 profiles and cleanup paths as the slash command.
 
+## Optional local clock
+
+`/sdui` → **Minimap** → **Show clock** is off by default. With it off, the zone
+name is centered in the existing top panel and the clock has no update callback
+or local-time reads. Turning it on restores the zone name's left position and
+shows local time on the right. The existing worker checks the date every five
+seconds only while the clock is enabled and visible; unchanged minutes skip text
+writes. Hiding/disabling clears only its owned hover. Show samples fresh time.
+
+`minimapShowClock` uses the existing display table and shared live preview,
+Confirm, Cancel/discard, profiles and both reset paths. Missing/invalid values
+and resets mean off. It adds no SavedVariable, drawing region or asset.
+
 ## Square placement
 
 `modules/map/buttons.lua` publishes `GetMinimapShape() == "SQUARE"` for compatible

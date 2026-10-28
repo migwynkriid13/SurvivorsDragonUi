@@ -175,8 +175,9 @@ DFRL:NewMod("Class resources", 2, function()
     local function Update()
         -- Phase retirement remains live while the player's presentation is hidden.
         local state
-        if inWorld then state = ReadRun(PlayerFrame:IsVisible()) end
-        if not PlayerFrame:IsVisible() then return end
+        local visible = PlayerFrame:IsVisible()
+        if inWorld then state = ReadRun(visible) end
+        if not visible then return end
         local exists = inWorld and UnitExists("player")
         if DFRL.playerResources then
             if exists and state then

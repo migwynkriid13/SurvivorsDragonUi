@@ -1449,6 +1449,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 key = "minimap",
                 label = "Minimap",
                 options = {
+                    { "minimapShowClock", "Show clock", "Show local time beside the minimap zone name." },
                     {
                         "keepDefeatedGuardianIcons",
                         "Keep defeated guardian icons",
@@ -2632,7 +2633,14 @@ DFRL:NewMod("RunTimers", 5, function()
     local zoneSequence, zoneRunPending
     local scheduleBarrier = -1
     local reloading = false
-    local render = { emptySchedule = {}, readPending = true, unitSequence = 0, unitBarrier = -1 }
+    local render = {
+        emptySchedule = {},
+        readPending = true,
+        unitSequence = 0,
+        unitBarrier = -1,
+        activeMarkers = {},
+        activeMarkerCount = 0,
+    }
     -- Only ReloadUI writes this handoff. Consume it once, keeping an initial
     -- nil phase from destroying it before the native API has replayed AZSRUN.
     local scheduleCache = _G.SurvivorsDragonUiBossSchedule
@@ -2807,7 +2815,6 @@ DFRL:NewMod("RunTimers", 5, function()
 
     local function ShowMarkerGlow(marker, shown)
         if marker.glowShown == shown then return end
-        marker.glowShown = shown
         for _, glow in ipairs(marker.glow) do
             if shown then
                 glow.texture:Show()
@@ -2815,6 +2822,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 glow.texture:Hide()
             end
         end
+        marker.glowShown = shown
     end
 
     local function HideMarkerTooltip(marker)
@@ -2833,6 +2841,7 @@ DFRL:NewMod("RunTimers", 5, function()
     end
 
     local function HideMarker(marker)
+        if marker.state then render.markerStatesDirty = true end
         HideMarkerTooltip(marker)
         if marker:IsShown() then marker:Hide() end
         if marker.check:IsShown() then marker.check:Hide() end
@@ -2852,6 +2861,11 @@ DFRL:NewMod("RunTimers", 5, function()
         for _, marker in ipairs(markers) do
             HideMarker(marker)
         end
+        for index = 1, render.activeMarkerCount do
+            render.activeMarkers[index] = nil
+        end
+        table.setn(render.activeMarkers, 0)
+        render.activeMarkerCount, render.markerStatesDirty, render.markerAtLimit = 0, true, nil
         Restore("clock")
     end
 
@@ -3131,6 +3145,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 marker:EnableMouse(marker.name ~= nil)
                 if GameTooltip and GameTooltip:IsOwned(marker) then ShowMarkerTooltip(marker) end
             end
+            if markerStates[index] ~= entry.state then render.markerStatesDirty = true end
             markerStates[index] = entry.state
             local width = runBar.layoutWidth or BAR_WIDTH
             if marker.at ~= at or marker.maximum ~= maximum or marker.width ~= width then
@@ -3144,48 +3159,66 @@ DFRL:NewMod("RunTimers", 5, function()
             end
         end
         for index = table.getn(entries) + 1, table.getn(markers) do
+            if markerStates[index] then render.markerStatesDirty = true end
             markerStates[index] = nil
             HideMarker(markers[index])
         end
     end
 
     local function UpdateMarkerStates(atLimit)
-        if atLimit then
-            for _, marker in ipairs(markers) do
-                if marker.state then HideMarker(marker) end
+        -- Schedule transitions reconcile the pooled markers once. Only active
+        -- skulls need frame animation; due/defeated/retired slots stay idle.
+        if render.markerStatesDirty or render.markerAtLimit ~= atLimit then
+            local count, pending = 0, false
+            for index, marker in ipairs(markers) do
+                local state = not atLimit and markerStates[index] or nil
+                if state then
+                    if marker.state ~= state then
+                        T.StyleDefeatedMarker(marker.skull, marker.check, MARKER_SIZE, state == "dead")
+                        ShowMarkerGlow(marker, state == "up")
+                        marker.state = state
+                    end
+                    if state == "up" then
+                        count = count + 1
+                        render.activeMarkers[count] = marker
+                    end
+                    if not marker:IsShown() then
+                        marker:Show()
+                        if not marker:IsShown() then pending = true end
+                    end
+                else
+                    HideMarker(marker)
+                    if marker:IsShown() or marker.check:IsShown() then pending = true end
+                end
             end
-            return
+            for index = count + 1, render.activeMarkerCount do
+                render.activeMarkers[index] = nil
+            end
+            table.setn(render.activeMarkers, count)
+            render.activeMarkerCount = count
+            render.markerStatesDirty, render.markerAtLimit = pending or nil, atLimit
         end
+        if render.activeMarkerCount == 0 then return end
         -- Only the official schedule establishes active and defeated bosses.
         -- UI time drives decoration only, including while the run is paused.
         -- The native run clock and schedule still own all gameplay timing/state.
         local pulse = 0.5 - 0.5 * math.cos(GetTime() * 2 * math.pi / ACTIVE_GLOW_PERIOD)
         local glowAlpha = ACTIVE_GLOW_MIN_ALPHA + (ACTIVE_GLOW_MAX_ALPHA - ACTIVE_GLOW_MIN_ALPHA) * pulse
         local glowOffset = ACTIVE_GLOW_MIN_OFFSET + (ACTIVE_GLOW_MAX_OFFSET - ACTIVE_GLOW_MIN_OFFSET) * pulse
-        for index, marker in ipairs(markers) do
-            local state = markerStates[index]
-            if state then
-                if marker.state ~= state then
-                    marker.state = state
-                    T.StyleDefeatedMarker(marker.skull, marker.check, MARKER_SIZE, state == "dead")
-                    ShowMarkerGlow(marker, state == "up")
+        for _, marker in ipairs(render.activeMarkers) do
+            if marker.glowOffset ~= glowOffset then
+                local cardinalSide, diagonalSide = 2 * glowOffset, 2 * ((1 / math.sqrt(2)) * glowOffset)
+                marker.glowCardinal:SetWidth(cardinalSide)
+                marker.glowCardinal:SetHeight(cardinalSide)
+                marker.glowDiagonal:SetWidth(diagonalSide)
+                marker.glowDiagonal:SetHeight(diagonalSide)
+                marker.glowOffset = glowOffset
+            end
+            if marker.glowAlpha ~= glowAlpha then
+                for _, glow in ipairs(marker.glow) do
+                    glow.texture:SetAlpha(glowAlpha)
                 end
-                if state == "up" then
-                    if marker.glowOffset ~= glowOffset then
-                        local cardinalSide, diagonalSide = 2 * glowOffset, 2 * ((1 / math.sqrt(2)) * glowOffset)
-                        marker.glowCardinal:SetWidth(cardinalSide)
-                        marker.glowCardinal:SetHeight(cardinalSide)
-                        marker.glowDiagonal:SetWidth(diagonalSide)
-                        marker.glowDiagonal:SetHeight(diagonalSide)
-                        marker.glowOffset = glowOffset
-                    end
-                    for _, glow in ipairs(marker.glow) do
-                        glow.texture:SetAlpha(glowAlpha)
-                    end
-                end
-                if not marker:IsShown() then marker:Show() end
-            else
-                HideMarker(marker)
+                marker.glowAlpha = glowAlpha
             end
         end
     end

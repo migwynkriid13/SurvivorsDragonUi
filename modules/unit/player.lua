@@ -217,7 +217,7 @@ DFRL:NewMod("Player", 1, function()
         end
     end
 
-    local function CreatePulse(r, g, b, active)
+    local function CreatePulse(r, g, b, active, startEvent, stopEvent)
         local overlay = CreateFrame("Frame", nil, PlayerFrame)
         overlay:SetAllPoints(PlayerFrame)
         overlay:SetFrameStrata("MEDIUM")
@@ -241,22 +241,61 @@ DFRL:NewMod("Player", 1, function()
         round:Hide()
         table.insert(pulseTextures, { original = texture, round = round })
         local pulseTime, pulseAlpha = 0, 0
-        overlay:SetScript("OnUpdate", function()
-            if not PlayerFrame:IsVisible() then return end
-            if DFRL.display.Get("hidePortraits") then return end
+        local inWorld, enabled, running = true, false, false
+        local portraitsShown = not DFRL.display.Get("hidePortraits")
+        local function StopUpdates()
+            if running then overlay:SetScript("OnUpdate", nil) end
+            running = false
+        end
+        local function AnimatePulse()
+            if not inWorld or not PlayerFrame:IsVisible() or not portraitsShown then
+                StopUpdates()
+                return
+            end
             local elapsed = arg1 or 0
-            if active() then
+            if enabled then
                 pulseTime = math.mod(pulseTime + elapsed, 1)
                 texture:SetAlpha(0.5 + 0.5 * math.sin(pulseTime * 2 * math.pi))
             else
-                -- Keep native state detection at frame cadence without repainting
-                -- either inactive artwork after its original fade reaches zero.
-                if pulseAlpha == 0 then return end
                 texture:SetAlpha(math.max(0, texture:GetAlpha() - elapsed * 2))
             end
             pulseAlpha = texture:GetAlpha()
-            round:SetAlpha(pulseAlpha)
+            if round:GetAlpha() ~= pulseAlpha then round:SetAlpha(pulseAlpha) end
+            if not enabled and pulseAlpha == 0 and round:GetAlpha() == 0 then StopUpdates() end
+        end
+        local function RefreshPulse()
+            portraitsShown = not DFRL.display.Get("hidePortraits")
+            if not inWorld or not PlayerFrame:IsVisible() or not portraitsShown then
+                StopUpdates()
+                return
+            end
+            enabled = active() and true or false
+            pulseAlpha = texture:GetAlpha()
+            if enabled or pulseAlpha > 0 or round:GetAlpha() > 0 then
+                if not running then overlay:SetScript("OnUpdate", AnimatePulse) end
+                running = true
+            else
+                StopUpdates()
+            end
+        end
+        overlay:RegisterEvent(startEvent)
+        if stopEvent then overlay:RegisterEvent(stopEvent) end
+        overlay:RegisterEvent("PLAYER_ENTERING_WORLD")
+        overlay:RegisterEvent("PLAYER_LEAVING_WORLD")
+        overlay:RegisterEvent("PLAYER_LOGOUT")
+        overlay:SetScript("OnEvent", function()
+            if event == "PLAYER_LEAVING_WORLD" or event == "PLAYER_LOGOUT" then
+                inWorld = false
+                StopUpdates()
+            else
+                if event == "PLAYER_ENTERING_WORLD" then inWorld = true end
+                RefreshPulse()
+            end
         end)
+        HookScript(PlayerFrame, "OnShow", RefreshPulse)
+        HookScript(PlayerFrame, "OnHide", StopUpdates)
+        DFRL.display.Listen(RefreshPulse)
+        RefreshPulse()
     end
 
     local function CreateRestingAnimation()
@@ -392,8 +431,15 @@ DFRL:NewMod("Player", 1, function()
                 texture:Hide()
             end
         end
-        CreatePulse(1, 0, 0, function() return UnitAffectingCombat("player") end)
-        CreatePulse(0, 1, 1, IsResting)
+        CreatePulse(
+            1,
+            0,
+            0,
+            function() return UnitAffectingCombat("player") end,
+            "PLAYER_REGEN_DISABLED",
+            "PLAYER_REGEN_ENABLED"
+        )
+        CreatePulse(0, 1, 1, IsResting, "PLAYER_UPDATE_RESTING")
         UpdatePortraitShape()
         CreateRestingAnimation()
         FixPlayerClick()

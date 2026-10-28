@@ -445,6 +445,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         intakeBuckets = {}
         origins = {}
         originIndex.names, originIndex.dirty = {}, {}
+        originIndex.retiredAt = nil
         originIndex.ClearQueries()
         recentDamage = {}
         for _, data in pairs(plates) do
@@ -551,6 +552,9 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         -- resets or reuses this frame. Active text keeps this incarnation.
         origin.live = false
         origin.hiddenAt = GetTime()
+        if not originIndex.retiredAt or origin.hiddenAt < originIndex.retiredAt then
+            originIndex.retiredAt = origin.hiddenAt
+        end
         data.origin = nil
     end
 
@@ -706,6 +710,10 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             RefreshPlate(plate, data, now, force, geometry)
         end
         local count, kept = table.getn(origins), 0
+        -- Live origins never expire. Only revisit the catalog after its earliest
+        -- real retirement can pass the original strict retention boundary.
+        if not originIndex.retiredAt or now - originIndex.retiredAt <= RECENT_PLATE_TIME then return end
+        originIndex.retiredAt = nil
         for index = 1, count do
             local origin = origins[index]
             if not origin.live and now - (origin.hiddenAt or origin.lastSeen) > RECENT_PLATE_TIME then
@@ -713,6 +721,12 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             else
                 kept = kept + 1
                 if kept ~= index then origins[kept] = origin end
+                if not origin.live then
+                    local retiredAt = origin.hiddenAt or origin.lastSeen
+                    if not originIndex.retiredAt or retiredAt < originIndex.retiredAt then
+                        originIndex.retiredAt = retiredAt
+                    end
+                end
             end
         end
         for index = kept + 1, count do
