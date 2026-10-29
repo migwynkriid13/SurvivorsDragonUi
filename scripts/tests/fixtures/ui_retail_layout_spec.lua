@@ -2,6 +2,24 @@
 local H = dofile("scripts/tests/fixtures/ui_helpers.lua")
 local context = H.New()
 local env = context.env
+local createObject = context.Object
+function context:Object(...)
+    local object = createObject(self, ...)
+    if object.kind == "FontString" then
+        -- Retain native write accounting while exposing label anchors to the
+        -- same paired-option geometry assertions used for frame controls.
+        local setPoint, clearPoints = object.SetPoint, object.ClearAllPoints
+        function object:SetPoint(...)
+            setPoint(self, ...)
+            self.point = { ... }
+        end
+        function object:ClearAllPoints()
+            clearPoints(self)
+            self.point = nil
+        end
+    end
+    return object
+end
 assert(_VERSION == "Lua 5.1", "retail Layout fixtures require CI Lua 5.1")
 local function Geometry(object)
     -- Native dimensions are independent of Lua fields such as the numeric
