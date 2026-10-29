@@ -16,6 +16,20 @@ The popup/form, manager and native input handlers are pooled; leaving the mode
 closes their input and stops any active window drag. No saved window position or
 new SavedVariable is introduced. Existing Layout records remain absolute.
 
+When the numeric form moves between settings and the selected-frame popup, it
+aligns its existing child frames above the new parent's drawing level and
+explicitly restores visibility. Legacy reparenting alone leaves child levels
+behind and can leave an effectively hidden form invisible. The form and input
+boxes are reused; draft, Apply and Save/Cancel behavior stays shared.
+
+The compatibility reference is the native
+[frame reparenting implementation](https://github.com/samwhosung/benilla/blob/3ae988ab1748149a10977093da909722d3a2e674/crates/benilla-ui/src/widget/propagation.rs#L334)
+and its
+[non-propagating script level setter](https://github.com/samwhosung/benilla/blob/3ae988ab1748149a10977093da909722d3a2e674/crates/benilla-ui/src/script/object/frame_state.rs#L326).
+This source reference does not identify the packaged client's exact revision;
+CI-only mocks cover the explicit hidden/reparent/layer boundaries without
+launching the game.
+
 ### Dragonflight movement reference
 
 The behavior reference is [Dragonflight 10.2.7 EditModeSystemTemplates.lua](https://github.com/Gethe/wow-ui-source/blob/6b65c2922baca3db5a28fb39b69c95cef1047bec/Interface/AddOns/Blizzard_EditMode/Mainline/EditModeSystemTemplates.lua)

@@ -191,8 +191,10 @@ Display/SCT settings listeners defer hidden windows and unselected pages before
 value formatting and drawing. Page Show catches up from current settings through
 the existing listeners. Hidden Profiles also defers listing/sorting and row
 painting until its existing Show callback. Dependency input/alpha and checkbox states skip unchanged
-writes. The font sample checks its page, since its source FontString is deliberately
-hidden behind the rendered parts; hidden categories do no sample font assignment,
+writes. Live run-caption updates first check that the lazy sample clock exists;
+an open shell does not imply a prepared timer page. The font sample checks its
+page, since its source FontString is deliberately hidden behind the rendered
+parts; hidden categories do no sample font assignment,
 measurement or painting. Visible samples cache face/size/outline/shadow/language,
 retaining scale/readiness checks through the existing clock owner. No new updater
 or gameplay preference is added. Failed native sample font assignments do not
@@ -265,6 +267,14 @@ corner/side grips prepare only when that mode first needs them and actually hide
 and stop input in moving mode. Selection, focus, drag completion, mode changes,
 manager close and world/logout/reload cleanup retire their input correctly.
 Normal and Performance Mode use the same non-animated presentation.
+
+Numeric-form transfers explicitly restore effective visibility and align existing
+child frame levels above the new parent. The bounded child walk runs only during
+form preparation or an explicit selection/mode transfer; unchanged layers skip
+writes. Returning to settings lowers the same controls to that parent's layer.
+This adds no frame, region, animation, event, updater, asset or saved state in
+either mode. CI-only mocks model legacy reparenting's root-only level changes
+and hidden visibility, without claiming live rendering verification.
 
 Each edit handle now has nine authored selection regions, using real retail
 blue/gold pixels and changed-only state UVs. Selection and snap bounds share a

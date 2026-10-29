@@ -1371,9 +1371,7 @@ DFRL:NewMod("RunTimers", 5, function()
         bossClock.option = remaining ~= nil and "bossCountdown" .. mode or nil
         bossClock.remaining = remaining
         RefreshTimerCaptions()
-        if fontEditor and fontEditor:IsShown() and fontSample:GetParent():IsVisible() then
-            RefreshClockLabel(fontSampleClock)
-        end
+        if fontSampleClock and fontSample:GetParent():IsVisible() then RefreshClockLabel(fontSampleClock) end
     end
 
     local function FontEditorLabel(parent, text, x, y, size)
