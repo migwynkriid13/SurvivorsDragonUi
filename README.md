@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/0d6d1b20-c97e-47e5-b5d5-9511bfa1aeff" alt="SurvivorsDragonUi dragon crest" width="128" height="128" />
+</p>
+
 # SurvivorsDragonUi
 
 [![For Azeroth Survivors](https://img.shields.io/badge/Azeroth_Survivors-UI_addon-c9a55c?style=flat-square&labelColor=25282d)](https://github.com/migwynkriid13/SurvivorsDragonUi/releases/latest)
