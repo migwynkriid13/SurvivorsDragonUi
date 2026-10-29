@@ -909,6 +909,7 @@ DFRL:NewMod("Waypoints", 3, function()
                 tracker.hudWanted = false
                 tracker.hud:Hide()
             end
+            if tracker.pointer:IsShown() then tracker.pointer:Hide() end
             return
         end
         if not tracker.hudWanted then
@@ -917,6 +918,7 @@ DFRL:NewMod("Waypoints", 3, function()
         end
         if not tracker.hud:IsVisible() then
             tracker.presentation = nil
+            if tracker.pointer:IsShown() then tracker.pointer:Hide() end
             return
         end
         elapsed = elapsed or 0
