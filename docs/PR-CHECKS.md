@@ -84,6 +84,16 @@ The assertions cover:
   lazy Chat time and observed/unreported tooltip owners. These fixtures are
   authored for CI and were not run locally; no live rendering/FPS is inferred.
 
+- Fallen-ally waypoint mocks load the production controller with explicit
+  native roster boundaries and check dead/alive/ghost/disconnect retirement,
+  slot changes during reads, literal native names, nearest/stable selection,
+  hidden/off sampling, display preview/Confirm/Cancel/profile/reset, world and
+  phase cleanup, missing getters and stationary work in Performance Mode.
+  Navigation cases reject missing/invalid and foreign-sheet party coordinates;
+  shared pin cases cover four edge indicators, changed-only writes and reuse.
+  These tests remain CI-only; local work uses source review, artwork preparation
+  and pinned formatting, with no addon/game execution or Actions polling.
+
 - Cadence-cleanup production mocks cover event-driven low-health eligibility
   with unchanged active pulse equations, idle versus editing Layout geometry,
   settled language/cooldown detachment and rearming, actual tooltip/target color

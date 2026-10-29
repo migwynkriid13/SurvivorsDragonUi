@@ -47,6 +47,10 @@
     "media/tex/xprep/main.tga": {
       "output": "media/tex/xprep/main_soft.blp",
       "reason": "Original XP fill used to prepare main_soft; see third_party/XPBar-ANIMATION.md."
+    },
+    "media/tex/waypoint/FallenAlly.tga": {
+      "output": "media/tex/waypoint/FallenAlly.blp",
+      "reason": "Full original Blizzard Dragonflight Winged Soul glyph, preserved losslessly; provenance in third_party/CacheWaypoints-ARTWORK.md."
     }
   }
 }

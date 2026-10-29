@@ -204,6 +204,62 @@ assert(tracker.minimapPins[entry.key].timer:GetText() == "0:24", "failed timer t
 print("PASS guardian timer defaults, drafts, native timing, idle work, lazy pooling and retirement")
 
 do
+    local party = {
+        kind = "party",
+        displayKey = "partyGuidance",
+        hudArt = "FallenAlly.blp",
+        hudTexCoord = { 0, 1, 0, 1 },
+        minimapPins = {},
+        minimapPool = {},
+        minimapCycle = 0,
+        entries = {},
+    }
+    for index = 1, 4 do
+        party.entries[index] = { key = "party" .. index, x = 100 * index, y = 50 * index }
+    end
+    Update(party, 1, 40, true)
+    local first = party.minimapPins.party1
+    assert(first and first.drawnX == 40 and first.drawnY == 20, "distant fallen ally did not clamp to the minimap edge")
+    assert(first:GetWidth() == 20 and not first.check and not first.timer, "fallen ally inherited guardian decorations")
+    assert(party.entries[1].x == 100, "pin placement changed native destination data")
+    local allocations = #context.objects
+    context:ResetCounts()
+    Update(party, 1, 40, true)
+    context:NoPresentationWrites()
+    assert(
+        #context.objects == allocations and not context.reads.clock,
+        "unchanged party pins allocated or read respawn time"
+    )
+    for index = 1, 4 do
+        party.entries[index] = { key = "replacement" .. index, x = 20, y = 10 }
+    end
+    Update(party, 1, 40, true)
+    assert(#context.objects == allocations and #party.minimapPool == 0, "a replaced roster expanded the four-pin pool")
+    party.entries[1].x = nil
+    Update(party, 1, 40, true)
+    assert(not party.minimapPins.replacement1, "failed geometry retained a pre-recycled party pin")
+    party.entries[1].x = 20
+    Update(party, 1, 40, true)
+    assert(#context.objects == allocations, "recovered geometry expanded the pin pool")
+    party.entries = {}
+    Update(party, 1, 40, true)
+    assert(
+        not next(party.minimapPins) and #party.minimapPool == 4 and not first:IsShown(),
+        "retired party pins were not recycled"
+    )
+    party.entries = { { key = "replacement", x = 0, y = 0 } }
+    Update(party, 1, 40, true)
+    assert(
+        party.minimapPins.replacement and #context.objects == allocations,
+        "replacement member bypassed the existing pin pool"
+    )
+    display.Set("partyGuidance", false)
+    Update(party, 1, 40, true)
+    assert(not next(party.minimapPins), "disabled party guidance retained its minimap pin")
+    print("PASS four Winged Soul minimap pins share edge clamping, unchanged writes and retirement pooling")
+end
+
+do
     local navigationContext = H.New()
     local native = navigationContext.env
     local currentPhase, browsing, mapName, playerX, playerY = "playing", false, "CurrentZone", 0.5, 0.5

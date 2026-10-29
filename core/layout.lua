@@ -39,6 +39,7 @@ DFRL:NewMod("Layout", 0, function()
         minimap = "Minimap",
         cacheWaypoint = "Cache waypoint",
         guardianWaypoint = "Guardian waypoint",
+        partyWaypoint = "Fallen ally waypoint",
         guardianTracker = "Guardian tracker",
         damageMeter = "DPS meter",
         sctMSBT = "MSBT-style scrolling",

@@ -4,6 +4,28 @@ The tracked-map and navigation textures use Blizzard World of Warcraft artwork d
 
 Original artwork and World of Warcraft are copyright Blizzard Entertainment. The mirror provides access to the source files; this attribution does not assert a separate redistribution license.
 
+## Selected 02 Winged Soul
+
+The fallen-ally HUD and minimap use Blizzard's original **Raid-Icon-Rez** glyph
+from the early Dragonflight **10.0.0 (45454)** texture snapshot, Gethe commit
+`e80e3278cc833c89e1f3fc79557b68315d750935`:
+[RAIDFRAME/Raid-Icon-Rez.PNG](https://raw.githubusercontent.com/Gethe/wow-ui-textures/e80e3278cc833c89e1f3fc79557b68315d750935/RAIDFRAME/Raid-Icon-Rez.PNG).
+The downloaded PNG SHA-256 is
+`52a1a0d74736d71335a2342830cb14a46bfdc2937c96a187da50cb6eaa5d134c`.
+
+The complete 64 × 64 canvas and RGBA pixels are retained: full UVs `(0, 1, 0, 1)`,
+without cropping, tinting or resampling. Visible alpha occupies `[4, 0, 60, 60)`.
+`media/tex/waypoint/FallenAlly.tga` is the lossless authoring source;
+`scripts/prepare_client_textures.py` prepares `FallenAlly.blp` for runtime. Only
+the BLP ships. It draws at 32 units in the HUD and 20 on the minimap.
+
+[Dragonflight CompactUnitFrame.lua](https://github.com/Gethe/wow-ui-source/blob/88f272e94c202ecbe11fa44945f6035c65c15176/Interface/AddOns/Blizzard_UnitFrame/Mainline/CompactUnitFrame.lua#L1283)
+uses `Interface\\RaidFrame\\Raid-Icon-Rez` for incoming resurrection. This addon
+reuses the glyph as a fallen-ally waypoint; its presence does not mean someone is
+already resurrecting that member. The design name **Winged Soul** labels the
+user-selected proposal, rather than an official atlas name. Blizzard retains
+the artwork copyright; the public mirror supplies no additional artwork license.
+
 ## Pinned texture sources
 
 The cache/navigation texture mirror snapshot used here is `9.2.7 (45114)`, commit `d23deaf8f44a7d280dc974a5c9d5321c013db59b`. Dragonflight's UI source still names the corresponding waypoint and navigation atlases; see the pinned Dragonflight references below. Those source texture files are from this earlier retail snapshot. The guardian medallion uses the separate pinned game-art source below.

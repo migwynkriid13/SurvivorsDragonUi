@@ -1603,6 +1603,16 @@ DFRL:NewMod("RunTimers", 5, function()
                         "Mirror guardian waypoint",
                         "Move the arrow to the left and the icon to the right.",
                     },
+                    {
+                        "partyGuidance",
+                        "Fallen ally guidance",
+                        "Show the direction and distance to a fallen party member.",
+                    },
+                    {
+                        "mirrorPartyWaypoint",
+                        "Mirror fallen ally waypoint",
+                        "Move the arrow to the left and the icon to the right.",
+                    },
                 },
             },
             {

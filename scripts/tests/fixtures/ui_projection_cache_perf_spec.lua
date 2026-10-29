@@ -150,6 +150,45 @@ reads = 0
 nav.GuideDelta(point)
 nav.GuideDelta(point)
 assert(reads == 2, "failed callback left ordinary callers memoized")
+
+-- Remote native map UVs require the same confirmed current sheet as the
+-- player, even with a world projector present. They never gain world XY.
+phase, browsing, mapName, continent, mapZone = "playing", false, "CurrentZone", 1, 1
+playerX, playerY = 0.5, 0.5
+local partyX, partyY, partyReads = 0.6, 0.4, 0
+env.GetPlayerMapPosition = function(unit)
+    if unit == "player" then return playerX, playerY end
+    assert(unit == "party1", "unexpected native party token")
+    partyReads = partyReads + 1
+    return partyX, partyY
+end
+nav.Reset()
+nav.SetPoints("AZS_CHESTS", { point })
+local remote
+nav.WithSample(function()
+    local x, y, selection = nav.UnitMapPosition("party1")
+    assert(x == partyX and y == partyY and type(selection) == "string")
+    remote = { mx = x, my = y, mapSelection = selection }
+    local e, n, _, calibrated = nav.GuideDelta(remote)
+    assert(calibrated and math.abs(e - 100) < 0.000001 and math.abs(n - 50) < 0.000001)
+end)
+for _, invalid in ipairs({ { 0, 0 }, { -0.1, 0.5 }, { 1.1, 0.5 }, { 0.5, math.huge }, { 0 / 0, 0.5 } }) do
+    partyX, partyY = unpack(invalid)
+    assert(nav.UnitMapPosition("party1") == nil, "invalid native party UV became a destination")
+end
+partyX, partyY = 0.6, 0.4
+browsing, mapName, partyReads = true, "AnotherZone", 0
+assert(nav.UnitMapPosition("party1") == nil and partyReads == 0, "foreign map lent its UVs to a party member")
+assert(nav.GuideDelta(remote) == nil, "retired map-only destination borrowed world fallback coordinates")
+browsing, mapName, continent, mapZone = false, "CurrentZone", -1, 0
+assert(nav.UnitMapPosition("party1") ~= nil)
+assert(nav.GuideDelta(remote) == nil, "same-label different-area selection retained a remote UV")
+playerX, playerY, partyReads = 0, 0, 0
+assert(nav.UnitMapPosition("party1") == nil and partyReads == 0, "missing player position used remote UVs")
+playerX, playerY = 0.5, 0.5
+env.GetPlayerMapPosition = function() error("native map getter unavailable") end
+assert(nav.UnitMapPosition("party1") == nil, "a failed map read became a party destination")
+assert(remote.x == nil and remote.y == nil, "map-only party data invented world coordinates")
 print(
     "PASS exact accepted destination projections share only successful same-pass reads with fresh movement and lifecycle retry"
 )

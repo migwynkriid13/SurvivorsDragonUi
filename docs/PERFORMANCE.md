@@ -1016,6 +1016,23 @@ No drawing, intake identity or queue-limit behavior changes.
 
 ### Rounded waypoint labels
 
+The fallen-ally extension adds one shared 190-by-46 HUD frame, two texture
+regions (the bound-once Winged Soul icon and existing direction arrow) and two
+font strings. Its static icon is identical in Performance Mode; it adds no
+cosmetic animation, event, controller, updater or SavedVariable. The existing
+ten-Hz/deferred waypoint refresh checks at most four native party slots, skipping
+all party reads while its guidance is disabled. Live map records reuse one
+bounded array and up to four point tables; retirement clears entries without
+persisting locations. Missing geometry does not guess a location.
+
+Each eligible member can lazily allocate one existing pooled minimap pin frame
+and one static texture, at most four active/pooled pins for this tracker. There
+are no party respawn labels, checkmarks, hover handlers or world overlays. The
+shared per-frame projection/arrow path uses the latest native sample and retains
+changed-only label/placement writes. CI-only production mocks cover roster and
+display transitions, stationary work, location loss and pin reuse. These are
+source/fixture claims, not measured rendering or FPS improvements.
+
 The waypoint HUDs no longer allocate or draw their decorative bottom stripes.
 Removing the shared `FloatingRail` helper and its construction call removes one
 `WHITE8X8` texture region per guide, two across Cache and Guardian. This is a
