@@ -1,5 +1,117 @@
 setfenv(1, DFRL:GetEnv())
 
+-- One native-circle compatibility path for pet and meter image textures.
+-- The caller retains its portrait geometry, rim, metadata and visibility policy.
+function DFRL.tools.NewCircularIcon(portrait, size, minimumParts)
+    local image, strips = {}, {}
+    local parent, radius = portrait:GetParent(), size / 2
+    local iconPath, native, failedIcon, scale, used
+    local function ClearStrips()
+        for _, strip in ipairs(strips) do
+            if strip.boundTexture then strip:SetTexture(nil) end
+            strip.boundTexture = nil
+            if strip:IsShown() then strip:Hide() end
+        end
+    end
+    local function ClearPortrait()
+        if portrait:GetTexture() then portrait:SetTexture(nil) end
+        if portrait:IsShown() then portrait:Hide() end
+        native = false
+    end
+    function image.Clear()
+        ClearPortrait()
+        ClearStrips()
+        iconPath, failedIcon = nil, nil
+    end
+    local function BindPortrait(icon)
+        _G.SetPortraitToTexture(portrait:GetName(), icon)
+        local assigned = portrait:GetTexture()
+        return assigned == icon or assigned == string.gsub(icon, "%.[^%.]*$", "")
+    end
+    function image.Bind(icon, effectiveScale)
+        if not icon then
+            image.Clear()
+            return false
+        end
+        if native and iconPath == icon then return true end
+        effectiveScale = effectiveScale or parent:GetEffectiveScale()
+        if type(effectiveScale) ~= "number" or effectiveScale - effectiveScale ~= 0 or effectiveScale <= 0 then
+            image.Clear()
+            return false
+        end
+        if iconPath == icon and T.NearlyEqual(scale, effectiveScale) then return true end
+        if failedIcon ~= icon and type(_G.SetPortraitToTexture) == "function" then
+            local ok, bound = pcall(BindPortrait, icon)
+            if ok and bound then
+                ClearStrips()
+                if not portrait:IsShown() then portrait:Show() end
+                iconPath, native, failedIcon = icon, true, nil
+                return true
+            end
+            failedIcon = icon
+        end
+        ClearPortrait()
+        iconPath = nil
+        if not T.NearlyEqual(scale, effectiveScale) then
+            local parts = math.max(minimumParts or 2, math.ceil(size * effectiveScale))
+            local step = size / parts
+            used = 0
+            for part = 1, parts do
+                local top, bottom = (part - 1) * step, part * step
+                local edge = math.max(math.abs(top - radius), math.abs(bottom - radius))
+                local half = math.sqrt(math.max(0, radius * radius - edge * edge))
+                if half > 0 then
+                    used = used + 1
+                    local strip = strips[used]
+                    if not strip then
+                        strip = parent:CreateTexture(nil, "ARTWORK")
+                        strip:Hide()
+                        strips[used] = strip
+                    end
+                    strip:ClearAllPoints()
+                    strip:SetPoint("TOPLEFT", portrait, "TOPLEFT", radius - half, -top)
+                    strip:SetWidth(half * 2)
+                    strip:SetHeight(step)
+                    strip:SetTexCoord((radius - half) / size, (radius + half) / size, top / size, bottom / size)
+                end
+            end
+            scale = effectiveScale
+        end
+        local usable = true
+        local stem = string.gsub(icon, "%.[^%.]*$", "")
+        for index, strip in ipairs(strips) do
+            if index <= used then
+                if strip.boundTexture ~= icon then
+                    strip.boundTexture = nil
+                    local loaded = strip:SetTexture(icon)
+                    local assigned = strip:GetTexture()
+                    if loaded ~= false and (loaded == true or loaded == 1 or assigned == icon or assigned == stem) then
+                        strip.boundTexture = icon
+                    else
+                        strip:SetTexture(nil)
+                    end
+                end
+                if not strip.boundTexture then usable = false end
+            else
+                if strip.boundTexture then strip:SetTexture(nil) end
+                strip.boundTexture = nil
+                if strip:IsShown() then strip:Hide() end
+            end
+        end
+        for index = 1, used do
+            local strip = strips[index]
+            if usable then
+                if not strip:IsShown() then strip:Show() end
+            elseif strip:IsShown() then
+                strip:Hide()
+            end
+        end
+        if usable then iconPath = icon end
+        return usable
+    end
+    return image
+end
+
 function DFRL.tools.StyleMinimapZoomButton(button, name)
     local path = DFRL:GetInfoOrCons("tex") .. "minimap\\" .. name
     button:SetAlpha(1)
@@ -42,7 +154,31 @@ function DFRL.tools.StyleEncounterHealth(bar, label)
     label:SetTextColor(1, 1, 1)
 end
 
-function DFRL.tools.EncounterHealthText(current, maximum, showCurrent, showMaximum, cache)
+function DFRL.tools.EncounterHealthText(current, maximum, showCurrent, showMaximum, cache, shorten, showPercentage)
+    shorten = shorten ~= false
+    local percentage
+    if showPercentage == true then
+        if cache and cache.encounterPercentCurrent == current and cache.encounterPercentMaximum == maximum then
+            percentage = cache.encounterPercentage
+        elseif
+            type(current) == "number"
+            and current >= 0
+            and current - current == 0
+            and type(maximum) == "number"
+            and maximum > 0
+            and maximum - maximum == 0
+        then
+            percentage = math.floor(math.max(0, math.min(1, current / maximum)) * 100 + 0.5)
+        end
+    end
+    -- Keep only the latest percentage basis, even when rounding keeps the same
+    -- caption. Off does no division and releases those optional cache values.
+    if cache then
+        local percentCurrent = showPercentage == true and current or nil
+        local percentMaximum = showPercentage == true and maximum or nil
+        if cache.encounterPercentCurrent ~= percentCurrent then cache.encounterPercentCurrent = percentCurrent end
+        if cache.encounterPercentMaximum ~= percentMaximum then cache.encounterPercentMaximum = percentMaximum end
+    end
     if showCurrent == false then current = nil end
     if showMaximum == false then maximum = nil end
     if
@@ -50,19 +186,24 @@ function DFRL.tools.EncounterHealthText(current, maximum, showCurrent, showMaxim
         and cache.encounterText ~= nil
         and cache.encounterCurrent == current
         and cache.encounterMaximum == maximum
+        and cache.encounterShortHealth == shorten
+        and cache.encounterPercentage == percentage
     then
         return cache.encounterText
     end
-    local text = current and T.CompactHealth(current) or ""
-    if maximum then text = text .. (current and " / " or "") .. T.CompactHealth(maximum) end
+    local text = current and T.CompactHealth(current, shorten) or ""
+    if maximum then text = text .. (current and " / " or "") .. T.CompactHealth(maximum, shorten) end
+    if percentage then text = text .. (text ~= "" and " (" or "") .. percentage .. "%" .. (text ~= "" and ")" or "") end
     if cache then
         cache.encounterCurrent, cache.encounterMaximum, cache.encounterText = current, maximum, text
+        cache.encounterShortHealth = shorten
+        cache.encounterPercentage = percentage
     end
     return text
 end
 
-function DFRL.tools.SetEncounterHealthText(label, current, maximum, showCurrent, showMaximum)
-    local text = T.EncounterHealthText(current, maximum, showCurrent, showMaximum, label)
+function DFRL.tools.SetEncounterHealthText(label, current, maximum, showCurrent, showMaximum, shorten, showPercentage)
+    local text = T.EncounterHealthText(current, maximum, showCurrent, showMaximum, label, shorten, showPercentage)
     T.SetTextIfChanged(label, text)
     if text == "" then
         if label:IsShown() then label:Hide() end
@@ -72,7 +213,8 @@ function DFRL.tools.SetEncounterHealthText(label, current, maximum, showCurrent,
 end
 
 -- Retail-style decimal tiers; presentation only, never a health calculation.
-function DFRL.tools.CompactHealth(value)
+function DFRL.tools.CompactHealth(value, shorten)
+    if shorten == false or value < 1000 then return string.format("%.0f", math.floor(value)) end
     local divisor, suffix
     if value >= 1000000000000 then
         divisor, suffix = 1000000000000, "T"
@@ -80,10 +222,8 @@ function DFRL.tools.CompactHealth(value)
         divisor, suffix = 1000000000, "B"
     elseif value >= 1000000 then
         divisor, suffix = 1000000, "M"
-    elseif value >= 1000 then
-        divisor, suffix = 1000, "K"
     else
-        return string.format("%.0f", math.floor(value))
+        divisor, suffix = 1000, "K"
     end
     local scaled = math.floor(value / (divisor / 10)) / 10
     return string.format(scaled == math.floor(scaled) and "%.0f" or "%.1f", scaled) .. suffix
@@ -135,7 +275,7 @@ function DFRL.tools.BindUnitHealthText(bar, label, unit, hideDead)
     local labels = { percentage = percentage }
     local leftInset, rightInset, centerOffset = 0, 0, 0
     local splitLayout
-    local previousCurrent, previousMaximum, previousValueShown, previousPercentShown
+    local previousCurrent, previousMaximum, previousValueShown, previousPercentShown, previousShortHealth
     local valueText, percentText = "", ""
 
     function labels.Update()
@@ -143,6 +283,7 @@ function DFRL.tools.BindUnitHealthText(bar, label, unit, hideDead)
         local current, maximum
         local valueShown = DFRL.display.Get("showHealthValue")
         local percentShown = DFRL.display.Get("showHealthPercentage")
+        local shorten = DFRL.display.Get("unitShortHealth") ~= false
         if UnitExists(unit) and not (hideDead and (UnitIsDead(unit) or UnitIsGhost(unit))) then
             current, maximum = T.GetUnitHealth(unit, not percentShown)
             if type(current) ~= "number" or current < 0 or current - current ~= 0 then current = nil end
@@ -152,10 +293,12 @@ function DFRL.tools.BindUnitHealthText(bar, label, unit, hideDead)
             or maximum ~= previousMaximum
             or valueShown ~= previousValueShown
             or percentShown ~= previousPercentShown
+            or shorten ~= previousShortHealth
         then
             previousCurrent, previousMaximum = current, maximum
             previousValueShown, previousPercentShown = valueShown, percentShown
-            valueText = current and valueShown and T.CompactHealth(current) or ""
+            previousShortHealth = shorten
+            valueText = current and valueShown and T.CompactHealth(current, shorten) or ""
             percentText = ""
             if current and percentShown and type(maximum) == "number" and maximum > 0 and maximum - maximum == 0 then
                 percentText = tostring(math.floor(math.min(1, current / maximum) * 100 + 0.5)) .. "%"

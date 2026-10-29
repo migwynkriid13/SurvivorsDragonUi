@@ -33,6 +33,55 @@ class SourceContractTests(unittest.TestCase):
         result = self.scan('DFRL.display.Set("enabled", true)')
         self.assertEqual(result["unusedSettings"], ["enabled"])
 
+    def test_native_closure_limit_accepts_32_and_rejects_33_distinct_bindings(self):
+        for count in (32, 33):
+            names = ", ".join(f"value{index}" for index in range(count))
+            source = f"local {names}\nreturn function() return {names}, value0 end"
+            result = self.scan(source)
+            failures = [row for row in result["failures"] if "upvalues" in row]
+            self.assertEqual(len(failures), int(count > 32))
+            if failures:
+                self.assertIn("captures 33 upvalues (limit 32)", failures[0])
+
+    def test_deeper_closure_captures_are_carried_by_intermediate_closures(self):
+        names = ", ".join(f"value{index}" for index in range(33))
+        result = self.scan(f"local {names}\nreturn function() return function() return {names} end end")
+        self.assertEqual(sum("captures 33 upvalues" in row for row in result["failures"]), 2)
+
+    def test_field_names_globals_and_current_function_locals_are_not_upvalues(self):
+        names = ", ".join(f"value{index}" for index in range(40))
+        fields = ", ".join(f"value{index} = outside.value{index}" for index in range(40))
+        source = f"""local {names}
+return function()
+  local {names}
+  return {names}, {{ {fields} }}
+end"""
+        self.assertEqual(self.scan(source)["failures"], [])
+
+    def test_block_bindings_remain_distinct_and_initializers_keep_outer_scope(self):
+        locals_ = ", ".join(f"value{index}" for index in range(31))
+        source = f"""local {locals_}, value
+do
+  local read = function() return {locals_}, value end
+  local value = function() return {locals_}, value, read end
+end"""
+        result = self.scan(source)
+        self.assertEqual(sum("captures 33 upvalues" in row for row in result["failures"]), 1)
+
+    def test_native_method_self_varargs_loops_and_repeat_scopes(self):
+        source = '''local object = {}
+function object:Read(...)
+  local callbacks = {}
+  for index = 1, 2 do callbacks[index] = function() return self, arg, index end end
+  for key, value in pairs(object) do callbacks[key] = function() return value end end
+  repeat
+    local ready = true
+    callbacks.check = function() return ready end
+  until ready
+  return callbacks
+end'''
+        self.assertEqual(self.scan(source)["failures"], [])
+
     def test_comments_cannot_keep_settings_or_captions_alive(self):
         result = self.scan('-- DFRL.display.Get("enabled"); "Old caption"', captions=["Old caption"])
         self.assertEqual(result["unusedSettings"], ["enabled"])
@@ -48,6 +97,26 @@ class SourceContractTests(unittest.TestCase):
         result = self.scan('DFRL.display.Get("typo"); T.MisspelledHelper()')
         self.assertTrue(any("unknown setting typo" in row for row in result["failures"]))
         self.assertTrue(any("unknown shared API DFRL.tools.MisspelledHelper" in row for row in result["failures"]))
+
+    def test_defaults_driven_normalization_requires_a_complete_matching_copy(self):
+        original = 'local function Normalize(source) return { enabled = Read(source, "enabled") } end'
+        copy = '''local function Normalize(source)
+    local result = {}
+    for key in pairs(defaults) do result[key] = Read(source, key) end
+    return result
+end'''
+        display = DISPLAY.replace(original, copy)
+        self.assertEqual(self.scan('DFRL.display.Get("enabled")', display=display)["failures"], [])
+        for broken in (
+            copy.replace('pairs(defaults)', 'pairs(source)'),
+            copy.replace('Read(source, key)', 'Read(source, "retired")'),
+            copy.replace('result[key] =', 'result.other ='),
+            copy.replace('return result', 'return {}'),
+            copy.replace('result[key] = Read(source, key)', 'if source[key] then result[key] = Read(source, key) end'),
+        ):
+            with self.subTest(broken=broken):
+                result = self.scan('', display=DISPLAY.replace(original, broken))
+                self.assertTrue(any("missing from Normalize" in row for row in result["failures"]))
 
     def test_duplicate_modules_and_undefined_callbacks_fail(self):
         result = self.scan('''

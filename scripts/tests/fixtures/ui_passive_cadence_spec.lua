@@ -105,6 +105,7 @@ do
         return object
     end
     function env.UIParent:GetEffectiveScale() return 1 end
+    context:Load("core/hud.lua")
     context:Load("modules/ui/levels.lua", "StoredLevels")
     local button = env.SurvivorsDragonUiStoredLevels
     local controller = context:Controller("PLAYER_ENTERING_WORLD")
@@ -167,6 +168,15 @@ do
     context:SetLayoutHidden(false)
     Tick()
     assert(label:GetText() == "4" and context.reads.formats == 1, "Show did not present the latest native count")
+    context.count, context.rejectHud = 0, true
+    Tick()
+    assert(not button:IsShown() and context.nativeShown == false, "failed restore showed a stale replacement")
+    context.rejectHud = false
+    Tick()
+    assert(context.nativeShown == true, "a no-op native restore discarded its retry target")
+    context.count = 4
+    Tick()
+    assert(button:IsVisible() and context.nativeShown == false, "restore retry prevented later takeover")
     context:Event(controller, "PLAYER_LEAVING_WORLD")
     assert(not controller:GetScript("OnUpdate"), "stored levels retained their out-of-world updater")
     context:ResetCounts()

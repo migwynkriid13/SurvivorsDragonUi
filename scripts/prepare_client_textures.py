@@ -14,10 +14,9 @@ import struct
 
 ROOT = Path(__file__).resolve().parents[1]
 TARGET_HEALTH = "media/tex/unitframes/UI-HUD-UnitFrame-TargetofTarget-PortraitOn-Bar-Health"
-# The original BLP and TGA have the same stem but distinct callers and pixels.
+# The original pet BLP and retained compact-fill TGA have distinct pixels.
 TGA_SOURCES = {
     TARGET_HEALTH + ".blp": None,
-    TARGET_HEALTH + "Fill.blp": TARGET_HEALTH + ".tga",
 }
 
 

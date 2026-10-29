@@ -51,7 +51,8 @@ DFRL:NewMod("StoredLevels", 5, function()
     }
     local PHASES = { playing = true, choosing = true, paused = true }
     local inWorld, editing, reloading, elapsed = true, false, false, 0
-    local nativePreference, retiredRun
+    local nativeOwner = T.NewHudOwner("levels")
+    local retiredRun
     local button = CreateFrame("Button", "SurvivorsDragonUiStoredLevels", UIParent)
     button:SetHeight(HEIGHT * VISUAL_SCALE)
     button:SetFrameStrata("HIGH")
@@ -228,22 +229,8 @@ DFRL:NewMod("StoredLevels", 5, function()
         if received and PositiveInteger(count) then return count end
     end
 
-    local function RestoreNative()
-        if nativePreference == nil or type(AZS_SetHudShown) ~= "function" then return end
-        if pcall(AZS_SetHudShown, "levels", nativePreference) then nativePreference = nil end
-    end
-
-    local function HideNative()
-        if type(AZS_IsHudShown) ~= "function" or type(AZS_SetHudShown) ~= "function" then return false end
-        local ok, shown = pcall(AZS_IsHudShown, "levels")
-        -- An unknown HUD part returns nil on older clients. Never claim takeover.
-        if not ok or type(shown) ~= "boolean" then return false end
-        if nativePreference == nil then nativePreference = shown end
-        if not shown then return true end
-        if not pcall(AZS_SetHudShown, "levels", false) then return false end
-        local checked, current = pcall(AZS_IsHudShown, "levels")
-        return checked and current == false
-    end
+    local function RestoreNative() return nativeOwner.Release(true) end
+    local function HideNative() return nativeOwner.Acquire() end
 
     local displayed, paintedCrop = false, nil
     local displayedCount, displayedText

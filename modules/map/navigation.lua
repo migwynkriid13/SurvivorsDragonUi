@@ -4,7 +4,7 @@ DFRL:NewMod("Navigation", 2, function()
     local navigation = {}
     DFRL.navigation = navigation
     local phases = { playing = true, choosing = true, paused = true, victory = true }
-    local minimapLevels = { cache = 10, guardian = 11, player = 12 }
+    local minimapLevels = { cache = 10, guardian = 11, party = 12, player = 13 }
     local identity, expected, realZone, arrow
     local playerOverlay, playerTexture, playerSide, playerFacing
     local points = {}
@@ -210,6 +210,13 @@ DFRL:NewMod("Navigation", 2, function()
         end
         return x, y
     end
+    function navigation.UnitMapPosition(unit)
+        -- The player read confirms the current-zone sheet without moving an
+        -- open world map. Remote UVs are meaningful only on that same sheet.
+        if not navigation.Position() or type(GetPlayerMapPosition) ~= "function" then return end
+        local ok, x, y = pcall(GetPlayerMapPosition, unit)
+        if ok and Coordinates(x, y) and (x ~= 0 or y ~= 0) then return x, y, Selection() end
+    end
     local function ProjectWorld(map, x, y)
         local getter = GetWorldLocMapPosition
         if type(getter) ~= "function" then return end
@@ -244,8 +251,8 @@ DFRL:NewMod("Navigation", 2, function()
     local function Project(target)
         local zone = Context()
         if not zone or type(target) ~= "table" then return end
-        if type(GetWorldLocMapPosition) == "function" then
-            if not Number(target.x) or not Number(target.y) then return end
+        if target.mapSelection and target.mapSelection ~= Selection() then return end
+        if type(GetWorldLocMapPosition) == "function" and Number(target.x) and Number(target.y) then
             local x, y = ProjectWorld(zone.map, target.x, target.y)
             if x then return x, y end
         end
@@ -356,6 +363,7 @@ DFRL:NewMod("Navigation", 2, function()
         if type(target) ~= "table" then return end
         local x, y = navigation.Position()
         if not x then return end
+        if target.mapSelection and target.mapSelection ~= Selection() then return end
         local targetX, targetY = target.mx, target.my
         if type(GetWorldLocMapPosition) == "function" then
             local projectedX, projectedY = Project(target)

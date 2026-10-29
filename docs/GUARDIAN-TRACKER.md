@@ -19,22 +19,44 @@ in the same green instead of Due. This caption does not change native occupancy,
 the Show dead filter or health availability. Combat bars
 show native current / maximum health by default with the regular boss-bar red fill and white
 DEFAULT 12 text. Both views share `core/widgets.lua` style/text helpers; the
-tracker has no Fighting caption or percentage. Missing health stays text-only,
+tracker has no Fighting caption, and health percentages are off by default. Missing health stays text-only,
 and a prior bar is cleared when its row stops fighting or is filtered out.
 
 **Show current health** and **Show maximum health** in **Guardian tracker** are
 both on by default. Both on shows `current / maximum`; either alone shows its
-value without a slash. Both off hides only the health text, preserving the fill
+value without a slash. With percentages off, both off hides only the health text, preserving the fill
 and other guardian status captions. Boss bars has an independent pair of controls.
 The normalized `guardianShowCurrentHealth` / `guardianShowMaximumHealth` booleans
 use the existing display table, live preview, Confirm, Cancel/discard, profiles
 and both full resets. Missing or invalid values and resets use true.
 
+**Shorten health numbers** in `/sdui` → **Encounters** → **Guardian tracker** also
+defaults on. Off shows full whole-number health, such as `166983 / 331328`,
+without K/M/B/T suffixes or exponent notation. The independent `guardianShortHealth`
+boolean shares the same preview/save/discard/profile/reset lifecycle and true
+fallback. A format change clears the existing bounded health-measurement slots
+and reflows through the existing visible refresh. It adds no row, drawing region
+or updater; hidden trackers defer the work. Boss and unit-frame choices remain
+independent, and health visibility, values and fills stay intact.
+
 Health text caches use only the latest effective values. Width measurements
 reuse one current entry per copied roster slot and retry unavailable metrics;
-option, scale and language changes discard them. Both values off skips health
+option, scale and language changes discard them. All health text choices off skips health
 formatting and measurement and actually hides the existing health label.
 The pill's two end caps keep their minimum non-overlapping span.
+
+**Show health percentage** defaults off and uses normalized
+`guardianShowHealthPercentage` in the same display table and transaction.
+Missing/invalid values and both resets use false. On appends a rounded whole
+percentage to the existing label, such as `50 / 100 (50%)`; with both numeric
+values hidden it shows only `50%`. The ratio uses received full health before
+shortening or current/maximum hiding, clamps to 0–100%, and requires a finite
+nonnegative current value and finite positive maximum. It shares the existing
+pill, font, changed-text cache, measurement slots and visible controller. Turning
+off all three text choices hides only the label. Hidden views defer formatting
+and measurements; percentages add no gameplay frame, region, updater or asset.
+While enabled, the health column receives its measured text width within the
+existing saved tracker width, retaining the minimum name space and pill-cap span.
 
 Each existing row also caches its latest status caption by received lair key,
 status, rounded native respawn second and language. Repeated tenth-second

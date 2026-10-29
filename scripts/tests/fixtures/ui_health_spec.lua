@@ -78,7 +78,7 @@ local function Target(current, maximum)
     end
     context:Publish(current, maximum)
     context:ResetCounts()
-    return context, controller, bar, label, labels.percentage, loss, animator
+    return context, controller, bar, label, labels.percentage, loss, animator, labels
 end
 
 local function Encounter(kind, id, name, maximum, current, state)
@@ -420,6 +420,7 @@ Test("health labels use decimal K M B T tiers without changing the counters", fu
         { 70e12, "70T" },
     }) do
         assert(compact(row[1]) == row[2], "wrong compact tier for " .. tostring(row[1]))
+        assert(compact(row[1], false) == string.format("%.0f", row[1]), "full health used a suffix or exponent")
     end
     assert(context.env.T.EncounterHealthText(35e12, 70e12) == "35T / 70T")
 end)
@@ -433,6 +434,9 @@ Test("boss and guardian health choices default on and share display transactions
         "bossShowMaximumHealth",
         "guardianShowCurrentHealth",
         "guardianShowMaximumHealth",
+        "unitShortHealth",
+        "bossShortHealth",
+        "guardianShortHealth",
     }
     for _, key in ipairs(keys) do
         assert(display.Get(key) == true, key .. " did not default on")
@@ -462,15 +466,139 @@ Test("boss and guardian health choices default on and share display transactions
     end
 end)
 
+Test("boss and guardian percentage choices default off and share display transactions", function()
+    local context = H.New()
+    context:Load("core/display.lua", "Display")
+    local display = context.env.DFRL.display
+    local keys = { "bossShowHealthPercentage", "guardianShowHealthPercentage" }
+    for _, key in ipairs(keys) do
+        assert(display.Get(key) == false, "percentage did not default off")
+        assert(display.Copy({ [key] = "true" })[key] == false, "invalid percentage choice did not default off")
+        assert(display.Copy({ [key] = true })[key] == true, "explicit percentage choice was lost")
+        display.BeginEdit()
+        display.Set(key, true)
+        assert(display.Get(key) == true and not context.env.SurvivorsDragonUiDisplay, "percentage preview saved early")
+        for _, other in ipairs(keys) do
+            if other ~= key then assert(display.Get(other) == false, "percentage choices were coupled") end
+        end
+        display.FinishEdit(false)
+        assert(display.Get(key) == false, "percentage Cancel did not restore the saved choice")
+        display.BeginEdit()
+        display.Set(key, true)
+        display.FinishEdit(true)
+        assert(context.env.SurvivorsDragonUiDisplay[key] == true, "percentage Confirm did not save")
+        display.BeginEdit()
+        display.Load({ [key] = false })
+        assert(display.Get(key) == false, "profile percentage preview failed")
+        display.FinishEdit(false)
+        assert(display.Get(key) == true, "profile discard lost the saved percentage choice")
+        display.Reset()
+        for _, resetKey in ipairs(keys) do
+            assert(display.Get(resetKey) == false, "reset did not turn percentages off")
+        end
+    end
+end)
+
+Test("encounter percentages use full values and allow percentage-only labels", function()
+    local context = H.New()
+    context:Load("core/widgets.lua")
+    local tools = context.env.T
+    for _, choice in ipairs({
+        { true, true, "1.2K / 9.9K (13%)" },
+        { true, false, "1.2K (13%)" },
+        { false, true, "9.9K (13%)" },
+        { false, false, "13%" },
+    }) do
+        local text = tools.EncounterHealthText(1299, 9999, choice[1], choice[2], nil, true, true)
+        assert(text == choice[3], "percentage used rounded health or lost an independent visibility choice")
+    end
+    assert(
+        tools.EncounterHealthText(35e12, 70e12, true, true, nil, false, true) == "35000000000000 / 70000000000000 (50%)",
+        "full-number mode changed the percentage"
+    )
+    for _, row in ipairs({
+        { 0, 100, "0%" },
+        { 100, 100, "100%" },
+        { 120, 100, "100%" },
+        { -1, 100, "" },
+        { 50, 0, "" },
+        { 50, math.huge, "" },
+        { math.huge, 100, "" },
+        { 0 / 0, 100, "" },
+    }) do
+        assert(
+            tools.EncounterHealthText(row[1], row[2], false, false, nil, true, true) == row[3],
+            "invalid percentage boundary"
+        )
+    end
+    local label = context.env.UIParent:CreateFontString(nil, "OVERLAY")
+    tools.SetEncounterHealthText(label, 50.1, 100, false, false, true, true)
+    assert(label:GetText() == "50%" and label:IsShown(), "percentage-only health label stayed hidden")
+    context:ResetCounts()
+    tools.SetEncounterHealthText(label, 50.2, 100, false, false, true, true)
+    tools.SetEncounterHealthText(label, 50.2, 100, false, false, true, true)
+    context:NoPresentationWrites()
+    assert(label.encounterPercentCurrent == 50.2, "unchanged rounded percentage retained an old basis")
+    tools.SetEncounterHealthText(label, 50.2, 100, false, false, true, false)
+    assert(
+        not label:IsShown() and label.encounterPercentCurrent == nil,
+        "disabled percentage retained optional text/cache"
+    )
+end)
+
+Test("unit full-number preview preserves health and percentages and defers hidden labels", function()
+    local context, _, bar, label, percentage, _, _, labels = Target(166983, 331328)
+    local allocated, value, percent = #context.objects, bar:GetValue(), percentage:GetText()
+    assert(label:GetText() == "166.9K", "missing unit shortening choice did not retain the default")
+    context:SetSetting("unitShortHealth", false)
+    assert(label:GetText() == "166983" and percentage:GetText() == percent, "full units changed health percentage")
+    assert(bar:GetValue() == value and #context.objects == allocated, "format choice changed native health or regions")
+    context:ResetCounts()
+    context:SetSetting("unitShortHealth", false)
+    assert(not context.writes.SetText, "unchanged format repainted health text")
+    bar:Hide()
+    context:ResetCounts()
+    context:SetSetting("unitShortHealth", true)
+    assert(not context.writes.SetText, "hidden unit formatted or painted a choice change")
+    bar:Show()
+    labels.Update()
+    assert(label:GetText() == "166.9K" and bar:GetValue() == value, "shown unit did not resume the current format")
+end)
+
+Test("encounter format changes invalidate only presentation caches", function()
+    local context = H.New()
+    context:Load("core/widgets.lua")
+    local tools, cache = context.env.T, {}
+    assert(tools.EncounterHealthText(166983, 331328, true, true, cache) == "166.9K / 331.3K")
+    assert(
+        tools.EncounterHealthText(166983, 331328, true, true, cache, false) == "166983 / 331328",
+        "cache retained suffixes"
+    )
+    assert(
+        tools.EncounterHealthText(166983, 331328, true, true, cache, true) == "166.9K / 331.3K",
+        "cache retained full numbers"
+    )
+    local label = context.env.UIParent:CreateFontString(nil, "OVERLAY")
+    tools.SetEncounterHealthText(label, 35e12, 70e12, true, true, false)
+    assert(label:GetText() == "35000000000000 / 70000000000000", "full encounter values used exponent notation")
+    context:ResetCounts()
+    tools.SetEncounterHealthText(label, 35e12, 70e12, true, true, false)
+    context:NoPresentationWrites()
+    tools.SetEncounterHealthText(label, 35e12, 70e12, false, true, false)
+    assert(label:GetText() == "70000000000000", "full maximum-only text retained a slash")
+    tools.SetEncounterHealthText(label, 35e12, 70e12, false, false, false)
+    assert(not label:IsShown(), "full-number mode overrode disabled health labels")
+end)
+
 Test("encounter health labels hide the slash and skip disabled or unchanged formatting", function()
     local context = H.New()
     context:Load("core/widgets.lua")
     local tools = context.env.T
     local label = context.env.UIParent:CreateFontString(nil, "OVERLAY")
     local compact, calls = tools.CompactHealth, 0
-    tools.CompactHealth = function(value)
+    tools.CompactHealth = function(value, shorten)
         calls = calls + 1
-        return compact(value)
+        return compact(value, shorten)
     end
     local allocated = table.getn(context.objects)
     for _, choice in ipairs({

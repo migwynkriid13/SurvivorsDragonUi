@@ -2,7 +2,40 @@
 
 The supplied CleanerChat 2.44 source targets Interface 30300. SurvivorsDragonUi adapts its glass-style presentation for an Interface 11200 chat window, including fading, animation and styled controls. Here, "prettify" means formatting the messages themselves. Only the requested level, native stat-gain, self-loot, marks, class talent-progress, ability-learning/skill-increase, player-say prefixes and NPC-yell messages are formatted; other incoming messages retain their original text. No separate chat addon is required. Source attribution and the supplied license metadata are retained in `third_party/CleanerChat-NOTICE.txt`.
 
+## Use the game's default chat
+
+In `/sdui` → **Chat**, enable **Use default chat**, click **Confirm**, then run
+`/reload`. The next UI load leaves the game's chat panes, tabs, controls, input,
+fonts, fading and message handlers in native ownership. Turning it off and
+confirming/reloading restores SDUI chat.
+
+This reload-only choice defaults off in the existing display table. Missing or
+invalid values also mean off. Drafts, Cancel, profiles and both full resets use
+the shared display lifecycle; changing a draft never partly replaces the running
+chat. Resetting defaults selects SDUI chat for the next reload. The explicit
+saved Copy preference is preserved, but default chat blocks all capture and the
+`/copy` command even if that preference was previously enabled.
+
+Default chat skips the ChatFormats, ChatCapture, ChatCopy and Chat initializers
+before any custom frame, collector, history, formatter, native hook, settings
+listener, readiness event, Layout registration or updater is created. It does
+not leave hidden SDUI chat frames polling. Reload is required because existing
+native frame changes and Lua hooks cannot be completely unloaded in place.
+The core discards initialization callbacks after startup, rather than retaining
+those inactive chat closures. No separate addon or SavedVariable is added.
+
+`core/messages.lua` supplies only shared native-message parsing and delivery
+deduplication for independent loot popups and banners. It creates no chat frame,
+event subscription or updater. In native-chat mode, an active SDUI loot view
+receives `CHAT_MSG_LOOT` and `CHAT_MSG_SYSTEM` through its existing service
+controller; Game/Off modes and world cleanup remove those subscriptions. Native
+chat receives its unmodified messages. Writes that bypass those native events
+are not intercepted in this mode. Banners keep their own native display feed
+without requiring chat diagnostics. No Performance Mode behavior changes.
+
 ## Presentation and incoming text
+
+The following custom presentation applies while **Use default chat** is off.
 
 Chat moves and resizes only through the shared `/sdui` or `/sdui lock` handles.
 The native message pane's inherited full-size `TitleRegion` is collapsed to

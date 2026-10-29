@@ -5,19 +5,24 @@ DFRL:NewMod("RunBanners", 4, function()
     local chat = DFRL.CleanerChat
     local diagnostic = {}
     DFRL.bannerDiagnostics = diagnostic
+    local function CaptureEnabled()
+        return chat and type(chat.IsCaptureEnabled) == "function" and chat.IsCaptureEnabled()
+    end
     local function SetDiagnostic(key, value)
-        if chat.IsCaptureEnabled() then diagnostic[key] = value end
+        if CaptureEnabled() then diagnostic[key] = value end
     end
     local function CountDiagnostic(key)
-        if chat.IsCaptureEnabled() then diagnostic[key] = (diagnostic[key] or 0) + 1 end
+        if CaptureEnabled() then diagnostic[key] = (diagnostic[key] or 0) + 1 end
     end
-    chat.ListenCapture(function()
-        for key in pairs(diagnostic) do
-            diagnostic[key] = nil
-        end
-    end)
+    if chat and type(chat.ListenCapture) == "function" then
+        chat.ListenCapture(function()
+            for key in pairs(diagnostic) do
+                diagnostic[key] = nil
+            end
+        end)
+    end
     local function RememberFailure(message)
-        if not chat.IsCaptureEnabled() then return end
+        if not CaptureEnabled() then return end
         local text = string.gsub(tostring(message), "[\r\n]", " ")
         if string.len(text) > 768 then
             local last = 768
@@ -61,7 +66,7 @@ DFRL:NewMod("RunBanners", 4, function()
     local companions = {}
 
     function DFRL.GetBannerDiagnostics()
-        if not chat.IsCaptureEnabled() then return "" end
+        if not CaptureEnabled() then return "" end
         local face, size
         if pool[1] then
             face, size = pool[1].label:GetFont()
@@ -350,11 +355,11 @@ DFRL:NewMod("RunBanners", 4, function()
         Enqueue(text, entry.boss == true, entry.kind, id, entry.text)
     end
     local function ReceiveLegacy(source, text, eventName, speaker, message, surface)
-        local chat = DFRL.CleanerChat
+        local messages = DFRL.messages
         if eventName == "CHAT_MSG_RAID_BOSS_EMOTE" then
             if
                 companions[message]
-                or not chat.FirstDelivery(
+                or not messages.FirstDelivery(
                     source,
                     PlainText(text) or text,
                     eventName,
@@ -373,8 +378,8 @@ DFRL:NewMod("RunBanners", 4, function()
     function banners.RedirectChat(source, text, eventName, speaker, message)
         if eventName == "CHAT_MSG_RAID_BOSS_EMOTE" then CountDiagnostic("chat") end
         if not banners.IsActive() or not source or type(text) ~= "string" then return false end
-        local chat = DFRL.CleanerChat
-        if not chat or type(chat.FirstDelivery) ~= "function" then return false end
+        local messages = DFRL.messages
+        if not messages or type(messages.FirstDelivery) ~= "function" then return false end
         if eventName == "CHAT_MSG_RAID_BOSS_EMOTE" then
             local ok, failure = pcall(ReceiveLegacy, source, text, eventName, speaker, message, "chat")
             if not ok then Failed(failure) end
@@ -386,7 +391,7 @@ DFRL:NewMod("RunBanners", 4, function()
         local fields = DFRL.locale.Match(DOT_STACKS, plain)
         if not fields or type(fields.n) ~= "string" or not string.find(fields.n, "^%d+$") then return false end
         local function Redirect()
-            if chat.FirstDelivery(source, plain, eventName, speaker, message, "chat-banners") then
+            if messages.FirstDelivery(source, plain, eventName, speaker, message, "chat-banners") then
                 -- Forward this received display call, without inventing a
                 -- gameplay event or replaying earlier chat history.
                 Enqueue(plain, false, "chat")
@@ -400,8 +405,13 @@ DFRL:NewMod("RunBanners", 4, function()
         return true
     end
     local function RedirectLegacy()
-        local frame, chat = RaidBossEmoteFrame, DFRL.CleanerChat
-        if not frame or type(frame.AddMessage) ~= "function" or not chat or type(chat.FirstDelivery) ~= "function" then
+        local frame, messages = RaidBossEmoteFrame, DFRL.messages
+        if
+            not frame
+            or type(frame.AddMessage) ~= "function"
+            or not messages
+            or type(messages.FirstDelivery) ~= "function"
+        then
             return
         end
         if legacyFrame == frame then return end

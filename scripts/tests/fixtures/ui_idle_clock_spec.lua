@@ -25,7 +25,8 @@ env.GameTooltip = {
 }
 local chunk = assert(loadfile(assert(arg[1])))
 setfenv(chunk, env)
-chunk()(frame, label, zoneButton, zoneText, panel)
+local minimap = chunk()
+minimap.Watch(frame, label, zoneButton, zoneText, panel)
 assert(display.Get("minimapShowClock") == false, "clock must default off")
 assert(display.Copy({ minimapShowClock = "true" }).minimapShowClock == false, "invalid clock choice must default off")
 assert(
@@ -80,3 +81,39 @@ display.Reset()
 assert(not display.Get("minimapShowClock") and not frame:IsShown() and not frame:GetScript("OnUpdate"))
 assert(zoneText.justify == "CENTER", "reset did not restore centered zone text")
 print("PASS default-off minimap clock, centered zone, preview/discard/Confirm/profile/reset and hidden recovery")
+
+-- The launcher remains clickable above Layout and restores its gameplay layer.
+minimap.Editing(true) -- No launcher has been allocated yet.
+env.Minimap = env.CreateFrame("Frame", nil, env.UIParent)
+function env.Minimap:GetFrameStrata() return "MEDIUM" end
+env.Minimap:SetFrameLevel(3)
+local launcher = env.CreateFrame("Button", "SurvivorsDragonUiMinimapButton", env.Minimap)
+local setStrata = launcher.SetFrameStrata
+function launcher:SetFrameStrata(value)
+    setStrata(self, value)
+    self.strata = value
+end
+function launcher:GetFrameStrata() return self.strata or "MEDIUM" end
+launcher:SetFrameLevel(23)
+minimap.Editing(true)
+assert(
+    launcher:GetFrameStrata() == "TOOLTIP" and launcher:GetFrameLevel() == 125,
+    "selection overlay covers launcher input"
+)
+local allocated = #context.objects
+context:ResetCounts()
+minimap.Editing(true)
+context:NoPresentationWrites()
+env.Minimap:SetFrameLevel(7)
+minimap.Editing(false)
+assert(
+    launcher:GetFrameStrata() == "MEDIUM" and launcher:GetFrameLevel() == 27,
+    "close did not restore current minimap layer"
+)
+context:ResetCounts()
+minimap.Editing(false)
+context:NoPresentationWrites()
+assert(
+    #context.objects == allocated and not launcher:GetScript("OnUpdate"),
+    "launcher layering added views or an idle worker"
+)

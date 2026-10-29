@@ -4,7 +4,7 @@ DFRL:NewMod("Mini", 1, function()
     local healthFill = T.LargeHealthFill
     -- The compact one-unit metal edge needs half the large frame's underlap.
     local healthUnderlap = healthFill.underlap / 2
-    local partyHealthCrops = {
+    local healthOnlyCrops = {
         { 0, 0, 44, 26 },
         { 0, 26, 43, 1 },
         { 0, 27, 44, 1 },
@@ -22,12 +22,12 @@ DFRL:NewMod("Mini", 1, function()
         { 112, 29, 16, 5 },
     }
 
-    -- Keep the original target-of-target crop; party rows additionally trim the
-    -- portrait's divider stubs and retain the complete rounded outer end.
+    -- Both compact health-only views omit the old divider's portrait/outer-end
+    -- stubs while retaining the complete ring and rounded outer contour.
     local function HealthOnlyBorder(parent, anchor, width, height, layer, crops, elastic)
         local scaleX, scaleY = width / 128, height / 64
         local strips, pieces = {}, elastic and {} or nil
-        for _, crop in ipairs(crops or { { 0, 0, 44, 64 }, { 44, 0, 84, 22 }, { 44, 34, 84, 30 }, { 114, 22, 14, 12 } }) do
+        for _, crop in ipairs(crops) do
             local x, y, w, h, sourceY = unpack(crop)
             sourceY = sourceY or y
             -- One-row portrait tips must not filter the neighboring divider.
@@ -232,14 +232,14 @@ DFRL:NewMod("Mini", 1, function()
             TargetofTargetTexture:Hide()
             TargetofTargetTexture.Show = TargetofTargetTexture.Hide
         end
-        -- Preserve the original 128x64 portrait/border sheet at its existing size,
-        -- omitting only the interior divider between the old health/power rows.
+        -- Reuse the party view's clean health-only crops at the existing size.
         local borderStrips = HealthOnlyBorder(
             border,
             border,
             TargetofTargetFrame:GetWidth() + 20,
             TargetofTargetFrame:GetHeight() + 15,
-            "OVERLAY"
+            "OVERLAY",
+            healthOnlyCrops
         )
         if TargetFrame then
             TargetofTargetFrame:ClearAllPoints()
@@ -262,21 +262,57 @@ DFRL:NewMod("Mini", 1, function()
             TargetofTargetBackground:ClearAllPoints()
             TargetofTargetBackground:SetAllPoints(TargetofTargetHealthBar)
         end
-        TargetofTargetHealthBar:SetStatusBarTexture(
-            tex .. "UI-HUD-UnitFrame-TargetofTarget-PortraitOn-Bar-HealthFill.blp"
-        )
+        TargetofTargetHealthBar:SetStatusBarTexture(healthFill.texture)
         TargetofTargetHealthBar:SetWidth(60)
         TargetofTargetHealthBar:SetHeight(16)
         TargetofTargetHealthBar:ClearAllPoints()
         TargetofTargetHealthBar:SetPoint("LEFT", TargetofTargetFrame, "LEFT", 40, -1.5)
         TargetofTargetHealthBar:SetScript("OnEnter", nil)
         TargetofTargetHealthBar:SetScript("OnLeave", nil)
-        local portraitless = T.CreatePortraitlessBorder(TargetofTargetFrame, TargetofTargetHealthBar, 16)
+        local portraitless =
+            T.CreatePortraitlessBorder(TargetofTargetFrame, TargetofTargetHealthBar, 16, healthUnderlap)
+        local targetName = TargetofTargetFrame.name
+        if targetName then
+            targetName:SetParent(border)
+            targetName:SetDrawLayer("OVERLAY")
+            targetName:SetWidth(60)
+            targetName:SetHeight(12)
+            targetName:SetJustifyH("LEFT")
+            targetName:SetJustifyV("BOTTOM")
+            T.SetFont(targetName, 9, "")
+        end
+        if TargetofTargetDeadText then
+            TargetofTargetDeadText:SetParent(border)
+            T.SetFont(TargetofTargetDeadText, 9, "OUTLINE")
+        end
         local portraitsHidden
         local function UpdatePortraitVisibility()
+            if not TargetofTargetFrame:IsVisible() then return end
             local hidden = DFRL.display.Get("hidePortraits")
             if hidden == portraitsHidden then return end
             portraitsHidden = hidden
+            -- Cover the lower ring curve and shaded fill edge without moving
+            -- the existing label area or the closed portraitless border.
+            local extension = hidden and 0 or 8
+            TargetofTargetHealthBar:SetWidth(60 + extension + 2 * healthUnderlap)
+            TargetofTargetHealthBar:SetHeight(16 + 2 * healthUnderlap)
+            TargetofTargetHealthBar:ClearAllPoints()
+            TargetofTargetHealthBar:SetPoint("LEFT", TargetofTargetFrame, "LEFT", 40 - extension - healthUnderlap, -1.5)
+            target.healthLabels.SetInsets(extension + healthUnderlap, healthUnderlap, extension / 2)
+            if targetName then
+                targetName:ClearAllPoints()
+                targetName:SetPoint(
+                    "BOTTOMLEFT",
+                    TargetofTargetHealthBar,
+                    "TOPLEFT",
+                    extension + healthUnderlap,
+                    2 - healthUnderlap
+                )
+            end
+            if TargetofTargetDeadText then
+                TargetofTargetDeadText:ClearAllPoints()
+                TargetofTargetDeadText:SetPoint("CENTER", TargetofTargetHealthBar, "CENTER", extension / 2, 0)
+            end
             for _, strip in ipairs(borderStrips) do
                 if hidden then
                     if strip:IsShown() then strip:Hide() end
@@ -290,19 +326,9 @@ DFRL:NewMod("Mini", 1, function()
                 portraitless:Hide()
             end
         end
+        target.resize = UpdatePortraitVisibility
         DFRL.display.Listen(UpdatePortraitVisibility)
         UpdatePortraitVisibility()
-        if TargetofTargetDeadText then
-            TargetofTargetDeadText:SetParent(border)
-            TargetofTargetDeadText:ClearAllPoints()
-            TargetofTargetDeadText:SetPoint("CENTER", TargetofTargetHealthBar, "CENTER", 0, 0)
-            T.SetFont(TargetofTargetDeadText, 9, "OUTLINE")
-        end
-        if TargetofTargetFrame.name then
-            TargetofTargetFrame.name:ClearAllPoints()
-            TargetofTargetFrame.name:SetPoint("TOPLEFT", TargetofTargetFrame, "TOPLEFT", 40, 25)
-            T.SetFont(TargetofTargetFrame.name, 9, "")
-        end
         local function UpdateTarget()
             if not TargetofTargetFrame:IsVisible() then return end
             if TargetofTargetFrame.name and UnitExists("targettarget") then
@@ -381,7 +407,7 @@ DFRL:NewMod("Mini", 1, function()
                 { 112, 0, 16, 64 },
             }, true)
             local healthOnlyBorder, resizeHealthBorder =
-                HealthOnlyBorder(borderFrame, border, 128, 64, "BORDER", partyHealthCrops, true)
+                HealthOnlyBorder(borderFrame, border, 128, 64, "BORDER", healthOnlyCrops, true)
             local portrait = _G[prefix .. "Portrait"]
             if portrait then
                 portrait:SetParent(borderFrame)

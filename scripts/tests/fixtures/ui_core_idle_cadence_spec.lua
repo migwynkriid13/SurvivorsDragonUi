@@ -232,7 +232,15 @@ local function Layout()
     env.IsShiftKeyDown = function() return false end
     env.GetCursorPosition = function() return context.cursorX or 200, context.cursorY or 300 end
     env.DFRL.locale.Bind = function(label) return label end
-    env.T.CreateEditorButton = function(parent) return env.CreateFrame("Button", nil, parent) end
+    env.T.CreateEditorButton = function(parent)
+        local button = env.CreateFrame("Button", nil, parent)
+        button.label = button:CreateFontString(nil, "OVERLAY")
+        return button
+    end
+    env.T.CreateEditModeSelection = function(handle)
+        -- Artwork and the moving-mode manager have separate production mocks.
+        return function(selected) handle.selected = selected end
+    end
     context:Load("core/layout.lua", "Layout")
     context.controller = context:Controller("PLAYER_LOGOUT")
     function context:Tick(delta) self:Call(self.controller, "OnUpdate", delta) end
@@ -258,7 +266,8 @@ do
     context:Event(context.controller, "PLAYER_ENTERING_WORLD")
     context:Tick(0.001)
     assert(context.reads.viewport, "world restore waited for idle sampling")
-    layout.BeginEdit(true)
+    -- Exercise full-editor cadence without preparing the separate moving UI.
+    layout.BeginEdit()
     context:ResetCounts()
     context:Tick(0.001)
     assert(context.reads.viewport == 1, "dirty editor did not sample viewport immediately")
@@ -286,7 +295,7 @@ do
     assert(context.reads.viewport >= 2, "unresolved default placement was throttled")
     frame.unready = false
     context:Tick(0.001)
-    layout.BeginEdit(true)
+    layout.BeginEdit()
     context:Tick(0.001)
     local handle
     for _, object in ipairs(context.objects) do

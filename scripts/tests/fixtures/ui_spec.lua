@@ -32,7 +32,7 @@ local function Loot(settings, nativeShown)
     local env = context.env
     if nativeShown ~= nil then context.nativeShown = nativeShown end
     env.DFRL.actionBarDefaults = { bottom = 55, height = 36, topInset = 14 }
-    env.DFRL.CleanerChat = {
+    env.DFRL.messages = {
         ParseLootMessage = function(name)
             if type(name) == "table" then return name end
             return { name = name, icon = "Interface\\Icons\\Test", iconSource = "native" }
@@ -479,7 +479,7 @@ Test("Game and Off retire custom loot stop intake and preserve native preference
     local env, display = context.env, context.env.DFRL.display
     Deliver(context, service, "Before mode change")
     local parsed, metadata = 0, 0
-    env.DFRL.CleanerChat.ParseLootMessage = function() parsed = parsed + 1 end
+    env.DFRL.messages.ParseLootMessage = function() parsed = parsed + 1 end
     env.GetItemInfo = function() metadata = metadata + 1 end
     display.BeginEdit()
     for _, mode in ipairs({ "game", "off", "game" }) do

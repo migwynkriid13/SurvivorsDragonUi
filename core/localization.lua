@@ -60,10 +60,45 @@ function language.CombatText(text)
     return text
 end
 
--- Measure real glyphs in every supported language before sizing shared controls.
-function language.Width(label, source)
+-- Shared callers can size against every language; lazily built settings use
+-- only the active catalog and cache successful measurements on their ruler.
+function language.Width(label, source, activeOnly)
     local entry = language.labels[label]
     local setText = entry and entry.original or label.SetText
+    if activeOnly then
+        local face, size, flags = label:GetFont()
+        local parent = label:GetParent()
+        local scale = parent and parent:GetEffectiveScale() or 1
+        local cache = entry and entry.widths
+        if
+            not cache
+            or cache.code ~= language.code
+            or cache.face ~= face
+            or cache.size ~= size
+            or cache.flags ~= flags
+            or cache.scale ~= scale
+            or cache.width ~= label:GetWidth()
+        then
+            cache = {
+                code = language.code,
+                face = face,
+                size = size,
+                flags = flags,
+                scale = scale,
+                width = label:GetWidth(),
+                values = {},
+            }
+            if entry then entry.widths = cache end
+        end
+        local measured = cache.values[source]
+        if measured then return measured end
+        setText(label, language.Text(source))
+        measured = label:GetStringWidth()
+        if not measured or measured <= 0 then return 0 end
+        measured = math.ceil(measured)
+        cache.values[source] = measured
+        return measured
+    end
     local width = 0
     for _, catalog in pairs(language.data) do
         setText(label, catalog.ui[source] or source)

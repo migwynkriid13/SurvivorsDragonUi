@@ -382,6 +382,8 @@ do
     env.activeRows, env.rowOrder, env.spareRows = { [entry.key] = row }, { row }, {}
     context.settings.bossRows = 0
     context.settings.bossShowCurrentHealth, context.settings.bossShowMaximumHealth = true, true
+    context.settings.bossShortHealth = true
+    context.settings.bossShowHealthPercentage = false
     row.name, row.health, row.debuffs = row.frame:CreateFontString(), row.frame:CreateFontString(), {}
     row.frame.RefreshWidth = function() end
     function row.bar:SetValue(value)
@@ -395,8 +397,16 @@ do
         assert(part == "bosses")
         return true
     end
-    env.T.SetEncounterHealthText = function(label, current, maximum, showCurrent, showMaximum)
-        label.received = { current, maximum, showCurrent, showMaximum }
+    env.T.SetEncounterHealthText = function(
+        label,
+        current,
+        maximum,
+        showCurrent,
+        showMaximum,
+        shorten,
+        showPercentage
+    )
+        label.received = { current, maximum, showCurrent, showMaximum, shorten, showPercentage }
     end
     context.source.Rows("playing")
     assert(row.bar.value == 1 and row.health.received[1] == 1000 and not row.lossTexture)
@@ -405,6 +415,20 @@ do
     assert(row.bar.value == 0.8 and row.health.received[1] == 800, "loss animation delayed real health fill or text")
     assert(row.lossTexture:IsShown() and controller.count == 1, "received health decrease did not start its echo")
     assert(entry.hp == 800 and entry.maximum == 1000, "cosmetic loss changed the native snapshot")
+    context.settings.bossShortHealth = false
+    context:ResetCounts()
+    context.source.Rows("playing")
+    assert(row.health.received[5] == false, "boss rows did not pass their independent full-number choice")
+    assert(
+        row.bar.value == 0.8 and not context.writes.value and controller.count == 1,
+        "health format changed fill or loss animation"
+    )
+    context.settings.bossShowHealthPercentage = true
+    context.source.Rows("playing")
+    assert(
+        row.health.received[6] == true and row.bar.value == 0.8 and controller.count == 1,
+        "boss percentage choice changed health or loss ownership"
+    )
     context.source.Retire(row)
     assert(controller.count == 0 and not row.lossTexture:IsShown(), "pooled row retirement retained a loss trail")
     assert(row.lossValue == nil and row.key == nil and env.spareRows[1] == row)

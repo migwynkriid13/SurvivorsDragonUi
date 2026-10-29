@@ -54,8 +54,14 @@ env.IsShiftKeyDown = function() return false end
 env.DFRL.locale.Bind = function(label) return label end
 env.T.CreateEditorButton = function(parent)
     local button = env.CreateFrame("Button", nil, parent)
+    button.label = button:CreateFontString(nil, "OVERLAY")
     context.confirm = button
     return button
+end
+env.T.CreateEditModeSelection = function(handle)
+    -- Explicit drawing boundary; the separate retail fixture loads the real art factory.
+    handle:SetBackdrop({ edgeFile = "TEST_SELECTION" })
+    return function(selected) handle.selected = selected end
 end
 context:Load("core/layout.lua", "Layout")
 local layout = env.DFRL.layout
@@ -92,7 +98,7 @@ local registered = #context.objects
 Tick()
 assert(#context.objects == registered and #Handles() == 0, "gameplay prepared editor handles")
 assert(not first:IsShown() and layout.IsHidden("first"), "lazy handles changed saved visibility")
-layout.BeginEdit(true)
+layout.BeginEdit()
 assert(#Handles() == 0, "editor entry bypassed the normal preparation refresh")
 Tick()
 local handles = Handles()
@@ -146,7 +152,7 @@ assert(not layout.IsEditing() and env.SurvivorsDragonUiLayout.first.hidden, "Con
 for _, handle in ipairs(Handles()) do
     assert(not handle:IsShown() and not handle.mouse, "Confirm retained active handle input")
 end
-layout.BeginEdit(true)
+layout.BeginEdit()
 Tick()
 assert(#context.objects == prepared, "reopening allocated another handle pool")
 layout.CancelEdit()
@@ -173,7 +179,7 @@ assert(
 layout.Register("broken", broken, Anchor(90, -90))
 Tick()
 context.failBackdrop = true
-layout.BeginEdit(true)
+layout.BeginEdit()
 local painted, failure = pcall(Tick)
 assert(
     not painted and string.find(failure, "injected native handle preparation failure", 1, true),
@@ -187,4 +193,29 @@ for _, handle in ipairs(Handles()) do
 end
 context:Event(controller, "PLAYER_LOGOUT")
 assert(not layout.IsEditing(), "logout failed with an unprepared handle")
+context:Event(controller, "PLAYER_ENTERING_WORLD")
+Tick()
+for index = 1, 7 do
+    Group("bounded" .. index, { edgeWidth = true })
+end
+local priorHandles = #Handles()
+layout.BeginEdit()
+Tick()
+assert(#Handles() == priorHandles + 2, "one editor sample prepared the whole handle pool")
+local partial = #context.objects
+layout.CancelEdit()
+Tick()
+assert(#context.objects == partial, "closed editor continued pending preparation")
+layout.BeginEdit()
+context:Call(controller, "OnUpdate", 0.001)
+assert(#Handles() == priorHandles + 4, "pending preparation waited for the normal ten-Hz cadence")
+context:Call(controller, "OnUpdate", 0.001)
+assert(#Handles() == priorHandles + 6, "a follow-up frame exceeded the preparation budget")
+context:Call(controller, "OnUpdate", 0.001)
+assert(#Handles() == priorHandles + 7, "bounded preparation did not finish")
+local complete = #context.objects
+Tick()
+assert(#context.objects == complete, "settled preparation did not reuse its pool")
+layout.CancelEdit()
+context:Event(controller, "PLAYER_LOGOUT")
 print("PASS Layout defers handle artwork, reuses the pool, preserves drafts and safely retires unprepared groups")

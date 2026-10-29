@@ -8,15 +8,35 @@ the game's boss and guardian health bars.
 
 **Boss bars** also has **Show current health** and **Show maximum health**, both
 on by default. Together they show `current / maximum`; either value alone has no
-slash, and turning both off hides the health text while keeping the fill. These
+slash, and turning both off hides the health text while keeping the fill when
+percentages are off. These
 choices apply to every row in this view, including enabled guardian rows. The
 Guardian tracker has its own independent pair.
 
 The normalized `bossShowCurrentHealth` / `bossShowMaximumHealth` booleans use the
 existing display table and shared preview, Confirm, Cancel/discard, profiles and
 both full resets. Missing or invalid values and resets use true. The shared
-encounter formatter retains compact K/M/B/T numbers, caches only each label's
+encounter formatter defaults to compact K/M/B/T numbers, caches only each label's
 current effective values and checks actual text/visibility before writing.
+
+**Shorten health numbers** in `/sdui` → **Encounters** → **Boss bars** defaults on.
+Off uses full whole-number health, with no K/M/B/T suffixes or exponent notation.
+The independent `bossShortHealth` boolean shares the existing display draft,
+Confirm/Cancel/discard, profiles and both resets; missing/invalid values and
+resets use true. It includes guardian rows enabled in this boss view. Current/
+maximum visibility and native fill/data stay unchanged. The shared formatter's
+cache includes the format choice, and the visible row pass reads these three
+health choices once before iterating the rows.
+
+**Show health percentage** defaults off. The independent normalized
+`bossShowHealthPercentage` boolean shares preview, Confirm/Cancel/discard,
+profiles and both resets; missing/invalid values and resets use false. On adds
+a rounded whole percentage inside the existing white health label, for example
+`35T / 70T (50%)`, or `50%` with current and maximum hidden. It uses full received
+current/maximum values, clamps to 0–100%, and skips unavailable, nonfinite or
+nonpositive maxima. The optional ratio cache keeps only the latest raw pair and
+whole percentage. Off skips ratio work. Row fills, loss animation, health
+visibility choices and enabled guardian-row ownership stay unchanged.
 
 When either switch is off, the settings underneath it are dimmed and inactive.
 The timer's preview, font controls and both mode columns fade together; an open

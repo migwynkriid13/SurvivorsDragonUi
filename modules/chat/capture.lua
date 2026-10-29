@@ -1,13 +1,13 @@
 -- Raw chat/event history adapted from CleanerChat's Filters/_Debug.lua.
 -- Diagnostic collection requires an explicit /copy enable choice.
-DFRL:NewMod("ChatCapture", 0, function()
+DFRL:NewMod("ChatCapture", 0.5, function()
+    if DFRL.display.Get("defaultChat") then return end
     DFRL.CleanerChat = DFRL.CleanerChat or {}
     local chat = DFRL.CleanerChat
     local history, pending = {}, {}
     local pendingBytes = 0
     local PAGE_BYTES, NATIVE_READS = 6144, 64
     local hasCapture = false
-    local broadcastTime, broadcasts
     local captureEnabled = _G.SurvivorsDragonUiCopyEnabled == true
     local captureGeneration, captureListeners = 0, {}
 
@@ -66,41 +66,7 @@ DFRL:NewMod("ChatCapture", 0, function()
     end
     local function FrameName(frame) return frame.GetName and frame:GetName() or "<unnamed>" end
 
-    local function FirstDelivery(frame, text, eventName, author, message, source, surface)
-        local now = GetTime()
-        if now ~= broadcastTime then
-            broadcastTime, broadcasts = now, {}
-        end
-        local signature = tostring(source)
-            .. "\001"
-            .. tostring(eventName)
-            .. "\001"
-            .. tostring(author)
-            .. "\001"
-            .. tostring(message)
-            .. "\001"
-            .. text
-        local delivery = broadcasts[signature]
-        if not delivery then
-            delivery = { counts = {}, maximum = 0 }
-            broadcasts[signature] = delivery
-        end
-        local counts = delivery.counts
-        if surface then
-            delivery.surfaces = delivery.surfaces or {}
-            delivery.surfaces[surface] = delivery.surfaces[surface] or {}
-            counts = delivery.surfaces[surface]
-        end
-        local count = (counts[frame] or 0) + 1
-        counts[frame] = count
-        -- Additional chat frames receive the same delivery. Repeated identical
-        -- messages on one frame remain distinct, including in the same UI tick.
-        -- Optional surfaces pair that frame's legacy and regular-chat calls.
-        if count <= delivery.maximum then return false end
-        delivery.maximum = count
-        return true
-    end
-    chat.FirstDelivery = FirstDelivery
+    local FirstDelivery = DFRL.messages.FirstDelivery
 
     chat.CaptureRaw = function(frame, text, eventName, author, message)
         if type(text) ~= "string" then return end

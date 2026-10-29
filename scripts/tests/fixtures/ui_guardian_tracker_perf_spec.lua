@@ -230,6 +230,89 @@ print("PASS guardian status caching preserves the shared health branch, values a
 
 do
     local context, row = Tracker()
+    context.entry.key, context.entry.id, context.entry.state, context.entry.status = "1:7", 7, "awake", "fighting"
+    context.entry.hp, context.entry.maximum = 166983, 331328
+    context.entry.healthFraction = context.entry.hp / context.entry.maximum
+    context:Tick()
+    local allocated, value = #context.objects, row.bar.value
+    assert(row.health:GetText() == "166.9K / 331.3K", "guardian default lost abbreviations")
+    context:SetSetting("guardianShortHealth", false)
+    context:Tick()
+    assert(
+        row.health:GetText() == "166983 / 331328" and row.bar.value == value,
+        "full guardian labels changed native health"
+    )
+    assert(#context.objects == allocated, "guardian format choice allocated another view")
+    context:ResetCounts()
+    context:Tick()
+    assert(not context.writes.SetText and not context.writes.SetValue, "unchanged full guardian health kept painting")
+    context:SetHidden(true)
+    context:SetSetting("guardianShortHealth", true)
+    context:ResetCounts()
+    context:Tick()
+    context:NoPresentationWrites()
+    assert(not context.reads.snapshot, "hidden format change retained guardian reads")
+    context:SetHidden(false)
+    context:Tick()
+    assert(
+        row.health:GetText() == "166.9K / 331.3K" and #context.objects == allocated,
+        "guardian format did not resume from its pool"
+    )
+end
+print("PASS guardian full/short health choice, cache invalidation, native fill preservation and hidden reuse")
+
+do
+    local context, row = Tracker()
+    context.entry.key, context.entry.id, context.entry.state, context.entry.status = "1:7", 7, "awake", "fighting"
+    context.entry.hp, context.entry.maximum, context.entry.healthFraction = 50, 100, 0.5
+    context:Tick()
+    local allocated = #context.objects
+    assert(row.health:GetText() == "50 / 100", "guardian percentages were not off by default")
+    context:SetSetting("guardianShowHealthPercentage", true)
+    context:Tick()
+    assert(row.health:GetText() == "50 / 100 (50%)" and row.bar.value == 0.5, "guardian percentage changed health/fill")
+    context.entry.hp, context.entry.maximum = 131122, 333333
+    context.entry.healthFraction = context.entry.hp / context.entry.maximum
+    context:Tick()
+    assert(
+        row.statusWidth >= string.len(row.health:GetText()) * 7 + 16,
+        "percentage did not receive its measured pill width"
+    )
+    context.entry.hp, context.entry.maximum, context.entry.healthFraction = 50, 100, 0.5
+    context:SetSetting("guardianShowCurrentHealth", false)
+    context:SetSetting("guardianShowMaximumHealth", false)
+    context:Tick()
+    assert(
+        row.health:GetText() == "50%" and row.health:IsShown() and row.pill:IsShown(),
+        "percentage-only pill disappeared"
+    )
+    context.entry.hp, context.entry.healthFraction = 50.2, 0.502
+    context:ResetCounts()
+    context:Tick()
+    assert(
+        not context.writes.SetText and row.bar.value == 0.502,
+        "unchanged percentage kept painting or blocked the fill"
+    )
+    context:SetHidden(true)
+    context:SetSetting("guardianShowHealthPercentage", false)
+    context:ResetCounts()
+    context:Tick()
+    context:NoPresentationWrites()
+    assert(not context.reads.snapshot, "hidden percentage choice retained tracker reads")
+    context:SetHidden(false)
+    context:Tick()
+    assert(not row.health:IsShown() and row.pill:IsShown(), "all text off hid the native health fill")
+    context:SetSetting("guardianShowHealthPercentage", true)
+    context:Tick()
+    assert(
+        row.health:GetText() == "50%" and #context.objects == allocated,
+        "percentage recovery replaced the existing view"
+    )
+end
+print("PASS guardian percentage visibility, whole-percent caching, hidden recovery and native fill preservation")
+
+do
+    local context, row = Tracker()
     context.entry.name = nil
     context:Tick()
     assert(row.name:GetText() == "Lair 1" and context.reads.nameFormats == 1)

@@ -1,4 +1,4 @@
--- Official cache and occupied guardian-lair snapshots supply these waypoints.
+-- Official cache/lair snapshots and live native dead-party map positions.
 --[[
 The navigation and guardian artwork is owned by Blizzard Entertainment. The Gethe archive is a public extraction of World of Warcraft client UI assets; it does not grant a new license to Blizzard artwork.
 
@@ -18,6 +18,12 @@ for use with the game. No upstream Lua is imported.
 The cache HUD, minimap and tally reuse the user's supplied chest.tga, prepared
 losslessly as Chest.blp. Its original pixels and alpha are retained.
 Detailed preparation: third_party/CacheWaypoints-ARTWORK.md.
+
+FallenAlly.blp retains Blizzard's Raid-Icon-Rez pixels from Dragonflight
+10.0.0 (45454), Gethe mirror e80e3278cc833c89e1f3fc79557b68315d750935:
+https://raw.githubusercontent.com/Gethe/wow-ui-textures/e80e3278cc833c89e1f3fc79557b68315d750935/RAIDFRAME/Raid-Icon-Rez.PNG
+The incoming-resurrection glyph is reused as the selected Winged Soul marker;
+it does not assert that a resurrection is in progress. Copyright Blizzard.
 ]]
 DFRL:NewMod("Waypoints", 3, function()
     local navigation = DFRL.navigation
@@ -59,6 +65,19 @@ DFRL:NewMod("Waypoints", 3, function()
             hudArt = "GuardianFloating.blp",
             hudTexCoord = { 0, 65 / 128, 0, 65 / 128 },
         },
+        {
+            kind = "party",
+            source = "nativeParty",
+            displayKey = "partyGuidance",
+            mirrorKey = "mirrorPartyWaypoint",
+            layoutKey = "partyWaypoint",
+            frameName = "DFRL_PartyWaypoint",
+            title = "Fallen ally",
+            defaultSide = "CENTER",
+            defaultOffsetY = 54,
+            hudArt = "FallenAlly.blp",
+            hudTexCoord = { 0, 1, 0, 1 },
+        },
     }
     local identity
     local runWasActive = false
@@ -67,6 +86,10 @@ DFRL:NewMod("Waypoints", 3, function()
 
     local function Number(value) return type(value) == "number" and value - value == 0 end
     local function Integer(value, minimum) return Number(value) and value >= minimum and value == math.floor(value) end
+    local function FrameVisible(frame)
+        local visible = frame:IsVisible()
+        return visible == true or visible == 1
+    end
     local function Native(name)
         local getter = _G[name]
         if type(getter) ~= "function" then return end
@@ -86,17 +109,12 @@ DFRL:NewMod("Waypoints", 3, function()
         local PIN_SIZE = 20
         local outdoorDiameter = { 14, 12, 10, 8, 6, 4 }
         local indoorDiameter = { 300, 240, 180, 120, 80, 50 }
-        local originalFlag
+        local nativeFlag = T.NewHudOwner("flag")
         local hoveredPin, hoveredName
         local mode, modeDirty, probing, reloading = nil, true, false, false
         local pendingZoom, RollbackZoom
         for _, tracker in ipairs(trackers) do
             tracker.minimapPins, tracker.minimapPool, tracker.minimapCycle = {}, {}, 0
-        end
-
-        local function Shown(value)
-            if value == true or value == 1 or value == "1" then return true end
-            if value == false or value == 0 or value == "0" then return false end
         end
 
         local function HideGuardianTooltip(pin)
@@ -176,12 +194,6 @@ DFRL:NewMod("Waypoints", 3, function()
             if not GameTooltip:IsVisible() then GameTooltip:Show() end
         end
 
-        local function FlagShown()
-            if type(_G.AZS_IsHudShown) ~= "function" then return end
-            local ok, value = pcall(_G.AZS_IsHudShown, "flag")
-            if ok then return Shown(value) end
-        end
-
         local function HideGuardianTimer(pin)
             if not pin.timer then return end
             if pin.timer:IsShown() then pin.timer:Hide() end
@@ -255,22 +267,8 @@ DFRL:NewMod("Waypoints", 3, function()
             if pendingZoom and (pendingZoom.retry or retryZoom) and not probing then RollbackZoom() end
         end
 
-        local function RestoreNativeFlag()
-            if originalFlag == nil or type(_G.AZS_SetHudShown) ~= "function" then return end
-            local ok = pcall(_G.AZS_SetHudShown, "flag", originalFlag)
-            if ok and FlagShown() == originalFlag then originalFlag = nil end
-        end
-
-        local function HideNativeFlag()
-            if type(_G.AZS_SetHudShown) ~= "function" then return false end
-            local shown = FlagShown()
-            if shown == nil then return false end
-            if originalFlag == nil then originalFlag = shown end
-            if not shown then return true end
-            local ok = pcall(_G.AZS_SetHudShown, "flag", false)
-            if not ok then return false end
-            return FlagShown() == false
-        end
+        local function RestoreNativeFlag() return nativeFlag.Release(true) end
+        local function HideNativeFlag() return nativeFlag.Acquire() end
 
         DirtyMinimapScale = function()
             if probing then return end
@@ -399,13 +397,13 @@ DFRL:NewMod("Waypoints", 3, function()
                 pin.drawnX, pin.drawnY = x, y
             end
             if not pin:IsShown() then pin:Show() end
-            return Shown(pin:IsVisible()) == true
+            return FrameVisible(pin)
         end
 
         local function Geometry()
             if not Minimap then return end
-            local visibleOK, visible = pcall(Minimap.IsVisible, Minimap)
-            if not visibleOK or Shown(visible) ~= true then return end
+            local visibleOK, visible = pcall(FrameVisible, Minimap)
+            if not visibleOK or not visible then return end
             local sizeOK, width, height = pcall(navigation.MinimapSize, PIN_SIZE)
             if not sizeOK or not Number(width) or not Number(height) or width <= PIN_SIZE or height <= PIN_SIZE then
                 return
@@ -445,16 +443,32 @@ DFRL:NewMod("Waypoints", 3, function()
         local function UpdateTrackerPins(tracker, scale, edge, refreshTimers)
             tracker.minimapCycle = tracker.minimapCycle + 1
             if scale and DFRL.display.Get(tracker.displayKey) then
+                if tracker.kind == "party" and refreshTimers then
+                    -- Recycle departed members before acquiring replacements,
+                    -- keeping this roster's entire pin pool bounded to four.
+                    for key, pin in pairs(tracker.minimapPins) do
+                        for _, entry in ipairs(tracker.entries) do
+                            if entry.key == key then
+                                pin.cycle = tracker.minimapCycle
+                                break
+                            end
+                        end
+                    end
+                    RecyclePins(tracker, tracker.minimapCycle)
+                    for _, pin in pairs(tracker.minimapPins) do
+                        pin.cycle = nil
+                    end
+                end
                 local now
                 for _, entry in ipairs(MinimapEntries(tracker)) do
                     local x, y = Offset(entry, scale)
-                    -- Each accepted lair keeps its own distant indicator.
+                    -- Lairs and fallen allies keep distant edge indicators.
                     -- Off-map caches hide instead of piling up on the edge.
-                    if x and tracker.kind == "guardian" then
+                    if x and tracker.kind ~= "cache" then
                         local ratio = math.max(1, math.abs(x) / edge, math.abs(y) / edge)
                         x, y = x / ratio, y / ratio
                     end
-                    if x and (tracker.kind == "guardian" or (math.abs(x) <= edge and math.abs(y) <= edge)) then
+                    if x and (tracker.kind ~= "cache" or (math.abs(x) <= edge and math.abs(y) <= edge)) then
                         if
                             refreshTimers
                             and showGuardianTimers
@@ -528,8 +542,9 @@ DFRL:NewMod("Waypoints", 3, function()
         DFRL.layout.Register(tracker.layoutKey, tracker.hud, function()
             local hud = tracker.hud
             local x = tracker.defaultSide == "LEFT" and -sideOffset or sideOffset
+            if tracker.defaultSide == "CENTER" then x = 0 end
             hud:ClearAllPoints()
-            hud:SetPoint("CENTER", UIParent, "BOTTOM", x, stackCenter)
+            hud:SetPoint("CENTER", UIParent, "BOTTOM", x, stackCenter + (tracker.defaultOffsetY or 0))
         end)
         -- Defaults come from the action/XP modules' static appearance geometry;
         -- all confirmed positions and scales remain independent of those bars.
@@ -578,7 +593,7 @@ DFRL:NewMod("Waypoints", 3, function()
         pointer:SetHeight(POINTER_SIZE)
         pointer:Hide()
         local title = hud:CreateFontString(nil, "OVERLAY")
-        DFRL.locale.Bind(title)
+        if tracker.kind ~= "party" then DFRL.locale.Bind(title) end
         T.SetFont(title, 13, "OUTLINE")
         title:SetTextColor(0.93, 0.8, 0.53)
         title:SetWidth(76)
@@ -586,7 +601,7 @@ DFRL:NewMod("Waypoints", 3, function()
         title:SetJustifyV("MIDDLE")
         title:SetShadowColor(0, 0, 0, 0.9)
         title:SetShadowOffset(1, -1)
-        title:SetText(tracker.title)
+        title:SetText(tracker.kind == "party" and DFRL.locale.Text(tracker.title) or tracker.title)
         local distanceText = hud:CreateFontString(nil, "OVERLAY")
         T.SetFont(distanceText, 15, "OUTLINE")
         distanceText:SetTextColor(1, 0.96, 0.85)
@@ -607,6 +622,12 @@ DFRL:NewMod("Waypoints", 3, function()
     local function Clear(tracker)
         if tracker.kind == "guardian" and DFRL.guardians then DFRL.guardians.Clear() end
         ClearMinimapPins(tracker.kind)
+        if tracker.partyEntries then
+            for index = table.getn(tracker.partyEntries), 1, -1 do
+                tracker.partyEntries[index] = nil
+            end
+            if table.setn then table.setn(tracker.partyEntries, 0) end
+        end
         tracker.entries = tracker.emptyEntries
         tracker.acceptedEntries, tracker.acceptedLairs, tracker.acceptedStamp = nil, nil, nil
         tracker.acceptedMinimapEntries = nil
@@ -641,7 +662,59 @@ DFRL:NewMod("Waypoints", 3, function()
         end
     end
 
+    local function UnitValue(name, unit)
+        local getter = _G[name]
+        if type(getter) ~= "function" then return end
+        local ok, value = pcall(getter, unit)
+        if ok then return value end
+    end
+
+    local function PartyMember(unit)
+        local exists = UnitValue("UnitExists", unit)
+        if exists ~= true and exists ~= 1 then return end
+        local connected = UnitValue("UnitIsConnected", unit)
+        if connected ~= true and connected ~= 1 then return end
+        local dead = UnitValue("UnitIsDead", unit)
+        if dead ~= true and dead ~= 1 then return end
+        local ghost = UnitValue("UnitIsGhost", unit)
+        -- A ghost's live unit position is not its corpse. There is no remote
+        -- corpse-position API, so never substitute that moving spirit or a
+        -- cached last-alive location for the fallen member's body.
+        if ghost == true or ghost == 1 then return end
+        local name = UnitValue("UnitName", unit)
+        if type(name) == "string" and name ~= "" then return name end
+    end
+
+    local function PartySnapshot(tracker)
+        if not DFRL.display.Get(tracker.displayKey) then return end
+        local result = tracker.partyEntries or {}
+        tracker.partyEntries = result
+        local count = 0
+        for index = 1, 4 do
+            local unit = "party" .. index
+            local name = PartyMember(unit)
+            if name then
+                local mx, my, selection = navigation.UnitMapPosition(unit)
+                -- Roster slots can change during a native read. Accept only
+                -- the same still-dead member; names are literal HUD content.
+                if mx and selection and PartyMember(unit) == name then
+                    count = count + 1
+                    local point = result[count] or {}
+                    point.key, point.name = unit .. ":" .. name, name
+                    point.mx, point.my, point.mapSelection = mx, my, selection
+                    result[count] = point
+                end
+            end
+        end
+        for index = table.getn(result), count + 1, -1 do
+            result[index] = nil
+        end
+        if table.setn then table.setn(result, count) end
+        return result
+    end
+
     local function Snapshot(tracker)
+        if tracker.kind == "party" then return PartySnapshot(tracker) end
         local list = _G[tracker.source]
         -- Each list has its own readiness. Last-change times from different
         -- prefixes are not run ids and cannot establish snapshot ordering.
@@ -836,6 +909,7 @@ DFRL:NewMod("Waypoints", 3, function()
                 tracker.hudWanted = false
                 tracker.hud:Hide()
             end
+            if tracker.pointer:IsShown() then tracker.pointer:Hide() end
             return
         end
         if not tracker.hudWanted then
@@ -844,10 +918,12 @@ DFRL:NewMod("Waypoints", 3, function()
         end
         if not tracker.hud:IsVisible() then
             tracker.presentation = nil
+            if tracker.pointer:IsShown() then tracker.pointer:Hide() end
             return
         end
         elapsed = elapsed or 0
         local selected = tracker.selected
+        if tracker.kind == "party" then T.SetTextIfChanged(tracker.titleText, selected.name) end
         local east, north, distance, metric, stamp = navigation.GuideDelta(selected)
         local facing, headingStamp = navigation.Heading()
         local presentation = tracker.presentation
@@ -1031,6 +1107,12 @@ DFRL:NewMod("Waypoints", 3, function()
         showGuardianTimers = DFRL.display.Get("guardianMinimapTimers")
         for _, tracker in ipairs(trackers) do
             LayoutHUD(tracker)
+            if tracker.kind == "party" then
+                -- Disabling clears the live roster; enabling waits for a fresh
+                -- controller sample instead of replaying a saved destination.
+                if not DFRL.display.Get(tracker.displayKey) then Clear(tracker) end
+                dirty = true
+            end
             UpdateGuide(tracker)
         end
         if not DFRL.display.Get("guardianGuidance") then ClearMinimapPins("guardian", true) end

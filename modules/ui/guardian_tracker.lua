@@ -19,6 +19,8 @@ DFRL:NewMod("GuardianTracker", 4, function()
     local showDead = DFRL.display.Get("guardianShowDead")
     local showCurrent = DFRL.display.Get("guardianShowCurrentHealth")
     local showMaximum = DFRL.display.Get("guardianShowMaximumHealth")
+    local showPercentage = DFRL.display.Get("guardianShowHealthPercentage") == true
+    local shortenHealth = DFRL.display.Get("guardianShortHealth") ~= false
     local DEFAULT_SCALE = 0.85
     local ROW_INSET, NAME_WIDTH, COLUMN_GAP = 12, 120, 16 * 0.9
     local HEALTH_RIGHT_OFFSET = 4
@@ -95,7 +97,15 @@ DFRL:NewMod("GuardianTracker", 4, function()
     end
     local function Status(entry, row)
         if entry.status == "fighting" and Number(entry.healthFraction) then
-            return T.EncounterHealthText(entry.hp, entry.maximum, showCurrent, showMaximum)
+            return T.EncounterHealthText(
+                entry.hp,
+                entry.maximum,
+                showCurrent,
+                showMaximum,
+                nil,
+                shortenHealth,
+                showPercentage
+            )
         end
         local second = entry.status == "returning" and math.max(0, math.ceil(entry.remaining)) or nil
         local language = DFRL.locale.code
@@ -219,11 +229,15 @@ DFRL:NewMod("GuardianTracker", 4, function()
     local function ApplyWidth()
         width = frame:GetWidth()
         local available = width - 2 * ROW_INSET - COLUMN_GAP
-        -- Compress both text columns below their natural width. The status
-        -- column plus its eight-unit pill allowance must span two 25-unit caps.
+        -- Stay within the saved width; percentages reserve measured health space
+        -- before shrinking the name. Keep the pill's two 25-unit caps apart.
         statusWidth = math.min(
             preferredStatusWidth,
-            math.max(42, available * preferredStatusWidth / (NAME_WIDTH + preferredStatusWidth)),
+            math.max(
+                42,
+                available * preferredStatusWidth / (NAME_WIDTH + preferredStatusWidth),
+                showPercentage and healthWidth or 0
+            ),
             available - 24
         )
     end
@@ -242,30 +256,30 @@ DFRL:NewMod("GuardianTracker", 4, function()
         ApplyWidth()
         return true
     end
-    local function Refresh()
-        if not inWorld or DFRL.layout.IsHidden("guardianTracker") or not UIParent:IsVisible() then return end
-        local snapshot = roster.GetSnapshot(presentation.snapshot)
-        if snapshot.status ~= "ready" or not snapshot.rows[1] then
-            Clear()
-            return
-        end
-        if not presentation.shown then
-            presentation.shown = true
-            frame:Show()
-        end
-        if not frame:IsVisible() then return end
-        if (showCurrent or showMaximum) and presentation.measureSize ~= T.EncounterHealthStyle.fontSize then
+    local function MeasureHealthLabels(snapshot)
+        if
+            (showCurrent or showMaximum or showPercentage)
+            and presentation.measureSize ~= T.EncounterHealthStyle.fontSize
+        then
             T.SetFont(measure, T.EncounterHealthStyle.fontSize, "OUTLINE")
             presentation.measureSize = T.EncounterHealthStyle.fontSize
         end
-        if showCurrent or showMaximum then
+        if showCurrent or showMaximum or showPercentage then
             local labels = presentation.healthLabels or {}
             presentation.healthLabels = labels
             for index, entry in ipairs(snapshot.rows) do
                 if entry.status == "fighting" and Number(entry.healthFraction) then
                     local cache = labels[index] or {}
                     labels[index] = cache
-                    local text = T.EncounterHealthText(entry.hp, entry.maximum, showCurrent, showMaximum, cache)
+                    local text = T.EncounterHealthText(
+                        entry.hp,
+                        entry.maximum,
+                        showCurrent,
+                        showMaximum,
+                        cache,
+                        shortenHealth,
+                        showPercentage
+                    )
                     if cache.measuredText ~= text or not cache.measured then
                         T.SetTextIfChanged(measure, text)
                         local measured = measure:GetStringWidth() or 0
@@ -283,11 +297,26 @@ DFRL:NewMod("GuardianTracker", 4, function()
             end
         end
         if dirty then
-            if not Measure() then
-                Clear()
-                return
-            end
+            if not Measure() then return false end
             dirty = false
+        end
+        return true
+    end
+    local function Refresh()
+        if not inWorld or DFRL.layout.IsHidden("guardianTracker") or not UIParent:IsVisible() then return end
+        local snapshot = roster.GetSnapshot(presentation.snapshot)
+        if snapshot.status ~= "ready" or not snapshot.rows[1] then
+            Clear()
+            return
+        end
+        if not presentation.shown then
+            presentation.shown = true
+            frame:Show()
+        end
+        if not frame:IsVisible() then return end
+        if not MeasureHealthLabels(snapshot) then
+            Clear()
+            return
         end
         if presentation.measuredWidth ~= width then
             title:SetWidth(width - TITLE_PADDING)
@@ -347,7 +376,15 @@ DFRL:NewMod("GuardianTracker", 4, function()
                     ClearStatus(row)
                     if row.value ~= entry.healthFraction then row.bar:SetValue(entry.healthFraction) end
                     row.value = entry.healthFraction
-                    T.SetEncounterHealthText(row.health, entry.hp, entry.maximum, showCurrent, showMaximum)
+                    T.SetEncounterHealthText(
+                        row.health,
+                        entry.hp,
+                        entry.maximum,
+                        showCurrent,
+                        showMaximum,
+                        shortenHealth,
+                        showPercentage
+                    )
                     if row.status:IsShown() then row.status:Hide() end
                     if not row.pill:IsShown() then row.pill:Show() end
                 else
@@ -428,9 +465,18 @@ DFRL:NewMod("GuardianTracker", 4, function()
         local selectedShowDead = DFRL.display.Get("guardianShowDead")
         local selectedCurrent = DFRL.display.Get("guardianShowCurrentHealth")
         local selectedMaximum = DFRL.display.Get("guardianShowMaximumHealth")
-        if selectedCurrent ~= showCurrent or selectedMaximum ~= showMaximum then
+        local selectedPercentage = DFRL.display.Get("guardianShowHealthPercentage") == true
+        local selectedShortHealth = DFRL.display.Get("guardianShortHealth") ~= false
+        if
+            selectedCurrent ~= showCurrent
+            or selectedMaximum ~= showMaximum
+            or selectedShortHealth ~= shortenHealth
+            or selectedPercentage ~= showPercentage
+        then
             ClearStatuses()
             showCurrent, showMaximum = selectedCurrent, selectedMaximum
+            showPercentage = selectedPercentage
+            shortenHealth = selectedShortHealth
             presentation.healthLabels, healthWidth = nil, 0
             dirty, age = true, 0.1
         end

@@ -7,6 +7,9 @@ DFRL:NewMod("LootNotifications", 0, function()
     local native = T.NewHudOwner("loot", "hudLoot")
     local inWorld, active = true, false
     local mode, showMarks = DFRL.display.Get("lootMode"), DFRL.display.Get("lootShowMarks")
+    -- Chat ownership changes only after reload. Native mode has no chat hooks;
+    -- this independent loot service receives its own two native message events.
+    local defaultChat, intake = DFRL.display.Get("defaultChat"), false
     local retry = false
     local SyncUpdates
     local queue, count, sequence, age = {}, 0, 0, 0
@@ -125,9 +128,9 @@ DFRL:NewMod("LootNotifications", 0, function()
     function loot.Observe(text, eventName)
         if not active or not inWorld then return end
         if eventName and eventName ~= "CHAT_MSG_LOOT" and eventName ~= "CHAT_MSG_SYSTEM" then return end
-        local chat = DFRL.CleanerChat
-        if not chat or type(chat.ParseLootMessage) ~= "function" then return end
-        local ok, entry = pcall(chat.ParseLootMessage, text)
+        local messages = DFRL.messages
+        if not messages or type(messages.ParseLootMessage) ~= "function" then return end
+        local ok, entry = pcall(messages.ParseLootMessage, text)
         if not ok or not loot.CanShow(entry) then return end
         if type(UnitClass) == "function" then
             local classOK, _, class = pcall(UnitClass, "player")
@@ -170,6 +173,13 @@ DFRL:NewMod("LootNotifications", 0, function()
     end
 
     SyncUpdates = function()
+        local wanted = defaultChat and active and inWorld and mode == "sdui"
+        if wanted ~= intake then
+            local method = wanted and "RegisterEvent" or "UnregisterEvent"
+            controller[method](controller, "CHAT_MSG_LOOT")
+            controller[method](controller, "CHAT_MSG_SYSTEM")
+            intake = wanted
+        end
         local update = inWorld and ((mode == "sdui" and renderer) or retry) and Update or nil
         if controller:GetScript("OnUpdate") ~= update then controller:SetScript("OnUpdate", update) end
     end
@@ -206,7 +216,9 @@ DFRL:NewMod("LootNotifications", 0, function()
     controller:RegisterEvent("PLAYER_LOGOUT")
     controller:RegisterEvent("CVAR_UPDATE")
     controller:SetScript("OnEvent", function()
-        if event == "PLAYER_ENTERING_WORLD" then
+        if event == "CHAT_MSG_LOOT" or event == "CHAT_MSG_SYSTEM" then
+            if intake then loot.Observe(arg1, event) end
+        elseif event == "PLAYER_ENTERING_WORLD" then
             inWorld = true
             age = 0
             Refresh()

@@ -28,11 +28,15 @@ def main():
             "COOLDOWN_INTERVAL", "COOLDOWN_ZERO", "COOLDOWN_FINAL_WINDOW", "COOLDOWN_UNITS",
             "FormatCooldown", "UpdateCooldownNumber", "CreateCooldownNumbers",
         ])
+        run_hud = "local render, refreshRows, scheduleCache = {}, false, nil\n" + extract_source("modules/ui/run.lua", [
+            "nativeParts", "TakeOver", "Restore", "SyncReplacements",
+        ])
+        run_hud = run_hud.rsplit("\nreturn ", 1)[0] + "\nreturn { TakeOver = TakeOver, Restore = Restore, Sync = SyncReplacements }\n"
         guardian_hover = "local hoveredPin, hoveredName\n" + extract_source("modules/map/waypoints.lua", [
             "PIN_SIZE", "Number", "HideGuardianTooltip", "UpdateGuardianTooltip",
         ])
         guardian_timers = "local hoveredPin, hoveredName\n" + extract_source("modules/map/waypoints.lua", [
-            "PIN_SIZE", "Number", "Native", "MinimapEntries", "Shown", "HideGuardianTooltip",
+            "PIN_SIZE", "Number", "Native", "FrameVisible", "MinimapEntries", "HideGuardianTooltip",
             "HideGuardianTimer", "UpdateGuardianTimer", "RecyclePins", "MakeMinimapPin", "PlacePin",
             "Offset", "DrawTrackedPin", "UpdateTrackerPins",
         ])
@@ -66,11 +70,22 @@ def main():
             "SetClockLabelText", "RefreshTimerCaptions", "ClearClockCaptions", "UpdateClockCaptions",
         ])
         run_captions = run_captions.rsplit("\nreturn ", 1)[0] + "\nreturn { New = NewClockLabel, Update = UpdateClockCaptions, Refresh = RefreshTimerCaptions, Style = StyleClockLabel, Clear = ClearClockCaptions }\n"
+        settings_views = extract_source("modules/ui/run.lua", [
+            "SetSettingsEnabled", "UpdateSctLabels", "UpdateDisplayLabels", "RefreshFontControls",
+        ])
+        settings_views = settings_views.rsplit("\nreturn ", 1)[0] + "\nreturn { Display = UpdateDisplayLabels, SCT = UpdateSctLabels, Font = RefreshFontControls }\n"
+        settings_editor = extract_source("modules/ui/run.lua", [
+            "fontFaces", "fontOutlines", "FontEditorLabel", "FontEditorButton",
+            "SetSettingsEnabled", "UpdateSctLabels", "UpdateDisplayLabels", "RefreshFontControls",
+            "FitFontEditor", "PlaceFontEditor", "FinishFontEditorDrag", "CreateFontEditor",
+        ])
+        settings_editor = settings_editor.rsplit("\nreturn ", 1)[0] + "\nreturn { Create = CreateFontEditor, Display = UpdateDisplayLabels, SCT = UpdateSctLabels, Font = RefreshFontControls }\n"
         tally_counters = extract_source("modules/ui/run.lua", [
             "TALLY_COUNTER_INTERVAL", "IsNumber", "TallyCountersDue", "ClearTally", "UpdateTally", "UpdateRunBoundary",
         ])
         tally_counters = tally_counters.rsplit("\nreturn ", 1)[0] + "\nreturn { Update = UpdateTally, Clear = ClearTally, Boundary = UpdateRunBoundary }\n"
-        minimap_clock = extract_source("modules/map/map.lua", ["WatchClock"])
+        minimap_clock = extract_source("modules/map/map.lua", ["WatchClock", "SetLauncherEditing"])
+        minimap_clock = minimap_clock.rsplit("\nreturn ", 1)[0] + "\nreturn { Watch = WatchClock, Editing = SetLauncherEditing }\n"
         player_pulse = extract_source("modules/unit/player.lua", ["CreatePulse"])
         aura_layout = extract_source("modules/unit/auras.lua", ["PlaceNativeFrame", "Layout"])
         aura_duration = extract_source("modules/unit/auras.lua", ["Time", "SetTimerDuration"])
@@ -103,6 +118,9 @@ def main():
         aura_duration_source = Path(folder) / "aura-duration-source.lua"
         aura_duration_source.write_text(aura_duration, encoding="utf-8")
         for name, source, fixture in (
+            ("settings-editor-source.lua", settings_editor, "ui_editor_navigation_spec.lua"),
+            ("settings-views-source.lua", settings_views, "ui_settings_visibility_spec.lua"),
+            ("run-hud-source.lua", run_hud, "ui_shared_rules_spec.lua"),
             ("cooldown-source.lua", cooldown, "ui_spec.lua"),
             ("guardian-hover-source.lua", guardian_hover, "ui_guardian_hover_spec.lua"),
             ("guardian-timers-source.lua", guardian_timers, "ui_guardian_timer_spec.lua"),
@@ -144,7 +162,7 @@ def main():
             result = subprocess.run(command, cwd=SOURCE)
             if result.returncode:
                 return result.returncode
-        for fixture in ("ui_health_spec.lua", "ui_sct_spec.lua", "ui_nameplates_spec.lua", "ui_marks_spec.lua", "ui_meter_party_spec.lua", "ui_banners_perf_spec.lua", "ui_layout_spec.lua", "ui_pets_totems_spec.lua", "ui_guardian_tracker_perf_spec.lua", "ui_revive_perf_spec.lua", "ui_core_idle_cadence_spec.lua", "ui_cooldown_lifecycle_spec.lua", "ui_tooltip_style_perf_spec.lua", "ui_target_color_perf_spec.lua", "ui_target_classification_spec.lua", "ui_passive_cadence_spec.lua", "ui_projection_cache_perf_spec.lua", "ui_sct_metadata_perf_spec.lua"):
+        for fixture in ("ui_retail_edit_spec.lua", "ui_retail_layout_spec.lua", "ui_default_chat_spec.lua", "ui_health_spec.lua", "ui_mini_health_spec.lua", "ui_sct_spec.lua", "ui_nameplates_spec.lua", "ui_marks_spec.lua", "ui_meter_party_spec.lua", "ui_party_waypoint_spec.lua", "ui_banners_perf_spec.lua", "ui_layout_spec.lua", "ui_pets_totems_spec.lua", "ui_guardian_tracker_perf_spec.lua", "ui_revive_perf_spec.lua", "ui_core_idle_cadence_spec.lua", "ui_cooldown_lifecycle_spec.lua", "ui_tooltip_style_perf_spec.lua", "ui_target_color_perf_spec.lua", "ui_target_classification_spec.lua", "ui_passive_cadence_spec.lua", "ui_projection_cache_perf_spec.lua", "ui_sct_metadata_perf_spec.lua"):
             result = subprocess.run(["lua5.1", "scripts/tests/fixtures/" + fixture], cwd=SOURCE)
             if result.returncode:
                 return result.returncode

@@ -67,32 +67,7 @@ DFRL:NewMod("TargetHealth", 0, function()
             return false
         end
         if source == unitSource and stamp == unitStamp and unitParsed == unitAccepted then return false end
-        for id in pairs(unitSeen) do
-            unitSeen[id] = nil
-        end
-        local valid = type(source) == "table" and Number(stamp) and table.getn(source) <= 40
-        if valid then
-            for _, entry in ipairs(source) do
-                if
-                    type(entry) ~= "table"
-                    or (entry.kind ~= "final" and entry.kind ~= "boss" and entry.kind ~= "guardian" and entry.kind ~= "elite")
-                    or not Number(entry.id)
-                    or entry.id <= 0
-                    or entry.id ~= math.floor(entry.id)
-                    or unitSeen[entry.id]
-                    or type(entry.name) ~= "string"
-                    or entry.name == ""
-                    or not Number(entry.hp)
-                    or not Number(entry.hpm)
-                    or entry.hpm <= 0
-                    or entry.hp > entry.hpm
-                then
-                    valid = false
-                    break
-                end
-                unitSeen[entry.id] = true
-            end
-        end
+        local valid = T.EncounterRosterSize(source, stamp) ~= nil and T.ValidateEncounterEntries(source, unitSeen)
         -- Keep the previous publication intact until the entire list is checked.
         for _, maxima in pairs(unitNames) do
             for value in pairs(maxima) do

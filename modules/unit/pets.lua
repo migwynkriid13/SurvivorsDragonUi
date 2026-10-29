@@ -1,6 +1,6 @@
 DFRL:NewMod("PetFrames", 4, function()
     local CELL_WIDTH, CELL_HEIGHT = 174, 46
-    local ICON_SIZE, ICON_RADIUS = 34, 17
+    local ICON_SIZE = 34
     local CENTER_X, CENTER_Y = 24.5, 22.5
     local RIM_SIZE = 39
     local petIcons = {
@@ -108,7 +108,7 @@ DFRL:NewMod("PetFrames", 4, function()
         portrait:SetHeight(ICON_SIZE)
         portrait:SetPoint("CENTER", frame, "TOPLEFT", CENTER_X, -CENTER_Y)
         portrait:Hide()
-        local circle = { frame = frame, portrait = portrait, strips = {} }
+        local circle = { frame = frame, image = T.NewCircularIcon(portrait, ICON_SIZE) }
         circle.count = Label(frame, 10)
         circle.count:SetJustifyH("RIGHT")
         circle.count:SetPoint("BOTTOMRIGHT", frame, "TOPLEFT", CENTER_X + RIM_SIZE / 2, -CENTER_Y - RIM_SIZE / 2)
@@ -116,117 +116,12 @@ DFRL:NewMod("PetFrames", 4, function()
         row.circle = circle
         return circle
     end
-    local function SetStripIcon(circle, icon, scale)
-        local changed = not T.NearlyEqual(circle.scale, scale)
-        if icon and not changed and circle.icon == icon then return true end
-        if changed and icon then
-            -- At most one physical pixel per icon strip. The complete rim
-            -- covers this clip edge without slicing the rim artwork itself.
-            local parts = math.max(2, math.ceil(ICON_SIZE * scale))
-            local step, used = ICON_SIZE / parts, 0
-            for part = 1, parts do
-                local top, bottom = (part - 1) * step, part * step
-                local edge = math.max(math.abs(top - ICON_RADIUS), math.abs(bottom - ICON_RADIUS))
-                local half = math.sqrt(math.max(0, ICON_RADIUS * ICON_RADIUS - edge * edge))
-                if half > 0 then
-                    used = used + 1
-                    local strip = circle.strips[used]
-                    if not strip then
-                        strip = circle.frame:CreateTexture(nil, "ARTWORK")
-                        table.insert(circle.strips, strip)
-                    end
-                    strip:ClearAllPoints()
-                    strip:SetPoint("TOPLEFT", circle.frame, "TOPLEFT", CENTER_X - half, -CENTER_Y + ICON_RADIUS - top)
-                    strip:SetWidth(half * 2)
-                    strip:SetHeight(step)
-                    strip:SetTexCoord(
-                        (ICON_RADIUS - half) / ICON_SIZE,
-                        (ICON_RADIUS + half) / ICON_SIZE,
-                        top / ICON_SIZE,
-                        bottom / ICON_SIZE
-                    )
-                end
-            end
-            circle.used, circle.scale = used, scale
-        end
-        local usable = true
-        local stem = icon and string.gsub(icon, "%.[^%.]*$", "")
-        for index, strip in ipairs(circle.strips) do
-            if icon and index <= (circle.used or 0) then
-                if strip.boundTexture ~= icon then
-                    strip.boundTexture = nil
-                    local loaded = strip:SetTexture(icon)
-                    local assigned = strip:GetTexture()
-                    if loaded ~= false and (loaded == true or loaded == 1 or assigned == icon or assigned == stem) then
-                        strip.boundTexture = icon
-                    else
-                        strip:SetTexture(nil)
-                    end
-                end
-                if not strip.boundTexture then usable = false end
-            else
-                if strip.boundTexture then strip:SetTexture(nil) end
-                strip.boundTexture = nil
-                if strip:IsShown() then strip:Hide() end
-            end
-        end
-        for index = 1, icon and (circle.used or 0) or 0 do
-            local strip = circle.strips[index]
-            if usable then
-                if not strip:IsShown() then strip:Show() end
-            elseif strip:IsShown() then
-                strip:Hide()
-            end
-        end
-        circle.icon = usable and icon or nil
-        return usable
-    end
-    local function ClearStrips(circle)
-        for _, strip in ipairs(circle.strips) do
-            if strip:IsShown() then strip:Hide() end
-            if strip.boundTexture then strip:SetTexture(nil) end
-            strip.boundTexture = nil
-        end
-    end
-    local function BindPortrait(portrait, icon)
-        _G.SetPortraitToTexture(portrait:GetName(), icon)
-        local assigned = portrait:GetTexture()
-        local stem = string.gsub(icon, "%.[^%.]*$", "")
-        return assigned == icon or assigned == stem
-    end
-    local function ClearPortrait(circle)
-        circle.portrait:Hide()
-        circle.portrait:SetTexture(nil)
-        if circle.native then circle.icon = nil end
-        circle.native = false
-    end
-    local function SetIcon(circle, icon, scale)
-        -- The native circle is one cached image, rather than a visible region
-        -- for every horizontal pixel. Scaling needs no new portrait binding.
-        if icon and circle.native and circle.icon == icon then return true end
-        if icon and circle.failedIcon ~= icon and type(_G.SetPortraitToTexture) == "function" then
-            local ok, bound = pcall(BindPortrait, circle.portrait, icon)
-            if ok and bound then
-                ClearStrips(circle)
-                circle.portrait:Show()
-                circle.native, circle.icon, circle.failedIcon = true, icon, nil
-                return true
-            end
-            ClearPortrait(circle)
-            circle.failedIcon = icon
-        end
-        if circle.native then ClearPortrait(circle) end
-        -- Older clients without the global keep the same clipped appearance.
-        -- These regions are allocated only if the native path is unavailable.
-        return SetStripIcon(circle, icon, scale)
-    end
     local function HideCircle(circle)
         if not circle.active then return end
         circle.frame:Hide()
-        ClearPortrait(circle)
-        ClearStrips(circle)
+        circle.image.Clear()
         Text(circle.count, "")
-        circle.icon, circle.active, circle.native, circle.failedIcon = nil, false, false, nil
+        circle.active = false
     end
     local function HideRow(row)
         row.timerSecond, row.timerText, row.countValue, row.countText = nil, nil, nil, nil
@@ -332,7 +227,7 @@ DFRL:NewMod("PetFrames", 4, function()
             row.showName, row.showTimer = showName, showTimer
         end
         local circle = Circle(row)
-        local usable = SetIcon(circle, entry.icon, scale)
+        local usable = circle.image.Bind(entry.icon, scale)
         Text(circle.count, CountText(row, entry.count, not DFRL.display.Get("hidePetCounts")))
         if not circle.active then circle.frame:Show() end
         circle.active = true

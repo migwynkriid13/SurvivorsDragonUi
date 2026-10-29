@@ -1,0 +1,31 @@
+{
+  "source_commit": "e80e3278cc833c89e1f3fc79557b68315d750935",
+  "build": "10.0.0.45454",
+  "source": "Buttons/128GoldRedButton.PNG",
+  "source_sha256": "243c7aa25c1dd9e299999f21a526afe7cc570e1362471cc6746039e8171c0d94",
+  "source_canvas": [512, 1024],
+  "canvas": [512, 512],
+  "state_rectangles": {
+    "normal": [
+      [295, 521, 409, 649],
+      [0, 1, 64, 129],
+      [179, 521, 293, 649]
+    ],
+    "pressed": [
+      [295, 781, 409, 909],
+      [0, 261, 64, 389],
+      [179, 781, 293, 909]
+    ],
+    "disabled": [
+      [295, 651, 409, 779],
+      [0, 131, 64, 259],
+      [179, 651, 293, 779]
+    ]
+  },
+  "highlight_rectangle": [1, 391, 442, 519],
+  "destination": "media/tex/editor/button.blp",
+  "rgba_sha256": "9b947705f6beef5247b0898491155c06f6bf426a4683a23ff44185ab0e8fa48c",
+  "blp_sha256": "878fe8b38252c1e1e86cc1a2e4a463f43dbfae5ac7e0d304e70876300a561564",
+  "decoded_pixels_and_tga_match": true,
+  "preparation": "Exact crops; retain each outer cap and stretch only the center at runtime. No recoloring or resampling."
+}

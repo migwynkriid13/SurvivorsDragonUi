@@ -51,6 +51,8 @@ portraits()
 assert(env.borderFrame:IsShown() and not env.portraitless:IsShown(), "portrait border did not restore")
 
 env.borderStrips = { env.border:CreateTexture(nil, "OVERLAY"), env.border:CreateTexture(nil, "OVERLAY") }
+env.TargetofTargetFrame, env.TargetofTargetHealthBar = env.frame, env.health
+env.target = { healthLabels = { SetInsets = function() end } }
 local mini = Load(assert(arg[3]), env)
 context.settings.hidePortraits = true
 mini()

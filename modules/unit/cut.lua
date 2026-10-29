@@ -1,5 +1,4 @@
 DFRL:NewMod("Cut-Out", 1, function()
-    local tex = DFRL:GetInfoOrCons("tex") .. "unitframes\\"
     local bars = {
         { "PlayerFrameHealthBar", "player" },
         { "TargetFrameHealthBar", "target" },
@@ -131,13 +130,9 @@ DFRL:NewMod("Cut-Out", 1, function()
                 overlay:SetFrameLevel(bar:GetFrameLevel() + 1)
                 overlay:SetAllPoints(bar)
                 local texture = overlay:CreateTexture(nil, "OVERLAY")
-                if data[1] == "PlayerFrameHealthBar" or data[1] == "TargetFrameHealthBar" then
-                    local healthFill = T.LargeHealthFill
-                    texture:SetTexture(healthFill.texture)
-                    texture:SetTexCoord(unpack(healthFill.texCoords))
-                else
-                    texture:SetTexture(tex .. "UI-HUD-UnitFrame-TargetofTarget-PortraitOn-Bar-HealthFill.blp")
-                end
+                local healthFill = T.LargeHealthFill
+                texture:SetTexture(healthFill.texture)
+                texture:SetTexCoord(unpack(healthFill.texCoords))
                 texture:SetVertexColor(1, 1, 1, 0.7)
                 local cutout = { bar = bar, texture = texture, unit = data[2] }
                 table.insert(cutouts, cutout)

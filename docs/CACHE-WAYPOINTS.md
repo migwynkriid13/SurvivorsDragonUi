@@ -1,8 +1,49 @@
-# Cache and guardian waypoints
+# Cache, guardian and fallen-ally waypoints
 
 Cache and guardian waypoints add independent guidance HUDs and minimap markers using the official coordinates supplied in the owner's updated addon documentation on 2026-10-15 and the subsequent `AZS_RUN` world-position/facing update. Cache guidance requires `AZS_CHESTS` and `AZS_CHESTS_UPDATED`; guardian guidance requires `AZS_LAIRS` and `AZS_LAIRS_UPDATED`. Both require the native active run phase. Received `AZS_RUN.px`/`py` and `pf` supply direct world guidance on supported builds, including instances; zone/map identity is additionally required for map projection and the older map-based fallback. Install them as part of SurvivorsDragonUi; no companion process or client modification is required.
 
 ## Player behavior
+
+**Fallen ally guidance** reuses this same HUD, arrow and minimap pin system with
+the selected **02 Winged Soul** artwork. A 32-unit blue/white spirit icon accompanies
+the exact native member name and distance; each eligible fallen ally also has a
+20-unit minimap pin, clamped to the edge when distant. The guide chooses a nearby
+member and keeps that selection until it becomes unavailable, then chooses again.
+Its default anchor sits 54 units above the action/XP stack center. Move, scale or
+hide **Fallen ally waypoint** in the shared Layout editor.
+
+The default-on `partyGuidance` and default-off `mirrorPartyWaypoint` choices live
+in the existing display table. Both support preview, Confirm-only saving,
+Cancel/world/logout/reload discard, profiles and both full resets. Turning this
+guide off clears its live roster and skips party reads; enabling waits for a
+fresh native sample. No member positions or death state are saved.
+
+The existing ten-Hz/deferred controller reads current `party1` through `party4`
+using `UnitExists`, `UnitIsConnected`, `UnitIsDead`, `UnitIsGhost`, `UnitName` and
+`GetPlayerMapPosition(unit)`. Boolean true and numeric one mean eligible; zero
+does not. Membership/name and death are checked again after the position read.
+Revival, disconnect, missing/failed coordinates, inactive phase and world cleanup
+remove guidance at the next existing refresh. No last-alive or historical
+location is substituted. Ghosts are excluded because their current unit position
+cannot establish their body's location.
+
+Remote party UVs are accepted only on the confirmed current-zone map sheet with
+a readable player position. Another open map, `(0, 0)` or an unsupported instance
+map hides this guide. Distance and bearing require the same native map-scale
+calibration as existing map guidance; without scale the caption is **On map** and
+the arrow/pins hide. Received cache/lair world guidance retains its existing
+instance fallback. No remote world coordinates or 3D body projection API are
+available, so this is HUD/minimap guidance and does not draw above the body in
+the world.
+
+The native party-position contract is documented by
+[benilla worldmap.rs at 0259668](https://github.com/samwhosung/benilla/blob/0259668162cd2674730e078f5bf3def4cf4dfb35/crates/benilla-ui/src/script/worldmap.rs#L953)
+and its [party map tests](https://github.com/samwhosung/benilla/blob/0259668162cd2674730e078f5bf3def4cf4dfb35/crates/benilla-app/src/ui_script/world_map_tests.rs#L245).
+The same snapshot's [unit bindings](https://github.com/samwhosung/benilla/blob/0259668162cd2674730e078f5bf3def4cf4dfb35/crates/benilla-ui/src/script/unit/bindings.rs#L318)
+read native dead/ghost object flags; a released ghost is no longer `UnitIsDead`.
+`AZS_GetRevive` supplies only the local interaction; `AZS_GetPartyMeter` supplies
+ranked totals. Neither is a remote corpse-position feed. Installed-game delivery,
+map support and rendering have not been verified through execution.
 
 - Each guide selects a nearby destination automatically when the player's location can be read. While position data is unavailable, the first available destination keeps that overlay visible with "On map"; automatic selection retries until it can choose a nearby one. A resolved cache selection stays until the cache is opened or disappears; a guardian selection stays until that guardian's occupied-lair identity disappears. The cache and guardian selections remain independent; there is no full world-map overlay or click-to-track control.
 - Each waypoint has its own horizontal floating-label guide, 190 by 46 at its default size. An upright 32-by-32 icon sits beside two left-aligned text lines: the full Cache or Guardian title in DEFAULT 13 above distance in DEFAULT 15. The guardian HUD uses the gold-dragon/skull medallion `GuardianFloating.tga`, and the cache HUD uses the supplied `Chest.blp`. The icon and text have transparent backgrounds, with no bottom stripe, rectangular fill or enclosing border.

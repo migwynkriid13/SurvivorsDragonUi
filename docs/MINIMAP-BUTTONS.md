@@ -1,6 +1,6 @@
 # Minimap buttons
 
-The gold Dragonflight glyph beside the minimap opens the existing `/sdui` editor.
+The gold Dragonflight glyph beside the minimap toggles the existing `/sdui` editor.
 It uses the selected **05 Small square button** background: a compact dark plate
 with a gold edge, centered behind the unchanged glyph. The background is static;
 the glyph uses additive blending, so its source image's black backing contributes
@@ -12,8 +12,17 @@ The launcher's center starts exactly on the minimap's bottom-left corner, where
 the two edges meet, with no outward offset. It can be dragged around the square
 edge. Its edge position is session-only. The minimap's existing Layout group owns
 its movement, scale and hiding; the launcher adds no saved state or Layout group.
-Clicking uses `layout.BeginEdit`, preserving the same preview, Confirm, Cancel,
-profiles and cleanup paths as the slash command.
+Clicking uses `layout.ToggleEdit`: a closed editor opens through `BeginEdit`;
+an active session closes through `CancelEdit`, discarding unconfirmed changes.
+Escape also cancels the full settings window, including from its numeric and
+profile-name fields. Confirm remains the save action. These routes share the
+existing profiles, preview and cleanup paths.
+
+While editing, the existing minimap `onEdit` callback puts the launcher at
+TOOLTIP level 125, above Layout's level-100 selection and below the settings
+dialog at 150. This keeps the second click reachable. Closing restores the
+minimap's current strata and its level plus twenty, with actual-state comparisons
+to skip unchanged writes. There is no new region, event or updater for layering.
 
 ## Optional local clock
 

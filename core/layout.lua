@@ -7,10 +7,13 @@ DFRL:NewMod("Layout", 0, function()
     local activeDrag
     local editing, draft, confirm = false, nil, nil
     local handlesOnly, setEditorVisible = false, nil
+    local handlesVisible = true
     local coordinates, selected, RefreshCoordinates, SelectEntry
     local showCoordinates
     local confirmAnchor
-    local grid, gridWidth, gridHeight, gridScale, gridFine
+    local editManager, selectionPanel, PlaceSelectionPanel, ShowSelectionPanel, UpdateSelection, ClearSelected, CloseEditing
+    local coordinateHome, guideOwner
+    local grid, gridWidth, gridHeight, gridScale, gridFine, gridPitch
     local GRID_SPACING = 32
     local EDITOR_INTERVAL = 0.1
     local SNAP_SPACING, SNAP_CAPTURE, SNAP_RELEASE = GRID_SPACING / 4, 8, 12
@@ -39,6 +42,7 @@ DFRL:NewMod("Layout", 0, function()
         minimap = "Minimap",
         cacheWaypoint = "Cache waypoint",
         guardianWaypoint = "Guardian waypoint",
+        partyWaypoint = "Fallen ally waypoint",
         guardianTracker = "Guardian tracker",
         damageMeter = "DPS meter",
         sctMSBT = "MSBT-style scrolling",
@@ -126,37 +130,61 @@ DFRL:NewMod("Layout", 0, function()
     local function Scale(frame) return frame.GetEffectiveScale and frame:GetEffectiveScale() or 1 end
     local function LocalScale(frame) return frame.GetScale and frame:GetScale() or 1 end
     local function HideSnapGuides()
-        if not grid or not grid.guides then return end
-        for _, guide in ipairs(grid.guides) do
+        if not guideOwner then return end
+        for _, guide in ipairs(guideOwner.guides) do
             if guide.shown then guide:Hide() end
             guide.shown = false
         end
+        if guideOwner:IsShown() then guideOwner:Hide() end
     end
     local function ShowSnapGuides(x, y)
-        if not grid then return end
-        grid.guides = grid.guides or {}
+        if not handlesOnly and not DFRL.display.Get("layoutShowGrid") then
+            HideSnapGuides()
+            return
+        end
+        if x == nil and y == nil then
+            HideSnapGuides()
+            return
+        end
+        if not guideOwner then
+            guideOwner = CreateFrame("Frame", nil, UIParent)
+            guideOwner:SetAllPoints(UIParent)
+            guideOwner:SetFrameStrata("HIGH")
+            guideOwner:SetFrameLevel(1)
+            guideOwner:EnableMouse(false)
+            guideOwner.guides = {}
+        end
+        if not guideOwner:IsShown() then guideOwner:Show() end
         local width, height = T.GetLocalSize(UIParent)
         local pixel = 1 / Scale(UIParent)
         for index = 1, 2 do
-            local guide = grid.guides[index]
+            local guide = guideOwner.guides[index]
             if not guide then
-                guide = grid:CreateTexture(nil, "OVERLAY")
+                guide = guideOwner:CreateTexture(nil, "OVERLAY")
                 guide:SetTexture("Interface\\Buttons\\WHITE8X8")
                 guide:SetVertexColor(1, 0.83, 0.38, 0.95)
-                grid.guides[index] = guide
+                guideOwner.guides[index] = guide
             end
             local vertical = index == 1
-            local value = vertical and x or y
+            local value
+            if vertical then
+                value = x
+            else
+                value = y
+            end
             if
-                guide.value ~= value
-                or guide.pixel ~= pixel
-                or guide.viewWidth ~= width
-                or guide.viewHeight ~= height
+                value ~= nil
+                and (
+                    guide.value ~= value
+                    or guide.pixel ~= pixel
+                    or guide.viewWidth ~= width
+                    or guide.viewHeight ~= height
+                )
             then
                 guide:ClearAllPoints()
                 guide:SetPoint(
                     "CENTER",
-                    grid,
+                    guideOwner,
                     "CENTER",
                     vertical and x - width / 2 or 0,
                     vertical and 0 or y + height / 2
@@ -165,18 +193,29 @@ DFRL:NewMod("Layout", 0, function()
                 guide:SetHeight(vertical and height or pixel)
                 guide.value, guide.pixel, guide.viewWidth, guide.viewHeight = value, pixel, width, height
             end
-            if not guide.shown then guide:Show() end
-            guide.shown = true
+            if value ~= nil then
+                if not guide.shown then guide:Show() end
+                guide.shown = true
+            else
+                if guide.shown then guide:Hide() end
+                guide.shown = false
+            end
         end
     end
     local function UpdateGrid()
+        if not inWorld or not editing or not handlesVisible then
+            if grid and grid:IsShown() then grid:Hide() end
+            HideSnapGuides()
+            return
+        end
         if DFRL.display and not DFRL.display.Get("layoutShowGrid") then
             if grid and grid:IsShown() then grid:Hide() end
+            if not handlesOnly then HideSnapGuides() end
             return
         end
         local width, height = T.GetLocalSize(UIParent)
         local scale = Scale(UIParent)
-        local fine = activeDrag and activeDrag.moving and IsShiftKeyDown() and true or false
+        local fine = not handlesOnly and activeDrag and activeDrag.moving and IsShiftKeyDown() and true or false
         if not Number(width) or not Number(height) or not Number(scale) or width <= 0 or height <= 0 or scale <= 0 then
             if grid then grid:Hide() end
             return
@@ -195,9 +234,13 @@ DFRL:NewMod("Layout", 0, function()
             or not T.NearlyEqual(height, gridHeight)
             or not T.NearlyEqual(scale, gridScale)
             or gridFine ~= fine
+            or gridPitch
+                ~= (handlesOnly and DFRL.display.Get("layoutGridSpacing") or fine and SNAP_SPACING or GRID_SPACING)
         then
             local used, pixel = 0, 1 / scale
-            local spacing = fine and SNAP_SPACING or GRID_SPACING
+            local spacing = handlesOnly and DFRL.display.Get("layoutGridSpacing")
+                or fine and SNAP_SPACING
+                or GRID_SPACING
             for axis = 1, 2 do
                 local vertical = axis == 1
                 local extent = vertical and width or height
@@ -237,7 +280,7 @@ DFRL:NewMod("Layout", 0, function()
             for index = used + 1, table.getn(grid.lines) do
                 grid.lines[index]:Hide()
             end
-            gridWidth, gridHeight, gridScale, gridFine = width, height, scale, fine
+            gridWidth, gridHeight, gridScale, gridFine, gridPitch = width, height, scale, fine, spacing
         end
         if not grid:IsShown() then grid:Show() end
     end
@@ -394,7 +437,7 @@ DFRL:NewMod("Layout", 0, function()
     end
     function layout.IsPlaced(key) return (entries[key] and entries[key].dragging) or Valid(GeometryStore()[key]) end
     local function CanShowHandle(entry)
-        return entry.defaultPosition and (not entry.options.onlyWhenShown or entry.wantsShown)
+        return handlesVisible and entry.defaultPosition and (not entry.options.onlyWhenShown or entry.wantsShown)
     end
     function layout.Width(key, fallback)
         local entry = entries[key]
@@ -408,7 +451,7 @@ DFRL:NewMod("Layout", 0, function()
     local UpdateMove, UpdateResize
     local function FinishDrag(entry, capture)
         if not entry or not entry.dragging then return end
-        if capture and entry.moving then UpdateMove(entry, true) end
+        if capture and entry.moving then UpdateMove(entry, true, nil, nil, nil, true) end
         if capture and entry.resizing then UpdateResize(entry, true) end
         entry.frame:StopMovingOrSizing()
         entry.dragging = false
@@ -454,7 +497,7 @@ DFRL:NewMod("Layout", 0, function()
         end
         local ratio = Scale(region) / uiScale
         local left, top = position.x * width, position.y * height
-        local scaledWidth, scaledHeight = regionWidth * ratio, regionHeight * ratio
+        local scaledWidth, scaledHeight = math.max(16, regionWidth * ratio), math.max(16, regionHeight * ratio)
         local changed = not T.NearlyEqual(bounds.left, left)
             or not T.NearlyEqual(bounds.top, top)
             or not T.NearlyEqual(bounds.width, scaledWidth)
@@ -586,7 +629,7 @@ DFRL:NewMod("Layout", 0, function()
         ShowSnapGuides(guideX, guideY)
         return x + dx, y + dy
     end
-    UpdateMove = function(entry, force, width, height, uiScale)
+    UpdateMove = function(entry, force, width, height, uiScale, releasing)
         local start = entry.moving
         if not width then
             width, height, uiScale = Viewport()
@@ -603,7 +646,10 @@ DFRL:NewMod("Layout", 0, function()
         end
         local shift = IsShiftKeyDown() and true or false
         start.targetsAge = start.targetsAge + (tonumber(arg1) or 0)
-        if shift and (force or start.targetsDirty or start.targetsAge >= EDITOR_INTERVAL) then
+        local snapping = handlesOnly and DFRL.display.Get("layoutSnapEnabled") or not handlesOnly and shift
+        local gridShown = DFRL.display.Get("layoutShowGrid")
+        local gridSpacing = handlesOnly and DFRL.display.Get("layoutGridSpacing") or SNAP_SPACING
+        if (snapping or handlesOnly) and (force or start.targetsDirty or start.targetsAge >= EDITOR_INTERVAL) then
             RefreshSnapTargets(entry, start, width, height, uiScale)
         end
         if
@@ -611,12 +657,32 @@ DFRL:NewMod("Layout", 0, function()
             and start.lastCursorX == cursorX
             and start.lastCursorY == cursorY
             and start.lastShift == shift
+            and start.lastSnapEnabled == snapping
+            and start.lastGridShown == gridShown
+            and start.lastGridSpacing == gridSpacing
             and start.lastRevision == start.targetRevision
         then
             return
         end
         local x, y = start.x + cursorX - start.cursorX, start.y + cursorY - start.cursorY
-        if shift then
+        if handlesOnly then
+            -- Retail lets the pointer move freely, previews nearby magnets,
+            -- then applies the chosen edge/corner only on the release sample.
+            if start.snapReady then
+                x = Clamp(x, -start.offsetX, width - start.rect.width - start.offsetX)
+                y = Clamp(y, -height + start.rect.height - start.offsetY, -start.offsetY)
+            end
+            if snapping then
+                local result = T.RetailSnap(start, x, y, gridShown, gridSpacing, uiScale)
+                ShowSnapGuides(result.guideX, result.guideY)
+                if releasing then
+                    x, y = x + result.dx, y + result.dy
+                end
+            else
+                start.targetsDirty = true
+                HideSnapGuides()
+            end
+        elseif shift then
             x, y = SnapMove(start, x, y)
         else
             start.snaps.x, start.snaps.y = nil, nil
@@ -626,7 +692,8 @@ DFRL:NewMod("Layout", 0, function()
         entry.pointerPosition.x, entry.pointerPosition.y = x / width, y / height
         ApplyPosition(entry.frame, entry.pointerPosition, width, height, uiScale)
         start.lastCursorX, start.lastCursorY = cursorX, cursorY
-        start.lastShift, start.lastRevision = shift, start.targetRevision
+        start.lastShift, start.lastRevision, start.lastSnapEnabled = shift, start.targetRevision, snapping
+        start.lastGridShown, start.lastGridSpacing = gridShown, gridSpacing
         return true
     end
     local function BeginMove(entry)
@@ -781,6 +848,7 @@ DFRL:NewMod("Layout", 0, function()
         grip:SetScript("OnMouseUp", function() FinishDrag(entry, true) end)
         grip:SetScript("OnHide", function() FinishDrag(entry, true) end)
         grip:EnableMouse(true)
+        table.insert(entry.grips, grip)
     end
 
     local function MakeCorner(entry, handle, corner)
@@ -815,6 +883,23 @@ DFRL:NewMod("Layout", 0, function()
         grip:SetScript("OnMouseUp", function() FinishDrag(entry, true) end)
         grip:SetScript("OnHide", function() FinishDrag(entry, true) end)
         grip:EnableMouse(true)
+        table.insert(entry.grips, grip)
+    end
+
+    local function PrepareGrips(entry, handle)
+        if entry.grips then return end
+        entry.grips = {}
+        for _, corner in ipairs({ "TOPLEFT", "TOPRIGHT", "BOTTOMLEFT", "BOTTOMRIGHT" }) do
+            MakeCorner(entry, handle, corner)
+        end
+        if entry.options.edgeWidth or entry.options.edgeHandles then
+            MakeEdge(entry, handle, "LEFT", "width")
+            MakeEdge(entry, handle, "RIGHT", "width")
+        end
+        if entry.options.onHeightDrag or entry.options.edgeHandles then
+            MakeEdge(entry, handle, "TOP", "height")
+            MakeEdge(entry, handle, "BOTTOM", "height")
+        end
     end
 
     local function MakeHandle(entry)
@@ -826,20 +911,22 @@ DFRL:NewMod("Layout", 0, function()
         handle:SetFrameStrata("TOOLTIP")
         handle:SetFrameLevel(100)
         handle:RegisterForDrag("LeftButton")
-        handle:SetBackdrop({ edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 1 })
-        handle:SetBackdropBorderColor(0.87, 0.73, 0.41, 0.8)
+        handle.SetEditorSelection = T.CreateEditModeSelection(handle)
+        handle.SetEditorSelection(selected == entry)
         local label = handle:CreateFontString(nil, "OVERLAY")
         DFRL.locale.Bind(label)
-        T.SetFont(label, 10, "OUTLINE")
+        T.SetFont(label, entry.options.labelAbove and 10 or 14, "OUTLINE")
         if entry.options.labelAbove then
             label:SetPoint("BOTTOM", handle, "TOP", 0, 6)
         else
             label:SetPoint("CENTER", handle, "CENTER", 0, 0)
         end
-        label:SetTextColor(0.87, 0.73, 0.41)
+        label:SetTextColor(1, 1, 1)
         label:SetText(labels[entry.key] or entry.key)
         handle:SetScript("OnDragStart", function() BeginMove(entry) end)
-        handle:SetScript("OnClick", function() SelectEntry(entry, true) end)
+        handle:SetScript("OnMouseDown", function()
+            if arg1 ~= "RightButton" then SelectEntry(entry, true) end
+        end)
         handle:SetScript("OnDragStop", function() FinishDrag(entry, true) end)
         handle:SetScript("OnMouseUp", function() FinishDrag(entry, true) end)
         handle:SetScript("OnHide", function() FinishDrag(entry, true) end)
@@ -863,23 +950,14 @@ DFRL:NewMod("Layout", 0, function()
         end
         handle:EnableMouse(false)
         handle:Hide()
-        for _, corner in ipairs({ "TOPLEFT", "TOPRIGHT", "BOTTOMLEFT", "BOTTOMRIGHT" }) do
-            MakeCorner(entry, handle, corner)
-        end
-        if entry.options.edgeWidth or entry.options.edgeHandles then
-            MakeEdge(entry, handle, "LEFT", "width")
-            MakeEdge(entry, handle, "RIGHT", "width")
-        end
-        if entry.options.onHeightDrag or entry.options.edgeHandles then
-            MakeEdge(entry, handle, "TOP", "height")
-            MakeEdge(entry, handle, "BOTTOM", "height")
-        end
+        if not handlesOnly then PrepareGrips(entry, handle) end
         entry.handle, entry.handleShown = handle, false
     end
 
     local function ShowHandle(entry, shown)
         if not entry.handle or entry.handleShown == shown then return end
         entry.handleShown = shown
+        if not shown and editing and handlesOnly and selected == entry then ClearSelected() end
         entry.handle:EnableMouse(shown)
         if shown then
             entry.handle:Show()
@@ -887,19 +965,42 @@ DFRL:NewMod("Layout", 0, function()
             entry.handle:Hide()
         end
     end
-    local function RefreshHandle(entry, scale)
+    local function RefreshHandle(entry, scale, mayPrepare)
+        local prepared = false
         local shown = CanShowHandle(entry)
         if shown then
+            if
+                (not entry.handle and not entry.handleAttempted)
+                or (entry.handle and not handlesOnly and not entry.grips)
+            then
+                if mayPrepare == false then
+                    RefreshEditorSoon()
+                    return false
+                end
+                prepared = true
+            end
             if not entry.handle then
                 if entry.handleAttempted then return end
                 MakeHandle(entry)
             end
             local handle, region = entry.handle, entry.options.region or entry.frame
+            if not handlesOnly then PrepareGrips(entry, handle) end
+            if entry.gripsVisible ~= not handlesOnly then
+                for _, grip in ipairs(entry.grips or {}) do
+                    grip:EnableMouse(not handlesOnly)
+                    if handlesOnly then
+                        grip:Hide()
+                    else
+                        grip:Show()
+                    end
+                end
+                entry.gripsVisible = not handlesOnly
+            end
             if entry.options.refreshRegion then entry.options.refreshRegion() end
             local ratio = Scale(region) / scale
             local regionWidth, regionHeight = T.GetLocalSize(region)
-            local handleWidth = math.max(12, regionWidth * ratio)
-            local handleHeight = math.max(12, regionHeight * ratio)
+            local handleWidth = math.max(16, regionWidth * ratio)
+            local handleHeight = math.max(16, regionHeight * ratio)
             if entry.handleRegion ~= region then
                 handle:ClearAllPoints()
                 handle:SetPoint("TOPLEFT", region, "TOPLEFT", 0, 0)
@@ -915,6 +1016,26 @@ DFRL:NewMod("Layout", 0, function()
             end
         end
         ShowHandle(entry, shown and true or false)
+        return prepared
+    end
+
+    -- Settings previews keep their transaction while unrelated categories hide
+    -- the editing overlay. The moving manager explicitly enables it again.
+    function layout.SetHandlesVisible(value)
+        value = value and true or false
+        if handlesVisible == value then return end
+        if activeDrag then FinishDrag(activeDrag, true) end
+        handlesVisible = value
+        RefreshEditorSoon()
+        if not value then
+            if grid and grid:IsShown() then grid:Hide() end
+            HideSnapGuides()
+            for _, entry in ipairs(order) do
+                ShowHandle(entry, false)
+            end
+        elseif editing then
+            UpdateGrid()
+        end
     end
 
     function layout.Register(key, frame, defaultAnchor, options)
@@ -965,6 +1086,7 @@ DFRL:NewMod("Layout", 0, function()
     local coordinateState = {}
     RefreshCoordinates = function(force)
         if not coordinates or not selected then return end
+        if force == false and not coordinates:IsVisible() then return end
         local x, y = CenterPosition(selected)
         local dimensions = selected.options.resize == "dimensions"
         local width = dimensions and selected.frame:GetWidth()
@@ -1024,14 +1146,20 @@ DFRL:NewMod("Layout", 0, function()
     end
     SelectEntry = function(entry, activate)
         if not editing or not entry then return end
+        local previous = selected
         selected = entry
+        if UpdateSelection then UpdateSelection(previous) end
         if coordinates then
             coordinates.dirty = false
             ClearCoordinateFocus()
             coordinates.status:SetText("")
             RefreshCoordinates()
         end
-        if activate and showCoordinates and not handlesOnly then showCoordinates() end
+        if activate and handlesOnly and ShowSelectionPanel then
+            ShowSelectionPanel(entry)
+        elseif activate and showCoordinates then
+            showCoordinates()
+        end
     end
     local function ApplyCoordinates()
         if not editing or not selected then return end
@@ -1075,11 +1203,75 @@ DFRL:NewMod("Layout", 0, function()
         RefreshCoordinates()
         return true
     end
+    local function ArrangeCoordinateOptions(popup)
+        local form = coordinates
+        local width = form:GetWidth()
+        local halfWidth = (width - 12) / 2
+        local visibilityWidth = popup and width or halfWidth
+        for _, record in ipairs({ { form.visibility, visibilityWidth }, { form.grid, halfWidth } }) do
+            local control, controlWidth = record[1], record[2]
+            if control:GetWidth() ~= controlWidth then
+                control:SetWidth(controlWidth)
+                control.label:SetWidth(controlWidth - 36)
+                control.description:SetWidth(controlWidth - 36)
+                control.editorDivider:SetWidth(controlWidth - 32)
+            end
+        end
+        local rowHeight = T.CompactEditorToggle(form.visibility)
+        if not popup then rowHeight = math.max(rowHeight, T.CompactEditorToggle(form.grid)) end
+        local applyTop = 156 + rowHeight + 8
+        if form.optionsPopup ~= popup or form.optionsApplyTop ~= applyTop then
+            form.visibility:ClearAllPoints()
+            form.visibility:SetPoint("TOPLEFT", form, "TOPLEFT", 0, -156)
+            form.grid:ClearAllPoints()
+            form.grid:SetPoint("TOPLEFT", form, "TOPLEFT", halfWidth + 12, -156)
+            if popup then
+                if form.grid:IsShown() then form.grid:Hide() end
+            elseif not form.grid:IsShown() then
+                form.grid:Show()
+            end
+            form.apply:ClearAllPoints()
+            form.apply:SetPoint("TOPLEFT", form, "TOPLEFT", 0, -applyTop)
+            form.status:ClearAllPoints()
+            form.status:SetPoint("TOPLEFT", form, "TOPLEFT", 0, -applyTop - 38)
+            form:SetHeight(applyTop + 62)
+            form.optionsPopup, form.optionsApplyTop = popup, applyTop
+        end
+        if popup and form:GetParent() == selectionPanel then
+            local height = math.max(320, form:GetHeight() + 30)
+            if selectionPanel:GetHeight() ~= height then
+                selectionPanel:SetHeight(height)
+                if selectionPanel:IsVisible() and selectionPanel.entry then
+                    PlaceSelectionPanel(selectionPanel.entry)
+                end
+            end
+        end
+    end
     -- The community's numeric editor shares the existing dialog and draft store.
     function layout.CreateControls(parent, width, activate)
+        if activate then
+            coordinateHome = parent
+            showCoordinates = activate
+        end
+        if coordinates then
+            coordinates:SetParent(parent)
+            coordinates:ClearAllPoints()
+            coordinates:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, 0)
+            if activate then
+                coordinates.label:ClearAllPoints()
+                coordinates.label:SetPoint("TOP", coordinates, "TOP", 0, -8)
+                for _, button in ipairs(coordinates.cycleButtons) do
+                    button:Show()
+                end
+                ArrangeCoordinateOptions(false)
+            end
+            return coordinates
+        end
+        width = math.min(width, 400)
         coordinates = CreateFrame("Frame", nil, parent)
-        coordinates:SetAllPoints(parent)
-        showCoordinates = activate
+        coordinates:SetWidth(width)
+        coordinates:SetHeight(320)
+        coordinates:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, 0)
         local function Text(text, y, size)
             local label = coordinates:CreateFontString(nil, "OVERLAY")
             DFRL.locale.Bind(label)
@@ -1116,7 +1308,13 @@ DFRL:NewMod("Layout", 0, function()
                 if not coordinates.refreshing and this:GetText() ~= this.layoutText then coordinates.dirty = true end
             end)
             box:SetScript("OnEnterPressed", ApplyCoordinates)
-            box:SetScript("OnEscapePressed", function() SelectEntry(selected) end)
+            box:SetScript("OnEscapePressed", function()
+                if handlesOnly then
+                    SelectEntry(selected)
+                else
+                    layout.CancelEdit()
+                end
+            end)
             coordinates[field] = box
         end
         local fields = { "x", "y", "width", "height" }
@@ -1129,6 +1327,7 @@ DFRL:NewMod("Layout", 0, function()
                 coordinates[nextField]:SetFocus()
             end)
         end
+        coordinates.cycleButtons = {}
         for _, step in ipairs({ -1, 1 }) do
             local direction = step
             local button = T.CreateEditorButton(coordinates, direction == -1 and "<" or ">", 30, 28)
@@ -1139,6 +1338,7 @@ DFRL:NewMod("Layout", 0, function()
                 0,
                 0
             )
+            table.insert(coordinates.cycleButtons, button)
             button:SetScript("OnClick", function()
                 FinishDrag(activeDrag, true)
                 local index = 1
@@ -1155,7 +1355,7 @@ DFRL:NewMod("Layout", 0, function()
             coordinates,
             "Hide frame",
             "Keep this group hidden during gameplay.",
-            width,
+            inputWidth,
             function(hidden)
                 if not editing or not selected then return end
                 FinishDrag(activeDrag, true)
@@ -1178,33 +1378,32 @@ DFRL:NewMod("Layout", 0, function()
             coordinates,
             "Show grid",
             "Show the alignment grid while editing.",
-            width,
+            inputWidth,
             function(shown) DFRL.display.Set("layoutShowGrid", shown) end
         )
-        coordinates.grid:SetPoint("TOPLEFT", coordinates, "TOPLEFT", 0, -204)
+        coordinates.grid:SetPoint("TOPLEFT", coordinates, "TOPLEFT", inputWidth + gap, -156)
         DFRL.display.Listen(function()
             RefreshEditorSoon()
-            if editing then UpdateGrid() end
             if coordinates and not coordinates.dirty and not coordinates.focused then RefreshCoordinates(false) end
         end)
         local apply = T.CreateEditorButton(coordinates, "Apply position / size", width, 28)
+        coordinates.apply = apply
         apply:SetPoint("TOPLEFT", coordinates, "TOPLEFT", 0, -252)
         apply:SetScript("OnClick", ApplyCoordinates)
         coordinates.status = Text("", -290, 10)
         coordinates.status:SetWidth(width)
         coordinates.status:SetHeight(18)
-        local refreshElapsed = 0
-        coordinates:SetScript("OnUpdate", function()
-            refreshElapsed = refreshElapsed + (arg1 or 0)
-            if refreshElapsed < EDITOR_INTERVAL then return end
-            refreshElapsed = 0
-            if not coordinates.dirty and not coordinates.focused then RefreshCoordinates(false) end
-        end)
         coordinates:SetScript("OnShow", function()
+            ArrangeCoordinateOptions(coordinates.optionsPopup or false)
             if not coordinates.dirty and not coordinates.focused then RefreshCoordinates() end
         end)
         coordinates:SetScript("OnHide", ClearCoordinateFocus)
+        DFRL.locale.Listen(function()
+            if coordinates:IsVisible() then ArrangeCoordinateOptions(coordinates.optionsPopup or false) end
+        end)
+        ArrangeCoordinateOptions(false)
         SelectEntry(selected or entries.playerFrame or order[1])
+        return coordinates
     end
 
     local function RestoreDefaults()
@@ -1226,7 +1425,11 @@ DFRL:NewMod("Layout", 0, function()
     local function PrepareDraft()
         FinishDrag(activeDrag, true)
         if coordinates and coordinates.dirty and not ApplyCoordinates() then
-            if showCoordinates then showCoordinates() end
+            if handlesOnly and selected and ShowSelectionPanel then
+                ShowSelectionPanel(selected)
+            elseif showCoordinates then
+                showCoordinates()
+            end
             return
         end
         return true
@@ -1255,7 +1458,7 @@ DFRL:NewMod("Layout", 0, function()
         RefreshEditorSoon()
         if coordinates then RefreshCoordinates() end
     end
-    local function CloseEditing(save, restore)
+    CloseEditing = function(save, restore)
         if not editing then return end
         if save then
             if not PrepareDraft() then return end
@@ -1265,6 +1468,7 @@ DFRL:NewMod("Layout", 0, function()
         if save then _G.SurvivorsDragonUiLayout = draft end
         editing, draft = false, nil
         if grid then grid:Hide() end
+        HideSnapGuides()
         for _, entry in ipairs(order) do
             if entry.options.onEdit then entry.options.onEdit(false, save) end
             LockFrame(entry.frame)
@@ -1272,6 +1476,8 @@ DFRL:NewMod("Layout", 0, function()
         end
         if DFRL.profiles then DFRL.profiles.FinishEdit(save) end
         if confirm then confirm:Hide() end
+        if editManager then editManager:Hide() end
+        if selectionPanel then selectionPanel:Hide() end
         handlesOnly = false
         if restore ~= false then
             for _, entry in ipairs(order) do
@@ -1280,31 +1486,316 @@ DFRL:NewMod("Layout", 0, function()
         end
     end
     function layout.CancelEdit() CloseEditing(false, true) end
+    function layout.RegisterEditorWindow(frame)
+        if frame.layoutEditorCloseRegistered then return end
+        local name = frame:GetName()
+        if not name then return end
+        frame.layoutEditorCloseRegistered = true
+        _G.UISpecialFrames = _G.UISpecialFrames or {}
+        local found
+        for _, registered in ipairs(_G.UISpecialFrames) do
+            if registered == name then found = true end
+        end
+        if not found then table.insert(_G.UISpecialFrames, name) end
+        HookScript(frame, "OnHide", function()
+            -- Moving mode hides the full window while retaining its draft.
+            -- Confirm/Cancel retire editing before their own Hide callbacks.
+            if editing and not handlesOnly then layout.CancelEdit() end
+        end)
+    end
+    local function EditorText(parent, text, size, x, y)
+        local label = parent:CreateFontString(nil, "OVERLAY")
+        DFRL.locale.Bind(label)
+        T.SetFont(label, size or 12, "")
+        label:SetTextColor(1, 0.83, 0.38)
+        label:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
+        label:SetText(text)
+        return label
+    end
+    local function MovePanel(panel)
+        panel:SetMovable(true)
+        if panel.SetClampedToScreen then panel:SetClampedToScreen(true) end
+        panel:RegisterForDrag("LeftButton")
+        panel:SetScript("OnDragStart", function() panel:StartMoving() end)
+        local function Stop()
+            panel:StopMovingOrSizing()
+            if panel.SetUserPlaced then panel:SetUserPlaced(false) end
+            if panel.keyboardActive and panel.EnableKeyboard then
+                panel:EnableKeyboard(false)
+                panel.keyboardActive = false
+            end
+        end
+        panel:SetScript("OnDragStop", Stop)
+        panel:SetScript("OnHide", Stop)
+    end
+    local function PlaceCoordinateForm(parent, popup)
+        local form = layout.CreateControls(parent, 400)
+        form:ClearAllPoints()
+        form:SetPoint("TOPLEFT", parent, "TOPLEFT", popup and 24 or 0, popup and -30 or 0)
+        form.label:ClearAllPoints()
+        form.label:SetPoint("TOP", popup and parent or form, "TOP", 0, popup and -5 or -8)
+        for _, button in ipairs(form.cycleButtons) do
+            if popup then
+                button:Hide()
+            else
+                button:Show()
+            end
+        end
+        ArrangeCoordinateOptions(popup)
+        return form
+    end
+    UpdateSelection = function(previous)
+        if previous and previous.handle then previous.handle.SetEditorSelection(previous == selected) end
+        if selected and selected.handle then selected.handle.SetEditorSelection(true) end
+        if editManager and editManager.EnableKeyboard then
+            local enabled = editing and handlesOnly and selected ~= nil
+            if editManager.keyboardActive ~= enabled then
+                editManager:EnableKeyboard(enabled)
+                editManager.keyboardActive = enabled
+            end
+        end
+    end
+    ClearSelected = function()
+        FinishDrag(activeDrag, true)
+        if coordinates then
+            coordinates.dirty = false
+            ClearCoordinateFocus()
+            T.SetTextIfChanged(coordinates.status, "")
+            if selected then RefreshCoordinates() end
+        end
+        local previous = selected
+        selected = nil
+        UpdateSelection(previous)
+        if selectionPanel then selectionPanel:Hide() end
+    end
+    PlaceSelectionPanel = function(entry)
+        local width, height, scale = Viewport()
+        local bounds = EditBounds(entry, width, height, scale, {})
+        if bounds then
+            local x = bounds.left + bounds.width + 24
+            if x + selectionPanel:GetWidth() > width - 12 then x = bounds.left - selectionPanel:GetWidth() - 24 end
+            x = Clamp(x, 12, math.max(12, width - selectionPanel:GetWidth() - 12))
+            local minimumY = -height + selectionPanel:GetHeight() + 12
+            local y = Clamp(bounds.top, minimumY, -24)
+            local managerPosition = editManager and ReadPosition(editManager, width, height, scale)
+            if managerPosition then
+                local mx, my = managerPosition.x * width, managerPosition.y * height
+                if
+                    x < mx + editManager:GetWidth() + 12
+                    and x + selectionPanel:GetWidth() > mx - 12
+                    and y > my - editManager:GetHeight() - 12
+                    and y - selectionPanel:GetHeight() < my + 12
+                then
+                    local below = my - editManager:GetHeight() - 24
+                    local above = my + selectionPanel:GetHeight() + 24
+                    y = below >= minimumY and below or above <= -24 and above or Clamp(below, minimumY, -24)
+                end
+            end
+            selectionPanel:ClearAllPoints()
+            selectionPanel:SetPoint("TOPLEFT", UIParent, "TOPLEFT", x, y)
+        end
+    end
+    ShowSelectionPanel = function(entry)
+        if not editing or not handlesOnly or not entry then return end
+        if not selectionPanel then
+            selectionPanel = T.CreateEditorPanel(UIParent, 448, 320)
+            selectionPanel:SetFrameStrata("TOOLTIP")
+            selectionPanel:SetFrameLevel(240)
+            MovePanel(selectionPanel)
+            local close = T.CreateEditorButton(selectionPanel, "X", 28, 24)
+            close:SetPoint("TOPRIGHT", selectionPanel, "TOPRIGHT", -3, 0)
+            close:SetScript("OnClick", ClearSelected)
+        end
+        if selectionPanel.entry ~= entry or not selectionPanel:IsShown() then
+            PlaceCoordinateForm(selectionPanel, true)
+            PlaceSelectionPanel(entry)
+            selectionPanel.entry = entry
+            selectionPanel:Show()
+        end
+    end
+    local function EditingText()
+        if coordinates and coordinates.focused then return true end
+        local chat = _G.ChatFrameEditBox or _G.ChatFrame1EditBox or (_G.ChatFrame1 and _G.ChatFrame1.editBox)
+        if chat and chat:IsShown() and (not chat.HasFocus or chat:HasFocus()) then return true end
+        local copy = _G.SurvivorsDragonUiChatCopyText
+        if copy and copy:IsShown() and (not copy.HasFocus or copy:HasFocus()) then return true end
+        return false
+    end
+    local function Nudge(key)
+        if not editing or not handlesOnly or not selected or activeDrag or coordinates and coordinates.focused then
+            return
+        end
+        local dx, dy = 0, 0
+        local amount = IsShiftKeyDown() and 10 or 1
+        if key == "LEFT" then
+            dx = -amount
+        elseif key == "RIGHT" then
+            dx = amount
+        elseif key == "UP" then
+            dy = amount
+        elseif key == "DOWN" then
+            dy = -amount
+        else
+            return
+        end
+        local width, height, scale = Viewport()
+        local position = ReadPosition(selected.frame, width, height, scale)
+        if not position then return end
+        position.x, position.y = position.x + dx / width, position.y + dy / height
+        ApplyPosition(selected.frame, position, width, height, scale)
+        draft[selected.key] = ReadGeometry(selected, position)
+        RefreshEditorSoon()
+        if coordinates and not coordinates.dirty then RefreshCoordinates(false) end
+    end
+    local function EnsureEditManager()
+        if editManager then return end
+        editManager = T.CreateEditorPanel(UIParent, 510, 184, "SurvivorsDragonUiEditMode")
+        editManager:SetFrameStrata("TOOLTIP")
+        editManager:SetFrameLevel(220)
+        editManager:SetPoint("TOP", UIParent, "TOP", 0, -100)
+        MovePanel(editManager)
+        local title = EditorText(editManager, "HUD Edit Mode", 14, 0, 0)
+        title:ClearAllPoints()
+        title:SetPoint("TOP", editManager, "TOP", 0, -5)
+        local function Toggle(caption, key, y)
+            local button = T.CreateEditorToggle(
+                editManager,
+                caption,
+                nil,
+                236,
+                function(value) DFRL.display.Set(key, value) end
+            )
+            button:SetHeight(32)
+            button:SetPoint("TOPLEFT", editManager, "TOPLEFT", 24, y)
+            button.label:ClearAllPoints()
+            button.label:SetPoint("LEFT", button, "LEFT", 32, 0)
+            return button
+        end
+        editManager.grid = Toggle("Show grid", "layoutShowGrid", -44)
+        editManager.snap = Toggle("Snap to elements", "layoutSnapEnabled", -88)
+        local slider = CreateFrame("Slider", "SurvivorsDragonUiEditGridSpacing", editManager, "OptionsSliderTemplate")
+        slider:SetWidth(180)
+        slider:SetHeight(16)
+        slider:SetPoint("TOPRIGHT", editManager, "TOPRIGHT", -28, -56)
+        slider:SetMinMaxValues(8, 128)
+        slider:SetValueStep(4)
+        for suffix, text in pairs({ Low = "8", High = "128", Text = "" }) do
+            local label = _G["SurvivorsDragonUiEditGridSpacing" .. suffix]
+            if label then label:SetText(text) end
+        end
+        slider:SetScript("OnValueChanged", function()
+            if not editManager.syncing then
+                DFRL.display.Set("layoutGridSpacing", tonumber(arg1) or slider:GetValue())
+            end
+        end)
+        editManager.spacing = slider
+        local caption = EditorText(editManager, "Grid spacing", 10, 280, -32)
+        caption:SetWidth(190)
+        caption:SetHeight(16)
+        local cancel = T.CreateEditorButton(editManager, "Cancel", 140, 30)
+        cancel:SetPoint("BOTTOMLEFT", editManager, "BOTTOMLEFT", 24, 16)
+        cancel:SetScript("OnClick", function() layout.CancelEdit() end)
+        local profiles = T.CreateEditorButton(editManager, "Profiles", 110, 30)
+        profiles:SetPoint("LEFT", cancel, "RIGHT", 8, 0)
+        profiles:SetScript("OnClick", function() layout.BeginEdit(false, "profiles") end)
+        local close = T.CreateEditorButton(editManager, "X", 28, 24)
+        close:SetPoint("TOPRIGHT", editManager, "TOPRIGHT", -3, 0)
+        close:SetScript("OnClick", function() layout.CancelEdit() end)
+        if editManager.EnableKeyboard then
+            editManager:EnableKeyboard(false)
+            editManager.keyboardActive = false
+            editManager:SetScript("OnKeyDown", function()
+                if EditingText() then return end
+                if arg1 == "ESCAPE" then
+                    if selectionPanel and selectionPanel:IsShown() then
+                        ClearSelected()
+                    else
+                        layout.CancelEdit()
+                    end
+                else
+                    Nudge(arg1)
+                end
+            end)
+        end
+        _G.UISpecialFrames = _G.UISpecialFrames or {}
+        table.insert(_G.UISpecialFrames, "SurvivorsDragonUiEditMode")
+        HookScript(editManager, "OnHide", function()
+            if editing and handlesOnly then layout.CancelEdit() end
+        end)
+    end
+    local function UpdateEditManager()
+        if not editManager or not handlesOnly or not editing then return end
+        editManager.syncing = true
+        local shown = DFRL.display.Get("layoutShowGrid")
+        if editManager.grid.editorChecked ~= shown then editManager.grid:SetChecked(shown) end
+        local snapping = DFRL.display.Get("layoutSnapEnabled")
+        if editManager.snap.editorChecked ~= snapping then editManager.snap:SetChecked(snapping) end
+        local value = DFRL.display.Get("layoutGridSpacing")
+        if editManager.spacing:GetValue() ~= value then editManager.spacing:SetValue(value) end
+        if editManager.gridEnabled ~= shown then
+            editManager.spacing:EnableMouse(shown)
+            editManager.spacing:SetAlpha(shown and 1 or 0.45)
+            editManager.gridEnabled = shown
+        end
+        editManager.syncing = false
+    end
     local function PlaceConfirm()
         if not confirm then return end
-        local anchor = not handlesOnly and confirmAnchor or UIParent
+        local anchor = handlesOnly and editManager or confirmAnchor or UIParent
         confirm:SetParent(anchor)
         confirm:SetFrameStrata("TOOLTIP")
-        confirm:SetFrameLevel(200)
+        confirm:SetFrameLevel(handlesOnly and 260 or 200)
         confirm:ClearAllPoints()
-        confirm:SetPoint("CENTER", anchor, "CENTER", 0, 0)
+        if handlesOnly then
+            confirm:SetPoint("BOTTOMRIGHT", anchor, "BOTTOMRIGHT", -24, 16)
+        else
+            confirm:SetPoint("CENTER", anchor, "CENTER", 0, 0)
+        end
+        confirm:SetWidth(handlesOnly and 170 or 140)
+        confirm.label:SetWidth(handlesOnly and 158 or 128)
+        confirm.label:SetText(handlesOnly and "Save and close" or "Confirm")
     end
     function layout.SetConfirmAnchor(anchor)
         confirmAnchor = anchor
         PlaceConfirm()
     end
     function layout.SetEditorVisibilityHandler(callback) setEditorVisible = callback end
-    function layout.BeginEdit(onlyHandles)
-        if not ready or not inWorld then return end
-        RefreshEditorSoon()
-        local starting = not editing
-        handlesOnly = onlyHandles == true
+    -- Keep each closure within the native Lua 5.0 limit of 32 upvalues.
+    -- Mode switching and presentation share the transaction, not one large closure.
+    local function PrepareEditView(starting)
+        if handlesOnly then
+            EnsureEditManager()
+            if starting then ClearSelected() end
+        elseif editManager then
+            editManager:Hide()
+            if selectionPanel then selectionPanel:Hide() end
+            if coordinateHome and coordinates then PlaceCoordinateForm(coordinateHome, false) end
+        end
         if editing and handlesOnly and coordinates then
             -- Keep staged geometry, but leave no unapplied text behind a hidden dialog.
             FinishDrag(activeDrag, true)
             ClearCoordinateFocus()
             RefreshCoordinates()
         end
+    end
+    local function ShowEditView(page)
+        if setEditorVisible then setEditorVisible(not handlesOnly, page) end
+        UpdateGrid()
+        if handlesOnly then
+            editManager:Show()
+            UpdateEditManager()
+            UpdateSelection()
+            if selected then ShowSelectionPanel(selected) end
+        end
+    end
+    function layout.BeginEdit(onlyHandles, page)
+        if not ready or not inWorld then return end
+        RefreshEditorSoon()
+        local starting = not editing
+        if activeDrag then FinishDrag(activeDrag, true) end
+        handlesOnly = onlyHandles == true
+        if handlesOnly then layout.SetHandlesVisible(true) end
+        PrepareEditView(starting)
         if not editing then
             draft = layout.Copy(Saved())
             editing = true
@@ -1315,16 +1806,31 @@ DFRL:NewMod("Layout", 0, function()
             end
             if DFRL.profiles then DFRL.profiles.BeginEdit() end
         end
-        UpdateGrid()
-        if setEditorVisible then setEditorVisible(not handlesOnly) end
+        ShowEditView(page)
         if not confirm then
             confirm = T.CreateEditorButton(confirmAnchor or UIParent, "Confirm", 140, 30, true)
             confirm:SetScript("OnClick", function() CloseEditing(true, true) end)
         end
         PlaceConfirm()
         confirm:Show()
-        if starting and coordinates then SelectEntry(selected or entries.playerFrame or order[1]) end
+        if starting and coordinates and not handlesOnly then
+            SelectEntry(selected or entries.playerFrame or order[1])
+        end
     end
+    function layout.ToggleEdit()
+        if editing then
+            layout.CancelEdit()
+        else
+            layout.BeginEdit()
+        end
+    end
+    DFRL.display.Listen(function()
+        RefreshEditorSoon()
+        if editing then
+            UpdateGrid()
+            UpdateEditManager()
+        end
+    end)
     function layout.Reset()
         CloseEditing(false, false)
         FinishDrag(activeDrag, false)
@@ -1346,8 +1852,8 @@ DFRL:NewMod("Layout", 0, function()
     local lastWidth, lastHeight, lastScale
     local viewportAge = 0
     controller:SetScript("OnUpdate", function()
-        if not ready then return end
-        local enabled = inWorld and editing
+        if not ready or not inWorld then return end
+        local enabled = inWorld and editing and handlesVisible
         viewportAge = viewportAge + (tonumber(arg1) or 0)
         -- Active input, unresolved placement and the first world sample retain
         -- frame cadence. Settled editing/gameplay use the existing 10-Hz sample.
@@ -1404,12 +1910,19 @@ DFRL:NewMod("Layout", 0, function()
         -- gameplay. Viewport changes and unresolved defaults still run above.
         if not enabled then return end
         editorAge = editorAge + sampleElapsed
-        local fine = activeDrag and activeDrag.moving and IsShiftKeyDown() and true or false
+        local fine = not handlesOnly and activeDrag and activeDrag.moving and IsShiftKeyDown() and true or false
         if editorDirty or editorAge >= EDITOR_INTERVAL or (DFRL.display.Get("layoutShowGrid") and gridFine ~= fine) then
             editorAge, editorDirty = 0, false
             UpdateGrid()
+            -- Spread first-use artwork over render frames through this existing
+            -- controller. Pending groups mark the editor dirty until prepared;
+            -- closing or leaving Layout stops allocation without another worker.
+            local prepared = 0
             for _, entry in ipairs(order) do
-                RefreshHandle(entry, scale)
+                if RefreshHandle(entry, scale, prepared < 2) then prepared = prepared + 1 end
+            end
+            if coordinates and coordinates:IsVisible() and not coordinates.dirty and not coordinates.focused then
+                RefreshCoordinates(false)
             end
         elseif dragChanged and activeDrag then
             -- The dragged outline follows size changes at the render cadence;

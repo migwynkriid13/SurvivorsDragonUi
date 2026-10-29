@@ -103,6 +103,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local plateFilter = {
         enabled = DFRL.display.Get("nameplatesBossGuardiansOnly"),
         names = {},
+        seen = {},
         sequence = 0,
         units = 0,
         run = 0,
@@ -154,13 +155,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             plateFilter.time = nativeTime
         end
         local entries, stamp = _G.AZS_UNITS, _G.AZS_UNITS_UPDATED
-        if
-            plateFilter.units <= plateFilter.barrier
-            or not IsFiniteNumber(stamp)
-            or stamp < 0
-            or type(entries) ~= "table"
-            or table.getn(entries) > 40
-        then
+        if plateFilter.units <= plateFilter.barrier or T.EncounterRosterSize(entries, stamp) == nil then
             plateFilter.Clear()
             return
         end
@@ -171,24 +166,9 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         then
             return
         end
-        for _, entry in ipairs(entries) do
-            if
-                type(entry) ~= "table"
-                or (entry.kind ~= "final" and entry.kind ~= "boss" and entry.kind ~= "guardian" and entry.kind ~= "elite")
-                or not IsFiniteNumber(entry.id)
-                or entry.id <= 0
-                or entry.id ~= math.floor(entry.id)
-                or type(entry.name) ~= "string"
-                or entry.name == ""
-                or not IsFiniteNumber(entry.hp)
-                or not IsFiniteNumber(entry.hpm)
-                or entry.hpm <= 0
-                or entry.hp < 0
-                or entry.hp > entry.hpm
-            then
-                plateFilter.Clear()
-                return
-            end
+        if not T.ValidateEncounterEntries(entries, plateFilter.seen) then
+            plateFilter.Clear()
+            return
         end
         -- Reuse each exact-name bucket while replacing the complete publication.
         for _, maxima in pairs(plateFilter.names) do

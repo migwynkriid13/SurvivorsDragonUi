@@ -27,6 +27,11 @@ branch protection by itself.
   remain visible in the report; removing a member is allowed. A changed group
   cannot silently add another copy.
 - A failing checker regression fixture or one of the existing artwork/root checks.
+- A runtime Lua closure capturing more than the client's 32-upvalue limit.
+  The source check follows lexical bindings, including captures carried through
+  intermediate closures. Lua 5.1 lifecycle mocks alone cannot detect this Lua 5.0
+  load failure. Mode switching and presentation use separate Layout helpers so
+  the editor entry function stays below the limit.
 - Duplicate literal table keys or module/Layout registrations, a display key missing
   from normalization, a normalization row reading the wrong key, an unknown literal
   display key, or an unknown method in the shared tools/display/Layout/locale/SCT APIs.
@@ -48,6 +53,31 @@ An explicit Bash shell enables `pipefail`, so piping fixture/model output into
 
 ## UI work and cleanup tests
 
+Health-format fixtures cover the independent default-on Unit frames, Boss bars
+and Guardian tracker shortening choices through the real display normalizer,
+preview/Confirm/discard/profile/reset paths. Production formatter/health owners
+cover full whole numbers without suffixes/exponents, format-aware cache changes,
+unchanged percentages and native fill, disabled current/maximum labels, pooled
+guardian width invalidation, hidden recovery and unchanged writes. The production
+boss row pass also forwards its own choice without changing health-loss state.
+These cases remain CI-only and were not executed locally.
+
+The default-off boss/guardian percentage cases cover independent transactions,
+current-only/maximum-only/combined/percentage-only captions, calculation from
+full values in both number formats, zero/100% boundaries, invalid health,
+rounded-caption cache reuse and release, hidden recovery, stable allocations
+and unchanged health fill/loss ownership. Existing production labels and native
+boundaries are used; no local checks or game execution are authorized.
+
+The default-chat fixture invokes all four production chat initializers with the
+native option enabled and an existing enabled Copy preference. It asserts no
+custom namespace, frame allocation, native method/script replacement, Layout
+registration, input/tab hiding, collector or Copy command, and checks reload-only
+draft/Cancel/Confirm/profile/reset behavior. Other cases retain custom formatter
+and Copy setup, shared cross-frame delivery semantics and native-chat loot intake
+with active-only message subscriptions. The banner fixture also runs without a
+custom chat namespace. These remain CI-only; no local tests or game execution.
+
 `scripts/run_ui_contracts.py` runs scenarios in Lua 5.1 with fresh mock
 state per scenario. Tests exercise the actual source, including the shared text
 helper, cooldown controller, range controller, HUD owner, loot intake and loot
@@ -58,6 +88,72 @@ cooldown declarations and constants by their exact byte ranges; a missing or
 ambiguous declaration fails preparation.
 
 The assertions cover:
+
+- Editor navigation loads `core/editor.lua` against explicit native scroll and
+  glyph-width boundaries. It covers grouped visibility, original section owners,
+  retained section state, per-category offsets, duplicate-heading suppression,
+  absence of search inputs, close/reopen, compact/wrapped caption spacing,
+  compact numeric captions, mixed-height two-column placement, odd last rows,
+  full-row master clearance, locale reflow and single-option/mode spacing,
+  missing-metric retry, stable allocations and hidden/unchanged work without an
+  idle updater. The shared button cases cover pressed/released/leave/hide recovery,
+  native 1/0 disabled values, click callback ownership, selected highlight locking,
+  narrow/resized caps and deferred hidden writes. The fixture is CI-only and was
+  not run locally; it does not render the dialog.
+
+  The same fixture loads the AST-extracted production settings constructor with
+  the actual locale/Display/Profiles owners and explicit native font/HUD
+  boundaries. It covers shell-only construction, selected-page preparation, all
+  nine categories/twenty sections, current defaults, preview/Confirm/discard,
+  pending Layout input, independent Damage meter preparation, centered section
+  headings, description-free checkbox alignment, plain input regions,
+  deferred font-menu selection and reuse, closed language
+  changes and no added background updater. Active-language width cases cover
+  one measurement, cache reuse, font/flags/width/scale/language invalidation and
+  missing-metric retry. The Layout fixture also covers two-group per-frame
+  preparation, fast continuation through the existing controller, cancellation
+  of unfinished work and reuse after reopening. Retail-layout cases also cover
+  paired Hide frame/Show grid, full-width Hide frame in the moving popup, wrapped
+  popup growth/clamping and unchanged locale reflow. These are CI-only source mocks,
+  not first-open latency or native rendering measurements.
+
+  Close cases cover repeated launcher-toggle open/cancel, native registered-window
+  hiding, focused invalid numeric input, profile-name Escape, duplicate Escape
+  registration and draft retention when switching to moving mode. The minimap
+  fixture covers the launcher's edit-layer priority, unchanged assignments and
+  restoration to the current minimap layer without new views or workers.
+
+- Settings visibility mocks exercise the production Display/SCT/font-control
+  listeners with explicit native ancestor visibility and font boundaries. Closed
+  windows and unselected categories perform no settings reads, formatting or font
+  work, then catch up from current values on Show. Repeated visible updates skip
+  unchanged writes. Layout fixtures also cover actually hidden overlays on other
+  categories, retained pending input and removal of the numeric form's separate
+  polling callback. These are CI-only and do not measure native rendering or FPS.
+
+- Retail-moving fixtures load the production magnetism/selection factories and
+  real Layout/Display owners against explicit native scroll, geometry, keyboard,
+  focus and slider boundaries. They cover eight-physical-pixel capture, corner
+  priority, grid-independent screen/frame magnets, reused state, free pointer
+  movement until release, one-/ten-unit nudging, shared-form/native-chat focus and validation,
+  Save/Cancel, mode switching, resize-grip hiding and world cleanup. The full
+  editor’s older grip/lazy-preparation cases remain separate. These are CI-only
+  and were not run locally; no retail C API or game client is loaded.
+
+- Compact target-of-target mocks load the production Mini and loss controllers
+  with explicit native boundaries. They cover name containment, stable health
+  label positions, clean pooled border reuse, portrait previews, hidden recovery,
+  dead/native-health updates and Performance Mode trail retirement/rearming.
+  They do not establish in-game appearance or native texture sampling.
+
+- Shared-rule mocks exercise restoration readback/retry, deferred native opt-out,
+  synchronous HUD callbacks and visibility encodings; shared encounter validation
+  rejects duplicate IDs before either cosmetic index is built. Circular-image
+  cases cover native path verification, failed-binding memoization, retryable
+  pooled strips at both existing icon sizes, unchanged writes and cleanup.
+  Display copies retain false values, range/enum normalization, legacy fallbacks
+  and draft isolation. Source contracts accept the complete defaults-driven
+  normalization loop and reject filtered, mis-keyed or wrong-source copies.
 
 - Projection/metadata cases exercise production navigation cache boundaries and
   resolver preparation: successful same-pass reuse, exact coordinate identity,
@@ -74,6 +170,19 @@ The assertions cover:
   samples/final release; unchanged waypoint math with active interpolation;
   lazy Chat time and observed/unreported tooltip owners. These fixtures are
   authored for CI and were not run locally; no live rendering/FPS is inferred.
+
+- Fallen-ally waypoint mocks load the production controller with explicit
+  native roster boundaries and check dead/alive/ghost/disconnect retirement,
+  slot changes during reads, literal native names, nearest/stable selection,
+  hidden/off sampling, display preview/Confirm/Cancel/profile/reset, world and
+  phase cleanup, missing getters and stationary work in Performance Mode.
+  Navigation cases reject missing/invalid and foreign-sheet party coordinates;
+  shared pin cases cover four edge indicators, changed-only writes and reuse.
+  The full controller also draws received cache and fallen-ally pins on a visible
+  native minimap, without supplying global visibility helpers. Boolean/numeric
+  visibility, hidden/nil cleanup and recovery cover both geometry and placement.
+  These tests remain CI-only; local work uses source review, artwork preparation
+  and pinned formatting, with no addon/game execution or Actions polling.
 
 - Cadence-cleanup production mocks cover event-driven low-health eligibility
   with unchanged active pulse equations, idle versus editing Layout geometry,

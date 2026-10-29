@@ -63,7 +63,23 @@ tracker.hud:Hide()
 context:ResetCounts()
 update(tracker, 0.01)
 assert(tracker.presentation == nil, "hidden guide retained interpolation state")
+assert(not tracker.pointer:IsShown(), "hidden guide retained its arrow's shown state")
+context:ResetCounts()
+update(tracker, 0.01)
+context:NoPresentationWrites()
 enabled = false
 update(tracker, 0.01)
-assert(not tracker.hud:IsShown(), "disabled guide was forced visible")
+assert(not tracker.hud:IsShown() and not tracker.pointer:IsShown(), "disabled guide retained visible content")
+enabled = true
+update(tracker, 0.01)
+assert(tracker.hud:IsShown() and tracker.pointer:IsShown(), "restored guide did not show its current arrow")
+tracker.selected = nil
+update(tracker, 0.01)
+assert(
+    not tracker.hud:IsShown() and not tracker.pointer:IsShown() and tracker.presentation == nil,
+    "an unavailable destination retained guidance or interpolation"
+)
+context:ResetCounts()
+update(tracker, 0.01)
+context:NoPresentationWrites()
 print("PASS settled waypoint math skips while movement, heading, pauses, regressions and hidden retirement remain")
