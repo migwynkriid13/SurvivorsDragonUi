@@ -4,6 +4,17 @@ assert(_VERSION == "Lua 5.1", "party waypoint fixtures require CI Lua 5.1")
 local c = H.New()
 local env = c.env
 local phase, unitReads, positionReads = "playing", 0, 0
+local minimapVisible = true
+env.Minimap = env.CreateFrame("Frame", nil, env.UIParent)
+env.Minimap.IsVisible = function() return minimapVisible end
+env.Minimap.GetZoom = function() return 0 end
+env.GetCVar = function(key)
+    if key == "minimapZoom" then return "0" end
+    if key == "minimapInsideZoom" then return "1" end
+    error("unexpected CVar read: " .. tostring(key))
+end
+env.AZS_CHESTS = { { id = 1, x = 10, y = 20, mx = 0.51, my = 0.5 } }
+env.AZS_CHESTS_UPDATED = 1
 local members, registered, bound = {}, {}, {}
 local function Member(name, x, y) return { name = name, mx = x, my = y, exists = 1, connected = 1, dead = 1, ghost = 0 } end
 local function Field(unit, key)
@@ -47,6 +58,9 @@ env.DFRL.navigation = {
     Reset = function() end,
     WithSample = function(callback) callback() end,
     UpdateMinimapPlayer = function() end,
+    StyleMinimap = function() end,
+    MinimapLevel = function() return 12 end,
+    MinimapSize = function() return 100, 100 end,
 }
 c:Load("core/hud.lua")
 c:Load("core/display.lua", "Display")
@@ -75,14 +89,49 @@ end
 assert(marker and pointer and title and distance, "selected glyph or shared guide content is missing")
 assert(not bound[title], "native member names were bound to caption translation")
 local function Tick(elapsed) c:Call(reader, "OnUpdate", elapsed or 0.1) end
+local function PinCount(art)
+    local count = 0
+    local texture = env.DFRL:GetInfoOrCons("tex") .. "waypoint\\" .. art
+    for _, object in ipairs(c.objects) do
+        if
+            object.kind == "Texture"
+            and object.texture == texture
+            and object.parent.parent == env.Minimap
+            and object.parent:IsShown()
+        then
+            count = count + 1
+        end
+    end
+    return count
+end
 assert(display.Get("partyGuidance") and not display.Get("mirrorPartyWaypoint"))
 assert(display.Copy({ partyGuidance = 0, mirrorPartyWaypoint = 1 }).partyGuidance)
 assert(not display.Copy({ mirrorPartyWaypoint = 1 }).mirrorPartyWaypoint)
 Tick()
 assert(not hud:IsShown(), "an empty party created a destination")
+assert(PinCount("Chest.blp") == 1, "the full visible-minimap controller lost cache placement")
 members.party1, members.party2 = Member("Far ally", 0.8, 0.8), Member("Near ally", 0.55, 0.5)
 Tick()
 assert(hud:IsShown() and title:GetText() == "Near ally" and distance:GetText() == "50 yards")
+assert(PinCount("FallenAlly.blp") == 2, "the full controller did not place both fallen-ally pins")
+for _, hidden in ipairs({ false, 0 }) do
+    minimapVisible = hidden
+    Tick()
+    assert(PinCount("Chest.blp") == 0 and PinCount("FallenAlly.blp") == 0, "hidden native minimap retained pins")
+    assert(hud:IsShown(), "minimap visibility hid the independent guidance HUD")
+    minimapVisible = 1
+    Tick()
+    assert(
+        PinCount("Chest.blp") == 1 and PinCount("FallenAlly.blp") == 2,
+        "numeric native visibility did not restore pins"
+    )
+end
+minimapVisible = nil
+Tick()
+assert(PinCount("FallenAlly.blp") == 0, "nil native visibility retained pins")
+minimapVisible = true
+Tick()
+assert(PinCount("FallenAlly.blp") == 2 and env.Shown == nil, "visible minimap relied on an injected global helper")
 members.party1.mx, members.party1.my = 0.501, 0.5
 Tick()
 assert(title:GetText() == "Near ally", "distance changes replaced a still-valid selection")

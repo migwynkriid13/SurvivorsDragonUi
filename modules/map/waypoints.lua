@@ -86,6 +86,10 @@ DFRL:NewMod("Waypoints", 3, function()
 
     local function Number(value) return type(value) == "number" and value - value == 0 end
     local function Integer(value, minimum) return Number(value) and value >= minimum and value == math.floor(value) end
+    local function FrameVisible(frame)
+        local visible = frame:IsVisible()
+        return visible == true or visible == 1
+    end
     local function Native(name)
         local getter = _G[name]
         if type(getter) ~= "function" then return end
@@ -393,13 +397,13 @@ DFRL:NewMod("Waypoints", 3, function()
                 pin.drawnX, pin.drawnY = x, y
             end
             if not pin:IsShown() then pin:Show() end
-            return Shown(pin:IsVisible()) == true
+            return FrameVisible(pin)
         end
 
         local function Geometry()
             if not Minimap then return end
-            local visibleOK, visible = pcall(Minimap.IsVisible, Minimap)
-            if not visibleOK or Shown(visible) ~= true then return end
+            local visibleOK, visible = pcall(FrameVisible, Minimap)
+            if not visibleOK or not visible then return end
             local sizeOK, width, height = pcall(navigation.MinimapSize, PIN_SIZE)
             if not sizeOK or not Number(width) or not Number(height) or width <= PIN_SIZE or height <= PIN_SIZE then
                 return

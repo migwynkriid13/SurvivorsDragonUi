@@ -97,6 +97,9 @@ The assertions cover:
   phase cleanup, missing getters and stationary work in Performance Mode.
   Navigation cases reject missing/invalid and foreign-sheet party coordinates;
   shared pin cases cover four edge indicators, changed-only writes and reuse.
+  The full controller also draws received cache and fallen-ally pins on a visible
+  native minimap, without supplying global visibility helpers. Boolean/numeric
+  visibility, hidden/nil cleanup and recovery cover both geometry and placement.
   These tests remain CI-only; local work uses source review, artwork preparation
   and pinned formatting, with no addon/game execution or Actions polling.
 

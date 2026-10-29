@@ -36,7 +36,7 @@ def main():
             "PIN_SIZE", "Number", "HideGuardianTooltip", "UpdateGuardianTooltip",
         ])
         guardian_timers = "local hoveredPin, hoveredName\n" + extract_source("modules/map/waypoints.lua", [
-            "PIN_SIZE", "Number", "Native", "MinimapEntries", "HideGuardianTooltip",
+            "PIN_SIZE", "Number", "Native", "FrameVisible", "MinimapEntries", "HideGuardianTooltip",
             "HideGuardianTimer", "UpdateGuardianTimer", "RecyclePins", "MakeMinimapPin", "PlacePin",
             "Offset", "DrawTrackedPin", "UpdateTrackerPins",
         ])
