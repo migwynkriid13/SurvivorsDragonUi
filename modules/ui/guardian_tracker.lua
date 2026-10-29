@@ -256,18 +256,7 @@ DFRL:NewMod("GuardianTracker", 4, function()
         ApplyWidth()
         return true
     end
-    local function Refresh()
-        if not inWorld or DFRL.layout.IsHidden("guardianTracker") or not UIParent:IsVisible() then return end
-        local snapshot = roster.GetSnapshot(presentation.snapshot)
-        if snapshot.status ~= "ready" or not snapshot.rows[1] then
-            Clear()
-            return
-        end
-        if not presentation.shown then
-            presentation.shown = true
-            frame:Show()
-        end
-        if not frame:IsVisible() then return end
+    local function MeasureHealthLabels(snapshot)
         if
             (showCurrent or showMaximum or showPercentage)
             and presentation.measureSize ~= T.EncounterHealthStyle.fontSize
@@ -308,11 +297,26 @@ DFRL:NewMod("GuardianTracker", 4, function()
             end
         end
         if dirty then
-            if not Measure() then
-                Clear()
-                return
-            end
+            if not Measure() then return false end
             dirty = false
+        end
+        return true
+    end
+    local function Refresh()
+        if not inWorld or DFRL.layout.IsHidden("guardianTracker") or not UIParent:IsVisible() then return end
+        local snapshot = roster.GetSnapshot(presentation.snapshot)
+        if snapshot.status ~= "ready" or not snapshot.rows[1] then
+            Clear()
+            return
+        end
+        if not presentation.shown then
+            presentation.shown = true
+            frame:Show()
+        end
+        if not frame:IsVisible() then return end
+        if not MeasureHealthLabels(snapshot) then
+            Clear()
+            return
         end
         if presentation.measuredWidth ~= width then
             title:SetWidth(width - TITLE_PADDING)

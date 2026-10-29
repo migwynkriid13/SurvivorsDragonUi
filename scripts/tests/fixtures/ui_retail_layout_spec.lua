@@ -4,6 +4,21 @@ local context = H.New()
 local env = context.env
 assert(_VERSION == "Lua 5.1", "retail Layout fixtures require CI Lua 5.1")
 local function Geometry(object)
+    -- Native dimensions are independent of Lua fields such as the numeric
+    -- form's width/height input boxes.
+    local width, height = object:GetWidth(), object:GetHeight()
+    function object:GetWidth() return width end
+    function object:GetHeight() return height end
+    function object:SetWidth(value)
+        assert(type(value) == "number", "native width must be numeric")
+        context.writes.SetWidth = (context.writes.SetWidth or 0) + 1
+        width = value
+    end
+    function object:SetHeight(value)
+        assert(type(value) == "number", "native height must be numeric")
+        context.writes.SetHeight = (context.writes.SetHeight or 0) + 1
+        height = value
+    end
     function object:GetScale() return self.scale or 1 end
     function object:GetEffectiveScale() return self:GetScale() end
     function object:GetLeft() return self.left or 0 end
@@ -55,7 +70,8 @@ local function Geometry(object)
     return object
 end
 Geometry(env.UIParent)
-env.UIParent.width, env.UIParent.height = 1024, 768
+env.UIParent:SetWidth(1024)
+env.UIParent:SetHeight(768)
 local createFrame = env.CreateFrame
 env.CreateFrame = function(kind, name, parent) return Geometry(createFrame(kind, name, parent)) end
 env.DFRL.locale.Bind = function(label) return label end
@@ -118,7 +134,8 @@ local layout, display = env.DFRL.layout, env.DFRL.display
 local controller = context:Controller("PLAYER_LOGOUT")
 local settingsWindow
 local frame = env.CreateFrame("Frame", nil, env.UIParent)
-frame.width, frame.height = 100, 40
+frame:SetWidth(100)
+frame:SetHeight(40)
 layout.Register("playerFrame", frame, function(owner)
     owner:ClearAllPoints()
     owner:SetPoint("TOPLEFT", env.UIParent, "TOPLEFT", 60, -80)
@@ -151,6 +168,14 @@ for _, object in ipairs(context.objects) do
 end
 context:Call(handle, "OnMouseDown", "LeftButton")
 assert(#context.inputs == 4 and manager.keyboard, "selected frame did not reuse one numeric form and keyboard owner")
+local numericForm = context.inputs[1]:GetParent()
+assert(
+    numericForm.width == context.inputs[3]
+        and numericForm.height == context.inputs[4]
+        and numericForm:GetWidth() == 400
+        and type(numericForm:GetHeight()) == "number",
+    "numeric input fields replaced the mock's native dimensions"
+)
 local left, top = frame:GetLeft(), frame:GetTop()
 context:Call(manager, "OnKeyDown", "RIGHT")
 assert(frame:GetLeft() == left + 1, "arrow-key nudge lost its one-unit step")
