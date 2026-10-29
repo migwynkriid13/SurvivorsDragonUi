@@ -162,6 +162,37 @@ all fourteen caption and hint catalogs; existing descriptions keep their two-lin
 space. The shared editor still fits the viewport, and other pages retain their
 existing layouts and scrolling behavior.
 
+## Target-of-target name and health seams
+
+The compact target-of-target name sits two units above its original 60-unit
+health-label column, within a 12-unit-high caption area. It follows the bar
+instead of the old frame-top anchor with a positive 25-unit offset, which put
+the name over the larger target portrait. The existing eight-character preview
+and native name updates remain unchanged. Its foreground owner keeps the name
+above the health and portrait artwork.
+
+The native health bar and its existing loss trail now share the prepared
+`T.LargeHealthFill` interior. The bar extends eight units beneath the portrait
+curve, with a half-unit render underlap on every side. Compensated text insets
+retain the current-health, percentage and lone-value positions. Hiding portraits
+removes that eight-unit extension and uses the existing closed border; its
+visible bounds and the name/health text positions stay fixed.
+
+The compact border reuses the party health-only crops, removing the obsolete
+divider stubs beside the ring and at the outer cap. The original pet sheet and
+portrait dimensions remain unchanged. The former shaded compact `HealthFill.blp`
+has no remaining consumer and is removed from the runtime payload and checkout;
+its original TGA and the separate native-pet `Health.blp` remain intact.
+
+Portrait previews defer while hidden and apply through the existing Show/value
+callbacks. Unchanged previews and refreshes skip geometry writes and reuse the
+same artwork. Normal mode retains the original loss fade; Performance Mode
+keeps health instant and clears the trail without replay. CI-only production
+mocks cover caption bounds, fixed label positions, border reuse, hidden recovery,
+native dead/health changes and trail transitions. Local tests and game execution
+were not run; the supplied screenshots establish the reported defect, not the
+appearance of this fix in-game.
+
 ## Settings and layout
 
 The normalized `hidePortraits` boolean defaults to false in the existing

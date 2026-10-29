@@ -75,6 +75,34 @@ leave hundreds of expensive texture regions drawing continuously.
   GPU-memory, pixel-parity or FPS measurements. No local tests, standalone
   validation, addon execution or game launch is authorized for this audit.
 
+## Target-of-target seams and name placement — 2026-10-29
+
+The compact target-of-target reuses the prepared large health fill for both its
+native StatusBar and existing loss texture. Native StatusBar UV ownership stays
+intact. An eight-unit span beneath the portrait curve and a half-unit underlap
+cover the reported joins; compensating label/name anchors keep the original
+text column fixed. The background follows the same rectangle. Portraitless mode
+removes the portrait span and compensates the existing closed border.
+
+The clean party health-only crop set replaces the compact view's four strips
+with fifteen, adding eleven allocated/visible texture regions in portrait mode.
+They share the existing pet sheet, meet edge to edge and retain half-texel-safe
+one-row tips, without overlapping shaded border alpha. The pool is built once
+and reused; portraitless mode actually hides all fifteen strips and shows its
+unchanged eight-piece closed border. No frame, FontString, asset, event, updater,
+setting or SavedVariable is added. The unused shaded compact fill BLP is removed,
+while its original TGA and native pet artwork are preserved.
+
+The existing visible native refresh and display listener own the geometry.
+Unchanged choices skip anchors, dimensions and visibility writes. Hidden previews
+defer until the existing Show/value path; hidden native refreshes skip custom
+name and health reads. The existing loss animation keeps its original normal-mode
+fade and Performance Mode retirement. Static name/border/fill geometry is the
+same in either mode. CI-only mocks cover those boundaries and pool reuse; local
+work uses source/asset review and pinned formatting. These region counts and
+bounded extra fill overdraw do not establish draw calls, GPU/FPS improvement or
+live visual parity.
+
 ## Projection reuse and metadata preparation — 2026-10-28
 
 The two changes in this pass share one commit. They reduce duplicate native

@@ -59,6 +59,12 @@ ambiguous declaration fails preparation.
 
 The assertions cover:
 
+- Compact target-of-target mocks load the production Mini and loss controllers
+  with explicit native boundaries. They cover name containment, stable health
+  label positions, clean pooled border reuse, portrait previews, hidden recovery,
+  dead/native-health updates and Performance Mode trail retirement/rearming.
+  They do not establish in-game appearance or native texture sampling.
+
 - Shared-rule mocks exercise restoration readback/retry, deferred native opt-out,
   synchronous HUD callbacks and visibility encodings; shared encounter validation
   rejects duplicate IDs before either cosmetic index is built. Circular-image
