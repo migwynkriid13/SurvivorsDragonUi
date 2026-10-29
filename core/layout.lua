@@ -11,7 +11,7 @@ DFRL:NewMod("Layout", 0, function()
     local coordinates, selected, RefreshCoordinates, SelectEntry
     local showCoordinates
     local confirmAnchor
-    local editManager, selectionPanel, ShowSelectionPanel, UpdateSelection, ClearSelected, CloseEditing
+    local editManager, selectionPanel, PlaceSelectionPanel, ShowSelectionPanel, UpdateSelection, ClearSelected, CloseEditing
     local coordinateHome, guideOwner
     local grid, gridWidth, gridHeight, gridScale, gridFine, gridPitch
     local GRID_SPACING = 32
@@ -965,9 +965,20 @@ DFRL:NewMod("Layout", 0, function()
             entry.handle:Hide()
         end
     end
-    local function RefreshHandle(entry, scale)
+    local function RefreshHandle(entry, scale, mayPrepare)
+        local prepared = false
         local shown = CanShowHandle(entry)
         if shown then
+            if
+                (not entry.handle and not entry.handleAttempted)
+                or (entry.handle and not handlesOnly and not entry.grips)
+            then
+                if mayPrepare == false then
+                    RefreshEditorSoon()
+                    return false
+                end
+                prepared = true
+            end
             if not entry.handle then
                 if entry.handleAttempted then return end
                 MakeHandle(entry)
@@ -1005,6 +1016,7 @@ DFRL:NewMod("Layout", 0, function()
             end
         end
         ShowHandle(entry, shown and true or false)
+        return prepared
     end
 
     -- Settings previews keep their transaction while unrelated categories hide
@@ -1191,6 +1203,50 @@ DFRL:NewMod("Layout", 0, function()
         RefreshCoordinates()
         return true
     end
+    local function ArrangeCoordinateOptions(popup)
+        local form = coordinates
+        local width = form:GetWidth()
+        local halfWidth = (width - 12) / 2
+        local visibilityWidth = popup and width or halfWidth
+        for _, record in ipairs({ { form.visibility, visibilityWidth }, { form.grid, halfWidth } }) do
+            local control, controlWidth = record[1], record[2]
+            if control:GetWidth() ~= controlWidth then
+                control:SetWidth(controlWidth)
+                control.label:SetWidth(controlWidth - 36)
+                control.description:SetWidth(controlWidth - 36)
+                control.editorDivider:SetWidth(controlWidth - 32)
+            end
+        end
+        local rowHeight = T.CompactEditorToggle(form.visibility)
+        if not popup then rowHeight = math.max(rowHeight, T.CompactEditorToggle(form.grid)) end
+        local applyTop = 156 + rowHeight + 8
+        if form.optionsPopup ~= popup or form.optionsApplyTop ~= applyTop then
+            form.visibility:ClearAllPoints()
+            form.visibility:SetPoint("TOPLEFT", form, "TOPLEFT", 0, -156)
+            form.grid:ClearAllPoints()
+            form.grid:SetPoint("TOPLEFT", form, "TOPLEFT", halfWidth + 12, -156)
+            if popup then
+                if form.grid:IsShown() then form.grid:Hide() end
+            elseif not form.grid:IsShown() then
+                form.grid:Show()
+            end
+            form.apply:ClearAllPoints()
+            form.apply:SetPoint("TOPLEFT", form, "TOPLEFT", 0, -applyTop)
+            form.status:ClearAllPoints()
+            form.status:SetPoint("TOPLEFT", form, "TOPLEFT", 0, -applyTop - 38)
+            form:SetHeight(applyTop + 62)
+            form.optionsPopup, form.optionsApplyTop = popup, applyTop
+        end
+        if popup and form:GetParent() == selectionPanel then
+            local height = math.max(320, form:GetHeight() + 30)
+            if selectionPanel:GetHeight() ~= height then
+                selectionPanel:SetHeight(height)
+                if selectionPanel:IsVisible() and selectionPanel.entry then
+                    PlaceSelectionPanel(selectionPanel.entry)
+                end
+            end
+        end
+    end
     -- The community's numeric editor shares the existing dialog and draft store.
     function layout.CreateControls(parent, width, activate)
         if activate then
@@ -1207,11 +1263,7 @@ DFRL:NewMod("Layout", 0, function()
                 for _, button in ipairs(coordinates.cycleButtons) do
                     button:Show()
                 end
-                coordinates.grid:Show()
-                coordinates.apply:ClearAllPoints()
-                coordinates.apply:SetPoint("TOPLEFT", coordinates, "TOPLEFT", 0, -252)
-                coordinates.status:ClearAllPoints()
-                coordinates.status:SetPoint("TOPLEFT", coordinates, "TOPLEFT", 0, -290)
+                ArrangeCoordinateOptions(false)
             end
             return coordinates
         end
@@ -1256,7 +1308,13 @@ DFRL:NewMod("Layout", 0, function()
                 if not coordinates.refreshing and this:GetText() ~= this.layoutText then coordinates.dirty = true end
             end)
             box:SetScript("OnEnterPressed", ApplyCoordinates)
-            box:SetScript("OnEscapePressed", function() SelectEntry(selected) end)
+            box:SetScript("OnEscapePressed", function()
+                if handlesOnly then
+                    SelectEntry(selected)
+                else
+                    layout.CancelEdit()
+                end
+            end)
             coordinates[field] = box
         end
         local fields = { "x", "y", "width", "height" }
@@ -1297,7 +1355,7 @@ DFRL:NewMod("Layout", 0, function()
             coordinates,
             "Hide frame",
             "Keep this group hidden during gameplay.",
-            width,
+            inputWidth,
             function(hidden)
                 if not editing or not selected then return end
                 FinishDrag(activeDrag, true)
@@ -1320,10 +1378,10 @@ DFRL:NewMod("Layout", 0, function()
             coordinates,
             "Show grid",
             "Show the alignment grid while editing.",
-            width,
+            inputWidth,
             function(shown) DFRL.display.Set("layoutShowGrid", shown) end
         )
-        coordinates.grid:SetPoint("TOPLEFT", coordinates, "TOPLEFT", 0, -204)
+        coordinates.grid:SetPoint("TOPLEFT", coordinates, "TOPLEFT", inputWidth + gap, -156)
         DFRL.display.Listen(function()
             RefreshEditorSoon()
             if coordinates and not coordinates.dirty and not coordinates.focused then RefreshCoordinates(false) end
@@ -1336,9 +1394,14 @@ DFRL:NewMod("Layout", 0, function()
         coordinates.status:SetWidth(width)
         coordinates.status:SetHeight(18)
         coordinates:SetScript("OnShow", function()
+            ArrangeCoordinateOptions(coordinates.optionsPopup or false)
             if not coordinates.dirty and not coordinates.focused then RefreshCoordinates() end
         end)
         coordinates:SetScript("OnHide", ClearCoordinateFocus)
+        DFRL.locale.Listen(function()
+            if coordinates:IsVisible() then ArrangeCoordinateOptions(coordinates.optionsPopup or false) end
+        end)
+        ArrangeCoordinateOptions(false)
         SelectEntry(selected or entries.playerFrame or order[1])
         return coordinates
     end
@@ -1423,6 +1486,23 @@ DFRL:NewMod("Layout", 0, function()
         end
     end
     function layout.CancelEdit() CloseEditing(false, true) end
+    function layout.RegisterEditorWindow(frame)
+        if frame.layoutEditorCloseRegistered then return end
+        local name = frame:GetName()
+        if not name then return end
+        frame.layoutEditorCloseRegistered = true
+        _G.UISpecialFrames = _G.UISpecialFrames or {}
+        local found
+        for _, registered in ipairs(_G.UISpecialFrames) do
+            if registered == name then found = true end
+        end
+        if not found then table.insert(_G.UISpecialFrames, name) end
+        HookScript(frame, "OnHide", function()
+            -- Moving mode hides the full window while retaining its draft.
+            -- Confirm/Cancel retire editing before their own Hide callbacks.
+            if editing and not handlesOnly then layout.CancelEdit() end
+        end)
+    end
     local function EditorText(parent, text, size, x, y)
         local label = parent:CreateFontString(nil, "OVERLAY")
         DFRL.locale.Bind(label)
@@ -1461,15 +1541,7 @@ DFRL:NewMod("Layout", 0, function()
                 button:Show()
             end
         end
-        if popup then
-            form.grid:Hide()
-        else
-            form.grid:Show()
-        end
-        form.apply:ClearAllPoints()
-        form.apply:SetPoint("TOPLEFT", form, "TOPLEFT", 0, popup and -204 or -252)
-        form.status:ClearAllPoints()
-        form.status:SetPoint("TOPLEFT", form, "TOPLEFT", 0, popup and -242 or -290)
+        ArrangeCoordinateOptions(popup)
         return form
     end
     UpdateSelection = function(previous)
@@ -1496,6 +1568,33 @@ DFRL:NewMod("Layout", 0, function()
         UpdateSelection(previous)
         if selectionPanel then selectionPanel:Hide() end
     end
+    PlaceSelectionPanel = function(entry)
+        local width, height, scale = Viewport()
+        local bounds = EditBounds(entry, width, height, scale, {})
+        if bounds then
+            local x = bounds.left + bounds.width + 24
+            if x + selectionPanel:GetWidth() > width - 12 then x = bounds.left - selectionPanel:GetWidth() - 24 end
+            x = Clamp(x, 12, math.max(12, width - selectionPanel:GetWidth() - 12))
+            local minimumY = -height + selectionPanel:GetHeight() + 12
+            local y = Clamp(bounds.top, minimumY, -24)
+            local managerPosition = editManager and ReadPosition(editManager, width, height, scale)
+            if managerPosition then
+                local mx, my = managerPosition.x * width, managerPosition.y * height
+                if
+                    x < mx + editManager:GetWidth() + 12
+                    and x + selectionPanel:GetWidth() > mx - 12
+                    and y > my - editManager:GetHeight() - 12
+                    and y - selectionPanel:GetHeight() < my + 12
+                then
+                    local below = my - editManager:GetHeight() - 24
+                    local above = my + selectionPanel:GetHeight() + 24
+                    y = below >= minimumY and below or above <= -24 and above or Clamp(below, minimumY, -24)
+                end
+            end
+            selectionPanel:ClearAllPoints()
+            selectionPanel:SetPoint("TOPLEFT", UIParent, "TOPLEFT", x, y)
+        end
+    end
     ShowSelectionPanel = function(entry)
         if not editing or not handlesOnly or not entry then return end
         if not selectionPanel then
@@ -1509,31 +1608,7 @@ DFRL:NewMod("Layout", 0, function()
         end
         if selectionPanel.entry ~= entry or not selectionPanel:IsShown() then
             PlaceCoordinateForm(selectionPanel, true)
-            local width, height, scale = Viewport()
-            local bounds = EditBounds(entry, width, height, scale, {})
-            if bounds then
-                local x = bounds.left + bounds.width + 24
-                if x + selectionPanel:GetWidth() > width - 12 then x = bounds.left - selectionPanel:GetWidth() - 24 end
-                x = Clamp(x, 12, math.max(12, width - selectionPanel:GetWidth() - 12))
-                local minimumY = -height + selectionPanel:GetHeight() + 12
-                local y = Clamp(bounds.top, minimumY, -24)
-                local managerPosition = editManager and ReadPosition(editManager, width, height, scale)
-                if managerPosition then
-                    local mx, my = managerPosition.x * width, managerPosition.y * height
-                    if
-                        x < mx + editManager:GetWidth() + 12
-                        and x + selectionPanel:GetWidth() > mx - 12
-                        and y > my - editManager:GetHeight() - 12
-                        and y - selectionPanel:GetHeight() < my + 12
-                    then
-                        local below = my - editManager:GetHeight() - 24
-                        local above = my + selectionPanel:GetHeight() + 24
-                        y = below >= minimumY and below or above <= -24 and above or Clamp(below, minimumY, -24)
-                    end
-                end
-                selectionPanel:ClearAllPoints()
-                selectionPanel:SetPoint("TOPLEFT", UIParent, "TOPLEFT", x, y)
-            end
+            PlaceSelectionPanel(entry)
             selectionPanel.entry = entry
             selectionPanel:Show()
         end
@@ -1704,8 +1779,8 @@ DFRL:NewMod("Layout", 0, function()
         end
     end
     local function ShowEditView(page)
-        UpdateGrid()
         if setEditorVisible then setEditorVisible(not handlesOnly, page) end
+        UpdateGrid()
         if handlesOnly then
             editManager:Show()
             UpdateEditManager()
@@ -1740,6 +1815,13 @@ DFRL:NewMod("Layout", 0, function()
         confirm:Show()
         if starting and coordinates and not handlesOnly then
             SelectEntry(selected or entries.playerFrame or order[1])
+        end
+    end
+    function layout.ToggleEdit()
+        if editing then
+            layout.CancelEdit()
+        else
+            layout.BeginEdit()
         end
     end
     DFRL.display.Listen(function()
@@ -1832,8 +1914,12 @@ DFRL:NewMod("Layout", 0, function()
         if editorDirty or editorAge >= EDITOR_INTERVAL or (DFRL.display.Get("layoutShowGrid") and gridFine ~= fine) then
             editorAge, editorDirty = 0, false
             UpdateGrid()
+            -- Spread first-use artwork over render frames through this existing
+            -- controller. Pending groups mark the editor dirty until prepared;
+            -- closing or leaving Layout stops allocation without another worker.
+            local prepared = 0
             for _, entry in ipairs(order) do
-                RefreshHandle(entry, scale)
+                if RefreshHandle(entry, scale, prepared < 2) then prepared = prepared + 1 end
             end
             if coordinates and coordinates:IsVisible() and not coordinates.dirty and not coordinates.focused then
                 RefreshCoordinates(false)

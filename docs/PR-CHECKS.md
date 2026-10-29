@@ -53,6 +53,22 @@ An explicit Bash shell enables `pipefail`, so piping fixture/model output into
 
 ## UI work and cleanup tests
 
+Health-format fixtures cover the independent default-on Unit frames, Boss bars
+and Guardian tracker shortening choices through the real display normalizer,
+preview/Confirm/discard/profile/reset paths. Production formatter/health owners
+cover full whole numbers without suffixes/exponents, format-aware cache changes,
+unchanged percentages and native fill, disabled current/maximum labels, pooled
+guardian width invalidation, hidden recovery and unchanged writes. The production
+boss row pass also forwards its own choice without changing health-loss state.
+These cases remain CI-only and were not executed locally.
+
+The default-off boss/guardian percentage cases cover independent transactions,
+current-only/maximum-only/combined/percentage-only captions, calculation from
+full values in both number formats, zero/100% boundaries, invalid health,
+rounded-caption cache reuse and release, hidden recovery, stable allocations
+and unchanged health fill/loss ownership. Existing production labels and native
+boundaries are used; no local checks or game execution are authorized.
+
 The default-chat fixture invokes all four production chat initializers with the
 native option enabled and an existing enabled Copy preference. It asserts no
 custom namespace, frame allocation, native method/script replacement, Layout
@@ -77,11 +93,35 @@ The assertions cover:
   glyph-width boundaries. It covers grouped visibility, original section owners,
   retained section state, per-category offsets, duplicate-heading suppression,
   absence of search inputs, close/reopen, compact/wrapped caption spacing,
+  compact numeric captions, mixed-height two-column placement, odd last rows,
+  full-row master clearance, locale reflow and single-option/mode spacing,
   missing-metric retry, stable allocations and hidden/unchanged work without an
   idle updater. The shared button cases cover pressed/released/leave/hide recovery,
   native 1/0 disabled values, click callback ownership, selected highlight locking,
   narrow/resized caps and deferred hidden writes. The fixture is CI-only and was
   not run locally; it does not render the dialog.
+
+  The same fixture loads the AST-extracted production settings constructor with
+  the actual locale/Display/Profiles owners and explicit native font/HUD
+  boundaries. It covers shell-only construction, selected-page preparation, all
+  nine categories/twenty sections, current defaults, preview/Confirm/discard,
+  pending Layout input, independent Damage meter preparation, centered section
+  headings, description-free checkbox alignment, plain input regions,
+  deferred font-menu selection and reuse, closed language
+  changes and no added background updater. Active-language width cases cover
+  one measurement, cache reuse, font/flags/width/scale/language invalidation and
+  missing-metric retry. The Layout fixture also covers two-group per-frame
+  preparation, fast continuation through the existing controller, cancellation
+  of unfinished work and reuse after reopening. Retail-layout cases also cover
+  paired Hide frame/Show grid, full-width Hide frame in the moving popup, wrapped
+  popup growth/clamping and unchanged locale reflow. These are CI-only source mocks,
+  not first-open latency or native rendering measurements.
+
+  Close cases cover repeated launcher-toggle open/cancel, native registered-window
+  hiding, focused invalid numeric input, profile-name Escape, duplicate Escape
+  registration and draft retention when switching to moving mode. The minimap
+  fixture covers the launcher's edit-layer priority, unchanged assignments and
+  restoration to the current minimap layer without new views or workers.
 
 - Settings visibility mocks exercise the production Display/SCT/font-control
   listeners with explicit native ancestor visibility and font boundaries. Closed

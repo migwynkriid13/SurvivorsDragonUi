@@ -40,6 +40,16 @@ Language is session-only. No setting, command, profile, SavedVariable, client pr
 
 ## Display text
 
+**Shorten health numbers** and its K/M/B/T hint have source/runtime UI entries
+in all fourteen languages. The same captions serve the independent Unit frames,
+Boss bars and Guardian tracker options. Only these two addon UI rows were
+prepared; native catalogs, spell aliases, effects and their source fingerprints
+are unchanged.
+
+Boss bars and Guardian tracker reuse the existing fourteen-language **Show health
+percentage** caption and hint from Unit frames; no duplicate translation rows,
+native catalogs or new language sources are added for those controls.
+
 **Show guardian timers** and its defeated-icon/respawn hint have source TSV and
 runtime UI entries in all fourteen languages. Only these addon captions were
 prepared; native catalogs, effects, spell aliases and their source pins are unchanged.
@@ -76,7 +86,7 @@ caption/help gap. A long caption does not expand and shrink the entire dialog.
 
 Coverage includes the editor categories and their controls, numeric-layout hints and status, run label, counter and encounter hints, waypoint titles/map-pin hints/distance units, menu buttons, chat scrolling/copy captions, combat-text feedback/miss captions, cooldown unit abbreviations and the frame inspector's explanatory text. Font family names, addon/game names, slash-command tokens, API identifiers, native unit/item/spell names, raw captured messages/events and bootstrap error diagnostics remain verbatim.
 
-The editor measures translated sidebar and button captions, bounds its content width and fits the dialog to the available viewport. Settings sections scroll; labels and descriptions reserve wrapping space. Jewelry retains natural-width measurement, its 272-unit wrapping column and the native wrapped-height measurement; no character-count width estimates or UTF-8 byte slicing are introduced. The frame inspector truncates previews only at complete UTF-8 character boundaries. Copy's hint area reserves two lines.
+The editor keeps a fixed 232-unit sidebar with wrapping captions, bounds its content width and fits the dialog to the available viewport. Settings sections are built on their category's first visit. Their button/control sizing uses only active-language glyphs through `locale.Width(..., true)`, caching successful measurements by caption, language, font/size/flags, ruler width and owning-frame effective scale. Missing metrics remain retryable; hidden pages defer remeasurement. The original all-language width path remains available to other callers. Settings sections scroll; labels and descriptions reserve wrapping space. Jewelry retains natural-width measurement, its 272-unit wrapping column and the native wrapped-height measurement; no character-count width estimates or UTF-8 byte slicing are introduced. The frame inspector truncates previews only at complete UTF-8 character boundaries. Copy's hint area reserves two lines.
 
 Ordinary captions use the game's `DEFAULT` font. When the translated run prefix contains non-ASCII glyphs, run/sample rendering also uses `DEFAULT` for the game's glyph support; the saved font selection is retained. Other run prefixes keep the user's selected face. Returning to a language with an ASCII run prefix reapplies that selection.
 

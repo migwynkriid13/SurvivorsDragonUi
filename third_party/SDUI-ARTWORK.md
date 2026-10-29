@@ -36,22 +36,27 @@ the pinned DragonUI commit. Rectangles use `(left, top, right, bottom)`, with ri
 and bottom excluded. Destination coordinates refer to the top-left pixel of each
 cell. Unused destination pixels are transparent.
 
-### `media/tex/editor/border.tga`
+### Input fields
 
-The 1024-by-128 destination contains only the eight diamond-metal border cells
-used by the editor, from the 512-by-512 `chrome-dialog.tga` source. The center is
-not included. Corners retain fixed dimensions; only straight edges stretch.
+Layout numeric fields and the Profile name field use a plain recessed treatment
+matching the neutral metal panel. They retain the native EditBox, text, focus and
+input handlers. No separate input artwork is bundled: one inset dark fill and
+four one-unit neutral edges use the game's existing
+`Interface\Buttons\WHITE8X8` texture. The top edge is subdued and the bottom
+edge lighter to give a small inset relief without ornamental corners.
 
-| Cell         | Source rectangle       | Destination |
-| ------------ | ---------------------- | ----------- |
-| Top left     | `(4, 276, 132, 404)`   | `(0, 0)`    |
-| Top right    | `(140, 276, 268, 404)` | `(128, 0)`  |
-| Bottom left  | `(140, 140, 268, 268)` | `(256, 0)`  |
-| Bottom right | `(276, 140, 404, 268)` | `(384, 0)`  |
-| Left edge    | `(4, 4, 132, 132)`     | `(512, 0)`  |
-| Right edge   | `(140, 4, 268, 132)`   | `(640, 0)`  |
-| Top edge     | `(4, 140, 132, 268)`   | `(768, 0)`  |
-| Bottom edge  | `(276, 4, 404, 132)`   | `(896, 0)`  |
+The fill uses RGB `(0.025, 0.028, 0.032)` at alpha `0.98`; edge colors are
+`(0.17, 0.19, 0.22, 1)` above, `(0.42, 0.44, 0.46, 0.85)` below and
+`(0.24, 0.27, 0.3, 0.95)` at the sides. These are addon-authored colors applied to
+the native white texture, rather than a claim of pixel-identical retail input
+artwork. Anchored edges follow field resizing without a script. Five regions
+replace the old fill and eight diamond-border pieces; no animation or idle
+updater is involved, and Performance Mode uses the same static treatment.
+
+The obsolete prepared `editor/border.blp` has been removed from the runtime
+manifest and media tree. `scripts/prepare_editor_art.py` prepares only the retail
+selection artwork below. The guardian design preview helper now uses the retained
+plain metal frame and does not depend on the old border or removed header crop.
 
 ### `media/tex/editor/choice.tga`
 

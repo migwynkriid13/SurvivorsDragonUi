@@ -1422,20 +1422,20 @@ DFRL:NewMod("RunTimers", 5, function()
         if fontEditor.SetUserPlaced then fontEditor:SetUserPlaced(false) end
     end
 
-    local function CreateFontEditor()
+    local function CreateFontEditor(initialPage)
+        local contentWidth = 660
         local measure = FontEditorLabel(UIParent, "", 0, 0)
+        measure:SetWidth(contentWidth)
         measure:Hide()
-        local function TextWidth(text) return DFRL.locale.Width(measure, text) end
+        local function TextWidth(text) return DFRL.locale.Width(measure, text, true) end
         local padding, gap = 24, 16
-        local labelWidth = math.max(TextWidth("Font"), TextWidth("Size"), TextWidth("Outline"))
-        local dropdownWidth, sidebarWidth = 0, 184
+        local sidebarWidth = 232
         local categories = {
             { key = "layout", label = "Layout" },
             { key = "profiles", label = "Profiles" },
             {
                 key = "units",
                 label = "Unit frames",
-                columns = 2,
                 options = {
                     { "showPlayerName", "Show player name", "Show the name above the player frame." },
                     { "showPlayerLevel", "Show player level", "Show the level above the player frame." },
@@ -1443,6 +1443,11 @@ DFRL:NewMod("RunTimers", 5, function()
                     { "showTargetLevel", "Show target level", "Show the level above the target frame." },
                     { "showHealthValue", "Show health", "Show current health on unit health bars." },
                     { "showHealthPercentage", "Show health percentage", "Show remaining health as a percentage." },
+                    {
+                        "unitShortHealth",
+                        "Shorten health numbers",
+                        "Use K, M, B and T instead of full health numbers.",
+                    },
                     { "classHealth", "Class-colored health", "Use vanilla class colors for player and party health." },
                     {
                         "healthLossAnimation",
@@ -1519,6 +1524,12 @@ DFRL:NewMod("RunTimers", 5, function()
                     { "customBossBars", "Enable custom boss bars", "Off: use the game's original boss bars." },
                     { "bossShowCurrentHealth", "Show current health", "Show current health on health bars." },
                     { "bossShowMaximumHealth", "Show maximum health", "Show maximum health on health bars." },
+                    { "bossShowHealthPercentage", "Show health percentage", "Show remaining health as a percentage." },
+                    {
+                        "bossShortHealth",
+                        "Shorten health numbers",
+                        "Use K, M, B and T instead of full health numbers.",
+                    },
                     { "bossDebuffs", "Boss debuffs", "Effects on boss and guardian health bars." },
                     { "guardiansInBossBar", "Guardians in boss bar", "Off: show only bosses in the boss bar." },
                 },
@@ -1526,9 +1537,13 @@ DFRL:NewMod("RunTimers", 5, function()
             {
                 key = "meter",
                 label = "Damage meter",
-                columns = 2,
                 options = {
-                    { "meterEnabled", "Enable damage meter", "Show the custom damage meter. Off by default." },
+                    {
+                        "meterEnabled",
+                        "Enable damage meter",
+                        "Show the custom damage meter. Off by default.",
+                        wide = true,
+                    },
                     { "meterRows", "Abilities shown", "Show 1 to 10 abilities at a time.", step = 1 },
                     { "meterFontSize", "Font size", "Change meter text without scaling the frame.", step = 1 },
                     {
@@ -1569,9 +1584,19 @@ DFRL:NewMod("RunTimers", 5, function()
                 key = "guardians",
                 label = "Guardian tracker",
                 options = {
-                    { "guardianShowDead", "Show dead", "Show defeated guardians and their respawn timers." },
                     { "guardianShowCurrentHealth", "Show current health", "Show current health on health bars." },
                     { "guardianShowMaximumHealth", "Show maximum health", "Show maximum health on health bars." },
+                    {
+                        "guardianShowHealthPercentage",
+                        "Show health percentage",
+                        "Show remaining health as a percentage.",
+                    },
+                    {
+                        "guardianShortHealth",
+                        "Shorten health numbers",
+                        "Use K, M, B and T instead of full health numbers.",
+                    },
+                    { "guardianShowDead", "Show dead", "Show defeated guardians and their respawn timers." },
                 },
             },
             {
@@ -1615,7 +1640,6 @@ DFRL:NewMod("RunTimers", 5, function()
             {
                 key = "tally",
                 label = "Kills, Gold & Caches",
-                columns = 2,
                 stylePicker = true,
                 options = {
                     {
@@ -1740,7 +1764,8 @@ DFRL:NewMod("RunTimers", 5, function()
         local groups = {
             { key = "layout", label = "Layout", sections = { "layout" } },
             { key = "units", label = "Unit frames", sections = { "units", "pets", "auras" } },
-            { key = "combat", label = "Combat", sections = { "combat", "nameplates", "meter" } },
+            { key = "combat", label = "Combat", sections = { "combat", "nameplates" } },
+            { key = "meter", label = "Damage meter", sections = { "meter" } },
             { key = "action", label = "Action bar", sections = { "abilities", "jewelry", "tally" } },
             { key = "encounters", label = "Encounters", sections = { "timer", "bosses", "guardians" } },
             { key = "map", label = "Map & navigation", sections = { "waypoints", "minimap" } },
@@ -1752,29 +1777,20 @@ DFRL:NewMod("RunTimers", 5, function()
             byKey[category.key] = category
         end
         for _, group in ipairs(groups) do
-            sidebarWidth = math.max(sidebarWidth, math.min(232, TextWidth(group.label) + 32))
             for _, key in ipairs(group.sections) do
                 local section = byKey[key]
                 section.group = group.key
                 table.insert(sections, section)
             end
         end
-        for _, entry in ipairs(fontFaces) do
-            dropdownWidth = math.max(dropdownWidth, TextWidth(entry.label) + 36)
-        end
-        sidebarWidth = math.max(sidebarWidth, math.min(232, TextWidth("Performance Mode") + 36))
-        local fontListWidth = dropdownWidth
-        local timerSizeWidth = TextWidth("Size") + gap + 104
-        local tallyStyleHint = "Styles stay the same when attached or detached."
-        local defaultsWidth = TextWidth("Addon defaults") + 24
+        local defaultsWidth = math.max(140, TextWidth("Addon defaults") + 24, TextWidth("Cancel") + 24)
         -- A long translation must wrap locally instead of expanding the entire
         -- dialog and shrinking every caption to fit the screen.
-        local contentWidth = 660
         local contentLeft = padding + sidebarWidth + 28
         local width = contentLeft + contentWidth + 24 + padding
-        dropdownWidth = contentWidth - labelWidth - gap - gap * 3 - timerSizeWidth
 
-        fontEditor = T.CreateEditorPanel(UIParent, width, 704)
+        fontEditor = T.CreateEditorPanel(UIParent, width, 704, "SurvivorsDragonUiSettings")
+        fontEditor:Hide()
         fontEditor:SetFrameStrata("TOOLTIP")
         fontEditor:SetFrameLevel(150)
         PlaceFontEditor()
@@ -1783,7 +1799,7 @@ DFRL:NewMod("RunTimers", 5, function()
         fontEditor:RegisterForDrag("LeftButton")
         fontEditor:SetScript("OnDragStart", function()
             if not fontDraft then return end
-            fontMenu:Hide()
+            if fontMenu then fontMenu:Hide() end
             fontEditor:StartMoving()
         end)
         fontEditor:SetScript("OnDragStop", FinishFontEditorDrag)
@@ -1819,22 +1835,33 @@ DFRL:NewMod("RunTimers", 5, function()
         separator:SetWidth(1)
         separator:SetPoint("TOPLEFT", fontEditor, "TOPLEFT", contentLeft - 12, -sidebarTop)
         separator:SetPoint("BOTTOMLEFT", fontEditor, "TOPLEFT", contentLeft - 12, -footerTop)
+        local builders = {}
         local navigation = T.CreateEditorNavigator(fontEditor, sidebar, groups, sections, {
             width = contentWidth + 24,
             left = contentLeft,
             top = sidebarTop,
             height = footerTop - sidebarTop - 8,
             sidebarWidth = sidebarWidth,
+            prepare = function(section, page)
+                if section.options then
+                    builders.options(page, section)
+                else
+                    builders[section.key](page)
+                end
+                HookScript(page, "OnShow", UpdateDisplayLabels)
+                if section.key == "combat" then HookScript(page, "OnShow", UpdateSctLabels) end
+                if section.key == "timer" then HookScript(page, "OnShow", RefreshFontControls) end
+            end,
+            arrange = function()
+                if builders.arrange then builders.arrange() end
+            end,
             onNavigate = function(key)
                 DFRL.layout.SetHandlesVisible(key == "layout")
                 if fontMenu and fontMenu:IsShown() then fontMenu:Hide() end
-                if fontEditor.RefreshOptionLayout then fontEditor.RefreshOptionLayout() end
             end,
         })
         fontEditor.navigation = navigation
-        local pages = navigation.pages
         local function SelectPage(key) navigation.Select(byKey[key] and byKey[key].group or key) end
-        local modeSize = (contentWidth - gap * 2) / 3
         local performance = T.CreateEditorToggle(
             sidebar,
             "Performance Mode",
@@ -1844,12 +1871,12 @@ DFRL:NewMod("RunTimers", 5, function()
         )
         performance:SetHeight(36)
         performance:SetPoint("TOPLEFT", sidebar, "TOPLEFT", 6, -sidebarInset)
-        performance.label:ClearAllPoints()
-        performance.label:SetPoint("TOPLEFT", performance, "TOPLEFT", 32, -10)
         performance.label:SetHeight(28)
         displayControls.performanceMode = performance
-        DFRL.layout.CreateControls(pages.layout, contentWidth, function() SelectPage("layout") end)
-        DFRL.profiles.CreateControls(pages.profiles, contentWidth)
+        builders.layout = function(page)
+            DFRL.layout.CreateControls(page, contentWidth, function() SelectPage("layout") end)
+        end
+        builders.profiles = function(page) DFRL.profiles.CreateControls(page, contentWidth) end
 
         local function DisplayToggle(parent, key, label, description, y, rowWidth)
             local control = T.CreateEditorToggle(
@@ -1879,6 +1906,7 @@ DFRL:NewMod("RunTimers", 5, function()
             description:SetHeight(40)
             description:SetJustifyH("LEFT")
             description:SetJustifyV("TOP")
+            control.label, control.description = label, description
             for _, direction in ipairs({ -1, 1 }) do
                 local step = direction * entry.step
                 local button = T.CreateEditorButton(control, direction < 0 and "-" or "+", 28, 28)
@@ -1900,22 +1928,21 @@ DFRL:NewMod("RunTimers", 5, function()
             return control
         end
         local optionLayouts = {}
-        local function CreateOptionsPage(category)
-            local page = pages[category.key]
+        builders.options = function(page, category)
             local dependents
             if category.master then
                 dependents = { controls = {}, value = category.masterValue }
                 dependentSettings[category.master] = dependents
             end
-            local columns = category.stylePicker and 2 or category.columns or 1
+            local columns = category.columns or (table.getn(category.options) > 1 and 2 or 1)
             local rowHeight = 88
-            local modeHeight = category.mode and 124 or 0
+            local modeHeight = category.mode and 112 or 0
             local rowWidth = (contentWidth - gap * (columns - 1)) / columns
             local content = page
             local ScrollOptions = navigation.Scroll
             local controls = {}
             for _, entry in ipairs(category.options) do
-                local span = entry.step and columns or 1
+                local span = (entry.wide or entry[1] == category.master) and columns or 1
                 local controlWidth = span == columns and contentWidth or rowWidth
                 local control
                 if entry.step then
@@ -1930,26 +1957,7 @@ DFRL:NewMod("RunTimers", 5, function()
             end
             local optionsHeight = 0
             local function LayoutOptions()
-                local top, column, height = modeHeight, 0, 0
-                for _, record in ipairs(controls) do
-                    local control, span = record.frame, record.span
-                    if span == columns and column > 0 then
-                        top, column, height = top + height, 0, 0
-                    end
-                    local itemHeight = record.numeric and rowHeight or T.CompactEditorToggle(control)
-                    local x, y = column * (rowWidth + gap), -top
-                    if record.x ~= x or record.y ~= y then
-                        control:ClearAllPoints()
-                        control:SetPoint("TOPLEFT", content, "TOPLEFT", x, y)
-                        record.x, record.y = x, y
-                    end
-                    height = math.max(height, itemHeight)
-                    column = column + span
-                    if column >= columns then
-                        top, column, height = top + height, 0, 0
-                    end
-                end
-                optionsHeight = top + height
+                optionsHeight = T.LayoutEditorOptions(content, controls, columns, gap, modeHeight)
                 if not category.stylePicker and page:GetHeight() ~= optionsHeight then page:SetHeight(optionsHeight) end
             end
             LayoutOptions()
@@ -1961,7 +1969,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 local group = { buttons = {}, descriptions = {} }
                 fontEditor.displayModes = fontEditor.displayModes or {}
                 fontEditor.displayModes[mode.key] = group
-                local buttonWidth = (rowWidth - gap * 2) / 3
+                local buttonWidth = (contentWidth - gap * 2) / 3
                 for index, entry in ipairs(mode.values) do
                     local id = entry[1]
                     local button = T.CreateEditorButton(content, entry[2], buttonWidth, 30)
@@ -1970,7 +1978,7 @@ DFRL:NewMod("RunTimers", 5, function()
                     group.buttons[id], group.descriptions[id] = button, entry[3]
                 end
                 group.description = FontEditorLabel(content, "", 0, -68, 10)
-                group.description:SetWidth(rowWidth)
+                group.description:SetWidth(contentWidth)
                 group.description:SetHeight(36)
                 group.description:SetJustifyV("TOP")
                 group.description:SetTextColor(0.59, 0.59, 0.56)
@@ -1979,7 +1987,8 @@ DFRL:NewMod("RunTimers", 5, function()
                 local stylePageWidth = content:GetWidth()
                 local heading = FontEditorLabel(content, "Frame style", 0, 0, 12)
                 heading:SetTextColor(0.94, 0.79, 0.47)
-                local description = FontEditorLabel(content, tallyStyleHint, 0, 0, 10)
+                local description =
+                    FontEditorLabel(content, "Styles stay the same when attached or detached.", 0, 0, 10)
                 description:SetWidth(stylePageWidth)
                 description:SetHeight(28)
                 description:SetJustifyH("LEFT")
@@ -2024,229 +2033,297 @@ DFRL:NewMod("RunTimers", 5, function()
                 table.insert(optionLayouts, { group = category.group, arrange = LayoutStyles })
             end
         end
-        for _, category in ipairs(categories) do
-            if category.options then CreateOptionsPage(category) end
-        end
-
-        local function RefreshOptionLayout()
+        builders.arrange = function()
             if not fontEditor:IsShown() then return end
+            if fontEditor.RefreshShell then fontEditor.RefreshShell() end
             for _, record in ipairs(optionLayouts) do
                 if record.group == navigation.selected then record.arrange() end
             end
-            navigation.Refresh(true)
+        end
+        local function RefreshOptionLayout()
+            if fontEditor:IsShown() then navigation.Refresh(true) end
         end
         DFRL.locale.Listen(RefreshOptionLayout)
         fontEditor.RefreshOptionLayout = RefreshOptionLayout
 
-        local combat = pages.combat
-        local heading = FontEditorLabel(combat, "Outgoing damage", 0, 0, 12)
-        heading:SetTextColor(0.94, 0.79, 0.47)
-        for index, entry in ipairs(modes) do
-            local mode = entry.value
-            local button = T.CreateEditorButton(combat, entry.label, modeSize, 30)
-            button:SetPoint("TOPLEFT", combat, "TOPLEFT", (index - 1) * (modeSize + gap), -24)
-            button:SetScript("OnClick", function()
-                if DFRL.sct then DFRL.sct.SetMode(mode) end
-            end)
-            sctButtons[mode] = button
-        end
-        sctDescription = FontEditorLabel(combat, "", 0, -66, 10)
-        sctDescription:SetWidth(contentWidth)
-        sctDescription:SetHeight(28)
-        sctDescription:SetJustifyH("LEFT")
-        sctDescription:SetJustifyV("TOP")
-        sctDescription:SetTextColor(0.75, 0.73, 0.67)
-        local combatPage = combat
-        combat = CreateFrame("Frame", nil, combatPage)
-        combat:SetAllPoints(combatPage)
-        combat:EnableMouse(false)
-        local combatSettings = { frame = combat, controls = {} }
-        fontEditor.combatSettings = combatSettings
-        combat.editorSettingsGroup = combatSettings
-        local divider = T.EditorDivider(combat, contentWidth)
-        divider:SetPoint("TOPLEFT", combat, "TOPLEFT", 0, -104)
-        local combatToggleWidth = (contentWidth - gap) / 2
-        incomingControl = T.CreateEditorToggle(
-            combat,
-            "Incoming / self text",
-            "Received damage and other native self feedback.",
-            combatToggleWidth,
-            function(value)
-                if DFRL.sct then DFRL.sct.SetIncoming(value) end
-            end
-        )
-        table.insert(combatSettings.controls, incomingControl)
-        incomingControl:SetPoint("TOPLEFT", combat, "TOPLEFT", 0, -112)
-        local iconControl = DisplayToggle(
-            combat,
-            "damageIcons",
-            "Damage icons",
-            "Spell icons beside custom damage numbers.",
-            -112,
-            combatToggleWidth
-        )
-        iconControl:ClearAllPoints()
-        iconControl:SetPoint("TOPLEFT", combat, "TOPLEFT", combatToggleWidth + gap, -112)
-        for _, control in ipairs({ incomingControl, iconControl }) do
-            control:SetHeight(60)
-            control.description:SetHeight(28)
-            control.description:SetJustifyV("TOP")
-        end
-        FontEditorLabel(combat, "SCT size", 0, -190, 11)
-        local scaleX = TextWidth("SCT size") + gap
-        local function ChangeSctSize(direction)
-            local percent = math.floor(DFRL.display.Get("sctScale") * 100 + 0.5)
-            DFRL.display.Set("sctScale", (percent + direction * 5) / 100)
-        end
-        FontEditorButton("-", 28, scaleX, -182, function() ChangeSctSize(-1) end, combat)
-        sctSizeLabel = FontEditorLabel(combat, "", scaleX + 36, -190)
-        sctSizeLabel:SetWidth(64)
-        sctSizeLabel:SetJustifyH("CENTER")
-        FontEditorButton("+", 28, scaleX + 108, -182, function() ChangeSctSize(1) end, combat)
-        local filterSize = (contentWidth - gap) / 2
-        local function CombatToggle(key, label, x, y)
-            local control = DisplayToggle(combat, key, label, nil, y, filterSize)
-            control:ClearAllPoints()
-            control:SetPoint("TOPLEFT", combat, "TOPLEFT", x, y)
-            control:SetHeight(28)
-            control.label:ClearAllPoints()
-            control.label:SetPoint("LEFT", control, "LEFT", 32, 0)
-        end
-        CombatToggle("sctMSBTStyle", "MSBT-style scrolling", filterSize + gap, -182)
-        CombatToggle("sctClassColors", "Class-colored damage", filterSize + gap, -218)
-        divider = T.EditorDivider(combat, contentWidth)
-        divider:SetPoint("TOPLEFT", combat, "TOPLEFT", 0, -282)
-        for _, group in ipairs(combatFilters) do
-            heading = FontEditorLabel(combat, group.label, 0, group.y, 12)
+        builders.combat = function(combat)
+            local modeSize = (contentWidth - gap * 2) / 3
+            local heading = FontEditorLabel(combat, "Outgoing damage", 0, 0, 12)
             heading:SetTextColor(0.94, 0.79, 0.47)
-            for index, entry in ipairs(group.entries) do
-                CombatToggle(
-                    entry.key,
-                    entry.label,
-                    math.mod(index - 1, 2) * (filterSize + gap),
-                    group.y - 24 - math.floor((index - 1) / 2) * 28
-                )
+            for index, entry in ipairs(modes) do
+                local mode = entry.value
+                local button = T.CreateEditorButton(combat, entry.label, modeSize, 30)
+                button:SetPoint("TOPLEFT", combat, "TOPLEFT", (index - 1) * (modeSize + gap), -24)
+                button:SetScript("OnClick", function()
+                    if DFRL.sct then DFRL.sct.SetMode(mode) end
+                end)
+                sctButtons[mode] = button
             end
-        end
-
-        local timer = pages.timer
-        local timerTop = 60
-        local timerEnabled = DisplayToggle(
-            timer,
-            "customRunTimer",
-            "Enable custom run timer",
-            "Off: use the game's original timer.",
-            0,
-            contentWidth
-        )
-        timerEnabled:SetHeight(52)
-        timerEnabled.description:SetHeight(28)
-        local timerPage = timer
-        timer = CreateFrame("Frame", nil, timerPage)
-        timer:SetAllPoints(timerPage)
-        timer:EnableMouse(false)
-        local timerSettings = { frame = timer, controls = {} }
-        timer.editorSettingsGroup = timerSettings
-        dependentSettings.customRunTimer = timerSettings
-        local caption = FontEditorLabel(timer, "Timer label preview", 0, -timerTop, 9)
-        caption:SetTextColor(0.75, 0.73, 0.67)
-        fontSample = FontEditorLabel(timer, DFRL.locale.Text("RUN") .. " 02:34 / 20:00", 0, 0)
-        fontSample:ClearAllPoints()
-        fontSample:SetPoint("TOP", timer, "TOP", 0, -16 - timerTop)
-        fontSampleClock = NewClockLabel(fontSample)
-        local controlX = labelWidth + gap
-        FontEditorLabel(timer, "Font", 0, -66 - timerTop, 11)
-        local fontButton
-        faceLabel, fontButton = FontEditorButton("", dropdownWidth, controlX, -58 - timerTop, function()
-            if not fontDraft then return end
-            if fontMenu:IsShown() then
-                fontMenu:Hide()
-            else
-                fontMenu:Show()
-            end
-        end, timer)
-        local arrow = FontEditorLabel(fontButton, "v", 0, 0)
-        arrow:ClearAllPoints()
-        arrow:SetPoint("RIGHT", fontButton, "RIGHT", -12, 0)
-
-        -- The popup catches outside clicks while its list stays above the editor.
-        fontMenu = CreateFrame("Button", nil, fontEditor)
-        fontMenu:SetAllPoints(UIParent)
-        fontMenu:SetFrameLevel(180)
-        fontMenu:EnableMouse(true)
-        fontMenu:SetScript("OnClick", function() fontMenu:Hide() end)
-        fontMenu:Hide()
-        fontListWidth = math.max(fontListWidth, dropdownWidth)
-        local fontList = T.CreateEditorPanel(fontMenu, fontListWidth, table.getn(fontFaces) * 28 + 16)
-        fontList:SetFrameLevel(190)
-        fontList:SetPoint("TOPLEFT", fontButton, "BOTTOMLEFT", 0, -4)
-        for index, entry in ipairs(fontFaces) do
-            local selectedFace = entry.face
-            local _, button = FontEditorButton(entry.label, fontListWidth - 16, 8, -8 - (index - 1) * 28, function()
-                if not fontDraft then return end
-                fontDraft.face = selectedFace
-                PreviewFont(fontDraft)
-                fontMenu:Hide()
-            end, fontList)
-            faceButtons[selectedFace] = button
-        end
-        fontEditor:SetScript("OnHide", function()
-            FinishFontEditorDrag()
-            fontMenu:Hide()
-        end)
-        local sizeX = contentWidth - timerSizeWidth
-        FontEditorLabel(timer, "Size", sizeX, -66 - timerTop, 11)
-        sizeX = sizeX + TextWidth("Size") + gap
-        FontEditorButton("-", 28, sizeX, -58 - timerTop, function() ChangeSize(-1) end, timer)
-        sizeLabel = FontEditorLabel(timer, "", sizeX + 42, -66 - timerTop)
-        FontEditorButton("+", 28, sizeX + 76, -58 - timerTop, function() ChangeSize(1) end, timer)
-        FontEditorLabel(timer, "Outline", 0, -104 - timerTop, 11)
-        local outlineSize = (contentWidth - controlX - gap * 2) / 3
-        for index, entry in ipairs(fontOutlines) do
-            local value = entry.value
-            local _, button = FontEditorButton(
-                entry.label,
-                outlineSize,
-                controlX + (index - 1) * (outlineSize + gap),
-                -96 - timerTop,
-                function()
-                    if not fontDraft then return end
-                    fontDraft.outline = value
-                    PreviewFont(fontDraft)
-                end,
-                timer
+            sctDescription = FontEditorLabel(combat, "", 0, -66, 10)
+            sctDescription:SetWidth(contentWidth)
+            sctDescription:SetHeight(28)
+            sctDescription:SetJustifyH("LEFT")
+            sctDescription:SetJustifyV("TOP")
+            sctDescription:SetTextColor(0.75, 0.73, 0.67)
+            local combatPage = combat
+            combat = CreateFrame("Frame", nil, combatPage)
+            combat:SetAllPoints(combatPage)
+            combat:EnableMouse(false)
+            local combatSettings = { frame = combat, controls = {} }
+            fontEditor.combatSettings = combatSettings
+            combat.editorSettingsGroup = combatSettings
+            local divider = T.EditorDivider(combat, contentWidth)
+            divider:SetPoint("TOPLEFT", combat, "TOPLEFT", 0, -104)
+            local combatToggleWidth = (contentWidth - gap) / 2
+            incomingControl = T.CreateEditorToggle(
+                combat,
+                "Incoming / self text",
+                "Received damage and other native self feedback.",
+                combatToggleWidth,
+                function(value)
+                    if DFRL.sct then DFRL.sct.SetIncoming(value) end
+                end
             )
-            outlineButtons[value] = button
-        end
-        local halfWidth = (contentWidth - gap) / 2
-        shadowControl = T.CreateEditorToggle(timer, "Black shadow", nil, halfWidth, function(value)
-            if not fontDraft then return end
-            fontDraft.shadow = value
-            PreviewFont(fontDraft)
-        end)
-        table.insert(timerSettings.controls, shadowControl)
-        shadowControl:SetPoint("TOPLEFT", timer, "TOPLEFT", 0, -132 - timerTop)
-        local attachAffixes =
-            DisplayToggle(timer, "attachAffixes", "Attach affixes to run timer", nil, -132 - timerTop, halfWidth)
-        attachAffixes:SetHeight(28)
-        attachAffixes:SetPoint("TOPLEFT", timer, "TOPLEFT", halfWidth + gap, -132 - timerTop)
-        for index, mode in ipairs(timerModes) do
-            local x = (index - 1) * (halfWidth + gap)
-            local heading = FontEditorLabel(timer, mode.label, x, -184 - timerTop, 12)
-            heading:SetTextColor(0.94, 0.79, 0.47)
-            local row = 0
-            for _, entry in ipairs(timerOptions) do
-                if not entry.regularOnly or mode.suffix == "Regular" then
-                    local y = -204 - timerTop - row * 32
-                    local control = DisplayToggle(timer, entry[1] .. mode.suffix, entry[2], nil, y, halfWidth)
-                    control:SetHeight(28)
-                    control:SetPoint("TOPLEFT", timer, "TOPLEFT", x, y)
-                    row = row + 1
+            table.insert(combatSettings.controls, incomingControl)
+            incomingControl:SetPoint("TOPLEFT", combat, "TOPLEFT", 0, -112)
+            local iconControl = DisplayToggle(
+                combat,
+                "damageIcons",
+                "Damage icons",
+                "Spell icons beside custom damage numbers.",
+                -112,
+                combatToggleWidth
+            )
+            iconControl:ClearAllPoints()
+            iconControl:SetPoint("TOPLEFT", combat, "TOPLEFT", combatToggleWidth + gap, -112)
+            for _, control in ipairs({ incomingControl, iconControl }) do
+                control:SetHeight(60)
+                control.description:SetHeight(28)
+                control.description:SetJustifyV("TOP")
+            end
+            FontEditorLabel(combat, "SCT size", 0, -190, 11)
+            local scaleX = TextWidth("SCT size") + gap
+            local function ChangeSctSize(direction)
+                local percent = math.floor(DFRL.display.Get("sctScale") * 100 + 0.5)
+                DFRL.display.Set("sctScale", (percent + direction * 5) / 100)
+            end
+            FontEditorButton("-", 28, scaleX, -182, function() ChangeSctSize(-1) end, combat)
+            sctSizeLabel = FontEditorLabel(combat, "", scaleX + 36, -190)
+            sctSizeLabel:SetWidth(64)
+            sctSizeLabel:SetJustifyH("CENTER")
+            FontEditorButton("+", 28, scaleX + 108, -182, function() ChangeSctSize(1) end, combat)
+            local filterSize = (contentWidth - gap) / 2
+            local function CombatToggle(key, label, x, y)
+                local control = DisplayToggle(combat, key, label, nil, y, filterSize)
+                control:ClearAllPoints()
+                control:SetPoint("TOPLEFT", combat, "TOPLEFT", x, y)
+                control:SetHeight(28)
+                control.label:ClearAllPoints()
+                control.label:SetPoint("LEFT", control, "LEFT", 32, 0)
+            end
+            CombatToggle("sctMSBTStyle", "MSBT-style scrolling", filterSize + gap, -182)
+            CombatToggle("sctClassColors", "Class-colored damage", filterSize + gap, -218)
+            divider = T.EditorDivider(combat, contentWidth)
+            divider:SetPoint("TOPLEFT", combat, "TOPLEFT", 0, -282)
+            for _, group in ipairs(combatFilters) do
+                heading = FontEditorLabel(combat, group.label, 0, group.y, 12)
+                heading:SetTextColor(0.94, 0.79, 0.47)
+                for index, entry in ipairs(group.entries) do
+                    CombatToggle(
+                        entry.key,
+                        entry.label,
+                        math.mod(index - 1, 2) * (filterSize + gap),
+                        group.y - 24 - math.floor((index - 1) / 2) * 28
+                    )
                 end
             end
         end
 
-        divider = T.EditorDivider(fontEditor, width - padding * 2)
+        builders.timer = function(timer)
+            local labelWidth = math.max(TextWidth("Font"), TextWidth("Size"), TextWidth("Outline"))
+            local timerSizeWidth = TextWidth("Size") + gap + 104
+            local dropdownWidth = contentWidth - labelWidth - gap - gap * 3 - timerSizeWidth
+            local timerTop = 60
+            local timerEnabled = DisplayToggle(
+                timer,
+                "customRunTimer",
+                "Enable custom run timer",
+                "Off: use the game's original timer.",
+                0,
+                contentWidth
+            )
+            timerEnabled:SetHeight(52)
+            timerEnabled.description:SetHeight(28)
+            local timerPage = timer
+            timer = CreateFrame("Frame", nil, timerPage)
+            timer:SetAllPoints(timerPage)
+            timer:EnableMouse(false)
+            local timerSettings = { frame = timer, controls = {} }
+            timer.editorSettingsGroup = timerSettings
+            dependentSettings.customRunTimer = timerSettings
+            local caption = FontEditorLabel(timer, "Timer label preview", 0, -timerTop, 9)
+            caption:SetTextColor(0.75, 0.73, 0.67)
+            fontSample = FontEditorLabel(timer, DFRL.locale.Text("RUN") .. " 02:34 / 20:00", 0, 0)
+            fontSample:ClearAllPoints()
+            fontSample:SetPoint("TOP", timer, "TOP", 0, -16 - timerTop)
+            fontSampleClock = NewClockLabel(fontSample)
+            local controlX = labelWidth + gap
+            FontEditorLabel(timer, "Font", 0, -66 - timerTop, 11)
+            local fontButton
+            local function PrepareFontMenu()
+                local fontListWidth = dropdownWidth
+                for _, entry in ipairs(fontFaces) do
+                    fontListWidth = math.max(fontListWidth, TextWidth(entry.label) + 36)
+                end
+                if fontMenu then
+                    if fontMenu.list:GetWidth() ~= fontListWidth then fontMenu.list:SetWidth(fontListWidth) end
+                    for _, button in pairs(faceButtons) do
+                        if button:GetWidth() ~= fontListWidth - 16 then
+                            button:SetWidth(fontListWidth - 16)
+                            button.label:SetWidth(fontListWidth - 28)
+                        end
+                    end
+                    return
+                end
+                fontMenu = CreateFrame("Button", nil, fontEditor)
+                fontMenu:SetAllPoints(UIParent)
+                fontMenu:SetFrameLevel(180)
+                fontMenu:EnableMouse(true)
+                fontMenu:SetScript("OnClick", function() fontMenu:Hide() end)
+                fontMenu:Hide()
+                local fontList = T.CreateEditorPanel(fontMenu, fontListWidth, table.getn(fontFaces) * 28 + 16)
+                fontMenu.list = fontList
+                fontList:SetFrameLevel(190)
+                fontList:SetPoint("TOPLEFT", fontButton, "BOTTOMLEFT", 0, -4)
+                for index, entry in ipairs(fontFaces) do
+                    local selectedFace = entry.face
+                    local _, button = FontEditorButton(
+                        entry.label,
+                        fontListWidth - 16,
+                        8,
+                        -8 - (index - 1) * 28,
+                        function()
+                            if not fontDraft then return end
+                            fontDraft.face = selectedFace
+                            PreviewFont(fontDraft)
+                            fontMenu:Hide()
+                        end,
+                        fontList
+                    )
+                    faceButtons[selectedFace] = button
+                end
+            end
+            faceLabel, fontButton = FontEditorButton("", dropdownWidth, controlX, -58 - timerTop, function()
+                if not fontDraft then return end
+                PrepareFontMenu()
+                RefreshFontControls()
+                if fontMenu:IsShown() then
+                    fontMenu:Hide()
+                else
+                    fontMenu:Show()
+                end
+            end, timer)
+            local arrow = FontEditorLabel(fontButton, "v", 0, 0)
+            arrow:ClearAllPoints()
+            arrow:SetPoint("RIGHT", fontButton, "RIGHT", -12, 0)
+
+            local sizeX = contentWidth - timerSizeWidth
+            local sizeCaption = FontEditorLabel(timer, "Size", sizeX, -66 - timerTop, 11)
+            sizeX = sizeX + TextWidth("Size") + gap
+            local _, smaller = FontEditorButton("-", 28, sizeX, -58 - timerTop, function() ChangeSize(-1) end, timer)
+            sizeLabel = FontEditorLabel(timer, "", sizeX + 42, -66 - timerTop)
+            local _, larger = FontEditorButton("+", 28, sizeX + 76, -58 - timerTop, function() ChangeSize(1) end, timer)
+            FontEditorLabel(timer, "Outline", 0, -104 - timerTop, 11)
+            local outlineSize = (contentWidth - controlX - gap * 2) / 3
+            for index, entry in ipairs(fontOutlines) do
+                local value = entry.value
+                local _, button = FontEditorButton(
+                    entry.label,
+                    outlineSize,
+                    controlX + (index - 1) * (outlineSize + gap),
+                    -96 - timerTop,
+                    function()
+                        if not fontDraft then return end
+                        fontDraft.outline = value
+                        PreviewFont(fontDraft)
+                    end,
+                    timer
+                )
+                outlineButtons[value] = button
+            end
+            local previousCaptionWidth, previousSizeWidth = labelWidth, timerSizeWidth
+            local function LayoutTimerControls()
+                labelWidth = math.max(TextWidth("Font"), TextWidth("Size"), TextWidth("Outline"))
+                timerSizeWidth = TextWidth("Size") + gap + 104
+                if previousCaptionWidth == labelWidth and previousSizeWidth == timerSizeWidth then return end
+                previousCaptionWidth, previousSizeWidth = labelWidth, timerSizeWidth
+                controlX = labelWidth + gap
+                dropdownWidth = contentWidth - labelWidth - gap - gap * 3 - timerSizeWidth
+                fontButton:ClearAllPoints()
+                fontButton:SetPoint("TOPLEFT", timer, "TOPLEFT", controlX, -58 - timerTop)
+                fontButton:SetWidth(dropdownWidth)
+                faceLabel:SetWidth(dropdownWidth - 12)
+                sizeX = contentWidth - timerSizeWidth
+                sizeCaption:ClearAllPoints()
+                sizeCaption:SetPoint("TOPLEFT", timer, "TOPLEFT", sizeX, -66 - timerTop)
+                sizeX = sizeX + TextWidth("Size") + gap
+                for _, record in ipairs({ { smaller, 0, -58 }, { sizeLabel, 42, -66 }, { larger, 76, -58 } }) do
+                    record[1]:ClearAllPoints()
+                    record[1]:SetPoint("TOPLEFT", timer, "TOPLEFT", sizeX + record[2], record[3] - timerTop)
+                end
+                outlineSize = (contentWidth - controlX - gap * 2) / 3
+                for index, entry in ipairs(fontOutlines) do
+                    local button = outlineButtons[entry.value]
+                    button:ClearAllPoints()
+                    button:SetPoint(
+                        "TOPLEFT",
+                        timer,
+                        "TOPLEFT",
+                        controlX + (index - 1) * (outlineSize + gap),
+                        -96 - timerTop
+                    )
+                    button:SetWidth(outlineSize)
+                    button.label:SetWidth(outlineSize - 12)
+                end
+                if fontMenu then fontMenu:Hide() end
+            end
+            table.insert(optionLayouts, { group = "encounters", arrange = LayoutTimerControls })
+            local halfWidth = (contentWidth - gap) / 2
+            shadowControl = T.CreateEditorToggle(timer, "Black shadow", nil, halfWidth, function(value)
+                if not fontDraft then return end
+                fontDraft.shadow = value
+                PreviewFont(fontDraft)
+            end)
+            table.insert(timerSettings.controls, shadowControl)
+            shadowControl:SetHeight(28)
+            shadowControl:SetPoint("TOPLEFT", timer, "TOPLEFT", 0, -132 - timerTop)
+            local attachAffixes =
+                DisplayToggle(timer, "attachAffixes", "Attach affixes to run timer", nil, -132 - timerTop, halfWidth)
+            attachAffixes:SetHeight(28)
+            attachAffixes:SetPoint("TOPLEFT", timer, "TOPLEFT", halfWidth + gap, -132 - timerTop)
+            for index, mode in ipairs(timerModes) do
+                local x = (index - 1) * (halfWidth + gap)
+                local heading = FontEditorLabel(timer, mode.label, x, -184 - timerTop, 12)
+                heading:SetTextColor(0.94, 0.79, 0.47)
+                local row = 0
+                for _, entry in ipairs(timerOptions) do
+                    if not entry.regularOnly or mode.suffix == "Regular" then
+                        local y = -204 - timerTop - row * 32
+                        local control = DisplayToggle(timer, entry[1] .. mode.suffix, entry[2], nil, y, halfWidth)
+                        control:SetHeight(28)
+                        control:SetPoint("TOPLEFT", timer, "TOPLEFT", x, y)
+                        row = row + 1
+                    end
+                end
+            end
+        end
+
+        fontEditor:SetScript("OnHide", function()
+            FinishFontEditorDrag()
+            if fontMenu then fontMenu:Hide() end
+        end)
+        DFRL.layout.RegisterEditorWindow(fontEditor)
+        local divider = T.EditorDivider(fontEditor, width - padding * 2)
         divider:SetPoint("TOPLEFT", fontEditor, "TOPLEFT", padding, -footerTop)
         local footer = CreateFrame("Frame", nil, fontEditor)
         footer:SetWidth(width - padding * 2)
@@ -2259,13 +2336,16 @@ DFRL:NewMod("RunTimers", 5, function()
         cancel:SetPoint("RIGHT", footer, "RIGHT", 0, 0)
         cancel:SetScript("OnClick", function() DFRL.layout.CancelEdit() end)
         DFRL.layout.SetConfirmAnchor(footer)
-        -- Source listeners defer hidden pages; native Show catches up once.
-        for _, page in pairs(pages) do
-            HookScript(page, "OnShow", UpdateDisplayLabels)
+        fontEditor.RefreshShell = function()
+            local buttonWidth = math.max(140, TextWidth("Addon defaults") + 24, TextWidth("Cancel") + 24)
+            for _, button in ipairs({ defaults, cancel }) do
+                if button:GetWidth() ~= buttonWidth then
+                    button:SetWidth(buttonWidth)
+                    button.label:SetWidth(buttonWidth - 12)
+                end
+            end
         end
-        HookScript(pages.combat, "OnShow", UpdateSctLabels)
-        HookScript(pages.timer, "OnShow", RefreshFontControls)
-        navigation.Select("layout")
+        navigation.Select(initialPage or "layout")
         UpdateDisplayLabels()
         if DFRL.sct then DFRL.sct.Listen(UpdateSctLabels) end
         UpdateSctLabels()
@@ -2290,12 +2370,15 @@ DFRL:NewMod("RunTimers", 5, function()
 
     DFRL.layout.SetEditorVisibilityHandler(function(shown, page)
         if shown then
-            if not fontEditor then CreateFontEditor() end
+            if not fontEditor then
+                CreateFontEditor(page)
+            elseif page then
+                fontEditor.navigation.Select(page)
+            end
             PreviewFont(fontDraft)
             UpdateSctLabels()
             DFRL.layout.SetHandlesVisible(fontEditor.navigation.selected == "layout")
             fontEditor:Show()
-            if page then fontEditor.navigation.Select(page) end
         elseif fontEditor then
             fontEditor:Hide()
         end
@@ -3761,6 +3844,10 @@ DFRL:NewMod("RunTimers", 5, function()
             return
         end
         -- Keep complete validated native entries, but allocate/paint only the viewport.
+        local showCurrent = DFRL.display.Get("bossShowCurrentHealth")
+        local showMaximum = DFRL.display.Get("bossShowMaximumHealth")
+        local showPercentage = DFRL.display.Get("bossShowHealthPercentage")
+        local shortenHealth = DFRL.display.Get("bossShortHealth")
         local visible = render.visibleBosses or {}
         render.visibleBosses = visible
         for key in pairs(visible) do
@@ -3804,8 +3891,10 @@ DFRL:NewMod("RunTimers", 5, function()
                     row.health,
                     entry.hp,
                     entry.maximum,
-                    DFRL.display.Get("bossShowCurrentHealth"),
-                    DFRL.display.Get("bossShowMaximumHealth")
+                    showCurrent,
+                    showMaximum,
+                    shortenHealth,
+                    showPercentage
                 )
                 if not row.frame:IsShown() then row.frame:Show() end
                 render.bossLoss:Observe(row, value, entry.maximum, entry.key, entry.name)

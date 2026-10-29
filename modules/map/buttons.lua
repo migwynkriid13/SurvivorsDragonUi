@@ -176,7 +176,7 @@ DFRL:NewMod("Minimap Buttons", 3, function()
     launcher:SetScript("OnClick", function()
         if dragging or GetTime() < suppressClickUntil then return end
         HideTooltip()
-        DFRL.layout.BeginEdit()
+        DFRL.layout.ToggleEdit()
     end)
     launcher:SetScript("OnEnter", function()
         SetAlpha(1)

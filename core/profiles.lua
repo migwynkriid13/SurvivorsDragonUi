@@ -121,7 +121,8 @@ DFRL:NewMod("Profiles", 1, function()
         Label("Profile name", -34, 10)
         local measure = Label("", 0)
         measure:Hide()
-        local saveWidth = DFRL.locale.Width(measure, "Save new profile") + 24
+        local saveWidth = DFRL.locale.Width(measure, "Save new profile", true) + 24
+        local save
         local input = T.CreateEditorInput(parent, width - saveWidth - 8, 26)
         input:SetMaxLetters(48)
         input:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, -52)
@@ -139,6 +140,13 @@ DFRL:NewMod("Profiles", 1, function()
 
         local function Refresh(followSelection)
             if not parent:IsVisible() then return end
+            local measured = DFRL.locale.Width(measure, "Save new profile", true) + 24
+            if measured ~= saveWidth then
+                saveWidth = measured
+                input:SetWidth(width - saveWidth - 8)
+                save:SetWidth(saveWidth)
+                save.label:SetWidth(saveWidth - 12)
+            end
             local names = profiles.List()
             local count = table.getn(names)
             local found
@@ -203,11 +211,11 @@ DFRL:NewMod("Profiles", 1, function()
             end)
             table.insert(rows, row)
         end
-        local save = T.CreateEditorButton(parent, "Save new profile", saveWidth, 26)
+        save = T.CreateEditorButton(parent, "Save new profile", saveWidth, 26)
         save:SetPoint("TOPRIGHT", parent, "TOPRIGHT", 0, -52)
         save:SetScript("OnClick", function() Result(profiles.Save(input:GetText(), false)) end)
         input:SetScript("OnEnterPressed", function() Result(profiles.Save(input:GetText(), false)) end)
-        input:SetScript("OnEscapePressed", function() input:ClearFocus() end)
+        input:SetScript("OnEscapePressed", function() DFRL.layout.CancelEdit() end)
         previous:SetScript("OnClick", function()
             offset = math.max(0, offset - pageSize)
             Refresh()

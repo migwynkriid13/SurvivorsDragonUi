@@ -75,30 +75,6 @@ local function Fill(parent, red, green, blue, alpha)
     return texture
 end
 
-local function Border(parent, side)
-    local pieces = {}
-    for index = 1, 8 do
-        local piece = Artwork(parent, "border", "BORDER", (index - 1) / 8, index / 8, 0, 1)
-        piece:SetWidth(side)
-        piece:SetHeight(side)
-        pieces[index] = piece
-    end
-    local topLeft, topRight, bottomLeft, bottomRight = pieces[1], pieces[2], pieces[3], pieces[4]
-    topLeft:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, 0)
-    topRight:SetPoint("TOPRIGHT", parent, "TOPRIGHT", 0, 0)
-    bottomLeft:SetPoint("BOTTOMLEFT", parent, "BOTTOMLEFT", 0, 0)
-    bottomRight:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", 0, 0)
-    pieces[5]:SetPoint("TOPLEFT", topLeft, "BOTTOMLEFT", 0, 0)
-    pieces[5]:SetPoint("BOTTOMRIGHT", bottomLeft, "TOPRIGHT", 0, 0)
-    pieces[6]:SetPoint("TOPLEFT", topRight, "BOTTOMLEFT", 0, 0)
-    pieces[6]:SetPoint("BOTTOMRIGHT", bottomRight, "TOPRIGHT", 0, 0)
-    pieces[7]:SetPoint("TOPLEFT", topLeft, "TOPRIGHT", 0, 0)
-    pieces[7]:SetPoint("BOTTOMRIGHT", topRight, "BOTTOMLEFT", 0, 0)
-    pieces[8]:SetPoint("TOPLEFT", bottomLeft, "TOPRIGHT", 0, 0)
-    pieces[8]:SetPoint("BOTTOMRIGHT", bottomRight, "BOTTOMLEFT", 0, 0)
-    return pieces
-end
-
 local function Label(parent, size, text)
     local label = parent:CreateFontString(nil, "OVERLAY")
     DFRL.locale.Bind(label)
@@ -348,8 +324,34 @@ function DFRL.tools.CreateEditorInput(parent, width, height)
     box:SetAutoFocus(false)
     box:SetMaxLetters(16)
     box:SetTextInsets(8, 8, 0, 0)
-    box.editorFill = Fill(box, 0.055, 0.06, 0.065, 0.93)
-    box.editorBorder = Border(box, 12)
+    -- Plain recessed fields match the metal panel without a decorative frame.
+    -- Thin native-color edges avoid another full-surface alpha layer.
+    box.editorFill = Fill(box, 0.025, 0.028, 0.032, 0.98)
+    box.editorFill:ClearAllPoints()
+    box.editorFill:SetPoint("TOPLEFT", box, "TOPLEFT", 1, -1)
+    box.editorFill:SetPoint("BOTTOMRIGHT", box, "BOTTOMRIGHT", -1, 1)
+    box.editorBorder = {}
+    for index, side in ipairs({ "TOP", "BOTTOM", "LEFT", "RIGHT" }) do
+        local edge = box:CreateTexture(nil, "BORDER")
+        edge:SetTexture("Interface\\Buttons\\WHITE8X8")
+        if side == "TOP" or side == "BOTTOM" then
+            edge:SetPoint(side .. "LEFT", box, side .. "LEFT", 0, 0)
+            edge:SetPoint(side .. "RIGHT", box, side .. "RIGHT", 0, 0)
+            edge:SetHeight(1)
+        else
+            edge:SetPoint("TOP" .. side, box, "TOP" .. side, 0, -1)
+            edge:SetPoint("BOTTOM" .. side, box, "BOTTOM" .. side, 0, 1)
+            edge:SetWidth(1)
+        end
+        if side == "TOP" then
+            edge:SetVertexColor(0.17, 0.19, 0.22, 1)
+        elseif side == "BOTTOM" then
+            edge:SetVertexColor(0.42, 0.44, 0.46, 0.85)
+        else
+            edge:SetVertexColor(0.24, 0.27, 0.3, 0.95)
+        end
+        box.editorBorder[index] = edge
+    end
     return box
 end
 
@@ -403,7 +405,12 @@ function DFRL.tools.CreateEditorToggle(parent, text, description, width, callbac
     mark:Hide()
     Hover(button, 2, 0.22)
     button.label = Label(button, 12, text)
-    button.label:SetPoint("TOPLEFT", button, "TOPLEFT", 32, description and -7 or -14)
+    if description then
+        button.label:SetPoint("TOPLEFT", button, "TOPLEFT", 32, -7)
+    else
+        button.label:SetPoint("LEFT", button, "LEFT", 32, 0)
+        button.label:SetJustifyV("MIDDLE")
+    end
     button.label:SetWidth(math.max(1, width - 36))
     button.label:SetHeight(16)
     button.label:SetJustifyH("LEFT")
@@ -416,6 +423,7 @@ function DFRL.tools.CreateEditorToggle(parent, text, description, width, callbac
         button.description:SetJustifyH("LEFT")
     end
     local divider = DFRL.tools.EditorDivider(button, math.max(1, width - 32))
+    button.editorDivider = divider
     divider:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", 0, 0)
     divider:SetAlpha(0.2)
     function button:SetChecked(value)
@@ -471,7 +479,8 @@ function DFRL.tools.CreateEditorNavigator(parent, sidebar, groups, sections, opt
         button:SetScript("OnClick", function() navigation.Select(key) end)
         navigation.buttons[key] = button
     end
-    for _, section in ipairs(sections) do
+    local function PrepareSection(section)
+        if navigation.pages[section.key] then return end
         local shell = CreateFrame("Frame", nil, content)
         shell:SetWidth(width - 24)
         shell:Hide()
@@ -481,10 +490,10 @@ function DFRL.tools.CreateEditorNavigator(parent, sidebar, groups, sections, opt
         if headingHeight > 0 then
             local heading = Label(shell, 13, section.label)
             heading:SetTextColor(0.94, 0.79, 0.47)
-            heading:SetPoint("TOPLEFT", shell, "TOPLEFT", 0, -4)
+            heading:SetPoint("TOP", shell, "TOP", 0, -4)
             heading:SetWidth(width - 24)
             heading:SetHeight(20)
-            heading:SetJustifyH("LEFT")
+            heading:SetJustifyH("CENTER")
             local divider = DFRL.tools.EditorDivider(shell, width - 24)
             divider:SetPoint("TOPLEFT", shell, "TOPLEFT", 0, -27)
             section.heading = heading
@@ -497,6 +506,7 @@ function DFRL.tools.CreateEditorNavigator(parent, sidebar, groups, sections, opt
         page:SetScript("OnMouseWheel", Scroll)
         section.shell, section.headingHeight = shell, headingHeight
         navigation.pages[section.key] = page
+        if options.prepare then options.prepare(section, page) end
     end
     function navigation.Refresh(force)
         if not parent:IsShown() then
@@ -507,10 +517,19 @@ function DFRL.tools.CreateEditorNavigator(parent, sidebar, groups, sections, opt
         if rendered == navigation.selected and slider then
             navigation.offsets[navigation.selected] = slider:GetValue()
         end
+        for _, section in ipairs(sections) do
+            if section.group == navigation.selected then
+                PrepareSection(section)
+                if not section.shell:IsShown() then section.shell:Show() end
+            elseif section.shell and section.shell:IsShown() then
+                section.shell:Hide()
+            end
+        end
+        if options.arrange then options.arrange() end
         local y = 0
         for _, section in ipairs(sections) do
-            local shell, page = section.shell, navigation.pages[section.key]
             if section.group == navigation.selected then
+                local shell, page = section.shell, navigation.pages[section.key]
                 local height = page:GetHeight() + section.headingHeight + 12
                 if section.y ~= y then
                     shell:ClearAllPoints()
@@ -518,10 +537,7 @@ function DFRL.tools.CreateEditorNavigator(parent, sidebar, groups, sections, opt
                     section.y = y
                 end
                 if shell:GetHeight() ~= height then shell:SetHeight(height) end
-                if not shell:IsShown() then shell:Show() end
                 y = y + height
-            elseif shell:IsShown() then
-                shell:Hide()
             end
         end
         local height = math.max(scroll:GetHeight(), y)
@@ -545,7 +561,7 @@ function DFRL.tools.CreateEditorNavigator(parent, sidebar, groups, sections, opt
         RememberOffset()
         navigation.selected = key
         if options.onNavigate then options.onNavigate(key) end
-        navigation.Refresh()
+        navigation.Refresh(true)
     end
     HookScript(scroll, "OnHide", function()
         RememberOffset()
@@ -577,4 +593,48 @@ function DFRL.tools.CompactEditorToggle(button)
     button:SetHeight(height)
     button.editorCompactHeight = natural and natural > 0 and height or nil
     return height
+end
+
+-- Numeric steps keep a separate right-hand value/button area. Their captions
+-- can still use one title line without reserving a blank second line.
+function DFRL.tools.CompactEditorNumber(control)
+    local label, description = control.label, control.description
+    local natural = label:GetStringWidth()
+    local labelHeight = natural and natural > 0 and natural <= label:GetWidth() and 16 or 28
+    local descriptionTop = 7 + labelHeight + 3
+    local height = math.max(70, descriptionTop + 40 + 6)
+    if not natural or natural <= 0 then control.editorNumberHeight = nil end
+    if control.editorNumberHeight == height and control:GetHeight() == height then return height end
+    label:SetHeight(labelHeight)
+    description:ClearAllPoints()
+    description:SetPoint("TOPLEFT", control, "TOPLEFT", 0, -descriptionTop)
+    control:SetHeight(height)
+    control.editorNumberHeight = natural and natural > 0 and height or nil
+    return height
+end
+
+-- Place existing controls in row-major order, with explicit full-row controls
+-- and a shared maximum height for each pair. No idle sampling or extra frames.
+function DFRL.tools.LayoutEditorOptions(parent, controls, columns, gap, top)
+    local column, height = 0, 0
+    local rowWidth = (parent:GetWidth() - gap * (columns - 1)) / columns
+    for _, record in ipairs(controls) do
+        local control, span = record.frame, record.span
+        if span == columns and column > 0 then
+            top, column, height = top + height, 0, 0
+        end
+        local itemHeight = record.numeric and T.CompactEditorNumber(control) or T.CompactEditorToggle(control)
+        local x, y = column * (rowWidth + gap), -top
+        if record.x ~= x or record.y ~= y then
+            control:ClearAllPoints()
+            control:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
+            record.x, record.y = x, y
+        end
+        height = math.max(height, itemHeight)
+        column = column + span
+        if column >= columns then
+            top, column, height = top + height, 0, 0
+        end
+    end
+    return top + height
 end

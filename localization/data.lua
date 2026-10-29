@@ -2,6 +2,8 @@
 DFRL.locale.data = {
     en = {
         ui = {
+            ["Shorten health numbers"] = "Shorten health numbers",
+            ["Use K, M, B and T instead of full health numbers."] = "Use K, M, B and T instead of full health numbers.",
             ["HUD Edit Mode"] = "HUD Edit Mode",
             ["Snap to elements"] = "Snap to elements",
             ["Grid spacing"] = "Grid spacing",
@@ -643,6 +645,8 @@ DFRL.locale.data = {
     },
     pl = {
         ui = {
+            ["Shorten health numbers"] = "Skracaj wartości zdrowia",
+            ["Use K, M, B and T instead of full health numbers."] = "Używaj K, M, B i T zamiast pełnych wartości zdrowia.",
             ["HUD Edit Mode"] = "Tryb edycji interfejsu",
             ["Snap to elements"] = "Przyciągaj do elementów",
             ["Grid spacing"] = "Odstęp siatki",
@@ -1755,6 +1759,8 @@ DFRL.locale.data = {
     },
     cs = {
         ui = {
+            ["Shorten health numbers"] = "Zkracovat hodnoty zdraví",
+            ["Use K, M, B and T instead of full health numbers."] = "Používat K, M, B a T místo plných hodnot zdraví.",
             ["HUD Edit Mode"] = "Režim úprav rozhraní",
             ["Snap to elements"] = "Přichytávat k prvkům",
             ["Grid spacing"] = "Rozestup mřížky",
@@ -2870,6 +2876,8 @@ DFRL.locale.data = {
     },
     de = {
         ui = {
+            ["Shorten health numbers"] = "Gesundheitszahlen abkürzen",
+            ["Use K, M, B and T instead of full health numbers."] = "K, M, B und T statt vollständiger Gesundheitszahlen verwenden.",
             ["HUD Edit Mode"] = "HUD-Bearbeitungsmodus",
             ["Snap to elements"] = "An Elementen ausrichten",
             ["Grid spacing"] = "Rasterabstand",
@@ -3983,6 +3991,8 @@ DFRL.locale.data = {
     },
     pt = {
         ui = {
+            ["Shorten health numbers"] = "Abreviar valores de vida",
+            ["Use K, M, B and T instead of full health numbers."] = "Usar K, M, B e T em vez dos valores completos de vida.",
             ["HUD Edit Mode"] = "Modo de edição do HUD",
             ["Snap to elements"] = "Ajustar aos elementos",
             ["Grid spacing"] = "Espaçamento da grade",
@@ -5087,6 +5097,8 @@ DFRL.locale.data = {
     },
     es = {
         ui = {
+            ["Shorten health numbers"] = "Abreviar valores de salud",
+            ["Use K, M, B and T instead of full health numbers."] = "Usa K, M, B y T en lugar de los valores completos de salud.",
             ["HUD Edit Mode"] = "Modo de edición de interfaz",
             ["Snap to elements"] = "Ajustar a elementos",
             ["Grid spacing"] = "Espaciado de cuadrícula",
@@ -6195,6 +6207,8 @@ DFRL.locale.data = {
     },
     fr = {
         ui = {
+            ["Shorten health numbers"] = "Abréger les valeurs de vie",
+            ["Use K, M, B and T instead of full health numbers."] = "Utiliser K, M, B et T à la place des valeurs de vie complètes.",
             ["HUD Edit Mode"] = "Mode édition de l’interface",
             ["Snap to elements"] = "Aligner sur les éléments",
             ["Grid spacing"] = "Espacement de la grille",
@@ -7311,6 +7325,8 @@ DFRL.locale.data = {
     },
     ro = {
         ui = {
+            ["Shorten health numbers"] = "Prescurtează valorile vieții",
+            ["Use K, M, B and T instead of full health numbers."] = "Folosește K, M, B și T în locul valorilor complete ale vieții.",
             ["HUD Edit Mode"] = "Mod editare interfață",
             ["Snap to elements"] = "Aliniază la elemente",
             ["Grid spacing"] = "Spațierea grilei",
@@ -8410,6 +8426,8 @@ DFRL.locale.data = {
     },
     tr = {
         ui = {
+            ["Shorten health numbers"] = "Sağlık sayılarını kısalt",
+            ["Use K, M, B and T instead of full health numbers."] = "Tam sağlık sayıları yerine K, M, B ve T kullan.",
             ["HUD Edit Mode"] = "Arayüz düzenleme modu",
             ["Snap to elements"] = "Öğelere hizala",
             ["Grid spacing"] = "Izgara aralığı",
@@ -9385,6 +9403,8 @@ DFRL.locale.data = {
     },
     ru = {
         ui = {
+            ["Shorten health numbers"] = "Сокращать значения здоровья",
+            ["Use K, M, B and T instead of full health numbers."] = "Использовать K, M, B и T вместо полных значений здоровья.",
             ["HUD Edit Mode"] = "Режим редактирования интерфейса",
             ["Snap to elements"] = "Привязка к элементам",
             ["Grid spacing"] = "Шаг сетки",
@@ -10579,6 +10599,8 @@ DFRL.locale.data = {
     },
     uk = {
         ui = {
+            ["Shorten health numbers"] = "Скорочувати значення здоров’я",
+            ["Use K, M, B and T instead of full health numbers."] = "Використовувати K, M, B і T замість повних значень здоров’я.",
             ["HUD Edit Mode"] = "Режим редагування інтерфейсу",
             ["Snap to elements"] = "Прив’язувати до елементів",
             ["Grid spacing"] = "Крок сітки",
@@ -11747,6 +11769,8 @@ DFRL.locale.data = {
     },
     zh = {
         ui = {
+            ["Shorten health numbers"] = "缩写生命值",
+            ["Use K, M, B and T instead of full health numbers."] = "使用 K、M、B 和 T 代替完整生命值。",
             ["HUD Edit Mode"] = "界面编辑模式",
             ["Snap to elements"] = "吸附到元素",
             ["Grid spacing"] = "网格间距",
@@ -12842,6 +12866,8 @@ DFRL.locale.data = {
     },
     ja = {
         ui = {
+            ["Shorten health numbers"] = "体力の数値を省略",
+            ["Use K, M, B and T instead of full health numbers."] = "体力の数値全体の代わりに K、M、B、T を使います。",
             ["HUD Edit Mode"] = "HUD編集モード",
             ["Snap to elements"] = "要素にスナップ",
             ["Grid spacing"] = "グリッド間隔",
@@ -13969,6 +13995,8 @@ DFRL.locale.data = {
     },
     ko = {
         ui = {
+            ["Shorten health numbers"] = "생명력 수치 줄이기",
+            ["Use K, M, B and T instead of full health numbers."] = "생명력 전체 숫자 대신 K, M, B, T를 사용합니다.",
             ["HUD Edit Mode"] = "HUD 편집 모드",
             ["Snap to elements"] = "요소에 맞추기",
             ["Grid spacing"] = "격자 간격",

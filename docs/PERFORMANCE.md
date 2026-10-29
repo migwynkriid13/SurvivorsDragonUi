@@ -77,26 +77,90 @@ leave hundreds of expensive texture regions drawing continuously.
 
 ## Settings navigation — 2026-10-29
 
+Default-off `bossShowHealthPercentage` and `guardianShowHealthPercentage` choices
+reuse the existing white health labels. On appends a whole percentage, or shows
+it alone when both numeric values are hidden. The shared formatter validates and
+clamps full native values before current/maximum hiding or abbreviation. Off
+skips ratio work and clears optional raw-pair cache fields; on reuses the latest
+raw pair and rounded percentage, including when changing health rounds to the
+same caption. Changed-only text writes and hidden-view guards remain intact.
+Guardian percentage-only labels use the existing bounded measurement slots;
+the optional longer caption receives its measured slot within the saved width,
+without resizing the tracker or changing fonts/caps. Turning
+all three text choices off skips health formatting/measurement and hides the
+label while preserving the bar. There is no gameplay frame/region, asset, event,
+updater, animation or SavedVariable. Normal and Performance Mode share this static
+behavior. The two extra editor checkboxes use existing pooled static artwork.
+CI-only fixtures cover defaults/transactions, independent visibility combinations,
+full-number compatibility, zero/full/invalid health, rounded-cache reuse, hidden
+recovery and unchanged native fill/loss state. They were not run locally.
+
+The independent default-on `unitShortHealth`, `bossShortHealth` and
+`guardianShortHealth` display choices use existing settings rows and transactions.
+Off formats full whole-number health in the shared formatter; on retains K/M/B/T.
+Native health, percentages, fills, input, fonts and selected geometry remain
+unchanged in normal and Performance Mode. Latest-value label caches include the
+format choice. Hidden unit/encounter views retain their existing early exits;
+the guardian option invalidates only its bounded measurement slots and defers
+remeasurement to the existing visible controller. Boss rows read health choices
+once per visible pass. No event, updater, gameplay frame/region, asset or
+SavedVariable is added. The three pooled editor checkboxes use existing static
+artwork and stay hidden with their categories. CI-only health/guardian fixtures
+cover full K/M/B/T values, cache transitions, defaults/normalization/transactions,
+native fill preservation, unchanged writes and hidden recovery; no local tests
+or addon/game execution were run.
+
 `/sdui` uses the already-bundled plain Dragonflight metal frame, gold choices and
 shared transaction.
-Eight category buttons replace twenty. Related controls share one native
+Nine category buttons replace twenty; Damage meter has its own sidebar entry. Related controls share one native
 ScrollFrame rather than thirteen separate option-page ScrollFrames. The editor
-is still prepared only on its first opening and reused. Each section retains
-its original control owner. There is no search input, query state, category
+shell is prepared only on its first opening and reused. Each section retains
+its original control owner. Its wrappers, heading and actual controls are built
+only when that category is selected, then retained. Unvisited categories allocate
+no native pages or controls; Profiles and the timer's font chooser are separately
+deferred to their category/button. The hidden shell is completed before showing
+the requested category, including direct Profiles entry. There is no background
+preloading. There is no search input, query state, category
 content title or repeated section title matching the sidebar category.
 See [SETTINGS.md](SETTINGS.md).
 
 Category changes perform bounded work over twenty section records. Settled
 navigation returns before presentation writes. Scroll offsets remain
-session-only. Hidden categories use real ancestor hiding. Compact toggle rows
+session-only. The sidebar uses its existing 232-unit maximum without measuring
+all category captions. Footer and selected-page sizing use only the active
+language, with successful ruler measurements cached by source caption,
+language/font/size/flags/width/owning-frame effective scale. Missing metrics remain
+retryable. This removes the previous first-click sweep of all fourteen catalogs
+and construction/measurement of 71 generic settings (65 toggles and six numeric
+controls). Those generic settings alone account for 308 texture regions and 160
+FontStrings; they now allocate only on their owning category's visit. These are
+source counts, not measured native load time or GPU costs. Hidden categories use
+real ancestor hiding. Compact toggle rows
 measure their active-language caption on opening, category selection and
 language changes; successful unchanged geometry skips writes. Single-line
 captions use 16 units and wrapped captions 28, followed by a three-unit gap and
 32-unit description. Row heights are 64/76, replacing the previous 88. Paired
-columns use their larger row height. Hidden categories defer later remeasurement;
+columns use their larger row height. Multi-option sections now pair numeric
+steps as well as toggles; numeric titles use the same three-unit help gap and
+72/84-unit rows with a separate 40-unit description area. Explicit enable
+switches, mode selectors and single-option sections retain full-width rows.
+The shared row layout reuses the existing controls, captions and separators,
+adding no frame, drawing region or artwork. It flushes incomplete pairs before
+full-width controls and includes the last odd row in the scroll extent.
+Hidden categories defer later remeasurement;
 missing metrics stay retryable. There is no new OnUpdate, event, animation,
 idle worker. The separate retail-moving changes below add their two preferences
 in the existing display table. Normal and Performance Mode share the static editor.
+
+The first Layout refresh also limits new handle/grip preparation to two eligible
+groups per render frame through the existing controller. Remaining groups set
+the existing editor dirty flag so preparation continues on the next frame,
+without waiting for the normal ten-Hz settled cadence. Closing, leaving Layout,
+Cancel/world cleanup or moving-mode transitions stop inappropriate preparation;
+reopening reuses completed groups and prepares only still-needed artwork. No
+queue, worker, event, frame, asset or saved preference is added for scheduling.
+The grid is updated after the selected editor page sets its overlay policy, so
+direct entry to a non-Layout category does not prepare an unnecessary grid.
 
 The full settings window enables HUD edit overlays only for Layout. Changing to
 another category finishes active input, actually hides all handle/grip parents,
@@ -113,6 +177,16 @@ are closed; it does no settled handle/grid/control painting in that state, and
 returns immediately outside the world. Necessary live geometry tracking remains
 bounded; this is not a claim that every addon controller stops when settings close.
 
+The existing full editor now has the native name `SurvivorsDragonUiSettings` and
+one `UISpecialFrames` registration. Its hide hook cancels the shared transaction
+only while full editing is active, preserving mode switches and Confirm's saved
+values. Numeric/profile Escape routes call the same Cancel owner; invalid text
+cannot keep the full window open. The minimap click uses `layout.ToggleEdit`.
+Its existing minimap-group edit callback raises the existing launcher above the
+selection overlay and restores its current minimap strata/level on exit, skipping
+unchanged native assignments. These event-driven changes add no frame, drawing
+region, asset, keyboard-capture worker, event, updater, setting or saved state.
+
 Display/SCT settings listeners defer hidden windows and unselected pages before
 value formatting and drawing. Page Show catches up from current settings through
 the existing listeners. Hidden Profiles also defers listing/sorting and row
@@ -125,14 +199,36 @@ or gameplay preference is added. Failed native sample font assignments do not
 advance the style cache and remain retryable. Locale binding and transaction cleanup retain
 their necessary event-driven work; no idle settings animation is introduced.
 
-Drawing and allocation are distinct from navigation work. Twelve fewer category
-buttons remove twelve sets of twelve directly authored textures and two frames
-per button. The navigator adds sixteen one-texture subsection dividers/heading
-labels, twenty passive wrappers and one shared scroll child. The four sections
+Drawing and allocation are distinct from navigation work. Eleven fewer category
+buttons remove eleven sets of twelve directly authored textures and two frames
+per button. After every category has been visited, the navigator adds fifteen
+one-texture subsection dividers/heading labels, twenty passive wrappers and one
+shared scroll child. These are allocated on demand; first opening does not create
+that complete set. The five sections
 named identically to their sidebar category allocate no heading or divider.
 Native scrollbar-template regions are not counted in those authored-texture
 figures. Only selected sections are shown; closing hides the editor's complete
 drawing tree. No GPU, FPS, draw-call or live appearance measurement is claimed.
+
+Description-free checkbox captions use a centered LEFT anchor and middle text
+alignment, so changing row heights does not separate text from its checkbox.
+Performance Mode retains its wrapped caption box; Black shadow and Attach affixes
+use the same 28-unit row. Subsection titles center within their existing width.
+These anchor/justification changes add no frame or drawing region.
+
+Layout's existing Hide frame/Show grid controls share one measured row, with no
+new controls. Mode/language/Show transitions update widths and the existing
+caption/description/divider bounds only when changed. The moving popup reuses the
+same form, expands Hide frame when Show grid is hidden, and fits translated row
+height through its existing clamped placement. No input or idle updater is added.
+
+Each Layout/profile input now uses one inset fill and four thin neutral native
+WHITE8X8 edges instead of the old fill and eight ornamental border pieces: five
+regions rather than nine per input. The five fields remove twenty regions once
+prepared. Anchors inherit resizing without a script; normal and Performance Mode
+share the static skin. The unreferenced border BLP and its manifest entry are
+removed, and the historical design producer uses retained metal artwork. This
+is a source-level cost change, not measured GPU/FPS or retail pixel parity.
 
 Shared action buttons now use three face textures and one native hover texture,
 plus their existing caption. This replaces eleven textures (inset fill, eight
@@ -1837,10 +1933,10 @@ appearance, draw calls, GPU memory or FPS.
 Boss bars and Guardian tracker each have default-on current/maximum-health
 checkboxes in the existing lazy settings dialog. Four standard checkbox rows
 reuse its native control/label/hint construction; no encounter frame, font
-region, artwork, material, alpha pass, event or updater is added. Both values
-off empties and actually hides each existing health label while native fills
+region, artwork, material, alpha pass, event or updater is added. With the optional
+percentage off, both values off empties and actually hides each existing health label while native fills
 continue unchanged. One value alone omits the slash. Shared formatting caches
-only the latest enabled values per label, so changing a disabled value performs
+only the latest enabled values per label; with percentages off, changing a disabled value performs
 no formatting or presentation write. Actual label text/visibility comparisons
 still repair retired pooled labels.
 

@@ -63,6 +63,17 @@ establish native event order or in-game appearance.
 
 ## Target health and compact numbers
 
+**Shorten health numbers** in `/sdui` → **Unit frames** defaults on. Off shows
+full whole-number health without K/M/B/T suffixes or scientific notation, such
+as `166983` instead of `166.9K`. It applies to the existing shared player, target,
+target-of-target, party and native pet health labels; percentage choices, fill,
+native values, fonts and geometry stay unchanged. `unitShortHealth` is a normalized
+boolean in the existing display table, including preview, Confirm, all discard
+paths, profiles and both resets. Missing/invalid values and resets use true.
+The latest-value label cache includes this format choice and hidden labels defer
+formatting until their existing visible refresh. Boss bars and Guardian tracker
+have independent choices.
+
 Enemy targets use the official `AZS_TARGET.hp` and `hpm` publication for their
 health label, whole-number percentage, fill and damage-loss animation once it
 arrives. Selecting a target first shows its validated current native
@@ -97,7 +108,7 @@ maximum health or spawn identity also resets the effect. Damage still uses the
 original full counters and the existing half-second fade, never abbreviated
 text or combat messages.
 
-Unit-health labels and boss/guardian current/maximum labels share K, M, B and T
+With shortening enabled, unit-health and boss/guardian current/maximum labels share K, M, B and T
 for thousands, millions, billions and trillions. Examples are `1.2K`, `15.1B`
 and `70T`; values below 1,000 remain whole numbers. Formatting truncates to at
 most one decimal and removes a trailing `.0`, so `999,999` stays `999.9K` until

@@ -2,7 +2,7 @@
 
 `/sdui` uses Blizzard’s Dragonflight plain metal settings frame, gold accents,
 compact category rows, checkbox artwork and
-Confirm/Cancel footer. The wider content column and eight categories replace
+Confirm/Cancel footer. The wider content column and nine categories replace
 the old twenty-entry sidebar. The editor fits to the available viewport without
 the former additional 85% scale reduction.
 
@@ -10,7 +10,8 @@ the former additional 85% scale reduction.
 | ---------------- | --------------------------------------------------- |
 | Layout           | Frame selection, coordinates, size, hiding and grid |
 | Unit frames      | Unit frames, Pet frames, Auras                      |
-| Combat           | Combat text, Nameplates, Damage meter               |
+| Combat           | Combat text, Nameplates                             |
+| Damage meter     | Damage meter                                        |
 | Action bar       | Action bar, Equipped jewelry, Kills, Gold & Caches  |
 | Encounters       | Run timer, Boss bars, Guardian tracker              |
 | Map & navigation | Waypoints, Minimap                                  |
@@ -19,20 +20,70 @@ the former additional 85% scale reduction.
 
 ## Navigation and spacing
 
-`core/editor.lua:CreateEditorNavigator` owns eight category buttons and one native
-scroll viewport. The selected sidebar button supplies the category name; there
+`core/editor.lua:CreateEditorNavigator` owns nine category buttons and one native
+scroll viewport. Opening creates the shell and selected category only. Section
+parents, headings and controls are constructed on their category's first visit
+and reused thereafter; unvisited categories have no native page objects. Profiles
+waits for its own category, and the Run timer font popup waits for its button.
+There is no background preloading. Direct entry to Profiles prepares Profiles
+without visiting Layout first. The selected sidebar button supplies the category name; there
 is no duplicate category title or search field. Section headings appear only
 when their names differ from the category, such as Pet frames under Unit frames.
+These subsection headings are centered above their controls and divider. Damage
+meter has its own sidebar category and no repeated content heading.
 Controls start at the top of the viewport rather than below a search/header area.
 Each category remembers its scroll offset until the UI reloads.
 
 `modules/ui/run.lua:CreateFontEditor` supplies the section definitions and keeps
-the existing control owners. Numeric editors retain full-width rows. Ordinary
-toggles use `CompactEditorToggle`: native caption width selects one or two title
-lines, then the description follows with a three-unit gap. Single-line rows are
-64 units high; wrapped-title rows are 76. Paired columns use the larger row height.
+the existing control owners. Multi-option sections use two columns for both
+toggles and numeric steps, read left to right and then down. At the current
+660-unit content width, each column is 322 units wide with a 16-unit gap. Enable
+switches for boss bars and the damage meter span both columns; mode selectors
+and sections with only one option keep their full width. An odd last option
+stays on the left. Guardian current/maximum health and percentage/shortening
+choices form matching pairs.
+
+The existing custom pages retain their useful arrangements: Layout pairs
+coordinates, dimensions and Hide frame/Show grid; Combat text pairs its switches
+and filters; Run
+timer pairs Regular/Endless options and keeps shared font controls together.
+Profiles retains one saved-profile list and its action row. Loot's three-way
+mode selector and the tally's two-column style picker keep their own rows.
+
+Ordinary toggles use `CompactEditorToggle`: native caption width selects one or
+two title lines, then the description follows with a three-unit gap. Single-line
+rows are 64 units high; wrapped-title rows are 76. `CompactEditorNumber` uses the
+same title gap, a separate 40-unit help area and the existing step controls,
+giving 72/84-unit rows instead of 88. `LayoutEditorOptions` uses the larger height
+in each pair and finishes incomplete pairs before placing a full-width control.
 Changed measurements reflow the selected category on opening, category selection
 or language changes, with no idle updater. Missing metrics remain retryable.
+
+Sidebar width stays at the existing 232-unit cap, avoiding first-click measuring
+of every translated category. Footer and prepared control widths use the active
+language through `locale.Width(..., true)`. Successful measurements are cached by
+caption, language, font/size/flags, ruler width and owning-frame effective scale;
+unavailable metrics are retried. The timer controls and Profiles save row reflow
+when their visible language changes. Closed and unselected pages defer that work.
+
+HUD edit artwork uses the existing Layout controller with a limit of two newly
+prepared groups per render frame. Pending groups keep the editor dirty only
+while Layout or the moving mode is active. Switching categories, closing,
+Cancel/world cleanup and reopening preserve the reusable pools without preparing
+remaining hidden artwork. The grid uses the chosen editor mode's existing path.
+
+Description-free checkbox captions stay vertically centered with their checkbox
+as row height changes. Performance Mode keeps a 28-unit caption box inside its
+36-unit row; Black shadow and Attach affixes share aligned 28-unit rows.
+
+Layout's Hide frame and Show grid use 194-unit columns with a 12-unit gap. The
+shared moving popup hides Show grid and expands Hide frame to 400 units. Caption
+wrapping determines the row height and positions Apply/status; the popup grows
+from its 320-unit minimum and reuses the existing screen-clamped placement.
+
+Layout and profile inputs use a plain dark inset with four thin neutral metal
+edges. Native EditBox behavior, text, focus and callbacks are unchanged. No
+ornamental border asset or input animation remains.
 
 ## Buttons
 
@@ -60,6 +111,15 @@ Cancel, profile/reset and world/logout/reload discard. Pending Layout numeric
 input is retained across categories; the existing invalid-input and
 frame-selection rules remain. Closing the editor retains the existing focus cleanup and
 closes the font-choice popup. No new SavedVariable or display preference exists.
+
+The named `SurvivorsDragonUiSettings` window is registered once with native
+`UISpecialFrames`. Escape hides it through the native close path, and its shared
+Layout hide hook calls Cancel only for a live full-editor session. Switching to
+moving mode hides the same window while retaining the draft; Confirm/Cancel
+retire the transaction before their own hide callbacks. Escape from a focused
+Layout numeric field or profile-name field also cancels the full editor, even
+with invalid pending input. The moving popup retains its existing field-level
+Escape behavior. The minimap glyph uses `layout.ToggleEdit` for open/cancel.
 
 All drawing is static in normal and Performance Mode. Sections and controls are
 prepared on the first editor opening and reused; navigation adds no idle worker,

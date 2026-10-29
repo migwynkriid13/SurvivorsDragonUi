@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/0d6d1b20-c97e-47e5-b5d5-9511bfa1aeff" alt="SurvivorsDragonUi dragon crest" width="128" height="128" />
+</p>
+
 # SurvivorsDragonUi
 
 [![For Azeroth Survivors](https://img.shields.io/badge/Azeroth_Survivors-UI_addon-c9a55c?style=flat-square&labelColor=25282d)](https://github.com/migwynkriid13/SurvivorsDragonUi/releases/latest)
@@ -70,11 +74,11 @@ For UI debugging, `/fstack on` and `/fstack off` set the inspector state, `/fsta
 
 Open `/sdui` or click the gold Dragonflight glyph beside the minimap, then drag a frame to move it or drag a corner to resize it. **Party frames** moves the party together, with an outline available even when playing solo. Hold **Shift** while dragging to line it up with other frames or the grid. Gold guides show the alignment. **Show grid** in **Layout** starts on and can hide the grid. Supported HUD groups and the player, target and party health bars have side handles for width. Portraits keep their size. Top/bottom handles change list rows or Chat height. Corners retain their existing resize behavior. For exact positions, sizes or **Hide frame**, use **Layout**.
 
-Settings are grouped into eight categories, with related options together.
+Settings are grouped into nine categories, with related options together.
 
 For a clear view while moving, use `/sdui lock`. Click a blue frame for its controls, drag to move, or nudge with arrow keys (Shift moves ten units). Choose **Show grid**, **Grid spacing** and **Snap to elements** in the small manager. **Save and close** keeps the changes.
 
-Click **Confirm** in the full editor to save or **Cancel** to undo. Leaving the run or reloading also discards unsaved changes. **Addon defaults** resets the same options as `/sdui reset`.
+Click **Confirm** in the full editor to save or **Cancel** to undo. Click the minimap glyph again or press **Escape** to cancel and close. Leaving the run or reloading also discards unsaved changes. **Addon defaults** resets the same options as `/sdui reset`.
 
 **Performance Mode**, above **Layout**, starts off. Turn it on for static portraits and HUD effects, chat and banners without fading, and no cooldown numbers. Combat text keeps its usual motion and selected style. Your individual choices return when you turn it off.
 
@@ -84,7 +88,7 @@ Action buttons start locked. Under **Action bar**, turn off **Lock action button
 
 Portraits use 2D images by default. Under **Unit frames**, choose **Experimental 3D portraits** or **Hide portraits** for bars without portraits.
 
-**Show health** and **Show health percentage** choose the text on unit health bars. A single value is centered. Enable both for health on the left and percentage on the right, or disable both to hide the text. **Class-colored health** uses each character's class color for player and party health bars.
+**Show health** and **Show health percentage** choose the text on unit health bars. A single value is centered. Enable both for health on the left and percentage on the right, or disable both to hide the text. **Shorten health numbers** starts on; turn it off for full numbers without K/M/B/T. **Encounters** → **Boss bars** and **Guardian tracker** each have their own shortening and percentage switches; percentages start off. **Class-colored health** uses each character's class color for player and party health bars.
 
 ### Profiles and tooltips
 
@@ -96,7 +100,7 @@ Move the **Tooltip** handle to place regular hover cards. Its Layout controls al
 
 Under **Combat** → **Combat text**, choose custom damage numbers, turn them off, or use **Game settings**. For the game's damage numbers, choose **Game settings**, then enable **Show Target Damage** in the game options. All settings below the mode selector are dimmed and inactive unless **Custom** is selected; their values are kept.
 
-The DPS meter is off by default. Turn on **Enable damage meter** under **Combat** → **Damage meter** and Confirm to show the game's damage totals and DPS. Click its heading to cycle through Damage Done, Healing Done, Boss Damage and Party Damage; scroll for more rows. Party Damage shows heroes with their native portraits during co-op. Choose 1 to 10 rows and which numbers, icons, ranks and header values to show. Move, scale or hide **DPS meter** under **Layout**. Details does not need to be installed.
+The DPS meter is off by default. Turn on **Enable damage meter** under **Damage meter** and Confirm to show the game's damage totals and DPS. Click its heading to cycle through Damage Done, Healing Done, Boss Damage and Party Damage; scroll for more rows. Party Damage shows heroes with their native portraits during co-op. Choose 1 to 10 rows and which numbers, icons, ranks and header values to show. Move, scale or hide **DPS meter** under **Layout**. Details does not need to be installed.
 
 Use **Encounters** → **Run timer** to change its text and font. In **Boss bars** in the same category, **Guardians in boss bar** adds fighting guardians to the boss bars; it starts off. You can also mirror either guide to put its arrow on the other side. Under **Map & navigation** → **Minimap**, **Keep defeated guardian icons** keeps lair icons visible while guardians are down; it starts off.
 

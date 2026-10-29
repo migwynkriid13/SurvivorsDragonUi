@@ -166,5 +166,15 @@ DFRL:NewMod("Map", 1, function()
 
     DFRL.topPanel = panel
     DFRL.minimapRoot = container
-    DFRL.layout.Register("minimap", container, nil, { wheelFrame = Minimap })
+    local function SetLauncherEditing(active)
+        local launcher = _G.SurvivorsDragonUiMinimapButton
+        if not launcher then return end
+        -- Keep the toggle reachable above Layout's level-100 selection,
+        -- while the settings dialog (150) and its controls remain above it.
+        local strata = active and "TOOLTIP" or Minimap:GetFrameStrata()
+        local level = active and 125 or Minimap:GetFrameLevel() + 20
+        if launcher:GetFrameStrata() ~= strata then launcher:SetFrameStrata(strata) end
+        if launcher:GetFrameLevel() ~= level then launcher:SetFrameLevel(level) end
+    end
+    DFRL.layout.Register("minimap", container, nil, { wheelFrame = Minimap, onEdit = SetLauncherEditing })
 end)

@@ -82,6 +82,15 @@ env.T.CreateEditorButton = function(parent, text, width, height)
 end
 env.T.CreateEditorToggle = function(parent, text, description, width, callback)
     local button = env.T.CreateEditorButton(parent, text, width, 44)
+    button.label:SetWidth(width - 36)
+    function button.label:GetStringWidth() return self.naturalWidth or 100 end
+    button.editorCheckbox = button:CreateTexture(nil, "ARTWORK")
+    button.editorDivider = button:CreateTexture(nil, "ARTWORK")
+    if description then
+        button.description = button:CreateFontString(nil, "OVERLAY")
+        button.description:SetWidth(width - 36)
+        button.description:SetText(description)
+    end
     function button:SetChecked(value) self.editorChecked = value end
     button:SetScript("OnClick", function()
         button:SetChecked(not button.editorChecked)
@@ -107,6 +116,7 @@ context:Load("core/layout_snap.lua")
 context:Load("core/layout.lua", "Layout")
 local layout, display = env.DFRL.layout, env.DFRL.display
 local controller = context:Controller("PLAYER_LOGOUT")
+local settingsWindow
 local frame = env.CreateFrame("Frame", nil, env.UIParent)
 frame.width, frame.height = 100, 40
 layout.Register("playerFrame", frame, function(owner)
@@ -119,6 +129,7 @@ end, {
             display.BeginEdit()
         else
             display.FinishEdit(save)
+            if settingsWindow then settingsWindow:Hide() end
         end
     end,
 })
@@ -187,14 +198,29 @@ assert(
     "Save and close did not confirm the shared transaction"
 )
 
-local home = env.CreateFrame("Frame", nil, env.UIParent)
+settingsWindow = env.CreateFrame("Frame", "SurvivorsDragonUiSettingsFixture", env.UIParent)
+settingsWindow:Hide()
+local home = env.CreateFrame("Frame", nil, settingsWindow)
+layout.RegisterEditorWindow(settingsWindow)
+local specialCount = #env.UISpecialFrames
+layout.RegisterEditorWindow(settingsWindow)
+assert(#env.UISpecialFrames == specialCount, "Escape registration was duplicated")
 layout.SetEditorVisibilityHandler(function(shown)
-    if shown then layout.CreateControls(home, 660, function() end) end
+    if shown then
+        layout.CreateControls(home, 660, function() end)
+        settingsWindow:Show()
+    else
+        settingsWindow:Hide()
+    end
 end)
 layout.BeginEdit(true)
 Tick()
 context:Call(handle, "OnMouseDown", "LeftButton")
 local form = context.inputs[1]:GetParent()
+assert(
+    form.visibility:GetWidth() == 400 and not form.grid:IsShown(),
+    "moving popup retained half-width or visible grid options"
+)
 layout.BeginEdit()
 Tick()
 assert(
@@ -202,6 +228,15 @@ assert(
     "switching to settings duplicated or stranded the numeric form"
 )
 assert(not form:GetScript("OnUpdate"), "numeric form retained a separate polling callback")
+assert(
+    form.visibility:GetWidth() == 194 and form.grid:GetWidth() == 194 and form.grid:IsShown(),
+    "full editor did not restore paired options"
+)
+assert(
+    form.visibility.point[5] == -156 and form.grid.point[5] == -156 and form.grid.point[4] == 206,
+    "Hide frame and Show grid do not share one row"
+)
+assert(form.apply.point[5] == -228 and form.status.point[5] == -266, "paired options retained a blank second row")
 context.inputs[1]:SetText("37")
 layout.SetHandlesVisible(false)
 home:Hide()
@@ -220,11 +255,66 @@ Tick()
 assert(handle:IsShown() and context.inputs[1]:GetText() == "37", "Layout return lost its selection or pending input")
 layout.BeginEdit(true)
 Tick()
+assert(
+    form.visibility:GetWidth() == 400 and not form.grid:IsShown(),
+    "returning to moving mode lost full-width Hide frame"
+)
+local popup = form:GetParent()
+local prepared = #context.objects
+form.visibility.label.naturalWidth = 500
+context:NotifyLocale()
+assert(form:GetHeight() == 302 and popup:GetHeight() == 332, "wrapped popup captions overflow the panel")
+assert(
+    popup.point[5] >= -768 + popup:GetHeight() + 12 and popup.point[5] <= -24,
+    "resized popup was not clamped through the existing placement lifecycle"
+)
+assert(#context.objects == prepared and form:GetParent() == popup, "wrapped caption rebuilt the popup or inputs")
+context:ResetCounts()
+context:NotifyLocale()
+context:NoPresentationWrites()
+form.visibility.label.naturalWidth = 100
+context:NotifyLocale()
+assert(form:GetHeight() == 290 and popup:GetHeight() == 320, "popup did not recover its minimum height")
 for _, object in ipairs(context.objects) do
     if object.parent == handle and object.dragButton then assert(not object:IsShown() and not object.mouse) end
 end
 context:Event(controller, "PLAYER_LEAVING_WORLD")
 assert(not layout.IsEditing() and not manager:IsShown() and not handle:IsShown(), "world cleanup retained editor input")
+context:Event(controller, "PLAYER_ENTERING_WORLD")
+Tick()
+layout.ToggleEdit()
+assert(layout.IsEditing() and settingsWindow:IsShown(), "launcher toggle did not open the editor")
+display.Set("layoutSnapEnabled", true)
+layout.ToggleEdit()
+assert(
+    not layout.IsEditing() and not settingsWindow:IsShown() and display.Get("layoutSnapEnabled") == false,
+    "launcher toggle failed to close and discard the draft"
+)
+layout.ToggleEdit()
+display.Set("layoutSnapEnabled", true)
+-- Native Escape hides the registered UISpecialFrames window.
+settingsWindow:Hide()
+assert(
+    not layout.IsEditing() and display.Get("layoutSnapEnabled") == false,
+    "Escape hide did not retire the edit session"
+)
+layout.ToggleEdit()
+display.Set("layoutSnapEnabled", true)
+context.inputs[1]:SetText("invalid")
+context:Call(context.inputs[1], "OnEscapePressed")
+assert(
+    not layout.IsEditing() and not settingsWindow:IsShown() and display.Get("layoutSnapEnabled") == false,
+    "focused invalid Layout input blocked Escape cancellation"
+)
+layout.ToggleEdit()
+display.Set("layoutSnapEnabled", true)
+layout.BeginEdit(true)
+assert(
+    layout.IsEditing() and display.Get("layoutSnapEnabled") == true,
+    "mode switch discarded the draft on window hide"
+)
+layout.CancelEdit()
+context:Event(controller, "PLAYER_LOGOUT")
 print(
     "PASS retail manager, one shared form, input/focus, release snapping, Save/Cancel, category-hidden idle, mode switch and world cleanup"
 )

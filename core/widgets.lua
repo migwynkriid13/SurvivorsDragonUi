@@ -154,7 +154,31 @@ function DFRL.tools.StyleEncounterHealth(bar, label)
     label:SetTextColor(1, 1, 1)
 end
 
-function DFRL.tools.EncounterHealthText(current, maximum, showCurrent, showMaximum, cache)
+function DFRL.tools.EncounterHealthText(current, maximum, showCurrent, showMaximum, cache, shorten, showPercentage)
+    shorten = shorten ~= false
+    local percentage
+    if showPercentage == true then
+        if cache and cache.encounterPercentCurrent == current and cache.encounterPercentMaximum == maximum then
+            percentage = cache.encounterPercentage
+        elseif
+            type(current) == "number"
+            and current >= 0
+            and current - current == 0
+            and type(maximum) == "number"
+            and maximum > 0
+            and maximum - maximum == 0
+        then
+            percentage = math.floor(math.max(0, math.min(1, current / maximum)) * 100 + 0.5)
+        end
+    end
+    -- Keep only the latest percentage basis, even when rounding keeps the same
+    -- caption. Off does no division and releases those optional cache values.
+    if cache then
+        local percentCurrent = showPercentage == true and current or nil
+        local percentMaximum = showPercentage == true and maximum or nil
+        if cache.encounterPercentCurrent ~= percentCurrent then cache.encounterPercentCurrent = percentCurrent end
+        if cache.encounterPercentMaximum ~= percentMaximum then cache.encounterPercentMaximum = percentMaximum end
+    end
     if showCurrent == false then current = nil end
     if showMaximum == false then maximum = nil end
     if
@@ -162,19 +186,24 @@ function DFRL.tools.EncounterHealthText(current, maximum, showCurrent, showMaxim
         and cache.encounterText ~= nil
         and cache.encounterCurrent == current
         and cache.encounterMaximum == maximum
+        and cache.encounterShortHealth == shorten
+        and cache.encounterPercentage == percentage
     then
         return cache.encounterText
     end
-    local text = current and T.CompactHealth(current) or ""
-    if maximum then text = text .. (current and " / " or "") .. T.CompactHealth(maximum) end
+    local text = current and T.CompactHealth(current, shorten) or ""
+    if maximum then text = text .. (current and " / " or "") .. T.CompactHealth(maximum, shorten) end
+    if percentage then text = text .. (text ~= "" and " (" or "") .. percentage .. "%" .. (text ~= "" and ")" or "") end
     if cache then
         cache.encounterCurrent, cache.encounterMaximum, cache.encounterText = current, maximum, text
+        cache.encounterShortHealth = shorten
+        cache.encounterPercentage = percentage
     end
     return text
 end
 
-function DFRL.tools.SetEncounterHealthText(label, current, maximum, showCurrent, showMaximum)
-    local text = T.EncounterHealthText(current, maximum, showCurrent, showMaximum, label)
+function DFRL.tools.SetEncounterHealthText(label, current, maximum, showCurrent, showMaximum, shorten, showPercentage)
+    local text = T.EncounterHealthText(current, maximum, showCurrent, showMaximum, label, shorten, showPercentage)
     T.SetTextIfChanged(label, text)
     if text == "" then
         if label:IsShown() then label:Hide() end
@@ -184,7 +213,8 @@ function DFRL.tools.SetEncounterHealthText(label, current, maximum, showCurrent,
 end
 
 -- Retail-style decimal tiers; presentation only, never a health calculation.
-function DFRL.tools.CompactHealth(value)
+function DFRL.tools.CompactHealth(value, shorten)
+    if shorten == false or value < 1000 then return string.format("%.0f", math.floor(value)) end
     local divisor, suffix
     if value >= 1000000000000 then
         divisor, suffix = 1000000000000, "T"
@@ -192,10 +222,8 @@ function DFRL.tools.CompactHealth(value)
         divisor, suffix = 1000000000, "B"
     elseif value >= 1000000 then
         divisor, suffix = 1000000, "M"
-    elseif value >= 1000 then
-        divisor, suffix = 1000, "K"
     else
-        return string.format("%.0f", math.floor(value))
+        divisor, suffix = 1000, "K"
     end
     local scaled = math.floor(value / (divisor / 10)) / 10
     return string.format(scaled == math.floor(scaled) and "%.0f" or "%.1f", scaled) .. suffix
@@ -247,7 +275,7 @@ function DFRL.tools.BindUnitHealthText(bar, label, unit, hideDead)
     local labels = { percentage = percentage }
     local leftInset, rightInset, centerOffset = 0, 0, 0
     local splitLayout
-    local previousCurrent, previousMaximum, previousValueShown, previousPercentShown
+    local previousCurrent, previousMaximum, previousValueShown, previousPercentShown, previousShortHealth
     local valueText, percentText = "", ""
 
     function labels.Update()
@@ -255,6 +283,7 @@ function DFRL.tools.BindUnitHealthText(bar, label, unit, hideDead)
         local current, maximum
         local valueShown = DFRL.display.Get("showHealthValue")
         local percentShown = DFRL.display.Get("showHealthPercentage")
+        local shorten = DFRL.display.Get("unitShortHealth") ~= false
         if UnitExists(unit) and not (hideDead and (UnitIsDead(unit) or UnitIsGhost(unit))) then
             current, maximum = T.GetUnitHealth(unit, not percentShown)
             if type(current) ~= "number" or current < 0 or current - current ~= 0 then current = nil end
@@ -264,10 +293,12 @@ function DFRL.tools.BindUnitHealthText(bar, label, unit, hideDead)
             or maximum ~= previousMaximum
             or valueShown ~= previousValueShown
             or percentShown ~= previousPercentShown
+            or shorten ~= previousShortHealth
         then
             previousCurrent, previousMaximum = current, maximum
             previousValueShown, previousPercentShown = valueShown, percentShown
-            valueText = current and valueShown and T.CompactHealth(current) or ""
+            previousShortHealth = shorten
+            valueText = current and valueShown and T.CompactHealth(current, shorten) or ""
             percentText = ""
             if current and percentShown and type(maximum) == "number" and maximum > 0 and maximum - maximum == 0 then
                 percentText = tostring(math.floor(math.min(1, current / maximum) * 100 + 0.5)) .. "%"

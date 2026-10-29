@@ -27,7 +27,7 @@ ROWS = [
 ]
 DESIGNS = [
     ("Waypoint ledger", "The closest fit to the existing Guardian HUD.", "A", "A transparent list, one medallion and the existing muted gold baseline."),
-    ("Editor metal ledger", "Matches the /sdui diamond-metal frame.", "AB", "A contained list using the editor's fixed corners and stretched edge strips."),
+    ("Editor metal ledger", "Matches the plain /sdui metal frame.", "AB", "A contained list using the editor's fixed corners and stretched edge strips."),
     ("Character metal panel", "Plain Blizzard metal, restrained gold text.", "AC", "A compact sibling of the character window with its plain metal frame."),
     ("Quest header list", "A published quest-tracker header above open rows.", "AD", "An older retail-style header option; more ornamental than the current HUD."),
     ("Medallion stack", "Independent rows built around the Guardian medallion.", "A", "A smaller repeat of the existing floating waypoint language on every row."),
@@ -55,7 +55,6 @@ def art(path, crop=None):
 
 
 ICON = art("waypoint/GuardianFloating.tga", (0, 0, 65, 65))
-EDITOR = art("editor/border.blp")
 CHROME = art("character/Chrome.blp")
 PARTS = art("character/Parts.tga")
 
@@ -95,31 +94,21 @@ def icon(image, x, y, size=28, opacity=1):
     paste(image, ICON, (x, y, size, size), opacity)
 
 
-def panel(image, x, y, w, h, kind="editor"):
+def panel(image, x, y, w, h):
     rect(image, (x+5, y+5, w-10, h-10), "#111817ed")
-    if kind == "editor":
-        size = 25
-        pieces = [EDITOR.crop((i*128, 0, (i+1)*128, 128)) for i in range(8)]
-        positions = [
-            (x, y, size, size), (x+w-size, y, size, size),
-            (x, y+h-size, size, size), (x+w-size, y+h-size, size, size),
-            (x, y+size, size, h-2*size), (x+w-size, y+size, size, h-2*size),
-            (x+size, y, w-2*size, size), (x+size, y+h-size, w-2*size, size),
-        ]
-    else:
-        size = 34
-        pieces = [CHROME.crop(b) for b in [
-            (0, 0, 150, 150), (256, 0, 406, 150),
-            (512, 0, 576, 64), (640, 0, 704, 64),
-            (0, 192, 150, 224), (256, 192, 406, 224),
-            (768, 0, 832, 150), (896, 0, 928, 64),
-        ]]
-        positions = [
-            (x, y, size, size), (x+w-size, y, size, size),
-            (x, y+h-16, 16, 16), (x+w-16, y+h-16, 16, 16),
-            (x, y+size, size, h-size-16), (x+w-size, y+size, size, h-size-16),
-            (x+size, y, w-2*size, size), (x+16, y+h-16, w-32, 16),
-        ]
+    size = 34
+    pieces = [CHROME.crop(b) for b in [
+        (0, 0, 150, 150), (256, 0, 406, 150),
+        (512, 0, 576, 64), (640, 0, 704, 64),
+        (0, 192, 150, 224), (256, 192, 406, 224),
+        (768, 0, 832, 150), (896, 0, 928, 64),
+    ]]
+    positions = [
+        (x, y, size, size), (x+w-size, y, size, size),
+        (x, y+h-16, 16, 16), (x+w-16, y+h-16, 16, 16),
+        (x, y+size, size, h-size-16), (x+w-size, y+size, size, h-size-16),
+        (x+size, y, w-2*size, size), (x+16, y+h-16, w-32, 16),
+    ]
     for piece, position in zip(pieces, positions):
         paste(image, piece, position)
 
@@ -187,8 +176,7 @@ def make(index, selected=False, collapsed=False):
     if index==1:
         heading(image,170,118,370); rows(image,170,164,370);line(image,170,326,370)
     elif index in (2,3):
-        panel(image,137,103,446,251,"editor" if index==2 else "metal")
-        if index==2:paste(image,art("editor/header.tga",(0,0,199,32)),(164,122,392,30),0.55)
+        panel(image,137,103,446,251)
         heading(image,164,126,392); rows(image,169,178,380,height=30)
     elif index==4:
         canvas=image
@@ -272,7 +260,7 @@ def make(index, selected=False, collapsed=False):
         for i in range(5):
             y=151+i*37;card(image,158,y,404,32);row(image,171,y+7,377,i,ROWS[i],small=True)
     elif index==14:
-        panel(image,66,116,589,224,"metal");heading(image,91,138,539)
+        panel(image,66,116,589,224);heading(image,91,138,539)
         card(image,92,182,219,124);icon(image,112,195,40)
         text(image,165,205,"Bloodtalon",15,GOLD,True)
         text(image,113,252,"Fighting",13,RED);text(image,290,250,"70%",22,WHITE,right=True)
@@ -282,7 +270,7 @@ def make(index, selected=False, collapsed=False):
         panel(image,99,116,523,230);heading(image,124,138,472)
         rows(image,126,194,231,height=32,indices=[0,1],small=True)
         row(image,126,269,231,3,ROWS[3],small=True);row(image,126,300,231,4,ROWS[4],small=True)
-        paste(image,art("editor/header.tga",(0,0,199,32)),(379,184,217,34),0.5)
+        paste(image,art("editor/choice.tga",(0,0,187,21)),(379,184,217,34),0.5)
         text(image,391,194,"NEXT RETURN",11,GOLD,True)
         text(image,394,228,"1:24",42,WHITE,True)
         text(image,395,286,"Marshlurker",14,GOLD)

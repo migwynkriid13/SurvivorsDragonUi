@@ -193,4 +193,29 @@ for _, handle in ipairs(Handles()) do
 end
 context:Event(controller, "PLAYER_LOGOUT")
 assert(not layout.IsEditing(), "logout failed with an unprepared handle")
+context:Event(controller, "PLAYER_ENTERING_WORLD")
+Tick()
+for index = 1, 7 do
+    Group("bounded" .. index, { edgeWidth = true })
+end
+local priorHandles = #Handles()
+layout.BeginEdit()
+Tick()
+assert(#Handles() == priorHandles + 2, "one editor sample prepared the whole handle pool")
+local partial = #context.objects
+layout.CancelEdit()
+Tick()
+assert(#context.objects == partial, "closed editor continued pending preparation")
+layout.BeginEdit()
+context:Call(controller, "OnUpdate", 0.001)
+assert(#Handles() == priorHandles + 4, "pending preparation waited for the normal ten-Hz cadence")
+context:Call(controller, "OnUpdate", 0.001)
+assert(#Handles() == priorHandles + 6, "a follow-up frame exceeded the preparation budget")
+context:Call(controller, "OnUpdate", 0.001)
+assert(#Handles() == priorHandles + 7, "bounded preparation did not finish")
+local complete = #context.objects
+Tick()
+assert(#context.objects == complete, "settled preparation did not reuse its pool")
+layout.CancelEdit()
+context:Event(controller, "PLAYER_LOGOUT")
 print("PASS Layout defers handle artwork, reuses the pool, preserves drafts and safely retires unprepared groups")
