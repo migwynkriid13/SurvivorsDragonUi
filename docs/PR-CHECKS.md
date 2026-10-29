@@ -181,6 +181,14 @@ The assertions cover:
   The full controller also draws received cache and fallen-ally pins on a visible
   native minimap, without supplying global visibility helpers. Boolean/numeric
   visibility, hidden/nil cleanup and recovery cover both geometry and placement.
+  The same full-controller fixture checks the default-off guardian respawn
+  option, invalid normalization, preview/Confirm/Cancel,
+  profiles/reset, immediate cached reselection, fallback after all lairs empty,
+  stable ties, due and unknown timers, living priority, navigation copies,
+  independent minimap choices, unchanged
+  normal/Performance Mode work, hidden/off recovery and run/world retirement.
+  Settings visibility mocks also cover the option dimming and disabling with
+  Guardian guidance while retaining its value and skipping unchanged writes.
   These tests remain CI-only; local work uses source review, artwork preparation
   and pinned formatting, with no addon/game execution or Actions polling.
 

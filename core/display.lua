@@ -86,6 +86,7 @@ DFRL:NewMod("Display", 0, function()
         cacheGuidance = true,
         partyGuidance = true,
         guardianGuidance = true,
+        guardianRespawnGuidance = false,
         keepDefeatedGuardianIcons = false,
         guardianMinimapTimers = false,
         minimapShowClock = false,

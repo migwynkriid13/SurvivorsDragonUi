@@ -1,9 +1,10 @@
--- CI only: the full waypoint controller over explicit native party boundaries.
+-- CI only: the full waypoint controller over explicit native party/lair boundaries.
 local H = dofile("scripts/tests/fixtures/ui_helpers.lua")
 assert(_VERSION == "Lua 5.1", "party waypoint fixtures require CI Lua 5.1")
 local c = H.New()
 local env = c.env
 local phase, unitReads, positionReads = "playing", 0, 0
+env.AZS_GetPhase = function() return phase end
 local minimapVisible = true
 env.Minimap = env.CreateFrame("Frame", nil, env.UIParent)
 env.Minimap.IsVisible = function() return minimapVisible end
@@ -15,7 +16,7 @@ env.GetCVar = function(key)
 end
 env.AZS_CHESTS = { { id = 1, x = 10, y = 20, mx = 0.51, my = 0.5 } }
 env.AZS_CHESTS_UPDATED = 1
-local members, registered, bound = {}, {}, {}
+local members, registered, bound, navigationPoints = {}, {}, {}, {}
 local function Member(name, x, y) return { name = name, mx = x, my = y, exists = 1, connected = 1, dead = 1, ghost = 0 } end
 local function Field(unit, key)
     unitReads = unitReads + 1
@@ -54,7 +55,7 @@ env.DFRL.navigation = {
     end,
     Delta = function(point) return env.DFRL.navigation.GuideDelta(point) end,
     Heading = function() return 0 end,
-    SetPoints = function() end,
+    SetPoints = function(key, points) navigationPoints[key] = points end,
     Reset = function() end,
     WithSample = function(callback) callback() end,
     UpdateMinimapPlayer = function() end,
@@ -64,6 +65,7 @@ env.DFRL.navigation = {
 }
 c:Load("core/hud.lua")
 c:Load("core/display.lua", "Display")
+c:Load("modules/ui/guardians.lua", "GuardianRoster")
 c:Load("modules/map/waypoints.lua", "Waypoints")
 local display = env.DFRL.display
 local hud, reader = env.DFRL_PartyWaypoint, env.DFRL_CacheWaypointReader
@@ -216,4 +218,140 @@ display.Reset()
 assert(display.Get("partyGuidance") and not display.Get("mirrorPartyWaypoint"), "full reset lost defaults")
 print(
     "PASS fallen-ally guidance uses fresh native death/position, shared selection/Layout, transactional settings and bounded idle work"
+)
+
+-- Exercise the same full controller's guardian fallback independently of the
+-- optional defeated minimap icons and their separate timer presentation.
+minimapVisible = false
+local guardianHud = registered.guardianWaypoint
+local guardianDistance
+for _, object in ipairs(c.objects) do
+    if object.parent == guardianHud and object.kind == "FontString" and object.font[2] == 15 then
+        guardianDistance = object
+    end
+end
+assert(guardianDistance, "guardian guide lost its existing distance label")
+local lairStamp = 0
+local function Lair(index, left, mx, state, id)
+    return { index = index, id = id or 0, state = state or "empty", left = left, x = index, y = 0, mx = mx, my = 0.5 }
+end
+local function PublishLairs(lairs)
+    lairStamp = lairStamp + 1
+    env.AZS_LAIRS, env.AZS_LAIRS_UPDATED = lairs, lairStamp
+    c:Event(reader, "CHAT_MSG_ADDON", "AZSLAIRS")
+    Tick()
+end
+local near, soon = Lair(1, 40, 0.51), Lair(2, 5, 0.8)
+assert(not display.Get("guardianRespawnGuidance"), "respawn guidance must default off")
+assert(
+    not display.Copy({ guardianRespawnGuidance = "true" }).guardianRespawnGuidance,
+    "invalid respawn guidance did not use its default"
+)
+PublishLairs({ near, soon })
+assert(not guardianHud:IsShown(), "default-off respawn guidance changed living-only behavior")
+display.BeginEdit()
+display.Set("guardianRespawnGuidance", true)
+assert(guardianHud:IsShown() and guardianDistance:GetText() == "300 yards", "preview needed a new lair packet")
+assert(not env.SurvivorsDragonUiDisplay, "respawn guidance preview saved early")
+display.FinishEdit(false)
+assert(not guardianHud:IsShown(), "Cancel retained respawn guidance")
+display.BeginEdit()
+display.Set("guardianRespawnGuidance", true)
+display.FinishEdit(true)
+assert(env.SurvivorsDragonUiDisplay.guardianRespawnGuidance, "Confirm lost the respawn guidance choice")
+display.BeginEdit()
+display.Set("guardianRespawnGuidance", false)
+assert(not guardianHud:IsShown(), "turning respawn guidance off retained its target")
+display.Load({ guardianRespawnGuidance = true })
+assert(guardianHud:IsShown(), "profile preview did not restore cached respawn guidance")
+display.Load({ guardianRespawnGuidance = false })
+assert(not guardianHud:IsShown(), "profile preview did not disable respawn guidance")
+display.FinishEdit(false)
+assert(guardianHud:IsShown(), "profile Cancel lost confirmed respawn guidance")
+PublishLairs({ Lair(3, nil, 0.56, "asleep", 7), soon })
+assert(guardianHud:IsShown() and guardianDistance:GetText() == "60 yards", "respawn displaced a living guardian")
+PublishLairs({ near, soon, Lair(3, nil, 0.501) })
+assert(guardianHud:IsShown() and guardianDistance:GetText() == "300 yards", "fallback chose distance over respawn time")
+assert(
+    #navigationPoints.AZS_LAIRS == 3 and navigationPoints.AZS_LAIRS[2].key == "2:0",
+    "accepted empty-lair coordinate pairs were unavailable to native navigation calibration"
+)
+assert(env.DFRL.guardians.GetSnapshot().counts.living == 0, "guidance invented a living guardian")
+minimapVisible = true
+Tick()
+assert(
+    PinCount("GuardianFloating.blp") == 0
+        and not display.Get("keepDefeatedGuardianIcons")
+        and not display.Get("guardianMinimapTimers"),
+    "respawn guidance enabled defeated minimap icons or timers"
+)
+near.left = 5
+PublishLairs({ near, soon })
+assert(guardianDistance:GetText() == "300 yards", "equal timers replaced the current lair")
+near.left = 0
+PublishLairs({ near, soon })
+assert(guardianDistance:GetText() == "10 yards", "a newly earlier or due lair did not replace the old selection")
+phase = "paused"
+Tick()
+assert(guardianHud:IsShown() and guardianDistance:GetText() == "10 yards", "pause discarded native respawn guidance")
+phase = "playing"
+display.BeginEdit()
+for _, performance in ipairs({ false, true }) do
+    display.Set("performanceMode", performance)
+    assert(display.Get("performanceMode") == performance, "fixture did not preview the requested performance mode")
+    Tick()
+    local prepared = #c.objects
+    c:ResetCounts()
+    for _ = 1, 20 do
+        Tick()
+    end
+    c:NoPresentationWrites()
+    assert(#c.objects == prepared and guardianHud:IsShown(), "settled respawn guidance rebuilt its view")
+end
+display.BeginEdit()
+display.Set("guardianGuidance", false)
+PublishLairs({ soon })
+assert(not guardianHud:IsShown(), "disabled guardian guidance retained its respawn HUD")
+display.FinishEdit(false)
+Tick()
+assert(guardianHud:IsShown() and guardianDistance:GetText() == "300 yards", "Cancel lost the current respawn selection")
+local mask = env.CreateFrame("Frame", nil, env.UIParent)
+guardianHud.parent = mask
+mask:Hide()
+PublishLairs({ near })
+c:ResetCounts()
+Tick()
+c:NoPresentationWrites()
+mask:Show()
+Tick()
+assert(guardianDistance:GetText() == "10 yards", "hidden guidance failed to resume from the current lair")
+PublishLairs({ Lair(1, nil, 0.51), Lair(2, -1, 0.8), Lair(3, math.huge, 0.55) })
+assert(not guardianHud:IsShown(), "unknown, negative or nonfinite timers invented a respawn target")
+local unavailable = Lair(1, 0, 0.51)
+unavailable.x = nil
+PublishLairs({ unavailable })
+assert(not guardianHud:IsShown(), "missing lair coordinates reused an old destination")
+PublishLairs({ near, Lair(3, nil, 0.56, "awake", 0) })
+assert(not guardianHud:IsShown(), "an invalid occupied lair was treated as all guardians defeated")
+minimapVisible = false
+PublishLairs({ near, Lair(3, nil, 0.56, "awake", 8) })
+assert(guardianDistance:GetText() == "60 yards", "a returned guardian did not take priority over the fallback")
+PublishLairs({ soon })
+phase = "ready"
+Tick()
+assert(not guardianHud:IsShown() and navigationPoints.AZS_LAIRS == nil, "run retirement retained a respawn target")
+phase = "playing"
+Tick()
+assert(not guardianHud:IsShown(), "a new run replayed the retired lair snapshot")
+PublishLairs({ near })
+assert(guardianHud:IsShown(), "a fresh lair publication did not restore guidance")
+c:Event(reader, "PLAYER_LEAVING_WORLD")
+assert(not guardianHud:IsShown(), "world cleanup retained respawn guidance")
+c:Event(reader, "PLAYER_ENTERING_WORLD")
+Tick()
+assert(not guardianHud:IsShown(), "world entry replayed the retired respawn destination")
+display.Reset()
+assert(not display.Get("guardianRespawnGuidance"), "full reset did not restore respawn guidance off")
+print(
+    "PASS guardian guidance selects the earliest native respawn only after every guardian is defeated, with shared idle and cleanup lifecycles"
 )

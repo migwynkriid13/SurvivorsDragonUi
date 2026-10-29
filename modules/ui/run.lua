@@ -1008,6 +1008,8 @@ DFRL:NewMod("RunTimers", 5, function()
                     enabled = not DFRL.display.Get("hidePortraits")
                 elseif key == "attachJewelry" then
                     enabled = DFRL.display.Get("equippedJewelry")
+                elseif key == "guardianRespawnGuidance" then
+                    enabled = DFRL.display.Get("guardianGuidance")
                 end
                 if enabled ~= nil and control.editorAvailable ~= enabled then
                     control:EnableMouse(enabled)
@@ -1680,6 +1682,11 @@ DFRL:NewMod("RunTimers", 5, function()
                         "Move the arrow to the left and the icon to the right.",
                     },
                     { "guardianGuidance", "Guardian guidance", "Show the guardian lair direction and distance." },
+                    {
+                        "guardianRespawnGuidance",
+                        "Guide to next respawn",
+                        "When all guardians are defeated, point to the lair due to respawn first.",
+                    },
                     {
                         "mirrorGuardianWaypoint",
                         "Mirror guardian waypoint",

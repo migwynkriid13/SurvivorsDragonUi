@@ -1274,6 +1274,34 @@ also occurs inside the protected delivery call. CI-only lifecycle coverage check
 three occupied cards, unchanged queued work and the first delivery after expiry.
 No drawing, intake identity or queue-limit behavior changes.
 
+### Guardian respawn guidance
+
+Optional **Guide to next respawn** selects the earliest known respawn only while
+every accepted lair is empty. The existing acceptance pass compares native
+non-negative `left` values once per publication, retains equal-time selections
+and caches one point reference. Navigation calibration reuses the accepted empty-lair coordinate
+copies. It adds no countdown clock, health read, per-refresh ranking scan or
+gameplay history. The default-off choice caches only a boolean through the shared
+display listener. Toggling reselects from accepted data immediately, with no new
+packet, timer sampling or roster copy. Living publications take priority, while
+hidden/off presentation and run/world retirement keep the existing lifecycle.
+Defeated minimap pins remain independently controlled.
+Normal and Performance Mode use the same existing icon, text and required
+navigation arrow; this adds no gameplay frame, region, asset, event, updater or
+SavedVariable. One boolean lives in the existing display table; the Map &
+navigation page lazily adds one standard Button, four texture regions and two
+FontStrings, using existing editor artwork. At rest the unchecked control draws
+two textures and its two text regions; checkmark and hover can show the other
+two textures. The page hides all of them when closed. While awaiting a respawn,
+the existing Guardian HUD can draw its two textures and two text regions; no
+additional gameplay regions are allocated. This required guidance stays visible
+in Performance Mode with the same static icon and native navigation updates.
+Its value is retained while it is dimmed/mouse-disabled with Guardian guidance
+off; hidden settings skip its presentation work. CI-only full-controller cases
+cover default/invalid choices, preview/save/discard/profiles/reset, timer ordering,
+ties, due/unknown values, living priority, hidden/off recovery and retirement;
+they were not run locally and do not establish rendered behavior or FPS.
+
 ### Rounded waypoint labels
 
 The fallen-ally extension adds one shared 190-by-46 HUD frame, two texture
