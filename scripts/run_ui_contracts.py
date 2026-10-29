@@ -75,11 +75,11 @@ def main():
         ])
         settings_views = settings_views.rsplit("\nreturn ", 1)[0] + "\nreturn { Display = UpdateDisplayLabels, SCT = UpdateSctLabels, Font = RefreshFontControls }\n"
         settings_editor = extract_source("modules/ui/run.lua", [
-            "fontFaces", "fontOutlines", "FontEditorLabel", "FontEditorButton",
+            "fontFaces", "fontOutlines", "IsNumber", "UpdateClockCaptions", "FontEditorLabel", "FontEditorButton",
             "SetSettingsEnabled", "UpdateSctLabels", "UpdateDisplayLabels", "RefreshFontControls",
             "FitFontEditor", "PlaceFontEditor", "FinishFontEditorDrag", "CreateFontEditor",
         ])
-        settings_editor = settings_editor.rsplit("\nreturn ", 1)[0] + "\nreturn { Create = CreateFontEditor, Display = UpdateDisplayLabels, SCT = UpdateSctLabels, Font = RefreshFontControls }\n"
+        settings_editor = settings_editor.rsplit("\nreturn ", 1)[0] + "\nreturn { Create = CreateFontEditor, Display = UpdateDisplayLabels, SCT = UpdateSctLabels, Font = RefreshFontControls, Clock = UpdateClockCaptions }\n"
         tally_counters = extract_source("modules/ui/run.lua", [
             "TALLY_COUNTER_INTERVAL", "IsNumber", "TallyCountersDue", "ClearTally", "UpdateTally", "UpdateRunBoundary",
         ])

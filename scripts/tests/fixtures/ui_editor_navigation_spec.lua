@@ -419,7 +419,14 @@ env.StyleClockLabel = function(clock, settings)
     clock.source:SetFont("DEFAULT_TEST", settings.size, settings.outline)
     clock.ruler:SetFont("DEFAULT_TEST", settings.size, settings.outline)
 end
-env.RefreshClockLabel = function() end
+env.RefreshClockLabel = function(clock)
+    assert(clock == env.fontSampleClock, "settings updated another clock owner")
+    assert(clock.source:GetParent():IsVisible(), "hidden timer sample reached presentation")
+    context.fontSampleRefreshes = (context.fontSampleRefreshes or 0) + 1
+end
+env.runClock, env.bossClock = {}, {}
+env.AZS_RUN, env.AZS_RUN_UPDATED = { endl = 0, nb = 30 }, 1
+env.RefreshTimerCaptions = function() context.hudCaptionRefreshes = (context.hudCaptionRefreshes or 0) + 1 end
 env.PreviewFont = function() context.fontPreviews = (context.fontPreviews or 0) + 1 end
 env.ChangeSize = function() end
 local source = assert(loadfile(arg[1]))
@@ -442,6 +449,14 @@ assert(context.reads.glyphs == openingGlyphs + 2, "shell measured unrelated or i
 dialog:Show()
 assert(context.reads.glyphs == openingGlyphs + 2, "show repeated cached shell sizing")
 assert(layoutBuilds == 1 and pages.layout and not pages.units and not pages.profiles, "first open built hidden pages")
+editor.Clock(10.5, 1200, true)
+assert(
+    env.runClock.seconds == 10
+        and context.hudCaptionRefreshes == 1
+        and not env.fontSampleClock
+        and not context.fontSampleRefreshes,
+    "live timer updates touched the unbuilt sample or stopped the HUD clock"
+)
 assert(
     env.displayControls.performanceMode and not env.displayControls.unitShortHealth,
     "first open built hidden options"
@@ -460,6 +475,8 @@ assert(
     "lazy option skipped preview/Confirm"
 )
 local unitObjects = #context.objects
+editor.Clock(11.5, 1200, true)
+assert(not env.fontSampleClock and not context.fontSampleRefreshes, "non-timer category built or updated the sample")
 dialog.navigation.Select("layout")
 dialog.navigation.Select("units")
 assert(
@@ -484,6 +501,12 @@ assert(
 )
 for _, key in ipairs({ "meter", "action", "encounters", "map", "interface", "profiles" }) do
     dialog.navigation.Select(key)
+    local samples = context.fontSampleRefreshes or 0
+    editor.Clock(12.5, 1200, true)
+    assert(
+        (context.fontSampleRefreshes or 0) == samples + (key == "encounters" and 1 or 0),
+        "live timer update ignored the selected category's sample visibility"
+    )
 end
 local pageCount = 0
 for _ in pairs(pages) do
@@ -523,6 +546,9 @@ dialog.RefreshOptionLayout()
 editor.Display()
 editor.SCT()
 editor.Font()
+local sampleRefreshes = context.fontSampleRefreshes
+editor.Clock(13.5, 1200, true)
+assert(context.fontSampleRefreshes == sampleRefreshes, "closed settings refreshed the timer sample")
 context:NoPresentationWrites()
 dialog:Show()
 dialog.navigation.Select("encounters")

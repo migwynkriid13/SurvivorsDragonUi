@@ -184,9 +184,16 @@ review and pinned formatting; live hover/input behavior remains unverified.
 `modules/ui/guardians.lua` registers `DFRL.guardians` before Waypoints initializes.
 The existing `modules/map/waypoints.lua` reader remains the only owner of raw lair
 acceptance. After accepting a received, phase-gated native lair snapshot, it passes
-copies of **all** lairs to `AcceptLairs`, including vacant ones. Navigation still
-receives only its existing occupied-lair coordinate copies. Cache behaviour is
-unchanged. No second raw lair poller or parallel lifecycle is introduced.
+copies of **all** lairs to `AcceptLairs`, including vacant ones. Navigation uses
+occupied-lair coordinate copies while any guardian is alive. With **Guide to next
+respawn** enabled under **Map & navigation**, all-empty snapshots instead use
+the lair with the shortest known non-negative native respawn timer and valid
+coordinates. This default-off display choice is independent of the tracker and
+minimap choices and uses the shared preview/save/discard/profile/reset lifecycle.
+Equal timers retain the selected lair, and an actual occupied publication restores
+living-guardian priority. This guidance does not enable defeated minimap icons
+or timers. Cache behaviour is unchanged. No second raw lair poller or parallel
+lifecycle is introduced.
 
 The roster accepts unique positive lair indexes, the native `asleep`, `awake` and
 `empty` states, positive spawn ids for held lairs, and id zero for empty lairs.

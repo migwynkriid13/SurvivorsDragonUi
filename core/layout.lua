@@ -1247,6 +1247,15 @@ DFRL:NewMod("Layout", 0, function()
             end
         end
     end
+    local function AlignCoordinateLayers(frame, parent)
+        local strata, level = parent:GetFrameStrata(), parent:GetFrameLevel() + 1
+        if frame:GetFrameStrata() ~= strata then frame:SetFrameStrata(strata) end
+        if frame:GetFrameLevel() ~= level then frame:SetFrameLevel(level) end
+        -- Legacy SetParent adjusts the root, but leaves child levels behind.
+        for _, child in ipairs({ frame:GetChildren() }) do
+            AlignCoordinateLayers(child, frame)
+        end
+    end
     -- The community's numeric editor shares the existing dialog and draft store.
     function layout.CreateControls(parent, width, activate)
         if activate then
@@ -1254,9 +1263,14 @@ DFRL:NewMod("Layout", 0, function()
             showCoordinates = activate
         end
         if coordinates then
-            coordinates:SetParent(parent)
+            local reparented = coordinates:GetParent() ~= parent
+            if reparented then coordinates:SetParent(parent) end
+            AlignCoordinateLayers(coordinates, parent)
             coordinates:ClearAllPoints()
             coordinates:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, 0)
+            -- Moving an effectively hidden legacy frame does not refresh its
+            -- visibility. Explicit Show also repairs that hidden-to-popup path.
+            if reparented then coordinates:Show() end
             if activate then
                 coordinates.label:ClearAllPoints()
                 coordinates.label:SetPoint("TOP", coordinates, "TOP", 0, -8)
@@ -1401,6 +1415,7 @@ DFRL:NewMod("Layout", 0, function()
         DFRL.locale.Listen(function()
             if coordinates:IsVisible() then ArrangeCoordinateOptions(coordinates.optionsPopup or false) end
         end)
+        AlignCoordinateLayers(coordinates, parent)
         ArrangeCoordinateOptions(false)
         SelectEntry(selected or entries.playerFrame or order[1])
         return coordinates

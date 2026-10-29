@@ -191,8 +191,10 @@ Display/SCT settings listeners defer hidden windows and unselected pages before
 value formatting and drawing. Page Show catches up from current settings through
 the existing listeners. Hidden Profiles also defers listing/sorting and row
 painting until its existing Show callback. Dependency input/alpha and checkbox states skip unchanged
-writes. The font sample checks its page, since its source FontString is deliberately
-hidden behind the rendered parts; hidden categories do no sample font assignment,
+writes. Live run-caption updates first check that the lazy sample clock exists;
+an open shell does not imply a prepared timer page. The font sample checks its
+page, since its source FontString is deliberately hidden behind the rendered
+parts; hidden categories do no sample font assignment,
 measurement or painting. Visible samples cache face/size/outline/shadow/language,
 retaining scale/readiness checks through the existing clock owner. No new updater
 or gameplay preference is added. Failed native sample font assignments do not
@@ -265,6 +267,14 @@ corner/side grips prepare only when that mode first needs them and actually hide
 and stop input in moving mode. Selection, focus, drag completion, mode changes,
 manager close and world/logout/reload cleanup retire their input correctly.
 Normal and Performance Mode use the same non-animated presentation.
+
+Numeric-form transfers explicitly restore effective visibility and align existing
+child frame levels above the new parent. The bounded child walk runs only during
+form preparation or an explicit selection/mode transfer; unchanged layers skip
+writes. Returning to settings lowers the same controls to that parent's layer.
+This adds no frame, region, animation, event, updater, asset or saved state in
+either mode. CI-only mocks model legacy reparenting's root-only level changes
+and hidden visibility, without claiming live rendering verification.
 
 Each edit handle now has nine authored selection regions, using real retail
 blue/gold pixels and changed-only state UVs. Selection and snap bounds share a
@@ -1273,6 +1283,34 @@ their existing bounded metadata retries, expiry and pool reuse. Resolution now
 also occurs inside the protected delivery call. CI-only lifecycle coverage checks
 three occupied cards, unchanged queued work and the first delivery after expiry.
 No drawing, intake identity or queue-limit behavior changes.
+
+### Guardian respawn guidance
+
+Optional **Guide to next respawn** selects the earliest known respawn only while
+every accepted lair is empty. The existing acceptance pass compares native
+non-negative `left` values once per publication, retains equal-time selections
+and caches one point reference. Navigation calibration reuses the accepted empty-lair coordinate
+copies. It adds no countdown clock, health read, per-refresh ranking scan or
+gameplay history. The default-off choice caches only a boolean through the shared
+display listener. Toggling reselects from accepted data immediately, with no new
+packet, timer sampling or roster copy. Living publications take priority, while
+hidden/off presentation and run/world retirement keep the existing lifecycle.
+Defeated minimap pins remain independently controlled.
+Normal and Performance Mode use the same existing icon, text and required
+navigation arrow; this adds no gameplay frame, region, asset, event, updater or
+SavedVariable. One boolean lives in the existing display table; the Map &
+navigation page lazily adds one standard Button, four texture regions and two
+FontStrings, using existing editor artwork. At rest the unchecked control draws
+two textures and its two text regions; checkmark and hover can show the other
+two textures. The page hides all of them when closed. While awaiting a respawn,
+the existing Guardian HUD can draw its two textures and two text regions; no
+additional gameplay regions are allocated. This required guidance stays visible
+in Performance Mode with the same static icon and native navigation updates.
+Its value is retained while it is dimmed/mouse-disabled with Guardian guidance
+off; hidden settings skip its presentation work. CI-only full-controller cases
+cover default/invalid choices, preview/save/discard/profiles/reset, timer ordering,
+ties, due/unknown values, living priority, hidden/off recovery and retirement;
+they were not run locally and do not establish rendered behavior or FPS.
 
 ### Rounded waypoint labels
 

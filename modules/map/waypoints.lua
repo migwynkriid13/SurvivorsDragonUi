@@ -83,6 +83,7 @@ DFRL:NewMod("Waypoints", 3, function()
     local runWasActive = false
     local inWorld, dirty, age = true, true, 0
     local showGuardianTimers = DFRL.display.Get("guardianMinimapTimers")
+    local guideRespawns = DFRL.display.Get("guardianRespawnGuidance")
 
     local function Number(value) return type(value) == "number" and value - value == 0 end
     local function Integer(value, minimum) return Number(value) and value >= minimum and value == math.floor(value) end
@@ -631,6 +632,7 @@ DFRL:NewMod("Waypoints", 3, function()
         tracker.entries = tracker.emptyEntries
         tracker.acceptedEntries, tracker.acceptedLairs, tracker.acceptedStamp = nil, nil, nil
         tracker.acceptedMinimapEntries = nil
+        tracker.acceptedRespawn = nil
         navigation.SetPoints(tracker.source, nil)
         tracker.selectedKey, tracker.selected, tracker.provisionalSelection = nil, nil, nil
         tracker.presentation = nil
@@ -736,6 +738,7 @@ DFRL:NewMod("Waypoints", 3, function()
         end
         local guardian = tracker.kind == "guardian"
         local result, seen, lairs, minimap = {}, {}, {}, {}
+        local nextRespawn, allDefeated = nil, guardian
         for _, entry in ipairs(list) do
             if type(entry) ~= "table" then return end
             -- Both occupied states mean a living guardian. Coordinates belong
@@ -744,6 +747,7 @@ DFRL:NewMod("Waypoints", 3, function()
             if guardian then
                 if not Integer(entry.index, 1) or seen[entry.index] then return end
                 seen[entry.index] = true
+                if entry.state ~= "empty" or entry.id ~= 0 then allDefeated = false end
                 table.insert(lairs, {
                     index = entry.index,
                     id = entry.id,
@@ -785,7 +789,7 @@ DFRL:NewMod("Waypoints", 3, function()
                 table.insert(result, point)
                 if guardian then table.insert(minimap, point) end
             elseif entry.state == "empty" and entry.id == 0 and Number(entry.x) and Number(entry.y) then
-                table.insert(minimap, {
+                local point = {
                     key = tostring(entry.index) .. ":0",
                     state = entry.state,
                     name = type(entry.name) == "string" and entry.name ~= "" and entry.name or nil,
@@ -794,12 +798,27 @@ DFRL:NewMod("Waypoints", 3, function()
                     y = entry.y,
                     mx = entry.mx,
                     my = entry.my,
-                })
+                }
+                table.insert(minimap, point)
+                if
+                    point.left
+                    and (
+                        not nextRespawn
+                        or point.left < nextRespawn.left
+                        or (point.left == nextRespawn.left and point.key == tracker.selectedKey)
+                    )
+                then
+                    nextRespawn = point
+                end
             end
         end
         tracker.acceptedSnapshot = list
         tracker.acceptedGeneration, tracker.acceptedStamp, tracker.acceptedEntries = received, stamp, result
         tracker.acceptedMinimapEntries = guardian and minimap or nil
+        -- All lairs share this native publication's clock anchor, so comparing
+        -- received timers needs no extra countdown or per-refresh roster scan.
+        -- Keep this navigation copy separate from the living-only pin list.
+        tracker.acceptedRespawn = allDefeated and nextRespawn or nil
         if guardian and DFRL.guardians then
             tracker.acceptedLairs = lairs
             local context = Number(_G.AZS_ZONE_UPDATED) and _G.AZS_ZONE or nil
@@ -808,7 +827,23 @@ DFRL:NewMod("Waypoints", 3, function()
         return result
     end
 
+    local function RespawnTarget(tracker)
+        if guideRespawns then return tracker.acceptedRespawn end
+    end
+    local function SetNavigationPoints(tracker)
+        navigation.SetPoints(
+            tracker.source,
+            RespawnTarget(tracker) and tracker.acceptedMinimapEntries or tracker.entries
+        )
+    end
     local function Choose(tracker)
+        local respawn = RespawnTarget(tracker)
+        if respawn then
+            tracker.selected = respawn
+            tracker.selectedKey = tracker.selected.key
+            tracker.provisionalSelection = nil
+            return
+        end
         tracker.selected = nil
         local previous
         for _, entry in ipairs(tracker.entries) do
@@ -1013,7 +1048,7 @@ DFRL:NewMod("Waypoints", 3, function()
             local snapshot = Snapshot(tracker)
             if snapshot then
                 tracker.entries = snapshot
-                navigation.SetPoints(tracker.source, snapshot)
+                SetNavigationPoints(tracker)
             else
                 Clear(tracker)
             end
@@ -1105,6 +1140,13 @@ DFRL:NewMod("Waypoints", 3, function()
     local function UpdateDisplay()
         -- Visibility drafts do not retire snapshots, selections or calibration.
         showGuardianTimers = DFRL.display.Get("guardianMinimapTimers")
+        local nextGuideRespawns = DFRL.display.Get("guardianRespawnGuidance")
+        if guideRespawns ~= nextGuideRespawns then
+            guideRespawns = nextGuideRespawns
+            local guardian = trackers[2]
+            if guardian.acceptedEntries then SetNavigationPoints(guardian) end
+            Choose(guardian)
+        end
         for _, tracker in ipairs(trackers) do
             LayoutHUD(tracker)
             if tracker.kind == "party" then

@@ -108,13 +108,21 @@ The assertions cover:
   pending Layout input, independent Damage meter preparation, centered section
   headings, description-free checkbox alignment, plain input regions,
   deferred font-menu selection and reuse, closed language
-  changes and no added background updater. Active-language width cases cover
-  one measurement, cache reuse, font/flags/width/scale/language invalidation and
+  changes and no added background updater. Live caption updates also run through
+  the production clock function with the settings shell open before Encounters
+  exists, across the category walk and
+  after closing. They require normal HUD updates without an early sample access,
+  and sample presentation only on its visible prepared page. Active-language
+  width cases cover one measurement, cache reuse, font/flags/width/scale/language
+  invalidation and
   missing-metric retry. The Layout fixture also covers two-group per-frame
   preparation, fast continuation through the existing controller, cancellation
   of unfinished work and reuse after reopening. Retail-layout cases also cover
   paired Hide frame/Show grid, full-width Hide frame in the moving popup, wrapped
-  popup growth/clamping and unchanged locale reflow. These are CI-only source mocks,
+  popup growth/clamping and unchanged locale reflow. Reparenting cases model
+  native root-only level changes and stale hidden visibility, then require the
+  reused numeric form and every input/button to draw above the popup and return
+  to the settings layer without repeated layer writes. These are CI-only source mocks,
   not first-open latency or native rendering measurements.
 
   Close cases cover repeated launcher-toggle open/cancel, native registered-window
@@ -181,6 +189,14 @@ The assertions cover:
   The full controller also draws received cache and fallen-ally pins on a visible
   native minimap, without supplying global visibility helpers. Boolean/numeric
   visibility, hidden/nil cleanup and recovery cover both geometry and placement.
+  The same full-controller fixture checks the default-off guardian respawn
+  option, invalid normalization, preview/Confirm/Cancel,
+  profiles/reset, immediate cached reselection, fallback after all lairs empty,
+  stable ties, due and unknown timers, living priority, navigation copies,
+  independent minimap choices, unchanged
+  normal/Performance Mode work, hidden/off recovery and run/world retirement.
+  Settings visibility mocks also cover the option dimming and disabling with
+  Guardian guidance while retaining its value and skipping unchanged writes.
   These tests remain CI-only; local work uses source review, artwork preparation
   and pinned formatting, with no addon/game execution or Actions polling.
 

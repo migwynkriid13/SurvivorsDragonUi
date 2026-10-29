@@ -2,6 +2,8 @@
 DFRL.locale.data = {
     en = {
         ui = {
+            ["Guide to next respawn"] = "Guide to next respawn",
+            ["When all guardians are defeated, point to the lair due to respawn first."] = "When all guardians are defeated, point to the lair due to respawn first.",
             ["Shorten health numbers"] = "Shorten health numbers",
             ["Use K, M, B and T instead of full health numbers."] = "Use K, M, B and T instead of full health numbers.",
             ["HUD Edit Mode"] = "HUD Edit Mode",
@@ -645,6 +647,8 @@ DFRL.locale.data = {
     },
     pl = {
         ui = {
+            ["Guide to next respawn"] = "Prowadź do następnego odrodzenia",
+            ["When all guardians are defeated, point to the lair due to respawn first."] = "Gdy wszyscy strażnicy zostaną pokonani, wskaż legowisko z najkrótszym czasem do odrodzenia.",
             ["Shorten health numbers"] = "Skracaj wartości zdrowia",
             ["Use K, M, B and T instead of full health numbers."] = "Używaj K, M, B i T zamiast pełnych wartości zdrowia.",
             ["HUD Edit Mode"] = "Tryb edycji interfejsu",
@@ -1759,6 +1763,8 @@ DFRL.locale.data = {
     },
     cs = {
         ui = {
+            ["Guide to next respawn"] = "Vést k dalšímu znovuzrození",
+            ["When all guardians are defeated, point to the lair due to respawn first."] = "Po porážce všech strážců ukazovat na doupě strážce, který se znovu objeví nejdříve.",
             ["Shorten health numbers"] = "Zkracovat hodnoty zdraví",
             ["Use K, M, B and T instead of full health numbers."] = "Používat K, M, B a T místo plných hodnot zdraví.",
             ["HUD Edit Mode"] = "Režim úprav rozhraní",
@@ -2876,6 +2882,8 @@ DFRL.locale.data = {
     },
     de = {
         ui = {
+            ["Guide to next respawn"] = "Zum nächsten Wiedererscheinen führen",
+            ["When all guardians are defeated, point to the lair due to respawn first."] = "Wenn alle Wächter besiegt sind, zum Hort mit der kürzesten verbleibenden Wiedererscheinungszeit führen.",
             ["Shorten health numbers"] = "Gesundheitszahlen abkürzen",
             ["Use K, M, B and T instead of full health numbers."] = "K, M, B und T statt vollständiger Gesundheitszahlen verwenden.",
             ["HUD Edit Mode"] = "HUD-Bearbeitungsmodus",
@@ -3991,6 +3999,8 @@ DFRL.locale.data = {
     },
     pt = {
         ui = {
+            ["Guide to next respawn"] = "Guiar até o próximo renascimento",
+            ["When all guardians are defeated, point to the lair due to respawn first."] = "Quando todos os guardiões forem derrotados, apontar para o covil cujo guardião renascerá primeiro.",
             ["Shorten health numbers"] = "Abreviar valores de vida",
             ["Use K, M, B and T instead of full health numbers."] = "Usar K, M, B e T em vez dos valores completos de vida.",
             ["HUD Edit Mode"] = "Modo de edição do HUD",
@@ -5097,6 +5107,8 @@ DFRL.locale.data = {
     },
     es = {
         ui = {
+            ["Guide to next respawn"] = "Guiar a la próxima reaparición",
+            ["When all guardians are defeated, point to the lair due to respawn first."] = "Cuando todos los guardianes estén derrotados, señala la guarida cuyo guardián reaparecerá primero.",
             ["Shorten health numbers"] = "Abreviar valores de salud",
             ["Use K, M, B and T instead of full health numbers."] = "Usa K, M, B y T en lugar de los valores completos de salud.",
             ["HUD Edit Mode"] = "Modo de edición de interfaz",
@@ -6207,6 +6219,8 @@ DFRL.locale.data = {
     },
     fr = {
         ui = {
+            ["Guide to next respawn"] = "Guider vers la prochaine réapparition",
+            ["When all guardians are defeated, point to the lair due to respawn first."] = "Quand tous les gardiens sont vaincus, indiquer le repaire dont le gardien réapparaîtra en premier.",
             ["Shorten health numbers"] = "Abréger les valeurs de vie",
             ["Use K, M, B and T instead of full health numbers."] = "Utiliser K, M, B et T à la place des valeurs de vie complètes.",
             ["HUD Edit Mode"] = "Mode édition de l’interface",
@@ -7325,6 +7339,8 @@ DFRL.locale.data = {
     },
     ro = {
         ui = {
+            ["Guide to next respawn"] = "Ghidează spre următoarea reapariție",
+            ["When all guardians are defeated, point to the lair due to respawn first."] = "Când toți străjerii sunt învinși, arată vizuina al cărei străjer va reapărea primul.",
             ["Shorten health numbers"] = "Prescurtează valorile vieții",
             ["Use K, M, B and T instead of full health numbers."] = "Folosește K, M, B și T în locul valorilor complete ale vieții.",
             ["HUD Edit Mode"] = "Mod editare interfață",
@@ -8426,6 +8442,8 @@ DFRL.locale.data = {
     },
     tr = {
         ui = {
+            ["Guide to next respawn"] = "Sonraki yeniden doğuşa yönlendir",
+            ["When all guardians are defeated, point to the lair due to respawn first."] = "Tüm muhafızlar yenildiğinde, muhafızı en önce yeniden doğacak ine yönlendir.",
             ["Shorten health numbers"] = "Sağlık sayılarını kısalt",
             ["Use K, M, B and T instead of full health numbers."] = "Tam sağlık sayıları yerine K, M, B ve T kullan.",
             ["HUD Edit Mode"] = "Arayüz düzenleme modu",
@@ -9403,6 +9421,8 @@ DFRL.locale.data = {
     },
     ru = {
         ui = {
+            ["Guide to next respawn"] = "К следующему возрождению",
+            ["When all guardians are defeated, point to the lair due to respawn first."] = "Когда все стражи побеждены, указывать на логово того, кто возродится раньше остальных.",
             ["Shorten health numbers"] = "Сокращать значения здоровья",
             ["Use K, M, B and T instead of full health numbers."] = "Использовать K, M, B и T вместо полных значений здоровья.",
             ["HUD Edit Mode"] = "Режим редактирования интерфейса",
@@ -10599,6 +10619,8 @@ DFRL.locale.data = {
     },
     uk = {
         ui = {
+            ["Guide to next respawn"] = "До наступного відродження",
+            ["When all guardians are defeated, point to the lair due to respawn first."] = "Коли всіх вартових переможено, вказувати на лігво того, хто відродиться найраніше.",
             ["Shorten health numbers"] = "Скорочувати значення здоров’я",
             ["Use K, M, B and T instead of full health numbers."] = "Використовувати K, M, B і T замість повних значень здоров’я.",
             ["HUD Edit Mode"] = "Режим редагування інтерфейсу",
@@ -11769,6 +11791,8 @@ DFRL.locale.data = {
     },
     zh = {
         ui = {
+            ["Guide to next respawn"] = "指引下次重生",
+            ["When all guardians are defeated, point to the lair due to respawn first."] = "所有守卫被击败后，指向守卫最先重生的巢穴。",
             ["Shorten health numbers"] = "缩写生命值",
             ["Use K, M, B and T instead of full health numbers."] = "使用 K、M、B 和 T 代替完整生命值。",
             ["HUD Edit Mode"] = "界面编辑模式",
@@ -12866,6 +12890,8 @@ DFRL.locale.data = {
     },
     ja = {
         ui = {
+            ["Guide to next respawn"] = "次のリスポーンへ案内",
+            ["When all guardians are defeated, point to the lair due to respawn first."] = "すべてのガーディアンを倒したら、最も早くリスポーンするガーディアンの巣へ案内します。",
             ["Shorten health numbers"] = "体力の数値を省略",
             ["Use K, M, B and T instead of full health numbers."] = "体力の数値全体の代わりに K、M、B、T を使います。",
             ["HUD Edit Mode"] = "HUD編集モード",
@@ -13995,6 +14021,8 @@ DFRL.locale.data = {
     },
     ko = {
         ui = {
+            ["Guide to next respawn"] = "다음 재생성 위치 안내",
+            ["When all guardians are defeated, point to the lair due to respawn first."] = "모든 수호자를 처치하면 가장 먼저 재생성될 수호자의 소굴을 가리킵니다.",
             ["Shorten health numbers"] = "생명력 수치 줄이기",
             ["Use K, M, B and T instead of full health numbers."] = "생명력 전체 숫자 대신 K, M, B, T를 사용합니다.",
             ["HUD Edit Mode"] = "HUD 편집 모드",

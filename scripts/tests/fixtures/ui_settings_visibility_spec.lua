@@ -10,6 +10,8 @@ local values = {
     meterRows = 6,
     tallyStyle = 1,
     customRunTimer = true,
+    guardianGuidance = true,
+    guardianRespawnGuidance = true,
 }
 local reads, styled, measured = 0, 0, 0
 env.DFRL.display.Get = function(key)
@@ -41,13 +43,18 @@ local function Choice(parent)
     return control
 end
 env.fontEditor = Frame()
-local combat, timer = Frame(env.fontEditor), Frame(env.fontEditor)
+local combat, timer, map = Frame(env.fontEditor), Frame(env.fontEditor), Frame(env.fontEditor)
+map:Hide()
 env.incomingControl = Check(combat)
 env.sctDescription = combat:CreateFontString(nil, "OVERLAY")
 env.sctSizeLabel = combat:CreateFontString(nil, "OVERLAY")
 env.sctButtons = { on = Choice(combat), off = Choice(combat) }
 env.fontEditor.combatSettings = { frame = combat, controls = { env.incomingControl } }
-env.displayControls = { performanceMode = Check(env.fontEditor), damageIcons = Check(combat) }
+env.displayControls = {
+    performanceMode = Check(env.fontEditor),
+    damageIcons = Check(combat),
+    guardianRespawnGuidance = Check(map),
+}
 env.displayNumbers = { meterRows = combat:CreateFontString(nil, "OVERLAY") }
 env.dependentSettings = { customRunTimer = { frame = timer, controls = { Check(timer) } } }
 env.fontEditor.tallyStyleButtons = { Choice(timer) }
@@ -121,4 +128,31 @@ assert(styled == 2, "deferred font choice did not catch up on Show")
 context.failFont = false
 views.Font()
 assert(styled == 3, "failed native sample font assignment was cached as successful")
+local respawnControl = env.displayControls.guardianRespawnGuidance
+local enableRespawnMouse = respawnControl.EnableMouse
+function respawnControl:EnableMouse(value)
+    self.inputEnabled = value
+    enableRespawnMouse(self, value)
+end
+map:Show()
+views.Display()
+assert(respawnControl.editorAvailable and respawnControl.editorChecked, "shown respawn option did not catch up")
+values.guardianGuidance = false
+views.Display()
+assert(
+    respawnControl.editorAvailable == false
+        and respawnControl.inputEnabled == false
+        and respawnControl:GetAlpha() == 0.45
+        and respawnControl.editorChecked,
+    "disabled guardian guidance did not dim the respawn option while retaining its value"
+)
+context:ResetCounts()
+views.Display()
+context:NoPresentationWrites()
+values.guardianGuidance = true
+views.Display()
+assert(
+    respawnControl.editorAvailable and respawnControl.inputEnabled and respawnControl:GetAlpha() == 1,
+    "respawn option did not become available"
+)
 print("PASS closed/category-hidden settings, current-value catch-up, unchanged labels and deferred font work")

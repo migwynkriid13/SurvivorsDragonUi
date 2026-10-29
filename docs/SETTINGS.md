@@ -34,6 +34,11 @@ meter has its own sidebar category and no repeated content heading.
 Controls start at the top of the viewport rather than below a search/header area.
 Each category remembers its scroll offset until the UI reloads.
 
+Live run updates touch the font preview only after the Run timer page has been
+prepared and its category is visible. Opening another category leaves that
+sample unallocated while the normal HUD captions continue updating. Hiding the
+category or closing settings stops sample presentation.
+
 `modules/ui/run.lua:CreateFontEditor` supplies the section definitions and keeps
 the existing control owners. Multi-option sections use two columns for both
 toggles and numeric steps, read left to right and then down. At the current

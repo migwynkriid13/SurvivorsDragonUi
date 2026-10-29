@@ -25,6 +25,32 @@ local function Geometry(object)
     -- Native dimensions are independent of Lua fields such as the numeric
     -- form's width/height input boxes.
     local width, height = object:GetWidth(), object:GetHeight()
+    local nativeShow, nativeVisible = object.Show, object.IsVisible
+    object.strata = object.parent and object.parent:GetFrameStrata() or "MEDIUM"
+    object.level = object.parent and object.parent:GetFrameLevel() + 1 or 0
+    function object:GetFrameStrata() return self.strata end
+    function object:GetChildren()
+        local children = {}
+        for _, child in ipairs(context.objects) do
+            if child.parent == self and child.kind ~= "Texture" and child.kind ~= "FontString" then
+                children[#children + 1] = child
+            end
+        end
+        return unpack(children)
+    end
+    function object:SetFrameStrata(strata)
+        if self.strata == strata then return end
+        context.writes.SetFrameStrata = (context.writes.SetFrameStrata or 0) + 1
+        self.strata = strata
+        for _, child in ipairs({ self:GetChildren() }) do
+            child:SetFrameStrata(strata)
+        end
+    end
+    function object:IsVisible() return not self.needsParentShow and nativeVisible(self) end
+    function object:Show()
+        self.needsParentShow = nil
+        nativeShow(self)
+    end
     function object:GetWidth() return width end
     function object:GetHeight() return height end
     function object:SetWidth(value)
@@ -54,7 +80,14 @@ local function Geometry(object)
         end
     end
     function object:SetParent(parent)
+        if self.parent == parent then return end
+        local wasVisible = self:IsVisible()
         self.parent = parent
+        -- Legacy reparenting changes this root's layer only. An effectively
+        -- hidden frame also needs Show before its visibility catches up.
+        self:SetFrameStrata(parent:GetFrameStrata())
+        self:SetFrameLevel(parent:GetFrameLevel() + 1)
+        self.needsParentShow = not wasVisible
         context:Visibility()
     end
     function object:SetMovable(value) self.movable = value end
@@ -86,6 +119,13 @@ local function Geometry(object)
         context:Call(self, "OnEditFocusGained")
     end
     return object
+end
+local function AssertLayers(frame, parent)
+    assert(frame:GetFrameStrata() == parent:GetFrameStrata(), "numeric form retained another window's strata")
+    assert(frame:GetFrameLevel() == parent:GetFrameLevel() + 1, "numeric control was painted below its parent")
+    for _, child in ipairs({ frame:GetChildren() }) do
+        AssertLayers(child, frame)
+    end
 end
 Geometry(env.UIParent)
 env.UIParent:SetWidth(1024)
@@ -187,6 +227,7 @@ end
 context:Call(handle, "OnMouseDown", "LeftButton")
 assert(#context.inputs == 4 and manager.keyboard, "selected frame did not reuse one numeric form and keyboard owner")
 local numericForm = context.inputs[1]:GetParent()
+AssertLayers(numericForm, numericForm:GetParent())
 assert(
     numericForm.width == context.inputs[3]
         and numericForm.height == context.inputs[4]
@@ -270,6 +311,7 @@ assert(
     form:GetParent() == home and #context.inputs == 4,
     "switching to settings duplicated or stranded the numeric form"
 )
+AssertLayers(form, home)
 assert(not form:GetScript("OnUpdate"), "numeric form retained a separate polling callback")
 assert(
     form.visibility:GetWidth() == 194 and form.grid:GetWidth() == 194 and form.grid:IsShown(),
@@ -303,6 +345,21 @@ assert(
     "returning to moving mode lost full-width Hide frame"
 )
 local popup = form:GetParent()
+assert(
+    form:IsVisible()
+        and form.label:IsVisible()
+        and form.x:IsVisible()
+        and form.visibility:IsVisible()
+        and form.apply:IsVisible(),
+    "hidden settings form reopened as an empty moving popup"
+)
+AssertLayers(form, popup)
+context:ResetCounts()
+layout.CreateControls(popup, 400)
+assert(
+    not context.writes.SetFrameLevel and not context.writes.SetFrameStrata and not context.writes.Show,
+    "unchanged popup reapplied its drawing layers or visibility"
+)
 local prepared = #context.objects
 form.visibility.label.naturalWidth = 500
 context:NotifyLocale()
