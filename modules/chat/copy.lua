@@ -2,7 +2,8 @@
 -- See third_party/CleanerChat-NOTICE.txt for the supplied source attribution.
 -- Resizable dialog and session-only capture; native text selection/clipboard.
 
-DFRL:NewMod("ChatCopy", 0, function()
+DFRL:NewMod("ChatCopy", 0.75, function()
+    if DFRL.display.Get("defaultChat") then return end
     DFRL.CleanerChat = DFRL.CleanerChat or {}
     local Chat = DFRL.CleanerChat
     local dialog

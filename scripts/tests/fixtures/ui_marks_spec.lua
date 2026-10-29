@@ -13,7 +13,8 @@ local function Chat()
     local context = H.New()
     context:Load("core/localization.lua")
     context:Load("localization/data.lua")
-    context:Load("modules/chat/prettify.lua")
+    context:Load("core/messages.lua")
+    context:Load("modules/chat/prettify.lua", "ChatFormats")
     return context, context.env.DFRL.CleanerChat, context.env.DFRL.locale
 end
 

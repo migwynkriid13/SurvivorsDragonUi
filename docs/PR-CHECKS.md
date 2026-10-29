@@ -48,6 +48,15 @@ An explicit Bash shell enables `pipefail`, so piping fixture/model output into
 
 ## UI work and cleanup tests
 
+The default-chat fixture invokes all four production chat initializers with the
+native option enabled and an existing enabled Copy preference. It asserts no
+custom namespace, frame allocation, native method/script replacement, Layout
+registration, input/tab hiding, collector or Copy command, and checks reload-only
+draft/Cancel/Confirm/profile/reset behavior. Other cases retain custom formatter
+and Copy setup, shared cross-frame delivery semantics and native-chat loot intake
+with active-only message subscriptions. The banner fixture also runs without a
+custom chat namespace. These remain CI-only; no local tests or game execution.
+
 `scripts/run_ui_contracts.py` runs scenarios in Lua 5.1 with fresh mock
 state per scenario. Tests exercise the actual source, including the shared text
 helper, cooldown controller, range controller, HUD owner, loot intake and loot

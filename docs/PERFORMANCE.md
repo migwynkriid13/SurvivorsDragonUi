@@ -2181,6 +2181,26 @@ GitHub Actions enforces the single shared root across runtime Lua sources.
 
 ## Full chat history
 
+**Use default chat** is a separate reload-only display choice, default off.
+After Confirm and `/reload`, all four custom chat initializers return before
+allocating presentation or diagnostic state. There is no SDUI chat root,
+indicator, movement region, capture collector, archive, Copy command/dialog,
+native method/script wrapper, settings listener, readiness frame, Layout group
+or chat updater. Native chat owns its controls, fonts, messages and input. The
+existing saved Copy choice is retained but cannot activate capture in this mode.
+The normal chat Performance Mode behavior is unchanged.
+
+Shared loot parsing and delivery deduplication move to `core/messages.lua` with
+no added frame/region or updater. Independent SDUI loot delivery uses two message
+subscriptions on its existing controller only while native-chat mode and active
+SDUI loot ownership require them; mode/ownership/world retirement detaches them.
+Custom-chat mode retains its original observation path without duplicate event
+intake. Banners use the shared delivery helper and skip absent capture APIs.
+CI-only fixtures assert skipped allocation/hooks, native ownership, reload-only
+settings/profile/reset behavior, normal feature recovery, shared broadcast
+semantics and independent loot/banner delivery. Source review and formatting do
+not establish in-game rendering, memory use or an FPS result.
+
 Marks chat formatting runs only during the existing accepted native message
 path. It reuses cached named-field templates, retains original integer text and
 adds no balance getter, currency history, frame, drawing region, asset, event,

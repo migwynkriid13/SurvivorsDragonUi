@@ -2,9 +2,10 @@
 local H = dofile("scripts/tests/fixtures/ui_helpers.lua")
 local context = H.New()
 local env = context.env
+context:Load("core/messages.lua")
 context.settings.customBanners = false
 env.DFRL.locale.data = { en = { native = {} } }
-env.DFRL.CleanerChat = { IsCaptureEnabled = function() return false end, ListenCapture = function() end }
+env.DFRL.CleanerChat = nil -- Default chat has no custom chat/capture namespace.
 env.DFRL.layout.Place = function() end
 env.T.SetChatFont = function(label) label:SetFont("DEFAULT_TEST", 12, "OUTLINE") end
 env.T.SetChatShadow = function() end

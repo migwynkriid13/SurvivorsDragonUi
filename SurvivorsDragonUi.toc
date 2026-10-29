@@ -30,6 +30,7 @@ modules\nameplates\sct.lua
 modules\bars\bars.lua
 modules\bars\range.lua
 modules\cast\cast.lua
+core\messages.lua
 modules\chat\prettify.lua
 modules\ui\loot_icons.lua
 modules\ui\loot.lua

@@ -3,6 +3,7 @@ DFRL:NewMod("Display", 0, function()
     local display, listeners, draft = {}, {}, nil
     local defaults = {
         performanceMode = false,
+        defaultChat = false,
         meterEnabled = false,
         meterRows = 6,
         layoutShowGrid = true,

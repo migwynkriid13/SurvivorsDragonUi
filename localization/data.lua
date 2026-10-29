@@ -2,6 +2,8 @@
 DFRL.locale.data = {
     en = {
         ui = {
+            ["Use default chat"] = "Use default chat",
+            ["Disable SDUI chat, formatting and Copy. Confirm, then /reload."] = "Disable SDUI chat, formatting and Copy. Confirm, then /reload.",
             ["Fallen ally"] = "Fallen ally",
             ["Fallen ally waypoint"] = "Fallen ally waypoint",
             ["Fallen ally guidance"] = "Fallen ally guidance",
@@ -634,6 +636,8 @@ DFRL.locale.data = {
     },
     pl = {
         ui = {
+            ["Use default chat"] = "Używaj domyślnego czatu",
+            ["Disable SDUI chat, formatting and Copy. Confirm, then /reload."] = "Wyłącz czat SDUI, formatowanie i Copy. Potwierdź, a potem wpisz /reload.",
             ["Fallen ally"] = "Poległy sojusznik",
             ["Fallen ally waypoint"] = "Punkt poległego sojusznika",
             ["Fallen ally guidance"] = "Nawigacja do poległego sojusznika",
@@ -1737,6 +1741,8 @@ DFRL.locale.data = {
     },
     cs = {
         ui = {
+            ["Use default chat"] = "Použít výchozí chat",
+            ["Disable SDUI chat, formatting and Copy. Confirm, then /reload."] = "Vypne chat SDUI, formátování a Copy. Potvrďte a potom použijte /reload.",
             ["Fallen ally"] = "Padlý spojenec",
             ["Fallen ally waypoint"] = "Bod padlého spojence",
             ["Fallen ally guidance"] = "Navigace k padlému spojenci",
@@ -2843,6 +2849,8 @@ DFRL.locale.data = {
     },
     de = {
         ui = {
+            ["Use default chat"] = "Standardchat verwenden",
+            ["Disable SDUI chat, formatting and Copy. Confirm, then /reload."] = "SDUI-Chat, Formatierung und Copy deaktivieren. Bestätigen, dann /reload eingeben.",
             ["Fallen ally"] = "Gefallener Verbündeter",
             ["Fallen ally waypoint"] = "Wegpunkt zum gefallenen Verbündeten",
             ["Fallen ally guidance"] = "Weg zum gefallenen Verbündeten",
@@ -3947,6 +3955,8 @@ DFRL.locale.data = {
     },
     pt = {
         ui = {
+            ["Use default chat"] = "Usar chat padrão",
+            ["Disable SDUI chat, formatting and Copy. Confirm, then /reload."] = "Desative o chat SDUI, a formatação e o Copy. Confirme e use /reload.",
             ["Fallen ally"] = "Aliado caído",
             ["Fallen ally waypoint"] = "Ponto do aliado caído",
             ["Fallen ally guidance"] = "Guia para aliado caído",
@@ -5042,6 +5052,8 @@ DFRL.locale.data = {
     },
     es = {
         ui = {
+            ["Use default chat"] = "Usar chat predeterminado",
+            ["Disable SDUI chat, formatting and Copy. Confirm, then /reload."] = "Desactiva el chat SDUI, el formato y Copy. Confirma y usa /reload.",
             ["Fallen ally"] = "Aliado caído",
             ["Fallen ally waypoint"] = "Punto del aliado caído",
             ["Fallen ally guidance"] = "Guía al aliado caído",
@@ -6141,6 +6153,8 @@ DFRL.locale.data = {
     },
     fr = {
         ui = {
+            ["Use default chat"] = "Utiliser le chat par défaut",
+            ["Disable SDUI chat, formatting and Copy. Confirm, then /reload."] = "Désactive le chat SDUI, sa mise en forme et Copy. Confirmez, puis utilisez /reload.",
             ["Fallen ally"] = "Allié tombé",
             ["Fallen ally waypoint"] = "Repère de l’allié tombé",
             ["Fallen ally guidance"] = "Guidage vers un allié tombé",
@@ -7248,6 +7262,8 @@ DFRL.locale.data = {
     },
     ro = {
         ui = {
+            ["Use default chat"] = "Folosește chatul implicit",
+            ["Disable SDUI chat, formatting and Copy. Confirm, then /reload."] = "Dezactivează chatul SDUI, formatarea și Copy. Confirmă, apoi folosește /reload.",
             ["Fallen ally"] = "Aliat căzut",
             ["Fallen ally waypoint"] = "Reperul aliatului căzut",
             ["Fallen ally guidance"] = "Ghidare spre aliatul căzut",
@@ -8338,6 +8354,8 @@ DFRL.locale.data = {
     },
     tr = {
         ui = {
+            ["Use default chat"] = "Varsayılan sohbeti kullan",
+            ["Disable SDUI chat, formatting and Copy. Confirm, then /reload."] = "SDUI sohbetini, biçimlendirmeyi ve Copy özelliğini kapat. Onayla, ardından /reload kullan.",
             ["Fallen ally"] = "Düşen müttefik",
             ["Fallen ally waypoint"] = "Düşen müttefik yol noktası",
             ["Fallen ally guidance"] = "Düşen müttefik rehberi",
@@ -9304,6 +9322,8 @@ DFRL.locale.data = {
     },
     ru = {
         ui = {
+            ["Use default chat"] = "Использовать стандартный чат",
+            ["Disable SDUI chat, formatting and Copy. Confirm, then /reload."] = "Отключить чат SDUI, форматирование и Copy. Подтвердите и введите /reload.",
             ["Fallen ally"] = "Павший союзник",
             ["Fallen ally waypoint"] = "Метка павшего союзника",
             ["Fallen ally guidance"] = "Путь к павшему союзнику",
@@ -10489,6 +10509,8 @@ DFRL.locale.data = {
     },
     uk = {
         ui = {
+            ["Use default chat"] = "Використовувати стандартний чат",
+            ["Disable SDUI chat, formatting and Copy. Confirm, then /reload."] = "Вимкнути чат SDUI, форматування й Copy. Підтвердьте та введіть /reload.",
             ["Fallen ally"] = "Полеглий союзник",
             ["Fallen ally waypoint"] = "Позначка полеглого союзника",
             ["Fallen ally guidance"] = "Шлях до полеглого союзника",
@@ -11648,6 +11670,8 @@ DFRL.locale.data = {
     },
     zh = {
         ui = {
+            ["Use default chat"] = "使用默认聊天",
+            ["Disable SDUI chat, formatting and Copy. Confirm, then /reload."] = "关闭 SDUI 聊天、格式化和 Copy。确认后输入 /reload。",
             ["Fallen ally"] = "倒下的盟友",
             ["Fallen ally waypoint"] = "倒下盟友的路点",
             ["Fallen ally guidance"] = "倒下盟友指引",
@@ -12734,6 +12758,8 @@ DFRL.locale.data = {
     },
     ja = {
         ui = {
+            ["Use default chat"] = "標準のチャットを使う",
+            ["Disable SDUI chat, formatting and Copy. Confirm, then /reload."] = "SDUIのチャット、書式設定、Copyを無効にします。確定後に /reload を実行してください。",
             ["Fallen ally"] = "倒れた味方",
             ["Fallen ally waypoint"] = "倒れた味方のウェイポイント",
             ["Fallen ally guidance"] = "倒れた味方への道案内",
@@ -13852,6 +13878,8 @@ DFRL.locale.data = {
     },
     ko = {
         ui = {
+            ["Use default chat"] = "기본 대화창 사용",
+            ["Disable SDUI chat, formatting and Copy. Confirm, then /reload."] = "SDUI 대화창, 서식 및 Copy를 끕니다. 확인 후 /reload를 입력하세요.",
             ["Fallen ally"] = "쓰러진 아군",
             ["Fallen ally waypoint"] = "쓰러진 아군 길잡이",
             ["Fallen ally guidance"] = "쓰러진 아군 안내",

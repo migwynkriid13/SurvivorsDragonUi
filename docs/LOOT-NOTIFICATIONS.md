@@ -81,7 +81,7 @@ table. The two display choices above add no SavedVariable.
 
 ## Shared message intake
 
-`DFRL.CleanerChat.ParseLootMessage(text)` is the existing self-loot parser,
+`DFRL.messages.ParseLootMessage(text)` is the shared self-loot parser,
 extracted as a side-effect-free shared function. `PrettifyMessage` uses its
 `chatText` result, preserving the current `+Item` chat wording, hyperlinks,
 quality colors, collection suffixes and unknown-message fallback. The native
@@ -100,7 +100,17 @@ An accepted record contains:
   final sentence period. Collected parentheses remain part of the supplied text.
 - `marks`: the received positive integer text from a collected item's marks
   suffix, when supplied. It is not a queried balance or an inferred reward.
-- `chatText`: the exact compact chat result, including its existing plus prefix.
+- `item` and `suffix`: the received item markup and recognized collection suffix
+  used by the optional chat formatter. Only the enabled chat wrapper adds
+  `chatText`, the exact compact chat result including its existing plus prefix.
+
+The parser and native delivery deduplication live in `core/messages.lua`, outside
+custom chat initialization. With **Use default chat** enabled after reload, the
+existing loot controller subscribes to `CHAT_MSG_LOOT`/`CHAT_MSG_SYSTEM` only
+while SDUI loot intake is active. Game/Off mode, unready/released ownership and
+world cleanup detach that intake. No native chat `AddMessage`/`OnEvent` wrapper,
+capture collector or Copy dialog is needed. Custom-chat mode keeps its existing
+raw-delivery observation and does not add those service message subscriptions.
 
 Unknown suffixes still decline the match. Item and collection state are copied
 from the received notice, never inferred from names, inventory, item quality,

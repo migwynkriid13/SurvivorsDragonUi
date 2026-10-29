@@ -1,6 +1,7 @@
 -- CleanerChat presentation with only the explicitly requested message formats.
 -- Source credits are retained in third_party/CleanerChat-NOTICE.txt.
 DFRL:NewMod("Chat", 1, function()
+    if DFRL.display.Get("defaultChat") then return end
     DFRL.CleanerChat = DFRL.CleanerChat or {}
     local chat = DFRL.CleanerChat
     local initialized = false

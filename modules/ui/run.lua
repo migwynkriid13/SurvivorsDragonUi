@@ -1420,6 +1420,17 @@ DFRL:NewMod("RunTimers", 5, function()
                 },
             },
             {
+                key = "chat",
+                label = "Chat",
+                options = {
+                    {
+                        "defaultChat",
+                        "Use default chat",
+                        "Disable SDUI chat, formatting and Copy. Confirm, then /reload.",
+                    },
+                },
+            },
+            {
                 key = "pets",
                 label = "Pet frames",
                 options = {

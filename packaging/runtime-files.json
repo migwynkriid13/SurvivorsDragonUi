@@ -12,6 +12,7 @@
     "core/layout.lua",
     "core/localization.lua",
     "core/meter_rates.lua",
+    "core/messages.lua",
     "core/profiles.lua",
     "core/tally.lua",
     "core/tools.lua",
