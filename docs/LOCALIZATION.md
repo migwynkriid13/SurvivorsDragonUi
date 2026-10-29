@@ -17,6 +17,10 @@ English supplies `+{n} marks` and `You earn {n} marks ({total} in all).`;
 some languages put the currency name before its amount. The shared named-field
 matcher consumes each exact native template, with an anchored English fallback.
 The compact `Mark`/`Marks` captions reuse the existing fourteen-language UI path.
+Both producers accept received integer and decimal text without conversion.
+Marks-only loot cards reuse those captions and remove the former item-arrow
+format from the source TSV and all fourteen runtime UI sections. Native templates,
+catalog fingerprints, effects and aliases are unchanged.
 
 The full generator's source pin now targets that executable. Only the two marks
 templates were prepared for this change; other native/UI captions, effects and

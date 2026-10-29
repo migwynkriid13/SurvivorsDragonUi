@@ -4,8 +4,8 @@ The user selected **02**, the silver retail loot alert, with the gold
 **You received** heading and item name in the game's Friz Quadrata font.
 Only that frame crop enters the runtime payload. The original four proposals
 remain archived; their slot/status lines and collection glow were proposal
-choices and are omitted from the selected view. Already-collected drops never
-enter the selected view.
+choices and are omitted from the selected view. Already-collected drops enter
+only as an enabled positive marks reward, using a marks-only label.
 
 World of Warcraft artwork is copyright Blizzard Entertainment. Cropping,
 tinting, repacking and conversion do not relicense it. DragonUI's notices
@@ -82,10 +82,18 @@ placement subtracts that padding so the visible rim meets the action bar's
 default artwork top. The original crop and its aspect ratio remain unchanged.
 
 The same pinned Dragonflight `AlertFrameSystems.xml` supplies a 0.2-second
-fade-in and a 1.5-second fade-out starting at 4.05 seconds for the normal item
-alert. The addon reproduces those cosmetic timings with ordinary legacy UI
-alpha updates. It does not import the retail animation XML, mixins, sheen,
-sounds, roll controls or item acquisition code.
+fade-in and a 1.5-second fade-out. Its 4.05-second default is replaced by the
+running code: [`AlertFrame_PlayOutroAnimation`](https://github.com/Gethe/wow-ui-source/blob/6b65c2922baca3db5a28fb39b69c95cef1047bec/Interface/AddOns/Blizzard_FrameXML/Mainline/AlertFrames.lua#L835)
+passes the default four-second delay to `AlertFrame_PlayOutAnimation`, giving
+each passive card a 5.5-second total lifetime. The same file's
+[`AlertFrameQueueMixin:AdjustAnchors`](https://github.com/Gethe/wow-ui-source/blob/6b65c2922baca3db5a28fb39b69c95cef1047bec/Interface/AddOns/Blizzard_FrameXML/Mainline/AlertFrames.lua#L243)
+places each card's bottom ten units above the previous card's top, a 106-unit
+step for the 96-unit frame. The addon follows this spacing and timing with its
+existing three-card pool and ordinary legacy alpha updates. Each card retires
+independently; Performance Mode keeps its deadline with instant opacity.
+It does not import retail animation XML, mixins, sheen, sounds, roll controls,
+hover handling or item acquisition code. Source matching does not establish
+in-game pixel or timing parity.
 
 The game-owned `Fonts\\FRIZQT__.TTF` is requested for both the gold caption
 and item name, at sizes 12 and 14 without an outline and with a black shadow.
@@ -94,6 +102,26 @@ The inspected installed game includes `data/fonts/frizqt__.ttf`; its native
 The addon ships no font bytes and falls back to resolved DEFAULT if the native
 font request fails. Its heading and Layout caption use the fourteen-language
 addon catalogs; item names and colors remain received game data.
+
+### Selected marks coin
+
+The user selected **03** from the separate marks-icon comparison:
+[`ICONS/inv_misc_token_pvp02.PNG`](https://github.com/Gethe/wow-ui-textures/blob/d23deaf8f44a7d280dc974a5c9d5321c013db59b/ICONS/inv_misc_token_pvp02.PNG),
+at texture commit `d23deaf8f44a7d280dc974a5c9d5321c013db59b`, identified as
+Shadowlands `9.2.7 (45114)`. This establishes the inspected client dump, not the
+icon's original expansion. Its whole 64-by-64 RGBA image is unchanged, including
+the silver skull coin, blue/red background, border and alpha. Blizzard owns the
+artwork; the mirror supplies no separate artwork license.
+
+`media/tex/loot/Marks.tga` retains the original-resolution preparation input.
+`Marks.blp` wraps the same BGRA8 pixels in the supported Raw3 BLP2 container using
+`scripts/prepare_client_textures.py`'s `blp_from_bgra`; it adds no crop, tint,
+resampling or new mip level. Only the 17,556-byte BLP enters the runtime manifest.
+The existing 50-by-50 icon slot uses it for marks rewards, without an item rarity
+rim. Ordinary items keep their received icons. This is the user's chosen display
+symbol; no native currency ID or icon assignment is inferred. The icon is static
+in normal and Performance Mode. The local comparison/selected-card previews are
+artwork deliverables, not in-game rendering evidence.
 
 ## 03 · Plain addon metal
 

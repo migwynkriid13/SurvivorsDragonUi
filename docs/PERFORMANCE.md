@@ -1468,17 +1468,38 @@ setter writes. World/logout/reload cleanup retains its native restoration.
 Initial Game/Off creates only the existing non-rendering loot root/controller
 frames; three cards and their nine textures/six FontStrings defer until the
 first SDUI readiness request. Failed preparation stays unready without repeated
-allocation. Once built, the original three-card pool, crop, quality rim, icons,
-UVs, geometry and authored fades remain unchanged and reusable. Both non-custom
+allocation. Once built, the original three-card pool, crop, quality rim, icons
+and UVs remain reusable. The card geometry is unchanged; stack spacing and
+fade deadlines now follow the retail running code described below. Both non-custom
 modes actually hide all cards and stop cosmetic animation. Layout hiding remains
 separate: current expiry and bounded metadata retries continue without painting.
 
-Positive item conversions reuse the existing name region, showing the item and
-received marks amount. Only enabled SDUI conversion rewards pass shared
-service/view eligibility; other collected items stop before queue/metadata.
+Positive item conversions reuse the existing name region for a gold marks-only
+label, such as `+0.5 Marks` or `+1 Mark`. Integer and decimal amounts use the
+same shared validation, retaining received text without numeric conversion.
+The converted item's class/metadata work and retries are skipped. The selected
+**03 silver skull coin** reuses the pooled icon region at its existing 50-unit
+size, with no rarity rim. Each marks card draws its background and static icon
+plus two labels: one more visible texture than the text-only marks card, up to
+three additional visible textures, with zero new allocated regions. Successful
+bindings skip repeated native writes; failed bindings retry on an existing
+required refresh, and hidden cards defer binding. The single new 64-by-64 Raw3
+BLP occupies 17,556 bytes on disk (16,384 bytes of pixel data); this is not a live
+GPU-memory or draw-call measurement. The full-resolution TGA is authoring-only.
+Both modes share this static image and normal item reuse restores its own icon
+and rarity rim. Only
+enabled SDUI conversion rewards pass shared service/view eligibility; other
+collected items stop before queue/metadata.
 One latest formatted reward label per card is cached and cleared on language
-change/retirement. No new drawing region, currency artwork, material, event,
-updater, gameplay counter/history or SavedVariable is added. The two normalized
+change/retirement. Custom chat hides the two recognized reward/balance notices
+while SDUI marks popups are active, retaining fallback chat when unavailable or
+disabled. Intake still sees the original message first; the balance line adds
+no card. Cards use retail's 106-unit stack step, 0.2-second fade-in, four-second
+outro delay and 1.5-second fade-out. Each start/expiry remains independent;
+Performance Mode keeps the same 5.5-second deadline with no fade. Hidden cards
+expire without replay. The original three-card pool and its region count remain
+unchanged. The selected coin adds one bound static image asset, with no new
+drawing region, event, updater, gameplay counter/history or SavedVariable. The two normalized
 display choices use the existing profile/draft/reset paths. Source review,
 authored CI-only mocks and pinned formatting do not establish measured draw
 calls, GPU/FPS, native box behavior or in-game font/appearance parity.
@@ -2472,11 +2493,12 @@ semantics and independent loot/banner delivery. Source review and formatting do
 not establish in-game rendering, memory use or an FPS result.
 
 Marks chat formatting runs only during the existing accepted native message
-path. It reuses cached named-field templates, retains original integer text and
+path. It reuses cached named-field templates, retains original integer/decimal text and
 adds no balance getter, currency history, frame, drawing region, asset, event,
 updater or saved state. The collected-item parser supplies a positive reward
-only when that exact suffix matches; chat displays it independently of the popup
-mode. The shared loot service/view guard permits a conversion card only in SDUI
+only when that exact suffix matches. Active SDUI marks popups hide recognized
+conversion/balance lines from custom chat after intake; other modes or unavailable
+popups retain fallback chat. The shared loot service/view guard permits a conversion card only in SDUI
 mode with Show marks rewards on; other collected items stop before queueing and
 icon metadata work.
 Unknown text stays native. Extra compact chat lines use the native message

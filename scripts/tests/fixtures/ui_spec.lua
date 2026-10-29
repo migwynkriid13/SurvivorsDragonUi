@@ -32,12 +32,11 @@ local function Loot(settings, nativeShown)
     local env = context.env
     if nativeShown ~= nil then context.nativeShown = nativeShown end
     env.DFRL.actionBarDefaults = { bottom = 55, height = 36, topInset = 14 }
-    env.DFRL.messages = {
-        ParseLootMessage = function(name)
-            if type(name) == "table" then return name end
-            return { name = name, icon = "Interface\\Icons\\Test", iconSource = "native" }
-        end,
-    }
+    context:Load("core/messages.lua")
+    env.DFRL.messages.ParseLootMessage = function(name)
+        if type(name) == "table" then return name end
+        return { name = name, icon = "Interface\\Icons\\Test", iconSource = "native" }
+    end
     env.SurvivorsDragonUiDisplay = settings
     context:Load("core/display.lua", "Display")
     context:Load("core/hud.lua")
@@ -430,7 +429,7 @@ Test("loot holds skip card traversal until fade or retry and reuse one animation
     context.now = cards[1].started + 4.2
     context:ResetCounts()
     context:Call(animation, "OnUpdate", 3.6)
-    local alpha = (5.55 - (context.now - cards[1].started)) / 1.5
+    local alpha = (5.5 - (context.now - cards[1].started)) / 1.5
     assert(math.abs(cards[1]:GetAlpha() - alpha) < 1e-12, "first fading frame lost its original alpha equation")
     assert(context.writes.SetAlpha == 3, "settled hold failed to wake when fade began")
     context:SetLayoutHidden(true)
@@ -563,7 +562,13 @@ Test("positive collected-item marks reuse the loot card and checkbox off rejects
     for _, object in ipairs(context.objects) do
         if object.entry then card = object end
     end
-    assert(card and card.name:GetText() == "Footpad's Cover → +1 Mark", "conversion reward was not shown")
+    assert(card and card.name:GetText() == "+1 Mark", "conversion reward was not shown")
+    assert(
+        card.icon:IsShown()
+            and card.iconPath == context.env.DFRL:GetInfoOrCons("tex") .. "loot\\Marks.blp"
+            and not card.border:IsShown(),
+        "marks did not replace the converted item's icon with the selected coin"
+    )
     assert(card.entry.collection == "collected", "conversion masqueraded as a new item")
     context.now = context.now + 0.5
     context:Call(animation, "OnUpdate", 0.5)
@@ -577,7 +582,7 @@ Test("positive collected-item marks reuse the loot card and checkbox off rejects
     Deliver(context, service, reward)
     assert(not card.entry and not animation:GetScript("OnUpdate"), "marks off retained or replayed a reward")
     display.FinishEdit(false)
-    for _, marks in ipairs({ "0", "-1", "1.5", "abc" }) do
+    for _, marks in ipairs({ "0", "0.0", "-1", "-0.5", ".5", "1.2.3", "1.", "abc" }) do
         Deliver(context, service, { name = "Duplicate", collection = "collected", marks = marks })
         assert(not card.entry, "invalid marks produced a loot card")
     end
@@ -585,8 +590,45 @@ Test("positive collected-item marks reuse the loot card and checkbox off rejects
     assert(not card.entry, "zero-reward duplicate became a popup")
     reward.marks = "002"
     Deliver(context, service, reward)
-    assert(card.entry and card.name:GetText() == "Footpad's Cover → +002 Marks", "marks amount/plural changed")
+    assert(card.entry and card.name:GetText() == "+002 Marks", "marks amount/plural changed")
     assert(table.getn(context.objects) == allocated, "marks rewards allocated another popup pool")
+end)
+
+Test("marks coins share icon binding retries caches and ordinary-item pool reuse", function()
+    local context, service, animation = Loot({ performanceMode = true })
+    local path = context.env.DFRL:GetInfoOrCons("tex") .. "loot\\Marks.blp"
+    local reward = { name = "Converted item", collection = "collected", marks = "0.5" }
+    context.failTexture = path
+    Deliver(context, service, reward)
+    local card
+    for _, object in ipairs(context.objects) do
+        if object.entry then card = object end
+    end
+    assert(card and not card.icon:IsShown() and not card.iconPath and not card.border:IsShown())
+    local allocated = #context.objects
+    context.failTexture = nil
+    context:NotifyLocale()
+    assert(card.iconPath == path and card.icon:IsShown() and not card.border:IsShown(), "coin binding did not retry")
+    context:ResetCounts()
+    context:NotifyLocale()
+    context:NoPresentationWrites()
+    context:SetLayoutHidden(true)
+    context:ResetCounts()
+    context:NotifyLocale()
+    context:NoPresentationWrites()
+    context.now = card.started + 5.5
+    context:Call(animation, "OnUpdate", 5.5)
+    context:SetLayoutHidden(false)
+    assert(not card.entry and not card.iconPath and not card.icon:IsShown(), "expired coin remained bound")
+    Deliver(context, service, "Ordinary item")
+    assert(
+        card.entry and card.iconPath == "Interface\\Icons\\Test" and card.border:IsShown(),
+        "a reused coin card did not restore the ordinary item icon and rarity rim"
+    )
+    context.env.DFRL.loot.Clear()
+    Deliver(context, service, reward)
+    assert(card.iconPath == path and not card.border:IsShown(), "item-to-marks reuse retained the item icon/rim")
+    assert(#context.objects == allocated, "currency icons allocated replacement views")
 end)
 
 Test("unchanged settled loot writes nothing and a full pool never allocates a fourth card", function()

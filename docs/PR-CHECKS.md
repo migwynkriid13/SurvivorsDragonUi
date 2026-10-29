@@ -355,7 +355,7 @@ The assertions cover:
   allocation/reuse and no unchanged cosmetic writes. The scrolling and plate
   fixtures share explicit native setup; production algorithms are not copied.
 - Native marks messages use exact templates in all fourteen catalogs. Tests
-  preserve item links/colors and original amounts/totals, keep zero-reward
+  preserve item links/colors and original integer/decimal amounts/totals, keep zero-reward
   duplicates hidden, leave conversations/unknown suffixes unchanged and reject
   collected conversions before popup delivery or item metadata reads when marks
   rewards are off. Loot mode tests exercise the production display/service/view:
@@ -363,7 +363,16 @@ The assertions cover:
   resets, native visible/hidden ownership, failed handoff retries and synchronous
   CVar callbacks, later external preferences, no Game/Off intake or idle updater,
   deferred/reused card artwork, positive conversion labels and zero/invalid
-  rewards. No mock proves native box content or live font rendering.
+  rewards. The Hogger `+0.5 marks` regression loads the production parser,
+  service, renderer and chat formatter together. It covers one marks-only card,
+  singular wording, the selected static coin without converted-item metadata
+  or rarity work, chat suppression only
+  while SDUI marks popups are active, no second card from the balance notice,
+  two-card retail spacing and independent fade/expiry in normal and Performance
+  Mode, pooled reuse and hidden retirement. Coin cases also cover failed binding
+  retry on required refresh, unchanged and hidden writes, cleared retired
+  bindings, and item-to-currency reuse without another region. These cases were not run locally.
+  No mock proves native box content or live font rendering.
 - The production meter cycles Party Damage after Boss Damage, reads native
   player totals/rates, binds uniquely matched native unit portraits, and retains
   class metadata across shared Reset deltas. Mocks cover unchanged/hidden/off

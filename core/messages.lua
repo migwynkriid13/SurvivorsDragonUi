@@ -12,20 +12,27 @@ local function StripColors(text)
     return (string.gsub(text, "|r", ""))
 end
 
+local function IsMarkAmount(value)
+    return type(value) == "string" and (string.find(value, "^%d+$") ~= nil or string.find(value, "^%d+%.%d+$") ~= nil)
+end
+
+local function MarkUnit(amount)
+    return (string.find(amount, "^0*1$") or string.find(amount, "^0*1%.0+$")) and "Mark" or "Marks"
+end
+
 local function MarkCounts(text, earned)
     local values = DFRL.locale.Match(earned and "marks.earned" or "marks.gained", text)
     local amount, total
     if values then
         amount, total = values.n, values.total
     elseif earned then
-        local _, _, n, balance = string.find(text, "^You earn (%d+) marks %((%d+) in all%)%.$")
+        local _, _, n, balance = string.find(text, "^You earn ([%d%.]+) marks %(([%d%.]+) in all%)%.$")
         amount, total = n, balance
     else
-        local _, _, n = string.find(text, "^%+(%d+) marks$")
+        local _, _, n = string.find(text, "^%+([%d%.]+) marks$")
         amount = n
     end
-    if type(amount) ~= "string" or not string.find(amount, "^%d+$") then return nil end
-    if earned and (type(total) ~= "string" or not string.find(total, "^%d+$")) then return nil end
+    if not IsMarkAmount(amount) or (earned and not IsMarkAmount(total)) then return nil end
     return amount, total
 end
 
@@ -243,6 +250,8 @@ local function FirstDelivery(frame, text, eventName, author, message, source, su
 end
 
 messages.StripColors = StripColors
+messages.IsMarkAmount = IsMarkAmount
+messages.MarkUnit = MarkUnit
 messages.MarkCounts = MarkCounts
 messages.CaptureFormat = CaptureFormat
 messages.FirstDelivery = FirstDelivery
