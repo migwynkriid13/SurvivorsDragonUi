@@ -4,7 +4,7 @@ SurvivorsDragonUi includes English, Polish, Czech (**Čeština**), German, Brazi
 
 ## Following the game
 
-The default-off **PERFORMANCE MODE** checkbox uses the standard editor caption
+The default-off **Performance Mode** checkbox uses the standard editor caption
 binding and width measurement. Its source row and all fourteen runtime UI entries
 are added together; native catalogs, spell aliases and effect templates are
 unchanged by this setting.
@@ -44,7 +44,7 @@ Language is session-only. No setting, command, profile, SavedVariable, client pr
 runtime UI entries in all fourteen languages. Only these addon captions were
 prepared; native catalogs, effects, spell aliases and their source pins are unchanged.
 
-The meter's **Font size** and its hint remain translated in all fourteen source/runtime UI catalogs. **Show grid**, its hint and the revised Layout drag instructions also have all fourteen translations. The removed meter/tracker width sliders' three captions are absent from both source and runtime UI catalogs. Native catalogs, spell aliases, effects and the older full-catalog fingerprint are unchanged by these editor-caption updates.
+The meter's **Font size** and its hint remain translated in all fourteen source/runtime UI catalogs. **Show grid** and its hint also have all fourteen translations. The removed drag/Shift/corner instruction line is absent from source and runtime catalogs. The removed meter/tracker width sliders' three captions are absent from both source and runtime UI catalogs. Native catalogs, spell aliases, effects and the older full-catalog fingerprint are unchanged by these editor-caption updates.
 
 The custom run-timer and boss-bar enable captions and their native-display
 hints have source TSV and runtime UI entries in all fourteen languages. Only
@@ -66,9 +66,17 @@ them through its existing shared label/description sizing and scrolls the paired
 guidance/mirror rows. Only these new caption entries were generated; reviewed
 native catalogs, effects and aliases remain unchanged.
 
-Coverage includes the four editor tabs and their controls, numeric-layout hints and status, run label, counter and encounter hints, waypoint titles/map-pin hints/distance units, menu buttons, chat scrolling/copy captions, combat-text feedback/miss captions, cooldown unit abbreviations and the frame inspector's explanatory text. Font family names, addon/game names, slash-command tokens, API identifiers, native unit/item/spell names, raw captured messages/events and bootstrap error diagnostics remain verbatim.
+The eight-category editor adds Combat, Encounters, Map & navigation and Interface
+in all fourteen source/runtime UI catalogs. Performance Mode uses sentence case.
+The removed search and empty-result captions are absent from both source and
+runtime UI catalogs. These are addon captions only; native catalogs, effects and
+spell aliases are unchanged. Fixed-width rows wrap translated captions locally;
+active-language native caption widths select one or two lines with a three-unit
+caption/help gap. A long caption does not expand and shrink the entire dialog.
 
-Editor controls measure native glyph widths across all fourteen translations before choosing shared widths. The dialog stays within the available viewport width. Jewelry retains natural-width measurement, its 272-unit wrapping column and the native wrapped-height measurement; no character-count width estimates or UTF-8 byte slicing are introduced. The frame inspector truncates previews only at complete UTF-8 character boundaries. Copy's hint area reserves two lines.
+Coverage includes the editor categories and their controls, numeric-layout hints and status, run label, counter and encounter hints, waypoint titles/map-pin hints/distance units, menu buttons, chat scrolling/copy captions, combat-text feedback/miss captions, cooldown unit abbreviations and the frame inspector's explanatory text. Font family names, addon/game names, slash-command tokens, API identifiers, native unit/item/spell names, raw captured messages/events and bootstrap error diagnostics remain verbatim.
+
+The editor measures translated sidebar and button captions, bounds its content width and fits the dialog to the available viewport. Settings sections scroll; labels and descriptions reserve wrapping space. Jewelry retains natural-width measurement, its 272-unit wrapping column and the native wrapped-height measurement; no character-count width estimates or UTF-8 byte slicing are introduced. The frame inspector truncates previews only at complete UTF-8 character boundaries. Copy's hint area reserves two lines.
 
 Ordinary captions use the game's `DEFAULT` font. When the translated run prefix contains non-ASCII glyphs, run/sample rendering also uses `DEFAULT` for the game's glyph support; the saved font selection is retained. Other run prefixes keep the user's selected face. Returning to a language with an ASCII run prefix reapplies that selection.
 
@@ -211,3 +219,8 @@ targeted preparation helper also serves the prior marks import with its
 original keys/fingerprint. This extraction did not run game or addon code;
 local source review and pinned formatting do not establish live translation
 selection or tooltip rendering.
+
+The moving manager adds HUD Edit Mode, Snap to elements, Grid spacing and Save
+and close in all fourteen source/runtime UI catalogs. Its new preferences stay
+in the existing display table. English/native gameplay text, effect templates,
+spell aliases and native language detection are unchanged.

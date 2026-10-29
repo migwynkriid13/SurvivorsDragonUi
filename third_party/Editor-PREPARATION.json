@@ -1,0 +1,16 @@
+{
+  "source_commit": "e80e3278cc833c89e1f3fc79557b68315d750935",
+  "build": "10.0.0.45454",
+  "source_sha256": {
+    "EditModeUI": "3b03f5057f07720af11e30b15df0b3b8e20908cf94d68e5f19ba4adf9aa69ab5",
+    "EditModeUIVertical": "8838b2a52f67c248cc4c66c1473cff282e7945cfe51804ea94be7061c3509a1a",
+    "EditModeUIHighlightBackground": "8d11095c112419d1ec8f6c2535bf0c1a4bf261fdd37f969929b612821a084826",
+    "EditModeUISelectedBackground": "eda958694dd58535047504a6fb9ccb663b780c25ce7977084d52f0a3e1f52ea6"
+  },
+  "destination": "media/tex/editor/selection.blp",
+  "canvas": [256, 64],
+  "rgba_sha256": "20bc64fb0be851833fe8d4b9bc72efbb3720b070c0953201c4a8daca8283461d",
+  "blp_sha256": "93ade47b1f4bd3d69f19e2e2dd6d43299ff835b7f3054da9d64625188924a7b1",
+  "decoded_pixels_and_tga_match": true,
+  "preparation": "Exact crops and 90-degree corner rotations; no recoloring or resampling."
+}

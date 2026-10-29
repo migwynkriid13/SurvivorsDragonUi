@@ -138,6 +138,7 @@ DFRL:NewMod("Profiles", 1, function()
         page:SetJustifyH("CENTER")
 
         local function Refresh(followSelection)
+            if not parent:IsVisible() then return end
             local names = profiles.List()
             local count = table.getn(names)
             local found
@@ -151,20 +152,25 @@ DFRL:NewMod("Profiles", 1, function()
                 local name = names[offset + index]
                 row.profileName = name
                 if name then
-                    row.label:SetText(name)
+                    T.SetTextIfChanged(row.label, name)
                     row:SetSelected(name == selected)
-                    row:Show()
-                else
+                    if not row:IsShown() then row:Show() end
+                elseif row:IsShown() then
                     row:Hide()
                 end
             end
-            page:SetText(string.format("%d / %d", offset / pageSize + 1, math.max(1, math.ceil(count / pageSize))))
-            previous:SetAlpha(offset > 0 and 1 or 0.45)
-            nextPage:SetAlpha(offset + pageSize < count and 1 or 0.45)
+            T.SetTextIfChanged(
+                page,
+                string.format("%d / %d", offset / pageSize + 1, math.max(1, math.ceil(count / pageSize)))
+            )
+            local previousAlpha, nextAlpha = offset > 0 and 1 or 0.45, offset + pageSize < count and 1 or 0.45
+            if previous:GetAlpha() ~= previousAlpha then previous:SetAlpha(previousAlpha) end
+            if nextPage:GetAlpha() ~= nextAlpha then nextPage:SetAlpha(nextAlpha) end
+            local alpha = selected and 1 or 0.45
             for _, button in ipairs(buttons) do
-                button:SetAlpha(selected and 1 or 0.45)
+                if button:GetAlpha() ~= alpha then button:SetAlpha(alpha) end
             end
-            if count == 0 then status:SetText("No saved profiles.") end
+            if count == 0 then T.SetTextIfChanged(status, "No saved profiles.") end
         end
         local function Result(ok, message, name)
             if ok and name then

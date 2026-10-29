@@ -1,6 +1,7 @@
 // Conservative source contracts. No addon chunks or game APIs execute here.
 const fs = require('node:fs');
 const { parse, walk, member } = require('./lua_inventory.cjs');
+const { upvalueLimits } = require('./lua_upvalues.cjs');
 
 const text = (node) =>
   node?.type === 'StringLiteral' ? Buffer.from(node.value, 'latin1').toString('utf8') : undefined;
@@ -134,7 +135,7 @@ function model(source) {
     }
     return [];
   }
-  return { nodes, tables, bindings, declared, path, strings };
+  return { nodes, tables, bindings, declared, path, strings, upvalueLimits: upvalueLimits(tree) };
 }
 
 function analyze(sources, captions = []) {
@@ -163,6 +164,10 @@ function analyze(sources, captions = []) {
   const namespaces = /^DFRL\.(tools|display|layout|locale|sct)\.[^.]+$/;
 
   for (const [file, data] of Object.entries(models)) {
+    for (const closure of data.upvalueLimits)
+      failures.push(
+        `${file}:${closure.line}: Lua 5.0 closure captures ${closure.count} upvalues (limit 32): ${closure.names.join(', ')}`,
+      );
     for (const node of data.nodes) {
       if (node.type === 'FunctionDeclaration' && node.identifier) {
         functions.add(data.path(node.identifier));

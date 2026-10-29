@@ -75,6 +75,142 @@ leave hundreds of expensive texture regions drawing continuously.
   GPU-memory, pixel-parity or FPS measurements. No local tests, standalone
   validation, addon execution or game launch is authorized for this audit.
 
+## Settings navigation — 2026-10-29
+
+`/sdui` uses the already-bundled plain Dragonflight metal frame, gold choices and
+shared transaction.
+Eight category buttons replace twenty. Related controls share one native
+ScrollFrame rather than thirteen separate option-page ScrollFrames. The editor
+is still prepared only on its first opening and reused. Each section retains
+its original control owner. There is no search input, query state, category
+content title or repeated section title matching the sidebar category.
+See [SETTINGS.md](SETTINGS.md).
+
+Category changes perform bounded work over twenty section records. Settled
+navigation returns before presentation writes. Scroll offsets remain
+session-only. Hidden categories use real ancestor hiding. Compact toggle rows
+measure their active-language caption on opening, category selection and
+language changes; successful unchanged geometry skips writes. Single-line
+captions use 16 units and wrapped captions 28, followed by a three-unit gap and
+32-unit description. Row heights are 64/76, replacing the previous 88. Paired
+columns use their larger row height. Hidden categories defer later remeasurement;
+missing metrics stay retryable. There is no new OnUpdate, event, animation,
+idle worker. The separate retail-moving changes below add their two preferences
+in the existing display table. Normal and Performance Mode share the static editor.
+
+The full settings window enables HUD edit overlays only for Layout. Changing to
+another category finishes active input, actually hides all handle/grip parents,
+grid and snap-guide owner, and suspends their edit-bound sampling. The shared
+draft and pending numeric input remain intact; returning to Layout restores the
+existing pools. `/sdui lock` explicitly enables these overlays. This avoids drawing
+every HUD selection while the user changes Combat, Profiles or other settings.
+
+The coordinate form no longer installs its own OnUpdate. Visible, unfocused,
+clean numeric fields reuse the existing ten-Hz Layout sample. Hidden form
+listeners return before reading geometry. The existing viewport watcher still
+checks client UI scale/size and resolves pending Layout placement while settings
+are closed; it does no settled handle/grid/control painting in that state, and
+returns immediately outside the world. Necessary live geometry tracking remains
+bounded; this is not a claim that every addon controller stops when settings close.
+
+Display/SCT settings listeners defer hidden windows and unselected pages before
+value formatting and drawing. Page Show catches up from current settings through
+the existing listeners. Hidden Profiles also defers listing/sorting and row
+painting until its existing Show callback. Dependency input/alpha and checkbox states skip unchanged
+writes. The font sample checks its page, since its source FontString is deliberately
+hidden behind the rendered parts; hidden categories do no sample font assignment,
+measurement or painting. Visible samples cache face/size/outline/shadow/language,
+retaining scale/readiness checks through the existing clock owner. No new updater
+or gameplay preference is added. Failed native sample font assignments do not
+advance the style cache and remain retryable. Locale binding and transaction cleanup retain
+their necessary event-driven work; no idle settings animation is introduced.
+
+Drawing and allocation are distinct from navigation work. Twelve fewer category
+buttons remove twelve sets of twelve directly authored textures and two frames
+per button. The navigator adds sixteen one-texture subsection dividers/heading
+labels, twenty passive wrappers and one shared scroll child. The four sections
+named identically to their sidebar category allocate no heading or divider.
+Native scrollbar-template regions are not counted in those authored-texture
+figures. Only selected sections are shown; closing hides the editor's complete
+drawing tree. No GPU, FPS, draw-call or live appearance measurement is claimed.
+
+Shared action buttons now use three face textures and one native hover texture,
+plus their existing caption. This replaces eleven textures (inset fill, eight
+border pieces, selected fill and hover) and removes the extra caption frame per
+button. Four textures and one caption belong to one native button. The shared
+512-by-512 `editor/button.blp` keeps exact source RGBA pixels; the retained TGA is
+an authoring input. Gold/grey normal, pressed and disabled states share this one
+sheet. No per-state region pool, idle updater or animation is added.
+
+Face UVs, cap dimensions, highlight locking, caption color and press offset skip
+unchanged writes. Hover/press, native enable/disable calls, selected-choice changes
+and explicit width/height changes are the only refresh sources. Hiding clears
+input/hover state, while subsequent hidden changes defer painting until Show.
+Normal and Performance Mode use the same static artwork. The CI-only editor
+fixture covers press/leave/hide recovery, native disabled values, retained click
+callbacks, selected choices, narrow/resized caps and unchanged/hidden work. It is
+not run locally and establishes no native rendering or FPS result.
+
+The CI-only editor fixture loads the production factory with explicit native
+scrollbar and glyph-width boundaries. It checks category/heading visibility,
+absence of a search input, original section ownership, retained state, scroll
+offsets, reopen, stable allocation, compact/wrapped spacing, metric retry and
+hidden/unchanged work. It was not run locally. The user's supplied screenshots
+showed the former duplicated titles and excessive spacing; the correction has
+not been launched or visually verified in the game.
+
+## Retail-style moving view — 2026-10-29
+
+The `/sdui lock` manager and selected-frame popup are lazy, static pools. They
+share the existing controller, layout geometry, display draft and Confirm/Cancel
+transaction. The same numeric form is reparented between the popup and full
+settings; inputs, validation and pending geometry are not duplicated. Full-editor
+corner/side grips prepare only when that mode first needs them and actually hide
+and stop input in moving mode. Selection, focus, drag completion, mode changes,
+manager close and world/logout/reload cleanup retire their input correctly.
+Normal and Performance Mode use the same non-animated presentation.
+
+Each edit handle now has nine authored selection regions, using real retail
+blue/gold pixels and changed-only state UVs. Selection and snap bounds share a
+16-unit minimum, so the fixed corners do not produce reversed edge spans on a
+thin native strip; this does not resize the native HUD owner. The former outline used a native
+backdrop plus twenty-four corner-mark textures and any side marks. No live
+rendering/driver count is inferred from those source allocations. All handle
+artwork is hidden outside editing. The new selection sheet is 256 by 64, with
+lossless BLP encoding and a retained TGA/preparation receipt. The main/popup
+panels reuse character/Chrome.blp rather than copying another sheet; the unused
+old header asset is removed. Eight simple category rows each use two choice
+textures instead of the former twelve textures and caption frame. The main
+panel has eight border pieces and a fill, with no extra header texture.
+
+The manager adds one panel, two toggles, a native slider and standard action
+buttons. The selected-frame popup adds one panel and close button around the
+existing numeric form. Their eight-piece borders retain native proportions;
+only straight edges stretch. Native scrollbar/slider/backdrop internals and text
+glyphs are not included in authored-region counts. The grid reuses its texture
+pool and rebuilds only for viewport, scale, spacing or mode changes. Moving mode
+supports 8–128 UI-unit spacing, default 32; finer spacing deliberately increases
+visible grid lines while editing. Retired surplus lines hide and remain pooled.
+
+Magnetism runs only on changed drag samples or refreshed target geometry, with
+fresh final-release input. The existing ten-Hz target/bounds sampling is retained;
+active pointer response keeps frame cadence. Candidate/results reuse the drag’s
+bounded target records and one result pool. Two preview lines use one lazy,
+mouse-transparent owner independent of the visible grid, so hiding the grid does
+not suppress frame/screen snapping. Cleanup hides their actual regions. No new
+OnUpdate, event, gameplay read, clock, history, SavedVariable or native preference
+owner is added. `layoutSnapEnabled`/`layoutGridSpacing` use the existing display
+normalizer, preview, Confirm/Cancel, profiles and resets.
+
+CI-only fixtures load production magnetism, selection art and Layout/Display
+against explicit native boundaries. They cover physical capture distances, grid
+independence, corner/axis priority, pool reuse, manager/form focus, one-/ten-unit
+nudging with numeric/native-chat focus ownership, free drag/release snapping, invalid input, Save/Cancel, mode switching,
+retired handles and world cleanup. They were authored but not run locally. The
+static preview and source review do not establish exact live retail parity,
+draw calls, FPS, GPU time or native input behavior. Compatibility boundaries
+and immutable source evidence are in [LAYOUT-HANDLES.md](LAYOUT-HANDLES.md).
+
 ## Target-of-target seams and name placement — 2026-10-29
 
 The compact target-of-target reuses the prepared large health fill for both its
@@ -184,8 +320,8 @@ The checkbox above **Layout** uses normalized default-false `performanceMode`
 in the existing display table. Missing and invalid values and both full resets
 leave it off. Preview, Confirm, Cancel, world/logout/reload discard and profiles
 use the shared display transaction. Individual effect, portrait and cooldown
-choices are retained. The sidebar measures the caption across all fourteen
-source/runtime catalogs and reserves its own row above the category buttons.
+choices are retained. The sidebar bounds translated category widths and reserves a wrapping row for
+this caption above the category buttons.
 
 | Owner                       | While Performance Mode is on                                                                                                                                                                                                                                                                                                                                                     |
 | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

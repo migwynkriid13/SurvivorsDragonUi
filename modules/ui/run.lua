@@ -936,6 +936,8 @@ DFRL:NewMod("RunTimers", 5, function()
 
     local function SetSettingsEnabled(group, enabled)
         if not group or group.enabled == enabled then return end
+        local owner = group.frame or group.controls[1]
+        if not owner or not owner:IsVisible() then return end
         group.enabled = enabled
         if group.frame then group.frame:SetAlpha(enabled and 1 or 0.45) end
         for _, control in ipairs(group.controls) do
@@ -945,67 +947,83 @@ DFRL:NewMod("RunTimers", 5, function()
     end
 
     local function UpdateSctLabels()
-        if not incomingControl or not DFRL.sct then return end
+        if not incomingControl or not incomingControl:IsVisible() or not DFRL.sct then return end
         local mode = DFRL.sct.GetMode()
         for value, button in pairs(sctButtons) do
             button:SetSelected(value == mode)
         end
         if mode == "on" then
             if DFRL.display.Get("sctMSBTStyle") then
-                sctDescription:SetText("Addon damage numbers scroll beside your character.")
+                T.SetTextIfChanged(sctDescription, "Addon damage numbers scroll beside your character.")
             else
-                sctDescription:SetText("Addon damage numbers follow enemies.")
+                T.SetTextIfChanged(sctDescription, "Addon damage numbers follow enemies.")
             end
         elseif mode == "off" then
-            sctDescription:SetText("Custom and native outgoing damage text are off.")
+            T.SetTextIfChanged(sctDescription, "Custom and native outgoing damage text are off.")
         else
-            sctDescription:SetText("Native outgoing text follows Show Target Damage.")
+            T.SetTextIfChanged(sctDescription, "Native outgoing text follows Show Target Damage.")
         end
-        incomingControl:SetChecked(DFRL.sct.GetIncoming())
+        local incoming = DFRL.sct.GetIncoming()
+        if incomingControl.editorChecked ~= incoming then incomingControl:SetChecked(incoming) end
         SetSettingsEnabled(fontEditor and fontEditor.combatSettings, mode == "on")
     end
 
     local function UpdateDisplayLabels()
-        if sctSizeLabel then
-            sctSizeLabel:SetText(tostring(math.floor(DFRL.display.Get("sctScale") * 100 + 0.5)) .. "%")
+        if not fontEditor or not fontEditor:IsVisible() then return end
+        if sctSizeLabel and sctSizeLabel:IsVisible() then
+            T.SetTextIfChanged(sctSizeLabel, tostring(math.floor(DFRL.display.Get("sctScale") * 100 + 0.5)) .. "%")
         end
         if fontEditor and fontEditor.tallyStyleButtons then
-            local selected = DFRL.display.Get("tallyStyle")
-            for id, button in pairs(fontEditor.tallyStyleButtons) do
-                button:SetSelected(id == selected)
+            local _, first = next(fontEditor.tallyStyleButtons)
+            if first and first:IsVisible() then
+                local selected = DFRL.display.Get("tallyStyle")
+                for id, button in pairs(fontEditor.tallyStyleButtons) do
+                    button:SetSelected(id == selected)
+                end
             end
         end
         if fontEditor and fontEditor.displayModes then
             for key, group in pairs(fontEditor.displayModes) do
-                local selected = DFRL.display.Get(key)
-                for id, button in pairs(group.buttons) do
-                    if button.editorSelected ~= (id == selected) then button:SetSelected(id == selected) end
+                if group.description:IsVisible() then
+                    local selected = DFRL.display.Get(key)
+                    for id, button in pairs(group.buttons) do
+                        if button.editorSelected ~= (id == selected) then button:SetSelected(id == selected) end
+                    end
+                    T.SetTextIfChanged(group.description, group.descriptions[selected])
                 end
-                T.SetTextIfChanged(group.description, group.descriptions[selected])
             end
         end
         for key, label in pairs(displayNumbers) do
-            local value = DFRL.display.Get(key)
-            T.SetTextIfChanged(label, label.formatValue and label.formatValue(value) or tostring(value))
+            if label:IsVisible() then
+                local value = DFRL.display.Get(key)
+                T.SetTextIfChanged(label, label.formatValue and label.formatValue(value) or tostring(value))
+            end
         end
         for key, control in pairs(displayControls) do
-            local checked = DFRL.display.Get(key)
-            if control.editorChecked ~= checked then control:SetChecked(checked) end
-            if key == "roundPlayerPortrait" or key == "playerPortrait3D" then
-                local enabled = not DFRL.display.Get("hidePortraits")
-                control:EnableMouse(enabled)
-                control:SetAlpha(enabled and 1 or 0.45)
-            elseif key == "attachJewelry" then
-                local enabled = DFRL.display.Get("equippedJewelry")
-                control:EnableMouse(enabled)
-                control:SetAlpha(enabled and 1 or 0.45)
+            if control:IsVisible() then
+                local checked = DFRL.display.Get(key)
+                if control.editorChecked ~= checked then control:SetChecked(checked) end
+                local enabled
+                if key == "roundPlayerPortrait" or key == "playerPortrait3D" then
+                    enabled = not DFRL.display.Get("hidePortraits")
+                elseif key == "attachJewelry" then
+                    enabled = DFRL.display.Get("equippedJewelry")
+                end
+                if enabled ~= nil and control.editorAvailable ~= enabled then
+                    control:EnableMouse(enabled)
+                    control:SetAlpha(enabled and 1 or 0.45)
+                    control.editorAvailable = enabled
+                end
             end
         end
         for key, group in pairs(dependentSettings) do
-            local enabled = DFRL.display.Get(key)
-            if group.value then enabled = enabled == group.value end
-            SetSettingsEnabled(group, enabled)
-            if not enabled and key == "customRunTimer" and fontMenu and fontMenu:IsShown() then fontMenu:Hide() end
+            local owner = group.frame or group.controls[1]
+            if owner and owner:IsVisible() then
+                local enabled = DFRL.display.Get(key)
+                if group.value then enabled = enabled == group.value end
+                SetSettingsEnabled(group, enabled)
+                if not enabled and key == "customRunTimer" and fontMenu and fontMenu:IsShown() then fontMenu:Hide() end
+            end
         end
     end
 
@@ -1251,23 +1269,56 @@ DFRL:NewMod("RunTimers", 5, function()
         if changed then UpdateRunFontBounds() end
     end
 
+    local function RefreshFontControls()
+        -- The clock source is intentionally hidden; its page owns visibility.
+        if not fontSampleClock or not fontSample:GetParent():IsVisible() then return end
+        T.SetTextIfChanged(fontSample, DFRL.locale.Text("RUN") .. " 02:34 / 20:00")
+        local style = fontSampleClock.editorStyle or {}
+        if
+            style.face ~= currentFont.face
+            or style.size ~= currentFont.size
+            or style.outline ~= currentFont.outline
+            or style.shadow ~= currentFont.shadow
+            or style.language ~= DFRL.locale.code
+        then
+            StyleClockLabel(fontSampleClock, currentFont, true)
+            local defaultFace = T.GetDefaultFont()
+            local function FontReady(label)
+                local face, size, flags = label:GetFont()
+                return (face == currentFont.face or face == defaultFace)
+                    and size == currentFont.size
+                    and (flags or "") == currentFont.outline
+            end
+            local ready = FontReady(fontSampleClock.source) and FontReady(fontSampleClock.ruler)
+            for _, part in ipairs(fontSampleClock.parts) do
+                if not FontReady(part) then ready = false end
+            end
+            if ready then
+                style.face, style.size, style.outline = currentFont.face, currentFont.size, currentFont.outline
+                style.shadow, style.language = currentFont.shadow, DFRL.locale.code
+                fontSampleClock.editorStyle = style
+            end
+        else
+            RefreshClockLabel(fontSampleClock)
+        end
+        for _, entry in ipairs(fontFaces) do
+            if currentFont.face == entry.face then T.SetTextIfChanged(faceLabel, entry.label) end
+            if faceButtons[entry.face] then faceButtons[entry.face]:SetSelected(currentFont.face == entry.face) end
+        end
+        for _, entry in ipairs(fontOutlines) do
+            outlineButtons[entry.value]:SetSelected(currentFont.outline == entry.value)
+        end
+        T.SetTextIfChanged(sizeLabel, tostring(currentFont.size))
+        if shadowControl.editorChecked ~= currentFont.shadow then shadowControl:SetChecked(currentFont.shadow) end
+    end
+
     local function PreviewFont(settings)
         currentFont = FontSettings(settings)
         StyleClockLabel(runClock, currentFont, runClock.visible)
         StyleClockLabel(bossClock, currentFont, bossClock.visible)
         RefreshTimerCaptions()
         UpdateRunFontBounds()
-        if not fontEditor then return end
-        StyleClockLabel(fontSampleClock, currentFont, true)
-        for _, entry in ipairs(fontFaces) do
-            if currentFont.face == entry.face then faceLabel:SetText(entry.label) end
-            if faceButtons[entry.face] then faceButtons[entry.face]:SetSelected(currentFont.face == entry.face) end
-        end
-        for _, entry in ipairs(fontOutlines) do
-            outlineButtons[entry.value]:SetSelected(currentFont.outline == entry.value)
-        end
-        sizeLabel:SetText(tostring(currentFont.size))
-        shadowControl:SetChecked(currentFont.shadow)
+        RefreshFontControls()
     end
 
     DFRL.runFont = {
@@ -1318,7 +1369,9 @@ DFRL:NewMod("RunTimers", 5, function()
         bossClock.option = remaining ~= nil and "bossCountdown" .. mode or nil
         bossClock.remaining = remaining
         RefreshTimerCaptions()
-        if fontEditor and fontEditor:IsShown() then RefreshClockLabel(fontSampleClock) end
+        if fontEditor and fontEditor:IsShown() and fontSample:GetParent():IsVisible() then
+            RefreshClockLabel(fontSampleClock)
+        end
     end
 
     local function FontEditorLabel(parent, text, x, y, size)
@@ -1340,10 +1393,7 @@ DFRL:NewMod("RunTimers", 5, function()
         return button.label, button
     end
 
-    DFRL.locale.Listen(function()
-        if fontSample then fontSample:SetText(DFRL.locale.Text("RUN") .. " 02:34 / 20:00") end
-        PreviewFont(fontDraft or _G.SurvivorsDragonUiRunFont)
-    end)
+    DFRL.locale.Listen(function() PreviewFont(fontDraft or _G.SurvivorsDragonUiRunFont) end)
 
     local function ChangeSize(direction)
         if not fontDraft then return end
@@ -1356,7 +1406,6 @@ DFRL:NewMod("RunTimers", 5, function()
         local screenWidth, screenHeight = T.GetLocalSize(UIParent)
         local scale =
             math.min(1, (screenWidth - 20) / fontEditor:GetWidth(), (screenHeight - 20) / fontEditor:GetHeight())
-        scale = scale * 0.85
         if scale > 0 and not T.NearlyEqual(fontEditor:GetScale(), scale) then fontEditor:SetScale(scale) end
     end
 
@@ -1377,16 +1426,15 @@ DFRL:NewMod("RunTimers", 5, function()
         local measure = FontEditorLabel(UIParent, "", 0, 0)
         measure:Hide()
         local function TextWidth(text) return DFRL.locale.Width(measure, text) end
-        local padding, gap = 20, 8
+        local padding, gap = 24, 16
         local labelWidth = math.max(TextWidth("Font"), TextWidth("Size"), TextWidth("Outline"))
-        local dropdownWidth, sidebarWidth, modeWidth = 0, 148, 0
+        local dropdownWidth, sidebarWidth = 0, 184
         local categories = {
             { key = "layout", label = "Layout" },
             { key = "profiles", label = "Profiles" },
             {
                 key = "units",
                 label = "Unit frames",
-                gapBefore = 8,
                 columns = 2,
                 options = {
                     { "showPlayerName", "Show player name", "Show the name above the player frame." },
@@ -1567,8 +1615,7 @@ DFRL:NewMod("RunTimers", 5, function()
             {
                 key = "tally",
                 label = "Kills, Gold & Caches",
-                columns = 3,
-                rowHeight = 72,
+                columns = 2,
                 stylePicker = true,
                 options = {
                     {
@@ -1650,7 +1697,7 @@ DFRL:NewMod("RunTimers", 5, function()
                     { "customBanners", "Custom banners", "Off: use the game's original banners." },
                 },
             },
-            { key = "combat", label = "Combat text", gapBefore = 8 },
+            { key = "combat", label = "Combat text" },
             { key = "timer", label = "Run timer" },
         }
         local modes = {
@@ -1690,86 +1737,44 @@ DFRL:NewMod("RunTimers", 5, function()
                 },
             },
         }
+        local groups = {
+            { key = "layout", label = "Layout", sections = { "layout" } },
+            { key = "units", label = "Unit frames", sections = { "units", "pets", "auras" } },
+            { key = "combat", label = "Combat", sections = { "combat", "nameplates", "meter" } },
+            { key = "action", label = "Action bar", sections = { "abilities", "jewelry", "tally" } },
+            { key = "encounters", label = "Encounters", sections = { "timer", "bosses", "guardians" } },
+            { key = "map", label = "Map & navigation", sections = { "waypoints", "minimap" } },
+            { key = "interface", label = "Interface", sections = { "chat", "loot", "tooltip", "banners" } },
+            { key = "profiles", label = "Profiles", sections = { "profiles" } },
+        }
+        local byKey, sections = {}, {}
+        for _, category in ipairs(categories) do
+            byKey[category.key] = category
+        end
+        for _, group in ipairs(groups) do
+            sidebarWidth = math.max(sidebarWidth, math.min(232, TextWidth(group.label) + 32))
+            for _, key in ipairs(group.sections) do
+                local section = byKey[key]
+                section.group = group.key
+                table.insert(sections, section)
+            end
+        end
         for _, entry in ipairs(fontFaces) do
             dropdownWidth = math.max(dropdownWidth, TextWidth(entry.label) + 36)
         end
+        sidebarWidth = math.max(sidebarWidth, math.min(232, TextWidth("Performance Mode") + 36))
         local fontListWidth = dropdownWidth
-        for _, entry in ipairs(categories) do
-            sidebarWidth = math.max(sidebarWidth, TextWidth(entry.label) + 32)
-        end
-        sidebarWidth = math.max(sidebarWidth, TextWidth("PERFORMANCE MODE") + 36)
-        for _, entry in ipairs(modes) do
-            modeWidth = math.max(modeWidth, TextWidth(entry.label) + 24)
-        end
-        local filterWidth = math.max(TextWidth("Class-colored damage"), TextWidth("MSBT-style scrolling")) + 36
-        local filterHeadingWidth = 0
-        for _, group in ipairs(combatFilters) do
-            filterHeadingWidth = math.max(filterHeadingWidth, TextWidth(group.label))
-            for _, entry in ipairs(group.entries) do
-                filterWidth = math.max(filterWidth, TextWidth(entry.label) + 36)
-            end
-        end
-        local hudOptionWidth = 0
-        for _, category in ipairs(categories) do
-            local columns = category.stylePicker and 1 or category.columns or 1
-            for _, entry in ipairs(category.options or {}) do
-                local controlsWidth = entry.step and 156 or 36
-                local optionWidth =
-                    math.max(TextWidth(entry[2]) + controlsWidth, TextWidth(entry[3]) / 2 + controlsWidth)
-                hudOptionWidth =
-                    math.max(hudOptionWidth, optionWidth * columns + gap * (columns - 1) + (columns == 1 and 24 or 0))
-            end
-            if category.mode then
-                hudOptionWidth = math.max(hudOptionWidth, TextWidth(category.mode.label) + 24)
-                for _, entry in ipairs(category.mode.values) do
-                    hudOptionWidth = math.max(hudOptionWidth, 3 * (TextWidth(entry[2]) + 24) + gap * 2 + 24)
-                    hudOptionWidth = math.max(hudOptionWidth, TextWidth(entry[3]) / 2 + 24)
-                end
-            end
-        end
-        local outlineWidth = 0
-        for _, entry in ipairs(fontOutlines) do
-            outlineWidth = math.max(outlineWidth, TextWidth(entry.label) + 24)
-        end
-        local tallyStyleWidth = 0
-        for _, entry in ipairs(DFRL.tallyStyles or {}) do
-            tallyStyleWidth = math.max(tallyStyleWidth, TextWidth(entry.label) + 24)
-        end
-        local timerOptionWidth = 0
-        for _, entry in ipairs(timerOptions) do
-            timerOptionWidth = math.max(timerOptionWidth, TextWidth(entry[2]) + 36)
-        end
-        for _, entry in ipairs(timerModes) do
-            timerOptionWidth = math.max(timerOptionWidth, TextWidth(entry.label))
-        end
         local timerSizeWidth = TextWidth("Size") + gap + 104
         local tallyStyleHint = "Styles stay the same when attached or detached."
         local defaultsWidth = TextWidth("Addon defaults") + 24
-        local instructions = "Drag to move. Shift snaps. Corners scale; sides resize."
-        local contentWidth = math.max(
-            modeWidth * 3 + gap * 2,
-            filterWidth * 2 + gap,
-            filterHeadingWidth,
-            hudOptionWidth,
-            timerOptionWidth * 2 + gap,
-            tallyStyleWidth * 2 + gap + 24,
-            TextWidth("Frame style") + 24,
-            TextWidth(tallyStyleHint) / 2 + 24,
-            (TextWidth("SCT size") + gap + 136) * 2 + gap,
-            labelWidth + gap + dropdownWidth,
-            labelWidth + gap + outlineWidth * 3 + gap * 2,
-            defaultsWidth * 2 + 140 + gap * 4,
-            DFRL.profiles.MinimumWidth(TextWidth),
-            TextWidth(instructions),
-            TextWidth("Enable custom run timer") + 36,
-            TextWidth("Attach affixes to run timer") * 2 + gap + 72,
-            TextWidth("Off: use the game's original timer.") / 2 + 36
-        )
-        local contentLeft = padding + sidebarWidth + 24
-        local width = contentLeft + contentWidth + padding
+        -- A long translation must wrap locally instead of expanding the entire
+        -- dialog and shrinking every caption to fit the screen.
+        local contentWidth = 660
+        local contentLeft = padding + sidebarWidth + 28
+        local width = contentLeft + contentWidth + 24 + padding
         dropdownWidth = contentWidth - labelWidth - gap - gap * 3 - timerSizeWidth
 
-        fontEditor = T.CreateEditorPanel(UIParent, width, 596)
+        fontEditor = T.CreateEditorPanel(UIParent, width, 704)
         fontEditor:SetFrameStrata("TOOLTIP")
         fontEditor:SetFrameLevel(150)
         PlaceFontEditor()
@@ -1782,7 +1787,10 @@ DFRL:NewMod("RunTimers", 5, function()
             fontEditor:StartMoving()
         end)
         fontEditor:SetScript("OnDragStop", FinishFontEditorDrag)
-        fontEditor:SetScript("OnShow", FitFontEditor)
+        fontEditor:SetScript("OnShow", function()
+            FitFontEditor()
+            if fontEditor.RefreshOptionLayout then fontEditor.RefreshOptionLayout() end
+        end)
         local titleText = "SurvivorsDragonUi"
         if type(GetAddOnMetadata) == "function" then
             local ok, version = pcall(GetAddOnMetadata, "SurvivorsDragonUi", "Version")
@@ -1793,14 +1801,9 @@ DFRL:NewMod("RunTimers", 5, function()
         end
         local title = FontEditorLabel(fontEditor, titleText, 0, 0, 17)
         title:ClearAllPoints()
-        title:SetPoint("TOP", fontEditor, "TOP", 0, -18)
+        title:SetPoint("TOP", fontEditor, "TOP", 0, -5)
         title:SetTextColor(1, 0.84, 0.48)
-        local hint = FontEditorLabel(fontEditor, instructions, 0, 0, 10)
-        hint:ClearAllPoints()
-        hint:SetPoint("TOP", fontEditor, "TOP", 0, -49)
-        hint:SetTextColor(0.75, 0.73, 0.67)
-
-        local sidebarTop, footerTop, sidebarInset, categoryGap = 68, 532, 4, 4
+        local sidebarTop, footerTop, sidebarInset = 56, 640, 4
         local sidebar = CreateFrame("Frame", nil, fontEditor)
         sidebar:SetPoint("TOPLEFT", fontEditor, "TOPLEFT", padding - 6, -sidebarTop)
         sidebar:SetWidth(sidebarWidth + 12)
@@ -1816,56 +1819,35 @@ DFRL:NewMod("RunTimers", 5, function()
         separator:SetWidth(1)
         separator:SetPoint("TOPLEFT", fontEditor, "TOPLEFT", contentLeft - 12, -sidebarTop)
         separator:SetPoint("BOTTOMLEFT", fontEditor, "TOPLEFT", contentLeft - 12, -footerTop)
-        local pages, categoryButtons = {}, {}
-        local function SelectPage(key)
-            if fontMenu then fontMenu:Hide() end
-            for pageKey, page in pairs(pages) do
-                if pageKey == key then
-                    page:Show()
-                else
-                    page:Hide()
-                end
-                categoryButtons[pageKey]:SetSelected(pageKey == key)
-            end
-        end
+        local navigation = T.CreateEditorNavigator(fontEditor, sidebar, groups, sections, {
+            width = contentWidth + 24,
+            left = contentLeft,
+            top = sidebarTop,
+            height = footerTop - sidebarTop - 8,
+            sidebarWidth = sidebarWidth,
+            onNavigate = function(key)
+                DFRL.layout.SetHandlesVisible(key == "layout")
+                if fontMenu and fontMenu:IsShown() then fontMenu:Hide() end
+                if fontEditor.RefreshOptionLayout then fontEditor.RefreshOptionLayout() end
+            end,
+        })
+        fontEditor.navigation = navigation
+        local pages = navigation.pages
+        local function SelectPage(key) navigation.Select(byKey[key] and byKey[key].group or key) end
         local modeSize = (contentWidth - gap * 2) / 3
         local performance = T.CreateEditorToggle(
             sidebar,
-            "PERFORMANCE MODE",
+            "Performance Mode",
             nil,
             sidebarWidth,
             function(value) DFRL.display.Set("performanceMode", value) end
         )
         performance:SetHeight(36)
         performance:SetPoint("TOPLEFT", sidebar, "TOPLEFT", 6, -sidebarInset)
+        performance.label:ClearAllPoints()
         performance.label:SetPoint("TOPLEFT", performance, "TOPLEFT", 32, -10)
+        performance.label:SetHeight(28)
         displayControls.performanceMode = performance
-        local sidebarY, categoryGaps = -sidebarInset - 40, 0
-        for _, entry in ipairs(categories) do
-            categoryGaps = categoryGaps + (entry.gapBefore or 0)
-        end
-        local categoryPitch = math.min(
-            42,
-            (sidebar:GetHeight() - sidebarInset * 2 - 40 - categoryGaps + categoryGap) / table.getn(categories)
-        )
-        for _, entry in ipairs(categories) do
-            local key = entry.key
-            local page = CreateFrame("Frame", nil, fontEditor)
-            page:SetPoint("TOPLEFT", fontEditor, "TOPLEFT", contentLeft, -130)
-            page:SetWidth(contentWidth)
-            page:SetHeight(396)
-            page:SetFrameLevel(152)
-            pages[key] = page
-            local button = T.CreateEditorCategory(sidebar, entry.label, sidebarWidth, categoryPitch - categoryGap)
-            sidebarY = sidebarY - (entry.gapBefore or 0)
-            button:SetPoint("TOPLEFT", sidebar, "TOPLEFT", 6, sidebarY)
-            sidebarY = sidebarY - categoryPitch
-            button:SetScript("OnClick", function() SelectPage(key) end)
-            categoryButtons[key] = button
-        end
-        local divider = T.EditorDivider(fontEditor, contentWidth)
-        divider:SetPoint("TOPLEFT", fontEditor, "TOPLEFT", contentLeft, -116)
-
         DFRL.layout.CreateControls(pages.layout, contentWidth, function() SelectPage("layout") end)
         DFRL.profiles.CreateControls(pages.profiles, contentWidth)
 
@@ -1887,19 +1869,20 @@ DFRL:NewMod("RunTimers", 5, function()
             control:SetWidth(width)
             control:SetHeight(height)
             local label = FontEditorLabel(control, entry[2], 0, -7, 12)
-            label:SetWidth(width - 156)
-            label:SetHeight(16)
+            label:SetWidth(width)
+            label:SetHeight(28)
             label:SetJustifyH("LEFT")
-            local description = FontEditorLabel(control, entry[3], 0, -24, 10)
+            label:SetJustifyV("TOP")
+            local description = FontEditorLabel(control, entry[3], 0, -38, 10)
             description:SetTextColor(0.59, 0.59, 0.56)
             description:SetWidth(width - 156)
-            description:SetHeight(28)
+            description:SetHeight(40)
             description:SetJustifyH("LEFT")
             description:SetJustifyV("TOP")
             for _, direction in ipairs({ -1, 1 }) do
                 local step = direction * entry.step
                 local button = T.CreateEditorButton(control, direction < 0 and "-" or "+", 28, 28)
-                button:SetPoint("TOPRIGHT", control, "TOPRIGHT", direction < 0 and -108 or 0, -8)
+                button:SetPoint("TOPRIGHT", control, "TOPRIGHT", direction < 0 and -108 or 0, -36)
                 button:SetScript("OnClick", function()
                     local value = DFRL.display.Get(entry[1]) + step
                     if entry[1] == "meterDpsWindow" and value < 0 then return end
@@ -1908,7 +1891,7 @@ DFRL:NewMod("RunTimers", 5, function()
             end
             local value = FontEditorLabel(control, "", 0, 0, 12)
             value:ClearAllPoints()
-            value:SetPoint("CENTER", control, "TOPRIGHT", -68, -22)
+            value:SetPoint("CENTER", control, "TOPRIGHT", -68, -50)
             value:SetWidth(64)
             value:SetHeight(16)
             value:SetJustifyH("CENTER")
@@ -1916,6 +1899,7 @@ DFRL:NewMod("RunTimers", 5, function()
             displayNumbers[entry[1]] = value
             return control
         end
+        local optionLayouts = {}
         local function CreateOptionsPage(category)
             local page = pages[category.key]
             local dependents
@@ -1923,58 +1907,53 @@ DFRL:NewMod("RunTimers", 5, function()
                 dependents = { controls = {}, value = category.masterValue }
                 dependentSettings[category.master] = dependents
             end
-            local columns, rowHeight = category.columns or 1, category.rowHeight or 60
-            local modeHeight = category.mode and 112 or 0
+            local columns = category.stylePicker and 2 or category.columns or 1
+            local rowHeight = 88
+            local modeHeight = category.mode and 124 or 0
             local rowWidth = (contentWidth - gap * (columns - 1)) / columns
-            local content, scroll, ScrollOptions = page, nil, nil
-            if not category.columns then
-                local scrollName = "SurvivorsDragonUi" .. category.key .. "OptionsScroll"
-                scroll = CreateFrame("ScrollFrame", scrollName, page, "UIPanelScrollFrameTemplate")
-                scroll:SetPoint("TOPLEFT", page, "TOPLEFT", 0, 0)
-                scroll:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -24, 0)
-                rowWidth = contentWidth - 24
-                content = CreateFrame("Frame", nil, scroll)
-                content:SetWidth(rowWidth)
-                content:SetHeight(modeHeight + table.getn(category.options) * rowHeight)
-                scroll:SetScrollChild(content)
-                ScrollOptions = function(direction)
-                    local slider = _G[scrollName .. "ScrollBar"]
-                    if not slider then return end
-                    local low, high = slider:GetMinMaxValues()
-                    local value = slider:GetValue() - (direction or arg1 or 0) * rowHeight
-                    slider:SetValue(math.max(low, math.min(high, value)))
-                end
-                scroll:EnableMouseWheel(true)
-                scroll:SetScript("OnMouseWheel", ScrollOptions)
-            end
-            for index, entry in ipairs(category.options) do
-                local x = math.mod(index - 1, columns) * (rowWidth + gap)
-                local y = -modeHeight - math.floor((index - 1) / columns) * rowHeight
+            local content = page
+            local ScrollOptions = navigation.Scroll
+            local controls = {}
+            for _, entry in ipairs(category.options) do
+                local span = entry.step and columns or 1
+                local controlWidth = span == columns and contentWidth or rowWidth
                 local control
                 if entry.step then
-                    control = DisplayNumber(content, entry, rowWidth, rowHeight)
+                    control = DisplayNumber(content, entry, controlWidth, rowHeight)
                 else
-                    control = DisplayToggle(content, entry[1], entry[2], entry[3], y, rowWidth)
-                    control:SetHeight(rowHeight)
-                    control.description:SetHeight(28)
-                    control.description:SetJustifyV("TOP")
-                    if category.stylePicker then
-                        control.label:ClearAllPoints()
-                        control.label:SetPoint("TOPLEFT", control, "TOPLEFT", 32, -3)
-                        control.label:SetHeight(28)
-                        control.label:SetJustifyV("MIDDLE")
-                        control.description:ClearAllPoints()
-                        control.description:SetPoint("TOPLEFT", control, "TOPLEFT", 32, -32)
-                        control.description:SetHeight(36)
+                    control = DisplayToggle(content, entry[1], entry[2], entry[3], 0, controlWidth)
+                end
+                table.insert(controls, { frame = control, span = span, numeric = entry.step ~= nil })
+                if dependents and entry[1] ~= category.master then table.insert(dependents.controls, control) end
+                control:EnableMouseWheel(true)
+                control:SetScript("OnMouseWheel", ScrollOptions)
+            end
+            local optionsHeight = 0
+            local function LayoutOptions()
+                local top, column, height = modeHeight, 0, 0
+                for _, record in ipairs(controls) do
+                    local control, span = record.frame, record.span
+                    if span == columns and column > 0 then
+                        top, column, height = top + height, 0, 0
+                    end
+                    local itemHeight = record.numeric and rowHeight or T.CompactEditorToggle(control)
+                    local x, y = column * (rowWidth + gap), -top
+                    if record.x ~= x or record.y ~= y then
+                        control:ClearAllPoints()
+                        control:SetPoint("TOPLEFT", content, "TOPLEFT", x, y)
+                        record.x, record.y = x, y
+                    end
+                    height = math.max(height, itemHeight)
+                    column = column + span
+                    if column >= columns then
+                        top, column, height = top + height, 0, 0
                     end
                 end
-                control:SetPoint("TOPLEFT", content, "TOPLEFT", x, y)
-                if dependents and entry[1] ~= category.master then table.insert(dependents.controls, control) end
-                if ScrollOptions then
-                    control:EnableMouseWheel(true)
-                    control:SetScript("OnMouseWheel", ScrollOptions)
-                end
+                optionsHeight = top + height
+                if not category.stylePicker and page:GetHeight() ~= optionsHeight then page:SetHeight(optionsHeight) end
             end
+            LayoutOptions()
+            table.insert(optionLayouts, { group = category.group, arrange = LayoutOptions })
             if category.mode then
                 local mode = category.mode
                 local heading = FontEditorLabel(content, mode.label, 0, -4, 12)
@@ -1997,42 +1976,67 @@ DFRL:NewMod("RunTimers", 5, function()
                 group.description:SetTextColor(0.59, 0.59, 0.56)
             end
             if category.stylePicker then
-                local top = math.ceil(table.getn(category.options) / columns) * rowHeight + 8
                 local stylePageWidth = content:GetWidth()
-                local heading = FontEditorLabel(content, "Frame style", 0, -top, 12)
+                local heading = FontEditorLabel(content, "Frame style", 0, 0, 12)
                 heading:SetTextColor(0.94, 0.79, 0.47)
-                local description = FontEditorLabel(content, tallyStyleHint, 0, -top - 22, 10)
+                local description = FontEditorLabel(content, tallyStyleHint, 0, 0, 10)
                 description:SetWidth(stylePageWidth)
                 description:SetHeight(28)
                 description:SetJustifyH("LEFT")
                 description:SetJustifyV("TOP")
                 description:SetTextColor(0.59, 0.59, 0.56)
                 local styleWidth, pitch = (stylePageWidth - gap) / 2, 36
+                local styleButtons = {}
                 fontEditor.tallyStyleButtons = {}
-                for index, entry in ipairs(DFRL.tallyStyles or {}) do
+                for _, entry in ipairs(DFRL.tallyStyles or {}) do
                     local id = entry.id
                     local button = T.CreateEditorButton(content, entry.label, styleWidth, 30)
-                    button:SetPoint(
-                        "TOPLEFT",
-                        content,
-                        "TOPLEFT",
-                        math.mod(index - 1, 2) * (styleWidth + gap),
-                        -top - 58 - math.floor((index - 1) / 2) * pitch
-                    )
                     button:SetScript("OnClick", function() DFRL.display.Set("tallyStyle", id) end)
-                    if ScrollOptions then
-                        button:EnableMouseWheel(true)
-                        button:SetScript("OnMouseWheel", ScrollOptions)
-                    end
+                    button:EnableMouseWheel(true)
+                    button:SetScript("OnMouseWheel", ScrollOptions)
+                    table.insert(styleButtons, button)
                     fontEditor.tallyStyleButtons[id] = button
                 end
-                content:SetHeight(top + 58 + math.ceil(table.getn(DFRL.tallyStyles or {}) / 2) * pitch)
+                local styleTop
+                local function LayoutStyles()
+                    local top = optionsHeight + 8
+                    if styleTop ~= top then
+                        heading:ClearAllPoints()
+                        heading:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -top)
+                        description:ClearAllPoints()
+                        description:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -top - 22)
+                        for index, button in ipairs(styleButtons) do
+                            button:ClearAllPoints()
+                            button:SetPoint(
+                                "TOPLEFT",
+                                content,
+                                "TOPLEFT",
+                                math.mod(index - 1, 2) * (styleWidth + gap),
+                                -top - 58 - math.floor((index - 1) / 2) * pitch
+                            )
+                        end
+                        styleTop = top
+                    end
+                    local height = top + 58 + math.ceil(table.getn(styleButtons) / 2) * pitch
+                    if page:GetHeight() ~= height then page:SetHeight(height) end
+                end
+                LayoutStyles()
+                table.insert(optionLayouts, { group = category.group, arrange = LayoutStyles })
             end
-            if scroll and scroll.UpdateScrollChildRect then scroll:UpdateScrollChildRect() end
         end
         for _, category in ipairs(categories) do
             if category.options then CreateOptionsPage(category) end
         end
+
+        local function RefreshOptionLayout()
+            if not fontEditor:IsShown() then return end
+            for _, record in ipairs(optionLayouts) do
+                if record.group == navigation.selected then record.arrange() end
+            end
+            navigation.Refresh(true)
+        end
+        DFRL.locale.Listen(RefreshOptionLayout)
+        fontEditor.RefreshOptionLayout = RefreshOptionLayout
 
         local combat = pages.combat
         local heading = FontEditorLabel(combat, "Outgoing damage", 0, 0, 12)
@@ -2059,7 +2063,7 @@ DFRL:NewMod("RunTimers", 5, function()
         local combatSettings = { frame = combat, controls = {} }
         fontEditor.combatSettings = combatSettings
         combat.editorSettingsGroup = combatSettings
-        divider = T.EditorDivider(combat, contentWidth)
+        local divider = T.EditorDivider(combat, contentWidth)
         divider:SetPoint("TOPLEFT", combat, "TOPLEFT", 0, -104)
         local combatToggleWidth = (contentWidth - gap) / 2
         incomingControl = T.CreateEditorToggle(
@@ -2255,7 +2259,13 @@ DFRL:NewMod("RunTimers", 5, function()
         cancel:SetPoint("RIGHT", footer, "RIGHT", 0, 0)
         cancel:SetScript("OnClick", function() DFRL.layout.CancelEdit() end)
         DFRL.layout.SetConfirmAnchor(footer)
-        SelectPage("layout")
+        -- Source listeners defer hidden pages; native Show catches up once.
+        for _, page in pairs(pages) do
+            HookScript(page, "OnShow", UpdateDisplayLabels)
+        end
+        HookScript(pages.combat, "OnShow", UpdateSctLabels)
+        HookScript(pages.timer, "OnShow", RefreshFontControls)
+        navigation.Select("layout")
         UpdateDisplayLabels()
         if DFRL.sct then DFRL.sct.Listen(UpdateSctLabels) end
         UpdateSctLabels()
@@ -2278,12 +2288,14 @@ DFRL:NewMod("RunTimers", 5, function()
         end
     end
 
-    DFRL.layout.SetEditorVisibilityHandler(function(shown)
+    DFRL.layout.SetEditorVisibilityHandler(function(shown, page)
         if shown then
             if not fontEditor then CreateFontEditor() end
             PreviewFont(fontDraft)
             UpdateSctLabels()
+            DFRL.layout.SetHandlesVisible(fontEditor.navigation.selected == "layout")
             fontEditor:Show()
+            if page then fontEditor.navigation.Select(page) end
         elseif fontEditor then
             fontEditor:Hide()
         end

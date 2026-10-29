@@ -18,6 +18,7 @@ core\tooltips.lua
 core\editor.lua
 core\tally.lua
 core\display.lua
+core\layout_snap.lua
 core\layout.lua
 core\profiles.lua
 core\fstack.lua

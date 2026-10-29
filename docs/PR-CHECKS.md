@@ -27,6 +27,11 @@ branch protection by itself.
   remain visible in the report; removing a member is allowed. A changed group
   cannot silently add another copy.
 - A failing checker regression fixture or one of the existing artwork/root checks.
+- A runtime Lua closure capturing more than the client's 32-upvalue limit.
+  The source check follows lexical bindings, including captures carried through
+  intermediate closures. Lua 5.1 lifecycle mocks alone cannot detect this Lua 5.0
+  load failure. Mode switching and presentation use separate Layout helpers so
+  the editor entry function stays below the limit.
 - Duplicate literal table keys or module/Layout registrations, a display key missing
   from normalization, a normalization row reading the wrong key, an unknown literal
   display key, or an unknown method in the shared tools/display/Layout/locale/SCT APIs.
@@ -67,6 +72,33 @@ cooldown declarations and constants by their exact byte ranges; a missing or
 ambiguous declaration fails preparation.
 
 The assertions cover:
+
+- Editor navigation loads `core/editor.lua` against explicit native scroll and
+  glyph-width boundaries. It covers grouped visibility, original section owners,
+  retained section state, per-category offsets, duplicate-heading suppression,
+  absence of search inputs, close/reopen, compact/wrapped caption spacing,
+  missing-metric retry, stable allocations and hidden/unchanged work without an
+  idle updater. The shared button cases cover pressed/released/leave/hide recovery,
+  native 1/0 disabled values, click callback ownership, selected highlight locking,
+  narrow/resized caps and deferred hidden writes. The fixture is CI-only and was
+  not run locally; it does not render the dialog.
+
+- Settings visibility mocks exercise the production Display/SCT/font-control
+  listeners with explicit native ancestor visibility and font boundaries. Closed
+  windows and unselected categories perform no settings reads, formatting or font
+  work, then catch up from current values on Show. Repeated visible updates skip
+  unchanged writes. Layout fixtures also cover actually hidden overlays on other
+  categories, retained pending input and removal of the numeric form's separate
+  polling callback. These are CI-only and do not measure native rendering or FPS.
+
+- Retail-moving fixtures load the production magnetism/selection factories and
+  real Layout/Display owners against explicit native scroll, geometry, keyboard,
+  focus and slider boundaries. They cover eight-physical-pixel capture, corner
+  priority, grid-independent screen/frame magnets, reused state, free pointer
+  movement until release, one-/ten-unit nudging, shared-form/native-chat focus and validation,
+  Save/Cancel, mode switching, resize-grip hiding and world cleanup. The full
+  editor’s older grip/lazy-preparation cases remain separate. These are CI-only
+  and were not run locally; no retail C API or game client is loaded.
 
 - Compact target-of-target mocks load the production Mini and loss controllers
   with explicit native boundaries. They cover name containment, stable health

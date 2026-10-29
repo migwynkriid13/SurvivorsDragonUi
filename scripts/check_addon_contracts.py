@@ -59,7 +59,8 @@ def main():
             f"Dynamic references for review: {len(current['dynamic'])}.\n\n"
             "All candidates and source references are in addon-contracts.json. New orphan candidates "
             "fail against the PR merge base; existing candidates remain visible. Duplicate table/registration "
-            "keys, settings/normalization mismatches, unknown shared APIs and broken concrete callbacks fail outright. "
+            "keys, Lua 5.0 closures exceeding 32 upvalues, settings/normalization mismatches, unknown shared APIs "
+            "and broken concrete callbacks fail outright. "
             "Dynamic expressions are conservative source evidence, not execution-path or native-API proof.\n\n"
         )
     except (OSError, ValueError, KeyError, subprocess.CalledProcessError) as error:

@@ -1,10 +1,56 @@
 # Layout handles and alignment grid
 
-`/sdui lock` enters the existing layout editing session with move/resize handles and the same shared Confirm button, centered in the middle of UIParent. It does not create or show the settings dialog on first use. Clicking a handle does not open it either. The button retains the editor's normal artwork, dimensions and confirmation action.
+`/sdui lock` opens a compact, draggable **HUD Edit Mode** manager with Show grid,
+Grid spacing, Snap to elements, Profiles, Cancel and Save and close. It uses the
+actual Blizzard plain metal frame already bundled for the character window.
+The former standalone centered Confirm button now shares the manager footer.
+Blue retail selections become gold on selection. Clicking opens a small frame
+popup with the existing numeric Layout form; text inputs and draft state are
+shared with the full editor. Numeric sizing replaces corner/edge grips in moving
+mode. The full `/sdui` editor retains those grips and the shared Confirm footer.
 
-`/sdui` shows the full editor within the same session. Switching either way retains staged geometry and display, timer and combat-text drafts. Entering handles-only mode discards unapplied numeric text, while keeping geometry already staged with Apply or pointer editing. Confirm saves the session and hides the handles. World leave, logout and reload retain the existing draft-discard behavior; neither command adds a saved mode or window position.
+Both commands enter the same draft transaction. Profiles returns to the full
+profile page. A pending invalid numeric value keeps Save and close open, while
+Cancel and world/logout/reload cleanup discard through the existing owner.
+The popup/form, manager and native input handlers are pooled; leaving the mode
+closes their input and stops any active window drag. No saved window position or
+new SavedVariable is introduced. Existing Layout records remain absolute.
 
-Both modes show a screen-wide alignment grid behind the HUD and editing controls by default. **Show grid** in `/sdui` → **Layout** turns it off immediately, including subdivisions and gold guides; Shift alignment still works. `layoutShowGrid` is a normalized boolean in the existing display table, default true for missing/invalid values and both full resets, using shared preview, Confirm, Cancel/discard and profiles. Squares are 32 UI units apart, measured outward from the exact screen center, with stronger lines every four squares. The horizontal and vertical center axes are gold and two physical pixels thick; other lines are one physical pixel thick. During Shift-drag, faint eight-unit subdivisions appear and the frame's edges and center can align with the grid, nearby edit outlines or matching screen edges/center. Two thin gold lines show the active horizontal and vertical alignments. Releasing Shift restores free movement and hides the guides and subdivisions. The grid overlay remains mouse-transparent.
+### Dragonflight movement reference
+
+The behavior reference is [Dragonflight 10.2.7 EditModeSystemTemplates.lua](https://github.com/Gethe/wow-ui-source/blob/6b65c2922baca3db5a28fb39b69c95cef1047bec/Interface/AddOns/Blizzard_EditMode/Mainline/EditModeSystemTemplates.lua)
+(selection, arrow keys, `OnDragStop`) and
+[EditModeUtil.lua](https://github.com/Gethe/wow-ui-source/blob/6b65c2922baca3db5a28fb39b69c95cef1047bec/Interface/AddOns/Blizzard_EditMode/Mainline/EditModeUtil.lua)
+(`GetMagneticFrameInfos`, physical capture range and corner priority).
+[DragonUI’s editor panel](https://github.com/NeticSoul/DragonUI/blob/6cfcd75a2e5762637322fd495cd4302b203b77df/DragonUI/core/editor_panel.lua)
+provides the verified manager/selected-frame-popup arrangement; its custom green
+tint is not used. This is an independent implementation using SDUI’s native
+ownership and transaction, not an imported retail framework.
+
+Moving mode previews magnetism while the pointer remains free, then takes a fresh
+release sample before applying it. The eight-pixel capture range is converted by
+UIParent’s effective scale. Frame magnets consider adjacent edges with overlapping
+perpendicular spans and their nearest non-diagonally-opposed corners. Corner
+priority wins; otherwise one closest frame axis wins, while screen/grid magnets
+may settle both axes. There is no old twelve-unit latch during retail movement.
+Grid hiding suppresses only grid lines/magnets, preserving screen/frame snapping
+and preview lines. The preview’s pooled owner is separate from the hidden grid.
+
+`layoutSnapEnabled` and `layoutGridSpacing` live in the existing display table,
+with defaults true/32 and spacing normalized to 8–128 whole UI units. This is
+SDUI’s supported spacing range, not a claim about retail’s C-side constants.
+The standard display preview, Confirm/Save and close, Cancel, profiles and full
+resets apply. Arrow nudging is one UI unit, or ten with Shift, and yields to a
+focused numeric input. Edit Mode does not launch or read additional game APIs.
+
+SDUI does not persist retail’s frame-to-frame docking links or per-spec layouts.
+The destination keeps absolute geometry, its existing profile page and only its
+own registered HUD groups. These are explicit compatibility boundaries; the
+source review and static artwork do not establish exact live retail parity.
+
+### Full-editor alignment
+
+Both modes support a screen-wide alignment grid behind the HUD and editing controls by default. **Show grid** in `/sdui` → **Layout** turns it off immediately, including subdivisions and gold guides; Shift alignment still works. `layoutShowGrid` is a normalized boolean in the existing display table, default true for missing/invalid values and both full resets, using shared preview, Confirm, Cancel/discard and profiles. Squares are 32 UI units apart, measured outward from the exact screen center, with stronger lines every four squares. The horizontal and vertical center axes are gold and two physical pixels thick; other lines are one physical pixel thick. In the full editor, during Shift-drag, faint eight-unit subdivisions appear and the frame's edges and center can align with the grid, nearby edit outlines or matching screen edges/center. Two thin gold lines show the active horizontal and vertical alignments. Releasing Shift restores free movement and hides the guides and subdivisions. The grid overlay remains mouse-transparent.
 
 Body dragging uses the original cursor-to-frame offset in UIParent units. Changed pointer/modifier samples derive the owner position from that original sample. Snapping measures the actual edit `region`, including inherited scale and its offset from the owner, then reuses that shape between refreshes. This keeps alignment tied to the compact Level Up panel, extended action artwork and other visible edit bounds. Snapping never changes another group's geometry. Corner resizing and numeric input retain their existing behavior. Width and row handles use the same drag lifecycle described below.
 
@@ -61,6 +107,6 @@ Shift-drag caches the screen, visible source shape and eligible target bounds in
 
 `core/layout.lua` lazily creates the grid from pooled native `WHITE8X8` textures. It uses `GetLocalSize(UIParent)` for rendered extents and effective UI scale for line thickness. While editing, viewport/scale changes or entering/leaving Shift-drag rebuild grid geometry; surplus lines hide and later sessions reuse the pool. The shared close path hides it immediately on Confirm, Cancel, either reset, world leave, logout or reload discard. Invalid numeric input keeps the existing session and its grid open. Switching between `/sdui` and `/sdui lock` keeps the same centered grid. The grid switch uses the existing display preference table; it adds no asset, SavedVariable or layout entry.
 
-`core/layout.lua` owns the session, mode, handles and Confirm button. The settings dialog registers one visibility callback; run-font editing still owns its existing previews and saving. This separates showing the dialog from beginning its drafts without another confirmation control or parallel layout store. A closed session clears the handles-only mode, so ordinary `/sdui` continues to open the full editor.
+`core/layout.lua` owns the session, mode, handles and Confirm button. The settings dialog registers one visibility callback; run-font editing still owns its existing previews and saving. The moving manager and full dialog share one confirmation control and no parallel layout store. A closed session clears the handles-only mode, so ordinary `/sdui` continues to open the full editor.
 
 The performance follow-up was formatted locally with pinned StyLua 2.6.0 and Prettier 3.9.10. Source/diff inspection covered idle and active paths, current modifier capture on release, target retirement, numeric input and shared Confirm/Cancel/profile/world/reset behavior. Local tests, standalone syntax/validation checks and addon/game execution were not run; runtime input, appearance and FPS impact remain unverified. GitHub Actions was not awaited.
