@@ -2799,7 +2799,11 @@ DFRL:NewMod("RunTimers", 5, function()
     local rowOrder = {}
     local spareRows = {}
     local createdRows = 0
-    local nativeParts = {}
+    local nativeParts = {
+        clock = T.NewHudOwner("clock"),
+        bosses = T.NewHudOwner("bosses"),
+        tally = T.NewHudOwner("tally"),
+    }
     local inWorld = true
     local pollAge = 0
     local refreshRows = true
@@ -2824,46 +2828,8 @@ DFRL:NewMod("RunTimers", 5, function()
     local scheduleCache = _G.SurvivorsDragonUiBossSchedule
     _G.SurvivorsDragonUiBossSchedule = nil
 
-    local function Shown(value)
-        if value == true or value == 1 or value == "1" then return true end
-        if value == false or value == 0 or value == "0" then return false end
-        return nil
-    end
-    local function WriteNative(part, shown)
-        if render.applyingNative or type(AZS_SetHudShown) ~= "function" then return false end
-        render.applyingNative = true
-        local ok = pcall(AZS_SetHudShown, part, shown)
-        render.applyingNative = false
-        return ok
-    end
-
-    local function TakeOver(part)
-        if type(AZS_SetHudShown) ~= "function" or type(AZS_IsHudShown) ~= "function" then return false end
-        local ok, value = pcall(AZS_IsHudShown, part)
-        if not ok then return false end
-        local shown = Shown(value)
-        if shown == nil then return false end
-        if not nativeParts[part] then nativeParts[part] = { shown = shown } end
-        if shown then
-            ok = WriteNative(part, false)
-            if not ok then return false end
-            local checked, now = pcall(AZS_IsHudShown, part)
-            return checked and Shown(now) == false
-        end
-        return true
-    end
-
-    local function Restore(part)
-        local original = nativeParts[part]
-        if not original or type(AZS_IsHudShown) ~= "function" then return end
-        local ok, shown = pcall(AZS_IsHudShown, part)
-        if not ok or Shown(shown) == nil then return end
-        if Shown(shown) ~= original.shown then
-            if not WriteNative(part, original.shown) then return end
-            ok, shown = pcall(AZS_IsHudShown, part)
-        end
-        if ok and Shown(shown) == original.shown then nativeParts[part] = nil end
-    end
+    local function TakeOver(part) return nativeParts[part].Acquire() end
+    local function Restore(part) return nativeParts[part].Release(true) end
 
     local function ClearTally()
         render.tallyCountersAt = nil
@@ -3073,7 +3039,7 @@ DFRL:NewMod("RunTimers", 5, function()
             if not clock then
                 -- Explicit opt-out turns the matching native setting back on,
                 -- including when it was hidden before this Lua session.
-                nativeParts.clock = { shown = true }
+                nativeParts.clock.SetRestorePreference(true)
                 scheduleCache = nil
                 ReleaseClock()
             end
@@ -3082,7 +3048,7 @@ DFRL:NewMod("RunTimers", 5, function()
         if render.customBosses ~= bosses then
             render.customBosses = bosses
             if not bosses then
-                nativeParts.bosses = { shown = true }
+                nativeParts.bosses.SetRestorePreference(true)
                 ClearRows()
                 Restore("bosses")
             end
@@ -4071,16 +4037,19 @@ DFRL:NewMod("RunTimers", 5, function()
         if event == "PLAYER_ENTERING_WORLD" then
             inWorld = true
             -- Native preferences can be reloaded independently of addon drafts.
-            if not render.customClock then nativeParts.clock = { shown = true } end
-            if not render.customBosses then nativeParts.bosses = { shown = true } end
+            if not render.customClock then nativeParts.clock.SetRestorePreference(true) end
+            if not render.customBosses then nativeParts.bosses.SetRestorePreference(true) end
             refreshRows = true
         elseif event == "CVAR_UPDATE" then
-            if render.applyingNative or type(arg1) ~= "string" then return end
+            if type(arg1) ~= "string" then return end
+            for _, owner in pairs(nativeParts) do
+                if owner.IsApplying() then return end
+            end
             local name = string.lower(arg1)
             if name == "hudclock" and not render.customClock then
-                nativeParts.clock = { shown = true }
+                nativeParts.clock.SetRestorePreference(true)
             elseif name == "hudbosses" and not render.customBosses then
-                nativeParts.bosses = { shown = true }
+                nativeParts.bosses.SetRestorePreference(true)
             else
                 return
             end

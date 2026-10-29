@@ -7,6 +7,50 @@ const text = (node) =>
 const key = (field) =>
   field.type === 'TableKeyString' ? field.key.name : (text(field.key) ?? field.key?.value);
 
+// Recognize the complete, unfiltered copy from the authoritative defaults.
+// Other loop shapes remain unproven and cannot satisfy normalization coverage.
+function copiesDisplayDefaults(node) {
+  if (node.body.length !== 3 || node.parameters.length !== 1) return false;
+  const [allocation, loop, result] = node.body;
+  const source = node.parameters[0].name;
+  if (
+    allocation.type !== 'LocalStatement' ||
+    allocation.variables.length !== 1 ||
+    allocation.init.length !== 1 ||
+    allocation.init[0].type !== 'TableConstructorExpression' ||
+    allocation.init[0].fields.length !== 0 ||
+    loop.type !== 'ForGenericStatement' ||
+    loop.variables.length !== 1 ||
+    loop.iterators.length !== 1 ||
+    loop.iterators[0].type !== 'CallExpression' ||
+    loop.iterators[0].base.name !== 'pairs' ||
+    loop.iterators[0].arguments.length !== 1 ||
+    loop.iterators[0].arguments[0].name !== 'defaults' ||
+    loop.body.length !== 1 ||
+    result.type !== 'ReturnStatement' ||
+    result.arguments.length !== 1 ||
+    result.arguments[0].name !== allocation.variables[0].name
+  )
+    return false;
+  const assignment = loop.body[0];
+  const variable = loop.variables[0].name;
+  const target = assignment.variables?.[0];
+  const read = assignment.init?.[0];
+  return (
+    assignment.type === 'AssignmentStatement' &&
+    assignment.variables.length === 1 &&
+    assignment.init.length === 1 &&
+    target.type === 'IndexExpression' &&
+    target.base.name === allocation.variables[0].name &&
+    target.index.name === variable &&
+    read.type === 'CallExpression' &&
+    read.base.name === 'Read' &&
+    read.arguments.length === 2 &&
+    read.arguments[0].name === source &&
+    read.arguments[1].name === variable
+  );
+}
+
 function model(source) {
   const tree = parse(source);
   const nodes = [];
@@ -150,6 +194,9 @@ function analyze(sources, captions = []) {
         node.identifier?.name === 'Normalize' &&
         file === 'core/display.lua'
       ) {
+        if (copiesDisplayDefaults(node)) {
+          for (const name of settings) normalized.add(name);
+        }
         walk(node, (child) => {
           if (child.type === 'TableKeyString') {
             normalized.add(key(child));

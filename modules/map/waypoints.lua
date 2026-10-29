@@ -86,17 +86,12 @@ DFRL:NewMod("Waypoints", 3, function()
         local PIN_SIZE = 20
         local outdoorDiameter = { 14, 12, 10, 8, 6, 4 }
         local indoorDiameter = { 300, 240, 180, 120, 80, 50 }
-        local originalFlag
+        local nativeFlag = T.NewHudOwner("flag")
         local hoveredPin, hoveredName
         local mode, modeDirty, probing, reloading = nil, true, false, false
         local pendingZoom, RollbackZoom
         for _, tracker in ipairs(trackers) do
             tracker.minimapPins, tracker.minimapPool, tracker.minimapCycle = {}, {}, 0
-        end
-
-        local function Shown(value)
-            if value == true or value == 1 or value == "1" then return true end
-            if value == false or value == 0 or value == "0" then return false end
         end
 
         local function HideGuardianTooltip(pin)
@@ -176,12 +171,6 @@ DFRL:NewMod("Waypoints", 3, function()
             if not GameTooltip:IsVisible() then GameTooltip:Show() end
         end
 
-        local function FlagShown()
-            if type(_G.AZS_IsHudShown) ~= "function" then return end
-            local ok, value = pcall(_G.AZS_IsHudShown, "flag")
-            if ok then return Shown(value) end
-        end
-
         local function HideGuardianTimer(pin)
             if not pin.timer then return end
             if pin.timer:IsShown() then pin.timer:Hide() end
@@ -255,22 +244,8 @@ DFRL:NewMod("Waypoints", 3, function()
             if pendingZoom and (pendingZoom.retry or retryZoom) and not probing then RollbackZoom() end
         end
 
-        local function RestoreNativeFlag()
-            if originalFlag == nil or type(_G.AZS_SetHudShown) ~= "function" then return end
-            local ok = pcall(_G.AZS_SetHudShown, "flag", originalFlag)
-            if ok and FlagShown() == originalFlag then originalFlag = nil end
-        end
-
-        local function HideNativeFlag()
-            if type(_G.AZS_SetHudShown) ~= "function" then return false end
-            local shown = FlagShown()
-            if shown == nil then return false end
-            if originalFlag == nil then originalFlag = shown end
-            if not shown then return true end
-            local ok = pcall(_G.AZS_SetHudShown, "flag", false)
-            if not ok then return false end
-            return FlagShown() == false
-        end
+        local function RestoreNativeFlag() return nativeFlag.Release(true) end
+        local function HideNativeFlag() return nativeFlag.Acquire() end
 
         DirtyMinimapScale = function()
             if probing then return end

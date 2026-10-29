@@ -314,6 +314,14 @@ assert(#context.objects == allocated and guardian.health:IsVisible(), "normal mo
 print("PASS names-only transitions hide actual regions and reuse lazily allocated bars")
 
 local entries = Entries()
+entries[2].id = entries[1].id
+context:Publish(entries)
+assert(not guardian.name:IsVisible() and not boss.name:IsVisible(), "duplicate IDs leaked a partial roster")
+context:Publish(Entries())
+assert(guardian.name:IsVisible() and boss.name:IsVisible(), "valid receipt did not recover after duplicate IDs")
+print("PASS nameplates share target roster rejection and recover on a valid publication")
+
+entries = Entries()
 entries[3] = { id = 12, kind = "elite", name = "Hogger", hp = 80e12, hpm = 80e12 }
 context:Publish(entries)
 assert(not guardian.name:IsVisible(), "ambiguous capped elite signature exposed a guardian name")

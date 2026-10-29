@@ -46,6 +46,42 @@ function DFRL.tools.IndexUnitMaximum(maxima, maximum, value)
     end
 end
 
+local function EncounterNumber(value) return type(value) == "number" and value >= 0 and value - value == 0 end
+
+-- Check the cheap publication envelope before reusing an unchanged roster.
+function DFRL.tools.EncounterRosterSize(source, stamp)
+    if type(source) ~= "table" or not EncounterNumber(stamp) then return end
+    local count = table.getn(source)
+    if count <= 40 then return count end
+end
+
+-- Consumers retain their own receipt gates, indexes and kind representations.
+function DFRL.tools.ValidateEncounterEntries(source, seen)
+    for id in pairs(seen) do
+        seen[id] = nil
+    end
+    for _, entry in ipairs(source) do
+        if
+            type(entry) ~= "table"
+            or (entry.kind ~= "final" and entry.kind ~= "boss" and entry.kind ~= "guardian" and entry.kind ~= "elite")
+            or not EncounterNumber(entry.id)
+            or entry.id <= 0
+            or entry.id ~= math.floor(entry.id)
+            or seen[entry.id]
+            or type(entry.name) ~= "string"
+            or entry.name == ""
+            or not EncounterNumber(entry.hp)
+            or not EncounterNumber(entry.hpm)
+            or entry.hpm <= 0
+            or entry.hp > entry.hpm
+        then
+            return false
+        end
+        seen[entry.id] = true
+    end
+    return true
+end
+
 function DFRL.tools.SetTextIfChanged(label, text)
     local language = DFRL.locale
     local binding = language and language.labels[label]

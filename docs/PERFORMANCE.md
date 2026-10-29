@@ -5,6 +5,15 @@ retaining native data, pause-aware timing, saved preferences and artwork.
 It adds no gameplay clock or native client dependency. Display choices use the
 existing saved display table; the optional minimap clock below defaults off.
 
+Pet and meter image textures share `T.NewCircularIcon` for native circular
+binding and the lazy physical-pixel strip fallback. Each view keeps its original
+icon/rim dimensions, strip-density minimum, metadata and hidden lifecycle. This
+consolidation adds no frame, region, asset or updater; successful bindings remain
+cached and failed fallback texture assignments remain retryable. Shared HUD
+ownership and encounter validation likewise retain the existing controller
+cadences and separate receipt/retirement gates. Performance Mode and normal-mode
+presentation keep the same behavior.
+
 ## Mandatory rule for all drawing and assets
 
 Drawing performance is a project requirement for every frame and artwork change,

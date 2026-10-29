@@ -28,11 +28,15 @@ def main():
             "COOLDOWN_INTERVAL", "COOLDOWN_ZERO", "COOLDOWN_FINAL_WINDOW", "COOLDOWN_UNITS",
             "FormatCooldown", "UpdateCooldownNumber", "CreateCooldownNumbers",
         ])
+        run_hud = "local render, refreshRows, scheduleCache = {}, false, nil\n" + extract_source("modules/ui/run.lua", [
+            "nativeParts", "TakeOver", "Restore", "SyncReplacements",
+        ])
+        run_hud = run_hud.rsplit("\nreturn ", 1)[0] + "\nreturn { TakeOver = TakeOver, Restore = Restore, Sync = SyncReplacements }\n"
         guardian_hover = "local hoveredPin, hoveredName\n" + extract_source("modules/map/waypoints.lua", [
             "PIN_SIZE", "Number", "HideGuardianTooltip", "UpdateGuardianTooltip",
         ])
         guardian_timers = "local hoveredPin, hoveredName\n" + extract_source("modules/map/waypoints.lua", [
-            "PIN_SIZE", "Number", "Native", "MinimapEntries", "Shown", "HideGuardianTooltip",
+            "PIN_SIZE", "Number", "Native", "MinimapEntries", "HideGuardianTooltip",
             "HideGuardianTimer", "UpdateGuardianTimer", "RecyclePins", "MakeMinimapPin", "PlacePin",
             "Offset", "DrawTrackedPin", "UpdateTrackerPins",
         ])
@@ -103,6 +107,7 @@ def main():
         aura_duration_source = Path(folder) / "aura-duration-source.lua"
         aura_duration_source.write_text(aura_duration, encoding="utf-8")
         for name, source, fixture in (
+            ("run-hud-source.lua", run_hud, "ui_shared_rules_spec.lua"),
             ("cooldown-source.lua", cooldown, "ui_spec.lua"),
             ("guardian-hover-source.lua", guardian_hover, "ui_guardian_hover_spec.lua"),
             ("guardian-timers-source.lua", guardian_timers, "ui_guardian_timer_spec.lua"),

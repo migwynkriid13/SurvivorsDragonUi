@@ -148,6 +148,7 @@ local function Meter()
     }
     context:Load("core/hud.lua")
     context:Load("core/meter_rates.lua")
+    context:Load("core/widgets.lua")
     context:Load("modules/ui/meter.lua", "DamageMeter")
     context.controller = context:Controller("CHAT_MSG_ADDON")
     context.root = env.DFRL_DamageMeter

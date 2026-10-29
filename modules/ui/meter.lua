@@ -166,19 +166,9 @@ DFRL:NewMod("DamageMeter", 7, function()
         if texture:SetTexture(path .. "meter\\" .. name .. ".blp") == false then ready = false end
         return texture
     end
-    local function ClearIconParts(row)
-        for _, strip in ipairs(row.iconParts) do
-            if strip.boundTexture then strip:SetTexture(nil) end
-            strip.boundTexture = nil
-            if strip:IsShown() then strip:Hide() end
-        end
-    end
     local function ClearIcon(row)
-        if row.iconPath or row.iconNative then row.icon:SetTexture(nil) end
-        if row.icon:IsShown() then row.icon:Hide() end
+        row.circularIcon.Clear()
         if row.rim:IsShown() then row.rim:Hide() end
-        ClearIconParts(row)
-        row.iconPath, row.iconNative, row.nativeFailedIcon = nil, nil, nil
         row.partyUnit, row.partyName, row.partySource, row.partyTexture = nil, nil, nil, nil
     end
     local function BindIcon(row, icon)
@@ -186,89 +176,7 @@ DFRL:NewMod("DamageMeter", 7, function()
             ClearIcon(row)
             return false
         end
-        if row.iconPath == icon and row.iconNative then return true end
-        local scale = row:GetEffectiveScale()
-        if type(scale) ~= "number" or scale - scale ~= 0 or scale <= 0 then
-            ClearIcon(row)
-            return false
-        end
-        if row.iconPath == icon and T.NearlyEqual(row.iconScale, scale) then return true end
-        local stem = string.gsub(icon, "%.[^%.]*$", "")
-        if row.nativeFailedIcon ~= icon and type(_G.SetPortraitToTexture) == "function" then
-            local ok = pcall(_G.SetPortraitToTexture, row.icon:GetName(), icon)
-            local assigned = row.icon:GetTexture()
-            if ok and (assigned == icon or assigned == stem) then
-                ClearIconParts(row)
-                if not row.icon:IsShown() then row.icon:Show() end
-                row.iconPath, row.iconNative, row.nativeFailedIcon = icon, true, nil
-                return true
-            end
-            row.nativeFailedIcon = icon
-        end
-        row.icon:SetTexture(nil)
-        if row.icon:IsShown() then row.icon:Hide() end
-        row.iconPath, row.iconNative = nil, nil
-        if not T.NearlyEqual(row.iconScale, scale) then
-            -- Match the pet fallback's circular boundary at physical-pixel steps.
-            local radius = ICON_SIZE / 2
-            local parts = math.max(4, math.ceil(ICON_SIZE * scale))
-            local step, used = ICON_SIZE / parts, 0
-            for part = 1, parts do
-                local top, bottom = (part - 1) * step, part * step
-                local edge = math.max(math.abs(top - radius), math.abs(bottom - radius))
-                local half = math.sqrt(math.max(0, radius * radius - edge * edge))
-                if half > 0 then
-                    used = used + 1
-                    local strip = row.iconParts[used]
-                    if not strip then
-                        strip = row:CreateTexture(nil, "ARTWORK")
-                        strip:Hide()
-                        table.insert(row.iconParts, strip)
-                    end
-                    strip:ClearAllPoints()
-                    strip:SetPoint("TOPLEFT", row, "LEFT", radius - half, radius - top)
-                    strip:SetWidth(half * 2)
-                    strip:SetHeight(step)
-                    strip:SetTexCoord(
-                        (radius - half) / ICON_SIZE,
-                        (radius + half) / ICON_SIZE,
-                        top / ICON_SIZE,
-                        bottom / ICON_SIZE
-                    )
-                end
-            end
-            row.iconUsed, row.iconScale = used, scale
-        end
-        local usable = true
-        for index, strip in ipairs(row.iconParts) do
-            if index <= row.iconUsed then
-                if strip.boundTexture ~= icon then
-                    strip.boundTexture = nil
-                    local loaded = strip:SetTexture(icon)
-                    local assigned = strip:GetTexture()
-                    if loaded ~= false and (loaded == true or loaded == 1 or assigned == icon or assigned == stem) then
-                        strip.boundTexture = icon
-                    else
-                        strip:SetTexture(nil)
-                    end
-                end
-                if not strip.boundTexture then usable = false end
-            else
-                if strip.boundTexture then strip:SetTexture(nil) end
-                strip.boundTexture = nil
-                if strip:IsShown() then strip:Hide() end
-            end
-        end
-        for index = 1, row.iconUsed do
-            local strip = row.iconParts[index]
-            if usable then
-                if not strip:IsShown() then strip:Show() end
-            elseif strip:IsShown() then
-                strip:Hide()
-            end
-        end
-        if usable then row.iconPath = icon end
-        return usable
+        return row.circularIcon.Bind(icon)
     end
     local function ClearPartyUnits()
         for _, candidate in ipairs(partyUnits) do
@@ -327,7 +235,7 @@ DFRL:NewMod("DamageMeter", 7, function()
                 local ok, result = pcall(_G.SetPortraitTexture, row.icon:GetName(), match.unit)
                 local texture = row.icon:GetTexture()
                 if ok and result ~= false and texture then
-                    row.iconNative, row.partyTexture = true, texture
+                    row.partyTexture = texture
                     if not row.icon:IsShown() then row.icon:Show() end
                     return true
                 end
@@ -533,12 +441,12 @@ DFRL:NewMod("DamageMeter", 7, function()
         row.value:SetHeight(fontSize + 5)
         row.layoutIcons, row.valueColumns = true, 3
         row.layoutFontSize = fontSize
-        row.iconParts = {}
         row.icon = row:CreateTexture("SurvivorsDragonUiMeterIcon" .. index, "ARTWORK")
         row.icon:SetPoint("LEFT", row, "LEFT", 0, 0)
         row.icon:SetWidth(ICON_SIZE)
         row.icon:SetHeight(ICON_SIZE)
         row.icon:Hide()
+        row.circularIcon = T.NewCircularIcon(row.icon, ICON_SIZE, 4)
         row.rim = row:CreateTexture(nil, "OVERLAY")
         if row.rim:SetTexture(path .. "jewelry\\Frame.blp") == false then ready = false end
         row.rim:SetTexCoord(576 / 1024, 648 / 1024, 56 / 256, 128 / 256)

@@ -99,6 +99,7 @@ local function Pets()
         end
         return labels[1]:GetText(), labels[2]:GetText(), count:GetText()
     end
+    context:Load("core/widgets.lua")
     context:Load("modules/unit/pets.lua", "PetFrames")
     context.controller = context:Controller("CHAT_MSG_ADDON")
     return context

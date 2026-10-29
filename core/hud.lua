@@ -20,6 +20,11 @@ function DFRL.tools.NewHudOwner(part, cvar)
         return ok
     end
     function owner.IsCaptured() return preference ~= nil end
+    function owner.IsApplying() return applying == true end
+    -- Explicit opt-outs can request a native preference before deferred cleanup.
+    function owner.SetRestorePreference(shown)
+        if type(shown) == "boolean" then preference = shown end
+    end
     function owner.Acquire(visible)
         visible = visible == true
         if type(AZS_SetHudShown) ~= "function" then return false end
@@ -33,19 +38,22 @@ function DFRL.tools.NewHudOwner(part, cvar)
         applied, previous = visible, nil
         return true
     end
-    function owner.Release()
+    function owner.Release(restoreOriginal)
         if preference == nil then return true end
         local current = owner.Read()
         if current == nil then return false end
-        -- Restore only our owned state, including an unfinished mode handoff.
-        if (current == applied or current == previous) and current ~= preference then
+        -- Ordinary releases restore owned state, including unfinished handoffs.
+        -- Legacy replacements explicitly restore their captured original choice.
+        if (restoreOriginal or current == applied or current == previous) and current ~= preference then
             if not Write(preference) or owner.Read() ~= preference then return false end
         end
         preference, applied, previous = nil, nil, nil
         return true
     end
     function owner.Observe(name)
-        if applying or type(name) ~= "string" or string.lower(name) ~= string.lower(cvar) then return false end
+        if applying or not cvar or type(name) ~= "string" or string.lower(name) ~= string.lower(cvar) then
+            return false
+        end
         if preference ~= nil then
             local shown = owner.Read()
             if shown ~= nil then preference = shown end

@@ -1,5 +1,117 @@
 setfenv(1, DFRL:GetEnv())
 
+-- One native-circle compatibility path for pet and meter image textures.
+-- The caller retains its portrait geometry, rim, metadata and visibility policy.
+function DFRL.tools.NewCircularIcon(portrait, size, minimumParts)
+    local image, strips = {}, {}
+    local parent, radius = portrait:GetParent(), size / 2
+    local iconPath, native, failedIcon, scale, used
+    local function ClearStrips()
+        for _, strip in ipairs(strips) do
+            if strip.boundTexture then strip:SetTexture(nil) end
+            strip.boundTexture = nil
+            if strip:IsShown() then strip:Hide() end
+        end
+    end
+    local function ClearPortrait()
+        if portrait:GetTexture() then portrait:SetTexture(nil) end
+        if portrait:IsShown() then portrait:Hide() end
+        native = false
+    end
+    function image.Clear()
+        ClearPortrait()
+        ClearStrips()
+        iconPath, failedIcon = nil, nil
+    end
+    local function BindPortrait(icon)
+        _G.SetPortraitToTexture(portrait:GetName(), icon)
+        local assigned = portrait:GetTexture()
+        return assigned == icon or assigned == string.gsub(icon, "%.[^%.]*$", "")
+    end
+    function image.Bind(icon, effectiveScale)
+        if not icon then
+            image.Clear()
+            return false
+        end
+        if native and iconPath == icon then return true end
+        effectiveScale = effectiveScale or parent:GetEffectiveScale()
+        if type(effectiveScale) ~= "number" or effectiveScale - effectiveScale ~= 0 or effectiveScale <= 0 then
+            image.Clear()
+            return false
+        end
+        if iconPath == icon and T.NearlyEqual(scale, effectiveScale) then return true end
+        if failedIcon ~= icon and type(_G.SetPortraitToTexture) == "function" then
+            local ok, bound = pcall(BindPortrait, icon)
+            if ok and bound then
+                ClearStrips()
+                if not portrait:IsShown() then portrait:Show() end
+                iconPath, native, failedIcon = icon, true, nil
+                return true
+            end
+            failedIcon = icon
+        end
+        ClearPortrait()
+        iconPath = nil
+        if not T.NearlyEqual(scale, effectiveScale) then
+            local parts = math.max(minimumParts or 2, math.ceil(size * effectiveScale))
+            local step = size / parts
+            used = 0
+            for part = 1, parts do
+                local top, bottom = (part - 1) * step, part * step
+                local edge = math.max(math.abs(top - radius), math.abs(bottom - radius))
+                local half = math.sqrt(math.max(0, radius * radius - edge * edge))
+                if half > 0 then
+                    used = used + 1
+                    local strip = strips[used]
+                    if not strip then
+                        strip = parent:CreateTexture(nil, "ARTWORK")
+                        strip:Hide()
+                        strips[used] = strip
+                    end
+                    strip:ClearAllPoints()
+                    strip:SetPoint("TOPLEFT", portrait, "TOPLEFT", radius - half, -top)
+                    strip:SetWidth(half * 2)
+                    strip:SetHeight(step)
+                    strip:SetTexCoord((radius - half) / size, (radius + half) / size, top / size, bottom / size)
+                end
+            end
+            scale = effectiveScale
+        end
+        local usable = true
+        local stem = string.gsub(icon, "%.[^%.]*$", "")
+        for index, strip in ipairs(strips) do
+            if index <= used then
+                if strip.boundTexture ~= icon then
+                    strip.boundTexture = nil
+                    local loaded = strip:SetTexture(icon)
+                    local assigned = strip:GetTexture()
+                    if loaded ~= false and (loaded == true or loaded == 1 or assigned == icon or assigned == stem) then
+                        strip.boundTexture = icon
+                    else
+                        strip:SetTexture(nil)
+                    end
+                end
+                if not strip.boundTexture then usable = false end
+            else
+                if strip.boundTexture then strip:SetTexture(nil) end
+                strip.boundTexture = nil
+                if strip:IsShown() then strip:Hide() end
+            end
+        end
+        for index = 1, used do
+            local strip = strips[index]
+            if usable then
+                if not strip:IsShown() then strip:Show() end
+            elseif strip:IsShown() then
+                strip:Hide()
+            end
+        end
+        if usable then iconPath = icon end
+        return usable
+    end
+    return image
+end
+
 function DFRL.tools.StyleMinimapZoomButton(button, name)
     local path = DFRL:GetInfoOrCons("tex") .. "minimap\\" .. name
     button:SetAlpha(1)

@@ -59,6 +59,15 @@ ambiguous declaration fails preparation.
 
 The assertions cover:
 
+- Shared-rule mocks exercise restoration readback/retry, deferred native opt-out,
+  synchronous HUD callbacks and visibility encodings; shared encounter validation
+  rejects duplicate IDs before either cosmetic index is built. Circular-image
+  cases cover native path verification, failed-binding memoization, retryable
+  pooled strips at both existing icon sizes, unchanged writes and cleanup.
+  Display copies retain false values, range/enum normalization, legacy fallbacks
+  and draft isolation. Source contracts accept the complete defaults-driven
+  normalization loop and reject filtered, mis-keyed or wrong-source copies.
+
 - Projection/metadata cases exercise production navigation cache boundaries and
   resolver preparation: successful same-pass reuse, exact coordinate identity,
   accepted-roster retirement, map/getter changes, failed projection recovery,

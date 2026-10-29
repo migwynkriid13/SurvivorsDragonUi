@@ -49,6 +49,26 @@ class SourceContractTests(unittest.TestCase):
         self.assertTrue(any("unknown setting typo" in row for row in result["failures"]))
         self.assertTrue(any("unknown shared API DFRL.tools.MisspelledHelper" in row for row in result["failures"]))
 
+    def test_defaults_driven_normalization_requires_a_complete_matching_copy(self):
+        original = 'local function Normalize(source) return { enabled = Read(source, "enabled") } end'
+        copy = '''local function Normalize(source)
+    local result = {}
+    for key in pairs(defaults) do result[key] = Read(source, key) end
+    return result
+end'''
+        display = DISPLAY.replace(original, copy)
+        self.assertEqual(self.scan('DFRL.display.Get("enabled")', display=display)["failures"], [])
+        for broken in (
+            copy.replace('pairs(defaults)', 'pairs(source)'),
+            copy.replace('Read(source, key)', 'Read(source, "retired")'),
+            copy.replace('result[key] =', 'result.other ='),
+            copy.replace('return result', 'return {}'),
+            copy.replace('result[key] = Read(source, key)', 'if source[key] then result[key] = Read(source, key) end'),
+        ):
+            with self.subTest(broken=broken):
+                result = self.scan('', display=DISPLAY.replace(original, broken))
+                self.assertTrue(any("missing from Normalize" in row for row in result["failures"]))
+
     def test_duplicate_modules_and_undefined_callbacks_fail(self):
         result = self.scan('''
 DFRL:NewMod("Example", 1, function() end)
