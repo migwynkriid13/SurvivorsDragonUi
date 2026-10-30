@@ -88,6 +88,10 @@ do
     env.DFRL.mainBar = env.CreateFrame("Frame", "PerformanceActionBar", env.UIParent)
     env.DFRL.actionBarDefaults = { sideInset = 2, xpTop = 0, xpInset = 2 }
     env.T.GetLocalSize = function(frame) return frame:GetWidth(), frame:GetHeight() end
+    env.T.SetChatShadow = function(label)
+        label:SetShadowColor(0, 0, 0, 1)
+        label:SetShadowOffset(1, -1)
+    end
     local create = context.Object
     function context:Object(...)
         local object = create(self, ...)
@@ -121,12 +125,55 @@ do
     assert(gain and spark and bar:IsVisible(), "missing production XP effect regions")
     context:Call(controller, "OnUpdate", 0.01)
     assert(bar:GetValue() == 0.2 and not controller:GetScript("OnUpdate"), "initial XP did not settle")
+    assert(display.Get("xpShowText") == false and display.Copy({ xpShowText = "true" }).xpShowText == false)
+    local function XPLabel()
+        for _, object in ipairs(context.objects) do
+            if object.parent == bar and object.kind == "FontString" then return object end
+        end
+    end
+    assert(not XPLabel(), "disabled XP text allocated a label")
+    env.DFRL.mainBar:Hide()
+    display.BeginEdit()
+    display.Set("xpShowText", true)
+    assert(not XPLabel() and not controller:GetScript("OnUpdate"), "hidden text preview allocated or added a worker")
+    env.DFRL.mainBar:Show()
+    context:Call(controller, "OnUpdate", 0.01)
+    local text = assert(XPLabel(), "XP text did not prepare on first visible preview")
+    assert(text:GetText() == "20 / 100 (20.0%)" and text:IsShown(), "XP text missed current native values")
+    assert(
+        not env.SurvivorsDragonUiDisplay and not controller:GetScript("OnUpdate"),
+        "text preview saved or added a worker"
+    )
+    display.FinishEdit(false)
+    assert(not text:IsShown(), "Cancel retained XP text")
+    local textPoolSize = #context.objects
+    display.BeginEdit()
+    display.Set("xpShowText", true)
+    display.FinishEdit(true)
+    assert(
+        env.SurvivorsDragonUiDisplay.xpShowText and #context.objects == textPoolSize,
+        "Confirm lost text or its pool"
+    )
+    display.BeginEdit()
+    display.Load({ xpShowText = false })
+    assert(not text:IsShown(), "profile did not preview hiding XP text")
+    display.FinishEdit(false)
+    assert(text:IsShown(), "profile discard lost confirmed XP text")
     context.xp = 60
     context:Event(controller, "PLAYER_XP_UPDATE", "player")
     context:Call(controller, "OnUpdate", 0.05)
     assert(
         bar:GetValue() > 0.2 and bar:GetValue() < 0.6 and gain:IsShown() and spark:IsShown(),
         "normal XP gain did not animate"
+    )
+    assert(text:GetText() == "60 / 100 (60.0%)", "XP text followed the animation instead of native XP")
+    local progress, worker = bar:GetValue(), controller:GetScript("OnUpdate")
+    display.BeginEdit()
+    display.Set("xpShowText", false)
+    display.Set("xpShowText", true)
+    assert(
+        bar:GetValue() == progress and controller:GetScript("OnUpdate") == worker,
+        "text preview restarted an active gain"
     )
     display.BeginEdit()
     display.Set("performanceMode", true)
@@ -151,6 +198,7 @@ do
     context:Event(controller, "PLAYER_LEVEL_UP")
     context:Call(controller, "OnUpdate", 0.01)
     assert(bar:GetValue() == 0.1 and not gain:IsShown(), "Performance Mode replayed a level-wrap gain")
+    assert(text:GetText() == "10 / 100 (10.0%)", "level-up text retained the old level's XP")
     display.FinishEdit(false)
     assert(bar:GetValue() == 0.1 and not controller:GetScript("OnUpdate"), "Cancel replayed a suppressed XP gain")
     context.xp = 50
@@ -167,6 +215,28 @@ do
         not controller:GetScript("OnUpdate") and not bar:IsShown() and not gain:IsShown() and not spark:IsShown(),
         "world retirement retained XP presentation"
     )
+    assert(not text:IsShown(), "world retirement retained XP text")
+    context.level, context.xp, context.maximum = 3, 90, 200
+    context:Event(controller, "PLAYER_ENTERING_WORLD")
+    context:Call(controller, "OnUpdate", 0.01)
+    assert(text:GetText() == "90 / 200 (45.0%)" and text:IsVisible(), "world entry replayed stale XP text")
+    context:ResetCounts()
+    context:Event(controller, "PLAYER_XP_UPDATE", "player")
+    context:Call(controller, "OnUpdate", 0.01)
+    assert(not context.writes.SetText, "unchanged XP rewrote the caption")
+    context.maximum = 0
+    context:Event(controller, "PLAYER_XP_UPDATE", "player")
+    context:Call(controller, "OnUpdate", 0.01)
+    assert(not text:IsShown() and not bar:IsVisible(), "invalid XP retained a caption")
+    context.maximum, context.xp = 200, 0
+    context:Event(controller, "PLAYER_XP_UPDATE", "player")
+    context:Call(controller, "OnUpdate", 0.01)
+    assert(text:GetText() == "0 / 200 (0.0%)" and text:IsVisible(), "zero XP or invalid-data recovery failed")
+    display.BeginEdit()
+    display.Set("attachXP", false)
+    assert(text:IsVisible() and #context.objects == textPoolSize, "detaching XP replaced or lost text")
+    display.Reset()
+    assert(not text:IsShown() and not display.Get("xpShowText"), "reset retained XP text")
 end
 print(
     "PASS full XP controller settles active effects, keeps current native progress and restores future animation without replay"

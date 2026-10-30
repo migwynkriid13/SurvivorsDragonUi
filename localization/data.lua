@@ -2,6 +2,8 @@
 DFRL.locale.data = {
     en = {
         ui = {
+            ["Show XP text"] = "Show XP text",
+            ["Show current XP, required XP and percentage on the XP bar."] = "Show current XP, required XP and percentage on the XP bar.",
             ["Change addon text except the run timer and combat text, which have their own fonts."] = "Change addon text except the run timer and combat text, which have their own fonts.",
             ["Guide to next respawn"] = "Guide to next respawn",
             ["When all guardians are defeated, point to the lair due to respawn first."] = "When all guardians are defeated, point to the lair due to respawn first.",
@@ -655,6 +657,8 @@ DFRL.locale.data = {
     },
     pl = {
         ui = {
+            ["Show XP text"] = "Pokaż tekst PD",
+            ["Show current XP, required XP and percentage on the XP bar."] = "Pokaż bieżące PD, wymagane PD i procent na pasku doświadczenia.",
             ["Change addon text except the run timer and combat text, which have their own fonts."] = "Zmień czcionkę tekstu dodatku z wyjątkiem licznika czasu biegu i tekstu walki, które mają własne ustawienia czcionki.",
             ["Guide to next respawn"] = "Prowadź do następnego odrodzenia",
             ["When all guardians are defeated, point to the lair due to respawn first."] = "Gdy wszyscy strażnicy zostaną pokonani, wskaż legowisko z najkrótszym czasem do odrodzenia.",
@@ -1779,6 +1783,8 @@ DFRL.locale.data = {
     },
     cs = {
         ui = {
+            ["Show XP text"] = "Zobrazit text zkušeností",
+            ["Show current XP, required XP and percentage on the XP bar."] = "Na liště zkušeností zobrazí aktuální a potřebné zkušenosti i procenta.",
             ["Change addon text except the run timer and combat text, which have their own fonts."] = "Změní písmo textu doplňku kromě časovače běhu a bojového textu, které mají vlastní nastavení písma.",
             ["Guide to next respawn"] = "Vést k dalšímu znovuzrození",
             ["When all guardians are defeated, point to the lair due to respawn first."] = "Po porážce všech strážců ukazovat na doupě strážce, který se znovu objeví nejdříve.",
@@ -2906,6 +2912,8 @@ DFRL.locale.data = {
     },
     de = {
         ui = {
+            ["Show XP text"] = "EP-Text anzeigen",
+            ["Show current XP, required XP and percentage on the XP bar."] = "Aktuelle EP, benötigte EP und Prozentwert auf der EP-Leiste anzeigen.",
             ["Change addon text except the run timer and combat text, which have their own fonts."] = "Ändert den Addontext außer Laufzeitmesser und Kampftext, die eigene Schriftarten haben.",
             ["Guide to next respawn"] = "Zum nächsten Wiedererscheinen führen",
             ["When all guardians are defeated, point to the lair due to respawn first."] = "Wenn alle Wächter besiegt sind, zum Hort mit der kürzesten verbleibenden Wiedererscheinungszeit führen.",
@@ -4031,6 +4039,8 @@ DFRL.locale.data = {
     },
     pt = {
         ui = {
+            ["Show XP text"] = "Mostrar texto de XP",
+            ["Show current XP, required XP and percentage on the XP bar."] = "Mostra a XP atual, a XP necessária e a porcentagem na barra de experiência.",
             ["Change addon text except the run timer and combat text, which have their own fonts."] = "Altera a fonte do texto do addon, exceto o cronômetro da corrida e o texto de combate, que têm fontes próprias.",
             ["Guide to next respawn"] = "Guiar até o próximo renascimento",
             ["When all guardians are defeated, point to the lair due to respawn first."] = "Quando todos os guardiões forem derrotados, apontar para o covil cujo guardião renascerá primeiro.",
@@ -5147,6 +5157,8 @@ DFRL.locale.data = {
     },
     es = {
         ui = {
+            ["Show XP text"] = "Mostrar texto de experiencia",
+            ["Show current XP, required XP and percentage on the XP bar."] = "Muestra la experiencia actual, la necesaria y el porcentaje en la barra de experiencia.",
             ["Change addon text except the run timer and combat text, which have their own fonts."] = "Cambia la fuente del texto del addon, salvo el temporizador de partida y el texto de combate, que tienen sus propias fuentes.",
             ["Guide to next respawn"] = "Guiar a la próxima reaparición",
             ["When all guardians are defeated, point to the lair due to respawn first."] = "Cuando todos los guardianes estén derrotados, señala la guarida cuyo guardián reaparecerá primero.",
@@ -6267,6 +6279,8 @@ DFRL.locale.data = {
     },
     fr = {
         ui = {
+            ["Show XP text"] = "Afficher le texte d’EXP",
+            ["Show current XP, required XP and percentage on the XP bar."] = "Affiche l’EXP actuelle, l’EXP requise et le pourcentage sur la barre d’expérience.",
             ["Change addon text except the run timer and combat text, which have their own fonts."] = "Change la police du texte de l’addon, sauf le chronomètre et le texte de combat, qui ont leurs propres polices.",
             ["Guide to next respawn"] = "Guider vers la prochaine réapparition",
             ["When all guardians are defeated, point to the lair due to respawn first."] = "Quand tous les gardiens sont vaincus, indiquer le repaire dont le gardien réapparaîtra en premier.",
@@ -7395,6 +7409,8 @@ DFRL.locale.data = {
     },
     ro = {
         ui = {
+            ["Show XP text"] = "Arată textul XP",
+            ["Show current XP, required XP and percentage on the XP bar."] = "Arată XP actual, XP necesar și procentul pe bara de experiență.",
             ["Change addon text except the run timer and combat text, which have their own fonts."] = "Schimbă fontul textului addonului, cu excepția cronometrului și a textului de luptă, care au propriile fonturi.",
             ["Guide to next respawn"] = "Ghidează spre următoarea reapariție",
             ["When all guardians are defeated, point to the lair due to respawn first."] = "Când toți străjerii sunt învinși, arată vizuina al cărei străjer va reapărea primul.",
@@ -8506,6 +8522,8 @@ DFRL.locale.data = {
     },
     tr = {
         ui = {
+            ["Show XP text"] = "XP metnini göster",
+            ["Show current XP, required XP and percentage on the XP bar."] = "Deneyim çubuğunda mevcut XP, gereken XP ve yüzdeyi göster.",
             ["Change addon text except the run timer and combat text, which have their own fonts."] = "Eklenti metninin yazı tipini değiştirir; kendi yazı tipi seçenekleri olan koşu sayacı ve savaş metni hariçtir.",
             ["Guide to next respawn"] = "Sonraki yeniden doğuşa yönlendir",
             ["When all guardians are defeated, point to the lair due to respawn first."] = "Tüm muhafızlar yenildiğinde, muhafızı en önce yeniden doğacak ine yönlendir.",
@@ -9493,6 +9511,8 @@ DFRL.locale.data = {
     },
     ru = {
         ui = {
+            ["Show XP text"] = "Показывать текст опыта",
+            ["Show current XP, required XP and percentage on the XP bar."] = "Показывать текущий и требуемый опыт, а также процент на полосе опыта.",
             ["Change addon text except the run timer and combat text, which have their own fonts."] = "Меняет шрифт текста аддона, кроме таймера забега и боевого текста, у которых есть свои настройки шрифта.",
             ["Guide to next respawn"] = "К следующему возрождению",
             ["When all guardians are defeated, point to the lair due to respawn first."] = "Когда все стражи побеждены, указывать на логово того, кто возродится раньше остальных.",
@@ -10699,6 +10719,8 @@ DFRL.locale.data = {
     },
     uk = {
         ui = {
+            ["Show XP text"] = "Показувати текст досвіду",
+            ["Show current XP, required XP and percentage on the XP bar."] = "Показувати поточний і потрібний досвід, а також відсоток на смузі досвіду.",
             ["Change addon text except the run timer and combat text, which have their own fonts."] = "Змінює шрифт тексту аддона, крім таймера забігу й бойового тексту, які мають власні налаштування шрифту.",
             ["Guide to next respawn"] = "До наступного відродження",
             ["When all guardians are defeated, point to the lair due to respawn first."] = "Коли всіх вартових переможено, вказувати на лігво того, хто відродиться найраніше.",
@@ -11879,6 +11901,8 @@ DFRL.locale.data = {
     },
     zh = {
         ui = {
+            ["Show XP text"] = "显示经验文字",
+            ["Show current XP, required XP and percentage on the XP bar."] = "在经验条上显示当前经验、所需经验和百分比。",
             ["Change addon text except the run timer and combat text, which have their own fonts."] = "更改插件文字的字体，但保留计时器和战斗文字各自的字体设置。",
             ["Guide to next respawn"] = "指引下次重生",
             ["When all guardians are defeated, point to the lair due to respawn first."] = "所有守卫被击败后，指向守卫最先重生的巢穴。",
@@ -12986,6 +13010,8 @@ DFRL.locale.data = {
     },
     ja = {
         ui = {
+            ["Show XP text"] = "経験値テキストを表示",
+            ["Show current XP, required XP and percentage on the XP bar."] = "経験値バーに現在の経験値、必要経験値、割合を表示します。",
             ["Change addon text except the run timer and combat text, which have their own fonts."] = "アドオンの文字のフォントを変更します。個別のフォント設定があるランタイマーと戦闘テキストは除きます。",
             ["Guide to next respawn"] = "次のリスポーンへ案内",
             ["When all guardians are defeated, point to the lair due to respawn first."] = "すべてのガーディアンを倒したら、最も早くリスポーンするガーディアンの巣へ案内します。",
@@ -14125,6 +14151,8 @@ DFRL.locale.data = {
     },
     ko = {
         ui = {
+            ["Show XP text"] = "경험치 텍스트 표시",
+            ["Show current XP, required XP and percentage on the XP bar."] = "경험치 바에 현재 경험치, 필요 경험치 및 백분율을 표시합니다.",
             ["Change addon text except the run timer and combat text, which have their own fonts."] = "애드온 글꼴을 변경합니다. 자체 글꼴 설정이 있는 진행 타이머와 전투 텍스트는 제외됩니다.",
             ["Guide to next respawn"] = "다음 재생성 위치 안내",
             ["When all guardians are defeated, point to the lair due to respawn first."] = "모든 수호자를 처치하면 가장 먼저 재생성될 수호자의 소굴을 가리킵니다.",

@@ -1609,11 +1609,31 @@ melee/periodic and foreign-source cases without shared-result aliasing.
 
 ### XP fade geometry
 
+**Show XP text** under Action bar is default off and adds one reusable FontString
+only on the first enabled, visible, valid XP sample. It centers full current /
+required XP and a percentage floored to one decimal inside the existing bar's
+12-unit border area. Size 9 OUTLINE and the shared chat shadow follow the global
+Layout font choice. Attached and detached modes reuse the same label.
+
+Text uses the existing deferred native XP/maximum sample and updates immediately,
+independently of the animated fill. It skips unchanged caption writes and hidden/
+disabled formatting, hides for invalid data or world retirement, and resumes
+from accepted native values on Show. Toggling text does not settle or restart
+an active gain. Both Performance Mode states use the same instant caption;
+normal mode retains its authored fill/glow animation. Preview, Confirm-only
+saving, discard, profiles and both resets use `xpShowText` in the existing
+display table. It adds no frame, asset, event, updater or SavedVariable. The two
+settings captions have fourteen source/runtime translations. CI-only production
+controller cases cover transactions, hidden preparation, reuse, immediate native
+values during animation, level/world/invalid-data recovery, detaching and reset.
+These cases were not run locally; source counts do not establish native fit,
+glyph coverage or FPS.
+
 The existing gain/spark renderer caches its owned anchors, widths, crop and alpha
 independently. A stationary final fade now changes only its two alpha values;
 actual width/progress changes retain the original gain bounds and clipped spark.
 Show/Hide comparisons preserve pooled reuse and the final clearing pass. Timing,
-easing, native XP reads, source images, layers and region count stay unchanged.
+easing, native XP reads, source images, layers and effect-region count stay unchanged.
 CI-only extracted production coverage checks fades, resizing, end clipping and
 zero-alpha retirement, without a GPU/FPS claim.
 

@@ -1913,6 +1913,7 @@ DFRL:NewMod("RunTimers", 5, function()
                     { "cooldownNumbers", "Cooldown numbers", "Show countdowns on ability buttons." },
                     { "showGryphons", "Show gryphons", "Show winged ornaments at both ends of the action bar." },
                     { "attachXP", "Attach XP to action bar", "Off: move and resize the XP bar separately." },
+                    { "xpShowText", "Show XP text", "Show current XP, required XP and percentage on the XP bar." },
                     {
                         "hideNativeBuild",
                         "Hide default jewelry / abilities",

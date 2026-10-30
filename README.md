@@ -84,7 +84,7 @@ Click **Confirm** in the full editor to save or **Cancel** to undo. Click the mi
 
 ### Action bar and portraits
 
-Action buttons start locked. Under **Action bar**, turn off **Lock action buttons** and confirm. You can then Shift-click two occupied buttons to swap their spells. **Show gryphons** adds ornaments at each end of the bar; it starts off. Turn off **Attach XP to action bar** to move the XP bar separately.
+Action buttons start locked. Under **Action bar**, turn off **Lock action buttons** and confirm. You can then Shift-click two occupied buttons to swap their spells. **Show gryphons** adds ornaments at each end of the bar; it starts off. Turn off **Attach XP to action bar** to move the XP bar separately. **Show XP text** adds current XP, required XP and percentage to the bar; it starts off.
 
 Portraits use 2D images by default. Under **Unit frames**, choose **Experimental 3D portraits** or **Hide portraits** for bars without portraits.
 

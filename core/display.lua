@@ -100,6 +100,7 @@ DFRL:NewMod("Display", 0, function()
         hideNativeBuild = true,
         attachJewelry = true,
         attachXP = true,
+        xpShowText = false,
         attachTally = true,
         tallyStyle = DFRL.tallyStyleDefault,
         showTallyKills = true,

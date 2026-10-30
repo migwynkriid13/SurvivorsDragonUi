@@ -58,6 +58,13 @@ An explicit Bash shell enables `pipefail`, so piping fixture/model output into
 
 ## UI work and cleanup tests
 
+The full XP-controller fixture also covers default-off Show XP text, malformed
+saves, preview/Confirm/discard/profile/reset, lazy hidden preparation and label
+reuse, immediate native text during animated gains, toggles that preserve active
+animation, Performance Mode, level/world/invalid-data recovery, zero XP, unchanged
+caption writes and detached placement. The editor fixture exercises its actual
+Action bar checkbox. Coverage is CI-only; no local tests or game execution.
+
 Global font cases load the production font/display owners with explicit native
 font boundaries. They cover enum normalization, preview/Confirm/discard/profiles/
 reset, preserved native sizes/flags, independent text, hidden Show ordering,
