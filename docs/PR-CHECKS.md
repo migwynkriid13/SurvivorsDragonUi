@@ -48,6 +48,11 @@ Checks continue after individual findings and report their results together.
 The final step fails the job if any setup or check failed. New pushes cancel
 superseded runs of the same PR. The workflow has read-only repository access
 and does not modify PR contents or publish a release.
+Independent UI fixture processes also continue after a failure. The runner
+reports each failed fixture and exit code together after both extracted-source
+and full-controller cases, while source-preparation failures still stop before
+execution. CI-only Python regressions use fake subprocesses to verify that an
+early failure in either group cannot skip later fixtures or produce success.
 An explicit Bash shell enables `pipefail`, so piping fixture/model output into
 `tee` cannot hide a failing check.
 
@@ -132,6 +137,9 @@ The assertions cover:
   Save/Cancel, world discard and full reset. The production Layout owner supplies
   the draft and resize behavior; fixtures provide only native slider/geometry
   boundaries. These cases remain CI-only and were not run locally.
+  The frame boundary includes real stored scale and scale-aware TOPLEFT edge
+  reads, so applying a pending scale edit exercises the existing center and
+  save/discard assertions instead of failing on a missing fake `SetScale`.
 
   Close cases cover repeated launcher-toggle open/cancel, native registered-window
   hiding, focused invalid numeric input, profile-name Escape, duplicate Escape

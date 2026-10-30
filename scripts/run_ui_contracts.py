@@ -117,6 +117,14 @@ def main():
     except RuntimeError as error:
         print(error, file=sys.stderr)
         return 1
+    failures = []
+
+    def run_fixture(command, fixture):
+        result = subprocess.run(command, cwd=SOURCE)
+        if result.returncode:
+            failures.append((fixture, result.returncode))
+            print(f"FAIL {fixture} (exit {result.returncode})", file=sys.stderr, flush=True)
+
     with tempfile.TemporaryDirectory(prefix="sdui-ui-contracts-") as folder:
         placement = Path(folder) / "guardian-placement-source.lua"
         placement.write_text(guardian_placement, encoding="utf-8")
@@ -165,14 +173,15 @@ def main():
                     source_file = Path(folder) / name
                     source_file.write_text(body, encoding="utf-8")
                     command.append(str(source_file))
-            result = subprocess.run(command, cwd=SOURCE)
-            if result.returncode:
-                return result.returncode
+            run_fixture(command, fixture)
         for fixture in ("ui_retail_edit_spec.lua", "ui_retail_layout_spec.lua", "ui_default_chat_spec.lua", "ui_health_spec.lua", "ui_mini_health_spec.lua", "ui_sct_spec.lua", "ui_nameplates_spec.lua", "ui_marks_spec.lua", "ui_meter_party_spec.lua", "ui_party_waypoint_spec.lua", "ui_banners_perf_spec.lua", "ui_layout_spec.lua", "ui_pets_totems_spec.lua", "ui_guardian_tracker_perf_spec.lua", "ui_revive_perf_spec.lua", "ui_core_idle_cadence_spec.lua", "ui_cooldown_lifecycle_spec.lua", "ui_tooltip_style_perf_spec.lua", "ui_target_color_perf_spec.lua", "ui_target_classification_spec.lua", "ui_passive_cadence_spec.lua", "ui_projection_cache_perf_spec.lua", "ui_sct_metadata_perf_spec.lua"):
-            result = subprocess.run(["lua5.1", "scripts/tests/fixtures/" + fixture], cwd=SOURCE)
-            if result.returncode:
-                return result.returncode
-        return 0
+            run_fixture(["lua5.1", "scripts/tests/fixtures/" + fixture], fixture)
+    if failures:
+        print("Failed UI fixtures:", file=sys.stderr)
+        for fixture, code in failures:
+            print(f"- {fixture} (exit {code})", file=sys.stderr)
+        return 1
+    return 0
 
 
 if __name__ == "__main__":

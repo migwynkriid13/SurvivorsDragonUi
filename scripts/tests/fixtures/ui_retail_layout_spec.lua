@@ -64,10 +64,29 @@ local function Geometry(object)
         height = value
     end
     function object:GetScale() return self.scale or 1 end
+    function object:SetScale(value)
+        assert(type(value) == "number" and value > 0, "native scale must be positive")
+        context.writes.SetScale = (context.writes.SetScale or 0) + 1
+        self.scale = value
+    end
     function object:GetEffectiveScale() return self:GetScale() end
-    function object:GetLeft() return self.left or 0 end
+    function object:GetLeft()
+        local point = self.point
+        if point and point[1] == "TOPLEFT" and point[3] == "TOPLEFT" then
+            local relative = point[2]
+            return relative:GetLeft() * relative:GetEffectiveScale() / self:GetEffectiveScale() + (point[4] or 0)
+        end
+        return self.left or 0
+    end
     function object:GetRight() return self:GetLeft() + self:GetWidth() end
-    function object:GetTop() return self.top or self:GetHeight() end
+    function object:GetTop()
+        local point = self.point
+        if point and point[1] == "TOPLEFT" and point[3] == "TOPLEFT" then
+            local relative = point[2]
+            return relative:GetTop() * relative:GetEffectiveScale() / self:GetEffectiveScale() + (point[5] or 0)
+        end
+        return self.top or self:GetHeight()
+    end
     function object:GetBottom() return self:GetTop() - self:GetHeight() end
     function object:GetNumPoints() return self.point and 1 or 0 end
     function object:GetPoint() return unpack(self.point or {}) end
