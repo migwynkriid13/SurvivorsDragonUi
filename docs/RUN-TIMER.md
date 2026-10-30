@@ -105,7 +105,7 @@ The same accepted `AZS_RUN.endl` flag used by the captions selects Endless:
 exactly `1` enables it, `0` selects regular mode, and unavailable or unaccepted
 publications do not enable Endless. Passing the run duration alone never
 selects a mode. Regular progress uses `AZS_GetRunTime` and the received native
-duration, stepping the fill in whole seconds and clamping it at the limit.
+duration, stepping the fill every two native seconds and clamping it at the limit.
 Endless fills the bar completely while retaining the current tier's colors.
 Captions and boss countdowns retain their own native times and settings.
 
@@ -176,7 +176,7 @@ With **PERFORMANCE MODE** on, regular and Endless runs retain the current
 tier's static fill and skip every decorative
 fill layer: foam, right-moving streaks, flecks, sparkles, red glints and glow.
 Enabling the mode hides any already-active layers immediately. Native progress
-continues in whole-second steps; captions and informative markers remain.
+continues in two-second steps; captions and informative markers remain.
 Turning the mode off restores effects from the current accepted rank and mode.
 
 Native duration and schedule validation reuse the existing ten-Hz/deferred
@@ -188,7 +188,7 @@ hovering samples phase/effects immediately before opening the tooltip. Removed
 slots clear before opening and changed debuff height reflows at that point.
 No private countdown supplies remaining time.
 
-The progress fill advances in whole native run-second steps instead of changing
+The progress fill advances in two-second native run-time steps instead of changing
 every rendered frame. Native pause/choice states therefore freeze progress;
 native corrections and duration changes still take effect, and reaching the
 limit fills the bar exactly even when that limit includes a fractional second.

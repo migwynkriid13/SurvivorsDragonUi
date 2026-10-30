@@ -1027,7 +1027,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 HideAnimatedFlow()
                 return
             end
-            -- Width changes and native whole-second progress share one geometry pass.
+            -- Width changes and native two-second progress share one geometry pass.
             local width = bar.layoutWidth or BAR_WIDTH
             local filledWidth = width * (endless and 1 or math.min(1, seconds / maximum))
             ResizeEffects(filledWidth)
@@ -4333,8 +4333,8 @@ DFRL:NewMod("RunTimers", 5, function()
                 local atLimit = seconds >= maximum
                 local mode = UpdateClockCaptions(seconds, maximum, not zoneRunPending)
                 local endless = mode == "Endless"
-                -- Whole native seconds avoid per-frame fill/crop rewrites.
-                local value = (endless or atLimit) and maximum or math.floor(seconds)
+                -- Two-second native steps avoid per-frame fill/crop rewrites.
+                local value = (endless or atLimit) and maximum or math.floor(seconds / 2) * 2
                 if render.runValue ~= value then runBar:SetValue(value) end
                 render.runMaximum, render.runValue = maximum, value
                 -- Missing schedule replay affects only spawn markers, never a clock
