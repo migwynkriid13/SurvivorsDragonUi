@@ -354,13 +354,13 @@ The assertions cover:
   300 ms sums across mode transitions. Enum cases cover legacy MSBT migration,
   invalid values, preview/Confirm/Cancel, profile normalization and reset.
   Settings fixtures cover style selection, hidden listeners and page extent.
-  Full plate cases move the native projection at unchanged UI time, require
-  no instant jump and one shared native sample, then exercise bounded catch-up,
-  large outliers and recovery without text/visibility/scale rewrites or new
-  allocations. They prevent reattachment after retirement, stale coordinates
-  or same-name frame reuse and retain the last displayed point on detach.
-  Queue cases allow following only for unanimous nonnil origins, preserving
-  original matching, fallback centroids, amounts and Performance Mode sums.
+  Full plate cases compare repeated native camera/collision changes with an
+  otherwise identical stationary production controller. Active trajectories,
+  amounts, fade and expiry must remain identical while required matching
+  samples keep updating. Cases cover invalid coordinates, native frame reuse,
+  Performance Mode transitions, fresh pooled launch points and world cleanup.
+  The user-selected fixed-position fallback retains no live follow references
+  or smoothing state and gives up camera compensation after launch.
   These cases are CI-only and do not prove Diablo IV visual parity or native
   font rendering. See [DIABLO-SCT.md](DIABLO-SCT.md) for the video study and tuning.
 - Full SCT/filter and nameplate-style fixtures combine Names only with the

@@ -18,8 +18,6 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         burst = 0.12,
         pop = 0.18,
         fade = 0.72,
-        followTime = 0.06,
-        followSpeed = 900,
         normal = { 0.92, 0.90, 0.82 },
         critical = { 1, 0.90, 0.32 },
     }
@@ -392,7 +390,6 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         text.needsMeasure = nil
         text.scrollOffset, text.scrollY = nil, nil
         text.diablo, text.duration = nil, nil
-        text.followOrigin = nil
         text.anchorRoot, text.anchorPoint, text.anchorX, text.anchorY = nil, nil, nil, nil
         table.insert(textPool, text)
     end
@@ -1593,39 +1590,6 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         text.anchorRoot, text.anchorPoint, text.anchorX, text.anchorY = root, relativePoint, x, y
     end
 
-    local function UpdateTextOrigin(text, now, blend, step)
-        local origin = text.followOrigin
-        if not origin then return end
-        -- Reuse the existing frame's projected sample; never rematch a name or
-        -- query native geometry per label. Keep the displayed point on detach,
-        -- so a last native correction cannot snap text just before retirement.
-        if
-            not origin.live
-            or not origin.positionAt
-            or now < origin.positionAt
-            or now - origin.positionAt > RECENT_PLATE_TIME
-            or not IsFiniteNumber(origin.x)
-            or not IsFiniteNumber(origin.y)
-        then
-            text.followOrigin = nil
-            return
-        end
-        if not blend then
-            -- Acquisition has no previous visible position to preserve.
-            text.x, text.y = origin.x, origin.y
-        elseif step > 0 then
-            local dx, dy = origin.x - text.x, origin.y - text.y
-            local distance = math.sqrt(dx * dx + dy * dy)
-            if distance <= 0.25 then
-                text.x, text.y = origin.x, origin.y
-            else
-                -- Never overshoot or teleport with native plate corrections.
-                local fraction = math.min(blend, step / distance)
-                text.x, text.y = text.x + dx * fraction, text.y + dy * fraction
-            end
-        end
-    end
-
     local function EnsureTextRoot()
         if not textRoot then
             -- Keep the growing hit pool out of the native discovery roster.
@@ -1784,23 +1748,21 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         return strong and DAMAGE_COLORS.strong or DAMAGE_COLORS.normal
     end
 
-    local function DisplayDamage(info, x, y, displayAmount, origin)
+    local function DisplayDamage(info, x, y, displayAmount)
         -- Filter only after every original hit has consumed its matching and
         -- color evidence, including members of a visually collapsed group.
         if not ShouldShowText(info) then return end
         local value = displayAmount or info.text or info.amount
         if not value then return end
         local text = AcquireText()
-        -- Default enemy arcs snapshot their launch point. Diablo labels reuse
-        -- only a unanimous matched instance; MSBT needs no enemy position.
+        -- Snapshot once: native nameplate stacking must never drag an active
+        -- number. MSBT instead uses offsets from its independent Layout owner.
         if msbtStyle then
             x, y = 0, MSBT.height / 2 - 12
         end
         text.x, text.y = x, y
         text.started = GetTime()
         text.diablo = textStyle == "diablo"
-        text.followOrigin = text.diablo and origin or nil
-        if text.diablo then UpdateTextOrigin(text, text.started) end
         text.duration = text.diablo and DIABLO.duration or TEXT_DURATION
         text.impact = info.critical or info.kind == "miss"
         text.sizeScale = info.critical and 1.5 or 1
@@ -1865,23 +1827,16 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             local age = now - entry.time
             local resolved = false
             if age >= EVENT_SETTLE then
-                local x, y, origin
+                local x, y
                 if msbtStyle then
                     x, y = 0, 0
                 else
-                    x, y, origin = ResolveOrigin(entry.info, now, age >= EVENT_FALLBACK_DELAY)
+                    x, y = ResolveOrigin(entry.info, now, age >= EVENT_FALLBACK_DELAY)
                 end
                 if x and y then
                     local group = entry.group
                     group.count = group.count + 1
                     group.x, group.y = group.x + x, group.y + y
-                    -- Every original hit still matches and consumes its loss.
-                    -- A nil/mixed match permanently disqualifies group follow.
-                    if group.count == 1 then
-                        group.origin = origin or false
-                    elseif group.origin ~= origin then
-                        group.origin = false
-                    end
                     group.remaining = group.remaining - 1
                     resolved = true
                 end
@@ -1922,13 +1877,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                 and not group.bucket
                 and (not group.lastArrival or now - group.lastArrival >= EVENT_SETTLE)
             then
-                DisplayDamage(
-                    group.info,
-                    group.x / group.count,
-                    group.y / group.count,
-                    group.displayAmount,
-                    group.origin or nil
-                )
+                DisplayDamage(group.info, group.x / group.count, group.y / group.count, group.displayAmount)
             else
                 kept = kept + 1
                 pendingGroups[kept] = group
@@ -1968,7 +1917,6 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         local count = table.getn(activeTexts)
         if count == 0 then return end
         if msbtStyle then PrepareScrollPositions(now, elapsed) end
-        local followBlend, followStep
         local kept = 0
         for index = 1, count do
             local text = activeTexts[index]
@@ -1981,15 +1929,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                 activeTexts[kept] = text
                 local x, y, relativePoint
                 if text.diablo then
-                    if text.followOrigin then
-                        if not followBlend then
-                            local delta = math.min(0.05, math.max(0, tonumber(elapsed) or 0))
-                            followBlend = 1 - math.exp(-delta / DIABLO.followTime)
-                            followStep = DIABLO.followSpeed * delta
-                        end
-                        UpdateTextOrigin(text, now, followBlend, followStep)
-                    end
-                    -- Launch into a compact fan, then hold near the target.
+                    -- Launch into a compact fan, then drift from its fixed point.
                     -- No gravity/fall or long screen-wide scrolling column.
                     local burst = math.min(1, math.max(0, age / DIABLO.burst))
                     local ease = 1 - math.pow(1 - burst, 3)

@@ -85,20 +85,18 @@ changed-only writes and empty lists remain idle. Performance Mode preserves the
 animation with the existing 300 ms same-attack sums. It never restarts active
 labels on a Performance Mode transition.
 
-Matched Diablo labels reuse the existing per-frame native origin projection,
-so camera/mob movement changes the base point beneath their independent motion.
-Only unanimous nonnil group origins are retained. Each following label performs
-constant-time cached-field reads, with no extra native geometry read, lookup,
-scan or updater. Active follow uses a shared lazily computed 60 ms exponential
-blend and a 900-UI-unit/second speed allowance, admitting at most 50 ms per
-update. Per-label distance/bounded interpolation replaces direct coordinate
-snaps without a history table; zero elapsed time performs no follow movement.
-Retirement or stale projection permanently detaches at the last displayed
-base point without a final native-coordinate snap; pool/world cleanup clears
-the reference. Mixed and unknown
-groups retain the fixed centroid. Camera compensation after native retirement
-has no supported world-projection source. CI-only plate/queue cases cover these
-boundaries in both grouping modes; they were not run locally.
+The user-selected addon-only fallback snapshots each settled group's screen
+launch centroid for the label's lifetime. Native camera/plate/collision changes
+do not alter active base coordinates. New numbers still resolve every original
+hit through the existing native samples and matching/loss-consumption path.
+Removing live follow also removes its per-group/per-label origin references,
+shared exponential blend, distance math and speed limiting. No native read,
+scan, updater, history table or drawing region is added. The authored burst,
+drift, scale pop and fade remain animated in both Performance Mode states.
+This favors stable presentation and gives up later camera compensation; initial
+positions can still reflect native stacking. CI-only production plate cases
+compare repeated native restacking with an identical stationary scene, without
+copying animation equations. These cases were not run locally.
 
 The shared style selector replaces the MSBT checkbox on the lazy Combat page.
 Net settings cost is two button frames, eight texture regions and three labels;

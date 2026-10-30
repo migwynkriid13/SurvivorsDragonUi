@@ -98,7 +98,7 @@ Move the **Tooltip** handle to place regular hover cards. Its Layout controls al
 
 ### Combat text and run display
 
-Under **Combat** → **Combat text**, choose custom damage numbers, turn them off, or use **Game settings**. For the game's damage numbers, choose **Game settings**, then enable **Show Target Damage** in the game options. All settings below the mode selector are dimmed and inactive unless **Custom** is selected; their values are kept.
+Under **Combat** → **Combat text**, choose custom damage numbers, turn them off, or use **Game settings**. For the game's damage numbers, choose **Game settings**, then enable **Show Target Damage** in the game options. All settings below the mode selector are dimmed and inactive unless **Custom** is selected; their values are kept. Diablo IV numbers keep their launch point while they animate, so crowded nameplates cannot drag them around.
 
 The DPS meter is off by default. Turn on **Enable damage meter** under **Damage meter** and Confirm to show the game's damage totals and DPS. Click its heading to cycle through Damage Done, Healing Done, Boss Damage and Party Damage; scroll for more rows. Party Damage shows heroes with their native portraits during co-op. Choose 1 to 10 rows and which numbers, icons, ranks and header values to show. Move, scale or hide **DPS meter** under **Layout**. Details does not need to be installed.
 

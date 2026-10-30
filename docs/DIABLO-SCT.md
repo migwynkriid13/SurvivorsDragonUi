@@ -14,20 +14,17 @@ The video was inspected in the browser, including full-player views, paused
 combat frames and adjacent frame advances around 12–13 seconds. It shows one
 Rogue training-dummy encounter, not every Diablo IV combat-text variant.
 
-The user clarified that numbers should retain their position relative to the
-enemy as the camera moves. Stationary dummies alone do not establish that
-behavior. The implementation uses the accepted enemy's current native projection,
-rather than treating the first screen coordinate as a world anchor.
-
-A subsequent in-game recording supplied on 2026-10-30 showed abrupt number
-placements while moving. The original follow path copied raw native plate
-corrections directly into already-visible text. Active follow now eases toward
-that sample with a movement limit. The recording documents the reported problem;
-it does not establish the patched client's behavior.
+The user initially requested camera-relative enemy following. Later in-game
+recordings still showed left/right and up/down motion in crowded packs after
+smoothing. The user selected the **addon-only fixed-position fallback**: each
+number keeps its screen-space launch point for its full lifetime and applies
+only its own burst, drift, scale pop and fade. It does not follow a moving enemy
+or compensate for later camera movement. This deliberately favors readable,
+stable numbers over exact Diablo IV world anchoring.
 
 | Reference                              | Observed presentation                                                                                                                                           | Addon treatment                                                                                                                                                                          |
 | -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Opening and first burst, roughly 0–7 s | Hits cluster around individual dummies rather than a fixed screen column. Nearby targets produce separate clusters.                                             | Follow the existing matched enemy instance's native projection, with independent burst/drift offsets. Detach permanently on retirement; ambiguous groups retain their centroid.          |
+| Opening and first burst, roughly 0–7 s | Hits cluster around individual dummies rather than a fixed screen column. Nearby targets produce separate clusters.                                             | Snapshot the resolved launch centroid once, then apply independent burst/drift offsets. Native re-stacking and camera movement cannot reposition an active number.                       |
 | Dense burst, roughly 7–13 s            | Pale white and yellow values coexist. Large white damage remains white; number size alone does not identify a critical hit.                                     | Pale normal damage and yellow native critical hits. Keep original native critical flags; never infer a result from amount, school, pet ownership or relative damage.                     |
 | Adjacent paused frames around 12–13 s  | Values fan out locally and linger near their launch area. They do not follow the addon's long falling arc. New values overlap older values during heavy damage. | Short eased fan-out, small continuing upward/outward drift, compact scale pop, readable hold and final fade. No long fall or screen-wide stream.                                         |
 | Late ticks, roughly 29–33 s            | Separated pale poison ticks remain readable after the dense yellow burst. Full values use comma separators, including nine-digit values.                        | Full comma-separated numeric text, with no K/M/B abbreviation. Periodic hits retain native amounts, independent arrivals and filters.                                                    |
@@ -82,26 +79,33 @@ resolver and hit pool. Diablo uses enemy-origin matching and the same invisible
 native plate tracking when V is off; MSBT still releases that tracking. Neither
 style writes V's preference. Native incoming/self text remains independent.
 
-Every original hit still resolves and consumes its own loss evidence. Only a
-group whose members all resolve to the same nonnil origin can follow it. That
-origin table belongs to one native visibility/name incarnation; animation never
-rematches names, reuses a frame handle as identity or chooses an arbitrary member
-of a mixed group. A newly acquired label starts at the current accepted sample.
-Already-visible labels ease toward the cached native position before applying
-their own offsets: a 60 ms exponential response, limited to 900 UI units/second.
-Each update admits at most 50 ms of catch-up; zero elapsed time cannot move the
-base point. The final quarter-unit settles to the sample without overshoot.
-These are cosmetic display coordinates, never matching/identity evidence or
-native-table writes. The original enemy arcs and MSBT retain their behavior.
+Every original hit still resolves and consumes its own loss evidence. Once the
+group settles, its resolved centroid becomes the label's fixed launch point.
+The renderer retains no live origin reference and never rematches, follows,
+reparents or restarts an active number when plates move, hide, re-stack or get
+reused. New numbers still use their own current resolved coordinates. The
+original enemy arcs and MSBT retain their behavior.
 
-On hide, retirement or reuse, the number keeps its last displayed base point
-and permanently drops its reference, avoiding a final raw-coordinate snap.
-Projection data older than
-the existing 0.65-second matching window also detaches. A later same-name enemy
-or restored projection cannot reclaim that number. Mixed/ambiguous/unmatched
-groups retain their fixed fallback centroid. The addon has no persistent world
-projection after the native plate retires, so continuing camera compensation
-after death or disappearance remains a client/API boundary.
+## Why native stacking cannot be followed reliably here
+
+The reference client source separates the raw projected head point from the
+final nameplate rectangle. In
+[`vplates.rs` at `9cd691f`](https://github.com/samwhosung/benilla/blob/9cd691f630adc3ec6e0985243d05867a4a7af2da/crates/benilla-app/src/vplates.rs#L586),
+`bucket.resolve(desired, viewport)` moves the rectangle around other plates and
+clamps it to the screen. Lines 649–664 publish that **solved** rectangle as
+`PlateState.top_centre`; the
+[widget owner](https://github.com/samwhosung/benilla/blob/9cd691f630adc3ec6e0985243d05867a4a7af2da/crates/benilla-ui/src/script/nameplate.rs)
+uses it for the native frame anchor. `SamplePosition` reads that frame's
+`GetCenter`/`GetTop`, so live following can inherit collision displacement.
+Easing changes how a number chases that input; it cannot recover the raw point.
+
+This public source is a compatibility lead, not proof of the installed binary's
+exact revision. The supplied 2026-10-22 API and 0.125.0 supplement expose neither
+an unstacked per-enemy screen anchor nor a general unit-to-screen projection.
+The stable fallback therefore makes no claim to reconstruct world positions,
+spawn identity or camera transforms. It leaves native plate geometry, collision,
+input, health reads and V ownership intact. Initial launch positions can still
+reflect native stacking; the guarantee is that existing labels never chase it.
 
 Performance Mode follows the existing explicit SCT exception: preserve the
 selected animation and lifetime, and sum matching same-attack damage within the
@@ -112,16 +116,12 @@ restarting active labels or rewriting an existing group total.
 The Diablo branch adds no combat frame, drawing region, asset, event, updater or
 SavedVariable. Each active entry still uses its original holder, inner visual,
 FontString and optional icon; the pool grows to observed peak concurrency and is
-reused. Formatting and random choices run once at acquisition. Only live labels
-run animation math. Following adds one optional origin reference per pending
-group/active label and constant-time cached-field reads, without another native
-position read, plate scan or lookup per label. One blend and speed allowance
-are computed lazily per active follow pass; a following label adds distance and
-bounded interpolation math only while elapsed time is positive. No additional
-history or per-frame table is allocated. References clear on detach,
-release and shared cleanup. Anchors, scale and alpha skip unchanged writes; glyph fitting
-continues only during scale changes or unavailable-metric retries. Empty lists
-remain idle and normal retirement clears the style/lifetime scalars.
+reused. Formatting, random choices and the launch point are chosen once at
+acquisition. Only live labels run their own animation math. The fallback removes
+pending-group/label follow references, distance/easing calculations and movement
+limits; it adds no position history, native read, scan or per-frame table.
+Anchors, scale and alpha skip unchanged writes; glyph fitting continues only
+during scale changes or unavailable-metric retries. Empty lists remain idle.
 
 The lazy settings page replaces one checkbox with three standard buttons and a
 heading: three button frames, twelve texture regions and four FontStrings,
@@ -138,14 +138,13 @@ native critical colors, icons/filters, launch/hold/fade/expiry, unchanged work,
 Performance Mode sums/transitions, pool reuse and world cleanup. The production
 settings fixtures cover selection, page extent and hidden/unchanged listeners.
 Existing nameplate fixtures continue to exercise native origin/visibility ownership.
-Full-controller plate cases move the accepted projection at unchanged UI time,
-require no instantaneous jump and one shared native sample, then cover bounded
-60 Hz catch-up, a large one-frame outlier and recovery without text/visibility/
-scale rewrites or replacement allocation. They retain active lifetime through
-Performance Mode changes, then exercise retirement, different-
-and same-name reuse, stale projection, fallback pool reuse and world cleanup.
-Queue fixtures require unanimous nonnil origins while retaining every original
-match, centroid, amount and Performance Mode total.
+Full-controller plate cases compare the moving/restacking scene with an
+otherwise identical stationary production controller, using the same fake
+random boundary rather than copying motion equations. Repeated alternating
+native positions must leave the complete label trajectory, value, fade and
+lifetime identical. Cases retain native matching samples and cover invalid
+coordinates, different-name frame reuse, Performance Mode changes, fresh pooled
+launch points and world cleanup in both grouping modes.
 
 Local work uses source/diff review and pinned formatting only. These tests were
 not run locally; addon/game execution remains unauthorized. No mock or source

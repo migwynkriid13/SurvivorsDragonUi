@@ -652,13 +652,21 @@ do
     )
 end
 
--- Diablo retains only the existing resolver's accepted native instance.
+-- Fixed Diablo launch points must ignore native collision/camera corrections.
 local function DiabloPlates(performance)
     return Plates(function(current, env)
         current.settings.sctStyle = "diablo"
         current.settings.performanceMode = performance
         current.settings.nameplatesBossGuardiansOnly = false
         env.NAMEPLATES_ON = nil
+        -- Both production controllers get identical launch choices, allowing a
+        -- stationary reference without copying any production motion equation.
+        local nativeMath = env.math
+        env.math = {}
+        for key, value in pairs(nativeMath) do
+            env.math[key] = value
+        end
+        env.math.random = function(low) return low end
         env.T.ParseNameplateCombatEvent = function(_, message)
             return {
                 kind = "damage",
@@ -672,114 +680,84 @@ local function DiabloPlates(performance)
 end
 
 for _, performance in ipairs({ false, true }) do
-    local moving = DiabloPlates(performance)
-    local plate = moving:MakePlate("Moving", 1000)
-    plate.centerX, plate.top = 280, 320
-    local center = plate.GetCenter
-    local samples = 0
-    function plate:GetCenter()
-        samples = samples + 1
-        return center(self)
+    local moving, stationary = DiabloPlates(performance), DiabloPlates(performance)
+    local plate, reference = moving:MakePlate("Moving", 1000), stationary:MakePlate("Moving", 1000)
+    for _, item in ipairs({ plate, reference }) do
+        item.centerX, item.top = 280, 320
     end
-    moving:Tick(0)
-    moving.targetName = "Moving"
-    moving:Hit(17)
-    moving:Tick(performance and 0.301 or 0.17)
-    local label = assert(moving:Labels()[1])
-    moving:Tick(0.21) -- Let the authored launch/pop settle before camera motion.
-    local holder = label.parent.parent
-    local x, y = holder.anchor.x, holder.anchor.y
-    local origin = plate.fixture.origin
-    local before = samples
-    plate.centerX, plate.top = 430, 355
-    moving:Tick(0)
-    assert(holder.anchor.x == x and holder.anchor.y == y, "zero-time native corrections teleported an active number")
-    assert(samples == before + 1, "following added native projection work per label")
-    moving:Tick(1 / 60)
-    assert(
-        holder.anchor.x > x and holder.anchor.x < x + 30,
-        "camera follow snapped instead of moving toward its sample"
-    )
-    assert(math.abs(holder.anchor.y - y) < 30, "vertical native correction teleported active damage")
-    for _ = 1, 18 do
-        moving:Tick(1 / 60)
+    for _, current in ipairs({ moving, stationary }) do
+        current:Tick(0)
+        current.targetName = "Moving"
+        current:Hit(17)
+        current:Tick(performance and 0.301 or 0.17)
     end
-    assert(math.abs(holder.anchor.x - x - 150) < 4, "eased camera follow stopped tracking the enemy")
-    assert(holder.anchor.y > y + 35 and holder.anchor.y < y + 45, "eased follow lost the projection or its own drift")
-
-    local previous = holder.anchor.x
-    local scale, allocated = label.parent.scale, #moving.objects
+    local label, referenceLabel = assert(moving:Labels()[1]), assert(stationary:Labels()[1])
+    local holder, referenceHolder = label.parent.parent, referenceLabel.parent.parent
+    local allocated = #moving.objects
     moving:ResetCounts()
-    plate.centerX = 1000
-    moving:Tick(1 / 60)
-    assert(
-        holder.anchor.x > previous and holder.anchor.x < previous + 30,
-        "one native outlier threw a number across the screen"
-    )
-    assert(label:GetText() == "17" and label.parent.scale == scale, "following restarted or rewrote a settled number")
-    assert((moving.writes.SetScale or 0) == 0, "following repeated a settled number's scale assignment")
+    local points = { { 950, 650 }, { 80, 120 }, { 850, 550 }, { 150, 700 }, { 280, 320 } }
+    for index = 1, 48 do
+        local point = points[math.mod(index - 1, #points) + 1]
+        plate.centerX, plate.top = point[1], point[2]
+        -- Native projection continues to update for later original hit matching.
+        moving:Tick(1 / 60)
+        stationary:Tick(1 / 60)
+        assert(plate.fixture.origin.x == point[1], "fixed presentation disabled required native matching samples")
+        assert(moving:Labels()[1] == label, "native restacking replaced the active number")
+        assert(
+            holder.anchor.x == referenceHolder.anchor.x and holder.anchor.y == referenceHolder.anchor.y,
+            "native restacking/camera movement altered an existing number's animation"
+        )
+        assert(
+            label:GetText() == "17" and holder:GetAlpha() == referenceHolder:GetAlpha(),
+            "native corrections changed the amount or lifetime/fade"
+        )
+    end
     assert(
         not moving.writes.SetText and not moving.writes.Show and not moving.writes.Hide,
-        "following flickered text visibility"
+        "native movement flickered active text visibility"
     )
-    assert(#moving.objects == allocated, "following replaced the active number")
-    plate.centerX = 430
-    moving:Tick(1 / 60)
-    assert(math.abs(holder.anchor.x - previous) < 30, "outlier recovery snapped back to the native sample")
-    assert(moving.backing and moving.env.NAMEPLATES_ON == nil, "Diablo following changed native V ownership")
-    x, y = holder.anchor.x, holder.anchor.y
+    assert(#moving.objects == allocated, "native movement allocated replacement text")
+    assert(moving.backing and moving.env.NAMEPLATES_ON == nil, "fixed presentation changed native V ownership")
+
+    local x, y = holder.anchor.x, holder.anchor.y
+    plate.centerX = math.huge
+    moving:Tick(0)
+    assert(holder.anchor.x == x and holder.anchor.y == y, "invalid projection moved existing text")
+    local origin = plate.fixture.origin
+    plate:Hide()
+    plate.centerX, plate.top = 700, 500
+    plate.regions[3]:SetText("Other occupant")
+    plate:Show()
+    moving:Tick(0)
+    assert(not origin.live and plate.fixture.origin ~= origin, "frame reuse retained the retired native incarnation")
+    assert(holder.anchor.x == x and holder.anchor.y == y, "frame retirement/reuse moved an active number")
     moving:SetSetting("performanceMode", not performance)
     moving:Tick(0)
     assert(
         moving:Labels()[1] == label and holder.anchor.x == x and holder.anchor.y == y,
-        "Performance Mode restarted or moved active follow"
+        "Performance Mode restarted or repositioned active text"
     )
-    moving:ResetCounts()
-    moving:Tick(0)
-    moving:NoPresentationWrites()
-    assert((moving.writes.SetScale or 0) == 0, "unchanged following repeated visual scale writes")
+    moving:Tick(0.301)
+    assert(#moving:Labels() == 0, "native movement extended the original 1.1-second lifetime")
+    moving:Tick(0.36) -- Retire the old matching evidence before testing a fresh same-name hit.
 
-    plate:Hide()
-    plate.centerX, plate.top = 850, 650
-    plate.regions[3]:SetText("Other occupant")
-    plate:Show()
-    moving:Tick(0)
-    assert(not origin.live and plate.fixture.origin ~= origin, "native reuse kept the retired origin")
-    assert(holder.anchor.x == x and holder.anchor.y == y, "retired damage jumped to a recycled frame")
     plate:Hide()
     plate.regions[3]:SetText("Moving")
     plate:Show()
-    moving:Tick(0)
-    assert(holder.anchor.x == x and holder.anchor.y == y, "same-name reuse reclaimed an old damage number")
-    moving:Tick(1.101)
-    assert(#moving:Labels() == 0, "following restarted the damage lifetime")
-    moving.targetName = "Missing"
+    moving.targetName = "Moving"
     moving:Hit(23)
     moving:Tick(0.301)
-    local reused = assert(moving:Labels()[1])
-    assert(reused == label and holder.anchor.x == 800, "pooled fallback retained the old follow origin")
-    plate.centerX = 1000
-    moving:Tick(0)
-    assert(holder.anchor.x == 800, "unmatched damage attached itself to a later native plate")
+    assert(
+        moving:Labels()[1] == label and holder.anchor.x == 700,
+        "a new number did not reuse the pool at its own current launch point"
+    )
     moving:Event(moving.controller, "PLAYER_LEAVING_WORLD")
-    assert(#moving:Labels() == 0 and not moving.backing, "world cleanup retained followed damage")
+    assert(#moving:Labels() == 0 and not moving.backing, "world cleanup retained fixed text")
+    moving:ResetCounts()
+    moving:Tick(0.2)
+    moving:NoPresentationWrites()
 end
-print("PASS Diablo eases camera/native corrections without rewriting or flickering text and detaches on frame reuse")
-
-for _, performance in ipairs({ false, true }) do
-    local stale = DiabloPlates(performance)
-    local plate = stale:MakePlate("Stale", 1000)
-    plate.centerX = 300
-    stale:Tick(0)
-    stale.targetName = "Stale"
-    stale:Hit(17)
-    stale:Tick(performance and 0.301 or 0.17)
-    local holder = assert(stale:Labels()[1]).parent.parent
-    plate.centerX = math.huge
-    stale:Tick(0.651)
-    local x, y = holder.anchor.x, holder.anchor.y
-    plate.centerX, plate.top = 700, 500
-    stale:Tick(0)
-    assert(holder.anchor.x == x and holder.anchor.y == y, "stale projection reattached after its match was detached")
-end
-print("PASS stale Diablo projection keeps its last usable point without later reacquisition")
+print(
+    "PASS fixed Diablo numbers ignore repeated native restacking/camera motion while retaining matching, animation and reuse"
+)
