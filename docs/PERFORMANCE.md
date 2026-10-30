@@ -75,6 +75,24 @@ leave hundreds of expensive texture regions drawing continuously.
   GPU-memory, pixel-parity or FPS measurements. No local tests, standalone
   validation, addon execution or game launch is authorized for this audit.
 
+## Shared Layout font — 2026-10-30
+
+The shared font registry adds no HUD frame, region, asset, event or updater.
+It visits weakly registered text and the existing native Font objects only when
+the effective choice changes. Hidden frame owners defer writes to one OnShow
+wrapper per owner; ordinary setter calls still skip identical native bindings.
+Successful face probes are cached, unavailable families use the game face, and
+failed object assignments retain a usable fallback and retry through existing
+setter/Show work. Sizes, outlines and shadows remain unchanged.
+
+The lazy Layout selector adds five button frames, twenty texture regions and
+seven FontStrings (five button labels, a caption and a hint). They draw only on
+the open Layout page. Measurement invalidation reuses the existing settings,
+Copy, guardian and tally lifecycles. Timer and outgoing SCT font selectors retain
+ownership. Both Performance Mode states use the same instant font change.
+These are source-level costs; handheld readability, glyph coverage and native
+rendering remain unverified. See [FONTS.md](FONTS.md).
+
 ## Diablo IV combat text — 2026-10-30
 
 The optional Diablo IV style reuses the enemy-origin path, controller and hit

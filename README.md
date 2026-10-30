@@ -72,7 +72,7 @@ For UI debugging, `/fstack on` and `/fstack off` set the inspector state, `/fsta
 
 ## Make it yours
 
-Open `/sdui` or click the gold Dragonflight glyph beside the minimap, then drag a frame to move it or drag a corner to resize it. **Party frames** moves the party together, with an outline available even when playing solo. Hold **Shift** while dragging to line it up with other frames or the grid. Gold guides show the alignment. **Show grid** in **Layout** starts on and can hide the grid. Supported HUD groups and the player, target and party health bars have side handles for width. Portraits keep their size. Top/bottom handles change list rows or Chat height. Corners retain their existing resize behavior. For exact positions, sizes or **Hide frame**, use **Layout**.
+Open `/sdui` or click the gold Dragonflight glyph beside the minimap, then drag a frame to move it or drag a corner to resize it. **Party frames** moves the party together, with an outline available even when playing solo. Hold **Shift** while dragging to line it up with other frames or the grid. Gold guides show the alignment. **Show grid** in **Layout** starts on and can hide the grid. Supported HUD groups and the player, target and party health bars have side handles for width. Portraits keep their size. Top/bottom handles change list rows or Chat height. Corners retain their existing resize behavior. For exact positions, sizes or **Hide frame**, use **Layout**. Its **Font** choice changes addon text; the run timer and combat text keep their own font choices.
 
 Settings are grouped into nine categories, with related options together.
 

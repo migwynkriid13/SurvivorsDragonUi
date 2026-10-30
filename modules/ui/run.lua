@@ -1248,6 +1248,18 @@ DFRL:NewMod("RunTimers", 5, function()
 
     local function UpdateDisplayLabels()
         if not fontEditor or not fontEditor:IsVisible() then return end
+        if fontEditor.uiFontButtons then
+            local selected = DFRL.display.Get("uiFont")
+            for value, button in pairs(fontEditor.uiFontButtons) do
+                if button:IsVisible() and button.editorSelected ~= (value == selected) then
+                    button:SetSelected(value == selected)
+                end
+            end
+            if fontEditor.uiFont ~= selected then
+                fontEditor.uiFont = selected
+                if fontEditor.RefreshOptionLayout then fontEditor.RefreshOptionLayout() end
+            end
+        end
         if sctSizeLabel and sctSizeLabel:IsVisible() then
             T.SetTextIfChanged(sctSizeLabel, tostring(math.floor(DFRL.display.Get("sctScale") * 100 + 0.5)) .. "%")
         end
@@ -1331,7 +1343,7 @@ DFRL:NewMod("RunTimers", 5, function()
     local function ApplyFont(text, settings, caption)
         -- Initialize the game's DEFAULT face first so a missing native face
         -- leaves readable text at the requested size and outline.
-        T.SetFont(text, settings.size, settings.outline)
+        T.SetFont(text, settings.size, settings.outline, true)
         -- Translated run captions with non-ASCII glyphs use the game face;
         -- retain the user's saved font choice for the other languages.
         if settings.face ~= "DEFAULT" and not string.find(DFRL.locale.Text(caption or "RUN"), "[\128-\255]") then
@@ -2087,6 +2099,7 @@ DFRL:NewMod("RunTimers", 5, function()
 
         fontEditor = T.CreateEditorPanel(UIParent, width, 704, "SurvivorsDragonUiSettings")
         fontEditor:Hide()
+        fontEditor.uiFont = DFRL.display.Get("uiFont")
         fontEditor:SetFrameStrata("TOOLTIP")
         fontEditor:SetFrameLevel(150)
         PlaceFontEditor()
@@ -2170,7 +2183,34 @@ DFRL:NewMod("RunTimers", 5, function()
         performance.label:SetHeight(28)
         displayControls.performanceMode = performance
         builders.layout = function(page)
+            page:SetHeight(500)
             DFRL.layout.CreateControls(page, contentWidth, function() SelectPage("layout") end)
+            FontEditorLabel(page, "Font", 0, -338, 12)
+            local hint = FontEditorLabel(
+                page,
+                "Change addon text except the run timer and combat text, which have their own fonts.",
+                0,
+                -365,
+                11
+            )
+            hint:SetWidth(contentWidth)
+            hint:SetHeight(36)
+            hint:SetJustifyH("LEFT")
+            hint:SetJustifyV("TOP")
+            local buttonWidth = (contentWidth - 2 * gap) / 3
+            fontEditor.uiFontButtons = {}
+            for index, entry in ipairs(DFRL.display.fonts) do
+                local choice = entry.value
+                local _, button = FontEditorButton(
+                    entry.label,
+                    buttonWidth,
+                    math.mod(index - 1, 3) * (buttonWidth + gap),
+                    -410 - math.floor((index - 1) / 3) * 38,
+                    function() DFRL.display.Set("uiFont", choice) end,
+                    page
+                )
+                fontEditor.uiFontButtons[choice] = button
+            end
         end
         builders.profiles = function(page) DFRL.profiles.CreateControls(page, contentWidth) end
 
@@ -2809,8 +2849,10 @@ DFRL:NewMod("RunTimers", 5, function()
         if entry.enabled == false then return end
         local value = entry.text:GetText() or ""
         local scale = entry.content:GetScale()
+        local face = entry.text:GetFont()
         if
-            entry.fitText == value
+            entry.fitFace == face
+            and entry.fitText == value
             and T.NearlyEqual(entry.fitWidth, entry.fieldWidth)
             and T.NearlyEqual(entry.fitScale, scale)
         then
@@ -2859,6 +2901,7 @@ DFRL:NewMod("RunTimers", 5, function()
             end
             entry.fitTextWidth = textWidth
         end
+        entry.fitFace = face
         entry.fitText, entry.fitWidth, entry.fitScale = value, entry.fieldWidth, scale
         RefreshTallyGlowBounds(entry)
     end

@@ -462,6 +462,12 @@ assert(
     "first open built hidden options"
 )
 local layoutPage = pages.layout
+assert(dialog.uiFontButtons.default.editorSelected, "Layout did not select the default font")
+context:Call(dialog.uiFontButtons.arial, "OnClick")
+editor.Display()
+assert(display.Get("uiFont") == "arial" and not env.SurvivorsDragonUiDisplay, "Layout font saved before Confirm")
+assert(dialog.uiFontButtons.arial.editorSelected, "Layout font selection did not refresh")
+assert(display.Get("sctFont") == "default", "Layout font changed the independent SCT choice")
 dialog.navigation.Select("units")
 assert(
     pages.units and pages.pets and pages.auras and not pages.combat and not pages.timer,
@@ -488,6 +494,10 @@ display.FinishEdit(false)
 dialog:Hide()
 display.BeginEdit()
 dialog:Show()
+assert(display.Get("uiFont") == "default", "Cancel retained the Layout font")
+dialog.navigation.Select("layout")
+assert(dialog.uiFontButtons.default.editorSelected, "Layout did not refresh the discarded font on re-entry")
+dialog.navigation.Select("units")
 assert(
     healthChoice.editorChecked == true and #context.objects == unitObjects,
     "reopen did not discard/catch up without allocation"

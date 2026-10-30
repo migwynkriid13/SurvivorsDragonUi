@@ -460,7 +460,9 @@ DFRL:NewMod("GuardianTracker", 4, function()
     local function SyncUpdates()
         controller:SetScript("OnUpdate", inWorld and not DFRL.layout.IsHidden("guardianTracker") and Tick or nil)
     end
+    local uiFont = DFRL.display.Get("uiFont")
     DFRL.display.Listen(function()
+        local selectedFont = DFRL.display.Get("uiFont")
         local selected = DFRL.display.Get("guardianRows")
         local selectedShowDead = DFRL.display.Get("guardianShowDead")
         local selectedCurrent = DFRL.display.Get("guardianShowCurrentHealth")
@@ -468,12 +470,15 @@ DFRL:NewMod("GuardianTracker", 4, function()
         local selectedPercentage = DFRL.display.Get("guardianShowHealthPercentage") == true
         local selectedShortHealth = DFRL.display.Get("guardianShortHealth") ~= false
         if
-            selectedCurrent ~= showCurrent
+            selectedFont ~= uiFont
+            or selectedCurrent ~= showCurrent
             or selectedMaximum ~= showMaximum
             or selectedShortHealth ~= shortenHealth
             or selectedPercentage ~= showPercentage
         then
             ClearStatuses()
+            uiFont = selectedFont
+            presentation.measureSize = nil
             showCurrent, showMaximum = selectedCurrent, selectedMaximum
             showPercentage = selectedPercentage
             shortenHealth = selectedShortHealth

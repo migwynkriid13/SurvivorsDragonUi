@@ -18,6 +18,11 @@ env.string.format = function(...)
     context.formats = (context.formats or 0) + 1
     return string.format(...)
 end
+local setFont = env.T.SetFont
+env.T.SetFont = function(object, size, flags, independent)
+    assert(independent == true, "a timer source, ruler or segment joined the Layout font owner")
+    return setFont(object, size, flags)
+end
 local parent = env.CreateFrame("Frame", nil, env.UIParent)
 parent.scale = 1
 function parent:GetEffectiveScale() return self.scale end

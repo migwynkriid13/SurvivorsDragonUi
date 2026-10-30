@@ -134,11 +134,16 @@ DFRL:NewMod("ChatCopy", 0.75, function()
         local textRevision = 0
         local observedText = edit:GetText()
         local measuredRevision, measuredWidth, measuredHeight, measuredScale
+        local measuredFace, measuredSize, measuredFlags
         local function ResizeText(text)
             local textWidth = frame:GetWidth() - 48
             local height, scale = frame:GetHeight(), frame:GetEffectiveScale()
+            local face, size, flags = measure:GetFont()
             if
-                measuredRevision == textRevision
+                measuredFace == face
+                and measuredSize == size
+                and measuredFlags == flags
+                and measuredRevision == textRevision
                 and T.NearlyEqual(measuredWidth, textWidth)
                 and T.NearlyEqual(measuredHeight, height)
                 and T.NearlyEqual(measuredScale, scale)
@@ -154,6 +159,7 @@ DFRL:NewMod("ChatCopy", 0.75, function()
             local editHeight = math.max(height - 98, textHeight + 16)
             if not T.NearlyEqual(edit:GetHeight(), editHeight) then edit:SetHeight(editHeight) end
             measuredRevision, measuredWidth, measuredHeight, measuredScale = textRevision, textWidth, height, scale
+            measuredFace, measuredSize, measuredFlags = face, size, flags
             if scroll.UpdateScrollChildRect then scroll:UpdateScrollChildRect() end
         end
         edit:SetScript("OnTextChanged", function()
@@ -203,6 +209,14 @@ DFRL:NewMod("ChatCopy", 0.75, function()
         frame.edit = edit
         frame.scroll = scroll
         frame.resizeText = ResizeText
+        HookScript(frame, "OnShow", function() ResizeText(edit:GetText()) end)
+        local uiFont = DFRL.display.Get("uiFont")
+        DFRL.display.Listen(function()
+            local selected = DFRL.display.Get("uiFont")
+            if selected == uiFont then return end
+            uiFont = selected
+            if frame:IsVisible() then ResizeText(edit:GetText()) end
+        end)
         frame.setText = function(text)
             if edit:GetText() == text then
                 ResizeText(text)

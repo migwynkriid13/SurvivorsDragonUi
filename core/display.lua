@@ -7,6 +7,7 @@ DFRL:NewMod("Display", 0, function()
         meterEnabled = false,
         meterRows = 6,
         layoutShowGrid = true,
+        uiFont = "default",
         layoutSnapEnabled = true,
         layoutGridSpacing = 32,
         meterFontSize = 11,
@@ -107,6 +108,14 @@ DFRL:NewMod("Display", 0, function()
         highlightAffordableCache = true,
     }
     DFRL.display = display
+    -- Shared by normalization, the font owner and the Layout selector.
+    display.fonts = {
+        { value = "default", label = "Default" },
+        { value = "friz", label = "Friz Quadrata", face = "Fonts\\FRIZQT__.TTF" },
+        { value = "arial", label = "Arial Narrow", face = "Fonts\\ARIALN.TTF" },
+        { value = "morpheus", label = "Morpheus", face = "Fonts\\MORPHEUS.TTF" },
+        { value = "skurri", label = "Skurri", face = "Fonts\\SKURRI.TTF" },
+    }
 
     local ranges = {
         meterRows = { minimum = 1, maximum = 10, integer = true },
@@ -140,6 +149,11 @@ DFRL:NewMod("Display", 0, function()
     local function NormalizeSctFont(value)
         if value == "default" or value == "diablo" then return value end
     end
+    local function NormalizeUiFont(value)
+        for _, entry in ipairs(display.fonts) do
+            if value == entry.value then return value end
+        end
+    end
     local function Read(source, key)
         local value
         if type(source) == "table" then value = source[key] end
@@ -147,6 +161,7 @@ DFRL:NewMod("Display", 0, function()
         if key == "tallyStyle" then return NormalizeTallyStyle(value) or defaults[key] end
         if key == "lootMode" then return NormalizeLootMode(value) or defaults[key] end
         if key == "sctFont" then return NormalizeSctFont(value) or defaults[key] end
+        if key == "uiFont" then return NormalizeUiFont(value) or defaults[key] end
         if key == "sctStyle" then
             -- Old saved display choices and named profiles retain their stream.
             return NormalizeSctStyle(value)
@@ -200,6 +215,9 @@ DFRL:NewMod("Display", 0, function()
             if not value then return end
         elseif key == "sctFont" then
             value = NormalizeSctFont(value)
+            if not value then return end
+        elseif key == "uiFont" then
+            value = NormalizeUiFont(value)
             if not value then return end
         elseif type(value) ~= "boolean" then
             return

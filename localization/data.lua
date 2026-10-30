@@ -2,6 +2,7 @@
 DFRL.locale.data = {
     en = {
         ui = {
+            ["Change addon text except the run timer and combat text, which have their own fonts."] = "Change addon text except the run timer and combat text, which have their own fonts.",
             ["Guide to next respawn"] = "Guide to next respawn",
             ["When all guardians are defeated, point to the lair due to respawn first."] = "When all guardians are defeated, point to the lair due to respawn first.",
             ["Shorten health numbers"] = "Shorten health numbers",
@@ -654,6 +655,7 @@ DFRL.locale.data = {
     },
     pl = {
         ui = {
+            ["Change addon text except the run timer and combat text, which have their own fonts."] = "Zmień czcionkę tekstu dodatku z wyjątkiem licznika czasu biegu i tekstu walki, które mają własne ustawienia czcionki.",
             ["Guide to next respawn"] = "Prowadź do następnego odrodzenia",
             ["When all guardians are defeated, point to the lair due to respawn first."] = "Gdy wszyscy strażnicy zostaną pokonani, wskaż legowisko z najkrótszym czasem do odrodzenia.",
             ["Shorten health numbers"] = "Skracaj wartości zdrowia",
@@ -1777,6 +1779,7 @@ DFRL.locale.data = {
     },
     cs = {
         ui = {
+            ["Change addon text except the run timer and combat text, which have their own fonts."] = "Změní písmo textu doplňku kromě časovače běhu a bojového textu, které mají vlastní nastavení písma.",
             ["Guide to next respawn"] = "Vést k dalšímu znovuzrození",
             ["When all guardians are defeated, point to the lair due to respawn first."] = "Po porážce všech strážců ukazovat na doupě strážce, který se znovu objeví nejdříve.",
             ["Shorten health numbers"] = "Zkracovat hodnoty zdraví",
@@ -2903,6 +2906,7 @@ DFRL.locale.data = {
     },
     de = {
         ui = {
+            ["Change addon text except the run timer and combat text, which have their own fonts."] = "Ändert den Addontext außer Laufzeitmesser und Kampftext, die eigene Schriftarten haben.",
             ["Guide to next respawn"] = "Zum nächsten Wiedererscheinen führen",
             ["When all guardians are defeated, point to the lair due to respawn first."] = "Wenn alle Wächter besiegt sind, zum Hort mit der kürzesten verbleibenden Wiedererscheinungszeit führen.",
             ["Shorten health numbers"] = "Gesundheitszahlen abkürzen",
@@ -4027,6 +4031,7 @@ DFRL.locale.data = {
     },
     pt = {
         ui = {
+            ["Change addon text except the run timer and combat text, which have their own fonts."] = "Altera a fonte do texto do addon, exceto o cronômetro da corrida e o texto de combate, que têm fontes próprias.",
             ["Guide to next respawn"] = "Guiar até o próximo renascimento",
             ["When all guardians are defeated, point to the lair due to respawn first."] = "Quando todos os guardiões forem derrotados, apontar para o covil cujo guardião renascerá primeiro.",
             ["Shorten health numbers"] = "Abreviar valores de vida",
@@ -5142,6 +5147,7 @@ DFRL.locale.data = {
     },
     es = {
         ui = {
+            ["Change addon text except the run timer and combat text, which have their own fonts."] = "Cambia la fuente del texto del addon, salvo el temporizador de partida y el texto de combate, que tienen sus propias fuentes.",
             ["Guide to next respawn"] = "Guiar a la próxima reaparición",
             ["When all guardians are defeated, point to the lair due to respawn first."] = "Cuando todos los guardianes estén derrotados, señala la guarida cuyo guardián reaparecerá primero.",
             ["Shorten health numbers"] = "Abreviar valores de salud",
@@ -6261,6 +6267,7 @@ DFRL.locale.data = {
     },
     fr = {
         ui = {
+            ["Change addon text except the run timer and combat text, which have their own fonts."] = "Change la police du texte de l’addon, sauf le chronomètre et le texte de combat, qui ont leurs propres polices.",
             ["Guide to next respawn"] = "Guider vers la prochaine réapparition",
             ["When all guardians are defeated, point to the lair due to respawn first."] = "Quand tous les gardiens sont vaincus, indiquer le repaire dont le gardien réapparaîtra en premier.",
             ["Shorten health numbers"] = "Abréger les valeurs de vie",
@@ -7388,6 +7395,7 @@ DFRL.locale.data = {
     },
     ro = {
         ui = {
+            ["Change addon text except the run timer and combat text, which have their own fonts."] = "Schimbă fontul textului addonului, cu excepția cronometrului și a textului de luptă, care au propriile fonturi.",
             ["Guide to next respawn"] = "Ghidează spre următoarea reapariție",
             ["When all guardians are defeated, point to the lair due to respawn first."] = "Când toți străjerii sunt învinși, arată vizuina al cărei străjer va reapărea primul.",
             ["Shorten health numbers"] = "Prescurtează valorile vieții",
@@ -8498,6 +8506,7 @@ DFRL.locale.data = {
     },
     tr = {
         ui = {
+            ["Change addon text except the run timer and combat text, which have their own fonts."] = "Eklenti metninin yazı tipini değiştirir; kendi yazı tipi seçenekleri olan koşu sayacı ve savaş metni hariçtir.",
             ["Guide to next respawn"] = "Sonraki yeniden doğuşa yönlendir",
             ["When all guardians are defeated, point to the lair due to respawn first."] = "Tüm muhafızlar yenildiğinde, muhafızı en önce yeniden doğacak ine yönlendir.",
             ["Shorten health numbers"] = "Sağlık sayılarını kısalt",
@@ -9484,6 +9493,7 @@ DFRL.locale.data = {
     },
     ru = {
         ui = {
+            ["Change addon text except the run timer and combat text, which have their own fonts."] = "Меняет шрифт текста аддона, кроме таймера забега и боевого текста, у которых есть свои настройки шрифта.",
             ["Guide to next respawn"] = "К следующему возрождению",
             ["When all guardians are defeated, point to the lair due to respawn first."] = "Когда все стражи побеждены, указывать на логово того, кто возродится раньше остальных.",
             ["Shorten health numbers"] = "Сокращать значения здоровья",
@@ -10689,6 +10699,7 @@ DFRL.locale.data = {
     },
     uk = {
         ui = {
+            ["Change addon text except the run timer and combat text, which have their own fonts."] = "Змінює шрифт тексту аддона, крім таймера забігу й бойового тексту, які мають власні налаштування шрифту.",
             ["Guide to next respawn"] = "До наступного відродження",
             ["When all guardians are defeated, point to the lair due to respawn first."] = "Коли всіх вартових переможено, вказувати на лігво того, хто відродиться найраніше.",
             ["Shorten health numbers"] = "Скорочувати значення здоров’я",
@@ -11868,6 +11879,7 @@ DFRL.locale.data = {
     },
     zh = {
         ui = {
+            ["Change addon text except the run timer and combat text, which have their own fonts."] = "更改插件文字的字体，但保留计时器和战斗文字各自的字体设置。",
             ["Guide to next respawn"] = "指引下次重生",
             ["When all guardians are defeated, point to the lair due to respawn first."] = "所有守卫被击败后，指向守卫最先重生的巢穴。",
             ["Shorten health numbers"] = "缩写生命值",
@@ -12974,6 +12986,7 @@ DFRL.locale.data = {
     },
     ja = {
         ui = {
+            ["Change addon text except the run timer and combat text, which have their own fonts."] = "アドオンの文字のフォントを変更します。個別のフォント設定があるランタイマーと戦闘テキストは除きます。",
             ["Guide to next respawn"] = "次のリスポーンへ案内",
             ["When all guardians are defeated, point to the lair due to respawn first."] = "すべてのガーディアンを倒したら、最も早くリスポーンするガーディアンの巣へ案内します。",
             ["Shorten health numbers"] = "体力の数値を省略",
@@ -14112,6 +14125,7 @@ DFRL.locale.data = {
     },
     ko = {
         ui = {
+            ["Change addon text except the run timer and combat text, which have their own fonts."] = "애드온 글꼴을 변경합니다. 자체 글꼴 설정이 있는 진행 타이머와 전투 텍스트는 제외됩니다.",
             ["Guide to next respawn"] = "다음 재생성 위치 안내",
             ["When all guardians are defeated, point to the lair due to respawn first."] = "모든 수호자를 처치하면 가장 먼저 재생성될 수호자의 소굴을 가리킵니다.",
             ["Shorten health numbers"] = "생명력 수치 줄이기",

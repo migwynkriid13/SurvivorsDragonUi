@@ -58,6 +58,14 @@ An explicit Bash shell enables `pipefail`, so piping fixture/model output into
 
 ## UI work and cleanup tests
 
+Global font cases load the production font/display owners with explicit native
+font boundaries. They cover enum normalization, preview/Confirm/discard/profiles/
+reset, preserved native sizes/flags, independent text, hidden Show ordering,
+rejected assignments, fallback recovery, reuse and unchanged writes. The editor
+fixture exercises the Layout selector; SCT and segmented timer fixtures require
+their production setters to opt out. These cases remain CI-only and were not
+executed locally. See [FONTS.md](FONTS.md).
+
 Health-format fixtures cover the independent default-on Unit frames, Boss bars
 and Guardian tracker shortening choices through the real display normalizer,
 preview/Confirm/discard/profile/reset paths. Production formatter/health owners

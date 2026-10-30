@@ -14,31 +14,104 @@ local defaultFace = TryDefault("DEFAULT")
     or TryDefault("Fonts\\FRIZQT__.TTF")
 if not defaultFace then error("SurvivorsDragonUi: the client has no usable default font") end
 
-function DFRL.tools.GetDefaultFont() return defaultFace end
-function DFRL.tools.SetFont(object, size, flags)
-    -- A size derived from a not-yet-resolved native region can be zero. On the
-    -- current client that frees a FontString's font instead of initializing it.
-    if type(size) ~= "number" or size <= 0 or size - size ~= 0 then size = 12 end
-    flags = flags or ""
+-- Track text explicitly styled by this addon, including the native Font objects
+-- it already restyles. Independent selectors opt out through argument four.
+local managed = setmetatable({}, { __mode = "k" })
+local pendingOwners = setmetatable({}, { __mode = "k" })
+local usableFaces = {}
+local selectedFace, selectedChoice
+local function UsableFace(face)
+    if not face then return defaultFace end
+    if usableFaces[face] then return usableFaces[face] end
+    local loaded = TryDefault(face) or defaultFace
+    usableFaces[face] = loaded
+    return loaded
+end
+local function Bind(object, face, size, flags)
     if object.GetFont then
-        local face, currentSize, currentFlags = object:GetFont()
-        if face == defaultFace and DFRL.tools.NearlyEqual(currentSize, size) and (currentFlags or "") == flags then
+        local currentFace, currentSize, currentFlags = object:GetFont()
+        if currentFace == face and DFRL.tools.NearlyEqual(currentSize, size) and (currentFlags or "") == flags then
             return true
         end
     end
-    return object:SetFont(defaultFace, size, flags)
+    local ok, loaded = pcall(object.SetFont, object, face, size, flags)
+    if not ok then return false end
+    if loaded then return true end
+    if object.GetFont then
+        local actualFace, actualSize, actualFlags = object:GetFont()
+        return actualFace == face and DFRL.tools.NearlyEqual(actualSize, size) and (actualFlags or "") == flags
+    end
+    return false
+end
+local function Apply(object, style)
+    local face = selectedFace or UsableFace(style.base)
+    local loaded = Bind(object, face, style.size, style.flags)
+    -- A rejected native assignment can clear the old binding. Restore readable
+    -- text and leave the request retryable through its existing owner.
+    if not loaded then Bind(object, defaultFace, style.size, style.flags) end
+    style.dirty = not loaded
+    return loaded
+end
+local function RefreshPending(labels)
+    for object in pairs(labels) do
+        local style = managed[object]
+        if style and style.dirty then pcall(Apply, object, style) end
+    end
+end
+local function Defer(object)
+    local owner = object
+    if object.GetObjectType and object:GetObjectType() == "FontString" then owner = object:GetParent() end
+    if not owner or not owner.GetScript or not owner.SetScript then return false end
+    if owner:IsVisible() then return false end
+    local labels = pendingOwners[owner]
+    if not labels then
+        labels = setmetatable({}, { __mode = "k" })
+        pendingOwners[owner] = labels
+        local previous = owner:GetScript("OnShow")
+        -- Bind before the view's existing Show work measures its labels.
+        owner:SetScript("OnShow", function(a1, a2, a3, a4, a5, a6, a7, a8, a9)
+            RefreshPending(labels)
+            if previous then previous(a1, a2, a3, a4, a5, a6, a7, a8, a9) end
+        end)
+    end
+    labels[object] = true
+    return true
+end
+local function RefreshFonts()
+    local choice = DFRL.display.Get("uiFont")
+    if selectedChoice == choice then return end
+    selectedChoice, selectedFace = choice, nil
+    for _, entry in ipairs(DFRL.display.fonts) do
+        if entry.value == choice and entry.face then selectedFace = UsableFace(entry.face) end
+    end
+    local face = selectedFace or defaultFace
+    _G.STANDARD_TEXT_FONT, _G.UNIT_NAME_FONT = face, face
+    _G.DAMAGE_TEXT_FONT, _G.NAMEPLATE_FONT = face, face
+    for object, style in pairs(managed) do
+        style.dirty = true
+        -- Retired native wrappers can reject even their visibility reads.
+        pcall(function()
+            if not Defer(object) then Apply(object, style) end
+        end)
+    end
 end
 
--- Chat and run banners share the same resolved native face and styling.
-function DFRL.tools.SetChatFont(frame)
-    local font, size, flags
-    if frame.GetFont then
-        font, size, flags = frame:GetFont()
+function DFRL.tools.GetDefaultFont() return defaultFace end
+function DFRL.tools.SetFont(object, size, flags, base)
+    -- A not-yet-resolved native region can report zero, which frees its font.
+    if type(size) ~= "number" or size <= 0 or size - size ~= 0 then size = 12 end
+    flags = flags or ""
+    if base == true then
+        managed[object] = nil
+        return Bind(object, defaultFace, size, flags)
     end
-    if font ~= defaultFace or not DFRL.tools.NearlyEqual(size, 12) or flags ~= "OUTLINE" then
-        DFRL.tools.SetFont(frame, 12, "OUTLINE")
-    end
+    local style = managed[object] or {}
+    managed[object] = style
+    style.size, style.flags, style.base = size, flags, base
+    return Apply(object, style)
 end
+
+function DFRL.tools.SetChatFont(frame) DFRL.tools.SetFont(frame, 12, "OUTLINE") end
 
 function DFRL.tools.SetChatShadow(frame)
     if frame.SetShadowColor then
@@ -59,12 +132,16 @@ end
 
 -- Keep stock font sizes and styling while using the resolved game font face.
 DFRL:NewMod("Fonts", 0, function()
-    _G.STANDARD_TEXT_FONT = defaultFace
-    _G.UNIT_NAME_FONT = defaultFace
-    _G.DAMAGE_TEXT_FONT = defaultFace
-    _G.NAMEPLATE_FONT = defaultFace
+    RefreshFonts()
+    DFRL.display.Listen(RefreshFonts)
     local function UpdateNativeFont(object)
-        if object.GetObjectType and object:GetObjectType() == "Font" and object.GetFont and object.SetFont then
+        if
+            object ~= defaultFont
+            and object.GetObjectType
+            and object:GetObjectType() == "Font"
+            and object.GetFont
+            and object.SetFont
+        then
             local _, size, flags = object:GetFont()
             if type(size) == "number" and size > 0 then T.SetFont(object, size, flags) end
         end
