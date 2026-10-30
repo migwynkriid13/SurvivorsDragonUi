@@ -58,15 +58,16 @@ def check_assets(files, tracked, inventory, rules):
     """Require literal evidence in loaded Lua, with explicit dynamic families.
 
     This is a syntactic ownership check, not a claim that a path is reachable.
-    A comment, document or manifest entry alone cannot keep a texture alive.
+    A comment, document or manifest entry alone cannot keep an asset alive.
     """
     failures = check_lua_sources(files, tracked, inventory, rules)
-    used = {name: [] for name in sorted(files) if name.endswith(".blp")}
+    used = {name: [] for name in sorted(files) if name.endswith((".blp", ".ttf"))}
     values = {name: {row["value"] for row in data["strings"]} for name, data in inventory.items()}
 
     def reference(name, source, line):
         if name not in used:
-            failures.append(f"{source}:{line}: missing packaged texture {name}")
+            kind = "font" if name.endswith(".ttf") else "texture"
+            failures.append(f"{source}:{line}: missing packaged {kind} {name}")
         else:
             used[name].append(f"{source}:{line}")
 
@@ -95,7 +96,9 @@ def check_assets(files, tracked, inventory, rules):
             value, line = normalized(row["value"]), row["line"]
             if value.lower().startswith("interface/"):
                 continue
-            if re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_./-]*\.blp", value):
+            if re.fullmatch(r"media/fonts/[A-Za-z0-9_-]+\.ttf", value):
+                reference(value, source, line)
+            elif re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_./-]*\.blp", value):
                 if "/" in value:
                     reference(TEXTURES + value, source, line)
                 else:
@@ -161,7 +164,7 @@ def zip_bytes(payload):
 def duplicate_groups(payload):
     groups = {}
     for name, data in payload.items():
-        if PurePosixPath(name).suffix in {".blp", ".lua"}:
+        if PurePosixPath(name).suffix in {".blp", ".lua", ".ttf"}:
             groups.setdefault(hashlib.sha256(data).hexdigest(), []).append(name)
     return {digest: sorted(names) for digest, names in groups.items() if len(names) > 1}
 
@@ -195,7 +198,7 @@ def main():
         tracked = set(git("ls-files", "-z").decode().rstrip("\0").split("\0"))
         for name in files:
             suffix = PurePosixPath(name).suffix
-            if suffix not in {".lua", ".blp"} and name != ADDON_DIRECTORY + ".toc" and PurePosixPath(name).name != "LICENSE.txt":
+            if suffix not in {".lua", ".blp", ".ttf"} and name != ADDON_DIRECTORY + ".toc" and PurePosixPath(name).name != "LICENSE.txt":
                 failures.append(f"Unexpected installable payload file: {name}")
         rules = json.loads((SOURCE / "packaging/asset-usage.json").read_text(encoding="utf-8"))
         if rules.get("format_version") != 1:

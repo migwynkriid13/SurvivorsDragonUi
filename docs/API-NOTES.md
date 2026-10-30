@@ -334,11 +334,13 @@ No tests, syntax checks, validation, addon execution or game startups were run; 
 Performance Mode leaves SCT unchanged, including its selected style, normal
 motion, critical pop, fade, matching and native plate ownership.
 
-`/sdui` → **Combat text** has **MSBT-style scrolling**, off by default. Missing
-or invalid `sctMSBTStyle` values normalize to false in the existing display
-table, preserving the current over-enemy style. Preview, Confirm-only saving,
+`/sdui` → **Combat text** has a **Damage number style** selector: **Over enemies**
+(default), **MSBT-style scrolling** and **Diablo IV**. The normalized `sctStyle`
+enum lives in the existing display table; legacy exact-true `sctMSBTStyle`
+choices migrate to MSBT. See [DIABLO-SCT.md](DIABLO-SCT.md) for the third style
+and migration rules. Preview, Confirm-only saving,
 Cancel/world/logout/reload discard, profiles and both full resets share the
-existing display transaction. The checkbox dims and disables alongside the
+existing display transaction. The style buttons dim and disable alongside the
 other settings when the effective mode is Off or Game settings. The Custom
 status description follows the selected style in all fourteen languages.
 

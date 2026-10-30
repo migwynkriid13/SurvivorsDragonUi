@@ -23,8 +23,8 @@ local function Plates(setup)
             function object:GetEffectiveScale() return 1 end
             function object:GetLeft() return 0 end
             function object:GetBottom() return 0 end
-            function object:GetCenter() return self.centerX or 200, 200 end
-            function object:GetTop() return 205 end
+            function object:GetCenter() return self.centerX or 200, self.centerY or 200 end
+            function object:GetTop() return self.top or 205 end
             function object:GetChildren()
                 self.childrenReads = (self.childrenReads or 0) + 1
                 local children = {}
@@ -193,12 +193,12 @@ context.guardian.nativeBar.rangeReads, context.guardian.nativeBar.valueReads = 0
 context:Tick(0.21)
 assert(context.guardian.nativeBar.rangeReads == 1, "filter and SCT sampled the same native range twice")
 assert(context.guardian.nativeBar.valueReads == 1, "SCT health sampling lost its native value")
-context:SetSetting("sctMSBTStyle", true)
+context:SetSetting("sctStyle", "msbt")
 context.guardian.nativeBar.rangeReads, context.guardian.nativeBar.valueReads = 0, 0
 context:Tick(0.21)
 assert(context.guardian.nativeBar.rangeReads == 1, "names-only filtering did not use its one required range")
 assert(context.guardian.nativeBar.valueReads == 0, "names-only scrolling added unnecessary native health reads")
-context:SetSetting("sctMSBTStyle", false)
+context:SetSetting("sctStyle", "enemy")
 print("PASS one synchronous sample supplies filter, skin and matching without adding disabled reads")
 
 local waking = Entries()
@@ -513,8 +513,8 @@ do
 
     shared[1].centerX = 500
     shared[3].regions[3]:SetText("Other occupant")
-    matching:SetSetting("sctMSBTStyle", true)
-    matching:SetSetting("sctMSBTStyle", false)
+    matching:SetSetting("sctStyle", "msbt")
+    matching:SetSetting("sctStyle", "enemy")
     matching.targetName = "Shared"
     matching:Hit(401)
     matching:Tick(0.09)
@@ -651,3 +651,113 @@ do
         "PASS SCT pass-local queries reuse no-match/ambiguity, separate exact keys and retire at loss/pass boundaries"
     )
 end
+
+-- Fixed Diablo launch points must ignore native collision/camera corrections.
+local function DiabloPlates(performance)
+    return Plates(function(current, env)
+        current.settings.sctStyle = "diablo"
+        current.settings.performanceMode = performance
+        current.settings.nameplatesBossGuardiansOnly = false
+        env.NAMEPLATES_ON = nil
+        -- Both production controllers get identical launch choices, allowing a
+        -- stationary reference without copying any production motion equation.
+        local nativeMath = env.math
+        env.math = {}
+        for key, value in pairs(nativeMath) do
+            env.math[key] = value
+        end
+        env.math.random = function(low) return low end
+        env.T.ParseNameplateCombatEvent = function(_, message)
+            return {
+                kind = "damage",
+                damageType = "autoattack",
+                sourceName = "Player",
+                targetName = current.targetName,
+                amount = tonumber(message),
+            }
+        end
+    end)
+end
+
+for _, performance in ipairs({ false, true }) do
+    local moving, stationary = DiabloPlates(performance), DiabloPlates(performance)
+    local plate, reference = moving:MakePlate("Moving", 1000), stationary:MakePlate("Moving", 1000)
+    for _, item in ipairs({ plate, reference }) do
+        item.centerX, item.top = 280, 320
+    end
+    for _, current in ipairs({ moving, stationary }) do
+        current:Tick(0)
+        current.targetName = "Moving"
+        current:Hit(17)
+        current:Tick(performance and 0.301 or 0.17)
+    end
+    local label, referenceLabel = assert(moving:Labels()[1]), assert(stationary:Labels()[1])
+    local holder, referenceHolder = label.parent.parent, referenceLabel.parent.parent
+    local allocated = #moving.objects
+    moving:ResetCounts()
+    local points = { { 950, 650 }, { 80, 120 }, { 850, 550 }, { 150, 700 }, { 280, 320 } }
+    for index = 1, 48 do
+        local point = points[math.mod(index - 1, #points) + 1]
+        plate.centerX, plate.top = point[1], point[2]
+        -- Native projection continues to update for later original hit matching.
+        moving:Tick(1 / 60)
+        stationary:Tick(1 / 60)
+        assert(plate.fixture.origin.x == point[1], "fixed presentation disabled required native matching samples")
+        assert(moving:Labels()[1] == label, "native restacking replaced the active number")
+        assert(
+            holder.anchor.x == referenceHolder.anchor.x and holder.anchor.y == referenceHolder.anchor.y,
+            "native restacking/camera movement altered an existing number's animation"
+        )
+        assert(
+            label:GetText() == "17" and holder:GetAlpha() == referenceHolder:GetAlpha(),
+            "native corrections changed the amount or lifetime/fade"
+        )
+    end
+    assert(
+        not moving.writes.SetText and not moving.writes.Show and not moving.writes.Hide,
+        "native movement flickered active text visibility"
+    )
+    assert(#moving.objects == allocated, "native movement allocated replacement text")
+    assert(moving.backing and moving.env.NAMEPLATES_ON == nil, "fixed presentation changed native V ownership")
+
+    local x, y = holder.anchor.x, holder.anchor.y
+    plate.centerX = math.huge
+    moving:Tick(0)
+    assert(holder.anchor.x == x and holder.anchor.y == y, "invalid projection moved existing text")
+    local origin = plate.fixture.origin
+    plate:Hide()
+    plate.centerX, plate.top = 700, 500
+    plate.regions[3]:SetText("Other occupant")
+    plate:Show()
+    moving:Tick(0)
+    assert(not origin.live and plate.fixture.origin ~= origin, "frame reuse retained the retired native incarnation")
+    assert(holder.anchor.x == x and holder.anchor.y == y, "frame retirement/reuse moved an active number")
+    moving:SetSetting("performanceMode", not performance)
+    moving:Tick(0)
+    assert(
+        moving:Labels()[1] == label and holder.anchor.x == x and holder.anchor.y == y,
+        "Performance Mode restarted or repositioned active text"
+    )
+    moving:Tick(0.301)
+    assert(#moving:Labels() == 0, "native movement extended the original 1.1-second lifetime")
+    moving:Tick(0.36) -- Retire the old matching evidence before testing a fresh same-name hit.
+
+    plate:Hide()
+    plate.regions[3]:SetText("Moving")
+    plate:Show()
+    moving.targetName = "Moving"
+    moving:Hit(23)
+    moving:Tick(0.301)
+    assert(
+        moving:Labels()[1] == label and holder.anchor.x == 700,
+        "a new number did not reuse the pool at its own current launch point"
+    )
+    moving:Event(moving.controller, "PLAYER_LEAVING_WORLD")
+    assert(#moving:Labels() == 0 and not moving.backing, "world cleanup retained fixed text")
+    moving:ResetCounts()
+    moving:Tick(0.2)
+    moving:NoPresentationWrites()
+end
+print(
+    "PASS fixed Diablo numbers ignore repeated native restacking/camera motion while retaining matching, animation and reuse"
+)

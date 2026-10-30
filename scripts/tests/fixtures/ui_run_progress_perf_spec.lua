@@ -91,42 +91,47 @@ end
 
 do
     local context, env = Clock()
-    for frame = 1, 60 do
+    for frame = 1, 120 do
         context:Sample(10 + frame / 100)
     end
-    assert(context.writes.value == 1 and env.runBar.value == 10, "one native second repainted the fill every frame")
+    assert(context.writes.value == 1 and env.runBar.value == 10, "fill moved within a native two-second step")
     assert(context.writes.range == 1 and env.runBar.maximum == 960, "unchanged maximum rewrote the range")
-    assert(context.reads.time == 60 and context.reads.length == 1 and context.reads.ownership == 60)
+    assert(context.reads.time == 120 and context.reads.length == 1 and context.reads.ownership == 120)
     assert(context.reads.schedule == 1, "one refresh scope repeatedly traversed its schedule")
     assert(context.reads.numeral == 1, "static Heroic presentation ran between deferred refreshes")
-    assert(#context.flows == 60 and #context.captions == 60 and #context.states == 60, "presentation cadence changed")
+    assert(
+        #context.flows == 120 and #context.captions == 120 and #context.states == 120,
+        "presentation cadence changed"
+    )
     for index, flow in ipairs(context.flows) do
         assert(flow.value == 10 and flow.maximum == 960, "effect clipping did not follow the stepped native fill")
         assert(context.captions[index].seconds == 10 + index / 100, "caption input lost native fractional seconds")
         assert(context.appearance[index] == false and context.states[index] == false, "markers reached the limit early")
     end
-    context:Sample(11)
-    assert(context.writes.value == 2 and env.runBar.value == 11, "the next native integer did not advance the fill")
+    context:Sample(11.99)
+    assert(context.writes.value == 1 and env.runBar.value == 10, "fill advanced before two native seconds")
+    context:Sample(12)
+    assert(
+        context.writes.value == 2 and env.runBar.value == 12,
+        "the next native two-second step did not advance the fill"
+    )
     context:ResetPerf()
     for _ = 1, 20 do
-        context:Sample(11.4, "paused")
+        context:Sample(12.4, "paused")
     end
     assert(not context.writes.value and #context.flows == 20, "paused progress repainted or stopped cosmetic cadence")
-    assert(context.schedulePhase == "paused" and context.captions[20].seconds == 11.4)
+    assert(context.schedulePhase == "paused" and context.captions[20].seconds == 12.4)
     context:Sample(9.8)
     assert(
-        context.cleared == 1 and env.refreshRows and env.runBar.value == 9,
+        context.cleared == 1 and env.refreshRows and env.runBar.value == 8,
         "backward native time did not retire rows"
     )
     context:Sample(9.2)
-    assert(
-        context.cleared == 2 and env.refreshRows and env.runBar.value == 9,
-        "same-integer correction lost retirement"
-    )
+    assert(context.cleared == 2 and env.refreshRows and env.runBar.value == 8, "same-step correction lost retirement")
     assert(context.writes.value == 1 and context.captions[#context.captions].seconds == 9.2)
 end
 print(
-    "PASS native-second progress skips repeated fill writes and retains raw timing, pauses, corrections and cosmetic cadence"
+    "PASS native two-second progress skips repeated fill writes and retains raw timing, pauses, corrections and cosmetic cadence"
 )
 
 do

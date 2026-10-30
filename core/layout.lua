@@ -1084,6 +1084,69 @@ DFRL:NewMod("Layout", 0, function()
         T.SetTextIfChanged(coordinates[field], text)
     end
     local coordinateState = {}
+    local ArrangeCoordinateOptions, ApplySelectedWidth
+    local function HasWidthControl(entry)
+        return entry and (entry.options.edgeWidth or entry.options.edgeHandles) and true or false
+    end
+    local function WidthControlLimits(entry)
+        local options = entry.options
+        return options.minWidth or 120, options.maxWidth or (options.resize == "dimensions" and 2400 or 1200)
+    end
+    local function PrepareWidthSlider()
+        if coordinates.widthSlider then return coordinates.widthSlider end
+        local name = "SurvivorsDragonUiLayoutWidth"
+        local slider = CreateFrame("Slider", name, coordinates, "OptionsSliderTemplate")
+        slider:SetFrameStrata(coordinates:GetFrameStrata())
+        slider:SetFrameLevel(coordinates:GetFrameLevel() + 1)
+        slider:SetWidth(coordinates:GetWidth() - 24)
+        slider:SetHeight(16)
+        slider:SetPoint("TOPLEFT", coordinates, "TOPLEFT", 12, -184)
+        slider:SetValueStep(1)
+        slider.low, slider.high = _G[name .. "Low"], _G[name .. "High"]
+        local caption = _G[name .. "Text"]
+        if caption then
+            DFRL.locale.Bind(caption)
+            T.SetFont(caption, 11, "")
+            caption:ClearAllPoints()
+            caption:SetPoint("BOTTOMLEFT", slider, "TOPLEFT", 0, 4)
+            caption:SetText("Width (frame units)")
+        end
+        slider.valueLabel = slider:CreateFontString(nil, "OVERLAY")
+        T.SetFont(slider.valueLabel, 11, "")
+        slider.valueLabel:SetPoint("BOTTOMRIGHT", slider, "TOPRIGHT", 0, 4)
+        slider.valueLabel:SetTextColor(1, 0.83, 0.38)
+        slider:SetScript("OnValueChanged", function()
+            if not coordinates.refreshing then ApplySelectedWidth(tonumber(arg1) or slider:GetValue()) end
+        end)
+        coordinates.widthSlider = slider
+        return slider
+    end
+    local function RefreshWidthControl()
+        local shown = HasWidthControl(selected)
+        if shown then
+            local slider = PrepareWidthSlider()
+            local minimum, maximum = WidthControlLimits(selected)
+            if slider.minimum ~= minimum or slider.maximum ~= maximum then
+                slider:SetMinMaxValues(minimum, maximum)
+                slider.minimum, slider.maximum = minimum, maximum
+                if slider.low then T.SetTextIfChanged(slider.low, string.format("%.0f", minimum)) end
+                if slider.high then T.SetTextIfChanged(slider.high, string.format("%.0f", maximum)) end
+            end
+            local width = selected.frame:GetWidth()
+            if not T.NearlyEqual(slider:GetValue(), width) then slider:SetValue(width) end
+            if slider.displayedWidth ~= width then
+                T.SetTextIfChanged(slider.valueLabel, string.format("%.2f", width))
+                slider.displayedWidth = width
+            end
+            if not slider:IsShown() then slider:Show() end
+        elseif coordinates.widthSlider and coordinates.widthSlider:IsShown() then
+            coordinates.widthSlider:Hide()
+        end
+        if coordinates.widthShown ~= shown then
+            coordinates.widthShown = shown
+            ArrangeCoordinateOptions(coordinates.optionsPopup or false)
+        end
+    end
     RefreshCoordinates = function(force)
         if not coordinates or not selected then return end
         if force == false and not coordinates:IsVisible() then return end
@@ -1091,6 +1154,7 @@ DFRL:NewMod("Layout", 0, function()
         local dimensions = selected.options.resize == "dimensions"
         local width = dimensions and selected.frame:GetWidth()
             or LocalScale(selected.frame) / selected.defaultScale * 100
+        local frameWidth = HasWidthControl(selected) and selected.frame:GetWidth() or nil
         local height = selected.frame:GetHeight()
         local hidden, language = IsHidden(selected), DFRL.locale.code
         local gridShown = DFRL.display.Get("layoutShowGrid")
@@ -1100,6 +1164,7 @@ DFRL:NewMod("Layout", 0, function()
             and coordinateState.x == x
             and coordinateState.y == y
             and coordinateState.width == width
+            and coordinateState.frameWidth == frameWidth
             and coordinateState.height == height
             and coordinateState.hidden == hidden
             and coordinateState.language == language
@@ -1131,8 +1196,10 @@ DFRL:NewMod("Layout", 0, function()
         end
         if coordinates.visibility.editorChecked ~= hidden then coordinates.visibility:SetChecked(hidden) end
         if coordinates.grid.editorChecked ~= gridShown then coordinates.grid:SetChecked(gridShown) end
+        RefreshWidthControl()
         coordinateState.entry, coordinateState.x, coordinateState.y = selected, x, y
         coordinateState.width, coordinateState.height = width, height
+        coordinateState.frameWidth = frameWidth
         coordinateState.hidden, coordinateState.language = hidden, language
         coordinateState.gridShown = gridShown
         coordinates.dirty = false
@@ -1203,7 +1270,49 @@ DFRL:NewMod("Layout", 0, function()
         RefreshCoordinates()
         return true
     end
-    local function ArrangeCoordinateOptions(popup)
+    ApplySelectedWidth = function(value)
+        if not editing or not coordinates:IsVisible() or not HasWidthControl(selected) or not Number(value) then
+            return
+        end
+        FinishDrag(activeDrag, true)
+        -- Pending numeric edits share Apply's validation; invalid text must not
+        -- be overwritten by a slider refresh or silently accepted on Save.
+        if coordinates.dirty and not ApplyCoordinates() then
+            coordinates.refreshing = true
+            RefreshWidthControl()
+            coordinates.refreshing = false
+            return
+        end
+        local frame = selected.frame
+        local minimum, maximum = WidthControlLimits(selected)
+        value = Clamp(math.floor(value + 0.5), minimum, maximum)
+        if T.NearlyEqual(frame:GetWidth(), value) then
+            coordinates.refreshing = true
+            RefreshWidthControl()
+            coordinates.refreshing = false
+            return
+        end
+        local width, height, uiScale = Viewport()
+        local x, y = CenterPosition(selected)
+        if not width or not x then
+            coordinates.status:SetText("Frame position is not available yet.")
+            coordinates.refreshing = true
+            RefreshWidthControl()
+            coordinates.refreshing = false
+            return
+        end
+        ApplySize(selected, { scale = LocalScale(frame), width = value, height = frame:GetHeight() })
+        local offsetX, offsetY = CenterOffsets(frame, uiScale)
+        local geometry = ReadGeometry(selected, { x = (x - offsetX) / width, y = (y - offsetY) / height })
+        -- Explicit width also opts caption-fitted views out of automatic sizing.
+        geometry.width = value
+        draft[selected.key] = geometry
+        layout.Place(selected.key)
+        RefreshEditorSoon()
+        coordinates.status:SetText("Preview. Confirm to save.")
+        RefreshCoordinates()
+    end
+    ArrangeCoordinateOptions = function(popup)
         local form = coordinates
         local width = form:GetWidth()
         local halfWidth = (width - 12) / 2
@@ -1219,12 +1328,13 @@ DFRL:NewMod("Layout", 0, function()
         end
         local rowHeight = T.CompactEditorToggle(form.visibility)
         if not popup then rowHeight = math.max(rowHeight, T.CompactEditorToggle(form.grid)) end
-        local applyTop = 156 + rowHeight + 8
+        local optionsTop = coordinates.widthShown and 228 or 156
+        local applyTop = optionsTop + rowHeight + 8
         if form.optionsPopup ~= popup or form.optionsApplyTop ~= applyTop then
             form.visibility:ClearAllPoints()
-            form.visibility:SetPoint("TOPLEFT", form, "TOPLEFT", 0, -156)
+            form.visibility:SetPoint("TOPLEFT", form, "TOPLEFT", 0, -optionsTop)
             form.grid:ClearAllPoints()
-            form.grid:SetPoint("TOPLEFT", form, "TOPLEFT", halfWidth + 12, -156)
+            form.grid:SetPoint("TOPLEFT", form, "TOPLEFT", halfWidth + 12, -optionsTop)
             if popup then
                 if form.grid:IsShown() then form.grid:Hide() end
             elseif not form.grid:IsShown() then

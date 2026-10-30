@@ -75,6 +75,17 @@ class AssetInventoryTests(unittest.TestCase):
         failures, _ = self.scan('-- "meter\\\\Old.blp"\n--[[ "meter\\\\Old.blp" ]]', ["media/tex/meter/Old.blp"])
         self.assertTrue(any("no reference" in row for row in failures))
 
+    def test_bundled_font_requires_live_literal_evidence_and_exact_package_membership(self):
+        font = "media/fonts/PT_Serif-Web-Regular.ttf"
+        source = r'local face = root .. "media\\fonts\\PT_Serif-Web-Regular.ttf"; label:SetFont(face, 18, "OUTLINE")'
+        failures, used = self.scan(source, [font])
+        self.assertEqual(failures, [])
+        self.assertTrue(used[font])
+        failures, _ = self.scan(source, [])
+        self.assertTrue(any("missing packaged font" in row for row in failures))
+        failures, _ = self.scan('-- ' + source, [font])
+        self.assertTrue(any("no reference" in row for row in failures))
+
     def test_native_paths_do_not_count_as_bundled_artwork(self):
         failures, _ = self.scan(r'icon:SetTexture("Interface\\Icons\\Spell_Test.blp")', [])
         self.assertEqual(failures, [])
@@ -203,7 +214,7 @@ class PackageTests(unittest.TestCase):
             self.inspect(self.files + ["alias.lua"])
 
     def test_zip_is_deterministic_and_has_only_the_reviewed_payload(self):
-        payload = {"core/view.lua": b"-- fixture\n", "media/tex/a.blp": b"art"}
+        payload = {"core/view.lua": b"-- fixture\n", "media/tex/a.blp": b"art", "media/fonts/face.ttf": b"font"}
         self.assertEqual(zip_bytes(payload), zip_bytes(dict(reversed(list(payload.items())))))
         with zipfile.ZipFile(io.BytesIO(zip_bytes(payload))) as archive:
             self.assertEqual(set(archive.namelist()), {"SurvivorsDragonUi/" + name for name in payload})
@@ -228,6 +239,11 @@ class PackageTests(unittest.TestCase):
         self.assertEqual(len(failures), 1)
         failures, _ = compare_payload(previous | {"c.blp": b"other"}, previous)
         self.assertEqual(failures, [])
+
+    def test_new_identical_font_copy_fails(self):
+        previous = {"media/fonts/face.ttf": b"font"}
+        failures, _ = compare_payload(previous | {"media/fonts/copy.ttf": b"font"}, previous)
+        self.assertEqual(len(failures), 1)
 
     def test_removed_and_changed_files_are_in_size_report(self):
         _, report = compare_payload({"keep.lua": b"larger"}, {"keep.lua": b"x", "old.blp": b"old"})

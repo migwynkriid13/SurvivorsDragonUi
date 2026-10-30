@@ -495,6 +495,30 @@ assert(
 
 dialog.navigation.Select("combat")
 assert(pages.combat and pages.nameplates and not pages.meter, "Combat still prepares Damage meter")
+assert(pages.combat:GetHeight() >= 532, "abbreviation clipped the final damage filters")
+assert(display.Get("sctShortNumbers") == false, "abbreviation was enabled by default")
+context:Call(env.displayControls.sctShortNumbers, "OnClick")
+assert(display.Get("sctShortNumbers") and not env.SurvivorsDragonUiDisplay, "abbreviation did not preview")
+assert(dialog.sctFontButtons.default.editorSelected, "the game font is not the default")
+context:Call(dialog.sctFontButtons.diablo, "OnClick")
+editor.SCT()
+assert(display.Get("sctFont") == "diablo" and dialog.sctFontButtons.diablo.editorSelected, "font did not preview")
+assert(dialog.sctStyleButtons.enemy.editorSelected, "the original enemy style is not selected by default")
+context:Call(dialog.sctStyleButtons.diablo, "OnClick")
+editor.SCT()
+assert(
+    display.Get("sctStyle") == "diablo" and dialog.sctStyleButtons.diablo.editorSelected,
+    "Diablo selector did not preview"
+)
+display.FinishEdit(false)
+editor.SCT()
+assert(
+    display.Get("sctStyle") == "enemy" and dialog.sctStyleButtons.enemy.editorSelected,
+    "Cancel retained the new style"
+)
+assert(display.Get("sctFont") == "default" and dialog.sctFontButtons.default.editorSelected, "Cancel retained font")
+assert(not display.Get("sctShortNumbers"), "Cancel retained abbreviation")
+display.BeginEdit()
 assert(
     dialog.navigation.buttons.meter and dialog.navigation.buttons.meter.label:GetText() == "Damage meter",
     "meter has no sidebar category"

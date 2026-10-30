@@ -6,8 +6,9 @@ actual Blizzard plain metal frame already bundled for the character window.
 The former standalone centered Confirm button now shares the manager footer.
 Blue retail selections become gold on selection. Clicking opens a small frame
 popup with the existing numeric Layout form; text inputs and draft state are
-shared with the full editor. Numeric sizing replaces corner/edge grips in moving
-mode. The full `/sdui` editor retains those grips and the shared Confirm footer.
+shared with the full editor. Numeric scale and a width slider replace corner/edge
+grips in moving mode. The full `/sdui` editor retains those grips, the same width
+slider and the shared Confirm footer.
 
 Both commands enter the same draft transaction. Profiles returns to the full
 profile page. A pending invalid numeric value keeps Save and close open, while
@@ -92,6 +93,19 @@ skips hidden intake and painting; only new hits appear after unhiding. Saved
 scrolling geometry never moves or hides over-enemy combat text.
 
 ## Width and row handles
+
+Selecting Player, Target, Party frames, Run timer, Boss health, Revive, DPS meter,
+Chat or Guardian tracker shows **Width (frame units)** in both the `/sdui lock`
+popup and `/sdui` → **Layout**. The shared slider previews whole-unit widths
+within each group's existing limits. It keeps the frame center, current scale
+and height; player/target/party health content stretches through the existing
+resize callback without enlarging portraits, fonts or end caps. Other groups
+hide the slider and its reserved space. Pending valid numeric edits apply first;
+invalid input stays visible and blocks the width change. Confirm or Save and
+close saves the shared draft; Cancel and the existing discard paths restore it.
+Profiles and both resets retain the same Layout geometry owner. Merely selecting
+Revive preserves automatic caption fitting; moving its slider chooses an explicit
+width. Switching between editors reuses the same slider and current width.
 
 Run timer, Boss health, Revive, DPS meter, Chat and Guardian tracker have handles at the center of their left and right sides. These change width only, keeping fonts, icons and row heights at their current scale. HUD corners still scale proportionally; Chat retains its existing corner dimension resizing. The opposite edge stays fixed during side dragging, and release samples the current pointer before saving the draft.
 

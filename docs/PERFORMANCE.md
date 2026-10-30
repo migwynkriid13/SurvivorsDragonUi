@@ -37,8 +37,8 @@ leave hundreds of expensive texture regions drawing continuously.
   SavedVariable or idle updater. Record the static behavior and source-level
   costs in the owning developer docs, with meaningful CI-only lifecycle coverage
   where appropriate; local tests and addon/game execution remain unauthorized.
-- SCT keeps its existing motion, fall, critical pop, fade and selected MSBT
-  style in Performance Mode. Only grouping changes: sum same-attack damage in
+- SCT keeps its selected Over enemies, MSBT or Diablo IV animation
+  in Performance Mode. Only grouping changes: sum same-attack damage in
   300 ms while enabled, with the original 75 ms exact-amount duplicate
   suppression otherwise. Do not add a static override or
   retire its active hits just because Performance Mode changes.
@@ -67,13 +67,97 @@ leave hundreds of expensive texture regions drawing continuously.
   cooldown sampling, model-paint readiness and native geometry repair are
   deliberate exceptions to idle throttling. Do not invent a gameplay clock,
   drop combat events, truncate diagnostics or cap native rosters to save work.
-  The user-requested run-progress exception uses whole native run-second steps
+  The user-requested run-progress exception uses two-second native run-time steps
   for the fill and its decorative clipping edge; temporal effect cadence stays
-  unchanged. See the one-second progress entry below.
+  unchanged. See the two-second progress entry below.
 - Record visible/allocated regions and material/UV-clamp implications separately
   from CPU calls. Source counts and reference models are not live draw-call,
   GPU-memory, pixel-parity or FPS measurements. No local tests, standalone
   validation, addon execution or game launch is authorized for this audit.
+
+## Diablo IV combat text — 2026-10-30
+
+The optional Diablo IV style reuses the enemy-origin path, controller and hit
+pool: the animation adds no combat frame, region, event or updater. Its 1.1-second
+burst/hold/fade replaces the selected label's animation only. Formatting and
+random size/scatter are chosen once; live anchors, scale and alpha retain their
+changed-only writes and empty lists remain idle. Performance Mode preserves the
+animation with the existing 300 ms same-attack sums. It never restarts active
+labels on a Performance Mode transition.
+
+The user-selected addon-only fallback snapshots each settled group's screen
+launch centroid for the label's lifetime. Native camera/plate/collision changes
+do not alter active base coordinates. New numbers still resolve every original
+hit through the existing native samples and matching/loss-consumption path.
+Removing live follow also removes its per-group/per-label origin references,
+shared exponential blend, distance math and speed limiting. No native read,
+scan, updater, history table or drawing region is added. The authored burst,
+drift, scale pop and fade remain animated in both Performance Mode states.
+This favors stable presentation and gives up later camera compensation; initial
+positions can still reflect native stacking. CI-only production plate cases
+compare repeated native restacking with an identical stationary scene, without
+copying animation equations. These cases were not run locally.
+
+The shared style selector replaces the MSBT checkbox on the lazy Combat page.
+Net settings cost is two button frames, eight texture regions and three labels;
+none draw while that page is closed. Original per-hit allocations, metadata
+ownership and native tracking remain shared. See [DIABLO-SCT.md](DIABLO-SCT.md)
+for the video study, tuning, migration and CI-only evidence limits. Source
+review and pinned formatting do not establish native appearance or FPS.
+
+The independent Default / Diablo IV (PT Serif) font choice adds one unmodified
+359,048-byte TTF, no combat region/font object and no new worker. Successful font
+bindings are cached across pool reuse. Font changes refit active glyph widths
+without restarting numbers; pooled/hidden entries defer work. Failed loads
+restore the game font before text writes and retry at most twice per second per
+active entry through the existing controller, stopping on success or expiry.
+Localized avoidance labels retain native glyph coverage. Both Performance Mode
+states use the same font lifecycle and existing animation/grouping policy.
+The lazy font row adds two button frames, eight texture regions and three
+FontStrings, visible only on the open Combat page. These are source-level costs,
+not measured GPU/FPS or native font-rendering evidence.
+
+Diablo's white/yellow result palette takes precedence over saved class colors;
+the retained class-color choice is dimmed/inactive for this style and returns
+for Over enemies/MSBT. The shared dependency helper retains per-control
+availability when a parent group changes, so Custom mode cannot re-enable that
+checkbox accidentally. RGB assignments now skip unchanged values across pool
+reuse and unrelated display changes. No native Overpower result is inferred
+from unavailable native fields. The user-authorized amber imitation below is
+cosmetic critical emphasis only.
+
+The default-off damage abbreviation reuses the existing K/M/B/T decimal helper
+at display time and on actual preview/Cancel changes. One original presentation
+value per active label allows reformatting a completed group total without
+changing original hit amounts, grouping, matching, font, coordinates or expiry;
+retirement clears it. Changed-only text/width writes add no per-frame formatting
+or new controller. The lazy checkbox adds one button, four texture regions and
+one FontString; no combat region, asset, event, updater or SavedVariable is
+added. Performance Mode retains its existing motion and 300 ms sums. CI-only
+cases cover tiers, preview/cancel, original-hit preservation, totals, pools,
+expiry, palette priority and control availability; no local tests were run.
+
+Diablo's cosmetic amber highlight compares each original native critical with
+its same-intake-identity critical mean before grouping. After three earlier
+criticals, at least 1.5 times the prior mean qualifies. A ten-second window uses
+20 reusable half-second sum/count buckets per identity (up to half a second of
+boundary approximation), capped at 64 identities with oldest-row reuse. It
+retains no individual combat log or saved gameplay data. Same-bucket arrivals
+update one total/count in constant work; bucket expiry scans at most 20 slots
+only on a new half-second coordinate. Identity eviction scans at most 64 rows
+only for a new identity at capacity. All identities/buckets allocate lazily;
+there is no idle sweep, per-frame average or new updater.
+
+Mode/style/world/zone cleanup and clock regression discard the baseline.
+Performance Mode transitions retain it; original per-hit inputs qualify before
+both 75 ms duplicates and 300 ms sums, and a group only inherits amber from a
+qualifying member. A larger summed label alone never qualifies. Pooled label
+cleanup clears its derived flag; active color remains fixed. No drawing region,
+frame, asset, setting, SavedVariable or extra animation is added. The existing
+color write runs only when RGB changes. CI-only cases cover warmup, inclusive
+threshold, identity isolation, expiry, cleanup, bounds/reuse, original-hit
+preservation, grouping, mode transitions and non-Diablo behavior. These are
+source-level bounds, not measured memory, draw-call or FPS results.
 
 ## Static Heroic numerals — 2026-10-29
 
@@ -113,7 +197,7 @@ received level. Unknown/invalid ranks use the blue fallback without a numeral.
 The existing caption reader returns its accepted `AZS_RUN.endl` mode to the
 same clock pass. Only that flag selects Endless; passing the native duration
 never changes the palette or mode. `AZS_GetRunTime` and the native duration own
-regular whole-second fill values. Endless holds full progress without altering
+regular two-second fill values. Endless holds full progress without altering
 native time, counters, schedule or gameplay tables.
 
 There is one timer and one lazy, reusable cosmetic pool. Performance Mode and
@@ -128,7 +212,7 @@ Rank changes recolor stable scattered stream/foam positions rather than splittin
 or overlaying the native fill. Unchanged tier colors, base fill, sizes,
 UVs and settled visibility skip native writes. Width changes reflow the existing
 stream spacing/span; glints and glow track the actual filled width. Native
-whole-second progress dirties this geometry once per changed sample. Pool
+two-second progress dirties this geometry once per changed sample. Pool
 retirement hides active pieces, and later accepted state reuses their artwork.
 
 Endless retains its tier palette and changes one existing nine-texture stream
@@ -516,19 +600,19 @@ use the shared display transaction. Individual effect, portrait and cooldown
 choices are retained. The sidebar bounds translated category widths and reserves a wrapping row for
 this caption above the category buttons.
 
-| Owner                       | While Performance Mode is on                                                                                                                                                                                                                                                                                                                                                                 |
-| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Chat                        | Keep native expiry at its original deadline with zero fade duration, so messages disappear instantly; scrolling back still holds lines. Snap reveal opacity and message-slide geometry, and clear active reveal/slide state. Native messages, history, links and input remain current.                                                                                                       |
-| SCT                         | Sum same-attack outgoing damage within a fixed 300 ms window; normal mode keeps 75 ms exact-amount duplicate suppression. Preserve original per-hit matching, critical/source separation, motion, fade, full lifetime and the selected enemy/MSBT style.                                                                                                                                     |
-| Unit frames                 | Hide player absorbs and player/target/target-of-target damage trails, reset trail baselines, and use the existing 2D still portraits. Party has no custom loss overlay. Hide combat/rest rim glows; keep a static resting symbol and a static low-health warning at the current health-derived strength.                                                                                     |
-| Resources                   | Skip absorb snapshot/field work when Class resources is also off; keep native phase/receipt retirement and selected resource values.                                                                                                                                                                                                                                                         |
-| Run timer                   | Keep native whole-second progress and current labels, static tier fill and informative skull/check markers. Skip flow, foam, sparkle, red-glint and skull-halo animation. The decorative pool grows lazily from 44 to at most 72 textures only if normal mode needs it, then retained for reuse. Required native phase, ownership, schedule and encounter work keeps its existing lifecycle. |
-| Boss bars                   | Keep native fill and health text instant. Hide the Crimson echo loss strip, clear its baseline and active state, and skip effect time/geometry work. Rows first used in this mode do not prepare a loss texture.                                                                                                                                                                             |
-| Cache tally                 | Refresh kills and gold numbers once every five UI seconds. Keep cache cost at its normal cadence. Clear the affordable-cache gold halo, rays and sparkles and detach its animation worker.                                                                                                                                                                                                   |
-| XP                          | Snap the fill to received XP, clear gain/spark artwork and detach completed effect work. Existing deferred native reads remain.                                                                                                                                                                                                                                                              |
-| Abilities and stored levels | Clear cooldown-number overlays and detach their timing worker. Suppress the seven native ability-ready flashes while retaining unfinished cooldown swipes. Hide level-button glow/highlight layers and detach the pulse worker; retain its static gold artwork, count and click behavior.                                                                                                    |
-| Notifications and revive    | Loot cards and banners stay opaque until their original expiry; hidden notices still retire. Revive displays received fill/percentage directly without smoothing, fade, spark or pulsing crosses, using its existing ten-Hz state reader.                                                                                                                                                    |
-| Action range                | Keep the current out-of-range warning static and remove any active native fade on a mode transition.                                                                                                                                                                                                                                                                                         |
+| Owner                       | While Performance Mode is on                                                                                                                                                                                                                                                                                                                                                               |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Chat                        | Keep native expiry at its original deadline with zero fade duration, so messages disappear instantly; scrolling back still holds lines. Snap reveal opacity and message-slide geometry, and clear active reveal/slide state. Native messages, history, links and input remain current.                                                                                                     |
+| SCT                         | Sum same-attack outgoing damage within a fixed 300 ms window; normal mode keeps 75 ms exact-amount duplicate suppression. Preserve original per-hit matching, critical/source separation, motion, fade, full lifetime and the selected enemy/MSBT style.                                                                                                                                   |
+| Unit frames                 | Hide player absorbs and player/target/target-of-target damage trails, reset trail baselines, and use the existing 2D still portraits. Party has no custom loss overlay. Hide combat/rest rim glows; keep a static resting symbol and a static low-health warning at the current health-derived strength.                                                                                   |
+| Resources                   | Skip absorb snapshot/field work when Class resources is also off; keep native phase/receipt retirement and selected resource values.                                                                                                                                                                                                                                                       |
+| Run timer                   | Keep native two-second progress and current labels, static tier fill and informative skull/check markers. Skip flow, foam, sparkle, red-glint and skull-halo animation. The decorative pool grows lazily from 44 to at most 72 textures only if normal mode needs it, then retained for reuse. Required native phase, ownership, schedule and encounter work keeps its existing lifecycle. |
+| Boss bars                   | Keep native fill and health text instant. Hide the Crimson echo loss strip, clear its baseline and active state, and skip effect time/geometry work. Rows first used in this mode do not prepare a loss texture.                                                                                                                                                                           |
+| Cache tally                 | Refresh kills and gold numbers once every five UI seconds. Keep cache cost at its normal cadence. Clear the affordable-cache gold halo, rays and sparkles and detach its animation worker.                                                                                                                                                                                                 |
+| XP                          | Snap the fill to received XP, clear gain/spark artwork and detach completed effect work. Existing deferred native reads remain.                                                                                                                                                                                                                                                            |
+| Abilities and stored levels | Clear cooldown-number overlays and detach their timing worker. Suppress the seven native ability-ready flashes while retaining unfinished cooldown swipes. Hide level-button glow/highlight layers and detach the pulse worker; retain its static gold artwork, count and click behavior.                                                                                                  |
+| Notifications and revive    | Loot cards and banners stay opaque until their original expiry; hidden notices still retire. Revive displays received fill/percentage directly without smoothing, fade, spark or pulsing crosses, using its existing ten-Hz state reader.                                                                                                                                                  |
+| Action range                | Keep the current out-of-range warning static and remove any active native fade on a mode transition.                                                                                                                                                                                                                                                                                       |
 
 Changing the mode clears or settles currently active effects immediately. Turning
 it off restores the saved individual choices from current native state, without
@@ -755,7 +839,7 @@ load, and native events can request additional refreshes.
 | Native aura layout        | Native enchant callbacks still repair actual BuffFrame/enchant anchors each time. Icon-slot traversal/reflow is dirty-driven by Show/Hide, received timer visibility, forced native positioning and editing. Forced geometry/font repair and hidden editor bounds remain.                                                                          |
 | Received aura countdowns  | Cache each displayed ceil-rounded duration string, retain actual-text comparisons and failed-setter retries, and Show timer buttons only on transitions. Ten-Hz native timing and hovered decimal-duration tooltip updates remain.                                                                                                                 |
 | Pet/summon/totem captions | Existing rows retain only their latest rounded countdown/count strings. Repeated tenth-second samples skip formatting/concatenation; hidden/missing/zero values and retirement remain distinct. Native feed validation, timing getters, roster counts and metadata/icon retries remain.                                                            |
-| Run length and schedule   | Reuse duration/schedule validation within the existing ten-Hz/deferred-publication scope; phase changes, schedule/run boundaries and reload force fresh acceptance. Raw native run time, phase/rollback checks and native clock ownership retain frame cadence. Exact one-second fill progress and authored decoration remain.                     |
+| Run length and schedule   | Reuse duration/schedule validation within the existing ten-Hz/deferred-publication scope; phase changes, schedule/run boundaries and reload force fresh acceptance. Raw native run time, phase/rollback checks and native clock ownership retain frame cadence. Native two-second fill progress and authored decoration remain.                    |
 | Boss debuffs              | Remove per-frame getter/list/format traversal between normal refreshes. Existing ten-Hz/deferred-publication updates read current native remaining values; hovering performs a fresh native phase/effect read before opening and reflows changed height immediately. No countdown is extrapolated.                                                 |
 | Guardian snapshots        | Sample native run time lazily once when the first returning lair needs it; no countdown-clock getter when none is returning. Native health and phase gates remain.                                                                                                                                                                                 |
 | Guardian tracker          | Cache fallback unnamed-lair captions by received index/language, retaining actual label comparison and clearing on row retirement. Existing status/health caches and ten-Hz native snapshots remain.                                                                                                                                               |
@@ -773,24 +857,24 @@ measured CPU milliseconds, GPU draw calls, FPS or proof that stutter is solved.
 Every path in the preceding cadence inventory was reviewed. The remaining work
 has an active visual, native-data, ownership or readiness purpose:
 
-| Area                                               | Cadence and reason retained                                                                                                                                                                                                                                                                                     |
-| -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| SCT and backing nameplates                         | Render-frame discovery, shown origins, pending matching and active label motion/scale/fade. Enemy-only visibility hooks do not prove every native/friendly feed transition. Native CVar polling also catches unreported changes; weakening it could duplicate native/custom text. Empty work now exits earlier. |
-| Waypoint HUD, minimap pins and legacy player arrow | Frame interpolation/projection uses current native position/heading. Shared synchronous sampling and changed-only anchors/UVs already avoid duplicate writes. The ten-Hz reader retains selection, receipt/phase retirement, flag ownership, hover tests and timer refreshes.                                   |
-| Run timer and boss health                          | Visible readers retain frame phase/boundary/native-clock/ownership checks. Fill values use whole native seconds. Flow/foam/red glints remain capped at thirty Hz; active boss-skull halo geometry/alpha retain frame cadence. Encounter rows, counters and debuffs use ten-Hz/deferred native refreshes.        |
-| Revive                                             | Ten-Hz receipt/phase/native ownership plus frame-driven active smoothing, fade, spark and six cross pulses. Caption/percentage/width caches from the prior pass remain.                                                                                                                                         |
-| Stored levels/player effects                       | Ten-Hz stored-level validity/native ownership; visible level pulse and player combat/rest rim pulses retain frames. Resting flipbook remains twenty Hz. Completed inactive fades already stop writes.                                                                                                           |
-| Optional 3D portraits                              | Frame/model-paint readiness preserves native camera/animation and still-image fallback. Removing the handshake could blank portraits on unsupported or not-yet-painted clients.                                                                                                                                 |
-| Health-loss and XP effects                         | Frame updates exist only for active loss/gain/fade animation and detach on completion. Target health and XP reads are coalesced next-frame native/event work, not additional idle pollers.                                                                                                                      |
-| Resources, absorbs and pets                        | Ten-Hz native phase/current values/readiness; power events and feed receipts can refresh earlier. Hidden views retain retirement while skipping presentation/timer-only reads. Unreported native changes and failed icon/style readiness still need fallback.                                                   |
-| Native buffs/received timers                       | Native anchor repair follows native resets; timing uses the official getter at ten Hz while active. Hovered tooltips display tenths, so their required timing refresh stays. Paused/static/hidden timers already stop or defer work.                                                                            |
-| Jewelry                                            | Five-Hz native equipment/cooldown and metadata readiness; active exact 64-cell cooldown painting at thirty Hz, cursor placement only while hovered. Fourteen-strip icon sampling and original rims remain.                                                                                                      |
-| Loot                                               | Five-Hz service/readiness/native ownership and bounded queue delivery, populated frame fades/expiry, bounded five-Hz metadata retry. Hidden cards must expire and free capacity; empty cosmetic pools already detach.                                                                                           |
-| Banners                                            | Five-Hz registration/ownership/readiness, next-frame pending native errors and original thirty-Hz fade/expiry/promotion. Settled disabled/faulted cleanup already detaches.                                                                                                                                     |
-| Damage meter                                       | Five-Hz native publication/readiness/ownership and one-Hz rate presentation. Off detaches; hidden views skip rows/rates/icon work. Accepted counter processing already has publication caches.                                                                                                                  |
-| Chat/tooltip/character                             | Visible chat slides/reveals and cursor tooltip placement need frames; chat geometry repair stays one Hz and tooltip styling five Hz. Character stats already coalesce to a next-frame flush only after relevant events while open. Capture/Copy remain opt-in/event/user driven.                                |
-| Editing and diagnostics                            | Active Layout/minimap-launcher drag stays per frame with final sample. Settled editor/coordinates remain ten Hz; fstack stays five Hz only while explicitly enabled.                                                                                                                                            |
-| Other modules/native work                          | Menu, font resolution, display/profile controls, static catalogs and bootstrap are event/initialization driven. Omitted cast/bag/micro frames remain suppressed. Native action swipes/usability, model animation, incoming combat text and range fade-manager animation retain their engine schedules.          |
+| Area                                               | Cadence and reason retained                                                                                                                                                                                                                                                                                          |
+| -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| SCT and backing nameplates                         | Render-frame discovery, shown origins, pending matching and active label motion/scale/fade. Enemy-only visibility hooks do not prove every native/friendly feed transition. Native CVar polling also catches unreported changes; weakening it could duplicate native/custom text. Empty work now exits earlier.      |
+| Waypoint HUD, minimap pins and legacy player arrow | Frame interpolation/projection uses current native position/heading. Shared synchronous sampling and changed-only anchors/UVs already avoid duplicate writes. The ten-Hz reader retains selection, receipt/phase retirement, flag ownership, hover tests and timer refreshes.                                        |
+| Run timer and boss health                          | Visible readers retain frame phase/boundary/native-clock/ownership checks. Fill values use two-second native run-time steps. Flow/foam/red glints remain capped at thirty Hz; active boss-skull halo geometry/alpha retain frame cadence. Encounter rows, counters and debuffs use ten-Hz/deferred native refreshes. |
+| Revive                                             | Ten-Hz receipt/phase/native ownership plus frame-driven active smoothing, fade, spark and six cross pulses. Caption/percentage/width caches from the prior pass remain.                                                                                                                                              |
+| Stored levels/player effects                       | Ten-Hz stored-level validity/native ownership; visible level pulse and player combat/rest rim pulses retain frames. Resting flipbook remains twenty Hz. Completed inactive fades already stop writes.                                                                                                                |
+| Optional 3D portraits                              | Frame/model-paint readiness preserves native camera/animation and still-image fallback. Removing the handshake could blank portraits on unsupported or not-yet-painted clients.                                                                                                                                      |
+| Health-loss and XP effects                         | Frame updates exist only for active loss/gain/fade animation and detach on completion. Target health and XP reads are coalesced next-frame native/event work, not additional idle pollers.                                                                                                                           |
+| Resources, absorbs and pets                        | Ten-Hz native phase/current values/readiness; power events and feed receipts can refresh earlier. Hidden views retain retirement while skipping presentation/timer-only reads. Unreported native changes and failed icon/style readiness still need fallback.                                                        |
+| Native buffs/received timers                       | Native anchor repair follows native resets; timing uses the official getter at ten Hz while active. Hovered tooltips display tenths, so their required timing refresh stays. Paused/static/hidden timers already stop or defer work.                                                                                 |
+| Jewelry                                            | Five-Hz native equipment/cooldown and metadata readiness; active exact 64-cell cooldown painting at thirty Hz, cursor placement only while hovered. Fourteen-strip icon sampling and original rims remain.                                                                                                           |
+| Loot                                               | Five-Hz service/readiness/native ownership and bounded queue delivery, populated frame fades/expiry, bounded five-Hz metadata retry. Hidden cards must expire and free capacity; empty cosmetic pools already detach.                                                                                                |
+| Banners                                            | Five-Hz registration/ownership/readiness, next-frame pending native errors and original thirty-Hz fade/expiry/promotion. Settled disabled/faulted cleanup already detaches.                                                                                                                                          |
+| Damage meter                                       | Five-Hz native publication/readiness/ownership and one-Hz rate presentation. Off detaches; hidden views skip rows/rates/icon work. Accepted counter processing already has publication caches.                                                                                                                       |
+| Chat/tooltip/character                             | Visible chat slides/reveals and cursor tooltip placement need frames; chat geometry repair stays one Hz and tooltip styling five Hz. Character stats already coalesce to a next-frame flush only after relevant events while open. Capture/Copy remain opt-in/event/user driven.                                     |
+| Editing and diagnostics                            | Active Layout/minimap-launcher drag stays per frame with final sample. Settled editor/coordinates remain ten Hz; fstack stays five Hz only while explicitly enabled.                                                                                                                                                 |
+| Other modules/native work                          | Menu, font resolution, display/profile controls, static catalogs and bootstrap are event/initialization driven. Omitted cast/bag/micro frames remain suppressed. Native action swipes/usability, model animation, incoming combat text and range fade-manager animation retain their engine schedules.               |
 
 Independent source reviews cover lifecycle, hidden recovery, native reset/color
 ownership, getter failures, Lua 5.0 remembered queue sizes and new seam/mock
@@ -1145,21 +1229,21 @@ remains source-only apart from the completed OS samples and read-only journal
 inspection. No timing command, saved diagnostic state or background updater
 was added.
 
-### One-second run progress — user-requested cadence change
+### Two-second run progress — user-requested cadence change
 
-The progress StatusBar now writes whole native run seconds instead of a new
+The progress StatusBar now writes two-second native run-time steps instead of a new
 fractional value every rendered frame. At a steady 60 FPS this reduces normal
-advancing fill-value writes from about 60 per second to one, without changing
+advancing fill-value writes from about 60 per second to one every two seconds, without changing
 the reader or inventing a gameplay clock. Native pauses stop the sampled native
 coordinate. Initial/current-state recovery, native time corrections and
 duration changes remain immediate; a reached limit uses its exact native value,
 including fractional maxima. Hidden views still skip fill painting.
 
 The same stepped value bounds the existing flow and foam so their fill edge
-cannot continue crawling between one-second steps. Their temporal phase and
+cannot continue crawling between two-second steps. Their temporal phase and
 30-Hz cap remain, as do the original caption, schedule and marker inputs.
 Moving textures, foam, glows and the native renderer's persistent drawing costs
-remain; this does not make the whole timer render only once per second.
+remain; this does not make the whole timer render only once every two seconds.
 The source reduction is not a measured FPS or stutter result. Local work uses
 source review and pinned formatting, with coverage authored for CI only.
 
@@ -1995,6 +2079,21 @@ Six Layout groups add twenty editor-only center-edge marks: two horizontal for r
 
 Width lives in shared Layout geometry. Meter and guardian roots default to 240 and allow 120–960 without scaling row height, icons or fonts. Cached natural tracker text widths compress its columns safely; native health end caps retain their 50-unit combined span. Meter geometry caches width, font size, icon gutter and numeric-column count. Failed font changes remain retryable. Hidden/off views accept required edit bounds while deferring row/header/font/icon presentation. Meter resizing never enables native reads or packet intake while off.
 
+The selected-frame form lazily prepares one pooled native `OptionsSliderTemplate`
+width slider, including its track/thumb and three native captions, plus one
+current-width FontString. Both editors and all nine existing side-width groups
+reuse it. Unsupported selections hide the complete slider and remove its space;
+closing or leaving Layout hides its parent. There is no gameplay region, asset,
+updater or saved preference. The existing ten-Hz editor sample includes actual
+frame width in its changed-value cache, so direct grip resizing refreshes the
+slider even when scale stays fixed. Settled and hidden forms skip slider writes;
+range/value synchronization guards synchronous native callbacks. User changes
+reuse the owning resize callback and shared Layout draft. Normal and Performance
+Mode use the same instant width preview without added cosmetic animation.
+CI-only cases cover pooling, width limits, center/scale/height preservation,
+numeric validation, automatic sizing, profiles, discard and resets. They were not
+run locally; native rendering and input remain unverified.
+
 Row handles update normalized display drafts. DPS retains 1–10 rows; boss/guardian capacity defaults to the existing automatic full list, with explicit 1–40-slot viewports and session-only scroll offsets. Native snapshots remain complete. Only viewport rows are painted; retired rows clear health, debuffs and hovers before pooling. Boss debuffs preserve their icon dimensions and reanchor only when their width-derived column count changes. Chat keeps its existing native dimension and content ownership.
 
 Run timer width reflows the existing 27 flow textures and 28 red glints without additional regions. Flow speed, temporal phases, pulse equations, opacity and cadence remain unchanged; spatial spacing, span, foam clipping and scheduled skull positions use the actual fill width. Native health/status-bar UV ownership and artwork crops are preserved. Wider visible fills cover more pixels; these source-level changes do not establish equal GPU cost or FPS. Revive invalidates its spark/cross geometry on width changes, retaining the existing animation lifecycle.
@@ -2214,10 +2313,9 @@ collision work are no longer forced by this style. V-visible plates keep native
 costs. Style transitions retire queued/active labels and matching state, reuse
 the pool and restore the current native V request without preference writes.
 
-The lazy Combat text page adds one standard checkbox: one button, four texture
-regions (box, mark, hover and divider) and one caption, using existing editor
-art. It joins the shared inactive-mode alpha/input guard. The checkbox sits beside SCT size, with the class-color control below it;
-all filters fit the existing page without enlarging the dialog or adding scrolling.
+The original checkbox has been replaced by the shared three-way style selector
+described in [DIABLO-SCT.md](DIABLO-SCT.md). Existing MSBT saves/profiles migrate
+through the display normalizer; the stream's Layout owner is unchanged.
 
 Source/diff review and pinned formatting only; no local tests, standalone
 validation or addon/game execution. CI-only native mocks cover the production

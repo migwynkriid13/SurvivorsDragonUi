@@ -64,10 +64,29 @@ local function Geometry(object)
         height = value
     end
     function object:GetScale() return self.scale or 1 end
+    function object:SetScale(value)
+        assert(type(value) == "number" and value > 0, "native scale must be positive")
+        context.writes.SetScale = (context.writes.SetScale or 0) + 1
+        self.scale = value
+    end
     function object:GetEffectiveScale() return self:GetScale() end
-    function object:GetLeft() return self.left or 0 end
+    function object:GetLeft()
+        local point = self.point
+        if point and point[1] == "TOPLEFT" and point[3] == "TOPLEFT" then
+            local relative = point[2]
+            return relative:GetLeft() * relative:GetEffectiveScale() / self:GetEffectiveScale() + (point[4] or 0)
+        end
+        return self.left or 0
+    end
     function object:GetRight() return self:GetLeft() + self:GetWidth() end
-    function object:GetTop() return self.top or self:GetHeight() end
+    function object:GetTop()
+        local point = self.point
+        if point and point[1] == "TOPLEFT" and point[3] == "TOPLEFT" then
+            local relative = point[2]
+            return relative:GetTop() * relative:GetEffectiveScale() / self:GetEffectiveScale() + (point[5] or 0)
+        end
+        return self.top or self:GetHeight()
+    end
     function object:GetBottom() return self:GetTop() - self:GetHeight() end
     function object:GetNumPoints() return self.point and 1 or 0 end
     function object:GetPoint() return unpack(self.point or {}) end
@@ -101,10 +120,14 @@ local function Geometry(object)
     function object:EnableKeyboard(value) self.keyboard = value end
     function object:SetMinMaxValues(low, high)
         self.minimum, self.maximum = low, high
+        context.writes.SetSliderRange = (context.writes.SetSliderRange or 0) + 1
+        -- Native range changes may synchronously clamp/fire the existing value.
+        self:SetValue(math.max(low, math.min(high, self:GetValue())))
     end
     function object:SetValueStep(step) self.step = step end
     function object:GetValue() return self.value or 0 end
     function object:SetValue(value)
+        context.writes.SetSliderValue = (context.writes.SetSliderValue or 0) + 1
         self.value = value
         context:Call(self, "OnValueChanged", value)
     end
@@ -131,7 +154,15 @@ Geometry(env.UIParent)
 env.UIParent:SetWidth(1024)
 env.UIParent:SetHeight(768)
 local createFrame = env.CreateFrame
-env.CreateFrame = function(kind, name, parent) return Geometry(createFrame(kind, name, parent)) end
+env.CreateFrame = function(kind, name, parent, template)
+    local frame = Geometry(createFrame(kind, name, parent))
+    if template == "OptionsSliderTemplate" then
+        for _, suffix in ipairs({ "Low", "High", "Text" }) do
+            env[name .. suffix] = frame:CreateFontString(nil, "OVERLAY")
+        end
+    end
+    return frame
+end
 env.DFRL.locale.Bind = function(label) return label end
 context.cursorX, context.cursorY = 200, 600
 env.GetCursorPosition = function() return context.cursorX, context.cursorY end
@@ -199,6 +230,8 @@ layout.Register("playerFrame", frame, function(owner)
     owner:SetPoint("TOPLEFT", env.UIParent, "TOPLEFT", 60, -80)
 end, {
     edgeWidth = true,
+    minWidth = 40,
+    maxWidth = 900,
     onEdit = function(active, save)
         if active then
             display.BeginEdit()
@@ -228,6 +261,54 @@ context:Call(handle, "OnMouseDown", "LeftButton")
 assert(#context.inputs == 4 and manager.keyboard, "selected frame did not reuse one numeric form and keyboard owner")
 local numericForm = context.inputs[1]:GetParent()
 AssertLayers(numericForm, numericForm:GetParent())
+local widthSlider = numericForm.widthSlider
+assert(
+    widthSlider == env.SurvivorsDragonUiLayoutWidth
+        and widthSlider:IsVisible()
+        and widthSlider.minimum == 40
+        and widthSlider.maximum == 900
+        and widthSlider.step == 1
+        and widthSlider:GetValue() == 100,
+    "selected width group did not prepare its bounded slider"
+)
+assert(
+    frame:GetWidth() == 100 and not env.SurvivorsDragonUiLayout.playerFrame,
+    "programmatic slider preparation resized the selected frame"
+)
+local centerX, centerY = numericForm.x:GetText(), numericForm.y:GetText()
+widthSlider:SetValue(220)
+assert(
+    frame:GetWidth() == 220
+        and frame:GetHeight() == 40
+        and frame:GetScale() == 1
+        and numericForm.x:GetText() == centerX
+        and numericForm.y:GetText() == centerY
+        and widthSlider.valueLabel:GetText() == "220.00"
+        and not env.SurvivorsDragonUiLayout.playerFrame,
+    "width preview changed center, height, scale or committed before Save"
+)
+widthSlider:SetValue(100)
+Tick()
+context:ResetCounts()
+Tick()
+Tick()
+assert(
+    not context.writes.SetSliderRange and not context.writes.SetSliderValue,
+    "settled width slider rewrote native range/value"
+)
+context:NoPresentationWrites()
+widthSlider:SetValue(100)
+context:NoPresentationWrites()
+-- An existing side grip changes width without changing scale. The shared
+-- controller must notice that width rather than retaining a scale-only cache.
+frame:SetWidth(150)
+Tick()
+assert(
+    widthSlider:GetValue() == 150 and widthSlider.valueLabel:GetText() == "150.00",
+    "existing width adjustment did not refresh the selected slider"
+)
+frame:SetWidth(100)
+Tick()
 assert(
     numericForm.width == context.inputs[3]
         and numericForm.height == context.inputs[4]
@@ -263,7 +344,7 @@ assert(frame:GetLeft() == 0, "release did not apply screen magnetism with the gr
 assert(not env.SurvivorsDragonUiLayout.playerFrame, "drag saved geometry before confirmation")
 layout.CancelEdit()
 assert(
-    frame:GetLeft() == 60 and display.Get("layoutShowGrid"),
+    frame:GetLeft() == 60 and frame:GetWidth() == 100 and display.Get("layoutShowGrid"),
     "Cancel did not restore geometry and display preferences"
 )
 assert(not manager:IsShown() and not handle:IsShown(), "Cancel retained editor input")
@@ -272,13 +353,29 @@ layout.BeginEdit(true)
 Tick()
 context:Call(handle, "OnMouseDown", "LeftButton")
 context.inputs[3]:SetText("invalid")
+widthSlider:SetValue(300)
+assert(
+    frame:GetWidth() == 100
+        and widthSlider:GetValue() == 100
+        and context.inputs[3]:GetText() == "invalid"
+        and numericForm.dirty,
+    "slider overwrote invalid numeric input or accepted a width through failed validation"
+)
 context:Call(context.confirm, "OnClick")
 assert(layout.IsEditing() and manager:IsShown(), "invalid numeric input closed the edit session")
-context.inputs[3]:SetText("100")
+context.inputs[3]:SetText("125")
+widthSlider:SetValue(210)
+assert(
+    frame:GetScale() == 1.25 and frame:GetHeight() == 40,
+    "slider failed to apply valid pending scale or changed height"
+)
 display.Set("layoutSnapEnabled", false)
 context:Call(context.confirm, "OnClick")
 assert(
-    not layout.IsEditing() and env.SurvivorsDragonUiDisplay.layoutSnapEnabled == false,
+    not layout.IsEditing()
+        and env.SurvivorsDragonUiDisplay.layoutSnapEnabled == false
+        and env.SurvivorsDragonUiLayout.playerFrame.width == 210
+        and env.SurvivorsDragonUiLayout.playerFrame.scale == 1.25,
     "Save and close did not confirm the shared transaction"
 )
 
@@ -311,6 +408,18 @@ assert(
     form:GetParent() == home and #context.inputs == 4,
     "switching to settings duplicated or stranded the numeric form"
 )
+assert(form.widthSlider == widthSlider and widthSlider:IsVisible(), "mode switch replaced or hid the width slider")
+centerX, centerY = form.x:GetText(), form.y:GetText()
+widthSlider:SetValue(360)
+assert(
+    frame:GetWidth() == 360
+        and frame:GetScale() == 1.25
+        and frame:GetHeight() == 40
+        and form.x:GetText() == centerX
+        and form.y:GetText() == centerY,
+    "full-editor width preview changed center, scale or height"
+)
+widthSlider:SetValue(210)
 AssertLayers(form, home)
 assert(not form:GetScript("OnUpdate"), "numeric form retained a separate polling callback")
 assert(
@@ -318,10 +427,10 @@ assert(
     "full editor did not restore paired options"
 )
 assert(
-    form.visibility.point[5] == -156 and form.grid.point[5] == -156 and form.grid.point[4] == 206,
+    form.visibility.point[5] == -228 and form.grid.point[5] == -228 and form.grid.point[4] == 206,
     "Hide frame and Show grid do not share one row"
 )
-assert(form.apply.point[5] == -228 and form.status.point[5] == -266, "paired options retained a blank second row")
+assert(form.apply.point[5] == -300 and form.status.point[5] == -338, "width slider overlaps the paired options")
 context.inputs[1]:SetText("37")
 layout.SetHandlesVisible(false)
 home:Hide()
@@ -363,7 +472,7 @@ assert(
 local prepared = #context.objects
 form.visibility.label.naturalWidth = 500
 context:NotifyLocale()
-assert(form:GetHeight() == 302 and popup:GetHeight() == 332, "wrapped popup captions overflow the panel")
+assert(form:GetHeight() == 374 and popup:GetHeight() == 404, "wrapped popup captions overflow the panel")
 assert(
     popup.point[5] >= -768 + popup:GetHeight() + 12 and popup.point[5] <= -24,
     "resized popup was not clamped through the existing placement lifecycle"
@@ -374,7 +483,7 @@ context:NotifyLocale()
 context:NoPresentationWrites()
 form.visibility.label.naturalWidth = 100
 context:NotifyLocale()
-assert(form:GetHeight() == 290 and popup:GetHeight() == 320, "popup did not recover its minimum height")
+assert(form:GetHeight() == 362 and popup:GetHeight() == 392, "popup did not recover its width-control height")
 for _, object in ipairs(context.objects) do
     if object.parent == handle and object.dragButton then assert(not object:IsShown() and not object.mouse) end
 end
@@ -414,7 +523,94 @@ assert(
     "mode switch discarded the draft on window hide"
 )
 layout.CancelEdit()
+-- Exercise selection-specific controls through the production handles, without
+-- publishing a runtime test hook or a second maintained list of Layout groups.
+local function SelectGroup(key, options)
+    local owner = env.CreateFrame("Frame", nil, env.UIParent)
+    owner:SetWidth(240)
+    owner:SetHeight(120)
+    local known = {}
+    for _, object in ipairs(context.objects) do
+        if object.SetEditorSelection then known[object] = true end
+    end
+    layout.Register(key, owner, function(root)
+        root:ClearAllPoints()
+        root:SetPoint("TOPLEFT", env.UIParent, "TOPLEFT", 300, -240)
+    end, options)
+    if not layout.IsEditing() then layout.BeginEdit(true) end
+    Tick()
+    local selection
+    for _, object in ipairs(context.objects) do
+        if object.SetEditorSelection and not known[object] then selection = object end
+    end
+    assert(selection, "new group did not prepare a selectable handle")
+    context:Call(selection, "OnMouseDown", "LeftButton")
+    return owner, selection
+end
+local chat, chatSelection = SelectGroup("chat", {
+    resize = "dimensions",
+    edgeHandles = true,
+    minWidth = 240,
+    maxWidth = 2400,
+    minHeight = 120,
+    maxHeight = 1600,
+})
+assert(
+    widthSlider.minimum == 240 and widthSlider.maximum == 2400 and chat:GetWidth() == 240,
+    "new range synchronisation changed the newly selected group"
+)
+widthSlider:SetValue(480)
+assert(
+    chat:GetWidth() == 480 and chat:GetHeight() == 120 and form.width:GetText() == "480.00",
+    "Chat width preview resized height or failed to update numeric dimensions"
+)
+widthSlider:SetValue(3000)
+assert(chat:GetWidth() == 2400 and widthSlider:GetValue() == 2400, "width preview exceeded the existing maximum")
+local naturalWidth = 240
+local revive = SelectGroup("revive", {
+    edgeWidth = true,
+    minWidth = 160,
+    maxWidth = 1200,
+    defaultWidth = function() return naturalWidth end,
+})
+assert(not layout.Snapshot().revive.width, "viewing the slider opted an automatic view into explicit width")
+widthSlider:SetValue(360)
+assert(layout.Snapshot().revive.width == 360, "caption-fitted view did not retain its chosen width")
+naturalWidth = 280
+layout.Place("revive")
+assert(revive:GetWidth() == 360, "natural caption changes replaced the slider width")
+local profile = layout.Snapshot()
+profile.revive.width = 420
+layout.Load(profile)
+assert(revive:GetWidth() == 420 and widthSlider:GetValue() == 420, "profile load did not refresh selected width")
+local ordinary, ordinarySelection = SelectGroup("minimap", {})
+assert(
+    not widthSlider:IsShown() and form.visibility.point[5] == -156,
+    "fixed-width group retained the slider or its reserved space"
+)
+context:Call(chatSelection, "OnMouseDown", "LeftButton")
+assert(
+    form.widthSlider == widthSlider and widthSlider:IsVisible() and widthSlider:GetValue() == 2400,
+    "returning to a width group rebuilt the slider or retained another group's value"
+)
+context:Call(ordinarySelection, "OnMouseDown", "LeftButton")
+widthSlider:SetValue(500)
+assert(ordinary:GetWidth() == 240, "hidden width control changed an unsupported group")
+layout.CancelEdit()
+assert(chat:GetWidth() == 240 and revive:GetWidth() == 280, "Cancel retained width previews or lost automatic sizing")
+layout.BeginEdit(true)
+context:Call(chatSelection, "OnMouseDown", "LeftButton")
+widthSlider:SetValue(600)
+context:Event(controller, "PLAYER_LEAVING_WORLD")
+assert(chat:GetWidth() == 240 and not widthSlider:IsVisible(), "world discard retained the width preview or input")
+context:Event(controller, "PLAYER_ENTERING_WORLD")
+Tick()
+layout.BeginEdit(true)
+context:Call(chatSelection, "OnMouseDown", "LeftButton")
+widthSlider:SetValue(700)
+layout.Reset()
+assert(chat:GetWidth() == 240 and not env.SurvivorsDragonUiLayout.chat, "full reset retained a slider width")
 context:Event(controller, "PLAYER_LOGOUT")
 print(
-    "PASS retail manager, one shared form, input/focus, release snapping, Save/Cancel, category-hidden idle, mode switch and world cleanup"
+    "PASS retail manager, shared width slider, center/scale/height, pending validation, profiles, reset, hidden idle, Save/Cancel and world cleanup"
 )
