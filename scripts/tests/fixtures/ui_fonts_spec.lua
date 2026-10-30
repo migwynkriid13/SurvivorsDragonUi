@@ -3,6 +3,9 @@ local H = dofile("scripts/tests/fixtures/ui_helpers.lua")
 assert(_VERSION == "Lua 5.1", "font fixtures require CI Lua 5.1")
 local context = H.New()
 local env = context.env
+-- Native Lua 5.0 globals can lack _G even though the addon environment supplies
+-- that alias to module initializers. Font helpers retain their file environment.
+env._G = nil
 env.setmetatable = setmetatable
 local make = context.Object
 function context:Object(kind, name, parent)
@@ -29,6 +32,14 @@ env.CreateFont = function(name)
 end
 context:Load("core/display.lua", "Display")
 context:Load("core/fonts.lua", "Fonts")
+assert(env._G == nil, "font initialization introduced a native _G alias")
+assert(
+    env.STANDARD_TEXT_FONT == "NATIVE_TEST"
+        and env.UNIT_NAME_FONT == "NATIVE_TEST"
+        and env.DAMAGE_TEXT_FONT == "NATIVE_TEST"
+        and env.NAMEPLATE_FONT == "NATIVE_TEST",
+    "initialization skipped native font paths without _G"
+)
 local display, tools = env.DFRL.display, env.T
 local root = env.CreateFrame("Frame", nil, env.UIParent)
 local label, loot = root:CreateFontString(), root:CreateFontString()
@@ -50,6 +61,13 @@ assert(display.Get("uiFont") == "arial" and not env.SurvivorsDragonUiDisplay, "p
 local face, size, flags = label:GetFont()
 assert(face == "Fonts\\ARIALN.TTF" and size == 11 and flags == "OUTLINE", "preview changed size or outline")
 assert(loot:GetFont() == face and env.GameFontNormal:GetFont() == face, "preview missed loot or native font objects")
+assert(
+    env.STANDARD_TEXT_FONT == face
+        and env.UNIT_NAME_FONT == face
+        and env.DAMAGE_TEXT_FONT == face
+        and env.NAMEPLATE_FONT == face,
+    "preview skipped native font paths without _G"
+)
 assert(independent:GetFont() == "INDEPENDENT_TEST", "global choice replaced an independent font")
 assert(tools.GetDefaultFont() == "NATIVE_TEST", "global choice changed the independent Default face")
 local _, stockSize, stockFlags = env.GameFontNormal:GetFont()
@@ -62,6 +80,7 @@ context:NoPresentationWrites()
 assert(#context.objects == count, "font preview allocated drawing objects")
 display.FinishEdit(false)
 assert(label:GetFont() == "NATIVE_TEST" and loot:GetFont() == "Fonts\\FRIZQT__.TTF", "Cancel lost original faces")
+assert(env.STANDARD_TEXT_FONT == "NATIVE_TEST" and env._G == nil, "Cancel lost native font paths without _G")
 
 -- Hidden views bind before their existing Show handler measures text.
 local hidden = env.CreateFrame("Frame", nil, env.UIParent)

@@ -1,6 +1,9 @@
 -- DEFAULT was a port-only filename alias. Newer clients require a real font
 -- file and reject SetText on a FontString whose SetFont silently failed.
 -- Resolve once before any addon captions or layout handles are constructed.
+-- File-scope helpers keep the native environment; only the module initializer
+-- is rebound. The Lua 5.0 client need not provide its own _G alias.
+local globals = getfenv(0)
 local defaultFont = CreateFont("SurvivorsDragonUiDefaultFont")
 local function TryDefault(face)
     if type(face) ~= "string" or face == "" then return end
@@ -85,8 +88,8 @@ local function RefreshFonts()
         if entry.value == choice and entry.face then selectedFace = UsableFace(entry.face) end
     end
     local face = selectedFace or defaultFace
-    _G.STANDARD_TEXT_FONT, _G.UNIT_NAME_FONT = face, face
-    _G.DAMAGE_TEXT_FONT, _G.NAMEPLATE_FONT = face, face
+    globals.STANDARD_TEXT_FONT, globals.UNIT_NAME_FONT = face, face
+    globals.DAMAGE_TEXT_FONT, globals.NAMEPLATE_FONT = face, face
     for object, style in pairs(managed) do
         style.dirty = true
         -- Retired native wrappers can reject even their visibility reads.
@@ -146,7 +149,7 @@ DFRL:NewMod("Fonts", 0, function()
             if type(size) == "number" and size > 0 then T.SetFont(object, size, flags) end
         end
     end
-    for _, object in pairs(_G) do
+    for _, object in pairs(globals) do
         local kind = type(object)
         -- Native globals can retain retired widget wrappers. Even GetObjectType
         -- can raise on those; skip that object without aborting the font pass.

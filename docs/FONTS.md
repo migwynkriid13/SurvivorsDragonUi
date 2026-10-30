@@ -21,6 +21,9 @@ family names remain literal.
 native Font-object pass and font-path globals follow the shared choice without
 changing native Font sizes or flags. The original resolved game face remains
 available through `GetDefaultFont` for independent selectors and fallback.
+The font owner captures native globals through `getfenv(0)` because the Lua 5.0
+client can lack `_G`; rebinding the module initializer does not rebind file-scope
+font helpers.
 
 A changed choice visits registered objects once. Hidden frame owners defer
 bindings to one preserved OnShow wrapper per owner, before existing measurements.
@@ -38,8 +41,9 @@ Both Performance Mode states share this instant presentation change.
 
 CI-only mocks load the production display/font owners and exercise normalization,
 preview, saving, discard, profiles, reset, preserved native sizes/flags, independent
-text, hidden Show ordering, rejected bindings, reuse and unchanged writes. The
-production editor, SCT controller and timer-caption fixtures also cover the
-selector or exclusion boundary. No local tests, standalone validation, addon or
+text, native font paths without `_G`, hidden Show ordering, rejected bindings,
+reuse and unchanged writes. The production editor, SCT controller and timer-caption
+fixtures also cover the selector or exclusion boundary. No local tests, standalone
+validation, addon or
 game execution were performed; source review and formatting do not establish
 native glyph coverage, visual fit or handheld readability.
