@@ -375,6 +375,7 @@ local function CriticalScene(performance)
     return SCT(false, function(setup, env)
         setup.settings.sctStyle, setup.settings.performanceMode = "diablo", performance == true
         setup.settings.sctDirectDamage, setup.settings.sctPeriodicDamage, setup.settings.sctPetDamage = true, true, true
+        env.DFRL.locale.code, env.DFRL.locale.data = "en", { en = {} }
         setup.critical, setup.originals, setup.variant = true, {}, {}
         local parse = env.T.ParseNameplateCombatEvent
         env.T.ParseNameplateCombatEvent = function(...)
