@@ -50,7 +50,7 @@ local font = { face = "Fonts\\SKURRI.TTF", size = 14, outline = "OUTLINE", shado
 api.Style(env.runClock, font, false)
 api.Style(env.bossClock, font, false)
 context.formats = 0
-api.Update(10.1, 1200.4, true)
+assert(api.Update(10.1, 1200.4, true) == "Regular", "caption owner did not return the accepted regular mode")
 assert(env.runClock.source:GetText() == "RUN 00:10 / 20:00" and env.bossClock.source:GetText() == "")
 assert(context.formats == 2, "disabled boss countdown still performed formatting")
 assert(env.runClock.caption == nil and env.bossClock.caption == "RUN", "formatting replaced font captions")
@@ -82,7 +82,7 @@ env.DFRL.locale.code = "de"
 api.Refresh()
 assert(env.bossClock.source:GetText() == "BOSS: 1:40", "language change retained formatted captions")
 env.AZS_RUN.endl = 1
-api.Update(60.3, 1300.2, true)
+assert(api.Update(60.3, 1300.2, true) == "Endless", "caption owner did not return the accepted Endless mode")
 assert(env.runClock.source:GetText() == "LAUF 01:00", "Endless mode retained Regular maximum/options")
 
 context:ResetCounts()
@@ -112,3 +112,9 @@ assert(env.runClock.captionCache == cleared, "settled disabled clock recreated i
 api.Update(0, 1300.2, true)
 assert(env.runClock.source:GetText() == "LAUF 00:00", "retirement lost the next native zero sample")
 print("PASS timer captions cache visible formats and retain preview, language, scale and metric recovery")
+
+assert(api.Update(60, 1300, false) == nil, "pending run publication returned an old mode")
+env.AZS_RUN_UPDATED = nil
+assert(api.Update(60, 1300, true) == nil, "unstamped run returned a mode")
+env.AZS_RUN_UPDATED, env.AZS_RUN.endl = 2, 2
+assert(api.Update(60, 1300, true) == nil, "unknown flag inferred an Endless mode")

@@ -13,9 +13,10 @@ DFRL:NewMod("LootView", 4, function()
     local loot, layout, actionDefaults = DFRL.loot, DFRL.layout, DFRL.actionBarDefaults
     if not loot or not layout or not actionDefaults then return end
     local path = DFRL:GetInfoOrCons("tex")
-    local WIDTH, HEIGHT, STEP, LIMIT = 276, 96, 80, 3
+    local MARKS_ICON = path .. "loot\\Marks.blp"
+    local WIDTH, HEIGHT, STEP, LIMIT = 276, 96, 106, 3
     local BORDER_BOTTOM_INSET = 12
-    local FADE_IN, FADE_START, LIFETIME = 0.2, 4.05, 5.55
+    local FADE_IN, FADE_START, LIFETIME = 0.2, 4, 5.5
     local pool, visible, count = {}, {}, 0
     local ready, needsReflow, prepared = true, false, false
     local nextUpdateAt
@@ -62,7 +63,7 @@ DFRL:NewMod("LootView", 4, function()
         if card:IsShown() then card:Hide() end
         card.entry, card.started, card.retryAt = nil, nil, nil
         card.presentationDirty = nil
-        card.rewardText, card.rewardName, card.rewardMarks = nil, nil, nil
+        card.rewardText, card.rewardMarks = nil, nil
         if card.icon:GetTexture() ~= nil then card.icon:SetTexture(nil) end
         card.iconPath = nil
         if card.icon:IsShown() then card.icon:Hide() end
@@ -99,16 +100,17 @@ DFRL:NewMod("LootView", 4, function()
         card.presentationDirty = true
         if not frame:IsVisible() then return end
         local entry = card.entry
-        local r, g, b = Color(entry)
+        local markReward = loot.IsMarkReward(entry)
+        local r, g, b = 1, 0.82, 0
         local label = entry.name
-        if loot.IsMarkReward(entry) then
-            if not card.rewardText or card.rewardName ~= entry.name or card.rewardMarks ~= entry.marks then
-                local unit = string.find(entry.marks, "^0*1$") and "Mark" or "Marks"
-                card.rewardText =
-                    string.format(DFRL.locale.Text("%s → +%s %s"), entry.name, entry.marks, DFRL.locale.Text(unit))
-                card.rewardName, card.rewardMarks = entry.name, entry.marks
+        if markReward then
+            if not card.rewardText or card.rewardMarks ~= entry.marks then
+                card.rewardText = "+" .. entry.marks .. " " .. DFRL.locale.Text(DFRL.messages.MarkUnit(entry.marks))
+                card.rewardMarks = entry.marks
             end
             label = card.rewardText
+        else
+            r, g, b = Color(entry)
         end
         T.SetTextIfChanged(card.name, label)
         if card.red ~= r or card.green ~= g or card.blue ~= b then
@@ -117,28 +119,29 @@ DFRL:NewMod("LootView", 4, function()
             card.red, card.green, card.blue = r, g, b
         end
         local hasIcon = false
-        if entry.icon then
-            if card.iconPath == entry.icon then
+        local icon = markReward and MARKS_ICON or entry.icon
+        if icon then
+            if card.iconPath == icon then
                 hasIcon = true
             else
                 card.iconPath = nil
-                local loaded = card.icon:SetTexture(entry.icon)
+                local loaded = card.icon:SetTexture(icon)
                 hasIcon = loaded ~= false
                 local assigned = card.icon:GetTexture()
-                local stem = type(entry.icon) == "string" and string.gsub(entry.icon, "%.[^%.]*$", "")
-                if
-                    hasIcon
-                    and (loaded == true or loaded == 1 or assigned == entry.icon or (stem and assigned == stem))
-                then
-                    card.iconPath = entry.icon
+                local stem = type(icon) == "string" and string.gsub(icon, "%.[^%.]*$", "")
+                if hasIcon and (loaded == true or loaded == 1 or assigned == icon or (stem and assigned == stem)) then
+                    card.iconPath = icon
                 end
             end
         end
         if hasIcon then
             if not card.icon:IsShown() then card.icon:Show() end
-            if not card.border:IsShown() then card.border:Show() end
         else
             if card.icon:IsShown() then card.icon:Hide() end
+        end
+        if hasIcon and not markReward then
+            if not card.border:IsShown() then card.border:Show() end
+        else
             if card.border:IsShown() then card.border:Hide() end
         end
         local left = hasIcon and 83 or 23
@@ -260,10 +263,12 @@ DFRL:NewMod("LootView", 4, function()
             end
         end
         if not card then return false end
-        entry = loot.Resolve(entry)
+        local markReward = loot.IsMarkReward(entry)
+        if not markReward then entry = loot.Resolve(entry) end
         card.entry, card.started = entry, GetTime()
         nextUpdateAt = nil
-        card.retryAt = entry.itemReference and entry.iconSource ~= "native" and card.started + 0.2 or nil
+        card.retryAt = not markReward and entry.itemReference and entry.iconSource ~= "native" and card.started + 0.2
+            or nil
         Refresh(card)
         count = count + 1
         visible[count] = card

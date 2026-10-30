@@ -17,14 +17,20 @@ DFRL:NewMod("ChatFormats", 0.25, function()
     local StripColors = DFRL.messages.StripColors
     local MarkCounts = DFRL.messages.MarkCounts
 
+    local function MarksInPopup()
+        local loot = DFRL.loot
+        return loot and loot.IsActive() and DFRL.display.Get("lootShowMarks")
+    end
+
     local function MarkGain(amount, spaced)
-        local unit = string.find(amount, "^0*1$") and "Mark" or "Marks"
+        local unit = DFRL.messages.MarkUnit(amount)
         return PLUS .. (spaced and " " or "") .. WHITE .. amount .. "|r " .. YELLOW .. DFRL.locale.Text(unit) .. "|r"
     end
 
     local function MarksMessage(text)
         local amount, total = MarkCounts(StripColors(text), true)
         if not amount then return nil end
+        if MarksInPopup() then return nil, "hide" end
         return MarkGain(amount, true) .. " - " .. YELLOW .. DFRL.locale.Text("Total") .. "|r " .. WHITE .. total .. "|r"
     end
 
@@ -314,11 +320,11 @@ DFRL:NewMod("ChatFormats", 0.25, function()
         end
         -- Recognize native self-loot on the system channel as well as loot events.
         if not eventName or eventName == "CHAT_MSG_LOOT" or eventName == "CHAT_MSG_SYSTEM" then
-            result = MarksMessage(text)
-            if result then return result end
+            result, kind = MarksMessage(text)
+            if result or kind == "hide" then return result, kind end
             local loot = CleanerChat.ParseLootMessage(text)
             if loot then
-                if loot.collection == "collected" and not loot.marks then return nil, "hide" end
+                if loot.collection == "collected" and (not loot.marks or MarksInPopup()) then return nil, "hide" end
                 return loot.chatText
             end
         end

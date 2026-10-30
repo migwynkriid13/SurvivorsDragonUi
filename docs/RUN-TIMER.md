@@ -68,6 +68,64 @@ All choices preview immediately and save only with Confirm. Cancel, world
 leave, logout and reload discard unconfirmed choices. Both full resets restore
 the defaults above. Changing a choice does not move or scale the timer.
 
+## Heroic level inside the bar
+
+The live timer shows the received Heroic rank as a Bildad Roman numeral near
+the one-minute position inside the fill. Normal runs have no numeral. The atlas
+contains I–X, made only from I, V and X; unavailable, fractional or unsupported
+ranks hide the marker instead of displaying an old value. Tier colors move
+from bright blue through steel blue and copper to red. Ranks above V use the final red tint.
+
+One static, transparent BLP cell supplies each marker, including its dark
+outline. It stays visible in Performance Mode. Width changes move its center
+with `fillWidth * 60 / nativeDuration`; very narrow or short bars keep the
+complete 32-unit cell inside their caps. Proportional Layout scaling is
+inherited normally. The existing timer overlay owns the marker.
+
+The existing tenth-second/deferred timer sample reads `AZS_ZONE.heroic` through
+the affix view's phase, zone-receipt and retired-publication gates. The rank
+does not require an affix list or depend on that separate row's visibility.
+Zone changes, run retirement, hiding, disabling and reload clear the marker.
+Artwork is prepared only on first visible Heroic use, with binding retries on
+the existing sample and no animation, event, updater, option or saved state.
+See [artwork and personal-use licensing](../third_party/HeroicNumerals-ARTWORK.md)
+and [drawing costs](PERFORMANCE.md#static-heroic-numerals--2026-10-29).
+
+## Heroic appearance and Endless
+
+The timer uses the received `AZS_ZONE.heroic` rank to choose its appearance.
+Normal runs keep the original blue fill. Heroic I adds scattered warm streams;
+Heroic II moves to muted blue, III to warm copper, IV to crimson and V to deep
+red. The entire fill changes together, with no abrupt blue/red boundary.
+The known Heroic V palette also serves higher positive ranks; I–X numerals
+continue to display their exact received rank. Missing or invalid ranks use
+the neutral blue presentation and hide the numeral.
+
+The same accepted `AZS_RUN.endl` flag used by the captions selects Endless:
+exactly `1` enables it, `0` selects regular mode, and unavailable or unaccepted
+publications do not enable Endless. Passing the run duration alone never
+selects a mode. Regular progress uses `AZS_GetRunTime` and the received native
+duration, stepping the fill in whole seconds and clamping it at the limit.
+Endless fills the bar completely while retaining the current tier's colors.
+Captions and boss countdowns retain their own native times and settings.
+
+Regular mode keeps three right-moving stream lanes and the brighter end froth.
+Heroic ranks progressively recolor 4, 9, 16, 23 and 27 streams and 2, 5, 10, 14
+and 16 foam pieces. Glow and stationary glints build with the tier. In Endless,
+one nine-texture stream lane becomes small moving glitter points; two broad
+lanes remain. Existing stationary glints twinkle 20% faster, with brighter and
+longer peaks. The twelve small foam flecks form a broad wash across the bar,
+with roughly 6–45% opacity, while the four brighter crest pieces stay at the end.
+
+One reusable effect pool handles rank and mode changes. The existing visible
+reader accepts rank changes through the affix publication/retirement gates;
+Endless follows the caption reader's accepted run flag. No level, clock,
+difficulty, schedule or mode is synthesized or stored. Hiding, disabling,
+run/zone/world retirement and reload clear active decoration and the numeral.
+Performance Mode keeps the same tier fill and information while skipping all
+cosmetic animation. See [PERFORMANCE.md](PERFORMANCE.md#heroic-run-timer) for
+allocation, cadence and CI-only evidence limits.
+
 ## Heroic affixes
 
 On the 0.125.0 API, the run timer shows the current run's Heroic affixes in one
@@ -114,12 +172,12 @@ unverified.
 
 ## Update work
 
-With **PERFORMANCE MODE** on, regular progress uses the plain blue fill and
-the red Endless state keeps only its plain red fill. Both skip every decorative
+With **PERFORMANCE MODE** on, regular and Endless runs retain the current
+tier's static fill and skip every decorative
 fill layer: foam, right-moving streaks, flecks, sparkles, red glints and glow.
 Enabling the mode hides any already-active layers immediately. Native progress
 continues in whole-second steps; captions and informative markers remain.
-Turning the mode off restores the original effects from current state.
+Turning the mode off restores effects from the current accepted rank and mode.
 
 Native duration and schedule validation reuse the existing ten-Hz/deferred
 publication refresh. Phase changes, run/schedule retirement and reload invalidate

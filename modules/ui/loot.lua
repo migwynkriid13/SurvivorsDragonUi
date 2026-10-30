@@ -116,8 +116,7 @@ DFRL:NewMod("LootNotifications", 0, function()
     function loot.IsMarkReward(entry)
         return type(entry) == "table"
             and entry.collection == "collected"
-            and type(entry.marks) == "string"
-            and string.find(entry.marks, "^%d+$") ~= nil
+            and DFRL.messages.IsMarkAmount(entry.marks)
             and string.find(entry.marks, "[1-9]") ~= nil
     end
     function loot.CanShow(entry)
@@ -132,7 +131,7 @@ DFRL:NewMod("LootNotifications", 0, function()
         if not messages or type(messages.ParseLootMessage) ~= "function" then return end
         local ok, entry = pcall(messages.ParseLootMessage, text)
         if not ok or not loot.CanShow(entry) then return end
-        if type(UnitClass) == "function" then
+        if not loot.IsMarkReward(entry) and type(UnitClass) == "function" then
             local classOK, _, class = pcall(UnitClass, "player")
             if classOK and type(class) == "string" then entry.itemClass = string.lower(class) end
         end

@@ -1,17 +1,22 @@
 # Loot notifications
 
-`/sdui` → **Loot notifications** offers **SDUI**, **Game** and **Off**:
+`/sdui` → **Interface** → **Loot notifications** offers **SDUI**, **Game** and **Off**:
 
 - **SDUI** is the default and uses the silver cards described below.
 - **Game** explicitly enables the game's original loot boxes and stops SDUI intake.
 - **Off** hides both popup styles; loot still appears in chat.
 
 **Show marks rewards** is on by default. In SDUI mode, an already-collected item
-with a positive conversion reward can show `Item name → +1 Mark` on the existing
-card. The native amount is retained, including plural amounts. Duplicates with
-no positive reward remain excluded. Standalone earned-marks chat notices do not
-create a second popup for the same event. Game mode leaves popup content to the
-game. The checkbox retains its value but is dimmed and ignores input in Game/Off.
+with a positive conversion reward shows **You received** and `+0.5 Marks` or
+`+1 Mark` on the existing card. The received integer or decimal text is retained;
+exactly one uses the singular caption. Marks cards use the selected **03 silver
+skull coin** in the existing icon slot. They omit the converted item's name,
+icon and quality rim and skip its metadata lookup. Duplicates with no positive
+reward remain excluded. While SDUI marks popups are active, custom chat hides
+both the converted-item line and the separate earned-marks balance line. The
+balance line never creates another popup. Game/Off, marks-off and unready SDUI
+retain the existing chat formats. Game mode leaves popup content to the game.
+The checkbox retains its value but is dimmed and ignores input in Game/Off.
 
 `lootMode` (`sdui`, `game`, `off`) and `lootShowMarks` (boolean) use the existing
 display table. Missing/invalid values and both full resets restore SDUI and marks
@@ -29,6 +34,8 @@ face for `GameFontNormal`, and `data/fonts/frizqt__.ttf` is present. No font
 file or font setting ships with the addon.
 
 [Selected static preview](designs/loot-notifications/selected.png).
+The [marks-card preview](designs/marks-icons/selected.png) shows the selected
+coin with singular and fractional rewards.
 The [original proposals](designs/loot-notifications/index.html) remain outside
 the runtime payload. Their earlier slot/status lines are not the selected view.
 
@@ -47,20 +54,26 @@ handler, roll button, sound, collection subtitle or slot line is added.
 
 Explicit native **already collected** status is rejected before queueing,
 metadata resolution or sequence assignment unless SDUI mode's enabled marks
-option accepts a positive integer conversion. `IsMarkReward` and `CanShow`
+option accepts a positive integer or decimal conversion. `IsMarkReward` and `CanShow`
 share that eligibility between intake and the view; collection identity stays
 `collected` and never becomes a new-item claim. Regular chat hides that explicit `collected`
-result unless a positive marks conversion was supplied. The conversion shows
-`+ [Item] +1 Mark` in chat, keeping native brackets, links and item color while
-omitting the collection suffix, independently of the popup choice. Zero-reward
-duplicates remain hidden; raw diagnostics retain the input.
+result unless a positive marks conversion was supplied and marks popups are
+inactive. That fallback shows `+ [Item] +0.5 Marks`, keeping native brackets,
+links and item color while omitting the collection suffix. Active SDUI marks
+popups suppress both recognized chat notices after raw intake. Zero-reward
+duplicates remain hidden; enabled raw diagnostics retain the input.
 Absent collection status stays unknown and is eligible; no collection database
 or item-name inference decides whether a drop is new.
 
-Cards fade in over 0.2 seconds and begin a 1.5-second fade at age 4.05, following
-the inspected retail alert timing. The pool stacks upward in occurrence order,
-80 units apart, and waits when all three cards are occupied. Its separate
-cosmetic updater runs only while cards exist, including while Layout hides the
+Cards fade in over 0.2 seconds and begin a 1.5-second fade at age four seconds,
+expiring at 5.5 seconds. This follows the retail running code's four-second
+outro delay, which replaces the XML template's 4.05-second default. The pool
+stacks upward in occurrence order with retail's ten-unit gap between 96-unit
+frames (106-unit steps), and waits when all three cards are occupied. Each card
+keeps its own start time and expiry; another reward never restarts or sums it.
+Retiring a lower card closes its stack slot without restarting the others.
+Performance Mode keeps the same expiry and stack, with instant appearance and
+removal. The separate cosmetic updater runs only while cards exist, including while Layout hides the
 group, so hidden cards expire normally. Exact-reference metadata can retry at
 0.2-second intervals for the first two seconds. A cosmetic update failure clears
 the view and marks it unready, releasing native ownership on the service tick.
@@ -73,7 +86,7 @@ the shared border is at 105 and the loot frame's bottom is at 93 UI units.
 Both groups remain independently movable; moving or resizing the action bar
 does not change the loot group's default or confirmed position.
 
-The loot edit bounds stay 276 by 256, with additional cards stacking upward.
+The loot edit bounds are 276 by 308, with additional cards stacking upward.
 Existing move, uniform resize, hide, Confirm, Cancel, discard and reset behavior
 applies. Existing confirmed/draft geometry is retained; both full resets use the
 new default. Only confirmed geometry uses the existing `SurvivorsDragonUiLayout`
@@ -98,7 +111,7 @@ An accepted record contains:
 - `collection`: `collected`, `new`, or absent when no status was supplied.
 - `collectionText`: the supplied localized status without color markup or the
   final sentence period. Collected parentheses remain part of the supplied text.
-- `marks`: the received positive integer text from a collected item's marks
+- `marks`: the received positive integer or decimal text from a collected item's marks
   suffix, when supplied. It is not a queried balance or an inferred reward.
 - `item` and `suffix`: the received item markup and recognized collection suffix
   used by the optional chat formatter. Only the enabled chat wrapper adds
@@ -235,11 +248,17 @@ already matches. Game/Off detach the service updater after a successful handoff;
 only unsuccessful native handoffs retry on its existing 0.2-second controller.
 Both skip custom parsing, item metadata, queueing, card animation and painting.
 
-Accepted conversion cards reuse the original item icon/name/quality, card regions
-and lifetime. Their extra text is cached by item name/amount and invalidated on
-language change or retirement; no new icon, currency art, balance getter, saved
-reward history or independent marks popup is added. Failed optional icons retain
-the existing retry policy and hidden cards keep their original expiry behavior.
+Accepted conversion cards reuse the existing heading/name regions and lifetime.
+Their gold marks-only text is cached by amount and invalidated on language change
+or retirement. The original collection/item identity stays in the received record;
+its icon, rim, class lookup and metadata retries are unnecessary for this card.
+The selected whole 64-by-64 Blizzard coin is bundled as `loot/Marks.blp` with its
+lossless TGA retained outside the payload. It uses the existing 50-unit icon
+region, no rarity rim, and the same binding cache and required-refresh retry as
+ordinary icons. It remains static in both modes; failed binding leaves the
+text-only fallback. No drawing region, balance getter, saved reward history or
+independent marks popup is added. Ordinary item icons retain their retry policy;
+hidden cards keep their expiry behavior.
 
 Other HUD parts, compact chat, raw diagnostics, loot rewards and collection
 progress keep their existing ownership. No native frame is guessed, no globals

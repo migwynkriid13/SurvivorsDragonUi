@@ -355,7 +355,7 @@ The assertions cover:
   allocation/reuse and no unchanged cosmetic writes. The scrolling and plate
   fixtures share explicit native setup; production algorithms are not copied.
 - Native marks messages use exact templates in all fourteen catalogs. Tests
-  preserve item links/colors and original amounts/totals, keep zero-reward
+  preserve item links/colors and original integer/decimal amounts/totals, keep zero-reward
   duplicates hidden, leave conversations/unknown suffixes unchanged and reject
   collected conversions before popup delivery or item metadata reads when marks
   rewards are off. Loot mode tests exercise the production display/service/view:
@@ -363,7 +363,16 @@ The assertions cover:
   resets, native visible/hidden ownership, failed handoff retries and synchronous
   CVar callbacks, later external preferences, no Game/Off intake or idle updater,
   deferred/reused card artwork, positive conversion labels and zero/invalid
-  rewards. No mock proves native box content or live font rendering.
+  rewards. The Hogger `+0.5 marks` regression loads the production parser,
+  service, renderer and chat formatter together. It covers one marks-only card,
+  singular wording, the selected static coin without converted-item metadata
+  or rarity work, chat suppression only
+  while SDUI marks popups are active, no second card from the balance notice,
+  two-card retail spacing and independent fade/expiry in normal and Performance
+  Mode, pooled reuse and hidden retirement. Coin cases also cover failed binding
+  retry on required refresh, unchanged and hidden writes, cleared retired
+  bindings, and item-to-currency reuse without another region. These cases were not run locally.
+  No mock proves native box content or live font rendering.
 - The production meter cycles Party Damage after Boss Damage, reads native
   player totals/rates, binds uniquely matched native unit portraits, and retains
   class metadata across shared Reset deltas. Mocks cover unchanged/hidden/off
@@ -515,11 +524,30 @@ world/reload/reset cleanup and row-pool reuse. Metadata learning runs only for
 changed accepted publications. The fixture and runner remain outside the
 runtime manifest, run only in CI and do not prove live delivery or rendering.
 
-## Heroic affix view scenarios
+## Heroic timer and affix scenarios
+
+The source-extracted foam fixture also covers the Endless wash: reuse of the
+twelve existing flecks, one height read, low peak opacity, full-width and cap
+clipping, the brighter end crest and retained regular-run placement. This is
+CI-only drawing-boundary coverage, with no local execution or FPS evidence.
+The extracted live fill owner checks Normal and Heroic I–V palettes, higher-rank
+fallback, invalid metadata, lazy bounded glint growth, full-width Endless,
+moving pinpoints, shared throttle, cleanup/reuse and Performance Mode. Native
+caption cases return only accepted `endl` modes; clock cases verify that the
+same mode controls fill without changing native elapsed time or inferring
+Endless from the duration. Pending publications retain no old rank or mode.
+
+`ui_run_numerals_spec.lua` exercises the extracted static numeral renderer:
+I–X selection, invalid-rank retirement, hidden lazy allocation, one-minute and
+width geometry, unchanged writes, binding retries and Performance Mode.
+Clock-progress cases check the native rank handshake and hidden sample gate;
+affix cases check rank acceptance without an affix list or visible affix row.
+These CI-only scenarios were authored without local execution and do not prove
+Bildad rendering, BLP decoding or native layering in game.
 
 `ui_run_affixes_spec.lua` uses the extracted production `CreateRunAffixes`
 factory, shared tooltip registry and generated native captions against fake
-widgets/snapshots. Eight scenarios cover ordered centering, the exact neutral
+widgets/snapshots. Scenarios cover ordered centering, the exact neutral
 jewelry crop and red tint, hidden/unchanged work, missing or non-Heroic data,
 unknown keys, receipt retirement, retry cadence, pool reuse, editing/Tooltip
 visibility, foreign ownership and all fourteen native name/description sets.
