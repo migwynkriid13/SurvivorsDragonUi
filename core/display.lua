@@ -63,7 +63,7 @@ DFRL:NewMod("Display", 0, function()
         sctReflectedDamage = true,
         sctMisses = true,
         sctClassColors = false,
-        sctMSBTStyle = false,
+        sctStyle = "enemy",
         sctScale = 1,
         hidePortraits = false,
         showPlayerName = true,
@@ -132,12 +132,21 @@ DFRL:NewMod("Display", 0, function()
     local function NormalizeLootMode(value)
         if value == "sdui" or value == "game" or value == "off" then return value end
     end
+    local function NormalizeSctStyle(value)
+        if value == "enemy" or value == "msbt" or value == "diablo" then return value end
+    end
     local function Read(source, key)
         local value
         if type(source) == "table" then value = source[key] end
         if ranges[key] then return NormalizeNumber(key, value) or defaults[key] end
         if key == "tallyStyle" then return NormalizeTallyStyle(value) or defaults[key] end
         if key == "lootMode" then return NormalizeLootMode(value) or defaults[key] end
+        if key == "sctStyle" then
+            -- Old saved display choices and named profiles retain their stream.
+            return NormalizeSctStyle(value)
+                or (type(source) == "table" and source.sctMSBTStyle == true and "msbt")
+                or defaults[key]
+        end
         if type(value) == "boolean" then return value end
         if key == "runTextRegular" or key == "runTextEndless" then
             local legacy = _G.SurvivorsDragonUiRunFont
@@ -179,6 +188,9 @@ DFRL:NewMod("Display", 0, function()
             if not value then return end
         elseif key == "lootMode" then
             value = NormalizeLootMode(value)
+            if not value then return end
+        elseif key == "sctStyle" then
+            value = NormalizeSctStyle(value)
             if not value then return end
         elseif type(value) ~= "boolean" then
             return

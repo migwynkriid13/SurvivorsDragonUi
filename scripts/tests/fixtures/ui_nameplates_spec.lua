@@ -193,12 +193,12 @@ context.guardian.nativeBar.rangeReads, context.guardian.nativeBar.valueReads = 0
 context:Tick(0.21)
 assert(context.guardian.nativeBar.rangeReads == 1, "filter and SCT sampled the same native range twice")
 assert(context.guardian.nativeBar.valueReads == 1, "SCT health sampling lost its native value")
-context:SetSetting("sctMSBTStyle", true)
+context:SetSetting("sctStyle", "msbt")
 context.guardian.nativeBar.rangeReads, context.guardian.nativeBar.valueReads = 0, 0
 context:Tick(0.21)
 assert(context.guardian.nativeBar.rangeReads == 1, "names-only filtering did not use its one required range")
 assert(context.guardian.nativeBar.valueReads == 0, "names-only scrolling added unnecessary native health reads")
-context:SetSetting("sctMSBTStyle", false)
+context:SetSetting("sctStyle", "enemy")
 print("PASS one synchronous sample supplies filter, skin and matching without adding disabled reads")
 
 local waking = Entries()
@@ -513,8 +513,8 @@ do
 
     shared[1].centerX = 500
     shared[3].regions[3]:SetText("Other occupant")
-    matching:SetSetting("sctMSBTStyle", true)
-    matching:SetSetting("sctMSBTStyle", false)
+    matching:SetSetting("sctStyle", "msbt")
+    matching:SetSetting("sctStyle", "enemy")
     matching.targetName = "Shared"
     matching:Hit(401)
     matching:Tick(0.09)

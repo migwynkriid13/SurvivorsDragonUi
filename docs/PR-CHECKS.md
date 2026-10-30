@@ -347,6 +347,15 @@ The assertions cover:
   clears labels and the owner request while retaining pool reuse and empty-list
   idling. These mocks do not exercise native dragging or independently retest
   the shared Layout save/profile transaction.
+- Diablo IV style cases exercise the production SCT controller's full numeric
+  formatting, native critical colors, icon/filter choices, compact launch,
+  settled hold, fade deadline, unchanged work, style retirement, pool reuse and
+  world cleanup. They retain the animated Performance Mode presentation and
+  300 ms sums across mode transitions. Enum cases cover legacy MSBT migration,
+  invalid values, preview/Confirm/Cancel, profile normalization and reset.
+  Settings fixtures cover style selection, hidden listeners and page extent.
+  These cases are CI-only and do not prove Diablo IV visual parity or native
+  font rendering. See [DIABLO-SCT.md](DIABLO-SCT.md) for the video study and tuning.
 - Full SCT/filter and nameplate-style fixtures combine Names only with the
   boss/guardian filter. They cover exact capped/float32 ranges and halfway
   rounding, sleeping-to-awake ceiling conversion and its float32 serialization

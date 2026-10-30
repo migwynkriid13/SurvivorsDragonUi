@@ -37,8 +37,8 @@ leave hundreds of expensive texture regions drawing continuously.
   SavedVariable or idle updater. Record the static behavior and source-level
   costs in the owning developer docs, with meaningful CI-only lifecycle coverage
   where appropriate; local tests and addon/game execution remain unauthorized.
-- SCT keeps its existing motion, fall, critical pop, fade and selected MSBT
-  style in Performance Mode. Only grouping changes: sum same-attack damage in
+- SCT keeps its selected Over enemies, MSBT or Diablo IV animation
+  in Performance Mode. Only grouping changes: sum same-attack damage in
   300 ms while enabled, with the original 75 ms exact-amount duplicate
   suppression otherwise. Do not add a static override or
   retire its active hits just because Performance Mode changes.
@@ -74,6 +74,23 @@ leave hundreds of expensive texture regions drawing continuously.
   from CPU calls. Source counts and reference models are not live draw-call,
   GPU-memory, pixel-parity or FPS measurements. No local tests, standalone
   validation, addon execution or game launch is authorized for this audit.
+
+## Diablo IV combat text — 2026-10-30
+
+The optional Diablo IV style reuses the enemy-origin path, controller and hit
+pool: no combat frame, region, asset, event or updater is added. Its 1.1-second
+burst/hold/fade replaces the selected label's animation only. Formatting and
+random size/scatter are chosen once; live anchors, scale and alpha retain their
+changed-only writes and empty lists remain idle. Performance Mode preserves the
+animation with the existing 300 ms same-attack sums. It never restarts active
+labels on a Performance Mode transition.
+
+The shared style selector replaces the MSBT checkbox on the lazy Combat page.
+Net settings cost is two button frames, eight texture regions and three labels;
+none draw while that page is closed. Original per-hit allocations, metadata
+ownership and native tracking remain shared. See [DIABLO-SCT.md](DIABLO-SCT.md)
+for the video study, tuning, migration and CI-only evidence limits. Source
+review and pinned formatting do not establish native appearance or FPS.
 
 ## Static Heroic numerals — 2026-10-29
 
@@ -2214,10 +2231,9 @@ collision work are no longer forced by this style. V-visible plates keep native
 costs. Style transitions retire queued/active labels and matching state, reuse
 the pool and restore the current native V request without preference writes.
 
-The lazy Combat text page adds one standard checkbox: one button, four texture
-regions (box, mark, hover and divider) and one caption, using existing editor
-art. It joins the shared inactive-mode alpha/input guard. The checkbox sits beside SCT size, with the class-color control below it;
-all filters fit the existing page without enlarging the dialog or adding scrolling.
+The original checkbox has been replaced by the shared three-way style selector
+described in [DIABLO-SCT.md](DIABLO-SCT.md). Existing MSBT saves/profiles migrate
+through the display normalizer; the stream's Layout owner is unchanged.
 
 Source/diff review and pinned formatting only; no local tests, standalone
 validation or addon/game execution. CI-only native mocks cover the production

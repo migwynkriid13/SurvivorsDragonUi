@@ -11,6 +11,16 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local ATTACK_ICON = "Interface\\Icons\\INV_Sword_04"
     local TEXT_DURATION = 1.45
     local MSBT = { x = 160, top = 110, height = 220, curve = 48, spacing = 8, settle = 0.06 }
+    -- Tuned from the supplied Diablo IV clip; these are presentation timings,
+    -- not recovered engine constants or combat-result classifications.
+    local DIABLO = {
+        duration = 1.1,
+        burst = 0.12,
+        pop = 0.18,
+        fade = 0.72,
+        normal = { 0.92, 0.90, 0.82 },
+        critical = { 1, 0.90, 0.32 },
+    }
     local EVENT_SETTLE = 0.08
     local EVENT_FALLBACK_DELAY = 0.16
     local DUPLICATE_WINDOW = 0.075
@@ -78,7 +88,8 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local damageIcons = DFRL.display.Get("damageIcons")
     local nameplatesNamesOnly = DFRL.display.Get("nameplatesNamesOnly")
     local nameplateFontSize = DFRL.display.Get("nameplateFontSize")
-    local msbtStyle = DFRL.display.Get("sctMSBTStyle")
+    local textStyle = DFRL.display.Get("sctStyle")
+    local msbtStyle = textStyle == "msbt"
     local textScale = DFRL.display.Get("sctScale")
     local duplicateWindow = DFRL.display.Get("performanceMode") and PERFORMANCE_DUPLICATE_WINDOW or DUPLICATE_WINDOW
     -- Keep V's visible request separate from the backing coordinate feed. The
@@ -378,6 +389,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         text.color = nil
         text.needsMeasure = nil
         text.scrollOffset, text.scrollY = nil, nil
+        text.diablo, text.duration = nil, nil
         text.anchorRoot, text.anchorPoint, text.anchorX, text.anchorY = nil, nil, nil, nil
         table.insert(textPool, text)
     end
@@ -1544,6 +1556,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
 
     local function UpdateTextColor(text)
         local color = text.color or DAMAGE_COLORS.normal
+        if text.diablo and text.kind == "damage" then color = text.critical and DIABLO.critical or DIABLO.normal end
         if text.kind == "damage" and DFRL.display.Get("sctClassColors") then
             color = T.GetPlayerClassColor() or color
         end
@@ -1628,9 +1641,10 @@ DFRL:NewMod("NameplateCombatText", 6, function()
 
     DFRL.display.Listen(function()
         SyncDuplicateWindow()
-        local scrolling = DFRL.display.Get("sctMSBTStyle")
-        if msbtStyle ~= scrolling then
-            msbtStyle = scrolling
+        local style = DFRL.display.Get("sctStyle")
+        if textStyle ~= style then
+            textStyle = style
+            msbtStyle = style == "msbt"
             -- Do not move old hits between unrelated coordinate systems, or
             -- replay a queued enemy hit in the fixed screen stream.
             ResetDisplay()
@@ -1748,15 +1762,34 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         end
         text.x, text.y = x, y
         text.started = GetTime()
+        text.diablo = textStyle == "diablo"
+        text.duration = text.diablo and DIABLO.duration or TEXT_DURATION
         text.impact = info.critical or info.kind == "miss"
         text.sizeScale = info.critical and 1.5 or 1
-        if not msbtStyle then
+        if text.diablo then
+            text.sizeScale = (info.critical and 1.25 or (info.damageType == "periodic" and 0.82 or 0.95))
+                * math.random(94, 106)
+                / 100
+            text.arcX = arcDirection * math.random(18, 42)
+            text.launch = math.random(-8, 18)
+            arcDirection = -arcDirection
+        elseif not msbtStyle then
             text.arcX = arcDirection * math.random(36, 64)
             text.launch = math.random(105, 130)
             text.gravity = text.launch + 65
             arcDirection = -arcDirection
         end
         local displayText = tostring(value)
+        if text.diablo and info.kind == "damage" and IsFiniteNumber(value) and value >= 0 then
+            -- Full comma-separated values match the supplied reference.
+            -- Never alter the original hit amount or native meter counters.
+            displayText = string.format("%.0f", value)
+            local grouped, changed
+            repeat
+                grouped, changed = string.gsub(displayText, "^(%d+)(%d%d%d)", "%1,%2")
+                displayText = grouped
+            until changed == 0
+        end
         if info.kind == "miss" then displayText = DFRL.locale.CombatText(displayText) end
         text.label:SetText(displayText)
         text.label:Show()
@@ -1767,7 +1800,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         text.color = info.color
         UpdateTextColor(text)
         UpdateIcon(text)
-        local scale = textScale * text.sizeScale * (text.impact and 0.5 or 1)
+        local scale = textScale * text.sizeScale * (text.diablo and 0.82 or (text.impact and 0.5 or 1))
         if text.scale ~= scale then
             text.scale = scale
             text.visual:SetScale(scale)
@@ -1888,14 +1921,23 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         local kept = 0
         for index = 1, count do
             local text = activeTexts[index]
-            local progress = (now - text.started) / TEXT_DURATION
+            local age = now - text.started
+            local progress = age / text.duration
             if progress >= 1 then
                 ReleaseText(text)
             else
                 kept = kept + 1
                 activeTexts[kept] = text
                 local x, y, relativePoint
-                if msbtStyle then
+                if text.diablo then
+                    -- Launch into a compact fan, then hold near the target.
+                    -- No gravity/fall or long screen-wide scrolling column.
+                    local burst = math.min(1, math.max(0, age / DIABLO.burst))
+                    local ease = 1 - math.pow(1 - burst, 3)
+                    x = text.x + text.arcX * ease + text.arcX * 0.12 * progress
+                    y = text.y + 12 + text.launch * ease + 18 * progress
+                    relativePoint = "BOTTOMLEFT"
+                elseif msbtStyle then
                     x = MSBT.curve * 4 * progress * (1 - progress)
                     y = text.scrollY
                     relativePoint = "CENTER"
@@ -1908,7 +1950,14 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                 -- Replacing CENTER updates the existing anchor in place.
                 PositionText(text, relativePoint, x, y)
                 local scale = textScale * text.sizeScale
-                if text.impact and progress < 1 / 6 then
+                if text.diablo and age < DIABLO.pop then
+                    local pop = age / DIABLO.pop
+                    if pop < 0.35 then
+                        scale = scale * (0.82 + (text.critical and 0.46 or 0.28) * (1 - math.pow(1 - pop / 0.35, 3)))
+                    else
+                        scale = scale * (1 + (text.critical and 0.28 or 0.10) * math.pow((1 - pop) / 0.65, 2))
+                    end
+                elseif not text.diablo and text.impact and progress < 1 / 6 then
                     local pop = progress * 6
                     if pop < 0.5 then
                         scale = scale * (0.5 + 1.5 * (1 - math.pow(1 - pop * 2, 5)))
@@ -1926,7 +1975,11 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                     FitText(text)
                 end
                 local alpha = 1
-                if progress > 0.68 then alpha = (1 - progress) / 0.32 end
+                if text.diablo then
+                    if progress > DIABLO.fade then alpha = (1 - progress) / (1 - DIABLO.fade) end
+                elseif progress > 0.68 then
+                    alpha = (1 - progress) / 0.32
+                end
                 if text.alpha ~= alpha then
                     text.alpha = alpha
                     text.holder:SetAlpha(alpha)

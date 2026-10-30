@@ -3,7 +3,7 @@ local H = dofile("scripts/tests/fixtures/ui_helpers.lua")
 local function SCT(scrolling, setup)
     local context = H.New()
     local env = context.env
-    context.settings.sctMSBTStyle = scrolling
+    context.settings.sctStyle = scrolling and "msbt" or "enemy"
     context.settings.sctScale = 1
     context.settings.sctNormalHits, context.settings.sctCriticalHits = true, true
     context.settings.sctAutoAttacks, context.settings.sctMisses = true, true

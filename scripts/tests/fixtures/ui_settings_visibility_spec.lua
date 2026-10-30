@@ -6,6 +6,7 @@ local env = context.env
 local values = {
     performanceMode = false,
     sctScale = 1,
+    sctStyle = "diablo",
     damageIcons = true,
     meterRows = 6,
     tallyStyle = 1,
@@ -14,6 +15,7 @@ local values = {
     guardianRespawnGuidance = true,
 }
 local reads, styled, measured = 0, 0, 0
+local sctMode = "on"
 env.DFRL.display.Get = function(key)
     reads = reads + 1
     return values[key]
@@ -21,7 +23,7 @@ end
 env.DFRL.sct = {
     GetMode = function()
         reads = reads + 1
-        return "on"
+        return sctMode
     end,
     GetIncoming = function()
         reads = reads + 1
@@ -49,7 +51,16 @@ env.incomingControl = Check(combat)
 env.sctDescription = combat:CreateFontString(nil, "OVERLAY")
 env.sctSizeLabel = combat:CreateFontString(nil, "OVERLAY")
 env.sctButtons = { on = Choice(combat), off = Choice(combat) }
+env.fontEditor.sctStyleButtons = { enemy = Choice(combat), msbt = Choice(combat), diablo = Choice(combat) }
 env.fontEditor.combatSettings = { frame = combat, controls = { env.incomingControl } }
+for _, button in pairs(env.fontEditor.sctStyleButtons) do
+    table.insert(env.fontEditor.combatSettings.controls, button)
+    local enable = button.EnableMouse
+    button.EnableMouse = function(self, value)
+        self.styleMouseEnabled = value
+        enable(self, value)
+    end
+end
 env.displayControls = {
     performanceMode = Check(env.fontEditor),
     damageIcons = Check(combat),
@@ -103,10 +114,24 @@ views.Display()
 views.SCT()
 assert(env.displayControls.damageIcons.editorChecked == false, "shown category did not catch up")
 assert(env.incomingControl.editorChecked == true and env.sctButtons.on.editorSelected, "shown SCT choices are stale")
+assert(env.fontEditor.sctStyleButtons.diablo.editorSelected, "shown style selection is stale")
+assert(env.sctDescription:GetText() == "Diablo IV numbers burst around enemies.", "style description is stale")
 context:ResetCounts()
 views.Display()
 views.SCT()
 context:NoPresentationWrites()
+sctMode = "off"
+views.SCT()
+for _, button in pairs(env.fontEditor.sctStyleButtons) do
+    assert(button.styleMouseEnabled == false, "non-Custom mode retained style input")
+end
+assert(combat:GetAlpha() == 0.45 and values.sctStyle == "diablo", "inactive mode lost its dimming or saved style")
+sctMode = "on"
+views.SCT()
+assert(
+    env.fontEditor.sctStyleButtons.diablo.styleMouseEnabled and combat:GetAlpha() == 1,
+    "Custom did not restore style input"
+)
 
 timer:Show()
 views.Display()

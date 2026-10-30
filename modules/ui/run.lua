@@ -1203,8 +1203,16 @@ DFRL:NewMod("RunTimers", 5, function()
         for value, button in pairs(sctButtons) do
             button:SetSelected(value == mode)
         end
+        local style = DFRL.display.Get("sctStyle")
+        if fontEditor and fontEditor.sctStyleButtons then
+            for value, button in pairs(fontEditor.sctStyleButtons) do
+                if button.editorSelected ~= (value == style) then button:SetSelected(value == style) end
+            end
+        end
         if mode == "on" then
-            if DFRL.display.Get("sctMSBTStyle") then
+            if style == "diablo" then
+                T.SetTextIfChanged(sctDescription, "Diablo IV numbers burst around enemies.")
+            elseif style == "msbt" then
                 T.SetTextIfChanged(sctDescription, "Addon damage numbers scroll beside your character.")
             else
                 T.SetTextIfChanged(sctDescription, "Addon damage numbers follow enemies.")
@@ -1989,6 +1997,11 @@ DFRL:NewMod("RunTimers", 5, function()
             { value = "off", label = "Off" },
             { value = "default", label = "Game settings" },
         }
+        local sctStyles = {
+            { value = "enemy", label = "Over enemies" },
+            { value = "msbt", label = "MSBT-style scrolling" },
+            { value = "diablo", label = "Diablo IV" },
+        }
         local timerModes = {
             { label = "Regular runs", suffix = "Regular" },
             { label = "Endless", suffix = "Endless" },
@@ -2002,7 +2015,7 @@ DFRL:NewMod("RunTimers", 5, function()
         local combatFilters = {
             {
                 label = "Damage type",
-                y = -226,
+                y = -290,
                 entries = {
                     { key = "sctNormalHits", label = "Normal damage" },
                     { key = "sctCriticalHits", label = "Critical damage" },
@@ -2010,7 +2023,7 @@ DFRL:NewMod("RunTimers", 5, function()
             },
             {
                 label = "Damage categories",
-                y = -288,
+                y = -352,
                 entries = {
                     { key = "sctAutoAttacks", label = "Auto-attacks" },
                     { key = "sctDirectDamage", label = "Direct abilities / spells" },
@@ -2326,6 +2339,7 @@ DFRL:NewMod("RunTimers", 5, function()
             sctDescription:SetJustifyV("TOP")
             sctDescription:SetTextColor(0.75, 0.73, 0.67)
             local combatPage = combat
+            combatPage:SetHeight(468)
             combat = CreateFrame("Frame", nil, combatPage)
             combat:SetAllPoints(combatPage)
             combat:EnableMouse(false)
@@ -2361,17 +2375,31 @@ DFRL:NewMod("RunTimers", 5, function()
                 control.description:SetHeight(28)
                 control.description:SetJustifyV("TOP")
             end
-            FontEditorLabel(combat, "SCT size", 0, -190, 11)
+            FontEditorLabel(combat, "Damage number style", 0, -178, 11)
+            fontEditor.sctStyleButtons = {}
+            for index, entry in ipairs(sctStyles) do
+                local style = entry.value
+                local _, button = FontEditorButton(
+                    entry.label,
+                    modeSize,
+                    (index - 1) * (modeSize + gap),
+                    -200,
+                    function() DFRL.display.Set("sctStyle", style) end,
+                    combat
+                )
+                fontEditor.sctStyleButtons[style] = button
+            end
+            FontEditorLabel(combat, "SCT size", 0, -254, 11)
             local scaleX = TextWidth("SCT size") + gap
             local function ChangeSctSize(direction)
                 local percent = math.floor(DFRL.display.Get("sctScale") * 100 + 0.5)
                 DFRL.display.Set("sctScale", (percent + direction * 5) / 100)
             end
-            FontEditorButton("-", 28, scaleX, -182, function() ChangeSctSize(-1) end, combat)
-            sctSizeLabel = FontEditorLabel(combat, "", scaleX + 36, -190)
+            FontEditorButton("-", 28, scaleX, -246, function() ChangeSctSize(-1) end, combat)
+            sctSizeLabel = FontEditorLabel(combat, "", scaleX + 36, -254)
             sctSizeLabel:SetWidth(64)
             sctSizeLabel:SetJustifyH("CENTER")
-            FontEditorButton("+", 28, scaleX + 108, -182, function() ChangeSctSize(1) end, combat)
+            FontEditorButton("+", 28, scaleX + 108, -246, function() ChangeSctSize(1) end, combat)
             local filterSize = (contentWidth - gap) / 2
             local function CombatToggle(key, label, x, y)
                 local control = DisplayToggle(combat, key, label, nil, y, filterSize)
@@ -2381,10 +2409,9 @@ DFRL:NewMod("RunTimers", 5, function()
                 control.label:ClearAllPoints()
                 control.label:SetPoint("LEFT", control, "LEFT", 32, 0)
             end
-            CombatToggle("sctMSBTStyle", "MSBT-style scrolling", filterSize + gap, -182)
-            CombatToggle("sctClassColors", "Class-colored damage", filterSize + gap, -218)
+            CombatToggle("sctClassColors", "Class-colored damage", filterSize + gap, -246)
             divider = T.EditorDivider(combat, contentWidth)
-            divider:SetPoint("TOPLEFT", combat, "TOPLEFT", 0, -282)
+            divider:SetPoint("TOPLEFT", combat, "TOPLEFT", 0, -346)
             for _, group in ipairs(combatFilters) do
                 heading = FontEditorLabel(combat, group.label, 0, group.y, 12)
                 heading:SetTextColor(0.94, 0.79, 0.47)
