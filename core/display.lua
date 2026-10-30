@@ -112,7 +112,6 @@ DFRL:NewMod("Display", 0, function()
     -- Shared by normalization, the font owner and the Layout selector.
     display.fonts = {
         { value = "default", label = "Default" },
-        { value = "friz", label = "Friz Quadrata", face = "Fonts\\FRIZQT__.TTF" },
         { value = "arial", label = "Arial Narrow", face = "Fonts\\ARIALN.TTF" },
         { value = "morpheus", label = "Morpheus", face = "Fonts\\MORPHEUS.TTF" },
         { value = "skurri", label = "Skurri", face = "Fonts\\SKURRI.TTF" },

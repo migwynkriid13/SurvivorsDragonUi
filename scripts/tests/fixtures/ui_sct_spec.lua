@@ -27,7 +27,7 @@ Test("numeric SCT keeps independent font ownership in both performance modes", f
         context:SetSetting("uiFont", "arial")
         assert(label:GetFont() == "DEFAULT_TEST", "global choice changed SCT Default")
         context:SetSetting("sctFont", "diablo")
-        context:SetSetting("uiFont", "friz")
+        context:SetSetting("uiFont", "skurri")
         assert(label:GetFont() ~= "DEFAULT_TEST", "global choice changed the selected SCT font")
     end
 end)

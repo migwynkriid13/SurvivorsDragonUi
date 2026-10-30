@@ -477,6 +477,7 @@ assert(
 )
 local layoutPage = pages.layout
 assert(dialog.uiFontButtons.default.editorSelected, "Layout did not select the default font")
+assert(not dialog.uiFontButtons.friz, "Layout still offers the removed Friz Quadrata choice")
 context:Call(dialog.uiFontButtons.arial, "OnClick")
 editor.Display()
 assert(display.Get("uiFont") == "arial" and not env.SurvivorsDragonUiDisplay, "Layout font saved before Confirm")
@@ -658,10 +659,10 @@ local function ProfileSaveControls()
     assert(env.SurvivorsDragonUiDisplay.uiFont == "arial" and env.SurvivorsDragonUiDisplay.xpShowText)
     assert(env.SurvivorsDragonUiProfiles.Handheld.display.uiFont == "arial", "named snapshot was not committed")
     Open()
-    display.Set("uiFont", "friz")
+    display.Set("uiFont", "skurri")
     context:Call(Button("Overwrite and close"), "OnClick")
     assert(not dialog:IsShown() and context.profileCommits == 2, "overwrite required another Confirm")
-    assert(env.SurvivorsDragonUiProfiles.Handheld.display.uiFont == "friz")
+    assert(env.SurvivorsDragonUiProfiles.Handheld.display.uiFont == "skurri")
     Open()
     profileInput:SetText("Keyboard")
     context:Call(profileInput, "OnEnterPressed")
@@ -672,7 +673,7 @@ local function ProfileSaveControls()
     display.Set("uiFont", "morpheus")
     context:Call(Button("Overwrite and close"), "OnClick")
     assert(
-        dialog:IsShown() and env.SurvivorsDragonUiProfiles.Keyboard.display.uiFont == "friz",
+        dialog:IsShown() and env.SurvivorsDragonUiProfiles.Keyboard.display.uiFont == "skurri",
         "failed commit changed saved data"
     )
     assert(not profiles.Save("Rejected", false) and not env.SurvivorsDragonUiProfiles.Rejected)
@@ -680,7 +681,10 @@ local function ProfileSaveControls()
         assert(name ~= "Rejected", "failed new save left a staged profile")
     end
     context.rejectProfileCommit = false
-    assert(profiles.Load("Keyboard") and display.Get("uiFont") == "friz", "failed overwrite left a staged replacement")
+    assert(
+        profiles.Load("Keyboard") and display.Get("uiFont") == "skurri",
+        "failed overwrite left a staged replacement"
+    )
     assert(
         context.profileRunFont == env.SurvivorsDragonUiProfiles.Keyboard.runFont,
         "load skipped the timer-font owner"
@@ -688,7 +692,7 @@ local function ProfileSaveControls()
     context:Call(Button("Delete profile"), "OnClick")
     assert(dialog:IsShown() and env.SurvivorsDragonUiProfiles.Keyboard, "delete stopped being a preview")
     env.DFRL.layout.CancelEdit()
-    assert(env.SurvivorsDragonUiProfiles.Keyboard and env.SurvivorsDragonUiDisplay.uiFont == "friz")
+    assert(env.SurvivorsDragonUiProfiles.Keyboard and env.SurvivorsDragonUiDisplay.uiFont == "skurri")
     for index = 1, 5 do
         Open()
         profileInput:SetText("Paged " .. index)

@@ -59,9 +59,12 @@ local independent = root:CreateFontString()
 tools.SetFont(independent, 18, "OUTLINE", true)
 independent:SetFont("INDEPENDENT_TEST", 18, "OUTLINE")
 
-for _, value in ipairs({ true, 1, "unknown", "Fonts\\ARIALN.TTF" }) do
+for _, value in ipairs({ true, 1, "unknown", "friz", "Fonts\\ARIALN.TTF" }) do
     assert(display.Copy({ uiFont = value }).uiFont == "default", "invalid saved face was accepted")
 end
+env.SurvivorsDragonUiDisplay = { uiFont = "friz" }
+assert(display.Get("uiFont") == "default", "removed saved font did not use Default")
+env.SurvivorsDragonUiDisplay = nil
 display.BeginEdit()
 display.Set("uiFont", "arial")
 display.Set("uiFont", "unknown")
@@ -110,8 +113,11 @@ hidden:Hide()
 display.BeginEdit()
 display.Load({ uiFont = "friz", sctFont = "diablo" })
 assert(
-    label:GetFont() == "Fonts\\FRIZQT__.TTF" and display.Get("sctFont") == "diablo",
-    "profile lost independent choices"
+    display.Get("uiFont") == "default"
+        and label:GetFont() == "NATIVE_TEST"
+        and loot:GetFont() == "Fonts\\FRIZQT__.TTF"
+        and display.Get("sctFont") == "diablo",
+    "removed profile font did not use Default or changed independent choices"
 )
 display.FinishEdit(false)
 assert(

@@ -1,7 +1,7 @@
 # Shared font choice
 
 `/sdui` → **Layout** → **Font** changes text styled by SDUI. Choose Default,
-Friz Quadrata, Arial Narrow, Morpheus or Skurri. Default preserves the existing
+Arial Narrow, Morpheus or Skurri. Default preserves the existing
 faces, including Friz Quadrata on loot cards. Font sizes, outlines, shadows,
 colors and layout geometry retain their own styling and controls.
 
@@ -12,7 +12,8 @@ font registry, including when their own Default option is selected.
 The normalized `uiFont` enum lives in the existing display table. Preview,
 Confirm-only saving, Cancel, world/logout/reload discard, profiles and both full
 resets use the existing display transaction. Missing or invalid choices use
-Default. The source/runtime hint is translated in all fourteen languages; font
+Default, including older saved settings and profiles that selected Friz Quadrata.
+The source/runtime hint is translated in all fourteen languages; font
 family names remain literal.
 
 `core/fonts.lua` owns weak registries of styled objects and pending hidden owners.
