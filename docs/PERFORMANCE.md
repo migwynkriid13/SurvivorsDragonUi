@@ -75,6 +75,18 @@ leave hundreds of expensive texture regions drawing continuously.
   GPU-memory, pixel-parity or FPS measurements. No local tests, standalone
   validation, addon execution or game launch is authorized for this audit.
 
+## Profile save and close — 2026-10-30
+
+Profile save and overwrite reuse the existing Confirm transaction and close the
+editor after one successful commit. They add no frame, drawing region, event,
+updater, asset or SavedVariable. The existing buttons and status label carry
+the translated captions; save-button sizing retains its active-language glyph
+cache. Failed validation leaves the editor open, and successful closing skips
+hidden result-caption writes. Both Performance Mode states use the same instant
+save path with existing native handoff and cosmetic cleanup. CI-only coverage
+uses real Layout/Display/Profiles owners and explicit native/font/SCT boundaries;
+it does not establish on-disk client persistence. See [PROFILES.md](PROFILES.md).
+
 ## Shared Layout font — 2026-10-30
 
 The shared font registry adds no HUD frame, region, asset, event or updater.

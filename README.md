@@ -78,7 +78,7 @@ Settings are grouped into nine categories, with related options together.
 
 For a clear view while moving, use `/sdui lock`. Click a blue frame for its controls, drag to move, or nudge with arrow keys (Shift moves ten units). Choose **Show grid**, **Grid spacing** and **Snap to elements** in the small manager. **Save and close** keeps the changes.
 
-Click **Confirm** in the full editor to save or **Cancel** to undo. Click the minimap glyph again or press **Escape** to cancel and close. Leaving the run or reloading also discards unsaved changes. **Addon defaults** resets the same options as `/sdui reset`.
+Click **Confirm** in the full editor to save or **Cancel** to undo. In **Profiles**, **Save profile and close** and **Overwrite and close** save the named profile and current setup together, then close the editor. Loading or deleting a profile stays a preview until Confirm. Click the minimap glyph again or press **Escape** to cancel and close. Leaving the run or reloading also discards unsaved changes. **Addon defaults** resets the same options as `/sdui reset`.
 
 **Performance Mode**, above **Layout**, starts off. Turn it on for static portraits and HUD effects, chat and banners without fading, and no cooldown numbers. Combat text keeps its usual motion and selected style. Your individual choices return when you turn it off.
 

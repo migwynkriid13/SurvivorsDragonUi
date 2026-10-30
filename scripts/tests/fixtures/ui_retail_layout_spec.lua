@@ -218,6 +218,7 @@ env.T.CreateEditorInput = function(parent, width, height)
 end
 context:Load("core/display.lua", "Display")
 context:Load("core/layout_snap.lua")
+env.ReloadUI = function() context.reloads = (context.reloads or 0) + 1 end
 context:Load("core/layout.lua", "Layout")
 local layout, display = env.DFRL.layout, env.DFRL.display
 local controller = context:Controller("PLAYER_LOGOUT")
@@ -611,6 +612,137 @@ widthSlider:SetValue(700)
 layout.Reset()
 assert(chat:GetWidth() == 240 and not env.SurvivorsDragonUiLayout.chat, "full reset retained a slider width")
 context:Event(controller, "PLAYER_LOGOUT")
+local function ProfileCommitLifecycle()
+    local function Copy(value)
+        if type(value) ~= "table" then return value end
+        local copy = {}
+        for key, entry in pairs(value) do
+            copy[key] = Copy(entry)
+        end
+        return copy
+    end
+    -- Font/SCT owners are explicit boundaries here; their own production
+    -- fixtures cover fonts, native preference handoff and preview cleanup.
+    env.DFRL.runFont = {
+        Copy = Copy,
+        Snapshot = function() return Copy(context.fontDraft) end,
+        Load = function(value) context.fontDraft = Copy(value) end,
+    }
+    env.DFRL.sct = {
+        NormalizeMode = function(value) return value == "on" and "on" or value == "off" and "off" or "default" end,
+        GetMode = function() return context.sctDraft end,
+        SetMode = function(value) context.sctDraft = value end,
+    }
+    local owner = env.CreateFrame("Frame", nil, env.UIParent)
+    owner:SetWidth(80)
+    owner:SetHeight(20)
+    layout.Register("profileOwner", owner, function(root)
+        root:ClearAllPoints()
+        root:SetPoint("TOPLEFT", env.UIParent, "TOPLEFT", 30, -60)
+    end, {
+        onEdit = function(active, save)
+            if active then
+                context.fontDraft = Copy(env.SurvivorsDragonUiRunFont or { face = "DEFAULT", size = 14 })
+                context.sctDraft = env.SurvivorsDragonUiSctMode or "default"
+            else
+                if save then
+                    context.profileCommits = (context.profileCommits or 0) + 1
+                    env.SurvivorsDragonUiRunFont = Copy(context.fontDraft)
+                    env.SurvivorsDragonUiSctMode = context.sctDraft
+                end
+                context.fontDraft, context.sctDraft = nil, nil
+            end
+        end,
+    })
+    context:Load("core/profiles.lua", "Profiles")
+    local profiles = env.DFRL.profiles
+    context:Event(controller, "PLAYER_ENTERING_WORLD")
+    Tick()
+    layout.BeginEdit()
+    context:Call(chatSelection, "OnMouseDown", "LeftButton")
+    widthSlider:SetValue(555)
+    form.x:SetText("120,5")
+    form.y:SetText("-33")
+    display.Set("uiFont", "arial")
+    display.Set("xpShowText", true)
+    display.Set("performanceMode", true)
+    context.fontDraft.size, context.sctDraft = 17, "on"
+    local name = "Handheld Ω"
+    assert(profiles.Save(name, false), "profile save rejected valid pending coordinates")
+    assert(not layout.IsEditing() and not settingsWindow:IsShown() and context.profileCommits == 1)
+    local saved = env.SurvivorsDragonUiProfiles[name]
+    assert(saved.layout.chat.width == 555 and env.SurvivorsDragonUiLayout.chat.width == 555)
+    assert(saved.display.uiFont == "arial" and env.SurvivorsDragonUiDisplay.uiFont == "arial")
+    assert(saved.display.xpShowText and saved.display.performanceMode)
+    assert(saved.runFont.size == 17 and env.SurvivorsDragonUiRunFont.size == 17)
+    assert(saved.sctMode == "on" and env.SurvivorsDragonUiSctMode == "on")
+    assert(saved.layout ~= env.SurvivorsDragonUiLayout and saved.display ~= env.SurvivorsDragonUiDisplay)
+    assert(saved.runFont ~= env.SurvivorsDragonUiRunFont, "profile aliases active font settings")
+    assert(not layout.ConfirmEdit() and context.profileCommits == 1, "closed editor committed twice")
+    env.ReloadUI()
+    assert(
+        context.reloads == 1 and env.SurvivorsDragonUiProfiles[name] == saved,
+        "reload discard removed a saved profile"
+    )
+    context:Event(controller, "PLAYER_LEAVING_WORLD")
+    context:Event(controller, "PLAYER_ENTERING_WORLD")
+    Tick()
+    assert(env.SurvivorsDragonUiProfiles[name] == saved and env.SurvivorsDragonUiLayout.chat.width == 555)
+
+    layout.BeginEdit()
+    context:Call(chatSelection, "OnMouseDown", "LeftButton")
+    assert(form.x:GetText() == "120.50" and form.y:GetText() == "-33.00", "save lost pending numeric positions")
+    form.x:SetText("invalid")
+    assert(not profiles.Save(name, true) and layout.IsEditing(), "invalid overwrite closed the editor")
+    assert(not profiles.Save("Blocked", false) and not env.SurvivorsDragonUiProfiles.Blocked)
+    assert(
+        env.SurvivorsDragonUiProfiles[name] == saved and context.profileCommits == 1,
+        "invalid save altered committed state"
+    )
+    form.x:SetText("75")
+    widthSlider:SetValue(730)
+    display.Set("uiFont", "friz")
+    display.Set("performanceMode", false)
+    context.fontDraft.size = 19
+    assert(profiles.Save(name, true), "valid overwrite failed after correcting coordinates")
+    saved = env.SurvivorsDragonUiProfiles[name]
+    assert(not layout.IsEditing() and context.profileCommits == 2 and saved.layout.chat.width == 730)
+    assert(saved.display.uiFont == "friz" and not saved.display.performanceMode and saved.runFont.size == 19)
+    layout.BeginEdit()
+    display.Set("uiFont", "skurri")
+    assert(not profiles.Save(name, false) and not profiles.Save("", false), "invalid names saved")
+    assert(layout.IsEditing() and env.SurvivorsDragonUiProfiles[name] == saved)
+    assert(profiles.Load(name) and layout.IsEditing(), "load stopped being a preview")
+    assert(profiles.Delete(name) and env.SurvivorsDragonUiProfiles[name] == saved, "delete committed before Confirm")
+    layout.CancelEdit()
+    assert(env.SurvivorsDragonUiDisplay.uiFont == "friz" and env.SurvivorsDragonUiProfiles[name] == saved)
+
+    -- Model the client's persistence boundary using only copied confirmed
+    -- globals in fresh Display/Profiles owners, with no client or disk access.
+    local fresh = H.New()
+    fresh.env.SurvivorsDragonUiProfiles = Copy(env.SurvivorsDragonUiProfiles)
+    fresh.env.SurvivorsDragonUiDisplay = Copy(env.SurvivorsDragonUiDisplay)
+    fresh.env.SurvivorsDragonUiLayout = Copy(env.SurvivorsDragonUiLayout)
+    fresh.env.SurvivorsDragonUiRunFont = Copy(env.SurvivorsDragonUiRunFont)
+    fresh.env.SurvivorsDragonUiSctMode = env.SurvivorsDragonUiSctMode
+    fresh.env.DFRL.layout.Copy = layout.Copy
+    fresh.env.DFRL.layout.Load = function(value) fresh.restoredLayout = layout.Copy(value) end
+    fresh.env.DFRL.runFont = { Copy = Copy, Load = function(value) fresh.restoredFont = Copy(value) end }
+    fresh.env.DFRL.sct =
+        { NormalizeMode = env.DFRL.sct.NormalizeMode, SetMode = function(value) fresh.restoredSct = value end }
+    fresh:Load("core/display.lua", "Display")
+    fresh:Load("core/profiles.lua", "Profiles")
+    local restoredDisplay, restoredProfiles = fresh.env.DFRL.display, fresh.env.DFRL.profiles
+    assert(fresh.env.SurvivorsDragonUiLayout.chat.width == 730 and restoredDisplay.Get("uiFont") == "friz")
+    assert(restoredProfiles.List()[1] == name, "fresh owners lost the confirmed profile")
+    restoredDisplay.BeginEdit()
+    restoredProfiles.BeginEdit()
+    assert(restoredProfiles.Load(name) and restoredDisplay.Get("uiFont") == "friz")
+    assert(fresh.restoredLayout.chat.width == 730 and fresh.restoredFont.size == 19 and fresh.restoredSct == "on")
+    layout.Reset()
+    assert(env.SurvivorsDragonUiProfiles[name] == saved, "Addon defaults erased a saved profile")
+end
+ProfileCommitLifecycle()
 print(
     "PASS retail manager, shared width slider, center/scale/height, pending validation, profiles, reset, hidden idle, Save/Cancel and world cleanup"
 )

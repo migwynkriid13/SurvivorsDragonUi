@@ -386,12 +386,22 @@ env.DFRL.layout = {
     Snapshot = function() return {} end,
     Copy = function(value) return value end,
     Load = function() end,
+    ConfirmEdit = function()
+        context.profileCommits = (context.profileCommits or 0) + 1
+        if context.rejectProfileCommit then return false end
+        display.FinishEdit(true)
+        env.DFRL.profiles.FinishEdit(true)
+        env.fontEditor:Hide()
+        return true
+    end,
     CancelEdit = function()
         display.FinishEdit(false)
+        env.DFRL.profiles.FinishEdit(false)
         env.fontEditor:Hide()
     end,
     Reset = function()
         display.Reset()
+        env.DFRL.profiles.FinishEdit(false)
         env.fontEditor:Hide()
     end,
 }
@@ -610,6 +620,83 @@ assert(display.Get("xpShowText") and xpText.editorChecked, "XP text checkbox did
 assert(not env.SurvivorsDragonUiDisplay.xpShowText, "XP text checkbox saved before Confirm")
 env.DFRL.layout.CancelEdit()
 assert(not display.Get("xpShowText"), "Cancel retained the XP text checkbox")
+local function ProfileSaveControls()
+    local profiles = env.DFRL.profiles
+    local function Open()
+        display.BeginEdit()
+        profiles.BeginEdit()
+        dialog:Show()
+        dialog.navigation.Select("profiles")
+    end
+    local function Button(caption)
+        for _, object in ipairs(context.objects) do
+            if
+                object.kind == "Button"
+                and object:GetParent() == pages.profiles
+                and object.label
+                and object.label:GetText() == locale.Text(caption)
+            then
+                return object
+            end
+        end
+        error("missing profile button: " .. caption)
+    end
+    Open()
+    local save = Button("Save profile and close")
+    profileInput:SetText("")
+    context:Call(save, "OnClick")
+    assert(dialog:IsShown() and not context.profileCommits, "invalid name committed or closed the editor")
+    display.Set("uiFont", "arial")
+    display.Set("xpShowText", true)
+    profileInput:SetText("Handheld")
+    context:Call(save, "OnClick")
+    assert(not dialog:IsShown() and context.profileCommits == 1, "profile save did not close through one shared commit")
+    assert(env.SurvivorsDragonUiDisplay.uiFont == "arial" and env.SurvivorsDragonUiDisplay.xpShowText)
+    assert(env.SurvivorsDragonUiProfiles.Handheld.display.uiFont == "arial", "named snapshot was not committed")
+    Open()
+    display.Set("uiFont", "friz")
+    context:Call(Button("Overwrite and close"), "OnClick")
+    assert(not dialog:IsShown() and context.profileCommits == 2, "overwrite required another Confirm")
+    assert(env.SurvivorsDragonUiProfiles.Handheld.display.uiFont == "friz")
+    Open()
+    profileInput:SetText("Keyboard")
+    context:Call(profileInput, "OnEnterPressed")
+    assert(not dialog:IsShown() and context.profileCommits == 3, "Enter did not save and close")
+    assert(env.SurvivorsDragonUiProfiles.Keyboard and env.SurvivorsDragonUiProfiles.Handheld)
+    Open()
+    context.rejectProfileCommit = true
+    display.Set("uiFont", "morpheus")
+    context:Call(Button("Overwrite and close"), "OnClick")
+    assert(
+        dialog:IsShown() and env.SurvivorsDragonUiProfiles.Keyboard.display.uiFont == "friz",
+        "failed commit changed saved data"
+    )
+    assert(not profiles.Save("Rejected", false) and not env.SurvivorsDragonUiProfiles.Rejected)
+    for _, name in ipairs(profiles.List()) do
+        assert(name ~= "Rejected", "failed new save left a staged profile")
+    end
+    context.rejectProfileCommit = false
+    assert(profiles.Load("Keyboard") and display.Get("uiFont") == "friz", "failed overwrite left a staged replacement")
+    context:Call(Button("Delete profile"), "OnClick")
+    assert(dialog:IsShown() and env.SurvivorsDragonUiProfiles.Keyboard, "delete stopped being a preview")
+    env.DFRL.layout.CancelEdit()
+    assert(env.SurvivorsDragonUiProfiles.Keyboard and env.SurvivorsDragonUiDisplay.uiFont == "friz")
+    for index = 1, 5 do
+        Open()
+        profileInput:SetText("Paged " .. index)
+        context:Call(profileInput, "OnEnterPressed")
+    end
+    Open()
+    local found
+    for _, object in ipairs(context.objects) do
+        if object:GetParent() == pages.profiles and object.profileName == "Paged 5" and object:IsVisible() then
+            found = true
+        end
+    end
+    assert(found and profileInput:GetText() == "Paged 5", "reopening lost the saved profile's selection or page")
+    env.DFRL.layout.CancelEdit()
+end
+ProfileSaveControls()
 for _, item in ipairs(context.objects) do
     assert(not item:GetScript("OnUpdate"), "lazy settings added a background worker")
 end

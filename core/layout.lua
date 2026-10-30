@@ -1609,7 +1609,9 @@ DFRL:NewMod("Layout", 0, function()
                 layout.Place(entry.key)
             end
         end
+        return true
     end
+    function layout.ConfirmEdit() return CloseEditing(true, true) end
     function layout.CancelEdit() CloseEditing(false, true) end
     function layout.RegisterEditorWindow(frame)
         if frame.layoutEditorCloseRegistered then return end
@@ -1934,7 +1936,7 @@ DFRL:NewMod("Layout", 0, function()
         ShowEditView(page)
         if not confirm then
             confirm = T.CreateEditorButton(confirmAnchor or UIParent, "Confirm", 140, 30, true)
-            confirm:SetScript("OnClick", function() CloseEditing(true, true) end)
+            confirm:SetScript("OnClick", layout.ConfirmEdit)
         end
         PlaceConfirm()
         confirm:Show()

@@ -36,13 +36,17 @@ do
     env.DFRL.runFont = { Copy = Copy, Snapshot = function() return {} end, Load = function() end }
     context:Load("core/profiles.lua", "Profiles")
     local profiles = env.DFRL.profiles
+    -- The separate retail Layout fixture covers the production shared commit.
+    env.DFRL.layout.ConfirmEdit = function()
+        display.FinishEdit(true)
+        profiles.FinishEdit(true)
+        return true
+    end
     display.BeginEdit()
     profiles.BeginEdit()
     display.Set("performanceMode", true)
     assert(profiles.Save("Performance", false), "profile did not capture Performance Mode")
-    profiles.FinishEdit(true)
-    display.FinishEdit(true)
-    assert(env.SurvivorsDragonUiDisplay.performanceMode, "Confirm lost Performance Mode")
+    assert(env.SurvivorsDragonUiDisplay.performanceMode, "profile save did not commit Performance Mode")
     assert(env.SurvivorsDragonUiProfiles.Performance.display.performanceMode, "saved profile lost Performance Mode")
     display.BeginEdit()
     display.Set("performanceMode", false)

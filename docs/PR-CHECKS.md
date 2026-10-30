@@ -58,6 +58,17 @@ An explicit Bash shell enables `pipefail`, so piping fixture/model output into
 
 ## UI work and cleanup tests
 
+Profile-save cases exercise the production Layout/Display/Profiles transaction
+with fake native geometry and font/SCT owner boundaries. They cover save and
+overwrite closing through one shared commit, Enter, pending numeric input,
+validation failures, independent snapshots, load/delete previews, Cancel,
+reload/world retirement and reset preserving saved profiles. Fresh production
+Display/Profiles owners receive copied confirmed globals and load the setup.
+The production editor fixture exercises translated save/overwrite buttons,
+keyboard saving and a rejected shared commit without a staged replacement.
+These are CI-only mocks, not tests of client serialization, external managers or
+filesystem persistence; they were not run locally.
+
 The full XP-controller fixture also covers default-off Show XP text, malformed
 saves, preview/Confirm/discard/profile/reset, lazy hidden preparation and label
 reuse, immediate native text during animated gains, toggles that preserve active
