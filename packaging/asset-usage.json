@@ -32,6 +32,10 @@
     }
   ],
   "source_assets": {
+    "media/tex/timer/HeroicNumerals.tga": {
+      "output": "media/tex/timer/HeroicNumerals.blp",
+      "reason": "Lossless Bildad I/V/X numeral atlas authoring source; personal-use license and preparation are recorded in third_party/HeroicNumerals-ARTWORK.md."
+    },
     "media/tex/timer/WidgetStatusBar.png": {
       "output": "media/tex/timer/BackgroundFixed.blp",
       "reason": "Original Blizzard source sheet; provenance and crops are in third_party/WidgetStatusBar-SOURCE.md."

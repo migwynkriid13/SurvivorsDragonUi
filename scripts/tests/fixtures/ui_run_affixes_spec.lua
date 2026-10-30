@@ -372,4 +372,23 @@ Test("all fourteen native catalogs supply names and descriptions without changin
     assert(languages == 14, "native caption coverage is incomplete")
 end)
 
+Test("Heroic rank shares retirement gates independently of affix art and visibility", function()
+    local c = Affixes()
+    c:Publish(nil, 8)
+    c.owner:Hide()
+    assert(c.view:HeroicLevel(true) == 8, "missing or hidden affixes suppressed a received rank")
+    assert(c.view:HeroicLevel(false) == nil, "pending run handshake admitted a rank")
+    c.view:Clear(true)
+    assert(c.view:HeroicLevel(true) == nil, "retired rank replayed from an unchanged publication")
+    c.view:ZoneChanged()
+    assert(c.view:HeroicLevel(true) == 8, "fresh receipt failed to rearm the retained publication")
+    for _, rank in ipairs({ 0, -1, 1.5, "3", math.huge }) do
+        c:Publish(nil, rank)
+        assert(c.view:HeroicLevel(true) == nil, "invalid native rank reached the indicator")
+    end
+    c:Publish(nil, 3)
+    c.env.AZS_ZONE_UPDATED = nil
+    assert(c.view:HeroicLevel(true) == nil, "unstamped rank was accepted")
+end)
+
 print("PASS run affix UI contracts: " .. passed)

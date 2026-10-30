@@ -75,6 +75,93 @@ leave hundreds of expensive texture regions drawing continuously.
   GPU-memory, pixel-parity or FPS measurements. No local tests, standalone
   validation, addon execution or game launch is authorized for this audit.
 
+## Static Heroic numerals — 2026-10-29
+
+The Bildad marker lazily adds one texture to the existing live timer overlay
+on first visible Heroic use, with no frame or animation pool. Normal allocates no numeral texture. Each
+32-by-16 unit region samples one transparent cell from the same 512-by-256
+lossless BLP atlas, with a baked dark outline and a tier-specific vertex tint.
+The TGA is an authoring source only; no font is installed or shipped. Source
+and licensing are in [HeroicNumerals-ARTWORK.md](../third_party/HeroicNumerals-ARTWORK.md).
+
+Rank/UV/tint and binding caches skip unchanged native writes. Position follows
+the actual fill width and received run duration, using the one-minute point
+with cap protection for narrow bars. Layout resizing reanchors the already
+accepted rank without another gameplay read. Lazy bindings retry on the
+existing ten-Hz/deferred sample; no per-frame numeral update is added.
+
+Live acceptance shares the affix view's numeric-rank, publication-stamp,
+receipt and retirement gates while remaining independent of affix artwork or
+visibility. Hiding and run/world/zone/reload retirement clear the active rank
+and hide its existing texture; later valid use reuses its successful binding.
+Hidden overlays skip allocation, geometry and tint work. Performance Mode
+retains the exact static marker with no animation work in either mode. There
+is no added event, updater, setting or SavedVariable.
+
+CI-only source-extracted mocks cover rank acceptance and retirement, I–X
+selection, hidden lazy allocation, unchanged-write suppression, width changes,
+binding failures/retry and the static Performance Mode path. These are source
+contracts, not live appearance or GPU measurements. Local tests, standalone
+validation and addon/game execution were not run.
+
+## Heroic run timer
+
+The timer selects one of six cosmetic palettes from accepted `AZS_ZONE.heroic`
+metadata: blue for Normal, then the authored Heroic I–V progression toward red.
+Higher ranks use V's palette while the separate I–X marker retains the exact
+received level. Unknown/invalid ranks use the blue fallback without a numeral.
+The existing caption reader returns its accepted `AZS_RUN.endl` mode to the
+same clock pass. Only that flag selects Endless; passing the native duration
+never changes the palette or mode. `AZS_GetRunTime` and the native duration own
+regular whole-second fill values. Endless holds full progress without altering
+native time, counters, schedule or gameplay tables.
+
+There is one timer and one lazy, reusable cosmetic pool. Performance Mode and
+empty regular progress allocate no decoration. First visible normal-mode
+progress prepares 44 regions: 27 flow textures, 16 foam pieces and one glow.
+Rank-dependent glints grow lazily to 0, 2, 5, 10, 18 or 28 regions, retaining
+the prepared maximum for reuse. The upper bound is 72 cosmetic textures, plus
+one lazy numeral texture for a supported Heroic rank; no new frame, asset,
+event, updater, option or SavedVariable is added by rank/mode selection.
+
+Rank changes recolor stable scattered stream/foam positions rather than splitting
+or overlaying the native fill. Unchanged tier colors, base fill, sizes,
+UVs and settled visibility skip native writes. Width changes reflow the existing
+stream spacing/span; glints and glow track the actual filled width. Native
+whole-second progress dirties this geometry once per changed sample. Pool
+retirement hides active pieces, and later accepted state reuses their artwork.
+
+Endless retains its tier palette and changes one existing nine-texture stream
+lane into moving glitter points. The remaining eighteen broad streaks preserve
+their original movement. Each point shares one sine sample between its pulse
+and vertical motion, adding one alpha write per visible point. Existing glints
+pulse 20% faster with squared peaks and alpha from `0.28 * 0.85` to `0.85`.
+Regular glints retain the authored cubic pulse. All cosmetic animation uses
+the same thirty-Hz cap through the existing visible HUD reader.
+
+The twelve existing foam flecks spread across Endless's full fill. They swell
+through most of its height, with final alpha from `0.04 * 1.4 = 0.056` to
+`(0.04 + 0.28) * 1.4 = 0.448`; the four brighter crest pieces stay at the end.
+This pass shares one native height read. Regular flecks retain their original
+edge placement and equations. Spark artwork keeps ADD blending so its source
+black backing contributes no color. Broader foam covers more pixels, and glitter
+adds timed alpha writes: a bounded reused pool does not establish equal GPU/CPU
+cost or FPS.
+
+Performance Mode keeps the same static tier fill, numeral, captions and native
+marker information. It hides prepared effects immediately and skips all cosmetic
+painting and UI-time samples; unused pools remain unallocated. Mode exit, showing
+and accepted rank/Endless changes resume from current native state, without
+replaying old particles. Hidden views skip presentation; run/zone/world retirement,
+disabling and reload clear active information through the existing lifecycle.
+
+CI-only source-extracted contracts cover API mode handoff, rank acceptance and
+retirement, invalid input, all tier palettes, higher-rank fallback, bounded/lazy
+allocation, width/progress changes, full Endless rendering, glitter/foam opacity,
+throttle, cleanup/reuse and Performance Mode. Source review and pinned formatting
+are not in-game appearance, BLP decoding, live API delivery or FPS proof. Local
+tests, standalone validation and addon/game execution were not run.
+
 ## Settings navigation — 2026-10-29
 
 Default-off `bossShowHealthPercentage` and `guardianShowHealthPercentage` choices
@@ -429,19 +516,19 @@ use the shared display transaction. Individual effect, portrait and cooldown
 choices are retained. The sidebar bounds translated category widths and reserves a wrapping row for
 this caption above the category buttons.
 
-| Owner                       | While Performance Mode is on                                                                                                                                                                                                                                                                                                                                                     |
-| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Chat                        | Keep native expiry at its original deadline with zero fade duration, so messages disappear instantly; scrolling back still holds lines. Snap reveal opacity and message-slide geometry, and clear active reveal/slide state. Native messages, history, links and input remain current.                                                                                           |
-| SCT                         | Sum same-attack outgoing damage within a fixed 300 ms window; normal mode keeps 75 ms exact-amount duplicate suppression. Preserve original per-hit matching, critical/source separation, motion, fade, full lifetime and the selected enemy/MSBT style.                                                                                                                         |
-| Unit frames                 | Hide player absorbs and player/target/target-of-target damage trails, reset trail baselines, and use the existing 2D still portraits. Party has no custom loss overlay. Hide combat/rest rim glows; keep a static resting symbol and a static low-health warning at the current health-derived strength.                                                                         |
-| Resources                   | Skip absorb snapshot/field work when Class resources is also off; keep native phase/receipt retirement and selected resource values.                                                                                                                                                                                                                                             |
-| Run timer                   | Keep native whole-second progress and current labels, static blue/red fill and informative skull/check markers. Skip flow, foam, sparkle, red-glint and skull-halo animation. The 72-texture decorative fill pool is prepared only if normal mode needs it, then retained for reuse. Required native phase, ownership, schedule and encounter work keeps its existing lifecycle. |
-| Boss bars                   | Keep native fill and health text instant. Hide the Crimson echo loss strip, clear its baseline and active state, and skip effect time/geometry work. Rows first used in this mode do not prepare a loss texture.                                                                                                                                                                 |
-| Cache tally                 | Refresh kills and gold numbers once every five UI seconds. Keep cache cost at its normal cadence. Clear the affordable-cache gold halo, rays and sparkles and detach its animation worker.                                                                                                                                                                                       |
-| XP                          | Snap the fill to received XP, clear gain/spark artwork and detach completed effect work. Existing deferred native reads remain.                                                                                                                                                                                                                                                  |
-| Abilities and stored levels | Clear cooldown-number overlays and detach their timing worker. Suppress the seven native ability-ready flashes while retaining unfinished cooldown swipes. Hide level-button glow/highlight layers and detach the pulse worker; retain its static gold artwork, count and click behavior.                                                                                        |
-| Notifications and revive    | Loot cards and banners stay opaque until their original expiry; hidden notices still retire. Revive displays received fill/percentage directly without smoothing, fade, spark or pulsing crosses, using its existing ten-Hz state reader.                                                                                                                                        |
-| Action range                | Keep the current out-of-range warning static and remove any active native fade on a mode transition.                                                                                                                                                                                                                                                                             |
+| Owner                       | While Performance Mode is on                                                                                                                                                                                                                                                                                                                                                                 |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Chat                        | Keep native expiry at its original deadline with zero fade duration, so messages disappear instantly; scrolling back still holds lines. Snap reveal opacity and message-slide geometry, and clear active reveal/slide state. Native messages, history, links and input remain current.                                                                                                       |
+| SCT                         | Sum same-attack outgoing damage within a fixed 300 ms window; normal mode keeps 75 ms exact-amount duplicate suppression. Preserve original per-hit matching, critical/source separation, motion, fade, full lifetime and the selected enemy/MSBT style.                                                                                                                                     |
+| Unit frames                 | Hide player absorbs and player/target/target-of-target damage trails, reset trail baselines, and use the existing 2D still portraits. Party has no custom loss overlay. Hide combat/rest rim glows; keep a static resting symbol and a static low-health warning at the current health-derived strength.                                                                                     |
+| Resources                   | Skip absorb snapshot/field work when Class resources is also off; keep native phase/receipt retirement and selected resource values.                                                                                                                                                                                                                                                         |
+| Run timer                   | Keep native whole-second progress and current labels, static tier fill and informative skull/check markers. Skip flow, foam, sparkle, red-glint and skull-halo animation. The decorative pool grows lazily from 44 to at most 72 textures only if normal mode needs it, then retained for reuse. Required native phase, ownership, schedule and encounter work keeps its existing lifecycle. |
+| Boss bars                   | Keep native fill and health text instant. Hide the Crimson echo loss strip, clear its baseline and active state, and skip effect time/geometry work. Rows first used in this mode do not prepare a loss texture.                                                                                                                                                                             |
+| Cache tally                 | Refresh kills and gold numbers once every five UI seconds. Keep cache cost at its normal cadence. Clear the affordable-cache gold halo, rays and sparkles and detach its animation worker.                                                                                                                                                                                                   |
+| XP                          | Snap the fill to received XP, clear gain/spark artwork and detach completed effect work. Existing deferred native reads remain.                                                                                                                                                                                                                                                              |
+| Abilities and stored levels | Clear cooldown-number overlays and detach their timing worker. Suppress the seven native ability-ready flashes while retaining unfinished cooldown swipes. Hide level-button glow/highlight layers and detach the pulse worker; retain its static gold artwork, count and click behavior.                                                                                                    |
+| Notifications and revive    | Loot cards and banners stay opaque until their original expiry; hidden notices still retire. Revive displays received fill/percentage directly without smoothing, fade, spark or pulsing crosses, using its existing ten-Hz state reader.                                                                                                                                                    |
+| Action range                | Keep the current out-of-range warning static and remove any active native fade on a mode transition.                                                                                                                                                                                                                                                                                         |
 
 Changing the mode clears or settles currently active effects immediately. Turning
 it off restores the saved individual choices from current native state, without
@@ -2392,9 +2479,10 @@ to 12 native methods per active marker per frame. The original trigonometry,
 alpha values, textures, timing and cadence remain. Blue flow and foam also skip
 identical size and UV writes, while position and animation continue normally.
 
-The timer's cosmetic layers now use 72 allocated textures,
-with at most 43 blue flow/foam pieces or 29 red sparkle/glow pieces visible at
-once, plus the base pill and schedule markers. Active boss markers retain their
+The timer's cosmetic layers use 44 shared regions plus up to 28 lazily prepared
+tier glints, for at most 72 allocated/visible regions, plus the base pill,
+schedule markers and one supported-rank numeral. Normal blue mode uses the
+43 flow/foam pieces; Heroic glow and glints can draw alongside that motion. Active boss markers retain their
 eight glow copies. Their drawing cost remains alongside the reductions above.
 A finite baked animation cannot preserve these independently phased effects at
 every native time and layout scale, so no animation frames are substituted.

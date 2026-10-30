@@ -58,16 +58,20 @@ def main():
         sct_queue = sct_queue.rsplit("\nreturn ", 1)[0] + "\nreturn { Queue = QueueCombatText, Update = UpdatePending, Handle = HandleCombatEvent, SyncWindow = SyncDuplicateWindow }\n"
         run_foam = extract_source("modules/ui/run.lua", ["DrawFoam", "UpdateBlueFoam"])
         run_static = extract_source("modules/ui/run.lua", [
+            "IsNumber", "RUN_TIER_STYLES", "RunTier", "ApplyRunFill",
             "BAR_WIDTH", "FLOW_WIDTH", "FLOW_SPEED", "FLOW_INTERVAL", "FLOW_SPACING", "FLOW_COUNT", "FLOW_SPAN",
             "RED_SPARKLE_OPACITY", "AnimatedRunFill", "runEffects", "SetRunAppearance", "HideRunFlow", "UpdateRunFlow",
         ])
         run_static = run_static.rsplit("\nreturn ", 1)[0] + "\nreturn { Appearance = SetRunAppearance, Hide = HideRunFlow, Update = UpdateRunFlow, effects = runEffects }\n"
         run_progress = extract_source("modules/ui/run.lua", ["IsNumber", "UpdateClock"])
+        run_numerals = 'local path = "Interface\\\\AddOns\\\\SurvivorsDragonUi\\\\media\\\\tex\\\\timer\\\\"\n' + extract_source("modules/ui/run.lua", [
+            "IsNumber", "HEROIC_NUMERAL_COLORS", "NewHeroicNumeral",
+        ])
         run_affixes = 'local path = "Interface\\\\AddOns\\\\SurvivorsDragonUi\\\\media\\\\tex\\\\timer\\\\"\n' + extract_source("modules/ui/run.lua", ["SKULL_ICON", "IsNumber", "CreateRunAffixes", "UpdateRunFontBounds"])
         run_affixes = run_affixes.rsplit("\nreturn ", 1)[0] + "\nreturn { New = CreateRunAffixes, Bounds = UpdateRunFontBounds }\n"
         run_captions = extract_source("modules/ui/run.lua", [
             "IsNumber", "Clock", "ApplyFont", "NewClockLabel", "RefreshClockLabel", "StyleClockLabel",
-            "SetClockLabelText", "RefreshTimerCaptions", "ClearClockCaptions", "UpdateClockCaptions",
+            "SetClockLabelText", "RunCaption", "RefreshTimerCaptions", "ClearClockCaptions", "UpdateClockCaptions",
         ])
         run_captions = run_captions.rsplit("\nreturn ", 1)[0] + "\nreturn { New = NewClockLabel, Update = UpdateClockCaptions, Refresh = RefreshTimerCaptions, Style = StyleClockLabel, Clear = ClearClockCaptions }\n"
         settings_views = extract_source("modules/ui/run.lua", [
@@ -133,6 +137,7 @@ def main():
             ("run-foam-source.lua", run_foam, "ui_run_foam_perf_spec.lua"),
             ("run-static-source.lua", run_static, "ui_run_static_mode_spec.lua"),
             ("run-progress-source.lua", run_progress, "ui_run_progress_perf_spec.lua"),
+            ("run-numerals-source.lua", run_numerals, "ui_run_numerals_spec.lua"),
             ("run-affixes-source.lua", run_affixes, "ui_run_affixes_spec.lua"),
             ("run-captions-source.lua", run_captions, "ui_run_captions_perf_spec.lua"),
             ("tally-counters-source.lua", tally_counters, "ui_tally_counter_cadence_spec.lua"),

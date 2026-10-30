@@ -524,11 +524,30 @@ world/reload/reset cleanup and row-pool reuse. Metadata learning runs only for
 changed accepted publications. The fixture and runner remain outside the
 runtime manifest, run only in CI and do not prove live delivery or rendering.
 
-## Heroic affix view scenarios
+## Heroic timer and affix scenarios
+
+The source-extracted foam fixture also covers the Endless wash: reuse of the
+twelve existing flecks, one height read, low peak opacity, full-width and cap
+clipping, the brighter end crest and retained regular-run placement. This is
+CI-only drawing-boundary coverage, with no local execution or FPS evidence.
+The extracted live fill owner checks Normal and Heroic I–V palettes, higher-rank
+fallback, invalid metadata, lazy bounded glint growth, full-width Endless,
+moving pinpoints, shared throttle, cleanup/reuse and Performance Mode. Native
+caption cases return only accepted `endl` modes; clock cases verify that the
+same mode controls fill without changing native elapsed time or inferring
+Endless from the duration. Pending publications retain no old rank or mode.
+
+`ui_run_numerals_spec.lua` exercises the extracted static numeral renderer:
+I–X selection, invalid-rank retirement, hidden lazy allocation, one-minute and
+width geometry, unchanged writes, binding retries and Performance Mode.
+Clock-progress cases check the native rank handshake and hidden sample gate;
+affix cases check rank acceptance without an affix list or visible affix row.
+These CI-only scenarios were authored without local execution and do not prove
+Bildad rendering, BLP decoding or native layering in game.
 
 `ui_run_affixes_spec.lua` uses the extracted production `CreateRunAffixes`
 factory, shared tooltip registry and generated native captions against fake
-widgets/snapshots. Eight scenarios cover ordered centering, the exact neutral
+widgets/snapshots. Scenarios cover ordered centering, the exact neutral
 jewelry crop and red tint, hidden/unchanged work, missing or non-Heroic data,
 unknown keys, receipt retirement, retry cadence, pool reuse, editing/Tooltip
 visibility, foreign ownership and all fourteen native name/description sets.

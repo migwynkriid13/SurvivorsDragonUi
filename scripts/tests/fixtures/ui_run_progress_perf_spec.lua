@@ -5,7 +5,7 @@ assert(_VERSION == "Lua 5.1", "run-progress fixtures require the CI Lua 5.1 inte
 local function Clock()
     local context = H.New()
     local env = context.env
-    context.maximum, context.schedule = 960, {}
+    context.maximum, context.schedule, context.mode = 960, {}, "Regular"
     env.render = { customClock = true, emptySchedule = {} }
     env.AZS_ZONE = { zone = "Elwynn" }
     env.BAR_WIDTH = 280
@@ -15,6 +15,13 @@ local function Clock()
     env.run.RefreshWidth = function() context.reads.width = (context.reads.width or 0) + 1 end
     env.run.affixes = {
         Update = function(_, accepted, force) context.affixes = { accepted = accepted, force = force } end,
+        HeroicLevel = function(_, accepted) return accepted and context.heroicRank or nil end,
+    }
+    env.run.heroicLevel = {
+        Update = function(_, rank, maximum, width)
+            context.numeral = { rank = rank, maximum = maximum, width = width }
+            context.reads.numeral = (context.reads.numeral or 0) + 1
+        end,
     }
     env.runBar = env.CreateFrame("StatusBar", nil, env.run)
     env.runBar.layoutWidth = 280
@@ -41,10 +48,14 @@ local function Clock()
         return context.schedule
     end
     env.ClearRows = function() context.cleared = context.cleared + 1 end
-    env.SetRunAppearance = function(atLimit) table.insert(context.appearance, atLimit) end
+    env.SetRunAppearance = function(heroic, endless)
+        context.appearanceHeroic = heroic
+        table.insert(context.appearance, endless)
+    end
     env.UpdateRunFlow = function(value, maximum) table.insert(context.flows, { value = value, maximum = maximum }) end
     env.UpdateClockCaptions = function(seconds, maximum, accepted)
         table.insert(context.captions, { seconds = seconds, maximum = maximum, accepted = accepted })
+        return accepted and context.mode or nil
     end
     env.UpdateMarkers = function(maximum, entries)
         table.insert(context.markers, { maximum = maximum, entries = entries })
@@ -87,6 +98,7 @@ do
     assert(context.writes.range == 1 and env.runBar.maximum == 960, "unchanged maximum rewrote the range")
     assert(context.reads.time == 60 and context.reads.length == 1 and context.reads.ownership == 60)
     assert(context.reads.schedule == 1, "one refresh scope repeatedly traversed its schedule")
+    assert(context.reads.numeral == 1, "static Heroic presentation ran between deferred refreshes")
     assert(#context.flows == 60 and #context.captions == 60 and #context.states == 60, "presentation cadence changed")
     for index, flow in ipairs(context.flows) do
         assert(flow.value == 10 and flow.maximum == 960, "effect clipping did not follow the stepped native fill")
@@ -124,7 +136,10 @@ do
     assert(env.runBar.value == 10 and context.flows[1].value == 10 and context.states[1] == false)
     context:Sample(10.5)
     assert(env.runBar.value == 10.5 and context.flows[2].value == 10.5, "fractional maximum was not filled exactly")
-    assert(context.appearance[2] == true and context.states[2] == true, "terminal native input lost marker state")
+    assert(
+        context.appearance[2] == false and context.states[2] == true,
+        "elapsed time inferred Endless or lost marker state"
+    )
     context:Sample(12.75)
     assert(context.writes.value == 2 and context.flows[3].value == 10.5, "post-limit progress moved the completed fill")
     assert(context.captions[3].seconds == 12.75 and context.captions[3].maximum == 10.5, "Endless captions were capped")
@@ -204,3 +219,46 @@ end
 print(
     "PASS duration and schedule reuse their refresh scope while phases, deferred reads and missing-data retries remain fresh"
 )
+
+do
+    local context, env = Clock()
+    context.heroicRank = 4
+    context:Sample(900, nil, true)
+    assert(context.numeral.rank == 4 and context.numeral.maximum == 960 and context.numeral.width == 280)
+    env.zoneRunPending = 7
+    context:Sample(900, nil, true)
+    assert(context.numeral.rank == nil, "pending new-zone handshake replayed the old Heroic rank")
+    env.zoneRunPending = nil
+    env.runBar.layoutWidth = 560
+    context:Sample(900)
+    assert(context.numeral.rank == 4 and context.numeral.width == 560, "width change lost accepted rank geometry")
+    context.hidden = true
+    context:ResetPerf()
+    context:Sample(900, nil, true)
+    assert(not context.reads.numeral, "Layout-hidden timer refreshed the static numeral")
+end
+print("PASS Heroic rank follows the native handshake and visible geometry refresh")
+
+do
+    local context, env = Clock()
+    context.heroicRank, context.mode = 2, "Endless"
+    context:Sample(42.5, nil, true)
+    assert(env.runBar.value == 960 and context.appearance[1] == true, "accepted Endless did not fill the bar")
+    assert(context.appearanceHeroic == 2 and context.numeral.rank == 2, "Endless replaced the accepted Heroic rank")
+    assert(context.captions[1].seconds == 42.5, "full Endless rendering changed native elapsed time")
+    context.mode = "Regular"
+    context:Sample(42.6)
+    assert(env.runBar.value == 42 and context.appearance[2] == false, "regular mode retained full Endless progress")
+    context.mode = "Endless"
+    env.zoneRunPending = 9
+    context:Sample(42.7, nil, true)
+    assert(env.runBar.value == 42 and context.appearance[3] == false, "pending run accepted the previous Endless flag")
+    assert(context.appearanceHeroic == nil, "pending run retained the previous Heroic palette")
+    env.zoneRunPending, context.mode = nil, nil
+    context:Sample(1000)
+    assert(
+        context.appearance[4] == false and env.runBar.value == 960,
+        "elapsed time selected Endless without an accepted flag"
+    )
+end
+print("PASS accepted API mode owns full Endless presentation without changing native time or inferring a mode")

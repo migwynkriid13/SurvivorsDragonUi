@@ -68,6 +68,7 @@ env.RetireEncounters = function() context.retired = true end
 env.run = env.CreateFrame("Frame", nil, env.UIParent)
 env.run:Hide()
 env.run.affixes = { Clear = function() context.affixesCleared = true end }
+env.run.heroicLevel = { Clear = function() context.numeralCleared = true end }
 env.HideRunFlow, env.ShowMarkerGlow = function() end, function() end
 env.SetRunAppearance = function() error("hidden run timer must not repaint during mode transition") end
 env.runSequence, env.packetSequence = 0, 0
