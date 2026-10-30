@@ -7,6 +7,14 @@ local env = context.env
 -- that alias to module initializers. Font helpers retain their file environment.
 env._G = nil
 env.setmetatable = setmetatable
+local addonEnv = setmetatable({ _G = env, T = env.T }, { __index = env })
+function env.DFRL:GetEnv() return addonEnv end
+function env.DFRL:NewMod(name, _, initialize)
+    context.modules[name] = function()
+        setfenv(initialize, self:GetEnv())
+        initialize()
+    end
+end
 local make = context.Object
 function context:Object(kind, name, parent)
     local object = make(self, kind, name, parent)

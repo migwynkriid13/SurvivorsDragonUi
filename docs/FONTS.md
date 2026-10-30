@@ -44,6 +44,7 @@ preview, saving, discard, profiles, reset, preserved native sizes/flags, indepen
 text, native font paths without `_G`, hidden Show ordering, rejected bindings,
 reuse and unchanged writes. The production editor, SCT controller and timer-caption
 fixtures also cover the selector or exclusion boundary. No local tests, standalone
-validation, addon or
-game execution were performed; source review and formatting do not establish
+validation, addon or game execution were performed. The font fixture separates
+native globals without `_G` from the addon environment supplied to module
+initializers, matching the loader. Source review and formatting do not establish
 native glyph coverage, visual fit or handheld readability.
