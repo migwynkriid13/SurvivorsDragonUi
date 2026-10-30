@@ -59,18 +59,24 @@ DFRL:NewMod("Profiles", 1, function()
         if not draft then return false, "Open the editor first." end
         name = Name(name)
         if not name then return false, "Enter a valid profile name." end
-        if draft[name] and not overwrite then return false, "That name already exists. Use Overwrite profile." end
+        if draft[name] and not overwrite then return false, "That name already exists. Use Overwrite and close." end
         if overwrite and not draft[name] then return false, "Select a profile first." end
         local geometry = DFRL.layout.Snapshot()
         if not geometry then return false, "Check the Layout values first." end
+        local previous = draft[name]
         draft[name] = {
             layout = geometry,
             display = DFRL.display.Snapshot(),
             runFont = DFRL.runFont.Snapshot(),
             sctMode = DFRL.sct and DFRL.sct.GetMode() or nil,
         }
-        Notify()
-        return true, "Profile saved. Confirm to keep it.", name
+        -- Save the profile and the active setup through the same transaction as
+        -- Confirm. A named snapshot must not look saved while still a draft.
+        if not DFRL.layout.ConfirmEdit() then
+            if draft then draft[name] = previous end
+            return false, "Check the Layout values first."
+        end
+        return true, "Profile and current setup saved.", name
     end
     function profiles.Load(name)
         if not draft then return false, "Open the editor first." end
@@ -89,7 +95,7 @@ DFRL:NewMod("Profiles", 1, function()
         return true, "Profile deleted. Confirm to keep the change."
     end
 
-    local actions = { "Load profile", "Overwrite profile", "Delete profile" }
+    local actions = { "Load profile", "Overwrite and close", "Delete profile" }
     function profiles.MinimumWidth(measure)
         local buttonWidth = 0
         for _, caption in ipairs(actions) do
@@ -97,7 +103,7 @@ DFRL:NewMod("Profiles", 1, function()
         end
         return math.max(
             buttonWidth * 3 + 16,
-            measure("Save new profile") + 192,
+            measure("Save profile and close") + 192,
             measure("Save and load named setups.") + 24
         )
     end
@@ -121,13 +127,18 @@ DFRL:NewMod("Profiles", 1, function()
         Label("Profile name", -34, 10)
         local measure = Label("", 0)
         measure:Hide()
-        local saveWidth = DFRL.locale.Width(measure, "Save new profile", true) + 24
+        local saveWidth = DFRL.locale.Width(measure, "Save profile and close", true) + 24
         local save
         local input = T.CreateEditorInput(parent, width - saveWidth - 8, 26)
         input:SetMaxLetters(48)
         input:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, -52)
         Label("Saved profiles", -90, 10)
-        local status = Label("Changes are saved with Confirm.", -340, 10, 44)
+        local status = Label(
+            "Save and overwrite close the editor and keep your setup. Load and delete need Confirm.",
+            -340,
+            10,
+            44
+        )
         local selected, offset = nil, 0
         local rows, buttons = {}, {}
         local pageSize = 5
@@ -140,7 +151,7 @@ DFRL:NewMod("Profiles", 1, function()
 
         local function Refresh(followSelection)
             if not parent:IsVisible() then return end
-            local measured = DFRL.locale.Width(measure, "Save new profile", true) + 24
+            local measured = DFRL.locale.Width(measure, "Save profile and close", true) + 24
             if measured ~= saveWidth then
                 saveWidth = measured
                 input:SetWidth(width - saveWidth - 8)
@@ -181,10 +192,9 @@ DFRL:NewMod("Profiles", 1, function()
             if count == 0 then T.SetTextIfChanged(status, "No saved profiles.") end
         end
         local function Result(ok, message, name)
-            if ok and name then
-                selected = name
-                input:SetText(name)
-            end
+            if ok and name then selected = name end
+            if not parent:IsVisible() then return end
+            if ok and name then input:SetText(name) end
             Refresh(ok and name ~= nil)
             status:SetText(message)
             input:ClearFocus()
@@ -206,12 +216,12 @@ DFRL:NewMod("Profiles", 1, function()
                 selected = row.profileName
                 input:SetText(selected or "")
                 input:ClearFocus()
-                status:SetText("Changes are saved with Confirm.")
+                status:SetText("Save and overwrite close the editor and keep your setup. Load and delete need Confirm.")
                 Refresh()
             end)
             table.insert(rows, row)
         end
-        save = T.CreateEditorButton(parent, "Save new profile", saveWidth, 26)
+        save = T.CreateEditorButton(parent, "Save profile and close", saveWidth, 26)
         save:SetPoint("TOPRIGHT", parent, "TOPRIGHT", 0, -52)
         save:SetScript("OnClick", function() Result(profiles.Save(input:GetText(), false)) end)
         input:SetScript("OnEnterPressed", function() Result(profiles.Save(input:GetText(), false)) end)
@@ -234,7 +244,7 @@ DFRL:NewMod("Profiles", 1, function()
                     status:SetText("Select a profile first.")
                 elseif action == "Load profile" then
                     Result(profiles.Load(selected))
-                elseif action == "Overwrite profile" then
+                elseif action == "Overwrite and close" then
                     Result(profiles.Save(selected, true))
                 else
                     Result(profiles.Delete(selected))
@@ -243,8 +253,9 @@ DFRL:NewMod("Profiles", 1, function()
             table.insert(buttons, button)
         end
         parent:SetScript("OnShow", function()
-            status:SetText("Changes are saved with Confirm.")
-            Refresh()
+            status:SetText("Save and overwrite close the editor and keep your setup. Load and delete need Confirm.")
+            Refresh(true)
+            if selected then T.SetTextIfChanged(input, selected) end
         end)
         parent:SetScript("OnHide", function() input:ClearFocus() end)
         table.insert(listeners, Refresh)

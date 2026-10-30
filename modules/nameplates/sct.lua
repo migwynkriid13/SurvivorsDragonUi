@@ -1796,7 +1796,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         else
             -- A rejected native SetFont can clear the previous binding. Restore
             -- the known usable game font before any SetText or measurement.
-            T.SetFont(text.label, 18, "OUTLINE")
+            T.SetFont(text.label, 18, "OUTLINE", true)
             text.fontFace = DEFAULT_FONT
             text.fontRetryAt = now + 0.5
         end
@@ -1935,7 +1935,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             visual:SetPoint("CENTER", holder, "CENTER", 0, 0)
             visual:EnableMouse(false)
             local label = visual:CreateFontString(nil, "OVERLAY")
-            T.SetFont(label, 18, "OUTLINE")
+            T.SetFont(label, 18, "OUTLINE", true)
             label:SetShadowOffset(1, -1)
             label:SetPoint("CENTER", visual, "CENTER", 0, 0)
             label:SetHeight(36)

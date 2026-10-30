@@ -11,6 +11,27 @@ end
 
 local SCT = dofile("scripts/tests/fixtures/ui_sct_helpers.lua")
 
+Test("numeric SCT keeps independent font ownership in both performance modes", function()
+    for _, performance in ipairs({ false, true }) do
+        local context = SCT(true, function(setup, env)
+            setup.settings.performanceMode = performance
+            local setFont = env.T.SetFont
+            env.T.SetFont = function(object, size, flags, independent)
+                assert(independent == true, "numeric SCT joined the Layout font registry")
+                return setFont(object, size, flags)
+            end
+        end)
+        context:Hit(1234)
+        context:Tick(0.4)
+        local label = assert(context:Labels()[1])
+        context:SetSetting("uiFont", "arial")
+        assert(label:GetFont() == "DEFAULT_TEST", "global choice changed SCT Default")
+        context:SetSetting("sctFont", "diablo")
+        context:SetSetting("uiFont", "skurri")
+        assert(label:GetFont() ~= "DEFAULT_TEST", "global choice changed the selected SCT font")
+    end
+end)
+
 Test("styles migrate legacy choices and share preview, Confirm, profiles and resets", function()
     local context = H.New()
     context:Load("core/display.lua", "Display")

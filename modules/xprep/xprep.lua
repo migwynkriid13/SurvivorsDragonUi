@@ -72,10 +72,43 @@ DFRL:NewMod("Xprep", 1, function()
     local origin, destination, gainStart, age, duration, fadeAge
     local wrapping, pending, instant = false, false, false
     local performanceMode = DFRL.display.Get("performanceMode")
+    local showText = DFRL.display.Get("xpShowText")
+    local xpText
     local events = CreateFrame("Frame")
     local OnUpdate
 
     local function Number(value) return type(value) == "number" and value - value == 0 and value >= 0 end
+
+    local function UpdateXPText()
+        if
+            not showText
+            or not inWorld
+            or not attached
+            or not bar:IsVisible()
+            or not previousXP
+            or not previousMaximum
+        then
+            if xpText and xpText:IsShown() then xpText:Hide() end
+            return
+        end
+        if not xpText then
+            xpText = bar:CreateFontString(nil, "OVERLAY")
+            xpText:SetPoint("LEFT", bar, "LEFT", 4, 0)
+            xpText:SetPoint("RIGHT", bar, "RIGHT", -4, 0)
+            xpText:SetHeight(12)
+            xpText:SetJustifyH("CENTER")
+            xpText:SetJustifyV("MIDDLE")
+            xpText:SetTextColor(1, 1, 1)
+            T.SetChatShadow(xpText)
+        end
+        T.SetFont(xpText, 9, "OUTLINE")
+        if not xpText:GetFont() then return end
+        if xpText.current ~= previousXP or xpText.maximum ~= previousMaximum then
+            T.SetTextIfChanged(xpText, string.format("%.0f/%.0f", previousXP, previousMaximum))
+            xpText.current, xpText.maximum = previousXP, previousMaximum
+        end
+        if not xpText:IsShown() then xpText:Show() end
+    end
 
     local function StopAnimation()
         origin, destination, gainStart, age, duration, fadeAge = nil, nil, nil, nil, nil, nil
@@ -201,6 +234,7 @@ DFRL:NewMod("Xprep", 1, function()
             desired = 0
             StopAnimation()
             ShowXP(false)
+            UpdateXPText()
             return
         end
         currentXP = math.min(currentXP, maximumXP)
@@ -226,6 +260,7 @@ DFRL:NewMod("Xprep", 1, function()
         end
         previousXP, previousMaximum, previousLevel = currentXP, maximumXP, level
         ShowXP(true)
+        UpdateXPText()
     end
 
     OnUpdate = function()
@@ -316,6 +351,11 @@ DFRL:NewMod("Xprep", 1, function()
     end
 
     DFRL.display.Listen(function()
+        local selectedText = DFRL.display.Get("xpShowText")
+        if showText ~= selectedText then
+            showText = selectedText
+            UpdateXPText()
+        end
         local enabled = DFRL.display.Get("performanceMode")
         local changed = performanceMode ~= enabled
         performanceMode = enabled
@@ -334,6 +374,7 @@ DFRL:NewMod("Xprep", 1, function()
             desired = 0
             StopAnimation()
             ShowXP(false)
+            UpdateXPText()
         elseif event ~= "PLAYER_XP_UPDATE" or arg1 == "player" or arg1 == nil then
             if event == "PLAYER_ENTERING_WORLD" then
                 inWorld, instant = true, true

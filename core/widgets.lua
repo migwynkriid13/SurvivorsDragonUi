@@ -269,8 +269,8 @@ end
 -- Unit health labels and loss fractions share the target's accepted health source.
 function DFRL.tools.BindUnitHealthText(bar, label, unit, hideDead)
     local percentage = label:GetParent():CreateFontString(nil, "OVERLAY")
-    local face, size, flags = label:GetFont()
-    percentage:SetFont(face, size, flags)
+    local _, size, flags = label:GetFont()
+    T.SetFont(percentage, size, flags)
     percentage:SetTextColor(1, 1, 1)
     local labels = { percentage = percentage }
     local leftInset, rightInset, centerOffset = 0, 0, 0

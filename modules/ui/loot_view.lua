@@ -33,9 +33,7 @@ DFRL:NewMod("LootView", 4, function()
 
     local function Label(parent, size)
         local label = parent:CreateFontString(nil, "OVERLAY")
-        local face = "Fonts\\FRIZQT__.TTF"
-        local ok, loaded = pcall(label.SetFont, label, face, size, "")
-        if not ok or (not loaded and label:GetFont() ~= face) then T.SetFont(label, size, "") end
+        T.SetFont(label, size, "", "Fonts\\FRIZQT__.TTF")
         if not label:GetFont() then ready = false end
         label:SetJustifyH("LEFT")
         label:SetJustifyV("MIDDLE")

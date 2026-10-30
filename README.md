@@ -72,19 +72,19 @@ For UI debugging, `/fstack on` and `/fstack off` set the inspector state, `/fsta
 
 ## Make it yours
 
-Open `/sdui` or click the gold Dragonflight glyph beside the minimap, then drag a frame to move it or drag a corner to resize it. **Party frames** moves the party together, with an outline available even when playing solo. Hold **Shift** while dragging to line it up with other frames or the grid. Gold guides show the alignment. **Show grid** in **Layout** starts on and can hide the grid. Supported HUD groups and the player, target and party health bars have side handles for width. Portraits keep their size. Top/bottom handles change list rows or Chat height. Corners retain their existing resize behavior. For exact positions, sizes or **Hide frame**, use **Layout**.
+Open `/sdui` or click the gold Dragonflight glyph beside the minimap, then drag a frame to move it or drag a corner to resize it. **Party frames** moves the party together, with an outline available even when playing solo. Hold **Shift** while dragging to line it up with other frames or the grid. Gold guides show the alignment. **Show grid** in **Layout** starts on and can hide the grid. Supported HUD groups and the player, target and party health bars have side handles for width. Portraits keep their size. Top/bottom handles change list rows or Chat height. Corners retain their existing resize behavior. For exact positions, sizes or **Hide frame**, use **Layout**. Its **Font** choice changes addon text; the run timer and combat text keep their own font choices.
 
 Settings are grouped into nine categories, with related options together.
 
 For a clear view while moving, use `/sdui lock`. Click a blue frame for its controls, drag to move, or nudge with arrow keys (Shift moves ten units). Choose **Show grid**, **Grid spacing** and **Snap to elements** in the small manager. **Save and close** keeps the changes.
 
-Click **Confirm** in the full editor to save or **Cancel** to undo. Click the minimap glyph again or press **Escape** to cancel and close. Leaving the run or reloading also discards unsaved changes. **Addon defaults** resets the same options as `/sdui reset`.
+Click **Confirm** in the full editor to save or **Cancel** to undo. In **Profiles**, **Save profile and close** and **Overwrite and close** save the named profile and current setup together, then close the editor. Loading or deleting a profile stays a preview until Confirm. Click the minimap glyph again or press **Escape** to cancel and close. Leaving the run or reloading also discards unsaved changes. **Addon defaults** resets the same options as `/sdui reset`.
 
 **Performance Mode**, above **Layout**, starts off. Turn it on for static portraits and HUD effects, chat and banners without fading, and no cooldown numbers. Combat text keeps its usual motion and selected style. Your individual choices return when you turn it off.
 
 ### Action bar and portraits
 
-Action buttons start locked. Under **Action bar**, turn off **Lock action buttons** and confirm. You can then Shift-click two occupied buttons to swap their spells. **Show gryphons** adds ornaments at each end of the bar; it starts off. Turn off **Attach XP to action bar** to move the XP bar separately.
+Action buttons start locked. Under **Action bar**, turn off **Lock action buttons** and confirm. You can then Shift-click two occupied buttons to swap their spells. **Show gryphons** adds ornaments at each end of the bar; it starts off. Turn off **Attach XP to action bar** to move the XP bar separately. **Show XP text** adds current/required XP, such as `5/25`, to the bar; it starts off.
 
 Portraits use 2D images by default. Under **Unit frames**, choose **Experimental 3D portraits** or **Hide portraits** for bars without portraits.
 

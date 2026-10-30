@@ -75,6 +75,36 @@ leave hundreds of expensive texture regions drawing continuously.
   GPU-memory, pixel-parity or FPS measurements. No local tests, standalone
   validation, addon execution or game launch is authorized for this audit.
 
+## Profile save and close — 2026-10-30
+
+Profile save and overwrite reuse the existing Confirm transaction and close the
+editor after one successful commit. They add no frame, drawing region, event,
+updater, asset or SavedVariable. The existing buttons and status label carry
+the translated captions; save-button sizing retains its active-language glyph
+cache. Failed validation leaves the editor open, and successful closing skips
+hidden result-caption writes. Both Performance Mode states use the same instant
+save path with existing native handoff and cosmetic cleanup. CI-only coverage
+uses real Layout/Display/Profiles owners and explicit native/font/SCT boundaries;
+it does not establish on-disk client persistence. See [PROFILES.md](PROFILES.md).
+
+## Shared Layout font — 2026-10-30
+
+The shared font registry adds no HUD frame, region, asset, event or updater.
+It visits weakly registered text and the existing native Font objects only when
+the effective choice changes. Hidden frame owners defer writes to one OnShow
+wrapper per owner; ordinary setter calls still skip identical native bindings.
+Successful face probes are cached, unavailable families use the game face, and
+failed object assignments retain a usable fallback and retry through existing
+setter/Show work. Sizes, outlines and shadows remain unchanged.
+
+The lazy Layout selector adds five button frames, twenty texture regions and
+seven FontStrings (five button labels, a caption and a hint). They draw only on
+the open Layout page. Measurement invalidation reuses the existing settings,
+Copy, guardian and tally lifecycles. Timer and outgoing SCT font selectors retain
+ownership. Both Performance Mode states use the same instant font change.
+These are source-level costs; handheld readability, glyph coverage and native
+rendering remain unverified. See [FONTS.md](FONTS.md).
+
 ## Diablo IV combat text — 2026-10-30
 
 The optional Diablo IV style reuses the enemy-origin path, controller and hit
@@ -1591,11 +1621,31 @@ melee/periodic and foreign-source cases without shared-result aliasing.
 
 ### XP fade geometry
 
+**Show XP text** under Action bar is default off and adds one reusable FontString
+only on the first enabled, visible, valid XP sample. It centers full
+current/required XP, such as `5/25`, inside the existing bar's
+12-unit border area. Size 9 OUTLINE and the shared chat shadow follow the global
+Layout font choice. Attached and detached modes reuse the same label.
+
+Text uses the existing deferred native XP/maximum sample and updates immediately,
+independently of the animated fill. It skips unchanged caption writes and hidden/
+disabled formatting, hides for invalid data or world retirement, and resumes
+from accepted native values on Show. Toggling text does not settle or restart
+an active gain. Both Performance Mode states use the same instant caption;
+normal mode retains its authored fill/glow animation. Preview, Confirm-only
+saving, discard, profiles and both resets use `xpShowText` in the existing
+display table. It adds no frame, asset, event, updater or SavedVariable. The two
+settings captions have fourteen source/runtime translations. CI-only production
+controller cases cover transactions, hidden preparation, reuse, immediate native
+values during animation, level/world/invalid-data recovery, detaching and reset.
+These cases were not run locally; source counts do not establish native fit,
+glyph coverage or FPS.
+
 The existing gain/spark renderer caches its owned anchors, widths, crop and alpha
 independently. A stationary final fade now changes only its two alpha values;
 actual width/progress changes retain the original gain bounds and clipped spark.
 Show/Hide comparisons preserve pooled reuse and the final clearing pass. Timing,
-easing, native XP reads, source images, layers and region count stay unchanged.
+easing, native XP reads, source images, layers and effect-region count stay unchanged.
 CI-only extracted production coverage checks fades, resizing, end clipping and
 zero-alpha retirement, without a GPU/FPS claim.
 

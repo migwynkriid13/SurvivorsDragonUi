@@ -58,6 +58,33 @@ An explicit Bash shell enables `pipefail`, so piping fixture/model output into
 
 ## UI work and cleanup tests
 
+Profile-save cases exercise the production Layout/Display/Profiles transaction
+with fake native geometry and font/SCT owner boundaries. They cover save and
+overwrite closing through one shared commit, Enter, pending numeric input,
+validation failures, independent snapshots, load/delete previews, Cancel,
+reload/world retirement and reset preserving saved profiles. Fresh production
+Display/Profiles owners receive copied confirmed globals and load the setup.
+The production editor fixture exercises translated save/overwrite buttons,
+keyboard saving and a rejected shared commit without a staged replacement.
+These are CI-only mocks, not tests of client serialization, external managers or
+filesystem persistence; they were not run locally.
+
+The full XP-controller fixture also covers default-off Show XP text, malformed
+saves, preview/Confirm/discard/profile/reset, lazy hidden preparation and label
+reuse, compact current/required XP without a percentage, immediate native text
+during animated gains, toggles that preserve active
+animation, Performance Mode, level/world/invalid-data recovery, zero XP, unchanged
+caption writes and detached placement. The editor fixture exercises its actual
+Action bar checkbox. Coverage is CI-only; no local tests or game execution.
+
+Global font cases load the production font/display owners with explicit native
+font boundaries. They cover enum normalization, preview/Confirm/discard/profiles/
+reset, preserved native sizes/flags, independent text, hidden Show ordering,
+rejected assignments, fallback recovery, reuse and unchanged writes. The editor
+fixture exercises the Layout selector; SCT and segmented timer fixtures require
+their production setters to opt out. These cases remain CI-only and were not
+executed locally. See [FONTS.md](FONTS.md).
+
 Health-format fixtures cover the independent default-on Unit frames, Boss bars
 and Guardian tracker shortening choices through the real display normalizer,
 preview/Confirm/discard/profile/reset paths. Production formatter/health owners

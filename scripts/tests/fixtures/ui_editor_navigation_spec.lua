@@ -386,16 +386,30 @@ env.DFRL.layout = {
     Snapshot = function() return {} end,
     Copy = function(value) return value end,
     Load = function() end,
+    ConfirmEdit = function()
+        context.profileCommits = (context.profileCommits or 0) + 1
+        if context.rejectProfileCommit then return false end
+        display.FinishEdit(true)
+        env.DFRL.profiles.FinishEdit(true)
+        env.fontEditor:Hide()
+        return true
+    end,
     CancelEdit = function()
         display.FinishEdit(false)
+        env.DFRL.profiles.FinishEdit(false)
         env.fontEditor:Hide()
     end,
     Reset = function()
         display.Reset()
+        env.DFRL.profiles.FinishEdit(false)
         env.fontEditor:Hide()
     end,
 }
-env.DFRL.runFont = { Copy = function(value) return value end, Snapshot = function() return {} end }
+env.DFRL.runFont = {
+    Copy = function(value) return value end,
+    Snapshot = function() return context.profileRunFont or {} end,
+    Load = function(value) context.profileRunFont = value end,
+}
 context:Load("core/profiles.lua", "Profiles")
 env.DFRL.sct = {
     GetMode = function() return "on" end,
@@ -462,6 +476,13 @@ assert(
     "first open built hidden options"
 )
 local layoutPage = pages.layout
+assert(dialog.uiFontButtons.default.editorSelected, "Layout did not select the default font")
+assert(not dialog.uiFontButtons.friz, "Layout still offers the removed Friz Quadrata choice")
+context:Call(dialog.uiFontButtons.arial, "OnClick")
+editor.Display()
+assert(display.Get("uiFont") == "arial" and not env.SurvivorsDragonUiDisplay, "Layout font saved before Confirm")
+assert(dialog.uiFontButtons.arial.editorSelected, "Layout font selection did not refresh")
+assert(display.Get("sctFont") == "default", "Layout font changed the independent SCT choice")
 dialog.navigation.Select("units")
 assert(
     pages.units and pages.pets and pages.auras and not pages.combat and not pages.timer,
@@ -488,6 +509,10 @@ display.FinishEdit(false)
 dialog:Hide()
 display.BeginEdit()
 dialog:Show()
+assert(display.Get("uiFont") == "default", "Cancel retained the Layout font")
+dialog.navigation.Select("layout")
+assert(dialog.uiFontButtons.default.editorSelected, "Layout did not refresh the discarded font on re-entry")
+dialog.navigation.Select("units")
 assert(
     healthChoice.editorChecked == true and #context.objects == unitObjects,
     "reopen did not discard/catch up without allocation"
@@ -589,6 +614,101 @@ assert(profileInput, "profile name field was not prepared")
 profileInput:SetText("Unconfirmed profile")
 context:Call(profileInput, "OnEscapePressed")
 assert(not dialog:IsShown() and display.Get("unitShortHealth") == false, "profile input Escape did not cancel")
+display.BeginEdit()
+dialog:Show()
+dialog.navigation.Select("action")
+local xpText = assert(env.displayControls.xpShowText, "Action bar did not prepare Show XP text")
+assert(not xpText.editorChecked, "XP text was enabled by default")
+context:Call(xpText, "OnClick")
+editor.Display()
+assert(display.Get("xpShowText") and xpText.editorChecked, "XP text checkbox did not preview")
+assert(not env.SurvivorsDragonUiDisplay.xpShowText, "XP text checkbox saved before Confirm")
+env.DFRL.layout.CancelEdit()
+assert(not display.Get("xpShowText"), "Cancel retained the XP text checkbox")
+local function ProfileSaveControls()
+    local profiles = env.DFRL.profiles
+    local function Open()
+        display.BeginEdit()
+        profiles.BeginEdit()
+        dialog:Show()
+        dialog.navigation.Select("profiles")
+    end
+    local function Button(caption)
+        for _, object in ipairs(context.objects) do
+            if
+                object.kind == "Button"
+                and object:GetParent() == pages.profiles
+                and object.label
+                and object.label:GetText() == locale.Text(caption)
+            then
+                return object
+            end
+        end
+        error("missing profile button: " .. caption)
+    end
+    Open()
+    local save = Button("Save profile and close")
+    profileInput:SetText("")
+    context:Call(save, "OnClick")
+    assert(dialog:IsShown() and not context.profileCommits, "invalid name committed or closed the editor")
+    display.Set("uiFont", "arial")
+    display.Set("xpShowText", true)
+    profileInput:SetText("Handheld")
+    context:Call(save, "OnClick")
+    assert(not dialog:IsShown() and context.profileCommits == 1, "profile save did not close through one shared commit")
+    assert(env.SurvivorsDragonUiDisplay.uiFont == "arial" and env.SurvivorsDragonUiDisplay.xpShowText)
+    assert(env.SurvivorsDragonUiProfiles.Handheld.display.uiFont == "arial", "named snapshot was not committed")
+    Open()
+    display.Set("uiFont", "skurri")
+    context:Call(Button("Overwrite and close"), "OnClick")
+    assert(not dialog:IsShown() and context.profileCommits == 2, "overwrite required another Confirm")
+    assert(env.SurvivorsDragonUiProfiles.Handheld.display.uiFont == "skurri")
+    Open()
+    profileInput:SetText("Keyboard")
+    context:Call(profileInput, "OnEnterPressed")
+    assert(not dialog:IsShown() and context.profileCommits == 3, "Enter did not save and close")
+    assert(env.SurvivorsDragonUiProfiles.Keyboard and env.SurvivorsDragonUiProfiles.Handheld)
+    Open()
+    context.rejectProfileCommit = true
+    display.Set("uiFont", "morpheus")
+    context:Call(Button("Overwrite and close"), "OnClick")
+    assert(
+        dialog:IsShown() and env.SurvivorsDragonUiProfiles.Keyboard.display.uiFont == "skurri",
+        "failed commit changed saved data"
+    )
+    assert(not profiles.Save("Rejected", false) and not env.SurvivorsDragonUiProfiles.Rejected)
+    for _, name in ipairs(profiles.List()) do
+        assert(name ~= "Rejected", "failed new save left a staged profile")
+    end
+    context.rejectProfileCommit = false
+    assert(
+        profiles.Load("Keyboard") and display.Get("uiFont") == "skurri",
+        "failed overwrite left a staged replacement"
+    )
+    assert(
+        context.profileRunFont == env.SurvivorsDragonUiProfiles.Keyboard.runFont,
+        "load skipped the timer-font owner"
+    )
+    context:Call(Button("Delete profile"), "OnClick")
+    assert(dialog:IsShown() and env.SurvivorsDragonUiProfiles.Keyboard, "delete stopped being a preview")
+    env.DFRL.layout.CancelEdit()
+    assert(env.SurvivorsDragonUiProfiles.Keyboard and env.SurvivorsDragonUiDisplay.uiFont == "skurri")
+    for index = 1, 5 do
+        Open()
+        profileInput:SetText("Paged " .. index)
+        context:Call(profileInput, "OnEnterPressed")
+    end
+    Open()
+    local found
+    for _, object in ipairs(context.objects) do
+        if object:GetParent() == pages.profiles and object.profileName == "Paged 5" and object:IsVisible() then
+            found = true
+        end
+    end
+    assert(found and profileInput:GetText() == "Paged 5", "reopening lost the saved profile's selection or page")
+    env.DFRL.layout.CancelEdit()
+end
+ProfileSaveControls()
 for _, item in ipairs(context.objects) do
     assert(not item:GetScript("OnUpdate"), "lazy settings added a background worker")
 end
