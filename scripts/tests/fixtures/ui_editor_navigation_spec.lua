@@ -405,7 +405,11 @@ env.DFRL.layout = {
         env.fontEditor:Hide()
     end,
 }
-env.DFRL.runFont = { Copy = function(value) return value end, Snapshot = function() return {} end }
+env.DFRL.runFont = {
+    Copy = function(value) return value end,
+    Snapshot = function() return context.profileRunFont or {} end,
+    Load = function(value) context.profileRunFont = value end,
+}
 context:Load("core/profiles.lua", "Profiles")
 env.DFRL.sct = {
     GetMode = function() return "on" end,
@@ -677,6 +681,10 @@ local function ProfileSaveControls()
     end
     context.rejectProfileCommit = false
     assert(profiles.Load("Keyboard") and display.Get("uiFont") == "friz", "failed overwrite left a staged replacement")
+    assert(
+        context.profileRunFont == env.SurvivorsDragonUiProfiles.Keyboard.runFont,
+        "load skipped the timer-font owner"
+    )
     context:Call(Button("Delete profile"), "OnClick")
     assert(dialog:IsShown() and env.SurvivorsDragonUiProfiles.Keyboard, "delete stopped being a preview")
     env.DFRL.layout.CancelEdit()
