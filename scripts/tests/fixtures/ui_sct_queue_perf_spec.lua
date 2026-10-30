@@ -21,10 +21,10 @@ local function Queues(scrolling, performance)
     env.ResolveOrigin = function(info, now, fallback)
         assert(not env.msbtStyle, "MSBT attempted native origin matching")
         table.insert(context.origins, { info = info, now = now, fallback = fallback })
-        if context.resolve or fallback then return info.fixtureX or 4, info.fixtureY or 6 end
+        if context.resolve or fallback then return info.fixtureX or 4, info.fixtureY or 6, info.fixtureOrigin end
     end
-    env.DisplayDamage = function(info, x, y, displayAmount)
-        table.insert(context.displays, { info = info, x = x, y = y, displayAmount = displayAmount })
+    env.DisplayDamage = function(info, x, y, displayAmount, origin)
+        table.insert(context.displays, { info = info, x = x, y = y, displayAmount = displayAmount, origin = origin })
     end
     -- Production Lua 5.0 queues remember their size after compaction.
     local insert, remove = env.table.insert, env.table.remove
@@ -500,3 +500,32 @@ for _, scrolling in ipairs({ false, true }) do
     )
 end
 print("PASS non-groupable SCT keeps the existing settle timing in Performance Mode")
+
+for _, performance in ipairs({ false, true }) do
+    local first, second = {}, {}
+    for _, case in ipairs({
+        { first = first, second = first, expected = first },
+        { first = first, second = second },
+        { second = first },
+        { first = first },
+        {},
+    }) do
+        local context = Queues(false, performance)
+        context.resolve = true
+        context:AbilityHit(17, 60, { fixtureOrigin = case.first, fixtureX = 100, fixtureY = 200 })
+        context:AbilityHit(17, 60.01, { fixtureOrigin = case.second, fixtureX = 300, fixtureY = 400 })
+        context.queue.Update(performance and 60.39 or 60.1)
+        local displayed = assert(context.displays[1])
+        assert(
+            #context.displays == 1 and #context.origins == 2,
+            "origin consensus dropped original matching or split grouping"
+        )
+        assert(displayed.origin == case.expected, "a mixed or missing origin acquired an arbitrary follow target")
+        assert(displayed.x == 200 and displayed.y == 300, "follow metadata changed the original fallback centroid")
+        assert(
+            displayed.info.amount == 17 and displayed.displayAmount == (performance and 34 or nil),
+            "follow metadata changed damage accounting"
+        )
+    end
+end
+print("PASS only unanimous nonnil SCT group origins can follow; mixed/fallback groups retain their centroid and totals")

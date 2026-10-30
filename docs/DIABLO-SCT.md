@@ -14,9 +14,14 @@ The video was inspected in the browser, including full-player views, paused
 combat frames and adjacent frame advances around 12–13 seconds. It shows one
 Rogue training-dummy encounter, not every Diablo IV combat-text variant.
 
+The user clarified that numbers should retain their position relative to the
+enemy as the camera moves. Stationary dummies alone do not establish that
+behavior. The implementation uses the accepted enemy's current native projection,
+rather than treating the first screen coordinate as a world anchor.
+
 | Reference                              | Observed presentation                                                                                                                                           | Addon treatment                                                                                                                                                                          |
 | -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Opening and first burst, roughly 0–7 s | Hits cluster around individual dummies rather than a fixed screen column. Nearby targets produce separate clusters.                                             | Use the existing resolved enemy launch point and matching fallback. Snapshot it once so death, plate reuse and later camera/plate movement cannot drag an existing label.                |
+| Opening and first burst, roughly 0–7 s | Hits cluster around individual dummies rather than a fixed screen column. Nearby targets produce separate clusters.                                             | Follow the existing matched enemy instance's native projection, with independent burst/drift offsets. Detach permanently on retirement; ambiguous groups retain their centroid.          |
 | Dense burst, roughly 7–13 s            | Pale white and yellow values coexist. Large white damage remains white; number size alone does not identify a critical hit.                                     | Pale normal damage and yellow native critical hits. Keep original native critical flags; never infer a result from amount, school, pet ownership or relative damage.                     |
 | Adjacent paused frames around 12–13 s  | Values fan out locally and linger near their launch area. They do not follow the addon's long falling arc. New values overlap older values during heavy damage. | Short eased fan-out, small continuing upward/outward drift, compact scale pop, readable hold and final fade. No long fall or screen-wide stream.                                         |
 | Late ticks, roughly 29–33 s            | Separated pale poison ticks remain readable after the dense yellow burst. Full values use comma separators, including nine-digit values.                        | Full comma-separated numeric text, with no K/M/B abbreviation. Periodic hits retain native amounts, independent arrivals and filters.                                                    |
@@ -71,6 +76,22 @@ resolver and hit pool. Diablo uses enemy-origin matching and the same invisible
 native plate tracking when V is off; MSBT still releases that tracking. Neither
 style writes V's preference. Native incoming/self text remains independent.
 
+Every original hit still resolves and consumes its own loss evidence. Only a
+group whose members all resolve to the same nonnil origin can follow it. That
+origin table belongs to one native visibility/name incarnation; animation never
+rematches names, reuses a frame handle as identity or chooses an arbitrary member
+of a mixed group. At display and each active animation sample, Diablo copies the
+already-sampled projection before applying its own offsets. The original enemy
+arcs and MSBT retain their coordinate behavior.
+
+On hide, retirement or reuse, the number takes the original instance's last
+usable point and permanently drops its reference. Projection data older than
+the existing 0.65-second matching window also detaches. A later same-name enemy
+or restored projection cannot reclaim that number. Mixed/ambiguous/unmatched
+groups retain their fixed fallback centroid. The addon has no persistent world
+projection after the native plate retires, so continuing camera compensation
+after death or disappearance remains a client/API boundary.
+
 Performance Mode follows the existing explicit SCT exception: preserve the
 selected animation and lifetime, and sum matching same-attack damage within the
 fixed inclusive 300 ms window. Normal mode retains the original 75 ms
@@ -81,7 +102,10 @@ The Diablo branch adds no combat frame, drawing region, asset, event, updater or
 SavedVariable. Each active entry still uses its original holder, inner visual,
 FontString and optional icon; the pool grows to observed peak concurrency and is
 reused. Formatting and random choices run once at acquisition. Only live labels
-run animation math. Anchors, scale and alpha skip unchanged writes; glyph fitting
+run animation math. Following adds one optional origin reference per pending
+group/active label and constant-time cached-field reads, without another native
+position read, plate scan or lookup per label. References clear on detach,
+release and shared cleanup. Anchors, scale and alpha skip unchanged writes; glyph fitting
 continues only during scale changes or unavailable-metric retries. Empty lists
 remain idle and normal retirement clears the style/lifetime scalars.
 
@@ -100,6 +124,12 @@ native critical colors, icons/filters, launch/hold/fade/expiry, unchanged work,
 Performance Mode sums/transitions, pool reuse and world cleanup. The production
 settings fixtures cover selection, page extent and hidden/unchanged listeners.
 Existing nameplate fixtures continue to exercise native origin/visibility ownership.
+New full-controller plate cases move the accepted projection at unchanged UI
+time, check the exact anchor delta and one shared native sample, retain active
+lifetime through Performance Mode changes, then exercise retirement, different-
+and same-name reuse, stale projection, fallback pool reuse and world cleanup.
+Queue fixtures require unanimous nonnil origins while retaining every original
+match, centroid, amount and Performance Mode total.
 
 Local work uses source/diff review and pinned formatting only. These tests were
 not run locally; addon/game execution remains unauthorized. No mock or source

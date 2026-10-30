@@ -85,6 +85,16 @@ changed-only writes and empty lists remain idle. Performance Mode preserves the
 animation with the existing 300 ms same-attack sums. It never restarts active
 labels on a Performance Mode transition.
 
+Matched Diablo labels reuse the existing per-frame native origin projection,
+so camera/mob movement changes the base point beneath their independent motion.
+Only unanimous nonnil group origins are retained. Each following label performs
+constant-time cached-field reads, with no extra native geometry read, lookup,
+scan or updater. Retirement or stale projection permanently detaches at the
+last usable point; pool/world cleanup clears the reference. Mixed and unknown
+groups retain the fixed centroid. Camera compensation after native retirement
+has no supported world-projection source. CI-only plate/queue cases cover these
+boundaries in both grouping modes; they were not run locally.
+
 The shared style selector replaces the MSBT checkbox on the lazy Combat page.
 Net settings cost is two button frames, eight texture regions and three labels;
 none draw while that page is closed. Original per-hit allocations, metadata

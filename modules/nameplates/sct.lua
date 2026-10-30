@@ -390,6 +390,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         text.needsMeasure = nil
         text.scrollOffset, text.scrollY = nil, nil
         text.diablo, text.duration = nil, nil
+        text.followOrigin = nil
         text.anchorRoot, text.anchorPoint, text.anchorX, text.anchorY = nil, nil, nil, nil
         table.insert(textPool, text)
     end
@@ -1590,6 +1591,25 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         text.anchorRoot, text.anchorPoint, text.anchorX, text.anchorY = root, relativePoint, x, y
     end
 
+    local function UpdateTextOrigin(text, now)
+        local origin = text.followOrigin
+        if not origin then return end
+        -- Reuse the existing frame's projected sample; never rematch a name or
+        -- query native geometry per label. Retired instances cannot reattach.
+        if
+            origin.positionAt
+            and now >= origin.positionAt
+            and now - origin.positionAt <= RECENT_PLATE_TIME
+            and IsFiniteNumber(origin.x)
+            and IsFiniteNumber(origin.y)
+        then
+            text.x, text.y = origin.x, origin.y
+        else
+            text.followOrigin = nil
+        end
+        if not origin.live then text.followOrigin = nil end
+    end
+
     local function EnsureTextRoot()
         if not textRoot then
             -- Keep the growing hit pool out of the native discovery roster.
@@ -1748,21 +1768,23 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         return strong and DAMAGE_COLORS.strong or DAMAGE_COLORS.normal
     end
 
-    local function DisplayDamage(info, x, y, displayAmount)
+    local function DisplayDamage(info, x, y, displayAmount, origin)
         -- Filter only after every original hit has consumed its matching and
         -- color evidence, including members of a visually collapsed group.
         if not ShouldShowText(info) then return end
         local value = displayAmount or info.text or info.amount
         if not value then return end
         local text = AcquireText()
-        -- The enemy layout snapshots its native launch point. The scrolling
-        -- layout uses offsets from its movable owner and needs no enemy position.
+        -- Default enemy arcs snapshot their launch point. Diablo labels reuse
+        -- only a unanimous matched instance; MSBT needs no enemy position.
         if msbtStyle then
             x, y = 0, MSBT.height / 2 - 12
         end
         text.x, text.y = x, y
         text.started = GetTime()
         text.diablo = textStyle == "diablo"
+        text.followOrigin = text.diablo and origin or nil
+        if text.diablo then UpdateTextOrigin(text, text.started) end
         text.duration = text.diablo and DIABLO.duration or TEXT_DURATION
         text.impact = info.critical or info.kind == "miss"
         text.sizeScale = info.critical and 1.5 or 1
@@ -1812,7 +1834,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             text.holder:SetAlpha(1)
         end
         -- New holders have no anchor; ReleaseText cleared pooled holders.
-        PositionText(text, msbtStyle and "CENTER" or "BOTTOMLEFT", x, y + 12)
+        PositionText(text, msbtStyle and "CENTER" or "BOTTOMLEFT", text.x, text.y + 12)
         text.holder:Show()
         table.insert(activeTexts, text)
     end
@@ -1827,16 +1849,23 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             local age = now - entry.time
             local resolved = false
             if age >= EVENT_SETTLE then
-                local x, y
+                local x, y, origin
                 if msbtStyle then
                     x, y = 0, 0
                 else
-                    x, y = ResolveOrigin(entry.info, now, age >= EVENT_FALLBACK_DELAY)
+                    x, y, origin = ResolveOrigin(entry.info, now, age >= EVENT_FALLBACK_DELAY)
                 end
                 if x and y then
                     local group = entry.group
                     group.count = group.count + 1
                     group.x, group.y = group.x + x, group.y + y
+                    -- Every original hit still matches and consumes its loss.
+                    -- A nil/mixed match permanently disqualifies group follow.
+                    if group.count == 1 then
+                        group.origin = origin or false
+                    elseif group.origin ~= origin then
+                        group.origin = false
+                    end
                     group.remaining = group.remaining - 1
                     resolved = true
                 end
@@ -1877,8 +1906,13 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                 and not group.bucket
                 and (not group.lastArrival or now - group.lastArrival >= EVENT_SETTLE)
             then
-                -- Every display keeps its resolved centroid for the full arc.
-                DisplayDamage(group.info, group.x / group.count, group.y / group.count, group.displayAmount)
+                DisplayDamage(
+                    group.info,
+                    group.x / group.count,
+                    group.y / group.count,
+                    group.displayAmount,
+                    group.origin or nil
+                )
             else
                 kept = kept + 1
                 pendingGroups[kept] = group
@@ -1930,6 +1964,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                 activeTexts[kept] = text
                 local x, y, relativePoint
                 if text.diablo then
+                    UpdateTextOrigin(text, now)
                     -- Launch into a compact fan, then hold near the target.
                     -- No gravity/fall or long screen-wide scrolling column.
                     local burst = math.min(1, math.max(0, age / DIABLO.burst))

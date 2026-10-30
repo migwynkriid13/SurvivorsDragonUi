@@ -23,8 +23,8 @@ local function Plates(setup)
             function object:GetEffectiveScale() return 1 end
             function object:GetLeft() return 0 end
             function object:GetBottom() return 0 end
-            function object:GetCenter() return self.centerX or 200, 200 end
-            function object:GetTop() return 205 end
+            function object:GetCenter() return self.centerX or 200, self.centerY or 200 end
+            function object:GetTop() return self.top or 205 end
             function object:GetChildren()
                 self.childrenReads = (self.childrenReads or 0) + 1
                 local children = {}
@@ -651,3 +651,106 @@ do
         "PASS SCT pass-local queries reuse no-match/ambiguity, separate exact keys and retire at loss/pass boundaries"
     )
 end
+
+-- Diablo retains only the existing resolver's accepted native instance.
+local function DiabloPlates(performance)
+    return Plates(function(current, env)
+        current.settings.sctStyle = "diablo"
+        current.settings.performanceMode = performance
+        current.settings.nameplatesBossGuardiansOnly = false
+        env.NAMEPLATES_ON = nil
+        env.T.ParseNameplateCombatEvent = function(_, message)
+            return {
+                kind = "damage",
+                damageType = "autoattack",
+                sourceName = "Player",
+                targetName = current.targetName,
+                amount = tonumber(message),
+            }
+        end
+    end)
+end
+
+for _, performance in ipairs({ false, true }) do
+    local moving = DiabloPlates(performance)
+    local plate = moving:MakePlate("Moving", 1000)
+    plate.centerX, plate.top = 280, 320
+    local center = plate.GetCenter
+    local samples = 0
+    function plate:GetCenter()
+        samples = samples + 1
+        return center(self)
+    end
+    moving:Tick(0)
+    moving.targetName = "Moving"
+    moving:Hit(17)
+    moving:Tick(performance and 0.301 or 0.17)
+    local label = assert(moving:Labels()[1])
+    local holder = label.parent.parent
+    local x, y = holder.anchor.x, holder.anchor.y
+    local origin = plate.fixture.origin
+    local before = samples
+    plate.centerX, plate.top = 430, 355
+    moving:Tick(0)
+    assert(
+        holder.anchor.x == x + 150 and holder.anchor.y == y + 35,
+        "camera/mob projection left damage at old screen coordinates"
+    )
+    assert(samples == before + 1, "following added native projection work per label")
+    assert(moving.backing and moving.env.NAMEPLATES_ON == nil, "Diablo following changed native V ownership")
+    x, y = holder.anchor.x, holder.anchor.y
+    moving:SetSetting("performanceMode", not performance)
+    moving:Tick(0)
+    assert(
+        moving:Labels()[1] == label and holder.anchor.x == x and holder.anchor.y == y,
+        "Performance Mode restarted or moved active follow"
+    )
+    moving:ResetCounts()
+    moving:Tick(0)
+    moving:NoPresentationWrites()
+    assert((moving.writes.SetScale or 0) == 0, "unchanged following repeated visual scale writes")
+
+    plate:Hide()
+    plate.centerX, plate.top = 850, 650
+    plate.regions[3]:SetText("Other occupant")
+    plate:Show()
+    moving:Tick(0)
+    assert(not origin.live and plate.fixture.origin ~= origin, "native reuse kept the retired origin")
+    assert(holder.anchor.x == x and holder.anchor.y == y, "retired damage jumped to a recycled frame")
+    plate:Hide()
+    plate.regions[3]:SetText("Moving")
+    plate:Show()
+    moving:Tick(0)
+    assert(holder.anchor.x == x and holder.anchor.y == y, "same-name reuse reclaimed an old damage number")
+    moving:Tick(1.101)
+    assert(#moving:Labels() == 0, "following restarted the damage lifetime")
+    moving.targetName = "Missing"
+    moving:Hit(23)
+    moving:Tick(0.301)
+    local reused = assert(moving:Labels()[1])
+    assert(reused == label and holder.anchor.x == 800, "pooled fallback retained the old follow origin")
+    plate.centerX = 1000
+    moving:Tick(0)
+    assert(holder.anchor.x == 800, "unmatched damage attached itself to a later native plate")
+    moving:Event(moving.controller, "PLAYER_LEAVING_WORLD")
+    assert(#moving:Labels() == 0 and not moving.backing, "world cleanup retained followed damage")
+end
+print("PASS Diablo follows current native projection in both modes and detaches permanently on frame retirement/reuse")
+
+for _, performance in ipairs({ false, true }) do
+    local stale = DiabloPlates(performance)
+    local plate = stale:MakePlate("Stale", 1000)
+    plate.centerX = 300
+    stale:Tick(0)
+    stale.targetName = "Stale"
+    stale:Hit(17)
+    stale:Tick(performance and 0.301 or 0.17)
+    local holder = assert(stale:Labels()[1]).parent.parent
+    plate.centerX = math.huge
+    stale:Tick(0.651)
+    local x, y = holder.anchor.x, holder.anchor.y
+    plate.centerX, plate.top = 700, 500
+    stale:Tick(0)
+    assert(holder.anchor.x == x and holder.anchor.y == y, "stale projection reattached after its match was detached")
+end
+print("PASS stale Diablo projection keeps its last usable point without later reacquisition")
