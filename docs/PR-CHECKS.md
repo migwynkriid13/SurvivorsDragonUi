@@ -354,9 +354,11 @@ The assertions cover:
   300 ms sums across mode transitions. Enum cases cover legacy MSBT migration,
   invalid values, preview/Confirm/Cancel, profile normalization and reset.
   Settings fixtures cover style selection, hidden listeners and page extent.
-  Full plate cases also move the native projection at unchanged UI time,
-  require the exact anchor delta with one shared native sample and prevent
-  reattachment after retirement, stale coordinates or same-name frame reuse.
+  Full plate cases move the native projection at unchanged UI time, require
+  no instant jump and one shared native sample, then exercise bounded catch-up,
+  large outliers and recovery without text/visibility/scale rewrites or new
+  allocations. They prevent reattachment after retirement, stale coordinates
+  or same-name frame reuse and retain the last displayed point on detach.
   Queue cases allow following only for unanimous nonnil origins, preserving
   original matching, fallback centroids, amounts and Performance Mode sums.
   These cases are CI-only and do not prove Diablo IV visual parity or native

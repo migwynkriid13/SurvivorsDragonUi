@@ -89,8 +89,13 @@ Matched Diablo labels reuse the existing per-frame native origin projection,
 so camera/mob movement changes the base point beneath their independent motion.
 Only unanimous nonnil group origins are retained. Each following label performs
 constant-time cached-field reads, with no extra native geometry read, lookup,
-scan or updater. Retirement or stale projection permanently detaches at the
-last usable point; pool/world cleanup clears the reference. Mixed and unknown
+scan or updater. Active follow uses a shared lazily computed 60 ms exponential
+blend and a 900-UI-unit/second speed allowance, admitting at most 50 ms per
+update. Per-label distance/bounded interpolation replaces direct coordinate
+snaps without a history table; zero elapsed time performs no follow movement.
+Retirement or stale projection permanently detaches at the last displayed
+base point without a final native-coordinate snap; pool/world cleanup clears
+the reference. Mixed and unknown
 groups retain the fixed centroid. Camera compensation after native retirement
 has no supported world-projection source. CI-only plate/queue cases cover these
 boundaries in both grouping modes; they were not run locally.

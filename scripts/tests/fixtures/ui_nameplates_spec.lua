@@ -686,17 +686,46 @@ for _, performance in ipairs({ false, true }) do
     moving:Hit(17)
     moving:Tick(performance and 0.301 or 0.17)
     local label = assert(moving:Labels()[1])
+    moving:Tick(0.21) -- Let the authored launch/pop settle before camera motion.
     local holder = label.parent.parent
     local x, y = holder.anchor.x, holder.anchor.y
     local origin = plate.fixture.origin
     local before = samples
     plate.centerX, plate.top = 430, 355
     moving:Tick(0)
-    assert(
-        holder.anchor.x == x + 150 and holder.anchor.y == y + 35,
-        "camera/mob projection left damage at old screen coordinates"
-    )
+    assert(holder.anchor.x == x and holder.anchor.y == y, "zero-time native corrections teleported an active number")
     assert(samples == before + 1, "following added native projection work per label")
+    moving:Tick(1 / 60)
+    assert(
+        holder.anchor.x > x and holder.anchor.x < x + 30,
+        "camera follow snapped instead of moving toward its sample"
+    )
+    assert(math.abs(holder.anchor.y - y) < 30, "vertical native correction teleported active damage")
+    for _ = 1, 18 do
+        moving:Tick(1 / 60)
+    end
+    assert(math.abs(holder.anchor.x - x - 150) < 4, "eased camera follow stopped tracking the enemy")
+    assert(holder.anchor.y > y + 35 and holder.anchor.y < y + 45, "eased follow lost the projection or its own drift")
+
+    local previous = holder.anchor.x
+    local scale, allocated = label.parent.scale, #moving.objects
+    moving:ResetCounts()
+    plate.centerX = 1000
+    moving:Tick(1 / 60)
+    assert(
+        holder.anchor.x > previous and holder.anchor.x < previous + 30,
+        "one native outlier threw a number across the screen"
+    )
+    assert(label:GetText() == "17" and label.parent.scale == scale, "following restarted or rewrote a settled number")
+    assert((moving.writes.SetScale or 0) == 0, "following repeated a settled number's scale assignment")
+    assert(
+        not moving.writes.SetText and not moving.writes.Show and not moving.writes.Hide,
+        "following flickered text visibility"
+    )
+    assert(#moving.objects == allocated, "following replaced the active number")
+    plate.centerX = 430
+    moving:Tick(1 / 60)
+    assert(math.abs(holder.anchor.x - previous) < 30, "outlier recovery snapped back to the native sample")
     assert(moving.backing and moving.env.NAMEPLATES_ON == nil, "Diablo following changed native V ownership")
     x, y = holder.anchor.x, holder.anchor.y
     moving:SetSetting("performanceMode", not performance)
@@ -735,7 +764,7 @@ for _, performance in ipairs({ false, true }) do
     moving:Event(moving.controller, "PLAYER_LEAVING_WORLD")
     assert(#moving:Labels() == 0 and not moving.backing, "world cleanup retained followed damage")
 end
-print("PASS Diablo follows current native projection in both modes and detaches permanently on frame retirement/reuse")
+print("PASS Diablo eases camera/native corrections without rewriting or flickering text and detaches on frame reuse")
 
 for _, performance in ipairs({ false, true }) do
     local stale = DiabloPlates(performance)
