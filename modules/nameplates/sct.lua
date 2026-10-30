@@ -3,6 +3,104 @@
 -- Original NameplateSCT copyright (c) 2020 Justwait, MIT License.
 -- The full upstream MIT notice is included in parser.lua, shipped with this module.
 
+-- Bundled PT Serif font license (the font is separate from addon code):
+--[[
+Copyright (c) 2010, ParaType Ltd. (http://www.paratype.com/public),
+with Reserved Font Names "PT Sans", "PT Serif" and "ParaType".
+
+This Font Software is licensed under the SIL Open Font License, Version 1.1 
+This license is copied below, and is also available with a FAQ at: 
+http://scripts.sil.org/OFL
+
+-----------------------------------------------------------
+SIL OPEN FONT LICENSE Version 1.1 - 26 February 2007
+-----------------------------------------------------------
+
+PREAMBLE
+The goals of the Open Font License (OFL) are to stimulate worldwide
+development of collaborative font projects, to support the font creation
+efforts of academic and linguistic communities, and to provide a free and
+open framework in which fonts may be shared and improved in partnership
+with others.
+
+The OFL allows the licensed fonts to be used, studied, modified and
+redistributed freely as long as they are not sold by themselves. The
+fonts, including any derivative works, can be bundled, embedded, 
+redistributed and/or sold with any software provided that any reserved
+names are not used by derivative works. The fonts and derivatives,
+however, cannot be released under any other type of license. The
+requirement for fonts to remain under this license does not apply
+to any document created using the fonts or their derivatives.
+
+DEFINITIONS
+"Font Software" refers to the set of files released by the Copyright
+Holder(s) under this license and clearly marked as such. This may
+include source files, build scripts and documentation.
+
+"Reserved Font Name" refers to any names specified as such after the
+copyright statement(s).
+
+"Original Version" refers to the collection of Font Software components as
+distributed by the Copyright Holder(s).
+
+"Modified Version" refers to any derivative made by adding to, deleting,
+or substituting -- in part or in whole -- any of the components of the
+Original Version, by changing formats or by porting the Font Software to a
+new environment.
+
+"Author" refers to any designer, engineer, programmer, technical
+writer or other person who contributed to the Font Software.
+
+PERMISSION & CONDITIONS
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of the Font Software, to use, study, copy, merge, embed, modify,
+redistribute, and sell modified and unmodified copies of the Font
+Software, subject to the following conditions:
+
+1) Neither the Font Software nor any of its individual components,
+in Original or Modified Versions, may be sold by itself.
+
+2) Original or Modified Versions of the Font Software may be bundled,
+redistributed and/or sold with any software, provided that each copy
+contains the above copyright notice and this license. These can be
+included either as stand-alone text files, human-readable headers or
+in the appropriate machine-readable metadata fields within text or
+binary files as long as those fields can be easily viewed by the user.
+
+3) No Modified Version of the Font Software may use the Reserved Font
+Name(s) unless explicit written permission is granted by the corresponding
+Copyright Holder. This restriction only applies to the primary font name as
+presented to the users.
+
+4) The name(s) of the Copyright Holder(s) or the Author(s) of the Font
+Software shall not be used to promote, endorse or advertise any
+Modified Version, except to acknowledge the contribution(s) of the
+Copyright Holder(s) and the Author(s) or with their explicit written
+permission.
+
+5) The Font Software, modified or unmodified, in part or in whole,
+must be distributed entirely under this license, and must not be
+distributed under any other license. The requirement for fonts to
+remain under this license does not apply to any document created
+using the Font Software.
+
+TERMINATION
+This license becomes null and void if any of the above conditions are
+not met.
+
+DISCLAIMER
+THE FONT SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT
+OF COPYRIGHT, PATENT, TRADEMARK, OR OTHER RIGHT. IN NO EVENT SHALL THE
+COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+INCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL
+DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
+OTHER DEALINGS IN THE FONT SOFTWARE.
+
+]]
+
 DFRL:NewMod("NameplateCombatText", 6, function()
     local ParseCombatEvent = T.ParseNameplateCombatEvent
     local plateStyle = T.NameplateStyle
@@ -10,6 +108,8 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local FALLBACK_ICON = T.SourceIconFallback
     local ATTACK_ICON = "Interface\\Icons\\INV_Sword_04"
     local TEXT_DURATION = 1.45
+    local DIABLO_FONT = DFRL:GetInfoOrCons("path") .. "media\\fonts\\PT_Serif-Web-Regular.ttf"
+    local DEFAULT_FONT = T.GetDefaultFont()
     local MSBT = { x = 160, top = 110, height = 220, curve = 48, spacing = 8, settle = 0.06 }
     -- Tuned from the supplied Diablo IV clip; these are presentation timings,
     -- not recovered engine constants or combat-result classifications.
@@ -20,6 +120,8 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         fade = 0.72,
         normal = { 0.92, 0.90, 0.82 },
         critical = { 1, 0.90, 0.32 },
+        largeCritical = { 1, 0.62, 0.18 },
+        history = { seconds = 10, step = 0.5, minimum = 3, ratio = 1.5, identities = 64 },
     }
     local EVENT_SETTLE = 0.08
     local EVENT_FALLBACK_DELAY = 0.16
@@ -69,6 +171,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local spellTexturesDirty, spellTexturesRetryAt = true, nil
     local spellTextureScan = {}
     local recentDamage = {}
+    local criticalHistory = { rows = {}, count = 0 }
     local discoveredChildren = 0
     local combatDiscoveryNeeded = true
     local arcDirection = 1
@@ -91,6 +194,8 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local textStyle = DFRL.display.Get("sctStyle")
     local msbtStyle = textStyle == "msbt"
     local textScale = DFRL.display.Get("sctScale")
+    local textFont = DFRL.display.Get("sctFont")
+    local shortNumbers = DFRL.display.Get("sctShortNumbers")
     local duplicateWindow = DFRL.display.Get("performanceMode") and PERFORMANCE_DUPLICATE_WINDOW or DUPLICATE_WINDOW
     -- Keep V's visible request separate from the backing coordinate feed. The
     -- native verbs do not write FrameXML's saved NAMEPLATES_ON preference.
@@ -384,10 +489,13 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         text.holder:ClearAllPoints()
         text.spell, text.damageType, text.iconTexture = nil, nil, nil
         text.kind = nil
+        text.displayValue = nil
         text.critical = nil
+        text.largeCritical = nil
         text.sourceIsPet = nil
         text.color = nil
         text.needsMeasure = nil
+        text.fontRetryAt = nil
         text.scrollOffset, text.scrollY = nil, nil
         text.diablo, text.duration = nil, nil
         text.anchorRoot, text.anchorPoint, text.anchorX, text.anchorY = nil, nil, nil, nil
@@ -409,6 +517,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         originIndex.retiredAt = nil
         originIndex.ClearQueries()
         recentDamage = {}
+        criticalHistory.rows, criticalHistory.count, criticalHistory.time = {}, 0, nil
         for _, data in pairs(plates) do
             data.origin = nil
         end
@@ -1465,8 +1574,75 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         end
     end
 
+    local function LargeCritical(info, identity, now)
+        -- Cosmetic emphasis, not an inferred native crit/Overpower result.
+        -- Observe original critical amounts before duplicate collapse or sums.
+        if textStyle ~= "diablo" or not info.critical or not identity then return end
+        if not IsFiniteNumber(now) or not IsFiniteNumber(info.amount) or info.amount <= 0 then return end
+        local history, config = criticalHistory, DIABLO.history
+        local slots = config.seconds / config.step
+        if history.time and now < history.time then
+            history.rows, history.count = {}, 0
+        end
+        history.time = now
+        local row = history.rows[identity]
+        if not row then
+            if history.count >= config.identities then
+                local oldest
+                for key, candidate in pairs(history.rows) do
+                    if not row or candidate.time < row.time then
+                        oldest, row = key, candidate
+                    end
+                end
+                history.rows[oldest] = nil
+                for _, bucket in pairs(row.buckets) do
+                    bucket.time, bucket.total, bucket.count = nil, 0, 0
+                end
+                row.total, row.count, row.tick = 0, 0, nil
+            else
+                row = { buckets = {}, total = 0, count = 0 }
+                history.count = history.count + 1
+            end
+            history.rows[identity] = row
+        end
+        local tick = math.floor(now / config.step)
+        if row.tick ~= tick then
+            -- Half-second aggregates retain all hits with at most half a
+            -- second of boundary approximation; no event log or idle sweep.
+            row.total, row.count = 0, 0
+            for _, bucket in pairs(row.buckets) do
+                if bucket.time and tick - bucket.time >= slots then
+                    bucket.time, bucket.total, bucket.count = nil, 0, 0
+                elseif bucket.time then
+                    row.total, row.count = row.total + bucket.total, row.count + bucket.count
+                end
+            end
+            row.tick = tick
+        end
+        row.time = now
+        local large = row.count >= config.minimum
+            and row.total > 0
+            and info.amount / (row.total / row.count) >= config.ratio
+        local total = row.total + info.amount
+        if not IsFiniteNumber(total) then
+            -- A corrupt/unrepresentable baseline must not color a hit amber.
+            history.rows[identity] = nil
+            history.count = history.count - 1
+            return
+        end
+        local slot = math.mod(tick, slots) + 1
+        local bucket = row.buckets[slot]
+        if not bucket then
+            bucket = { total = 0, count = 0 }
+            row.buckets[slot] = bucket
+        end
+        bucket.time, bucket.total, bucket.count = tick, bucket.total + info.amount, bucket.count + 1
+        row.total, row.count = total, row.count + 1
+        return large
+    end
+
     local function QueueCombatText(info, now)
-        local identity, byAmount, group, bucketKey
+        local identity, byAmount, group, bucketKey, largeCritical
         if info.kind == "damage" then
             -- Resolve once even when icons are hidden, so identity and the
             -- eventual displayed icon cannot change while this hit waits.
@@ -1492,6 +1668,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                     .. IconIdentityPart(info.school or "")
                     .. IconIdentityPart(info.critical and "critical" or "normal")
                     .. IconIdentityPart(TextureKey(info.iconTexture) or FALLBACK_ICON)
+                largeCritical = LargeCritical(info, identity, now)
                 byAmount = intakeBuckets[identity]
                 if not byAmount then
                     byAmount = {}
@@ -1533,6 +1710,9 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             table.insert(pendingGroups, group)
             if byAmount then byAmount[bucketKey] = group end
         end
+        -- A grouped label may emphasize a qualifying original member. Its
+        -- summed total never qualifies on its own or enters the baseline.
+        group.largeCritical = group.largeCritical or largeCritical
         if msbtStyle then
             -- The fixed stream has no per-hit origin to resolve. Retain the
             -- latest member's original age gate without storing each arrival.
@@ -1556,11 +1736,33 @@ DFRL:NewMod("NameplateCombatText", 6, function()
 
     local function UpdateTextColor(text)
         local color = text.color or DAMAGE_COLORS.normal
-        if text.diablo and text.kind == "damage" then color = text.critical and DIABLO.critical or DIABLO.normal end
-        if text.kind == "damage" and DFRL.display.Get("sctClassColors") then
-            color = T.GetPlayerClassColor() or color
+        if text.kind == "damage" then
+            if text.diablo then
+                color = DIABLO.normal
+                if text.critical then color = text.largeCritical and DIABLO.largeCritical or DIABLO.critical end
+            elseif DFRL.display.Get("sctClassColors") then
+                color = T.GetPlayerClassColor() or color
+            end
         end
-        text.label:SetTextColor(color[1], color[2], color[3])
+        if text.red ~= color[1] or text.green ~= color[2] or text.blue ~= color[3] then
+            text.label:SetTextColor(color[1], color[2], color[3])
+            text.red, text.green, text.blue = color[1], color[2], color[3]
+        end
+    end
+
+    local function DamageValue(value, diablo)
+        if not IsFiniteNumber(value) or value < 0 then return tostring(value) end
+        -- Shared K/M/B/T decimal tiers are display-only. This value may be a
+        -- completed group's total; its original per-hit inputs stay untouched.
+        if shortNumbers then return T.CompactHealth(value, true) end
+        if not diablo then return tostring(value) end
+        local result = string.format("%.0f", value)
+        local grouped, changed
+        repeat
+            grouped, changed = string.gsub(result, "^(%d+)(%d%d%d)", "%1,%2")
+            result = grouped
+        until changed == 0
+        return result
     end
 
     local function FitText(text)
@@ -1574,6 +1776,31 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             text.width = width
             text.label:SetWidth(width)
         end
+    end
+
+    local function ApplyTextFont(text, now)
+        -- PT Serif supplies numeric damage. Native wording keeps its full
+        -- localized glyph coverage, including Chinese, Japanese and Korean.
+        local face = textFont == "diablo" and text.kind == "damage" and DIABLO_FONT or DEFAULT_FONT
+        if text.fontFace == face then
+            text.fontRetryAt = nil
+            return
+        end
+        local previous = text.fontFace
+        pcall(text.label.SetFont, text.label, face, 18, "OUTLINE")
+        local loaded, size, flags = text.label:GetFont()
+        -- GetFont converts the stored native screen units back to Lua units;
+        -- even a successful 18-unit assignment can read slightly above/below 18.
+        if loaded == face and T.NearlyEqual(size, 18) and flags == "OUTLINE" then
+            text.fontFace, text.fontRetryAt = face, nil
+        else
+            -- A rejected native SetFont can clear the previous binding. Restore
+            -- the known usable game font before any SetText or measurement.
+            T.SetFont(text.label, 18, "OUTLINE")
+            text.fontFace = DEFAULT_FONT
+            text.fontRetryAt = now + 0.5
+        end
+        if previous ~= text.fontFace then text.needsMeasure = true end
     end
 
     local function PositionText(text, relativePoint, x, y)
@@ -1663,6 +1890,12 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             ApplyPlateTracking(false)
         end
         textScale = DFRL.display.Get("sctScale")
+        local font = DFRL.display.Get("sctFont")
+        local fontChanged = textFont ~= font
+        textFont = font
+        local shorten = DFRL.display.Get("sctShortNumbers")
+        local numbersChanged = shortNumbers ~= shorten
+        shortNumbers = shorten
         local enabled = DFRL.display.Get("damageIcons")
         local iconsChanged = damageIcons ~= enabled
         damageIcons = enabled
@@ -1671,6 +1904,13 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             if not ShouldShowText(text) then
                 ReleaseText(table.remove(activeTexts, index))
             else
+                if fontChanged then ApplyTextFont(text, GetTime()) end
+                if numbersChanged and text.kind == "damage" then
+                    if T.SetTextIfChanged(text.label, DamageValue(text.displayValue, text.diablo)) then
+                        text.needsMeasure = true
+                    end
+                end
+                if (fontChanged or numbersChanged) and text.needsMeasure then FitText(text) end
                 UpdateTextColor(text)
                 if iconsChanged then UpdateIcon(text) end
             end
@@ -1709,6 +1949,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             -- SCT contains only the hit and its icon. Repeating the enemy's
             -- name here made fallback hits grow another name during crit pop.
             text = { holder = holder, visual = visual, label = label, icon = icon }
+            text.fontFace = DEFAULT_FONT
         end
         if text.holder:GetParent() ~= parent then text.holder:SetParent(parent) end
         return text
@@ -1748,7 +1989,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         return strong and DAMAGE_COLORS.strong or DAMAGE_COLORS.normal
     end
 
-    local function DisplayDamage(info, x, y, displayAmount)
+    local function DisplayDamage(info, x, y, displayAmount, largeCritical)
         -- Filter only after every original hit has consumed its matching and
         -- color evidence, including members of a visually collapsed group.
         if not ShouldShowText(info) then return end
@@ -1780,22 +2021,16 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             arcDirection = -arcDirection
         end
         local displayText = tostring(value)
-        if text.diablo and info.kind == "damage" and IsFiniteNumber(value) and value >= 0 then
-            -- Full comma-separated values match the supplied reference.
-            -- Never alter the original hit amount or native meter counters.
-            displayText = string.format("%.0f", value)
-            local grouped, changed
-            repeat
-                grouped, changed = string.gsub(displayText, "^(%d+)(%d%d%d)", "%1,%2")
-                displayText = grouped
-            until changed == 0
-        end
+        if info.kind == "damage" then displayText = DamageValue(value, text.diablo) end
         if info.kind == "miss" then displayText = DFRL.locale.CombatText(displayText) end
+        text.kind = info.kind
+        text.displayValue = value
+        ApplyTextFont(text, text.started)
         text.label:SetText(displayText)
         text.label:Show()
         text.spell, text.damageType, text.iconTexture = info.spell, info.damageType, info.iconTexture
-        text.kind = info.kind
         text.critical = info.critical
+        text.largeCritical = largeCritical
         text.sourceIsPet = info.sourceIsPet
         text.color = info.color
         UpdateTextColor(text)
@@ -1877,7 +2112,13 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                 and not group.bucket
                 and (not group.lastArrival or now - group.lastArrival >= EVENT_SETTLE)
             then
-                DisplayDamage(group.info, group.x / group.count, group.y / group.count, group.displayAmount)
+                DisplayDamage(
+                    group.info,
+                    group.x / group.count,
+                    group.y / group.count,
+                    group.displayAmount,
+                    group.largeCritical
+                )
             else
                 kept = kept + 1
                 pendingGroups[kept] = group
@@ -1927,6 +2168,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             else
                 kept = kept + 1
                 activeTexts[kept] = text
+                if text.fontRetryAt and now >= text.fontRetryAt then ApplyTextFont(text, now) end
                 local x, y, relativePoint
                 if text.diablo then
                     -- Launch into a compact fan, then drift from its fixed point.
@@ -2198,6 +2440,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             elseif arg1 == "AZSZONE" then
                 DirtySpellTextures()
                 ClearSummonIcons()
+                criticalHistory.rows, criticalHistory.count, criticalHistory.time = {}, 0, nil
                 iconSourcesDirty.debuffs = true
             end
         elseif event == "CVAR_UPDATE" then

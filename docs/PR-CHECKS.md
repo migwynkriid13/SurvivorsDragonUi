@@ -18,12 +18,12 @@ branch protection by itself.
   between the runtime manifest and TOC; or tracked runtime Lua left outside the TOC.
 - Test/tooling or reference-only Lua entering the payload/TOC, or an invalid
   reference-source classification with a missing file, non-Lua path or empty reason.
-- An unexpected payload file. The addon ZIP contains Lua, BLP artwork, its TOC
+- An unexpected payload file. The addon ZIP contains Lua, BLP artwork, TTF fonts, its TOC
   and the required artwork license. Tools, test fixtures, documentation and
   authoring inputs stay out of it.
-- A missing or unreferenced bundled texture, an unclassified file under `media/`,
+- A missing or unreferenced bundled texture/font, an unclassified file under `media/`,
   or a stale dynamic-owner/preparation-source rule.
-- A new byte-identical runtime Lua or texture copy. Existing duplicate groups
+- A new byte-identical runtime Lua, texture or font copy. Existing duplicate groups
   remain visible in the report; removing a member is allowed. A changed group
   cannot silently add another copy.
 - A failing checker regression fixture or one of the existing artwork/root checks.
@@ -124,6 +124,14 @@ The assertions cover:
   reused numeric form and every input/button to draw above the popup and return
   to the settings layer without repeated layer writes. These are CI-only source mocks,
   not first-open latency or native rendering measurements.
+
+  The selected-frame width slider cases cover reuse across both editors,
+  selection-specific limits and visibility, synchronous range/value callbacks,
+  unchanged writes, live width with stable center/scale/height, valid/invalid
+  pending numeric input, Chat dimensions, automatic Revive sizing, profile loads,
+  Save/Cancel, world discard and full reset. The production Layout owner supplies
+  the draft and resize behavior; fixtures provide only native slider/geometry
+  boundaries. These cases remain CI-only and were not run locally.
 
   Close cases cover repeated launcher-toggle open/cancel, native registered-window
   hiding, focused invalid numeric input, profile-name Escape, duplicate Escape
@@ -362,7 +370,32 @@ The assertions cover:
   The user-selected fixed-position fallback retains no live follow references
   or smoothing state and gives up camera compensation after launch.
   These cases are CI-only and do not prove Diablo IV visual parity or native
-  font rendering. See [DIABLO-SCT.md](DIABLO-SCT.md) for the video study and tuning.
+  font rendering. Font cases cover invalid/default choices, preview, Confirm,
+  Cancel, profiles/reset, active width invalidation without motion/lifetime
+  restart, pooled reuse across all styles and Performance Mode states, rejected
+  native loads/fallback/retry/expiry, and non-Latin avoidance glyph coverage.
+  Native rounded-height cases keep successful PT Serif bindings across reuse
+  without fallback/retries; genuinely different heights remain rejected.
+  Color cases retain white/yellow native-result priority over class colors and
+  preserve class colors in other styles. Cosmetic amber cases exercise the
+  three-critical warmup, previous-mean/inclusive 1.5x threshold, exclusion of
+  normal hits, native identity isolation, original members versus summed totals,
+  active-color retention, half-second bucket expiry, time regression,
+  style/mode/world/zone cleanup, 64-identity eviction/reuse and preservation
+  across Performance Mode transitions. No native Overpower result is inferred.
+  Abbreviation cases cover boolean
+  defaults/invalid values, all K/M/B/T boundaries, original per-hit amounts,
+  75 ms duplicate versus 300 ms summed totals, active width refitting without
+  coordinate/font/lifetime restart, Cancel, pooled reuse and localized misses.
+  Settings cases retain the disabled class-color choice across Custom mode
+  changes and cover abbreviation preview/Cancel and final page extent.
+  Settings cases cover font selection, Custom-only input and final page extent;
+  package fixtures reject unreferenced or missing font payloads.
+  The shared SCT label sink identifies the real holder/visual pool through its
+  observed native root binding, excluding native enemy-name labels from combat
+  assertions. The reported nameplate anchor failure and unused motion-test
+  variable were corrected without changing production movement behavior.
+  See [DIABLO-SCT.md](DIABLO-SCT.md) for the video study and tuning.
 - Full SCT/filter and nameplate-style fixtures combine Names only with the
   boss/guardian filter. They cover exact capped/float32 ranges and halfway
   rounding, sleeping-to-awake ceiling conversion and its float32 serialization

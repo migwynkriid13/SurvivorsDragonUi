@@ -20,6 +20,7 @@
     "core/tooltips.lua",
     "core/widgets.lua",
     "localization/data.lua",
+    "media/fonts/PT_Serif-Web-Regular.ttf",
     "media/tex/actionbars/Gryphon.blp",
     "media/tex/actionbars/HDActionBar.blp",
     "media/tex/actionbars/HDActionBarBtn.blp",

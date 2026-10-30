@@ -51,9 +51,10 @@ def main():
         waypoint_frame = extract_source("modules/map/waypoints.lua", ["Number", "Rotate", "WrapAngle", "Blend", "UpdateGuide"])
         xp_glow = extract_source("modules/xprep/xprep.lua", ["PaintGlow"])
         sct_queue = extract_source("modules/nameplates/sct.lua", [
+            "DIABLO", "criticalHistory", "textStyle",
             "FALLBACK_ICON", "EVENT_SETTLE", "EVENT_FALLBACK_DELAY", "DUPLICATE_WINDOW", "PERFORMANCE_DUPLICATE_WINDOW", "duplicateWindow", "DAMAGE_COLORS",
             "DAMAGE_SAMPLE_LIMIT", "DAMAGE_SAMPLE_TIME", "DAMAGE_SAMPLE_MINIMUM", "STRONG_DAMAGE_RATIO",
-            "IsFiniteNumber", "TextureKey", "IconIdentityPart", "DamageColor", "SyncDuplicateWindow", "QueueCombatText", "UpdatePending", "HandleCombatEvent",
+            "IsFiniteNumber", "TextureKey", "IconIdentityPart", "DamageColor", "SyncDuplicateWindow", "LargeCritical", "QueueCombatText", "UpdatePending", "HandleCombatEvent",
         ])
         sct_queue = sct_queue.rsplit("\nreturn ", 1)[0] + "\nreturn { Queue = QueueCombatText, Update = UpdatePending, Handle = HandleCombatEvent, SyncWindow = SyncDuplicateWindow }\n"
         run_foam = extract_source("modules/ui/run.lua", ["DrawFoam", "UpdateBlueFoam"])

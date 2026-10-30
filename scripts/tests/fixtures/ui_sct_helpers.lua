@@ -5,6 +5,8 @@ local function SCT(scrolling, setup)
     local env = context.env
     context.settings.sctStyle = scrolling and "msbt" or "enemy"
     context.settings.sctScale = 1
+    context.settings.sctFont = "default"
+    context.settings.sctShortNumbers = false
     context.settings.sctNormalHits, context.settings.sctCriticalHits = true, true
     context.settings.sctAutoAttacks, context.settings.sctMisses = true, true
     context.settings.damageIcons, context.settings.nameplatesBossGuardiansOnly = false, false
@@ -52,6 +54,13 @@ local function SCT(scrolling, setup)
             self.parent = value
             context:Visibility()
         end
+        if kind == "Frame" and parent == env.WorldFrame then
+            local setAllPoints = object.SetAllPoints
+            object.SetAllPoints = function(self, relative)
+                setAllPoints(self, relative)
+                if relative == env.WorldFrame then context.textRoot = self end
+            end
+        end
         return object
     end
     env.WorldFrame = env.CreateFrame("Frame", "WorldFrame", env.UIParent)
@@ -63,6 +72,10 @@ local function SCT(scrolling, setup)
     env.WorldFrame.GetCenter = NoPlateRead
     env.WorldFrame.DisableDrawLayer, env.WorldFrame.EnableDrawLayer = NoPlateRead, NoPlateRead
     env.WorldFrame.GetHitRectInsets, env.WorldFrame.SetHitRectInsets = NoPlateRead, NoPlateRead
+    function env.DFRL:GetInfoOrCons(kind)
+        local root = "Interface\\AddOns\\SurvivorsDragonUi\\"
+        return kind == "tex" and root .. "media\\tex\\" or root
+    end
     env.T.SetFont = function(object, size, flags)
         object:SetFont("DEFAULT_TEST", size, flags)
         object.GetStringWidth = function(self) return string.len(self:GetText()) * 9 end
@@ -95,6 +108,7 @@ local function SCT(scrolling, setup)
         self.scrollVisibility(not hidden)
     end
     if setup then setup(context, env) end
+    context:Load("core/widgets.lua")
     context:Load("modules/nameplates/sct.lua", "NameplateCombatText")
     context.controller = context:Controller("TEST_COMBAT")
     function context:Hit(amount) self:Event(self.controller, "TEST_COMBAT", tostring(amount)) end
@@ -105,7 +119,18 @@ local function SCT(scrolling, setup)
     function context:Labels()
         local labels = {}
         for _, object in ipairs(self.objects) do
-            if object.kind == "FontString" and object:IsVisible() and object:GetText() ~= "" then
+            -- Native nameplate names are visible FontStrings too. Only the
+            -- existing SCT holder/visual pool belongs to this assertion sink.
+            local visual = object.parent
+            local holder = visual and visual.parent
+            local owner = holder and holder.parent
+            if
+                object.kind == "FontString"
+                and owner
+                and (owner == self.textRoot or owner == self.scrollRoot)
+                and object:IsVisible()
+                and object:GetText() ~= ""
+            then
                 table.insert(labels, object)
             end
         end

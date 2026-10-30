@@ -64,6 +64,8 @@ DFRL:NewMod("Display", 0, function()
         sctMisses = true,
         sctClassColors = false,
         sctStyle = "enemy",
+        sctFont = "default",
+        sctShortNumbers = false,
         sctScale = 1,
         hidePortraits = false,
         showPlayerName = true,
@@ -135,12 +137,16 @@ DFRL:NewMod("Display", 0, function()
     local function NormalizeSctStyle(value)
         if value == "enemy" or value == "msbt" or value == "diablo" then return value end
     end
+    local function NormalizeSctFont(value)
+        if value == "default" or value == "diablo" then return value end
+    end
     local function Read(source, key)
         local value
         if type(source) == "table" then value = source[key] end
         if ranges[key] then return NormalizeNumber(key, value) or defaults[key] end
         if key == "tallyStyle" then return NormalizeTallyStyle(value) or defaults[key] end
         if key == "lootMode" then return NormalizeLootMode(value) or defaults[key] end
+        if key == "sctFont" then return NormalizeSctFont(value) or defaults[key] end
         if key == "sctStyle" then
             -- Old saved display choices and named profiles retain their stream.
             return NormalizeSctStyle(value)
@@ -191,6 +197,9 @@ DFRL:NewMod("Display", 0, function()
             if not value then return end
         elseif key == "sctStyle" then
             value = NormalizeSctStyle(value)
+            if not value then return end
+        elseif key == "sctFont" then
+            value = NormalizeSctFont(value)
             if not value then return end
         elseif type(value) ~= "boolean" then
             return

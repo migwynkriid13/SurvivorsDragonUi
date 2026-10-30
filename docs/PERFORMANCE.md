@@ -78,7 +78,7 @@ leave hundreds of expensive texture regions drawing continuously.
 ## Diablo IV combat text — 2026-10-30
 
 The optional Diablo IV style reuses the enemy-origin path, controller and hit
-pool: no combat frame, region, asset, event or updater is added. Its 1.1-second
+pool: the animation adds no combat frame, region, event or updater. Its 1.1-second
 burst/hold/fade replaces the selected label's animation only. Formatting and
 random size/scatter are chosen once; live anchors, scale and alpha retain their
 changed-only writes and empty lists remain idle. Performance Mode preserves the
@@ -104,6 +104,60 @@ none draw while that page is closed. Original per-hit allocations, metadata
 ownership and native tracking remain shared. See [DIABLO-SCT.md](DIABLO-SCT.md)
 for the video study, tuning, migration and CI-only evidence limits. Source
 review and pinned formatting do not establish native appearance or FPS.
+
+The independent Default / Diablo IV (PT Serif) font choice adds one unmodified
+359,048-byte TTF, no combat region/font object and no new worker. Successful font
+bindings are cached across pool reuse. Font changes refit active glyph widths
+without restarting numbers; pooled/hidden entries defer work. Failed loads
+restore the game font before text writes and retry at most twice per second per
+active entry through the existing controller, stopping on success or expiry.
+Localized avoidance labels retain native glyph coverage. Both Performance Mode
+states use the same font lifecycle and existing animation/grouping policy.
+The lazy font row adds two button frames, eight texture regions and three
+FontStrings, visible only on the open Combat page. These are source-level costs,
+not measured GPU/FPS or native font-rendering evidence.
+
+Diablo's white/yellow result palette takes precedence over saved class colors;
+the retained class-color choice is dimmed/inactive for this style and returns
+for Over enemies/MSBT. The shared dependency helper retains per-control
+availability when a parent group changes, so Custom mode cannot re-enable that
+checkbox accidentally. RGB assignments now skip unchanged values across pool
+reuse and unrelated display changes. No native Overpower result is inferred
+from unavailable native fields. The user-authorized amber imitation below is
+cosmetic critical emphasis only.
+
+The default-off damage abbreviation reuses the existing K/M/B/T decimal helper
+at display time and on actual preview/Cancel changes. One original presentation
+value per active label allows reformatting a completed group total without
+changing original hit amounts, grouping, matching, font, coordinates or expiry;
+retirement clears it. Changed-only text/width writes add no per-frame formatting
+or new controller. The lazy checkbox adds one button, four texture regions and
+one FontString; no combat region, asset, event, updater or SavedVariable is
+added. Performance Mode retains its existing motion and 300 ms sums. CI-only
+cases cover tiers, preview/cancel, original-hit preservation, totals, pools,
+expiry, palette priority and control availability; no local tests were run.
+
+Diablo's cosmetic amber highlight compares each original native critical with
+its same-intake-identity critical mean before grouping. After three earlier
+criticals, at least 1.5 times the prior mean qualifies. A ten-second window uses
+20 reusable half-second sum/count buckets per identity (up to half a second of
+boundary approximation), capped at 64 identities with oldest-row reuse. It
+retains no individual combat log or saved gameplay data. Same-bucket arrivals
+update one total/count in constant work; bucket expiry scans at most 20 slots
+only on a new half-second coordinate. Identity eviction scans at most 64 rows
+only for a new identity at capacity. All identities/buckets allocate lazily;
+there is no idle sweep, per-frame average or new updater.
+
+Mode/style/world/zone cleanup and clock regression discard the baseline.
+Performance Mode transitions retain it; original per-hit inputs qualify before
+both 75 ms duplicates and 300 ms sums, and a group only inherits amber from a
+qualifying member. A larger summed label alone never qualifies. Pooled label
+cleanup clears its derived flag; active color remains fixed. No drawing region,
+frame, asset, setting, SavedVariable or extra animation is added. The existing
+color write runs only when RGB changes. CI-only cases cover warmup, inclusive
+threshold, identity isolation, expiry, cleanup, bounds/reuse, original-hit
+preservation, grouping, mode transitions and non-Diablo behavior. These are
+source-level bounds, not measured memory, draw-call or FPS results.
 
 ## Static Heroic numerals — 2026-10-29
 
@@ -2024,6 +2078,21 @@ remain unverified.
 Six Layout groups add twenty editor-only center-edge marks: two horizontal for run timer, boss health, Revive, meter, Chat and guardians, plus two vertical for the four row views. Each is one existing native solid texture under the hidden shared handle, with no asset or additional controller. The two obsolete settings sliders and their four thumb/track textures are removed. **Show grid** uses one existing-style lazy editor checkbox; off hides the complete grid and guide parent and skips grid geometry sampling. Shift alignment still uses the existing active-drag calculations.
 
 Width lives in shared Layout geometry. Meter and guardian roots default to 240 and allow 120–960 without scaling row height, icons or fonts. Cached natural tracker text widths compress its columns safely; native health end caps retain their 50-unit combined span. Meter geometry caches width, font size, icon gutter and numeric-column count. Failed font changes remain retryable. Hidden/off views accept required edit bounds while deferring row/header/font/icon presentation. Meter resizing never enables native reads or packet intake while off.
+
+The selected-frame form lazily prepares one pooled native `OptionsSliderTemplate`
+width slider, including its track/thumb and three native captions, plus one
+current-width FontString. Both editors and all nine existing side-width groups
+reuse it. Unsupported selections hide the complete slider and remove its space;
+closing or leaving Layout hides its parent. There is no gameplay region, asset,
+updater or saved preference. The existing ten-Hz editor sample includes actual
+frame width in its changed-value cache, so direct grip resizing refreshes the
+slider even when scale stays fixed. Settled and hidden forms skip slider writes;
+range/value synchronization guards synchronous native callbacks. User changes
+reuse the owning resize callback and shared Layout draft. Normal and Performance
+Mode use the same instant width preview without added cosmetic animation.
+CI-only cases cover pooling, width limits, center/scale/height preservation,
+numeric validation, automatic sizing, profiles, discard and resets. They were not
+run locally; native rendering and input remain unverified.
 
 Row handles update normalized display drafts. DPS retains 1–10 rows; boss/guardian capacity defaults to the existing automatic full list, with explicit 1–40-slot viewports and session-only scroll offsets. Native snapshots remain complete. Only viewport rows are painted; retired rows clear health, debuffs and hovers before pooling. Boss debuffs preserve their icon dimensions and reanchor only when their width-derived column count changes. Chat keeps its existing native dimension and content ownership.
 

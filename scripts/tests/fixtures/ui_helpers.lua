@@ -259,6 +259,7 @@ function H.New()
     function dfrl:GetInfoOrCons() return "Interface\\AddOns\\SurvivorsDragonUi\\media\\tex\\" end
     function dfrl:NewMod(name, _, callback) context.modules[name] = callback end
     dfrl.tools.SetFont = function(object, size, flags) object:SetFont("DEFAULT_TEST", size, flags) end
+    dfrl.tools.GetDefaultFont = function() return "DEFAULT_TEST" end
     dfrl.locale.Text = function(value) return value end
     dfrl.locale.Listen = function(callback) table.insert(localeListeners, callback) end
     dfrl.display.Get = function(name) return context.settings[name] end
