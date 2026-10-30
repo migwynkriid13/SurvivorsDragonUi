@@ -71,7 +71,8 @@ filesystem persistence; they were not run locally.
 
 The full XP-controller fixture also covers default-off Show XP text, malformed
 saves, preview/Confirm/discard/profile/reset, lazy hidden preparation and label
-reuse, immediate native text during animated gains, toggles that preserve active
+reuse, compact current/required XP without a percentage, immediate native text
+during animated gains, toggles that preserve active
 animation, Performance Mode, level/world/invalid-data recovery, zero XP, unchanged
 caption writes and detached placement. The editor fixture exercises its actual
 Action bar checkbox. Coverage is CI-only; no local tests or game execution.

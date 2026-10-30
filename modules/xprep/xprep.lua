@@ -104,8 +104,7 @@ DFRL:NewMod("Xprep", 1, function()
         T.SetFont(xpText, 9, "OUTLINE")
         if not xpText:GetFont() then return end
         if xpText.current ~= previousXP or xpText.maximum ~= previousMaximum then
-            local percentage = math.floor(previousXP * 1000 / previousMaximum) / 10
-            T.SetTextIfChanged(xpText, string.format("%.0f / %.0f (%.1f%%)", previousXP, previousMaximum, percentage))
+            T.SetTextIfChanged(xpText, string.format("%.0f/%.0f", previousXP, previousMaximum))
             xpText.current, xpText.maximum = previousXP, previousMaximum
         end
         if not xpText:IsShown() then xpText:Show() end

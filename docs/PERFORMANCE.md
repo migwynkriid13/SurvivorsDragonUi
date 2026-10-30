@@ -1622,8 +1622,8 @@ melee/periodic and foreign-source cases without shared-result aliasing.
 ### XP fade geometry
 
 **Show XP text** under Action bar is default off and adds one reusable FontString
-only on the first enabled, visible, valid XP sample. It centers full current /
-required XP and a percentage floored to one decimal inside the existing bar's
+only on the first enabled, visible, valid XP sample. It centers full
+current/required XP, such as `5/25`, inside the existing bar's
 12-unit border area. Size 9 OUTLINE and the shared chat shadow follow the global
 Layout font choice. Attached and detached modes reuse the same label.
 

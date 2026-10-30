@@ -143,7 +143,7 @@ do
     env.DFRL.mainBar:Show()
     context:Call(controller, "OnUpdate", 0.01)
     local text = assert(XPLabel(), "XP text did not prepare on first visible preview")
-    assert(text:GetText() == "20 / 100 (20.0%)" and text:IsShown(), "XP text missed current native values")
+    assert(text:GetText() == "20/100" and text:IsShown(), "XP text missed current native values")
     assert(
         not env.SurvivorsDragonUiDisplay and not controller:GetScript("OnUpdate"),
         "text preview saved or added a worker"
@@ -170,7 +170,7 @@ do
         bar:GetValue() > 0.2 and bar:GetValue() < 0.6 and gain:IsShown() and spark:IsShown(),
         "normal XP gain did not animate"
     )
-    assert(text:GetText() == "60 / 100 (60.0%)", "XP text followed the animation instead of native XP")
+    assert(text:GetText() == "60/100", "XP text followed the animation instead of native XP")
     local progress, worker = bar:GetValue(), controller:GetScript("OnUpdate")
     display.BeginEdit()
     display.Set("xpShowText", false)
@@ -194,6 +194,7 @@ do
         bar:GetValue() == 0.8 and not gain:IsShown() and not spark:IsShown(),
         "Performance Mode did not use native XP immediately"
     )
+    assert(text:GetText() == "80/100", "Performance Mode changed the compact XP format")
     assert(
         not controller:GetScript("OnUpdate") and #context.objects == allocated,
         "static XP retained animation or allocated replacement artwork"
@@ -202,7 +203,7 @@ do
     context:Event(controller, "PLAYER_LEVEL_UP")
     context:Call(controller, "OnUpdate", 0.01)
     assert(bar:GetValue() == 0.1 and not gain:IsShown(), "Performance Mode replayed a level-wrap gain")
-    assert(text:GetText() == "10 / 100 (10.0%)", "level-up text retained the old level's XP")
+    assert(text:GetText() == "10/100", "level-up text retained the old level's XP")
     display.FinishEdit(false)
     assert(bar:GetValue() == 0.1 and not controller:GetScript("OnUpdate"), "Cancel replayed a suppressed XP gain")
     context.xp = 50
@@ -223,7 +224,7 @@ do
     context.level, context.xp, context.maximum = 3, 90, 200
     context:Event(controller, "PLAYER_ENTERING_WORLD")
     context:Call(controller, "OnUpdate", 0.01)
-    assert(text:GetText() == "90 / 200 (45.0%)" and text:IsVisible(), "world entry replayed stale XP text")
+    assert(text:GetText() == "90/200" and text:IsVisible(), "world entry replayed stale XP text")
     context:ResetCounts()
     context:Event(controller, "PLAYER_XP_UPDATE", "player")
     context:Call(controller, "OnUpdate", 0.01)
@@ -235,7 +236,7 @@ do
     context.maximum, context.xp = 200, 0
     context:Event(controller, "PLAYER_XP_UPDATE", "player")
     context:Call(controller, "OnUpdate", 0.01)
-    assert(text:GetText() == "0 / 200 (0.0%)" and text:IsVisible(), "zero XP or invalid-data recovery failed")
+    assert(text:GetText() == "0/200" and text:IsVisible(), "zero XP or invalid-data recovery failed")
     display.BeginEdit()
     display.Set("attachXP", false)
     assert(text:IsVisible() and #context.objects == textPoolSize, "detaching XP replaced or lost text")
