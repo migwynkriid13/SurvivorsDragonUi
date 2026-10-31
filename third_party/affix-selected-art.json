@@ -24,10 +24,20 @@
       "destination": [128, 0, 192, 64]
     }
   ],
-  "ring": {
-    "source": "media/tex/jewelry/Frame.blp",
-    "crop": [664, 56, 736, 128],
-    "vertex_color": [0.9294117647058824, 0.13725490196078433, 0.14901960784313725, 1]
+  "frame": {
+    "proposal": 2,
+    "title": "Minimap bevel",
+    "source": "media/tex/minimap/LauncherBackground.blp",
+    "canvas": [32, 32],
+    "crop": [0, 3, 29, 29],
+    "display_size": [25, 23],
+    "icon_size": [16, 16],
+    "gold_bounds": [4, 5, 27, 27],
+    "icon_center_offset": [0.8620689655172413, 0],
+    "gap": 5,
+    "layer": "BACKGROUND",
+    "source_commit": "e80e3278cc833c89e1f3fc79557b68315d750935",
+    "source_path": "BUTTONS/UI-SquareButton-Up.PNG"
   },
-  "sha256": "09a6a26a99a2e919fe562ad206b265ef3e74527539e1d4968539e92e748e6209"
+  "sha256": "188d73da868322d5340bf10bbb93012b388eed07f9cb4743eb0d3a58ede07c21"
 }

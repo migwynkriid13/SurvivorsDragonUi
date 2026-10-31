@@ -8,10 +8,11 @@ local function Test(name, callback)
     print("PASS " .. name)
 end
 
-local function Affixes()
+local function Affixes(performance)
     local c = H.New()
     local env = c.env
     c.settings.attachAffixes = true
+    c.settings.performanceMode = performance or false
     c.runWidth, c.bossWidth = 160, 90
     local create = c.Object
     function c:Object(...)
@@ -30,8 +31,16 @@ local function Affixes()
             c:Visibility()
         end
         local setPoint, setUV, setColor = object.SetPoint, object.SetTexCoord, object.SetVertexColor
+        local createTexture = object.CreateTexture
+        function object:CreateTexture(name, layer)
+            local texture = createTexture(self, name)
+            texture.layer = layer
+            return texture
+        end
         function object:SetPoint(...)
             self.point = { ... }
+            self.points = self.points or {}
+            self.points[self.point[1]] = self.point
             setPoint(self, ...)
         end
         function object:SetTexCoord(...)
@@ -91,6 +100,13 @@ local function Affixes()
     function env.runText:GetStringWidth() return c.runWidth end
     function env.bossText:GetStringWidth() return c.bossWidth end
     env.runMoveRegion = env.CreateFrame("Frame", nil, c.owner)
+    env.runBar, env.BAR_WIDTH = { layoutWidth = 280 }, 280
+    env.run.heroicLevel = {
+        Resize = function(_, width)
+            c.numeralRefreshes = (c.numeralRefreshes or 0) + 1
+            c.numeralCenter = c.view:FirstCenter(width)
+        end,
+    }
     c.view.onBounds = function()
         c.bounds = (c.bounds or 0) + 1
         api.Bounds()
@@ -108,30 +124,141 @@ local function Affixes()
     return c
 end
 
-Test("native order places icons left of the run text with the shadow-free rim and red tint", function()
+local function AssertInsideGold(row)
+    local icon, rim = row.icon, row.rim
+    assert(icon.point[1] == "CENTER" and icon.point[3] == "CENTER")
+    local x = row:GetWidth() / 2 + icon.point[4]
+    local y = row:GetHeight() / 2 - icon.point[5]
+    local sourceWidth = (rim.uv[2] - rim.uv[1]) * 32
+    local sourceHeight = (rim.uv[4] - rim.uv[3]) * 32
+    local left = rim.uv[1] * 32 + (x - icon:GetWidth() / 2) * sourceWidth / row:GetWidth()
+    local right = rim.uv[1] * 32 + (x + icon:GetWidth() / 2) * sourceWidth / row:GetWidth()
+    local top = rim.uv[3] * 32 + (y - icon:GetHeight() / 2) * sourceHeight / row:GetHeight()
+    local bottom = rim.uv[3] * 32 + (y + icon:GetHeight() / 2) * sourceHeight / row:GetHeight()
+    -- The source gold rails occupy x=4/26 and y=5/26. Keep every picture
+    -- strictly inside them, including the native unknown-key fallback.
+    assert(left > 5 and right < 26 and top > 6 and bottom < 26, "picture covers the gold rails")
+    assert(math.abs((left + right) / 2 - 15.5) < 0.000001, "picture follows shadow padding instead of the rim")
+    assert(math.abs((top + bottom) / 2 - 16) < 0.000001, "picture lost the rim's vertical center")
+end
+
+Test("the affix owner supplies the first visible opening center through placement and retirement", function()
+    for _, performance in ipairs({ false, true }) do
+        local c = Affixes(performance)
+        assert(c.view:FirstCenter(280) == nil, "empty row supplied a numeral anchor")
+        c:Publish("sanguine")
+        c:Update(true)
+        local first, objects = c.view.rows[1], #c.objects
+        local expected = 18 + 12.5 + 25 / 29 - 8
+        assert(math.abs(c.view:FirstCenter(280) - expected) < 0.000001, "first opening followed its shadow padding")
+        assert(math.abs(c.numeralCenter - expected) < 0.000001, "first publication did not refresh the numeral")
+        c:ResetCounts()
+        c.refreshBounds()
+        c.refreshBounds()
+        c:NoPresentationWrites()
+        c:Publish("sanguine,explosive")
+        c:Update(true)
+        expected = 5 + 12.5 + 25 / 29 - 8
+        assert(math.abs(c.view:FirstCenter(280) - expected) < 0.000001, "row growth lost the first opening")
+        c.env.bossClock.visible = true
+        c.refreshBounds()
+        expected = (296 - 55) / 2 + 12.5 + 25 / 29 - 8
+        assert(math.abs(c.view:FirstCenter(280) - expected) < 0.000001, "two captions used a stale left anchor")
+        assert(math.abs(c.numeralCenter - expected) < 0.000001, "caption placement did not refresh the numeral")
+        c.owner:SetWidth(576)
+        c.env.runBar.layoutWidth = 560
+        c.refreshBounds()
+        expected = (576 - 55) / 2 + 12.5 + 25 / 29 - 8
+        assert(math.abs(c.view:FirstCenter(560) - expected) < 0.000001, "resize lost the bar's left inset")
+        c.settings.attachAffixes = false
+        c:Update(true)
+        assert(c.view.root:IsVisible() and c.view:FirstCenter(560) == nil and c.numeralCenter == nil)
+        c.settings.attachAffixes = true
+        c:Update(true)
+        assert(math.abs(c.view:FirstCenter(560) - expected) < 0.000001, "reattachment lost current alignment")
+        c.owner:Hide()
+        c:ResetCounts()
+        assert(c.view:FirstCenter(560) == nil, "hidden affixes supplied a stale alignment")
+        c:NoPresentationWrites()
+        c.owner:Show()
+        c:Update(true)
+        assert(c.view.rows[1] == first and #c.objects == objects + 3, "alignment changes rebuilt affix artwork")
+        c.view:Clear(true)
+        assert(c.view:FirstCenter(560) == nil and c.numeralCenter == nil, "retirement retained first-affix geometry")
+    end
+end)
+
+Test("same-width readiness changes refresh the first affix anchor without replay or reallocation", function()
+    local c = Affixes()
+    c:Publish("sanguine")
+    c:Update(true)
+    local expected, first, objects = c.view:FirstCenter(280), c.view.rows[1], #c.objects
+    local refreshes = c.numeralRefreshes
+    c.failTexture = "Interface\\TargetingFrame\\UI-TargetingFrame-Skull"
+    c:Publish("future_affix")
+    c:Update(true)
+    assert(c.view.width == 25 and c.view:FirstCenter(280) == nil and c.numeralCenter == nil)
+    assert(c.numeralRefreshes == refreshes + 1, "failed first artwork did not retire alignment")
+    c:ResetCounts()
+    c:Update(false)
+    c:NoPresentationWrites()
+    assert(c.numeralRefreshes == refreshes + 1, "settled missing artwork repeatedly refreshed placement")
+    c.failTexture = nil
+    c:Update(true)
+    assert(c.view.rows[1] == first and #c.objects == objects, "retry rebuilt the first affix")
+    assert(c.numeralRefreshes == refreshes + 2, "ready first artwork did not restore alignment")
+    assert(math.abs(c.view:FirstCenter(280) - expected) < 0.000001 and c.numeralCenter == expected)
+end)
+
+Test("native order places square icons inside the exact gold minimap bevel beside the run text", function()
     local c = Affixes()
     local objects = #c.objects
     assert(c.view.count == 0 and #c.view.rows == 0, "construction allocated affix artwork")
     c:Publish("sanguine,explosive")
     c:Update(true)
-    assert(c.view.count == 2 and c.view.width == 49)
+    assert(c.view.count == 2 and c.view.width == 55 and c.view.height == 23)
+    assert(c.view.root:GetHeight() == 23 and c.view.detached:GetHeight() == 23)
     assert(#c.objects == objects + 6, "each affix must add one hover frame and two textures")
     local first, second = c.view.rows[1], c.view.rows[2]
     assert(first.key == "sanguine" and second.key == "explosive", "native affix order changed")
     assert(
-        first.point[4] == 0 and second.point[4] == 27 and first.point[5] == 0,
+        first.point[4] == 0 and second.point[4] == 30 and first.point[5] == 0,
         "icon spacing or native order changed"
     )
     assert(
         c.view.root.point[1] == "BOTTOMLEFT"
             and c.view.root.point[3] == "TOPLEFT"
-            and c.view.root.point[4] == 11
-            and c.view.root.point[5] == -2,
+            and c.view.root.point[4] == 5
+            and c.view.root.point[5] == -2.5,
         "attached icons are not inset with their center aligned to the caption"
     )
-    assert(first.rim.uv[1] == 576 / 1024 and first.rim.uv[2] == 648 / 1024, "rim differs from the shadow-free crop")
-    assert(first.rim.color[1] == 237 / 255 and first.rim.color[2] == 35 / 255 and first.rim.color[3] == 38 / 255)
+    assert(first:GetWidth() == 25 and first:GetHeight() == 23, "hover bounds lost the selected frame geometry")
+    assert(first.icon:GetWidth() == 16 and first.icon:GetHeight() == 16)
+    assert(first.icon.point[1] == "CENTER" and first.icon.point[4] == 25 / 29 and first.icon.point[5] == 0)
+    assert(first.rim:GetWidth() == 25 and first.rim:GetHeight() == 23)
+    assert(first.rim.layer == "BACKGROUND" and first.icon.layer == "ARTWORK", "opaque bevel covers the icon")
+    assert(
+        first.rim:GetTexture() == "Interface\\AddOns\\SurvivorsDragonUi\\media\\tex\\minimap\\LauncherBackground.blp",
+        "affixes do not share the existing minimap button artwork"
+    )
+    assert(
+        first.rim.uv[1] == 0 and first.rim.uv[2] == 29 / 32 and first.rim.uv[3] == 3 / 32 and first.rim.uv[4] == 29 / 32,
+        "bevel crop lost source pixels or included transparent canvas padding"
+    )
+    AssertInsideGold(first)
+    AssertInsideGold(second)
+    assert(
+        not first.rim.color
+            or (
+                first.rim.color[1] == 1
+                and first.rim.color[2] == 1
+                and first.rim.color[3] == 1
+                and (first.rim.color[4] == nil or first.rim.color[4] == 1)
+            ),
+        "gold source artwork retained a rarity or red tint"
+    )
     assert(first.icon.uv[1] == 64 / 256 and second.icon.uv[1] == 128 / 256)
+    assert(c.env.runMoveRegion.points.TOPLEFT[5] == 20.5, "edit bounds clip the taller bevel")
     c:ResetCounts()
     c:Update(true)
     c:NoPresentationWrites()
@@ -149,7 +276,7 @@ Test("both captions center the attached row and reserve a gap even with wide lab
     c:Update(true)
     local root, runLabel, bossLabel = c.view.root, c.env.runText, c.env.bossText
     assert(
-        root.point[1] == "BOTTOM" and root.point[3] == "TOP" and root.point[4] == 0 and root.point[5] == -2,
+        root.point[1] == "BOTTOM" and root.point[3] == "TOP" and root.point[4] == 0 and root.point[5] == -2.5,
         "two captions did not center the affixes horizontally and vertically"
     )
     local first = (296 - c.view.width) / 2
@@ -166,6 +293,10 @@ Test("both captions center the attached row and reserve a gap even with wide lab
         "single caption did not restore left placement"
     )
     assert(root.point[4] + c.view.width <= (296 - c.runWidth) / 2 - 8, "wide run text overlaps left affixes")
+    c.env.runClock.visible = false
+    c.refreshBounds()
+    assert(root.point[5] == 2, "no-caption placement retained a stale caption height")
+    assert(c.env.runMoveRegion.points.TOPLEFT[5] == 25, "no-caption edit bounds clip the taller square row")
 end)
 
 Test("detached geometry survives reattachment and stays visible independently of the run timer", function()
@@ -286,6 +417,20 @@ Test("unknown keys retain native order and labels without borrowing a known affi
     assert(c.view.count == 2 and c.view.rows[1].title == "future_affix" and c.view.rows[1].hint == nil)
     assert(c.view.rows[1].icon:GetTexture() == "Interface\\TargetingFrame\\UI-TargetingFrame-Skull")
     assert(c.view.rows[2].key == "bolstering", "unknown native key was dropped or reordered")
+    local first, objects = c.view.rows[1], #c.objects
+    c:Publish("sanguine,bolstering")
+    c:Update(true)
+    assert(c.view.rows[1] == first and first.icon.uv[1] == 64 / 256, "known artwork did not reuse the square pool")
+    c:Publish("future_affix")
+    c:Update(true)
+    assert(first.icon:GetTexture() == "Interface\\TargetingFrame\\UI-TargetingFrame-Skull")
+    assert(
+        first.icon.uv[1] == 0 and first.icon.uv[2] == 1 and first.icon.uv[3] == 0 and first.icon.uv[4] == 1,
+        "unknown fallback retained a known icon's atlas crop"
+    )
+    assert(first.icon:GetWidth() == 16 and first.icon:GetHeight() == 16)
+    assert(first.rim.layer == "BACKGROUND" and #c.objects == objects)
+    AssertInsideGold(first)
 end)
 
 Test("retirement blocks retained tables and a fresh same-table receipt reopens the current snapshot", function()
@@ -310,19 +455,36 @@ Test("retirement blocks retained tables and a fresh same-table receipt reopens t
 end)
 
 Test("failed artwork retries only on the existing retry cadence and reuses successful bindings", function()
-    local c = Affixes()
-    c:Publish("bolstering")
-    c.failTexture = "Interface\\AddOns\\SurvivorsDragonUi\\media\\tex\\timer\\Affixes.blp"
-    c:Update(true)
-    assert(c.view.retry and not c.view.rows[1]:IsShown(), "partial artwork became visible")
-    local objects = #c.objects
-    c:ResetCounts()
-    c:Update(false)
-    c:NoPresentationWrites()
-    c.failTexture = nil
-    c:Update(true)
-    assert(not c.view.retry and c.view.rows[1]:IsShown() and #c.objects == objects)
-    assert(c.writes.SetTexture == 1, "retry rebound the successful jewelry rim")
+    for _, path in ipairs({ "timer\\Affixes.blp", "minimap\\LauncherBackground.blp" }) do
+        local c = Affixes()
+        c:Publish("bolstering")
+        c.failTexture = "Interface\\AddOns\\SurvivorsDragonUi\\media\\tex\\" .. path
+        c:Update(true)
+        assert(c.view.retry and not c.view.rows[1]:IsShown(), "partial artwork became visible")
+        local objects = #c.objects
+        c:ResetCounts()
+        c:Update(false)
+        c:NoPresentationWrites()
+        c.failTexture = nil
+        c:Update(true)
+        assert(not c.view.retry and c.view.rows[1]:IsShown() and #c.objects == objects)
+        assert(c.writes.SetTexture == 1, "retry rebound the other successful square artwork binding")
+    end
+end)
+
+Test("both Performance Mode states keep the same static bevel without additional work", function()
+    for _, performance in ipairs({ false, true }) do
+        local c = Affixes(performance)
+        c:Publish("bolstering,sanguine,explosive")
+        c:Update(true)
+        local objects = #c.objects
+        assert(c.view.width == 85 and c.view.height == 23 and c.view.rows[3].point[4] == 60)
+        c.settings.performanceMode = not performance
+        c:ResetCounts()
+        c:Update(true)
+        c:NoPresentationWrites()
+        assert(#c.objects == objects and c.view.rows[1]:IsShown(), "mode change rebuilt or hid static affixes")
+    end
 end)
 
 Test("shared hovers obey editing/hiding and cleanup never hides a foreign tooltip", function()

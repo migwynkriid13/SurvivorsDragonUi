@@ -695,8 +695,12 @@ same mode controls fill without changing native elapsed time or inferring
 Endless from the duration. Pending publications retain no old rank or mode.
 
 `ui_run_numerals_spec.lua` exercises the extracted static numeral renderer:
-I–X selection, invalid-rank retirement, hidden lazy allocation, one-minute and
-width geometry, unchanged writes, binding retries and Performance Mode.
+I–X selection, invalid-rank retirement, hidden lazy allocation, vertical
+centering of the visible lettering and alignment under the first attached
+affix's gold opening. The 9.375% position remains the fallback for absent,
+hidden, detached or unready affixes. Cases include width/cap geometry,
+unchanged anchors across positive native durations including a sub-minute
+zone, binding retries and Performance Mode.
 Clock-progress cases check the native rank handshake and hidden sample gate;
 affix cases check rank acceptance without an affix list or visible affix row.
 These CI-only scenarios were authored without local execution and do not prove
@@ -704,10 +708,18 @@ Bildad rendering, BLP decoding or native layering in game.
 
 `ui_run_affixes_spec.lua` uses the extracted production `CreateRunAffixes`
 factory, shared tooltip registry and generated native captions against fake
-widgets/snapshots. Scenarios cover ordered centering, the exact neutral
-jewelry crop and red tint, hidden/unchanged work, missing or non-Heroic data,
-unknown keys, receipt retirement, retry cadence, pool reuse, editing/Tooltip
-visibility, foreign ownership and all fourteen native name/description sets.
+widgets/snapshots. Scenarios cover ordered placement, the selected 25-by-23
+gold minimap bevel and exact normal-state crop, the 16-square icon above its
+background layer, its measured rightward correction, source-coordinate bounds
+strictly inside the gold rails for both known and unknown pictures, untinted
+artwork, caption/edit bounds, first-opening coordinates for one/two captions,
+row growth, resize, attachment, hidden retirement and same-width readiness
+transitions, and shared static
+behavior in both Performance Mode states. Hidden/unchanged work, missing or
+non-Heroic data, unknown-key/known-icon reuse, receipt retirement, separate
+icon/background binding failures, retry cadence, pool reuse, editing/Tooltip
+visibility, foreign ownership and all fourteen native name/description sets
+retain CI-only coverage.
 The existing required job runs the fixture; it is not shipped or run locally.
 This isolates the view boundary, rather than executing the full timer/game or
 proving native packet delivery and appearance.

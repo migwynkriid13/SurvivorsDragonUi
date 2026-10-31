@@ -213,11 +213,22 @@ lossless BLP atlas, with a baked dark outline and a tier-specific vertex tint.
 The TGA is an authoring source only; no font is installed or shipped. Source
 and licensing are in [HeroicNumerals-ARTWORK.md](../third_party/HeroicNumerals-ARTWORK.md).
 
-Rank/UV/tint and binding caches skip unchanged native writes. Position follows
-the actual fill width and received run duration, using the one-minute point
-with cap protection for narrow bars. Layout resizing reanchors the already
+Rank/UV/tint and binding caches skip unchanged native writes. The numeral uses
+the first visible attached affix's picture/gold-opening center, supplied by the
+affix owner from its existing row width, inset and cached anchor. A quarter-unit
+downward correction centers visible ink inside the pill. Detached, hidden,
+empty or unready rows retain the **9.375%** fallback (`width * 3 / 32`), equivalent
+to 1:30 of a 16:00 zone. Cap protection remains for narrow bars. A valid positive
+native duration remains an acceptance gate; duration changes do not move the
+marker or trigger another position write. Layout resizing reanchors the already
 accepted rank without another gameplay read. Lazy bindings retry on the
-existing ten-Hz/deferred sample; no per-frame numeral update is added.
+existing ten-Hz/deferred sample; no per-frame numeral update is added. Existing
+caption/Layout bounds work also refreshes the anchor after affix placement;
+first-row readiness changes use the same callback. The provider reads only
+existing native frame visibility/width and cached local geometry, without
+screen-coordinate sampling, gameplay reads or another updater. Changed-only
+position writes include both coordinates and run before the bounds cache's
+early return, so a row can move while the outer edit bounds remain unchanged.
 
 Live acceptance shares the affix view's numeric-rank, publication-stamp,
 receipt and retirement gates while remaining independent of affix artwork or
@@ -228,7 +239,8 @@ retains the exact static marker with no animation work in either mode. There
 is no added event, updater, setting or SavedVariable.
 
 CI-only source-extracted mocks cover rank acceptance and retirement, I–X
-selection, hidden lazy allocation, unchanged-write suppression, width changes,
+selection, hidden lazy allocation, unchanged-write suppression, attached-affix
+alignment and percentage fallback across native durations, width changes,
 binding failures/retry and the static Performance Mode path. These are source
 contracts, not live appearance or GPU measurements. Local tests, standalone
 validation and addon/game execution were not run.
@@ -2989,7 +3001,7 @@ formatting do not establish live behavior, drawing submissions or FPS/GPU gains.
 
 ## Heroic affix row — 2026-10-28
 
-The selected #04 affix row shares the run timer's existing phase-first reader,
+The selected #04 pictures with #02 Minimap bevel frames share the run timer's existing phase-first reader,
 zone/run receipt handshake, deferred packet handling and tenth-second retry
 gate. It adds no event registration, updater, animation, setting or saved state.
 A visible accepted zone snapshot is parsed only when its identity, receipt,
@@ -3002,27 +3014,32 @@ inherits native visibility and the shared tooltip registry's cleanup.
 Each represented kind lazily allocates one mouse-enabled hover frame and two
 Texture regions, with no FontString. The chosen three kinds therefore cost at
 most three frames and six visible textures when all three are actually
-published. Frame and rim diameter is 22 units; the icon is `22 * 34 / 39`, with
-five-unit gaps and a three-unit offset below the bar. The existing Layout
-region adds the row's 25-unit vertical inset and includes any horizontal
-overflow without changing the saved timer geometry. Frames and successful
-artwork bindings remain pooled across publications and toggles.
-The same count/bounds transition refreshes only the default boss placement,
-reserving 33 units for the row and first boss caption; saved/draft positions
-remain authoritative. There is no per-frame placement or new layout polling.
+published. Each frame/background is 25 by 23 units around a 16-square picture,
+with five-unit gaps. Existing caption/attachment placement includes horizontal
+overflow and uses the affix view's own height for attached Layout bounds,
+without changing saved geometry. Frames and successful artwork bindings remain
+pooled across publications and toggles. There is no per-frame placement or new
+layout polling. Normal and Performance Mode use the same static frame. The
+picture's one-time `25/29`-unit right inset correction aligns with the gold
+opening rather than the source canvas's uneven shadow padding. Smaller icons
+keep every gold rail visible without another overlay, mask, crop or region.
 
-One new 256-by-64 lossless BLP atlas holds the three circular icons. Each icon
-uses its fixed 64-square UV cell; the red rim reuses the neutral jewelry crop
-at `(664,56)-(736,128)` in the existing atlas and the same native RGB tint
-path as jewelry. There is no native-circle call, strip fallback, changing UV
-animation or extra per-icon glow. Icon/rim alpha overlap, small persistent
-regions, texture/material differences and distinct UV clamps retain their
-normal renderer costs. Sharing an atlas does not establish batching or reduced
-draw submissions. No GPU-memory, live FPS or pixel-parity result is claimed.
+The existing 256-by-64 lossless BLP atlas now holds three square icons in the
+same fixed 64-square UV cells. The second region reuses the existing
+`minimap/LauncherBackground.blp` normal-state crop `(0,3)-(29,29)` on its
+32-square canvas, with unchanged source RGB/alpha and no vertex tint. It sits
+on BACKGROUND beneath the ARTWORK icon. The selection adds no texture region,
+frame, source download or runtime asset; the existing affix atlas is regenerated
+without a circle mask. There is no native-circle call, strip fallback, changing
+UV animation or extra glow. Icon/background overlap, the slightly wider
+persistent footprint, different texture materials and distinct UV clamps retain
+their normal renderer costs. Reusing an image does not establish batching or
+reduced draw submissions. No GPU-memory, live FPS or pixel-parity result is claimed.
 
-Eight CI-only scenarios extract the actual affix-view factory and use the
+CI-only scenarios extract the actual affix-view factory and use the
 production tooltip registry with explicit fake native widgets. They cover
-order/centering, exact rim crop/tint, unchanged and hidden work, malformed and
+order/centering, the exact gold background crop/layer and frame/icon geometry,
+attached Layout bounds, unchanged and hidden work, malformed and
 unknown keys, receipt retirement, asset failure cadence, pooling, owned/foreign
 hover cleanup and all fourteen native name/description catalogs. The parent
 timer's event integration was source-reviewed; these mocks do not establish

@@ -45,7 +45,8 @@ DFRL:NewMod("RunTimers", 5, function()
     end
 
     local function CreateRunAffixes(owner)
-        local size, gap = 22, 5
+        local rowWidth, rowHeight, iconSize, gap = 25, 23, 16, 5
+        local iconOffsetX = rowWidth / 29
         local definitions = {
             bolstering = {
                 name = "Bolstering",
@@ -65,17 +66,17 @@ DFRL:NewMod("RunTimers", 5, function()
         }
         -- Affix artwork copyright Blizzard Entertainment; third_party/HeroicAffixes-ARTWORK.md.
         local atlas = path .. "Affixes.blp"
-        local rimPath = DFRL:GetInfoOrCons("tex") .. "jewelry\\Frame.blp"
-        local view = { rows = {}, keys = {}, seen = {}, count = 0, width = 0, received = 0 }
+        local rimPath = DFRL:GetInfoOrCons("tex") .. "minimap\\LauncherBackground.blp"
+        local view = { rows = {}, keys = {}, seen = {}, count = 0, width = 0, height = rowHeight, received = 0 }
         local detached = CreateFrame("Frame", nil, UIParent)
-        detached:SetWidth(size * 3 + gap * 2)
-        detached:SetHeight(size)
+        detached:SetWidth(rowWidth * 3 + gap * 2)
+        detached:SetHeight(rowHeight)
         detached:SetFrameStrata("HIGH")
         detached:EnableMouse(false)
         detached:Hide()
         local root = CreateFrame("Frame", nil, owner)
-        root:SetWidth(size * 3 + gap * 2)
-        root:SetHeight(size)
+        root:SetWidth(rowWidth * 3 + gap * 2)
+        root:SetHeight(rowHeight)
         root:EnableMouse(false)
         root:Hide()
         view.root, view.detached = root, detached
@@ -87,6 +88,26 @@ DFRL:NewMod("RunTimers", 5, function()
                 return IsNumber(ratio) and ratio > 0 and self.width * ratio or 0
             end
             return 0
+        end
+        function view:FirstCenter(fillWidth)
+            if not self.attached or not self.rows[1] or not self.rows[1].active or not root:IsVisible() then return end
+            local frameWidth, x = owner:GetWidth(), root.affixX
+            if
+                not IsNumber(frameWidth)
+                or frameWidth <= 0
+                or not IsNumber(fillWidth)
+                or fillWidth <= 0
+                or type(x) ~= "number"
+                or x - x ~= 0
+            then
+                return
+            end
+            if root.affixPoint == "BOTTOM" then
+                x = x + (frameWidth - self.width) / 2
+            elseif root.affixPoint ~= "BOTTOMLEFT" then
+                return
+            end
+            return x + rowWidth / 2 + iconOffsetX - (frameWidth - fillWidth) / 2
         end
         function view:Anchor(frame, force)
             local ratio = owner:GetEffectiveScale() / frame:GetEffectiveScale()
@@ -102,7 +123,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 x = x * ratio
             end
             local y = 2 * ratio
-            if attached then y = (2 + ((self.captionHeight or size) - size) / 2) * ratio end
+            if attached then y = (2 + ((self.captionHeight or rowHeight) - rowHeight) / 2) * ratio end
             if
                 force
                 or frame.affixPoint ~= point
@@ -217,20 +238,21 @@ DFRL:NewMod("RunTimers", 5, function()
             local row = view.rows[index]
             if row then return row end
             row = CreateFrame("Frame", nil, root)
-            row:SetWidth(size)
-            row:SetHeight(size)
+            row:SetWidth(rowWidth)
+            row:SetHeight(rowHeight)
             row:EnableMouse(false)
             row:Hide()
             row.icon = row:CreateTexture(nil, "ARTWORK")
-            row.icon:SetWidth(size * 34 / 39)
-            row.icon:SetHeight(size * 34 / 39)
-            row.icon:SetPoint("CENTER", row, "CENTER", 0, 0)
-            row.rim = row:CreateTexture(nil, "OVERLAY")
-            row.rim:SetWidth(size)
-            row.rim:SetHeight(size)
+            row.icon:SetWidth(iconSize)
+            row.icon:SetHeight(iconSize)
+            -- The gold opening is one source pixel right of the cropped
+            -- canvas center; its left-side shadow is wider than the right.
+            row.icon:SetPoint("CENTER", row, "CENTER", iconOffsetX, 0)
+            row.rim = row:CreateTexture(nil, "BACKGROUND")
+            row.rim:SetWidth(rowWidth)
+            row.rim:SetHeight(rowHeight)
             row.rim:SetPoint("CENTER", row, "CENTER", 0, 0)
-            row.rim:SetTexCoord(576 / 1024, 648 / 1024, 56 / 256, 128 / 256)
-            row.rim:SetVertexColor(237 / 255, 35 / 255, 38 / 255, 1)
+            row.rim:SetTexCoord(0, 29 / 32, 3 / 32, 29 / 32)
             row:SetScript("OnEnter", function() ShowHover(row) end)
             row:SetScript("OnLeave", function() HideHover(row) end)
             T.RegisterTooltipIcon(row, row.icon, "below")
@@ -328,11 +350,11 @@ DFRL:NewMod("RunTimers", 5, function()
             for index = count + 1, self.count do
                 self.keys[index] = nil
             end
-            local width = count > 0 and count * size + (count - 1) * gap or 0
+            local width = count > 0 and count * rowWidth + (count - 1) * gap or 0
             local boundsChanged = self.width ~= width
             self.count, self.width = count, width
             if boundsChanged then
-                local frameWidth = math.max(size, width)
+                local frameWidth = math.max(rowWidth, width)
                 if not T.NearlyEqual(root:GetWidth(), frameWidth) then root:SetWidth(frameWidth) end
                 if not T.NearlyEqual(detached:GetWidth(), frameWidth) then detached:SetWidth(frameWidth) end
                 self:Place()
@@ -343,6 +365,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 root:Hide()
             end
             self.retry = false
+            local firstActive = self.rows[1] and self.rows[1].active or false
             for index = 1, count do
                 local key = self.keys[index]
                 local definition = definitions[key]
@@ -353,7 +376,7 @@ DFRL:NewMod("RunTimers", 5, function()
                     HideHover(row)
                     row.key, row.title, row.hint = key, title, hint
                 end
-                local x = (index - 1) * (size + gap)
+                local x = (index - 1) * (rowWidth + gap)
                 if row.x ~= x then
                     row:ClearAllPoints()
                     row:SetPoint("LEFT", root, "LEFT", x, 0)
@@ -383,7 +406,9 @@ DFRL:NewMod("RunTimers", 5, function()
             end
             self.packet, self.stamp, self.acceptedReceived = packet, stamp, self.received
             self.text, self.language, self.presentationDirty = packet.affixes, language, false
-            if boundsChanged and self.onBounds then self.onBounds() end
+            if self.onBounds and (boundsChanged or firstActive ~= (self.rows[1] and self.rows[1].active or false)) then
+                self.onBounds()
+            end
         end
         view:SyncAttachment()
         return view
@@ -478,7 +503,7 @@ DFRL:NewMod("RunTimers", 5, function()
         { 1, 0.1, 0.08 },
     }
 
-    local function NewHeroicNumeral(bar, border)
+    local function NewHeroicNumeral(bar, border, affixes)
         local view = {}
         -- Bildad I/V/X raster artwork; personal-use notice in timer/LICENSE.txt.
         local atlas = path .. "HeroicNumerals.blp"
@@ -488,12 +513,16 @@ DFRL:NewMod("RunTimers", 5, function()
         end
         function view:Resize(width)
             if not self.rank or not self.texture or not border:IsVisible() then return end
-            -- Keep the whole 32-unit cell inside exceptionally narrow/short bars.
-            local x = math.max(16, math.min(width - 16, width * 60 / self.maximum))
-            if not T.NearlyEqual(self.x, x) then
+            local center = affixes and affixes:FirstCenter(width)
+            if type(center) ~= "number" or center - center ~= 0 then center = width * 3 / 32 end
+            -- Keep the whole 32-unit cell inside exceptionally narrow bars.
+            local x = math.max(16, math.min(width - 16, center))
+            -- The visible glyph sits one source pixel above its cell center.
+            local y = -0.25
+            if not T.NearlyEqual(self.x, x) or self.y ~= y then
                 self.texture:ClearAllPoints()
-                self.texture:SetPoint("CENTER", bar, "LEFT", x, 0)
-                self.x = x
+                self.texture:SetPoint("CENTER", bar, "LEFT", x, y)
+                self.x, self.y = x, y
             end
         end
         function view:Update(rank, maximum, width)
@@ -503,7 +532,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 or rank > 10
                 or rank ~= math.floor(rank)
                 or not IsNumber(maximum)
-                or maximum < 60
+                or maximum <= 0
                 or not IsNumber(width)
                 or width < 32
             then
@@ -1108,7 +1137,7 @@ DFRL:NewMod("RunTimers", 5, function()
 
     local run, runBar, runText, overlay = Pill("DFRL_RunTimerPill", "FillBlue")
     run.affixes = CreateRunAffixes(run)
-    run.heroicLevel = NewHeroicNumeral(runBar, overlay)
+    run.heroicLevel = NewHeroicNumeral(runBar, overlay, run.affixes)
     local bossText = overlay:CreateFontString(nil, "OVERLAY")
     T.SetFont(bossText, 14, "OUTLINE")
     bossText:SetTextColor(1, 1, 1)
@@ -1442,7 +1471,7 @@ DFRL:NewMod("RunTimers", 5, function()
             bossClock.visible and (bossText:GetHeight() or 0) or 0
         )
         if captionHeight <= 0 then
-            captionHeight = (runClock.visible or bossClock.visible) and currentFont.size or 22
+            captionHeight = (runClock.visible or bossClock.visible) and currentFont.size or run.affixes.height
         end
         local frameWidth = run:GetWidth()
         local overflow = math.max(0, (math.max(width, bossWidth) + 8 - frameWidth) / 2)
@@ -1464,7 +1493,7 @@ DFRL:NewMod("RunTimers", 5, function()
         local top = (runClock.visible or bossClock.visible) and currentFont.size + 4 or 0
         local leftOverflow, rightOverflow = overflow, overflow
         if run.affixes.attached and run.affixes.width > 0 then
-            top = math.max(top, 2 + (captionHeight + 22) / 2)
+            top = math.max(top, 2 + (captionHeight + run.affixes.height) / 2)
             if runClock.visible and bossClock.visible then
                 leftOverflow = math.max(leftOverflow, (run.affixes.width - frameWidth) / 2)
                 rightOverflow = math.max(rightOverflow, (run.affixes.width - frameWidth) / 2)
@@ -1474,6 +1503,7 @@ DFRL:NewMod("RunTimers", 5, function()
             end
         end
         run.affixes:Context(runClock.visible, bossClock.visible, math.max(width, bossWidth), captionHeight)
+        if run.heroicLevel then run.heroicLevel:Resize(runBar.layoutWidth or BAR_WIDTH) end
         local bounds = runClock.bounds or {}
         runClock.bounds = bounds
         local both = runClock.visible and bossClock.visible and true or false
@@ -2898,7 +2928,6 @@ DFRL:NewMod("RunTimers", 5, function()
         onEdit = EditRunFont,
         onResize = function()
             runBar.layoutWidth = run:GetWidth() - 16
-            run.heroicLevel:Resize(runBar.layoutWidth)
             RefreshClockLabel(runClock)
             RefreshClockLabel(bossClock)
             UpdateRunFontBounds()
