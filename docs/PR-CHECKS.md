@@ -76,6 +76,10 @@ over explicit native boundaries. Search only navigates to existing controls;
 these CI-only cases do not establish in-game glyph fit or native scrolling.
 They were not run locally.
 
+SCT font-choice cases use real display notifications to check both buttons'
+selected and native highlight states when switching in either direction, plus
+unchanged clicks, hidden presentation and Cancel restoration.
+
 Profile-save cases exercise the production Layout/Display/Profiles transaction
 with fake native geometry and font/SCT owner boundaries. They cover save and
 overwrite closing through one shared commit, Enter, pending numeric input,

@@ -450,7 +450,10 @@ and explicit width/height changes are the only refresh sources. Hiding clears
 input/hover state, while subsequent hidden changes defer painting until Show.
 Normal and Performance Mode use the same static artwork. The CI-only editor
 fixture covers press/leave/hide recovery, native disabled values, retained click
-callbacks, selected choices, narrow/resized caps and unchanged/hidden work. It is
+callbacks, mutually exclusive SCT font choices through the existing display
+listener, narrow/resized caps and unchanged/hidden work. Display changes refresh
+SCT selectors alongside the other visible controls, without a new listener or
+worker; unchanged button states skip writes. The fixture is
 not run locally and establishes no native rendering or FPS result.
 
 The CI-only editor fixture loads the production factory with explicit native

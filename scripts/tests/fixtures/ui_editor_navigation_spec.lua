@@ -832,25 +832,65 @@ assert(pages.combat:GetHeight() >= 532, "abbreviation clipped the final damage f
 assert(display.Get("sctShortNumbers") == false, "abbreviation was enabled by default")
 context:Call(env.displayControls.sctShortNumbers, "OnClick")
 assert(display.Get("sctShortNumbers") and not env.SurvivorsDragonUiDisplay, "abbreviation did not preview")
-assert(dialog.sctFontButtons.default.editorSelected, "the game font is not the default")
-context:Call(dialog.sctFontButtons.diablo, "OnClick")
-editor.SCT()
-assert(display.Get("sctFont") == "diablo" and dialog.sctFontButtons.diablo.editorSelected, "font did not preview")
-assert(dialog.sctStyleButtons.enemy.editorSelected, "the original enemy style is not selected by default")
+local function AssertSctFont(selected)
+    assert(display.Get("sctFont") == selected, "font did not preview through the existing display transaction")
+    for value, button in pairs(dialog.sctFontButtons) do
+        assert(button.editorSelected == (value == selected), "font selection left the other choice selected")
+        assert(button.highlightLocked == (value == selected), "font selection left the other native highlight locked")
+    end
+    assert(not env.SurvivorsDragonUiDisplay, "font choice saved before Confirm")
+end
+local function AssertSctStyle(selected)
+    assert(display.Get("sctStyle") == selected, "style did not preview through the existing display transaction")
+    for value, button in pairs(dialog.sctStyleButtons) do
+        assert(button.editorSelected == (value == selected), "style selection left another choice selected")
+        assert(button.highlightLocked == (value == selected), "style selection left another native highlight locked")
+    end
+end
+AssertSctFont("default")
+local sctObjects = #context.objects
+for _, performance in ipairs({ false, true }) do
+    display.Set("performanceMode", performance)
+    for _, font in ipairs({ "default", "diablo", "default", "diablo" }) do
+        context:Call(dialog.sctFontButtons[font], "OnClick")
+        AssertSctFont(font)
+    end
+    local defaultLocks = dialog.sctFontButtons.default.lockWrites
+    local diabloLocks = dialog.sctFontButtons.diablo.lockWrites
+    context:ResetCounts()
+    context:Call(dialog.sctFontButtons.diablo, "OnClick")
+    AssertSctFont("diablo")
+    context:NoPresentationWrites()
+    assert(
+        dialog.sctFontButtons.default.lockWrites == defaultLocks
+            and dialog.sctFontButtons.diablo.lockWrites == diabloLocks,
+        "clicking the selected font repeated native highlight writes"
+    )
+    dialog:Hide()
+    context:ResetCounts()
+    display.Set("sctFont", "default")
+    assert(
+        dialog.sctFontButtons.diablo.editorSelected and not dialog.sctFontButtons.default.editorSelected,
+        "hidden font change performed deferred presentation"
+    )
+    assert(
+        not dialog.sctFontButtons.default.highlightLocked and not dialog.sctFontButtons.diablo.highlightLocked,
+        "hidden font change relocked a native highlight"
+    )
+    context:NoPresentationWrites()
+    dialog:Show()
+    AssertSctFont("default")
+    context:Call(dialog.sctFontButtons.diablo, "OnClick")
+    AssertSctFont("diablo")
+end
+assert(#context.objects == sctObjects, "font selection or reopen allocated another control")
+AssertSctStyle("enemy")
 context:Call(dialog.sctStyleButtons.diablo, "OnClick")
-editor.SCT()
-assert(
-    display.Get("sctStyle") == "diablo" and dialog.sctStyleButtons.diablo.editorSelected,
-    "Diablo selector did not preview"
-)
+AssertSctStyle("diablo")
 display.FinishEdit(false)
-editor.SCT()
-assert(
-    display.Get("sctStyle") == "enemy" and dialog.sctStyleButtons.enemy.editorSelected,
-    "Cancel retained the new style"
-)
-assert(display.Get("sctFont") == "default" and dialog.sctFontButtons.default.editorSelected, "Cancel retained font")
-assert(not display.Get("sctShortNumbers"), "Cancel retained abbreviation")
+AssertSctStyle("enemy")
+AssertSctFont("default")
+assert(not display.Get("sctShortNumbers") and not display.Get("performanceMode"), "Cancel retained combat choices")
 display.BeginEdit()
 assert(
     dialog.navigation.buttons.meter and dialog.navigation.buttons.meter.label:GetText() == "Damage meter",

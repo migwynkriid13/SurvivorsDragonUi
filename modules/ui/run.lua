@@ -1317,6 +1317,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 if not enabled and key == "customRunTimer" and fontMenu and fontMenu:IsShown() then fontMenu:Hide() end
             end
         end
+        UpdateSctLabels()
     end
 
     local function FontSettings(value)
