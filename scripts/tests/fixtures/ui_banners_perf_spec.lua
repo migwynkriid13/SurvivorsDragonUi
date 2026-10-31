@@ -1,36 +1,50 @@
 -- CI only: production banner controller over explicit native handler/HUD mocks.
 local H = dofile("scripts/tests/fixtures/ui_helpers.lua")
-local context = H.New()
+local function NewBannerContext()
+    local context = H.New()
+    local env = context.env
+    context:Load("core/messages.lua")
+    context.settings.customBanners = false
+    context:Load("localization/data.lua")
+    env.DFRL.CleanerChat = nil -- Default chat has no custom chat/capture namespace.
+    env.DFRL.layout.Place = function() end
+    env.T.SetChatFont = function(label) label:SetFont("DEFAULT_TEST", 12, "OUTLINE") end
+    env.T.SetChatShadow = function() end
+    env.AZS_RegisterBannerHandler = function(callback)
+        context.handler = callback
+        context.registrations = (context.registrations or 0) + 1
+    end
+    env.AZS_UnregisterBannerHandler = function(callback)
+        assert(context.handler == callback, "unregistration replaced a foreign handler")
+        if context.failUnregister then error("pending unregistration") end
+        context.handler = nil
+    end
+    env.geterrorhandler = function()
+        return function(message) context.failure = message end
+    end
+    env.AZS_SetHudShown = function(_, shown)
+        if shown and context.failRestore then return end
+        context.nativeShown = shown
+    end
+    env.AZS_IsHudShown = function()
+        context.reads.hud = (context.reads.hud or 0) + 1
+        return context.nativeShown
+    end
+    context.errors = {}
+    context.originalError = function(owner, text, r, g, b, id, hold)
+        table.insert(context.errors, { owner = owner, text = text, r = r, g = g, b = b, id = id, hold = hold })
+        return "native-error"
+    end
+    env.UIErrorsFrame = context:Object("Frame", "UIErrorsFrame", env.UIParent)
+    env.UIErrorsFrame.AddMessage = context.originalError
+    env.ReloadUI = function() context.reloaded = true end
+    context:Load("core/hud.lua")
+    context:Load("modules/ui/banners.lua", "RunBanners")
+    return context
+end
+
+local context = NewBannerContext()
 local env = context.env
-context:Load("core/messages.lua")
-context.settings.customBanners = false
-env.DFRL.locale.data = { en = { native = {} } }
-env.DFRL.CleanerChat = nil -- Default chat has no custom chat/capture namespace.
-env.DFRL.layout.Place = function() end
-env.T.SetChatFont = function(label) label:SetFont("DEFAULT_TEST", 12, "OUTLINE") end
-env.T.SetChatShadow = function() end
-env.AZS_RegisterBannerHandler = function(callback)
-    context.handler = callback
-    context.registrations = (context.registrations or 0) + 1
-end
-env.AZS_UnregisterBannerHandler = function(callback)
-    assert(context.handler == callback, "unregistration replaced a foreign handler")
-    if context.failUnregister then error("pending unregistration") end
-    context.handler = nil
-end
-env.geterrorhandler = function()
-    return function(message) context.failure = message end
-end
-env.AZS_SetHudShown = function(_, shown)
-    if shown and context.failRestore then return end
-    context.nativeShown = shown
-end
-env.AZS_IsHudShown = function()
-    context.reads.hud = (context.reads.hud or 0) + 1
-    return context.nativeShown
-end
-context:Load("core/hud.lua")
-context:Load("modules/ui/banners.lua", "RunBanners")
 local controller = context:Controller("CVAR_UPDATE")
 assert(controller:GetScript("OnUpdate") == nil, "initially disabled banners retained an idle callback")
 context:ResetCounts()
@@ -100,14 +114,109 @@ assert(normal:GetAlpha() == faded, "mode preview restarted the notification life
 print(
     "PASS static banners are opaque, idle between deadlines and retain queued/hidden expiry and normal fade restoration"
 )
+local warningKey = "An Explosive Orb appears! Destroy it before it bursts!"
+local allocations = table.getn(context.objects)
+local languageCount = 0
+for code, catalog in pairs(env.DFRL.locale.data) do
+    local warning = assert(catalog.native[warningKey], "missing native affix warning for " .. code)
+    for _, performance in ipairs({ false, true }) do
+        env.DFRL.banners.Clear()
+        context:SetSetting("performanceMode", performance)
+        local started, errors = context.now, table.getn(context.errors)
+        env.UIErrorsFrame:AddMessage(warning, 1, 0, 0, 7, 9)
+        local label = assert(BannerLabel(warning), "affix warning did not enter banners for " .. code)
+        local r, g, b = label:GetTextColor()
+        assert(r == 1 and g == 0.25 and b == 0.18, "affix warning lost the banner warning palette")
+        assert(label:GetAlpha() == (performance and 1 or 0), "affix warning used the wrong animation mode")
+        context.now = started + 0.075
+        context:Call(controller, "OnUpdate", 0.075)
+        if performance then
+            context:ResetCounts()
+            context.now = started + 0.1
+            context:Call(controller, "OnUpdate", 0.025)
+            context:NoPresentationWrites()
+        else
+            assert(label:GetAlpha() > 0 and label:GetAlpha() < 1, "affix warning lost its normal fade")
+        end
+        context.now = started + 4.11
+        context:Call(controller, "OnUpdate", 4.11)
+        assert(not BannerLabel(warning), "affix warning did not retire")
+        assert(table.getn(context.errors) == errors, "affix warning leaked or replayed in native errors")
+        assert(table.getn(context.objects) == allocations, "affix warning allocated a new view")
+    end
+    languageCount = languageCount + 1
+end
+assert(languageCount == 14, "affix warning coverage omitted a native language")
+context:SetSetting("performanceMode", true)
+env.UIErrorsFrame:AddMessage(warningKey)
+env.UIErrorsFrame:AddMessage(warningKey)
+local repeated = 0
+for _, object in ipairs(context.objects) do
+    if object.kind == "FontString" and object:GetText() == warningKey then repeated = repeated + 1 end
+end
+assert(repeated == 2, "separate identical affix notifications were deduplicated")
+env.DFRL.banners.Clear()
+local errors = table.getn(context.errors)
+env.UIErrorsFrame:AddMessage("Not enough mana", 0.9, 0.2, 0.1, 17, 23)
+env.UIErrorsFrame:AddMessage(warningKey .. " unrelated suffix")
+context:Call(controller, "OnUpdate", 0.01)
+local ordinary = context.errors[errors + 1]
+assert(ordinary and ordinary.text == "Not enough mana", "ordinary combat error was redirected")
+assert(
+    ordinary.owner == env.UIErrorsFrame
+        and ordinary.r == 0.9
+        and ordinary.g == 0.2
+        and ordinary.b == 0.1
+        and ordinary.id == 17
+        and ordinary.hold == 23,
+    "native error arguments were changed"
+)
+assert(context.errors[errors + 2].text == warningKey .. " unrelated suffix", "affix matching accepted a substring")
+context:SetLayoutHidden(true)
+local hiddenWarningStarted = context.now
+context:ResetCounts()
+env.UIErrorsFrame:AddMessage(warningKey)
+context:NoPresentationWrites()
+context.now = hiddenWarningStarted + 4.11
+context:Call(controller, "OnUpdate", 4.11)
+context:SetLayoutHidden(false)
+assert(not BannerLabel(warningKey), "hidden expired affix warning replayed")
+env.UIErrorsFrame:AddMessage(warningKey)
+local transitioning = assert(BannerLabel(warningKey))
+local transitionStarted = context.now
+context:SetSetting("performanceMode", false)
+assert(transitioning:GetAlpha() == 0, "normal preview did not resume the affix warning's current age")
+context:SetSetting("performanceMode", true)
+assert(transitioning:GetAlpha() == 1, "performance preview did not settle the affix warning")
+context.now = transitionStarted + 4.11
+context:Call(controller, "OnUpdate", 4.11)
+assert(not BannerLabel(warningKey), "mode preview restarted the affix warning lifetime")
+print(
+    "PASS all fourteen native affix warnings use the shared pool, preserve occurrences and leave unrelated errors native"
+)
 context.failRestore, context.failUnregister = true, true
 context:SetSetting("customBanners", false)
 assert(controller:GetScript("OnUpdate") and context.handler, "pending native cleanup was detached")
+assert(env.UIErrorsFrame.AddMessage == context.originalError, "disabled banners retained the native error hook")
+assert(env.UIErrorsFrame:AddMessage(warningKey) == "native-error", "disabled banners suppressed an affix warning")
 context.failRestore, context.failUnregister = false, false
 context:Call(controller, "OnUpdate", 0.2)
 assert(not context.handler and context.nativeShown == true, "pending cleanup did not retry")
 assert(controller:GetScript("OnUpdate") == nil, "settled disabled banners retained their driver")
 context:SetSetting("customBanners", true)
+env.UIErrorsFrame:AddMessage(warningKey)
+context:Event(controller, "PLAYER_LEAVING_WORLD")
+assert(env.UIErrorsFrame.AddMessage == context.originalError, "world cleanup retained the error hook")
+assert(not BannerLabel(warningKey), "world cleanup retained an affix warning")
+context:Event(controller, "PLAYER_ENTERING_WORLD")
+env.UIErrorsFrame:AddMessage(warningKey)
+env.ReloadUI()
+assert(
+    context.reloaded and env.UIErrorsFrame.AddMessage == context.originalError,
+    "reload did not release the error hook"
+)
+assert(not BannerLabel(warningKey), "reload retained an affix warning")
+context:Event(controller, "PLAYER_ENTERING_WORLD")
 context.failText = "Injected failure"
 context.handler({ id = 1, text = "Injected failure" })
 assert(context.handler, "handler-list mutation occurred inside native dispatch")
@@ -115,3 +224,24 @@ context:Call(controller, "OnUpdate", 0.2)
 assert(not context.handler and controller:GetScript("OnUpdate") == nil, "fault cleanup did not settle")
 assert(context.nativeShown == true, "fault cleanup lost the native preference")
 print("PASS banners detach when disabled or faulted after retrying pending native cleanup")
+
+local failing = NewBannerContext()
+failing:SetSetting("customBanners", true)
+failing.failText = warningKey
+assert(
+    failing.env.UIErrorsFrame:AddMessage(warningKey, 1, 0, 0, 19, 31) == "native-error",
+    "failed affix presentation did not forward the received native warning"
+)
+assert(failing.failure and table.getn(failing.errors) == 1, "failed redirect lost or duplicated the original warning")
+assert(failing.errors[1].id == 19 and failing.errors[1].hold == 31, "failed redirect changed native error arguments")
+assert(failing.env.UIErrorsFrame.AddMessage == failing.originalError, "failed redirect did not restore native delivery")
+local ownership = NewBannerContext()
+ownership:SetSetting("customBanners", true)
+local ownedHook = ownership.env.UIErrorsFrame.AddMessage
+local foreign = function(...) return ownedHook(...) end
+ownership.env.UIErrorsFrame.AddMessage = foreign
+ownership:SetSetting("customBanners", false)
+assert(ownership.env.UIErrorsFrame.AddMessage == foreign, "release replaced a later external wrapper")
+assert(ownership.env.UIErrorsFrame:AddMessage(warningKey) == "native-error", "released wrapper did not pass through")
+assert(table.getn(ownership.errors) == 1, "released wrapper lost or duplicated the warning")
+print("PASS failed affix redirects preserve native fallback and cleanup respects external wrappers")
