@@ -16,7 +16,9 @@ env.GetCVar = function(key)
 end
 env.AZS_CHESTS = { { id = 1, x = 10, y = 20, mx = 0.51, my = 0.5 } }
 env.AZS_CHESTS_UPDATED = 1
-local members, registered, bound, navigationPoints = {}, {}, {}, {}
+local members, registered, bound, navigationPoints, anchors = {}, {}, {}, {}, {}
+local hiddenWaypoints = {}
+env.DFRL.layout.IsHidden = function(key) return hiddenWaypoints[key] == true end
 local function Member(name, x, y) return { name = name, mx = x, my = y, exists = 1, connected = 1, dead = 1, ghost = 0 } end
 local function Field(unit, key)
     unitReads = unitReads + 1
@@ -27,16 +29,35 @@ env.UnitIsConnected = function(unit) return Field(unit, "connected") end
 env.UnitIsDead = function(unit) return Field(unit, "dead") end
 env.UnitIsGhost = function(unit) return Field(unit, "ghost") end
 env.UnitName = function(unit) return Field(unit, "name") end
-env.DFRL.actionBarDefaults = { bottom = 20, height = 30, topInset = 0, width = 500, sideInset = 0 }
+env.DFRL.actionBarDefaults =
+    { bottom = 20, height = 30, topInset = 0, jewelryTopInset = 40, width = 500, sideInset = 0 }
 env.DFRL.xpBarDefaults = { top = 10, height = 8, borderHeight = 0 }
 env.DFRL.locale.Bind = function(label) bound[label] = true end
 env.DFRL.locale.code = "en"
 env.DFRL.locale.Native = function(_, fields) return tostring(fields.n) .. " yards" end
 env.DFRL.layout.Register = function(key, frame, anchor)
     registered[key] = frame
+    anchors[key] = anchor
     anchor()
 end
-local swapDuringRead, missingPosition
+local createObject = c.Object
+function c:Object(...)
+    local object = createObject(self, ...)
+    local setPoint = object.SetPoint
+    function object:SetPoint(...)
+        setPoint(self, ...)
+        self.point = { ... }
+    end
+    return object
+end
+local swapDuringRead, missingPosition, missingDelta
+local playerX, playerY, lastGuidePoint = 0.5, 0.5, nil
+local function Delta(point)
+    c.reads.delta = (c.reads.delta or 0) + 1
+    if missingDelta then return end
+    local east, north = (point.mx - playerX) * 1000, (playerY - point.my) * 1000
+    return east, north, math.sqrt(east * east + north * north), true
+end
 env.DFRL.navigation = {
     Phase = function() return phase end,
     IsRunPhase = function(value) return value == "playing" or value == "paused" end,
@@ -50,10 +71,10 @@ env.DFRL.navigation = {
         if member and not missingPosition then return member.mx, member.my, "current:1:1" end
     end,
     GuideDelta = function(point)
-        local east, north = (point.mx - 0.5) * 1000, (0.5 - point.my) * 1000
-        return east, north, math.sqrt(east * east + north * north), true
+        lastGuidePoint = point
+        return Delta(point)
     end,
-    Delta = function(point) return env.DFRL.navigation.GuideDelta(point) end,
+    Delta = Delta,
     Heading = function() return 0 end,
     SetPoints = function(key, points) navigationPoints[key] = points end,
     Reset = function() end,
@@ -70,6 +91,17 @@ c:Load("modules/map/waypoints.lua", "Waypoints")
 local display = env.DFRL.display
 local hud, reader = env.DFRL_PartyWaypoint, env.DFRL_CacheWaypointReader
 assert(registered.partyWaypoint == hud, "fallen ally bypassed shared Layout registration")
+local jewelryTop = env.DFRL.actionBarDefaults.bottom
+    + env.DFRL.actionBarDefaults.height
+    + env.DFRL.actionBarDefaults.jewelryTopInset
+assert(
+    hud.point[4] == 0 and hud.point[5] - hud:GetHeight() / 2 == jewelryTop + 8,
+    "fallen ally default overlaps jewelry"
+)
+assert(
+    registered.cacheWaypoint.point[5] == 28 and registered.guardianWaypoint.point[5] == 28,
+    "moving the ally default changed cache/guardian anchors"
+)
 local title, distance, marker, pointer
 for _, object in ipairs(c.objects) do
     if object.parent == hud then
@@ -91,6 +123,16 @@ end
 assert(marker and pointer and title and distance, "selected glyph or shared guide content is missing")
 assert(not bound[title], "native member names were bound to caption translation")
 local function Tick(elapsed) c:Call(reader, "OnUpdate", elapsed or 0.1) end
+hud:SetPoint("CENTER", env.UIParent, "CENTER", 133, -77)
+Tick()
+hud:Hide()
+hud:Show()
+assert(
+    hud.point[3] == "CENTER" and hud.point[4] == 133 and hud.point[5] == -77,
+    "guide refresh/show overwrote custom placement"
+)
+hud:Hide()
+anchors.partyWaypoint()
 local function PinCount(art)
     local count = 0
     local texture = env.DFRL:GetInfoOrCons("tex") .. "waypoint\\" .. art
@@ -355,3 +397,132 @@ assert(not display.Get("guardianRespawnGuidance"), "full reset did not restore r
 print(
     "PASS guardian guidance selects the earliest native respawn only after every guardian is defeated, with shared idle and cleanup lifecycles"
 )
+
+-- Observe only the native guide boundary: selection remains private to the
+-- production controller, and the fixture does not reproduce its algorithm.
+local cacheHud = registered.cacheWaypoint
+local cacheStamp = 0
+local function Cache(id, mx) return { id = id, x = id, y = 0, mx = mx, my = 0.5 } end
+local function PublishCaches(entries)
+    cacheStamp = cacheStamp + 1
+    env.AZS_CHESTS, env.AZS_CHESTS_UPDATED = entries, cacheStamp
+    c:Event(reader, "CHAT_MSG_ADDON", "AZSCHESTS")
+    Tick()
+end
+display.BeginEdit()
+display.Set("guardianGuidance", false)
+display.Set("partyGuidance", false)
+minimapVisible = false
+playerX, playerY = 0.5, 0.5
+PublishCaches({ Cache(11, 0.75), Cache(12, 0.9) })
+assert(lastGuidePoint.key == "11", "initial cache choice was not nearest")
+PublishCaches({ Cache(11, 0.75), Cache(12, 0.9), Cache(13, 0.55) })
+assert(lastGuidePoint.key == "13", "a closer arriving cache did not replace the old destination")
+display.Set("performanceMode", true)
+playerX = 0.88
+Tick()
+assert(lastGuidePoint.key == "12", "Performance Mode movement did not update the nearest cache")
+display.Set("performanceMode", false)
+Tick()
+assert(lastGuidePoint.key == "12", "normal mode replayed an older selected cache")
+playerX = 0.5
+PublishCaches({ Cache(22, 0.625) })
+PublishCaches({ Cache(21, 0.375), Cache(22, 0.625) })
+assert(lastGuidePoint.key == "22", "equal distances changed selection to the first list entry")
+PublishCaches({ Cache(22, 0.625), Cache(21, 0.375) })
+assert(lastGuidePoint.key == "22", "equal-distance array reordering changed selection")
+playerX = 0.625
+Tick()
+assert(lastGuidePoint.key == "22", "zero distance failed to retain the nearest cache")
+PublishCaches({ Cache(21, 0.375) })
+assert(lastGuidePoint.key == "21", "a retired cache identity remained selected")
+
+playerX, missingDelta = 0.5, true
+PublishCaches({ Cache(31, 0.625), Cache(32, 0.51) })
+assert(cacheHud:IsShown() and lastGuidePoint.key == "31", "unavailable geometry lost the provisional first destination")
+missingDelta = false
+Tick()
+assert(lastGuidePoint.key == "32", "ready geometry did not replace the provisional destination")
+missingDelta = true
+PublishCaches({ Cache(34, 0.99), Cache(32, 0.51), Cache(31, 0.625) })
+assert(lastGuidePoint.key == "32", "missing geometry discarded the current available destination")
+playerX, missingDelta = 0.98, false
+Tick()
+assert(lastGuidePoint.key == "34", "position recovery retained an obsolete nearest choice")
+
+display.Set("cacheGuidance", false)
+c:ResetCounts()
+PublishCaches({ Cache(41, 0.99), Cache(42, 0.5) })
+assert(not c.reads.delta and not cacheHud:IsShown(), "disabled guidance still scored native distances")
+display.Set("cacheGuidance", true)
+assert(cacheHud:IsShown() and lastGuidePoint.key == "41", "enable replayed a deferred stale destination")
+hiddenWaypoints.cacheWaypoint = true
+cacheHud:Hide()
+Tick()
+c:ResetCounts()
+PublishCaches({ Cache(51, 0.875), Cache(52, 0.1) })
+assert(not c.reads.delta, "Layout-hidden guidance still scored native distances")
+c:ResetCounts()
+Tick()
+c:NoPresentationWrites()
+hiddenWaypoints.cacheWaypoint = false
+cacheHud:Show()
+Tick(0.01)
+assert(lastGuidePoint.key == "51", "shown guidance painted a stale destination before its next reader pass")
+env.UIParent:Hide()
+Tick()
+c:ResetCounts()
+PublishCaches({ Cache(53, 0.9375), Cache(54, 0.1) })
+assert(not c.reads.delta, "hidden UIParent still scored waypoint distances")
+c:ResetCounts()
+Tick()
+c:NoPresentationWrites()
+env.UIParent:Show()
+Tick()
+assert(lastGuidePoint.key == "53", "UIParent recovery replayed the previous selection")
+local prepared = #c.objects
+c:ResetCounts()
+for _ = 1, 20 do
+    Tick()
+end
+c:NoPresentationWrites()
+assert(#c.objects == prepared, "nearest refresh allocated additional drawing objects")
+PublishCaches({ { id = 55, y = 0, mx = 0.6, my = 0.5 } })
+assert(
+    not cacheHud:IsShown() and navigationPoints.AZS_CHESTS == nil,
+    "invalid native cache coordinates retained guidance"
+)
+PublishCaches({})
+assert(not cacheHud:IsShown(), "empty cache publication invented a nearest destination")
+PublishCaches({ Cache(61, 0.75) })
+phase = "ready"
+Tick()
+assert(not cacheHud:IsShown(), "inactive phase retained the nearest cache")
+phase = "playing"
+Tick()
+assert(not cacheHud:IsShown(), "a new run reused the retired nearest-cache publication")
+PublishCaches({ Cache(62, 0.625) })
+assert(cacheHud:IsShown() and lastGuidePoint.key == "62", "fresh cache data did not recover after retirement")
+
+display.Set("cacheGuidance", false)
+display.Set("guardianGuidance", true)
+display.Set("guardianRespawnGuidance", false)
+playerX = 0.5
+PublishLairs({ Lair(20, nil, 0.75, "awake", 11) })
+assert(lastGuidePoint.key == "20:11", "initial living guardian did not acquire guidance")
+PublishLairs({ Lair(20, nil, 0.75, "awake", 11), Lair(21, nil, 0.51, "asleep", 12) })
+assert(lastGuidePoint.key == "21:12", "a closer living guardian did not replace the old destination")
+playerX = 0.74
+Tick()
+assert(lastGuidePoint.key == "20:11", "player movement did not update the nearest living guardian")
+playerX = 0.5
+PublishLairs({ Lair(22, nil, 0.375, "awake", 13), Lair(20, nil, 0.625, "awake", 11) })
+assert(lastGuidePoint.key == "20:11", "equal guardian distances discarded the current identity")
+PublishLairs({ Lair(20, nil, 0.625), Lair(22, nil, 0.375, "awake", 13) })
+assert(lastGuidePoint.key == "22:13", "an empty lair kept the retired guardian selected")
+display.Set("guardianGuidance", false)
+c:ResetCounts()
+Tick()
+assert(not c.reads.delta, "disabled living-guardian guidance still scored distances")
+display.FinishEdit(false)
+print("PASS nearest cache/living-guardian guidance retains ties, native readiness, hidden idleness and retirement")

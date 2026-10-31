@@ -258,6 +258,11 @@ The assertions cover:
   slot changes during reads, literal native names, nearest/stable selection,
   hidden/off sampling, display preview/Confirm/Cancel/profile/reset, world and
   phase cleanup, missing getters and stationary work in Performance Mode.
+  Cache/guardian cases cover nearer arrivals, movement, equal-distance stability,
+  missing-coordinate fallback, hidden/off distance-work deferral and retired
+  identities. They retain party selection and next-respawn priority, and check
+  the ally default clears the shared static jewelry bounds without Show-time
+  reanchoring.
   Navigation cases reject missing/invalid and foreign-sheet party coordinates;
   shared pin cases cover four edge indicators, changed-only writes and reuse.
   The full controller also draws received cache and fallen-ally pins on a visible
@@ -493,6 +498,12 @@ The assertions cover:
   class metadata across shared Reset deltas. Mocks cover unchanged/hidden/off
   and icons-off work, missing APIs, ambiguous/replaced units, failed-portrait
   caching and world retirement until a fresh `AZSPARTY` publication.
+  Deferred view-selection cases cover unpublished-view skipping in both
+  directions, rapid clicks, initial fallback, valid empty/error pages, all-waiting
+  stability, new publications, reset/disable cleanup and hidden/off probes.
+  They retain native freshness gates, assert no getter runs from clicks and
+  bound each getter to one read per pass across selection, Reset and rate work.
+  New-pass and failed-render recovery cases reject retained native results.
 
 The mocks implement only explicit API methods and record calls, allocation and
 effective parent visibility. An unsupported method fails rather than silently

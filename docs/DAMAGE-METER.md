@@ -15,10 +15,11 @@ it off hides and clears the custom view and restores the native HUD preference
 captured by the replacement. It does not force the game's own meter setting off.
 
 Click its heading to cycle through Damage Done, Healing Done, Boss Damage and Party Damage;
-right-click goes backwards. The gold header shows **Total** and **DPS** (or **HPS**
+views still waiting for their first usable native publication are skipped.
+Right-click goes backwards. The gold header shows **Total** and **DPS** (or **HPS**
 for healing), replacing the view name and the former footer text. Hover over the
 header to see the current view. The small gold **X** resets statistics in every
-view; it never closes the meter. Missing data displays `--` for both values.
+view; it never closes the meter. When totals are shown, missing values display `--`.
 Under `/sdui` → **Damage meter**, set **Abilities shown** from **1 to 10**;
 the default is **6**. The number previews immediately and saves with Confirm.
 Cancel, world/logout/reload discard, profiles and both resets use the shared
@@ -341,12 +342,29 @@ layout registration and a selected snapshot are usable. Invalid or missing data,
 render failures, world leave, logout and the wrapped ReloadUI release suppression
 and restore the captured/latest external preference, including an originally
 hidden meter. Its native minimap button belongs to that same HUD preference.
-The custom heading remains available when another view has no snapshot. While
-waiting for a native publication, the body status is empty and hidden; no waiting
-caption or replacement message is shown. The publication gates still reject
-retired and initially empty data. Unavailable-data and valid-empty messages keep
-their existing behavior. Hiding the Layout group intentionally hides the
-replacement while its valid native takeover remains active.
+The existing visible reader resolves header navigation and skips unpublished
+views whose body would be blank, in the chosen forward or reverse order. A valid
+received empty snapshot remains selectable with **No meter entries yet.**, and
+explicit unavailable-data errors retain their message. Initial selection can
+also advance to a ready view. If every view is waiting, selection stays stable
+and the existing header names the current view; totals return when data arrives.
+The waiting body remains hidden, without another caption or invented values.
+
+Getter calls stay out of click handlers. Pending navigation waits while hidden;
+disabling or retiring the meter clears it. Candidate scans are bounded by the four views and reuse the
+existing phase/publication validation; retired and initially empty data never
+become available merely to fill a page. Hiding the Layout group intentionally
+hides the replacement while its valid native takeover remains active.
+
+Rapid clicks retain their first direction and subsequent net steps through one
+deferred resolution, including reverse clicks and an initially waiting view.
+Other views are probed for navigation or a new readiness/publication/visibility
+change, rather than every settled poll. Selection, Reset baselines, rolling
+damage observation and presentation reuse each native result within a reader
+pass. Four reusable result records release their source/value references after
+the pass, including failed refreshes. Candidates retain only view indices; no
+view history or gameplay persistence is added. Normal and Performance Mode use
+the same selection and static waiting header.
 
 Layout-hidden meter groups retain phase retirement and native ownership. They
 validate selected-view data only after a native publication, without copying

@@ -35,6 +35,11 @@ DFRL:NewMod("Waypoints", 3, function()
     local stackBottom = xpDefaults.top - (xpDefaults.height + xpDefaults.borderHeight) / 2
     local HUD_WIDTH, HUD_HEIGHT = 190, 46
     local stackCenter = (stackTop + stackBottom) / 2
+    local allyCenter = actionDefaults.bottom
+        + actionDefaults.height
+        + math.max(actionDefaults.topInset, actionDefaults.jewelryTopInset)
+        + 8
+        + HUD_HEIGHT / 2
     local sideOffset = actionDefaults.width / 2 + actionDefaults.sideInset + 8 + HUD_WIDTH / 2
     -- The selected preview shows 19 visible pixels; the source glyph spans 24/32.
     local POINTER_SIZE = 19 * 1.2 * 32 / 24
@@ -74,7 +79,7 @@ DFRL:NewMod("Waypoints", 3, function()
             frameName = "DFRL_PartyWaypoint",
             title = "Fallen ally",
             defaultSide = "CENTER",
-            defaultOffsetY = 54,
+            defaultOffsetY = allyCenter - stackCenter,
             hudArt = "FallenAlly.blp",
             hudTexCoord = { 0, 1, 0, 1 },
         },
@@ -635,6 +640,7 @@ DFRL:NewMod("Waypoints", 3, function()
         tracker.acceptedRespawn = nil
         navigation.SetPoints(tracker.source, nil)
         tracker.selectedKey, tracker.selected, tracker.provisionalSelection = nil, nil, nil
+        tracker.selectionDeferred = nil
         tracker.presentation = nil
         tracker.distanceValue, tracker.distanceLanguage, tracker.distanceLabel = nil, nil, nil
         if tracker.hudWanted ~= false then
@@ -836,12 +842,18 @@ DFRL:NewMod("Waypoints", 3, function()
             RespawnTarget(tracker) and tracker.acceptedMinimapEntries or tracker.entries
         )
     end
+    local function CanSelectNearest(tracker)
+        return DFRL.display.Get(tracker.displayKey)
+            and not DFRL.layout.IsHidden(tracker.layoutKey)
+            and FrameVisible(UIParent)
+    end
     local function Choose(tracker)
         local respawn = RespawnTarget(tracker)
         if respawn then
             tracker.selected = respawn
             tracker.selectedKey = tracker.selected.key
             tracker.provisionalSelection = nil
+            tracker.selectionDeferred = nil
             return
         end
         tracker.selected = nil
@@ -849,18 +861,28 @@ DFRL:NewMod("Waypoints", 3, function()
         for _, entry in ipairs(tracker.entries) do
             if entry.key == tracker.selectedKey then
                 previous = entry
-                if not tracker.provisionalSelection then
+                if tracker.kind == "party" and not tracker.provisionalSelection then
                     tracker.selected = entry
                     return
                 end
                 break
             end
         end
+        if tracker.kind ~= "party" and not CanSelectNearest(tracker) then
+            -- Retire removed identities while deferring distance/projection
+            -- work. A returning view selects from current native data first.
+            tracker.selected = previous
+            tracker.selectedKey = previous and previous.key or nil
+            if not previous then tracker.provisionalSelection = nil end
+            tracker.presentation, tracker.selectionDeferred = nil, true
+            return
+        end
+        tracker.selectionDeferred = nil
         local best
         for _, entry in ipairs(tracker.entries) do
             local east, north, distance = navigation.Delta(entry)
             local score = distance or (east and math.sqrt(east * east + north * north))
-            if score and (not best or score < best) then
+            if score and (not best or score < best or (score == best and entry.key == tracker.selectedKey)) then
                 tracker.selected, best = entry, score
             end
         end
@@ -938,6 +960,7 @@ DFRL:NewMod("Waypoints", 3, function()
     end
 
     local function UpdateGuide(tracker, elapsed)
+        if tracker.selectionDeferred and CanSelectNearest(tracker) then Choose(tracker) end
         if not DFRL.display.Get(tracker.displayKey) or not tracker.selected then
             tracker.presentation = nil
             if tracker.hudWanted ~= false then

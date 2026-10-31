@@ -1559,6 +1559,23 @@ all party reads while its guidance is disabled. Live map records reuse one
 bounded array and up to four point tables; retirement clears entries without
 persisting locations. Missing geometry does not guess a location.
 
+Cache and living-guardian HUDs now rescore their accepted destinations through
+that same ten-Hz pass. Current identity wins exact distance ties; new nearer
+spawns and movement can change the selection. Party selection and next-respawn
+timer priority retain their existing behavior. The scoring cost is linear in
+the accepted destination count, with no new event, updater, drawing region,
+asset or saved history. Shared sampling reuses the run/player/metric reads;
+map fallback can still need one native projection per distinct destination in
+the pass. Off, Layout-hidden and UIParent-hidden HUDs defer distance scoring,
+while accepted identity retirement and independent minimap work remain active.
+The next visible refresh resolves current data before painting.
+
+The fallen-ally default bottom sits eight units above the static jewelry
+envelope. `actionBarDefaults.jewelryTopInset` is the shared source for the bar's
+socket rail, jewelry bounds and this placement. There is no live jewelry scan,
+new region or ongoing anchor work. Saved positions retain precedence through
+the existing Layout owner; changing the default does not rewrite prior saves.
+
 Each eligible member can lazily allocate one existing pooled minimap pin frame
 and one static texture, at most four active/pooled pins for this tracker. There
 are no party respawn labels, checkmarks, hover handlers or world overlays. The
@@ -2104,6 +2121,22 @@ neutral fallback can still use the existing more expensive strip path. Source
 review and formatting are the only local checks; CI-only mocks are authored for
 cycling, portraits, unchanged/hidden/off work, failure caching, reset metadata
 and world retirement. No measured CPU/GPU/FPS or live visual-parity claim follows.
+
+Waiting meter views are skipped by a bounded four-view scan in the existing
+deferred visible reader. Click handlers retain only direction/step intent and
+call no getter. Accepted empty snapshots and explicit error messages remain
+selectable; fresh-publication guards stay unchanged. Candidate scans run for
+pending navigation or readiness/publication/visibility changes, rather than
+adding unselected-view polling to each idle pass. Hidden views defer selection,
+and disable/retirement clears it. Candidates store only view indices. Four
+reusable native-result records coalesce selection, Reset baselines, rolling
+damage observation and presentation within each pass; their source/value
+references are cleared immediately after the protected refresh, including
+failures and early returns, and on invalidation. If all views are waiting, the
+existing header displays the selected view name until data arrives. No frame,
+region, animation, asset, event, updater, setting or SavedVariable is added;
+normal and Performance Mode share the same behavior. CI-only fixtures cover
+the navigation, lifecycle and waypoint changes; they were not run locally.
 
 Hiding empties recent vectors once and stops observation; showing warms the
 window again. Disabling and run/world retirement drop all rate state; language

@@ -754,7 +754,7 @@ DFRL:NewMod("Jewelry", 4, function()
         if DFRL.SetActionBarJewelryTop then
             local top = actionDefaults.topInset
             if DFRL.display.Get("equippedJewelry") and docked then
-                top = math.max(top, actionDefaults.buttonWidth * 40 / 36)
+                top = math.max(top, actionDefaults.jewelryTopInset)
             end
             DFRL.SetActionBarJewelryTop(top)
         end

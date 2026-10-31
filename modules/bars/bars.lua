@@ -34,6 +34,7 @@ DFRL:NewMod("Bars", 1, function()
     -- The half-shell keeps sixteen transparent source rows below its silver
     -- bevel, including in the taller joined-XP crop.
     defaults.silverBottomInset = (defaults.height + 2 * defaults.topInset) * 16 / 128
+    defaults.jewelryTopInset = defaults.buttonWidth * 40 / 36
     DFRL.actionBarDefaults = defaults
 
     local function DisableFrame(frame)
@@ -169,7 +170,7 @@ DFRL:NewMod("Bars", 1, function()
         local socketBottom = defaults.buttonWidth * 2 / 36
         local upper = bar:CreateTexture(nil, "BACKGROUND")
         upper:SetTexture(DFRL:GetInfoOrCons("tex") .. "jewelry\\SocketRail.blp")
-        upper:SetPoint("TOPLEFT", bar, "TOPLEFT", -defaults.sideInset, defaults.buttonWidth * 40 / 36)
+        upper:SetPoint("TOPLEFT", bar, "TOPLEFT", -defaults.sideInset, defaults.jewelryTopInset)
         upper:SetPoint("BOTTOMRIGHT", bar, "TOPRIGHT", defaults.sideInset, socketBottom)
         upper:SetTexCoord(0, 1200 / 2048, 0, 152 / 256)
         upper:Hide()

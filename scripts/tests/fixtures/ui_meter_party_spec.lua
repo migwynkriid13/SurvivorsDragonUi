@@ -156,8 +156,14 @@ local function Meter()
         local source, total = Totals(context.damage)
         return source, total, total / math.max(1, env.AZS_RUN.t)
     end
-    env.AZS_GetHealing = function() return Totals(context.healing) end
-    env.AZS_GetBossMeter = function() return Totals(context.boss) end
+    env.AZS_GetHealing = function()
+        Count("reads", "healing")
+        return Totals(context.healing)
+    end
+    env.AZS_GetBossMeter = function()
+        Count("reads", "boss")
+        return Totals(context.boss)
+    end
     env.AZS_GetPartyMeter = function()
         Count("reads", "party")
         return Totals(context.party)
@@ -188,6 +194,7 @@ local function Meter()
     end
     for _, object in ipairs(context.objects) do
         if object.kind == "FontString" and object.parent == context.header then context.title = object end
+        if object.kind == "FontString" and object.parent == context.root then context.status = object end
     end
     function context:Tick()
         self.now = self.now + 0.21
@@ -226,6 +233,216 @@ local function Meter()
     end
     return context
 end
+
+local function NoMeterReads(context)
+    assert(
+        not context.reads.damage and not context.reads.healing and not context.reads.boss and not context.reads.party,
+        "navigation read meter getters before its visible deferred reader"
+    )
+end
+
+Test("deferred navigation skips unpublished boss and party views in both directions", function()
+    local context = Meter()
+    context.boss, context.party = {}, {}
+    context:Tick()
+    context:ResetCounts()
+    context:Call(context.header, "OnClick", "LeftButton")
+    NoMeterReads(context)
+    assert(context.title:GetText() == "Damage Done", "click changed the view before deferred selection")
+    context:Tick()
+    assert(context.title:GetText() == "Healing Done", "the next available view was skipped")
+    assert(
+        context.reads.damage == 1
+            and context.reads.healing == 1
+            and context.reads.boss == 1
+            and context.reads.party == 1,
+        "selection and rolling DPS repeated native getters in one pass"
+    )
+    context:Cycle()
+    assert(context.title:GetText() == "Damage Done", "blank boss/party pages interrupted the cycle")
+    context:Cycle("RightButton")
+    assert(context.title:GetText() == "Healing Done", "reverse cycling entered an unpublished page")
+    context:Cycle("RightButton")
+    assert(context.title:GetText() == "Damage Done")
+    context:ResetCounts()
+    for _ = 1, 6 do
+        context:Tick()
+    end
+    assert(
+        not context.reads.healing and not context.reads.boss and not context.reads.party,
+        "settled navigation kept probing unused views"
+    )
+    context.boss = { { name = "Boss Strike", dmg = 200, dps = 20, share = 1, proc = 0 } }
+    context:Publish("AZSBOSSDMG")
+    context:Cycle()
+    assert(context.title:GetText() == "Healing Done")
+    context:Cycle()
+    assert(context.title:GetText() == "Boss Damage", "a fresh publication did not join the cycle")
+    context:Cycle()
+    assert(context.title:GetText() == "Damage Done", "unpublished party data became a blank page")
+end)
+
+Test("selection reset baselines and rolling observation share one bounded native pass", function()
+    local context = Meter()
+    context:Party()
+    context.env.DFRL.ResetMeterStats()
+    context:ResetCounts()
+    context:Tick()
+    assert(
+        context.reads.damage == 1
+            and context.reads.healing == 1
+            and context.reads.boss == 1
+            and context.reads.party == 1,
+        "all-view reset baselines reread native getters during rendering"
+    )
+    context:ResetCounts()
+    context:Tick()
+    assert(
+        context.reads.party == 1 and context.reads.damage == 1,
+        "per-pass results leaked into the next native sample"
+    )
+    assert(not context.reads.healing and not context.reads.boss, "settled rendering retained an all-view scan")
+end)
+
+Test("failed rendering releases temporary native pass results before recovery", function()
+    local context = Meter()
+    context:Tick()
+    context.failText = "Healing Done"
+    local ok = pcall(function() context:Cycle() end)
+    assert(
+        not ok and not context.controller:GetScript("OnUpdate"),
+        "native text failure did not retire the failed reader"
+    )
+    context.healing = { { name = "Regeneration", dmg = 300, dps = 30, share = 1, proc = 0 } }
+    context:Event(context.controller, "PLAYER_ENTERING_WORLD")
+    context:ResetCounts()
+    context:Tick()
+    assert(
+        context.reads.healing == 1 and context:Row(1).entry.dmg == 300,
+        "failed-pass source data survived into recovery"
+    )
+end)
+
+Test("rapid queued clicks preserve advancement without a private click log", function()
+    local context = Meter()
+    context:Tick()
+    context:ResetCounts()
+    context:Call(context.header, "OnClick", "LeftButton")
+    context:Call(context.header, "OnClick", "LeftButton")
+    NoMeterReads(context)
+    context:Tick()
+    assert(context.title:GetText() == "Boss Damage", "two queued clicks collapsed into one view change")
+    local waiting = Meter()
+    waiting.damage, waiting.boss = {}, {}
+    waiting:Call(waiting.header, "OnClick", "LeftButton")
+    waiting:Call(waiting.header, "OnClick", "RightButton")
+    waiting:Call(waiting.header, "OnClick", "RightButton")
+    waiting:Tick()
+    assert(waiting.title:GetText() == "Healing Done", "mixed clicks lost the first entry into the available ring")
+end)
+
+Test("initial waiting views select available data while received empty views stay selectable", function()
+    local context = Meter()
+    context.damage, context.boss, context.party = {}, {}, {}
+    context:Tick()
+    assert(
+        context.title:GetText() == "Healing Done" and context:Row(1).active,
+        "initial blank view hid an available healing view"
+    )
+    local empty = Meter()
+    empty.healing, empty.boss, empty.party = {}, {}, {}
+    empty:Tick()
+    empty:Publish("AZSHEAL")
+    empty:Cycle()
+    assert(empty.title:GetText() == "Healing Done", "received empty data was treated as unpublished")
+    assert(
+        empty.status:IsShown() and empty.status:GetText() == "No meter entries yet.",
+        "received empty view lost its truthful status"
+    )
+    empty:Cycle()
+    assert(empty.title:GetText() == "Damage Done")
+    empty.env.AZS_GetHealing = function() return nil end
+    empty:Cycle()
+    assert(
+        empty.title:GetText() == "Healing Done" and empty.status:GetText() == "Meter data is unavailable.",
+        "explicit errors were silently skipped"
+    )
+end)
+
+Test("all waiting views stay bounded and wake on an unselected publication", function()
+    local context = Meter()
+    context.damage, context.healing, context.boss, context.party = {}, {}, {}, {}
+    context:SetSetting("meterShowTotal", true)
+    context:SetSetting("meterShowTotalDps", true)
+    context:Tick()
+    assert(
+        context.title:GetText() == "Damage Done" and not context.status:IsShown(),
+        "all-waiting state lost its view identity"
+    )
+    context:ResetCounts()
+    for _ = 1, 6 do
+        context:Tick()
+    end
+    assert(
+        not context.reads.healing and not context.reads.boss and not context.reads.party,
+        "all-waiting state scanned every idle tick"
+    )
+    context:NoPresentationWrites()
+    context:ResetCounts()
+    context:Call(context.header, "OnClick", "RightButton")
+    context:Tick()
+    assert(context.title:GetText() == "Damage Done", "all-waiting navigation invented a selected view")
+    assert(
+        context.reads.damage == 1
+            and context.reads.healing == 1
+            and context.reads.boss == 1
+            and context.reads.party == 1,
+        "all-waiting scan was not bounded to four views"
+    )
+    context.healing = { { name = "Regeneration", dmg = 100, dps = 10, share = 1, proc = 0 } }
+    context:Publish("AZSHEAL")
+    context:ResetCounts()
+    context:Tick()
+    assert(context:Row(1).entry.name == "Regeneration", "unselected fresh data did not recover a waiting meter")
+    assert(context.title:GetText() == "Total: 100   HPS: 10", "accepted data did not restore the chosen numeric header")
+end)
+
+Test("hidden and off meters defer queued choices and retired data cannot qualify", function()
+    local context = Meter()
+    context.boss, context.party = {}, {}
+    context:Tick()
+    context:SetLayoutHidden(true)
+    context:ResetCounts()
+    context:Call(context.header, "OnClick", "LeftButton")
+    context:Tick()
+    NoMeterReads(context)
+    context:SetLayoutHidden(false)
+    context:Tick()
+    assert(context.title:GetText() == "Healing Done", "visible recovery lost its queued navigation")
+    context:SetSetting("meterEnabled", false)
+    context:ResetCounts()
+    context:Call(context.header, "OnClick", "LeftButton")
+    context:Tick()
+    NoMeterReads(context)
+    context:SetSetting("meterEnabled", true)
+    context:ResetCounts()
+    context:Tick()
+    NoMeterReads(context)
+    context:Call(context.header, "OnClick", "LeftButton")
+    context:Tick()
+    NoMeterReads(context)
+    assert(not context:Row(1).active, "retired nonempty tables qualified without new publications")
+    context:Publish("AZSMETER")
+    context:Tick()
+    assert(context.title:GetText() == "Damage Done" and context:Row(1).active)
+    context:Event(context.controller, "CHAT_MSG_ADDON", "AZSZONE")
+    context:ResetCounts()
+    context:Tick()
+    NoMeterReads(context)
+    context:Publish("AZSHEAL")
+    context:Tick()
+    assert(context.title:GetText() == "Healing Done", "fresh data did not recover after zone retirement")
+end)
 
 Test("numeric reservation follows the final caption instead of fixed empty columns", function()
     local context = Meter()
