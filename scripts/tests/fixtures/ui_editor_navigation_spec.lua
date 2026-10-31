@@ -729,6 +729,53 @@ assert(
     dialog.navigation.buttons.meter and dialog.navigation.buttons.meter.label:GetText() == "Damage meter",
     "meter has no sidebar category"
 )
+dialog.navigation.Search("meter name font")
+assert(
+    #dialog.navigation.results == 1 and dialog.navigation.results[1].target == "meterNameFontSize" and not pages.meter,
+    "name-font search missed its original lazy meter control"
+)
+dialog.navigation.OpenResult(1)
+local meterNameValue, meterNumberValue = env.displayNumbers.meterNameFontSize, env.displayNumbers.meterFontSize
+assert(meterNameValue and meterNumberValue and dialog.navigation.selected == "meter")
+local meterNameControl, meterNumberControl = meterNameValue:GetParent(), meterNumberValue:GetParent()
+assert(
+    meterNameControl.label:GetText() == "Name font size" and meterNumberControl.label:GetText() == "Number font size",
+    "meter font controls do not explain their independent scope"
+)
+local function IncreaseNumber(control)
+    for _, object in ipairs(context.objects) do
+        if object.kind == "Button" and object:GetParent() == control and object.label:GetText() == "+" then
+            context:Call(object, "OnClick")
+            return
+        end
+    end
+    error("missing production numeric step button")
+end
+IncreaseNumber(meterNameControl)
+editor.Display()
+assert(
+    display.Get("meterNameFontSize") == 12 and display.Get("meterFontSize") == 11 and meterNameValue:GetText() == "12",
+    "name font did not preview independently"
+)
+IncreaseNumber(meterNumberControl)
+IncreaseNumber(meterNumberControl)
+assert(
+    display.Get("meterFontSize") == 13 and display.Get("meterNameFontSize") == 12,
+    "number font changed the name choice"
+)
+assert(not env.SurvivorsDragonUiDisplay, "font step controls saved before Confirm")
+local meterObjects = #context.objects
+dialog.navigation.Search("meter number font")
+assert(#dialog.navigation.results == 1 and dialog.navigation.results[1].target == "meterFontSize")
+dialog.navigation.OpenResult(1)
+assert(
+    #context.objects == meterObjects and env.displayNumbers.meterNameFontSize == meterNameValue,
+    "search rebuilt meter settings"
+)
+display.FinishEdit(false)
+display.BeginEdit()
+editor.Display()
+assert(display.Get("meterNameFontSize") == 11 and display.Get("meterFontSize") == 11, "Cancel retained font previews")
 for _, key in ipairs({ "meter", "action", "encounters", "map", "interface", "profiles" }) do
     dialog.navigation.Select(key)
     local samples = context.fontSampleRefreshes or 0

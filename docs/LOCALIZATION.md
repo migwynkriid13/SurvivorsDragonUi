@@ -58,7 +58,7 @@ native catalogs or new language sources are added for those controls.
 runtime UI entries in all fourteen languages. Only these addon captions were
 prepared; native catalogs, effects, spell aliases and their source pins are unchanged.
 
-The meter's **Font size** and its hint remain translated in all fourteen source/runtime UI catalogs. **Show grid** and its hint also have all fourteen translations. The removed drag/Shift/corner instruction line is absent from source and runtime catalogs. The removed meter/tracker width sliders' three captions are absent from both source and runtime UI catalogs. Native catalogs, spell aliases, effects and the older full-catalog fingerprint are unchanged by these editor-caption updates.
+The meter's **Name font size**, **Number font size** and their hints have matching translations in all fourteen source/runtime UI catalogs. The replaced general meter-font hint is removed; the shared **Font size** caption remains for other controls. **Show grid** and its hint also have all fourteen translations. The removed drag/Shift/corner instruction line is absent from source and runtime catalogs. The removed meter/tracker width sliders' three captions are absent from both source and runtime UI catalogs. Native catalogs, spell aliases, effects and the older full-catalog fingerprint are unchanged by these editor-caption updates.
 
 The custom run-timer and boss-bar enable captions and their native-display
 hints have source TSV and runtime UI entries in all fourteen languages. Only

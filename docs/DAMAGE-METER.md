@@ -52,7 +52,7 @@ separate Reset DPS settings button. After resetting, **All** and the average DPS
 tooltips use only damage since the reset. The window choice retains the shared
 preview, Confirm, Cancel, profile and full-reset paths.
 
-Use the left/right side handles on **DPS meter** in Layout to change its width without scaling rows or icons. Top/bottom handles change **Abilities shown**, using the same 1–10 limit as the settings control. Corner handles retain proportional scaling. **Font size** remains under Damage meter, from **8 to 18**, default **11**. All changes preview and use Confirm, Cancel, profiles, discard and resets.
+Use the left/right side handles on **DPS meter** in Layout to change its width without scaling rows or icons. Top/bottom handles change **Abilities shown**, using the same 1–10 limit as the settings control. Corner handles retain proportional scaling. Under Damage meter, **Name font size** changes source/hero names independently; **Number font size** changes row values and header/status text. Both range from **8 to 18**, default **11**. All changes preview and use Confirm, Cancel, profiles, discard and resets.
 
 Ability names and row values use the resolved native DEFAULT font with OUTLINE,
 matching guardian/chat text, and the shared chat shadow: black at `(1, -1)`.
@@ -61,20 +61,33 @@ The gold header retains its original styling.
 
 The default scale remains **0.8** and width **240** UI units, with side-width limits **120–960**. Its bottom-right corner sits at the screen's bottom-right corner with no offset. Shared layout registration captures this scale before applying saved geometry. Defaults apply to unset geometry and both full resets; confirmed/draft positions and scales retain the shared rules. The default corner stays fixed when the ability count changes. Active side dragging holds the opposite edge fixed.
 
-Width now lives beside scale and position in the existing Layout record. The obsolete `meterWidth` display field and slider are removed. `meterFontSize` remains a finite, clamped/rounded display integer; both normalizers participate in named profiles and the existing save/discard lifecycle. No new SavedVariable or geometry migration is needed. Hidden/off views accept required root geometry but defer presentation, and resizing never starts native collection while the meter is off.
+Width now lives beside scale and position in the existing Layout record. The obsolete `meterWidth` display field and slider are removed. `meterFontSize` and `meterNameFontSize` are finite, clamped/rounded display integers. Older saves/profiles missing a valid name size inherit their normalized `meterFontSize`, preserving the selected appearance; full resets use eleven for both. Both settings participate in named profiles and the existing save/discard lifecycle. No new SavedVariable or geometry migration is needed. Hidden/off views accept required root geometry but defer presentation, and resizing never starts native collection while the meter is off.
 
 Row height, circular icons and gold rims remain 32, 26 and 31 units. Header
-text retains its original size offsets above the selected row font. Numeric
-column widths follow font size and enabled columns, reserving at least 48 units
-for names at the narrowest widths. Very large text with all numeric columns can
-still clip; the full native name and values remain available on hover. Wider
-meters or fewer numeric fields provide more name space. Text sizes and row
+text retains its original size offsets above the selected number font. The
+numeric label uses its actual native text width, rounded up with one unit of
+glyph clearance and a five-unit name gap. Names receive all remaining space,
+with at least 48 units reserved at the narrowest widths. Disabled numeric fields
+leave no reserved column. This replaces the old fixed 58 units per field, which
+truncated names early even when short numbers left unused space. Very large
+text with all numeric fields can still clip; full native names and values stay
+available on hover. Text sizes and row
 widths update only on effective changes; failed font-size changes stay retryable.
 Hidden/off views defer row/header presentation until visible; the shared editor
 still receives required root-width changes.
 The readiness row and lazy rows start with positive label widths even at 120;
-column reflow then applies the existing name-space reservation. Defaults apply
+column reflow then applies the measured name-space reservation. Defaults apply
 to missing/invalid values and resets, preserving explicit saved width choices.
+
+Each pooled row retains only its latest successful numeric text metric, keyed
+by the rendered caption, actual font face/size/flags, owning-row effective scale
+and relevant width. Raw counter changes that keep the same compact caption do
+not remeasure. Missing/invalid metrics retry through the existing visible reader
+with conservative space until ready. Row retirement clears the metric; hidden,
+off and numbers-off views skip measurement. Both Performance Mode states use
+the same instant reflow, without a new region, asset, event or updater. CI-only
+production-meter cases cover the layout and font lifecycle; no local tests or
+addon/game execution were run, and native glyph fit remains unverified.
 
 ## Native data
 

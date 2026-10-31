@@ -4,6 +4,7 @@
 DFRL:NewMod("DamageMeter", 7, function()
     local HEADER, ROW_HEIGHT, FOOTER = 32, 32, 32
     local width, fontSize = 240, DFRL.display.Get("meterFontSize")
+    local nameFontSize = DFRL.display.Get("meterNameFontSize")
     local enabled = DFRL.display.Get("meterEnabled")
     local visible = DFRL.display.Get("meterRows")
     local optionKeys = {
@@ -431,16 +432,23 @@ DFRL:NewMod("DamageMeter", 7, function()
         labels:SetAllPoints(row)
         labels:SetFrameLevel(bar:GetFrameLevel() + 1)
         labels:EnableMouse(false)
-        row.name = Label(labels, fontSize, "LEFT", "OUTLINE")
+        row.name = Label(labels, nameFontSize, "LEFT", "OUTLINE")
         row.name:SetPoint("TOPLEFT", labels, "TOPLEFT", 35, 1)
         row.name:SetWidth(math.max(1, width - 232))
-        row.name:SetHeight(fontSize + 5)
+        row.name:SetHeight(nameFontSize + 5)
         row.value = Label(labels, fontSize, "RIGHT", "OUTLINE")
         row.value:SetPoint("TOPRIGHT", labels, "TOPRIGHT", -2, 1)
         row.value:SetWidth(174)
         row.value:SetHeight(fontSize + 5)
         row.layoutIcons, row.valueColumns = true, 3
-        row.layoutFontSize = fontSize
+        local _, appliedNameSize, appliedNameFlags = row.name:GetFont()
+        if T.NearlyEqual(appliedNameSize, nameFontSize) and (appliedNameFlags or "") == "OUTLINE" then
+            row.layoutNameFontSize = nameFontSize
+        end
+        local _, appliedValueSize, appliedValueFlags = row.value:GetFont()
+        if T.NearlyEqual(appliedValueSize, fontSize) and (appliedValueFlags or "") == "OUTLINE" then
+            row.layoutFontSize = fontSize
+        end
         row.icon = row:CreateTexture("SurvivorsDragonUiMeterIcon" .. index, "ARTWORK")
         row.icon:SetPoint("LEFT", row, "LEFT", 0, 0)
         row.icon:SetWidth(ICON_SIZE)
@@ -456,7 +464,10 @@ DFRL:NewMod("DamageMeter", 7, function()
         row.rim:Hide()
         row:SetScript("OnEnter", function() ShowRowTooltip(row) end)
         row:SetScript("OnLeave", HideTooltip)
-        row:SetScript("OnHide", HideTooltip)
+        row:SetScript("OnHide", function()
+            row.valueMetric = nil
+            HideTooltip()
+        end)
         row:Hide()
         table.insert(rows, row)
         return row
@@ -465,14 +476,6 @@ DFRL:NewMod("DamageMeter", 7, function()
     Row(1)
     local function LayoutRow(row)
         local columns = (options.damage and 1 or 0) + (options.dps and 1 or 0) + (options.percentage and 1 or 0)
-        if
-            row.layoutIcons == options.icons
-            and row.valueColumns == columns
-            and row.layoutWidth == width
-            and row.layoutFontSize == fontSize
-        then
-            return
-        end
         local nameLeft = options.icons and 35 or 3
         if row.layoutWidth ~= width then row:SetWidth(width - 16) end
         if row.layoutIcons ~= options.icons or row.layoutWidth ~= width then
@@ -484,15 +487,44 @@ DFRL:NewMod("DamageMeter", 7, function()
             row.name:ClearAllPoints()
             row.name:SetPoint("TOPLEFT", row.name:GetParent(), "TOPLEFT", nameLeft, 1)
         end
-        if row.layoutFontSize ~= fontSize then
-            local nameSized = SizeLabel(row.name, fontSize, fontSize + 5)
-            local valueSized = SizeLabel(row.value, fontSize, fontSize + 5)
-            if nameSized and valueSized then row.layoutFontSize = fontSize end
+        if row.layoutNameFontSize ~= nameFontSize and SizeLabel(row.name, nameFontSize, nameFontSize + 5) then
+            row.layoutNameFontSize = nameFontSize
         end
-        -- Retain the original 58-unit columns at size 11, reserving name room
-        -- when large text and all numeric columns meet a narrow viewport.
+        if columns > 0 and row.layoutFontSize ~= fontSize and SizeLabel(row.value, fontSize, fontSize + 5) then
+            row.layoutFontSize = fontSize
+        end
         local available = width - 16 - nameLeft - 2
-        local valueWidth = math.min(columns * math.ceil(58 * fontSize / 11), available - 5 - 48)
+        local valueWidth = 0
+        if columns > 0 then
+            -- Reserve only the current numeric caption's natural width. Keep
+            -- the old conservative reservation until native metrics are ready.
+            valueWidth = columns * math.ceil(58 * fontSize / 11)
+            local text = row.value:GetText()
+            local face, size, flags = row.value:GetFont()
+            local scale = row:GetEffectiveScale()
+            local metric = row.valueMetric
+            if
+                metric
+                and metric.text == text
+                and metric.face == face
+                and metric.size == size
+                and metric.flags == flags
+                and metric.scale == scale
+                and metric.available == available
+            then
+                valueWidth = metric.width
+            elseif face and Number(size) and size > 0 and Number(scale) and scale > 0 and text and text ~= "" then
+                local measured = row.value:GetStringWidth()
+                if Number(measured) and measured > 0 then
+                    metric = metric or {}
+                    metric.text, metric.face, metric.size, metric.flags = text, face, size, flags
+                    metric.scale, metric.available, metric.width = scale, available, math.ceil(measured) + 1
+                    row.valueMetric = metric
+                    valueWidth = metric.width
+                end
+            end
+            valueWidth = math.min(valueWidth, math.max(1, available - 5 - 48))
+        end
         local nameWidth = available - (columns > 0 and valueWidth + 5 or 0)
         if not T.NearlyEqual(row.name:GetWidth(), nameWidth) then row.name:SetWidth(nameWidth) end
         if not T.NearlyEqual(row.value:GetWidth(), math.max(1, valueWidth)) then
@@ -516,6 +548,7 @@ DFRL:NewMod("DamageMeter", 7, function()
         row.entry, row.displayName, row.drawIndex, row.drawDamage, row.drawRate, row.drawShare =
             nil, nil, nil, nil, nil, nil
         row.drawRevision = nil
+        row.valueMetric = nil
         if row:IsShown() then row:Hide() end
         row.active = false
     end
@@ -718,7 +751,6 @@ DFRL:NewMod("DamageMeter", 7, function()
                 local row = Row(index)
                 if hovered == row and row.displayName ~= entry.name then HideTooltip() end
                 row.entry, row.active = entry, true
-                LayoutRow(row)
                 local rank = options.ranks and index + offset or nil
                 if row.displayName ~= entry.name or row.drawIndex ~= rank or row.drawRevision ~= optionsRevision then
                     T.SetTextIfChanged(row.name, rank and (tostring(rank) .. ". " .. entry.name) or entry.name)
@@ -744,6 +776,7 @@ DFRL:NewMod("DamageMeter", 7, function()
                     row.drawDamage, row.drawRate, row.drawShare = damage, rate, share
                 end
                 row.drawRevision = optionsRevision
+                LayoutRow(row)
                 local fraction = maximum > 0 and math.min(1, entry.dmg / maximum) or 0
                 if row.fraction ~= fraction then row.bar:SetValue(fraction) end
                 row.fraction = fraction
@@ -907,6 +940,9 @@ DFRL:NewMod("DamageMeter", 7, function()
         HideTooltip()
         dps.Suspend()
         ClearSamples()
+        for _, row in ipairs(rows) do
+            row.valueMetric = nil
+        end
     end)
     root:SetScript("OnShow", function() age = 0.2 end)
     root:SetScript("OnMouseWheel", function()
@@ -955,7 +991,8 @@ DFRL:NewMod("DamageMeter", 7, function()
         local enabledChanged = enabled ~= enable
         local count = DFRL.display.Get("meterRows")
         local selectedFontSize = DFRL.display.Get("meterFontSize")
-        local fontChanged = fontSize ~= selectedFontSize
+        local selectedNameFontSize = DFRL.display.Get("meterNameFontSize")
+        local fontChanged = fontSize ~= selectedFontSize or nameFontSize ~= selectedNameFontSize
         local window = DFRL.display.Get("meterDpsWindow")
         local windowChanged = dps.window ~= window
         local changed, iconsWereShown = false, options.icons
@@ -971,6 +1008,7 @@ DFRL:NewMod("DamageMeter", 7, function()
         HideTooltip()
         enabled = enable
         fontSize = selectedFontSize
+        nameFontSize = selectedNameFontSize
         if windowChanged then
             dps.SetWindow(window)
             ClearSamples()

@@ -19,6 +19,31 @@ local function Meter()
     local create = context.Object
     function context:Object(...)
         local object = create(self, ...)
+        local setFont = object.SetFont
+        function object:SetFont(face, size, flags)
+            self.fontAttempts = (self.fontAttempts or 0) + 1
+            if context.failFontObject == self and context.failFontSize == size then return false end
+            return setFont(self, face, size, flags)
+        end
+        local setShadowColor, setShadowOffset = object.SetShadowColor, object.SetShadowOffset
+        function object:SetShadowColor(...)
+            self.shadowColor = { ... }
+            setShadowColor(self, ...)
+        end
+        function object:SetShadowOffset(...)
+            self.shadowOffset = { ... }
+            setShadowOffset(self, ...)
+        end
+        function object:GetStringWidth()
+            Count("reads", "metrics")
+            self.measuredText = self:GetText()
+            self.metricReads = (self.metricReads or 0) + 1
+            if context.metricMissing then return nil end
+            if context.metricOverride ~= nil then return context.metricOverride end
+            local _, size = self:GetFont()
+            -- Explicit native glyph boundary; production owns all reservation math.
+            return string.len(self:GetText()) * 4 * (size or 11) / 11
+        end
         function object:GetEffectiveScale()
             return (self.scale or 1) * (self.parent and self.parent:GetEffectiveScale() or 1)
         end
@@ -66,10 +91,16 @@ local function Meter()
     end
     env.DFRL.layout.IsHidden = function() return not context.layoutMask:IsShown() end
     env.DFRL.layout.Place = function() end
+    local register = env.DFRL.layout.Register
+    env.DFRL.layout.Register = function(name, frame, anchor, options)
+        context.layoutOptions = options
+        register(name, frame, anchor)
+    end
     context.settings = {
         meterEnabled = true,
         meterRows = 6,
         meterFontSize = 11,
+        meterNameFontSize = 11,
         meterDpsWindow = 10,
         meterShowDamage = true,
         meterShowDps = true,
@@ -188,8 +219,209 @@ local function Meter()
         assert(self.title:GetText() == "Party Damage", "party is not the fourth view")
     end
     function context:Row(index) return env["SurvivorsDragonUiMeterIcon" .. index]:GetParent() end
+    function context:Resize(value)
+        self.root:SetWidth(value)
+        self.layoutOptions.onResize(self.root)
+        self:Tick()
+    end
     return context
 end
+
+Test("numeric reservation follows the final caption instead of fixed empty columns", function()
+    local context = Meter()
+    context:SetSetting("meterShowDamage", false)
+    context:Tick()
+    context:Cycle()
+    local row = context:Row(1)
+    assert(row.value:GetText() == "10" and row.value.measuredText == "10", "layout measured the previous caption")
+    assert(row.value:GetWidth() == 9 and row.name:GetWidth() == 173, "short DPS retained a fixed numeric deadzone")
+    local allocated = #context.objects
+    local nameWidth = row.name:GetWidth()
+    context.healing[1].dps = 1210
+    for _ = 1, 5 do
+        context:Tick()
+    end
+    assert(
+        row.value:GetText() == "1.2K" and row.value.measuredText == "1.2K",
+        "new values were measured one sample late"
+    )
+    assert(
+        row.value:GetWidth() == 17 and row.name:GetWidth() == nameWidth - 8,
+        "numeric growth did not take only its glyph space"
+    )
+    assert(row.entry.dps == 1210 and context.healing[1].dps == 1210, "layout changed native values")
+    context:ResetCounts()
+    context.healing[1].dps = 1240
+    for _ = 1, 5 do
+        context:Tick()
+    end
+    assert(row.entry.dps == 1240 and row.value:GetText() == "1.2K")
+    assert(not context.reads.metrics, "unchanged compact text was measured again")
+    context:NoPresentationWrites()
+    assert(#context.objects == allocated, "numeric layout allocated extra drawing regions")
+    context:SetSetting("meterShowDamage", true)
+    context:SetSetting("meterShowPercentage", true)
+    context:Tick()
+    local values = row.value:GetText()
+    assert(
+        string.find(values, "100", 1, true) and string.find(values, "100.0%", 1, true),
+        "enabled numeric information was removed"
+    )
+    assert(row.name:GetWidth() >= 48, "numeric columns consumed the minimum name space")
+    context:SetSetting("meterShowDamage", false)
+    context:SetSetting("meterShowDps", false)
+    context:SetSetting("meterShowPercentage", false)
+    context:ResetCounts()
+    context:Tick()
+    assert(
+        not row.value:IsShown() and row.name:GetWidth() == 187,
+        "disabled numbers did not return their entire gutter"
+    )
+    assert(not context.reads.metrics, "disabled numeric text still requested glyph metrics")
+    context:SetSetting("meterShowIcons", false)
+    context:ResetCounts()
+    context:Tick()
+    assert(row.name:GetWidth() == 219 and not context.reads.metrics, "disabled icons retained unused name space")
+end)
+
+Test("name and number fonts stay independent and rejected native sizes retry", function()
+    local context = Meter()
+    context:Tick()
+    local row = context:Row(1)
+    local allocated, numericAttempts = #context.objects, row.value.fontAttempts
+    local iconWidth, rowHeight = row.icon:GetWidth(), row:GetHeight()
+    context:SetSetting("meterNameFontSize", 8)
+    context:Tick()
+    local _, nameSize, nameFlags = row.name:GetFont()
+    local _, numberSize, numberFlags = row.value:GetFont()
+    assert(nameSize == 8 and numberSize == 11, "name font changed numeric text")
+    assert(row.value.fontAttempts == numericAttempts, "name-only preview rebound the numeric font")
+    assert(nameFlags == "OUTLINE" and numberFlags == "OUTLINE", "font preview removed outlines")
+    assert(row.name.shadowColor[4] == 1 and row.name.shadowOffset[1] == 1 and row.name.shadowOffset[2] == -1)
+    local nameAttempts = row.name.fontAttempts
+    context:SetSetting("meterFontSize", 14)
+    context:Tick()
+    _, nameSize = row.name:GetFont()
+    _, numberSize = row.value:GetFont()
+    local _, headerSize = context.title:GetFont()
+    assert(
+        nameSize == 8 and numberSize == 14 and headerSize == 16,
+        "numeric size changed names or lost the header offset"
+    )
+    assert(row.name.fontAttempts == nameAttempts, "number-only preview rebound the name font")
+    context.failFontObject, context.failFontSize = row.name, 10
+    context:SetSetting("meterNameFontSize", 10)
+    context:Tick()
+    _, nameSize = row.name:GetFont()
+    assert(nameSize == 8, "rejected name font was recorded as usable")
+    context.failFontObject = nil
+    context:Tick()
+    _, nameSize, nameFlags = row.name:GetFont()
+    assert(nameSize == 10 and nameFlags == "OUTLINE", "failed name-size assignment did not retry")
+    context.failFontObject, context.failFontSize = row.value, 16
+    context:SetSetting("meterFontSize", 16)
+    context:Tick()
+    _, numberSize = row.value:GetFont()
+    assert(numberSize == 14, "rejected numeric font was cached as applied")
+    context.failFontObject = nil
+    context:Tick()
+    _, numberSize, numberFlags = row.value:GetFont()
+    assert(numberSize == 16 and numberFlags == "OUTLINE", "failed numeric-size assignment did not retry")
+    assert(row:GetHeight() == rowHeight and row.icon:GetWidth() == iconWidth and #context.objects == allocated)
+    context:ResetCounts()
+    context:Tick()
+    context:NoPresentationWrites()
+    assert(not context.reads.metrics, "settled font retry kept measuring unchanged values")
+end)
+
+Test("numeric metrics follow font scale and width changes and retry unavailable glyphs", function()
+    local context = Meter()
+    context:Tick()
+    context:Cycle()
+    local row = context:Row(1)
+    local allocated = #context.objects
+    local _, size, flags = row.value:GetFont()
+    row.value:SetFont("OTHER_NATIVE_FACE", size, flags)
+    context:ResetCounts()
+    context:Tick()
+    assert(context.reads.metrics == 1, "actual native font change retained the previous measurement")
+    context.root:SetScale(1.1)
+    context:ResetCounts()
+    context:Tick()
+    assert(context.reads.metrics == 1, "owner scale change retained native glyph metrics")
+    context:ResetCounts()
+    context:Resize(200)
+    assert(context.reads.metrics == 1, "width change retained a measurement from another viewport")
+    context:Resize(120)
+    assert(row.name:GetWidth() >= 48 and row.value:GetWidth() > 0, "narrow viewport lost the name reservation")
+    context:Resize(240)
+    for _, metric in ipairs({ 0, -1, math.huge, 0 / 0 }) do
+        context.metricOverride = metric
+        row.value:SetFont("UNREADY_" .. tostring(metric), size, flags)
+        context:ResetCounts()
+        context:Tick()
+        context:Tick()
+        assert(context.reads.metrics == 2, "unavailable glyph width was cached as ready")
+        assert(row.name:GetWidth() >= 48 and row.value:GetWidth() > 0, "metric failure broke safe layout")
+        context.metricOverride = nil
+        context:Tick()
+        assert(row.value.measuredText == row.value:GetText(), "ready metrics did not recover against current text")
+        context:ResetCounts()
+        context:Tick()
+        assert(not context.reads.metrics, "successful recovery failed to cache its native measurement")
+    end
+    context.metricMissing = true
+    row.value:SetFont("MISSING_NATIVE_METRICS", size, flags)
+    context:ResetCounts()
+    context:Tick()
+    context:Tick()
+    assert(context.reads.metrics == 2, "missing native metrics were cached as ready")
+    context.metricMissing = nil
+    context:Tick()
+    assert(#context.objects == allocated, "metric retries allocated extra labels or rulers")
+end)
+
+Test("hidden disabled and retired meter rows do no glyph work and reuse their pool", function()
+    local context = Meter()
+    context:Tick()
+    context:Cycle()
+    local row = context:Row(1)
+    local allocated = #context.objects
+    context:SetLayoutHidden(true)
+    context:SetSetting("meterNameFontSize", 9)
+    context:SetSetting("meterFontSize", 13)
+    context:ResetCounts()
+    context:Tick()
+    context:NoPresentationWrites()
+    assert(not context.reads.metrics, "hidden meter measured numeric labels")
+    context:SetLayoutHidden(false)
+    context:Tick()
+    local _, nameSize = row.name:GetFont()
+    local _, numberSize = row.value:GetFont()
+    assert(
+        nameSize == 9 and numberSize == 13 and #context.objects == allocated,
+        "visible recovery lost font choices or rebuilt rows"
+    )
+    context:SetSetting("meterEnabled", false)
+    context:ResetCounts()
+    context:Tick()
+    assert(
+        not context.reads.metrics and not context.controller:GetScript("OnUpdate"),
+        "disabled meter retained glyph work"
+    )
+    context:SetSetting("meterEnabled", true)
+    context:Publish("AZSHEAL")
+    context:Tick()
+    assert(row.active and #context.objects == allocated, "enabled meter did not reuse its existing row")
+    context:Event(context.controller, "PLAYER_LEAVING_WORLD")
+    context:ResetCounts()
+    context:Tick()
+    assert(not context.reads.metrics and not row.active, "world retirement measured or retained rows")
+    context:Event(context.controller, "PLAYER_ENTERING_WORLD")
+    context:Publish("AZSHEAL")
+    context:Tick()
+    assert(row.active and #context.objects == allocated, "fresh native data failed to reuse the retired row")
+end)
 
 Test("party is fourth in both header directions and uses real unit portraits", function()
     local context = Meter()

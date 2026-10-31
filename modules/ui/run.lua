@@ -1849,7 +1849,6 @@ DFRL:NewMod("RunTimers", 5, function()
                         wide = true,
                     },
                     { "meterRows", "Abilities shown", "Show 1 to 10 abilities at a time.", step = 1 },
-                    { "meterFontSize", "Font size", "Change meter text without scaling the frame.", step = 1 },
                     {
                         "meterDpsWindow",
                         "DPS window",
@@ -1857,6 +1856,8 @@ DFRL:NewMod("RunTimers", 5, function()
                         step = 5,
                         format = function(value) return value == 0 and DFRL.locale.Text("All") or tostring(value) end,
                     },
+                    { "meterNameFontSize", "Name font size", "Change spell and player name size.", step = 1 },
+                    { "meterFontSize", "Number font size", "Change meter numbers and header size.", step = 1 },
                     { "meterShowDamage", "Ability damage", "Show each ability's damage or healing total." },
                     { "meterShowDps", "Ability DPS", "Show DPS per ability, or HPS for healing." },
                     { "meterShowPercentage", "Ability percentage", "Show each ability's share of the total." },

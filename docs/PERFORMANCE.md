@@ -2166,7 +2166,30 @@ remain unverified.
 
 Six Layout groups add twenty editor-only center-edge marks: two horizontal for run timer, boss health, Revive, meter, Chat and guardians, plus two vertical for the four row views. Each is one existing native solid texture under the hidden shared handle, with no asset or additional controller. The two obsolete settings sliders and their four thumb/track textures are removed. **Show grid** uses one existing-style lazy editor checkbox; off hides the complete grid and guide parent and skips grid geometry sampling. Shift alignment still uses the existing active-drag calculations.
 
-Width lives in shared Layout geometry. Meter and guardian roots default to 240 and allow 120–960 without scaling row height, icons or fonts. Cached natural tracker text widths compress its columns safely; native health end caps retain their 50-unit combined span. Meter geometry caches width, font size, icon gutter and numeric-column count. Failed font changes remain retryable. Hidden/off views accept required edit bounds while deferring row/header/font/icon presentation. Meter resizing never enables native reads or packet intake while off.
+Width lives in shared Layout geometry. Meter and guardian roots default to 240 and allow 120–960 without scaling row height, icons or fonts. Cached natural tracker text widths compress its columns safely; native health end caps retain their 50-unit combined span. Meter geometry caches width, separate name/number font sizes, icon gutter and numeric text metrics. Failed font changes remain retryable. Hidden/off views accept required edit bounds while deferring row/header/font/icon presentation. Meter resizing never enables native reads or packet intake while off.
+
+The 2026-10-31 meter text change replaces fixed 58-unit numeric-field slots with
+the final numeric label's native `GetStringWidth`, rounded up with one unit of
+glyph clearance and the existing five-unit gap. The same two row FontStrings
+remain; no HUD frame/region, asset, event or updater is added. Each of at most
+ten rows keeps one latest successful metric keyed by caption, actual font,
+owner scale and relevant width. Unchanged compact text skips measurement even
+when raw counters change. Unready metrics remain retryable through the existing
+visible reader; disabled numbers skip measurement and reclaim the whole label
+area. Hidden/off views skip measurement and font work, while retirement clears
+the metric. Numeric rendering happens before reflow so new captions do not use
+the previous sample's width.
+
+`meterNameFontSize` adds one normalized integer in the existing display table,
+inheriting the old selected `meterFontSize` for older saves/profiles. Both full
+resets use eleven. The new Name font size editor row adds three frames, eight
+texture regions and five FontStrings through the shared numeric control,
+allocated only when Damage meter is first opened and hidden with its page.
+Number font size retains the existing control and header offsets. The two
+choices share preview/Confirm/discard/profile/reset and font-retry handling.
+Normal and Performance Mode use the same static layout. CI-only tests cover
+these boundaries; no local tests, standalone validation or addon/game execution
+were run. Source counts do not establish live draw calls, glyph fit or FPS.
 
 The selected-frame form lazily prepares one pooled native `OptionsSliderTemplate`
 width slider, including its track/thumb and three native captions, plus one

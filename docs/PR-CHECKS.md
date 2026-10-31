@@ -58,6 +58,14 @@ An explicit Bash shell enables `pipefail`, so piping fixture/model output into
 
 ## UI work and cleanup tests
 
+Meter spacing cases use the production meter with explicit native text metrics.
+They cover reclaiming unused numeric space, caption-aware metric caching and
+retries, width/font/scale changes, independent name/number font sizes, preserved
+native values/row geometry, hidden/off/disabled-number work and pooled-row
+retirement. Display/editor cases cover inherited older saves, normalization,
+preview/Confirm/discard/profiles/resets and searchable controls. These cases
+remain CI-only and were not run locally; native glyph fit is unverified.
+
 The editor fixture covers metadata search without constructing unopened pages,
 active-language/English matching, supported case folding, literal punctuation,
 empty results, pooled paging, custom and ordinary option redirects, current
