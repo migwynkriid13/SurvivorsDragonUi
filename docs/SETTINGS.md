@@ -50,6 +50,16 @@ numeric range/count; no matches shows **No matching settings.** Search does not
 toggle, save or bypass disabled controls. Clear search restores the selected
 category and its scroll position. Escape keeps the shared Cancel behavior.
 
+Each result button fits the wider of its gold title and category path, with
+twelve units of padding on each side and one unit of glyph clearance, capped
+at the viewport width. Both lines align left, including while the button is
+pressed. Width measurements use the native glyph metrics and cache the latest
+captions, fonts, owning-button effective scale and available width. Paging can
+shrink or grow the same pooled button. Missing metrics remain retryable through
+existing navigation/Show/language refreshes, with no idle updater. Font sizes,
+row heights, artwork and the eight-button region budget are unchanged; narrower
+button faces do not establish a measured draw-call or FPS improvement.
+
 Generic settings use the same option/mode records as construction. Layout and
 Profiles expose their existing caption records; custom Combat text and Run
 timer controls share their caption/offset records with the search index. Font,
