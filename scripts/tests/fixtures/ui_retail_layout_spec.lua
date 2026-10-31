@@ -655,6 +655,14 @@ local function ProfileCommitLifecycle()
                 context.fontDraft, context.sctDraft = nil, nil
             end
         end,
+        -- The production runTimer registration owns the full-reset handoff
+        -- to Display. Keep that boundary explicit with the fake font owner.
+        onReset = function()
+            context.profileFontResets = (context.profileFontResets or 0) + 1
+            env.SurvivorsDragonUiRunFont = nil
+            display.Reset()
+            context.fontDraft = nil
+        end,
     })
     context:Load("core/profiles.lua", "Profiles")
     local profiles = env.DFRL.profiles
@@ -783,10 +791,13 @@ local function ProfileCommitLifecycle()
     assert(restoredDisplay.Get("uiFontOutline") == "THICKOUTLINE" and restoredDisplay.Get("uiFontShadow"))
     assert(fresh.restoredLayout.chat.width == 730 and fresh.restoredFont.size == 19 and fresh.restoredSct == "on")
     layout.Reset()
+    assert(context.profileFontResets == 1, "Layout reset skipped the registered font-owner handoff")
     assert(
         display.Get("uiFontOutline") == "OUTLINE" and display.Get("uiFontShadow"),
         "full reset lost font-style defaults"
     )
+    assert(not env.SurvivorsDragonUiRunFont and not context.fontDraft, "full reset retained timer-font preferences")
+    assert(env.SurvivorsDragonUiSctMode == "on", "full reset changed the confirmed scalar SCT mode")
     assert(env.SurvivorsDragonUiProfiles[name] == saved, "Addon defaults erased a saved profile")
     assert(
         saved.display.uiFontOutline == "THICKOUTLINE" and saved.display.uiFontShadow,
