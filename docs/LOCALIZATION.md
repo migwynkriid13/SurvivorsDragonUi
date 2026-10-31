@@ -82,8 +82,9 @@ native catalogs, effects and aliases remain unchanged.
 
 The eight-category editor adds Combat, Encounters, Map & navigation and Interface
 in all fourteen source/runtime UI catalogs. Performance Mode uses sentence case.
-Search settings, Clear search and No matching settings. have matching source and
-runtime UI entries in all fourteen languages. Search indexes the active captions
+Search settings and No matching settings. have matching source and
+runtime UI entries in all fourteen languages. The removed Clear search caption
+is absent from both source and runtime UI catalogs. Search indexes the active captions
 alongside their English source and folds supported Latin/Cyrillic case pairs.
 These are addon captions only; native catalogs, effects and
 spell aliases are unchanged. Fixed-width rows wrap translated captions locally;

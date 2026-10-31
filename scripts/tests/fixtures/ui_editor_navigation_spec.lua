@@ -225,24 +225,19 @@ local searchNavigation = env.T.CreateEditorNavigator(searchPanel, searchSidebar,
     onEscape = function() escapes = escapes + 1 end,
 })
 local function AssertSidebarSearch(navigation, sidebar, width)
-    local input, owner = navigation.search, navigation.searchOwner
+    local input = navigation.search
     local header = input:GetParent()
     assert(header:GetParent() == sidebar and header.point[2] == sidebar, "search header left the shared sidebar")
     assert(
-        header.point[4] == 6 and header.point[5] == -4 and header:GetWidth() == width and header:GetHeight() == 88,
+        header.point[4] == 6 and header.point[5] == -4 and header:GetWidth() == width and header:GetHeight() == 56,
         "sidebar search header geometry changed"
     )
-    assert(navigation.searchHeight == 96, "categories did not reserve the sidebar search block")
+    assert(navigation.searchHeight == 64, "categories did not reserve the compact sidebar search block")
     assert(input:GetWidth() == width and input:GetHeight() == 28, "sidebar input did not retain the full column width")
     assert(
         input.point[2] == header and input.point[4] == 0 and input.point[5] == -24,
         "sidebar input lost its caption clearance"
     )
-    assert(
-        owner.clear:GetParent() == header and owner.clear.point[2] == header and owner.clear.point[5] == -60,
-        "clear search is not below the input"
-    )
-    assert(owner.clear:GetHeight() == 28 and owner.clear:GetWidth() <= width, "clear search extends beyond the sidebar")
     local caption
     for _, item in ipairs(context.objects) do
         if item.kind == "FontString" and item:GetParent() == header then caption = item end
@@ -262,36 +257,10 @@ assert(
 for index, group in ipairs(groups) do
     local button = searchNavigation.buttons[group.key]
     assert(
-        button:GetParent() == searchSidebar and button.point[5] == -144 - (index - 1) * 48 and button:GetHeight() == 42,
+        button:GetParent() == searchSidebar and button.point[5] == -112 - (index - 1) * 48 and button:GetHeight() == 42,
         "sidebar categories overlap the search block"
     )
 end
-local clear = searchNavigation.searchOwner.clear
-local clearFace, clearSize, clearFlags = clear.label:GetFont()
-clear.label.naturalWidth = 500
-clear.label:SetFont("WIDE_SEARCH_CLEAR", clearSize, clearFlags)
-searchNavigation.searchOwner.RefreshHeader()
-assert(
-    clear:GetWidth() == 212 and searchNavigation.search:GetWidth() == 212,
-    "long clear caption did not use the full sidebar width"
-)
-clear.label.naturalWidth = nil
-clear.label:SetFont(clearFace, clearSize, clearFlags)
-searchNavigation.searchOwner.RefreshHeader()
-local clearWidth = clear:GetWidth()
-clear.label.naturalWidth = 0
-env.DFRL.locale.code = "search_retry"
-context:NotifyLocale()
-assert(clear:GetWidth() == clearWidth, "unavailable header metrics replaced a usable clear width")
-clear.label.naturalWidth = 180
-searchNavigation.searchOwner.RefreshHeader()
-assert(
-    clear:GetWidth() == 204 and searchNavigation.search:GetWidth() == 212,
-    "failed sidebar header metrics did not retry independently of the input width"
-)
-clear.label.naturalWidth = nil
-env.DFRL.locale.code = "en"
-context:NotifyLocale()
 searchNavigation.Select("layout")
 local searchSlider = env.SurvivorsDragonUiSettingsScrollScrollBar
 searchSlider:SetValue(150)
@@ -830,7 +799,7 @@ assert(not dialog:IsShown() and not next(pages), "shell construction prepared se
 assert(not env.fontSample and not env.fontMenu and layoutBuilds == 0, "shell prepared timer/menu/Layout controls")
 assert(context.reads.glyphs == openingGlyphs + 2, "shell measured unrelated or inactive-language captions")
 dialog:Show()
-assert(context.reads.glyphs == openingGlyphs + 3, "show measured more than the search header and existing shell")
+assert(context.reads.glyphs == openingGlyphs + 2, "show measured unrelated settings captions")
 assert(layoutBuilds == 1 and pages.layout and not pages.units and not pages.profiles, "first open built hidden pages")
 editor.Clock(10.5, 1200, true)
 assert(
@@ -850,7 +819,7 @@ local dialogSidebar = dialogSearch:GetParent():GetParent()
 local dialogSearchHeader = AssertSidebarSearch(dialog.navigation, dialogSidebar, 232)
 local performanceControl = env.displayControls.performanceMode
 assert(
-    performanceControl:GetParent() == dialogSidebar and performanceControl.point[5] == -100,
+    performanceControl:GetParent() == dialogSidebar and performanceControl.point[5] == -68,
     "Performance Mode did not move below the sidebar search"
 )
 assert(
@@ -863,13 +832,13 @@ for index, key in ipairs(categoryKeys) do
     local button = dialog.navigation.buttons[key]
     local top = -button.point[5]
     assert(
-        button:GetParent() == dialogSidebar and top == 144 + (index - 1) * 48 and top >= previousBottom,
+        button:GetParent() == dialogSidebar and top == 112 + (index - 1) * 48 and top >= previousBottom,
         "category rows overlap search, Performance Mode or another category"
     )
     previousBottom = top + button:GetHeight()
 end
 assert(
-    previousBottom == 570 and previousBottom <= dialogSidebar:GetHeight(),
+    previousBottom == 538 and previousBottom <= dialogSidebar:GetHeight(),
     "the ninth sidebar category extends into the footer"
 )
 local dialogScroll = env.SurvivorsDragonUiSettingsScroll

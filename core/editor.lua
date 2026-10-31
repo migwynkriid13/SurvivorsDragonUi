@@ -519,7 +519,7 @@ local function CreateEditorSearch(parent, sidebar, scroll, content, navigation, 
     local header = CreateFrame("Frame", nil, sidebar)
     header:SetPoint("TOPLEFT", sidebar, "TOPLEFT", 6, -4)
     header:SetWidth(width)
-    header:SetHeight(88)
+    header:SetHeight(56)
     local caption = Label(header, 12, "Search settings")
     caption:SetPoint("TOPLEFT", header, "TOPLEFT", 0, -2)
     caption:SetWidth(width)
@@ -528,9 +528,6 @@ local function CreateEditorSearch(parent, sidebar, scroll, content, navigation, 
     owner.input = T.CreateEditorInput(header, width, 28)
     owner.input:SetMaxLetters(128)
     owner.input:SetPoint("TOPLEFT", header, "TOPLEFT", 0, -24)
-    owner.clear = T.CreateEditorButton(header, "Clear search", 112, 28)
-    owner.clear:SetPoint("TOPRIGHT", header, "TOPRIGHT", 0, -60)
-    owner.clear:Disable()
     navigation.search = owner.input
     navigation.results, navigation.query = owner.results, ""
 
@@ -547,41 +544,7 @@ local function CreateEditorSearch(parent, sidebar, scroll, content, navigation, 
         owner.changing = true
         if owner.input:GetText() ~= owner.query then owner.input:SetText(owner.query) end
         owner.changing = nil
-        local enabled = owner.query ~= ""
-        if owner.clearEnabled ~= enabled then
-            owner.clearEnabled = enabled
-            if enabled then
-                owner.clear:Enable()
-            else
-                owner.clear:Disable()
-            end
-        end
     end
-    local function RefreshHeader()
-        if not parent:IsShown() then return end
-        local face, size, flags = owner.clear.label:GetFont()
-        local scale = parent:GetEffectiveScale()
-        local previous = owner.headerMetrics
-        if
-            previous
-            and previous.code == DFRL.locale.code
-            and previous.face == face
-            and previous.size == size
-            and previous.flags == flags
-            and previous.scale == scale
-        then
-            return
-        end
-        local measured = owner.clear.label:GetStringWidth()
-        if not measured or measured <= 0 then return end
-        local clearWidth = math.min(width, math.max(112, math.ceil(measured) + 24))
-        if owner.clear:GetWidth() ~= clearWidth then
-            owner.clear:SetWidth(clearWidth)
-            owner.clear.label:SetWidth(clearWidth - 12)
-        end
-        owner.headerMetrics = { code = DFRL.locale.code, face = face, size = size, flags = flags, scale = scale }
-    end
-    owner.RefreshHeader = RefreshHeader
     local function Index()
         if owner.index and owner.language == DFRL.locale.code then return owner.index end
         local index, identities = {}, {}
@@ -682,7 +645,6 @@ local function CreateEditorSearch(parent, sidebar, scroll, content, navigation, 
     end
     function owner.Refresh()
         if not parent:IsShown() or not owner.active then return end
-        RefreshHeader()
         PrepareResults()
         if not owner.frame:IsShown() then owner.frame:Show() end
         local total = table.getn(owner.results)
@@ -835,7 +797,6 @@ local function CreateEditorSearch(parent, sidebar, scroll, content, navigation, 
     end
     navigation.Search = owner.Search
     navigation.ClearSearch = function() owner.Clear(true) end
-    owner.clear:SetScript("OnClick", navigation.ClearSearch)
     owner.input:SetScript("OnTextChanged", function()
         if not owner.changing then owner.Search(owner.input:GetText()) end
     end)
@@ -850,17 +811,14 @@ local function CreateEditorSearch(parent, sidebar, scroll, content, navigation, 
     end)
     HookScript(header, "OnHide", function() owner.Clear(false) end)
     HookScript(header, "OnShow", function()
-        RefreshHeader()
         SyncInput()
         if owner.query ~= "" then owner.Search(owner.query, true) end
     end)
     DFRL.locale.Listen(function()
         owner.index = nil
         if not parent:IsShown() then return end
-        RefreshHeader()
         if owner.query ~= "" then owner.Search(owner.query, true) end
     end)
-    RefreshHeader()
     return owner
 end
 
@@ -871,7 +829,7 @@ function DFRL.tools.CreateEditorNavigator(parent, sidebar, groups, sections, opt
         buttons = {},
         offsets = {},
         selected = groups[1].key,
-        searchHeight = options.search and 96 or 0,
+        searchHeight = options.search and 64 or 0,
     }
     local width = options.width
     local scroll = CreateFrame("ScrollFrame", "SurvivorsDragonUiSettingsScroll", parent, "UIPanelScrollFrameTemplate")
@@ -939,7 +897,6 @@ function DFRL.tools.CreateEditorNavigator(parent, sidebar, groups, sections, opt
             rendered = nil
             return
         end
-        if navigation.searchOwner then navigation.searchOwner.RefreshHeader() end
         if navigation.searchOwner and navigation.searchOwner.active then
             for _, section in ipairs(sections) do
                 if section.shell and section.shell:IsShown() then section.shell:Hide() end

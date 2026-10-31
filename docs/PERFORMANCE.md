@@ -478,15 +478,15 @@ not been launched or visually verified in the game.
 
 ### Settings search — 2026-10-31
 
-The search header reuses the input/button helpers: three frames (container,
-EditBox and clear button), nine texture regions and two FontStrings.
+The search header reuses the input helper: two frames (container and EditBox),
+five texture regions and one caption FontString. Removing the Clear button
+also removes its four regions, caption and width-measurement/cache work.
 
 The same header lives once in the sidebar above Performance Mode. Its caption,
-full-width input and separate Clear row reserve 96 units there; the nine
-42-unit category rows keep their 48-unit pitch and finish fourteen units before
+full-width input reserve 64 units there; the nine
+42-unit category rows keep their 48-unit pitch and finish forty-six units before
 the sidebar footer. The content viewport reclaims the former 64-unit header
-reservation without changing the dialog size. Clear-caption metrics use the
-whole sidebar width, while result geometry remains tied to the main viewport.
+reservation without changing the dialog size. Result geometry remains tied to the main viewport.
 No frame, drawing region, asset or updater is added by this relocation.
 
 Results are allocated only on a nonempty query, with a maximum pool of eight buttons.
@@ -506,8 +506,8 @@ the first query and rebuilt for language changes. Input is limited to 128
 characters. Literal token matching visits that bounded metadata list only on
 text/locale changes; unchanged queries skip rebuilding and writes. Pagination
 reuses the pool. Destination offsets use current native row layout, and opening
-a result prepares only its original category. Header measurements cache language,
-font and owner scale and retry unavailable metrics. Closing clears focus/query;
+a result prepares only its original category. Empty input restores the selected
+category and scroll position. Closing clears focus/query;
 hidden changes defer work until Show. No event, updater, animation, gameplay
 read, setting, saved history or SavedVariable is added. Both Performance Mode
 states use the same static presentation. CI-only editor cases cover these

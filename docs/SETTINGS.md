@@ -31,8 +31,8 @@ there is no duplicate category title. Section headings appear only
 when their names differ from the category, such as Pet frames under Unit frames.
 These subsection headings are centered above their controls and divider. Damage
 meter has its own sidebar category and no repeated content heading.
-Search stays in the left sidebar above Performance Mode, with its input and
-Clear search button stacked. Category pages use the full content viewport.
+Search stays in the left sidebar above Performance Mode, with one full-width
+input below its caption. Category pages use the full content viewport.
 Each category remembers its scroll offset until the UI reloads.
 
 ## Finding a setting
@@ -48,7 +48,7 @@ Results show their category and subsection. Click one, or press Enter for the
 first result on the current page, to return to the original controls and scroll
 to that option. Eight reusable result buttons have previous/next paging and a
 numeric range/count; no matches shows **No matching settings.** Search does not
-toggle, save or bypass disabled controls. Clear search restores the selected
+toggle, save or bypass disabled controls. Deleting the search text restores the selected
 category and its scroll position. Escape keeps the shared Cancel behavior.
 
 Results use a plain 360-unit-wide list, capped at the available viewport width.
@@ -69,7 +69,7 @@ prepared. Searching leaves unvisited pages unallocated until a result is opened.
 Indexing happens on a query or active language change, with no idle worker.
 Search text, matches, pagination and offsets stay in session memory. Closing
 clears the query and focus; hidden language changes defer presentation. The
-input and clear button use the existing static editor artwork; result rows stay
+input uses the existing static editor artwork; result rows stay
 plain in both Performance Mode states. No setting or SavedVariable is added.
 
 Live run updates touch the font preview only after the Run timer page has been
