@@ -34,7 +34,13 @@ DFRL:NewMod("Waypoints", 3, function()
     local stackTop = actionDefaults.bottom + actionDefaults.height + actionDefaults.topInset
     local stackBottom = xpDefaults.top - (xpDefaults.height + xpDefaults.borderHeight) / 2
     local HUD_WIDTH, HUD_HEIGHT = 190, 46
+    local NEAREST_INTERVAL = 5
     local stackCenter = (stackTop + stackBottom) / 2
+    local allyCenter = actionDefaults.bottom
+        + actionDefaults.height
+        + math.max(actionDefaults.topInset, actionDefaults.jewelryTopInset)
+        + 8
+        + HUD_HEIGHT / 2
     local sideOffset = actionDefaults.width / 2 + actionDefaults.sideInset + 8 + HUD_WIDTH / 2
     -- The selected preview shows 19 visible pixels; the source glyph spans 24/32.
     local POINTER_SIZE = 19 * 1.2 * 32 / 24
@@ -74,7 +80,7 @@ DFRL:NewMod("Waypoints", 3, function()
             frameName = "DFRL_PartyWaypoint",
             title = "Fallen ally",
             defaultSide = "CENTER",
-            defaultOffsetY = 54,
+            defaultOffsetY = allyCenter - stackCenter,
             hudArt = "FallenAlly.blp",
             hudTexCoord = { 0, 1, 0, 1 },
         },
@@ -82,6 +88,7 @@ DFRL:NewMod("Waypoints", 3, function()
     local identity
     local runWasActive = false
     local inWorld, dirty, age = true, true, 0
+    local nearestClock = 0
     local showGuardianTimers = DFRL.display.Get("guardianMinimapTimers")
     local guideRespawns = DFRL.display.Get("guardianRespawnGuidance")
 
@@ -635,6 +642,8 @@ DFRL:NewMod("Waypoints", 3, function()
         tracker.acceptedRespawn = nil
         navigation.SetPoints(tracker.source, nil)
         tracker.selectedKey, tracker.selected, tracker.provisionalSelection = nil, nil, nil
+        tracker.selectionDeferred = nil
+        tracker.selectionEntries, tracker.nextSelectionAt = nil, nil
         tracker.presentation = nil
         tracker.distanceValue, tracker.distanceLanguage, tracker.distanceLabel = nil, nil, nil
         if tracker.hudWanted ~= false then
@@ -836,31 +845,67 @@ DFRL:NewMod("Waypoints", 3, function()
             RespawnTarget(tracker) and tracker.acceptedMinimapEntries or tracker.entries
         )
     end
+    local function CanSelectNearest(tracker)
+        return DFRL.display.Get(tracker.displayKey)
+            and not DFRL.layout.IsHidden(tracker.layoutKey)
+            and FrameVisible(UIParent)
+    end
     local function Choose(tracker)
         local respawn = RespawnTarget(tracker)
         if respawn then
             tracker.selected = respawn
             tracker.selectedKey = tracker.selected.key
             tracker.provisionalSelection = nil
+            tracker.selectionDeferred = nil
+            tracker.selectionEntries, tracker.nextSelectionAt = nil, nil
             return
         end
-        tracker.selected = nil
         local previous
-        for _, entry in ipairs(tracker.entries) do
-            if entry.key == tracker.selectedKey then
-                previous = entry
-                if not tracker.provisionalSelection then
-                    tracker.selected = entry
-                    return
+        if tracker.kind ~= "party" and tracker.selectionEntries == tracker.entries then
+            -- The accepted copied list is unchanged, so its current identity
+            -- needs neither another list walk nor distance scoring yet.
+            previous = tracker.selected
+        else
+            for _, entry in ipairs(tracker.entries) do
+                if entry.key == tracker.selectedKey then
+                    previous = entry
+                    if tracker.kind == "party" and not tracker.provisionalSelection then
+                        tracker.selected = entry
+                        return
+                    end
+                    break
                 end
-                break
             end
         end
+        tracker.selected = previous
+        tracker.selectionEntries = tracker.entries
+        if tracker.kind ~= "party" and not CanSelectNearest(tracker) then
+            -- Retire removed identities while deferring distance/projection
+            -- work. A returning view selects from current native data first.
+            tracker.selectedKey = previous and previous.key or nil
+            if not previous then tracker.provisionalSelection = nil end
+            tracker.presentation, tracker.selectionDeferred = nil, true
+            return
+        end
+        if
+            tracker.kind ~= "party"
+            and previous
+            and not tracker.selectionDeferred
+            and tracker.nextSelectionAt
+            and nearestClock < tracker.nextSelectionAt
+        then
+            return
+        end
+        tracker.selectionDeferred = nil
+        -- Throttle the all-destination search independently of the responsive
+        -- selected-arrow/minimap reader. Initial and retired targets bypass it.
+        if tracker.kind ~= "party" then tracker.nextSelectionAt = nearestClock + NEAREST_INTERVAL end
+        tracker.selected = nil
         local best
         for _, entry in ipairs(tracker.entries) do
             local east, north, distance = navigation.Delta(entry)
             local score = distance or (east and math.sqrt(east * east + north * north))
-            if score and (not best or score < best) then
+            if score and (not best or score < best or (score == best and entry.key == tracker.selectedKey)) then
                 tracker.selected, best = entry, score
             end
         end
@@ -938,7 +983,10 @@ DFRL:NewMod("Waypoints", 3, function()
     end
 
     local function UpdateGuide(tracker, elapsed)
-        if not DFRL.display.Get(tracker.displayKey) or not tracker.selected then
+        if tracker.selectionDeferred and CanSelectNearest(tracker) then Choose(tracker) end
+        local enabled = DFRL.display.Get(tracker.displayKey)
+        if not enabled or not tracker.selected then
+            if tracker.kind ~= "party" and not enabled then tracker.selectionDeferred = true end
             tracker.presentation = nil
             if tracker.hudWanted ~= false then
                 tracker.hudWanted = false
@@ -952,6 +1000,7 @@ DFRL:NewMod("Waypoints", 3, function()
             tracker.hud:Show()
         end
         if not tracker.hud:IsVisible() then
+            if tracker.kind ~= "party" then tracker.selectionDeferred = true end
             tracker.presentation = nil
             if tracker.pointer:IsShown() then tracker.pointer:Hide() end
             return
@@ -1122,6 +1171,7 @@ DFRL:NewMod("Waypoints", 3, function()
     local function UpdateWaypoints()
         local elapsed = tonumber(arg1) or 0
         if not Number(elapsed) or elapsed < 0 then elapsed = 0 end
+        nearestClock = nearestClock + elapsed
         age = age + elapsed
         local refreshed = false
         if dirty or age >= 0.1 then

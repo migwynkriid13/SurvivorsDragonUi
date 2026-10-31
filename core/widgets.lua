@@ -267,7 +267,7 @@ function DFRL.tools.BindClassHealthColor(bar, unit)
 end
 
 -- Unit health labels and loss fractions share the target's accepted health source.
-function DFRL.tools.BindUnitHealthText(bar, label, unit, hideDead)
+function DFRL.tools.BindUnitHealthText(bar, label, unit, hideDead, showDeathState)
     local percentage = label:GetParent():CreateFontString(nil, "OVERLAY")
     local _, size, flags = label:GetFont()
     T.SetFont(percentage, size, flags)
@@ -276,17 +276,30 @@ function DFRL.tools.BindUnitHealthText(bar, label, unit, hideDead)
     local leftInset, rightInset, centerOffset = 0, 0, 0
     local splitLayout
     local previousCurrent, previousMaximum, previousValueShown, previousPercentShown, previousShortHealth
+    local previousStatus
+    local absorbValue, absorbMaximum, previousAbsorb, previousAbsorbMaximum, absorbPending
+    local absorbText, absorbPercentText = "", ""
     local valueText, percentText = "", ""
 
     function labels.Update()
         if not bar:IsVisible() then return end
-        local current, maximum
+        local current, maximum, status
         local valueShown = DFRL.display.Get("showHealthValue")
         local percentShown = DFRL.display.Get("showHealthPercentage")
         local shorten = DFRL.display.Get("unitShortHealth") ~= false
-        if UnitExists(unit) and not (hideDead and (UnitIsDead(unit) or UnitIsGhost(unit))) then
-            current, maximum = T.GetUnitHealth(unit, not percentShown)
-            if type(current) ~= "number" or current < 0 or current - current ~= 0 then current = nil end
+        if UnitExists(unit) then
+            local dead, ghost
+            if hideDead or showDeathState then
+                local deadValue, ghostValue = UnitIsDead(unit), UnitIsGhost(unit)
+                dead = deadValue == true or deadValue == 1
+                ghost = ghostValue == true or ghostValue == 1
+            end
+            if dead or ghost then
+                if showDeathState then status = DFRL.locale.Text(ghost and "Ghost" or "Dead") end
+            else
+                current, maximum = T.GetUnitHealth(unit, not percentShown)
+                if type(current) ~= "number" or current < 0 or current - current ~= 0 then current = nil end
+            end
         end
         if
             current ~= previousCurrent
@@ -294,14 +307,47 @@ function DFRL.tools.BindUnitHealthText(bar, label, unit, hideDead)
             or valueShown ~= previousValueShown
             or percentShown ~= previousPercentShown
             or shorten ~= previousShortHealth
+            or absorbValue ~= previousAbsorb
+            or absorbMaximum ~= previousAbsorbMaximum
+            or status ~= previousStatus
         then
+            if
+                absorbValue ~= previousAbsorb
+                or absorbMaximum ~= previousAbsorbMaximum
+                or valueShown ~= previousValueShown
+                or percentShown ~= previousPercentShown
+                or shorten ~= previousShortHealth
+            then
+                absorbText, absorbPercentText = "", ""
+                if absorbValue then
+                    if valueShown then absorbText = "|cffA6D9FF+" .. T.CompactHealth(absorbValue, shorten) .. "|r" end
+                    if percentShown then
+                        -- Shield capacity is not published. Express current absorb
+                        -- against the accepted maximum HP, without the bar's cap.
+                        local percent = absorbValue / absorbMaximum * 100
+                        if percent - percent == 0 then
+                            absorbPercentText = "|cffA6D9FF+"
+                                .. string.format("%.0f", math.floor(percent + 0.5))
+                                .. "%|r"
+                        end
+                    end
+                end
+            end
             previousCurrent, previousMaximum = current, maximum
             previousValueShown, previousPercentShown = valueShown, percentShown
             previousShortHealth = shorten
-            valueText = current and valueShown and T.CompactHealth(current, shorten) or ""
+            previousAbsorb, previousAbsorbMaximum = absorbValue, absorbMaximum
+            previousStatus = status
+            valueText = status or (current and valueShown and T.CompactHealth(current, shorten) or "")
             percentText = ""
             if current and percentShown and type(maximum) == "number" and maximum > 0 and maximum - maximum == 0 then
                 percentText = tostring(math.floor(math.min(1, current / maximum) * 100 + 0.5)) .. "%"
+            end
+            if current and current > 0 and absorbValue then
+                if absorbText ~= "" then valueText = valueText .. " " .. absorbText end
+                if absorbPercentText ~= "" then
+                    percentText = percentText .. (percentText ~= "" and " " or "") .. absorbPercentText
+                end
             end
         end
         local split = valueText ~= "" and percentText ~= ""
@@ -323,6 +369,24 @@ function DFRL.tools.BindUnitHealthText(bar, label, unit, hideDead)
         end
         T.SetTextIfChanged(label, valueText)
         T.SetTextIfChanged(percentage, percentText)
+        absorbPending = nil
+    end
+
+    function labels.SetAbsorb(value, maximum)
+        if
+            unit ~= "player"
+            or type(value) ~= "number"
+            or value <= 0
+            or value - value ~= 0
+            or type(maximum) ~= "number"
+            or maximum <= 0
+            or maximum - maximum ~= 0
+        then
+            value, maximum = nil, nil
+        end
+        if value == absorbValue and maximum == absorbMaximum and not absorbPending then return end
+        absorbValue, absorbMaximum, absorbPending = value, maximum, true
+        labels.Update()
     end
 
     function labels.SetInsets(left, right, center)
@@ -333,6 +397,7 @@ function DFRL.tools.BindUnitHealthText(bar, label, unit, hideDead)
     end
 
     DFRL.display.Listen(labels.Update)
+    if showDeathState then DFRL.locale.Listen(labels.Update) end
     labels.Update()
     return labels
 end

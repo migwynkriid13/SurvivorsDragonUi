@@ -5,8 +5,11 @@ centered below the same sample run timer. Sets 01–20 use different trios of re
 WoW pictures, now with red outlines. Set 21 repeats 01's original transparent
 symbols inside thin red circular rims. These are custom visual associations,
 not a claim that Blizzard used these sets for Mythic+ affixes. The user selected
-**04 Rally and rupture**, with the existing jewelry rim tinted red, for the
-runtime affix row. The other proposals remain design references.
+**04 Rally and rupture** pictures for the runtime affix row. On 2026-10-31,
+the user selected **02 Minimap bevel** from the
+[gold frame comparison](../docs/designs/heroic-affix-frames/index.html), replacing
+the red circular rim with square source pictures and the existing minimap
+button's gold background. The earlier proposals remain design references.
 
 The local [gallery](../docs/designs/heroic-affixes/index.html),
 [overview](../docs/designs/heroic-affixes/overview.png) and five comparison sheets
@@ -99,7 +102,7 @@ in the source manifest.
 
 `scripts/prepare_affix_art.py` reads proposal 04 from the shared design list,
 removes each four-pixel source margin, retains the full interior's proportions
-and alpha, and applies an antialiased circle. It packs three 64-square cells
+and alpha, without applying a circle mask. It packs three 64-square cells
 at x=0,64,128 on one transparent 256-by-64 canvas. Only the resulting
 `media/tex/timer/Affixes.blp` joins the runtime manifest. Lossless BLP conversion
 uses the existing client-format preparer, without color quantization or a
@@ -107,10 +110,40 @@ runtime mask/portrait dependency. No source image, generator, preview or
 external font is shipped.
 
 [affix-selected-art.json](affix-selected-art.json) records the exact source
-crops, native atlas cells, original/final hashes and the reused neutral jewelry
-rim/tint. The ring stays a separate cached image, preserving the source alpha
-and native vertex-color behavior. The run module's artwork notice retains
+crops, native atlas cells, original/final hashes and the reused minimap frame.
+The background stays a separate cached image, preserving source RGB/alpha.
+The run module's artwork notice retains
 Blizzard ownership; no upstream addon software is copied.
+
+### Selected 02 gold frame — 2026-10-31
+
+The frame reuses `media/tex/minimap/LauncherBackground.blp`, already shipped for
+the minimap launcher. Its unchanged 32-square source and full-resolution TGA
+are documented in [MinimapGlyph-ARTWORK.md](MinimapGlyph-ARTWORK.md): Blizzard's
+[`BUTTONS/UI-SquareButton-Up.PNG`](https://github.com/Gethe/wow-ui-textures/blob/e80e3278cc833c89e1f3fc79557b68315d750935/BUTTONS/UI-SquareButton-Up.PNG),
+commit `e80e3278cc833c89e1f3fc79557b68315d750935`, **10.0.0 build 45454**.
+This is shared Blizzard button art present in that export, not a claim of
+Dragonflight-exclusive origin.
+
+Only its complete nontransparent normal-state rectangle `(0,3)-(29,29)` is
+selected, using UVs `(0,29/32,3/32,29/32)`. It is displayed at 25 by 23 units
+on BACKGROUND, with a 16-square source picture on ARTWORK and five-unit gaps
+between frames. The gold rails occupy source bounds `(4,5)-(27,27)`; their
+center is `(15.5,16)`, while the cropped canvas center is `(14.5,16)`.
+The picture therefore sits `25/29` units right of the row center with no
+vertical offset. Its smaller size keeps the left and bottom rails visible,
+fixing the earlier 18-square picture's overlap without changing the frame.
+There is no red tint, circular mask or extra
+hover/pressed texture. All three original selected picture interiors retain
+their square corners. Unknown keys keep the existing native skull fallback
+inside the same gold frame.
+
+This replaces the previous rim region and retains two textures per pooled
+affix. Both Performance Mode states share the static presentation, successful
+binding cache and failed-binding retries. No runtime payload entry, source
+image or source-addon code is added. The earlier red-circle gallery describes
+the historical proposals; the selected frame and exact preparation are recorded
+in the current source manifest and gold-frame design notes.
 
 ## Rights and limits
 

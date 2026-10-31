@@ -1,5 +1,11 @@
 # Bildad Heroic numerals
 
+The visible lettering in the retained cells is one source pixel above the
+cell center. At the existing quarter-size display, a `-0.25` vertical anchor
+offset centers it inside the run pill without changing source pixels or UVs.
+The affix owner supplies the horizontal center below its first visible attached
+picture; the original atlas and personal-use notice remain unchanged.
+
 The user selected [Bildad from FontGet](https://www.fontget.com/font/bildad/)
 for the run timer's Heroic numerals. The downloaded archive's `LICENSE.md` says
 the font is free for personal use and requires FontGet.com credit when

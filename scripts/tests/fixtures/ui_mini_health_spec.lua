@@ -1,53 +1,62 @@
 -- CI only: production compact frame and loss controller over explicit native mocks.
 local H = dofile("scripts/tests/fixtures/ui_helpers.lua")
 assert(_VERSION == "Lua 5.1", "compact health fixtures require CI Lua 5.1")
-local context = H.New()
-local env = context.env
-local function Write(name) context.writes[name] = (context.writes[name] or 0) + 1 end
-local create = context.Object
-function context:Object(kind, name, parent)
-    local object = create(self, kind, name, parent)
-    object.points = {}
-    function object:SetParent(value)
-        Write("SetParent")
-        self.parent = value
+local function CompactContext()
+    local context = H.New()
+    local function Write(name) context.writes[name] = (context.writes[name] or 0) + 1 end
+    local create = context.Object
+    function context:Object(kind, name, parent)
+        local object = create(self, kind, name, parent)
+        object.points = {}
+        function object:SetParent(value)
+            Write("SetParent")
+            self.parent = value
+        end
+        function object:SetScale(value)
+            Write("SetScale")
+            self.scale = value
+        end
+        function object:SetDrawLayer(value)
+            Write("SetDrawLayer")
+            self.layer = value
+        end
+        function object:SetPoint(...)
+            Write("SetPoint")
+            table.insert(self.points, { ... })
+        end
+        function object:ClearAllPoints()
+            Write("ClearAllPoints")
+            self.points = {}
+        end
+        function object:SetAllPoints(value)
+            Write("SetAllPoints")
+            self.allPoints = value
+        end
+        function object:SetTexCoord(...)
+            Write("SetTexCoord")
+            self.uv = { ... }
+        end
+        function object:SetStatusBarTexture(path)
+            Write("SetStatusBarTexture")
+            self.fill = self:CreateTexture(nil, "ARTWORK")
+            self.fill:SetTexture(path)
+        end
+        function object:GetStatusBarColor() return unpack(self.color or { 0, 1, 0, 1 }) end
+        function object:GetStatusBarTexture() return self.fill end
+        function object:SetMovable(value)
+            Write("SetMovable")
+            self.movable = value
+        end
+        function object:SetStatusBarColor(r, g, b)
+            Write("SetStatusBarColor")
+            self.color = { r, g, b, 1 }
+        end
+        return object
     end
-    function object:SetScale(value)
-        Write("SetScale")
-        self.scale = value
-    end
-    function object:SetDrawLayer(value)
-        Write("SetDrawLayer")
-        self.layer = value
-    end
-    function object:SetPoint(...)
-        Write("SetPoint")
-        table.insert(self.points, { ... })
-    end
-    function object:ClearAllPoints()
-        Write("ClearAllPoints")
-        self.points = {}
-    end
-    function object:SetAllPoints(value)
-        Write("SetAllPoints")
-        self.allPoints = value
-    end
-    function object:SetTexCoord(...)
-        Write("SetTexCoord")
-        self.uv = { ... }
-    end
-    function object:SetStatusBarTexture(path)
-        Write("SetStatusBarTexture")
-        self.fill = self:CreateTexture(nil, "ARTWORK")
-        self.fill:SetTexture(path)
-    end
-    function object:GetStatusBarColor() return unpack(self.color or { 0, 1, 0, 1 }) end
-    function object:SetStatusBarColor(r, g, b)
-        Write("SetStatusBarColor")
-        self.color = { r, g, b, 1 }
-    end
-    return object
+    return context
 end
+local context = CompactContext()
+local env = context.env
 
 context.current, context.maximum, context.name = 1200, 1200, "Zyde"
 context.settings.hidePortraits = false
@@ -190,3 +199,169 @@ assert(loss:IsShown(), "the next native damage did not rearm the normal trail")
 root:Hide()
 assert(not loss:IsShown() and animator:GetScript("OnUpdate") == nil, "hidden compact frame kept an active trail")
 print("PASS compact target name containment, seamless fill, pooled borders, hidden recovery and Performance Mode")
+
+local function PartyContext()
+    local party = CompactContext()
+    local native = party.env
+    party.units = {}
+    party.settings.hidePortraits = false
+    party.settings.classResources = true
+    party.settings.showHealthValue, party.settings.showHealthPercentage = true, true
+    native.DFRL.layout.IsEditing = function() return false end
+    local function State(unit, field)
+        party.reads[unit .. ":" .. field] = (party.reads[unit .. ":" .. field] or 0) + 1
+        local entry = party.units[unit]
+        return entry and entry[field]
+    end
+    native.UnitExists = function(unit) return State(unit, "exists") end
+    native.UnitIsDead = function(unit) return State(unit, "dead") end
+    native.UnitIsGhost = function(unit) return State(unit, "ghost") end
+    native.UnitIsConnected = function(unit) return State(unit, "connected") end
+    native.UnitHealth = function(unit) return State(unit, "current") end
+    native.UnitHealthMax = function(unit) return State(unit, "maximum") end
+    native.UnitIsUnit = function(unit, candidate) return unit == candidate end
+    native.UnitClass = function() return "Warlock", "WARLOCK" end
+    native.DFRL.locale.Text = function(text)
+        if party.language == "fr" then
+            if text == "Dead" then return "Mort" end
+            if text == "Ghost" then return "Fantôme" end
+        end
+        return text
+    end
+    for index = 1, 4 do
+        local prefix, unit = "PartyMemberFrame" .. index, "party" .. index
+        local frame = native.CreateFrame("Frame", prefix, native.UIParent)
+        frame:SetWidth(100)
+        frame:SetHeight(50)
+        local health = native.CreateFrame("StatusBar", prefix .. "HealthBar", frame)
+        local mana = native.CreateFrame("StatusBar", prefix .. "ManaBar", frame)
+        health:SetWidth(70)
+        mana:SetWidth(70)
+        health.nativeValue, mana.nativeValue = 17 + index, 31 + index
+        health.SetValue = function() error("party captions wrote native health") end
+        mana.SetValue = function() error("party captions wrote native resources") end
+        party.units[unit] = {
+            exists = true,
+            connected = true,
+            dead = 0,
+            ghost = 0,
+            current = 800 + index,
+            maximum = 1600 + index * 2,
+            frame = frame,
+            health = health,
+            mana = mana,
+        }
+    end
+    party:Load("core/widgets.lua")
+    party:Load("modules/unit/mini.lua", "Mini")
+    for _, entry in pairs(party.units) do
+        for _, object in ipairs(party.objects) do
+            if object.kind == "FontString" and object.points[1] and object.points[1][2] == entry.health then
+                if object.points[1][1] == "LEFT" then entry.label = object end
+                if object.points[1][1] == "RIGHT" then entry.percentage = object end
+            end
+        end
+        assert(entry.label and entry.percentage, "native party row did not bind its existing health labels")
+        assert(entry.percentage:GetText() == "50%", "numeric-zero flags incorrectly marked a living party member dead")
+    end
+    party.controller = party:Controller("UNIT_FLAGS")
+    assert(party.controller.events.UNIT_CONNECTION, "party connection transitions do not refresh captions")
+    return party
+end
+
+local party = PartyContext()
+local prepared = table.getn(party.objects)
+for _, performance in ipairs({ false, true }) do
+    party:SetSetting("performanceMode", performance)
+    for index = 1, 4 do
+        local unit = "party" .. index
+        local entry = party.units[unit]
+        entry.dead = index == 1 and true or 1
+        party:ResetCounts()
+        party:Event(party.controller, "UNIT_FLAGS", unit)
+        assert(
+            entry.label:GetText() == "Dead" and entry.percentage:GetText() == "",
+            "death retained stale positive health"
+        )
+        assert(entry.label.points[1][1] == "CENTER", "party death caption was left in the numeric column")
+        assert(
+            not party.reads[unit .. ":current"] and not party.reads[unit .. ":maximum"],
+            "dead party caption read health values"
+        )
+        for other = 1, 4 do
+            if other ~= index then
+                assert(
+                    not party.reads["party" .. other .. ":exists"],
+                    "a unit flags event refreshed unrelated party rows"
+                )
+            end
+        end
+        party:ResetCounts()
+        party:Event(party.controller, "UNIT_FLAGS", unit)
+        party:NoPresentationWrites()
+        entry.ghost = index == 1 and true or 1
+        party:Event(party.controller, "UNIT_FLAGS", unit)
+        assert(
+            entry.label:GetText() == "Ghost" and entry.percentage:GetText() == "",
+            "ghost did not take priority over dead"
+        )
+        entry.dead, entry.ghost = 0, 0
+        party:Event(party.controller, "UNIT_FLAGS", unit)
+        assert(
+            entry.label:GetText() == tostring(entry.current) and entry.percentage:GetText() == "50%",
+            "resurrection did not restore native health captions"
+        )
+        assert(
+            entry.health.nativeValue == 17 + index and entry.mana.nativeValue == 31 + index,
+            "status presentation changed native bar values"
+        )
+    end
+end
+
+local member = party.units.party1
+member.dead = true
+party:Event(party.controller, "UNIT_CONNECTION", "party1")
+party:SetSetting("showHealthValue", false)
+party:SetSetting("showHealthPercentage", false)
+assert(
+    member.label:GetText() == "Dead" and member.percentage:GetText() == "",
+    "numeric choices hid a party death state"
+)
+party.language = "fr"
+party:NotifyLocale()
+assert(member.label:GetText() == "Mort", "language change retained the previous party death caption")
+member.ghost = true
+party:Event(party.controller, "UNIT_CONNECTION", "party1")
+assert(member.label:GetText() == "Fantôme", "connection-only refresh did not reflect current ghost state")
+member.exists = false
+party:Event(party.controller, "UNIT_CONNECTION", "party1")
+assert(
+    member.label:GetText() == "" and member.percentage:GetText() == "",
+    "missing native unit retained its prior death caption"
+)
+member.exists, member.dead, member.ghost = true, false, false
+party:Event(party.controller, "UNIT_CONNECTION", "party1")
+assert(member.label:GetText() == "" and member.percentage:GetText() == "", "revival discarded disabled numeric choices")
+party:SetSetting("showHealthValue", true)
+party:SetSetting("showHealthPercentage", true)
+assert(
+    member.label:GetText() == "801" and member.percentage:GetText() == "50%",
+    "health choices did not recover after resurrection"
+)
+
+party:SetLayoutHidden(true)
+party:ResetCounts()
+member.dead, member.ghost = true, true
+party.language = nil
+party:Event(party.controller, "UNIT_FLAGS", "party1")
+party:NotifyLocale()
+party:NoPresentationWrites()
+assert(not next(party.reads), "hidden party frames read health or death presentation")
+party:SetLayoutHidden(false)
+assert(
+    member.label:GetText() == "Ghost" and member.percentage:GetText() == "",
+    "Show replayed hidden party health or language state"
+)
+assert(table.getn(party.objects) == prepared, "party death transitions allocated new UI objects")
+assert(party.controller:GetScript("OnUpdate") == nil, "party death captions added an idle updater")
+print("PASS party Dead/Ghost flags, localized reused labels, numeric choices, resurrection and hidden recovery")

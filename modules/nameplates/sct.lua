@@ -177,7 +177,8 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local arcDirection = 1
     local function IsMode(mode) return mode == "on" or mode == "off" or mode == "default" end
     local sctMode = _G.SurvivorsDragonUiSctMode
-    if not IsMode(sctMode) then sctMode = "default" end
+    local initializeMode = not IsMode(sctMode)
+    if initializeMode then sctMode = "on" end
     local sct, settingsListeners, settingsDraft = {}, {}, nil
     DFRL.sct = sct
     local observedIncoming
@@ -213,6 +214,53 @@ DFRL:NewMod("NameplateCombatText", 6, function()
 
     local function CustomEnabled() return customEnabled and (not msbtStyle or not scrollHidden) end
     local function UsesPlateOrigins() return CustomEnabled() and not msbtStyle end
+
+    local cameraDrag = { owned = false, starting = false }
+    local cameraDragSupported = WorldFrame
+        and type(_G.MouselookStart) == "function"
+        and type(_G.MouselookStop) == "function"
+        and type(_G.IsMouselooking) == "function"
+    function cameraDrag.Stop(cleanup)
+        -- Native freelook entry sends a synthetic up to the old capture.
+        -- Only the later real release, or world cleanup, ends our hold.
+        if not cameraDrag.owned then return end
+        if cameraDrag.starting then
+            if cleanup then cameraDrag.stopPending = true end
+            return
+        end
+        cameraDrag.owned, cameraDrag.stopPending = false, nil
+        local looking = _G.IsMouselooking()
+        if looking and looking ~= 0 then pcall(_G.MouselookStop) end
+    end
+    function cameraDrag.Start()
+        if not cameraDragSupported or not inWorld or cameraDrag.starting then return end
+        local looking = _G.IsMouselooking()
+        if looking and looking ~= 0 then return end
+        -- A native release can end look without visiting either Lua up hook.
+        -- A fresh press must replace that stale ownership instead of sticking.
+        cameraDrag.stopPending = nil
+        cameraDrag.owned, cameraDrag.starting = true, true
+        -- Unlike TurnOrActionStart, this native camera verb is callable from
+        -- an addon mouse-down handler. It also releases the plate's capture.
+        local ok = pcall(_G.MouselookStart)
+        cameraDrag.starting = false
+        if not ok or not inWorld or cameraDrag.stopPending then cameraDrag.Stop() end
+    end
+    if cameraDragSupported then
+        HookScript(WorldFrame, "OnMouseUp", function()
+            if arg1 == "RightButton" then cameraDrag.Stop() end
+        end)
+        HookScript(WorldFrame, "OnHide", function() cameraDrag.Stop(true) end)
+        hooksecurefunc("MouselookStart", function()
+            -- A later external start owns its session; never stop it for ours.
+            if not cameraDrag.starting then
+                cameraDrag.owned, cameraDrag.stopPending = false, nil
+            end
+        end)
+        hooksecurefunc("MouselookStop", function()
+            cameraDrag.owned, cameraDrag.stopPending = false, nil
+        end)
+    end
 
     local function IsFiniteNumber(value) return type(value) == "number" and value - value == 0 end
 
@@ -497,6 +545,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         text.needsMeasure = nil
         text.fontRetryAt = nil
         text.scrollOffset, text.scrollY = nil, nil
+        text.origin = nil
         text.diablo, text.duration = nil, nil
         text.anchorRoot, text.anchorPoint, text.anchorX, text.anchorY = nil, nil, nil, nil
         table.insert(textPool, text)
@@ -738,6 +787,22 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         -- Build the skin before the first recursive mask so V-off tracking
         -- covers every visual child without touching the SCT data sources.
         if plateStyle then plateStyle.Attach(plate, data) end
+        if cameraDragSupported then
+            HookScript(plate, "OnMouseDown", function()
+                if
+                    arg1 == "RightButton"
+                    and plate:IsShown()
+                    and (not plate.IsVisible or plate:IsVisible())
+                    and not data.presentationMasked
+                    and IsEnemyPlate(data)
+                then
+                    cameraDrag.Start()
+                end
+            end)
+            HookScript(plate, "OnMouseUp", function()
+                if arg1 == "RightButton" then cameraDrag.Stop() end
+            end)
+        end
         HookScript(plate, "OnHide", function()
             shownPlates[plate] = nil
             RetirePlate(plate)
@@ -1989,18 +2054,22 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         return strong and DAMAGE_COLORS.strong or DAMAGE_COLORS.normal
     end
 
-    local function DisplayDamage(info, x, y, displayAmount, largeCritical)
+    local function DisplayDamage(info, x, y, displayAmount, largeCritical, origin)
         -- Filter only after every original hit has consumed its matching and
         -- color evidence, including members of a visually collapsed group.
         if not ShouldShowText(info) then return end
         local value = displayAmount or info.text or info.amount
         if not value then return end
         local text = AcquireText()
-        -- Snapshot once: native nameplate stacking must never drag an active
-        -- number. MSBT instead uses offsets from its independent Layout owner.
+        -- Follow only the common resolved incarnation. Ambiguous/mixed groups
+        -- keep their centroid; MSBT uses its independent Layout owner.
         if msbtStyle then
             x, y = 0, MSBT.height / 2 - 12
+            origin = nil
+        elseif origin then
+            x, y = origin.x, origin.y
         end
+        text.origin = origin
         text.x, text.y = x, y
         text.started = GetTime()
         text.diablo = textStyle == "diablo"
@@ -2062,14 +2131,19 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             local age = now - entry.time
             local resolved = false
             if age >= EVENT_SETTLE then
-                local x, y
+                local x, y, origin
                 if msbtStyle then
                     x, y = 0, 0
                 else
-                    x, y = ResolveOrigin(entry.info, now, age >= EVENT_FALLBACK_DELAY)
+                    x, y, origin = ResolveOrigin(entry.info, now, age >= EVENT_FALLBACK_DELAY)
                 end
                 if x and y then
                     local group = entry.group
+                    if group.count == 0 then
+                        group.origin = origin
+                    elseif group.origin ~= origin then
+                        group.origin = nil
+                    end
                     group.count = group.count + 1
                     group.x, group.y = group.x + x, group.y + y
                     group.remaining = group.remaining - 1
@@ -2117,7 +2191,8 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                     group.x / group.count,
                     group.y / group.count,
                     group.displayAmount,
-                    group.largeCritical
+                    group.largeCritical,
+                    group.origin
                 )
             else
                 kept = kept + 1
@@ -2169,9 +2244,14 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                 kept = kept + 1
                 activeTexts[kept] = text
                 if text.fontRetryAt and now >= text.fontRetryAt then ApplyTextFont(text, now) end
+                -- ScanPlates already sampled this incarnation. Retired origins
+                -- keep their last usable point when native frames are reused.
+                if text.origin then
+                    text.x, text.y = text.origin.x, text.origin.y
+                end
                 local x, y, relativePoint
                 if text.diablo then
-                    -- Launch into a compact fan, then drift from its fixed point.
+                    -- Launch into a compact fan, then drift above the origin.
                     -- No gravity/fall or long screen-wide scrolling column.
                     local burst = math.min(1, math.max(0, age / DIABLO.burst))
                     local ease = 1 - math.pow(1 - burst, 3)
@@ -2183,7 +2263,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                     y = text.scrollY
                     relativePoint = "CENTER"
                 else
-                    -- Only the hit's own animation moves its native launch point.
+                    -- Preserve the original arc relative to the current origin.
                     x = text.x + text.arcX * progress
                     y = text.y + 12 + text.launch * progress - text.gravity * progress * progress
                     relativePoint = "BOTTOMLEFT"
@@ -2206,8 +2286,8 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                         scale = scale * (2 - math.pow((pop - 0.5) * 2, 5))
                     end
                 end
-                -- Only the inner visual scales: its launch point stays
-                -- fixed during crit pop, including after the mob has died.
+                -- Only the inner visual scales, independently of origin motion
+                -- and the frozen last position after the mob has died.
                 if text.scale ~= scale then
                     text.scale = scale
                     text.visual:SetScale(scale)
@@ -2347,7 +2427,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     end
 
     function sct.GetMode() return ActiveMode() end
-    function sct.NormalizeMode(mode) return IsMode(mode) and mode or "default" end
+    function sct.NormalizeMode(mode) return IsMode(mode) and mode or "on" end
     function sct.GetIncoming() return ReadIncoming() == "1" end
     function sct.BeginEdit()
         if not settingsDraft then settingsDraft = {} end
@@ -2410,6 +2490,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             enemyPlatesEnabled = _G.NAMEPLATES_ON and true or false
             SyncGameSettings(true)
         elseif event == "PLAYER_LEAVING_WORLD" or event == "PLAYER_LOGOUT" then
+            cameraDrag.Stop(true)
             sct.FinishEdit(false)
             inWorld = false
             SyncScrollRoot()
@@ -2486,6 +2567,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         local reloadUI = _G.ReloadUI
         _G.ReloadUI = function()
             -- Restore native preview values before ReloadUI can serialize them.
+            cameraDrag.Stop(true)
             sct.FinishEdit(false)
             inWorld = false
             for _, data in pairs(plates) do
@@ -2495,5 +2577,8 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         end
     end
 
+    -- Missing/invalid mode preferences adopt Custom once. Later startup/world
+    -- observations still honor native choices without reapplying suppression.
+    if initializeMode then WriteNativeDamage("0") end
     SyncGameSettings(true)
 end)

@@ -74,6 +74,23 @@ The latest-value label cache includes this format choice and hidden labels defer
 formatting until their existing visible refresh. Boss bars and Guardian tracker
 have independent choices.
 
+Party frames show **Dead** or **Ghost** in the existing health label when the
+native unit flags report that state. Ghost takes priority if both flags are
+set. The caption is centered, replaces the health numbers and percentage, and
+remains visible when either numeric choice is off. Resurrection restores the
+selected numeric choices. Missing units clear the caption. The lower resource
+bar retains its native value; it is separate from health.
+
+The compact-frame controller refreshes party captions on `UNIT_FLAGS` and
+`UNIT_CONNECTION` as well as its existing health/roster/Show events. Both native
+boolean and numeric flags are accepted, with numeric zero treated as false.
+Only the affected unit and its native aliases refresh. Hidden frames defer
+state reads and text writes until Show, including language changes. All
+fourteen languages share this static presentation in normal and Performance
+Mode, using the existing label and percentage regions without another updater
+or saved choice. CI-only mocks cover these transitions; local source review
+and formatting do not verify the client's event delivery or appearance.
+
 Enemy targets use the official `AZS_TARGET.hp` and `hpm` publication for their
 health label, whole-number percentage, fill and damage-loss animation once it
 arrives. Selecting a target first shows its validated current native
@@ -134,16 +151,33 @@ segment. There is no separate setting, and **Class resources** can stay off.
 The segment starts after current health when there is room. When health plus
 the shield exceeds maximum health, it moves left inside the bar so the shield
 is still visible at full health. Its width represents shield / maximum health,
-capped at one full bar. Existing health labels continue to show health only.
+capped at one full bar.
+
+The existing health labels add the current absorb in pale blue: **Show health**
+shows `1K +7K`, and **Show health percentage** shows `100% +700%` for 1K maximum
+HP and 7K shield. Each control remains independent; **Shorten health numbers**
+also applies to the absorb amount. The shield percentage uses received maximum
+HP and is not capped at 100%, so depletion remains readable while the segment
+still fills the bar. It is not a percentage of original shield capacity: the
+official API publishes current total absorb, not the full capacity of each buff.
+Performance Mode retains these static numbers while hiding the blue segment.
+The existing label anchors and font size remain unchanged; narrow bars with
+long full-number captions may need wider Layout geometry.
 
 The shared player-resource reader uses the official `AZS_RUN.sh`, `hp` and
 `hpm` fields after checking `AZS_GetPhase()` and a published `AZS_RUN_UPDATED`.
 It never derives absorbs from buffs, spell descriptions or combat text. Zero,
-missing or invalid shield/health data clears the segment. Inactive phases,
-new zones and world cleanup retire the previous run publication; the same
+missing or invalid shield/health data clears the segment and absorb numbers.
+Inactive phases, new zones and world cleanup retire the previous run publication; the same
 table/stamp/receipt tuple stays blocked until native data changes. Hidden
-player frames clear the segment and defer presentation until visible again.
+player frames clear the segment and retained absorb values, deferring
+presentation until visible again.
 Run packets request a deferred read through the existing resource controller.
+
+The shared labels receive only validated shield/maximum-HP scalars from that
+reader, without consulting buffs or rereading native run tables. Successful
+formatting is cached separately from health changes; failed text writes retry
+through the existing reader. No text region or display setting is added.
 
 The segment inherits the actual health rectangle, including width handles,
 portrait modes and the optional resource row's height. It lazily reuses the

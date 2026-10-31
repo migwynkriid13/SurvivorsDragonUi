@@ -15,10 +15,11 @@ it off hides and clears the custom view and restores the native HUD preference
 captured by the replacement. It does not force the game's own meter setting off.
 
 Click its heading to cycle through Damage Done, Healing Done, Boss Damage and Party Damage;
-right-click goes backwards. The gold header shows **Total** and **DPS** (or **HPS**
+views still waiting for their first usable native publication are skipped.
+Right-click goes backwards. The gold header shows **Total** and **DPS** (or **HPS**
 for healing), replacing the view name and the former footer text. Hover over the
 header to see the current view. The small gold **X** resets statistics in every
-view; it never closes the meter. Missing data displays `--` for both values.
+view; it never closes the meter. When totals are shown, missing values display `--`.
 Under `/sdui` → **Damage meter**, set **Abilities shown** from **1 to 10**;
 the default is **6**. The number previews immediately and saves with Confirm.
 Cancel, world/logout/reload discard, profiles and both resets use the shared
@@ -52,7 +53,7 @@ separate Reset DPS settings button. After resetting, **All** and the average DPS
 tooltips use only damage since the reset. The window choice retains the shared
 preview, Confirm, Cancel, profile and full-reset paths.
 
-Use the left/right side handles on **DPS meter** in Layout to change its width without scaling rows or icons. Top/bottom handles change **Abilities shown**, using the same 1–10 limit as the settings control. Corner handles retain proportional scaling. **Font size** remains under Damage meter, from **8 to 18**, default **11**. All changes preview and use Confirm, Cancel, profiles, discard and resets.
+Use the left/right side handles on **DPS meter** in Layout to change its width without scaling rows or icons. Top/bottom handles change **Abilities shown**, using the same 1–10 limit as the settings control. Corner handles retain proportional scaling. Under Damage meter, **Name font size** changes source/hero names independently; **Number font size** changes row values and header/status text. Both range from **8 to 18**, default **11**. All changes preview and use Confirm, Cancel, profiles, discard and resets.
 
 Ability names and row values use the resolved native DEFAULT font with OUTLINE,
 matching guardian/chat text, and the shared chat shadow: black at `(1, -1)`.
@@ -61,20 +62,33 @@ The gold header retains its original styling.
 
 The default scale remains **0.8** and width **240** UI units, with side-width limits **120–960**. Its bottom-right corner sits at the screen's bottom-right corner with no offset. Shared layout registration captures this scale before applying saved geometry. Defaults apply to unset geometry and both full resets; confirmed/draft positions and scales retain the shared rules. The default corner stays fixed when the ability count changes. Active side dragging holds the opposite edge fixed.
 
-Width now lives beside scale and position in the existing Layout record. The obsolete `meterWidth` display field and slider are removed. `meterFontSize` remains a finite, clamped/rounded display integer; both normalizers participate in named profiles and the existing save/discard lifecycle. No new SavedVariable or geometry migration is needed. Hidden/off views accept required root geometry but defer presentation, and resizing never starts native collection while the meter is off.
+Width now lives beside scale and position in the existing Layout record. The obsolete `meterWidth` display field and slider are removed. `meterFontSize` and `meterNameFontSize` are finite, clamped/rounded display integers. Older saves/profiles missing a valid name size inherit their normalized `meterFontSize`, preserving the selected appearance; full resets use eleven for both. Both settings participate in named profiles and the existing save/discard lifecycle. No new SavedVariable or geometry migration is needed. Hidden/off views accept required root geometry but defer presentation, and resizing never starts native collection while the meter is off.
 
 Row height, circular icons and gold rims remain 32, 26 and 31 units. Header
-text retains its original size offsets above the selected row font. Numeric
-column widths follow font size and enabled columns, reserving at least 48 units
-for names at the narrowest widths. Very large text with all numeric columns can
-still clip; the full native name and values remain available on hover. Wider
-meters or fewer numeric fields provide more name space. Text sizes and row
+text retains its original size offsets above the selected number font. The
+numeric label uses its actual native text width, rounded up with one unit of
+glyph clearance and a five-unit name gap. Names receive all remaining space,
+with at least 48 units reserved at the narrowest widths. Disabled numeric fields
+leave no reserved column. This replaces the old fixed 58 units per field, which
+truncated names early even when short numbers left unused space. Very large
+text with all numeric fields can still clip; full native names and values stay
+available on hover. Text sizes and row
 widths update only on effective changes; failed font-size changes stay retryable.
 Hidden/off views defer row/header presentation until visible; the shared editor
 still receives required root-width changes.
 The readiness row and lazy rows start with positive label widths even at 120;
-column reflow then applies the existing name-space reservation. Defaults apply
+column reflow then applies the measured name-space reservation. Defaults apply
 to missing/invalid values and resets, preserving explicit saved width choices.
+
+Each pooled row retains only its latest successful numeric text metric, keyed
+by the rendered caption, actual font face/size/flags, owning-row effective scale
+and relevant width. Raw counter changes that keep the same compact caption do
+not remeasure. Missing/invalid metrics retry through the existing visible reader
+with conservative space until ready. Row retirement clears the metric; hidden,
+off and numbers-off views skip measurement. Both Performance Mode states use
+the same instant reflow, without a new region, asset, event or updater. CI-only
+production-meter cases cover the layout and font lifecycle; no local tests or
+addon/game execution were run, and native glyph fit remains unverified.
 
 ## Native data
 
@@ -328,12 +342,29 @@ layout registration and a selected snapshot are usable. Invalid or missing data,
 render failures, world leave, logout and the wrapped ReloadUI release suppression
 and restore the captured/latest external preference, including an originally
 hidden meter. Its native minimap button belongs to that same HUD preference.
-The custom heading remains available when another view has no snapshot. While
-waiting for a native publication, the body status is empty and hidden; no waiting
-caption or replacement message is shown. The publication gates still reject
-retired and initially empty data. Unavailable-data and valid-empty messages keep
-their existing behavior. Hiding the Layout group intentionally hides the
-replacement while its valid native takeover remains active.
+The existing visible reader resolves header navigation and skips unpublished
+views whose body would be blank, in the chosen forward or reverse order. A valid
+received empty snapshot remains selectable with **No meter entries yet.**, and
+explicit unavailable-data errors retain their message. Initial selection can
+also advance to a ready view. If every view is waiting, selection stays stable
+and the existing header names the current view; totals return when data arrives.
+The waiting body remains hidden, without another caption or invented values.
+
+Getter calls stay out of click handlers. Pending navigation waits while hidden;
+disabling or retiring the meter clears it. Candidate scans are bounded by the four views and reuse the
+existing phase/publication validation; retired and initially empty data never
+become available merely to fill a page. Hiding the Layout group intentionally
+hides the replacement while its valid native takeover remains active.
+
+Rapid clicks retain their first direction and subsequent net steps through one
+deferred resolution, including reverse clicks and an initially waiting view.
+Other views are probed for navigation or a new readiness/publication/visibility
+change, rather than every settled poll. Selection, Reset baselines, rolling
+damage observation and presentation reuse each native result within a reader
+pass. Four reusable result records release their source/value references after
+the pass, including failed refreshes. Candidates retain only view indices; no
+view history or gameplay persistence is added. Normal and Performance Mode use
+the same selection and static waiting header.
 
 Layout-hidden meter groups retain phase retirement and native ownership. They
 validate selected-view data only after a native publication, without copying

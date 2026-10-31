@@ -144,7 +144,8 @@ Test("display copies derive membership from defaults and preserve normalization 
         unknown = true,
     })
     assert(copy.meterEnabled and copy.cooldownNumbers == false and copy.meterRows == 10)
-    assert(copy.nameplateFontSize == 11 and copy.sctScale == 1 and copy.lootMode == "game")
+    assert(copy.nameplateFontSize == 11 and copy.sctScale == 0.9 and copy.lootMode == "game")
+    assert(copy.sctStyle == "diablo" and copy.sctFont == "default" and copy.sctShortNumbers == true)
     assert(copy.tallyStyle == "silver" and copy.unknown == nil)
     assert(copy.runTextRegular == false and copy.runTextEndless == false, "legacy visibility fallback changed")
     display.BeginEdit()
@@ -159,6 +160,103 @@ Test("display copies derive membership from defaults and preserve normalization 
     display.FinishEdit(true)
     copy.meterEnabled = false
     assert(display.Get("meterEnabled") and env.SurvivorsDragonUiDisplay.cooldownNumbers == false)
+end)
+
+Test("meter name fonts inherit older saves and normalize independently", function()
+    local c = H.New()
+    c:Load("core/display.lua", "Display")
+    local display = c.env.DFRL.display
+    assert(display.Get("meterFontSize") == 11 and display.Get("meterNameFontSize") == 11)
+    local copy = display.Copy({ meterFontSize = 14.6 })
+    assert(copy.meterFontSize == 15 and copy.meterNameFontSize == 15, "older saves changed their name appearance")
+    copy = display.Copy({ meterFontSize = 30, meterNameFontSize = 0 / 0 })
+    assert(
+        copy.meterFontSize == 18 and copy.meterNameFontSize == 18,
+        "invalid name size did not inherit normalized numbers"
+    )
+    copy = display.Copy({ meterFontSize = 14, meterNameFontSize = 3 })
+    assert(copy.meterFontSize == 14 and copy.meterNameFontSize == 8, "explicit name size was coupled to numbers")
+    copy = display.Copy({ meterFontSize = "invalid", meterNameFontSize = math.huge })
+    assert(copy.meterFontSize == 11 and copy.meterNameFontSize == 11, "invalid legacy sizes did not use defaults")
+    c.env.SurvivorsDragonUiDisplay = { meterFontSize = 15 }
+    display.BeginEdit()
+    display.Set("meterNameFontSize", 9)
+    assert(display.Get("meterNameFontSize") == 9 and display.Get("meterFontSize") == 15, "preview changed both fonts")
+    assert(c.env.SurvivorsDragonUiDisplay.meterNameFontSize == nil, "name-size preview saved early")
+    display.Set("meterNameFontSize", "invalid")
+    assert(display.Get("meterNameFontSize") == 9, "invalid input replaced a usable name-size draft")
+    display.FinishEdit(false)
+    assert(display.Get("meterNameFontSize") == 15, "Cancel lost legacy inheritance")
+    display.BeginEdit()
+    display.Set("meterNameFontSize", 10)
+    display.Set("meterFontSize", 18)
+    local snapshot = display.Snapshot()
+    snapshot.meterNameFontSize = 8
+    assert(display.Get("meterNameFontSize") == 10, "font snapshot aliased the draft")
+    display.FinishEdit(true)
+    assert(
+        c.env.SurvivorsDragonUiDisplay.meterNameFontSize == 10 and c.env.SurvivorsDragonUiDisplay.meterFontSize == 18
+    )
+    display.BeginEdit()
+    display.Load({ meterFontSize = 8 })
+    assert(
+        display.Get("meterNameFontSize") == 8 and display.Get("meterFontSize") == 8,
+        "older profile skipped name-size migration"
+    )
+    display.FinishEdit(false)
+    assert(
+        display.Get("meterNameFontSize") == 10 and display.Get("meterFontSize") == 18,
+        "profile discard lost independent fonts"
+    )
+    display.Reset()
+    assert(
+        display.Get("meterNameFontSize") == 11 and display.Get("meterFontSize") == 11,
+        "full defaults retained font overrides"
+    )
+end)
+
+Test("named profiles retain independent meter fonts and migrate older profile previews", function()
+    local c = H.New()
+    local env = c.env
+    c:Load("core/display.lua", "Display")
+    local display = env.DFRL.display
+    env.SurvivorsDragonUiDisplay = { meterFontSize = 16, meterNameFontSize = 9 }
+    env.SurvivorsDragonUiProfiles = {
+        Legacy = { layout = {}, display = { meterFontSize = 14 }, runFont = {} },
+        Separate = { layout = {}, display = { meterFontSize = 18, meterNameFontSize = 8 }, runFont = {} },
+    }
+    env.DFRL.layout.Copy = function(value) return value end
+    env.DFRL.layout.Load = function() end
+    env.DFRL.runFont = { Copy = function(value) return value end, Load = function() end }
+    c:Load("core/profiles.lua", "Profiles")
+    local profiles = env.DFRL.profiles
+    display.BeginEdit()
+    profiles.BeginEdit()
+    assert(profiles.Load("Legacy"))
+    assert(display.Get("meterFontSize") == 14 and display.Get("meterNameFontSize") == 14)
+    display.FinishEdit(false)
+    profiles.FinishEdit(false)
+    assert(
+        display.Get("meterFontSize") == 16 and display.Get("meterNameFontSize") == 9,
+        "profile Cancel retained migrated fonts"
+    )
+    assert(
+        env.SurvivorsDragonUiProfiles.Legacy.display.meterNameFontSize == nil,
+        "preview rewrote an older saved profile"
+    )
+    display.BeginEdit()
+    profiles.BeginEdit()
+    assert(profiles.Load("Separate"))
+    display.FinishEdit(true)
+    profiles.FinishEdit(true)
+    assert(
+        display.Get("meterFontSize") == 18 and display.Get("meterNameFontSize") == 8,
+        "profile Confirm coupled the fonts"
+    )
+    assert(
+        env.SurvivorsDragonUiProfiles.Legacy.display.meterNameFontSize == 14,
+        "profile normalization lost legacy appearance"
+    )
 end)
 
 local function Circular(size, minimumParts)

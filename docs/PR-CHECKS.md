@@ -58,6 +58,50 @@ An explicit Bash shell enables `pipefail`, so piping fixture/model output into
 
 ## UI work and cleanup tests
 
+SCT default cases use real Display/SCT owners to check Custom mode, Diablo IV
+style, Default font, 90% size and enabled abbreviations. Missing/invalid modes
+suppress native outgoing damage once during initialization, including synchronous
+CVar callbacks, without touching incoming/self text; valid saved modes and later native changes keep their usual
+behavior. Cases retain explicit saved values and both legacy style choices,
+display preview/Confirm/discard/profiles/reset and confirmed-mode preservation
+on full reset. These cases remain CI-only and were not run locally.
+
+Nameplate camera cases use the production controller with explicit native
+mouse-look boundaries. They cover right-button entry, left/native handler
+preservation, synchronous synthetic release, real WorldFrame/plate release,
+death/reuse during a hold, hidden/filtered plates, pre-existing/external camera
+ownership and world/logout/reload cleanup in both Performance Mode states.
+Reentrant world hiding, unnotified native stops and partially failed starts
+clear or replace owned state without sticking later presses.
+Missing APIs retain native interaction; repeated discovery and idle updates add
+no hooks or drawing work. These cases remain CI-only and were not run locally.
+
+Meter spacing cases use the production meter with explicit native text metrics.
+They cover reclaiming unused numeric space, caption-aware metric caching and
+retries, width/font/scale changes, independent name/number font sizes, preserved
+native values/row geometry, hidden/off/disabled-number work and pooled-row
+retirement. Display/editor cases cover inherited older saves, normalization,
+preview/Confirm/discard/profiles/resets and searchable controls. These cases
+remain CI-only and were not run locally; native glyph fit is unverified.
+
+The editor fixture covers the single sidebar search above Performance Mode,
+compact caption/input geometry, all nine category rows staying clear of the footer,
+the recovered full content viewport and result geometry remaining in that
+viewport. Category changes reuse the same header and preserve draft/scroll
+behavior. It also covers metadata search without constructing unopened pages,
+active-language/English matching, supported case folding, literal punctuation,
+empty results, pooled paging, fixed-width plain rows and their single hidden
+hover texture, custom and ordinary option redirects, current
+row offsets, pending drafts, shared Escape/Cancel, hidden focus/query cleanup
+and unchanged/idle work. It loads the real navigator and settings constructor
+over explicit native boundaries. Search only navigates to existing controls;
+these CI-only cases do not establish in-game glyph fit or native scrolling.
+They were not run locally.
+
+SCT font-choice cases use real display notifications to check both buttons'
+selected and native highlight states when switching in either direction, plus
+unchanged clicks, hidden presentation and Cancel restoration.
+
 Profile-save cases exercise the production Layout/Display/Profiles transaction
 with fake native geometry and font/SCT owner boundaries. They cover save and
 overwrite closing through one shared commit, Enter, pending numeric input,
@@ -94,6 +138,15 @@ guardian width invalidation, hidden recovery and unchanged writes. The productio
 boss row pass also forwards its own choice without changing health-loss state.
 These cases remain CI-only and were not executed locally.
 
+Player-absorb cases exercise the production resource reader, player absorb
+owner and shared health labels. They cover current amount and uncapped
+percentage of received maximum HP, independent text choices, shortening,
+deferred run reads, Performance Mode text without overlay allocation, invalid
+data, hidden work, phase/zone/world retirement, failed text/texture retries and
+unchanged formatting/writes/allocations. The native boundaries are explicit;
+no buff values, capacity history or client files are read. Coverage is CI-only
+and was not executed locally.
+
 The default-off boss/guardian percentage cases cover independent transactions,
 current-only/maximum-only/combined/percentage-only captions, calculation from
 full values in both number formats, zero/100% boundaries, invalid health,
@@ -124,7 +177,7 @@ The assertions cover:
 - Editor navigation loads `core/editor.lua` against explicit native scroll and
   glyph-width boundaries. It covers grouped visibility, original section owners,
   retained section state, per-category offsets, duplicate-heading suppression,
-  absence of search inputs, close/reopen, compact/wrapped caption spacing,
+  search redirects and lazy result pooling, close/reopen, compact/wrapped caption spacing,
   compact numeric captions, mixed-height two-column placement, odd last rows,
   full-row master clearance, locale reflow and single-option/mode spacing,
   missing-metric retry, stable allocations and hidden/unchanged work without an
@@ -227,6 +280,12 @@ The assertions cover:
   slot changes during reads, literal native names, nearest/stable selection,
   hidden/off sampling, display preview/Confirm/Cancel/profile/reset, world and
   phase cleanup, missing getters and stationary work in Performance Mode.
+  Cache/guardian cases cover the five-second nearest-selection cadence for
+  nearer arrivals and movement, responsive selected-arrow updates between
+  checks, equal-distance stability, missing-coordinate fallback, hidden/off
+  distance-work deferral and immediate retired-identity/visible recovery. They
+  retain party selection and next-respawn priority, and check the ally default
+  clears the shared static jewelry bounds without Show-time reanchoring.
   Navigation cases reject missing/invalid and foreign-sheet party coordinates;
   shared pin cases cover four edge indicators, changed-only writes and reuse.
   The full controller also draws received cache and fallen-ally pins on a visible
@@ -255,6 +314,14 @@ The assertions cover:
   portrait variants, restore the retained artwork on option changes and skip
   unchanged writes. These assertions distinguish shown state from alpha; they
   do not measure the packaged renderer's submitted quads or GPU time.
+  The full compact-frame fixture also creates all four native party rows and
+  loads the shared health-label and Mini owners. It checks Dead/Ghost changes
+  from `UNIT_FLAGS` and `UNIT_CONNECTION` without health events, suppression of
+  stale positive health, Ghost priority, numeric-zero flags, centered reused
+  captions, independent numeric choices, resurrection, missing units, localized
+  status refresh, hidden/Show recovery, unchanged writes and native bar-value
+  preservation in both Performance Mode states. No new object or idle updater
+  may appear during these transitions. The fixture remains CI-only.
   Target classification mocks also cover accepted guardian silver wings,
   boss/final gold wings, native artwork fallback, unchanged/forced bindings and
   hidden reads/writes. Full target-health mocks cover accepted-kind copying and
@@ -398,12 +465,13 @@ The assertions cover:
   invalid values, preview/Confirm/Cancel, profile normalization and reset.
   Settings fixtures cover style selection, hidden listeners and page extent.
   Full plate cases compare repeated native camera/collision changes with an
-  otherwise identical stationary production controller. Active trajectories,
-  amounts, fade and expiry must remain identical while required matching
-  samples keep updating. Cases cover invalid coordinates, native frame reuse,
-  Performance Mode transitions, fresh pooled launch points and world cleanup.
-  The user-selected fixed-position fallback retains no live follow references
-  or smoothing state and gives up camera compensation after launch.
+  otherwise identical stationary production controller. Over enemies and
+  Diablo IV retain identical authored motion, amounts, fade and expiry while
+  their base coordinates follow the matched native plate. Grouped cases require
+  one common nonnil origin; mixed/ambiguous groups retain a fixed centroid.
+  Cases cover invalid coordinates, native frame retirement/reuse, Performance
+  Mode transitions, fresh pooled origins and world cleanup. Existing native
+  sampling supplies the coordinates without extra reads or smoothing state.
   These cases are CI-only and do not prove Diablo IV visual parity or native
   font rendering. Font cases cover invalid/default choices, preview, Confirm,
   Cancel, profiles/reset, active width invalidation without motion/lifetime
@@ -428,8 +496,7 @@ The assertions cover:
   package fixtures reject unreferenced or missing font payloads.
   The shared SCT label sink identifies the real holder/visual pool through its
   observed native root binding, excluding native enemy-name labels from combat
-  assertions. The reported nameplate anchor failure and unused motion-test
-  variable were corrected without changing production movement behavior.
+  assertions.
   See [DIABLO-SCT.md](DIABLO-SCT.md) for the video study and tuning.
 - Full SCT/filter and nameplate-style fixtures combine Names only with the
   boss/guardian filter. They cover exact capped/float32 ranges and halfway
@@ -462,6 +529,12 @@ The assertions cover:
   class metadata across shared Reset deltas. Mocks cover unchanged/hidden/off
   and icons-off work, missing APIs, ambiguous/replaced units, failed-portrait
   caching and world retirement until a fresh `AZSPARTY` publication.
+  Deferred view-selection cases cover unpublished-view skipping in both
+  directions, rapid clicks, initial fallback, valid empty/error pages, all-waiting
+  stability, new publications, reset/disable cleanup and hidden/off probes.
+  They retain native freshness gates, assert no getter runs from clicks and
+  bound each getter to one read per pass across selection, Reset and rate work.
+  New-pass and failed-render recovery cases reject retained native results.
 
 The mocks implement only explicit API methods and record calls, allocation and
 effective parent visibility. An unsupported method fails rather than silently
@@ -622,8 +695,12 @@ same mode controls fill without changing native elapsed time or inferring
 Endless from the duration. Pending publications retain no old rank or mode.
 
 `ui_run_numerals_spec.lua` exercises the extracted static numeral renderer:
-I–X selection, invalid-rank retirement, hidden lazy allocation, one-minute and
-width geometry, unchanged writes, binding retries and Performance Mode.
+I–X selection, invalid-rank retirement, hidden lazy allocation, vertical
+centering of the visible lettering and alignment under the first attached
+affix's gold opening. The 9.375% position remains the fallback for absent,
+hidden, detached or unready affixes. Cases include width/cap geometry,
+unchanged anchors across positive native durations including a sub-minute
+zone, binding retries and Performance Mode.
 Clock-progress cases check the native rank handshake and hidden sample gate;
 affix cases check rank acceptance without an affix list or visible affix row.
 These CI-only scenarios were authored without local execution and do not prove
@@ -631,10 +708,18 @@ Bildad rendering, BLP decoding or native layering in game.
 
 `ui_run_affixes_spec.lua` uses the extracted production `CreateRunAffixes`
 factory, shared tooltip registry and generated native captions against fake
-widgets/snapshots. Scenarios cover ordered centering, the exact neutral
-jewelry crop and red tint, hidden/unchanged work, missing or non-Heroic data,
-unknown keys, receipt retirement, retry cadence, pool reuse, editing/Tooltip
-visibility, foreign ownership and all fourteen native name/description sets.
+widgets/snapshots. Scenarios cover ordered placement, the selected 25-by-23
+gold minimap bevel and exact normal-state crop, the 16-square icon above its
+background layer, its measured rightward correction, source-coordinate bounds
+strictly inside the gold rails for both known and unknown pictures, untinted
+artwork, caption/edit bounds, first-opening coordinates for one/two captions,
+row growth, resize, attachment, hidden retirement and same-width readiness
+transitions, and shared static
+behavior in both Performance Mode states. Hidden/unchanged work, missing or
+non-Heroic data, unknown-key/known-icon reuse, receipt retirement, separate
+icon/background binding failures, retry cadence, pool reuse, editing/Tooltip
+visibility, foreign ownership and all fourteen native name/description sets
+retain CI-only coverage.
 The existing required job runs the fixture; it is not shipped or run locally.
 This isolates the view boundary, rather than executing the full timer/game or
 proving native packet delivery and appearance.

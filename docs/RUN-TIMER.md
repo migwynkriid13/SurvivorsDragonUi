@@ -70,23 +70,32 @@ the defaults above. Changing a choice does not move or scale the timer.
 
 ## Heroic level inside the bar
 
-The live timer shows the received Heroic rank as a Bildad Roman numeral near
-the one-minute position inside the fill. Normal runs have no numeral. The atlas
+The live timer shows the received Heroic rank as a Bildad Roman numeral centered
+vertically inside the pill, directly below the first visible attached affix's
+picture and gold opening. The numeral follows existing caption and affix
+placement when the row changes. With no visible attached affix, it uses
+**9.375%** of the fill width, the 1:30 point of a 16:00 zone. Normal runs have no numeral. The atlas
 contains I–X, made only from I, V and X; unavailable, fractional or unsupported
 ranks hide the marker instead of displaying an old value. Tier colors move
 from bright blue through steel blue and copper to red. Ranks above V use the final red tint.
 
 One static, transparent BLP cell supplies each marker, including its dark
-outline. It stays visible in Performance Mode. Width changes move its center
-with `fillWidth * 60 / nativeDuration`; very narrow or short bars keep the
+outline. It stays visible in Performance Mode. Its horizontal center comes from
+the affix owner's existing placement geometry, with `fillWidth * 3 / 32` as
+the detached/hidden/empty/unready fallback. Very narrow bars keep the
 complete 32-unit cell inside their caps. Proportional Layout scaling is
-inherited normally. The existing timer overlay owns the marker.
+inherited normally. A valid positive native zone duration is still required;
+it no longer determines the marker's horizontal coordinate. The existing timer
+overlay owns the marker. A quarter-unit downward correction centers the visible
+lettering rather than its padded texture cell.
 
 The existing tenth-second/deferred timer sample reads `AZS_ZONE.heroic` through
 the affix view's phase, zone-receipt and retired-publication gates. The rank
 does not require an affix list or depend on that separate row's visibility.
 Zone changes, run retirement, hiding, disabling and reload clear the marker.
-Artwork is prepared only on first visible Heroic use, with binding retries on
+Affix count, attachment, readiness and caption/Layout placement changes refresh
+alignment through the existing bounds callbacks. No new coordinate polling or
+gameplay reads are added. Artwork is prepared only on first visible Heroic use, with binding retries on
 the existing sample and no animation, event, updater, option or saved state.
 See [artwork and personal-use licensing](../third_party/HeroicNumerals-ARTWORK.md)
 and [drawing costs](PERFORMANCE.md#static-heroic-numerals--2026-10-29).
@@ -128,23 +137,23 @@ allocation, cadence and CI-only evidence limits.
 
 ## Heroic affixes
 
-On the 0.125.0 API, the run timer shows the current run's Heroic affixes in one
-centered row beneath the bar. The selected **04 Rally and rupture** pictures
-use the same neutral circular rim as equipped jewelry, tinted red while
-retaining its original shading and alpha. There is no added flat outline.
+On the 0.125.0 API, the run timer shows the current run's Heroic affixes above
+the bar. The selected **04 Rally and rupture** pictures use **02 Minimap bevel**:
+square pictures inside the same gold background as the bottom-left minimap
+button. The background retains its original gold, dark inset and clipped corners.
 Hovering an icon shows the game's name and description in the active language.
-The run timer's existing move, scale, width and Hide frame controls own the row;
-its Layout outline includes the icons without changing saved geometry.
-Unpositioned boss bars reserve 33 more units below their usual 77-unit default
-while the affix row is present, keeping the first boss name clear. Confirmed
-and draft boss positions retain their shared Layout ownership.
+**Attach affixes to run timer** keeps the row with the timer by default. With
+one caption, it sits to that caption's left; with both captions, it sits between
+them. Detaching retains the separate Heroic affixes Layout group. Existing
+move, scale and Hide frame controls retain their ownership, and the attached
+timer's Layout outline includes the complete row without changing saved geometry.
 
 The view reads only received `AZS_ZONE.heroic`, `AZS_ZONE.affixes` and
 `AZS_ZONE_UPDATED` after the timer controller's phase check. It preserves the
 published English-key order and does not calculate a rotation from difficulty,
 date or zone. Empty, unavailable or non-Heroic snapshots hide the row. Unknown
 future keys retain their exact label and use the native skull inside the same
-rim, without borrowing another affix's description. Duplicate keys display once.
+gold square, without borrowing another affix's description. Duplicate keys display once.
 
 `AZSZONE` clears old presentation and schedules acceptance after native parsing
 and the existing new-run handshake. Observed run regressions, inactive phases,
@@ -154,11 +163,16 @@ arrives. Disabling the custom timer hides its affixes, while re-enabling can use
 the current run's snapshot. Shared tooltip hiding/editing/placement and owned
 hover cleanup apply; polling never reclaims a foreign tooltip.
 
-Each kind lazily adds one 22-unit hover frame and two textures: its prepared
-circular image and the existing jewelry rim. Five-unit gaps and a three-unit
-top offset center the row on the bar. One 256-by-64 lossless BLP atlas holds
-the three selected images; the separate rim uses `(664,56)-(736,128)` from
-`jewelry/Frame.blp` and RGB `(237,35,38)/255`. No label, animation, updater,
+Each kind lazily uses one 25-by-23 hover frame and two textures: its
+16-square picture and the existing minimap background. The picture is inset
+inside the gold rails and shifted `25/29` units right to account for the
+source's wider left shadow, rather than centered on that padded canvas.
+Five-unit gaps match
+the selected preview. One 256-by-64 lossless BLP atlas holds the three square
+images. The background uses `(0,3)-(29,29)` from the 32-square
+`minimap/LauncherBackground.blp`, without tinting, on BACKGROUND below the
+ARTWORK picture. Both Performance Mode states share this static presentation.
+The row height also supplies the attached Layout bounds. No label, animation, updater,
 event registration, setting or SavedVariable is added. Hidden rows allocate
 and paint nothing; successful bindings, labels, UVs and anchors are reused.
 Failed artwork retries only on the existing tenth-second refresh.

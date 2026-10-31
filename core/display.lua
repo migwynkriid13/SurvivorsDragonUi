@@ -11,6 +11,7 @@ DFRL:NewMod("Display", 0, function()
         layoutSnapEnabled = true,
         layoutGridSpacing = 32,
         meterFontSize = 11,
+        meterNameFontSize = 11,
         meterDpsWindow = 10,
         bossRows = 0,
         guardianRows = 0,
@@ -64,10 +65,10 @@ DFRL:NewMod("Display", 0, function()
         sctReflectedDamage = true,
         sctMisses = true,
         sctClassColors = false,
-        sctStyle = "enemy",
+        sctStyle = "diablo",
         sctFont = "default",
-        sctShortNumbers = false,
-        sctScale = 1,
+        sctShortNumbers = true,
+        sctScale = 0.9,
         hidePortraits = false,
         showPlayerName = true,
         showPlayerLevel = true,
@@ -121,6 +122,7 @@ DFRL:NewMod("Display", 0, function()
         meterRows = { minimum = 1, maximum = 10, integer = true },
         bossRows = { minimum = 0, maximum = 40, integer = true },
         meterFontSize = { minimum = 8, maximum = 18, integer = true },
+        meterNameFontSize = { minimum = 8, maximum = 18, integer = true },
         nameplateFontSize = { minimum = 6, maximum = 32, integer = true },
         meterDpsWindow = { minimum = 5, maximum = 120, integer = true },
         layoutGridSpacing = { minimum = 8, maximum = 128, integer = true },
@@ -157,16 +159,26 @@ DFRL:NewMod("Display", 0, function()
     local function Read(source, key)
         local value
         if type(source) == "table" then value = source[key] end
-        if ranges[key] then return NormalizeNumber(key, value) or defaults[key] end
+        if ranges[key] then
+            local number = NormalizeNumber(key, value)
+            if key == "meterNameFontSize" and not number and type(source) == "table" then
+                -- Older saves/profiles used one size for every meter label.
+                number = NormalizeNumber("meterFontSize", source.meterFontSize)
+            end
+            return number or defaults[key]
+        end
         if key == "tallyStyle" then return NormalizeTallyStyle(value) or defaults[key] end
         if key == "lootMode" then return NormalizeLootMode(value) or defaults[key] end
         if key == "sctFont" then return NormalizeSctFont(value) or defaults[key] end
         if key == "uiFont" then return NormalizeUiFont(value) or defaults[key] end
         if key == "sctStyle" then
-            -- Old saved display choices and named profiles retain their stream.
-            return NormalizeSctStyle(value)
-                or (type(source) == "table" and source.sctMSBTStyle == true and "msbt")
-                or defaults[key]
+            local style = NormalizeSctStyle(value)
+            if style then return style end
+            -- Both explicit legacy choices survive the new Diablo default.
+            if type(source) == "table" and type(source.sctMSBTStyle) == "boolean" then
+                return source.sctMSBTStyle and "msbt" or "enemy"
+            end
+            return defaults[key]
         end
         if type(value) == "boolean" then return value end
         if key == "runTextRegular" or key == "runTextEndless" then

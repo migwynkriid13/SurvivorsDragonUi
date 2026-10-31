@@ -29,6 +29,11 @@ context.Object = function(self, kind, name, parent)
         end
     end
     if kind == "Texture" then
+        local setVertexColor = result.SetVertexColor
+        function result:SetVertexColor(...)
+            setVertexColor(self, ...)
+            self.vertexColor = { ... }
+        end
         local setTexCoord = result.SetTexCoord
         function result:SetTexCoord(...)
             setTexCoord(self, ...)
@@ -54,6 +59,11 @@ env.CreateFrame = function(kind, name, parent, template)
         function frame:SetMaxLetters(value) self.maxLetters = value end
         function frame:SetTextInsets(...) self.insets = { ... } end
         function frame:ClearFocus() self.focused = false end
+        local setText = frame.SetText
+        function frame:SetText(value)
+            setText(self, value)
+            context:Call(self, "OnTextChanged")
+        end
     end
     if kind == "Button" then
         frame.enabled = 1
@@ -148,6 +158,10 @@ assert(
     "subsection heading was not centered over its controls"
 )
 assert(not navigation.search and not navigation.query, "the removed search retained runtime state")
+assert(
+    navigation.searchHeight == 0 and navigation.buttons.layout.point[5] == -48,
+    "search-free categories reserved a search row"
+)
 assert(navigation.pages.text:GetParent() == sections[2].shell, "navigation moved the real controls")
 slider:SetValue(235)
 navigation.Refresh(true)
@@ -170,6 +184,330 @@ for _, object in ipairs(context.objects) do
     assert(not object:GetScript("OnUpdate"), "navigator added idle polling or animation")
     assert(object.kind ~= "EditBox", "navigator allocated a search input")
 end
+-- Search indexes metadata before it prepares any destination page and reuses
+-- the existing settings owners rather than editing their values itself.
+local searchPanel = env.CreateFrame("Frame", nil, env.UIParent)
+local searchSidebar = env.CreateFrame("Frame", nil, searchPanel)
+local searchSections = {
+    { key = "home", label = "Layout", group = "layout" },
+    {
+        key = "damage",
+        label = "Combat text",
+        group = "combat",
+        options = {
+            { "icons", "Damage icons", "Spell icons beside outgoing numbers." },
+            { "punctuation", "Literal [test].*", "A punctuation caption." },
+        },
+        search = { { label = "Diablo IV", description = "Choose a damage number style.", offset = 248 } },
+    },
+    { key = "unused", label = "Unused", group = "unused", options = {} },
+}
+for index = 1, 18 do
+    table.insert(searchSections[3].options, { "choice" .. index, "Unused choice " .. index, "A pooled result." })
+end
+searchSections[2].options[1].terms = { "shield", "ABSORB" }
+local searchBuilds, escapes, searchNavigations = {}, 0, {}
+local searchNavigation = env.T.CreateEditorNavigator(searchPanel, searchSidebar, groups, searchSections, {
+    search = true,
+    width = 684,
+    left = 240,
+    top = 80,
+    height = 552,
+    sidebarWidth = 212,
+    prepare = function(section, content)
+        searchBuilds[section.key] = (searchBuilds[section.key] or 0) + 1
+        content:SetHeight(900)
+        content.pending = "-12,5"
+        section.searchOffsets = { icons = 316 }
+    end,
+    searchEntries = { { label = "Performance Mode", group = "layout" } },
+    onNavigate = function(key) table.insert(searchNavigations, key or "search") end,
+    onEscape = function() escapes = escapes + 1 end,
+})
+local function AssertSidebarSearch(navigation, sidebar, width)
+    local input = navigation.search
+    local header = input:GetParent()
+    assert(header:GetParent() == sidebar and header.point[2] == sidebar, "search header left the shared sidebar")
+    assert(
+        header.point[4] == 6 and header.point[5] == -4 and header:GetWidth() == width and header:GetHeight() == 56,
+        "sidebar search header geometry changed"
+    )
+    assert(navigation.searchHeight == 64, "categories did not reserve the compact sidebar search block")
+    assert(input:GetWidth() == width and input:GetHeight() == 28, "sidebar input did not retain the full column width")
+    assert(
+        input.point[2] == header and input.point[4] == 0 and input.point[5] == -24,
+        "sidebar input lost its caption clearance"
+    )
+    local caption
+    for _, item in ipairs(context.objects) do
+        if item.kind == "FontString" and item:GetParent() == header then caption = item end
+    end
+    assert(
+        caption and caption:GetHeight() == 18 and caption.point[4] == 0 and caption.point[5] == -2,
+        "sidebar search caption moved or wrapped into the input"
+    )
+    return header
+end
+local searchScroll = env.SurvivorsDragonUiSettingsScroll
+local searchHeader = AssertSidebarSearch(searchNavigation, searchSidebar, 212)
+assert(
+    searchScroll.point[4] == 240 and searchScroll.point[5] == -80 and searchScroll:GetHeight() == 552,
+    "sidebar search consumed the right-hand viewport"
+)
+for index, group in ipairs(groups) do
+    local button = searchNavigation.buttons[group.key]
+    assert(
+        button:GetParent() == searchSidebar and button.point[5] == -112 - (index - 1) * 48 and button:GetHeight() == 42,
+        "sidebar categories overlap the search block"
+    )
+end
+searchNavigation.Select("layout")
+local searchSlider = env.SurvivorsDragonUiSettingsScrollScrollBar
+searchSlider:SetValue(150)
+searchNavigation.Search("damage icons")
+assert(
+    #searchNavigation.results == 1 and not searchBuilds.damage and not searchBuilds.unused,
+    "search built unvisited pages"
+)
+assert(searchNavigation.results[1].target == "icons" and searchNavigation.results[1].section == "damage")
+assert(searchNavigations[#searchNavigations] == "search", "results retained Layout handles")
+local resultButton = searchNavigation.searchOwner.rows[1]
+assert(
+    searchNavigation.searchOwner.frame:GetParent() == searchScroll.child
+        and resultButton:GetParent() == searchNavigation.searchOwner.frame,
+    "sidebar search moved results out of the main content pane"
+)
+assert(
+    searchHeader:IsVisible() and searchScroll:GetHeight() == 552,
+    "results hid the shared sidebar header or reduced the viewport"
+)
+assert(
+    resultButton:GetWidth() == 360 and resultButton:GetHeight() == 42,
+    "search results do not use the compact fixed row size"
+)
+assert(
+    not resultButton.editorPieces
+        and resultButton.label.justifyH == "LEFT"
+        and resultButton.path.justifyH == "LEFT"
+        and resultButton.label.point[1] == "TOPLEFT"
+        and resultButton.label.point[4] == 10
+        and resultButton.label.point[5] == -4
+        and resultButton.path.point[4] == 10
+        and resultButton.path.point[5] == -24,
+    "plain search rows retained the textured button skin or lost their aligned text"
+)
+local function ResultHighlight(row)
+    local highlight, count = nil, 0
+    for _, item in ipairs(context.objects) do
+        if item.kind == "Texture" and item:GetParent() == row then
+            highlight, count = item, count + 1
+        end
+    end
+    assert(
+        count == 1 and highlight:GetTexture() == "Interface\\Buttons\\WHITE8X8",
+        "result row allocated decorative texture layers"
+    )
+    return highlight
+end
+local resultHighlight = ResultHighlight(resultButton)
+assert(
+    not resultHighlight:IsShown() and resultHighlight.vertexColor and resultHighlight.vertexColor[4] <= 0.1,
+    "plain search row draws a persistent or heavy hover fill"
+)
+local red, green, blue = resultButton.label:GetTextColor()
+assert(red >= 0.9 and green >= 0.7 and blue <= 0.5, "result title lost its gold caption")
+context:Call(resultButton, "OnEnter")
+assert(resultHighlight:IsShown(), "plain result row has no hover feedback")
+context:Call(resultButton, "OnLeave")
+assert(not resultHighlight:IsShown(), "result hover survives mouse leave")
+context:Call(resultButton, "OnMouseDown", "LeftButton")
+context:Call(resultButton, "OnMouseUp", "LeftButton")
+assert(
+    resultButton.label.point[1] == "TOPLEFT" and resultButton.label.point[4] == 10 and resultButton.label.point[5] == -4,
+    "plain result row retained the old pressed caption displacement"
+)
+local resultObjects = #context.objects
+context:ResetCounts()
+searchNavigation.Refresh(true)
+context:NoPresentationWrites()
+assert(
+    not context.reads.glyphs and #context.objects == resultObjects,
+    "settled search results measured text or allocated"
+)
+local titleFace, titleSize, titleFlags = resultButton.label:GetFont()
+resultButton.label.naturalWidth, resultButton.path.naturalWidth = 900, 800
+resultButton.label:SetFont("OTHER_RESULT_FACE", titleSize, titleFlags)
+resultButton:SetScale(1.25)
+context:ResetCounts()
+searchNavigation.Refresh(true)
+assert(
+    resultButton:GetWidth() == 360 and not context.reads.glyphs and #context.objects == resultObjects,
+    "result width depends on caption length, font metrics or owner scale"
+)
+resultButton.label.naturalWidth, resultButton.path.naturalWidth = nil, nil
+resultButton.label:SetFont(titleFace, titleSize, titleFlags)
+resultButton:SetScale(1)
+searchNavigation.ClearSearch()
+assert(
+    searchSlider:GetValue() == 150 and searchNavigation.pages.home.pending == "-12,5",
+    "clearing lost category scroll or draft"
+)
+searchNavigation.search:SetText("SHIELD")
+assert(#searchNavigation.results == 1, "metadata search aliases were not indexed")
+context:Call(searchNavigation.search, "OnEnterPressed")
+assert(searchNavigation.selected == "combat" and searchBuilds.damage == 1 and not searchBuilds.unused)
+assert(searchSlider:GetValue() == 350, "result did not use the destination's current option offset")
+assert(searchNavigation.query == "" and searchNavigation.search:GetText() == "", "redirect retained the query")
+local destination = searchNavigation.pages.damage
+searchNavigation.Search("diablo style")
+assert(#searchNavigation.results == 1 and searchNavigation.results[1].label == "Diablo IV")
+searchNavigation.OpenResult(1)
+assert(
+    searchSlider:GetValue() == 282 and searchNavigation.pages.damage == destination,
+    "custom redirect lost its offset or control owner"
+)
+searchNavigation.Search("[test].*")
+assert(
+    #searchNavigation.results == 1 and searchNavigation.results[1].target == "punctuation",
+    "search interpreted pattern punctuation"
+)
+searchNavigation.Search("not-present")
+assert(
+    #searchNavigation.results == 0 and searchNavigation.searchOwner.empty:IsShown(),
+    "empty results were not explained"
+)
+local beforeNoHit = #context.objects
+context:ResetCounts()
+searchNavigation.Search("not-present")
+context:NoPresentationWrites()
+assert(#context.objects == beforeNoHit, "unchanged query allocated views")
+searchNavigation.Search("unused choice")
+assert(#searchNavigation.results == 18 and #searchNavigation.searchOwner.rows == 8 and not searchBuilds.unused)
+local searchPool = #context.objects
+context:Call(searchNavigation.searchOwner.next, "OnClick")
+assert(searchNavigation.searchOwner.page == 2 and searchNavigation.searchOwner.rows[1].resultIndex == 9)
+context:Call(searchNavigation.searchOwner.next, "OnClick")
+assert(searchNavigation.searchOwner.page == 3 and searchNavigation.searchOwner.rows[1].resultIndex == 17)
+assert(
+    not searchNavigation.searchOwner.rows[3]:IsShown() and #context.objects == searchPool,
+    "paging expanded the result pool"
+)
+context:Call(searchNavigation.searchOwner.previous, "OnClick")
+assert(searchNavigation.searchOwner.page == 2 and #context.objects == searchPool)
+for slot, row in ipairs(searchNavigation.searchOwner.rows) do
+    assert(
+        row:GetWidth() == 360 and row:GetHeight() == 42 and row.point[5] == -(slot - 1) * 46,
+        "paged results lost their fixed list geometry"
+    )
+    ResultHighlight(row)
+end
+local retiredHover = ResultHighlight(searchNavigation.searchOwner.rows[3])
+context:Call(searchNavigation.searchOwner.rows[3], "OnEnter")
+assert(retiredHover:IsShown())
+context:Call(searchNavigation.searchOwner.next, "OnClick")
+assert(
+    not searchNavigation.searchOwner.rows[3]:IsShown() and not retiredHover:IsShown(),
+    "retiring a pooled result retained its hover"
+)
+context:Call(searchNavigation.searchOwner.previous, "OnClick")
+context:Call(searchNavigation.searchOwner.previous, "OnClick")
+assert(
+    searchNavigation.searchOwner.page == 1
+        and searchNavigation.searchOwner.rows[1]:GetWidth() == 360
+        and #context.objects == searchPool,
+    "paging to shorter captions changed the fixed width or rebuilt its pool"
+)
+searchNavigation.Search("performance")
+searchNavigation.OpenResult(1)
+assert(searchNavigation.selected == "layout", "standalone result did not redirect to its existing owner")
+
+local originalText = env.DFRL.locale.Text
+local setResultText = resultButton.label.SetText
+function resultButton.label:SetText(source) setResultText(self, env.DFRL.locale.Text(source)) end
+env.DFRL.locale.Text = function(source)
+    if env.DFRL.locale.code == "ru" and source == "Damage icons" then return "ЗНАЧКИ УРОНА" end
+    if env.DFRL.locale.code == "de" and source == "Damage icons" then return "ÄNDERUNG" end
+    return source
+end
+env.DFRL.locale.code = "ru"
+context:NotifyLocale()
+searchNavigation.Search("значки урона")
+assert(
+    #searchNavigation.results == 1 and searchNavigation.results[1].target == "icons",
+    "localized Cyrillic case folding failed"
+)
+assert(resultButton:GetWidth() == 360, "translated result changed its fixed row width")
+context:ResetCounts()
+searchNavigation.Search("Damage icons")
+assert(#searchNavigation.results == 1, "English fallback search disappeared in another language")
+assert(not context.reads.glyphs, "plain translated results measured their captions")
+env.DFRL.locale.code = "de"
+context:NotifyLocale()
+searchNavigation.Search("änderung")
+assert(#searchNavigation.results == 1, "accented Latin case folding failed")
+assert(resultButton:GetWidth() == 360, "shorter active-language captions changed the fixed row width")
+searchNavigation.search.focused = true
+context:Call(resultButton, "OnEnter")
+assert(resultHighlight:IsShown())
+searchPanel:Hide()
+assert(not resultHighlight:IsShown(), "closing search retained its result hover")
+assert(searchNavigation.query == "" and not searchNavigation.search.focused, "close retained search query or focus")
+context:ResetCounts()
+env.DFRL.locale.code = "ru"
+context:NotifyLocale()
+searchNavigation.Refresh(true)
+context:NoPresentationWrites()
+assert(not context.reads.glyphs, "closed search measured result captions")
+local closedSearchPool = #context.objects
+searchPanel:Show()
+searchNavigation.Refresh(true)
+assert(
+    searchNavigation.query == "" and #context.objects == closedSearchPool,
+    "reopen rebuilt search or replayed results"
+)
+searchNavigation.Search("diablo")
+context:Call(searchNavigation.search, "OnEscapePressed")
+assert(escapes == 1 and searchNavigation.query == "", "search Escape skipped the shared close callback")
+searchNavigation.Search("unused choice")
+searchNavigation.Select("combat")
+assert(
+    searchNavigation.query == "" and searchNavigation.pages.damage == destination,
+    "sidebar navigation retained search or replaced drafts"
+)
+env.DFRL.locale.Text, env.DFRL.locale.code = originalText, "en"
+resultButton.label.SetText = setResultText
+local categoryObjects = #context.objects
+for _, key in ipairs({ "layout", "combat", "layout", "combat" }) do
+    searchNavigation.Select(key)
+    assert(
+        searchNavigation.search:GetParent() == searchHeader and searchHeader:IsVisible(),
+        "category switch replaced or hid the sidebar search header"
+    )
+end
+assert(#context.objects == categoryObjects, "category switches allocated another search header")
+searchPanel:Hide()
+
+local narrowPanel = env.CreateFrame("Frame", nil, env.UIParent)
+local narrowSidebar = env.CreateFrame("Frame", nil, narrowPanel)
+local narrowNavigation = env.T.CreateEditorNavigator(narrowPanel, narrowSidebar, groups, {
+    {
+        key = "narrow",
+        label = "Combat text",
+        group = "combat",
+        options = { { "icons", "Damage icons", "Spell icons." } },
+    },
+}, {
+    search = true,
+    width = 264,
+    left = 0,
+    top = 0,
+    height = 552,
+    sidebarWidth = 212,
+})
+narrowNavigation.Search("damage icons")
+assert(narrowNavigation.searchOwner.rows[1]:GetWidth() == 240, "fixed result row exceeded a narrower content viewport")
+narrowPanel:Hide()
+
 local toggle = env.T.CreateEditorToggle(panel, "Ability damage", "Show each ability's damage.", 300)
 assert(env.T.CompactEditorToggle(toggle) == 64, "single-line toggle did not shrink")
 assert(toggle.label:GetHeight() == 16 and toggle.description.point[5] == -26, "caption/help gap was not three units")
@@ -461,7 +799,7 @@ assert(not dialog:IsShown() and not next(pages), "shell construction prepared se
 assert(not env.fontSample and not env.fontMenu and layoutBuilds == 0, "shell prepared timer/menu/Layout controls")
 assert(context.reads.glyphs == openingGlyphs + 2, "shell measured unrelated or inactive-language captions")
 dialog:Show()
-assert(context.reads.glyphs == openingGlyphs + 2, "show repeated cached shell sizing")
+assert(context.reads.glyphs == openingGlyphs + 2, "show measured unrelated settings captions")
 assert(layoutBuilds == 1 and pages.layout and not pages.units and not pages.profiles, "first open built hidden pages")
 editor.Clock(10.5, 1200, true)
 assert(
@@ -475,6 +813,57 @@ assert(
     env.displayControls.performanceMode and not env.displayControls.unitShortHealth,
     "first open built hidden options"
 )
+assert(dialog.navigation.search and dialog.navigation.search.maxLetters == 128, "settings has no native search input")
+local dialogSearch = dialog.navigation.search
+local dialogSidebar = dialogSearch:GetParent():GetParent()
+local dialogSearchHeader = AssertSidebarSearch(dialog.navigation, dialogSidebar, 232)
+local performanceControl = env.displayControls.performanceMode
+assert(
+    performanceControl:GetParent() == dialogSidebar and performanceControl.point[5] == -68,
+    "Performance Mode did not move below the sidebar search"
+)
+assert(
+    -dialogSearchHeader.point[5] + dialogSearchHeader:GetHeight() <= -performanceControl.point[5],
+    "search header overlaps Performance Mode"
+)
+local categoryKeys = { "layout", "units", "combat", "meter", "action", "encounters", "map", "interface", "profiles" }
+local previousBottom = -performanceControl.point[5] + performanceControl:GetHeight()
+for index, key in ipairs(categoryKeys) do
+    local button = dialog.navigation.buttons[key]
+    local top = -button.point[5]
+    assert(
+        button:GetParent() == dialogSidebar and top == 112 + (index - 1) * 48 and top >= previousBottom,
+        "category rows overlap search, Performance Mode or another category"
+    )
+    previousBottom = top + button:GetHeight()
+end
+assert(
+    previousBottom == 538 and previousBottom <= dialogSidebar:GetHeight(),
+    "the ninth sidebar category extends into the footer"
+)
+local dialogScroll = env.SurvivorsDragonUiSettingsScroll
+assert(
+    dialogScroll:GetParent() == dialog and dialogScroll.point[5] == -56 and dialogScroll:GetHeight() == 576,
+    "search reduced the full settings content viewport"
+)
+dialog.navigation.Search("shield")
+assert(
+    #dialog.navigation.results == 2 and not pages.units,
+    "shield search missed existing health controls or built their page"
+)
+assert(
+    not context.editHandles and not env.SurvivorsDragonUiDisplay,
+    "search changed settings or retained Layout overlays"
+)
+dialog.navigation.ClearSearch()
+assert(context.editHandles and pages.layout.pending == "17,5", "clearing search lost Layout state or handles")
+dialog.navigation.Search("sct icons")
+assert(#dialog.navigation.results == 1 and not pages.combat, "SCT aliases missed damage icons or eagerly built Combat")
+assert(dialog.navigation.results[1].target == "damageIcons" and dialog.navigation.results[1].group == "combat")
+dialog.navigation.ClearSearch()
+dialog.navigation.Search("marks rewards")
+assert(#dialog.navigation.results == 1 and not pages.loot, "generic hidden settings were not searchable")
+dialog.navigation.ClearSearch()
 local layoutPage = pages.layout
 assert(dialog.uiFontButtons.default.editorSelected, "Layout did not select the default font")
 assert(not dialog.uiFontButtons.friz, "Layout still offers the removed Friz Quadrata choice")
@@ -520,34 +909,135 @@ assert(
 
 dialog.navigation.Select("combat")
 assert(pages.combat and pages.nameplates and not pages.meter, "Combat still prepares Damage meter")
+dialog.navigation.Search("damage over time")
+assert(#dialog.navigation.results == 1, "custom combat filters were absent from search")
+dialog.navigation.OpenResult(1)
+assert(
+    dialog.navigation.selected == "combat" and display.Get("sctPeriodicDamage") and not env.SurvivorsDragonUiDisplay,
+    "search result changed the existing filter instead of redirecting"
+)
+dialog.navigation.Search("Diablo")
+assert(#dialog.navigation.results >= 2, "custom style and font choices were absent from search")
+dialog.navigation.ClearSearch()
 assert(pages.combat:GetHeight() >= 532, "abbreviation clipped the final damage filters")
-assert(display.Get("sctShortNumbers") == false, "abbreviation was enabled by default")
+assert(display.Get("sctScale") == 0.9 and env.sctSizeLabel:GetText() == "90%", "default SCT size did not show 90%")
+assert(display.Get("sctShortNumbers") == true, "abbreviation was disabled by default")
 context:Call(env.displayControls.sctShortNumbers, "OnClick")
-assert(display.Get("sctShortNumbers") and not env.SurvivorsDragonUiDisplay, "abbreviation did not preview")
-assert(dialog.sctFontButtons.default.editorSelected, "the game font is not the default")
-context:Call(dialog.sctFontButtons.diablo, "OnClick")
-editor.SCT()
-assert(display.Get("sctFont") == "diablo" and dialog.sctFontButtons.diablo.editorSelected, "font did not preview")
-assert(dialog.sctStyleButtons.enemy.editorSelected, "the original enemy style is not selected by default")
-context:Call(dialog.sctStyleButtons.diablo, "OnClick")
-editor.SCT()
-assert(
-    display.Get("sctStyle") == "diablo" and dialog.sctStyleButtons.diablo.editorSelected,
-    "Diablo selector did not preview"
-)
+assert(not display.Get("sctShortNumbers") and not env.SurvivorsDragonUiDisplay, "full numbers did not preview")
+local function AssertSctFont(selected)
+    assert(display.Get("sctFont") == selected, "font did not preview through the existing display transaction")
+    for value, button in pairs(dialog.sctFontButtons) do
+        assert(button.editorSelected == (value == selected), "font selection left the other choice selected")
+        assert(button.highlightLocked == (value == selected), "font selection left the other native highlight locked")
+    end
+    assert(not env.SurvivorsDragonUiDisplay, "font choice saved before Confirm")
+end
+local function AssertSctStyle(selected)
+    assert(display.Get("sctStyle") == selected, "style did not preview through the existing display transaction")
+    for value, button in pairs(dialog.sctStyleButtons) do
+        assert(button.editorSelected == (value == selected), "style selection left another choice selected")
+        assert(button.highlightLocked == (value == selected), "style selection left another native highlight locked")
+    end
+end
+AssertSctFont("default")
+local sctObjects = #context.objects
+for _, performance in ipairs({ false, true }) do
+    display.Set("performanceMode", performance)
+    for _, font in ipairs({ "default", "diablo", "default", "diablo" }) do
+        context:Call(dialog.sctFontButtons[font], "OnClick")
+        AssertSctFont(font)
+    end
+    local defaultLocks = dialog.sctFontButtons.default.lockWrites
+    local diabloLocks = dialog.sctFontButtons.diablo.lockWrites
+    context:ResetCounts()
+    context:Call(dialog.sctFontButtons.diablo, "OnClick")
+    AssertSctFont("diablo")
+    context:NoPresentationWrites()
+    assert(
+        dialog.sctFontButtons.default.lockWrites == defaultLocks
+            and dialog.sctFontButtons.diablo.lockWrites == diabloLocks,
+        "clicking the selected font repeated native highlight writes"
+    )
+    dialog:Hide()
+    context:ResetCounts()
+    display.Set("sctFont", "default")
+    assert(
+        dialog.sctFontButtons.diablo.editorSelected and not dialog.sctFontButtons.default.editorSelected,
+        "hidden font change performed deferred presentation"
+    )
+    assert(
+        not dialog.sctFontButtons.default.highlightLocked and not dialog.sctFontButtons.diablo.highlightLocked,
+        "hidden font change relocked a native highlight"
+    )
+    context:NoPresentationWrites()
+    dialog:Show()
+    AssertSctFont("default")
+    context:Call(dialog.sctFontButtons.diablo, "OnClick")
+    AssertSctFont("diablo")
+end
+assert(#context.objects == sctObjects, "font selection or reopen allocated another control")
+AssertSctStyle("diablo")
+context:Call(dialog.sctStyleButtons.enemy, "OnClick")
+AssertSctStyle("enemy")
 display.FinishEdit(false)
-editor.SCT()
+AssertSctStyle("diablo")
+AssertSctFont("default")
 assert(
-    display.Get("sctStyle") == "enemy" and dialog.sctStyleButtons.enemy.editorSelected,
-    "Cancel retained the new style"
+    display.Get("sctShortNumbers") and display.Get("sctScale") == 0.9 and not display.Get("performanceMode"),
+    "Cancel did not restore default combat choices"
 )
-assert(display.Get("sctFont") == "default" and dialog.sctFontButtons.default.editorSelected, "Cancel retained font")
-assert(not display.Get("sctShortNumbers"), "Cancel retained abbreviation")
 display.BeginEdit()
 assert(
     dialog.navigation.buttons.meter and dialog.navigation.buttons.meter.label:GetText() == "Damage meter",
     "meter has no sidebar category"
 )
+dialog.navigation.Search("meter name font")
+assert(
+    #dialog.navigation.results == 1 and dialog.navigation.results[1].target == "meterNameFontSize" and not pages.meter,
+    "name-font search missed its original lazy meter control"
+)
+dialog.navigation.OpenResult(1)
+local meterNameValue, meterNumberValue = env.displayNumbers.meterNameFontSize, env.displayNumbers.meterFontSize
+assert(meterNameValue and meterNumberValue and dialog.navigation.selected == "meter")
+local meterNameControl, meterNumberControl = meterNameValue:GetParent(), meterNumberValue:GetParent()
+assert(
+    meterNameControl.label:GetText() == "Name font size" and meterNumberControl.label:GetText() == "Number font size",
+    "meter font controls do not explain their independent scope"
+)
+local function IncreaseNumber(control)
+    for _, object in ipairs(context.objects) do
+        if object.kind == "Button" and object:GetParent() == control and object.label:GetText() == "+" then
+            context:Call(object, "OnClick")
+            return
+        end
+    end
+    error("missing production numeric step button")
+end
+IncreaseNumber(meterNameControl)
+editor.Display()
+assert(
+    display.Get("meterNameFontSize") == 12 and display.Get("meterFontSize") == 11 and meterNameValue:GetText() == "12",
+    "name font did not preview independently"
+)
+IncreaseNumber(meterNumberControl)
+IncreaseNumber(meterNumberControl)
+assert(
+    display.Get("meterFontSize") == 13 and display.Get("meterNameFontSize") == 12,
+    "number font changed the name choice"
+)
+assert(not env.SurvivorsDragonUiDisplay, "font step controls saved before Confirm")
+local meterObjects = #context.objects
+dialog.navigation.Search("meter number font")
+assert(#dialog.navigation.results == 1 and dialog.navigation.results[1].target == "meterFontSize")
+dialog.navigation.OpenResult(1)
+assert(
+    #context.objects == meterObjects and env.displayNumbers.meterNameFontSize == meterNameValue,
+    "search rebuilt meter settings"
+)
+display.FinishEdit(false)
+display.BeginEdit()
+editor.Display()
+assert(display.Get("meterNameFontSize") == 11 and display.Get("meterFontSize") == 11, "Cancel retained font previews")
 for _, key in ipairs({ "meter", "action", "encounters", "map", "interface", "profiles" }) do
     dialog.navigation.Select(key)
     local samples = context.fontSampleRefreshes or 0
@@ -562,6 +1052,17 @@ for _ in pairs(pages) do
     pageCount = pageCount + 1
 end
 assert(pageCount == 20 and layoutBuilds == 1, "full category walk lost or rebuilt sections")
+local allCategoryObjects = #context.objects
+for _, key in ipairs(categoryKeys) do
+    dialog.navigation.Select(key)
+    assert(
+        dialog.navigation.search == dialogSearch
+            and dialogSearch:GetParent() == dialogSearchHeader
+            and dialogSearchHeader:IsVisible(),
+        "an editor category replaced or hid the shared sidebar search"
+    )
+end
+assert(#context.objects == allCategoryObjects, "revisiting all nine categories allocated another sidebar search")
 assert(env.fontSampleClock and not env.fontMenu, "Encounters eagerly prepared the closed font popup")
 local affixes, shadow = env.displayControls.attachAffixes, env.shadowControl
 assert(

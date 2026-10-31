@@ -57,13 +57,14 @@ DFRL:NewMod("Mini", 1, function()
         return strips, Resize
     end
 
-    local function AddValues(frame, health, mana, unit)
+    local function AddValues(frame, health, mana, unit, showDeathState)
         local values = { frame = frame, unit = unit, healthBar = health, manaBar = mana }
         values.health = health:CreateFontString(nil, "OVERLAY")
         T.SetFont(values.health, 9, "OUTLINE")
         values.health:SetPoint("CENTER", health, "CENTER", 0, 0)
         values.health:SetTextColor(1, 1, 1)
-        values.healthLabels = T.BindUnitHealthText(health, values.health, unit, unit == "targettarget")
+        values.healthLabels =
+            T.BindUnitHealthText(health, values.health, unit, unit == "targettarget" or showDeathState, showDeathState)
         if mana then
             values.mana = mana:CreateFontString(nil, "OVERLAY")
             T.SetFont(values.mana, 8, "OUTLINE")
@@ -368,7 +369,7 @@ DFRL:NewMod("Mini", 1, function()
         local prefix = "PartyMemberFrame" .. i
         local frame, health, mana = _G[prefix], _G[prefix .. "HealthBar"], _G[prefix .. "ManaBar"]
         if frame and health and mana then
-            local values = AddValues(frame, health, nil, "party" .. i)
+            local values = AddValues(frame, health, nil, "party" .. i, true)
             values.updateHealthColor = T.BindClassHealthColor(health, values.unit)
             if partyRoot then
                 -- Keep native row/pet anchors and visibility; the passive owner
@@ -550,6 +551,8 @@ DFRL:NewMod("Mini", 1, function()
         UNIT_RAGE = true,
         UNIT_FOCUS = true,
         UNIT_FACTION = true,
+        UNIT_FLAGS = true,
+        UNIT_CONNECTION = true,
     }
     if table.getn(units) == 0 then return end
     local frame = CreateFrame("Frame")
@@ -565,6 +568,8 @@ DFRL:NewMod("Mini", 1, function()
     frame:RegisterEvent("PLAYER_TARGET_CHANGED")
     frame:RegisterEvent("UNIT_TARGET")
     frame:RegisterEvent("UNIT_FACTION")
+    frame:RegisterEvent("UNIT_FLAGS")
+    frame:RegisterEvent("UNIT_CONNECTION")
     frame:SetScript("OnEvent", function()
         if unitEvents[event] and type(arg1) == "string" and arg1 ~= "" then
             for _, values in ipairs(units) do

@@ -4,6 +4,7 @@
 DFRL:NewMod("DamageMeter", 7, function()
     local HEADER, ROW_HEIGHT, FOOTER = 32, 32, 32
     local width, fontSize = 240, DFRL.display.Get("meterFontSize")
+    local nameFontSize = DFRL.display.Get("meterNameFontSize")
     local enabled = DFRL.display.Get("meterEnabled")
     local visible = DFRL.display.Get("meterRows")
     local optionKeys = {
@@ -61,6 +62,7 @@ DFRL:NewMod("DamageMeter", 7, function()
     local inWorld, editing, ready, faulted = true, false, true, false
     local rows, received, blocked = {}, {}, {}
     local receipts, publications, publicationSequence = {}, {}, 0
+    local viewSelection = { dirty = true, direction = 1, steps = 0, candidates = {}, reads = {} }
     local partyUnits = {
         { unit = "player" },
         { unit = "party1", portrait = "PartyMemberFrame1Portrait" },
@@ -131,6 +133,7 @@ DFRL:NewMod("DamageMeter", 7, function()
         return string.format("%.0f", value)
     end
     local function HeaderText(amount, rate)
+        if presentation.waiting then return DFRL.locale.Text(modes[mode].title) end
         local text = ""
         if options.total then text = DFRL.locale.Text("Total") .. ": " .. (amount and Compact(amount) or "--") end
         if options.totalDps then
@@ -318,6 +321,7 @@ DFRL:NewMod("DamageMeter", 7, function()
             and presentation.headerMode == mode
             and presentation.headerLanguage == language
             and presentation.headerRevision == optionsRevision
+            and presentation.headerWaiting == presentation.waiting
         then
             return
         end
@@ -325,6 +329,7 @@ DFRL:NewMod("DamageMeter", 7, function()
         presentation.headerDrawn, presentation.headerAmount, presentation.headerRate = true, amount, rate
         presentation.headerMode, presentation.headerLanguage, presentation.headerRevision =
             mode, language, optionsRevision
+        presentation.headerWaiting = presentation.waiting
     end
     -- Blizzard's existing gold X and native button states; see Character-ARTWORK.md.
     local resetButton = CreateFrame("Button", nil, header)
@@ -431,16 +436,23 @@ DFRL:NewMod("DamageMeter", 7, function()
         labels:SetAllPoints(row)
         labels:SetFrameLevel(bar:GetFrameLevel() + 1)
         labels:EnableMouse(false)
-        row.name = Label(labels, fontSize, "LEFT", "OUTLINE")
+        row.name = Label(labels, nameFontSize, "LEFT", "OUTLINE")
         row.name:SetPoint("TOPLEFT", labels, "TOPLEFT", 35, 1)
         row.name:SetWidth(math.max(1, width - 232))
-        row.name:SetHeight(fontSize + 5)
+        row.name:SetHeight(nameFontSize + 5)
         row.value = Label(labels, fontSize, "RIGHT", "OUTLINE")
         row.value:SetPoint("TOPRIGHT", labels, "TOPRIGHT", -2, 1)
         row.value:SetWidth(174)
         row.value:SetHeight(fontSize + 5)
         row.layoutIcons, row.valueColumns = true, 3
-        row.layoutFontSize = fontSize
+        local _, appliedNameSize, appliedNameFlags = row.name:GetFont()
+        if T.NearlyEqual(appliedNameSize, nameFontSize) and (appliedNameFlags or "") == "OUTLINE" then
+            row.layoutNameFontSize = nameFontSize
+        end
+        local _, appliedValueSize, appliedValueFlags = row.value:GetFont()
+        if T.NearlyEqual(appliedValueSize, fontSize) and (appliedValueFlags or "") == "OUTLINE" then
+            row.layoutFontSize = fontSize
+        end
         row.icon = row:CreateTexture("SurvivorsDragonUiMeterIcon" .. index, "ARTWORK")
         row.icon:SetPoint("LEFT", row, "LEFT", 0, 0)
         row.icon:SetWidth(ICON_SIZE)
@@ -456,7 +468,10 @@ DFRL:NewMod("DamageMeter", 7, function()
         row.rim:Hide()
         row:SetScript("OnEnter", function() ShowRowTooltip(row) end)
         row:SetScript("OnLeave", HideTooltip)
-        row:SetScript("OnHide", HideTooltip)
+        row:SetScript("OnHide", function()
+            row.valueMetric = nil
+            HideTooltip()
+        end)
         row:Hide()
         table.insert(rows, row)
         return row
@@ -465,14 +480,6 @@ DFRL:NewMod("DamageMeter", 7, function()
     Row(1)
     local function LayoutRow(row)
         local columns = (options.damage and 1 or 0) + (options.dps and 1 or 0) + (options.percentage and 1 or 0)
-        if
-            row.layoutIcons == options.icons
-            and row.valueColumns == columns
-            and row.layoutWidth == width
-            and row.layoutFontSize == fontSize
-        then
-            return
-        end
         local nameLeft = options.icons and 35 or 3
         if row.layoutWidth ~= width then row:SetWidth(width - 16) end
         if row.layoutIcons ~= options.icons or row.layoutWidth ~= width then
@@ -484,15 +491,44 @@ DFRL:NewMod("DamageMeter", 7, function()
             row.name:ClearAllPoints()
             row.name:SetPoint("TOPLEFT", row.name:GetParent(), "TOPLEFT", nameLeft, 1)
         end
-        if row.layoutFontSize ~= fontSize then
-            local nameSized = SizeLabel(row.name, fontSize, fontSize + 5)
-            local valueSized = SizeLabel(row.value, fontSize, fontSize + 5)
-            if nameSized and valueSized then row.layoutFontSize = fontSize end
+        if row.layoutNameFontSize ~= nameFontSize and SizeLabel(row.name, nameFontSize, nameFontSize + 5) then
+            row.layoutNameFontSize = nameFontSize
         end
-        -- Retain the original 58-unit columns at size 11, reserving name room
-        -- when large text and all numeric columns meet a narrow viewport.
+        if columns > 0 and row.layoutFontSize ~= fontSize and SizeLabel(row.value, fontSize, fontSize + 5) then
+            row.layoutFontSize = fontSize
+        end
         local available = width - 16 - nameLeft - 2
-        local valueWidth = math.min(columns * math.ceil(58 * fontSize / 11), available - 5 - 48)
+        local valueWidth = 0
+        if columns > 0 then
+            -- Reserve only the current numeric caption's natural width. Keep
+            -- the old conservative reservation until native metrics are ready.
+            valueWidth = columns * math.ceil(58 * fontSize / 11)
+            local text = row.value:GetText()
+            local face, size, flags = row.value:GetFont()
+            local scale = row:GetEffectiveScale()
+            local metric = row.valueMetric
+            if
+                metric
+                and metric.text == text
+                and metric.face == face
+                and metric.size == size
+                and metric.flags == flags
+                and metric.scale == scale
+                and metric.available == available
+            then
+                valueWidth = metric.width
+            elseif face and Number(size) and size > 0 and Number(scale) and scale > 0 and text and text ~= "" then
+                local measured = row.value:GetStringWidth()
+                if Number(measured) and measured > 0 then
+                    metric = metric or {}
+                    metric.text, metric.face, metric.size, metric.flags = text, face, size, flags
+                    metric.scale, metric.available, metric.width = scale, available, math.ceil(measured) + 1
+                    row.valueMetric = metric
+                    valueWidth = metric.width
+                end
+            end
+            valueWidth = math.min(valueWidth, math.max(1, available - 5 - 48))
+        end
         local nameWidth = available - (columns > 0 and valueWidth + 5 or 0)
         if not T.NearlyEqual(row.name:GetWidth(), nameWidth) then row.name:SetWidth(nameWidth) end
         if not T.NearlyEqual(row.value:GetWidth(), math.max(1, valueWidth)) then
@@ -516,6 +552,7 @@ DFRL:NewMod("DamageMeter", 7, function()
         row.entry, row.displayName, row.drawIndex, row.drawDamage, row.drawRate, row.drawShare =
             nil, nil, nil, nil, nil, nil
         row.drawRevision = nil
+        row.valueMetric = nil
         if row:IsShown() then row:Hide() end
         row.active = false
     end
@@ -541,11 +578,24 @@ DFRL:NewMod("DamageMeter", 7, function()
         if not preserveDps then dps.Suspend() end
         native.Release()
     end
+    local function ClearReadPass()
+        if not viewSelection.read then return end
+        for index = 1, table.getn(modes) do
+            local entry = viewSelection.reads[index]
+            if entry and entry.read then
+                entry.read, entry.source, entry.amount, entry.rate, entry.message, entry.publication =
+                    nil, nil, nil, nil, nil, nil
+            end
+        end
+        viewSelection.read = nil
+    end
     local function Invalidate()
         HideTooltip()
         dps.Clear()
         session.Clear()
         resetPending = false
+        ClearReadPass()
+        viewSelection.first, viewSelection.steps, viewSelection.dirty, viewSelection.paint = nil, 0, true, false
         Release()
         for index = 1, table.getn(modes) do
             received[index], blocked[index] = nil, true
@@ -616,10 +666,70 @@ DFRL:NewMod("DamageMeter", 7, function()
         publications[index] = publication
         return source, amount, rate, nil, publication.revision
     end
+    local function ReadOnce(index)
+        local entry = viewSelection.reads[index]
+        if not entry then
+            entry = {}
+            viewSelection.reads[index] = entry
+        end
+        if not entry.read then
+            entry.source, entry.amount, entry.rate, entry.message, entry.publication = ReadNative(index)
+            entry.read, viewSelection.read = true, true
+        end
+        return entry.source, entry.amount, entry.rate, entry.message, entry.publication
+    end
+    local function ResolveView(source, amount, rate, message, publication)
+        local supported = type(_G[modes[mode].getter]) == "function"
+        if not viewSelection.first then
+            if supported and (source or message) then
+                viewSelection.dirty = false
+                return source, amount, rate, message, publication
+            end
+            if not viewSelection.dirty then return source, amount, rate, message, publication end
+        end
+        -- Only a navigation request or newly relevant publication/readiness
+        -- probes other views. Empty received snapshots and explicit errors
+        -- have useful presentation; only unpublished blank views are skipped.
+        local count, current = 0, false
+        for step = 0, table.getn(modes) - 1 do
+            local index = math.mod(mode - 1 + step, table.getn(modes)) + 1
+            if type(_G[modes[index].getter]) == "function" then
+                local candidateSource, candidateMessage
+                local _
+                candidateSource, _, _, candidateMessage = ReadOnce(index)
+                if candidateSource or candidateMessage then
+                    count = count + 1
+                    viewSelection.candidates[count] = index
+                    if step == 0 then current = true end
+                end
+            end
+        end
+        if count > 0 then
+            local slot
+            if viewSelection.first then
+                -- The first click enters the available ring even if the old
+                -- view was waiting; later clicks advance within that ring.
+                slot = current and 1 + viewSelection.first or (viewSelection.first > 0 and 1 or count)
+                slot = slot + viewSelection.steps
+            else
+                slot = viewSelection.direction > 0 and 1 or count
+            end
+            slot = math.mod(math.mod(slot - 1, count) + count, count) + 1
+            local selected = viewSelection.candidates[slot]
+            if mode ~= selected then
+                HideTooltip()
+                Release(true)
+                mode, offset = selected, 0
+            end
+            source, amount, rate, message, publication = ReadOnce(selected)
+        end
+        viewSelection.first, viewSelection.steps, viewSelection.dirty = nil, 0, false
+        return source, amount, rate, message, publication
+    end
     local function ObserveDamage(source, amount, rate, publication)
         if not source then
             local _
-            source, amount, rate, _, publication = ReadNative(1)
+            source, amount, rate, _, publication = ReadOnce(1)
             if not source then
                 dps.Suspend()
                 return
@@ -628,8 +738,7 @@ DFRL:NewMod("DamageMeter", 7, function()
         end
         if not dps.Observe(RunSeconds(), source, amount, rate, publication) then dps.Suspend() end
     end
-    local function Read(paint)
-        local source, amount, rate, message, publication = ReadNative(mode)
+    local function Read(paint, source, amount, rate, message, publication)
         if not source then return false, message end
         dataValid = true
         if not paint then
@@ -718,7 +827,6 @@ DFRL:NewMod("DamageMeter", 7, function()
                 local row = Row(index)
                 if hovered == row and row.displayName ~= entry.name then HideTooltip() end
                 row.entry, row.active = entry, true
-                LayoutRow(row)
                 local rank = options.ranks and index + offset or nil
                 if row.displayName ~= entry.name or row.drawIndex ~= rank or row.drawRevision ~= optionsRevision then
                     T.SetTextIfChanged(row.name, rank and (tostring(rank) .. ". " .. entry.name) or entry.name)
@@ -744,6 +852,7 @@ DFRL:NewMod("DamageMeter", 7, function()
                     row.drawDamage, row.drawRate, row.drawShare = damage, rate, share
                 end
                 row.drawRevision = optionsRevision
+                LayoutRow(row)
                 local fraction = maximum > 0 and math.min(1, entry.dmg / maximum) or 0
                 if row.fraction ~= fraction then row.bar:SetValue(fraction) end
                 row.fraction = fraction
@@ -825,6 +934,8 @@ DFRL:NewMod("DamageMeter", 7, function()
             return
         end
         local paint = not DFRL.layout.IsHidden("damageMeter") and UIParent:IsVisible()
+        if paint and not viewSelection.paint then viewSelection.dirty = true end
+        viewSelection.paint = paint
         if not paint and not dataDirty then
             if dataValid then native.Acquire() end
             return
@@ -834,10 +945,14 @@ DFRL:NewMod("DamageMeter", 7, function()
             -- One deferred capture clears every view, including unselected ones.
             -- Unavailable/unpublished views baseline their first accepted snapshot.
             for index = 1, table.getn(modes) do
-                local source, amount, rate, _, publication = ReadNative(index)
+                local source, amount, rate, _, publication = ReadOnce(index)
                 if source then session.Apply(index, source, amount, rate, time, publication) end
             end
             resetPending = false
+        end
+        local source, amount, rate, message, publication = ReadOnce(mode)
+        if paint then
+            source, amount, rate, message, publication = ResolveView(source, amount, rate, message, publication)
         end
         -- Keep the recent damage window while another view awaits its own data.
         if paint and mode ~= 1 and dps.NeedsRead() then
@@ -845,7 +960,9 @@ DFRL:NewMod("DamageMeter", 7, function()
             ObserveDamage()
             if revision ~= dps.revision then ClearSamples() end
         end
-        local valid, message = Read(paint)
+        local valid
+        valid, message = Read(paint, source, amount, rate, message, publication)
+        presentation.waiting = not valid and message == nil
         dataDirty = false
         SetShown(true)
         if root:IsVisible() then PreparePresentation() end
@@ -875,18 +992,15 @@ DFRL:NewMod("DamageMeter", 7, function()
         end
     end
     header:SetScript("OnClick", function()
-        if editing then return end
+        if editing or not enabled or not inWorld then return end
         HideTooltip()
         local direction = arg1 == "RightButton" and -1 or 1
-        for step = 1, table.getn(modes) do
-            local candidate = math.mod(mode - 1 + direction * step + table.getn(modes), table.getn(modes)) + 1
-            if type(_G[modes[candidate].getter]) == "function" then
-                mode, offset, age = candidate, 0, 0.2
-                dataDirty = true
-                Release(true)
-                break
-            end
+        if viewSelection.first then
+            viewSelection.steps = viewSelection.steps + direction
+        else
+            viewSelection.first, viewSelection.steps = direction, 0
         end
+        viewSelection.direction, age = direction, 0.2
     end)
     header:SetScript("OnEnter", ShowHeaderTooltip)
     header:SetScript("OnLeave", HideTooltip)
@@ -904,9 +1018,13 @@ DFRL:NewMod("DamageMeter", 7, function()
     end)
     resetButton:SetScript("OnLeave", HideTooltip)
     root:SetScript("OnHide", function()
+        viewSelection.paint = false
         HideTooltip()
         dps.Suspend()
         ClearSamples()
+        for _, row in ipairs(rows) do
+            row.valueMetric = nil
+        end
     end)
     root:SetScript("OnShow", function() age = 0.2 end)
     root:SetScript("OnMouseWheel", function()
@@ -941,6 +1059,7 @@ DFRL:NewMod("DamageMeter", 7, function()
         end,
         onReset = function()
             mode, offset, age, faulted = 1, 0, 0.2, false
+            viewSelection.first, viewSelection.steps, viewSelection.dirty = nil, 0, true
             dataDirty = true
             HideTooltip()
             dps.Clear()
@@ -955,7 +1074,8 @@ DFRL:NewMod("DamageMeter", 7, function()
         local enabledChanged = enabled ~= enable
         local count = DFRL.display.Get("meterRows")
         local selectedFontSize = DFRL.display.Get("meterFontSize")
-        local fontChanged = fontSize ~= selectedFontSize
+        local selectedNameFontSize = DFRL.display.Get("meterNameFontSize")
+        local fontChanged = fontSize ~= selectedFontSize or nameFontSize ~= selectedNameFontSize
         local window = DFRL.display.Get("meterDpsWindow")
         local windowChanged = dps.window ~= window
         local changed, iconsWereShown = false, options.icons
@@ -971,6 +1091,7 @@ DFRL:NewMod("DamageMeter", 7, function()
         HideTooltip()
         enabled = enable
         fontSize = selectedFontSize
+        nameFontSize = selectedNameFontSize
         if windowChanged then
             dps.SetWindow(window)
             ClearSamples()
@@ -1027,6 +1148,7 @@ DFRL:NewMod("DamageMeter", 7, function()
         if age < 0.2 then return end
         age = 0
         local ok, message = pcall(Refresh)
+        ClearReadPass()
         if not ok then
             faulted = true
             dps.Clear()
@@ -1066,6 +1188,7 @@ DFRL:NewMod("DamageMeter", 7, function()
                     if arg1 == entry.prefix then
                         received[index] = true
                         receipts[index] = (receipts[index] or 0) + 1
+                        viewSelection.dirty = true
                         if index == mode then dataDirty = true end
                     end
                 end

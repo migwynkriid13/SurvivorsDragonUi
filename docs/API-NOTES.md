@@ -196,9 +196,9 @@ The first-hit info and active text retain native critical status, and the duplic
 
 ## SCT size and shared checkbox row — 2026-10-19
 
-The Combat text tab places Incoming/self text and Damage icons side by side, retaining both independent native/addon preference paths and allowing two lines for each description. SCT size uses the existing minus/plus editor buttons, with a 100% default and five-percentage-point steps clamped to 25–200%. The existing display table adds only a normalized numeric `sctScale` multiplier (0.25–2): missing, nonnumeric and nonfinite values use 1; finite out-of-range values clamp. This is the user-authorized numeric exception to that table's display booleans.
+The Combat text tab places Incoming/self text and Damage icons side by side, retaining both independent native/addon preference paths and allowing two lines for each description. SCT size uses the existing minus/plus editor buttons, with a 90% default and five-percentage-point steps clamped to 25–200%. The existing display table adds only a normalized numeric `sctScale` multiplier (0.25–2): missing, nonnumeric and nonfinite values use 0.9; finite out-of-range values clamp. Existing valid saved sizes are retained. This is the user-authorized numeric exception to that table's display booleans.
 
-The renderer multiplies only each hit's inner visual scale at launch and throughout animation, so text, icons and existing critical/miss pop follow the setting. Holder coordinates, trajectory, lifetime, matching, raw amounts, grouping, colors and native combat text are unchanged. Already animating hits preview size without resetting their launch/lifetime. The shared display draft handles Confirm-only saving, Cancel/world cleanup/reload discard and both full resets to 100%, without changing SCT mode. No new SavedVariable, command or asset is added. No local checks or game/addon execution were run; packaged-game behavior remains unverified.
+The renderer multiplies only each hit's inner visual scale at launch and throughout animation, so text, icons and existing critical/miss pop follow the setting. Holder coordinates, trajectory, lifetime, matching, raw amounts, grouping, colors and native combat text are unchanged. Already animating hits preview size without resetting their launch/lifetime. The shared display draft handles Confirm-only saving, Cancel/world cleanup/reload discard and both full resets to 90%, without changing the confirmed SCT mode. No new SavedVariable, command or asset is added. No local checks or game/addon execution were run; packaged-game behavior remains unverified.
 
 ## Player/buff options, class damage colors and command retirement — 2026-10-19
 
@@ -334,10 +334,12 @@ No tests, syntax checks, validation, addon execution or game startups were run; 
 Performance Mode leaves SCT unchanged, including its selected style, normal
 motion, critical pop, fade, matching and native plate ownership.
 
-`/sdui` → **Combat text** has a **Damage number style** selector: **Over enemies**
-(default), **MSBT-style scrolling** and **Diablo IV**. The normalized `sctStyle`
-enum lives in the existing display table; legacy exact-true `sctMSBTStyle`
-choices migrate to MSBT. See [DIABLO-SCT.md](DIABLO-SCT.md) for the third style
+`/sdui` → **Combat text** has a **Damage number style** selector: **Over enemies**,
+**MSBT-style scrolling** and **Diablo IV** (default). The normalized `sctStyle`
+enum lives in the existing display table. A valid saved style wins; otherwise
+legacy exact-false `sctMSBTStyle` choices retain Over enemies and exact-true
+choices migrate to MSBT. Missing/invalid choices without either legacy boolean
+use Diablo IV. See [DIABLO-SCT.md](DIABLO-SCT.md) for the third style
 and migration rules. Preview, Confirm-only saving,
 Cancel/world/logout/reload discard, profiles and both full resets share the
 existing display transaction. The style buttons dim and disable alongside the
@@ -508,6 +510,33 @@ updater, SavedVariable or client change is added. Verification was source/diff
 review and pinned formatting only; local tests, standalone validation and
 addon/game execution were not run.
 
+## Nameplate right-button camera turning — 2026-10-31
+
+A right-button press on a visible enemy plate now starts native mouse-look,
+which uses the client's right-turn channel. Left-click targeting and existing
+mouse handlers stay native. The addon does not change native mouse-enabled
+flags, hit rectangles, click registrations, V or the boss/guardian filter.
+Masked and hidden plates cannot start the gesture. This works independently of
+the selected SCT mode/style and uses the same input path in Performance Mode.
+
+The reference client's [movement calls](https://github.com/Arnesen/wenilla/blob/ea514d8bb724c0571fc74183f23de7b1bbb303cf/crates/benilla-ui/src/script/input_verbs.rs#L510)
+allow `MouselookStart`/`MouselookStop` from addon handlers; `TurnOrActionStart`
+has a separate movement gate. Native [camera entry](https://github.com/Arnesen/wenilla/blob/ea514d8bb724c0571fc74183f23de7b1bbb303cf/crates/benilla-ui/src/script/pointer.rs#L309)
+sends a synthetic mouse-up to the plate and releases its capture. The addon
+ignores that entry-time release and ends its own hold on the later real
+right-button release through WorldFrame, with a plate mouse-up fallback. Plate
+death, hiding and reuse do not end a held camera gesture. Native left-click
+selection remains available; right-button presses prioritize camera control.
+
+Only an addon-started hold is stopped. Pre-existing mouse-look is left alone,
+and a later external start takes ownership. Real release, WorldFrame hiding,
+world leave, logout and reload clear the owned hold. Missing camera APIs leave
+native interaction unchanged. Hooks are installed once on discovered plates
+and the existing WorldFrame, with no idle polling, new controller or saved data.
+CI-only mocks cover native entry/release ordering and cleanup. Source inspection
+does not establish input delivery in the packaged game; no local tests or
+addon/game execution were performed.
+
 ## First-allocation nameplate flash — 2026-10-15
 
 The user reported a brief stock-nameplate flash on spawning mobs, both before the custom nameplate style and with V off. The current public client source has a matching first-allocation timing gap: [Lua ticking runs in UiInput and painting follows VPlateSet](https://github.com/samwhosung/benilla/blob/358731f95a7eab43861e250280856ecf5d90741d/crates/benilla-app/src/ui_script/mod.rs#L373-L392), while [native plate generation runs after UiInput](https://github.com/samwhosung/benilla/blob/358731f95a7eab43861e250280856ecf5d90741d/crates/benilla-app/src/vplates.rs#L650-L658). A brand-new plate can therefore be drawn before the addon's next OnUpdate discovers, skins and masks it. This source ordering matches the report; it does not establish the exact packaged client's runtime behavior.
@@ -518,7 +547,7 @@ Known pooled plates already receive synchronous OnShow and OnValueChanged handli
 
 ## Invisible nameplate tracking for custom SCT — 2026-10-15
 
-The user reported that custom hits fell back to the center when native nameplates were hidden. The default over-enemy SCT style separates V's requested visible state from the native tracking state: while that style is active, it uses the original `ShowNameplates` to keep hostile plates live and their coordinates updating even when the user has chosen to hide the plates. `NAMEPLATES_ON` and the user's saved V preference remain unchanged. Selecting MSBT-style scrolling, Off or Game settings in `/sdui` releases that tracking control and restore the originally requested native visibility. World leave and logout release it too; the selected SCT mode is saved separately and restored subject to current game settings on the next UI initialization.
+The user reported that custom hits fell back to the center when native nameplates were hidden. The enemy-origin SCT styles, Over enemies and Diablo IV, separate V's requested visible state from the native tracking state: while either style is active, they use the original `ShowNameplates` to keep hostile plates live and their coordinates updating even when the user has chosen to hide the plates. `NAMEPLATES_ON` and the user's saved V preference remain unchanged. Selecting MSBT-style scrolling, Off or Game settings in `/sdui` releases that tracking control and restores the originally requested native visibility. World leave and logout release it too; the selected SCT mode is saved separately and restored subject to current game settings on the next UI initialization.
 
 With V off, the addon disables draw layers on hostile plate frames and their descendants, including health-bar layers. It makes their hit rectangles empty through insets so invisible plates cannot receive clicks. It leaves the native mouse-enabled flag unchanged, preserving the client's freelook transitions. It does not hide the plate frames or change their alpha, so their native shown-state lifecycle and coordinate updates continue. Turning visible plates back on, changing out of custom mode, leaving the world or logging out restores the captured draw-layer and hit-rectangle state.
 
@@ -558,13 +587,17 @@ Schedule completeness checks include all recognized `due`, `up` and `dead` state
 
 ## Saved SCT mode and native settings — 2026-10-16
 
-The selected Custom (`on`), Off (`off`) or Game settings (`default`) mode persists in the separate scalar `SurvivorsDragonUiSctMode` SavedVariable. Module initialization accepts only those three mode names and uses `default` for missing or invalid values, preserving native choices on new installations. The game's **Enable Floating Combat Text** checkbox writes the saved `SHOW_COMBAT_TEXT` global; **Show Target Damage** independently writes the `CombatDamage` CVar. The floating-text checkbox controls native incoming/self feedback, while `CombatDamage` gates native outgoing numbers and miss words. Custom outgoing SCT depends on effective `on` mode, either confirmed or previewed in the editor, and native outgoing text being disabled; it has no dependency on `SHOW_COMBAT_TEXT`.
+The selected Custom (`on`), Off (`off`) or Game settings (`default`) mode persists in the separate scalar `SurvivorsDragonUiSctMode` SavedVariable. Module initialization accepts only those three mode names. Missing or invalid saved modes initialize to `on` and save that normalized scalar. This initialization requests `CombatDamage = 0` once through the existing native writer before the first settings synchronization, so new installations start Custom without duplicate native outgoing text. Valid saved modes retain their existing initialization behavior. This path never writes incoming/self preferences, loads their addon or calls their updater.
+
+The game's **Enable Floating Combat Text** checkbox writes the saved `SHOW_COMBAT_TEXT` global; **Show Target Damage** independently writes the `CombatDamage` CVar. The floating-text checkbox controls native incoming/self feedback, while `CombatDamage` gates native outgoing numbers and miss words. Custom outgoing SCT depends on effective `on` mode, either confirmed or previewed in the editor, and native outgoing text being disabled; it has no dependency on `SHOW_COMBAT_TEXT`.
+
+New display defaults are Diablo IV style, Default font, 90% size and abbreviated K/M/B/T numbers. Existing valid saved display values are retained, including explicit `false` for full numbers and the legacy style booleans described above. Missing/invalid display fields and both full display resets use the new defaults. Full resets still preserve the separately confirmed scalar mode and native incoming choice.
 
 The previous `/sct on` implementation wrote `SHOW_COMBAT_TEXT = "1"` and called the native floating-text updater, which explains why selecting custom outgoing text also enabled received-damage text. The base game's [options adapter](https://github.com/samwhosung/benilla/blob/main/crates/benilla-app/assets/ui/OptionsFrame.xml#L36-L43) loads `Blizzard_CombatText` when that global is enabled and updates its displayed messages; its [combat settings rows](https://github.com/samwhosung/benilla/blob/main/crates/benilla-app/assets/ui/OptionsFrame.xml#L2231-L2241) explicitly keep outgoing `CombatDamage` separate. The [native outgoing renderer](https://github.com/samwhosung/benilla/blob/main/crates/benilla-app/src/combat_text/mod.rs#L436-L442) observes the outgoing damage CVars. These are base-source evidence, not verification of the packaged game's exact build.
 
 The `/sdui` Custom choice selects custom outgoing SCT and suppresses `CombatDamage` once to avoid duplicate numbers. Off disables custom SCT, suppresses native outgoing damage once and clears custom hits. Game settings disables custom SCT and releases temporary outgoing-preview suppression, otherwise leaving native outgoing preferences in control. Confirm alone saves the chosen addon mode. None of these mode selections writes `SHOW_COMBAT_TEXT`, loads the native incoming-text addon or calls its updater. After `on` or `off`, players who want native outgoing numbers must enable **Show Target Damage** themselves; switching to `default` alone does not turn it back on.
 
-Enabling native target damage selects and saves `default` mode, preventing duplicate outgoing displays. Turning incoming/self floating text off does not clear custom hits or release tracking, and turning it on does not switch saved `off` mode to `on`. Initialization, world entry, `CVAR_UPDATE` and the frame update loop observe native outgoing settings without writing them. Effective custom-state or mode changes clear active and queued hits before refreshing tracking.
+Enabling native target damage selects and saves `default` mode, preventing duplicate outgoing displays. Turning incoming/self floating text off does not clear custom hits or release tracking, and turning it on does not switch saved `off` mode to `on`. After the single missing/invalid-mode initialization above, ordinary initialization, world entry, `CVAR_UPDATE` and the frame update loop only observe native outgoing settings without writing them. Effective custom-state or mode changes clear active and queued hits before refreshing tracking.
 
 The `/sdui` **Combat text** tab presents direct **Custom**, **Off** and **Game settings** outgoing choices and an **Incoming/self text** checkbox. Both preview immediately when clicked. The committed SCT mode remains separate from its effective draft; custom/off previews suppress native outgoing damage once and immediately refresh custom text and tracking. Game settings selects the existing `default` mode and releases the preview's temporary outgoing suppression so the previous native preference applies. The separate incoming/self control immediately writes native `SHOW_COMBAT_TEXT` and applies the shared `BenillaCombatText_UpdateOrLoad` or feature-detected native load/update fallback. Selecting outgoing SCT alone never changes incoming/self text. Confirm saves only the selected mode in the existing scalar SavedVariable and retains the current native choices without reapplying them. The incoming choice uses the game's own saved preference, with no addon SavedVariable.
 

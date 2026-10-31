@@ -26,13 +26,51 @@ parents, headings and controls are constructed on their category's first visit
 and reused thereafter; unvisited categories have no native page objects. Profiles
 waits for its own category, and the Run timer font popup waits for its button.
 There is no background preloading. Direct entry to Profiles prepares Profiles
-without visiting Layout first. The selected sidebar button supplies the category name; there
-is no duplicate category title or search field. Section headings appear only
+without visiting Layout first. The selected sidebar button supplies the category name;
+there is no duplicate category title. Section headings appear only
 when their names differ from the category, such as Pet frames under Unit frames.
 These subsection headings are centered above their controls and divider. Damage
 meter has its own sidebar category and no repeated content heading.
-Controls start at the top of the viewport rather than below a search/header area.
+Search stays in the left sidebar above Performance Mode, with one full-width
+input below its caption. Category pages use the full content viewport.
 Each category remembers its scroll offset until the UI reloads.
+
+## Finding a setting
+
+**Search settings** above Performance Mode in the sidebar matches existing captions, descriptions and category names,
+using both the active language and English source text. Multiple words must all
+match; punctuation is literal. Supported Latin and Cyrillic case pairs are
+folded without changing other UTF-8 text. `shield` and `absorb`, including the
+translated native ABSORB caption, find the player health amount/percentage
+controls. `SCT` also finds Combat text settings.
+
+Results show their category and subsection. Click one, or press Enter for the
+first result on the current page, to return to the original controls and scroll
+to that option. Eight reusable result buttons have previous/next paging and a
+numeric range/count; no matches shows **No matching settings.** Search does not
+toggle, save or bypass disabled controls. Deleting the search text restores the selected
+category and its scroll position. Escape keeps the shared Cancel behavior.
+
+Results use a plain 360-unit-wide list, capped at the available viewport width.
+Each 42-unit row has a gold title and muted category path, aligned left with
+ten-unit side padding. Rows keep the same width across captions, languages and
+pages. Their only texture is a faint solid hover highlight, hidden on leave or
+row hiding. Pagination follows the list width. There are no decorative button
+faces, content-width measurements or result-width caches. The eight-row pool,
+click/Enter navigation and shared save/discard lifecycle remain unchanged.
+
+Generic settings use the same option/mode records as construction. Layout and
+Profiles expose their existing caption records; custom Combat text and Run
+timer controls share their caption/offset records with the search index. Font,
+style and filter choices reuse their original lists. Generic option targets
+come from the actual paired-row layout after the destination category is
+prepared. Searching leaves unvisited pages unallocated until a result is opened.
+
+Indexing happens on a query or active language change, with no idle worker.
+Search text, matches, pagination and offsets stay in session memory. Closing
+clears the query and focus; hidden language changes defer presentation. The
+input uses the existing static editor artwork; result rows stay
+plain in both Performance Mode states. No setting or SavedVariable is added.
 
 Live run updates touch the font preview only after the Run timer page has been
 prepared and its category is visible. Opening another category leaves that

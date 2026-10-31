@@ -35,7 +35,8 @@ border:Show()
 view:Update(1, 960, 280)
 assert(#c.objects == count + 1 and view.texture:IsShown(), "Heroic marker is not one lazy texture")
 assert(view.texture.point[2] == bar and view.texture.point[3] == "LEFT")
-assert(view.texture.point[4] == 17.5, "marker did not use the native one-minute coordinate")
+assert(view.texture.point[4] == 26.25, "marker did not use the 1:30-of-16:00 percentage coordinate")
+assert(view.texture.point[5] == -0.25, "visible lettering is not centered vertically in the pill")
 assert(view.texture.width == 32 and view.texture.height == 16, "atlas display size changed")
 local texture = view.texture
 c:ResetCounts()
@@ -44,14 +45,23 @@ for _ = 1, 20 do
 end
 c:NoPresentationWrites()
 assert(not c.writes.Show and not c.writes.Hide, "unchanged marker rewrote visibility")
+c:ResetCounts()
+for _, maximum in ipairs({ 45, 600, 960, 1200, 1800 }) do
+    view:Update(1, maximum, 280)
+    assert(texture.point[4] == 26.25 and texture:IsShown(), "zone duration changed the fixed percentage position")
+end
+c:NoPresentationWrites()
+assert(not c.writes.SetPoint, "duration-only changes rewrote the numeral anchor")
 view:Resize(560)
-assert(texture.point[4] == 35 and not c.writes.SetTexture, "width change rebound or misplaced artwork")
+assert(texture.point[4] == 52.5 and not c.writes.SetTexture, "width change rebound or misplaced percentage artwork")
 view:Resize(104)
 assert(texture.point[4] == 16, "narrow bar clipped the numeral against its cap")
 local lastTint
 for rank = 1, 10 do
     view:Update(rank, 960, 280)
     assert(texture:IsShown() and #c.objects == count + 1, "changing rank rebuilt or hid its texture")
+    assert(texture.point[4] == 26.25, "Heroic rank changed the shared percentage position")
+    assert(texture.point[5] == -0.25, "rank change moved the visible lettering off the pill center")
     local uv = texture.uv
     assert(uv[1] >= 0 and uv[2] <= 1 and uv[3] >= 0 and uv[4] <= 1, "numeral crop left its atlas")
     assert(not lastTint or rank > 5 or texture.color[2] < lastTint[2], "Heroic colors failed to warm by tier")
@@ -90,9 +100,58 @@ assert(
     failed.texture == failedTexture and #c.objects == allocated and failed.texture:IsShown(),
     "retry rebuilt or lost the texture"
 )
+local affixes = { center = 18 + 12.5 + 25 / 29 - 8 }
+function affixes:FirstCenter(width)
+    self.width = width
+    return self.center
+end
+local aligned = new(bar, border, affixes)
+aligned:Update(5, 960, 280)
+local alignedTexture, alignedObjects = aligned.texture, #c.objects
+assert(
+    math.abs(alignedTexture.point[4] - affixes.center) < 0.000001 and alignedTexture.point[5] == -0.25,
+    "numeral does not sit beneath the first affix's visible center"
+)
+assert(affixes.width == 280, "affix owner did not receive the actual fill width")
+c:ResetCounts()
+for _, maximum in ipairs({ 45, 600, 960, 1800 }) do
+    aligned:Update(5, maximum, 280)
+end
+c:NoPresentationWrites()
+assert(#c.objects == alignedObjects, "aligned updates rebuilt the numeral")
+affixes.center = 125.5
+aligned:Resize(280)
+assert(alignedTexture.point[4] == 125.5 and alignedTexture.point[5] == -0.25)
+assert(c.writes.SetPoint == 1 and not c.writes.SetTexture, "affix movement rebound or repeatedly placed the artwork")
+c:ResetCounts()
+aligned:Resize(280)
+c:NoPresentationWrites()
+for _, center in ipairs({ -20, 0, 400 }) do
+    affixes.center = center
+    aligned:Resize(280)
+    assert(alignedTexture.point[4] == (center > 280 and 264 or 16), "affix alignment escaped the pill caps")
+end
+for _, center in ipairs({ false, "invalid", math.huge, 0 / 0 }) do
+    affixes.center = center
+    aligned:Resize(280)
+    assert(alignedTexture.point[4] == 26.25, "invalid affix center did not retain the percentage fallback")
+end
+affixes.center = nil
+aligned:Resize(560)
+assert(alignedTexture.point[4] == 52.5, "detached or absent affixes lost the percentage fallback")
+for _, performance in ipairs({ false, true }) do
+    env.performanceMode = performance
+    affixes.center = 91.75
+    aligned:Update(5, 960, 280)
+    c:ResetCounts()
+    aligned:Update(5, 1200, 280)
+    c:NoPresentationWrites()
+    assert(alignedTexture.point[4] == 91.75 and alignedTexture.point[5] == -0.25 and alignedTexture:IsShown())
+end
 border:Hide()
 c:ResetCounts()
 view:Update(2, 960, 280)
 view:Resize(560)
+aligned:Resize(560)
 c:NoPresentationWrites()
-print("PASS static Heroic numeral lifecycle, ranks, resize, retirement and binding retry")
+print("PASS static Heroic numeral lifecycle, ranks, affix alignment, resize, retirement and binding retry")

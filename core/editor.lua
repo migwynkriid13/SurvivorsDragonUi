@@ -444,9 +444,393 @@ function DFRL.tools.CreateEditorToggle(parent, text, description, width, callbac
     return button
 end
 
+-- Literal settings search needs the same case folding on both localized
+-- metadata and input. Decode only for supported Latin/Cyrillic case pairs;
+-- retain every other UTF-8 byte unchanged, including CJK captions.
+local function FoldEditorSearch(text)
+    local result, index = {}, 1
+    while index <= string.len(text) do
+        local first = string.byte(text, index)
+        local length, code = 1, first
+        local second, third = string.byte(text, index + 1), string.byte(text, index + 2)
+        if first >= 194 and first <= 223 and second and second >= 128 and second <= 191 then
+            length, code = 2, (first - 192) * 64 + second - 128
+        elseif
+            first >= 224
+            and first <= 239
+            and second
+            and third
+            and second >= 128
+            and second <= 191
+            and third >= 128
+            and third <= 191
+        then
+            length, code = 3, (first - 224) * 4096 + (second - 128) * 64 + third - 128
+        end
+        local lower = code
+        if code >= 65 and code <= 90 then
+            lower = code + 32
+        elseif (code >= 192 and code <= 214) or (code >= 216 and code <= 222) then
+            lower = code + 32
+        elseif code == 304 or code == 305 then
+            lower = 105
+        elseif code == 376 then
+            lower = 255
+        elseif (code >= 256 and code <= 303) or (code >= 306 and code <= 311) or (code >= 330 and code <= 375) then
+            if math.mod(code, 2) == 0 then lower = code + 1 end
+        elseif (code >= 313 and code <= 328) or (code >= 377 and code <= 382) then
+            if math.mod(code, 2) == 1 then lower = code + 1 end
+        elseif code == 536 or code == 538 or code == 1168 then
+            lower = code + 1
+        elseif code >= 1040 and code <= 1071 then
+            lower = code + 32
+        elseif code >= 1024 and code <= 1039 then
+            lower = code + 80
+        end
+        local folded
+        if code == 223 or code == 7838 then
+            folded = "ss"
+        elseif lower == code then
+            folded = string.sub(text, index, index + length - 1)
+        elseif lower < 128 then
+            folded = string.char(lower)
+        elseif lower < 2048 then
+            folded = string.char(192 + math.floor(lower / 64), 128 + math.mod(lower, 64))
+        else
+            folded = string.char(
+                224 + math.floor(lower / 4096),
+                128 + math.mod(math.floor(lower / 64), 64),
+                128 + math.mod(lower, 64)
+            )
+        end
+        table.insert(result, folded)
+        index = index + length
+    end
+    return table.concat(result)
+end
+
+-- Search only redirects to the original controls. Metadata is available before
+-- unvisited pages exist; a small result pool reuses the navigator's viewport.
+local function CreateEditorSearch(parent, sidebar, scroll, content, navigation, groups, sections, options)
+    local owner = { active = false, query = "", page = 1, rows = {}, results = {} }
+    local width = options.sidebarWidth
+    local resultWidth, resultHeight, resultPitch = math.min(options.width - 24, 360), 42, 46
+    local resultFooter = 8 * resultPitch + 8
+    local header = CreateFrame("Frame", nil, sidebar)
+    header:SetPoint("TOPLEFT", sidebar, "TOPLEFT", 6, -4)
+    header:SetWidth(width)
+    header:SetHeight(56)
+    local caption = Label(header, 12, "Search settings")
+    caption:SetPoint("TOPLEFT", header, "TOPLEFT", 0, -2)
+    caption:SetWidth(width)
+    caption:SetHeight(18)
+    caption:SetJustifyH("LEFT")
+    owner.input = T.CreateEditorInput(header, width, 28)
+    owner.input:SetMaxLetters(128)
+    owner.input:SetPoint("TOPLEFT", header, "TOPLEFT", 0, -24)
+    navigation.search = owner.input
+    navigation.results, navigation.query = owner.results, ""
+
+    local byGroup, bySection = {}, {}
+    for _, group in ipairs(groups) do
+        byGroup[group.key] = group
+    end
+    for _, section in ipairs(sections) do
+        bySection[section.key] = section
+    end
+
+    local function SyncInput()
+        if not parent:IsShown() then return end
+        owner.changing = true
+        if owner.input:GetText() ~= owner.query then owner.input:SetText(owner.query) end
+        owner.changing = nil
+    end
+    local function Index()
+        if owner.index and owner.language == DFRL.locale.code then return owner.index end
+        local index, identities = {}, {}
+        local function Add(entry, section, target)
+            local groupKey = entry.group or (section and section.group)
+            local group = byGroup[groupKey]
+            local label = entry.label or (section and section.label)
+            if not label then return end
+            local identity = (section and section.key or groupKey or "")
+                .. ":"
+                .. (target or entry.target or entry.key or label)
+            local record = identities[identity]
+            if not record then
+                record = {
+                    label = label,
+                    section = section and section.key,
+                    sectionInfo = section,
+                    group = groupKey,
+                    entry = entry,
+                    target = target or entry.target or entry.key,
+                }
+                identities[identity] = record
+                table.insert(index, record)
+            end
+            local sources =
+                { label, entry.description or "", section and section.label or "", group and group.label or "" }
+            for _, term in ipairs(entry.terms or {}) do
+                table.insert(sources, term)
+            end
+            for _, term in ipairs(section and section.terms or {}) do
+                table.insert(sources, term)
+            end
+            local text = {}
+            for _, source in ipairs(sources) do
+                table.insert(text, source)
+                table.insert(text, DFRL.locale.Text(source))
+            end
+            record.text = (record.text or "") .. " " .. FoldEditorSearch(table.concat(text, " "))
+        end
+        for _, section in ipairs(sections) do
+            Add({ label = section.label }, section)
+            for _, entry in ipairs(section.options or {}) do
+                Add(
+                    { label = entry[2], description = entry[3], offset = entry.offset, terms = entry.terms },
+                    section,
+                    entry[1]
+                )
+            end
+            if section.mode then
+                local mode = section.mode
+                Add({ label = mode.label }, section, mode.key)
+                for _, entry in ipairs(mode.values) do
+                    Add({ label = entry[2], description = entry[3] }, section, mode.key)
+                end
+            end
+            for _, entry in ipairs(section.search or {}) do
+                Add(entry, section)
+            end
+        end
+        for _, entry in ipairs(options.searchEntries or {}) do
+            Add(entry, bySection[entry.section])
+        end
+        owner.index, owner.language = index, DFRL.locale.code
+        return index
+    end
+    local function PrepareResults()
+        if owner.frame then return end
+        local frame = CreateFrame("Frame", nil, content)
+        frame:SetWidth(resultWidth)
+        frame:SetHeight(1)
+        frame:SetPoint("TOPLEFT", content, "TOPLEFT", 0, 0)
+        owner.frame = frame
+        owner.empty = Label(frame, 12, "No matching settings.")
+        owner.empty:SetPoint("TOPLEFT", frame, "TOPLEFT", 4, -12)
+        owner.empty:SetWidth(resultWidth - 8)
+        owner.empty:SetHeight(36)
+        owner.count = Label(frame, 11, "")
+        owner.count:SetPoint("TOP", frame, "TOP", 0, -resultFooter - 4)
+        owner.count:SetWidth(resultWidth - 100)
+        owner.count:SetHeight(24)
+        owner.count:SetJustifyH("CENTER")
+        owner.previous = T.CreateEditorButton(frame, "<", 32, 26)
+        owner.previous:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, -resultFooter)
+        owner.next = T.CreateEditorButton(frame, ">", 32, 26)
+        owner.next:SetPoint("TOPRIGHT", frame, "TOPRIGHT", 0, -resultFooter)
+        owner.previous:SetScript("OnClick", function()
+            if owner.page > 1 then
+                owner.page = owner.page - 1
+                navigation.Refresh(true)
+            end
+        end)
+        owner.next:SetScript("OnClick", function()
+            if owner.page * 8 < table.getn(owner.results) then
+                owner.page = owner.page + 1
+                navigation.Refresh(true)
+            end
+        end)
+    end
+    function owner.Refresh()
+        if not parent:IsShown() or not owner.active then return end
+        PrepareResults()
+        if not owner.frame:IsShown() then owner.frame:Show() end
+        local total = table.getn(owner.results)
+        local first = (owner.page - 1) * 8 + 1
+        local last = math.min(total, first + 7)
+        for slot = 1, 8 do
+            local result = owner.results[first + slot - 1]
+            local button = owner.rows[slot]
+            if result then
+                if not button then
+                    button = CreateFrame("Button", nil, owner.frame)
+                    button:SetWidth(resultWidth)
+                    button:SetHeight(resultHeight)
+                    button:SetPoint("TOPLEFT", owner.frame, "TOPLEFT", 0, -(slot - 1) * resultPitch)
+                    local hover = button:CreateTexture(nil, "BACKGROUND")
+                    hover:SetAllPoints(button)
+                    hover:SetTexture("Interface\\Buttons\\WHITE8X8")
+                    hover:SetVertexColor(1, 0.82, 0, 0.08)
+                    hover:Hide()
+                    button:SetScript("OnEnter", function()
+                        if not hover:IsShown() then hover:Show() end
+                    end)
+                    local function HideHover()
+                        if hover:IsShown() then hover:Hide() end
+                    end
+                    button:SetScript("OnLeave", HideHover)
+                    button:SetScript("OnHide", HideHover)
+                    button.label = Label(button, 12, "")
+                    button.label:SetPoint("TOPLEFT", button, "TOPLEFT", 10, -4)
+                    button.label:SetWidth(resultWidth - 20)
+                    button.label:SetHeight(18)
+                    button.label:SetJustifyH("LEFT")
+                    button.label:SetTextColor(1, 0.82, 0)
+                    button.path = Label(button, 10, "")
+                    button.path:SetPoint("TOPLEFT", button, "TOPLEFT", 10, -24)
+                    button.path:SetWidth(resultWidth - 20)
+                    button.path:SetHeight(14)
+                    button.path:SetJustifyH("LEFT")
+                    button.path:SetTextColor(0.65, 0.65, 0.62)
+                    button:SetScript("OnClick", function() navigation.OpenResult(button.resultIndex) end)
+                    owner.rows[slot] = button
+                end
+                button.resultIndex = first + slot - 1
+                if button.label:GetText() ~= DFRL.locale.Text(result.label) then button.label:SetText(result.label) end
+                local group = byGroup[result.group]
+                local pathText = group and DFRL.locale.Text(group.label) or ""
+                if result.sectionInfo and (not group or result.sectionInfo.label ~= group.label) then
+                    pathText = pathText
+                        .. (pathText ~= "" and " > " or "")
+                        .. DFRL.locale.Text(result.sectionInfo.label)
+                end
+                T.SetTextIfChanged(button.path, pathText)
+                if not button:IsShown() then button:Show() end
+            elseif button and button:IsShown() then
+                button:Hide()
+            end
+        end
+        if total == 0 then
+            if not owner.empty:IsShown() then owner.empty:Show() end
+        elseif owner.empty:IsShown() then
+            owner.empty:Hide()
+        end
+        T.SetTextIfChanged(
+            owner.count,
+            (total == 0 and "0" or tostring(first) .. "-" .. tostring(last)) .. " / " .. tostring(total)
+        )
+        local previous, nextPage = owner.page > 1, last < total
+        if owner.previousEnabled ~= previous then
+            owner.previousEnabled = previous
+            if previous then
+                owner.previous:Enable()
+            else
+                owner.previous:Disable()
+            end
+        end
+        if owner.nextEnabled ~= nextPage then
+            owner.nextEnabled = nextPage
+            if nextPage then
+                owner.next:Enable()
+            else
+                owner.next:Disable()
+            end
+        end
+        local height = math.max(scroll:GetHeight(), resultFooter + 36)
+        if owner.frame:GetHeight() ~= height then owner.frame:SetHeight(height) end
+        if content:GetHeight() ~= height then content:SetHeight(height) end
+        if scroll.UpdateScrollChildRect then scroll:UpdateScrollChildRect() end
+    end
+    function owner.Clear(refresh)
+        local changed = owner.active or owner.query ~= ""
+        owner.active, owner.query, owner.folded, owner.page = false, "", nil, 1
+        navigation.query = ""
+        if table.getn(owner.results) > 0 then
+            owner.results = {}
+            navigation.results = owner.results
+        end
+        if owner.frame and owner.frame:IsShown() then owner.frame:Hide() end
+        owner.input:ClearFocus()
+        SyncInput()
+        if changed and refresh then
+            if options.onNavigate then options.onNavigate(navigation.selected) end
+            navigation.Refresh(true)
+        end
+    end
+    function owner.Search(query, force)
+        query = type(query) == "string" and query or ""
+        local folded = string.gsub(FoldEditorSearch(query), "^%s*(.-)%s*$", "%1")
+        if folded == "" then
+            owner.Clear(true)
+            return
+        end
+        owner.query, navigation.query = query, query
+        if not parent:IsShown() then return end
+        SyncInput()
+        if not force and owner.active and owner.folded == folded and owner.language == DFRL.locale.code then return end
+        if not owner.active then
+            navigation.RememberOffset()
+            owner.active = true
+            if options.onNavigate then options.onNavigate(nil) end
+        end
+        owner.folded, owner.page = folded, 1
+        local results, tokens = {}, {}
+        for token in string.gfind(folded, "%S+") do
+            table.insert(tokens, token)
+        end
+        for _, record in ipairs(Index()) do
+            local matched = true
+            for _, token in ipairs(tokens) do
+                if not string.find(record.text, token, 1, true) then
+                    matched = false
+                    break
+                end
+            end
+            if matched then table.insert(results, record) end
+        end
+        owner.results, navigation.results = results, results
+        navigation.Refresh(true)
+    end
+    function navigation.OpenResult(index)
+        if not parent:IsShown() or not owner.active then return end
+        local result = owner.results[index]
+        if not result then return end
+        local entry, section = result.entry, result.sectionInfo
+        owner.Clear(false)
+        navigation.Select(result.group or navigation.selected)
+        if section then
+            local offset = entry.offset or (section.searchOffsets and section.searchOffsets[result.target]) or 0
+            navigation.Jump((section.y or 0) + (section.headingHeight or 0) + offset)
+        end
+    end
+    navigation.Search = owner.Search
+    navigation.ClearSearch = function() owner.Clear(true) end
+    owner.input:SetScript("OnTextChanged", function()
+        if not owner.changing then owner.Search(owner.input:GetText()) end
+    end)
+    owner.input:SetScript("OnEnterPressed", function() navigation.OpenResult((owner.page - 1) * 8 + 1) end)
+    owner.input:SetScript("OnEscapePressed", function()
+        if options.onEscape then
+            owner.Clear(false)
+            options.onEscape()
+        else
+            owner.Clear(true)
+        end
+    end)
+    HookScript(header, "OnHide", function() owner.Clear(false) end)
+    HookScript(header, "OnShow", function()
+        SyncInput()
+        if owner.query ~= "" then owner.Search(owner.query, true) end
+    end)
+    DFRL.locale.Listen(function()
+        owner.index = nil
+        if not parent:IsShown() then return end
+        if owner.query ~= "" then owner.Search(owner.query, true) end
+    end)
+    return owner
+end
+
 -- Related settings share one scroll surface and keep their original owners.
 function DFRL.tools.CreateEditorNavigator(parent, sidebar, groups, sections, options)
-    local navigation = { pages = {}, buttons = {}, offsets = {}, selected = groups[1].key }
+    local navigation = {
+        pages = {},
+        buttons = {},
+        offsets = {},
+        selected = groups[1].key,
+        searchHeight = options.search and 64 or 0,
+    }
     local width = options.width
     local scroll = CreateFrame("ScrollFrame", "SurvivorsDragonUiSettingsScroll", parent, "UIPanelScrollFrameTemplate")
     scroll:SetPoint("TOPLEFT", parent, "TOPLEFT", options.left, -options.top)
@@ -473,7 +857,7 @@ function DFRL.tools.CreateEditorNavigator(parent, sidebar, groups, sections, opt
         groupLabels[group.key] = group.label
         local key = group.key
         local button = DFRL.tools.CreateEditorCategory(sidebar, group.label, options.sidebarWidth, 42)
-        button:SetPoint("TOPLEFT", sidebar, "TOPLEFT", 6, -48 - (index - 1) * 48)
+        button:SetPoint("TOPLEFT", sidebar, "TOPLEFT", 6, -48 - navigation.searchHeight - (index - 1) * 48)
         button.label:SetHeight(32)
         button.label:SetJustifyV("MIDDLE")
         button:SetScript("OnClick", function() navigation.Select(key) end)
@@ -511,6 +895,14 @@ function DFRL.tools.CreateEditorNavigator(parent, sidebar, groups, sections, opt
     function navigation.Refresh(force)
         if not parent:IsShown() then
             rendered = nil
+            return
+        end
+        if navigation.searchOwner and navigation.searchOwner.active then
+            for _, section in ipairs(sections) do
+                if section.shell and section.shell:IsShown() then section.shell:Hide() end
+            end
+            rendered = nil
+            navigation.searchOwner.Refresh()
             return
         end
         if rendered == navigation.selected and not force then return end
@@ -554,11 +946,23 @@ function DFRL.tools.CreateEditorNavigator(parent, sidebar, groups, sections, opt
         rendered = navigation.selected
     end
     local function RememberOffset()
-        if slider then navigation.offsets[navigation.selected] = slider:GetValue() end
+        if slider and rendered == navigation.selected then
+            navigation.offsets[navigation.selected] = slider:GetValue()
+        end
+    end
+    navigation.RememberOffset = RememberOffset
+    function navigation.Jump(value)
+        if not slider then return end
+        local low, high = slider:GetMinMaxValues()
+        local offset = math.max(low, math.min(high, value))
+        slider:SetValue(offset)
+        navigation.offsets[navigation.selected] = offset
     end
     function navigation.Select(key)
         if not navigation.buttons[key] then return end
-        RememberOffset()
+        local searching = navigation.searchOwner and navigation.searchOwner.active
+        if navigation.searchOwner then navigation.searchOwner.Clear(false) end
+        if not searching then RememberOffset() end
         navigation.selected = key
         if options.onNavigate then options.onNavigate(key) end
         navigation.Refresh(true)
@@ -567,6 +971,10 @@ function DFRL.tools.CreateEditorNavigator(parent, sidebar, groups, sections, opt
         RememberOffset()
         rendered = nil
     end)
+    if options.search then
+        navigation.searchOwner =
+            CreateEditorSearch(parent, sidebar, scroll, content, navigation, groups, sections, options)
+    end
     return navigation
 end
 

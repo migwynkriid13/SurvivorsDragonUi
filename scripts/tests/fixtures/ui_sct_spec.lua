@@ -36,14 +36,19 @@ Test("styles migrate legacy choices and share preview, Confirm, profiles and res
     local context = H.New()
     context:Load("core/display.lua", "Display")
     local display = context.env.DFRL.display
-    assert(display.Get("sctStyle") == "enemy", "the default must remain over enemies")
+    assert(display.Get("sctStyle") == "diablo", "missing style did not select Diablo")
     assert(display.Copy({ sctMSBTStyle = true }).sctStyle == "msbt", "legacy scrolling was lost")
-    assert(display.Copy({ sctMSBTStyle = "true" }).sctStyle == "enemy", "invalid legacy style was accepted")
-    assert(display.Copy({ sctStyle = true }).sctStyle == "enemy", "invalid enum was accepted")
-    assert(
-        display.Copy({ sctStyle = "diablo", sctMSBTStyle = true }).sctStyle == "diablo",
-        "legacy overrode the new choice"
-    )
+    assert(display.Copy({ sctMSBTStyle = "true" }).sctStyle == "diablo", "invalid legacy style was accepted")
+    assert(display.Copy({ sctMSBTStyle = false }).sctStyle == "enemy", "explicit legacy Over enemies was lost")
+    assert(display.Copy({ sctStyle = true }).sctStyle == "diablo", "invalid enum was accepted")
+    for _, style in ipairs({ "msbt", "diablo", "enemy" }) do
+        for _, legacy in ipairs({ false, true }) do
+            assert(
+                display.Copy({ sctStyle = style, sctMSBTStyle = legacy }).sctStyle == style,
+                "legacy overrode the new choice"
+            )
+        end
+    end
     for _, style in ipairs({ "msbt", "diablo", "enemy" }) do
         display.BeginEdit()
         display.Set("sctStyle", style)
@@ -51,7 +56,7 @@ Test("styles migrate legacy choices and share preview, Confirm, profiles and res
         display.Set("sctStyle", "invalid")
         assert(display.Get("sctStyle") == style, "invalid edit replaced the preview")
         display.FinishEdit(false)
-        assert(display.Get("sctStyle") == "enemy", "Cancel did not restore the default")
+        assert(display.Get("sctStyle") == "diablo", "Cancel did not restore the default")
         display.BeginEdit()
         display.Set("sctStyle", style)
         display.FinishEdit(true)
@@ -62,7 +67,7 @@ Test("styles migrate legacy choices and share preview, Confirm, profiles and res
         display.FinishEdit(false)
         assert(display.Get("sctStyle") == style, "profile discard lost the saved style")
         display.Reset()
-        assert(display.Get("sctStyle") == "enemy", "reset did not restore over-enemy text")
+        assert(display.Get("sctStyle") == "diablo", "reset did not restore Diablo text")
     end
     context.env.SurvivorsDragonUiDisplay = { sctMSBTStyle = true }
     assert(display.Get("sctStyle") == "msbt", "an installed legacy selection was not migrated")
@@ -97,6 +102,168 @@ Test("font choice normalizes, previews, saves, discards, profiles and resets ind
     assert(display.Get("sctFont") == "diablo", "profile discard lost saved font")
     display.Reset()
     assert(display.Get("sctFont") == "default", "reset retained custom font")
+end)
+
+Test("SCT display defaults normalize missing values while retaining valid saved presentation", function()
+    local context = H.New()
+    context:Load("core/display.lua", "Display")
+    local display = context.env.DFRL.display
+    local defaults = { sctStyle = "diablo", sctFont = "default", sctScale = 0.9, sctShortNumbers = true }
+    local function AssertChoices(expected)
+        for key, value in pairs(expected) do
+            assert(display.Get(key) == value, key .. " lost its display transaction value")
+        end
+    end
+    for _, saved in ipairs({
+        {},
+        { sctStyle = false, sctFont = false, sctScale = 0 / 0, sctShortNumbers = "false" },
+        { sctStyle = "invalid", sctFont = "invalid", sctScale = math.huge, sctShortNumbers = 0 },
+    }) do
+        local copy = display.Copy(saved)
+        for key, value in pairs(defaults) do
+            assert(copy[key] == value, key .. " did not use its missing/invalid default")
+        end
+    end
+    AssertChoices(defaults)
+    local saved = { sctStyle = "enemy", sctFont = "diablo", sctScale = 1.25, sctShortNumbers = false }
+    context.env.SurvivorsDragonUiDisplay = saved
+    AssertChoices(saved)
+    local preview = { sctStyle = "msbt", sctFont = "default", sctScale = 0.75, sctShortNumbers = true }
+    display.BeginEdit()
+    for key, value in pairs(preview) do
+        display.Set(key, value)
+    end
+    AssertChoices(preview)
+    for key, value in pairs(saved) do
+        assert(context.env.SurvivorsDragonUiDisplay[key] == value, "presentation preview saved early")
+    end
+    display.FinishEdit(false)
+    AssertChoices(saved)
+    display.BeginEdit()
+    for key, value in pairs(preview) do
+        display.Set(key, value)
+    end
+    display.FinishEdit(true)
+    AssertChoices(preview)
+    display.BeginEdit()
+    display.Load({})
+    AssertChoices(defaults)
+    display.FinishEdit(false)
+    AssertChoices(preview)
+    display.BeginEdit()
+    display.Load(saved)
+    AssertChoices(saved)
+    display.FinishEdit(true)
+    AssertChoices(saved)
+    display.Reset()
+    AssertChoices(defaults)
+    assert(context.env.SurvivorsDragonUiDisplay == nil, "full display reset retained old presentation")
+end)
+
+local function NativeMode(saved, damage, incoming, realDisplay)
+    return SCT(true, function(context, env)
+        env.SurvivorsDragonUiSctMode = saved
+        env.SHOW_COMBAT_TEXT = incoming
+        context.nativeDamage, context.nativeWrites = damage, 0
+        env.GetCVar = function(name)
+            assert(name == "CombatDamage", "mode initialization read an unrelated native setting")
+            return context.nativeDamage
+        end
+        env.SetCVar = function(name, value)
+            assert(name == "CombatDamage" and value == "0", "mode initialization wrote an unrelated native setting")
+            context.nativeDamage, context.nativeWrites = value, context.nativeWrites + 1
+            context:Event(context:Controller("CVAR_UPDATE"), "CVAR_UPDATE", name)
+        end
+        env.BenillaCombatText_UpdateOrLoad = function() error("outgoing defaults changed incoming/self text") end
+        env.UIParentLoadAddOn = function() error("outgoing defaults loaded native incoming text") end
+        env.CombatText_UpdateDisplayedMessages = function() error("outgoing defaults updated native incoming text") end
+        if realDisplay then context:Load("core/display.lua", "Display") end
+    end)
+end
+
+Test("missing and invalid SCT modes initialize Custom once without touching incoming text", function()
+    for _, saved in ipairs({ {}, { value = false }, { value = 1 }, { value = "invalid" } }) do
+        for _, incoming in ipairs({ "0", "1" }) do
+            local context = NativeMode(saved.value, "1", incoming)
+            local sct = context.env.DFRL.sct
+            assert(
+                sct.GetMode() == "on" and context.env.SurvivorsDragonUiSctMode == "on",
+                "fresh mode did not choose Custom"
+            )
+            assert(
+                context.nativeDamage == "0" and context.nativeWrites == 1,
+                "fresh Custom did not suppress native outgoing exactly once"
+            )
+            assert(context.env.SHOW_COMBAT_TEXT == incoming, "fresh mode changed incoming/self text")
+            assert(
+                sct.NormalizeMode(nil) == "on" and sct.NormalizeMode("invalid") == "on",
+                "mode normalization lost Custom default"
+            )
+            context:Event(context.controller, "PLAYER_ENTERING_WORLD")
+            context:Event(context.controller, "CVAR_UPDATE", "CombatDamage")
+            context:Tick(0.2)
+            assert(
+                context.nativeWrites == 1 and sct.GetMode() == "on",
+                "world entry or observation reapplied initialization"
+            )
+            context.nativeDamage = "1"
+            context:Event(context.controller, "CVAR_UPDATE", "CombatDamage")
+            assert(
+                sct.GetMode() == "default" and context.env.SurvivorsDragonUiSctMode == "default",
+                "external native outgoing did not take precedence"
+            )
+            context:Event(context.controller, "PLAYER_ENTERING_WORLD")
+            context:Tick(0.2)
+            assert(
+                context.nativeWrites == 1 and context.nativeDamage == "1",
+                "observation overwrote later native outgoing preference"
+            )
+            assert(context.env.SHOW_COMBAT_TEXT == incoming, "native override changed incoming/self text")
+        end
+    end
+    local disabled = NativeMode(nil, "0", "1")
+    assert(
+        disabled.env.DFRL.sct.GetMode() == "on" and disabled.nativeWrites == 0,
+        "already suppressed outgoing was rewritten"
+    )
+end)
+
+Test("valid saved SCT modes keep native choices and display resets preserve the committed mode", function()
+    for _, mode in ipairs({ "on", "off", "default" }) do
+        for _, damage in ipairs({ "0", "1" }) do
+            local context = NativeMode(mode, damage, "1", true)
+            local sct, display = context.env.DFRL.sct, context.env.DFRL.display
+            local expected = damage == "1" and "default" or mode
+            assert(
+                sct.GetMode() == expected and context.nativeWrites == 0,
+                "valid saved mode was reapplied to native outgoing"
+            )
+            assert(sct.NormalizeMode(mode) == mode, "normalization replaced a valid saved mode")
+            display.BeginEdit()
+            display.Set("sctStyle", "enemy")
+            display.Set("sctFont", "diablo")
+            display.Set("sctScale", 1.4)
+            display.Set("sctShortNumbers", false)
+            display.FinishEdit(true)
+            display.Reset()
+            assert(
+                display.Get("sctStyle") == "diablo" and display.Get("sctFont") == "default",
+                "reset lost default style/font"
+            )
+            assert(
+                display.Get("sctScale") == 0.9 and display.Get("sctShortNumbers"),
+                "reset lost default size/abbreviation"
+            )
+            assert(
+                sct.GetMode() == expected and context.env.SurvivorsDragonUiSctMode == expected,
+                "display reset changed committed SCT mode"
+            )
+            assert(
+                context.nativeWrites == 0 and context.nativeDamage == damage and context.env.SHOW_COMBAT_TEXT == "1",
+                "display reset changed native combat choices"
+            )
+        end
+    end
 end)
 
 local DIABLO_FONT = "Interface\\AddOns\\SurvivorsDragonUi\\media\\fonts\\PT_Serif-Web-Regular.ttf"
@@ -269,28 +436,29 @@ Test("Diablo numbers preserve full amounts, native crit status, icons and filter
     assert(#context:Labels() == 0, "critical filter did not retire active Diablo text")
 end)
 
-Test("abbreviation shares boolean preview, Confirm, Cancel, profiles and reset", function()
+Test("abbreviation defaults on and preserves explicit full-value choices through the display lifecycle", function()
     local context = H.New()
     context:Load("core/display.lua", "Display")
     local display = context.env.DFRL.display
-    assert(display.Get("sctShortNumbers") == false, "existing full values changed by default")
-    assert(display.Copy({ sctShortNumbers = "true" }).sctShortNumbers == false, "invalid abbreviation was accepted")
+    assert(display.Get("sctShortNumbers") == true, "missing abbreviation did not use the new default")
+    assert(display.Copy({ sctShortNumbers = "true" }).sctShortNumbers == true, "invalid abbreviation lost the default")
+    assert(display.Copy({ sctShortNumbers = false }).sctShortNumbers == false, "saved full values were overwritten")
     display.BeginEdit()
-    display.Set("sctShortNumbers", true)
-    assert(display.Get("sctShortNumbers") and not context.env.SurvivorsDragonUiDisplay, "preview saved early")
+    display.Set("sctShortNumbers", false)
+    assert(not display.Get("sctShortNumbers") and not context.env.SurvivorsDragonUiDisplay, "preview saved early")
     display.FinishEdit(false)
-    assert(not display.Get("sctShortNumbers"), "Cancel lost full values")
+    assert(display.Get("sctShortNumbers"), "Cancel lost the abbreviation default")
     display.BeginEdit()
-    display.Set("sctShortNumbers", true)
+    display.Set("sctShortNumbers", false)
     display.FinishEdit(true)
-    assert(context.env.SurvivorsDragonUiDisplay.sctShortNumbers, "Confirm lost abbreviation")
+    assert(context.env.SurvivorsDragonUiDisplay.sctShortNumbers == false, "Confirm lost full values")
     display.BeginEdit()
-    display.Load({ sctShortNumbers = false })
-    assert(not display.Get("sctShortNumbers"), "profile did not load full values")
+    display.Load({ sctShortNumbers = true })
+    assert(display.Get("sctShortNumbers"), "profile did not load abbreviation")
     display.FinishEdit(false)
-    assert(display.Get("sctShortNumbers"), "profile discard lost saved choice")
+    assert(not display.Get("sctShortNumbers"), "profile discard lost saved full values")
     display.Reset()
-    assert(not display.Get("sctShortNumbers"), "reset retained abbreviation")
+    assert(display.Get("sctShortNumbers"), "reset did not restore abbreviation")
 end)
 
 Test("all styles abbreviate shared K M B T tiers without changing original hits", function()

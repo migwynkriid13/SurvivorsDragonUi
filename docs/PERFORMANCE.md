@@ -107,7 +107,7 @@ rendering remain unverified. See [FONTS.md](FONTS.md).
 
 ## Diablo IV combat text — 2026-10-30
 
-The optional Diablo IV style reuses the enemy-origin path, controller and hit
+The default Diablo IV style reuses the enemy-origin path, controller and hit
 pool: the animation adds no combat frame, region, event or updater. Its 1.1-second
 burst/hold/fade replaces the selected label's animation only. Formatting and
 random size/scatter are chosen once; live anchors, scale and alpha retain their
@@ -115,18 +115,33 @@ changed-only writes and empty lists remain idle. Performance Mode preserves the
 animation with the existing 300 ms same-attack sums. It never restarts active
 labels on a Performance Mode transition.
 
-The user-selected addon-only fallback snapshots each settled group's screen
-launch centroid for the label's lifetime. Native camera/plate/collision changes
-do not alter active base coordinates. New numbers still resolve every original
-hit through the existing native samples and matching/loss-consumption path.
-Removing live follow also removes its per-group/per-label origin references,
-shared exponential blend, distance math and speed limiting. No native read,
-scan, updater, history table or drawing region is added. The authored burst,
-drift, scale pop and fade remain animated in both Performance Mode states.
-This favors stable presentation and gives up later camera compensation; initial
-positions can still reflect native stacking. CI-only production plate cases
-compare repeated native restacking with an identical stationary scene, without
-copying animation equations. These cases were not run locally.
+New setups use Custom outgoing SCT, Diablo IV style, Default font, 90% size and
+abbreviated numbers. Missing/invalid scalar modes suppress native outgoing
+damage once through the existing writer before initialization observes it.
+Valid saved modes and later native changes retain their existing handoff; no
+incoming/self setting is touched. This changes which existing renderer starts
+enabled, not its region pool, animation equations or per-hit work. Display
+normalization/reset uses the new presentation defaults and retains explicit
+saved choices, including both legacy style booleans. No setting, SavedVariable,
+event, updater, frame or asset is added. Both Performance Mode states keep the
+existing SCT animation/grouping exception. CI-only cases cover the defaults and
+one-time handoff; native appearance and performance remain unverified.
+
+Over enemies and Diablo IV now follow the common matched native plate directly,
+replacing the fixed-position fallback. Each pending group retains at most one
+existing origin reference, only while every original member resolves to that
+same nonnil incarnation. Mixed/ambiguous groups keep their resolved centroid.
+Each active label retains that reference until pool retirement and copies its
+two cached coordinates during the existing animation loop. The per-frame plate
+reader already updates those coordinates before text animation; no native read,
+scan, updater, history table, smoothing math or drawing region is added. Invalid
+projection retains the last usable point. Retirement freezes the origin, so
+native frame reuse cannot redirect old text. Pool release clears the reference.
+The game's Stacking/Overlapping choice changes the native anchor immediately;
+the addon does not write it. Authored motion, fade and expiry remain unchanged
+in both Performance Mode states. CI-only cases compare moving and stationary
+production controllers without copying animation equations, including grouped
+origin agreement, retirement and reuse. These cases were not run locally.
 
 The shared style selector replaces the MSBT checkbox on the lazy Combat page.
 Net settings cost is two button frames, eight texture regions and three labels;
@@ -156,7 +171,7 @@ reuse and unrelated display changes. No native Overpower result is inferred
 from unavailable native fields. The user-authorized amber imitation below is
 cosmetic critical emphasis only.
 
-The default-off damage abbreviation reuses the existing K/M/B/T decimal helper
+The default-on damage abbreviation reuses the existing K/M/B/T decimal helper
 at display time and on actual preview/Cancel changes. One original presentation
 value per active label allows reformatting a completed group total without
 changing original hit amounts, grouping, matching, font, coordinates or expiry;
@@ -198,11 +213,22 @@ lossless BLP atlas, with a baked dark outline and a tier-specific vertex tint.
 The TGA is an authoring source only; no font is installed or shipped. Source
 and licensing are in [HeroicNumerals-ARTWORK.md](../third_party/HeroicNumerals-ARTWORK.md).
 
-Rank/UV/tint and binding caches skip unchanged native writes. Position follows
-the actual fill width and received run duration, using the one-minute point
-with cap protection for narrow bars. Layout resizing reanchors the already
+Rank/UV/tint and binding caches skip unchanged native writes. The numeral uses
+the first visible attached affix's picture/gold-opening center, supplied by the
+affix owner from its existing row width, inset and cached anchor. A quarter-unit
+downward correction centers visible ink inside the pill. Detached, hidden,
+empty or unready rows retain the **9.375%** fallback (`width * 3 / 32`), equivalent
+to 1:30 of a 16:00 zone. Cap protection remains for narrow bars. A valid positive
+native duration remains an acceptance gate; duration changes do not move the
+marker or trigger another position write. Layout resizing reanchors the already
 accepted rank without another gameplay read. Lazy bindings retry on the
-existing ten-Hz/deferred sample; no per-frame numeral update is added.
+existing ten-Hz/deferred sample; no per-frame numeral update is added. Existing
+caption/Layout bounds work also refreshes the anchor after affix placement;
+first-row readiness changes use the same callback. The provider reads only
+existing native frame visibility/width and cached local geometry, without
+screen-coordinate sampling, gameplay reads or another updater. Changed-only
+position writes include both coordinates and run before the bounds cache's
+early return, so a row can move while the outer edit bounds remain unchanged.
 
 Live acceptance shares the affix view's numeric-rank, publication-stamp,
 receipt and retirement gates while remaining independent of affix artwork or
@@ -213,7 +239,8 @@ retains the exact static marker with no animation work in either mode. There
 is no added event, updater, setting or SavedVariable.
 
 CI-only source-extracted mocks cover rank acceptance and retirement, I–X
-selection, hidden lazy allocation, unchanged-write suppression, width changes,
+selection, hidden lazy allocation, unchanged-write suppression, attached-affix
+alignment and percentage fallback across native durations, width changes,
 binding failures/retry and the static Performance Mode path. These are source
 contracts, not live appearance or GPU measurements. Local tests, standalone
 validation and addon/game execution were not run.
@@ -321,8 +348,8 @@ only when that category is selected, then retained. Unvisited categories allocat
 no native pages or controls; Profiles and the timer's font chooser are separately
 deferred to their category/button. The hidden shell is completed before showing
 the requested category, including direct Profiles entry. There is no background
-preloading. There is no search input, query state, category
-content title or repeated section title matching the sidebar category.
+preloading. Search uses caption metadata without preparing unvisited pages;
+there is no category content title or repeated section title matching the sidebar category.
 See [SETTINGS.md](SETTINGS.md).
 
 Category changes perform bounded work over twenty section records. Settled
@@ -447,16 +474,57 @@ and explicit width/height changes are the only refresh sources. Hiding clears
 input/hover state, while subsequent hidden changes defer painting until Show.
 Normal and Performance Mode use the same static artwork. The CI-only editor
 fixture covers press/leave/hide recovery, native disabled values, retained click
-callbacks, selected choices, narrow/resized caps and unchanged/hidden work. It is
+callbacks, mutually exclusive SCT font choices through the existing display
+listener, narrow/resized caps and unchanged/hidden work. Display changes refresh
+SCT selectors alongside the other visible controls, without a new listener or
+worker; unchanged button states skip writes. The fixture is
 not run locally and establishes no native rendering or FPS result.
 
 The CI-only editor fixture loads the production factory with explicit native
 scrollbar and glyph-width boundaries. It checks category/heading visibility,
-absence of a search input, original section ownership, retained state, scroll
+metadata search and redirection, original section ownership, retained state, scroll
 offsets, reopen, stable allocation, compact/wrapped spacing, metric retry and
 hidden/unchanged work. It was not run locally. The user's supplied screenshots
 showed the former duplicated titles and excessive spacing; the correction has
 not been launched or visually verified in the game.
+
+### Settings search — 2026-10-31
+
+The search header reuses the input helper: two frames (container and EditBox),
+five texture regions and one caption FontString. Removing the Clear button
+also removes its four regions, caption and width-measurement/cache work.
+
+The same header lives once in the sidebar above Performance Mode. Its caption,
+full-width input reserve 64 units there; the nine
+42-unit category rows keep their 48-unit pitch and finish forty-six units before
+the sidebar footer. The content viewport reclaims the former 64-unit header
+reservation without changing the dialog size. Result geometry remains tied to the main viewport.
+No frame, drawing region, asset or updater is added by this relocation.
+
+Results are allocated only on a nonempty query, with a maximum pool of eight buttons.
+The full results pool adds eleven frames, sixteen texture regions and twenty
+FontStrings, including its container, empty/count labels and two paging buttons.
+Plain fixed-width rows replace the decorative red/gold faces, removing twenty-four
+texture regions from the result pool. Each row retains one solid hover highlight
+that actually hides on leave or row hiding; unhovered rows draw only their two
+labels. The 360-unit list uses 42-unit rows with a four-unit gap and has no
+content-width measurements or result metric cache. Paging reuses the same width
+and pool. Normal and Performance Mode share this static presentation.
+Only search results or original section pages are shown in the shared viewport;
+the retained pool is hidden outside search. No runtime asset is added.
+
+The index is built from current section/option/mode/custom caption records on
+the first query and rebuilt for language changes. Input is limited to 128
+characters. Literal token matching visits that bounded metadata list only on
+text/locale changes; unchanged queries skip rebuilding and writes. Pagination
+reuses the pool. Destination offsets use current native row layout, and opening
+a result prepares only its original category. Empty input restores the selected
+category and scroll position. Closing clears focus/query;
+hidden changes defer work until Show. No event, updater, animation, gameplay
+read, setting, saved history or SavedVariable is added. Both Performance Mode
+states use the same static presentation. CI-only editor cases cover these
+lifecycles; they were not run locally. Counts are source-level costs, not native
+draw-call or FPS measurements.
 
 ## Retail-style moving view — 2026-10-29
 
@@ -634,8 +702,8 @@ this caption above the category buttons.
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Chat                        | Keep native expiry at its original deadline with zero fade duration, so messages disappear instantly; scrolling back still holds lines. Snap reveal opacity and message-slide geometry, and clear active reveal/slide state. Native messages, history, links and input remain current.                                                                                                     |
 | SCT                         | Sum same-attack outgoing damage within a fixed 300 ms window; normal mode keeps 75 ms exact-amount duplicate suppression. Preserve original per-hit matching, critical/source separation, motion, fade, full lifetime and the selected enemy/MSBT style.                                                                                                                                   |
-| Unit frames                 | Hide player absorbs and player/target/target-of-target damage trails, reset trail baselines, and use the existing 2D still portraits. Party has no custom loss overlay. Hide combat/rest rim glows; keep a static resting symbol and a static low-health warning at the current health-derived strength.                                                                                   |
-| Resources                   | Skip absorb snapshot/field work when Class resources is also off; keep native phase/receipt retirement and selected resource values.                                                                                                                                                                                                                                                       |
+| Unit frames                 | Hide the player absorb segment while retaining its selected static amount/percentage labels. Hide player/target/target-of-target damage trails, reset trail baselines, and use the existing 2D still portraits. Party has no custom loss overlay. Hide combat/rest rim glows; keep a static resting symbol and a static low-health warning at the current health-derived strength.         |
+| Resources                   | Skip absorb snapshot/field work when both health-text choices and Class resources are off; keep native phase/receipt retirement and selected resource values.                                                                                                                                                                                                                              |
 | Run timer                   | Keep native two-second progress and current labels, static tier fill and informative skull/check markers. Skip flow, foam, sparkle, red-glint and skull-halo animation. The decorative pool grows lazily from 44 to at most 72 textures only if normal mode needs it, then retained for reuse. Required native phase, ownership, schedule and encounter work keeps its existing lifecycle. |
 | Boss bars                   | Keep native fill and health text instant. Hide the Crimson echo loss strip, clear its baseline and active state, and skip effect time/geometry work. Rows first used in this mode do not prepare a loss texture.                                                                                                                                                                           |
 | Cache tally                 | Refresh kills and gold numbers once every five UI seconds. Keep cache cost at its normal cadence. Clear the affordable-cache gold halo, rays and sparkles and detach its animation worker.                                                                                                                                                                                                 |
@@ -1415,6 +1483,23 @@ are excluded. CI-only extracted production transitions assert hiding, restoratio
 and unchanged-state idling. No local tests, addon execution or measured GPU/FPS
 result is claimed; the packaged renderer's exact revision remains unverified.
 
+### Nameplate camera input
+
+Each discovered native plate adds one mouse-down and one mouse-up wrapper,
+preserving previous handlers. One shared WorldFrame mouse-up/hide pair and two
+native mouse-look post-hooks manage session-only ownership, entry and deferred
+cleanup flags. Only eligible enemy right presses read camera state and call the
+native camera verb; releases/cleanup inspect it only while a hold is owned.
+The synchronous synthetic plate release during camera entry is ignored, while
+cleanup requested during entry runs immediately afterward. A new press can
+recover from an unnotified native camera stop without polling.
+Retirement/reuse does no camera work, and later external ownership is preserved.
+Both Performance Mode states use this same native input path. There is no new
+frame, region, asset, event, updater, CVar, saved data or per-frame polling.
+CI-only plate cases cover gesture routing, native handler preservation, masked
+input, retirement/reuse and ownership cleanup; they were not run locally and
+do not establish packaged-game input delivery or live performance.
+
 ### Native nameplate layers
 
 Supported native plate and health-bar owners now disable their own drawing
@@ -1523,6 +1608,31 @@ ten-Hz/deferred waypoint refresh checks at most four native party slots, skippin
 all party reads while its guidance is disabled. Live map records reuse one
 bounded array and up to four point tables; retirement clears entries without
 persisting locations. Missing geometry does not guess a location.
+
+Cache and living-guardian HUDs rescore their accepted destinations every five
+seconds through that same controller. Current identity wins exact distance
+ties; new nearer spawns and movement take effect at the next scheduled check.
+Initial selection, removal of the current identity and visible recovery can
+choose immediately. Selected-arrow direction/distance presentation, snapshot
+acceptance and minimap work keep their existing cadence. Party selection and
+next-respawn timer priority retain their existing behavior. Existing UI elapsed
+time schedules one scoring pass when due, without replaying missed intervals
+after a delayed frame. An unchanged accepted-list reference also skips the
+current-identity walk between checks. Each scoring pass
+is linear in the accepted destination count, with no new event, updater,
+drawing region, asset or saved history. Shared sampling reuses the
+run/player/metric reads; map fallback can still need one native projection per
+distinct destination in the scoring pass. Off, Layout-hidden and
+UIParent-hidden HUDs defer distance scoring, while accepted identity retirement
+and independent minimap work remain active. The next visible refresh resolves
+current data before painting. This is a source-level reduction in selection
+work, not a measured live CPU/FPS claim.
+
+The fallen-ally default bottom sits eight units above the static jewelry
+envelope. `actionBarDefaults.jewelryTopInset` is the shared source for the bar's
+socket rail, jewelry bounds and this placement. There is no live jewelry scan,
+new region or ongoing anchor work. Saved positions retain precedence through
+the existing Layout owner; changing the default does not rewrite prior saves.
 
 Each eligible member can lazily allocate one existing pooled minimap pin frame
 and one static texture, at most four active/pooled pins for this tracker. There
@@ -1760,6 +1870,26 @@ K/M/B/T display tiers without changing counters, percentage math or loss
 fractions. Player/party/pet health sources remain native, and percentage-off
 labels still skip their native maximum-health getter.
 
+Party Dead/Ghost status reuses each row's existing health label, centered with
+the percentage cleared; it allocates no frame, font object, texture or drawing
+region. Ghost wins when both native flags are set, numeric zero is false, and
+dead/ghost states skip native health/maximum reads. Status text remains visible
+independently of the numeric health choices and returns to those choices on
+resurrection. Missing units clear retained status. Native bar/resource values
+and geometry remain under their existing owners.
+
+The existing compact controller adds `UNIT_FLAGS` and `UNIT_CONNECTION`
+subscriptions, routing only the affected native unit/aliases through its
+current event handler. The four party label bindings also listen for language
+changes. Visible status updates use changed-only text and layout writes;
+hidden rows return before reading flags/health or formatting, then refresh on
+Show. Normal and Performance Mode share this static behavior, with no animation,
+idle updater, asset, setting or saved data. CI-only full-controller cases cover
+four rows, stale positive health, flag-only death/ghost changes, resurrection,
+numeric choices, locale/hidden recovery, unchanged writes and native-value
+preservation. These are authored mock/source boundaries, without local test or
+game execution or measured FPS/visual-parity claims.
+
 Loss retirement removes the effect from its existing animation list immediately
 on target/spawn/max changes, hiding, world leave or logout. Its original
 half-second fade and fill geometry remain intact. The owner adds one passive
@@ -1818,6 +1948,22 @@ absorbs and the optional secondary resource; shield display stays independent
 of **Class resources**. Phase/zone/world retirement blocks the retired
 table/stamp/receipt tuple. Hidden frames retain only phase retirement, clear
 their absorb fractions on Hide and perform no shield reads or presentation.
+
+The 2026-10-31 numeric display reuses the two health FontStrings with no added
+frame, region, asset, setting, event or updater. Amount and uncapped percentage
+use the accepted `AZS_RUN.sh` / `hpm` values; no buff scans, peak history or
+shield-capacity estimates are introduced. Shield fragments are cached by
+amount, maximum HP and text choices, independently of ordinary health changes;
+unchanged polls skip formatting and native writes. Failed text writes remain
+pending for retry. Zero/invalid data and hide/phase/zone/world retirement clear
+the retained scalars through the existing owner.
+
+Performance Mode keeps the selected static amount/percentage while hiding the
+overlay and clearing its geometry baseline. A fresh Performance Mode session
+does not allocate the overlay. If both text choices and Class resources are
+off, the shared reader skips run-field access after phase/receipt retirement.
+Switching modes adds no animation or controller. CI-only production-source
+mocks cover the numeric and overlay lifecycles; they were not run locally.
 
 The first valid positive shield lazily allocates one mouse-transparent frame
 and one texture region, reusing `LargeHealthFill` with full UVs. Successful
@@ -2054,6 +2200,22 @@ review and formatting are the only local checks; CI-only mocks are authored for
 cycling, portraits, unchanged/hidden/off work, failure caching, reset metadata
 and world retirement. No measured CPU/GPU/FPS or live visual-parity claim follows.
 
+Waiting meter views are skipped by a bounded four-view scan in the existing
+deferred visible reader. Click handlers retain only direction/step intent and
+call no getter. Accepted empty snapshots and explicit error messages remain
+selectable; fresh-publication guards stay unchanged. Candidate scans run for
+pending navigation or readiness/publication/visibility changes, rather than
+adding unselected-view polling to each idle pass. Hidden views defer selection,
+and disable/retirement clears it. Candidates store only view indices. Four
+reusable native-result records coalesce selection, Reset baselines, rolling
+damage observation and presentation within each pass; their source/value
+references are cleared immediately after the protected refresh, including
+failures and early returns, and on invalidation. If all views are waiting, the
+existing header displays the selected view name until data arrives. No frame,
+region, animation, asset, event, updater, setting or SavedVariable is added;
+normal and Performance Mode share the same behavior. CI-only fixtures cover
+the navigation, lifecycle and waypoint changes; they were not run locally.
+
 Hiding empties recent vectors once and stops observation; showing warms the
 window again. Disabling and run/world retirement drop all rate state; language
 changes rebase an active reset session. Repeated retirement of an empty model allocates nothing. Pause leaves the
@@ -2127,7 +2289,30 @@ remain unverified.
 
 Six Layout groups add twenty editor-only center-edge marks: two horizontal for run timer, boss health, Revive, meter, Chat and guardians, plus two vertical for the four row views. Each is one existing native solid texture under the hidden shared handle, with no asset or additional controller. The two obsolete settings sliders and their four thumb/track textures are removed. **Show grid** uses one existing-style lazy editor checkbox; off hides the complete grid and guide parent and skips grid geometry sampling. Shift alignment still uses the existing active-drag calculations.
 
-Width lives in shared Layout geometry. Meter and guardian roots default to 240 and allow 120–960 without scaling row height, icons or fonts. Cached natural tracker text widths compress its columns safely; native health end caps retain their 50-unit combined span. Meter geometry caches width, font size, icon gutter and numeric-column count. Failed font changes remain retryable. Hidden/off views accept required edit bounds while deferring row/header/font/icon presentation. Meter resizing never enables native reads or packet intake while off.
+Width lives in shared Layout geometry. Meter and guardian roots default to 240 and allow 120–960 without scaling row height, icons or fonts. Cached natural tracker text widths compress its columns safely; native health end caps retain their 50-unit combined span. Meter geometry caches width, separate name/number font sizes, icon gutter and numeric text metrics. Failed font changes remain retryable. Hidden/off views accept required edit bounds while deferring row/header/font/icon presentation. Meter resizing never enables native reads or packet intake while off.
+
+The 2026-10-31 meter text change replaces fixed 58-unit numeric-field slots with
+the final numeric label's native `GetStringWidth`, rounded up with one unit of
+glyph clearance and the existing five-unit gap. The same two row FontStrings
+remain; no HUD frame/region, asset, event or updater is added. Each of at most
+ten rows keeps one latest successful metric keyed by caption, actual font,
+owner scale and relevant width. Unchanged compact text skips measurement even
+when raw counters change. Unready metrics remain retryable through the existing
+visible reader; disabled numbers skip measurement and reclaim the whole label
+area. Hidden/off views skip measurement and font work, while retirement clears
+the metric. Numeric rendering happens before reflow so new captions do not use
+the previous sample's width.
+
+`meterNameFontSize` adds one normalized integer in the existing display table,
+inheriting the old selected `meterFontSize` for older saves/profiles. Both full
+resets use eleven. The new Name font size editor row adds three frames, eight
+texture regions and five FontStrings through the shared numeric control,
+allocated only when Damage meter is first opened and hidden with its page.
+Number font size retains the existing control and header offsets. The two
+choices share preview/Confirm/discard/profile/reset and font-retry handling.
+Normal and Performance Mode use the same static layout. CI-only tests cover
+these boundaries; no local tests, standalone validation or addon/game execution
+were run. Source counts do not establish live draw calls, glyph fit or FPS.
 
 The selected-frame form lazily prepares one pooled native `OptionsSliderTemplate`
 width slider, including its track/thumb and three native captions, plus one
@@ -2816,7 +3001,7 @@ formatting do not establish live behavior, drawing submissions or FPS/GPU gains.
 
 ## Heroic affix row — 2026-10-28
 
-The selected #04 affix row shares the run timer's existing phase-first reader,
+The selected #04 pictures with #02 Minimap bevel frames share the run timer's existing phase-first reader,
 zone/run receipt handshake, deferred packet handling and tenth-second retry
 gate. It adds no event registration, updater, animation, setting or saved state.
 A visible accepted zone snapshot is parsed only when its identity, receipt,
@@ -2829,27 +3014,32 @@ inherits native visibility and the shared tooltip registry's cleanup.
 Each represented kind lazily allocates one mouse-enabled hover frame and two
 Texture regions, with no FontString. The chosen three kinds therefore cost at
 most three frames and six visible textures when all three are actually
-published. Frame and rim diameter is 22 units; the icon is `22 * 34 / 39`, with
-five-unit gaps and a three-unit offset below the bar. The existing Layout
-region adds the row's 25-unit vertical inset and includes any horizontal
-overflow without changing the saved timer geometry. Frames and successful
-artwork bindings remain pooled across publications and toggles.
-The same count/bounds transition refreshes only the default boss placement,
-reserving 33 units for the row and first boss caption; saved/draft positions
-remain authoritative. There is no per-frame placement or new layout polling.
+published. Each frame/background is 25 by 23 units around a 16-square picture,
+with five-unit gaps. Existing caption/attachment placement includes horizontal
+overflow and uses the affix view's own height for attached Layout bounds,
+without changing saved geometry. Frames and successful artwork bindings remain
+pooled across publications and toggles. There is no per-frame placement or new
+layout polling. Normal and Performance Mode use the same static frame. The
+picture's one-time `25/29`-unit right inset correction aligns with the gold
+opening rather than the source canvas's uneven shadow padding. Smaller icons
+keep every gold rail visible without another overlay, mask, crop or region.
 
-One new 256-by-64 lossless BLP atlas holds the three circular icons. Each icon
-uses its fixed 64-square UV cell; the red rim reuses the neutral jewelry crop
-at `(664,56)-(736,128)` in the existing atlas and the same native RGB tint
-path as jewelry. There is no native-circle call, strip fallback, changing UV
-animation or extra per-icon glow. Icon/rim alpha overlap, small persistent
-regions, texture/material differences and distinct UV clamps retain their
-normal renderer costs. Sharing an atlas does not establish batching or reduced
-draw submissions. No GPU-memory, live FPS or pixel-parity result is claimed.
+The existing 256-by-64 lossless BLP atlas now holds three square icons in the
+same fixed 64-square UV cells. The second region reuses the existing
+`minimap/LauncherBackground.blp` normal-state crop `(0,3)-(29,29)` on its
+32-square canvas, with unchanged source RGB/alpha and no vertex tint. It sits
+on BACKGROUND beneath the ARTWORK icon. The selection adds no texture region,
+frame, source download or runtime asset; the existing affix atlas is regenerated
+without a circle mask. There is no native-circle call, strip fallback, changing
+UV animation or extra glow. Icon/background overlap, the slightly wider
+persistent footprint, different texture materials and distinct UV clamps retain
+their normal renderer costs. Reusing an image does not establish batching or
+reduced draw submissions. No GPU-memory, live FPS or pixel-parity result is claimed.
 
-Eight CI-only scenarios extract the actual affix-view factory and use the
+CI-only scenarios extract the actual affix-view factory and use the
 production tooltip registry with explicit fake native widgets. They cover
-order/centering, exact rim crop/tint, unchanged and hidden work, malformed and
+order/centering, the exact gold background crop/layer and frame/icon geometry,
+attached Layout bounds, unchanged and hidden work, malformed and
 unknown keys, receipt retirement, asset failure cadence, pooling, owned/foreign
 hover cleanup and all fourteen native name/description catalogs. The parent
 timer's event integration was source-reviewed; these mocks do not establish

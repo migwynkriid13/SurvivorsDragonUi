@@ -629,7 +629,9 @@ local function ProfileCommitLifecycle()
         Load = function(value) context.fontDraft = Copy(value) end,
     }
     env.DFRL.sct = {
-        NormalizeMode = function(value) return value == "on" and "on" or value == "off" and "off" or "default" end,
+        NormalizeMode = function(value)
+            return (value == "on" or value == "off" or value == "default") and value or "on"
+        end,
         GetMode = function() return context.sctDraft end,
         SetMode = function(value) context.sctDraft = value end,
     }
@@ -643,7 +645,7 @@ local function ProfileCommitLifecycle()
         onEdit = function(active, save)
             if active then
                 context.fontDraft = Copy(env.SurvivorsDragonUiRunFont or { face = "DEFAULT", size = 14 })
-                context.sctDraft = env.SurvivorsDragonUiSctMode or "default"
+                context.sctDraft = env.DFRL.sct.NormalizeMode(env.SurvivorsDragonUiSctMode)
             else
                 if save then
                     context.profileCommits = (context.profileCommits or 0) + 1

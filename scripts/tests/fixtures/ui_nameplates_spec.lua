@@ -652,10 +652,10 @@ do
     )
 end
 
--- Fixed Diablo launch points must ignore native collision/camera corrections.
-local function DiabloPlates(performance)
+-- Enemy styles follow one matched native incarnation without rematching.
+local function FollowingPlates(performance, style)
     return Plates(function(current, env)
-        current.settings.sctStyle = "diablo"
+        current.settings.sctStyle = style
         current.settings.performanceMode = performance
         current.settings.nameplatesBossGuardiansOnly = false
         env.NAMEPLATES_ON = nil
@@ -679,85 +679,475 @@ local function DiabloPlates(performance)
     end)
 end
 
-for _, performance in ipairs({ false, true }) do
-    local moving, stationary = DiabloPlates(performance), DiabloPlates(performance)
-    local plate, reference = moving:MakePlate("Moving", 1000), stationary:MakePlate("Moving", 1000)
-    for _, item in ipairs({ plate, reference }) do
-        item.centerX, item.top = 280, 320
+local function Near(actual, expected, message) assert(math.abs(actual - expected) < 0.00000001, message) end
+
+for _, style in ipairs({ "diablo", "enemy" }) do
+    for _, performance in ipairs({ false, true }) do
+        local moving, stationary = FollowingPlates(performance, style), FollowingPlates(performance, style)
+        local plate, reference = moving:MakePlate("Moving", 1000), stationary:MakePlate("Moving", 1000)
+        for _, item in ipairs({ plate, reference }) do
+            item.centerX, item.top = 280, 320
+        end
+        for _, current in ipairs({ moving, stationary }) do
+            current:Tick(0)
+            current.targetName = "Moving"
+            current:Hit(17)
+            current:Hit(performance and 19 or 17)
+            current:Tick(performance and 0.301 or 0.17)
+            assert(#current:Labels() == 1, "same-origin originals stopped sharing a displayed group")
+        end
+        local label, referenceLabel = assert(moving:Labels()[1]), assert(stationary:Labels()[1])
+        local holder, referenceHolder = label.parent.parent, referenceLabel.parent.parent
+        local allocated = #moving.objects
+        moving:ResetCounts()
+        local points = { { 950, 650 }, { 80, 120 }, { 850, 550 }, { 150, 700 }, { 280, 320 } }
+        for index = 1, 48 do
+            local point = points[math.mod(index - 1, #points) + 1]
+            plate.centerX, plate.top = point[1], point[2]
+            moving:Tick(1 / 60)
+            stationary:Tick(1 / 60)
+            assert(plate.fixture.origin.x == point[1], "follow lost required native matching samples")
+            assert(moving:Labels()[1] == label, "native movement replaced the active number")
+            Near(holder.anchor.x - referenceHolder.anchor.x, point[1] - 280, "text lost horizontal plate movement")
+            Near(holder.anchor.y - referenceHolder.anchor.y, point[2] - 320, "text lost vertical plate movement")
+            assert(
+                label:GetText() == (performance and "36" or "17") and holder:GetAlpha() == referenceHolder:GetAlpha(),
+                "following changed the group amount or lifetime/fade"
+            )
+            assert(label.parent.scale == referenceLabel.parent.scale, "following restarted the scale animation")
+            if index == 24 then
+                local x, y = holder.anchor.x, holder.anchor.y
+                moving:SetSetting("performanceMode", not performance)
+                stationary:SetSetting("performanceMode", not performance)
+                assert(
+                    moving:Labels()[1] == label and holder.anchor.x == x and holder.anchor.y == y,
+                    "Performance Mode transition restarted active following text"
+                )
+            end
+        end
+        assert(
+            not moving.writes.SetText and not moving.writes.Show and not moving.writes.Hide,
+            "native movement flickered active text visibility"
+        )
+        assert(#moving.objects == allocated, "native movement allocated replacement text")
+        assert(moving.backing and moving.env.NAMEPLATES_ON == nil, "following changed native V ownership")
+
+        local x, y = holder.anchor.x, holder.anchor.y
+        plate.centerX = math.huge
+        moving:Tick(0)
+        assert(holder.anchor.x == x and holder.anchor.y == y, "invalid projection lost the last usable position")
+        local origin = plate.fixture.origin
+        plate:Hide()
+        plate.centerX, plate.top = 700, 500
+        plate.regions[3]:SetText("Other occupant")
+        plate:Show()
+        moving:Tick(0)
+        assert(
+            not origin.live and plate.fixture.origin ~= origin,
+            "frame reuse retained the retired native incarnation"
+        )
+        assert(holder.anchor.x == x and holder.anchor.y == y, "frame retirement/reuse moved an active number")
+        moving:SetSetting("performanceMode", performance)
+        moving:Tick(0)
+        assert(
+            moving:Labels()[1] == label and holder.anchor.x == x and holder.anchor.y == y,
+            "Performance Mode restarted or repositioned retired-origin text"
+        )
+        moving:Tick(0.7)
+        assert(#moving:Labels() == 0, "native movement extended the original style lifetime")
+
+        plate:Hide()
+        plate.regions[3]:SetText("Moving")
+        plate:Show()
+        moving.targetName = "Moving"
+        moving:Hit(23)
+        moving:Tick(0.301)
+        assert(
+            moving:Labels()[1] == label and holder.anchor.x == 700,
+            "a new number did not reuse the pool at its own current origin"
+        )
+        plate.centerX, plate.top = 450, 250
+        moving:Tick(0)
+        assert(
+            holder.anchor.x == 450 and holder.anchor.y == 262,
+            "pooled text kept the old origin instead of following its new incarnation"
+        )
+        moving:Event(moving.controller, "PLAYER_LEAVING_WORLD")
+        stationary:Event(stationary.controller, "PLAYER_LEAVING_WORLD")
+        assert(#moving:Labels() == 0 and not moving.backing, "world cleanup retained following text")
+        moving:ResetCounts()
+        moving:Tick(0.2)
+        moving:NoPresentationWrites()
     end
-    for _, current in ipairs({ moving, stationary }) do
+end
+print(
+    "PASS enemy and Diablo groups follow native movement in both modes, preserve animation and freeze on retirement/reuse"
+)
+
+for _, style in ipairs({ "diablo", "enemy" }) do
+    for _, performance in ipairs({ false, true }) do
+        local current = FollowingPlates(performance, style)
+        local plate = current:MakePlate("Moving", 1000)
+        plate.centerX, plate.top = 280, 320
         current:Tick(0)
         current.targetName = "Moving"
         current:Hit(17)
-        current:Tick(performance and 0.301 or 0.17)
-    end
-    local label, referenceLabel = assert(moving:Labels()[1]), assert(stationary:Labels()[1])
-    local holder, referenceHolder = label.parent.parent, referenceLabel.parent.parent
-    local allocated = #moving.objects
-    moving:ResetCounts()
-    local points = { { 950, 650 }, { 80, 120 }, { 850, 550 }, { 150, 700 }, { 280, 320 } }
-    for index = 1, 48 do
-        local point = points[math.mod(index - 1, #points) + 1]
-        plate.centerX, plate.top = point[1], point[2]
-        -- Native projection continues to update for later original hit matching.
-        moving:Tick(1 / 60)
-        stationary:Tick(1 / 60)
-        assert(plate.fixture.origin.x == point[1], "fixed presentation disabled required native matching samples")
-        assert(moving:Labels()[1] == label, "native restacking replaced the active number")
+        current:Tick(0.04)
+        current:Hit(performance and 19 or 17)
+        current:Tick(0.05)
+        assert(#current:Labels() == 0, "a group displayed before every original finished settling")
+        plate.centerX, plate.top = 700, 500
+        current:Tick(0.041)
+        if performance then
+            assert(#current:Labels() == 0, "a summed group displayed before its intake closed")
+            plate.centerX, plate.top = 900, 650
+            current:Tick(0.17)
+        end
+        local label = assert(current:Labels()[1])
+        local holder = label.parent.parent
         assert(
-            holder.anchor.x == referenceHolder.anchor.x and holder.anchor.y == referenceHolder.anchor.y,
-            "native restacking/camera movement altered an existing number's animation"
+            holder.anchor.x == plate.centerX and holder.anchor.y == plate.top + 12,
+            "a group launched from stale resolved coordinates instead of its latest common origin"
         )
+        current:Event(current.controller, "PLAYER_LEAVING_WORLD")
+    end
+end
+print("PASS settled groups launch at their common origin's latest position in either style or mode")
+
+for _, style in ipairs({ "diablo", "enemy" }) do
+    for _, performance in ipairs({ false, true }) do
+        for _, targets in ipairs({
+            { "First", "Second", "First" },
+            { "First", "Missing", "First" },
+            { "Missing", "First", "First" },
+        }) do
+            local moving, stationary = FollowingPlates(performance, style), FollowingPlates(performance, style)
+            local first = moving:MakePlate("First", 1000)
+            local second = moving:MakePlate("Second", 1000)
+            local referenceFirst = stationary:MakePlate("First", 1000)
+            local referenceSecond = stationary:MakePlate("Second", 1000)
+            for _, item in ipairs({ first, referenceFirst }) do
+                item.centerX, item.top = 100, 200
+            end
+            for _, item in ipairs({ second, referenceSecond }) do
+                item.centerX, item.top = 500, 600
+            end
+            for _, current in ipairs({ moving, stationary }) do
+                current:Tick(0)
+                for index, target in ipairs(targets) do
+                    current.targetName = target
+                    current:Hit(performance and (index * 2 + 15) or 17)
+                end
+                current:Tick(performance and 0.301 or 0.17)
+                assert(#current:Labels() == 1, "mixed-origin originals lost their grouped presentation")
+            end
+            local label, referenceLabel = moving:Labels()[1], stationary:Labels()[1]
+            local holder, referenceHolder = label.parent.parent, referenceLabel.parent.parent
+            local secondX, secondY = targets[2] == "Second" and 500 or 800, targets[2] == "Second" and 600 or 522
+            if targets[1] == "Missing" then
+                secondX, secondY = 800, 522
+            end
+            Near(holder.anchor.x, (100 + secondX + 100) / 3, "mixed group changed its original hit centroid")
+            Near(holder.anchor.y, (200 + secondY + 200) / 3 + 12, "mixed group changed its vertical hit centroid")
+            -- A later plate with a previously unmatched name must not claim an
+            -- active fallback label, nor may a later member restore following.
+            local late = moving:MakePlate("Missing", 1000)
+            late.centerX, late.top = 1200, 700
+            first.centerX, first.top = 900, 800
+            second.centerX, second.top = 50, 100
+            for _ = 1, 12 do
+                moving:Tick(1 / 60)
+                stationary:Tick(1 / 60)
+                Near(
+                    holder.anchor.x,
+                    referenceHolder.anchor.x,
+                    "mixed or nil origins acquired a live horizontal follow"
+                )
+                Near(holder.anchor.y, referenceHolder.anchor.y, "mixed or nil origins acquired a live vertical follow")
+                assert(label:GetText() == (performance and "57" or "17"), "mixed follow changed displayed totals")
+            end
+            moving:Event(moving.controller, "PLAYER_LEAVING_WORLD")
+            stationary:Event(stationary.controller, "PLAYER_LEAVING_WORLD")
+        end
+    end
+end
+print("PASS mixed and nil-origin groups keep their original centroid without rematching in either style or mode")
+
+-- CI-only native camera boundary: freelook releases the old plate capture
+-- synchronously, then routes the later physical release to WorldFrame.
+local function CameraPlates(performance, missing)
+    return Plates(function(current, env)
+        current.settings.performanceMode = performance
+        current.settings.nameplatesBossGuardiansOnly = false
+        local camera = { starts = 0, stops = 0, queries = 0, looking = false, worldUps = {}, reloads = 0 }
+        current.camera = camera
+        local function NativeInput(plate)
+            plate.nativeDown, plate.nativeUp = {}, {}
+            plate:SetScript("OnMouseDown", function()
+                local button = env.arg1
+                plate.nativeDown[button] = (plate.nativeDown[button] or 0) + 1
+                if button == "LeftButton" then current.nativeTarget = plate end
+            end)
+            plate:SetScript("OnMouseUp", function()
+                local button = env.arg1
+                plate.nativeUp[button] = (plate.nativeUp[button] or 0) + 1
+            end)
+        end
+        for _, plate in ipairs({ current.guardian, current.boss, current.ordinary }) do
+            NativeInput(plate)
+        end
+        local make = current.MakePlate
+        function current:MakePlate(...)
+            local plate = make(self, ...)
+            NativeInput(plate)
+            return plate
+        end
+        env.WorldFrame:SetScript("OnMouseUp", function()
+            local button = env.arg1
+            camera.worldUps[button] = (camera.worldUps[button] or 0) + 1
+        end)
+        env.WorldFrame:SetScript("OnHide", function() camera.worldHides = (camera.worldHides or 0) + 1 end)
+        env.MouselookStart = function()
+            camera.starts, camera.looking = camera.starts + 1, true
+            local previous = camera.capture
+            camera.capture, camera.focus = nil, env.WorldFrame
+            if previous then current:Call(previous, "OnMouseUp", "RightButton") end
+            if camera.onStart then camera.onStart() end
+        end
+        env.MouselookStop = function()
+            camera.stops, camera.looking, camera.focus = camera.stops + 1, false, nil
+        end
+        env.IsMouselooking = function()
+            camera.queries = camera.queries + 1
+            if performance then return camera.looking end
+            return camera.looking and 1 or 0
+        end
+        env.TurnOrActionStart = function() error("binding-only TurnOrActionStart called from a plate script") end
+        env.TurnOrActionStop = function() error("binding-only TurnOrActionStop called from a plate script") end
+        env.ReloadUI = function() camera.reloads = camera.reloads + 1 end
+        if missing then env[missing] = nil end
+        function current:Press(plate, button)
+            camera.capture = plate
+            self:Call(plate, "OnMouseDown", button)
+        end
+        function current:Release(button)
+            local recipient = camera.focus or camera.capture
+            camera.capture = nil
+            if recipient then self:Call(recipient, "OnMouseUp", button) end
+        end
+    end)
+end
+
+for _, performance in ipairs({ false, true }) do
+    local current = CameraPlates(performance)
+    current:Tick(0)
+    local plate, camera = current.ordinary, current.camera
+    local down, up = plate:GetScript("OnMouseDown"), plate:GetScript("OnMouseUp")
+    local worldUp = current.env.WorldFrame:GetScript("OnMouseUp")
+    local allocated = #current.objects
+    for _, button in ipairs({ "LeftButton", "MiddleButton" }) do
+        current:Press(plate, button)
+        current:Release(button)
+        assert(plate.nativeDown[button] == 1 and plate.nativeUp[button] == 1, "original non-right input was lost")
+    end
+    assert(current.nativeTarget == plate and camera.starts == 0 and camera.stops == 0, "left-click targeting changed")
+    current:Press(plate, "RightButton")
+    assert(camera.starts == 1 and camera.looking and camera.stops == 0, "synthetic plate release stopped camera entry")
+    assert(
+        plate.nativeDown.RightButton == 1 and plate.nativeUp.RightButton == 1,
+        "original right-button handlers were lost"
+    )
+    current:Release("LeftButton")
+    assert(camera.looking and camera.stops == 0, "another mouse button ended the held right-button camera")
+    current:Release("RightButton")
+    assert(
+        not camera.looking and camera.stops == 1 and camera.worldUps.RightButton == 1,
+        "WorldFrame release lost camera stop"
+    )
+    current:Release("RightButton")
+    assert(camera.stops == 1, "an unowned repeated release called native camera stop")
+
+    current:Press(plate, "RightButton")
+    plate:Hide()
+    plate.regions[3]:SetText("Reused enemy")
+    plate:Show()
+    current:Tick(0)
+    assert(camera.looking and camera.stops == 1, "plate death or frame reuse interrupted a held camera")
+    current:Release("RightButton")
+    assert(not camera.looking and camera.stops == 2, "reused plate lost the WorldFrame release")
+    current:Press(plate, "RightButton")
+    current:Call(plate, "OnMouseUp", "RightButton")
+    assert(not camera.looking and camera.stops == 3, "real plate release did not end its owned camera hold")
+
+    local starts = camera.starts
+    current.env.HideNameplates()
+    current:Call(plate, "OnMouseDown", "RightButton")
+    assert(camera.starts == starts, "V-off tracking plate started camera input")
+    current.env.ShowNameplates()
+    current:SetSetting("nameplatesBossGuardiansOnly", true)
+    current:Call(plate, "OnMouseDown", "RightButton")
+    assert(camera.starts == starts, "filtered plate started camera input")
+    current:SetSetting("nameplatesBossGuardiansOnly", false)
+    current:Tick(0)
+    plate:Hide()
+    current:Call(plate, "OnMouseDown", "RightButton")
+    plate:Show()
+    plate.nativeBar.color = { 0, 1, 0, 1 }
+    current:Call(plate, "OnMouseDown", "RightButton")
+    plate.nativeBar.color = { 1, 0, 0, 1 }
+    assert(camera.starts == starts, "hidden or friendly plate started hostile camera input")
+
+    assert(#current.objects == allocated, "camera input allocated another frame or region")
+    current.env.DFRL.sct.BeginEdit()
+    for _, mode in ipairs({ "off", "default", "on" }) do
+        current.env.DFRL.sct.SetMode(mode)
+        for _, style in ipairs({ "enemy", "msbt" }) do
+            current:SetSetting("sctStyle", style)
+            current:Press(plate, "RightButton")
+            assert(camera.looking, "visible plate camera depended on SCT mode or style")
+            current:Release("RightButton")
+            assert(not camera.looking, "SCT mode/style lost camera release")
+        end
+    end
+    current.env.DFRL.sct.FinishEdit(false)
+    current:SetSetting("sctStyle", "enemy")
+    current:Tick(0)
+    local queries = camera.queries
+    allocated = #current.objects
+    for _, object in ipairs(current.objects) do
         assert(
-            label:GetText() == "17" and holder:GetAlpha() == referenceHolder:GetAlpha(),
-            "native corrections changed the amount or lifetime/fade"
+            object == current.controller or not object:GetScript("OnUpdate"),
+            "camera support installed another updater"
         )
     end
+    current:ResetCounts()
+    for _ = 1, 12 do
+        current:Tick(1 / 60)
+    end
+    current:NoPresentationWrites()
+    assert(camera.queries == queries and #current.objects == allocated, "idle camera support polled or allocated")
     assert(
-        not moving.writes.SetText and not moving.writes.Show and not moving.writes.Hide,
-        "native movement flickered active text visibility"
+        plate:GetScript("OnMouseDown") == down
+            and plate:GetScript("OnMouseUp") == up
+            and current.env.WorldFrame:GetScript("OnMouseUp") == worldUp,
+        "plate discovery or reuse installed duplicate camera hooks"
     )
-    assert(#moving.objects == allocated, "native movement allocated replacement text")
-    assert(moving.backing and moving.env.NAMEPLATES_ON == nil, "fixed presentation changed native V ownership")
-
-    local x, y = holder.anchor.x, holder.anchor.y
-    plate.centerX = math.huge
-    moving:Tick(0)
-    assert(holder.anchor.x == x and holder.anchor.y == y, "invalid projection moved existing text")
-    local origin = plate.fixture.origin
-    plate:Hide()
-    plate.centerX, plate.top = 700, 500
-    plate.regions[3]:SetText("Other occupant")
-    plate:Show()
-    moving:Tick(0)
-    assert(not origin.live and plate.fixture.origin ~= origin, "frame reuse retained the retired native incarnation")
-    assert(holder.anchor.x == x and holder.anchor.y == y, "frame retirement/reuse moved an active number")
-    moving:SetSetting("performanceMode", not performance)
-    moving:Tick(0)
-    assert(
-        moving:Labels()[1] == label and holder.anchor.x == x and holder.anchor.y == y,
-        "Performance Mode restarted or repositioned active text"
-    )
-    moving:Tick(0.301)
-    assert(#moving:Labels() == 0, "native movement extended the original 1.1-second lifetime")
-    moving:Tick(0.36) -- Retire the old matching evidence before testing a fresh same-name hit.
-
-    plate:Hide()
-    plate.regions[3]:SetText("Moving")
-    plate:Show()
-    moving.targetName = "Moving"
-    moving:Hit(23)
-    moving:Tick(0.301)
-    assert(
-        moving:Labels()[1] == label and holder.anchor.x == 700,
-        "a new number did not reuse the pool at its own current launch point"
-    )
-    moving:Event(moving.controller, "PLAYER_LEAVING_WORLD")
-    assert(#moving:Labels() == 0 and not moving.backing, "world cleanup retained fixed text")
-    moving:ResetCounts()
-    moving:Tick(0.2)
-    moving:NoPresentationWrites()
+    current:Event(current.controller, "PLAYER_LEAVING_WORLD")
 end
 print(
-    "PASS fixed Diablo numbers ignore repeated native restacking/camera motion while retaining matching, animation and reuse"
+    "PASS right-button camera entry survives native capture transfer and plate reuse while preserving left targeting and SCT modes"
 )
+
+for _, performance in ipairs({ false, true }) do
+    for _, cleanup in ipairs({ "worldHide", "PLAYER_LEAVING_WORLD", "PLAYER_LOGOUT", "reload" }) do
+        for _, foreign in ipairs({ false, true }) do
+            local current = CameraPlates(performance)
+            current:Tick(0)
+            local camera, plate = current.camera, current.ordinary
+            if foreign then
+                current.env.MouselookStart()
+                current:Press(plate, "RightButton")
+                assert(camera.starts == 1, "pre-existing native camera look was started again")
+                current:Release("RightButton")
+                assert(camera.looking and camera.stops == 0, "plate release stopped a pre-existing foreign camera")
+            else
+                current:Press(plate, "RightButton")
+            end
+            if cleanup == "worldHide" then
+                current.env.WorldFrame:Hide()
+                assert(camera.worldHides == 1, "camera cleanup replaced the existing WorldFrame hide handler")
+            elseif cleanup == "reload" then
+                current.env.ReloadUI()
+                assert(camera.reloads == 1, "camera cleanup replaced native ReloadUI")
+            else
+                current:Event(current.controller, cleanup)
+            end
+            assert(camera.looking == foreign and camera.stops == (foreign and 0 or 1), "cleanup lost camera ownership")
+            local starts = camera.starts
+            current:Call(plate, "OnMouseDown", "RightButton")
+            assert(camera.starts == starts, "inactive or hidden world accepted plate camera input")
+        end
+    end
+
+    local transferred = CameraPlates(performance)
+    transferred:Tick(0)
+    transferred:Press(transferred.ordinary, "RightButton")
+    transferred.env.MouselookStart()
+    transferred:Release("RightButton")
+    transferred:Event(transferred.controller, "PLAYER_LEAVING_WORLD")
+    assert(transferred.camera.looking and transferred.camera.stops == 0, "external start did not take camera ownership")
+    local stopped = CameraPlates(performance)
+    stopped:Tick(0)
+    stopped:Press(stopped.ordinary, "RightButton")
+    stopped.env.MouselookStop()
+    stopped:Release("RightButton")
+    stopped:Event(stopped.controller, "PLAYER_LEAVING_WORLD")
+    assert(stopped.camera.stops == 1, "external stop left an owned hold that stopped again")
+end
+print("PASS camera world/logout/reload cleanup stops only owned holds and preserves external native look sessions")
+
+for _, performance in ipairs({ false, true }) do
+    local hidden = CameraPlates(performance)
+    hidden:Tick(0)
+    hidden.camera.onStart = function() hidden.env.WorldFrame:Hide() end
+    hidden:Press(hidden.ordinary, "RightButton")
+    assert(
+        hidden.camera.starts == 1 and hidden.camera.stops == 1 and not hidden.camera.looking,
+        "synchronous world hiding left a camera hold pending after native start"
+    )
+    hidden.camera.onStart = nil
+    hidden.env.WorldFrame:Show()
+    hidden:Press(hidden.ordinary, "RightButton")
+    assert(hidden.camera.starts == 2 and hidden.camera.looking, "deferred cleanup prevented the next camera hold")
+    hidden:Release("RightButton")
+    hidden:Event(hidden.controller, "PLAYER_LEAVING_WORLD")
+    assert(hidden.camera.stops == 2, "deferred cleanup retained ownership after the next real release")
+
+    local released = CameraPlates(performance)
+    released:Tick(0)
+    released:Press(released.ordinary, "RightButton")
+    -- A native release can bypass both Lua mouse-up scripts and the global
+    -- stop verb; the next physical press must still acquire a new hold.
+    released.camera.looking, released.camera.focus = false, nil
+    released:Press(released.ordinary, "RightButton")
+    assert(released.camera.starts == 2 and released.camera.looking, "stale ownership blocked a fresh camera press")
+    released:Release("RightButton")
+    released:Event(released.controller, "PLAYER_LEAVING_WORLD")
+    assert(released.camera.stops == 1 and not released.camera.looking, "fresh camera hold did not stop exactly once")
+
+    local failed = CameraPlates(performance)
+    failed:Tick(0)
+    failed.camera.onStart = function() error("injected native error after camera entry") end
+    failed:Press(failed.ordinary, "RightButton")
+    assert(
+        failed.camera.starts == 1 and failed.camera.stops == 1 and not failed.camera.looking,
+        "native entry error retained a partially started camera hold"
+    )
+    failed.camera.onStart = nil
+    failed:Press(failed.ordinary, "RightButton")
+    assert(failed.camera.starts == 2 and failed.camera.looking, "native entry error prevented a later valid hold")
+    failed:Release("RightButton")
+    failed:Event(failed.controller, "PLAYER_LEAVING_WORLD")
+    assert(failed.camera.stops == 2, "native entry error retained stale ownership")
+end
+print(
+    "PASS camera entry flushes synchronous cleanup, recovers from unobserved native release and stops partial native errors"
+)
+
+for _, missing in ipairs({ "MouselookStart", "MouselookStop", "IsMouselooking" }) do
+    local current = CameraPlates(false, missing)
+    current:Tick(0)
+    local plate, camera = current.ordinary, current.camera
+    for _, button in ipairs({ "LeftButton", "RightButton", "MiddleButton" }) do
+        current:Press(plate, button)
+        current:Release(button)
+        assert(
+            plate.nativeDown[button] == 1 and plate.nativeUp[button] == 1,
+            "missing API changed native plate handlers"
+        )
+    end
+    assert(camera.starts == 0 and camera.stops == 0 and camera.queries == 0, "partial native camera API was used")
+    assert(current.nativeTarget == plate, "missing API fallback changed left-click targeting")
+    current:Event(current.controller, "PLAYER_LEAVING_WORLD")
+end
+print("PASS missing native camera APIs preserve original plate input without partial camera control")
