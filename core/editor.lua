@@ -511,25 +511,25 @@ end
 
 -- Search only redirects to the original controls. Metadata is available before
 -- unvisited pages exist; a small result pool reuses the navigator's viewport.
-local function CreateEditorSearch(parent, scroll, content, navigation, groups, sections, options)
+local function CreateEditorSearch(parent, sidebar, scroll, content, navigation, groups, sections, options)
     local owner = { active = false, query = "", page = 1, rows = {}, results = {} }
-    local width = options.width - 24
-    local resultWidth, resultHeight, resultPitch = math.min(width, 360), 42, 46
+    local width = options.sidebarWidth
+    local resultWidth, resultHeight, resultPitch = math.min(options.width - 24, 360), 42, 46
     local resultFooter = 8 * resultPitch + 8
-    local header = CreateFrame("Frame", nil, parent)
-    header:SetPoint("TOPLEFT", parent, "TOPLEFT", options.left, -options.top)
+    local header = CreateFrame("Frame", nil, sidebar)
+    header:SetPoint("TOPLEFT", sidebar, "TOPLEFT", 6, -4)
     header:SetWidth(width)
-    header:SetHeight(64)
+    header:SetHeight(88)
     local caption = Label(header, 12, "Search settings")
     caption:SetPoint("TOPLEFT", header, "TOPLEFT", 0, -2)
     caption:SetWidth(width)
     caption:SetHeight(18)
     caption:SetJustifyH("LEFT")
-    owner.input = T.CreateEditorInput(header, width - 128, 28)
+    owner.input = T.CreateEditorInput(header, width, 28)
     owner.input:SetMaxLetters(128)
     owner.input:SetPoint("TOPLEFT", header, "TOPLEFT", 0, -24)
     owner.clear = T.CreateEditorButton(header, "Clear search", 112, 28)
-    owner.clear:SetPoint("TOPRIGHT", header, "TOPRIGHT", 0, -24)
+    owner.clear:SetPoint("TOPRIGHT", header, "TOPRIGHT", 0, -60)
     owner.clear:Disable()
     navigation.search = owner.input
     navigation.results, navigation.query = owner.results, ""
@@ -574,13 +574,11 @@ local function CreateEditorSearch(parent, scroll, content, navigation, groups, s
         end
         local measured = owner.clear.label:GetStringWidth()
         if not measured or measured <= 0 then return end
-        local clearWidth = math.min(width / 2, math.max(112, math.ceil(measured) + 24))
+        local clearWidth = math.min(width, math.max(112, math.ceil(measured) + 24))
         if owner.clear:GetWidth() ~= clearWidth then
             owner.clear:SetWidth(clearWidth)
             owner.clear.label:SetWidth(clearWidth - 12)
         end
-        local inputWidth = width - clearWidth - 16
-        if owner.input:GetWidth() ~= inputWidth then owner.input:SetWidth(inputWidth) end
         owner.headerMetrics = { code = DFRL.locale.code, face = face, size = size, flags = flags, scale = scale }
     end
     owner.RefreshHeader = RefreshHeader
@@ -868,13 +866,18 @@ end
 
 -- Related settings share one scroll surface and keep their original owners.
 function DFRL.tools.CreateEditorNavigator(parent, sidebar, groups, sections, options)
-    local navigation = { pages = {}, buttons = {}, offsets = {}, selected = groups[1].key }
+    local navigation = {
+        pages = {},
+        buttons = {},
+        offsets = {},
+        selected = groups[1].key,
+        searchHeight = options.search and 96 or 0,
+    }
     local width = options.width
     local scroll = CreateFrame("ScrollFrame", "SurvivorsDragonUiSettingsScroll", parent, "UIPanelScrollFrameTemplate")
-    local searchHeight = options.search and 64 or 0
-    scroll:SetPoint("TOPLEFT", parent, "TOPLEFT", options.left, -options.top - searchHeight)
+    scroll:SetPoint("TOPLEFT", parent, "TOPLEFT", options.left, -options.top)
     scroll:SetWidth(width)
-    scroll:SetHeight(options.height - searchHeight)
+    scroll:SetHeight(options.height)
     local content = CreateFrame("Frame", nil, scroll)
     content:SetWidth(width - 24)
     content:SetHeight(1)
@@ -896,7 +899,7 @@ function DFRL.tools.CreateEditorNavigator(parent, sidebar, groups, sections, opt
         groupLabels[group.key] = group.label
         local key = group.key
         local button = DFRL.tools.CreateEditorCategory(sidebar, group.label, options.sidebarWidth, 42)
-        button:SetPoint("TOPLEFT", sidebar, "TOPLEFT", 6, -48 - (index - 1) * 48)
+        button:SetPoint("TOPLEFT", sidebar, "TOPLEFT", 6, -48 - navigation.searchHeight - (index - 1) * 48)
         button.label:SetHeight(32)
         button.label:SetJustifyV("MIDDLE")
         button:SetScript("OnClick", function() navigation.Select(key) end)
@@ -1012,7 +1015,8 @@ function DFRL.tools.CreateEditorNavigator(parent, sidebar, groups, sections, opt
         rendered = nil
     end)
     if options.search then
-        navigation.searchOwner = CreateEditorSearch(parent, scroll, content, navigation, groups, sections, options)
+        navigation.searchOwner =
+            CreateEditorSearch(parent, sidebar, scroll, content, navigation, groups, sections, options)
     end
     return navigation
 end

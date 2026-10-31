@@ -2306,7 +2306,7 @@ DFRL:NewMod("RunTimers", 5, function()
             function(value) DFRL.display.Set("performanceMode", value) end
         )
         performance:SetHeight(36)
-        performance:SetPoint("TOPLEFT", sidebar, "TOPLEFT", 6, -sidebarInset)
+        performance:SetPoint("TOPLEFT", sidebar, "TOPLEFT", 6, -sidebarInset - navigation.searchHeight)
         performance.label:SetHeight(28)
         displayControls.performanceMode = performance
         builders.layout = function(page)

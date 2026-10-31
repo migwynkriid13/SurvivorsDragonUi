@@ -479,8 +479,17 @@ not been launched or visually verified in the game.
 ### Settings search — 2026-10-31
 
 The search header reuses the input/button helpers: three frames (container,
-EditBox and clear button), nine texture regions and two FontStrings. Results
-are allocated only on a nonempty query, with a maximum pool of eight buttons.
+EditBox and clear button), nine texture regions and two FontStrings.
+
+The same header lives once in the sidebar above Performance Mode. Its caption,
+full-width input and separate Clear row reserve 96 units there; the nine
+42-unit category rows keep their 48-unit pitch and finish fourteen units before
+the sidebar footer. The content viewport reclaims the former 64-unit header
+reservation without changing the dialog size. Clear-caption metrics use the
+whole sidebar width, while result geometry remains tied to the main viewport.
+No frame, drawing region, asset or updater is added by this relocation.
+
+Results are allocated only on a nonempty query, with a maximum pool of eight buttons.
 The full results pool adds eleven frames, sixteen texture regions and twenty
 FontStrings, including its container, empty/count labels and two paging buttons.
 Plain fixed-width rows replace the decorative red/gold faces, removing twenty-four

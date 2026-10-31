@@ -31,12 +31,13 @@ there is no duplicate category title. Section headings appear only
 when their names differ from the category, such as Pet frames under Unit frames.
 These subsection headings are centered above their controls and divider. Damage
 meter has its own sidebar category and no repeated content heading.
-Search occupies a 64-unit header above the existing content viewport.
+Search stays in the left sidebar above Performance Mode, with its input and
+Clear search button stacked. Category pages use the full content viewport.
 Each category remembers its scroll offset until the UI reloads.
 
 ## Finding a setting
 
-**Search settings** matches existing captions, descriptions and category names,
+**Search settings** above Performance Mode in the sidebar matches existing captions, descriptions and category names,
 using both the active language and English source text. Multiple words must all
 match; punctuation is literal. Supported Latin and Cyrillic case pairs are
 folded without changing other UTF-8 text. `shield` and `absorb`, including the

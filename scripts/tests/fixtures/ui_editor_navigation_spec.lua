@@ -158,6 +158,10 @@ assert(
     "subsection heading was not centered over its controls"
 )
 assert(not navigation.search and not navigation.query, "the removed search retained runtime state")
+assert(
+    navigation.searchHeight == 0 and navigation.buttons.layout.point[5] == -48,
+    "search-free categories reserved a search row"
+)
 assert(navigation.pages.text:GetParent() == sections[2].shell, "navigation moved the real controls")
 slider:SetValue(235)
 navigation.Refresh(true)
@@ -220,6 +224,74 @@ local searchNavigation = env.T.CreateEditorNavigator(searchPanel, searchSidebar,
     onNavigate = function(key) table.insert(searchNavigations, key or "search") end,
     onEscape = function() escapes = escapes + 1 end,
 })
+local function AssertSidebarSearch(navigation, sidebar, width)
+    local input, owner = navigation.search, navigation.searchOwner
+    local header = input:GetParent()
+    assert(header:GetParent() == sidebar and header.point[2] == sidebar, "search header left the shared sidebar")
+    assert(
+        header.point[4] == 6 and header.point[5] == -4 and header:GetWidth() == width and header:GetHeight() == 88,
+        "sidebar search header geometry changed"
+    )
+    assert(navigation.searchHeight == 96, "categories did not reserve the sidebar search block")
+    assert(input:GetWidth() == width and input:GetHeight() == 28, "sidebar input did not retain the full column width")
+    assert(
+        input.point[2] == header and input.point[4] == 0 and input.point[5] == -24,
+        "sidebar input lost its caption clearance"
+    )
+    assert(
+        owner.clear:GetParent() == header and owner.clear.point[2] == header and owner.clear.point[5] == -60,
+        "clear search is not below the input"
+    )
+    assert(owner.clear:GetHeight() == 28 and owner.clear:GetWidth() <= width, "clear search extends beyond the sidebar")
+    local caption
+    for _, item in ipairs(context.objects) do
+        if item.kind == "FontString" and item:GetParent() == header then caption = item end
+    end
+    assert(
+        caption and caption:GetHeight() == 18 and caption.point[4] == 0 and caption.point[5] == -2,
+        "sidebar search caption moved or wrapped into the input"
+    )
+    return header
+end
+local searchScroll = env.SurvivorsDragonUiSettingsScroll
+local searchHeader = AssertSidebarSearch(searchNavigation, searchSidebar, 212)
+assert(
+    searchScroll.point[4] == 240 and searchScroll.point[5] == -80 and searchScroll:GetHeight() == 552,
+    "sidebar search consumed the right-hand viewport"
+)
+for index, group in ipairs(groups) do
+    local button = searchNavigation.buttons[group.key]
+    assert(
+        button:GetParent() == searchSidebar and button.point[5] == -144 - (index - 1) * 48 and button:GetHeight() == 42,
+        "sidebar categories overlap the search block"
+    )
+end
+local clear = searchNavigation.searchOwner.clear
+local clearFace, clearSize, clearFlags = clear.label:GetFont()
+clear.label.naturalWidth = 500
+clear.label:SetFont("WIDE_SEARCH_CLEAR", clearSize, clearFlags)
+searchNavigation.searchOwner.RefreshHeader()
+assert(
+    clear:GetWidth() == 212 and searchNavigation.search:GetWidth() == 212,
+    "long clear caption did not use the full sidebar width"
+)
+clear.label.naturalWidth = nil
+clear.label:SetFont(clearFace, clearSize, clearFlags)
+searchNavigation.searchOwner.RefreshHeader()
+local clearWidth = clear:GetWidth()
+clear.label.naturalWidth = 0
+env.DFRL.locale.code = "search_retry"
+context:NotifyLocale()
+assert(clear:GetWidth() == clearWidth, "unavailable header metrics replaced a usable clear width")
+clear.label.naturalWidth = 180
+searchNavigation.searchOwner.RefreshHeader()
+assert(
+    clear:GetWidth() == 204 and searchNavigation.search:GetWidth() == 212,
+    "failed sidebar header metrics did not retry independently of the input width"
+)
+clear.label.naturalWidth = nil
+env.DFRL.locale.code = "en"
+context:NotifyLocale()
 searchNavigation.Select("layout")
 local searchSlider = env.SurvivorsDragonUiSettingsScrollScrollBar
 searchSlider:SetValue(150)
@@ -231,6 +303,15 @@ assert(
 assert(searchNavigation.results[1].target == "icons" and searchNavigation.results[1].section == "damage")
 assert(searchNavigations[#searchNavigations] == "search", "results retained Layout handles")
 local resultButton = searchNavigation.searchOwner.rows[1]
+assert(
+    searchNavigation.searchOwner.frame:GetParent() == searchScroll.child
+        and resultButton:GetParent() == searchNavigation.searchOwner.frame,
+    "sidebar search moved results out of the main content pane"
+)
+assert(
+    searchHeader:IsVisible() and searchScroll:GetHeight() == 552,
+    "results hid the shared sidebar header or reduced the viewport"
+)
 assert(
     resultButton:GetWidth() == 360 and resultButton:GetHeight() == 42,
     "search results do not use the compact fixed row size"
@@ -426,6 +507,15 @@ assert(
 )
 env.DFRL.locale.Text, env.DFRL.locale.code = originalText, "en"
 resultButton.label.SetText = setResultText
+local categoryObjects = #context.objects
+for _, key in ipairs({ "layout", "combat", "layout", "combat" }) do
+    searchNavigation.Select(key)
+    assert(
+        searchNavigation.search:GetParent() == searchHeader and searchHeader:IsVisible(),
+        "category switch replaced or hid the sidebar search header"
+    )
+end
+assert(#context.objects == categoryObjects, "category switches allocated another search header")
 searchPanel:Hide()
 
 local narrowPanel = env.CreateFrame("Frame", nil, env.UIParent)
@@ -755,6 +845,38 @@ assert(
     "first open built hidden options"
 )
 assert(dialog.navigation.search and dialog.navigation.search.maxLetters == 128, "settings has no native search input")
+local dialogSearch = dialog.navigation.search
+local dialogSidebar = dialogSearch:GetParent():GetParent()
+local dialogSearchHeader = AssertSidebarSearch(dialog.navigation, dialogSidebar, 232)
+local performanceControl = env.displayControls.performanceMode
+assert(
+    performanceControl:GetParent() == dialogSidebar and performanceControl.point[5] == -100,
+    "Performance Mode did not move below the sidebar search"
+)
+assert(
+    -dialogSearchHeader.point[5] + dialogSearchHeader:GetHeight() <= -performanceControl.point[5],
+    "search header overlaps Performance Mode"
+)
+local categoryKeys = { "layout", "units", "combat", "meter", "action", "encounters", "map", "interface", "profiles" }
+local previousBottom = -performanceControl.point[5] + performanceControl:GetHeight()
+for index, key in ipairs(categoryKeys) do
+    local button = dialog.navigation.buttons[key]
+    local top = -button.point[5]
+    assert(
+        button:GetParent() == dialogSidebar and top == 144 + (index - 1) * 48 and top >= previousBottom,
+        "category rows overlap search, Performance Mode or another category"
+    )
+    previousBottom = top + button:GetHeight()
+end
+assert(
+    previousBottom == 570 and previousBottom <= dialogSidebar:GetHeight(),
+    "the ninth sidebar category extends into the footer"
+)
+local dialogScroll = env.SurvivorsDragonUiSettingsScroll
+assert(
+    dialogScroll:GetParent() == dialog and dialogScroll.point[5] == -56 and dialogScroll:GetHeight() == 576,
+    "search reduced the full settings content viewport"
+)
 dialog.navigation.Search("shield")
 assert(
     #dialog.navigation.results == 2 and not pages.units,
@@ -961,6 +1083,17 @@ for _ in pairs(pages) do
     pageCount = pageCount + 1
 end
 assert(pageCount == 20 and layoutBuilds == 1, "full category walk lost or rebuilt sections")
+local allCategoryObjects = #context.objects
+for _, key in ipairs(categoryKeys) do
+    dialog.navigation.Select(key)
+    assert(
+        dialog.navigation.search == dialogSearch
+            and dialogSearch:GetParent() == dialogSearchHeader
+            and dialogSearchHeader:IsVisible(),
+        "an editor category replaced or hid the shared sidebar search"
+    )
+end
+assert(#context.objects == allCategoryObjects, "revisiting all nine categories allocated another sidebar search")
 assert(env.fontSampleClock and not env.fontMenu, "Encounters eagerly prepared the closed font popup")
 local affixes, shadow = env.displayControls.attachAffixes, env.shadowControl
 assert(

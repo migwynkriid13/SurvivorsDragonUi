@@ -84,7 +84,11 @@ retirement. Display/editor cases cover inherited older saves, normalization,
 preview/Confirm/discard/profiles/resets and searchable controls. These cases
 remain CI-only and were not run locally; native glyph fit is unverified.
 
-The editor fixture covers metadata search without constructing unopened pages,
+The editor fixture covers the single sidebar search above Performance Mode,
+stacked input/Clear geometry, all nine category rows staying clear of the footer,
+the recovered full content viewport and result geometry remaining in that
+viewport. Category changes reuse the same header and preserve draft/scroll
+behavior. It also covers metadata search without constructing unopened pages,
 active-language/English matching, supported case folding, literal punctuation,
 empty results, pooled paging, fixed-width plain rows and their single hidden
 hover texture, custom and ordinary option redirects, current
