@@ -7,7 +7,8 @@ use `core/meter_api.lua` for Damage Done, Healing Done, Boss Damage and Party Da
 native snapshots and their authoritative source/hero descriptors. Names and
 icons come directly from those descriptors, including equipment, jewelry,
 learned talents, pet/totem attacks and periodic effects in every native language.
-Native row IDs identify rate samples even when several rows share a name.
+Unrelated native sources retain their separate rows even when their names match.
+Recognized ability ranks use a stable display-group identity for rate samples.
 
 Damage Done requests the selected native recent window, or All. Healing Done
 keeps native received-healing semantics; Boss Damage requests the current/last
@@ -132,6 +133,32 @@ the same instant reflow, without a new region, asset, event or updater. CI-only
 production-meter cases cover the layout and font lifecycle; no local tests or
 addon/game execution were run, and native glyph fit remains unverified.
 
+## Ability ranks
+
+Damage Done, Healing Done and Boss Damage combine recognized ranks of one
+ability into one displayed row. The row adds their native amounts and rates,
+recomputes its share against the native total, and sorts by the combined amount
+with native order as the tie-breaker. Native counters, detailed source records,
+header totals and checkpoints remain unchanged. Party Damage and Damage Taken
+keep their existing grouping.
+
+On v1, grouping requires an ability descriptor with a valid native `abilityKey`
+and skill rank. Owner, proc, variant, item-instance, talent and item identities
+stay distinct. A family with conflicting same-rank sources stays separate, as
+do sources without the required identity and generic, effect or item sources.
+Names alone never establish a v1 family. The highest contributing skill rank
+provides the native caption and artwork, including pending or missing artwork;
+the private display identity survives later upgrades and language changes.
+Any member with an unavailable rate leaves that combined rate unavailable.
+
+Legacy getters expose only names and proc flags as source identity. Their exact
+name/proc duplicates combine before reset baselines and rolling-rate sampling;
+the addon never strips rank text or guesses a relationship between other names.
+Copies are pooled and publication-cached, with rate-only refreshes using the
+existing cadence. Both Performance Mode states use the same instant result.
+CI-only cases cover nine ranks, later upgrades, resets, rates, metadata changes
+and distinct sources; no local tests or game execution were run.
+
 ## Damage Taken
 
 Damage Taken is the fifth view. It reads the official legacy `AZS_TAKEN` rows
@@ -194,8 +221,8 @@ The owner-supplied [2026-10-22 API reference](AzerothSurvivors-Addon-API-2026-10
 defines `AZS_GetMeter()`, `AZS_GetHealing()` and `AZS_GetBossMeter()`. Each returns
 `lines, total, rate`; rows supply `name`, `dmg`, `dps`, `share` and `proc`.
 
-Before a local reset, damage/healing totals and native shares/order cover the
-whole run. Boss Damage covers the native current/last boss fight. Healing and
+Before a local reset, damage/healing totals cover the whole run. Grouped source
+shares use those native totals. Boss Damage covers the native current/last boss fight. Healing and
 Boss Damage retain supplied native rates until a local reset. The game's own
 meter-window Reset does not reset the API totals; there is no official setter
 for clearing these counters.

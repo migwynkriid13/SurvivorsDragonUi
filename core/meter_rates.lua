@@ -116,6 +116,130 @@ function DFRL.tools.NewMeterSession()
     return session
 end
 
+-- The legacy source identity is the exact received name and proc flag.
+function DFRL.tools.NewMeterSourceGroups()
+    local model = { revision = 0 }
+    local rows, pool, members, groups, kindsPool = {}, {}, {}, {}, {}
+    local lastSource, lastPublication
+    local count, memberCount = 0, 0
+    local function Number(value) return type(value) == "number" and value - value == 0 and value >= 0 end
+    local function ClearRow(row)
+        for key in pairs(row) do
+            row[key] = nil
+        end
+    end
+    local function ClearGroups()
+        for name in pairs(groups) do
+            groups[name] = nil
+        end
+        for _, kinds in ipairs(kindsPool) do
+            kinds[0], kinds[1] = nil, nil
+        end
+    end
+    local function Order(left, right)
+        if left.dmg == right.dmg then return left.order < right.order end
+        return left.dmg > right.dmg
+    end
+    function model.Clear()
+        if not lastSource and count == 0 and memberCount == 0 and not next(groups) then return end
+        for _, row in ipairs(pool) do
+            ClearRow(row)
+        end
+        for index in pairs(rows) do
+            rows[index] = nil
+        end
+        for index in pairs(members) do
+            members[index] = nil
+        end
+        table.setn(rows, 0)
+        table.setn(members, 0)
+        ClearGroups()
+        lastSource, lastPublication = nil, nil
+        count, memberCount = 0, 0
+        model.revision = model.revision + 1
+    end
+    local function Unavailable()
+        model.Clear()
+        return nil
+    end
+    function model.Read(source, publication)
+        if type(source) ~= "table" then return Unavailable() end
+        if not publication or source ~= lastSource or publication ~= lastPublication then
+            local used, names, length = 0, 0, 0
+            ClearGroups()
+            for order, entry in ipairs(source) do
+                if
+                    type(entry) ~= "table"
+                    or type(entry.name) ~= "string"
+                    or entry.name == ""
+                    or not Number(entry.dmg)
+                    or not Number(entry.share)
+                then
+                    return Unavailable()
+                end
+                local kinds = groups[entry.name]
+                if not kinds then
+                    names = names + 1
+                    kinds = kindsPool[names] or {}
+                    kindsPool[names], groups[entry.name] = kinds, kinds
+                end
+                local kind = entry.proc == 1 and 1 or 0
+                local row = kinds[kind]
+                if not row then
+                    used = used + 1
+                    row = pool[used]
+                    if not row then
+                        row = {}
+                        pool[used] = row
+                    else
+                        ClearRow(row)
+                    end
+                    for key, value in pairs(entry) do
+                        row[key] = value
+                    end
+                    row.dmg, row.dps, row.share, row.order = 0, 0, 0, order
+                    kinds[kind], rows[used] = row, row
+                end
+                local amount, share = row.dmg + entry.dmg, row.share + entry.share
+                if not Number(amount) or not Number(share) then return Unavailable() end
+                row.dmg, row.share = amount, share
+                members[order], length = row, order
+            end
+            for index = used + 1, count do
+                ClearRow(pool[index])
+                rows[index] = nil
+            end
+            for index = length + 1, memberCount do
+                members[index] = nil
+            end
+            table.setn(rows, used)
+            table.setn(members, length)
+            for _, row in ipairs(rows) do
+                row.share = math.min(1, row.share)
+            end
+            table.sort(rows, Order)
+            count, memberCount = used, length
+            lastSource, lastPublication = source, publication
+            model.revision = model.revision + 1
+        end
+        for _, row in ipairs(rows) do
+            row.dps = 0
+        end
+        local length = 0
+        for index, entry in ipairs(source) do
+            local row = members[index]
+            if type(entry) ~= "table" or not row or not Number(entry.dps) then return Unavailable() end
+            local rate = row.dps + entry.dps
+            if not Number(rate) then return Unavailable() end
+            row.dps = rate
+            length = index
+        end
+        if length ~= memberCount then return Unavailable() end
+        return rows, model.revision
+    end
+    return model
+end
+
 -- Native incoming counters have category totals rather than meter-source rows.
 function DFRL.tools.NewMeterTaken()
     local model = { revision = 0 }

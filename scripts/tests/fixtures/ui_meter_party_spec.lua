@@ -1177,4 +1177,119 @@ Test("hidden off and Performance Mode taken views reuse rows without hidden sour
     end
 end)
 
+local function LegacyRanks(count)
+    local source, total = {}, count * (count + 1) * 5
+    for rank = count, 1, -1 do
+        table.insert(source, { name = "Flamestrike", dmg = rank * 10, dps = rank, share = rank * 10 / total, proc = 0 })
+    end
+    return source
+end
+
+Test("legacy skill ranks share one row before rate and session accounting", function()
+    local context = Meter(function(c)
+        c.settings.meterDpsWindow = 0
+        c.damage = LegacyRanks(9)
+        for _, entry in ipairs(c.damage) do
+            entry.share = entry.dmg / 650
+        end
+        table.insert(c.damage, 1, { name = "Other", dmg = 200, dps = 20, share = 200 / 650, proc = 0 })
+        c.healing, c.boss = c.damage, c.damage
+    end)
+    context:Tick()
+    for _, title in ipairs({ "Damage Done", "Healing Done", "Boss Damage" }) do
+        assert(context.title:GetText() == title)
+        local first, second = context:Row(1), context:Row(2)
+        assert(first.entry.name == "Flamestrike" and first.entry.dmg == 450 and first.entry.dps == 45)
+        assert(second.entry.name == "Other" and second.entry.dmg == 200)
+        assert(math.abs(first.entry.share - 450 / 650) < 1e-12, "legacy rank grouping changed native shares")
+        assert(not context.env.SurvivorsDragonUiMeterIcon3, "legacy ranks allocated unnecessary display rows")
+        context:Cycle()
+    end
+    assert(table.getn(context.damage) == 10 and context.damage[2].dmg == 90 and context.damage[10].dmg == 10)
+    assert(context.damage[2].dps == 9 and context.damage[2].share == 90 / 650)
+end)
+
+Test("legacy upgraded ranks retain observed rolling DPS and exact proc separation", function()
+    local context = Meter(function(c) c.damage = LegacyRanks(9) end)
+    context:Tick()
+    assert(context:Row(1).entry.name == "Flamestrike" and not context:Row(1).entry.dps)
+    context.env.AZS_RUN.t = 12
+    table.insert(context.damage, 1, { name = "Flamestrike", dmg = 100, dps = 100 / 12, share = 100 / 550, proc = 0 })
+    for _, entry in ipairs(context.damage) do
+        entry.dps, entry.share = entry.dmg / 12, entry.dmg / 550
+    end
+    context:Publish("AZSMETER")
+    context:Tick()
+    for _ = 1, 5 do
+        context:Tick()
+    end
+    assert(
+        context:Row(1).entry.dmg == 550 and context:Row(1).entry.dps == 50,
+        "duplicate ranks invalidated rolling DPS"
+    )
+    context.env.DFRL.ResetMeterStats()
+    context:Tick()
+    assert(not context:Row(1).active, "rank grouping replayed pre-reset damage")
+    context.env.AZS_RUN.t = 14
+    table.insert(context.damage, 1, { name = "Flamestrike", dmg = 110, dps = 110 / 14, share = 110 / 660, proc = 0 })
+    for _, entry in ipairs(context.damage) do
+        entry.dps, entry.share = entry.dmg / 14, entry.dmg / 660
+    end
+    context:Publish("AZSMETER")
+    context:Tick()
+    assert(context:Row(1).entry.dmg == 110 and context:Row(1).entry.dps == 55, "new rank lost the existing X baseline")
+    assert(table.getn(context.damage) == 11 and context.damage[1].dmg == 110)
+
+    local separate = Meter(function(c)
+        c.settings.meterDpsWindow = 0
+        c.damage = {
+            { name = "Flamestrike", dmg = 40, dps = 4, share = 0.4, proc = 0 },
+            { name = "Flamestrike", dmg = 30, dps = 3, share = 0.3, proc = 1 },
+            { name = "Flamestrike", dmg = 20, dps = 2, share = 0.2, proc = 0 },
+            { name = "Flamestrike", dmg = 10, dps = 1, share = 0.1, proc = 1 },
+        }
+    end)
+    separate:Tick()
+    assert(separate:Row(1).entry.dmg == 60 and separate:Row(1).entry.proc == 0)
+    assert(separate:Row(2).entry.dmg == 40 and separate:Row(2).entry.proc == 1, "direct ranks merged with a proc")
+end)
+
+Test("legacy rank groups refresh same-stamp publications without idle presentation work", function()
+    for _, performance in ipairs({ false, true }) do
+        local context = Meter(function(c)
+            c.settings.performanceMode, c.settings.meterDpsWindow = performance, 0
+            c.damage = LegacyRanks(9)
+        end)
+        context:Tick()
+        local first, allocated = context:Row(1), #context.objects
+        context:ResetCounts()
+        context:Tick()
+        context:NoPresentationWrites()
+        assert(#context.objects == allocated and first.entry.dmg == 450)
+        context.damage[1].dmg, context.damage[1].dps = 100, 10
+        for _, entry in ipairs(context.damage) do
+            entry.share = entry.dmg / 460
+        end
+        context:Publish("AZSMETER", context.env.AZS_METER_UPDATED)
+        context:Tick()
+        assert(
+            first.entry.dmg == 460 and #context.objects == allocated,
+            "same-stamp rank update lost grouping or pool reuse"
+        )
+        context:SetLayoutHidden(true)
+        context:ResetCounts()
+        context:Tick()
+        NoMeterReads(context)
+        context:NoPresentationWrites()
+        context:SetLayoutHidden(false)
+        context:Tick()
+        assert(first.active and first.entry.dmg == 460 and #context.objects == allocated)
+        context:SetSetting("meterEnabled", false)
+        context:ResetCounts()
+        context:Tick()
+        NoMeterReads(context)
+        assert(not context.controller:GetScript("OnUpdate"))
+    end
+end)
+
 print("PASS " .. passed .. " party meter contracts")

@@ -83,6 +83,23 @@ existing view-selection bound grows from four to five. CI-only lifecycle cases
 are authored and were not run locally. Source review does not measure FPS,
 native drawing or live appearance.
 
+## Meter ability rank grouping
+
+Rank summaries reuse the existing meter reader, row pool, source metadata and
+one-Hz rate presentation. Grouped rows never outnumber their native inputs.
+Normalized copies and family identities are pooled and publication-cached;
+rate-only refreshes retain the existing cadence. Legacy exact-name/proc grouping
+precedes session baselines and rolling-DPS observation, so upgrades do not add
+another history series for the same identity.
+
+V1 grouping uses supplied ability/rank metadata and preserves owner, proc and
+explicit variant/item/talent distinctions. Detailed native records, counters and
+checkpoints are untouched. Both Performance Mode states show the same instant
+summary. Added frame/region/asset/event/updater/setting/SavedVariable cost is
+zero; hidden/off work and retirement remain with the current owners. CI-only
+cases were authored and not run locally; this is no measured rendering or FPS
+result.
+
 ## Mandatory rule for all drawing and assets
 
 Drawing performance is a project requirement for every frame and artwork change,

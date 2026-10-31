@@ -416,15 +416,83 @@ function DFRL.tools.NewNativeMeter()
         view.rows, view.used = {}, state.usage
         return view
     end
+    local familyFields = { "variantKey", "itemInstanceKey", "talentKey", "itemKey" }
+    local function FamilyKey(source, native)
+        if
+            source.kind ~= "ability"
+            or not Id(source.abilityKey)
+            or not Number(source.rank)
+            or source.rank ~= math.floor(source.rank)
+        then
+            return
+        end
+        local key = string.len(native.ownerId)
+            .. ":"
+            .. native.ownerId
+            .. string.len(source.abilityKey)
+            .. ":"
+            .. source.abilityKey
+            .. (native.nativeProc and "1" or "0")
+        for _, field in ipairs(familyFields) do
+            local value = source[field]
+            if value ~= nil and not Id(value) then return end
+            value = value or ""
+            key = key .. string.len(value) .. ":" .. value
+        end
+        if
+            source.itemId ~= nil
+            and (not Number(source.itemId) or source.itemId <= 0 or source.itemId ~= math.floor(source.itemId))
+        then
+            return
+        end
+        return key .. ":" .. (source.itemId and tostring(source.itemId) or "")
+    end
+    local function RowOrder(left, right)
+        if left.dmg == right.dmg then return left.order < right.order end
+        return left.dmg > right.dmg
+    end
+    local function GroupRows(view, snapshot, query)
+        local count = 0
+        for _, row in ipairs(view.pool) do
+            local family = row.family
+            if family and not family.ambiguous then
+                if not family.emitted then
+                    family.emitted = true
+                    count = count + 1
+                    family.row.share = snapshot.totals.displayAmount > 0
+                            and math.min(1, family.row.dmg / snapshot.totals.displayAmount)
+                        or 0
+                    view.rows[count] = family.row
+                end
+            else
+                count = count + 1
+                view.rows[count] = row
+            end
+        end
+        for index = count + 1, table.getn(view.rows) do
+            view.rows[index] = nil
+        end
+        table.setn(view.rows, count)
+        if query.groupBy == "source" then table.sort(view.rows, RowOrder) end
+    end
     local function CopyRows(view, snapshot, query)
+        view.pool, view.families = view.pool or {}, view.families or {}
+        local rebuild = view.groupRevision ~= view.revision
+        for _, family in pairs(view.families) do
+            family.used, family.emitted, family.ambiguous, family.rank = false, false, false, nil
+            for rank in pairs(family.ranks) do
+                family.ranks[rank] = nil
+            end
+        end
         local count = 0
         for index, native in ipairs(snapshot.rows) do
-            local row = view.rows[index] or {}
+            local row = view.pool[index] or {}
             local average = query.checkpointId and native.checkpointAverage or native.periodAverage
             row.rowId, row.dmg, row.dps, row.averageDps, row.share =
                 native.rowId, native.displayAmount, native.displayRate.value, average.value, native.share
             row.icon, row.iconStatus, row.class = nil, nil, nil
             row.portraitKey, row.portraitRunId, row.portraitStatus = nil, nil, nil
+            row.family, row.order = nil, index
             if query.groupBy == "owner" then
                 local actor = snapshot.actors[native.ownerId]
                 row.name, row.class, row.proc = actor.name, actor.classKey, 0
@@ -434,13 +502,55 @@ function DFRL.tools.NewNativeMeter()
                 local source = snapshot.sources[native.sourceKey]
                 row.name, row.proc, row.iconStatus = source.name, native.nativeProc and 1 or 0, source.icon.status
                 if source.icon.status == "ready" then row.icon = source.icon.path end
+                if rebuild then row.familyKey = query.groupBy == "source" and FamilyKey(source, native) or nil end
+                local key = row.familyKey
+                if key then
+                    local family = view.families[key]
+                    if not family then
+                        family = { row = {}, token = {}, ranks = {} }
+                        view.families[key] = family
+                    end
+                    local grouped = family.row
+                    if not family.used then
+                        grouped.rowId, grouped.dmg, grouped.dps, grouped.averageDps, grouped.order =
+                            family.token, row.dmg, row.dps, row.averageDps, index
+                    else
+                        grouped.dmg = grouped.dmg + row.dmg
+                        grouped.dps = grouped.dps and row.dps and grouped.dps + row.dps or nil
+                        grouped.averageDps = grouped.averageDps
+                                and row.averageDps
+                                and grouped.averageDps + row.averageDps
+                            or nil
+                    end
+                    if
+                        not Number(grouped.dmg)
+                        or (grouped.dps ~= nil and not Number(grouped.dps))
+                        or (grouped.averageDps ~= nil and not Number(grouped.averageDps))
+                    then
+                        return false
+                    end
+                    if family.ranks[source.rank] then family.ambiguous = true end
+                    family.ranks[source.rank] = true
+                    if not family.rank or source.rank > family.rank then
+                        grouped.name, grouped.proc, grouped.iconStatus, grouped.icon =
+                            row.name, row.proc, row.iconStatus, row.icon
+                        family.rank = source.rank
+                    end
+                    row.family, family.used = family, true
+                end
             end
-            view.rows[index], count = row, index
+            view.pool[index], count = row, index
         end
-        for index = count + 1, table.getn(view.rows) do
-            view.rows[index] = nil
+        for index = count + 1, table.getn(view.pool) do
+            view.pool[index] = nil
         end
-        table.setn(view.rows, count)
+        table.setn(view.pool, count)
+        for key, family in pairs(view.families) do
+            if not family.used then view.families[key] = nil end
+        end
+        GroupRows(view, snapshot, query)
+        view.groupRevision = view.revision
+        return true
     end
     local function Read(viewSpec, window)
         local context, failure = adapter.Context()
@@ -538,7 +648,7 @@ function DFRL.tools.NewNativeMeter()
             current.counterRevision, current.metadataRevision, current.languageRevision
         view.counterEpoch, view.authorityId = current.counterEpoch, current.authorityId
         view.encounterId = current.encounter and current.encounter.encounterId
-        CopyRows(view, snapshot, query)
+        if not CopyRows(view, snapshot, query) then return Failure(Malformed(), current) end
         local average = query.checkpointId and snapshot.totals.checkpointAverage or snapshot.totals.periodAverage
         local meta = {
             averageRate = average.value,

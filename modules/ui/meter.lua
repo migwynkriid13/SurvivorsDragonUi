@@ -76,6 +76,9 @@ DFRL:NewMod("DamageMeter", 7, function()
             taken = true,
         },
     }
+    for _, selected in ipairs(modes) do
+        if not selected.party and not selected.taken then selected.groups = T.NewMeterSourceGroups() end
+    end
     local phases = { playing = true, choosing = true, paused = true, dead = true, victory = true }
     local mode, offset, age = 1, 0, 0.2
     local inWorld, editing, ready, faulted = true, false, true, false
@@ -115,6 +118,11 @@ DFRL:NewMod("DamageMeter", 7, function()
         return UsesApi(index)
             or (selected.taken and type(_G.AZS_TAKEN) == "table")
             or (selected.getter and type(_G[selected.getter]) == "function")
+    end
+    local function ClearSourceGroups()
+        for _, selected in ipairs(modes) do
+            if selected.groups then selected.groups.Clear() end
+        end
     end
     local function UpdateController()
         local listen = inWorld and enabled and ready and not faulted and true or false
@@ -669,6 +677,7 @@ DFRL:NewMod("DamageMeter", 7, function()
         dps.Clear()
         session.Clear()
         taken.Clear()
+        ClearSourceGroups()
         if api then api.Clear() end
         apiIdentity = {}
         resetPending = false
@@ -690,6 +699,13 @@ DFRL:NewMod("DamageMeter", 7, function()
     local function RunSeconds()
         if apiActive then return apiIdentity.time end
         if Number(AZS_RUN_UPDATED) and type(AZS_RUN) == "table" and Number(AZS_RUN.t) then return AZS_RUN.t end
+    end
+    local function LegacyRows(selected, source, amount, rate, publication)
+        if selected.groups and viewSelection.paint then
+            source = selected.groups.Read(source, publication)
+            if not source then return nil, nil, nil, "Meter data is unavailable." end
+        end
+        return source, amount, rate, nil, publication
     end
     local function ReadNative(index)
         local selected = modes[index]
@@ -725,7 +741,7 @@ DFRL:NewMod("DamageMeter", 7, function()
             and publication.amount == amount
             and (not selected.taken or publication.takenRevision == taken.revision)
         then
-            return source, amount, rate, nil, publication.revision
+            return LegacyRows(selected, source, amount, rate, publication.revision)
         end
         local count = 0
         for _, entry in ipairs(source) do
@@ -752,7 +768,7 @@ DFRL:NewMod("DamageMeter", 7, function()
         publication.receipt, publication.amount, publication.revision = receipt, amount, publicationSequence
         publication.takenRevision = selected.taken and taken.revision or nil
         publications[index] = publication
-        return source, amount, rate, nil, publication.revision
+        return LegacyRows(selected, source, amount, rate, publication.revision)
     end
     local function ReadOnce(index)
         local entry = viewSelection.reads[index]
@@ -1044,6 +1060,7 @@ DFRL:NewMod("DamageMeter", 7, function()
             session.Clear()
             dps.Clear()
             taken.Clear()
+            ClearSourceGroups()
             apiActive = useApi
             apiIdentity = {}
             viewSelection.dirty = true
@@ -1250,6 +1267,7 @@ DFRL:NewMod("DamageMeter", 7, function()
             dps.Clear()
             session.Clear()
             taken.Clear()
+            ClearSourceGroups()
             if api then api.Clear() end
             resetPending = false
             Release()
@@ -1352,6 +1370,7 @@ DFRL:NewMod("DamageMeter", 7, function()
             dps.Clear()
             session.Clear()
             taken.Clear()
+            ClearSourceGroups()
             if api then api.Clear() end
             resetPending = false
             Release()

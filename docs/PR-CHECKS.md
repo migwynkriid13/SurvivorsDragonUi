@@ -91,6 +91,16 @@ Damage Taken baseline are separate actions, not an atomic five-view checkpoint.
 These cases are authored and were not executed locally; no native data or game
 execution is used by the local workflow.
 
+Ability-rank cases add nine native ranks and a later upgrade, checking one
+combined row, amounts, available/unavailable rates, shares and sorting without
+changing native counters or checkpoints. They retain unrelated same-name
+sources, owner/proc/variant/item/talent distinctions, ambiguous same-rank
+families and missing-identity sources. Legacy duplicate cases exercise grouping
+before session Reset and rolling-rate observation. Metadata/language changes,
+pool reuse, hidden/off work and both Performance Mode states use the production
+owners over explicit fake boundaries. These cases are CI-only and were not
+executed locally; they do not prove native client behavior.
+
 The production banner fixture supplies an explicit `UIErrorsFrame.AddMessage`
 boundary and the generated fourteen-language native catalogs. Affix-warning
 cases cover exact received-text admission and native suppression, separate
