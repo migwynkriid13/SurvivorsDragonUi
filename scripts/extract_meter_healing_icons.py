@@ -12,6 +12,8 @@ import re
 import struct
 from pathlib import Path
 
+from native_pe import PeImage
+
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE_SHA256 = "291c281bd0a4255fdb3d04b2e442121e2df144f388f16de086b430e875aaad08"
 # Name LEA, name-length MOV, icon LEA, icon-length MOV/prefix, record call/target.
@@ -29,21 +31,8 @@ def extract(client):
     fingerprint = hashlib.sha256(raw).hexdigest()
     if fingerprint != SOURCE_SHA256:
         raise ValueError("Review the new executable before interpreting the pinned healing producers.")
-    pe = struct.unpack_from("<I", raw, 0x3C)[0]
-    optional = pe + 24
-    image_base = struct.unpack_from("<Q", raw, optional + 24)[0]
-    section_table = optional + struct.unpack_from("<H", raw, pe + 20)[0]
-    sections = []
-    for index in range(struct.unpack_from("<H", raw, pe + 6)[0]):
-        _, rva, size, offset = struct.unpack_from("<4I", raw, section_table + index * 40 + 8)
-        sections.append((image_base + rva, offset, size))
-
-    def read(address, length):
-        for base, offset, size in sections:
-            if base <= address and address + length <= base + size:
-                start = offset + address - base
-                return raw[start : start + length]
-        raise ValueError("Healing metadata lies outside a file-backed PE section.")
+    image = PeImage(raw)
+    read = image.read
 
     def immediate(address, prefix):
         encoded = read(address, len(prefix) + 4)

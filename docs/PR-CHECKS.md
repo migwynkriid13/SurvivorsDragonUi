@@ -255,6 +255,10 @@ The assertions cover:
   rejects duplicate IDs before either cosmetic index is built. Circular-image
   cases cover native path verification, failed-binding memoization, retryable
   pooled strips at both existing icon sizes, unchanged writes and cleanup.
+  Texture readiness cases retain true/1 success, exact/extension-stripped
+  readback and explicit-failure precedence. Production loot cases hide
+  unconfirmed icons without an empty gutter, then recover through the existing
+  refresh and reuse the pool in both Performance Mode states.
   Display copies retain false values, range/enum normalization, legacy fallbacks
   and draft isolation. Source contracts accept the complete defaults-driven
   normalization loop and reject filtered, mis-keyed or wrong-source copies.
@@ -644,6 +648,15 @@ unreferenced artwork despite retained source. Source-checker fixtures execute on
 against synthetic source/data; the parser never loads those Lua chunks. Separate
 mutation fixtures verify that orphan regressions, duplicate keys, misspelled APIs,
 broken callbacks and stale/ambiguous production seams are rejected.
+
+Authoring-helper fixtures use synthetic PE32+ and BLP bytes, with a fake Pillow
+boundary. They cover complete file-backed spans, truncated headers/data,
+fingerprint rejection before PE parsing, retained loot string limits, Raw1
+alpha precision, Raw3 transparent RGB and the existing format fallback. Current
+character/jewelry loaders use the production decoder without network access.
+Generator cases retain UTF-8, quotes, backslashes and control bytes through the
+shared Lua 5.0 string writer. These cases run in the existing CI fixture step;
+they read no client files, regenerate no artwork/catalogs and were not run locally.
 
 ## What still needs the client
 

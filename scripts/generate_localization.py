@@ -11,6 +11,8 @@ import mmap
 import re
 from pathlib import Path
 
+from generate_spell_icons import lua_string
+
 ROOT = Path(__file__).resolve().parents[1]
 # Physical order of the reviewed embedded catalogs; TSV columns have their own
 # named headers so an inserted native language cannot shift existing captions.
@@ -25,10 +27,6 @@ AFFIX_KEYS = (
     "A slain elite leaves a pool that heals enemies standing in it.",
     "Orbs come out of the horde: only direct hits hurt them, so kill them before they burst.",
 )
-
-
-def lua_string(text):
-    return '"' + text.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t") + '"'
 
 
 def translations(path, numbered=False):

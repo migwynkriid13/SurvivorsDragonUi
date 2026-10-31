@@ -192,6 +192,12 @@ Source executable SHA-256: `6382e9ae654295293b82d48fb07a1aa999132775bda10c6c6f80
 - `localization/native-keys.json` selects native captions/chat templates. The generator also includes only the identity names/subtitles needed for language detection.
 - `scripts/generate_localization.py --client PATH_TO_CLIENT` prepares `localization/data.lua`. Its pinned fingerprint and catalog-count guard require source review before accepting a different game build or language order. It supplies neither fixed gameplay values nor a complete localization dump.
 
+Localization and icon generators share `generate_spell_icons.lua_string` for
+Lua 5.0 quoting, including UTF-8 and fixed-width decimal control-byte escapes.
+The pinned native catalog readers share `scripts/native_pe.py` only for PE32+
+section mapping and complete byte-span reads; each extractor retains its own
+fingerprints, offsets, instruction checks and catalog-selection rules.
+
 The runtime manifest adds only `core/localization.lua` and `localization/data.lua`; source JSON/TSV, documentation and the generator do not enter the release ZIP. Source inspection and data generation do not establish packaged-game behavior or native-speaker translation approval. No local tests, syntax checks, formatting tools or addon/game execution were run. The existing PR GitHub Actions checks are the authorized static checks.
 
 The guardian tracker adds nine addon-caption rows for its heading, layout label,

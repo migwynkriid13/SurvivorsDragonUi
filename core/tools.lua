@@ -10,6 +10,15 @@ function DFRL.tools.NearlyEqual(a, b)
         and math.abs(a - b) <= 0.000001 * math.max(1, math.abs(a), math.abs(b))
 end
 
+-- Native setters can return a flag or rely on an extension-stripped readback.
+-- Callers retain their own binding caches, probes, cleanup and retry cadence.
+function DFRL.tools.TextureAssigned(loaded, assigned, wanted)
+    if loaded == false or wanted == nil then return false end
+    if loaded == true or loaded == 1 then return true end
+    if assigned == wanted then return true end
+    return type(wanted) == "string" and assigned == string.gsub(wanted, "%.[^%.]*$", "")
+end
+
 -- Native unit maxima pass through ceiling/uint32 fields and float32 storage.
 -- Share these exact encodings between cosmetic target and nameplate matching.
 local function UnitMaximumFloat(value)

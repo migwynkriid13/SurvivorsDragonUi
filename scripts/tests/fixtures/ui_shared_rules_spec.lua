@@ -9,6 +9,20 @@ local function Test(name, callback)
     print("PASS " .. name)
 end
 
+Test("texture assignments share native flags, exact readback and failure precedence", function()
+    local assigned = H.New().env.T.TextureAssigned
+    local wanted = "Interface\\Icons\\Shared.blp"
+    assert(assigned(true, nil, wanted) and assigned(1, nil, wanted), "native success flags were lost")
+    assert(assigned(nil, wanted, wanted), "exact path readback was rejected")
+    assert(assigned(nil, "Interface\\Icons\\Shared", wanted), "extension-stripped readback was rejected")
+    assert(assigned(nil, "Interface\\Icons\\Shared", "Interface\\Icons\\Shared.tga"))
+    assert(not assigned(false, wanted, wanted), "explicit failure was overridden by retained artwork")
+    assert(not assigned(false, "Interface\\Icons\\Shared", wanted))
+    assert(not assigned(nil, "Interface\\Icons\\Previous", wanted), "unrelated artwork became ready")
+    assert(not assigned(0, nil, wanted) and not assigned("1", nil, wanted), "unknown flags became ready")
+    assert(not assigned(nil, nil, wanted) and not assigned(nil, nil, nil), "missing artwork became ready")
+end)
+
 Test("HUD restoration retains capture until native readback accepts the original preference", function()
     local c = H.New()
     c:Load("core/hud.lua")

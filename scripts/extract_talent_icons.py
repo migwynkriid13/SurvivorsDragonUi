@@ -13,6 +13,7 @@ import json
 import struct
 
 from generate_spell_icons import Dbc
+from native_pe import PeImage
 
 
 SOURCE_SHA256 = "96e24dcd0e53fc13a6fdef5826aa46f77a29aa1aad4abd585adf04e94b2756d3"
@@ -48,33 +49,12 @@ SELECTION = (
 
 
 def extract_records(raw, spells, spell_icons):
-    pe = struct.unpack_from("<I", raw, 0x3C)[0]
-    if raw[:2] != b"MZ" or raw[pe : pe + 4] != b"PE\0\0":
-        raise ValueError("Expected the pinned Windows PE executable")
-    section_count = struct.unpack_from("<H", raw, pe + 6)[0]
-    optional_size = struct.unpack_from("<H", raw, pe + 20)[0]
-    optional = pe + 24
-    if struct.unpack_from("<H", raw, optional)[0] != 0x20B:
-        raise ValueError("Expected the pinned PE32+ optional header")
-    image_base = struct.unpack_from("<Q", raw, optional + 24)[0]
-    sections = []
-    for index in range(section_count):
-        at = optional + optional_size + index * 40
-        _, rva, size, offset = struct.unpack_from("<4I", raw, at + 8)
-        sections.append((image_base + rva, offset, size))
-
-    def file_offset(address):
-        for base, offset, size in sections:
-            if base <= address < base + size:
-                return offset + address - base
-        raise ValueError("Native pointer is outside the PE file-backed sections")
+    image = PeImage(raw)
+    file_offset = image.offset
 
     def string_at(at):
         address, length = struct.unpack_from("<QQ", raw, at)
-        start = file_offset(address)
-        if start + length > len(raw):
-            raise ValueError("Native string extends beyond the PE file")
-        return raw[start : start + length].decode("utf-8")
+        return image.read(address, length).decode("utf-8")
 
     records = []
     for class_index in range(CLASS_COUNT):

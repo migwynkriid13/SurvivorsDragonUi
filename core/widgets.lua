@@ -26,7 +26,7 @@ function DFRL.tools.NewCircularIcon(portrait, size, minimumParts)
     local function BindPortrait(icon)
         _G.SetPortraitToTexture(portrait:GetName(), icon)
         local assigned = portrait:GetTexture()
-        return assigned == icon or assigned == string.gsub(icon, "%.[^%.]*$", "")
+        return T.TextureAssigned(nil, assigned, icon)
     end
     function image.Bind(icon, effectiveScale)
         if not icon then
@@ -78,14 +78,13 @@ function DFRL.tools.NewCircularIcon(portrait, size, minimumParts)
             scale = effectiveScale
         end
         local usable = true
-        local stem = string.gsub(icon, "%.[^%.]*$", "")
         for index, strip in ipairs(strips) do
             if index <= used then
                 if strip.boundTexture ~= icon then
                     strip.boundTexture = nil
                     local loaded = strip:SetTexture(icon)
                     local assigned = strip:GetTexture()
-                    if loaded ~= false and (loaded == true or loaded == 1 or assigned == icon or assigned == stem) then
+                    if T.TextureAssigned(loaded, assigned, icon) then
                         strip.boundTexture = icon
                     else
                         strip:SetTexture(nil)
