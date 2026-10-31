@@ -447,6 +447,7 @@ DFRL.locale.data = {
             ["Soul Link"] = "Soul Link",
         },
         native = {
+            ["An Explosive Orb appears! Destroy it before it bursts!"] = "An Explosive Orb appears! Destroy it before it bursts!",
             ["Bolstering"] = "Bolstering",
             ["Sanguine"] = "Sanguine",
             ["Explosive"] = "Explosive",
@@ -1109,6 +1110,7 @@ DFRL.locale.data = {
             ["Soul Link"] = "Więź Dusz",
         },
         native = {
+            ["An Explosive Orb appears! Destroy it before it bursts!"] = "Pojawia się Wybuchowa kula! Zniszcz ją, zanim wybuchnie!",
             ["Bolstering"] = "Wzmacniający",
             ["Sanguine"] = "Krwawy",
             ["Explosive"] = "Wybuchowy",
@@ -2242,6 +2244,7 @@ DFRL.locale.data = {
             ["Soul Link"] = "Pouto duší",
         },
         native = {
+            ["An Explosive Orb appears! Destroy it before it bursts!"] = "Objevuje se Výbušná koule! Znič ji, než vybuchne!",
             ["Bolstering"] = "Posilující",
             ["Sanguine"] = "Krvavý",
             ["Explosive"] = "Výbušný",
@@ -3378,6 +3381,7 @@ DFRL.locale.data = {
             ["Soul Link"] = "Seelenverbindung",
         },
         native = {
+            ["An Explosive Orb appears! Destroy it before it bursts!"] = "Eine Explosive Kugel erscheint! Zerstört sie, bevor sie platzt!",
             ["Bolstering"] = "Anstachelnd",
             ["Sanguine"] = "Blutig",
             ["Explosive"] = "Explosiv",
@@ -4512,6 +4516,7 @@ DFRL.locale.data = {
             ["Soul Link"] = "Vínculo de Alma",
         },
         native = {
+            ["An Explosive Orb appears! Destroy it before it bursts!"] = "Um Orbe Explosivo aparece! Destrua-o antes que exploda!",
             ["Bolstering"] = "Fortalecente",
             ["Sanguine"] = "Sanguíneo",
             ["Explosive"] = "Explosivo",
@@ -5637,6 +5642,7 @@ DFRL.locale.data = {
             ["Soul Link"] = "Vínculo de alma",
         },
         native = {
+            ["An Explosive Orb appears! Destroy it before it bursts!"] = "¡Aparece un orbe explosivo! ¡Destrúyelo antes de que estalle!",
             ["Bolstering"] = "Reforzante",
             ["Sanguine"] = "Sanguinario",
             ["Explosive"] = "Explosivo",
@@ -6766,6 +6772,7 @@ DFRL.locale.data = {
             ["Soul Link"] = "Lien spirituel",
         },
         native = {
+            ["An Explosive Orb appears! Destroy it before it bursts!"] = "Un Orbe explosif apparaît ! Détruisez-le avant qu'il n'éclate !",
             ["Bolstering"] = "Galvanisant",
             ["Sanguine"] = "Sanguin",
             ["Explosive"] = "Explosif",
@@ -7903,6 +7910,7 @@ DFRL.locale.data = {
             ["Soul Link"] = "Legătura sufletelor",
         },
         native = {
+            ["An Explosive Orb appears! Destroy it before it bursts!"] = "Apare un Glob exploziv! Distruge-l înainte să explodeze!",
             ["Bolstering"] = "Întăritor",
             ["Sanguine"] = "Sângeros",
             ["Explosive"] = "Exploziv",
@@ -9023,6 +9031,7 @@ DFRL.locale.data = {
             ["Soul Link"] = "Soul Link",
         },
         native = {
+            ["An Explosive Orb appears! Destroy it before it bursts!"] = "Bir Patlayıcı Küre belirdi! Patlamadan önce yok et!",
             ["Bolstering"] = "Güçlendiren",
             ["Sanguine"] = "Kanlı",
             ["Explosive"] = "Patlayıcı",
@@ -10019,6 +10028,7 @@ DFRL.locale.data = {
             ["Soul Link"] = "Связь душ",
         },
         native = {
+            ["An Explosive Orb appears! Destroy it before it bursts!"] = "Появилась взрывная сфера! Уничтожьте её, пока она не взорвалась!",
             ["Bolstering"] = "Усиливающий",
             ["Sanguine"] = "Кровавый",
             ["Explosive"] = "Взрывной",
@@ -11234,6 +11244,7 @@ DFRL.locale.data = {
             ["Soul Link"] = "Зв'язок душ",
         },
         native = {
+            ["An Explosive Orb appears! Destroy it before it bursts!"] = "З'явилася вибухова сфера! Знищте її, поки вона не вибухнула!",
             ["Bolstering"] = "Підсилювальний",
             ["Sanguine"] = "Кривавий",
             ["Explosive"] = "Вибуховий",
@@ -12423,6 +12434,7 @@ DFRL.locale.data = {
             ["Soul Link"] = "灵魂链接",
         },
         native = {
+            ["An Explosive Orb appears! Destroy it before it bursts!"] = "易爆宝珠出现了！在它爆炸前摧毁它！",
             ["Bolstering"] = "激励",
             ["Sanguine"] = "血池",
             ["Explosive"] = "易爆",
@@ -13539,6 +13551,7 @@ DFRL.locale.data = {
             ["Soul Link"] = "ソウルリンク",
         },
         native = {
+            ["An Explosive Orb appears! Destroy it before it bursts!"] = "爆発オーブが出現！弾ける前に破壊しろ！",
             ["Bolstering"] = "強化",
             ["Sanguine"] = "血溜まり",
             ["Explosive"] = "爆発",
@@ -14687,6 +14700,7 @@ DFRL.locale.data = {
             ["Soul Link"] = "영혼 연결",
         },
         native = {
+            ["An Explosive Orb appears! Destroy it before it bursts!"] = "폭발 구슬이 나타났습니다! 터지기 전에 파괴하세요!",
             ["Bolstering"] = "강화",
             ["Sanguine"] = "피웅덩이",
             ["Explosive"] = "폭발",

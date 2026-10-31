@@ -37,8 +37,7 @@ DFRL:NewMod("LootView", 4, function()
         if not label:GetFont() then ready = false end
         label:SetJustifyH("LEFT")
         label:SetJustifyV("MIDDLE")
-        label:SetShadowColor(0, 0, 0, 1)
-        label:SetShadowOffset(1, -1)
+        T.SetChatShadow(label)
         return label
     end
     local function Reflow()
@@ -124,12 +123,9 @@ DFRL:NewMod("LootView", 4, function()
             else
                 card.iconPath = nil
                 local loaded = card.icon:SetTexture(icon)
-                hasIcon = loaded ~= false
                 local assigned = card.icon:GetTexture()
-                local stem = type(icon) == "string" and string.gsub(icon, "%.[^%.]*$", "")
-                if hasIcon and (loaded == true or loaded == 1 or assigned == icon or (stem and assigned == stem)) then
-                    card.iconPath = icon
-                end
+                hasIcon = T.TextureAssigned(loaded, assigned, icon)
+                if hasIcon then card.iconPath = icon end
             end
         end
         if hasIcon then

@@ -68,6 +68,20 @@ readiness failures, native retry delays and instance coordinate-space matching. 
 native API enters the runtime payload. These scenarios run only in CI and were
 not executed locally; the future game's implementation still needs native
 integration and rendering verification.
+Native label cases use distinct committed snapshot/metadata revisions, including
+metadata-only changes with stable row IDs and counters. Portrait cases include
+opaque retained images, unchanged strip-backed writes and malformed-response
+cleanup. Navigation cases supply explicit native minimap bounds and the shared
+marker/tooltip boundaries, checking copied coordinate tags separately from
+guide and pin visibility.
+
+The production banner fixture supplies an explicit `UIErrorsFrame.AddMessage`
+boundary and the generated fourteen-language native catalogs. Affix-warning
+cases cover exact received-text admission and native suppression, separate
+identical calls, unchanged ordinary-error arguments, normal/static animation,
+pool reuse, hidden expiry, mode changes, disabled/failure fallback and
+world/reload/external-wrapper cleanup. These cases remain CI-only and were not
+executed locally; they do not prove actual client event delivery or rendering.
 
 SCT default cases use real Display/SCT owners to check Custom mode, Diablo IV
 style, Default font, 90% size and enabled abbreviations. Missing/invalid modes
@@ -134,11 +148,19 @@ Action bar checkbox. Coverage is CI-only; no local tests or game execution.
 
 Global font cases load the production font/display owners with explicit native
 font boundaries. They cover enum normalization, preview/Confirm/discard/profiles/
-reset, preserved native sizes/flags, independent text, hidden Show ordering,
-rejected assignments, fallback recovery, reuse and unchanged writes. The editor
-fixture exercises the Layout selector; SCT and segmented timer fixtures require
+reset, preserved sizes/non-outline flags, independent text, hidden Show ordering,
+rejected font/shadow assignments, fallback recovery, reuse and unchanged writes.
+The editor fixture exercises all three Layout outline choices and Black shadow
+in both Performance Mode states, search, unchanged clicks and Cancel/re-entry;
+profile cases retain the choices through save, overwrite, load, discard and
+fresh-owner restoration. Meter cases cover effective outline caching and retries;
+guardian minimap cases cover countdown readiness under None and Thick outline.
+SCT and segmented timer fixtures require
 their production setters to opt out. These cases remain CI-only and were not
 executed locally. See [FONTS.md](FONTS.md).
+Stored-level integration cases load the real Display, Fonts and StoredLevels
+owners: the badge keeps plain Default 12 through shared font/style transactions
+and both Performance Mode states while the heading follows the shared choices.
 
 Health-format fixtures cover the independent default-on Unit frames, Boss bars
 and Guardian tracker shortening choices through the real display normalizer,
@@ -266,6 +288,10 @@ The assertions cover:
   rejects duplicate IDs before either cosmetic index is built. Circular-image
   cases cover native path verification, failed-binding memoization, retryable
   pooled strips at both existing icon sizes, unchanged writes and cleanup.
+  Texture readiness cases retain true/1 success, exact/extension-stripped
+  readback and explicit-failure precedence. Production loot cases hide
+  unconfirmed icons without an empty gutter, then recover through the existing
+  refresh and reuse the pool in both Performance Mode states.
   Display copies retain false values, range/enum normalization, legacy fallbacks
   and draft isolation. Source contracts accept the complete defaults-driven
   normalization loop and reject filtered, mis-keyed or wrong-source copies.
@@ -655,6 +681,15 @@ unreferenced artwork despite retained source. Source-checker fixtures execute on
 against synthetic source/data; the parser never loads those Lua chunks. Separate
 mutation fixtures verify that orphan regressions, duplicate keys, misspelled APIs,
 broken callbacks and stale/ambiguous production seams are rejected.
+
+Authoring-helper fixtures use synthetic PE32+ and BLP bytes, with a fake Pillow
+boundary. They cover complete file-backed spans, truncated headers/data,
+fingerprint rejection before PE parsing, retained loot string limits, Raw1
+alpha precision, Raw3 transparent RGB and the existing format fallback. Current
+character/jewelry loaders use the production decoder without network access.
+Generator cases retain UTF-8, quotes, backslashes and control bytes through the
+shared Lua 5.0 string writer. These cases run in the existing CI fixture step;
+they read no client files, regenerate no artwork/catalogs and were not run locally.
 
 ## What still needs the client
 

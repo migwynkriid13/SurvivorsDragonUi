@@ -710,6 +710,37 @@ Test("failed optional icons retry on refresh and successful bindings stay cached
     context:NoPresentationWrites()
 end)
 
+Test("unconfirmed loot icons hide and retry through the existing refresh in both modes", function()
+    for _, performance in ipairs({ false, true }) do
+        local context, service = Loot({ performanceMode = performance })
+        local iconPath = "Interface\\Icons\\Test"
+        for _, object in ipairs(context.objects) do
+            if object.icon then
+                local setTexture = object.icon.SetTexture
+                object.icon.SetTexture = function(icon, value)
+                    if value == iconPath and not context.iconReady then return nil end
+                    return setTexture(icon, value)
+                end
+            end
+        end
+        Deliver(context, service, "Unconfirmed")
+        local card
+        for _, object in ipairs(context.objects) do
+            if object.entry and object.entry.name == "Unconfirmed" then card = object end
+        end
+        assert(card and not card.iconPath and not card.icon:IsShown(), "unconfirmed icon became visible or cached")
+        assert(card.textLeft == 23, "failed icon kept an empty icon gutter")
+        local allocated = #context.objects
+        context.iconReady = true
+        context:NotifyLocale()
+        assert(card.iconPath == iconPath and card.icon:IsShown() and card.textLeft == 83)
+        assert(#context.objects == allocated, "recovery replaced the prepared pool")
+        context:ResetCounts()
+        context:NotifyLocale()
+        context:NoPresentationWrites()
+    end
+end)
+
 Test("a failed loot draw releases native ownership and every active card", function()
     local context, service, animation = Loot()
     Deliver(context, service, "First")

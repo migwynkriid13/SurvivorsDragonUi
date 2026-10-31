@@ -47,6 +47,8 @@ local function Fixture(circle)
             return nil, { code = "ART_NOT_READY", message = "pending", retryable = true, retryAfterSeconds = 0.2 }
         end
         texture:SetTexture("retained:" .. run .. ":" .. key)
+        -- A retained native image need not expose a file path through GetTexture.
+        if state.opaque then texture.texture = nil end
         if state.badSuccess then return true, { code = "INTERNAL_ERROR", retryable = false } end
         return true, nil
     end
@@ -121,6 +123,33 @@ do
     assert(
         image.BindNative("run", "replacement") and table.getn(state:Parts()) == 50,
         "new identity did not reuse the pool"
+    )
+end
+
+for _, circle in ipairs({ true, false }) do
+    local c, state, image, portrait = Fixture(circle)
+    state.opaque = true
+    assert(image.BindNative("run", "hero"), "native image without path readback did not bind")
+    local calls = state.calls
+    c:ResetCounts()
+    assert(image.BindNative("run", "hero"))
+    c:NoPresentationWrites()
+    assert(state.calls == calls, "opaque native binding repeated its image work")
+    image.Clear()
+    assert(
+        c.writes.SetTexture == (circle and 1 or 24) and not portrait:IsShown(),
+        "retirement did not clear opaque retained images exactly once"
+    )
+    for _, strip in ipairs(state:Parts()) do
+        assert(not strip:IsShown() and not strip.nativeKey, "retirement retained an opaque strip binding")
+    end
+    state.badSuccess = true
+    c:ResetCounts()
+    local bound, failure = image.BindNative("run", "replacement")
+    assert(not bound and failure and not portrait:IsShown(), "opaque malformed success exposed an image")
+    assert(
+        c.writes.SetTexture == (circle and 3 or 2),
+        "malformed opaque native binding did not clear its pending image"
     )
 end
 

@@ -551,6 +551,40 @@ Test("name and number fonts stay independent and rejected native sizes retry", f
     assert(not context.reads.metrics, "settled font retry kept measuring unchanged values")
 end)
 
+Test("global outline choices preserve successful size caching and rejected-size retries", function()
+    for _, outline in ipairs({ "", "THICKOUTLINE" }) do
+        local context = Meter()
+        -- The real font registry is covered separately. This boundary models
+        -- its effective flags so the production meter checks the accepted style.
+        context.env.T.GetFontFlags = function() return outline end
+        context.env.T.SetFont = function(object, size) object:SetFont("DEFAULT_TEST", size, outline) end
+        context:SetSetting("meterNameFontSize", 10)
+        context:SetSetting("meterFontSize", 13)
+        context:Tick()
+        local row = context:Row(1)
+        local _, nameSize, nameFlags = row.name:GetFont()
+        local _, numberSize, numberFlags = row.value:GetFont()
+        assert(nameSize == 10 and nameFlags == outline and numberSize == 13 and numberFlags == outline)
+        assert(
+            row.layoutNameFontSize == 10 and row.layoutFontSize == 13,
+            "accepted global outline did not settle the meter's size cache"
+        )
+        context.failFontObject, context.failFontSize = row.name, 9
+        context:SetSetting("meterNameFontSize", 9)
+        context:Tick()
+        _, nameSize = row.name:GetFont()
+        assert(nameSize == 10 and row.layoutNameFontSize == 10, "rejected size was cached with a global outline")
+        context.failFontObject = nil
+        context:Tick()
+        _, nameSize, nameFlags = row.name:GetFont()
+        assert(nameSize == 9 and nameFlags == outline and row.layoutNameFontSize == 9)
+        context:ResetCounts()
+        context:Tick()
+        context:NoPresentationWrites()
+        assert(not context.reads.metrics, "settled global outline kept measuring the meter")
+    end
+end)
+
 Test("numeric metrics follow font scale and width changes and retry unavailable glyphs", function()
     local context = Meter()
     context:Tick()

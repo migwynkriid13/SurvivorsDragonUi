@@ -303,8 +303,7 @@ DFRL:NewMod("Jewelry", 4, function()
             effectPanel:Hide()
             effectText = effectPanel:CreateFontString(nil, "OVERLAY")
             T.SetFont(effectText, 13, "")
-            effectText:SetShadowColor(0, 0, 0, 1)
-            effectText:SetShadowOffset(1, -1)
+            T.SetChatShadow(effectText)
             effectText:SetJustifyH("LEFT")
             effectText:SetJustifyV("TOP")
             effectText:SetWidth(EFFECT_MAX_WIDTH)
@@ -410,8 +409,7 @@ DFRL:NewMod("Jewelry", 4, function()
         iconProbe:SetTexture(nil)
         local loaded = iconProbe:SetTexture(texture)
         local assigned = iconProbe:GetTexture()
-        local stem = string.gsub(texture, "%.[^%.]*$", "")
-        if loaded == 1 or loaded == true or assigned == texture or assigned == stem then slot.artTexture = texture end
+        if T.TextureAssigned(loaded, assigned, texture) then slot.artTexture = texture end
         iconProbe:SetTexture(nil)
         slot.texture = texture
         iconsDirty = true

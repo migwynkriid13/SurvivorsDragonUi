@@ -8,6 +8,8 @@ DFRL:NewMod("Display", 0, function()
         meterRows = 6,
         layoutShowGrid = true,
         uiFont = "default",
+        uiFontOutline = "OUTLINE",
+        uiFontShadow = true,
         layoutSnapEnabled = true,
         layoutGridSpacing = 32,
         meterFontSize = 11,
@@ -156,6 +158,9 @@ DFRL:NewMod("Display", 0, function()
             if value == entry.value then return value end
         end
     end
+    local function NormalizeUiFontOutline(value)
+        if value == "" or value == "OUTLINE" or value == "THICKOUTLINE" then return value end
+    end
     local function Read(source, key)
         local value
         if type(source) == "table" then value = source[key] end
@@ -171,6 +176,7 @@ DFRL:NewMod("Display", 0, function()
         if key == "lootMode" then return NormalizeLootMode(value) or defaults[key] end
         if key == "sctFont" then return NormalizeSctFont(value) or defaults[key] end
         if key == "uiFont" then return NormalizeUiFont(value) or defaults[key] end
+        if key == "uiFontOutline" then return NormalizeUiFontOutline(value) or defaults[key] end
         if key == "sctStyle" then
             local style = NormalizeSctStyle(value)
             if style then return style end
@@ -230,6 +236,9 @@ DFRL:NewMod("Display", 0, function()
             if not value then return end
         elseif key == "uiFont" then
             value = NormalizeUiFont(value)
+            if not value then return end
+        elseif key == "uiFontOutline" then
+            value = NormalizeUiFontOutline(value)
             if not value then return end
         elseif type(value) ~= "boolean" then
             return

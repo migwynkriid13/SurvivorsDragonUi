@@ -206,6 +206,12 @@ phase = "playing"
 env.Minimap = env.CreateFrame("Frame", nil, env.UIParent)
 env.Minimap:SetWidth(300)
 env.Minimap:SetHeight(300)
+-- The shared size reader measures native edges before authored dimensions.
+-- These are explicit local native bounds, independent of world/map geometry.
+env.Minimap.GetLeft = function() return 0 end
+env.Minimap.GetRight = function() return 300 end
+env.Minimap.GetBottom = function() return 0 end
+env.Minimap.GetTop = function() return 300 end
 env.Minimap.GetZoom = function() return 0 end
 env.Minimap.SetPlayerModel = function() end
 env.GetCVar = function(key)
@@ -221,6 +227,17 @@ env.DFRL.locale.Bind = function() end
 env.DFRL.locale.Native = function(_, values) return tostring(values.n) .. " yards" end
 env.DFRL.layout.IsHidden = function() return false end
 env.DFRL.layout.Register = function(_, _, anchor) anchor() end
+local registeredPins = {}
+env.T.RegisterTooltipIcon = function(pin, icon, side)
+    assert(pin:GetParent() == env.Minimap and icon == nil and side == "cursor", "unexpected guardian tooltip boundary")
+    registeredPins[pin] = true
+end
+-- Observe the actual copied lists at the existing public navigation boundary.
+local accepted, setPoints = {}, nav.SetPoints
+function nav.SetPoints(key, list)
+    accepted[key] = list
+    return setPoints(key, list)
+end
 local createObject = c.Object
 function c:Object(...)
     local object = createObject(self, ...)
@@ -237,6 +254,7 @@ lair.index, lair.id, lair.state = 1, 3, "asleep"
 env.AZS_CHESTS, env.AZS_CHESTS_UPDATED = { point }, 1
 env.AZS_LAIRS, env.AZS_LAIRS_UPDATED = { lair }, 1
 c:Load("core/hud.lua")
+c:Load("core/widgets.lua")
 c:Load("core/display.lua", "Display")
 c:Load("modules/map/waypoints.lua", "Waypoints")
 local display, reader = env.DFRL.display, env.DFRL_CacheWaypointReader
@@ -251,11 +269,28 @@ end
 local function Visible()
     return env.DFRL_CacheWaypoint:IsShown() and env.DFRL_GuardianWaypoint:IsShown() and Pin("1") and Pin("1:3")
 end
+local function AcceptedTags(source, original)
+    local copy = accepted[source] and accepted[source][1]
+    assert(copy and copy ~= original, "destination publication was missing or retained the native table")
+    assert(
+        copy.runId == original.runId and copy.mapId == original.mapId and copy.spaceId == original.spaceId,
+        "accepted native coordinate tags were lost in destination copies"
+    )
+end
+local function AssertVisible()
+    assert(env.DFRL_CacheWaypoint:IsShown(), "accepted cache destination did not show its guide")
+    assert(env.DFRL_GuardianWaypoint:IsShown(), "accepted guardian destination did not show its guide")
+    assert(Pin("1"), "accepted cache destination did not project onto the native minimap bounds")
+    local pin = assert(Pin("1:3"), "accepted guardian destination did not project onto the native minimap bounds")
+    assert(registeredPins[pin] and pin.art and pin.check, "guardian pin skipped its shared artwork/tooltip owners")
+end
 for _, performance in ipairs({ false, true }) do
     display.Set("performanceMode", performance)
     position = Position()
     Tick()
-    assert(Visible(), "accepted native coordinate tags were lost in destination copies")
+    AcceptedTags("AZS_CHESTS", point)
+    AcceptedTags("AZS_LAIRS", lair)
+    AssertVisible()
     position.x, position.y = 8, 4
     capReads, positionReads, mapReads = 0, 0, 0
     Tick()

@@ -225,8 +225,7 @@ DFRL:NewMod("RunTimers", 5, function()
             if texture.affixPath == wanted then return true end
             local loaded = texture:SetTexture(wanted)
             local assigned = texture:GetTexture()
-            local stem = string.gsub(wanted, "%.[^%.]*$", "")
-            if loaded ~= false and (loaded == true or loaded == 1 or assigned == wanted or assigned == stem) then
+            if T.TextureAssigned(loaded, assigned, wanted) then
                 texture.affixPath = wanted
                 return true
             end
@@ -552,8 +551,7 @@ DFRL:NewMod("RunTimers", 5, function()
             if not self.bound then
                 local loaded = texture:SetTexture(atlas)
                 local assigned = texture:GetTexture()
-                local stem = string.gsub(atlas, "%.[^%.]*$", "")
-                if loaded == false or not (loaded == true or loaded == 1 or assigned == atlas or assigned == stem) then
+                if not T.TextureAssigned(loaded, assigned, atlas) then
                     if assigned then texture:SetTexture(nil) end
                     if texture:IsShown() then texture:Hide() end
                     return
@@ -618,17 +616,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 local wanted = path .. "FillWhite.blp"
                 local loaded = texture:SetTexture(wanted)
                 local assigned = texture:GetTexture()
-                if
-                    loaded == false
-                    or not (
-                        loaded == true
-                        or loaded == 1
-                        or assigned == wanted
-                        or assigned == string.sub(wanted, 1, -5)
-                    )
-                then
-                    return
-                end
+                if not T.TextureAssigned(loaded, assigned, wanted) then return end
                 texture:SetTexCoord(0, 1, 0, 15 / 16)
                 -- Bake the preview's opacity against black into the tint. A
                 -- translucent strip over native red and black looks split.
@@ -1284,8 +1272,14 @@ DFRL:NewMod("RunTimers", 5, function()
                     button:SetSelected(value == selected)
                 end
             end
-            if fontEditor.uiFont ~= selected then
-                fontEditor.uiFont = selected
+            local outline = DFRL.display.Get("uiFontOutline")
+            for value, button in pairs(fontEditor.uiFontOutlineButtons or {}) do
+                if button:IsVisible() and button.editorSelected ~= (value == outline) then
+                    button:SetSelected(value == outline)
+                end
+            end
+            if fontEditor.uiFont ~= selected or fontEditor.uiFontOutline ~= outline then
+                fontEditor.uiFont, fontEditor.uiFontOutline = selected, outline
                 if fontEditor.RefreshOptionLayout then fontEditor.RefreshOptionLayout() end
             end
         end
@@ -2144,6 +2138,8 @@ DFRL:NewMod("RunTimers", 5, function()
                     description = "Change addon text except the run timer and combat text, which have their own fonts.",
                     offset = 338,
                 },
+                { key = "uiFontOutline", label = "Outline", offset = 488 },
+                { key = "uiFontShadow", label = "Black shadow", offset = 552 },
             },
             combat = {
                 { key = "outgoing", label = "Outgoing damage", offset = 0 },
@@ -2203,6 +2199,7 @@ DFRL:NewMod("RunTimers", 5, function()
             end
         end
         SearchChoices("layout", DFRL.display.fonts, captions.uiFont)
+        SearchChoices("layout", fontOutlines, captions.uiFontOutline)
         SearchChoices("combat", modes, captions.outgoing)
         SearchChoices("combat", sctStyles, captions.sctStyle)
         SearchChoices("combat", sctFonts, captions.sctFont)
@@ -2254,6 +2251,7 @@ DFRL:NewMod("RunTimers", 5, function()
         fontEditor = T.CreateEditorPanel(UIParent, width, 704, "SurvivorsDragonUiSettings")
         fontEditor:Hide()
         fontEditor.uiFont = DFRL.display.Get("uiFont")
+        fontEditor.uiFontOutline = DFRL.display.Get("uiFontOutline")
         fontEditor:SetFrameStrata("TOOLTIP")
         fontEditor:SetFrameLevel(150)
         PlaceFontEditor()
@@ -2340,7 +2338,7 @@ DFRL:NewMod("RunTimers", 5, function()
         performance.label:SetHeight(28)
         displayControls.performanceMode = performance
         builders.layout = function(page)
-            page:SetHeight(500)
+            page:SetHeight(588)
             DFRL.layout.CreateControls(page, contentWidth, function() SelectPage("layout") end)
             FontEditorLabel(page, captions.uiFont.label, 0, -captions.uiFont.offset, 12)
             local hint = FontEditorLabel(page, captions.uiFont.description, 0, -365, 11)
@@ -2362,6 +2360,30 @@ DFRL:NewMod("RunTimers", 5, function()
                 )
                 fontEditor.uiFontButtons[choice] = button
             end
+            FontEditorLabel(page, captions.uiFontOutline.label, 0, -captions.uiFontOutline.offset, 12)
+            fontEditor.uiFontOutlineButtons = {}
+            for index, entry in ipairs(fontOutlines) do
+                local choice = entry.value
+                local _, button = FontEditorButton(
+                    entry.label,
+                    buttonWidth,
+                    (index - 1) * (buttonWidth + gap),
+                    -514,
+                    function() DFRL.display.Set("uiFontOutline", choice) end,
+                    page
+                )
+                fontEditor.uiFontOutlineButtons[choice] = button
+            end
+            local shadow = T.CreateEditorToggle(
+                page,
+                captions.uiFontShadow.label,
+                nil,
+                contentWidth,
+                function(value) DFRL.display.Set("uiFontShadow", value) end
+            )
+            shadow:SetHeight(28)
+            shadow:SetPoint("TOPLEFT", page, "TOPLEFT", 0, -captions.uiFontShadow.offset)
+            displayControls.uiFontShadow = shadow
         end
         builders.profiles = function(page) DFRL.profiles.CreateControls(page, contentWidth) end
 
@@ -4253,11 +4275,7 @@ DFRL:NewMod("RunTimers", 5, function()
                             if icon.iconPath ~= effect.icon then
                                 local loaded = icon.texture:SetTexture(effect.icon)
                                 local assigned = icon.texture:GetTexture()
-                                local stem = string.gsub(effect.icon, "%.[^%.]*$", "")
-                                icon.iconPath = loaded ~= false
-                                        and (assigned == effect.icon or assigned == stem)
-                                        and effect.icon
-                                    or nil
+                                icon.iconPath = T.TextureAssigned(loaded, assigned, effect.icon) and effect.icon or nil
                             end
                             T.SetTextIfChanged(
                                 icon.count,

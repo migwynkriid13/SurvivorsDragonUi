@@ -99,8 +99,7 @@ DFRL:NewMod("Class resources", 2, function()
     local meterText = meter:CreateFontString(nil, "OVERLAY")
     T.SetFont(meterText, 10, "OUTLINE")
     meterText:SetTextColor(1, 1, 1)
-    meterText:SetShadowColor(0, 0, 0, 1)
-    meterText:SetShadowOffset(1, -1)
+    T.SetChatShadow(meterText)
     meterText:SetPoint("CENTER", meter, "CENTER", 0, 0)
     meter:Hide()
 
@@ -148,10 +147,8 @@ DFRL:NewMod("Class resources", 2, function()
         texture:SetTexCoord(unpack(crop))
         texture:SetWidth(style.width)
         texture:SetHeight(style.height)
-        if loaded == false then return false end
         local assigned = texture:GetTexture()
-        local stem = string.gsub(style.texture, "%.[^%.]*$", "")
-        return loaded == true or loaded == 1 or assigned == style.texture or assigned == stem
+        return T.TextureAssigned(loaded, assigned, style.texture)
     end
 
     local function HidePoints()

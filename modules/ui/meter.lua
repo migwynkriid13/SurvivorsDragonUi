@@ -174,7 +174,7 @@ DFRL:NewMod("DamageMeter", 7, function()
         local flags = label.meterFontFlags or ""
         T.SetFont(label, size, flags)
         local _, applied, appliedFlags = label:GetFont()
-        if not T.NearlyEqual(applied, size) or (appliedFlags or "") ~= flags then return false end
+        if not T.NearlyEqual(applied, size) or (appliedFlags or "") ~= T.GetFontFlags(flags) then return false end
         if height and not T.NearlyEqual(label:GetHeight(), height) then label:SetHeight(height) end
         return true
     end
@@ -501,11 +501,11 @@ DFRL:NewMod("DamageMeter", 7, function()
         row.value:SetHeight(fontSize + 5)
         row.layoutIcons, row.valueColumns = true, 3
         local _, appliedNameSize, appliedNameFlags = row.name:GetFont()
-        if T.NearlyEqual(appliedNameSize, nameFontSize) and (appliedNameFlags or "") == "OUTLINE" then
+        if T.NearlyEqual(appliedNameSize, nameFontSize) and (appliedNameFlags or "") == T.GetFontFlags("OUTLINE") then
             row.layoutNameFontSize = nameFontSize
         end
         local _, appliedValueSize, appliedValueFlags = row.value:GetFont()
-        if T.NearlyEqual(appliedValueSize, fontSize) and (appliedValueFlags or "") == "OUTLINE" then
+        if T.NearlyEqual(appliedValueSize, fontSize) and (appliedValueFlags or "") == T.GetFontFlags("OUTLINE") then
             row.layoutFontSize = fontSize
         end
         row.icon = row:CreateTexture("SurvivorsDragonUiMeterIcon" .. index, "ARTWORK")

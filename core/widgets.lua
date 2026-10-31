@@ -18,7 +18,8 @@ function DFRL.tools.NewCircularIcon(portrait, size, minimumParts)
         end
     end
     local function ClearPortrait()
-        if nativeRun or portrait:GetTexture() then portrait:SetTexture(nil) end
+        -- Strip-backed results also retain nativeRun; only native owns this image.
+        if native or portrait:GetTexture() then portrait:SetTexture(nil) end
         if portrait:IsShown() then portrait:Hide() end
         native = false
         nativeRun, nativeKey, nativeTexture = nil, nil, nil
@@ -32,7 +33,7 @@ function DFRL.tools.NewCircularIcon(portrait, size, minimumParts)
     local function BindPortrait(icon)
         _G.SetPortraitToTexture(portrait:GetName(), icon)
         local assigned = portrait:GetTexture()
-        return assigned == icon or assigned == string.gsub(icon, "%.[^%.]*$", "")
+        return T.TextureAssigned(nil, assigned, icon)
     end
     local function PrepareStrips(effectiveScale)
         if not T.NearlyEqual(scale, effectiveScale) then
@@ -98,7 +99,6 @@ function DFRL.tools.NewCircularIcon(portrait, size, minimumParts)
         iconPath = nil
         PrepareStrips(effectiveScale)
         local usable = true
-        local stem = string.gsub(icon, "%.[^%.]*$", "")
         for index, strip in ipairs(strips) do
             if index <= used then
                 if strip.boundTexture ~= icon then
@@ -106,7 +106,7 @@ function DFRL.tools.NewCircularIcon(portrait, size, minimumParts)
                     strip.nativeRun, strip.nativeKey, strip.nativeTexture = nil, nil, nil
                     local loaded = strip:SetTexture(icon)
                     local assigned = strip:GetTexture()
-                    if loaded ~= false and (loaded == true or loaded == 1 or assigned == icon or assigned == stem) then
+                    if T.TextureAssigned(loaded, assigned, icon) then
                         strip.boundTexture = icon
                     else
                         strip:SetTexture(nil)

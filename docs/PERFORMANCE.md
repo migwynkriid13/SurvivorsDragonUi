@@ -14,6 +14,13 @@ ownership and encounter validation likewise retain the existing controller
 cadences and separate receipt/retirement gates. Performance Mode and normal-mode
 presentation keep the same behavior.
 
+Texture readiness uses `T.TextureAssigned` across circular icons, jewelry,
+resources, absorb, loot and encounter artwork. An explicit native failure wins;
+otherwise a true/1 result or exact/extension-stripped path confirms the binding.
+The helper runs only where each owner already checks changed or pending artwork.
+Successful caches, probes, retirement and retries remain with those owners in
+both Performance Mode states. It adds no frame, region, asset or updater.
+
 ## Native meter and live navigation API — draft
 
 The v1 meter adapter adds no frame, drawing region, asset, event, updater or
@@ -34,6 +41,9 @@ keeps the native circle or existing scale-aware strip pool, with the original
 UV equations, 26-unit icon and 31-unit rim. It adds no persistent visible
 regions over the previously available compatibility fallback. Partial binding
 failures clear the owned fallback instead of drawing a square or stale image.
+Settled strip-backed portraits leave the unused square owner untouched. Native
+circles still clear retained images on retirement or malformed responses even
+when texture-path readback is unavailable; no new region or worker is added.
 
 Live navigation shares one capabilities/position result, including failure,
 inside each synchronous navigation sample and stays frame-driven. Coordinate
@@ -121,17 +131,27 @@ it does not establish on-disk client persistence. See [PROFILES.md](PROFILES.md)
 
 The shared font registry adds no HUD frame, region, asset, event or updater.
 It visits weakly registered text and the existing native Font objects only when
-the effective choice changes. Hidden frame owners defer writes to one OnShow
+the effective face, outline or shadow changes. Hidden frame owners defer writes to one OnShow
 wrapper per owner; ordinary setter calls still skip identical native bindings.
 Successful face probes are cached, unavailable families use the game face, and
 failed object assignments retain a usable fallback and retry through existing
-setter/Show work. Sizes, outlines and shadows remain unchanged.
+setter/Show work. Sizes and unrelated native flags remain unchanged; the shared
+outline and black-shadow choices apply instantly, including newly created
+managed labels. Shadow writes compare native state or cache successful writes
+when getters are absent, with failed assignments remaining retryable.
 
-The lazy Layout selector adds five button frames, twenty texture regions and
-seven FontStrings (five button labels, a caption and a hint). They draw only on
-the open Layout page. Measurement invalidation reuses the existing settings,
-Copy, guardian and tally lifecycles. Timer and outgoing SCT font selectors retain
+The lazy Layout font controls contain seven choice buttons, one shadow toggle,
+thirty-two texture regions and eleven FontStrings (seven button labels, the
+toggle label, two captions and a hint). Issue #75 adds three choice buttons, one
+toggle, sixteen textures and five labels to the existing face controls. They
+draw only on the open Layout page and reuse its scrolling viewport. Measurement
+invalidation reuses the existing settings, Copy, guardian and tally lifecycles;
+meter font-size caches compare the effective shared outline. Timer and outgoing SCT font selectors retain
 ownership. Both Performance Mode states use the same instant font change.
+The stored-level count badge opts out through the existing font setter, keeping
+its original plain size-12 Default text in both modes. The heading remains
+managed. This adds no region, event, updater, binding retry or per-refresh work;
+badge fitting and the existing stored-level controller remain unchanged.
 These are source-level costs; handheld readability, glyph coverage and native
 rendering remain unverified. See [FONTS.md](FONTS.md).
 
@@ -1695,6 +1715,16 @@ lethal-hit matching remain unchanged; no native roster is capped or discarded.
 CI-only production fixtures assert hidden-pool idling and reuse on Show.
 
 ### Settled disabled banners
+
+Affix-warning intake reuses the existing `UIErrorsFrame.AddMessage` wrapper,
+three-label pool, bounded queue, expiry and cleanup. A one-time lookup contains
+the recovered English templates and their fourteen native translations; each
+received error adds one exact lookup before the existing banner-pairing path.
+There is no new per-frame work, drawing region, event, updater or asset. Normal
+mode keeps the shared fade; Performance Mode keeps warnings opaque to their
+original expiry. Hidden intake skips painting and expires without replay.
+Failed presentation restores native delivery of that received warning. The
+existing CI-only banner fixture covers these paths without local execution.
 
 Disabled, faulted or unsupported banners detach their existing update callback
 after native restoration and handler unregistration settle. Pending cleanup

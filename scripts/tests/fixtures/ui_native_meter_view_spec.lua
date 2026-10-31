@@ -131,16 +131,48 @@ end)
 
 Test("all native language labels remain literal in the production meter", function()
     local c, state = View()
+    local counterRevision = state.context.counterRevision
+    local firstId, secondId = c:Row(1).entry.rowId, c:Row(2).entry.rowId
     for index, language in ipairs(helpers.languages) do
-        state.context.languageCode, state.context.languageRevision = language, "language-" .. index
-        state.context.metadataRevision = "metadata-" .. index
+        -- View has already painted the initial metadata-1/language-1 capture.
+        -- Native labels may change only with a new metadata publication.
+        state.context.languageCode, state.context.languageRevision = language, "view-language-" .. index
+        state.context.metadataRevision, state.context.snapshotId = "view-metadata-" .. index, "view-snapshot-" .. index
         state.records[1].name, state.records[2].name = helpers.labels[index], "123"
         c.env.DFRL.locale.code = language
         c:NotifyLocale()
         c:Tick()
         assert(c:Row(1).name:GetText() == helpers.labels[index], "production view rewrote a native localized ability")
         assert(c:Row(2).name:GetText() == "123", "production view coerced a numeric-looking ability name")
+        assert(
+            c:Row(1).entry.rowId == firstId
+                and c:Row(2).entry.rowId == secondId
+                and state.context.counterRevision == counterRevision,
+            "language metadata changed native row or counter identity"
+        )
     end
+end)
+
+Test("metadata-only native publications refresh names and icons without a locale callback", function()
+    local c, state = View()
+    local row = c:Row(1)
+    local rowId, counterRevision = row.entry.rowId, state.context.counterRevision
+    state.records[1].name = "Updated native ability"
+    state.records[1].icon = { status = "ready", path = "Interface\\Icons\\updated-native-ability" }
+    state.context.metadataRevision, state.context.snapshotId = "updated-metadata", "updated-snapshot"
+    c:Tick()
+    assert(row.name:GetText() == "Updated native ability", "metadata-only publication retained the old ability label")
+    assert(
+        row.icon:GetTexture() == "Interface\\Icons\\updated-native-ability",
+        "metadata-only publication retained old artwork"
+    )
+    assert(
+        row.entry.rowId == rowId and row.entry.dmg == 100 and state.context.counterRevision == counterRevision,
+        "metadata-only publication rebased native counters or row identity"
+    )
+    c:ResetCounts()
+    c:Tick()
+    c:NoPresentationWrites()
 end)
 
 Test("native X captures at the click and language changes preserve its exact session", function()
@@ -150,6 +182,7 @@ Test("native X captures at the click and language changes preserve its exact ses
     assert(not c:Row(1):IsShown(), "production X left pre-reset rows visible")
     state.records[1].after, state.records[2].after = 20, 10
     state.context.asOfRunSeconds, state.context.counterRevision = 21, "counter-after-X"
+    state.context.snapshotId = "snapshot-after-X"
     c:SetSetting("meterShowDamage", true)
     c:SetSetting("meterShowDps", false)
     c:Tick()
@@ -159,6 +192,7 @@ Test("native X captures at the click and language changes preserve its exact ses
     )
     state.context.languageCode, state.context.languageRevision = "ru", "language-ru"
     state.context.metadataRevision, state.records[1].name = "metadata-ru", "Укус"
+    state.context.snapshotId = "snapshot-ru"
     env.DFRL.locale.code = "ru"
     c:NotifyLocale()
     c:Tick()
@@ -196,7 +230,8 @@ Test("party rows bind retained native portraits without a live roster", function
             departed = true,
         },
     }
-    state.context.counterRevision = "party-counter"
+    state.context.counterRevision, state.context.metadataRevision = "party-counter", "party-metadata"
+    state.context.snapshotId = "party-snapshot"
     c:Cycle()
     c:Cycle()
     c:Cycle()
@@ -216,7 +251,8 @@ end)
 Test("pending native portraits retry on their native deadline and stable failures stay memoized", function()
     local c, state = View()
     state.records = { { id = "a", rowId = "a", name = "Ability", amount = 100, recent = 50, ownerId = "hero-1" } }
-    state.context.counterRevision = "party-pending"
+    state.context.counterRevision, state.context.metadataRevision = "party-pending", "party-pending-metadata"
+    state.context.snapshotId = "party-pending-snapshot"
     state.portraitError = { code = "ART_NOT_READY", message = "waiting", retryable = true, retryAfterSeconds = 1 }
     c:Cycle()
     c:Cycle()
@@ -233,6 +269,7 @@ Test("pending native portraits retry on their native deadline and stable failure
     )
     state.records[1].portraitKey = "unknown-portrait"
     state.context.metadataRevision = "unknown-portrait-metadata"
+    state.context.snapshotId = "unknown-portrait-snapshot"
     state.portraitError = { code = "UNKNOWN_PORTRAIT", message = "unknown", retryable = false }
     c:Tick()
     local attempts = state.calls.portrait
@@ -246,6 +283,7 @@ Test("pending native portraits retry on their native deadline and stable failure
     assert(state.calls.portrait == attempts, "stable native portrait failure retried every refresh")
     state.records[1].portraitKey = "replacement-portrait"
     state.context.metadataRevision, state.portraitError = "replacement-portrait-metadata", nil
+    state.context.snapshotId = "replacement-portrait-snapshot"
     c:Tick()
     assert(
         state.calls.portrait == attempts + 1 and c:Row(1).icon:GetTexture() == "Retained\\replacement-portrait",
@@ -292,6 +330,7 @@ Test("native recent warmup displays unavailable rate text while keeping source a
     state.context.asOfRunSeconds, state.context.encounter = 0.5, nil
     state.context.counterEpoch = "warmup-epoch"
     state.context.counterRevision = "native-warmup"
+    state.context.snapshotId = "native-warmup-snapshot"
     state.recentStatus = "warming_up"
     c:Tick(1.01)
     assert(
@@ -314,9 +353,11 @@ Test("unready publications and invalid reset epochs clear native rows without re
     env.DFRL.ResetMeterStats()
     state.records[1].after, state.records[2].after = 20, 10
     state.context.asOfRunSeconds, state.context.counterRevision = 21, "post-reset"
+    state.context.snapshotId = "post-reset-snapshot"
     c:Tick()
     assert(c:Row(1):IsShown(), "post-checkpoint native amounts were not shown")
     state.context.counterEpoch = "corrected-epoch"
+    state.context.snapshotId = "corrected-snapshot"
     c:Tick()
     assert(not c:Row(1):IsShown(), "counter correction replayed pre-checkpoint damage")
     c:Tick()

@@ -1430,8 +1430,7 @@ DFRL:NewMod("Layout", 0, function()
             label:SetPoint("TOP", coordinates, "TOP", 0, y)
             label:SetText(text)
             label:SetTextColor(0.88, 0.87, 0.83)
-            label:SetShadowColor(0, 0, 0, 1)
-            label:SetShadowOffset(1, -1)
+            T.SetChatShadow(label)
             return label
         end
         coordinates.label = Text("", -8, 12)

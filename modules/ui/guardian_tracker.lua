@@ -47,8 +47,7 @@ DFRL:NewMod("GuardianTracker", 4, function()
         label:SetJustifyH(justify or "LEFT")
         label:SetJustifyV("MIDDLE")
         label:SetTextColor(0.87, 0.74, 0.49)
-        label:SetShadowColor(0, 0, 0, 0.9)
-        label:SetShadowOffset(1, -1)
+        T.SetChatShadow(label)
         return label
     end
     local function Texture(parent, file, layer, w, h, right, bottom)
@@ -461,8 +460,10 @@ DFRL:NewMod("GuardianTracker", 4, function()
         controller:SetScript("OnUpdate", inWorld and not DFRL.layout.IsHidden("guardianTracker") and Tick or nil)
     end
     local uiFont = DFRL.display.Get("uiFont")
+    local uiFontOutline = DFRL.display.Get("uiFontOutline")
     DFRL.display.Listen(function()
         local selectedFont = DFRL.display.Get("uiFont")
+        local selectedOutline = DFRL.display.Get("uiFontOutline")
         local selected = DFRL.display.Get("guardianRows")
         local selectedShowDead = DFRL.display.Get("guardianShowDead")
         local selectedCurrent = DFRL.display.Get("guardianShowCurrentHealth")
@@ -471,13 +472,14 @@ DFRL:NewMod("GuardianTracker", 4, function()
         local selectedShortHealth = DFRL.display.Get("guardianShortHealth") ~= false
         if
             selectedFont ~= uiFont
+            or selectedOutline ~= uiFontOutline
             or selectedCurrent ~= showCurrent
             or selectedMaximum ~= showMaximum
             or selectedShortHealth ~= shortenHealth
             or selectedPercentage ~= showPercentage
         then
             ClearStatuses()
-            uiFont = selectedFont
+            uiFont, uiFontOutline = selectedFont, selectedOutline
             presentation.measureSize = nil
             showCurrent, showMaximum = selectedCurrent, selectedMaximum
             showPercentage = selectedPercentage

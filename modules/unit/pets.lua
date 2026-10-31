@@ -62,8 +62,7 @@ DFRL:NewMod("PetFrames", 4, function()
         label:SetJustifyH("LEFT")
         label:SetJustifyV("MIDDLE")
         label:SetTextColor(1, 1, 1)
-        label:SetShadowColor(0, 0, 0, 1)
-        label:SetShadowOffset(1, -1)
+        T.SetChatShadow(label)
         return label
     end
     local function Row(index)

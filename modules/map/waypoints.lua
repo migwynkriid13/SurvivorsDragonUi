@@ -240,7 +240,7 @@ DFRL:NewMod("Waypoints", 3, function()
                 pin.timerFontReady = type(face) == "string"
                     and face ~= ""
                     and T.NearlyEqual(size, 8.6)
-                    and (flags or "") == "OUTLINE"
+                    and (flags or "") == T.GetFontFlags("OUTLINE")
                 if not pin.timerFontReady then return end
             end
             local second = math.ceil(remaining)
@@ -607,8 +607,7 @@ DFRL:NewMod("Waypoints", 3, function()
         title:SetWidth(76)
         title:SetHeight(16)
         title:SetJustifyV("MIDDLE")
-        title:SetShadowColor(0, 0, 0, 0.9)
-        title:SetShadowOffset(1, -1)
+        T.SetChatShadow(title)
         title:SetText(tracker.kind == "party" and DFRL.locale.Text(tracker.title) or tracker.title)
         local distanceText = hud:CreateFontString(nil, "OVERLAY")
         T.SetFont(distanceText, 15, "OUTLINE")
@@ -616,8 +615,7 @@ DFRL:NewMod("Waypoints", 3, function()
         distanceText:SetWidth(76)
         distanceText:SetHeight(19)
         distanceText:SetJustifyV("MIDDLE")
-        distanceText:SetShadowColor(0, 0, 0, 0.9)
-        distanceText:SetShadowOffset(1, -1)
+        T.SetChatShadow(distanceText)
         tracker.hud, tracker.pointer = hud, pointer
         tracker.titleText, tracker.distanceText = title, distanceText
         LayoutHUD(tracker)

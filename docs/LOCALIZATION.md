@@ -42,6 +42,21 @@ python3 -B scripts/generate_localization.py \
   --refresh-marks-only --metadata /tmp/sdui-marks-native.json
 ```
 
+The native affix-warning templates are separately pinned to installed **0.131.0**,
+SHA-256 `5dd6819d836748ccf809ab76fe6509c9ee793e087939b5d036c430d835a14e63`.
+The recovered warning set currently contains **An Explosive Orb appears! Destroy
+it before it bursts!**. All fourteen values come directly from the native
+catalogs in the existing reviewed language order and enter only the `native`
+sections and `native-keys.json`. Other captions, spell aliases, effects and their
+source pins are retained. The banner hook matches complete received text in any
+of those languages without translating it again or inferring the active affix.
+Reproduce this data-only preparation with:
+
+```sh
+python3 -B scripts/generate_localization.py \
+  --client /path/to/AzerothSurvivors.exe --refresh-affix-warnings-only
+```
+
 The initial fallback is the native `GetLocale()` value, with aliases for the supported language codes, including `csCZ` → `cs`. This alone does not establish the language selected by the game's fourteen-language picker: the inspected [base-client implementation](https://github.com/samwhosung/benilla/blob/main/crates/benilla-ui/src/script/client.rs) reads the older client locale table.
 
 The authoritative addon-visible evidence is the game's localized text published in the official `AZS_ZONE` snapshot. For each candidate catalog, compare the exact `zname` and `zsub` associated with the stable `zone` key and `cname` associated with the stable `class` key. Select the unique highest-scoring catalog. Shared proper names alone can tie; a tie or unfamiliar wording retains the existing fallback rather than choosing a language arbitrarily. The normal localized zone subtitle distinguishes the catalogs without deriving anything from an enemy or item name.
@@ -199,6 +214,12 @@ Source executable SHA-256: `6382e9ae654295293b82d48fb07a1aa999132775bda10c6c6f80
 - `localization/ui.tsv` contains English caption keys and thirteen translations, in the header's language order. An `@key` cell explicitly reuses a native catalog entry. Both TSV files identify their columns by code; Czech is appended without reordering existing translation columns, independently of its third position in the executable.
 - `localization/native-keys.json` selects native captions/chat templates. The generator also includes only the identity names/subtitles needed for language detection.
 - `scripts/generate_localization.py --client PATH_TO_CLIENT` prepares `localization/data.lua`. Its pinned fingerprint and catalog-count guard require source review before accepting a different game build or language order. It supplies neither fixed gameplay values nor a complete localization dump.
+
+Localization and icon generators share `generate_spell_icons.lua_string` for
+Lua 5.0 quoting, including UTF-8 and fixed-width decimal control-byte escapes.
+The pinned native catalog readers share `scripts/native_pe.py` only for PE32+
+section mapping and complete byte-span reads; each extractor retains its own
+fingerprints, offsets, instruction checks and catalog-selection rules.
 
 The runtime manifest adds only `core/localization.lua` and `localization/data.lua`; source JSON/TSV, documentation and the generator do not enter the release ZIP. Source inspection and data generation do not establish packaged-game behavior or native-speaker translation approval. No local tests, syntax checks, formatting tools or addon/game execution were run. The existing PR GitHub Actions checks are the authorized static checks.
 

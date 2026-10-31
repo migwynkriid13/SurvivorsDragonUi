@@ -7,6 +7,7 @@ displayed unchanged except for the requested full guardian-death wording below.
 The native `boss` flag selects red text; other notices use
 gold. No icon, backdrop, sound or gameplay lookup is added. The Layout caption
 uses the existing fourteen-language source/runtime catalogs.
+Received affix warnings use the same red warning style and banner lifetime.
 
 ## Placement and lifetime
 
@@ -82,6 +83,44 @@ from chat, a boss list, a countdown or an item acquisition.
 The native message prefix is `AZSBANNER`, with ordered fields
 `id=...;kind=...;boss=...;name=...;text=...`. The game's embedded API owns parsing
 and dispatch. This addon does not install another raw event producer.
+
+## Affix warnings
+
+Native affix warnings delivered through `UIErrorsFrame:AddMessage` enter the
+same three-label pool and bounded queue while custom banners are active. Match
+only complete recovered native templates, including all fourteen translations,
+and keep each received display call as its own occurrence. Preserve the supplied
+text and suppress its original red copy only after the queue accepts it. Other
+errors retain their original arguments and native delivery. Disabled, unready
+or failed banners leave the warning native; release restores only the owned
+method wrapper, including world leave, logout and reload cleanup.
+
+In installed **0.131.0**, the recovered affixes are Bolstering, Sanguine and
+Explosive. The inspected Bolstering death and Sanguine creation/healing paths do
+not publish a text warning. Explosive sends **An Explosive Orb appears! Destroy
+it before it bursts!** through localized `SMSG_NOTIFICATION` (`0x1CB`), separately
+from `AZSBANNER`. The existing API and legacy-emote routes continue to accept
+their other received notices. No warning is manufactured for an affix effect.
+
+REA 6.5.0 / Ghidra 12.1.4 inspected the current affix update owner
+`0x145cdb100..0x145cdeb97`, actor-hit/death owner
+`0x145cc7340..0x145ccb9d9` and notification serializer
+`0x145b52ad0..0x145b52be0`, bound to SHA-256
+`5dd6819d836748ccf809ab76fe6509c9ee793e087939b5d036c430d835a14e63`.
+The warning call is at `0x145cdbd9a`. Retained Evidence IDs are
+`ev_35171d2699a62d6398adc999a257fc8e2ecc3f8c9a380f42428d34ac753d5937`,
+`ev_3fb46d34365e6bb3bd9cb7fda5f914609676efa8ea9364bc7af4f100a9131ef1`
+and `ev_9c1b4ee782036db6dc8c311c1a9e044a76e0012a535d9f015fda67b9f1145022`.
+These bounded static traces do not prove full-image completeness or actual
+client/Lua delivery. See [LOCALIZATION.md](LOCALIZATION.md) for caption preparation.
+
+Normal mode retains the existing banner fade; Performance Mode remains opaque
+until the same expiry. Layout-hidden intake skips presentation and retires
+without replay. No frame, region, event, updater, asset, setting or SavedVariable
+is added. CI-only production mocks cover translated intake, native suppression
+and fallback, separate identical calls, unrelated errors, hidden/mode expiry
+and cleanup. They were not run locally; in-game delivery and appearance remain
+unverified.
 
 ## Ownership and cleanup
 
