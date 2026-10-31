@@ -74,6 +74,23 @@ The latest-value label cache includes this format choice and hidden labels defer
 formatting until their existing visible refresh. Boss bars and Guardian tracker
 have independent choices.
 
+Party frames show **Dead** or **Ghost** in the existing health label when the
+native unit flags report that state. Ghost takes priority if both flags are
+set. The caption is centered, replaces the health numbers and percentage, and
+remains visible when either numeric choice is off. Resurrection restores the
+selected numeric choices. Missing units clear the caption. The lower resource
+bar retains its native value; it is separate from health.
+
+The compact-frame controller refreshes party captions on `UNIT_FLAGS` and
+`UNIT_CONNECTION` as well as its existing health/roster/Show events. Both native
+boolean and numeric flags are accepted, with numeric zero treated as false.
+Only the affected unit and its native aliases refresh. Hidden frames defer
+state reads and text writes until Show, including language changes. All
+fourteen languages share this static presentation in normal and Performance
+Mode, using the existing label and percentage regions without another updater
+or saved choice. CI-only mocks cover these transitions; local source review
+and formatting do not verify the client's event delivery or appearance.
+
 Enemy targets use the official `AZS_TARGET.hp` and `hpm` publication for their
 health label, whole-number percentage, fill and damage-loss animation once it
 arrives. Selecting a target first shows its validated current native

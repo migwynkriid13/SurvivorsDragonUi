@@ -1837,6 +1837,26 @@ K/M/B/T display tiers without changing counters, percentage math or loss
 fractions. Player/party/pet health sources remain native, and percentage-off
 labels still skip their native maximum-health getter.
 
+Party Dead/Ghost status reuses each row's existing health label, centered with
+the percentage cleared; it allocates no frame, font object, texture or drawing
+region. Ghost wins when both native flags are set, numeric zero is false, and
+dead/ghost states skip native health/maximum reads. Status text remains visible
+independently of the numeric health choices and returns to those choices on
+resurrection. Missing units clear retained status. Native bar/resource values
+and geometry remain under their existing owners.
+
+The existing compact controller adds `UNIT_FLAGS` and `UNIT_CONNECTION`
+subscriptions, routing only the affected native unit/aliases through its
+current event handler. The four party label bindings also listen for language
+changes. Visible status updates use changed-only text and layout writes;
+hidden rows return before reading flags/health or formatting, then refresh on
+Show. Normal and Performance Mode share this static behavior, with no animation,
+idle updater, asset, setting or saved data. CI-only full-controller cases cover
+four rows, stale positive health, flag-only death/ghost changes, resurrection,
+numeric choices, locale/hidden recovery, unchanged writes and native-value
+preservation. These are authored mock/source boundaries, without local test or
+game execution or measured FPS/visual-parity claims.
+
 Loss retirement removes the effect from its existing animation list immediately
 on target/spawn/max changes, hiding, world leave or logout. Its original
 half-second fade and fill geometry remain intact. The owner adds one passive

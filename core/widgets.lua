@@ -267,7 +267,7 @@ function DFRL.tools.BindClassHealthColor(bar, unit)
 end
 
 -- Unit health labels and loss fractions share the target's accepted health source.
-function DFRL.tools.BindUnitHealthText(bar, label, unit, hideDead)
+function DFRL.tools.BindUnitHealthText(bar, label, unit, hideDead, showDeathState)
     local percentage = label:GetParent():CreateFontString(nil, "OVERLAY")
     local _, size, flags = label:GetFont()
     T.SetFont(percentage, size, flags)
@@ -276,19 +276,30 @@ function DFRL.tools.BindUnitHealthText(bar, label, unit, hideDead)
     local leftInset, rightInset, centerOffset = 0, 0, 0
     local splitLayout
     local previousCurrent, previousMaximum, previousValueShown, previousPercentShown, previousShortHealth
+    local previousStatus
     local absorbValue, absorbMaximum, previousAbsorb, previousAbsorbMaximum, absorbPending
     local absorbText, absorbPercentText = "", ""
     local valueText, percentText = "", ""
 
     function labels.Update()
         if not bar:IsVisible() then return end
-        local current, maximum
+        local current, maximum, status
         local valueShown = DFRL.display.Get("showHealthValue")
         local percentShown = DFRL.display.Get("showHealthPercentage")
         local shorten = DFRL.display.Get("unitShortHealth") ~= false
-        if UnitExists(unit) and not (hideDead and (UnitIsDead(unit) or UnitIsGhost(unit))) then
-            current, maximum = T.GetUnitHealth(unit, not percentShown)
-            if type(current) ~= "number" or current < 0 or current - current ~= 0 then current = nil end
+        if UnitExists(unit) then
+            local dead, ghost
+            if hideDead or showDeathState then
+                local deadValue, ghostValue = UnitIsDead(unit), UnitIsGhost(unit)
+                dead = deadValue == true or deadValue == 1
+                ghost = ghostValue == true or ghostValue == 1
+            end
+            if dead or ghost then
+                if showDeathState then status = DFRL.locale.Text(ghost and "Ghost" or "Dead") end
+            else
+                current, maximum = T.GetUnitHealth(unit, not percentShown)
+                if type(current) ~= "number" or current < 0 or current - current ~= 0 then current = nil end
+            end
         end
         if
             current ~= previousCurrent
@@ -298,6 +309,7 @@ function DFRL.tools.BindUnitHealthText(bar, label, unit, hideDead)
             or shorten ~= previousShortHealth
             or absorbValue ~= previousAbsorb
             or absorbMaximum ~= previousAbsorbMaximum
+            or status ~= previousStatus
         then
             if
                 absorbValue ~= previousAbsorb
@@ -325,7 +337,8 @@ function DFRL.tools.BindUnitHealthText(bar, label, unit, hideDead)
             previousValueShown, previousPercentShown = valueShown, percentShown
             previousShortHealth = shorten
             previousAbsorb, previousAbsorbMaximum = absorbValue, absorbMaximum
-            valueText = current and valueShown and T.CompactHealth(current, shorten) or ""
+            previousStatus = status
+            valueText = status or (current and valueShown and T.CompactHealth(current, shorten) or "")
             percentText = ""
             if current and percentShown and type(maximum) == "number" and maximum > 0 and maximum - maximum == 0 then
                 percentText = tostring(math.floor(math.min(1, current / maximum) * 100 + 0.5)) .. "%"
@@ -384,6 +397,7 @@ function DFRL.tools.BindUnitHealthText(bar, label, unit, hideDead)
     end
 
     DFRL.display.Listen(labels.Update)
+    if showDeathState then DFRL.locale.Listen(labels.Update) end
     labels.Update()
     return labels
 end

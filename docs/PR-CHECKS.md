@@ -302,6 +302,14 @@ The assertions cover:
   portrait variants, restore the retained artwork on option changes and skip
   unchanged writes. These assertions distinguish shown state from alpha; they
   do not measure the packaged renderer's submitted quads or GPU time.
+  The full compact-frame fixture also creates all four native party rows and
+  loads the shared health-label and Mini owners. It checks Dead/Ghost changes
+  from `UNIT_FLAGS` and `UNIT_CONNECTION` without health events, suppression of
+  stale positive health, Ghost priority, numeric-zero flags, centered reused
+  captions, independent numeric choices, resurrection, missing units, localized
+  status refresh, hidden/Show recovery, unchanged writes and native bar-value
+  preservation in both Performance Mode states. No new object or idle updater
+  may appear during these transitions. The fixture remains CI-only.
   Target classification mocks also cover accepted guardian silver wings,
   boss/final gold wings, native artwork fallback, unchanged/forced bindings and
   hidden reads/writes. Full target-health mocks cover accepted-kind copying and
