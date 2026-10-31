@@ -50,15 +50,13 @@ numeric range/count; no matches shows **No matching settings.** Search does not
 toggle, save or bypass disabled controls. Clear search restores the selected
 category and its scroll position. Escape keeps the shared Cancel behavior.
 
-Each result button fits the wider of its gold title and category path, with
-twelve units of padding on each side and one unit of glyph clearance, capped
-at the viewport width. Both lines align left, including while the button is
-pressed. Width measurements use the native glyph metrics and cache the latest
-captions, fonts, owning-button effective scale and available width. Paging can
-shrink or grow the same pooled button. Missing metrics remain retryable through
-existing navigation/Show/language refreshes, with no idle updater. Font sizes,
-row heights, artwork and the eight-button region budget are unchanged; narrower
-button faces do not establish a measured draw-call or FPS improvement.
+Results use a plain 360-unit-wide list, capped at the available viewport width.
+Each 42-unit row has a gold title and muted category path, aligned left with
+ten-unit side padding. Rows keep the same width across captions, languages and
+pages. Their only texture is a faint solid hover highlight, hidden on leave or
+row hiding. Pagination follows the list width. There are no decorative button
+faces, content-width measurements or result-width caches. The eight-row pool,
+click/Enter navigation and shared save/discard lifecycle remain unchanged.
 
 Generic settings use the same option/mode records as construction. Layout and
 Profiles expose their existing caption records; custom Combat text and Run
@@ -70,8 +68,8 @@ prepared. Searching leaves unvisited pages unallocated until a result is opened.
 Indexing happens on a query or active language change, with no idle worker.
 Search text, matches, pagination and offsets stay in session memory. Closing
 clears the query and focus; hidden language changes defer presentation. The
-input, clear button and results use the existing static editor artwork in both
-Performance Mode states. No setting or SavedVariable is added.
+input and clear button use the existing static editor artwork; result rows stay
+plain in both Performance Mode states. No setting or SavedVariable is added.
 
 Live run updates touch the font preview only after the Run timer page has been
 prepared and its category is visible. Opening another category leaves that

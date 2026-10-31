@@ -211,7 +211,7 @@ function DFRL.tools.CreateEditorButton(parent, text, width, height)
     button.label:SetJustifyH("CENTER")
     local hovered, down = false, false
     local lastState, lastFraction, lastWidth, lastHeight, locked
-    local lastLabel, lastColor, lastPressed, lastLabelPoint
+    local lastLabel, lastColor, lastPressed
     local function Refresh(force)
         if not force and not button:IsVisible() then return end
         -- Native clients can report 1/0 rather than true/false.
@@ -260,19 +260,10 @@ function DFRL.tools.CreateEditorButton(parent, text, width, height)
             lastColor = color
         end
         local pressed = enabled and down
-        local labelPoint = button.editorLabelPoint
-        if lastLabel ~= label or lastPressed ~= pressed or lastLabelPoint ~= labelPoint then
+        if lastLabel ~= label or lastPressed ~= pressed then
             label:ClearAllPoints()
-            local point = labelPoint and labelPoint[1] or "CENTER"
-            label:SetPoint(
-                point,
-                button,
-                point,
-                (labelPoint and labelPoint[2] or 0) + (pressed and 1 or 0),
-                (labelPoint and labelPoint[3] or 0) + (pressed and -1 or 0)
-            )
+            label:SetPoint("CENTER", button, "CENTER", pressed and 1 or 0, pressed and -1 or 0)
             lastPressed = pressed
-            lastLabelPoint = labelPoint
         end
         lastLabel = label
     end
@@ -523,6 +514,8 @@ end
 local function CreateEditorSearch(parent, scroll, content, navigation, groups, sections, options)
     local owner = { active = false, query = "", page = 1, rows = {}, results = {} }
     local width = options.width - 24
+    local resultWidth, resultHeight, resultPitch = math.min(width, 360), 42, 46
+    local resultFooter = 8 * resultPitch + 8
     local header = CreateFrame("Frame", nil, parent)
     header:SetPoint("TOPLEFT", parent, "TOPLEFT", options.left, -options.top)
     header:SetWidth(width)
@@ -659,23 +652,23 @@ local function CreateEditorSearch(parent, scroll, content, navigation, groups, s
     local function PrepareResults()
         if owner.frame then return end
         local frame = CreateFrame("Frame", nil, content)
-        frame:SetWidth(width)
+        frame:SetWidth(resultWidth)
         frame:SetHeight(1)
         frame:SetPoint("TOPLEFT", content, "TOPLEFT", 0, 0)
         owner.frame = frame
         owner.empty = Label(frame, 12, "No matching settings.")
         owner.empty:SetPoint("TOPLEFT", frame, "TOPLEFT", 4, -12)
-        owner.empty:SetWidth(width - 8)
+        owner.empty:SetWidth(resultWidth - 8)
         owner.empty:SetHeight(36)
         owner.count = Label(frame, 11, "")
-        owner.count:SetPoint("TOP", frame, "TOP", 0, -428)
-        owner.count:SetWidth(width - 100)
+        owner.count:SetPoint("TOP", frame, "TOP", 0, -resultFooter - 4)
+        owner.count:SetWidth(resultWidth - 100)
         owner.count:SetHeight(24)
         owner.count:SetJustifyH("CENTER")
         owner.previous = T.CreateEditorButton(frame, "<", 32, 26)
-        owner.previous:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, -424)
+        owner.previous:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, -resultFooter)
         owner.next = T.CreateEditorButton(frame, ">", 32, 26)
-        owner.next:SetPoint("TOPRIGHT", frame, "TOPRIGHT", 0, -424)
+        owner.next:SetPoint("TOPRIGHT", frame, "TOPRIGHT", 0, -resultFooter)
         owner.previous:SetScript("OnClick", function()
             if owner.page > 1 then
                 owner.page = owner.page - 1
@@ -688,54 +681,6 @@ local function CreateEditorSearch(parent, scroll, content, navigation, groups, s
                 navigation.Refresh(true)
             end
         end)
-    end
-    local function FitResultButton(button)
-        local title, path = button.label:GetText(), button.path:GetText()
-        local face, size, flags = button.label:GetFont()
-        local pathFace, pathSize, pathFlags = button.path:GetFont()
-        local scale = button:GetEffectiveScale()
-        local metric = button.searchMetric
-        if
-            metric
-            and metric.title == title
-            and metric.path == path
-            and metric.face == face
-            and metric.size == size
-            and metric.flags == flags
-            and metric.pathFace == pathFace
-            and metric.pathSize == pathSize
-            and metric.pathFlags == pathFlags
-            and metric.scale == scale
-            and metric.width == width
-        then
-            return
-        end
-        local titleWidth = button.label:GetStringWidth()
-        local pathWidth = path == "" and 0 or button.path:GetStringWidth()
-        if
-            type(titleWidth) ~= "number"
-            or titleWidth <= 0
-            or titleWidth - titleWidth ~= 0
-            or type(pathWidth) ~= "number"
-            or pathWidth < 0
-            or (path ~= "" and pathWidth == 0)
-            or pathWidth - pathWidth ~= 0
-        then
-            return
-        end
-        -- Both lines share twelve-unit side padding and one unit of glyph
-        -- clearance. Keep the native button caps; stretch only as far as needed.
-        local fitted = math.min(width, math.ceil(math.max(titleWidth, pathWidth)) + 25)
-        if not T.NearlyEqual(button:GetWidth(), fitted) then button:SetWidth(fitted) end
-        local textWidth = math.max(1, fitted - 24)
-        if not T.NearlyEqual(button.label:GetWidth(), textWidth) then button.label:SetWidth(textWidth) end
-        if not T.NearlyEqual(button.path:GetWidth(), textWidth) then button.path:SetWidth(textWidth) end
-        metric = metric or {}
-        metric.title, metric.path = title, path
-        metric.face, metric.size, metric.flags = face, size, flags
-        metric.pathFace, metric.pathSize, metric.pathFlags = pathFace, pathSize, pathFlags
-        metric.scale, metric.width = scale, width
-        button.searchMetric = metric
     end
     function owner.Refresh()
         if not parent:IsShown() or not owner.active then return end
@@ -750,18 +695,33 @@ local function CreateEditorSearch(parent, scroll, content, navigation, groups, s
             local button = owner.rows[slot]
             if result then
                 if not button then
-                    button = T.CreateEditorButton(owner.frame, "", width, 48)
-                    button:SetPoint("TOPLEFT", owner.frame, "TOPLEFT", 0, -(slot - 1) * 52)
-                    button.editorLabelPoint = { "TOPLEFT", 12, -5 }
-                    button.label:ClearAllPoints()
-                    button.label:SetPoint("TOPLEFT", button, "TOPLEFT", 12, -5)
-                    button.label:SetWidth(width - 24)
+                    button = CreateFrame("Button", nil, owner.frame)
+                    button:SetWidth(resultWidth)
+                    button:SetHeight(resultHeight)
+                    button:SetPoint("TOPLEFT", owner.frame, "TOPLEFT", 0, -(slot - 1) * resultPitch)
+                    local hover = button:CreateTexture(nil, "BACKGROUND")
+                    hover:SetAllPoints(button)
+                    hover:SetTexture("Interface\\Buttons\\WHITE8X8")
+                    hover:SetVertexColor(1, 0.82, 0, 0.08)
+                    hover:Hide()
+                    button:SetScript("OnEnter", function()
+                        if not hover:IsShown() then hover:Show() end
+                    end)
+                    local function HideHover()
+                        if hover:IsShown() then hover:Hide() end
+                    end
+                    button:SetScript("OnLeave", HideHover)
+                    button:SetScript("OnHide", HideHover)
+                    button.label = Label(button, 12, "")
+                    button.label:SetPoint("TOPLEFT", button, "TOPLEFT", 10, -4)
+                    button.label:SetWidth(resultWidth - 20)
                     button.label:SetHeight(18)
                     button.label:SetJustifyH("LEFT")
+                    button.label:SetTextColor(1, 0.82, 0)
                     button.path = Label(button, 10, "")
-                    button.path:SetPoint("TOPLEFT", button, "TOPLEFT", 12, -27)
-                    button.path:SetWidth(width - 24)
-                    button.path:SetHeight(16)
+                    button.path:SetPoint("TOPLEFT", button, "TOPLEFT", 10, -24)
+                    button.path:SetWidth(resultWidth - 20)
+                    button.path:SetHeight(14)
                     button.path:SetJustifyH("LEFT")
                     button.path:SetTextColor(0.65, 0.65, 0.62)
                     button:SetScript("OnClick", function() navigation.OpenResult(button.resultIndex) end)
@@ -778,7 +738,6 @@ local function CreateEditorSearch(parent, scroll, content, navigation, groups, s
                 end
                 T.SetTextIfChanged(button.path, pathText)
                 if not button:IsShown() then button:Show() end
-                FitResultButton(button)
             elseif button and button:IsShown() then
                 button:Hide()
             end
@@ -809,7 +768,7 @@ local function CreateEditorSearch(parent, scroll, content, navigation, groups, s
                 owner.next:Disable()
             end
         end
-        local height = math.max(scroll:GetHeight(), 460)
+        local height = math.max(scroll:GetHeight(), resultFooter + 36)
         if owner.frame:GetHeight() ~= height then owner.frame:SetHeight(height) end
         if content:GetHeight() ~= height then content:SetHeight(height) end
         if scroll.UpdateScrollChildRect then scroll:UpdateScrollChildRect() end

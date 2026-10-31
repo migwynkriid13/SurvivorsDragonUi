@@ -29,6 +29,11 @@ context.Object = function(self, kind, name, parent)
         end
     end
     if kind == "Texture" then
+        local setVertexColor = result.SetVertexColor
+        function result:SetVertexColor(...)
+            setVertexColor(self, ...)
+            self.vertexColor = { ... }
+        end
         local setTexCoord = result.SetTexCoord
         function result:SetTexCoord(...)
             setTexCoord(self, ...)
@@ -226,77 +231,72 @@ assert(
 assert(searchNavigation.results[1].target == "icons" and searchNavigation.results[1].section == "damage")
 assert(searchNavigations[#searchNavigations] == "search", "results retained Layout handles")
 local resultButton = searchNavigation.searchOwner.rows[1]
-assert(resultButton:GetWidth() == 145, "search result retained empty viewport width instead of fitting its longer path")
 assert(
-    resultButton.label.justifyH == "LEFT"
+    resultButton:GetWidth() == 360 and resultButton:GetHeight() == 42,
+    "search results do not use the compact fixed row size"
+)
+assert(
+    not resultButton.editorPieces
+        and resultButton.label.justifyH == "LEFT"
         and resultButton.path.justifyH == "LEFT"
-        and resultButton.label.point[4] == 12
-        and resultButton.path.point[4] == 12,
-    "search result title and category path do not share their left inset"
+        and resultButton.label.point[1] == "TOPLEFT"
+        and resultButton.label.point[4] == 10
+        and resultButton.label.point[5] == -4
+        and resultButton.path.point[4] == 10
+        and resultButton.path.point[5] == -24,
+    "plain search rows retained the textured button skin or lost their aligned text"
 )
-context:Call(resultButton, "OnMouseDown", "LeftButton")
+local function ResultHighlight(row)
+    local highlight, count = nil, 0
+    for _, item in ipairs(context.objects) do
+        if item.kind == "Texture" and item:GetParent() == row then
+            highlight, count = item, count + 1
+        end
+    end
+    assert(
+        count == 1 and highlight:GetTexture() == "Interface\\Buttons\\WHITE8X8",
+        "result row allocated decorative texture layers"
+    )
+    return highlight
+end
+local resultHighlight = ResultHighlight(resultButton)
 assert(
-    resultButton.label.point[1] == "TOPLEFT"
-        and resultButton.label.point[4] == 13
-        and resultButton.label.point[5] == -6
-        and resultButton.path.point[4] == 12
-        and resultButton.path.point[5] == -27,
-    "pressing a search result recentered its title or displaced the breadcrumb"
+    not resultHighlight:IsShown() and resultHighlight.vertexColor and resultHighlight.vertexColor[4] <= 0.1,
+    "plain search row draws a persistent or heavy hover fill"
 )
+local red, green, blue = resultButton.label:GetTextColor()
+assert(red >= 0.9 and green >= 0.7 and blue <= 0.5, "result title lost its gold caption")
+context:Call(resultButton, "OnEnter")
+assert(resultHighlight:IsShown(), "plain result row has no hover feedback")
+context:Call(resultButton, "OnLeave")
+assert(not resultHighlight:IsShown(), "result hover survives mouse leave")
+context:Call(resultButton, "OnMouseDown", "LeftButton")
 context:Call(resultButton, "OnMouseUp", "LeftButton")
 assert(
-    resultButton.label.point[1] == "TOPLEFT" and resultButton.label.point[4] == 12 and resultButton.label.point[5] == -5,
-    "released search result did not restore its compact title anchor"
+    resultButton.label.point[1] == "TOPLEFT" and resultButton.label.point[4] == 10 and resultButton.label.point[5] == -4,
+    "plain result row retained the old pressed caption displacement"
 )
 local resultObjects = #context.objects
 context:ResetCounts()
 searchNavigation.Refresh(true)
 context:NoPresentationWrites()
-assert(not context.reads.glyphs and #context.objects == resultObjects, "settled search results remeasured or allocated")
-local titleFace, titleSize, titleFlags = resultButton.label:GetFont()
-local pathFace, pathSize, pathFlags = resultButton.path:GetFont()
-resultButton.label.naturalWidth = 210.25
-resultButton.path.naturalWidth = 90
-resultButton.label:SetFont("WIDER_TITLE_FACE", titleSize, titleFlags)
-context:ResetCounts()
-searchNavigation.Refresh(true)
-assert(resultButton:GetWidth() == 236 and context.reads.glyphs, "gold title did not determine its fitted button width")
-resultButton.label.naturalWidth = 60
-resultButton.path.naturalWidth = 300.5
-resultButton.path:SetFont("WIDER_PATH_FACE", pathSize, pathFlags)
-searchNavigation.Refresh(true)
-assert(resultButton:GetWidth() == 326, "category breadcrumb was clipped by the title width")
-resultButton.label.naturalWidth, resultButton.path.naturalWidth = 900, 800
-resultButton.label:SetFont("LONG_RESULT_FACE", titleSize, titleFlags)
-searchNavigation.Refresh(true)
-assert(resultButton:GetWidth() == 660, "long translated result extended beyond the content viewport")
-resultButton.label.naturalWidth, resultButton.path.naturalWidth = nil, nil
-resultButton.label:SetFont(titleFace, titleSize, titleFlags)
-resultButton.path:SetFont(pathFace, pathSize, pathFlags)
-searchNavigation.Refresh(true)
 assert(
-    resultButton:GetWidth() == 145 and #context.objects == resultObjects,
-    "short result did not shrink its existing button"
+    not context.reads.glyphs and #context.objects == resultObjects,
+    "settled search results measured text or allocated"
 )
+local titleFace, titleSize, titleFlags = resultButton.label:GetFont()
+resultButton.label.naturalWidth, resultButton.path.naturalWidth = 900, 800
+resultButton.label:SetFont("OTHER_RESULT_FACE", titleSize, titleFlags)
 resultButton:SetScale(1.25)
 context:ResetCounts()
 searchNavigation.Refresh(true)
-assert(context.reads.glyphs, "search result reused glyph metrics from another owner scale")
-resultButton:SetScale(1)
-searchNavigation.Refresh(true)
-resultButton.label.naturalWidth = 0
-resultButton.label:SetFont("UNREADY_RESULT_FACE", titleSize, titleFlags)
-context:ResetCounts()
-searchNavigation.Refresh(true)
-local unreadyReads = context.reads.glyphs or 0
-searchNavigation.Refresh(true)
-assert((context.reads.glyphs or 0) > unreadyReads, "unavailable result metrics were cached as ready")
-resultButton.label.naturalWidth = 160
-searchNavigation.Refresh(true)
-assert(resultButton:GetWidth() == 185, "available native metrics did not repair the pooled result width")
-resultButton.label.naturalWidth = nil
+assert(
+    resultButton:GetWidth() == 360 and not context.reads.glyphs and #context.objects == resultObjects,
+    "result width depends on caption length, font metrics or owner scale"
+)
+resultButton.label.naturalWidth, resultButton.path.naturalWidth = nil, nil
 resultButton.label:SetFont(titleFace, titleSize, titleFlags)
-searchNavigation.Refresh(true)
+resultButton:SetScale(1)
 searchNavigation.ClearSearch()
 assert(
     searchSlider:GetValue() == 150 and searchNavigation.pages.home.pending == "-12,5",
@@ -344,13 +344,28 @@ assert(
 )
 context:Call(searchNavigation.searchOwner.previous, "OnClick")
 assert(searchNavigation.searchOwner.page == 2 and #context.objects == searchPool)
-local twoDigitResultWidth = searchNavigation.searchOwner.rows[1]:GetWidth()
+for slot, row in ipairs(searchNavigation.searchOwner.rows) do
+    assert(
+        row:GetWidth() == 360 and row:GetHeight() == 42 and row.point[5] == -(slot - 1) * 46,
+        "paged results lost their fixed list geometry"
+    )
+    ResultHighlight(row)
+end
+local retiredHover = ResultHighlight(searchNavigation.searchOwner.rows[3])
+context:Call(searchNavigation.searchOwner.rows[3], "OnEnter")
+assert(retiredHover:IsShown())
+context:Call(searchNavigation.searchOwner.next, "OnClick")
+assert(
+    not searchNavigation.searchOwner.rows[3]:IsShown() and not retiredHover:IsShown(),
+    "retiring a pooled result retained its hover"
+)
+context:Call(searchNavigation.searchOwner.previous, "OnClick")
 context:Call(searchNavigation.searchOwner.previous, "OnClick")
 assert(
     searchNavigation.searchOwner.page == 1
-        and searchNavigation.searchOwner.rows[1]:GetWidth() < twoDigitResultWidth
+        and searchNavigation.searchOwner.rows[1]:GetWidth() == 360
         and #context.objects == searchPool,
-    "paging to shorter captions retained a wider result or rebuilt its pool"
+    "paging to shorter captions changed the fixed width or rebuilt its pool"
 )
 searchNavigation.Search("performance")
 searchNavigation.OpenResult(1)
@@ -371,28 +386,28 @@ assert(
     #searchNavigation.results == 1 and searchNavigation.results[1].target == "icons",
     "localized Cyrillic case folding failed"
 )
-local translatedResultWidth = resultButton:GetWidth()
+assert(resultButton:GetWidth() == 360, "translated result changed its fixed row width")
 context:ResetCounts()
 searchNavigation.Search("Damage icons")
 assert(#searchNavigation.results == 1, "English fallback search disappeared in another language")
-assert(not context.reads.glyphs, "unchanged translated result captions were measured again")
+assert(not context.reads.glyphs, "plain translated results measured their captions")
 env.DFRL.locale.code = "de"
 context:NotifyLocale()
 searchNavigation.Search("änderung")
 assert(#searchNavigation.results == 1, "accented Latin case folding failed")
-assert(
-    resultButton:GetWidth() < translatedResultWidth,
-    "shorter active-language captions kept the previous button width"
-)
+assert(resultButton:GetWidth() == 360, "shorter active-language captions changed the fixed row width")
 searchNavigation.search.focused = true
+context:Call(resultButton, "OnEnter")
+assert(resultHighlight:IsShown())
 searchPanel:Hide()
+assert(not resultHighlight:IsShown(), "closing search retained its result hover")
 assert(searchNavigation.query == "" and not searchNavigation.search.focused, "close retained search query or focus")
 context:ResetCounts()
 env.DFRL.locale.code = "ru"
 context:NotifyLocale()
 searchNavigation.Refresh(true)
 context:NoPresentationWrites()
-assert(not context.reads.glyphs, "closed search measured compact result captions")
+assert(not context.reads.glyphs, "closed search measured result captions")
 local closedSearchPool = #context.objects
 searchPanel:Show()
 searchNavigation.Refresh(true)
@@ -412,6 +427,27 @@ assert(
 env.DFRL.locale.Text, env.DFRL.locale.code = originalText, "en"
 resultButton.label.SetText = setResultText
 searchPanel:Hide()
+
+local narrowPanel = env.CreateFrame("Frame", nil, env.UIParent)
+local narrowSidebar = env.CreateFrame("Frame", nil, narrowPanel)
+local narrowNavigation = env.T.CreateEditorNavigator(narrowPanel, narrowSidebar, groups, {
+    {
+        key = "narrow",
+        label = "Combat text",
+        group = "combat",
+        options = { { "icons", "Damage icons", "Spell icons." } },
+    },
+}, {
+    search = true,
+    width = 264,
+    left = 0,
+    top = 0,
+    height = 552,
+    sidebarWidth = 212,
+})
+narrowNavigation.Search("damage icons")
+assert(narrowNavigation.searchOwner.rows[1]:GetWidth() == 240, "fixed result row exceeded a narrower content viewport")
+narrowPanel:Hide()
 
 local toggle = env.T.CreateEditorToggle(panel, "Ability damage", "Show each ability's damage.", 300)
 assert(env.T.CompactEditorToggle(toggle) == 64, "single-line toggle did not shrink")

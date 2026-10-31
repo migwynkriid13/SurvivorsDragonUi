@@ -466,8 +466,14 @@ not been launched or visually verified in the game.
 The search header reuses the input/button helpers: three frames (container,
 EditBox and clear button), nine texture regions and two FontStrings. Results
 are allocated only on a nonempty query, with a maximum pool of eight buttons.
-The full results pool adds eleven frames, forty texture regions and twenty
+The full results pool adds eleven frames, sixteen texture regions and twenty
 FontStrings, including its container, empty/count labels and two paging buttons.
+Plain fixed-width rows replace the decorative red/gold faces, removing twenty-four
+texture regions from the result pool. Each row retains one solid hover highlight
+that actually hides on leave or row hiding; unhovered rows draw only their two
+labels. The 360-unit list uses 42-unit rows with a four-unit gap and has no
+content-width measurements or result metric cache. Paging reuses the same width
+and pool. Normal and Performance Mode share this static presentation.
 Only search results or original section pages are shown in the shared viewport;
 the retained pool is hidden outside search. No runtime asset is added.
 

@@ -68,7 +68,8 @@ remain CI-only and were not run locally; native glyph fit is unverified.
 
 The editor fixture covers metadata search without constructing unopened pages,
 active-language/English matching, supported case folding, literal punctuation,
-empty results, pooled paging, custom and ordinary option redirects, current
+empty results, pooled paging, fixed-width plain rows and their single hidden
+hover texture, custom and ordinary option redirects, current
 row offsets, pending drafts, shared Escape/Cancel, hidden focus/query cleanup
 and unchanged/idle work. It loads the real navigator and settings constructor
 over explicit native boundaries. Search only navigates to existing controls;
