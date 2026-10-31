@@ -42,6 +42,7 @@ DFRL:NewMod("RunBanners", 4, function()
     local GUARDIAN_SLAIN =
         "%s is slain! Its lair yields treasure and its strength, and the other guardians grow stronger."
     local DOT_STACKS = "Your damage over time spells now stack {n} times on one enemy."
+    local AFFIX_WARNINGS = { "An Explosive Orb appears! Destroy it before it bursts!" }
     local native = T.NewHudOwner("banners", "hudBanners")
     local controller = CreateFrame("Frame")
     local root = CreateFrame("Frame", nil, UIParent)
@@ -64,6 +65,7 @@ DFRL:NewMod("RunBanners", 4, function()
     local nextPaintAt
     local OnBanner, Refresh, Update, SyncUpdates
     local companions = {}
+    local errorBanners = {}
 
     function DFRL.GetBannerDiagnostics()
         if not CaptureEnabled() then return "" end
@@ -134,6 +136,13 @@ DFRL:NewMod("RunBanners", 4, function()
         for _, catalog in pairs(DFRL.locale.data) do
             local text = catalog.native[source]
             if text then companions[text] = true end
+        end
+    end
+    for _, source in ipairs(AFFIX_WARNINGS) do
+        errorBanners[source] = true
+        for _, catalog in pairs(DFRL.locale.data) do
+            local text = catalog.native[source]
+            if type(text) == "string" and text ~= "" then errorBanners[text] = true end
         end
     end
 
@@ -455,6 +464,13 @@ DFRL:NewMod("RunBanners", 4, function()
         local original, hook = frame.AddMessage
         hook = function(owner, text, r, g, b, id, hold)
             if banners.IsActive() and errorHook == hook and type(text) == "string" and text ~= "" then
+                if errorBanners[text] then
+                    -- Each received affix display call is a separate warning.
+                    local ok, failure = pcall(Enqueue, text, true, "affix")
+                    if ok then return end
+                    Failed(failure)
+                    return original(owner, text, r, g, b, id, hold)
+                end
                 if HasBanner(text) then return end
                 -- Wait until the next update so either native delivery order
                 -- can pair with an accepted banner. Unmatched errors stay native.

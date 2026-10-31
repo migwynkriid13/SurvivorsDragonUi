@@ -34,6 +34,21 @@ python3 -B scripts/generate_localization.py \
   --refresh-marks-only --metadata /tmp/sdui-marks-native.json
 ```
 
+The native affix-warning templates are separately pinned to installed **0.131.0**,
+SHA-256 `5dd6819d836748ccf809ab76fe6509c9ee793e087939b5d036c430d835a14e63`.
+The recovered warning set currently contains **An Explosive Orb appears! Destroy
+it before it bursts!**. All fourteen values come directly from the native
+catalogs in the existing reviewed language order and enter only the `native`
+sections and `native-keys.json`. Other captions, spell aliases, effects and their
+source pins are retained. The banner hook matches complete received text in any
+of those languages without translating it again or inferring the active affix.
+Reproduce this data-only preparation with:
+
+```sh
+python3 -B scripts/generate_localization.py \
+  --client /path/to/AzerothSurvivors.exe --refresh-affix-warnings-only
+```
+
 The initial fallback is the native `GetLocale()` value, with aliases for the supported language codes, including `csCZ` → `cs`. This alone does not establish the language selected by the game's fourteen-language picker: the inspected [base-client implementation](https://github.com/samwhosung/benilla/blob/main/crates/benilla-ui/src/script/client.rs) reads the older client locale table.
 
 The authoritative addon-visible evidence is the game's localized text published in the official `AZS_ZONE` snapshot. For each candidate catalog, compare the exact `zname` and `zsub` associated with the stable `zone` key and `cname` associated with the stable `class` key. Select the unique highest-scoring catalog. Shared proper names alone can tie; a tie or unfamiliar wording retains the existing fallback rather than choosing a language arbitrarily. The normal localized zone subtitle distinguishes the catalogs without deriving anything from an enemy or item name.

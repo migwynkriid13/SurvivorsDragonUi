@@ -58,6 +58,14 @@ An explicit Bash shell enables `pipefail`, so piping fixture/model output into
 
 ## UI work and cleanup tests
 
+The production banner fixture supplies an explicit `UIErrorsFrame.AddMessage`
+boundary and the generated fourteen-language native catalogs. Affix-warning
+cases cover exact received-text admission and native suppression, separate
+identical calls, unchanged ordinary-error arguments, normal/static animation,
+pool reuse, hidden expiry, mode changes, disabled/failure fallback and
+world/reload/external-wrapper cleanup. These cases remain CI-only and were not
+executed locally; they do not prove actual client event delivery or rendering.
+
 SCT default cases use real Display/SCT owners to check Custom mode, Diablo IV
 style, Default font, 90% size and enabled abbreviations. Missing/invalid modes
 suppress native outgoing damage once during initialization, including synchronous

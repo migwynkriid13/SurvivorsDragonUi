@@ -1666,6 +1666,16 @@ CI-only production fixtures assert hidden-pool idling and reuse on Show.
 
 ### Settled disabled banners
 
+Affix-warning intake reuses the existing `UIErrorsFrame.AddMessage` wrapper,
+three-label pool, bounded queue, expiry and cleanup. A one-time lookup contains
+the recovered English templates and their fourteen native translations; each
+received error adds one exact lookup before the existing banner-pairing path.
+There is no new per-frame work, drawing region, event, updater or asset. Normal
+mode keeps the shared fade; Performance Mode keeps warnings opaque to their
+original expiry. Hidden intake skips painting and expires without replay.
+Failed presentation restores native delivery of that received warning. The
+existing CI-only banner fixture covers these paths without local execution.
+
 Disabled, faulted or unsupported banners detach their existing update callback
 after native restoration and handler unregistration settle. Pending cleanup
 retains its existing fifth-second retry; failed unregistration remains pending,

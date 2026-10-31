@@ -19,6 +19,8 @@ SOURCE_SHA256 = "22f7938eb4f99f2857dc091b1c57c147bd848eaabfeaa81e444c0a3393ca815
 SPELL_NAMES_SHA256 = "80ac3217660a02020b3e09f1ce93bfaa6ba89abd9a9d62405b9f70114fd6d46c"
 MARKS_KEYS = ("marks.gained", "marks.earned")
 AFFIXES_SHA256 = "08f8c58d6967b94598c56b822a1e6b323a52924a299a6df70ef6055ca839b8cd"
+AFFIX_WARNINGS_SHA256 = "5dd6819d836748ccf809ab76fe6509c9ee793e087939b5d036c430d835a14e63"
+AFFIX_WARNING_KEYS = ("An Explosive Orb appears! Destroy it before it bursts!",)
 AFFIX_KEYS = (
     "Bolstering", "Sanguine", "Explosive",
     "A death makes the enemies near it tougher and stronger, stacking.",
@@ -181,6 +183,10 @@ def refresh_affixes(client, metadata):
     refresh_native_templates(client, metadata, AFFIX_KEYS, AFFIXES_SHA256, "affix")
 
 
+def refresh_affix_warnings(client, metadata):
+    refresh_native_templates(client, metadata, AFFIX_WARNING_KEYS, AFFIX_WARNINGS_SHA256, "affix warning")
+
+
 def generate(client):
     catalogs, seen = [], set()
     with client.open("rb") as stream, mmap.mmap(stream.fileno(), 0, access=mmap.ACCESS_READ) as data:
@@ -257,9 +263,12 @@ if __name__ == "__main__":
     refresh.add_argument("--refresh-spell-names-only", action="store_true", help="Refresh icon aliases from the separately pinned client without replacing captions/effects.")
     refresh.add_argument("--refresh-marks-only", action="store_true", help="Refresh only the two native marks templates from the reviewed Heroic update.")
     refresh.add_argument("--refresh-affixes-only", action="store_true", help="Prepare the six reviewed native affix names/descriptions from 0.125.0.")
+    refresh.add_argument("--refresh-affix-warnings-only", action="store_true", help="Prepare the reviewed native affix warning templates from 0.131.0.")
     parser.add_argument("--metadata", type=Path, help="Optional data-preparation receipt for a targeted refresh.")
     arguments = parser.parse_args()
-    if arguments.refresh_affixes_only:
+    if arguments.refresh_affix_warnings_only:
+        refresh_affix_warnings(arguments.client, arguments.metadata)
+    elif arguments.refresh_affixes_only:
         refresh_affixes(arguments.client, arguments.metadata)
     elif arguments.refresh_marks_only:
         refresh_marks(arguments.client, arguments.metadata)
