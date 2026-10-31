@@ -131,9 +131,14 @@ Action bar checkbox. Coverage is CI-only; no local tests or game execution.
 
 Global font cases load the production font/display owners with explicit native
 font boundaries. They cover enum normalization, preview/Confirm/discard/profiles/
-reset, preserved native sizes/flags, independent text, hidden Show ordering,
-rejected assignments, fallback recovery, reuse and unchanged writes. The editor
-fixture exercises the Layout selector; SCT and segmented timer fixtures require
+reset, preserved sizes/non-outline flags, independent text, hidden Show ordering,
+rejected font/shadow assignments, fallback recovery, reuse and unchanged writes.
+The editor fixture exercises all three Layout outline choices and Black shadow
+in both Performance Mode states, search, unchanged clicks and Cancel/re-entry;
+profile cases retain the choices through save, overwrite, load, discard and
+fresh-owner restoration. Meter cases cover effective outline caching and retries;
+guardian minimap cases cover countdown readiness under None and Thick outline.
+SCT and segmented timer fixtures require
 their production setters to opt out. These cases remain CI-only and were not
 executed locally. See [FONTS.md](FONTS.md).
 

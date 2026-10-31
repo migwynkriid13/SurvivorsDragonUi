@@ -19,7 +19,7 @@ env.texturePath = "Interface\\AddOns\\SurvivorsDragonUi\\media\\tex\\waypoint\\"
 env.Minimap = env.CreateFrame("Frame", nil, env.UIParent)
 local setNativeFont = env.T.SetFont
 env.T.SetFont = function(label, size, flags)
-    setNativeFont(label, size, flags)
+    setNativeFont(label, size, env.T.GetFontFlags(flags))
     -- Native GetFont may report the resolved path instead of the requested alias.
     label.font[1] = "Fonts\\FRIZQT__.TTF"
 end
@@ -180,6 +180,19 @@ assert(not pin.timer:IsShown(), "failed font displayed uninitialized text")
 env.T.SetFont = setFont
 Paint(true, 1)
 assert(pin.timer:IsVisible(), "failed timer font was not retried")
+local originalFlags = env.T.GetFontFlags
+for _, outline in ipairs({ "", "THICKOUTLINE" }) do
+    -- Model the shared font owner's effective style without loading it here.
+    env.T.GetFontFlags = function() return outline end
+    pin.timerFontReady = nil
+    pin.timer:Hide()
+    Paint(true, 1)
+    assert(pin.timer:IsVisible() and pin.timer.font[3] == outline, "global outline blocked countdown readiness")
+    context:ResetCounts()
+    Paint(true, 1)
+    context:NoPresentationWrites()
+end
+env.T.GetFontFlags = originalFlags
 local other = { key = "2:0", index = 2, id = 0, state = "empty", left = 20, x = 10, y = 0 }
 tracker.acceptedMinimapEntries = { entry, other }
 now = now + 1

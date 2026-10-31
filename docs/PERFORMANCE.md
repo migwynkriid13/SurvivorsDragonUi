@@ -98,16 +98,22 @@ it does not establish on-disk client persistence. See [PROFILES.md](PROFILES.md)
 
 The shared font registry adds no HUD frame, region, asset, event or updater.
 It visits weakly registered text and the existing native Font objects only when
-the effective choice changes. Hidden frame owners defer writes to one OnShow
+the effective face, outline or shadow changes. Hidden frame owners defer writes to one OnShow
 wrapper per owner; ordinary setter calls still skip identical native bindings.
 Successful face probes are cached, unavailable families use the game face, and
 failed object assignments retain a usable fallback and retry through existing
-setter/Show work. Sizes, outlines and shadows remain unchanged.
+setter/Show work. Sizes and unrelated native flags remain unchanged; the shared
+outline and black-shadow choices apply instantly, including newly created
+managed labels. Shadow writes compare native state or cache successful writes
+when getters are absent, with failed assignments remaining retryable.
 
-The lazy Layout selector adds five button frames, twenty texture regions and
-seven FontStrings (five button labels, a caption and a hint). They draw only on
-the open Layout page. Measurement invalidation reuses the existing settings,
-Copy, guardian and tally lifecycles. Timer and outgoing SCT font selectors retain
+The lazy Layout font controls contain seven choice buttons, one shadow toggle,
+thirty-two texture regions and eleven FontStrings (seven button labels, the
+toggle label, two captions and a hint). Issue #75 adds three choice buttons, one
+toggle, sixteen textures and five labels to the existing face controls. They
+draw only on the open Layout page and reuse its scrolling viewport. Measurement
+invalidation reuses the existing settings, Copy, guardian and tally lifecycles;
+meter font-size caches compare the effective shared outline. Timer and outgoing SCT font selectors retain
 ownership. Both Performance Mode states use the same instant font change.
 These are source-level costs; handheld readability, glyph coverage and native
 rendering remain unverified. See [FONTS.md](FONTS.md).

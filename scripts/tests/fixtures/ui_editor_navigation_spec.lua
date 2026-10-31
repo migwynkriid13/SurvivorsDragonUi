@@ -872,6 +872,61 @@ editor.Display()
 assert(display.Get("uiFont") == "arial" and not env.SurvivorsDragonUiDisplay, "Layout font saved before Confirm")
 assert(dialog.uiFontButtons.arial.editorSelected, "Layout font selection did not refresh")
 assert(display.Get("sctFont") == "default", "Layout font changed the independent SCT choice")
+local globalShadow = assert(env.displayControls.uiFontShadow, "Layout did not prepare Black shadow")
+assert(
+    globalShadow.editorChecked and dialog.uiFontOutlineButtons.OUTLINE.editorSelected,
+    "Layout lost font-style defaults"
+)
+local globalFontObjects = #context.objects
+for _, performance in ipairs({ false, true }) do
+    display.Set("performanceMode", performance)
+    for _, outline in ipairs({ "", "OUTLINE", "THICKOUTLINE" }) do
+        local selected = assert(dialog.uiFontOutlineButtons[outline], "Layout omitted an outline choice")
+        context:Call(selected, "OnClick")
+        editor.Display()
+        assert(
+            display.Get("uiFontOutline") == outline and not env.SurvivorsDragonUiDisplay,
+            "outline saved before Confirm"
+        )
+        for value, button in pairs(dialog.uiFontOutlineButtons) do
+            assert(button.editorSelected == (value == outline), "outline selection did not refresh")
+        end
+        local locks = selected.lockWrites
+        context:ResetCounts()
+        context:Call(selected, "OnClick")
+        editor.Display()
+        context:NoPresentationWrites()
+        assert(selected.lockWrites == locks, "selected outline repeated native highlight writes")
+    end
+    context:Call(globalShadow, "OnClick")
+    editor.Display()
+    assert(globalShadow.editorChecked == display.Get("uiFontShadow"), "Black shadow did not preview")
+    assert(not env.SurvivorsDragonUiDisplay, "Black shadow saved before Confirm")
+end
+context:Call(globalShadow, "OnClick")
+editor.Display()
+assert(not globalShadow.editorChecked and not display.Get("uiFontShadow"), "Black shadow could not be disabled")
+assert(#context.objects == globalFontObjects, "font-style choices allocated replacement controls")
+dialog.navigation.Search("thick outline")
+local foundLayoutOutline
+for _, result in ipairs(dialog.navigation.results) do
+    if result.group == "layout" then
+        assert(result.entry.offset == 488, "global outline search does not redirect to its controls")
+        foundLayoutOutline = true
+    end
+end
+assert(foundLayoutOutline and not pages.timer, "global outline was missing from search or eagerly prepared Encounters")
+dialog.navigation.ClearSearch()
+dialog.navigation.Search("black shadow")
+local foundLayoutShadow
+for _, result in ipairs(dialog.navigation.results) do
+    if result.group == "layout" then
+        assert(result.target == "uiFontShadow" and result.entry.offset == 552, "global shadow search lost its control")
+        foundLayoutShadow = true
+    end
+end
+assert(foundLayoutShadow, "global Black shadow was missing from search")
+dialog.navigation.ClearSearch()
 dialog.navigation.Select("units")
 assert(
     pages.units and pages.pets and pages.auras and not pages.combat and not pages.timer,
@@ -901,6 +956,13 @@ dialog:Show()
 assert(display.Get("uiFont") == "default", "Cancel retained the Layout font")
 dialog.navigation.Select("layout")
 assert(dialog.uiFontButtons.default.editorSelected, "Layout did not refresh the discarded font on re-entry")
+assert(
+    display.Get("uiFontOutline") == "OUTLINE"
+        and display.Get("uiFontShadow")
+        and dialog.uiFontOutlineButtons.OUTLINE.editorSelected
+        and globalShadow.editorChecked,
+    "Cancel/reopen retained draft outline or shadow"
+)
 dialog.navigation.Select("units")
 assert(
     healthChoice.editorChecked == true and #context.objects == unitObjects,

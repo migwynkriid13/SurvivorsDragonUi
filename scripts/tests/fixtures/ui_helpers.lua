@@ -260,6 +260,11 @@ function H.New()
     function dfrl:NewMod(name, _, callback) context.modules[name] = callback end
     dfrl.tools.SetFont = function(object, size, flags) object:SetFont("DEFAULT_TEST", size, flags) end
     dfrl.tools.GetDefaultFont = function() return "DEFAULT_TEST" end
+    dfrl.tools.GetFontFlags = function(flags) return flags or "" end
+    dfrl.tools.SetChatShadow = function(object)
+        object:SetShadowColor(0, 0, 0, 1)
+        object:SetShadowOffset(1, -1)
+    end
     dfrl.locale.Text = function(value) return value end
     dfrl.locale.Listen = function(callback) table.insert(localeListeners, callback) end
     dfrl.display.Get = function(name) return context.settings[name] end
