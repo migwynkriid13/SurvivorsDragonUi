@@ -49,6 +49,23 @@ local healing =
 local boss = { metric = "damage", scope = "self", period = "encounter", groupBy = "source" }
 local party = { metric = "damage", scope = "party", period = "run", groupBy = "owner" }
 
+local function Ranks(count)
+    local records = {}
+    for rank = count, 1, -1 do
+        table.insert(records, {
+            id = "flamestrike-rank-" .. rank,
+            rowId = "flamestrike-leaf-" .. rank,
+            abilityKey = "flamestrike",
+            rank = rank,
+            name = "Flamestrike",
+            amount = rank * 10,
+            recent = rank * 2,
+            after = rank * 3,
+        })
+    end
+    return records
+end
+
 local function Native()
     local c = H.New()
     local env = c.env
@@ -132,7 +149,7 @@ local function Native()
         end
         return value
     end
-    local function Stats(query, amount, recent, checkpointAmount)
+    local function Stats(query, amount, recent, checkpointAmount, sourceRecentStatus)
         local ending = state.context.asOfRunSeconds
         local start = query.period == "encounter" and 10 or 0
         local result = { periodAmount = amount, displayAmount = amount, periodAverage = Rate(amount, start, ending) }
@@ -146,7 +163,7 @@ local function Native()
             local recentStart =
                 math.max(start, ending - query.windowSeconds, query.checkpointId and state.checkpoint.atRunSeconds or 0)
             if query.checkpointId then recent = math.min(recent, checkpointAmount or 0) end
-            local recentStatus = state.recentStatus
+            local recentStatus = sourceRecentStatus or state.recentStatus
             if recentStatus == "ready" and ending - recentStart < 1 then recentStatus = "warming_up" end
             result.recentRate = Rate(recent, recentStart, ending, recentStatus)
             if recentStatus ~= "unavailable" then result.windowAmount = recent end
@@ -217,16 +234,22 @@ local function Native()
             end
             response.sources[record.id] = {
                 sourceKey = record.id,
-                kind = "ability",
+                kind = record.kind or "ability",
                 name = record.name,
                 nameLanguageCode = self.context.languageCode,
                 icon = record.icon or { status = "ready", path = "Interface\\Icons\\" .. record.id },
                 spellIds = {},
                 originSourceKeys = {},
                 relatedSourceKeys = {},
-                abilityKey = record.id,
+                abilityKey = not record.omitAbilityKey and (record.abilityKey or record.id) or nil,
+                rank = record.rank,
+                variantKey = record.variantKey,
+                itemInstanceKey = record.itemInstanceKey,
+                talentKey = record.talentKey,
+                itemKey = record.itemKey,
+                itemId = record.itemId,
             }
-            local leaf = Stats(query, record.amount, record.recent, record.after)
+            local leaf = Stats(query, record.amount, record.recent, record.after, record.recentStatus)
             leaf.rowId, leaf.ownerId, leaf.actorId, leaf.sourceKey = record.rowId, owner, actor, record.id
             leaf.nativeProc, leaf.periodicity = record.proc == true, record.periodic and "periodic" or "non_periodic"
             leaf.reflection, leaf.schoolState, leaf.schoolMask = "not_reflected", "known", 1
@@ -236,7 +259,7 @@ local function Native()
                 leaf.recipientActorId, leaf.recipientOwnerState, leaf.recipientOwnerId = owner, "known", owner
             end
             leaf.originSourceKeys, leaf.tieOrder = {}, index
-            local row = Stats(query, record.amount, record.recent, record.after)
+            local row = Stats(query, record.amount, record.recent, record.after, record.recentStatus)
             row.rowId, row.memberIds, row.rank = "group-" .. record.rowId, { record.rowId }, index
             row.ownerId, row.sourceKey, row.nativeProc, row.tieOrder = owner, record.id, leaf.nativeProc, index
             row.procClassification = leaf.nativeProc and "proc" or "non_proc"
@@ -319,7 +342,7 @@ local function Native()
     return c, state, env.T.NewNativeMeter(), env
 end
 
-if helperMode == "helpers" then return { New = Native, languages = languages, labels = labels } end
+if helperMode == "helpers" then return { New = Native, languages = languages, labels = labels, Ranks = Ranks } end
 
 Test("missing native endpoints retain the legacy selection boundary", function()
     local c = H.New()
@@ -579,4 +602,134 @@ Test("checkpoint cleanup retries only unresolved native resources", function()
         not meter.PendingCleanup() and state.calls.snapshot == reads,
         "cleanup collected counters or retained settled work"
     )
+end)
+
+Test("nine native ability ranks form one ordered row without changing native counters", function()
+    local _, state, meter = Native()
+    state.records = Ranks(9)
+    table.insert(state.records, 1, { id = "other", rowId = "other", name = "Other", amount = 200, recent = 40 })
+    local source, total, rate, message, _, meta = meter.Read(damage, 10)
+    assert(source and not message and table.getn(source) == 2, "nine ranks became nine displayed ability rows")
+    assert(source[1].name == "Flamestrike" and source[1].dmg == 450 and source[2].name == "Other")
+    assert(source[1].dps == 9 and source[1].averageDps == 22.5, "grouped native rates were not summed")
+    assert(source[1].share == 450 / 650 and total == 650 and rate == 13 and meta.averageRate == 32.5)
+    assert(source[1].icon == "Interface\\Icons\\flamestrike-rank-9", "group did not use highest-rank metadata")
+    assert(table.getn(state.lastResponse.rows) == 10 and table.getn(state.lastResponse.contributions) == 10)
+    for index = 1, 9 do
+        local rank = 10 - index
+        assert(state.lastResponse.rows[index + 1].displayAmount == rank * 10, "grouping rewrote a native source amount")
+        assert(state.lastResponse.sources["flamestrike-rank-" .. rank].rank == rank)
+    end
+    local identity = source[1].rowId
+    state.records = Ranks(10)
+    state.context.snapshotId, state.context.counterRevision = "rank-ten", "rank-ten"
+    source = assert(meter.Read(damage, 10))
+    assert(table.getn(source) == 1 and source[1].dmg == 550 and source[1].dps == 11)
+    assert(source[1].rowId == identity, "adding a new rank restarted the displayed ability identity")
+    assert(source[1].icon == "Interface\\Icons\\flamestrike-rank-10")
+end)
+
+Test("native rank groups preserve explicit family distinctions and ambiguous ranks", function()
+    local distinctions = {
+        { "abilityKey", "ability-a", "ability-b" },
+        { "variantKey", "direct", "periodic" },
+        { "itemInstanceKey", "item-one", "item-two" },
+        { "talentKey", "talent-one", "talent-two" },
+        { "itemKey", "item-one", "item-two" },
+        { "itemId", 101, 102 },
+        { "kind", "ability", "effect" },
+        { "rank" },
+        { "proc", false, true },
+        { "omitAbilityKey", true, true },
+    }
+    for _, distinction in ipairs(distinctions) do
+        local _, state, meter = Native()
+        state.records = Ranks(2)
+        state.records[1][distinction[1]], state.records[2][distinction[1]] = distinction[2], distinction[3]
+        local source = assert(meter.Read(damage, 10))
+        assert(table.getn(source) == 2, "rank grouping collapsed distinct " .. distinction[1] .. " values")
+    end
+    do
+        local _, state, meter = Native()
+        state.records = Ranks(2)
+        state.records[1].ownerId, state.records[2].ownerId = "hero-1", "hero-2"
+        local source = assert(meter.Read({ metric = "damage", scope = "party", period = "run", groupBy = "source" }, 0))
+        assert(table.getn(source) == 2, "rank grouping merged different accounting heroes")
+    end
+    do
+        local _, state, meter = Native()
+        state.records = Ranks(3)
+        state.records[2].rank, state.records[3].rank = 1, 1
+        local source = assert(meter.Read(damage, 10))
+        assert(table.getn(source) == 3, "same-rank ambiguity partially merged a native family")
+        for _, row in ipairs(source) do
+            assert(type(row.rowId) == "string", "ambiguous family lost its individual native row IDs")
+        end
+    end
+end)
+
+Test("native rank groups retain missing rates and highest-rank artwork readiness", function()
+    local _, state, meter = Native()
+    state.records = Ranks(3)
+    state.recentStatus = "unavailable"
+    local source, total, rate = meter.Read(damage, 10)
+    assert(table.getn(source) == 1 and source[1].dmg == 60 and total == 60)
+    assert(source[1].dps == nil and rate == nil and source[1].averageDps == 3)
+    state.records[2].recentStatus, state.records[3].recentStatus = "ready", "ready"
+    source = assert(meter.Read(damage, 10))
+    assert(source[1].dps == nil, "later known ranks replaced an unknown member's rate")
+    state.records[2].recentStatus, state.records[3].recentStatus = nil, nil
+    state.context.asOfRunSeconds, state.context.encounter = 0.5, nil
+    state.recentStatus = "warming_up"
+    source = assert(meter.Read(damage, 10))
+    assert(source[1].dps == nil, "rank aggregation manufactured a warming-up DPS value")
+    state.context.asOfRunSeconds, state.recentStatus = 20, "ready"
+    state.records[1].icon = { status = "pending", retryAfterSeconds = 0.2 }
+    state.context.metadataRevision, state.context.snapshotId = "rank-art-pending", "rank-art-pending"
+    source = assert(meter.Read(damage, 10))
+    assert(source[1].icon == nil and source[1].iconStatus == "pending", "group borrowed old-rank art while pending")
+    state.records[1].icon = { status = "missing", reason = "not_available" }
+    state.context.metadataRevision, state.context.snapshotId = "rank-art-missing", "rank-art-missing"
+    source = assert(meter.Read(damage, 10))
+    assert(source[1].icon == nil and source[1].iconStatus == "missing")
+    state.records[1].icon = { status = "ready", path = "Interface\\Icons\\new-rank-art" }
+    state.context.metadataRevision, state.context.snapshotId = "rank-art-ready", "rank-art-ready"
+    source = assert(meter.Read(damage, 10))
+    assert(source[1].icon == "Interface\\Icons\\new-rank-art", "rank metadata readiness never recovered")
+end)
+
+Test("rank grouping uses native checkpoint deltas across language and later upgrades", function()
+    local _, state, meter = Native()
+    state.records = Ranks(3)
+    local source = assert(meter.Read(damage, 0))
+    assert(table.getn(source) == 1 and source[1].dmg == 60)
+    assert(meter.Reset())
+    state.context.asOfRunSeconds = 22
+    source = assert(meter.Read(damage, 0))
+    assert(table.getn(source) == 1 and source[1].dmg == 18 and source[1].dps == 9)
+    assert(source[1].share == 1)
+    local identity = source[1].rowId
+    local checkpoint = state.queries[table.getn(state.queries)].checkpointId
+    for _, record in ipairs(state.records) do
+        record.name = "Flammenstoß"
+    end
+    state.context.languageCode, state.context.languageRevision = "de", "rank-language-de"
+    state.context.metadataRevision, state.context.snapshotId = "rank-meta-de", "rank-snapshot-de"
+    source = assert(meter.Read(damage, 0))
+    assert(source[1].name == "Flammenstoß" and source[1].rowId == identity and source[1].dmg == 18)
+    assert(state.queries[table.getn(state.queries)].checkpointId == checkpoint)
+    table.insert(state.records, 1, {
+        id = "flamestrike-rank-4",
+        rowId = "flamestrike-leaf-4",
+        abilityKey = "flamestrike",
+        rank = 4,
+        name = "Flammenstoß",
+        amount = 40,
+        recent = 8,
+        after = 12,
+    })
+    state.context.snapshotId, state.context.counterRevision = "rank-four-after-X", "rank-four-after-X"
+    source = assert(meter.Read(damage, 0))
+    assert(source[1].dmg == 30 and source[1].dps == 15 and source[1].rowId == identity)
+    assert(state.queries[table.getn(state.queries)].checkpointId == checkpoint, "rank change replaced the native fence")
 end)

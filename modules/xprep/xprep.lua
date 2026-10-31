@@ -6,9 +6,6 @@ DFRL:NewMod("Xprep", 1, function()
     local fillTexture = texpath .. "main_soft.blp"
     local defaults = { top = 49, height = 6, borderHeight = 12 }
     DFRL.xpBarDefaults = defaults
-    KillFrame(MainMenuBarPerformanceBarFrame)
-    KillFrame(MainMenuExpBar)
-    KillFrame(ReputationWatchBar)
 
     local hud = CreateFrame("Frame", "SurvivorsDragonUiXP", UIParent)
     hud:SetHeight(defaults.height)
@@ -67,6 +64,55 @@ DFRL:NewMod("Xprep", 1, function()
     local attached, registered, editing = false, false, false
     local docked
     local inWorld = UnitExists("player") and true or false
+    local customActionBar = DFRL.display.Get("customActionBar") ~= false
+    local stockXP, stockOwned = {}, false
+    for _, name in ipairs({ "MainMenuBarPerformanceBarFrame", "MainMenuExpBar", "ReputationWatchBar" }) do
+        local frame = _G[name]
+        if frame then table.insert(stockXP, { frame = frame }) end
+    end
+    local function UpdateStockXP()
+        local owned = inWorld and customActionBar
+        if stockOwned == owned then return end
+        stockOwned = owned
+        for _, state in ipairs(stockXP) do
+            local frame = state.frame
+            if owned then
+                local originalShow, originalHide, originalOnShow = frame.Show, frame.Hide, frame:GetScript("OnShow")
+                state.originalShow, state.originalHide, state.originalOnShow =
+                    originalShow, originalHide, originalOnShow
+                state.shown = frame:IsShown()
+                local show, hide, onShow
+                show = function(self)
+                    if not stockOwned or state.show ~= show then return originalShow(self) end
+                    state.shown = true
+                    if self:IsShown() then return originalHide(self) end
+                end
+                hide = function(self)
+                    if stockOwned and state.hide == hide then state.shown = false end
+                    return originalHide(self)
+                end
+                onShow = function(a1, a2, a3, a4, a5, a6, a7, a8, a9)
+                    local active = stockOwned and state.onShow == onShow
+                    if active then state.shown = true end
+                    if originalOnShow then originalOnShow(a1, a2, a3, a4, a5, a6, a7, a8, a9) end
+                    if active then originalHide(frame) end
+                end
+                state.show, state.hide, state.onShow = show, hide, onShow
+                frame.Show, frame.Hide = show, hide
+                frame:SetScript("OnShow", onShow)
+                if frame:IsShown() then originalHide(frame) end
+            else
+                if frame.Show == state.show then frame.Show = state.originalShow end
+                if frame.Hide == state.hide then frame.Hide = state.originalHide end
+                if frame:GetScript("OnShow") == state.onShow then frame:SetScript("OnShow", state.originalOnShow) end
+                if state.shown and not frame:IsShown() then
+                    frame:Show()
+                elseif not state.shown and frame:IsShown() then
+                    frame:Hide()
+                end
+            end
+        end
+    end
     local previousXP, previousMaximum, previousLevel
     local displayed, desired = 0, 0
     local origin, destination, gainStart, age, duration, fadeAge
@@ -82,6 +128,7 @@ DFRL:NewMod("Xprep", 1, function()
     local function UpdateXPText()
         if
             not showText
+            or not customActionBar
             or not inWorld
             or not attached
             or not bar:IsVisible()
@@ -122,7 +169,7 @@ DFRL:NewMod("Xprep", 1, function()
 
     local requestedShown, requestedDocked
     local function ShowXP(shown)
-        shown = shown and attached and true or false
+        shown = shown and attached and customActionBar and true or false
         if requestedShown == shown and requestedDocked == docked then return end
         requestedShown, requestedDocked = shown, docked
         if shown and attached then
@@ -228,6 +275,14 @@ DFRL:NewMod("Xprep", 1, function()
     end
 
     local function UpdateXP(animate)
+        if not customActionBar or not inWorld then
+            previousXP, previousMaximum, previousLevel = nil, nil, nil
+            desired = 0
+            StopAnimation()
+            ShowXP(false)
+            UpdateXPText()
+            return
+        end
         local currentXP, maximumXP, level = UnitXP("player"), UnitXPMax("player"), UnitLevel("player")
         if not inWorld or not Number(currentXP) or not Number(maximumXP) or maximumXP <= 0 then
             previousXP, previousMaximum, previousLevel = nil, nil, nil
@@ -351,6 +406,13 @@ DFRL:NewMod("Xprep", 1, function()
     end
 
     DFRL.display.Listen(function()
+        local selectedBar = DFRL.display.Get("customActionBar") ~= false
+        local barChanged = customActionBar ~= selectedBar
+        customActionBar = selectedBar
+        if barChanged then
+            StopAnimation()
+            UpdateStockXP()
+        end
         local selectedText = DFRL.display.Get("xpShowText")
         if showText ~= selectedText then
             showText = selectedText
@@ -360,8 +422,17 @@ DFRL:NewMod("Xprep", 1, function()
         local changed = performanceMode ~= enabled
         performanceMode = enabled
         if changed then StopAnimation() end
-        if UpdateAttachment() or changed then UpdateXP(false) end
+        if UpdateAttachment() or changed or barChanged then UpdateXP(false) end
     end)
+    function DFRL.ReleaseActionBarXP()
+        inWorld, pending, instant = false, false, false
+        UpdateStockXP()
+        previousXP, previousMaximum, previousLevel = nil, nil, nil
+        desired = 0
+        StopAnimation()
+        ShowXP(false)
+        UpdateXPText()
+    end
     events:RegisterEvent("PLAYER_ENTERING_WORLD")
     events:RegisterEvent("PLAYER_LEAVING_WORLD")
     events:RegisterEvent("PLAYER_LOGOUT")
@@ -369,24 +440,21 @@ DFRL:NewMod("Xprep", 1, function()
     events:RegisterEvent("PLAYER_LEVEL_UP")
     events:SetScript("OnEvent", function()
         if event == "PLAYER_LEAVING_WORLD" or event == "PLAYER_LOGOUT" then
-            inWorld, pending, instant = false, false, false
-            previousXP, previousMaximum, previousLevel = nil, nil, nil
-            desired = 0
-            StopAnimation()
-            ShowXP(false)
-            UpdateXPText()
+            DFRL.ReleaseActionBarXP()
         elseif event ~= "PLAYER_XP_UPDATE" or arg1 == "player" or arg1 == nil then
             if event == "PLAYER_ENTERING_WORLD" then
                 inWorld, instant = true, true
+                UpdateStockXP()
                 previousXP, previousMaximum, previousLevel = nil, nil, nil
             end
-            if inWorld then
+            if inWorld and customActionBar then
                 pending = true
                 events:SetScript("OnUpdate", OnUpdate)
             end
         end
     end)
     DFRL.xpBar = hud
+    UpdateStockXP()
     -- The bar may already exist, or its world-entry callback will attach us.
     if DFRL.mainBar then DFRL.AttachXPBar(DFRL.mainBar) end
 end)

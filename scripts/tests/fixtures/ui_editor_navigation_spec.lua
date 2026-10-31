@@ -8,6 +8,11 @@ env.DFRL.locale.Bind = function(label) return label end
 local object = context.Object
 context.Object = function(self, kind, name, parent)
     local result = object(self, kind, name, parent)
+    local enableMouse = result.EnableMouse
+    function result:EnableMouse(value)
+        enableMouse(self, value)
+        self.mouse = value
+    end
     local setPoint = result.SetPoint
     function result:SetPoint(...)
         setPoint(self, ...)
@@ -1188,6 +1193,35 @@ assert(display.Get("xpShowText") and xpText.editorChecked, "XP text checkbox did
 assert(not env.SurvivorsDragonUiDisplay.xpShowText, "XP text checkbox saved before Confirm")
 env.DFRL.layout.CancelEdit()
 assert(not display.Get("xpShowText"), "Cancel retained the XP text checkbox")
+display.BeginEdit()
+dialog:Show()
+dialog.navigation.Select("action")
+local customActionBar = assert(env.displayControls.customActionBar, "Action bar did not prepare the SDUI toggle")
+assert(customActionBar.editorChecked, "new setups did not select the SDUI action bar")
+context:Call(customActionBar, "OnClick")
+editor.Display()
+assert(not display.Get("customActionBar") and env.SurvivorsDragonUiDisplay.customActionBar ~= false)
+for _, key in ipairs({
+    "lockActionButtons",
+    "cooldownNumbers",
+    "showGryphons",
+    "attachXP",
+    "xpShowText",
+    "attachTally",
+    "attachJewelry",
+}) do
+    local control = assert(env.displayControls[key], "missing native-bar dependent control: " .. key)
+    assert(control:GetAlpha() == 0.45 and not control.mouse, "native bar left a custom-bar option interactive: " .. key)
+end
+assert(display.Get("attachJewelry") and display.Get("attachTally"), "native preview rewrote attachment preferences")
+env.DFRL.layout.CancelEdit()
+assert(display.Get("customActionBar") and display.Get("attachJewelry") and display.Get("attachTally"))
+display.BeginEdit()
+dialog:Show()
+dialog.navigation.Select("action")
+editor.Display()
+assert(customActionBar.editorChecked, "Cancel did not restore the action-bar toggle")
+env.DFRL.layout.CancelEdit()
 local function ProfileSaveControls()
     local profiles = env.DFRL.profiles
     local function Open()

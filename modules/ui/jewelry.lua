@@ -78,6 +78,10 @@ DFRL:NewMod("Jewelry", 4, function()
     local cooldownsActive = false
     local shownWanted, wantedDocked, SyncUpdates, cleared = false, nil, nil, true
     local displayGeometry = {}
+    local function Docked()
+        if type(DFRL.ActionBarAttached) == "function" then return DFRL.ActionBarAttached("attachJewelry") end
+        return DFRL.display.Get("customActionBar") ~= false and DFRL.display.Get("attachJewelry")
+    end
     local hud = CreateFrame("Frame", "SurvivorsDragonUiJewelry", UIParent)
     hud:SetWidth(WIDTH)
     hud:SetHeight(HEIGHT)
@@ -604,7 +608,7 @@ DFRL:NewMod("Jewelry", 4, function()
     hud:SetScript("OnShow", function()
         elapsed, animationElapsed = INTERVAL, ANIMATION_INTERVAL
         if SyncUpdates then SyncUpdates() end
-        if DFRL.SetJewelryBarShown then DFRL.SetJewelryBarShown(DFRL.display.Get("attachJewelry")) end
+        if DFRL.SetJewelryBarShown then DFRL.SetJewelryBarShown(Docked()) end
     end)
     local function ResolveSlots()
         if slotsReady then return true end
@@ -667,7 +671,7 @@ DFRL:NewMod("Jewelry", 4, function()
         cooldownsActive = active
     end
     local function CanPaint()
-        local docked = DFRL.display.Get("attachJewelry")
+        local docked = Docked()
         local owner = docked and DFRL.mainBar or UIParent
         return inWorld
             and attached
@@ -681,7 +685,7 @@ DFRL:NewMod("Jewelry", 4, function()
             Clear()
             return
         end
-        local docked = DFRL.display.Get("attachJewelry")
+        local docked = Docked()
         if not shownWanted or wantedDocked ~= docked then
             cleared = false
             shownWanted, wantedDocked = true, docked
@@ -720,7 +724,7 @@ DFRL:NewMod("Jewelry", 4, function()
         PaintIcons()
     end
     local function UpdateDisplay()
-        local docked = DFRL.display.Get("attachJewelry")
+        local docked = Docked()
         if attached then
             local owner = docked and DFRL.mainBar or detached
             local reparented = hud:GetParent() ~= owner

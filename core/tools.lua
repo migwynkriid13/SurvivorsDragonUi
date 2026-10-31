@@ -128,6 +128,209 @@ function DFRL.tools.GetLocalSize(frame)
     return width, height
 end
 
+-- Bar ownership snapshots only objects registered before SDUI prepares artwork.
+function DFRL.tools.NewActionBarState(ignored)
+    local owner, objects, visited = {}, {}, {}
+    local properties = {
+        { "GetParent", "SetParent", 1, true },
+        { "GetWidth", "SetWidth", 1 },
+        { "GetHeight", "SetHeight", 1 },
+        { "GetScale", "SetScale", 1 },
+        { "GetAlpha", "SetAlpha", 1 },
+        { "GetFrameStrata", "SetFrameStrata", 1 },
+        { "GetFrameLevel", "SetFrameLevel", 1 },
+        { "IsMouseEnabled", "EnableMouse", 1, true },
+        { "IsKeyboardEnabled", "EnableKeyboard", 1, true },
+        { "GetTexture", "SetTexture", 1, true },
+        { "GetTexCoord", "SetTexCoord", 4 },
+        { "GetVertexColor", "SetVertexColor", 4 },
+        { "GetBlendMode", "SetBlendMode", 1 },
+        { "GetFont", "SetFont", 3 },
+        { "GetText", "SetText", 1, true },
+        { "GetTextColor", "SetTextColor", 4 },
+        { "GetShadowColor", "SetShadowColor", 4 },
+        { "GetShadowOffset", "SetShadowOffset", 2 },
+    }
+    local scripts = { "OnShow", "OnHide", "OnClick", "OnDragStart", "OnReceiveDrag", "OnUpdateModel" }
+    local function Read(object, method, argument)
+        local getter = object[method]
+        if type(getter) ~= "function" then return end
+        local ok, a, b, c, d, e, f, g, h
+        if argument ~= nil then
+            ok, a, b, c, d, e, f, g, h = pcall(getter, object, argument)
+        else
+            ok, a, b, c, d, e, f, g, h = pcall(getter, object)
+        end
+        if ok then return { a, b, c, d, e, f, g, h } end
+    end
+    local function Children(object, method)
+        local getter = object[method]
+        if type(getter) ~= "function" then return end
+        local ok, children = pcall(function() return { getter(object) } end)
+        if ok then return children end
+    end
+    function owner.Track(object)
+        local kind = type(object)
+        if (kind ~= "table" and kind ~= "userdata") or visited[object] then return end
+        if ignored then
+            local ancestor, parents = object, {}
+            while ancestor and not parents[ancestor] do
+                if ignored[ancestor] then return end
+                parents[ancestor] = true
+                local parent = Read(ancestor, "GetParent")
+                ancestor = parent and parent[1]
+            end
+        end
+        visited[object] = true
+        table.insert(objects, object)
+        for _, method in ipairs({ "GetRegions", "GetChildren" }) do
+            for _, child in ipairs(Children(object, method) or {}) do
+                owner.Track(child)
+            end
+        end
+    end
+    function owner.Capture()
+        local snapshot = {}
+        for _, object in ipairs(objects) do
+            local record = { object = object, values = {}, scripts = {}, methods = {} }
+            for _, property in ipairs(properties) do
+                if type(object[property[2]]) == "function" then
+                    local values = Read(object, property[1])
+                    if values and (values[1] ~= nil or property[4]) then record.values[property[1]] = values end
+                end
+            end
+            local points = Read(object, "GetNumPoints")
+            if
+                points
+                and type(points[1]) == "number"
+                and points[1] - points[1] == 0
+                and points[1] >= 0
+                and points[1] == math.floor(points[1])
+            then
+                local anchors, complete = {}, true
+                for index = 1, points[1] do
+                    local anchor = Read(object, "GetPoint", index)
+                    if not anchor or anchor[1] == nil then
+                        complete = false
+                        break
+                    end
+                    anchors[index] = anchor
+                end
+                if complete then record.points = anchors end
+            end
+            for _, script in ipairs(scripts) do
+                local callback = Read(object, "GetScript", script)
+                if callback then table.insert(record.scripts, { name = script, callback = callback[1] }) end
+            end
+            for _, name in ipairs({ "Show", "Hide" }) do
+                if type(object[name]) == "function" then record.methods[name] = object[name] end
+            end
+            local shown = Read(object, "IsShown")
+            if shown then record.shown = shown[1] ~= nil and shown[1] ~= false and shown[1] ~= 0 end
+            table.insert(snapshot, record)
+        end
+        return snapshot
+    end
+    local function Set(object, method, values, count)
+        local setter = object[method]
+        if type(setter) ~= "function" then return false end
+        if count == 1 then return pcall(setter, object, values[1]) end
+        if count == 2 then return pcall(setter, object, values[1], values[2]) end
+        if count == 3 then return pcall(setter, object, values[1], values[2], values[3]) end
+        if count == 4 then return pcall(setter, object, values[1], values[2], values[3], values[4]) end
+        return pcall(
+            setter,
+            object,
+            values[1],
+            values[2],
+            values[3],
+            values[4],
+            values[5],
+            values[6],
+            values[7],
+            values[8]
+        )
+    end
+    function owner.Apply(snapshot)
+        if type(snapshot) ~= "table" then return false end
+        local complete, records, applied, applying = true, {}, {}, {}
+        -- Restore every script before any reparenting or visibility transition.
+        for _, record in ipairs(snapshot) do
+            local object = record.object
+            records[object] = record
+            for name, method in pairs(record.methods) do
+                if object[name] ~= method then
+                    local ok = pcall(function() object[name] = method end)
+                    if not ok then complete = false end
+                end
+            end
+            for _, script in ipairs(record.scripts) do
+                local current = Read(object, "GetScript", script.name)
+                if not current or current[1] ~= script.callback then
+                    local setter = object.SetScript
+                    local ok = type(setter) == "function" and pcall(setter, object, script.name, script.callback)
+                    if not ok then complete = false end
+                end
+            end
+        end
+        local function ApplyRecord(record)
+            local object = record.object
+            if applied[object] or applying[object] then return end
+            applying[object] = true
+            local parent = record.values.GetParent
+            if parent and records[parent[1]] then ApplyRecord(records[parent[1]]) end
+            for _, property in ipairs(properties) do
+                local values = record.values[property[1]]
+                if values then
+                    local current = Read(object, property[1])
+                    local count = property[1] == "GetTexCoord" and values[5] ~= nil and 8 or property[3]
+                    local same = current ~= nil
+                    for index = 1, count do
+                        if not current or current[index] ~= values[index] then same = false end
+                    end
+                    if not same and not Set(object, property[2], values, count) then complete = false end
+                end
+            end
+            if record.points and type(object.ClearAllPoints) == "function" and type(object.SetPoint) == "function" then
+                local size = Read(object, "GetNumPoints")
+                local same = size and size[1] == table.getn(record.points)
+                for index, point in ipairs(record.points) do
+                    local current = Read(object, "GetPoint", index)
+                    for field = 1, 5 do
+                        if not current or current[field] ~= point[field] then same = false end
+                    end
+                end
+                if not same then
+                    local ok = pcall(object.ClearAllPoints, object)
+                    if not ok then complete = false end
+                    for _, point in ipairs(record.points) do
+                        ok = pcall(object.SetPoint, object, point[1], point[2], point[3], point[4], point[5])
+                        if not ok then complete = false end
+                    end
+                end
+            end
+            applying[object], applied[object] = nil, true
+        end
+        for _, record in ipairs(snapshot) do
+            ApplyRecord(record)
+        end
+        -- Children retain their own shown state even under a hidden parent.
+        for _, record in ipairs(snapshot) do
+            if record.shown ~= nil then
+                local current = Read(record.object, "IsShown")
+                local shown = current and current[1] ~= nil and current[1] ~= false and current[1] ~= 0
+                if shown ~= record.shown then
+                    local method = record.shown and record.object.Show or record.object.Hide
+                    local ok = type(method) == "function" and pcall(method, record.object)
+                    if not ok then complete = false end
+                end
+            end
+        end
+        return complete
+    end
+    return owner
+end
+
 -- Original 1.12.1 FrameXML/Fonts.xml RAID_CLASS_COLORS:
 -- https://github.com/MOUZU/Blizzard-WoW-Interface/blob/master/1.12.1/FrameXML/Fonts.xml
 local classColors = {

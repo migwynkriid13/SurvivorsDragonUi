@@ -21,6 +21,21 @@ The helper runs only where each owner already checks changed or pending artwork.
 Successful caches, probes, retirement and retries remain with those owners in
 both Performance Mode states. It adds no frame, region, asset or updater.
 
+## Optional game action bar
+
+The default-on `customActionBar` display choice reuses the existing bar,
+attachment owners and display listener. Game-bar mode hides SDUI's bar artwork
+and XP presentation, releases native bar presentation, and keeps jewelry and
+counters detached without replacing their saved attachment choices. SDUI-only
+controls use the existing changed-only dependency refresh.
+
+Both Performance Mode states share the same handoff. Native bar input and
+cooldowns retain their original owners; hidden SDUI decoration and cosmetic
+updates stop. Returning to SDUI reuses prepared regions and existing
+normal/static effects. This choice adds no artwork, gameplay persistence or
+separate idle updater. CI-only mocks cover choice transitions and attachment
+state; source review and formatting do not establish live appearance or FPS.
+
 ## Native meter and live navigation API — draft
 
 The v1 meter adapter adds no frame, drawing region, asset, event, updater or
@@ -55,6 +70,50 @@ alias; this adds no polling, allocation or presentation work.
 Both Performance Mode states use the same instant native data and static art.
 These are source costs and CI-only mock scenarios, not measured native drawing,
 appearance or FPS results; no local tests or game execution were performed.
+
+## Damage Taken meter view
+
+The fifth cycle entry reuses the meter row/icon/rim pool, five-Hz visible reader
+and one-Hz rate presentation. It normalizes official `AZS_TAKEN` categories and
+an explicit `AZS_RUN.taken` remainder only while visible and enabled. Category
+icons reuse the neutral image and skip the spell/item resolver. Existing
+publication/retirement, changed-write and hidden/off cleanup paths remain the
+owners; there is no second poller or private rate clock.
+
+The adapter bounds input to 64 native categories plus one unattributed row and
+reuses its normalized row pool. Table identity, publication stamp, receipt and
+native total changes trigger parsing; native-time changes refresh only rates.
+Malformed input and retired publications clear cached rows. No gameplay history
+or per-hit records are retained.
+
+Rates divide by native run seconds (or native seconds since the legacy Reset),
+with a one-second minimum; pause does not advance the denominator. Legacy X
+baselines five views on the next visible pass. With v1 active, its four-view
+native checkpoint stays synchronous and Damage Taken baselines separately on
+that deferred pass; failed native capture retains both previous sessions.
+
+Both Performance Mode states use identical instant information and artwork.
+Added frame/region/asset/event/updater/setting/SavedVariable cost is zero; the
+existing view-selection bound grows from four to five. CI-only lifecycle cases
+are authored and were not run locally. Source review does not measure FPS,
+native drawing or live appearance.
+
+## Meter ability rank grouping
+
+Rank summaries reuse the existing meter reader, row pool, source metadata and
+one-Hz rate presentation. Grouped rows never outnumber their native inputs.
+Normalized copies and family identities are pooled and publication-cached;
+rate-only refreshes retain the existing cadence. Legacy exact-name/proc grouping
+precedes session baselines and rolling-DPS observation, so upgrades do not add
+another history series for the same identity.
+
+V1 grouping uses supplied ability/rank metadata and preserves owner, proc and
+explicit variant/item/talent distinctions. Detailed native records, counters and
+checkpoints are untouched. Both Performance Mode states show the same instant
+summary. Added frame/region/asset/event/updater/setting/SavedVariable cost is
+zero; hidden/off work and retirement remain with the current owners. CI-only
+cases were authored and not run locally; this is no measured rendering or FPS
+result.
 
 ## Mandatory rule for all drawing and assets
 
@@ -2239,7 +2298,7 @@ retains at most 120 run seconds plus one boundary sample, and compresses flat
 intervals to their endpoints. Source identities remain exact name/proc pairs;
 new identities allocate once and reuse their numeric vectors. Left-boundary
 queries use binary search at the one-Hz presentation cadence. All skips history;
-The X captures all four native views once through the existing reader and keeps
+The legacy X captures all five views once through the existing reader and keeps
 one baseline/last-counter record per exact name/proc identity. It pools positive
 session rows and recalculates their totals/shares/order only when counters or
 native order change; unchanged counters refresh only native-time average rates.
@@ -2262,13 +2321,13 @@ review and formatting are the only local checks; CI-only mocks are authored for
 cycling, portraits, unchanged/hidden/off work, failure caching, reset metadata
 and world retirement. No measured CPU/GPU/FPS or live visual-parity claim follows.
 
-Waiting meter views are skipped by a bounded four-view scan in the existing
+Waiting meter views are skipped by a bounded five-view scan in the existing
 deferred visible reader. Click handlers retain only direction/step intent and
 call no getter. Accepted empty snapshots and explicit error messages remain
 selectable; fresh-publication guards stay unchanged. Candidate scans run for
 pending navigation or readiness/publication/visibility changes, rather than
 adding unselected-view polling to each idle pass. Hidden views defer selection,
-and disable/retirement clears it. Candidates store only view indices. Four
+and disable/retirement clears it. Candidates store only view indices. Five
 reusable native-result records coalesce selection, Reset baselines, rolling
 damage observation and presentation within each pass; their source/value
 references are cleared immediately after the protected refresh, including

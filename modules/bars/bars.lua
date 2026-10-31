@@ -2,6 +2,7 @@ DFRL:NewMod("Bars", 1, function()
     -- The run fills slots 1-6; the always-available ability stays in native slot 12.
     local ACTION_SLOTS = { 1, 2, 3, 4, 5, 6, 12 }
     local BUTTON_COUNT = 7
+    local active = false
     local BUTTON_SPACING = 6
     local COOLDOWN_INTERVAL = 0.1
     local COOLDOWN_ZERO = 0.1
@@ -36,11 +37,26 @@ DFRL:NewMod("Bars", 1, function()
     defaults.silverBottomInset = (defaults.height + 2 * defaults.topInset) * 16 / 128
     defaults.jewelryTopInset = defaults.buttonWidth * 40 / 36
     DFRL.actionBarDefaults = defaults
+    function DFRL.ActionBarAttached(key) return DFRL.display.Get("customActionBar") ~= false and DFRL.display.Get(key) end
+    function DFRL.GetActionBarSilverBottom() return -defaults.topInset + defaults.silverBottomInset end
+    function DFRL.SetRunTallyBarExtent() end
+    function DFRL.RefreshActionBarBounds() end
 
+    local disabledFrames = {}
     local function DisableFrame(frame)
         if not frame then return end
-        KillFrame(frame)
-        if frame.SetScript then frame:SetScript("OnShow", function() frame:Hide() end) end
+        if frame.EnableMouse then frame:EnableMouse(false) end
+        if frame.SetScript then
+            local guard = disabledFrames[frame]
+            if not guard then
+                guard = function()
+                    if DFRL.display.Get("customActionBar") ~= false then frame:Hide() end
+                end
+                disabledFrames[frame] = guard
+            end
+            frame:SetScript("OnShow", guard)
+        end
+        frame:Hide()
     end
 
     local function HideHotkey(button)
@@ -51,74 +67,96 @@ DFRL:NewMod("Bars", 1, function()
         end
     end
 
+    local stockFrames = {
+        "ActionBarUpButton",
+        "ActionBarDownButton",
+        "MainMenuBarPageNumber",
+        "MultiBarBottomLeft",
+        "MultiBarBottomRight",
+        "MultiBarLeft",
+        "MultiBarRight",
+        "PetActionBarFrame",
+        "ShapeshiftBarFrame",
+        "BonusActionBarFrame",
+        "PossessBarFrame",
+        "CharacterMicroButton",
+        "TalentMicroButton",
+        "MainMenuMicroButton",
+        "SpellbookMicroButton",
+        "WorldMapMicroButton",
+        "QuestLogMicroButton",
+        "SocialsMicroButton",
+        "HelpMicroButton",
+        "MainMenuBarBackpackButton",
+        "CharacterBag0Slot",
+        "CharacterBag1Slot",
+        "CharacterBag2Slot",
+        "CharacterBag3Slot",
+        "KeyRingButton",
+    }
+    local stockPrefixes = {
+        "MultiBarBottomLeftButton",
+        "MultiBarBottomRightButton",
+        "MultiBarLeftButton",
+        "MultiBarRightButton",
+        "BonusActionButton",
+        "PetActionButton",
+        "ShapeshiftButton",
+        "PossessButton",
+    }
+    local stockTextures = {
+        "MainMenuBarLeftEndCap",
+        "MainMenuBarRightEndCap",
+        "SlidingActionBarTexture0",
+        "SlidingActionBarTexture1",
+        "BonusActionBarTexture0",
+        "BonusActionBarTexture1",
+        "ShapeshiftBarLeft",
+        "ShapeshiftBarMiddle",
+        "ShapeshiftBarRight",
+    }
     local function HideStockBars()
         HideFrameTextures(MainMenuBar)
         HideFrameTextures(MainMenuBarArtFrame)
         MainMenuBar:EnableMouse(false)
         MainMenuBarArtFrame:EnableMouse(false)
 
-        for _, name in ipairs({
-            "ActionBarUpButton",
-            "ActionBarDownButton",
-            "MainMenuBarPageNumber",
-            "MultiBarBottomLeft",
-            "MultiBarBottomRight",
-            "MultiBarLeft",
-            "MultiBarRight",
-            "PetActionBarFrame",
-            "ShapeshiftBarFrame",
-            "BonusActionBarFrame",
-            "PossessBarFrame",
-            "ExhaustionTick",
-        }) do
+        for _, name in ipairs(stockFrames) do
             DisableFrame(_G[name])
         end
 
         for i = BUTTON_COUNT + 1, 12 do
             DisableFrame(_G["ActionButton" .. i])
         end
-        for _, prefix in ipairs({
-            "MultiBarBottomLeftButton",
-            "MultiBarBottomRightButton",
-            "MultiBarLeftButton",
-            "MultiBarRightButton",
-            "BonusActionButton",
-            "PetActionButton",
-            "ShapeshiftButton",
-            "PossessButton",
-        }) do
+        for _, prefix in ipairs(stockPrefixes) do
             for i = 1, 12 do
                 DisableFrame(_G[prefix .. i])
             end
         end
-        for _, name in ipairs({
-            "MainMenuBarLeftEndCap",
-            "MainMenuBarRightEndCap",
-            "SlidingActionBarTexture0",
-            "SlidingActionBarTexture1",
-            "BonusActionBarTexture0",
-            "BonusActionBarTexture1",
-            "ShapeshiftBarLeft",
-            "ShapeshiftBarMiddle",
-            "ShapeshiftBarRight",
-        }) do
+        for _, name in ipairs(stockTextures) do
             local texture = _G[name]
             if texture then texture:SetTexture(nil) end
         end
+        if MicroButtonPortrait then MicroButtonPortrait:Hide() end
 
         -- The six run abilities and the permanent ability stay on the first page.
         -- Page bindings must not silently replace the skills behind those buttons.
         local changePage = _G.ChangeActionBarPage
+        local pageUp, pageDown = _G.ActionBar_PageUp, _G.ActionBar_PageDown
         local function KeepMainPage()
+            if not active then return changePage and changePage() end
             _G.CURRENT_ACTIONBAR_PAGE = 1
             if changePage then changePage() end
         end
         _G.ChangeActionBarPage = KeepMainPage
-        _G.ActionBar_PageUp = KeepMainPage
-        _G.ActionBar_PageDown = KeepMainPage
-        _G.MultiActionBar_Update = function() end
-        _G.ShowBonusActionBar = function() end
-        _G.HideBonusActionBar = function() end
+        _G.ActionBar_PageUp = function()
+            if not active then return pageUp and pageUp() end
+            return KeepMainPage()
+        end
+        _G.ActionBar_PageDown = function()
+            if not active then return pageDown and pageDown() end
+            return KeepMainPage()
+        end
         _G.SHOW_MULTI_ACTIONBAR_1 = nil
         _G.SHOW_MULTI_ACTIONBAR_2 = nil
         _G.SHOW_MULTI_ACTIONBAR_3 = nil
@@ -127,13 +165,16 @@ DFRL:NewMod("Bars", 1, function()
 
         local buttonDown, buttonUp = _G.ActionButtonDown, _G.ActionButtonUp
         _G.ActionButtonDown = function(id)
-            if id >= 1 and id <= BUTTON_COUNT then buttonDown(id) end
+            if not active or (id >= 1 and id <= BUTTON_COUNT) then return buttonDown(id) end
         end
         _G.ActionButtonUp = function(id, onSelf)
-            if id >= 1 and id <= BUTTON_COUNT then buttonUp(id, onSelf) end
+            if not active or (id >= 1 and id <= BUTTON_COUNT) then return buttonUp(id, onSelf) end
         end
         -- Existing client bindings must not execute slots on discarded bars.
         for _, name in ipairs({
+            "MultiActionBar_Update",
+            "ShowBonusActionBar",
+            "HideBonusActionBar",
             "MultiActionButtonDown",
             "MultiActionButtonUp",
             "BonusActionButtonDown",
@@ -142,7 +183,10 @@ DFRL:NewMod("Bars", 1, function()
             "PetActionButtonUp",
             "ShapeshiftBar_ChangeForm",
         }) do
-            _G[name] = function() end
+            local original = _G[name]
+            _G[name] = function(a1, a2, a3)
+                if not active and type(original) == "function" then return original(a1, a2, a3) end
+            end
         end
     end
 
@@ -331,7 +375,6 @@ DFRL:NewMod("Bars", 1, function()
     local function StyleButton(button, index, bar)
         -- Never expose pickup or outside drops. Unlocked Shift-clicks select two
         -- occupied native slots; ordinary clicks keep their original activation.
-        button:RegisterForDrag()
         button:SetScript("OnDragStart", nil)
         button:SetScript("OnReceiveDrag", nil)
         button:SetScript("OnClick", function()
@@ -487,7 +530,13 @@ DFRL:NewMod("Bars", 1, function()
                 -- The stock Model scrubs sequence 0 for the swipe, then starts
                 -- sequence 1 for the ready flash. Stop before that handoff.
                 cooldown:SetScript("OnUpdateModel", function()
-                    if performanceMode and HideReadyCooldown(cooldown) then return end
+                    if
+                        DFRL.display.Get("customActionBar") ~= false
+                        and performanceMode
+                        and HideReadyCooldown(cooldown)
+                    then
+                        return
+                    end
                     updateModel()
                 end)
             end
@@ -521,7 +570,7 @@ DFRL:NewMod("Bars", 1, function()
             end
         end
         local function RefreshNumbers(finalOnly)
-            local selected = DFRL.display.Get("performanceMode")
+            local selected = DFRL.display.Get("customActionBar") ~= false and DFRL.display.Get("performanceMode")
             if performanceMode ~= selected then
                 performanceMode = selected
                 if performanceMode then
@@ -585,95 +634,247 @@ DFRL:NewMod("Bars", 1, function()
         controller:SetScript("OnHide", ClearNumbers)
         controller:SetScript("OnShow", RefreshNumbers)
         DFRL.display.Listen(RefreshNumbers)
+        DFRL.ClearActionBarCooldowns = ClearNumbers
         RefreshNumbers()
     end
 
     local initialized = false
-    local events = CreateFrame("Frame")
-    events:RegisterEvent("PLAYER_ENTERING_WORLD")
+    local prepared, nativeSkin, customSkin, nativeGlobals = false, nil, nil, nil
+    local inWorld = UnitExists("player") and true or false
+    local stateOwner
+    local globalNames = {
+        "ActionButton_GetPagedID",
+        "ActionButton_UpdateHotkeys",
+        "ChangeActionBarPage",
+        "ActionBar_PageUp",
+        "ActionBar_PageDown",
+        "MultiActionBar_Update",
+        "ShowBonusActionBar",
+        "HideBonusActionBar",
+        "ActionButtonDown",
+        "ActionButtonUp",
+        "MultiActionButtonDown",
+        "MultiActionButtonUp",
+        "BonusActionButtonDown",
+        "BonusActionButtonUp",
+        "PetActionButtonDown",
+        "PetActionButtonUp",
+        "ShapeshiftBar_ChangeForm",
+        "SHOW_MULTI_ACTIONBAR_1",
+        "SHOW_MULTI_ACTIONBAR_2",
+        "SHOW_MULTI_ACTIONBAR_3",
+        "SHOW_MULTI_ACTIONBAR_4",
+        "CURRENT_ACTIONBAR_PAGE",
+    }
+    local function CaptureGlobals()
+        local result = {}
+        for _, name in ipairs(globalNames) do
+            result[name] = { original = _G[name] }
+        end
+        return result
+    end
+    local function CaptureNative()
+        nativeSkin, nativeGlobals = stateOwner.Capture(), CaptureGlobals()
+    end
+    local function RememberGlobals()
+        for name, record in pairs(nativeGlobals) do
+            record.applied = _G[name]
+        end
+    end
+    local function RestoreGlobals()
+        for name, record in pairs(nativeGlobals or {}) do
+            if _G[name] == record.applied then _G[name] = record.original end
+        end
+    end
+    local function ClearCosmetics()
+        ClearSelection()
+        if DFRL.ClearActionBarCooldowns then DFRL.ClearActionBarCooldowns() end
+        for _, button in ipairs(DFRL.actionButtons or {}) do
+            for _, field in ipairs({ "DFRL_BorderOverlay", "DFRL_swapSelection", "rangeIndicator" }) do
+                local region = button[field]
+                if region then
+                    if field == "rangeIndicator" and type(UIFrameFadeRemoveFrame) == "function" then
+                        UIFrameFadeRemoveFrame(region)
+                        region.showing = false
+                    end
+                    if region:IsShown() then region:Hide() end
+                end
+            end
+        end
+    end
+    local function RefreshNativeButtons()
+        local previousThis = _G.this
+        for index = 1, 12 do
+            local button = _G["ActionButton" .. index]
+            if button and type(_G.ActionButton_Update) == "function" then
+                _G.this = button
+                _G.ActionButton_Update()
+                if type(_G.ActionButton_UpdateHotkeys) == "function" then _G.ActionButton_UpdateHotkeys() end
+            end
+        end
+        _G.this = previousThis
+    end
+    local function RestoreNative()
+        if not active then return end
+        customSkin = stateOwner.Capture()
+        active = false
+        if DFRL.mainBar:IsShown() then DFRL.mainBar:Hide() end
+        ClearCosmetics()
+        for _, button in ipairs(DFRL.actionButtons) do
+            button.DFRL_actionSlot = nil
+            local macro = _G[button:GetName() .. "Name"]
+            if macro then T.SetFont(macro, 13, "OUTLINE", true) end
+        end
+        RestoreGlobals()
+        stateOwner.Apply(nativeSkin)
+        RefreshNativeButtons()
+    end
+    local function ApplyBindings()
+        local getPagedID = nativeGlobals.ActionButton_GetPagedID.original
+        _G.ActionButton_GetPagedID = function(button)
+            if active and button.DFRL_actionSlot then return button.DFRL_actionSlot end
+            return getPagedID(button)
+        end
+        local hotkeys = nativeGlobals.ActionButton_UpdateHotkeys.original
+        _G.ActionButton_UpdateHotkeys = function()
+            if not active then return hotkeys and hotkeys() end
+            for _, button in ipairs(DFRL.actionButtons) do
+                HideHotkey(button)
+            end
+        end
+        for index, button in ipairs(DFRL.actionButtons) do
+            button.DFRL_actionSlot = ACTION_SLOTS[index]
+            local macro = _G[button:GetName() .. "Name"]
+            if macro then T.SetFont(macro, 13, "OUTLINE") end
+            if button.DFRL_BorderOverlay then button.DFRL_BorderOverlay:Show() end
+        end
+    end
+    local function PrepareCustomBar()
+        local mainBar = DFRL.mainBar
+        local art = CreateFrame("Frame", "DFRL_ActionBar", mainBar)
+        art:SetAllPoints(mainBar)
+        art:SetFrameStrata("LOW")
+        art:SetFrameLevel(2)
+        DFRL.actionBarFrame = art
+        CreateBackground(art)
+        for index, button in ipairs(DFRL.actionButtons) do
+            StyleButton(button, index, art)
+        end
+        CreateCooldownNumbers(mainBar)
+        customSkin = stateOwner.Capture()
+        prepared = true
+    end
+    local function ApplyMode()
+        if not initialized then return end
+        ClearSelection()
+        local wanted = inWorld and DFRL.display.Get("customActionBar") ~= false
+        if not wanted then
+            RestoreNative()
+            if DFRL.mainBar:IsShown() then DFRL.mainBar:Hide() end
+            return
+        end
+        if active then return end
+        CaptureNative()
+        active = true
+        HideStockBars()
+        if prepared then
+            stateOwner.Apply(customSkin)
+        else
+            PrepareCustomBar()
+        end
+        ApplyBindings()
+        RememberGlobals()
+        RefreshNativeButtons()
+        if not DFRL.layout.IsHidden("actionBar") then DFRL.mainBar:Show() end
+        if DFRL.AttachJewelry then DFRL.AttachJewelry(DFRL.mainBar) end
+        if DFRL.AttachXPBar then DFRL.AttachXPBar(DFRL.mainBar) end
+        if DFRL.AttachRunTally then DFRL.AttachRunTally() end
+    end
     local function InitializeBar()
         if initialized then return end
         initialized = true
-
-        -- Keep the seventh frame's ID and ACTIONBUTTON7 binding, while every
-        -- stock action handler (including slot-change events) reads native slot 12.
-        local getPagedID = _G.ActionButton_GetPagedID
-        _G.ActionButton_GetPagedID = function(button)
-            if button.DFRL_actionSlot then return button.DFRL_actionSlot end
-            return getPagedID(button)
+        local ignored = {}
+        for _, name in ipairs({ "MainMenuExpBar", "ReputationWatchBar", "MainMenuBarPerformanceBarFrame" }) do
+            if _G[name] then ignored[_G[name]] = true end
         end
-        for i = 1, BUTTON_COUNT do
-            _G["ActionButton" .. i].DFRL_actionSlot = ACTION_SLOTS[i]
+        stateOwner = T.NewActionBarState(ignored)
+        stateOwner.Track(MainMenuBar)
+        stateOwner.Track(MainMenuBarArtFrame)
+        stateOwner.Track(MicroButtonPortrait)
+        for _, name in ipairs(stockFrames) do
+            stateOwner.Track(_G[name])
         end
-        HideStockBars()
-
+        for _, name in ipairs(stockTextures) do
+            stateOwner.Track(_G[name])
+        end
+        for _, prefix in ipairs(stockPrefixes) do
+            for index = 1, 12 do
+                stateOwner.Track(_G[prefix .. index])
+            end
+        end
+        DFRL.actionButtons = {}
+        for index = 1, 12 do
+            local button = _G["ActionButton" .. index]
+            stateOwner.Track(button)
+            if index <= BUTTON_COUNT then DFRL.actionButtons[index] = button end
+        end
         local mainBar = CreateFrame("Frame", "DFRL_MainBar", UIParent)
+        mainBar:Hide()
         mainBar:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, defaults.bottom)
         mainBar:SetWidth(defaults.width)
         mainBar:SetHeight(defaults.height)
         mainBar:SetClampedToScreen(true)
         mainBar:SetFrameStrata("LOW")
         mainBar:SetFrameLevel(1)
+        mainBar:SetScript("OnShow", function()
+            if not active then mainBar:Hide() end
+        end)
         DFRL.mainBar = mainBar
-
-        local art = CreateFrame("Frame", "DFRL_ActionBar", mainBar)
-        art:SetAllPoints(mainBar)
-        art:SetFrameStrata("LOW")
-        art:SetFrameLevel(2)
-        DFRL.actionBarFrame = art
-        DFRL.actionButtons = {}
-        CreateBackground(art)
-        for i = 1, BUTTON_COUNT do
-            local button = _G["ActionButton" .. i]
-            StyleButton(button, i, art)
-            DFRL.actionButtons[i] = button
-        end
-        -- Keep stock cooldown, usability, click and action-slot updates.
-        -- Binding and action refreshes must keep button-number labels hidden.
-        _G.ActionButton_UpdateHotkeys = function()
-            for _, button in ipairs(DFRL.actionButtons) do
-                HideHotkey(button)
-            end
-        end
-        local previousThis = _G.this
-        for _, button in ipairs(DFRL.actionButtons) do
-            _G.this = button
-            ActionButton_Update()
-        end
-        _G.this = previousThis
-        CreateCooldownNumbers(mainBar)
-        local selectionEvents = CreateFrame("Frame", nil, mainBar)
-        for _, name in ipairs({
-            "ACTIONBAR_SLOT_CHANGED",
-            "PLAYER_LEAVING_WORLD",
-            "PLAYER_ENTERING_WORLD",
-            "PLAYER_LOGOUT",
-        }) do
-            selectionEvents:RegisterEvent(name)
-        end
-        selectionEvents:SetScript("OnEvent", ClearSelection)
-        DFRL.display.Listen(ClearSelection)
         local moveRegion = CreateFrame("Frame", nil, mainBar)
         moveRegion:SetPoint("TOPLEFT", mainBar, "TOPLEFT", -defaults.sideInset, defaults.topInset)
         moveRegion:SetPoint("BOTTOMRIGHT", mainBar, "BOTTOMRIGHT", defaults.sideInset, 0)
         DFRL.actionBarMoveRegion = moveRegion
-        DFRL.RefreshActionBarBounds()
         DFRL.layout.Register("actionBar", mainBar, function()
             mainBar:ClearAllPoints()
             mainBar:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, defaults.bottom)
         end, {
             region = moveRegion,
-            onEdit = function(active)
+            onEdit = function(editing)
                 ClearSelection()
-                if DFRL.SetJewelryEditing then DFRL.SetJewelryEditing(active) end
+                if DFRL.SetJewelryEditing then DFRL.SetJewelryEditing(editing) end
             end,
         })
+        ApplyMode()
         if DFRL.AttachJewelry then DFRL.AttachJewelry(mainBar) end
         if DFRL.AttachXPBar then DFRL.AttachXPBar(mainBar) end
-        events:UnregisterEvent("PLAYER_ENTERING_WORLD")
-        events:SetScript("OnEvent", nil)
     end
-    events:SetScript("OnEvent", InitializeBar)
+    local events = CreateFrame("Frame")
+    for _, name in ipairs({ "ACTIONBAR_SLOT_CHANGED", "PLAYER_ENTERING_WORLD", "PLAYER_LEAVING_WORLD", "PLAYER_LOGOUT" }) do
+        events:RegisterEvent(name)
+    end
+    events:SetScript("OnEvent", function()
+        if event == "PLAYER_ENTERING_WORLD" then
+            inWorld = true
+            InitializeBar()
+            ApplyMode()
+        elseif event == "PLAYER_LEAVING_WORLD" or event == "PLAYER_LOGOUT" then
+            inWorld = false
+            if DFRL.ReleaseActionBarXP then DFRL.ReleaseActionBarXP() end
+            RestoreNative()
+        else
+            ClearSelection()
+        end
+    end)
+    DFRL.display.Listen(ApplyMode)
+    if type(_G.ReloadUI) == "function" then
+        local reloadUI = _G.ReloadUI
+        _G.ReloadUI = function()
+            inWorld = false
+            if DFRL.ReleaseActionBarXP then DFRL.ReleaseActionBarXP() end
+            RestoreNative()
+            return reloadUI()
+        end
+    end
     -- The port can load loose addons after the initial world event.
-    if UnitExists("player") then InitializeBar() end
+    if inWorld then InitializeBar() end
 end)

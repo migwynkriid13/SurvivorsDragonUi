@@ -116,6 +116,9 @@ do
     end
     context:Load("core/display.lua", "Display")
     local display = env.DFRL.display
+    env.MainMenuExpBar = env.CreateFrame("Frame", "MainMenuExpBar", env.UIParent)
+    env.ReputationWatchBar = env.CreateFrame("Frame", "ReputationWatchBar", env.UIParent)
+    env.ReputationWatchBar:Hide()
     context:Load("modules/xprep/xprep.lua", "Xprep")
     local controller = context:Controller("PLAYER_XP_UPDATE")
     local bar = env.DFRL_XPBar
@@ -229,6 +232,21 @@ do
     context:Event(controller, "PLAYER_XP_UPDATE", "player")
     context:Call(controller, "OnUpdate", 0.01)
     assert(not context.writes.SetText, "unchanged XP rewrote the caption")
+    local nativeModePool = #context.objects
+    display.Set("customActionBar", false)
+    assert(not bar:IsVisible() and env.MainMenuExpBar:IsVisible(), "native action bar kept SDUI XP or hid native XP")
+    assert(not env.ReputationWatchBar:IsShown(), "native action bar enabled an originally hidden reputation bar")
+    assert(
+        display.Get("attachXP") and not controller:GetScript("OnUpdate"),
+        "native XP changed the saved attachment or retained work"
+    )
+    context:ResetCounts()
+    context:Event(controller, "PLAYER_XP_UPDATE", "player")
+    context:Call(controller, "OnUpdate", 0.2)
+    assert(not controller:GetScript("OnUpdate"), "native mode restarted the SDUI XP worker")
+    display.FinishEdit(false)
+    assert(bar:IsVisible() and not env.MainMenuExpBar:IsShown(), "Cancel did not restore custom XP ownership")
+    assert(#context.objects == nativeModePool, "switching XP owner allocated replacement regions")
     context.maximum = 0
     context:Event(controller, "PLAYER_XP_UPDATE", "player")
     context:Call(controller, "OnUpdate", 0.01)

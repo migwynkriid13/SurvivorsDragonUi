@@ -3,6 +3,8 @@ DFRL:NewMod("RangeIndicator", 1, function()
     local INDICATOR_ALPHA = 0.5
     local UPDATE_INTERVAL = 0.1
     local performanceMode = DFRL.display.Get("performanceMode")
+    local customActionBar = DFRL.display.Get("customActionBar") ~= false
+    local SyncUpdates
 
     local function ClearIndicator(button)
         local indicator = button.rangeIndicator
@@ -54,6 +56,12 @@ DFRL:NewMod("RangeIndicator", 1, function()
 
     local function UpdateIndicators()
         if not DFRL.actionButtons then return end
+        if not customActionBar then
+            for _, button in ipairs(DFRL.actionButtons) do
+                ClearIndicator(button)
+            end
+            return
+        end
         local targetRead, canAttack = false, nil
         for _, button in ipairs(DFRL.actionButtons) do
             targetRead, canAttack = UpdateButton(button, targetRead, canAttack)
@@ -61,14 +69,17 @@ DFRL:NewMod("RangeIndicator", 1, function()
     end
     DFRL.display.Listen(function()
         local enabled = DFRL.display.Get("performanceMode")
-        if performanceMode == enabled then return end
+        local custom = DFRL.display.Get("customActionBar") ~= false
+        if performanceMode == enabled and customActionBar == custom then return end
         performanceMode = enabled
+        customActionBar = custom
         if DFRL.actionButtons then
             for _, button in ipairs(DFRL.actionButtons) do
                 ClearIndicator(button)
             end
         end
         UpdateIndicators()
+        if SyncUpdates then SyncUpdates() end
     end)
 
     local events = CreateFrame("Frame")
@@ -85,8 +96,8 @@ DFRL:NewMod("RangeIndicator", 1, function()
         end
     end
     local hooked
-    local function SyncUpdates()
-        local visible = DFRL.mainBar and DFRL.mainBar:IsVisible()
+    SyncUpdates = function()
+        local visible = customActionBar and DFRL.mainBar and DFRL.mainBar:IsVisible()
         events:SetScript("OnUpdate", visible and Tick or nil)
         if visible then
             elapsed = UPDATE_INTERVAL

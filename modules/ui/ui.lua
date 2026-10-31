@@ -4,35 +4,27 @@ DFRL:NewMod("Native micro buttons", 1, function()
         local button = _G[name]
         if button then
             quietButtons[button] = true
-            if type(ButtonPulse_StopPulse) == "function" then ButtonPulse_StopPulse(button) end
-            button:UnlockHighlight()
+            if button ~= TalentMicroButton or DFRL.display.Get("customActionBar") ~= false then
+                if type(ButtonPulse_StopPulse) == "function" then ButtonPulse_StopPulse(button) end
+                button:UnlockHighlight()
+            end
         end
     end
     if next(quietButtons) then
         local setButtonPulse = _G.SetButtonPulse
         if type(setButtonPulse) == "function" then
             _G.SetButtonPulse = function(button, duration, pulseRate)
-                if quietButtons[button] then return end
+                if
+                    quietButtons[button]
+                    and (button ~= TalentMicroButton or DFRL.display.Get("customActionBar") ~= false)
+                then
+                    return
+                end
                 return setButtonPulse(button, duration, pulseRate)
             end
         end
     end
-    for _, name in ipairs({
-        "CharacterMicroButton",
-        "TalentMicroButton",
-        "MainMenuMicroButton",
-        "SpellbookMicroButton",
-        "WorldMapMicroButton",
-        "QuestLogMicroButton",
-        "SocialsMicroButton",
-        "HelpMicroButton",
-    }) do
-        PermanentlyDisableFrame(_G[name])
-    end
-    if MicroButtonPortrait then
-        MicroButtonPortrait:Hide()
-        MicroButtonPortrait.Show = MicroButtonPortrait.Hide
-    end
+    -- The action-bar owner hides and restores the stock micro row with its skin.
 end)
 
 DFRL:NewMod("Ui", 5, function()
