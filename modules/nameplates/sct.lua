@@ -497,6 +497,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         text.needsMeasure = nil
         text.fontRetryAt = nil
         text.scrollOffset, text.scrollY = nil, nil
+        text.origin = nil
         text.diablo, text.duration = nil, nil
         text.anchorRoot, text.anchorPoint, text.anchorX, text.anchorY = nil, nil, nil, nil
         table.insert(textPool, text)
@@ -1989,18 +1990,22 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         return strong and DAMAGE_COLORS.strong or DAMAGE_COLORS.normal
     end
 
-    local function DisplayDamage(info, x, y, displayAmount, largeCritical)
+    local function DisplayDamage(info, x, y, displayAmount, largeCritical, origin)
         -- Filter only after every original hit has consumed its matching and
         -- color evidence, including members of a visually collapsed group.
         if not ShouldShowText(info) then return end
         local value = displayAmount or info.text or info.amount
         if not value then return end
         local text = AcquireText()
-        -- Snapshot once: native nameplate stacking must never drag an active
-        -- number. MSBT instead uses offsets from its independent Layout owner.
+        -- Follow only the common resolved incarnation. Ambiguous/mixed groups
+        -- keep their centroid; MSBT uses its independent Layout owner.
         if msbtStyle then
             x, y = 0, MSBT.height / 2 - 12
+            origin = nil
+        elseif origin then
+            x, y = origin.x, origin.y
         end
+        text.origin = origin
         text.x, text.y = x, y
         text.started = GetTime()
         text.diablo = textStyle == "diablo"
@@ -2062,14 +2067,19 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             local age = now - entry.time
             local resolved = false
             if age >= EVENT_SETTLE then
-                local x, y
+                local x, y, origin
                 if msbtStyle then
                     x, y = 0, 0
                 else
-                    x, y = ResolveOrigin(entry.info, now, age >= EVENT_FALLBACK_DELAY)
+                    x, y, origin = ResolveOrigin(entry.info, now, age >= EVENT_FALLBACK_DELAY)
                 end
                 if x and y then
                     local group = entry.group
+                    if group.count == 0 then
+                        group.origin = origin
+                    elseif group.origin ~= origin then
+                        group.origin = nil
+                    end
                     group.count = group.count + 1
                     group.x, group.y = group.x + x, group.y + y
                     group.remaining = group.remaining - 1
@@ -2117,7 +2127,8 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                     group.x / group.count,
                     group.y / group.count,
                     group.displayAmount,
-                    group.largeCritical
+                    group.largeCritical,
+                    group.origin
                 )
             else
                 kept = kept + 1
@@ -2169,9 +2180,14 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                 kept = kept + 1
                 activeTexts[kept] = text
                 if text.fontRetryAt and now >= text.fontRetryAt then ApplyTextFont(text, now) end
+                -- ScanPlates already sampled this incarnation. Retired origins
+                -- keep their last usable point when native frames are reused.
+                if text.origin then
+                    text.x, text.y = text.origin.x, text.origin.y
+                end
                 local x, y, relativePoint
                 if text.diablo then
-                    -- Launch into a compact fan, then drift from its fixed point.
+                    -- Launch into a compact fan, then drift above the origin.
                     -- No gravity/fall or long screen-wide scrolling column.
                     local burst = math.min(1, math.max(0, age / DIABLO.burst))
                     local ease = 1 - math.pow(1 - burst, 3)
@@ -2183,7 +2199,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                     y = text.scrollY
                     relativePoint = "CENTER"
                 else
-                    -- Only the hit's own animation moves its native launch point.
+                    -- Preserve the original arc relative to the current origin.
                     x = text.x + text.arcX * progress
                     y = text.y + 12 + text.launch * progress - text.gravity * progress * progress
                     relativePoint = "BOTTOMLEFT"
@@ -2206,8 +2222,8 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                         scale = scale * (2 - math.pow((pop - 0.5) * 2, 5))
                     end
                 end
-                -- Only the inner visual scales: its launch point stays
-                -- fixed during crit pop, including after the mob has died.
+                -- Only the inner visual scales, independently of origin motion
+                -- and the frozen last position after the mob has died.
                 if text.scale ~= scale then
                     text.scale = scale
                     text.visual:SetScale(scale)

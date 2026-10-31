@@ -424,12 +424,13 @@ The assertions cover:
   invalid values, preview/Confirm/Cancel, profile normalization and reset.
   Settings fixtures cover style selection, hidden listeners and page extent.
   Full plate cases compare repeated native camera/collision changes with an
-  otherwise identical stationary production controller. Active trajectories,
-  amounts, fade and expiry must remain identical while required matching
-  samples keep updating. Cases cover invalid coordinates, native frame reuse,
-  Performance Mode transitions, fresh pooled launch points and world cleanup.
-  The user-selected fixed-position fallback retains no live follow references
-  or smoothing state and gives up camera compensation after launch.
+  otherwise identical stationary production controller. Over enemies and
+  Diablo IV retain identical authored motion, amounts, fade and expiry while
+  their base coordinates follow the matched native plate. Grouped cases require
+  one common nonnil origin; mixed/ambiguous groups retain a fixed centroid.
+  Cases cover invalid coordinates, native frame retirement/reuse, Performance
+  Mode transitions, fresh pooled origins and world cleanup. Existing native
+  sampling supplies the coordinates without extra reads or smoothing state.
   These cases are CI-only and do not prove Diablo IV visual parity or native
   font rendering. Font cases cover invalid/default choices, preview, Confirm,
   Cancel, profiles/reset, active width invalidation without motion/lifetime
@@ -454,8 +455,7 @@ The assertions cover:
   package fixtures reject unreferenced or missing font payloads.
   The shared SCT label sink identifies the real holder/visual pool through its
   observed native root binding, excluding native enemy-name labels from combat
-  assertions. The reported nameplate anchor failure and unused motion-test
-  variable were corrected without changing production movement behavior.
+  assertions.
   See [DIABLO-SCT.md](DIABLO-SCT.md) for the video study and tuning.
 - Full SCT/filter and nameplate-style fixtures combine Names only with the
   boss/guardian filter. They cover exact capped/float32 ranges and halfway

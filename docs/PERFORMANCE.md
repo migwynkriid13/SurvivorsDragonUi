@@ -115,18 +115,21 @@ changed-only writes and empty lists remain idle. Performance Mode preserves the
 animation with the existing 300 ms same-attack sums. It never restarts active
 labels on a Performance Mode transition.
 
-The user-selected addon-only fallback snapshots each settled group's screen
-launch centroid for the label's lifetime. Native camera/plate/collision changes
-do not alter active base coordinates. New numbers still resolve every original
-hit through the existing native samples and matching/loss-consumption path.
-Removing live follow also removes its per-group/per-label origin references,
-shared exponential blend, distance math and speed limiting. No native read,
-scan, updater, history table or drawing region is added. The authored burst,
-drift, scale pop and fade remain animated in both Performance Mode states.
-This favors stable presentation and gives up later camera compensation; initial
-positions can still reflect native stacking. CI-only production plate cases
-compare repeated native restacking with an identical stationary scene, without
-copying animation equations. These cases were not run locally.
+Over enemies and Diablo IV now follow the common matched native plate directly,
+replacing the fixed-position fallback. Each pending group retains at most one
+existing origin reference, only while every original member resolves to that
+same nonnil incarnation. Mixed/ambiguous groups keep their resolved centroid.
+Each active label retains that reference until pool retirement and copies its
+two cached coordinates during the existing animation loop. The per-frame plate
+reader already updates those coordinates before text animation; no native read,
+scan, updater, history table, smoothing math or drawing region is added. Invalid
+projection retains the last usable point. Retirement freezes the origin, so
+native frame reuse cannot redirect old text. Pool release clears the reference.
+The game's Stacking/Overlapping choice changes the native anchor immediately;
+the addon does not write it. Authored motion, fade and expiry remain unchanged
+in both Performance Mode states. CI-only cases compare moving and stationary
+production controllers without copying animation equations, including grouped
+origin agreement, retirement and reuse. These cases were not run locally.
 
 The shared style selector replaces the MSBT checkbox on the lazy Combat page.
 Net settings cost is two button frames, eight texture regions and three labels;
