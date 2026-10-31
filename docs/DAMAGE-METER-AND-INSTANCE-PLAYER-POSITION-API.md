@@ -425,11 +425,13 @@ This proposal describes the APIs consumed by the addon and the native data
 contract requested from the game. The game developer should confirm current
 capabilities and any additional accounting or co-op publication work needed.
 
-Current addon behavior is visible in the [meter controller](../modules/ui/meter.lua),
-[local reset and rolling rates](../core/meter_rates.lua),
-[shared icon resolver](../modules/nameplates/sct.lua),
+Sections 1 and 2 retain the pre-v1 investigation and motivation. The current
+addon meter requires the version 1 contract through its
+[native adapter](../core/meter_api.lua) and [meter controller](../modules/ui/meter.lua).
+Local rate/reset calculations and the name-based meter icon bridge have been
+removed. The independent [SCT icon resolver](../modules/nameplates/sct.lua),
 [pet/totem metadata reader](../modules/unit/pets.lua) and
-[game-language selection](../core/localization.lua).
+[game-language selection](../core/localization.lua) retain their own lifecycles.
 
 Section 3 defines the exact requested interface; its examples follow that
 contract. No game/addon execution or local tests were performed for this

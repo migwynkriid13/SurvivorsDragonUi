@@ -1,4 +1,4 @@
--- CI only: production shared icon resolver and bounded spellbook preparation.
+-- CI only: production SCT icon resolver and bounded spellbook preparation.
 assert(_VERSION == "Lua 5.1", "metadata fixtures require CI Lua 5.1")
 local SCT = dofile("scripts/tests/fixtures/ui_sct_helpers.lua")
 local passed = 0
@@ -52,9 +52,9 @@ local function Book(count, setup)
         if setup then setup(context, env) end
     end)
 end
-local function Lookup(context, name) return context.env.DFRL.sct.GetSourceIcon(name) end
+local function Lookup(context, name) return context:LookupIcon(name) end
 
-Test("warm preparation bounds slot/header work and settles shared icon lookups", function()
+Test("warm preparation bounds slot/header work and settles SCT icon lookups", function()
     local context = Book(19)
     assert(context.slotReads == 0 and context.countReads == 0, "initialization scanned eagerly")
     for _ = 1, 12 do
@@ -67,7 +67,7 @@ Test("warm preparation bounds slot/header work and settles shared icon lookups",
     assert(Lookup(context, "Spell1") == Art(1) and Lookup(context, "Spell19") == Art(19))
     assert(
         context.slotReads == reads and context.headerReads == headers and context.countReads == counts,
-        "accepted warm generation did not serve both shared callers without native book reads"
+        "accepted warm generation did not serve SCT lookups without native book reads"
     )
     context:Tick(0.016)
     assert(
@@ -182,7 +182,7 @@ Test("optional warm failure does not interrupt active text and backs off", funct
     assert(#context:Labels() == 0, "warm error prevented the original text lifetime from retiring")
 end)
 
-Test("off, hidden and world retirement stop provisional work; meter-only demand remains fresh", function()
+Test("off, hidden and world retirement stop provisional work; resumed SCT demand stays fresh", function()
     local context = Book(9)
     context:Tick(0.016)
     context:SetScrollHidden(true)
@@ -199,9 +199,12 @@ Test("off, hidden and world retirement stop provisional work; meter-only demand 
     reads = context.slotReads
     context:Tick(0.2)
     assert(context.slotReads == reads, "off mode retained the optional warm worker")
+    source.BeginEdit()
+    source.SetMode("on")
+    source.FinishEdit(true)
     assert(
         Lookup(context, "Spell9") == Art(9) and context.slotReads == reads + 9,
-        "independent meter consumer lost its on-demand complete lookup"
+        "resumed SCT consumer lost its on-demand complete lookup"
     )
     context:Event(context.controller, "PLAYER_LEAVING_WORLD")
     reads = context.slotReads

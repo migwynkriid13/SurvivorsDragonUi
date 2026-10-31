@@ -58,9 +58,13 @@ An explicit Bash shell enables `pipefail`, so piping fixture/model output into
 
 ## UI work and cleanup tests
 
-The native API draft adds production-boundary fixtures for the v1 meter adapter,
+The required native meter API has production-boundary fixtures for the v1 adapter,
 complete meter view, retained portrait circle helper, native language selection
-and live navigation. They cover all fourteen literal label sets, duplicate names
+and live navigation. All four meter views have only native v1 boundaries;
+legacy getters, packet data, local rate/reset models, roster matching and SCT
+name-based meter lookup are absent. Missing/incomplete APIs retain or restore
+the native HUD, and legacy endpoint stubs fail if called. The cases cover all
+fourteen literal label sets, duplicate names
 with distinct row IDs, direct source icons/retained portraits, native recent/All
 rates, unavailable history, synchronous checkpoint Reset and cleanup retries,
 epoch/encounter retirement, hidden/off work, circular fallback reuse, typed
@@ -378,8 +382,8 @@ The assertions cover:
   production maximum-alias helper; no local execution or live latency claim is
   implied by these authored CI cases.
 - Performance follow-up fixtures also exercise production banner detach/retry,
-  Layout handle preparation/failure, unchanged meter publications with changing
-  rates, shown-plate sampling, shared navigation reads, tooltip content/owner
+  Layout handle preparation/failure, native meter revision/rate changes,
+  shown-plate sampling, shared navigation reads, tooltip content/owner
   caches, loot backpressure, parser descriptors and XP fade geometry. Extracted
   helpers retain explicit fake native boundaries; full controllers still load
   only in CI. These assert call/object/lifecycle behavior, not rendering or FPS.
@@ -565,17 +569,19 @@ The assertions cover:
   retry on required refresh, unchanged and hidden writes, cleared retired
   bindings, and item-to-currency reuse without another region. These cases were not run locally.
   No mock proves native box content or live font rendering.
-- The production meter cycles Party Damage after Boss Damage, reads native
-  player totals/rates, binds uniquely matched native unit portraits, and retains
-  class metadata across shared Reset deltas. Mocks cover unchanged/hidden/off
-  and icons-off work, missing APIs, ambiguous/replaced units, failed-portrait
-  caching and world retirement until a fresh `AZSPARTY` publication.
-  Deferred view-selection cases cover unpublished-view skipping in both
-  directions, rapid clicks, initial fallback, valid empty/error pages, all-waiting
-  stability, new publications, reset/disable cleanup and hidden/off probes.
-  They retain native freshness gates, assert no getter runs from clicks and
-  bound each getter to one read per pass across selection, Reset and rate work.
-  New-pass and failed-render recovery cases reject retained native results.
+- The production meter cycles Damage Done, Healing Done, Boss Damage and Party
+  Damage through complete native v1 snapshots. Cases cover stable row/source/
+  owner IDs, descriptor icons, retained portraits, native recent/All rates and
+  atomic checkpoint Reset without legacy data calls or local counter models.
+  Missing or incomplete endpoint sets leave or restore native HUD ownership;
+  transient/permanent native errors preserve typed readiness and retry behavior.
+  Deferred view selection, rapid clicks, valid empty/error pages, metadata-only
+  revisions, cleanup, all-waiting stability and one-read-per-pass bounds retain
+  coverage. Layout-hidden cases prohibit row snapshots even initially/dirty,
+  while preserving context retirement/ownership. Off prohibits collection and
+  keeps only pending HUD/checkpoint release work. Detailed row metrics, fonts,
+  scroll/resize and pool scenarios run against native snapshots. No fixture
+  claims current-client delivery of the future native API.
 
 The mocks implement only explicit API methods and record calls, allocation and
 effective parent visibility. An unsupported method fails rather than silently
@@ -583,6 +589,13 @@ succeeding. Native fades are modeled as boundary calls, not rendered animations.
 A small table-size shim covers the explicit Lua 5.0 queue sizes used here; the
 interpreter and mock objects do not emulate the packaged engine. These tests
 cover the named controllers, not every Layout group, native visual parity or FPS.
+
+SCT metadata cases use a CI-only helper to locate the existing private
+`CombatIcon` closure through Lua debug upvalues. They execute that production
+resolver with explicit native boundaries; no public meter name-lookup wrapper,
+runtime export or shipped test hook exists. Autoattacks use actual SCT attack
+type rather than a translated meter-source-name bridge. Shared spellbook,
+aura, generated/item/summon metadata and ambiguity/retry coverage remain SCT-only.
 
 ## Configuration and registration contracts
 

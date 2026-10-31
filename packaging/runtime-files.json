@@ -12,7 +12,6 @@
     "core/layout.lua",
     "core/layout_snap.lua",
     "core/localization.lua",
-    "core/meter_rates.lua",
     "core/meter_api.lua",
     "core/messages.lua",
     "core/profiles.lua",

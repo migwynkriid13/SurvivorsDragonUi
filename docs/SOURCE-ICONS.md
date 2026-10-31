@@ -1,20 +1,21 @@
 # Shared source icons
 
-SCT and the meter use one resolver in `modules/nameplates/sct.lua`. Floating
-combat text calls `CombatIcon`; the meter's `sct.GetSourceIcon` entry point adds
-its exact healing-category/Melee context and calls that same resolver. The
-meter owns circular drawing and gold rims, with no second item/spell scanner.
+Outgoing SCT uses `CombatIcon` in `modules/nameplates/sct.lua` for its exact
+native spellbook, aura, generated ability/talent/item and accepted-summon
+metadata. All fourteen game catalogs supply exact aliases; unresolved or
+ambiguous names keep the shared neutral icon. Source priority, original hit
+identity and existing binding/retirement rules remain unchanged.
 
-All fourteen game catalogs now supply exact ability/talent aliases to that same
-resolver. The Portuguese report exposed a Czech-only preparation path; see
-[LOCALIZATION.md](LOCALIZATION.md#source-icon-languages--2026-10-27) for the
-installed-client source, language populations and AzerothSurvivorsRE leads.
-Existing spell/item priorities, native values and rendering are preserved; accepted summon metadata now joins the observed-name tiers described below.
+The damage meter uses only native version 1 descriptors and retained portraits.
+It does not call SCT, match names to items or party units, or maintain a second
+metadata scanner. The former `sct.GetSourceIcon` meter bridge and special healing
+lookup are removed. Shared neutral artwork and generic circle/strip drawing
+remain independent of those retired meter data paths.
 
-The reported **The Eye of Hakkar** was missing because its damage is named after
-an item. The spell/talent/database lookup had no item-name tier, and the meter
-hid the rim whenever that resolver returned no icon. The installed native
-record supplies `INV_Jewelry_Necklace_22`; no icon is inferred from “Eye.”
+The research below began with the meter's historical **The Eye of Hakkar** and
+summon-icon reports. Its exact item/catalog evidence remains useful for SCT;
+it does not describe a current meter compatibility fallback. See
+[DAMAGE-METER.md](DAMAGE-METER.md) for the required native boundary.
 
 ## Public-source audit — 2026-10-27
 
@@ -76,15 +77,25 @@ python3 scripts/generate_source_item_icons.py \
 
 ## Accepted summon portraits
 
-The Russian report showed Pit Lord, Felhunter and Imp as question marks in the meter while the pet tracker already displayed their portraits. The tracker reads exact localized `name` / `icon` fields from the official `AZS_GetSummons` roster; the spell/item resolver previously had no access to those pairs. The owner-supplied [summon API reference](AzerothSurvivors-Addon-API-2026-10-22.txt) documents these fields for every class and spec.
+A historical meter report showed Pit Lord, Felhunter and Imp as question marks
+while the pet tracker already displayed their portraits. That led to the exact
+metadata admission path retained for SCT. The owner-supplied [summon API reference](AzerothSurvivors-Addon-API-2026-10-22.txt)
+documents native localized names and icon paths; no name-based meter bridge
+remains.
 
-After the pet reader passes its existing native phase, packet/stamp and complete roster-validation gates, a changed accepted publication passes its display groups to `sct.LearnSummonIcon`. It uses each group's exact localized name and the same resolved path its portrait uses, including the existing Wolf/Raptor family choices. Invalid/partial snapshots admit no metadata. Timer-only refreshes do not repeat this learning loop. Neither the meter nor SCT adds a summon getter, event subscription, roster scan or polling loop.
+After the pet reader passes its existing phase, receipt and complete-roster
+validation, a changed accepted publication passes its display groups to
+`sct.LearnSummonIcon`. It uses each group's exact localized name and resolved
+portrait path, including the established Wolf/Raptor family choices. Partial
+snapshots admit nothing; timer-only refreshes do not repeat the learning loop.
+No SCT getter, event subscription, roster scan or polling loop is added.
 
-The single shared resolver owns this unsaved name/icon cache and uses the existing `LearnSpellTexture` helper to normalize paths, reject unknown art and retain conflicting names as ambiguous. Exact learned pet names follow native spellbook and observed aura metadata, before generated catalogs. Stronger ambiguity is preserved; an ambiguous pet name remains neutral instead of selecting an arbitrary creature. The meter still calls only `sct.GetSourceIcon`, independently of SCT filters and mode.
-
-Only names and paths are retained. Spawn IDs, counts, durations, targets, health, damage and roster rows are not stored in the cache. Metadata remains available after despawning so existing native meter rows can retain their portraits. New zone, effective-language change, world leave and logout clear it. A pet never observed by the current addon session has no inferred portrait and keeps the existing fallback until authoritative metadata is available.
-
-The meter's existing visible five-Hz refresh already resolves icons again, so a question-mark row can use a newly learned pair without another publication or updater. Off/hidden meters and icon-disabled rows keep their existing no-resolver rules. Pet metadata admission belongs to the independent accepted pet view, even when the meter is off. Circular masking, gold rings, texture binding retries and the native/strip compatibility paths are unchanged, with no new regions or artwork.
+The resolver retains only unsaved names and paths, normalizing through
+`LearnSpellTexture` and preserving conflicts. Spellbook/observed-aura metadata
+keeps its stronger priority. Spawn IDs, counts, timing, targets, health, damage
+and roster rows do not enter this cache. New zone, language, world leave and
+logout retire it. An unobserved source never acquires an inferred portrait.
+The native v1 meter independently uses the descriptors in its own snapshot.
 
 ## Lookup, retries and cleanup
 
@@ -100,19 +111,19 @@ The live item path accepts native icon paths/basenames, rejects placeholders
 and distinguishes item-info's ninth/tenth return forms from equipment-slot
 strings. Successes use the existing `LearnSpellTexture` ambiguity helper,
 including path/extension normalization. Misses retry at most once per second
-per source; equipment scans share one one-second limit across both consumers.
+per source; equipment scans share one one-second limit within the SCT resolver.
 Successful item metadata can outlive unequipping during the same world session.
 World/logout and effective-language changes clear the shared live item cache.
 
-Unknown or ambiguous sources use the shared question mark. Meter rows draw it
-inside their existing gold rings; disabled icons still hide the complete icon
-and rim. Both renderers cache successful bindings, retain their native-circle /
-strip fallback behavior, and add no regions or artwork for item resolution.
+Unknown or ambiguous SCT sources use the shared question mark. Resolution
+adds no drawing region or artwork; existing labels/icons and their selected
+style retain ownership. The same neutral constant may also be drawn by pets or
+the native v1 meter without invoking this resolver.
 
 There is no new updater, event subscription, saved learned-icon registry,
-combat history, bag scan or chat interception. A hidden/off meter never calls
-the resolver. SCT can independently use the same unsaved display metadata
-through its existing combat flow; that is not off-period meter collection.
+combat history, bag scan or chat interception. SCT consumes the unsaved
+metadata through its existing eligible combat flow. Meter visibility and
+settings never start or warm it.
 The 39-record static tier covers general jewelry/amulets, not every generated
 class-amulet name or future effect. Other exact native metadata can fill those
 gaps; genuinely unavailable sources keep the neutral fallback and remain
@@ -125,13 +136,13 @@ the existing eligible SCT frame callback. A provisional table stays private unti
 the generation completes. Book, language, world and getter changes retire stale
 preparation; no additional updater or saved cache is introduced.
 
-Real combat and visible meter consumers retain a fresh synchronous completion
+Real SCT combat retains a fresh synchronous completion
 fallback when no usable complete generation exists. They never consume a partial
 table, wait for background work, or substitute a weaker icon because preparation
 is unfinished. Original source priority, duplicate-group identity, counts and
 animation lifetime remain. Custom SCT needs this metadata even when visual icons
 are off, because the icon forms part of its exact attack identity. Game/Off and
-hidden MSBT do not warm in the background; meter-only consumers remain on demand.
+hidden MSBT do not warm in the background. There is no meter-only lookup path.
 
 This reduces optional preparation bursts when frames are available before the
 first real lookup; a cold lookup can still scan the full native book. The exact

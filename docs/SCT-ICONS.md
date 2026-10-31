@@ -22,23 +22,12 @@ Pet metadata admission reuses `LearnSpellTexture`, retains name conflicts and ad
 
 ## Runtime behavior
 
-The meter calls this same resolver through `sct.GetSourceIcon`; it has no
-separate item/spell scan or learned-item registry. Generated general-item data,
-live native item lookup, ambiguity handling and the unknown-icon constant are
-shared by both consumers. Item cache misses remain retryable without a new
-event or updater. The native record join and eight-repository research are in
-[SOURCE-ICONS.md](SOURCE-ICONS.md). The meter alone wraps the resolved image in
-its existing circular gold rim; SCT keeps its own icon renderer and visibility.
-
-The optional Healing Done context of `sct.GetSourceIcon(name, healing, proc)`
-also recognizes the exact native Regeneration, Leech, Healing on Kill, Level Up
-and Soul Link records when their proc flag is off. Their icons come from reviewed
-native producer instructions, with all fourteen exact captions cached by the
-active language; see [DAMAGE-METER.md](DAMAGE-METER.md#native-healing-icons).
-This class-independent healing-category context is applied before the common
-`CombatIcon` lookup. Named healing spells, item sources and damage/boss views
-otherwise share the same resolver and ambiguity handling. No class-specific
-branch or guessed healing spell icon is added.
+SCT keeps its exact-name resolver, generated general-item data, native item
+lookup, ambiguity handling and cached retry lifecycle. The native v1 damage
+meter receives names and artwork from its snapshots and no longer calls this
+resolver. The former meter export and special healing-category icon table have
+been removed; pinned source research remains in
+[SOURCE-ICONS.md](SOURCE-ICONS.md) and [DAMAGE-METER.md](DAMAGE-METER.md).
 
 Every game catalog supplies exact-name candidates in `localization/data.lua` through its `spellNames` field. `scripts/generate_localization.py` derives them from official `ability.*.name` entries and literal native keys matching the verified custom-talent names in `SpellIconCatalog.game`. It does not reverse-map arbitrary catalog values: an armor-set caption such as English `Wrath` has a different Czech grammatical form from the actual ability. The generator reads the existing generated icon module as text metadata, never as Lua code, and leaves the pinned icon tables unchanged. English needs no aliases; its empty table selects the existing English database tier even when the base-client locale differs.
 

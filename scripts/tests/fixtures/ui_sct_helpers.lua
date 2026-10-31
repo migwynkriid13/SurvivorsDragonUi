@@ -1,5 +1,25 @@
 -- CI-only native setup shared by scrolling and nameplate lifecycle fixtures.
 local H = dofile("scripts/tests/fixtures/ui_helpers.lua")
+-- CI can inspect lexical closures without exporting a runtime test API. Search
+-- only function upvalues and require the production resolver's exact name.
+local function FindCombatIcon(callback, visited)
+    if visited[callback] then return end
+    visited[callback] = true
+    local index = 1
+    while true do
+        local name, value = debug.getupvalue(callback, index)
+        if not name then return end
+        if name == "CombatIcon" then
+            assert(type(value) == "function", "production CombatIcon upvalue is not callable")
+            return value
+        end
+        if type(value) == "function" then
+            local found = FindCombatIcon(value, visited)
+            if found then return found end
+        end
+        index = index + 1
+    end
+end
 local function SCT(scrolling, setup)
     local context = H.New()
     local env = context.env
@@ -111,6 +131,16 @@ local function SCT(scrolling, setup)
     context:Load("core/widgets.lua")
     context:Load("modules/nameplates/sct.lua", "NameplateCombatText")
     context.controller = context:Controller("TEST_COMBAT")
+    local combatIcon
+    function context:LookupIcon(name, school, damageType)
+        if not combatIcon then
+            combatIcon = assert(
+                FindCombatIcon(self.controller:GetScript("OnEvent"), {}),
+                "production SCT controller has no reachable CombatIcon closure"
+            )
+        end
+        return combatIcon({ spell = name, school = school, damageType = damageType })
+    end
     function context:Hit(amount) self:Event(self.controller, "TEST_COMBAT", tostring(amount)) end
     function context:Tick(elapsed)
         self.now = self.now + elapsed

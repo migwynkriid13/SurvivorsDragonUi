@@ -1,5 +1,15 @@
 # Official addon API integration — 2026-10-14
 
+## Current damage-meter requirement
+
+The custom damage meter now requires the complete native version 1 API for all
+four views. `core/meter_api.lua` supplies native identities, descriptors, rates,
+checkpoints and retained portraits; no old counter/getter/packet or name-based
+metadata fallback remains. Missing API readiness leaves or restores the native
+HUD. This change is confined to meter data: navigation, language, SCT and other
+native compatibility paths keep their own contracts. The dated meter notes
+below are historical API evidence. See [DAMAGE-METER.md](DAMAGE-METER.md).
+
 ## Heroic affixes and totems — 0.125.0, 2026-10-28
 
 The [supplied 0.125.0 reference](AzerothSurvivors-Addon-API-0.125.0-2026-10-28.txt)
@@ -31,7 +41,7 @@ expire, not the next summon. No individual totem IDs, health, positions, pulse
 times or combat ownership are supplied. Local work is source review and pinned
 formatting; CI-only controller scenarios are authored but not run locally.
 
-## Party meter — 2026-10-27
+## Historical party-meter API — 2026-10-27
 
 Static reading of the installed 146,088,960-byte client, SHA-256
 `22f7938eb4f99f2857dc091b1c57c147bd848eaabfeaa81e444c0a3393ca8150`,
@@ -42,13 +52,13 @@ The embedded API describes one hero per row, most damage first:
 clock. The `AZSPARTY` parser publishes exactly those seven fields and stamps
 `AZS_PARTY_UPDATED`; the getter is documented as empty outside a party.
 
-SDUI adds this as the fourth meter view after Boss Damage. Hero portraits use
-the native `SetPortraitTexture` unit path after a unique current player/party
-name match; the meter's party API itself supplies no portrait path or unit ID.
-The native frame portrait image invalidates a cached binding when it changes.
-Unmatched/ambiguous identities stay neutral. Existing official reference copies
-are preserved verbatim; source inspection does not establish live co-op behavior.
-See [DAMAGE-METER.md](DAMAGE-METER.md#party-data-and-portraits).
+Earlier SDUI releases used these counters for a fourth view and matched
+unique current player/party names for `SetPortraitTexture`. That compatibility
+path is removed. Current Party Damage obtains native owner descriptors and
+retained portrait IDs from version 1 snapshots, including heroes no longer in
+the live roster. The pinned reference remains historical evidence; it does not
+establish current native v1 delivery or live co-op appearance. See
+[DAMAGE-METER.md](DAMAGE-METER.md#required-native-api).
 
 ## Supplied summon API reference — 2026-10-22
 

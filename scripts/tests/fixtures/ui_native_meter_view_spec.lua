@@ -1,6 +1,7 @@
 -- CI only: the full production meter using native v1 snapshots and retained artwork.
 local helpers = assert(loadfile("scripts/tests/fixtures/ui_native_meter_api_spec.lua"))("helpers")
 assert(_VERSION == "Lua 5.1", "native meter view fixtures require CI Lua 5.1")
+local helperMode = ...
 
 local function Test(name, callback)
     local ok, failure = pcall(callback)
@@ -8,12 +9,34 @@ local function Test(name, callback)
     print("PASS " .. name)
 end
 
-local function View()
+local function View(options)
     local c, state, _, env = helpers.New()
+    local function Count(name) c.reads[name] = (c.reads[name] or 0) + 1 end
     local create = c.Object
     function c:Object(...)
         local object = create(self, ...)
-        function object:GetStringWidth() return string.len(self:GetText()) * 4 end
+        local setFont, setColor, setOffset = object.SetFont, object.SetShadowColor, object.SetShadowOffset
+        function object:SetFont(face, size, flags)
+            self.fontAttempts = (self.fontAttempts or 0) + 1
+            if c.failFontObject == self and c.failFontSize == size then return false end
+            return setFont(self, face, size, flags)
+        end
+        function object:SetShadowColor(...)
+            self.shadowColor = { ... }
+            setColor(self, ...)
+        end
+        function object:SetShadowOffset(...)
+            self.shadowOffset = { ... }
+            setOffset(self, ...)
+        end
+        function object:GetStringWidth()
+            Count("metrics")
+            self.measuredText = self:GetText()
+            if c.metricMissing then return nil end
+            if c.metricOverride ~= nil then return c.metricOverride end
+            local _, size = self:GetFont()
+            return string.len(self:GetText()) * 4 * (size or 11) / 11
+        end
         function object:GetEffectiveScale()
             return (self.scale or 1) * (self.parent and self.parent:GetEffectiveScale() or 1)
         end
@@ -52,17 +75,37 @@ local function View()
     env.DFRL.locale.code = "en"
     env.DFRL.layout.IsHidden = function() return not c.layoutMask:IsShown() end
     env.DFRL.layout.Place = function() end
+    local register = env.DFRL.layout.Register
+    env.DFRL.layout.Register = function(name, frame, anchor, settings)
+        c.layoutOptions = settings
+        register(name, frame, anchor)
+    end
     env.UnitClass = function(unit)
         assert(unit == "player", "native meter read the current party roster for historical class metadata")
         return "Hunter", "HUNTER"
     end
-    env.UnitExists = function() error("native meter searched the live roster for a retained hero") end
-    env.SetPortraitTexture = function() error("native meter guessed a unit for its retained native portrait") end
+    local function Forbidden()
+        state.calls.legacy = (state.calls.legacy or 0) + 1
+        error("native meter used a removed counter, roster, phase or artwork fallback")
+    end
+    for _, name in ipairs({
+        "AZS_GetMeter",
+        "AZS_GetHealing",
+        "AZS_GetBossMeter",
+        "AZS_GetPartyMeter",
+        "AZS_GetRunTime",
+        "AZS_GetPhase",
+        "UnitExists",
+        "UnitName",
+        "SetPortraitTexture",
+    }) do
+        env[name] = Forbidden
+    end
+    env.DFRL.sct = { GetSourceIcon = Forbidden }
     env.SetPortraitToTexture = function(name, path)
         local texture = assert(env[name], "native circle binding used an unknown texture name")
         texture:SetTexture(path)
     end
-    env.AZS_GetPhase = function() error("native meter read the legacy phase instead of its snapshot context") end
     env.AZS_SetMeterPortrait = function(texture, runId, key)
         state.calls.portrait = (state.calls.portrait or 0) + 1
         assert(
@@ -88,27 +131,129 @@ local function View()
         meterShowTotal = false,
         meterShowTotalDps = false,
     }
+    if options and options.configure then options.configure(c, state, env) end
     c:Load("core/hud.lua")
-    c:Load("core/meter_rates.lua")
     c:Load("core/widgets.lua")
     c:Load("modules/ui/meter.lua", "DamageMeter")
     c.root, c.controller = env.DFRL_DamageMeter, c:Controller("PLAYER_ENTERING_WORLD")
     for _, object in ipairs(c.objects) do
         if object.kind == "Button" and object.parent == c.root then c.header = object end
     end
+    for _, object in ipairs(c.objects) do
+        if object.kind == "FontString" and object.parent == c.header then c.title = object end
+        if object.kind == "FontString" and object.parent == c.root then c.status = object end
+    end
     function c:Tick(elapsed)
         local step = elapsed or 0.21
         self.now = self.now + step
         self:Call(self.controller, "OnUpdate", step)
     end
-    function c:Cycle()
-        self:Call(self.header, "OnClick", "LeftButton")
+    function c:Cycle(direction)
+        self:Call(self.header, "OnClick", direction or "LeftButton")
         self:Tick()
     end
     function c:Row(index) return assert(env["SurvivorsDragonUiMeterIcon" .. index]):GetParent() end
-    c:Tick()
+    function c:Resize(width)
+        self.root:SetWidth(width)
+        self.layoutOptions.onResize(self.root)
+        self:Tick()
+    end
+    if not options or options.start ~= false then c:Tick() end
     return c, state, env
 end
+
+if helperMode == "helpers" then return { New = View, Error = helpers.Error } end
+
+Test("missing or partial native APIs retain the game HUD and never use legacy fallbacks", function()
+    for _, missing in ipairs({ "AZS_GetMeterCapabilities", "AZS_GetMeterSnapshot", "AZS_SetMeterPortrait" }) do
+        local restore
+        local c, state, env = View({
+            configure = function(_, _, globals)
+                restore, globals[missing] = globals[missing], nil
+            end,
+        })
+        assert(not c.root:IsVisible() and c.nativeShown, "incomplete API suppressed the game meter")
+        assert(not state.calls.snapshot and not state.calls.legacy, "incomplete API used a removed fallback")
+        env[missing] = restore
+        c:Tick()
+        assert(c.root:IsVisible() and not c.nativeShown, "complete native API did not recover its custom view")
+        local getContext = env.AZS_GetMeterContext
+        env.AZS_GetMeterContext = nil
+        c:Tick()
+        assert(not c.root:IsVisible() and c.nativeShown, "lost native context did not restore the game HUD")
+        assert(not state.calls.legacy, "API loss queried old counters, roster names or spell artwork")
+        env.AZS_GetMeterContext = getContext
+    end
+end)
+
+Test("hidden endpoint loss releases a warmed native meter until visible recovery", function()
+    for _, missing in ipairs({ "AZS_GetMeterSnapshot", "AZS_SetMeterPortrait" }) do
+        local c, state, env = View()
+        assert(c.root:IsVisible() and not c.nativeShown)
+        c:SetLayoutHidden(true)
+        local snapshots, endpoint = state.calls.snapshot, env[missing]
+        env[missing] = nil
+        c:Tick()
+        assert(state.calls.snapshot == snapshots, "hidden endpoint loss collected source snapshots")
+        assert(c.nativeShown and not c:Row(1).active, "cached capabilities retained an incomplete takeover")
+        env[missing] = endpoint
+        c:SetLayoutHidden(false)
+        c:Tick()
+        assert(state.calls.snapshot > snapshots and c:Row(1).active and not c.nativeShown)
+        assert(not state.calls.legacy, "native endpoint recovery used a removed fallback")
+    end
+end)
+
+Test("disabled native meter reads nothing and enabling needs no legacy publication", function()
+    local c, state = View({ configure = function(context) context.settings.meterEnabled = false end })
+    assert(next(state.calls) == nil and c.nativeShown, "disabled initialization read the native API")
+    c:Tick()
+    assert(next(state.calls) == nil, "disabled meter retained an API collector")
+    c:SetSetting("meterEnabled", true)
+    c:Tick()
+    assert(c.root:IsVisible() and state.calls.snapshot and not c.nativeShown)
+    assert(not c.controller.events.CHAT_MSG_ADDON and not state.calls.legacy)
+    c:SetSetting("meterEnabled", false)
+    local contexts, snapshots = state.calls.context, state.calls.snapshot
+    for _ = 1, 6 do
+        c:Tick()
+    end
+    assert(state.calls.context == contexts and state.calls.snapshot == snapshots and c.nativeShown)
+end)
+
+Test("native context readiness honors retry delay and recovers without old meter data", function()
+    local c, state = View({
+        configure = function(_, native)
+            native.contextError = { code = "NOT_READY", message = "waiting", retryable = true, retryAfterSeconds = 1 }
+        end,
+    })
+    assert(not c.root:IsVisible() and c.nativeShown and not state.calls.snapshot)
+    local contexts = state.calls.context
+    c:Tick()
+    c:Tick()
+    assert(state.calls.context == contexts, "unready context ignored the native retry delay")
+    state.contextError = nil
+    c:Tick(1.01)
+    assert(c.root:IsVisible() and c:Row(1).active and not c.nativeShown)
+    assert(not state.calls.legacy, "readiness recovery used legacy counters")
+end)
+
+Test("initial Layout hiding defers even dirty native snapshots until Show", function()
+    local c, state = View({
+        configure = function(context, _, env)
+            local register = env.DFRL.layout.Register
+            env.DFRL.layout.Register = function(...)
+                register(...)
+                context.layoutMask:Hide()
+            end
+        end,
+    })
+    assert(state.calls.context and not state.calls.snapshot and not state.calls.portrait)
+    assert(c.nativeShown, "unprepared hidden replacement captured the game meter")
+    c:SetLayoutHidden(false)
+    c:Tick()
+    assert(state.calls.snapshot and c:Row(1).active and not c.nativeShown)
+end)
 
 Test("native IDs keep different rates for equal source names and bypass guessed artwork", function()
     local c = View()
@@ -322,6 +467,27 @@ Test("hidden and disabled native meter does not poll source snapshots or paint r
     assert(
         state.calls.snapshot == reads and state.calls.context == contexts and state.calls.portrait == portraits,
         "disabled native meter kept a collector running"
+    )
+end)
+
+Test("a hidden native run change releases takeover until fresh visible rows are accepted", function()
+    local c, state = View()
+    assert(c.root:IsVisible() and c:Row(1).active and not c.nativeShown)
+    c:SetLayoutHidden(true)
+    local snapshots = state.calls.snapshot
+    state.context.runId, state.context.counterEpoch = "run-2", "epoch-run-2"
+    state.context.snapshotId, state.context.counterRevision = "snapshot-run-2", "counter-run-2"
+    state.context.metadataRevision, state.context.encounter = "metadata-run-2", nil
+    state.records = { { id = "new-source", rowId = "new-leaf", name = "New run ability", amount = 80, recent = 40 } }
+    c:Tick()
+    assert(state.calls.snapshot == snapshots, "hidden run retirement collected new source snapshots")
+    assert(c.nativeShown and not c:Row(1).active, "old-run readiness kept the native meter suppressed")
+    c:SetLayoutHidden(false)
+    c:Tick()
+    assert(state.calls.snapshot > snapshots and c:Row(1).active and not c.nativeShown)
+    assert(
+        c:Row(1).entry.rowId == "group-new-leaf" and c:Row(1).name:GetText() == "New run ability",
+        "visible takeover accepted a retired run's rows"
     )
 end)
 

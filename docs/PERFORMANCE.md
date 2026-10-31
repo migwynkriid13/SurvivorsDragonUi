@@ -2,7 +2,8 @@
 
 The October 2026 performance work removes repeated presentation writes while
 retaining native data, pause-aware timing, saved preferences and artwork.
-It adds no gameplay clock or native client dependency. Display choices use the
+Performance edits add no private gameplay clock. The meter requires the native
+version 1 data contract described below. Display choices use the
 existing saved display table; the optional minimap clock below defaults off.
 
 Pet and meter image textures share `T.NewCircularIcon` for native circular
@@ -21,14 +22,18 @@ The helper runs only where each owner already checks changed or pending artwork.
 Successful caches, probes, retirement and retries remain with those owners in
 both Performance Mode states. It adds no frame, region, asset or updater.
 
-## Native meter and live navigation API — draft
+## Required native meter and live navigation API
 
 The v1 meter adapter adds no frame, drawing region, asset, event, updater or
 SavedVariable. It reuses the existing five-Hz reader and one-Hz displayed rates,
-four bounded reusable source buffers and stable native row IDs. Native recent
-rates and checkpoints bypass local damage-history observation and baselines;
-native descriptors bypass name/icon scanners and party-unit portrait matching.
-Hidden settled views retain only context/retirement and required HUD ownership;
+four bounded reusable source buffers and stable native row IDs. All four views
+use only this API. Old meter getters/packet receipts, local rolling-DPS/reset
+models, name-based meter icon resolution and party-roster matching are removed.
+Missing/incomplete API data leaves the custom meter unavailable and leaves or
+restores the native HUD. Native rates, descriptors and checkpoints are the sole
+data source; existing settings/defaults/profile fields remain unchanged.
+Hidden views retain only context/retirement and required HUD ownership, with no
+row snapshot fetch even for initial/dirty views. Showing resumes fresh snapshots;
 off views read no native counter/context data. Outstanding checkpoint releases
 retry alone through the existing controller and stop when complete.
 Typed native failures retain bounded retry deadlines; UI time controls only
@@ -85,8 +90,9 @@ leave hundreds of expensive texture regions drawing continuously.
   suppression otherwise. Do not add a static override or
   retire its active hits just because Performance Mode changes.
 - Prefer one cached native image when its appearance matches the request.
-  Pet and meter circles use named `SetPortraitToTexture` images, with the gold
-  rim separate. Bind only on icon changes; scale inheritance needs no rebinding.
+  Pet images use named `SetPortraitToTexture` circles; retained meter portraits
+  use `AZS_SetMeterPortrait` within that shared circle/strip owner, with the gold
+  rim separate. Bind only when identity/artwork changes.
 - Pool and lazily allocate view elements and reuse existing atlases. A
   compatibility fallback allocates only when needed and reflows only on actual
   scale changes. Successful bindings are cached. Remember native-path failures
@@ -717,7 +723,7 @@ Native book/language/world changes and getter changes cancel stale preparation.
 Incomplete warm metadata remains private and retries after one second. Optional
 read failures back off without interrupting active text or queued-hit delivery.
 
-An actual SCT or meter consumer still needs an authoritative current result.
+An actual SCT hit still needs an authoritative current result.
 If preparation has not produced a usable complete generation, that call discards
 unfinished work and performs the existing fresh synchronous traversal. It does
 not hold a hit, extend the grouping window, choose a weaker icon while warming
@@ -727,7 +733,7 @@ claim a strict four-slot bound for every possible icon lookup.
 Preparation runs only through the existing eligible SCT controller. Custom SCT
 also resolves icons with visual damage icons off because the resolved icon is
 part of duplicate identity. Game/Off and hidden MSBT do no background preparation;
-a visible meter can still resolve through the shared on-demand path. Completed
+the native-only meter never requests or warms this resolver. Completed
 work becomes idle, and missing native metadata retains the existing bounded
 retry behavior. No new updater, event, SavedVariable, learned registry, gameplay
 history, drawing region or asset is added.
@@ -1021,7 +1027,7 @@ has an active visual, native-data, ownership or readiness purpose:
 | Jewelry                                            | Five-Hz native equipment/cooldown and metadata readiness; active exact 64-cell cooldown painting at thirty Hz, cursor placement only while hovered. Fourteen-strip icon sampling and original rims remain.                                                                                                           |
 | Loot                                               | Five-Hz service/readiness/native ownership and bounded queue delivery, populated frame fades/expiry, bounded five-Hz metadata retry. Hidden cards must expire and free capacity; empty cosmetic pools already detach.                                                                                                |
 | Banners                                            | Five-Hz registration/ownership/readiness, next-frame pending native errors and original thirty-Hz fade/expiry/promotion. Settled disabled/faulted cleanup already detaches.                                                                                                                                          |
-| Damage meter                                       | Five-Hz native publication/readiness/ownership and one-Hz rate presentation. Off detaches; hidden views skip rows/rates/icon work. Accepted counter processing already has publication caches.                                                                                                                       |
+| Damage meter                                       | Five-Hz native v1 context/snapshot readiness and ownership with one-Hz rate presentation. Off detaches collection; hidden views retain context/cleanup only and skip snapshots, rates and icon work.                                                                                                                 |
 | Chat/tooltip/character                             | Visible chat slides/reveals and cursor tooltip placement need frames; chat geometry repair stays one Hz and tooltip styling five Hz. Character stats already coalesce to a next-frame flush only after relevant events while open. Capture/Copy remain opt-in/event/user driven.                                     |
 | Editing and diagnostics                            | Active Layout/minimap-launcher drag stays per frame with final sample. Settled editor/coordinates remain ten Hz; fstack stays five Hz only while explicitly enabled.                                                                                                                                                 |
 | Other modules/native work                          | Menu, font resolution, display/profile controls, static catalogs and bootstrap are event/initialization driven. Omitted cast/bag/micro frames remain suppressed. Native action swipes/usability, model animation, incoming combat text and range fade-manager animation retain their engine schedules.               |
@@ -1285,10 +1291,12 @@ address further source-level scaling. Icon resolution can still be required
 with icons hidden because exact duplicate identity includes its received art.
 Ambiguity still considers every eligible same-name candidate.
 
-An enabled meter processes complete source lists independently of its one-to-ten
-visible rows. Its rolling history already uses bounded separate time/value
-arrays and lossless flat-interval compression; 604 pairs per series is a
-worst-case capacity for changing counters, not an unchanged-plateau leak. The
+At the captured historical revision, an enabled meter processed complete source
+lists independently of its one-to-ten visible rows. Its then-local rolling
+history used bounded separate time/value arrays and lossless flat-interval
+compression; 604 pairs per series was the worst-case capacity for changing
+counters, not an unchanged-plateau leak. The v1-only refactor removes that local
+model; this paragraph explains the older captured revision. The
 default-off meter detaches collection and cannot explain this default-off
 capture. Neither native portraits nor the SCT pool are established lifetime
 leaks: portrait images are path-cached and text pools track peak concurrency,
@@ -1603,14 +1611,16 @@ No new registry, event, region or drawing pass is introduced.
 
 ### Shared spellbook generations
 
-SCT and meter source resolution share one lazy complete spellbook scan after an
-existing spell/world/language invalidation. Different non-book names use that
+SCT source resolution uses one lazy complete spellbook scan after an existing
+spell/world/language invalidation. The native-only meter does not consume it. Different non-book names use that
 same result instead of each rebuilding the book before catalog lookup. Incomplete
 native slot metadata retries at most once per second through actual consumers;
 missing APIs and failed scans remain retryable. Off/hidden consumers add no scan.
 The source priority, ambiguity, original grouping identity and icon pools remain
-unchanged. CI-only controller coverage includes meter-only lookup while SCT is
-off, several missing names, delayed artwork readiness and world retirement.
+unchanged. CI-only controller coverage reaches the private production
+`CombatIcon` closure through a development-only helper; no meter export or
+shipped test hook remains. Cases retain missing names, delayed artwork readiness
+and world retirement.
 
 ### Loot backpressure
 
@@ -1737,23 +1747,21 @@ new event or updater. Enabled views keep their original polling, expiry and
 cosmetic cadence, including hidden notice retirement. CI-only production
 coverage checks enable/disable, failed cleanup retries and dispatch failure.
 
-### Meter publication work
+### Native meter snapshot work
 
-The visible meter distinguishes accepted counter publications from changing
-native rates. Getter identity, returned source, native stamp, total and a
-monotonic receipt generation invalidate counter validation/copying, including
-same-table/same-stamp deliveries. Official getters and five-Hz native-time
-observations remain active; one-Hz row/header rate updates remain independent.
-Session comparison and immutable name/order/class/share copying skip settled
-publications. The bounded rolling ring still samples cached counters, preserving
-pauses, interpolation, warmup, gaps and regressions. Reset, language/off/world
-retirement and empty-publication gates retain their existing ownership.
+The meter consumes version 1 context/snapshot identities instead of legacy
+getter/table/stamp/packet receipt heuristics. Stable native row/source/owner IDs
+and counter/metadata/language revisions guard copied presentation; rates and
+recent windows are native results. Five-Hz visible data reads and one-Hz rate
+presentation remain separate. No local rolling ring, baseline subtraction,
+source sorting/share calculation or unselected Damage Done observation remains.
 
-This independently applies FieldKit's separation of publication and rate work,
-with the installed native parser's list-replacement/stamp contract and our
-stronger receipt gates. CI-only production fixtures cover invalid/replaced
-sources, same-stamp receipts, native changing rates and all reset/retirement
-boundaries. No native gameplay table is changed and no drawing region is removed.
+Native checkpoints own session resets, and explicit run/authority/epoch/encounter
+identity retires stale state. At most four reusable records coalesce data within
+one protected reader pass. Hiding skips all row snapshots and cosmetic work;
+only context/ownership and required cleanup remain. Off detaches collection,
+retrying only outstanding native releases. Neither native tables nor counters
+are modified, and no drawing region or updater is added.
 
 ### Shared plate samples
 
@@ -1833,7 +1841,7 @@ hits and current native Melee/equipment artwork retain their own paths.
 
 This adds bounded unsaved display metadata, not gameplay data or drawing regions.
 Consumers keep their hidden/off/icon-off guards and texture assignment retries.
-CI-only controller scenarios cover school refinement, meter ambiguity, stronger
+CI-only controller scenarios cover school refinement, source-name ambiguity, stronger
 metadata, failures/recovery, language/world retirement, weapon changes and FIFO
 eviction. Existing learned-talent lifetime and source priority remain unchanged.
 
@@ -2113,7 +2121,7 @@ kept separately so normal native state can resume on showing.
 | `guardianWaypoint`  | Same visibility boundary as cache guidance; accepted lairs still feed the guardian data foundation independently of this HUD's visibility.                                                                                                                                                                                                                                        |
 | `guardianTracker`   | Layout-hidden policy detaches its pure view controller before roster copying, measurements or row painting. The separate guardian foundation continues accepting native state. Show uses a fresh snapshot.                                                                                                                                                                        |
 | `sctMSBT`           | Hiding clears active/queued scrolling hits and skips intake, resolver work, animation and measurement. Showing admits new hits only. The stream owner and its edit handle retire when Custom or MSBT-style turns off; over-enemy text uses its original parent and WorldFrame anchors.                                                                                            |
-| `damageMeter`       | Layout-hidden mode validates newly published native data without copying view rows or sampling displayed rates, retaining phase retirement and takeover checks. Showing rebuilds from the getter. Feature-off remains stricter: no meter subscription, collection, getters or idle updater, apart from a pending native-preference restoration.                                   |
+| `damageMeter`       | Layout-hidden mode reads native v1 context for session retirement/ownership but fetches no row snapshots or displayed rates. Showing reads fresh snapshots. Feature-off has no collection/context reads or idle updater, apart from pending native HUD/checkpoint releases.                                                                                                       |
 | `petFrames`         | Hidden/static groups skip timer sampling and all row/icon painting. New native roster receipts, phase retirement and changed edit bounds remain. Show refreshes current timing through the existing controller. The separate native primary pet retains its native ownership.                                                                                                     |
 | `revive`            | Hidden progress/identity state stays current without glyph measurement, text/bar/cross/spark writes or cosmetic animation. Show requests a fresh deferred read. Existing native-HUD release while Layout-hidden remains; no revive time is invented.                                                                                                                              |
 | `levelUp`           | Hidden class icon, count formatting/measurement, content alignment and pulse painting stop. Native stored-level validity/takeover remains. Hidden editor bounds still measure the active-language panel; Show refreshes current data.                                                                                                                                             |
@@ -2183,7 +2191,7 @@ remain in place; this is not a claim that every remaining cost is eliminated.
 | Minimap and waypoint guides                             | `modules/map/map.lua`, `buttons.lua`, `navigation.lua`, `waypoints.lua`: reusable accepted snapshots/pins and native direction/position sampling; skip unchanged clock labels and button anchors. The gold glyph and selected static square background use two bound-once textures: one added persistent background region/UV clamp and normal alpha overlap beneath the glyph, with no idle polling or extra hover region. Both inherit hiding/scale and stay static in Performance Mode; the pointer updater exists only while dragging. Square-edge adaptation runs on foreign placement calls or map/show/load events. See `MINIMAP-BUTTONS.md`. |
 | SCT and nameplates                                      | `modules/nameplates/sct.lua`, `style.lua`: event-batch discovery plus independent frame discovery, preserved matching/animation, cached metadata and unchanged native styling.                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | Layout/editor, tooltips, chat, Copy, menu and inspector | `core/layout.lua`, `editor.lua`, `tooltips.lua`, `fstack.lua`, `modules/chat/*`, `modules/menu/menu.lua`: bounded edit sampling, passive/pool reuse, owner/scale-aware hover work, native chat/fades, retained opt-in diagnostics and hidden inspector shutdown.                                                                                                                                                                                                                                                                                                                                                                                     |
-| Meter and general warning overlay                       | `modules/ui/meter.lua`, `modules/ui/ui.lua`: native circles, one-Hz rate display with five-Hz data observation, visibility/change guards, transition-only warning visibility and preserved gradient animation.                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| Meter and general warning overlay                       | `modules/ui/meter.lua`, `modules/ui/ui.lua`: native circles, one-Hz native rate display with five-Hz v1 reading, visibility/change guards, transition-only warning visibility and preserved gradient animation.                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 
 Native aura/timer rows (`modules/unit/auras.lua`) retain changed-slot reflow,
 hidden timer shutdown and required repair of native buff/enchant anchors.
@@ -2231,68 +2239,31 @@ with CVar observation until its captured preference is released. The initial rea
 allocated for reuse, with no visible drawing cost. Live enable/disable, profiles,
 Confirm/Cancel/discard and both resets share the existing display lifecycle.
 
-Damage Done now derives rolling DPS from native cumulative snapshots and run
-seconds, defaulting to ten seconds. The existing five-Hz reader observes complete
-sources even on another visible meter tab; no event, frame or updater is added.
-`core/meter_rates.lua` caps each header/source series at 604 timestamp/value pairs,
-retains at most 120 run seconds plus one boundary sample, and compresses flat
-intervals to their endpoints. Source identities remain exact name/proc pairs;
-new identities allocate once and reuse their numeric vectors. Left-boundary
-queries use binary search at the one-Hz presentation cadence. All skips history;
-The X captures all four native views once through the existing reader and keeps
-one baseline/last-counter record per exact name/proc identity. It pools positive
-session rows and recalculates their totals/shares/order only when counters or
-native order change; unchanged counters refresh only native-time average rates.
-No native counter or table is modified.
+All four views now require complete native v1 snapshots. Damage Done requests
+the selected ten-second default recent window, configurable 5–120 seconds or All;
+no local rate history is allocated. Native descriptors and retained portraits
+replace SCT name lookup and live party-unit matching. The X captures a native
+checkpoint atomically; no local reset baseline or re-ranking model remains.
+Missing or incomplete API/data leaves or restores native HUD ownership.
 
-Party Damage reuses that fourth mode, existing packet intake, reader, session
-reset model, one-Hz presentation and lazy row pool. Native class keys share the
-existing class-color palette. Its only portrait discovery is a bounded five-unit
-pass during visible, icons-enabled party painting; it skips all spell/item icon
-resolution. Unit/name/native-frame-image and actual texture comparisons skip
-unchanged native portrait binding. Failures remain memoized until the identity
-or source image changes or the row retires; neutral fallback binding retains the
-existing retry rules. Icons-off, hidden/off views and retired rows skip that pass
-and binding; release clears the bounded metadata. All four views retain phase
-and received-publication gates. No frame, region, model, artwork, event, updater,
-setting or saved state is added. Native unit portraits occupy the existing icon
-and gold-rim regions, so the authored visible-region budget below is unchanged;
-neutral fallback can still use the existing more expensive strip path. Source
-review and formatting are the only local checks; CI-only mocks are authored for
-cycling, portraits, unchanged/hidden/off work, failure caching, reset metadata
-and world retirement. No measured CPU/GPU/FPS or live visual-parity claim follows.
+View cycling remains a bounded deferred scan over four native query results.
+Clicks retain direction/step intent without snapshot reads; candidate results
+are reused within the pass and released afterward, including failures. Native
+waiting/empty/error states keep their existing presentation. Layout-hidden views
+fetch context only for retirement/ownership, with no row snapshots, rates or
+artwork work; off detaches all collection apart from pending release cleanup.
+Both Performance Mode states use this same static path and preserve all existing
+saved settings, row/font/width geometry and controller cadences.
 
-Waiting meter views are skipped by a bounded four-view scan in the existing
-deferred visible reader. Click handlers retain only direction/step intent and
-call no getter. Accepted empty snapshots and explicit error messages remain
-selectable; fresh-publication guards stay unchanged. Candidate scans run for
-pending navigation or readiness/publication/visibility changes, rather than
-adding unselected-view polling to each idle pass. Hidden views defer selection,
-and disable/retirement clears it. Candidates store only view indices. Four
-reusable native-result records coalesce selection, Reset baselines, rolling
-damage observation and presentation within each pass; their source/value
-references are cleared immediately after the protected refresh, including
-failures and early returns, and on invalidation. If all views are waiting, the
-existing header displays the selected view name until data arrives. No frame,
-region, animation, asset, event, updater, setting or SavedVariable is added;
-normal and Performance Mode share the same behavior. CI-only fixtures cover
-the navigation, lifecycle and waypoint changes; they were not run locally.
-
-Hiding empties recent vectors once and stops observation; showing warms the
-window again. Disabling and run/world retirement drop all rate state; language
-changes rebase an active reset session. Repeated retirement of an empty model allocates nothing. Pause leaves the
-native time coordinate unchanged. Window choices reuse normalized display drafts,
-profiles and resets. The window row reuses existing editor controls. The old
-rate-only Reset DPS settings action is removed. The header arrow FontString is
-replaced by one native button using three already-bundled Close.blp states:
-normal, pressed and additive hover. One image draws normally, with a second only
-on hover; native button state handling needs no Lua updater or cosmetic polling.
-The texture is bound once, retains its source proportions and inherits meter
-scale/hiding. This adds one normal HUD texture region and removes one label,
-without adding an image file or saved state. Rate text/tooltips still skip
-unchanged writes; reset clears rows/icons/hovers and both rate caches immediately.
-These bounds are source-level cost evidence; CPU time, gameplay behavior and FPS
-remain unmeasured. See [DAMAGE-METER.md](DAMAGE-METER.md).
+The existing gold X retains the three bundled Close.blp states and native button
+handling: one normal image, plus transient hover. Native checkpoint capture is
+synchronous; failure preserves the previous session. Successful replacement
+clears displayed rows/scroll/rates and requests native post-checkpoint values,
+without changing game counters. Failed checkpoint/HUD releases retry through the
+existing controller and stop when settled. There is no new frame, asset, setting,
+event, updater or gameplay persistence. The removed `core/meter_rates.lua` and
+older name/proc baselines are historical implementation details, not a drawing
+fallback. See [DAMAGE-METER.md](DAMAGE-METER.md).
 
 The meter's normal circular path uses six native icon regions plus six existing
 ring regions. With its header, row backgrounds and fills, the full six-row view
@@ -2314,7 +2285,7 @@ widths and the icon gutter reflow only for effective option changes; header
 text is cached by its visible values, view, language and options revision.
 These are source-level cost controls, without a measured FPS claim.
 
-The compatibility path is deliberately more expensive: at effective scale one,
+The retained strip drawing fallback is deliberately more expensive: at effective scale one,
 each 26-unit icon uses 24 nonempty strips. Including the header and normal X,
 six such outlined rows have 170 visible
 authored texture regions and 176 allocated regions including their six hidden
@@ -2328,9 +2299,9 @@ as a fix for strip-composition cost.
 
 The audit found and corrected local meter gaps:
 
-- Valid native data and HUD ownership continue while Layout hides the meter,
-  but hidden rows skip formatting, tooltip repaint, icon lookup/binding and bar
-  painting. Visibility requests occur only on transitions; clearing is idempotent.
+- Native v1 context retirement and already acquired HUD ownership continue
+  while Layout hides the meter; hidden row snapshots, rates, formatting,
+  tooltip repaint, icon binding and bar painting stop. Visibility requests occur only on transitions; clearing is idempotent.
 - A hovered tooltip reuses unchanged source/value/mode/language/scale content.
   It no longer clears, reparents and rebuilds the same lines every five-Hz poll,
   or steals a tooltip that another native owner has taken or hidden.
@@ -2351,7 +2322,7 @@ remain unverified.
 
 Six Layout groups add twenty editor-only center-edge marks: two horizontal for run timer, boss health, Revive, meter, Chat and guardians, plus two vertical for the four row views. Each is one existing native solid texture under the hidden shared handle, with no asset or additional controller. The two obsolete settings sliders and their four thumb/track textures are removed. **Show grid** uses one existing-style lazy editor checkbox; off hides the complete grid and guide parent and skips grid geometry sampling. Shift alignment still uses the existing active-drag calculations.
 
-Width lives in shared Layout geometry. Meter and guardian roots default to 240 and allow 120–960 without scaling row height, icons or fonts. Cached natural tracker text widths compress its columns safely; native health end caps retain their 50-unit combined span. Meter geometry caches width, separate name/number font sizes, icon gutter and numeric text metrics. Failed font changes remain retryable. Hidden/off views accept required edit bounds while deferring row/header/font/icon presentation. Meter resizing never enables native reads or packet intake while off.
+Width lives in shared Layout geometry. Meter and guardian roots default to 240 and allow 120–960 without scaling row height, icons or fonts. Cached natural tracker text widths compress its columns safely; native health end caps retain their 50-unit combined span. Meter geometry caches width, separate name/number font sizes, icon gutter and numeric text metrics. Failed font changes remain retryable. Hidden/off views accept required edit bounds while deferring row/header/font/icon presentation. Meter resizing never enables native data reads while off; no meter packet intake remains.
 
 The 2026-10-31 meter text change replaces fixed 58-unit numeric-field slots with
 the final numeric label's native `GetStringWidth`, rounded up with one unit of
@@ -2531,7 +2502,7 @@ drawing/lifecycle observations, without measured FPS or in-game input proof.
 
 ## Source-icon language coverage — 2026-10-27
 
-The shared SCT/meter icon resolver now receives generated exact-name aliases
+The SCT icon resolver receives generated exact-name aliases
 for all fourteen game languages, extending the former Czech-only data path.
 The generated data contains 5,667 non-identity alias groups; English has an
 empty table. This adds resident Lua tables/strings at load time. Each lookup
@@ -2540,13 +2511,20 @@ existing resolver; there is no per-hit catalog build or cross-language scan.
 
 No renderer, frame, texture, material, UV, alpha, animation or binding path
 changes. Native circles, fallback pools and gold rims keep their existing
-region counts and binding caches. Disabled/hidden meters and disabled icons
-still skip resolution. No updater, event, setting, asset or saved state is
+region counts and binding caches. The native v1 meter does not call this
+resolver; actual SCT keeps its existing eligibility guards. No updater, event, setting, asset or saved state is
 added. These are source-level cost observations, without an FPS/GPU claim or
 local execution. Alias provenance and remaining limits are in
 [LOCALIZATION.md](LOCALIZATION.md#source-icon-languages--2026-10-27).
 
-Accepted pet publications now contribute exact localized name/path metadata to the shared SCT/meter resolver after the pet reader's full validation. A changed publication adds one pass over its already copied display groups; timer-only updates do not repeat it. Cache hits add one name lookup before generated catalogs and can avoid weaker item/database lookups. There is no new native getter, event, updater, bitmap, frame or drawing region. The meter's existing refresh replaces a bound question mark when the path becomes available, retaining binding caches, circular masking and all off/hidden/icon-off guards. Only unsaved display names/paths remain after despawn, with zone/language/world cleanup; no summon IDs, timing, damage or roster history is learned. Source inspection and pinned formatting do not establish in-game appearance or FPS.
+Accepted pet publications contribute exact localized name/path metadata to the
+SCT resolver after full pet-reader validation. A changed publication adds one
+pass over already copied groups; timer-only updates do not repeat it. Unsaved
+names/paths retire on zone/language/world cleanup, without summon IDs, timing,
+damage or roster history. The historical meter bridge is removed: native v1
+meter rows receive metadata directly and do not trigger SCT lookups. There is no
+new getter, event, updater, bitmap, frame or drawing region. Source inspection
+and formatting do not establish in-game appearance or FPS.
 
 ## Pet re-audit — 2026-10-26
 

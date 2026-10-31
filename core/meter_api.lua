@@ -80,24 +80,18 @@ function DFRL.tools.NewNativeMeter()
         if failure ~= nil then return nil, Malformed() end
         return result
     end
-    function adapter.Supported()
-        if state.supported then return true end
-        if type(_G.AZS_GetMeterCapabilities) ~= "function" then return false end
-        state.supported = true
-        return true
-    end
     local function Capabilities()
+        for _, name in ipairs(endpoints) do
+            if type(_G[name]) ~= "function" then
+                return nil, Error("UNSUPPORTED_QUERY", "The native meter endpoint set is incomplete.")
+            end
+        end
         if state.capabilities then return state.capabilities end
         local result, failure = Call("AZS_GetMeterCapabilities")
         if not result then return nil, failure end
         if type(result) ~= "table" or not Number(result.apiVersion) then return nil, Malformed() end
         if result.apiVersion ~= 1 then
             return nil, Error("UNSUPPORTED_VERSION", "Native meter version 1 is required.")
-        end
-        for _, name in ipairs(endpoints) do
-            if type(_G[name]) ~= "function" then
-                return nil, Error("UNSUPPORTED_QUERY", "The native meter endpoint set is incomplete.")
-            end
         end
         if not Id(result.uiSessionId) or type(result.features) ~= "table" then return nil, Malformed() end
         state.capabilities = { uiSessionId = result.uiSessionId, features = {} }

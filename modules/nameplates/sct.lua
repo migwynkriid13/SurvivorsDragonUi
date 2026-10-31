@@ -1589,40 +1589,6 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         return FALLBACK_ICON
     end
 
-    -- Exact native healing records: docs/DAMAGE-METER.md; shared across classes.
-    local healingSourceIcons = {
-        ["Regeneration"] = "Interface\\Icons\\Spell_Nature_Rejuvenation",
-        ["Leech"] = "Interface\\Icons\\Spell_Shadow_LifeDrain02",
-        ["Healing on Kill"] = "Interface\\Icons\\Spell_Shadow_DeathPact",
-        ["Level Up"] = "Interface\\Icons\\Spell_Holy_HolyBolt",
-        ["Soul Link"] = "Interface\\Icons\\Spell_Shadow_GatherShadows",
-    }
-    local healingNames, healingLanguage = {}, false
-    local function NativeHealingIcon(name)
-        local code = DFRL.locale.code
-        if healingLanguage ~= code then
-            healingNames = {}
-            for caption, texture in pairs(healingSourceIcons) do
-                LearnSpellTexture(healingNames, caption, texture)
-                LearnSpellTexture(healingNames, DFRL.locale.Native(caption), texture)
-            end
-            healingLanguage = code
-        end
-        return healingNames[name]
-    end
-
-    -- Native meter names can share the same metadata resolver without passing
-    -- through combat parsing, filtering, grouping or damage attribution.
-    function sct.GetSourceIcon(name, healing, proc)
-        if type(name) ~= "string" or name == "" then return FALLBACK_ICON end
-        if healing and proc ~= 1 then
-            local texture = NativeHealingIcon(name)
-            if texture ~= nil then return texture or FALLBACK_ICON end
-        end
-        if name == "Melee" or name == DFRL.locale.Native("Melee") then return AutoAttackIcon() end
-        return CombatIcon({ spell = name })
-    end
-
     local function IconIdentityPart(value) return string.len(value) .. ":" .. value end
 
     local function SyncDuplicateWindow()

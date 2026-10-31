@@ -1120,7 +1120,7 @@ Test("empty SCT queues skip remembered-size writes and resume for new hits", fun
     assert(writes == 0 and #context:Labels() == 0, "retired queues did not return to the idle path")
 end)
 
-Test("source lookup scans one spellbook per publication generation across SCT and meter callers", function()
+Test("SCT icon lookup scans one spellbook per publication generation", function()
     local context = SCT(true, function(current, env)
         env.DFRL.locale.code, env.DFRL.locale.data = "en", { en = {} }
         env.DFRL.locale.Native = function(value) return value end
@@ -1141,9 +1141,9 @@ Test("source lookup scans one spellbook per publication generation across SCT an
     end)
     local source = context.env.DFRL.sct
     assert(not context.bookScans, "icons-off initialization scanned the spellbook")
-    assert(source.GetSourceIcon("PassiveA") == "Interface\\Icons\\Spell_Nature_Thorns")
-    assert(source.GetSourceIcon("PassiveB") == "Interface\\Icons\\Spell_Fire_Fire")
-    assert(source.GetSourceIcon("BookSpell") == context.bookTexture)
+    assert(context:LookupIcon("PassiveA") == "Interface\\Icons\\Spell_Nature_Thorns")
+    assert(context:LookupIcon("PassiveB") == "Interface\\Icons\\Spell_Fire_Fire")
+    assert(context:LookupIcon("BookSpell") == context.bookTexture)
     assert(context.bookScans == 1, "non-spellbook names each rebuilt the same book")
     source.BeginEdit()
     source.SetMode("off")
@@ -1151,17 +1151,21 @@ Test("source lookup scans one spellbook per publication generation across SCT an
     context.bookName, context.bookTexture = "NewSpell", nil
     context:Event(context.controller, "SPELLS_CHANGED")
     assert(context.bookScans == 1, "an inactive source publication scanned eagerly")
-    assert(source.GetSourceIcon("NewSpell") == context.env.T.SourceIconFallback, "missing art was cached as ready")
-    source.GetSourceIcon("PassiveA")
+    source.BeginEdit()
+    source.SetMode("on")
+    source.FinishEdit(true)
+    assert(context:LookupIcon("NewSpell") == context.env.T.SourceIconFallback, "missing art was cached as ready")
+    context:LookupIcon("PassiveA")
     assert(context.bookScans == 2, "incomplete metadata retried for every source name")
     context.bookTexture = "Interface\\Icons\\Spell_Frost_FrostBolt02"
-    context:Tick(1.01)
-    assert(source.GetSourceIcon("NewSpell") == context.bookTexture, "meter-only lookup did not retry missing art")
-    source.GetSourceIcon("PassiveB")
+    -- Isolate demand-driven retry from the separately covered warm callback.
+    context.now = context.now + 1.01
+    assert(context:LookupIcon("NewSpell") == context.bookTexture, "SCT lookup did not retry missing art")
+    context:LookupIcon("PassiveB")
     assert(context.bookScans == 3, "successful metadata retry did not settle the generation")
     context:Event(context.controller, "PLAYER_LEAVING_WORLD")
     context:Event(context.controller, "PLAYER_ENTERING_WORLD")
-    source.GetSourceIcon("NewSpell")
+    context:LookupIcon("NewSpell")
     assert(context.bookScans == 4, "world retirement retained an accepted spellbook generation")
 end)
 
@@ -1250,10 +1254,10 @@ Test("final icon cache preserves stronger metadata, ambiguity, language and nati
         end
     end)
     local source = context.env.DFRL.sct
-    assert(source.GetSourceIcon("Generated") == "Interface\\Icons\\Spell_Nature_Thorns")
-    source.GetSourceIcon("Generated")
+    assert(context:LookupIcon("Generated") == "Interface\\Icons\\Spell_Nature_Thorns")
+    context:LookupIcon("Generated")
     assert(context.catalogReads.Generated == 1, "unchanged final icon repeated its catalog traversal")
-    assert(source.GetSourceIcon("Ambiguous") == context.env.T.SourceIconFallback)
+    assert(context:LookupIcon("Ambiguous") == context.env.T.SourceIconFallback)
     context.school = "Nature"
     context:Hit(1)
     context:Tick(0.1)
@@ -1274,39 +1278,39 @@ Test("final icon cache preserves stronger metadata, ambiguity, language and nati
     )
     assert(schoolIcons["2"] == "Interface\\Icons\\Spell_Fire_FireBolt02", "cached Nature artwork crossed into Fire")
     assert(
-        source.GetSourceIcon("Ambiguous") == context.env.T.SourceIconFallback,
-        "school refinement leaked into the meter"
+        context:LookupIcon("Ambiguous") == context.env.T.SourceIconFallback,
+        "school refinement leaked into a school-free SCT lookup"
     )
     source.LearnSummonIcon("Generated", "Interface\\Icons\\Spell_Shadow_SummonImp")
     assert(
-        source.GetSourceIcon("Generated") == "Interface\\Icons\\Spell_Shadow_SummonImp",
+        context:LookupIcon("Generated") == "Interface\\Icons\\Spell_Shadow_SummonImp",
         "cached catalog outranked new summon metadata"
     )
     source.LearnSummonIcon("Generated", "Interface\\Icons\\Spell_Shadow_SummonVoidWalker")
-    assert(source.GetSourceIcon("Generated") == context.env.T.SourceIconFallback, "cache lost summon ambiguity")
+    assert(context:LookupIcon("Generated") == context.env.T.SourceIconFallback, "cache lost summon ambiguity")
     context.env.AZS_DEBUFFS = { { name = "Generated", icon = "Interface\\Icons\\Spell_Holy_HolyBolt" } }
     context:Event(context.controller, "CHAT_MSG_ADDON", "AZSDEBUFFS")
     context:Tick(0.36)
     assert(
-        source.GetSourceIcon("Generated") == "Interface\\Icons\\Spell_Holy_HolyBolt",
+        context:LookupIcon("Generated") == "Interface\\Icons\\Spell_Holy_HolyBolt",
         "cached ambiguity overrode a stronger observed aura"
     )
-    assert(source.GetSourceIcon("Alias") == "Interface\\Icons\\Spell_Nature_Thorns")
+    assert(context:LookupIcon("Alias") == "Interface\\Icons\\Spell_Nature_Thorns")
     context.env.DFRL.locale.code = "de"
     context:NotifyLocale()
     assert(
-        source.GetSourceIcon("Alias") == "Interface\\Icons\\Spell_Fire_Fire",
+        context:LookupIcon("Alias") == "Interface\\Icons\\Spell_Fire_Fire",
         "language change retained an old alias result"
     )
     context.weapon = "Interface\\Icons\\INV_Sword_04"
-    assert(source.GetSourceIcon("Melee") == context.weapon)
+    assert(context:LookupIcon(nil, nil, "autoattack") == context.weapon)
     context.weapon = "Interface\\Icons\\INV_Axe_01"
-    assert(source.GetSourceIcon("Melee") == context.weapon, "cache retained an unequipped melee image")
+    assert(context:LookupIcon(nil, nil, "autoattack") == context.weapon, "cache retained an unequipped melee image")
     context:Event(context.controller, "PLAYER_LEAVING_WORLD")
     context:Event(context.controller, "PLAYER_ENTERING_WORLD")
     context.env.AZS_DEBUFFS = {}
     assert(
-        source.GetSourceIcon("Generated") == "Interface\\Icons\\Spell_Nature_Thorns",
+        context:LookupIcon("Generated") == "Interface\\Icons\\Spell_Nature_Thorns",
         "world retirement retained learned or resolved metadata"
     )
 end)
@@ -1336,26 +1340,25 @@ Test("unknown icon retry remains one second and final cache evicts old identitie
             error("native item metadata is not ready")
         end
     end)
-    local source = context.env.DFRL.sct
-    assert(source.GetSourceIcon("Mystery") == context.env.T.SourceIconFallback)
-    source.GetSourceIcon("Mystery")
+    assert(context:LookupIcon("Mystery") == context.env.T.SourceIconFallback)
+    context:LookupIcon("Mystery")
     context:Tick(0.5)
-    source.GetSourceIcon("Mystery")
+    context:LookupIcon("Mystery")
     assert(context.itemReads == 1 and context.catalogReads.Mystery == 1, "unknown lookup repeated before retry time")
     context.itemReady = true
     context:Tick(0.51)
     assert(
-        source.GetSourceIcon("Mystery") == "Interface\\Icons\\INV_Misc_Orb_01",
+        context:LookupIcon("Mystery") == "Interface\\Icons\\INV_Misc_Orb_01",
         "negative final cache blocked metadata retry"
     )
-    source.GetSourceIcon("Mystery")
+    context:LookupIcon("Mystery")
     assert(context.itemReads == 2, "settled item metadata repeated a native lookup")
     for index = 1, 257 do
-        source.GetSourceIcon("Source" .. index)
+        context:LookupIcon("Source" .. index)
     end
-    source.GetSourceIcon("Source257")
+    context:LookupIcon("Source257")
     assert(context.catalogReads.Source257 == 1, "newest icon result was not retained")
-    source.GetSourceIcon("Source1")
+    context:LookupIcon("Source1")
     assert(context.catalogReads.Source1 == 2, "resolved identity cache grew without eviction")
 end)
 

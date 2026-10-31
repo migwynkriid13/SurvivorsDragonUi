@@ -152,7 +152,7 @@ The original Czech icon integration supplied 449 non-identity alias groups from 
 
 ## Source-icon languages — 2026-10-27
 
-The Portuguese report showed working native meter totals and bars but question marks for translated abilities. Only Czech had a `spellNames` table; the packaged spell database has English names, and `GetLocale()` can differ from the game's picker. The shared SCT/meter resolver already reads aliases from the effective game language at lookup time. Supplying the missing tables fixes that metadata gap without changing native row names, values or language detection.
+The Portuguese report originally showed working native meter totals and bars but question marks for translated abilities. Only Czech had a `spellNames` table; the packaged spell database has English names, and `GetLocale()` can differ from the game's picker. These aliases remain part of SCT's icon resolver. The meter now receives names and artwork directly from the version 1 API and does not use that name-based bridge.
 
 `scripts/generate_localization.py` now generates exact aliases for all fourteen catalogs. Selection remains limited to official `ability.*.name` fields and literal keys matching verified custom talents in `SpellIconCatalog.game`. It never reverse-maps arbitrary catalog values. Each translated name retains every canonical English candidate, including an identity candidate when another name shares it; conflicting icon choices remain ambiguous. Live spellbook/aura/talent observations retain their priority. Unknown or ambiguous names retain the shared question mark.
 
@@ -184,30 +184,25 @@ python3 -B scripts/generate_localization.py \
   --metadata /tmp/source-icon-languages.json
 ```
 
-AzerothSurvivorsRE's `docs/analysis/run-meters-0.105.0.md` and `gameplay/addon_meters.rs::source_name` lead to localized ability/literal-talent names before wire publication. Its `docs/analysis/localization-loader-0.119.0.md` describes selected-language lookup with English fallback and external overrides. The retained `0.120.2/embedded-api.lua` meter parser still publishes names, amounts, rates, shares and proc flags without icons. These historical references guide the fix; the installed executable above supplies the actual translated data. Custom external translations or future wording can remain unresolved because the API supplies no stable spell key/icon for those rows.
+AzerothSurvivorsRE's `docs/analysis/run-meters-0.105.0.md` and `gameplay/addon_meters.rs::source_name` lead to localized ability/literal-talent names before wire publication. Its `docs/analysis/localization-loader-0.119.0.md` describes selected-language lookup with English fallback and external overrides. The retained `0.120.2/embedded-api.lua` meter parser still publishes names, amounts, rates, shares and proc flags without icons. These historical references explain the former meter-name bridge. The installed executable above still supplies SCT alias data; custom external translations or future wording can remain unresolved for SCT. Native v1 meter labels and icons are supplied directly by its snapshot descriptors.
 
 Source/data preparation, manual diffs and pinned formatting do not establish in-game appearance or native-speaker approval; no local tests, standalone validation or addon/game execution was performed. See [SCT-ICONS.md](SCT-ICONS.md) for source-tier behavior and [PERFORMANCE.md](PERFORMANCE.md#source-icon-language-coverage--2026-10-27) for costs.
 
 ## Source and maintenance
 
-The meter's **Melee** icon matches the exact native `Melee` caption in all
-fourteen languages. These UI/native entries and `localization/native-keys.json`
-reuse the installed executable's dictionaries, read as data on 2026-10-26 from
-SHA-256 `291c281bd0a4255fdb3d04b2e442121e2df144f388f16de086b430e875aaad08`.
-Catalogs were matched by their existing exact `class.warrior.name` identity;
-no translated spell name, fuzzy match or runtime binary access is introduced.
-Other native entries, effect templates, aliases and the generator's older source
-fingerprint remain unchanged.
+The retired meter-name bridge used exact `Melee`, `Regeneration`, `Leech`,
+`Healing on Kill`, `Level Up` and `Soul Link` captions from all fourteen native
+catalogs. Their meter-only UI/native entries and `native-keys.json` selections
+are removed. Version 1 snapshots now supply meter names and artwork directly;
+SCT's independent spell-name aliases remain.
 
-The 2026-10-27 healing-icon follow-up selects the same executable's exact
-`Regeneration`, `Leech`, `Healing on Kill`, `Level Up` and `Soul Link` captions in all fourteen
-languages. `ui.tsv` references those native keys with `@key` cells, and
-`native-keys.json` plus the UI/native runtime sections retain them for regeneration.
-`scripts/extract_meter_healing_icons.py` reads the reviewed producer/icon pairs
-and matches embedded catalogs by existing `class.warrior.name` identity. Only
-these selected captions are added; the general generator's pinned older native
-catalogs, effect templates and spell-name aliases stay unchanged. The mapping
-selects display metadata without translating or rewriting native meter rows.
+Historical producer/icon evidence remains in [DAMAGE-METER.md](DAMAGE-METER.md#historical-healing-icon-provenance).
+The data-only `scripts/extract_meter_healing_icons.py` reads the pinned executable
+with SHA-256 `291c281bd0a4255fdb3d04b2e442121e2df144f388f16de086b430e875aaad08`
+and matches embedded catalogs by their existing `class.warrior.name` identity.
+Its research output is not a runtime or localization-generation input for the
+current meter. Other native entries, effect templates and aliases retain their
+existing sources.
 
 The stored-level button uses the user-requested **LEVEL UP** heading through `localization/ui.tsv` and the matching fourteen runtime UI entries. This is addon wording rather than a native caption. The former `Level Up!` and `LEVEL {n}` selections were removed with the current-level subtitle. See [STORED-LEVELS.md](STORED-LEVELS.md); other generated catalogs and the generator's reviewed source fingerprint are unchanged.
 

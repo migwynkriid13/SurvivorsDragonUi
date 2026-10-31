@@ -157,6 +157,8 @@ local function Native()
         return result
     end
     function state:Snapshot(query)
+        local view = query.scope == "party" and "party" or query.period == "encounter" and "boss" or query.metric
+        local records = self.viewRecords and self.viewRecords[view] or self.records
         local response = {
             apiVersion = 1,
             status = "ready",
@@ -188,7 +190,7 @@ local function Native()
         }
         local amount, recent, after = 0, 0, 0
         local owners = {}
-        for index, record in ipairs(self.records) do
+        for index, record in ipairs(records) do
             local owner = record.ownerId or "hero-1"
             local actor = record.actorId or owner
             if not owners[owner] then table.insert(response.ownerIds, owner) end
@@ -275,6 +277,8 @@ local function Native()
     env.AZS_GetMeterSnapshot = function(query)
         Call("snapshot")
         table.insert(state.queries, Copy(query))
+        local view = query.scope == "party" and "party" or query.period == "encounter" and "boss" or query.metric
+        if state.viewErrors and state.viewErrors[view] then return nil, state.viewErrors[view] end
         if state.snapshotError then return nil, state.snapshotError end
         state.lastResponse = state:Snapshot(query)
         if state.malformed then state.lastResponse.sources = {} end
@@ -319,17 +323,27 @@ local function Native()
     return c, state, env.T.NewNativeMeter(), env
 end
 
-if helperMode == "helpers" then return { New = Native, languages = languages, labels = labels } end
+if helperMode == "helpers" then return { New = Native, languages = languages, labels = labels, Error = Error } end
 
-Test("missing native endpoints retain the legacy selection boundary", function()
+Test("missing native endpoints report an unavailable native meter", function()
     local c = H.New()
+    c.env.AZS_GetMeter = function() error("missing API fell back to legacy damage") end
+    c.env.AZS_GetHealing = function() error("missing API fell back to legacy healing") end
+    c.env.AZS_GetBossMeter = function() error("missing API fell back to legacy bosses") end
+    c.env.AZS_GetPartyMeter = function() error("missing API fell back to legacy party") end
     c:Load("core/meter_api.lua")
-    assert(not c.env.T.NewNativeMeter().Supported(), "missing API selected the native v1 path")
+    local meter = c.env.T.NewNativeMeter()
+    local source, _, _, message, _, meta = meter.Read(damage, 10)
+    assert(
+        not source and message == "Meter data is unavailable." and meta.error.code == "UNSUPPORTED_QUERY",
+        "missing native endpoint did not report its unsupported API"
+    )
+    local captured, failure = meter.Reset()
+    assert(not captured and failure.code == "UNSUPPORTED_QUERY", "missing API invented a local reset fence")
 end)
 
 Test("native source keys preserve equal labels, original values and authoritative icons", function()
     local _, state, meter = Native()
-    assert(meter.Supported(), "complete native endpoint set was not detected")
     local source, total, rate, message, revision, meta = meter.Read(damage, 10)
     assert(source and not message and revision and meta, "ready native snapshot was rejected")
     assert(table.getn(source) == 2 and total == 140 and rate == 6, "native totals or recent rates were recalculated")
@@ -530,19 +544,17 @@ Test("native readiness failures stay on the selected native path", function()
     do
         local _, state, meter = Native()
         state.capabilities.apiVersion = 2
-        assert(meter.Supported())
-        local source = meter.Read(damage, 10)
-        assert(not source and meter.Supported(), "unsupported native version switched to legacy accounting")
+        local source, _, _, _, _, meta = meter.Read(damage, 10)
+        assert(not source and meta.error.code == "UNSUPPORTED_VERSION", "unsupported native version was accepted")
     end
     do
         local _, state, meter, env = Native()
         state.capabilities.features.nativeRecentWindows = false
-        assert(meter.Supported())
-        local source = meter.Read(damage, 10)
-        assert(not source and meter.Supported(), "unsupported native window fell back to a local DPS approximation")
+        local source, _, _, _, _, meta = meter.Read(damage, 10)
+        assert(not source and meta.error.code == "UNSUPPORTED_QUERY", "unsupported native window was approximated")
         env.AZS_GetMeterSnapshot = function() error("injected native API failure") end
-        source = meter.Read(damage, 0)
-        assert(not source and meter.Supported(), "a thrown native failure changed the accounting source")
+        source, _, _, _, _, meta = meter.Read(damage, 0)
+        assert(not source and meta.error.code == "INTERNAL_ERROR", "a thrown native failure changed accounting")
     end
 end)
 
