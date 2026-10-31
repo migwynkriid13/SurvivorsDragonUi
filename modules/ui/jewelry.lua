@@ -410,8 +410,7 @@ DFRL:NewMod("Jewelry", 4, function()
         iconProbe:SetTexture(nil)
         local loaded = iconProbe:SetTexture(texture)
         local assigned = iconProbe:GetTexture()
-        local stem = string.gsub(texture, "%.[^%.]*$", "")
-        if loaded == 1 or loaded == true or assigned == texture or assigned == stem then slot.artTexture = texture end
+        if T.TextureAssigned(loaded, assigned, texture) then slot.artTexture = texture end
         iconProbe:SetTexture(nil)
         slot.texture = texture
         iconsDirty = true

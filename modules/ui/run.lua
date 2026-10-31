@@ -225,8 +225,7 @@ DFRL:NewMod("RunTimers", 5, function()
             if texture.affixPath == wanted then return true end
             local loaded = texture:SetTexture(wanted)
             local assigned = texture:GetTexture()
-            local stem = string.gsub(wanted, "%.[^%.]*$", "")
-            if loaded ~= false and (loaded == true or loaded == 1 or assigned == wanted or assigned == stem) then
+            if T.TextureAssigned(loaded, assigned, wanted) then
                 texture.affixPath = wanted
                 return true
             end
@@ -552,8 +551,7 @@ DFRL:NewMod("RunTimers", 5, function()
             if not self.bound then
                 local loaded = texture:SetTexture(atlas)
                 local assigned = texture:GetTexture()
-                local stem = string.gsub(atlas, "%.[^%.]*$", "")
-                if loaded == false or not (loaded == true or loaded == 1 or assigned == atlas or assigned == stem) then
+                if not T.TextureAssigned(loaded, assigned, atlas) then
                     if assigned then texture:SetTexture(nil) end
                     if texture:IsShown() then texture:Hide() end
                     return
@@ -618,17 +616,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 local wanted = path .. "FillWhite.blp"
                 local loaded = texture:SetTexture(wanted)
                 local assigned = texture:GetTexture()
-                if
-                    loaded == false
-                    or not (
-                        loaded == true
-                        or loaded == 1
-                        or assigned == wanted
-                        or assigned == string.sub(wanted, 1, -5)
-                    )
-                then
-                    return
-                end
+                if not T.TextureAssigned(loaded, assigned, wanted) then return end
                 texture:SetTexCoord(0, 1, 0, 15 / 16)
                 -- Bake the preview's opacity against black into the tint. A
                 -- translucent strip over native red and black looks split.
@@ -4253,11 +4241,7 @@ DFRL:NewMod("RunTimers", 5, function()
                             if icon.iconPath ~= effect.icon then
                                 local loaded = icon.texture:SetTexture(effect.icon)
                                 local assigned = icon.texture:GetTexture()
-                                local stem = string.gsub(effect.icon, "%.[^%.]*$", "")
-                                icon.iconPath = loaded ~= false
-                                        and (assigned == effect.icon or assigned == stem)
-                                        and effect.icon
-                                    or nil
+                                icon.iconPath = T.TextureAssigned(loaded, assigned, effect.icon) and effect.icon or nil
                             end
                             T.SetTextIfChanged(
                                 icon.count,

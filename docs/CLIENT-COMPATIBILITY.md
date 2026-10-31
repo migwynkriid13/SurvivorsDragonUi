@@ -29,10 +29,12 @@ without a same-name TGA, and `save_image` uses the same policy. The original
 target-of-target Health BLP remains intact; HealthFill retains the distinct
 converted-TGA path and the large health fill keeps its exact source crop.
 
-The shared authoring reader used by jewelry/tally preparation also decodes Raw1
-explicitly. Pillow's installed BLP reader reads palette alpha instead of the
-separate alpha block, so it must not be used to decode these prepared files.
-The existing DXT source-decoding path is unchanged.
+The shared `image_from_bytes` authoring reader in
+`scripts/prepare_client_textures.py` serves character, jewelry/tally and loot
+preview inputs. It decodes Raw1/Raw3 through `blp_bgra_levels`, preserving the
+separate alpha block. Pillow's installed BLP reader reads palette alpha instead
+of that block, so it must not decode these prepared files. Other formats retain
+the existing Pillow fallback, including DXT sources.
 
 Exactly 48 files changed: seven have fully opaque alpha, three have binary alpha,
 and 38 retain arbitrary eight-bit alpha. They all retain their original single

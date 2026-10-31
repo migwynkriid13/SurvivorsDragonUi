@@ -6,7 +6,6 @@ Only static previews and their source index are written under docs/designs/.
 
 import argparse
 import json
-import struct
 import tempfile
 import urllib.request
 from pathlib import Path
@@ -14,6 +13,7 @@ from pathlib import Path
 from PIL import Image, ImageChops, ImageDraw, ImageFont
 
 from preview_guardian_designs import panel
+from prepare_client_textures import image_from_bytes
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -68,12 +68,7 @@ SAMPLES = [
 
 
 def load(path):
-    data = path.read_bytes()
-    if data[:4] == b"BLP2" and data[8] == 3:
-        width, height = struct.unpack_from("<II", data, 12)
-        offset = struct.unpack_from("<I", data, 20)[0]
-        return Image.frombytes("RGBA", (width, height), data[offset:offset + width * height * 4], "raw", "BGRA")
-    return Image.open(path).convert("RGBA")
+    return image_from_bytes(path.read_bytes())
 
 
 def fetch(scratch, key):

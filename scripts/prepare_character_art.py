@@ -1,11 +1,11 @@
 """Extract the pinned Blizzard character-panel pixels; never execute addon code."""
 
-import io
 import pathlib
-import struct
 import urllib.request
 
 from PIL import Image
+
+from prepare_client_textures import image_from_bytes
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -17,13 +17,7 @@ DRAGONFLIGHT = "https://raw.githubusercontent.com/Gethe/wow-ui-textures/e80e3278
 def source(base, path):
     with urllib.request.urlopen(base + path, timeout=60) as response:
         data = response.read()
-    if data[:4] == b"BLP2" and data[8] == 3:
-        width, height = struct.unpack_from("<II", data, 12)
-        offset = struct.unpack_from("<I", data, 20)[0]
-        return Image.frombytes(
-            "RGBA", (width, height), data[offset : offset + width * height * 4], "raw", "BGRA"
-        )
-    return Image.open(io.BytesIO(data)).convert("RGBA")
+    return image_from_bytes(data)
 
 
 def save(image, name):

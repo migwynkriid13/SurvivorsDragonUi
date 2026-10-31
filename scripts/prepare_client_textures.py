@@ -60,6 +60,16 @@ def blp_bgra_levels(data):
     return width, height, levels
 
 
+def image_from_bytes(data):
+    """Decode authoring inputs with exact Raw1/Raw3 alpha and a Pillow fallback."""
+    from PIL import Image
+
+    if len(data) >= 9 and data[:4] == b"BLP2" and data[8] in (1, 3):
+        width, height, levels = blp_bgra_levels(data)
+        return Image.frombytes("RGBA", (width, height), levels[0], "raw", "BGRA")
+    return Image.open(io.BytesIO(data)).convert("RGBA")
+
+
 def lossless_palette(data):
     """Use Raw1 only when one exact RGB palette fits every existing mip level.
 
