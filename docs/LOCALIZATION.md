@@ -11,6 +11,10 @@ share that reader; no language polling loop is added. A visible native meter
 also selects the language carried by its accepted snapshot. Only supported
 local catalogs are selected. Missing, malformed or unknown native language data
 retains the established fallback below; native meter source names stay literal.
+The file-scope language reader uses the native getter directly, without relying
+on a native `_G` alias. Only module initializers receive the addon's `_G`
+binding; the getter is resolved on each observation so an endpoint appearing or
+changing later still uses the same fallback and deferred lifecycle.
 
 The default-off **Performance Mode** checkbox uses the standard editor caption
 binding and width measurement. Its source row and all fourteen runtime UI entries

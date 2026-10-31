@@ -153,8 +153,10 @@ end
 
 local nativeCode, nativeRevision
 local function ObserveNativeLanguage()
-    if type(_G.AZS_GetMeterCapabilities) ~= "function" then return false end
-    local ok, capabilities, failure = pcall(_G.AZS_GetMeterCapabilities)
+    -- File-scope helpers keep the native environment, which may have no _G alias.
+    local getter = AZS_GetMeterCapabilities
+    if type(getter) ~= "function" then return false end
+    local ok, capabilities, failure = pcall(getter)
     if
         not ok
         or failure ~= nil

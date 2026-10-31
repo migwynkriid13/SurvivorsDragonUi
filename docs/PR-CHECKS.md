@@ -74,6 +74,10 @@ opaque retained images, unchanged strip-backed writes and malformed-response
 cleanup. Navigation cases supply explicit native minimap bounds and the shared
 marker/tooltip boundaries, checking copied coordinate tags separately from
 guide and pin visibility.
+Native-language cases separate the native environment without `_G` from the
+addon initializer environment. They retain all fourteen catalogs, native errors,
+legacy fallback and deferred recovery when the capability endpoint is absent
+or appears after initialization.
 
 The production banner fixture supplies an explicit `UIErrorsFrame.AddMessage`
 boundary and the generated fourteen-language native catalogs. Affix-warning

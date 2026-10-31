@@ -2,20 +2,34 @@
 local H = dofile("scripts/tests/fixtures/ui_helpers.lua")
 assert(_VERSION == "Lua 5.1", "native language fixtures require CI Lua 5.1")
 
-local function New(capabilities, failure, zoneLanguage)
+local function New(capabilities, failure, zoneLanguage, getterPresent)
     local c = H.New()
     local env = c.env
+    -- The native Lua 5.0 environment may lack _G. Only module initializers
+    -- receive the addon's _G/T aliases; file-scope language helpers do not.
+    env._G = nil
+    local addonEnv = setmetatable({ _G = env, T = env.T }, { __index = env })
+    function env.DFRL:GetEnv() return addonEnv end
+    function env.DFRL:NewMod(name, _, initialize)
+        c.modules[name] = function()
+            setfenv(initialize, self:GetEnv())
+            initialize()
+        end
+    end
+    assert(env.getfenv(0) == env, "fixture getfenv lost the native environment")
     local state = { capabilities = capabilities, failure = failure, reads = 0, localeReads = 0, notifications = 0 }
     env.GetLocale = function()
         state.localeReads = state.localeReads + 1
         return "enUS"
     end
     env.AZS_GetPhase = function() return "playing" end
-    env.AZS_GetMeterCapabilities = function()
-        state.reads = state.reads + 1
-        if state.failure == "throw" then error("native language unavailable") end
-        if state.failure then return nil, { code = "NOT_READY" } end
-        return state.capabilities, nil
+    if getterPresent ~= false then
+        env.AZS_GetMeterCapabilities = function()
+            state.reads = state.reads + 1
+            if state.failure == "throw" then error("native language unavailable") end
+            if state.failure then return nil, { code = "NOT_READY" } end
+            return state.capabilities, nil
+        end
     end
     c:Load("core/localization.lua")
     c:Load("localization/data.lua")
@@ -29,6 +43,8 @@ local function New(capabilities, failure, zoneLanguage)
     label:SetText("Font size")
     language.Listen(function() state.notifications = state.notifications + 1 end)
     c.modules.Language()
+    assert(env._G == nil and addonEnv._G == env, "language initialization changed the native _G boundary")
+    assert(getfenv(language.ObserveZone) == env, "language helpers did not retain the native file environment")
     state.observer = c:Controller("CHAT_MSG_ADDON")
     function state:Tick(elapsed) c:Call(self.observer, "OnUpdate", elapsed or 0.2) end
     return state, c, env, language, label
@@ -81,6 +97,36 @@ for _, failure in ipairs({ "waiting", "throw" }) do
     s, c, env, language = New(nil, failure, "de")
     assert(language.code == "de", "unavailable native capabilities prevented the legacy language fallback")
 end
+s, c, env, language = New(nil, nil, "de", false)
+assert(
+    language.code == "de" and s.localeReads == 1 and s.reads == 0,
+    "an initially absent native getter broke the locale/zone fallback without _G"
+)
+assert(not s.observer:GetScript("OnUpdate"), "a settled legacy zone kept the absent native getter pending")
+s, c, env, language = New(nil, nil, nil, false)
+assert(language.code == "en" and s.observer:GetScript("OnUpdate"), "absent native/zone evidence lost locale retry")
+env.AZS_ZONE = { zone = "fixture", class = "warrior", cname = language.data.de.native["class.warrior.name"] }
+s:Tick()
+assert(
+    language.code == "de" and s.reads == 0 and not s.observer:GetScript("OnUpdate"),
+    "deferred zone evidence did not recover with the native getter absent"
+)
+s, c, env, language, label = New(nil, nil, nil, false)
+local lateState = s
+env.AZS_GetMeterCapabilities = function()
+    lateState.reads = lateState.reads + 1
+    return { apiVersion = 1, languageCode = "ja", languageRevision = "language:late" }, nil
+end
+s:Tick(0.1)
+assert(language.code == "en" and s.reads == 0, "a newly available getter bypassed the deferred cadence")
+s:Tick(0.1)
+assert(
+    language.code == "ja"
+        and label:GetText() == language.data.ja.ui["Font size"]
+        and s.reads == 1
+        and not s.observer:GetScript("OnUpdate"),
+    "a getter added after initialization did not recover native language selection without _G"
+)
 s, c, env, language = New(nil, "waiting")
 assert(
     language.code == "en" and s.observer:GetScript("OnUpdate"),

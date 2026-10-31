@@ -50,6 +50,8 @@ inside each synchronous navigation sample and stays frame-driven. Coordinate
 tags guard all copied destinations. Hidden/inactive guide paths defer pure
 presentation; native readiness and snapshot retirement retain ownership.
 Explicit native language selection reuses the existing deferred observer.
+Its file-scope reader feature-detects the current native getter without a `_G`
+alias; this adds no polling, allocation or presentation work.
 Both Performance Mode states use the same instant native data and static art.
 These are source costs and CI-only mock scenarios, not measured native drawing,
 appearance or FPS results; no local tests or game execution were performed.
