@@ -268,11 +268,12 @@ The assertions cover:
   slot changes during reads, literal native names, nearest/stable selection,
   hidden/off sampling, display preview/Confirm/Cancel/profile/reset, world and
   phase cleanup, missing getters and stationary work in Performance Mode.
-  Cache/guardian cases cover nearer arrivals, movement, equal-distance stability,
-  missing-coordinate fallback, hidden/off distance-work deferral and retired
-  identities. They retain party selection and next-respawn priority, and check
-  the ally default clears the shared static jewelry bounds without Show-time
-  reanchoring.
+  Cache/guardian cases cover the five-second nearest-selection cadence for
+  nearer arrivals and movement, responsive selected-arrow updates between
+  checks, equal-distance stability, missing-coordinate fallback, hidden/off
+  distance-work deferral and immediate retired-identity/visible recovery. They
+  retain party selection and next-respawn priority, and check the ally default
+  clears the shared static jewelry bounds without Show-time reanchoring.
   Navigation cases reject missing/invalid and foreign-sheet party coordinates;
   shared pin cases cover four edge indicators, changed-only writes and reuse.
   The full controller also draws received cache and fallen-ally pins on a visible

@@ -1576,16 +1576,24 @@ all party reads while its guidance is disabled. Live map records reuse one
 bounded array and up to four point tables; retirement clears entries without
 persisting locations. Missing geometry does not guess a location.
 
-Cache and living-guardian HUDs now rescore their accepted destinations through
-that same ten-Hz pass. Current identity wins exact distance ties; new nearer
-spawns and movement can change the selection. Party selection and next-respawn
-timer priority retain their existing behavior. The scoring cost is linear in
-the accepted destination count, with no new event, updater, drawing region,
-asset or saved history. Shared sampling reuses the run/player/metric reads;
-map fallback can still need one native projection per distinct destination in
-the pass. Off, Layout-hidden and UIParent-hidden HUDs defer distance scoring,
-while accepted identity retirement and independent minimap work remain active.
-The next visible refresh resolves current data before painting.
+Cache and living-guardian HUDs rescore their accepted destinations every five
+seconds through that same controller. Current identity wins exact distance
+ties; new nearer spawns and movement take effect at the next scheduled check.
+Initial selection, removal of the current identity and visible recovery can
+choose immediately. Selected-arrow direction/distance presentation, snapshot
+acceptance and minimap work keep their existing cadence. Party selection and
+next-respawn timer priority retain their existing behavior. Existing UI elapsed
+time schedules one scoring pass when due, without replaying missed intervals
+after a delayed frame. An unchanged accepted-list reference also skips the
+current-identity walk between checks. Each scoring pass
+is linear in the accepted destination count, with no new event, updater,
+drawing region, asset or saved history. Shared sampling reuses the
+run/player/metric reads; map fallback can still need one native projection per
+distinct destination in the scoring pass. Off, Layout-hidden and
+UIParent-hidden HUDs defer distance scoring, while accepted identity retirement
+and independent minimap work remain active. The next visible refresh resolves
+current data before painting. This is a source-level reduction in selection
+work, not a measured live CPU/FPS claim.
 
 The fallen-ally default bottom sits eight units above the static jewelry
 envelope. `actionBarDefaults.jewelryTopInset` is the shared source for the bar's
