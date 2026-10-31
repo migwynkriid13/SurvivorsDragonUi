@@ -11,11 +11,43 @@ DFRL:NewMod("Navigation", 2, function()
     local samples, seen, width, height = {}, {}, nil, nil
     local sampling, frameSample = false, {}
     local runSample = {}
+    local liveSample, liveAdvertised = {}, false
+    local capabilitiesRetry, positionRetry = {}, {}
     local projections, projectionRows, projectionCells = {}, {}, {}
     local projectionDirty, projectionPass = true, 0
 
     local function Number(value) return type(value) == "number" and value - value == 0 end
+    local function Id(value) return type(value) == "string" and value ~= "" end
+    local function MapId(value)
+        return Number(value) and value >= 0 and value <= 4294967295 and value == math.floor(value)
+    end
     local function Coordinates(x, y) return Number(x) and Number(y) and x >= 0 and x <= 1 and y >= 0 and y <= 1 end
+    local function ClearRetry(retry)
+        retry.started, retry.delay = nil, nil
+    end
+    local function RetryReady(retry)
+        if not retry.started then return true end
+        local now = GetTime()
+        if Number(now) and now >= retry.started and now - retry.started < retry.delay then return false end
+        ClearRetry(retry)
+        return true
+    end
+    local function RememberRetry(retry, failure)
+        if
+            type(failure) ~= "table"
+            or not Id(failure.code)
+            or not Id(failure.message)
+            or failure.retryable ~= true
+            or not Number(failure.retryAfterSeconds)
+            or failure.retryAfterSeconds <= 0
+        then
+            return
+        end
+        local now = GetTime()
+        if Number(now) then
+            retry.started, retry.delay = now, failure.retryAfterSeconds
+        end
+    end
     local function ClearProjections()
         for x, row in pairs(projections) do
             for y, cell in pairs(row) do
@@ -69,8 +101,8 @@ DFRL:NewMod("Navigation", 2, function()
         end
     end
     function navigation.BeginSample()
-        -- Guides and pins share only this synchronous controller pass. Missing
-        -- native values retry on its next pass; ordinary callers stay fresh.
+        -- Guides and pins share only this synchronous controller pass. Usable
+        -- values stay fresh; typed failures retain only their retry deadline.
         ClearSample()
         projectionPass = projectionPass + 1
         sampling = true
@@ -90,6 +122,8 @@ DFRL:NewMod("Navigation", 2, function()
     function navigation.Reset()
         ResetCalibration()
         ClearSample()
+        ClearRetry(capabilitiesRetry)
+        ClearRetry(positionRetry)
     end
     function navigation.SetPoints(key, list)
         if points[key] ~= list then
@@ -109,6 +143,91 @@ DFRL:NewMod("Navigation", 2, function()
             frameSample.phaseRead, frameSample.phase = true, phase
         end
         return phase
+    end
+    local function ReadLivePosition()
+        if not RetryReady(capabilitiesRetry) then return nil, true end
+        local capabilities = _G.AZS_GetMeterCapabilities
+        if type(capabilities) ~= "function" then return nil, liveAdvertised end
+        local ok, supported, failure = pcall(capabilities)
+        if ok and supported == nil then RememberRetry(capabilitiesRetry, failure) end
+        if
+            not ok
+            or failure ~= nil
+            or type(supported) ~= "table"
+            or supported.apiVersion ~= 1
+            or type(supported.features) ~= "table"
+            or type(supported.features.liveInstancePosition) ~= "boolean"
+        then
+            -- An unreadable advertisement does not prove the old path is safe.
+            liveAdvertised = true
+            return nil, true
+        end
+        if not supported.features.liveInstancePosition then return nil, liveAdvertised end
+        liveAdvertised = true
+        if not RetryReady(positionRetry) then return nil, true end
+        if type(_G.AZS_GetPlayerPosition) ~= "function" then return nil, true end
+        local read, position, problem = pcall(_G.AZS_GetPlayerPosition)
+        if read and position == nil then RememberRetry(positionRetry, problem) end
+        if
+            not read
+            or problem ~= nil
+            or type(position) ~= "table"
+            or position.apiVersion ~= 1
+            or not MapId(position.mapId)
+            or not Id(position.spaceId)
+            or not Id(position.sampleId)
+            or not Number(position.x)
+            or not Number(position.y)
+            or not Number(position.z)
+            or not Number(position.facing)
+            or position.facing < 0
+            or position.facing >= math.pi * 2
+            or (position.runId ~= nil and not Id(position.runId))
+        then
+            return nil, true
+        end
+        return position, true
+    end
+    local function LivePosition()
+        if sampling and frameSample.liveRead then return frameSample.live, frameSample.liveSupported end
+        local position, supported = ReadLivePosition()
+        if sampling then
+            if position then
+                liveSample.mapId, liveSample.spaceId, liveSample.sampleId =
+                    position.mapId, position.spaceId, position.sampleId
+                liveSample.x, liveSample.y, liveSample.z = position.x, position.y, position.z
+                liveSample.facing, liveSample.runId = position.facing, position.runId
+                position = liveSample
+            end
+            frameSample.liveRead, frameSample.live, frameSample.liveSupported = true, position, supported
+        end
+        return position, supported
+    end
+    local function MatchesLivePosition(target, position)
+        return position
+            and Id(target.runId)
+            and target.runId == position.runId
+            and MapId(target.mapId)
+            and target.mapId == position.mapId
+            and Id(target.spaceId)
+            and target.spaceId == position.spaceId
+            and Number(target.x)
+            and Number(target.y)
+    end
+    function navigation.IsCurrentDestination(target)
+        if type(target) ~= "table" then return false end
+        if target.mapSelection then return true end
+        local position, supported = LivePosition()
+        return not supported or (MatchesLivePosition(target, position) and true or false)
+    end
+    local function LiveDelta(target)
+        local position, supported = LivePosition()
+        if not supported then return false end
+        if not MatchesLivePosition(target, position) then return true end
+        local east, north = position.y - target.y, target.x - position.x
+        local distance = math.sqrt(east * east + north * north)
+        if Number(east) and Number(north) and Number(distance) then return true, east, north, distance end
+        return true
     end
     local function ReadRunState()
         if not navigation.IsRunPhase(navigation.Phase()) then return end
@@ -381,6 +500,11 @@ DFRL:NewMod("Navigation", 2, function()
     end
     function navigation.Delta(target)
         if type(target) ~= "table" then return end
+        if not navigation.IsRunPhase(navigation.Phase()) then return end
+        if not target.mapSelection then
+            local supported, east, north, distance = LiveDelta(target)
+            if supported then return east, north, distance, east ~= nil end
+        end
         local state, stamp = RunState()
         if state and Number(state.px) and Number(state.py) and Number(target.x) and Number(target.y) then
             -- Official world coordinates work without a map sheet or calibration,
@@ -391,6 +515,11 @@ DFRL:NewMod("Navigation", 2, function()
         return MapDelta(target)
     end
     function navigation.GuideDelta(target)
+        if type(target) ~= "table" or not navigation.IsRunPhase(navigation.Phase()) then return end
+        if not target.mapSelection then
+            local supported, east, north, distance = LiveDelta(target)
+            if supported then return east, north, distance, east ~= nil end
+        end
         -- A valid current-sheet native reading follows movement every frame.
         -- Keep sampled world coordinates for instances and other map sheets.
         local east, north, distance, metric = MapDelta(target)
@@ -440,6 +569,8 @@ DFRL:NewMod("Navigation", 2, function()
         if arrow:GetFrameLevel() < level then arrow:SetFrameLevel(level) end
     end
     local function ReadHeading()
+        local position, supported = LivePosition()
+        if supported then return position and position.facing end
         if not arrow then arrow = PlayerArrow() end
         if arrow and arrow.GetFacing then
             local ok, facing = pcall(arrow.GetFacing, arrow)

@@ -25,6 +25,8 @@ DFRL:NewMod("DamageMeter", 7, function()
     local UNKNOWN_ICON = T.SourceIconFallback
     local path = DFRL:GetInfoOrCons("tex")
     local native = T.NewHudOwner("meter", "hudMeter")
+    local api = type(T.NewNativeMeter) == "function" and T.NewNativeMeter() or nil
+    local apiActive, apiIdentity = false, {}
     local modes = {
         {
             getter = "AZS_GetMeter",
@@ -32,6 +34,7 @@ DFRL:NewMod("DamageMeter", 7, function()
             prefix = "AZSMETER",
             title = "Damage Done",
             rate = "DPS",
+            query = { metric = "damage", scope = "self", period = "run", groupBy = "source" },
         },
         {
             getter = "AZS_GetHealing",
@@ -40,6 +43,13 @@ DFRL:NewMod("DamageMeter", 7, function()
             title = "Healing Done",
             rate = "HPS",
             healing = true,
+            query = {
+                metric = "healing",
+                healingPerspective = "received",
+                scope = "self",
+                period = "run",
+                groupBy = "source",
+            },
         },
         {
             getter = "AZS_GetBossMeter",
@@ -47,6 +57,7 @@ DFRL:NewMod("DamageMeter", 7, function()
             prefix = "AZSBOSSDMG",
             title = "Boss Damage",
             rate = "DPS",
+            query = { metric = "damage", scope = "self", period = "encounter", groupBy = "source" },
         },
         {
             getter = "AZS_GetPartyMeter",
@@ -55,6 +66,7 @@ DFRL:NewMod("DamageMeter", 7, function()
             title = "Party Damage",
             rate = "DPS",
             party = true,
+            query = { metric = "damage", scope = "party", period = "run", groupBy = "owner" },
         },
     }
     local phases = { playing = true, choosing = true, paused = true, dead = true, victory = true }
@@ -90,15 +102,17 @@ DFRL:NewMod("DamageMeter", 7, function()
     local Tick, updating, listening = nil, false, false
     local function UpdateController()
         local listen = inWorld and enabled and ready and not faulted and true or false
-        if listening ~= listen then
-            listening = listen
-            if listen then
+        local packets = listen and not (api and api.Supported()) and true or false
+        if listening ~= packets then
+            listening = packets
+            if packets then
                 controller:RegisterEvent("CHAT_MSG_ADDON")
             else
                 controller:UnregisterEvent("CHAT_MSG_ADDON")
             end
         end
-        local active = inWorld and (listen or native.IsCaptured()) and true or false
+        local cleanup = api and api.PendingCleanup()
+        local active = inWorld and (listen or native.IsCaptured() or cleanup) and true or false
         if updating == active then return end
         updating = active
         if active then
@@ -173,6 +187,8 @@ DFRL:NewMod("DamageMeter", 7, function()
         row.circularIcon.Clear()
         if row.rim:IsShown() then row.rim:Hide() end
         row.partyUnit, row.partyName, row.partySource, row.partyTexture = nil, nil, nil, nil
+        row.apiPortraitKey, row.apiPortraitRun = nil, nil
+        row.apiPortraitBound, row.apiPortraitRetryAt = nil, nil
     end
     local function BindIcon(row, icon)
         if not icon then
@@ -249,6 +265,45 @@ DFRL:NewMod("DamageMeter", 7, function()
         -- Failed native bindings stay memoized until identity/artwork changes.
         return BindIcon(row, UNKNOWN_ICON)
     end
+    local function BindNativePortrait(row, entry)
+        local key, run = entry.portraitKey, entry.portraitRunId
+        if not key or not run or entry.portraitStatus ~= "ready" then
+            if row.apiPortraitKey then ClearIcon(row) end
+            return BindIcon(row, UNKNOWN_ICON)
+        end
+        local same = row.apiPortraitKey == key and row.apiPortraitRun == run
+        if same and not row.apiPortraitBound then
+            if not row.apiPortraitRetryAt or GetTime() < row.apiPortraitRetryAt then
+                return BindIcon(row, UNKNOWN_ICON)
+            end
+        end
+        if not same then
+            ClearIcon(row)
+            row.apiPortraitKey, row.apiPortraitRun = key, run
+        end
+        local setter = row.circularIcon.BindNative
+        local ok, result, failure = false, nil, nil
+        if type(setter) == "function" then
+            ok, result, failure = pcall(setter, run, key)
+        end
+        if ok and result == true and failure == nil then
+            row.apiPortraitBound, row.apiPortraitRetryAt = true, nil
+            return true
+        end
+        row.apiPortraitBound = false
+        row.apiPortraitRetryAt = nil
+        if ok and type(failure) == "table" and failure.retryable == true then
+            local delay = failure.retryAfterSeconds
+            if type(delay) == "number" and delay - delay == 0 and delay > 0 then
+                row.apiPortraitRetryAt = GetTime() + delay
+            end
+        end
+        return BindIcon(row, UNKNOWN_ICON)
+    end
+    local function IsReset()
+        if apiActive then return api.IsReset() end
+        return session.IsReset()
+    end
     local function HideTooltip()
         if not hovered then return end
         if hovered and GameTooltip and GameTooltip:IsOwned(hovered) then GameTooltip:Hide() end
@@ -263,7 +318,7 @@ DFRL:NewMod("DamageMeter", 7, function()
         local damage = string.format("%.0f", entry.dmg)
         local rate = entry.dps and string.format("%.1f", entry.dps) or "--"
         local average = entry.averageDps and string.format("%.1f", entry.averageDps) or "--"
-        local reset = session.IsReset()
+        local reset = IsReset()
         local share = string.format("%.1f%%", entry.share * 100)
         if
             hovered == row
@@ -351,7 +406,7 @@ DFRL:NewMod("DamageMeter", 7, function()
     local function ShowHeaderTooltip()
         if editing or not GameTooltip then return end
         local average = snapshot.averageRate and string.format("%.1f", snapshot.averageRate) or "--"
-        local reset = session.IsReset()
+        local reset = IsReset()
         local scale = GameTooltip:GetEffectiveScale()
         if
             hovered == header
@@ -565,6 +620,8 @@ DFRL:NewMod("DamageMeter", 7, function()
         end
         snapshot.count, snapshot.total, snapshot.rate, snapshot.averageRate = 0, nil, nil, nil
         snapshot.source, snapshot.publication = nil, nil
+        snapshot.nativeRunId, snapshot.nativeEpoch, snapshot.nativeAuthority = nil, nil, nil
+        snapshot.nativeEncounter = nil
         ClearSamples()
         for key in pairs(snapshot.rows) do
             snapshot.rows[key] = nil
@@ -585,6 +642,7 @@ DFRL:NewMod("DamageMeter", 7, function()
             if entry and entry.read then
                 entry.read, entry.source, entry.amount, entry.rate, entry.message, entry.publication =
                     nil, nil, nil, nil, nil, nil
+                entry.meta = nil
             end
         end
         viewSelection.read = nil
@@ -593,6 +651,8 @@ DFRL:NewMod("DamageMeter", 7, function()
         HideTooltip()
         dps.Clear()
         session.Clear()
+        if api then api.Clear() end
+        apiIdentity = {}
         resetPending = false
         ClearReadPass()
         viewSelection.first, viewSelection.steps, viewSelection.dirty, viewSelection.paint = nil, 0, true, false
@@ -614,6 +674,7 @@ DFRL:NewMod("DamageMeter", 7, function()
     end
     local function ReadNative(index)
         local selected = modes[index]
+        if apiActive then return api.Read(selected.query, index == 1 and dps.window or 0) end
         local getter = _G[selected.getter]
         if type(getter) ~= "function" then
             publications[index] = nil
@@ -673,19 +734,19 @@ DFRL:NewMod("DamageMeter", 7, function()
             viewSelection.reads[index] = entry
         end
         if not entry.read then
-            entry.source, entry.amount, entry.rate, entry.message, entry.publication = ReadNative(index)
+            entry.source, entry.amount, entry.rate, entry.message, entry.publication, entry.meta = ReadNative(index)
             entry.read, viewSelection.read = true, true
         end
-        return entry.source, entry.amount, entry.rate, entry.message, entry.publication
+        return entry.source, entry.amount, entry.rate, entry.message, entry.publication, entry.meta
     end
-    local function ResolveView(source, amount, rate, message, publication)
-        local supported = type(_G[modes[mode].getter]) == "function"
+    local function ResolveView(source, amount, rate, message, publication, meta)
+        local supported = apiActive or type(_G[modes[mode].getter]) == "function"
         if not viewSelection.first then
             if supported and (source or message) then
                 viewSelection.dirty = false
-                return source, amount, rate, message, publication
+                return source, amount, rate, message, publication, meta
             end
-            if not viewSelection.dirty then return source, amount, rate, message, publication end
+            if not viewSelection.dirty then return source, amount, rate, message, publication, meta end
         end
         -- Only a navigation request or newly relevant publication/readiness
         -- probes other views. Empty received snapshots and explicit errors
@@ -693,7 +754,7 @@ DFRL:NewMod("DamageMeter", 7, function()
         local count, current = 0, false
         for step = 0, table.getn(modes) - 1 do
             local index = math.mod(mode - 1 + step, table.getn(modes)) + 1
-            if type(_G[modes[index].getter]) == "function" then
+            if apiActive or type(_G[modes[index].getter]) == "function" then
                 local candidateSource, candidateMessage
                 local _
                 candidateSource, _, _, candidateMessage = ReadOnce(index)
@@ -721,10 +782,10 @@ DFRL:NewMod("DamageMeter", 7, function()
                 Release(true)
                 mode, offset = selected, 0
             end
-            source, amount, rate, message, publication = ReadOnce(selected)
+            source, amount, rate, message, publication, meta = ReadOnce(selected)
         end
         viewSelection.first, viewSelection.steps, viewSelection.dirty = nil, 0, false
-        return source, amount, rate, message, publication
+        return source, amount, rate, message, publication, meta
     end
     local function ObserveDamage(source, amount, rate, publication)
         if not source then
@@ -738,18 +799,34 @@ DFRL:NewMod("DamageMeter", 7, function()
         end
         if not dps.Observe(RunSeconds(), source, amount, rate, publication) then dps.Suspend() end
     end
-    local function Read(paint, source, amount, rate, message, publication)
+    local function Read(paint, source, amount, rate, message, publication, meta)
         if not source then return false, message end
         dataValid = true
         if not paint then
             dps.Suspend()
             return true
         end
+        if apiActive and meta then
+            if
+                snapshot.nativeRunId ~= meta.runId
+                or snapshot.nativeEpoch ~= meta.counterEpoch
+                or snapshot.nativeAuthority ~= meta.authorityId
+                or snapshot.nativeEncounter ~= meta.encounterId
+            then
+                ClearSamples()
+            end
+            snapshot.nativeRunId, snapshot.nativeEpoch, snapshot.nativeAuthority =
+                meta.runId, meta.counterEpoch, meta.authorityId
+            snapshot.nativeEncounter = meta.encounterId
+            if type(DFRL.locale.Select) == "function" then DFRL.locale.Select(meta.languageCode) end
+        end
         local nativeSource = source
-        source, amount, rate = session.Apply(mode, source, amount, rate, RunSeconds(), publication)
+        if not apiActive then
+            source, amount, rate = session.Apply(mode, source, amount, rate, RunSeconds(), publication)
+        end
         local count = table.getn(source)
         local revision = dps.revision
-        if mode == 1 then ObserveDamage(source, amount, rate, publication) end
+        if mode == 1 and not apiActive then ObserveDamage(source, amount, rate, publication) end
         if revision ~= dps.revision then ClearSamples() end
         -- Native run seconds own the rate window; UI time only limits repaint.
         local now = GetTime()
@@ -759,9 +836,13 @@ DFRL:NewMod("DamageMeter", 7, function()
             or (snapshot.total and amount < snapshot.total)
         if sampleRates then
             for _, entry in ipairs(nativeSource) do
-                if not Number(entry.dps) then return false, "Meter data is unavailable." end
+                if not Number(entry.dps) and not (apiActive and entry.dps == nil) then
+                    return false, "Meter data is unavailable."
+                end
             end
-            if mode == 1 then
+            if apiActive then
+                snapshot.rate, snapshot.averageRate = rate, meta and meta.averageRate
+            elseif mode == 1 then
                 snapshot.rate, snapshot.averageRate = dps.Header(rate)
             else
                 snapshot.rate, snapshot.averageRate = rate, nil
@@ -775,11 +856,15 @@ DFRL:NewMod("DamageMeter", 7, function()
             if countersChanged then
                 copy.name, copy.dmg, copy.share, copy.proc = entry.name, entry.dmg, entry.share, entry.proc
                 copy.class = modes[mode].party and type(entry.class) == "string" and entry.class or nil
+                copy.rowId, copy.icon = entry.rowId, entry.icon
+                copy.portraitKey, copy.portraitRunId = entry.portraitKey, entry.portraitRunId
+                copy.portraitStatus = entry.portraitStatus
             end
-            local samples = rateSamples[copy.name]
+            local key = apiActive and copy.rowId or copy.name
+            local samples = rateSamples[key]
             if not samples then
                 samples = {}
-                rateSamples[copy.name] = samples
+                rateSamples[key] = samples
             end
             local proc = copy.proc == 1
             local sample = samples[proc]
@@ -788,7 +873,9 @@ DFRL:NewMod("DamageMeter", 7, function()
                 samples[proc] = sample
             end
             if sample.epoch ~= rateSampledAt then
-                if mode == 1 then
+                if apiActive then
+                    sample.rate, sample.average = entry.dps, entry.averageDps
+                elseif mode == 1 then
                     sample.rate, sample.average = dps.Row(copy.name, copy.proc, entry.dps)
                 else
                     sample.rate, sample.average = entry.dps, nil
@@ -814,7 +901,7 @@ DFRL:NewMod("DamageMeter", 7, function()
         local maximum = snapshot.rows[1] and snapshot.rows[1].dmg or 0
         local party = modes[mode].party
         local classColor = party and PARTY_COLOR or T.GetPlayerClassColor() or { 0.8, 0.63, 0.28 }
-        if party and options.icons then
+        if party and options.icons and not apiActive then
             if snapshot.count > 0 then
                 ReadPartyUnits()
             else
@@ -871,8 +958,12 @@ DFRL:NewMod("DamageMeter", 7, function()
                 row.red, row.green, row.blue = r, g, b
                 if options.icons then
                     local bound
-                    if party then
+                    if party and apiActive then
+                        bound = BindNativePortrait(row, entry)
+                    elseif party then
                         bound = BindPartyIcon(row, entry)
+                    elseif apiActive then
+                        bound = BindIcon(row, entry.icon or UNKNOWN_ICON)
                     else
                         local resolver = DFRL.sct and DFRL.sct.GetSourceIcon
                         local icon = type(resolver) == "function"
@@ -912,18 +1003,67 @@ DFRL:NewMod("DamageMeter", 7, function()
             if status:IsShown() then status:Hide() end
         end
     end
+    local function ReadPhase()
+        if api and api.PendingCleanup() then api.RetryCleanup() end
+        local ok, phase = false, nil
+        local useApi = api and api.Supported() and true or false
+        if apiActive ~= useApi then
+            ClearRows()
+            ClearSamples()
+            ClearReadPass()
+            session.Clear()
+            dps.Clear()
+            apiActive = useApi
+            apiIdentity = {}
+            viewSelection.dirty = true
+            UpdateController()
+        end
+        if apiActive then
+            local context = api.Context()
+            if context then
+                ok, phase = true, context.phase
+                if apiIdentity.runId and apiIdentity.runId ~= context.runId then
+                    api.Clear()
+                    ClearRows()
+                    ClearSamples()
+                    ClearReadPass()
+                    viewSelection.dirty = true
+                elseif
+                    apiIdentity.epoch ~= context.counterEpoch
+                    or apiIdentity.authority ~= context.authorityId
+                    or apiIdentity.encounter ~= (context.encounter and context.encounter.encounterId)
+                then
+                    ClearSamples()
+                end
+                apiIdentity.runId, apiIdentity.epoch, apiIdentity.authority =
+                    context.runId, context.counterEpoch, context.authorityId
+                apiIdentity.encounter = context.encounter and context.encounter.encounterId
+            end
+        elseif type(AZS_GetPhase) == "function" then
+            ok, phase = pcall(AZS_GetPhase)
+        end
+        return ok, phase
+    end
+    local function CaptureLegacyReset()
+        if not resetPending or apiActive then return end
+        local time = RunSeconds()
+        -- Legacy clients capture once in the visible deferred reader.
+        for index = 1, table.getn(modes) do
+            local source, amount, rate, _, publication = ReadOnce(index)
+            if source then session.Apply(index, source, amount, rate, time, publication) end
+        end
+        resetPending = false
+    end
     local function Refresh()
         if not inWorld or not enabled or not ready or faulted then
+            if api and api.PendingCleanup() then api.RetryCleanup() end
             Release()
             SetShown(false)
             UpdateController()
             return
         end
-        -- Retained API tables may describe the previous run outside these phases.
-        local ok, phase = false, nil
-        if type(AZS_GetPhase) == "function" then
-            ok, phase = pcall(AZS_GetPhase)
-        end
+        -- Native context owns v1 phase/run identity; legacy clients retain packets.
+        local ok, phase = ReadPhase()
         if not ok or not phases[phase] then
             if phase == "ready" then
                 Invalidate()
@@ -940,28 +1080,21 @@ DFRL:NewMod("DamageMeter", 7, function()
             if dataValid then native.Acquire() end
             return
         end
-        if paint and resetPending then
-            local time = RunSeconds()
-            -- One deferred capture clears every view, including unselected ones.
-            -- Unavailable/unpublished views baseline their first accepted snapshot.
-            for index = 1, table.getn(modes) do
-                local source, amount, rate, _, publication = ReadOnce(index)
-                if source then session.Apply(index, source, amount, rate, time, publication) end
-            end
-            resetPending = false
-        end
-        local source, amount, rate, message, publication = ReadOnce(mode)
+        if paint then CaptureLegacyReset() end
+        local source, amount, rate, message, publication, meta = ReadOnce(mode)
+        if apiActive and not source then viewSelection.dirty = true end
         if paint then
-            source, amount, rate, message, publication = ResolveView(source, amount, rate, message, publication)
+            source, amount, rate, message, publication, meta =
+                ResolveView(source, amount, rate, message, publication, meta)
         end
         -- Keep the recent damage window while another view awaits its own data.
-        if paint and mode ~= 1 and dps.NeedsRead() then
+        if paint and mode ~= 1 and not apiActive and dps.NeedsRead() then
             local revision = dps.revision
             ObserveDamage()
             if revision ~= dps.revision then ClearSamples() end
         end
         local valid
-        valid, message = Read(paint, source, amount, rate, message, publication)
+        valid, message = Read(paint, source, amount, rate, message, publication, meta)
         presentation.waiting = not valid and message == nil
         dataDirty = false
         SetShown(true)
@@ -1064,6 +1197,7 @@ DFRL:NewMod("DamageMeter", 7, function()
             HideTooltip()
             dps.Clear()
             session.Clear()
+            if api then api.Clear() end
             resetPending = false
             Release()
             UpdateController()
@@ -1119,7 +1253,7 @@ DFRL:NewMod("DamageMeter", 7, function()
     DFRL.locale.Listen(function()
         HideTooltip()
         dps.Clear()
-        if session.IsReset() then
+        if not apiActive and session.IsReset() then
             session.Reset()
             resetPending = true
         end
@@ -1129,11 +1263,19 @@ DFRL:NewMod("DamageMeter", 7, function()
     end)
     function DFRL.ResetMeterStats()
         if not enabled or not inWorld or not ready or faulted then return end
-        session.Reset()
-        resetPending = true
+        if api and api.Supported() then
+            local captured = api.Reset()
+            if not captured then return end
+            apiActive = true
+            resetPending = false
+        else
+            session.Reset()
+            resetPending = true
+        end
         dps.Clear()
         ClearRows()
         ClearSamples()
+        ClearReadPass()
         offset = 0
         if root:IsVisible() then
             DrawHeader(0)
@@ -1153,6 +1295,7 @@ DFRL:NewMod("DamageMeter", 7, function()
             faulted = true
             dps.Clear()
             session.Clear()
+            if api then api.Clear() end
             resetPending = false
             Release()
             SetShown(false)

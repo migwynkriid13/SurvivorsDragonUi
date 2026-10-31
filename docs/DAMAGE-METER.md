@@ -1,5 +1,43 @@
 # DPS meter
 
+## Native version 1 data path
+
+Clients implementing the [version 1 contract](DAMAGE-METER-AND-INSTANCE-PLAYER-POSITION-API.md#3-version-1-implementation-contract)
+use `core/meter_api.lua` for the existing four views. The meter reads complete
+native snapshots and their authoritative source/hero descriptors. Names and
+icons come directly from those descriptors, including equipment, jewelry,
+learned talents, pet/totem attacks and periodic effects in every native language.
+Native row IDs identify rate samples even when several rows share a name.
+
+Damage Done requests the selected native recent window, or All. Healing Done
+keeps native received-healing semantics; Boss Damage requests the current/last
+encounter; Party Damage requests owner totals and retained hero portraits.
+The source buffers are bounded to four views. The meter does not call its
+legacy icon resolver, match party names to live units, observe a second damage
+tab, keep a local rolling ring or subtract local reset baselines on this path.
+Current-loadout reads are unnecessary for these rows because each snapshot
+includes complete historical source metadata.
+
+X captures a native checkpoint synchronously. A failed capture preserves the
+previous session and its visible values. Successful replacement releases the
+old handle; failed release retries through the existing controller without
+collecting data while disabled. Invalidated checkpoints block pre-reset replay
+until a new Reset or the normal session/world retirement. Language changes
+update captions without replacing the checkpoint. New runs clear the previous
+session; epoch/authority/encounter changes invalidate displayed rate samples.
+
+Pending/missing artwork uses the shared neutral image. Retained portraits use
+the existing circular renderer, native circle when available and the same
+pooled strip fallback otherwise. Failed bindings observe native retry delays;
+permanent failures wait for a changed identity or normal pool retirement.
+Both Performance Mode states retain the same instant native information.
+
+The existing getter/metadata/rate path below remains for clients without the
+v1 capability endpoint. Once that endpoint is present, typed errors or missing
+native data never borrow legacy counters. Local work is source review and
+pinned formatting; mocked lifecycle scenarios remain CI-only and no game was
+launched to verify this future native boundary.
+
 The meter uses the original Details! **The War Within** header, progress-bar and
 background artwork in a native SurvivorsDragonUi window. Details and its skin
 addon do not need to be installed.

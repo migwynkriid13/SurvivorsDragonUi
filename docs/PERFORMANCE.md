@@ -21,6 +21,41 @@ The helper runs only where each owner already checks changed or pending artwork.
 Successful caches, probes, retirement and retries remain with those owners in
 both Performance Mode states. It adds no frame, region, asset or updater.
 
+## Native meter and live navigation API — draft
+
+The v1 meter adapter adds no frame, drawing region, asset, event, updater or
+SavedVariable. It reuses the existing five-Hz reader and one-Hz displayed rates,
+four bounded reusable source buffers and stable native row IDs. Native recent
+rates and checkpoints bypass local damage-history observation and baselines;
+native descriptors bypass name/icon scanners and party-unit portrait matching.
+Hidden settled views retain only context/retirement and required HUD ownership;
+off views read no native counter/context data. Outstanding checkpoint releases
+retry alone through the existing controller and stop when complete.
+Typed native failures retain bounded retry deadlines; UI time controls only
+error cadence, never native rates or player movement.
+
+Native metadata/language/counter changes refresh copied presentation while
+unchanged values retain existing write/measurement caches. Epoch/authority/run
+and boss-encounter identities retire stale rate samples. The portrait binder
+keeps the native circle or existing scale-aware strip pool, with the original
+UV equations, 26-unit icon and 31-unit rim. It adds no persistent visible
+regions over the previously available compatibility fallback. Partial binding
+failures clear the owned fallback instead of drawing a square or stale image.
+Settled strip-backed portraits leave the unused square owner untouched. Native
+circles still clear retained images on retirement or malformed responses even
+when texture-path readback is unavailable; no new region or worker is added.
+
+Live navigation shares one capabilities/position result, including failure,
+inside each synchronous navigation sample and stays frame-driven. Coordinate
+tags guard all copied destinations. Hidden/inactive guide paths defer pure
+presentation; native readiness and snapshot retirement retain ownership.
+Explicit native language selection reuses the existing deferred observer.
+Its file-scope reader feature-detects the current native getter without a `_G`
+alias; this adds no polling, allocation or presentation work.
+Both Performance Mode states use the same instant native data and static art.
+These are source costs and CI-only mock scenarios, not measured native drawing,
+appearance or FPS results; no local tests or game execution were performed.
+
 ## Mandatory rule for all drawing and assets
 
 Drawing performance is a project requirement for every frame and artwork change,
