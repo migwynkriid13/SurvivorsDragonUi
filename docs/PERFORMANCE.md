@@ -107,13 +107,25 @@ rendering remain unverified. See [FONTS.md](FONTS.md).
 
 ## Diablo IV combat text — 2026-10-30
 
-The optional Diablo IV style reuses the enemy-origin path, controller and hit
+The default Diablo IV style reuses the enemy-origin path, controller and hit
 pool: the animation adds no combat frame, region, event or updater. Its 1.1-second
 burst/hold/fade replaces the selected label's animation only. Formatting and
 random size/scatter are chosen once; live anchors, scale and alpha retain their
 changed-only writes and empty lists remain idle. Performance Mode preserves the
 animation with the existing 300 ms same-attack sums. It never restarts active
 labels on a Performance Mode transition.
+
+New setups use Custom outgoing SCT, Diablo IV style, Default font, 90% size and
+abbreviated numbers. Missing/invalid scalar modes suppress native outgoing
+damage once through the existing writer before initialization observes it.
+Valid saved modes and later native changes retain their existing handoff; no
+incoming/self setting is touched. This changes which existing renderer starts
+enabled, not its region pool, animation equations or per-hit work. Display
+normalization/reset uses the new presentation defaults and retains explicit
+saved choices, including both legacy style booleans. No setting, SavedVariable,
+event, updater, frame or asset is added. Both Performance Mode states keep the
+existing SCT animation/grouping exception. CI-only cases cover the defaults and
+one-time handoff; native appearance and performance remain unverified.
 
 Over enemies and Diablo IV now follow the common matched native plate directly,
 replacing the fixed-position fallback. Each pending group retains at most one
@@ -159,7 +171,7 @@ reuse and unrelated display changes. No native Overpower result is inferred
 from unavailable native fields. The user-authorized amber imitation below is
 cosmetic critical emphasis only.
 
-The default-off damage abbreviation reuses the existing K/M/B/T decimal helper
+The default-on damage abbreviation reuses the existing K/M/B/T decimal helper
 at display time and on actual preview/Cancel changes. One original presentation
 value per active label allows reformatting a completed group total without
 changing original hit amounts, grouping, matching, font, coordinates or expiry;

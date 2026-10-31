@@ -144,7 +144,8 @@ Test("display copies derive membership from defaults and preserve normalization 
         unknown = true,
     })
     assert(copy.meterEnabled and copy.cooldownNumbers == false and copy.meterRows == 10)
-    assert(copy.nameplateFontSize == 11 and copy.sctScale == 1 and copy.lootMode == "game")
+    assert(copy.nameplateFontSize == 11 and copy.sctScale == 0.9 and copy.lootMode == "game")
+    assert(copy.sctStyle == "diablo" and copy.sctFont == "default" and copy.sctShortNumbers == true)
     assert(copy.tallyStyle == "silver" and copy.unknown == nil)
     assert(copy.runTextRegular == false and copy.runTextEndless == false, "legacy visibility fallback changed")
     display.BeginEdit()

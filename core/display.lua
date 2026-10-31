@@ -65,10 +65,10 @@ DFRL:NewMod("Display", 0, function()
         sctReflectedDamage = true,
         sctMisses = true,
         sctClassColors = false,
-        sctStyle = "enemy",
+        sctStyle = "diablo",
         sctFont = "default",
-        sctShortNumbers = false,
-        sctScale = 1,
+        sctShortNumbers = true,
+        sctScale = 0.9,
         hidePortraits = false,
         showPlayerName = true,
         showPlayerLevel = true,
@@ -172,10 +172,13 @@ DFRL:NewMod("Display", 0, function()
         if key == "sctFont" then return NormalizeSctFont(value) or defaults[key] end
         if key == "uiFont" then return NormalizeUiFont(value) or defaults[key] end
         if key == "sctStyle" then
-            -- Old saved display choices and named profiles retain their stream.
-            return NormalizeSctStyle(value)
-                or (type(source) == "table" and source.sctMSBTStyle == true and "msbt")
-                or defaults[key]
+            local style = NormalizeSctStyle(value)
+            if style then return style end
+            -- Both explicit legacy choices survive the new Diablo default.
+            if type(source) == "table" and type(source.sctMSBTStyle) == "boolean" then
+                return source.sctMSBTStyle and "msbt" or "enemy"
+            end
+            return defaults[key]
         end
         if type(value) == "boolean" then return value end
         if key == "runTextRegular" or key == "runTextEndless" then

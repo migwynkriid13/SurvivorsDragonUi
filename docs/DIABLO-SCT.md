@@ -1,10 +1,15 @@
 # Diablo IV combat text
 
-Choose **Custom**, then **Diablo IV** under `/sdui` → **Combat** → **Combat text** →
-**Damage number style**. **Over enemies** remains the default; **MSBT-style
-scrolling** retains the movable stream. Confirm saves the choice. Cancel,
+New installations start with **Custom** combat text, **Diablo IV** style,
+**Default** font, **90%** size and **Abbreviate damage (K, M, B, T)** enabled.
+Existing valid saved choices are retained. Change the style under `/sdui` →
+**Combat** → **Combat text** → **Damage number style**; **Over enemies** remains
+available, and **MSBT-style scrolling** retains the movable stream. Confirm saves
+the choice. Cancel,
 world/logout/reload discard, profiles and both full resets use the existing
-display transaction. Existing saved MSBT choices and profiles migrate to MSBT.
+display transaction. Full resets restore the display defaults above while
+preserving the confirmed Custom/Off/Game settings mode. Existing saved MSBT
+choices and profiles migrate to MSBT.
 
 ## Reference study
 
@@ -25,7 +30,7 @@ mid-run changes. This replaces the earlier fixed-position fallback.
 | Opening and first burst, roughly 0–7 s | Hits cluster around individual dummies rather than a fixed screen column. Nearby targets produce separate clusters.                                             | Follow the common matched native plate and apply independent burst/drift offsets. Mixed or ambiguous groups retain their resolved centroid.                                              |
 | Dense burst, roughly 7–13 s            | Pale white and yellow values coexist. Large white damage remains white; number size alone does not identify a critical hit.                                     | Pale normal damage and yellow native critical hits. Keep original native critical flags; never infer a result from amount, school, pet ownership or relative damage.                     |
 | Adjacent paused frames around 12–13 s  | Values fan out locally and linger near their launch area. They do not follow the addon's long falling arc. New values overlap older values during heavy damage. | Short eased fan-out, small continuing upward/outward drift, compact scale pop, readable hold and final fade. No long fall or screen-wide stream.                                         |
-| Late ticks, roughly 29–33 s            | Separated pale poison ticks remain readable after the dense yellow burst. Full values use comma separators, including nine-digit values.                        | Full comma-separated numeric text by default; optional K/M/B/T abbreviations. Periodic hits retain native amounts, independent arrivals and filters.                                     |
+| Late ticks, roughly 29–33 s            | Separated pale poison ticks remain readable after the dense yellow burst. Full values use comma separators, including nine-digit values.                        | K/M/B/T abbreviations by default; disabling abbreviation retains full comma-separated text. Periodic hits retain native amounts, independent arrivals and filters.                       |
 | Across the clip                        | Number sizes vary; critical numbers are visually prominent. No spell icons or source names appear beside the damage.                                            | Subtle launch-size variation, larger critical labels and smaller periodic labels. The existing optional icon choice remains available and defaults off. Never add source/enemy captions. |
 
 These observations motivate an approximation. The equations and durations below
@@ -152,9 +157,10 @@ states retain the same cosmetic comparison and existing animation.
 
 ## Optional abbreviated damage
 
-**Combat → Combat text → Abbreviate damage (K, M, B, T)** uses default-off boolean
+**Combat → Combat text → Abbreviate damage (K, M, B, T)** uses default-on boolean
 `sctShortNumbers` in the existing display table. Missing/invalid choices and both
-full resets retain full values. It shares preview, Confirm-only saving,
+full resets use abbreviated values; existing saved booleans, including an
+explicit `false` for full values, are retained. It shares preview, Confirm-only saving,
 Cancel/discard, profiles and Custom-only availability, independently of the
 animation style, font and Performance Mode.
 
@@ -235,8 +241,9 @@ references and exact manifest membership, just as it does for owned textures.
 
 `sctStyle` is a normalized `enemy` / `msbt` / `diablo` enum in the existing
 `SurvivorsDragonUiDisplay` table. Explicit valid new values win over the old
-`sctMSBTStyle` boolean. Missing/invalid choices use the original enemy style,
-except a legacy exact `true` selects MSBT. Invalid editor writes are ignored.
+`sctMSBTStyle` boolean. Without a valid new value, legacy exact `false` selects
+Over enemies and exact `true` selects MSBT. Otherwise missing/invalid choices
+use Diablo IV. Invalid editor writes are ignored.
 Profiles copy through the same normalizer and do not alias active drafts.
 
 Style changes retire active/queued labels and matching state before changing

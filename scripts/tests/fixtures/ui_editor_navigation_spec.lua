@@ -829,9 +829,10 @@ dialog.navigation.Search("Diablo")
 assert(#dialog.navigation.results >= 2, "custom style and font choices were absent from search")
 dialog.navigation.ClearSearch()
 assert(pages.combat:GetHeight() >= 532, "abbreviation clipped the final damage filters")
-assert(display.Get("sctShortNumbers") == false, "abbreviation was enabled by default")
+assert(display.Get("sctScale") == 0.9 and env.sctSizeLabel:GetText() == "90%", "default SCT size did not show 90%")
+assert(display.Get("sctShortNumbers") == true, "abbreviation was disabled by default")
 context:Call(env.displayControls.sctShortNumbers, "OnClick")
-assert(display.Get("sctShortNumbers") and not env.SurvivorsDragonUiDisplay, "abbreviation did not preview")
+assert(not display.Get("sctShortNumbers") and not env.SurvivorsDragonUiDisplay, "full numbers did not preview")
 local function AssertSctFont(selected)
     assert(display.Get("sctFont") == selected, "font did not preview through the existing display transaction")
     for value, button in pairs(dialog.sctFontButtons) do
@@ -884,13 +885,16 @@ for _, performance in ipairs({ false, true }) do
     AssertSctFont("diablo")
 end
 assert(#context.objects == sctObjects, "font selection or reopen allocated another control")
-AssertSctStyle("enemy")
-context:Call(dialog.sctStyleButtons.diablo, "OnClick")
 AssertSctStyle("diablo")
-display.FinishEdit(false)
+context:Call(dialog.sctStyleButtons.enemy, "OnClick")
 AssertSctStyle("enemy")
+display.FinishEdit(false)
+AssertSctStyle("diablo")
 AssertSctFont("default")
-assert(not display.Get("sctShortNumbers") and not display.Get("performanceMode"), "Cancel retained combat choices")
+assert(
+    display.Get("sctShortNumbers") and display.Get("sctScale") == 0.9 and not display.Get("performanceMode"),
+    "Cancel did not restore default combat choices"
+)
 display.BeginEdit()
 assert(
     dialog.navigation.buttons.meter and dialog.navigation.buttons.meter.label:GetText() == "Damage meter",

@@ -177,7 +177,8 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local arcDirection = 1
     local function IsMode(mode) return mode == "on" or mode == "off" or mode == "default" end
     local sctMode = _G.SurvivorsDragonUiSctMode
-    if not IsMode(sctMode) then sctMode = "default" end
+    local initializeMode = not IsMode(sctMode)
+    if initializeMode then sctMode = "on" end
     local sct, settingsListeners, settingsDraft = {}, {}, nil
     DFRL.sct = sct
     local observedIncoming
@@ -2426,7 +2427,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     end
 
     function sct.GetMode() return ActiveMode() end
-    function sct.NormalizeMode(mode) return IsMode(mode) and mode or "default" end
+    function sct.NormalizeMode(mode) return IsMode(mode) and mode or "on" end
     function sct.GetIncoming() return ReadIncoming() == "1" end
     function sct.BeginEdit()
         if not settingsDraft then settingsDraft = {} end
@@ -2576,5 +2577,11 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         end
     end
 
+    -- Missing/invalid mode preferences adopt Custom once. Later startup/world
+    -- observations still honor native choices without reapplying suppression.
+    if initializeMode then
+        initializeMode = nil
+        WriteNativeDamage("0")
+    end
     SyncGameSettings(true)
 end)

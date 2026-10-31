@@ -58,6 +58,14 @@ An explicit Bash shell enables `pipefail`, so piping fixture/model output into
 
 ## UI work and cleanup tests
 
+SCT default cases use real Display/SCT owners to check Custom mode, Diablo IV
+style, Default font, 90% size and enabled abbreviations. Missing/invalid modes
+suppress native outgoing damage once during initialization, including synchronous
+CVar callbacks, without touching incoming/self text; valid saved modes and later native changes keep their usual
+behavior. Cases retain explicit saved values and both legacy style choices,
+display preview/Confirm/discard/profiles/reset and confirmed-mode preservation
+on full reset. These cases remain CI-only and were not run locally.
+
 Nameplate camera cases use the production controller with explicit native
 mouse-look boundaries. They cover right-button entry, left/native handler
 preservation, synchronous synthetic release, real WorldFrame/plate release,
