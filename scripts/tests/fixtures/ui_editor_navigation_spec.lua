@@ -54,6 +54,11 @@ env.CreateFrame = function(kind, name, parent, template)
         function frame:SetMaxLetters(value) self.maxLetters = value end
         function frame:SetTextInsets(...) self.insets = { ... } end
         function frame:ClearFocus() self.focused = false end
+        local setText = frame.SetText
+        function frame:SetText(value)
+            setText(self, value)
+            context:Call(self, "OnTextChanged")
+        end
     end
     if kind == "Button" then
         frame.enabled = 1
@@ -170,6 +175,153 @@ for _, object in ipairs(context.objects) do
     assert(not object:GetScript("OnUpdate"), "navigator added idle polling or animation")
     assert(object.kind ~= "EditBox", "navigator allocated a search input")
 end
+-- Search indexes metadata before it prepares any destination page and reuses
+-- the existing settings owners rather than editing their values itself.
+local searchPanel = env.CreateFrame("Frame", nil, env.UIParent)
+local searchSidebar = env.CreateFrame("Frame", nil, searchPanel)
+local searchSections = {
+    { key = "home", label = "Layout", group = "layout" },
+    {
+        key = "damage",
+        label = "Combat text",
+        group = "combat",
+        options = {
+            { "icons", "Damage icons", "Spell icons beside outgoing numbers." },
+            { "punctuation", "Literal [test].*", "A punctuation caption." },
+        },
+        search = { { label = "Diablo IV", description = "Choose a damage number style.", offset = 248 } },
+    },
+    { key = "unused", label = "Unused", group = "unused", options = {} },
+}
+for index = 1, 18 do
+    table.insert(searchSections[3].options, { "choice" .. index, "Unused choice " .. index, "A pooled result." })
+end
+searchSections[2].options[1].terms = { "shield", "ABSORB" }
+local searchBuilds, escapes, searchNavigations = {}, 0, {}
+local searchNavigation = env.T.CreateEditorNavigator(searchPanel, searchSidebar, groups, searchSections, {
+    search = true,
+    width = 684,
+    left = 240,
+    top = 80,
+    height = 552,
+    sidebarWidth = 212,
+    prepare = function(section, content)
+        searchBuilds[section.key] = (searchBuilds[section.key] or 0) + 1
+        content:SetHeight(900)
+        content.pending = "-12,5"
+        section.searchOffsets = { icons = 316 }
+    end,
+    searchEntries = { { label = "Performance Mode", group = "layout" } },
+    onNavigate = function(key) table.insert(searchNavigations, key or "search") end,
+    onEscape = function() escapes = escapes + 1 end,
+})
+searchNavigation.Select("layout")
+local searchSlider = env.SurvivorsDragonUiSettingsScrollScrollBar
+searchSlider:SetValue(150)
+searchNavigation.Search("damage icons")
+assert(
+    #searchNavigation.results == 1 and not searchBuilds.damage and not searchBuilds.unused,
+    "search built unvisited pages"
+)
+assert(searchNavigation.results[1].target == "icons" and searchNavigation.results[1].section == "damage")
+assert(searchNavigations[#searchNavigations] == "search", "results retained Layout handles")
+searchNavigation.ClearSearch()
+assert(
+    searchSlider:GetValue() == 150 and searchNavigation.pages.home.pending == "-12,5",
+    "clearing lost category scroll or draft"
+)
+searchNavigation.search:SetText("SHIELD")
+assert(#searchNavigation.results == 1, "metadata search aliases were not indexed")
+context:Call(searchNavigation.search, "OnEnterPressed")
+assert(searchNavigation.selected == "combat" and searchBuilds.damage == 1 and not searchBuilds.unused)
+assert(searchSlider:GetValue() == 350, "result did not use the destination's current option offset")
+assert(searchNavigation.query == "" and searchNavigation.search:GetText() == "", "redirect retained the query")
+local destination = searchNavigation.pages.damage
+searchNavigation.Search("diablo style")
+assert(#searchNavigation.results == 1 and searchNavigation.results[1].label == "Diablo IV")
+searchNavigation.OpenResult(1)
+assert(
+    searchSlider:GetValue() == 282 and searchNavigation.pages.damage == destination,
+    "custom redirect lost its offset or control owner"
+)
+searchNavigation.Search("[test].*")
+assert(
+    #searchNavigation.results == 1 and searchNavigation.results[1].target == "punctuation",
+    "search interpreted pattern punctuation"
+)
+searchNavigation.Search("not-present")
+assert(
+    #searchNavigation.results == 0 and searchNavigation.searchOwner.empty:IsShown(),
+    "empty results were not explained"
+)
+local beforeNoHit = #context.objects
+context:ResetCounts()
+searchNavigation.Search("not-present")
+context:NoPresentationWrites()
+assert(#context.objects == beforeNoHit, "unchanged query allocated views")
+searchNavigation.Search("unused choice")
+assert(#searchNavigation.results == 18 and #searchNavigation.searchOwner.rows == 8 and not searchBuilds.unused)
+local searchPool = #context.objects
+context:Call(searchNavigation.searchOwner.next, "OnClick")
+assert(searchNavigation.searchOwner.page == 2 and searchNavigation.searchOwner.rows[1].resultIndex == 9)
+context:Call(searchNavigation.searchOwner.next, "OnClick")
+assert(searchNavigation.searchOwner.page == 3 and searchNavigation.searchOwner.rows[1].resultIndex == 17)
+assert(
+    not searchNavigation.searchOwner.rows[3]:IsShown() and #context.objects == searchPool,
+    "paging expanded the result pool"
+)
+context:Call(searchNavigation.searchOwner.previous, "OnClick")
+assert(searchNavigation.searchOwner.page == 2 and #context.objects == searchPool)
+searchNavigation.Search("performance")
+searchNavigation.OpenResult(1)
+assert(searchNavigation.selected == "layout", "standalone result did not redirect to its existing owner")
+
+local originalText = env.DFRL.locale.Text
+env.DFRL.locale.Text = function(source)
+    if env.DFRL.locale.code == "ru" and source == "Damage icons" then return "ЗНАЧКИ УРОНА" end
+    if env.DFRL.locale.code == "de" and source == "Damage icons" then return "ÄNDERUNG" end
+    return source
+end
+env.DFRL.locale.code = "ru"
+context:NotifyLocale()
+searchNavigation.Search("значки урона")
+assert(
+    #searchNavigation.results == 1 and searchNavigation.results[1].target == "icons",
+    "localized Cyrillic case folding failed"
+)
+searchNavigation.Search("Damage icons")
+assert(#searchNavigation.results == 1, "English fallback search disappeared in another language")
+env.DFRL.locale.code = "de"
+context:NotifyLocale()
+searchNavigation.Search("änderung")
+assert(#searchNavigation.results == 1, "accented Latin case folding failed")
+searchNavigation.search.focused = true
+searchPanel:Hide()
+assert(searchNavigation.query == "" and not searchNavigation.search.focused, "close retained search query or focus")
+context:ResetCounts()
+env.DFRL.locale.code = "ru"
+context:NotifyLocale()
+searchNavigation.Refresh(true)
+context:NoPresentationWrites()
+local closedSearchPool = #context.objects
+searchPanel:Show()
+searchNavigation.Refresh(true)
+assert(
+    searchNavigation.query == "" and #context.objects == closedSearchPool,
+    "reopen rebuilt search or replayed results"
+)
+searchNavigation.Search("diablo")
+context:Call(searchNavigation.search, "OnEscapePressed")
+assert(escapes == 1 and searchNavigation.query == "", "search Escape skipped the shared close callback")
+searchNavigation.Search("unused choice")
+searchNavigation.Select("combat")
+assert(
+    searchNavigation.query == "" and searchNavigation.pages.damage == destination,
+    "sidebar navigation retained search or replaced drafts"
+)
+env.DFRL.locale.Text, env.DFRL.locale.code = originalText, "en"
+searchPanel:Hide()
+
 local toggle = env.T.CreateEditorToggle(panel, "Ability damage", "Show each ability's damage.", 300)
 assert(env.T.CompactEditorToggle(toggle) == 64, "single-line toggle did not shrink")
 assert(toggle.label:GetHeight() == 16 and toggle.description.point[5] == -26, "caption/help gap was not three units")
@@ -461,7 +613,7 @@ assert(not dialog:IsShown() and not next(pages), "shell construction prepared se
 assert(not env.fontSample and not env.fontMenu and layoutBuilds == 0, "shell prepared timer/menu/Layout controls")
 assert(context.reads.glyphs == openingGlyphs + 2, "shell measured unrelated or inactive-language captions")
 dialog:Show()
-assert(context.reads.glyphs == openingGlyphs + 2, "show repeated cached shell sizing")
+assert(context.reads.glyphs == openingGlyphs + 3, "show measured more than the search header and existing shell")
 assert(layoutBuilds == 1 and pages.layout and not pages.units and not pages.profiles, "first open built hidden pages")
 editor.Clock(10.5, 1200, true)
 assert(
@@ -475,6 +627,25 @@ assert(
     env.displayControls.performanceMode and not env.displayControls.unitShortHealth,
     "first open built hidden options"
 )
+assert(dialog.navigation.search and dialog.navigation.search.maxLetters == 128, "settings has no native search input")
+dialog.navigation.Search("shield")
+assert(
+    #dialog.navigation.results == 2 and not pages.units,
+    "shield search missed existing health controls or built their page"
+)
+assert(
+    not context.editHandles and not env.SurvivorsDragonUiDisplay,
+    "search changed settings or retained Layout overlays"
+)
+dialog.navigation.ClearSearch()
+assert(context.editHandles and pages.layout.pending == "17,5", "clearing search lost Layout state or handles")
+dialog.navigation.Search("sct icons")
+assert(#dialog.navigation.results == 1 and not pages.combat, "SCT aliases missed damage icons or eagerly built Combat")
+assert(dialog.navigation.results[1].target == "damageIcons" and dialog.navigation.results[1].group == "combat")
+dialog.navigation.ClearSearch()
+dialog.navigation.Search("marks rewards")
+assert(#dialog.navigation.results == 1 and not pages.loot, "generic hidden settings were not searchable")
+dialog.navigation.ClearSearch()
 local layoutPage = pages.layout
 assert(dialog.uiFontButtons.default.editorSelected, "Layout did not select the default font")
 assert(not dialog.uiFontButtons.friz, "Layout still offers the removed Friz Quadrata choice")
@@ -520,6 +691,16 @@ assert(
 
 dialog.navigation.Select("combat")
 assert(pages.combat and pages.nameplates and not pages.meter, "Combat still prepares Damage meter")
+dialog.navigation.Search("damage over time")
+assert(#dialog.navigation.results == 1, "custom combat filters were absent from search")
+dialog.navigation.OpenResult(1)
+assert(
+    dialog.navigation.selected == "combat" and display.Get("sctPeriodicDamage") and not env.SurvivorsDragonUiDisplay,
+    "search result changed the existing filter instead of redirecting"
+)
+dialog.navigation.Search("Diablo")
+assert(#dialog.navigation.results >= 2, "custom style and font choices were absent from search")
+dialog.navigation.ClearSearch()
 assert(pages.combat:GetHeight() >= 532, "abbreviation clipped the final damage filters")
 assert(display.Get("sctShortNumbers") == false, "abbreviation was enabled by default")
 context:Call(env.displayControls.sctShortNumbers, "OnClick")

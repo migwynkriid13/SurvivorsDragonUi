@@ -2,6 +2,9 @@
 DFRL.locale.data = {
     en = {
         ui = {
+            ["Search settings"] = "Search settings",
+            ["Clear search"] = "Clear search",
+            ["No matching settings."] = "No matching settings.",
             ["Show XP text"] = "Show XP text",
             ["Show current and required XP on the XP bar."] = "Show current and required XP on the XP bar.",
             ["Change addon text except the run timer and combat text, which have their own fonts."] = "Change addon text except the run timer and combat text, which have their own fonts.",
@@ -657,6 +660,9 @@ DFRL.locale.data = {
     },
     pl = {
         ui = {
+            ["Search settings"] = "Wyszukaj ustawienia",
+            ["Clear search"] = "Wyczyść wyszukiwanie",
+            ["No matching settings."] = "Nie znaleziono pasujących ustawień.",
             ["Show XP text"] = "Pokaż tekst PD",
             ["Show current and required XP on the XP bar."] = "Pokaż bieżące i wymagane PD na pasku doświadczenia.",
             ["Change addon text except the run timer and combat text, which have their own fonts."] = "Zmień czcionkę tekstu dodatku z wyjątkiem licznika czasu biegu i tekstu walki, które mają własne ustawienia czcionki.",
@@ -1783,6 +1789,9 @@ DFRL.locale.data = {
     },
     cs = {
         ui = {
+            ["Search settings"] = "Hledat nastavení",
+            ["Clear search"] = "Vymazat hledání",
+            ["No matching settings."] = "Nebyla nalezena odpovídající nastavení.",
             ["Show XP text"] = "Zobrazit text zkušeností",
             ["Show current and required XP on the XP bar."] = "Na liště zkušeností zobrazí aktuální a potřebné zkušenosti.",
             ["Change addon text except the run timer and combat text, which have their own fonts."] = "Změní písmo textu doplňku kromě časovače běhu a bojového textu, které mají vlastní nastavení písma.",
@@ -2912,6 +2921,9 @@ DFRL.locale.data = {
     },
     de = {
         ui = {
+            ["Search settings"] = "Einstellungen suchen",
+            ["Clear search"] = "Suche löschen",
+            ["No matching settings."] = "Keine passenden Einstellungen gefunden.",
             ["Show XP text"] = "EP-Text anzeigen",
             ["Show current and required XP on the XP bar."] = "Aktuelle und benötigte EP auf der EP-Leiste anzeigen.",
             ["Change addon text except the run timer and combat text, which have their own fonts."] = "Ändert den Addontext außer Laufzeitmesser und Kampftext, die eigene Schriftarten haben.",
@@ -4039,6 +4051,9 @@ DFRL.locale.data = {
     },
     pt = {
         ui = {
+            ["Search settings"] = "Pesquisar configurações",
+            ["Clear search"] = "Limpar pesquisa",
+            ["No matching settings."] = "Nenhuma configuração correspondente.",
             ["Show XP text"] = "Mostrar texto de XP",
             ["Show current and required XP on the XP bar."] = "Mostra a XP atual e a XP necessária na barra de experiência.",
             ["Change addon text except the run timer and combat text, which have their own fonts."] = "Altera a fonte do texto do addon, exceto o cronômetro da corrida e o texto de combate, que têm fontes próprias.",
@@ -5157,6 +5172,9 @@ DFRL.locale.data = {
     },
     es = {
         ui = {
+            ["Search settings"] = "Buscar ajustes",
+            ["Clear search"] = "Borrar búsqueda",
+            ["No matching settings."] = "No se encontraron ajustes coincidentes.",
             ["Show XP text"] = "Mostrar texto de experiencia",
             ["Show current and required XP on the XP bar."] = "Muestra la experiencia actual y la necesaria en la barra de experiencia.",
             ["Change addon text except the run timer and combat text, which have their own fonts."] = "Cambia la fuente del texto del addon, salvo el temporizador de partida y el texto de combate, que tienen sus propias fuentes.",
@@ -6279,6 +6297,9 @@ DFRL.locale.data = {
     },
     fr = {
         ui = {
+            ["Search settings"] = "Rechercher dans les réglages",
+            ["Clear search"] = "Effacer la recherche",
+            ["No matching settings."] = "Aucun réglage correspondant.",
             ["Show XP text"] = "Afficher le texte d’EXP",
             ["Show current and required XP on the XP bar."] = "Affiche l’EXP actuelle et l’EXP requise sur la barre d’expérience.",
             ["Change addon text except the run timer and combat text, which have their own fonts."] = "Change la police du texte de l’addon, sauf le chronomètre et le texte de combat, qui ont leurs propres polices.",
@@ -7409,6 +7430,9 @@ DFRL.locale.data = {
     },
     ro = {
         ui = {
+            ["Search settings"] = "Caută setări",
+            ["Clear search"] = "Șterge căutarea",
+            ["No matching settings."] = "Nu s-au găsit setări potrivite.",
             ["Show XP text"] = "Arată textul XP",
             ["Show current and required XP on the XP bar."] = "Arată XP actual și XP necesar pe bara de experiență.",
             ["Change addon text except the run timer and combat text, which have their own fonts."] = "Schimbă fontul textului addonului, cu excepția cronometrului și a textului de luptă, care au propriile fonturi.",
@@ -8522,6 +8546,9 @@ DFRL.locale.data = {
     },
     tr = {
         ui = {
+            ["Search settings"] = "Ayarlarda ara",
+            ["Clear search"] = "Aramayı temizle",
+            ["No matching settings."] = "Eşleşen ayar bulunamadı.",
             ["Show XP text"] = "XP metnini göster",
             ["Show current and required XP on the XP bar."] = "Deneyim çubuğunda mevcut ve gereken XP değerlerini göster.",
             ["Change addon text except the run timer and combat text, which have their own fonts."] = "Eklenti metninin yazı tipini değiştirir; kendi yazı tipi seçenekleri olan koşu sayacı ve savaş metni hariçtir.",
@@ -9511,6 +9538,9 @@ DFRL.locale.data = {
     },
     ru = {
         ui = {
+            ["Search settings"] = "Поиск настроек",
+            ["Clear search"] = "Очистить поиск",
+            ["No matching settings."] = "Подходящие настройки не найдены.",
             ["Show XP text"] = "Показывать текст опыта",
             ["Show current and required XP on the XP bar."] = "Показывать текущий и требуемый опыт на полосе опыта.",
             ["Change addon text except the run timer and combat text, which have their own fonts."] = "Меняет шрифт текста аддона, кроме таймера забега и боевого текста, у которых есть свои настройки шрифта.",
@@ -10719,6 +10749,9 @@ DFRL.locale.data = {
     },
     uk = {
         ui = {
+            ["Search settings"] = "Пошук налаштувань",
+            ["Clear search"] = "Очистити пошук",
+            ["No matching settings."] = "Відповідних налаштувань не знайдено.",
             ["Show XP text"] = "Показувати текст досвіду",
             ["Show current and required XP on the XP bar."] = "Показувати поточний і потрібний досвід на смузі досвіду.",
             ["Change addon text except the run timer and combat text, which have their own fonts."] = "Змінює шрифт тексту аддона, крім таймера забігу й бойового тексту, які мають власні налаштування шрифту.",
@@ -11901,6 +11934,9 @@ DFRL.locale.data = {
     },
     zh = {
         ui = {
+            ["Search settings"] = "搜索设置",
+            ["Clear search"] = "清除搜索",
+            ["No matching settings."] = "未找到匹配的设置。",
             ["Show XP text"] = "显示经验文字",
             ["Show current and required XP on the XP bar."] = "在经验条上显示当前经验和所需经验。",
             ["Change addon text except the run timer and combat text, which have their own fonts."] = "更改插件文字的字体，但保留计时器和战斗文字各自的字体设置。",
@@ -13010,6 +13046,9 @@ DFRL.locale.data = {
     },
     ja = {
         ui = {
+            ["Search settings"] = "設定を検索",
+            ["Clear search"] = "検索をクリア",
+            ["No matching settings."] = "一致する設定が見つかりません。",
             ["Show XP text"] = "経験値テキストを表示",
             ["Show current and required XP on the XP bar."] = "経験値バーに現在の経験値と必要経験値を表示します。",
             ["Change addon text except the run timer and combat text, which have their own fonts."] = "アドオンの文字のフォントを変更します。個別のフォント設定があるランタイマーと戦闘テキストは除きます。",
@@ -14151,6 +14190,9 @@ DFRL.locale.data = {
     },
     ko = {
         ui = {
+            ["Search settings"] = "설정 검색",
+            ["Clear search"] = "검색 지우기",
+            ["No matching settings."] = "일치하는 설정이 없습니다.",
             ["Show XP text"] = "경험치 텍스트 표시",
             ["Show current and required XP on the XP bar."] = "경험치 바에 현재 경험치와 필요 경험치를 표시합니다.",
             ["Change addon text except the run timer and combat text, which have their own fonts."] = "애드온 글꼴을 변경합니다. 자체 글꼴 설정이 있는 진행 타이머와 전투 텍스트는 제외됩니다.",

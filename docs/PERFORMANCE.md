@@ -321,8 +321,8 @@ only when that category is selected, then retained. Unvisited categories allocat
 no native pages or controls; Profiles and the timer's font chooser are separately
 deferred to their category/button. The hidden shell is completed before showing
 the requested category, including direct Profiles entry. There is no background
-preloading. There is no search input, query state, category
-content title or repeated section title matching the sidebar category.
+preloading. Search uses caption metadata without preparing unvisited pages;
+there is no category content title or repeated section title matching the sidebar category.
 See [SETTINGS.md](SETTINGS.md).
 
 Category changes perform bounded work over twenty section records. Settled
@@ -452,11 +452,34 @@ not run locally and establishes no native rendering or FPS result.
 
 The CI-only editor fixture loads the production factory with explicit native
 scrollbar and glyph-width boundaries. It checks category/heading visibility,
-absence of a search input, original section ownership, retained state, scroll
+metadata search and redirection, original section ownership, retained state, scroll
 offsets, reopen, stable allocation, compact/wrapped spacing, metric retry and
 hidden/unchanged work. It was not run locally. The user's supplied screenshots
 showed the former duplicated titles and excessive spacing; the correction has
 not been launched or visually verified in the game.
+
+### Settings search — 2026-10-31
+
+The search header reuses the input/button helpers: three frames (container,
+EditBox and clear button), nine texture regions and two FontStrings. Results
+are allocated only on a nonempty query, with a maximum pool of eight buttons.
+The full results pool adds eleven frames, forty texture regions and twenty
+FontStrings, including its container, empty/count labels and two paging buttons.
+Only search results or original section pages are shown in the shared viewport;
+the retained pool is hidden outside search. No runtime asset is added.
+
+The index is built from current section/option/mode/custom caption records on
+the first query and rebuilt for language changes. Input is limited to 128
+characters. Literal token matching visits that bounded metadata list only on
+text/locale changes; unchanged queries skip rebuilding and writes. Pagination
+reuses the pool. Destination offsets use current native row layout, and opening
+a result prepares only its original category. Header measurements cache language,
+font and owner scale and retry unavailable metrics. Closing clears focus/query;
+hidden changes defer work until Show. No event, updater, animation, gameplay
+read, setting, saved history or SavedVariable is added. Both Performance Mode
+states use the same static presentation. CI-only editor cases cover these
+lifecycles; they were not run locally. Counts are source-level costs, not native
+draw-call or FPS measurements.
 
 ## Retail-style moving view — 2026-10-29
 

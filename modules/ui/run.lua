@@ -1735,8 +1735,18 @@ DFRL:NewMod("RunTimers", 5, function()
                     { "showPlayerLevel", "Show player level", "Show the level above the player frame." },
                     { "showTargetName", "Show target name", "Show the name above the target frame." },
                     { "showTargetLevel", "Show target level", "Show the level above the target frame." },
-                    { "showHealthValue", "Show health", "Show current health on unit health bars." },
-                    { "showHealthPercentage", "Show health percentage", "Show remaining health as a percentage." },
+                    {
+                        "showHealthValue",
+                        "Show health",
+                        "Show current health on unit health bars.",
+                        terms = { "shield", "absorb", "ABSORB" },
+                    },
+                    {
+                        "showHealthPercentage",
+                        "Show health percentage",
+                        "Show remaining health as a percentage.",
+                        terms = { "shield", "absorb", "ABSORB" },
+                    },
                     {
                         "unitShortHealth",
                         "Shorten health numbers",
@@ -2092,6 +2102,117 @@ DFRL:NewMod("RunTimers", 5, function()
                 table.insert(sections, section)
             end
         end
+        -- Custom pages share their actual captions with the search index. The
+        -- ordinary pages already supply captions and hints in category.options.
+        local customCaptions = {
+            layout = {
+                {
+                    key = "uiFont",
+                    label = "Font",
+                    description = "Change addon text except the run timer and combat text, which have their own fonts.",
+                    offset = 338,
+                },
+            },
+            combat = {
+                { key = "outgoing", label = "Outgoing damage", offset = 0 },
+                {
+                    key = "incoming",
+                    label = "Incoming / self text",
+                    description = "Received damage and other native self feedback.",
+                    offset = 112,
+                },
+                {
+                    key = "damageIcons",
+                    label = "Damage icons",
+                    description = "Spell icons beside custom damage numbers.",
+                    offset = 112,
+                },
+                { key = "sctStyle", label = "Damage number style", offset = 178 },
+                { key = "sctFont", label = "Font", offset = 246 },
+                { key = "sctScale", label = "SCT size", offset = 282 },
+                { key = "sctClassColors", label = "Class-colored damage", offset = 282 },
+                { key = "sctShortNumbers", label = "Abbreviate damage (K, M, B, T)", offset = 318 },
+            },
+            timer = {
+                {
+                    key = "customRunTimer",
+                    label = "Enable custom run timer",
+                    description = "Off: use the game's original timer.",
+                    offset = 0,
+                },
+                { key = "timerFont", label = "Font", offset = 126 },
+                { key = "timerSize", label = "Size", offset = 126 },
+                { key = "timerOutline", label = "Outline", offset = 164 },
+                { key = "timerShadow", label = "Black shadow", offset = 192 },
+                { key = "attachAffixes", label = "Attach affixes to run timer", offset = 192 },
+            },
+        }
+        local captions = {}
+        for _, key in ipairs({ "layout", "combat", "timer" }) do
+            local section = byKey[key]
+            section.search = {}
+            for _, entry in ipairs(customCaptions[key]) do
+                captions[entry.key] = entry
+                table.insert(section.search, entry)
+            end
+        end
+        for _, entry in ipairs(DFRL.layout.search or {}) do
+            table.insert(byKey.layout.search, entry)
+        end
+        byKey.combat.terms = { "SCT" }
+        byKey.profiles.search = DFRL.profiles.search
+        local function SearchChoices(section, choices, owner)
+            for _, entry in ipairs(choices) do
+                table.insert(byKey[section].search, {
+                    label = entry.label,
+                    description = owner.label,
+                    offset = owner.offset,
+                })
+            end
+        end
+        SearchChoices("layout", DFRL.display.fonts, captions.uiFont)
+        SearchChoices("combat", modes, captions.outgoing)
+        SearchChoices("combat", sctStyles, captions.sctStyle)
+        SearchChoices("combat", sctFonts, captions.sctFont)
+        SearchChoices("timer", fontFaces, captions.timerFont)
+        SearchChoices("timer", fontOutlines, captions.timerOutline)
+        for _, group in ipairs(combatFilters) do
+            table.insert(byKey.combat.search, { label = group.label, offset = -group.y })
+            for index, entry in ipairs(group.entries) do
+                entry.offset = -group.y + 24 + math.floor((index - 1) / 2) * 28
+                table.insert(byKey.combat.search, entry)
+            end
+        end
+        for _, mode in ipairs(timerModes) do
+            local row = 0
+            for _, entry in ipairs(timerOptions) do
+                if not entry.regularOnly or mode.suffix == "Regular" then
+                    local record = {
+                        label = entry[2],
+                        description = mode.label,
+                        target = entry[1] .. mode.suffix,
+                        offset = 264 + row * 32,
+                    }
+                    captions[entry[1] .. mode.suffix] = record
+                    table.insert(byKey.timer.search, record)
+                    row = row + 1
+                end
+            end
+        end
+        local tallyStyleCaption = {
+            label = "Frame style",
+            description = "Styles stay the same when attached or detached.",
+            target = "tallyStyle",
+        }
+        byKey.tally.search = { tallyStyleCaption }
+        for _, entry in ipairs(DFRL.tallyStyles or {}) do
+            table.insert(byKey.tally.search, {
+                label = entry.label,
+                description = tallyStyleCaption.label,
+                target = "style:" .. entry.id,
+            })
+        end
+        local performanceCaption = { label = "Performance Mode", group = "layout" }
         local defaultsWidth = math.max(140, TextWidth("Addon defaults") + 24, TextWidth("Cancel") + 24)
         -- A long translation must wrap locally instead of expanding the entire
         -- dialog and shrinking every caption to fit the screen.
@@ -2152,6 +2273,9 @@ DFRL:NewMod("RunTimers", 5, function()
             top = sidebarTop,
             height = footerTop - sidebarTop - 8,
             sidebarWidth = sidebarWidth,
+            search = true,
+            searchEntries = { performanceCaption },
+            onEscape = function() DFRL.layout.CancelEdit() end,
             prepare = function(section, page)
                 if section.options then
                     builders.options(page, section)
@@ -2174,7 +2298,7 @@ DFRL:NewMod("RunTimers", 5, function()
         local function SelectPage(key) navigation.Select(byKey[key] and byKey[key].group or key) end
         local performance = T.CreateEditorToggle(
             sidebar,
-            "Performance Mode",
+            performanceCaption.label,
             nil,
             sidebarWidth,
             function(value) DFRL.display.Set("performanceMode", value) end
@@ -2186,14 +2310,8 @@ DFRL:NewMod("RunTimers", 5, function()
         builders.layout = function(page)
             page:SetHeight(500)
             DFRL.layout.CreateControls(page, contentWidth, function() SelectPage("layout") end)
-            FontEditorLabel(page, "Font", 0, -338, 12)
-            local hint = FontEditorLabel(
-                page,
-                "Change addon text except the run timer and combat text, which have their own fonts.",
-                0,
-                -365,
-                11
-            )
+            FontEditorLabel(page, captions.uiFont.label, 0, -captions.uiFont.offset, 12)
+            local hint = FontEditorLabel(page, captions.uiFont.description, 0, -365, 11)
             hint:SetWidth(contentWidth)
             hint:SetHeight(36)
             hint:SetJustifyH("LEFT")
@@ -2287,7 +2405,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 else
                     control = DisplayToggle(content, entry[1], entry[2], entry[3], 0, controlWidth)
                 end
-                table.insert(controls, { frame = control, span = span, numeric = entry.step ~= nil })
+                table.insert(controls, { frame = control, span = span, numeric = entry.step ~= nil, entry = entry })
                 if dependents and entry[1] ~= category.master then table.insert(dependents.controls, control) end
                 control:EnableMouseWheel(true)
                 control:SetScript("OnMouseWheel", ScrollOptions)
@@ -2295,6 +2413,10 @@ DFRL:NewMod("RunTimers", 5, function()
             local optionsHeight = 0
             local function LayoutOptions()
                 optionsHeight = T.LayoutEditorOptions(content, controls, columns, gap, modeHeight)
+                category.searchOffsets = category.searchOffsets or {}
+                for _, record in ipairs(controls) do
+                    category.searchOffsets[record.entry[1]] = -record.y
+                end
                 if not category.stylePicker and page:GetHeight() ~= optionsHeight then page:SetHeight(optionsHeight) end
             end
             LayoutOptions()
@@ -2322,10 +2444,9 @@ DFRL:NewMod("RunTimers", 5, function()
             end
             if category.stylePicker then
                 local stylePageWidth = content:GetWidth()
-                local heading = FontEditorLabel(content, "Frame style", 0, 0, 12)
+                local heading = FontEditorLabel(content, tallyStyleCaption.label, 0, 0, 12)
                 heading:SetTextColor(0.94, 0.79, 0.47)
-                local description =
-                    FontEditorLabel(content, "Styles stay the same when attached or detached.", 0, 0, 10)
+                local description = FontEditorLabel(content, tallyStyleCaption.description, 0, 0, 10)
                 description:SetWidth(stylePageWidth)
                 description:SetHeight(28)
                 description:SetJustifyH("LEFT")
@@ -2340,26 +2461,30 @@ DFRL:NewMod("RunTimers", 5, function()
                     button:SetScript("OnClick", function() DFRL.display.Set("tallyStyle", id) end)
                     button:EnableMouseWheel(true)
                     button:SetScript("OnMouseWheel", ScrollOptions)
-                    table.insert(styleButtons, button)
+                    table.insert(styleButtons, { frame = button, key = "style:" .. id })
                     fontEditor.tallyStyleButtons[id] = button
                 end
                 local styleTop
                 local function LayoutStyles()
                     local top = optionsHeight + 8
+                    category.searchOffsets.tallyStyle = top
                     if styleTop ~= top then
                         heading:ClearAllPoints()
                         heading:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -top)
                         description:ClearAllPoints()
                         description:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -top - 22)
-                        for index, button in ipairs(styleButtons) do
+                        for index, record in ipairs(styleButtons) do
+                            local button = record.frame
+                            local offset = top + 58 + math.floor((index - 1) / 2) * pitch
                             button:ClearAllPoints()
                             button:SetPoint(
                                 "TOPLEFT",
                                 content,
                                 "TOPLEFT",
                                 math.mod(index - 1, 2) * (styleWidth + gap),
-                                -top - 58 - math.floor((index - 1) / 2) * pitch
+                                -offset
                             )
+                            category.searchOffsets[record.key] = offset
                         end
                         styleTop = top
                     end
@@ -2385,7 +2510,7 @@ DFRL:NewMod("RunTimers", 5, function()
 
         builders.combat = function(combat)
             local modeSize = (contentWidth - gap * 2) / 3
-            local heading = FontEditorLabel(combat, "Outgoing damage", 0, 0, 12)
+            local heading = FontEditorLabel(combat, captions.outgoing.label, 0, -captions.outgoing.offset, 12)
             heading:SetTextColor(0.94, 0.79, 0.47)
             for index, entry in ipairs(modes) do
                 local mode = entry.value
@@ -2415,31 +2540,31 @@ DFRL:NewMod("RunTimers", 5, function()
             local combatToggleWidth = (contentWidth - gap) / 2
             incomingControl = T.CreateEditorToggle(
                 combat,
-                "Incoming / self text",
-                "Received damage and other native self feedback.",
+                captions.incoming.label,
+                captions.incoming.description,
                 combatToggleWidth,
                 function(value)
                     if DFRL.sct then DFRL.sct.SetIncoming(value) end
                 end
             )
             table.insert(combatSettings.controls, incomingControl)
-            incomingControl:SetPoint("TOPLEFT", combat, "TOPLEFT", 0, -112)
+            incomingControl:SetPoint("TOPLEFT", combat, "TOPLEFT", 0, -captions.incoming.offset)
             local iconControl = DisplayToggle(
                 combat,
                 "damageIcons",
-                "Damage icons",
-                "Spell icons beside custom damage numbers.",
-                -112,
+                captions.damageIcons.label,
+                captions.damageIcons.description,
+                -captions.damageIcons.offset,
                 combatToggleWidth
             )
             iconControl:ClearAllPoints()
-            iconControl:SetPoint("TOPLEFT", combat, "TOPLEFT", combatToggleWidth + gap, -112)
+            iconControl:SetPoint("TOPLEFT", combat, "TOPLEFT", combatToggleWidth + gap, -captions.damageIcons.offset)
             for _, control in ipairs({ incomingControl, iconControl }) do
                 control:SetHeight(60)
                 control.description:SetHeight(28)
                 control.description:SetJustifyV("TOP")
             end
-            FontEditorLabel(combat, "Damage number style", 0, -178, 11)
+            FontEditorLabel(combat, captions.sctStyle.label, 0, -captions.sctStyle.offset, 11)
             fontEditor.sctStyleButtons = {}
             for index, entry in ipairs(sctStyles) do
                 local style = entry.value
@@ -2453,8 +2578,8 @@ DFRL:NewMod("RunTimers", 5, function()
                 )
                 fontEditor.sctStyleButtons[style] = button
             end
-            FontEditorLabel(combat, "Font", 0, -254, 11)
-            local fontX = TextWidth("Font") + gap
+            FontEditorLabel(combat, captions.sctFont.label, 0, -captions.sctFont.offset - 8, 11)
+            local fontX = TextWidth(captions.sctFont.label) + gap
             local fontWidth = (contentWidth - fontX - gap) / 2
             fontEditor.sctFontButtons = {}
             for index, entry in ipairs(sctFonts) do
@@ -2463,23 +2588,23 @@ DFRL:NewMod("RunTimers", 5, function()
                     entry.label,
                     fontWidth,
                     fontX + (index - 1) * (fontWidth + gap),
-                    -246,
+                    -captions.sctFont.offset,
                     function() DFRL.display.Set("sctFont", font) end,
                     combat
                 )
                 fontEditor.sctFontButtons[font] = button
             end
-            FontEditorLabel(combat, "SCT size", 0, -290, 11)
-            local scaleX = TextWidth("SCT size") + gap
+            FontEditorLabel(combat, captions.sctScale.label, 0, -captions.sctScale.offset - 8, 11)
+            local scaleX = TextWidth(captions.sctScale.label) + gap
             local function ChangeSctSize(direction)
                 local percent = math.floor(DFRL.display.Get("sctScale") * 100 + 0.5)
                 DFRL.display.Set("sctScale", (percent + direction * 5) / 100)
             end
-            FontEditorButton("-", 28, scaleX, -282, function() ChangeSctSize(-1) end, combat)
-            sctSizeLabel = FontEditorLabel(combat, "", scaleX + 36, -290)
+            FontEditorButton("-", 28, scaleX, -captions.sctScale.offset, function() ChangeSctSize(-1) end, combat)
+            sctSizeLabel = FontEditorLabel(combat, "", scaleX + 36, -captions.sctScale.offset - 8)
             sctSizeLabel:SetWidth(64)
             sctSizeLabel:SetJustifyH("CENTER")
-            FontEditorButton("+", 28, scaleX + 108, -282, function() ChangeSctSize(1) end, combat)
+            FontEditorButton("+", 28, scaleX + 108, -captions.sctScale.offset, function() ChangeSctSize(1) end, combat)
             local filterSize = (contentWidth - gap) / 2
             local function CombatToggle(key, label, x, y)
                 local control = DisplayToggle(combat, key, label, nil, y, filterSize)
@@ -2489,20 +2614,20 @@ DFRL:NewMod("RunTimers", 5, function()
                 control.label:ClearAllPoints()
                 control.label:SetPoint("LEFT", control, "LEFT", 32, 0)
             end
-            CombatToggle("sctClassColors", "Class-colored damage", filterSize + gap, -282)
-            CombatToggle("sctShortNumbers", "Abbreviate damage (K, M, B, T)", 0, -318)
+            CombatToggle(
+                "sctClassColors",
+                captions.sctClassColors.label,
+                filterSize + gap,
+                -captions.sctClassColors.offset
+            )
+            CombatToggle("sctShortNumbers", captions.sctShortNumbers.label, 0, -captions.sctShortNumbers.offset)
             divider = T.EditorDivider(combat, contentWidth)
             divider:SetPoint("TOPLEFT", combat, "TOPLEFT", 0, -418)
             for _, group in ipairs(combatFilters) do
                 heading = FontEditorLabel(combat, group.label, 0, group.y, 12)
                 heading:SetTextColor(0.94, 0.79, 0.47)
                 for index, entry in ipairs(group.entries) do
-                    CombatToggle(
-                        entry.key,
-                        entry.label,
-                        math.mod(index - 1, 2) * (filterSize + gap),
-                        group.y - 24 - math.floor((index - 1) / 2) * 28
-                    )
+                    CombatToggle(entry.key, entry.label, math.mod(index - 1, 2) * (filterSize + gap), -entry.offset)
                 end
             end
         end
@@ -2515,8 +2640,8 @@ DFRL:NewMod("RunTimers", 5, function()
             local timerEnabled = DisplayToggle(
                 timer,
                 "customRunTimer",
-                "Enable custom run timer",
-                "Off: use the game's original timer.",
+                captions.customRunTimer.label,
+                captions.customRunTimer.description,
                 0,
                 contentWidth
             )
@@ -2536,7 +2661,7 @@ DFRL:NewMod("RunTimers", 5, function()
             fontSample:SetPoint("TOP", timer, "TOP", 0, -16 - timerTop)
             fontSampleClock = NewClockLabel(fontSample)
             local controlX = labelWidth + gap
-            FontEditorLabel(timer, "Font", 0, -66 - timerTop, 11)
+            FontEditorLabel(timer, captions.timerFont.label, 0, -captions.timerFont.offset, 11)
             local fontButton
             local function PrepareFontMenu()
                 local fontListWidth = dropdownWidth
@@ -2596,12 +2721,12 @@ DFRL:NewMod("RunTimers", 5, function()
             arrow:SetPoint("RIGHT", fontButton, "RIGHT", -12, 0)
 
             local sizeX = contentWidth - timerSizeWidth
-            local sizeCaption = FontEditorLabel(timer, "Size", sizeX, -66 - timerTop, 11)
+            local sizeCaption = FontEditorLabel(timer, captions.timerSize.label, sizeX, -captions.timerSize.offset, 11)
             sizeX = sizeX + TextWidth("Size") + gap
             local _, smaller = FontEditorButton("-", 28, sizeX, -58 - timerTop, function() ChangeSize(-1) end, timer)
             sizeLabel = FontEditorLabel(timer, "", sizeX + 42, -66 - timerTop)
             local _, larger = FontEditorButton("+", 28, sizeX + 76, -58 - timerTop, function() ChangeSize(1) end, timer)
-            FontEditorLabel(timer, "Outline", 0, -104 - timerTop, 11)
+            FontEditorLabel(timer, captions.timerOutline.label, 0, -captions.timerOutline.offset, 11)
             local outlineSize = (contentWidth - controlX - gap * 2) / 3
             for index, entry in ipairs(fontOutlines) do
                 local value = entry.value
@@ -2657,30 +2782,36 @@ DFRL:NewMod("RunTimers", 5, function()
             end
             table.insert(optionLayouts, { group = "encounters", arrange = LayoutTimerControls })
             local halfWidth = (contentWidth - gap) / 2
-            shadowControl = T.CreateEditorToggle(timer, "Black shadow", nil, halfWidth, function(value)
+            shadowControl = T.CreateEditorToggle(timer, captions.timerShadow.label, nil, halfWidth, function(value)
                 if not fontDraft then return end
                 fontDraft.shadow = value
                 PreviewFont(fontDraft)
             end)
             table.insert(timerSettings.controls, shadowControl)
             shadowControl:SetHeight(28)
-            shadowControl:SetPoint("TOPLEFT", timer, "TOPLEFT", 0, -132 - timerTop)
-            local attachAffixes =
-                DisplayToggle(timer, "attachAffixes", "Attach affixes to run timer", nil, -132 - timerTop, halfWidth)
+            shadowControl:SetPoint("TOPLEFT", timer, "TOPLEFT", 0, -captions.timerShadow.offset)
+            local attachAffixes = DisplayToggle(
+                timer,
+                "attachAffixes",
+                captions.attachAffixes.label,
+                nil,
+                -captions.attachAffixes.offset,
+                halfWidth
+            )
             attachAffixes:SetHeight(28)
-            attachAffixes:SetPoint("TOPLEFT", timer, "TOPLEFT", halfWidth + gap, -132 - timerTop)
+            attachAffixes:SetPoint("TOPLEFT", timer, "TOPLEFT", halfWidth + gap, -captions.attachAffixes.offset)
             for index, mode in ipairs(timerModes) do
                 local x = (index - 1) * (halfWidth + gap)
                 local heading = FontEditorLabel(timer, mode.label, x, -184 - timerTop, 12)
                 heading:SetTextColor(0.94, 0.79, 0.47)
-                local row = 0
                 for _, entry in ipairs(timerOptions) do
                     if not entry.regularOnly or mode.suffix == "Regular" then
-                        local y = -204 - timerTop - row * 32
-                        local control = DisplayToggle(timer, entry[1] .. mode.suffix, entry[2], nil, y, halfWidth)
+                        local key = entry[1] .. mode.suffix
+                        local record = captions[key]
+                        local y = -record.offset
+                        local control = DisplayToggle(timer, key, record.label, nil, y, halfWidth)
                         control:SetHeight(28)
                         control:SetPoint("TOPLEFT", timer, "TOPLEFT", x, y)
-                        row = row + 1
                     end
                 end
             end

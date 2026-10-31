@@ -95,17 +95,29 @@ DFRL:NewMod("Profiles", 1, function()
         return true, "Profile deleted. Confirm to keep the change."
     end
 
-    local actions = { "Load profile", "Overwrite and close", "Delete profile" }
+    local captions = {
+        summary = {
+            label = "Save and load named setups.",
+            description = "Save and overwrite close the editor and keep your setup. Load and delete need Confirm.",
+            offset = 0,
+        },
+        name = { label = "Profile name", offset = 34 },
+        saved = { label = "Saved profiles", offset = 90 },
+        save = { label = "Save profile and close", offset = 52 },
+    }
+    local actions = {
+        { label = "Load profile", offset = 300 },
+        { label = "Overwrite and close", offset = 300 },
+        { label = "Delete profile", offset = 300 },
+    }
+    profiles.search =
+        { captions.summary, captions.name, captions.saved, captions.save, actions[1], actions[2], actions[3] }
     function profiles.MinimumWidth(measure)
         local buttonWidth = 0
-        for _, caption in ipairs(actions) do
-            buttonWidth = math.max(buttonWidth, measure(caption) + 24)
+        for _, entry in ipairs(actions) do
+            buttonWidth = math.max(buttonWidth, measure(entry.label) + 24)
         end
-        return math.max(
-            buttonWidth * 3 + 16,
-            measure("Save profile and close") + 192,
-            measure("Save and load named setups.") + 24
-        )
+        return math.max(buttonWidth * 3 + 16, measure(captions.save.label) + 192, measure(captions.summary.label) + 24)
     end
     function profiles.CreateControls(parent, width)
         local function Label(text, y, size, height)
@@ -123,22 +135,17 @@ DFRL:NewMod("Profiles", 1, function()
             label:SetText(text)
             return label
         end
-        Label("Save and load named setups.", 0, 12, 28)
-        Label("Profile name", -34, 10)
+        Label(captions.summary.label, 0, 12, 28)
+        Label(captions.name.label, -34, 10)
         local measure = Label("", 0)
         measure:Hide()
-        local saveWidth = DFRL.locale.Width(measure, "Save profile and close", true) + 24
+        local saveWidth = DFRL.locale.Width(measure, captions.save.label, true) + 24
         local save
         local input = T.CreateEditorInput(parent, width - saveWidth - 8, 26)
         input:SetMaxLetters(48)
         input:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, -52)
-        Label("Saved profiles", -90, 10)
-        local status = Label(
-            "Save and overwrite close the editor and keep your setup. Load and delete need Confirm.",
-            -340,
-            10,
-            44
-        )
+        Label(captions.saved.label, -90, 10)
+        local status = Label(captions.summary.description, -340, 10, 44)
         local selected, offset = nil, 0
         local rows, buttons = {}, {}
         local pageSize = 5
@@ -151,7 +158,7 @@ DFRL:NewMod("Profiles", 1, function()
 
         local function Refresh(followSelection)
             if not parent:IsVisible() then return end
-            local measured = DFRL.locale.Width(measure, "Save profile and close", true) + 24
+            local measured = DFRL.locale.Width(measure, captions.save.label, true) + 24
             if measured ~= saveWidth then
                 saveWidth = measured
                 input:SetWidth(width - saveWidth - 8)
@@ -216,12 +223,12 @@ DFRL:NewMod("Profiles", 1, function()
                 selected = row.profileName
                 input:SetText(selected or "")
                 input:ClearFocus()
-                status:SetText("Save and overwrite close the editor and keep your setup. Load and delete need Confirm.")
+                status:SetText(captions.summary.description)
                 Refresh()
             end)
             table.insert(rows, row)
         end
-        save = T.CreateEditorButton(parent, "Save profile and close", saveWidth, 26)
+        save = T.CreateEditorButton(parent, captions.save.label, saveWidth, 26)
         save:SetPoint("TOPRIGHT", parent, "TOPRIGHT", 0, -52)
         save:SetScript("OnClick", function() Result(profiles.Save(input:GetText(), false)) end)
         input:SetScript("OnEnterPressed", function() Result(profiles.Save(input:GetText(), false)) end)
@@ -235,16 +242,16 @@ DFRL:NewMod("Profiles", 1, function()
             Refresh()
         end)
         local buttonWidth = (width - 16) / 3
-        for index, caption in ipairs(actions) do
-            local action = caption
-            local button = T.CreateEditorButton(parent, caption, buttonWidth, 28)
+        for index, entry in ipairs(actions) do
+            local action = entry
+            local button = T.CreateEditorButton(parent, entry.label, buttonWidth, 28)
             button:SetPoint("TOPLEFT", parent, "TOPLEFT", (index - 1) * (buttonWidth + 8), -300)
             button:SetScript("OnClick", function()
                 if not selected then
                     status:SetText("Select a profile first.")
-                elseif action == "Load profile" then
+                elseif action == actions[1] then
                     Result(profiles.Load(selected))
-                elseif action == "Overwrite and close" then
+                elseif action == actions[2] then
                     Result(profiles.Save(selected, true))
                 else
                     Result(profiles.Delete(selected))
@@ -253,7 +260,7 @@ DFRL:NewMod("Profiles", 1, function()
             table.insert(buttons, button)
         end
         parent:SetScript("OnShow", function()
-            status:SetText("Save and overwrite close the editor and keep your setup. Load and delete need Confirm.")
+            status:SetText(captions.summary.description)
             Refresh(true)
             if selected then T.SetTextIfChanged(input, selected) end
         end)

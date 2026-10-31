@@ -58,6 +58,15 @@ An explicit Bash shell enables `pipefail`, so piping fixture/model output into
 
 ## UI work and cleanup tests
 
+The editor fixture covers metadata search without constructing unopened pages,
+active-language/English matching, supported case folding, literal punctuation,
+empty results, pooled paging, custom and ordinary option redirects, current
+row offsets, pending drafts, shared Escape/Cancel, hidden focus/query cleanup
+and unchanged/idle work. It loads the real navigator and settings constructor
+over explicit native boundaries. Search only navigates to existing controls;
+these CI-only cases do not establish in-game glyph fit or native scrolling.
+They were not run locally.
+
 Profile-save cases exercise the production Layout/Display/Profiles transaction
 with fake native geometry and font/SCT owner boundaries. They cover save and
 overwrite closing through one shared commit, Enter, pending numeric input,
@@ -133,7 +142,7 @@ The assertions cover:
 - Editor navigation loads `core/editor.lua` against explicit native scroll and
   glyph-width boundaries. It covers grouped visibility, original section owners,
   retained section state, per-category offsets, duplicate-heading suppression,
-  absence of search inputs, close/reopen, compact/wrapped caption spacing,
+  search redirects and lazy result pooling, close/reopen, compact/wrapped caption spacing,
   compact numeric captions, mixed-height two-column placement, odd last rows,
   full-row master clearance, locale reflow and single-option/mode spacing,
   missing-metric retry, stable allocations and hidden/unchanged work without an

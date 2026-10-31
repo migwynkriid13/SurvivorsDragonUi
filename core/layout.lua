@@ -2,6 +2,36 @@
 DFRL:NewMod("Layout", 0, function()
     local layout, entries, order, visibilityListeners = {}, {}, {}, {}
     DFRL.layout = layout
+    local captions = {
+        position = { label = "Center relative to screen center (UI units)", offset = 36 },
+        x = { label = "X: right +", offset = 56 },
+        y = { label = "Y: up +", offset = 56 },
+        dimensions = { label = "Width / Height (frame units)", offset = 106 },
+        scale = { label = "Scale (%) - 40 to 300", offset = 106 },
+        width = { label = "Width (frame units)", offset = 164 },
+        visibility = {
+            label = "Hide frame",
+            description = "Keep this group hidden during gameplay.",
+            offset = 156,
+        },
+        grid = {
+            label = "Show grid",
+            description = "Show the alignment grid while editing.",
+            offset = 156,
+        },
+        apply = { label = "Apply position / size", offset = 252 },
+    }
+    layout.search = {
+        captions.position,
+        captions.x,
+        captions.y,
+        captions.dimensions,
+        captions.scale,
+        captions.width,
+        captions.visibility,
+        captions.grid,
+        captions.apply,
+    }
     local ready, inWorld, needsRestore = false, true, false
     local needsDefaultPosition = false
     local activeDrag
@@ -1109,7 +1139,7 @@ DFRL:NewMod("Layout", 0, function()
             T.SetFont(caption, 11, "")
             caption:ClearAllPoints()
             caption:SetPoint("BOTTOMLEFT", slider, "TOPLEFT", 0, 4)
-            caption:SetText("Width (frame units)")
+            caption:SetText(captions.width.label)
         end
         slider.valueLabel = slider:CreateFontString(nil, "OVERLAY")
         T.SetFont(slider.valueLabel, 11, "")
@@ -1183,10 +1213,7 @@ DFRL:NewMod("Layout", 0, function()
             coordinates.unavailable = false
             T.SetTextIfChanged(coordinates.status, "")
         end
-        T.SetTextIfChanged(
-            coordinates.sizeLabel,
-            dimensions and "Width / Height (frame units)" or "Scale (%) - 40 to 300"
-        )
+        T.SetTextIfChanged(coordinates.sizeLabel, dimensions and captions.dimensions.label or captions.scale.label)
         SetCoordinateText("width", string.format("%.2f", width))
         SetCoordinateText("height", string.format("%.2f", height))
         if dimensions then
@@ -1410,7 +1437,7 @@ DFRL:NewMod("Layout", 0, function()
         coordinates.label = Text("", -8, 12)
         coordinates.label:SetWidth(width - 80)
         coordinates.label:SetHeight(16)
-        Text("Center relative to screen center (UI units)", -36, 10)
+        Text(captions.position.label, -36, 10)
         coordinates.sizeLabel = Text("", -106)
         local gap, inputWidth = 12, (width - 12) / 2
         for _, field in ipairs({ "x", "y", "width", "height" }) do
@@ -1418,7 +1445,7 @@ DFRL:NewMod("Layout", 0, function()
             local left = field == "x" or field == "width"
             local x = left and 0 or inputWidth + gap
             if positionField then
-                local label = Text(left and "X: right +" or "Y: up +", -56)
+                local label = Text(left and captions.x.label or captions.y.label, -56)
                 label:ClearAllPoints()
                 label:SetPoint("TOPLEFT", coordinates, "TOPLEFT", x + 6, -56)
             end
@@ -1477,8 +1504,8 @@ DFRL:NewMod("Layout", 0, function()
         end
         local visibility = T.CreateEditorToggle(
             coordinates,
-            "Hide frame",
-            "Keep this group hidden during gameplay.",
+            captions.visibility.label,
+            captions.visibility.description,
             inputWidth,
             function(hidden)
                 if not editing or not selected then return end
@@ -1500,8 +1527,8 @@ DFRL:NewMod("Layout", 0, function()
         coordinates.visibility = visibility
         coordinates.grid = T.CreateEditorToggle(
             coordinates,
-            "Show grid",
-            "Show the alignment grid while editing.",
+            captions.grid.label,
+            captions.grid.description,
             inputWidth,
             function(shown) DFRL.display.Set("layoutShowGrid", shown) end
         )
@@ -1510,7 +1537,7 @@ DFRL:NewMod("Layout", 0, function()
             RefreshEditorSoon()
             if coordinates and not coordinates.dirty and not coordinates.focused then RefreshCoordinates(false) end
         end)
-        local apply = T.CreateEditorButton(coordinates, "Apply position / size", width, 28)
+        local apply = T.CreateEditorButton(coordinates, captions.apply.label, width, 28)
         coordinates.apply = apply
         apply:SetPoint("TOPLEFT", coordinates, "TOPLEFT", 0, -252)
         apply:SetScript("OnClick", ApplyCoordinates)
@@ -1798,7 +1825,7 @@ DFRL:NewMod("Layout", 0, function()
             button.label:SetPoint("LEFT", button, "LEFT", 32, 0)
             return button
         end
-        editManager.grid = Toggle("Show grid", "layoutShowGrid", -44)
+        editManager.grid = Toggle(captions.grid.label, "layoutShowGrid", -44)
         editManager.snap = Toggle("Snap to elements", "layoutSnapEnabled", -88)
         local slider = CreateFrame("Slider", "SurvivorsDragonUiEditGridSpacing", editManager, "OptionsSliderTemplate")
         slider:SetWidth(180)
