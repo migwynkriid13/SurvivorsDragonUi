@@ -48,7 +48,10 @@ def main():
         border_mini = "local portraitsHidden\n" + extract_source("modules/unit/mini.lua", ["UpdatePortraitVisibility"])
         debuff_tooltip = extract_source("modules/ui/run.lua", ["IsNumber", "Clock", "Permanent", "DebuffRemaining", "DebuffTooltip"])
         navigation_distance = extract_source("modules/map/waypoints.lua", ["UpdateDistance"])
-        waypoint_frame = extract_source("modules/map/waypoints.lua", ["Number", "Rotate", "WrapAngle", "Blend", "UpdateGuide"])
+        waypoint_frame = extract_source("modules/map/waypoints.lua", [
+            "NEAREST_INTERVAL", "nearestClock", "guideRespawns", "Number", "FrameVisible",
+            "RespawnTarget", "CanSelectNearest", "Choose", "Rotate", "WrapAngle", "Blend", "UpdateGuide",
+        ])
         xp_glow = extract_source("modules/xprep/xprep.lua", ["PaintGlow"])
         sct_queue = extract_source("modules/nameplates/sct.lua", [
             "DIABLO", "criticalHistory", "textStyle",

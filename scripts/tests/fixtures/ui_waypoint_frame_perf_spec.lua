@@ -4,8 +4,8 @@ assert(_VERSION == "Lua 5.1")
 local context = H.New()
 local env = context.env
 local east, north, distance, stamp, facing = 3, 4, 5, 10, 0
-local phase, enabled = "playing", true
-local atanReads, wraps = 0, 0
+local phase, enabled, layoutHidden = "playing", true, false
+local atanReads, wraps, selectionReads = 0, 0, 0
 env.math = {}
 for key, value in pairs(math) do
     env.math[key] = value
@@ -19,21 +19,32 @@ env.math.floor = function(value)
     return math.floor(value)
 end
 env.navigation = {
+    Delta = function()
+        selectionReads = selectionReads + 1
+        return east, north, distance
+    end,
     GuideDelta = function() return east, north, distance, true, stamp end,
     Heading = function() return facing, stamp end,
     Phase = function() return phase end,
 }
-env.DFRL.display.Get = function() return enabled end
+env.DFRL.display.Get = function(key) return key ~= "guardianRespawnGuidance" and enabled end
+env.DFRL.layout.IsHidden = function(key)
+    assert(key == "cacheWaypoint", "selection queried an unexpected Layout group")
+    return layoutHidden
+end
 env.UpdateDistance = function(tracker, value) tracker.distance = value end
 local chunk = assert(loadfile(assert(arg[1])))
 setfenv(chunk, env)
 local update = chunk()
 local tracker = {
+    kind = "cache",
     displayKey = "cacheGuidance",
+    layoutKey = "cacheWaypoint",
     hud = env.CreateFrame("Frame", nil, env.UIParent),
     pointer = env.UIParent:CreateTexture(nil, "OVERLAY"),
     selected = { key = "cache", x = 1, y = 2 },
 }
+tracker.entries, tracker.selectedKey = { tracker.selected }, tracker.selected.key
 update(tracker, 0.01)
 assert(atanReads == 1 and tracker.distance == 5 and tracker.pointer:IsShown())
 atanReads, wraps = 0, 0
@@ -60,6 +71,7 @@ phase, distance, stamp = "playing", 7, 9
 update(tracker, 0.05)
 assert(tracker.distance == 7, "regressed native time reused prior interpolation")
 tracker.hud:Hide()
+layoutHidden = true
 context:ResetCounts()
 update(tracker, 0.01)
 assert(tracker.presentation == nil, "hidden guide retained interpolation state")
@@ -67,12 +79,18 @@ assert(not tracker.pointer:IsShown(), "hidden guide retained its arrow's shown s
 context:ResetCounts()
 update(tracker, 0.01)
 context:NoPresentationWrites()
+assert(selectionReads == 0 and tracker.selectionDeferred, "hidden guide selected or forgot deferred recovery")
 enabled = false
 update(tracker, 0.01)
 assert(not tracker.hud:IsShown() and not tracker.pointer:IsShown(), "disabled guide retained visible content")
 enabled = true
+layoutHidden = false
 update(tracker, 0.01)
 assert(tracker.hud:IsShown() and tracker.pointer:IsShown(), "restored guide did not show its current arrow")
+assert(
+    selectionReads == 1 and not tracker.selectionDeferred and tracker.selected == tracker.entries[1],
+    "restored guide did not run production deferred selection exactly once"
+)
 tracker.selected = nil
 update(tracker, 0.01)
 assert(

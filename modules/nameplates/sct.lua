@@ -2579,9 +2579,6 @@ DFRL:NewMod("NameplateCombatText", 6, function()
 
     -- Missing/invalid mode preferences adopt Custom once. Later startup/world
     -- observations still honor native choices without reapplying suppression.
-    if initializeMode then
-        initializeMode = nil
-        WriteNativeDamage("0")
-    end
+    if initializeMode then WriteNativeDamage("0") end
     SyncGameSettings(true)
 end)
