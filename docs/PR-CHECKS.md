@@ -94,6 +94,15 @@ guardian width invalidation, hidden recovery and unchanged writes. The productio
 boss row pass also forwards its own choice without changing health-loss state.
 These cases remain CI-only and were not executed locally.
 
+Player-absorb cases exercise the production resource reader, player absorb
+owner and shared health labels. They cover current amount and uncapped
+percentage of received maximum HP, independent text choices, shortening,
+deferred run reads, Performance Mode text without overlay allocation, invalid
+data, hidden work, phase/zone/world retirement, failed text/texture retries and
+unchanged formatting/writes/allocations. The native boundaries are explicit;
+no buff values, capacity history or client files are read. Coverage is CI-only
+and was not executed locally.
+
 The default-off boss/guardian percentage cases cover independent transactions,
 current-only/maximum-only/combined/percentage-only captions, calculation from
 full values in both number formats, zero/100% boundaries, invalid health,

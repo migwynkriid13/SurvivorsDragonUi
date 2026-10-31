@@ -178,6 +178,8 @@ DFRL:NewMod("Class resources", 2, function()
         local visible = PlayerFrame:IsVisible()
         local classEnabled = DFRL.display.Get("classResources")
         local absorbEnabled = not DFRL.display.Get("performanceMode")
+            or DFRL.display.Get("showHealthValue")
+            or DFRL.display.Get("showHealthPercentage")
         if inWorld then state = ReadRun(visible and (classEnabled or absorbEnabled)) end
         if not visible then return end
         local exists = inWorld and UnitExists("player")

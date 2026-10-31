@@ -134,16 +134,33 @@ segment. There is no separate setting, and **Class resources** can stay off.
 The segment starts after current health when there is room. When health plus
 the shield exceeds maximum health, it moves left inside the bar so the shield
 is still visible at full health. Its width represents shield / maximum health,
-capped at one full bar. Existing health labels continue to show health only.
+capped at one full bar.
+
+The existing health labels add the current absorb in pale blue: **Show health**
+shows `1K +7K`, and **Show health percentage** shows `100% +700%` for 1K maximum
+HP and 7K shield. Each control remains independent; **Shorten health numbers**
+also applies to the absorb amount. The shield percentage uses received maximum
+HP and is not capped at 100%, so depletion remains readable while the segment
+still fills the bar. It is not a percentage of original shield capacity: the
+official API publishes current total absorb, not the full capacity of each buff.
+Performance Mode retains these static numbers while hiding the blue segment.
+The existing label anchors and font size remain unchanged; narrow bars with
+long full-number captions may need wider Layout geometry.
 
 The shared player-resource reader uses the official `AZS_RUN.sh`, `hp` and
 `hpm` fields after checking `AZS_GetPhase()` and a published `AZS_RUN_UPDATED`.
 It never derives absorbs from buffs, spell descriptions or combat text. Zero,
-missing or invalid shield/health data clears the segment. Inactive phases,
-new zones and world cleanup retire the previous run publication; the same
+missing or invalid shield/health data clears the segment and absorb numbers.
+Inactive phases, new zones and world cleanup retire the previous run publication; the same
 table/stamp/receipt tuple stays blocked until native data changes. Hidden
-player frames clear the segment and defer presentation until visible again.
+player frames clear the segment and retained absorb values, deferring
+presentation until visible again.
 Run packets request a deferred read through the existing resource controller.
+
+The shared labels receive only validated shield/maximum-HP scalars from that
+reader, without consulting buffs or rereading native run tables. Successful
+formatting is cached separately from health changes; failed text writes retry
+through the existing reader. No text region or display setting is added.
 
 The segment inherits the actual health rectangle, including width handles,
 portrait modes and the optional resource row's height. It lazily reuses the

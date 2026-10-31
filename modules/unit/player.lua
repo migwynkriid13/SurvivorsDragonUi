@@ -71,9 +71,13 @@ DFRL:NewMod("Player", 1, function()
     local performanceMode = DFRL.display.Get("performanceMode")
     local absorbOverlay, absorbTexture, absorbBound
     local absorbStart, absorbFraction, absorbLeft
-    local function ClearAbsorb()
+    local function HideAbsorb()
         absorbStart, absorbFraction = nil, nil
         if absorbOverlay and absorbOverlay:IsShown() then absorbOverlay:Hide() end
+    end
+    local function ClearAbsorb()
+        HideAbsorb()
+        if healthLabels then healthLabels.SetAbsorb() end
     end
     local function PlaceAbsorb()
         if performanceMode or not absorbFraction or not PlayerFrameHealthBar:IsVisible() then return end
@@ -110,8 +114,7 @@ DFRL:NewMod("Player", 1, function()
     end
     DFRL.playerResources.SetAbsorb = function(value, health, maximum)
         if
-            performanceMode
-            or type(value) ~= "number"
+            type(value) ~= "number"
             or value <= 0
             or value - value ~= 0
             or type(health) ~= "number"
@@ -124,7 +127,15 @@ DFRL:NewMod("Player", 1, function()
             ClearAbsorb()
             return
         end
-        if not initialized or not PlayerFrame:IsVisible() then return end
+        if not initialized or not PlayerFrame:IsVisible() then
+            ClearAbsorb()
+            return
+        end
+        if healthLabels then healthLabels.SetAbsorb(value, maximum) end
+        if performanceMode then
+            HideAbsorb()
+            return
+        end
         absorbFraction = math.min(value / maximum, 1)
         -- Follow current health when space permits; slide back inside the bar
         -- for overflow so a shield remains visible even at full health.
@@ -135,7 +146,7 @@ DFRL:NewMod("Player", 1, function()
         local enabled = DFRL.display.Get("performanceMode")
         if enabled == performanceMode then return end
         performanceMode = enabled
-        ClearAbsorb()
+        HideAbsorb()
     end)
     DFRL.playerResources.SetPrimary = function(value, maximum, powerType)
         if not primaryBar then return end

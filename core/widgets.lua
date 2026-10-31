@@ -276,6 +276,8 @@ function DFRL.tools.BindUnitHealthText(bar, label, unit, hideDead)
     local leftInset, rightInset, centerOffset = 0, 0, 0
     local splitLayout
     local previousCurrent, previousMaximum, previousValueShown, previousPercentShown, previousShortHealth
+    local absorbValue, absorbMaximum, previousAbsorb, previousAbsorbMaximum, absorbPending
+    local absorbText, absorbPercentText = "", ""
     local valueText, percentText = "", ""
 
     function labels.Update()
@@ -294,14 +296,45 @@ function DFRL.tools.BindUnitHealthText(bar, label, unit, hideDead)
             or valueShown ~= previousValueShown
             or percentShown ~= previousPercentShown
             or shorten ~= previousShortHealth
+            or absorbValue ~= previousAbsorb
+            or absorbMaximum ~= previousAbsorbMaximum
         then
+            if
+                absorbValue ~= previousAbsorb
+                or absorbMaximum ~= previousAbsorbMaximum
+                or valueShown ~= previousValueShown
+                or percentShown ~= previousPercentShown
+                or shorten ~= previousShortHealth
+            then
+                absorbText, absorbPercentText = "", ""
+                if absorbValue then
+                    if valueShown then absorbText = "|cffA6D9FF+" .. T.CompactHealth(absorbValue, shorten) .. "|r" end
+                    if percentShown then
+                        -- Shield capacity is not published. Express current absorb
+                        -- against the accepted maximum HP, without the bar's cap.
+                        local percent = absorbValue / absorbMaximum * 100
+                        if percent - percent == 0 then
+                            absorbPercentText = "|cffA6D9FF+"
+                                .. string.format("%.0f", math.floor(percent + 0.5))
+                                .. "%|r"
+                        end
+                    end
+                end
+            end
             previousCurrent, previousMaximum = current, maximum
             previousValueShown, previousPercentShown = valueShown, percentShown
             previousShortHealth = shorten
+            previousAbsorb, previousAbsorbMaximum = absorbValue, absorbMaximum
             valueText = current and valueShown and T.CompactHealth(current, shorten) or ""
             percentText = ""
             if current and percentShown and type(maximum) == "number" and maximum > 0 and maximum - maximum == 0 then
                 percentText = tostring(math.floor(math.min(1, current / maximum) * 100 + 0.5)) .. "%"
+            end
+            if current and current > 0 and absorbValue then
+                if absorbText ~= "" then valueText = valueText .. " " .. absorbText end
+                if absorbPercentText ~= "" then
+                    percentText = percentText .. (percentText ~= "" and " " or "") .. absorbPercentText
+                end
             end
         end
         local split = valueText ~= "" and percentText ~= ""
@@ -323,6 +356,24 @@ function DFRL.tools.BindUnitHealthText(bar, label, unit, hideDead)
         end
         T.SetTextIfChanged(label, valueText)
         T.SetTextIfChanged(percentage, percentText)
+        absorbPending = nil
+    end
+
+    function labels.SetAbsorb(value, maximum)
+        if
+            unit ~= "player"
+            or type(value) ~= "number"
+            or value <= 0
+            or value - value ~= 0
+            or type(maximum) ~= "number"
+            or maximum <= 0
+            or maximum - maximum ~= 0
+        then
+            value, maximum = nil, nil
+        end
+        if value == absorbValue and maximum == absorbMaximum and not absorbPending then return end
+        absorbValue, absorbMaximum, absorbPending = value, maximum, true
+        labels.Update()
     end
 
     function labels.SetInsets(left, right, center)

@@ -634,8 +634,8 @@ this caption above the category buttons.
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Chat                        | Keep native expiry at its original deadline with zero fade duration, so messages disappear instantly; scrolling back still holds lines. Snap reveal opacity and message-slide geometry, and clear active reveal/slide state. Native messages, history, links and input remain current.                                                                                                     |
 | SCT                         | Sum same-attack outgoing damage within a fixed 300 ms window; normal mode keeps 75 ms exact-amount duplicate suppression. Preserve original per-hit matching, critical/source separation, motion, fade, full lifetime and the selected enemy/MSBT style.                                                                                                                                   |
-| Unit frames                 | Hide player absorbs and player/target/target-of-target damage trails, reset trail baselines, and use the existing 2D still portraits. Party has no custom loss overlay. Hide combat/rest rim glows; keep a static resting symbol and a static low-health warning at the current health-derived strength.                                                                                   |
-| Resources                   | Skip absorb snapshot/field work when Class resources is also off; keep native phase/receipt retirement and selected resource values.                                                                                                                                                                                                                                                       |
+| Unit frames                 | Hide the player absorb segment while retaining its selected static amount/percentage labels. Hide player/target/target-of-target damage trails, reset trail baselines, and use the existing 2D still portraits. Party has no custom loss overlay. Hide combat/rest rim glows; keep a static resting symbol and a static low-health warning at the current health-derived strength.         |
+| Resources                   | Skip absorb snapshot/field work when both health-text choices and Class resources are off; keep native phase/receipt retirement and selected resource values.                                                                                                                                                                                                                              |
 | Run timer                   | Keep native two-second progress and current labels, static tier fill and informative skull/check markers. Skip flow, foam, sparkle, red-glint and skull-halo animation. The decorative pool grows lazily from 44 to at most 72 textures only if normal mode needs it, then retained for reuse. Required native phase, ownership, schedule and encounter work keeps its existing lifecycle. |
 | Boss bars                   | Keep native fill and health text instant. Hide the Crimson echo loss strip, clear its baseline and active state, and skip effect time/geometry work. Rows first used in this mode do not prepare a loss texture.                                                                                                                                                                           |
 | Cache tally                 | Refresh kills and gold numbers once every five UI seconds. Keep cache cost at its normal cadence. Clear the affordable-cache gold halo, rays and sparkles and detach its animation worker.                                                                                                                                                                                                 |
@@ -1818,6 +1818,22 @@ absorbs and the optional secondary resource; shield display stays independent
 of **Class resources**. Phase/zone/world retirement blocks the retired
 table/stamp/receipt tuple. Hidden frames retain only phase retirement, clear
 their absorb fractions on Hide and perform no shield reads or presentation.
+
+The 2026-10-31 numeric display reuses the two health FontStrings with no added
+frame, region, asset, setting, event or updater. Amount and uncapped percentage
+use the accepted `AZS_RUN.sh` / `hpm` values; no buff scans, peak history or
+shield-capacity estimates are introduced. Shield fragments are cached by
+amount, maximum HP and text choices, independently of ordinary health changes;
+unchanged polls skip formatting and native writes. Failed text writes remain
+pending for retry. Zero/invalid data and hide/phase/zone/world retirement clear
+the retained scalars through the existing owner.
+
+Performance Mode keeps the selected static amount/percentage while hiding the
+overlay and clearing its geometry baseline. A fresh Performance Mode session
+does not allocate the overlay. If both text choices and Class resources are
+off, the shared reader skips run-field access after phase/receipt retirement.
+Switching modes adds no animation or controller. CI-only production-source
+mocks cover the numeric and overlay lifecycles; they were not run locally.
 
 The first valid positive shield lazily allocates one mouse-transparent frame
 and one texture region, reusing `LargeHealthFill` with full UVs. Successful
