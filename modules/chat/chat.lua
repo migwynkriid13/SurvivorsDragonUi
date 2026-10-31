@@ -48,8 +48,7 @@ DFRL:NewMod("Chat", 1, function()
             local label = parent:CreateFontString(nil, "OVERLAY")
             DFRL.locale.Bind(label)
             T.SetFont(label, size or 12, "OUTLINE")
-            label:SetShadowColor(0, 0, 0, 1)
-            label:SetShadowOffset(1, -1)
+            T.SetChatShadow(label)
             label:SetText(text or "")
             return label
         end

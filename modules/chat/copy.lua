@@ -211,10 +211,12 @@ DFRL:NewMod("ChatCopy", 0.75, function()
         frame.resizeText = ResizeText
         HookScript(frame, "OnShow", function() ResizeText(edit:GetText()) end)
         local uiFont = DFRL.display.Get("uiFont")
+        local uiFontOutline = DFRL.display.Get("uiFontOutline")
         DFRL.display.Listen(function()
             local selected = DFRL.display.Get("uiFont")
-            if selected == uiFont then return end
-            uiFont = selected
+            local outline = DFRL.display.Get("uiFontOutline")
+            if selected == uiFont and outline == uiFontOutline then return end
+            uiFont, uiFontOutline = selected, outline
             if frame:IsVisible() then ResizeText(edit:GetText()) end
         end)
         frame.setText = function(text)

@@ -22,7 +22,50 @@ if not defaultFace then error("SurvivorsDragonUi: the client has no usable defau
 local managed = setmetatable({}, { __mode = "k" })
 local pendingOwners = setmetatable({}, { __mode = "k" })
 local usableFaces = {}
-local selectedFace, selectedChoice
+local selectedFace, selectedChoice, selectedOutline, selectedShadow
+local flagCache = {}
+local function FontFlags(flags)
+    flags = flags or ""
+    local cached = flagCache[flags]
+    if cached then return cached end
+    local value = selectedOutline or "OUTLINE"
+    for flag in string.gfind(flags, "[^,%s]+") do
+        if flag ~= "OUTLINE" and flag ~= "THICKOUTLINE" then value = value .. (value ~= "" and "," or "") .. flag end
+    end
+    flagCache[flags] = value
+    return value
+end
+local function ApplyShadow(object, style)
+    local enabled = not style or selectedShadow ~= false
+    local alpha, x, y = enabled and 1 or 0, enabled and 1 or 0, enabled and -1 or 0
+    if object.SetShadowColor then
+        local r, g, b, a
+        if object.GetShadowColor then
+            r, g, b, a = object:GetShadowColor()
+        end
+        local unchanged = object.GetShadowColor and r == 0 and g == 0 and b == 0 and a == alpha
+        if not unchanged and not (not object.GetShadowColor and style and style.shadowColor == enabled) then
+            local ok, applied = pcall(object.SetShadowColor, object, 0, 0, 0, alpha)
+            if not ok or applied == false then return false end
+            if style then style.shadowColor = enabled end
+        end
+    end
+    if object.SetShadowOffset then
+        local currentX, currentY
+        if object.GetShadowOffset then
+            currentX, currentY = object:GetShadowOffset()
+        end
+        local unchanged = object.GetShadowOffset
+            and DFRL.tools.NearlyEqual(currentX, x)
+            and DFRL.tools.NearlyEqual(currentY, y)
+        if not unchanged and not (not object.GetShadowOffset and style and style.shadowOffset == enabled) then
+            local ok, applied = pcall(object.SetShadowOffset, object, x, y)
+            if not ok or applied == false then return false end
+            if style then style.shadowOffset = enabled end
+        end
+    end
+    return true
+end
 local function UsableFace(face)
     if not face then return defaultFace end
     if usableFaces[face] then return usableFaces[face] end
@@ -48,10 +91,14 @@ local function Bind(object, face, size, flags)
 end
 local function Apply(object, style)
     local face = selectedFace or UsableFace(style.base)
-    local loaded = Bind(object, face, style.size, style.flags)
+    local flags = FontFlags(style.flags)
+    local loaded = Bind(object, face, style.size, flags)
     -- A rejected native assignment can clear the old binding. Restore readable
     -- text and leave the request retryable through its existing owner.
-    if not loaded then Bind(object, defaultFace, style.size, style.flags) end
+    if not loaded and not Bind(object, defaultFace, style.size, flags) then
+        Bind(object, defaultFace, style.size, style.flags)
+    end
+    loaded = ApplyShadow(object, style) and loaded
     style.dirty = not loaded
     return loaded
 end
@@ -82,8 +129,12 @@ local function Defer(object)
 end
 local function RefreshFonts()
     local choice = DFRL.display.Get("uiFont")
-    if selectedChoice == choice then return end
+    local outline = DFRL.display.Get("uiFontOutline")
+    local shadow = DFRL.display.Get("uiFontShadow")
+    if selectedChoice == choice and selectedOutline == outline and selectedShadow == shadow then return end
+    if selectedOutline ~= outline then flagCache = {} end
     selectedChoice, selectedFace = choice, nil
+    selectedOutline, selectedShadow = outline, shadow
     for _, entry in ipairs(DFRL.display.fonts) do
         if entry.value == choice and entry.face then selectedFace = UsableFace(entry.face) end
     end
@@ -100,6 +151,7 @@ local function RefreshFonts()
 end
 
 function DFRL.tools.GetDefaultFont() return defaultFace end
+function DFRL.tools.GetFontFlags(flags) return FontFlags(flags) end
 function DFRL.tools.SetFont(object, size, flags, base)
     -- A not-yet-resolved native region can report zero, which frees its font.
     if type(size) ~= "number" or size <= 0 or size - size ~= 0 then size = 12 end
@@ -117,23 +169,13 @@ end
 function DFRL.tools.SetChatFont(frame) DFRL.tools.SetFont(frame, 12, "OUTLINE") end
 
 function DFRL.tools.SetChatShadow(frame)
-    if frame.SetShadowColor then
-        local r, g, b, a
-        if frame.GetShadowColor then
-            r, g, b, a = frame:GetShadowColor()
-        end
-        if r ~= 0 or g ~= 0 or b ~= 0 or a ~= 1 then frame:SetShadowColor(0, 0, 0, 1) end
-    end
-    if frame.SetShadowOffset then
-        local x, y
-        if frame.GetShadowOffset then
-            x, y = frame:GetShadowOffset()
-        end
-        if not DFRL.tools.NearlyEqual(x, 1) or not DFRL.tools.NearlyEqual(y, -1) then frame:SetShadowOffset(1, -1) end
-    end
+    local style = managed[frame]
+    local loaded = ApplyShadow(frame, style)
+    if style and not loaded then style.dirty = true end
+    return loaded
 end
 
--- Keep stock font sizes and styling while using the resolved game font face.
+-- Keep stock font sizes while using the shared face, outline and shadow.
 DFRL:NewMod("Fonts", 0, function()
     RefreshFonts()
     DFRL.display.Listen(RefreshFonts)

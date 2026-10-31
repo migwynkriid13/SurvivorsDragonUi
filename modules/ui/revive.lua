@@ -95,8 +95,7 @@ DFRL:NewMod("Revive", 4, function()
             label:SetJustifyH("CENTER")
             label:SetJustifyV("MIDDLE")
             label:SetTextColor(1, 1, 1)
-            label:SetShadowColor(0, 0, 0, 1)
-            label:SetShadowOffset(1, -1)
+            T.SetChatShadow(label)
             return label
         end
         local caption = Label(14)

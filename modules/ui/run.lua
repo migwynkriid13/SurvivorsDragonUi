@@ -1272,8 +1272,14 @@ DFRL:NewMod("RunTimers", 5, function()
                     button:SetSelected(value == selected)
                 end
             end
-            if fontEditor.uiFont ~= selected then
-                fontEditor.uiFont = selected
+            local outline = DFRL.display.Get("uiFontOutline")
+            for value, button in pairs(fontEditor.uiFontOutlineButtons or {}) do
+                if button:IsVisible() and button.editorSelected ~= (value == outline) then
+                    button:SetSelected(value == outline)
+                end
+            end
+            if fontEditor.uiFont ~= selected or fontEditor.uiFontOutline ~= outline then
+                fontEditor.uiFont, fontEditor.uiFontOutline = selected, outline
                 if fontEditor.RefreshOptionLayout then fontEditor.RefreshOptionLayout() end
             end
         end
@@ -2132,6 +2138,8 @@ DFRL:NewMod("RunTimers", 5, function()
                     description = "Change addon text except the run timer and combat text, which have their own fonts.",
                     offset = 338,
                 },
+                { key = "uiFontOutline", label = "Outline", offset = 488 },
+                { key = "uiFontShadow", label = "Black shadow", offset = 552 },
             },
             combat = {
                 { key = "outgoing", label = "Outgoing damage", offset = 0 },
@@ -2191,6 +2199,7 @@ DFRL:NewMod("RunTimers", 5, function()
             end
         end
         SearchChoices("layout", DFRL.display.fonts, captions.uiFont)
+        SearchChoices("layout", fontOutlines, captions.uiFontOutline)
         SearchChoices("combat", modes, captions.outgoing)
         SearchChoices("combat", sctStyles, captions.sctStyle)
         SearchChoices("combat", sctFonts, captions.sctFont)
@@ -2242,6 +2251,7 @@ DFRL:NewMod("RunTimers", 5, function()
         fontEditor = T.CreateEditorPanel(UIParent, width, 704, "SurvivorsDragonUiSettings")
         fontEditor:Hide()
         fontEditor.uiFont = DFRL.display.Get("uiFont")
+        fontEditor.uiFontOutline = DFRL.display.Get("uiFontOutline")
         fontEditor:SetFrameStrata("TOOLTIP")
         fontEditor:SetFrameLevel(150)
         PlaceFontEditor()
@@ -2328,7 +2338,7 @@ DFRL:NewMod("RunTimers", 5, function()
         performance.label:SetHeight(28)
         displayControls.performanceMode = performance
         builders.layout = function(page)
-            page:SetHeight(500)
+            page:SetHeight(588)
             DFRL.layout.CreateControls(page, contentWidth, function() SelectPage("layout") end)
             FontEditorLabel(page, captions.uiFont.label, 0, -captions.uiFont.offset, 12)
             local hint = FontEditorLabel(page, captions.uiFont.description, 0, -365, 11)
@@ -2350,6 +2360,30 @@ DFRL:NewMod("RunTimers", 5, function()
                 )
                 fontEditor.uiFontButtons[choice] = button
             end
+            FontEditorLabel(page, captions.uiFontOutline.label, 0, -captions.uiFontOutline.offset, 12)
+            fontEditor.uiFontOutlineButtons = {}
+            for index, entry in ipairs(fontOutlines) do
+                local choice = entry.value
+                local _, button = FontEditorButton(
+                    entry.label,
+                    buttonWidth,
+                    (index - 1) * (buttonWidth + gap),
+                    -514,
+                    function() DFRL.display.Set("uiFontOutline", choice) end,
+                    page
+                )
+                fontEditor.uiFontOutlineButtons[choice] = button
+            end
+            local shadow = T.CreateEditorToggle(
+                page,
+                captions.uiFontShadow.label,
+                nil,
+                contentWidth,
+                function(value) DFRL.display.Set("uiFontShadow", value) end
+            )
+            shadow:SetHeight(28)
+            shadow:SetPoint("TOPLEFT", page, "TOPLEFT", 0, -captions.uiFontShadow.offset)
+            displayControls.uiFontShadow = shadow
         end
         builders.profiles = function(page) DFRL.profiles.CreateControls(page, contentWidth) end
 

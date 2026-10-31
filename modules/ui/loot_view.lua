@@ -37,8 +37,7 @@ DFRL:NewMod("LootView", 4, function()
         if not label:GetFont() then ready = false end
         label:SetJustifyH("LEFT")
         label:SetJustifyV("MIDDLE")
-        label:SetShadowColor(0, 0, 0, 1)
-        label:SetShadowOffset(1, -1)
+        T.SetChatShadow(label)
         return label
     end
     local function Reflow()

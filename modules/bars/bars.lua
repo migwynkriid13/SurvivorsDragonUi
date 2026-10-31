@@ -498,8 +498,7 @@ DFRL:NewMod("Bars", 1, function()
             overlay.text = overlay:CreateFontString(nil, "OVERLAY")
             overlay.text:SetPoint("CENTER", overlay, "CENTER", 0, 0)
             T.SetFont(overlay.text, math.min(14, button:GetHeight() * 0.64), "OUTLINE")
-            overlay.text:SetShadowColor(0, 0, 0, 1)
-            overlay.text:SetShadowOffset(1, -1)
+            T.SetChatShadow(overlay.text)
             overlay:Hide()
             button.DFRL_cooldownNumber = overlay
         end

@@ -80,8 +80,7 @@ local function Label(parent, size, text)
     DFRL.locale.Bind(label)
     T.SetFont(label, size, "")
     label:SetTextColor(0.88, 0.87, 0.83)
-    label:SetShadowColor(0, 0, 0, 1)
-    label:SetShadowOffset(1, -1)
+    T.SetChatShadow(label)
     label:SetText(text or "")
     return label
 end

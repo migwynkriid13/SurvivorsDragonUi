@@ -655,6 +655,14 @@ local function ProfileCommitLifecycle()
                 context.fontDraft, context.sctDraft = nil, nil
             end
         end,
+        -- The production runTimer registration owns the full-reset handoff
+        -- to Display. Keep that boundary explicit with the fake font owner.
+        onReset = function()
+            context.profileFontResets = (context.profileFontResets or 0) + 1
+            env.SurvivorsDragonUiRunFont = nil
+            display.Reset()
+            context.fontDraft = nil
+        end,
     })
     context:Load("core/profiles.lua", "Profiles")
     local profiles = env.DFRL.profiles
@@ -666,6 +674,8 @@ local function ProfileCommitLifecycle()
     form.x:SetText("120,5")
     form.y:SetText("-33")
     display.Set("uiFont", "arial")
+    display.Set("uiFontOutline", "")
+    display.Set("uiFontShadow", false)
     display.Set("xpShowText", true)
     display.Set("performanceMode", true)
     context.fontDraft.size, context.sctDraft = 17, "on"
@@ -675,21 +685,37 @@ local function ProfileCommitLifecycle()
     local saved = env.SurvivorsDragonUiProfiles[name]
     assert(saved.layout.chat.width == 555 and env.SurvivorsDragonUiLayout.chat.width == 555)
     assert(saved.display.uiFont == "arial" and env.SurvivorsDragonUiDisplay.uiFont == "arial")
+    assert(saved.display.uiFontOutline == "" and not saved.display.uiFontShadow, "profile lost None or shadow-off")
+    assert(
+        env.SurvivorsDragonUiDisplay.uiFontOutline == "" and not env.SurvivorsDragonUiDisplay.uiFontShadow,
+        "profile save skipped confirmed global font styling"
+    )
     assert(saved.display.xpShowText and saved.display.performanceMode)
     assert(saved.runFont.size == 17 and env.SurvivorsDragonUiRunFont.size == 17)
     assert(saved.sctMode == "on" and env.SurvivorsDragonUiSctMode == "on")
     assert(saved.layout ~= env.SurvivorsDragonUiLayout and saved.display ~= env.SurvivorsDragonUiDisplay)
     assert(saved.runFont ~= env.SurvivorsDragonUiRunFont, "profile aliases active font settings")
     assert(not layout.ConfirmEdit() and context.profileCommits == 1, "closed editor committed twice")
+    layout.BeginEdit()
+    display.Set("uiFontOutline", "THICKOUTLINE")
+    display.Set("uiFontShadow", true)
     env.ReloadUI()
     assert(
         context.reloads == 1 and env.SurvivorsDragonUiProfiles[name] == saved,
         "reload discard removed a saved profile"
     )
+    assert(display.Get("uiFontOutline") == "" and not display.Get("uiFontShadow"), "reload retained draft font styling")
+    layout.BeginEdit()
+    display.Set("uiFontOutline", "THICKOUTLINE")
+    display.Set("uiFontShadow", true)
     context:Event(controller, "PLAYER_LEAVING_WORLD")
     context:Event(controller, "PLAYER_ENTERING_WORLD")
     Tick()
     assert(env.SurvivorsDragonUiProfiles[name] == saved and env.SurvivorsDragonUiLayout.chat.width == 555)
+    assert(
+        display.Get("uiFontOutline") == "" and not display.Get("uiFontShadow"),
+        "world cleanup retained draft font styling"
+    )
 
     layout.BeginEdit()
     context:Call(chatSelection, "OnMouseDown", "LeftButton")
@@ -704,20 +730,38 @@ local function ProfileCommitLifecycle()
     form.x:SetText("75")
     widthSlider:SetValue(730)
     display.Set("uiFont", "morpheus")
+    display.Set("uiFontOutline", "THICKOUTLINE")
+    display.Set("uiFontShadow", true)
     display.Set("performanceMode", false)
     context.fontDraft.size = 19
     assert(profiles.Save(name, true), "valid overwrite failed after correcting coordinates")
     saved = env.SurvivorsDragonUiProfiles[name]
     assert(not layout.IsEditing() and context.profileCommits == 2 and saved.layout.chat.width == 730)
     assert(saved.display.uiFont == "morpheus" and not saved.display.performanceMode and saved.runFont.size == 19)
+    assert(
+        saved.display.uiFontOutline == "THICKOUTLINE" and saved.display.uiFontShadow,
+        "overwrite lost global font styling"
+    )
     layout.BeginEdit()
     display.Set("uiFont", "skurri")
+    display.Set("uiFontOutline", "")
+    display.Set("uiFontShadow", false)
     assert(not profiles.Save(name, false) and not profiles.Save("", false), "invalid names saved")
     assert(layout.IsEditing() and env.SurvivorsDragonUiProfiles[name] == saved)
     assert(profiles.Load(name) and layout.IsEditing(), "load stopped being a preview")
+    assert(
+        display.Get("uiFontOutline") == "THICKOUTLINE" and display.Get("uiFontShadow"),
+        "profile load did not preview its global font styling"
+    )
+    display.Set("uiFontOutline", "")
+    display.Set("uiFontShadow", false)
     assert(profiles.Delete(name) and env.SurvivorsDragonUiProfiles[name] == saved, "delete committed before Confirm")
     layout.CancelEdit()
     assert(env.SurvivorsDragonUiDisplay.uiFont == "morpheus" and env.SurvivorsDragonUiProfiles[name] == saved)
+    assert(
+        display.Get("uiFontOutline") == "THICKOUTLINE" and display.Get("uiFontShadow"),
+        "Cancel retained draft global font styling"
+    )
 
     -- Model the client's persistence boundary using only copied confirmed
     -- globals in fresh Display/Profiles owners, with no client or disk access.
@@ -736,13 +780,29 @@ local function ProfileCommitLifecycle()
     fresh:Load("core/profiles.lua", "Profiles")
     local restoredDisplay, restoredProfiles = fresh.env.DFRL.display, fresh.env.DFRL.profiles
     assert(fresh.env.SurvivorsDragonUiLayout.chat.width == 730 and restoredDisplay.Get("uiFont") == "morpheus")
+    assert(
+        restoredDisplay.Get("uiFontOutline") == "THICKOUTLINE" and restoredDisplay.Get("uiFontShadow"),
+        "fresh owners lost confirmed global font styling"
+    )
     assert(restoredProfiles.List()[1] == name, "fresh owners lost the confirmed profile")
     restoredDisplay.BeginEdit()
     restoredProfiles.BeginEdit()
     assert(restoredProfiles.Load(name) and restoredDisplay.Get("uiFont") == "morpheus")
+    assert(restoredDisplay.Get("uiFontOutline") == "THICKOUTLINE" and restoredDisplay.Get("uiFontShadow"))
     assert(fresh.restoredLayout.chat.width == 730 and fresh.restoredFont.size == 19 and fresh.restoredSct == "on")
     layout.Reset()
+    assert(context.profileFontResets == 1, "Layout reset skipped the registered font-owner handoff")
+    assert(
+        display.Get("uiFontOutline") == "OUTLINE" and display.Get("uiFontShadow"),
+        "full reset lost font-style defaults"
+    )
+    assert(not env.SurvivorsDragonUiRunFont and not context.fontDraft, "full reset retained timer-font preferences")
+    assert(env.SurvivorsDragonUiSctMode == "on", "full reset changed the confirmed scalar SCT mode")
     assert(env.SurvivorsDragonUiProfiles[name] == saved, "Addon defaults erased a saved profile")
+    assert(
+        saved.display.uiFontOutline == "THICKOUTLINE" and saved.display.uiFontShadow,
+        "reset changed the saved profile"
+    )
 end
 ProfileCommitLifecycle()
 print(
