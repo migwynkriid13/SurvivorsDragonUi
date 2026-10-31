@@ -86,6 +86,7 @@ DFRL:NewMod("Display", 0, function()
         classResources = false,
         classHealth = false,
         healthLossAnimation = true,
+        customActionBar = true,
         lockActionButtons = true,
         cooldownNumbers = true,
         showGryphons = false,

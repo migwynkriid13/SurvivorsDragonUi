@@ -21,6 +21,21 @@ The helper runs only where each owner already checks changed or pending artwork.
 Successful caches, probes, retirement and retries remain with those owners in
 both Performance Mode states. It adds no frame, region, asset or updater.
 
+## Optional game action bar
+
+The default-on `customActionBar` display choice reuses the existing bar,
+attachment owners and display listener. Game-bar mode hides SDUI's bar artwork
+and XP presentation, releases native bar presentation, and keeps jewelry and
+counters detached without replacing their saved attachment choices. SDUI-only
+controls use the existing changed-only dependency refresh.
+
+Both Performance Mode states share the same handoff. Native bar input and
+cooldowns retain their original owners; hidden SDUI decoration and cosmetic
+updates stop. Returning to SDUI reuses prepared regions and existing
+normal/static effects. This choice adds no artwork, gameplay persistence or
+separate idle updater. CI-only mocks cover choice transitions and attachment
+state; source review and formatting do not establish live appearance or FPS.
+
 ## Native meter and live navigation API — draft
 
 The v1 meter adapter adds no frame, drawing region, asset, event, updater or

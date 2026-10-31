@@ -2,6 +2,8 @@
 DFRL.locale.data = {
     en = {
         ui = {
+            ["Use SDUI action bar"] = "Use SDUI action bar",
+            ["Turn off to use the game action bar. Jewelry and counters stay detached."] = "Turn off to use the game action bar. Jewelry and counters stay detached.",
             ["Search settings"] = "Search settings",
             ["No matching settings."] = "No matching settings.",
             ["Show XP text"] = "Show XP text",
@@ -673,6 +675,8 @@ DFRL.locale.data = {
     },
     pl = {
         ui = {
+            ["Use SDUI action bar"] = "Używaj paska akcji SDUI",
+            ["Turn off to use the game action bar. Jewelry and counters stay detached."] = "Wyłącz, aby używać paska akcji gry. Biżuteria i liczniki pozostaną odłączone.",
             ["Search settings"] = "Wyszukaj ustawienia",
             ["No matching settings."] = "Nie znaleziono pasujących ustawień.",
             ["Show XP text"] = "Pokaż tekst PD",
@@ -1815,6 +1819,8 @@ DFRL.locale.data = {
     },
     cs = {
         ui = {
+            ["Use SDUI action bar"] = "Používat akční lištu SDUI",
+            ["Turn off to use the game action bar. Jewelry and counters stay detached."] = "Vypnutím použijete akční lištu hry. Šperky a počítadla zůstanou odpojené.",
             ["Search settings"] = "Hledat nastavení",
             ["No matching settings."] = "Nebyla nalezena odpovídající nastavení.",
             ["Show XP text"] = "Zobrazit text zkušeností",
@@ -2960,6 +2966,8 @@ DFRL.locale.data = {
     },
     de = {
         ui = {
+            ["Use SDUI action bar"] = "SDUI-Aktionsleiste verwenden",
+            ["Turn off to use the game action bar. Jewelry and counters stay detached."] = "Ausschalten, um die Aktionsleiste des Spiels zu verwenden. Schmuck und Zähler bleiben losgelöst.",
             ["Search settings"] = "Einstellungen suchen",
             ["No matching settings."] = "Keine passenden Einstellungen gefunden.",
             ["Show XP text"] = "EP-Text anzeigen",
@@ -4103,6 +4111,8 @@ DFRL.locale.data = {
     },
     pt = {
         ui = {
+            ["Use SDUI action bar"] = "Usar barra de ações do SDUI",
+            ["Turn off to use the game action bar. Jewelry and counters stay detached."] = "Desative para usar a barra de ações do jogo. Joias e contadores ficam separados.",
             ["Search settings"] = "Pesquisar configurações",
             ["No matching settings."] = "Nenhuma configuração correspondente.",
             ["Show XP text"] = "Mostrar texto de XP",
@@ -5237,6 +5247,8 @@ DFRL.locale.data = {
     },
     es = {
         ui = {
+            ["Use SDUI action bar"] = "Usar la barra de acción de SDUI",
+            ["Turn off to use the game action bar. Jewelry and counters stay detached."] = "Desactívalo para usar la barra de acción del juego. Las joyas y los contadores quedan separados.",
             ["Search settings"] = "Buscar ajustes",
             ["No matching settings."] = "No se encontraron ajustes coincidentes.",
             ["Show XP text"] = "Mostrar texto de experiencia",
@@ -6375,6 +6387,8 @@ DFRL.locale.data = {
     },
     fr = {
         ui = {
+            ["Use SDUI action bar"] = "Utiliser la barre d’action SDUI",
+            ["Turn off to use the game action bar. Jewelry and counters stay detached."] = "Désactivez pour utiliser la barre d’action du jeu. Les bijoux et les compteurs restent détachés.",
             ["Search settings"] = "Rechercher dans les réglages",
             ["No matching settings."] = "Aucun réglage correspondant.",
             ["Show XP text"] = "Afficher le texte d’EXP",
@@ -7521,6 +7535,8 @@ DFRL.locale.data = {
     },
     ro = {
         ui = {
+            ["Use SDUI action bar"] = "Folosește bara de acțiuni SDUI",
+            ["Turn off to use the game action bar. Jewelry and counters stay detached."] = "Dezactivează pentru a folosi bara de acțiuni a jocului. Bijuteriile și contoarele rămân detașate.",
             ["Search settings"] = "Caută setări",
             ["No matching settings."] = "Nu s-au găsit setări potrivite.",
             ["Show XP text"] = "Arată textul XP",
@@ -8650,6 +8666,8 @@ DFRL.locale.data = {
     },
     tr = {
         ui = {
+            ["Use SDUI action bar"] = "SDUI eylem çubuğunu kullan",
+            ["Turn off to use the game action bar. Jewelry and counters stay detached."] = "Oyunun eylem çubuğunu kullanmak için kapat. Takılar ve sayaçlar ayrı kalır.",
             ["Search settings"] = "Ayarlarda ara",
             ["No matching settings."] = "Eşleşen ayar bulunamadı.",
             ["Show XP text"] = "XP metnini göster",
@@ -9655,6 +9673,8 @@ DFRL.locale.data = {
     },
     ru = {
         ui = {
+            ["Use SDUI action bar"] = "Использовать панель действий SDUI",
+            ["Turn off to use the game action bar. Jewelry and counters stay detached."] = "Отключите, чтобы использовать панель действий игры. Украшения и счётчики останутся отдельно.",
             ["Search settings"] = "Поиск настроек",
             ["No matching settings."] = "Подходящие настройки не найдены.",
             ["Show XP text"] = "Показывать текст опыта",
@@ -10879,6 +10899,8 @@ DFRL.locale.data = {
     },
     uk = {
         ui = {
+            ["Use SDUI action bar"] = "Використовувати панель дій SDUI",
+            ["Turn off to use the game action bar. Jewelry and counters stay detached."] = "Вимкніть, щоб використовувати панель дій гри. Прикраси й лічильники залишаться окремо.",
             ["Search settings"] = "Пошук налаштувань",
             ["No matching settings."] = "Відповідних налаштувань не знайдено.",
             ["Show XP text"] = "Показувати текст досвіду",
@@ -12077,6 +12099,8 @@ DFRL.locale.data = {
     },
     zh = {
         ui = {
+            ["Use SDUI action bar"] = "使用 SDUI 动作条",
+            ["Turn off to use the game action bar. Jewelry and counters stay detached."] = "关闭后使用游戏动作条。饰品和计数条保持分离。",
             ["Search settings"] = "搜索设置",
             ["No matching settings."] = "未找到匹配的设置。",
             ["Show XP text"] = "显示经验文字",
@@ -13202,6 +13226,8 @@ DFRL.locale.data = {
     },
     ja = {
         ui = {
+            ["Use SDUI action bar"] = "SDUIのアクションバーを使う",
+            ["Turn off to use the game action bar. Jewelry and counters stay detached."] = "オフにするとゲーム標準のアクションバーを使います。装飾品とカウンターは分離したままになります。",
             ["Search settings"] = "設定を検索",
             ["No matching settings."] = "一致する設定が見つかりません。",
             ["Show XP text"] = "経験値テキストを表示",
@@ -14359,6 +14385,8 @@ DFRL.locale.data = {
     },
     ko = {
         ui = {
+            ["Use SDUI action bar"] = "SDUI 행동 단축바 사용",
+            ["Turn off to use the game action bar. Jewelry and counters stay detached."] = "끄면 게임 기본 행동 단축바를 사용합니다. 장신구와 카운터는 분리된 상태를 유지합니다.",
             ["Search settings"] = "설정 검색",
             ["No matching settings."] = "일치하는 설정이 없습니다.",
             ["Show XP text"] = "경험치 텍스트 표시",

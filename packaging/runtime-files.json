@@ -135,7 +135,6 @@
     "media/tex/waypoint/HudArrow.blp",
     "media/tex/xprep/border_half.blp",
     "media/tex/xprep/main_soft.blp",
-    "modules/bags/bags.lua",
     "modules/bars/bars.lua",
     "modules/bars/range.lua",
     "modules/cast/cast.lua",

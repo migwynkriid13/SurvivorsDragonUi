@@ -1320,7 +1320,16 @@ DFRL:NewMod("RunTimers", 5, function()
                 if key == "roundPlayerPortrait" or key == "playerPortrait3D" then
                     enabled = not DFRL.display.Get("hidePortraits")
                 elseif key == "attachJewelry" then
-                    enabled = DFRL.display.Get("equippedJewelry")
+                    enabled = DFRL.display.Get("equippedJewelry") and DFRL.display.Get("customActionBar")
+                elseif
+                    key == "lockActionButtons"
+                    or key == "cooldownNumbers"
+                    or key == "showGryphons"
+                    or key == "attachXP"
+                    or key == "xpShowText"
+                    or key == "attachTally"
+                then
+                    enabled = DFRL.display.Get("customActionBar")
                 elseif key == "guardianRespawnGuidance" then
                     enabled = DFRL.display.Get("guardianGuidance")
                 end
@@ -1941,6 +1950,12 @@ DFRL:NewMod("RunTimers", 5, function()
                 key = "abilities",
                 label = "Action bar",
                 options = {
+                    {
+                        "customActionBar",
+                        "Use SDUI action bar",
+                        "Turn off to use the game action bar. Jewelry and counters stay detached.",
+                        wide = true,
+                    },
                     {
                         "lockActionButtons",
                         "Lock action buttons",
@@ -3366,7 +3381,12 @@ DFRL:NewMod("RunTimers", 5, function()
 
         function tallyAttachment.Refresh(force)
             if not tallyAttachment.ready then return end
-            local joined = DFRL.display.Get("attachTally")
+            local joined
+            if type(DFRL.ActionBarAttached) == "function" then
+                joined = DFRL.ActionBarAttached("attachTally")
+            else
+                joined = DFRL.display.Get("customActionBar") ~= false and DFRL.display.Get("attachTally")
+            end
             local bottom = joined and DFRL.GetActionBarSilverBottom() or nil
             local style = DFRL.tallyStyleById[DFRL.display.Get("tallyStyle")]
             local appearance = not joined and style.detached or style

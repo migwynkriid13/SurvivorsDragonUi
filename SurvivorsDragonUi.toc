@@ -40,7 +40,6 @@ modules\ui\loot_view.lua
 modules\chat\capture.lua
 modules\chat\copy.lua
 modules\chat\chat.lua
-modules\bags\bags.lua
 modules\map\map.lua
 modules\map\buttons.lua
 modules\map\navigation.lua

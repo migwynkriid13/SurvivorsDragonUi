@@ -58,6 +58,13 @@ An explicit Bash shell enables `pipefail`, so piping fixture/model output into
 
 ## UI work and cleanup tests
 
+Action-bar choice cases use the production display/bar owners and explicit fake
+native frames. They cover default-on normalization, shared preview/Confirm/Cancel,
+profiles and resets, native presentation restoration, retained attachment
+choices with detached jewelry/counters, SDUI XP hiding, disabled dependent
+controls and both Performance Mode states. These cases remain CI-only and were
+not run locally; they do not prove native input or in-game appearance.
+
 The native API draft adds production-boundary fixtures for the v1 meter adapter,
 complete meter view, retained portrait circle helper, native language selection
 and live navigation. They cover all fourteen literal label sets, duplicate names

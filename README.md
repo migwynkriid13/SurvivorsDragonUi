@@ -84,7 +84,7 @@ Click **Confirm** in the full editor to save or **Cancel** to undo. In **Profile
 
 ### Action bar and portraits
 
-Action buttons start locked. Under **Action bar**, turn off **Lock action buttons** and confirm. You can then Shift-click two occupied buttons to swap their spells. **Show gryphons** adds ornaments at each end of the bar; it starts off. Turn off **Attach XP to action bar** to move the XP bar separately. **Show XP text** adds current/required XP, such as `5/25`, to the bar; it starts off.
+The SDUI action bar starts on. Under **Action bar**, turn off **Use SDUI action bar** to use the game's default bottom bar. Jewelry and counters stay detached, and the game keeps its own XP bar. Their saved attachment choices return with the SDUI bar. SDUI action buttons start locked. Turn off **Lock action buttons** and confirm to Shift-click two occupied buttons and swap their spells. **Show gryphons** adds ornaments at each end of the SDUI bar; it starts off. Turn off **Attach XP to action bar** to move the SDUI XP bar separately. **Show XP text** adds current/required XP, such as `5/25`, to that bar; it starts off.
 
 Portraits use 2D images by default. Under **Unit frames**, choose **Experimental 3D portraits** or **Hide portraits** for bars without portraits.
 

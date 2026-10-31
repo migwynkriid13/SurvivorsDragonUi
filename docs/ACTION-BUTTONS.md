@@ -1,5 +1,32 @@
 # Action buttons
 
+## Bar choice
+
+**Use SDUI action bar** in `/sdui` → **Action bar** starts on. The normalized
+`customActionBar` boolean lives in the existing display table. Missing or
+invalid values and both full resets select SDUI. The shared editor retains
+live preview, Confirm-only saving, Cancel/discard and profiles.
+
+Turning it off restores the game's default bottom bar, including its native XP
+bar. The SDUI bar and XP presentation are hidden. Jewelry and counters use their
+existing detached owners and saved detached geometry; their attachment choices
+stay saved and become effective again when SDUI is selected. The native bar
+keeps its original artwork, buttons, geometry and handlers.
+
+SDUI's Lock action buttons, Cooldown numbers, Show gryphons, Attach XP and Show
+XP text controls dim and disable input while the game bar is selected. Jewelry
+and counter attachment controls also disable without changing their values;
+jewelry keeps its existing Equipped jewelry dependency. These controls reuse the
+shared availability refresh and add no separate listener or updater. The title
+and hint have all fourteen UI translations.
+
+Both Performance Mode states use the same native-bar handoff and detached
+attachments. Existing normal/static SDUI effects return with the SDUI bar.
+CI-only coverage is authored; local work uses source review and pinned formatting,
+with no local tests, standalone validation or addon/game execution.
+
+## SDUI button swapping
+
 `lockActionButtons` is a normalized boolean in the existing display table. It
 starts true, previews through the shared editor, saves only with Confirm, and
 uses the existing discard and full-reset paths. Both full resets restore locked.
@@ -26,9 +53,10 @@ native action APIs own the exchanged slots and their usual persistence.
 
 The installed executable exposes `PickupAction`, `PlaceAction`, `CursorHasSpell`
 and `CursorHasItem`; no retail-only cursor or action-info API is required.
-Local tests, syntax checks, formatters and addon/game execution were intentionally
-not run. GitHub Actions supplies static checks; native swap behavior and rendering
-still require in-game confirmation.
+Local work uses source review and pinned formatting. GitHub Actions supplies
+static checks and CI-only mocked lifecycle coverage; native swap behavior and
+rendering still require in-game confirmation. No local tests, standalone
+validation or addon/game execution were run.
 
 ## Native source evidence
 
