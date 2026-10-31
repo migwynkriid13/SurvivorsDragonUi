@@ -214,6 +214,53 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local function CustomEnabled() return customEnabled and (not msbtStyle or not scrollHidden) end
     local function UsesPlateOrigins() return CustomEnabled() and not msbtStyle end
 
+    local cameraDrag = { owned = false, starting = false }
+    local cameraDragSupported = WorldFrame
+        and type(_G.MouselookStart) == "function"
+        and type(_G.MouselookStop) == "function"
+        and type(_G.IsMouselooking) == "function"
+    function cameraDrag.Stop(cleanup)
+        -- Native freelook entry sends a synthetic up to the old capture.
+        -- Only the later real release, or world cleanup, ends our hold.
+        if not cameraDrag.owned then return end
+        if cameraDrag.starting then
+            if cleanup then cameraDrag.stopPending = true end
+            return
+        end
+        cameraDrag.owned, cameraDrag.stopPending = false, nil
+        local looking = _G.IsMouselooking()
+        if looking and looking ~= 0 then pcall(_G.MouselookStop) end
+    end
+    function cameraDrag.Start()
+        if not cameraDragSupported or not inWorld or cameraDrag.starting then return end
+        local looking = _G.IsMouselooking()
+        if looking and looking ~= 0 then return end
+        -- A native release can end look without visiting either Lua up hook.
+        -- A fresh press must replace that stale ownership instead of sticking.
+        cameraDrag.stopPending = nil
+        cameraDrag.owned, cameraDrag.starting = true, true
+        -- Unlike TurnOrActionStart, this native camera verb is callable from
+        -- an addon mouse-down handler. It also releases the plate's capture.
+        local ok = pcall(_G.MouselookStart)
+        cameraDrag.starting = false
+        if not ok or not inWorld or cameraDrag.stopPending then cameraDrag.Stop() end
+    end
+    if cameraDragSupported then
+        HookScript(WorldFrame, "OnMouseUp", function()
+            if arg1 == "RightButton" then cameraDrag.Stop() end
+        end)
+        HookScript(WorldFrame, "OnHide", function() cameraDrag.Stop(true) end)
+        hooksecurefunc("MouselookStart", function()
+            -- A later external start owns its session; never stop it for ours.
+            if not cameraDrag.starting then
+                cameraDrag.owned, cameraDrag.stopPending = false, nil
+            end
+        end)
+        hooksecurefunc("MouselookStop", function()
+            cameraDrag.owned, cameraDrag.stopPending = false, nil
+        end)
+    end
+
     local function IsFiniteNumber(value) return type(value) == "number" and value - value == 0 end
 
     local plateFilter = {
@@ -739,6 +786,22 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         -- Build the skin before the first recursive mask so V-off tracking
         -- covers every visual child without touching the SCT data sources.
         if plateStyle then plateStyle.Attach(plate, data) end
+        if cameraDragSupported then
+            HookScript(plate, "OnMouseDown", function()
+                if
+                    arg1 == "RightButton"
+                    and plate:IsShown()
+                    and (not plate.IsVisible or plate:IsVisible())
+                    and not data.presentationMasked
+                    and IsEnemyPlate(data)
+                then
+                    cameraDrag.Start()
+                end
+            end)
+            HookScript(plate, "OnMouseUp", function()
+                if arg1 == "RightButton" then cameraDrag.Stop() end
+            end)
+        end
         HookScript(plate, "OnHide", function()
             shownPlates[plate] = nil
             RetirePlate(plate)
@@ -2426,6 +2489,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             enemyPlatesEnabled = _G.NAMEPLATES_ON and true or false
             SyncGameSettings(true)
         elseif event == "PLAYER_LEAVING_WORLD" or event == "PLAYER_LOGOUT" then
+            cameraDrag.Stop(true)
             sct.FinishEdit(false)
             inWorld = false
             SyncScrollRoot()
@@ -2502,6 +2566,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         local reloadUI = _G.ReloadUI
         _G.ReloadUI = function()
             -- Restore native preview values before ReloadUI can serialize them.
+            cameraDrag.Stop(true)
             sct.FinishEdit(false)
             inWorld = false
             for _, data in pairs(plates) do

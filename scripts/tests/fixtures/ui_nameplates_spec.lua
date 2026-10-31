@@ -872,3 +872,282 @@ for _, style in ipairs({ "diablo", "enemy" }) do
     end
 end
 print("PASS mixed and nil-origin groups keep their original centroid without rematching in either style or mode")
+
+-- CI-only native camera boundary: freelook releases the old plate capture
+-- synchronously, then routes the later physical release to WorldFrame.
+local function CameraPlates(performance, missing)
+    return Plates(function(current, env)
+        current.settings.performanceMode = performance
+        current.settings.nameplatesBossGuardiansOnly = false
+        local camera = { starts = 0, stops = 0, queries = 0, looking = false, worldUps = {}, reloads = 0 }
+        current.camera = camera
+        local function NativeInput(plate)
+            plate.nativeDown, plate.nativeUp = {}, {}
+            plate:SetScript("OnMouseDown", function()
+                local button = env.arg1
+                plate.nativeDown[button] = (plate.nativeDown[button] or 0) + 1
+                if button == "LeftButton" then current.nativeTarget = plate end
+            end)
+            plate:SetScript("OnMouseUp", function()
+                local button = env.arg1
+                plate.nativeUp[button] = (plate.nativeUp[button] or 0) + 1
+            end)
+        end
+        for _, plate in ipairs({ current.guardian, current.boss, current.ordinary }) do
+            NativeInput(plate)
+        end
+        local make = current.MakePlate
+        function current:MakePlate(...)
+            local plate = make(self, ...)
+            NativeInput(plate)
+            return plate
+        end
+        env.WorldFrame:SetScript("OnMouseUp", function()
+            local button = env.arg1
+            camera.worldUps[button] = (camera.worldUps[button] or 0) + 1
+        end)
+        env.WorldFrame:SetScript("OnHide", function() camera.worldHides = (camera.worldHides or 0) + 1 end)
+        env.MouselookStart = function()
+            camera.starts, camera.looking = camera.starts + 1, true
+            local previous = camera.capture
+            camera.capture, camera.focus = nil, env.WorldFrame
+            if previous then current:Call(previous, "OnMouseUp", "RightButton") end
+            if camera.onStart then camera.onStart() end
+        end
+        env.MouselookStop = function()
+            camera.stops, camera.looking, camera.focus = camera.stops + 1, false, nil
+        end
+        env.IsMouselooking = function()
+            camera.queries = camera.queries + 1
+            if performance then return camera.looking end
+            return camera.looking and 1 or 0
+        end
+        env.TurnOrActionStart = function() error("binding-only TurnOrActionStart called from a plate script") end
+        env.TurnOrActionStop = function() error("binding-only TurnOrActionStop called from a plate script") end
+        env.ReloadUI = function() camera.reloads = camera.reloads + 1 end
+        if missing then env[missing] = nil end
+        function current:Press(plate, button)
+            camera.capture = plate
+            self:Call(plate, "OnMouseDown", button)
+        end
+        function current:Release(button)
+            local recipient = camera.focus or camera.capture
+            camera.capture = nil
+            if recipient then self:Call(recipient, "OnMouseUp", button) end
+        end
+    end)
+end
+
+for _, performance in ipairs({ false, true }) do
+    local current = CameraPlates(performance)
+    current:Tick(0)
+    local plate, camera = current.ordinary, current.camera
+    local down, up = plate:GetScript("OnMouseDown"), plate:GetScript("OnMouseUp")
+    local worldUp = current.env.WorldFrame:GetScript("OnMouseUp")
+    local allocated = #current.objects
+    for _, button in ipairs({ "LeftButton", "MiddleButton" }) do
+        current:Press(plate, button)
+        current:Release(button)
+        assert(plate.nativeDown[button] == 1 and plate.nativeUp[button] == 1, "original non-right input was lost")
+    end
+    assert(current.nativeTarget == plate and camera.starts == 0 and camera.stops == 0, "left-click targeting changed")
+    current:Press(plate, "RightButton")
+    assert(camera.starts == 1 and camera.looking and camera.stops == 0, "synthetic plate release stopped camera entry")
+    assert(
+        plate.nativeDown.RightButton == 1 and plate.nativeUp.RightButton == 1,
+        "original right-button handlers were lost"
+    )
+    current:Release("LeftButton")
+    assert(camera.looking and camera.stops == 0, "another mouse button ended the held right-button camera")
+    current:Release("RightButton")
+    assert(
+        not camera.looking and camera.stops == 1 and camera.worldUps.RightButton == 1,
+        "WorldFrame release lost camera stop"
+    )
+    current:Release("RightButton")
+    assert(camera.stops == 1, "an unowned repeated release called native camera stop")
+
+    current:Press(plate, "RightButton")
+    plate:Hide()
+    plate.regions[3]:SetText("Reused enemy")
+    plate:Show()
+    current:Tick(0)
+    assert(camera.looking and camera.stops == 1, "plate death or frame reuse interrupted a held camera")
+    current:Release("RightButton")
+    assert(not camera.looking and camera.stops == 2, "reused plate lost the WorldFrame release")
+    current:Press(plate, "RightButton")
+    current:Call(plate, "OnMouseUp", "RightButton")
+    assert(not camera.looking and camera.stops == 3, "real plate release did not end its owned camera hold")
+
+    local starts = camera.starts
+    current.env.HideNameplates()
+    current:Call(plate, "OnMouseDown", "RightButton")
+    assert(camera.starts == starts, "V-off tracking plate started camera input")
+    current.env.ShowNameplates()
+    current:SetSetting("nameplatesBossGuardiansOnly", true)
+    current:Call(plate, "OnMouseDown", "RightButton")
+    assert(camera.starts == starts, "filtered plate started camera input")
+    current:SetSetting("nameplatesBossGuardiansOnly", false)
+    current:Tick(0)
+    plate:Hide()
+    current:Call(plate, "OnMouseDown", "RightButton")
+    plate:Show()
+    plate.nativeBar.color = { 0, 1, 0, 1 }
+    current:Call(plate, "OnMouseDown", "RightButton")
+    plate.nativeBar.color = { 1, 0, 0, 1 }
+    assert(camera.starts == starts, "hidden or friendly plate started hostile camera input")
+
+    assert(#current.objects == allocated, "camera input allocated another frame or region")
+    current.env.DFRL.sct.BeginEdit()
+    for _, mode in ipairs({ "off", "default", "on" }) do
+        current.env.DFRL.sct.SetMode(mode)
+        for _, style in ipairs({ "enemy", "msbt" }) do
+            current:SetSetting("sctStyle", style)
+            current:Press(plate, "RightButton")
+            assert(camera.looking, "visible plate camera depended on SCT mode or style")
+            current:Release("RightButton")
+            assert(not camera.looking, "SCT mode/style lost camera release")
+        end
+    end
+    current.env.DFRL.sct.FinishEdit(false)
+    current:SetSetting("sctStyle", "enemy")
+    current:Tick(0)
+    local queries = camera.queries
+    allocated = #current.objects
+    for _, object in ipairs(current.objects) do
+        assert(
+            object == current.controller or not object:GetScript("OnUpdate"),
+            "camera support installed another updater"
+        )
+    end
+    current:ResetCounts()
+    for _ = 1, 12 do
+        current:Tick(1 / 60)
+    end
+    current:NoPresentationWrites()
+    assert(camera.queries == queries and #current.objects == allocated, "idle camera support polled or allocated")
+    assert(
+        plate:GetScript("OnMouseDown") == down
+            and plate:GetScript("OnMouseUp") == up
+            and current.env.WorldFrame:GetScript("OnMouseUp") == worldUp,
+        "plate discovery or reuse installed duplicate camera hooks"
+    )
+    current:Event(current.controller, "PLAYER_LEAVING_WORLD")
+end
+print(
+    "PASS right-button camera entry survives native capture transfer and plate reuse while preserving left targeting and SCT modes"
+)
+
+for _, performance in ipairs({ false, true }) do
+    for _, cleanup in ipairs({ "worldHide", "PLAYER_LEAVING_WORLD", "PLAYER_LOGOUT", "reload" }) do
+        for _, foreign in ipairs({ false, true }) do
+            local current = CameraPlates(performance)
+            current:Tick(0)
+            local camera, plate = current.camera, current.ordinary
+            if foreign then
+                current.env.MouselookStart()
+                current:Press(plate, "RightButton")
+                assert(camera.starts == 1, "pre-existing native camera look was started again")
+                current:Release("RightButton")
+                assert(camera.looking and camera.stops == 0, "plate release stopped a pre-existing foreign camera")
+            else
+                current:Press(plate, "RightButton")
+            end
+            if cleanup == "worldHide" then
+                current.env.WorldFrame:Hide()
+                assert(camera.worldHides == 1, "camera cleanup replaced the existing WorldFrame hide handler")
+            elseif cleanup == "reload" then
+                current.env.ReloadUI()
+                assert(camera.reloads == 1, "camera cleanup replaced native ReloadUI")
+            else
+                current:Event(current.controller, cleanup)
+            end
+            assert(camera.looking == foreign and camera.stops == (foreign and 0 or 1), "cleanup lost camera ownership")
+            local starts = camera.starts
+            current:Call(plate, "OnMouseDown", "RightButton")
+            assert(camera.starts == starts, "inactive or hidden world accepted plate camera input")
+        end
+    end
+
+    local transferred = CameraPlates(performance)
+    transferred:Tick(0)
+    transferred:Press(transferred.ordinary, "RightButton")
+    transferred.env.MouselookStart()
+    transferred:Release("RightButton")
+    transferred:Event(transferred.controller, "PLAYER_LEAVING_WORLD")
+    assert(transferred.camera.looking and transferred.camera.stops == 0, "external start did not take camera ownership")
+    local stopped = CameraPlates(performance)
+    stopped:Tick(0)
+    stopped:Press(stopped.ordinary, "RightButton")
+    stopped.env.MouselookStop()
+    stopped:Release("RightButton")
+    stopped:Event(stopped.controller, "PLAYER_LEAVING_WORLD")
+    assert(stopped.camera.stops == 1, "external stop left an owned hold that stopped again")
+end
+print("PASS camera world/logout/reload cleanup stops only owned holds and preserves external native look sessions")
+
+for _, performance in ipairs({ false, true }) do
+    local hidden = CameraPlates(performance)
+    hidden:Tick(0)
+    hidden.camera.onStart = function() hidden.env.WorldFrame:Hide() end
+    hidden:Press(hidden.ordinary, "RightButton")
+    assert(
+        hidden.camera.starts == 1 and hidden.camera.stops == 1 and not hidden.camera.looking,
+        "synchronous world hiding left a camera hold pending after native start"
+    )
+    hidden.camera.onStart = nil
+    hidden.env.WorldFrame:Show()
+    hidden:Press(hidden.ordinary, "RightButton")
+    assert(hidden.camera.starts == 2 and hidden.camera.looking, "deferred cleanup prevented the next camera hold")
+    hidden:Release("RightButton")
+    hidden:Event(hidden.controller, "PLAYER_LEAVING_WORLD")
+    assert(hidden.camera.stops == 2, "deferred cleanup retained ownership after the next real release")
+
+    local released = CameraPlates(performance)
+    released:Tick(0)
+    released:Press(released.ordinary, "RightButton")
+    -- A native release can bypass both Lua mouse-up scripts and the global
+    -- stop verb; the next physical press must still acquire a new hold.
+    released.camera.looking, released.camera.focus = false, nil
+    released:Press(released.ordinary, "RightButton")
+    assert(released.camera.starts == 2 and released.camera.looking, "stale ownership blocked a fresh camera press")
+    released:Release("RightButton")
+    released:Event(released.controller, "PLAYER_LEAVING_WORLD")
+    assert(released.camera.stops == 1 and not released.camera.looking, "fresh camera hold did not stop exactly once")
+
+    local failed = CameraPlates(performance)
+    failed:Tick(0)
+    failed.camera.onStart = function() error("injected native error after camera entry") end
+    failed:Press(failed.ordinary, "RightButton")
+    assert(
+        failed.camera.starts == 1 and failed.camera.stops == 1 and not failed.camera.looking,
+        "native entry error retained a partially started camera hold"
+    )
+    failed.camera.onStart = nil
+    failed:Press(failed.ordinary, "RightButton")
+    assert(failed.camera.starts == 2 and failed.camera.looking, "native entry error prevented a later valid hold")
+    failed:Release("RightButton")
+    failed:Event(failed.controller, "PLAYER_LEAVING_WORLD")
+    assert(failed.camera.stops == 2, "native entry error retained stale ownership")
+end
+print(
+    "PASS camera entry flushes synchronous cleanup, recovers from unobserved native release and stops partial native errors"
+)
+
+for _, missing in ipairs({ "MouselookStart", "MouselookStop", "IsMouselooking" }) do
+    local current = CameraPlates(false, missing)
+    current:Tick(0)
+    local plate, camera = current.ordinary, current.camera
+    for _, button in ipairs({ "LeftButton", "RightButton", "MiddleButton" }) do
+        current:Press(plate, button)
+        current:Release(button)
+        assert(
+            plate.nativeDown[button] == 1 and plate.nativeUp[button] == 1,
+            "missing API changed native plate handlers"
+        )
+    end
+    assert(camera.starts == 0 and camera.stops == 0 and camera.queries == 0, "partial native camera API was used")
+    assert(current.nativeTarget == plate, "missing API fallback changed left-click targeting")
+    current:Event(current.controller, "PLAYER_LEAVING_WORLD")
+end
+print("PASS missing native camera APIs preserve original plate input without partial camera control")

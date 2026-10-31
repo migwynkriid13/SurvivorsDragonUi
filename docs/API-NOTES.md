@@ -508,6 +508,33 @@ updater, SavedVariable or client change is added. Verification was source/diff
 review and pinned formatting only; local tests, standalone validation and
 addon/game execution were not run.
 
+## Nameplate right-button camera turning — 2026-10-31
+
+A right-button press on a visible enemy plate now starts native mouse-look,
+which uses the client's right-turn channel. Left-click targeting and existing
+mouse handlers stay native. The addon does not change native mouse-enabled
+flags, hit rectangles, click registrations, V or the boss/guardian filter.
+Masked and hidden plates cannot start the gesture. This works independently of
+the selected SCT mode/style and uses the same input path in Performance Mode.
+
+The reference client's [movement calls](https://github.com/Arnesen/wenilla/blob/ea514d8bb724c0571fc74183f23de7b1bbb303cf/crates/benilla-ui/src/script/input_verbs.rs#L510)
+allow `MouselookStart`/`MouselookStop` from addon handlers; `TurnOrActionStart`
+has a separate movement gate. Native [camera entry](https://github.com/Arnesen/wenilla/blob/ea514d8bb724c0571fc74183f23de7b1bbb303cf/crates/benilla-ui/src/script/pointer.rs#L309)
+sends a synthetic mouse-up to the plate and releases its capture. The addon
+ignores that entry-time release and ends its own hold on the later real
+right-button release through WorldFrame, with a plate mouse-up fallback. Plate
+death, hiding and reuse do not end a held camera gesture. Native left-click
+selection remains available; right-button presses prioritize camera control.
+
+Only an addon-started hold is stopped. Pre-existing mouse-look is left alone,
+and a later external start takes ownership. Real release, WorldFrame hiding,
+world leave, logout and reload clear the owned hold. Missing camera APIs leave
+native interaction unchanged. Hooks are installed once on discovered plates
+and the existing WorldFrame, with no idle polling, new controller or saved data.
+CI-only mocks cover native entry/release ordering and cleanup. Source inspection
+does not establish input delivery in the packaged game; no local tests or
+addon/game execution were performed.
+
 ## First-allocation nameplate flash — 2026-10-15
 
 The user reported a brief stock-nameplate flash on spawning mobs, both before the custom nameplate style and with V off. The current public client source has a matching first-allocation timing gap: [Lua ticking runs in UiInput and painting follows VPlateSet](https://github.com/samwhosung/benilla/blob/358731f95a7eab43861e250280856ecf5d90741d/crates/benilla-app/src/ui_script/mod.rs#L373-L392), while [native plate generation runs after UiInput](https://github.com/samwhosung/benilla/blob/358731f95a7eab43861e250280856ecf5d90741d/crates/benilla-app/src/vplates.rs#L650-L658). A brand-new plate can therefore be drawn before the addon's next OnUpdate discovers, skins and masks it. This source ordering matches the report; it does not establish the exact packaged client's runtime behavior.

@@ -1450,6 +1450,23 @@ are excluded. CI-only extracted production transitions assert hiding, restoratio
 and unchanged-state idling. No local tests, addon execution or measured GPU/FPS
 result is claimed; the packaged renderer's exact revision remains unverified.
 
+### Nameplate camera input
+
+Each discovered native plate adds one mouse-down and one mouse-up wrapper,
+preserving previous handlers. One shared WorldFrame mouse-up/hide pair and two
+native mouse-look post-hooks manage session-only ownership, entry and deferred
+cleanup flags. Only eligible enemy right presses read camera state and call the
+native camera verb; releases/cleanup inspect it only while a hold is owned.
+The synchronous synthetic plate release during camera entry is ignored, while
+cleanup requested during entry runs immediately afterward. A new press can
+recover from an unnotified native camera stop without polling.
+Retirement/reuse does no camera work, and later external ownership is preserved.
+Both Performance Mode states use this same native input path. There is no new
+frame, region, asset, event, updater, CVar, saved data or per-frame polling.
+CI-only plate cases cover gesture routing, native handler preservation, masked
+input, retirement/reuse and ownership cleanup; they were not run locally and
+do not establish packaged-game input delivery or live performance.
+
 ### Native nameplate layers
 
 Supported native plate and health-bar owners now disable their own drawing

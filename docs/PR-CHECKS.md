@@ -58,6 +58,16 @@ An explicit Bash shell enables `pipefail`, so piping fixture/model output into
 
 ## UI work and cleanup tests
 
+Nameplate camera cases use the production controller with explicit native
+mouse-look boundaries. They cover right-button entry, left/native handler
+preservation, synchronous synthetic release, real WorldFrame/plate release,
+death/reuse during a hold, hidden/filtered plates, pre-existing/external camera
+ownership and world/logout/reload cleanup in both Performance Mode states.
+Reentrant world hiding, unnotified native stops and partially failed starts
+clear or replace owned state without sticking later presses.
+Missing APIs retain native interaction; repeated discovery and idle updates add
+no hooks or drawing work. These cases remain CI-only and were not run locally.
+
 Meter spacing cases use the production meter with explicit native text metrics.
 They cover reclaiming unused numeric space, caption-aware metric caching and
 retries, width/font/scale changes, independent name/number font sizes, preserved
