@@ -96,9 +96,7 @@ DFRL:NewMod("Player", 1, function()
             local fill = T.LargeHealthFill
             local loaded = absorbTexture:SetTexture(fill.texture)
             local assigned = absorbTexture:GetTexture()
-            local stem = string.gsub(fill.texture, "%.[^%.]*$", "")
-            absorbBound = loaded ~= false
-                and (loaded == true or loaded == 1 or assigned == fill.texture or assigned == stem)
+            absorbBound = T.TextureAssigned(loaded, assigned, fill.texture)
             if not absorbBound then return end
             absorbTexture:SetTexCoord(unpack(fill.texCoords))
         end

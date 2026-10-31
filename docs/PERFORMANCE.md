@@ -14,6 +14,13 @@ ownership and encounter validation likewise retain the existing controller
 cadences and separate receipt/retirement gates. Performance Mode and normal-mode
 presentation keep the same behavior.
 
+Texture readiness uses `T.TextureAssigned` across circular icons, jewelry,
+resources, absorb, loot and encounter artwork. An explicit native failure wins;
+otherwise a true/1 result or exact/extension-stripped path confirms the binding.
+The helper runs only where each owner already checks changed or pending artwork.
+Successful caches, probes, retirement and retries remain with those owners in
+both Performance Mode states. It adds no frame, region, asset or updater.
+
 ## Mandatory rule for all drawing and assets
 
 Drawing performance is a project requirement for every frame and artwork change,

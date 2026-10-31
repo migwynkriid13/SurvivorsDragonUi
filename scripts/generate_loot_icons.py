@@ -12,6 +12,7 @@ import struct
 from pathlib import Path
 
 from generate_spell_icons import Dbc, lua_string, native_icon
+from native_pe import PeImage
 
 
 SOURCE_SHA256 = "8f8de1512420dd6c9fefcbbf90a6a6feaf7388ba1cda3b6c3d5eaa7a74927514"
@@ -28,32 +29,14 @@ class Native:
         self.raw = path.read_bytes()
         if hashlib.sha256(self.raw).hexdigest() != source_sha256:
             raise ValueError("Review the changed executable before updating native offsets")
-        pe = self.number(0x3C, "I")
-        optional = pe + 24
-        if self.raw[:2] != b"MZ" or self.raw[pe:pe + 4] != b"PE\0\0" or self.number(optional, "H") != 0x20B:
-            raise ValueError("Expected the pinned PE32+ executable")
-        base = self.number(optional + 24, "Q")
-        self.sections = []
-        for index in range(self.number(pe + 6, "H")):
-            at = optional + self.number(pe + 20, "H") + index * 40
-            _, rva, size, offset = struct.unpack_from("<4I", self.raw, at + 8)
-            self.sections.append((base + rva, offset, size))
-
-    def number(self, at, kind="Q"):
-        return struct.unpack_from("<" + kind, self.raw, at)[0]
-
-    def offset(self, address):
-        for base, offset, size in self.sections:
-            if base <= address < base + size:
-                return offset + address - base
-        raise ValueError("Native pointer is outside file-backed sections")
+        self.image = PeImage(self.raw)
+        self.number, self.offset = self.image.number, self.image.offset
 
     def text(self, at):
         address, length = struct.unpack_from("<QQ", self.raw, at)
-        start = self.offset(address)
-        if not 0 < length < 1024 or start + length > len(self.raw):
+        if not 0 < length < 1024:
             raise ValueError("Unexpected native string slice")
-        return self.raw[start:start + length].decode("utf-8")
+        return self.image.read(address, length).decode("utf-8")
 
     def catalogs(self):
         catalogs, seen, cursor = [], set(), 0

@@ -11,18 +11,13 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw
 
-from prepare_client_textures import blp_bgra_levels
+from prepare_client_textures import image_from_bytes
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def rgba(path):
-    data = path.read_bytes()
-    # Pillow's Raw1 path omits the separate alpha block; Raw3 is unsupported.
-    if len(data) >= 148 and data[:4] == b"BLP2" and data[8] in (1, 3):
-        width, height, levels = blp_bgra_levels(data)
-        return Image.frombytes("RGBA", (width, height), levels[0], "raw", "BGRA")
-    return Image.open(path).convert("RGBA")
+    return image_from_bytes(path.read_bytes())
 
 
 def prepare_pet_rim(canvas):
