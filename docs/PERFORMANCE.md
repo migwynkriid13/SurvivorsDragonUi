@@ -115,6 +115,10 @@ draw only on the open Layout page and reuse its scrolling viewport. Measurement
 invalidation reuses the existing settings, Copy, guardian and tally lifecycles;
 meter font-size caches compare the effective shared outline. Timer and outgoing SCT font selectors retain
 ownership. Both Performance Mode states use the same instant font change.
+The stored-level count badge opts out through the existing font setter, keeping
+its original plain size-12 Default text in both modes. The heading remains
+managed. This adds no region, event, updater, binding retry or per-refresh work;
+badge fitting and the existing stored-level controller remain unchanged.
 These are source-level costs; handheld readability, glyph coverage and native
 rendering remain unverified. See [FONTS.md](FONTS.md).
 

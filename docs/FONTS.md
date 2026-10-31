@@ -11,6 +11,10 @@ own controls.
 The run timer and numeric outgoing combat text have independent font selectors.
 Their sources, rulers, pooled segments and damage labels stay outside the shared
 font registry, including when their own Default option is selected.
+The stored-level icon's upper-right count badge also stays outside that registry:
+it retains its original resolved Default face at size 12 without outline or
+shadow. Its dark number, gold disk and fitting are unchanged; the LEVEL UP heading
+continues to follow the shared choices.
 
 The normalized `uiFont` and `uiFontOutline` enums and boolean `uiFontShadow`
 live in the existing display table. Outline stores `""`, `"OUTLINE"` or

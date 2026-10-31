@@ -141,6 +141,9 @@ guardian minimap cases cover countdown readiness under None and Thick outline.
 SCT and segmented timer fixtures require
 their production setters to opt out. These cases remain CI-only and were not
 executed locally. See [FONTS.md](FONTS.md).
+Stored-level integration cases load the real Display, Fonts and StoredLevels
+owners: the badge keeps plain Default 12 through shared font/style transactions
+and both Performance Mode states while the heading follows the shared choices.
 
 Health-format fixtures cover the independent default-on Unit frames, Boss bars
 and Guardian tracker shortening choices through the real display normalizer,

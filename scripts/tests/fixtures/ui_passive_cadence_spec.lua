@@ -95,27 +95,108 @@ do
     local create = context.Object
     function context:Object(...)
         local object = create(self, ...)
+        function object:GetObjectType() return self.kind end
+        function object:GetShadowColor() return unpack(self.shadowColor or { 0, 0, 0, 0 }) end
+        function object:GetShadowOffset() return unpack(self.shadowOffset or { 0, 0 }) end
+        local setFont, setColor, setOffset = object.SetFont, object.SetShadowColor, object.SetShadowOffset
+        function object:SetFont(face, size, flags)
+            if face == "DEFAULT" then return false end
+            return setFont(self, face, size, flags)
+        end
+        function object:SetShadowColor(r, g, b, a)
+            setColor(self, r, g, b, a)
+            self.shadowColor = { r, g, b, a }
+        end
+        function object:SetShadowOffset(x, y)
+            setOffset(self, x, y)
+            self.shadowOffset = { x, y }
+        end
         function object:SetScale(value) self.scale = value end
         function object:GetEffectiveScale()
             return (self.scale or 1) * (self.parent and self.parent:GetEffectiveScale() or 1)
         end
-        function object:GetStringWidth() return #self:GetText() * 7 end
+        function object:GetStringWidth()
+            context.reads.metrics = (context.reads.metrics or 0) + 1
+            return #self:GetText() * 7
+        end
         function object:RegisterForClicks(value) assert(value == "LeftButtonUp") end
         function object:SetBlendMode(value) assert(value == "ADD") end
         return object
     end
     function env.UIParent:GetEffectiveScale() return 1 end
+    env.setmetatable = setmetatable
+    env.CreateFont = function(name) return context:Object("Font", name) end
+    env.GameFontNormal = env.CreateFont("GameFontNormal")
+    env.GameFontNormal:SetFont("DEFAULT_TEST", 12, "")
+    context:Load("core/display.lua", "Display")
+    context:Load("core/fonts.lua", "Fonts")
+    local display = env.DFRL.display
+    function context:SetSetting(name, value)
+        display.BeginEdit()
+        display.Set(name, value)
+    end
     context:Load("core/hud.lua")
     context:Load("modules/ui/levels.lua", "StoredLevels")
     local button = env.SurvivorsDragonUiStoredLevels
     local controller = context:Controller("PLAYER_ENTERING_WORLD")
-    local label
+    local label, title
     for _, object in ipairs(context.objects) do
         if object.kind == "FontString" and object:GetText() == "3" then label = object end
+        if object.kind == "FontString" and object:GetText() == "LEVEL UP" then title = object end
     end
     assert(label and button:IsVisible() and context.nativeShown == false)
     assert(context.reads.hud == 2, "initial takeover did not read back the setter")
     assert(button:GetScript("OnUpdate"), "normal stored-level pulse did not start")
+    local function OriginalBadge()
+        local face, size, flags = label:GetFont()
+        local _, _, _, alpha = label:GetShadowColor()
+        local x, y = label:GetShadowOffset()
+        assert(
+            face == "DEFAULT_TEST" and size == 12 and flags == "" and alpha == 0 and x == 0 and y == 0,
+            "shared styling changed the original stored-level badge number"
+        )
+        assert(label:GetText() == "3", "font settings changed the native stored-level count")
+    end
+    OriginalBadge()
+    for _, performance in ipairs({ false, true }) do
+        display.BeginEdit()
+        display.Set("performanceMode", performance)
+        display.Set("uiFont", "arial")
+        for _, outline in ipairs({ "", "OUTLINE", "THICKOUTLINE" }) do
+            display.Set("uiFontOutline", outline)
+            for _, shadow in ipairs({ false, true }) do
+                display.Set("uiFontShadow", shadow)
+                OriginalBadge()
+                local face, size, flags = title:GetFont()
+                local _, _, _, alpha = title:GetShadowColor()
+                assert(
+                    face == "Fonts\\ARIALN.TTF" and size == 22 and flags == outline and alpha == (shadow and 1 or 0),
+                    "excluding the badge also excluded the stored-level title"
+                )
+            end
+        end
+        display.FinishEdit(false)
+        OriginalBadge()
+    end
+    display.BeginEdit()
+    display.Load({ uiFont = "morpheus", uiFontOutline = "THICKOUTLINE", uiFontShadow = true })
+    OriginalBadge()
+    display.FinishEdit(true)
+    display.BeginEdit()
+    context.hidden = true
+    context:SetLayoutHidden(true)
+    display.Set("uiFont", "skurri")
+    display.Set("uiFontOutline", "")
+    display.Set("uiFontShadow", false)
+    OriginalBadge()
+    context.hidden = false
+    context:SetLayoutHidden(false)
+    OriginalBadge()
+    assert(title:GetFont() == "Fonts\\SKURRI.TTF", "hidden title did not resume the shared font")
+    display.FinishEdit(false)
+    OriginalBadge()
+    display.Reset()
+    OriginalBadge()
     context:SetSetting("performanceMode", true)
     assert(button:IsVisible() and label:GetText() == "3", "Performance Mode hid the stored-level information")
     assert(not button:GetScript("OnUpdate"), "Performance Mode retained the stored-level pulse")
@@ -140,6 +221,7 @@ do
     assert(context.reads.phase == 10 and context.reads.levels == 10, "native state polling changed")
     assert(context.reads.hud == 10 and not context.writes.hud, "settled ownership repeated its readback")
     assert(not context.reads.formats, "unchanged stored-level counts were formatted repeatedly")
+    assert(not context.reads.metrics, "unchanged stored-level labels were measured repeatedly")
     label.text = "native reset"
     context:ResetCounts()
     Tick()
@@ -168,6 +250,16 @@ do
     context:SetLayoutHidden(false)
     Tick()
     assert(label:GetText() == "4" and context.reads.formats == 1, "Show did not present the latest native count")
+    context.count = 1234
+    context:ResetCounts()
+    Tick()
+    assert(
+        label:GetText() == "1234" and context.reads.formats == 1 and context.reads.metrics == 1,
+        "changed stored-level counts lost their complete native number or one measurement"
+    )
+    context:ResetCounts()
+    Tick()
+    assert(not context.reads.formats and not context.reads.metrics, "unchanged badge repeated formatting or fitting")
     context.count, context.rejectHud = 0, true
     Tick()
     assert(not button:IsShown() and context.nativeShown == false, "failed restore showed a stale replacement")
@@ -185,6 +277,4 @@ do
     context:Event(controller, "PLAYER_ENTERING_WORLD")
     assert(controller:GetScript("OnUpdate"), "stored levels did not rearm on world entry")
 end
-print(
-    "PASS stored levels cache numeric captions, retain actual-state repair and preserve native takeover readback/retry"
-)
+print("PASS stored levels retain original badge styling, cache full counts and preserve native takeover readback/retry")
