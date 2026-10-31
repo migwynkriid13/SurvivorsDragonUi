@@ -79,6 +79,18 @@ addon initializer environment. They retain all fourteen catalogs, native errors,
 legacy fallback and deferred recovery when the capability endpoint is absent
 or appears after initialization.
 
+Damage Taken coverage adds the fifth heading-cycle entry alongside the retained
+legacy meter path and optional v1 path for the original four views. The CI-only
+cases use explicit official `AZS_TAKEN` category rows and `AZS_RUN.taken` totals,
+including an unattributed remainder, malformed data, native-time rates and pause,
+publication/run retirement, shared legacy Reset, v1 checkpoint coexistence and
+capture failure preserving both sessions. They cover localized categories,
+neutral icon reuse without source resolution, hidden/off normalization skips and
+both Performance Mode states. The v1 four-view checkpoint and deferred legacy
+Damage Taken baseline are separate actions, not an atomic five-view checkpoint.
+These cases are authored and were not executed locally; no native data or game
+execution is used by the local workflow.
+
 The production banner fixture supplies an explicit `UIErrorsFrame.AddMessage`
 boundary and the generated fourteen-language native catalogs. Affix-warning
 cases cover exact received-text admission and native suppression, separate

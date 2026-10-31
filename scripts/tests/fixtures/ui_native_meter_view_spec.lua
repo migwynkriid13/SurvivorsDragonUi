@@ -8,7 +8,7 @@ local function Test(name, callback)
     print("PASS " .. name)
 end
 
-local function View()
+local function View(configure)
     local c, state, _, env = helpers.New()
     local create = c.Object
     function c:Object(...)
@@ -88,6 +88,7 @@ local function View()
         meterShowTotal = false,
         meterShowTotalDps = false,
     }
+    if configure then configure(c, state, env) end
     c:Load("core/hud.lua")
     c:Load("core/meter_rates.lua")
     c:Load("core/widgets.lua")
@@ -96,14 +97,22 @@ local function View()
     for _, object in ipairs(c.objects) do
         if object.kind == "Button" and object.parent == c.root then c.header = object end
     end
+    for _, object in ipairs(c.objects) do
+        if object.kind == "FontString" and object.parent == c.header then c.title = object end
+        if object.kind == "FontString" and object.parent == c.root then c.status = object end
+    end
     function c:Tick(elapsed)
         local step = elapsed or 0.21
         self.now = self.now + step
         self:Call(self.controller, "OnUpdate", step)
     end
-    function c:Cycle()
-        self:Call(self.header, "OnClick", "LeftButton")
+    function c:Cycle(direction)
+        self:Call(self.header, "OnClick", direction or "LeftButton")
         self:Tick()
+    end
+    function c:PublishTaken(stamp)
+        env.AZS_TAKEN_UPDATED = stamp or self.now
+        self:Event(self.controller, "CHAT_MSG_ADDON", "AZSTAKEN")
     end
     function c:Row(index) return assert(env["SurvivorsDragonUiMeterIcon" .. index]):GetParent() end
     c:Tick()
@@ -362,4 +371,156 @@ Test("unready publications and invalid reset epochs clear native rows without re
     assert(not c:Row(1):IsShown(), "counter correction replayed pre-checkpoint damage")
     c:Tick()
     assert(not c:Row(1):IsShown(), "a later refresh silently removed the invalid native reset fence")
+end)
+
+local function TakenView(performance)
+    local c, state, env = View(function(context, _, boundaries)
+        context.settings.performanceMode = performance == true
+        boundaries.AZS_RUN, boundaries.AZS_RUN_UPDATED = { t = 20, taken = 100 }, context.now
+        boundaries.AZS_TAKEN = { { source = "boss spell", dmg = 100 } }
+        boundaries.AZS_TAKEN_UPDATED = context.now
+        boundaries.ReloadUI = function() context.reloaded = true end
+        local snapshot = boundaries.AZS_GetMeterSnapshot
+        boundaries.AZS_GetMeterSnapshot = function(query)
+            assert(
+                query.metric == "damage" or query.metric == "healing",
+                "Taken invented an unsupported native-v1 metric"
+            )
+            return snapshot(query)
+        end
+    end)
+    c:Cycle("RightButton")
+    assert(c.title:GetText() == "Damage Taken" and c:Row(1).entry.name == "Boss spells")
+    return c, state, env
+end
+
+Test("native four-view clients retain their original cycle when Taken is absent", function()
+    local c, state, env = View()
+    assert(env.AZS_TAKEN == nil)
+    local expected = { "Healing Done", "Boss Damage", "Party Damage", "Damage Done" }
+    for _, title in ipairs(expected) do
+        c:Cycle()
+        assert(c.title:GetText() == title, "absent Taken changed the existing native-v1 cycle")
+    end
+    c:Cycle("RightButton")
+    assert(c.title:GetText() == "Party Damage", "absent Taken introduced a blank reverse page")
+    for _, query in ipairs(state.queries) do
+        assert(query.metric == "damage" or query.metric == "healing")
+    end
+end)
+
+Test("Taken uses official category packets alongside the unchanged native four views", function()
+    local c, state, env = TakenView()
+    assert(c.controller.events.CHAT_MSG_ADDON, "native-v1 selection detached Taken publication delivery")
+    assert(c:Row(1).entry.dmg == 100 and c:Row(1).entry.dps == 5)
+    assert(c:Row(1).icon:GetTexture() == env.T.SourceIconFallback, "Taken used retained hero or guessed spell art")
+    local snapshots = state.calls.snapshot
+    env.AZS_TAKEN[1].dmg, env.AZS_RUN.taken = 130, 130
+    c:PublishTaken(env.AZS_TAKEN_UPDATED)
+    c:Tick()
+    assert(c:Row(1).entry.dmg == 130, "same-stamp Taken packet was ignored with v1 available")
+    assert(state.calls.snapshot == snapshots, "selected Taken queried an outgoing v1 snapshot")
+    c:Cycle()
+    assert(c.title:GetText() == "Damage Done" and c:Row(1).entry.rowId, "Taken replaced native outgoing data")
+    c:Cycle()
+    assert(c.title:GetText() == "Healing Done" and c:Row(1).entry.rowId)
+    c:Cycle()
+    assert(c.title:GetText() == "Boss Damage" and c:Row(1).entry.rowId)
+    c:Cycle()
+    assert(c.title:GetText() == "Party Damage" and c:Row(1).entry.portraitRunId == state.context.runId)
+    c:Cycle()
+    assert(c.title:GetText() == "Damage Taken" and not c:Row(1).entry.rowId)
+end)
+
+Test("native checkpoint Reset and Taken share success while failure preserves both sessions", function()
+    local c, state, env = TakenView()
+    env.DFRL.ResetMeterStats()
+    assert(state.calls.create == 1 and not c:Row(1).active)
+    c:Tick()
+    assert(not c:Row(1).active, "native checkpoint Reset replayed pre-reset Taken")
+    state.context.asOfRunSeconds = 22
+    state.context.snapshotId, state.context.counterRevision = "taken-after-X", "taken-after-X"
+    env.AZS_TAKEN[1].dmg, env.AZS_RUN.taken, env.AZS_RUN.t = 130, 130, 22
+    c:PublishTaken()
+    c:Tick()
+    assert(c:Row(1).entry.dmg == 30 and c:Row(1).entry.dps == 15, "Taken did not retain its shared X baseline")
+    state.createError = { code = "NOT_READY", message = "waiting", retryable = true, retryAfterSeconds = 0.2 }
+    env.DFRL.ResetMeterStats()
+    assert(c:Row(1).active and c:Row(1).entry.dmg == 30, "failed native X cleared the previous Taken session")
+    state.context.asOfRunSeconds = 24
+    env.AZS_TAKEN[1].dmg, env.AZS_RUN.taken, env.AZS_RUN.t = 140, 140, 24
+    c:PublishTaken()
+    c:Tick()
+    assert(c:Row(1).entry.dmg == 40, "failed checkpoint capture silently rebased Taken")
+    state.records[1].after, state.records[2].after = 20, 10
+    c:Cycle()
+    assert(c:Row(1).entry.dmg == 20, "Taken Reset discarded the still-active native checkpoint")
+    assert(state.queries[table.getn(state.queries)].checkpointId == "checkpoint-1")
+end)
+
+Test("native run and epoch retirement block old Taken until a fresh packet", function()
+    local c, state, env = TakenView()
+    state.context.counterEpoch, state.context.snapshotId = "new-taken-epoch", "new-taken-epoch"
+    c:Tick()
+    assert(c.title:GetText() ~= "Damage Taken", "new native epoch accepted stale Taken")
+    c:PublishTaken()
+    c:Cycle("RightButton")
+    assert(c.title:GetText() == "Damage Taken" and c:Row(1).entry.dmg == 100)
+    state.context.runId, state.context.snapshotId = "new-taken-run", "new-taken-run"
+    c:Tick()
+    assert(c.title:GetText() ~= "Damage Taken", "new native run accepted the last run's Taken categories")
+    c:PublishTaken()
+    c:Cycle("RightButton")
+    assert(c.title:GetText() == "Damage Taken")
+    c:Event(c.controller, "PLAYER_LEAVING_WORLD")
+    c:Event(c.controller, "PLAYER_ENTERING_WORLD")
+    c:Tick()
+    assert(c.title:GetText() ~= "Damage Taken", "native world entry replayed old Taken")
+    assert(env.AZS_TAKEN[1].dmg == 100, "Taken retirement altered native category counters")
+end)
+
+Test("mixed meter reload releases its checkpoint and Taken listener together", function()
+    local c, state, env = TakenView()
+    env.DFRL.ResetMeterStats()
+    c:Tick()
+    env.ReloadUI()
+    assert(c.reloaded and state.calls.release == 1 and not c:Row(1).active)
+    assert(not c.controller:GetScript("OnUpdate") and not c.controller.events.CHAT_MSG_ADDON)
+    assert(env.AZS_TAKEN[1].dmg == 100 and env.AZS_RUN.taken == 100)
+end)
+
+Test("mixed native and Taken hidden views defer category work in both Performance Mode states", function()
+    for _, performance in ipairs({ false, true }) do
+        local c, state, env = TakenView(performance)
+        local allocated = #c.objects
+        c:SetLayoutHidden(true)
+        env.AZS_TAKEN = {
+            setmetatable({}, {
+                __index = function(_, key)
+                    if key == "source" or key == "dmg" then state.takenReads = (state.takenReads or 0) + 1 end
+                    return key == "source" and "boss spell" or key == "dmg" and 150 or nil
+                end,
+            }),
+        }
+        env.AZS_RUN.taken = 150
+        c:PublishTaken()
+        local snapshots = state.calls.snapshot
+        c:ResetCounts()
+        for _ = 1, 6 do
+            c:Tick()
+        end
+        assert(not state.takenReads and state.calls.snapshot == snapshots, "hidden Taken read category or v1 rows")
+        c:NoPresentationWrites()
+        c:SetLayoutHidden(false)
+        c:Tick()
+        assert(c:Row(1).entry.dmg == 150 and #c.objects == allocated, "Taken Show failed to refresh its existing pool")
+        local reads = state.takenReads
+        c:SetSetting("meterEnabled", false)
+        c:ResetCounts()
+        for _ = 1, 6 do
+            c:Tick()
+        end
+        assert(state.takenReads == reads and not c.controller:GetScript("OnUpdate"))
+        assert(not c.controller.events.CHAT_MSG_ADDON, "disabled mixed meter retained Taken intake")
+    end
 end)

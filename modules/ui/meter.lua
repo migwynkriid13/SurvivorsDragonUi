@@ -68,6 +68,13 @@ DFRL:NewMod("DamageMeter", 7, function()
             party = true,
             query = { metric = "damage", scope = "party", period = "run", groupBy = "owner" },
         },
+        {
+            stamp = "AZS_TAKEN_UPDATED",
+            prefix = "AZSTAKEN",
+            title = "Damage Taken",
+            rate = "DPS",
+            taken = true,
+        },
     }
     local phases = { playing = true, choosing = true, paused = true, dead = true, victory = true }
     local mode, offset, age = 1, 0, 0.2
@@ -87,6 +94,8 @@ DFRL:NewMod("DamageMeter", 7, function()
     local rateSamples, rateSampledAt = {}, nil
     local dps = T.NewMeterDps(DFRL.display.Get("meterDpsWindow"))
     local session, resetPending = T.NewMeterSession(), false
+    local taken = T.NewMeterTaken()
+    taken.index = table.getn(modes)
     local presentation = { shown = false, cleared = true }
     local tooltipState = {}
     local hovered
@@ -100,9 +109,17 @@ DFRL:NewMod("DamageMeter", 7, function()
     root:Hide()
     local controller = CreateFrame("Frame")
     local Tick, updating, listening = nil, false, false
+    local function UsesApi(index) return apiActive and modes[index].query ~= nil end
+    local function Supported(index)
+        local selected = modes[index]
+        return UsesApi(index)
+            or (selected.taken and type(_G.AZS_TAKEN) == "table")
+            or (selected.getter and type(_G[selected.getter]) == "function")
+    end
     local function UpdateController()
         local listen = inWorld and enabled and ready and not faulted and true or false
-        local packets = listen and not (api and api.Supported()) and true or false
+        -- The fifth view retains its official category publication on v1 clients.
+        local packets = listen
         if listening ~= packets then
             listening = packets
             if packets then
@@ -301,7 +318,7 @@ DFRL:NewMod("DamageMeter", 7, function()
         return BindIcon(row, UNKNOWN_ICON)
     end
     local function IsReset()
-        if apiActive then return api.IsReset() end
+        if UsesApi(mode) then return api.IsReset() end
         return session.IsReset()
     end
     local function HideTooltip()
@@ -338,7 +355,7 @@ DFRL:NewMod("DamageMeter", 7, function()
         HideTooltip()
         hovered = row
         GameTooltip:SetOwner(row, "ANCHOR_NONE")
-        GameTooltip:SetText(row.entry.name)
+        GameTooltip:SetText(modes[mode].taken and DFRL.locale.Text(entry.name) or entry.name)
         GameTooltip:AddDoubleLine(DFRL.locale.Text(modes[mode].title), damage)
         GameTooltip:AddDoubleLine(DFRL.locale.Text(modes[mode].rate), rate)
         if mode == 1 then
@@ -651,6 +668,7 @@ DFRL:NewMod("DamageMeter", 7, function()
         HideTooltip()
         dps.Clear()
         session.Clear()
+        taken.Clear()
         if api then api.Clear() end
         apiIdentity = {}
         resetPending = false
@@ -670,18 +688,25 @@ DFRL:NewMod("DamageMeter", 7, function()
         SetShown(false)
     end
     local function RunSeconds()
+        if apiActive then return apiIdentity.time end
         if Number(AZS_RUN_UPDATED) and type(AZS_RUN) == "table" and Number(AZS_RUN.t) then return AZS_RUN.t end
     end
     local function ReadNative(index)
         local selected = modes[index]
-        if apiActive then return api.Read(selected.query, index == 1 and dps.window or 0) end
-        local getter = _G[selected.getter]
+        if UsesApi(index) then return api.Read(selected.query, index == 1 and dps.window or 0) end
+        local getter = selected.taken and taken.Read or _G[selected.getter]
         if type(getter) ~= "function" then
             publications[index] = nil
             return nil, nil, nil, "Meter data is unavailable."
         end
         if blocked[index] and not received[index] then return end
-        local ok, source, amount, rate = pcall(getter)
+        if selected.taken and not Number(_G[selected.stamp]) and not received[index] then return end
+        local ok, source, amount, rate
+        if selected.taken then
+            ok, source, amount, rate = pcall(getter, RunSeconds(), receipts[index] or 0)
+        else
+            ok, source, amount, rate = pcall(getter)
+        end
         if not ok or type(source) ~= "table" or not Number(amount) or not Number(rate) then
             publications[index] = nil
             return nil, nil, nil, "Meter data is unavailable."
@@ -698,6 +723,7 @@ DFRL:NewMod("DamageMeter", 7, function()
             and publication.stamp == stamp
             and publication.receipt == receipt
             and publication.amount == amount
+            and (not selected.taken or publication.takenRevision == taken.revision)
         then
             return source, amount, rate, nil, publication.revision
         end
@@ -724,6 +750,7 @@ DFRL:NewMod("DamageMeter", 7, function()
         publication = publication or {}
         publication.getter, publication.source, publication.stamp = getter, source, stamp
         publication.receipt, publication.amount, publication.revision = receipt, amount, publicationSequence
+        publication.takenRevision = selected.taken and taken.revision or nil
         publications[index] = publication
         return source, amount, rate, nil, publication.revision
     end
@@ -740,7 +767,7 @@ DFRL:NewMod("DamageMeter", 7, function()
         return entry.source, entry.amount, entry.rate, entry.message, entry.publication, entry.meta
     end
     local function ResolveView(source, amount, rate, message, publication, meta)
-        local supported = apiActive or type(_G[modes[mode].getter]) == "function"
+        local supported = Supported(mode)
         if not viewSelection.first then
             if supported and (source or message) then
                 viewSelection.dirty = false
@@ -754,7 +781,7 @@ DFRL:NewMod("DamageMeter", 7, function()
         local count, current = 0, false
         for step = 0, table.getn(modes) - 1 do
             local index = math.mod(mode - 1 + step, table.getn(modes)) + 1
-            if apiActive or type(_G[modes[index].getter]) == "function" then
+            if Supported(index) then
                 local candidateSource, candidateMessage
                 local _
                 candidateSource, _, _, candidateMessage = ReadOnce(index)
@@ -781,6 +808,7 @@ DFRL:NewMod("DamageMeter", 7, function()
                 HideTooltip()
                 Release(true)
                 mode, offset = selected, 0
+                viewSelection.taken = modes[selected].taken
             end
             source, amount, rate, message, publication, meta = ReadOnce(selected)
         end
@@ -806,7 +834,8 @@ DFRL:NewMod("DamageMeter", 7, function()
             dps.Suspend()
             return true
         end
-        if apiActive and meta then
+        local nativeView = UsesApi(mode)
+        if nativeView and meta then
             if
                 snapshot.nativeRunId ~= meta.runId
                 or snapshot.nativeEpoch ~= meta.counterEpoch
@@ -821,7 +850,7 @@ DFRL:NewMod("DamageMeter", 7, function()
             if type(DFRL.locale.Select) == "function" then DFRL.locale.Select(meta.languageCode) end
         end
         local nativeSource = source
-        if not apiActive then
+        if not nativeView then
             source, amount, rate = session.Apply(mode, source, amount, rate, RunSeconds(), publication)
         end
         local count = table.getn(source)
@@ -836,11 +865,11 @@ DFRL:NewMod("DamageMeter", 7, function()
             or (snapshot.total and amount < snapshot.total)
         if sampleRates then
             for _, entry in ipairs(nativeSource) do
-                if not Number(entry.dps) and not (apiActive and entry.dps == nil) then
+                if not Number(entry.dps) and not (nativeView and entry.dps == nil) then
                     return false, "Meter data is unavailable."
                 end
             end
-            if apiActive then
+            if nativeView then
                 snapshot.rate, snapshot.averageRate = rate, meta and meta.averageRate
             elseif mode == 1 then
                 snapshot.rate, snapshot.averageRate = dps.Header(rate)
@@ -860,7 +889,7 @@ DFRL:NewMod("DamageMeter", 7, function()
                 copy.portraitKey, copy.portraitRunId = entry.portraitKey, entry.portraitRunId
                 copy.portraitStatus = entry.portraitStatus
             end
-            local key = apiActive and copy.rowId or copy.name
+            local key = nativeView and copy.rowId or copy.name
             local samples = rateSamples[key]
             if not samples then
                 samples = {}
@@ -873,7 +902,7 @@ DFRL:NewMod("DamageMeter", 7, function()
                 samples[proc] = sample
             end
             if sample.epoch ~= rateSampledAt then
-                if apiActive then
+                if nativeView then
                     sample.rate, sample.average = entry.dps, entry.averageDps
                 elseif mode == 1 then
                     sample.rate, sample.average = dps.Row(copy.name, copy.proc, entry.dps)
@@ -912,12 +941,13 @@ DFRL:NewMod("DamageMeter", 7, function()
             local entry = snapshot.rows[index + offset]
             if entry then
                 local row = Row(index)
-                if hovered == row and row.displayName ~= entry.name then HideTooltip() end
+                local name = modes[mode].taken and DFRL.locale.Text(entry.name) or entry.name
+                if hovered == row and row.displayName ~= name then HideTooltip() end
                 row.entry, row.active = entry, true
                 local rank = options.ranks and index + offset or nil
-                if row.displayName ~= entry.name or row.drawIndex ~= rank or row.drawRevision ~= optionsRevision then
-                    T.SetTextIfChanged(row.name, rank and (tostring(rank) .. ". " .. entry.name) or entry.name)
-                    row.displayName, row.drawIndex = entry.name, rank
+                if row.displayName ~= name or row.drawIndex ~= rank or row.drawRevision ~= optionsRevision then
+                    T.SetTextIfChanged(row.name, rank and (tostring(rank) .. ". " .. name) or name)
+                    row.displayName, row.drawIndex = name, rank
                 end
                 local damage = options.damage and entry.dmg or nil
                 local rate = options.dps and entry.dps or nil
@@ -962,7 +992,7 @@ DFRL:NewMod("DamageMeter", 7, function()
                         bound = BindNativePortrait(row, entry)
                     elseif party then
                         bound = BindPartyIcon(row, entry)
-                    elseif apiActive then
+                    elseif UsesApi(mode) or modes[mode].taken then
                         bound = BindIcon(row, entry.icon or UNKNOWN_ICON)
                     else
                         local resolver = DFRL.sct and DFRL.sct.GetSourceIcon
@@ -1013,6 +1043,7 @@ DFRL:NewMod("DamageMeter", 7, function()
             ClearReadPass()
             session.Clear()
             dps.Clear()
+            taken.Clear()
             apiActive = useApi
             apiIdentity = {}
             viewSelection.dirty = true
@@ -1027,6 +1058,10 @@ DFRL:NewMod("DamageMeter", 7, function()
                     ClearRows()
                     ClearSamples()
                     ClearReadPass()
+                    session.Clear()
+                    taken.Clear()
+                    received[taken.index], blocked[taken.index], publications[taken.index] = nil, true, nil
+                    resetPending = false
                     viewSelection.dirty = true
                 elseif
                     apiIdentity.epoch ~= context.counterEpoch
@@ -1034,10 +1069,24 @@ DFRL:NewMod("DamageMeter", 7, function()
                     or apiIdentity.encounter ~= (context.encounter and context.encounter.encounterId)
                 then
                     ClearSamples()
+                    if
+                        apiIdentity.epoch
+                        and (apiIdentity.epoch ~= context.counterEpoch or apiIdentity.authority ~= context.authorityId)
+                    then
+                        taken.Clear()
+                        received[taken.index], blocked[taken.index], publications[taken.index] = nil, true, nil
+                        if session.IsReset() then
+                            session.Reset()
+                            resetPending = true
+                        end
+                        ClearReadPass()
+                        viewSelection.dirty = true
+                    end
                 end
                 apiIdentity.runId, apiIdentity.epoch, apiIdentity.authority =
                     context.runId, context.counterEpoch, context.authorityId
                 apiIdentity.encounter = context.encounter and context.encounter.encounterId
+                apiIdentity.time = context.asOfRunSeconds
             end
         elseif type(AZS_GetPhase) == "function" then
             ok, phase = pcall(AZS_GetPhase)
@@ -1045,12 +1094,14 @@ DFRL:NewMod("DamageMeter", 7, function()
         return ok, phase
     end
     local function CaptureLegacyReset()
-        if not resetPending or apiActive then return end
+        if not resetPending then return end
         local time = RunSeconds()
         -- Legacy clients capture once in the visible deferred reader.
         for index = 1, table.getn(modes) do
-            local source, amount, rate, _, publication = ReadOnce(index)
-            if source then session.Apply(index, source, amount, rate, time, publication) end
+            if not UsesApi(index) then
+                local source, amount, rate, _, publication = ReadOnce(index)
+                if source then session.Apply(index, source, amount, rate, time, publication) end
+            end
         end
         resetPending = false
     end
@@ -1076,7 +1127,7 @@ DFRL:NewMod("DamageMeter", 7, function()
         local paint = not DFRL.layout.IsHidden("damageMeter") and UIParent:IsVisible()
         if paint and not viewSelection.paint then viewSelection.dirty = true end
         viewSelection.paint = paint
-        if not paint and not dataDirty then
+        if not paint and (not dataDirty or viewSelection.taken) then
             if dataValid then native.Acquire() end
             return
         end
@@ -1146,7 +1197,7 @@ DFRL:NewMod("DamageMeter", 7, function()
         hovered = resetButton
         GameTooltip:SetOwner(resetButton, "ANCHOR_NONE")
         GameTooltip:SetText(DFRL.locale.Text("Reset statistics"))
-        GameTooltip:AddLine(DFRL.locale.Text("Clear damage and healing. Start again from zero."), 1, 1, 1)
+        GameTooltip:AddLine(DFRL.locale.Text("Clear meter statistics. Start again from zero."), 1, 1, 1)
         GameTooltip:Show()
     end)
     resetButton:SetScript("OnLeave", HideTooltip)
@@ -1192,11 +1243,13 @@ DFRL:NewMod("DamageMeter", 7, function()
         end,
         onReset = function()
             mode, offset, age, faulted = 1, 0, 0.2, false
+            viewSelection.taken = nil
             viewSelection.first, viewSelection.steps, viewSelection.dirty = nil, 0, true
             dataDirty = true
             HideTooltip()
             dps.Clear()
             session.Clear()
+            taken.Clear()
             if api then api.Clear() end
             resetPending = false
             Release()
@@ -1267,7 +1320,10 @@ DFRL:NewMod("DamageMeter", 7, function()
             local captured = api.Reset()
             if not captured then return end
             apiActive = true
-            resetPending = false
+            -- Native checkpoints cover the original four views. The legacy
+            -- incoming categories share the existing deferred reset boundary.
+            session.Reset()
+            resetPending = true
         else
             session.Reset()
             resetPending = true
@@ -1295,6 +1351,7 @@ DFRL:NewMod("DamageMeter", 7, function()
             faulted = true
             dps.Clear()
             session.Clear()
+            taken.Clear()
             if api then api.Clear() end
             resetPending = false
             Release()
@@ -1328,7 +1385,7 @@ DFRL:NewMod("DamageMeter", 7, function()
                 Invalidate()
             else
                 for index, entry in ipairs(modes) do
-                    if arg1 == entry.prefix then
+                    if arg1 == entry.prefix and (not apiActive or entry.taken) then
                         received[index] = true
                         receipts[index] = (receipts[index] or 0) + 1
                         viewSelection.dirty = true

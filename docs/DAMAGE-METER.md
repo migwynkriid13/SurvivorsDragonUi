@@ -3,7 +3,7 @@
 ## Native version 1 data path
 
 Clients implementing the [version 1 contract](DAMAGE-METER-AND-INSTANCE-PLAYER-POSITION-API.md#3-version-1-implementation-contract)
-use `core/meter_api.lua` for the existing four views. The meter reads complete
+use `core/meter_api.lua` for Damage Done, Healing Done, Boss Damage and Party Damage. The meter reads complete
 native snapshots and their authoritative source/hero descriptors. Names and
 icons come directly from those descriptors, including equipment, jewelry,
 learned talents, pet/totem attacks and periodic effects in every native language.
@@ -12,14 +12,15 @@ Native row IDs identify rate samples even when several rows share a name.
 Damage Done requests the selected native recent window, or All. Healing Done
 keeps native received-healing semantics; Boss Damage requests the current/last
 encounter; Party Damage requests owner totals and retained hero portraits.
-The source buffers are bounded to four views. The meter does not call its
+The v1 source buffers are bounded to these four views. The meter does not call its
 legacy icon resolver, match party names to live units, observe a second damage
 tab, keep a local rolling ring or subtract local reset baselines on this path.
 Current-loadout reads are unnecessary for these rows because each snapshot
 includes complete historical source metadata.
 
-X captures a native checkpoint synchronously. A failed capture preserves the
-previous session and its visible values. Successful replacement releases the
+For these four views, X captures a native checkpoint synchronously. A failed
+capture preserves both the native checkpoint and the separate Damage Taken reset
+session. Successful replacement releases the
 old handle; failed release retries through the existing controller without
 collecting data while disabled. Invalidated checkpoints block pre-reset replay
 until a new Reset or the normal session/world retirement. Language changes
@@ -52,7 +53,8 @@ the shared Cancel/discard/profile paths; both full resets turn it off. Turning
 it off hides and clears the custom view and restores the native HUD preference
 captured by the replacement. It does not force the game's own meter setting off.
 
-Click its heading to cycle through Damage Done, Healing Done, Boss Damage and Party Damage;
+Click its heading to cycle through Damage Done, Healing Done, Boss Damage,
+Party Damage and Damage Taken;
 views still waiting for their first usable native publication are skipped.
 Right-click goes backwards. The gold header shows **Total** and **DPS** (or **HPS**
 for healing), replacing the view name and the former footer text. Hover over the
@@ -61,7 +63,7 @@ view; it never closes the meter. When totals are shown, missing values display `
 Under `/sdui` → **Damage meter**, set **Abilities shown** from **1 to 10**;
 the default is **6**. The number previews immediately and saves with Confirm.
 Cancel, world/logout/reload discard, profiles and both resets use the shared
-display lifecycle. Only views with a native getter are offered. Scroll
+display lifecycle. Views without their required native data remain gated. Scroll
 over the window for more sources. The settings use two columns. Rows show the
 native source name, DPS/HPS and gold-ringed icon by default; ability totals,
 percentages and ranks start off. **Ability damage**, **Ability DPS** and **Ability
@@ -82,11 +84,13 @@ party getter skip that view.
 Under **DPS window**, use the minus/plus buttons for **5–120 seconds**, in
 five-second steps. Below five, **All** selects the whole-run average. Hover over
 the header or a source to see its whole-run average alongside recent DPS.
-The **X** purges all existing Damage Done, Healing Done, Boss Damage and Party Damage statistics
-from this meter and starts again from zero. It clears totals, source rows, shares,
+The **X** starts a new session for all five views. It clears totals, source rows, shares,
 rankings, scroll position and displayed/recent rates together. Existing effects
 or pets remain in game; their later damage or healing counts as new activity.
-The reset is session-only and immediate, independent of Confirm. There is no
+The reset is session-only and independent of Confirm. Legacy baselines are
+captured by the next visible reader pass; v1 captures its four-view checkpoint
+synchronously and leaves Damage Taken to that deferred legacy pass. This is not
+one atomic five-view checkpoint. There is no
 separate Reset DPS settings button. After resetting, **All** and the average DPS
 tooltips use only damage since the reset. The window choice retains the shared
 preview, Confirm, Cancel, profile and full-reset paths.
@@ -128,6 +132,39 @@ the same instant reflow, without a new region, asset, event or updater. CI-only
 production-meter cases cover the layout and font lifecycle; no local tests or
 addon/game execution were run, and native glyph fit remains unverified.
 
+## Damage Taken
+
+Damage Taken is the fifth view. It reads the official legacy `AZS_TAKEN` rows
+(`source`, `dmg`) and `AZS_RUN.taken`, including when the other four views use
+v1. The current v1 contract has no incoming-damage metric; this view does not
+invent one or fall back to outgoing damage.
+
+The six known source keys are categories: `boss melee`, `boss spell`, `elite`,
+`mob melee`, `mob spell` and `area`. Their captions are Boss melee, Boss spells,
+Elites, Enemy melee, Enemy spells and Ground effects. Unknown native category
+names retain their received text. These rows do not identify an attacker or
+spell. A native total above the source sum contributes one **Unattributed
+damage** row for the remainder, without guessing its cause. The title and seven
+category captions have all fourteen UI translations.
+
+Rates use `amount / max(native run seconds, 1)`, or native seconds since the
+legacy Reset baseline. Pausing leaves those seconds unchanged. Damage Taken
+uses the existing neutral icon inside the same circle/rim and never asks the
+spell/item source resolver for category artwork. Amounts, shares and rows use
+the existing pool, five-Hz visible reader and one-Hz rate presentation.
+
+The shared legacy session baselines all five views on its next visible pass.
+With v1 active, a successful native checkpoint capture also requests the separate
+Damage Taken baseline; capture failure retains both previous sessions. Hidden
+after a click defers that legacy capture until visible. World/run retirement,
+disabling and full resets clear it through the existing lifecycle. No baseline
+or gameplay data is saved.
+
+Hidden/off meters skip Damage Taken normalization. Both Performance Mode states
+show the same instant values. The fifth view adds no frame, region, asset,
+event, updater, setting or SavedVariable. CI-only coverage is authored; no local
+tests, standalone validation or addon/game execution were run.
+
 ## Native data
 
 `meterEnabled` is a normalized boolean in the existing display table. Missing
@@ -164,7 +201,7 @@ meter-window Reset does not reset the API totals; there is no official setter
 for clearing these counters.
 
 `NewMeterSession` therefore captures exact name/proc counter baselines for all
-four views through their existing getters, once in the deferred visible refresh
+five views through their existing data adapters, once in the deferred visible refresh
 after the X is clicked. Subsequent rows contain only positive counter deltas.
 Their sum becomes the displayed total; shares and descending rankings use those
 deltas, with native order as the tie-breaker. Proc identity, source names and

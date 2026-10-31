@@ -9,7 +9,7 @@ local function Test(name, callback)
     print("PASS " .. name)
 end
 
-local function Meter()
+local function Meter(configure)
     local context = H.New()
     local env = context.env
     local function Count(kind, name)
@@ -173,6 +173,7 @@ local function Meter()
         AZSHEAL = "AZS_HEALING_UPDATED",
         AZSBOSSDMG = "AZS_BOSSMETER_UPDATED",
         AZSPARTY = "AZS_PARTY_UPDATED",
+        AZSTAKEN = "AZS_TAKEN_UPDATED",
     }
     for _, name in pairs(stamps) do
         env[name] = context.now
@@ -183,6 +184,7 @@ local function Meter()
             return env.T.SourceIconFallback
         end,
     }
+    if configure then configure(context, env) end
     context:Load("core/hud.lua")
     context:Load("core/meter_rates.lua")
     context:Load("core/widgets.lua")
@@ -871,6 +873,308 @@ Test("publication-cached rolling samples retain gaps, regressions and source ret
     source = {}
     assert(model.Observe(10, source, 0, 0, 3) and model.Header(0) == nil)
     assert(model.Observe(11, source, 0, 0, 3) and model.Header(0) == 0)
+end)
+
+local function Taken(performance)
+    local context = Meter(function(c, env)
+        c.settings.performanceMode = performance == true
+        env.AZS_TAKEN = { { source = "boss melee", dmg = 100 } }
+        env.AZS_RUN.taken = 100
+        env.ReloadUI = function() c.reloaded = true end
+    end)
+    context:Tick()
+    context:Cycle("RightButton")
+    assert(context.title:GetText() == "Damage Taken", "received damage was not the fifth view")
+    return context
+end
+
+Test("damage taken joins both cycle directions without changing the four original views", function()
+    local context = Taken()
+    context:Cycle()
+    assert(context.title:GetText() == "Damage Done", "Taken did not wrap to outgoing damage")
+    local expected = { "Healing Done", "Boss Damage", "Party Damage", "Damage Taken", "Damage Done" }
+    for _, title in ipairs(expected) do
+        context:Cycle()
+        assert(context.title:GetText() == title, "adding Taken changed the existing cycle order")
+    end
+    context:Cycle("RightButton")
+    assert(context.title:GetText() == "Damage Taken")
+    context:Cycle("RightButton")
+    assert(context.title:GetText() == "Party Damage", "reverse Taken navigation skipped Party")
+    context:Call(context.header, "OnClick", "LeftButton")
+    context:Call(context.header, "OnClick", "LeftButton")
+    context:Tick()
+    assert(context.title:GetText() == "Damage Done", "queued clicks lost the Taken boundary")
+end)
+
+Test("taken categories preserve received amounts and use neutral artwork", function()
+    local context = Taken()
+    local env = context.env
+    local source = {
+        { source = "boss melee", dmg = 60 },
+        { source = "boss spell", dmg = 50 },
+        { source = "elite", dmg = 40 },
+        { source = "mob melee", dmg = 30 },
+        { source = "mob spell", dmg = 20 },
+        { source = "area", dmg = 10 },
+    }
+    env.AZS_TAKEN, env.AZS_RUN.taken = source, 210
+    context:ResetCounts()
+    context:Publish("AZSTAKEN")
+    context:Tick()
+    local names = { "Boss melee", "Boss spells", "Elites", "Enemy melee", "Enemy spells", "Ground effects" }
+    for index, name in ipairs(names) do
+        local row = context:Row(index)
+        assert(row.entry.name == name and row.entry.dmg == source[index].dmg, "Taken rewrote a source amount")
+        assert(row.entry.share == source[index].dmg / 210, "Taken share used outgoing or guessed damage")
+        assert(row.icon:GetTexture() == env.T.SourceIconFallback, "Taken guessed an ability icon")
+        assert(not source[index].name and not source[index].dps and not source[index].share)
+    end
+    assert(not context.reads.spells and not context.reads.portraits, "Taken borrowed SCT or party metadata")
+    env.AZS_RUN.taken = 230
+    context:SetSetting("meterRows", 10)
+    context:Publish("AZSTAKEN")
+    context:Tick()
+    local found
+    for index = 1, 7 do
+        local entry = context:Row(index).entry
+        if entry.name == "Unattributed damage" then
+            found = true
+            assert(entry.dmg == 20, "unattributed damage did not retain the native total's exact remainder")
+        end
+    end
+    assert(found, "native damage absent from source categories disappeared")
+end)
+
+Test("taken uses native run time and unchanged paused rates stay frozen", function()
+    local context = Taken()
+    assert(context:Row(1).entry.dps == 10)
+    context.env.AZS_RUN.t = 20
+    for _ = 1, 5 do
+        context:Tick()
+    end
+    assert(context:Row(1).entry.dps == 5, "Taken rate did not follow native run time")
+    context.phase = "paused"
+    for _ = 1, 8 do
+        context:Tick()
+    end
+    assert(context:Row(1).entry.dps == 5, "UI time changed a paused Taken rate")
+end)
+
+Test("same-stamp taken receipts refresh in-place categories and empty pages stay truthful", function()
+    local context = Taken()
+    local stamp = context.env.AZS_TAKEN_UPDATED
+    context.env.AZS_TAKEN[1].dmg, context.env.AZS_RUN.taken = 135, 135
+    context:Publish("AZSTAKEN", stamp)
+    context:Tick()
+    assert(context:Row(1).entry.dmg == 135, "same-stamp receipt retained the previous Taken amount")
+    context.env.AZS_TAKEN, context.env.AZS_RUN.taken = {}, 0
+    context:Publish("AZSTAKEN", stamp)
+    context:Tick()
+    assert(not context:Row(1).active and context.status:GetText() == "No meter entries yet.")
+    context:Cycle()
+    context:Cycle("RightButton")
+    assert(context.title:GetText() == "Damage Taken", "published empty Taken was excluded from cycling")
+end)
+
+Test("unpublished empty Taken waits while a received empty page remains selectable", function()
+    local context = Meter(function(_, env) env.AZS_TAKEN = {} end)
+    context:Tick()
+    context:Cycle("RightButton")
+    assert(context.title:GetText() == "Party Damage", "unpublished Taken inserted a blank page")
+    context:Publish("AZSTAKEN")
+    context:Cycle()
+    assert(context.title:GetText() == "Damage Taken" and not context:Row(1).active)
+    assert(context.status:GetText() == "No meter entries yet.")
+end)
+
+Test("initial Taken without a publication stamp waits for its first packet", function()
+    local context = Meter(function(_, env)
+        env.AZS_TAKEN, env.AZS_TAKEN_UPDATED = {}, nil
+    end)
+    context:Tick()
+    context:Cycle("RightButton")
+    assert(context.title:GetText() == "Party Damage", "unstamped empty Taken inserted an unavailable page")
+    context:Publish("AZSTAKEN")
+    context:Cycle()
+    assert(context.title:GetText() == "Damage Taken" and not context:Row(1).active)
+    assert(context.status:GetText() == "No meter entries yet.", "first received empty Taken lost its zero state")
+end)
+
+Test("regressed run time retires Taken until a fresh same-stamp packet", function()
+    local context = Taken()
+    local source, stamp = context.env.AZS_TAKEN, context.env.AZS_TAKEN_UPDATED
+    context.env.AZS_RUN.t = 5
+    context:Tick()
+    assert(not context:Row(1).active, "run-clock regression replayed old Taken amounts")
+    context:Tick()
+    assert(not context:Row(1).active, "a later poll accepted the retired Taken table")
+    assert(context.env.AZS_TAKEN == source and context.env.AZS_TAKEN_UPDATED == stamp)
+    context:Publish("AZSTAKEN", stamp)
+    context:Tick()
+    assert(context:Row(1).active and context:Row(1).entry.dmg == 100 and context:Row(1).entry.dps == 20)
+    assert(context.env.AZS_TAKEN == source and context.env.AZS_TAKEN_UPDATED == stamp)
+end)
+
+Test("Taken titles categories ranks and tooltips follow all fourteen real catalogs", function()
+    local context = Meter(function(c, env)
+        c:Load("localization/data.lua")
+        env.DFRL.locale.code = "en"
+        env.DFRL.locale.Text = function(key) return env.DFRL.locale.data[env.DFRL.locale.code].ui[key] or key end
+        c.settings.meterRows, c.settings.meterShowRanks = 10, true
+        env.AZS_TAKEN = {
+            { source = "boss melee", dmg = 60 },
+            { source = "boss spell", dmg = 50 },
+            { source = "elite", dmg = 40 },
+            { source = "mob melee", dmg = 30 },
+            { source = "mob spell", dmg = 20 },
+            { source = "area", dmg = 10 },
+        }
+        env.AZS_RUN.taken = 215
+        local tooltip = c:Object("GameTooltip", "GameTooltip", env.UIParent)
+        function tooltip:SetOwner(owner)
+            self.owner, self.lines = owner, {}
+        end
+        function tooltip:IsOwned(owner) return self.owner == owner end
+        function tooltip:AddDoubleLine(left, right) table.insert(self.lines, { left, right }) end
+        function tooltip:AddLine(text) table.insert(self.lines, { text }) end
+        tooltip:Hide()
+    end)
+    context:Tick()
+    context:Cycle("RightButton")
+    local names = {
+        "Boss melee",
+        "Boss spells",
+        "Elites",
+        "Enemy melee",
+        "Enemy spells",
+        "Ground effects",
+        "Unattributed damage",
+    }
+    local languages = { "en", "pl", "cs", "de", "pt", "es", "fr", "ro", "tr", "ru", "uk", "zh", "ja", "ko" }
+    local tooltip, source = context.env.GameTooltip, context.env.AZS_TAKEN
+    for _, language in ipairs(languages) do
+        local locale = context.env.DFRL.locale
+        local labels = locale.data[language].ui
+        locale.code = language
+        context:NotifyLocale()
+        assert(not tooltip:IsShown(), "language change left a stale Taken tooltip visible")
+        context:Tick()
+        assert(context.title:GetText() == assert(labels["Damage Taken"]), "Taken title retained another language")
+        for index, name in ipairs(names) do
+            local row = context:Row(index)
+            local label = assert(labels[name], "Taken category is missing from " .. language)
+            local amount = index <= 6 and source[index].dmg or 5
+            assert(row.name:GetText() == tostring(index) .. ". " .. label, "ranked category was not localized")
+            assert(row.entry.name == name and row.entry.dmg == amount, "localization rewrote Taken identity or amounts")
+            context:Call(row, "OnEnter")
+            assert(tooltip:GetText() == label, "Taken tooltip title retained English or its numeric rank")
+            assert(tooltip.lines[1][1] == labels["Damage Taken"])
+            assert(tooltip.lines[1][2] == string.format("%.0f", amount), "localized tooltip altered received damage")
+        end
+    end
+    assert(context.env.AZS_TAKEN == source and source[1].source == "boss melee" and source[1].dmg == 60)
+end)
+
+Test("malformed taken tables cannot display partial or stale amounts", function()
+    local cases = {
+        { { source = "boss melee", dmg = -1 } },
+        { { source = "boss melee", dmg = 0 / 0 } },
+        { { source = "boss melee", dmg = math.huge } },
+        { { source = "boss melee", dmg = "100" } },
+        { { dmg = 100 } },
+        { { source = "boss melee", dmg = 100 }, { source = "boss melee", dmg = 20 } },
+        { [1] = { source = "boss melee", dmg = 100 }, [3] = { source = "area", dmg = 20 } },
+    }
+    for _, source in ipairs(cases) do
+        local context = Taken()
+        context.env.AZS_TAKEN = source
+        context:Publish("AZSTAKEN")
+        context:Tick()
+        assert(not context:Row(1).active, "invalid Taken source retained a previous valid row")
+        assert(context.status:GetText() == "Meter data is unavailable.", "invalid Taken looked like valid zero")
+        context:Cycle()
+        assert(context.title:GetText() == "Damage Done", "invalid Taken broke outgoing navigation")
+    end
+end)
+
+Test("shared legacy Reset includes taken without changing native counters", function()
+    local context = Taken()
+    context.env.DFRL.ResetMeterStats()
+    assert(not context:Row(1).active, "Taken Reset kept its pre-reset row")
+    context:Tick()
+    assert(not context:Row(1).active, "Taken baseline replayed damage collected before Reset")
+    context.env.AZS_TAKEN[1].dmg, context.env.AZS_RUN.taken = 130, 130
+    context.env.AZS_RUN.t = 12
+    context:Publish("AZSTAKEN")
+    context:Tick()
+    assert(context:Row(1).entry.dmg == 30 and context:Row(1).entry.dps == 15)
+    assert(context.env.AZS_TAKEN[1].dmg == 130 and context.env.AZS_RUN.taken == 130)
+    context:Cycle()
+    assert(context.title:GetText() == "Damage Done" and not context:Row(1).active)
+end)
+
+Test("taken retirement blocks stale tables until a new publication", function()
+    local context = Taken()
+    context:Event(context.controller, "CHAT_MSG_ADDON", "AZSZONE")
+    context:Tick()
+    assert(not context:Row(1).active, "zone retirement replayed old Taken categories")
+    context:Publish("AZSTAKEN")
+    context:Tick()
+    assert(context:Row(1).active and context:Row(1).entry.dmg == 100)
+    context:Event(context.controller, "PLAYER_LEAVING_WORLD")
+    context:Event(context.controller, "PLAYER_ENTERING_WORLD")
+    context:Tick()
+    assert(not context:Row(1).active, "world retirement accepted the previous Taken publication")
+    context:Publish("AZSTAKEN")
+    context:Tick()
+    assert(context:Row(1).active)
+end)
+
+Test("wrapped reload retires Taken rows and intake without changing native counters", function()
+    local context = Taken()
+    context.env.ReloadUI()
+    assert(context.reloaded and not context:Row(1).active and not context.root:IsVisible())
+    assert(not context.controller:GetScript("OnUpdate") and not context.controller.events.CHAT_MSG_ADDON)
+    assert(context.env.AZS_TAKEN[1].dmg == 100 and context.env.AZS_RUN.taken == 100)
+end)
+
+Test("hidden off and Performance Mode taken views reuse rows without hidden source work", function()
+    for _, performance in ipairs({ false, true }) do
+        local context = Taken(performance)
+        local row, allocated = context:Row(1), #context.objects
+        context:ResetCounts()
+        context:Tick()
+        context:NoPresentationWrites()
+        assert(#context.objects == allocated and not context.reads.spells and not context.reads.portraits)
+        context:SetLayoutHidden(true)
+        context.env.AZS_TAKEN = {
+            setmetatable({}, {
+                __index = function(_, key)
+                    if key == "source" or key == "dmg" then
+                        context.reads.takenFields = (context.reads.takenFields or 0) + 1
+                    end
+                    return key == "source" and "boss melee" or key == "dmg" and 140 or nil
+                end,
+            }),
+        }
+        context.env.AZS_RUN.taken = 140
+        context:Publish("AZSTAKEN")
+        context:ResetCounts()
+        for _ = 1, 6 do
+            context:Tick()
+        end
+        assert(not context.reads.takenFields and not context.reads.metrics, "hidden Taken normalized or measured rows")
+        context:NoPresentationWrites()
+        context:SetLayoutHidden(false)
+        context:Tick()
+        assert(row.active and row.entry.dmg == 140 and #context.objects == allocated)
+        context:SetSetting("meterEnabled", false)
+        context:ResetCounts()
+        context:Tick()
+        assert(not context.reads.takenFields and not context.controller:GetScript("OnUpdate"))
+        assert(not context.controller.events.CHAT_MSG_ADDON, "disabled Taken retained its packet listener")
+    end
 end)
 
 print("PASS " .. passed .. " party meter contracts")

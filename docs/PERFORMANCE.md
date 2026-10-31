@@ -56,6 +56,33 @@ Both Performance Mode states use the same instant native data and static art.
 These are source costs and CI-only mock scenarios, not measured native drawing,
 appearance or FPS results; no local tests or game execution were performed.
 
+## Damage Taken meter view
+
+The fifth cycle entry reuses the meter row/icon/rim pool, five-Hz visible reader
+and one-Hz rate presentation. It normalizes official `AZS_TAKEN` categories and
+an explicit `AZS_RUN.taken` remainder only while visible and enabled. Category
+icons reuse the neutral image and skip the spell/item resolver. Existing
+publication/retirement, changed-write and hidden/off cleanup paths remain the
+owners; there is no second poller or private rate clock.
+
+The adapter bounds input to 64 native categories plus one unattributed row and
+reuses its normalized row pool. Table identity, publication stamp, receipt and
+native total changes trigger parsing; native-time changes refresh only rates.
+Malformed input and retired publications clear cached rows. No gameplay history
+or per-hit records are retained.
+
+Rates divide by native run seconds (or native seconds since the legacy Reset),
+with a one-second minimum; pause does not advance the denominator. Legacy X
+baselines five views on the next visible pass. With v1 active, its four-view
+native checkpoint stays synchronous and Damage Taken baselines separately on
+that deferred pass; failed native capture retains both previous sessions.
+
+Both Performance Mode states use identical instant information and artwork.
+Added frame/region/asset/event/updater/setting/SavedVariable cost is zero; the
+existing view-selection bound grows from four to five. CI-only lifecycle cases
+are authored and were not run locally. Source review does not measure FPS,
+native drawing or live appearance.
+
 ## Mandatory rule for all drawing and assets
 
 Drawing performance is a project requirement for every frame and artwork change,
@@ -2239,7 +2266,7 @@ retains at most 120 run seconds plus one boundary sample, and compresses flat
 intervals to their endpoints. Source identities remain exact name/proc pairs;
 new identities allocate once and reuse their numeric vectors. Left-boundary
 queries use binary search at the one-Hz presentation cadence. All skips history;
-The X captures all four native views once through the existing reader and keeps
+The legacy X captures all five views once through the existing reader and keeps
 one baseline/last-counter record per exact name/proc identity. It pools positive
 session rows and recalculates their totals/shares/order only when counters or
 native order change; unchanged counters refresh only native-time average rates.
@@ -2262,13 +2289,13 @@ review and formatting are the only local checks; CI-only mocks are authored for
 cycling, portraits, unchanged/hidden/off work, failure caching, reset metadata
 and world retirement. No measured CPU/GPU/FPS or live visual-parity claim follows.
 
-Waiting meter views are skipped by a bounded four-view scan in the existing
+Waiting meter views are skipped by a bounded five-view scan in the existing
 deferred visible reader. Click handlers retain only direction/step intent and
 call no getter. Accepted empty snapshots and explicit error messages remain
 selectable; fresh-publication guards stay unchanged. Candidate scans run for
 pending navigation or readiness/publication/visibility changes, rather than
 adding unselected-view polling to each idle pass. Hidden views defer selection,
-and disable/retirement clears it. Candidates store only view indices. Four
+and disable/retirement clears it. Candidates store only view indices. Five
 reusable native-result records coalesce selection, Reset baselines, rolling
 damage observation and presentation within each pass; their source/value
 references are cleared immediately after the protected refresh, including
