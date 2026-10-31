@@ -151,9 +151,33 @@ function language.Select(code)
     end
 end
 
+local nativeCode, nativeRevision
+local function ObserveNativeLanguage()
+    if type(_G.AZS_GetMeterCapabilities) ~= "function" then return false end
+    local ok, capabilities, failure = pcall(_G.AZS_GetMeterCapabilities)
+    if
+        not ok
+        or failure ~= nil
+        or type(capabilities) ~= "table"
+        or capabilities.apiVersion ~= 1
+        or type(capabilities.languageCode) ~= "string"
+        or not language.data[capabilities.languageCode]
+        or type(capabilities.languageRevision) ~= "string"
+        or capabilities.languageRevision == ""
+    then
+        return false
+    end
+    local code, revision = capabilities.languageCode, capabilities.languageRevision
+    if nativeCode ~= code or nativeRevision ~= revision or language.code ~= code then
+        nativeCode, nativeRevision = code, revision
+        language.Select(code)
+    end
+    return true
+end
+
 -- Exact localized zone subtitles distinguish all fourteen game catalogs. Names
 -- supplement them; tied/unknown evidence never guesses a language from bytes.
-function language.ObserveZone()
+local function ObserveZoneLanguage()
     if type(AZS_GetPhase) ~= "function" then return end
     local phase = AZS_GetPhase()
     local phases = { ready = true, playing = true, choosing = true, paused = true, dead = true, victory = true }
@@ -181,6 +205,8 @@ function language.ObserveZone()
     return zone.zone ~= nil
 end
 
+function language.ObserveZone() return ObserveNativeLanguage() or ObserveZoneLanguage() end
+
 -- Preserve complete UTF-8 characters when clipping diagnostic previews.
 function language.Preview(text, limit)
     local last = math.min(string.len(text), limit)
@@ -195,11 +221,14 @@ function language.Preview(text, limit)
 end
 
 DFRL:NewMod("Language", -1, function()
-    if type(GetLocale) == "function" then
-        local ok, locale = pcall(GetLocale)
-        if ok then language.Select(aliases[locale] or locale) end
+    local pending = false
+    if not ObserveNativeLanguage() then
+        if type(GetLocale) == "function" then
+            local ok, locale = pcall(GetLocale)
+            if ok then language.Select(aliases[locale] or locale) end
+        end
+        pending = not ObserveZoneLanguage()
     end
-    local pending = not language.ObserveZone()
     local elapsed = 0
     local observer = CreateFrame("Frame")
     local function Tick()

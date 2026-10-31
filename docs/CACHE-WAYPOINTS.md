@@ -105,6 +105,26 @@ minimap pins, calibration and interpolation state remain independent of mirrorin
 
 ## Smooth HUD updates
 
+### Native version 1 live positions
+
+When `AZS_GetMeterCapabilities()` advertises `liveInstancePosition`, navigation
+uses `AZS_GetPlayerPosition()` for the current native rendered-frame world
+position and facing, including instance maps. Cache/lair copies retain their
+`runId`, `mapId` and `spaceId`; all three must match before their world offsets
+are used for selection, floating guides or minimap pins. One synchronous
+navigation sample shares the validated position across consumers. Successful
+reads stay fresh each frame; typed failures defer for the native retry delay
+without retaining an old position. Zero coordinates are valid.
+
+Native offsets carry no sampled-presentation timestamp, so movement is direct
+in both Performance Mode states. No cosmetic pin tween or movement prediction
+is added. Advertised-API errors, missing getters and mismatched coordinate tags
+hide/defer affected guidance instead of substituting older run packets. Accepted
+snapshots remain available for readiness recovery. Legacy clients retain the
+map/run-snapshot paths described below; map-only fallen-ally coordinates still
+use the existing confirmed-sheet path. See the
+[API contract](DAMAGE-METER-AND-INSTANCE-PLAYER-POSITION-API.md#35-azs_getplayerposition).
+
 The HUD's `OnUpdate` already runs every rendered frame, but repeating a received `AZS_RUN` position does not make that packet's coordinates live. The earlier world-coordinate change preferred those sampled values even where a native per-frame position was available, making the rounded yard label and arrow step at the packet cadence.
 
 Visible guides now first try the native current-sheet player map position with confirmed physical map geometry, and the native minimap model's per-frame facing. These live readings update the displayed distance and direction every frame. Browsing another sheet, missing scale or unavailable instance map coordinates retains the official world-coordinate path; missing native facing retains `pf`. The addon never changes an open world map to obtain a live reading.

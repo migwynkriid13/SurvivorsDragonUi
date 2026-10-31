@@ -768,6 +768,9 @@ DFRL:NewMod("Waypoints", 3, function()
                     z = entry.z,
                     mx = entry.mx,
                     my = entry.my,
+                    runId = type(entry.runId) == "string" and entry.runId or nil,
+                    mapId = Number(entry.mapId) and entry.mapId or nil,
+                    spaceId = type(entry.spaceId) == "string" and entry.spaceId or nil,
                 })
             end
             if not guardian or occupied then
@@ -794,6 +797,9 @@ DFRL:NewMod("Waypoints", 3, function()
                     y = entry.y,
                     mx = entry.mx,
                     my = entry.my,
+                    runId = type(entry.runId) == "string" and entry.runId or nil,
+                    mapId = Number(entry.mapId) and entry.mapId or nil,
+                    spaceId = type(entry.spaceId) == "string" and entry.spaceId or nil,
                 }
                 table.insert(result, point)
                 if guardian then table.insert(minimap, point) end
@@ -807,6 +813,9 @@ DFRL:NewMod("Waypoints", 3, function()
                     y = entry.y,
                     mx = entry.mx,
                     my = entry.my,
+                    runId = type(entry.runId) == "string" and entry.runId or nil,
+                    mapId = Number(entry.mapId) and entry.mapId or nil,
+                    spaceId = type(entry.spaceId) == "string" and entry.spaceId or nil,
                 }
                 table.insert(minimap, point)
                 if
@@ -985,7 +994,15 @@ DFRL:NewMod("Waypoints", 3, function()
     local function UpdateGuide(tracker, elapsed)
         if tracker.selectionDeferred and CanSelectNearest(tracker) then Choose(tracker) end
         local enabled = DFRL.display.Get(tracker.displayKey)
-        if not enabled or not tracker.selected then
+        if
+            not enabled
+            or not tracker.selected
+            or (
+                navigation.IsCurrentDestination
+                and CanSelectNearest(tracker)
+                and not navigation.IsCurrentDestination(tracker.selected)
+            )
+        then
             if tracker.kind ~= "party" and not enabled then tracker.selectionDeferred = true end
             tracker.presentation = nil
             if tracker.hudWanted ~= false then

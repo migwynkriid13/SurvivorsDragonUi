@@ -6,52 +6,35 @@ function DFRL.tools.NewCircularIcon(portrait, size, minimumParts)
     local image, strips = {}, {}
     local parent, radius = portrait:GetParent(), size / 2
     local iconPath, native, failedIcon, scale, used
+    local nativeRun, nativeKey, nativeTexture, failedCircleRun, failedCircleKey
+    local function ClearStrip(strip)
+        if strip.boundTexture or strip.nativeKey then strip:SetTexture(nil) end
+        strip.boundTexture, strip.nativeRun, strip.nativeKey, strip.nativeTexture = nil, nil, nil, nil
+        if strip:IsShown() then strip:Hide() end
+    end
     local function ClearStrips()
         for _, strip in ipairs(strips) do
-            if strip.boundTexture then strip:SetTexture(nil) end
-            strip.boundTexture = nil
-            if strip:IsShown() then strip:Hide() end
+            ClearStrip(strip)
         end
     end
     local function ClearPortrait()
-        if portrait:GetTexture() then portrait:SetTexture(nil) end
+        if nativeRun or portrait:GetTexture() then portrait:SetTexture(nil) end
         if portrait:IsShown() then portrait:Hide() end
         native = false
+        nativeRun, nativeKey, nativeTexture = nil, nil, nil
     end
     function image.Clear()
         ClearPortrait()
         ClearStrips()
         iconPath, failedIcon = nil, nil
+        failedCircleRun, failedCircleKey = nil, nil
     end
     local function BindPortrait(icon)
         _G.SetPortraitToTexture(portrait:GetName(), icon)
         local assigned = portrait:GetTexture()
         return assigned == icon or assigned == string.gsub(icon, "%.[^%.]*$", "")
     end
-    function image.Bind(icon, effectiveScale)
-        if not icon then
-            image.Clear()
-            return false
-        end
-        if native and iconPath == icon then return true end
-        effectiveScale = effectiveScale or parent:GetEffectiveScale()
-        if type(effectiveScale) ~= "number" or effectiveScale - effectiveScale ~= 0 or effectiveScale <= 0 then
-            image.Clear()
-            return false
-        end
-        if iconPath == icon and T.NearlyEqual(scale, effectiveScale) then return true end
-        if failedIcon ~= icon and type(_G.SetPortraitToTexture) == "function" then
-            local ok, bound = pcall(BindPortrait, icon)
-            if ok and bound then
-                ClearStrips()
-                if not portrait:IsShown() then portrait:Show() end
-                iconPath, native, failedIcon = icon, true, nil
-                return true
-            end
-            failedIcon = icon
-        end
-        ClearPortrait()
-        iconPath = nil
+    local function PrepareStrips(effectiveScale)
         if not T.NearlyEqual(scale, effectiveScale) then
             local parts = math.max(minimumParts or 2, math.ceil(size * effectiveScale))
             local step = size / parts
@@ -77,12 +60,50 @@ function DFRL.tools.NewCircularIcon(portrait, size, minimumParts)
             end
             scale = effectiveScale
         end
+    end
+    local function ShowStrips(usable)
+        for index = 1, used do
+            local strip = strips[index]
+            if usable then
+                if not strip:IsShown() then strip:Show() end
+            elseif strip:IsShown() then
+                strip:Hide()
+            end
+        end
+    end
+    function image.Bind(icon, effectiveScale)
+        if not icon then
+            image.Clear()
+            return false
+        end
+        nativeRun, nativeKey, nativeTexture = nil, nil, nil
+        if native and iconPath == icon then return true end
+        effectiveScale = effectiveScale or parent:GetEffectiveScale()
+        if type(effectiveScale) ~= "number" or effectiveScale - effectiveScale ~= 0 or effectiveScale <= 0 then
+            image.Clear()
+            return false
+        end
+        if iconPath == icon and T.NearlyEqual(scale, effectiveScale) then return true end
+        if failedIcon ~= icon and type(_G.SetPortraitToTexture) == "function" then
+            local ok, bound = pcall(BindPortrait, icon)
+            if ok and bound then
+                ClearStrips()
+                if not portrait:IsShown() then portrait:Show() end
+                iconPath, native, failedIcon = icon, true, nil
+                return true
+            end
+            failedIcon = icon
+        end
+        ClearPortrait()
+        iconPath = nil
+        PrepareStrips(effectiveScale)
         local usable = true
         local stem = string.gsub(icon, "%.[^%.]*$", "")
         for index, strip in ipairs(strips) do
             if index <= used then
                 if strip.boundTexture ~= icon then
                     strip.boundTexture = nil
+                    strip.nativeRun, strip.nativeKey, strip.nativeTexture = nil, nil, nil
                     local loaded = strip:SetTexture(icon)
                     local assigned = strip:GetTexture()
                     if loaded ~= false and (loaded == true or loaded == 1 or assigned == icon or assigned == stem) then
@@ -93,21 +114,108 @@ function DFRL.tools.NewCircularIcon(portrait, size, minimumParts)
                 end
                 if not strip.boundTexture then usable = false end
             else
-                if strip.boundTexture then strip:SetTexture(nil) end
-                strip.boundTexture = nil
-                if strip:IsShown() then strip:Hide() end
+                ClearStrip(strip)
             end
         end
-        for index = 1, used do
-            local strip = strips[index]
-            if usable then
-                if not strip:IsShown() then strip:Show() end
-            elseif strip:IsShown() then
-                strip:Hide()
-            end
-        end
+        ShowStrips(usable)
         if usable then iconPath = icon end
         return usable
+    end
+    local function NativeFailure(code, message) return { code = code, message = message, retryable = false } end
+    local function BindRetained(texture, runId, portraitKey)
+        if type(_G.AZS_SetMeterPortrait) ~= "function" then
+            return false, NativeFailure("UNSUPPORTED_QUERY", "The native portrait endpoint is unavailable.")
+        end
+        local ok, result, failure = pcall(_G.AZS_SetMeterPortrait, texture, runId, portraitKey)
+        if ok and result == true and failure == nil then return true end
+        if
+            ok
+            and result == nil
+            and type(failure) == "table"
+            and type(failure.code) == "string"
+            and type(failure.retryable) == "boolean"
+        then
+            return false, failure
+        end
+        local error = NativeFailure("INTERNAL_ERROR", "The native portrait binding failed.")
+        if not ok then
+            error.retryable, error.retryAfterSeconds = true, 1
+        end
+        return false, error
+    end
+    function image.BindNative(runId, portraitKey, effectiveScale)
+        if type(runId) ~= "string" or runId == "" or type(portraitKey) ~= "string" or portraitKey == "" then
+            image.Clear()
+            return false, NativeFailure("INVALID_ARGUMENT", "Native portrait identity is required.")
+        end
+        if
+            native
+            and nativeRun == runId
+            and nativeKey == portraitKey
+            and (nativeTexture == nil or portrait:GetTexture() == nativeTexture)
+        then
+            return true
+        end
+        if nativeRun and nativeTexture ~= nil and portrait:GetTexture() ~= nativeTexture then native = false end
+        effectiveScale = effectiveScale or parent:GetEffectiveScale()
+        if type(effectiveScale) ~= "number" or effectiveScale - effectiveScale ~= 0 or effectiveScale <= 0 then
+            image.Clear()
+            return false, NativeFailure("INVALID_ARGUMENT", "A usable portrait scale is required.")
+        end
+        local fallback = T.SourceIconFallback
+        if
+            not native
+            and (failedCircleRun ~= runId or failedCircleKey ~= portraitKey)
+            and type(fallback) == "string"
+            and type(_G.SetPortraitToTexture) == "function"
+        then
+            local ok, bound = pcall(BindPortrait, fallback)
+            if ok and bound then
+                native, failedIcon = true, nil
+                failedCircleRun, failedCircleKey = nil, nil
+            else
+                failedCircleRun, failedCircleKey = runId, portraitKey
+                failedIcon = fallback
+            end
+        end
+        iconPath = nil
+        if native then
+            local bound, failure = BindRetained(portrait, runId, portraitKey)
+            if not bound then
+                ClearPortrait()
+                ClearStrips()
+                return false, failure
+            end
+            ClearStrips()
+            nativeRun, nativeKey, nativeTexture = runId, portraitKey, portrait:GetTexture()
+            if not portrait:IsShown() then portrait:Show() end
+            return true
+        end
+        ClearPortrait()
+        PrepareStrips(effectiveScale)
+        for index, strip in ipairs(strips) do
+            if index <= used then
+                if
+                    strip.nativeRun ~= runId
+                    or strip.nativeKey ~= portraitKey
+                    or (strip.nativeTexture ~= nil and strip:GetTexture() ~= strip.nativeTexture)
+                then
+                    local bound, failure = BindRetained(strip, runId, portraitKey)
+                    if not bound then
+                        strip:SetTexture(nil)
+                        ClearStrips()
+                        return false, failure
+                    end
+                    strip.boundTexture = nil
+                    strip.nativeRun, strip.nativeKey, strip.nativeTexture = runId, portraitKey, strip:GetTexture()
+                end
+            else
+                ClearStrip(strip)
+            end
+        end
+        ShowStrips(true)
+        nativeRun, nativeKey = runId, portraitKey
+        return true
     end
     return image
 end

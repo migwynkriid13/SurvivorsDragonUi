@@ -58,6 +58,17 @@ An explicit Bash shell enables `pipefail`, so piping fixture/model output into
 
 ## UI work and cleanup tests
 
+The native API draft adds production-boundary fixtures for the v1 meter adapter,
+complete meter view, retained portrait circle helper, native language selection
+and live navigation. They cover all fourteen literal label sets, duplicate names
+with distinct row IDs, direct source icons/retained portraits, native recent/All
+rates, unavailable history, synchronous checkpoint Reset and cleanup retries,
+epoch/encounter retirement, hidden/off work, circular fallback reuse, typed
+readiness failures, native retry delays and instance coordinate-space matching. No test stub or fake
+native API enters the runtime payload. These scenarios run only in CI and were
+not executed locally; the future game's implementation still needs native
+integration and rendering verification.
+
 SCT default cases use real Display/SCT owners to check Custom mode, Diablo IV
 style, Default font, 90% size and enabled abbreviations. Missing/invalid modes
 suppress native outgoing damage once during initialization, including synchronous
