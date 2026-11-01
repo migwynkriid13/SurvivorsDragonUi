@@ -474,6 +474,51 @@ Test("documented melee and ranged categories keep autoattack filtering without a
     end
 end)
 
+Test(
+    "native area spell IDs respect critical/direct choices without confusing area pulses and targeted damage",
+    function()
+        for _, style in ipairs({ "enemy", "diablo" }) do
+            for _, performance in ipairs({ false, true }) do
+                local context = Scene(style, performance, function(current)
+                    current.settings.sctAreaDamage = false
+                    current.settings.sctNormalHits, current.settings.sctCriticalHits = false, true
+                    current.settings.sctAutoAttacks, current.settings.sctPeriodicDamage = false, false
+                    current.settings.sctReflectedDamage = false
+                end)
+                context:Prime()
+                local area = context:NativeHit(111, { spellId = 26573, abilityName = "Consecration", critical = true })
+                context:NativeHit(222, { spellId = 8187, sourceKind = "totem", sourceId = "magma", critical = true })
+                context:NativeHit(333, { critical = true })
+                context:NativeHit(444)
+                context:Tick(0.4)
+                local labels = context:Labels()
+                assert(
+                    #labels == 1 and labels[1]:GetText() == "333",
+                    "native area damage bypassed the independent off choice"
+                )
+                local direct, registrations = labels[1], context.native.registers
+                context:SetSetting("sctAreaDamage", true)
+                context:NativeHit(555, { spellId = 26573, critical = true })
+                context:NativeHit(666, { spellId = 26573, critical = true, periodic = true })
+                context:Tick(0.4)
+                assert(#context:Labels() == 2, "area on bypassed the separate periodic filter")
+                context:SetSetting("sctAreaDamage", false)
+                assert(
+                    #context:Labels() == 1 and context:Labels()[1] == direct,
+                    "area preview retired a direct critical"
+                )
+                assert(
+                    area.amount == 111 and area.critical == true and area.periodic == false,
+                    "classification rewrote native fields"
+                )
+                assert(context.native.registers == registrations, "area filtering rebound the native frame handler")
+                context:Event(context.controller, "PLAYER_LEAVING_WORLD")
+                assert(#context:Labels() == 0, "native area filtering retained labels after world cleanup")
+            end
+        end
+    end
+)
+
 Test("native misses, pet attribution and damage-category filters retain the existing controls", function()
     local context = Scene("enemy", false, function(_, env)
         env.DFRL.locale.CombatText = function() error("native miss captions are already localized") end

@@ -607,6 +607,14 @@ The assertions cover:
   update both normal labels. Matching-cache cases check each original hit's
   position and loss consumption instead of a shared presentation centroid.
   These are CI-only source/lifecycle assertions.
+  Area-filter cases load the generated native spell data and production SCT
+  over fake boundaries. They cover default-on normalization, saved off,
+  profile/discard/reset behavior, all styles and both modes, native Consecration
+  and totem pulse IDs, independent critical/periodic choices, current queued
+  choices, mixed grouping, active removal, unchanged pool allocation, exact
+  localized aliases, conflicts, unknown native IDs and world cleanup. Editor
+  cases cover search, the hint and extended final row. These cases do not
+  establish live provider payloads or native cast-consumer parity.
   Default per-hit matching/fallback remains covered. Extraction keeps complete
   multi-variable constant declarations once, with uniqueness regression cases.
 

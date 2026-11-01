@@ -1,5 +1,10 @@
 # Languages
 
+The AoE damage caption and its ground/cone/radial/pulse hint are present in all
+fourteen `localization/ui.tsv` and runtime UI catalogs. Spell classification
+uses received IDs or exact existing canonical name aliases; it adds no
+translated spell-name list or inferred language state.
+
 SurvivorsDragonUi includes English, Polish, Czech (**Čeština**), German, Brazilian Portuguese, Spanish, French, Romanian, Turkish, Russian, Ukrainian, Simplified Chinese, Japanese and Korean. `core/localization.lua` supplies the shared text functions; `localization/data.lua` contains the generated runtime text. Both load before the editor and HUD modules.
 
 ## Following the game

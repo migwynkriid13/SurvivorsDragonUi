@@ -2,6 +2,8 @@
 DFRL.locale.data = {
     en = {
         ui = {
+            ["AoE damage"] = "AoE damage",
+            ["Ground effects, cones, radial attacks and area pulses."] = "Ground effects, cones, radial attacks and area pulses.",
             ["Scale damage by distance"] = "Scale damage by distance",
             ["Make distant damage numbers smaller. Requires an updated game."] = "Make distant damage numbers smaller. Requires an updated game.",
             ["Native IDs"] = "Native IDs",
@@ -672,6 +674,8 @@ DFRL.locale.data = {
     },
     pl = {
         ui = {
+            ["AoE damage"] = "Obrażenia obszarowe",
+            ["Ground effects, cones, radial attacks and area pulses."] = "Efekty na ziemi, stożki, ataki wokół postaci i impulsy obszarowe.",
             ["Scale damage by distance"] = "Skaluj liczby obrażeń według odległości",
             ["Make distant damage numbers smaller. Requires an updated game."] = "Zmniejszaj liczby obrażeń odległych wrogów. Wymaga aktualnej wersji gry.",
             ["Native IDs"] = "Identyfikatory gry",
@@ -1813,6 +1817,8 @@ DFRL.locale.data = {
     },
     cs = {
         ui = {
+            ["AoE damage"] = "Plošné poškození",
+            ["Ground effects, cones, radial attacks and area pulses."] = "Pozemní efekty, kužely, útoky do okolí a plošné pulzy.",
             ["Scale damage by distance"] = "Měnit velikost čísel poškození podle vzdálenosti",
             ["Make distant damage numbers smaller. Requires an updated game."] = "Zmenšovat vzdálená čísla poškození. Vyžaduje aktualizovanou verzi hry.",
             ["Native IDs"] = "ID hry",
@@ -2957,6 +2963,8 @@ DFRL.locale.data = {
     },
     de = {
         ui = {
+            ["AoE damage"] = "Flächenschaden",
+            ["Ground effects, cones, radial attacks and area pulses."] = "Bodeneffekte, Kegel, Angriffe im Umkreis und Flächenimpulse.",
             ["Scale damage by distance"] = "Schadenszahlen nach Entfernung skalieren",
             ["Make distant damage numbers smaller. Requires an updated game."] = "Weit entfernte Schadenszahlen verkleinern. Erfordert eine aktualisierte Spielversion.",
             ["Native IDs"] = "Native IDs",
@@ -4099,6 +4107,8 @@ DFRL.locale.data = {
     },
     pt = {
         ui = {
+            ["AoE damage"] = "Dano em área",
+            ["Ground effects, cones, radial attacks and area pulses."] = "Efeitos no chão, cones, ataques ao redor e pulsos em área.",
             ["Scale damage by distance"] = "Ajustar números de dano pela distância",
             ["Make distant damage numbers smaller. Requires an updated game."] = "Reduz os números de dano distantes. Requer uma versão atualizada do jogo.",
             ["Native IDs"] = "IDs nativos",
@@ -5232,6 +5242,8 @@ DFRL.locale.data = {
     },
     es = {
         ui = {
+            ["AoE damage"] = "Daño de área",
+            ["Ground effects, cones, radial attacks and area pulses."] = "Efectos de suelo, conos, ataques alrededor y pulsos de área.",
             ["Scale damage by distance"] = "Ajustar números de daño según la distancia",
             ["Make distant damage numbers smaller. Requires an updated game."] = "Reduce los números de daño lejanos. Requiere una versión actualizada del juego.",
             ["Native IDs"] = "ID nativos",
@@ -6369,6 +6381,8 @@ DFRL.locale.data = {
     },
     fr = {
         ui = {
+            ["AoE damage"] = "Dégâts de zone",
+            ["Ground effects, cones, radial attacks and area pulses."] = "Effets au sol, cônes, attaques autour de soi et pulsations de zone.",
             ["Scale damage by distance"] = "Adapter les nombres de dégâts à la distance",
             ["Make distant damage numbers smaller. Requires an updated game."] = "Réduire les nombres de dégâts éloignés. Nécessite une version du jeu à jour.",
             ["Native IDs"] = "Identifiants natifs",
@@ -7514,6 +7528,8 @@ DFRL.locale.data = {
     },
     ro = {
         ui = {
+            ["AoE damage"] = "Daune de zonă",
+            ["Ground effects, cones, radial attacks and area pulses."] = "Efecte la sol, conuri, atacuri în jur și impulsuri de zonă.",
             ["Scale damage by distance"] = "Scalează numerele de daune după distanță",
             ["Make distant damage numbers smaller. Requires an updated game."] = "Micșorează numerele de daune îndepărtate. Necesită o versiune actualizată a jocului.",
             ["Native IDs"] = "ID-uri native",
@@ -8642,6 +8658,8 @@ DFRL.locale.data = {
     },
     tr = {
         ui = {
+            ["AoE damage"] = "Alan hasarı",
+            ["Ground effects, cones, radial attacks and area pulses."] = "Yer etkileri, koniler, çevresel saldırılar ve alan darbeleri.",
             ["Scale damage by distance"] = "Hasar sayılarını mesafeye göre ölçekle",
             ["Make distant damage numbers smaller. Requires an updated game."] = "Uzaktaki hasar sayılarını küçültür. Güncel bir oyun sürümü gerektirir.",
             ["Native IDs"] = "Yerel kimlikler",
@@ -9646,6 +9664,8 @@ DFRL.locale.data = {
     },
     ru = {
         ui = {
+            ["AoE damage"] = "Урон по области",
+            ["Ground effects, cones, radial attacks and area pulses."] = "Эффекты на земле, конусы, круговые атаки и импульсы по области.",
             ["Scale damage by distance"] = "Масштабировать числа урона по расстоянию",
             ["Make distant damage numbers smaller. Requires an updated game."] = "Уменьшать числа урона вдали. Требуется обновлённая версия игры.",
             ["Native IDs"] = "Идентификаторы игры",
@@ -10869,6 +10889,8 @@ DFRL.locale.data = {
     },
     uk = {
         ui = {
+            ["AoE damage"] = "Шкода по області",
+            ["Ground effects, cones, radial attacks and area pulses."] = "Ефекти на землі, конуси, кругові атаки й імпульси по області.",
             ["Scale damage by distance"] = "Масштабувати числа шкоди за відстанню",
             ["Make distant damage numbers smaller. Requires an updated game."] = "Зменшувати числа шкоди вдалині. Потрібна оновлена версія гри.",
             ["Native IDs"] = "Ідентифікатори гри",
@@ -12066,6 +12088,8 @@ DFRL.locale.data = {
     },
     zh = {
         ui = {
+            ["AoE damage"] = "范围伤害",
+            ["Ground effects, cones, radial attacks and area pulses."] = "地面效果、锥形攻击、周围攻击和范围脉冲。",
             ["Scale damage by distance"] = "按距离缩放伤害数字",
             ["Make distant damage numbers smaller. Requires an updated game."] = "缩小远处的伤害数字。需要更新后的游戏版本。",
             ["Native IDs"] = "原生 ID",
@@ -13190,6 +13214,8 @@ DFRL.locale.data = {
     },
     ja = {
         ui = {
+            ["AoE damage"] = "範囲ダメージ",
+            ["Ground effects, cones, radial attacks and area pulses."] = "地面効果、前方範囲攻撃、周囲への攻撃、範囲パルス。",
             ["Scale damage by distance"] = "距離に応じてダメージ数字の大きさを変える",
             ["Make distant damage numbers smaller. Requires an updated game."] = "遠くのダメージ数字を小さく表示します。更新済みのゲームが必要です。",
             ["Native IDs"] = "ネイティブID",
@@ -14346,6 +14372,8 @@ DFRL.locale.data = {
     },
     ko = {
         ui = {
+            ["AoE damage"] = "광역 피해",
+            ["Ground effects, cones, radial attacks and area pulses."] = "지면 효과, 부채꼴 공격, 주변 공격과 광역 파동 피해입니다.",
             ["Scale damage by distance"] = "거리에 따라 피해 숫자 크기 조절",
             ["Make distant damage numbers smaller. Requires an updated game."] = "먼 거리의 피해 숫자를 작게 표시합니다. 업데이트된 게임 버전이 필요합니다.",
             ["Native IDs"] = "게임 ID",

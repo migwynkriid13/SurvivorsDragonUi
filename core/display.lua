@@ -64,6 +64,7 @@ DFRL:NewMod("Display", 0, function()
         sctPetDamage = true,
         sctAutoAttacks = true,
         sctDirectDamage = true,
+        sctAreaDamage = true,
         sctPeriodicDamage = true,
         sctReflectedDamage = true,
         sctMisses = true,

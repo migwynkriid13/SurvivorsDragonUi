@@ -57,7 +57,7 @@ def main():
             "DIABLO", "criticalHistory", "textStyle",
             "FALLBACK_ICON", "EVENT_SETTLE", "EVENT_FALLBACK_DELAY", "PERFORMANCE_GROUP_WINDOW", "groupWindow", "DAMAGE_COLORS",
             "DAMAGE_SAMPLE_LIMIT", "DAMAGE_SAMPLE_TIME", "DAMAGE_SAMPLE_MINIMUM", "STRONG_DAMAGE_RATIO",
-            "IsFiniteNumber", "TextureKey", "IconIdentityPart", "DamageColor", "SyncGroupWindow", "LargeCritical", "QueueCombatText", "UpdatePending", "HandleCombatEvent",
+            "IsFiniteNumber", "TextureKey", "IconIdentityPart", "AreaDamage", "DamageColor", "SyncGroupWindow", "LargeCritical", "QueueCombatText", "UpdatePending", "HandleCombatEvent",
         ])
         sct_queue = sct_queue.rsplit("\nreturn ", 1)[0] + "\nreturn { Queue = QueueCombatText, Update = UpdatePending, Handle = HandleCombatEvent, SyncWindow = SyncGroupWindow }\n"
         run_foam = extract_source("modules/ui/run.lua", ["DrawFoam", "UpdateBlueFoam"])
@@ -172,7 +172,7 @@ def main():
                     source_file.write_text(body, encoding="utf-8")
                     command.append(str(source_file))
             run_fixture(command, fixture)
-        for fixture in ("ui_fonts_spec.lua", "ui_retail_edit_spec.lua", "ui_retail_layout_spec.lua", "ui_default_chat_spec.lua", "ui_health_spec.lua", "ui_player_absorb_spec.lua", "ui_mini_health_spec.lua", "ui_sct_spec.lua", "ui_native_sct_api_spec.lua", "ui_nameplates_spec.lua", "ui_marks_spec.lua", "ui_meter_party_spec.lua", "ui_native_meter_api_spec.lua", "ui_native_meter_view_spec.lua", "ui_native_portrait_circle_spec.lua", "ui_native_language_spec.lua", "ui_live_position_api_spec.lua", "ui_party_waypoint_spec.lua", "ui_banners_perf_spec.lua", "ui_layout_spec.lua", "ui_pets_totems_spec.lua", "ui_guardian_tracker_perf_spec.lua", "ui_revive_perf_spec.lua", "ui_core_idle_cadence_spec.lua", "ui_cooldown_lifecycle_spec.lua", "ui_default_action_bar_spec.lua", "ui_tooltip_style_perf_spec.lua", "ui_target_color_perf_spec.lua", "ui_target_classification_spec.lua", "ui_passive_cadence_spec.lua", "ui_projection_cache_perf_spec.lua", "ui_sct_metadata_perf_spec.lua"):
+        for fixture in ("ui_fonts_spec.lua", "ui_retail_edit_spec.lua", "ui_retail_layout_spec.lua", "ui_default_chat_spec.lua", "ui_health_spec.lua", "ui_player_absorb_spec.lua", "ui_mini_health_spec.lua", "ui_sct_spec.lua", "ui_sct_areas_spec.lua", "ui_native_sct_api_spec.lua", "ui_nameplates_spec.lua", "ui_marks_spec.lua", "ui_meter_party_spec.lua", "ui_native_meter_api_spec.lua", "ui_native_meter_view_spec.lua", "ui_native_portrait_circle_spec.lua", "ui_native_language_spec.lua", "ui_live_position_api_spec.lua", "ui_party_waypoint_spec.lua", "ui_banners_perf_spec.lua", "ui_layout_spec.lua", "ui_pets_totems_spec.lua", "ui_guardian_tracker_perf_spec.lua", "ui_revive_perf_spec.lua", "ui_core_idle_cadence_spec.lua", "ui_cooldown_lifecycle_spec.lua", "ui_default_action_bar_spec.lua", "ui_tooltip_style_perf_spec.lua", "ui_target_color_perf_spec.lua", "ui_target_classification_spec.lua", "ui_passive_cadence_spec.lua", "ui_projection_cache_perf_spec.lua", "ui_sct_metadata_perf_spec.lua"):
             run_fixture(["lua5.1", "scripts/tests/fixtures/" + fixture], fixture)
     if failures:
         print("Failed UI fixtures:", file=sys.stderr)

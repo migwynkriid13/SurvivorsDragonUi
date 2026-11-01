@@ -218,6 +218,7 @@ function DFRL.tools.NewCombatTextApi()
             sourceIsPet = value.sourceKind ~= "player",
             targetName = value.targetName or "",
             spell = value.abilityName,
+            spellId = value.spellId,
             damageType = damageType,
             school = schools[value.schoolMask] or (value.schoolMask and tostring(value.schoolMask)),
             critical = value.critical,

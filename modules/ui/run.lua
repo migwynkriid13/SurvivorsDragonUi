@@ -2133,6 +2133,11 @@ DFRL:NewMod("RunTimers", 5, function()
                     { key = "sctReflectedDamage", label = "Reflected damage" },
                     { key = "sctMisses", label = "Misses / avoidance" },
                     { key = "sctPetDamage", label = "Pet damage" },
+                    {
+                        key = "sctAreaDamage",
+                        label = "AoE damage",
+                        description = "Ground effects, cones, radial attacks and area pulses.",
+                    },
                 },
             },
         }
@@ -2618,7 +2623,7 @@ DFRL:NewMod("RunTimers", 5, function()
             sctDescription:SetJustifyV("TOP")
             sctDescription:SetTextColor(0.75, 0.73, 0.67)
             local combatPage = combat
-            combatPage:SetHeight(612)
+            combatPage:SetHeight(672)
             combat = CreateFrame("Frame", nil, combatPage)
             combat:SetAllPoints(combatPage)
             combat:EnableMouse(false)
@@ -2696,13 +2701,20 @@ DFRL:NewMod("RunTimers", 5, function()
             sctSizeLabel:SetJustifyH("CENTER")
             FontEditorButton("+", 28, scaleX + 108, -captions.sctScale.offset, function() ChangeSctSize(1) end, combat)
             local filterSize = (contentWidth - gap) / 2
-            local function CombatToggle(key, label, x, y)
-                local control = DisplayToggle(combat, key, label, nil, y, filterSize)
+            local function CombatToggle(key, label, x, y, description)
+                local control =
+                    DisplayToggle(combat, key, label, description, y, description and contentWidth or filterSize)
                 control:ClearAllPoints()
                 control:SetPoint("TOPLEFT", combat, "TOPLEFT", x, y)
-                control:SetHeight(28)
-                control.label:ClearAllPoints()
-                control.label:SetPoint("LEFT", control, "LEFT", 32, 0)
+                if description then
+                    control:SetHeight(60)
+                    control.description:SetHeight(28)
+                    control.description:SetJustifyV("TOP")
+                else
+                    control:SetHeight(28)
+                    control.label:ClearAllPoints()
+                    control.label:SetPoint("LEFT", control, "LEFT", 32, 0)
+                end
             end
             CombatToggle(
                 "sctClassColors",
@@ -2727,7 +2739,13 @@ DFRL:NewMod("RunTimers", 5, function()
                 heading = FontEditorLabel(combat, group.label, 0, group.y, 12)
                 heading:SetTextColor(0.94, 0.79, 0.47)
                 for index, entry in ipairs(group.entries) do
-                    CombatToggle(entry.key, entry.label, math.mod(index - 1, 2) * (filterSize + gap), -entry.offset)
+                    CombatToggle(
+                        entry.key,
+                        entry.label,
+                        math.mod(index - 1, 2) * (filterSize + gap),
+                        -entry.offset,
+                        entry.description
+                    )
                 end
             end
         end

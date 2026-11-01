@@ -987,6 +987,22 @@ dialog.navigation.Search("Diablo")
 assert(#dialog.navigation.results >= 2, "custom style and font choices were absent from search")
 dialog.navigation.ClearSearch()
 assert(pages.combat:GetHeight() >= 604, "distance scaling clipped the final damage filters")
+assert(display.Get("sctAreaDamage") == true, "AoE damage did not default on")
+dialog.navigation.Search("AoE damage")
+assert(
+    #dialog.navigation.results == 1 and dialog.navigation.results[1].target == "sctAreaDamage",
+    "AoE damage was absent from settings search"
+)
+dialog.navigation.OpenResult(1)
+assert(
+    env.displayControls.sctAreaDamage.description and pages.combat:GetHeight() >= 672,
+    "AoE damage hint or final row was clipped"
+)
+context:Call(env.displayControls.sctAreaDamage, "OnClick")
+assert(not display.Get("sctAreaDamage") and not env.SurvivorsDragonUiDisplay, "AoE preview saved before Confirm")
+context:Call(env.displayControls.sctAreaDamage, "OnClick")
+assert(display.Get("sctAreaDamage"), "AoE preview did not restore on")
+dialog.navigation.ClearSearch()
 assert(display.Get("sctScale") == 0.9 and env.sctSizeLabel:GetText() == "90%", "default SCT size did not show 90%")
 assert(display.Get("sctShortNumbers") == true, "abbreviation was disabled by default")
 assert(display.Get("sctDistanceScaling") == false, "distance scaling was enabled by default")

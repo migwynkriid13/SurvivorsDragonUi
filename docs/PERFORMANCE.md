@@ -1138,6 +1138,22 @@ Performance Mode's label sharing and drawing cost are unchanged. These are
 source-level costs, not measured FPS/GPU evidence; the authored burst, anchor,
 pooling and mode-transition cases remain CI-only and were not run locally.
 
+The default-on AoE damage filter loads one generated catalog containing two
+lookup tables: native spell IDs and exact names for all 114 current ability
+records and their pulse IDs. Known native IDs take a direct lookup; legacy
+names reuse the current language's existing alias arrays. Classification runs
+once during damage intake, without another native getter, metadata scan,
+temporary table, event or updater. Pending/active records reuse one scalar flag;
+pool retirement clears it. Performance Mode's existing grouping identity adds
+that flag, preventing mixed sums from exchanging filter visibility. Preview
+uses the shared listener and cached flag without re-registering native handlers
+or restarting animations. Unknown effects retain their established display.
+Both modes share this filter. The lazy settings row adds one existing-style
+button, four texture regions and two FontStrings, with no gameplay region or
+new artwork; the existing page extends to fit its caption/hint. CI-only cases
+were authored without local execution. These are source costs, not measured
+FPS or current native cast-consumer parity. See [SCT spell data](SCT-SPELL-DATA.md).
+
 Only the kills/gold number presentation uses the five-second cadence. The initial
 valid display paints immediately, then changing packets, styles and widths
 cannot refresh those numbers early. Cache cost, native phase/data validation,

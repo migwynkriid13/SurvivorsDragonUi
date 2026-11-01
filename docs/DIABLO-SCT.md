@@ -160,6 +160,22 @@ Diablo stops this collection; it is unsaved and unrelated to DPS. No new
 setting, frame, region, event, updater or asset is added. Both Performance Mode
 states retain the same cosmetic comparison and existing animation.
 
+## AoE damage
+
+**Combat → Combat text → AoE damage** is on by default. Turn it off to hide
+identified ground effects, cones, radial attacks and area pulses, including
+their critical hits. Other enabled damage categories do not override it. Turning
+it on still respects Normal damage, Critical damage and the other categories.
+It shares live preview, Confirm/Cancel, profiles and both display resets.
+
+Classification uses generated native spell data for all 114 current ability
+definitions and their pulse IDs, including Consecration. Target counts and timing
+are not used: chain hops and separately selected attacks retain their direct
+classification. Unidentified effects stay visible. All styles and both
+Performance Mode states share the filter; toggling it does not restart active
+hits or replay retired damage. See [SCT spell data](SCT-SPELL-DATA.md) for the
+source, authoring rule and coverage limits.
+
 ## Optional abbreviated damage
 
 **Combat → Combat text → Abbreviate damage (K, M, B, T)** uses default-on boolean

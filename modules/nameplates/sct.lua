@@ -146,6 +146,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local function ShouldShowText(info)
         if info.kind == "damage" then
             if info.sourceIsPet and not DFRL.display.Get("sctPetDamage") then return false end
+            if info.areaDamage == true and not DFRL.display.Get("sctAreaDamage") then return false end
             local result = info.critical and "sctCriticalHits" or "sctNormalHits"
             if not DFRL.display.Get(result) then return false end
         end
@@ -547,6 +548,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         text.critical = nil
         text.largeCritical = nil
         text.sourceIsPet = nil
+        text.areaDamage = nil
         text.color = nil
         text.needsMeasure = nil
         text.fontRetryAt = nil
@@ -1632,6 +1634,34 @@ DFRL:NewMod("NameplateCombatText", 6, function()
 
     local function IconIdentityPart(value) return string.len(value) .. ":" .. value end
 
+    local function AreaDamage(info)
+        local data = T.SctSpellData
+        if not data then return end
+        local names = data.byName
+        if info.spellId then
+            local value = data.byId[info.spellId]
+            if type(value) == "boolean" then return value end
+            -- An unknown received ID cannot borrow another spell's name data.
+            if type(value) ~= "table" then return end
+            names = value
+        end
+        if type(info.spell) ~= "string" or info.spell == "" then return end
+        local value = names[info.spell]
+        local language = DFRL.locale
+        local catalog = language and language.data[language.code]
+        local aliases = catalog and catalog.spellNames and catalog.spellNames[info.spell]
+        if aliases then
+            for _, name in ipairs(aliases) do
+                local candidate = names[name]
+                if candidate ~= nil then
+                    if value ~= nil and candidate ~= value then return end
+                    value = candidate
+                end
+            end
+        end
+        return value
+    end
+
     local function SyncGroupWindow()
         local window = DFRL.display.Get("performanceMode") and PERFORMANCE_GROUP_WINDOW or nil
         if groupWindow == window then return end
@@ -1716,6 +1746,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local function QueueCombatText(info, now)
         local identity, byAmount, group, bucketKey, largeCritical
         if info.kind == "damage" then
+            info.areaDamage = AreaDamage(info)
             -- Resolve once even when icons are hidden, so identity and the
             -- eventual displayed icon cannot change while this hit waits.
             if not TextureKey(info.iconTexture) then info.iconTexture = CombatIcon(info) end
@@ -1741,6 +1772,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                     .. IconIdentityPart(info.damageType or "")
                     .. IconIdentityPart(info.school or "")
                     .. IconIdentityPart(info.critical and "critical" or "normal")
+                    .. IconIdentityPart(info.areaDamage == true and "area" or "")
                     .. IconIdentityPart(TextureKey(info.iconTexture) or FALLBACK_ICON)
                     .. IconIdentityPart(info.nativeIdentity or "")
                 largeCritical = LargeCritical(info, identity, now)
@@ -2115,6 +2147,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         text.critical = info.critical
         text.largeCritical = largeCritical
         text.sourceIsPet = info.sourceIsPet
+        text.areaDamage = info.areaDamage
         text.color = info.color
         UpdateTextColor(text)
         UpdateIcon(text)

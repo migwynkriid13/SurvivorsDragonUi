@@ -153,6 +153,7 @@
     "modules/nameplates/parser.lua",
     "modules/nameplates/sct.lua",
     "modules/nameplates/source_icons.lua",
+    "modules/nameplates/spell_data.lua",
     "modules/nameplates/style.lua",
     "modules/ui/banners.lua",
     "modules/ui/character.lua",
