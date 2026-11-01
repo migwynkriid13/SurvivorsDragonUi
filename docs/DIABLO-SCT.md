@@ -279,8 +279,8 @@ native labels.
 Looking away hides them, and looking back can reveal only their remaining life.
 Offscreen and missing projections never reuse old screen coordinates.
 
-**Scale damage by distance** in Combat text is on by default. Turn it off to keep
-your selected SCT size at every distance; world/death-location tracking stays
+**Scale damage by distance** in Combat text is off by default. Turn it on to make
+distant numbers smaller. Off keeps your selected SCT size at every distance; world/death-location tracking stays
 active. The choice previews immediately, saves with Confirm and follows Cancel,
 profiles and both full resets. MSBT dims the control while retaining its value.
 

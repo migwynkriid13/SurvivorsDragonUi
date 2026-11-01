@@ -83,7 +83,7 @@ They add no runtime hook or shipped fixture. Cases are CI-only and were not run
 locally; mocks cannot establish native death-position capture, camera-update
 ordering, provider availability, appearance or FPS.
 
-Distance-choice cases retain default-on normalization and explicit saved off,
+Distance-choice cases retain default-off normalization and explicit saved choices,
 preview/Confirm/Cancel, older/named profiles and resets. Production-controller
 comparisons toggle sizing in both enemy styles and Performance Mode states while
 retaining death anchors, motion, fade, expiry, pooled objects and frame ownership.

@@ -432,10 +432,10 @@ labels keep expiring while skipping font/geometry/animation writes; they do not
 restart on reappearance. The original 75 ms duplicate suppression and Performance
 Mode's 300 ms same-attack sums remain distinct and preserve original hit amounts.
 
-The default-on `sctDistanceScaling` display choice lets players disable that
-distance factor while keeping current-camera/death-location tracking and the
-selected SCT size. Missing/invalid values and both full resets select on;
-explicit saved off, profiles and the existing preview/Confirm/Cancel/discard
+The default-off `sctDistanceScaling` display choice lets players enable that
+distance factor. Off keeps current-camera/death-location tracking and the
+selected SCT size. Missing/invalid values and both full resets select off;
+explicit saved choices, profiles and the existing preview/Confirm/Cancel/discard
 lifecycle are retained. The existing listener caches the choice; the next owned
 post-camera pass applies it without resetting hits, lifetimes or handler ownership.
 Off skips the factor calculation. Hidden/off consumers retain their deferred

@@ -277,9 +277,32 @@ Test("offscreen living and dead hits hide, recover for remaining life and never 
     end
 end)
 
+Test("native distance sizing defaults off while death anchors continue tracking the camera", function()
+    for _, style in ipairs({ "enemy", "diablo" }) do
+        for _, performance in ipairs({ false, true }) do
+            local context, control = Scene(style, performance), Scene(style, performance)
+            context:Prime()
+            control:Prime()
+            local _, point = context:NativeHit(123)
+            local _, reference = control:NativeHit(123)
+            point.cameraDepth = 100000
+            context:Tick(0.31)
+            control:Tick(0.31)
+            local label, original = assert(context:Labels()[1]), assert(control:Labels()[1])
+            Close(label:GetParent().scale, original:GetParent().scale)
+            point.x, reference.x, point.targetState, reference.targetState = 650, 650, "dead", "dead"
+            context:Tick(0.1)
+            control:Tick(0.1)
+            Close(label:GetParent().scale, original:GetParent().scale)
+            Close(Holder(label).anchor.x, Holder(original).anchor.x)
+            assert(Holder(label).anchor.x > 600, "default-off sizing disabled death-location tracking")
+        end
+    end
+end)
+
 Test("native depth makes distant text smaller, with stable readable bounds in both performance modes", function()
     for _, performance in ipairs({ false, true }) do
-        local context = Scene("enemy", performance)
+        local context = Scene("enemy", performance, function(setup) setup.settings.sctDistanceScaling = true end)
         context:Prime()
         local _, point = context:NativeHit(123)
         context:Tick(0.31)
@@ -304,7 +327,8 @@ end)
 Test("distance scaling choice preserves live death anchors, animations and expiry in both performance modes", function()
     for _, style in ipairs({ "enemy", "diablo" }) do
         for _, performance in ipairs({ false, true }) do
-            local context, control = Scene(style, performance), Scene(style, performance)
+            local context = Scene(style, performance, function(setup) setup.settings.sctDistanceScaling = true end)
+            local control = Scene(style, performance, function(setup) setup.settings.sctDistanceScaling = true end)
             context:Prime()
             control:Prime()
             local _, point = context:NativeHit(123)

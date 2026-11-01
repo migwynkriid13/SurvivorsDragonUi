@@ -147,7 +147,7 @@ Test("SCT display defaults normalize missing values while retaining valid saved 
     context:Load("core/display.lua", "Display")
     local display = context.env.DFRL.display
     local defaults =
-        { sctStyle = "diablo", sctFont = "default", sctScale = 0.9, sctShortNumbers = true, sctDistanceScaling = true }
+        { sctStyle = "diablo", sctFont = "default", sctScale = 0.9, sctShortNumbers = true, sctDistanceScaling = false }
     local function AssertChoices(expected)
         for key, value in pairs(expected) do
             assert(display.Get(key) == value, key .. " lost its display transaction value")
@@ -213,15 +213,16 @@ Test("SCT display defaults normalize missing values while retaining valid saved 
     assert(context.env.SurvivorsDragonUiDisplay == nil, "full display reset retained old presentation")
 end)
 
-Test("named distance-scaling profiles retain saved off and normalize older profiles", function()
+Test("named distance-scaling profiles retain saved choices and default older profiles to off", function()
     local context = H.New()
     local env = context.env
     context:Load("core/display.lua", "Display")
     local display = env.DFRL.display
-    env.SurvivorsDragonUiDisplay = { sctDistanceScaling = false }
+    env.SurvivorsDragonUiDisplay = { sctDistanceScaling = true }
     env.SurvivorsDragonUiProfiles = {
         Old = { layout = {}, display = {}, runFont = {} },
         Fixed = { layout = {}, display = { sctDistanceScaling = false }, runFont = {} },
+        Scaled = { layout = {}, display = { sctDistanceScaling = true }, runFont = {} },
     }
     env.DFRL.layout.Copy = function(value) return value end
     env.DFRL.layout.Load = function() end
@@ -230,19 +231,25 @@ Test("named distance-scaling profiles retain saved off and normalize older profi
     local profiles = env.DFRL.profiles
     display.BeginEdit()
     profiles.BeginEdit()
-    assert(profiles.Load("Old") and display.Get("sctDistanceScaling"), "older profile did not use the default")
+    assert(profiles.Load("Old") and not display.Get("sctDistanceScaling"), "older profile did not default to off")
     assert(env.SurvivorsDragonUiProfiles.Old.display.sctDistanceScaling == nil, "preview rewrote an older profile")
     display.FinishEdit(false)
     profiles.FinishEdit(false)
-    assert(not display.Get("sctDistanceScaling"), "profile Cancel lost saved off")
+    assert(display.Get("sctDistanceScaling"), "profile Cancel lost saved on")
     display.BeginEdit()
     profiles.BeginEdit()
     assert(profiles.Load("Fixed") and not display.Get("sctDistanceScaling"), "profile lost explicit off")
     display.FinishEdit(true)
     profiles.FinishEdit(true)
     assert(not display.Get("sctDistanceScaling"), "profile Confirm lost explicit off")
+    display.BeginEdit()
+    profiles.BeginEdit()
+    assert(profiles.Load("Scaled") and display.Get("sctDistanceScaling"), "profile lost explicit on")
+    display.FinishEdit(true)
+    profiles.FinishEdit(true)
+    assert(display.Get("sctDistanceScaling"), "profile Confirm lost explicit on")
     display.Reset()
-    assert(display.Get("sctDistanceScaling"), "reset did not restore the default")
+    assert(not display.Get("sctDistanceScaling"), "reset did not restore default off")
 end)
 
 local function NativeMode(saved, damage, incoming, realDisplay)

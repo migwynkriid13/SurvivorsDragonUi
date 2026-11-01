@@ -21,11 +21,11 @@ it died. The provider's separate `impact` mode retains the original hit location
 An enemy disappearing without a confirmed death retains its last world position
 with `targetState = "unavailable"`. Neither mode uses stale nameplate pixels.
 
-The default-on **Scale damage by distance** checkbox lets players choose this
+The default-off **Scale damage by distance** checkbox lets players choose this
 presentation. Off keeps the selected SCT size at every distance while retaining
 world/death-location tracking. The existing display table's `sctDistanceScaling`
 boolean shares preview/Confirm/Cancel, profiles and both full resets; missing or
-invalid values reset to on while explicit saved off survives. MSBT dims the
+invalid values reset to off while explicit saved choices survive. MSBT dims the
 control and retains the choice. Both Performance Mode states share this path.
 
 When enabled, farther numbers appear smaller while remaining readable. SDUI multiplies
