@@ -206,6 +206,31 @@ instant result; hidden/off work remains deferred. CI-only mocks cover native
 caster labels, summaries, later incarnations, preview/discard, profiles, resets
 and unchanged reuse. No local tests or game execution were performed.
 
+## Talent proc captions
+
+On the native v1 path, a proc can show its triggering talent's received name
+and icon. For example, an ordinary cast remains `Pyroblast`, while a separately
+recorded proc with an explicit Hot Streak origin shows `Hot Streak`. The same
+rule applies to Chastise or any other native talent caption; the addon has no
+spell-to-talent name table and does not infer a talent from the player's class,
+current build, spell name or bar color.
+
+Every positive displayed contribution in the row must identify the same single
+actual talent origin in that snapshot. Definition-level associations do not
+establish that attribution. Missing, mixed, multiple or invalid origins keep
+the received source caption and artwork. Zero-display history does not supply
+post-Reset attribution. Native proc colors remain unchanged, so two related
+spell/proc rows can still have different colors.
+
+This changes presentation only. Native source records and IDs, counters, rates
+and checkpoint fences remain intact. Display families retain distinct accepted
+talent origins. Pending or missing talent
+art uses the shared neutral icon; native metadata revisions refresh names and
+artwork through the existing pooled presentation. Both Performance Mode states
+use the same instant result and hidden/off work stays deferred. CI-only mocks
+cover these boundaries; no local tests or game execution were performed, and
+actual Rockbiter, Hot Streak and Chastise payloads remain unverified.
+
 ## Native data
 
 `meterEnabled` is a normalized boolean in the existing display table. Missing

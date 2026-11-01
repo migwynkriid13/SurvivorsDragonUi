@@ -99,6 +99,19 @@ native getter, animation, frame, region, asset, event, updater, setting or saved
 data added. Hidden/off retirement remains shared. CI-only source mocks were
 authored but not run locally; live Hakkar metadata and rendering remain unverified.
 
+## Meter talent proc captions
+
+Talent proc captions reuse the same snapshot contribution index and pooled
+rows. Only changed source publications join positive row members to one actual
+talent origin; rate-only passes reuse the accepted display metadata. This adds
+no native read, current-build scan, history, animation, frame, region, asset,
+event, updater, setting or saved data. Names and icon readiness follow the
+existing metadata/language revisions and changed-only bindings. Native source
+identities, counters, checkpoints and one-Hz rates remain unchanged. Normal and
+Performance Mode both update instantly; hidden/off work stays deferred. CI-only
+mock cases were authored but not run locally, with no native rendering or FPS
+claim.
+
 ## Meter pet attribution and summaries
 
 Damage Done and Boss Damage request native actor/source rows through their

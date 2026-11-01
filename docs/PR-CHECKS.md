@@ -120,6 +120,17 @@ default-off normalization, searchable controls, preview, Confirm, discard,
 profiles and resets. These cases remain CI-only and were not executed locally;
 they do not prove native actor metadata or live rendering.
 
+Talent proc cases join only each positive member's single actual native talent
+origin. They retain ordinary casts, proc colors, source IDs/counters/checkpoints
+and separate origin identities; definition-only, absent, conflicting, malformed
+or multiple origins keep the received source presentation. Full-controller
+cases show Pyroblast beside Hot Streak, FX Holy nova as Chastise and a generic
+received shaman talent caption, without a hardcoded spell/talent mapping. They
+cover metadata-only caption/artwork changes, pending/missing icon recovery,
+unchanged pooled writes, hidden/off work and both Performance Mode states.
+These cases remain CI-only and were not run locally. Actual Rockbiter, Hot Streak
+and Chastise native snapshots and live rendering remain unverified.
+
 The production banner fixture supplies an explicit `UIErrorsFrame.AddMessage`
 boundary and the generated fourteen-language native catalogs. Affix-warning
 cases cover exact received-text admission and native suppression, separate

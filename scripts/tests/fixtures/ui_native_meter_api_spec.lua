@@ -101,6 +101,32 @@ local function ItemEffects(count)
     return records, origins
 end
 
+local function Talents()
+    local records = {
+        { id = "pyroblast-normal", rowId = "pyroblast-normal", name = "Pyroblast", amount = 9400 },
+        { id = "pyroblast-proc", rowId = "pyroblast-proc", name = "Pyroblast", amount = 4900, origin = "hot-streak" },
+        { id = "holy-nova-proc", rowId = "holy-nova-proc", name = "FX Holy nova", amount = 2900, origin = "chastise" },
+        { id = "fire-nova-proc", rowId = "fire-nova-proc", name = "Fire Nova", amount = 1900, origin = "shaman-proc" },
+    }
+    local origins = {
+        ["hot-streak"] = { name = "Hot Streak", talentKey = "hot_streak", art = "hot-streak-talent" },
+        chastise = { name = "Chastise", talentKey = "chastise", art = "chastise-talent" },
+        ["shaman-proc"] = { name = "Received shaman talent", talentKey = "native_shaman_talent", art = "shaman-talent" },
+    }
+    for _, record in ipairs(records) do
+        record.abilityKey = string.find(record.id, "pyroblast", 1, true) and "pyroblast" or record.id
+        record.rank, record.recent, record.after = 1, record.amount / 5, record.amount / 10
+        record.proc, record.origins = record.origin ~= nil, record.origin and { record.origin } or {}
+    end
+    for key, origin in pairs(origins) do
+        origin.sourceKey, origin.kind, origin.attribution = key, "talent", "known"
+        origin.nameLanguageCode, origin.spellIds, origin.originSourceKeys, origin.relatedSourceKeys = "en", {}, {}, {}
+        origin.icon = { status = "ready", path = "Interface\\Icons\\" .. origin.art }
+        origin.art = nil
+    end
+    return records, origins
+end
+
 local function Pets()
     local records = {
         { id = "shadowbolt", rowId = "hero-bolt", name = "Shadowbolt", amount = 100, recent = 50, after = 10 },
@@ -403,7 +429,15 @@ local function Native()
 end
 
 if helperMode == "helpers" then
-    return { New = Native, languages = languages, labels = labels, Ranks = Ranks, ItemRanks = ItemRanks, Pets = Pets }
+    return {
+        New = Native,
+        languages = languages,
+        labels = labels,
+        Ranks = Ranks,
+        ItemRanks = ItemRanks,
+        Pets = Pets,
+        Talents = Talents,
+    }
 end
 
 Test("missing native endpoints retain the legacy selection boundary", function()
@@ -1011,6 +1045,195 @@ Test("item rank summaries retain pet casters and repeated native source membersh
     state.context.metadataRevision = "mismatched-item-member-caster"
     source = assert(meter.Read(view, 10))
     assert(table.getn(source) == 2, "item origin borrowed a contribution from a different actor")
+end)
+
+Test("actual talent triggers supply native captions and artwork without changing spell records", function()
+    for _, view in ipairs({ damage, healing, boss }) do
+        local _, state, meter = Native()
+        state.records, state.extraSources = Talents()
+        state.records[1].origins = { "hot-streak" }
+        state.records[3].kind, state.records[4].kind = "effect", "generic"
+        local source, total = meter.Read(view, 10)
+        assert(table.getn(source) == 4 and total == 19100)
+        assert(source[1].name == "Pyroblast" and source[1].proc == 0, "normal spell cast took its modifier's name")
+        assert(source[2].name == "Hot Streak" and source[2].proc == 1 and source[2].dmg == 4900)
+        assert(source[3].name == "Chastise" and source[4].name == "Received shaman talent")
+        assert(source[2].icon == "Interface\\Icons\\hot-streak-talent")
+        assert(state.lastResponse.sources["pyroblast-proc"].name == "Pyroblast")
+        assert(state.lastResponse.sources["holy-nova-proc"].name == "FX Holy nova")
+        assert(state.lastResponse.rows[2].displayAmount == 4900 and state.lastResponse.rows[2].nativeProc)
+        local identity = source[2].rowId
+        source = assert(meter.Read(view, 10))
+        assert(source[2].rowId == identity and source[2].icon == "Interface\\Icons\\hot-streak-talent")
+    end
+end)
+
+Test("talent presentation rejects absent, modifier-only, malformed and mixed attribution", function()
+    local cases = {
+        function(state) state.records[1].proc = false end,
+        function(state)
+            state.records[1].origins, state.records[1].definitionOrigins = {}, { "hot-streak" }
+        end,
+        function(state)
+            state.records[1].origins, state.records[1].talentKey = {}, "hot_streak"
+        end,
+        function(state) state.extraSources["hot-streak"] = nil end,
+        function(state) state.extraSources["hot-streak"].name = "" end,
+        function(state) state.extraSources["hot-streak"].sourceKey = "different-source" end,
+        function(state) state.extraSources["hot-streak"].kind = "generic" end,
+        function(state) state.extraSources["hot-streak"].attribution = "unknown" end,
+        function(state) state.extraSources["hot-streak"].attribution = "mixed" end,
+        function(state) state.extraSources["hot-streak"].attribution = nil end,
+        function(state) state.extraSources["hot-streak"].icon = { status = "ready" } end,
+        function(state) state.records[1].origins = { "hot-streak", "chastise" } end,
+        function(state)
+            state.mutate = function(snapshot) snapshot.rows[1].memberIds = {} end
+        end,
+        function(state)
+            state.mutate = function(snapshot) snapshot.rows[1].memberIds = { "unavailable" } end
+        end,
+        function(state)
+            state.mutate = function(snapshot) snapshot.contributions[1].ownerId = "other-owner" end
+        end,
+        function(state)
+            state.mutate = function(snapshot) snapshot.contributions[1].nativeProc = false end
+        end,
+    }
+    for _, mutate in ipairs(cases) do
+        local _, state, meter = Native()
+        local records
+        records, state.extraSources = Talents()
+        state.records = { records[2] }
+        mutate(state)
+        local source = assert(meter.Read(damage, 10))
+        assert(table.getn(source) == 1 and source[1].name == "Pyroblast", "uncertain origin invented a talent caption")
+        assert(source[1].icon == "Interface\\Icons\\pyroblast-proc", "uncertain origin replaced native source artwork")
+    end
+end)
+
+Test("all positive source members must agree on one actual talent while retired members are ignored", function()
+    for _, origin in ipairs({ "hot-streak", "chastise", "missing" }) do
+        local _, state, meter = Native()
+        local records
+        records, state.extraSources = Talents()
+        state.records = { records[2] }
+        state.mutate = function(snapshot)
+            local leaf = Copy(snapshot.contributions[1])
+            leaf.rowId, leaf.originSourceKeys = "second-positive-member", { origin }
+            table.insert(snapshot.contributions, leaf)
+            table.insert(snapshot.rows[1].memberIds, leaf.rowId)
+        end
+        local source = assert(meter.Read(damage, 10))
+        assert(source[1].name == (origin == "hot-streak" and "Hot Streak" or "Pyroblast"))
+        assert(source[1].dmg == 4900, "talent display counted actual member amounts a second time")
+    end
+    local _, state, meter = Native()
+    local records
+    records, state.extraSources = Talents()
+    state.records = { records[2] }
+    state.mutate = function(snapshot)
+        local leaf = Copy(snapshot.contributions[1])
+        leaf.rowId, leaf.displayAmount, leaf.originSourceKeys = "retired-member", 0, { "missing" }
+        table.insert(snapshot.contributions, leaf)
+        table.insert(snapshot.rows[1].memberIds, leaf.rowId)
+    end
+    local source = assert(meter.Read(damage, 10))
+    assert(source[1].name == "Hot Streak", "retired zero-delta contribution supplied current attribution")
+    state.mutate = function(snapshot)
+        local leaf = Copy(snapshot.contributions[1])
+        leaf.rowId, leaf.originSourceKeys = "unattributed-positive-member", {}
+        table.insert(snapshot.contributions, leaf)
+        table.insert(snapshot.rows[1].memberIds, leaf.rowId)
+    end
+    state.context.counterRevision = "positive-unattributed-member"
+    source = assert(meter.Read(damage, 10))
+    assert(source[1].name == "Pyroblast", "one known talent borrowed attribution for an unrelated positive member")
+end)
+
+Test("rank summaries separate actual talent origins and fallback spell sources", function()
+    local _, state, meter = Native()
+    local _
+    _, state.extraSources = Talents()
+    state.records = Ranks(3)
+    for _, record in ipairs(state.records) do
+        record.proc, record.origins = true, { "hot-streak" }
+    end
+    state.records[3].origins = { "chastise" }
+    local source = assert(meter.Read(damage, 10))
+    assert(table.getn(source) == 2 and source[1].name == "Hot Streak" and source[1].dmg == 50)
+    assert(source[2].name == "Chastise" and source[2].dmg == 10, "different triggering talents shared a rank caption")
+    local identity = source[1].rowId
+    state.records[3].origins = {}
+    state.context.counterRevision = "fallback-rank-source"
+    source = assert(meter.Read(damage, 10))
+    assert(table.getn(source) == 2 and source[1].rowId == identity and source[1].dmg == 50)
+    assert(source[2].name == "Flamestrike", "rank summary attached a talent label to unknown provenance")
+    state.extraSources["hot-streak"].name = "Série brûlante"
+    state.context.metadataRevision = "localized-talent-ranks"
+    source = assert(meter.Read(damage, 10))
+    assert(source[1].name == "Série brûlante" and source[1].rowId == identity)
+end)
+
+Test("talent metadata and pending artwork retain native checkpoints and stable display identities", function()
+    local _, state, meter = Native()
+    local records
+    records, state.extraSources = Talents()
+    state.records = { records[2] }
+    local source = assert(meter.Read(damage, 0))
+    assert(source[1].name == "Hot Streak" and source[1].dmg == 4900)
+    assert(meter.Reset())
+    state.context.asOfRunSeconds = 22
+    source = assert(meter.Read(damage, 0))
+    local identity = source[1].rowId
+    local checkpoint = state.queries[table.getn(state.queries)].checkpointId
+    local captures = state.calls.create
+    assert(source[1].name == "Hot Streak" and source[1].dmg == 490 and source[1].dps == 245)
+    for _, status in ipairs({ "pending", "missing", "ready" }) do
+        local origin = state.extraSources["hot-streak"]
+        origin.icon = status == "pending" and { status = "pending", retryAfterSeconds = 0.2 }
+            or status == "missing" and { status = "missing", reason = "not_available" }
+            or { status = "ready", path = "Interface\\Icons\\updated-talent" }
+        origin.name = "Updated talent " .. status
+        state.context.metadataRevision = "talent-art-" .. status
+        source = assert(meter.Read(damage, 0))
+        assert(source[1].name == origin.name and source[1].rowId == identity and source[1].dmg == 490)
+        assert(
+            source[1].iconStatus == status and source[1].icon == origin.icon.path,
+            "talent art borrowed base spell artwork"
+        )
+        source = assert(meter.Read(damage, 0))
+        assert(
+            source[1].icon == origin.icon.path and source[1].rowId == identity,
+            "unchanged pass restored base artwork"
+        )
+    end
+    assert(state.calls.create == captures and state.queries[table.getn(state.queries)].checkpointId == checkpoint)
+end)
+
+Test("direct talent rows and combined pet summaries keep their authoritative presentation", function()
+    local _, state, meter = Native()
+    local records
+    records, state.extraSources = Talents()
+    state.records = { records[2] }
+    state.records[1].kind, state.records[1].name = "talent", "Direct native talent"
+    local source = assert(meter.Read(damage, 10))
+    assert(source[1].name == "Direct native talent" and source[1].icon == "Interface\\Icons\\pyroblast-proc")
+    records, state.extraSources = Talents()
+    state.records = { records[1], records[2] }
+    for _, record in ipairs(state.records) do
+        record.actorId, record.actorKind, record.actorName, record.summonKey = "imp-1", "summon", "Imp", "imp"
+    end
+    state.context.counterRevision = "talent-pet-caster"
+    local view = { metric = "damage", scope = "self", period = "run", groupBy = "actor_source" }
+    source = assert(meter.Read(view, 10))
+    assert(source[1].name == "Pyroblast (Imp)" and source[2].name == "Hot Streak (Imp)")
+    state.mutate = function(snapshot) snapshot.contributions[2].actorId = "unrelated-pet" end
+    state.context.counterRevision = "mismatched-talent-caster"
+    source = assert(meter.Read(view, 10))
+    assert(source[2].name == "Pyroblast (Imp)", "talent attribution borrowed another caster's member")
+    state.mutate = nil
+    source = assert(meter.Read(view, 10, true))
+    assert(table.getn(source) == 1 and source[1].name == "Imp" and source[1].dmg == 14300)
 end)
 
 Test("pet skills keep the caster and combine repeated native summon definitions", function()

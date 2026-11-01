@@ -472,6 +472,53 @@ function DFRL.tools.NewNativeMeter()
         end
         if used == count then return count end
     end
+    local function Member(native, contributions, id)
+        local leaf = contributions[id]
+        if
+            type(leaf) == "table"
+            and leaf.sourceKey == native.sourceKey
+            and leaf.ownerId == native.ownerId
+            and (native.actorId == nil or leaf.actorId == native.actorId)
+            and leaf.nativeProc == native.nativeProc
+            and Number(leaf.displayAmount)
+        then
+            return leaf
+        end
+    end
+    local function TalentOrigin(source, native, snapshot, contributions)
+        if
+            source.kind == "talent"
+            or not native.nativeProc
+            or (not nonItemOrigins[source.kind] and source.kind ~= "item")
+        then
+            return
+        end
+        local count = Ids(native.memberIds)
+        if not count or count == 0 then return end
+        local talent
+        for _, id in ipairs(native.memberIds) do
+            local leaf = Member(native, contributions, id)
+            if not leaf then return end
+            if leaf.displayAmount > 0 then
+                local origins = leaf.originSourceKeys
+                if Ids(origins) ~= 1 then return end
+                local origin = snapshot.sources[origins[1]]
+                if
+                    type(origin) ~= "table"
+                    or origin.sourceKey ~= origins[1]
+                    or origin.kind ~= "talent"
+                    or origin.attribution ~= "known"
+                    or not Id(origin.name)
+                    or not Icon(origin.icon)
+                    or (talent and talent.sourceKey ~= origin.sourceKey)
+                then
+                    return
+                end
+                talent = origin
+            end
+        end
+        return talent
+    end
     local function BoundItem(source, native, snapshot, contributions)
         local own = source.itemKey ~= nil
         local ownRank = Item(source)
@@ -481,15 +528,8 @@ function DFRL.tools.NewNativeMeter()
         local members = Ids(native.memberIds)
         if not members or members == 0 then return nil, true end
         for _, id in ipairs(native.memberIds) do
-            local leaf = contributions[id]
-            if
-                type(leaf) ~= "table"
-                or leaf.sourceKey ~= native.sourceKey
-                or leaf.ownerId ~= native.ownerId
-                or (native.actorId ~= nil and leaf.actorId ~= native.actorId)
-                or leaf.nativeProc ~= native.nativeProc
-                or not Number(leaf.displayAmount)
-            then
+            local leaf = Member(native, contributions, id)
+            if not leaf then
                 invalid, candidate = true, true
             elseif leaf.displayAmount > 0 then
                 local origins = leaf.originSourceKeys
@@ -663,12 +703,14 @@ function DFRL.tools.NewNativeMeter()
                     actor.portrait.portraitKey, snapshot.context.runId, actor.portrait.status
             else
                 local source = snapshot.sources[native.sourceKey]
-                row.proc, row.iconStatus = native.nativeProc and 1 or 0, source.icon.status
-                if source.icon.status == "ready" then row.icon = source.icon.path end
+                if rebuild then row.displaySource = TalentOrigin(source, native, snapshot, contributions) end
+                local display = row.displaySource or source
+                row.proc, row.iconStatus = native.nativeProc and 1 or 0, display.icon.status
+                if display.icon.status == "ready" then row.icon = display.icon.path end
                 local actor = query.groupBy == "actor_source" and snapshot.actors[native.actorId] or nil
                 local pet = actor and petKinds[actor.kind]
                 if rebuild then
-                    row.name = pet and (source.name .. " (" .. actor.name .. ")") or source.name
+                    row.name = pet and (display.name .. " (" .. actor.name .. ")") or display.name
                     local actorKey = actor and ActorKey(actor, native)
                     row.groupKind = nil
                     if pet and view.groupPets then
@@ -676,12 +718,18 @@ function DFRL.tools.NewNativeMeter()
                     elseif query.groupBy == "source" or query.groupBy == "actor_source" then
                         row.familyKey, row.familyRank = FamilyKey(source, native, actorKey, snapshot, contributions)
                         if row.familyKey then
+                            if row.displaySource then
+                                row.familyKey = row.familyKey .. ":talent:" .. KeyPart(row.displaySource.sourceKey)
+                            end
                             row.groupKind = "rank"
                         elseif pet then
                             row.familyKey = "pet-source:"
                                 .. actorKey
                                 .. KeyPart(native.sourceKey)
                                 .. (native.nativeProc and "1" or "0")
+                            if row.displaySource then
+                                row.familyKey = row.familyKey .. ":talent:" .. KeyPart(row.displaySource.sourceKey)
+                            end
                             row.groupKind = "source"
                         end
                     else

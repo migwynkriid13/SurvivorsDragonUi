@@ -186,6 +186,75 @@ Test("metadata-only native publications refresh names and icons without a locale
     c:NoPresentationWrites()
 end)
 
+Test("talent proc captions keep ordinary casts and share metadata, reset and hidden lifecycles", function()
+    for _, performance in ipairs({ false, true }) do
+        local c, state, env = View(function(context, native)
+            context.settings.performanceMode = performance
+            native.records, native.extraSources = helpers.Talents()
+        end)
+        local normal, streak, chastise, shaman = c:Row(1), c:Row(2), c:Row(3), c:Row(4)
+        assert(normal.name:GetText() == "Pyroblast" and normal.entry.dmg == 9400)
+        assert(streak.name:GetText() == "Hot Streak" and streak.entry.dmg == 4900)
+        assert(chastise.name:GetText() == "Chastise" and shaman.name:GetText() == "Received shaman talent")
+        assert(normal.icon:GetTexture() == "Interface\\Icons\\pyroblast-normal")
+        assert(streak.icon:GetTexture() == "Interface\\Icons\\hot-streak-talent")
+        assert(chastise.icon:GetTexture() == "Interface\\Icons\\chastise-talent")
+        assert(shaman.icon:GetTexture() == "Interface\\Icons\\shaman-talent")
+        for _, row in ipairs({ streak, chastise, shaman }) do
+            assert(row.bar.color[1] == 0.25 and row.bar.color[2] == 0.58 and row.bar.color[3] == 1)
+        end
+        assert(normal.entry.proc == 0 and streak.entry.proc == 1, "talent captions changed native proc classification")
+        assert(
+            state.lastResponse.sources["pyroblast-proc"].name == "Pyroblast"
+                and state.lastResponse.sources["holy-nova-proc"].name == "FX Holy nova",
+            "talent presentation rewrote native source descriptors"
+        )
+        local identity, allocated, counters = streak.entry.rowId, #c.objects, state.context.counterRevision
+        c:ResetCounts()
+        c:Tick()
+        c:NoPresentationWrites()
+        for index, status in ipairs({ "pending", "missing" }) do
+            state.extraSources["hot-streak"].icon = status == "pending" and { status = status, retryAfterSeconds = 0.2 }
+                or { status = status, reason = "not_available" }
+            state.context.metadataRevision = "talent-art-" .. index
+            c:Tick()
+            assert(streak.name:GetText() == "Hot Streak" and streak.entry.rowId == identity)
+            assert(streak.icon:GetTexture() == env.T.SourceIconFallback, "talent art borrowed the triggered spell icon")
+        end
+        state.extraSources["hot-streak"].name = "Received talent renamed"
+        state.extraSources["hot-streak"].icon = { status = "ready", path = "Interface\\Icons\\hot-streak-restored" }
+        state.context.metadataRevision = "talent-art-restored"
+        c:Tick()
+        assert(streak.name:GetText() == "Received talent renamed" and streak.entry.rowId == identity)
+        assert(streak.icon:GetTexture() == "Interface\\Icons\\hot-streak-restored")
+        assert(streak.entry.dmg == 4900 and state.context.counterRevision == counters and #c.objects == allocated)
+        env.DFRL.ResetMeterStats()
+        state.context.asOfRunSeconds, state.context.counterRevision = 22, "talent-after-X"
+        c:Tick()
+        assert(streak.entry.dmg == 490 and state.calls.create == 1)
+        local checkpoint = state.queries[table.getn(state.queries)].checkpointId
+        c:SetLayoutHidden(true)
+        state.extraSources["hot-streak"].name = "Hidden native talent"
+        state.context.metadataRevision = "hidden-talent-metadata"
+        local reads = state.calls.snapshot
+        c:ResetCounts()
+        c:Tick()
+        assert(state.calls.snapshot == reads, "hidden talent captions read native snapshots")
+        c:NoPresentationWrites()
+        c:SetLayoutHidden(false)
+        c:Tick()
+        assert(streak.name:GetText() == "Hidden native talent" and streak.entry.dmg == 490)
+        assert(state.calls.create == 1 and state.queries[table.getn(state.queries)].checkpointId == checkpoint)
+        assert(#c.objects == allocated, "talent metadata grew the native row pool")
+        c:SetSetting("meterEnabled", false)
+        reads = state.calls.snapshot
+        c:ResetCounts()
+        c:Tick()
+        assert(state.calls.snapshot == reads and not c.controller:GetScript("OnUpdate"))
+        c:NoPresentationWrites()
+    end
+end)
+
 Test("native X captures at the click and language changes preserve its exact session", function()
     local c, state, env = View()
     env.DFRL.ResetMeterStats()

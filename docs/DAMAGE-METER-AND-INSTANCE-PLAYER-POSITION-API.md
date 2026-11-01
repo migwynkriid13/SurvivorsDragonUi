@@ -961,6 +961,18 @@ Current loadout and recorded contribution descriptors use the same namespace.
 Descriptor closure applies to MeterSnapshot and MeterLoadout. Context alone
 contains identity references without a descriptor map.
 
+SDUI's talent proc presentation uses these existing fields without extending
+the API. A proc row may borrow its caption/icon from one valid `kind="talent"`
+descriptor only when every positive display member's actual `originSourceKeys`
+identifies that same single descriptor. The join uses the row's `memberIds` and
+the snapshot's contributions and source maps. Missing, invalid, mixed or
+multiple origins preserve the actual source presentation; zero-display history,
+definition relationships, current loadouts, spell/name matching and proc color
+do not establish attribution. Distinct accepted talent origins retain separate
+display families. This does not rewrite source descriptors, native row IDs,
+amounts, rates, native grouping identities, proc flags or checkpoints. Pending/missing
+talent artwork remains explicit and uses the addon's existing neutral fallback.
+
 ### 3.9. `AZS_GetMeterLoadout(query)`
 
 `LoadoutQuery`, in validation order:
