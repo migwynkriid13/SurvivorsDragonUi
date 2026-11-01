@@ -2564,7 +2564,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 fontEditor.displayModes = fontEditor.displayModes or {}
                 fontEditor.displayModes[mode.key] = group
                 local buttonWidth = (contentWidth - gap * (table.getn(mode.values) - 1)) / table.getn(mode.values)
-                for index, entry in ipairs(mode.values) do
+                for _, entry in ipairs(mode.values) do
                     local id = entry[1]
                     local button = T.CreateEditorButton(content, entry[2], buttonWidth, 30)
                     button:SetScript("OnClick", function() DFRL.display.Set(mode.key, id) end)
