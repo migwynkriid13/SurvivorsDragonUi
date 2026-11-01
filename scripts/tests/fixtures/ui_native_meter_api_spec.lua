@@ -66,6 +66,24 @@ local function Ranks(count)
     return records
 end
 
+local function Pets()
+    local records = {
+        { id = "shadowbolt", rowId = "hero-bolt", name = "Shadowbolt", amount = 100, recent = 50, after = 10 },
+        { id = "shadowbolt", rowId = "imp-one-bolt", name = "Shadowbolt", amount = 40, recent = 20, after = 4 },
+        { id = "shadowbolt", rowId = "imp-two-bolt", name = "Shadowbolt", amount = 20, recent = 10, after = 2 },
+        { id = "hellfire", rowId = "imp-one-fire", name = "Hellfire", amount = 60, recent = 30, after = 6 },
+    }
+    for index, record in ipairs(records) do
+        record.abilityKey, record.rank = record.id, 1
+        if index > 1 then
+            record.actorId = index == 3 and "imp-2" or "imp-1"
+            record.actorKind, record.actorName, record.summonKey = "summon", "Imp", "imp"
+            record.actorPortrait = { portraitKey = "portrait-" .. record.actorId, status = "ready" }
+        end
+    end
+    return records
+end
+
 local function Native()
     local c = H.New()
     local env = c.env
@@ -222,14 +240,17 @@ local function Native()
             if actor ~= owner then
                 response.actors[actor] = {
                     actorId = actor,
-                    kind = "pet",
-                    name = "Hunter pet",
+                    kind = record.actorKind or "pet",
+                    name = record.actorName or "Hunter pet",
                     nameLanguageCode = self.context.languageCode,
-                    state = "despawned",
+                    state = record.actorState or "despawned",
                     parentActorId = owner,
                     currentOwnerId = owner,
-                    petFamilyKey = "wolf",
-                    portrait = { portraitKey = "portrait-" .. actor, status = "missing", reason = "not_available" },
+                    petFamilyKey = record.petFamilyKey or "wolf",
+                    summonKey = record.summonKey,
+                    totemKey = record.totemKey,
+                    portrait = record.actorPortrait
+                        or { portraitKey = "portrait-" .. actor, status = "missing", reason = "not_available" },
                 }
             end
             response.sources[record.id] = {
@@ -261,11 +282,12 @@ local function Native()
             leaf.originSourceKeys, leaf.tieOrder = {}, index
             local row = Stats(query, record.amount, record.recent, record.after, record.recentStatus)
             row.rowId, row.memberIds, row.rank = "group-" .. record.rowId, { record.rowId }, index
+            row.actorId = actor
             row.ownerId, row.sourceKey, row.nativeProc, row.tieOrder = owner, record.id, leaf.nativeProc, index
             row.procClassification = leaf.nativeProc and "proc" or "non_proc"
             if query.groupBy == "owner" then
                 row.rowId, row.actorId, row.sourceKey, row.nativeProc = "owner-" .. owner, nil, nil, nil
-            else
+            elseif query.groupBy ~= "actor_source" then
                 row.actorId = nil
             end
             amount, recent, after = amount + record.amount, recent + record.recent, after + (record.after or 0)
@@ -342,7 +364,9 @@ local function Native()
     return c, state, env.T.NewNativeMeter(), env
 end
 
-if helperMode == "helpers" then return { New = Native, languages = languages, labels = labels, Ranks = Ranks } end
+if helperMode == "helpers" then
+    return { New = Native, languages = languages, labels = labels, Ranks = Ranks, Pets = Pets }
+end
 
 Test("missing native endpoints retain the legacy selection boundary", function()
     local c = H.New()
@@ -732,4 +756,120 @@ Test("rank grouping uses native checkpoint deltas across language and later upgr
     source = assert(meter.Read(damage, 0))
     assert(source[1].dmg == 30 and source[1].dps == 15 and source[1].rowId == identity)
     assert(state.queries[table.getn(state.queries)].checkpointId == checkpoint, "rank change replaced the native fence")
+end)
+
+Test("pet skills keep the caster and combine repeated native summon definitions", function()
+    local _, state, meter = Native()
+    local view = { metric = "damage", scope = "self", period = "run", groupBy = "actor_source" }
+    state.records = Pets()
+    local source, total, rate = meter.Read(view, 10)
+    assert(table.getn(source) == 3 and total == 220 and rate == 11)
+    assert(source[1].name == "Shadowbolt" and source[1].dmg == 100, "pet casts merged with the hero's same source")
+    assert(source[2].name == "Shadowbolt (Imp)" and source[2].dmg == 60 and source[2].dps == 3)
+    assert(
+        source[3].name == "Hellfire (Imp)" and source[3].dmg == 60 and source[3].icon == "Interface\\Icons\\hellfire"
+    )
+    assert(table.getn(state.lastResponse.rows) == 4 and state.lastResponse.rows[2].displayAmount == 40)
+    local identity = source[2].rowId
+    state.records[2].actorId, state.records[3].actorId = "imp-3", "imp-4"
+    state.context.counterRevision = "new-imp-incarnations"
+    source = assert(meter.Read(view, 10))
+    assert(source[2].rowId == identity and source[2].dmg == 60, "new incarnations replaced the native summon family")
+    state.records[3].id = "shadowbolt-distinct-definition"
+    state.context.metadataRevision = "ambiguous-pet-rank"
+    source = assert(meter.Read(view, 10))
+    assert(table.getn(source) == 4, "different native descriptors at the same rank lost their ambiguity")
+end)
+
+Test("pet summaries preserve native rates, reset fences and presentation changes", function()
+    local _, state, meter = Native()
+    local view = { metric = "damage", scope = "self", period = "run", groupBy = "actor_source" }
+    state.records = Pets()
+    state.records[2].proc = true
+    local source, total, rate, _, revision = meter.Read(view, 10, true)
+    assert(table.getn(source) == 2 and source[1].name == "Imp" and source[1].dmg == 120)
+    assert(source[1].dps == 6 and source[1].averageDps == 6 and source[1].share == 120 / 220)
+    assert(total == 220 and rate == 11 and source[1].proc == 0, "mixed pet skills changed accounting or proc styling")
+    assert(source[1].icon == nil and source[1].portraitKey == "portrait-imp-1" and source[1].portraitStatus == "ready")
+    local _, _, _, _, detailRevision = meter.Read(view, 10, false)
+    assert(detailRevision ~= revision, "option change did not publish the changed row presentation")
+    source = assert(meter.Read(view, 10, true))
+    assert(source[1].name == "Imp" and source[1].dmg == 120)
+    assert(meter.Reset())
+    state.context.asOfRunSeconds = 22
+    source = assert(meter.Read(view, 0, true))
+    assert(source[1].dmg == 12 and source[1].dps == 6 and source[2].dmg == 10)
+    local checkpoint = state.queries[table.getn(state.queries)].checkpointId
+    local captures = state.calls.create
+    local identity = source[1].rowId
+    for _, record in ipairs(state.records) do
+        if record.actorId then record.actorName = "Wichtel" end
+    end
+    state.context.languageCode, state.context.languageRevision = "de", "pet-language-de"
+    state.context.metadataRevision = "pet-meta-de"
+    source = assert(meter.Read(view, 0, true))
+    assert(source[1].name == "Wichtel" and source[1].rowId == identity and source[1].dmg == 12)
+    state.records[3].recentStatus = "unavailable"
+    source = assert(meter.Read(view, 10, true))
+    assert(source[1].dps == nil and source[1].averageDps == 6, "known skills replaced an unavailable member rate")
+    source = assert(meter.Read(view, 10, false))
+    assert(table.getn(source) == 4, "mixed proc detail rows lost their native distinction")
+    assert(state.calls.create == captures and state.queries[table.getn(state.queries)].checkpointId == checkpoint)
+    assert(state.queries[table.getn(state.queries)].groupBy == "actor_source")
+end)
+
+Test("pet grouping never guesses relationships from names or broad pet families", function()
+    local cases = {
+        { kind = "summon", field = "summonKey", first = "imp", second = "imp", count = 1 },
+        { kind = "summon", field = "summonKey", first = "imp", second = "doomguard", count = 2 },
+        { kind = "pet", field = "summonKey", first = "pet-definition", second = "pet-definition", count = 1 },
+        { kind = "pet", count = 2 },
+        { kind = "totem", field = "totemKey", first = "searing", second = "searing", count = 1 },
+        { kind = "totem", field = "summonKey", first = "same-unused-key", second = "same-unused-key", count = 2 },
+        { kind = "summon", field = "summonKey", first = "imp", second = "imp", otherKind = "pet", count = 2 },
+        { kind = "summon", field = "summonKey", first = "imp", second = "imp", otherOwner = "hero-2", count = 2 },
+    }
+    for _, case in ipairs(cases) do
+        local _, state, meter = Native()
+        state.records = {
+            { id = "effect", rowId = "one", name = "Attack", amount = 20, recent = 10, actorId = "pet-one" },
+            { id = "effect", rowId = "two", name = "Attack", amount = 10, recent = 5, actorId = "pet-two" },
+        }
+        for _, record in ipairs(state.records) do
+            record.actorKind, record.actorName, record.petFamilyKey = case.kind, "Same received name", "wolf"
+            record.kind = "effect"
+        end
+        if case.field then
+            state.records[1][case.field], state.records[2][case.field] = case.first, case.second
+        end
+        state.records[2].actorKind = case.otherKind or case.kind
+        state.records[2].ownerId = case.otherOwner
+        local view = { metric = "damage", scope = "party", period = "run", groupBy = "actor_source" }
+        local source = assert(meter.Read(view, 10))
+        assert(table.getn(source) == case.count, "detail skills inferred a pet definition from name or family")
+        source = assert(meter.Read(view, 10, true))
+        assert(table.getn(source) == case.count, "pet summary discarded explicit actor/owner distinctions")
+    end
+end)
+
+Test("pet attribution rejects missing native actor metadata and keeps unknown actors literal", function()
+    local _, state, meter = Native()
+    local view = { metric = "damage", scope = "self", period = "run", groupBy = "actor_source" }
+    state.records = Pets()
+    state.mutate = function(snapshot) snapshot.actors["imp-1"] = nil end
+    local source = meter.Read(view, 10, true)
+    assert(not source, "missing caster metadata silently guessed a pet name")
+    state.mutate = function(snapshot) snapshot.actors["imp-1"].name = "" end
+    source = meter.Read(view, 10, true)
+    assert(not source, "empty caster metadata silently guessed a pet name")
+    state.mutate = nil
+    for _, record in ipairs(state.records) do
+        if record.actorId then record.actorKind = "unknown" end
+    end
+    state.context.metadataRevision = "unknown-actors"
+    source = assert(meter.Read(view, 10, true))
+    assert(table.getn(source) == 4, "unknown actors were relabeled or combined as pets")
+    for _, row in ipairs(source) do
+        assert(row.name == "Shadowbolt" or row.name == "Hellfire")
+    end
 end)

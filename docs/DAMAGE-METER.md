@@ -156,6 +156,33 @@ existing cadence. Both Performance Mode states use the same instant result.
 CI-only cases cover nine ranks, later upgrades, resets, rates, metadata changes
 and distinct sources; no local tests or game execution were run.
 
+## Pet damage
+
+On clients with the native v1 meter API, Damage Done and Boss Damage show the
+received caster name beside each pet, summon or totem spell, such as
+`Shadowbolt (Imp)`. Player spells keep their own rows. The meter uses recorded
+actor identities, including contributors that have despawned, rather than
+matching names or observing the current pet.
+
+Under `/sdui` → **Damage meter**, enable **Combine pet damage** to show each
+pet's spells together under its native name and portrait. This choice defaults
+off and shares preview, Confirm, Cancel, profiles and full resets. Where the
+native actor supplies a summon or totem key, the same kind belonging to the same
+accounting owner shares a row across incarnations. Without that key, individual
+actor identities stay separate. Names and broad pet-family labels never merge
+actors. The same identity rule keeps the default spell rows compact without
+combining player and pet casts.
+
+Pet summaries add their disjoint native amounts and rates, retaining the
+selected native window and checkpoint. A missing member rate keeps the combined
+rate unavailable. All-proc summaries retain the proc color; mixed summaries use
+the normal class color. They do not change native counters,
+header totals or Reset. Healing Done, Party Damage and the legacy meter path
+keep their existing grouping. Both Performance Mode states show the same
+instant result; hidden/off work remains deferred. CI-only mocks cover native
+caster labels, summaries, later incarnations, preview/discard, profiles, resets
+and unchanged reuse. No local tests or game execution were performed.
+
 ## Native data
 
 `meterEnabled` is a normalized boolean in the existing display table. Missing

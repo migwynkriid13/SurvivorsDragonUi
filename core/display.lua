@@ -27,6 +27,7 @@ DFRL:NewMod("Display", 0, function()
         meterShowPercentage = false,
         meterShowIcons = true,
         meterShowRanks = false,
+        meterGroupPets = false,
         meterShowTotal = true,
         meterShowTotalDps = true,
         customBanners = true,

@@ -2,6 +2,8 @@
 DFRL.locale.data = {
     en = {
         ui = {
+            ["Combine pet damage"] = "Combine pet damage",
+            ["Combine each pet's spells under its name. Off: show spells with their pet names."] = "Combine each pet's spells under its name. Off: show spells with their pet names.",
             ["Use SDUI action bar"] = "Use SDUI action bar",
             ["Turn off to use the game action bar. Jewelry and counters stay detached."] = "Turn off to use the game action bar. Jewelry and counters stay detached.",
             ["Search settings"] = "Search settings",
@@ -667,6 +669,8 @@ DFRL.locale.data = {
     },
     pl = {
         ui = {
+            ["Combine pet damage"] = "Łącz obrażenia zwierzaków",
+            ["Combine each pet's spells under its name. Off: show spells with their pet names."] = "Łącz zaklęcia każdego zwierzaka pod jego nazwą. Wyłączone: pokazuj zaklęcia z nazwami zwierzaków.",
             ["Use SDUI action bar"] = "Używaj paska akcji SDUI",
             ["Turn off to use the game action bar. Jewelry and counters stay detached."] = "Wyłącz, aby używać paska akcji gry. Biżuteria i liczniki pozostaną odłączone.",
             ["Search settings"] = "Wyszukaj ustawienia",
@@ -1803,6 +1807,8 @@ DFRL.locale.data = {
     },
     cs = {
         ui = {
+            ["Combine pet damage"] = "Sloučit poškození společníků",
+            ["Combine each pet's spells under its name. Off: show spells with their pet names."] = "Sloučí kouzla každého společníka pod jeho jménem. Vypnuto: zobrazí kouzla se jmény společníků.",
             ["Use SDUI action bar"] = "Používat akční lištu SDUI",
             ["Turn off to use the game action bar. Jewelry and counters stay detached."] = "Vypnutím použijete akční lištu hry. Šperky a počítadla zůstanou odpojené.",
             ["Search settings"] = "Hledat nastavení",
@@ -2942,6 +2948,8 @@ DFRL.locale.data = {
     },
     de = {
         ui = {
+            ["Combine pet damage"] = "Begleiterschaden zusammenfassen",
+            ["Combine each pet's spells under its name. Off: show spells with their pet names."] = "Fasst die Zauber jedes Begleiters unter seinem Namen zusammen. Aus: zeigt Zauber mit Begleiternamen.",
             ["Use SDUI action bar"] = "SDUI-Aktionsleiste verwenden",
             ["Turn off to use the game action bar. Jewelry and counters stay detached."] = "Ausschalten, um die Aktionsleiste des Spiels zu verwenden. Schmuck und Zähler bleiben losgelöst.",
             ["Search settings"] = "Einstellungen suchen",
@@ -4079,6 +4087,8 @@ DFRL.locale.data = {
     },
     pt = {
         ui = {
+            ["Combine pet damage"] = "Combinar dano dos ajudantes",
+            ["Combine each pet's spells under its name. Off: show spells with their pet names."] = "Combina os feitiços de cada ajudante sob o seu nome. Desativado: mostra os feitiços com o nome do ajudante.",
             ["Use SDUI action bar"] = "Usar barra de ações do SDUI",
             ["Turn off to use the game action bar. Jewelry and counters stay detached."] = "Desative para usar a barra de ações do jogo. Joias e contadores ficam separados.",
             ["Search settings"] = "Pesquisar configurações",
@@ -5207,6 +5217,8 @@ DFRL.locale.data = {
     },
     es = {
         ui = {
+            ["Combine pet damage"] = "Combinar daño de mascotas",
+            ["Combine each pet's spells under its name. Off: show spells with their pet names."] = "Combina los hechizos de cada mascota bajo su nombre. Desactivado: muestra los hechizos con el nombre de la mascota.",
             ["Use SDUI action bar"] = "Usar la barra de acción de SDUI",
             ["Turn off to use the game action bar. Jewelry and counters stay detached."] = "Desactívalo para usar la barra de acción del juego. Las joyas y los contadores quedan separados.",
             ["Search settings"] = "Buscar ajustes",
@@ -6339,6 +6351,8 @@ DFRL.locale.data = {
     },
     fr = {
         ui = {
+            ["Combine pet damage"] = "Regrouper les dégâts des familiers",
+            ["Combine each pet's spells under its name. Off: show spells with their pet names."] = "Regroupe les sorts de chaque familier sous son nom. Désactivé : affiche les sorts avec le nom du familier.",
             ["Use SDUI action bar"] = "Utiliser la barre d’action SDUI",
             ["Turn off to use the game action bar. Jewelry and counters stay detached."] = "Désactivez pour utiliser la barre d’action du jeu. Les bijoux et les compteurs restent détachés.",
             ["Search settings"] = "Rechercher dans les réglages",
@@ -7479,6 +7493,8 @@ DFRL.locale.data = {
     },
     ro = {
         ui = {
+            ["Combine pet damage"] = "Combină daunele companionilor",
+            ["Combine each pet's spells under its name. Off: show spells with their pet names."] = "Combină vrăjile fiecărui companion sub numele său. Dezactivat: arată vrăjile cu numele companionilor.",
             ["Use SDUI action bar"] = "Folosește bara de acțiuni SDUI",
             ["Turn off to use the game action bar. Jewelry and counters stay detached."] = "Dezactivează pentru a folosi bara de acțiuni a jocului. Bijuteriile și contoarele rămân detașate.",
             ["Search settings"] = "Caută setări",
@@ -8602,6 +8618,8 @@ DFRL.locale.data = {
     },
     tr = {
         ui = {
+            ["Combine pet damage"] = "Yoldaş hasarını birleştir",
+            ["Combine each pet's spells under its name. Off: show spells with their pet names."] = "Her yoldaşın büyülerini kendi adı altında birleştirir. Kapalı: büyüleri yoldaş adlarıyla gösterir.",
             ["Use SDUI action bar"] = "SDUI eylem çubuğunu kullan",
             ["Turn off to use the game action bar. Jewelry and counters stay detached."] = "Oyunun eylem çubuğunu kullanmak için kapat. Takılar ve sayaçlar ayrı kalır.",
             ["Search settings"] = "Ayarlarda ara",
@@ -9601,6 +9619,8 @@ DFRL.locale.data = {
     },
     ru = {
         ui = {
+            ["Combine pet damage"] = "Объединять урон питомцев",
+            ["Combine each pet's spells under its name. Off: show spells with their pet names."] = "Объединяет заклинания каждого питомца под его именем. Выключено: показывает заклинания с именами питомцев.",
             ["Use SDUI action bar"] = "Использовать панель действий SDUI",
             ["Turn off to use the game action bar. Jewelry and counters stay detached."] = "Отключите, чтобы использовать панель действий игры. Украшения и счётчики останутся отдельно.",
             ["Search settings"] = "Поиск настроек",
@@ -10819,6 +10839,8 @@ DFRL.locale.data = {
     },
     uk = {
         ui = {
+            ["Combine pet damage"] = "Об’єднувати шкоду вихованців",
+            ["Combine each pet's spells under its name. Off: show spells with their pet names."] = "Об’єднує закляття кожного вихованця під його ім’ям. Вимкнено: показує закляття з іменами вихованців.",
             ["Use SDUI action bar"] = "Використовувати панель дій SDUI",
             ["Turn off to use the game action bar. Jewelry and counters stay detached."] = "Вимкніть, щоб використовувати панель дій гри. Прикраси й лічильники залишаться окремо.",
             ["Search settings"] = "Пошук налаштувань",
@@ -12011,6 +12033,8 @@ DFRL.locale.data = {
     },
     zh = {
         ui = {
+            ["Combine pet damage"] = "合并宠物伤害",
+            ["Combine each pet's spells under its name. Off: show spells with their pet names."] = "将每只宠物的法术合并到其名称下。关闭：显示法术及其宠物名称。",
             ["Use SDUI action bar"] = "使用 SDUI 动作条",
             ["Turn off to use the game action bar. Jewelry and counters stay detached."] = "关闭后使用游戏动作条。饰品和计数条保持分离。",
             ["Search settings"] = "搜索设置",
@@ -13130,6 +13154,8 @@ DFRL.locale.data = {
     },
     ja = {
         ui = {
+            ["Combine pet damage"] = "ペットのダメージをまとめる",
+            ["Combine each pet's spells under its name. Off: show spells with their pet names."] = "各ペットの呪文をその名前にまとめます。オフ：呪文にペットの名前を表示します。",
             ["Use SDUI action bar"] = "SDUIのアクションバーを使う",
             ["Turn off to use the game action bar. Jewelry and counters stay detached."] = "オフにするとゲーム標準のアクションバーを使います。装飾品とカウンターは分離したままになります。",
             ["Search settings"] = "設定を検索",
@@ -14281,6 +14307,8 @@ DFRL.locale.data = {
     },
     ko = {
         ui = {
+            ["Combine pet damage"] = "소환수 피해 합산",
+            ["Combine each pet's spells under its name. Off: show spells with their pet names."] = "각 소환수의 주문을 해당 이름으로 합산합니다. 끄면 주문과 소환수 이름을 함께 표시합니다.",
             ["Use SDUI action bar"] = "SDUI 행동 단축바 사용",
             ["Turn off to use the game action bar. Jewelry and counters stay detached."] = "끄면 게임 기본 행동 단축바를 사용합니다. 장신구와 카운터는 분리된 상태를 유지합니다.",
             ["Search settings"] = "설정 검색",

@@ -88,6 +88,25 @@ zero; hidden/off work and retirement remain with the current owners. CI-only
 cases were authored and not run locally; this is no measured rendering or FPS
 result.
 
+## Meter pet attribution and summaries
+
+Damage Done and Boss Damage request native actor/source rows through their
+existing snapshot read. Recorded actor names distinguish pet spells without
+current-pet scans or name-based attribution. An explicit native summon/totem key
+groups matching kinds for one owner across incarnations; otherwise the actor
+identity stays separate. Native spell-rank grouping retains that caster scope.
+
+The default-off `meterGroupPets` choice in the existing display table combines
+pet spell rows through the same pooled presentation copies. Actual choice
+changes invalidate only view/rate presentation; native counters, windows and
+checkpoint fences stay untouched. Grouped rows reuse the existing retained
+portrait binder, circular texture and rim; no frame, region, asset, event,
+updater or SavedVariable is added. One normalized boolean setting and two
+fourteen-language UI captions are added. Hidden/off reads retain their existing
+gates and both Performance Mode states show the same instant result. CI-only
+mocks cover attribution, reuse and shared preview/save/discard/profile/reset;
+no local tests, game execution, drawing or FPS measurements were performed.
+
 ## Mandatory rule for all drawing and assets
 
 Drawing performance is a project requirement for every frame and artwork change,

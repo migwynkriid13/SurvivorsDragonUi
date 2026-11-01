@@ -102,6 +102,15 @@ pool reuse, hidden/off work and both Performance Mode states use the production
 owners over explicit fake boundaries. These cases are CI-only and were not
 executed locally; they do not prove native client behavior.
 
+Pet meter cases add explicit recorded hero/pet/summon/totem actors, overlapping
+spell names, repeated summon incarnations and native type-key fallbacks. They
+cover default spell/caster captions, optional pet summaries, native rates and
+checkpoint preservation, retained portraits, metadata changes, unchanged reuse,
+hidden/off work and both Performance Mode states. Display/editor cases cover
+default-off normalization, searchable controls, preview, Confirm, discard,
+profiles and resets. These cases remain CI-only and were not executed locally;
+they do not prove native actor metadata or live rendering.
+
 The production banner fixture supplies an explicit `UIErrorsFrame.AddMessage`
 boundary and the generated fourteen-language native catalogs. Affix-warning
 cases cover exact received-text admission and native suppression, separate

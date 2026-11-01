@@ -1897,6 +1897,12 @@ DFRL:NewMod("RunTimers", 5, function()
                     { "meterShowPercentage", "Ability percentage", "Show each ability's share of the total." },
                     { "meterShowIcons", "Ability icons", "Show spell icons inside gold rings." },
                     { "meterShowRanks", "Ability ranks", "Show each ability's position in the list." },
+                    {
+                        "meterGroupPets",
+                        "Combine pet damage",
+                        "Combine each pet's spells under its name. Off: show spells with their pet names.",
+                        wide = true,
+                    },
                     { "meterShowTotal", "Header total", "Show total damage or healing in the header." },
                     { "meterShowTotalDps", "Header DPS", "Show total DPS or HPS in the header." },
                 },

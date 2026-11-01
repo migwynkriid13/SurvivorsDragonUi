@@ -176,6 +176,50 @@ Test("display copies derive membership from defaults and preserve normalization 
     assert(display.Get("meterEnabled") and env.SurvivorsDragonUiDisplay.cooldownNumbers == false)
 end)
 
+Test("pet meter grouping defaults off and shares preview, profile and reset ownership", function()
+    local c = H.New()
+    local env = c.env
+    c:Load("core/display.lua", "Display")
+    local display = env.DFRL.display
+    assert(not display.Get("meterGroupPets"), "missing pet grouping enabled summaries")
+    for _, invalid in ipairs({ 0, 1, "true", {}, 0 / 0 }) do
+        assert(not display.Copy({ meterGroupPets = invalid }).meterGroupPets, "invalid pet grouping enabled summaries")
+    end
+    display.BeginEdit()
+    display.Set("meterGroupPets", true)
+    assert(display.Get("meterGroupPets") and env.SurvivorsDragonUiDisplay == nil, "preview saved pet grouping early")
+    display.Set("meterGroupPets", "false")
+    assert(display.Get("meterGroupPets"), "invalid input replaced the pet grouping draft")
+    display.FinishEdit(false)
+    assert(not display.Get("meterGroupPets"), "discard kept pet grouping")
+    display.BeginEdit()
+    display.Set("meterGroupPets", true)
+    display.FinishEdit(true)
+    assert(env.SurvivorsDragonUiDisplay.meterGroupPets, "Confirm lost pet grouping")
+    env.SurvivorsDragonUiProfiles = {
+        Legacy = { layout = {}, display = {}, runFont = {} },
+        Combined = { layout = {}, display = { meterGroupPets = true }, runFont = {} },
+    }
+    env.DFRL.layout.Copy = function(value) return value end
+    env.DFRL.layout.Load = function() end
+    env.DFRL.runFont = { Copy = function(value) return value end, Load = function() end }
+    c:Load("core/profiles.lua", "Profiles")
+    local profiles = env.DFRL.profiles
+    display.BeginEdit()
+    profiles.BeginEdit()
+    assert(profiles.Load("Legacy") and not display.Get("meterGroupPets"), "older profile did not default grouping off")
+    display.FinishEdit(false)
+    profiles.FinishEdit(false)
+    assert(display.Get("meterGroupPets"), "profile Cancel lost confirmed pet grouping")
+    display.BeginEdit()
+    profiles.BeginEdit()
+    assert(profiles.Load("Combined") and display.Get("meterGroupPets"))
+    display.FinishEdit(true)
+    profiles.FinishEdit(true)
+    display.Reset()
+    assert(not display.Get("meterGroupPets") and env.SurvivorsDragonUiDisplay == nil, "full reset kept pet summaries")
+end)
+
 Test("meter name fonts inherit older saves and normalize independently", function()
     local c = H.New()
     c:Load("core/display.lua", "Display")

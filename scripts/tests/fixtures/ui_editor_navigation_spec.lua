@@ -1101,10 +1101,23 @@ assert(
     #context.objects == meterObjects and env.displayNumbers.meterNameFontSize == meterNameValue,
     "search rebuilt meter settings"
 )
+dialog.navigation.Search("combine pet damage")
+assert(
+    #dialog.navigation.results == 1 and dialog.navigation.results[1].target == "meterGroupPets",
+    "pet grouping was absent from settings search"
+)
+dialog.navigation.OpenResult(1)
+local petGrouping = assert(env.displayControls.meterGroupPets, "meter did not prepare its pet grouping checkbox")
+assert(not petGrouping.editorChecked and not display.Get("meterGroupPets"), "pet grouping defaulted on")
+context:Call(petGrouping, "OnClick")
+editor.Display()
+assert(petGrouping.editorChecked and display.Get("meterGroupPets"), "pet grouping checkbox did not preview")
+assert(not env.SurvivorsDragonUiDisplay, "pet grouping checkbox saved before Confirm")
 display.FinishEdit(false)
 display.BeginEdit()
 editor.Display()
 assert(display.Get("meterNameFontSize") == 11 and display.Get("meterFontSize") == 11, "Cancel retained font previews")
+assert(not petGrouping.editorChecked and not display.Get("meterGroupPets"), "Cancel kept pet grouping enabled")
 for _, key in ipairs({ "meter", "action", "encounters", "map", "interface", "profiles" }) do
     dialog.navigation.Select(key)
     local samples = context.fontSampleRefreshes or 0

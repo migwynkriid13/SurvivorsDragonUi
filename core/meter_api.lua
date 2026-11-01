@@ -321,6 +321,25 @@ function DFRL.tools.NewNativeMeter()
         end
         return actor
     end
+    local petKinds = { pet = true, summon = true, totem = true }
+    local actorKinds =
+        { hero = true, pet = true, summon = true, totem = true, enemy = true, system = true, unknown = true }
+    local function Actor(actors, id)
+        local actor = Id(id) and actors[id]
+        if
+            type(actor) ~= "table"
+            or actor.actorId ~= id
+            or not actorKinds[actor.kind]
+            or not Id(actor.name)
+            or not Portrait(actor.portrait)
+            or (actor.state ~= "present" and actor.state ~= "departed" and actor.state ~= "despawned")
+            or (actor.summonKey ~= nil and not Id(actor.summonKey))
+            or (actor.totemKey ~= nil and not Id(actor.totemKey))
+        then
+            return
+        end
+        return actor
+    end
     local function RowsValid(snapshot, query)
         if type(snapshot.ownerIds) ~= "table" then return false end
         local count, owners = 0, {}
@@ -374,6 +393,7 @@ function DFRL.tools.NewNativeMeter()
                 then
                     return false
                 end
+                if query.groupBy == "actor_source" and not Actor(snapshot.actors, row.actorId) then return false end
             end
             seen[row.rowId], count = true, count + 1
             maximum = math.max(maximum, row.displayAmount)
@@ -416,8 +436,19 @@ function DFRL.tools.NewNativeMeter()
         view.rows, view.used = {}, state.usage
         return view
     end
+    local function KeyPart(value) return string.len(value) .. ":" .. value end
+    local function ActorKey(actor, native)
+        local identity
+        if actor.kind == "totem" then
+            identity = actor.totemKey
+        elseif petKinds[actor.kind] then
+            identity = actor.summonKey
+        end
+        local kind = identity and "definition" or "actor"
+        return KeyPart(native.ownerId) .. KeyPart(actor.kind) .. KeyPart(kind) .. KeyPart(identity or actor.actorId)
+    end
     local familyFields = { "variantKey", "itemInstanceKey", "talentKey", "itemKey" }
-    local function FamilyKey(source, native)
+    local function FamilyKey(source, native, actorKey)
         if
             source.kind ~= "ability"
             or not Id(source.abilityKey)
@@ -445,7 +476,7 @@ function DFRL.tools.NewNativeMeter()
         then
             return
         end
-        return key .. ":" .. (source.itemId and tostring(source.itemId) or "")
+        return key .. KeyPart(source.itemId and tostring(source.itemId) or "") .. KeyPart(actorKey or "")
     end
     local function RowOrder(left, right)
         if left.dmg == right.dmg then return left.order < right.order end
@@ -473,13 +504,13 @@ function DFRL.tools.NewNativeMeter()
             view.rows[index] = nil
         end
         table.setn(view.rows, count)
-        if query.groupBy == "source" then table.sort(view.rows, RowOrder) end
+        if query.groupBy == "source" or query.groupBy == "actor_source" then table.sort(view.rows, RowOrder) end
     end
     local function CopyRows(view, snapshot, query)
         view.pool, view.families = view.pool or {}, view.families or {}
         local rebuild = view.groupRevision ~= view.revision
         for _, family in pairs(view.families) do
-            family.used, family.emitted, family.ambiguous, family.rank = false, false, false, nil
+            family.used, family.emitted, family.ambiguous, family.rank, family.actorId = false, false, false, nil, nil
             for rank in pairs(family.ranks) do
                 family.ranks[rank] = nil
             end
@@ -500,9 +531,31 @@ function DFRL.tools.NewNativeMeter()
                     actor.portrait.portraitKey, snapshot.context.runId, actor.portrait.status
             else
                 local source = snapshot.sources[native.sourceKey]
-                row.name, row.proc, row.iconStatus = source.name, native.nativeProc and 1 or 0, source.icon.status
+                row.proc, row.iconStatus = native.nativeProc and 1 or 0, source.icon.status
                 if source.icon.status == "ready" then row.icon = source.icon.path end
-                if rebuild then row.familyKey = query.groupBy == "source" and FamilyKey(source, native) or nil end
+                local actor = query.groupBy == "actor_source" and snapshot.actors[native.actorId] or nil
+                local pet = actor and petKinds[actor.kind]
+                if rebuild then
+                    row.name = pet and (source.name .. " (" .. actor.name .. ")") or source.name
+                    local actorKey = actor and ActorKey(actor, native)
+                    row.groupKind = nil
+                    if pet and view.groupPets then
+                        row.familyKey, row.groupKind = "pet:" .. actorKey, "pet"
+                    elseif query.groupBy == "source" or query.groupBy == "actor_source" then
+                        row.familyKey = FamilyKey(source, native, actorKey)
+                        if row.familyKey then
+                            row.groupKind = "rank"
+                        elseif pet then
+                            row.familyKey = "pet-source:"
+                                .. actorKey
+                                .. KeyPart(native.sourceKey)
+                                .. (native.nativeProc and "1" or "0")
+                            row.groupKind = "source"
+                        end
+                    else
+                        row.familyKey = nil
+                    end
+                end
                 local key = row.familyKey
                 if key then
                     local family = view.families[key]
@@ -514,6 +567,8 @@ function DFRL.tools.NewNativeMeter()
                     if not family.used then
                         grouped.rowId, grouped.dmg, grouped.dps, grouped.averageDps, grouped.order =
                             family.token, row.dmg, row.dps, row.averageDps, index
+                        grouped.proc = row.proc
+                        grouped.portraitKey, grouped.portraitRunId, grouped.portraitStatus = nil, nil, nil
                     else
                         grouped.dmg = grouped.dmg + row.dmg
                         grouped.dps = grouped.dps and row.dps and grouped.dps + row.dps or nil
@@ -529,9 +584,20 @@ function DFRL.tools.NewNativeMeter()
                     then
                         return false
                     end
-                    if family.ranks[source.rank] then family.ambiguous = true end
-                    family.ranks[source.rank] = true
-                    if not family.rank or source.rank > family.rank then
+                    if row.groupKind == "rank" then
+                        local previous = family.ranks[source.rank]
+                        if previous and previous ~= native.sourceKey then family.ambiguous = true end
+                        family.ranks[source.rank] = native.sourceKey
+                    end
+                    if row.groupKind == "pet" then
+                        if grouped.proc ~= row.proc then grouped.proc = 0 end
+                        if not family.actorId or actor.actorId < family.actorId then
+                            grouped.name, grouped.icon, grouped.iconStatus = actor.name, nil, nil
+                            grouped.portraitKey, grouped.portraitRunId, grouped.portraitStatus =
+                                actor.portrait.portraitKey, snapshot.context.runId, actor.portrait.status
+                            family.actorId = actor.actorId
+                        end
+                    elseif row.groupKind == "source" or not family.rank or source.rank > family.rank then
                         grouped.name, grouped.proc, grouped.iconStatus, grouped.icon =
                             row.name, row.proc, row.iconStatus, row.icon
                         family.rank = source.rank
@@ -552,7 +618,7 @@ function DFRL.tools.NewNativeMeter()
         view.groupRevision = view.revision
         return true
     end
-    local function Read(viewSpec, window)
+    local function Read(viewSpec, window, groupPets)
         local context, failure = adapter.Context()
         if not context then return Failure(failure) end
         if state.blocked then return Failure(state.blocked, context) end
@@ -640,6 +706,7 @@ function DFRL.tools.NewNativeMeter()
             or view.counterEpoch ~= current.counterEpoch
             or view.authorityId ~= current.authorityId
             or view.encounterId ~= (current.encounter and current.encounter.encounterId)
+            or view.groupPets ~= (groupPets == true)
         then
             state.sequence = state.sequence + 1
             view.revision = state.sequence
@@ -648,6 +715,7 @@ function DFRL.tools.NewNativeMeter()
             current.counterRevision, current.metadataRevision, current.languageRevision
         view.counterEpoch, view.authorityId = current.counterEpoch, current.authorityId
         view.encounterId = current.encounter and current.encounter.encounterId
+        view.groupPets = groupPets == true
         if not CopyRows(view, snapshot, query) then return Failure(Malformed(), current) end
         local average = query.checkpointId and snapshot.totals.checkpointAverage or snapshot.totals.periodAverage
         local meta = {
@@ -668,8 +736,8 @@ function DFRL.tools.NewNativeMeter()
         }
         return view.rows, snapshot.totals.displayAmount, snapshot.totals.displayRate.value, nil, view.revision, meta
     end
-    function adapter.Read(viewSpec, window)
-        local ok, source, amount, rate, message, revision, meta = pcall(Read, viewSpec, window)
+    function adapter.Read(viewSpec, window, groupPets)
+        local ok, source, amount, rate, message, revision, meta = pcall(Read, viewSpec, window, groupPets)
         if not ok then return Failure(Error("INTERNAL_ERROR", "The native meter response could not be read.")) end
         return source, amount, rate, message, revision, meta
     end

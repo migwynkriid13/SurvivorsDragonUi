@@ -1181,7 +1181,7 @@ end
 local damage, err = AZS_GetMeterSnapshot({
     apiVersion = 1, runId = context.runId,
     metric = "damage", scope = "self", period = "run",
-    groupBy = "source", windowSeconds = 10,
+    groupBy = "actor_source", windowSeconds = 10,
 })
 
 local healing, err = AZS_GetMeterSnapshot({
@@ -1193,7 +1193,7 @@ local healing, err = AZS_GetMeterSnapshot({
 local boss, err = AZS_GetMeterSnapshot({
     apiVersion = 1, runId = context.runId,
     metric = "damage", scope = "self", period = "encounter",
-    groupBy = "source", windowSeconds = 0,
+    groupBy = "actor_source", windowSeconds = 0,
 })
 
 local party, err = AZS_GetMeterSnapshot({

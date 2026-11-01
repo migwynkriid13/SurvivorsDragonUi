@@ -119,7 +119,7 @@ Test("native IDs keep different rates for equal source names and bypass guessed 
     local c = View()
     assert(c.root:IsVisible(), "native meter did not become ready without legacy publication packets")
     local first, second = c:Row(1), c:Row(2)
-    assert(first.name:GetText() == "Same name" and second.name:GetText() == "Same name")
+    assert(first.name:GetText() == "Same name (Hunter pet)" and second.name:GetText() == "Same name")
     assert(first.entry.rowId ~= second.entry.rowId, "production view lost native row identity")
     assert(first.value:GetText() == "5" and second.value:GetText() == "1", "equal names shared a sampled rate slot")
     assert(
@@ -147,7 +147,10 @@ Test("all native language labels remain literal in the production meter", functi
         c.env.DFRL.locale.code = language
         c:NotifyLocale()
         c:Tick()
-        assert(c:Row(1).name:GetText() == helpers.labels[index], "production view rewrote a native localized ability")
+        assert(
+            c:Row(1).name:GetText() == helpers.labels[index] .. " (Hunter pet)",
+            "production view lost the native localized skill or caster caption"
+        )
         assert(c:Row(2).name:GetText() == "123", "production view coerced a numeric-looking ability name")
         assert(
             c:Row(1).entry.rowId == firstId
@@ -166,7 +169,10 @@ Test("metadata-only native publications refresh names and icons without a locale
     state.records[1].icon = { status = "ready", path = "Interface\\Icons\\updated-native-ability" }
     state.context.metadataRevision, state.context.snapshotId = "updated-metadata", "updated-snapshot"
     c:Tick()
-    assert(row.name:GetText() == "Updated native ability", "metadata-only publication retained the old ability label")
+    assert(
+        row.name:GetText() == "Updated native ability (Hunter pet)",
+        "metadata-only publication retained the old ability label"
+    )
     assert(
         row.icon:GetTexture() == "Interface\\Icons\\updated-native-ability",
         "metadata-only publication retained old artwork"
@@ -203,12 +209,48 @@ Test("native X captures at the click and language changes preserve its exact ses
     c:Tick()
     assert(state.calls.create == 1 and state.queries[table.getn(state.queries)].checkpointId == "checkpoint-1")
     assert(
-        c:Row(1).name:GetText() == "Укус" and c:Row(1).value:GetText() == "20",
+        c:Row(1).name:GetText() == "Укус (Hunter pet)" and c:Row(1).value:GetText() == "20",
         "language change rebased native reset counters"
     )
     state.createError = { code = "NOT_READY", message = "waiting", retryable = true, retryAfterSeconds = 0.2 }
     env.DFRL.ResetMeterStats()
     assert(c:Row(1):IsShown() and c:Row(1).value:GetText() == "20", "failed native X erased its prior valid session")
+end)
+
+Test("pet details and combined portraits share the existing visible and hidden lifecycle", function()
+    for _, performance in ipairs({ false, true }) do
+        local c, state = View(function(context, native)
+            native.records = helpers.Pets()
+            context.settings.performanceMode = performance
+        end)
+        assert(c:Row(1).name:GetText() == "Shadowbolt" and c:Row(2).name:GetText() == "Shadowbolt (Imp)")
+        local allocated = #c.objects
+        c:SetSetting("meterGroupPets", true)
+        c:Tick()
+        assert(c:Row(1).name:GetText() == "Imp" and c:Row(1).entry.dmg == 120 and c:Row(1).value:GetText() == "6")
+        assert(
+            c:Row(1).icon:GetTexture() == "Retained\\portrait-imp-1",
+            "pet summary discarded retained native artwork"
+        )
+        assert(not c:Row(3):IsShown() and #c.objects == allocated, "pet grouping allocated replacement rows")
+        c:ResetCounts()
+        c:Tick()
+        c:NoPresentationWrites()
+        c:SetLayoutHidden(true)
+        c:SetSetting("meterGroupPets", false)
+        local reads, portraits = state.calls.snapshot, state.calls.portrait
+        c:ResetCounts()
+        c:Tick()
+        assert(
+            state.calls.snapshot == reads and state.calls.portrait == portraits,
+            "hidden pet option read or rebound artwork"
+        )
+        c:NoPresentationWrites()
+        c:SetLayoutHidden(false)
+        c:Tick()
+        assert(c:Row(1).name:GetText() == "Shadowbolt" and c:Row(2).name:GetText() == "Shadowbolt (Imp)")
+        assert(c:Row(2).icon:GetTexture() == "Interface\\Icons\\shadowbolt" and #c.objects == allocated)
+    end
 end)
 
 Test("party rows bind retained native portraits without a live roster", function()

@@ -13,6 +13,7 @@ DFRL:NewMod("DamageMeter", 7, function()
         percentage = "meterShowPercentage",
         icons = "meterShowIcons",
         ranks = "meterShowRanks",
+        groupPets = "meterGroupPets",
         total = "meterShowTotal",
         totalDps = "meterShowTotalDps",
     }
@@ -34,7 +35,7 @@ DFRL:NewMod("DamageMeter", 7, function()
             prefix = "AZSMETER",
             title = "Damage Done",
             rate = "DPS",
-            query = { metric = "damage", scope = "self", period = "run", groupBy = "source" },
+            query = { metric = "damage", scope = "self", period = "run", groupBy = "actor_source" },
         },
         {
             getter = "AZS_GetHealing",
@@ -57,7 +58,7 @@ DFRL:NewMod("DamageMeter", 7, function()
             prefix = "AZSBOSSDMG",
             title = "Boss Damage",
             rate = "DPS",
-            query = { metric = "damage", scope = "self", period = "encounter", groupBy = "source" },
+            query = { metric = "damage", scope = "self", period = "encounter", groupBy = "actor_source" },
         },
         {
             getter = "AZS_GetPartyMeter",
@@ -690,7 +691,7 @@ DFRL:NewMod("DamageMeter", 7, function()
     end
     local function ReadNative(index)
         local selected = modes[index]
-        if apiActive then return api.Read(selected.query, index == 1 and dps.window or 0) end
+        if apiActive then return api.Read(selected.query, index == 1 and dps.window or 0, options.groupPets) end
         local getter = _G[selected.getter]
         if type(getter) ~= "function" then
             publications[index] = nil
@@ -974,7 +975,7 @@ DFRL:NewMod("DamageMeter", 7, function()
                 row.red, row.green, row.blue = r, g, b
                 if options.icons then
                     local bound
-                    if party and apiActive then
+                    if apiActive and (party or entry.portraitKey) then
                         bound = BindNativePortrait(row, entry)
                     elseif party then
                         bound = BindPartyIcon(row, entry)
@@ -1230,7 +1231,7 @@ DFRL:NewMod("DamageMeter", 7, function()
         local fontChanged = fontSize ~= selectedFontSize or nameFontSize ~= selectedNameFontSize
         local window = DFRL.display.Get("meterDpsWindow")
         local windowChanged = dps.window ~= window
-        local changed, iconsWereShown = false, options.icons
+        local changed, iconsWereShown, petsWereCombined = false, options.icons, options.groupPets
         for key, setting in pairs(optionKeys) do
             local value = DFRL.display.Get(setting)
             if options[key] ~= value then
@@ -1247,6 +1248,10 @@ DFRL:NewMod("DamageMeter", 7, function()
         if windowChanged then
             dps.SetWindow(window)
             ClearSamples()
+        end
+        if petsWereCombined ~= options.groupPets then
+            ClearSamples()
+            ClearReadPass()
         end
         if changed then optionsRevision = optionsRevision + 1 end
         visible, age = count, 0.2
