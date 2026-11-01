@@ -448,15 +448,128 @@ function DFRL.tools.NewNativeMeter()
         return KeyPart(native.ownerId) .. KeyPart(actor.kind) .. KeyPart(kind) .. KeyPart(identity or actor.actorId)
     end
     local familyFields = { "variantKey", "itemInstanceKey", "talentKey", "itemKey" }
-    local function FamilyKey(source, native, actorKey)
-        if
-            source.kind ~= "ability"
-            or not Id(source.abilityKey)
-            or not Number(source.rank)
-            or source.rank ~= math.floor(source.rank)
-        then
-            return
+    local nonItemOrigins =
+        { ability = true, effect = true, talent = true, basic_attack = true, system = true, generic = true }
+    local function Rank(source) return Number(source.rank) and source.rank == math.floor(source.rank) end
+    local function ItemFields(source)
+        for _, field in ipairs(familyFields) do
+            if source[field] ~= nil and not Id(source[field]) then return false end
         end
+        return source.itemId == nil
+            or (Number(source.itemId) and source.itemId > 0 and source.itemId == math.floor(source.itemId))
+    end
+    local function Item(source)
+        return type(source) == "table" and Id(source.itemKey) and Rank(source) and ItemFields(source)
+    end
+    local function Ids(values)
+        if type(values) ~= "table" then return end
+        local count, used = table.getn(values), 0
+        for index, value in pairs(values) do
+            if not Number(index) or index < 1 or index > count or index ~= math.floor(index) or not Id(value) then
+                return
+            end
+            used = used + 1
+        end
+        if used == count then return count end
+    end
+    local function BoundItem(source, native, snapshot, contributions)
+        local own = source.itemKey ~= nil
+        local ownRank = Item(source)
+        local item, candidate, invalid =
+            ownRank and source or nil, own, not ItemFields(source) or (source.rank ~= nil and not Rank(source))
+        local missingOrigin, acceptedOrigin = false, nil
+        local members = Ids(native.memberIds)
+        if not members or members == 0 then return nil, true end
+        for _, id in ipairs(native.memberIds) do
+            local leaf = contributions[id]
+            if
+                type(leaf) ~= "table"
+                or leaf.sourceKey ~= native.sourceKey
+                or leaf.ownerId ~= native.ownerId
+                or (native.actorId ~= nil and leaf.actorId ~= native.actorId)
+                or leaf.nativeProc ~= native.nativeProc
+                or not Number(leaf.displayAmount)
+            then
+                invalid, candidate = true, true
+            elseif leaf.displayAmount > 0 then
+                local origins = leaf.originSourceKeys
+                local count = Ids(origins)
+                local origin = count == 1 and snapshot.sources[origins[1]] or nil
+                if count == nil then candidate = true end
+                if type(origins) == "table" then
+                    for _, key in ipairs(origins) do
+                        local descriptor = snapshot.sources[key]
+                        if
+                            type(descriptor) ~= "table"
+                            or descriptor.sourceKey ~= key
+                            or not nonItemOrigins[descriptor.kind]
+                        then
+                            candidate = true
+                        end
+                    end
+                end
+                if count == 0 then
+                    missingOrigin = true
+                elseif count ~= 1 or not Item(origin) or origin.kind ~= "item" or origin.sourceKey ~= origins[1] then
+                    invalid = true
+                else
+                    if
+                        (source.itemKey ~= nil and source.itemKey ~= origin.itemKey)
+                        or (source.itemInstanceKey ~= nil and origin.itemInstanceKey ~= nil and source.itemInstanceKey ~= origin.itemInstanceKey)
+                        or (
+                            acceptedOrigin
+                            and (
+                                acceptedOrigin.itemKey ~= origin.itemKey
+                                or acceptedOrigin.rank ~= origin.rank
+                                or acceptedOrigin.itemInstanceKey ~= origin.itemInstanceKey
+                                or acceptedOrigin.variantKey ~= origin.variantKey
+                                or acceptedOrigin.talentKey ~= origin.talentKey
+                            )
+                        )
+                    then
+                        invalid = true
+                    end
+                    item, acceptedOrigin = origin, origin
+                end
+            end
+        end
+        if invalid or (missingOrigin and not ownRank) then return nil, candidate end
+        return item, candidate
+    end
+    local function ItemFamilyKey(source, native, actorKey, snapshot, contributions)
+        if source.kind ~= "item" and source.kind ~= "ability" and source.kind ~= "effect" then return end
+        local item, candidate
+        if source.kind == "item" then
+            item, candidate = Item(source) and source or nil, true
+        else
+            item, candidate = BoundItem(source, native, snapshot, contributions)
+        end
+        if not item then return nil, nil, candidate end
+        local component = source.abilityKey
+        if source.kind == "effect" and component == nil then component = source.variantKey end
+        if source.kind == "item" and component == nil then component = "" end
+        if (component ~= "" and not Id(component)) or (component == "" and source.kind ~= "item") then
+            return nil, nil, true
+        end
+        if not ItemFields(source) then return nil, nil, true end
+        local key = "item-rank:"
+            .. KeyPart(native.ownerId)
+            .. KeyPart(actorKey or "")
+            .. (native.nativeProc and "1" or "0")
+            .. KeyPart(source.kind)
+            .. KeyPart(component)
+            .. KeyPart(item.itemKey)
+            .. KeyPart(source.itemInstanceKey or item.itemInstanceKey or "")
+            .. KeyPart(source.variantKey or "")
+            .. KeyPart(source.talentKey or "")
+            .. KeyPart(item ~= source and (item.variantKey or "") or "")
+            .. KeyPart(item ~= source and (item.talentKey or "") or "")
+        return key, item.rank, true
+    end
+    local function FamilyKey(source, native, actorKey, snapshot, contributions)
+        local itemKey, itemRank, itemCandidate = ItemFamilyKey(source, native, actorKey, snapshot, contributions)
+        if itemCandidate then return itemKey, itemRank end
+        if source.kind ~= "ability" or not Id(source.abilityKey) or not Rank(source) then return end
         local key = string.len(native.ownerId)
             .. ":"
             .. native.ownerId
@@ -476,7 +589,7 @@ function DFRL.tools.NewNativeMeter()
         then
             return
         end
-        return key .. KeyPart(source.itemId and tostring(source.itemId) or "") .. KeyPart(actorKey or "")
+        return key .. KeyPart(source.itemId and tostring(source.itemId) or "") .. KeyPart(actorKey or ""), source.rank
     end
     local function RowOrder(left, right)
         if left.dmg == right.dmg then return left.order < right.order end
@@ -509,6 +622,25 @@ function DFRL.tools.NewNativeMeter()
     local function CopyRows(view, snapshot, query)
         view.pool, view.families = view.pool or {}, view.families or {}
         local rebuild = view.groupRevision ~= view.revision
+        local contributions = view.contributions
+        if rebuild and query.groupBy ~= "owner" then
+            contributions = contributions or {}
+            view.contributions = contributions
+            for id in pairs(contributions) do
+                contributions[id] = nil
+            end
+        end
+        if rebuild and query.groupBy ~= "owner" and type(snapshot.contributions) == "table" then
+            for _, leaf in ipairs(snapshot.contributions) do
+                if type(leaf) == "table" and Id(leaf.rowId) then
+                    if contributions[leaf.rowId] ~= nil then
+                        contributions[leaf.rowId] = false
+                    else
+                        contributions[leaf.rowId] = leaf
+                    end
+                end
+            end
+        end
         for _, family in pairs(view.families) do
             family.used, family.emitted, family.ambiguous, family.rank, family.actorId = false, false, false, nil, nil
             for rank in pairs(family.ranks) do
@@ -542,7 +674,7 @@ function DFRL.tools.NewNativeMeter()
                     if pet and view.groupPets then
                         row.familyKey, row.groupKind = "pet:" .. actorKey, "pet"
                     elseif query.groupBy == "source" or query.groupBy == "actor_source" then
-                        row.familyKey = FamilyKey(source, native, actorKey)
+                        row.familyKey, row.familyRank = FamilyKey(source, native, actorKey, snapshot, contributions)
                         if row.familyKey then
                             row.groupKind = "rank"
                         elseif pet then
@@ -585,9 +717,9 @@ function DFRL.tools.NewNativeMeter()
                         return false
                     end
                     if row.groupKind == "rank" then
-                        local previous = family.ranks[source.rank]
+                        local previous = family.ranks[row.familyRank]
                         if previous and previous ~= native.sourceKey then family.ambiguous = true end
-                        family.ranks[source.rank] = native.sourceKey
+                        family.ranks[row.familyRank] = native.sourceKey
                     end
                     if row.groupKind == "pet" then
                         if grouped.proc ~= row.proc then grouped.proc = 0 end
@@ -597,10 +729,10 @@ function DFRL.tools.NewNativeMeter()
                                 actor.portrait.portraitKey, snapshot.context.runId, actor.portrait.status
                             family.actorId = actor.actorId
                         end
-                    elseif row.groupKind == "source" or not family.rank or source.rank > family.rank then
+                    elseif row.groupKind == "source" or not family.rank or row.familyRank > family.rank then
                         grouped.name, grouped.proc, grouped.iconStatus, grouped.icon =
                             row.name, row.proc, row.iconStatus, row.icon
-                        family.rank = source.rank
+                        family.rank = row.familyRank
                     end
                     row.family, family.used = family, true
                 end

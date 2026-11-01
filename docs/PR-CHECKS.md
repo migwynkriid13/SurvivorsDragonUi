@@ -102,6 +102,15 @@ pool reuse, hidden/off work and both Performance Mode states use the production
 owners over explicit fake boundaries. These cases are CI-only and were not
 executed locally; they do not prove native client behavior.
 
+Item-rank cases add differing rank-specific item IDs under one explicit item
+key, direct and item-bound sources, single actual-origin joins, independent
+components and item copies. They retain unknown/mixed origins, same-rank
+ambiguity, caster/owner/proc/variant/talent distinctions and original native
+records. They cover highest-rank captions/artwork readiness, missing rates,
+Reset, zero-display historical members, repeated pet sources, unchanged reuse,
+hidden/off work and both Performance Mode states. These cases remain CI-only
+and were not executed locally; no live Eye of Hakkar snapshot was available.
+
 Pet meter cases add explicit recorded hero/pet/summon/totem actors, overlapping
 spell names, repeated summon incarnations and native type-key fallbacks. They
 cover default spell/caster captions, optional pet summaries, native rates and

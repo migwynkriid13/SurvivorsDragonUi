@@ -142,7 +142,7 @@ grouping.
 On v1, grouping requires an ability descriptor with a valid native `abilityKey`
 and skill rank. Owner, proc, variant, item-instance, talent and item identities
 stay distinct. A family with conflicting same-rank sources stays separate, as
-do sources without the required identity and generic, effect or item sources.
+do sources without the required identity and generic or unbound effect sources.
 Names alone never establish a v1 family. The highest contributing skill rank
 provides the native caption and artwork, including pending or missing artwork;
 the private display identity survives later upgrades and language changes.
@@ -155,6 +155,29 @@ Copies are pooled and publication-cached, with rate-only refreshes using the
 existing cadence. Both Performance Mode states use the same instant result.
 CI-only cases cover nine ranks, later upgrades, resets, rates, metadata changes
 and distinct sources; no local tests or game execution were run.
+
+## Item ranks
+
+The v1 meter also combines recognized ranks of one item, including item-bound
+abilities and effects. An explicit native `itemKey` establishes the family;
+rank-specific item IDs may differ. Separate copies, caster/owner, proc, variant,
+talent and effect-component identities remain separate. The highest contributing
+item rank supplies the native row caption and artwork. Amounts, rates, shares,
+Reset checkpoints and both Performance Mode states use the existing rank-summary
+path without changing native counters.
+
+Direct item rows require their own item key and rank. Item-bound abilities and
+effects also require a stable native ability or effect-component key. They can
+use their own explicit item/rank metadata, or each positive member's single
+recorded item origin joined from the same snapshot. Actual item origins supply
+the item rank independently of an ability's skill rank. Definition-level links,
+names, current equipment and item IDs alone never establish a family. Missing,
+conflicting or multiple origins and ambiguous same-rank sources stay separate;
+zero-display members do not supply post-Reset attribution.
+
+CI-only fixtures cover these explicit contracts. No live Eye of Hakkar snapshot
+was available, so grouping its published ranks still depends on the game
+supplying that identity. No local tests or game execution were performed.
 
 ## Pet damage
 

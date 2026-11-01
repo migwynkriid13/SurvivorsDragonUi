@@ -66,6 +66,41 @@ local function Ranks(count)
     return records
 end
 
+local function ItemRanks(count)
+    local records = {}
+    for rank = count, 1, -1 do
+        table.insert(records, {
+            id = "hakkar-rank-" .. rank,
+            rowId = "hakkar-leaf-" .. rank,
+            kind = "item",
+            omitAbilityKey = true,
+            itemKey = "eye_of_hakkar",
+            itemInstanceKey = "hakkar-copy-one",
+            itemId = 9000 + rank,
+            rank = rank,
+            name = "The Eye of Hakkar " .. rank,
+            amount = rank * 10,
+            recent = rank * 2,
+            after = rank * 3,
+        })
+    end
+    return records
+end
+
+local function ItemEffects(count)
+    local records, origins = ItemRanks(count), {}
+    for _, record in ipairs(records) do
+        local origin = Copy(record)
+        origin.sourceKey = origin.id
+        origins[origin.sourceKey] = origin
+        record.id = "hakkar-pulse-rank-" .. record.rank
+        record.kind, record.abilityKey, record.omitAbilityKey = "effect", "hakkar-pulse", nil
+        record.origins = { origin.sourceKey }
+        record.itemKey, record.itemInstanceKey, record.itemId, record.rank = nil, nil, nil, nil
+    end
+    return records, origins
+end
+
 local function Pets()
     local records = {
         { id = "shadowbolt", rowId = "hero-bolt", name = "Shadowbolt", amount = 100, recent = 50, after = 10 },
@@ -260,7 +295,7 @@ local function Native()
                 nameLanguageCode = self.context.languageCode,
                 icon = record.icon or { status = "ready", path = "Interface\\Icons\\" .. record.id },
                 spellIds = {},
-                originSourceKeys = {},
+                originSourceKeys = Copy(record.definitionOrigins or {}),
                 relatedSourceKeys = {},
                 abilityKey = not record.omitAbilityKey and (record.abilityKey or record.id) or nil,
                 rank = record.rank,
@@ -279,7 +314,7 @@ local function Native()
             if query.metric == "healing" then
                 leaf.recipientActorId, leaf.recipientOwnerState, leaf.recipientOwnerId = owner, "known", owner
             end
-            leaf.originSourceKeys, leaf.tieOrder = {}, index
+            leaf.originSourceKeys, leaf.tieOrder = Copy(record.origins or {}), index
             local row = Stats(query, record.amount, record.recent, record.after, record.recentStatus)
             row.rowId, row.memberIds, row.rank = "group-" .. record.rowId, { record.rowId }, index
             row.actorId = actor
@@ -296,6 +331,9 @@ local function Native()
                 table.insert(response.rows, row)
                 response.maxRowAmount = math.max(response.maxRowAmount, row.displayAmount)
             end
+        end
+        for key, descriptor in pairs(self.extraSources or {}) do
+            response.sources[key] = Copy(descriptor)
         end
         response.totals = Stats(query, amount, recent, after)
         for _, leaf in ipairs(response.contributions) do
@@ -365,7 +403,7 @@ local function Native()
 end
 
 if helperMode == "helpers" then
-    return { New = Native, languages = languages, labels = labels, Ranks = Ranks, Pets = Pets }
+    return { New = Native, languages = languages, labels = labels, Ranks = Ranks, ItemRanks = ItemRanks, Pets = Pets }
 end
 
 Test("missing native endpoints retain the legacy selection boundary", function()
@@ -756,6 +794,223 @@ Test("rank grouping uses native checkpoint deltas across language and later upgr
     source = assert(meter.Read(damage, 0))
     assert(source[1].dmg == 30 and source[1].dps == 15 and source[1].rowId == identity)
     assert(state.queries[table.getn(state.queries)].checkpointId == checkpoint, "rank change replaced the native fence")
+end)
+
+Test("item ranks combine native item IDs using the explicit family in all source views", function()
+    for _, view in ipairs({ damage, healing, boss }) do
+        local _, state, meter = Native()
+        state.records = ItemRanks(9)
+        local source, total, _, message = meter.Read(view, 10)
+        assert(source and not message and table.getn(source) == 1, "item ranks remained separate rows")
+        assert(source[1].dmg == 450 and source[1].dps == 9 and source[1].share == 1 and total == 450)
+        assert(source[1].name == "The Eye of Hakkar 9" and source[1].icon == "Interface\\Icons\\hakkar-rank-9")
+        assert(table.getn(state.lastResponse.rows) == 9 and state.lastResponse.sources["hakkar-rank-1"].itemId == 9001)
+        local identity = source[1].rowId
+        state.records = ItemRanks(10)
+        state.context.counterRevision = "item-rank-ten"
+        source = assert(meter.Read(view, 10))
+        assert(source[1].dmg == 550 and source[1].rowId == identity and source[1].name == "The Eye of Hakkar 10")
+    end
+end)
+
+Test("item rank families preserve copies, components, owners and unknown identities", function()
+    local distinctions = {
+        { "itemKey", "eye_of_hakkar", "another_item" },
+        { "itemInstanceKey", "copy-one", "copy-two" },
+        { "variantKey", "direct", "periodic" },
+        { "talentKey", "talent-one", "talent-two" },
+        { "proc", false, true },
+        { "rank" },
+        { "itemKey" },
+        { "itemId", 0, 9001 },
+        { "kind", "item", "generic" },
+    }
+    for _, distinction in ipairs(distinctions) do
+        local _, state, meter = Native()
+        state.records = ItemRanks(2)
+        state.records[1][distinction[1]], state.records[2][distinction[1]] = distinction[2], distinction[3]
+        local source = assert(meter.Read(damage, 10))
+        assert(table.getn(source) == 2, "item grouping discarded " .. distinction[1] .. " distinction")
+    end
+    local _, state, meter = Native()
+    state.records = ItemRanks(2)
+    state.records[2].ownerId = "hero-2"
+    local source = assert(meter.Read({ metric = "damage", scope = "party", period = "run", groupBy = "source" }, 10))
+    assert(table.getn(source) == 2, "item grouping merged different credited owners")
+    state.records = ItemRanks(3)
+    state.records[2].rank, state.records[3].rank = 1, 1
+    state.context.counterRevision = "ambiguous-item-rank"
+    source = assert(meter.Read(damage, 10))
+    assert(table.getn(source) == 3, "same-rank item ambiguity partially merged a family")
+end)
+
+Test("item-triggered effects use actual single-item origins and retain separate components", function()
+    local _, state, meter = Native()
+    state.records, state.extraSources = ItemEffects(3)
+    local source = assert(meter.Read(damage, 10))
+    assert(table.getn(source) == 1 and source[1].dmg == 60 and source[1].name == "The Eye of Hakkar 3")
+    assert(source[1].icon == "Interface\\Icons\\hakkar-pulse-rank-3")
+    state.records[3].abilityKey = "hakkar-other-component"
+    state.context.metadataRevision = "separate-item-components"
+    source = assert(meter.Read(damage, 10))
+    assert(table.getn(source) == 2, "independent item effects merged by their parent item")
+    for _, record in ipairs(state.records) do
+        record.abilityKey, record.variantKey, record.omitAbilityKey = nil, "hakkar-pulse", true
+    end
+    state.context.metadataRevision = "explicit-variant-component"
+    source = assert(meter.Read(damage, 10))
+    assert(table.getn(source) == 1, "explicit effect component identity was ignored")
+    for _, record in ipairs(state.records) do
+        record.variantKey = nil
+    end
+    state.context.metadataRevision = "missing-item-component"
+    source = assert(meter.Read(damage, 10))
+    assert(table.getn(source) == 3, "missing component identity merged unrelated item effects")
+end)
+
+Test("item origins never come from definition links, missing members or mixed positive contributions", function()
+    local mutations = {
+        function(snapshot) snapshot.contributions[1].originSourceKeys = { "missing-item" } end,
+        function(snapshot) snapshot.rows[1].memberIds = { "missing-member" } end,
+        function(snapshot) snapshot.contributions[1].originSourceKeys = { "hakkar-rank-3", "hakkar-rank-2" } end,
+        function(snapshot) snapshot.sources["hakkar-rank-3"].itemInstanceKey = "other-copy" end,
+        function(snapshot) snapshot.sources["hakkar-rank-3"].rank = nil end,
+        function(snapshot)
+            for _, leaf in ipairs(snapshot.contributions) do
+                leaf.originSourceKeys = {}
+            end
+        end,
+    }
+    for _, mutate in ipairs(mutations) do
+        local _, state, meter = Native()
+        state.records, state.extraSources = ItemEffects(3)
+        for _, record in ipairs(state.records) do
+            record.definitionOrigins = Copy(record.origins)
+        end
+        state.mutate = mutate
+        local source = assert(meter.Read(damage, 10))
+        assert(table.getn(source) > 1, "uncertain item origin was inferred from source metadata or names")
+    end
+    local _, state, meter = Native()
+    state.records, state.extraSources = ItemEffects(2)
+    state.mutate = function(snapshot)
+        local leaf = Copy(snapshot.contributions[1])
+        leaf.rowId, leaf.displayAmount, leaf.originSourceKeys = "retired-origin", 0, { "missing-item" }
+        table.insert(snapshot.contributions, leaf)
+        table.insert(snapshot.rows[1].memberIds, leaf.rowId)
+    end
+    local source = assert(meter.Read(damage, 10))
+    assert(
+        table.getn(source) == 1 and source[1].dmg == 30,
+        "zero checkpoint contribution changed current item attribution"
+    )
+    state.mutate = function(snapshot)
+        local leaf = Copy(snapshot.contributions[1])
+        leaf.rowId, leaf.originSourceKeys = "mixed-origin", { "hakkar-rank-1" }
+        table.insert(snapshot.contributions, leaf)
+        table.insert(snapshot.rows[1].memberIds, leaf.rowId)
+    end
+    state.context.counterRevision = "mixed-positive-origins"
+    source = assert(meter.Read(damage, 10))
+    assert(table.getn(source) == 2, "one source row with mixed actual item ranks entered a guessed family")
+end)
+
+Test("explicit item-bound abilities retain native resets, missing rates and artwork readiness", function()
+    local _, state, meter = Native()
+    state.records = ItemRanks(3)
+    for _, record in ipairs(state.records) do
+        record.kind, record.abilityKey, record.omitAbilityKey = "ability", "hakkar-pulse", nil
+    end
+    local source = assert(meter.Read(damage, 0))
+    assert(table.getn(source) == 1 and source[1].dmg == 60)
+    assert(meter.Reset())
+    state.context.asOfRunSeconds = 22
+    source = assert(meter.Read(damage, 0))
+    assert(source[1].dmg == 18 and source[1].dps == 9)
+    local checkpoint = state.queries[table.getn(state.queries)].checkpointId
+    state.records[1].recentStatus = "unavailable"
+    state.records[1].icon = { status = "pending", retryAfterSeconds = 0.2 }
+    state.context.metadataRevision = "item-pending"
+    source = assert(meter.Read(damage, 10))
+    assert(source[1].dps == nil and source[1].icon == nil and source[1].iconStatus == "pending")
+    state.records[1].icon = { status = "ready", path = "Interface\\Icons\\current-item-rank" }
+    state.context.metadataRevision = "item-ready"
+    source = assert(meter.Read(damage, 10))
+    assert(source[1].icon == "Interface\\Icons\\current-item-rank")
+    assert(
+        state.queries[table.getn(state.queries)].checkpointId == checkpoint,
+        "item presentation replaced Reset fence"
+    )
+end)
+
+Test("unresolved item origins cannot fall back to ordinary ability-rank grouping", function()
+    local _, state, meter = Native()
+    state.records = Ranks(2)
+    for _, record in ipairs(state.records) do
+        record.origins = { "unavailable-item-origin" }
+    end
+    local source = assert(meter.Read(damage, 10))
+    assert(table.getn(source) == 2, "unknown actual origin fell through to a guessed ability family")
+    state.extraSources =
+        { ["unavailable-item-origin"] = { sourceKey = "unavailable-item-origin", kind = "invalid-kind" } }
+    state.context.metadataRevision = "malformed-origin-kind"
+    source = assert(meter.Read(damage, 10))
+    assert(table.getn(source) == 2, "malformed origin kind fell through to a guessed ability family")
+    state.extraSources = { ["unavailable-item-origin"] = { sourceKey = "unavailable-item-origin", kind = "talent" } }
+    state.context.metadataRevision = "known-non-item-origin"
+    source = assert(meter.Read(damage, 10))
+    assert(table.getn(source) == 1, "known non-item origin changed the original ability-rank behavior")
+end)
+
+Test("partial own item identity cannot borrow a rank from another positive member", function()
+    local _, state, meter = Native()
+    state.records, state.extraSources = ItemEffects(2)
+    for _, record in ipairs(state.records) do
+        record.itemKey = "eye_of_hakkar"
+    end
+    state.mutate = function(snapshot)
+        local leaf = Copy(snapshot.contributions[1])
+        leaf.rowId, leaf.originSourceKeys = "origin-free-member", {}
+        table.insert(snapshot.contributions, leaf)
+        table.insert(snapshot.rows[1].memberIds, leaf.rowId)
+    end
+    local source = assert(meter.Read(damage, 10))
+    assert(table.getn(source) == 2, "own item key without rank borrowed another member's item rank")
+    state.mutate = nil
+    for _, record in ipairs(state.records) do
+        record.kind, record.rank = "ability", 7
+    end
+    state.context.metadataRevision = "skill-and-item-ranks-differ"
+    source = assert(meter.Read(damage, 10))
+    assert(table.getn(source) == 1 and source[1].name == "The Eye of Hakkar 2", "skill rank replaced actual item rank")
+end)
+
+Test("item rank summaries retain pet casters and repeated native source membership", function()
+    local _, state, meter = Native()
+    local view = { metric = "damage", scope = "self", period = "run", groupBy = "actor_source" }
+    state.records = ItemRanks(2)
+    local repeated = Copy(state.records[2])
+    repeated.rowId = "hakkar-repeat"
+    table.insert(state.records, repeated)
+    for index, record in ipairs(state.records) do
+        record.actorId, record.actorKind, record.actorName, record.summonKey = "imp-" .. index, "summon", "Imp", "imp"
+    end
+    local source = assert(meter.Read(view, 10))
+    assert(table.getn(source) == 1 and source[1].dmg == 40 and source[1].name == "The Eye of Hakkar 2 (Imp)")
+    state.records[3].summonKey, state.records[3].actorName = "doomguard", "Doomguard"
+    state.context.metadataRevision = "different-item-caster"
+    source = assert(meter.Read(view, 10))
+    assert(table.getn(source) == 2, "item ranks merged unrelated pet definitions")
+    source = assert(meter.Read(view, 10, true))
+    assert(table.getn(source) == 2 and source[1].name == "Imp", "item grouping displaced optional pet summary")
+    state.records, state.extraSources = ItemEffects(2)
+    for index, record in ipairs(state.records) do
+        record.actorId, record.actorKind, record.actorName, record.summonKey = "imp-" .. index, "summon", "Imp", "imp"
+    end
+    state.mutate = function(snapshot) snapshot.contributions[1].actorId = "unrelated-caster" end
+    state.context.metadataRevision = "mismatched-item-member-caster"
+    source = assert(meter.Read(view, 10))
+    assert(table.getn(source) == 2, "item origin borrowed a contribution from a different actor")
 end)
 
 Test("pet skills keep the caster and combine repeated native summon definitions", function()

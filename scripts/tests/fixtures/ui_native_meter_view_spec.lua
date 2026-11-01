@@ -443,6 +443,46 @@ Test("native meter keeps four views despite damage-taken publications in both Pe
     end
 end)
 
+Test("item rank upgrades reuse native artwork and hidden lifecycle in both Performance Mode states", function()
+    for _, performance in ipairs({ false, true }) do
+        local c, state, env = View(function(context, native)
+            context.settings.performanceMode = performance
+            native.records = helpers.ItemRanks(3)
+        end)
+        local first, allocated = c:Row(1), #c.objects
+        local identity = first.entry.rowId
+        assert(first.name:GetText() == "The Eye of Hakkar 3" and first.entry.dmg == 60)
+        assert(first.icon:GetTexture() == "Interface\\Icons\\hakkar-rank-3")
+        assert(not env.SurvivorsDragonUiMeterIcon2, "item ranks allocated extra displayed rows")
+        c:ResetCounts()
+        c:Tick()
+        c:NoPresentationWrites()
+        assert(#c.objects == allocated, "unchanged item summaries grew the artwork pool")
+        c:SetLayoutHidden(true)
+        state.records = helpers.ItemRanks(4)
+        state.context.counterRevision = "hidden-item-upgrade"
+        local snapshots = state.calls.snapshot
+        c:ResetCounts()
+        for _ = 1, 5 do
+            c:Tick()
+        end
+        assert(state.calls.snapshot == snapshots, "hidden item summaries fetched native data")
+        c:NoPresentationWrites()
+        c:SetLayoutHidden(false)
+        c:Tick()
+        assert(
+            first.entry.rowId == identity and first.entry.dmg == 100 and first.name:GetText() == "The Eye of Hakkar 4"
+        )
+        assert(first.icon:GetTexture() == "Interface\\Icons\\hakkar-rank-4" and #c.objects == allocated)
+        c:SetSetting("meterEnabled", false)
+        snapshots = state.calls.snapshot
+        c:ResetCounts()
+        c:Tick()
+        assert(state.calls.snapshot == snapshots and not c.controller:GetScript("OnUpdate"))
+        c:NoPresentationWrites()
+    end
+end)
+
 Test("native upgraded ranks reuse one displayed ability in both Performance Mode states", function()
     for _, performance in ipairs({ false, true }) do
         local c, state, env = View(function(context, native)

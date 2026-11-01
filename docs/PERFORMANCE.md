@@ -88,6 +88,17 @@ zero; hidden/off work and retirement remain with the current owners. CI-only
 cases were authored and not run locally; this is no measured rendering or FPS
 result.
 
+Item-rank summaries reuse this same family/row pool and instant presentation.
+Direct native item keys avoid name or equipment lookups. Item-bound effects can
+join one actual item origin per positive member through a reusable contribution
+index built only for changed source publications. The index is cleared and
+refilled within each of the existing four bounded views; rate-only and owner
+passes do not build it. Work is linear in that snapshot's contributions and
+referenced member/origin entries, with no recursive relationship walk, history,
+native getter, animation, frame, region, asset, event, updater, setting or saved
+data added. Hidden/off retirement remains shared. CI-only source mocks were
+authored but not run locally; live Hakkar metadata and rendering remain unverified.
+
 ## Meter pet attribution and summaries
 
 Damage Done and Boss Damage request native actor/source rows through their
