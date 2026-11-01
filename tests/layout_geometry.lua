@@ -461,7 +461,7 @@ local function FreshBoot(saved)
             x = -15,
             y = 15,
         },
-        { key = "minimap", width = 180, height = 180, point = "TOPRIGHT", relative = "TOPRIGHT", x = -8, y = -32 },
+        { key = "minimap", width = 180, height = 180, point = "TOPRIGHT", relative = "TOPRIGHT", x = -8, y = -26 },
         { key = "cacheWaypoint", width = 190, height = 46, point = "CENTER", relative = "BOTTOM", x = -253, y = 72.5 },
         {
             key = "guardianWaypoint",
@@ -513,7 +513,7 @@ local function ExpectBootDefaults(frames, name)
         runTimer = { screenWidth / 2 - 148 * u, screenHeight - (30 + 31) * u, 296 * u, 31 * u },
         chat = { 20 * u, 40 * u, 520 * u, 340 * u },
         microMenu = { screenWidth - (15 + 66) * 0.85 * u, 15 * 0.85 * u, 66 * 0.85 * u, 30 * 0.85 * u },
-        minimap = { screenWidth - (8 + 180) * u, screenHeight - (32 + 180) * u, 180 * u, 180 * u },
+        minimap = { screenWidth - (8 + 180) * u, screenHeight - (26 + 180) * u, 180 * u, 180 * u },
         cacheWaypoint = { screenWidth / 2 - (253 + 95) * u, (72.5 - 23) * u, 190 * u, 46 * u },
         guardianWaypoint = { screenWidth / 2 + (253 - 95) * u, (72.5 - 23) * u, 190 * u, 46 * u },
     }

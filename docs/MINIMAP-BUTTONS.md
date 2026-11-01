@@ -24,6 +24,12 @@ dialog at 150. This keeps the second click reachable. Closing restores the
 minimap's current strata and its level plus twenty, with actual-state comparisons
 to skip unchanged writes. There is no new region, event or updater for layering.
 
+The default map top is 26 UI units below the screen top. The zone panel sits
+12 units above the map, tightening their gap by six units while retaining the
+zone strip's default screen position. Saved Layout positions still take priority.
+Both Performance Mode states use these static anchors with no added regions,
+artwork or recurring work.
+
 ## Optional local clock
 
 `/sdui` → **Minimap** → **Show clock** is off by default. With it off, the zone

@@ -46,7 +46,7 @@ DFRL:NewMod("Map", 1, function()
         DFRL.display.Listen(UpdateChoice)
         UpdateChoice()
     end
-    local defaults = { width = 180, height = 180, right = -8, top = -32, zoomX = -21, zoomY = 40, zoomScale = 0.8 }
+    local defaults = { width = 180, height = 180, right = -8, top = -26, zoomX = -21, zoomY = 40, zoomScale = 0.8 }
     -- Export appearance geometry before layout restores any confirmed placement.
     DFRL.minimapDefaults = defaults
 
@@ -102,7 +102,7 @@ DFRL:NewMod("Map", 1, function()
     local panel = CreateFrame("Frame", "MinimapTopPanel", Minimap)
     panel:SetWidth(180)
     panel:SetHeight(12)
-    panel:SetPoint("BOTTOM", Minimap, "TOP", 0, 18)
+    panel:SetPoint("BOTTOM", Minimap, "TOP", 0, 12)
 
     local panelBackground = panel:CreateTexture(nil, "BACKGROUND")
     panelBackground:SetTexture(texpath .. "uiminimap_toppanel.blp")
