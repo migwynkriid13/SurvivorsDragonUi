@@ -28,10 +28,13 @@ Test("all SCT styles stay below Character across pooled reuse without hiding com
             local caption = label:GetText()
             pooled = pooled or label
             assert(label == pooled, "style reuse replaced the SCT text pool")
-            local frame = label:GetParent()
-            while frame ~= context.env.WorldFrame do
+            local visual = label:GetParent()
+            local holder = visual:GetParent()
+            local root = style == "msbt" and context.scrollRoot or context.textRoot
+            assert(holder:GetParent() == root, "pooled SCT holder retained another style's owner")
+            -- Check SCT's drawing owners, not the fixture's non-drawing Layout mask.
+            for _, frame in ipairs({ visual, holder, root, context.textRoot }) do
                 assert(order[frame:GetFrameStrata()] < order[character:GetFrameStrata()], "SCT rose above Character")
-                frame = frame:GetParent()
             end
             context:ResetCounts()
             character:Hide()

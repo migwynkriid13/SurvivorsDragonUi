@@ -192,7 +192,12 @@ local function AuraOwner(performance)
         state.timerReads = (state.timerReads or 0) + 1
         return state.timers
     end
+    native.DFRL.layout.Place = function(key, frame)
+        assert(key == "buffs" and frame == native.DFRL_PlayerAuras, "aura layout placed an unexpected owner")
+        state.placements = (state.placements or 0) + 1
+    end
     current:Load("modules/unit/auras.lua", "Player Auras")
+    assert(state.placements > 0, "aura layout did not publish its initial bounds")
     current.controller = current:Controller("CHAT_MSG_ADDON")
     current.root = native.DFRL_PlayerAuras
     function current:NativeUpdate(button)

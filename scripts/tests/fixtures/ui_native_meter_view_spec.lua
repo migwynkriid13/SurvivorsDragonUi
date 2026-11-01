@@ -937,6 +937,8 @@ Test("upgrade cards hide the native meter without suspending recent rates or rep
             end
         end)
         env.DFRL.ResetMeterStats()
+        -- Reset hides zero-contribution rows; publish real post-checkpoint damage first.
+        state.records[1].after, state.records[2].after = 20, 10
         HistoryTick(c, state, "before-cards")
         local checkpoint = state.checkpoint.checkpointId
         local row, allocated = c:Row(1), #c.objects
