@@ -54,6 +54,18 @@ local function SCT(scrolling, setup)
             self.parent = value
             context:Visibility()
         end
+        object.SetFrameStrata = function(self, value)
+            context.writes.SetFrameStrata = (context.writes.SetFrameStrata or 0) + 1
+            self.strata = value
+        end
+        object.GetFrameStrata = function(self)
+            local owner = self
+            while owner do
+                if owner.strata then return owner.strata end
+                owner = owner:GetParent()
+            end
+            return "MEDIUM"
+        end
         if kind == "Frame" and parent == env.WorldFrame then
             local setAllPoints = object.SetAllPoints
             object.SetAllPoints = function(self, relative)

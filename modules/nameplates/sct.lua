@@ -162,6 +162,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local originIndex = { names = {}, dirty = {}, queries = {}, queryPool = {}, queryCount = 0, lossRevision = 0 }
     local activeTexts = {}
     local textPool = {}
+    local TEXT_STRATA = "LOW"
     local textRoot
     local scrollRoot, scrollEnabled, scrollHidden
     local pending = {}
@@ -1887,7 +1888,8 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             -- Keep the growing hit pool out of the native discovery roster.
             textRoot = CreateFrame("Frame", nil, WorldFrame)
             textRoot:SetAllPoints(WorldFrame)
-            textRoot:SetFrameStrata("HIGH")
+            -- World combat text stays below ordinary panels such as Character.
+            textRoot:SetFrameStrata(TEXT_STRATA)
             textRoot:SetFrameLevel(WorldFrame:GetFrameLevel())
             textRoot:EnableMouse(false)
         end
@@ -1899,7 +1901,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         if enabled and not scrollRoot then
             scrollRoot = CreateFrame("Frame", nil, EnsureTextRoot())
             scrollRoot:Hide()
-            scrollRoot:SetFrameStrata("HIGH")
+            scrollRoot:SetFrameStrata(TEXT_STRATA)
             scrollRoot:SetFrameLevel(textRoot:GetFrameLevel())
             scrollRoot:SetWidth(240)
             scrollRoot:SetHeight(MSBT.height)
@@ -1992,7 +1994,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             holder:Hide()
             holder:SetWidth(1)
             holder:SetHeight(1)
-            holder:SetFrameStrata("HIGH")
+            holder:SetFrameStrata(TEXT_STRATA)
             holder:EnableMouse(false)
             local visual = CreateFrame("Frame", nil, holder)
             visual:SetWidth(240)

@@ -60,30 +60,40 @@ asset root. See [DAMAGE-METER.md](../docs/DAMAGE-METER.md) for data and lifecycl
 boundaries. No in-game appearance or compatibility claim follows from inspecting
 the source artwork.
 
-## Header reset X
+## Header reset icon
 
-The header's former `>` FontString is replaced by the existing Blizzard gold X
-in `media/tex/character/Close.blp`; no new image or manifest member is added.
-Its prepared 128-by-128 sheet, upstream ownership and complete notices are in
-[Character-ARTWORK.md](Character-ARTWORK.md#mediatexcharacterclosetga).
-The pinned source is DragonUI `6d9cc95eedd1de78fab3b965683df13421e21604`,
-`DragonUI/Textures/UI/redbutton2x.blp` (256 by 128). Its owning
-[`ModernizeCloseButton`](https://github.com/NeticSoul/DragonUI/blob/6d9cc95eedd1de78fab3b965683df13421e21604/DragonUI/modules/characterpanel/chrome.lua)
-maps normal `(39,1)-(75,39)`, pressed `(39,81)-(75,119)` and highlight
-`(115,1)-(151,39)`; the highlight uses ADD. These correspond to prepared-sheet
-rectangles `(0,0)-(36,38)`, `(64,0)-(100,38)` and `(64,64)-(100,102)`.
-Blizzard's [10.2.7 close-button template](https://github.com/Gethe/wow-ui-source/blob/6b65c2922baca3db5a28fb39b69c95cef1047bec/Interface/AddOns/Blizzard_SharedXML/Mainline/SharedUIPanelTemplates.xml)
-independently identifies the RedButton Exit normal/pressed/disabled atlas family
-and additive highlight. This is shared panel art, not an expansion-exclusive X.
+The reset button uses Blizzard's gold circular refresh arrow from
+[`Buttons/UI-RefreshButton.PNG`](https://github.com/Gethe/wow-ui-textures/blob/d23deaf8f44a7d280dc974a5c9d5321c013db59b/Buttons/UI-RefreshButton.PNG).
+The texture mirror's pinned commit `d23deaf8f44a7d280dc974a5c9d5321c013db59b`
+identifies Shadowlands **9.2.7 build 45114**. The complete 16-by-16 image is
+transparent and uses full `0..1` UVs; there is no atlas crop, resizing or recoloring
+in the prepared artwork. Original PNG SHA-256:
+`fc776d821890cad3b60e61dfd5e1808a43bf1ec45f8988673e1392efa5f6f9db`.
 
-The meter draws it 16 units wide by `16 * 38 / 36` high, preserving source
-proportions, centered at the old arrow's right-side position. The native button
-selects its cached states; no animation/updater, tinting or repeated binding is
-added. Clicking performs only the requested statistics purge, without a close
-handler. Its label/hint use all fourteen UI catalogs. Blizzard retains ownership;
-existing addon MIT notices do not separately license its art. Static inspection
-compared the bundled normal/pressed sheets and this prepared state sheet against
-a neutral background; it does not establish in-game size/input behavior.
+Blizzard's pinned
+[`IconButtonTemplate.xml`](https://github.com/Gethe/wow-ui-source/blob/d07eb00237d8891f153215db98a5df880a26cfe5/Interface/AddOns/Blizzard_SharedXML/Shared/Button/IconButtonTemplate.xml)
+documents this native path as a 16-unit icon, including reuse as the highlight.
+The meter bundles the image for the older client rather than relying on a retail
+atlas, mixin or native texture being installed. No source addon code is imported.
+
+The authoring copy is `media/tex/meter/Reset.tga`, converted from the full PNG
+with ImageMagick using true-color alpha, eight-bit channels and no compression.
+TGA SHA-256:
+`6afeb0c8fd1cbf2ab5e37d8e13897a5f92618b26fd0ac3fd2d620a250ccd183d`.
+The existing `blp_from_tga` / `lossless_palette` preparation writes
+`media/tex/meter/Reset.blp` without resampling; decoded BGRA SHA-256:
+`a397761ad3b9ec7395cf14a288911331f16f95e84bf51a3d068fc55e792f21ec`.
+Only the BLP enters the runtime manifest. The TGA remains the reusable
+preparation input, matching the other meter artwork.
+
+The square glyph is centered at 16 units inside the existing 16-by-`16 * 38 / 36`
+button bounds and original right-side anchor. All three cached native button
+states use this image: normal, a pressed tint of `(0.65, 0.65, 0.65)`, and an ADD
+highlight. The button's input, tooltip and all-view statistics reset are
+unchanged. Both Performance Mode states use the same static icon, with no new
+frame, region, animation, updater or saved state. Blizzard retains ownership;
+the meter skin's MIT license does not separately license this image. Static
+artwork inspection and preparation do not establish in-game appearance or input.
 
 ## Native healing source icons
 

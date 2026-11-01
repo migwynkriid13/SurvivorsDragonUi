@@ -1,5 +1,6 @@
 -- The War Within artwork: Karl-HeinzSchneider, MIT; shipped notice in
 -- media/tex/meter/LICENSE.txt. Pinned source: third_party/DetailsTWW-ARTWORK.md.
+-- Reset glyph: Blizzard Entertainment; provenance in the same source notes.
 -- The existing gold ring retains third_party/Jewelry-ARTWORK.md's provenance.
 DFRL:NewMod("DamageMeter", 7, function()
     local HEADER, ROW_HEIGHT, FOOTER, REFRESH_SECONDS = 32, 32, 32, 1
@@ -155,6 +156,11 @@ DFRL:NewMod("DamageMeter", 7, function()
         for name in pairs(rateSamples) do
             rateSamples[name] = nil
         end
+    end
+    local function SuspendRates()
+        dps.Suspend()
+        ClearSamples()
+        if api then api.SuspendRecent() end
     end
     local function Compact(value)
         if value >= 1000000000 then return string.format("%.1fB", value / 1000000000) end
@@ -410,20 +416,23 @@ DFRL:NewMod("DamageMeter", 7, function()
             mode, language, optionsRevision
         presentation.headerWaiting = presentation.waiting
     end
-    -- Blizzard's existing gold X and native button states; see Character-ARTWORK.md.
+    -- Blizzard's gold refresh glyph and native button states; see DetailsTWW-ARTWORK.md.
     local resetButton = CreateFrame("Button", nil, header)
     resetButton:SetPoint("RIGHT", header, "RIGHT", -12, 1)
     resetButton:SetWidth(16)
     resetButton:SetHeight(16 * 38 / 36)
     resetButton:RegisterForClicks("LeftButtonUp")
-    for _, entry in ipairs({ { "Normal", 0, 0 }, { "Pushed", 64, 0 }, { "Highlight", 64, 64 } }) do
-        resetButton["Set" .. entry[1] .. "Texture"](resetButton, path .. "character\\Close.blp")
-        local texture = resetButton["Get" .. entry[1] .. "Texture"](resetButton)
+    for _, state in ipairs({ "Normal", "Pushed", "Highlight" }) do
+        resetButton["Set" .. state .. "Texture"](resetButton, path .. "meter\\Reset.blp")
+        local texture = resetButton["Get" .. state .. "Texture"](resetButton)
         if texture then
-            texture:SetTexCoord(entry[2] / 128, (entry[2] + 36) / 128, entry[3] / 128, (entry[3] + 38) / 128)
+            texture:SetTexCoord(0, 1, 0, 1)
             texture:ClearAllPoints()
-            texture:SetAllPoints(resetButton)
-            if entry[1] == "Highlight" then texture:SetBlendMode("ADD") end
+            texture:SetPoint("CENTER", resetButton, "CENTER", 0, 0)
+            texture:SetWidth(16)
+            texture:SetHeight(16)
+            if state == "Pushed" then texture:SetVertexColor(0.65, 0.65, 0.65) end
+            if state == "Highlight" then texture:SetBlendMode("ADD") end
         end
     end
 
@@ -1184,6 +1193,8 @@ DFRL:NewMod("DamageMeter", 7, function()
         end
         -- Native context owns v1 phase/run identity; legacy clients retain packets.
         local ok, phase = ReadPhase()
+        local wasChoiceHidden = presentation.choiceHidden
+        presentation.choiceHidden = ok and phase == "choosing" or false
         if not ok or not phases[phase] then
             if phase == "ready" then
                 Invalidate()
@@ -1193,7 +1204,14 @@ DFRL:NewMod("DamageMeter", 7, function()
             SetShown(false)
             return
         end
+        if presentation.choiceHidden then
+            -- Choice cards hide presentation without retiring the active session.
+            SetShown(false)
+            native.Acquire()
+            return
+        end
         local paint = not DFRL.layout.IsHidden("damageMeter") and UIParent:IsVisible()
+        if wasChoiceHidden and not paint then SuspendRates() end
         if paint and not viewSelection.paint then viewSelection.dirty = true end
         viewSelection.paint = paint
         if not paint and not dataDirty then
@@ -1273,15 +1291,17 @@ DFRL:NewMod("DamageMeter", 7, function()
     root:SetScript("OnHide", function()
         viewSelection.paint = false
         HideTooltip()
-        dps.Suspend()
-        ClearSamples()
-        if api then api.SuspendRecent() end
+        if not presentation.choiceHidden then SuspendRates() end
         for _, row in ipairs(rows) do
             row.valueMetric = nil
             row.layoutReady = nil
         end
     end)
     root:SetScript("OnShow", function()
+        if presentation.choiceHidden then
+            root:Hide()
+            return
+        end
         if not viewSelection.paint then age = REFRESH_SECONDS end
     end)
     root:SetScript("OnMouseWheel", function()

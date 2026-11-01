@@ -921,6 +921,64 @@ Test("pending native portraits retry on their native deadline and stable failure
     )
 end)
 
+Test("upgrade cards hide the native meter without suspending recent rates or replacing checkpoints", function()
+    for _, performance in ipairs({ false, true }) do
+        local c, state, env = View(function(context, native, boundary)
+            context.settings.performanceMode = performance
+            local factory = boundary.T.NewNativeMeter
+            boundary.T.NewNativeMeter = function()
+                local adapter = factory()
+                local suspend = adapter.SuspendRecent
+                adapter.SuspendRecent = function()
+                    native.recentSuspends = (native.recentSuspends or 0) + 1
+                    return suspend()
+                end
+                return adapter
+            end
+        end)
+        env.DFRL.ResetMeterStats()
+        HistoryTick(c, state, "before-cards")
+        local checkpoint = state.checkpoint.checkpointId
+        local row, allocated = c:Row(1), #c.objects
+        local amount, rate, icon = row.entry.dmg, row.entry.dps, row.icon:GetTexture()
+        local reads, captures, suspends = state.calls.snapshot, state.calls.create, state.recentSuspends or 0
+        state.context.phase = "choosing"
+        c:Tick()
+        assert(not c.root:IsShown() and not row:IsVisible() and row.entry.dmg == amount)
+        c.root:Show()
+        assert(not c.root:IsShown(), "another Show bypassed the native meter's card-choice hide")
+        assert(row.icon:GetTexture() == icon and row.entry.dps == rate)
+        assert(state.calls.snapshot == reads and state.calls.create == captures and not state.calls.release)
+        assert((state.recentSuspends or 0) == suspends, "choice hide suspended native recent-rate samples")
+        c:ResetCounts()
+        for _ = 1, 3 do
+            c:Tick()
+        end
+        c:NoPresentationWrites()
+        assert(state.calls.snapshot == reads and #c.objects == allocated and c.nativeShown == false)
+        state.context.phase = "playing"
+        c:Tick()
+        assert(c.root:IsVisible() and row.entry.dmg == amount and row.entry.dps == rate)
+        assert(state.calls.create == captures and state.queries[table.getn(state.queries)].checkpointId == checkpoint)
+        assert((state.recentSuspends or 0) == suspends and #c.objects == allocated)
+        state.context.phase = "choosing"
+        c:Tick()
+        c:SetLayoutHidden(true)
+        state.context.phase = "playing"
+        c:Tick()
+        assert(not c.root:IsVisible() and state.recentSuspends == suspends + 1)
+        c:SetLayoutHidden(false)
+        c:Tick()
+        assert(c.root:IsVisible() and state.calls.create == captures)
+        state.context.phase = "choosing"
+        c:Tick()
+        c:SetSetting("meterEnabled", false)
+        state.context.phase = "playing"
+        c:Tick()
+        assert(not c.root:IsShown() and state.calls.release == 1 and not c.controller:GetScript("OnUpdate"))
+    end
+end)
+
 Test("hidden and disabled native meter does not poll source snapshots or paint rows", function()
     for _, performance in ipairs({ false, true }) do
         local c, state, env = View(function(context) context.settings.performanceMode = performance end)

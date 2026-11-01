@@ -834,6 +834,62 @@ Test("shared Reset includes party counters and preserves class metadata without 
     assert(context.reads.party == 1 and context:Row(1).entry.dmg == 230)
 end)
 
+Test("upgrade cards hide the legacy meter without losing recent samples or its Reset baseline", function()
+    for _, performance in ipairs({ false, true }) do
+        local c = Meter(function(context) context.settings.performanceMode = performance end)
+        c:Tick()
+        c.damage[1].dmg, c.env.AZS_RUN.t = 150, 11
+        c:Publish("AZSMETER")
+        c:Tick()
+        local row, allocated = c:Row(1), #c.objects
+        assert(row.entry.dps == 50, "choice fixture did not establish recent native-time samples")
+        c.phase = "choosing"
+        c:ResetCounts()
+        c:Tick()
+        assert(not c.root:IsShown() and not row:IsVisible() and row.entry.dmg == 150)
+        c.root:Show()
+        assert(not c.root:IsShown(), "another Show bypassed the legacy meter's card-choice hide")
+        NoMeterReads(c)
+        c:ResetCounts()
+        for _ = 1, 3 do
+            c:Tick()
+        end
+        NoMeterReads(c)
+        c:NoPresentationWrites()
+        assert(#c.objects == allocated and c.nativeShown == false)
+        c.phase = "playing"
+        c:Tick()
+        assert(c.root:IsVisible() and row.entry.dps == 50 and row.entry.dmg == 150)
+        assert(#c.objects == allocated, "return from cards rebuilt the legacy meter pool")
+        c.phase = "choosing"
+        c:Tick()
+        c:SetLayoutHidden(true)
+        c.phase = "playing"
+        c:Tick()
+        assert(not c.root:IsVisible(), "leaving cards ignored the Layout hide choice")
+        c:SetLayoutHidden(false)
+        c:Tick()
+        assert(c.root:IsVisible() and row.entry.dps == nil, "ordinary hiding retained the choice-only rate exception")
+        c.env.DFRL.ResetMeterStats()
+        c:Tick()
+        c.phase = "choosing"
+        c:Tick()
+        c.damage[1].dmg, c.env.AZS_RUN.t = 175, 12
+        c:Publish("AZSMETER")
+        c:Tick()
+        assert(not c.root:IsShown())
+        c.phase = "paused"
+        c:Tick()
+        assert(c.root:IsVisible() and row.entry.dmg == 25, "choice hiding replaced the legacy Reset baseline")
+        c.phase = "choosing"
+        c:Tick()
+        c:SetSetting("meterEnabled", false)
+        c.phase = "playing"
+        c:Tick()
+        assert(not c.root:IsShown() and not c.controller:GetScript("OnUpdate"))
+    end
+end)
+
 Test("unchanged meter publications skip counter traversal while native time keeps sampling", function()
     for _, performance in ipairs({ false, true }) do
         local context = Meter(function(c) c.settings.performanceMode = performance end)

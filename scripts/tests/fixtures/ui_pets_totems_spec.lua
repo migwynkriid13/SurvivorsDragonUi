@@ -189,7 +189,7 @@ Test("countdowns wait for native run time, respect pauses and keep zero-time nat
     c.phase, c.runTime = "choosing", 11
     c:Tick()
     _, timer = c:Labels(1)
-    assert(timer == "0:09", "card-choice phase discarded valid native timing")
+    assert(not c.layoutFrame:IsShown() and timer == "0:10", "card choice painted or discarded retained timing")
     c.phase, c.runTime = "playing", 25
     c:Tick()
     _, timer, count = c:Labels(1)
@@ -197,6 +197,46 @@ Test("countdowns wait for native run time, respect pauses and keep zero-time nat
     c:Publish("AZSTOTEMS", {})
     c:Tick()
     assert(not c.layoutFrame:IsShown(), "empty native snapshot retained a visible totem")
+end)
+
+Test("upgrade cards hide whole pet groups without retiring their roster or allocating hidden artwork", function()
+    for _, performance in ipairs({ false, true }) do
+        local c = Pets()
+        c:SetSetting("performanceMode", performance)
+        c:SetSetting("hidePetTimers", false)
+        c:Publish("AZSPETS", { Summon(1, "imp", "Imp", nil, true) })
+        c:Publish("AZSTOTEMS", { Totem("searing_totem", 2, 30) })
+        c:Tick()
+        local allocated = #c.objects
+        local portrait = c.env.SurvivorsDragonUiPetPortrait2:GetTexture()
+        c.phase = "choosing"
+        c:ResetCounts()
+        c:Tick()
+        assert(not c.layoutFrame:IsShown() and not c:Rows()[1]:IsVisible() and not c:Rows()[2]:IsVisible())
+        c.layoutFrame:Show()
+        assert(not c.layoutFrame:IsShown(), "another Show bypassed the active card-choice hide")
+        assert(c.env.SurvivorsDragonUiPetPortrait2:GetTexture() == portrait)
+        assert(not c.reads.pets and not c.reads.totems and not c.reads.clock)
+        c:Publish("AZSTOTEMS", { Totem("searing_totem", 4, 30) })
+        c:ResetCounts()
+        for _ = 1, 3 do
+            c:Tick()
+        end
+        c:NoPresentationWrites()
+        assert(#c.objects == allocated and not c.reads.totems and not c.reads.clock and not c.reads.learn)
+        c.phase, c.runTime = "playing", 12
+        c:Tick()
+        local _, timer, count = c:Labels(2)
+        assert(c.layoutFrame:IsVisible() and c:Labels(1) == "Imp" and timer == "0:18" and count == "x4")
+        assert(#c.objects == allocated, "return from cards replaced the pet row pool")
+        c.phase = "choosing"
+        c:Tick()
+        c:Event(c.controller, "PLAYER_LEAVING_WORLD")
+        c.phase = "playing"
+        c:Event(c.controller, "PLAYER_ENTERING_WORLD")
+        c:Tick()
+        assert(not c.layoutFrame:IsShown(), "world retirement replayed a choice-hidden roster")
+    end
 end)
 
 Test("missing totem support preserves pets and totems work without the pet getter", function()

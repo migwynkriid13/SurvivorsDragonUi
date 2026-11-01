@@ -36,6 +36,7 @@ DFRL:NewMod("PetFrames", 4, function()
         },
     }
     local inWorld, age, displayed = true, 0, false
+    local choiceHidden = false
     local entryCount = 0
     local dirty, paintedScale = true, nil
 
@@ -162,6 +163,7 @@ DFRL:NewMod("PetFrames", 4, function()
         feed.packet, feed.stamp, feed.acceptedReceived = nil, nil, nil
     end
     local function Clear()
+        choiceHidden = false
         if not displayed and entryCount == 0 and not dirty and not feeds[1].packet and not feeds[2].packet then
             return
         end
@@ -349,7 +351,9 @@ DFRL:NewMod("PetFrames", 4, function()
             return
         end
         local changed = packet ~= feed.packet or stamp ~= feed.stamp or feed.received ~= feed.acceptedReceived
-        local ticking = feed.hasTemporary and not DFRL.display.Get("hidePetTimers") and root:IsVisible()
+        local ticking = feed.hasTemporary
+            and not DFRL.display.Get("hidePetTimers")
+            and (root:IsVisible() or (choiceHidden and not DFRL.layout.IsHidden("petFrames") and UIParent:IsVisible()))
         if not changed and not ticking then return end
         dirty = true
         local list = Native(feed.getter)
@@ -375,6 +379,11 @@ DFRL:NewMod("PetFrames", 4, function()
             Retire()
             return
         end
+        if phase == "choosing" then
+            choiceHidden = true
+            if root:IsShown() then root:Hide() end
+            return
+        end
         for _, feed in ipairs(feeds) do
             RefreshFeed(feed)
         end
@@ -396,7 +405,10 @@ DFRL:NewMod("PetFrames", 4, function()
             end
             return
         end
-        if not displayed then root:Show() end
+        if not displayed or choiceHidden then
+            choiceHidden = false
+            root:Show()
+        end
         displayed = true
         local scale = root:GetEffectiveScale()
         if not Number(scale) or scale <= 0 then return end
@@ -432,6 +444,10 @@ DFRL:NewMod("PetFrames", 4, function()
         Refresh()
     end
     root:SetScript("OnShow", function()
+        if choiceHidden then
+            root:Hide()
+            return
+        end
         dirty, age = true, 0.1
     end)
     DFRL.layout.Register("petFrames", root, function()

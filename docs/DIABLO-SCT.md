@@ -11,6 +11,10 @@ display transaction. Full resets restore the display defaults above while
 preserving the confirmed Custom/Off/Game settings mode. Existing saved MSBT
 choices and profiles migrate to MSBT.
 
+All three styles draw above the world but below ordinary windows, including the
+character screen opened with **C**. Combat text continues normally behind those
+panels; opening or closing one does not clear hits or restart their lifetime.
+
 ## Reference study
 
 The requested reference is Vaereth's

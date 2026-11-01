@@ -98,6 +98,19 @@ but not run locally; live Hakkar metadata and rendering remain unverified.
 
 ## Meter processing and display caches
 
+The meter and Pet frames fully hide during native `choosing` at their existing
+one-second and tenth-second phase reads. Choice hiding retains meter sessions,
+checkpoints, legacy recent samples, native rate caches and pet rosters; it is a
+presentation exception to ordinary hidden-window rate retirement. It skips
+meter snapshots and pet roster/timer reads, icon binding, metrics and painting
+while cards remain open. Existing OnShow handlers reject premature reappearance;
+normal visibility returns through Layout and the retained pools on the next
+eligible reader pass. Ordinary hide/off/world/reset cleanup remains separate.
+Both Performance Mode states use actual Hide/Show without a fade. No frame,
+region, asset, setting, SavedVariable, event, updater or faster reader is added.
+The authored CI-only cases do not establish live overlay rendering or latency;
+local tests and addon/game execution were not run.
+
 The existing meter controller reads regular native and legacy data once per
 second, including counters, shares, bars, attribution and displayed rates.
 Input, settings, scrolling, Reset and showing the meter prime that same reader
@@ -2456,18 +2469,22 @@ region, animation, asset, event, updater, setting or SavedVariable is added;
 normal and Performance Mode share the same behavior. CI-only fixtures cover
 the navigation, lifecycle and waypoint changes; they were not run locally.
 
-Hiding empties recent vectors once and stops observation; showing warms the
+Ordinary Layout/UI hiding empties recent vectors once and stops observation; showing warms the
 window again. Disabling and run/world retirement drop all rate state; language
 changes rebase an active reset session. Repeated retirement of an empty model allocates nothing. Pause leaves the
 native time coordinate unchanged. Window choices reuse normalized display drafts,
 profiles and resets. The window row reuses existing editor controls. The old
 rate-only Reset DPS settings action is removed. The header arrow FontString is
-replaced by one native button using three already-bundled Close.blp states:
-normal, pressed and additive hover. One image draws normally, with a second only
+replaced by one native button using the bundled Blizzard refresh glyph in
+`meter/Reset.blp`, with normal, dimmed pressed and additive hover states.
+One image draws normally, with a second only
 on hover; native button state handling needs no Lua updater or cosmetic polling.
-The texture is bound once, retains its source proportions and inherits meter
-scale/hiding. This adds one normal HUD texture region and removes one label,
-without adding an image file or saved state. Rate text/tooltips still skip
+The 16-unit square glyph is centered within the existing button bounds, bound
+once and inherits meter scale/hiding. It stays static in both Performance Mode
+states. Replacing the X adds one 16-by-16 runtime BLP and no frame or texture
+region; the authoring TGA stays outside the runtime manifest. The button itself
+adds one normal HUD texture region in place of the old label, without saved
+state. Rate text/tooltips still skip
 unchanged writes; reset clears rows/icons/hovers and both rate caches immediately.
 These bounds are source-level cost evidence; CPU time, gameplay behavior and FPS
 remain unmeasured. See [DAMAGE-METER.md](DAMAGE-METER.md).
@@ -2765,6 +2782,13 @@ Holders inherit the owner's movement, scale and visibility; animation anchors
 remain local without per-frame owner geometry reads. Layout scaling refits only
 active, visible labels through `onResize`. Holder parent changes occur only on
 pool acquisition across styles, restoring the original parent for enemy text.
+The world owner, scrolling owner and pooled holders use one `LOW` strata
+constant. Their visual children inherit it, keeping all styles beneath ordinary
+panels such as Character while combat text continues above the world. Existing
+construction binds the layer once; panel visibility adds no hooks, polling,
+region, animation, asset or repeated layer writes. Both Performance Mode states
+retain their normal motion, expiry, intake and pooling. CI-only mocks cover
+relative native strata and pooled reuse, not actual panel occlusion in-game.
 Default coordinates, curve, spacing and cadence remain unchanged. Layout hiding
 retires active/queued hits and skips hidden intake, resolver work and animation;
 unhiding admits only new hits. The cached visibility policy uses the existing

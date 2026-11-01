@@ -592,6 +592,12 @@ The assertions cover:
   clears labels and the owner request while retaining pool reuse and empty-list
   idling. These mocks do not exercise native dragging or independently retest
   the shared Layout save/profile transaction.
+- SCT layer cases model a native MEDIUM character panel above every active text
+  owner, holder and visual frame across all three styles and both Performance
+  Mode states. They cover repeated style/pool reuse, ongoing hits while the
+  panel opens/closes, retained captions/expiry and no layer writes during
+  animation. This is a relative native-frame contract; it does not exercise
+  rendered panel occlusion, and the authored cases were not run locally.
 - Diablo IV style cases exercise the production SCT controller's full numeric
   formatting, native critical colors, icon/filter choices, compact launch,
   settled hold, fade deadline, unchanged work, style retirement, pool reuse and
@@ -814,6 +820,15 @@ when authorized. Local work remains limited to source review and pinned
 formatting; these regression tests and audits run in GitHub Actions.
 
 ## Pet and totem controller scenarios
+
+The meter view/legacy cases and `ui_pets_totems_spec.lua` cover temporary
+upgrade-card hiding in both Performance Mode states: complete roots and children
+hide, competing Show calls are rejected, unchanged choice passes perform no
+presentation writes or source/timer reads, and returning reuses the pool.
+Meter recent samples and native checkpoints survive; updated pet/totem receipts
+are applied on return. Disabling and world retirement still prevent stale
+reappearance. These cases are authored for CI only and were not run locally;
+they do not prove the native card overlay or actual hide/show timing.
 
 `ui_pets_totems_spec.lua` loads the production PetFrames module against fake
 native getters, snapshots, phase and run time. It covers unchanged grouped pets

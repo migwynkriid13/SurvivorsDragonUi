@@ -32,7 +32,7 @@ tab, keep a local rolling ring or subtract local reset baselines on this path.
 Current-loadout reads are unnecessary for these rows because each snapshot
 includes complete historical source metadata.
 
-X captures a native checkpoint synchronously. A failed capture preserves the
+The reset button captures a native checkpoint synchronously. A failed capture preserves the
 previous session and its visible values. Successful replacement releases the
 old handle; failed release retries through the existing controller without
 collecting data while disabled. Invalidated checkpoints block pre-reset replay
@@ -73,8 +73,12 @@ Click its heading to cycle through Damage Done, Healing Done, Boss Damage and Pa
 views still waiting for their first usable native publication are skipped.
 Right-click goes backwards. The gold header shows **Total** and **DPS** (or **HPS**
 for healing), replacing the view name and the former footer text. Hover over the
-header to see the current view. The small gold **X** resets statistics in every
+header to see the current view. The small gold **refresh button** resets statistics in every
 view; it never closes the meter. When totals are shown, missing values display `--`.
+The whole meter hides while level-up or jewelry upgrade cards are open and
+returns afterward. This temporary hide preserves statistics, reset checkpoints
+and recent DPS samples. It follows the existing one-second reader and respects
+the Layout Hide frame choice.
 Under `/sdui` → **Damage meter**, set **Abilities shown** from **1 to 10**;
 the default is **6**. The number previews immediately and saves with Confirm.
 Cancel, world/logout/reload discard, profiles and both resets use the shared
@@ -99,7 +103,7 @@ party getter skip that view.
 Under **DPS window**, use the minus/plus buttons for **5–120 seconds**, in
 five-second steps. Below five, **All** selects the whole-run average. Hover over
 the header or a source to see its whole-run average alongside recent DPS.
-The **X** starts a new session for all four views. It clears totals, source rows, shares,
+The **reset button** starts a new session for all four views. It clears totals, source rows, shares,
 rankings, scroll position and displayed/recent rates together. Existing effects
 or pets remain in game; their later damage or healing counts as new activity.
 The reset is session-only and independent of Confirm. Legacy baselines are
@@ -295,7 +299,7 @@ for clearing these counters.
 
 `NewMeterSession` therefore captures exact name/proc counter baselines for all
 four views through their existing getters, once in the deferred visible refresh
-after the X is clicked. Subsequent rows contain only positive counter deltas.
+after the reset button is clicked. Subsequent rows contain only positive counter deltas.
 Their sum becomes the displayed total; shares and descending rankings use those
 deltas, with native order as the tie-breaker. Proc identity, source names and
 native tables are never changed. Post-reset averages, including healing and boss
@@ -324,9 +328,9 @@ segments enter the calculation.
 header and exact source-name/proc identities. Observation uses the existing
 one-Hz controller, continuing Damage Done sampling while another meter view is
 visible. A gap over two run seconds discards the recent window; showing after
-hiding starts a new observation window. Clock/total/source-counter regression or
+ordinary Layout/UI hiding starts a new observation window. Clock/total/source-counter regression or
 a disappearing source retires recent history. New runs, world cleanup, language
-changes, full resets, disabling and the X clear it too. All skips recent history
+changes, full resets, disabling and the reset button clear it too. All skips recent history
 and uses the native run average before a reset, or the session average afterwards.
 No recent samples or reset baselines are collected while hidden/off.
 
@@ -351,7 +355,12 @@ Their runtime code is not imported; native data ownership and the addon lifecycl
 remain local to this implementation.
 
 The phase is read before any retained meter data. `ready` clears the view;
-`playing`, `choosing`, `paused`, `dead` and `victory` can display valid data.
+`playing`, `choosing`, `paused`, `dead` and `victory` remain valid data phases.
+During `choosing`, the root is actually hidden before snapshot/row work; the
+existing native HUD suppression stays acquired. Its OnHide handler retains
+recent samples only for this temporary choice hide, and OnShow rejects an
+attempt to reveal it until a fresh phase read leaves `choosing`. Session and
+native checkpoint ownership are unchanged. Other valid phases display normally.
 Each native snapshot must have finite nonnegative totals, rates, row amounts
 and shares, with shares at most one. Source names remain native; before Reset,
 source order remains native too.
@@ -384,7 +393,7 @@ rate and share are consumed; no spell breakdown or attribution is invented.
 The existing controller handles `AZSPARTY` receipts and defers its getter until
 after native parsing, with the same phase, empty-publication and world/zone
 retirement gates. Readiness, native HUD ownership, displayed rates and the
-one-Hz regular reader are shared. X baselines this fourth view along with
+one-Hz regular reader are shared. The reset button baselines this fourth view along with
 the other three; its post-reset rates use native seconds since Reset. Class
 metadata survives session deltas, including metadata-only changes.
 

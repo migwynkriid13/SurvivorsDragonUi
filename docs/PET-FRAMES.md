@@ -151,7 +151,14 @@ OnUpdate, after native parsing. New-zone, inactive-phase, world-leave and logout
 cleanup retire each current packet/stamp and receipt generation. The same
 retained packet cannot reactivate that stream's rows until its identity/stamp
 changes or a fresh corresponding receipt occurs. Paused and choosing phases
-keep valid data without a timeout.
+keep valid data without a timeout. During `choosing`, the whole group is actually
+hidden at the existing tenth-second phase read, including every pet/totem icon,
+rim, count, name and timer. It retains its roster and row pool while deferring
+roster/timer reads and all painting; receipts remain pending for the return.
+The existing OnShow handler rejects attempts to show it while choice-hidden.
+When cards close, current native feeds are read before the shared Layout owner
+can show the pooled group again. Saved hiding stays respected. Both Performance
+Mode states use the same Hide/Show with no fade, new reader, event or updater.
 World leave/logout and the wrapped ReloadUI stop updates and clear accepted
 roster caches, row identity, text and icon references. Full layout resets clear
 the view; its next native refresh can repopulate current summons. Nothing is
