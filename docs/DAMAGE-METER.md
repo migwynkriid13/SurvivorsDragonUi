@@ -93,6 +93,22 @@ view name. Both header fields start on. All seven options use the same preview, 
 Cancel, profile and reset behavior. Healing uses healing totals and HPS.
 Hover still provides the full name and numbers when row values are hidden.
 
+Native v1 rows also show **Native IDs** in that tooltip. The technical field
+names stay as the API spells them: `rowId`, `sourceKey`, `ownerId`, `actorId`,
+`nativeProc`, `kind`, `attribution` and `rank`, plus supplied ability, talent,
+variant and item IDs. Accepted positive members supply actual
+`originSourceKey` details; zero-display history supplies none. Missing fields
+show `--` or are omitted. These are received native identities, never the
+private display token or an ID guessed from a name.
+
+This helps compare two equally named rows that still have separate DPS. A
+combined row can include several native source records. The tooltip shows at
+most three records and three actual origins per record, within 24 diagnostic
+lines; `...` marks omitted details. It makes no additional native read. Text is
+prepared only on hover and reused while identities and metadata stay unchanged.
+Both Performance Mode states share this static behavior. Legacy meters keep
+their existing statistics tooltip because they do not supply these IDs.
+
 **Party Damage** lists heroes during co-op, with each hero's class color and
 native unit portrait inside the same gold ring. It uses the game's player
 totals and DPS; the **DPS window** setting applies to Damage Done. The row/icon

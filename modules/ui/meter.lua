@@ -343,13 +343,23 @@ DFRL:NewMod("DamageMeter", 7, function()
         end
     end
     local function ShowRowTooltip(row)
-        if editing or not row.entry or not GameTooltip then return end
+        if editing or not row.entry or not row:IsVisible() or not GameTooltip then return end
         local entry, language, scale = row.entry, DFRL.locale.code, GameTooltip:GetEffectiveScale()
         local damage = string.format("%.0f", entry.dmg)
         local rate = entry.dps and string.format("%.1f", entry.dps) or "--"
         local average = entry.averageDps and string.format("%.1f", entry.averageDps) or "--"
         local reset = IsReset()
         local share = string.format("%.1f%%", entry.share * 100)
+        local source, identity = apiActive and snapshot.source or nil, apiActive and entry.rateIdentity or nil
+        local details = tooltipState.details
+        if
+            hovered ~= row
+            or tooltipState.source ~= source
+            or tooltipState.rowId ~= entry.rowId
+            or tooltipState.identity ~= identity
+        then
+            details = source and type(api.Describe) == "function" and api.Describe(source, entry.rowId) or nil
+        end
         if
             hovered == row
             and GameTooltip:IsOwned(row)
@@ -361,6 +371,9 @@ DFRL:NewMod("DamageMeter", 7, function()
             and tooltipState.share == share
             and tooltipState.mode == mode
             and tooltipState.language == language
+            and tooltipState.source == source
+            and tooltipState.rowId == entry.rowId
+            and tooltipState.identity == identity
             and T.NearlyEqual(tooltipState.scale, scale)
         then
             return
@@ -378,10 +391,18 @@ DFRL:NewMod("DamageMeter", 7, function()
             )
         end
         GameTooltip:AddDoubleLine(DFRL.locale.Text("Share"), share)
+        if details and table.getn(details) > 0 then
+            GameTooltip:AddLine(DFRL.locale.Text("Native IDs"), 1, 0.82, 0)
+            for _, text in ipairs(details) do
+                GameTooltip:AddLine(text, 0.75, 0.75, 0.75, true)
+            end
+        end
         GameTooltip:Show()
         tooltipState.name, tooltipState.damage, tooltipState.rate, tooltipState.share = entry.name, damage, rate, share
         tooltipState.average, tooltipState.reset = average, reset
         tooltipState.mode, tooltipState.language, tooltipState.scale = mode, language, scale
+        tooltipState.source, tooltipState.rowId, tooltipState.identity, tooltipState.details =
+            source, entry.rowId, identity, details
     end
     local header = CreateFrame("Button", nil, root)
     header:SetPoint("TOPLEFT", root, "TOPLEFT", 0, 0)

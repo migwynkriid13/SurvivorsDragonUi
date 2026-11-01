@@ -1467,6 +1467,89 @@ Test("talent rank summaries reuse unchanged identity work for direct and actual-
     end
 end)
 
+Test("hover diagnostics distinguish native proc rows even when their source IDs and names match", function()
+    local _, state, meter = Native()
+    state.records = TalentRanks(2, "shaman.enh_windfury_weapon", "Windfury Weapon")
+    for _, record in ipairs(state.records) do
+        record.id, record.rank = "talent:shaman.enh_windfury_weapon:r1", 1
+    end
+    state.records[2].proc = false
+    local source, total =
+        meter.Read({ metric = "damage", scope = "self", period = "run", groupBy = "actor_source" }, 10)
+    assert(table.getn(source) == 2 and total == 30)
+    local reads = state.calls.snapshot
+    local first = table.concat(assert(meter.Describe(source, source[1].rowId)), "\n")
+    local second = table.concat(assert(meter.Describe(source, source[2].rowId)), "\n")
+    for _, text in ipairs({ first, second }) do
+        assert(string.find(text, "sourceKey: talent:shaman.enh_windfury_weapon:r1", 1, true))
+        assert(string.find(text, "ownerId: hero-1; actorId: hero-1", 1, true))
+        assert(string.find(text, "kind=talent; attribution=known; rank=1", 1, true))
+        assert(not string.find(text, "table:", 1, true), "hover exposed a private display token as a native ID")
+    end
+    assert(string.find(first, "nativeProc=true", 1, true) and string.find(second, "nativeProc=false", 1, true))
+    assert(first ~= second and state.calls.snapshot == reads, "hover merged rows or collected another native snapshot")
+    assert(meter.Describe(source, "not-a-current-row") == nil)
+end)
+
+Test("group hover diagnostics retain source and actual origin IDs while ignoring zero-display history", function()
+    local _, state, meter = Native()
+    state.records, state.extraSources = TalentProcRanks(2)
+    state.mutate = function(snapshot)
+        local leaf = Copy(snapshot.contributions[1])
+        leaf.rowId, leaf.displayAmount, leaf.originSourceKeys = "retired-origin-member", 0, { "retired-origin" }
+        table.insert(snapshot.contributions, leaf)
+        table.insert(snapshot.rows[1].memberIds, leaf.rowId)
+    end
+    local source = assert(meter.Read(damage, 10))
+    local text = table.concat(assert(meter.Describe(source, source[1].rowId)), "\n")
+    assert(table.getn(source) == 1 and source[1].dmg == 30 and source[1].name == "Flametongue Weapon")
+    for rank = 1, 2 do
+        assert(string.find(text, "sourceKey: fire-nova-origin-rank-" .. rank, 1, true))
+        assert(string.find(text, "originSourceKey: talent:shaman.enh_flametongue_weapon:r" .. rank, 1, true))
+    end
+    assert(not string.find(text, "retired-origin", 1, true), "zero-display history supplied current hover attribution")
+    assert(string.find(text, "abilityKey: fire_nova", 1, true))
+    assert(string.find(text, "talentKey: shaman.enh_flametongue_weapon", 1, true))
+end)
+
+Test("hover diagnostics prepare lazily, reuse counter-only text and refresh changed metadata", function()
+    local c, state, meter = Native()
+    state.records = TalentRanks(3)
+    local formats, nativeString = 0, c.env.string
+    c.env.string = setmetatable({
+        gsub = function(...)
+            formats = formats + 1
+            return nativeString.gsub(...)
+        end,
+    }, { __index = nativeString })
+    local source = assert(meter.Read(damage, 10))
+    assert(formats == 0, "unhovered rows prepared diagnostic strings")
+    local lines = assert(meter.Describe(source, source[1].rowId))
+    assert(formats > 0)
+    local formatted = formats
+    state.records[1].amount = state.records[1].amount + 1
+    state.context.counterRevision = "hover-counter-only"
+    source = assert(meter.Read(damage, 10))
+    assert(meter.Describe(source, source[1].rowId) == lines and formats == formatted)
+    state.records[1].variantKey = "received-variant"
+    state.context.metadataRevision = "hover-variant-metadata"
+    source = assert(meter.Read(damage, 10))
+    local changed = assert(meter.Describe(source, source[1].rowId))
+    assert(changed == lines and formats > formatted, "changed hover allocated a new buffer or kept stale IDs")
+    assert(string.find(table.concat(changed, "\n"), "variantKey: received-variant", 1, true))
+    meter.Clear()
+    assert(meter.Describe(source, source[1].rowId) == nil, "retired native handles replayed hover IDs")
+end)
+
+Test("hover diagnostic output stays bounded for large rank families", function()
+    local _, state, meter = Native()
+    state.records = TalentRanks(30)
+    local source = assert(meter.Read(damage, 10))
+    local lines = assert(meter.Describe(source, source[1].rowId))
+    assert(table.getn(lines) <= 24 and lines[table.getn(lines)] == "...")
+    assert(source[1].dmg == 4650 and state.lastResponse.totals.displayAmount == 4650)
+end)
+
 Test("counter and unrelated metadata publications reuse prepared native identities", function()
     local c, state, meter = Native()
     state.records = Ranks(30)

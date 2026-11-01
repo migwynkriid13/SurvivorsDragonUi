@@ -153,6 +153,17 @@ pool reuse, hidden/off work and both Performance Mode states use the production
 owners over explicit fake boundaries. These cases are CI-only and were not
 executed locally; they do not prove native client behavior.
 
+Native hover-ID cases expose received source/owner/caster/proc/rank and actual
+positive-origin metadata without a new snapshot. They distinguish equally named
+rows with the same source ID but different native proc flags, avoid private
+display tokens and ignore zero-display origin history. The adapter prepares
+text lazily in one bounded reusable buffer, reuses it for counter-only changes,
+refreshes changed metadata and retires old handles on Clear. Full meter cases
+exercise unchanged hover writes, metadata changes with unchanged captions and
+amounts, foreign tooltip ownership and hidden work in both Performance Mode
+states. Diagnostics do not establish the identities in a screenshot until the
+actual tooltip is observed. Coverage remains CI-only.
+
 Talent-rank cases cover direct known talent descriptors and ability rows with
 validated actual talent origins. They combine native ranks without rewriting
 counter records, check later upgrades and stable display identities across the

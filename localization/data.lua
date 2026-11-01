@@ -2,6 +2,7 @@
 DFRL.locale.data = {
     en = {
         ui = {
+            ["Native IDs"] = "Native IDs",
             ["Combine pet damage"] = "Combine pet damage",
             ["Combine each pet's spells under its name. Off: show spells with their pet names."] = "Combine each pet's spells under its name. Off: show spells with their pet names.",
             ["Use SDUI action bar"] = "Use SDUI action bar",
@@ -669,6 +670,7 @@ DFRL.locale.data = {
     },
     pl = {
         ui = {
+            ["Native IDs"] = "Identyfikatory gry",
             ["Combine pet damage"] = "Łącz obrażenia zwierzaków",
             ["Combine each pet's spells under its name. Off: show spells with their pet names."] = "Łącz zaklęcia każdego zwierzaka pod jego nazwą. Wyłączone: pokazuj zaklęcia z nazwami zwierzaków.",
             ["Use SDUI action bar"] = "Używaj paska akcji SDUI",
@@ -1807,6 +1809,7 @@ DFRL.locale.data = {
     },
     cs = {
         ui = {
+            ["Native IDs"] = "ID hry",
             ["Combine pet damage"] = "Sloučit poškození společníků",
             ["Combine each pet's spells under its name. Off: show spells with their pet names."] = "Sloučí kouzla každého společníka pod jeho jménem. Vypnuto: zobrazí kouzla se jmény společníků.",
             ["Use SDUI action bar"] = "Používat akční lištu SDUI",
@@ -2948,6 +2951,7 @@ DFRL.locale.data = {
     },
     de = {
         ui = {
+            ["Native IDs"] = "Native IDs",
             ["Combine pet damage"] = "Begleiterschaden zusammenfassen",
             ["Combine each pet's spells under its name. Off: show spells with their pet names."] = "Fasst die Zauber jedes Begleiters unter seinem Namen zusammen. Aus: zeigt Zauber mit Begleiternamen.",
             ["Use SDUI action bar"] = "SDUI-Aktionsleiste verwenden",
@@ -4087,6 +4091,7 @@ DFRL.locale.data = {
     },
     pt = {
         ui = {
+            ["Native IDs"] = "IDs nativos",
             ["Combine pet damage"] = "Combinar dano dos ajudantes",
             ["Combine each pet's spells under its name. Off: show spells with their pet names."] = "Combina os feitiços de cada ajudante sob o seu nome. Desativado: mostra os feitiços com o nome do ajudante.",
             ["Use SDUI action bar"] = "Usar barra de ações do SDUI",
@@ -5217,6 +5222,7 @@ DFRL.locale.data = {
     },
     es = {
         ui = {
+            ["Native IDs"] = "ID nativos",
             ["Combine pet damage"] = "Combinar daño de mascotas",
             ["Combine each pet's spells under its name. Off: show spells with their pet names."] = "Combina los hechizos de cada mascota bajo su nombre. Desactivado: muestra los hechizos con el nombre de la mascota.",
             ["Use SDUI action bar"] = "Usar la barra de acción de SDUI",
@@ -6351,6 +6357,7 @@ DFRL.locale.data = {
     },
     fr = {
         ui = {
+            ["Native IDs"] = "Identifiants natifs",
             ["Combine pet damage"] = "Regrouper les dégâts des familiers",
             ["Combine each pet's spells under its name. Off: show spells with their pet names."] = "Regroupe les sorts de chaque familier sous son nom. Désactivé : affiche les sorts avec le nom du familier.",
             ["Use SDUI action bar"] = "Utiliser la barre d’action SDUI",
@@ -7493,6 +7500,7 @@ DFRL.locale.data = {
     },
     ro = {
         ui = {
+            ["Native IDs"] = "ID-uri native",
             ["Combine pet damage"] = "Combină daunele companionilor",
             ["Combine each pet's spells under its name. Off: show spells with their pet names."] = "Combină vrăjile fiecărui companion sub numele său. Dezactivat: arată vrăjile cu numele companionilor.",
             ["Use SDUI action bar"] = "Folosește bara de acțiuni SDUI",
@@ -8618,6 +8626,7 @@ DFRL.locale.data = {
     },
     tr = {
         ui = {
+            ["Native IDs"] = "Yerel kimlikler",
             ["Combine pet damage"] = "Yoldaş hasarını birleştir",
             ["Combine each pet's spells under its name. Off: show spells with their pet names."] = "Her yoldaşın büyülerini kendi adı altında birleştirir. Kapalı: büyüleri yoldaş adlarıyla gösterir.",
             ["Use SDUI action bar"] = "SDUI eylem çubuğunu kullan",
@@ -9619,6 +9628,7 @@ DFRL.locale.data = {
     },
     ru = {
         ui = {
+            ["Native IDs"] = "Идентификаторы игры",
             ["Combine pet damage"] = "Объединять урон питомцев",
             ["Combine each pet's spells under its name. Off: show spells with their pet names."] = "Объединяет заклинания каждого питомца под его именем. Выключено: показывает заклинания с именами питомцев.",
             ["Use SDUI action bar"] = "Использовать панель действий SDUI",
@@ -10839,6 +10849,7 @@ DFRL.locale.data = {
     },
     uk = {
         ui = {
+            ["Native IDs"] = "Ідентифікатори гри",
             ["Combine pet damage"] = "Об’єднувати шкоду вихованців",
             ["Combine each pet's spells under its name. Off: show spells with their pet names."] = "Об’єднує закляття кожного вихованця під його ім’ям. Вимкнено: показує закляття з іменами вихованців.",
             ["Use SDUI action bar"] = "Використовувати панель дій SDUI",
@@ -12033,6 +12044,7 @@ DFRL.locale.data = {
     },
     zh = {
         ui = {
+            ["Native IDs"] = "原生 ID",
             ["Combine pet damage"] = "合并宠物伤害",
             ["Combine each pet's spells under its name. Off: show spells with their pet names."] = "将每只宠物的法术合并到其名称下。关闭：显示法术及其宠物名称。",
             ["Use SDUI action bar"] = "使用 SDUI 动作条",
@@ -13154,6 +13166,7 @@ DFRL.locale.data = {
     },
     ja = {
         ui = {
+            ["Native IDs"] = "ネイティブID",
             ["Combine pet damage"] = "ペットのダメージをまとめる",
             ["Combine each pet's spells under its name. Off: show spells with their pet names."] = "各ペットの呪文をその名前にまとめます。オフ：呪文にペットの名前を表示します。",
             ["Use SDUI action bar"] = "SDUIのアクションバーを使う",
@@ -14307,6 +14320,7 @@ DFRL.locale.data = {
     },
     ko = {
         ui = {
+            ["Native IDs"] = "게임 ID",
             ["Combine pet damage"] = "소환수 피해 합산",
             ["Combine each pet's spells under its name. Off: show spells with their pet names."] = "각 소환수의 주문을 해당 이름으로 합산합니다. 끄면 주문과 소환수 이름을 함께 표시합니다.",
             ["Use SDUI action bar"] = "SDUI 행동 단축바 사용",

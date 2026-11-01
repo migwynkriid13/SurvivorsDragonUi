@@ -173,7 +173,7 @@ function DFRL.tools.NewNativeMeter()
         state.blocked = failure
         QueueRelease(state.checkpoint)
         state.checkpoint = nil
-        state.views = {}
+        state.views, state.details = {}, nil
     end
     local function CheckCheckpoint(context)
         local checkpoint = state.checkpoint
@@ -1055,6 +1055,121 @@ function DFRL.tools.NewNativeMeter()
             current.authorityId, current.encounter and current.encounter.encounterId, view.groupPets
         return true
     end
+    local function DetailValue(value)
+        local kind = type(value)
+        if kind == "string" or kind == "number" or kind == "boolean" then
+            return string.gsub(tostring(value), "|", "||")
+        end
+        return "--"
+    end
+    local function DetailField(metadata, field)
+        for index, key in ipairs(sourceFields) do
+            if key == field then return metadata[index] end
+        end
+    end
+    local function DetailLine(details, text)
+        if details.count < 23 then
+            details.count = details.count + 1
+            details.lines[details.count] = text
+        else
+            details.truncated = true
+        end
+    end
+    local function DetailMetadata(details, metadata)
+        if not metadata.present then return end
+        DetailLine(
+            details,
+            "kind="
+                .. DetailValue(DetailField(metadata, "kind"))
+                .. "; attribution="
+                .. DetailValue(DetailField(metadata, "attribution"))
+                .. "; rank="
+                .. DetailValue(DetailField(metadata, "rank"))
+        )
+        for index, key in ipairs(sourceFields) do
+            if
+                key ~= "sourceKey"
+                and key ~= "kind"
+                and key ~= "name"
+                and key ~= "attribution"
+                and key ~= "rank"
+                and metadata[index] ~= nil
+            then
+                DetailLine(details, key .. ": " .. DetailValue(metadata[index]))
+            end
+        end
+    end
+    function adapter.Describe(source, rowId)
+        if state.blocked then return end
+        for _, view in ipairs(state.views) do
+            if view.rows == source and view.capture then
+                local display
+                for _, row in ipairs(view.rows) do
+                    if row.rowId == rowId then
+                        display = row
+                        break
+                    end
+                end
+                if not display then return end
+                local details = state.details
+                if
+                    details
+                    and details.view == view
+                    and details.rowId == rowId
+                    and details.identity == display.rateIdentity
+                then
+                    return details.lines
+                end
+                details = details or { lines = {} }
+                for index = table.getn(details.lines), 1, -1 do
+                    details.lines[index] = nil
+                end
+                details.view, details.rowId, details.identity = view, rowId, display.rateIdentity
+                details.truncated, details.count = false, 0
+                local count = 0
+                for _, row in ipairs(view.pool) do
+                    if row == display or (row.family and not row.family.ambiguous and row.family.row == display) then
+                        count = count + 1
+                        if count <= 3 then
+                            DetailLine(details, "rowId: " .. DetailValue(row.rowId))
+                            if row.nativeSource then
+                                DetailLine(details, "sourceKey: " .. DetailValue(row.nativeSource))
+                            end
+                            DetailLine(
+                                details,
+                                "ownerId: "
+                                    .. DetailValue(row.nativeOwner)
+                                    .. "; actorId: "
+                                    .. DetailValue(row.nativeActor)
+                                    .. "; nativeProc="
+                                    .. DetailValue(row.nativeProc)
+                            )
+                            DetailMetadata(details, row.sourceMetadata)
+                            local origins = 0
+                            for key, metadata in pairs(row.originMetadata) do
+                                origins = origins + 1
+                                if origins <= 3 then
+                                    DetailLine(details, "originSourceKey: " .. DetailValue(key))
+                                    DetailMetadata(details, metadata)
+                                else
+                                    details.truncated = true
+                                end
+                            end
+                        else
+                            details.truncated = true
+                        end
+                    end
+                end
+                if details.truncated then
+                    details.count = details.count + 1
+                    details.lines[details.count] = "..."
+                end
+                table.setn(details.lines, details.count)
+                state.details = details
+                return details.lines
+            end
+        end
+    end
     local captureFields = {
         "snapshotId",
         "uiSessionId",
@@ -1416,13 +1531,13 @@ function DFRL.tools.NewNativeMeter()
             return nil, Malformed()
         end
         QueueRelease(state.checkpoint)
-        state.checkpoint, state.reset, state.blocked, state.views = checkpoint, true, nil, {}
+        state.checkpoint, state.reset, state.blocked, state.views, state.details = checkpoint, true, nil, {}, nil
         adapter.RetryCleanup()
         return true
     end
     function adapter.Clear()
         QueueRelease(state.checkpoint)
-        state.checkpoint, state.reset, state.blocked, state.views = nil, false, nil, {}
+        state.checkpoint, state.reset, state.blocked, state.views, state.details = nil, false, nil, {}, nil
         ClearRetry(state.contextRetry)
         return adapter.RetryCleanup()
     end

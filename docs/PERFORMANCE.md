@@ -228,6 +228,26 @@ cover growing ledgers, cache invalidation, viewport work, native history cadence
 and early row-piece gates. No local tests, game execution, late-run frame timings
 or FPS measurements were performed.
 
+## Meter hover IDs
+
+Native meter hover IDs reuse the adapter's existing scalar source/actor and
+positive-member origin fingerprints. Only an entered or changed hover calls
+the descriptor; steady hovered numeric updates reuse its text. A first or
+invalidated hover searches the selected view's cached rows/pool, with no native
+getter or full snapshot retention. One lazy reusable buffer per adapter holds
+at most 24 lines for up to three native rows and three actual origins per row;
+there is no cache for every visited row. Relevant identity/metadata changes
+invalidate it, and Reset/checkpoint retirement/Clear release it. No formatting
+runs for unhovered, hidden or off rows. Existing tooltip ownership, pooling,
+one-second numeric updates and instant behavior in both Performance Mode states
+remain intact. No addon-owned frame, region, asset, event, updater, setting or
+SavedVariable is added. The existing shared GameTooltip supplies its native
+line pool for the heading and diagnostic lines; that native cost is not
+measured here. CI-only cases cover lazy preparation, unchanged reuse, bounds,
+metadata changes with identical captions/counters, native proc distinctions,
+positive origins, foreign tooltip ownership and hidden cleanup. These are not
+live rendering or FPS measurements; no local tests or game execution ran.
+
 ## Meter talent proc captions
 
 Talent proc captions reuse the same snapshot member caches and pooled rows.
