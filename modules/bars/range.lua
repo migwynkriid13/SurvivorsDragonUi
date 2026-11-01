@@ -98,7 +98,8 @@ DFRL:NewMod("RangeIndicator", 1, function()
     local hooked
     SyncUpdates = function()
         local visible = customActionBar and DFRL.mainBar and DFRL.mainBar:IsVisible()
-        events:SetScript("OnUpdate", visible and Tick or nil)
+        local update = visible and Tick or nil
+        if events:GetScript("OnUpdate") ~= update then events:SetScript("OnUpdate", update) end
         if visible then
             elapsed = UPDATE_INTERVAL
         else

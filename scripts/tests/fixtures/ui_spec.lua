@@ -327,6 +327,7 @@ Test("performance mode replaces range fades with static warnings and restores no
     assert(indicator:IsShown() and indicator:GetAlpha() == 0.5, "static mode lost the range warning")
     assert(context.writes.UIFrameFadeRemoveFrame == 1, "active native fade was not removed")
     assert(not context.writes.UIFrameFadeIn and not context.writes.UIFrameFadeOut, "static mode started a fade")
+    assert(not context.writes.SetScript, "static mode rebound the unchanged range updater")
     local allocated = #context.objects
     context:ResetCounts()
     context:Event(controller, "PLAYER_TARGET_CHANGED")
@@ -339,6 +340,7 @@ Test("performance mode replaces range fades with static warnings and restores no
     context:ResetCounts()
     context:SetSetting("performanceMode", false)
     assert(context.writes.UIFrameFadeIn == 1 and #context.objects == allocated, "normal fade did not reuse the warning")
+    assert(not context.writes.SetScript, "normal mode rebound the unchanged range updater")
     bar:Hide()
     context:ResetCounts()
     context:SetSetting("performanceMode", true)

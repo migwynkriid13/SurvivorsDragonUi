@@ -194,9 +194,7 @@ function DFRL.tools.NewMeterSourceGroups()
                     else
                         ClearRow(row)
                     end
-                    for key, value in pairs(entry) do
-                        row[key] = value
-                    end
+                    row.name, row.proc, row.class = entry.name, entry.proc, entry.class
                     row.dmg, row.dps, row.share, row.order = 0, 0, 0, order
                     kinds[kind], rows[used] = row, row
                 end

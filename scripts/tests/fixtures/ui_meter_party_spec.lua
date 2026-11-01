@@ -779,22 +779,28 @@ Test("shared Reset includes party counters and preserves class metadata without 
 end)
 
 Test("unchanged meter publications skip counter traversal while native time keeps sampling", function()
-    local context = Meter()
-    context.damage = { context:WatchCounters(context.damage[1]) }
-    context:Tick()
-    context:ResetCounts()
-    for _ = 1, 6 do
-        context.env.AZS_RUN.t = context.env.AZS_RUN.t + 0.21
+    for _, performance in ipairs({ false, true }) do
+        local context = Meter(function(c) c.settings.performanceMode = performance end)
+        context.damage = { context:WatchCounters(context.damage[1]) }
         context:Tick()
+        assert(
+            context:Row(1).entry.name == "Sinister Strike" and context:Row(1).entry.proc == 0,
+            "grouped native accessor rows lost their source identity"
+        )
+        context:ResetCounts()
+        for _ = 1, 6 do
+            context.env.AZS_RUN.t = context.env.AZS_RUN.t + 0.21
+            context:Tick()
+        end
+        assert(context.reads.damage == 6, "cached counters stopped the official getter")
+        assert(not context.reads.counterFields, "unchanged publications retraversed immutable counter fields")
+        assert(context:Row(1).entry.dps == 0, "unchanged counters stopped the rolling native-time window")
+        context.env.DFRL.ResetMeterStats()
+        context:Tick()
+        context:ResetCounts()
+        context:Tick()
+        assert(not context.reads.counterFields, "settled Reset baselines rescanned unchanged counter metadata")
     end
-    assert(context.reads.damage == 6, "cached counters stopped the official getter")
-    assert(not context.reads.counterFields, "unchanged publications retraversed immutable counter fields")
-    assert(context:Row(1).entry.dps == 0, "unchanged counters stopped the rolling native-time window")
-    context.env.DFRL.ResetMeterStats()
-    context:Tick()
-    context:ResetCounts()
-    context:Tick()
-    assert(not context.reads.counterFields, "settled Reset baselines rescanned unchanged counter metadata")
 end)
 
 Test("same-table same-stamp receipts refresh order, class and validation", function()
