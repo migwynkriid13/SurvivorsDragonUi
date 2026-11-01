@@ -121,6 +121,7 @@ local function SCT(scrolling, setup)
     end
     if setup then setup(context, env) end
     context:Load("core/widgets.lua")
+    context:Load("core/combat_text_api.lua")
     context:Load("modules/nameplates/sct.lua", "NameplateCombatText")
     context.controller = context:Controller("TEST_COMBAT")
     function context:Hit(amount) self:Event(self.controller, "TEST_COMBAT", tostring(amount)) end

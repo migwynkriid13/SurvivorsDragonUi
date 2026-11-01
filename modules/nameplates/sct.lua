@@ -173,6 +173,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local spellTextureScan = {}
     local recentDamage = {}
     local criticalHistory = { rows = {}, count = 0 }
+    local nativeText = T.NewCombatTextApi()
     local discoveredChildren = 0
     local combatDiscoveryNeeded = true
     local arcDirection = 1
@@ -213,8 +214,12 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         and WorldFrame.GetHitRectInsets
         and WorldFrame.SetHitRectInsets
 
-    local function CustomEnabled() return customEnabled and (not msbtStyle or not scrollHidden) end
-    local function UsesPlateOrigins() return CustomEnabled() and not msbtStyle end
+    local function CustomEnabled()
+        return customEnabled
+            and (not msbtStyle or not scrollHidden)
+            and (not nativeText.Selected() or not WorldFrame.IsVisible or WorldFrame:IsVisible())
+    end
+    local function UsesPlateOrigins() return CustomEnabled() and not msbtStyle and not nativeText.Selected() end
 
     local cameraDrag = { owned = false, starting = false }
     local cameraDragSupported = WorldFrame
@@ -552,7 +557,8 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         table.insert(textPool, text)
     end
 
-    local function ResetDisplay()
+    local function ResetDisplay(preserveNative)
+        if not preserveNative then nativeText.Reset() end
         spellTextureScan.work, spellTextureScan.warmRetryAt = nil, nil
         for index = table.getn(activeTexts), 1, -1 do
             ReleaseText(activeTexts[index])
@@ -1712,7 +1718,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         if info.kind == "damage" then
             -- Resolve once even when icons are hidden, so identity and the
             -- eventual displayed icon cannot change while this hit waits.
-            info.iconTexture = CombatIcon(info)
+            if not TextureKey(info.iconTexture) then info.iconTexture = CombatIcon(info) end
             local attack, attackKind = info.spell, "spell"
             if not attack or attack == "" then
                 if info.damageType == "autoattack" then
@@ -1734,6 +1740,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                     .. IconIdentityPart(info.school or "")
                     .. IconIdentityPart(info.critical and "critical" or "normal")
                     .. IconIdentityPart(TextureKey(info.iconTexture) or FALLBACK_ICON)
+                    .. IconIdentityPart(info.nativeIdentity or "")
                 largeCritical = LargeCritical(info, identity, now)
                 byAmount = intakeBuckets[identity]
                 if not byAmount then
@@ -1939,6 +1946,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         if textStyle ~= style then
             textStyle = style
             msbtStyle = style == "msbt"
+            nativeText.Configure(inWorld and customEnabled and not msbtStyle)
             -- Do not move old hits between unrelated coordinate systems, or
             -- replay a queued enemy hit in the fixed screen stream.
             ResetDisplay()
@@ -2119,7 +2127,11 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         end
         -- New holders have no anchor; ReleaseText cleared pooled holders.
         PositionText(text, msbtStyle and "CENTER" or "BOTTOMLEFT", text.x, text.y + 12)
-        text.holder:Show()
+        if origin and origin.native then
+            text.holder:Hide()
+        else
+            text.holder:Show()
+        end
         table.insert(activeTexts, text)
     end
 
@@ -2136,12 +2148,19 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                 local x, y, origin
                 if msbtStyle then
                     x, y = 0, 0
+                elseif entry.info.nativeOrigin then
+                    origin = entry.info.nativeOrigin
+                    x, y = 0, 0
                 else
                     x, y, origin = ResolveOrigin(entry.info, now, age >= EVENT_FALLBACK_DELAY)
                 end
                 if x and y then
                     local group = entry.group
-                    if group.count == 0 then
+                    if origin and origin.native then
+                        -- Native grouping includes the exact target incarnation.
+                        -- Its latest member's handle has the longest retention.
+                        group.origin = origin
+                    elseif group.count == 0 then
                         group.origin = origin
                     elseif group.origin ~= origin then
                         group.origin = nil
@@ -2245,67 +2264,74 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             else
                 kept = kept + 1
                 activeTexts[kept] = text
-                if text.fontRetryAt and now >= text.fontRetryAt then ApplyTextFont(text, now) end
-                -- ScanPlates already sampled this incarnation. Retired origins
-                -- keep their last usable point when native frames are reused.
-                if text.origin then
-                    text.x, text.y = text.origin.x, text.origin.y
-                end
-                local x, y, relativePoint
-                if text.diablo then
-                    -- Launch into a compact fan, then drift above the origin.
-                    -- No gravity/fall or long screen-wide scrolling column.
-                    local burst = math.min(1, math.max(0, age / DIABLO.burst))
-                    local ease = 1 - math.pow(1 - burst, 3)
-                    x = text.x + text.arcX * ease + text.arcX * 0.12 * progress
-                    y = text.y + 12 + text.launch * ease + 18 * progress
-                    relativePoint = "BOTTOMLEFT"
-                elseif msbtStyle then
-                    x = MSBT.curve * 4 * progress * (1 - progress)
-                    y = text.scrollY
-                    relativePoint = "CENTER"
+                if text.origin and text.origin.native and not text.origin.visible then
+                    if text.holder:IsShown() then text.holder:Hide() end
                 else
-                    -- Preserve the original arc relative to the current origin.
-                    x = text.x + text.arcX * progress
-                    y = text.y + 12 + text.launch * progress - text.gravity * progress * progress
-                    relativePoint = "BOTTOMLEFT"
-                end
-                -- Replacing CENTER updates the existing anchor in place.
-                PositionText(text, relativePoint, x, y)
-                local scale = textScale * text.sizeScale
-                if text.diablo and age < DIABLO.pop then
-                    local pop = age / DIABLO.pop
-                    if pop < 0.35 then
-                        scale = scale * (0.82 + (text.critical and 0.46 or 0.28) * (1 - math.pow(1 - pop / 0.35, 3)))
-                    else
-                        scale = scale * (1 + (text.critical and 0.28 or 0.10) * math.pow((1 - pop) / 0.65, 2))
+                    if text.fontRetryAt and now >= text.fontRetryAt then ApplyTextFont(text, now) end
+                    -- Legacy plate origins keep their last usable screen point;
+                    -- native origins received this frame's world projection above.
+                    if text.origin then
+                        text.x, text.y = text.origin.x, text.origin.y
                     end
-                elseif not text.diablo and text.impact and progress < 1 / 6 then
-                    local pop = progress * 6
-                    if pop < 0.5 then
-                        scale = scale * (0.5 + 1.5 * (1 - math.pow(1 - pop * 2, 5)))
+                    local x, y, relativePoint
+                    if text.diablo then
+                        -- Launch into a compact fan, then drift above the origin.
+                        -- No gravity/fall or long screen-wide scrolling column.
+                        local burst = math.min(1, math.max(0, age / DIABLO.burst))
+                        local ease = 1 - math.pow(1 - burst, 3)
+                        x = text.x + text.arcX * ease + text.arcX * 0.12 * progress
+                        y = text.y + 12 + text.launch * ease + 18 * progress
+                        relativePoint = "BOTTOMLEFT"
+                    elseif msbtStyle then
+                        x = MSBT.curve * 4 * progress * (1 - progress)
+                        y = text.scrollY
+                        relativePoint = "CENTER"
                     else
-                        scale = scale * (2 - math.pow((pop - 0.5) * 2, 5))
+                        -- Preserve the original arc relative to the current origin.
+                        x = text.x + text.arcX * progress
+                        y = text.y + 12 + text.launch * progress - text.gravity * progress * progress
+                        relativePoint = "BOTTOMLEFT"
                     end
-                end
-                -- Only the inner visual scales, independently of origin motion
-                -- and the frozen last position after the mob has died.
-                if text.scale ~= scale then
-                    text.scale = scale
-                    text.visual:SetScale(scale)
-                    FitText(text)
-                elseif text.needsMeasure then
-                    FitText(text)
-                end
-                local alpha = 1
-                if text.diablo then
-                    if progress > DIABLO.fade then alpha = (1 - progress) / (1 - DIABLO.fade) end
-                elseif progress > 0.68 then
-                    alpha = (1 - progress) / 0.32
-                end
-                if text.alpha ~= alpha then
-                    text.alpha = alpha
-                    text.holder:SetAlpha(alpha)
+                    -- Replacing CENTER updates the existing anchor in place.
+                    PositionText(text, relativePoint, x, y)
+                    local scale = textScale * text.sizeScale
+                    if text.origin and text.origin.native then scale = scale * text.origin.distanceScale end
+                    if text.diablo and age < DIABLO.pop then
+                        local pop = age / DIABLO.pop
+                        if pop < 0.35 then
+                            scale = scale
+                                * (0.82 + (text.critical and 0.46 or 0.28) * (1 - math.pow(1 - pop / 0.35, 3)))
+                        else
+                            scale = scale * (1 + (text.critical and 0.28 or 0.10) * math.pow((1 - pop) / 0.65, 2))
+                        end
+                    elseif not text.diablo and text.impact and progress < 1 / 6 then
+                        local pop = progress * 6
+                        if pop < 0.5 then
+                            scale = scale * (0.5 + 1.5 * (1 - math.pow(1 - pop * 2, 5)))
+                        else
+                            scale = scale * (2 - math.pow((pop - 0.5) * 2, 5))
+                        end
+                    end
+                    -- Only the inner visual scales, independently of origin motion
+                    -- and the frozen last position after the mob has died.
+                    if text.scale ~= scale then
+                        text.scale = scale
+                        text.visual:SetScale(scale)
+                        FitText(text)
+                    elseif text.needsMeasure then
+                        FitText(text)
+                    end
+                    local alpha = 1
+                    if text.diablo then
+                        if progress > DIABLO.fade then alpha = (1 - progress) / (1 - DIABLO.fade) end
+                    elseif progress > 0.68 then
+                        alpha = (1 - progress) / 0.32
+                    end
+                    if text.alpha ~= alpha then
+                        text.alpha = alpha
+                        text.holder:SetAlpha(alpha)
+                    end
+                    if text.origin and text.origin.native and not text.holder:IsShown() then text.holder:Show() end
                 end
             end
         end
@@ -2326,6 +2352,9 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             iconSourcesDirty.target, iconSourcesDirty.mouseover = true, true
             return
         end
+        -- Select one transport for the whole native session; do not duplicate
+        -- its hits through localized chat or fall back on a failed batch.
+        if nativeText and nativeText.Selected() then return end
         if not info.targetName or info.targetName == "" then return end
         local now = eventTime or GetTime()
         -- Catch newly allocated plates before a lethal hit can retire them.
@@ -2420,6 +2449,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         -- Persist only the committed mode, never the effective editor preview.
         _G.SurvivorsDragonUiSctMode = sctMode
         customEnabled = enabled
+        nativeText.Configure(inWorld and enabled and not msbtStyle)
         ResetDisplay()
         SyncScrollRoot()
         ApplyPlateTracking(true)
@@ -2495,6 +2525,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             cameraDrag.Stop(true)
             sct.FinishEdit(false)
             inWorld = false
+            nativeText.Configure(false)
             SyncScrollRoot()
             plateFilter.Clear(plateFilter.sequence)
             plateFilter.time, plateFilter.zone = nil, nil
@@ -2549,7 +2580,18 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         -- One tab-header or slot pair consumes a step; empty tabs stay bounded.
         RebuildSpellTextures(4)
         local now = GetTime()
+        if nativeText.Selected() then
+            local events, retired = nativeText.Read(now)
+            if retired then ResetDisplay(true) end
+            if events then
+                for _, info in ipairs(events) do
+                    info.color = DamageColor(info, info.nativeTime)
+                    QueueCombatText(info, info.nativeTime)
+                end
+            end
+        end
         UpdatePending(now)
+        if nativeText.Selected() and not nativeText.Project(activeTexts, now) then ResetDisplay(true) end
         UpdateTexts(now, arg1)
     end)
 
@@ -2572,6 +2614,8 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             cameraDrag.Stop(true)
             sct.FinishEdit(false)
             inWorld = false
+            nativeText.Configure(false)
+            ResetDisplay()
             for _, data in pairs(plates) do
                 RestorePresentation(data, true)
             end

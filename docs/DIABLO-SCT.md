@@ -23,11 +23,12 @@ The video was inspected in the browser, including full-player views, paused
 combat frames and adjacent frame advances around 12–13 seconds. It shows one
 Rogue training-dummy encounter, not every Diablo IV combat-text variant.
 
-Numbers follow their matched native nameplate while retaining their own burst,
-drift, scale pop and fade. The game's **Options → Combat → Nameplate Layout**
+Numbers retain their own burst, drift, scale pop and fade while following the
+enemy anchor. On the legacy nameplate path, the game's **Options → Combat → Nameplate Layout**
 choice controls the plate position: **Overlapping** keeps plates over enemies;
 **Stacking** separates them. SCT follows either layout immediately, including
-mid-run changes. This replaces the earlier fixed-position fallback.
+mid-run changes. The optional native world-anchor path described below uses the
+enemy's overhead world position before nameplate stacking.
 
 | Reference                              | Observed presentation                                                                                                                                           | Addon treatment                                                                                                                                                                          |
 | -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -263,6 +264,30 @@ member cannot attach an already mixed group to one enemy. The label starts at
 the common origin's latest usable position and reads that same incarnation's
 cached coordinates through the existing animation loop. Both **Over enemies**
 and **Diablo IV** use this path. MSBT retains its independent Layout stream.
+
+## Native world anchors
+
+On builds exposing the complete version 1
+[combat-text world-anchor API](COMBAT-TEXT-WORLD-ANCHOR-API-PROPOSAL.md), Over
+enemies and Diablo IV consume native hit identities and use `follow` anchors.
+After an enemy dies, its numbers stay over the retained death location in the
+world as the player moves, rotates the camera or zooms. Each frame uses a fresh
+native camera projection; the numbers keep their normal animation and expiry.
+Looking away hides them, and looking back can reveal only their remaining life.
+Offscreen and missing projections never reuse old screen coordinates.
+
+Distance sizing uses native camera depth: up to 20 yards retains the selected
+SCT size, farther text shrinks to a minimum of 55%. Existing animation scale and
+critical pop multiply that factor. Both Performance Mode states share the
+projection, size and visibility behavior, retaining their 75/300 ms grouping
+rules. Separate native targets/casters cannot share an arbitrary anchor.
+MSBT remains independent of world anchors.
+
+The addon feature-detects and validates the complete provider. Old builds keep
+the nameplate behavior below. A failing selected native provider hides/retires
+its custom labels and retries that transport without duplicating parsed-chat
+hits. The game must implement the proposed provider; this consumer alone
+cannot create native world anchors or establish their packaged-game availability.
 
 ## Native nameplate layout and retirement
 

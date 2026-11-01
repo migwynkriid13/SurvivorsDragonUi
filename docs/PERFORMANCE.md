@@ -346,6 +346,35 @@ badge fitting and the existing stored-level controller remain unchanged.
 These are source-level costs; handheld readability, glyph coverage and native
 rendering remain unverified. See [FONTS.md](FONTS.md).
 
+## Native world combat text — 2026-11-01
+
+The optional version 1 consumer reuses the original SCT controller and pooled
+holders, with no additional frame, region, asset, event, updater or SavedVariable.
+It selects one native transport for enemy-origin styles and releases the forced
+invisible plate feed; ordinary user-requested nameplate styling stays active.
+MSBT and unsupported builds retain their established paths.
+
+An enabled native consumer reads at most 256 events in one frame and retains a
+bounded 4096-ID duplicate window. It copies only accepted hit fields/handles;
+raw native snapshots are not retained. Only active labels request projection,
+in batches of at most 256 with one coherent camera sample across chunks. Empty
+active lists do no native projection or animation work. Off/hidden/world-retired
+consumers do not read the native event feed. Native failures retire presentation
+and throttle re-priming to half-second retries through the existing controller.
+
+Current-camera world projection, offscreen hiding and bounded depth scaling are
+identical in both Performance Mode states. Distance multiplies the existing
+animation scale, with no extra effect loop or unchanged scale writes. Hidden
+labels keep expiring while skipping font/geometry/animation writes; they do not
+restart on reappearance. The original 75 ms duplicate suppression and Performance
+Mode's 300 ms same-attack sums remain distinct and preserve original hit amounts.
+
+CI-only production-boundary cases cover these paths, errors and cleanup. They
+were not run locally and establish neither native API availability/cost nor live
+camera alignment, late-run FPS or appearance. See the
+[provider proposal](COMBAT-TEXT-WORLD-ANCHOR-API-PROPOSAL.md) for the required
+death-anchor, event ordering and current-frame sampling guarantees.
+
 ## Diablo IV combat text — 2026-10-30
 
 The default Diablo IV style reuses the enemy-origin path, controller and hit

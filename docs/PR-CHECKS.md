@@ -58,6 +58,16 @@ An explicit Bash shell enables `pipefail`, so piping fixture/model output into
 
 ## UI work and cleanup tests
 
+Native world-SCT cases run the actual adapter and controller over explicit fake
+capability/event/projection endpoints. They cover native-only intake, one-shot
+anchors without plates, camera movement after death, living/dead offscreen
+hiding and remaining-life recovery, bounded distance scaling, distinct native
+targets/casters, both grouping modes, malformed/throwing responses, retry
+throttling, stream retirement, MSBT/legacy fallback and off/world cleanup.
+They add no runtime hook or shipped fixture. Cases are CI-only and were not run
+locally; mocks cannot establish native death-position capture, camera-update
+ordering, provider availability, appearance or FPS.
+
 Meter processing cases exercise growing native source/member lists through the
 production adapter and controller. Fixture-only counters check that ordinary
 counter changes reuse identity preparation, appended history reuses contribution
