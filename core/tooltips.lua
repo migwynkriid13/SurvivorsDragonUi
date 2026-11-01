@@ -136,9 +136,10 @@ DFRL:NewMod("Tooltips", 2, function()
     local tooltip, bar = GameTooltip, GameTooltipStatusBar
     if not tooltip then return end
     local currentUnit
-    local lastIconOwner, currentOwner
+    local lastIconOwner, lastIconIsDetail, currentOwner
     local elapsed, inWorld = 0, true
     local editing = false
+    local nativeScale = tooltip:GetScale()
     -- A stable, passive edit region exists even when no native hover is shown.
     -- Keep GameTooltip's parent and owner native; neither controls this handle.
     local root = CreateFrame("Frame", nil, UIParent)
@@ -174,14 +175,10 @@ DFRL:NewMod("Tooltips", 2, function()
     end
 
     local function PlaceTooltip()
-        if not inWorld or editing or not root:IsVisible() then
+        if not inWorld or editing then
             if tooltip:IsShown() then tooltip:Hide() end
             return
         end
-        local parent = tooltip:GetParent() or UIParent
-        local scale = root:GetEffectiveScale() / parent:GetEffectiveScale()
-        if not T.NearlyEqual(tooltip:GetScale(), scale) then tooltip:SetScale(scale) end
-        local anchor, target, targetPoint, offsetY = "BOTTOMRIGHT", root, "BOTTOMRIGHT", 0
         -- Native ownership follows registered skill, equipment and HUD icons.
         -- Other hovers keep their shared layout seat.
         local owner = currentOwner
@@ -190,12 +187,24 @@ DFRL:NewMod("Tooltips", 2, function()
         end
         local button = lastIconOwner
         if not button or (owner and button ~= owner) or (not owner and not tooltip:IsOwned(button)) then
-            button = IconOwner(DFRL.actionButtons, owner)
-                or IconOwner(DFRL.characterItemButtons, owner)
-                or IconOwner(registeredIcons, owner)
+            button = IconOwner(DFRL.actionButtons, owner) or IconOwner(DFRL.characterItemButtons, owner)
+            lastIconIsDetail = button ~= nil
+            button = button or IconOwner(registeredIcons, owner)
             lastIconOwner = button
         end
         if button then currentOwner = button end
+        -- Layout's Tooltip handle controls world hovers. UI-owned cards keep
+        -- their native scale and visibility, including enhanced ability/item
+        -- descriptions. Identify the owner, never the displayed content.
+        local uiHover = lastIconIsDetail or (not button and owner and owner ~= UIParent and owner ~= WorldFrame)
+        if not uiHover and not root:IsVisible() then
+            if tooltip:IsShown() then tooltip:Hide() end
+            return
+        end
+        local parent = tooltip:GetParent() or UIParent
+        local scale = uiHover and nativeScale or root:GetEffectiveScale() / parent:GetEffectiveScale()
+        if not T.NearlyEqual(tooltip:GetScale(), scale) then tooltip:SetScale(scale) end
+        local anchor, target, targetPoint, offsetY = "BOTTOMRIGHT", root, "BOTTOMRIGHT", 0
         if button and not button:IsVisible() then
             tooltip:Hide()
             return
@@ -233,11 +242,15 @@ DFRL:NewMod("Tooltips", 2, function()
         onResize = function()
             if tooltip:IsShown() then PlaceTooltip() end
         end,
-        onReset = function() tooltip:Hide() end,
+        onReset = function()
+            if tooltip:IsShown() then PlaceTooltip() end
+        end,
     })
-    -- Visibility previews must clear the current hover, without revealing a
-    -- retired subject when the user unhides the group later.
-    HookScript(root, "OnHide", function() tooltip:Hide() end)
+    -- Visibility previews clear world hovers while preserving ability/items.
+    -- Unhiding must never reveal a retired subject.
+    HookScript(root, "OnHide", function()
+        if tooltip:IsShown() then PlaceTooltip() end
+    end)
     DFRL.display.Listen(function()
         if tooltip:IsShown() then PlaceTooltip() end
     end)
@@ -304,15 +317,18 @@ DFRL:NewMod("Tooltips", 2, function()
             DFRL.tools.StyleHoverCard(tooltip)
         end
     end
-    local function Clear()
-        currentUnit, lastIconOwner, currentOwner, elapsed = nil, nil, nil, 0
+    local function Clear(keepOwner)
+        currentUnit, lastIconOwner, lastIconIsDetail, elapsed = nil, nil, nil, 0
+        if not keepOwner or (currentOwner and not tooltip:IsOwned(currentOwner)) then currentOwner = nil end
         DFRL.tools.StyleHoverCard(tooltip)
         if bar and bar:IsShown() then bar:Hide() end
     end
 
     DFRL.tools.StyleHoverCard(tooltip)
-    HookScript(tooltip, "OnTooltipCleared", Clear)
-    HookScript(tooltip, "OnHide", Clear)
+    -- Content builders clear their lines after SetOwner. Retain a verified UI
+    -- owner across those clears so bag/spellbook cards need no icon registry.
+    HookScript(tooltip, "OnTooltipCleared", function() Clear(true) end)
+    HookScript(tooltip, "OnHide", function() Clear() end)
     HookScript(tooltip, "OnShow", function()
         PlaceTooltip()
         Refresh()

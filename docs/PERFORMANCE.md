@@ -1866,11 +1866,24 @@ and retirement. This is native-call reduction, not a changed drawing budget.
 
 Shared tooltip placement first checks its last accepted icon with native IsOwned.
 An unchanged owner skips action/equipment/registered-icon traversals; a mismatch
-uses the original discovery order. Clear/Hide retires the cached owner, while
-foreign owners and native resets remain observable. Cursor motion, current
+uses the original discovery order. Content clears retire the cached icon;
+Hide releases the observed owner. Foreign owners and native resets remain
+observable. Cursor motion, current
 visibility, scale and anchor checks still run at their existing cadence. CI-only
 placement assertions cover the single-owner check and replaced-owner fallback.
 No new registry, event, region or drawing pass is introduced.
+
+Tooltip Layout hiding and scale exempt action/equipment cards and directly
+observed non-world UI owners, so native ability/item details remain available.
+The controller captures one original native scale and reuses the existing owner
+and icon caches; content clears retain only an owner still confirmed by native
+`IsOwned`, while Hide/world retirement releases it. World hovers and registered
+HUD hints retain shared hiding/scale. Both Performance Mode states use the same
+instant behavior, existing visible updater and changed-only writes. No native
+tooltip preference is read or written, no content is copied, and no new frame,
+region, event, setting or saved state is added. CI-only lifecycle cases were
+authored without local execution; native appearance and event order remain
+unverified.
 
 ### Shared spellbook generations
 
@@ -2399,7 +2412,7 @@ kept separately so normal native state can resume on showing.
 | `chat`              | Its cosmetic updater inherits native hiding; native hooks skip hidden font/geometry/indicator work. Show repairs native presentation. Native messages, level/stat batching, history, opt-in capture and the separately parented command input remain available.                                                                                                                   |
 | `copyWindow`        | No idle updater. Opening while Layout-hidden only establishes the lazy edit owner/requested visibility; it skips archive-page preparation and invisible focus. Existing close cleanup and capture policy remain.                                                                                                                                                                  |
 | `menu`              | No idle updater or hidden decorative controller. Game-owned commands/window actions keep their existing behavior.                                                                                                                                                                                                                                                                 |
-| `tooltip`           | Hide clears the current native hover immediately. Hidden ancestry prevents positioning/styling updates; no subject is forced visible on Show. Native content/owner and separate private readers stay native.                                                                                                                                                                      |
+| `tooltip`           | Hide clears world hovers and registered HUD hints immediately, preventing their positioning/styling updates. Ability/equipment cards and directly observed non-world UI owners keep native scale and availability. No subject is forced visible on Show; editing/world cleanup still retire shared cards. Native content and private readers stay native.                         |
 
 The shared grid, handles and numeric/editor bounds remain active while editing,
 including for hidden elements: they are the controls needed to show them again.

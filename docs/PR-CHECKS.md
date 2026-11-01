@@ -58,6 +58,14 @@ An explicit Bash shell enables `pipefail`, so piping fixture/model output into
 
 ## UI work and cleanup tests
 
+Shared-tooltip cases load the production controller over explicit native owner,
+content-clear, visibility and scale boundaries. They cover Tooltip hiding/scaling
+without suppressing ability/item UI hovers or changing the game's Enhanced
+Tooltips choice, retained native returns, unregistered UI buttons, unobserved
+owner replacement, cursor/icon placement, unchanged work, editor suppression and
+world cleanup in both Performance Mode states. These cases remain CI-only and
+were not run locally; they do not prove native tooltip rendering or event order.
+
 Native world-SCT cases run the actual adapter and controller over explicit fake
 capability/event/projection endpoints. They cover native-only intake, one-shot
 anchors without plates, camera movement after death, living/dead offscreen

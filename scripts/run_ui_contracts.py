@@ -40,7 +40,7 @@ def main():
             "HideGuardianTimer", "UpdateGuardianTimer", "RecyclePins", "MakeMinimapPin", "PlacePin",
             "Offset", "DrawTrackedPin", "UpdateTrackerPins",
         ])
-        guardian_placement = "local tooltip, root = GameTooltip, tooltipRoot\nlocal inWorld, editing = true, false\nlocal lastIconOwner\n" + extract_source("core/tooltips.lua", [
+        guardian_placement = "local tooltip, root = GameTooltip, tooltipRoot\nlocal inWorld, editing = true, false\nlocal lastIconOwner, lastIconIsDetail\nlocal nativeScale = tooltip:GetScale()\n" + extract_source("core/tooltips.lua", [
             "IconOwner", "PlaceTooltip",
         ])
         border_modes = "local resourcesShown, appliedDelta\n" + extract_source("modules/unit/mini.lua", ["UpdateResources"])
