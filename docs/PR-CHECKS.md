@@ -395,8 +395,9 @@ The assertions cover:
   invalidation and fresh synchronous first-use completion. They preserve the
   absence of new runtime test hooks and remain CI-only, without live FPS claims.
 
-- The remaining-frame pass adds CI-only cases for the default-off minimap clock,
-  centered zone text and display transactions; selective final-window cooldown
+- The remaining-frame pass adds CI-only cases for the default-on minimap clock,
+  saved off choices, missing/invalid and reset defaults, centered zone text while
+  off and display transactions; selective final-window cooldown
   reads; strict SCT retirement deadlines and native raid-icon UV forms; dirty
   boss marker reconciliation with exact active halos; settled loot hold/hidden
   expiry; Revive clipping reuse; event-driven player pulses; shared Layout

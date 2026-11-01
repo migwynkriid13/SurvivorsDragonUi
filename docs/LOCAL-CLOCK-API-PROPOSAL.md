@@ -123,7 +123,8 @@ messages are needed for a minute display.
 ### Current addon integration
 
 The existing **Minimap → Show clock** checkbox selects Custom when on and Off
-when off; it remains off by default. The addon consumes this proposal's native
+when off; it is on by default. Missing/invalid choices and resets select on,
+while an explicitly saved off choice stays off. The addon consumes this proposal's native
 snapshot when available and formats its hour/minute fields as 24-hour `HH:MM`,
 independently of the native text's language or AM/PM format. Its hover uses the
 same reading. Native visibility is acquired only after the separate `localClock`

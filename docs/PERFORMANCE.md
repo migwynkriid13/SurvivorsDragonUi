@@ -3,7 +3,7 @@
 The October 2026 performance work removes repeated presentation writes while
 retaining native data, pause-aware timing, saved preferences and artwork.
 It adds no gameplay clock or native client dependency. Display choices use the
-existing saved display table; the optional minimap clock below defaults off.
+existing saved display table; the optional minimap clock below defaults on.
 
 Pet and meter image textures share `T.NewCircularIcon` for native circular
 binding and the lazy physical-pixel strip fallback. Each view keeps its original
@@ -1075,7 +1075,7 @@ lower authored animation cadence or replace native gameplay time.
 
 | Path                        | Before this pass                                                                                       | After this pass                                                                                                                                                                                                                                                                                                                                   |
 | --------------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Minimap local clock         | A visible frame callback and one time read every five seconds                                          | **Off by default**, with no clock callback or time reads. `/sdui` → Minimap → **Show clock** enables the existing five-second native-local-time reader, or its older-build date fallback, only while visible. Off centers the existing zone button/text in the top panel; on restores its original left position beside the clock.                |
+| Minimap local clock         | A visible frame callback and one time read every five seconds                                          | **On by default**, using the existing five-second native-local-time reader, or its older-build date fallback, only while visible. `/sdui` → Minimap → **Show clock** off detaches the clock callback and stops time reads. Off centers the existing zone button/text in the top panel; on restores its original left position beside the clock.   |
 | SCT origin retirement       | Walk the complete live/recent catalog every frame                                                      | Skip that walk until the earliest real retirement is strictly older than the original 0.65 seconds, then stable-compact and retain the next deadline. Shown-plate sampling, matching, every original hit and active text motion retain frame cadence.                                                                                             |
 | Nameplate raid-icon copying | Two native source texture reads per refresh and two UV reads when copying                              | One texture and one UV sample, retaining four/eight-coordinate forms, actual destination comparisons and retry.                                                                                                                                                                                                                                   |
 | Final cooldown numbers      | All seven buttons reread every frame when any is in the positive final 200 ms                          | Only the **m** already-finishing buttons receive intervening frame reads. All seven retain an independent ten-Hz full pass and immediate cooldown/slot events. Store only final-window flags, never a private completion clock or cached native timing.                                                                                           |
@@ -1092,9 +1092,10 @@ lower authored animation cadence or replace native gameplay time.
 | Stored levels               | Out-of-world callback kept reaching the ten-Hz guard/update                                            | Detach on world leave/logout and rearm on entry; live ten-Hz native state and frame pulse remain.                                                                                                                                                                                                                                                 |
 | Resources                   | Two player-visibility samples per native pass                                                          | One synchronous sample shared by data-read eligibility and presentation. Native events/ten-Hz fallback remain.                                                                                                                                                                                                                                    |
 
-The minimap choice is normalized as default-false `minimapShowClock` in the
+The minimap choice is normalized as default-true `minimapShowClock` in the
 existing display table. Preview, Confirm-only saving, Cancel/world/logout/reload
-discard, profiles and both full resets use the shared display lifecycle. No new
+discard, profiles and both full resets use the shared display lifecycle. Missing
+or invalid choices and resets select on; explicit saved off choices stay off. No new
 SavedVariable, gameplay clock, drawing region or asset is added. The caption and
 hint have all fourteen source/runtime translations. Hiding or disabling the
 clock clears only its owned hover and detaches its worker; Show with the option

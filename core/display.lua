@@ -97,7 +97,7 @@ DFRL:NewMod("Display", 0, function()
         guardianRespawnGuidance = false,
         keepDefeatedGuardianIcons = false,
         guardianMinimapTimers = false,
-        minimapShowClock = false,
+        minimapShowClock = true,
         mirrorCacheWaypoint = false,
         mirrorGuardianWaypoint = false,
         mirrorPartyWaypoint = false,

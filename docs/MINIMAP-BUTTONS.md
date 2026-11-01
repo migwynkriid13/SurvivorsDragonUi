@@ -32,10 +32,10 @@ artwork or recurring work.
 
 ## Optional local clock
 
-`/sdui` → **Minimap** → **Show clock** is off by default. With it off, the zone
-name is centered in the existing top panel and the clock has no update callback
-or local-time reads. Turning it on restores the zone name's left position and
-shows local time on the right. The existing worker checks the date every five
+`/sdui` → **Minimap** → **Show clock** is on by default, with the zone name on
+the left and local time on the right. Turning it off centers the zone name in
+the existing top panel and stops the clock's update callback and local-time
+reads. The existing worker checks the date every five
 seconds only while the clock is enabled and visible on older builds. With
 `AZS_GetLocalTime()` available, that same worker reads the native snapshot
 instead. Our label and tooltip use its hour/minute fields in **24-hour `HH:MM`**
@@ -46,7 +46,8 @@ Show, world entry and language changes sample fresh time.
 
 `minimapShowClock` uses the existing display table and shared live preview,
 Confirm, Cancel/discard, profiles and both reset paths. Missing/invalid values
-and resets mean off. It adds no SavedVariable, drawing region or asset.
+and resets mean on; an explicitly saved off choice stays off. It adds no
+SavedVariable, drawing region or asset.
 
 On builds that also recognize the native `localClock` HUD part, on hides the
 game clock once our text/font is ready; off hides both clocks. The shared HUD
