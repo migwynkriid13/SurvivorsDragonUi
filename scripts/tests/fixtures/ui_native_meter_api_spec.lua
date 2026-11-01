@@ -604,9 +604,9 @@ Test("school colors require positive-member agreement and ignore zero-display hi
         local value = snapshot(self, query)
         local first, second = self.records[1], self.records[2]
         local row = value.rows[1]
-        for key, field in
-            pairs(Stats(query, first.amount + second.amount, first.recent + second.recent, first.after + second.after))
-        do
+        -- The original snapshot already supplies the combined validated Stats.
+        -- Its Stats builder is private to Native(), outside this test's scope.
+        for key, field in pairs(Copy(value.totals)) do
             row[key] = field
         end
         row.memberIds, row.share = { first.rowId, second.rowId }, 1

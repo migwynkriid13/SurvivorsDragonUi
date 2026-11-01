@@ -351,7 +351,7 @@ for _, performance in ipairs({ false, true }) do
     end
     At(current.timed, 3, true)
     At(current.persistent, 4, true)
-    At(current.weapon, 7, true)
+    At(current.weapon, 6, true, current.root)
     state.timers[1].remaining, state.timers[1].ready = 8, false
     state.timers[2].remaining, state.timers[2].ready = 0, true
     current:Event(current.controller, "CHAT_MSG_ADDON", "AZSTIMERS")

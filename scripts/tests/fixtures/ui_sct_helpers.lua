@@ -3,6 +3,9 @@ local H = dofile("scripts/tests/fixtures/ui_helpers.lua")
 local function SCT(scrolling, setup)
     local context = H.New()
     local env = context.env
+    -- Production localization initializes these before SCT; aliases stay explicit
+    -- fixture data rather than loading any client catalogs.
+    env.DFRL.locale.code, env.DFRL.locale.data = "en", { en = { spellNames = {} } }
     context.settings.sctStyle = scrolling and "msbt" or "enemy"
     context.settings.sctScale = 1
     context.settings.sctFont = "default"

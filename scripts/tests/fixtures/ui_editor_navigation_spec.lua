@@ -1122,8 +1122,16 @@ do
     assert(ability.available and proc.available and ability.input.keyboard, "custom colors did not enable RGB input")
     assert(not ability.pickerAvailable, "missing native picker disabled the hex fallback incorrectly")
     dialog.navigation.Search("Proc color")
-    assert(#dialog.navigation.results == 1 and dialog.navigation.results[1].target == "meterProcColor")
-    dialog.navigation.OpenResult(1)
+    local colorResult, modeResult
+    for index, result in ipairs(dialog.navigation.results) do
+        if result.target == "meterProcColor" then colorResult = index end
+        if result.target == "meterColorMode" then modeResult = index end
+    end
+    assert(
+        #dialog.navigation.results == 2 and colorResult and modeResult,
+        "proc-color search must include its control and the matching Bar colors description"
+    )
+    dialog.navigation.OpenResult(colorResult)
     context:Call(ability.input, "OnEditFocusGained")
     ability.input:SetText("#aB1290")
     assert(display.Get("meterAbilityColor") == "AB1290" and not env.SurvivorsDragonUiDisplay)
@@ -1136,6 +1144,11 @@ do
     local picker = env.CreateFrame("Frame", nil, env.UIParent)
     picker:Hide()
     function picker:GetFrameStrata() return self.strata or "DIALOG" end
+    local setPickerStrata = picker.SetFrameStrata
+    function picker:SetFrameStrata(value)
+        setPickerStrata(self, value)
+        self.strata = value
+    end
     function picker:SetColorRGB(red, green, blue)
         self.rgb = { red, green, blue }
         if self.func then self.func() end
