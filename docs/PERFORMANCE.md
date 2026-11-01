@@ -2560,6 +2560,14 @@ remain in place; this is not a claim that every remaining cost is eliminated.
 
 Native aura/timer rows (`modules/unit/auras.lua`) retain changed-slot reflow,
 hidden timer shutdown and required repair of native buff/enchant anchors.
+Native harmful buttons share one additional passive `DFRL_PlayerDebuffs` frame,
+with no additional gameplay texture or FontString. Its independent `debuffs`
+Layout entry reuses the shared lazy editor selection artwork and existing
+position/scale/visibility/profile lifecycle. Its default resolves below Buffs;
+explicit debuff geometry stays independent. Per-group dirty flags retain hidden
+work until Show and avoid settled icon scans. Both Performance Mode states use
+the same instant layout, native durations, stacks, expiry, input and tooltips,
+with no new setting, asset, SavedVariable, event, reader or updater.
 The presentation applies only to `AZS_GetTimers()` talent/jewelry
 icons: they stay bright with no fade/dimming, added outer border or text underneath,
 at any remaining value. The timer-only native backdrop and its edge drawing are
@@ -2570,7 +2578,7 @@ group keeps received order at the chosen left/right anchor, without ready/waitin
 reflow. Remaining/full-wait/Ready tooltips and native timing stay current through
 the existing reader. Regular native aura duration captions, opacity, expiration,
 indices, counts, input and tooltips are unchanged. Both Performance Mode states
-share these paths, with no new reader, frame, region, event or updater.
+share these paths, with no new reader, drawing region, event or updater.
 Damage-loss artwork (`modules/unit/cut.lua`) installs its animation callback
 only for active fades and removes it when the fading pool is empty. These
 native repair and authored fade paths must not be removed as idle work.

@@ -69,6 +69,7 @@ DFRL:NewMod("Layout", 0, function()
         xpBar = "XP (detached)",
         runTally = "Kills / Gold / Cache (detached)",
         buffs = "Buffs",
+        debuffs = "Debuffs",
         minimap = "Minimap",
         cacheWaypoint = "Cache waypoint",
         guardianWaypoint = "Guardian waypoint",

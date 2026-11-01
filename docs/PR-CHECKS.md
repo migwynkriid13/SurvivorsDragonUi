@@ -538,7 +538,12 @@ The assertions cover:
   text-free, borderless talent/jewelry timer icons filling their existing buttons
   with positive and zero remaining time, stable received
   order at either anchor without ready/waiting movement, retained timer tooltips
-  and unchanged regular native aura handling. These authored cases remain
+  and unchanged regular native aura handling. Separate Debuffs cases retain
+  native button IDs/handlers, independent roots and slots, below-Buffs defaults,
+  six-column wrapping, both flip directions, anchor repair, independently hidden
+  groups, pending hidden reflow and pool reuse in both Performance Mode states.
+  Shared Layout continues to own position/scale/visibility transactions, profiles
+  and resets. These authored cases remain
   CI-only and were not run locally; native appearance remains unverified.
 - Extracted production unit-border transitions actually hide inactive party and
   portrait variants, restore the retained artwork on option changes and skip

@@ -15,6 +15,17 @@ DFRL:NewMod("Player Auras", 2, function()
     PlaceDefault()
     container:SetWidth(width)
     container:SetHeight(iconSize + rowGap)
+    local debuffContainer = CreateFrame("Frame", "DFRL_PlayerDebuffs", UIParent)
+    local function PlaceDebuffDefault()
+        debuffContainer:ClearAllPoints()
+        debuffContainer:SetPoint("TOPRIGHT", container, "BOTTOMRIGHT", 0, 0)
+    end
+    PlaceDebuffDefault()
+    debuffContainer:SetWidth(width)
+    debuffContainer:SetHeight(iconSize + rowGap)
+    local buffGroup = { key = "buffs", frame = container, dirty = true }
+    local debuffGroup = { key = "debuffs", frame = debuffContainer, dirty = true }
+    local groups = { buffGroup, debuffGroup }
 
     -- Keep the native frames, buttons, and aura updates. Only their layout changes.
     local nativeFrames = { BuffFrame }
@@ -25,11 +36,13 @@ DFRL:NewMod("Player Auras", 2, function()
     end
 
     local entries = {}
-    local function AddButton(name)
+    local function AddButton(name, group)
         local button = _G[name]
         if button then
+            if group == debuffGroup then button:SetParent(debuffContainer) end
             table.insert(entries, {
                 button = button,
+                group = group,
                 icon = _G[name .. "Icon"],
                 border = _G[name .. "Border"],
                 duration = _G[name .. "Duration"],
@@ -40,10 +53,10 @@ DFRL:NewMod("Player Auras", 2, function()
     end
     -- Native indices 0-15 are helpful auras; 16-23 are harmful auras.
     for i = 0, 23 do
-        AddButton("BuffButton" .. i)
+        AddButton("BuffButton" .. i, i < 16 and buffGroup or debuffGroup)
     end
-    AddButton("TempEnchant1")
-    AddButton("TempEnchant2")
+    AddButton("TempEnchant1", buffGroup)
+    AddButton("TempEnchant2", buffGroup)
 
     local function PlaceNativeFrame(frame)
         local point, relative, relativePoint, x, y = frame:GetPoint(1)
@@ -91,49 +104,51 @@ DFRL:NewMod("Player Auras", 2, function()
         end
     end
 
-    local previousRows, layoutDirty = nil, true
     local function Layout(force)
-        local paint = container:IsVisible()
-        if not paint and not editing then return end
         -- The native enchant update re-anchors BuffFrame even when no aura changes.
         -- Restore its container anchor each time, independently of icon reflow.
-        if paint then
+        if container:IsVisible() then
             for _, frame in ipairs(nativeFrames) do
                 PlaceNativeFrame(frame)
             end
         end
-        if not force and not layoutDirty and not editing then return end
-        local slot = 0
-        for priority = 1, 2 do
-            for _, entry in ipairs(entries) do
-                if (entry.timer == true) == (priority == 1) then
-                    if entry.button:IsShown() then
-                        if paint and (force or entry.slot ~= slot) then
-                            SizeButton(entry)
-                            entry.button:ClearAllPoints()
-                            local column = math.mod(slot, columns) * (iconSize + gap)
-                            local row = -math.floor(slot / columns) * (iconSize + rowGap)
-                            if flipped then
-                                entry.button:SetPoint("TOPLEFT", container, "TOPLEFT", column, row)
+        for _, group in ipairs(groups) do
+            local paint = group.frame:IsVisible()
+            if (paint or editing) and (force or group.dirty or editing) then
+                local slot = 0
+                for priority = 1, 2 do
+                    for _, entry in ipairs(entries) do
+                        if entry.group == group and (entry.timer == true) == (priority == 1) then
+                            if entry.button:IsShown() then
+                                if paint and (force or entry.slot ~= slot) then
+                                    SizeButton(entry)
+                                    entry.button:ClearAllPoints()
+                                    local column = math.mod(slot, columns) * (iconSize + gap)
+                                    local row = -math.floor(slot / columns) * (iconSize + rowGap)
+                                    if flipped then
+                                        entry.button:SetPoint("TOPLEFT", group.frame, "TOPLEFT", column, row)
+                                    else
+                                        entry.button:SetPoint("TOPRIGHT", group.frame, "TOPRIGHT", -column, row)
+                                    end
+                                    entry.slot = slot
+                                end
+                                slot = slot + 1
                             else
-                                entry.button:SetPoint("TOPRIGHT", container, "TOPRIGHT", -column, row)
+                                entry.slot = nil
                             end
-                            entry.slot = slot
                         end
-                        slot = slot + 1
-                    else
-                        entry.slot = nil
                     end
                 end
+                local rows = math.max(1, math.ceil(slot / columns))
+                if rows ~= group.rows then
+                    group.frame:SetHeight(rows * (iconSize + rowGap))
+                    group.rows = rows
+                    DFRL.layout.Place(group.key, group.frame)
+                    if group == buffGroup then DFRL.layout.Place("debuffs", debuffContainer) end
+                end
+                group.dirty = false
             end
         end
-        local rows = math.max(1, math.ceil(slot / columns))
-        if rows ~= previousRows then
-            container:SetHeight(rows * (iconSize + rowGap))
-            previousRows = rows
-            DFRL.layout.Place("buffs", container)
-        end
-        layoutDirty = false
     end
 
     local timers, hovered = {}, nil
@@ -173,7 +188,7 @@ DFRL:NewMod("Player Auras", 2, function()
         button:SetWidth(iconSize)
         button:SetHeight(iconSize)
         button:Hide()
-        local entry = { button = button, timer = true }
+        local entry = { button = button, timer = true, group = buffGroup }
         entry.icon = button:CreateTexture(nil, "ARTWORK")
         entry.icon:SetAllPoints(button)
         -- API timers stay bright; their timing details live only in the tooltip.
@@ -185,9 +200,9 @@ DFRL:NewMod("Player Auras", 2, function()
             Tooltip(entry)
         end)
         button:SetScript("OnLeave", HideHover)
-        button:SetScript("OnShow", function() layoutDirty = true end)
+        button:SetScript("OnShow", function() buffGroup.dirty = true end)
         button:SetScript("OnHide", function()
-            layoutDirty = true
+            buffGroup.dirty = true
             if hovered == entry then HideHover() end
         end)
         T.RegisterTooltipIcon(button, nil, "below")
@@ -304,11 +319,11 @@ DFRL:NewMod("Player Auras", 2, function()
 
     for _, entry in ipairs(entries) do
         HookScript(entry.button, "OnShow", function()
-            layoutDirty = true
+            entry.group.dirty = true
             Layout(false)
         end)
         HookScript(entry.button, "OnHide", function()
-            layoutDirty = true
+            entry.group.dirty = true
             Layout(false)
         end)
     end
@@ -327,6 +342,7 @@ DFRL:NewMod("Player Auras", 2, function()
     -- Aura updates resize/reflow this container without replacing its own anchor.
     DFRL.layout.Register("buffs", container, PlaceDefault, {
         refreshDefault = true,
+        onResize = function() DFRL.layout.Place("debuffs", debuffContainer) end,
         onEdit = function(active)
             editing = active
             HideHover()
@@ -337,6 +353,14 @@ DFRL:NewMod("Player Auras", 2, function()
             WakeTimers()
         end,
     })
+    DFRL.layout.Register("debuffs", debuffContainer, PlaceDebuffDefault, {
+        refreshDefault = true,
+        onEdit = function(active)
+            editing = active
+            Layout(true)
+            if not active then DFRL.layout.Place("debuffs", debuffContainer) end
+        end,
+    })
     HookScript(container, "OnShow", function()
         Layout(true)
         WakeTimers()
@@ -345,6 +369,7 @@ DFRL:NewMod("Player Auras", 2, function()
         ClearTimers()
         if not observePending then controller:SetScript("OnUpdate", nil) end
     end)
+    HookScript(debuffContainer, "OnShow", function() Layout(true) end)
     DFRL.locale.Listen(function()
         if hovered and GameTooltip and GameTooltip:IsOwned(hovered.button) and GameTooltip:IsShown() then
             Tooltip(hovered)

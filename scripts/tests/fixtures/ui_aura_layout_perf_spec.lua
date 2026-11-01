@@ -4,9 +4,13 @@ assert(_VERSION == "Lua 5.1")
 local context = H.New()
 local env = context.env
 env.container = env.CreateFrame("Frame", nil, env.UIParent)
+env.debuffContainer = env.CreateFrame("Frame", nil, env.UIParent)
+env.buffGroup = { key = "buffs", frame = env.container, dirty = true }
+env.debuffGroup = { key = "debuffs", frame = env.debuffContainer, dirty = true }
+env.groups = { env.buffGroup, env.debuffGroup }
 env.nativeFrames, env.entries = {}, {}
 env.iconSize, env.gap, env.rowGap, env.columns = 28, 3, 14, 6
-env.width, env.flipped, env.editing, env.layoutDirty = 183, false, false, true
+env.flipped, env.editing = false, false
 local reads, sizes = 0, 0
 for index = 1, 2 do
     local native = env.CreateFrame("Frame", nil, env.container)
@@ -21,44 +25,62 @@ for index = 1, 2 do
         reads = reads + 1
         return shown(self)
     end
-    env.entries[index] = { button = button }
+    env.entries[index] = { button = button, group = env.buffGroup }
 end
+local harmful = env.CreateFrame("Button", nil, env.debuffContainer)
+local harmfulShown = harmful.IsShown
+function harmful:IsShown()
+    reads = reads + 1
+    return harmfulShown(self)
+end
+env.entries[3] = { button = harmful, group = env.debuffGroup }
 env.SizeButton = function() sizes = sizes + 1 end
-env.DFRL.layout.Place = function(key) assert(key == "buffs") end
+env.DFRL.layout.Place = function(key) assert(key == "buffs" or key == "debuffs") end
 local chunk = assert(loadfile(assert(arg[1])))
 setfenv(chunk, env)
 local layout = chunk()
 layout(false)
-assert(reads == 2 and sizes == 2 and env.entries[2].slot == 1 and not env.layoutDirty)
+assert(reads == 3 and sizes == 3 and env.entries[2].slot == 1 and env.entries[3].slot == 0)
+assert(not env.buffGroup.dirty and not env.debuffGroup.dirty)
 reads, sizes = 0, 0
 env.nativeFrames[1].point = { "CENTER", env.UIParent, "CENTER", 20, 30 }
 layout(false)
 assert(reads == 0 and sizes == 0, "settled native anchor repair rescanned aura slots")
 assert(env.nativeFrames[1].point[1] == "TOPLEFT" and env.nativeFrames[1].point[2] == env.container)
 env.entries[1].button:Hide()
-env.layoutDirty = true
+env.buffGroup.dirty = true
 layout(false)
 assert(env.entries[1].slot == nil and env.entries[2].slot == 0 and sizes == 1)
 reads, sizes = 0, 0
 layout(true)
-assert(reads == 2 and sizes == 1, "forced native layout stopped repairing current artwork")
+assert(reads == 3 and sizes == 2, "forced native layout stopped repairing current artwork")
 env.container:Hide()
-env.layoutDirty = true
+env.buffGroup.dirty = true
+env.debuffGroup.dirty = true
 reads, sizes = 0, 0
 layout(false)
-assert(reads == 0 and sizes == 0 and env.layoutDirty, "hidden layout consumed pending presentation")
+assert(reads == 1 and sizes == 0 and env.buffGroup.dirty and not env.debuffGroup.dirty)
+assert(harmful:IsVisible(), "hiding buffs hid the independent debuff group")
+env.debuffContainer:Hide()
+env.debuffGroup.dirty = true
+reads, sizes = 0, 0
+layout(false)
+assert(reads == 0 and sizes == 0 and env.buffGroup.dirty and env.debuffGroup.dirty)
 env.container:Show()
 layout(false)
-assert(reads == 2 and not env.layoutDirty)
+assert(reads == 2 and not env.buffGroup.dirty and env.debuffGroup.dirty)
+env.debuffContainer:Show()
+layout(false)
+assert(reads == 3 and not env.debuffGroup.dirty, "showing debuffs lost their pending reflow")
 reads = 0
 env.editing = true
 layout(false)
-assert(reads == 2, "editing skipped current aura bounds")
+assert(reads == 3, "editing skipped current aura bounds")
 
 local function AuraOwner(performance)
     local current = H.New()
     local native = current.env
-    local state = { helpful = {}, harmful = {}, remaining = {}, nativeUpdates = 0, registered = {} }
+    local state = { helpful = {}, harmful = {}, remaining = {}, nativeUpdates = 0, registered = {}, layouts = {} }
     current.settings.flipBuffs, current.settings.performanceMode = false, performance
     local create = current.Object
     function current:Object(...)
@@ -128,7 +150,9 @@ local function AuraOwner(performance)
     native.BuffButton_Update = function() end
     state.nativeDuration, state.nativeUpdate, state.nativeButtonUpdate =
         native.BuffFrame_UpdateDuration, native.BuffButton_OnUpdate, native.BuffButton_Update
-    native.BuffButtons_UpdatePositions = function() end
+    native.BuffButtons_UpdatePositions = function()
+        if current.debuff then current.debuff:SetPoint("TOPLEFT", native.BuffFrame, "TOPLEFT", 100, -100) end
+    end
     native.UIParent_ManageFramePositions = function() end
     native.BuffFrame_Enchant_OnUpdate = function()
         native.BuffFrame_UpdateDuration(native.TempEnchant1, state.enchantText and 0 or 10)
@@ -153,6 +177,12 @@ local function AuraOwner(performance)
     current.persistent = Button("BuffButton1", native.BuffFrame, 1, 3)
     current.zeroTimed = Button("BuffButton2", native.BuffFrame, 2, 11)
     current.debuff = Button("BuffButton16", native.BuffFrame, 16, 33)
+    current.extraDebuffs = {}
+    for index = 17, 23 do
+        local button = Button("BuffButton" .. index, native.BuffFrame, index, index + 50)
+        button:Hide()
+        table.insert(current.extraDebuffs, button)
+    end
     current.weapon = Button("TempEnchant1", native.TemporaryEnchantFrame, 71, 71)
     current.persistent.untilCancelled = true
     state.helpful[0], state.helpful[1], state.helpful[2] =
@@ -200,13 +230,23 @@ local function AuraOwner(performance)
         return state.timers
     end
     native.DFRL.layout.Place = function(key, frame)
-        assert(key == "buffs" and frame == native.DFRL_PlayerAuras, "aura layout placed an unexpected owner")
+        assert(
+            (key == "buffs" and frame == native.DFRL_PlayerAuras)
+                or (key == "debuffs" and frame == native.DFRL_PlayerDebuffs),
+            "aura layout placed an unexpected owner"
+        )
         state.placements = (state.placements or 0) + 1
+    end
+    native.DFRL.layout.Register = function(key, frame, anchor, options)
+        assert(not state.layouts[key], "aura owner registered duplicate Layout groups")
+        state.layouts[key] = { frame = frame, anchor = anchor, options = options }
+        anchor()
     end
     current:Load("modules/unit/auras.lua", "Player Auras")
     assert(state.placements > 0, "aura layout did not publish its initial bounds")
     current.controller = current:Controller("CHAT_MSG_ADDON")
     current.root = native.DFRL_PlayerAuras
+    current.debuffRoot = native.DFRL_PlayerDebuffs
     function current:NativeUpdate(button)
         self.now = self.now + 0.1
         self:Call(button, "OnUpdate", 0.1)
@@ -218,10 +258,11 @@ local function AuraOwner(performance)
     return current, state, native
 end
 
-local function At(button, slot, flipped)
-    local point, _, relative, x, y = button:GetPoint()
+local function At(button, slot, flipped, owner)
+    local point, parent, relative, x, y = button:GetPoint()
     assert(point == (flipped and "TOPLEFT" or "TOPRIGHT") and relative == point)
     assert(x == (flipped and 1 or -1) * math.mod(slot, 6) * 31 and y == -math.floor(slot / 6) * 42)
+    if owner then assert(parent == owner, "aura anchored to the wrong Layout group") end
 end
 
 local function TimerIcon(current, button)
@@ -263,8 +304,21 @@ for _, performance in ipairs({ false, true }) do
     At(current.timed, 3, false)
     At(current.persistent, 4, false)
     At(current.zeroTimed, 5, false)
-    At(current.debuff, 6, false)
-    At(current.weapon, 7, false)
+    At(current.debuff, 0, false, current.debuffRoot)
+    At(current.weapon, 6, false, current.root)
+    assert(current.debuff:GetParent() == current.debuffRoot and current.debuffRoot:GetParent() == native.UIParent)
+    assert(state.layouts.buffs.frame == current.root and state.layouts.debuffs.frame == current.debuffRoot)
+    local default = { current.debuffRoot:GetPoint() }
+    assert(default[1] == "TOPRIGHT" and default[2] == current.root and default[3] == "BOTTOMRIGHT")
+    assert(current.root:GetHeight() == 84 and current.debuffRoot:GetHeight() == 42)
+    assert(current.debuff:GetID() == 16 and current.debuff.buffIndex == 33)
+    assert(current.debuff:GetScript("OnClick") == current.debuff.nativeClick)
+    assert(current.debuff:GetScript("OnEnter") == current.debuff.nativeEnter)
+    current:Call(current.debuff, "OnEnter")
+    current:Call(current.debuff, "OnClick")
+    assert(state.tooltipId == 33 and state.cancelId == 33)
+    current:NativeUpdate(current.debuff)
+    assert(native.BuffButton16Duration:GetText() == "20")
     assert(native.BuffFrame_UpdateDuration == state.nativeDuration and native.BuffButton_OnUpdate == state.nativeUpdate)
     assert(
         native.BuffButton_Update == state.nativeButtonUpdate,
@@ -291,6 +345,7 @@ for _, performance in ipairs({ false, true }) do
     assert(HasLine(native.GameTooltip, "Cooldown") and HasLine(native.GameTooltip, "Remaining: 5.0 sec"))
     assert(HasLine(native.GameTooltip, "Full wait: 20.0 sec"))
     current:SetSetting("flipBuffs", true)
+    At(current.debuff, 0, true, current.debuffRoot)
     for index, button in ipairs(buttons) do
         At(button, index - 1, true)
     end
@@ -311,6 +366,7 @@ for _, performance in ipairs({ false, true }) do
     assert(HasLine(native.GameTooltip, "Next summon") and HasLine(native.GameTooltip, "Remaining: 8.0 sec"))
     current:Call(buttons[1], "OnLeave")
     current:SetSetting("flipBuffs", false)
+    At(current.debuff, 0, false, current.debuffRoot)
     for index, button in ipairs(buttons) do
         At(button, index - 1, false)
     end
@@ -330,7 +386,12 @@ for _, performance in ipairs({ false, true }) do
     native.BuffFrame_Enchant_OnUpdate()
     assert(native.TempEnchant1Duration:GetText() == "0s" and native.TempEnchant1Duration:IsShown())
     local allocated = #current.objects
+    current.debuffRoot:Hide()
+    assert(current.root:IsVisible() and buttons[1]:IsVisible(), "hiding debuffs hid buffs/timers")
+    current.debuffRoot:Show()
     current.root:Hide()
+    assert(current.debuff:IsVisible(), "hiding buffs hid native debuffs")
+    current.debuffRoot:Hide()
     local phaseReads, runReads, timerReads = state.phaseReads, state.runReads, state.timerReads
     current:ResetCounts()
     native.BuffButtons_UpdatePositions()
@@ -339,6 +400,8 @@ for _, performance in ipairs({ false, true }) do
     assert(not current.controller:GetScript("OnUpdate"))
     current:NoPresentationWrites()
     current.root:Show()
+    assert(not current.debuff:IsVisible(), "showing buffs overrode the independent debuff visibility")
+    current.debuffRoot:Show()
     current:Tick()
     assert(#current.objects == allocated)
     for index, button in ipairs(buttons) do
@@ -361,10 +424,32 @@ for _, performance in ipairs({ false, true }) do
     end
     assert(#current.objects == allocated and not state.buffReads)
     assert(state.timeReads == state.nativeUpdates, "API timer styling added a native aura-time getter")
+    current.debuffRoot:SetPoint("TOPLEFT", native.UIParent, "TOPLEFT", 40, -200)
+    for _, button in ipairs(current.extraDebuffs) do
+        button:Show()
+    end
+    assert(current.debuffRoot:GetHeight() == 84 and #current.objects == allocated)
+    local independent = { current.debuffRoot:GetPoint() }
+    assert(independent[1] == "TOPLEFT" and independent[2] == native.UIParent and independent[4] == 40)
+    At(current.debuff, 0, false, current.debuffRoot)
+    for index, button in ipairs(current.extraDebuffs) do
+        At(button, index, false, current.debuffRoot)
+    end
+    native.BuffButtons_UpdatePositions()
+    At(current.debuff, 0, false, current.debuffRoot)
+    for index, button in ipairs(buttons) do
+        At(button, index - 1, false, current.root)
+    end
+    state.layouts.debuffs.anchor()
+    local restored = { current.debuffRoot:GetPoint() }
+    assert(restored[1] == "TOPRIGHT" and restored[2] == current.root and restored[3] == "BOTTOMRIGHT")
 end
 print(
     "PASS API timer icons stay bright without text, retain received order and tooltips, and reuse their hidden pool in both modes"
 )
 print(
     "PASS native aura duration, dimming, updates, input and expiry remain native while layout repairs anchors only when needed"
+)
+print(
+    "PASS separate Debuffs Layout roots retain native identity, independent hiding, wrapping and anchor repair in both modes"
 )
