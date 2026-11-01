@@ -1236,6 +1236,224 @@ Test("direct talent rows and combined pet summaries keep their authoritative pre
     assert(table.getn(source) == 1 and source[1].name == "Imp" and source[1].dmg == 14300)
 end)
 
+Test("counter and unrelated metadata publications reuse prepared native identities", function()
+    local c, state, meter = Native()
+    state.records = Ranks(30)
+    local lengths, sorts = 0, 0
+    local nativeString, nativeTable = c.env.string, c.env.table
+    c.env.string = setmetatable({
+        len = function(value)
+            lengths = lengths + 1
+            return nativeString.len(value)
+        end,
+    }, { __index = nativeString })
+    c.env.table = setmetatable({
+        sort = function(values, compare)
+            sorts = sorts + 1
+            return nativeTable.sort(values, compare)
+        end,
+    }, { __index = nativeTable })
+    local source = assert(meter.Read(damage, 10))
+    local identity = source[1].rowId
+    assert(source[1].dmg == 4650 and lengths > 0 and sorts == 1)
+    lengths = 0
+    for tick = 1, 5 do
+        state.context.counterRevision = "counter-only-" .. tick
+        state.context.asOfRunSeconds = 20 + tick
+        source = assert(meter.Read(damage, 10))
+        assert(source[1].rowId == identity and source[1].dmg == 4650)
+    end
+    assert(lengths == 0 and sorts == 1, "counter-only values rebuilt stable keys or sorted an unchanged view")
+    state.context.metadataRevision = "unrelated-new-demon-metadata"
+    source = assert(meter.Read(damage, 10))
+    assert(source[1].rowId == identity and lengths == 0 and sorts == 1, "unrelated metadata rebuilt existing families")
+    state.records[1].amount = state.records[1].amount + 10
+    state.context.counterRevision = "amount-change"
+    source = assert(meter.Read(damage, 10))
+    assert(
+        source[1].dmg == 4660 and lengths == 0 and sorts == 2,
+        "numeric refresh lost ordering or repeated identity work"
+    )
+end)
+
+Test("clock-only refresh preserves combined ordering and native rates", function()
+    local _, state, meter = Native()
+    state.records = Ranks(2)
+    state.records[1].amount, state.records[2].amount = 40, 40
+    table.insert(
+        state.records,
+        1,
+        { id = "leading-native-row", rowId = "leading-native-row", name = "Other", amount = 60, recent = 12 }
+    )
+    local source = assert(meter.Read(damage, 10))
+    local identity = source[1].rowId
+    assert(source[1].name == "Flamestrike" and source[1].dmg == 80 and source[2].dmg == 60)
+    state.context.asOfRunSeconds, state.context.snapshotId = 25, "clock-only-capture"
+    state.records[2].recent, state.records[3].recent = 20, 10
+    source = assert(meter.Read(damage, 10))
+    assert(source[1].rowId == identity and source[1].name == "Flamestrike" and source[1].dps == 3)
+    assert(source[1].averageDps == 3.2 and source[2].name == "Other", "clock pass lost grouped amount ordering")
+end)
+
+Test("incremental member positions recover new tails, reorder and retirement", function()
+    local _, state, meter = Native()
+    state.records, state.extraSources = ItemEffects(3)
+    local source = assert(meter.Read(damage, 10))
+    local identity = source[1].rowId
+    local first = table.remove(state.records, 1)
+    table.insert(state.records, first)
+    state.context.counterRevision = "reordered-native-members"
+    source = assert(meter.Read(damage, 10))
+    assert(source[1].rowId == identity and source[1].dmg == 60 and source[1].name == "The Eye of Hakkar 3")
+    state.records, state.extraSources = ItemEffects(4)
+    state.context.counterRevision = "new-native-source-tail"
+    source = assert(meter.Read(damage, 10))
+    assert(source[1].rowId == identity and source[1].dmg == 100 and source[1].name == "The Eye of Hakkar 4")
+    state.records, state.extraSources = ItemEffects(1)
+    state.context.counterRevision = "native-source-retirement"
+    source = assert(meter.Read(damage, 10))
+    assert(table.getn(source) == 1 and source[1].dmg == 10 and source[1].name == "The Eye of Hakkar 1")
+    state.records, state.extraSources = ItemEffects(2)
+    state.context.counterRevision = "new-source-after-retirement"
+    source = assert(meter.Read(damage, 10))
+    assert(table.getn(source) == 1 and source[1].dmg == 30 and source[1].name == "The Eye of Hakkar 2")
+end)
+
+Test("counter-only late positive members reevaluate actual talent and item attribution", function()
+    for _, kind in ipairs({ "talent", "item" }) do
+        local _, state, meter = Native()
+        if kind == "talent" then
+            local records
+            records, state.extraSources = Talents()
+            state.records = { records[2] }
+        else
+            state.records, state.extraSources = ItemEffects(2)
+        end
+        local positive = false
+        state.mutate = function(snapshot)
+            local leaf = Copy(snapshot.contributions[1])
+            leaf.rowId = "retained-zero-member"
+            leaf.displayAmount, leaf.sinceCheckpointAmount = positive and 1 or 0, positive and 1 or 0
+            leaf.originSourceKeys = { kind == "talent" and "chastise" or "hakkar-rank-1" }
+            table.insert(snapshot.contributions, leaf)
+            table.insert(snapshot.rows[1].memberIds, leaf.rowId)
+        end
+        assert(meter.Reset())
+        state.context.asOfRunSeconds = 22
+        local source = assert(meter.Read(damage, 0))
+        assert(source[1].name == (kind == "talent" and "Hot Streak" or "The Eye of Hakkar 2"))
+        positive = true
+        state.context.counterRevision = "historical-member-now-positive"
+        source = assert(meter.Read(damage, 0))
+        if kind == "talent" then
+            assert(source[1].name == "Pyroblast", "cached zero-member fingerprint mislabeled a mixed talent source")
+        else
+            assert(table.getn(source) == 2, "cached zero-member fingerprint merged incompatible item origins")
+        end
+    end
+end)
+
+Test("new active contribution tails do not reindex unrelated retained zero history", function()
+    local _, state, meter = Native()
+    state.records = { { id = "active-old", rowId = "active-old", name = "Old", amount = 100, recent = 20, after = 10 } }
+    local historyReads = 0
+    state.mutate = function(snapshot)
+        local appended = snapshot.contributions[2]
+        snapshot.contributions[2] = nil
+        for index = 1, 1000 do
+            local id = "retired-" .. index
+            local leaf = Copy(snapshot.contributions[1])
+            leaf.rowId, leaf.sourceKey, leaf.periodAmount = id, id, 1
+            leaf.displayAmount, leaf.sinceCheckpointAmount, leaf.windowAmount = 0, 0, 0
+            leaf.periodAverage.amount, leaf.periodAverage.value = 1, 1 / leaf.periodAverage.denominatorSeconds
+            for _, rate in ipairs({ leaf.checkpointAverage, leaf.recentRate, leaf.displayRate }) do
+                rate.amount, rate.value = 0, 0
+            end
+            leaf.share = 0
+            snapshot.sources[id] = {
+                sourceKey = id,
+                kind = "generic",
+                name = "Retired",
+                icon = { status = "missing", reason = "not_available" },
+            }
+            table.insert(
+                snapshot.contributions,
+                setmetatable({}, {
+                    __index = function(_, key)
+                        if key == "rowId" then historyReads = historyReads + 1 end
+                        return leaf[key]
+                    end,
+                })
+            )
+        end
+        if appended then table.insert(snapshot.contributions, appended) end
+        snapshot.totals.periodAmount = snapshot.totals.periodAmount + 1000
+        snapshot.totals.periodAverage.amount = snapshot.totals.periodAverage.amount + 1000
+        snapshot.totals.periodAverage.value = snapshot.totals.periodAverage.amount
+            / snapshot.totals.periodAverage.denominatorSeconds
+    end
+    assert(meter.Reset())
+    state.context.asOfRunSeconds = 22
+    local source = assert(meter.Read(damage, 10))
+    assert(source[1].dmg == 10 and historyReads >= 1000)
+    historyReads = 0
+    table.insert(
+        state.records,
+        { id = "active-new", rowId = "active-new", name = "New", amount = 50, recent = 10, after = 5 }
+    )
+    state.context.counterRevision = "appended-active-contribution"
+    source = assert(meter.Read(damage, 10))
+    assert(table.getn(source) == 2 and source[1].dmg == 10 and source[2].dmg == 5)
+    assert(historyReads == 0, "new active tail rescanned the unrelated retained history prefix")
+end)
+
+Test("shared refresh context reuses only an exact accepted native capture", function()
+    local _, state, meter = Native()
+    local context = assert(meter.Context())
+    local source, total, rate = meter.Read(damage, 10, false, context)
+    assert(source and total == 140 and rate == 6 and state.calls.context == 1 and state.calls.snapshot == 1)
+    source = assert(meter.Read(damage, 10, false, context))
+    assert(source[1].dmg == 100 and state.calls.snapshot == 1, "exact native capture repeated full snapshot work")
+    state.context.asOfRunSeconds, state.context.snapshotId = 21, "native-clock-moved"
+    context = assert(meter.Context())
+    assert(meter.Read(damage, 10, false, context) and state.calls.context == 2 and state.calls.snapshot == 2)
+    state.mutate = function(snapshot) snapshot.query.checkpointId = "unrequested" end
+    state.context.snapshotId = "fresh-malformed-capture"
+    context = assert(meter.Context())
+    assert(not meter.Read(damage, 10, false, context), "fresh malformed capture bypassed validation")
+    state.mutate = nil
+    assert(
+        meter.Read(damage, 10, false, context) and state.calls.snapshot == 4,
+        "rejected capture replayed an older cache"
+    )
+    local before = state.calls.context
+    state.snapshotError = Error("NOT_READY")
+    assert(
+        not meter.Read(damage, 10) and state.calls.context == before + 1,
+        "direct adapter call stopped reading fresh context/snapshot"
+    )
+end)
+
+Test("shared context is validated and a newer embedded snapshot remains authoritative", function()
+    local _, state, meter = Native()
+    local context = assert(meter.Context())
+    local invalid = Copy(context)
+    invalid.asOfRunSeconds = -1
+    assert(
+        not meter.Read(damage, 10, false, invalid) and not state.calls.snapshot,
+        "invalid forwarded context reached native snapshot"
+    )
+    state.mutate = function(snapshot)
+        snapshot.context.asOfRunSeconds, snapshot.context.snapshotId = 22, "mid-call-capture"
+    end
+    local source, _, _, _, _, meta = meter.Read(damage, 10, false, context)
+    assert(source and meta.snapshotId == "mid-call-capture", "earlier phase context replaced the snapshot's capture")
+    assert(
+        meter.Read(damage, 10, false, context) and state.calls.snapshot == 2,
+        "older phase context reused a newer mismatched capture"
+    )
+end)
+
 Test("pet skills keep the caster and combine repeated native summon definitions", function()
     local _, state, meter = Native()
     local view = { metric = "damage", scope = "self", period = "run", groupBy = "actor_source" }

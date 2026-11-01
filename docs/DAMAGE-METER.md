@@ -233,6 +233,13 @@ actual Rockbiter, Hot Streak and Chastise payloads remain unverified.
 
 ## Native data
 
+The meter reuses prepared source names and groups as counters change, and only
+prepares the rows currently visible. Scrolling retains the complete rankings
+and initializes each newly revealed row's rate. Totals keep their existing
+refresh, while displayed DPS/HPS updates once per second. Both Performance Mode
+states share this behavior. The native API still supplies the complete ledger;
+these source changes do not establish a measured late-run FPS improvement.
+
 `meterEnabled` is a normalized boolean in the existing display table. Missing
 or invalid values use false, including older configurations without the key.
 While disabled, there are no meter/phase reads, drawing or idle OnUpdate. The

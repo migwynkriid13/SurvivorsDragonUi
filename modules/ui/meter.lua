@@ -27,7 +27,7 @@ DFRL:NewMod("DamageMeter", 7, function()
     local path = DFRL:GetInfoOrCons("tex")
     local native = T.NewHudOwner("meter", "hudMeter")
     local api = type(T.NewNativeMeter) == "function" and T.NewNativeMeter() or nil
-    local apiActive, apiIdentity = false, {}
+    local apiActive, apiIdentity, nativeContext = false, {}, nil
     local modes = {
         {
             getter = "AZS_GetMeter",
@@ -88,7 +88,7 @@ DFRL:NewMod("DamageMeter", 7, function()
     }
     local dataDirty, dataValid = true, false
     local snapshot = { rows = {}, count = 0 }
-    local rateSamples, rateSampledAt = {}, nil
+    local rateSamples, rateSampledAt, ratePass = {}, nil, 0
     local dps = T.NewMeterDps(DFRL.display.Get("meterDpsWindow"))
     local session, resetPending = T.NewMeterSession(), false
     local presentation = { shown = false, cleared = true }
@@ -629,6 +629,7 @@ DFRL:NewMod("DamageMeter", 7, function()
         end
         snapshot.count, snapshot.total, snapshot.rate, snapshot.averageRate = 0, nil, nil, nil
         snapshot.source, snapshot.publication = nil, nil
+        snapshot.maximum, snapshot.offset, snapshot.visible = nil, nil, nil
         snapshot.nativeRunId, snapshot.nativeEpoch, snapshot.nativeAuthority = nil, nil, nil
         snapshot.nativeEncounter = nil
         ClearSamples()
@@ -645,6 +646,7 @@ DFRL:NewMod("DamageMeter", 7, function()
         native.Release()
     end
     local function ClearReadPass()
+        nativeContext = nil
         if not viewSelection.read then return end
         for index = 1, table.getn(modes) do
             local entry = viewSelection.reads[index]
@@ -686,12 +688,20 @@ DFRL:NewMod("DamageMeter", 7, function()
         if selected.groups and viewSelection.paint then
             source = selected.groups.Read(source, publication)
             if not source then return nil, nil, nil, "Meter data is unavailable." end
+        elseif selected.party then
+            for _, entry in ipairs(source) do
+                if type(entry) ~= "table" or not Number(entry.dps) then
+                    return nil, nil, nil, "Meter data is unavailable."
+                end
+            end
         end
         return source, amount, rate, nil, publication
     end
     local function ReadNative(index)
         local selected = modes[index]
-        if apiActive then return api.Read(selected.query, index == 1 and dps.window or 0, options.groupPets) end
+        if apiActive then
+            return api.Read(selected.query, index == 1 and dps.window or 0, options.groupPets, nativeContext)
+        end
         local getter = _G[selected.getter]
         if type(getter) ~= "function" then
             publications[index] = nil
@@ -837,7 +847,6 @@ DFRL:NewMod("DamageMeter", 7, function()
             snapshot.nativeEncounter = meta.encounterId
             if type(DFRL.locale.Select) == "function" then DFRL.locale.Select(meta.languageCode) end
         end
-        local nativeSource = source
         if not apiActive then
             source, amount, rate = session.Apply(mode, source, amount, rate, RunSeconds(), publication)
         end
@@ -852,11 +861,6 @@ DFRL:NewMod("DamageMeter", 7, function()
             or now - rateSampledAt >= 1
             or (snapshot.total and amount < snapshot.total)
         if sampleRates then
-            for _, entry in ipairs(nativeSource) do
-                if not Number(entry.dps) and not (apiActive and entry.dps == nil) then
-                    return false, "Meter data is unavailable."
-                end
-            end
             if apiActive then
                 snapshot.rate, snapshot.averageRate = rate, meta and meta.averageRate
             elseif mode == 1 then
@@ -866,11 +870,19 @@ DFRL:NewMod("DamageMeter", 7, function()
             end
             rateSampledAt = now
         end
-        local countersChanged = snapshot.publication ~= publication or snapshot.source ~= source
-        if not countersChanged and not sampleRates then return true end
-        for index, entry in ipairs(source) do
+        offset = math.max(0, math.min(offset, count - visible))
+        local countersChanged = snapshot.publication ~= publication
+            or snapshot.source ~= source
+            or snapshot.count ~= count
+            or snapshot.total ~= amount
+        local viewportChanged = snapshot.offset ~= offset or snapshot.visible ~= visible
+        if not countersChanged and not sampleRates and not viewportChanged then return true end
+        ratePass = ratePass + 1
+        local displayed = math.min(visible, count - offset)
+        for index = 1, displayed do
+            local entry = source[index + offset]
             local copy = snapshot.rows[index] or {}
-            if countersChanged then
+            if countersChanged or viewportChanged then
                 copy.name, copy.dmg, copy.share, copy.proc = entry.name, entry.dmg, entry.share, entry.proc
                 copy.class = modes[mode].party and type(entry.class) == "string" and entry.class or nil
                 copy.rowId, copy.icon = entry.rowId, entry.icon
@@ -899,23 +911,30 @@ DFRL:NewMod("DamageMeter", 7, function()
                 end
                 sample.epoch = rateSampledAt
             end
+            sample.seen = ratePass
             copy.dps, copy.averageDps = sample.rate, sample.average
             snapshot.rows[index] = copy
         end
-        if countersChanged then
-            for index = count + 1, snapshot.count do
-                snapshot.rows[index] = nil
+        for key, samples in pairs(rateSamples) do
+            for proc, sample in pairs(samples) do
+                if sample.seen ~= ratePass then samples[proc] = nil end
             end
-            table.setn(snapshot.rows, count)
-            snapshot.count, snapshot.total = count, amount
-            snapshot.source, snapshot.publication = source, publication
+            if not next(samples) then rateSamples[key] = nil end
         end
+        for index = displayed + 1, table.getn(snapshot.rows) do
+            snapshot.rows[index] = nil
+        end
+        table.setn(snapshot.rows, displayed)
+        snapshot.count, snapshot.total = count, amount
+        snapshot.maximum = source[1] and source[1].dmg or 0
+        snapshot.source, snapshot.publication = source, publication
+        snapshot.offset, snapshot.visible = offset, visible
         presentation.cleared = false
         return true
     end
     local function Draw()
         offset = math.max(0, math.min(offset, snapshot.count - visible))
-        local maximum = snapshot.rows[1] and snapshot.rows[1].dmg or 0
+        local maximum = snapshot.maximum or 0
         local party = modes[mode].party
         local classColor = party and PARTY_COLOR or T.GetPlayerClassColor() or { 0.8, 0.63, 0.28 }
         if party and options.icons and not apiActive then
@@ -926,7 +945,7 @@ DFRL:NewMod("DamageMeter", 7, function()
             end
         end
         for index = 1, visible do
-            local entry = snapshot.rows[index + offset]
+            local entry = snapshot.rows[index]
             if entry then
                 local row = Row(index)
                 if hovered == row and row.displayName ~= entry.name then HideTooltip() end
@@ -1057,6 +1076,7 @@ DFRL:NewMod("DamageMeter", 7, function()
                     context.runId, context.counterEpoch, context.authorityId
                 apiIdentity.encounter = context.encounter and context.encounter.encounterId
             end
+            nativeContext = context
         elseif type(AZS_GetPhase) == "function" then
             ok, phase = pcall(AZS_GetPhase)
         end

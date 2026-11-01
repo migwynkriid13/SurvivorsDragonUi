@@ -1028,4 +1028,63 @@ Test("legacy rank groups refresh same-stamp publications without idle presentati
     end
 end)
 
+Test("legacy viewport scroll keeps full-source rolling observation on other tabs", function()
+    for _, performance in ipairs({ false, true }) do
+        local context = Meter(function(c)
+            c.settings.performanceMode, c.settings.meterShowRanks = performance, true
+            c.damage = {}
+            for index = 1, 40 do
+                c.damage[index] = { name = "Attack " .. index, dmg = (41 - index) * 100, dps = 10, share = 0, proc = 0 }
+            end
+            c.healing = { { name = "Regeneration", dmg = 10, dps = 1, share = 1, proc = 0 } }
+        end)
+        local function Advance(time)
+            context.env.AZS_RUN.t = time
+            local total = 0
+            for _, record in ipairs(context.damage) do
+                record.dmg = record.dmg + 100
+                total = total + record.dmg
+            end
+            for _, record in ipairs(context.damage) do
+                record.share = record.dmg / total
+            end
+            context:Publish("AZSMETER")
+        end
+        context:Tick()
+        Advance(11)
+        for _ = 1, 6 do
+            context:Tick()
+        end
+        local allocated, reads = #context.objects, context.reads.damage
+        context:Call(context.root, "OnMouseWheel", -20)
+        assert(context:Row(1).entry.name == "Attack 1" and context.reads.damage == reads)
+        context:Tick()
+        assert(context:Row(1).name:GetText() == "21. Attack 21" and context:Row(1).entry.dps == 100)
+        context:Cycle()
+        assert(context.title:GetText() == "Healing Done")
+        Advance(12)
+        context:ResetCounts()
+        context:Tick()
+        assert(context.reads.damage == 1, "another visible legacy tab stopped complete damage observation")
+        context:Cycle("RightButton")
+        assert(context.title:GetText() == "Damage Done" and context:Row(1).entry.dps == 100)
+        context:Call(context.root, "OnMouseWheel", -20)
+        context:Tick()
+        assert(context:Row(1).entry.name == "Attack 21" and context:Row(1).entry.dps == 100)
+        assert(#context.objects == allocated, "scrolling a legacy ledger allocated more visible rows")
+    end
+end)
+
+Test("legacy party rate-only updates remain validated after viewport sampling", function()
+    local context = Meter()
+    context:Party()
+    local valid = context.env.AZS_GetPartyMeter
+    local source, total, rate = valid()
+    context.env.AZS_GetPartyMeter = function() return source, total, rate end
+    context:Tick()
+    source[1].dps = -1
+    context:Tick()
+    assert(not context:Row(1):IsShown(), "invalid same-publication party rate reached visible formatting")
+end)
+
 print("PASS " .. passed .. " party meter contracts")

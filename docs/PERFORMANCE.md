@@ -90,20 +90,60 @@ result.
 
 Item-rank summaries reuse this same family/row pool and instant presentation.
 Direct native item keys avoid name or equipment lookups. Item-bound effects can
-join one actual item origin per positive member through a reusable contribution
-index built only for changed source publications. The index is cleared and
-refilled within each of the existing four bounded views; rate-only and owner
-passes do not build it. Work is linear in that snapshot's contributions and
-referenced member/origin entries, with no recursive relationship walk, history,
-native getter, animation, frame, region, asset, event, updater, setting or saved
-data added. Hidden/off retirement remains shared. CI-only source mocks were
-authored but not run locally; live Hakkar metadata and rendering remain unverified.
+join one actual item origin per positive member through the incremental member
+and contribution-position caches below. No recursive relationship walk, native
+getter, animation, frame, region, asset, event, updater, setting or saved data is
+added. Hidden/off retirement remains shared. CI-only source mocks were authored
+but not run locally; live Hakkar metadata and rendering remain unverified.
+
+## Meter processing and display caches
+
+The existing five-Hz reader keeps responsive counters, and displayed rates
+still update once per second. One validated native context is shared within
+each refresh; manual Reset obtains its own fresh context. A previously accepted
+view can be reused when the complete forwarded capture identity, clock and
+query still match. Clock-only captures remain eligible for fresh native rate
+reads; counter revision alone never proves a recent rate is unchanged.
+
+Each native row keeps its own identity and copied metadata/member fingerprints.
+Counter updates reuse prepared names, artwork, actor keys and family mappings.
+New sources, member or positive-attribution changes, affected source/actor/origin
+metadata and lifecycle transitions rebuild the affected preparation. A global
+metadata update for a new summon does not by itself require reconstructing
+unchanged historical captions and keys. Amounts and rates still come from the
+accepted native snapshot, and numeric ordering changes still reorder summaries.
+Rate-only passes retain the existing sorted output order.
+
+The contribution index stores IDs and array positions instead of complete leaf
+statistic tables. Appended records extend it; reordered, missing or shortened
+input triggers a safe reindex. Member fingerprints include zero-to-positive
+changes after Reset, so old history cannot supply a different current talent or
+item origin. Source identities and families retire with their existing view and
+run owners. There are still at most four native view caches; their size follows
+the native ledger rather than the number of visible bars.
+
+The meter controller copies and samples only its visible viewport, retaining the
+complete source ordering for scrolling, ranks, shares and the leading bar.
+Displayed-rate caches retire offscreen identities instead of retaining every
+source visited during a run. Newly revealed rows initialize their own rates;
+unchanged visible identities retain the one-second cadence. Legacy clients keep
+their complete five-Hz rolling observations, reset baselines and publication
+gates, with rate validation retained at their native/grouping boundaries.
+
+Both Performance Mode states use these same caches. No frame, drawing region,
+asset, setting, saved data, event, updater or runtime diagnostic hook is added.
+Fresh snapshots still require full native row validation and numeric processing;
+the native API still returns its complete ledger. This change does not bound or
+measure the native snapshot producer's cost. CI-only operation-count and
+lifecycle cases cover growing ledgers, cache invalidation and viewport work;
+no local tests, game execution, late-run frame timings or FPS measurements were
+performed.
 
 ## Meter talent proc captions
 
-Talent proc captions reuse the same snapshot contribution index and pooled
-rows. Only changed source publications join positive row members to one actual
-talent origin; rate-only passes reuse the accepted display metadata. This adds
+Talent proc captions reuse the same snapshot member caches and pooled rows.
+Only changed attribution or relevant metadata rejoins positive row members to
+one actual talent origin; rate-only passes reuse accepted display metadata. This adds
 no native read, current-build scan, history, animation, frame, region, asset,
 event, updater, setting or saved data. Names and icon readiness follow the
 existing metadata/language revisions and changed-only bindings. Native source

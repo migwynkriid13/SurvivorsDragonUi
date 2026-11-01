@@ -472,8 +472,7 @@ function DFRL.tools.NewNativeMeter()
         end
         if used == count then return count end
     end
-    local function Member(native, contributions, id)
-        local leaf = contributions[id]
+    local function MemberValid(native, leaf)
         if
             type(leaf) == "table"
             and leaf.sourceKey == native.sourceKey
@@ -485,6 +484,7 @@ function DFRL.tools.NewNativeMeter()
             return leaf
         end
     end
+    local function Member(native, contributions, id) return MemberValid(native, contributions[id]) end
     local function TalentOrigin(source, native, snapshot, contributions)
         if
             source.kind == "talent"
@@ -635,7 +635,15 @@ function DFRL.tools.NewNativeMeter()
         if left.dmg == right.dmg then return left.order < right.order end
         return left.dmg > right.dmg
     end
-    local function GroupRows(view, snapshot, query)
+    local function GroupRows(view, snapshot, query, sort)
+        if not sort then
+            for _, family in pairs(view.families) do
+                family.row.share = snapshot.totals.displayAmount > 0
+                        and math.min(1, family.row.dmg / snapshot.totals.displayAmount)
+                    or 0
+            end
+            return
+        end
         local count = 0
         for _, row in ipairs(view.pool) do
             local family = row.family
@@ -657,149 +665,387 @@ function DFRL.tools.NewNativeMeter()
             view.rows[index] = nil
         end
         table.setn(view.rows, count)
-        if query.groupBy == "source" or query.groupBy == "actor_source" then table.sort(view.rows, RowOrder) end
-    end
-    local function CopyRows(view, snapshot, query)
-        view.pool, view.families = view.pool or {}, view.families or {}
-        local rebuild = view.groupRevision ~= view.revision
-        local contributions = view.contributions
-        if rebuild and query.groupBy ~= "owner" then
-            contributions = contributions or {}
-            view.contributions = contributions
-            for id in pairs(contributions) do
-                contributions[id] = nil
-            end
+        if sort and (query.groupBy == "source" or query.groupBy == "actor_source") then
+            table.sort(view.rows, RowOrder)
         end
-        if rebuild and query.groupBy ~= "owner" and type(snapshot.contributions) == "table" then
-            for _, leaf in ipairs(snapshot.contributions) do
-                if type(leaf) == "table" and Id(leaf.rowId) then
-                    if contributions[leaf.rowId] ~= nil then
-                        contributions[leaf.rowId] = false
-                    else
-                        contributions[leaf.rowId] = leaf
-                    end
+    end
+    local function IndexContributions(view, leaves, reset)
+        local positions = view.positions or {}
+        view.positions = positions
+        local count = type(leaves) == "table" and table.getn(leaves) or 0
+        local previous = view.positionCount or 0
+        if reset or count < previous then
+            for id in pairs(positions) do
+                positions[id] = nil
+            end
+            previous = 0
+        end
+        for index = previous + 1, count do
+            local leaf = leaves[index]
+            if type(leaf) == "table" and Id(leaf.rowId) then
+                if positions[leaf.rowId] ~= nil then
+                    positions[leaf.rowId] = false
+                else
+                    positions[leaf.rowId] = index
                 end
             end
         end
+        view.positionCount = count
+    end
+    local function ContributionPosition(view, leaves, id)
+        local index = view.positions[id]
+        local leaf = index and type(leaves) == "table" and leaves[index]
+        if type(leaf) == "table" and leaf.rowId == id then return index end
+        if not view.reindexed then
+            IndexContributions(view, leaves, true)
+            view.reindexed = true
+            index = view.positions[id]
+            leaf = index and type(leaves) == "table" and leaves[index]
+            if type(leaf) == "table" and leaf.rowId == id then return index end
+        end
+    end
+    local function MembersChanged(view, row, native, leaves)
+        local count = Ids(native.memberIds)
+        local changed = row.memberCount ~= count
+        row.memberCount, row.members = count, row.members or {}
+        for index = 1, count or 0 do
+            local id = native.memberIds[index]
+            local member = row.members[index] or { origins = {} }
+            local position = ContributionPosition(view, leaves, id)
+            local leaf = position and MemberValid(native, leaves[position])
+            local positive = leaf and leaf.displayAmount > 0 or false
+            local origins = 0
+            if positive then origins = Ids(leaf.originSourceKeys) or false end
+            if
+                member.id ~= id
+                or member.valid ~= (leaf ~= nil)
+                or member.positive ~= positive
+                or member.originCount ~= origins
+            then
+                changed = true
+            end
+            for origin = 1, origins or 0 do
+                local key = leaf.originSourceKeys[origin]
+                if member.origins[origin] ~= key then changed = true end
+                member.origins[origin] = key
+            end
+            for origin = (origins or 0) + 1, table.getn(member.origins) do
+                member.origins[origin] = nil
+            end
+            member.id, member.position, member.valid, member.positive, member.originCount =
+                id, position, leaf ~= nil, positive, origins
+            row.members[index] = member
+        end
+        for index = (count or 0) + 1, table.getn(row.members) do
+            row.members[index] = nil
+        end
+        return changed
+    end
+    local sourceFields = {
+        "sourceKey",
+        "kind",
+        "name",
+        "attribution",
+        "abilityKey",
+        "rank",
+        "variantKey",
+        "itemInstanceKey",
+        "talentKey",
+        "itemKey",
+        "itemId",
+    }
+    local actorFields = { "actorId", "kind", "name", "classKey", "state", "summonKey", "totemKey" }
+    local iconFields = { "status", "path", "reason", "retryAfterSeconds", "portraitKey" }
+    local function FieldsChanged(cache, value, fields)
+        local present = type(value) == "table"
+        local changed = cache.present ~= present
+        cache.present = present
+        for index, key in ipairs(fields) do
+            local field
+            if present then field = value[key] end
+            if cache[index] ~= field then changed = true end
+            cache[index] = field
+        end
+        return changed
+    end
+    local function DescriptorChanged(cache, value, fields, art)
+        local changed = FieldsChanged(cache, value, fields)
+        cache.art = cache.art or {}
+        if FieldsChanged(cache.art, type(value) == "table" and value[art], iconFields) then changed = true end
+        return changed
+    end
+    local function MetadataChanged(row, native, snapshot, query)
+        row.sourceMetadata, row.actorMetadata, row.originMetadata =
+            row.sourceMetadata or {}, row.actorMetadata or {}, row.originMetadata or {}
+        local source = query.groupBy ~= "owner" and snapshot.sources[native.sourceKey] or nil
+        local actor = (query.groupBy == "owner" or query.groupBy == "actor_source")
+                and snapshot.actors[native.actorId or native.ownerId]
+            or nil
+        local changed = DescriptorChanged(row.sourceMetadata, source, sourceFields, "icon")
+        if DescriptorChanged(row.actorMetadata, actor, actorFields, "portrait") then changed = true end
+        for _, origin in pairs(row.originMetadata) do
+            origin.used = false
+        end
+        for _, member in ipairs(row.members or {}) do
+            for _, key in ipairs(member.origins) do
+                local origin = row.originMetadata[key] or {}
+                if not origin.used and DescriptorChanged(origin, snapshot.sources[key], sourceFields, "icon") then
+                    changed = true
+                end
+                origin.used, row.originMetadata[key] = true, origin
+            end
+        end
+        for key, origin in pairs(row.originMetadata) do
+            if not origin.used then
+                row.originMetadata[key] = nil
+                changed = true
+            end
+        end
+        return changed
+    end
+    local function PrepareRow(view, row, native, snapshot, query)
+        row.icon, row.iconStatus, row.class = nil, nil, nil
+        row.portraitKey, row.portraitRunId, row.portraitStatus = nil, nil, nil
+        row.familyKey, row.familyRank, row.groupKind = nil, nil, nil
+        if query.groupBy == "owner" then
+            local actor = snapshot.actors[native.ownerId]
+            row.name, row.class, row.proc = actor.name, actor.classKey, 0
+            row.portraitKey, row.portraitRunId, row.portraitStatus =
+                actor.portrait.portraitKey, snapshot.context.runId, actor.portrait.status
+            return
+        end
+        local contributions = view.memberScratch or {}
+        view.memberScratch = contributions
+        for _, member in ipairs(row.members) do
+            contributions[member.id] = member.position and snapshot.contributions[member.position] or false
+        end
+        local source = snapshot.sources[native.sourceKey]
+        local actor = query.groupBy == "actor_source" and snapshot.actors[native.actorId] or nil
+        local pet = actor and petKinds[actor.kind]
+        local display = TalentOrigin(source, native, snapshot, contributions) or source
+        row.proc, row.iconStatus = native.nativeProc and 1 or 0, display.icon.status
+        if display.icon.status == "ready" then row.icon = display.icon.path end
+        row.name = pet and (display.name .. " (" .. actor.name .. ")") or display.name
+        row.actorId, row.actorName = actor and actor.actorId, actor and actor.name
+        row.actorPortraitKey = actor and actor.portrait.portraitKey
+        row.actorPortraitStatus = actor and actor.portrait.status
+        local actorKey = actor and ActorKey(actor, native)
+        if pet and view.groupPets then
+            row.familyKey, row.groupKind = "pet:" .. actorKey, "pet"
+        elseif query.groupBy == "source" or query.groupBy == "actor_source" then
+            row.familyKey, row.familyRank = FamilyKey(source, native, actorKey, snapshot, contributions)
+            if row.familyKey then
+                row.groupKind = "rank"
+            elseif pet then
+                row.familyKey = "pet-source:"
+                    .. actorKey
+                    .. KeyPart(native.sourceKey)
+                    .. (native.nativeProc and "1" or "0")
+                row.groupKind = "source"
+            end
+            if row.familyKey and display ~= source then
+                row.familyKey = row.familyKey .. ":talent:" .. KeyPart(display.sourceKey)
+            end
+        end
+        for id in pairs(contributions) do
+            contributions[id] = nil
+        end
+    end
+    local function PrepareFamilies(view, snapshot)
         for _, family in pairs(view.families) do
-            family.used, family.emitted, family.ambiguous, family.rank, family.actorId = false, false, false, nil, nil
+            family.used, family.ambiguous, family.rank, family.actorId = false, false, nil, nil
             for rank in pairs(family.ranks) do
                 family.ranks[rank] = nil
             end
         end
-        local count = 0
-        for index, native in ipairs(snapshot.rows) do
-            local row = view.pool[index] or {}
-            local average = query.checkpointId and native.checkpointAverage or native.periodAverage
-            row.rowId, row.dmg, row.dps, row.averageDps, row.share =
-                native.rowId, native.displayAmount, native.displayRate.value, average.value, native.share
-            row.icon, row.iconStatus, row.class = nil, nil, nil
-            row.portraitKey, row.portraitRunId, row.portraitStatus = nil, nil, nil
-            row.family, row.order = nil, index
-            if query.groupBy == "owner" then
-                local actor = snapshot.actors[native.ownerId]
-                row.name, row.class, row.proc = actor.name, actor.classKey, 0
-                row.portraitKey, row.portraitRunId, row.portraitStatus =
-                    actor.portrait.portraitKey, snapshot.context.runId, actor.portrait.status
-            else
-                local source = snapshot.sources[native.sourceKey]
-                if rebuild then row.displaySource = TalentOrigin(source, native, snapshot, contributions) end
-                local display = row.displaySource or source
-                row.proc, row.iconStatus = native.nativeProc and 1 or 0, display.icon.status
-                if display.icon.status == "ready" then row.icon = display.icon.path end
-                local actor = query.groupBy == "actor_source" and snapshot.actors[native.actorId] or nil
-                local pet = actor and petKinds[actor.kind]
-                if rebuild then
-                    row.name = pet and (display.name .. " (" .. actor.name .. ")") or display.name
-                    local actorKey = actor and ActorKey(actor, native)
-                    row.groupKind = nil
-                    if pet and view.groupPets then
-                        row.familyKey, row.groupKind = "pet:" .. actorKey, "pet"
-                    elseif query.groupBy == "source" or query.groupBy == "actor_source" then
-                        row.familyKey, row.familyRank = FamilyKey(source, native, actorKey, snapshot, contributions)
-                        if row.familyKey then
-                            if row.displaySource then
-                                row.familyKey = row.familyKey .. ":talent:" .. KeyPart(row.displaySource.sourceKey)
-                            end
-                            row.groupKind = "rank"
-                        elseif pet then
-                            row.familyKey = "pet-source:"
-                                .. actorKey
-                                .. KeyPart(native.sourceKey)
-                                .. (native.nativeProc and "1" or "0")
-                            if row.displaySource then
-                                row.familyKey = row.familyKey .. ":talent:" .. KeyPart(row.displaySource.sourceKey)
-                            end
-                            row.groupKind = "source"
-                        end
-                    else
-                        row.familyKey = nil
-                    end
+        for _, row in ipairs(view.pool) do
+            local key = row.familyKey
+            row.family = nil
+            if key then
+                local family = view.families[key]
+                if not family then
+                    family = { row = {}, token = {}, ranks = {} }
+                    view.families[key] = family
                 end
-                local key = row.familyKey
-                if key then
-                    local family = view.families[key]
-                    if not family then
-                        family = { row = {}, token = {}, ranks = {} }
-                        view.families[key] = family
+                local grouped = family.row
+                if not family.used then
+                    grouped.rowId, grouped.order, grouped.proc = family.token, row.order, row.proc
+                    grouped.portraitKey, grouped.portraitRunId, grouped.portraitStatus = nil, nil, nil
+                end
+                if row.groupKind == "rank" then
+                    local previous = family.ranks[row.familyRank]
+                    if previous and previous ~= row.nativeSource then family.ambiguous = true end
+                    family.ranks[row.familyRank] = row.nativeSource
+                end
+                if row.groupKind == "pet" then
+                    if grouped.proc ~= row.proc then grouped.proc = 0 end
+                    if not family.actorId or row.actorId < family.actorId then
+                        grouped.name, grouped.icon, grouped.iconStatus = row.actorName, nil, nil
+                        grouped.portraitKey, grouped.portraitRunId, grouped.portraitStatus =
+                            row.actorPortraitKey, snapshot.context.runId, row.actorPortraitStatus
+                        family.actorId = row.actorId
                     end
-                    local grouped = family.row
-                    if not family.used then
-                        grouped.rowId, grouped.dmg, grouped.dps, grouped.averageDps, grouped.order =
-                            family.token, row.dmg, row.dps, row.averageDps, index
-                        grouped.proc = row.proc
-                        grouped.portraitKey, grouped.portraitRunId, grouped.portraitStatus = nil, nil, nil
-                    else
-                        grouped.dmg = grouped.dmg + row.dmg
-                        grouped.dps = grouped.dps and row.dps and grouped.dps + row.dps or nil
-                        grouped.averageDps = grouped.averageDps
-                                and row.averageDps
-                                and grouped.averageDps + row.averageDps
-                            or nil
-                    end
-                    if
-                        not Number(grouped.dmg)
-                        or (grouped.dps ~= nil and not Number(grouped.dps))
-                        or (grouped.averageDps ~= nil and not Number(grouped.averageDps))
-                    then
-                        return false
-                    end
-                    if row.groupKind == "rank" then
-                        local previous = family.ranks[row.familyRank]
-                        if previous and previous ~= native.sourceKey then family.ambiguous = true end
-                        family.ranks[row.familyRank] = native.sourceKey
-                    end
-                    if row.groupKind == "pet" then
-                        if grouped.proc ~= row.proc then grouped.proc = 0 end
-                        if not family.actorId or actor.actorId < family.actorId then
-                            grouped.name, grouped.icon, grouped.iconStatus = actor.name, nil, nil
-                            grouped.portraitKey, grouped.portraitRunId, grouped.portraitStatus =
-                                actor.portrait.portraitKey, snapshot.context.runId, actor.portrait.status
-                            family.actorId = actor.actorId
-                        end
-                    elseif row.groupKind == "source" or not family.rank or row.familyRank > family.rank then
-                        grouped.name, grouped.proc, grouped.iconStatus, grouped.icon =
-                            row.name, row.proc, row.iconStatus, row.icon
-                        family.rank = row.familyRank
-                    end
-                    row.family, family.used = family, true
+                elseif row.groupKind == "source" or not family.rank or row.familyRank > family.rank then
+                    grouped.name, grouped.proc, grouped.iconStatus, grouped.icon =
+                        row.name, row.proc, row.iconStatus, row.icon
+                    family.rank = row.familyRank
+                end
+                row.family, family.used = family, true
+            end
+        end
+        for key, family in pairs(view.families) do
+            if not family.used then view.families[key] = nil end
+        end
+    end
+    local function CopyRows(view, snapshot, query)
+        view.pool, view.families, view.identities = view.pool or {}, view.families or {}, view.identities or {}
+        local current = snapshot.context
+        local metadata = view.preparedMetadata ~= current.metadataRevision
+        local invalidate = view.preparedLanguage ~= current.languageRevision
+            or view.preparedEpoch ~= current.counterEpoch
+            or view.preparedAuthority ~= current.authorityId
+            or view.preparedEncounter ~= (current.encounter and current.encounter.encounterId)
+            or view.preparedPets ~= view.groupPets
+        local mapping, amounts, count = invalidate, false, 0
+        view.reindexed = false
+        if query.groupBy ~= "owner" then IndexContributions(view, snapshot.contributions, false) end
+        for _, row in pairs(view.identities) do
+            row.present = false
+        end
+        for index, native in ipairs(snapshot.rows) do
+            local row = view.identities[native.rowId] or {}
+            local dirty = invalidate
+                or row.nativeSource ~= native.sourceKey
+                or row.nativeOwner ~= native.ownerId
+                or row.nativeActor ~= native.actorId
+                or row.nativeProc ~= native.nativeProc
+            if query.groupBy ~= "owner" and MembersChanged(view, row, native, snapshot.contributions) then
+                dirty = true
+            end
+            if dirty or metadata then
+                if MetadataChanged(row, native, snapshot, query) then dirty = true end
+            end
+            if view.pool[index] ~= row or dirty then mapping = true end
+            row.rowId, row.order, row.present = native.rowId, index, true
+            row.nativeSource, row.nativeOwner, row.nativeActor, row.nativeProc =
+                native.sourceKey, native.ownerId, native.actorId, native.nativeProc
+            local average = query.checkpointId and native.checkpointAverage or native.periodAverage
+            if row.dmg ~= native.displayAmount then amounts = true end
+            row.dmg, row.dps, row.averageDps, row.share =
+                native.displayAmount, native.displayRate.value, average.value, native.share
+            if dirty or row.name == nil then PrepareRow(view, row, native, snapshot, query) end
+            view.pool[index], view.identities[native.rowId], count = row, row, index
+        end
+        if view.reindexed and query.groupBy ~= "owner" then
+            for index, native in ipairs(snapshot.rows) do
+                local row = view.pool[index]
+                if MembersChanged(view, row, native, snapshot.contributions) then
+                    MetadataChanged(row, native, snapshot, query)
+                    PrepareRow(view, row, native, snapshot, query)
+                    mapping = true
                 end
             end
-            view.pool[index], count = row, index
         end
         for index = count + 1, table.getn(view.pool) do
             view.pool[index] = nil
         end
         table.setn(view.pool, count)
-        for key, family in pairs(view.families) do
-            if not family.used then view.families[key] = nil end
+        for id, row in pairs(view.identities) do
+            if not row.present then
+                view.identities[id] = nil
+                mapping = true
+            end
         end
-        GroupRows(view, snapshot, query)
-        view.groupRevision = view.revision
+        if mapping then PrepareFamilies(view, snapshot) end
+        for _, family in pairs(view.families) do
+            family.summed, family.emitted = false, false
+        end
+        for _, row in ipairs(view.pool) do
+            local family = row.family
+            if family then
+                local grouped = family.row
+                if not family.summed then
+                    grouped.dmg, grouped.dps, grouped.averageDps = row.dmg, row.dps, row.averageDps
+                    family.summed = true
+                else
+                    grouped.dmg = grouped.dmg + row.dmg
+                    grouped.dps = grouped.dps and row.dps and grouped.dps + row.dps or nil
+                    grouped.averageDps = grouped.averageDps and row.averageDps and grouped.averageDps + row.averageDps
+                        or nil
+                end
+                if
+                    not Number(grouped.dmg)
+                    or (grouped.dps ~= nil and not Number(grouped.dps))
+                    or (grouped.averageDps ~= nil and not Number(grouped.averageDps))
+                then
+                    return false
+                end
+            end
+        end
+        GroupRows(view, snapshot, query, mapping or amounts)
+        view.preparedMetadata, view.preparedLanguage, view.preparedEpoch =
+            current.metadataRevision, current.languageRevision, current.counterEpoch
+        view.preparedAuthority, view.preparedEncounter, view.preparedPets =
+            current.authorityId, current.encounter and current.encounter.encounterId, view.groupPets
         return true
     end
-    local function Read(viewSpec, window, groupPets)
-        local context, failure = adapter.Context()
+    local captureFields = {
+        "snapshotId",
+        "uiSessionId",
+        "runId",
+        "authorityId",
+        "counterEpoch",
+        "counterRevision",
+        "metadataRevision",
+        "languageRevision",
+        "languageCode",
+        "phase",
+        "asOfRunSeconds",
+        "localOwnerId",
+        "partyState",
+        "partyId",
+    }
+    local encounterFields = { "encounterId", "state", "startRunSeconds", "endRunSeconds", "startFenceId", "endFenceId" }
+    local function Capture(context, saved)
+        if not saved then return false end
+        for _, key in ipairs(captureFields) do
+            if context[key] ~= saved[key] then return false end
+        end
+        local encounter = context.encounter
+        if (encounter ~= nil) ~= saved.hasEncounter then return false end
+        if encounter then
+            for _, key in ipairs(encounterFields) do
+                if encounter[key] ~= saved.encounter[key] then return false end
+            end
+        end
+        return true
+    end
+    local function SaveCapture(view, context)
+        local saved = view.captureStorage or { encounter = {} }
+        view.captureStorage = saved
+        for _, key in ipairs(captureFields) do
+            saved[key] = context[key]
+        end
+        saved.hasEncounter = context.encounter ~= nil
+        for _, key in ipairs(encounterFields) do
+            saved.encounter[key] = context.encounter and context.encounter[key]
+        end
+        view.capture = saved
+    end
+    local function Read(viewSpec, window, groupPets, sharedContext)
+        local context, failure
+        if sharedContext ~= nil then
+            local capabilities
+            capabilities, failure = Capabilities()
+            if not capabilities then return Failure(failure) end
+            if not ContextValid(sharedContext) or sharedContext.uiSessionId ~= capabilities.uiSessionId then
+                return Failure(Malformed())
+            end
+            context = sharedContext
+            CheckCheckpoint(context)
+        else
+            context, failure = adapter.Context()
+        end
         if not context then return Failure(failure) end
         if state.blocked then return Failure(state.blocked, context) end
         local query = {
@@ -831,6 +1077,10 @@ function DFRL.tools.NewNativeMeter()
         end
         local deferred = DeferredError(view)
         if deferred then return Failure(deferred, context) end
+        if sharedContext ~= nil and view.groupPets == (groupPets == true) and Capture(context, view.capture) then
+            return view.rows, view.acceptedAmount, view.acceptedRate, nil, view.revision, view.acceptedMeta
+        end
+        view.capture = nil
         local snapshot
         snapshot, failure = Call("AZS_GetMeterSnapshot", query)
         if not snapshot then
@@ -914,10 +1164,14 @@ function DFRL.tools.NewNativeMeter()
             recentStatus = snapshot.totals.recentRate.status,
             encounterId = current.encounter and current.encounter.encounterId,
         }
-        return view.rows, snapshot.totals.displayAmount, snapshot.totals.displayRate.value, nil, view.revision, meta
+        view.acceptedAmount, view.acceptedRate, view.acceptedMeta =
+            snapshot.totals.displayAmount, snapshot.totals.displayRate.value, meta
+        SaveCapture(view, current)
+        return view.rows, view.acceptedAmount, view.acceptedRate, nil, view.revision, meta
     end
-    function adapter.Read(viewSpec, window, groupPets)
-        local ok, source, amount, rate, message, revision, meta = pcall(Read, viewSpec, window, groupPets)
+    function adapter.Read(viewSpec, window, groupPets, sharedContext)
+        local ok, source, amount, rate, message, revision, meta =
+            pcall(Read, viewSpec, window, groupPets, sharedContext)
         if not ok then return Failure(Error("INTERNAL_ERROR", "The native meter response could not be read.")) end
         return source, amount, rate, message, revision, meta
     end

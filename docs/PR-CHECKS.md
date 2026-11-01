@@ -58,6 +58,20 @@ An explicit Bash shell enables `pipefail`, so piping fixture/model output into
 
 ## UI work and cleanup tests
 
+Meter processing cases exercise growing native source/member lists through the
+production adapter and controller. Fixture-only counters check that ordinary
+counter changes reuse identity preparation, appended history reuses contribution
+positions, unchanged/rate-only summaries retain their ordering and controller
+row copies stay bounded by the viewport. Cases retain source/member/positive
+attribution changes, per-source metadata updates, unknown and mixed origins,
+clock-only rates, native errors, checkpoints and lifecycle retirement. Viewport
+cases cover immediate initialization of newly revealed identities, ranks and
+bar proportions, one-second displayed rates, shared refresh contexts, fresh
+manual Reset contexts, hidden/off work and both Performance Mode states. Legacy
+cases retain complete rolling observations while another meter tab is visible
+and same-publication Party rate validation. These cases are CI-only and were
+not run locally; operation counts do not establish native snapshot cost or FPS.
+
 Action-bar choice cases use the production display/bar owners and explicit fake
 native frames. They cover default-on normalization, shared preview/Confirm/Cancel,
 profiles and resets, native presentation restoration, retained attachment

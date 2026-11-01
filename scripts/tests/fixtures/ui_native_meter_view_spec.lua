@@ -134,6 +134,110 @@ Test("native IDs keep different rates for equal source names and bypass guessed 
     )
 end)
 
+Test("large native ledgers copy only the viewport and share one fresh context per refresh", function()
+    for _, performance in ipairs({ false, true }) do
+        local c, state, env = View(function(context, native, environment)
+            context.settings.performanceMode, context.settings.meterShowRanks = performance, true
+            native.records = {}
+            for index = 1, 1000 do
+                native.records[index] = {
+                    id = "large-source-" .. index,
+                    rowId = "large-leaf-" .. index,
+                    name = "Spell " .. index,
+                    amount = 2000 - index,
+                    recent = 100,
+                }
+            end
+            native.ownerFields = {}
+            local factory = environment.T.NewNativeMeter
+            environment.T.NewNativeMeter = function()
+                local api = factory()
+                local read, captured, proxies = api.Read, nil, {}
+                api.Read = function(...)
+                    local source, total, rate, message, revision, meta = read(...)
+                    if not source then return source, total, rate, message, revision, meta end
+                    if source ~= captured then
+                        captured, proxies = source, {}
+                    end
+                    for index = 1, table.getn(source) do
+                        if not proxies[index] then
+                            local slot = index
+                            proxies[index] = setmetatable({}, {
+                                __index = function(_, key)
+                                    native.ownerFields[key] = (native.ownerFields[key] or 0) + 1
+                                    return captured[slot][key]
+                                end,
+                            })
+                        end
+                    end
+                    for index = table.getn(source) + 1, table.getn(proxies) do
+                        proxies[index] = nil
+                    end
+                    return proxies, total, rate, message, revision, meta
+                end
+                return api
+            end
+        end)
+        assert(
+            state.ownerFields.name == 6 and state.ownerFields.rowId == 6,
+            "controller copied the complete native ledger"
+        )
+        assert(state.calls.context == 1 and state.calls.snapshot == 1, "one refresh repeated its context getter")
+        local allocated = #c.objects
+        state.ownerFields = {}
+        for index = 1001, 1200 do
+            state.records[index] = {
+                id = "large-source-" .. index,
+                rowId = "large-leaf-" .. index,
+                name = "Spell " .. index,
+                amount = 2000 - index,
+                recent = 100,
+            }
+        end
+        state.records[1].amount = 2010
+        state.context.counterRevision = "large-growth"
+        c:Tick()
+        assert(state.ownerFields.name == 6 and state.ownerFields.rowId == 6 and c:Row(1).entry.dmg == 2010)
+        assert(state.calls.context == 2 and state.calls.snapshot == 2 and #c.objects == allocated)
+        state.records[7].recent = 777
+        state.context.counterRevision = "new-viewport-rate"
+        local reads = state.calls.snapshot
+        c:Call(c.root, "OnMouseWheel", -1)
+        assert(
+            c:Row(1).name:GetText() == "1. Spell 1" and state.calls.snapshot == reads,
+            "scroll read native data synchronously"
+        )
+        c:Tick(0.01)
+        assert(c:Row(1).name:GetText() == "2. Spell 2" and c:Row(6).entry.name == "Spell 7")
+        assert(c:Row(6).entry.dps == 77.7, "newly revealed row inherited another identity's sampled rate")
+        c:Call(c.root, "OnMouseWheel", -100)
+        c:Tick(0.01)
+        assert(c:Row(1).name:GetText() == "102. Spell 102")
+        state.records[1].recent = 123
+        state.context.counterRevision = "revisited-viewport-rate"
+        c:Call(c.root, "OnMouseWheel", 10000)
+        c:Tick(0.01)
+        assert(c:Row(1).name:GetText() == "1. Spell 1" and c:Row(1).entry.dps == 12.3)
+        state.records[1].recent, state.records[1].amount = 234, 2020
+        state.context.counterRevision = "visible-rate-held"
+        c:Tick(0.21)
+        assert(c:Row(1).entry.dps == 12.3 and c:Row(1).entry.dmg == 2020, "viewport rates lost their one-Hz cadence")
+        c:Tick(1.01)
+        assert(c:Row(1).entry.dps == 23.4 and #c.objects == allocated)
+        local contexts = state.calls.context
+        env.DFRL.ResetMeterStats()
+        assert(state.calls.context == contexts + 1, "manual Reset reused an earlier refresh context")
+        c:SetLayoutHidden(true)
+        c:Tick()
+        reads = state.calls.snapshot
+        c:Tick()
+        assert(state.calls.snapshot == reads, "settled hidden viewport read complete native data")
+        c:SetSetting("meterEnabled", false)
+        c:Tick()
+        assert(state.calls.snapshot == reads and not c.controller:GetScript("OnUpdate"))
+    end
+end)
+
 Test("all native language labels remain literal in the production meter", function()
     local c, state = View()
     local counterRevision = state.context.counterRevision
