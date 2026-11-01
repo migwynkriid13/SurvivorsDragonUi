@@ -82,6 +82,8 @@ DFRL:NewMod("Player Auras", 2, function()
         if icon then
             icon:ClearAllPoints()
             icon:SetAllPoints(button)
+            -- Keep the icon's baked rim from showing outside the native debuff overlay.
+            if entry.group == debuffGroup then icon:SetTexCoord(0.07, 0.93, 0.07, 0.93) end
         end
         local border = entry.border
         if border then

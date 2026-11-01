@@ -29,7 +29,14 @@ flip direction and existing `buffs` Layout entry. Native harmful buttons
 Each group starts its own six-column grid. The unsaved debuff default resolves
 below the current Buffs bounds, including buff row/scale changes; a saved/draft
 debuff position stays independent. Both groups retain a one-row editing bound
-when empty. Native duration labels retain their original placement; API timer
+when empty. Only harmful icon artwork uses the existing boss-debuff inset
+(`0.07`–`0.93` UVs), preventing its baked pale rim from peeking past the native
+colored overlay. The border's texture, crop and dispel tint stay native; ordinary
+buffs, weapon enchants and API timer artwork retain their full images. Both
+Performance Mode states use this static crop through existing layout calls,
+with no new region, asset, reader or updater.
+
+Native duration labels retain their original placement; API timer
 buttons have no countdown FontString. Changing
 the pool's visible row count updates measured bounds through shared Layout,
 preserving confirmed/draft center and scale and the default top-right edge.
