@@ -1894,6 +1894,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 mode = {
                     key = "meterColorMode",
                     label = "Bar colors",
+                    after = "meterEnabled",
                     values = {
                         {
                             "default",
@@ -2507,7 +2508,8 @@ DFRL:NewMod("RunTimers", 5, function()
             local rowWidth = (contentWidth - gap * (columns - 1)) / columns
             local content = page
             local ScrollOptions = navigation.Scroll
-            local controls = {}
+            local controls, beforeMode = {}, {}
+            local leading = category.mode and category.mode.after ~= nil
             for _, entry in ipairs(category.options) do
                 local span = (entry.wide or entry[1] == category.master) and columns or 1
                 local controlWidth = span == columns and contentWidth or rowWidth
@@ -2527,24 +2529,33 @@ DFRL:NewMod("RunTimers", 5, function()
                     control = DisplayToggle(content, entry[1], entry[2], entry[3], 0, controlWidth)
                 end
                 table.insert(
-                    controls,
+                    leading and beforeMode or controls,
                     { frame = control, span = span, numeric = entry.step ~= nil, color = entry.color, entry = entry }
                 )
+                if leading and entry[1] == category.mode.after then leading = false end
                 if dependents and entry[1] ~= category.master then table.insert(dependents.controls, control) end
                 control:EnableMouseWheel(true)
                 control:SetScript("OnMouseWheel", ScrollOptions)
             end
             local optionsHeight = 0
+            local ArrangeMode
             local function LayoutOptions()
-                optionsHeight = T.LayoutEditorOptions(content, controls, columns, gap, modeHeight)
+                local modeTop = 0
+                if table.getn(beforeMode) > 0 then
+                    modeTop = T.LayoutEditorOptions(content, beforeMode, columns, gap, 0)
+                end
+                optionsHeight = T.LayoutEditorOptions(content, controls, columns, gap, modeTop + modeHeight)
                 category.searchOffsets = category.searchOffsets or {}
+                for _, record in ipairs(beforeMode) do
+                    category.searchOffsets[record.entry[1]] = -record.y
+                end
                 for _, record in ipairs(controls) do
                     category.searchOffsets[record.entry[1]] = -record.y
                 end
+                if category.mode then category.searchOffsets[category.mode.key] = modeTop end
+                if ArrangeMode then ArrangeMode(modeTop) end
                 if not category.stylePicker and page:GetHeight() ~= optionsHeight then page:SetHeight(optionsHeight) end
             end
-            LayoutOptions()
-            table.insert(optionLayouts, { group = category.group, arrange = LayoutOptions })
             if category.mode then
                 local mode = category.mode
                 local heading = FontEditorLabel(content, mode.label, 0, -4, 12)
@@ -2556,7 +2567,6 @@ DFRL:NewMod("RunTimers", 5, function()
                 for index, entry in ipairs(mode.values) do
                     local id = entry[1]
                     local button = T.CreateEditorButton(content, entry[2], buttonWidth, 30)
-                    button:SetPoint("TOPLEFT", content, "TOPLEFT", (index - 1) * (buttonWidth + gap), -28)
                     button:SetScript("OnClick", function() DFRL.display.Set(mode.key, id) end)
                     group.buttons[id], group.descriptions[id] = button, entry[3]
                 end
@@ -2565,7 +2575,23 @@ DFRL:NewMod("RunTimers", 5, function()
                 group.description:SetHeight(36)
                 group.description:SetJustifyV("TOP")
                 group.description:SetTextColor(0.59, 0.59, 0.56)
+                local appliedTop
+                ArrangeMode = function(top)
+                    if appliedTop == top then return end
+                    heading:ClearAllPoints()
+                    heading:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -top - 4)
+                    for index, entry in ipairs(mode.values) do
+                        local button = group.buttons[entry[1]]
+                        button:ClearAllPoints()
+                        button:SetPoint("TOPLEFT", content, "TOPLEFT", (index - 1) * (buttonWidth + gap), -top - 28)
+                    end
+                    group.description:ClearAllPoints()
+                    group.description:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -top - 68)
+                    appliedTop = top
+                end
             end
+            LayoutOptions()
+            table.insert(optionLayouts, { group = category.group, arrange = LayoutOptions })
             if category.stylePicker then
                 local stylePageWidth = content:GetWidth()
                 local heading = FontEditorLabel(content, tallyStyleCaption.label, 0, 0, 12)

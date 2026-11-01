@@ -2,7 +2,8 @@
 
 ## Bar colors
 
-In `/sdui` → **Damage meter**, **Bar colors** selects **Default** or **Custom**.
+In `/sdui` → **Damage meter**, **Bar colors** sits below **Enable damage meter**
+and above the **Ability color** and **Proc color** fields. Select **Default** or **Custom**.
 Default colors skills and procs by their received damage school:
 
 | School   | Color      |
