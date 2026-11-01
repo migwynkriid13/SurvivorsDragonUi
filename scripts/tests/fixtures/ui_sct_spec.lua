@@ -949,7 +949,7 @@ Test("scrolling keeps native V ownership and default text keeps its native coord
     assert(label.parent.parent.anchor.point == "BOTTOMLEFT", "default text changed coordinate systems")
 end)
 
-Test("fixed scrolling separates a burst and animates without enemy projection", function()
+Test("normal fixed scrolling retains every burst hit and animates without enemy projection", function()
     local context = SCT(true)
     context:Hit(111)
     context:Hit(111)
@@ -957,7 +957,7 @@ Test("fixed scrolling separates a burst and animates without enemy projection", 
     context:Hit(333)
     context:Tick(0.1)
     local labels = context:Labels()
-    assert(#labels == 3, "distinct hits were dropped or merged")
+    assert(#labels == 4, "normal scrolling dropped or merged an original hit")
     local rows = {}
     local values = {}
     for _, label in ipairs(labels) do
@@ -969,9 +969,12 @@ Test("fixed scrolling separates a burst and animates without enemy projection", 
         assert(context.scrollRoot.anchor.x == 160, "the default stream moved from the right of screen center")
         assert(not rows[anchor.y], "simultaneous scrolling labels share a row")
         rows[anchor.y] = true
-        values[label:GetText()] = true
+        values[label:GetText()] = (values[label:GetText()] or 0) + 1
     end
-    assert(values["111"] and values["222"] and values["333"], "grouping changed an original damage amount")
+    assert(
+        values["111"] == 2 and values["222"] == 1 and values["333"] == 1,
+        "normal scrolling changed or suppressed an original damage amount"
+    )
     local holder = labels[1].parent.parent
     local x, y = holder.anchor.x, holder.anchor.y
     context:Tick(0.2)
