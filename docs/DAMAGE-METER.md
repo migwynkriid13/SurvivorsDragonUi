@@ -180,6 +180,33 @@ existing cadence. Both Performance Mode states use the same instant result.
 CI-only cases cover nine ranks, later upgrades, resets, rates, metadata changes
 and distinct sources; no local tests or game execution were run.
 
+## Talent ranks
+
+Damage Done, Healing Done and Boss Damage also combine recognized ranks of one
+native talent. A direct talent source requires known attribution, a valid
+`talentKey` and rank. The highest contributing rank supplies its received name
+and artwork. Later upgrades retain one display identity and add their native
+amounts and rates, like ability ranks.
+
+For an ability row already named from its single actual talent origin, the
+family can normalize that origin's explicit talent identity across ranks too.
+The underlying ability or item family remains distinct. Ambiguity checks use
+both the underlying rank and talent rank, retaining exact source and origin IDs
+within each pair. Presentation keeps the highest underlying rank, then the
+highest talent rank on a tie. Each positive member must still agree on one
+exact actual origin before its row receives a talent caption.
+
+Different owners, recorded casters, proc flags, ability components, variants,
+item identities and talent identities stay separate. Missing or invalid talent
+metadata and conflicting sources at the same rank stay separate as well;
+names and source-key text never establish a family. No native record, amount,
+rate, checkpoint or origin is rewritten. Existing pooled rows, metadata caches,
+one-second rates, pet summaries and both Performance Mode states keep their
+shared lifecycle. CI-only cases cover direct and actual-origin ranks, upgrades,
+ambiguity, art readiness, rates, resets and hidden work. No local tests or game
+execution were performed; the reported run's exact native payload remains
+unverified.
+
 ## Item ranks
 
 The v1 meter also combines recognized ranks of one item, including item-bound
@@ -248,7 +275,7 @@ spell/proc rows can still have different colors.
 
 This changes presentation only. Native source records and IDs, counters, rates
 and checkpoint fences remain intact. Display families retain distinct accepted
-talent origins. Pending or missing talent
+talent identities, with explicit rank normalization as described above. Pending or missing talent
 art uses the shared neutral icon; native metadata revisions refresh names and
 artwork through the existing pooled presentation. Both Performance Mode states
 use the same instant result and hidden/off work stays deferred. CI-only mocks

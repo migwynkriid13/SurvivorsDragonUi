@@ -153,6 +153,18 @@ pool reuse, hidden/off work and both Performance Mode states use the production
 owners over explicit fake boundaries. These cases are CI-only and were not
 executed locally; they do not prove native client behavior.
 
+Talent-rank cases cover direct known talent descriptors and ability rows with
+validated actual talent origins. They combine native ranks without rewriting
+counter records, check later upgrades and stable display identities across the
+three source views, and retain independent components, owner/caster/proc/item
+distinctions and same-rank ambiguity. Actual-origin cases distinguish the
+underlying rank from the talent rank and reject missing identity metadata.
+Checkpoint deltas, unavailable rates, localization, highest-rank artwork
+readiness and counter-only identity reuse share the production adapter. Full
+meter cases check pooled row reuse and hidden work in both Performance Mode
+states. These CI-only mocks do not identify the exact source IDs in the reported
+Flametongue/Windfury run or establish live native payloads, appearance or FPS.
+
 Item-rank cases add differing rank-specific item IDs under one explicit item
 key, direct and item-bound sources, single actual-origin joins, independent
 components and item copies. They retain unknown/mixed origins, same-rank

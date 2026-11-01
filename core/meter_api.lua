@@ -606,17 +606,8 @@ function DFRL.tools.NewNativeMeter()
             .. KeyPart(item ~= source and (item.talentKey or "") or "")
         return key, item.rank, true
     end
-    local function FamilyKey(source, native, actorKey, snapshot, contributions)
-        local itemKey, itemRank, itemCandidate = ItemFamilyKey(source, native, actorKey, snapshot, contributions)
-        if itemCandidate then return itemKey, itemRank end
-        if source.kind ~= "ability" or not Id(source.abilityKey) or not Rank(source) then return end
-        local key = string.len(native.ownerId)
-            .. ":"
-            .. native.ownerId
-            .. string.len(source.abilityKey)
-            .. ":"
-            .. source.abilityKey
-            .. (native.nativeProc and "1" or "0")
+    local function FamilyDetails(source)
+        local key = ""
         for _, field in ipairs(familyFields) do
             local value = source[field]
             if value ~= nil and not Id(value) then return end
@@ -629,7 +620,41 @@ function DFRL.tools.NewNativeMeter()
         then
             return
         end
-        return key .. KeyPart(source.itemId and tostring(source.itemId) or "") .. KeyPart(actorKey or ""), source.rank
+        return key .. KeyPart(source.itemId and tostring(source.itemId) or "")
+    end
+    local function TalentRankKey(source)
+        if
+            source.kind ~= "talent"
+            or source.attribution ~= "known"
+            or not Id(source.talentKey)
+            or not Rank(source)
+            or (source.abilityKey ~= nil and not Id(source.abilityKey))
+        then
+            return
+        end
+        local details = FamilyDetails(source)
+        if details then
+            return "talent-rank:" .. KeyPart(source.talentKey) .. KeyPart(source.abilityKey or "") .. details,
+                source.rank
+        end
+    end
+    local function FamilyKey(source, native, actorKey, snapshot, contributions)
+        local itemKey, itemRank, itemCandidate = ItemFamilyKey(source, native, actorKey, snapshot, contributions)
+        if itemCandidate then return itemKey, itemRank end
+        local talentKey, talentRank = TalentRankKey(source)
+        if talentKey then
+            return talentKey .. KeyPart(native.ownerId) .. (native.nativeProc and "1" or "0") .. KeyPart(actorKey or ""),
+                talentRank
+        end
+        if source.kind ~= "ability" or not Id(source.abilityKey) or not Rank(source) then return end
+        local details = FamilyDetails(source)
+        if not details then return end
+        return KeyPart(native.ownerId)
+            .. KeyPart(source.abilityKey)
+            .. (native.nativeProc and "1" or "0")
+            .. details
+            .. KeyPart(actorKey or ""),
+            source.rank
     end
     local function RowOrder(left, right)
         if left.dmg == right.dmg then return left.order < right.order end
@@ -807,6 +832,7 @@ function DFRL.tools.NewNativeMeter()
         row.icon, row.iconStatus, row.class = nil, nil, nil
         row.portraitKey, row.portraitRunId, row.portraitStatus = nil, nil, nil
         row.familyKey, row.familyRank, row.groupKind = nil, nil, nil
+        row.familyTalentRank, row.familyRankKey, row.familyMemberKey = nil, nil, nil
         if query.groupBy == "owner" then
             local actor = snapshot.actors[native.ownerId]
             row.name, row.class, row.proc = actor.name, actor.classKey, 0
@@ -844,7 +870,21 @@ function DFRL.tools.NewNativeMeter()
                 row.groupKind = "source"
             end
             if row.familyKey and display ~= source then
-                row.familyKey = row.familyKey .. ":talent:" .. KeyPart(display.sourceKey)
+                local talentKey, talentRank
+                if row.groupKind == "rank" then
+                    talentKey, talentRank = TalentRankKey(display)
+                end
+                row.familyKey = row.familyKey
+                    .. (talentKey and ":talent-rank:" or ":talent:")
+                    .. KeyPart(talentKey or display.sourceKey)
+                row.familyTalentRank = talentRank
+                if talentRank then row.familyMemberKey = KeyPart(native.sourceKey) .. KeyPart(display.sourceKey) end
+            end
+            if row.groupKind == "rank" then
+                row.familyRankKey = row.familyTalentRank
+                        and (tostring(row.familyRank) .. ":talent:" .. tostring(row.familyTalentRank))
+                    or row.familyRank
+                row.familyMemberKey = row.familyMemberKey or native.sourceKey
             end
         end
         for id in pairs(contributions) do
@@ -854,6 +894,7 @@ function DFRL.tools.NewNativeMeter()
     local function PrepareFamilies(view, snapshot)
         for _, family in pairs(view.families) do
             family.used, family.ambiguous, family.rank, family.actorId = false, false, nil, nil
+            family.talentRank = nil
             family.previousCount, family.count, family.rateChanged = family.count or 0, 0, false
             for rank in pairs(family.ranks) do
                 family.ranks[rank] = nil
@@ -878,9 +919,9 @@ function DFRL.tools.NewNativeMeter()
                     grouped.portraitKey, grouped.portraitRunId, grouped.portraitStatus = nil, nil, nil
                 end
                 if row.groupKind == "rank" then
-                    local previous = family.ranks[row.familyRank]
-                    if previous and previous ~= row.nativeSource then family.ambiguous = true end
-                    family.ranks[row.familyRank] = row.nativeSource
+                    local previous = family.ranks[row.familyRankKey]
+                    if previous and previous ~= row.familyMemberKey then family.ambiguous = true end
+                    family.ranks[row.familyRankKey] = row.familyMemberKey
                 end
                 if row.groupKind == "pet" then
                     if grouped.proc ~= row.proc then grouped.proc = 0 end
@@ -890,10 +931,19 @@ function DFRL.tools.NewNativeMeter()
                             row.actorPortraitKey, snapshot.context.runId, row.actorPortraitStatus
                         family.actorId = row.actorId
                     end
-                elseif row.groupKind == "source" or not family.rank or row.familyRank > family.rank then
+                elseif
+                    row.groupKind == "source"
+                    or not family.rank
+                    or row.familyRank > family.rank
+                    or (
+                        row.familyRank == family.rank
+                        and row.familyTalentRank
+                        and (not family.talentRank or row.familyTalentRank > family.talentRank)
+                    )
+                then
                     grouped.name, grouped.proc, grouped.iconStatus, grouped.icon =
                         row.name, row.proc, row.iconStatus, row.icon
-                    family.rank = row.familyRank
+                    family.rank, family.talentRank = row.familyRank, row.familyTalentRank
                 end
                 row.family, family.used = family, true
             elseif previous then

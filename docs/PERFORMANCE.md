@@ -103,6 +103,21 @@ getter, animation, frame, region, asset, event, updater, setting or saved data i
 added. Hidden/off retirement remains shared. CI-only source mocks were authored
 but not run locally; live Hakkar metadata and rendering remain unverified.
 
+Talent-rank summaries reuse the same pool and publication/member caches.
+Direct talent keys and accepted actual-origin talent keys normalize only during
+changed identity/attribution or relevant metadata preparation. Counter-only
+refreshes do not rebuild them. Each prepared rank row retains three scalar
+fields for its origin rank, ambiguity slot and exact member identity; family
+comparison adds one scalar tie-breaker. Existing rank maps retire with their
+families, without retaining native leaf Stats or adding another history series.
+Underlying ability/item components, owner/caster/proc distinctions, native
+amounts, rates and checkpoints remain intact. Both Performance Mode states
+update instantly, and hidden/off work remains deferred. No frame, region,
+asset, native getter, event, updater, setting or saved data is added. CI-only
+cases cover counter-only key reuse, upgrades, ambiguity, missing rates, art
+readiness, resets and visible/hidden row reuse in both modes; they were authored
+without local execution and do not prove live FPS or appearance.
+
 ## Meter processing and display caches
 
 The meter and Pet frames fully hide during native `choosing` at their existing

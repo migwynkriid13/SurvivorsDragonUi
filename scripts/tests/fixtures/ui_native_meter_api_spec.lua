@@ -66,6 +66,39 @@ local function Ranks(count)
     return records
 end
 
+local function TalentRanks(count, key, name)
+    local records = Ranks(count)
+    for _, record in ipairs(records) do
+        record.talentKey = key or "shaman.enh_flametongue_weapon"
+        record.id = "talent:" .. record.talentKey .. ":r" .. record.rank
+        record.rowId = record.id .. ":leaf"
+        record.kind, record.attribution, record.omitAbilityKey = "talent", "known", true
+        record.abilityKey, record.proc = nil, true
+        record.name = name or "Flametongue Weapon"
+    end
+    return records
+end
+
+local function TalentProcRanks(count)
+    local records, origins = TalentRanks(count), {}
+    for _, record in ipairs(records) do
+        local key = record.id
+        origins[key] = {
+            sourceKey = key,
+            kind = "talent",
+            attribution = "known",
+            talentKey = record.talentKey,
+            rank = record.rank,
+            name = record.name,
+            icon = { status = "ready", path = "Interface\\Icons\\" .. key },
+        }
+        record.id, record.name = "fire-nova-origin-rank-" .. record.rank, "Fire Nova"
+        record.kind, record.abilityKey, record.omitAbilityKey = "ability", "fire_nova", nil
+        record.talentKey, record.origins, record.rank = nil, { key }, 1
+    end
+    return records, origins
+end
+
 local function ItemRanks(count)
     local records = {}
     for rank = count, 1, -1 do
@@ -317,6 +350,7 @@ local function Native()
             response.sources[record.id] = {
                 sourceKey = record.id,
                 kind = record.kind or "ability",
+                attribution = record.attribution,
                 name = record.name,
                 nameLanguageCode = self.context.languageCode,
                 icon = record.icon or { status = "ready", path = "Interface\\Icons\\" .. record.id },
@@ -434,6 +468,7 @@ if helperMode == "helpers" then
         languages = languages,
         labels = labels,
         Ranks = Ranks,
+        TalentRanks = TalentRanks,
         ItemRanks = ItemRanks,
         Pets = Pets,
         Talents = Talents,
@@ -1234,6 +1269,192 @@ Test("direct talent rows and combined pet summaries keep their authoritative pre
     state.mutate = nil
     source = assert(meter.Read(view, 10, true))
     assert(table.getn(source) == 1 and source[1].name == "Imp" and source[1].dmg == 14300)
+end)
+
+Test("native talent ranks combine across views and upgrades without rewriting native accounting", function()
+    for _, view in ipairs({ damage, healing, boss }) do
+        local _, state, meter = Native()
+        state.records = TalentRanks(3)
+        for _, record in ipairs(TalentRanks(2, "shaman.enh_windfury_weapon", "Windfury Weapon")) do
+            table.insert(state.records, record)
+        end
+        local source, total, rate = meter.Read(view, 10)
+        assert(table.getn(source) == 2 and total == 90 and rate == 1.8)
+        assert(source[1].name == "Flametongue Weapon" and source[1].dmg == 60 and source[1].share == 60 / 90)
+        assert(source[2].name == "Windfury Weapon" and source[2].dmg == 30)
+        assert(math.abs(source[1].dps - 1.2) < 0.000001)
+        assert(source[1].averageDps == (view.period == "encounter" and 6 or 3))
+        assert(source[1].icon == "Interface\\Icons\\talent:shaman.enh_flametongue_weapon:r3")
+        assert(table.getn(state.lastResponse.rows) == 5 and table.getn(state.lastResponse.contributions) == 5)
+        assert(state.lastResponse.rows[1].displayAmount == 30 and state.lastResponse.rows[1].nativeProc)
+        assert(state.lastResponse.sources["talent:shaman.enh_flametongue_weapon:r3"].rank == 3)
+        local identity = source[1].rowId
+        table.insert(state.records, 1, TalentRanks(4)[1])
+        state.context.counterRevision = "later-talent-rank"
+        source, total = meter.Read(view, 10)
+        assert(table.getn(source) == 2 and total == 130 and source[1].dmg == 100)
+        assert(source[1].rowId == identity and source[1].proc == 1, "talent upgrade replaced the display family")
+        assert(source[1].icon == "Interface\\Icons\\talent:shaman.enh_flametongue_weapon:r4")
+    end
+end)
+
+Test("talent rank families require explicit identity and preserve source distinctions and ambiguity", function()
+    local distinctions = {
+        { "talentKey", "talent-one", "talent-two" },
+        { "abilityKey", "component-one", "component-two" },
+        { "variantKey", "extra-strike", "nova" },
+        { "itemInstanceKey", "copy-one", "copy-two" },
+        { "itemKey", "item-one", "item-two" },
+        { "itemId", 101, 102 },
+        { "kind", "talent", "ability" },
+        { "proc", false, true },
+        { "rank", 1, 1 },
+        { "rank" },
+        { "rank", 1.5, -1 },
+        { "talentKey" },
+        { "talentKey", "", "" },
+        { "variantKey", "", "" },
+        { "itemId", -1, -1 },
+        { "attribution" },
+        { "attribution", "unknown", "unknown" },
+        { "attribution", "mixed", "mixed" },
+    }
+    for _, distinction in ipairs(distinctions) do
+        local _, state, meter = Native()
+        state.records = TalentRanks(2)
+        state.records[1][distinction[1]], state.records[2][distinction[1]] = distinction[2], distinction[3]
+        if distinction[1] == "abilityKey" then
+            state.records[1].omitAbilityKey, state.records[2].omitAbilityKey = false, false
+        end
+        local source = assert(meter.Read(damage, 10))
+        assert(table.getn(source) == 2, "talent family collapsed distinct or invalid " .. distinction[1])
+        assert(type(source[1].rowId) == "string" and type(source[2].rowId) == "string")
+    end
+    local _, state, meter = Native()
+    state.records = TalentRanks(2)
+    state.records[2].ownerId = "hero-2"
+    local source = assert(meter.Read({ metric = "damage", scope = "party", period = "run", groupBy = "source" }, 0))
+    assert(table.getn(source) == 2, "talent ranks merged different accounting owners")
+    state.records[2].ownerId = nil
+    for index, record in ipairs(state.records) do
+        record.actorId, record.actorKind, record.actorName = "caster-" .. index, "totem", "Same totem name"
+    end
+    source = assert(meter.Read({ metric = "damage", scope = "self", period = "run", groupBy = "actor_source" }, 10))
+    assert(table.getn(source) == 2, "talent ranks merged unrelated recorded casters by name")
+end)
+
+Test("actual talent origin ranks combine without treating one ability rank as an ambiguous talent rank", function()
+    for _, view in ipairs({ damage, healing, boss }) do
+        local _, state, meter = Native()
+        state.records, state.extraSources = TalentProcRanks(3)
+        local source, total = meter.Read(view, 10)
+        assert(table.getn(source) == 1 and source[1].dmg == 60 and total == 60)
+        assert(source[1].name == "Flametongue Weapon" and source[1].proc == 1)
+        assert(source[1].icon == "Interface\\Icons\\talent:shaman.enh_flametongue_weapon:r3")
+        assert(state.lastResponse.sources["fire-nova-origin-rank-3"].name == "Fire Nova")
+        assert(state.lastResponse.sources["fire-nova-origin-rank-3"].rank == 1)
+        local identity = source[1].rowId
+        state.records, state.extraSources = TalentProcRanks(4)
+        state.context.counterRevision = "later-actual-talent-origin"
+        source = assert(meter.Read(view, 10))
+        assert(table.getn(source) == 1 and source[1].dmg == 100 and source[1].rowId == identity)
+        assert(source[1].icon == "Interface\\Icons\\talent:shaman.enh_flametongue_weapon:r4")
+    end
+end)
+
+Test("normalized talent origins retain exact components, incomplete identities and same-rank conflicts", function()
+    local distinctions = {
+        { "talentKey", "different-talent" },
+        { "abilityKey", "different-component" },
+        { "variantKey", "different-variant" },
+        { "itemInstanceKey", "different-copy" },
+        { "itemKey", "different-item" },
+        { "itemId", 101 },
+        { "talentKey" },
+        { "rank" },
+        { "rank", 1 },
+    }
+    for _, distinction in ipairs(distinctions) do
+        local _, state, meter = Native()
+        state.records, state.extraSources = TalentProcRanks(2)
+        state.extraSources[state.records[1].origins[1]][distinction[1]] = distinction[2]
+        local source = assert(meter.Read(damage, 10))
+        assert(table.getn(source) == 2, "origin normalization lost " .. distinction[1] .. " boundary")
+    end
+    local _, state, meter = Native()
+    state.records, state.extraSources = TalentProcRanks(2)
+    state.records[1].abilityKey = "other-ability"
+    local source = assert(meter.Read(damage, 10))
+    assert(table.getn(source) == 2, "one talent origin merged independent ability components")
+end)
+
+Test("talent ranks retain checkpoint deltas, missing rates, localization and highest-rank art retries", function()
+    local _, state, meter = Native()
+    state.records = TalentRanks(3)
+    assert(meter.Read(damage, 0) and meter.Reset())
+    state.context.asOfRunSeconds = 22
+    local source = assert(meter.Read(damage, 0))
+    assert(table.getn(source) == 1 and source[1].dmg == 18 and source[1].dps == 9)
+    local identity = source[1].rowId
+    local checkpoint = state.queries[table.getn(state.queries)].checkpointId
+    for _, status in ipairs({ "pending", "missing", "ready" }) do
+        state.records[1].icon = status == "pending" and { status = "pending", retryAfterSeconds = 0.2 }
+            or status == "missing" and { status = "missing", reason = "not_available" }
+            or { status = "ready", path = "Interface\\Icons\\updated-talent-rank" }
+        for _, record in ipairs(state.records) do
+            record.name = "Received localized weapon talent"
+        end
+        state.context.metadataRevision, state.context.languageRevision = "talent-rank-art-" .. status, "talent-fr"
+        state.context.languageCode = "fr"
+        source = assert(meter.Read(damage, 0))
+        assert(source[1].rowId == identity and source[1].name == "Received localized weapon talent")
+        assert(source[1].iconStatus == status and source[1].icon == state.records[1].icon.path)
+        assert(source[1].dmg == 18 and state.queries[table.getn(state.queries)].checkpointId == checkpoint)
+    end
+    state.recentStatus = "unavailable"
+    source = assert(meter.Read(damage, 10))
+    assert(source[1].dps == nil and source[1].averageDps == 9)
+    identity = source[1].rowId
+    state.records = TalentRanks(4)
+    for index = 2, 4 do
+        state.records[index].after = 0
+    end
+    state.context.counterRevision = "new-talent-rank-after-reset"
+    source = assert(meter.Read(damage, 10))
+    assert(table.getn(source) == 1 and source[1].dmg == 12 and source[1].averageDps == 6)
+    assert(source[1].rowId == identity and source[1].dps == nil)
+    assert(
+        state.queries[table.getn(state.queries)].checkpointId == checkpoint,
+        "talent upgrade replaced the reset fence"
+    )
+end)
+
+Test("talent rank summaries reuse unchanged identity work for direct and actual-origin sources", function()
+    for _, records in ipairs({ TalentRanks, TalentProcRanks }) do
+        local c, state, meter = Native()
+        state.records, state.extraSources = records(30)
+        local lengths, nativeString = 0, c.env.string
+        c.env.string = setmetatable({
+            len = function(value)
+                lengths = lengths + 1
+                return nativeString.len(value)
+            end,
+        }, { __index = nativeString })
+        local source = assert(meter.Read(damage, 10))
+        local identity = source[1].rowId
+        assert(table.getn(source) == 1 and source[1].dmg == 4650 and lengths > 0)
+        lengths = 0
+        state.context.counterRevision = "unchanged-talent-counters"
+        source = assert(meter.Read(damage, 10))
+        assert(source[1].rowId == identity and lengths == 0)
+        state.context.metadataRevision = "unrelated-talent-metadata"
+        source = assert(meter.Read(damage, 10))
+        assert(source[1].rowId == identity and lengths == 0)
+        state.records[1].amount = state.records[1].amount + 10
+        state.context.counterRevision = "changed-talent-amount"
+        source = assert(meter.Read(damage, 10))
+        assert(source[1].dmg == 4660 and source[1].rowId == identity and lengths == 0)
+    end
 end)
 
 Test("counter and unrelated metadata publications reuse prepared native identities", function()

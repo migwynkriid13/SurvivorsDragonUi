@@ -404,6 +404,35 @@ Test("row layout gates retain scale, dimensions, global fonts and failed-metric 
     end
 end)
 
+Test("talent upgrades reuse one visible row and defer hidden work in both performance modes", function()
+    for _, performance in ipairs({ false, true }) do
+        local c, state = View(function(context, native)
+            context.settings.performanceMode = performance
+            native.records = helpers.TalentRanks(3)
+        end)
+        local row, allocated = c:Row(1), table.getn(c.objects)
+        assert(row.entry.name == "Flametongue Weapon" and row.entry.dmg == 60 and row.entry.proc == 1)
+        local identity = row.entry.rowId
+        state.records = helpers.TalentRanks(4)
+        state.context.counterRevision = "visible-talent-upgrade"
+        c:Tick()
+        assert(c:Row(1) == row and row.entry.rowId == identity and row.entry.dmg == 100)
+        assert(table.getn(c.objects) == allocated, "talent upgrade grew the visible row artwork pool")
+        c:Tick()
+        assert(c:Row(1) == row and row.entry.rowId == identity and row.entry.dmg == 100)
+        c.layoutMask:Hide()
+        c:Tick()
+        local reads = state.calls.snapshot
+        state.records = helpers.TalentRanks(5)
+        state.context.counterRevision = "hidden-talent-upgrade"
+        c:Tick()
+        assert(state.calls.snapshot == reads, "hidden talent upgrade read or painted native rows")
+        c.layoutMask:Show()
+        c:Tick()
+        assert(c:Row(1) == row and row.entry.dmg == 150 and table.getn(c.objects) == allocated)
+    end
+end)
+
 Test("large native ledgers copy only the viewport and share one fresh context per refresh", function()
     for _, performance in ipairs({ false, true }) do
         local c, state, env = View(function(context, native, environment)
