@@ -36,6 +36,11 @@ preserving confirmed/draft center and scale and the default top-right edge.
 Move, resize, hide, Confirm, Cancel, profiles and both resets keep their existing
 ownership. New native auras do not need a separate layout path.
 
+Native Show/Hide hooks share one callback per group, bound through a stable
+function parameter. They never retain the generic-for entry, which becomes nil
+when iteration ends in the client's Lua 5.0. Original native scripts still run
+first; callbacks only mark their own group dirty and request the existing layout.
+
 Timer buttons have no cast, cancel-aura or other click action. Their hover uses
 shared `GameTooltip` and `RegisterTooltipIcon`. By default it follows below the
 icon; **Tooltip at cursor** uses the shared cursor placement instead. Both modes

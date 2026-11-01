@@ -317,16 +317,22 @@ DFRL:NewMod("Player Auras", 2, function()
         controller:SetScript("OnUpdate", Tick)
     end
 
-    for _, entry in ipairs(entries) do
-        HookScript(entry.button, "OnShow", function()
-            entry.group.dirty = true
+    local function HookGroup(group)
+        -- Lua 5.0 reuses generic-for variables through the final nil result.
+        -- Keep the retained callback on this call's stable group parameter.
+        local function Changed()
+            group.dirty = true
             Layout(false)
-        end)
-        HookScript(entry.button, "OnHide", function()
-            entry.group.dirty = true
-            Layout(false)
-        end)
+        end
+        for _, entry in ipairs(entries) do
+            if entry.group == group then
+                HookScript(entry.button, "OnShow", Changed)
+                HookScript(entry.button, "OnHide", Changed)
+            end
+        end
     end
+    HookGroup(buffGroup)
+    HookGroup(debuffGroup)
     -- Duration settings rewrite the native second buff row and debuff anchors.
     -- Force those anchors back even when the visible buttons have not changed.
     hooksecurefunc("BuffButtons_UpdatePositions", function() Layout(true) end)

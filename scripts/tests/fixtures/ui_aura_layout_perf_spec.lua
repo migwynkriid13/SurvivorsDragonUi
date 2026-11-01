@@ -77,6 +77,28 @@ env.editing = true
 layout(false)
 assert(reads == 3, "editing skipped current aura bounds")
 
+local function RetireLoopCapture(button, script)
+    local wrapper = assert(button:GetScript(script), "missing native aura hook")
+    local index, handler = 1, nil
+    while true do
+        local name, value = debug.getupvalue(wrapper, index)
+        if not name then break end
+        if name == "handler" then handler = value end
+        index = index + 1
+    end
+    assert(type(handler) == "function", "native aura callback bypassed the production HookScript wrapper")
+    index = 1
+    while true do
+        local name, value = debug.getupvalue(handler, index)
+        if not name then break end
+        -- Lua 5.1 closes each loop iteration separately. Retire a captured
+        -- entry explicitly to model the Lua 5.0 final nil iterator result.
+        if type(value) == "table" and value.button == button then debug.setupvalue(handler, index, nil) end
+        index = index + 1
+    end
+    return handler
+end
+
 local function AuraOwner(performance)
     local current = H.New()
     local native = current.env
@@ -247,6 +269,18 @@ local function AuraOwner(performance)
     current.controller = current:Controller("CHAT_MSG_ADDON")
     current.root = native.DFRL_PlayerAuras
     current.debuffRoot = native.DFRL_PlayerDebuffs
+    local buffHandler, debuffHandler
+    for _, button in ipairs({ current.timed, current.persistent, current.zeroTimed, current.weapon, current.debuff }) do
+        local show, hide = RetireLoopCapture(button, "OnShow"), RetireLoopCapture(button, "OnHide")
+        assert(show == hide, "native Show/Hide allocated separate group callbacks")
+        if button == current.debuff then
+            debuffHandler = show
+        else
+            assert(not buffHandler or show == buffHandler, "native buffs did not share their stable group callback")
+            buffHandler = show
+        end
+    end
+    assert(buffHandler ~= debuffHandler, "buff/debuff hooks shared the wrong group binding")
     function current:NativeUpdate(button)
         self.now = self.now + 0.1
         self:Call(button, "OnUpdate", 0.1)
@@ -311,6 +345,15 @@ for _, performance in ipairs({ false, true }) do
     local default = { current.debuffRoot:GetPoint() }
     assert(default[1] == "TOPRIGHT" and default[2] == current.root and default[3] == "BOTTOMRIGHT")
     assert(current.root:GetHeight() == 84 and current.debuffRoot:GetHeight() == 42)
+    current.persistent:Hide()
+    At(current.weapon, 5, false, current.root)
+    At(current.debuff, 0, false, current.debuffRoot)
+    current.persistent:Show()
+    At(current.weapon, 6, false, current.root)
+    current.debuff:Hide()
+    At(current.weapon, 6, false, current.root)
+    current.debuff:Show()
+    At(current.debuff, 0, false, current.debuffRoot)
     assert(current.debuff:GetID() == 16 and current.debuff.buffIndex == 33)
     assert(current.debuff:GetScript("OnClick") == current.debuff.nativeClick)
     assert(current.debuff:GetScript("OnEnter") == current.debuff.nativeEnter)

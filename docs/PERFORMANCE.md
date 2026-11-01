@@ -2606,7 +2606,9 @@ with no additional gameplay texture or FontString. Its independent `debuffs`
 Layout entry reuses the shared lazy editor selection artwork and existing
 position/scale/visibility/profile lifecycle. Its default resolves below Buffs;
 explicit debuff geometry stays independent. Per-group dirty flags retain hidden
-work until Show and avoid settled icon scans. Both Performance Mode states use
+work until Show and avoid settled icon scans. Native Show/Hide hooks reuse two
+callbacks total, each bound to its stable group parameter instead of a generic-for
+entry. They add no recurring work or allocation. Both Performance Mode states use
 the same instant layout, native durations, stacks, expiry, input and tooltips,
 with no new setting, asset, SavedVariable, event, reader or updater.
 The presentation applies only to `AZS_GetTimers()` talent/jewelry

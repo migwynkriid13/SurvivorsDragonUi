@@ -562,6 +562,11 @@ The assertions cover:
   native button IDs/handlers, independent roots and slots, below-Buffs defaults,
   six-column wrapping, both flip directions, anchor repair, independently hidden
   groups, pending hidden reflow and pool reuse in both Performance Mode states.
+  Callback cases retire any captured native loop entry through fixture-only
+  upvalue access, modeling Lua 5.0's final nil iterator result under the CI
+  Lua 5.1 interpreter. They require one stable Show/Hide callback per group
+  and exercise native visibility reflow after binding. This is a targeted model,
+  not execution under the native Lua 5.0 client.
   Shared Layout continues to own position/scale/visibility transactions, profiles
   and resets. These authored cases remain
   CI-only and were not run locally; native appearance remains unverified.
