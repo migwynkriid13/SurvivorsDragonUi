@@ -268,7 +268,14 @@ Test("native presentation timestamps retain inclusive grouping deadlines across 
 end)
 
 Test("native misses, pet attribution and damage-category filters retain the existing controls", function()
-    local context = Scene("enemy", false)
+    local localizationReads = 0
+    local context = Scene("enemy", false, function(_, env)
+        env.DFRL.locale.CombatText = function(text)
+            assert(text == "Dodge", "native miss caption changed before localization")
+            localizationReads = localizationReads + 1
+            return "Translated dodge"
+        end
+    end)
     context:Prime()
     context:NativeHit(111, { periodic = true })
     context:NativeHit(222, { sourceKind = "totem", sourceId = "totem-one" })
@@ -276,10 +283,14 @@ Test("native misses, pet attribution and damage-category filters retain the exis
     miss.amount = nil
     context:Tick(0.31)
     assert(#context:Labels() == 3, "native miss or attributed damage disappeared")
+    assert(localizationReads == 1 and miss.result.text == "Dodge", "miss localization mutated native metadata")
     context:SetSetting("sctPeriodicDamage", false)
     assert(#context:Labels() == 2, "periodic filter did not retain its native meaning")
     context:SetSetting("sctPetDamage", false)
-    assert(#context:Labels() == 1 and context:Labels()[1]:GetText() == "Dodge", "totem damage bypassed the pet filter")
+    assert(
+        #context:Labels() == 1 and context:Labels()[1]:GetText() == "Translated dodge",
+        "totem filtering lost the localized native miss"
+    )
     context:SetSetting("sctMisses", false)
     assert(#context:Labels() == 0, "native miss bypassed its independent control")
 end)
