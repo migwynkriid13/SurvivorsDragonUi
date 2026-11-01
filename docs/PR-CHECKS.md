@@ -401,6 +401,26 @@ The assertions cover:
   and Custom precedence in both Performance Mode states. Legacy and Party keep
   their existing fallbacks. These cases are CI-only and do not verify current
   provider payloads or appearance.
+- Exact skill/talent suffix cases cover all three current catalog pairs and a
+  future canonical pair, without a per-ability allowlist. They reject missing or
+  extra suffixes, partial names, changed case, unknown/nested class prefixes and
+  conflicting classes at equal or different ranks. Optional matching components
+  and metadata-driven retirement are covered. Different actual casters never form
+  a mixed pair even when they share a native summon definition; ordinary summon
+  skill grouping keeps its existing cases. Cases combine known ability/non-proc and
+  talent/proc records only with matching owner, actual caster and components.
+  They use different received captions to establish key-based grouping and
+  equal captions for negative identity cases. Native amounts, recent/average
+  rates, mixed presentation, highest positive ability-rank artwork/caption,
+  counter/order identity reuse and both original Native IDs remain covered.
+  Owner/caster, role, kind, unknown attribution, missing/invalid ranks,
+  variant/item components, source-only/healing scope and same-rank ambiguity
+  keep their boundaries; Boss Damage shares the exact-pair rule. Reset ignores
+  zero-display high ranks. Full view cases in both Performance Mode states
+  include Holy Nova/Radiance and Holy Fire/Purifying Flame with different labels; they
+  cover one displayed bar, Custom's mixed ability color, changed-only writes,
+  hidden deferral, pooled reuse and world cleanup. These cases are CI-only;
+  no local tests or native appearance verification was performed.
 - Editor navigation loads `core/editor.lua` against explicit native scroll and
   glyph-width boundaries. It covers grouped visibility, original section owners,
   retained section state, per-category offsets, duplicate-heading suppression,

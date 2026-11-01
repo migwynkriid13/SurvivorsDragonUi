@@ -253,6 +253,25 @@ meters defer color painting and reuse their existing rows on return. There is
 no new meter getter, frame, region, artwork, event, updater or animation, and
 both Performance Mode states share the instant behavior.
 
+Exact `<class>.<abilityKey>_talent` display pairs reuse the existing
+family path. Canonical suffix/key/role checks run only during changed-row
+preparation, after item-family and optional pet-summary selection. Owner,
+actor identity and variant/item boundaries remain in the key; separate
+kind/proc/rank slots reuse the existing ambiguity map. One optional per-row
+caption priority and one family priority select the highest positive ability
+rank ahead of talent ranks. One exact-talent scalar per row/family rejects
+conflicting class prefixes at every rank. Two family scalars retain the role mix
+and actual-caster conflict, reusing the existing actor scalar. Only mixed
+ability/talent families require one exact caster; ordinary repeated-summon skill
+grouping keeps its existing native definition identity. Families accumulate mixed-proc presentation
+independently of caption selection, while Native IDs keeps raw proc flags.
+Counter-only updates do no pairing/caption rebuild and preserve rate identities.
+The existing sum pass retains native amounts/rates and agreed school metadata,
+including Reset and hidden/world retirement. Both Performance Mode states stay
+instant. No extra member pass, native getter, frame, region, asset, setting,
+SavedVariable, event or updater is added. CI-only grouping/identity/pooling
+cases do not establish live appearance or measured performance.
+
 Default school metadata adds at most two scalar reads per valid positive member
 to the adapter's existing ID/origin pass. It retains one agreed mask per native
 row; unknown/malformed/unjoined/conflicting positive members fall back, and zero

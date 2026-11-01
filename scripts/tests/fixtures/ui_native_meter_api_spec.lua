@@ -66,6 +66,47 @@ local function Ranks(count)
     return records
 end
 
+local function SkillPair(abilityKey, talentKey, abilityRank, talentRank)
+    abilityRank, talentRank = abilityRank or 1, talentRank or 1
+    return {
+        {
+            id = "talent:" .. talentKey .. ":r" .. talentRank,
+            rowId = "paired-talent:" .. talentKey .. ":" .. talentRank,
+            kind = "talent",
+            attribution = "known",
+            talentKey = talentKey,
+            rank = talentRank,
+            omitAbilityKey = true,
+            proc = true,
+            ownerId = "hero-1",
+            actorId = "hero-1",
+            name = "Received talent caption",
+            amount = 60,
+            recent = 6,
+            after = 6,
+        },
+        {
+            id = "ability:" .. abilityKey .. ":r" .. abilityRank,
+            rowId = "paired-ability:" .. abilityKey .. ":" .. abilityRank,
+            kind = "ability",
+            attribution = "known",
+            abilityKey = abilityKey,
+            rank = abilityRank,
+            proc = false,
+            ownerId = "hero-1",
+            actorId = "hero-1",
+            name = "Received ability caption",
+            amount = 40,
+            recent = 4,
+            after = 4,
+        },
+    }
+end
+
+local function BladeFlurry(abilityRank, talentRank)
+    return SkillPair("blade_flurry", "rogue.blade_flurry_talent", abilityRank, talentRank)
+end
+
 local function TalentRanks(count, key, name)
     local records = Ranks(count)
     for _, record in ipairs(records) do
@@ -524,6 +565,8 @@ if helperMode == "helpers" then
         languages = languages,
         labels = labels,
         Ranks = Ranks,
+        BladeFlurry = BladeFlurry,
+        SkillPair = SkillPair,
         TalentRanks = TalentRanks,
         TalentTriggers = TalentTriggers,
         ItemRanks = ItemRanks,
@@ -648,6 +691,188 @@ Test("rank families preserve grouping and accept school colors only when their r
     state.records[2].schoolMask, state.context.metadataRevision = 4, "restored-rank-schools"
     source = assert(meter.Read(damage, 10))
     assert(source[1].schoolMask == 4 and source[1].rateIdentity == identity)
+end)
+
+Test("exact class skill talent suffixes pair all catalog matches without an ability allowlist", function()
+    local _, state, meter = Native()
+    local query = { metric = "damage", scope = "self", period = "run", groupBy = "actor_source" }
+    state.records = {}
+    for _, pair in ipairs({
+        { "blade_flurry", "rogue.blade_flurry_talent" },
+        { "holy_nova", "priest.holy_nova_talent" },
+        { "holy_fire", "priest.holy_fire_talent" },
+        { "new_skill", "mage.new_skill_talent" },
+    }) do
+        local records = SkillPair(pair[1], pair[2], 1, 3)
+        table.insert(state.records, records[1])
+        table.insert(state.records, records[2])
+    end
+    local rows, total = meter.Read(query, 10)
+    assert(rows and table.getn(rows) == 4 and total == 400)
+    for _, row in ipairs(rows) do
+        assert(row.dmg == 100 and row.dps == 1 and row.averageDps == 5 and row.proc == 0)
+        assert(row.name == "Received ability caption", "talent label replaced an exact ability key")
+        local text = table.concat(assert(meter.Describe(rows, row.rowId)), "\n")
+        assert(string.find(text, "nativeProc=true", 1, true) and string.find(text, "nativeProc=false", 1, true))
+    end
+end)
+
+Test("skill talent pairing rejects near matches and ambiguous class prefixes across ranks", function()
+    local query = { metric = "damage", scope = "self", period = "run", groupBy = "actor_source" }
+    for _, key in ipairs({
+        "rogue.blade_flurry",
+        "rogue.improved_blade_flurry_talent",
+        "rogue.blade_flurry_talent_extra",
+        "rogue.blade_flurry_TALENT",
+        "Rogue.blade_flurry_talent",
+        "unknown.blade_flurry_talent",
+        "rogue.extra.blade_flurry_talent",
+        "blade_flurry_talent",
+    }) do
+        local _, state, meter = Native()
+        state.records = SkillPair("blade_flurry", key)
+        state.records[1].name, state.records[2].name = "Same name", "Same name"
+        assert(table.getn(assert(meter.Read(query, 10))) == 2, "paired near-match " .. key)
+    end
+    for _, rank in ipairs({ 1, 3 }) do
+        local _, state, meter = Native()
+        state.records = BladeFlurry()
+        table.insert(state.records, SkillPair("blade_flurry", "mage.blade_flurry_talent", 1, rank)[1])
+        local rows, total = meter.Read(query, 10)
+        assert(rows and table.getn(rows) == 3 and total == 160, "paired ambiguous classes across ranks")
+    end
+    local _, state, meter = Native()
+    state.records = BladeFlurry()
+    state.records[2].talentKey = "rogue.blade_flurry_talent"
+    assert(table.getn(assert(meter.Read(query, 10))) == 1, "matching optional talent component blocked pairing")
+    state.records[1].talentKey = "priest.holy_nova_talent"
+    state.context.metadataRevision = "changed-exact-talent-key"
+    assert(table.getn(assert(meter.Read(query, 10))) == 2, "metadata changes retained an obsolete skill pair")
+
+    local _, state, meter = Native()
+    state.records = BladeFlurry()
+    for index, record in ipairs(state.records) do
+        record.actorId, record.actorKind, record.actorName, record.summonKey = "imp-" .. index, "summon", "Imp", "imp"
+    end
+    assert(table.getn(assert(meter.Read(query, 10))) == 2, "paired skill and talent across summon incarnations")
+end)
+
+Test("Blade Flurry ability and talent share one display family while Native IDs preserve both records", function()
+    local _, state, meter = Native()
+    local query = { metric = "damage", scope = "self", period = "run", groupBy = "actor_source" }
+    state.records = BladeFlurry(1, 3)
+    local source, total, rate = meter.Read(query, 10)
+    assert(source and table.getn(source) == 1 and total == 100 and rate == 1)
+    local row = source[1]
+    local token, identity = row.rowId, row.rateIdentity
+    assert(row.dmg == 100 and row.dps == 1 and row.averageDps == 5 and row.proc == 0 and row.schoolMask == 1)
+    assert(row.name == state.records[2].name and row.icon == "Interface\\Icons\\" .. state.records[2].id)
+    local details = assert(meter.Describe(source, row.rowId))
+    local text = table.concat(details, "\n")
+    assert(string.find(text, state.records[1].id, 1, true) and string.find(text, state.records[2].id, 1, true))
+    assert(string.find(text, "nativeProc=true", 1, true) and string.find(text, "nativeProc=false", 1, true))
+    assert(not string.find(text, "table:", 1, true), "paired family serialized a private display token")
+    state.records[1].amount, state.records[2].amount = 70, 50
+    state.records[1].recent, state.records[2].recent = 7, 5
+    state.context.counterRevision = "flurry-counter-update"
+    source = assert(meter.Read(query, 10))
+    assert(source[1].rowId == token and source[1].rateIdentity == identity and source[1].dmg == 120)
+    assert(source[1].dps == 1.2 and source[1].averageDps == 6)
+    local first = table.remove(state.records, 1)
+    table.insert(state.records, first)
+    state.context.counterRevision = "reordered-flurry-sources"
+    source = assert(meter.Read(query, 10))
+    assert(table.getn(source) == 1 and source[1].rowId == token and source[1].rateIdentity == identity)
+    assert(source[1].proc == 0, "source order changed mixed-proc presentation")
+    assert(meter.Describe(source, source[1].rowId) == details, "paired hover replaced the adapter-wide text buffer")
+end)
+
+Test("Blade Flurry pairing keeps explicit identity, proc roles, variants, ranks and casters separate", function()
+    local cases = {
+        { "ability key", function(r) r[2].abilityKey = "other_ability" end },
+        { "talent key", function(r) r[1].talentKey = "rogue.other_talent" end },
+        { "ability proc", function(r) r[2].proc = true end },
+        { "talent cast", function(r) r[1].proc = false end },
+        { "ability kind", function(r) r[2].kind = "effect" end },
+        { "unknown ability", function(r) r[2].attribution = "unknown" end },
+        { "unknown talent", function(r) r[1].attribution = "unknown" end },
+        { "missing rank", function(r) r[2].rank = nil end },
+        { "zero rank", function(r) r[1].rank = 0 end },
+        { "fractional rank", function(r) r[1].rank = 1.5 end },
+        { "caster", function(r) r[1].actorId = "pet-1" end },
+        { "variant", function(r) r[1].variantKey = "different-variant" end },
+        { "item identity", function(r) r[1].itemKey = "different-item" end },
+        { "item copy", function(r) r[1].itemInstanceKey = "different-copy" end },
+        { "item entry", function(r) r[1].itemId = 123 end },
+        {
+            "other ability component",
+            function(r)
+                r[1].abilityKey, r[1].omitAbilityKey = "other_ability", false
+            end,
+        },
+        { "other talent component", function(r) r[2].talentKey = "rogue.other_talent" end },
+    }
+    local query = { metric = "damage", scope = "self", period = "run", groupBy = "actor_source" }
+    for _, case in ipairs(cases) do
+        local _, state, meter = Native()
+        state.records = BladeFlurry()
+        state.records[1].name, state.records[2].name = "Same displayed name", "Same displayed name"
+        case[2](state.records)
+        local source, total = meter.Read(query, 10)
+        assert(source and table.getn(source) == 2 and total == 100, "paired distinct " .. case[1])
+    end
+    local _, state, meter = Native()
+    state.records = BladeFlurry()
+    state.records[1].ownerId, state.records[1].actorId = "hero-2", "hero-2"
+    local source =
+        assert(meter.Read({ metric = "damage", scope = "party", period = "run", groupBy = "actor_source" }, 10))
+    assert(table.getn(source) == 2, "paired different accounting owners")
+    state.records = BladeFlurry()
+    state.context.counterRevision = "flurry-source-query"
+    assert(table.getn(assert(meter.Read(damage, 10))) == 2, "source-only query invented caster agreement")
+    local healingQuery = {
+        metric = "healing",
+        healingPerspective = "received",
+        scope = "self",
+        period = "run",
+        groupBy = "actor_source",
+    }
+    assert(table.getn(assert(meter.Read(healingQuery, 0))) == 2, "damage pairing changed healing grouping")
+end)
+
+Test("Blade Flurry pairing uses the same exact sources in Boss Damage", function()
+    local _, state, meter = Native()
+    state.records = BladeFlurry()
+    local query = { metric = "damage", scope = "self", period = "encounter", groupBy = "actor_source" }
+    local source, total = meter.Read(query, 0)
+    assert(source and table.getn(source) == 1 and source[1].dmg == 100 and total == 100)
+    assert(source[1].name == "Received ability caption" and source[1].proc == 0)
+end)
+
+Test("Blade Flurry display prefers positive ability ranks and preserves ambiguous native sources", function()
+    local _, state, meter = Native()
+    local query = { metric = "damage", scope = "self", period = "run", groupBy = "actor_source" }
+    state.records = BladeFlurry(1, 3)
+    local ability = Copy(state.records[2])
+    ability.id, ability.rowId, ability.rank, ability.name =
+        "ability:blade_flurry:r2", "flurry-ability-2", 2, "Highest ability caption"
+    ability.amount, ability.recent, ability.after = 20, 2, 0
+    table.insert(state.records, ability)
+    state.records[1].after = 0
+    local source = assert(meter.Read(query, 10))
+    assert(table.getn(source) == 1 and source[1].dmg == 120 and source[1].name == ability.name)
+    assert(meter.Reset())
+    source = assert(meter.Read(query, 10))
+    assert(source[1].dmg == 4 and source[1].name == "Received ability caption" and source[1].proc == 0)
+
+    local _, state, meter = Native()
+    state.records = BladeFlurry()
+    local duplicate = Copy(state.records[2])
+    duplicate.id, duplicate.rowId = "ability:blade_flurry:ambiguous-r1", "ambiguous-flurry-ability"
+    duplicate.amount, duplicate.recent = 20, 2
+    table.insert(state.records, duplicate)
+    source = assert(meter.Read(query, 10))
+    assert(table.getn(source) == 3, "same-rank source ambiguity was hidden by pairing")
 end)
 
 Test("native source keys preserve equal labels, original values and authoritative icons", function()

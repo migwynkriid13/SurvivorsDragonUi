@@ -249,6 +249,72 @@ the same instant reflow, without a new region, asset, event or updater. CI-only
 production-meter cases cover the layout and font lifecycle; no local tests or
 addon/game execution were run, and native glyph fit remains unverified.
 
+## Exact ability/talent key pairs
+
+Native v1 Damage Done and Boss Damage combine an ability and talent when their
+received keys match exactly as `<class>.<abilityKey>_talent`. For example,
+`rogue.blade_flurry_talent` pairs with `blade_flurry`. The class prefix must be
+one of the nine recognized native classes; spelling and case remain exact.
+There is no per-ability allowlist. Talents without the exact suffix, partial
+matches, similar names and matching icons never establish a pair.
+
+A static read of the installed executable's 355 talent definitions and 114
+ability definitions found these three suffix matches:
+
+| Native talent key           | Native ability key | Received talent / ability names |
+| --------------------------- | ------------------ | ------------------------------- |
+| `rogue.blade_flurry_talent` | `blade_flurry`     | Blade Flurry / Blade Flurry     |
+| `priest.holy_nova_talent`   | `holy_nova`        | Radiance / Holy Nova            |
+| `priest.holy_fire_talent`   | `holy_fire`        | Purifying Flame / Holy Fire     |
+
+The native game records these effects separately. Combining their presentation
+is an addon choice, not proof that their gameplay effects are identical. The
+row adds same-snapshot native amounts and supplied recent/average rates;
+an unavailable input rate remains unavailable. Native IDs keeps the original
+ability/talent source IDs, row IDs, proc flags and actual origins.
+
+Only known non-proc ability records and known proc talent records participate.
+Both need positive integer ranks and the same received owner, actual caster
+and variant/item components. An optional ability/talent component must agree
+with the same exact pair. Different class prefixes for one ability stem make
+the family ambiguous, even across different talent ranks, and retain the raw
+rows. Item families and optional pet summaries keep their existing precedence.
+Ordinary skill grouping across repeated native summon definitions stays unchanged;
+a mixed skill/talent family with conflicting actual casters retains its raw rows.
+Queries without an actual caster, Healing Done, Party and the legacy path
+retain their established behavior.
+
+The highest positive ability rank supplies the received name and artwork;
+the highest positive talent rank supplies them while no ability contributes.
+Zero-display history after Reset cannot choose the caption. Kind/proc/rank
+slots preserve same-rank source ambiguity instead of silently merging it. A
+mixed family uses the normal ability presentation; Default still prefers an
+agreed native damage school, and Custom uses its ability color. Raw proc flags
+remain visible in Native IDs.
+
+The existing family pool handles sums, sorting, checkpoints and retirement.
+Caption priority and exact talent identity are cached with changed source
+metadata, so counter-only updates keep the existing display/rate identities.
+Both Performance Mode states are instant, with hidden/off deferral and no new
+control, region or updater. CI-only cases are authored without local execution;
+actual in-game presentation remains unverified.
+
+Catalog provenance: executable SHA-256
+`eb5fd1c1b96e6180fcf5f3d685d90a61471af28d22e5f060c02b7b7663fbf79e`.
+The class index starts at file offset `0x71460f8`: nine 200-byte records,
+three 64-byte trees each, with native pointer/count slices of 176-byte talent
+records. Keys and names are at +64/+80. The ability table is the same pinned
+114-record table used by [SCT spell data](SCT-SPELL-DATA.md). REA/Ghidra 12.1.4
+also read the bounded original region `0x7128538..0x7146800`, SHA-256
+`d88ffec25297aa1d0052c0e4e9b9489b8f0f315ae1ac1eb6029005cfe60bb4d6`;
+its suffix search returned these three candidates and its complete 1,800-byte
+index read retained all class/tree descriptors. This is static catalog evidence,
+not game execution or a claim about every talent's damage attribution.
+REA evidence: suffix search
+`ev_e35af9eaa5af4954515ed1e77c20dbe9e30cacd2ed1550c25adc5b80ba9d429a`;
+index read
+`ev_394146680745e93c61e4fb6c71be5afb34a92a9dfe629e406b93b71b26791696`.
+
 ## Ability ranks
 
 Damage Done, Healing Done and Boss Damage combine recognized ranks of one

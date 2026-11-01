@@ -212,6 +212,81 @@ local function WatchPresentation(context, state, count)
     end
 end
 
+Test("exact Holy Nova and Holy Fire talent keys share bars despite different native names", function()
+    for _, performance in ipairs({ false, true }) do
+        for _, pair in ipairs({
+            { "holy_nova", "priest.holy_nova_talent", "Holy Nova", "Radiance" },
+            { "holy_fire", "priest.holy_fire_talent", "Holy Fire", "Purifying Flame" },
+        }) do
+            local c = View(function(context, native)
+                context.settings.performanceMode = performance
+                native.records = helpers.SkillPair(pair[1], pair[2], 1, 3)
+                native.records[1].name, native.records[2].name = pair[4], pair[3]
+            end)
+            local row = c:Row(1)
+            assert(row.name:GetText() == pair[3] and row.entry.dmg == 100 and row.entry.proc == 0)
+            local active = 0
+            for _, object in ipairs(c.objects) do
+                if object.bar and object.active then active = active + 1 end
+            end
+            assert(active == 1, "exact talent key left a second bar")
+        end
+    end
+end)
+
+Test("Blade Flurry shares one native bar with exact sums, mixed color and pooled hidden/world lifecycles", function()
+    for _, performance in ipairs({ false, true }) do
+        local c, state, env = View(function(context, native, globals)
+            context.settings.performanceMode = performance
+            native.records, native.instrumentPresentation = helpers.BladeFlurry(1, 3), true
+            context:Load("core/display.lua", "Display")
+            globals.SurvivorsDragonUiDisplay = globals.DFRL.display.Copy(context.settings)
+            globals.DFRL.display.BeginEdit()
+        end)
+        local row = c:Row(1)
+        local token, allocated = row.entry.rowId, #c.objects
+        local active = 0
+        for _, object in ipairs(c.objects) do
+            if object.bar and object.active then active = active + 1 end
+        end
+        assert(active == 1 and row.name:GetText() == "Received ability caption")
+        assert(row.entry.dmg == 100 and row.entry.dps == 1 and row.entry.averageDps == 5 and row.entry.proc == 0)
+        assert(row.bar.color[1] == 1 and row.bar.color[2] == 1 and row.bar.color[3] == 0)
+        state.records[1].amount, state.records[2].amount = 70, 50
+        state.records[1].recent, state.records[2].recent = 7, 5
+        state.context.counterRevision = "combined-flurry-counters"
+        c:Tick()
+        assert(row.entry.rowId == token and row.entry.dmg == 120 and row.entry.dps == 1.2 and #c.objects == allocated)
+        WatchPresentation(c, state, 1)
+        c:ResetCounts()
+        c:Tick()
+        assert(not state.presentationOps.SetStatusBarColor)
+        c:NoPresentationWrites()
+        local display = env.DFRL.display
+        display.Set("meterAbilityColor", "FF0000")
+        display.Set("meterProcColor", "00FF00")
+        display.Set("meterColorMode", "custom")
+        c:Tick(0.01)
+        assert(
+            row.bar.color[1] == 1 and row.bar.color[2] == 0 and row.bar.color[3] == 0,
+            "mixed Blade Flurry used the proc-only color"
+        )
+        c:SetLayoutHidden(true)
+        state.records[1].amount, state.records[2].amount = 80, 60
+        state.context.counterRevision = "hidden-flurry-counters"
+        local captures = state.calls.snapshot
+        c:ResetCounts()
+        c:Tick()
+        assert(state.calls.snapshot == captures)
+        c:NoPresentationWrites()
+        c:SetLayoutHidden(false)
+        c:Tick()
+        assert(row.entry.rowId == token and row.entry.dmg == 140 and #c.objects == allocated)
+        c:Event(c.controller, "PLAYER_LEAVING_WORLD")
+        assert(not c.root:IsVisible() and not row.active, "combined Blade Flurry survived world cleanup")
+    end
+end)
+
 Test("default school colors follow native types across equal skill captions, procs and hidden reuse", function()
     local masks = { 1, 2, 4, 8, 16, 32, 64, 20 }
     local colors = {

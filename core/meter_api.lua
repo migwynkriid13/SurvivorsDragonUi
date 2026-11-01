@@ -588,11 +588,12 @@ function DFRL.tools.NewNativeMeter()
             .. KeyPart(item ~= source and (item.talentKey or "") or "")
         return key, item.rank, true
     end
-    local function FamilyDetails(source)
+    local function FamilyDetails(source, pairedTalent)
         local key = ""
         for _, field in ipairs(familyFields) do
             local value = source[field]
             if value ~= nil and not Id(value) then return end
+            if pairedTalent and field == "talentKey" and value == pairedTalent then value = nil end
             value = value or ""
             key = key .. string.len(value) .. ":" .. value
         end
@@ -603,6 +604,42 @@ function DFRL.tools.NewNativeMeter()
             return
         end
         return key .. KeyPart(source.itemId and tostring(source.itemId) or "")
+    end
+    local function TalentAbilityKey(talentKey)
+        if not Id(talentKey) then return end
+        local _, _, class, ability = string.find(talentKey, "^([a-z]+)%.([a-z][a-z0-9_]*)_talent$")
+        if classes[class] then return ability end
+    end
+    -- Exact canonical keys pair a skill with class.<skill>_talent, independently
+    -- of their received captions. Native accounting/proc roles stay distinct.
+    local function SkillPairKey(source, native, actorKey)
+        local talentKey = source.talentKey
+        local pairedAbility = TalentAbilityKey(talentKey)
+        local ability = source.kind == "ability" and native.nativeProc == false
+        local talent = source.kind == "talent" and native.nativeProc == true
+        local abilityKey = talent and pairedAbility or source.abilityKey
+        if
+            not (ability or talent)
+            or not Id(abilityKey)
+            or not string.find(abilityKey, "^[a-z][a-z0-9_]*$")
+            or source.attribution ~= "known"
+            or not Rank(source)
+            or source.rank < 1
+            or not Id(native.actorId)
+            or not actorKey
+            or (ability and talentKey ~= nil and pairedAbility ~= abilityKey)
+            or (talent and source.abilityKey ~= nil and source.abilityKey ~= abilityKey)
+            or (talent and not pairedAbility)
+        then
+            return
+        end
+        local details = FamilyDetails(source, talentKey)
+        if not details then return end
+        return "skill-pair:" .. KeyPart(abilityKey) .. KeyPart(actorKey) .. details,
+            source.rank,
+            source.kind .. ":" .. (native.nativeProc and "1:" or "0:") .. tostring(source.rank),
+            ability and 1 or 0,
+            talentKey
     end
     local function TalentRankKey(source)
         if
@@ -901,6 +938,8 @@ function DFRL.tools.NewNativeMeter()
         row.familyKey, row.familyRank, row.groupKind = nil, nil, nil
         row.familyTalentRank, row.familyRankKey, row.familyMemberKey = nil, nil, nil
         row.familyOriginKey = nil
+        row.familyPriority = nil
+        row.familyPairTalent = nil
         row.familyName = nil
         if query.groupBy == "owner" then
             row.schoolMask = nil
@@ -931,8 +970,14 @@ function DFRL.tools.NewNativeMeter()
                 row.familyKey, row.groupKind = "pet:" .. actorKey, "pet"
             else
                 if not itemCandidate then
-                    row.familyKey, row.familyRank, row.familyRankKey, row.familyOriginKey =
-                        FamilyKey(source, native, actorKey, display)
+                    if query.metric == "damage" then
+                        row.familyKey, row.familyRank, row.familyRankKey, row.familyPriority, row.familyPairTalent =
+                            SkillPairKey(source, native, actorKey)
+                    end
+                    if not row.familyKey then
+                        row.familyKey, row.familyRank, row.familyRankKey, row.familyOriginKey =
+                            FamilyKey(source, native, actorKey, display)
+                    end
                 end
                 if row.familyKey then
                     row.groupKind = "rank"
@@ -972,7 +1017,9 @@ function DFRL.tools.NewNativeMeter()
     local function PrepareFamilies(view, snapshot)
         for _, family in pairs(view.families) do
             family.used, family.ambiguous, family.rank, family.actorId = false, false, nil, nil
-            family.talentRank = nil
+            family.talentRank, family.priority = nil, nil
+            family.pairTalent = nil
+            family.pairRoles, family.pairActorConflict = nil, nil
             family.previousCount, family.count, family.rateChanged = family.count or 0, 0, false
             for rank in pairs(family.ranks) do
                 family.ranks[rank] = nil
@@ -1000,8 +1047,26 @@ function DFRL.tools.NewNativeMeter()
                 if not family.used then
                     grouped.rowId, grouped.order, grouped.proc = family.token, row.order, row.proc
                     grouped.portraitKey, grouped.portraitRunId, grouped.portraitStatus = nil, nil, nil
+                elseif grouped.proc ~= row.proc then
+                    grouped.proc = 0
                 end
                 if row.groupKind == "rank" then
+                    if row.familyPriority ~= nil then
+                        local role = row.familyPriority == 1 and 1 or 2
+                        if not family.pairRoles then
+                            family.pairRoles = role
+                        elseif family.pairRoles ~= role then
+                            family.pairRoles = 3
+                        end
+                        if family.actorId and family.actorId ~= row.nativeActor then family.pairActorConflict = true end
+                        family.actorId = row.nativeActor
+                    end
+                    if row.familyPairTalent then
+                        if family.pairTalent and family.pairTalent ~= row.familyPairTalent then
+                            family.ambiguous = true
+                        end
+                        family.pairTalent = row.familyPairTalent
+                    end
                     local previous = family.ranks[row.familyRankKey]
                     if previous and previous ~= row.familyMemberKey then family.ambiguous = true end
                     family.ranks[row.familyRankKey] = row.familyMemberKey
@@ -1012,8 +1077,8 @@ function DFRL.tools.NewNativeMeter()
                         family.talentOrigins[row.familyRank] = row.familyOriginKey
                     end
                 end
+                local priority = row.familyPriority or 0
                 if row.groupKind == "pet" then
-                    if grouped.proc ~= row.proc then grouped.proc = 0 end
                     if not family.actorId or row.actorId < family.actorId then
                         grouped.name, grouped.icon, grouped.iconStatus = row.actorName, nil, nil
                         grouped.portraitKey, grouped.portraitRunId, grouped.portraitStatus =
@@ -1023,16 +1088,23 @@ function DFRL.tools.NewNativeMeter()
                 elseif
                     row.groupKind == "source"
                     or not family.rank
-                    or row.familyRank > family.rank
+                    or priority > (family.priority or 0)
                     or (
-                        row.familyRank == family.rank
-                        and row.familyTalentRank
-                        and (not family.talentRank or row.familyTalentRank > family.talentRank)
+                        priority == (family.priority or 0)
+                        and (
+                            row.familyRank > family.rank
+                            or (
+                                row.familyRank == family.rank
+                                and row.familyTalentRank
+                                and (not family.talentRank or row.familyTalentRank > family.talentRank)
+                            )
+                        )
                     )
                 then
-                    grouped.name, grouped.proc, grouped.iconStatus, grouped.icon =
-                        row.familyName or row.name, row.proc, row.iconStatus, row.icon
+                    grouped.name, grouped.iconStatus, grouped.icon =
+                        row.familyName or row.name, row.iconStatus, row.icon
                     family.rank, family.talentRank = row.familyRank, row.familyTalentRank
+                    family.priority = priority
                 end
                 row.family, family.used = family, true
             elseif previous then
@@ -1040,6 +1112,7 @@ function DFRL.tools.NewNativeMeter()
             end
         end
         for key, family in pairs(view.families) do
+            if family.pairRoles == 3 and family.pairActorConflict then family.ambiguous = true end
             if not family.used then
                 view.families[key] = nil
             elseif family.rateChanged or family.count ~= family.previousCount then
