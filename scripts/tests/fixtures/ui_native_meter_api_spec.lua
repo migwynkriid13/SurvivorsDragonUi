@@ -616,6 +616,34 @@ Test("native school metadata follows exact contributions without changing rate i
     assert(source[1].schoolMask == nil and source[1].rateIdentity == identity and source[1].dmg == amount)
 end)
 
+Test("periodic damage metadata uses native credit and never changes rate identity", function()
+    local _, state, meter = Native()
+    state.records[1].periodic = true
+    local rows = assert(meter.Read(damage, 10))
+    local identity, amount, rate = rows[1].rateIdentity, rows[1].dmg, rows[1].dps
+    assert(rows[1].periodicDamage == true and rows[1].colorKind == "ability")
+    assert(not rows[2].periodicDamage)
+    state.records[1].periodic, state.context.counterRevision = false, "periodic-became-direct"
+    rows = assert(meter.Read(damage, 10))
+    assert(not rows[1].periodicDamage and rows[1].rateIdentity == identity)
+    state.records[1].periodic = true
+    for _, invalid in ipairs({ false, "unknown", "PERIODIC", 1 }) do
+        state.mutate = function(snapshot) snapshot.contributions[1].periodicity = invalid end
+        state.context.counterRevision = "invalid-periodicity-" .. tostring(invalid)
+        rows = assert(meter.Read(damage, 10))
+        assert(not rows[1].periodicDamage and rows[1].rateIdentity == identity)
+        assert(rows[1].dmg == amount and rows[1].dps == rate)
+    end
+    for _, field in ipairs({ "periodicity", "creditKind" }) do
+        state.mutate = function(snapshot) snapshot.contributions[1][field] = nil end
+        state.context.counterRevision = "missing-periodic-field-" .. field
+        assert(not assert(meter.Read(damage, 10))[1].periodicDamage)
+    end
+    state.mutate = function(snapshot) snapshot.contributions[1].creditKind = "health_restored" end
+    state.context.counterRevision = "periodic-healing-is-not-dot"
+    assert(not assert(meter.Read(damage, 10))[1].periodicDamage)
+end)
+
 Test("school colors require positive-member agreement and ignore zero-display history after Reset", function()
     local _, state, meter = Native()
     state.records = {
@@ -629,6 +657,7 @@ Test("school colors require positive-member agreement and ignore zero-display hi
             recent = 7,
             after = 10,
             schoolMask = 4,
+            periodic = true,
         },
         {
             id = "shared",
@@ -659,6 +688,11 @@ Test("school colors require positive-member agreement and ignore zero-display hi
     local source = assert(meter.Read(damage, 10))
     local identity = source[1].rateIdentity
     assert(table.getn(source) == 1 and source[1].dmg == 100 and source[1].schoolMask == nil)
+    assert(not source[1].periodicDamage, "mixed direct/periodic members were labeled entirely periodic")
+    state.records[2].periodic, state.context.counterRevision = true, "matching-periodic-members"
+    source = assert(meter.Read(damage, 10))
+    assert(source[1].periodicDamage == true and source[1].rateIdentity == identity)
+    state.records[2].periodic = false
     state.records[2].schoolMask, state.context.metadataRevision = 4, "matching-member-schools"
     source = assert(meter.Read(damage, 10))
     assert(source[1].schoolMask == 4 and source[1].rateIdentity == identity)
@@ -668,6 +702,7 @@ Test("school colors require positive-member agreement and ignore zero-display hi
     assert(meter.Reset())
     source = assert(meter.Read(damage, 10))
     assert(source[1].dmg == 10 and source[1].schoolMask == 4, "zero-display history supplied a school after Reset")
+    assert(source[1].periodicDamage == true, "zero-display direct history blocked a post-Reset periodic category")
 end)
 
 Test("rank families preserve grouping and accept school colors only when their rows agree", function()
@@ -679,6 +714,16 @@ Test("rank families preserve grouping and accept school colors only when their r
     local source = assert(meter.Read(damage, 10))
     local identity, token, amount, rate = source[1].rateIdentity, source[1].rowId, source[1].dmg, source[1].dps
     assert(table.getn(source) == 1 and source[1].schoolMask == 4)
+    assert(source[1].colorKind == "ability" and not source[1].periodicDamage)
+    for _, record in ipairs(state.records) do
+        record.periodic = true
+    end
+    state.context.counterRevision = "periodic-rank-family"
+    source = assert(meter.Read(damage, 10))
+    assert(source[1].periodicDamage == true and source[1].rateIdentity == identity)
+    state.records[2].periodic, state.context.counterRevision = false, "mixed-periodic-rank-family"
+    source = assert(meter.Read(damage, 10))
+    assert(not source[1].periodicDamage and source[1].rateIdentity == identity)
     state.records[2].schoolMask, state.context.metadataRevision = 16, "conflicting-rank-schools"
     source = assert(meter.Read(damage, 10))
     assert(table.getn(source) == 1 and source[1].schoolMask == nil)

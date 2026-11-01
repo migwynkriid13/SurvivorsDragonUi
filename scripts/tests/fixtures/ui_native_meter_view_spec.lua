@@ -287,7 +287,87 @@ Test("Blade Flurry shares one native bar with exact sums, mixed color and pooled
     end
 end)
 
-Test("default school colors follow native types across equal skill captions, procs and hidden reuse", function()
+Test("Default separates same-school melee, periodic damage, talents, procs and items using native metadata", function()
+    local colors = {
+        { 1, 1, 0 },
+        { 0.72, 0.75, 0.8 },
+        { 0.35, 0.84, 0.36 },
+        { 0.72, 0.48, 1 },
+        { 0.25, 0.58, 1 },
+        { 1, 0.62, 0.2 },
+        { 0.35, 0.84, 0.36 },
+    }
+    for _, performance in ipairs({ false, true }) do
+        local c, state, env = View(function(context, native, globals)
+            context.settings.performanceMode, context.settings.meterRows = performance, 7
+            native.instrumentPresentation, native.records = true, {}
+            for index = 1, 7 do
+                native.records[index] = {
+                    id = "category-source-" .. index,
+                    rowId = "category-leaf-" .. index,
+                    name = "Same native name",
+                    actorId = "hero-1",
+                    amount = 1000 - index * 10,
+                    recent = 100 - index,
+                    kind = "ability",
+                    schoolMask = 1,
+                    attribution = "known",
+                }
+            end
+            native.records[2].kind = "basic_attack"
+            native.records[3].periodic = true
+            native.records[4].kind = "talent"
+            native.records[5].proc = true
+            native.records[6].kind, native.records[6].itemKey, native.records[6].rank = "item", "fixture_item", 1
+            native.records[6].omitAbilityKey = true
+            native.records[7].kind, native.records[7].periodic, native.records[7].proc = "talent", true, true
+            context:Load("core/display.lua", "Display")
+            globals.SurvivorsDragonUiDisplay = globals.DFRL.display.Copy(context.settings)
+            globals.DFRL.display.BeginEdit()
+        end)
+        for index, color in ipairs(colors) do
+            local actual = c:Row(index).bar.color
+            assert(actual[1] == color[1] and actual[2] == color[2] and actual[3] == color[3], "category " .. index)
+        end
+        local row, display, allocated = c:Row(3), env.DFRL.display, #c.objects
+        local identity, amount, values = row.entry.rateIdentity, row.entry.dmg, row.value:GetText()
+        WatchPresentation(c, state, 7)
+        c:ResetCounts()
+        c:Tick()
+        c:NoPresentationWrites()
+        state.records[3].periodic, state.context.counterRevision = false, "category-periodicity-only"
+        c:Tick()
+        assert(row.bar.color[1] == 1 and row.bar.color[2] == 1 and row.bar.color[3] == 0)
+        assert(state.presentationOps.SetStatusBarColor == 1 and row.entry.rateIdentity == identity)
+        assert(row.entry.dmg == amount and row.value:GetText() == values and #c.objects == allocated)
+        c:SetLayoutHidden(true)
+        state.records[2].kind, state.context.metadataRevision = "talent", "hidden-category-only"
+        local captures = state.calls.snapshot
+        c:ResetCounts()
+        c:Tick()
+        assert(state.calls.snapshot == captures)
+        c:NoPresentationWrites()
+        c:SetLayoutHidden(false)
+        c:Tick()
+        assert(c:Row(2).bar.color[1] == 0.72 and c:Row(2).bar.color[2] == 0.48 and #c.objects == allocated)
+        display.Set("meterAbilityColor", "FF0000")
+        display.Set("meterProcColor", "00FF00")
+        display.Set("meterColorMode", "custom")
+        c:Tick(0.01)
+        for index = 1, 7 do
+            local actual = c:Row(index).bar.color
+            local proc = c:Row(index).entry.proc == 1
+            assert(actual[1] == (proc and 0 or 1) and actual[2] == (proc and 1 or 0) and actual[3] == 0)
+        end
+        display.Set("meterColorMode", "default")
+        c:Tick(0.01)
+        assert(c:Row(7).bar.color[2] == 0.84, "returning to Default lost periodic precedence")
+        c:Event(c.controller, "PLAYER_LEAVING_WORLD")
+        assert(not c.root:IsVisible() and not row.active)
+    end
+end)
+
+Test("default school colors follow regular abilities while procs retain their category across hidden reuse", function()
     local masks = { 1, 2, 4, 8, 16, 32, 64, 20 }
     local colors = {
         { 1, 1, 0 },
@@ -312,7 +392,7 @@ Test("default school colors follow native types across equal skill captions, pro
                     actorId = "hero-1",
                     amount = 1000 - index * 10,
                     recent = 100 - index,
-                    proc = math.mod(index, 2) == 0 or index == 9,
+                    proc = index == 9,
                     schoolState = index == 9 and "unknown" or "known",
                     schoolMask = masks[index],
                 }
@@ -364,7 +444,7 @@ Test("default school colors follow native types across equal skill captions, pro
         display.Set("meterColorMode", "custom")
         c:Tick(0.01)
         assert(c:Row(1).bar.color[1] == 1 and c:Row(1).bar.color[2] == 0 and c:Row(1).bar.color[3] == 0)
-        assert(c:Row(2).bar.color[1] == 0 and c:Row(2).bar.color[2] == 1 and c:Row(2).bar.color[3] == 0)
+        assert(c:Row(9).bar.color[1] == 0 and c:Row(9).bar.color[2] == 1 and c:Row(9).bar.color[3] == 0)
     end
 end)
 
@@ -409,7 +489,7 @@ Test("custom native colors preserve counters, settle writes and defer hidden pal
         assert(#c.objects == allocated, "showing a changed palette allocated new native rows")
         display.FinishEdit(false)
         c:Tick(0.01)
-        assert(second.bar.color[1] == 1 and second.bar.color[2] == 1 and second.bar.color[3] == 0)
+        assert(second.bar.color[1] == 0.25 and second.bar.color[2] == 0.58 and second.bar.color[3] == 1)
     end
 end)
 
@@ -486,12 +566,13 @@ Test("settled native rows skip layout reads and static binding while changed val
         state.records[2].rowId = "native-proc-leaf-b"
         WatchPresentation(c, state, 2)
         c:Tick()
-        assert(c:Row(2).entry.proc == 1 and c:Row(2).bar.color[1] == 1 and c:Row(2).bar.color[3] == 0)
-        assert(not state.presentationOps.SetStatusBarColor, "a known-school proc replaced its school color")
+        assert(c:Row(2).entry.proc == 1 and c:Row(2).bar.color[1] == 0.25 and c:Row(2).bar.color[3] == 1)
+        assert(state.presentationOps.SetStatusBarColor == 1, "changed proc classification did not repaint its category")
         state.records[2].schoolState, state.context.metadataRevision = "unknown", "unknown-proc-school"
         WatchPresentation(c, state, 2)
+        c:ResetCounts()
         c:Tick()
-        assert(c:Row(2).bar.color[1] == 0.25 and state.presentationOps.SetStatusBarColor == 1)
+        assert(c:Row(2).bar.color[1] == 0.25 and not state.presentationOps.SetStatusBarColor)
         assert(not state.presentationOps.GetStringWidth and not state.presentationOps.Bind)
         local icon = "Interface\\Icons\\rejected-static-icon"
         state.records[1].icon, state.rejectedIcon = { status = "ready", path = icon }, icon
@@ -1054,9 +1135,9 @@ Test("talent proc captions keep ordinary casts and share metadata, reset and hid
         assert(streak.icon:GetTexture() == "Interface\\Icons\\hot-streak-talent")
         assert(chastise.icon:GetTexture() == "Interface\\Icons\\chastise-talent")
         assert(shaman.icon:GetTexture() == "Interface\\Icons\\shaman-talent")
-        assert(streak.bar.color[1] == 1 and streak.bar.color[2] == 0.5 and streak.bar.color[3] == 0)
-        assert(chastise.bar.color[1] == 1 and chastise.bar.color[2] == 0.9 and chastise.bar.color[3] == 0.5)
-        assert(shaman.bar.color[1] == 0.3 and shaman.bar.color[2] == 1 and shaman.bar.color[3] == 0.3)
+        for _, row in ipairs({ streak, chastise, shaman }) do
+            assert(row.bar.color[1] == 0.72 and row.bar.color[2] == 0.48 and row.bar.color[3] == 1)
+        end
         assert(normal.entry.proc == 0 and streak.entry.proc == 1, "talent captions changed native proc classification")
         assert(
             state.lastResponse.sources["pyroblast-proc"].name == "Pyroblast"
@@ -1461,6 +1542,7 @@ Test("item casters share one row across pet options, hidden changes and both Per
         local first, allocated = c:Row(1), #c.objects
         local identity = first.entry.rowId
         assert(first.name:GetText() == "The Eye of Hakkar 2" and first.entry.dmg == 150)
+        assert(first.bar.color[1] == 1 and first.bar.color[2] == 0.62 and first.bar.color[3] == 0.2)
         assert(first.icon:GetTexture() == "Interface\\Icons\\hakkar-rank-2")
         assert(not env.SurvivorsDragonUiMeterIcon2, "item casters allocated separate displayed rows")
         c:SetSetting("meterGroupPets", true)
@@ -1501,6 +1583,7 @@ Test("growing historical totem ledgers retain pooled rendering and native resets
         local first, allocated = c:Row(1), #c.objects
         local identity = first.entry.rowId
         assert(first.entry.dmg == 1200 and first.name:GetText() == "The Eye of Hakkar 1")
+        assert(first.bar.color[1] == 1 and first.bar.color[2] == 0.62 and first.bar.color[3] == 0.2)
         assert(not env.SurvivorsDragonUiMeterIcon2, "historical totems expanded the visible row pool")
         c:SetSetting("meterGroupPets", true)
         c:Tick()

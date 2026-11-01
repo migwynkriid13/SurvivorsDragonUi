@@ -4,7 +4,26 @@
 
 In `/sdui` → **Damage meter**, **Bar colors** sits below **Enable damage meter**
 and above the **Ability color** and **Proc color** fields. Select **Default** or **Custom**.
-Default colors skills and procs by their received damage school:
+Default distinguishes the kind of damage before applying spell-school colors:
+
+| Damage category                    | Color                     |
+| ---------------------------------- | ------------------------- |
+| Periodic damage / damage over time | Green                     |
+| Melee / basic attacks              | Silver                    |
+| Talent damage                      | Violet                    |
+| Item effects                       | Amber                     |
+| Other procs                        | Blue                      |
+| Other abilities                    | Their damage-school color |
+
+Periodic damage takes priority when the game identifies all of a row's damage
+as periodic. The other categories use native source metadata and proc flags.
+For example, periodic poison damage is green even when its supplied school is
+Physical. No poison names, icon colors or current equipment are used to guess.
+Talent-colored rows use a direct talent descriptor or the existing validated
+actual-talent presentation; an ability merely related to a talent does not
+become talent damage.
+
+Remaining abilities use these received schools:
 
 | School   | Color      |
 | -------- | ---------- |
@@ -17,10 +36,11 @@ Default colors skills and procs by their received damage school:
 | Arcane   | Pink       |
 
 Known hybrid schools blend their native mask's school colors. Unknown,
-unavailable or conflicting types fall back to your class color for abilities
-and the original blue for procs. Legacy builds without this metadata retain
-that fallback. Names, icons, current skills and equipment do not establish a
-damage school.
+unavailable or conflicting types retain class-color fallback for ordinary
+abilities. Mixed families retain only categories shared by all constituents;
+a mixed ability/talent family keeps normal ability presentation unless all of
+its damage is periodic. Legacy builds without source/category metadata retain
+the existing class/blue-proc fallback. Names and icons never establish a school.
 
 Custom enables separate **Ability color** and **Proc color** controls. Click a
 swatch to use the game's color picker, or enter a six-digit RGB hex value such
@@ -66,17 +86,26 @@ and optional pet summaries retain their original grouping and get a school only
 when every constituent row agrees; mixed rows keep the previous fallback.
 Actual multi-bit masks are distinct from conflicts between different members.
 
-The adapter copies only one school scalar per prepared row during its existing
+The adapter retains the received display source kind and one all-periodic flag
+beside the school scalar. That flag uses the same exact member join: every
+positive contribution must have `creditKind = "health_damage"` and
+`periodicity = "periodic"`. Missing/malformed periodicity, other credit kinds,
+unjoined members and direct/periodic mixtures leave it unset. Zero-display
+history does not vote. Item-family classification uses only the existing
+validated item family, without another origin lookup.
+
+The adapter copies these scalar color inputs during its existing
 member pass, without retaining new leaf tables or duplicating the contribution
-index. School-only changes do not invalidate attribution fingerprints, rate
+index. School/periodicity-only changes do not invalidate attribution fingerprints, rate
 identities, checkpoints, captions or artwork. Family sums refresh their school
-scalar without regrouping. The visible viewport copies that scalar through its
-existing sampling pass, and row color caches include it only for Default.
-Seven base colors and at most 120 lazily resolved hybrid colors form one bounded
+inputs without regrouping. The visible viewport copies those scalars through its
+existing sampling pass, and row color caches include them only for Default.
+Five category colors, seven base colors and at most 120 lazily resolved hybrid colors form one bounded
 renderer palette; RGB resolution and writes happen only when relevant inputs
 change. There is no new setting, API getter, gameplay region or updater for
 automatic colors. CI-only cases cover exact types across identical captions,
-typed procs, hybrids, malformed/unknown data, member/family agreement, Reset,
+same-school melee/periodic/talent/item/proc distinctions, hybrids, malformed/unknown
+data, member/family agreement, Reset,
 rate-identity preservation, hidden reuse and Custom precedence.
 
 ## Native version 1 data path

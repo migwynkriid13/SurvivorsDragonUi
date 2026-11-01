@@ -237,7 +237,7 @@ profiles and resets. These cases remain CI-only and were not executed locally;
 they do not prove native actor metadata or live rendering.
 
 Talent proc cases join only each positive member's single actual native talent
-origin. They retain ordinary casts, proc colors, source IDs/counters/checkpoints
+origin. They retain ordinary casts, native proc flags, source IDs/counters/checkpoints
 and separate origin identities; definition-only, absent, conflicting, malformed
 or multiple origins keep the received source presentation. Full-controller
 cases show Pyroblast beside Hot Streak, FX Holy nova as Chastise and a generic
@@ -392,15 +392,19 @@ The assertions cover:
   Party class colors. These CI-only cases do not establish native picker
   availability, live appearance or measured performance; no local execution is
   authorized.
-- Automatic Default-color cases use received native contribution school fields,
-  exact same-snapshot member joins and positive-display agreement. They cover
-  all seven schools, explicit hybrid masks, equal captions with different types,
-  typed procs, missing/unknown/malformed fields, conflicting members and rank
-  families, zero-display history after Reset, unchanged native amounts/rates
-  and rate identities, changed-only RGB writes, hidden deferral, pooled reuse
-  and Custom precedence in both Performance Mode states. Legacy and Party keep
-  their existing fallbacks. These cases are CI-only and do not verify current
-  provider payloads or appearance.
+- Automatic Default-color cases use received native source kinds and contribution
+  school/periodicity/credit fields through the existing exact same-snapshot member
+  joins. They distinguish same-school/equal-caption melee, periodic damage,
+  direct talents (even without a proc flag), validated talent/item origins and
+  other procs, with periodic priority. Ordinary abilities retain all seven
+  schools and explicit hybrid colors. Missing/unknown/malformed periodicity or
+  credit, mixed members/families and non-damage credit cannot claim an all-periodic
+  category; zero-display history does not vote after Reset. Category-only changes
+  retain counters, rates, fractions and rate identities where source identity
+  stays unchanged. Both Performance Mode states cover changed-only RGB writes,
+  hidden deferral, pooled/world cleanup, Custom precedence and return to Default.
+  Legacy and Party retain their existing fallbacks. These cases are CI-only and
+  do not verify current provider payloads or appearance.
 - Exact skill/talent suffix cases cover all three current catalog pairs and a
   future canonical pair, without a per-ability allowlist. They reject missing or
   extra suffixes, partial names, changed case, unknown/nested class prefixes and

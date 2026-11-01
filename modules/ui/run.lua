@@ -1899,7 +1899,7 @@ DFRL:NewMod("RunTimers", 5, function()
                         {
                             "default",
                             "Default",
-                            "Color skills and procs by damage school. Party bars keep class colors.",
+                            "Use distinct colors for damage categories and spell schools. Party bars keep class colors.",
                         },
                         { "custom", "Custom", "Choose ability and proc colors. Party bars keep class colors." },
                     },

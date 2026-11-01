@@ -272,20 +272,30 @@ instant. No extra member pass, native getter, frame, region, asset, setting,
 SavedVariable, event or updater is added. CI-only grouping/identity/pooling
 cases do not establish live appearance or measured performance.
 
-Default school metadata adds at most two scalar reads per valid positive member
-to the adapter's existing ID/origin pass. It retains one agreed mask per native
-row; unknown/malformed/unjoined/conflicting positive members fall back, and zero
-display history does not vote after Reset. Existing family sums combine only
-matching masks without changing their grouping, counters, rates or identities.
-School-only changes leave attribution/rate fingerprints intact. The existing
-viewport pass copies the scalar, and visible row color caches compare it only
-in Default. One bounded table contains seven base RGB colors and lazily caches
-at most 120 native hybrid masks. Settled rows do no palette resolution or color
-writes. No native getter, source scan, extra member loop, gameplay region,
-setting, animation or updater is added. Legacy rows without metadata retain the
-class/proc fallback. Party continues using class colors, and Custom overrides
-automatic school colors. CI-only cases preserve rates and pooling through
-school-only metadata changes; this is not native snapshot-cost or FPS proof.
+Default coloring reuses the adapter's validated ID/origin member pass for
+school and periodicity agreement. It reads the native school pair plus
+`periodicity` and `creditKind` from each positive member, retaining one agreed
+school and one all-periodic flag per row. Unknown/malformed/unjoined/conflicting
+members fall back; zero-display history never votes after Reset. The display
+source kind is captured during existing changed-row preparation, reusing the
+validated talent/item display paths without another origin lookup. Existing
+family sums keep a category only when kinds agree and a periodic flag only
+when every constituent is periodic; native grouping, counters and rates stay
+unchanged. School/periodicity-only changes do not invalidate attribution or
+rate fingerprints.
+
+The existing viewport pass copies the scalar inputs, and the Default color
+gate compares kind and periodicity alongside school before resolving RGB. Five
+static category colors distinguish periodic damage, basic attacks, talents,
+items and other procs; remaining abilities use seven base school colors and
+at most 120 lazily cached native hybrids. Settled rows do no RGB resolution or
+color writes. Custom ignores the automatic metadata and retains its original
+native-proc-based two-color palette. Party retains native class colors and
+legacy rows keep their class/proc fallback. Hidden/off work and both
+Performance Mode states retain their existing instant lifecycle. No source
+scan, extra member loop, native getter, gameplay region, setting, asset,
+animation or updater is added. CI-only category/member/family/Reset and pooled
+lifecycle cases do not establish live appearance, snapshot cost or FPS gains.
 
 The lazy meter settings add eight editor frames/widgets (two control frames,
 four buttons and two EditBoxes), 28 texture regions and eight explicitly created

@@ -806,6 +806,7 @@ function DFRL.tools.NewNativeMeter()
         local count = type(values) == "table" and table.getn(values) or nil
         local used, changed = 0, false
         local schoolMask, schoolUnknown
+        local periodicity, periodicUnknown
         row.members = row.members or {}
         if count then
             for index, id in pairs(values) do
@@ -819,6 +820,7 @@ function DFRL.tools.NewNativeMeter()
                 local positive = leaf and leaf.displayAmount > 0 or false
                 if not leaf then
                     schoolUnknown = true
+                    periodicUnknown = true
                 elseif positive then
                     local mask = leaf.schoolMask
                     if
@@ -833,6 +835,14 @@ function DFRL.tools.NewNativeMeter()
                         schoolUnknown = true
                     else
                         schoolMask = mask
+                    end
+                    local value = leaf.periodicity
+                    if leaf.creditKind ~= "health_damage" or (value ~= "periodic" and value ~= "non_periodic") then
+                        periodicUnknown = true
+                    elseif periodicity and periodicity ~= value then
+                        periodicUnknown = true
+                    else
+                        periodicity = value
                     end
                 end
                 local origins, originsChanged = IdsChanged(member.origins, positive and leaf.originSourceKeys or nil)
@@ -868,6 +878,7 @@ function DFRL.tools.NewNativeMeter()
         row.memberCount = count
         -- Presentation metadata does not change attribution/rate identities.
         row.schoolMask = count and not schoolUnknown and schoolMask or nil
+        row.periodicDamage = count and not periodicUnknown and periodicity == "periodic" or nil
         return changed
     end
     local sourceFields = {
@@ -941,8 +952,10 @@ function DFRL.tools.NewNativeMeter()
         row.familyPriority = nil
         row.familyPairTalent = nil
         row.familyName = nil
+        row.colorKind = nil
         if query.groupBy == "owner" then
             row.schoolMask = nil
+            row.periodicDamage = nil
             local actor = snapshot.actors[native.ownerId]
             row.name, row.class, row.proc = actor.name, actor.classKey, 0
             row.portraitKey, row.portraitRunId, row.portraitStatus =
@@ -953,6 +966,7 @@ function DFRL.tools.NewNativeMeter()
         local actor = query.groupBy == "actor_source" and snapshot.actors[native.actorId] or nil
         local pet = actor and petKinds[actor.kind]
         local display = TalentOrigin(source, native, snapshot, row) or source
+        row.colorKind = (nonItemOrigins[display.kind] or display.kind == "item") and display.kind or nil
         row.proc, row.iconStatus = native.nativeProc and 1 or 0, display.icon.status
         if display.icon.status == "ready" then row.icon = display.icon.path end
         row.name = pet and display.name ~= actor.name and (display.name .. " (" .. actor.name .. ")") or display.name
@@ -966,6 +980,7 @@ function DFRL.tools.NewNativeMeter()
             row.familyKey, row.familyRank, itemCandidate = ItemFamilyKey(source, native, snapshot, row)
             if row.familyKey then
                 row.groupKind, row.familyName = "rank", display.name
+                row.colorKind = "item"
             elseif pet and view.groupPets then
                 row.familyKey, row.groupKind = "pet:" .. actorKey, "pet"
             else
@@ -1195,9 +1210,12 @@ function DFRL.tools.NewNativeMeter()
                 if not family.summed then
                     grouped.dmg, grouped.dps, grouped.averageDps = row.dmg, row.dps, row.averageDps
                     grouped.schoolMask = row.schoolMask
+                    grouped.colorKind, grouped.periodicDamage = row.colorKind, row.periodicDamage
                     family.summed = true
                 else
                     if grouped.schoolMask ~= row.schoolMask then grouped.schoolMask = nil end
+                    if grouped.colorKind ~= row.colorKind then grouped.colorKind = nil end
+                    if not row.periodicDamage then grouped.periodicDamage = nil end
                     grouped.dmg = grouped.dmg + row.dmg
                     grouped.dps = grouped.dps and row.dps and grouped.dps + row.dps or nil
                     grouped.averageDps = grouped.averageDps and row.averageDps and grouped.averageDps + row.averageDps

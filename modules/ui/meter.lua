@@ -66,6 +66,19 @@ DFRL:NewMod("DamageMeter", 7, function()
         schoolColors[mask] = { red, green, blue }
         return red, green, blue
     end
+    local categoryColors = {
+        periodic = { 0.35, 0.84, 0.36 },
+        basic_attack = { 0.72, 0.75, 0.8 },
+        talent = { 0.72, 0.48, 1 },
+        item = { 1, 0.62, 0.2 },
+        proc = { 0.25, 0.58, 1 },
+    }
+    local function DefaultColor(entry)
+        local color = entry.periodicDamage and categoryColors.periodic or categoryColors[entry.colorKind]
+        if color then return unpack(color) end
+        if entry.proc == 1 then return unpack(categoryColors.proc) end
+        if entry.schoolMask then return SchoolColor(entry.schoolMask) end
+    end
     local ICON_SIZE, RIM_SIZE = 26, 31
     local PARTY_COLOR = { 0.6, 0.6, 0.6 }
     local UNKNOWN_ICON = T.SourceIconFallback
@@ -1028,6 +1041,8 @@ DFRL:NewMod("DamageMeter", 7, function()
                 copy.portraitStatus = entry.portraitStatus
             end
             copy.schoolMask = apiActive and entry.schoolMask or nil
+            copy.colorKind = apiActive and entry.colorKind or nil
+            copy.periodicDamage = apiActive and entry.periodicDamage or nil
             local key = apiActive and copy.rowId or copy.name
             local samples = rateSamples[key]
             if not samples then
@@ -1136,7 +1151,14 @@ DFRL:NewMod("DamageMeter", 7, function()
                     or row.colorGreen ~= classGreen
                     or row.colorBlue ~= classBlue
                     or row.colorPalette ~= palette.revision
-                    or (palette.mode ~= "custom" and row.colorSchoolMask ~= entry.schoolMask)
+                    or (
+                        palette.mode ~= "custom"
+                        and (
+                            row.colorSchoolMask ~= entry.schoolMask
+                            or row.colorKind ~= entry.colorKind
+                            or row.colorPeriodic ~= entry.periodicDamage
+                        )
+                    )
                 then
                     local r, g, b = classRed, classGreen, classBlue
                     if party then
@@ -1146,13 +1168,14 @@ DFRL:NewMod("DamageMeter", 7, function()
                         else
                             r, g, b = 0.6, 0.6, 0.6
                         end
-                    elseif palette.mode ~= "custom" and entry.schoolMask then
-                        r, g, b = SchoolColor(entry.schoolMask)
-                    elseif entry.proc == 1 then
-                        if palette.mode == "custom" then
+                    elseif palette.mode == "custom" then
+                        if entry.proc == 1 then
                             r, g, b = palette.procRed, palette.procGreen, palette.procBlue
-                        else
-                            r, g, b = 0.25, 0.58, 1
+                        end
+                    else
+                        local red, green, blue = DefaultColor(entry)
+                        if red then
+                            r, g, b = red, green, blue
                         end
                     end
                     if row.red ~= r or row.green ~= g or row.blue ~= b then row.bar:SetStatusBarColor(r, g, b) end
@@ -1161,6 +1184,7 @@ DFRL:NewMod("DamageMeter", 7, function()
                     row.colorRed, row.colorGreen, row.colorBlue = classRed, classGreen, classBlue
                     row.colorPalette = palette.revision
                     row.colorSchoolMask = entry.schoolMask
+                    row.colorKind, row.colorPeriodic = entry.colorKind, entry.periodicDamage
                 end
                 if options.icons then
                     local bound
