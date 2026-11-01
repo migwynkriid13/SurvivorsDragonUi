@@ -236,9 +236,12 @@ unverified.
 
 The v1 meter also combines recognized ranks of one item, including item-bound
 abilities and effects. An explicit native `itemKey` establishes the family;
-rank-specific item IDs may differ. Separate copies, caster/owner, proc, variant,
-talent and effect-component identities remain separate. The highest contributing
-item rank supplies the native row caption and artwork. Amounts, rates, shares,
+rank-specific item IDs may differ. Matching item damage from the player, pets,
+summons and totems combines under the item's native caption without a caster
+suffix, including when **Combine pet damage** is enabled. Separate copies,
+accounting owners, proc flags, variants, talents and effect components remain
+separate. The highest contributing item rank supplies the native row caption
+and artwork. Amounts, rates, shares,
 Reset checkpoints and both Performance Mode states use the existing rank-summary
 path without changing native counters.
 
@@ -251,8 +254,16 @@ names, current equipment and item IDs alone never establish a family. Missing,
 conflicting or multiple origins and ambiguous same-rank sources stay separate;
 zero-display members do not supply post-Reset attribution.
 
-CI-only fixtures cover these explicit contracts. No live Eye of Hakkar snapshot
-was available, so grouping its published ranks still depends on the game
+The existing bounded **Native IDs** hover retains the original source and caster
+IDs. Summing the display rows does not rewrite the native records or add item
+damage to a pet summary a second time. Ambiguous families retain their separate
+native rows and caster captions.
+
+CI-only fixtures cover these explicit contracts, including multiple item keys,
+player/pet/totem casters, repeated summons, pet grouping, native amount/rate sums,
+Reset, missing rates, ambiguity, caster diagnostics and hidden/off reuse in both
+Performance Mode states. No live Eye of Hakkar snapshot was available, so
+grouping its published ranks still depends on the game
 supplying that identity. No local tests or game execution were performed.
 
 ## Pet damage
@@ -273,7 +284,8 @@ native actor supplies a summon or totem key, the same kind belonging to the same
 accounting owner shares a row across incarnations. Without that key, individual
 actor identities stay separate. Names and broad pet-family labels never merge
 actors. The same identity rule keeps the default spell rows compact without
-combining player and pet casts.
+combining player and pet casts. Recognized item damage uses the shared item row
+described above rather than a caster spell row or pet summary.
 
 Pet summaries add their disjoint native amounts and rates, retaining the
 selected native window and checkpoint. A missing member rate keeps the combined

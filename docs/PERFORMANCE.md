@@ -96,12 +96,19 @@ cases were authored and not run locally; this is no measured rendering or FPS
 result.
 
 Item-rank summaries reuse this same family/row pool and instant presentation.
-Direct native item keys avoid name or equipment lookups. Item-bound effects can
-join one actual item origin per positive member through the incremental member
+Matching item families share one row across player, pet, summon and totem
+casters before optional pet summaries. Only the item display key omits the
+caster; native pool members retain their actor/source metadata for the existing
+bounded hover. Changed preparation retains one scalar item-family caption so
+ambiguous fallback rows keep their caster suffixes. Counter-only passes reuse
+the accepted family and caption. Direct native item keys avoid name or equipment
+lookups. Item-bound effects can join one actual item origin per positive member through the incremental member
 and contribution-position caches below. No recursive relationship walk, native
 getter, animation, frame, region, asset, event, updater, setting or saved data is
-added. Hidden/off retirement remains shared. CI-only source mocks were authored
-but not run locally; live Hakkar metadata and rendering remain unverified.
+added. Hidden/off retirement remains shared. CI-only source mocks cover caster
+sums, pet-summary precedence, conservative boundaries, resets, unavailable rates
+and pooled visible/hidden reuse in both modes. They were authored but not run
+locally; live Hakkar metadata and rendering remain unverified.
 
 Talent-rank summaries reuse the same pool and publication/member caches.
 Direct talent keys and accepted actual-origin talent keys normalize only during

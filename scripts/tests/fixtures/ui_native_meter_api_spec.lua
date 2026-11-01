@@ -157,6 +157,25 @@ local function ItemEffects(count)
     return records, origins
 end
 
+local function ItemCasters()
+    local ranks, records = ItemRanks(2), {}
+    local actors = {
+        { "hero-1", "hero", "Hero" },
+        { "searing-1", "totem", "Searing Totem", "searing" },
+        { "magma-1", "totem", "Magma Totem", "magma" },
+        { "searing-2", "totem", "Searing Totem", "searing" },
+        { "pet-1", "pet", "Wolf" },
+    }
+    for index, actor in ipairs(actors) do
+        local record = Copy(ranks[index % 2 + 1])
+        record.rowId = "item-caster-leaf-" .. index
+        record.actorId, record.actorKind, record.actorName, record.totemKey = actor[1], actor[2], actor[3], actor[4]
+        record.amount, record.recent, record.after = index * 10, index * 2, index * 3
+        records[index] = record
+    end
+    return records
+end
+
 local function Talents()
     local records = {
         { id = "pyroblast-normal", rowId = "pyroblast-normal", name = "Pyroblast", amount = 9400 },
@@ -494,6 +513,7 @@ if helperMode == "helpers" then
         TalentRanks = TalentRanks,
         TalentTriggers = TalentTriggers,
         ItemRanks = ItemRanks,
+        ItemCasters = ItemCasters,
         Pets = Pets,
         Talents = Talents,
     }
@@ -921,8 +941,10 @@ Test("item rank families preserve copies, components, owners and unknown identit
     for _, distinction in ipairs(distinctions) do
         local _, state, meter = Native()
         state.records = ItemRanks(2)
+        state.records[2].actorId, state.records[2].actorKind, state.records[2].actorName = "totem-1", "totem", "Totem"
         state.records[1][distinction[1]], state.records[2][distinction[1]] = distinction[2], distinction[3]
-        local source = assert(meter.Read(damage, 10))
+        local source =
+            assert(meter.Read({ metric = "damage", scope = "self", period = "run", groupBy = "actor_source" }, 10))
         assert(table.getn(source) == 2, "item grouping discarded " .. distinction[1] .. " distinction")
     end
     local _, state, meter = Native()
@@ -932,9 +954,15 @@ Test("item rank families preserve copies, components, owners and unknown identit
     assert(table.getn(source) == 2, "item grouping merged different credited owners")
     state.records = ItemRanks(3)
     state.records[2].rank, state.records[3].rank = 1, 1
+    state.records[2].actorId, state.records[2].actorName = "searing-1", "Searing Totem"
+    state.records[3].actorId, state.records[3].actorName = "magma-1", "Magma Totem"
     state.context.counterRevision = "ambiguous-item-rank"
-    source = assert(meter.Read(damage, 10))
+    source = assert(meter.Read({ metric = "damage", scope = "self", period = "run", groupBy = "actor_source" }, 10))
     assert(table.getn(source) == 3, "same-rank item ambiguity partially merged a family")
+    for _, row in ipairs(source) do
+        assert(type(row.rowId) == "string", "ambiguous item family lost native row IDs")
+    end
+    assert(source[2].name == "The Eye of Hakkar 2 (Searing Totem)", "ambiguous item fallback lost its caster")
 end)
 
 Test("item-triggered effects use actual single-item origins and retain separate components", function()
@@ -1078,7 +1106,75 @@ Test("partial own item identity cannot borrow a rank from another positive membe
     assert(table.getn(source) == 1 and source[1].name == "The Eye of Hakkar 2", "skill rank replaced actual item rank")
 end)
 
-Test("item rank summaries retain pet casters and repeated native source membership", function()
+Test("item families combine player, pet and totem damage independently of pet summaries", function()
+    for _, itemKey in ipairs({ "eye_of_hakkar", "amulet:enlightenment", "another-native-item" }) do
+        for _, period in ipairs({ "run", "encounter" }) do
+            local _, state, meter = Native()
+            local view = { metric = "damage", scope = "self", period = period, groupBy = "actor_source" }
+            state.records = ItemCasters()
+            for _, record in ipairs(state.records) do
+                record.itemKey = itemKey
+            end
+            local source, total, rate = meter.Read(view, 10)
+            assert(table.getn(source) == 1 and source[1].dmg == 150 and total == 150)
+            assert(source[1].dps == 3 and rate == 3 and source[1].share == 1)
+            assert(source[1].name == "The Eye of Hakkar 2" and source[1].icon == "Interface\\Icons\\hakkar-rank-2")
+            assert(table.getn(state.lastResponse.rows) == 5 and state.lastResponse.rows[2].displayAmount == 20)
+            assert(state.lastResponse.rows[2].actorId == "searing-1", "display grouping rewrote native casters")
+            local identity = source[1].rowId
+            local details = table.concat(assert(meter.Describe(source, identity)), "\n")
+            for _, actor in ipairs({ "hero-1", "searing-1", "magma-1" }) do
+                assert(string.find(details, "actorId: " .. actor, 1, true), "item hover lost recorded caster IDs")
+            end
+            source = assert(meter.Read(view, 10, true))
+            assert(table.getn(source) == 1 and source[1].rowId == identity and source[1].dmg == 150)
+            state.records[4].actorId = "searing-replacement"
+            state.records[4].amount = 45
+            state.context.counterRevision = "new-item-caster-and-amount"
+            source = assert(meter.Read(view, 10, true))
+            assert(table.getn(source) == 1 and source[1].rowId == identity and source[1].dmg == 155)
+            local first = table.remove(state.records, 1)
+            table.insert(state.records, first)
+            state.context.counterRevision = "reordered-item-casters"
+            source = assert(meter.Read(view, 10))
+            assert(table.getn(source) == 1 and source[1].rowId == identity and source[1].dmg == 155)
+        end
+    end
+end)
+
+Test("item summaries exclude ordinary pet spells and retain native Reset and unavailable rates", function()
+    local _, state, meter = Native()
+    local view = { metric = "damage", scope = "self", period = "run", groupBy = "actor_source" }
+    state.records = ItemCasters()
+    local spell = Copy(Pets()[2])
+    spell.actorId, spell.actorName = "pet-1", "Wolf"
+    table.insert(state.records, spell)
+    for _, grouped in ipairs({ false, true }) do
+        local source, total = meter.Read(view, 10, grouped)
+        assert(table.getn(source) == 2 and total == 190 and source[1].dmg == 150 and source[2].dmg == 40)
+        assert(source[1].name == "The Eye of Hakkar 2")
+        assert(source[2].name == (grouped and "Wolf" or "Shadowbolt (Wolf)"))
+    end
+    state.records = ItemCasters()
+    state.records[2].after = 0
+    state.context.counterRevision = "item-reset-ready"
+    assert(meter.Read(view, 0))
+    assert(meter.Reset())
+    state.context.asOfRunSeconds = 22
+    local source = assert(meter.Read(view, 0))
+    assert(source[1].dmg == 39 and source[1].dps == 19.5)
+    local identity = source[1].rowId
+    state.records[2].after = 6
+    state.context.counterRevision = "item-caster-zero-to-positive"
+    source = assert(meter.Read(view, 0))
+    assert(source[1].rowId == identity and source[1].dmg == 45 and source[1].dps == 22.5)
+    state.records[2].recentStatus = "unavailable"
+    state.context.counterRevision = "item-caster-rate-unavailable"
+    source = assert(meter.Read(view, 10))
+    assert(source[1].dmg == 45 and source[1].dps == nil, "item summary invented a missing caster rate")
+end)
+
+Test("item rank summaries combine distinct casters without relaxing actual member joins", function()
     local _, state, meter = Native()
     local view = { metric = "damage", scope = "self", period = "run", groupBy = "actor_source" }
     state.records = ItemRanks(2)
@@ -1089,17 +1185,21 @@ Test("item rank summaries retain pet casters and repeated native source membersh
         record.actorId, record.actorKind, record.actorName, record.summonKey = "imp-" .. index, "summon", "Imp", "imp"
     end
     local source = assert(meter.Read(view, 10))
-    assert(table.getn(source) == 1 and source[1].dmg == 40 and source[1].name == "The Eye of Hakkar 2 (Imp)")
+    assert(table.getn(source) == 1 and source[1].dmg == 40 and source[1].name == "The Eye of Hakkar 2")
     state.records[3].summonKey, state.records[3].actorName = "doomguard", "Doomguard"
     state.context.metadataRevision = "different-item-caster"
     source = assert(meter.Read(view, 10))
-    assert(table.getn(source) == 2, "item ranks merged unrelated pet definitions")
+    assert(table.getn(source) == 1 and source[1].dmg == 40, "item damage split by pet definition")
     source = assert(meter.Read(view, 10, true))
-    assert(table.getn(source) == 2 and source[1].name == "Imp", "item grouping displaced optional pet summary")
+    assert(table.getn(source) == 1 and source[1].dmg == 40, "pet summaries split matching item damage")
     state.records, state.extraSources = ItemEffects(2)
     for index, record in ipairs(state.records) do
         record.actorId, record.actorKind, record.actorName, record.summonKey = "imp-" .. index, "summon", "Imp", "imp"
     end
+    state.records[2].summonKey, state.records[2].actorName = "doomguard", "Doomguard"
+    state.context.metadataRevision = "different-item-effect-casters"
+    source = assert(meter.Read(view, 10))
+    assert(table.getn(source) == 1 and source[1].dmg == 30 and source[1].name == "The Eye of Hakkar 2")
     state.mutate = function(snapshot) snapshot.contributions[1].actorId = "unrelated-caster" end
     state.context.metadataRevision = "mismatched-item-member-caster"
     source = assert(meter.Read(view, 10))

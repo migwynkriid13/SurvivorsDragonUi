@@ -198,11 +198,15 @@ snapshot, patched live appearance or FPS.
 
 Item-rank cases add differing rank-specific item IDs under one explicit item
 key, direct and item-bound sources, single actual-origin joins, independent
-components and item copies. They retain unknown/mixed origins, same-rank
-ambiguity, caster/owner/proc/variant/talent distinctions and original native
-records. They cover highest-rank captions/artwork readiness, missing rates,
-Reset, zero-display historical members, repeated pet sources, unchanged reuse,
-hidden/off work and both Performance Mode states. These cases remain CI-only
+components and item copies. Cross-caster cases combine player, pet, summon and
+totem item damage with both pet-summary choices, retaining native records and
+bounded caster diagnostics. They cover counter changes, reordered/replaced
+casters, Reset, zero-to-positive contributions, unavailable rates and pooled
+visible/hidden/off reuse in both Performance Mode states. They retain unknown
+or mixed origins, same-rank ambiguity, owner/proc/variant/talent distinctions,
+exact member-caster joins and original native records. Other cases cover
+highest-rank captions/artwork readiness, zero-display historical members and
+unchanged reuse. These cases remain CI-only
 and were not executed locally; no live Eye of Hakkar snapshot was available.
 
 Pet meter cases add explicit recorded hero/pet/summon/totem actors, overlapping
