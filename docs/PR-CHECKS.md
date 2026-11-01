@@ -104,6 +104,16 @@ cases retain complete rolling observations while another meter tab is visible
 and same-publication Party rate validation. These cases are CI-only and were
 not run locally; operation counts do not establish native snapshot cost or FPS.
 
+Totem-ledger cases count native member/origin ID reads with explicit array
+boundaries over 120–180 records, including first preparation and appended actors.
+Malformed keys, sparse/non-string lists and recovery must preserve conservative
+talent attribution without needing a metadata revision. Aliased display/recent
+or average rates avoid duplicate validation; separately returned malformed rates
+still fail, with and without checkpoints. Full-controller cases grow to 240
+historical totem actors while retaining one item row, native totals, Reset,
+pet-summary choices, pooling, unchanged work and hidden/off cleanup in both modes.
+These cases are CI-only and do not measure native allocation, history cost or FPS.
+
 Native history-cadence cases count positive-window and zero-window queries
 through the production adapter/controller. They cover shared one-Hz regular
 native/legacy reads, next-frame input/settings/scroll/Reset/show refreshes,

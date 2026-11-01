@@ -199,6 +199,22 @@ item origin. Source identities and families retire with their existing view and
 run owners. There are still at most four native view caches; their size follows
 the native ledger rather than the number of visible bars.
 
+Member and positive-origin ID arrays are validated and fingerprinted together
+in one pass over each received list. Dense-array checks still reject bad keys,
+holes and non-string IDs; invalid lists clear their accepted fingerprints.
+Exact source/owner/caster/proc joins, zero-to-positive transitions and origin
+changes are checked on every pass, with the existing safe reindex fallback.
+Changed talent/item preparation reads those same-snapshot scalar fingerprints
+instead of revalidating raw lists and rebuilding a temporary ID-to-contribution
+map. No leaf Stats, duplicate member-position field or new per-source cache is
+retained. Native descriptor validation and conservative ambiguity remain intact.
+
+When a native Stats record uses the exact same rate table for `displayRate`
+and its selected recent or average rate, validate that table once. Separately
+returned rate tables still receive full independent validation, including
+checkpoint averages, unavailable rates and native window status. This removes
+redundant addon work only; it does not change requested rates or native history.
+
 The meter controller copies and samples only its visible viewport, retaining the
 complete source ordering for scrolling, ranks, shares and the leading bar.
 Displayed-rate caches retire offscreen identities instead of retaining every
@@ -236,7 +252,11 @@ queries on extra reads within a second. Full snapshot materialization is still
 required. Query counts do not measure the native
 snapshot producer's cost or FPS. CI-only operation-count and lifecycle cases
 cover growing ledgers, cache invalidation, viewport work, native history cadence
-and early row-piece gates. No local tests, game execution, late-run frame timings
+and early row-piece gates. Additional cases count received ID reads across
+120–180 totem records, exercise malformed-list recovery and aliased/copied rate
+validation, and grow the full controller to 240 historical totems through
+pet grouping, hidden/off cleanup and Reset in both Performance Mode states.
+No local tests, game execution, late-run frame timings
 or FPS measurements were performed.
 
 ## Meter hover IDs

@@ -176,6 +176,18 @@ local function ItemCasters()
     return records
 end
 
+local function TotemItems(count)
+    local effects, origins = ItemEffects(1)
+    local records = {}
+    for index = 1, count do
+        local record = Copy(effects[1])
+        record.rowId, record.actorId = "totem-item-leaf-" .. index, "totem-" .. index
+        record.actorKind, record.actorName, record.totemKey = "totem", "Searing Totem", "searing"
+        records[index] = record
+    end
+    return records, origins
+end
+
 local function Talents()
     local records = {
         { id = "pyroblast-normal", rowId = "pyroblast-normal", name = "Pyroblast", amount = 9400 },
@@ -514,6 +526,7 @@ if helperMode == "helpers" then
         TalentTriggers = TalentTriggers,
         ItemRanks = ItemRanks,
         ItemCasters = ItemCasters,
+        TotemItems = TotemItems,
         Pets = Pets,
         Talents = Talents,
     }
@@ -1786,6 +1799,165 @@ Test("hover diagnostic output stays bounded for large rank families", function()
     local lines = assert(meter.Describe(source, source[1].rowId))
     assert(table.getn(lines) <= 24 and lines[table.getn(lines)] == "...")
     assert(source[1].dmg == 4650 and state.lastResponse.totals.displayAmount == 4650)
+end)
+
+Test("large totem ledgers read each native member and origin ID once per fingerprint pass", function()
+    local c, state, meter = Native()
+    state.records, state.extraSources = TotemItems(120)
+    local arrays, reads = {}, 0
+    local nativePairs, nativeIpairs, nativeTable = c.env.pairs, c.env.ipairs, c.env.table
+    local function Track(values)
+        local proxy = {}
+        arrays[proxy] = values
+        return setmetatable(proxy, {
+            __index = function(_, index)
+                reads = reads + 1
+                return values[index]
+            end,
+        })
+    end
+    c.env.table = setmetatable({
+        getn = function(values) return nativeTable.getn(arrays[values] or values) end,
+    }, { __index = nativeTable })
+    c.env.pairs = function(values)
+        local original = arrays[values]
+        if not original then return nativePairs(values) end
+        local iterator, source, key = nativePairs(original)
+        return function(collection, previous)
+            local index, value = iterator(collection, previous)
+            if index ~= nil then reads = reads + 1 end
+            return index, value
+        end,
+            source,
+            key
+    end
+    c.env.ipairs = function(values)
+        if arrays[values] then
+            return function(collection, index)
+                index = index + 1
+                local value = collection[index]
+                if value ~= nil then return index, value end
+            end,
+                values,
+                0
+        end
+        return nativeIpairs(values)
+    end
+    state.mutate = function(snapshot)
+        arrays = {}
+        for _, row in ipairs(snapshot.rows) do
+            row.memberIds = Track(row.memberIds)
+        end
+        for _, leaf in ipairs(snapshot.contributions) do
+            leaf.originSourceKeys = Track(leaf.originSourceKeys)
+        end
+    end
+    local view = { metric = "damage", scope = "self", period = "run", groupBy = "actor_source" }
+    for tick = 1, 3 do
+        reads = 0
+        if tick == 3 then
+            state.records, state.extraSources = TotemItems(180)
+        end
+        state.context.counterRevision = "totem-fingerprint-" .. tick
+        local source, total = meter.Read(view, 10)
+        local count = table.getn(state.records)
+        assert(source and table.getn(source) == 1 and source[1].dmg == count * 10 and total == count * 10)
+        assert(source[1].name == "The Eye of Hakkar 1")
+        assert(reads == count * 2, "native member/origin IDs were skipped or read again during preparation")
+        assert(state.calls.snapshot == tick, "fingerprint processing added a native capture")
+    end
+end)
+
+Test("single-pass fingerprints reject malformed arrays and recover without a metadata revision", function()
+    local mutations = {
+        function(snapshot) snapshot.rows[1].memberIds.extra = "unexpected" end,
+        function(snapshot) snapshot.rows[1].memberIds[1] = false end,
+        function(snapshot)
+            snapshot.rows[1].memberIds[3] = snapshot.rows[1].memberIds[1]
+            snapshot.rows[1].memberIds[1] = nil
+        end,
+        function(snapshot) snapshot.contributions[1].originSourceKeys.extra = "unexpected" end,
+        function(snapshot) snapshot.contributions[1].originSourceKeys[1] = false end,
+        function(snapshot)
+            snapshot.contributions[1].originSourceKeys[3] = snapshot.contributions[1].originSourceKeys[1]
+            snapshot.contributions[1].originSourceKeys[1] = nil
+        end,
+    }
+    for _, mutate in ipairs(mutations) do
+        local _, state, meter = Native()
+        local records
+        records, state.extraSources = Talents()
+        state.records = { records[2] }
+        local source = assert(meter.Read(damage, 10))
+        assert(source[1].name == "Hot Streak")
+        state.mutate, state.context.counterRevision = mutate, "malformed-native-ids"
+        source = assert(meter.Read(damage, 10))
+        assert(source[1].name == "Pyroblast", "malformed array retained stale talent attribution")
+        state.mutate, state.context.counterRevision = nil, "recovered-native-ids"
+        source = assert(meter.Read(damage, 10))
+        assert(source[1].name == "Hot Streak" and source[1].dmg == 4900)
+    end
+end)
+
+Test("aliased native rates validate once while separate malformed rate tables remain rejected", function()
+    for _, window in ipairs({ 0, 10 }) do
+        for _, checkpoint in ipairs({ false, true }) do
+            local counts = {}
+            for _, alias in ipairs({ false, true }) do
+                local _, state, meter = Native()
+                local reads = 0
+                state.records = Ranks(2)
+                if checkpoint then
+                    assert(meter.Reset())
+                    state.context.asOfRunSeconds = 22
+                end
+                local function Track(value)
+                    return setmetatable({}, {
+                        __index = function(_, key)
+                            reads = reads + 1
+                            return value[key]
+                        end,
+                    })
+                end
+                state.mutate = function(snapshot)
+                    local stats = { snapshot.totals }
+                    for _, row in ipairs(snapshot.rows) do
+                        table.insert(stats, row)
+                    end
+                    for _, value in ipairs(stats) do
+                        local selected = window > 0 and value.recentRate
+                            or value.checkpointAverage
+                            or value.periodAverage
+                        value.periodAverage, value.recentRate = Track(value.periodAverage), Track(value.recentRate)
+                        if value.checkpointAverage then value.checkpointAverage = Track(value.checkpointAverage) end
+                        value.displayRate = alias
+                                and (window > 0 and value.recentRate or value.checkpointAverage or value.periodAverage)
+                            or Track(Copy(selected))
+                    end
+                end
+                local source = assert(meter.Read(damage, window))
+                assert(table.getn(source) == 1 and source[1].dmg == (checkpoint and 9 or 30))
+                counts[alias and 2 or 1] = reads
+            end
+            assert(counts[2] < counts[1], "aliased display rates repeated their full validation")
+            local _, state, meter = Native()
+            state.records = Ranks(2)
+            if checkpoint then
+                assert(meter.Reset())
+                state.context.asOfRunSeconds = 22
+            end
+            state.mutate = function(snapshot)
+                local row = snapshot.rows[1]
+                local selected = window > 0 and row.recentRate or row.checkpointAverage or row.periodAverage
+                local equal = { __eq = function() return true end }
+                setmetatable(selected, equal)
+                row.displayRate = setmetatable(Copy(selected), equal)
+                row.displayRate.endRunSeconds = -1
+                assert(row.displayRate == selected and not rawequal(row.displayRate, selected))
+            end
+            assert(not meter.Read(damage, window), "separate invalid display rate bypassed validation")
+        end
+    end
 end)
 
 Test("counter and unrelated metadata publications reuse prepared native identities", function()

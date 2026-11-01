@@ -262,7 +262,6 @@ function DFRL.tools.NewNativeMeter()
             or not Number(stats.periodAmount)
             or not Number(stats.displayAmount)
             or not Rate(stats.periodAverage, true)
-            or not Rate(stats.displayRate, window == 0)
             or not Rate(stats.recentRate, false)
         then
             return false
@@ -281,6 +280,7 @@ function DFRL.tools.NewNativeMeter()
             return false
         end
         local selected = window > 0 and stats.recentRate or average
+        if not rawequal(stats.displayRate, selected) and not Rate(stats.displayRate, window == 0) then return false end
         if stats.displayRate.status ~= selected.status or stats.displayRate.value ~= selected.value then
             return false
         end
@@ -461,17 +461,6 @@ function DFRL.tools.NewNativeMeter()
     local function Item(source)
         return type(source) == "table" and Id(source.itemKey) and Rank(source) and ItemFields(source)
     end
-    local function Ids(values)
-        if type(values) ~= "table" then return end
-        local count, used = table.getn(values), 0
-        for index, value in pairs(values) do
-            if not Number(index) or index < 1 or index > count or index ~= math.floor(index) or not Id(value) then
-                return
-            end
-            used = used + 1
-        end
-        if used == count then return count end
-    end
     local function MemberValid(native, leaf)
         if
             type(leaf) == "table"
@@ -484,8 +473,7 @@ function DFRL.tools.NewNativeMeter()
             return leaf
         end
     end
-    local function Member(native, contributions, id) return MemberValid(native, contributions[id]) end
-    local function TalentOrigin(source, native, snapshot, contributions)
+    local function TalentOrigin(source, native, snapshot, row)
         if
             source.kind == "talent"
             or not native.nativeProc
@@ -493,15 +481,14 @@ function DFRL.tools.NewNativeMeter()
         then
             return
         end
-        local count = Ids(native.memberIds)
+        local count = row.memberCount
         if not count or count == 0 then return end
         local talent
-        for _, id in ipairs(native.memberIds) do
-            local leaf = Member(native, contributions, id)
-            if not leaf then return end
-            if leaf.displayAmount > 0 then
-                local origins = leaf.originSourceKeys
-                if Ids(origins) ~= 1 then return end
+        for _, member in ipairs(row.members) do
+            if not member.valid then return end
+            if member.positive then
+                local origins = member.origins
+                if member.originCount ~= 1 then return end
                 local origin = snapshot.sources[origins[1]]
                 if
                     type(origin) ~= "table"
@@ -519,33 +506,29 @@ function DFRL.tools.NewNativeMeter()
         end
         return talent
     end
-    local function BoundItem(source, native, snapshot, contributions)
+    local function BoundItem(source, snapshot, row)
         local own = source.itemKey ~= nil
         local ownRank = Item(source)
         local item, candidate, invalid =
             ownRank and source or nil, own, not ItemFields(source) or (source.rank ~= nil and not Rank(source))
         local missingOrigin, acceptedOrigin = false, nil
-        local members = Ids(native.memberIds)
+        local members = row.memberCount
         if not members or members == 0 then return nil, true end
-        for _, id in ipairs(native.memberIds) do
-            local leaf = Member(native, contributions, id)
-            if not leaf then
+        for _, member in ipairs(row.members) do
+            if not member.valid then
                 invalid, candidate = true, true
-            elseif leaf.displayAmount > 0 then
-                local origins = leaf.originSourceKeys
-                local count = Ids(origins)
+            elseif member.positive then
+                local origins, count = member.origins, member.originCount
                 local origin = count == 1 and snapshot.sources[origins[1]] or nil
-                if count == nil then candidate = true end
-                if type(origins) == "table" then
-                    for _, key in ipairs(origins) do
-                        local descriptor = snapshot.sources[key]
-                        if
-                            type(descriptor) ~= "table"
-                            or descriptor.sourceKey ~= key
-                            or not nonItemOrigins[descriptor.kind]
-                        then
-                            candidate = true
-                        end
+                if count == false then candidate = true end
+                for _, key in ipairs(origins) do
+                    local descriptor = snapshot.sources[key]
+                    if
+                        type(descriptor) ~= "table"
+                        or descriptor.sourceKey ~= key
+                        or not nonItemOrigins[descriptor.kind]
+                    then
+                        candidate = true
                     end
                 end
                 if count == 0 then
@@ -576,13 +559,13 @@ function DFRL.tools.NewNativeMeter()
         if invalid or (missingOrigin and not ownRank) then return nil, candidate end
         return item, candidate
     end
-    local function ItemFamilyKey(source, native, snapshot, contributions)
+    local function ItemFamilyKey(source, native, snapshot, row)
         if source.kind ~= "item" and source.kind ~= "ability" and source.kind ~= "effect" then return end
         local item, candidate
         if source.kind == "item" then
             item, candidate = Item(source) and source or nil, true
         else
-            item, candidate = BoundItem(source, native, snapshot, contributions)
+            item, candidate = BoundItem(source, snapshot, row)
         end
         if not item then return nil, nil, candidate end
         local component = source.abilityKey
@@ -753,41 +736,80 @@ function DFRL.tools.NewNativeMeter()
             if type(leaf) == "table" and leaf.rowId == id then return index end
         end
     end
+    local function ArrayIndex(index, count)
+        return type(index) == "number" and index >= 1 and index <= count and index == math.floor(index)
+    end
+    local function IdsChanged(cache, values)
+        local count = type(values) == "table" and table.getn(values) or nil
+        local used, changed = 0, false
+        if count then
+            for index, id in pairs(values) do
+                if not ArrayIndex(index, count) or not Id(id) then
+                    count = nil
+                    break
+                end
+                if cache[index] ~= id then changed = true end
+                cache[index], used = id, used + 1
+            end
+            if count and used ~= count then count = nil end
+        end
+        if count then
+            for index = count + 1, table.getn(cache) do
+                cache[index], changed = nil, true
+            end
+        else
+            for index in pairs(cache) do
+                cache[index], changed = nil, true
+            end
+        end
+        return count, changed
+    end
     local function MembersChanged(view, row, native, leaves)
-        local count = Ids(native.memberIds)
-        local changed = row.memberCount ~= count
-        row.memberCount, row.members = count, row.members or {}
-        for index = 1, count or 0 do
-            local id = native.memberIds[index]
-            local member = row.members[index] or { origins = {} }
-            local position = ContributionPosition(view, leaves, id)
-            local leaf = position and MemberValid(native, leaves[position])
-            local positive = leaf and leaf.displayAmount > 0 or false
-            local origins = 0
-            if positive then origins = Ids(leaf.originSourceKeys) or false end
-            if
-                member.id ~= id
-                or member.valid ~= (leaf ~= nil)
-                or member.positive ~= positive
-                or member.originCount ~= origins
-            then
-                changed = true
+        local values = native.memberIds
+        local count = type(values) == "table" and table.getn(values) or nil
+        local used, changed = 0, false
+        row.members = row.members or {}
+        if count then
+            for index, id in pairs(values) do
+                if not ArrayIndex(index, count) or not Id(id) then
+                    count = nil
+                    break
+                end
+                local member = row.members[index] or { origins = {} }
+                local position = ContributionPosition(view, leaves, id)
+                local leaf = position and MemberValid(native, leaves[position])
+                local positive = leaf and leaf.displayAmount > 0 or false
+                local origins, originsChanged = IdsChanged(member.origins, positive and leaf.originSourceKeys or nil)
+                if positive then
+                    origins = origins or false
+                else
+                    origins = 0
+                end
+                if
+                    originsChanged
+                    or member.id ~= id
+                    or member.valid ~= (leaf ~= nil)
+                    or member.positive ~= positive
+                    or member.originCount ~= origins
+                then
+                    changed = true
+                end
+                member.id, member.valid, member.positive, member.originCount = id, leaf ~= nil, positive, origins
+                row.members[index], used = member, used + 1
             end
-            for origin = 1, origins or 0 do
-                local key = leaf.originSourceKeys[origin]
-                if member.origins[origin] ~= key then changed = true end
-                member.origins[origin] = key
-            end
-            for origin = (origins or 0) + 1, table.getn(member.origins) do
-                member.origins[origin] = nil
-            end
-            member.id, member.position, member.valid, member.positive, member.originCount =
-                id, position, leaf ~= nil, positive, origins
-            row.members[index] = member
+            if count and used ~= count then count = nil end
         end
-        for index = (count or 0) + 1, table.getn(row.members) do
-            row.members[index] = nil
+        if count then
+            for index = count + 1, table.getn(row.members) do
+                row.members[index], changed = nil, true
+            end
+        else
+            for index in pairs(row.members) do
+                row.members[index], changed = nil, true
+            end
         end
+        if row.memberCount ~= count then changed = true end
+        row.memberCount = count
         return changed
     end
     local sourceFields = {
@@ -866,15 +888,10 @@ function DFRL.tools.NewNativeMeter()
                 actor.portrait.portraitKey, snapshot.context.runId, actor.portrait.status
             return
         end
-        local contributions = view.memberScratch or {}
-        view.memberScratch = contributions
-        for _, member in ipairs(row.members) do
-            contributions[member.id] = member.position and snapshot.contributions[member.position] or false
-        end
         local source = snapshot.sources[native.sourceKey]
         local actor = query.groupBy == "actor_source" and snapshot.actors[native.actorId] or nil
         local pet = actor and petKinds[actor.kind]
-        local display = TalentOrigin(source, native, snapshot, contributions) or source
+        local display = TalentOrigin(source, native, snapshot, row) or source
         row.proc, row.iconStatus = native.nativeProc and 1 or 0, display.icon.status
         if display.icon.status == "ready" then row.icon = display.icon.path end
         row.name = pet and display.name ~= actor.name and (display.name .. " (" .. actor.name .. ")") or display.name
@@ -885,7 +902,7 @@ function DFRL.tools.NewNativeMeter()
         if query.groupBy == "source" or query.groupBy == "actor_source" then
             -- Item accounting spans casters; pet summaries contain the remaining sources.
             local itemCandidate
-            row.familyKey, row.familyRank, itemCandidate = ItemFamilyKey(source, native, snapshot, contributions)
+            row.familyKey, row.familyRank, itemCandidate = ItemFamilyKey(source, native, snapshot, row)
             if row.familyKey then
                 row.groupKind, row.familyName = "rank", display.name
             elseif pet and view.groupPets then
@@ -928,9 +945,6 @@ function DFRL.tools.NewNativeMeter()
                     or row.familyMemberKey
                     or native.sourceKey
             end
-        end
-        for id in pairs(contributions) do
-            contributions[id] = nil
         end
     end
     local function PrepareFamilies(view, snapshot)
