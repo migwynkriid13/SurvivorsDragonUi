@@ -1,11 +1,12 @@
 # Native timers in Buffs
 
-On Azeroth Survivors 0.115.0 or newer, the existing Buffs group appends the
-received talent and jewelry timers after native buffs, debuffs and weapon
-enchants. All returned effects are shown in native order, including separate
-effects with the same name. An elapsed wait stays visible with a bright icon
-and zero beneath it. Timer borders stay neutral. A waiting timer uses a dimmed icon and its
-remaining time, rounded upward for the compact label.
+On Azeroth Survivors 0.115.0 or newer, the existing Buffs group shows received
+talent and jewelry timers alongside native buffs, debuffs and weapon enchants.
+The received timers occupy the first slots at the selected left or right anchor
+in their received order, including separate effects with the same name. Every
+timer icon stays bright, without fading or dimming, and has no text underneath
+at any remaining value. Timer borders stay neutral. Ready/waiting changes do
+not move the icons within that group.
 
 Hover shows the supplied source name, Next summon or Cooldown, full wait to
 one decimal place, and remaining seconds or Ready. These five captions use all
@@ -18,7 +19,8 @@ already out and their lifetimes.
 
 `modules/unit/auras.lua` owns both the original native buttons and a passive
 pool of timer buttons. Both use the same 28-unit icons, six-column wrapping,
-duration placement, flip direction and existing `buffs` Layout entry. Changing
+flip direction and existing `buffs` Layout entry. Native duration labels retain
+their original placement; API timer buttons have no countdown FontString. Changing
 the pool's visible row count updates measured bounds through shared Layout,
 preserving confirmed/draft center and scale and the default top-right edge.
 Move, resize, hide, Confirm, Cancel, profiles and both resets keep their existing
@@ -28,8 +30,11 @@ Timer buttons have no cast, cancel-aura or other click action. Their hover uses
 shared `GameTooltip` and `RegisterTooltipIcon`. By default it follows below the
 icon; **Tooltip at cursor** uses the shared cursor placement instead. Both modes
 retain shared Tooltip scale/hiding, screen clamping and edit suppression. Hiding a
-timer or its group clears its hover. Native aura content, stacks, updates,
-input handlers and tooltips remain native.
+timer or its group clears its hover. Native aura duration captions, including
+zero, opacity, expiry, identities, stacks, input handlers and tooltips remain
+native. The always-bright, text-free presentation applies only to the received
+`AZS_GetTimers()` buttons. Their tooltips retain remaining seconds, full wait and
+Ready text; their native timing data is unchanged.
 
 The adapter reads `AZS_GetPhase()` first, then requires received `AZS_TIMERS`
 and `AZS_TIMERS_UPDATED` plus a received run clock. It calls the feature-detected

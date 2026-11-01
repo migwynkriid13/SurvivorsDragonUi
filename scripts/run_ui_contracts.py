@@ -96,7 +96,6 @@ def main():
         minimap_clock = minimap_clock.rsplit("\nreturn ", 1)[0] + "\nreturn { Watch = WatchClock, Editing = SetLauncherEditing }\n"
         player_pulse = extract_source("modules/unit/player.lua", ["CreatePulse"])
         aura_layout = extract_source("modules/unit/auras.lua", ["PlaceNativeFrame", "Layout"])
-        aura_duration = extract_source("modules/unit/auras.lua", ["Time", "SetTimerDuration"])
         pet_captions = extract_source("modules/unit/pets.lua", ["Number", "Time", "TimerText", "CountText", "HideRow"])
         pet_captions = pet_captions.rsplit("\nreturn ", 1)[0] + "\nreturn { Timer = TimerText, Count = CountText, Hide = HideRow }\n"
         chat_idle = extract_source("modules/chat/chat.lua", ["HOLD", "FADE", "FadeSettings"])
@@ -131,8 +130,6 @@ def main():
     with tempfile.TemporaryDirectory(prefix="sdui-ui-contracts-") as folder:
         placement = Path(folder) / "guardian-placement-source.lua"
         placement.write_text(guardian_placement, encoding="utf-8")
-        aura_duration_source = Path(folder) / "aura-duration-source.lua"
-        aura_duration_source.write_text(aura_duration, encoding="utf-8")
         for name, source, fixture in (
             ("settings-editor-source.lua", settings_editor, "ui_editor_navigation_spec.lua"),
             ("settings-views-source.lua", settings_views, "ui_settings_visibility_spec.lua"),
@@ -169,8 +166,6 @@ def main():
             command = ["lua5.1", "scripts/tests/fixtures/" + fixture, str(seam)]
             if fixture == "ui_guardian_hover_spec.lua":
                 command.append(str(placement))
-            if fixture == "ui_aura_layout_perf_spec.lua":
-                command.append(str(aura_duration_source))
             if fixture == "ui_border_spec.lua":
                 for name, body in (("border-portraits-source.lua", border_portraits), ("border-mini-source.lua", border_mini)):
                     source_file = Path(folder) / name

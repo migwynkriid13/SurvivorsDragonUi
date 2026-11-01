@@ -1156,7 +1156,7 @@ load, and native events can request additional refreshes.
 | Tooltip and target colors | Compare actual native colors before writing, after resolving the owning friendly/enemy target rule. Missing tooltip color getters keep the original write fallback. Native resets and failed assignments remain repairable. Hiding an already-hidden tooltip health bar skips the extra Hide.                                                      |
 | Minimap clock             | Accumulated frame elapsed replaces a native GetTime call each frame. The existing five-second date check remains; Hide detaches and Show samples immediately. Unchanged minutes still skip text writes.                                                                                                                                            |
 | Native aura layout        | Native enchant callbacks still repair actual BuffFrame/enchant anchors each time. Icon-slot traversal/reflow is dirty-driven by Show/Hide, received timer visibility, forced native positioning and editing. Forced geometry/font repair and hidden editor bounds remain.                                                                          |
-| Received aura countdowns  | Cache each displayed ceil-rounded duration string, retain actual-text comparisons and failed-setter retries, and Show timer buttons only on transitions. Ten-Hz native timing and hovered decimal-duration tooltip updates remain.                                                                                                                 |
+| Received aura timers      | API timer icons have no countdown region or formatting and stay bright. Show timer buttons only on transitions. Ten-Hz native timing and hovered decimal-duration tooltip updates remain; regular native aura captions and expiration are unchanged.                                                                                               |
 | Pet/summon/totem captions | Existing rows retain only their latest rounded countdown/count strings. Repeated tenth-second samples skip formatting/concatenation; hidden/missing/zero values and retirement remain distinct. Native feed validation, timing getters, roster counts and metadata/icon retries remain.                                                            |
 | Run length and schedule   | Reuse duration/schedule validation within the existing ten-Hz/deferred-publication scope; phase changes, schedule/run boundaries and reload force fresh acceptance. Raw native run time, phase/rollback checks and native clock ownership retain frame cadence. Native two-second fill progress and authored decoration remain.                    |
 | Boss debuffs              | Remove per-frame getter/list/format traversal between normal refreshes. Existing ten-Hz/deferred-publication updates read current native remaining values; hovering performs a fresh native phase/effect read before opening and reflows changed height immediately. No countdown is extrapolated.                                                 |
@@ -2357,6 +2357,14 @@ remain in place; this is not a claim that every remaining cost is eliminated.
 
 Native aura/timer rows (`modules/unit/auras.lua`) retain changed-slot reflow,
 hidden timer shutdown and required repair of native buff/enchant anchors.
+The presentation applies only to `AZS_GetTimers()` talent/jewelry
+icons: they stay bright with no fade/dimming or text underneath, at any remaining
+value. Their countdown FontString and formatting work are removed. The API timer
+group keeps received order at the chosen left/right anchor, without ready/waiting
+reflow. Remaining/full-wait/Ready tooltips and native timing stay current through
+the existing reader. Regular native aura duration captions, opacity, expiration,
+indices, counts, input and tooltips are unchanged. Both Performance Mode states
+share these paths, with no new reader, frame, region, event or updater.
 Damage-loss artwork (`modules/unit/cut.lua`) installs its animation callback
 only for active fades and removes it when the fading pool is empty. These
 native repair and authored fade paths must not be removed as idle work.

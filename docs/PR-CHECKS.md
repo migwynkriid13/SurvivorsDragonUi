@@ -439,6 +439,12 @@ The assertions cover:
   clock reads and ten-Hz/deferred/fresh-hover boss-debuff work. Clock tests keep
   raw native phase/time/ownership and original effect inputs. These are CI-only
   call/lifecycle contracts and do not establish rendered parity or FPS gains.
+- API-timer presentation cases in `ui_aura_layout_perf_spec.lua` exercise
+  the production owner with explicit native boundaries. They cover bright,
+  text-free talent/jewelry timer icons with positive and zero remaining time, stable received
+  order at either anchor without ready/waiting movement, retained timer tooltips
+  and unchanged regular native aura handling. These authored cases remain
+  CI-only and were not run locally; native appearance remains unverified.
 - Extracted production unit-border transitions actually hide inactive party and
   portrait variants, restore the retained artwork on option changes and skip
   unchanged writes. These assertions distinguish shown state from alpha; they

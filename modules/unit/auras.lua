@@ -109,23 +109,27 @@ DFRL:NewMod("Player Auras", 2, function()
         end
         if not force and not layoutDirty and not editing then return end
         local slot = 0
-        for _, entry in ipairs(entries) do
-            if entry.button:IsShown() then
-                if paint and (force or entry.slot ~= slot) then
-                    SizeButton(entry)
-                    entry.button:ClearAllPoints()
-                    local column = math.mod(slot, columns) * (iconSize + gap)
-                    local row = -math.floor(slot / columns) * (iconSize + rowGap)
-                    if flipped then
-                        entry.button:SetPoint("TOPLEFT", container, "TOPLEFT", column, row)
+        for priority = 1, 2 do
+            for _, entry in ipairs(entries) do
+                if (entry.timer == true) == (priority == 1) then
+                    if entry.button:IsShown() then
+                        if paint and (force or entry.slot ~= slot) then
+                            SizeButton(entry)
+                            entry.button:ClearAllPoints()
+                            local column = math.mod(slot, columns) * (iconSize + gap)
+                            local row = -math.floor(slot / columns) * (iconSize + rowGap)
+                            if flipped then
+                                entry.button:SetPoint("TOPLEFT", container, "TOPLEFT", column, row)
+                            else
+                                entry.button:SetPoint("TOPRIGHT", container, "TOPRIGHT", -column, row)
+                            end
+                            entry.slot = slot
+                        end
+                        slot = slot + 1
                     else
-                        entry.button:SetPoint("TOPRIGHT", container, "TOPRIGHT", -column, row)
+                        entry.slot = nil
                     end
-                    entry.slot = slot
                 end
-                slot = slot + 1
-            else
-                entry.slot = nil
             end
         end
         local rows = math.max(1, math.ceil(slot / columns))
@@ -179,7 +183,8 @@ DFRL:NewMod("Player Auras", 2, function()
         local entry = { button = button, timer = true }
         entry.icon = button:CreateTexture(nil, "ARTWORK")
         entry.icon:SetAllPoints(button)
-        entry.duration = button:CreateFontString(nil, "OVERLAY")
+        -- API timers stay bright; their timing details live only in the tooltip.
+        entry.icon:SetAlpha(1)
         SizeButton(entry)
         button:SetScript("OnEnter", function()
             if editing then return end
@@ -201,9 +206,7 @@ DFRL:NewMod("Player Auras", 2, function()
         if not entry.name and not entry.texture and not entry.button:IsShown() then return end
         entry.button:Hide()
         entry.icon:SetTexture(nil)
-        T.SetTextIfChanged(entry.duration, "")
         entry.name, entry.kind, entry.wait, entry.remaining, entry.ready, entry.texture = nil, nil, nil, nil, nil, nil
-        entry.durationSecond, entry.durationText = nil, nil
     end
     local function ClearTimers()
         HideHover()
@@ -223,19 +226,6 @@ DFRL:NewMod("Player Auras", 2, function()
         if type(value) ~= "string" or value == "" then return "Interface\\Icons\\INV_Misc_QuestionMark" end
         if not string.find(value, "[/\\]") then return "Interface\\Icons\\" .. value end
         return value
-    end
-    local function Time(value)
-        local seconds = math.ceil(value)
-        if seconds < 60 then return tostring(seconds) end
-        return string.format("%d:%02d", math.floor(seconds / 60), math.mod(seconds, 60))
-    end
-    local function SetTimerDuration(entry, remaining)
-        local second = math.ceil(remaining)
-        if entry.durationSecond ~= second or entry.durationText == nil then
-            local text = Time(second)
-            entry.durationSecond, entry.durationText = second, text
-        end
-        T.SetTextIfChanged(entry.duration, entry.durationText)
     end
     local function RefreshTimers()
         if not inWorld then return end
@@ -289,10 +279,8 @@ DFRL:NewMod("Player Auras", 2, function()
                 entry.icon:SetTexture(texture)
                 entry.texture = texture
             end
-            if entry.ready ~= timer.ready then entry.icon:SetAlpha(timer.ready and 1 or 0.65) end
             entry.name, entry.kind, entry.wait = timer.name, timer.kind, timer.duration
             entry.remaining, entry.ready = timer.remaining, timer.ready
-            SetTimerDuration(entry, timer.remaining)
             if not entry.button:IsShown() then entry.button:Show() end
             ticking = ticking or not timer.ready
             count = index
