@@ -90,7 +90,7 @@ Test("empty tabs consume the same bounded warm budget", function()
     assert(context.headerReads == headers, "completed empty tabs did not settle atomically")
 end)
 
-Test("cold hit discards partial preparation and keeps first-hit priority and grouping", function()
+Test("cold hit discards partial preparation and keeps icon priority for every normal hit", function()
     local context = Book(9, function(current)
         current.names[1], current.names[9], current.spell = "Shared", "Shared", "Shared"
     end)
@@ -104,8 +104,11 @@ Test("cold hit discards partial preparation and keeps first-hit priority and gro
     context:Hit(111)
     context:Tick(0.1)
     local labels = context:Labels()
-    assert(#labels == 1 and labels[1]:GetText() == "111", "preparation split exact duplicate grouping or summed hits")
-    assert(context.slotReads == reads, "grouped hits repeated a settled book scan")
+    assert(
+        #labels == 2 and labels[1]:GetText() == "111" and labels[2]:GetText() == "111",
+        "preparation grouped normal hits"
+    )
+    assert(context.slotReads == reads, "separate hits repeated a settled book scan")
 end)
 
 Test("a warm metadata hole stays provisional and the consumer samples newly ready art", function()

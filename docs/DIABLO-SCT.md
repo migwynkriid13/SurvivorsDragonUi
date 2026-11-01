@@ -146,7 +146,7 @@ status and resolved icon. Unidentified unnamed abilities stay yellow rather
 than sharing an invented source. No target identity, health loss, damage
 amount tier, random chance or inferred spawn identity is introduced.
 
-The same rule runs before 75 ms duplicate collapse and Performance Mode's 300 ms
+The same rule runs on each normal-mode hit and before Performance Mode's 300 ms
 sums. A sum of many ordinary-sized criticals stays yellow. A group containing
 an amber-qualified original critical displays amber; its total never trains or
 qualifies against the baseline. Original amounts, critical flags, matching,
@@ -181,7 +181,7 @@ presentation-group total when applicable). Preview/Cancel reformats and refits
 that value without moving or restarting the number, changing its font/color or
 expiry, closing intake, or recomputing a total from compact text. Pool retirement
 clears this value. Queued hits use the current choice when displayed; their
-original matching amounts and the 75 ms duplicate / 300 ms sum policies stay
+original matching amounts and the separate normal hits / 300 ms sum policies stay
 intact. The meter and native counters never consume abbreviated values.
 
 The checkbox adds one lazy settings button, four texture regions and one label;
@@ -287,8 +287,8 @@ profiles and both full resets. MSBT dims the control while retaining its value.
 When enabled, distance sizing uses native camera depth: up to 20 yards retains
 the selected SCT size, farther text shrinks to a minimum of 55%. Existing animation scale and
 critical pop multiply that factor. Both Performance Mode states share the
-projection, size and visibility behavior, retaining their 75/300 ms grouping
-rules. Separate native targets/casters cannot share an arbitrary anchor.
+projection, size and visibility behavior. Normal mode displays every hit separately;
+Performance Mode retains its 300 ms sums. Separate native targets/casters cannot share an arbitrary anchor.
 MSBT remains independent of world anchors.
 
 The addon feature-detects and validates the complete provider. Old builds keep
@@ -320,8 +320,9 @@ health reads and native input ownership remain unchanged.
 
 Performance Mode follows the existing explicit SCT exception: preserve the
 selected animation and lifetime, and sum matching same-attack damage within the
-fixed inclusive 300 ms window. Normal mode retains the original 75 ms
-exact-amount duplicate suppression. Mode changes close old intake without
+fixed inclusive 300 ms window. Normal mode displays every damage hit separately,
+including equal amounts on the same or different enemies, without a grouping window.
+Mode changes close old intake without
 restarting active labels or rewriting an existing group total.
 
 The Diablo animation adds no combat frame, drawing region, event, updater or

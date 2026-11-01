@@ -339,8 +339,8 @@ leave hundreds of expensive texture regions drawing continuously.
   where appropriate; local tests and addon/game execution remain unauthorized.
 - SCT keeps its selected Over enemies, MSBT or Diablo IV animation
   in Performance Mode. Only grouping changes: sum same-attack damage in
-  300 ms while enabled, with the original 75 ms exact-amount duplicate
-  suppression otherwise. Do not add a static override or
+  300 ms while enabled; normal mode displays every hit separately without
+  duplicate suppression or a grouping hold. Do not add a static override or
   retire its active hits just because Performance Mode changes.
 - Prefer one cached native image when its appearance matches the request.
   Pet and meter circles use named `SetPortraitToTexture` images, with the gold
@@ -449,8 +449,8 @@ Current-camera world projection, offscreen hiding and bounded depth scaling are
 identical in both Performance Mode states. Distance multiplies the existing
 animation scale, with no extra effect loop or unchanged scale writes. Hidden
 labels keep expiring while skipping font/geometry/animation writes; they do not
-restart on reappearance. The original 75 ms duplicate suppression and Performance
-Mode's 300 ms same-attack sums remain distinct and preserve original hit amounts.
+restart on reappearance. Normal mode displays every original hit separately;
+Performance Mode retains its 300 ms same-attack sums and original hit amounts.
 
 The default-off `sctDistanceScaling` display choice lets players enable that
 distance factor. Off keeps current-camera/death-location tracking and the
@@ -564,7 +564,7 @@ there is no idle sweep, per-frame average or new updater.
 
 Mode/style/world/zone cleanup and clock regression discard the baseline.
 Performance Mode transitions retain it; original per-hit inputs qualify before
-both 75 ms duplicates and 300 ms sums, and a group only inherits amber from a
+individual normal labels and 300 ms sums, and a group only inherits amber from a
 qualifying member. A larger summed label alone never qualifies. Pooled label
 cleanup clears its derived flag; active color remains fixed. No drawing region,
 frame, asset, setting, SavedVariable or extra animation is added. The existing
@@ -1070,7 +1070,7 @@ this caption above the category buttons.
 | Owner                       | While Performance Mode is on                                                                                                                                                                                                                                                                                                                                                               |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Chat                        | Keep native expiry at its original deadline with zero fade duration, so messages disappear instantly; scrolling back still holds lines. Snap reveal opacity and message-slide geometry, and clear active reveal/slide state. Native messages, history, links and input remain current.                                                                                                     |
-| SCT                         | Sum same-attack outgoing damage within a fixed 300 ms window; normal mode keeps 75 ms exact-amount duplicate suppression. Preserve original per-hit matching, critical/source separation, motion, fade, full lifetime and the selected enemy/MSBT style.                                                                                                                                   |
+| SCT                         | Sum same-attack outgoing damage within a fixed 300 ms window; normal mode displays every original hit separately. Preserve original per-hit matching, critical/source separation, motion, fade, full lifetime and the selected enemy/MSBT style.                                                                                                                                           |
 | Unit frames                 | Hide the player absorb segment while retaining its selected static amount/percentage labels. Hide player/target/target-of-target damage trails, reset trail baselines, and use the existing 2D still portraits. Party has no custom loss overlay. Hide combat/rest rim glows; keep a static resting symbol and a static low-health warning at the current health-derived strength.         |
 | Resources                   | Skip absorb snapshot/field work when both health-text choices and Class resources are off; keep native phase/receipt retirement and selected resource values.                                                                                                                                                                                                                              |
 | Run timer                   | Keep native two-second progress and current labels, static tier fill and informative skull/check markers. Skip flow, foam, sparkle, red-glint and skull-halo animation. The decorative pool grows lazily from 44 to at most 72 textures only if normal mode needs it, then retained for reuse. Required native phase, ownership, schedule and encounter work keeps its existing lifecycle. |
@@ -1107,8 +1107,9 @@ SCT caches the selected grouping window through the existing display listener.
 Each new identified damage group receives its fixed inclusive deadline from
 the first hit; joining hits never extend it. Performance Mode sums amounts for
 the same identified attack: `20 + 100` displays `120`, and `100 + 100` displays
-`200`. Normal mode retains exact-amount duplicate suppression, so those cases
-remain separate `20`/`100` labels or one unchanged `100` respectively. Source,
+`200`. Normal mode displays every hit separately, so those cases remain two
+`20`/`100` labels or two unchanged `100` labels respectively. Normal intake
+does not allocate, look up or retain a grouping bucket or deadline. Source,
 pet, damage type, school, critical status and resolved icon remain separate
 identity fields in both modes. Misses, aura notices and unidentified attacks
 gain no new hold. The original 80 ms per-hit settling and
@@ -1119,7 +1120,7 @@ window; native incoming text remains independent.
 An actual window change closes intake on every queued group and clears its
 bucket index, while retaining all pending hits and active text. Existing
 matching/settling finishes those groups without mixing new arrivals across
-mode changes. Each group retains its creation mode's total or duplicate value.
+mode changes. Each queued entry retains its creation mode's sum or original hit value.
 Preview, Cancel, profiles and resets restore the selected window
 through the shared lifecycle. Active animation and normal-mode equations are
 unchanged; no per-hit setting lookup, frame, region, asset, event, updater or
@@ -1129,8 +1130,13 @@ color samples and loss consumption are untouched. A stored bucket key keeps
 cleanup independent of the changing total, including when a newer group owns
 the same attack. Unrepresentable numeric totals split into separate groups
 instead of painting infinity. No per-hit display-copy table is allocated.
-More same-attack arrivals can share a label, but visible
-region savings depend on the hit stream; this is not measured FPS/GPU evidence.
+Normal mode reuses the existing pool for one holder, visual frame, FontString
+and optional icon per displayed hit, so equal-hit bursts can keep more labels
+visible and perform more per-label animation work than the former suppression.
+Retirement and world cleanup release every hit through the shared pool.
+Performance Mode's label sharing and drawing cost are unchanged. These are
+source-level costs, not measured FPS/GPU evidence; the authored burst, anchor,
+pooling and mode-transition cases remain CI-only and were not run locally.
 
 Only the kills/gold number presentation uses the five-second cadence. The initial
 valid display paints immediately, then changing packets, styles and widths
@@ -1613,7 +1619,7 @@ source resolution, parser descriptors and recurring complete meter processing.
 The original performance branch already reduces several of those paths; the
 additional indexed matching, stable retirement and stream queue work below
 address further source-level scaling. Icon resolution can still be required
-with icons hidden because exact duplicate identity includes its received art.
+with icons hidden because Performance Mode group identity includes its received art.
 Ambiguity still considers every eligible same-name candidate.
 
 An enabled meter processes complete source lists independently of its one-to-ten
@@ -1796,9 +1802,10 @@ The following changes remove specific avoidable work:
   greater-than-0.65-second boundary. The index adds references, not duplicate
   origin records or additional gameplay history, and clears on the existing
   style/mode/world lifecycle.
-- MSBT arrivals increment their existing duplicate group directly and retain
-  the maximum member receipt. The original subtraction-based 80 ms age gate
-  and inclusive intake window (75 ms normally, 300 ms in Performance Mode)
+- MSBT arrivals retain one presentation entry per normal hit, or increment
+  the existing Performance Mode group and retain its maximum member receipt.
+  The original subtraction-based 80 ms age gate
+  and Performance Mode's inclusive 300 ms intake window
   determine emission, including out-of-order
   receipts and floating-point boundaries. Stream mode no longer allocates or
   revisits a pending record for each original hit. Every original color sample
@@ -2934,7 +2941,7 @@ failure recovery and performance remain unverified in the running client.
 ## MSBT-style combat text — 2026-10-27
 
 The optional outgoing stream shares the existing SCT controller,
-parser/intake, exact duplicate groups, active list and lazy text pool. Each
+parser/intake, individual normal hits, Performance Mode sums, active list and lazy text pool. Each
 label still uses its original two passive frames, FontString and optional icon.
 The movable stream adds one passive `sctMSBT` owner lazily on first effective
 Custom/MSBT enable and reuses it afterward. This owner has no drawing regions.

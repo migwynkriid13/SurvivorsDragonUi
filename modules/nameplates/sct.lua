@@ -125,8 +125,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     }
     local EVENT_SETTLE = 0.08
     local EVENT_FALLBACK_DELAY = 0.16
-    local DUPLICATE_WINDOW = 0.075
-    local PERFORMANCE_DUPLICATE_WINDOW = 0.3
+    local PERFORMANCE_GROUP_WINDOW = 0.3
     local RECENT_PLATE_TIME = 0.65
     local LOSS_TIME = 0.25
     local DAMAGE_COLORS = {
@@ -200,7 +199,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local textFont = DFRL.display.Get("sctFont")
     local shortNumbers = DFRL.display.Get("sctShortNumbers")
     local distanceScaling = DFRL.display.Get("sctDistanceScaling")
-    local duplicateWindow = DFRL.display.Get("performanceMode") and PERFORMANCE_DUPLICATE_WINDOW or DUPLICATE_WINDOW
+    local groupWindow = DFRL.display.Get("performanceMode") and PERFORMANCE_GROUP_WINDOW or nil
     -- Keep V's visible request separate from the backing coordinate feed. The
     -- native verbs do not write FrameXML's saved NAMEPLATES_ON preference.
     local enemyPlatesEnabled = NAMEPLATES_ON and true or false
@@ -1633,10 +1632,10 @@ DFRL:NewMod("NameplateCombatText", 6, function()
 
     local function IconIdentityPart(value) return string.len(value) .. ":" .. value end
 
-    local function SyncDuplicateWindow()
-        local window = DFRL.display.Get("performanceMode") and PERFORMANCE_DUPLICATE_WINDOW or DUPLICATE_WINDOW
-        if duplicateWindow == window then return end
-        duplicateWindow = window
+    local function SyncGroupWindow()
+        local window = DFRL.display.Get("performanceMode") and PERFORMANCE_GROUP_WINDOW or nil
+        if groupWindow == window then return end
+        groupWindow = window
         -- Finish old intake under its existing matching/settle gates. Keep
         -- queued hits and active motion, without joining across mode changes.
         for _, group in ipairs(pendingGroups) do
@@ -1649,7 +1648,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
 
     local function LargeCritical(info, identity, now)
         -- Cosmetic emphasis, not an inferred native crit/Overpower result.
-        -- Observe original critical amounts before duplicate collapse or sums.
+        -- Observe original critical amounts before any Performance Mode sums.
         if textStyle ~= "diablo" or not info.critical or not identity then return end
         if not IsFiniteNumber(now) or not IsFiniteNumber(info.amount) or info.amount <= 0 then return end
         local history, config = criticalHistory, DIABLO.history
@@ -1745,25 +1744,26 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                     .. IconIdentityPart(TextureKey(info.iconTexture) or FALLBACK_ICON)
                     .. IconIdentityPart(info.nativeIdentity or "")
                 largeCritical = LargeCritical(info, identity, now)
-                byAmount = intakeBuckets[identity]
-                if not byAmount then
-                    byAmount = {}
-                    intakeBuckets[identity] = byAmount
-                end
-                -- Performance Mode sums this attack's amounts. Normal mode
-                -- still collapses only exact duplicates. Preserve each hit.
-                bucketKey = info.amount
-                if duplicateWindow == PERFORMANCE_DUPLICATE_WINDOW then bucketKey = false end
-                group = byAmount[bucketKey]
-                if group and (now < group.time or now > group.closesAt) then group = nil end
-                if group and group.displayAmount then
-                    local total = group.displayAmount + info.amount
-                    if IsFiniteNumber(total) then
-                        group.displayAmount = total
-                    else
-                        -- Keep both original finite hits when a display sum
-                        -- cannot be represented, rather than painting infinity.
-                        group = nil
+                -- Normal mode gives every hit its own label, even when its
+                -- amount and receipt time match another enemy's damage.
+                if groupWindow then
+                    byAmount = intakeBuckets[identity]
+                    if not byAmount then
+                        byAmount = {}
+                        intakeBuckets[identity] = byAmount
+                    end
+                    bucketKey = false
+                    group = byAmount[bucketKey]
+                    if group and (now < group.time or now > group.closesAt) then group = nil end
+                    if group and group.displayAmount then
+                        local total = group.displayAmount + info.amount
+                        if IsFiniteNumber(total) then
+                            group.displayAmount = total
+                        else
+                            -- Keep both original finite hits when a display sum
+                            -- cannot be represented, rather than painting infinity.
+                            group = nil
+                        end
                     end
                 end
             end
@@ -1773,11 +1773,11 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             group = {
                 info = info,
                 time = now,
-                closesAt = now + duplicateWindow,
+                closesAt = groupWindow and now + groupWindow or nil,
                 bucket = byAmount,
                 bucketKey = bucketKey,
                 identity = identity,
-                displayAmount = byAmount and duplicateWindow == PERFORMANCE_DUPLICATE_WINDOW and info.amount or nil,
+                displayAmount = byAmount and info.amount or nil,
                 remaining = 0,
                 count = 0,
                 x = 0,
@@ -1944,7 +1944,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     end
 
     DFRL.display.Listen(function()
-        SyncDuplicateWindow()
+        SyncGroupWindow()
         local style = DFRL.display.Get("sctStyle")
         if textStyle ~= style then
             textStyle = style

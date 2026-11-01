@@ -68,13 +68,13 @@ and preserve the existing animation/grouping exception.
 
 Use received `sourceId`, `sourceKind`, `targetId` and `spellId` for native
 identity. Preserve target incarnations, caster ownership, school, critical,
-periodic/reflected status and resolved icons. Normal mode retains the inclusive
-75 ms exact-amount window; Performance Mode retains its inclusive 300 ms sums,
+periodic/reflected status and resolved icons. Normal mode displays every received
+hit separately; Performance Mode retains its inclusive 300 ms sums,
 using native presentation timestamps and leaving original amounts unchanged.
 
 The shipped contract has no required `basicAttack` or `abilityKey`. Map the
 received `melee`/`ranged` categories to Auto attacks and `spell` to Direct damage;
-periodic/reflected booleans retain their dedicated filters. Group known spells
+periodic/reflected booleans retain their dedicated filters. Performance Mode groups known spells
 by `spellId`, even without a name/icon. Plain native melee/ranged attacks can
 use their received category; otherwise missing native attack identity keeps
 hits separate. Names or matching artwork never establish an unknown identity.

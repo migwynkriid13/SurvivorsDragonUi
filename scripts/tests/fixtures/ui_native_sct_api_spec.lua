@@ -364,7 +364,7 @@ Test("distance scaling choice preserves live death anchors, animations and expir
     end
 end)
 
-Test("native grouping keeps target and source IDs, original amounts and exact normal/performance windows", function()
+Test("native hits keep target and source IDs, individual normal labels and Performance Mode sums", function()
     for _, performance in ipairs({ false, true }) do
         local context = Scene("enemy", performance)
         context:Prime()
@@ -385,6 +385,32 @@ Test("native grouping keeps target and source IDs, original amounts and exact no
     end
 end)
 
+Test("normal native bursts keep every equal hit over its own enemy anchor", function()
+    for _, style in ipairs({ "enemy", "diablo" }) do
+        local context = Scene(style)
+        context:Prime()
+        for index = 1, 24 do
+            local _, point = context:NativeHit(100, { targetId = "target:" .. math.ceil(index / 2) })
+            point.x, point.y = 100 + index * 20, 200 + index * 5
+        end
+        context:Tick(0.1)
+        local labels, anchors = context:Labels(), {}
+        assert(#labels == 24, "normal native burst suppressed equal hits on the same or different enemies")
+        for _, label in ipairs(labels) do
+            assert(label:GetText() == "100", "normal native burst summed an amount")
+            local holder = Holder(label)
+            anchors[holder.anchor.x .. ":" .. holder.anchor.y] = true
+        end
+        local count = 0
+        for _ in pairs(anchors) do
+            count = count + 1
+        end
+        assert(count == 24, "normal native hits shared an arbitrary enemy anchor")
+        context:Tick(2)
+        assert(#context:Labels() == 0, "normal native burst retained expired hits")
+    end
+end)
+
 Test("native presentation timestamps retain inclusive grouping deadlines across batched receipt", function()
     for _, performance in ipairs({ false, true }) do
         local window = performance and 0.3 or 0.075
@@ -396,7 +422,10 @@ Test("native presentation timestamps retain inclusive grouping deadlines across 
             context:Tick(0.31)
             context:Tick(0.31)
             local labels = context:Labels()
-            assert(#labels == (extra == 0 and 1 or 2), "receipt batching changed the fixed native deadline")
+            assert(
+                #labels == (performance and extra == 0 and 1 or 2),
+                "receipt batching grouped normal hits or changed the Performance Mode deadline"
+            )
             if performance and extra == 0 then assert(labels[1]:GetText() == "200", "equal hits did not sum") end
         end
     end
@@ -413,7 +442,10 @@ Test("spell IDs group unnamed attacks and preserve distinct spells without propo
         third.abilityName, third.icon = nil, nil
         context:Tick(0.31)
         local labels = context:Labels()
-        assert(#labels == 2, "native spell IDs did not preserve grouping and separation")
+        assert(
+            #labels == (performance and 2 or 3),
+            "native spell IDs grouped normal hits or changed Performance Mode separation"
+        )
         if performance then assert(labels[1]:GetText() == "200", "native spell identity did not sum") end
         local unknown = Scene("enemy", performance)
         unknown:Prime()

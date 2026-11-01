@@ -82,36 +82,35 @@ do
     local group = assert(env.pendingGroups[1])
     assert(#env.pending == 0 and group.count == 1 and group.remaining == 0, "MSBT retained a per-hit pending record")
     assert(group.info == first and group.lastArrival == 1, "MSBT lost the original hit or its settle coordinate")
-    context.queue.Update(group.closesAt)
-    assert(group.bucket and #context.displays == 0, "the inclusive intake deadline changed")
+    assert(not group.bucket and not group.closesAt and not next(env.intakeBuckets), "normal MSBT opened group intake")
     context.queue.Update(1.079)
-    assert(not group.bucket and #context.displays == 0, "MSBT displayed before the first member settled")
+    assert(#context.displays == 0, "MSBT displayed before the hit settled")
     context.queue.Update(1.081)
     local displayed = assert(context.displays[1])
     assert(displayed.info == first and displayed.x == 0 and displayed.y == 0, "MSBT changed its first hit or origin")
     assert(#context.displays == 1 and #env.pendingGroups == 0 and not next(env.intakeBuckets))
     assert(#context.origins == 0 and context.icons == 1, "MSBT added matching or omitted icon intake")
 end
-print("PASS MSBT groups skip per-hit pending records and retain first-hit settle and intake deadlines")
+print("PASS normal MSBT skips per-hit pending records and group intake while retaining hit settling")
 
 do
-    local context, env = Queues(true)
+    local context, env = Queues(true, true)
     local first = context:Hit(100, 2)
     local color, icon = first.color, first.iconTexture
     context.queue.Update(2.06)
-    context:Hit(100, 2.07)
+    context:Hit(100, 2.29)
     context:Hit(100, 2.03)
     local group = assert(env.pendingGroups[1])
     assert(
         #env.pendingGroups == 1 and #env.pending == 0 and group.count == 3,
         "duplicates allocated extra stream records"
     )
-    assert(group.closesAt == 2 + 0.075 and group.lastArrival == 2.07, "a member extended intake or shortened settling")
-    context.queue.Update(2.081)
+    assert(group.closesAt == 2 + 0.3 and group.lastArrival == 2.29, "a member extended intake or shortened settling")
+    context.queue.Update(2.301)
     assert(#context.displays == 0, "a late member used the first member's settle deadline")
-    context.queue.Update(2.149)
+    context.queue.Update(2.369)
     assert(#context.displays == 0, "a nonmonotonic arrival replaced the latest member's settle coordinate")
-    context.queue.Update(2.151)
+    context.queue.Update(2.371)
     assert(#context.displays == 1 and context.displays[1].info == first, "duplicates changed the first display record")
     assert(
         first.amount == 100 and first.color == color and first.iconTexture == icon,
@@ -172,10 +171,11 @@ print("PASS MSBT retains the original raw subtraction at a floating-point settle
 
 do
     local context, env = Queues(false)
-    local first = context:Hit(100, 6)
-    local second = context:Hit(100, 6.01)
+    local first = context:AbilityHit(100, 6, { targetName = "First enemy", fixtureX = 2, fixtureY = 4 })
+    local second = context:AbilityHit(100, 6.01, { targetName = "Second enemy", fixtureX = 10, fixtureY = 12 })
     local group = assert(env.pendingGroups[1])
-    assert(#env.pending == 2 and group.remaining == 2 and group.count == 0 and not group.lastArrival)
+    assert(#env.pending == 2 and #env.pendingGroups == 2 and group.remaining == 1 and group.count == 0)
+    assert(not group.bucket and not group.closesAt and not next(env.intakeBuckets), "normal SCT opened group intake")
     assert(env.pending[1].info == first and env.pending[2].info == second, "default SCT dropped an original record")
     context.queue.Update(6.079)
     assert(#context.origins == 0 and #context.displays == 0, "default matching ran before the existing settle age")
@@ -187,7 +187,7 @@ do
     assert(not context.origins[1].fallback and not context.origins[2].fallback, "default fallback started early")
     context.queue.Update(6.18)
     assert(
-        #context.origins == 4 and #env.pending == 0 and #context.displays == 1,
+        #context.origins == 4 and #env.pending == 0 and #context.displays == 2,
         "default fallback lost per-hit matching"
     )
     assert(
@@ -196,10 +196,15 @@ do
     )
     assert(context.origins[3].fallback and context.origins[4].fallback, "default fallback deadline changed")
     local displayed = context.displays[1]
-    assert(displayed.info == first and displayed.x == 4 and displayed.y == 6, "default resolved centroid changed")
-    assert(group.count == 2 and group.remaining == 0 and not next(env.intakeBuckets))
+    assert(displayed.info == first and displayed.x == 2 and displayed.y == 4, "first enemy lost its own hit position")
+    displayed = context.displays[2]
+    assert(
+        displayed.info == second and displayed.x == 10 and displayed.y == 12,
+        "second enemy lost its own hit position"
+    )
+    assert(group.count == 1 and group.remaining == 0 and not next(env.intakeBuckets))
 end
-print("PASS default SCT retains original per-hit pending records, ordered matching, fallback age and centroid")
+print("PASS normal enemy SCT retains every hit, ordered matching, fallback age and separate enemy positions")
 
 do
     local context, env = Queues(true)
@@ -344,23 +349,24 @@ for _, scrolling in ipairs({ false, true }) do
     local first = context:AbilityHit(20, 55)
     local second = context:AbilityHit(100, 55)
     local duplicate = context:AbilityHit(100, 55.01)
-    assert(#env.pendingGroups == 2, "normal mode changed exact-amount grouping")
+    assert(#env.pendingGroups == 3 and not next(env.intakeBuckets), "normal mode combined hits or opened group intake")
     context.queue.Update(55.101)
-    assert(#context.displays == 2, "normal mode summed distinct amounts or duplicated identical amounts")
+    assert(#context.displays == 3, "normal mode summed or suppressed an original hit")
     assert(
-        context.displays[1].info == first and context.displays[2].info == second,
+        context.displays[1].info == first
+            and context.displays[2].info == second
+            and context.displays[3].info == duplicate,
         "normal mode changed original display order"
     )
-    assert(
-        context.displays[1].displayAmount == nil and context.displays[2].displayAmount == nil,
-        "normal mode received a sum override"
-    )
+    for _, displayed in ipairs(context.displays) do
+        assert(displayed.displayAmount == nil, "normal mode received a sum override")
+    end
     assert(
         first.amount == 20 and second.amount == 100 and duplicate.amount == 100,
         "normal mode changed original hit values"
     )
 end
-print("PASS normal SCT keeps 20 and 100 separate and still collapses duplicate 100 values")
+print("PASS normal SCT displays 20, 100 and another 100 separately in both styles")
 
 for _, scrolling in ipairs({ false, true }) do
     local context, env = Queues(scrolling, true)
@@ -426,12 +432,12 @@ for _, scrolling in ipairs({ false, true }) do
     context.resolve = true
     local first = context:Hit(100, 30)
     local old = assert(env.pendingGroups[1])
-    assert(old.closesAt == 30 + 0.075, "normal mode lost its original 75 ms deadline")
+    assert(not old.closesAt and not old.bucket, "normal mode opened group intake")
     local pending = #env.pending
     context:Mode(true)
     assert(not old.bucket and not next(env.intakeBuckets), "mode preview kept the old intake open")
     assert(
-        #env.pending == pending and old.info == first and old.closesAt == 30 + 0.075,
+        #env.pending == pending and old.info == first and not old.closesAt,
         "mode preview retired or retimed original hits"
     )
     local performance = context:Hit(20, 30.02)
@@ -446,9 +452,9 @@ for _, scrolling in ipairs({ false, true }) do
     assert(not wider.bucket and wider.closesAt == 30.02 + 0.3, "Cancel rewrote or retained the wider intake")
     local normal = context:Hit(100, 30.12)
     local restored = assert(env.pendingGroups[2])
-    assert(restored.closesAt == 30.12 + 0.075, "Cancel did not restore the normal deadline")
+    assert(not restored.closesAt and not restored.bucket, "Cancel did not restore separate normal hits")
     context:Mode(false)
-    assert(restored.bucket, "an unchanged normal-mode notification closed current intake")
+    assert(not restored.bucket, "an unchanged normal-mode notification opened group intake")
     context.queue.Update(30.201)
     assert(
         #context.displays == 3 and context.displays[2].info == performance and context.displays[3].info == normal,
@@ -458,12 +464,12 @@ for _, scrolling in ipairs({ false, true }) do
         context.displays[1].displayAmount == nil
             and context.displays[2].displayAmount == 120
             and context.displays[3].displayAmount == nil,
-        "mode changes rewrote created-mode sum/dedup behavior"
+        "mode changes rewrote created-mode sum or individual-hit behavior"
     )
     assert(performance.amount == 20 and addition.amount == 100, "Cancel rewrote an original summed hit")
     assert(not next(env.intakeBuckets), "mode changes retained an intake owner")
 end
-print("PASS mode preview and Cancel settle old intake without dropping hits or changing normal deadlines")
+print("PASS mode preview and Cancel preserve queued sums and restore separate normal hits")
 
 for _, scrolling in ipairs({ false, true }) do
     local context, env = Queues(scrolling, true)

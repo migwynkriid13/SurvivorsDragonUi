@@ -611,7 +611,10 @@ Test("abbreviation previews refit active totals without restarting motion, font 
         context:Tick(0.4)
         local label = assert(context:Labels()[1])
         local full, compact = performance and "3,000,000" or "1,500,000", performance and "3M" or "1.5M"
-        assert(#context:Labels() == 1 and label:GetText() == full, "original group semantics changed")
+        assert(
+            #context:Labels() == (performance and 1 or 2) and label:GetText() == full,
+            "per-mode hit presentation changed"
+        )
         local holder, allocated, width = label.parent.parent, #context.objects, label:GetWidth()
         local anchor, alpha, font = holder.anchor, holder:GetAlpha(), label:GetFont()
         context:SetSetting("sctShortNumbers", true)
@@ -1089,7 +1092,7 @@ Test("Performance Mode changes grouping without retiring or restarting active SC
     end
 end)
 
-Test("Performance Mode renders summed damage while restored normal mode keeps exact-amount duplicates", function()
+Test("Performance Mode renders summed damage while restored normal mode shows every original hit", function()
     for _, scrolling in ipairs({ false, true }) do
         local context = SCT(scrolling, function(setup) setup.settings.performanceMode = true end)
         context:Hit(20)
@@ -1115,13 +1118,37 @@ Test("Performance Mode renders summed damage while restored normal mode keeps ex
             values[label:GetText()] = label
         end
         assert(
-            #context:Labels() == 3 and values["120"] == summed and values["20"] and values["100"] and not values["200"],
-            "normal mode summed distinct amounts or stopped exact-amount duplicate suppression"
+            #context:Labels() == 4 and values["120"] == summed and values["20"] and values["100"] and not values["200"],
+            "normal mode summed or suppressed an original hit"
         )
         context:Tick(1.26)
-        assert(#context:Labels() == 2 and not summed:IsVisible(), "sum lifetime was restarted by the mode transition")
+        assert(#context:Labels() == 3 and not summed:IsVisible(), "sum lifetime was restarted by the mode transition")
         context:Tick(0.3)
         assert(#context:Labels() == 0, "normal groups lost their full original display lifetime")
+    end
+end)
+
+Test("normal bursts show every identical hit in all styles and reuse their retired pool", function()
+    for _, style in ipairs({ "enemy", "msbt", "diablo" }) do
+        local context = SCT(style == "msbt", function(setup) setup.settings.sctStyle = style end)
+        for _ = 1, 24 do
+            context:Hit(100)
+        end
+        context:Tick(0.2)
+        assert(#context:Labels() == 24, "normal burst collapsed identical simultaneous hits")
+        for _, label in ipairs(context:Labels()) do
+            assert(label:GetText() == "100", "normal burst changed an original damage amount")
+        end
+        local allocated = #context.objects
+        context:Tick(2)
+        assert(#context:Labels() == 0, "normal burst retained expired labels")
+        for _ = 1, 24 do
+            context:Hit(100)
+        end
+        context:Tick(0.2)
+        assert(#context:Labels() == 24 and #context.objects == allocated, "normal burst did not reuse its text pool")
+        context:Event(context.controller, "PLAYER_LEAVING_WORLD")
+        assert(#context:Labels() == 0, "world cleanup retained normal burst labels")
     end
 end)
 

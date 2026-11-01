@@ -593,10 +593,11 @@ The assertions cover:
   Source-extracted SCT queue cases retain original metadata/color intake,
   amount/critical/icon identities, inclusive intake and subtraction-based
   settle boundaries while checking that MSBT stores no per-hit pending record.
-  Grouping cases retain the original 75 ms normal path and cover Performance
-  Mode's fixed inclusive 300 ms window in both SCT styles, same-attack sums
-  (`20 + 100 = 120`, including equal amounts), unchanged normal duplicate
-  suppression, preserved original per-hit values, separate critical/source/icon
+  Normal-mode cases retain every identical simultaneous hit in all three styles,
+  separate same-target and different-target native anchors, original values,
+  independent settling, pooled reuse and world cleanup without group intake.
+  Performance Mode cases retain its fixed inclusive 300 ms window, same-attack sums
+  (`20 + 100 = 120`, including equal amounts), preserved original per-hit values, separate critical/source/icon
   identities, numeric overflow splitting, stable bucket cleanup,
   old/new intake separation and active animation
   surviving preview/Cancel window changes. Matching and settling keep their
@@ -723,7 +724,7 @@ The assertions cover:
   across Performance Mode transitions. No native Overpower result is inferred.
   Abbreviation cases cover boolean
   defaults/invalid values, all K/M/B/T boundaries, original per-hit amounts,
-  75 ms duplicate versus 300 ms summed totals, active width refitting without
+  individual normal values versus 300 ms summed totals, active width refitting without
   coordinate/font/lifetime restart, Cancel, pooled reuse and localized misses.
   Settings cases retain the disabled class-color choice across Custom mode
   changes and cover abbreviation preview/Cancel and final page extent.
