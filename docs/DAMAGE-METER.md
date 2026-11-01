@@ -204,15 +204,23 @@ native talent. A direct talent source requires known attribution, a valid
 and artwork. Later upgrades retain one display identity and add their native
 amounts and rates, like ability ranks.
 
-For an ability row already named from its single actual talent origin, the
-family can normalize that origin's explicit talent identity across ranks too.
-The underlying ability or item family remains distinct. Ambiguity checks use
-both the underlying rank and talent rank, retaining exact source and origin IDs
-within each pair. Presentation keeps the highest underlying rank, then the
-highest talent rank on a tie. Each positive member must still agree on one
-exact actual origin before its row receives a talent caption.
+Known ability procs already named from one validated actual talent origin group
+under that talent across triggering abilities and optional ability ranks.
+For example, the received `ability:fire_nova` without a rank and
+`ability:fire_nova:r1` can share Flametongue Weapon rank 3. Rockbiter and
+Stormstrike procs with the same actual Windfury Weapon origin share its row too.
+The highest contributing talent rank supplies the caption and artwork. The
+addon never assigns a missing ability rank or derives ownership from names,
+definition relationships or loadouts. Every positive member of each native row
+must still agree on one exact valid actual origin.
 
-Different owners, recorded casters, proc flags, ability components, variants,
+Ambiguity checks retain the triggering ability, its supplied rank or explicit
+absence, and talent rank. Conflicting native sources in one such slot, or
+different actual origin IDs at the same talent rank, keep the whole family
+separate. Item-bound rank families retain their existing component identity
+and highest-item-rank presentation, with talent rank as its tie-breaker.
+
+Different owners, recorded casters, proc flags, explicit variants,
 item identities and talent identities stay separate. Missing or invalid talent
 metadata and conflicting sources at the same rank stay separate as well;
 names and source-key text never establish a family. No native record, amount,
@@ -220,7 +228,8 @@ rate, checkpoint or origin is rewritten. Existing pooled rows, metadata caches,
 one-second rates, pet summaries and both Performance Mode states keep their
 shared lifecycle. CI-only cases cover direct and actual-origin ranks, upgrades,
 ambiguity, art readiness, rates, resets and hidden work. No local tests or game
-execution were performed; the reported run's exact native payload remains
+execution were performed. The reported tooltips establish these source/origin
+shapes; the complete native snapshot and the patched live appearance remain
 unverified.
 
 ## Item ranks

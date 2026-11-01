@@ -106,16 +106,20 @@ but not run locally; live Hakkar metadata and rendering remain unverified.
 Talent-rank summaries reuse the same pool and publication/member caches.
 Direct talent keys and accepted actual-origin talent keys normalize only during
 changed identity/attribution or relevant metadata preparation. Counter-only
-refreshes do not rebuild them. Each prepared rank row retains three scalar
-fields for its origin rank, ambiguity slot and exact member identity; family
-comparison adds one scalar tie-breaker. Existing rank maps retire with their
-families, without retaining native leaf Stats or adding another history series.
-Underlying ability/item components, owner/caster/proc distinctions, native
+refreshes do not rebuild them. Prepared rank rows retain scalar origin-rank,
+ambiguity-slot and exact-member fields. Validated known ability procs additionally
+retain their actual origin ID and use its talent rank for presentation; triggering
+ability/rank slots distinguish ambiguity without splitting one talent by its
+triggers or inventing a missing rank. Each such family lazily reuses one
+rank-to-origin-ID map, bounded by its current members and cleared on mapping
+changes. These maps retire with their families and retain no native leaf Stats.
+Item components, explicit variants, owner/caster/proc distinctions, native
 amounts, rates and checkpoints remain intact. Both Performance Mode states
 update instantly, and hidden/off work remains deferred. No frame, region,
 asset, native getter, event, updater, setting or saved data is added. CI-only
 cases cover counter-only key reuse, upgrades, ambiguity, missing rates, art
-readiness, resets and visible/hidden row reuse in both modes; they were authored
+readiness, resets, ranked/unranked and different ability triggers, and
+visible/hidden row reuse in both modes; they were authored
 without local execution and do not prove live FPS or appearance.
 
 ## Meter processing and display caches

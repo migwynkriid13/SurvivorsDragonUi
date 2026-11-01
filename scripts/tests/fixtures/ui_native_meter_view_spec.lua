@@ -470,6 +470,43 @@ Test("native hover IDs refresh without changed captions or numbers and respect t
     end
 end)
 
+Test("new ranked or different ability triggers retain one actual-talent row in both performance modes", function()
+    local cases = {
+        {
+            "shaman.enh_flametongue_weapon",
+            "Flametongue Weapon",
+            {
+                { id = "ability:fire_nova", abilityKey = "fire_nova" },
+                { id = "ability:fire_nova:r1", abilityKey = "fire_nova", rank = 1 },
+            },
+        },
+        {
+            "shaman.enh_windfury_weapon",
+            "Windfury Weapon",
+            {
+                { id = "ability:rockbiter:r5", abilityKey = "rockbiter", rank = 5 },
+                { id = "ability:stormstrike:r1", abilityKey = "stormstrike", rank = 1 },
+            },
+        },
+    }
+    for _, case in ipairs(cases) do
+        for _, performance in ipairs({ false, true }) do
+            local c, state = View(function(context, native)
+                context.settings.performanceMode = performance
+                native.records, native.extraSources = helpers.TalentTriggers(case[1], case[2], { case[3][1] })
+            end)
+            local row, allocated = c:Row(1), table.getn(c.objects)
+            local identity = row.entry.rowId
+            assert(row.entry.name == case[2] and row.entry.dmg == 10)
+            state.records, state.extraSources = helpers.TalentTriggers(case[1], case[2], case[3])
+            state.context.counterRevision = "additional-talent-trigger"
+            c:Tick()
+            assert(c:Row(1) == row and row.entry.rowId == identity and row.entry.dmg == 30)
+            assert(table.getn(c.objects) == allocated, "a different triggering ability allocated another meter row")
+        end
+    end
+end)
+
 Test("talent upgrades reuse one visible row and defer hidden work in both performance modes", function()
     for _, performance in ipairs({ false, true }) do
         local c, state = View(function(context, native)

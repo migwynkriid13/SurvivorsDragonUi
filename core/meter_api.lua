@@ -638,7 +638,32 @@ function DFRL.tools.NewNativeMeter()
                 source.rank
         end
     end
-    local function FamilyKey(source, native, actorKey, snapshot, contributions)
+    local function TalentProcKey(source, display, native, actorKey)
+        if
+            display == source
+            or source.kind ~= "ability"
+            or source.attribution ~= "known"
+            or not Id(source.abilityKey)
+            or (source.rank ~= nil and not Rank(source))
+        then
+            return
+        end
+        local talentKey, talentRank = TalentRankKey(display)
+        local details = FamilyDetails(source)
+        if not talentKey or not details then return end
+        local key = "talent-proc:"
+            .. KeyPart(talentKey)
+            .. KeyPart(native.ownerId)
+            .. (native.nativeProc and "1" or "0")
+            .. KeyPart(actorKey or "")
+            .. details
+        local slot = tostring(talentRank)
+            .. ":"
+            .. KeyPart(source.abilityKey)
+            .. KeyPart(source.rank ~= nil and tostring(source.rank) or "")
+        return key, talentRank, slot, display.sourceKey
+    end
+    local function FamilyKey(source, native, actorKey, snapshot, contributions, display)
         local itemKey, itemRank, itemCandidate = ItemFamilyKey(source, native, actorKey, snapshot, contributions)
         if itemCandidate then return itemKey, itemRank end
         local talentKey, talentRank = TalentRankKey(source)
@@ -646,6 +671,8 @@ function DFRL.tools.NewNativeMeter()
             return talentKey .. KeyPart(native.ownerId) .. (native.nativeProc and "1" or "0") .. KeyPart(actorKey or ""),
                 talentRank
         end
+        local procKey, procRank, procSlot, originKey = TalentProcKey(source, display, native, actorKey)
+        if procKey then return procKey, procRank, procSlot, originKey end
         if source.kind ~= "ability" or not Id(source.abilityKey) or not Rank(source) then return end
         local details = FamilyDetails(source)
         if not details then return end
@@ -833,6 +860,7 @@ function DFRL.tools.NewNativeMeter()
         row.portraitKey, row.portraitRunId, row.portraitStatus = nil, nil, nil
         row.familyKey, row.familyRank, row.groupKind = nil, nil, nil
         row.familyTalentRank, row.familyRankKey, row.familyMemberKey = nil, nil, nil
+        row.familyOriginKey = nil
         if query.groupBy == "owner" then
             local actor = snapshot.actors[native.ownerId]
             row.name, row.class, row.proc = actor.name, actor.classKey, 0
@@ -859,7 +887,8 @@ function DFRL.tools.NewNativeMeter()
         if pet and view.groupPets then
             row.familyKey, row.groupKind = "pet:" .. actorKey, "pet"
         elseif query.groupBy == "source" or query.groupBy == "actor_source" then
-            row.familyKey, row.familyRank = FamilyKey(source, native, actorKey, snapshot, contributions)
+            row.familyKey, row.familyRank, row.familyRankKey, row.familyOriginKey =
+                FamilyKey(source, native, actorKey, snapshot, contributions, display)
             if row.familyKey then
                 row.groupKind = "rank"
             elseif pet then
@@ -869,7 +898,7 @@ function DFRL.tools.NewNativeMeter()
                     .. (native.nativeProc and "1" or "0")
                 row.groupKind = "source"
             end
-            if row.familyKey and display ~= source then
+            if row.familyKey and display ~= source and not row.familyOriginKey then
                 local talentKey, talentRank
                 if row.groupKind == "rank" then
                     talentKey, talentRank = TalentRankKey(display)
@@ -881,10 +910,16 @@ function DFRL.tools.NewNativeMeter()
                 if talentRank then row.familyMemberKey = KeyPart(native.sourceKey) .. KeyPart(display.sourceKey) end
             end
             if row.groupKind == "rank" then
-                row.familyRankKey = row.familyTalentRank
-                        and (tostring(row.familyRank) .. ":talent:" .. tostring(row.familyTalentRank))
-                    or row.familyRank
-                row.familyMemberKey = row.familyMemberKey or native.sourceKey
+                row.familyRankKey = row.familyRankKey
+                    or (
+                        row.familyTalentRank
+                            and (tostring(row.familyRank) .. ":talent:" .. tostring(row.familyTalentRank))
+                        or row.familyRank
+                    )
+                row.familyMemberKey = row.familyOriginKey
+                        and (KeyPart(native.sourceKey) .. KeyPart(row.familyOriginKey))
+                    or row.familyMemberKey
+                    or native.sourceKey
             end
         end
         for id in pairs(contributions) do
@@ -898,6 +933,11 @@ function DFRL.tools.NewNativeMeter()
             family.previousCount, family.count, family.rateChanged = family.count or 0, 0, false
             for rank in pairs(family.ranks) do
                 family.ranks[rank] = nil
+            end
+            if family.talentOrigins then
+                for rank in pairs(family.talentOrigins) do
+                    family.talentOrigins[rank] = nil
+                end
             end
         end
         for _, row in ipairs(view.pool) do
@@ -922,6 +962,12 @@ function DFRL.tools.NewNativeMeter()
                     local previous = family.ranks[row.familyRankKey]
                     if previous and previous ~= row.familyMemberKey then family.ambiguous = true end
                     family.ranks[row.familyRankKey] = row.familyMemberKey
+                    if row.familyOriginKey then
+                        family.talentOrigins = family.talentOrigins or {}
+                        local origin = family.talentOrigins[row.familyRank]
+                        if origin and origin ~= row.familyOriginKey then family.ambiguous = true end
+                        family.talentOrigins[row.familyRank] = row.familyOriginKey
+                    end
                 end
                 if row.groupKind == "pet" then
                     if grouped.proc ~= row.proc then grouped.proc = 0 end

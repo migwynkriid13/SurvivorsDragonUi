@@ -99,6 +99,29 @@ local function TalentProcRanks(count)
     return records, origins
 end
 
+local function TalentTriggers(talentKey, name, triggers)
+    local records, originKey = Ranks(table.getn(triggers)), "talent:" .. talentKey .. ":r3"
+    for index, trigger in ipairs(triggers) do
+        local record = records[index]
+        record.id, record.rowId = trigger.id, "trigger-leaf-" .. index
+        record.name, record.abilityKey, record.rank =
+            trigger.name or trigger.abilityKey, trigger.abilityKey, trigger.rank
+        record.kind, record.attribution, record.proc, record.origins = "ability", "known", true, { originKey }
+    end
+    return records,
+        {
+            [originKey] = {
+                sourceKey = originKey,
+                kind = "talent",
+                attribution = "known",
+                rank = 3,
+                talentKey = talentKey,
+                name = name,
+                icon = { status = "ready", path = "Interface\\Icons\\" .. originKey },
+            },
+        }
+end
+
 local function ItemRanks(count)
     local records = {}
     for rank = count, 1, -1 do
@@ -469,6 +492,7 @@ if helperMode == "helpers" then
         labels = labels,
         Ranks = Ranks,
         TalentRanks = TalentRanks,
+        TalentTriggers = TalentTriggers,
         ItemRanks = ItemRanks,
         Pets = Pets,
         Talents = Talents,
@@ -1395,7 +1419,121 @@ Test("normalized talent origins retain exact components, incomplete identities a
     state.records, state.extraSources = TalentProcRanks(2)
     state.records[1].abilityKey = "other-ability"
     local source = assert(meter.Read(damage, 10))
-    assert(table.getn(source) == 2, "one talent origin merged independent ability components")
+    assert(
+        table.getn(source) == 1 and source[1].dmg == 30,
+        "one actual talent stayed split by its triggering abilities"
+    )
+end)
+
+Test("received Flametongue and Windfury trigger shapes share their validated actual talent family", function()
+    local cases = {
+        {
+            "shaman.enh_flametongue_weapon",
+            "Flametongue Weapon",
+            {
+                { id = "ability:fire_nova", abilityKey = "fire_nova" },
+                { id = "ability:fire_nova:r1", abilityKey = "fire_nova", rank = 1 },
+            },
+        },
+        {
+            "shaman.enh_windfury_weapon",
+            "Windfury Weapon",
+            {
+                { id = "ability:rockbiter:r5", abilityKey = "rockbiter", rank = 5 },
+                { id = "ability:stormstrike:r1", abilityKey = "stormstrike", rank = 1 },
+            },
+        },
+    }
+    for _, case in ipairs(cases) do
+        for _, view in ipairs({ damage, healing, boss }) do
+            local _, state, meter = Native()
+            state.records, state.extraSources = TalentTriggers(case[1], case[2], case[3])
+            local source, total, rate = meter.Read(view, 10)
+            assert(table.getn(source) == 1 and source[1].name == case[2] and source[1].dmg == 30 and total == 30)
+            assert(math.abs(source[1].dps - 0.6) < 0.000001 and rate == 0.6)
+            assert(source[1].icon == "Interface\\Icons\\talent:" .. case[1] .. ":r3")
+            for index, trigger in ipairs(case[3]) do
+                assert(state.lastResponse.sources[trigger.id].rank == trigger.rank, "grouping invented an ability rank")
+                assert(state.lastResponse.rows[index].sourceKey == trigger.id)
+            end
+            local identity = source[1].rowId
+            local old = table.remove(state.records, 1)
+            table.insert(state.records, old)
+            state.context.counterRevision = "reordered-talent-triggers"
+            source = assert(meter.Read(view, 10))
+            assert(source[1].rowId == identity and source[1].dmg == 30)
+            assert(meter.Reset())
+            state.context.asOfRunSeconds = 22
+            source = assert(meter.Read(view, 0))
+            assert(table.getn(source) == 1 and source[1].dmg == 9 and source[1].dps == 4.5)
+        end
+    end
+end)
+
+Test("actual talent trigger summaries keep explicit distinctions and reject missing or ambiguous ownership", function()
+    local triggers = {
+        { id = "ability:fire_nova", abilityKey = "fire_nova" },
+        { id = "ability:fire_nova:r1", abilityKey = "fire_nova", rank = 1 },
+    }
+    local mutations = {
+        function(state) state.records[1].variantKey = "separate-variant" end,
+        function(state) state.records[1].itemKey = "separate-item" end,
+        function(state) state.records[1].itemInstanceKey = "separate-instance" end,
+        function(state) state.records[1].itemId = 101 end,
+        function(state) state.records[1].talentKey = "separate-explicit-talent" end,
+        function(state) state.records[1].proc = false end,
+        function(state) state.records[1].attribution = "unknown" end,
+        function(state) state.records[1].rank = -1 end,
+        function(state) state.records[1].omitAbilityKey = true end,
+        function(state) state.records[1].origins = {} end,
+        function(state) state.records[1].origins = { state.records[1].origins[1], "missing-second-origin" } end,
+        function(state) state.extraSources[state.records[1].origins[1]].rank = nil end,
+        function(state) state.extraSources[state.records[1].origins[1]].talentKey = nil end,
+        function(state)
+            local origin = Copy(state.extraSources[state.records[1].origins[1]])
+            origin.sourceKey = "conflicting-origin-at-the-same-rank"
+            state.extraSources[origin.sourceKey], state.records[1].origins = origin, { origin.sourceKey }
+        end,
+    }
+    for _, mutate in ipairs(mutations) do
+        local _, state, meter = Native()
+        state.records, state.extraSources =
+            TalentTriggers("shaman.enh_flametongue_weapon", "Flametongue Weapon", triggers)
+        mutate(state)
+        local source = assert(meter.Read(damage, 10))
+        assert(
+            table.getn(source) == 2,
+            "actual talent summary erased a supplied distinction or accepted uncertain identity"
+        )
+    end
+    local _, state, meter = Native()
+    state.records, state.extraSources = TalentTriggers("shaman.enh_flametongue_weapon", "Flametongue Weapon", triggers)
+    local duplicate = Copy(state.records[1])
+    duplicate.id, duplicate.rowId = "second-unranked-fire-nova", "second-unranked-member"
+    table.insert(state.records, duplicate)
+    local source = assert(meter.Read(damage, 10))
+    assert(table.getn(source) == 3, "ambiguous unranked trigger partially merged its talent family")
+    for _, row in ipairs(source) do
+        assert(type(row.rowId) == "string", "ambiguous triggers lost their exact native row identities")
+    end
+end)
+
+Test("actual talent triggers preserve recorded owners and casters", function()
+    local _, state, meter = Native()
+    local triggers = {
+        { id = "ability:rockbiter:r5", abilityKey = "rockbiter", rank = 5 },
+        { id = "ability:stormstrike:r1", abilityKey = "stormstrike", rank = 1 },
+    }
+    state.records, state.extraSources = TalentTriggers("shaman.enh_windfury_weapon", "Windfury Weapon", triggers)
+    state.records[2].ownerId = "hero-2"
+    local source = assert(meter.Read({ metric = "damage", scope = "party", period = "run", groupBy = "source" }, 10))
+    assert(table.getn(source) == 2, "talent triggers merged different credited owners")
+    state.records[2].ownerId = nil
+    for index, record in ipairs(state.records) do
+        record.actorId, record.actorKind, record.actorName = "caster-" .. index, "totem", "Same totem"
+    end
+    source = assert(meter.Read({ metric = "damage", scope = "self", period = "run", groupBy = "actor_source" }, 10))
+    assert(table.getn(source) == 2, "talent triggers merged unrelated recorded casters")
 end)
 
 Test("talent ranks retain checkpoint deltas, missing rates, localization and highest-rank art retries", function()

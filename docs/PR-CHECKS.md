@@ -167,14 +167,19 @@ actual tooltip is observed. Coverage remains CI-only.
 Talent-rank cases cover direct known talent descriptors and ability rows with
 validated actual talent origins. They combine native ranks without rewriting
 counter records, check later upgrades and stable display identities across the
-three source views, and retain independent components, owner/caster/proc/item
-distinctions and same-rank ambiguity. Actual-origin cases distinguish the
-underlying rank from the talent rank and reject missing identity metadata.
+three source views, and retain explicit variants, owner/caster/proc/item
+distinctions and same-rank ambiguity. Actual-origin cases reproduce received
+Flametongue shapes with absent/present Fire Nova ranks and Windfury shapes with
+Rockbiter/Stormstrike triggers. They group by validated actual talent ownership,
+preserve the original ability keys/ranks, reject missing or multiple ownership,
+and retain conflicting source slots or same-rank origin IDs. Full meter cases
+check that an additional triggering ability reuses one row in both modes.
 Checkpoint deltas, unavailable rates, localization, highest-rank artwork
 readiness and counter-only identity reuse share the production adapter. Full
 meter cases check pooled row reuse and hidden work in both Performance Mode
-states. These CI-only mocks do not identify the exact source IDs in the reported
-Flametongue/Windfury run or establish live native payloads, appearance or FPS.
+states. The reported tooltips supply the source/origin shapes; these CI-only
+mocks use illustrative counters and do not establish the complete native
+snapshot, patched live appearance or FPS.
 
 Item-rank cases add differing rank-specific item IDs under one explicit item
 key, direct and item-bound sources, single actual-origin joins, independent
