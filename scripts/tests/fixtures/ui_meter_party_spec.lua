@@ -1199,4 +1199,44 @@ Test("legacy party rate-only updates remain validated after viewport sampling", 
     assert(not context:Row(1):IsShown(), "invalid same-publication party rate reached visible formatting")
 end)
 
+Test("custom ability and proc colors retain Party class colors and discard without new rows", function()
+    for _, performance in ipairs({ false, true }) do
+        local context = Meter(function(current, env)
+            current.settings.performanceMode = performance
+            current.damage = {
+                { name = "Ability", dmg = 100, dps = 10, share = 2 / 3, proc = 0 },
+                { name = "Proc", dmg = 50, dps = 5, share = 1 / 3, proc = 1 },
+            }
+            current:Load("core/display.lua", "Display")
+            env.SurvivorsDragonUiDisplay = env.DFRL.display.Copy(current.settings)
+            env.DFRL.display.BeginEdit()
+        end)
+        local display = context.env.DFRL.display
+        context:Tick()
+        local first, second = context:Row(1), context:Row(2)
+        local red, green, blue = unpack(first.bar.color)
+        local allocated = #context.objects
+        display.Set("meterAbilityColor", "FF0000")
+        display.Set("meterProcColor", "00FF00")
+        display.Set("meterColorMode", "custom")
+        context:Tick(0.01)
+        assert(first.bar.color[1] == 1 and first.bar.color[2] == 0 and first.bar.color[3] == 0)
+        assert(second.bar.color[1] == 0 and second.bar.color[2] == 1 and second.bar.color[3] == 0)
+        assert(first.entry.dmg == 100 and second.entry.dmg == 50 and #context.objects == allocated)
+        context:ResetCounts()
+        context:Tick()
+        assert(not context.writes.SetStatusBarColor, "unchanged custom colors repainted settled bars")
+        display.FinishEdit(false)
+        context:Tick(0.01)
+        assert(first.bar.color[1] == red and first.bar.color[2] == green and first.bar.color[3] == blue)
+        assert(second.bar.color[1] == 0.25 and second.bar.color[2] == 0.58 and second.bar.color[3] == 1)
+        display.BeginEdit()
+        display.Set("meterColorMode", "custom")
+        display.Set("meterAbilityColor", "FF0000")
+        context:Party()
+        assert(context:Row(1).bar.color[1] == 0.41 and context:Row(2).bar.color[1] == 1)
+        assert(context:Row(2).bar.color[2] == 0.96, "custom ability color replaced a Party class color")
+    end
+end)
+
 print("PASS " .. passed .. " party meter contracts")

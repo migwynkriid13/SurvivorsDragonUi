@@ -422,7 +422,9 @@ local function Native()
             local leaf = Stats(query, record.amount, record.recent, record.after, record.recentStatus)
             leaf.rowId, leaf.ownerId, leaf.actorId, leaf.sourceKey = record.rowId, owner, actor, record.id
             leaf.nativeProc, leaf.periodicity = record.proc == true, record.periodic and "periodic" or "non_periodic"
-            leaf.reflection, leaf.schoolState, leaf.schoolMask = "not_reflected", "known", 1
+            leaf.reflection = "not_reflected"
+            leaf.schoolState = record.schoolState == nil and "known" or record.schoolState
+            leaf.schoolMask = record.schoolMask == nil and 1 or record.schoolMask
             leaf.creditKind = query.metric == "healing" and "health_restored" or "health_damage"
             leaf.sourceOwnerState, leaf.sourceOwnerId = "known", owner
             if query.metric == "healing" then
@@ -536,6 +538,116 @@ Test("missing native endpoints retain the legacy selection boundary", function()
     local c = H.New()
     c:Load("core/meter_api.lua")
     assert(not c.env.T.NewNativeMeter().Supported(), "missing API selected the native v1 path")
+end)
+
+Test("native school metadata follows exact contributions without changing rate identity", function()
+    local _, state, meter = Native()
+    state.records[1].schoolMask, state.records[2].schoolMask = 4, 16
+    local source = assert(meter.Read(damage, 10))
+    local identity, amount, rate = source[1].rateIdentity, source[1].dmg, source[1].dps
+    assert(source[1].name == source[2].name and source[1].schoolMask == 4 and source[2].schoolMask == 16)
+    state.records[1].schoolMask, state.context.metadataRevision = 20, "native-hybrid-school"
+    source = assert(meter.Read(damage, 10))
+    assert(source[1].schoolMask == 20 and source[1].rateIdentity == identity)
+    assert(source[1].dmg == amount and source[1].dps == rate, "school metadata changed native statistics")
+    for index, invalid in ipairs({ 0, 128, -1, 1.5, math.huge, 0 / 0, false, "4" }) do
+        state.records[1].schoolMask, state.context.metadataRevision = invalid, "invalid-school-" .. index
+        source = assert(meter.Read(damage, 10))
+        assert(source[1].schoolMask == nil and source[1].rateIdentity == identity)
+        assert(source[1].dmg == amount, "invalid color metadata removed valid damage")
+    end
+    for _, unknown in ipairs({ "unknown", "not_applicable", "guessed" }) do
+        state.records[1].schoolState, state.records[1].schoolMask = unknown, 4
+        state.context.metadataRevision = "school-state-" .. unknown
+        source = assert(meter.Read(damage, 10))
+        assert(source[1].schoolMask == nil and source[1].rateIdentity == identity)
+    end
+    local snapshot = state.Snapshot
+    function state:Snapshot(query)
+        local value = snapshot(self, query)
+        value.contributions[1].schoolState, value.contributions[1].schoolMask = nil, nil
+        return value
+    end
+    state.context.metadataRevision = "missing-school-fields"
+    source = assert(meter.Read(damage, 10))
+    assert(source[1].schoolMask == nil and source[1].rateIdentity == identity and source[1].dmg == amount)
+end)
+
+Test("school colors require positive-member agreement and ignore zero-display history after Reset", function()
+    local _, state, meter = Native()
+    state.records = {
+        {
+            id = "shared",
+            rowId = "shared-one",
+            name = "Same spell",
+            ownerId = "hero-1",
+            actorId = "hero-1",
+            amount = 70,
+            recent = 7,
+            after = 10,
+            schoolMask = 4,
+        },
+        {
+            id = "shared",
+            rowId = "shared-two",
+            name = "Same spell",
+            ownerId = "hero-1",
+            actorId = "hero-1",
+            amount = 30,
+            recent = 3,
+            after = 0,
+            schoolMask = 16,
+        },
+    }
+    local snapshot = state.Snapshot
+    function state:Snapshot(query)
+        local value = snapshot(self, query)
+        local first, second = self.records[1], self.records[2]
+        local row = value.rows[1]
+        for key, field in
+            pairs(Stats(query, first.amount + second.amount, first.recent + second.recent, first.after + second.after))
+        do
+            row[key] = field
+        end
+        row.memberIds, row.share = { first.rowId, second.rowId }, 1
+        value.rows, value.maxRowAmount = { row }, row.displayAmount
+        return value
+    end
+    local source = assert(meter.Read(damage, 10))
+    local identity = source[1].rateIdentity
+    assert(table.getn(source) == 1 and source[1].dmg == 100 and source[1].schoolMask == nil)
+    state.records[2].schoolMask, state.context.metadataRevision = 4, "matching-member-schools"
+    source = assert(meter.Read(damage, 10))
+    assert(source[1].schoolMask == 4 and source[1].rateIdentity == identity)
+    state.records[2].schoolState, state.context.metadataRevision = "unknown", "unknown-positive-school"
+    source = assert(meter.Read(damage, 10))
+    assert(source[1].schoolMask == nil and source[1].rateIdentity == identity)
+    assert(meter.Reset())
+    source = assert(meter.Read(damage, 10))
+    assert(source[1].dmg == 10 and source[1].schoolMask == 4, "zero-display history supplied a school after Reset")
+end)
+
+Test("rank families preserve grouping and accept school colors only when their rows agree", function()
+    local _, state, meter = Native()
+    state.records = Ranks(3)
+    for _, record in ipairs(state.records) do
+        record.schoolMask = 4
+    end
+    local source = assert(meter.Read(damage, 10))
+    local identity, token, amount, rate = source[1].rateIdentity, source[1].rowId, source[1].dmg, source[1].dps
+    assert(table.getn(source) == 1 and source[1].schoolMask == 4)
+    state.records[2].schoolMask, state.context.metadataRevision = 16, "conflicting-rank-schools"
+    source = assert(meter.Read(damage, 10))
+    assert(table.getn(source) == 1 and source[1].schoolMask == nil)
+    assert(
+        source[1].rowId == token
+            and source[1].rateIdentity == identity
+            and source[1].dmg == amount
+            and source[1].dps == rate
+    )
+    state.records[2].schoolMask, state.context.metadataRevision = 4, "restored-rank-schools"
+    source = assert(meter.Read(damage, 10))
+    assert(source[1].schoolMask == 4 and source[1].rateIdentity == identity)
 end)
 
 Test("native source keys preserve equal labels, original values and authoritative icons", function()

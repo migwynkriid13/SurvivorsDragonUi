@@ -381,6 +381,26 @@ ambiguous declaration fails preparation.
 
 The assertions cover:
 
+- Meter-color cases exercise Default/Custom normalization, six-digit RGB values,
+  missing/invalid/older-profile defaults, preview/Confirm/discard/reset and
+  retained custom choices. The production editor uses explicit fake native
+  picker methods to cover synchronous initialization, independent ability/proc
+  previews, picker Cancel, Default retirement, foreign callback takeover,
+  missing-picker hex fallback and settings search. Native and legacy meter
+  cases cover both Performance Mode states, unchanged numeric values and
+  fractions, changed-only RGB writes, hidden deferral, pooled reuse and retained
+  Party class colors. These CI-only cases do not establish native picker
+  availability, live appearance or measured performance; no local execution is
+  authorized.
+- Automatic Default-color cases use received native contribution school fields,
+  exact same-snapshot member joins and positive-display agreement. They cover
+  all seven schools, explicit hybrid masks, equal captions with different types,
+  typed procs, missing/unknown/malformed fields, conflicting members and rank
+  families, zero-display history after Reset, unchanged native amounts/rates
+  and rate identities, changed-only RGB writes, hidden deferral, pooled reuse
+  and Custom precedence in both Performance Mode states. Legacy and Party keep
+  their existing fallbacks. These cases are CI-only and do not verify current
+  provider payloads or appearance.
 - Editor navigation loads `core/editor.lua` against explicit native scroll and
   glyph-width boundaries. It covers grouped visibility, original section owners,
   retained section state, per-category offsets, duplicate-heading suppression,
@@ -618,7 +638,7 @@ The assertions cover:
   and totem pulse IDs, independent critical/periodic choices, current queued
   choices, mixed grouping, active removal, unchanged pool allocation, exact
   localized aliases, conflicts, unknown native IDs and world cleanup. Editor
-  cases cover search, the hint and extended final row. These cases do not
+  cases cover search, the compact category grid without a description and the final row. These cases do not
   establish live provider payloads or native cast-consumer parity.
   Default per-hit matching/fallback remains covered. Extraction keeps complete
   multi-variable constant declarations once, with uniqueness regression cases.

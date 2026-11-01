@@ -443,6 +443,170 @@ function DFRL.tools.CreateEditorToggle(parent, text, description, width, callbac
     return button
 end
 
+local editorColorOwner
+local function ColorPicker()
+    local picker = _G.ColorPickerFrame
+    if
+        picker
+        and type(picker.SetColorRGB) == "function"
+        and type(picker.GetColorRGB) == "function"
+        and type(picker.Show) == "function"
+        and type(picker.Hide) == "function"
+        and type(picker.IsShown) == "function"
+        and type(picker.GetFrameStrata) == "function"
+        and type(picker.SetFrameStrata) == "function"
+        and type(picker.GetFrameLevel) == "function"
+        and type(picker.SetFrameLevel) == "function"
+    then
+        return picker
+    end
+end
+local function ReleaseEditorColor(owner)
+    if not owner or editorColorOwner ~= owner then return end
+    editorColorOwner, owner.active = nil, false
+    local picker = owner.picker
+    if picker.func ~= owner.change or picker.cancelFunc ~= owner.cancel then return end
+    picker.func, picker.cancelFunc, picker.opacityFunc = nil, nil, nil
+    pcall(picker.Hide, picker)
+    -- A foreign OnHide handoff owns its new callbacks and values.
+    if picker.func ~= nil or picker.cancelFunc ~= nil or picker.opacityFunc ~= nil then return end
+    if owner.layer and picker:GetFrameStrata() == owner.layer then picker:SetFrameStrata(owner.strata) end
+    if owner.layerLevel and picker:GetFrameLevel() == owner.layerLevel then picker:SetFrameLevel(owner.level) end
+    picker.func, picker.cancelFunc, picker.opacityFunc = owner.func, owner.cancelFunc, owner.opacityFunc
+    picker.hasOpacity, picker.opacity, picker.previousValues = owner.hasOpacity, owner.opacity, owner.previousValues
+end
+
+-- The native picker is optional; the same RGB choice always accepts a hex value.
+function DFRL.tools.CreateEditorColor(parent, text, width, callback)
+    local control = CreateFrame("Frame", nil, parent)
+    control:SetWidth(width)
+    control.label = Label(control, 12, text)
+    control.label:SetPoint("TOPLEFT", control, "TOPLEFT", 0, -7)
+    control.label:SetWidth(width)
+    control.label:SetJustifyH("LEFT")
+    control.pickerButton = T.CreateEditorButton(control, "", 30, 26)
+    local swatch = control.pickerButton:CreateTexture(nil, "OVERLAY")
+    swatch:SetTexture("Interface\\Buttons\\WHITE8X8")
+    swatch:SetPoint("TOPLEFT", control.pickerButton, "TOPLEFT", 5, -5)
+    swatch:SetPoint("BOTTOMRIGHT", control.pickerButton, "BOTTOMRIGHT", -5, 5)
+    control.input = T.CreateEditorInput(control, math.max(1, width - 38), 26)
+    control.input:SetMaxLetters(7)
+    function control:SyncInput()
+        if self.hex and not self.typing then
+            local value = "#" .. self.hex
+            if self.input:GetText() ~= value then self.input:SetText(value) end
+        end
+    end
+    function control:SetColor(value)
+        if self.hex ~= value then
+            local red, green, blue, hex = DFRL.display.ColorRGB(value)
+            if not hex then return end
+            self.hex = hex
+            swatch:SetVertexColor(red, green, blue, 1)
+        end
+        self:SyncInput()
+    end
+    function control:ReleasePicker()
+        if editorColorOwner and editorColorOwner.control == self then ReleaseEditorColor(editorColorOwner) end
+    end
+    function control:SetAvailable(enabled)
+        local pickerAvailable = enabled and ColorPicker() ~= nil
+        if self.available == enabled and self.pickerAvailable == pickerAvailable then return end
+        self.available, self.pickerAvailable = enabled, pickerAvailable
+        self:SetAlpha(enabled and 1 or 0.45)
+        self.pickerButton:EnableMouse(pickerAvailable)
+        self.pickerButton:SetAlpha(enabled and not pickerAvailable and 0.45 or 1)
+        self.input:EnableMouse(enabled)
+        self.input:EnableKeyboard(enabled)
+        if not enabled then
+            self.typing, self.before = nil, nil
+            self.input:ClearFocus()
+            self:SyncInput()
+            self:ReleasePicker()
+        end
+    end
+    control.input:SetScript("OnEditFocusGained", function()
+        control:ReleasePicker()
+        control.before, control.typing = control.hex, true
+    end)
+    control.input:SetScript("OnTextChanged", function()
+        if not control.typing or not control.available then return end
+        local _, _, _, hex = DFRL.display.ColorRGB(control.input:GetText())
+        if hex then callback(hex) end
+    end)
+    control.input:SetScript("OnEditFocusLost", function()
+        control.typing, control.before = nil, nil
+        control:SyncInput()
+    end)
+    control.input:SetScript("OnEnterPressed", function() control.input:ClearFocus() end)
+    control.input:SetScript("OnEscapePressed", function()
+        if control.before and control.available then callback(control.before) end
+        control.input:ClearFocus()
+    end)
+    control.pickerButton:SetScript("OnClick", function()
+        if not control.available or not control:IsVisible() then return end
+        ReleaseEditorColor(editorColorOwner)
+        local picker = ColorPicker()
+        if not picker or picker:IsShown() then return end
+        local owner = {
+            picker = picker,
+            control = control,
+            active = true,
+            original = control.hex,
+            func = picker.func,
+            cancelFunc = picker.cancelFunc,
+            opacityFunc = picker.opacityFunc,
+            hasOpacity = picker.hasOpacity,
+            opacity = picker.opacity,
+            previousValues = picker.previousValues,
+            strata = picker:GetFrameStrata(),
+            level = picker:GetFrameLevel(),
+        }
+        local function Owned()
+            return editorColorOwner == owner
+                and owner.active
+                and not owner.initializing
+                and picker.func == owner.change
+                and picker.cancelFunc == owner.cancel
+                and picker:IsShown()
+                and control.available
+                and control:IsVisible()
+        end
+        owner.change = function()
+            if not Owned() then return end
+            local ok, red, green, blue = pcall(picker.GetColorRGB, picker)
+            local hex = ok and DFRL.display.ColorHex(red, green, blue)
+            if hex then callback(hex) end
+        end
+        owner.cancel = function()
+            if not Owned() then return end
+            callback(owner.original)
+            ReleaseEditorColor(owner)
+        end
+        editorColorOwner = owner
+        picker.func, picker.cancelFunc, picker.opacityFunc = owner.change, owner.cancel, nil
+        picker.hasOpacity = false
+        local red, green, blue = DFRL.display.ColorRGB(control.hex)
+        picker.previousValues = { r = red, g = green, b = blue }
+        owner.initializing = true
+        local ok = pcall(picker.SetColorRGB, picker, red, green, blue)
+        owner.initializing = nil
+        if not ok or not pcall(picker.Show, picker) then
+            ReleaseEditorColor(owner)
+        elseif Owned() then
+            owner.layer, owner.layerLevel = control:GetFrameStrata(), control:GetFrameLevel() + 10
+            picker:SetFrameStrata(owner.layer)
+            picker:SetFrameLevel(owner.layerLevel)
+        end
+    end)
+    control:SetScript("OnHide", function()
+        control.typing, control.before = nil, nil
+        control.input:ClearFocus()
+        control:ReleasePicker()
+    end)
+    return control
+end
+
 -- Literal settings search needs the same case folding on both localized
 -- metadata and input. Decode only for supported Latin/Cyrillic case pairs;
 -- retain every other UTF-8 byte unchanged, including CJK captions.
@@ -1020,6 +1184,25 @@ function DFRL.tools.CompactEditorNumber(control)
     return height
 end
 
+-- Color captions share the same wrapping rules above their swatch and hex field.
+function DFRL.tools.CompactEditorColor(control)
+    local label = control.label
+    local natural = label:GetStringWidth()
+    local labelHeight = natural and natural > 0 and natural <= label:GetWidth() and 16 or 28
+    local inputTop, height = 7 + labelHeight + 8, 7 + labelHeight + 8 + 26 + 10
+    if not natural or natural <= 0 then control.editorColorHeight = nil end
+    if control.editorColorHeight == height and control:GetHeight() == height then return height end
+    label:SetHeight(labelHeight)
+    label:SetJustifyV("TOP")
+    control.pickerButton:ClearAllPoints()
+    control.pickerButton:SetPoint("TOPLEFT", control, "TOPLEFT", 0, -inputTop)
+    control.input:ClearAllPoints()
+    control.input:SetPoint("TOPLEFT", control, "TOPLEFT", 38, -inputTop)
+    control:SetHeight(height)
+    control.editorColorHeight = natural and natural > 0 and height or nil
+    return height
+end
+
 -- Place existing controls in row-major order, with explicit full-row controls
 -- and a shared maximum height for each pair. No idle sampling or extra frames.
 function DFRL.tools.LayoutEditorOptions(parent, controls, columns, gap, top)
@@ -1030,7 +1213,12 @@ function DFRL.tools.LayoutEditorOptions(parent, controls, columns, gap, top)
         if span == columns and column > 0 then
             top, column, height = top + height, 0, 0
         end
-        local itemHeight = record.numeric and T.CompactEditorNumber(control) or T.CompactEditorToggle(control)
+        local itemHeight
+        if record.color then
+            itemHeight = T.CompactEditorColor(control)
+        else
+            itemHeight = record.numeric and T.CompactEditorNumber(control) or T.CompactEditorToggle(control)
+        end
         local x, y = column * (rowWidth + gap), -top
         if record.x ~= x or record.y ~= y then
             control:ClearAllPoints()

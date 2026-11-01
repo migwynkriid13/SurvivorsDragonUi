@@ -1,5 +1,83 @@
 # DPS meter
 
+## Bar colors
+
+In `/sdui` → **Damage meter**, **Bar colors** selects **Default** or **Custom**.
+Default colors skills and procs by their received damage school:
+
+| School   | Color      |
+| -------- | ---------- |
+| Physical | Yellow     |
+| Holy     | Light gold |
+| Fire     | Orange     |
+| Nature   | Green      |
+| Frost    | Cyan       |
+| Shadow   | Violet     |
+| Arcane   | Pink       |
+
+Known hybrid schools blend their native mask's school colors. Unknown,
+unavailable or conflicting types fall back to your class color for abilities
+and the original blue for procs. Legacy builds without this metadata retain
+that fallback. Names, icons, current skills and equipment do not establish a
+damage school.
+
+Custom enables separate **Ability color** and **Proc color** controls. Click a
+swatch to use the game's color picker, or enter a six-digit RGB hex value such
+as `#FF8800`. The hex fields also work when the native picker is unavailable.
+Party rows keep their class colors. The existing textured bar artwork is used
+with either palette.
+
+Valid colors preview immediately. Enter or leaving the field finishes its text
+edit; Escape restores its color from before typing. Cancel in the native picker
+restores the color from before opening it. The settings window saves only with
+Confirm; its Cancel/discard paths and profiles include the palette. Returning to
+Default retains the custom choices for later. Missing/invalid saved preferences
+and both full resets select Default; custom defaults are gold `CCA147` and blue
+`4094FF`.
+
+The three scalar preferences live in the existing display table. RGB strings
+normalize to six uppercase hex digits, accepting an optional leading `#`;
+malformed values fall back when loading and are ignored while editing. The
+native picker accepts finite RGB channels only, disables opacity editing and
+uses owned callbacks with initialization guards. Its owned session temporarily
+borrows the settings strata and a higher frame level, restoring its captured
+native layer on release. Retirement closes/restores only
+the owned session, preserving a foreign callback handoff. No global picker
+script is replaced, and missing native functions leave hex input usable.
+
+The renderer caches the active palette and decodes changed custom colors once
+through the display listener. Visible rows include its revision in their color
+inputs and write only changed final RGB values. Default-mode edits to retained
+custom choices do not invalidate presentation. Both Performance Mode states use
+the same instant presentation; hidden/off meters defer painting, and existing
+show/world/row retirement paths reuse the pool. Counters, native rates, proc
+classification, reset checkpoints and attribution are unchanged. The CI-only
+editor/native/legacy cases were authored without local execution; native picker
+availability and live appearance remain unverified.
+
+Native v1 school colors join each display row's received `memberIds` to its
+same-snapshot contributions through the existing validated owner/caster/source/
+proc boundary. Every positive member must have `schoolState = "known"` and agree
+on one finite integer `schoolMask` in `1..127`. Missing, malformed, unjoined or
+conflicting members leave the row's school unknown. Zero-display historical
+members cannot supply or block a post-Reset school. Rank/item/talent families
+and optional pet summaries retain their original grouping and get a school only
+when every constituent row agrees; mixed rows keep the previous fallback.
+Actual multi-bit masks are distinct from conflicts between different members.
+
+The adapter copies only one school scalar per prepared row during its existing
+member pass, without retaining new leaf tables or duplicating the contribution
+index. School-only changes do not invalidate attribution fingerprints, rate
+identities, checkpoints, captions or artwork. Family sums refresh their school
+scalar without regrouping. The visible viewport copies that scalar through its
+existing sampling pass, and row color caches include it only for Default.
+Seven base colors and at most 120 lazily resolved hybrid colors form one bounded
+renderer palette; RGB resolution and writes happen only when relevant inputs
+change. There is no new setting, API getter, gameplay region or updater for
+automatic colors. CI-only cases cover exact types across identical captions,
+typed procs, hybrids, malformed/unknown data, member/family agreement, Reset,
+rate-identity preservation, hidden reuse and Custom precedence.
+
 ## Native version 1 data path
 
 Clients implementing the [version 1 contract](DAMAGE-METER-AND-INSTANCE-PLAYER-POSITION-API.md#3-version-1-implementation-contract)
@@ -289,8 +367,9 @@ described above rather than a caster spell row or pet summary.
 
 Pet summaries add their disjoint native amounts and rates, retaining the
 selected native window and checkpoint. A missing member rate keeps the combined
-rate unavailable. All-proc summaries retain the proc color; mixed summaries use
-the normal class color. They do not change native counters,
+rate unavailable. Summaries follow **Bar colors**: Default uses an agreed known
+school, with the proc/class fallback otherwise; Custom uses the proc color for
+all-proc summaries and the ability color for mixed summaries. They do not change native counters,
 header totals or Reset. Healing Done, Party Damage and the legacy meter path
 keep their existing grouping. Both Performance Mode states show the same
 instant result; hidden/off work remains deferred. CI-only mocks cover native
@@ -310,8 +389,9 @@ Every positive displayed contribution in the row must identify the same single
 actual talent origin in that snapshot. Definition-level associations do not
 establish that attribution. Missing, mixed, multiple or invalid origins keep
 the received source caption and artwork. Zero-display history does not supply
-post-Reset attribution. Native proc colors remain unchanged, so two related
-spell/proc rows can still have different colors.
+post-Reset attribution. Native proc classification remains unchanged. Default
+colors use the received damage school regardless of the talent caption, and
+Custom retains its separate ability/proc colors.
 
 This changes presentation only. Native source records and IDs, counters, rates
 and checkpoint fences remain intact. Display families retain distinct accepted

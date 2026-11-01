@@ -236,14 +236,54 @@ A successfully bound static native icon skips its helper while path and scale
 match. Failed bindings retry, and another binding path invalidates that cache.
 Retained native portrait-image checks and regular legacy resolver checks remain.
 Bar fractions recompute only when the row amount or leading amount changes.
-Non-Party colors reuse the common class color and check proc classification;
+Non-Party Default colors use a validated native school when available, with the
+common class/proc fallback; Custom uses the selected palette. Both check proc classification;
 Party class-palette validation continues through the regular reader. Pool
 retirement clears settled presentation state, while hovered tooltips retain
 their source/value and native ownership checks. The one-second data-reader
 cadence is unchanged.
 
-Both Performance Mode states use these same caches. No frame, drawing region,
-asset, setting, saved data, event, updater or runtime diagnostic hook is added.
+The **Bar colors** selector uses native damage schools for Default or applies
+separate custom ability/proc RGB choices. Its existing display listener decodes
+changed active custom colors once and invalidates row color inputs through a
+scalar palette revision. Retained custom changes while Default is active do not
+invalidate meter presentation. RGB writes still compare the final channels;
+Party continues validating class colors through its existing reader. Hidden/off
+meters defer color painting and reuse their existing rows on return. There is
+no new meter getter, frame, region, artwork, event, updater or animation, and
+both Performance Mode states share the instant behavior.
+
+Default school metadata adds at most two scalar reads per valid positive member
+to the adapter's existing ID/origin pass. It retains one agreed mask per native
+row; unknown/malformed/unjoined/conflicting positive members fall back, and zero
+display history does not vote after Reset. Existing family sums combine only
+matching masks without changing their grouping, counters, rates or identities.
+School-only changes leave attribution/rate fingerprints intact. The existing
+viewport pass copies the scalar, and visible row color caches compare it only
+in Default. One bounded table contains seven base RGB colors and lazily caches
+at most 120 native hybrid masks. Settled rows do no palette resolution or color
+writes. No native getter, source scan, extra member loop, gameplay region,
+setting, animation or updater is added. Legacy rows without metadata retain the
+class/proc fallback. Party continues using class colors, and Custom overrides
+automatic school colors. CI-only cases preserve rates and pooling through
+school-only metadata changes; this is not native snapshot-cost or FPS proof.
+
+The lazy meter settings add eight editor frames/widgets (two control frames,
+four buttons and two EditBoxes), 28 texture regions and eight explicitly created
+FontStrings. This includes the two mode buttons, their heading/description,
+two swatches, existing button chrome and recessed input edges. The existing
+native color picker is optional; hex inputs remain available without it. Owned
+picker callbacks, values and borrowed layering are restored on release, foreign callback takeovers are preserved
+and hidden/retired callbacks are inert. No picker OnUpdate, global script hook,
+separate SavedVariable or runtime test hook is added. CI-only cases cover
+normalization, preview/discard/profile/reset, picker initialization/cancellation
+and ownership, native/legacy row colors, Party preservation, unchanged writes
+and hidden reuse. They are source/lifecycle evidence, not live appearance or
+FPS measurements, and were not run locally.
+
+Both Performance Mode states use these same caches. The row-cache optimization
+itself adds no frame, drawing region, asset, setting, saved data, event, updater
+or runtime diagnostic hook.
 Fresh snapshots still require full native row validation and numeric processing;
 the native API still returns its complete ledger. Regular complete-snapshot
 reads fall from five to one per second; triggered reads remain available for
@@ -1138,7 +1178,7 @@ Performance Mode's label sharing and drawing cost are unchanged. These are
 source-level costs, not measured FPS/GPU evidence; the authored burst, anchor,
 pooling and mode-transition cases remain CI-only and were not run locally.
 
-The default-on AoE damage filter loads one generated catalog containing two
+The default-on Area of Effect filter loads one generated catalog containing two
 lookup tables: native spell IDs and exact names for all 114 current ability
 records and their pulse IDs. Known native IDs take a direct lookup; legacy
 names reuse the current language's existing alias arrays. Classification runs
@@ -1149,8 +1189,9 @@ that flag, preventing mixed sums from exchanging filter visibility. Preview
 uses the shared listener and cached flag without re-registering native handlers
 or restarting animations. Unknown effects retain their established display.
 Both modes share this filter. The lazy settings row adds one existing-style
-button, four texture regions and two FontStrings, with no gameplay region or
-new artwork; the existing page extends to fit its caption/hint. CI-only cases
+button, four texture regions and one FontString, with no gameplay region or
+new artwork. It uses the compact two-column category grid without a description;
+the existing page fits the final row. CI-only cases
 were authored without local execution. These are source costs, not measured
 FPS or current native cast-consumer parity. See [SCT spell data](SCT-SPELL-DATA.md).
 

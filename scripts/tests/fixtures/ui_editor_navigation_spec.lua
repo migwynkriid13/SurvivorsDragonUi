@@ -64,6 +64,7 @@ env.CreateFrame = function(kind, name, parent, template)
         function frame:SetMaxLetters(value) self.maxLetters = value end
         function frame:SetTextInsets(...) self.insets = { ... } end
         function frame:ClearFocus() self.focused = false end
+        function frame:EnableKeyboard(value) self.keyboard = value end
         local setText = frame.SetText
         function frame:SetText(value)
             setText(self, value)
@@ -987,16 +988,21 @@ dialog.navigation.Search("Diablo")
 assert(#dialog.navigation.results >= 2, "custom style and font choices were absent from search")
 dialog.navigation.ClearSearch()
 assert(pages.combat:GetHeight() >= 604, "distance scaling clipped the final damage filters")
-assert(display.Get("sctAreaDamage") == true, "AoE damage did not default on")
-dialog.navigation.Search("AoE damage")
+assert(display.Get("sctAreaDamage") == true, "Area of Effect did not default on")
+dialog.navigation.Search("Area of Effect")
 assert(
     #dialog.navigation.results == 1 and dialog.navigation.results[1].target == "sctAreaDamage",
-    "AoE damage was absent from settings search"
+    "Area of Effect was absent from settings search"
 )
 dialog.navigation.OpenResult(1)
 assert(
-    env.displayControls.sctAreaDamage.description and pages.combat:GetHeight() >= 672,
-    "AoE damage hint or final row was clipped"
+    env.displayControls.sctAreaDamage.label:GetText() == "Area of Effect"
+        and not env.displayControls.sctAreaDamage.description
+        and env.displayControls.sctAreaDamage:GetHeight() == 28
+        and env.displayControls.sctAreaDamage:GetWidth() == env.displayControls.sctPeriodicDamage:GetWidth()
+        and env.displayControls.sctAreaDamage.point[5] == env.displayControls.sctPeriodicDamage.point[5]
+        and pages.combat:GetHeight() >= 640,
+    "Area of Effect did not share the compact damage-category grid"
 )
 context:Call(env.displayControls.sctAreaDamage, "OnClick")
 assert(not display.Get("sctAreaDamage") and not env.SurvivorsDragonUiDisplay, "AoE preview saved before Confirm")
@@ -1101,6 +1107,117 @@ assert(
     meterNameControl.label:GetText() == "Name font size" and meterNumberControl.label:GetText() == "Number font size",
     "meter font controls do not explain their independent scope"
 )
+do
+    local controls = {}
+    for _, object in ipairs(context.objects) do
+        if object:GetParent() == pages.meter and object.input and object.pickerButton then
+            controls[object.label:GetText()] = object
+        end
+    end
+    local ability, proc = assert(controls["Ability color"]), assert(controls["Proc color"])
+    local initial = display.Snapshot()
+    local modes = dialog.displayModes.meterColorMode.buttons
+    assert(display.Get("meterColorMode") == "default" and not ability.available and not proc.available)
+    context:Call(modes.custom, "OnClick")
+    assert(ability.available and proc.available and ability.input.keyboard, "custom colors did not enable RGB input")
+    assert(not ability.pickerAvailable, "missing native picker disabled the hex fallback incorrectly")
+    dialog.navigation.Search("Proc color")
+    assert(#dialog.navigation.results == 1 and dialog.navigation.results[1].target == "meterProcColor")
+    dialog.navigation.OpenResult(1)
+    context:Call(ability.input, "OnEditFocusGained")
+    ability.input:SetText("#aB1290")
+    assert(display.Get("meterAbilityColor") == "AB1290" and not env.SurvivorsDragonUiDisplay)
+    ability.input:SetText("bad")
+    assert(display.Get("meterAbilityColor") == "AB1290", "partial RGB text changed the preview")
+    context:Call(ability.input, "OnEscapePressed")
+    context:Call(ability.input, "OnEditFocusLost")
+    assert(display.Get("meterAbilityColor") == initial.meterAbilityColor, "Escape retained an unconfirmed hex edit")
+
+    local picker = env.CreateFrame("Frame", nil, env.UIParent)
+    picker:Hide()
+    function picker:GetFrameStrata() return self.strata or "DIALOG" end
+    function picker:SetColorRGB(red, green, blue)
+        self.rgb = { red, green, blue }
+        if self.func then self.func() end
+    end
+    function picker:GetColorRGB() return unpack(self.rgb) end
+    local foreignCalls = 0
+    local foreign = function() foreignCalls = foreignCalls + 1 end
+    local previous = {}
+    picker.func, picker.cancelFunc, picker.opacityFunc = foreign, foreign, foreign
+    picker.hasOpacity, picker.opacity, picker.previousValues = true, 0.25, previous
+    env.ColorPickerFrame = picker
+    editor.Display()
+    context:Call(ability.pickerButton, "OnClick")
+    assert(picker:IsShown() and display.Get("meterAbilityColor") == initial.meterAbilityColor and foreignCalls == 0)
+    assert(picker:GetFrameStrata() == "TOOLTIP" and picker:GetFrameLevel() > ability:GetFrameLevel())
+    picker:SetColorRGB(1, 0, 0)
+    assert(display.Get("meterAbilityColor") == "FF0000" and display.Get("meterProcColor") == initial.meterProcColor)
+    picker.cancelFunc()
+    assert(not picker:IsShown() and display.Get("meterAbilityColor") == initial.meterAbilityColor)
+    assert(
+        picker:GetFrameStrata() == "DIALOG" and picker:GetFrameLevel() == 1,
+        "picker retirement lost its native layer"
+    )
+    assert(
+        picker.func == foreign
+            and picker.opacityFunc == foreign
+            and picker.hasOpacity
+            and picker.previousValues == previous
+    )
+
+    context:Call(proc.pickerButton, "OnClick")
+    picker:SetColorRGB(0, 1, 0)
+    local hiddenChange = picker.func
+    picker:Hide()
+    picker.rgb = { 1, 0, 0 }
+    hiddenChange()
+    assert(display.Get("meterProcColor") == "00FF00", "a hidden picker callback changed the preview")
+    context:Call(modes.default, "OnClick")
+    assert(not picker:IsShown() and not proc.available and display.Get("meterProcColor") == "00FF00")
+    context:Call(modes.custom, "OnClick")
+    assert(proc.available and display.Get("meterProcColor") == "00FF00", "Default lost the retained custom color")
+    context:Call(proc.pickerButton, "OnClick")
+    local retiredChange = picker.func
+    picker.func, picker.cancelFunc = foreign, foreign
+    picker.rgb = { 1, 1, 1 }
+    retiredChange()
+    proc:Hide()
+    assert(picker:IsShown() and picker.func == foreign and display.Get("meterProcColor") == "00FF00")
+    proc:Show()
+    picker:Hide()
+    env.ColorPickerFrame = nil
+    dialog.navigation.ClearSearch()
+    display.Load(initial)
+end
+do
+    local normalized = H.New()
+    normalized:Load("core/display.lua", "Display")
+    local colors = normalized.env.DFRL.display
+    assert(colors.Copy({ meterColorMode = "invalid", meterAbilityColor = false }).meterColorMode == "default")
+    assert(colors.Copy({ meterAbilityColor = "#ab12CD" }).meterAbilityColor == "AB12CD")
+    assert(colors.Copy({ meterAbilityColor = "FFFFFFFF" }).meterAbilityColor == "CCA147")
+    assert(colors.ColorHex(0 / 0, 0, 0) == nil and colors.ColorHex(1, math.huge, 0) == nil)
+    assert(colors.ColorHex(1, 0, 0) == "FF0000" and colors.ColorHex(0, 1, 0) == "00FF00")
+    colors.BeginEdit()
+    colors.Set("meterColorMode", "custom")
+    colors.Set("meterAbilityColor", "#123456")
+    colors.Set("meterProcColor", "abcdef")
+    assert(not normalized.env.SurvivorsDragonUiDisplay)
+    colors.FinishEdit(true)
+    assert(normalized.env.SurvivorsDragonUiDisplay.meterProcColor == "ABCDEF")
+    colors.BeginEdit()
+    colors.Load({ meterColorMode = "default", meterAbilityColor = "FF0000" })
+    colors.FinishEdit(false)
+    assert(colors.Get("meterColorMode") == "custom" and colors.Get("meterAbilityColor") == "123456")
+    colors.BeginEdit()
+    colors.Load({})
+    assert(colors.Get("meterColorMode") == "default", "an older profile enabled custom colors")
+    colors.FinishEdit(false)
+    assert(colors.Get("meterProcColor") == "ABCDEF", "profile discard lost the custom palette")
+    colors.Reset()
+    assert(colors.Get("meterColorMode") == "default" and colors.Get("meterAbilityColor") == "CCA147")
+end
 local function IncreaseNumber(control)
     for _, object in ipairs(context.objects) do
         if object.kind == "Button" and object:GetParent() == control and object.label:GetText() == "+" then

@@ -22,6 +22,50 @@ DFRL:NewMod("DamageMeter", 7, function()
     for key, setting in pairs(optionKeys) do
         options[key] = DFRL.display.Get(setting)
     end
+    local palette = { revision = 0 }
+    local function ReadPalette()
+        local mode = DFRL.display.Get("meterColorMode")
+        local ability, proc = DFRL.display.Get("meterAbilityColor"), DFRL.display.Get("meterProcColor")
+        if palette.initialized and palette.mode == mode and palette.ability == ability and palette.proc == proc then
+            return false
+        end
+        local changed = not palette.initialized or palette.mode ~= mode or mode == "custom"
+        palette.initialized, palette.mode, palette.ability, palette.proc = true, mode, ability, proc
+        if not changed then return false end
+        palette.revision = palette.revision + 1
+        if mode == "custom" then
+            palette.red, palette.green, palette.blue = DFRL.display.ColorRGB(ability)
+            palette.procRed, palette.procGreen, palette.procBlue = DFRL.display.ColorRGB(proc)
+        end
+        return true
+    end
+    ReadPalette()
+    local schoolColors = {
+        [1] = { 1, 1, 0 },
+        [2] = { 1, 0.9, 0.5 },
+        [4] = { 1, 0.5, 0 },
+        [8] = { 0.3, 1, 0.3 },
+        [16] = { 0.5, 1, 1 },
+        [32] = { 0.5, 0.5, 1 },
+        [64] = { 1, 0.5, 1 },
+    }
+    local function SchoolColor(mask)
+        if type(mask) ~= "number" or mask < 1 or mask > 127 or mask ~= math.floor(mask) then return end
+        local color = schoolColors[mask]
+        if color then return unpack(color) end
+        -- A native hybrid school is explicit; blend its bits once and reuse it.
+        local red, green, blue, count, bit = 0, 0, 0, 0, 1
+        for _ = 1, 7 do
+            if math.mod(math.floor(mask / bit), 2) == 1 then
+                local base = schoolColors[bit]
+                red, green, blue, count = red + base[1], green + base[2], blue + base[3], count + 1
+            end
+            bit = bit * 2
+        end
+        red, green, blue = red / count, green / count, blue / count
+        schoolColors[mask] = { red, green, blue }
+        return red, green, blue
+    end
     local ICON_SIZE, RIM_SIZE = 26, 31
     local PARTY_COLOR = { 0.6, 0.6, 0.6 }
     local UNKNOWN_ICON = T.SourceIconFallback
@@ -983,6 +1027,7 @@ DFRL:NewMod("DamageMeter", 7, function()
                 copy.portraitKey, copy.portraitRunId = entry.portraitKey, entry.portraitRunId
                 copy.portraitStatus = entry.portraitStatus
             end
+            copy.schoolMask = apiActive and entry.schoolMask or nil
             local key = apiActive and copy.rowId or copy.name
             local samples = rateSamples[key]
             if not samples then
@@ -1032,6 +1077,9 @@ DFRL:NewMod("DamageMeter", 7, function()
         local party = modes[mode].party
         local classColor = party and PARTY_COLOR or T.GetPlayerClassColor() or { 0.8, 0.63, 0.28 }
         local classRed, classGreen, classBlue = unpack(classColor)
+        if not party and palette.mode == "custom" then
+            classRed, classGreen, classBlue = palette.red, palette.green, palette.blue
+        end
         if party and options.icons and not apiActive then
             if snapshot.count > 0 then
                 ReadPartyUnits()
@@ -1087,6 +1135,8 @@ DFRL:NewMod("DamageMeter", 7, function()
                     or row.colorRed ~= classRed
                     or row.colorGreen ~= classGreen
                     or row.colorBlue ~= classBlue
+                    or row.colorPalette ~= palette.revision
+                    or (palette.mode ~= "custom" and row.colorSchoolMask ~= entry.schoolMask)
                 then
                     local r, g, b = classRed, classGreen, classBlue
                     if party then
@@ -1096,13 +1146,21 @@ DFRL:NewMod("DamageMeter", 7, function()
                         else
                             r, g, b = 0.6, 0.6, 0.6
                         end
+                    elseif palette.mode ~= "custom" and entry.schoolMask then
+                        r, g, b = SchoolColor(entry.schoolMask)
                     elseif entry.proc == 1 then
-                        r, g, b = 0.25, 0.58, 1
+                        if palette.mode == "custom" then
+                            r, g, b = palette.procRed, palette.procGreen, palette.procBlue
+                        else
+                            r, g, b = 0.25, 0.58, 1
+                        end
                     end
                     if row.red ~= r or row.green ~= g or row.blue ~= b then row.bar:SetStatusBarColor(r, g, b) end
                     row.red, row.green, row.blue = r, g, b
                     row.colorParty, row.colorProc = party, entry.proc
                     row.colorRed, row.colorGreen, row.colorBlue = classRed, classGreen, classBlue
+                    row.colorPalette = palette.revision
+                    row.colorSchoolMask = entry.schoolMask
                 end
                 if options.icons then
                     local bound
@@ -1370,6 +1428,7 @@ DFRL:NewMod("DamageMeter", 7, function()
         end,
     })
     DFRL.display.Listen(function()
+        local paletteChanged = ReadPalette()
         local enable = DFRL.display.Get("meterEnabled")
         local enabledChanged = enabled ~= enable
         local count = DFRL.display.Get("meterRows")
@@ -1394,6 +1453,7 @@ DFRL:NewMod("DamageMeter", 7, function()
             and not fontChanged
             and not styleChanged
             and not windowChanged
+            and not paletteChanged
         then
             return
         end

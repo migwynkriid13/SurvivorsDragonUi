@@ -1,7 +1,11 @@
 # Languages
 
-The AoE damage caption and its ground/cone/radial/pulse hint are present in all
-fourteen `localization/ui.tsv` and runtime UI catalogs. Spell classification
+The Damage meter Bar colors selector, ability/proc captions and Default/Custom
+hints use all fourteen source/runtime UI catalogs. RGB hex values remain literal
+and the optional game's picker retains its own native localization.
+
+The Area of Effect caption is present in all fourteen `localization/ui.tsv`
+and runtime UI catalogs; the compact category control has no description. Spell classification
 uses received IDs or exact existing canonical name aliases; it adds no
 translated spell-name list or inferred language state.
 

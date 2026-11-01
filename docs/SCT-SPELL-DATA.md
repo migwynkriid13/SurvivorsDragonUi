@@ -1,6 +1,6 @@
 # SCT area spell data
 
-**Combat → Combat text → AoE damage** defaults on. Turning it off excludes
+**Combat → Combat text → Area of Effect** defaults on. Turning it off excludes
 identified area damage even when Direct abilities / spells and Critical damage
 are enabled. Turning it on retains the other result/category filters. The
 checkbox uses the existing display transaction, profiles, search and resets;
@@ -87,7 +87,7 @@ CI-only cases cover default/saved/profile/discard/reset behavior, all three
 styles and both modes, native Consecration and totem pulse IDs, independent
 critical/periodic choices, queued/current choices, mixed grouping, active
 removal, pooled reuse, exact localized names, conflicts, unknown IDs and world
-cleanup. Editor cases cover search, hint, preview and the extended final row.
+cleanup. Editor cases cover search, the compact category grid without a description, preview and the final row.
 Local work is data preparation, source inspection and pinned formatting only;
 no local tests, standalone validation or addon/game execution was performed.
 Current native cast-consumer parity, live payloads, appearance and FPS remain

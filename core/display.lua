@@ -15,6 +15,9 @@ DFRL:NewMod("Display", 0, function()
         meterFontSize = 11,
         meterNameFontSize = 11,
         meterDpsWindow = 10,
+        meterColorMode = "default",
+        meterAbilityColor = "CCA147",
+        meterProcColor = "4094FF",
         bossRows = 0,
         guardianRows = 0,
         guardianShowDead = true,
@@ -165,9 +168,40 @@ DFRL:NewMod("Display", 0, function()
     local function NormalizeUiFontOutline(value)
         if value == "" or value == "OUTLINE" or value == "THICKOUTLINE" then return value end
     end
+    local colorKeys = { meterAbilityColor = true, meterProcColor = true }
+    local function NormalizeColor(value)
+        if type(value) ~= "string" then return end
+        value = string.gsub(value, "^#", "")
+        if string.len(value) == 6 and not string.find(value, "[^%x]") then return string.upper(value) end
+    end
+    local function NormalizeMeterColorMode(value)
+        if value == "default" or value == "custom" then return value end
+    end
+    function display.ColorRGB(value)
+        local hex = NormalizeColor(value)
+        if not hex then return end
+        return tonumber(string.sub(hex, 1, 2), 16) / 255,
+            tonumber(string.sub(hex, 3, 4), 16) / 255,
+            tonumber(string.sub(hex, 5, 6), 16) / 255,
+            hex
+    end
+    local function ColorChannel(value)
+        return type(value) == "number" and value - value == 0 and value >= 0 and value <= 1
+    end
+    function display.ColorHex(red, green, blue)
+        if not ColorChannel(red) or not ColorChannel(green) or not ColorChannel(blue) then return end
+        return string.format(
+            "%02X%02X%02X",
+            math.floor(red * 255 + 0.5),
+            math.floor(green * 255 + 0.5),
+            math.floor(blue * 255 + 0.5)
+        )
+    end
     local function Read(source, key)
         local value
         if type(source) == "table" then value = source[key] end
+        if colorKeys[key] then return NormalizeColor(value) or defaults[key] end
+        if key == "meterColorMode" then return NormalizeMeterColorMode(value) or defaults[key] end
         if ranges[key] then
             local number = NormalizeNumber(key, value)
             if key == "meterNameFontSize" and not number and type(source) == "table" then
@@ -223,7 +257,13 @@ DFRL:NewMod("Display", 0, function()
     end
     function display.Set(key, value)
         if not draft or defaults[key] == nil then return end
-        if ranges[key] then
+        if colorKeys[key] then
+            value = NormalizeColor(value)
+            if not value then return end
+        elseif key == "meterColorMode" then
+            value = NormalizeMeterColorMode(value)
+            if not value then return end
+        elseif ranges[key] then
             value = NormalizeNumber(key, value)
             if not value then return end
         elseif key == "tallyStyle" then

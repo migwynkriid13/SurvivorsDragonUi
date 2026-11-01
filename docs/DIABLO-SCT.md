@@ -160,9 +160,9 @@ Diablo stops this collection; it is unsaved and unrelated to DPS. No new
 setting, frame, region, event, updater or asset is added. Both Performance Mode
 states retain the same cosmetic comparison and existing animation.
 
-## AoE damage
+## Area of Effect
 
-**Combat → Combat text → AoE damage** is on by default. Turn it off to hide
+**Combat → Combat text → Area of Effect** is on by default. Turn it off to hide
 identified ground effects, cones, radial attacks and area pulses, including
 their critical hits. Other enabled damage categories do not override it. Turning
 it on still respects Normal damage, Critical damage and the other categories.

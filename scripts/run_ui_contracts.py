@@ -79,10 +79,11 @@ def main():
         ])
         run_captions = run_captions.rsplit("\nreturn ", 1)[0] + "\nreturn { New = NewClockLabel, Update = UpdateClockCaptions, Refresh = RefreshTimerCaptions, Style = StyleClockLabel, Clear = ClearClockCaptions }\n"
         settings_views = extract_source("modules/ui/run.lua", [
-            "SetSettingsEnabled", "UpdateSctLabels", "UpdateDisplayLabels", "RefreshFontControls",
+            "displayColors", "SetSettingsEnabled", "UpdateSctLabels", "UpdateDisplayLabels", "RefreshFontControls",
         ])
         settings_views = settings_views.rsplit("\nreturn ", 1)[0] + "\nreturn { Display = UpdateDisplayLabels, SCT = UpdateSctLabels, Font = RefreshFontControls }\n"
         settings_editor = extract_source("modules/ui/run.lua", [
+            "displayColors",
             "fontFaces", "fontOutlines", "IsNumber", "UpdateClockCaptions", "FontEditorLabel", "FontEditorButton",
             "SetSettingsEnabled", "UpdateSctLabels", "UpdateDisplayLabels", "RefreshFontControls",
             "FitFontEditor", "PlaceFontEditor", "FinishFontEditorDrag", "CreateFontEditor",

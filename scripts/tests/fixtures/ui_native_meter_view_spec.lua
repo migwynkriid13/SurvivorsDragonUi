@@ -212,6 +212,132 @@ local function WatchPresentation(context, state, count)
     end
 end
 
+Test("default school colors follow native types across equal skill captions, procs and hidden reuse", function()
+    local masks = { 1, 2, 4, 8, 16, 32, 64, 20 }
+    local colors = {
+        { 1, 1, 0 },
+        { 1, 0.9, 0.5 },
+        { 1, 0.5, 0 },
+        { 0.3, 1, 0.3 },
+        { 0.5, 1, 1 },
+        { 0.5, 0.5, 1 },
+        { 1, 0.5, 1 },
+        { 0.75, 0.75, 0.5 },
+        { 0.25, 0.58, 1 },
+    }
+    for _, performance in ipairs({ false, true }) do
+        local c, state, env = View(function(context, native, globals)
+            context.settings.performanceMode, context.settings.meterRows = performance, 9
+            native.instrumentPresentation, native.records = true, {}
+            for index = 1, 9 do
+                native.records[index] = {
+                    id = "school-source-" .. index,
+                    rowId = "school-leaf-" .. index,
+                    name = "Same skill caption",
+                    actorId = "hero-1",
+                    amount = 1000 - index * 10,
+                    recent = 100 - index,
+                    proc = math.mod(index, 2) == 0 or index == 9,
+                    schoolState = index == 9 and "unknown" or "known",
+                    schoolMask = masks[index],
+                }
+            end
+            context:Load("core/display.lua", "Display")
+            globals.SurvivorsDragonUiDisplay = globals.DFRL.display.Copy(context.settings)
+            globals.DFRL.display.BeginEdit()
+        end)
+        local display, allocated = env.DFRL.display, #c.objects
+        for index, color in ipairs(colors) do
+            local actual = c:Row(index).bar.color
+            assert(
+                actual[1] == color[1] and actual[2] == color[2] and actual[3] == color[3],
+                "school RGB mismatch at row " .. index
+            )
+        end
+        local row = c:Row(3)
+        local identity, amount, rate, fraction =
+            row.entry.rateIdentity, row.entry.dmg, row.value:GetText(), row.bar.value
+        state.records[3].schoolMask, state.context.metadataRevision = 32, "visible-school-metadata"
+        WatchPresentation(c, state, 9)
+        c:Tick()
+        assert(row.bar.color[1] == 0.5 and row.bar.color[2] == 0.5 and row.bar.color[3] == 1)
+        assert(state.presentationOps.SetStatusBarColor == 1, "school-only metadata repainted unrelated bars")
+        assert(
+            row.entry.rateIdentity == identity
+                and row.entry.dmg == amount
+                and row.value:GetText() == rate
+                and row.bar.value == fraction
+        )
+        WatchPresentation(c, state, 9)
+        c:ResetCounts()
+        c:Tick()
+        assert(not state.presentationOps.SetStatusBarColor, "settled default school colors repainted")
+        c:NoPresentationWrites()
+        c:SetLayoutHidden(true)
+        state.records[2].schoolMask, state.context.metadataRevision = 4, "hidden-school-metadata"
+        local captures = state.calls.snapshot
+        c:ResetCounts()
+        c:Tick()
+        assert(state.calls.snapshot == captures)
+        c:NoPresentationWrites()
+        c:SetLayoutHidden(false)
+        c:Tick(0.01)
+        assert(c:Row(2).bar.color[1] == 1 and c:Row(2).bar.color[2] == 0.5 and c:Row(2).bar.color[3] == 0)
+        assert(#c.objects == allocated, "default school colors allocated new pooled rows")
+        display.Set("meterAbilityColor", "FF0000")
+        display.Set("meterProcColor", "00FF00")
+        display.Set("meterColorMode", "custom")
+        c:Tick(0.01)
+        assert(c:Row(1).bar.color[1] == 1 and c:Row(1).bar.color[2] == 0 and c:Row(1).bar.color[3] == 0)
+        assert(c:Row(2).bar.color[1] == 0 and c:Row(2).bar.color[2] == 1 and c:Row(2).bar.color[3] == 0)
+    end
+end)
+
+Test("custom native colors preserve counters, settle writes and defer hidden palette changes", function()
+    for _, performance in ipairs({ false, true }) do
+        local c, state, env = View(function(context, native, globals)
+            context.settings.performanceMode = performance
+            native.instrumentPresentation = true
+            native.records[2].proc, native.records[2].rowId = true, "custom-color-proc"
+            context:Load("core/display.lua", "Display")
+            globals.SurvivorsDragonUiDisplay = globals.DFRL.display.Copy(context.settings)
+            globals.DFRL.display.BeginEdit()
+        end)
+        local display = env.DFRL.display
+        local first, second = c:Row(1), c:Row(2)
+        local amount, rate, fraction, allocated = first.entry.dmg, first.value:GetText(), first.bar.value, #c.objects
+        display.Set("meterColorMode", "custom")
+        display.Set("meterAbilityColor", "FF0000")
+        display.Set("meterProcColor", "00FF00")
+        WatchPresentation(c, state, 2)
+        c:Tick(0.01)
+        assert(first.bar.color[1] == 1 and first.bar.color[2] == 0 and first.bar.color[3] == 0)
+        assert(second.bar.color[1] == 0 and second.bar.color[2] == 1 and second.bar.color[3] == 0)
+        assert(first.entry.dmg == amount and first.value:GetText() == rate and first.bar.value == fraction)
+        assert(#c.objects == allocated and state.presentationOps.SetStatusBarColor == 2)
+        WatchPresentation(c, state, 2)
+        c:ResetCounts()
+        c:Tick()
+        assert(not state.presentationOps.SetStatusBarColor, "settled native palette repeated color writes")
+        c:NoPresentationWrites()
+        c:SetLayoutHidden(true)
+        WatchPresentation(c, state, 2)
+        c:ResetCounts()
+        local captures = state.calls.snapshot
+        display.Set("meterProcColor", "0000FF")
+        c:Tick()
+        assert(state.calls.snapshot == captures and not state.presentationOps.SetStatusBarColor)
+        c:NoPresentationWrites()
+        c:SetLayoutHidden(false)
+        c:Tick(0.01)
+        assert(second.bar.color[1] == 0 and second.bar.color[2] == 0 and second.bar.color[3] == 1)
+        assert(#c.objects == allocated, "showing a changed palette allocated new native rows")
+        display.FinishEdit(false)
+        c:Tick(0.01)
+        assert(second.bar.color[1] == 1 and second.bar.color[2] == 1 and second.bar.color[3] == 0)
+    end
+end)
+
 Test("native IDs keep different rates for equal source names and bypass guessed artwork", function()
     local c = View()
     assert(c.root:IsVisible(), "native meter did not become ready without legacy publication packets")
@@ -283,6 +409,11 @@ Test("settled native rows skip layout reads and static binding while changed val
         )
         state.records[2].proc, state.context.counterRevision = true, "changed-native-proc-color"
         state.records[2].rowId = "native-proc-leaf-b"
+        WatchPresentation(c, state, 2)
+        c:Tick()
+        assert(c:Row(2).entry.proc == 1 and c:Row(2).bar.color[1] == 1 and c:Row(2).bar.color[3] == 0)
+        assert(not state.presentationOps.SetStatusBarColor, "a known-school proc replaced its school color")
+        state.records[2].schoolState, state.context.metadataRevision = "unknown", "unknown-proc-school"
         WatchPresentation(c, state, 2)
         c:Tick()
         assert(c:Row(2).bar.color[1] == 0.25 and state.presentationOps.SetStatusBarColor == 1)
@@ -837,6 +968,8 @@ Test("talent proc captions keep ordinary casts and share metadata, reset and hid
         local c, state, env = View(function(context, native)
             context.settings.performanceMode = performance
             native.records, native.extraSources = helpers.Talents()
+            native.records[1].schoolMask, native.records[2].schoolMask = 4, 4
+            native.records[3].schoolMask, native.records[4].schoolMask = 2, 8
         end)
         local normal, streak, chastise, shaman = c:Row(1), c:Row(2), c:Row(3), c:Row(4)
         assert(normal.name:GetText() == "Pyroblast" and normal.entry.dmg == 9400)
@@ -846,9 +979,9 @@ Test("talent proc captions keep ordinary casts and share metadata, reset and hid
         assert(streak.icon:GetTexture() == "Interface\\Icons\\hot-streak-talent")
         assert(chastise.icon:GetTexture() == "Interface\\Icons\\chastise-talent")
         assert(shaman.icon:GetTexture() == "Interface\\Icons\\shaman-talent")
-        for _, row in ipairs({ streak, chastise, shaman }) do
-            assert(row.bar.color[1] == 0.25 and row.bar.color[2] == 0.58 and row.bar.color[3] == 1)
-        end
+        assert(streak.bar.color[1] == 1 and streak.bar.color[2] == 0.5 and streak.bar.color[3] == 0)
+        assert(chastise.bar.color[1] == 1 and chastise.bar.color[2] == 0.9 and chastise.bar.color[3] == 0.5)
+        assert(shaman.bar.color[1] == 0.3 and shaman.bar.color[2] == 1 and shaman.bar.color[3] == 0.3)
         assert(normal.entry.proc == 0 and streak.entry.proc == 1, "talent captions changed native proc classification")
         assert(
             state.lastResponse.sources["pyroblast-proc"].name == "Pyroblast"

@@ -768,6 +768,7 @@ function DFRL.tools.NewNativeMeter()
         local values = native.memberIds
         local count = type(values) == "table" and table.getn(values) or nil
         local used, changed = 0, false
+        local schoolMask, schoolUnknown
         row.members = row.members or {}
         if count then
             for index, id in pairs(values) do
@@ -779,6 +780,24 @@ function DFRL.tools.NewNativeMeter()
                 local position = ContributionPosition(view, leaves, id)
                 local leaf = position and MemberValid(native, leaves[position])
                 local positive = leaf and leaf.displayAmount > 0 or false
+                if not leaf then
+                    schoolUnknown = true
+                elseif positive then
+                    local mask = leaf.schoolMask
+                    if
+                        leaf.schoolState ~= "known"
+                        or not Number(mask)
+                        or mask < 1
+                        or mask > 127
+                        or mask ~= math.floor(mask)
+                    then
+                        schoolUnknown = true
+                    elseif schoolMask and schoolMask ~= mask then
+                        schoolUnknown = true
+                    else
+                        schoolMask = mask
+                    end
+                end
                 local origins, originsChanged = IdsChanged(member.origins, positive and leaf.originSourceKeys or nil)
                 if positive then
                     origins = origins or false
@@ -810,6 +829,8 @@ function DFRL.tools.NewNativeMeter()
         end
         if row.memberCount ~= count then changed = true end
         row.memberCount = count
+        -- Presentation metadata does not change attribution/rate identities.
+        row.schoolMask = count and not schoolUnknown and schoolMask or nil
         return changed
     end
     local sourceFields = {
@@ -882,6 +903,7 @@ function DFRL.tools.NewNativeMeter()
         row.familyOriginKey = nil
         row.familyName = nil
         if query.groupBy == "owner" then
+            row.schoolMask = nil
             local actor = snapshot.actors[native.ownerId]
             row.name, row.class, row.proc = actor.name, actor.classKey, 0
             row.portraitKey, row.portraitRunId, row.portraitStatus =
@@ -1099,8 +1121,10 @@ function DFRL.tools.NewNativeMeter()
                 local grouped = family.row
                 if not family.summed then
                     grouped.dmg, grouped.dps, grouped.averageDps = row.dmg, row.dps, row.averageDps
+                    grouped.schoolMask = row.schoolMask
                     family.summed = true
                 else
+                    if grouped.schoolMask ~= row.schoolMask then grouped.schoolMask = nil end
                     grouped.dmg = grouped.dmg + row.dmg
                     grouped.dps = grouped.dps and row.dps and grouped.dps + row.dps or nil
                     grouped.averageDps = grouped.averageDps and row.averageDps and grouped.averageDps + row.averageDps

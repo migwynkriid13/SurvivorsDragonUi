@@ -1198,6 +1198,7 @@ DFRL:NewMod("RunTimers", 5, function()
     local currentFont, fontDraft, fontEditor, fontSample, fontSampleClock, fontMenu
     local faceLabel, sizeLabel, shadowControl
     local displayControls, displayNumbers, outlineButtons, faceButtons, sctButtons = {}, {}, {}, {}, {}
+    local displayColors = {}
     local dependentSettings = {}
     local incomingControl, sctDescription
     local sctSizeLabel
@@ -1313,6 +1314,12 @@ DFRL:NewMod("RunTimers", 5, function()
                     end
                     T.SetTextIfChanged(group.description, group.descriptions[selected])
                 end
+            end
+        end
+        for key, control in pairs(displayColors) do
+            if control:IsVisible() then
+                control:SetColor(DFRL.display.Get(key))
+                control:SetAvailable(DFRL.display.Get("meterColorMode") == "custom")
             end
         end
         for key, label in pairs(displayNumbers) do
@@ -1884,6 +1891,18 @@ DFRL:NewMod("RunTimers", 5, function()
             {
                 key = "meter",
                 label = "Damage meter",
+                mode = {
+                    key = "meterColorMode",
+                    label = "Bar colors",
+                    values = {
+                        {
+                            "default",
+                            "Default",
+                            "Color skills and procs by damage school. Party bars keep class colors.",
+                        },
+                        { "custom", "Custom", "Choose ability and proc colors. Party bars keep class colors." },
+                    },
+                },
                 options = {
                     {
                         "meterEnabled",
@@ -1891,6 +1910,8 @@ DFRL:NewMod("RunTimers", 5, function()
                         "Show the custom damage meter. Off by default.",
                         wide = true,
                     },
+                    { "meterAbilityColor", "Ability color", color = true },
+                    { "meterProcColor", "Proc color", color = true },
                     { "meterRows", "Abilities shown", "Show 1 to 10 abilities at a time.", step = 1 },
                     {
                         "meterDpsWindow",
@@ -2129,15 +2150,11 @@ DFRL:NewMod("RunTimers", 5, function()
                 entries = {
                     { key = "sctAutoAttacks", label = "Auto-attacks" },
                     { key = "sctDirectDamage", label = "Direct abilities / spells" },
+                    { key = "sctAreaDamage", label = "Area of Effect" },
                     { key = "sctPeriodicDamage", label = "Damage over time" },
                     { key = "sctReflectedDamage", label = "Reflected damage" },
-                    { key = "sctMisses", label = "Misses / avoidance" },
                     { key = "sctPetDamage", label = "Pet damage" },
-                    {
-                        key = "sctAreaDamage",
-                        label = "AoE damage",
-                        description = "Ground effects, cones, radial attacks and area pulses.",
-                    },
+                    { key = "sctMisses", label = "Misses / avoidance" },
                 },
             },
         }
@@ -2495,12 +2512,24 @@ DFRL:NewMod("RunTimers", 5, function()
                 local span = (entry.wide or entry[1] == category.master) and columns or 1
                 local controlWidth = span == columns and contentWidth or rowWidth
                 local control
-                if entry.step then
+                if entry.color then
+                    local key = entry[1]
+                    control = T.CreateEditorColor(
+                        content,
+                        entry[2],
+                        controlWidth,
+                        function(value) DFRL.display.Set(key, value) end
+                    )
+                    displayColors[key] = control
+                elseif entry.step then
                     control = DisplayNumber(content, entry, controlWidth, rowHeight)
                 else
                     control = DisplayToggle(content, entry[1], entry[2], entry[3], 0, controlWidth)
                 end
-                table.insert(controls, { frame = control, span = span, numeric = entry.step ~= nil, entry = entry })
+                table.insert(
+                    controls,
+                    { frame = control, span = span, numeric = entry.step ~= nil, color = entry.color, entry = entry }
+                )
                 if dependents and entry[1] ~= category.master then table.insert(dependents.controls, control) end
                 control:EnableMouseWheel(true)
                 control:SetScript("OnMouseWheel", ScrollOptions)
@@ -2523,7 +2552,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 local group = { buttons = {}, descriptions = {} }
                 fontEditor.displayModes = fontEditor.displayModes or {}
                 fontEditor.displayModes[mode.key] = group
-                local buttonWidth = (contentWidth - gap * 2) / 3
+                local buttonWidth = (contentWidth - gap * (table.getn(mode.values) - 1)) / table.getn(mode.values)
                 for index, entry in ipairs(mode.values) do
                     local id = entry[1]
                     local button = T.CreateEditorButton(content, entry[2], buttonWidth, 30)
@@ -2623,7 +2652,7 @@ DFRL:NewMod("RunTimers", 5, function()
             sctDescription:SetJustifyV("TOP")
             sctDescription:SetTextColor(0.75, 0.73, 0.67)
             local combatPage = combat
-            combatPage:SetHeight(672)
+            combatPage:SetHeight(640)
             combat = CreateFrame("Frame", nil, combatPage)
             combat:SetAllPoints(combatPage)
             combat:EnableMouse(false)
@@ -2701,20 +2730,13 @@ DFRL:NewMod("RunTimers", 5, function()
             sctSizeLabel:SetJustifyH("CENTER")
             FontEditorButton("+", 28, scaleX + 108, -captions.sctScale.offset, function() ChangeSctSize(1) end, combat)
             local filterSize = (contentWidth - gap) / 2
-            local function CombatToggle(key, label, x, y, description)
-                local control =
-                    DisplayToggle(combat, key, label, description, y, description and contentWidth or filterSize)
+            local function CombatToggle(key, label, x, y)
+                local control = DisplayToggle(combat, key, label, nil, y, filterSize)
                 control:ClearAllPoints()
                 control:SetPoint("TOPLEFT", combat, "TOPLEFT", x, y)
-                if description then
-                    control:SetHeight(60)
-                    control.description:SetHeight(28)
-                    control.description:SetJustifyV("TOP")
-                else
-                    control:SetHeight(28)
-                    control.label:ClearAllPoints()
-                    control.label:SetPoint("LEFT", control, "LEFT", 32, 0)
-                end
+                control:SetHeight(28)
+                control.label:ClearAllPoints()
+                control.label:SetPoint("LEFT", control, "LEFT", 32, 0)
             end
             CombatToggle(
                 "sctClassColors",
@@ -2739,13 +2761,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 heading = FontEditorLabel(combat, group.label, 0, group.y, 12)
                 heading:SetTextColor(0.94, 0.79, 0.47)
                 for index, entry in ipairs(group.entries) do
-                    CombatToggle(
-                        entry.key,
-                        entry.label,
-                        math.mod(index - 1, 2) * (filterSize + gap),
-                        -entry.offset,
-                        entry.description
-                    )
+                    CombatToggle(entry.key, entry.label, math.mod(index - 1, 2) * (filterSize + gap), -entry.offset)
                 end
             end
         end
