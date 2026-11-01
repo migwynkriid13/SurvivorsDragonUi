@@ -518,6 +518,12 @@ The assertions cover:
   failed handoffs retire the duplicate custom caption. These authored CI-only
   contracts do not verify native provider availability or live clock rendering.
 
+  Clock-fit cases supply explicit natural glyph metrics and owning-frame scale.
+  They cover leftward growth past the old fixed slot, remaining zone width,
+  font/scale invalidation, unchanged measurement/write reuse, hidden/off deferral,
+  Show recovery and failed-metric native ownership retries in both Performance
+  Mode states. No local tests or native rendering verification were performed.
+
 - Fallen-ally waypoint mocks load the production controller with explicit
   native roster boundaries and check dead/alive/ghost/disconnect retirement,
   slot changes during reads, literal native names, nearest/stable selection,

@@ -2780,6 +2780,18 @@ The audit found and corrected local meter gaps:
   timer, and the low-health overlay skips repeated Show/Hide calls while keeping
   its authored gradient animation and timing.
 
+The local-clock label and its existing hover frame now fit natural text width
+plus four units of raster/outline padding, retaining their right anchor and
+allowing leftward growth. The zone caption/button receive the remaining width;
+clock-off restores their centered full-width budget. A single retained cache
+keys measurements by caption, actual font/size/flags and frame effective scale.
+Settled samples compare only final widths, font and scale; font changes refit
+without extra local-time reads. Show/language recovery remeasure, hidden/off
+clocks do no metric reads, and missing metrics retry on the existing visible
+five-second worker before native handoff. Both Performance Mode states share
+this static path, with no new frame, region, artwork, event, setting or updater.
+CI-only geometry cases do not establish native rendering or FPS.
+
 All audit edits are made directly in the installed Git checkout and remain
 unstaged, uncommitted and unpushed. Local work used source/history review and
 pinned formatting only; no addon/client execution, local test or standalone

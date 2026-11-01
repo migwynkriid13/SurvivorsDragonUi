@@ -1,15 +1,29 @@
 -- CI only: production minimap choice/lifecycle with explicit frame/date boundaries.
 local H = dofile("scripts/tests/fixtures/ui_helpers.lua")
 assert(_VERSION == "Lua 5.1")
+local function ClockMetrics(frame, label, state)
+    function frame:GetEffectiveScale() return state.scale or 1 end
+    function label:GetStringWidth()
+        state.measurements = (state.measurements or 0) + 1
+        return state.missingMetrics and 0 or state.textWidth or 35
+    end
+    local setPoint = frame.SetPoint
+    function frame:SetPoint(...)
+        setPoint(self, ...)
+        self.point = { ... }
+    end
+end
 local context = H.New()
 local env = context.env
 context:Load("core/display.lua", "Display")
 context:Load("core/hud.lua")
 local display = env.DFRL.display
 local panel = env.CreateFrame("Frame", nil, env.UIParent)
+panel:SetWidth(180)
 local frame = env.CreateFrame("Frame", nil, panel)
 local label = frame:CreateFontString(nil, "OVERLAY")
 label:SetFont("DEFAULT_TEST", 10, "")
+ClockMetrics(frame, label, {})
 local zoneButton = env.CreateFrame("Button", nil, panel)
 local zoneText = zoneButton:CreateFontString(nil, "OVERLAY")
 function zoneButton:SetPoint(...) self.point = { ... } end
@@ -108,11 +122,15 @@ local function NativeClock(preference, configure)
         value = { text = "10:42 PM", hour = 22, minute = 42, is24Hour = false },
     }
     c.panel = boundary.CreateFrame("Frame", nil, boundary.UIParent)
+    c.panel:SetWidth(180)
     c.clock = boundary.CreateFrame("Frame", nil, c.panel)
     c.label = c.clock:CreateFontString(nil, "OVERLAY")
     c.label:SetFont("DEFAULT_TEST", 10, "")
+    ClockMetrics(c.clock, c.label, state)
+    c.clock:SetPoint("RIGHT", c.panel, "RIGHT", -4, -3)
     local zone = boundary.CreateFrame("Button", nil, c.panel)
     local name = zone:CreateFontString(nil, "OVERLAY")
+    c.zone, c.zoneText = zone, name
     boundary.GameTooltip = boundary.CreateFrame("Frame", nil, boundary.UIParent)
     function boundary.GameTooltip:SetOwner(owner) self.owner = owner end
     function boundary.GameTooltip:IsOwned(owner) return self.owner == owner end
@@ -211,6 +229,63 @@ for _, performance in ipairs({ false, true }) do
     assert(state.reloaded and state.shown == true and not c.clock:GetScript("OnUpdate"))
 end
 print("PASS native clock uses 24-hour fields, bounded/hidden sampling, owned hover and preview/world/reload handoff")
+
+for _, performance in ipairs({ false, true }) do
+    local c, state, boundary = NativeClock(true, function(_, metrics, env)
+        metrics.textWidth, metrics.scale = 68.2, 0.7
+        env.SurvivorsDragonUiDisplay = { performanceMode = performance }
+    end)
+    local display = boundary.DFRL.display
+    local function Fitted(width)
+        assert(c.label:GetWidth() == width and c.clock:GetWidth() == width, "clock kept a fixed or clipped width")
+        assert(c.zone:GetWidth() == math.max(1, c.panel:GetWidth() - width - 14))
+        assert(c.zoneText:GetWidth() == c.zone:GetWidth(), "zone caption overlapped the clock budget")
+        assert(c.clock.point[1] == "RIGHT" and c.clock.point[2] == c.panel and c.clock.point[4] == -4)
+    end
+    Fitted(73)
+    local measurements, reads, allocated = state.measurements, state.reads, #c.objects
+    c:ResetCounts()
+    c:ClockTick()
+    assert(state.measurements == measurements and state.reads == reads + 1)
+    c:NoPresentationWrites()
+    state.textWidth, state.scale = 77.6, 0.45
+    c:ClockTick()
+    Fitted(82)
+    display.BeginEdit()
+    state.textWidth = 91.2
+    c.label:SetFont("WIDER_TEST", 10, "THICKOUTLINE")
+    reads = state.reads
+    display.Set("uiFont", "arial")
+    Fitted(96)
+    assert(state.reads == reads, "font refitting added a local-time read")
+    c.panel:Hide()
+    state.textWidth, state.scale = 64.2, 0.3
+    measurements = state.measurements
+    display.Set("uiFont", "default")
+    c:ClockTick(30)
+    assert(state.measurements == measurements and state.reads == reads, "hidden clock read metrics or time")
+    c.panel:Show()
+    Fitted(69)
+    display.Set("minimapShowClock", false)
+    assert(c.zone:GetWidth() == 172 and c.zoneText:GetWidth() == 172, "clock-off kept a reserved slot")
+    measurements, reads = state.measurements, state.reads
+    c:ClockTick(30)
+    assert(state.measurements == measurements and state.reads == reads)
+    display.FinishEdit(false)
+    Fitted(69)
+    state.missingMetrics = true
+    c.label:SetFont("RETRY_TEST", 10, "")
+    c:ClockTick()
+    assert(not c.label:IsShown() and state.shown, "unfitted clock suppressed the readable native clock")
+    state.missingMetrics = false
+    c:ClockTick()
+    assert(c.label:IsShown() and not state.shown, "clock metrics did not recover on the existing worker")
+    state.textWidth, state.value.minute = 220.2, 43
+    c:ClockTick()
+    Fitted(225)
+    assert(c.label:GetText() == "22:43" and #c.objects == allocated, "wide clock added regions or lost digits")
+end
+print("PASS minimap clock fits native glyphs leftward, reserves zone space, caches metrics and retries in both modes")
 
 for _, preference in ipairs({ false, true }) do
     local c, state, boundary = NativeClock(preference)

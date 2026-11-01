@@ -6,6 +6,37 @@ DFRL:NewMod("Map", 1, function()
         local inWorld = UnitExists("player") and true or false
         local caption, ready, tooltipCaption
         local nativeHour, nativeMinute, nativeText
+        local fitted = {}
+        local function Positive(value) return type(value) == "number" and value - value == 0 and value > 0 end
+        local function FitZone(clockWidth)
+            local width = panel:GetWidth()
+            if not Positive(width) then return end
+            width = math.max(1, width - 8 - (clockWidth and clockWidth + 6 or 0))
+            if zoneButton:GetWidth() ~= width then zoneButton:SetWidth(width) end
+            if zoneText:GetWidth() ~= width then zoneText:SetWidth(width) end
+        end
+        local function FitReading(face, size, flags)
+            local scale = frame:GetEffectiveScale()
+            if not Positive(size) or not Positive(scale) then return end
+            if
+                fitted.caption ~= caption
+                or fitted.face ~= face
+                or fitted.size ~= size
+                or fitted.flags ~= flags
+                or fitted.scale ~= scale
+            then
+                -- Native natural width is already in local units. Leave room
+                -- for outline/shadow rounding without constraining the clock.
+                local width = label:GetStringWidth()
+                if not Positive(width) then return end
+                fitted.width = math.ceil(width) + 4
+                fitted.caption, fitted.face, fitted.size, fitted.flags, fitted.scale = caption, face, size, flags, scale
+            end
+            if label:GetWidth() ~= fitted.width then label:SetWidth(fitted.width) end
+            if frame:GetWidth() ~= fitted.width then frame:SetWidth(fitted.width) end
+            FitZone(fitted.width)
+            return true
+        end
         local function HideTooltip()
             if GameTooltip and GameTooltip:IsOwned(frame) and GameTooltip:IsShown() then GameTooltip:Hide() end
             tooltipCaption = nil
@@ -21,6 +52,7 @@ DFRL:NewMod("Map", 1, function()
         end
         local function HideReading()
             ready, caption = false, nil
+            fitted.caption = nil
             if label:IsShown() then label:Hide() end
             HideTooltip()
         end
@@ -32,8 +64,12 @@ DFRL:NewMod("Map", 1, function()
         end
         local function SyncNative()
             if enabled and ready then
-                local font = label:GetFont()
-                if type(font) ~= "string" or font == "" or label:GetText() ~= caption then HideReading() end
+                local font, size, flags = label:GetFont()
+                if type(font) ~= "string" or font == "" or label:GetText() ~= caption then
+                    HideReading()
+                elseif frame:IsVisible() and not FitReading(font, size, flags) then
+                    HideReading()
+                end
             end
             if inWorld and NativeSupported() and (not enabled or ready) then
                 if not native.Acquire(false) then
@@ -106,6 +142,7 @@ DFRL:NewMod("Map", 1, function()
                 return
             end
             elapsed = 0
+            fitted.caption = nil
             if frame:GetScript("OnUpdate") ~= Tick then frame:SetScript("OnUpdate", Tick) end
             Refresh()
         end
@@ -149,6 +186,7 @@ DFRL:NewMod("Map", 1, function()
                 if frame:IsShown() then frame:Hide() end
                 zoneButton:SetPoint("CENTER", panel, "CENTER", 0, -3)
                 zoneText:SetJustifyH("CENTER")
+                FitZone()
             end
             SyncNative()
         end
@@ -256,13 +294,13 @@ DFRL:NewMod("Map", 1, function()
     T.SetFont(MinimapZoneText, 10, "")
 
     local timeFrame = CreateFrame("Frame", "MinimapTimeFrame", panel)
-    timeFrame:SetWidth(40)
+    timeFrame:SetWidth(1)
     timeFrame:SetHeight(20)
     timeFrame:SetPoint("RIGHT", panel, "RIGHT", -4, -3)
     timeFrame:EnableMouse(true)
 
     local timeText = timeFrame:CreateFontString("MinimapTimeText", "OVERLAY", "GameFontNormal")
-    timeText:SetPoint("CENTER", timeFrame, "CENTER", 0, 0)
+    timeText:SetPoint("RIGHT", timeFrame, "RIGHT", 0, 0)
     T.SetFont(timeText, 10, "")
     timeText:SetTextColor(1, 1, 1, 1)
     WatchClock(timeFrame, timeText, MinimapZoneTextButton, MinimapZoneText, panel)

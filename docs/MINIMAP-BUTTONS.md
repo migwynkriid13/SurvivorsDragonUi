@@ -44,6 +44,17 @@ hour/minute pairs skip formatting; all paths skip unchanged text writes.
 Hiding/disabling clears only its owned hover.
 Show, world entry and language changes sample fresh time.
 
+The clock's right edge stays aligned with the panel, while its label and hover
+frame fit the current font's natural `HH:MM` width plus four units for outline
+and shadow rounding. Wider readings extend left instead of being cut to a fixed
+slot. The zone caption and its button use the remaining panel width with a
+six-unit gap; clock-off restores their full centered width. Measurements are
+cached by reading, actual font/size/flags and the owning frame's effective scale.
+Visible font changes refit without another time read; Show and language recovery
+remeasure. Missing metrics retry through the same visible worker and defer native
+clock suppression until the replacement fits. Both Performance Mode states use
+this static geometry, with no added frame, region, asset, event or updater.
+
 `minimapShowClock` uses the existing display table and shared live preview,
 Confirm, Cancel/discard, profiles and both reset paths. Missing/invalid values
 and resets mean on; an explicitly saved off choice stays off. It adds no
