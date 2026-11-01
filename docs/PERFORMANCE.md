@@ -2232,15 +2232,20 @@ Switching modes adds no animation or controller. CI-only production-source
 mocks cover the numeric and overlay lifecycles; they were not run locally.
 
 The first valid positive shield lazily allocates one mouse-transparent frame
-and one texture region, reusing `LargeHealthFill` with full UVs. Successful
-texture binding is cached; failed assignments remain retryable through the
-same reader. Anchors and width change only when their effective geometry
+and two texture regions: the silver-white `LargeHealthFill` with full UVs and
+one dark leading divider using the existing native `WHITE8X8` texture. The
+divider adds one region to the original absorb presentation and stays within
+the segment, at most one UI unit wide. Successful texture bindings are cached;
+failed assignments remain retryable through the same reader, with a missing
+divider preserving the usable fill and numbers. Colours and divider anchors
+are assigned once; each visible normal-mode pass adds one divider-width read
+and writes only a changed width. Fill anchors and width change only when their effective geometry
 changes; dual vertical anchors follow the resource row's health-height change
 without a new updater. Health-size callbacks reflow retained fractions only
 while visible. Zero, invalid or retired data hides the region once.
 
-There is at most one extra visible region and one additional tinted alpha
-pass over the existing health opening. The segment can overlap the health
+There are at most two visible overlay regions: one tinted alpha fill and one
+narrow solid divider. The segment can overlap the health
 fill at full health or when the shield would exceed its right edge; it is
 clamped to one bar and stays beneath the border and labels. No new texture
 file, material image, animation, event subscription, gameplay history or saved

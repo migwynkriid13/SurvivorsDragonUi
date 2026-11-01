@@ -18,7 +18,7 @@ end
 local absorbSource = string.sub(playerSource, first, last - 1)
     .. "\n"
     .. table.concat(hooks, "\n")
-    .. "\nreturn function() return absorbOverlay, absorbTexture end\n"
+    .. "\nreturn function() return absorbOverlay, absorbTexture, absorbEdge end\n"
 
 local function Blue(value) return " |cffA6D9FF+" .. value .. "|r" end
 local passed = 0
@@ -76,6 +76,10 @@ local function Player(performance)
             Write("SetStatusBarColor")
             self.color = { ... }
         end
+        function object:SetVertexColor(...)
+            Write("SetVertexColor")
+            self.vertexColor = { ... }
+        end
         return object
     end
 
@@ -131,6 +135,43 @@ local function Player(performance)
     return context, controller, bar, label, labels, overlay
 end
 
+Test("silver shields retain a dark bounded edge over mage and default health colours", function()
+    local context, _, bar, _, _, overlay = Player()
+    local env = context.env
+    env.UnitClass = function(unit)
+        assert(unit == "player")
+        return "Mage", "MAGE"
+    end
+    function bar:GetStatusBarColor() return unpack(self.color or { 0, 1, 0, 1 }) end
+    local updateColor = env.T.BindClassHealthColor(bar, "player")
+    updateColor()
+    context:SetSetting("classHealth", true)
+    context:Publish(250)
+    local frame, texture, edge = overlay()
+    local mage = env.T.GetClassColor("MAGE")
+    assert(bar.color[1] == mage[1] and bar.color[2] == mage[2] and bar.color[3] == mage[3])
+    assert(texture.vertexColor[1] == 1 and texture.vertexColor[2] == 1 and texture.vertexColor[3] == 1)
+    assert(texture.vertexColor[4] == 0.9 and edge.vertexColor[4] == 1)
+    assert(edge.vertexColor[1] < 0.15 and edge.vertexColor[2] < 0.15 and edge.vertexColor[3] < 0.15)
+    assert(edge:GetParent() == frame and edge:IsVisible() and edge:GetWidth() == 1 and texture:GetWidth() == 50)
+    local allocated = #context.objects
+    context:SetSetting("classHealth", false)
+    assert(bar.color[1] == 0 and bar.color[2] == 1 and bar.color[3] == 0)
+    assert(edge:IsVisible() and texture.vertexColor[1] == 1 and #context.objects == allocated)
+    context:Publish(1, 1000, 10000)
+    assert(edge:GetWidth() == texture:GetWidth() and edge:GetWidth() < 1, "divider extended beyond a tiny shield")
+    bar:SetWidth(400)
+    context:Call(bar, "OnSizeChanged")
+    assert(math.abs(texture:GetWidth() - 0.04) < 0.000001 and edge:GetWidth() == texture:GetWidth())
+    context:Publish(0)
+    assert(not frame:IsShown() and not edge:IsVisible())
+    context:Publish(250)
+    assert(edge:IsVisible() and edge:GetWidth() == 1 and #context.objects == allocated)
+    context:ResetCounts()
+    context:Tick()
+    context:NoPresentationWrites()
+end)
+
 Test("current shield and its uncapped max-health percentage distinguish saturated bars", function()
     local context, _, bar, label, labels, overlay = Player()
     context:Publish(7000)
@@ -172,11 +213,14 @@ Test("Performance Mode retains static shield numbers and hides only the optional
     assert(label:GetText() == "1K" .. Blue("7K") and labels.percentage:GetText() == "100%" .. Blue("700%"))
     assert(overlay() == nil, "Performance Mode prepared unused overlay artwork")
     context:SetSetting("performanceMode", false)
-    local frame = overlay()
-    assert(frame and frame:IsShown(), "normal presentation did not prepare its overlay")
+    local frame, _, edge = overlay()
+    assert(frame and frame:IsShown() and edge:IsVisible(), "normal presentation did not prepare its overlay")
     local allocated = #context.objects
     context:SetSetting("performanceMode", true)
-    assert(not frame:IsShown() and label:GetText() == "1K" .. Blue("7K"), "mode entry removed shield information")
+    assert(
+        not frame:IsShown() and not edge:IsVisible() and label:GetText() == "1K" .. Blue("7K"),
+        "mode entry removed shield information"
+    )
     context:Publish(1200)
     assert(labels.percentage:GetText() == "100%" .. Blue("120%") and not frame:IsShown())
     context:SetSetting("performanceMode", false)
@@ -363,6 +407,29 @@ Test("failed numeric writes remain retryable on the existing resource reader", f
     assert(not ok, "native text failure was not injected")
     context:Tick()
     assert(label:GetText() == "1K" .. Blue("1.2K") and labels.percentage:GetText() == "100%" .. Blue("120%"))
+    context:ResetCounts()
+    context:Tick()
+    context:NoPresentationWrites()
+end)
+
+Test("divider binding retries preserve shield fill and numbers without hidden work", function()
+    local context, _, _, label, _, overlay = Player()
+    context.failTexture = "Interface\\Buttons\\WHITE8X8"
+    context:Publish(250)
+    local frame, texture, edge = overlay()
+    assert(frame:IsShown() and texture:GetWidth() == 50 and not edge:IsShown())
+    assert(label:GetText() == "1K" .. Blue("250"), "divider failure hid shield information")
+    local allocated = #context.objects
+    context:Tick()
+    assert(frame:IsShown() and not edge:IsShown() and #context.objects == allocated)
+    context:SetSetting("performanceMode", true)
+    context:ResetCounts()
+    context:Tick()
+    assert(not frame:IsShown() and not edge:IsVisible())
+    context:NoPresentationWrites()
+    context.failTexture = nil
+    context:SetSetting("performanceMode", false)
+    assert(frame:IsShown() and edge:IsVisible() and #context.objects == allocated)
     context:ResetCounts()
     context:Tick()
     context:NoPresentationWrites()

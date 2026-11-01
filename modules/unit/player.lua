@@ -69,7 +69,7 @@ DFRL:NewMod("Player", 1, function()
 
     DFRL.playerResources = DFRL.playerResources or {}
     local performanceMode = DFRL.display.Get("performanceMode")
-    local absorbOverlay, absorbTexture, absorbBound
+    local absorbOverlay, absorbTexture, absorbBound, absorbEdge, absorbEdgeBound
     local absorbStart, absorbFraction, absorbLeft
     local function HideAbsorb()
         absorbStart, absorbFraction = nil, nil
@@ -90,7 +90,13 @@ DFRL:NewMod("Player", 1, function()
             absorbOverlay:EnableMouse(false)
             absorbOverlay:Hide()
             absorbTexture = absorbOverlay:CreateTexture(nil, "OVERLAY")
-            absorbTexture:SetVertexColor(0.65, 0.85, 1, 0.8)
+            absorbTexture:SetVertexColor(1, 1, 1, 0.9)
+            -- A dark boundary stays legible against cyan and white class fills.
+            absorbEdge = absorbOverlay:CreateTexture(nil, "OVERLAY")
+            absorbEdge:SetVertexColor(0.06, 0.08, 0.1, 1)
+            absorbEdge:SetPoint("TOPLEFT", absorbTexture, "TOPLEFT", 0, 0)
+            absorbEdge:SetPoint("BOTTOMLEFT", absorbTexture, "BOTTOMLEFT", 0, 0)
+            absorbEdge:Hide()
         end
         if not absorbBound then
             local fill = T.LargeHealthFill
@@ -100,6 +106,12 @@ DFRL:NewMod("Player", 1, function()
             if not absorbBound then return end
             absorbTexture:SetTexCoord(unpack(fill.texCoords))
         end
+        if not absorbEdgeBound then
+            local path = "Interface\\Buttons\\WHITE8X8"
+            local loaded = absorbEdge:SetTexture(path)
+            absorbEdgeBound = T.TextureAssigned(loaded, absorbEdge:GetTexture(), path)
+            if absorbEdgeBound then absorbEdge:Show() end
+        end
         local left, span = width * absorbStart, width * absorbFraction
         if not T.NearlyEqual(absorbLeft, left) then
             absorbTexture:ClearAllPoints()
@@ -108,6 +120,8 @@ DFRL:NewMod("Player", 1, function()
             absorbLeft = left
         end
         if not T.NearlyEqual(absorbTexture:GetWidth(), span) then absorbTexture:SetWidth(span) end
+        local edgeWidth = math.min(1, span)
+        if not T.NearlyEqual(absorbEdge:GetWidth(), edgeWidth) then absorbEdge:SetWidth(edgeWidth) end
         if not absorbOverlay:IsShown() then absorbOverlay:Show() end
     end
     DFRL.playerResources.SetAbsorb = function(value, health, maximum)

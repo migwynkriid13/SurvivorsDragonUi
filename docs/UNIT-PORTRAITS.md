@@ -146,8 +146,10 @@ unverified.
 
 ## Player absorbs
 
-The player health bar shows active absorbs automatically as a pale-blue
-segment. There is no separate setting, and **Class resources** can stay off.
+The player health bar shows active absorbs automatically as a silver-white
+segment with a thin dark divider at its start. This separates the shield from
+class-coloured health, including mage cyan. There is no separate setting, and
+**Class resources** can stay off.
 The segment starts after current health when there is room. When health plus
 the shield exceeds maximum health, it moves left inside the bar so the shield
 is still visible at full health. Its width represents shield / maximum health,
@@ -160,7 +162,7 @@ also applies to the absorb amount. The shield percentage uses received maximum
 HP and is not capped at 100%, so depletion remains readable while the segment
 still fills the bar. It is not a percentage of original shield capacity: the
 official API publishes current total absorb, not the full capacity of each buff.
-Performance Mode retains these static numbers while hiding the blue segment.
+Performance Mode retains these static numbers while hiding the segment and divider.
 The existing label anchors and font size remain unchanged; narrow bars with
 long full-number captions may need wider Layout geometry.
 
@@ -181,7 +183,7 @@ through the existing reader. No text region or display setting is added.
 
 The segment inherits the actual health rectangle, including width handles,
 portrait modes and the optional resource row's height. It lazily reuses the
-prepared health-fill image below the gold border and health text, leaving
+prepared health-fill image and one solid divider below the gold border and health text, leaving
 native StatusBar UVs, values and clicks unchanged. No setting, artwork,
 SavedVariable, event subscription or updater is added. Appearance and live
 shield changes remain unverified in-game.
