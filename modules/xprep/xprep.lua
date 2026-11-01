@@ -74,7 +74,10 @@ DFRL:NewMod("Xprep", 1, function()
         local owned = inWorld and customActionBar
         if stockOwned == owned then return end
         stockOwned = owned
-        for _, state in ipairs(stockXP) do
+        for _, entry in ipairs(stockXP) do
+            -- Lua 5.0 reuses iterator variables; retained callbacks need their
+            -- own binding after the loop advances and finally yields nil.
+            local state = entry
             local frame = state.frame
             if owned then
                 local originalShow, originalHide, originalOnShow = frame.Show, frame.Hide, frame:GetScript("OnShow")

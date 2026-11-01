@@ -86,17 +86,11 @@ addon initializer environment. They retain all fourteen catalogs, native errors,
 legacy fallback and deferred recovery when the capability endpoint is absent
 or appears after initialization.
 
-Damage Taken coverage adds the fifth heading-cycle entry alongside the retained
-legacy meter path and optional v1 path for the original four views. The CI-only
-cases use explicit official `AZS_TAKEN` category rows and `AZS_RUN.taken` totals,
-including an unattributed remainder, malformed data, native-time rates and pause,
-publication/run retirement, shared legacy Reset, v1 checkpoint coexistence and
-capture failure preserving both sessions. They cover localized categories,
-neutral icon reuse without source resolution, hidden/off normalization skips and
-both Performance Mode states. The v1 four-view checkpoint and deferred legacy
-Damage Taken baseline are separate actions, not an atomic five-view checkpoint.
-These cases are authored and were not executed locally; no native data or game
-execution is used by the local workflow.
+Native and legacy meter cases keep forward and reverse navigation within the
+four supported views in both Performance Mode states, even when incoming-damage
+categories are published. They reject category reads and retain native counters;
+the native API path keeps legacy packet intake detached. These cases remain
+CI-only and were not executed locally.
 
 Ability-rank cases add nine native ranks and a later upgrade, checking one
 combined row, amounts, available/unavailable rates, shares and sorting without
