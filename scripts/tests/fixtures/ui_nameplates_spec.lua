@@ -543,13 +543,15 @@ do
         end
     end)
     local function Label(value)
-        local found, count = nil, 0
+        local found, count, positions = nil, 0, {}
         for _, label in ipairs(cached:Labels()) do
             if label:GetText() == tostring(value) then
                 found, count = label, count + 1
+                table.insert(positions, label.parent.parent.anchor.x)
             end
         end
-        return found, count
+        table.sort(positions)
+        return found, count, positions
     end
     local first, second = cached:MakePlate("Cache", 1000), cached:MakePlate("Cache", 1000)
     first.centerX, second.centerX = 100, 300
@@ -604,7 +606,11 @@ do
     cached.targetName = "Cache"
     cached:Hit(205)
     cached:Tick(0.17)
-    assert(Label(205).parent.parent.anchor.x == 500, "distinct native names shared a cached fallback")
+    local _, namedCount, namedPositions = Label(205)
+    assert(
+        namedCount == 2 and namedPositions[1] == 200 and namedPositions[2] == 800,
+        "distinct native names shared a cached fallback or a grouped label"
+    )
 
     cached:Hit(206)
     cached.now = cached.now + 0.09
@@ -631,9 +637,10 @@ do
         firstOrigin.lossRemaining == 0 and secondOrigin.lossRemaining == 0,
         "an original hit skipped loss consumption"
     )
+    local _, lossCount, lossPositions = Label(100)
     assert(
-        Label(100).parent.parent.anchor.x == (100 + 300 + 300) / 3,
-        "loss invalidation changed the original centroid"
+        lossCount == 3 and lossPositions[1] == 100 and lossPositions[2] == 300 and lossPositions[3] == 300,
+        "loss invalidation grouped original hits or changed their individual origins"
     )
 
     before = widths

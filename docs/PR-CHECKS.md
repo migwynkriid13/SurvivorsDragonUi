@@ -535,7 +535,8 @@ The assertions cover:
   call/lifecycle contracts and do not establish rendered parity or FPS gains.
 - API-timer presentation cases in `ui_aura_layout_perf_spec.lua` exercise
   the production owner with explicit native boundaries. They cover bright,
-  text-free talent/jewelry timer icons with positive and zero remaining time, stable received
+  text-free, borderless talent/jewelry timer icons filling their existing buttons
+  with positive and zero remaining time, stable received
   order at either anchor without ready/waiting movement, retained timer tooltips
   and unchanged regular native aura handling. These authored cases remain
   CI-only and were not run locally; native appearance remains unverified.
@@ -601,7 +602,11 @@ The assertions cover:
   identities, numeric overflow splitting, stable bucket cleanup,
   old/new intake separation and active animation
   surviving preview/Cancel window changes. Matching and settling keep their
-  original gates. These are CI-only source/lifecycle assertions.
+  original gates. Pool reuse accepts either retired normal label while requiring
+  no replacement allocation and a fresh display value; abbreviation/Cancel must
+  update both normal labels. Matching-cache cases check each original hit's
+  position and loss consumption instead of a shared presentation centroid.
+  These are CI-only source/lifecycle assertions.
   Default per-hit matching/fallback remains covered. Extraction keeps complete
   multi-variable constant declarations once, with uniqueness regression cases.
 

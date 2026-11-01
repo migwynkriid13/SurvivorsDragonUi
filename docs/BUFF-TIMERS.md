@@ -5,8 +5,8 @@ talent and jewelry timers alongside native buffs, debuffs and weapon enchants.
 The received timers occupy the first slots at the selected left or right anchor
 in their received order, including separate effects with the same name. Every
 timer icon stays bright, without fading or dimming, and has no text underneath
-at any remaining value. Timer borders stay neutral. Ready/waiting changes do
-not move the icons within that group.
+at any remaining value. Timer icons have no added outer border and fill their
+existing buttons. Ready/waiting changes do not move the icons within that group.
 
 Hover shows the supplied source name, Next summon or Cooldown, full wait to
 one decimal place, and remaining seconds or Ready. These five captions use all

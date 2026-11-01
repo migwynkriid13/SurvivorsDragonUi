@@ -65,8 +65,15 @@ local function AuraOwner(performance)
         local object = create(self, ...)
         function object:GetNumPoints() return self.point and 1 or 0 end
         function object:GetPoint() return unpack(self.point or {}) end
-        function object:ClearAllPoints() self.point = nil end
+        function object:ClearAllPoints()
+            self.point, self.allPoints = nil, nil
+        end
         function object:SetPoint(...) self.point = { ... } end
+        local setAllPoints = object.SetAllPoints
+        function object:SetAllPoints(relative)
+            setAllPoints(self, relative)
+            self.allPoints = relative
+        end
         function object:SetScale(value) self.scale = value end
         function object:SetParent(parent)
             self.parent = parent
@@ -226,6 +233,8 @@ local function TimerIcon(current, button)
         end
     end
     assert(icon and icon:GetAlpha() == 1 and button:GetAlpha() == 1, "API timer was dimmed")
+    assert(not button.backdrop and not button.borderColor, "API timer retained an added outer border")
+    assert(icon.allPoints == button and not icon.point, "borderless timer icon did not fill its existing button")
     return icon
 end
 

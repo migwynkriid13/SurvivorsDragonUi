@@ -2545,8 +2545,11 @@ remain in place; this is not a claim that every remaining cost is eliminated.
 Native aura/timer rows (`modules/unit/auras.lua`) retain changed-slot reflow,
 hidden timer shutdown and required repair of native buff/enchant anchors.
 The presentation applies only to `AZS_GetTimers()` talent/jewelry
-icons: they stay bright with no fade/dimming or text underneath, at any remaining
-value. Their countdown FontString and formatting work are removed. The API timer
+icons: they stay bright with no fade/dimming, added outer border or text underneath,
+at any remaining value. The timer-only native backdrop and its edge drawing are
+removed; the icon fills the existing button without the former one-unit inset.
+Both Performance Mode states share this static presentation. Their countdown
+FontString and formatting work are removed. The API timer
 group keeps received order at the chosen left/right anchor, without ready/waiting
 reflow. Remaining/full-wait/Ready tooltips and native timing stay current through
 the existing reader. Regular native aura duration captions, opacity, expiration,

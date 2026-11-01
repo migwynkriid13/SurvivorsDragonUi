@@ -68,12 +68,7 @@ DFRL:NewMod("Player Auras", 2, function()
         local icon = entry.icon
         if icon then
             icon:ClearAllPoints()
-            if entry.timer then
-                icon:SetPoint("TOPLEFT", button, "TOPLEFT", 1, -1)
-                icon:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -1, 1)
-            else
-                icon:SetAllPoints(button)
-            end
+            icon:SetAllPoints(button)
         end
         local border = entry.border
         if border then
@@ -178,8 +173,6 @@ DFRL:NewMod("Player Auras", 2, function()
         button:SetWidth(iconSize)
         button:SetHeight(iconSize)
         button:Hide()
-        button:SetBackdrop({ edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 1 })
-        button:SetBackdropBorderColor(0.6, 0.66, 0.74, 1)
         local entry = { button = button, timer = true }
         entry.icon = button:CreateTexture(nil, "ARTWORK")
         entry.icon:SetAllPoints(button)

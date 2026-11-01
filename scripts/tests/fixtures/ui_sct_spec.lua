@@ -609,16 +609,17 @@ Test("abbreviation previews refit active totals without restarting motion, font 
         context:Hit(1500000)
         context:Hit(1500000)
         context:Tick(0.4)
-        local label = assert(context:Labels()[1])
+        local labels = context:Labels()
+        local label = assert(labels[1])
         local full, compact = performance and "3,000,000" or "1,500,000", performance and "3M" or "1.5M"
-        assert(
-            #context:Labels() == (performance and 1 or 2) and label:GetText() == full,
-            "per-mode hit presentation changed"
-        )
+        assert(#labels == (performance and 1 or 2) and label:GetText() == full, "per-mode hit presentation changed")
         local holder, allocated, width = label.parent.parent, #context.objects, label:GetWidth()
         local anchor, alpha, font = holder.anchor, holder:GetAlpha(), label:GetFont()
         context:SetSetting("sctShortNumbers", true)
         assert(context:Labels()[1] == label and label:GetText() == compact, "active group did not abbreviate")
+        for _, active in ipairs(labels) do
+            assert(active:GetText() == compact, "abbreviation skipped a separate normal hit")
+        end
         assert(label:GetWidth() < width, "abbreviation retained the old glyph width")
         assert(
             holder.anchor == anchor and holder:GetAlpha() == alpha and label:GetFont() == font,
@@ -633,12 +634,22 @@ Test("abbreviation previews refit active totals without restarting motion, font 
         context:NoPresentationWrites()
         context:SetSetting("sctShortNumbers", false)
         assert(label:GetText() == full and holder.anchor == anchor, "Cancel did not restore the original total")
+        for _, active in ipairs(labels) do
+            assert(active:GetText() == full, "Cancel skipped a separate normal hit")
+        end
         context:Tick(1.11)
         assert(#context:Labels() == 0, "formatting restarted expiry")
         context:SetSetting("sctShortNumbers", true)
         context:Hit(2500000000)
         context:Tick(0.4)
-        assert(context:Labels()[1] == label and label:GetText() == "2.5B", "pooled text replayed an old total")
+        local reused = assert(context:Labels()[1])
+        assert(
+            #context:Labels() == 1
+                and (reused == labels[1] or reused == labels[2])
+                and reused:GetText() == "2.5B"
+                and #context.objects == allocated,
+            "pooled text allocated a replacement or replayed an old total"
+        )
     end
 end)
 
