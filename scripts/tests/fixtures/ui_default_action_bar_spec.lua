@@ -201,6 +201,10 @@ local function Bar(custom, performance)
     end
     env.MainMenuBar = env.CreateFrame("Frame", "MainMenuBar", env.UIParent)
     env.MainMenuBarArtFrame = env.CreateFrame("Frame", "MainMenuBarArtFrame", env.MainMenuBar)
+    env.MainMenuBarMaxLevelBar = env.CreateFrame("Frame", "MainMenuBarMaxLevelBar", env.MainMenuBar)
+    env.MainMenuBarMaxLevelBar:Hide()
+    local maxLevelArt = env.MainMenuBarMaxLevelBar:CreateTexture("MainMenuMaxLevelBar1", "BACKGROUND")
+    maxLevelArt:SetTexture("Interface\\MainMenuBar\\UI-MainMenuBar-MaxLevel")
     for index = 1, 4 do
         local texture = env.MainMenuBarArtFrame:CreateTexture("MainMenuBarTexture" .. (index - 1), "BACKGROUND")
         texture:SetTexture("Native\\Bar" .. index)
@@ -534,6 +538,30 @@ Test("native frame snapshots leave the separate XP owner's frames and descendant
     owner.Apply(state)
     assert(parent:GetAlpha() == 1)
     assert(xp:GetAlpha() == 0.25 and text:GetText() == "New native XP", "bar snapshot overwrote the XP owner's state")
+end)
+
+Test("bar mode snapshots leave max-level XP ownership and artwork alone", function()
+    for _, performance in ipairs({ false, true }) do
+        local c, env = Bar(false, performance)
+        local frame, art = env.MainMenuBarMaxLevelBar, env.MainMenuMaxLevelBar1
+        c:SetSetting("customActionBar", true)
+        local allocated = #c.objects
+        local show = function() c.maxLevelShow = true end
+        local onShow = function() c.maxLevelOnShow = true end
+        frame.Show = show
+        frame:SetScript("OnShow", onShow)
+        frame:SetAlpha(0.4)
+        art:SetTexture("Native\\UpdatedMaxLevelArt")
+        c:SetSetting("customActionBar", false)
+        assert(frame.Show == show and frame:GetScript("OnShow") == onShow, "bar restore replaced the XP owner's hooks")
+        assert(frame:GetAlpha() == 0.4 and art:GetTexture() == "Native\\UpdatedMaxLevelArt")
+        frame:SetAlpha(0.6)
+        art:SetTexture("Native\\LatestMaxLevelArt")
+        c:SetSetting("customActionBar", true)
+        assert(frame.Show == show and frame:GetScript("OnShow") == onShow, "custom skin restored stale XP hooks")
+        assert(frame:GetAlpha() == 0.6 and art:GetTexture() == "Native\\LatestMaxLevelArt")
+        assert(frame:GetParent() == env.MainMenuBar and #c.objects == allocated)
+    end
 end)
 
 Test("world retirement and reload release the custom bar without changing the saved selection", function()

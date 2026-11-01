@@ -29,6 +29,13 @@ and XP presentation, releases native bar presentation, and keeps jewelry and
 counters detached without replacing their saved attachment choices. SDUI-only
 controls use the existing changed-only dependency refresh.
 
+Native max-level artwork shares the XP owner's existing Show/Hide and OnShow
+guards. It stays suppressed with SDUI selected, including a level-cap
+transition, and restores its latest native visibility on release. Action-bar
+snapshots exclude that frame and its descendants. Both Performance Mode states
+use the same immediate ownership path, with no new polling,
+frame, region, asset, event, updater or saved state.
+
 Both Performance Mode states share the same handoff. Native bar input and
 cooldowns retain their original owners; hidden SDUI decoration and cosmetic
 updates stop. Returning to SDUI reuses prepared regions and existing

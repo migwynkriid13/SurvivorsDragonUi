@@ -794,7 +794,12 @@ DFRL:NewMod("Bars", 1, function()
         if initialized then return end
         initialized = true
         local ignored = {}
-        for _, name in ipairs({ "MainMenuExpBar", "ReputationWatchBar", "MainMenuBarPerformanceBarFrame" }) do
+        for _, name in ipairs({
+            "MainMenuExpBar",
+            "MainMenuBarMaxLevelBar",
+            "ReputationWatchBar",
+            "MainMenuBarPerformanceBarFrame",
+        }) do
             if _G[name] then ignored[_G[name]] = true end
         end
         stateOwner = T.NewActionBarState(ignored)

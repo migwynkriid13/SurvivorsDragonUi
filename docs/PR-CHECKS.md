@@ -98,8 +98,13 @@ Action-bar choice cases use the production display/bar owners and explicit fake
 native frames. They cover default-on normalization, shared preview/Confirm/Cancel,
 profiles and resets, native presentation restoration, retained attachment
 choices with detached jewelry/counters, SDUI XP hiding, disabled dependent
-controls and both Performance Mode states. These cases remain CI-only and were
-not run locally; they do not prove native input or in-game appearance.
+controls and both Performance Mode states. Max-level cases cover a 119→120
+transition, repeated native Show calls and direct native OnShow delivery,
+already-capped reacquisition, native-mode restoration of latest Show/Hide
+requests and callbacks, Cancel, world/release cleanup and pool reuse. Bar
+snapshots must leave the XP owner's max-level frame, descendants and hooks
+untouched. These cases remain CI-only and were not run locally; they do not
+prove native input or in-game appearance.
 
 The native API draft adds production-boundary fixtures for the v1 meter adapter,
 complete meter view, retained portrait circle helper, native language selection

@@ -13,6 +13,17 @@ existing detached owners and saved detached geometry; their attachment choices
 stay saved and become effective again when SDUI is selected. The native bar
 keeps its original artwork, buttons, geometry and handlers.
 
+SDUI also suppresses the native `MainMenuBarMaxLevelBar`, whose
+`MainMenuMaxLevelBar0`–`3` textures form the grey strip shown at the level cap.
+The existing XP owner captures its latest Show/Hide requests and restores its
+native callbacks and visibility in game-bar mode or world/reload cleanup.
+Action-bar snapshots exclude this frame and its descendants so they cannot
+overwrite that separate XP ownership. No new polling or artwork is needed.
+The frame/texture relationship is recorded in the
+[1.12.1 native FrameXML](https://github.com/tekkub/wow-ui-source/blob/1.12.1/FrameXML/MainMenuBar.xml#L160-L223);
+the native [reputation/XP update](https://github.com/tekkub/wow-ui-source/blob/1.12.1/FrameXML/ReputationFrame.lua#L218-L230)
+shows that frame at the level cap when no reputation is watched.
+
 SDUI's Lock action buttons, Cooldown numbers, Show gryphons, Attach XP and Show
 XP text controls dim and disable input while the game bar is selected. Jewelry
 and counter attachment controls also disable without changing their values;

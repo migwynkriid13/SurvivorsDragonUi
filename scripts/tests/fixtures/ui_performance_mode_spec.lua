@@ -118,6 +118,16 @@ do
     local display = env.DFRL.display
     env.MainMenuBarPerformanceBarFrame = env.CreateFrame("Frame", "MainMenuBarPerformanceBarFrame", env.UIParent)
     env.MainMenuExpBar = env.CreateFrame("Frame", "MainMenuExpBar", env.UIParent)
+    env.MainMenuBarMaxLevelBar = env.CreateFrame("Frame", "MainMenuBarMaxLevelBar", env.UIParent)
+    local maxLevelBar = env.MainMenuBarMaxLevelBar
+    local maxLevelArt = maxLevelBar:CreateTexture("MainMenuMaxLevelBar1", "BACKGROUND")
+    local maxLevelPath = "Interface\\MainMenuBar\\UI-MainMenuBar-MaxLevel"
+    maxLevelArt:SetTexture(maxLevelPath)
+    maxLevelBar:Hide()
+    local maxLevelShow, maxLevelHide = maxLevelBar.Show, maxLevelBar.Hide
+    local maxLevelShows = 0
+    local function MaxLevelShown() maxLevelShows = maxLevelShows + 1 end
+    maxLevelBar:SetScript("OnShow", MaxLevelShown)
     env.ReputationWatchBar = env.CreateFrame("Frame", "ReputationWatchBar", env.UIParent)
     env.ReputationWatchBar:Hide()
     local nativeShow, nativeHide = env.MainMenuExpBar.Show, env.MainMenuExpBar.Hide
@@ -300,6 +310,50 @@ do
     assert(text:IsVisible() and #context.objects == textPoolSize, "detaching XP replaced or lost text")
     display.Reset()
     assert(not text:IsShown() and not display.Get("xpShowText"), "reset retained XP text")
+    local maxLevelPool = #context.objects
+    for _, performance in ipairs({ false, true }) do
+        display.BeginEdit()
+        display.Set("performanceMode", performance)
+        context.level, context.xp, context.maximum = 119, 0, 1
+        maxLevelBar:Hide()
+        context:Event(controller, "PLAYER_LEVEL_UP")
+        context:Call(controller, "OnUpdate", 0.01)
+        context.level, context.xp = 120, 1
+        context:Event(controller, "PLAYER_LEVEL_UP")
+        local shows = maxLevelShows
+        for _ = 1, 3 do
+            maxLevelBar:Show()
+            assert(
+                not maxLevelBar:IsShown() and not maxLevelArt:IsVisible(),
+                "level-cap artwork escaped SDUI ownership"
+            )
+        end
+        maxLevelShow(maxLevelBar)
+        assert(not maxLevelBar:IsShown() and maxLevelShows == shows + 1, "native OnShow bypassed max-level suppression")
+        context:Call(controller, "OnUpdate", 0.01)
+        assert(not maxLevelBar:IsShown() and maxLevelShows == shows + 1 and maxLevelArt:GetTexture() == maxLevelPath)
+        display.Set("customActionBar", false)
+        assert(maxLevelBar:IsVisible() and maxLevelArt:IsVisible() and maxLevelShows == shows + 2)
+        assert(maxLevelBar.Show == maxLevelShow and maxLevelBar.Hide == maxLevelHide)
+        assert(maxLevelBar:GetScript("OnShow") == MaxLevelShown, "native max-level callback was not restored")
+        display.Set("customActionBar", true)
+        assert(not maxLevelBar:IsShown(), "already-capped bar survived SDUI reacquisition")
+        maxLevelBar:Hide()
+        display.Set("customActionBar", false)
+        assert(not maxLevelBar:IsShown(), "native mode lost the latest max-level Hide request")
+        maxLevelBar:Show()
+        display.FinishEdit(false)
+        assert(not maxLevelBar:IsShown(), "Cancel did not restore max-level suppression")
+        context:Event(controller, "PLAYER_LEAVING_WORLD")
+        assert(maxLevelBar:IsShown() and maxLevelBar.Show == maxLevelShow and maxLevelBar.Hide == maxLevelHide)
+        context:Event(controller, "PLAYER_ENTERING_WORLD")
+        context:Call(controller, "OnUpdate", 0.01)
+        assert(
+            not maxLevelBar:IsShown() and maxLevelArt:GetTexture() == maxLevelPath and #context.objects == maxLevelPool
+        )
+    end
+    env.DFRL.ReleaseActionBarXP()
+    assert(maxLevelBar:IsShown() and maxLevelBar:GetScript("OnShow") == MaxLevelShown)
 end
 print(
     "PASS full XP controller settles active effects, keeps current native progress and restores future animation without replay"

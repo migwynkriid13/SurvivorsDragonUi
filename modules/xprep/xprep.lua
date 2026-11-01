@@ -66,7 +66,13 @@ DFRL:NewMod("Xprep", 1, function()
     local inWorld = UnitExists("player") and true or false
     local customActionBar = DFRL.display.Get("customActionBar") ~= false
     local stockXP, stockOwned = {}, false
-    for _, name in ipairs({ "MainMenuBarPerformanceBarFrame", "MainMenuExpBar", "ReputationWatchBar" }) do
+    -- The native level-cap strip has its own frame, separate from MainMenuExpBar.
+    for _, name in ipairs({
+        "MainMenuBarPerformanceBarFrame",
+        "MainMenuExpBar",
+        "MainMenuBarMaxLevelBar",
+        "ReputationWatchBar",
+    }) do
         local frame = _G[name]
         if frame then table.insert(stockXP, { frame = frame }) end
     end
