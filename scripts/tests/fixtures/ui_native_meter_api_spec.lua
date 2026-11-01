@@ -1328,7 +1328,17 @@ Test("talent rank families require explicit identity and preserve source distinc
         end
         local source = assert(meter.Read(damage, 10))
         assert(table.getn(source) == 2, "talent family collapsed distinct or invalid " .. distinction[1])
-        assert(type(source[1].rowId) == "string" and type(source[2].rowId) == "string")
+        local first, second = source[1].rowId, source[2].rowId
+        assert(first ~= second, "distinct talent families shared a display identity for " .. distinction[1])
+        assert(source[1].dmg == 20 and source[2].dmg == 10, "separate talent families changed native amounts")
+        if distinction[1] == "rank" and distinction[2] == 1 and distinction[3] == 1 then
+            assert(
+                first == state.lastResponse.rows[1].rowId and second == state.lastResponse.rows[2].rowId,
+                "ambiguous talent ranks lost their individual native row IDs"
+            )
+        end
+        source = assert(meter.Read(damage, 10))
+        assert(source[1].rowId == first and source[2].rowId == second, "unchanged talent identities were replaced")
     end
     local _, state, meter = Native()
     state.records = TalentRanks(2)
