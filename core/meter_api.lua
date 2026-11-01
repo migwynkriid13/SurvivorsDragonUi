@@ -854,20 +854,25 @@ function DFRL.tools.NewNativeMeter()
     local function PrepareFamilies(view, snapshot)
         for _, family in pairs(view.families) do
             family.used, family.ambiguous, family.rank, family.actorId = false, false, nil, nil
+            family.previousCount, family.count, family.rateChanged = family.count or 0, 0, false
             for rank in pairs(family.ranks) do
                 family.ranks[rank] = nil
             end
         end
         for _, row in ipairs(view.pool) do
             local key = row.familyKey
+            local previous = row.family
             row.family = nil
             if key then
                 local family = view.families[key]
                 if not family then
-                    family = { row = {}, token = {}, ranks = {} }
+                    family = { row = {}, token = {}, ranks = {}, count = 0, previousCount = 0 }
                     view.families[key] = family
                 end
                 local grouped = family.row
+                family.count = family.count + 1
+                if previous ~= family or row.rateChanged then family.rateChanged = true end
+                if previous and previous ~= family then previous.rateChanged = true end
                 if not family.used then
                     grouped.rowId, grouped.order, grouped.proc = family.token, row.order, row.proc
                     grouped.portraitKey, grouped.portraitRunId, grouped.portraitStatus = nil, nil, nil
@@ -891,13 +896,19 @@ function DFRL.tools.NewNativeMeter()
                     family.rank = row.familyRank
                 end
                 row.family, family.used = family, true
+            elseif previous then
+                previous.rateChanged = true
             end
         end
         for key, family in pairs(view.families) do
-            if not family.used then view.families[key] = nil end
+            if not family.used then
+                view.families[key] = nil
+            elseif family.rateChanged or family.count ~= family.previousCount then
+                family.row.rateIdentity = {}
+            end
         end
     end
-    local function CopyRows(view, snapshot, query)
+    local function CopyRows(view, snapshot, query, deferRecent)
         view.pool, view.families, view.identities = view.pool or {}, view.families or {}, view.identities or {}
         local current = snapshot.context
         local metadata = view.preparedMetadata ~= current.metadataRevision
@@ -932,8 +943,12 @@ function DFRL.tools.NewNativeMeter()
             local average = query.checkpointId and native.checkpointAverage or native.periodAverage
             if row.dmg ~= native.displayAmount then amounts = true end
             row.dmg, row.dps, row.averageDps, row.share =
-                native.displayAmount, native.displayRate.value, average.value, native.share
-            if dirty or row.name == nil then PrepareRow(view, row, native, snapshot, query) end
+                native.displayAmount, not deferRecent and native.displayRate.value or nil, average.value, native.share
+            row.rateChanged = dirty or row.name == nil
+            if row.rateChanged then
+                row.rateIdentity = {}
+                PrepareRow(view, row, native, snapshot, query)
+            end
             view.pool[index], view.identities[native.rowId], count = row, row, index
         end
         if view.reindexed and query.groupBy ~= "owner" then
@@ -942,6 +957,7 @@ function DFRL.tools.NewNativeMeter()
                 if MembersChanged(view, row, native, snapshot.contributions) then
                     MetadataChanged(row, native, snapshot, query)
                     PrepareRow(view, row, native, snapshot, query)
+                    row.rateIdentity, row.rateChanged = {}, true
                     mapping = true
                 end
             end
@@ -1032,52 +1048,22 @@ function DFRL.tools.NewNativeMeter()
         end
         view.capture = saved
     end
-    local function Read(viewSpec, window, groupPets, sharedContext)
-        local context, failure
-        if sharedContext ~= nil then
-            local capabilities
-            capabilities, failure = Capabilities()
-            if not capabilities then return Failure(failure) end
-            if not ContextValid(sharedContext) or sharedContext.uiSessionId ~= capabilities.uiSessionId then
-                return Failure(Malformed())
-            end
-            context = sharedContext
-            CheckCheckpoint(context)
-        else
-            context, failure = adapter.Context()
+    local function ReadCapture(view, query, context, groupPets, sharedContext, deferRecent)
+        local retryKey = query.windowSeconds > 0 and "recentRetry" or "counterRetry"
+        local attempt = view[retryKey] or {}
+        view[retryKey] = attempt
+        local failure
+        if attempt.retryAuthorityId ~= context.authorityId or attempt.retryCounterEpoch ~= context.counterEpoch then
+            ClearRetry(attempt)
         end
-        if not context then return Failure(failure) end
-        if state.blocked then return Failure(state.blocked, context) end
-        local query = {
-            apiVersion = 1,
-            runId = context.runId,
-            metric = viewSpec.metric,
-            scope = viewSpec.scope,
-            ownerId = viewSpec.ownerId,
-            period = viewSpec.period,
-            groupBy = viewSpec.groupBy,
-            windowSeconds = window,
-            checkpointId = state.checkpoint and state.checkpoint.checkpointId or nil,
-        }
-        if query.metric == "healing" then query.healingPerspective = viewSpec.healingPerspective or "received" end
-        local features = { "completeSourceBreakdowns", "nativeSourceIcons", "localizedMetadata" }
-        if query.scope ~= "self" then table.insert(features, "partySourceBreakdowns") end
-        if query.metric == "healing" and query.scope ~= "self" then table.insert(features, "partyHealing") end
-        if query.healingPerspective == "performed" then table.insert(features, "performedHealing") end
-        if window > 0 then table.insert(features, "nativeRecentWindows") end
-        if query.checkpointId then table.insert(features, "atomicCheckpoints") end
-        for _, key in ipairs(features) do
-            local available
-            available, failure = Feature(state.capabilities, key)
-            if not available then return Failure(failure, context) end
-        end
-        local view = View(query)
-        if view.retryAuthorityId ~= context.authorityId or view.retryCounterEpoch ~= context.counterEpoch then
-            ClearRetry(view)
-        end
-        local deferred = DeferredError(view)
+        local deferred = DeferredError(attempt)
         if deferred then return Failure(deferred, context) end
-        if sharedContext ~= nil and view.groupPets == (groupPets == true) and Capture(context, view.capture) then
+        if
+            sharedContext ~= nil
+            and view.captureWindow == query.windowSeconds
+            and view.groupPets == (groupPets == true)
+            and Capture(context, view.capture)
+        then
             return view.rows, view.acceptedAmount, view.acceptedRate, nil, view.revision, view.acceptedMeta
         end
         view.capture = nil
@@ -1085,8 +1071,8 @@ function DFRL.tools.NewNativeMeter()
         snapshot, failure = Call("AZS_GetMeterSnapshot", query)
         if not snapshot then
             if state.reset and invalidCheckpoints[failure.code] then BlockCheckpoint(failure) end
-            RememberError(view, failure)
-            view.retryAuthorityId, view.retryCounterEpoch = context.authorityId, context.counterEpoch
+            RememberError(attempt, failure)
+            attempt.retryAuthorityId, attempt.retryCounterEpoch = context.authorityId, context.counterEpoch
             return Failure(failure, context)
         end
         if
@@ -1102,7 +1088,7 @@ function DFRL.tools.NewNativeMeter()
             or type(snapshot.sources) ~= "table"
             or type(snapshot.actors) ~= "table"
             or snapshot.amountBasis ~= (query.checkpointId and "checkpoint" or "period")
-            or not Stats(snapshot.totals, query.checkpointId, window)
+            or not Stats(snapshot.totals, query.checkpointId, query.windowSeconds)
         then
             return Failure(Malformed(), context)
         end
@@ -1146,15 +1132,17 @@ function DFRL.tools.NewNativeMeter()
         view.counterEpoch, view.authorityId = current.counterEpoch, current.authorityId
         view.encounterId = current.encounter and current.encounter.encounterId
         view.groupPets = groupPets == true
-        if not CopyRows(view, snapshot, query) then return Failure(Malformed(), current) end
+        if not CopyRows(view, snapshot, query, deferRecent) then return Failure(Malformed(), current) end
         local average = query.checkpointId and snapshot.totals.checkpointAverage or snapshot.totals.periodAverage
         local meta = {
             averageRate = average.value,
+            asOfRunSeconds = current.asOfRunSeconds,
             isReset = state.reset == true,
             amountBasis = snapshot.amountBasis,
             runId = current.runId,
             counterEpoch = current.counterEpoch,
             authorityId = current.authorityId,
+            localOwnerId = current.localOwnerId,
             uiSessionId = current.uiSessionId,
             snapshotId = current.snapshotId,
             counterRevision = current.counterRevision,
@@ -1167,11 +1155,183 @@ function DFRL.tools.NewNativeMeter()
         view.acceptedAmount, view.acceptedRate, view.acceptedMeta =
             snapshot.totals.displayAmount, snapshot.totals.displayRate.value, meta
         SaveCapture(view, current)
+        view.captureWindow = query.windowSeconds
         return view.rows, view.acceptedAmount, view.acceptedRate, nil, view.revision, meta
     end
-    function adapter.Read(viewSpec, window, groupPets, sharedContext)
+    -- These samples contain only native rates for the current visible identities.
+    -- Zero-window captures never supply recent DPS, including during warmup/gaps.
+    local function ClearRecent(view)
+        view.rateContext, view.recentRows, view.recentRate, view.recentStatus = nil, nil, nil, nil
+    end
+    function adapter.SuspendRecent()
+        for _, view in ipairs(state.views) do
+            ClearRecent(view)
+        end
+    end
+    local function RateContext(view, meta)
+        local saved = view.rateContext
+        return saved
+            and saved.runId == meta.runId
+            and saved.uiSessionId == meta.uiSessionId
+            and saved.authorityId == meta.authorityId
+            and saved.counterEpoch == meta.counterEpoch
+            and saved.localOwnerId == meta.localOwnerId
+            and saved.encounterId == (meta.encounter and meta.encounter.encounterId or meta.encounterId)
+            and meta.asOfRunSeconds >= saved.asOfRunSeconds
+    end
+    local function RateBounds(view, policy)
+        local count = table.getn(view.rows)
+        local offset = math.max(0, math.min(policy.offset, count - policy.count))
+        return offset + 1, math.min(count, offset + policy.count)
+    end
+    local function HasRecent(view, policy, meta)
+        if not RateContext(view, meta) then return false end
+        local first, last = RateBounds(view, policy)
+        local samples = view.recentRows
+        for index = first, last do
+            local row = view.rows[index]
+            local sample = samples[row.rowId]
+            if not sample or sample.identity ~= row.rateIdentity then return false end
+        end
+        return true
+    end
+    local function RestoreRecent(view, policy, meta)
+        if not HasRecent(view, policy, meta) then return false end
+        local first, last = RateBounds(view, policy)
+        local samples = view.recentRows
+        for _, sample in pairs(samples) do
+            sample.used = false
+        end
+        for index = first, last do
+            local row = view.rows[index]
+            local sample = samples[row.rowId]
+            row.dps, row.averageDps, sample.used = sample.rate, sample.average, true
+        end
+        for id, sample in pairs(samples) do
+            if not sample.used then samples[id] = nil end
+        end
+        meta.recentStatus, meta.recentAsOfRunSeconds = view.recentStatus, view.rateContext.asOfRunSeconds
+        return true
+    end
+    local function SaveRecent(view, policy, meta)
+        local samples = view.recentRows or {}
+        view.recentRows = samples
+        for _, sample in pairs(samples) do
+            sample.used = false
+        end
+        local first, last = RateBounds(view, policy)
+        for index = first, last do
+            local row = view.rows[index]
+            local sample = samples[row.rowId] or {}
+            sample.identity, sample.rate, sample.average, sample.used = row.rateIdentity, row.dps, row.averageDps, true
+            samples[row.rowId] = sample
+        end
+        for id, sample in pairs(samples) do
+            if not sample.used then samples[id] = nil end
+        end
+        local saved = view.rateContext or {}
+        view.rateContext = saved
+        for _, key in ipairs({
+            "runId",
+            "uiSessionId",
+            "authorityId",
+            "counterEpoch",
+            "localOwnerId",
+            "encounterId",
+            "asOfRunSeconds",
+        }) do
+            saved[key] = meta[key]
+        end
+        view.recentRate, view.recentStatus = view.acceptedRate, meta.recentStatus
+        meta.recentAsOfRunSeconds = meta.asOfRunSeconds
+    end
+    local function Read(viewSpec, window, groupPets, sharedContext, rateView)
+        local context, failure
+        if sharedContext ~= nil then
+            local capabilities
+            capabilities, failure = Capabilities()
+            if not capabilities then return Failure(failure) end
+            if not ContextValid(sharedContext) or sharedContext.uiSessionId ~= capabilities.uiSessionId then
+                return Failure(Malformed())
+            end
+            context = sharedContext
+            CheckCheckpoint(context)
+        else
+            context, failure = adapter.Context()
+        end
+        if not context then return Failure(failure) end
+        if state.blocked then return Failure(state.blocked, context) end
+        local query = {
+            apiVersion = 1,
+            runId = context.runId,
+            metric = viewSpec.metric,
+            scope = viewSpec.scope,
+            ownerId = viewSpec.ownerId,
+            period = viewSpec.period,
+            groupBy = viewSpec.groupBy,
+            windowSeconds = window,
+            checkpointId = state.checkpoint and state.checkpoint.checkpointId or nil,
+        }
+        if query.metric == "healing" then query.healingPerspective = viewSpec.healingPerspective or "received" end
+        local features = { "completeSourceBreakdowns", "nativeSourceIcons", "localizedMetadata" }
+        if query.scope ~= "self" then table.insert(features, "partySourceBreakdowns") end
+        if query.metric == "healing" and query.scope ~= "self" then table.insert(features, "partyHealing") end
+        if query.healingPerspective == "performed" then table.insert(features, "performedHealing") end
+        if window > 0 then table.insert(features, "nativeRecentWindows") end
+        if query.checkpointId then table.insert(features, "atomicCheckpoints") end
+        for _, key in ipairs(features) do
+            local available
+            available, failure = Feature(state.capabilities, key)
+            if not available then return Failure(failure, context) end
+        end
+        local view = View(query)
+        local scheduled = window > 0 and rateView ~= nil
+        if
+            scheduled
+            and (
+                type(rateView) ~= "table"
+                or not Number(rateView.offset)
+                or rateView.offset ~= math.floor(rateView.offset)
+                or not Number(rateView.count)
+                or rateView.count < 1
+                or rateView.count > 10
+                or rateView.count ~= math.floor(rateView.count)
+                or type(rateView.refresh) ~= "boolean"
+            )
+        then
+            return Failure(Malformed(), context)
+        end
+        for _, cached in ipairs(state.views) do
+            if cached ~= view or not scheduled then ClearRecent(cached) end
+        end
+        if scheduled and not rateView.refresh and HasRecent(view, rateView, context) then query.windowSeconds = 0 end
+        local previous = view.acceptedAmount
+        local source, amount, rate, message, revision, meta =
+            ReadCapture(view, query, context, groupPets, sharedContext, scheduled and query.windowSeconds == 0)
+        if not source then
+            if scheduled then ClearRecent(view) end
+            return source, amount, rate, message, revision, meta
+        end
+        if scheduled and query.windowSeconds == 0 then
+            if (previous and amount < previous) or not RestoreRecent(view, rateView, meta) then
+                query.windowSeconds = window
+                source, amount, rate, message, revision, meta =
+                    ReadCapture(view, query, context, groupPets, sharedContext, false)
+                if not source then
+                    ClearRecent(view)
+                    return source, amount, rate, message, revision, meta
+                end
+            end
+        end
+        if scheduled then
+            if query.windowSeconds > 0 then SaveRecent(view, rateView, meta) end
+            rate = view.recentRate
+        end
+        return source, amount, rate, message, revision, meta
+    end
+    function adapter.Read(viewSpec, window, groupPets, sharedContext, rateView)
         local ok, source, amount, rate, message, revision, meta =
-            pcall(Read, viewSpec, window, groupPets, sharedContext)
+            pcall(Read, viewSpec, window, groupPets, sharedContext, rateView)
         if not ok then return Failure(Error("INTERNAL_ERROR", "The native meter response could not be read.")) end
         return source, amount, rate, message, revision, meta
     end

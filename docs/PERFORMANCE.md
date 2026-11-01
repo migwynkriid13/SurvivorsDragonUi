@@ -103,7 +103,33 @@ still update once per second. One validated native context is shared within
 each refresh; manual Reset obtains its own fresh context. A previously accepted
 view can be reused when the complete forwarded capture identity, clock and
 query still match. Clock-only captures remain eligible for fresh native rate
-reads; counter revision alone never proves a recent rate is unchanged.
+reads when the rate sample is due; counter revision alone never proves a recent
+rate is unchanged.
+
+For visible Damage Done with a positive DPS window, the logical selected window
+stays unchanged while physical native queries request that window only at the
+existing one-second displayed-rate cadence. Intervening five-Hz reads request
+`windowSeconds = 0` and still accept complete official snapshots for totals,
+shares, source identities and attribution. Their All averages never replace
+cached recent DPS. The viewport retains only its accepted native recent and
+average rates, plus the native header rate/status and capture clock; the addon
+does not calculate a replacement recent rate from counters or wall time.
+Hidden and inactive views retire these sampled rates without releasing the
+shared Reset checkpoint.
+
+Rate identities survive amount/order updates but change with source, actor,
+member, positive-origin or family membership changes. A newly visible or
+replaced identity without its own sample requests one fresh positive-window
+capture in the same reader pass. Known viewport misses request recent rates
+directly. If a counter capture reveals an unexpected identity/group change,
+one additional recent snapshot replaces that capture's data for the pass.
+Reset, context retirement and native-clock
+regression also require fresh native rates. Native warmup or unavailable
+history remains unavailable until the next accepted rate capture. All, Healing
+Done, Boss Damage and Party Damage keep their zero-window queries. Retry and
+accepted-capture state distinguish physical query windows, preserving native
+error delays and consumer checkpoint fences. Both Performance Mode states use
+the same policy, with no new updater, setting or persistence.
 
 Each native row keeps its own identity and copied metadata/member fingerprints.
 Counter updates reuse prepared names, artwork, actor keys and family mappings.
@@ -133,9 +159,11 @@ gates, with rate validation retained at their native/grouping boundaries.
 Both Performance Mode states use these same caches. No frame, drawing region,
 asset, setting, saved data, event, updater or runtime diagnostic hook is added.
 Fresh snapshots still require full native row validation and numeric processing;
-the native API still returns its complete ledger. This change does not bound or
-measure the native snapshot producer's cost. CI-only operation-count and
-lifecycle cases cover growing ledgers, cache invalidation and viewport work;
+the native API still returns its complete ledger at the counter-read cadence.
+Fewer positive-window queries reduce requested history work; full snapshot
+materialization is still required. Query counts do not measure the native
+snapshot producer's cost or FPS. CI-only operation-count and lifecycle cases
+cover growing ledgers, cache invalidation, viewport work and native history cadence;
 no local tests, game execution, late-run frame timings or FPS measurements were
 performed.
 

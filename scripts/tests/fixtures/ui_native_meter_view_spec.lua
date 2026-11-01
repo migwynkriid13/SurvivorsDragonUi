@@ -115,6 +115,47 @@ local function View(configure)
     return c, state, env
 end
 
+local function HistoryView(performance)
+    return View(function(context, native)
+        context.settings.performanceMode, context.settings.meterRows = performance, 2
+        context.settings.meterShowTotal = true
+        native.records = {}
+        for index = 1, 8 do
+            local amount = 1100 - index * 100
+            native.records[index] = {
+                id = "history-source-" .. index,
+                rowId = "history-leaf-" .. index,
+                name = "History " .. index,
+                rank = 1,
+                amount = amount,
+                recent = index == 1 and 70 or index * 10,
+                after = amount / 10,
+            }
+        end
+    end)
+end
+
+local function HistoryCounts(state)
+    local recent, all = 0, 0
+    for _, query in ipairs(state.queries) do
+        if query.metric == "damage" and query.scope == "self" and query.period == "run" then
+            if query.windowSeconds > 0 then
+                recent = recent + 1
+            else
+                all = all + 1
+            end
+        end
+    end
+    return recent, all
+end
+
+local function HistoryTick(context, state, suffix, elapsed)
+    local step = elapsed or 0.21
+    state.context.asOfRunSeconds = state.context.asOfRunSeconds + step
+    state.context.counterRevision, state.context.snapshotId = "history-" .. suffix, "history-" .. suffix
+    context:Tick(step)
+end
+
 Test("native IDs keep different rates for equal source names and bypass guessed artwork", function()
     local c = View()
     assert(c.root:IsVisible(), "native meter did not become ready without legacy publication packets")
@@ -233,6 +274,138 @@ Test("large native ledgers copy only the viewport and share one fresh context pe
         c:Tick()
         assert(state.calls.snapshot == reads, "settled hidden viewport read complete native data")
         c:SetSetting("meterEnabled", false)
+        c:Tick()
+        assert(state.calls.snapshot == reads and not c.controller:GetScript("OnUpdate"))
+    end
+end)
+
+Test("native history is sampled once per second while counter-only captures keep totals responsive", function()
+    for _, performance in ipairs({ false, true }) do
+        local c, state = HistoryView(performance)
+        local identity, allocated = c:Row(1).entry.rowId, #c.objects
+        assert(c:Row(1).entry.dps == 7 and c:Row(1).entry.averageDps == 50)
+        local recent = HistoryCounts(state)
+        assert(recent == 1, "initial viewport did not request one native recent capture")
+        state.records[1].recent = 90
+        for tick = 1, 4 do
+            local title = c.title:GetText()
+            state.records[1].amount = state.records[1].amount + 1000
+            HistoryTick(c, state, "counter-" .. tick)
+            assert(c:Row(1).entry.dmg == state.records[1].amount and c.title:GetText() ~= title)
+            assert(
+                c:Row(1).entry.dps == 7 and c:Row(1).entry.rowId == identity,
+                "All replaced the native recent rate or identity"
+            )
+            recent = HistoryCounts(state)
+            assert(recent == 1, "counter-only refresh repeated native history before the one-Hz deadline")
+        end
+        local _, all = HistoryCounts(state)
+        assert(all >= 4, "five-Hz counters were delayed with the history capture")
+        HistoryTick(c, state, "rate-due")
+        recent = HistoryCounts(state)
+        assert(recent == 2 and c:Row(1).entry.dps == 9 and #c.objects == allocated)
+        state.records[3].recent = 123
+        local reads = state.calls.snapshot
+        c:Call(c.root, "OnMouseWheel", -1)
+        assert(state.calls.snapshot == reads, "scroll fetched native history synchronously")
+        HistoryTick(c, state, "revealed", 0.01)
+        local revealed = HistoryCounts(state)
+        assert(revealed > recent and c:Row(2).entry.name == "History 3" and c:Row(2).entry.dps == 12.3)
+        c:Call(c.root, "OnMouseWheel", 100)
+        HistoryTick(c, state, "first-page", 0.01)
+        table.insert(state.records, 1, {
+            id = "history-new",
+            rowId = "history-new",
+            name = "New native source",
+            rank = 1,
+            amount = 10000,
+            recent = 140,
+            after = 100,
+        })
+        recent = HistoryCounts(state)
+        HistoryTick(c, state, "new-visible")
+        local admitted = HistoryCounts(state)
+        assert(admitted > recent and c:Row(1).entry.name == "New native source" and c:Row(1).entry.dps == 14)
+        c:SetSetting("meterDpsWindow", 0)
+        HistoryTick(c, state, "all")
+        recent = HistoryCounts(state)
+        for tick = 1, 3 do
+            HistoryTick(c, state, "all-" .. tick)
+        end
+        assert(HistoryCounts(state) == recent, "All requested a positive native history window")
+        assert(c:Row(1).entry.dps == c:Row(1).entry.averageDps and #c.objects == allocated)
+    end
+end)
+
+Test("a retained rank-group identity refreshes changed membership and regressed native time immediately", function()
+    for _, performance in ipairs({ false, true }) do
+        local c, state = View(function(context, native)
+            context.settings.performanceMode = performance
+            native.records = helpers.Ranks(1)
+        end)
+        local identity = c:Row(1).entry.rowId
+        state.records = helpers.Ranks(2)
+        HistoryTick(c, state, "new-rank-member")
+        local expected = state.lastResponse.rows[1].displayRate.value + state.lastResponse.rows[2].displayRate.value
+        assert(c:Row(1).entry.rowId == identity and c:Row(1).entry.dmg == 30)
+        assert(c:Row(1).entry.dps == expected, "same group ID kept its old partial rate until the next one-Hz sample")
+        local recent = HistoryCounts(state)
+        state.records[1].amount, state.records[1].recent = 200, 20
+        state.records[2].amount, state.records[2].recent = 100, 10
+        -- Defend against an unexpected host clock regression without deriving a rate locally.
+        state.context.asOfRunSeconds, state.context.counterRevision = 19, "regressed-native-time"
+        state.context.snapshotId = "regressed-native-time"
+        c:Tick()
+        assert(c:Row(1).entry.rowId == identity and c:Row(1).entry.dmg == 300)
+        assert(c:Row(1).entry.dps == 3, "regressed native time retained the previous presentation sample")
+        assert(HistoryCounts(state) > recent and state.queries[table.getn(state.queries)].windowSeconds == 10)
+    end
+end)
+
+Test("reduced history cadence retains native unavailable, warmup, reset and view lifecycles", function()
+    for _, performance in ipairs({ false, true }) do
+        local c, state, env = HistoryView(performance)
+        state.recentStatus = "unavailable"
+        HistoryTick(c, state, "history-gap", 1.01)
+        assert(c:Row(1).entry.dps == nil and c:Row(1).entry.averageDps ~= nil)
+        assert(c:Row(1).value:GetText() == "--", "native history gap was filled with an All average")
+        local recent = HistoryCounts(state)
+        HistoryTick(c, state, "gap-held")
+        assert(HistoryCounts(state) == recent and c:Row(1).entry.dps == nil)
+        state.recentStatus = "ready"
+        env.DFRL.ResetMeterStats()
+        local checkpoint = state.checkpoint.checkpointId
+        HistoryTick(c, state, "reset-warmup")
+        assert(c:Row(1).entry.dmg == 100 and c:Row(1).entry.dps == nil)
+        assert(state.queries[table.getn(state.queries)].checkpointId == checkpoint)
+        recent = HistoryCounts(state)
+        HistoryTick(c, state, "warmup-held")
+        assert(HistoryCounts(state) == recent and c:Row(1).entry.dps == nil)
+        HistoryTick(c, state, "warmup-ended", 1.01)
+        local span = math.min(10, state.context.asOfRunSeconds - state.checkpoint.atRunSeconds)
+        assert(c:Row(1).entry.dps == 70 / span and state.calls.create == 1)
+        c:SetSetting("meterShowTotal", false)
+        c:Cycle()
+        assert(c.title:GetText() == "Healing Done")
+        recent = HistoryCounts(state)
+        HistoryTick(c, state, "healing-counters")
+        assert(HistoryCounts(state) == recent, "another tab kept querying Damage Done history")
+        state.records[1].recent = 160
+        c:Cycle("RightButton")
+        span = math.min(10, state.context.asOfRunSeconds - state.checkpoint.atRunSeconds)
+        assert(c.title:GetText() == "Damage Done" and c:Row(1).entry.dps == 100 / span)
+        assert(HistoryCounts(state) > recent and state.calls.create == 1)
+        c:SetLayoutHidden(true)
+        local reads = state.calls.snapshot
+        c:Tick()
+        c:Tick()
+        assert(state.calls.snapshot == reads, "hidden history cache kept requesting native snapshots")
+        c:SetLayoutHidden(false)
+        HistoryTick(c, state, "shown-again")
+        span = math.min(10, state.context.asOfRunSeconds - state.checkpoint.atRunSeconds)
+        assert(c:Row(1).entry.dps == 100 / span and state.queries[table.getn(state.queries)].checkpointId == checkpoint)
+        c:SetSetting("meterEnabled", false)
+        reads = state.calls.snapshot
         c:Tick()
         assert(state.calls.snapshot == reads and not c.controller:GetScript("OnUpdate"))
     end

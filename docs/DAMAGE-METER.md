@@ -10,7 +10,14 @@ learned talents, pet/totem attacks and periodic effects in every native language
 Unrelated native sources retain their separate rows even when their names match.
 Recognized ability ranks use a stable display-group identity for rate samples.
 
-Damage Done requests the selected native recent window, or All. Healing Done
+Damage Done requests the selected native recent window at the existing
+one-second rate cadence. Between rate samples, complete native snapshots with
+`windowSeconds = 0` keep totals, shares and attribution current at five Hz.
+These counter reads do not replace recent DPS with the All average. Newly
+revealed or replaced row identities, Reset and native context retirement obtain
+a fresh recent capture immediately through the existing reader. Only visible
+rows retain sampled native rates; unavailable history stays unavailable.
+Selecting All uses native averages without requesting recent history. Healing Done
 keeps native received-healing semantics; Boss Damage requests the current/last
 encounter; Party Damage requests owner totals and retained hero portraits.
 The v1 source buffers are bounded to these four views. The meter does not call its
@@ -32,6 +39,9 @@ the existing circular renderer, native circle when available and the same
 pooled strip fallback otherwise. Failed bindings observe native retry delays;
 permanent failures wait for a changed identity or normal pool retirement.
 Both Performance Mode states retain the same instant native information.
+
+The reduced history-query cadence still reads complete official snapshots;
+it does not omit the native ledger or establish a measured FPS improvement.
 
 The existing getter/metadata/rate path below remains for clients without the
 v1 capability endpoint. Once that endpoint is present, typed errors or missing

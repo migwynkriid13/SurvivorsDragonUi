@@ -1569,3 +1569,130 @@ Test("pet attribution rejects missing native actor metadata and keeps unknown ac
         assert(row.name == "Shadowbolt" or row.name == "Hellfire")
     end
 end)
+
+Test("scheduled recent caches retain native zero, unavailable and warming-up results", function()
+    local cases = {
+        { time = 20, recent = 0, status = "ready", expected = 0 },
+        { time = 20, recent = 50, status = "unavailable", expectedStatus = "unavailable" },
+        { time = 0.5, recent = 5, status = "ready", expectedStatus = "warming_up" },
+    }
+    for _, case in ipairs(cases) do
+        local _, state, meter = Native()
+        state.records =
+            { { id = "native-rate", rowId = "native-rate", name = "Native rate", amount = 100, recent = case.recent } }
+        state.context.asOfRunSeconds, state.recentStatus = case.time, case.status
+        if case.time < 10 then state.context.encounter = nil end
+        local policy = { offset = 0, count = 1, refresh = true }
+        local source, total, rate, _, _, meta = meter.Read(damage, 10, false, nil, policy)
+        assert(source and total == 100 and source[1].dps == case.expected and rate == case.expected)
+        assert(meta.recentStatus == (case.expectedStatus or case.status))
+        state.records[1].amount, state.records[1].recent = 125, 90
+        state.context.asOfRunSeconds, state.context.counterRevision = case.time + 0.1, "counter-with-cached-native-rate"
+        policy.refresh = false
+        source, total, rate, _, _, meta = meter.Read(damage, 10, false, nil, policy)
+        assert(source and total == 125 and source[1].dps == case.expected and rate == case.expected)
+        assert(
+            table.getn(state.queries) == 2 and state.queries[2].windowSeconds == 0,
+            "cached nil or zero repeated native history"
+        )
+        assert(meta.recentStatus == (case.expectedStatus or case.status))
+        assert(meta.recentAsOfRunSeconds == case.time and meta.asOfRunSeconds == case.time + 0.1)
+    end
+end)
+
+Test("new family members force native history and its newer capture supplies all returned values", function()
+    local _, state, meter, env = Native()
+    state.records = Ranks(1)
+    local policy = { offset = 0, count = 1, refresh = true }
+    local source = assert(meter.Read(damage, 10, false, nil, policy))
+    local identity = source[1].rowId
+    state.records = Ranks(2)
+    state.context.asOfRunSeconds, state.context.counterRevision = 21, "rank-added-between-rate-samples"
+    local original = env.AZS_GetMeterSnapshot
+    env.AZS_GetMeterSnapshot = function(query)
+        if query.windowSeconds > 0 then
+            state.context.asOfRunSeconds, state.context.snapshotId = 22, "newer-positive-capture"
+            state.context.counterRevision, state.records[1].amount = "newer-positive-counters", 200
+        end
+        return original(query)
+    end
+    policy.refresh = false
+    local total, rate, meta
+    source, total, rate, _, _, meta = meter.Read(damage, 10, false, nil, policy)
+    assert(source and source[1].rowId == identity and source[1].dmg == 210 and total == 210)
+    assert(meta.snapshotId == "newer-positive-capture" and meta.asOfRunSeconds == 22)
+    assert(state.queries[2].windowSeconds == 0 and state.queries[3].windowSeconds == 10)
+    local response = state.lastResponse
+    assert(rate == response.totals.displayRate.value and meta.averageRate == response.totals.periodAverage.value)
+    local expected = response.rows[1].displayRate.value + response.rows[2].displayRate.value
+    assert(source[1].dps == expected, "new group reused a partial old native rate")
+end)
+
+Test("viewport recent caches retire old identities without adding a fifth physical-query view", function()
+    do
+        local _, state, meter = Native()
+        state.records = {
+            { id = "one", rowId = "one", name = "One", amount = 100, recent = 10, rank = 1 },
+            { id = "two", rowId = "two", name = "Two", amount = 50, recent = 20, rank = 1 },
+        }
+        local policy = { offset = 0, count = 1, refresh = true }
+        assert(meter.Read(damage, 10, false, nil, policy))
+        policy.offset, policy.refresh = 1, false
+        local source = assert(meter.Read(damage, 10, false, nil, policy))
+        assert(source[2].dps == 2 and table.getn(state.queries) == 2)
+        assert(state.queries[2].windowSeconds == 10, "known viewport miss copied counters before requesting rates")
+        state.records[1].recent, state.context.counterRevision = 90, "reveal-retired-rate-identity"
+        policy.offset = 0
+        source = assert(meter.Read(damage, 10, false, nil, policy))
+        assert(source[1].dps == 9 and table.getn(state.queries) == 3, "retired viewport reused stale native history")
+    end
+    do
+        local _, state, meter = Native()
+        state.records = Ranks(1)
+        local policy = { offset = 0, count = 1, refresh = true }
+        local source = assert(meter.Read(damage, 10, false, nil, policy))
+        local identity = source[1].rowId
+        policy.refresh = false
+        state.context.asOfRunSeconds, state.context.counterRevision = 21, "logical-view-counter-capture"
+        assert(meter.Read(damage, 10, false, nil, policy))
+        assert(meter.Read(healing, 0) and meter.Read(boss, 0) and meter.Read(party, 0))
+        source = assert(meter.Read(damage, 10, false, nil, policy))
+        assert(source[1].rowId == identity, "counter-only physical query evicted one of the four logical views")
+    end
+end)
+
+Test("physical recent failures never expose All rates and do not poison counter retries", function()
+    local c, state, meter, env = Native()
+    state.records = Ranks(1)
+    local policy = { offset = 0, count = 1, refresh = true }
+    assert(meter.Read(damage, 10, false, nil, policy))
+    local original = env.AZS_GetMeterSnapshot
+    local failWindow = 0
+    env.AZS_GetMeterSnapshot = function(query)
+        if query.windowSeconds == failWindow then
+            state.snapshotError = Error("NOT_READY")
+        else
+            state.snapshotError = nil
+        end
+        return original(query)
+    end
+    policy.refresh = false
+    assert(not meter.Read(damage, 10, false, nil, policy), "failed counter query replayed a stale source list")
+    policy.refresh = true
+    assert(meter.Read(damage, 10, false, nil, policy), "counter retry deadline blocked an independent recent query")
+    c.now = c.now + 0.21
+    state.records = Ranks(2)
+    state.context.counterRevision, failWindow = "new-group-with-failed-native-history", 10
+    policy.refresh = false
+    local source, total, rate = meter.Read(damage, 10, false, nil, policy)
+    assert(not source and total == nil and rate == nil, "failed forced history returned All data as recent")
+    assert(state.queries[table.getn(state.queries) - 1].windowSeconds == 0)
+    assert(state.queries[table.getn(state.queries)].windowSeconds == 10)
+    state.snapshotError, failWindow = nil, nil
+    c.now = c.now + 0.21
+    source = assert(meter.Read(damage, 10, false, nil, policy))
+    assert(
+        source[1].dmg == 30 and math.abs(source[1].dps - 0.6) < 0.000000001,
+        "fresh native history did not recover the changed family"
+    )
+end)

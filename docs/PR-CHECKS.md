@@ -72,6 +72,16 @@ cases retain complete rolling observations while another meter tab is visible
 and same-publication Party rate validation. These cases are CI-only and were
 not run locally; operation counts do not establish native snapshot cost or FPS.
 
+Native history-cadence cases count positive-window and zero-window queries
+through the production adapter/controller. They retain five-Hz counter updates
+between one-second native rate samples, newly revealed and replaced identities,
+unavailable history, warmup after atomic Reset, native checkpoint denominators,
+All, view return, hidden/off retirement and both Performance Mode states.
+Adapter cases keep physical query retries/captures separate and invalidate
+samples when attribution or context changes; counter/ordering updates retain a
+row's own sample. These cases remain CI-only and were not run locally. The
+query counts do not prove reduced native snapshot-copy cost or live FPS.
+
 Action-bar choice cases use the production display/bar owners and explicit fake
 native frames. They cover default-on normalization, shared preview/Confirm/Cancel,
 profiles and resets, native presentation restoration, retained attachment

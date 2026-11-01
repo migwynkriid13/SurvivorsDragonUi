@@ -89,6 +89,7 @@ DFRL:NewMod("DamageMeter", 7, function()
     local dataDirty, dataValid = true, false
     local snapshot = { rows = {}, count = 0 }
     local rateSamples, rateSampledAt, ratePass = {}, nil, 0
+    local recentView = {}
     local dps = T.NewMeterDps(DFRL.display.Get("meterDpsWindow"))
     local session, resetPending = T.NewMeterSession(), false
     local presentation = { shown = false, cleared = true }
@@ -631,7 +632,7 @@ DFRL:NewMod("DamageMeter", 7, function()
         snapshot.source, snapshot.publication = nil, nil
         snapshot.maximum, snapshot.offset, snapshot.visible = nil, nil, nil
         snapshot.nativeRunId, snapshot.nativeEpoch, snapshot.nativeAuthority = nil, nil, nil
-        snapshot.nativeEncounter = nil
+        snapshot.nativeEncounter, snapshot.nativeRunSeconds = nil, nil
         ClearSamples()
         for key in pairs(snapshot.rows) do
             snapshot.rows[key] = nil
@@ -700,7 +701,20 @@ DFRL:NewMod("DamageMeter", 7, function()
     local function ReadNative(index)
         local selected = modes[index]
         if apiActive then
-            return api.Read(selected.query, index == 1 and dps.window or 0, options.groupPets, nativeContext)
+            local window = index == 1 and dps.window or 0
+            local policy
+            if window > 0 then
+                local now = GetTime()
+                recentView.offset, recentView.count = offset, visible
+                recentView.refresh = not rateSampledAt
+                    or now < rateSampledAt
+                    or now - rateSampledAt >= 1
+                    or index ~= mode
+                    or viewSelection.first ~= nil
+                    or viewSelection.dirty
+                policy = recentView
+            end
+            return api.Read(selected.query, window, options.groupPets, nativeContext, policy)
         end
         local getter = _G[selected.getter]
         if type(getter) ~= "function" then
@@ -839,12 +853,14 @@ DFRL:NewMod("DamageMeter", 7, function()
                 or snapshot.nativeEpoch ~= meta.counterEpoch
                 or snapshot.nativeAuthority ~= meta.authorityId
                 or snapshot.nativeEncounter ~= meta.encounterId
+                or (snapshot.nativeRunSeconds and meta.asOfRunSeconds < snapshot.nativeRunSeconds)
             then
                 ClearSamples()
             end
             snapshot.nativeRunId, snapshot.nativeEpoch, snapshot.nativeAuthority =
                 meta.runId, meta.counterEpoch, meta.authorityId
             snapshot.nativeEncounter = meta.encounterId
+            snapshot.nativeRunSeconds = meta.asOfRunSeconds
             if type(DFRL.locale.Select) == "function" then DFRL.locale.Select(meta.languageCode) end
         end
         if not apiActive then
@@ -886,6 +902,7 @@ DFRL:NewMod("DamageMeter", 7, function()
                 copy.name, copy.dmg, copy.share, copy.proc = entry.name, entry.dmg, entry.share, entry.proc
                 copy.class = modes[mode].party and type(entry.class) == "string" and entry.class or nil
                 copy.rowId, copy.icon = entry.rowId, entry.icon
+                copy.rateIdentity = apiActive and entry.rateIdentity or nil
                 copy.portraitKey, copy.portraitRunId = entry.portraitKey, entry.portraitRunId
                 copy.portraitStatus = entry.portraitStatus
             end
@@ -901,7 +918,7 @@ DFRL:NewMod("DamageMeter", 7, function()
                 sample = {}
                 samples[proc] = sample
             end
-            if sample.epoch ~= rateSampledAt then
+            if sample.epoch ~= rateSampledAt or (apiActive and sample.identity ~= copy.rateIdentity) then
                 if apiActive then
                     sample.rate, sample.average = entry.dps, entry.averageDps
                 elseif mode == 1 then
@@ -909,7 +926,7 @@ DFRL:NewMod("DamageMeter", 7, function()
                 else
                     sample.rate, sample.average = entry.dps, nil
                 end
-                sample.epoch = rateSampledAt
+                sample.epoch, sample.identity = rateSampledAt, copy.rateIdentity
             end
             sample.seen = ratePass
             copy.dps, copy.averageDps = sample.rate, sample.average
@@ -1193,6 +1210,7 @@ DFRL:NewMod("DamageMeter", 7, function()
         HideTooltip()
         dps.Suspend()
         ClearSamples()
+        if api then api.SuspendRecent() end
         for _, row in ipairs(rows) do
             row.valueMetric = nil
         end
