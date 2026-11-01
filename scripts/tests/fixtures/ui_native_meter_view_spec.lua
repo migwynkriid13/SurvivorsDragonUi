@@ -922,37 +922,62 @@ Test("pending native portraits retry on their native deadline and stable failure
 end)
 
 Test("hidden and disabled native meter does not poll source snapshots or paint rows", function()
-    local c, state, env = View()
-    env.DFRL.ResetMeterStats()
-    c:Tick()
-    c:SetLayoutHidden(true)
-    local reads, portraits = state.calls.snapshot, state.calls.portrait
-    c:ResetCounts()
-    for _ = 1, 6 do
+    for _, performance in ipairs({ false, true }) do
+        local c, state, env = View(function(context) context.settings.performanceMode = performance end)
+        env.DFRL.ResetMeterStats()
         c:Tick()
+        c:SetLayoutHidden(true)
+        local reads, portraits = state.calls.snapshot, state.calls.portrait
+        c:ResetCounts()
+        for _ = 1, 6 do
+            c:Tick()
+        end
+        assert(
+            state.calls.snapshot == reads and state.calls.portrait == portraits,
+            "hidden native view continued source/art collection"
+        )
+        c:NoPresentationWrites()
+        local contexts = state.calls.context
+        c:SetLayoutHidden(false)
+        assert(state.calls.context == contexts, "show read native context synchronously")
+        c:Tick(0.01)
+        assert(state.calls.context == contexts + 1, "native view did not request fresh context when shown")
+        assert(state.calls.snapshot == reads, "unchanged native context fetched a replacement snapshot")
+        assert(c.root:IsVisible(), "unchanged native capture did not restore the view")
+
+        c:SetLayoutHidden(true)
+        state.records[1].after, state.records[2].after = 20, 10
+        c:ResetCounts()
+        HistoryTick(c, state, "hidden-post-reset")
+        assert(
+            state.calls.snapshot == reads and state.calls.portrait == portraits,
+            "hidden native publication fetched source data or artwork"
+        )
+        c:NoPresentationWrites()
+        contexts = state.calls.context
+        c:SetLayoutHidden(false)
+        assert(state.calls.snapshot == reads, "show fetched the changed native snapshot synchronously")
+        c:Tick(0.01)
+        assert(
+            state.calls.context == contexts + 1 and state.calls.snapshot == reads + 1,
+            "native view did not fetch the changed publication on the next frame"
+        )
+        assert(c:Row(1):IsShown() and c:Row(1).entry.dmg == 20 and c:Row(2).entry.dmg == 10)
+        c:SetSetting("meterEnabled", false)
+        assert(
+            not c.root:IsVisible() and state.calls.release == 1,
+            "disable did not retire the consumer-owned native checkpoint"
+        )
+        reads, portraits = state.calls.snapshot, state.calls.portrait
+        contexts = state.calls.context
+        for _ = 1, 6 do
+            c:Tick()
+        end
+        assert(
+            state.calls.snapshot == reads and state.calls.context == contexts and state.calls.portrait == portraits,
+            "disabled native meter kept a collector running"
+        )
     end
-    assert(
-        state.calls.snapshot == reads and state.calls.portrait == portraits,
-        "hidden native view continued source/art collection"
-    )
-    c:NoPresentationWrites()
-    c:SetLayoutHidden(false)
-    c:Tick()
-    assert(state.calls.snapshot > reads, "native view did not request current state when shown")
-    c:SetSetting("meterEnabled", false)
-    assert(
-        not c.root:IsVisible() and state.calls.release == 1,
-        "disable did not retire the consumer-owned native checkpoint"
-    )
-    reads, portraits = state.calls.snapshot, state.calls.portrait
-    local contexts = state.calls.context
-    for _ = 1, 6 do
-        c:Tick()
-    end
-    assert(
-        state.calls.snapshot == reads and state.calls.context == contexts and state.calls.portrait == portraits,
-        "disabled native meter kept a collector running"
-    )
 end)
 
 Test("native recent warmup displays unavailable rate text while keeping source amounts", function()
@@ -974,6 +999,7 @@ end)
 
 Test("unready publications and invalid reset epochs clear native rows without replay", function()
     local c, state, env = View()
+    state.context.snapshotId = "unready-snapshot"
     state.snapshotError = { code = "NOT_READY", message = "waiting", retryable = true, retryAfterSeconds = 0.2 }
     c:Tick()
     assert(not c:Row(1):IsShown(), "unready native publication left the previous source row visible")
