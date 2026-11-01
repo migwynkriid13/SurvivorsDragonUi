@@ -67,11 +67,18 @@ world cleanup in both Performance Mode states. These cases remain CI-only and
 were not run locally; they do not prove native tooltip rendering or event order.
 
 Native world-SCT cases run the actual adapter and controller over explicit fake
-capability/event/projection endpoints. They cover native-only intake, one-shot
+capability/event/projection/registration endpoints. Their ordinary and post-camera
+frame phases are separate. They cover native-only intake, one-shot
 anchors without plates, camera movement after death, living/dead offscreen
 hiding and remaining-life recovery, bounded distance scaling, distinct native
 targets/casters, both grouping modes, malformed/throwing responses, retry
 throttling, stream retirement, MSBT/legacy fallback and off/world cleanup.
+Documented-shape cases omit `basicAttack`/`abilityKey`, group by native `spellId`,
+preserve literal native miss words and accept absent miss captions without
+rejecting other hits. Cases require `frameCurrent = true`, reject early-phase
+native reads/positioning, retain one handler across Performance Mode changes,
+and cover partial registration, failed release, hidden/retired callbacks and
+style/mode/world/reload cleanup without affecting foreign handlers.
 They add no runtime hook or shipped fixture. Cases are CI-only and were not run
 locally; mocks cannot establish native death-position capture, camera-update
 ordering, provider availability, appearance or FPS.

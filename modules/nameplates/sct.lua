@@ -1720,7 +1720,9 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             -- eventual displayed icon cannot change while this hit waits.
             if not TextureKey(info.iconTexture) then info.iconTexture = CombatIcon(info) end
             local attack, attackKind = info.spell, "spell"
-            if not attack or attack == "" then
+            if info.nativeAttack then
+                attack, attackKind = info.nativeAttack, "native"
+            elseif not attack or attack == "" then
                 if info.damageType == "autoattack" then
                     attack, attackKind = "", "autoattack"
                 else
@@ -2101,7 +2103,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         end
         local displayText = tostring(value)
         if info.kind == "damage" then displayText = DamageValue(value, text.diablo) end
-        if info.kind == "miss" then displayText = DFRL.locale.CombatText(displayText) end
+        if info.kind == "miss" and not info.nativeIdentity then displayText = DFRL.locale.CombatText(displayText) end
         text.kind = info.kind
         text.displayValue = value
         ApplyTextFont(text, text.started)
@@ -2564,11 +2566,37 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             HandleCombatEvent(event, arg1, eventTime)
         end
     end)
+    nativeText.BindFrame(function()
+        if not inWorld or not nativeText.Selected() or not CustomEnabled() then return end
+        local now = GetTime()
+        local events, retired = nativeText.Read(now)
+        if retired then ResetDisplay(true) end
+        if events then
+            for _, info in ipairs(events) do
+                info.color = DamageColor(info, info.nativeTime)
+                QueueCombatText(info, info.nativeTime)
+            end
+        end
+        UpdatePending(now)
+        if not nativeText.Project(activeTexts, now) then ResetDisplay(true) end
+        -- Enemy animations use their absolute age. No OnUpdate arg1 leaks into
+        -- the post-camera callback; MSBT keeps its existing elapsed-time path.
+        UpdateTexts(now, 0)
+    end)
     frame:SetScript("OnUpdate", function()
-        if not inWorld then return end
+        if not inWorld then
+            -- A failed unregister can finish through this existing controller
+            -- without reading combat data or running a retired world handler.
+            nativeText.Service()
+            return
+        end
         -- Observe outgoing CVar changes without writing; the independent
         -- incoming/self global is read only for its editor control.
         SyncGameSettings(false)
+        if nativeText.Service() then
+            ResetDisplay()
+            ApplyPlateTracking(true)
+        end
         plateFilter.Update(arg1)
         ScanPlates(false)
         -- Native plate allocation follows this update. The first accepted hit
@@ -2579,19 +2607,9 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         -- Group identity needs the same resolver even with damage icons hidden.
         -- One tab-header or slot pair consumes a step; empty tabs stay bounded.
         RebuildSpellTextures(4)
+        if nativeText.Selected() then return end
         local now = GetTime()
-        if nativeText.Selected() then
-            local events, retired = nativeText.Read(now)
-            if retired then ResetDisplay(true) end
-            if events then
-                for _, info in ipairs(events) do
-                    info.color = DamageColor(info, info.nativeTime)
-                    QueueCombatText(info, info.nativeTime)
-                end
-            end
-        end
         UpdatePending(now)
-        if nativeText.Selected() and not nativeText.Project(activeTexts, now) then ResetDisplay(true) end
         UpdateTexts(now, arg1)
     end)
 

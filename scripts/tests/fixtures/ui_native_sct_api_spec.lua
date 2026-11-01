@@ -24,6 +24,9 @@ local function Scene(style, performance, configure)
             points = {},
             reads = 0,
             projections = 0,
+            handlers = {},
+            registers = 0,
+            unregisters = 0,
             streamId = "stream-one",
             worldId = "world-one",
         }
@@ -36,6 +39,7 @@ local function Scene(style, performance, configure)
                 followAnchors = true,
                 frameProjection = true,
                 distanceMetrics = true,
+                frameHandler = true,
                 maxEventsPerRead = 256,
                 maxAnchorsPerRead = 256,
                 eventCapacity = 4096,
@@ -44,7 +48,21 @@ local function Scene(style, performance, configure)
                 anchorRetentionSeconds = 5,
             }
         end
+        env.AZS_RegisterCombatTextFrameHandler = function(handler)
+            assert(type(handler) == "function", "invalid native frame handler")
+            native.registers = native.registers + 1
+            native.handlers[handler] = true
+            if native.registerFault then return nil, { code = "NOT_READY", message = "registration failed" } end
+            return true
+        end
+        env.AZS_UnregisterCombatTextFrameHandler = function(handler)
+            native.unregisters = native.unregisters + 1
+            if native.unregisterFault then return nil, { code = "NOT_READY", message = "release failed" } end
+            native.handlers[handler] = nil
+            return true
+        end
         env.AZS_GetCombatTextEvents = function(cursor, limit)
+            assert(native.inHandler, "native events read before the post-camera phase")
             native.reads = native.reads + 1
             assert(limit == 256, "native event reads exceeded the advertised limit")
             local from = #native.events
@@ -88,6 +106,7 @@ local function Scene(style, performance, configure)
                 worldId = native.worldId,
                 clockSeconds = context.now,
                 cameraSampleId = tostring(context.now),
+                frameCurrent = native.inHandler == true,
                 entries = entries,
             }
             if native.projectFault then return native.projectFault(projection) end
@@ -109,10 +128,9 @@ local function Scene(style, performance, configure)
             critical = false,
             periodic = false,
             reflected = false,
-            basicAttack = false,
             damageType = "spell",
             schoolMask = 4,
-            abilityKey = "ability-one",
+            spellId = 133,
             abilityName = "Native attack",
             icon = "Interface\\Icons\\Spell_Fire_FireBolt",
             anchorId = "anchor:" .. index,
@@ -135,11 +153,65 @@ local function Scene(style, performance, configure)
         end
         return event, self.native.points[event.anchorId]
     end
+    local earlyTick = context.Tick
+    function context:BeforeCamera(elapsed) earlyTick(self, elapsed) end
+    function context:AfterCamera()
+        local handlers = {}
+        for handler in pairs(self.native.handlers) do
+            table.insert(handlers, handler)
+        end
+        self.native.inHandler = true
+        for _, handler in ipairs(handlers) do
+            if self.native.handlers[handler] then handler() end
+        end
+        self.native.inHandler = false
+    end
+    function context:Tick(elapsed)
+        self:BeforeCamera(elapsed)
+        self:AfterCamera()
+    end
     function context:Prime() self:Tick(0.01) end
     return context
 end
 local function Holder(label) return label:GetParent():GetParent() end
 local function Close(left, right) assert(math.abs(left - right) < 0.000001, "trajectory changed") end
+local function HandlerCount(context)
+    local count = 0
+    for _ in pairs(context.native.handlers) do
+        count = count + 1
+    end
+    return count
+end
+
+Test("documented events and label positioning run only in the post-camera handler", function()
+    local context = Scene("enemy", false)
+    assert(HandlerCount(context) == 1 and context.native.registers == 1, "native frame handler was not acquired once")
+    context:Prime()
+    local event, point = context:NativeHit(123)
+    assert(
+        event.basicAttack == nil and event.abilityKey == nil and event.spellId == 133,
+        "fixture retained proposed fields"
+    )
+    local reads = context.native.reads
+    context:BeforeCamera(0.31)
+    assert(
+        context.native.reads == reads and context.native.projections == 0 and #context:Labels() == 0,
+        "OnUpdate ran native SCT"
+    )
+    point.x = 600
+    context:AfterCamera()
+    local label = assert(context:Labels()[1])
+    Close(Holder(label).anchor.x, 600)
+    local x, projections = Holder(label).anchor.x, context.native.projections
+    context:BeforeCamera(0.1)
+    assert(
+        Holder(label).anchor.x == x and context.native.projections == projections,
+        "early update moved an active label"
+    )
+    point.x, point.targetState = 200, "dead"
+    context:AfterCamera()
+    assert(Holder(label).anchor.x < 300, "native handler used the previous camera position")
+end)
 
 Test("native mode primes its own cursor, ignores duplicate chat and releases invisible plate tracking", function()
     local context = Scene("enemy", false)
@@ -267,14 +339,49 @@ Test("native presentation timestamps retain inclusive grouping deadlines across 
     end
 end)
 
+Test("spell IDs group unnamed attacks and preserve distinct spells without proposed ability keys", function()
+    for _, performance in ipairs({ false, true }) do
+        local context = Scene("enemy", performance)
+        context:Prime()
+        local first = context:NativeHit(100)
+        local second = context:NativeHit(100)
+        first.abilityName, first.icon, second.abilityName, second.icon = nil, nil, nil, nil
+        local third = context:NativeHit(100, { spellId = 134 })
+        third.abilityName, third.icon = nil, nil
+        context:Tick(0.31)
+        local labels = context:Labels()
+        assert(#labels == 2, "native spell IDs did not preserve grouping and separation")
+        if performance then assert(labels[1]:GetText() == "200", "native spell identity did not sum") end
+        local unknown = Scene("enemy", performance)
+        unknown:Prime()
+        local left, right = unknown:NativeHit(100), unknown:NativeHit(100)
+        left.spellId, right.spellId = nil, nil
+        unknown:Tick(0.31)
+        assert(#unknown:Labels() == 2, "same-name sources without native spell identity were guessed together")
+    end
+end)
+
+Test("documented melee and ranged categories keep autoattack filtering without a basicAttack field", function()
+    for _, kind in ipairs({ "melee", "ranged" }) do
+        local context = Scene("enemy", true)
+        context:Prime()
+        local first, second =
+            context:NativeHit(100, { damageType = kind }), context:NativeHit(100, { damageType = kind })
+        first.spellId, first.abilityName, first.icon = nil, nil, nil
+        second.spellId, second.abilityName, second.icon = nil, nil, nil
+        context:Tick(0.31)
+        assert(
+            #context:Labels() == 1 and context:Labels()[1]:GetText() == "200",
+            "plain native attacks lost stable identity"
+        )
+        context:SetSetting("sctAutoAttacks", false)
+        assert(#context:Labels() == 0, "native attack category bypassed the existing autoattack filter")
+    end
+end)
+
 Test("native misses, pet attribution and damage-category filters retain the existing controls", function()
-    local localizationReads = 0
     local context = Scene("enemy", false, function(_, env)
-        env.DFRL.locale.CombatText = function(text)
-            assert(text == "Dodge", "native miss caption changed before localization")
-            localizationReads = localizationReads + 1
-            return "Translated dodge"
-        end
+        env.DFRL.locale.CombatText = function() error("native miss captions are already localized") end
     end)
     context:Prime()
     context:NativeHit(111, { periodic = true })
@@ -283,16 +390,36 @@ Test("native misses, pet attribution and damage-category filters retain the exis
     miss.amount = nil
     context:Tick(0.31)
     assert(#context:Labels() == 3, "native miss or attributed damage disappeared")
-    assert(localizationReads == 1 and miss.result.text == "Dodge", "miss localization mutated native metadata")
+    assert(miss.result.text == "Dodge", "native miss metadata was changed")
     context:SetSetting("sctPeriodicDamage", false)
     assert(#context:Labels() == 2, "periodic filter did not retain its native meaning")
     context:SetSetting("sctPetDamage", false)
     assert(
-        #context:Labels() == 1 and context:Labels()[1]:GetText() == "Translated dodge",
+        #context:Labels() == 1 and context:Labels()[1]:GetText() == "Dodge",
         "totem filtering lost the localized native miss"
     )
     context:SetSetting("sctMisses", false)
     assert(#context:Labels() == 0, "native miss bypassed its independent control")
+end)
+
+Test("missing native miss captions are skipped without rejecting or re-priming valid damage", function()
+    local context = Scene("enemy", false)
+    context:Prime()
+    context:NativeHit(123)
+    context:Tick(0.31)
+    local original = assert(context:Labels()[1])
+    local miss = context:NativeHit(0, { kind = "miss", result = { key = "dodge" } })
+    miss.amount = nil
+    context:NativeHit(456)
+    context:Tick(0.31)
+    assert(
+        #context:Labels() == 2 and context:Labels()[1] == original,
+        "missing caption retired the valid native session"
+    )
+    assert(
+        context:Labels()[2]:GetText() == "456" and miss.result.text == nil,
+        "missing caption was invented or blocked damage"
+    )
 end)
 
 Test("stale and unanchored native hits do not acquire a shared screen fallback", function()
@@ -370,6 +497,14 @@ Test("missing projection, mismatched handles and invalid distance never paint st
             projection.worldId = "another-world"
             return projection
         end,
+        function(projection)
+            projection.frameCurrent = false
+            return projection
+        end,
+        function(projection)
+            projection.frameCurrent = nil
+            return projection
+        end,
     }) do
         local context = Scene("enemy", false)
         context:Prime()
@@ -380,6 +515,72 @@ Test("missing projection, mismatched handles and invalid distance never paint st
         context:Tick(0.1)
         assert(#context:Labels() == 0, "invalid projection reused a screen point")
     end
+end)
+
+Test("frame registration and release failures retry without duplicate handlers or combat reads", function()
+    local context = Scene("enemy", false, function(current) current.native.registerFault = true end)
+    assert(context.backing and HandlerCount(context) == 1, "failed registration did not retain legacy presentation")
+    context:Tick(0.1)
+    assert(context.native.reads == 0 and context.native.registers == 1, "failed handler read data or retried per frame")
+    context.native.registerFault = false
+    context:Tick(0.5)
+    assert(
+        not context.backing and HandlerCount(context) == 1 and context.native.registers == 2,
+        "native handoff did not recover"
+    )
+    assert(context.native.unregisters == 1 and context.native.reads == 1, "retry did not release before registering")
+    context.native.unregisterFault = true
+    context:Event(context.controller, "PLAYER_LEAVING_WORLD")
+    local reads, releases = context.native.reads, context.native.unregisters
+    context:Tick(0.1)
+    assert(
+        context.native.reads == reads and context.native.unregisters == releases,
+        "retired handler worked or release retried per frame"
+    )
+    context.native.unregisterFault = false
+    context:Tick(0.5)
+    assert(
+        HandlerCount(context) == 0 and context.native.unregisters == releases + 1,
+        "world cleanup did not release its pending handler"
+    )
+end)
+
+Test("native frame ownership follows style, mode, world, reload and Performance Mode lifecycles", function()
+    local context = Scene("enemy", false, function(current, env)
+        env.ReloadUI = function() current.reloaded = true end
+    end)
+    context:SetSetting("performanceMode", true)
+    context:SetSetting("performanceMode", false)
+    assert(context.native.registers == 1 and HandlerCount(context) == 1, "Performance Mode registered another handler")
+    context:SetSetting("sctStyle", "msbt")
+    assert(HandlerCount(context) == 0, "MSBT retained the world handler")
+    context:SetSetting("sctStyle", "diablo")
+    assert(HandlerCount(context) == 1, "enemy style did not reacquire its world handler")
+    context.env.DFRL.sct.BeginEdit()
+    context.env.DFRL.sct.SetMode("off")
+    assert(HandlerCount(context) == 0, "Off retained the native frame handler")
+    context.env.DFRL.sct.FinishEdit(false)
+    assert(HandlerCount(context) == 1, "Cancel did not restore the native frame handler")
+    context:Event(context.controller, "PLAYER_LEAVING_WORLD")
+    assert(HandlerCount(context) == 0, "world leave retained the native frame handler")
+    context:Event(context.controller, "PLAYER_ENTERING_WORLD")
+    assert(HandlerCount(context) == 1, "world entry did not restore the native frame handler")
+    context.env.ReloadUI()
+    assert(context.reloaded and HandlerCount(context) == 0, "reload did not release the native frame handler")
+end)
+
+Test("native frame cleanup preserves another addon's handler", function()
+    local foreignCalls = 0
+    local foreign = function() foreignCalls = foreignCalls + 1 end
+    local context = Scene("enemy", false, function(current) current.native.handlers[foreign] = true end)
+    assert(HandlerCount(context) == 2, "fixture lost an independent handler")
+    context.env.DFRL.sct.BeginEdit()
+    context.env.DFRL.sct.SetMode("off")
+    assert(HandlerCount(context) == 1 and context.native.handlers[foreign], "Off removed a foreign handler")
+    context:Tick(0.1)
+    assert(foreignCalls == 1 and context.native.reads == 0, "foreign handler stopped or retired SCT still read events")
+    context:Event(context.controller, "PLAYER_LEAVING_WORLD")
+    assert(context.native.handlers[foreign], "world cleanup removed a foreign handler")
 end)
 
 Test("stream retirement, disabled SCT, MSBT and world cleanup bound native work", function()
@@ -433,11 +634,26 @@ Test("a hidden world suspends native reads while existing labels retain their ex
 end)
 
 Test("incomplete capability sets retain the existing legacy nameplate path", function()
-    local context = Scene("enemy", false, function(_, env) env.AZS_ProjectCombatTextAnchors = nil end)
-    assert(context.backing, "partial API disabled legacy tracking")
-    context:Hit(321)
-    context:Tick(0.31)
-    assert(context:Labels()[1]:GetText() == "321" and context.native.reads == 0, "partial API consumed hits")
+    for _, endpoint in ipairs({
+        "AZS_ProjectCombatTextAnchors",
+        "AZS_RegisterCombatTextFrameHandler",
+        "AZS_UnregisterCombatTextFrameHandler",
+    }) do
+        local context = Scene("enemy", false, function(_, env) env[endpoint] = nil end)
+        assert(context.backing and HandlerCount(context) == 0, "partial API disabled legacy tracking")
+        context:Hit(321)
+        context:Tick(0.31)
+        assert(context:Labels()[1]:GetText() == "321" and context.native.reads == 0, "partial API consumed hits")
+    end
+    local context = Scene("enemy", false, function(_, env)
+        local capabilities = env.AZS_GetCombatTextCapabilities
+        env.AZS_GetCombatTextCapabilities = function()
+            local value = capabilities()
+            value.frameHandler = false
+            return value
+        end
+    end)
+    assert(context.backing and HandlerCount(context) == 0, "missing frameHandler capability selected native mode")
 end)
 
 print("PASS " .. passed .. " native world SCT contracts")

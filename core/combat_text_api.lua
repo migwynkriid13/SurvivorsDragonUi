@@ -5,7 +5,7 @@ function DFRL.tools.NewCombatTextApi()
     local adapter = {}
     local state = { selected = false, seen = {}, order = {}, slot = 0, ids = {}, origins = {} }
     local kinds = { player = true, pet = true, summon = true, totem = true, ownedUnknown = true }
-    local attacks = { melee = true, ranged = true, spell = true }
+    local attacks = { melee = "autoattack", ranged = "autoattack", spell = "spell" }
     local schools = {
         [1] = "Physical",
         [2] = "Holy",
@@ -26,7 +26,6 @@ function DFRL.tools.NewCombatTextApi()
         absorb = true,
         reflect = true,
         deflect = true,
-        unknown = true,
     }
     local states = {
         onScreen = true,
@@ -82,6 +81,19 @@ function DFRL.tools.NewCombatTextApi()
             and value.clockSeconds >= 0
     end
     function adapter.Selected() return state.selected end
+    local function Clock()
+        local ok, now = pcall(_G.GetTime)
+        return ok and Number(now) and now or 0
+    end
+    local function FrameCall(callback, handler)
+        local ok, result, failure = pcall(callback, handler)
+        return ok and result ~= false and failure == nil
+    end
+    local function PendingFrame()
+        state.handoffStarted = Clock()
+        state.handoffAt = state.handoffStarted + 0.5
+    end
+    function adapter.BindFrame(handler) state.handler = handler end
     function adapter.Reset()
         state.cursor, state.streamId, state.worldId, state.clock, state.presentedAt = nil, nil, nil, nil, nil
         state.retryAt, state.retryStarted = nil, nil
@@ -90,12 +102,23 @@ function DFRL.tools.NewCombatTextApi()
     end
     function adapter.Configure(wanted)
         adapter.Reset()
+        state.wanted, state.handoffAt, state.handoffStarted = wanted, nil, nil
         state.selected, state.limit = false, nil
+        if state.registered then
+            if not FrameCall(state.unregister, state.handler) then
+                PendingFrame()
+                return
+            end
+            state.registered, state.unregister = false, nil
+        end
         if
             not wanted
+            or type(state.handler) ~= "function"
             or type(_G.AZS_GetCombatTextCapabilities) ~= "function"
             or type(_G.AZS_GetCombatTextEvents) ~= "function"
             or type(_G.AZS_ProjectCombatTextAnchors) ~= "function"
+            or type(_G.AZS_RegisterCombatTextFrameHandler) ~= "function"
+            or type(_G.AZS_UnregisterCombatTextFrameHandler) ~= "function"
         then
             return
         end
@@ -107,6 +130,7 @@ function DFRL.tools.NewCombatTextApi()
             or value.followAnchors ~= true
             or value.frameProjection ~= true
             or value.distanceMetrics ~= true
+            or value.frameHandler ~= true
             or not Integer(value.maxEventsPerRead, 1, 256)
             or not Integer(value.maxAnchorsPerRead, 1, 256)
             or not Integer(value.eventCapacity, 4096, 1000000)
@@ -118,8 +142,23 @@ function DFRL.tools.NewCombatTextApi()
         then
             return
         end
-        state.selected = true
         state.limit, state.projectLimit = value.maxEventsPerRead, value.maxAnchorsPerRead
+        -- A native call may fail after installing the handler. Always release
+        -- that same function before a retry can register it again.
+        state.registered, state.unregister = true, _G.AZS_UnregisterCombatTextFrameHandler
+        if not FrameCall(_G.AZS_RegisterCombatTextFrameHandler, state.handler) then
+            PendingFrame()
+            return
+        end
+        state.selected = true
+    end
+    function adapter.Service()
+        if not state.handoffAt then return false end
+        local now = Clock()
+        if now >= state.handoffStarted and now < state.handoffAt then return false end
+        local selected = state.selected
+        adapter.Configure(state.wanted)
+        return selected ~= state.selected
     end
     local function Retry(now)
         adapter.Reset()
@@ -136,15 +175,15 @@ function DFRL.tools.NewCombatTextApi()
             or type(value.critical) ~= "boolean"
             or type(value.periodic) ~= "boolean"
             or type(value.reflected) ~= "boolean"
-            or type(value.basicAttack) ~= "boolean"
             or (value.kind ~= "damage" and value.kind ~= "miss")
             or (value.anchorStatus ~= "ready" and value.anchorStatus ~= "unavailable")
         then
             return
         end
-        for _, key in ipairs({ "targetId", "targetName", "sourceId", "abilityKey", "abilityName", "icon" }) do
+        for _, key in ipairs({ "targetId", "targetName", "sourceId", "abilityName", "icon" }) do
             if value[key] ~= nil and not Id(value[key]) then return end
         end
+        if value.spellId ~= nil and not Integer(value.spellId, 1, 4294967295) then return end
         if value.damageType ~= nil and not attacks[value.damageType] then return end
         if value.schoolMask ~= nil and not Integer(value.schoolMask, 1, 127) then return end
         if value.anchorStatus == "ready" then
@@ -158,14 +197,19 @@ function DFRL.tools.NewCombatTextApi()
             value.amount ~= nil
             or type(value.result) ~= "table"
             or not results[value.result.key]
-            or not Id(value.result.text)
+            or (value.result.text ~= nil and not Id(value.result.text))
         then
             return
         end
-        local damageType = value.basicAttack and "autoattack"
-            or (value.damageType and (value.damageType == "spell" and "spell" or "ability"))
+        local damageType = attacks[value.damageType]
         if value.periodic then damageType = "periodic" end
         if value.reflected then damageType = "reflected" end
+        local attack
+        if value.spellId then
+            attack = "spell:" .. tostring(value.spellId)
+        elseif damageType == "autoattack" then
+            attack = "attack:" .. value.damageType
+        end
         return {
             kind = value.kind,
             amount = value.amount,
@@ -178,9 +222,10 @@ function DFRL.tools.NewCombatTextApi()
             school = schools[value.schoolMask] or (value.schoolMask and tostring(value.schoolMask)),
             critical = value.critical,
             iconTexture = value.icon,
+            nativeAttack = attack,
             nativeIdentity = Part(value.sourceId or value.eventId) .. Part(value.sourceKind) .. Part(
                 value.targetId or value.eventId
-            ) .. Part(value.abilityKey or value.eventId),
+            ) .. Part(attack or value.eventId),
             nativeEventId = value.eventId,
             nativeTime = value.presentedAt,
             nativeOrigin = value.anchorStatus == "ready" and {
@@ -230,7 +275,13 @@ function DFRL.tools.NewCombatTextApi()
             previous = event.nativeTime
             seen[event.nativeEventId] = true
             -- Skip stale intake and unanchored hits; neither gets an invented position.
-            if value.clockSeconds - event.nativeTime <= 0.65 and event.nativeOrigin then table.insert(events, event) end
+            if
+                value.clockSeconds - event.nativeTime <= 0.65
+                and event.nativeOrigin
+                and (event.kind ~= "miss" or event.text ~= nil)
+            then
+                table.insert(events, event)
+            end
         end
         state.cursor, state.streamId, state.worldId = value.cursor, value.streamId, value.worldId
         state.clock, state.presentedAt = value.clockSeconds, previous
@@ -284,6 +335,7 @@ function DFRL.tools.NewCombatTextApi()
             if
                 not value
                 or not Header(value)
+                or value.frameCurrent ~= true
                 or value.streamId ~= state.streamId
                 or value.worldId ~= state.worldId
                 or not Id(value.cameraSampleId)

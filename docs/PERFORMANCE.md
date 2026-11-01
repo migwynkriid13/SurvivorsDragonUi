@@ -391,10 +391,20 @@ rendering remain unverified. See [FONTS.md](FONTS.md).
 ## Native world combat text — 2026-11-01
 
 The optional version 1 consumer reuses the original SCT controller and pooled
-holders, with no additional frame, region, asset, event, updater or SavedVariable.
+holders, with no additional frame, region, asset, event or SavedVariable.
 It selects one native transport for enemy-origin styles and releases the forced
 invisible plate feed; ordinary user-requested nameplate styling stays active.
 MSBT and unsupported builds retain their established paths.
+
+One addon-owned `AZS_RegisterCombatTextFrameHandler` callback replaces the native
+text work formerly done in `OnUpdate`. Native event intake, pending groups,
+projection and animation run only after camera movement, with `frameCurrent = true`
+and a coherent sample across chunks. The existing `OnUpdate` retains metadata,
+plate styling and bounded pending handoff cleanup; it never also animates native
+labels. There is no separate idle effect updater. Off, MSBT, world leave/logout
+and reload release only the owned callback; partial failures leave it inert and
+retry through the existing controller at half-second intervals, including
+pending release outside the world. Performance Mode changes do not re-register.
 
 An enabled native consumer reads at most 256 events in one frame and retains a
 bounded 4096-ID duplicate window. It copies only accepted hit fields/handles;
@@ -403,6 +413,10 @@ in batches of at most 256 with one coherent camera sample across chunks. Empty
 active lists do no native projection or animation work. Off/hidden/world-retired
 consumers do not read the native event feed. Native failures retire presentation
 and throttle re-priming to half-second retries through the existing controller.
+Payload validation uses the supplied contract's `spellId` and native attack
+categories, without proposed-only `basicAttack` or `abilityKey` dependencies.
+Missing native miss wording skips that event's presentation before queue work;
+it does not discard valid damage, re-prime the stream or invent a caption.
 
 Current-camera world projection, offscreen hiding and bounded depth scaling are
 identical in both Performance Mode states. Distance multiplies the existing
@@ -414,8 +428,9 @@ Mode's 300 ms same-attack sums remain distinct and preserve original hit amounts
 CI-only production-boundary cases cover these paths, errors and cleanup. They
 were not run locally and establish neither native API availability/cost nor live
 camera alignment, late-run FPS or appearance. See the
-[provider proposal](COMBAT-TEXT-WORLD-ANCHOR-API-PROPOSAL.md) for the required
-death-anchor, event ordering and current-frame sampling guarantees.
+[supplied provider contract](AzerothSurvivors-Addon-API.md#world-anchored-combat-text-version-1)
+and [integration notes](COMBAT-TEXT-WORLD-ANCHOR-API-PROPOSAL.md) for death-anchor,
+event ordering and current-frame sampling guarantees.
 
 ## Diablo IV combat text — 2026-10-30
 
