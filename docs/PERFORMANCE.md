@@ -161,6 +161,25 @@ unchanged visible identities retain the one-second cadence. Legacy clients keep
 their complete one-Hz regular rolling observations, reset baselines and publication
 gates, with rate validation retained at their native/grouping boundaries.
 
+Visible rows also gate the full work for each drawing piece. A settled
+layout skips text/width/scale reads and numeric metric lookup. Its inputs include
+the final displayed numeric caption, dimensions, icon options, font sizes,
+global font/outline choices, actual numeric font and effective scale. Rows share
+one root-scale sample; each visible numeric label retains an actual-font check
+so unannounced native font changes still invalidate layout. Invalid metrics and
+failed font assignments keep the layout retryable. Name/caster and option changes
+continue updating the affected piece.
+
+A successfully bound static native icon skips its helper while path and scale
+match. Failed bindings retry, and another binding path invalidates that cache.
+Retained native portrait-image checks and regular legacy resolver checks remain.
+Bar fractions recompute only when the row amount or leading amount changes.
+Non-Party colors reuse the common class color and check proc classification;
+Party class-palette validation continues through the regular reader. Pool
+retirement clears settled presentation state, while hovered tooltips retain
+their source/value and native ownership checks. The one-second data-reader
+cadence is unchanged.
+
 Both Performance Mode states use these same caches. No frame, drawing region,
 asset, setting, saved data, event, updater or runtime diagnostic hook is added.
 Fresh snapshots still require full native row validation and numeric processing;
@@ -170,9 +189,9 @@ immediate user feedback. Native-history caches also avoid repeated positive-wind
 queries on extra reads within a second. Full snapshot materialization is still
 required. Query counts do not measure the native
 snapshot producer's cost or FPS. CI-only operation-count and lifecycle cases
-cover growing ledgers, cache invalidation, viewport work and native history cadence;
-no local tests, game execution, late-run frame timings or FPS measurements were
-performed.
+cover growing ledgers, cache invalidation, viewport work, native history cadence
+and early row-piece gates. No local tests, game execution, late-run frame timings
+or FPS measurements were performed.
 
 ## Meter talent proc captions
 

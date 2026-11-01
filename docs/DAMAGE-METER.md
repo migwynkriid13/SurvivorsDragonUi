@@ -139,7 +139,11 @@ to missing/invalid values and resets, preserving explicit saved width choices.
 Each pooled row retains only its latest successful numeric text metric, keyed
 by the rendered caption, actual font face/size/flags, owning-row effective scale
 and relevant width. Raw counter changes that keep the same compact caption do
-not remeasure. Missing/invalid metrics retry through the existing visible reader
+not remeasure or repeat the settled layout helpers. Each visible numeric label
+still checks its actual font so an unannounced native font change can invalidate
+the layout; rows share one root-scale sample. Width, scale, icon options, font
+choices and changed captions also invalidate the relevant layout. Missing or
+invalid metrics retry through the existing visible reader
 with conservative space until ready. Row retirement clears the metric; hidden,
 off and numbers-off views skip measurement. Both Performance Mode states use
 the same instant reflow, without a new region, asset, event or updater. CI-only
@@ -581,8 +585,17 @@ updater or repeated geometry work is added.
 The pooled rows show a scrollable source list. Header mode and scroll
 offset are session-only; resets select Damage Done and the first page. One controller
 coalesces regular data reads at one Hz; user actions prime that same reader for
-the next frame. Bar values, colors, successful icon bindings and
-label text skip unchanged writes. If the shared SCT resolver is unavailable,
+the next frame. Rows skip full layout, metric, static-icon, fraction and color work
+when their corresponding inputs are unchanged. Final displayed captions drive
+text layout; bar fractions still react to both the row amount and leading amount.
+Names, including recorded caster captions, update independently.
+Successful static native icons skip rebinding at the same path and scale, while
+failed artwork and font assignments remain retryable. Native portrait-image
+checks, legacy icon-resolver checks and Party class-color validation continue
+through the regular reader. Pool retirement clears the settled presentation
+state, and hovered tooltips retain their existing ownership checks. Bar values,
+colors, successful icon bindings and label text also skip unchanged writes.
+If the shared SCT resolver is unavailable,
 the meter uses the same neutral unknown icon without changing native totals.
 Shared layout storage contains only confirmed geometry and visibility; no meter
 data or new SavedVariable is saved. All captions have source/runtime entries in

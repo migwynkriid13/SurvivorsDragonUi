@@ -83,6 +83,17 @@ samples when attribution or context changes; counter/ordering updates retain a
 row's own sample. These cases remain CI-only and were not run locally. The
 query counts do not prove reduced native snapshot-copy cost or live FPS.
 
+Early row-piece cases count fixture-only getter, font, static-icon and bar
+operations through the production controller in both Performance Mode states.
+Settled rows retain their targeted numeric-font check while skipping text,
+width, per-row scale, metric and static-binding helpers. Cases cover unchanged
+compact captions, changed captions and leading amounts, proc colors, failed
+artwork retries, scrolling with pooled rows, width/scale/global font changes,
+unannounced numeric-font changes, failed font assignments and missing metrics.
+Existing portrait, legacy resolver, tooltip ownership and retirement cases
+retain those regular checks and cleanup boundaries. Coverage is CI-only and was
+not run locally; helper counts do not establish frame timings or FPS.
+
 Action-bar choice cases use the production display/bar owners and explicit fake
 native frames. They cover default-on normalization, shared preview/Confirm/Cancel,
 profiles and resets, native presentation restoration, retained attachment

@@ -92,7 +92,13 @@ DFRL:NewMod("DamageMeter", 7, function()
     local recentView = {}
     local dps = T.NewMeterDps(DFRL.display.Get("meterDpsWindow"))
     local session, resetPending = T.NewMeterSession(), false
-    local presentation = { shown = false, cleared = true }
+    local presentation = {
+        shown = false,
+        cleared = true,
+        fontChoice = DFRL.display.Get("uiFont"),
+        fontOutline = DFRL.display.Get("uiFontOutline"),
+        fontRevision = 0,
+    }
     local tooltipState = {}
     local hovered
     local root = CreateFrame("Frame", "DFRL_DamageMeter", UIParent)
@@ -195,17 +201,25 @@ DFRL:NewMod("DamageMeter", 7, function()
     end
     local function ClearIcon(row)
         row.circularIcon.Clear()
+        row.staticIcon, row.staticScale, row.staticBound = nil, nil, nil
         if row.rim:IsShown() then row.rim:Hide() end
         row.partyUnit, row.partyName, row.partySource, row.partyTexture = nil, nil, nil, nil
         row.apiPortraitKey, row.apiPortraitRun = nil, nil
         row.apiPortraitBound, row.apiPortraitRetryAt = nil, nil
     end
     local function BindIcon(row, icon)
+        row.staticBound = nil
         if not icon then
             ClearIcon(row)
             return false
         end
-        return row.circularIcon.Bind(icon)
+        return row.circularIcon.Bind(icon, presentation.scale)
+    end
+    local function BindStaticIcon(row, icon)
+        if row.staticBound and row.staticIcon == icon and row.staticScale == presentation.scale then return true end
+        local bound = BindIcon(row, icon)
+        row.staticIcon, row.staticScale, row.staticBound = icon, presentation.scale, bound
+        return bound
     end
     local function ClearPartyUnits()
         for _, candidate in ipairs(partyUnits) do
@@ -458,6 +472,7 @@ DFRL:NewMod("DamageMeter", 7, function()
 
     local presentationWidth, presentationFontSize = width, fontSize
     local function PreparePresentation()
+        presentation.scale = root:GetEffectiveScale()
         if presentationWidth ~= width then
             header:SetWidth(width)
             total:SetWidth(width - 52)
@@ -535,6 +550,7 @@ DFRL:NewMod("DamageMeter", 7, function()
         row:SetScript("OnLeave", HideTooltip)
         row:SetScript("OnHide", function()
             row.valueMetric = nil
+            row.layoutReady = nil
             HideTooltip()
         end)
         row:Hide()
@@ -545,6 +561,29 @@ DFRL:NewMod("DamageMeter", 7, function()
     Row(1)
     local function LayoutRow(row)
         local columns = (options.damage and 1 or 0) + (options.dps and 1 or 0) + (options.percentage and 1 or 0)
+        local face, size, flags
+        -- Native font changes can affect just one label without a settings edit.
+        if columns > 0 then
+            face, size, flags = row.value:GetFont()
+        end
+        local scale = presentation.scale
+        if
+            row.layoutReady
+            and (columns == 0 or row.valueMetric ~= nil)
+            and row.layoutWidth == width
+            and row.layoutIcons == options.icons
+            and row.valueColumns == columns
+            and row.layoutText == row.valueText
+            and row.layoutNameFontSize == nameFontSize
+            and (columns == 0 or row.layoutFontSize == fontSize)
+            and row.layoutFontRevision == presentation.fontRevision
+            and row.layoutFace == face
+            and row.layoutSize == size
+            and row.layoutFlags == flags
+            and T.NearlyEqual(row.layoutScale, scale)
+        then
+            return
+        end
         local nameLeft = options.icons and 35 or 3
         if row.layoutWidth ~= width then row:SetWidth(width - 16) end
         if row.layoutIcons ~= options.icons or row.layoutWidth ~= width then
@@ -559,18 +598,17 @@ DFRL:NewMod("DamageMeter", 7, function()
         if row.layoutNameFontSize ~= nameFontSize and SizeLabel(row.name, nameFontSize, nameFontSize + 5) then
             row.layoutNameFontSize = nameFontSize
         end
-        if columns > 0 and row.layoutFontSize ~= fontSize and SizeLabel(row.value, fontSize, fontSize + 5) then
-            row.layoutFontSize = fontSize
+        if columns > 0 and row.layoutFontSize ~= fontSize then
+            if SizeLabel(row.value, fontSize, fontSize + 5) then row.layoutFontSize = fontSize end
+            face, size, flags = row.value:GetFont()
         end
         local available = width - 16 - nameLeft - 2
-        local valueWidth = 0
+        local valueWidth, measuredReady = 0, columns == 0
         if columns > 0 then
             -- Reserve only the current numeric caption's natural width. Keep
             -- the old conservative reservation until native metrics are ready.
             valueWidth = columns * math.ceil(58 * fontSize / 11)
-            local text = row.value:GetText()
-            local face, size, flags = row.value:GetFont()
-            local scale = row:GetEffectiveScale()
+            local text = row.valueText
             local metric = row.valueMetric
             if
                 metric
@@ -582,6 +620,7 @@ DFRL:NewMod("DamageMeter", 7, function()
                 and metric.available == available
             then
                 valueWidth = metric.width
+                measuredReady = true
             elseif face and Number(size) and size > 0 and Number(scale) and scale > 0 and text and text ~= "" then
                 local measured = row.value:GetStringWidth()
                 if Number(measured) and measured > 0 then
@@ -590,6 +629,7 @@ DFRL:NewMod("DamageMeter", 7, function()
                     metric.scale, metric.available, metric.width = scale, available, math.ceil(measured) + 1
                     row.valueMetric = metric
                     valueWidth = metric.width
+                    measuredReady = true
                 end
             end
             valueWidth = math.min(valueWidth, math.max(1, available - 5 - 48))
@@ -606,6 +646,11 @@ DFRL:NewMod("DamageMeter", 7, function()
         end
         row.layoutIcons, row.valueColumns = options.icons, columns
         row.layoutWidth = width
+        row.layoutText, row.layoutFace, row.layoutSize, row.layoutFlags = row.valueText, face, size, flags
+        row.layoutScale, row.layoutFontRevision = scale, presentation.fontRevision
+        row.layoutReady = measuredReady
+            and row.layoutNameFontSize == nameFontSize
+            and (columns == 0 or row.layoutFontSize == fontSize)
     end
     local function ClearRow(row)
         if not row or not row.active then return end
@@ -616,7 +661,9 @@ DFRL:NewMod("DamageMeter", 7, function()
         row.fraction = 0
         row.entry, row.displayName, row.drawIndex, row.drawDamage, row.drawRate, row.drawShare =
             nil, nil, nil, nil, nil, nil
-        row.drawRevision = nil
+        row.drawDamageShown, row.drawDpsShown, row.drawShareShown = nil, nil, nil
+        row.valueText, row.layoutReady = nil, nil
+        row.fractionDamage, row.fractionMaximum = nil, nil
         row.valueMetric = nil
         if row:IsShown() then row:Hide() end
         row.active = false
@@ -954,6 +1001,7 @@ DFRL:NewMod("DamageMeter", 7, function()
         local maximum = snapshot.maximum or 0
         local party = modes[mode].party
         local classColor = party and PARTY_COLOR or T.GetPlayerClassColor() or { 0.8, 0.63, 0.28 }
+        local classRed, classGreen, classBlue = unpack(classColor)
         if party and options.icons and not apiActive then
             if snapshot.count > 0 then
                 ReadPartyUnits()
@@ -968,7 +1016,7 @@ DFRL:NewMod("DamageMeter", 7, function()
                 if hovered == row and row.displayName ~= entry.name then HideTooltip() end
                 row.entry, row.active = entry, true
                 local rank = options.ranks and index + offset or nil
-                if row.displayName ~= entry.name or row.drawIndex ~= rank or row.drawRevision ~= optionsRevision then
+                if row.displayName ~= entry.name or row.drawIndex ~= rank then
                     T.SetTextIfChanged(row.name, rank and (tostring(rank) .. ". " .. entry.name) or entry.name)
                     row.displayName, row.drawIndex = entry.name, rank
                 end
@@ -979,7 +1027,9 @@ DFRL:NewMod("DamageMeter", 7, function()
                     row.drawDamage ~= damage
                     or row.drawRate ~= rate
                     or row.drawShare ~= share
-                    or row.drawRevision ~= optionsRevision
+                    or row.drawDamageShown ~= options.damage
+                    or row.drawDpsShown ~= options.dps
+                    or row.drawShareShown ~= options.percentage
                 then
                     local values = damage and Compact(damage) or ""
                     if options.dps then
@@ -989,26 +1039,41 @@ DFRL:NewMod("DamageMeter", 7, function()
                         values = values .. (values ~= "" and "   " or "") .. string.format("%.1f%%", share * 100)
                     end
                     T.SetTextIfChanged(row.value, values)
+                    row.valueText = values
                     row.drawDamage, row.drawRate, row.drawShare = damage, rate, share
+                    row.drawDamageShown, row.drawDpsShown, row.drawShareShown =
+                        options.damage, options.dps, options.percentage
                 end
-                row.drawRevision = optionsRevision
                 LayoutRow(row)
-                local fraction = maximum > 0 and math.min(1, entry.dmg / maximum) or 0
-                if row.fraction ~= fraction then row.bar:SetValue(fraction) end
-                row.fraction = fraction
-                local r, g, b = unpack(classColor)
-                if party then
-                    local color = T.GetClassColor(entry.class)
-                    if color then
-                        r, g, b = unpack(color)
-                    else
-                        r, g, b = 0.6, 0.6, 0.6
-                    end
-                elseif entry.proc == 1 then
-                    r, g, b = 0.25, 0.58, 1
+                if row.fractionDamage ~= entry.dmg or row.fractionMaximum ~= maximum then
+                    local fraction = maximum > 0 and math.min(1, entry.dmg / maximum) or 0
+                    if row.fraction ~= fraction then row.bar:SetValue(fraction) end
+                    row.fraction, row.fractionDamage, row.fractionMaximum = fraction, entry.dmg, maximum
                 end
-                if row.red ~= r or row.green ~= g or row.blue ~= b then row.bar:SetStatusBarColor(r, g, b) end
-                row.red, row.green, row.blue = r, g, b
+                if
+                    party
+                    or row.colorParty ~= party
+                    or row.colorProc ~= entry.proc
+                    or row.colorRed ~= classRed
+                    or row.colorGreen ~= classGreen
+                    or row.colorBlue ~= classBlue
+                then
+                    local r, g, b = classRed, classGreen, classBlue
+                    if party then
+                        local color = T.GetClassColor(entry.class)
+                        if color then
+                            r, g, b = unpack(color)
+                        else
+                            r, g, b = 0.6, 0.6, 0.6
+                        end
+                    elseif entry.proc == 1 then
+                        r, g, b = 0.25, 0.58, 1
+                    end
+                    if row.red ~= r or row.green ~= g or row.blue ~= b then row.bar:SetStatusBarColor(r, g, b) end
+                    row.red, row.green, row.blue = r, g, b
+                    row.colorParty, row.colorProc = party, entry.proc
+                    row.colorRed, row.colorGreen, row.colorBlue = classRed, classGreen, classBlue
+                end
                 if options.icons then
                     local bound
                     if apiActive and (party or entry.portraitKey) then
@@ -1016,7 +1081,7 @@ DFRL:NewMod("DamageMeter", 7, function()
                     elseif party then
                         bound = BindPartyIcon(row, entry)
                     elseif apiActive then
-                        bound = BindIcon(row, entry.icon or UNKNOWN_ICON)
+                        bound = BindStaticIcon(row, entry.icon or UNKNOWN_ICON)
                     else
                         local resolver = DFRL.sct and DFRL.sct.GetSourceIcon
                         local icon = type(resolver) == "function"
@@ -1213,6 +1278,7 @@ DFRL:NewMod("DamageMeter", 7, function()
         if api then api.SuspendRecent() end
         for _, row in ipairs(rows) do
             row.valueMetric = nil
+            row.layoutReady = nil
         end
     end)
     root:SetScript("OnShow", function()
@@ -1269,6 +1335,8 @@ DFRL:NewMod("DamageMeter", 7, function()
         local selectedFontSize = DFRL.display.Get("meterFontSize")
         local selectedNameFontSize = DFRL.display.Get("meterNameFontSize")
         local fontChanged = fontSize ~= selectedFontSize or nameFontSize ~= selectedNameFontSize
+        local fontChoice, fontOutline = DFRL.display.Get("uiFont"), DFRL.display.Get("uiFontOutline")
+        local styleChanged = presentation.fontChoice ~= fontChoice or presentation.fontOutline ~= fontOutline
         local window = DFRL.display.Get("meterDpsWindow")
         local windowChanged = dps.window ~= window
         local changed, iconsWereShown, petsWereCombined = false, options.icons, options.groupPets
@@ -1278,13 +1346,24 @@ DFRL:NewMod("DamageMeter", 7, function()
                 options[key], changed = value, true
             end
         end
-        if visible == count and not changed and not enabledChanged and not fontChanged and not windowChanged then
+        if
+            visible == count
+            and not changed
+            and not enabledChanged
+            and not fontChanged
+            and not styleChanged
+            and not windowChanged
+        then
             return
         end
         HideTooltip()
         enabled = enable
         fontSize = selectedFontSize
         nameFontSize = selectedNameFontSize
+        if styleChanged then
+            presentation.fontChoice, presentation.fontOutline = fontChoice, fontOutline
+            presentation.fontRevision = presentation.fontRevision + 1
+        end
         if windowChanged then
             dps.SetWindow(window)
             ClearSamples()

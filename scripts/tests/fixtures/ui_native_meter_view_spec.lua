@@ -10,23 +10,52 @@ end
 
 local function View(configure)
     local c, state, _, env = helpers.New()
+    local function CountPresentation(object, key)
+        if state.trackedPresentation and state.trackedPresentation[object] then
+            state.presentationOps[key] = (state.presentationOps[key] or 0) + 1
+        end
+    end
     local create = c.Object
     function c:Object(...)
         local object = create(self, ...)
-        function object:GetStringWidth() return string.len(self:GetText()) * 4 end
+        for _, method in ipairs({ "GetText", "GetFont", "GetWidth" }) do
+            local key, original = method, object[method]
+            object[key] = function(self, ...)
+                CountPresentation(self, key)
+                return original(self, ...)
+            end
+        end
+        local setFont = object.SetFont
+        function object:SetFont(face, size, flags)
+            CountPresentation(self, "SetFont")
+            if state.rejectFontObject == self and state.rejectFontSize == size then return false end
+            return setFont(self, face, size, flags)
+        end
+        function object:GetStringWidth()
+            CountPresentation(self, "GetStringWidth")
+            if state.missingMetrics then return 0 end
+            return string.len(self:GetText()) * 4
+        end
         function object:GetEffectiveScale()
+            CountPresentation(self, "GetEffectiveScale")
             return (self.scale or 1) * (self.parent and self.parent:GetEffectiveScale() or 1)
         end
         function object:SetScale(value) self.scale = value end
         function object:SetMinMaxValues(low, high)
             self.minimum, self.maximum = low, high
         end
-        function object:SetValue(value) self.value = value end
+        function object:SetValue(value)
+            CountPresentation(self, "SetValue")
+            self.value = value
+        end
         function object:SetStatusBarTexture(path)
             self.barTexture = path
             return true
         end
-        function object:SetStatusBarColor(...) self.color = { ... } end
+        function object:SetStatusBarColor(...)
+            CountPresentation(self, "SetStatusBarColor")
+            self.color = { ... }
+        end
         function object:RegisterForClicks(...) self.clicks = { ... } end
         function object:EnableMouseWheel(value) self.mouseWheel = value end
         function object:SetBlendMode(value) self.blend = value end
@@ -92,6 +121,24 @@ local function View(configure)
     c:Load("core/hud.lua")
     c:Load("core/meter_rates.lua")
     c:Load("core/widgets.lua")
+    if state.instrumentPresentation then
+        local factory = env.T.NewCircularIcon
+        env.T.NewCircularIcon = function(...)
+            local icon = factory(...)
+            local bind = icon.Bind
+            icon.Bind = function(path, ...)
+                if state.trackedPresentation then state.presentationOps.Bind = (state.presentationOps.Bind or 0) + 1 end
+                if state.rejectedIcon == path then return false end
+                return bind(path, ...)
+            end
+            return icon
+        end
+        local register = env.DFRL.layout.Register
+        env.DFRL.layout.Register = function(name, frame, anchor, options)
+            if name == "damageMeter" then c.meterLayoutOptions = options end
+            return register(name, frame, anchor, options)
+        end
+    end
     c:Load("modules/ui/meter.lua", "DamageMeter")
     c.root, c.controller = env.DFRL_DamageMeter, c:Controller("PLAYER_ENTERING_WORLD")
     for _, object in ipairs(c.objects) do
@@ -156,6 +203,15 @@ local function HistoryTick(context, state, suffix, elapsed)
     context:Tick(step)
 end
 
+local function WatchPresentation(context, state, count)
+    state.trackedPresentation, state.presentationOps = {}, {}
+    for index = 1, count do
+        local row = context:Row(index)
+        state.trackedPresentation[row], state.trackedPresentation[row.name] = true, true
+        state.trackedPresentation[row.value], state.trackedPresentation[row.bar] = true, true
+    end
+end
+
 Test("native IDs keep different rates for equal source names and bypass guessed artwork", function()
     local c = View()
     assert(c.root:IsVisible(), "native meter did not become ready without legacy publication packets")
@@ -173,6 +229,179 @@ Test("native IDs keep different rates for equal source names and bypass guessed 
         first.value:GetText() == "5" and second.value:GetText() == "2",
         "All used recent rather than native average rates"
     )
+end)
+
+Test("settled native rows skip layout reads and static binding while changed values and leaders remain live", function()
+    for _, performance in ipairs({ false, true }) do
+        local c, state = View(function(context, native)
+            context.settings.performanceMode, context.settings.meterRows = performance, 2
+            native.instrumentPresentation = true
+        end)
+        WatchPresentation(c, state, 2)
+        c:ResetCounts()
+        c:Tick()
+        local ops = state.presentationOps
+        assert(ops.GetFont == 2, "settled rows did not retain one targeted numeric-font check each")
+        assert(
+            not ops.GetText
+                and not ops.GetWidth
+                and not ops.GetEffectiveScale
+                and not ops.GetStringWidth
+                and not ops.Bind
+        )
+        assert(not ops.SetValue and not ops.SetStatusBarColor)
+        c:NoPresentationWrites()
+        c:SetSetting("meterShowTotal", true)
+        WatchPresentation(c, state, 2)
+        c:Tick(0.01)
+        ops = state.presentationOps
+        assert(ops.GetFont == 2 and not ops.GetText and not ops.GetWidth and not ops.GetEffectiveScale)
+        assert(not ops.GetStringWidth and not ops.Bind, "header-only choice refreshed unchanged row presentation")
+        state.records[1].recent, state.context.counterRevision = 50.4, "same-formatted-dps"
+        WatchPresentation(c, state, 2)
+        c:Tick()
+        assert(
+            c:Row(1).entry.dps == 5.04
+                and not state.presentationOps.GetStringWidth
+                and not state.presentationOps.GetWidth
+        )
+        assert(not state.presentationOps.Bind, "rate-only change rebound static artwork")
+        state.records[1].recent, state.records[1].amount = 500, 1000
+        state.context.counterRevision = "changed-formatted-dps"
+        WatchPresentation(c, state, 2)
+        c:Tick()
+        assert(c:Row(1).value:GetText() == "50" and (state.presentationOps.GetStringWidth or 0) > 0)
+        local fraction = c:Row(2).bar.value
+        state.records[1].amount, state.context.counterRevision = 2000, "changed-leader-maximum"
+        WatchPresentation(c, state, 2)
+        c:Tick()
+        assert(c:Row(2).bar.value == 0.02 and c:Row(2).bar.value ~= fraction)
+        assert(
+            not state.presentationOps.GetStringWidth
+                and not state.presentationOps.GetWidth
+                and not state.presentationOps.Bind
+        )
+        state.records[2].proc, state.context.counterRevision = true, "changed-native-proc-color"
+        state.records[2].rowId = "native-proc-leaf-b"
+        WatchPresentation(c, state, 2)
+        c:Tick()
+        assert(c:Row(2).bar.color[1] == 0.25 and state.presentationOps.SetStatusBarColor == 1)
+        assert(not state.presentationOps.GetStringWidth and not state.presentationOps.Bind)
+        local icon = "Interface\\Icons\\rejected-static-icon"
+        state.records[1].icon, state.rejectedIcon = { status = "ready", path = icon }, icon
+        state.context.metadataRevision = "changed-static-icon"
+        WatchPresentation(c, state, 2)
+        c:Tick()
+        assert(state.presentationOps.Bind == 1, "metadata change did not attempt only its changed native artwork")
+        WatchPresentation(c, state, 2)
+        c:Tick()
+        assert(state.presentationOps.Bind == 1, "failed static artwork was treated as successfully cached")
+        state.rejectedIcon = nil
+        WatchPresentation(c, state, 2)
+        c:Tick()
+        assert(c:Row(1).icon:GetTexture() == icon and state.presentationOps.Bind == 1)
+        WatchPresentation(c, state, 2)
+        c:Tick()
+        assert(not state.presentationOps.Bind, "successful artwork kept retrying")
+        local allocated = #c.objects
+        table.insert(state.records, { id = "third", rowId = "third", name = "Third", amount = 20, recent = 5 })
+        state.context.counterRevision = "new-visible-pool-binding"
+        c:Tick()
+        c:Call(c.root, "OnMouseWheel", -1)
+        WatchPresentation(c, state, 2)
+        c:Tick(0.01)
+        assert(c:Row(2).entry.name == "Third" and (state.presentationOps.Bind or 0) > 0 and #c.objects == allocated)
+    end
+end)
+
+Test("enabling an unavailable native DPS column reveals its placeholder without changing the rate", function()
+    for _, performance in ipairs({ false, true }) do
+        local c = View(function(context, native)
+            context.settings.performanceMode, context.settings.meterShowDps = performance, false
+            native.recentStatus = "unavailable"
+        end)
+        local row = c:Row(1)
+        assert(row.entry.dps == nil and not row.value:IsShown())
+        c:SetSetting("meterShowDps", true)
+        c:Tick(0.01)
+        assert(row.entry.dps == nil and row.value:IsShown() and row.value:GetText() == "--")
+        c:SetSetting("meterShowDps", false)
+        c:Tick(0.01)
+        assert(row.entry.dps == nil and not row.value:IsShown())
+    end
+end)
+
+Test("row layout gates retain scale, dimensions, global fonts and failed-metric or font retries", function()
+    for _, performance in ipairs({ false, true }) do
+        local c, state = View(function(context, native, env)
+            context.settings.performanceMode, context.settings.meterRows = performance, 2
+            context.settings.uiFont, context.settings.uiFontOutline = "default", "OUTLINE"
+            native.instrumentPresentation = true
+            env.T.GetFontFlags = function(flags) return native.fontFlags or flags or "" end
+            env.T.SetFont = function(object, size, flags)
+                object:SetFont(native.fontFace or "DEFAULT_TEST", size, env.T.GetFontFlags(flags))
+            end
+        end)
+        c.root:SetScale(0.9)
+        WatchPresentation(c, state, 2)
+        c:Tick()
+        assert((state.presentationOps.GetStringWidth or 0) > 0 and (state.presentationOps.Bind or 0) > 0)
+        c.root:SetWidth(300)
+        c.meterLayoutOptions.onResize(c.root)
+        WatchPresentation(c, state, 2)
+        c:Tick(0.01)
+        assert((state.presentationOps.GetStringWidth or 0) > 0, "width change reused a stale numeric-slot metric")
+        state.fontFace, state.fontFlags = "CHANGED_NATIVE_FONT", "THICKOUTLINE"
+        for _, object in ipairs(c.objects) do
+            if object.kind == "FontString" and object.font then
+                object:SetFont(state.fontFace, object.font[2], state.fontFlags)
+            end
+        end
+        c:SetSetting("uiFont", "changed-native")
+        c:SetSetting("uiFontOutline", "THICKOUTLINE")
+        WatchPresentation(c, state, 2)
+        c:Tick()
+        assert((state.presentationOps.GetStringWidth or 0) > 0)
+        assert(c:Row(1).value.font[1] == state.fontFace and c:Row(1).value.font[3] == state.fontFlags)
+        c:Row(1).value:SetFont("EXTERNAL_NUMERIC_FACE", 13, "OUTLINE")
+        WatchPresentation(c, state, 2)
+        c:Tick()
+        assert((state.presentationOps.GetStringWidth or 0) > 0, "numeric font mutation bypassed the layout gate")
+        c:Tick()
+        state.rejectFontObject, state.rejectFontSize = c:Row(1).name, 14
+        c:SetSetting("meterNameFontSize", 14)
+        c:Tick()
+        assert(c:Row(1).name.font[2] ~= 14)
+        WatchPresentation(c, state, 2)
+        c:Tick()
+        assert(
+            (state.presentationOps.SetFont or 0) > 0,
+            "rejected name font stopped retrying after the first layout pass"
+        )
+        state.rejectFontObject = nil
+        c:Tick()
+        assert(c:Row(1).name.font[2] == 14)
+        state.missingMetrics, state.records[1].recent = true, 500
+        state.records[1].amount, state.context.counterRevision = 1000, "pending-metric-caption"
+        c:Tick()
+        WatchPresentation(c, state, 2)
+        c:Tick()
+        assert((state.presentationOps.GetStringWidth or 0) > 0, "missing metrics were recorded as settled")
+        state.missingMetrics = false
+        c:Tick()
+        WatchPresentation(c, state, 2)
+        c:Tick()
+        assert(
+            state.presentationOps.GetFont == 2
+                and not state.presentationOps.GetStringWidth
+                and not state.presentationOps.GetWidth
+        )
+        assert(
+            not state.presentationOps.GetText
+                and not state.presentationOps.GetEffectiveScale
+                and not state.presentationOps.Bind
+        )
+    end
 end)
 
 Test("large native ledgers copy only the viewport and share one fresh context per refresh", function()
