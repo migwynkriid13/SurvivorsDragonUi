@@ -108,6 +108,7 @@ function H.New()
         pairs = pairs,
         next = next,
         pcall = pcall,
+        rawequal = rawequal,
         type = type,
         tonumber = tonumber,
         tostring = tostring,
