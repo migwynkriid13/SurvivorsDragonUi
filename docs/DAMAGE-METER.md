@@ -201,7 +201,11 @@ view name. Both header fields start on. All seven options use the same preview, 
 Cancel, profile and reset behavior. Healing uses healing totals and HPS.
 Hover still provides the full name and numbers when row values are hidden.
 
-Native v1 rows also show **Native IDs** in that tooltip. The technical field
+Hold **Shift** over a native v1 row to show **Native IDs** in its tooltip.
+Without Shift, the tooltip shows its usual name, damage, DPS, average and share.
+Pressing or releasing Shift while the pointer stays over the row updates the
+section through the existing controller, without another combat-data read.
+If the Shift getter is unavailable, diagnostics stay hidden. The technical field
 names stay as the API spells them: `rowId`, `sourceKey`, `ownerId`, `actorId`,
 `nativeProc`, `kind`, `attribution` and `rank`, plus supplied ability, talent,
 variant and item IDs. Accepted positive members supply actual
@@ -213,7 +217,8 @@ This helps compare two equally named rows that still have separate DPS. A
 combined row can include several native source records. The tooltip shows at
 most three records and three actual origins per record, within 24 diagnostic
 lines; `...` marks omitted details. It makes no additional native read. Text is
-prepared only on hover and reused while identities and metadata stay unchanged.
+prepared only on a Shift-held hover and reused while identities and metadata
+stay unchanged. Ordinary hovers never request the diagnostic descriptor.
 Both Performance Mode states share this static behavior. Legacy meters keep
 their existing statistics tooltip because they do not supply these IDs.
 
@@ -795,7 +800,7 @@ They skip cosmetic row formatting, icon lookup/binding, tooltip repaint and bar 
 Requested root visibility changes only on transitions. Repeated unavailable
 reads do not keep clearing an already-cleared view. Visible rows cache formatted
 values, and a hovered tooltip rebuilds only when its source, displayed numbers,
-view, language or effective scale changes; a tooltip taken or hidden by another
+view, language, Shift state or effective scale changes; a tooltip taken or hidden by another
 native owner is not reclaimed by the periodic update.
 
 The `meterRows` integer belongs to the existing `SurvivorsDragonUiDisplay`

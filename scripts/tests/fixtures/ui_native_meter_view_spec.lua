@@ -691,13 +691,18 @@ Test("row layout gates retain scale, dimensions, global fonts and failed-metric 
     end
 end)
 
-Test("native hover IDs refresh without changed captions or numbers and respect tooltip ownership and hiding", function()
+Test("native hover IDs require held Shift and refresh without extra snapshots or foreign tooltip takeover", function()
     for _, performance in ipairs({ false, true }) do
         local tooltip
-        local c, state = View(function(context, native, env)
+        local c, state, env = View(function(context, native, env)
             context.settings.performanceMode = performance
             native.records = helpers.TalentRanks(2, "shaman.enh_windfury_weapon", "Windfury Weapon")
             native.records[2].proc = false
+            native.shift, native.shiftReads = false, 0
+            env.IsShiftKeyDown = function()
+                native.shiftReads = native.shiftReads + 1
+                return native.shift
+            end
             local factory = env.T.NewNativeMeter
             native.descriptions = 0
             env.T.NewNativeMeter = function()
@@ -722,38 +727,80 @@ Test("native hover IDs refresh without changed captions or numbers and respect t
         end)
         local first, second = c:Row(1), c:Row(2)
         assert(state.descriptions == 0, "visible unhovered rows requested diagnostic data")
+        assert(state.shiftReads == 0, "unhovered rows polled the Shift key")
+        c:Call(c.header, "OnEnter")
+        c:Tick(0.01)
+        assert(state.shiftReads == 0 and state.descriptions == 0, "header hover polled Shift or prepared row IDs")
+        c:Call(c.header, "OnLeave")
         local reads = state.calls.snapshot
         c:Call(first, "OnEnter")
         local text = table.concat(tooltip.lines, "\n")
+        assert(string.find(text, "Damage Done", 1, true) and string.find(text, "DPS", 1, true))
+        assert(not string.find(text, "Native IDs", 1, true) and not string.find(text, "sourceKey:", 1, true))
+        assert(state.descriptions == 0, "ordinary hover prepared diagnostic IDs")
+        local paints = tooltip.paints
+        c:Tick(0.01)
+        assert(tooltip.paints == paints and state.descriptions == 0, "unchanged ordinary hover repeated work")
+        state.shift = true
+        c:Tick(0.01)
+        text = table.concat(tooltip.lines, "\n")
         assert(string.find(text, "Native IDs", 1, true) and string.find(text, "nativeProc=true", 1, true))
         assert(string.find(text, "sourceKey: talent:shaman.enh_windfury_weapon:r2", 1, true))
         assert(state.calls.snapshot == reads, "entering the tooltip collected a native snapshot")
         local descriptions, paints = state.descriptions, tooltip.paints
+        c:Tick(0.01)
+        assert(state.descriptions == descriptions and tooltip.paints == paints and state.calls.snapshot == reads)
         c:Tick()
         assert(state.descriptions == descriptions and tooltip.paints == paints, "unchanged hover repeated ID work")
+        reads = state.calls.snapshot
+        state.shift = false
+        c:Tick(0.01)
+        text = table.concat(tooltip.lines, "\n")
+        assert(not string.find(text, "Native IDs", 1, true) and string.find(text, "Damage Done", 1, true))
+        assert(state.descriptions == descriptions and tooltip.paints == paints + 1 and state.calls.snapshot == reads)
         state.records[1].variantKey = "received-extra-strike"
         state.context.metadataRevision = "changed-hover-id"
         c:Tick()
+        assert(state.descriptions == descriptions, "unshifted metadata changes prepared diagnostic IDs")
+        reads = state.calls.snapshot
+        state.shift = true
+        c:Tick(0.01)
         text = table.concat(tooltip.lines, "\n")
         assert(string.find(text, "variantKey: received-extra-strike", 1, true))
+        assert(state.calls.snapshot == reads, "pressing Shift collected a native snapshot")
         assert(first.entry.name == "Windfury Weapon" and first.entry.dmg == 20)
         c:Call(first, "OnLeave")
         c:Call(second, "OnEnter")
         text = table.concat(tooltip.lines, "\n")
         assert(string.find(text, "nativeProc=false", 1, true))
         assert(string.find(text, "sourceKey: talent:shaman.enh_windfury_weapon:r1", 1, true))
+        local shift = env.IsShiftKeyDown
+        env.IsShiftKeyDown = nil
+        descriptions = state.descriptions
+        c:Tick(0.01)
+        assert(not string.find(table.concat(tooltip.lines, "\n"), "Native IDs", 1, true))
+        assert(state.descriptions == descriptions, "missing Shift getter prepared diagnostic IDs")
+        env.IsShiftKeyDown = shift
+        c:Tick(0.01)
         tooltip:SetOwner(c.root)
         tooltip:SetText("Foreign tooltip")
         descriptions, paints = state.descriptions, tooltip.paints
+        local shiftReads = state.shiftReads
+        state.shift = false
+        c:Tick(0.01)
         c:Tick()
         assert(tooltip.owner == c.root and tooltip.text == "Foreign tooltip" and tooltip:IsShown())
         assert(state.descriptions == descriptions and tooltip.paints == paints, "meter reclaimed a foreign tooltip")
+        assert(state.shiftReads == shiftReads, "foreign tooltip ownership still polled Shift")
         c:Call(second, "OnEnter")
         c.layoutMask:Hide()
         descriptions = state.descriptions
         c:Tick()
         c:Call(second, "OnEnter")
         assert(not tooltip:IsShown() and state.descriptions == descriptions, "hidden rows prepared hover IDs")
+        local shiftReads = state.shiftReads
+        c:Tick(0.01)
+        assert(state.shiftReads == shiftReads, "hidden rows polled the Shift key")
     end
 end)
 

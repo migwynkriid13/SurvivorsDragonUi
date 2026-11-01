@@ -191,8 +191,12 @@ rows with the same source ID but different native proc flags, avoid private
 display tokens and ignore zero-display origin history. The adapter prepares
 text lazily in one bounded reusable buffer, reuses it for counter-only changes,
 refreshes changed metadata and retires old handles on Clear. Full meter cases
-exercise unchanged hover writes, metadata changes with unchanged captions and
-amounts, foreign tooltip ownership and hidden work in both Performance Mode
+exercise ordinary unshifted figures without diagnostic preparation, Shift-held
+entry, press/release while already hovered, immediate modifier-only repaint
+without native snapshots, missing Shift getters and unchanged holds. Unshifted
+metadata changes defer diagnostic work until Shift; hidden/unhovered/header and
+foreign tooltips do no modifier reads. They retain metadata changes with unchanged
+captions and amounts, foreign tooltip ownership and hidden work in both Performance Mode
 states. Diagnostics do not establish the identities in a screenshot until the
 actual tooltip is observed. Coverage remains CI-only.
 

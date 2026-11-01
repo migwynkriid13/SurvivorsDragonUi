@@ -399,6 +399,7 @@ DFRL:NewMod("DamageMeter", 7, function()
             tooltipState[key] = nil
         end
     end
+    local function ShiftHeld() return type(IsShiftKeyDown) == "function" and IsShiftKeyDown() and true or false end
     local function ShowRowTooltip(row)
         if editing or not row.entry or not row:IsVisible() or not GameTooltip then return end
         local entry, language, scale = row.entry, DFRL.locale.code, GameTooltip:GetEffectiveScale()
@@ -408,12 +409,17 @@ DFRL:NewMod("DamageMeter", 7, function()
         local reset = IsReset()
         local share = string.format("%.1f%%", entry.share * 100)
         local source, identity = apiActive and snapshot.source or nil, apiActive and entry.rateIdentity or nil
-        local details = tooltipState.details
+        local debug = source ~= nil and ShiftHeld() or false
+        local details = debug and tooltipState.details or nil
         if
-            hovered ~= row
-            or tooltipState.source ~= source
-            or tooltipState.rowId ~= entry.rowId
-            or tooltipState.identity ~= identity
+            debug
+            and (
+                not tooltipState.debug
+                or hovered ~= row
+                or tooltipState.source ~= source
+                or tooltipState.rowId ~= entry.rowId
+                or tooltipState.identity ~= identity
+            )
         then
             details = source and type(api.Describe) == "function" and api.Describe(source, entry.rowId) or nil
         end
@@ -431,6 +437,7 @@ DFRL:NewMod("DamageMeter", 7, function()
             and tooltipState.source == source
             and tooltipState.rowId == entry.rowId
             and tooltipState.identity == identity
+            and tooltipState.debug == debug
             and T.NearlyEqual(tooltipState.scale, scale)
         then
             return
@@ -457,6 +464,7 @@ DFRL:NewMod("DamageMeter", 7, function()
         GameTooltip:Show()
         tooltipState.name, tooltipState.damage, tooltipState.rate, tooltipState.share = entry.name, damage, rate, share
         tooltipState.average, tooltipState.reset = average, reset
+        tooltipState.debug = debug
         tooltipState.mode, tooltipState.language, tooltipState.scale = mode, language, scale
         tooltipState.source, tooltipState.rowId, tooltipState.identity, tooltipState.details =
             source, entry.rowId, identity, details
@@ -1554,7 +1562,21 @@ DFRL:NewMod("DamageMeter", 7, function()
     Tick = function()
         if not inWorld then return end
         age = age + (tonumber(arg1) or 0)
-        if age < REFRESH_SECONDS then return end
+        if age < REFRESH_SECONDS then
+            if hovered and hovered.entry then
+                if
+                    not hovered:IsVisible()
+                    or not GameTooltip
+                    or not GameTooltip:IsVisible()
+                    or not GameTooltip:IsOwned(hovered)
+                then
+                    HideTooltip()
+                elseif tooltipState.debug ~= (apiActive and ShiftHeld() or false) then
+                    ShowRowTooltip(hovered)
+                end
+            end
+            return
+        end
         age = 0
         local ok, message = pcall(Refresh)
         ClearReadPass()

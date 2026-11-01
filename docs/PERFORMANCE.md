@@ -331,8 +331,14 @@ or FPS measurements were performed.
 ## Meter hover IDs
 
 Native meter hover IDs reuse the adapter's existing scalar source/actor and
-positive-member origin fingerprints. Only an entered or changed hover calls
-the descriptor; steady hovered numeric updates reuse its text. A first or
+positive-member origin fingerprints. Only a Shift-held native-row hover calls
+the descriptor; unshifted hovers retain just the ordinary figures and never
+prepare diagnostic text. The held state joins the existing tooltip fingerprint.
+The controller checks it before its one-second reader gate only while a visible
+row owns the visible tooltip, repainting once on press/release from cached data.
+Unchanged holds do no formatting/descriptor work, and unhovered, hidden/off,
+header and foreign tooltips do no Shift reads. Missing getters select no debug
+section. Steady shifted numeric updates reuse diagnostic text. A first or
 invalidated hover searches the selected view's cached rows/pool, with no native
 getter or full snapshot retention. One lazy reusable buffer per adapter holds
 at most 24 lines for up to three native rows and three actual origins per row;
@@ -345,7 +351,9 @@ SavedVariable is added. The existing shared GameTooltip supplies its native
 line pool for the heading and diagnostic lines; that native cost is not
 measured here. CI-only cases cover lazy preparation, unchanged reuse, bounds,
 metadata changes with identical captions/counters, native proc distinctions,
-positive origins, foreign tooltip ownership and hidden cleanup. These are not
+positive origins, Shift entry/press/release, missing modifier getters, foreign
+tooltip ownership and hidden cleanup. Modifier changes never collect a native
+snapshot. These are not
 live rendering or FPS measurements; no local tests or game execution ran.
 
 ## Meter talent proc captions
