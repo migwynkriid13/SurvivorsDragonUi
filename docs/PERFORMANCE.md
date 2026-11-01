@@ -432,6 +432,21 @@ labels keep expiring while skipping font/geometry/animation writes; they do not
 restart on reappearance. The original 75 ms duplicate suppression and Performance
 Mode's 300 ms same-attack sums remain distinct and preserve original hit amounts.
 
+The default-on `sctDistanceScaling` display choice lets players disable that
+distance factor while keeping current-camera/death-location tracking and the
+selected SCT size. Missing/invalid values and both full resets select on;
+explicit saved off, profiles and the existing preview/Confirm/Cancel/discard
+lifecycle are retained. The existing listener caches the choice; the next owned
+post-camera pass applies it without resetting hits, lifetimes or handler ownership.
+Off skips the factor calculation. Hidden/off consumers retain their deferred
+work rules, and both Performance Mode states share the same choice.
+
+The lazy Combat text page adds one standard button, four texture regions and
+two FontStrings for the caption/hint, using existing checkbox artwork. Its row
+and the shifted filters stay in the existing scroll viewport. No gameplay
+region, asset, event, updater or separate SavedVariable is added. Search reuses
+the same metadata; MSBT disables/dims the control while retaining its value.
+
 CI-only production-boundary cases cover these paths, errors and cleanup. They
 were not run locally and establish neither native API availability/cost nor live
 camera alignment, late-run FPS or appearance. See the

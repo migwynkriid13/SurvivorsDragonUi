@@ -71,6 +71,11 @@ Language is session-only. No setting, command, profile, SavedVariable, client pr
 
 ## Display text
 
+**Scale damage by distance** and its updated-game hint have source TSV and
+runtime UI entries in all fourteen languages. Only these two addon captions
+were prepared; native catalogs, effects, aliases and source pins are unchanged.
+The existing caption/hint binding and search metadata serve the same checkbox.
+
 **Shorten health numbers** and its K/M/B/T hint have source/runtime UI entries
 in all fourteen languages. The same captions serve the independent Unit frames,
 Boss bars and Guardian tracker options. Only these two addon UI rows were

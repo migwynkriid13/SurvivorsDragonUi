@@ -7,6 +7,7 @@ local function SCT(scrolling, setup)
     context.settings.sctScale = 1
     context.settings.sctFont = "default"
     context.settings.sctShortNumbers = false
+    context.settings.sctDistanceScaling = true
     context.settings.sctNormalHits, context.settings.sctCriticalHits = true, true
     context.settings.sctAutoAttacks, context.settings.sctMisses = true, true
     context.settings.damageIcons, context.settings.nameplatesBossGuardiansOnly = false, false

@@ -199,6 +199,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local textScale = DFRL.display.Get("sctScale")
     local textFont = DFRL.display.Get("sctFont")
     local shortNumbers = DFRL.display.Get("sctShortNumbers")
+    local distanceScaling = DFRL.display.Get("sctDistanceScaling")
     local duplicateWindow = DFRL.display.Get("performanceMode") and PERFORMANCE_DUPLICATE_WINDOW or DUPLICATE_WINDOW
     -- Keep V's visible request separate from the backing coordinate feed. The
     -- native verbs do not write FrameXML's saved NAMEPLATES_ON preference.
@@ -1967,6 +1968,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             ApplyPlateTracking(false)
         end
         textScale = DFRL.display.Get("sctScale")
+        distanceScaling = DFRL.display.Get("sctDistanceScaling")
         local font = DFRL.display.Get("sctFont")
         local fontChanged = textFont ~= font
         textFont = font
@@ -2578,7 +2580,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             end
         end
         UpdatePending(now)
-        if not nativeText.Project(activeTexts, now) then ResetDisplay(true) end
+        if not nativeText.Project(activeTexts, now, distanceScaling) then ResetDisplay(true) end
         -- Enemy animations use their absolute age. No OnUpdate arg1 leaks into
         -- the post-camera callback; MSBT keeps its existing elapsed-time path.
         UpdateTexts(now, 0)

@@ -2,6 +2,8 @@
 DFRL.locale.data = {
     en = {
         ui = {
+            ["Scale damage by distance"] = "Scale damage by distance",
+            ["Make distant damage numbers smaller. Requires an updated game."] = "Make distant damage numbers smaller. Requires an updated game.",
             ["Native IDs"] = "Native IDs",
             ["Combine pet damage"] = "Combine pet damage",
             ["Combine each pet's spells under its name. Off: show spells with their pet names."] = "Combine each pet's spells under its name. Off: show spells with their pet names.",
@@ -670,6 +672,8 @@ DFRL.locale.data = {
     },
     pl = {
         ui = {
+            ["Scale damage by distance"] = "Skaluj liczby obrażeń według odległości",
+            ["Make distant damage numbers smaller. Requires an updated game."] = "Zmniejszaj liczby obrażeń odległych wrogów. Wymaga aktualnej wersji gry.",
             ["Native IDs"] = "Identyfikatory gry",
             ["Combine pet damage"] = "Łącz obrażenia zwierzaków",
             ["Combine each pet's spells under its name. Off: show spells with their pet names."] = "Łącz zaklęcia każdego zwierzaka pod jego nazwą. Wyłączone: pokazuj zaklęcia z nazwami zwierzaków.",
@@ -1809,6 +1813,8 @@ DFRL.locale.data = {
     },
     cs = {
         ui = {
+            ["Scale damage by distance"] = "Měnit velikost čísel poškození podle vzdálenosti",
+            ["Make distant damage numbers smaller. Requires an updated game."] = "Zmenšovat vzdálená čísla poškození. Vyžaduje aktualizovanou verzi hry.",
             ["Native IDs"] = "ID hry",
             ["Combine pet damage"] = "Sloučit poškození společníků",
             ["Combine each pet's spells under its name. Off: show spells with their pet names."] = "Sloučí kouzla každého společníka pod jeho jménem. Vypnuto: zobrazí kouzla se jmény společníků.",
@@ -2951,6 +2957,8 @@ DFRL.locale.data = {
     },
     de = {
         ui = {
+            ["Scale damage by distance"] = "Schadenszahlen nach Entfernung skalieren",
+            ["Make distant damage numbers smaller. Requires an updated game."] = "Weit entfernte Schadenszahlen verkleinern. Erfordert eine aktualisierte Spielversion.",
             ["Native IDs"] = "Native IDs",
             ["Combine pet damage"] = "Begleiterschaden zusammenfassen",
             ["Combine each pet's spells under its name. Off: show spells with their pet names."] = "Fasst die Zauber jedes Begleiters unter seinem Namen zusammen. Aus: zeigt Zauber mit Begleiternamen.",
@@ -4091,6 +4099,8 @@ DFRL.locale.data = {
     },
     pt = {
         ui = {
+            ["Scale damage by distance"] = "Ajustar números de dano pela distância",
+            ["Make distant damage numbers smaller. Requires an updated game."] = "Reduz os números de dano distantes. Requer uma versão atualizada do jogo.",
             ["Native IDs"] = "IDs nativos",
             ["Combine pet damage"] = "Combinar dano dos ajudantes",
             ["Combine each pet's spells under its name. Off: show spells with their pet names."] = "Combina os feitiços de cada ajudante sob o seu nome. Desativado: mostra os feitiços com o nome do ajudante.",
@@ -5222,6 +5232,8 @@ DFRL.locale.data = {
     },
     es = {
         ui = {
+            ["Scale damage by distance"] = "Ajustar números de daño según la distancia",
+            ["Make distant damage numbers smaller. Requires an updated game."] = "Reduce los números de daño lejanos. Requiere una versión actualizada del juego.",
             ["Native IDs"] = "ID nativos",
             ["Combine pet damage"] = "Combinar daño de mascotas",
             ["Combine each pet's spells under its name. Off: show spells with their pet names."] = "Combina los hechizos de cada mascota bajo su nombre. Desactivado: muestra los hechizos con el nombre de la mascota.",
@@ -6357,6 +6369,8 @@ DFRL.locale.data = {
     },
     fr = {
         ui = {
+            ["Scale damage by distance"] = "Adapter les nombres de dégâts à la distance",
+            ["Make distant damage numbers smaller. Requires an updated game."] = "Réduire les nombres de dégâts éloignés. Nécessite une version du jeu à jour.",
             ["Native IDs"] = "Identifiants natifs",
             ["Combine pet damage"] = "Regrouper les dégâts des familiers",
             ["Combine each pet's spells under its name. Off: show spells with their pet names."] = "Regroupe les sorts de chaque familier sous son nom. Désactivé : affiche les sorts avec le nom du familier.",
@@ -7500,6 +7514,8 @@ DFRL.locale.data = {
     },
     ro = {
         ui = {
+            ["Scale damage by distance"] = "Scalează numerele de daune după distanță",
+            ["Make distant damage numbers smaller. Requires an updated game."] = "Micșorează numerele de daune îndepărtate. Necesită o versiune actualizată a jocului.",
             ["Native IDs"] = "ID-uri native",
             ["Combine pet damage"] = "Combină daunele companionilor",
             ["Combine each pet's spells under its name. Off: show spells with their pet names."] = "Combină vrăjile fiecărui companion sub numele său. Dezactivat: arată vrăjile cu numele companionilor.",
@@ -8626,6 +8642,8 @@ DFRL.locale.data = {
     },
     tr = {
         ui = {
+            ["Scale damage by distance"] = "Hasar sayılarını mesafeye göre ölçekle",
+            ["Make distant damage numbers smaller. Requires an updated game."] = "Uzaktaki hasar sayılarını küçültür. Güncel bir oyun sürümü gerektirir.",
             ["Native IDs"] = "Yerel kimlikler",
             ["Combine pet damage"] = "Yoldaş hasarını birleştir",
             ["Combine each pet's spells under its name. Off: show spells with their pet names."] = "Her yoldaşın büyülerini kendi adı altında birleştirir. Kapalı: büyüleri yoldaş adlarıyla gösterir.",
@@ -9628,6 +9646,8 @@ DFRL.locale.data = {
     },
     ru = {
         ui = {
+            ["Scale damage by distance"] = "Масштабировать числа урона по расстоянию",
+            ["Make distant damage numbers smaller. Requires an updated game."] = "Уменьшать числа урона вдали. Требуется обновлённая версия игры.",
             ["Native IDs"] = "Идентификаторы игры",
             ["Combine pet damage"] = "Объединять урон питомцев",
             ["Combine each pet's spells under its name. Off: show spells with their pet names."] = "Объединяет заклинания каждого питомца под его именем. Выключено: показывает заклинания с именами питомцев.",
@@ -10849,6 +10869,8 @@ DFRL.locale.data = {
     },
     uk = {
         ui = {
+            ["Scale damage by distance"] = "Масштабувати числа шкоди за відстанню",
+            ["Make distant damage numbers smaller. Requires an updated game."] = "Зменшувати числа шкоди вдалині. Потрібна оновлена версія гри.",
             ["Native IDs"] = "Ідентифікатори гри",
             ["Combine pet damage"] = "Об’єднувати шкоду вихованців",
             ["Combine each pet's spells under its name. Off: show spells with their pet names."] = "Об’єднує закляття кожного вихованця під його ім’ям. Вимкнено: показує закляття з іменами вихованців.",
@@ -12044,6 +12066,8 @@ DFRL.locale.data = {
     },
     zh = {
         ui = {
+            ["Scale damage by distance"] = "按距离缩放伤害数字",
+            ["Make distant damage numbers smaller. Requires an updated game."] = "缩小远处的伤害数字。需要更新后的游戏版本。",
             ["Native IDs"] = "原生 ID",
             ["Combine pet damage"] = "合并宠物伤害",
             ["Combine each pet's spells under its name. Off: show spells with their pet names."] = "将每只宠物的法术合并到其名称下。关闭：显示法术及其宠物名称。",
@@ -13166,6 +13190,8 @@ DFRL.locale.data = {
     },
     ja = {
         ui = {
+            ["Scale damage by distance"] = "距離に応じてダメージ数字の大きさを変える",
+            ["Make distant damage numbers smaller. Requires an updated game."] = "遠くのダメージ数字を小さく表示します。更新済みのゲームが必要です。",
             ["Native IDs"] = "ネイティブID",
             ["Combine pet damage"] = "ペットのダメージをまとめる",
             ["Combine each pet's spells under its name. Off: show spells with their pet names."] = "各ペットの呪文をその名前にまとめます。オフ：呪文にペットの名前を表示します。",
@@ -14320,6 +14346,8 @@ DFRL.locale.data = {
     },
     ko = {
         ui = {
+            ["Scale damage by distance"] = "거리에 따라 피해 숫자 크기 조절",
+            ["Make distant damage numbers smaller. Requires an updated game."] = "먼 거리의 피해 숫자를 작게 표시합니다. 업데이트된 게임 버전이 필요합니다.",
             ["Native IDs"] = "게임 ID",
             ["Combine pet damage"] = "소환수 피해 합산",
             ["Combine each pet's spells under its name. Off: show spells with their pet names."] = "각 소환수의 주문을 해당 이름으로 합산합니다. 끄면 주문과 소환수 이름을 함께 표시합니다.",

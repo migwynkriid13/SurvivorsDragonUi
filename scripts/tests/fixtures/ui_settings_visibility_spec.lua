@@ -9,6 +9,7 @@ local values = {
     sctStyle = "diablo",
     sctFont = "diablo",
     sctShortNumbers = false,
+    sctDistanceScaling = true,
     sctClassColors = true,
     damageIcons = true,
     meterRows = 6,
@@ -77,10 +78,11 @@ env.displayControls = {
     performanceMode = Check(env.fontEditor),
     damageIcons = Check(combat),
     sctShortNumbers = Check(combat),
+    sctDistanceScaling = Check(combat),
     sctClassColors = Check(combat),
     guardianRespawnGuidance = Check(map),
 }
-for _, key in ipairs({ "sctShortNumbers", "sctClassColors" }) do
+for _, key in ipairs({ "sctShortNumbers", "sctClassColors", "sctDistanceScaling" }) do
     local control = env.displayControls[key]
     table.insert(env.fontEditor.combatSettings.controls, control)
     local enable = control.EnableMouse
@@ -146,6 +148,7 @@ assert(
 )
 assert(classColors:GetAlpha() == 0.45, "inactive class color option was not dimmed")
 assert(env.displayControls.sctShortNumbers.inputEnabled, "abbreviation is unavailable in Custom")
+assert(env.displayControls.sctDistanceScaling.inputEnabled, "distance scaling is unavailable over enemies")
 assert(
     env.sctDescription:GetText() == "Diablo IV numbers burst around enemies; amber highlights big criticals.",
     "style description is stale"
@@ -157,6 +160,7 @@ context:NoPresentationWrites()
 sctMode = "off"
 views.SCT()
 assert(not env.displayControls.sctShortNumbers.inputEnabled, "non-Custom mode retained abbreviation input")
+assert(not env.displayControls.sctDistanceScaling.inputEnabled, "non-Custom mode retained distance-scaling input")
 for _, button in pairs(env.fontEditor.sctStyleButtons) do
     assert(button.styleMouseEnabled == false, "non-Custom mode retained style input")
 end
@@ -181,6 +185,17 @@ assert(
 values.sctStyle = "diablo"
 views.SCT()
 assert(not classColors.inputEnabled and classColors:GetAlpha() == 0.45, "Diablo retained class-color input")
+values.sctStyle = "msbt"
+views.SCT()
+assert(
+    not env.displayControls.sctDistanceScaling.inputEnabled
+        and env.displayControls.sctDistanceScaling:GetAlpha() == 0.45
+        and values.sctDistanceScaling,
+    "MSBT did not retain and disable distance scaling"
+)
+values.sctStyle = "diablo"
+views.SCT()
+assert(env.displayControls.sctDistanceScaling.inputEnabled, "enemy style did not restore distance-scaling input")
 assert(
     env.fontEditor.sctStyleButtons.diablo.styleMouseEnabled and combat:GetAlpha() == 1,
     "Custom did not restore style input"

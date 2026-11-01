@@ -71,6 +71,7 @@ DFRL:NewMod("Display", 0, function()
         sctStyle = "diablo",
         sctFont = "default",
         sctShortNumbers = true,
+        sctDistanceScaling = true,
         sctScale = 0.9,
         hidePortraits = false,
         showPlayerName = true,

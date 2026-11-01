@@ -279,8 +279,13 @@ native labels.
 Looking away hides them, and looking back can reveal only their remaining life.
 Offscreen and missing projections never reuse old screen coordinates.
 
-Distance sizing uses native camera depth: up to 20 yards retains the selected
-SCT size, farther text shrinks to a minimum of 55%. Existing animation scale and
+**Scale damage by distance** in Combat text is on by default. Turn it off to keep
+your selected SCT size at every distance; world/death-location tracking stays
+active. The choice previews immediately, saves with Confirm and follows Cancel,
+profiles and both full resets. MSBT dims the control while retaining its value.
+
+When enabled, distance sizing uses native camera depth: up to 20 yards retains
+the selected SCT size, farther text shrinks to a minimum of 55%. Existing animation scale and
 critical pop multiply that factor. Both Performance Mode states share the
 projection, size and visibility behavior, retaining their 75/300 ms grouping
 rules. Separate native targets/casters cannot share an arbitrary anchor.

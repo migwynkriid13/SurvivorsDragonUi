@@ -1260,6 +1260,15 @@ DFRL:NewMod("RunTimers", 5, function()
                 classColors.editorAvailable = available
             end
         end
+        local distanceScaling = displayControls.sctDistanceScaling
+        if distanceScaling and distanceScaling:IsVisible() then
+            local available = style ~= "msbt"
+            if distanceScaling.editorAvailable ~= available then
+                distanceScaling:EnableMouse(mode == "on" and available)
+                distanceScaling:SetAlpha(available and 1 or 0.45)
+                distanceScaling.editorAvailable = available
+            end
+        end
         SetSettingsEnabled(fontEditor and fontEditor.combatSettings, mode == "on")
     end
 
@@ -2108,7 +2117,7 @@ DFRL:NewMod("RunTimers", 5, function()
         local combatFilters = {
             {
                 label = "Damage type",
-                y = -362,
+                y = -434,
                 entries = {
                     { key = "sctNormalHits", label = "Normal damage" },
                     { key = "sctCriticalHits", label = "Critical damage" },
@@ -2116,7 +2125,7 @@ DFRL:NewMod("RunTimers", 5, function()
             },
             {
                 label = "Damage categories",
-                y = -424,
+                y = -496,
                 entries = {
                     { key = "sctAutoAttacks", label = "Auto-attacks" },
                     { key = "sctDirectDamage", label = "Direct abilities / spells" },
@@ -2181,6 +2190,12 @@ DFRL:NewMod("RunTimers", 5, function()
                 { key = "sctScale", label = "SCT size", offset = 282 },
                 { key = "sctClassColors", label = "Class-colored damage", offset = 282 },
                 { key = "sctShortNumbers", label = "Abbreviate damage (K, M, B, T)", offset = 318 },
+                {
+                    key = "sctDistanceScaling",
+                    label = "Scale damage by distance",
+                    description = "Make distant damage numbers smaller. Requires an updated game.",
+                    offset = 354,
+                },
             },
             timer = {
                 {
@@ -2603,7 +2618,7 @@ DFRL:NewMod("RunTimers", 5, function()
             sctDescription:SetJustifyV("TOP")
             sctDescription:SetTextColor(0.75, 0.73, 0.67)
             local combatPage = combat
-            combatPage:SetHeight(540)
+            combatPage:SetHeight(612)
             combat = CreateFrame("Frame", nil, combatPage)
             combat:SetAllPoints(combatPage)
             combat:EnableMouse(false)
@@ -2696,8 +2711,18 @@ DFRL:NewMod("RunTimers", 5, function()
                 -captions.sctClassColors.offset
             )
             CombatToggle("sctShortNumbers", captions.sctShortNumbers.label, 0, -captions.sctShortNumbers.offset)
+            local distanceScaling = DisplayToggle(
+                combat,
+                "sctDistanceScaling",
+                captions.sctDistanceScaling.label,
+                captions.sctDistanceScaling.description,
+                -captions.sctDistanceScaling.offset
+            )
+            distanceScaling:SetHeight(60)
+            distanceScaling.description:SetHeight(28)
+            distanceScaling.description:SetJustifyV("TOP")
             divider = T.EditorDivider(combat, contentWidth)
-            divider:SetPoint("TOPLEFT", combat, "TOPLEFT", 0, -418)
+            divider:SetPoint("TOPLEFT", combat, "TOPLEFT", 0, -490)
             for _, group in ipairs(combatFilters) do
                 heading = FontEditorLabel(combat, group.label, 0, group.y, 12)
                 heading:SetTextColor(0.94, 0.79, 0.47)

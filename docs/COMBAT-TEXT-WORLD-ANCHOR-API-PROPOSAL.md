@@ -21,7 +21,14 @@ it died. The provider's separate `impact` mode retains the original hit location
 An enemy disappearing without a confirmed death retains its last world position
 with `targetState = "unavailable"`. Neither mode uses stale nameplate pixels.
 
-Farther numbers should appear smaller while remaining readable. SDUI multiplies
+The default-on **Scale damage by distance** checkbox lets players choose this
+presentation. Off keeps the selected SCT size at every distance while retaining
+world/death-location tracking. The existing display table's `sctDistanceScaling`
+boolean shares preview/Confirm/Cancel, profiles and both full resets; missing or
+invalid values reset to on while explicit saved off survives. MSBT dims the
+control and retains the choice. Both Performance Mode states share this path.
+
+When enabled, farther numbers appear smaller while remaining readable. SDUI multiplies
 the selected SCT size by `min(1, max(0.55, 20 / cameraDepth))`: full size through
 20 yards of camera depth, shrinking farther away with a 55% floor. Camera turns,
 player movement and zoom update this factor without restarting the label.
@@ -48,8 +55,8 @@ all batches. Ordinary `OnUpdate` runs too early for native SCT positioning.
 `OnUpdate` retains native-setting observation, plate styling and shared metadata
 preparation. It updates legacy/MSBT text only while the native transport is not
 selected. It also retries pending registration/release failures at most once
-per half-second. No new controller, frame, region, setting or SavedVariable is
-added, and the native path never animates a label in both frame phases.
+per half-second. No gameplay controller, frame, region or separate SavedVariable
+is added, and the native path never animates a label in both frame phases.
 
 Release only this addon's handler on Off, MSBT, world leave, logout and reload.
 A failed release leaves its callback inert while the existing controller retries.

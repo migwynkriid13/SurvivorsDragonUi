@@ -146,7 +146,8 @@ Test("SCT display defaults normalize missing values while retaining valid saved 
     local context = H.New()
     context:Load("core/display.lua", "Display")
     local display = context.env.DFRL.display
-    local defaults = { sctStyle = "diablo", sctFont = "default", sctScale = 0.9, sctShortNumbers = true }
+    local defaults =
+        { sctStyle = "diablo", sctFont = "default", sctScale = 0.9, sctShortNumbers = true, sctDistanceScaling = true }
     local function AssertChoices(expected)
         for key, value in pairs(expected) do
             assert(display.Get(key) == value, key .. " lost its display transaction value")
@@ -154,8 +155,20 @@ Test("SCT display defaults normalize missing values while retaining valid saved 
     end
     for _, saved in ipairs({
         {},
-        { sctStyle = false, sctFont = false, sctScale = 0 / 0, sctShortNumbers = "false" },
-        { sctStyle = "invalid", sctFont = "invalid", sctScale = math.huge, sctShortNumbers = 0 },
+        {
+            sctStyle = false,
+            sctFont = false,
+            sctScale = 0 / 0,
+            sctShortNumbers = "false",
+            sctDistanceScaling = "false",
+        },
+        {
+            sctStyle = "invalid",
+            sctFont = "invalid",
+            sctScale = math.huge,
+            sctShortNumbers = 0,
+            sctDistanceScaling = 0,
+        },
     }) do
         local copy = display.Copy(saved)
         for key, value in pairs(defaults) do
@@ -163,10 +176,12 @@ Test("SCT display defaults normalize missing values while retaining valid saved 
         end
     end
     AssertChoices(defaults)
-    local saved = { sctStyle = "enemy", sctFont = "diablo", sctScale = 1.25, sctShortNumbers = false }
+    local saved =
+        { sctStyle = "enemy", sctFont = "diablo", sctScale = 1.25, sctShortNumbers = false, sctDistanceScaling = false }
     context.env.SurvivorsDragonUiDisplay = saved
     AssertChoices(saved)
-    local preview = { sctStyle = "msbt", sctFont = "default", sctScale = 0.75, sctShortNumbers = true }
+    local preview =
+        { sctStyle = "msbt", sctFont = "default", sctScale = 0.75, sctShortNumbers = true, sctDistanceScaling = true }
     display.BeginEdit()
     for key, value in pairs(preview) do
         display.Set(key, value)
@@ -196,6 +211,38 @@ Test("SCT display defaults normalize missing values while retaining valid saved 
     display.Reset()
     AssertChoices(defaults)
     assert(context.env.SurvivorsDragonUiDisplay == nil, "full display reset retained old presentation")
+end)
+
+Test("named distance-scaling profiles retain saved off and normalize older profiles", function()
+    local context = H.New()
+    local env = context.env
+    context:Load("core/display.lua", "Display")
+    local display = env.DFRL.display
+    env.SurvivorsDragonUiDisplay = { sctDistanceScaling = false }
+    env.SurvivorsDragonUiProfiles = {
+        Old = { layout = {}, display = {}, runFont = {} },
+        Fixed = { layout = {}, display = { sctDistanceScaling = false }, runFont = {} },
+    }
+    env.DFRL.layout.Copy = function(value) return value end
+    env.DFRL.layout.Load = function() end
+    env.DFRL.runFont = { Copy = function(value) return value end, Load = function() end }
+    context:Load("core/profiles.lua", "Profiles")
+    local profiles = env.DFRL.profiles
+    display.BeginEdit()
+    profiles.BeginEdit()
+    assert(profiles.Load("Old") and display.Get("sctDistanceScaling"), "older profile did not use the default")
+    assert(env.SurvivorsDragonUiProfiles.Old.display.sctDistanceScaling == nil, "preview rewrote an older profile")
+    display.FinishEdit(false)
+    profiles.FinishEdit(false)
+    assert(not display.Get("sctDistanceScaling"), "profile Cancel lost saved off")
+    display.BeginEdit()
+    profiles.BeginEdit()
+    assert(profiles.Load("Fixed") and not display.Get("sctDistanceScaling"), "profile lost explicit off")
+    display.FinishEdit(true)
+    profiles.FinishEdit(true)
+    assert(not display.Get("sctDistanceScaling"), "profile Confirm lost explicit off")
+    display.Reset()
+    assert(display.Get("sctDistanceScaling"), "reset did not restore the default")
 end)
 
 local function NativeMode(saved, damage, incoming, realDisplay)

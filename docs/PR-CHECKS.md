@@ -83,6 +83,13 @@ They add no runtime hook or shipped fixture. Cases are CI-only and were not run
 locally; mocks cannot establish native death-position capture, camera-update
 ordering, provider availability, appearance or FPS.
 
+Distance-choice cases retain default-on normalization and explicit saved off,
+preview/Confirm/Cancel, older/named profiles and resets. Production-controller
+comparisons toggle sizing in both enemy styles and Performance Mode states while
+retaining death anchors, motion, fade, expiry, pooled objects and frame ownership.
+Editor cases cover the actual checkbox/search target, hint, final filter extent,
+MSBT/mode dependencies and hidden/unchanged writes. These remain CI-only.
+
 Meter processing cases exercise growing native source/member lists through the
 production adapter and controller. Fixture-only counters check that ordinary
 counter changes reuse identity preparation, appended history reuses contribution

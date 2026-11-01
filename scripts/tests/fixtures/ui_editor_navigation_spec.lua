@@ -986,9 +986,23 @@ assert(
 dialog.navigation.Search("Diablo")
 assert(#dialog.navigation.results >= 2, "custom style and font choices were absent from search")
 dialog.navigation.ClearSearch()
-assert(pages.combat:GetHeight() >= 532, "abbreviation clipped the final damage filters")
+assert(pages.combat:GetHeight() >= 604, "distance scaling clipped the final damage filters")
 assert(display.Get("sctScale") == 0.9 and env.sctSizeLabel:GetText() == "90%", "default SCT size did not show 90%")
 assert(display.Get("sctShortNumbers") == true, "abbreviation was disabled by default")
+assert(display.Get("sctDistanceScaling") == true, "distance scaling was disabled by default")
+dialog.navigation.Search("Scale damage by distance")
+assert(
+    #dialog.navigation.results == 1 and dialog.navigation.results[1].target == "sctDistanceScaling",
+    "distance choice was absent from search"
+)
+dialog.navigation.OpenResult(1)
+assert(env.displayControls.sctDistanceScaling.description, "distance choice lost its help text")
+context:Call(env.displayControls.sctDistanceScaling, "OnClick")
+assert(
+    not display.Get("sctDistanceScaling") and not env.SurvivorsDragonUiDisplay,
+    "distance preview saved before Confirm"
+)
+dialog.navigation.ClearSearch()
 context:Call(env.displayControls.sctShortNumbers, "OnClick")
 assert(not display.Get("sctShortNumbers") and not env.SurvivorsDragonUiDisplay, "full numbers did not preview")
 local function AssertSctFont(selected)
@@ -1050,7 +1064,10 @@ display.FinishEdit(false)
 AssertSctStyle("diablo")
 AssertSctFont("default")
 assert(
-    display.Get("sctShortNumbers") and display.Get("sctScale") == 0.9 and not display.Get("performanceMode"),
+    display.Get("sctShortNumbers")
+        and display.Get("sctDistanceScaling")
+        and display.Get("sctScale") == 0.9
+        and not display.Get("performanceMode"),
     "Cancel did not restore default combat choices"
 )
 display.BeginEdit()

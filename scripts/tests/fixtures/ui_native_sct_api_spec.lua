@@ -301,6 +301,45 @@ Test("native depth makes distant text smaller, with stable readable bounds in bo
     end
 end)
 
+Test("distance scaling choice preserves live death anchors, animations and expiry in both performance modes", function()
+    for _, style in ipairs({ "enemy", "diablo" }) do
+        for _, performance in ipairs({ false, true }) do
+            local context, control = Scene(style, performance), Scene(style, performance)
+            context:Prime()
+            control:Prime()
+            local _, point = context:NativeHit(123)
+            local _, reference = control:NativeHit(123)
+            point.cameraDepth, reference.cameraDepth = 40, 40
+            context:Tick(0.31)
+            control:Tick(0.31)
+            local label, original = assert(context:Labels()[1]), assert(control:Labels()[1])
+            local objects, registrations = #context.objects, context.native.registers
+            context:SetSetting("sctDistanceScaling", false)
+            context:Tick(0.2)
+            control:Tick(0.2)
+            assert(context:Labels()[1] == label, "distance preview restarted the hit")
+            Close(original:GetParent().scale / label:GetParent().scale, 0.55)
+            point.x, reference.x, point.targetState, reference.targetState = 650, 650, "dead", "dead"
+            context:Tick(0.1)
+            control:Tick(0.1)
+            Close(Holder(label).anchor.x, Holder(original).anchor.x)
+            Close(Holder(label).anchor.y, Holder(original).anchor.y)
+            context:SetSetting("sctDistanceScaling", true)
+            context:Tick(0.1)
+            control:Tick(0.1)
+            Close(label:GetParent().scale, original:GetParent().scale)
+            Close(Holder(label):GetAlpha(), Holder(original):GetAlpha())
+            assert(
+                #context.objects == objects and context.native.registers == registrations,
+                "distance choice allocated or rebound SCT"
+            )
+            context:Tick(2)
+            control:Tick(2)
+            assert(#context:Labels() == 0 and #control:Labels() == 0, "distance choice extended hit lifetime")
+        end
+    end
+end)
+
 Test("native grouping keeps target and source IDs, original amounts and exact normal/performance windows", function()
     for _, performance in ipairs({ false, true }) do
         local context = Scene("enemy", performance)
