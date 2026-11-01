@@ -1,10 +1,98 @@
 DFRL:NewMod("Map", 1, function()
     local texpath = DFRL:GetInfoOrCons("tex") .. "minimap\\"
     local function WatchClock(frame, label, zoneButton, zoneText, panel)
-        local elapsed = 0
-        local enabled
+        local native = T.NewHudOwner("localClock", "hudLocalClock")
+        local elapsed, enabled = 0, nil
+        local inWorld = UnitExists("player") and true or false
+        local caption, ready, tooltipCaption
+        local nativeHour, nativeMinute, nativeText
+        local function HideTooltip()
+            if GameTooltip and GameTooltip:IsOwned(frame) and GameTooltip:IsShown() then GameTooltip:Hide() end
+            tooltipCaption = nil
+        end
+        local function DrawTooltip()
+            if not caption or not GameTooltip or not GameTooltip:IsOwned(frame) then return end
+            if tooltipCaption ~= caption then
+                GameTooltip:ClearLines()
+                GameTooltip:AddLine("Local time: " .. caption, 1, 1, 1)
+                tooltipCaption = caption
+            end
+            if not GameTooltip:IsShown() then GameTooltip:Show() end
+        end
+        local function HideReading()
+            ready, caption = false, nil
+            if label:IsShown() then label:Hide() end
+            HideTooltip()
+        end
+        local function NativeSupported()
+            return type(_G.AZS_GetLocalTime) == "function"
+                and type(_G.AZS_IsHudShown) == "function"
+                and type(_G.AZS_SetHudShown) == "function"
+                and native.Read() ~= nil
+        end
+        local function SyncNative()
+            if enabled and ready then
+                local font = label:GetFont()
+                if type(font) ~= "string" or font == "" or label:GetText() ~= caption then HideReading() end
+            end
+            if inWorld and NativeSupported() and (not enabled or ready) then
+                if not native.Acquire(false) then
+                    native.Release()
+                    if enabled then HideReading() end
+                end
+            else
+                native.Release()
+            end
+        end
+        local function ClockPart(value, maximum)
+            return type(value) == "number"
+                and value - value == 0
+                and value >= 0
+                and value <= maximum
+                and value == math.floor(value)
+        end
+        local function ReadClock()
+            if type(_G.AZS_GetLocalTime) == "function" then
+                local ok, value = pcall(_G.AZS_GetLocalTime)
+                if
+                    not ok
+                    or type(value) ~= "table"
+                    or not ClockPart(value.hour, 23)
+                    or not ClockPart(value.minute, 59)
+                    or type(value.text) ~= "string"
+                    or value.text == ""
+                    or type(value.is24Hour) ~= "boolean"
+                then
+                    return
+                end
+                if nativeHour ~= value.hour or nativeMinute ~= value.minute then
+                    nativeHour, nativeMinute = value.hour, value.minute
+                    nativeText = string.format("%02d:%02d", nativeHour, nativeMinute)
+                end
+                return nativeText
+            end
+            if type(date) ~= "function" then return end
+            local ok, value = pcall(date, "%H:%M")
+            if ok and type(value) == "string" and value ~= "" then return value end
+        end
         local function Refresh()
-            if frame:IsVisible() then T.SetTextIfChanged(label, date("%H:%M")) end
+            if not inWorld or not enabled or not frame:IsVisible() then return end
+            local value = ReadClock()
+            local ok = value and pcall(T.SetTextIfChanged, label, value)
+            local font = label:GetFont()
+            if value and (type(font) ~= "string" or font == "") then
+                pcall(T.SetFont, label, 10, "")
+                font = label:GetFont()
+            end
+            ready = ok and type(font) == "string" and font ~= "" and label:GetText() == value or false
+            caption = ready and value or nil
+            if ready then
+                if not label:IsShown() then label:Show() end
+                if GameTooltip and GameTooltip:IsOwned(frame) and GameTooltip:IsShown() then DrawTooltip() end
+            else
+                HideReading()
+            end
+            SyncNative()
         end
         local function Tick()
             elapsed = elapsed + math.max(0, tonumber(arg1) or 0)
@@ -13,19 +101,39 @@ DFRL:NewMod("Map", 1, function()
             Refresh()
         end
         local function Start()
-            if not enabled or not frame:IsVisible() then return end
+            if not enabled or not inWorld or not frame:IsVisible() then
+                SyncNative()
+                return
+            end
             elapsed = 0
-            frame:SetScript("OnUpdate", Tick)
+            if frame:GetScript("OnUpdate") ~= Tick then frame:SetScript("OnUpdate", Tick) end
             Refresh()
         end
+        local function Stop()
+            if frame:GetScript("OnUpdate") then frame:SetScript("OnUpdate", nil) end
+            HideTooltip()
+        end
+        local function Retire()
+            inWorld = false
+            Stop()
+            HideReading()
+            native.Release()
+        end
         frame:SetScript("OnShow", Start)
-        frame:SetScript("OnHide", function()
-            frame:SetScript("OnUpdate", nil)
-            if GameTooltip and GameTooltip:IsOwned(frame) then GameTooltip:Hide() end
+        frame:SetScript("OnHide", Stop)
+        frame:SetScript("OnEnter", function()
+            if not inWorld or not enabled or not ready or not frame:IsVisible() or not GameTooltip then return end
+            GameTooltip:SetOwner(frame, "ANCHOR_BOTTOMLEFT")
+            tooltipCaption = nil
+            DrawTooltip()
         end)
+        frame:SetScript("OnLeave", HideTooltip)
         local function UpdateChoice()
             local shown = DFRL.display.Get("minimapShowClock")
-            if enabled == shown then return end
+            if enabled == shown then
+                SyncNative()
+                return
+            end
             enabled, elapsed = shown, 0
             zoneButton:ClearAllPoints()
             if shown then
@@ -37,13 +145,45 @@ DFRL:NewMod("Map", 1, function()
                     Start()
                 end
             else
-                frame:SetScript("OnUpdate", nil)
+                Stop()
                 if frame:IsShown() then frame:Hide() end
                 zoneButton:SetPoint("CENTER", panel, "CENTER", 0, -3)
                 zoneText:SetJustifyH("CENTER")
             end
+            SyncNative()
         end
         DFRL.display.Listen(UpdateChoice)
+        DFRL.locale.Listen(function()
+            if enabled then
+                Start()
+            else
+                SyncNative()
+            end
+        end)
+        for _, name in ipairs({ "PLAYER_ENTERING_WORLD", "PLAYER_LEAVING_WORLD", "PLAYER_LOGOUT", "CVAR_UPDATE" }) do
+            frame:RegisterEvent(name)
+        end
+        frame:SetScript("OnEvent", function()
+            if event == "PLAYER_ENTERING_WORLD" then
+                inWorld = true
+                if enabled then
+                    Start()
+                else
+                    SyncNative()
+                end
+            elseif event == "PLAYER_LEAVING_WORLD" or event == "PLAYER_LOGOUT" then
+                Retire()
+            elseif event == "CVAR_UPDATE" and native.Observe(arg1) then
+                SyncNative()
+            end
+        end)
+        if type(_G.ReloadUI) == "function" then
+            local reloadUI = _G.ReloadUI
+            _G.ReloadUI = function()
+                Retire()
+                return reloadUI()
+            end
+        end
         UpdateChoice()
     end
     local defaults = { width = 180, height = 180, right = -8, top = -26, zoomX = -21, zoomY = 40, zoomScale = 0.8 }
@@ -126,14 +266,6 @@ DFRL:NewMod("Map", 1, function()
     T.SetFont(timeText, 10, "")
     timeText:SetTextColor(1, 1, 1, 1)
     WatchClock(timeFrame, timeText, MinimapZoneTextButton, MinimapZoneText, panel)
-    timeFrame:SetScript("OnEnter", function()
-        GameTooltip:SetOwner(this, "ANCHOR_BOTTOMLEFT")
-        GameTooltip:AddLine("Local time: " .. date("%H:%M"), 1, 1, 1)
-        GameTooltip:Show()
-    end)
-    timeFrame:SetScript("OnLeave", function()
-        if GameTooltip:IsOwned(this) then GameTooltip:Hide() end
-    end)
 
     MinimapZoomIn:ClearAllPoints()
     MinimapZoomIn:SetParent(Minimap)

@@ -404,6 +404,17 @@ The assertions cover:
   lazy Chat time and observed/unreported tooltip owners. These fixtures are
   authored for CI and were not run locally; no live rendering/FPS is inferred.
 
+- Native local-clock cases in `ui_idle_clock_spec.lua` reuse the production
+  clock and shared HUD owner. They cover 24-hour conversion from native numeric
+  fields, midnight/noon, changed and backwards device readings, five-second and
+  hidden/off sampling, shared tooltip content and foreign owners, preview/Cancel,
+  world/logout/reload restoration, synchronous CVar callbacks and later external
+  preferences. Malformed/unavailable snapshots and missing fonts/failed text
+  assignments release native ownership and recover without a date fallback;
+  partial HUD support avoids visibility writes and
+  failed handoffs retire the duplicate custom caption. These authored CI-only
+  contracts do not verify native provider availability or live clock rendering.
+
 - Fallen-ally waypoint mocks load the production controller with explicit
   native roster boundaries and check dead/alive/ghost/disconnect retirement,
   slot changes during reads, literal native names, nearest/stable selection,
