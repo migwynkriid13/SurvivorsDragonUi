@@ -102,7 +102,7 @@ local function View(configure)
         if object.kind == "FontString" and object.parent == c.root then c.status = object end
     end
     function c:Tick(elapsed)
-        local step = elapsed or 0.21
+        local step = elapsed or 1.01
         self.now = self.now + step
         self:Call(self.controller, "OnUpdate", step)
     end
@@ -150,7 +150,7 @@ local function HistoryCounts(state)
 end
 
 local function HistoryTick(context, state, suffix, elapsed)
-    local step = elapsed or 0.21
+    local step = elapsed or 1.01
     state.context.asOfRunSeconds = state.context.asOfRunSeconds + step
     state.context.counterRevision, state.context.snapshotId = "history-" .. suffix, "history-" .. suffix
     context:Tick(step)
@@ -261,6 +261,7 @@ Test("large native ledgers copy only the viewport and share one fresh context pe
         assert(c:Row(1).name:GetText() == "1. Spell 1" and c:Row(1).entry.dps == 12.3)
         state.records[1].recent, state.records[1].amount = 234, 2020
         state.context.counterRevision = "visible-rate-held"
+        c:SetSetting("meterShowDamage", true)
         c:Tick(0.21)
         assert(c:Row(1).entry.dps == 12.3 and c:Row(1).entry.dmg == 2020, "viewport rates lost their one-Hz cadence")
         c:Tick(1.01)
@@ -279,33 +280,37 @@ Test("large native ledgers copy only the viewport and share one fresh context pe
     end
 end)
 
-Test("native history is sampled once per second while counter-only captures keep totals responsive", function()
+Test("native controller waits one second between regular reads and defers input to the next frame", function()
     for _, performance in ipairs({ false, true }) do
         local c, state = HistoryView(performance)
         local identity, allocated = c:Row(1).entry.rowId, #c.objects
         assert(c:Row(1).entry.dps == 7 and c:Row(1).entry.averageDps == 50)
         local recent = HistoryCounts(state)
         assert(recent == 1, "initial viewport did not request one native recent capture")
+        local contexts, reads, title = state.calls.context, state.calls.snapshot, c.title:GetText()
         state.records[1].recent = 90
         for tick = 1, 4 do
-            local title = c.title:GetText()
             state.records[1].amount = state.records[1].amount + 1000
-            HistoryTick(c, state, "counter-" .. tick)
-            assert(c:Row(1).entry.dmg == state.records[1].amount and c.title:GetText() ~= title)
+            HistoryTick(c, state, "counter-" .. tick, 0.21)
+            assert(
+                state.calls.context == contexts and state.calls.snapshot == reads,
+                "regular reads ran before one second"
+            )
+            assert(c:Row(1).entry.dmg == 1000 and c.title:GetText() == title)
             assert(
                 c:Row(1).entry.dps == 7 and c:Row(1).entry.rowId == identity,
-                "All replaced the native recent rate or identity"
+                "waiting for the next refresh changed a native rate or identity"
             )
             recent = HistoryCounts(state)
-            assert(recent == 1, "counter-only refresh repeated native history before the one-Hz deadline")
+            assert(recent == 1, "native history ran before the one-second deadline")
         end
-        local _, all = HistoryCounts(state)
-        assert(all >= 4, "five-Hz counters were delayed with the history capture")
-        HistoryTick(c, state, "rate-due")
+        HistoryTick(c, state, "rate-due", 0.21)
         recent = HistoryCounts(state)
         assert(recent == 2 and c:Row(1).entry.dps == 9 and #c.objects == allocated)
+        assert(state.calls.context == contexts + 1 and state.calls.snapshot == reads + 1)
+        assert(c:Row(1).entry.dmg == 5000 and c.title:GetText() ~= title)
         state.records[3].recent = 123
-        local reads = state.calls.snapshot
+        reads = state.calls.snapshot
         c:Call(c.root, "OnMouseWheel", -1)
         assert(state.calls.snapshot == reads, "scroll fetched native history synchronously")
         HistoryTick(c, state, "revealed", 0.01)
@@ -323,7 +328,8 @@ Test("native history is sampled once per second while counter-only captures keep
             after = 100,
         })
         recent = HistoryCounts(state)
-        HistoryTick(c, state, "new-visible")
+        c:Call(c.root, "OnMouseWheel", 0)
+        HistoryTick(c, state, "new-visible", 0.01)
         local admitted = HistoryCounts(state)
         assert(admitted > recent and c:Row(1).entry.name == "New native source" and c:Row(1).entry.dps == 14)
         c:SetSetting("meterDpsWindow", 0)
@@ -345,7 +351,8 @@ Test("a retained rank-group identity refreshes changed membership and regressed 
         end)
         local identity = c:Row(1).entry.rowId
         state.records = helpers.Ranks(2)
-        HistoryTick(c, state, "new-rank-member")
+        c:Call(c.root, "OnMouseWheel", 0)
+        HistoryTick(c, state, "new-rank-member", 0.01)
         local expected = state.lastResponse.rows[1].displayRate.value + state.lastResponse.rows[2].displayRate.value
         assert(c:Row(1).entry.rowId == identity and c:Row(1).entry.dmg == 30)
         assert(c:Row(1).entry.dps == expected, "same group ID kept its old partial rate until the next one-Hz sample")
@@ -355,7 +362,8 @@ Test("a retained rank-group identity refreshes changed membership and regressed 
         -- Defend against an unexpected host clock regression without deriving a rate locally.
         state.context.asOfRunSeconds, state.context.counterRevision = 19, "regressed-native-time"
         state.context.snapshotId = "regressed-native-time"
-        c:Tick()
+        c:Call(c.root, "OnMouseWheel", 0)
+        c:Tick(0.01)
         assert(c:Row(1).entry.rowId == identity and c:Row(1).entry.dmg == 300)
         assert(c:Row(1).entry.dps == 3, "regressed native time retained the previous presentation sample")
         assert(HistoryCounts(state) > recent and state.queries[table.getn(state.queries)].windowSeconds == 10)
@@ -370,16 +378,16 @@ Test("reduced history cadence retains native unavailable, warmup, reset and view
         assert(c:Row(1).entry.dps == nil and c:Row(1).entry.averageDps ~= nil)
         assert(c:Row(1).value:GetText() == "--", "native history gap was filled with an All average")
         local recent = HistoryCounts(state)
-        HistoryTick(c, state, "gap-held")
+        HistoryTick(c, state, "gap-held", 0.21)
         assert(HistoryCounts(state) == recent and c:Row(1).entry.dps == nil)
         state.recentStatus = "ready"
         env.DFRL.ResetMeterStats()
         local checkpoint = state.checkpoint.checkpointId
-        HistoryTick(c, state, "reset-warmup")
+        HistoryTick(c, state, "reset-warmup", 0.21)
         assert(c:Row(1).entry.dmg == 100 and c:Row(1).entry.dps == nil)
         assert(state.queries[table.getn(state.queries)].checkpointId == checkpoint)
         recent = HistoryCounts(state)
-        HistoryTick(c, state, "warmup-held")
+        HistoryTick(c, state, "warmup-held", 0.21)
         assert(HistoryCounts(state) == recent and c:Row(1).entry.dps == nil)
         HistoryTick(c, state, "warmup-ended", 1.01)
         local span = math.min(10, state.context.asOfRunSeconds - state.checkpoint.atRunSeconds)
@@ -651,8 +659,8 @@ Test("pending native portraits retry on their native deadline and stable failure
     c:Cycle()
     c:Cycle()
     assert(state.calls.portrait == 1, "pending portrait was not attempted once on first native identity")
-    c:Tick()
-    c:Tick()
+    c:Tick(0.21)
+    c:Tick(0.21)
     assert(state.calls.portrait == 1, "pending portrait ignored its retry delay")
     state.portraitError = nil
     c:Tick(1.01)

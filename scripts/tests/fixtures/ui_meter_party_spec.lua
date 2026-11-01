@@ -136,7 +136,10 @@ local function Meter(configure)
         return true
     end
     env.SetPortraitToTexture = function(name, texture) env[name]:SetTexture(texture) end
-    env.AZS_GetPhase = function() return context.phase end
+    env.AZS_GetPhase = function()
+        Count("reads", "phase")
+        return context.phase
+    end
     env.AZS_RUN, env.AZS_RUN_UPDATED = { t = 10 }, context.now
     context.damage = { { name = "Sinister Strike", dmg = 100, dps = 10, share = 1, proc = 0 } }
     context.healing, context.boss = context.damage, context.damage
@@ -198,9 +201,10 @@ local function Meter(configure)
         if object.kind == "FontString" and object.parent == context.header then context.title = object end
         if object.kind == "FontString" and object.parent == context.root then context.status = object end
     end
-    function context:Tick()
-        self.now = self.now + 0.21
-        self:Call(self.controller, "OnUpdate", 0.21)
+    function context:Tick(elapsed)
+        local step = elapsed or 1.01
+        self.now = self.now + step
+        self:Call(self.controller, "OnUpdate", step)
     end
     function context:Cycle(direction)
         self:Call(self.header, "OnClick", direction or "LeftButton")
@@ -242,6 +246,58 @@ local function NoMeterReads(context)
         "navigation read meter getters before its visible deferred reader"
     )
 end
+
+Test("legacy meter coalesces packets for one second and explicit actions arm the next frame", function()
+    for _, performance in ipairs({ false, true }) do
+        local context = Meter(function(c) c.settings.performanceMode = performance end)
+        context:Tick(0.01)
+        assert(
+            context.reads.phase == 1 and context.reads.damage == 1,
+            "initial readiness waited a full regular interval"
+        )
+        assert(context:Row(1).entry.dmg == 100)
+        context:ResetCounts()
+        for receipt = 1, 4 do
+            context.damage[1].dmg = 100 + receipt * 10
+            context:Publish("AZSMETER")
+            context:Tick(0.2)
+            NoMeterReads(context)
+            assert(
+                not context.reads.phase and context:Row(1).entry.dmg == 100,
+                "packet receipt bypassed the regular read interval"
+            )
+        end
+        context:Tick(0.19)
+        NoMeterReads(context)
+        assert(not context.reads.phase, "phase polling ran before the one-second boundary")
+        context:Tick(0.02)
+        assert(
+            context.reads.phase == 1 and context.reads.damage == 1,
+            "queued packets did not share one bounded reader pass"
+        )
+        assert(context:Row(1).entry.dmg == 140, "the regular read did not publish the latest coalesced counters")
+        context:ResetCounts()
+        context:Call(context.header, "OnClick", "LeftButton")
+        NoMeterReads(context)
+        context:Tick(0.01)
+        assert(
+            context.reads.phase == 1 and context.reads.healing == 1 and context.title:GetText() == "Healing Done",
+            "navigation lost next-frame readiness"
+        )
+        context:ResetCounts()
+        context.env.DFRL.ResetMeterStats()
+        NoMeterReads(context)
+        context:Tick(0.01)
+        assert(
+            context.reads.phase == 1
+                and context.reads.damage == 1
+                and context.reads.healing == 1
+                and context.reads.boss == 1
+                and context.reads.party == 1,
+            "Reset delayed or repeated its deferred native baselines"
+        )
+    end
+end)
 
 Test("deferred navigation skips unpublished boss and party views in both directions", function()
     local context = Meter()

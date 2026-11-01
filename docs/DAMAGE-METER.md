@@ -10,10 +10,16 @@ learned talents, pet/totem attacks and periodic effects in every native language
 Unrelated native sources retain their separate rows even when their names match.
 Recognized ability ranks use a stable display-group identity for rate samples.
 
-Damage Done requests the selected native recent window at the existing
-one-second rate cadence. Between rate samples, complete native snapshots with
-`windowSeconds = 0` keep totals, shares and attribution current at five Hz.
-These counter reads do not replace recent DPS with the All average. Newly
+The shared meter controller reads native and legacy data once per second during
+regular updates. Totals, shares, bars, attribution and displayed rates use that
+same cadence. Input, settings, scrolling, Reset and showing the meter prime the
+existing reader for the next frame, keeping user feedback immediate without
+another idle updater.
+
+Damage Done requests the selected native recent window on the regular
+one-second pass. Extra triggered reads within that second may use complete
+native snapshots with `windowSeconds = 0` while the viewport's native rates
+remain current. These counter reads do not replace recent DPS with the All average. Newly
 revealed or replaced row identities, Reset and native context retirement obtain
 a fresh recent capture immediately through the existing reader. Only visible
 rows retain sampled native rates; unavailable history stays unavailable.
@@ -244,9 +250,9 @@ actual Rockbiter, Hot Streak and Chastise payloads remain unverified.
 ## Native data
 
 The meter reuses prepared source names and groups as counters change, and only
-prepares the rows currently visible. Scrolling retains the complete rankings
-and initializes each newly revealed row's rate. Totals keep their existing
-refresh, while displayed DPS/HPS updates once per second. Both Performance Mode
+copies and samples the rows currently visible. Scrolling retains the complete
+rankings and initializes each newly revealed row's rate. Regular totals and
+displayed DPS/HPS update once per second. Both Performance Mode
 states share this behavior. The native API still supplies the complete ledger;
 these source changes do not establish a measured late-run FPS improvement.
 
@@ -312,7 +318,7 @@ segments enter the calculation.
 
 `core/meter_rates.lua` keeps bounded, session-only cumulative samples for the
 header and exact source-name/proc identities. Observation uses the existing
-five-Hz controller, continuing Damage Done sampling while another meter view is
+one-Hz controller, continuing Damage Done sampling while another meter view is
 visible. A gap over two run seconds discards the recent window; showing after
 hiding starts a new observation window. Clock/total/source-counter regression or
 a disappearing source retires recent history. New runs, world cleanup, language
@@ -326,8 +332,8 @@ Missing or invalid values and both full resets use ten. Named profiles copy the
 same normalized setting, with no new SavedVariable. Reset baselines/history are
 never saved or included in profiles.
 
-Header and row DPS/HPS plus average tooltips are presented at one Hz; totals,
-shares, bars and input retain five-Hz updates. New sources obtain their current
+Header and row DPS/HPS, average tooltips, totals, shares and bars use one-Hz
+regular updates. Input primes the reader for the next frame. New sources obtain their current
 rate immediately when a sufficient window exists. Rate samples follow exact
 name/proc identity, independently of row pooling, scrolling or native sorting.
 View changes and invalid data clear presentation samples; rate-history retirement
@@ -351,8 +357,9 @@ Initially a nonempty valid getter result can recover a view whose packet arrived
 before addon initialization. Empty lists require their `AZSMETER`, `AZSHEAL` or
 `AZSBOSSDMG` publication. A new zone, world leave or ready phase retires the
 previous data and requires new publications before accepting that view again.
-Packet handlers record receipt only: getters are read after parsing in OnUpdate,
-at most five times a second. Paused data has no artificial expiry. Missing native
+Packet handlers record receipt only: getters are read after parsing by the
+shared one-second controller, with input-triggered refreshes on the next frame.
+Paused data has no artificial expiry. Missing native
 replay after reload can leave an empty view waiting; no resync API is invented.
 
 Damage, healing and boss sources belong to the local player's native meter.
@@ -372,8 +379,8 @@ rows and the summed party total/rate. Only the published name, class, damage,
 rate and share are consumed; no spell breakdown or attribution is invented.
 The existing controller handles `AZSPARTY` receipts and defers its getter until
 after native parsing, with the same phase, empty-publication and world/zone
-retirement gates. Readiness, native HUD ownership, one-Hz displayed rates and
-the five-Hz visible reader are shared. X baselines this fourth view along with
+retirement gates. Readiness, native HUD ownership, displayed rates and the
+one-Hz regular reader are shared. X baselines this fourth view along with
 the other three; its post-reset rates use native seconds since Reset. Class
 metadata survives session deltas, including metadata-only changes.
 
@@ -414,7 +421,7 @@ The native **Melee** source uses the equipped main-hand icon from
 Unavailable, empty, invalid or question-mark results use the native default
 `Interface\\Icons\\INV_Sword_04` sword. Only the exact English label or the
 active language's official `Melee` caption matches. Equipment changes are read
-through the meter's existing five-Hz refresh, with no new event or updater.
+through the meter's existing one-Hz refresh, with no new event or updater.
 
 SCT and the meter share one source-icon resolver and live item cache. The
 native general-jewelry catalog now covers item-triggered damage/healing such as
@@ -573,7 +580,8 @@ updater or repeated geometry work is added.
 
 The pooled rows show a scrollable source list. Header mode and scroll
 offset are session-only; resets select Damage Done and the first page. One controller
-coalesces data reads at five Hz. Bar values, colors, successful icon bindings and
+coalesces regular data reads at one Hz; user actions prime that same reader for
+the next frame. Bar values, colors, successful icon bindings and
 label text skip unchanged writes. If the shared SCT resolver is unavailable,
 the meter uses the same neutral unknown icon without changing native totals.
 Shared layout storage contains only confirmed geometry and visibility; no meter

@@ -2,7 +2,7 @@
 -- media/tex/meter/LICENSE.txt. Pinned source: third_party/DetailsTWW-ARTWORK.md.
 -- The existing gold ring retains third_party/Jewelry-ARTWORK.md's provenance.
 DFRL:NewMod("DamageMeter", 7, function()
-    local HEADER, ROW_HEIGHT, FOOTER = 32, 32, 32
+    local HEADER, ROW_HEIGHT, FOOTER, REFRESH_SECONDS = 32, 32, 32, 1
     local width, fontSize = 240, DFRL.display.Get("meterFontSize")
     local nameFontSize = DFRL.display.Get("meterNameFontSize")
     local enabled = DFRL.display.Get("meterEnabled")
@@ -74,7 +74,7 @@ DFRL:NewMod("DamageMeter", 7, function()
         if not selected.party then selected.groups = T.NewMeterSourceGroups() end
     end
     local phases = { playing = true, choosing = true, paused = true, dead = true, victory = true }
-    local mode, offset, age = 1, 0, 0.2
+    local mode, offset, age = 1, 0, REFRESH_SECONDS
     local inWorld, editing, ready, faulted = true, false, true, false
     local rows, received, blocked = {}, {}, {}
     local receipts, publications, publicationSequence = {}, {}, 0
@@ -1188,7 +1188,7 @@ DFRL:NewMod("DamageMeter", 7, function()
         else
             viewSelection.first, viewSelection.steps = direction, 0
         end
-        viewSelection.direction, age = direction, 0.2
+        viewSelection.direction, age = direction, REFRESH_SECONDS
     end)
     header:SetScript("OnEnter", ShowHeaderTooltip)
     header:SetScript("OnLeave", HideTooltip)
@@ -1215,12 +1215,14 @@ DFRL:NewMod("DamageMeter", 7, function()
             row.valueMetric = nil
         end
     end)
-    root:SetScript("OnShow", function() age = 0.2 end)
+    root:SetScript("OnShow", function()
+        if not viewSelection.paint then age = REFRESH_SECONDS end
+    end)
     root:SetScript("OnMouseWheel", function()
         if editing then return end
         HideTooltip()
         offset = math.max(0, math.min(offset - (tonumber(arg1) or 0), snapshot.count - visible))
-        age = 0.2
+        age = REFRESH_SECONDS
     end)
     DFRL.layout.Register("damageMeter", root, function()
         root:ClearAllPoints()
@@ -1235,10 +1237,10 @@ DFRL:NewMod("DamageMeter", 7, function()
             DFRL.display.Set("meterRows", math.floor((height - HEADER - FOOTER) / ROW_HEIGHT + 0.5))
         end,
         onResize = function(frame)
-            width, age = frame:GetWidth(), 0.2
+            width, age = frame:GetWidth(), REFRESH_SECONDS
         end,
         onEdit = function(active)
-            editing, age = active, 0.2
+            editing, age = active, REFRESH_SECONDS
             HideTooltip()
             header:EnableMouse(not active)
             resetButton:EnableMouse(not active)
@@ -1247,7 +1249,7 @@ DFRL:NewMod("DamageMeter", 7, function()
             end
         end,
         onReset = function()
-            mode, offset, age, faulted = 1, 0, 0.2, false
+            mode, offset, age, faulted = 1, 0, REFRESH_SECONDS, false
             viewSelection.first, viewSelection.steps, viewSelection.dirty = nil, 0, true
             dataDirty = true
             HideTooltip()
@@ -1292,7 +1294,7 @@ DFRL:NewMod("DamageMeter", 7, function()
             ClearReadPass()
         end
         if changed then optionsRevision = optionsRevision + 1 end
-        visible, age = count, 0.2
+        visible, age = count, REFRESH_SECONDS
         offset = math.max(0, math.min(offset, snapshot.count - visible))
         for index = visible + 1, table.getn(rows) do
             ClearRow(rows[index])
@@ -1320,7 +1322,7 @@ DFRL:NewMod("DamageMeter", 7, function()
         end
         ClearSamples()
         dataDirty = true
-        age = 0.2
+        age = REFRESH_SECONDS
     end)
     function DFRL.ResetMeterStats()
         if not enabled or not inWorld or not ready or faulted then return end
@@ -1343,12 +1345,12 @@ DFRL:NewMod("DamageMeter", 7, function()
             T.SetTextIfChanged(status, "")
             if status:IsShown() then status:Hide() end
         end
-        dataDirty, age = true, 0.2
+        dataDirty, age = true, REFRESH_SECONDS
     end
     Tick = function()
         if not inWorld then return end
         age = age + (tonumber(arg1) or 0)
-        if age < 0.2 then return end
+        if age < REFRESH_SECONDS then return end
         age = 0
         local ok, message = pcall(Refresh)
         ClearReadPass()
@@ -1374,7 +1376,7 @@ DFRL:NewMod("DamageMeter", 7, function()
     end
     controller:SetScript("OnEvent", function()
         if event == "PLAYER_ENTERING_WORLD" then
-            inWorld, faulted, age = true, false, 0.2
+            inWorld, faulted, age = true, false, REFRESH_SECONDS
             UpdateController()
         elseif event == "PLAYER_LEAVING_WORLD" or event == "PLAYER_LOGOUT" then
             inWorld = false
@@ -1382,7 +1384,7 @@ DFRL:NewMod("DamageMeter", 7, function()
             UpdateController()
         elseif event == "CVAR_UPDATE" then
             if native.Observe(arg1) then
-                age = 0.2
+                age = REFRESH_SECONDS
                 UpdateController()
             end
         elseif event == "CHAT_MSG_ADDON" and enabled then
@@ -1398,7 +1400,7 @@ DFRL:NewMod("DamageMeter", 7, function()
                     end
                 end
             end
-            -- The five-Hz read coalesces packets and runs after native parsing.
+            -- The one-second read coalesces packets and runs after native parsing.
         end
     end)
     if type(_G.ReloadUI) == "function" then

@@ -89,8 +89,8 @@ Party rows contain `name`, `class`, `dmg`, `dps`, `share`, `top` and `topdps`.
 The addon currently consumes the hero name/class/totals/rate/share and resolves
 portraits separately. It does not invent party spell or healing breakdowns.
 
-The custom meter reads through one five-Hz controller, with displayed rates
-limited to one Hz. Its one-to-ten visible rows and scrolling are a viewport,
+The custom meter uses one controller for one-Hz regular reads and displayed
+rates. User input primes that reader for the next frame. Its one-to-ten visible rows and scrolling are a viewport,
 not a limit on the native source list. It has four distinct periods/behaviors:
 
 - Native whole-run totals and averages for Damage Done and Healing Done.

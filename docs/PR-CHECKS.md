@@ -73,8 +73,9 @@ and same-publication Party rate validation. These cases are CI-only and were
 not run locally; operation counts do not establish native snapshot cost or FPS.
 
 Native history-cadence cases count positive-window and zero-window queries
-through the production adapter/controller. They retain five-Hz counter updates
-between one-second native rate samples, newly revealed and replaced identities,
+through the production adapter/controller. They cover shared one-Hz regular
+native/legacy reads, next-frame input/settings/scroll/Reset/show refreshes,
+extra zero-window reads within a native rate sample, newly revealed and replaced identities,
 unavailable history, warmup after atomic Reset, native checkpoint denominators,
 All, view return, hidden/off retirement and both Performance Mode states.
 Adapter cases keep physical query retries/captures separate and invalidate
