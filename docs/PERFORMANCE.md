@@ -272,6 +272,9 @@ existing snapshot read. Recorded actor names distinguish pet spells without
 current-pet scans or name-based attribution. An explicit native summon/totem key
 groups matching kinds for one owner across incarnations; otherwise the actor
 identity stays separate. Native spell-rank grouping retains that caster scope.
+An exact ability/caster display-name match skips the redundant suffix during
+existing changed-only caption preparation. It adds no lookup, cache, read or
+per-frame work and never merges identities; both modes share the same result.
 
 The default-off `meterGroupPets` choice in the existing display table combines
 pet spell rows through the same pooled presentation copies. Actual choice

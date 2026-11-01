@@ -1929,6 +1929,59 @@ Test("pet skills keep the caster and combine repeated native summon definitions"
     assert(table.getn(source) == 4, "different native descriptors at the same rank lost their ambiguity")
 end)
 
+Test(
+    "equal pet spell and caster captions suppress only the suffix while keeping recorded identities separate",
+    function()
+        for _, kind in ipairs({ "pet", "summon", "totem" }) do
+            local _, state, meter = Native()
+            local view = { metric = "damage", scope = "self", period = "run", groupBy = "actor_source" }
+            state.records = {
+                {
+                    id = "same-skill",
+                    rowId = "hero-skill",
+                    abilityKey = "searing",
+                    rank = 1,
+                    name = "Searing Totem",
+                    amount = 100,
+                    recent = 50,
+                },
+                {
+                    id = "same-skill",
+                    rowId = "caster-skill",
+                    abilityKey = "searing",
+                    rank = 1,
+                    name = "Searing Totem",
+                    amount = 40,
+                    recent = 20,
+                    actorId = "caster-one",
+                    actorKind = kind,
+                    actorName = "Searing Totem",
+                },
+            }
+            local source, total, rate = meter.Read(view, 10)
+            assert(table.getn(source) == 2 and total == 140 and rate == 7)
+            assert(source[1].name == "Searing Totem" and source[2].name == "Searing Totem")
+            assert(
+                source[1].rowId ~= source[2].rowId and source[1].dmg == 100 and source[2].dmg == 40,
+                "equal captions merged recorded player and pet damage"
+            )
+            local identity = source[2].rowId
+            for _, record in ipairs(state.records) do
+                record.name = "Totem incendiaire"
+            end
+            state.records[2].actorName = "Totem incendiaire"
+            state.context.languageCode, state.context.languageRevision = "fr", "equal-pet-captions-fr"
+            state.context.metadataRevision = "localized-equal-pet-caption"
+            source = assert(meter.Read(view, 10))
+            assert(source[2].name == "Totem incendiaire" and source[2].rowId == identity)
+            state.records[2].actorName = "Different Totem"
+            state.context.metadataRevision = "different-pet-caption"
+            source = assert(meter.Read(view, 10))
+            assert(source[2].name == "Totem incendiaire (Different Totem)" and source[2].rowId == identity)
+        end
+    end
+)
+
 Test("pet summaries preserve native rates, reset fences and presentation changes", function()
     local _, state, meter = Native()
     local view = { metric = "damage", scope = "self", period = "run", groupBy = "actor_source" }

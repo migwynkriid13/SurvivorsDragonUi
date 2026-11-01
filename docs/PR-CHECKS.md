@@ -200,7 +200,8 @@ and were not executed locally; no live Eye of Hakkar snapshot was available.
 
 Pet meter cases add explicit recorded hero/pet/summon/totem actors, overlapping
 spell names, repeated summon incarnations and native type-key fallbacks. They
-cover default spell/caster captions, optional pet summaries, native rates and
+cover default spell/caster captions, exact-match suffix suppression without
+merging player/pet identities, localized name changes, optional pet summaries, native rates and
 checkpoint preservation, retained portraits, metadata changes, unchanged reuse,
 hidden/off work and both Performance Mode states. Display/editor cases cover
 default-off normalization, searchable controls, preview, Confirm, discard,

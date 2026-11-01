@@ -879,7 +879,7 @@ function DFRL.tools.NewNativeMeter()
         local display = TalentOrigin(source, native, snapshot, contributions) or source
         row.proc, row.iconStatus = native.nativeProc and 1 or 0, display.icon.status
         if display.icon.status == "ready" then row.icon = display.icon.path end
-        row.name = pet and (display.name .. " (" .. actor.name .. ")") or display.name
+        row.name = pet and display.name ~= actor.name and (display.name .. " (" .. actor.name .. ")") or display.name
         row.actorId, row.actorName = actor and actor.actorId, actor and actor.name
         row.actorPortraitKey = actor and actor.portrait.portraitKey
         row.actorPortraitStatus = actor and actor.portrait.status

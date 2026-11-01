@@ -259,7 +259,10 @@ supplying that identity. No local tests or game execution were performed.
 
 On clients with the native v1 meter API, Damage Done and Boss Damage show the
 received caster name beside each pet, summon or totem spell, such as
-`Shadowbolt (Imp)`. Player spells keep their own rows. The meter uses recorded
+`Shadowbolt (Imp)`. When the received ability and caster display names match
+exactly, omit the repeated suffix: `Searing Totem` stays `Searing Totem`.
+This changes only the caption; player and pet damage keep their recorded
+identities even when the visible names match. Player spells keep their own rows. The meter uses recorded
 actor identities, including contributors that have despawned, rather than
 matching names or observing the current pet.
 
