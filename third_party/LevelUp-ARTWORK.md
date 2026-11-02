@@ -59,7 +59,8 @@ the measured caption width; changing language or font adds no regions or
 per-frame layout loop. Adjacent strips share their original atlas neighbours
 for filtering.
 
-The content keeps its 60-unit title inset and ten-unit side padding. A 40-unit
+Content measurement keeps its 60-unit title inset and ten-unit side padding;
+the heading paints three units left of that inset for optical centering. A 40-unit
 class icon centers inside a 44-unit silver rim; its upper-right badge keeps the
 existing count measurement and widening behavior. The complete panel remains
 centered within the same multilingual Layout owner, at the existing 0.7 visual
