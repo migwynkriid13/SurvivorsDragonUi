@@ -62,6 +62,7 @@ do
     local env = context.env
     context.phase, context.count = "playing", 3
     env.AZS_RUN, env.AZS_RUN_UPDATED = {}, 1
+    env.AZS_ZONE, env.AZS_ZONE_UPDATED = { class = "mage" }, 1
     env.AZS_GetPhase = function()
         context.reads.phase = (context.reads.phase or 0) + 1
         return context.phase
@@ -83,7 +84,8 @@ do
     end
     env.UnitClass = function(unit)
         assert(unit == "player")
-        return "Mage", "MAGE"
+        context.reads.characterClass = (context.reads.characterClass or 0) + 1
+        return "Paladin", "PALADIN"
     end
     env.tostring = function(value)
         if type(value) == "number" then context.reads.formats = (context.reads.formats or 0) + 1 end
@@ -119,6 +121,11 @@ do
             context.reads.metrics = (context.reads.metrics or 0) + 1
             return #self:GetText() * 7
         end
+        local setCrop = object.SetTexCoord
+        function object:SetTexCoord(...)
+            setCrop(self, ...)
+            self.crop = { ... }
+        end
         function object:RegisterForClicks(value) assert(value == "LeftButtonUp") end
         function object:SetBlendMode(value) assert(value == "ADD") end
         return object
@@ -139,11 +146,19 @@ do
     context:Load("modules/ui/levels.lua", "StoredLevels")
     local button = env.SurvivorsDragonUiStoredLevels
     local controller = context:Controller("PLAYER_ENTERING_WORLD")
-    local label, title
+    local label, title, icon
     for _, object in ipairs(context.objects) do
         if object.kind == "FontString" and object:GetText() == "3" then label = object end
         if object.kind == "FontString" and object:GetText() == "LEVEL UP" then title = object end
+        if object.texture == "Interface\\Glues\\CharacterCreate\\UI-CharacterCreate-Classes" then icon = object end
     end
+    local function Crop(left, right, top, bottom)
+        assert(icon and icon:IsShown(), "current run class icon is hidden")
+        local crop = icon.crop
+        assert(crop[1] == left and crop[2] == right and crop[3] == top and crop[4] == bottom, "stale class artwork")
+        assert(not context.reads.characterClass, "stored levels queried the character-selection class")
+    end
+    Crop(0.25, 0.5, 0, 0.25)
     assert(label and button:IsVisible() and context.nativeShown == false)
     assert(context.reads.hud == 2, "initial takeover did not read back the setter")
     assert(button:GetScript("OnUpdate"), "normal stored-level pulse did not start")
@@ -222,6 +237,7 @@ do
     assert(context.reads.hud == 10 and not context.writes.hud, "settled ownership repeated its readback")
     assert(not context.reads.formats, "unchanged stored-level counts were formatted repeatedly")
     assert(not context.reads.metrics, "unchanged stored-level labels were measured repeatedly")
+    assert(not context.writes.SetTexCoord, "unchanged run class repeated its crop write")
     label.text = "native reset"
     context:ResetCounts()
     Tick()
@@ -269,12 +285,100 @@ do
     context.count = 4
     Tick()
     assert(button:IsVisible() and context.nativeShown == false, "restore retry prevented later takeover")
-    context:Event(controller, "PLAYER_LEAVING_WORLD")
-    assert(not controller:GetScript("OnUpdate"), "stored levels retained their out-of-world updater")
-    context:ResetCounts()
-    Tick()
-    assert(not context.reads.phase and not context.reads.levels and not context.reads.formats)
-    context:Event(controller, "PLAYER_ENTERING_WORLD")
-    assert(controller:GetScript("OnUpdate"), "stored levels did not rearm on world entry")
+    for _, performance in ipairs({ false, true }) do
+        context:SetSetting("performanceMode", performance)
+        env.AZS_ZONE, env.AZS_ZONE_UPDATED = { class = "warlock" }, 2
+        context:Event(controller, "CHAT_MSG_ADDON", "AZSZONE")
+        context:Call(controller, "OnUpdate", 0)
+        Crop(0.75, 1, 0.25, 0.5)
+        context.count = 0
+        Tick()
+        context.count = 4
+        Tick()
+        Crop(0.75, 1, 0.25, 0.5)
+
+        -- The next run's counter can arrive before its class snapshot.
+        context.phase = "ready"
+        Tick()
+        context.phase, env.AZS_RUN = "playing", {}
+        Tick()
+        assert(button:IsVisible() and label:GetText() == "4" and not icon:IsShown(), "previous run class survived")
+        context.opened = false
+        context:Call(button, "OnClick")
+        assert(context.opened, "pending class metadata blocked the native level-up action")
+        env.AZS_ZONE, env.AZS_ZONE_UPDATED = { class = "hunter" }, 3
+        context:Event(controller, "CHAT_MSG_ADDON", "AZSZONE")
+        context:Call(controller, "OnUpdate", 0)
+        Crop(0, 0.25, 0.25, 0.5)
+        context:ResetCounts()
+        Tick()
+        assert(not context.writes.SetTexCoord, "unchanged Hunter class repeated its crop write")
+
+        local function MissingClass(zone, stamp)
+            env.AZS_ZONE, env.AZS_ZONE_UPDATED = zone, stamp
+            Tick()
+            assert(button:IsVisible() and not icon:IsShown(), "invalid class metadata retained or guessed artwork")
+            assert(not context.reads.characterClass, "missing run class fell back to the previous character")
+        end
+        MissingClass(nil, 3)
+        MissingClass(false, 3)
+        MissingClass({}, 3)
+        MissingClass({ class = false }, 3)
+        MissingClass({ class = "HUNTER" }, 3)
+        MissingClass({ class = "unknown" }, 3)
+        MissingClass({ class = "hunter" }, nil)
+        MissingClass({ class = "hunter" }, "3")
+        MissingClass({ class = "hunter" }, -1)
+        MissingClass({ class = "hunter" }, math.huge)
+        MissingClass({ class = "hunter" }, 0 / 0)
+        env.AZS_ZONE, env.AZS_ZONE_UPDATED = { class = "hunter" }, 3
+        Tick()
+        Crop(0, 0.25, 0.25, 0.5)
+        context.phase = nil
+        Tick()
+        context.phase = "playing"
+        Tick()
+        Crop(0, 0.25, 0.25, 0.5)
+
+        context.hidden = true
+        context:SetLayoutHidden(true)
+        env.AZS_ZONE, env.AZS_ZONE_UPDATED = { class = "mage" }, 4
+        context:ResetCounts()
+        Tick()
+        assert(not context.writes.SetTexCoord, "hidden stored levels painted a new class")
+        context.hidden = false
+        context:SetLayoutHidden(false)
+        Tick()
+        Crop(0.25, 0.5, 0, 0.25)
+
+        context:Event(controller, "PLAYER_LEAVING_WORLD")
+        assert(not controller:GetScript("OnUpdate"), "stored levels retained their out-of-world updater")
+        context:ResetCounts()
+        Tick()
+        assert(not context.reads.phase and not context.reads.levels and not context.reads.formats)
+        context:Event(controller, "PLAYER_ENTERING_WORLD")
+        assert(controller:GetScript("OnUpdate"), "stored levels did not rearm on world entry")
+        Tick()
+        assert(not button:IsShown(), "world re-entry accepted the retired run counter")
+        env.AZS_RUN = {}
+        Tick()
+        assert(button:IsVisible() and not icon:IsShown(), "world re-entry accepted the retired class")
+        -- A fresh zone can arrive before the run enters playing.
+        context.phase = "ready"
+        env.AZS_ZONE, env.AZS_ZONE_UPDATED = { class = "warlock" }, 5
+        Tick()
+        Tick()
+        context.phase = "playing"
+        Tick()
+        Crop(0.75, 1, 0.25, 0.5)
+        for _, phase in ipairs({ "dead", "victory" }) do
+            context.phase = phase
+            Tick()
+            assert(not button:IsShown(), "terminal phase retained the stored-level button")
+            context.phase = "playing"
+            Tick()
+            Crop(0.75, 1, 0.25, 0.5)
+        end
+    end
 end
-print("PASS stored levels retain original badge styling, cache full counts and preserve native takeover readback/retry")
+print("PASS stored levels follow the current run class, retain badge styling and preserve cached/native lifecycles")

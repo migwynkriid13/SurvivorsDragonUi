@@ -38,6 +38,15 @@ kits retain the legacy fallback. Both Performance Mode states share these cases.
 These are CI-only ownership/input-boundary checks. They do not execute client
 code or prove actual native hit testing, AS settings behavior or run preservation.
 
+Stored-level cases keep `UnitClass("player")` fixed to a different character
+while changing received run classes. They cover Warlock-to-Hunter switching,
+next-frame zone receipt, missing/malformed metadata, unchanged crop writes,
+zero-count reuse, hidden recovery, ready/world retirement, same-run recovery
+after dead/victory and a fresh zone received before playing. Count and click
+behavior remain available while class metadata is pending. Both Performance Mode states use
+the production controller over fake native boundaries. These cases are authored
+for CI only; they do not establish native publication timing or rendering.
+
 ## What fails a PR
 
 - Prettier or StyLua formatting differences, or a missing TOC version increment

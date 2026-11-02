@@ -39,20 +39,20 @@ DFRL:NewMod("StoredLevels", 5, function()
     local TEXT_LEFT, PANEL_PADDING, ICON_OFFSET_X, ICON_OFFSET_Y = 60, 10, -12, 4
     local texturePath = DFRL:GetInfoOrCons("tex") .. "levelup\\"
     local CLASS_ICONS = {
-        WARRIOR = { 0, 0.25, 0, 0.25 },
-        MAGE = { 0.25, 0.5, 0, 0.25 },
-        ROGUE = { 0.5, 0.75, 0, 0.25 },
-        DRUID = { 0.75, 1, 0, 0.25 },
-        HUNTER = { 0, 0.25, 0.25, 0.5 },
-        SHAMAN = { 0.25, 0.5, 0.25, 0.5 },
-        PRIEST = { 0.5, 0.75, 0.25, 0.5 },
-        WARLOCK = { 0.75, 1, 0.25, 0.5 },
-        PALADIN = { 0, 0.25, 0.5, 0.75 },
+        warrior = { 0, 0.25, 0, 0.25 },
+        mage = { 0.25, 0.5, 0, 0.25 },
+        rogue = { 0.5, 0.75, 0, 0.25 },
+        druid = { 0.75, 1, 0, 0.25 },
+        hunter = { 0, 0.25, 0.25, 0.5 },
+        shaman = { 0.25, 0.5, 0.25, 0.5 },
+        priest = { 0.5, 0.75, 0.25, 0.5 },
+        warlock = { 0.75, 1, 0.25, 0.5 },
+        paladin = { 0, 0.25, 0.5, 0.75 },
     }
     local PHASES = { playing = true, choosing = true, paused = true }
     local inWorld, editing, reloading, elapsed = true, false, false, 0
     local nativeOwner = T.NewHudOwner("levels")
-    local retiredRun
+    local retiredRun, retiredZone, observedZone
     local button = CreateFrame("Button", "SurvivorsDragonUiStoredLevels", UIParent)
     button:SetHeight(HEIGHT * VISUAL_SCALE)
     button:SetFrameStrata("HIGH")
@@ -222,11 +222,37 @@ DFRL:NewMod("StoredLevels", 5, function()
             return
         end
         local ok, phase = pcall(AZS_GetPhase)
-        if not ok or not PHASES[phase] then return end
+        if not ok then return end
+        if not PHASES[phase] then
+            if observedZone and phase == "ready" then
+                -- Retire the previous run, not a new AZSZONE already received
+                -- while ready for the next class.
+                retiredZone, observedZone = observedZone, nil
+            end
+            return
+        end
         local state = AZS_RUN
         if type(state) ~= "table" or state == retiredRun or type(AZS_RUN_UPDATED) ~= "number" then return end
+        observedZone = AZS_ZONE
         local received, count = pcall(AZS_GetStoredLevels)
         if received and PositiveInteger(count) then return count end
+    end
+
+    local function ClassCrop()
+        local zone, stamp = observedZone, AZS_ZONE_UPDATED
+        if
+            type(zone) ~= "table"
+            or zone == retiredZone
+            or type(stamp) ~= "number"
+            or stamp < 0
+            or stamp - stamp ~= 0
+            or type(zone.class) ~= "string"
+        then
+            return
+        end
+        -- UnitClass("player") can still describe the character-selection
+        -- record after changing classes. The run publishes its own class key.
+        return CLASS_ICONS[zone.class]
     end
 
     local function RestoreNative() return nativeOwner.Release(true) end
@@ -253,8 +279,7 @@ DFRL:NewMod("StoredLevels", 5, function()
         end
         local paint = not DFRL.layout.IsHidden("levelUp") and UIParent:IsVisible()
         if paint then
-            local _, class = UnitClass("player")
-            local crop = CLASS_ICONS[class]
+            local crop = ClassCrop()
             if crop then
                 if paintedCrop ~= crop then
                     icon:SetTexCoord(unpack(crop))
@@ -322,6 +347,7 @@ DFRL:NewMod("StoredLevels", 5, function()
         inWorld = false
         controller:SetScript("OnUpdate", nil)
         retiredRun = AZS_RUN
+        retiredZone, observedZone = AZS_ZONE, nil
         Clear()
     end
 
@@ -336,8 +362,8 @@ DFRL:NewMod("StoredLevels", 5, function()
             inWorld = true
             elapsed = INTERVAL
             controller:SetScript("OnUpdate", Tick)
-        elseif event == "CHAT_MSG_ADDON" and arg1 == "AZSRUN" then
-            -- Read on the next frame, after the native parser replaces AZS_RUN.
+        elseif event == "CHAT_MSG_ADDON" and (arg1 == "AZSRUN" or arg1 == "AZSZONE") then
+            -- Read on the next frame, after the native parser replaces its table.
             elapsed = INTERVAL
         end
     end)

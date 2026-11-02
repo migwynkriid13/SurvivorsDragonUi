@@ -14,7 +14,22 @@ Read-only inspection of the current local executable's embedded Lua confirms:
 
 The replacement requires these functions, a recognized active run phase, a received `AZS_RUN_UPDATED` snapshot and a positive integer count. Missing data, unsupported APIs, zero waiting levels and terminal/out-of-run phases hide the replacement and release its native visibility ownership. The native count, queue, choices, pause behavior and Store Level-Ups preference remain game-owned; the addon does not change the storing preference.
 
-Data is read at most ten times a second. `AZSRUN` schedules a read on the next frame so native parsing can finish first. World leave retires the old run-table reference, so re-entry waits for a replacement snapshot. No count, level, queue or run snapshot is saved.
+Data is read at most ten times a second. `AZSRUN` and `AZSZONE` schedule a read on the next frame so native parsing can finish first. World leave retires the old run-table reference, so re-entry waits for a replacement snapshot. No count, level, queue or run snapshot is saved.
+
+The icon reads the exact canonical `AZS_ZONE.class` key from a received snapshot
+with a finite, nonnegative `AZS_ZONE_UPDATED` timestamp. It does not query
+`UnitClass("player")`, whose character-selection record can describe the previous
+class after switching runs. World cleanup retires the old zone table; an observed
+ready phase retires the zone last seen during the active run. A fresh zone
+received while ready remains available when playing starts.
+
+Missing, malformed, unknown or retired class data hides only the icon until a
+usable snapshot arrives; the waiting count and native click action remain
+available. Spending all waiting levels does not retire the current run's class.
+Returning from dead/victory to playing without leaving the run can reuse that
+same class snapshot. Both Performance Mode states use the existing controller,
+artwork and changed-only crop writes, with no added frame, region, event, updater
+or saved state; hidden views defer class validation and painting.
 
 Unchanged counts and class icons do not repeat text or crop writes. Text-width
 measurements are reused until text, font or effective scale changes; edit entry,
@@ -39,4 +54,4 @@ This group opts into shared `resizeToRegion` handling. Corner resizing measures 
 
 The executable inspected for the API contract on 2026-10-20 has SHA-256 `96e24dcd0e53fc13a6fdef5826aa46f77a29aa1aad4abd585adf04e94b2756d3`. The user-requested **LEVEL UP** heading is addon wording, with thirteen translations in `localization/ui.tsv` and matching runtime entries. The removed native `Level Up!` and `LEVEL {n}` captions are no longer selected by this addon. Other generated text and the localization generator's reviewed source fingerprint are unchanged.
 
-Source inspection and text-data extraction do not establish packaged-game rendering, mouse behavior or reload parity. Local validation, tests, syntax/formatting tools and addon/game execution were intentionally not run. The PR uses the existing GitHub Actions static checks.
+Source inspection and text-data extraction do not establish packaged-game rendering, mouse behavior or reload parity. The class-switch fix was formatted locally with the pinned tools. Its regression cases are authored for CI only; local tests, standalone validation and addon/game execution were not run. The cases exercise stale character-selection data, deferred class receipt, invalid metadata, phase/world retirement, hidden recovery and unchanged crop writes in both Performance Mode states.
