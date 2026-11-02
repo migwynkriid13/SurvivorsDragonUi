@@ -2,7 +2,7 @@
 --[[
 The selected thin-bezel design keeps the Blizzard circular rim artwork, with
 native rarity colors for equipped items and the original gold for empty slots.
-SocketRail.blp joins all upper socket arches and straight spans in one texture
+SocketRail BLP strips join all upper socket arches and straight spans on one baseline
 using pixels from the existing HDActionBar.tga. The original bar texture is
 unchanged; only its narrow top strip switches while this jewelry row is visible.
 No extra inner or lower curved line is drawn beneath the gold circles.
@@ -522,15 +522,15 @@ DFRL:NewMod("Jewelry", 4, function()
         -- Trim the source rim's uneven clear padding; its visible circle is
         -- centered in this square crop rather than the full source rectangle.
         -- Compensate the crop size to preserve the visible rim's diameter.
-        rim:SetTexCoord(106 / 1024, 178 / 1024, 56 / 256, 128 / 256)
+        rim:SetTexCoord(1 / 512, 73 / 512, 1 / 128, 73 / 128)
         slot.rim = rim
     end
     local function SetQuality(slot, quality, red, green, blue)
         if (slot.qualityR ~= nil) ~= (red ~= nil) then
             -- The neutral copy keeps the same shading and alpha without
             -- multiplying rarity colors by the stock gold's yellow channels.
-            local left = red ~= nil and 664 or 106
-            slot.rim:SetTexCoord(left / 1024, (left + 72) / 1024, 56 / 256, 128 / 256)
+            local left = red ~= nil and 257 or 1
+            slot.rim:SetTexCoord(left / 512, (left + 72) / 512, 1 / 128, 73 / 128)
         end
         if
             (slot.qualityR or 1) ~= (red or 1)

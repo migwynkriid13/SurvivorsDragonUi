@@ -7,6 +7,17 @@ executes selected production Lua against fake native boundaries. Keep the `Forma
 check in the repository's branch rules; editing a workflow does not configure
 branch protection by itself.
 
+The 0.139.0 compatibility cases are authored for CI only. Artwork data fixtures
+check every packaged BLP against the native power-of-two size gate and compare
+both neighbour pixels at each strip join. Mocked production helpers cover strip
+region counts, resizing, right anchoring, parent visibility, failed bindings and
+unchanged writes. Navigation covers old zero-valued and new texture-height map
+returns; party portraits cover object and legacy-name forms. Native SCT cases
+separate equal-caption borrowed spells by received meter source keys, retain
+same-key sums and accept older events without optional attribution. These cases
+do not establish packaged-client appearance or repair native FrameXML errors
+that occur before addon loading.
+
 ## What fails a PR
 
 - Prettier or StyLua formatting differences, or a missing TOC version increment

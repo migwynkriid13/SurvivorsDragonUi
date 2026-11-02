@@ -208,15 +208,19 @@ DFRL:NewMod("Bars", 1, function()
         DFRL.actionBarBGleft = left
         DFRL.actionBarBGright = right
 
-        -- Keep every socket foot and straight span in one texture and anchor
-        -- space. Separate scaled caps can round to different screen rows.
+        -- Keep every socket foot and straight span on one shared baseline.
+        -- Legal source strips join with neighbour gutters, without separate caps.
         local artHeight = defaults.height + 2 * defaults.topInset
         local socketBottom = defaults.buttonWidth * 2 / 36
-        local upper = bar:CreateTexture(nil, "BACKGROUND")
-        upper:SetTexture(DFRL:GetInfoOrCons("tex") .. "jewelry\\SocketRail.blp")
+        local upper = T.CreateArtworkStrip(bar, "BACKGROUND", 3)
+        upper:SetTextures(
+            DFRL:GetInfoOrCons("tex") .. "jewelry\\",
+            { "SocketRail.blp", "SocketRail_2.blp", "SocketRail_3.blp" }
+        )
         upper:SetPoint("TOPLEFT", bar, "TOPLEFT", -defaults.sideInset, defaults.jewelryTopInset)
-        upper:SetPoint("BOTTOMRIGHT", bar, "TOPRIGHT", defaults.sideInset, socketBottom)
-        upper:SetTexCoord(0, 1200 / 2048, 0, 152 / 256)
+        upper:SetWidth(defaults.width + 2 * defaults.sideInset)
+        upper:SetHeight(defaults.jewelryTopInset - socketBottom)
+        upper:SetTexCoord(1 / 512, 401 / 512, 0, 152 / 256)
         upper:Hide()
         local jewelryShown, xpJoined = false, false
         local jewelryTop = defaults.topInset

@@ -58,7 +58,11 @@ DFRL:NewMod("GuardianTracker", 4, function()
         texture:SetTexCoord(0, right or 1, 0, bottom or 1)
         return texture
     end
-    local header = Texture(frame, "guardians\\Header", "BACKGROUND", width, headerHeight, 560 / 1024, 70 / 128)
+    local header = T.CreateArtworkStrip(frame, "BACKGROUND", 2)
+    header:SetTextures(path .. "guardians\\", { "Header.blp", "Header_2.blp" })
+    header:SetWidth(width)
+    header:SetHeight(headerHeight)
+    header:SetTexCoord(1 / 512, 281 / 512, 0, 70 / 128)
     header:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, 0)
     header:SetAlpha(0.8)
     local icon = Texture(frame, "waypoint\\GuardianFloating", "ARTWORK", 28, 28, 65 / 128, 65 / 128)

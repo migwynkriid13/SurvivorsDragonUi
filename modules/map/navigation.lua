@@ -275,21 +275,17 @@ DFRL:NewMod("Navigation", 2, function()
         return zone
     end
     local function MapInfo()
-        if sampling and frameSample.mapRead then
-            return frameSample.mapName, frameSample.mapWidth, frameSample.mapHeight
-        end
-        local name, w, h
+        if sampling and frameSample.mapRead then return frameSample.mapName end
+        local name
         if type(GetMapInfo) == "function" then
-            local ok, mapName, mapWidth, mapHeight = pcall(GetMapInfo)
-            if ok then
-                name, w, h = mapName, mapWidth, mapHeight
-            end
+            local ok, mapName = pcall(GetMapInfo)
+            if ok then name = mapName end
         end
         if sampling then
             frameSample.mapRead = true
-            frameSample.mapName, frameSample.mapWidth, frameSample.mapHeight = name, w, h
+            frameSample.mapName = name
         end
-        return name, w, h
+        return name
     end
     local function Selection()
         if sampling and frameSample.selectionRead then return frameSample.selection end
@@ -464,8 +460,7 @@ DFRL:NewMod("Navigation", 2, function()
         return w, h
     end
     local function ReadAspect()
-        local _, w, h = MapInfo()
-        if Number(w) and Number(h) and w > 0 and h > 0 then return w / h end
+        -- GetMapInfo's numeric results describe texture heights, not width/height.
         if WorldMapDetailFrame and WorldMapDetailFrame.GetWidth and WorldMapDetailFrame.GetHeight then
             local w, h = WorldMapDetailFrame:GetWidth(), WorldMapDetailFrame:GetHeight()
             if Number(w) and Number(h) and w > 0 and h > 0 then return w / h end

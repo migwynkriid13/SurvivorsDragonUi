@@ -46,7 +46,7 @@
     },
     "media/tex/unitframes/healthDF2.tga": {
       "output": "media/tex/unitframes/healthDF2Fill.blp",
-      "reason": "Source of the exact health-fill crop in scripts/prepare_client_textures.py."
+      "reason": "Original health interior used by scripts/prepare_client_textures.py to prepare the native power-of-two fill canvas."
     },
     "media/tex/xprep/main.tga": {
       "output": "media/tex/xprep/main_soft.blp",

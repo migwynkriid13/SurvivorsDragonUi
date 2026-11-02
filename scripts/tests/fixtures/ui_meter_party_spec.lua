@@ -128,11 +128,17 @@ local function Meter(configure)
         return context.units[unit].name
     end
     env.UnitClass = function(unit) return "localized", context.units[unit] and context.units[unit].class end
-    env.SetPortraitTexture = function(name, unit)
+    env.SetPortraitTexture = function(texture, unit)
         Count("reads", "portraits")
+        if context.portraitForm == "name" then
+            assert(type(texture) == "string", "legacy portrait binding requires the global texture name")
+            texture = env[texture]
+        else
+            assert(type(texture) == "table", "native portrait binding requires the texture object")
+        end
         if context.failPortrait then return false end
         assert(context.units[unit], "portrait requested for a missing native unit")
-        env[name]:SetTexture(context.units[unit].texture)
+        texture:SetTexture(context.units[unit].texture)
         return true
     end
     env.SetPortraitToTexture = function(name, texture) env[name]:SetTexture(texture) end
@@ -774,6 +780,20 @@ Test("settled party rows skip presentation and portrait binding; hidden/off/icon
     context:Tick()
     assert(not context.controller:GetScript("OnUpdate") and not context.controller.events.CHAT_MSG_ADDON)
     assert(not context.reads.party and not context.reads.names and not context.reads.portraits)
+end)
+
+Test("legacy party portraits fall back once to the texture name and retain their binding cache", function()
+    local context = Meter()
+    context.portraitForm = "name"
+    context:ResetCounts()
+    context:Party()
+    assert(context:Row(1).icon:GetTexture() == "Portraits\\Friend")
+    assert(context:Row(2).icon:GetTexture() == "Portraits\\Me")
+    assert(context.reads.portraits == 4, "legacy portraits did not use exactly one fallback per row")
+    context:ResetCounts()
+    context:Tick()
+    assert(not context.reads.portraits, "settled legacy portraits rebound")
+    context:NoPresentationWrites()
 end)
 
 Test("unmatched and ambiguous names cannot borrow another party member's portrait", function()

@@ -582,7 +582,7 @@ function DFRL.tools.CreateButton(parent, text, width, height)
     return button
 end
 
--- The prepared interior leaves native StatusBar UVs free to track health.
+-- The prepared power-of-two interior leaves native StatusBar UVs free to track health.
 -- The large health fill and its damage-loss overlay share the same artwork.
 DFRL.tools.LargeHealthFill = {
     texture = DFRL:GetInfoOrCons("tex") .. "unitframes\\healthDF2Fill.blp",

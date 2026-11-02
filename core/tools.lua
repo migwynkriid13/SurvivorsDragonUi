@@ -19,6 +19,105 @@ function DFRL.tools.TextureAssigned(loaded, assigned, wanted)
     return type(wanted) == "string" and assigned == string.gsub(wanted, "%.[^%.]*$", "")
 end
 
+-- Wide artwork uses equal source strips with a neighbouring pixel at each
+-- join. All pieces share their parent's lifecycle; no frame or updater is used.
+function DFRL.tools.CreateArtworkStrip(parent, layer, count)
+    local view = { pieces = {} }
+    for index = 1, count do
+        view.pieces[index] = parent:CreateTexture(nil, layer)
+    end
+    function view:SetTextures(root, files)
+        for index, piece in ipairs(self.pieces) do
+            local path = root .. files[index]
+            if piece.sduiStripPath ~= path then
+                if piece:SetTexture(path) ~= false then piece.sduiStripPath = path end
+            end
+        end
+    end
+    function view:SetWidth(width)
+        if self.width == width then return end
+        self.width = width
+        for _, piece in ipairs(self.pieces) do
+            piece:SetWidth(width / count)
+        end
+    end
+    function view:SetHeight(height)
+        if self.height == height then return end
+        self.height = height
+        for _, piece in ipairs(self.pieces) do
+            piece:SetHeight(height)
+        end
+    end
+    function view:SetPoint(point, relative, relativePoint, x, y)
+        if
+            self.point == point
+            and self.relative == relative
+            and self.relativePoint == relativePoint
+            and self.x == x
+            and self.y == y
+        then
+            return
+        end
+        self.point, self.relative, self.relativePoint, self.x, self.y = point, relative, relativePoint, x, y
+        local backwards = string.find(point, "RIGHT", 1, true) ~= nil
+        local first, last, step = 1, count, 1
+        if backwards then
+            first, last, step = count, 1, -1
+        end
+        local previous
+        for index = first, last, step do
+            local piece = self.pieces[index]
+            piece:ClearAllPoints()
+            if previous then
+                piece:SetPoint(
+                    backwards and "TOPRIGHT" or "TOPLEFT",
+                    previous,
+                    backwards and "TOPLEFT" or "TOPRIGHT",
+                    0,
+                    0
+                )
+            else
+                piece:SetPoint(point, relative, relativePoint, x, y)
+            end
+            previous = piece
+        end
+    end
+    function view:SetTexCoord(left, right, top, bottom)
+        if self.left == left and self.right == right and self.top == top and self.bottom == bottom then return end
+        self.left, self.right, self.top, self.bottom = left, right, top, bottom
+        for _, piece in ipairs(self.pieces) do
+            piece:SetTexCoord(left, right, top, bottom)
+        end
+    end
+    function view:SetAlpha(alpha)
+        if self.alpha == alpha then return end
+        self.alpha = alpha
+        for _, piece in ipairs(self.pieces) do
+            piece:SetAlpha(alpha)
+        end
+    end
+    function view:Show()
+        for _, piece in ipairs(self.pieces) do
+            if not piece:IsShown() then piece:Show() end
+        end
+    end
+    function view:Hide()
+        for _, piece in ipairs(self.pieces) do
+            if piece:IsShown() then piece:Hide() end
+        end
+    end
+    return view
+end
+
+-- The original two horizontal halves are stacked in a legal 512x512 atlas.
+function DFRL.tools.SetChromeTexture(texture, left, top, right, bottom)
+    texture:SetTexture(DFRL:GetInfoOrCons("tex") .. "character\\Chrome.blp")
+    if left >= 512 then
+        left, right, top, bottom = left - 512, right - 512, top + 256, bottom + 256
+    end
+    texture:SetTexCoord(left / 512, right / 512, top / 512, bottom / 512)
+end
+
 -- Native unit maxima pass through ceiling/uint32 fields and float32 storage.
 -- Share these exact encodings between cosmetic target and nameplate matching.
 local function UnitMaximumFloat(value)

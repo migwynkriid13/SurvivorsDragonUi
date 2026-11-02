@@ -49,7 +49,7 @@ DFRL:NewMod("Character window", 6, function()
     local COLUMN_GAP = 12
     local COLUMN_WIDTH = (ROW_WIDTH - COLUMN_GAP) / 2
     local path = DFRL:GetInfoOrCons("tex") .. "character\\"
-    local sheets = { Chrome = { 1024, 256 }, Parts = { 256, 256 }, Tabs = { 64, 256 }, Close = { 128, 128 } }
+    local sheets = { Parts = { 256, 256 }, Tabs = { 64, 256 }, Close = { 128, 128 } }
     local panes = { "PaperDollFrame", "PetPaperDollFrame", "ReputationFrame", "SkillFrame", "HonorFrame" }
     local primaryNames = {
         "CharacterStatFrame1",
@@ -72,9 +72,13 @@ DFRL:NewMod("Character window", 6, function()
     local function Cut(parent, sheet, left, top, right, bottom, width, height, layer)
         local texture = parent:CreateTexture(nil, layer or "BACKGROUND")
         texture.sduiCharacterArt = true
-        texture:SetTexture(path .. sheet .. ".blp")
-        local size = sheets[sheet]
-        texture:SetTexCoord(left / size[1], right / size[1], top / size[2], bottom / size[2])
+        if sheet == "Chrome" then
+            T.SetChromeTexture(texture, left, top, right, bottom)
+        else
+            texture:SetTexture(path .. sheet .. ".blp")
+            local size = sheets[sheet]
+            texture:SetTexCoord(left / size[1], right / size[1], top / size[2], bottom / size[2])
+        end
         if width then texture:SetWidth(width) end
         if height then texture:SetHeight(height) end
         return texture

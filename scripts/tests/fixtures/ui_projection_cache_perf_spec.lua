@@ -10,7 +10,8 @@ env.AZS_ZONE, env.AZS_ZONE_UPDATED = { zone = "CurrentZone", map = 1 }, 2
 env.AZS_RUN, env.AZS_RUN_UPDATED = { px = 0, py = 0, pf = 0.25 }, 12
 env.AZS_GetPhase = function() return phase end
 env.GetRealZoneText = function() return "CurrentZone" end
-env.GetMapInfo = function() return mapName, 1000, 500 end
+env.GetMapInfo = function() return mapName, 668, 1024 end
+env.WorldMapDetailFrame = { GetWidth = function() return 1000 end, GetHeight = function() return 500 end }
 env.GetCurrentMapContinent = function() return continent end
 env.GetCurrentMapZone = function() return mapZone end
 env.GetPlayerMapPosition = function() return playerX, playerY end
@@ -25,6 +26,21 @@ end
 env.GetWorldLocMapPosition = Project
 context:Load("modules/map/navigation.lua", "Navigation")
 local nav = env.DFRL.navigation
+
+-- Without metric/world coordinates, the native map's texture heights must
+-- never be mistaken for its aspect ratio. Older zero-valued getters agree.
+local projector = env.GetWorldLocMapPosition
+env.GetWorldLocMapPosition = nil
+for _, heights in ipairs({ { 668, 1024 }, { 0, 0 } }) do
+    env.GetMapInfo = function() return mapName, heights[1], heights[2] end
+    nav.Reset()
+    local east, north, distance, metric = nav.Delta({ mx = 0.6, my = 0.4 })
+    assert(math.abs(east - 0.2) < 0.000001 and math.abs(north - 0.1) < 0.000001)
+    assert(distance == nil and not metric, "map aspect invented a yard distance")
+end
+env.GetMapInfo = function() return mapName, 668, 1024 end
+env.GetWorldLocMapPosition = projector
+nav.Reset()
 local point = { x = 100, y = -100, mx = 0.6, my = 0.3 }
 nav.SetPoints("AZS_CHESTS", { point })
 nav.Position()

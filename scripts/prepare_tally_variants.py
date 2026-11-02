@@ -13,8 +13,7 @@ from pathlib import Path
 
 from PIL import Image, ImageChops, ImageDraw, ImageEnhance
 
-from prepare_client_textures import save_image
-from prepare_jewelry_art import rgba
+from prepare_client_textures import save_image, tally_canvas
 
 ROOT = Path(__file__).resolve().parents[1]
 SCALE = 2
@@ -136,11 +135,11 @@ def prepare(originals, output):
     def variant(match):
         block = match.group(0)
         identifier = re.search(r'^        id = "([^"]+)",', block, re.M).group(1)
-        texture = re.search(r'^        texture = "([^"]+)",', block, re.M).group(1)
+        texture = re.search(r'^        textures = \{ "([^"]+)",', block, re.M).group(1)
         center_y = float(re.search(r'^        contentY = ([\d.]+),', block, re.M).group(1))
         image = repaired.get(identifier)
         if image is None:
-            image = rgba(ROOT / "media/tex/tally" / texture)
+            image = tally_canvas(ROOT / "media/tex/tally" / texture)
         else:
             save_image(image, output / texture)
         if identifier == "gothic13":
@@ -162,7 +161,7 @@ def prepare(originals, output):
         name = identifier + "_detached.blp"
         save_image(detached, output / name)
         entry = ("        detached = {\n"
-                 '            texture = "' + name + '",\n'
+                 '            textures = { "' + name + '", "' + identifier + '_detached_2.blp" },\n'
                  "            extent = " + number(extent) + ",\n"
                  "            contentY = " + number(center) + ",\n"
                  "        },\n")

@@ -338,8 +338,13 @@ DFRL:NewMod("DamageMeter", 7, function()
             ClearIcon(row)
             row.partyUnit, row.partyName, row.partySource = match.unit, match.name, match.texture
             if type(_G.SetPortraitTexture) == "function" then
-                local ok, result = pcall(_G.SetPortraitTexture, row.icon:GetName(), match.unit)
+                local ok, result = pcall(_G.SetPortraitTexture, row.icon, match.unit)
                 local texture = row.icon:GetTexture()
+                if not ok or result == false or not texture then
+                    -- Older clients accept the texture's global name instead.
+                    ok, result = pcall(_G.SetPortraitTexture, row.icon:GetName(), match.unit)
+                    texture = row.icon:GetTexture()
+                end
                 if ok and result ~= false and texture then
                     row.partyTexture = texture
                     if not row.icon:IsShown() then row.icon:Show() end
@@ -636,7 +641,7 @@ DFRL:NewMod("DamageMeter", 7, function()
         row.circularIcon = T.NewCircularIcon(row.icon, ICON_SIZE, 4)
         row.rim = row:CreateTexture(nil, "OVERLAY")
         if row.rim:SetTexture(path .. "jewelry\\Frame.blp") == false then ready = false end
-        row.rim:SetTexCoord(576 / 1024, 648 / 1024, 56 / 256, 128 / 256)
+        row.rim:SetTexCoord(129 / 512, 201 / 512, 1 / 128, 73 / 128)
         row.rim:SetPoint("CENTER", row.icon, "CENTER", 0, 0)
         row.rim:SetWidth(RIM_SIZE)
         row.rim:SetHeight(RIM_SIZE)

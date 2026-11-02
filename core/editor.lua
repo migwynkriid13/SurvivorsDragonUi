@@ -124,8 +124,7 @@ function DFRL.tools.CreateEditorPanel(parent, width, height, name)
     }
     for index, region in ipairs(regions) do
         local piece = frame:CreateTexture(nil, "BORDER")
-        piece:SetTexture(DFRL:GetInfoOrCons("tex") .. "character\\Chrome.blp")
-        piece:SetTexCoord(region[1] / 1024, region[3] / 1024, region[2] / 256, region[4] / 256)
+        T.SetChromeTexture(piece, region[1], region[2], region[3], region[4])
         if region[5] then piece:SetWidth(region[5]) end
         if region[6] then piece:SetHeight(region[6]) end
         pieces[index] = piece
@@ -383,7 +382,9 @@ function DFRL.tools.CreateEditorCategory(parent, text, width, height)
 end
 
 function DFRL.tools.EditorDivider(parent, width)
-    local divider = Artwork(parent, "divider", "ARTWORK", 0, 630 / 1024, 0, 1)
+    local divider = T.CreateArtworkStrip(parent, "ARTWORK", 2)
+    divider:SetTextures(path, { "divider.blp", "divider_2.blp" })
+    divider:SetTexCoord(1 / 512, 316 / 512, 0, 1)
     divider:SetWidth(width)
     divider:SetHeight(1)
     divider:SetAlpha(0.5)

@@ -411,6 +411,29 @@ Test("normal native bursts keep every equal hit over its own enemy anchor", func
     end
 end)
 
+Test("credited native meter sources separate borrowed-spell sums without caption or spell guesses", function()
+    for _, performance in ipairs({ false, true }) do
+        local context = Scene("enemy", performance)
+        context:Prime()
+        context:NativeHit(20, { meterSource = "Same caption", meterSourceKey = "source:cast" })
+        context:NativeHit(30, { meterSource = "Same caption", meterSourceKey = "source:proc" })
+        context:NativeHit(40, { meterSource = "Translated caption", meterSourceKey = "source:proc" })
+        context:Tick(0.31)
+        local labels, amounts = context:Labels(), {}
+        assert(#labels == (performance and 2 or 3), "borrowed spell exchanged credited meter sources")
+        for _, label in ipairs(labels) do
+            amounts[label:GetText()] = true
+        end
+        if performance then assert(amounts["20"] and amounts["70"], "same native source stopped summing") end
+    end
+    local context = Scene("enemy", true)
+    context:Prime()
+    context:NativeHit(20, { meterSource = "Caption alone" })
+    context:NativeHit(30, { meterSource = "Another caption", meterSourceKey = "" })
+    context:Tick(0.31)
+    assert(#context:Labels() == 1 and context:Labels()[1]:GetText() == "50", "optional metadata dropped legacy hits")
+end)
+
 Test("native presentation timestamps retain inclusive grouping deadlines across batched receipt", function()
     for _, performance in ipairs({ false, true }) do
         local window = performance and 0.3 or 0.075

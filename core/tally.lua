@@ -4,7 +4,7 @@
 -- textures reflect the lower structural trim into a complete upper surround.
 -- Iron sarcophagus retains its attached frame beneath a matching top bevel.
 -- Demon reliquary restores its complete wings and keeps its pendant below.
--- Each lossless BLP is 1024x128 with 600x128 content at 2x. Use UV 0,600/1024,0,1;
+-- Each 600x128 span uses two lossless 512x128 BLP strips with neighbour gutters;
 -- artHeight is the full 64-unit texture canvas, height is the counter row,
 -- and extent includes the complete contour for that mode. No font or source framework ships.
 -- contentY is the counter center below the texture top; contentScale affects
@@ -216,19 +216,19 @@
 -- End pinned ARPG LGPL-3 license text.
 
 DFRL.tallyStyleDefault = "gothic13"
-DFRL.tallyStyleCanvas = { width = 300, height = 64, right = 600 / 1024, bottom = 1 }
+DFRL.tallyStyleCanvas = { width = 300, height = 64, left = 1 / 512, right = 301 / 512, bottom = 1 }
 DFRL.tallyStyles = {
     {
         id = "silver",
         label = "Continuous silver",
-        texture = "silver.blp",
+        textures = { "silver.blp", "silver_2.blp" },
         height = 27,
         extent = 27,
         artHeight = 64,
         contentY = 13.5,
         contentScale = 1,
         detached = {
-            texture = "silver_detached.blp",
+            textures = { "silver_detached.blp", "silver_detached_2.blp" },
             extent = 27,
             contentY = 13.5,
         },
@@ -236,14 +236,14 @@ DFRL.tallyStyles = {
     {
         id = "graphite",
         label = "Soft graphite",
-        texture = "graphite.blp",
+        textures = { "graphite.blp", "graphite_2.blp" },
         height = 27,
         extent = 28,
         artHeight = 64,
         contentY = 13.5,
         contentScale = 1,
         detached = {
-            texture = "graphite_detached.blp",
+            textures = { "graphite_detached.blp", "graphite_detached_2.blp" },
             extent = 29,
             contentY = 14.5,
         },
@@ -251,14 +251,14 @@ DFRL.tallyStyles = {
     {
         id = "gothic01",
         label = "Roth scrollwork",
-        texture = "gothic01.blp",
+        textures = { "gothic01.blp", "gothic01_2.blp" },
         height = 36,
         extent = 36,
         artHeight = 64,
         contentY = 10,
         contentScale = 0.9,
         detached = {
-            texture = "gothic01_detached.blp",
+            textures = { "gothic01_detached.blp", "gothic01_detached_2.blp" },
             extent = 52,
             contentY = 26,
         },
@@ -266,14 +266,14 @@ DFRL.tallyStyles = {
     {
         id = "gothic02",
         label = "Roth shrine",
-        texture = "gothic02.blp",
+        textures = { "gothic02.blp", "gothic02_2.blp" },
         height = 36,
         extent = 36,
         artHeight = 64,
         contentY = 12,
         contentScale = 0.9,
         detached = {
-            texture = "gothic02_detached.blp",
+            textures = { "gothic02_detached.blp", "gothic02_detached_2.blp" },
             extent = 48,
             contentY = 24,
         },
@@ -281,14 +281,14 @@ DFRL.tallyStyles = {
     {
         id = "gothic03",
         label = "Gothic cornerwork",
-        texture = "gothic03.blp",
+        textures = { "gothic03.blp", "gothic03_2.blp" },
         height = 36,
         extent = 36,
         artHeight = 64,
         contentY = 13,
         contentScale = 0.95,
         detached = {
-            texture = "gothic03_detached.blp",
+            textures = { "gothic03_detached.blp", "gothic03_detached_2.blp" },
             extent = 46,
             contentY = 23,
         },
@@ -296,14 +296,14 @@ DFRL.tallyStyles = {
     {
         id = "gothic04",
         label = "Iron sarcophagus",
-        texture = "gothic04.blp",
+        textures = { "gothic04.blp", "gothic04_2.blp" },
         height = 36,
         extent = 36,
         artHeight = 64,
         contentY = 16,
         contentScale = 1,
         detached = {
-            texture = "gothic04_detached.blp",
+            textures = { "gothic04_detached.blp", "gothic04_detached_2.blp" },
             extent = 42,
             contentY = 22,
         },
@@ -311,14 +311,14 @@ DFRL.tallyStyles = {
     {
         id = "gothic07",
         label = "Knotted iron",
-        texture = "gothic07.blp",
+        textures = { "gothic07.blp", "gothic07_2.blp" },
         height = 36,
         extent = 37,
         artHeight = 64,
         contentY = 16,
         contentScale = 1,
         detached = {
-            texture = "gothic07_detached.blp",
+            textures = { "gothic07_detached.blp", "gothic07_detached_2.blp" },
             extent = 42,
             contentY = 21,
         },
@@ -326,14 +326,14 @@ DFRL.tallyStyles = {
     {
         id = "gothic10",
         label = "ARPG carved cornice",
-        texture = "gothic10.blp",
+        textures = { "gothic10.blp", "gothic10_2.blp" },
         height = 36,
         extent = 40,
         artHeight = 64,
         contentY = 14,
         contentScale = 1,
         detached = {
-            texture = "gothic10_detached.blp",
+            textures = { "gothic10_detached.blp", "gothic10_detached_2.blp" },
             extent = 52,
             contentY = 26,
         },
@@ -341,14 +341,14 @@ DFRL.tallyStyles = {
     {
         id = "gothic11",
         label = "Gothic leaf corners",
-        texture = "gothic11.blp",
+        textures = { "gothic11.blp", "gothic11_2.blp" },
         height = 36,
         extent = 36,
         artHeight = 64,
         contentY = 13,
         contentScale = 0.95,
         detached = {
-            texture = "gothic11_detached.blp",
+            textures = { "gothic11_detached.blp", "gothic11_detached_2.blp" },
             extent = 46,
             contentY = 23,
         },
@@ -356,14 +356,14 @@ DFRL.tallyStyles = {
     {
         id = "gothic13",
         label = "Demon reliquary",
-        texture = "gothic13.blp",
+        textures = { "gothic13.blp", "gothic13_2.blp" },
         height = 36,
         extent = 39,
         artHeight = 64,
         contentY = 13,
         contentScale = 0.95,
         detached = {
-            texture = "gothic13_detached.blp",
+            textures = { "gothic13_detached.blp", "gothic13_detached_2.blp" },
             extent = 55,
             contentY = 29,
         },

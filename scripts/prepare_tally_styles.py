@@ -285,28 +285,28 @@ def number(value):
 
 def write_registry(rows, path):
     metadata = [NOTICE, 'DFRL.tallyStyleDefault = "%s"\n' % DEFAULT_STYLE,
-                'DFRL.tallyStyleCanvas = { width = 300, height = 64, right = 600 / 1024, bottom = 1 }\n',
+                'DFRL.tallyStyleCanvas = { width = 300, height = 64, left = 1 / 512, right = 301 / 512, bottom = 1 }\n',
                 'DFRL.tallyStyles = {\n']
     for entry, _ in rows:
         metadata.append('    {\n'
                         '        id = "%s",\n'
                         '        label = "%s",\n'
-                        '        texture = "%s",\n'
+                        '        textures = { "%s", "%s" },\n'
                         '        height = %s,\n'
                         '        extent = %s,\n'
                         '        artHeight = 64,\n'
                         '        contentY = %s,\n'
                         '        contentScale = %s,\n'
                         '        detached = {\n'
-                        '            texture = "%s",\n'
+                        '            textures = { "%s", "%s" },\n'
                         '            extent = %s,\n'
                         '            contentY = %s,\n'
                         '        },\n'
                         '    },\n'
-                        % (entry["id"], entry["label"], entry["texture"],
+                        % (entry["id"], entry["label"], entry["texture"], Path(entry["texture"]).stem + "_2.blp",
                            number(entry["height"]), number(entry["extent"]),
                            number(entry["contentY"]), number(entry["contentScale"]),
-                           entry["detached"]["texture"], number(entry["detached"]["extent"]),
+                           entry["detached"]["texture"], Path(entry["detached"]["texture"]).stem + "_2.blp", number(entry["detached"]["extent"]),
                            number(entry["detached"]["contentY"])))
     metadata.append('}\nDFRL.tallyStyleById = {}\nfor _, style in ipairs(DFRL.tallyStyles) do\n    DFRL.tallyStyleById[style.id] = style\nend\n')
     path.write_text("".join(metadata))

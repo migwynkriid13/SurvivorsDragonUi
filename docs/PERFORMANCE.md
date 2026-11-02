@@ -5,6 +5,23 @@ retaining native data, pause-aware timing, saved preferences and artwork.
 It adds no gameplay clock or native client dependency. Display choices use the
 existing saved display table; the optional minimap clock below defaults on.
 
+The 0.139.0 texture compatibility repair uses static source strips to fit the
+native 8–512 power-of-two size gate. It adds two texture regions to the jewelry
+rail, one to the displayed counter surround, one to the guardian header and one
+per constructed settings divider. It adds no frame, event, updater or saved
+state. Existing parents own their visibility, layer and scale; changed paths,
+dimensions, anchors, UVs and alpha are the only writes. Both Performance Mode
+states share this path. Extra regions may affect persistent rendering; source
+inspection and smaller texture files do not establish an FPS gain. See
+[the preparation recipes and native startup boundary](CLIENT-COMPATIBILITY.md#01390-engine-update--2026-11-02).
+
+Optional native SCT `meterSourceKey` joins the existing per-hit identity once
+at intake, separating credited proc sources in Performance Mode sums without
+another meter snapshot or metadata lookup. Older events retain their fallback
+identity. Party portraits prefer the native texture-object call with one
+legacy-name fallback per changed binding; settled and hidden rows keep their
+existing work gates.
+
 Pet and meter image textures share `T.NewCircularIcon` for native circular
 binding and the lazy physical-pixel strip fallback. Each view keeps its original
 icon/rim dimensions, strip-density minimum, metadata and hidden lifecycle. This

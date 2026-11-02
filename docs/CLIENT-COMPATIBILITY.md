@@ -1,5 +1,83 @@
 # Client update compatibility
 
+## 0.139.0 engine update — 2026-11-02
+
+The supplied screenshots show solid-green player health, jewelry rail and
+counter artwork. The files exist. Wenilla's merged
+[texture loader](https://github.com/Arnesen/wenilla/blob/407a76e83d03ba6e0a755a5a89b564c80e16025d/crates/benilla-assets/src/world_assets/mod.rs#L309-L340)
+substitutes solid green when a BLP's decoded dimensions fail the device gate:
+each side must be a power of two from 8 through 512. BLP conversion alone no
+longer bypasses that gate. The public source explains the reported appearance;
+it does not identify the exact engine commit packaged in 0.139.0.
+
+Twenty-six runtime images were outside those limits. Character chrome now
+stacks its original two halves in a 512-by-512 atlas. Jewelry's original gold,
+gray and neutral rim crops share a 512-by-128 atlas. The rail uses three
+512-wide pieces; each attached/detached counter style, guardian header and
+editor divider uses two. Neighbour pixels at the joins preserve filtering
+without gaps or overlapping alpha. The divider repeats its single authored
+row across eight rows. Referenced pixels, visible sizes, crops, tinting and
+attachment choices retain their original ownership.
+
+The health interior changes from 116-by-20 to 128-by-32 using one Lanczos
+resample during asset preparation. This is the only resampled artwork in this
+repair. Transparent padding would distort the native StatusBar, which owns
+its full-range UVs and health-fraction clipping. Player, target, compact health,
+absorbs and damage-loss overlays keep the same geometry and shared fill.
+
+`scripts/prepare_client_textures.py` applies these recipes after ordinary
+preparation, including newly regenerated original sheets. Its
+`--runtime-dimensions-only` option repacks existing artwork and the health
+interior. Original wide sheets remain available in Git history before this
+repair. The tally generators understand the split runtime artwork and produce
+the same two-file metadata. No downloaded originals or conversion backups are
+required in the installed tree.
+
+The shared strip helper adds no frame or updater. Relative to the old single
+regions, it adds two texture regions for the jewelry rail, one for the current
+counter style, one for the guardian header and one per constructed settings
+divider. All inherit their existing parent visibility, scale, layer and
+lifecycle. Bindings, dimensions, anchors, UVs and alpha skip unchanged writes.
+
+Waypoint fallback now measures `WorldMapDetailFrame` for aspect: `GetMapInfo`'s
+numeric results are texture heights, not map width/height. Calibrated and
+official world-coordinate paths remain independent. Party meter portraits try
+the texture object first and the legacy global name once if that call fails,
+rejects it or supplies no texture. Successful and failed bindings retain the
+existing identity/artwork cache and hidden/off deferral.
+
+The supplied 0.139.0 changelog also adds combat-text `meterSource` and
+`meterSourceKey`. The native SCT adapter retains valid optional values and
+includes the exact received key in its existing identity. Performance Mode
+therefore separates different credited sources even when they borrow the same
+spell; captions alone never separate or join hits. Missing or unusable optional
+values retain older-client behavior. This adds no snapshot query, source lookup,
+spell/area reclassification or change to normal-mode per-hit presentation.
+
+CI-only cases cover every shipped texture's size gate, neighbouring strip
+pixels, artwork ownership/reuse, both portrait call forms, old/new map returns
+and borrowed-spell source separation. Local work uses asset preparation, source
+review and pinned formatting only. No local tests, standalone validation or
+addon/game execution is performed; actual native/browser appearance remains
+unverified.
+
+### Native startup dropdown error
+
+The reported `UIDropDownMenu.lua:156` error matches the stock 1.12.1
+[button-overflow branch](https://github.com/tekkub/wow-ui-source/blob/1.12.1/FrameXML/UIDropDownMenu.lua#L149-L158):
+after the 32-button limit, its diagnostic concatenates a nil
+`UIDROPDOWNMENU_OPEN_MENU`. The user reports it immediately during loading.
+Wenilla loads the stock
+[core and layer before third-party addons](https://github.com/Arnesen/wenilla/blob/407a76e83d03ba6e0a755a5a89b564c80e16025d/crates/benilla-app/src/ui_script/lifecycle.rs#L557-L627),
+so an SDUI hook cannot prevent an error already raised in that startup path.
+
+This remains a client issue. The exact overflowing native menu needs the
+client's startup traceback; screen-resolution enumeration is one candidate,
+not an established caller. The engine repair must make the diagnostic nil-safe
+and build oversized native choices safely before stock initialization, retaining
+their actual selection IDs. SDUI does not hide the popup, truncate choices,
+invent an open-menu owner or modify client files.
+
 The reported regression followed the Azeroth Survivors client update. The supplied changelog identifies 0.101.0 as the move to a newer client and Lua 5.0 behavior. The screenshots show `SetText(): Font not set` in the player and target modules, an incomplete layout entry at `core/layout.lua:730`, and the client's 48 MB script-memory popup. They do not establish the exact engine commit packaged by the game or the allocation responsible for the memory popup.
 
 ## Exact lossless palettes — 2026-10-27

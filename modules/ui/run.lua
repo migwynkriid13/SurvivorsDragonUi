@@ -3448,8 +3448,8 @@ DFRL:NewMod("RunTimers", 5, function()
         detached:EnableMouse(false)
         detached:Hide()
         local docked, lastBottom, lastWidth, lastStyle, lastMask
-        local artwork = tally:CreateTexture(nil, "BACKGROUND")
-        artwork:SetTexCoord(0, DFRL.tallyStyleCanvas.right, 0, DFRL.tallyStyleCanvas.bottom)
+        local artwork = T.CreateArtworkStrip(tally, "BACKGROUND", 2)
+        artwork:SetTexCoord(DFRL.tallyStyleCanvas.left, DFRL.tallyStyleCanvas.right, 0, DFRL.tallyStyleCanvas.bottom)
         artwork:SetPoint("TOPLEFT", tally, "TOPLEFT", 0, 0)
         artwork:Hide()
 
@@ -3511,7 +3511,7 @@ DFRL:NewMod("RunTimers", 5, function()
             else
                 tally:SetPoint("TOPLEFT", owner, "TOPLEFT", 0, 0)
             end
-            artwork:SetTexture(DFRL:GetInfoOrCons("tex") .. "tally\\" .. appearance.texture)
+            artwork:SetTextures(DFRL:GetInfoOrCons("tex") .. "tally\\", appearance.textures)
             artwork:SetWidth(lastWidth)
             artwork:SetHeight(DFRL.tallyStyleCanvas.height * artScale)
             artwork:Show()

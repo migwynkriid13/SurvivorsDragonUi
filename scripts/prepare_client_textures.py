@@ -185,7 +185,7 @@ def blp_from_tga(data):
 
 
 def prepare_health_fill():
-    """Copy the authored health interior, without resampling or its atlas padding."""
+    """Fit the authored interior to a legal native StatusBar texture canvas."""
     source = ROOT / "media/tex/unitframes/healthDF2.tga"
     destination = ROOT / "media/tex/unitframes/healthDF2Fill.blp"
     converted, record = blp_from_tga(source.read_bytes())
@@ -199,12 +199,103 @@ def prepare_health_fill():
     width, height = right - left, bottom - top
     cropped = b"".join(pixels[(y * 128 + left) * 4:(y * 128 + right) * 4]
                        for y in range(top, bottom))
-    destination.write_bytes(blp_from_bgra(width, height, cropped))
+    from PIL import Image
+
+    # StatusBar owns full-range UVs, so transparent padding would change its
+    # shape and health fraction. Resample this interior once during authoring;
+    # all runtime consumers keep the same native geometry and 0..1 coordinates.
+    image = Image.frombytes("RGBA", (width, height), cropped, "raw", "BGRA")
+    image = image.resize((128, 32), Image.Resampling.LANCZOS)
+    save_image(image, destination)
     return {"source": source.relative_to(ROOT).as_posix(),
             "destination": destination.relative_to(ROOT).as_posix(),
             "source_crop": [left, top, right, bottom],
-            "width": width, "height": height,
-            "bgra_sha256": hashlib.sha256(cropped).hexdigest()}
+            "width": 128, "height": 32,
+            "bgra_sha256": hashlib.sha256(image.tobytes("raw", "BGRA")).hexdigest()}
+
+
+def tally_canvas(path):
+    """Reassemble the referenced 600-pixel tally span for artwork generators."""
+    from PIL import Image
+
+    image = image_from_bytes(path.read_bytes())
+    if image.width != 512:
+        return image
+    right = image_from_bytes(path.with_stem(path.stem + "_2").read_bytes())
+    canvas = Image.new("RGBA", (1024, 128))
+    canvas.paste(image.crop((1, 0, 301, 128)), (0, 0))
+    canvas.paste(right.crop((1, 0, 301, 128)), (300, 0))
+    return canvas
+
+
+def prepare_runtime_dimensions():
+    """Repack wide sheets into power-of-two BLPs between 8 and 512 pixels.
+
+    Atlas cells retain their pixels. Wide strips keep a neighbour gutter on
+    either side of each join, and render side by side at the original size.
+    Already prepared sheets are left alone; regenerated originals are repacked.
+    """
+    from PIL import Image
+
+    manifest_path = ROOT / "packaging/runtime-files.json"
+    manifest = json.loads(manifest_path.read_text())
+    added, records = {}, []
+    for name in list(manifest["files"]):
+        if not name.endswith(".blp"):
+            continue
+        path = ROOT / name
+        data = path.read_bytes()
+        width, height = struct.unpack_from("<II", data, 12)
+        if 8 <= width <= 512 and 8 <= height <= 512 and not (width & (width - 1) or height & (height - 1)):
+            continue
+        source = image_from_bytes(data)
+        outputs = []
+        if name == "media/tex/character/Chrome.blp" and source.size == (1024, 256):
+            atlas = Image.new("RGBA", (512, 512))
+            atlas.paste(source.crop((0, 0, 512, 256)), (0, 0))
+            atlas.paste(source.crop((512, 0, 1024, 256)), (0, 256))
+            outputs.append((path, atlas))
+        elif name == "media/tex/jewelry/Frame.blp" and source.size == (1024, 256):
+            atlas = Image.new("RGBA", (512, 128))
+            for index, left in enumerate((106, 576, 664)):
+                atlas.paste(source.crop((left - 1, 55, left + 73, 129)), (index * 128, 0))
+            outputs.append((path, atlas))
+        else:
+            if name == "media/tex/jewelry/SocketRail.blp":
+                count, span = 3, 400
+            elif name == "media/tex/guardians/Header.blp":
+                count, span = 2, 280
+            elif name == "media/tex/editor/divider.blp":
+                count, span = 2, 315
+            elif path.parent.name == "tally" and source.size == (1024, 128):
+                count, span = 2, 300
+            else:
+                raise ValueError("Artwork needs an explicit size-compatible recipe: " + name)
+            if source.height == 1:
+                # The divider's sole row is repeated exactly, not filtered.
+                row = source
+                source = Image.new("RGBA", (source.width, 8))
+                for y in range(8):
+                    source.paste(row, (0, y))
+            for index in range(count):
+                left = index * span
+                tile = Image.new("RGBA", (512, source.height))
+                tile.paste(source.crop((left, 0, left + span, source.height)), (1, 0))
+                neighbour = max(0, left - 1)
+                tile.paste(source.crop((neighbour, 0, neighbour + 1, source.height)), (0, 0))
+                tile.paste(source.crop((left + span, 0, left + span + 1, source.height)), (span + 1, 0))
+                output = path if index == 0 else path.with_stem(path.stem + "_" + str(index + 1))
+                outputs.append((output, tile))
+        for output, image in outputs:
+            save_image(image, output)
+            relative = output.relative_to(ROOT).as_posix()
+            if relative not in manifest["files"]:
+                added.setdefault(name, []).append(relative)
+            records.append({"file": relative, "width": image.width, "height": image.height})
+    if added:
+        manifest["files"] = [output for name in manifest["files"] for output in [name, *added.get(name, [])]]
+        manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
+    return records
 
 
 def save_image(image, path):
@@ -270,17 +361,25 @@ def prepare():
                          "alpha_bits": converted[9], "before_bytes": len(original),
                          "after_bytes": len(converted),
                          "bgra_sha256": hashlib.sha256(original[offset:offset + width * height * 4]).hexdigest()})
-    return {"converted": records, "health_fill": health_fill, "palettes": palettes}
+    dimensions = prepare_runtime_dimensions()
+    return {"converted": records, "health_fill": health_fill, "palettes": palettes, "dimensions": dimensions}
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--receipt", type=Path)
+    parser.add_argument("--runtime-dimensions-only", action="store_true",
+                        help="Repack existing runtime artwork and the health interior only")
     args = parser.parse_args()
-    receipt = prepare()
+    if args.runtime_dimensions_only:
+        receipt = {"converted": [], "health_fill": prepare_health_fill(), "palettes": [],
+                   "dimensions": prepare_runtime_dimensions()}
+    else:
+        receipt = prepare()
     if args.receipt:
         args.receipt.write_text(json.dumps(receipt, indent=2) + "\n")
     print(json.dumps({"converted_files": len(receipt["converted"]),
                       "health_fill": receipt["health_fill"],
                       "palette_files": len(receipt["palettes"]),
-                      "palette_saved_bytes": sum(row["before_bytes"] - row["after_bytes"] for row in receipt["palettes"])}))
+                      "palette_saved_bytes": sum(row["before_bytes"] - row["after_bytes"] for row in receipt["palettes"]),
+                      "dimension_outputs": len(receipt["dimensions"])}))

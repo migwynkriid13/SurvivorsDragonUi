@@ -205,6 +205,9 @@ function DFRL.tools.NewCombatTextApi()
         if value.periodic then damageType = "periodic" end
         if value.reflected then damageType = "reflected" end
         local attack
+        -- Newer clients identify the credited meter line even when its proc
+        -- borrows another spell. Optional captions never establish identity.
+        local meterSourceKey = Id(value.meterSourceKey) and value.meterSourceKey or nil
         if value.spellId then
             attack = "spell:" .. tostring(value.spellId)
         elseif damageType == "autoattack" then
@@ -219,6 +222,8 @@ function DFRL.tools.NewCombatTextApi()
             targetName = value.targetName or "",
             spell = value.abilityName,
             spellId = value.spellId,
+            meterSource = Id(value.meterSource) and value.meterSource or nil,
+            meterSourceKey = meterSourceKey,
             damageType = damageType,
             school = schools[value.schoolMask] or (value.schoolMask and tostring(value.schoolMask)),
             critical = value.critical,
@@ -226,7 +231,7 @@ function DFRL.tools.NewCombatTextApi()
             nativeAttack = attack,
             nativeIdentity = Part(value.sourceId or value.eventId) .. Part(value.sourceKind) .. Part(
                 value.targetId or value.eventId
-            ) .. Part(attack or value.eventId),
+            ) .. Part(attack or value.eventId) .. Part(meterSourceKey or ""),
             nativeEventId = value.eventId,
             nativeTime = value.presentedAt,
             nativeOrigin = value.anchorStatus == "ready" and {
