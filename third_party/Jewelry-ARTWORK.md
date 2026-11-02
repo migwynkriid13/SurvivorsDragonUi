@@ -21,32 +21,24 @@ Only the existing Layout edit envelopes grow to include the larger static canvas
 
 This is original World of Warcraft artwork, copyright Blizzard Entertainment. Public availability and software licenses do not transfer its ownership or supply a blanket art redistribution license. Existing project permission for upstream custom art does not relicense this Blizzard texture; its provenance remains in the shipped jewelry module. No source addon code, fonts or framework is imported.
 
-## Animated rarity halo atlas
+## Steady rarity glow
 
-`scripts/prepare_jewelry_flames.py` prepares the white-alpha edge halo in
-`media/tex/jewelry/RarityFlames.tga` and its lossless Raw3 runtime BLP.
-The mask follows the existing Runecarver housing alpha, softly blurred and
-confined to radii 17.5–24.8 local units, leaving the item center clear. A narrow
-soft band stays close to the artwork. Brighter patches travel upward through
-dark gaps, making motion visible without restoring the earlier tall plumes.
-Maximum lift is 0.7 local units; no separate flame extends above the housing.
-The 256-by-256 atlas contains sixteen 64-square cells in a four-by-four grid,
-with clear cell edges.
+One lazy `OVERLAY` region per equipped slot reuses the Runecarver housing crop
+`384/512, 1, 0, 1` in the existing `Frame.blp`. It shares the housing's size,
+center and original alpha, with additive blending, fixed alpha 0.4 and validated
+native rarity RGB. The original carved shading and baked halo supply the glow's
+shape; there is no upward movement, pulse or texture animation. Geometry, UVs,
+texture, blend and intensity bind only at construction. Color and visibility
+change only when needed through the existing equipment reader.
 
-One lazy `ARTWORK` region per equipped slot uses the same size and center as
-the housing. Additive blending, alpha 0.75 and validated native rarity RGB color
-the moving mask, whose own alpha never exceeds 0.84. The sixteen frames loop
-over 0.96 seconds with different starting phases per slot. Only changed UVs
-are written through the existing painting gate; no texture or geometry rebind
-occurs per frame. Empty or unknown-quality slots have no animated halo.
-Visibility, editing, Performance Mode and world/disabled cleanup stop it while
-retaining regions for reuse. Icon size, slot order and attachment are unchanged.
-
-Only `RarityFlames.blp` is added to the runtime manifest. The TGA and generator
-remain authoring files. This derived mask retains the Runecarver artwork's
-Blizzard attribution above; no external flame art or animation code is imported.
-Static artwork review does not establish animation appearance in the packaged
-client; no addon or game was executed locally.
+Empty or unknown-quality slots have no extra glow. Visibility, editing,
+Performance Mode and world/disabled cleanup hide it while retaining regions
+for reuse; Performance Mode keeps the static housing tint. Icon size, slot
+order, attachment and native cooldown animation are unchanged. The retired
+moving-halo atlas, its authoring copy and preparation helper are removed, so
+this effect adds no runtime file or separate artwork dependency. The reused
+housing retains the Blizzard attribution above. Native appearance remains
+unverified; no addon or game was executed locally.
 
 ## Shared pet/meter rim source
 

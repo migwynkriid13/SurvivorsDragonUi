@@ -2279,8 +2279,8 @@ DFRL:NewMod("RunTimers", 5, function()
                     description = "Change addon text except the run timer and combat text, which have their own fonts.",
                     offset = 338,
                 },
-                { key = "uiFontOutline", label = "Outline", offset = 488 },
-                { key = "uiFontShadow", label = "Black shadow", offset = 552 },
+                { key = "uiFontOutline", label = "Outline", offset = 338 },
+                { key = "uiFontShadow", label = "Black shadow", offset = 454 },
             },
             combat = {
                 { key = "outgoing", label = "Outgoing damage", offset = 0 },
@@ -2522,9 +2522,12 @@ DFRL:NewMod("RunTimers", 5, function()
         performance.label:SetHeight(28)
         displayControls.performanceMode = performance
         builders.layout = function(page)
-            page:SetHeight(588)
+            page:SetHeight(490)
             DFRL.layout.CreateControls(page, contentWidth, function() SelectPage("layout") end)
-            FontEditorLabel(page, captions.uiFont.label, 0, -captions.uiFont.offset, 12)
+            local choiceWidth = (contentWidth - gap) / 2
+            local fontLabel = FontEditorLabel(page, captions.uiFont.label, 0, -captions.uiFont.offset, 12)
+            fontLabel:SetWidth(choiceWidth)
+            fontLabel:SetJustifyH("LEFT")
             local hint = FontEditorLabel(page, captions.uiFont.description, 0, -365, 11)
             hint:SetWidth(contentWidth)
             hint:SetHeight(36)
@@ -2533,20 +2536,24 @@ DFRL:NewMod("RunTimers", 5, function()
             fontEditor.uiFontDropdown = Dropdown(
                 page,
                 DFRL.display.fonts,
-                300,
+                choiceWidth,
                 30,
                 function(value) DFRL.display.Set("uiFont", value) end
             )
             fontEditor.uiFontDropdown:SetPoint("TOPLEFT", page, "TOPLEFT", 0, -410)
-            FontEditorLabel(page, captions.uiFontOutline.label, 0, -captions.uiFontOutline.offset, 12)
+            local outlineX = choiceWidth + gap
+            local outlineLabel =
+                FontEditorLabel(page, captions.uiFontOutline.label, outlineX, -captions.uiFontOutline.offset, 12)
+            outlineLabel:SetWidth(choiceWidth)
+            outlineLabel:SetJustifyH("LEFT")
             fontEditor.uiFontOutlineDropdown = Dropdown(
                 page,
                 fontOutlines,
-                300,
+                choiceWidth,
                 30,
                 function(value) DFRL.display.Set("uiFontOutline", value) end
             )
-            fontEditor.uiFontOutlineDropdown:SetPoint("TOPLEFT", page, "TOPLEFT", 0, -514)
+            fontEditor.uiFontOutlineDropdown:SetPoint("TOPLEFT", page, "TOPLEFT", outlineX, -410)
             local shadow = T.CreateEditorToggle(
                 page,
                 captions.uiFontShadow.label,

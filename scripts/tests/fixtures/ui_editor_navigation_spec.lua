@@ -933,7 +933,7 @@ dialog.navigation.Search("thick outline")
 local foundLayoutOutline
 for _, result in ipairs(dialog.navigation.results) do
     if result.group == "layout" then
-        assert(result.entry.offset == 488, "global outline search does not redirect to its controls")
+        assert(result.entry.offset == 338, "global outline search does not redirect to its controls")
         foundLayoutOutline = true
     end
 end
@@ -943,7 +943,7 @@ dialog.navigation.Search("black shadow")
 local foundLayoutShadow
 for _, result in ipairs(dialog.navigation.results) do
     if result.group == "layout" then
-        assert(result.target == "uiFontShadow" and result.entry.offset == 552, "global shadow search lost its control")
+        assert(result.target == "uiFontShadow" and result.entry.offset == 454, "global shadow search lost its control")
         foundLayoutShadow = true
     end
 end

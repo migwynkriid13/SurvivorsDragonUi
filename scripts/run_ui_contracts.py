@@ -34,10 +34,10 @@ def main():
         ])
         jewelry_cache = jewelry_cache.rsplit("\nreturn ", 1)[0] + "\nreturn { InvalidateEffects = InvalidateEffects, ReadEffects = ReadEffects, ClearSlot = ClearSlot, PaintIcons = PaintIcons, PrepareIconParts = PrepareIconParts }\n"
         jewelry_rarity = extract_source("modules/ui/jewelry.lua", [
-            "RARITY_TINT_STRENGTH", "FLAME_PERIOD", "FLAME_FRAMES", "Number",
-            "StopSlotFlames", "StopFlames", "UpdateRarity", "PaintFlames", "SetQuality", "UpdateQuality",
+            "RARITY_TINT_STRENGTH", "RARITY_GLOW_ALPHA", "Number",
+            "HideSlotGlow", "HideGlows", "UpdateRarity", "SetQuality", "UpdateQuality",
         ])
-        jewelry_rarity = jewelry_rarity.rsplit("\nreturn ", 1)[0] + "\nreturn { Update = UpdateRarity, Paint = PaintFlames, Stop = StopFlames, Quality = UpdateQuality }\n"
+        jewelry_rarity = jewelry_rarity.rsplit("\nreturn ", 1)[0] + "\nreturn { Update = UpdateRarity, Stop = HideGlows, Quality = UpdateQuality }\n"
         jewelry_order = extract_source("modules/ui/jewelry.lua", ["PlaceSlots"])
         run_hud = "local render, refreshRows, scheduleCache = {}, false, nil\n" + extract_source("modules/ui/run.lua", [
             "nativeParts", "TakeOver", "Restore", "SyncReplacements",

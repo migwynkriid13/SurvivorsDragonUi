@@ -13,8 +13,9 @@ selectors replace 39 former choice buttons and add eleven arrow captions.
 One popup per settings window allocates on demand and grows only to its largest
 visited list, currently ten choices; its overlay/panel and choice buttons are
 reused across selectors. Closed lists do no recurring work. The existing
-Encounters font menu remains independent. Combat style and font share a
-two-column row; mode and counter-style headings, selectors and descriptions
+Encounters font menu remains independent. Layout Font/Outline share a row,
+with Black shadow underneath and the shortened page/search offsets following
+the controls. Combat style and font share a two-column row; mode and counter-style headings, selectors and descriptions
 share the content center. These changes reuse the same widgets and anchors,
 with no added regions or recurring work.
 
@@ -104,27 +105,29 @@ only changed native rarity updates its vertex color. Parent visibility and
 world/disabled cleanup hide it. Both Performance Mode states retain this static
 tint. No gold, rarity-colored or replacement circle is drawn.
 
-Normal mode lazily adds at most five texture regions on the existing overlay,
-one per visible equipped slot with valid native rarity RGB. Their white-alpha
-256-square Raw3 atlas is 256 KiB of pixels, separate from the unchanged housing
-atlas. Its moving edge mask matches the housing canvas and stays within
-24.8 local units of the icon center, with less than one local unit of lift.
-Sixteen frames loop over 0.96 seconds, staggered across the five slots.
-The existing at-most-30-Hz cooldown painting gate advances only changed sprite
-UVs; texture, geometry, alpha and color are retained. The phase advances from
-the existing frame delta without another clock read or per-frame allocation.
-The five-Hz equipment/quality cadence is unchanged. Hidden/off, empty, missing
-rarity, editing and Performance Mode retire the flames; retained regions are
-reused on return. Performance Mode never allocates a flame region. Editing
-hides the effect so the static housing edit envelopes remain sufficient.
-No gameplay frame, getter, event, setting, saved state or updater is added.
+Normal mode lazily adds at most five steady glow regions on the existing
+overlay, one per visible equipped slot with valid native rarity RGB. Each
+additive `OVERLAY` region reuses the same `Frame.blp` housing crop, size and
+center, brightening the existing carving at fixed alpha 0.4. Texture, geometry,
+UVs, blend mode and alpha bind once. Native rarity color and shown state change
+only when needed through the existing five-Hz equipment refresh. No glow clock,
+sprite frames, upward movement or recurring glow painting remains. The retired
+256-square halo atlas, authoring copy and generator are removed; the glow adds
+no runtime file. Cooldown painting retains its existing at-most-30-Hz gate.
+
+Hidden/off, empty, missing rarity, editing and Performance Mode hide the glow;
+retained regions are reused on return. Performance Mode never allocates a glow
+region and retains the static housing tint. No gameplay frame, getter, event,
+setting, saved state or updater is added. Region count stays at most five for
+the effect; persistent additive rendering remains a native cost even though
+Lua no longer advances animation UVs.
 
 CI-only mocks cover native color validation, poor/common qualities, grey
-fallback, changed-only writes, atlas wrap, staggered frames and lazy reuse
-across visibility/editing/Performance Mode retirement. Local work is static
-art preparation, source review and pinned formatting; no local tests,
-standalone validation or addon/game execution were performed. Region and
-payload counts do not establish native appearance, rendering cost or FPS.
+fallback, matching housing crop/geometry, fixed intensity, unchanged writes
+and lazy reuse across visibility/editing/Performance Mode retirement. Local
+work is source review and pinned formatting; no local tests, standalone
+validation or addon/game execution were performed. Source and payload counts
+do not establish native appearance, rendering cost or FPS.
 
 ## Artisan metal LEVEL UP — 2026-11-02
 
@@ -3551,7 +3554,7 @@ adding text regions or remeasuring for color alone. Hidden/off views stop
 those reads and writes through their existing controller. The two end caps bring
 the icon to sixteen bands. The same five Runecarver housings surround occupied
 and empty sockets; no replacement inner circle is drawn. Changed-only housing
-tints and the separate lazy flame atlas are described above. No GPU or FPS
+tints and the lazy steady glow using the same housing crop are described above. No GPU or FPS
 result is inferred from these source counts.
 
 The base renderer additionally sorts equal-texture quads using an unstable

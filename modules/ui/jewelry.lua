@@ -1,12 +1,12 @@
 -- Five equipped jewelry sockets, attached by default and optionally independent.
 --[[
 Selected 03 Runecarver housings use grey metal matching the action-bar surround.
-Native rarity colors tint the grey carving and its animated edge shimmer.
+Native rarity colors tint the grey carving and its steady additive glow.
 Effects-only hover text keeps the full native rarity color.
 The housing and soft halo are baked together in the existing Frame.blp atlas;
 five static regions inherit the shared overlay's visibility and scale.
-No inner circle is drawn. Flame frames share the existing controller and stop
-while hidden, empty, editing or in Performance Mode; the static tint remains.
+No inner circle is drawn. The glow reuses the same housing artwork without
+animation, hiding while empty, editing or in Performance Mode; the tint remains.
 SocketRail BLP strips join all upper socket arches and straight spans on one baseline
 using pixels from the existing HDActionBar.tga. The original bar texture is
 unchanged; only its narrow top strip switches while this jewelry row is visible.
@@ -28,8 +28,8 @@ Empty-slot artwork: Gethe/wow-ui-textures, commit
 e80e3278cc833c89e1f3fc79557b68315d750935, PaperDoll/UI-PaperDoll-Slot-
 Finger.PNG, -Neck.PNG and -Trinket.PNG. World of Warcraft artwork remains
 copyright Blizzard Entertainment, distinct from the software license below.
-The cooldown atlas is original generated geometry; the animated rarity halo
-mask follows the prepared Runecarver housing alpha.
+The cooldown atlas is original generated geometry; the steady rarity glow
+reuses the prepared Runecarver housing crop and its original alpha.
 
 Applicable source notices (Blizzard artwork is distinct from MIT software):
 MIT License
@@ -103,8 +103,7 @@ DFRL:NewMod("Jewelry", 4, function()
     local socketBounds = math.max(socketSize, carvingSize)
     local ANIMATION_INTERVAL = 1 / 30
     local RARITY_TINT_STRENGTH = 0.75
-    local FLAME_PERIOD = 0.96
-    local FLAME_FRAMES = 16
+    local RARITY_GLOW_ALPHA = 0.4
     local performanceMode = DFRL.display.Get("performanceMode")
     local texturePath = DFRL:GetInfoOrCons("tex") .. "jewelry\\"
     local SLOT_NAMES = { "Finger0Slot", "Finger1Slot", "NeckSlot", "Trinket0Slot", "Trinket1Slot" }
@@ -118,7 +117,6 @@ DFRL:NewMod("Jewelry", 4, function()
     local slots, slotsReady = {}, false
     local inWorld, editing, attached, elapsed, animationElapsed = true, false, false, 0, 0
     local cooldownsActive = false
-    local flamesActive, flameClock = false, 0
     local shownWanted, wantedDocked, SyncUpdates, cleared = false, nil, nil, true
     local displayGeometry = {}
     local function Docked()
@@ -546,8 +544,7 @@ DFRL:NewMod("Jewelry", 4, function()
         button:SetHeight(ICON_SIZE)
         button:SetPoint("TOPLEFT", hud, "TOPLEFT", WIDTH / 2 - ICON_SIZE / 2 + (index - 3) * columnPitch, -30.5)
         button:EnableMouse(true)
-        local slot =
-            { name = name, button = button, flamePhase = (index - 1) / 5, orderKey = tostring(index), position = index }
+        local slot = { name = name, button = button, orderKey = tostring(index), position = index }
         local placeholder = button:CreateTexture(nil, "ARTWORK")
         placeholder:SetTexture(texturePath .. EMPTY_TEXTURES[index])
         placeholder:SetWidth(ICON_ART_SIZE)
@@ -592,14 +589,13 @@ DFRL:NewMod("Jewelry", 4, function()
         carving:SetTexCoord(384 / 512, 1, 0, 1)
         slot.carving = carving
     end
-    local function StopSlotFlames(slot)
-        if slot.flameFrame ~= nil then slot.flame:Hide() end
-        slot.flameFrame, slot.flameRunning = nil, false
+    local function HideSlotGlow(slot)
+        if slot.glowShown then slot.glow:Hide() end
+        slot.glowShown = nil
     end
-    local function StopFlames()
-        flamesActive, flameClock = false, 0
+    local function HideGlows()
         for _, slot in ipairs(slots) do
-            StopSlotFlames(slot)
+            HideSlotGlow(slot)
         end
     end
     local function UpdateRarity(slot)
@@ -616,41 +612,31 @@ DFRL:NewMod("Jewelry", 4, function()
             slot.carvingR, slot.carvingG, slot.carvingB = red, green, blue
         end
         if not known or not visible or performanceMode or editing then
-            StopSlotFlames(slot)
+            HideSlotGlow(slot)
             return false
         end
-        local flame = slot.flame
-        if not flame then
-            flame = overlay:CreateTexture(nil, "ARTWORK")
-            flame:SetTexture(texturePath .. "RarityFlames.blp")
-            flame:SetWidth(carvingSize)
-            flame:SetHeight(carvingSize)
-            flame:SetPoint("CENTER", slot.button, "CENTER", 0, 0)
-            flame:SetBlendMode("ADD")
-            flame:SetAlpha(0.75)
-            flame:Hide()
-            slot.flame = flame
+        local glow = slot.glow
+        if not glow then
+            glow = overlay:CreateTexture(nil, "OVERLAY")
+            glow:SetTexture(texturePath .. "Frame.blp")
+            glow:SetWidth(carvingSize)
+            glow:SetHeight(carvingSize)
+            glow:SetPoint("CENTER", slot.button, "CENTER", 0, 0)
+            glow:SetTexCoord(384 / 512, 1, 0, 1)
+            glow:SetBlendMode("ADD")
+            glow:SetAlpha(RARITY_GLOW_ALPHA)
+            glow:Hide()
+            slot.glow = glow
         end
-        if slot.flameR ~= slot.qualityR or slot.flameG ~= slot.qualityG or slot.flameB ~= slot.qualityB then
-            flame:SetVertexColor(slot.qualityR, slot.qualityG, slot.qualityB, 1)
-            slot.flameR, slot.flameG, slot.flameB = slot.qualityR, slot.qualityG, slot.qualityB
+        if slot.glowR ~= slot.qualityR or slot.glowG ~= slot.qualityG or slot.glowB ~= slot.qualityB then
+            glow:SetVertexColor(slot.qualityR, slot.qualityG, slot.qualityB, 1)
+            slot.glowR, slot.glowG, slot.glowB = slot.qualityR, slot.qualityG, slot.qualityB
         end
-        slot.flameRunning = true
+        if not slot.glowShown then
+            glow:Show()
+            slot.glowShown = true
+        end
         return true
-    end
-    local function PaintFlames()
-        if not flamesActive or performanceMode or editing or not hud:IsVisible() then return end
-        for _, slot in ipairs(slots) do
-            if slot.flameRunning then
-                local frame = math.floor(math.mod(flameClock / FLAME_PERIOD + slot.flamePhase, 1) * FLAME_FRAMES)
-                if slot.flameFrame ~= frame then
-                    local column, row = math.mod(frame, 4), math.floor(frame / 4)
-                    slot.flame:SetTexCoord(column / 4, (column + 1) / 4, row / 4, (row + 1) / 4)
-                    if slot.flameFrame == nil then slot.flame:Show() end
-                    slot.flameFrame = frame
-                end
-            end
-        end
     end
     local function SetQuality(slot, quality, red, green, blue)
         slot.quality, slot.qualityR, slot.qualityG, slot.qualityB = quality, red, green, blue
@@ -707,7 +693,7 @@ DFRL:NewMod("Jewelry", 4, function()
         shownWanted, wantedDocked = false, nil
         formattedCache, cacheSize = {}, 0
         cooldownsActive = false
-        StopFlames()
+        HideGlows()
         for _, slot in ipairs(slots) do
             ClearSlot(slot)
         end
@@ -716,7 +702,7 @@ DFRL:NewMod("Jewelry", 4, function()
         detached:Hide()
     end
     hud:SetScript("OnHide", function()
-        StopFlames()
+        HideGlows()
         if SyncUpdates then SyncUpdates() end
         if DFRL.SetJewelryBarShown then DFRL.SetJewelryBarShown(false) end
         for _, slot in ipairs(slots) do
@@ -825,14 +811,13 @@ DFRL:NewMod("Jewelry", 4, function()
             return
         end
         cooldownsActive = false
-        flamesActive = false
         for _, slot in ipairs(slots) do
             local ok, texture = pcall(GetInventoryItemTexture, "player", slot.id)
             if ok and type(texture) == "string" and texture ~= "" then
                 slot.placeholder:Hide()
                 if slot.texture ~= texture then SetIcon(slot, texture) end
                 UpdateQuality(slot)
-                if UpdateRarity(slot) then flamesActive = true end
+                UpdateRarity(slot)
                 UpdateCooldown(slot)
                 if hoveredSlot == slot then ShowTooltip(slot) end
             else
@@ -914,7 +899,7 @@ DFRL:NewMod("Jewelry", 4, function()
     function DFRL.SetJewelryEditing(active)
         editing = active
         if editing then
-            StopFlames()
+            HideGlows()
         else
             elapsed = INTERVAL
         end
@@ -965,9 +950,6 @@ DFRL:NewMod("Jewelry", 4, function()
     end)
     local function Tick()
         if not CanPaint() then return end
-        if flamesActive and not performanceMode and not editing then
-            flameClock = math.mod(flameClock + math.min(arg1, 0.1), FLAME_PERIOD)
-        end
         if hoveredSlot and effectPanel and effectPanel:IsShown() and DFRL.display.Get("tooltipAtCursor") then
             PlaceEffectTooltip(hoveredSlot)
         end
@@ -981,12 +963,11 @@ DFRL:NewMod("Jewelry", 4, function()
         if animationElapsed >= ANIMATION_INTERVAL then
             animationElapsed = 0
             if cooldownsActive then PaintCooldowns() end
-            if flamesActive then PaintFlames() end
         end
     end
     SyncUpdates = function()
         local visible = CanPaint()
-        if not visible then StopFlames() end
+        if not visible then HideGlows() end
         controller:SetScript("OnUpdate", visible and Tick or nil)
     end
     local function VisibilityChanged()
@@ -997,7 +978,7 @@ DFRL:NewMod("Jewelry", 4, function()
     DFRL.layout.ListenVisibility("jewelryBar", VisibilityChanged)
     DFRL.display.Listen(function()
         performanceMode = DFRL.display.Get("performanceMode")
-        if performanceMode then StopFlames() end
+        if performanceMode then HideGlows() end
         UpdateDisplay()
         if hoveredSlot and effectPanel and effectPanel:IsShown() then PlaceEffectTooltip(hoveredSlot) end
     end)

@@ -138,13 +138,14 @@ the unchanged 5% source zoom and a centered artwork box at the selected icon siz
 retain inset band heights through pooling. These cases are CI-only and do not
 establish native pixel coverage.
 
-Jewelry rarity cases extract the production native-quality and flame helpers
-over fake color/texture boundaries. They cover poor/common quality, invalid
-metadata recovery, grey fallback, stronger housing tint, a centered moving shimmer,
-changed-only writes, frame wrapping/staggering and lazy region reuse. Hidden,
-empty, editing and Performance Mode retire animation; Performance Mode keeps
-the tint without allocating flames. These cases are authored for CI only and
-do not establish native appearance or performance.
+Jewelry rarity cases extract the production native-quality and steady-glow
+helpers over fake color/texture boundaries. They cover poor/common quality,
+invalid metadata recovery, grey fallback, stronger housing tint and a stationary
+additive pass using the existing housing crop/geometry at fixed intensity.
+Repeated refreshes retain UVs, alpha, bindings and shown state. Hidden, empty,
+editing and Performance Mode hide the glow and reuse its region on recovery;
+Performance Mode keeps the tint without allocating glow regions. These cases
+are authored for CI only and do not establish native appearance or performance.
 
 Jewelry cache cases use the exact production reader/cache/compositor functions
 over fake native tooltip and texture boundaries. They cover unchanged successful

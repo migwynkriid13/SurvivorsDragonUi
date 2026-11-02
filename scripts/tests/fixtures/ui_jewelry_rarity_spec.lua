@@ -3,7 +3,7 @@ assert(_VERSION == "Lua 5.1", "jewelry rarity fixtures require CI Lua 5.1")
 local env = setmetatable({}, { __index = _G })
 env._G = env
 local visible, allocations = true, 0
-local writes = { color = 0, uv = 0, geometry = 0, texture = 0, show = 0, hide = 0 }
+local writes = { color = 0, uv = 0, geometry = 0, texture = 0, alpha = 0, blend = 0, show = 0, hide = 0 }
 local methods = {}
 local function Region() return setmetatable({}, { __index = methods }) end
 function methods:SetVertexColor(...)
@@ -30,8 +30,14 @@ function methods:SetPoint(...)
     writes.geometry = writes.geometry + 1
     self.point = { ... }
 end
-function methods:SetBlendMode(value) self.blend = value end
-function methods:SetAlpha(value) self.alpha = value end
+function methods:SetBlendMode(value)
+    writes.blend = writes.blend + 1
+    self.blend = value
+end
+function methods:SetAlpha(value)
+    writes.alpha = writes.alpha + 1
+    self.alpha = value
+end
 function methods:Show()
     writes.show = writes.show + 1
     self.shown = true
@@ -43,17 +49,17 @@ end
 env.hud = { IsVisible = function() return visible end }
 env.overlay = {
     CreateTexture = function(_, name, layer)
-        assert(name == nil and layer == "ARTWORK")
+        assert(name == nil and layer == "OVERLAY", "steady glow must brighten the existing border")
         allocations = allocations + 1
         return Region()
     end,
 }
 env.texturePath = "owned/"
 env.carvingSize = 43 * 128 / 108
-env.performanceMode, env.editing, env.flamesActive, env.flameClock = false, false, false, 0
+env.performanceMode, env.editing = false, false
 env.slots = {}
 for index = 1, 5 do
-    env.slots[index] = { id = index, button = {}, carving = Region(), flamePhase = (index - 1) / 5 }
+    env.slots[index] = { id = index, button = {}, carving = Region() }
 end
 local quality, red, green, blue = 2, 0.12, 1, 0
 env.GetInventoryItemQuality = function(unit, id)
@@ -73,58 +79,43 @@ local function Color(region, r, g, b)
     assert(math.abs(region.color[2] - g) < 0.000001)
     assert(math.abs(region.color[3] - b) < 0.000001 and region.color[4] == 1)
 end
-assert(not api.Update(slot) and allocations == 0, "empty slot allocated flames")
+assert(not api.Update(slot) and allocations == 0, "empty slot allocated glow")
 Color(slot.carving, 1, 1, 1)
 slot.texture = "native:item"
 api.Quality(slot)
 env.performanceMode = true
-assert(not api.Update(slot) and allocations == 0, "Performance Mode allocated flames")
+assert(not api.Update(slot) and allocations == 0, "Performance Mode allocated glow")
 Color(slot.carving, 0.34, 1, 0.25)
 env.performanceMode = false
 assert(api.Update(slot) and allocations == 1)
-local flame = slot.flame
-assert(flame.texture == "owned/RarityFlames.blp" and flame.blend == "ADD" and flame.alpha == 0.75)
-assert(flame.width == env.carvingSize and flame.height == env.carvingSize)
-assert(flame.point[2] == slot.button and flame.point[4] == 0 and flame.point[5] == 0)
-Color(flame, red, green, blue)
-env.flamesActive = true
-api.Paint()
-assert(flame.shown and slot.flameFrame == 0 and writes.show == 1, "frame zero did not show")
+local glow = slot.glow
+assert(glow.texture == "owned/Frame.blp" and glow.blend == "ADD" and glow.alpha == 0.4)
+assert(glow.width == env.carvingSize and glow.height == env.carvingSize)
+assert(glow.point[2] == slot.button and glow.point[4] == 0 and glow.point[5] == 0)
+assert(glow.uv[1] == 384 / 512 and glow.uv[2] == 1 and glow.uv[3] == 0 and glow.uv[4] == 1)
+Color(glow, red, green, blue)
+assert(glow.shown and slot.glowShown and writes.show == 1, "steady glow did not show")
 local colors, geometry, textures, uvs = writes.color, writes.geometry, writes.texture, writes.uv
+local alphas, blends, shows, hides = writes.alpha, writes.blend, writes.show, writes.hide
 for _ = 1, 10 do
     assert(api.Update(slot))
-    api.Paint()
 end
 assert(writes.color == colors and writes.geometry == geometry and writes.texture == textures)
-assert(writes.uv == uvs and allocations == 1, "settled frame repeated native writes")
-env.flameClock = 0.02
-api.Paint()
-assert(writes.uv == uvs, "unchanged sprite repeated UV writes")
-env.flameClock = 0.065
-api.Paint()
-assert(slot.flameFrame == 1 and writes.uv == uvs + 1)
-for frame = 0, 16 do
-    env.flameClock = frame * 0.96 / 16
-    api.Paint()
-    for _, edge in ipairs(flame.uv) do
-        assert(edge >= 0 and edge <= 1, "sprite escaped its atlas")
-    end
-    assert(flame.uv[2] - flame.uv[1] == 0.25 and flame.uv[4] - flame.uv[3] == 0.25)
-end
-assert(slot.flameFrame == 0, "sprite period did not wrap")
+assert(writes.uv == uvs and allocations == 1, "steady glow changed its artwork crop")
+assert(writes.alpha == alphas and writes.blend == blends, "steady glow changed its intensity")
+assert(writes.show == shows and writes.hide == hides, "steady glow repeated visibility writes")
 api.Stop()
-assert(not flame.shown and not slot.flameRunning and slot.flameFrame == nil)
-assert(not env.flamesActive and env.flameClock == 0)
-local hides = writes.hide
+assert(not glow.shown and not slot.glowShown)
+hides = writes.hide
 api.Stop()
-assert(writes.hide == hides, "retired flame repeated hide writes")
+assert(writes.hide == hides, "retired glow repeated hide writes")
 for _, state in ipairs({ "performanceMode", "editing" }) do
-    env[state], env.flamesActive = true, true
+    env[state] = true
     uvs = writes.uv
     assert(not api.Update(slot))
-    api.Paint()
-    assert(writes.uv == uvs and not flame.shown and allocations == 1)
+    assert(writes.uv == uvs and not glow.shown and allocations == 1)
     env[state] = false
+    assert(api.Update(slot) and glow.shown and slot.glow == glow and allocations == 1)
 end
 -- Hidden recoloring waits for Show, then reuses the same region and raw native RGB.
 visible = false
@@ -132,22 +123,21 @@ quality, red, green, blue = 4, 0.64, 0.21, 0.93
 api.Quality(slot)
 colors, uvs = writes.color, writes.uv
 assert(not api.Update(slot))
-api.Paint()
-assert(writes.color == colors and writes.uv == uvs)
+assert(writes.color == colors and writes.uv == uvs and not glow.shown)
 visible = true
-assert(api.Update(slot) and slot.flame == flame and allocations == 1)
-Color(flame, red, green, blue)
+assert(api.Update(slot) and slot.glow == glow and allocations == 1)
+Color(glow, red, green, blue)
 Color(slot.carving, 0.73, 0.4075, 0.9475)
 -- Poor/common are valid native qualities; missing or malformed metadata stays grey.
 for _, rank in ipairs({ 0, 1 }) do
     quality, red, green, blue = rank, 0.62 + rank * 0.38, 0.62 + rank * 0.38, 0.62 + rank * 0.38
     api.Quality(slot)
     assert(api.Update(slot), "poor/common rarity was rejected")
-    Color(flame, red, green, blue)
+    Color(glow, red, green, blue)
 end
 quality = nil
 api.Quality(slot)
-assert(not api.Update(slot) and not flame.shown and not slot.qualityR)
+assert(not api.Update(slot) and not glow.shown and not slot.qualityR)
 Color(slot.carving, 1, 1, 1)
 quality, red = 5, 2
 api.Quality(slot)
@@ -158,15 +148,16 @@ for _, entry in ipairs(env.slots) do
     api.Quality(entry)
     assert(api.Update(entry))
 end
-env.flamesActive = true
-api.Paint()
-assert(allocations == 5 and env.slots[2].flameFrame ~= slot.flameFrame, "slots did not reuse staggered sprites")
+assert(allocations == 5 and slot.glow == glow, "equipment changes did not reuse glow regions")
+for _, entry in ipairs(env.slots) do
+    assert(entry.glow.shown and entry.glow.uv[1] == 384 / 512 and entry.glow.uv[2] == 1)
+end
 api.Stop()
 for _, entry in ipairs(env.slots) do
-    assert(not entry.flame.shown and not entry.flameRunning)
+    assert(not entry.glow.shown and not entry.glowShown)
 end
 slot.texture = nil
-assert(not api.Update(slot), "empty slot retained flames")
+assert(not api.Update(slot), "empty slot retained glow")
 Color(slot.carving, 1, 1, 1)
-print("PASS jewelry rarity uses native RGB, grey fallback, lazy reuse and changed-only sprite frames")
-print("PASS jewelry flames retire for hidden/empty/editing/Performance Mode without native reads")
+print("PASS jewelry rarity reuses the housing artwork with a steady native-color glow and unchanged writes")
+print("PASS jewelry glow retires for hidden/empty/editing/Performance Mode without native reads")

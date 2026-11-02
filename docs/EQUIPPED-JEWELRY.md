@@ -1,6 +1,6 @@
 # Equipped jewelry
 
-The selected **03 — Cold-lit runes** artwork uses grey-metal Runecarver housings matched to the action bar with no separate inner-circle rim. Equipped items give the metal a clear rarity tint and an animated edge shimmer in their native rarity color. The row keeps the **Thin shared bezel** connection to the original action bar, with no jewelry panel, permanent title or side ornament. It uses the character's five normal equipment slots, ordered left to right as first ring, second ring, necklace, first trinket and second trinket. By default, the necklace occupies the middle socket in both attached and detached modes, including its empty-slot placeholder. It is independent of the native six-pickup run build and does not add an ability row or infer run jewelry from worn gear, stats or chat.
+The selected **03 — Cold-lit runes** artwork uses grey-metal Runecarver housings matched to the action bar with no separate inner-circle rim. Equipped items give the metal a clear rarity tint and a steady glow in their native rarity color. The row keeps the **Thin shared bezel** connection to the original action bar, with no jewelry panel, permanent title or side ornament. It uses the character's five normal equipment slots, ordered left to right as first ring, second ring, necklace, first trinket and second trinket. By default, the necklace occupies the middle socket in both attached and detached modes, including its empty-slot placeholder. It is independent of the native six-pickup run build and does not add an ability row or infer run jewelry from worn gear, stats or chat.
 
 ## Settings and placement
 
@@ -35,14 +35,15 @@ keeps a removed item's color. Empty slots have no hover card.
 
 There is no separate gold, rarity-colored or replacement inner circle. The
 grey Runecarver housing receives a 75% blend toward native rarity RGB, retaining
-its subdued metal shading. An additive shimmer follows the carved border, with bright patches moving upward
-and only a trace beyond the artwork. It uses native rarity RGB with distinct bright and dark patches,
-leaving the icon center clear. Empty slots and unavailable
-rarity metadata stay grey with no flames. Performance Mode keeps the static
-tint and stops the flames; layout editing also stops the flames. Attached and
-detached modes share the effect, and hidden/off/world cleanup retires its
-animation. One lazy sprite region per equipped slot uses the existing
-controller, with no new event, worker, setting or saved state. Native quality
+its subdued metal shading. A steady additive glow brightens that same carved
+artwork in native rarity RGB. It uses the housing's existing crop, size and
+center, without upward movement, pulsing or animated texture frames. Empty
+slots and unavailable rarity metadata stay grey with no glow. Performance
+Mode keeps the static tint without the extra glow; layout editing also hides
+it. Attached and detached modes share the effect, and hidden/off/world cleanup
+hides it. One lazy region per equipped slot is retained for reuse. Its artwork,
+geometry and 40% alpha bind once; only changed visible rarity updates its color.
+No new artwork, event, worker, setting or saved state is added. Native quality
 reads and the changed-only hover-text color update retain their cadence.
 Sources and preparation are recorded in
 [Jewelry-ARTWORK.md](../third_party/Jewelry-ARTWORK.md).
