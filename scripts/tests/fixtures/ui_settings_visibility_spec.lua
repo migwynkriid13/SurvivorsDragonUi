@@ -54,23 +54,24 @@ map:Hide()
 env.incomingControl = Check(combat)
 env.sctDescription = combat:CreateFontString(nil, "OVERLAY")
 env.sctSizeLabel = combat:CreateFontString(nil, "OVERLAY")
-env.sctButtons = { on = Choice(combat), off = Choice(combat) }
-env.fontEditor.sctStyleButtons = { enemy = Choice(combat), msbt = Choice(combat), diablo = Choice(combat) }
-env.fontEditor.sctFontButtons = { default = Choice(combat), diablo = Choice(combat) }
-env.fontEditor.combatSettings = { frame = combat, controls = { env.incomingControl } }
-for _, button in pairs(env.fontEditor.sctStyleButtons) do
-    table.insert(env.fontEditor.combatSettings.controls, button)
-    local enable = button.EnableMouse
-    button.EnableMouse = function(self, value)
-        self.styleMouseEnabled = value
-        enable(self, value)
-    end
+local function Dropdown(parent)
+    local control = Frame(parent)
+    function control:SetValue(value) self.dropdownValue = value end
+    return control
 end
-for _, button in pairs(env.fontEditor.sctFontButtons) do
-    table.insert(env.fontEditor.combatSettings.controls, button)
-    local enable = button.EnableMouse
-    button.EnableMouse = function(self, value)
-        self.fontMouseEnabled = value
+env.fontEditor.sctModeDropdown = Dropdown(combat)
+env.fontEditor.sctStyleDropdown = Dropdown(combat)
+env.fontEditor.sctFontDropdown = Dropdown(combat)
+env.fontEditor.combatSettings = { frame = combat, controls = { env.incomingControl } }
+for _, record in ipairs({
+    { env.fontEditor.sctStyleDropdown, "styleMouseEnabled" },
+    { env.fontEditor.sctFontDropdown, "fontMouseEnabled" },
+}) do
+    local control, field = record[1], record[2]
+    table.insert(env.fontEditor.combatSettings.controls, control)
+    local enable = control.EnableMouse
+    control.EnableMouse = function(self, value)
+        self[field] = value
         enable(self, value)
     end
 end
@@ -93,7 +94,7 @@ for _, key in ipairs({ "sctShortNumbers", "sctClassColors", "sctDistanceScaling"
 end
 env.displayNumbers = { meterRows = combat:CreateFontString(nil, "OVERLAY") }
 env.dependentSettings = { customRunTimer = { frame = timer, controls = { Check(timer) } } }
-env.fontEditor.tallyStyleButtons = { Choice(timer) }
+env.fontEditor.tallyStyleDropdown = Dropdown(timer)
 env.fontSample = timer:CreateFontString(nil, "OVERLAY")
 env.fontSample:Hide() -- The production source is hidden; its page owns the rendered parts.
 env.fontSampleClock = { source = env.fontSample, ruler = timer:CreateFontString(nil, "OVERLAY"), parts = {} }
@@ -101,7 +102,8 @@ env.T.GetDefaultFont = function() return "DEFAULT_TEST" end
 env.currentFont = { face = "DEFAULT", size = 12, outline = "", shadow = true }
 env.fontFaces, env.fontOutlines = { { face = "DEFAULT", label = "Default" } }, { { value = "" } }
 env.faceLabel, env.sizeLabel = timer:CreateFontString(nil, "OVERLAY"), timer:CreateFontString(nil, "OVERLAY")
-env.faceButtons, env.outlineButtons = { DEFAULT = Choice(timer) }, { [""] = Choice(timer) }
+env.faceButtons = { DEFAULT = Choice(timer) }
+env.fontEditor.timerOutlineDropdown = Dropdown(timer)
 env.shadowControl = Check(timer)
 env.StyleClockLabel = function(clock, settings)
     assert(clock.source:GetParent():IsVisible(), "hidden sample reached native font work")
@@ -138,9 +140,12 @@ combat:Show()
 views.Display()
 views.SCT()
 assert(env.displayControls.damageIcons.editorChecked == false, "shown category did not catch up")
-assert(env.incomingControl.editorChecked == true and env.sctButtons.on.editorSelected, "shown SCT choices are stale")
-assert(env.fontEditor.sctStyleButtons.diablo.editorSelected, "shown style selection is stale")
-assert(env.fontEditor.sctFontButtons.diablo.editorSelected, "shown font selection is stale")
+assert(
+    env.incomingControl.editorChecked == true and env.fontEditor.sctModeDropdown.dropdownValue == "on",
+    "shown SCT choices are stale"
+)
+assert(env.fontEditor.sctStyleDropdown.dropdownValue == "diablo", "shown style selection is stale")
+assert(env.fontEditor.sctFontDropdown.dropdownValue == "diablo", "shown font selection is stale")
 local classColors = env.displayControls.sctClassColors
 assert(
     classColors.editorChecked and classColors.editorAvailable == false and classColors.inputEnabled == false,
@@ -161,17 +166,12 @@ sctMode = "off"
 views.SCT()
 assert(not env.displayControls.sctShortNumbers.inputEnabled, "non-Custom mode retained abbreviation input")
 assert(not env.displayControls.sctDistanceScaling.inputEnabled, "non-Custom mode retained distance-scaling input")
-for _, button in pairs(env.fontEditor.sctStyleButtons) do
-    assert(button.styleMouseEnabled == false, "non-Custom mode retained style input")
-end
+assert(not env.fontEditor.sctStyleDropdown.styleMouseEnabled, "non-Custom mode retained style input")
 assert(combat:GetAlpha() == 0.45 and values.sctStyle == "diablo", "inactive mode lost its dimming or saved style")
-assert(
-    env.fontEditor.sctFontButtons.diablo.fontMouseEnabled == false and values.sctFont == "diablo",
-    "inactive font input"
-)
+assert(env.fontEditor.sctFontDropdown.fontMouseEnabled == false and values.sctFont == "diablo", "inactive font input")
 sctMode = "on"
 views.SCT()
-assert(env.fontEditor.sctFontButtons.diablo.fontMouseEnabled, "Custom did not restore font input")
+assert(env.fontEditor.sctFontDropdown.fontMouseEnabled, "Custom did not restore font input")
 assert(
     env.displayControls.sctShortNumbers.inputEnabled and not classColors.inputEnabled,
     "mode transition enabled class colors in Diablo or disabled abbreviation"
@@ -197,7 +197,7 @@ values.sctStyle = "diablo"
 views.SCT()
 assert(env.displayControls.sctDistanceScaling.inputEnabled, "enemy style did not restore distance-scaling input")
 assert(
-    env.fontEditor.sctStyleButtons.diablo.styleMouseEnabled and combat:GetAlpha() == 1,
+    env.fontEditor.sctStyleDropdown.styleMouseEnabled and combat:GetAlpha() == 1,
     "Custom did not restore style input"
 )
 

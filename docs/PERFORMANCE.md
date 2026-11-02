@@ -4,14 +4,42 @@ The performance work removes repeated presentation writes while retaining native
 data, pause-aware timing, saved preferences and artwork. It adds no gameplay clock
 or native client dependency. Display choices use the existing saved display table.
 
+## Shared settings dropdowns — 2026-11-02
+
+Layout Font/Outline, Combat Outgoing damage/style/font, meter Bar colors,
+action-bar Frame style, Encounters Outline, map cache/boss visibility and
+Interface Loot popups use the same dropdown factory as jewelry. Eleven
+selectors replace 39 former choice buttons and add eleven arrow captions.
+One popup per settings window allocates on demand and grows only to its largest
+visited list, currently ten choices; its overlay/panel and choice buttons are
+reused across selectors. Closed lists do no recurring work. The existing
+Encounters font menu remains independent. Combat style and font share a
+two-column row; mode and counter-style headings, selectors and descriptions
+share the content center. These changes reuse the same widgets and anchors,
+with no added regions or recurring work.
+
+The existing display/SCT/font listeners update only visible selector captions,
+with changed-only text and highlight writes. Menu dismissal clears its owner
+and choices; owner hiding or disabling input cannot retain a foreign popup.
+Descriptions, search targets, stored choices, transaction/profile/reset
+behavior and gameplay appearance stay unchanged. Loot mode remains available
+in all three modes; only its dependent controls dim outside SDUI. No setting,
+saved state, gameplay frame/region, asset, event or updater is added. CI-only
+fixtures cover choices, dependencies, selected state, hidden deferral, pooling
+and cleanup. No local tests or game execution; native appearance is unverified.
+
 ## Jewelry settings and optional order — 2026-11-02
 
 The dedicated Jewelry page moves existing controls out of Action bar. Its
-five-by-five position picker is built only on first visiting the page and
-retains 25 choice buttons plus seven captions, one new toggle and one sidebar
-category using existing editor artwork;
-these are settings-only objects, not gameplay regions. The tenth sidebar row
-uses the existing navigator with a 46-unit pitch, staying clear of the footer.
+five position dropdowns are built only on first visiting the page and retain
+five selector buttons plus twelve captions, one toggle and one sidebar category
+using existing editor artwork. The shared editor popup is created only on first opening:
+one dismissal overlay, one panel and a reusable choice pool shared with the
+other converted settings selectors (currently at most ten frame styles).
+Selection, outside click, scrolling, owner hiding and disabling input close it
+and clear its active owner and retired choices. These are
+settings-only objects, not gameplay regions. The tenth sidebar row uses the
+existing navigator with a 46-unit pitch, staying clear of the footer.
 
 Custom order defaults off. Its boolean and immutable five-character
 permutation use the existing display draft, saving/profile/reset lifecycle.

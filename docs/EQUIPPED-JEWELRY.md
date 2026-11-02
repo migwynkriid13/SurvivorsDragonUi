@@ -9,7 +9,7 @@ game's original jewelry/ability rows. These controls now live together on this
 page rather than under Action bar.
 
 **Custom jewelry order** is off by default, keeping **ring → ring → neck →
-trinket → trinket**. Turn it on to choose the item in each of the five positions,
+trinket → trinket**. Turn it on to choose the item from a dropdown for each of the five positions,
 from left to right. Choosing an item swaps its position with the selected item,
 so each equipped slot appears once. The order works attached or detached.
 Turning it off restores the original order while retaining your custom choice.

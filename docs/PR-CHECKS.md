@@ -114,12 +114,21 @@ Cancel, profile copies, reset and the custom-boss master dependency. These are
 authored for CI only; no local tests, standalone validation or game execution
 are authorized. They do not establish native text clipping or appearance.
 
+Shared settings-dropdown cases retain the real editor factory and exercise
+Layout font/outline, Combat outgoing/style/font, meter colors, tally styles,
+timer outline, map visibility, loot modes and jewelry. They cover the shared
+lazy popup, longest-list reuse, selected captions, disabled input, independent
+native SCT/font transactions and owner/hide/Cancel cleanup. Loot remains
+selectable in Game/Off, with only its dependent controls disabled. These cases
+are CI-only; no local tests or addon/game execution are authorized.
+
 Jewelry order cases load the production Display owner and extract the actual
 placement helper. They cover default-off behavior, permutation validation,
 atomic swaps, unchanged native slot identities, changed-only anchors,
 disabled/world-hidden deferral, Confirm/Cancel, profile copies and reset.
-Editor cases cover the dedicated Jewelry category, five position selectors,
-attachment/master dependencies, swap feedback, search metadata, lazy reuse and
+Editor cases cover the dedicated Jewelry category, five dropdown selectors,
+attachment/master dependencies, swap feedback, search metadata, lazy popup
+reuse, selection/outside-click/page-hide/disable/Cancel cleanup and
 ten sidebar rows staying above the footer. Coverage is authored for CI only;
 no local tests or addon/game execution are authorized.
 

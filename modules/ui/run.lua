@@ -1207,7 +1207,7 @@ DFRL:NewMod("RunTimers", 5, function()
     }
     local currentFont, fontDraft, fontEditor, fontSample, fontSampleClock, fontMenu
     local faceLabel, sizeLabel, shadowControl
-    local displayControls, displayNumbers, outlineButtons, faceButtons, sctButtons = {}, {}, {}, {}, {}
+    local displayControls, displayNumbers, faceButtons = {}, {}, {}
     local displayColors = {}
     local dependentSettings = {}
     local incomingControl, sctDescription
@@ -1229,21 +1229,10 @@ DFRL:NewMod("RunTimers", 5, function()
     local function UpdateSctLabels()
         if not incomingControl or not incomingControl:IsVisible() or not DFRL.sct then return end
         local mode = DFRL.sct.GetMode()
-        for value, button in pairs(sctButtons) do
-            button:SetSelected(value == mode)
-        end
+        if fontEditor.sctModeDropdown then fontEditor.sctModeDropdown:SetValue(mode) end
         local style = DFRL.display.Get("sctStyle")
-        if fontEditor and fontEditor.sctStyleButtons then
-            for value, button in pairs(fontEditor.sctStyleButtons) do
-                if button.editorSelected ~= (value == style) then button:SetSelected(value == style) end
-            end
-        end
-        if fontEditor and fontEditor.sctFontButtons then
-            local font = DFRL.display.Get("sctFont")
-            for value, button in pairs(fontEditor.sctFontButtons) do
-                if button.editorSelected ~= (value == font) then button:SetSelected(value == font) end
-            end
-        end
+        if fontEditor.sctStyleDropdown then fontEditor.sctStyleDropdown:SetValue(style) end
+        if fontEditor.sctFontDropdown then fontEditor.sctFontDropdown:SetValue(DFRL.display.Get("sctFont")) end
         if mode == "on" then
             if style == "diablo" then
                 T.SetTextIfChanged(
@@ -1289,35 +1278,17 @@ DFRL:NewMod("RunTimers", 5, function()
 
     local function UpdateDisplayLabels()
         if not fontEditor or not fontEditor:IsVisible() then return end
-        if fontEditor.uiFontButtons then
-            local selected = DFRL.display.Get("uiFont")
-            for value, button in pairs(fontEditor.uiFontButtons) do
-                if button:IsVisible() and button.editorSelected ~= (value == selected) then
-                    button:SetSelected(value == selected)
-                end
-            end
-            local outline = DFRL.display.Get("uiFontOutline")
-            for value, button in pairs(fontEditor.uiFontOutlineButtons or {}) do
-                if button:IsVisible() and button.editorSelected ~= (value == outline) then
-                    button:SetSelected(value == outline)
-                end
-            end
+        if fontEditor.uiFontDropdown and fontEditor.uiFontDropdown:IsVisible() then
+            local selected, outline = DFRL.display.Get("uiFont"), DFRL.display.Get("uiFontOutline")
+            fontEditor.uiFontDropdown:SetValue(selected)
+            fontEditor.uiFontOutlineDropdown:SetValue(outline)
             if fontEditor.uiFont ~= selected or fontEditor.uiFontOutline ~= outline then
                 fontEditor.uiFont, fontEditor.uiFontOutline = selected, outline
                 if fontEditor.RefreshOptionLayout then fontEditor.RefreshOptionLayout() end
             end
         end
-        if sctSizeLabel and sctSizeLabel:IsVisible() then
-            T.SetTextIfChanged(sctSizeLabel, tostring(math.floor(DFRL.display.Get("sctScale") * 100 + 0.5)) .. "%")
-        end
-        if fontEditor and fontEditor.tallyStyleButtons then
-            local _, first = next(fontEditor.tallyStyleButtons)
-            if first and first:IsVisible() then
-                local selected = DFRL.display.Get("tallyStyle")
-                for id, button in pairs(fontEditor.tallyStyleButtons) do
-                    button:SetSelected(id == selected)
-                end
-            end
+        if fontEditor.tallyStyleDropdown and fontEditor.tallyStyleDropdown:IsVisible() then
+            fontEditor.tallyStyleDropdown:SetValue(DFRL.display.Get("tallyStyle"))
         end
         local jewelry = fontEditor.jewelryOrderSettings
         if jewelry and jewelry.controls[1]:IsVisible() then
@@ -1325,18 +1296,15 @@ DFRL:NewMod("RunTimers", 5, function()
             local order = DFRL.display.Get("jewelryOrder")
             for position, row in ipairs(jewelry.rows) do
                 local selected = string.sub(order, position, position)
-                for choice, button in pairs(row.buttons) do
-                    if button.editorSelected ~= (choice == selected) then button:SetSelected(choice == selected) end
-                end
+                row.button:SetValue(selected)
+                row.value = selected
             end
         end
         if fontEditor and fontEditor.displayModes then
             for key, group in pairs(fontEditor.displayModes) do
                 if group.description:IsVisible() then
                     local selected = DFRL.display.Get(key)
-                    for id, button in pairs(group.buttons) do
-                        if button.editorSelected ~= (id == selected) then button:SetSelected(id == selected) end
-                    end
+                    group.dropdown:SetValue(selected)
                     T.SetTextIfChanged(group.description, group.descriptions[selected])
                 end
             end
@@ -1689,9 +1657,7 @@ DFRL:NewMod("RunTimers", 5, function()
             if currentFont.face == entry.face then T.SetTextIfChanged(faceLabel, entry.label) end
             if faceButtons[entry.face] then faceButtons[entry.face]:SetSelected(currentFont.face == entry.face) end
         end
-        for _, entry in ipairs(fontOutlines) do
-            outlineButtons[entry.value]:SetSelected(currentFont.outline == entry.value)
-        end
+        if fontEditor.timerOutlineDropdown then fontEditor.timerOutlineDropdown:SetValue(currentFont.outline) end
         T.SetTextIfChanged(sizeLabel, tostring(currentFont.size))
         if shadowControl.editorChecked ~= currentFont.shadow then shadowControl:SetChecked(currentFont.shadow) end
     end
@@ -1813,6 +1779,14 @@ DFRL:NewMod("RunTimers", 5, function()
         local function TextWidth(text) return DFRL.locale.Width(measure, text, true) end
         local padding, gap = 24, 16
         local sidebarWidth = 232
+        local function Dropdown(parent, entries, width, height, callback)
+            local button = T.CreateEditorDropdown(parent, fontEditor, entries, width, height, callback)
+            button.dropdownScroll = fontEditor.navigation.Scroll
+            button:EnableMouseWheel(true)
+            button:SetScript("OnMouseWheel", button.dropdownScroll)
+            if parent.editorSettingsGroup then table.insert(parent.editorSettingsGroup.controls, button) end
+            return button
+        end
         local worldIconModes = {
             { "always", "Always", "Show icons at any distance." },
             { "near", "Nearby only", "Show icons at or within the distance cutoff." },
@@ -2320,7 +2294,7 @@ DFRL:NewMod("RunTimers", 5, function()
                     offset = 112,
                 },
                 { key = "sctStyle", label = "Damage number style", offset = 178 },
-                { key = "sctFont", label = "Font", offset = 246 },
+                { key = "sctFont", label = "Font", offset = 178 },
                 { key = "sctScale", label = "SCT size", offset = 282 },
                 { key = "sctClassColors", label = "Class-colored damage", offset = 282 },
                 { key = "sctShortNumbers", label = "Abbreviate damage (K, M, B, T)", offset = 318 },
@@ -2526,6 +2500,9 @@ DFRL:NewMod("RunTimers", 5, function()
             onNavigate = function(key)
                 DFRL.layout.SetHandlesVisible(key == "layout")
                 if fontMenu and fontMenu:IsShown() then fontMenu:Hide() end
+                if fontEditor.editorDropdownMenu and fontEditor.editorDropdownMenu:IsShown() then
+                    fontEditor.editorDropdownMenu:Hide()
+                end
             end,
         })
         fontEditor.navigation = navigation
@@ -2550,34 +2527,23 @@ DFRL:NewMod("RunTimers", 5, function()
             hint:SetHeight(36)
             hint:SetJustifyH("LEFT")
             hint:SetJustifyV("TOP")
-            local buttonWidth = (contentWidth - 2 * gap) / 3
-            fontEditor.uiFontButtons = {}
-            for index, entry in ipairs(DFRL.display.fonts) do
-                local choice = entry.value
-                local _, button = FontEditorButton(
-                    entry.label,
-                    buttonWidth,
-                    math.mod(index - 1, 3) * (buttonWidth + gap),
-                    -410 - math.floor((index - 1) / 3) * 38,
-                    function() DFRL.display.Set("uiFont", choice) end,
-                    page
-                )
-                fontEditor.uiFontButtons[choice] = button
-            end
+            fontEditor.uiFontDropdown = Dropdown(
+                page,
+                DFRL.display.fonts,
+                300,
+                30,
+                function(value) DFRL.display.Set("uiFont", value) end
+            )
+            fontEditor.uiFontDropdown:SetPoint("TOPLEFT", page, "TOPLEFT", 0, -410)
             FontEditorLabel(page, captions.uiFontOutline.label, 0, -captions.uiFontOutline.offset, 12)
-            fontEditor.uiFontOutlineButtons = {}
-            for index, entry in ipairs(fontOutlines) do
-                local choice = entry.value
-                local _, button = FontEditorButton(
-                    entry.label,
-                    buttonWidth,
-                    (index - 1) * (buttonWidth + gap),
-                    -514,
-                    function() DFRL.display.Set("uiFontOutline", choice) end,
-                    page
-                )
-                fontEditor.uiFontOutlineButtons[choice] = button
-            end
+            fontEditor.uiFontOutlineDropdown = Dropdown(
+                page,
+                fontOutlines,
+                300,
+                30,
+                function(value) DFRL.display.Set("uiFontOutline", value) end
+            )
+            fontEditor.uiFontOutlineDropdown:SetPoint("TOPLEFT", page, "TOPLEFT", 0, -514)
             local shadow = T.CreateEditorToggle(
                 page,
                 captions.uiFontShadow.label,
@@ -2719,39 +2685,38 @@ DFRL:NewMod("RunTimers", 5, function()
             if category.mode then
                 local mode = category.mode
                 local heading = FontEditorLabel(content, mode.label, 0, -4, 12)
+                heading:SetWidth(contentWidth)
+                heading:SetJustifyH("CENTER")
                 heading:SetTextColor(0.94, 0.79, 0.47)
-                local group = { buttons = {}, descriptions = {} }
+                local group = { descriptions = {} }
                 fontEditor.displayModes = fontEditor.displayModes or {}
                 fontEditor.displayModes[mode.key] = group
-                local buttonWidth = (contentWidth - gap * (table.getn(mode.values) - 1)) / table.getn(mode.values)
+                group.dropdown = Dropdown(
+                    content,
+                    mode.values,
+                    300,
+                    30,
+                    function(value) DFRL.display.Set(mode.key, value) end
+                )
+                if dependents and category.master ~= mode.key then table.insert(dependents.controls, group.dropdown) end
                 for _, entry in ipairs(mode.values) do
-                    local id = entry[1]
-                    local button = T.CreateEditorButton(content, entry[2], buttonWidth, 30)
-                    button:SetScript("OnClick", function()
-                        if not category.master or DFRL.display.Get(category.master) then
-                            DFRL.display.Set(mode.key, id)
-                        end
-                    end)
-                    if dependents then table.insert(dependents.controls, button) end
-                    group.buttons[id], group.descriptions[id] = button, entry[3]
+                    group.descriptions[entry[1]] = entry[3]
                 end
                 group.description = FontEditorLabel(content, "", 0, -68, 10)
                 group.description:SetWidth(contentWidth)
                 group.description:SetHeight(36)
+                group.description:SetJustifyH("CENTER")
                 group.description:SetJustifyV("TOP")
                 group.description:SetTextColor(0.59, 0.59, 0.56)
                 local appliedTop
                 ArrangeMode = function(top)
                     if appliedTop == top then return end
                     heading:ClearAllPoints()
-                    heading:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -top - 4)
-                    for index, entry in ipairs(mode.values) do
-                        local button = group.buttons[entry[1]]
-                        button:ClearAllPoints()
-                        button:SetPoint("TOPLEFT", content, "TOPLEFT", (index - 1) * (buttonWidth + gap), -top - 28)
-                    end
+                    heading:SetPoint("TOP", content, "TOP", 0, -top - 4)
+                    group.dropdown:ClearAllPoints()
+                    group.dropdown:SetPoint("TOP", content, "TOP", 0, -top - 28)
                     group.description:ClearAllPoints()
-                    group.description:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -top - 68)
+                    group.description:SetPoint("TOP", content, "TOP", 0, -top - 68)
                     appliedTop = top
                 end
             end
@@ -2767,27 +2732,19 @@ DFRL:NewMod("RunTimers", 5, function()
                 hint:SetHeight(40)
                 hint:SetJustifyH("LEFT")
                 hint:SetJustifyV("TOP")
-                local labelWidth, choiceGap = 94, 6
-                local choiceWidth = (contentWidth - labelWidth - choiceGap * 4) / 5
+                local labelWidth, choiceWidth = 100, 300
                 for index, caption in ipairs(jewelryPositions) do
                     local position = index
-                    local row = { label = FontEditorLabel(content, caption, 0, 0, 11), buttons = {} }
+                    local row = { label = FontEditorLabel(content, caption, 0, 0, 11) }
                     row.label:SetWidth(labelWidth - 6)
                     row.label:SetHeight(36)
                     row.label:SetJustifyV("MIDDLE")
                     settings.rows[index] = row
-                    for _, entry in ipairs(DFRL.display.jewelrySlots) do
-                        local choice = entry.value
-                        local button = T.CreateEditorButton(content, entry.label, choiceWidth, 36)
-                        button.label:SetHeight(32)
-                        button:SetScript("OnClick", function()
-                            if settings.enabled then DFRL.display.SetJewelryPosition(position, choice) end
-                        end)
-                        button:EnableMouseWheel(true)
-                        button:SetScript("OnMouseWheel", ScrollOptions)
-                        row.buttons[choice] = button
-                        table.insert(settings.controls, button)
-                    end
+                    row.button = Dropdown(content, DFRL.display.jewelrySlots, choiceWidth, 36, function(value)
+                        if settings.enabled then DFRL.display.SetJewelryPosition(position, value) end
+                    end)
+                    row.button.dropdownOpenUp = index >= 4
+                    table.insert(settings.controls, row.button)
                 end
                 local appliedTop
                 local function LayoutJewelry()
@@ -2799,15 +2756,7 @@ DFRL:NewMod("RunTimers", 5, function()
                     for position, row in ipairs(settings.rows) do
                         local y = -top - 72 - (position - 1) * 44
                         row.label:SetPoint("TOPLEFT", content, "TOPLEFT", 0, y)
-                        for index, entry in ipairs(DFRL.display.jewelrySlots) do
-                            row.buttons[entry.value]:SetPoint(
-                                "TOPLEFT",
-                                content,
-                                "TOPLEFT",
-                                labelWidth + (index - 1) * (choiceWidth + choiceGap),
-                                y
-                            )
-                        end
+                        row.button:SetPoint("TOPLEFT", content, "TOPLEFT", labelWidth, y)
                     end
                     category.searchOffsets.jewelryOrder = top
                     page:SetHeight(top + 72 + 5 * 44 + 8)
@@ -2818,50 +2767,39 @@ DFRL:NewMod("RunTimers", 5, function()
             if category.stylePicker then
                 local stylePageWidth = content:GetWidth()
                 local heading = FontEditorLabel(content, tallyStyleCaption.label, 0, 0, 12)
+                heading:SetWidth(stylePageWidth)
+                heading:SetJustifyH("CENTER")
                 heading:SetTextColor(0.94, 0.79, 0.47)
                 local description = FontEditorLabel(content, tallyStyleCaption.description, 0, 0, 10)
                 description:SetWidth(stylePageWidth)
                 description:SetHeight(28)
-                description:SetJustifyH("LEFT")
+                description:SetJustifyH("CENTER")
                 description:SetJustifyV("TOP")
                 description:SetTextColor(0.59, 0.59, 0.56)
-                local styleWidth, pitch = (stylePageWidth - gap) / 2, 36
-                local styleButtons = {}
-                fontEditor.tallyStyleButtons = {}
-                for _, entry in ipairs(DFRL.tallyStyles or {}) do
-                    local id = entry.id
-                    local button = T.CreateEditorButton(content, entry.label, styleWidth, 30)
-                    button:SetScript("OnClick", function() DFRL.display.Set("tallyStyle", id) end)
-                    button:EnableMouseWheel(true)
-                    button:SetScript("OnMouseWheel", ScrollOptions)
-                    table.insert(styleButtons, { frame = button, key = "style:" .. id })
-                    fontEditor.tallyStyleButtons[id] = button
-                end
+                fontEditor.tallyStyleDropdown = Dropdown(
+                    content,
+                    DFRL.tallyStyles,
+                    320,
+                    30,
+                    function(value) DFRL.display.Set("tallyStyle", value) end
+                )
                 local styleTop
                 local function LayoutStyles()
                     local top = optionsHeight + 8
                     category.searchOffsets.tallyStyle = top
                     if styleTop ~= top then
                         heading:ClearAllPoints()
-                        heading:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -top)
+                        heading:SetPoint("TOP", content, "TOP", 0, -top)
                         description:ClearAllPoints()
-                        description:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -top - 22)
-                        for index, record in ipairs(styleButtons) do
-                            local button = record.frame
-                            local offset = top + 58 + math.floor((index - 1) / 2) * pitch
-                            button:ClearAllPoints()
-                            button:SetPoint(
-                                "TOPLEFT",
-                                content,
-                                "TOPLEFT",
-                                math.mod(index - 1, 2) * (styleWidth + gap),
-                                -offset
-                            )
-                            category.searchOffsets[record.key] = offset
+                        description:SetPoint("TOP", content, "TOP", 0, -top - 22)
+                        fontEditor.tallyStyleDropdown:ClearAllPoints()
+                        fontEditor.tallyStyleDropdown:SetPoint("TOP", content, "TOP", 0, -top - 58)
+                        for _, entry in ipairs(DFRL.tallyStyles) do
+                            category.searchOffsets["style:" .. entry.id] = top + 58
                         end
                         styleTop = top
                     end
-                    local height = top + 58 + math.ceil(table.getn(styleButtons) / 2) * pitch
+                    local height = top + 96
                     if page:GetHeight() ~= height then page:SetHeight(height) end
                 end
                 LayoutStyles()
@@ -2882,18 +2820,12 @@ DFRL:NewMod("RunTimers", 5, function()
         fontEditor.RefreshOptionLayout = RefreshOptionLayout
 
         builders.combat = function(combat)
-            local modeSize = (contentWidth - gap * 2) / 3
             local heading = FontEditorLabel(combat, captions.outgoing.label, 0, -captions.outgoing.offset, 12)
             heading:SetTextColor(0.94, 0.79, 0.47)
-            for index, entry in ipairs(modes) do
-                local mode = entry.value
-                local button = T.CreateEditorButton(combat, entry.label, modeSize, 30)
-                button:SetPoint("TOPLEFT", combat, "TOPLEFT", (index - 1) * (modeSize + gap), -24)
-                button:SetScript("OnClick", function()
-                    if DFRL.sct then DFRL.sct.SetMode(mode) end
-                end)
-                sctButtons[mode] = button
-            end
+            fontEditor.sctModeDropdown = Dropdown(combat, modes, 300, 30, function(value)
+                if DFRL.sct then DFRL.sct.SetMode(value) end
+            end)
+            fontEditor.sctModeDropdown:SetPoint("TOPLEFT", combat, "TOPLEFT", 0, -24)
             sctDescription = FontEditorLabel(combat, "", 0, -66, 10)
             sctDescription:SetWidth(contentWidth)
             sctDescription:SetHeight(28)
@@ -2937,36 +2869,30 @@ DFRL:NewMod("RunTimers", 5, function()
                 control.description:SetHeight(28)
                 control.description:SetJustifyV("TOP")
             end
-            FontEditorLabel(combat, captions.sctStyle.label, 0, -captions.sctStyle.offset, 11)
-            fontEditor.sctStyleButtons = {}
-            for index, entry in ipairs(sctStyles) do
-                local style = entry.value
-                local _, button = FontEditorButton(
-                    entry.label,
-                    modeSize,
-                    (index - 1) * (modeSize + gap),
-                    -200,
-                    function() DFRL.display.Set("sctStyle", style) end,
-                    combat
-                )
-                fontEditor.sctStyleButtons[style] = button
-            end
-            FontEditorLabel(combat, captions.sctFont.label, 0, -captions.sctFont.offset - 8, 11)
-            local fontX = TextWidth(captions.sctFont.label) + gap
-            local fontWidth = (contentWidth - fontX - gap) / 2
-            fontEditor.sctFontButtons = {}
-            for index, entry in ipairs(sctFonts) do
-                local font = entry.value
-                local _, button = FontEditorButton(
-                    entry.label,
-                    fontWidth,
-                    fontX + (index - 1) * (fontWidth + gap),
-                    -captions.sctFont.offset,
-                    function() DFRL.display.Set("sctFont", font) end,
-                    combat
-                )
-                fontEditor.sctFontButtons[font] = button
-            end
+            local choiceWidth = (contentWidth - gap) / 2
+            local styleLabel = FontEditorLabel(combat, captions.sctStyle.label, 0, -captions.sctStyle.offset, 11)
+            styleLabel:SetWidth(choiceWidth)
+            styleLabel:SetJustifyH("LEFT")
+            fontEditor.sctStyleDropdown = Dropdown(
+                combat,
+                sctStyles,
+                choiceWidth,
+                30,
+                function(value) DFRL.display.Set("sctStyle", value) end
+            )
+            fontEditor.sctStyleDropdown:SetPoint("TOPLEFT", combat, "TOPLEFT", 0, -200)
+            local fontX = choiceWidth + gap
+            local fontLabel = FontEditorLabel(combat, captions.sctFont.label, fontX, -captions.sctFont.offset, 11)
+            fontLabel:SetWidth(choiceWidth)
+            fontLabel:SetJustifyH("LEFT")
+            fontEditor.sctFontDropdown = Dropdown(
+                combat,
+                sctFonts,
+                choiceWidth,
+                30,
+                function(value) DFRL.display.Set("sctFont", value) end
+            )
+            fontEditor.sctFontDropdown:SetPoint("TOPLEFT", combat, "TOPLEFT", fontX, -200)
             FontEditorLabel(combat, captions.sctScale.label, 0, -captions.sctScale.offset - 8, 11)
             local scaleX = TextWidth(captions.sctScale.label) + gap
             local function ChangeSctSize(direction)
@@ -3127,23 +3053,12 @@ DFRL:NewMod("RunTimers", 5, function()
             sizeLabel = FontEditorLabel(timer, "", sizeX + 42, -66 - timerTop)
             local _, larger = FontEditorButton("+", 28, sizeX + 76, -58 - timerTop, function() ChangeSize(1) end, timer)
             FontEditorLabel(timer, captions.timerOutline.label, 0, -captions.timerOutline.offset, 11)
-            local outlineSize = (contentWidth - controlX - gap * 2) / 3
-            for index, entry in ipairs(fontOutlines) do
-                local value = entry.value
-                local _, button = FontEditorButton(
-                    entry.label,
-                    outlineSize,
-                    controlX + (index - 1) * (outlineSize + gap),
-                    -96 - timerTop,
-                    function()
-                        if not fontDraft then return end
-                        fontDraft.outline = value
-                        PreviewFont(fontDraft)
-                    end,
-                    timer
-                )
-                outlineButtons[value] = button
-            end
+            fontEditor.timerOutlineDropdown = Dropdown(timer, fontOutlines, contentWidth - controlX, 28, function(value)
+                if not fontDraft then return end
+                fontDraft.outline = value
+                PreviewFont(fontDraft)
+            end)
+            fontEditor.timerOutlineDropdown:SetPoint("TOPLEFT", timer, "TOPLEFT", controlX, -96 - timerTop)
             local previousCaptionWidth, previousSizeWidth = labelWidth, timerSizeWidth
             local function LayoutTimerControls()
                 labelWidth = math.max(TextWidth("Font"), TextWidth("Size"), TextWidth("Outline"))
@@ -3164,20 +3079,9 @@ DFRL:NewMod("RunTimers", 5, function()
                     record[1]:ClearAllPoints()
                     record[1]:SetPoint("TOPLEFT", timer, "TOPLEFT", sizeX + record[2], record[3] - timerTop)
                 end
-                outlineSize = (contentWidth - controlX - gap * 2) / 3
-                for index, entry in ipairs(fontOutlines) do
-                    local button = outlineButtons[entry.value]
-                    button:ClearAllPoints()
-                    button:SetPoint(
-                        "TOPLEFT",
-                        timer,
-                        "TOPLEFT",
-                        controlX + (index - 1) * (outlineSize + gap),
-                        -96 - timerTop
-                    )
-                    button:SetWidth(outlineSize)
-                    button.label:SetWidth(outlineSize - 12)
-                end
+                fontEditor.timerOutlineDropdown:ClearAllPoints()
+                fontEditor.timerOutlineDropdown:SetPoint("TOPLEFT", timer, "TOPLEFT", controlX, -96 - timerTop)
+                fontEditor.timerOutlineDropdown:SetWidth(contentWidth - controlX)
                 if fontMenu then fontMenu:Hide() end
             end
             table.insert(optionLayouts, { group = "encounters", arrange = LayoutTimerControls })
@@ -3220,6 +3124,9 @@ DFRL:NewMod("RunTimers", 5, function()
         fontEditor:SetScript("OnHide", function()
             FinishFontEditorDrag()
             if fontMenu then fontMenu:Hide() end
+            if fontEditor.editorDropdownMenu and fontEditor.editorDropdownMenu:IsShown() then
+                fontEditor.editorDropdownMenu:Hide()
+            end
         end)
         DFRL.layout.RegisterEditorWindow(fontEditor)
         local divider = T.EditorDivider(fontEditor, width - padding * 2)
