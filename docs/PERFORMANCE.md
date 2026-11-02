@@ -3846,3 +3846,59 @@ Coverage is authored for CI only. No local tests, syntax/validation checks or
 addon/game execution were performed. Operation bounds and mocks do not prove
 native API delivery, instance revive locations,
 attachment correctness, wall visibility, camera timing, appearance or FPS.
+
+### World-icon distance visibility and quick fades
+
+Cache and encounter icon switches retain their existing defaults. Two new modes
+(`worldCacheIconMode`, `worldBossIconMode`) normalize to `always`, `near` or
+`far`, initially `always`. Their existing-display-table cutoffs
+(`worldCacheIconDistance`, `worldBossIconDistance`) default to 40 yards and
+normalize to finite integer 5–200 values. The controls step by five; old/invalid
+profiles select Always/40, and all four preferences use the shared
+preview/Confirm/Cancel/profile/reset lifecycle without another SavedVariable.
+
+Distance filtering consumes `playerDistance` already supplied by the same
+current-frame projection, only when `playerDistanceMetrics` is advertised.
+Near is inclusive and Far exclusive at the cutoff. Missing, negative or
+nonfinite distances hide only a filtered kind; Always preserves older metric
+providers. Camera metrics never substitute. Affordability remains an independent
+cache gate and fallen allies do not inherit these filters.
+
+Choices are copied by the existing listener. Changing a mode/cutoff does not
+dirty discovery, rebind the native callback or rebuild the pool. Hidden
+out-of-band handles still need their existing projection to detect movement
+back into range, but do no texture preparation, frame allocation or placement
+while fully hidden. No player-position, capability or other getter is added.
+
+Cache/encounter appearances and distance exits interpolate opacity for 120 ms
+using the native projection clock in the existing post-camera callback.
+Reversals start from the currently painted alpha. Settled opacity is
+changed-only; invalid/noncurrent/offscreen projections, explicit disabling and
+world/handle retirement hide immediately and clear the fade. Hidden marker
+coordinates are never replayed to sustain a fade. Recycled views restore alpha
+and retire their fade scalars. Performance Mode settles visibility immediately,
+including an active transition, with identical range queries and cleanup.
+Fallen-ally icons retain instant visibility. No gameplay frame, region, event,
+separate updater or animation timer is added.
+
+Two lazy Map subsections reuse the existing master switch, segmented-mode
+builder, numeric controls, scrolling and search. Cutoffs dim for Always; all
+related inputs dim while their master switch is off, preserving choices.
+They add 16 settings-only frames, 44 texture regions and 22 FontStrings across
+the two section shells/pages, six mode buttons, two numeric wrappers/four step
+buttons, headings and dividers. Existing checkboxes move into these sections.
+Prepared settings reuse those controls; hidden settings do no range-label work.
+All eleven added captions have fourteen source/runtime translations.
+
+CI-only source/view cases cover exact/fractional boundaries, independent kinds,
+missing/unadvertised metrics, affordability conjunction, interrupted/completed
+fades, instant Performance Mode transitions, stale/offscreen cleanup, pooled
+recovery, no extra metadata queries, unchanged hidden writes, normalization and
+editor dependencies/search. Local tests, validation and game execution were not
+run. These operation counts do not prove native call cost, appearance or FPS.
+
+Cache, guardian and fallen-ally HUD/minimap guidance now defaults off through
+its existing three display booleans. Missing/invalid values and both full-reset
+entry points select off; explicit saved choices remain unchanged. The existing
+disabled-reader gates apply without another setting, frame, region, event or
+updater. World-icon switches and their demand remain independent.

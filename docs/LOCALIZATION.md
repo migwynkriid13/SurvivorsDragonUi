@@ -288,3 +288,10 @@ The moving manager adds HUD Edit Mode, Snap to elements, Grid spacing and Save
 and close in all fourteen source/runtime UI catalogs. Its new preferences stay
 in the existing display table. English/native gameplay text, effect templates,
 spell aliases and native language detection are unchanged.
+
+World-icon range controls add eleven caption rows for the two Map subsections,
+Always/Nearby/Distant choices, cutoff label and hints. All fourteen UI source
+and runtime catalogs are updated together. Native catalogs, identities and
+source fingerprints are retained; only the prepared UI rows change. Existing
+caption bindings, language switching and settings search consume these rows.
+No local tests, validation or addon/game execution were run.

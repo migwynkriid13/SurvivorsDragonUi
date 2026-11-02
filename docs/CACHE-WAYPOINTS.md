@@ -4,6 +4,12 @@ Cache and guardian waypoints add independent guidance HUDs and minimap markers u
 
 ## Player behavior
 
+Cache, guardian and fallen-ally direction guidance defaults off. Enable any
+guide in `/sdui` → **Map & navigation** to show its HUD and minimap pins.
+World icons above the entities use their separate switches and keep their
+existing defaults and saved choices. Existing saved guidance choices also stay
+in use; changing defaults does not overwrite them.
+
 **Fallen ally guidance** reuses this same HUD, arrow and minimap pin system with
 the selected **02 Winged Soul** artwork. A 32-unit blue/white spirit icon accompanies
 the exact native member name and distance; each eligible fallen ally also has a
@@ -14,13 +20,13 @@ action bar's shared static artwork bounds. Move, scale or hide **Fallen ally
 waypoint** in the shared Layout editor. Existing saved positions remain in use;
 move the guide there if an older saved position overlaps the jewelry.
 
-The default-on `partyGuidance` and default-off `mirrorPartyWaypoint` choices live
+The default-off `partyGuidance` and default-off `mirrorPartyWaypoint` choices live
 in the existing display table. Both support preview, Confirm-only saving,
 Cancel/world/logout/reload discard, profiles and both full resets. Turning this
 guide off clears its live roster and skips party reads; enabling waits for a
 fresh native sample. No member positions or death state are saved.
 
-The existing ten-Hz/deferred controller prefers the proposed
+The existing ten-Hz/deferred controller prefers the documented
 `AZS_GetDownedPartyMembers()` when that function exists. It copies at most four
 members by opaque native ID and validates the complete snapshot before accepting
 positions. World X/Y/Z can be zero; map, run and coordinate-space identity must
@@ -49,10 +55,26 @@ and bosses** defaults off and includes final bosses. These switches retain live
 preview, Confirm/Cancel, profiles and both resets. They are independent of the
 HUD/minimap guidance switches.
 
+Under **Map & navigation**, **World cache icons** and **World guardian and
+boss icons** each have **Always**, **Nearby only** and **Distant only** choices.
+Always is the default. The separate **Distance cutoff (yards)** starts at 40
+and adjusts from 5 to 200 in five-yard steps. Nearby includes the cutoff;
+Distant starts beyond it. The cutoff dims when Always is selected, and all
+related controls dim while that icon switch is off, retaining their choices.
+These choices share live preview, Confirm/Cancel, profiles and both resets.
+Fallen-ally world icons keep their existing visibility behavior.
+
+Cache and encounter icons fade in over 120 ms; crossing a distance cutoff also
+fades them out over 120 ms. Performance Mode uses instant visibility. Missing,
+invalid, offscreen or retired positions and explicit feature/world cleanup hide
+immediately, preventing a fade from showing an old screen position. Distance
+modes need a valid native hero-distance metric; Always does not require it.
+
 **Only show affordable caches** defaults off. Enable it to show a world cache
 icon only when the latest received native gold covers the next cache cost.
 Equality and a free cache count as affordable. Missing or invalid gold/cost data
-hides cache icons while this filter is on. The option dims when **Icons above
+hides cache icons while this filter is on. It combines with the chosen distance
+mode, so both conditions must pass. The option dims when **Icons above
 caches** is off and retains its choice. It shares preview, Confirm/Cancel,
 profiles and both resets; HUD/minimap guidance and other world icons keep their
 existing behavior.
@@ -113,7 +135,7 @@ map support and rendering have not been verified through execution.
 - Guardian coordinates describe the fixed lair, not the guardian's moving combat position. The visible label is **Guardian**; its distance and direction still refer to the lair, including while its guardian is fighting elsewhere.
 - **Guide to next respawn** under `/sdui` → **Map & navigation** defaults off. When enabled and every guardian is defeated, Guardian guidance points to the lair with the shortest known native respawn timer. A timer of zero takes priority; equal timers keep the current lair. Unknown timers or missing coordinates cannot supply a destination. Any received living guardian takes priority again. This works with defeated minimap icons and minimap timers turned off. The option retains its value but dims and disables while Guardian guidance is off.
 - Move and uniformly resize each guide independently through `/sdui`, then click Confirm to save geometry. Uniform resizing preserves the 190:46 shape. Their existing layout keys remain `cacheWaypoint` and `guardianWaypoint`. Each guide hides with its own unavailable waypoint; the two containers remain separate. Unconfirmed geometry uses the existing discard behavior. `/sdui reset` and Addon defaults restore both default anchors and sizes. The two visibility choices share the existing display preference store; no separate SavedVariables are added.
-- **Cache guidance: on/off** and **Guardian guidance: on/off** in `/sdui` independently control each guide's HUD and minimap markers, both defaulting on. Guardian guidance also controls the guardian minimap markers and hides the native flag as described below. Changes preview immediately. Confirm alone saves `cacheGuidance` and `guardianGuidance` in `SurvivorsDragonUiDisplay`; missing or invalid older choices default on. Turning a guide off keeps its valid destination, accepted snapshots, calibration and geometry, and its layout handles remain available. Turning it back on restores the current valid selection. World leave/logout/reload discard unconfirmed visibility drafts. Both full resets restore both guides on together with their default geometry.
+- **Cache guidance: on/off** and **Guardian guidance: on/off** in `/sdui` independently control each guide's HUD and minimap markers, both defaulting off. Guardian guidance also controls the guardian minimap markers and hides the native flag as described below. Changes preview immediately. Confirm alone saves `cacheGuidance` and `guardianGuidance` in `SurvivorsDragonUiDisplay`; missing or invalid older choices default off. Explicit saved on choices stay on. Turning a guide off keeps its valid destination, accepted snapshots, calibration and geometry, and its layout handles remain available. Turning it back on restores the current valid selection. World leave/logout/reload discard unconfirmed visibility drafts. Both full resets restore both guides off together with their default geometry.
 - Selection, positions and map calibration are session-only. No cache, guardian or other gameplay state is added to SavedVariables.
 
 `guardianRespawnGuidance` is a normalized default-false boolean in the existing

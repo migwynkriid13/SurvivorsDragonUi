@@ -98,13 +98,17 @@ DFRL:NewMod("Display", 0, function()
         lockActionButtons = true,
         cooldownNumbers = true,
         showGryphons = false,
-        cacheGuidance = true,
+        cacheGuidance = false,
         worldCacheIcons = true,
+        worldCacheIconMode = "always",
+        worldCacheIconDistance = 40,
         worldCacheAffordableOnly = false,
         worldBossIcons = false,
+        worldBossIconMode = "always",
+        worldBossIconDistance = 40,
         worldPartyIcons = true,
-        partyGuidance = true,
-        guardianGuidance = true,
+        partyGuidance = false,
+        guardianGuidance = false,
         guardianRespawnGuidance = false,
         keepDefeatedGuardianIcons = false,
         guardianMinimapTimers = false,
@@ -145,6 +149,8 @@ DFRL:NewMod("Display", 0, function()
         sctScale = { minimum = 0.25, maximum = 2 },
         sctDistanceReference = { minimum = 1, maximum = 100, integer = true },
         sctDistanceMinimum = { minimum = 25, maximum = 100, integer = true },
+        worldCacheIconDistance = { minimum = 5, maximum = 200, integer = true },
+        worldBossIconDistance = { minimum = 5, maximum = 200, integer = true },
         petRows = { minimum = 1, maximum = 6, integer = true },
         petSpacing = { minimum = 0, maximum = 60, integer = true },
     }
@@ -185,6 +191,9 @@ DFRL:NewMod("Display", 0, function()
     local function NormalizeMeterColorMode(value)
         if value == "default" or value == "custom" then return value end
     end
+    local function NormalizeWorldIconMode(value)
+        if value == "always" or value == "near" or value == "far" then return value end
+    end
     function display.ColorRGB(value)
         local hex = NormalizeColor(value)
         if not hex then return end
@@ -210,6 +219,9 @@ DFRL:NewMod("Display", 0, function()
         if type(source) == "table" then value = source[key] end
         if colorKeys[key] then return NormalizeColor(value) or defaults[key] end
         if key == "meterColorMode" then return NormalizeMeterColorMode(value) or defaults[key] end
+        if key == "worldCacheIconMode" or key == "worldBossIconMode" then
+            return NormalizeWorldIconMode(value) or defaults[key]
+        end
         if ranges[key] then
             local number = NormalizeNumber(key, value)
             if key == "meterNameFontSize" and not number and type(source) == "table" then
@@ -270,6 +282,9 @@ DFRL:NewMod("Display", 0, function()
             if not value then return end
         elseif key == "meterColorMode" then
             value = NormalizeMeterColorMode(value)
+            if not value then return end
+        elseif key == "worldCacheIconMode" or key == "worldBossIconMode" then
+            value = NormalizeWorldIconMode(value)
             if not value then return end
         elseif ranges[key] then
             value = NormalizeNumber(key, value)

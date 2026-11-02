@@ -89,6 +89,13 @@ env.DFRL.navigation = {
 }
 c:Load("core/hud.lua")
 c:Load("core/display.lua", "Display")
+do
+    local defaults = env.DFRL.display.Snapshot()
+    assert(not defaults.cacheGuidance and not defaults.guardianGuidance and not defaults.partyGuidance)
+    assert(defaults.worldCacheIcons and defaults.worldPartyIcons, "guidance defaults disabled independent world icons")
+end
+-- The controller lifecycle below exercises an explicit saved opt-in.
+env.SurvivorsDragonUiDisplay = { cacheGuidance = true, guardianGuidance = true, partyGuidance = true }
 c:Load("modules/ui/guardians.lua", "GuardianRoster")
 c:Load("modules/map/waypoints.lua", "Waypoints")
 local display = env.DFRL.display
@@ -152,7 +159,7 @@ local function PinCount(art)
     return count
 end
 assert(display.Get("partyGuidance") and not display.Get("mirrorPartyWaypoint"))
-assert(display.Copy({ partyGuidance = 0, mirrorPartyWaypoint = 1 }).partyGuidance)
+assert(not display.Copy({ partyGuidance = 0, mirrorPartyWaypoint = 1 }).partyGuidance)
 assert(not display.Copy({ mirrorPartyWaypoint = 1 }).mirrorPartyWaypoint)
 Tick()
 assert(not hud:IsShown(), "an empty party created a destination")
@@ -212,7 +219,7 @@ for _ = 1, 20 do
     Tick()
 end
 assert(not hud:IsShown() and unitReads == 0 and positionReads == 0, "disabled guidance still sampled the party")
-assert(not env.SurvivorsDragonUiDisplay, "display preview saved before Confirm")
+assert(env.SurvivorsDragonUiDisplay.partyGuidance, "display preview overwrote the saved guidance opt-in")
 display.FinishEdit(false)
 assert(not hud:IsShown(), "Cancel replayed stale party coordinates synchronously")
 Tick()
@@ -270,7 +277,8 @@ do
     )
 end
 display.Reset()
-assert(display.Get("partyGuidance") and not display.Get("mirrorPartyWaypoint"), "full reset lost defaults")
+assert(not display.Get("partyGuidance") and not display.Get("mirrorPartyWaypoint"), "full reset lost defaults")
+assert(not display.Get("cacheGuidance") and not display.Get("guardianGuidance"))
 print(
     "PASS fallen-ally guidance uses fresh native death/position, shared selection/Layout, transactional settings and bounded idle work"
 )
@@ -278,6 +286,11 @@ print(
 -- Exercise the same full controller's guardian fallback independently of the
 -- optional defeated minimap icons and their separate timer presentation.
 members = {} -- Guardian-only cases do not depend on the earlier party roster/faults.
+display.BeginEdit()
+display.Set("cacheGuidance", true)
+display.Set("guardianGuidance", true)
+display.Set("partyGuidance", true)
+display.FinishEdit(true)
 minimapVisible = false
 local guardianHud = registered.guardianWaypoint
 local guardianDistance
@@ -318,9 +331,9 @@ assert(env.SurvivorsDragonUiDisplay.guardianRespawnGuidance, "Confirm lost the r
 display.BeginEdit()
 display.Set("guardianRespawnGuidance", false)
 assert(not guardianHud:IsShown(), "turning respawn guidance off retained its target")
-display.Load({ guardianRespawnGuidance = true })
+display.Load({ guardianGuidance = true, guardianRespawnGuidance = true })
 assert(guardianHud:IsShown(), "profile preview did not restore cached respawn guidance")
-display.Load({ guardianRespawnGuidance = false })
+display.Load({ guardianGuidance = true, guardianRespawnGuidance = false })
 assert(not guardianHud:IsShown(), "profile preview did not disable respawn guidance")
 display.FinishEdit(false)
 assert(guardianHud:IsShown(), "profile Cancel lost confirmed respawn guidance")
@@ -431,6 +444,7 @@ local function PublishCaches(entries)
     Tick()
 end
 display.BeginEdit()
+display.Set("cacheGuidance", true)
 display.Set("guardianGuidance", false)
 display.Set("partyGuidance", false)
 minimapVisible = false

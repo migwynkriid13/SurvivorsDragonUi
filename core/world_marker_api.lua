@@ -22,6 +22,8 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
     local styles = {
         cache = {
             key = "worldCacheIcons",
+            mode = "worldCacheIconMode",
+            distance = "worldCacheIconDistance",
             art = "Chest.blp",
             state = "present",
             attachment = "position",
@@ -32,6 +34,8 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
         },
         guardian = {
             key = "worldBossIcons",
+            mode = "worldBossIconMode",
+            distance = "worldBossIconDistance",
             art = "GuardianFloating.blp",
             state = "alive",
             attachment = "overhead",
@@ -40,6 +44,8 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
         },
         boss = {
             key = "worldBossIcons",
+            mode = "worldBossIconMode",
+            distance = "worldBossIconDistance",
             art = "GuardianFloating.blp",
             state = "alive",
             attachment = "overhead",
@@ -48,6 +54,8 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
         },
         finalBoss = {
             key = "worldBossIcons",
+            mode = "worldBossIconMode",
+            distance = "worldBossIconDistance",
             art = "GuardianFloating.blp",
             state = "alive",
             attachment = "overhead",
@@ -128,13 +136,19 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
         if ok and failure == nil and type(value) == "table" then return value end
         return nil, type(failure) == "table" and failure.code or nil
     end
+    local function HideMarker(marker)
+        if marker:IsShown() then marker:Hide() end
+        marker.fadeStarted, marker.fadeTarget, marker.fadeFrom = nil, nil, nil
+        if marker.alpha and marker.alpha ~= 1 then marker:SetAlpha(1) end
+        marker.alpha = 1
+    end
     local function HideAll()
         for _, marker in pairs(state.markers) do
-            if marker:IsShown() then marker:Hide() end
+            HideMarker(marker)
         end
     end
     local function Recycle(id, marker)
-        marker:Hide()
+        HideMarker(marker)
         marker.x, marker.y, marker.kind, marker.ready = nil, nil, nil, nil
         state.markers[id] = nil
         table.insert(state.pool, marker)
@@ -189,6 +203,47 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
         local style = styles[kind]
         return style and state.choices[style.key]
     end
+    local function DistanceVisible(kind, distance)
+        local style = styles[kind]
+        local mode = style.mode and state.choices[style.mode] or "always"
+        if mode == "always" then return true end
+        if not state.capabilities.playerDistanceMetrics or not Number(distance) or distance < 0 then return false end
+        local cutoff = state.choices[style.distance]
+        return (mode == "near" and distance <= cutoff) or (mode == "far" and distance > cutoff)
+    end
+    local function UpdateVisibility(marker, visible, now, animate)
+        if not animate or state.choices.performanceMode then
+            if not visible then
+                HideMarker(marker)
+                return
+            end
+            marker.fadeStarted, marker.fadeTarget, marker.fadeFrom = nil, nil, nil
+            if marker.alpha ~= 1 then marker:SetAlpha(1) end
+            marker.alpha = 1
+            if not marker:IsShown() then marker:Show() end
+            return
+        end
+        local target = visible and 1 or 0
+        if not visible and not marker:IsShown() then return end
+        if visible and not marker:IsShown() then
+            marker:SetAlpha(0)
+            marker.alpha = 0
+            marker:Show()
+        end
+        if marker.fadeTarget ~= target then
+            marker.fadeStarted, marker.fadeFrom, marker.fadeTarget = now, marker.alpha or 1, target
+        end
+        if marker.fadeStarted then
+            local progress = math.max(0, math.min(1, (now - marker.fadeStarted) / 0.12))
+            local alpha = marker.fadeFrom + (target - marker.fadeFrom) * progress
+            if marker.alpha ~= alpha then marker:SetAlpha(alpha) end
+            marker.alpha = alpha
+            if progress == 1 then
+                marker.fadeStarted = nil
+                if target == 0 then HideMarker(marker) end
+            end
+        end
+    end
     local function Marker(record)
         local style = styles[record.kind]
         local marker = state.markers[record.anchorId]
@@ -239,21 +294,34 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
         local boss = DFRL.display.Get("worldBossIcons")
         local party = DFRL.display.Get("worldPartyIcons")
         local affordable = DFRL.display.Get("worldCacheAffordableOnly")
+        local cacheMode = DFRL.display.Get("worldCacheIconMode")
+        local bossMode = DFRL.display.Get("worldBossIconMode")
+        local cacheDistance = DFRL.display.Get("worldCacheIconDistance")
+        local bossDistance = DFRL.display.Get("worldBossIconDistance")
+        local performance = DFRL.display.Get("performanceMode")
         local choices = state.choices
         if
             choices.worldCacheIcons == cache
             and choices.worldBossIcons == boss
             and choices.worldPartyIcons == party
             and choices.worldCacheAffordableOnly == affordable
+            and choices.worldCacheIconMode == cacheMode
+            and choices.worldBossIconMode == bossMode
+            and choices.worldCacheIconDistance == cacheDistance
+            and choices.worldBossIconDistance == bossDistance
+            and choices.performanceMode == performance
         then
             return
         end
         local visibilityChanged = choices.worldCacheIcons ~= cache
             or choices.worldBossIcons ~= boss
             or choices.worldPartyIcons ~= party
+        if visibilityChanged or choices.worldCacheAffordableOnly ~= affordable then state.queryDirty = true end
         choices.worldCacheIcons, choices.worldBossIcons, choices.worldPartyIcons = cache, boss, party
         choices.worldCacheAffordableOnly = affordable
-        state.queryDirty = true
+        choices.worldCacheIconMode, choices.worldBossIconMode = cacheMode, bossMode
+        choices.worldCacheIconDistance, choices.worldBossIconDistance = cacheDistance, bossDistance
+        choices.performanceMode = performance
         if visibilityChanged then
             local used = 0
             for index = 1, table.getn(state.records) do
@@ -308,7 +376,9 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
                     state.requests[size], state.indices[size] = request, first
                 else
                     local point = state.points[first]
-                    if point then point.visible = false end
+                    if point then
+                        point.visible, point.onScreen = false, false
+                    end
                 end
                 first = first + 1
             end
@@ -359,7 +429,7 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
                         return true
                     end
                     local point = state.points[state.indices[index]] or {}
-                    point.visible = false
+                    point.visible, point.onScreen = false, false
                     point.retired = entry.state == "expired" or entry.state == "unknownAnchor"
                     if entry.state == "onScreen" then
                         if
@@ -374,7 +444,9 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
                         then
                             return
                         end
+                        point.onScreen = true
                         point.visible = entry.entityState == styles[record.kind].state
+                            and DistanceVisible(record.kind, entry.playerDistance)
                         point.x, point.y = entry.x, entry.y + styles[record.kind].padding
                     elseif entry.x ~= nil or entry.y ~= nil then
                         return
@@ -395,23 +467,23 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
                 used = used + 1
                 state.records[used], state.points[used] = record, point
             end
-            if point and point.visible and Wanted(record.kind) then
-                local marker = Marker(record)
-                if marker.ready then
-                    if marker.x ~= point.x or marker.y ~= point.y then
+            if point and point.onScreen and Wanted(record.kind) then
+                local marker = point.visible and Marker(record) or state.markers[record.anchorId]
+                if marker and marker.ready then
+                    if (point.visible or marker:IsShown()) and (marker.x ~= point.x or marker.y ~= point.y) then
                         marker:ClearAllPoints()
                         marker:SetPoint("CENTER", WorldFrame, "BOTTOMLEFT", point.x, point.y)
                         marker.x, marker.y = point.x, point.y
                     end
                     marker.drawPass = state.drawPass
-                    if not marker:IsShown() then marker:Show() end
+                    UpdateVisibility(marker, point.visible, clock, styles[record.kind].mode ~= nil)
                 end
             end
         end
         Trim(state.records, used)
         Trim(state.points, used)
         for _, marker in pairs(state.markers) do
-            if marker.drawPass ~= state.drawPass and marker:IsShown() then marker:Hide() end
+            if marker.drawPass ~= state.drawPass then HideMarker(marker) end
         end
         return true
     end
@@ -478,6 +550,7 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
                 maxEntriesPerCall = caps.maxEntriesPerCall,
                 maxProjectionsPerCall = caps.maxProjectionsPerCall,
                 kinds = {},
+                playerDistanceMetrics = caps.playerDistanceMetrics == true,
             }
             for _, kind in ipairs(markerKinds) do
                 cached.kinds[kind] = Contains(caps.kinds, kinds, kind)

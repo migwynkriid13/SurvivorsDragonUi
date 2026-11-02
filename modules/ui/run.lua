@@ -1371,6 +1371,16 @@ DFRL:NewMod("RunTimers", 5, function()
                 if not enabled and key == "customRunTimer" and fontMenu and fontMenu:IsShown() then fontMenu:Hide() end
             end
         end
+        if fontEditor.worldIconRanges then
+            for _, group in ipairs(fontEditor.worldIconRanges) do
+                if group.frame:IsVisible() then
+                    SetSettingsEnabled(
+                        group,
+                        DFRL.display.Get(group.master) and DFRL.display.Get(group.mode) ~= "always"
+                    )
+                end
+            end
+        end
         UpdateSctLabels()
     end
 
@@ -1780,6 +1790,11 @@ DFRL:NewMod("RunTimers", 5, function()
         local function TextWidth(text) return DFRL.locale.Width(measure, text, true) end
         local padding, gap = 24, 16
         local sidebarWidth = 232
+        local worldIconModes = {
+            { "always", "Always", "Show icons at any distance." },
+            { "near", "Nearby only", "Show icons at or within the distance cutoff." },
+            { "far", "Distant only", "Show icons beyond the distance cutoff." },
+        }
         local categories = {
             { key = "layout", label = "Layout" },
             { key = "profiles", label = "Profiles" },
@@ -2063,13 +2078,6 @@ DFRL:NewMod("RunTimers", 5, function()
                 label = "Waypoints",
                 options = {
                     { "cacheGuidance", "Cache guidance", "Show the cache direction and distance." },
-                    { "worldCacheIcons", "Icons above caches", "Requires an updated game." },
-                    {
-                        "worldCacheAffordableOnly",
-                        "Only show affordable caches",
-                        "Hide world cache icons until you have enough gold.",
-                    },
-                    { "worldBossIcons", "Icons above guardians and bosses", "Requires an updated game." },
                     { "worldPartyIcons", "Icons above fallen allies", "Requires an updated game." },
                     {
                         "mirrorCacheWaypoint",
@@ -2096,6 +2104,56 @@ DFRL:NewMod("RunTimers", 5, function()
                         "mirrorPartyWaypoint",
                         "Mirror fallen ally waypoint",
                         "Move the arrow to the left and the icon to the right.",
+                    },
+                },
+            },
+            {
+                key = "cacheIcons",
+                label = "World cache icons",
+                master = "worldCacheIcons",
+                mode = {
+                    key = "worldCacheIconMode",
+                    label = "When to show",
+                    after = "worldCacheIcons",
+                    values = worldIconModes,
+                },
+                options = {
+                    { "worldCacheIcons", "Icons above caches", "Requires an updated game." },
+                    {
+                        "worldCacheIconDistance",
+                        "Distance cutoff (yards)",
+                        "Nearby includes this distance; distant starts beyond it.",
+                        step = 5,
+                        wide = true,
+                        range = true,
+                    },
+                    {
+                        "worldCacheAffordableOnly",
+                        "Only show affordable caches",
+                        "Hide world cache icons until you have enough gold.",
+                        wide = true,
+                    },
+                },
+            },
+            {
+                key = "bossIcons",
+                label = "World guardian and boss icons",
+                master = "worldBossIcons",
+                mode = {
+                    key = "worldBossIconMode",
+                    label = "When to show",
+                    after = "worldBossIcons",
+                    values = worldIconModes,
+                },
+                options = {
+                    { "worldBossIcons", "Icons above guardians and bosses", "Requires an updated game." },
+                    {
+                        "worldBossIconDistance",
+                        "Distance cutoff (yards)",
+                        "Nearby includes this distance; distant starts beyond it.",
+                        step = 5,
+                        wide = true,
+                        range = true,
                     },
                 },
             },
@@ -2180,7 +2238,11 @@ DFRL:NewMod("RunTimers", 5, function()
             { key = "meter", label = "Damage meter", sections = { "meter" } },
             { key = "action", label = "Action bar", sections = { "abilities", "jewelry", "tally" } },
             { key = "encounters", label = "Encounters", sections = { "timer", "bosses", "guardians" } },
-            { key = "map", label = "Map & navigation", sections = { "waypoints", "minimap" } },
+            {
+                key = "map",
+                label = "Map & navigation",
+                sections = { "waypoints", "cacheIcons", "bossIcons", "minimap" },
+            },
             { key = "interface", label = "Interface", sections = { "chat", "loot", "tooltip", "banners" } },
             { key = "profiles", label = "Profiles", sections = { "profiles" } },
         }
@@ -2501,12 +2563,16 @@ DFRL:NewMod("RunTimers", 5, function()
             description:SetJustifyH("LEFT")
             description:SetJustifyV("TOP")
             control.label, control.description = label, description
+            local range = entry.range and { frame = control, controls = {} }
+            control.rangeSettings = range
             for _, direction in ipairs({ -1, 1 }) do
                 local step = direction * entry.step
                 local button = T.CreateEditorButton(control, direction < 0 and "-" or "+", 28, 28)
                 button:SetPoint("TOPRIGHT", control, "TOPRIGHT", direction < 0 and -108 or 0, -36)
                 if parent.editorSettingsGroup then table.insert(parent.editorSettingsGroup.controls, button) end
+                if range then table.insert(range.controls, button) end
                 button:SetScript("OnClick", function()
+                    if range and range.enabled == false then return end
                     local value = DFRL.display.Get(entry[1]) + step
                     if entry[1] == "meterDpsWindow" and value < 0 then return end
                     DFRL.display.Set(entry[1], value)
@@ -2552,6 +2618,12 @@ DFRL:NewMod("RunTimers", 5, function()
                     displayColors[key] = control
                 elseif entry.step then
                     control = DisplayNumber(content, entry, controlWidth, rowHeight)
+                    if entry.range then
+                        local range = control.rangeSettings
+                        range.master, range.mode = category.master, category.mode.key
+                        fontEditor.worldIconRanges = fontEditor.worldIconRanges or {}
+                        table.insert(fontEditor.worldIconRanges, range)
+                    end
                 else
                     control = DisplayToggle(content, entry[1], entry[2], entry[3], 0, controlWidth)
                 end
@@ -2560,7 +2632,9 @@ DFRL:NewMod("RunTimers", 5, function()
                     { frame = control, span = span, numeric = entry.step ~= nil, color = entry.color, entry = entry }
                 )
                 if leading and entry[1] == category.mode.after then leading = false end
-                if dependents and entry[1] ~= category.master then table.insert(dependents.controls, control) end
+                if dependents and entry[1] ~= category.master and not entry.range then
+                    table.insert(dependents.controls, control)
+                end
                 control:EnableMouseWheel(true)
                 control:SetScript("OnMouseWheel", ScrollOptions)
             end
@@ -2594,7 +2668,12 @@ DFRL:NewMod("RunTimers", 5, function()
                 for _, entry in ipairs(mode.values) do
                     local id = entry[1]
                     local button = T.CreateEditorButton(content, entry[2], buttonWidth, 30)
-                    button:SetScript("OnClick", function() DFRL.display.Set(mode.key, id) end)
+                    button:SetScript("OnClick", function()
+                        if not category.master or DFRL.display.Get(category.master) then
+                            DFRL.display.Set(mode.key, id)
+                        end
+                    end)
+                    if dependents then table.insert(dependents.controls, button) end
                     group.buttons[id], group.descriptions[id] = button, entry[3]
                 end
                 group.description = FontEditorLabel(content, "", 0, -68, 10)

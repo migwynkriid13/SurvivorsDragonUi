@@ -259,6 +259,8 @@ c:Load("core/display.lua", "Display")
 c:Load("modules/map/waypoints.lua", "Waypoints")
 local display, reader = env.DFRL.display, env.DFRL_CacheWaypointReader
 display.BeginEdit()
+display.Set("cacheGuidance", true)
+display.Set("guardianGuidance", true)
 display.Set("partyGuidance", false)
 local function Tick() c:Call(reader, "OnUpdate", 0.1) end
 local function Pin(key)

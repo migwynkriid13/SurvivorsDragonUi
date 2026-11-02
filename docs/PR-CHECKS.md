@@ -1200,3 +1200,28 @@ Settled ally and cache frames
 issue no size/placement writes. Missing world-offset support omits cache and
 ally icons while leaving encounter markers usable. These cases
 are CI-only; no local tests, validation or game execution were run.
+
+World-icon distance/fade cases are authored for CI only. Native marker fixtures
+exercise independent Always/Nearby/Distant choices, inclusive/exclusive cutoff
+boundaries, fractional distance, unchanged camera frames, absent/unadvertised
+hero metrics, affordability conjunction and stable callback/capability/pool
+counts. Fade cases sample 0/60/120+ ms opacity, reverse direction without an
+opacity jump, settle active fades when Performance Mode is enabled and clear
+stale/offscreen presentation immediately. Fully hidden out-of-band markers do
+no texture/placement/alpha writes. Both modes share query counts.
+
+Display cases cover finite 5–200-yard bounds, default Always/40 for missing or
+invalid/older profiles, rejected mode values, preview/Cancel/Confirm, profile
+copies and reset during preview. Editor cases cover both Map subsections,
+master-disabled mode/cutoff controls, retained choices, five-yard stepping,
+Always-disabled cutoffs and searchable mode captions. All fourteen source and
+runtime catalogs contain the new captions. No runtime test hook or client
+execution is added; these mocks do not establish native appearance or FPS.
+
+Guidance-default cases require missing/invalid cache, guardian and fallen-ally
+HUD/minimap preferences to normalize to off, while explicit saved on choices
+remain on. Reset restores guidance off without changing the independent world
+icon defaults. Full waypoint, native-position and minimap lifecycle fixtures
+explicitly opt into the guidance they exercise, retaining preview/Cancel,
+profile, native-read, pooling and cleanup assertions. These cases remain
+CI-only; no local tests or game execution were run.

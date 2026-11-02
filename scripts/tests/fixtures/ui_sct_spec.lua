@@ -283,6 +283,7 @@ Test("distance values and world icons share normalized display transactions", fu
     local defaults = display.Snapshot()
     assert(defaults.sctDistanceReference == 20 and defaults.sctDistanceMinimum == 55)
     assert(defaults.worldCacheIcons and defaults.worldPartyIcons and not defaults.worldBossIcons)
+    assert(not defaults.cacheGuidance and not defaults.guardianGuidance and not defaults.partyGuidance)
     display.BeginEdit()
     display.Set("sctDistanceReference", 1000)
     display.Set("sctDistanceMinimum", -2)
@@ -300,21 +301,33 @@ Test("distance values and world icons share normalized display transactions", fu
         worldCacheIcons = false,
         worldBossIcons = true,
         worldPartyIcons = false,
+        cacheGuidance = true,
+        guardianGuidance = true,
+        partyGuidance = true,
     })
     display.FinishEdit(true)
     assert(display.Get("sctDistanceReference") == 13 and display.Get("sctDistanceMinimum") == 72)
     assert(not display.Get("worldCacheIcons") and display.Get("worldBossIcons") and not display.Get("worldPartyIcons"))
+    assert(display.Get("cacheGuidance") and display.Get("guardianGuidance") and display.Get("partyGuidance"))
     local invalid = display.Copy({
         sctDistanceReference = 0 / 0,
         sctDistanceMinimum = math.huge,
         worldCacheIcons = 0,
         worldBossIcons = "true",
         worldPartyIcons = "false",
+        cacheGuidance = "true",
+        guardianGuidance = 1,
+        partyGuidance = {},
     })
     assert(invalid.sctDistanceReference == 20 and invalid.sctDistanceMinimum == 55)
     assert(invalid.worldCacheIcons and invalid.worldPartyIcons and not invalid.worldBossIcons)
+    assert(not invalid.cacheGuidance and not invalid.guardianGuidance and not invalid.partyGuidance)
     display.Reset()
     assert(display.Get("sctDistanceMinimum") == 55 and not display.Get("worldBossIcons"))
+    assert(
+        not display.Get("cacheGuidance") and not display.Get("guardianGuidance") and not display.Get("partyGuidance")
+    )
+    assert(display.Get("worldCacheIcons") and display.Get("worldPartyIcons"))
 end)
 
 Test("affordable-only cache setting preserves preview, Cancel, Confirm and invalid defaults", function()
@@ -340,6 +353,57 @@ Test("affordable-only cache setting preserves preview, Cancel, Confirm and inval
     assert(display.Get("worldCacheAffordableOnly"), "Cancel lost confirmed affordability filter")
     display.Reset()
     assert(not display.Get("worldCacheAffordableOnly"), "reset did not restore default off")
+end)
+
+Test("world icon distance choices preserve defaults, transactions, bounds and profile copies", function()
+    local c = H.New()
+    c:Load("core/display.lua", "Display")
+    local display = c.env.DFRL.display
+    local defaults = display.Snapshot()
+    assert(defaults.worldCacheIconMode == "always" and defaults.worldBossIconMode == "always")
+    assert(defaults.worldCacheIconDistance == 40 and defaults.worldBossIconDistance == 40)
+    display.BeginEdit()
+    display.Set("worldCacheIconMode", "near")
+    display.Set("worldBossIconMode", "far")
+    display.Set("worldCacheIconDistance", 0)
+    display.Set("worldBossIconDistance", 1000)
+    assert(display.Get("worldCacheIconDistance") == 5 and display.Get("worldBossIconDistance") == 200)
+    display.Set("worldCacheIconMode", "invalid")
+    assert(display.Get("worldCacheIconMode") == "near" and not c.env.SurvivorsDragonUiDisplay)
+    display.FinishEdit(false)
+    assert(display.Get("worldCacheIconMode") == "always" and display.Get("worldBossIconDistance") == 40)
+    display.BeginEdit()
+    display.Load({
+        worldCacheIconMode = "far",
+        worldBossIconMode = "near",
+        worldCacheIconDistance = 55,
+        worldBossIconDistance = 25,
+    })
+    local profile = display.Snapshot()
+    display.FinishEdit(true)
+    assert(display.Get("worldCacheIconMode") == "far" and display.Get("worldBossIconDistance") == 25)
+    display.BeginEdit()
+    display.Load({})
+    assert(display.Get("worldCacheIconMode") == "always" and display.Get("worldCacheIconDistance") == 40)
+    display.FinishEdit(false)
+    assert(display.Get("worldCacheIconMode") == "far", "old-profile Cancel lost confirmed icon visibility")
+    local copy = display.Copy(profile)
+    assert(copy.worldBossIconMode == "near" and copy.worldCacheIconDistance == 55)
+    local invalid = display.Copy({
+        worldCacheIconMode = true,
+        worldBossIconMode = "off",
+        worldCacheIconDistance = 0 / 0,
+        worldBossIconDistance = math.huge,
+    })
+    assert(invalid.worldCacheIconMode == "always" and invalid.worldBossIconMode == "always")
+    assert(invalid.worldCacheIconDistance == 40 and invalid.worldBossIconDistance == 40)
+    display.Reset()
+    assert(display.Get("worldCacheIconMode") == "always" and display.Get("worldBossIconDistance") == 40)
+    display.BeginEdit()
+    display.Set("worldCacheIconMode", "near")
+    display.Reset()
+    assert(display.Get("worldCacheIconMode") == "always", "reset during preview retained an icon distance mode")
+    display.FinishEdit(false)
 end)
 
 local function NativeMode(saved, damage, incoming, realDisplay)

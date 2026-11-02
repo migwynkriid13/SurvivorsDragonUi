@@ -1423,6 +1423,45 @@ assert(
 )
 dialog.navigation.ClearSearch()
 display.Set("worldCacheAffordableOnly", false)
+local cacheModes = assert(dialog.displayModes.worldCacheIconMode, "missing cache visibility modes")
+local bossModes = assert(dialog.displayModes.worldBossIconMode, "missing encounter visibility modes")
+local cacheRange, bossRange
+for _, group in ipairs(dialog.worldIconRanges) do
+    if group.master == "worldCacheIcons" then
+        cacheRange = group
+    else
+        bossRange = group
+    end
+end
+assert(cacheRange and bossRange and not cacheRange.enabled and not bossRange.enabled)
+context:Call(cacheModes.buttons.near, "OnClick")
+editor.Display()
+assert(display.Get("worldCacheIconMode") == "near" and cacheRange.enabled, "Nearby did not enable its cutoff")
+context:Call(cacheRange.controls[2], "OnClick")
+assert(display.Get("worldCacheIconDistance") == 45, "cutoff did not preview in five-yard steps")
+display.Set("worldCacheIcons", false)
+editor.Display()
+assert(not cacheModes.buttons.near.mouse and not cacheRange.enabled, "cache-off retained distance input")
+context:Call(cacheModes.buttons.far, "OnClick")
+context:Call(cacheRange.controls[2], "OnClick")
+assert(display.Get("worldCacheIconMode") == "near" and display.Get("worldCacheIconDistance") == 45)
+display.Set("worldCacheIcons", true)
+display.Set("worldBossIcons", true)
+editor.Display()
+context:Call(bossModes.buttons.far, "OnClick")
+editor.Display()
+assert(cacheRange.enabled and bossRange.enabled and display.Get("worldBossIconMode") == "far")
+dialog.navigation.Search("Nearby only")
+assert(#dialog.navigation.results == 2, "distance modes were missing from settings search")
+dialog.navigation.OpenResult(1)
+assert(dialog.navigation.selected == "map", "distance search did not open Map & navigation")
+dialog.navigation.ClearSearch()
+display.Set("worldCacheIconMode", "always")
+display.Set("worldBossIconMode", "always")
+display.Set("worldCacheIconDistance", 40)
+display.Set("worldBossIcons", false)
+editor.Display()
+assert(not cacheRange.enabled and not bossRange.enabled, "Always retained an unnecessary cutoff control")
 dialog.navigation.Select("action")
 local xpText = assert(env.displayControls.xpShowText, "Action bar did not prepare Show XP text")
 assert(not xpText.editorChecked, "XP text was enabled by default")

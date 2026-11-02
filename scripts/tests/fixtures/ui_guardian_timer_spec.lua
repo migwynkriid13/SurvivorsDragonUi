@@ -77,6 +77,8 @@ assert(display.Get("guardianMinimapTimers"), "profile Cancel lost the confirmed 
 display.Reset()
 assert(not display.Get("guardianMinimapTimers"), "reset did not restore timers off")
 display.BeginEdit()
+display.Set("guardianGuidance", true)
+display.Set("partyGuidance", true)
 Timers(false)
 Publish(12)
 context:ResetCounts()
