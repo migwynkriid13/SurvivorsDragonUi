@@ -3849,7 +3849,10 @@ attachment correctness, wall visibility, camera timing, appearance or FPS.
 
 ### World-icon distance visibility and quick fades
 
-Cache and encounter icon switches retain their existing defaults. Two new modes
+Cache, fallen-ally and encounter icon switches default on, including missing or
+invalid values and both full resets; explicit saved off choices are preserved.
+The encounter switch covers guardians, bosses and final bosses through the same
+existing discovery and projection path, without another reader or updater. Two modes
 (`worldCacheIconMode`, `worldBossIconMode`) normalize to `always`, `near` or
 `far`, initially `always`. Their existing-display-table cutoffs
 (`worldCacheIconDistance`, `worldBossIconDistance`) default to 40 yards and

@@ -1388,6 +1388,10 @@ dialog:Show()
 dialog.navigation.Select("map")
 local affordableOnly = assert(env.displayControls.worldCacheAffordableOnly, "missing affordability checkbox")
 assert(
+    env.displayControls.worldBossIcons.editorChecked and display.Get("worldBossIcons"),
+    "guardian and boss world icons did not default on in settings"
+)
+assert(
     dialog.navigation.selected == "map" and pages.cacheIcons:IsVisible() and affordableOnly:IsVisible(),
     "affordability case did not open the visible Map & navigation category"
 )

@@ -103,7 +103,7 @@ DFRL:NewMod("Display", 0, function()
         worldCacheIconMode = "always",
         worldCacheIconDistance = 40,
         worldCacheAffordableOnly = false,
-        worldBossIcons = false,
+        worldBossIcons = true,
         worldBossIconMode = "always",
         worldBossIconDistance = 40,
         worldPartyIcons = true,

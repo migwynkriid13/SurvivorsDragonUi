@@ -218,10 +218,10 @@ Test("named distance-scaling profiles retain saved choices and default older pro
     local env = context.env
     context:Load("core/display.lua", "Display")
     local display = env.DFRL.display
-    env.SurvivorsDragonUiDisplay = { sctDistanceScaling = true }
+    env.SurvivorsDragonUiDisplay = { sctDistanceScaling = true, worldBossIcons = false }
     env.SurvivorsDragonUiProfiles = {
         Old = { layout = {}, display = {}, runFont = {} },
-        Fixed = { layout = {}, display = { sctDistanceScaling = false }, runFont = {} },
+        Fixed = { layout = {}, display = { sctDistanceScaling = false, worldBossIcons = false }, runFont = {} },
         Scaled = {
             layout = {},
             display = {
@@ -244,17 +244,21 @@ Test("named distance-scaling profiles retain saved choices and default older pro
     display.BeginEdit()
     profiles.BeginEdit()
     assert(profiles.Load("Old") and not display.Get("sctDistanceScaling"), "older profile did not default to off")
+    assert(display.Get("worldBossIcons"), "older profile did not enable encounter world icons")
     assert(not display.Get("worldCacheAffordableOnly"), "older profile enabled affordability filtering")
     assert(env.SurvivorsDragonUiProfiles.Old.display.sctDistanceScaling == nil, "preview rewrote an older profile")
     display.FinishEdit(false)
     profiles.FinishEdit(false)
     assert(display.Get("sctDistanceScaling"), "profile Cancel lost saved on")
+    assert(not display.Get("worldBossIcons"), "profile Cancel lost saved encounter icons off")
     display.BeginEdit()
     profiles.BeginEdit()
     assert(profiles.Load("Fixed") and not display.Get("sctDistanceScaling"), "profile lost explicit off")
+    assert(not display.Get("worldBossIcons"), "profile lost explicit encounter icons off")
     display.FinishEdit(true)
     profiles.FinishEdit(true)
     assert(not display.Get("sctDistanceScaling"), "profile Confirm lost explicit off")
+    assert(not display.Get("worldBossIcons"), "profile Confirm lost explicit encounter icons off")
     display.BeginEdit()
     profiles.BeginEdit()
     assert(profiles.Load("Scaled") and display.Get("sctDistanceScaling"), "profile lost explicit on")
@@ -282,24 +286,26 @@ Test("distance values and world icons share normalized display transactions", fu
     local display = context.env.DFRL.display
     local defaults = display.Snapshot()
     assert(defaults.sctDistanceReference == 20 and defaults.sctDistanceMinimum == 55)
-    assert(defaults.worldCacheIcons and defaults.worldPartyIcons and not defaults.worldBossIcons)
+    assert(defaults.worldCacheIcons and defaults.worldPartyIcons and defaults.worldBossIcons)
     assert(not defaults.cacheGuidance and not defaults.guardianGuidance and not defaults.partyGuidance)
     display.BeginEdit()
     display.Set("sctDistanceReference", 1000)
     display.Set("sctDistanceMinimum", -2)
     display.Set("worldCacheIcons", false)
     display.Set("worldPartyIcons", false)
-    display.Set("worldBossIcons", true)
+    display.Set("worldBossIcons", false)
     assert(display.Get("sctDistanceReference") == 100 and display.Get("sctDistanceMinimum") == 25)
     assert(context.env.SurvivorsDragonUiDisplay == nil, "preview saved before Confirm")
     display.FinishEdit(false)
-    assert(display.Get("sctDistanceReference") == 20 and display.Get("worldCacheIcons"))
+    assert(
+        display.Get("sctDistanceReference") == 20 and display.Get("worldCacheIcons") and display.Get("worldBossIcons")
+    )
     display.BeginEdit()
     display.Load({
         sctDistanceReference = 12.6,
         sctDistanceMinimum = 72.4,
         worldCacheIcons = false,
-        worldBossIcons = true,
+        worldBossIcons = false,
         worldPartyIcons = false,
         cacheGuidance = true,
         guardianGuidance = true,
@@ -307,7 +313,9 @@ Test("distance values and world icons share normalized display transactions", fu
     })
     display.FinishEdit(true)
     assert(display.Get("sctDistanceReference") == 13 and display.Get("sctDistanceMinimum") == 72)
-    assert(not display.Get("worldCacheIcons") and display.Get("worldBossIcons") and not display.Get("worldPartyIcons"))
+    assert(
+        not display.Get("worldCacheIcons") and not display.Get("worldBossIcons") and not display.Get("worldPartyIcons")
+    )
     assert(display.Get("cacheGuidance") and display.Get("guardianGuidance") and display.Get("partyGuidance"))
     local invalid = display.Copy({
         sctDistanceReference = 0 / 0,
@@ -320,10 +328,10 @@ Test("distance values and world icons share normalized display transactions", fu
         partyGuidance = {},
     })
     assert(invalid.sctDistanceReference == 20 and invalid.sctDistanceMinimum == 55)
-    assert(invalid.worldCacheIcons and invalid.worldPartyIcons and not invalid.worldBossIcons)
+    assert(invalid.worldCacheIcons and invalid.worldPartyIcons and invalid.worldBossIcons)
     assert(not invalid.cacheGuidance and not invalid.guardianGuidance and not invalid.partyGuidance)
     display.Reset()
-    assert(display.Get("sctDistanceMinimum") == 55 and not display.Get("worldBossIcons"))
+    assert(display.Get("sctDistanceMinimum") == 55 and display.Get("worldBossIcons"))
     assert(
         not display.Get("cacheGuidance") and not display.Get("guardianGuidance") and not display.Get("partyGuidance")
     )

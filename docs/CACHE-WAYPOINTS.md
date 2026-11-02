@@ -50,10 +50,11 @@ last-alive or historical location is substituted.
 ### World icons (native API)
 
 **Waypoints** also has three independent world-icon switches. **Icons above
-caches** and **Icons above fallen allies** default on; **Icons above guardians
-and bosses** defaults off and includes final bosses. These switches retain live
-preview, Confirm/Cancel, profiles and both resets. They are independent of the
-HUD/minimap guidance switches.
+caches**, **Icons above fallen allies** and **Icons above guardians
+and bosses** all default on; the encounter switch includes final bosses.
+Missing or invalid values, older profiles and both resets use on. Explicit saved
+off choices are preserved. These switches retain live preview, Confirm/Cancel
+and profiles. They are independent of the HUD/minimap guidance switches.
 
 Under **Map & navigation**, **World cache icons** and **World guardian and
 boss icons** each have **Always**, **Nearby only** and **Distant only** choices.

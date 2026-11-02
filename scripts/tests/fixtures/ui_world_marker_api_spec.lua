@@ -259,13 +259,16 @@ end
 for _, performance in ipairs({ false, true }) do
     local c = Scene(performance)
     local native, display = c.native, c.env.DFRL.display
-    assert(display.Get("worldCacheIcons") and display.Get("worldPartyIcons") and not display.Get("worldBossIcons"))
+    assert(display.Get("worldCacheIcons") and display.Get("worldPartyIcons") and display.Get("worldBossIcons"))
     assert(
         not display.Get("cacheGuidance") and not display.Get("guardianGuidance") and not display.Get("partyGuidance")
     )
     native.entries = { Record("cache", "cache"), Record("ally", "downedPartyMember"), Record("boss", "boss") }
     c:Service()
     assert(#c:Markers() == 0, "ordinary controller placed a world marker")
+    c:Frame()
+    assert(#c:Markers() == 3, "default-on encounter icons omitted a boss")
+    display.Set("worldBossIcons", false)
     c:Frame()
     assert(#c:Markers() == 2 and native.registers == 1 and native.handlers[native.foreign])
     local objects = #c.objects
@@ -904,6 +907,7 @@ end
 for _, performance in ipairs({ false, true }) do
     local quiet = Scene(performance)
     local qn, qd = quiet.native, quiet.env.DFRL.display
+    qd.Set("worldBossIcons", false)
     qn.partyPresent = false
     qd.Set("worldCacheAffordableOnly", true)
     quiet.env.AZS_RUN, quiet.env.AZS_RUN_UPDATED = { gold = 0, chest = 10 }, 1
@@ -981,6 +985,7 @@ for _, performance in ipairs({ false, true }) do
     local alive = Scene(performance)
     alive.native.downedPresent = false
     alive.env.DFRL.display.Set("worldCacheIcons", false)
+    alive.env.DFRL.display.Set("worldBossIcons", false)
     for _ = 1, 20 do
         alive:Service(0.1)
         alive:Frame()
