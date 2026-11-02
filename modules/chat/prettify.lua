@@ -11,6 +11,7 @@ DFRL:NewMod("ChatFormats", 0.25, function()
     local WHITE = "|cfffafafa"
     local GRAY = "|cff787878"
     local RED = "|cffcc1a1a"
+    local BLUE = "|cff66b3ff"
     -- Existing gains join '+' directly to their value; marks use the requested spacing.
     local PLUS = GREEN .. "+|r"
 
@@ -126,6 +127,12 @@ DFRL:NewMod("ChatFormats", 0.25, function()
             or string.find(plain, "^[^\r\n]+ %- survive the onslaught!$") ~= nil
     end
 
+    local function PlayerName(name)
+        name = string.gsub(name, "(|Hplayer:[^|]+|h)%[(.-)%](|h)", "%1%2%3")
+        name = string.gsub(name, "^(|c%x%x%x%x%x%x%x%x)%[([^%[%]]+)%](|r)$", "%1%2%3")
+        return (string.gsub(name, "^%[([^%[%]]+)%]$", "%1"))
+    end
+
     local function PlayerSay(text)
         local name, body
         if type(_G.CHAT_SAY_GET) == "string" then
@@ -137,10 +144,28 @@ DFRL:NewMod("ChatFormats", 0.25, function()
         if not name or not body then return text end
         -- Remove only the author's display brackets, retaining native player links,
         -- inline colors, language labels and the complete message body.
-        name = string.gsub(name, "(|Hplayer:[^|]+|h)%[(.-)%](|h)", "%1%2%3")
-        name = string.gsub(name, "^(|c%x%x%x%x%x%x%x%x)%[([^%[%]]+)%](|r)$", "%1%2%3")
-        name = string.gsub(name, "^%[([^%[%]]+)%]$", "%1")
-        return name .. ": " .. body
+        return PlayerName(name) .. ": " .. body
+    end
+
+    local function PlayerParty(text, eventName)
+        local formatText = eventName == "CHAT_MSG_PARTY_LEADER" and _G.CHAT_PARTY_LEADER_GET or _G.CHAT_PARTY_GET
+        local input = string.gsub(text, "^|c%x%x%x%x%x%x%x%x", "")
+        local name, body
+        if type(formatText) == "string" then
+            name, body = CaptureFormat(input, formatText .. "%s")
+        end
+        if not name then
+            -- Event identity limits this fallback to party chat, including
+            -- localized channel tags on clients without matching GlobalStrings.
+            local _, _, author, message = string.find(input, "^%[[^%]]+%]%s+(.-): (.*)$")
+            name, body = author, message
+        end
+        if not name or not body then return text end
+        -- Keep native player/item links and body colors. Inline resets return
+        -- ordinary text to blue instead of the native lavender channel color.
+        name = PlayerName(StripColors(name))
+        body = string.gsub(body, "|r", "|r" .. BLUE)
+        return BLUE .. name .. ": " .. body .. "|r"
     end
 
     local function NpcYell(text, speaker, message)
@@ -291,6 +316,9 @@ DFRL:NewMod("ChatFormats", 0.25, function()
             return nil, "hide"
         end
         if eventName == "CHAT_MSG_SAY" then return PlayerSay(text) end
+        if eventName == "CHAT_MSG_PARTY" or eventName == "CHAT_MSG_PARTY_LEADER" then
+            return PlayerParty(text, eventName)
+        end
         if eventName == "CHAT_MSG_MONSTER_YELL" then return NpcYell(text, speaker, message) end
         -- The caller supplies an event while native Lua chat handlers run. Direct
         -- client writes have no event; only anchored, recognizable notices match.
