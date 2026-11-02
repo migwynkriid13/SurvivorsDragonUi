@@ -47,7 +47,9 @@ rejects it or supplies no texture. Successful and failed bindings retain the
 existing identity/artwork cache and hidden/off deferral.
 
 The supplied 0.139.0 changelog also adds combat-text `meterSource` and
-`meterSourceKey`. The native SCT adapter retains valid optional values and
+`meterSourceKey`; the [API supplement](API-NOTES.md#combat-text-meter-attribution--01390-2026-11-02)
+documents their meanings, meter-key matching and borrowed-spell/pet/summon cases.
+The native SCT adapter retains valid optional values and
 includes the exact received key in its existing identity. Performance Mode
 therefore separates different credited sources even when they borrow the same
 spell; captions alone never separate or join hits. Missing or unusable optional

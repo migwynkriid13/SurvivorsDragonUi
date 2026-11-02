@@ -4,8 +4,11 @@ The owner-supplied `addon_docs.md` from 2026-11-01 is preserved verbatim in
 [Azeroth Survivors: Addon API](AzerothSurvivors-Addon-API.md).
 Its [World-anchored combat text section](AzerothSurvivors-Addon-API.md#world-anchored-combat-text-version-1)
 is the authoritative provider contract. It supersedes the original proposal's
-assumptions about event fields and callback timing. This file describes the
-requested result and SDUI's consumer; it does not define another payload schema.
+assumptions about event fields and callback timing. The supplied 0.139.0 release
+notes add credited meter-source fields, documented in the
+[API supplement](API-NOTES.md#combat-text-meter-attribution--01390-2026-11-02).
+This file describes the requested result and SDUI's consumer; it does not define
+another payload schema.
 
 ## Required result
 
@@ -66,18 +69,32 @@ and preserve the existing animation/grouping exception.
 
 ## Documented hit fields
 
-Use received `sourceId`, `sourceKind`, `targetId` and `spellId` for native
-identity. Preserve target incarnations, caster ownership, school, critical,
-periodic/reflected status and resolved icons. Normal mode displays every received
-hit separately; Performance Mode retains its inclusive 300 ms sums,
-using native presentation timestamps and leaving original amounts unchanged.
+Use received `sourceId`, `sourceKind`, `targetId`, `spellId` and, when usable,
+`meterSourceKey` for native identity. The 0.139.0 `meterSource` is the credited
+meter line's name; `meterSourceKey` is its exact `sourceKey` in
+`AZS_GetMeterSnapshot`. A proc can borrow another spell's `abilityName` and
+`spellId` while counting toward its own talent/item line. Pet/summon swings can
+lack those spell fields. Use the received meter key for credit, never caption
+matching, hit sizes or inferred changes in totals. See the
+[field definitions and reported examples](API-NOTES.md#combat-text-meter-attribution--01390-2026-11-02).
+
+SDUI retains nonempty string values for both additions. The key supplements
+attack/caster/target identity; the caption alone never changes grouping.
+Missing or unusable values retain older-client behavior without dropping a
+valid hit or requiring a meter query. Preserve target incarnations, caster
+ownership, school, critical, periodic/reflected status and resolved icons.
+Normal mode displays every received hit separately; Performance Mode retains
+its inclusive 300 ms sums, using native presentation timestamps and leaving
+original amounts unchanged.
 
 The shipped contract has no required `basicAttack` or `abilityKey`. Map the
 received `melee`/`ranged` categories to Auto attacks and `spell` to Direct damage;
 periodic/reflected booleans retain their dedicated filters. Performance Mode groups known spells
-by `spellId`, even without a name/icon. Plain native melee/ranged attacks can
-use their received category; otherwise missing native attack identity keeps
-hits separate. Names or matching artwork never establish an unknown identity.
+by `spellId`, even without a name/icon, while distinct credited meter keys keep
+borrowed-spell hits separate. Plain native melee/ranged attacks can use their
+received category; otherwise missing native attack identity keeps hits separate,
+even with a meter source key. Names or matching artwork never establish an
+unknown identity.
 
 Miss `result.text` is already the game's localized word. Render it unchanged
 with the existing game font. If the language supplies no word, accept the event
@@ -109,7 +126,8 @@ incoming/self text retain their existing ownership rules.
 CI-only production-controller fixtures model `OnUpdate` and the later native
 frame phase separately, with the supplied capabilities/events/projections and
 no proposed-only payload fields. They cover death/camera movement, missing miss
-captions, spell/category grouping, frame ownership, partial failures, cleanup,
+captions, spell/category grouping, credited-source separation and optional-field
+fallback, frame ownership, partial failures, cleanup,
 false/missing `frameCurrent`, hidden work, old-build fallback and both modes.
 No local tests, standalone validation or addon/game execution were run. Mocks do
 not establish actual engine scheduling, live API delivery, appearance or FPS.

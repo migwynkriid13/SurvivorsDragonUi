@@ -1,5 +1,61 @@
 # Official addon API integration — 2026-10-14
 
+## Combat-text meter attribution — 0.139.0, 2026-11-02
+
+The developer's supplied 0.139.0 release notes add two fields to events from
+`AZS_GetCombatTextEvents`. This supplements the
+[2026-11-01 API reference](AzerothSurvivors-Addon-API.md#azs_getcombattexteventscursor-limit),
+which remains preserved verbatim; its event table predates these additions.
+
+| Event field      | Meaning                                                                                |
+| ---------------- | -------------------------------------------------------------------------------------- |
+| `meterSource`    | The name of the native damage-meter line this hit counts toward.                       |
+| `meterSourceKey` | That line's `sourceKey` in `AZS_GetMeterSnapshot`, for exact credited-source matching. |
+
+`abilityName` and `spellId` describe the spell used to present the hit. A proc
+can borrow another spell while the meter credits its talent or item instead.
+Use `meterSource` for the credited caption and `meterSourceKey` for identity;
+captions can match or change language without establishing that identity.
+Match the received key to the snapshot's `sources` registry and `sourceKey`
+fields, not to a meter `rowId` or an attacker ID. Treat the key as opaque; do
+not reconstruct it from a spell name, hit size or changes in meter totals.
+
+The report that led to this change included these borrowed-spell examples:
+
+| Credited meter line | Reported `abilityName` | Reported `spellId` |
+| ------------------- | ---------------------- | ------------------ |
+| Shadow Weaving      | Shadow Word: Pain      | 589                |
+| Shadowy Apparitions | Mind Blast             | 8092               |
+| Shadowform          | Corpse Explosion       | 17616              |
+
+The reported Shadow Weaving hit also had `periodic = false`. The 0.139.0 notes
+explicitly confirm that a strike displayed as Shadow Word: Pain now identifies
+Shadow Weaving as its meter source. The examples above are supplied reports,
+not new captures or an ability-specific mapping for the addon.
+
+A pet's or summon's swing can lack `abilityName` and `spellId`; the new meter
+source identifies whose hit the meter credits without requiring either spell
+field. Preserve the event's separate attacker/target identities, `critical`,
+`periodic` and other native categories. A credited source name alone does not
+establish a spell ID, icon, proc flag or talent/item origin record. Continue
+using the meter API for totals rather than reconstructing them from the hit feed.
+
+SDUI retains nonempty string values for both fields. The exact received key
+supplements its existing attack/caster/target identity, so Performance Mode
+does not sum different credited sources merely because they borrow one spell.
+The name alone never joins or separates hits. Missing or unusable values keep
+the older-client path and do not reject an otherwise valid hit. A source key
+alone does not supply a missing attack identity or group otherwise unknown hits.
+Normal mode still displays each received hit separately; no snapshot lookup or
+spell/area reclassification is added.
+
+These field meanings come from the supplied 0.139.0 developer release notes.
+They do not specify field presence for every damage/miss category. CI-only
+fixtures cover borrowed-spell source separation, caption independence and
+missing/empty-key fallback; native payload delivery remains unverified.
+See the [SCT integration guide](COMBAT-TEXT-WORLD-ANCHOR-API-PROPOSAL.md#documented-hit-fields)
+and [client compatibility notes](CLIENT-COMPATIBILITY.md#01390-engine-update--2026-11-02).
+
 ## Heroic affixes and totems — 0.125.0, 2026-10-28
 
 The [supplied 0.125.0 reference](AzerothSurvivors-Addon-API-0.125.0-2026-10-28.txt)
