@@ -1,7 +1,9 @@
 # Proposal: party positions and general world anchors
 
-Status: proposed game API. The function name and field layout below are
-illustrative and require game-side implementation and confirmation.
+Status: provisional API schema. The developer has described an implementation,
+but official function/field documentation and installed-game delivery have not
+been supplied or verified. The original proposal below remains a design
+reference; reported behavior and the addon consumer are distinguished later.
 
 ## Purpose
 
@@ -339,12 +341,45 @@ player-relative metric is an optional extension. The position getters and
 general anchors above are proposed additions; the current combat-text API does
 not by itself provide persistent entity discovery or all of these marker types.
 
+## Provider behavior reported on 2026-11-02
+
+The following comes from the provider developer's message supplied by the user,
+not an official API reference or an inspected implementation:
+
+- Occlusion and world-space offsets are optional and unsupported; capabilities
+  report them false. Markers can show through walls.
+- `overhead` works for units. Cache, lair and downed-party overhead requests
+  return unavailable with `unsupportedAttachment`; callers must not invent a
+  world height. SDUI therefore chooses `position` for caches/downed allies and
+  adds only screen-space icon spacing. Encounter units retain `overhead`.
+- All pages of one discovery pass must be read in the same frame. Frequent
+  catalog revisions during enemy deaths invalidate older cursors with
+  `CATALOG_CHANGED`. Existing handles remain valid independently of catalog
+  revisions, so a failed discovery refresh must not discard them.
+- Native guardian classification can lag by up to about 0.2 seconds because
+  `AZSUNITS` arrives at most five times a second. The same handle can first be
+  classified as an ordinary enemy; periodic discovery must pick up the later
+  native classification without guessing it from names.
+- The enemy scan starts lazily on the first enemy request. That first call can
+  return `NOT_READY` for one frame. Retry through the existing reader rather
+  than restarting the marker owner.
+- Enemy corpses last about 1.2 seconds. A longer frame hitch can hide a death
+  from discovery and produce no fallen-enemy marker, without producing a false
+  one. SDUI does not request general fallen-enemy markers. This statement does
+  not establish a lifetime limit for native downed-party positions or the
+  separate combat-text anchors.
+
+These notes are sufficient to adjust attachment choice, pagination and retry
+behavior. Exact endpoint names, capability/record/error layouts, coordinate
+identity and combat-text `playerDistanceMetrics`/`playerDistance` still need to
+be checked against official documentation before claiming native compatibility.
+
 ## Draft SDUI consumer profile
 
-The draft PR includes addon-side consumers, not a game implementation. Until
-provider owners confirm a final shape, SDUI requires this explicit version-one
-profile in addition to the behavior above; it does not probe alternate field
-names, parse handles or match display captions. Unknown/missing capabilities
+The PR includes addon-side consumers, not a game implementation. The reported
+behavior above informs those consumers. Until provider owners confirm a final
+schema, SDUI requires the explicit provisional version-one profile below; it
+does not probe alternate field names, parse handles or match display captions. Unknown/missing capabilities
 leave world icons hidden. This profile is provisional and must be reconciled
 with the delivered native API before the PR is ready to merge.
 
@@ -386,7 +421,7 @@ cursor is nil. Each response must provide:
             state = "available", -- alive for guardians/bosses, downed for allies
             anchorStatus = "ready",
             anchorId = "opaque lifetime handle",
-            attachments = { overhead = true },
+            attachments = { position = true },
         },
     },
     hasMore = false,
@@ -395,14 +430,28 @@ cursor is nil. Each response must provide:
 ```
 
 An unavailable entry uses `anchorStatus = "unavailable"` with no `anchorId` and
-is not drawn. Ready entries without an explicit overhead attachment are not
-drawn. Each ready handle must be unique throughout the complete catalog. Every
-page must preserve catalog/world identity and current map/run/space. One page is
-read per existing waypoint service pass. SDUI bounds a catalog to 256 total
-entries and 256 pages, rejects cyclic cursors and publishes a replacement only
-after completion. An invalidated/failed catalog hides markers and restarts after
-a half-second retry; partial pages do not establish removal. A provider should
-filter to eligible supported entities before pagination.
+is not drawn. Ready caches/downed members require `attachments.position = true`;
+ready guardians/bosses/final bosses require `attachments.overhead = true`.
+The corresponding global attachment capability and native kind must also be
+advertised; lack of overhead support does not disable usable position markers.
+Each ready handle must be unique throughout the complete catalog.
+
+Every page must preserve catalog/world identity and current map/run/space. All
+pages are read synchronously in one service/frame pass, bounded to 256 total
+entries and 256 pages. Cyclic cursors, changing identities and malformed arrays
+reject the whole attempted replacement. SDUI publishes only a complete catalog.
+Accepted refreshes are scheduled every 0.2 UI seconds through the existing
+waypoint controller; per-frame projection reuses accepted handles without
+re-reading discovery. This allows later native guardian classification to be
+picked up without requesting ordinary enemies or inferring their kind.
+
+`CATALOG_CHANGED` and first-read `NOT_READY` retry no sooner than 0.1 UI seconds
+(the next ordinary shared reader pass); other failed catalogs retry after 0.5
+seconds. These refresh failures preserve the existing accepted handles, marker
+pool and exact registered callback while their native projections remain valid.
+No cursor is retained for a later frame and no partial list proves removal.
+A complete empty catalog retires old handles; explicit world/map/run/space
+changes retire the old context even if a replacement is not yet ready.
 
 Projection uses the request/result shape above, including `apiVersion = 1`,
 `worldId`, `cameraSampleId`, finite nonnegative `clockSeconds`, exact request
@@ -417,8 +466,11 @@ remain native; general fallen-enemy/lair discovery is outside this UI scope.
 The three switches are **Icons above caches** (on), **Icons above guardians and
 bosses** (off, including final bosses) and **Icons above fallen allies** (on), in
 `/sdui` → **Waypoints**. They are independent of HUD/minimap guidance. Existing
-32-unit artwork uses native `overhead` attachment plus six screen UI units of
-padding. No guessed world height or nameplate fallback is provided.
+32-unit artwork uses `overhead` plus six screen UI units for encounter units,
+and `position` plus 22 screen UI units for caches and downed allies. The latter
+leaves six units beneath the icon above the projected location; it does not
+claim a native head/chest-top measurement. No world offset, occlusion query,
+guessed world height or nameplate fallback is provided.
 
 The optional **Only show affordable caches** filter defaults off and uses the
 existing published `AZS_RUN.gold` and `AZS_RUN.chest` (the next cache cost),

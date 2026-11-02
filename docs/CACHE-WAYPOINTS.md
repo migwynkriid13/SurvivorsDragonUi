@@ -60,17 +60,30 @@ existing behavior.
 Icons require all five general world-anchor endpoints and the explicit draft
 schema in [the API proposal](FALLEN-ALLY-POSITION-API-PROPOSAL.md#draft-sdui-consumer-profile).
 Discovery uses opaque handles; guardians/bosses follow the actual living entity,
-not the fixed lair. The provider must supply an `overhead` attachment. No
-nameplate matching, inferred height, old screen point or general enemy marker is
-substituted. Existing chest, guardian and Winged Soul artwork is reused at 32 UI
-units with six UI units of screen padding above the native point.
+not the fixed lair. Encounters use the native `overhead` point with six UI units
+of screen padding. Caches and fallen allies use their native `position` point:
+the existing 32-unit icon's center sits 22 UI units above it, leaving a six-unit
+gap beneath the icon. This is screen spacing, not an invented world height or a
+claim that the game supplies the chest's top edge or a downed hero's head.
+Only kinds with their required advertised attachment are requested. No
+nameplate matching or old screen point is substituted.
+
+Discovery finishes every page in one bounded controller pass; cursors never
+cross frames. Complete catalogs replace the previous list atomically. Valid
+handles continue projecting each native post-camera frame while periodic
+discovery checks for new entities and delayed guardian classifications. A
+`CATALOG_CHANGED`, first-read `NOT_READY` or malformed refresh keeps the last
+valid handles; their native projection still decides whether they can be drawn.
+These failures do not release the callback or publish a partial list. Explicit
+world/context changes retire the old handles.
 
 Only current post-camera projections place icons. Offscreen/behind-camera,
-expired, unavailable and explicitly occluded anchors hide. An untested occlusion
-result can allow icons through walls. Collected caches and revived/departed
-allies are removed by the next complete native catalog or native handle
-retirement. These are addon-side draft consumers, pending native implementation
-and confirmation of the proposed field layout.
+expired, unavailable and explicitly occluded anchors hide. The developer reports
+no occlusion or world-offset support; neither is requested. Untested markers can
+show through walls. Collected caches and revived/departed allies are removed by
+the next complete native catalog or native handle retirement. The developer's
+behavior notes guide these changes; the exact official function/field schema and
+installed-game delivery remain unconfirmed.
 
 The native party-position contract is documented by
 [benilla worldmap.rs at 0259668](https://github.com/samwhosung/benilla/blob/0259668162cd2674730e078f5bf3def4cf4dfb35/crates/benilla-ui/src/script/worldmap.rs#L953)

@@ -1133,3 +1133,17 @@ icons skip painting; ally icons, pools and callback/catalog ownership remain
 unchanged in both Performance Mode states. These cases are authored for CI only
 and were not run locally; actual native gold publication and rendering remain
 unverified.
+
+Provider-note compatibility cases model position-only caches/downed allies and
+unit-only overhead, including capability combinations without global overhead,
+correct screen spacing and explicit unsupported-attachment recovery. Fake
+catalog cursors expire when the fixture frame changes, so multi-page acceptance
+requires one synchronous service pass. Cases preserve known handles and the
+same callback after first-read `NOT_READY`, `CATALOG_CHANGED`, malformed/cyclic
+or oversized refreshes; reject partial additions; bound pages/records; reuse
+handles across many camera frames without discovery reads; and retire a
+complete empty catalog. Delayed native enemy-to-guardian classification keeps
+its opaque handle and never uses name-based inference. Both Performance Mode
+states retain affordability/pooling/cleanup coverage. These cases use the
+provisional consumer schema and are authored for CI only; they do not establish
+that the developer's final API uses these field names or payloads.

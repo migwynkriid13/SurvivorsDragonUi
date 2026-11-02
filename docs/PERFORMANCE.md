@@ -3701,11 +3701,23 @@ validation or addon/game execution.
 
 `core/world_marker_api.lua` shares the waypoint controller's ten-Hz/deferred
 service pass; it adds no event or ordinary updater. One native post-camera
-callback owns screen projection. Discovery reads at most one advertised page
-per service pass, bounded to 256 pages and 256 total catalog entries; cyclic
-cursors, changed catalog identity within pagination and malformed pages retire
-the attempt. Complete pages commit atomically. Both Performance Mode states
-use the same instant, static marker lifecycle.
+callback owns screen projection. Each discovery refresh reads all advertised
+pages synchronously within one frame, bounded to 256 pages and 256 total
+catalog entries. Cursors stay local to that call. Cyclic cursors, changed
+catalog identity during pagination and malformed pages reject the attempted
+replacement; only a complete list commits atomically. Accepted discovery
+refreshes run no more often than every 0.2 UI seconds, without a catalog read
+on each projection frame.
+
+Discovery failures preserve the last accepted handles and the exact callback.
+`NOT_READY` and `CATALOG_CHANGED` retry on the next shared pass no sooner than
+0.1 seconds; other discovery failures wait 0.5 seconds. Existing markers keep
+using fresh native projections while the refresh is pending. A complete empty
+catalog removes old records; confirmed world/context changes retire them rather
+than borrowing another world's identities. Reused staging/seen/cursor buffers
+retain explicit Lua 5.0 lengths even after a rejected partial scan so Reset
+clears all retired scalar IDs. Both Performance Mode states use the same
+instant, static lifecycle.
 
 Only enabled cache/guardian/boss/fallen-ally kinds are requested. General enemy
 and lair markers are not requested. Up to 256 lazy frame/texture pairs reuse a
@@ -3719,6 +3731,19 @@ selection at half-second intervals. Failed release retains only the exact
 callback needed for retry; retired callbacks stay inert and foreign handlers
 remain untouched. Occlusion is not requested; explicit occluded responses hide,
 and untested markers can show through walls.
+
+Attachment selection is per kind and advertised capability: caches/downed
+allies use `position` with 22 UI units above the projected point; encounter units
+use `overhead` with six units. For a 32-unit icon, position markers leave a
+six-unit gap under the image. Unsupported attachment kinds skip discovery;
+per-entry unavailable/unsupported attachments hide without invented coordinates.
+No world-space height, offset or occlusion query is requested. Periodic native
+classification refresh can reveal a guardian after its reported initial enemy
+classification, keeping the opaque handle unchanged. Lazy enemy scan warmup
+retries without unregistering the existing marker callback. General enemies,
+fallen-enemy corpses and lairs remain outside the requested marker kinds.
+The provider's reported 1.2-second corpse observation limit therefore adds no
+new SDUI enemy-death marker work or history.
 
 Native downed-party reads reuse one array and at most four point records. The
 whole dense native list is validated before copying; only current matching
@@ -3745,5 +3770,5 @@ and keeps its choice while cache icons are off.
 
 Coverage is authored for CI only. No local tests, syntax/validation checks or
 addon/game execution were performed. Operation bounds and mocks do not prove
-native API delivery, instance revive locations, overhead attachment correctness,
-wall visibility, camera timing, appearance or FPS.
+native API delivery, final official payload schema, instance revive locations,
+attachment correctness, wall visibility, camera timing, appearance or FPS.
