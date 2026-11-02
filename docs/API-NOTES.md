@@ -12,9 +12,10 @@ Overflowed catalogs cannot prove removal; expired/unknown handles retire from
 frame projection. Caching, request-demand gates, pools and existing camera
 callback ownership remain shared in both Performance Mode states.
 
-The game advertises world offsets; cache icons use `{ z = 5 }` to sit five
-yards above the cache and have 22.4-unit sides (30% smaller). Other world icons
-retain their prior size and screen spacing. Cache markers require advertised
+The game advertises world offsets; cache and fallen-ally icons share
+`{ z = 5 }` to sit five yards above the cache or revive spot, with matching
+22.4-unit sides (30% smaller). Encounter icons retain their prior size and
+screen spacing. Cache and fallen-ally world markers require advertised
 offset support. Occlusion remains unsupported. SCT sizing and
 instance downed-position guidance already use the documented fields.
 CI-only fixtures now model the released shapes and stream/terminal boundaries;

@@ -61,12 +61,11 @@ Icons require the five documented general world-anchor endpoints and version-one
 capabilities in [the released API](AzerothSurvivors-Addon-API.md#world-anchors-version-1).
 Discovery uses opaque handles; guardians/bosses follow the actual living entity,
 not the fixed lair. Encounters use the native `overhead` point with six UI units
-of screen padding. Cache icons use `position` with the documented world offset
-`{ z = 5 }`: their center is five yards above the cache, without extra screen
-padding. Their 22.4-unit sides are 30% smaller than the former 32-unit icon.
-Fallen allies retain the 32-unit icon centered 22 UI units above their native
-`position`, leaving a six-unit screen gap. Cache icons require advertised
-world-offset support; unsupported builds hide only that marker kind.
+of screen padding. Cache and fallen-ally icons use `position` with the same
+documented world offset `{ z = 5 }`: their centers sit five yards above the
+cache or revive spot, without extra screen padding. Both have 22.4-unit sides,
+30% smaller than their former 32-unit icons. These two kinds require advertised
+world-offset support; encounter icons remain usable without it.
 Only kinds with their required advertised attachment are requested. No
 nameplate matching or old screen point is substituted.
 
@@ -89,7 +88,7 @@ Options update through the existing settings listener, and repeated failures
 back off instead of flooding the provider. Visible recovery reads fresh data.
 
 Only current post-camera projections place icons. Offscreen/behind-camera,
-expired and unavailable anchors hide. Native world projection makes the cache
+expired and unavailable anchors hide. Native world projection makes cache and ally
 height follow distance and camera perspective. Occlusion is unsupported, so markers
 can show through walls. Collected caches and revived/departed allies are removed
 by the next complete native catalog or native handle retirement. The released

@@ -146,16 +146,18 @@ local function Scene(performance)
             local expected = (source.kind == "cache" or source.kind == "downedPartyMember") and "position" or "overhead"
             assert(attachment == expected, "consumer requested an unsupported entity attachment")
             local offset = requests[1].offset
-            if source.kind == "cache" then
-                assert(native.worldOffsets ~= false, "cache requested unadvertised world offsets")
+            if source.kind == "cache" or source.kind == "downedPartyMember" then
+                assert(native.worldOffsets ~= false, "position icon requested unadvertised world offsets")
                 assert(type(offset) == "table" and offset.z == 5 and offset.x == nil and offset.y == nil)
                 for axis in pairs(offset) do
-                    assert(axis == "z", "cache shifted along another world axis")
+                    assert(axis == "z", "position icon shifted along another world axis")
                 end
-                if native.cacheOffset then assert(offset == native.cacheOffset, "cache offset allocated per frame") end
-                native.cacheOffset = offset
+                if native.positionOffset then
+                    assert(offset == native.positionOffset, "cache and ally offsets were not shared across frames")
+                end
+                native.positionOffset = offset
             else
-                assert(offset == nil, "shared request slot leaked cache height to another marker")
+                assert(offset == nil, "shared request slot leaked position-icon height to an encounter")
             end
             local supported = false
             for _, offered in ipairs(source.attachments) do
@@ -295,8 +297,9 @@ for _, performance in ipairs({ false, true }) do
     c:Frame()
     assert(#c:Markers() == 3, "same-frame pagination omitted a boss")
     for _, marker in ipairs(c:Markers()) do
-        local expectedY = marker.kind == "cache" and 280 or (marker.kind == "boss" and 206 or 222)
-        local expectedSize = marker.kind == "cache" and 22.4 or 32
+        local raised = marker.kind == "cache" or marker.kind == "downedPartyMember"
+        local expectedY = raised and 280 or 206
+        local expectedSize = raised and 22.4 or 32
         assert(marker.point[5] == expectedY, "marker ignored native world offset or used incorrect screen padding")
         assert(marker:GetWidth() == expectedSize and marker:GetHeight() == expectedSize, "incorrect world-icon size")
     end
@@ -352,7 +355,7 @@ for _, performance in ipairs({ false, true }) do
     assert(native.calls == reads and #c:Markers() == 0, "disabled markers retained discovery or drawings")
     c.api.Reset()
 end
--- Cache height is projected by the provider, and mixed-kind pool reuse must
+-- Cache/ally height is projected by the provider, and mixed-kind pool reuse must
 -- restore each icon's geometry without adding repeated size writes or queries.
 for _, performance in ipairs({ false, true }) do
     local c = Scene(performance)
@@ -372,11 +375,13 @@ for _, performance in ipairs({ false, true }) do
     assert(native.calls == calls and native.capabilityReads == capabilities, "cache height added metadata queries")
     native.entries = { Record("pooled-ally", "downedPartyMember") }
     c:Service(0.21)
+    c:ResetCounts()
     c:Frame()
     assert(
-        c:Markers()[1] == marker and marker:GetWidth() == 32 and marker:GetHeight() == 32 and marker.point[5] == 222,
-        "cache pooling changed ally size or placement"
+        c:Markers()[1] == marker and marker:GetWidth() == 22.4 and marker:GetHeight() == 22.4 and marker.point[5] == 240,
+        "fallen ally failed to match cache size and world height"
     )
+    assert(not c.writes.SetWidth and not c.writes.SetHeight, "same-size cache/ally reuse rewrote dimensions")
     native.entries = { Record("pooled-boss", "boss") }
     c.env.DFRL.display.Set("worldBossIcons", true)
     c:Service(0.21)
@@ -403,8 +408,11 @@ for _, performance in ipairs({ false, true }) do
     unsupported:Service()
     unsupported:Frame()
     assert(
-        #unsupported:Markers() == 2 and not unsupported.native.queryKinds.cache,
-        "unadvertised world offset drew a wrongly placed cache or hid other kinds"
+        #unsupported:Markers() == 1
+            and not unsupported.native.queryKinds.cache
+            and not unsupported.native.queryKinds.downedPartyMember
+            and unsupported.native.queryKinds.boss,
+        "unadvertised offsets drew misplaced cache/ally icons or hid encounter icons"
     )
     unsupported.api.Reset()
 end

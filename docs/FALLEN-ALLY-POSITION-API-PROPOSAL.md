@@ -374,7 +374,8 @@ its advertised world-offset support and 60-second fallen-enemy retention:
 
 The released reference now confirms the endpoint and payload definitions.
 It advertises `worldOffsets = true`, while occlusion remains false. SDUI does
-request only the cache's five-yard upward offset, with no occlusion or general
+request the shared five-yard upward offset for caches and fallen allies,
+with no occlusion or general
 fallen-enemy discovery.
 
 ## SDUI integration with the released API
@@ -390,7 +391,7 @@ World markers require all five documented functions, version 1,
 `frameProjection = true` and `frameHandler = true`. Capability `kinds` and
 `attachments` are dense string lists. SDUI copies only supported-kind booleans
 and `maxEntriesPerCall` / `maxProjectionsPerCall` into its own metadata cache;
-it retains no provider table. Cache support additionally requires advertised
+it retains no provider table. Cache and fallen-ally support require advertised
 `worldOffsets = true`. Unsupported kinds/attachments stay hidden.
 
 Queries contain only needed `cache`, `guardian`, `boss`, `finalBoss` and
@@ -424,12 +425,11 @@ sample and clock, and exact request order. A changed stream/world response or
 batches hide all icons atomically and retire the presentation for retry.
 
 Encounters use the native unit `overhead` point with six screen units above it.
-Caches use `position` with one shared `{ z = 5 }` offset, placing the icon center
-five world yards above the cache without extra screen padding. Cache sides are
-22.4 UI units, 70% of the former 32. Fallen allies retain a 32-unit icon centered
-22 screen units above `position`, leaving six units beneath the image. Every
-request slot explicitly sets or clears its offset, so cache height never leaks
-to another kind. Pooled frames update dimensions only when the required size
+Caches and fallen allies use `position` with the same shared `{ z = 5 }`
+offset, placing their centers five world yards above the cache or revive spot
+without extra screen padding. Their sides share one 22.4-unit value, 70% of the
+former 32. Every request slot explicitly sets or clears its offset, so this
+height never leaks to an encounter kind. Pooled frames update dimensions only when the required size
 changes. Occlusion is unsupported, so markers can show through walls.
 
 Offscreen, behind-camera, clipped, notReady and unsupported/unavailable entries

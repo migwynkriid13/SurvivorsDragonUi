@@ -1181,11 +1181,12 @@ callback across stream recovery and count zero later projections for retired
 handles in both Performance Mode states. No runtime test hook is shipped and
 no local tests, validation or addon/game execution were run.
 
-Cache styling cases in both Performance Mode states require the reused native
-request to carry exactly `offset = { z = 5 }` for caches and no offset for any
-other kind. A changed fake camera projection alters the five-yard point without
+Cache/ally styling cases in both Performance Mode states require the reused
+native request to carry the same `offset = { z = 5 }` table for caches and
+fallen allies, with no offset for encounters. A changed fake camera projection alters the five-yard point without
 an added screen gap or metadata query. Pooled cache → ally → boss → cache views
-retain one frame while restoring 22.4/32-unit sizes and existing non-cache
-spacing. Settled frames issue no size/placement writes. Missing world-offset
-support omits caches while leaving ally/encounter markers usable. These cases
+retain one frame while restoring 22.4/32-unit sizes and existing encounter
+spacing. Cache → ally reuse issues no redundant size writes. Settled frames
+issue no size/placement writes. Missing world-offset support omits cache and
+ally icons while leaving encounter markers usable. These cases
 are CI-only; no local tests, validation or game execution were run.
