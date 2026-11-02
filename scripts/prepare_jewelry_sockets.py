@@ -1,8 +1,8 @@
-"""Prepare the original straight bar edge with clear jewelry openings.
+"""Prepare the straight bar edge and short lower jewelry connectors.
 
 Only texture pixels are read. No addon or game code is loaded or executed.
 The native reference uses 36-unit buttons and six-unit gaps. The rail replaces
-only the 12-unit top strip, without the retired circular socket surrounds.
+only the 12-unit top strip, retaining the bottom arch but no upper/side circle.
 The remainder of HDActionBar stays intact. Write the three legal runtime
 strips directly, without leaving an intermediate atlas or detached-circle copy.
 """
@@ -27,9 +27,12 @@ def prepare(bar_path, output):
     native.alpha_composite(half.transpose(Image.Transpose.FLIP_LEFT_RIGHT), (150 * SCALE, 0))
     rail = Image.new("RGBA", (300 * SCALE, 38 * SCALE))
     rail.alpha_composite(native.crop((0, 0, 300 * SCALE, 12 * SCALE)), (0, 26 * SCALE))
-    # Preserve the existing icon openings, including through the straight edge.
-    # All pixels above the original strip stay clear: Runecarver owns the rim.
-    center, opening = 20, 13.7
+    # Keep the original lower junction's native bevel phase and shape. Only
+    # its lowest portion survives; Runecarver owns the top and side surround.
+    center, radius, opening = 20, 20, 13.7
+    baseline, connector_top = 33.5, 28
+    junction = math.sqrt(radius * radius - (baseline - center) ** 2)
+    left_join, right_join = center - junction, center + junction
     pixels = rail.load()
     for index in range(5):
         start = (46 + index * 42) * SCALE
@@ -40,6 +43,26 @@ def prepare(bar_path, output):
                 radial = math.hypot(x - center, y - center)
                 if radial < opening:
                     pixels[start + px, py] = (0, 0, 0, 0)
+                    continue
+                if y < connector_top or (radial > radius and y < baseline):
+                    continue
+                if y >= baseline and (x <= left_join or x >= right_join):
+                    continue
+                distance = min(
+                    math.hypot(x - left_join, y - baseline),
+                    math.hypot(x - right_join, y - baseline),
+                )
+                if radial > 0 and center + radius * (y - center) / radial <= baseline:
+                    distance = min(distance, abs(radius - radial))
+                if x <= left_join or x >= right_join:
+                    distance = min(distance, abs(y - baseline))
+                source_y = min(48, 30 + math.floor(distance * SCALE))
+                color = native.getpixel((start + px, source_y))
+                if py >= rail.height - SCALE:
+                    original = native.getpixel((start + px, py - 26 * SCALE))
+                    blend = (py - (rail.height - SCALE) + 1) / SCALE
+                    color = tuple(round(a * (1 - blend) + b * blend) for a, b in zip(color, original))
+                pixels[start + px, py] = color
     output.parent.mkdir(parents=True, exist_ok=True)
     # Match the existing three 400-pixel spans and both neighbour gutters.
     for index in range(3):

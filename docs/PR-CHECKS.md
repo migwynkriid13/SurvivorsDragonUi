@@ -148,7 +148,7 @@ retain inset band heights through pooling. These cases are CI-only and do not
 establish native pixel coverage.
 
 Jewelry rail asset cases require clear pixels above the original straight
-upper strip, clear item openings, retained bar pixels and exclusion of the
+upper strip, clear item openings, retained bottom-arch/bar pixels and exclusion of the
 retired detached-circle file from the runtime manifest. Existing strip cases
 retain both neighbour pixels at every join. These are CI-only data cases;
 local work is artwork preparation, source review and pinned formatting, with

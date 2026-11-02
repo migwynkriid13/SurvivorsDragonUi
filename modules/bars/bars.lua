@@ -208,8 +208,8 @@ DFRL:NewMod("Bars", 1, function()
         DFRL.actionBarBGleft = left
         DFRL.actionBarBGright = right
 
-        -- Keep the original straight edge clear beneath the Runecarver openings.
-        -- These guttered strips contain no legacy circular socket surrounds.
+        -- Keep the small lower arch joining the straight edge to Runecarver.
+        -- The guttered strips omit the old circle's upper and side surround.
         local artHeight = defaults.height + 2 * defaults.topInset
         local socketBottom = defaults.buttonWidth * 2 / 36
         local upper = T.CreateArtworkStrip(bar, "BACKGROUND", 3)

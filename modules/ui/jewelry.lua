@@ -9,10 +9,10 @@ Empty or unknown-quality slots keep the original grey housing; only known
 equipped rarity selects the brighter crop in the same atlas.
 No inner circle is drawn. The glow reuses the same housing artwork without
 animation, hiding while empty, editing or in Performance Mode; the tint remains.
-SocketRail BLP strips retain the original straight bar edge with clear item
-openings, using pixels from the existing HDActionBar.tga. Only its narrow top
-strip switches while this jewelry row is visible. No old socket arch or
-detached circle is drawn behind the Runecarver housings.
+SocketRail BLP strips retain the straight bar edge and small bottom arch with
+clear item openings, using pixels from the existing HDActionBar.tga. Only its
+narrow top strip switches while this jewelry row is visible. The old circle's
+top/sides and detached backing no longer sit behind the Runecarver housings.
 EmptyNeck.blp, EmptyRing.blp and EmptyTrinket.blp use Blizzard's original
 paper-doll placeholders, fitted inside the carving without cropping.
 Texture conversion does not change the underlying artwork's ownership.

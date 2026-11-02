@@ -50,17 +50,20 @@ class RuntimeTextureTests(unittest.TestCase):
                     self.assertLessEqual(dimension, 512)
                     self.assertEqual(dimension & (dimension - 1), 0)
 
-    def test_jewelry_rail_keeps_the_bar_and_openings_without_old_socket_arches(self):
+    def test_jewelry_rail_keeps_lower_arches_without_old_upper_circle(self):
         names = ["SocketRail.blp", "SocketRail_2.blp", "SocketRail_3.blp"]
         strips = [blp_bgra_levels((ROOT / "media/tex/jewelry" / name).read_bytes())[2][0] for name in names]
+
         def alpha(x, y):
             strip, local_x = divmod(x, 400)
             return strips[strip][(y * 512 + local_x + 1) * 4 + 3]
+
         for y in range(104):
             self.assertFalse(any(alpha(x, y) for x in range(1200)), "old socket arch remains above the bar")
+        self.assertTrue(any(alpha(196, y) for y in range(112, 134)), "small lower connector was removed")
         for center in (264, 432, 600, 768, 936):
             self.assertFalse(any(alpha(center, y) for y in range(104, 134)), "bar crosses an item opening")
-        self.assertTrue(any(alpha(24, y) for y in range(104, 152)), "straight bar edge was removed")
+        self.assertTrue(any(alpha(348, y) for y in range(104, 152)), "straight bar edge was removed")
         manifest = json.loads((ROOT / "packaging/runtime-files.json").read_text())
         self.assertNotIn("media/tex/jewelry/SocketDetached.blp", manifest["files"])
 

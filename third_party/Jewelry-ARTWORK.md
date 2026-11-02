@@ -94,12 +94,13 @@ the complete ring is never sliced. Jewelry uses its own inset sixteen-band icon 
 `scripts/prepare_jewelry_sockets.py` reads the existing
 `media/tex/actionbars/HDActionBar.tga` as texture data, without importing or
 executing addon code. The original artwork and attribution remain intact. At
-the 36-unit button reference, it copies only the original 12-unit straight
-upper edge into the existing 300-by-38 rail space, 26 units below its top.
-Pixels above that strip stay clear. Five existing 13.7-unit-radius cutouts
-keep the bar from crossing the item openings. The former 20-unit circular
-arches, feet and socket body are no longer generated; Runecarver supplies the
-complete visible surround.
+the 36-unit button reference, it copies the original 12-unit straight upper
+edge into the existing 300-by-38 rail space, 26 units below its top. Pixels
+above that strip stay clear. The small lower arch is retained from y=28
+downward, with the same 20-unit curve, 33.5-unit join and native bevel phase.
+Only this bottom connector survives; the old upper and side circle is omitted
+so it cannot bleed outside Runecarver. Five existing 13.7-unit-radius cutouts
+keep the bar and connector from crossing the item openings.
 
 The helper writes `SocketRail.blp`, `SocketRail_2.blp` and `SocketRail_3.blp`
 directly through the shared lossless BLP encoder, without a temporary large
