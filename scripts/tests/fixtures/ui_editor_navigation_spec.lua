@@ -1316,7 +1316,10 @@ local pageCount = 0
 for _ in pairs(pages) do
     pageCount = pageCount + 1
 end
-assert(pageCount == 20 and layoutBuilds == 1, "full category walk lost or rebuilt sections")
+assert(
+    pageCount == 22 and pages.cacheIcons and pages.bossIcons and layoutBuilds == 1,
+    "full category walk lost or rebuilt sections"
+)
 local allCategoryObjects = #context.objects
 for _, key in ipairs(categoryKeys) do
     dialog.navigation.Select(key)
@@ -1385,7 +1388,7 @@ dialog:Show()
 dialog.navigation.Select("map")
 local affordableOnly = assert(env.displayControls.worldCacheAffordableOnly, "missing affordability checkbox")
 assert(
-    dialog.navigation.selected == "map" and pages.waypoints:IsVisible() and affordableOnly:IsVisible(),
+    dialog.navigation.selected == "map" and pages.cacheIcons:IsVisible() and affordableOnly:IsVisible(),
     "affordability case did not open the visible Map & navigation category"
 )
 assert(not display.Get("worldCacheAffordableOnly") and affordableOnly.mouse, "wrong affordability default/dependency")

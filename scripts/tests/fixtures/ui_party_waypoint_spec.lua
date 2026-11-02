@@ -321,7 +321,7 @@ assert(not guardianHud:IsShown(), "default-off respawn guidance changed living-o
 display.BeginEdit()
 display.Set("guardianRespawnGuidance", true)
 assert(guardianHud:IsShown() and guardianDistance:GetText() == "300 yards", "preview needed a new lair packet")
-assert(not env.SurvivorsDragonUiDisplay, "respawn guidance preview saved early")
+assert(not env.SurvivorsDragonUiDisplay.guardianRespawnGuidance, "respawn guidance preview saved early")
 display.FinishEdit(false)
 assert(not guardianHud:IsShown(), "Cancel retained respawn guidance")
 display.BeginEdit()
