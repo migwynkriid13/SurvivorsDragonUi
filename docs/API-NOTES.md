@@ -12,8 +12,10 @@ Overflowed catalogs cannot prove removal; expired/unknown handles retire from
 frame projection. Caching, request-demand gates, pools and existing camera
 callback ownership remain shared in both Performance Mode states.
 
-The game now advertises world offsets; SDUI retains the documented fixed screen
-gap and requests no offset. Occlusion remains unsupported. SCT sizing and
+The game advertises world offsets; cache icons use `{ z = 5 }` to sit five
+yards above the cache and have 22.4-unit sides (30% smaller). Other world icons
+retain their prior size and screen spacing. Cache markers require advertised
+offset support. Occlusion remains unsupported. SCT sizing and
 instance downed-position guidance already use the documented fields.
 CI-only fixtures now model the released shapes and stream/terminal boundaries;
 no local tests, standalone validation or addon/game execution were run. Native

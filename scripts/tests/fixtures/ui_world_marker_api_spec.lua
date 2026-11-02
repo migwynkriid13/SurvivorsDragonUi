@@ -56,7 +56,7 @@ local function Scene(performance)
             maxEntriesPerCall = native.pageLimit or 2,
             maxProjectionsPerCall = 1,
             playerDistanceMetrics = true,
-            worldOffsets = true,
+            worldOffsets = native.worldOffsets ~= false,
             occlusion = false,
             fallenRetentionSeconds = 60,
             fallenCapacity = 4096,
@@ -130,7 +130,7 @@ local function Scene(performance)
         if native.projectionError then return nil, { code = native.projectionError } end
         local id, attachment = requests[1].anchorId, requests[1].attachment
         for key in pairs(requests[1]) do
-            assert(key == "anchorId" or key == "attachment", "marker requested optional world offsets/occlusion")
+            assert(key == "anchorId" or key == "attachment" or key == "offset", "marker requested unsupported options")
         end
         local source
         for _, entry in ipairs(native.entries) do
@@ -145,6 +145,18 @@ local function Scene(performance)
         if source then
             local expected = (source.kind == "cache" or source.kind == "downedPartyMember") and "position" or "overhead"
             assert(attachment == expected, "consumer requested an unsupported entity attachment")
+            local offset = requests[1].offset
+            if source.kind == "cache" then
+                assert(native.worldOffsets ~= false, "cache requested unadvertised world offsets")
+                assert(type(offset) == "table" and offset.z == 5 and offset.x == nil and offset.y == nil)
+                for axis in pairs(offset) do
+                    assert(axis == "z", "cache shifted along another world axis")
+                end
+                if native.cacheOffset then assert(offset == native.cacheOffset, "cache offset allocated per frame") end
+                native.cacheOffset = offset
+            else
+                assert(offset == nil, "shared request slot leaked cache height to another marker")
+            end
             local supported = false
             for _, offered in ipairs(source.attachments) do
                 if offered == attachment then supported = true end
@@ -158,6 +170,7 @@ local function Scene(performance)
         end
         if entry.state == "onScreen" then
             entry.x, entry.y = source.x or 100, source.y or 200
+            if requests[1].offset then entry.y = entry.y + requests[1].offset.z * (native.heightProjection or 16) end
             entry.cameraDistance, entry.cameraDepth, entry.uiUnitsPerYard = 20, 20, 16
             entry.playerDistance = 20
         end
@@ -252,7 +265,12 @@ for _, performance in ipairs({ false, true }) do
     c:ResetCounts()
     c:Frame()
     assert(
-        not c.writes.SetPoint and not c.writes.SetTexture and not c.writes.Show and not c.writes.Hide,
+        not c.writes.SetPoint
+            and not c.writes.SetTexture
+            and not c.writes.Show
+            and not c.writes.Hide
+            and not c.writes.SetWidth
+            and not c.writes.SetHeight,
         "unchanged projection rewrote static presentation"
     )
     native.entries[1].x = 300
@@ -277,8 +295,10 @@ for _, performance in ipairs({ false, true }) do
     c:Frame()
     assert(#c:Markers() == 3, "same-frame pagination omitted a boss")
     for _, marker in ipairs(c:Markers()) do
-        local padding = marker.kind == "boss" and 6 or 22
-        assert(marker.point[5] == 200 + padding, "marker used a guessed world height or incorrect screen spacing")
+        local expectedY = marker.kind == "cache" and 280 or (marker.kind == "boss" and 206 or 222)
+        local expectedSize = marker.kind == "cache" and 22.4 or 32
+        assert(marker.point[5] == expectedY, "marker ignored native world offset or used incorrect screen padding")
+        assert(marker:GetWidth() == expectedSize and marker:GetHeight() == expectedSize, "incorrect world-icon size")
     end
     native.frameCurrent = false
     c:Frame()
@@ -331,6 +351,62 @@ for _, performance in ipairs({ false, true }) do
     c:Frame()
     assert(native.calls == reads and #c:Markers() == 0, "disabled markers retained discovery or drawings")
     c.api.Reset()
+end
+-- Cache height is projected by the provider, and mixed-kind pool reuse must
+-- restore each icon's geometry without adding repeated size writes or queries.
+for _, performance in ipairs({ false, true }) do
+    local c = Scene(performance)
+    local native = c.native
+    native.entries = { Record("small-cache", "cache") }
+    c:Service()
+    c:Frame()
+    local marker = c:Markers()[1]
+    assert(marker:GetWidth() == 22.4 and marker:GetHeight() == 22.4 and marker.point[5] == 280)
+    local objects, calls, capabilities = #c.objects, native.calls, native.capabilityReads
+    c:ResetCounts()
+    c:Frame()
+    assert(not c.writes.SetWidth and not c.writes.SetHeight and not c.writes.SetPoint, "settled cache rewrote geometry")
+    native.heightProjection = 8
+    c:Frame()
+    assert(marker.point[5] == 240 and marker:GetWidth() == 22.4, "cache height substituted a fixed screen gap")
+    assert(native.calls == calls and native.capabilityReads == capabilities, "cache height added metadata queries")
+    native.entries = { Record("pooled-ally", "downedPartyMember") }
+    c:Service(0.21)
+    c:Frame()
+    assert(
+        c:Markers()[1] == marker and marker:GetWidth() == 32 and marker:GetHeight() == 32 and marker.point[5] == 222,
+        "cache pooling changed ally size or placement"
+    )
+    native.entries = { Record("pooled-boss", "boss") }
+    c.env.DFRL.display.Set("worldBossIcons", true)
+    c:Service(0.21)
+    c:Frame()
+    assert(c:Markers()[1] == marker and marker:GetWidth() == 32 and marker.point[5] == 206)
+    native.entries = { Record("pooled-cache", "cache") }
+    c:Service(0.21)
+    c:Frame()
+    assert(
+        c:Markers()[1] == marker and marker:GetWidth() == 22.4 and marker:GetHeight() == 22.4 and marker.point[5] == 240,
+        "mixed-kind pool failed to restore the smaller raised cache"
+    )
+    assert(#c.objects == objects and native.registers == 1, "cache styling rebuilt the pool or native owner")
+    c.api.Reset()
+
+    local unsupported = Scene(performance)
+    unsupported.native.worldOffsets = false
+    unsupported.env.DFRL.display.Set("worldBossIcons", true)
+    unsupported.native.entries = {
+        Record("no-height", "cache"),
+        Record("ally", "downedPartyMember"),
+        Record("boss", "boss"),
+    }
+    unsupported:Service()
+    unsupported:Frame()
+    assert(
+        #unsupported:Markers() == 2 and not unsupported.native.queryKinds.cache,
+        "unadvertised world offset drew a wrongly placed cache or hid other kinds"
+    )
+    unsupported.api.Reset()
 end
 -- Camera-frame affordability changes gate caches without discovery or rebinding.
 for _, performance in ipairs({ false, true }) do

@@ -61,10 +61,12 @@ Icons require the five documented general world-anchor endpoints and version-one
 capabilities in [the released API](AzerothSurvivors-Addon-API.md#world-anchors-version-1).
 Discovery uses opaque handles; guardians/bosses follow the actual living entity,
 not the fixed lair. Encounters use the native `overhead` point with six UI units
-of screen padding. Caches and fallen allies use their native `position` point:
-the existing 32-unit icon's center sits 22 UI units above it, leaving a six-unit
-gap beneath the icon. This is screen spacing, not an invented world height or a
-claim that the game supplies the chest's top edge or a downed hero's head.
+of screen padding. Cache icons use `position` with the documented world offset
+`{ z = 5 }`: their center is five yards above the cache, without extra screen
+padding. Their 22.4-unit sides are 30% smaller than the former 32-unit icon.
+Fallen allies retain the 32-unit icon centered 22 UI units above their native
+`position`, leaving a six-unit screen gap. Cache icons require advertised
+world-offset support; unsupported builds hide only that marker kind.
 Only kinds with their required advertised attachment are requested. No
 nameplate matching or old screen point is substituted.
 
@@ -87,8 +89,8 @@ Options update through the existing settings listener, and repeated failures
 back off instead of flooding the provider. Visible recovery reads fresh data.
 
 Only current post-camera projections place icons. Offscreen/behind-camera,
-expired and unavailable anchors hide. The released API supports optional world
-offsets, which these icons do not request. Occlusion is unsupported, so markers
+expired and unavailable anchors hide. Native world projection makes the cache
+height follow distance and camera perspective. Occlusion is unsupported, so markers
 can show through walls. Collected caches and revived/departed allies are removed
 by the next complete native catalog or native handle retirement. The released
 reference defines the accepted schema; installed-game delivery and appearance

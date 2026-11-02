@@ -24,7 +24,9 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
             art = "Chest.blp",
             state = "present",
             attachment = "position",
-            padding = 22,
+            size = 22.4,
+            offset = { z = 5 },
+            padding = 0,
             crop = { 0, 1, 0, 1 },
         },
         guardian = {
@@ -185,6 +187,7 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
         return style and state.choices[style.key]
     end
     local function Marker(record)
+        local style = styles[record.kind]
         local marker = state.markers[record.anchorId]
         if not marker then
             marker = table.remove(state.pool)
@@ -193,15 +196,18 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
                 marker:Hide()
                 marker:SetFrameStrata("LOW")
                 marker:EnableMouse(false)
-                marker:SetWidth(32)
-                marker:SetHeight(32)
                 marker.icon = marker:CreateTexture(nil, "ARTWORK")
                 marker.icon:SetAllPoints(marker)
             end
             state.markers[record.anchorId] = marker
         end
+        local size = style.size or 32
+        if marker.size ~= size then
+            marker:SetWidth(size)
+            marker:SetHeight(size)
+            marker.size = size
+        end
         if marker.kind ~= record.kind or not marker.ready then
-            local style = styles[record.kind]
             local ok, result = pcall(marker.icon.SetTexture, marker.icon, path .. style.art)
             marker.ready = ok and result ~= false
             if marker.ready then marker.icon:SetTexCoord(unpack(style.crop)) end
@@ -295,6 +301,7 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
                     size = size + 1
                     local request = state.requests[size] or {}
                     request.anchorId, request.attachment = record.anchorId, record.attachment
+                    request.offset = styles[record.kind].offset
                     state.requests[size], state.indices[size] = request, first
                 else
                     local point = state.points[first]
@@ -472,6 +479,7 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
             for _, kind in ipairs(markerKinds) do
                 cached.kinds[kind] = Contains(caps.kinds, kinds, kind)
                     and Contains(caps.attachments, attachments, styles[kind].attachment)
+                    and (not styles[kind].offset or caps.worldOffsets == true)
             end
             state.cachedCapabilities, state.capabilityGetter, state.capabilityAt = cached, getter, now
         end

@@ -3750,12 +3750,19 @@ callback needed for retry; retired callbacks stay inert and foreign handlers
 remain untouched. The released API has no occlusion support, so markers can
 show through walls; no occlusion query or undocumented result field is used.
 
-Attachment selection is per kind and advertised capability: caches/downed
-allies use `position` with 22 UI units above the projected point; encounter units
-use `overhead` with six units. For a 32-unit icon, position markers leave a
-six-unit gap under the image. Unsupported attachment kinds skip discovery;
-per-entry unavailable/unsupported attachments hide without invented coordinates.
-No world-space height, offset or occlusion query is requested. Periodic native
+Attachment selection is per kind and advertised capability. Cache icons are
+22.4 units square (30% smaller), using `position` plus one shared `{ z = 5 }`
+world offset and zero screen padding. The existing batched projection places
+them five yards above the cache without another query or per-frame offset-table
+allocation. Cache kinds require advertised `worldOffsets`; other kinds stay
+usable without it. Every reused request slot sets or clears its offset.
+Downed allies retain 32-unit icons centered 22 UI units above `position` with
+a six-unit screen gap; encounters retain 32-unit icons at `overhead` plus six
+units. Pooled views cache their size and only write width/height on actual size
+changes, including reuse across kinds. No frame, region, asset or updater is
+added. Unsupported attachment kinds skip discovery; per-entry unavailable or
+unsupported attachments hide without invented coordinates. No occlusion query
+is requested. Periodic native
 classification refresh can reveal a guardian after its reported initial enemy
 classification, keeping the opaque handle unchanged. Lazy enemy scan warmup
 retries without unregistering the existing marker callback. General enemies,
