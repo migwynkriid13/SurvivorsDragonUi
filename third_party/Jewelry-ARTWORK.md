@@ -21,8 +21,6 @@ Only the existing Layout edit envelopes grow to include the larger static canvas
 
 This is original World of Warcraft artwork, copyright Blizzard Entertainment. Public availability and software licenses do not transfer its ownership or supply a blanket art redistribution license. Existing project permission for upstream custom art does not relicense this Blizzard texture; its provenance remains in the shipped jewelry module. No source addon code, fonts or framework is imported.
 
-![Prepared grey-metal housings without an extra circular rim](../docs/previews/jewelry-runecarver-rarity.png)
-
 ## Shared pet/meter rim source
 
 - [Karl-HeinzSchneider/WoW-DragonflightUI, commit b8b35451d4621a8097e887385f72ec03e17765f1](https://github.com/Karl-HeinzSchneider/WoW-DragonflightUI/tree/b8b35451d4621a8097e887385f72ec03e17765f1).
