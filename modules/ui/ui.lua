@@ -36,6 +36,11 @@ DFRL:NewMod("Ui", 5, function()
 
     -- hide stuff
     do
+        -- The main zone splash also owns the territory line.
+        for _, name in ipairs({ "ZoneTextFrame", "SubZoneTextFrame" }) do
+            local frame = _G[name]
+            if frame then PermanentlyDisableFrame(frame) end
+        end
         if PetPaperDollCloseButton then PetPaperDollCloseButton:Hide() end
         if SkillFrameCancelButton then SkillFrameCancelButton:Hide() end
     end

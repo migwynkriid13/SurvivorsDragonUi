@@ -30,6 +30,25 @@ zone strip's default screen position. Saved Layout positions still take priority
 Both Performance Mode states use these static anchors with no added regions,
 artwork or recurring work.
 
+## Zone name
+
+The text above the minimap shows the received `AZS_ZONE.zname` exactly, in the
+game's language. Native area/subzone updates cannot replace it, and the zone
+subtitle is not appended. Missing or invalid zone data leaves the caption empty;
+there is no area-name fallback.
+
+The existing zone button refreshes once after a native `AZSZONE` message, world
+entry or language change, after native parsing. Showing the minimap refreshes
+the caption; hiding it cancels pending work. World leave, logout and reload clear
+the old name. Changed-only writes and the same existing controls serve both
+Performance Mode states, including with the clock off. No frame, region, asset,
+setting or recurring zone poll is added.
+
+The center-screen zone-entry splash is disabled, including its territory and
+subzone lines. The existing `PermanentlyDisableFrame` helper retires
+`ZoneTextFrame` and `SubZoneTextFrame`, removes their event/animation callbacks
+and blocks later Show attempts. This adds no polling or drawing resources.
+
 ## Optional local clock
 
 `/sdui` → **Minimap** → **Show clock** is on by default, with the zone name on

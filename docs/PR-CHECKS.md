@@ -613,6 +613,13 @@ The assertions cover:
   failed handoffs retire the duplicate custom caption. These authored CI-only
   contracts do not verify native provider availability or live clock rendering.
 
+  Zone-caption cases keep the clock off in both Performance Mode states and
+  require the exact received `AZS_ZONE.zname`, native subzone-write suppression,
+  next-frame publication, unchanged writes, prior callback restoration, hidden
+  recovery and world retirement. Invalid/out-of-run data has no area fallback.
+  These cases are authored for CI only and do not verify native message timing
+  or in-game appearance.
+
   Clock-fit cases supply explicit natural glyph metrics and owning-frame scale.
   They cover leftward growth past the old fixed slot, remaining zone width,
   font/scale invalidation, unchanged measurement/write reuse, hidden/off deferral,

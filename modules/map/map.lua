@@ -7,6 +7,60 @@ DFRL:NewMod("Map", 1, function()
         local caption, ready, tooltipCaption
         local nativeHour, nativeMinute, nativeText
         local fitted = {}
+        local setZoneText = zoneText.SetText
+        local zoneQueued, previousZoneUpdate = false, nil
+        local UpdateZone
+        local function RefreshZone()
+            if not zoneText:IsVisible() then return end
+            local value = ""
+            if inWorld and type(_G.AZS_GetPhase) == "function" then
+                local ok, phase = pcall(_G.AZS_GetPhase)
+                local zone = _G.AZS_ZONE
+                if
+                    ok
+                    and (phase == "ready" or phase == "playing" or phase == "choosing" or phase == "paused" or phase == "dead" or phase == "victory")
+                    and type(zone) == "table"
+                    and type(zone.zname) == "string"
+                then
+                    value = zone.zname
+                end
+            end
+            if zoneText:GetText() ~= value then setZoneText(zoneText, value) end
+        end
+        -- Native area/subzone writes must keep the received run-zone caption.
+        zoneText.SetText = function() RefreshZone() end
+        local function StopZoneUpdate()
+            if not zoneQueued then return end
+            if zoneButton:GetScript("OnUpdate") == UpdateZone then
+                zoneButton:SetScript("OnUpdate", previousZoneUpdate)
+            end
+            zoneQueued, previousZoneUpdate = false, nil
+        end
+        UpdateZone = function()
+            local previous = previousZoneUpdate
+            StopZoneUpdate()
+            if previous then previous() end
+            RefreshZone()
+        end
+        local function QueueZone()
+            if zoneQueued and zoneButton:GetScript("OnUpdate") ~= UpdateZone then
+                zoneQueued, previousZoneUpdate = false, nil
+            end
+            if not inWorld or not zoneButton:IsVisible() or zoneQueued then return end
+            previousZoneUpdate, zoneQueued = zoneButton:GetScript("OnUpdate"), true
+            -- Read after the native addon-message parser has published AZS_ZONE.
+            zoneButton:SetScript("OnUpdate", UpdateZone)
+        end
+        local zoneShow, zoneHide = zoneButton:GetScript("OnShow"), zoneButton:GetScript("OnHide")
+        zoneButton:SetScript("OnShow", function()
+            if zoneShow then zoneShow() end
+            RefreshZone()
+            QueueZone()
+        end)
+        zoneButton:SetScript("OnHide", function()
+            if zoneHide then zoneHide() end
+            StopZoneUpdate()
+        end)
         local function Positive(value) return type(value) == "number" and value - value == 0 and value > 0 end
         local function FitZone(clockWidth)
             local width = panel:GetWidth()
@@ -152,6 +206,8 @@ DFRL:NewMod("Map", 1, function()
         end
         local function Retire()
             inWorld = false
+            StopZoneUpdate()
+            if zoneText:GetText() ~= "" then setZoneText(zoneText, "") end
             Stop()
             HideReading()
             native.Release()
@@ -192,18 +248,26 @@ DFRL:NewMod("Map", 1, function()
         end
         DFRL.display.Listen(UpdateChoice)
         DFRL.locale.Listen(function()
+            QueueZone()
             if enabled then
                 Start()
             else
                 SyncNative()
             end
         end)
-        for _, name in ipairs({ "PLAYER_ENTERING_WORLD", "PLAYER_LEAVING_WORLD", "PLAYER_LOGOUT", "CVAR_UPDATE" }) do
+        for _, name in ipairs({
+            "PLAYER_ENTERING_WORLD",
+            "PLAYER_LEAVING_WORLD",
+            "PLAYER_LOGOUT",
+            "CVAR_UPDATE",
+            "CHAT_MSG_ADDON",
+        }) do
             frame:RegisterEvent(name)
         end
         frame:SetScript("OnEvent", function()
             if event == "PLAYER_ENTERING_WORLD" then
                 inWorld = true
+                QueueZone()
                 if enabled then
                     Start()
                 else
@@ -213,6 +277,8 @@ DFRL:NewMod("Map", 1, function()
                 Retire()
             elseif event == "CVAR_UPDATE" and native.Observe(arg1) then
                 SyncNative()
+            elseif event == "CHAT_MSG_ADDON" and arg1 == "AZSZONE" then
+                QueueZone()
             end
         end)
         if type(_G.ReloadUI) == "function" then
@@ -223,6 +289,7 @@ DFRL:NewMod("Map", 1, function()
             end
         end
         UpdateChoice()
+        RefreshZone()
     end
     local defaults = { width = 180, height = 180, right = -8, top = -26, zoomX = -21, zoomY = 40, zoomScale = 0.8 }
     -- Export appearance geometry before layout restores any confirmed placement.

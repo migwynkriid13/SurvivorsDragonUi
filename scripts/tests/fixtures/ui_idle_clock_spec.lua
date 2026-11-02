@@ -175,6 +175,60 @@ local function NativeClock(preference, configure)
 end
 
 for _, performance in ipairs({ false, true }) do
+    local phase, priorUpdates = "playing", 0
+    local c, state, boundary = NativeClock(true, function(c, _, env)
+        env.SurvivorsDragonUiDisplay = { performanceMode = performance, minimapShowClock = false }
+        env.AZS_GetPhase = function() return phase end
+        env.AZS_ZONE = { zname = "Elwynn Forest", zsub = "The Defias Uprising" }
+        c.zone:SetScript("OnUpdate", function() priorUpdates = priorUpdates + 1 end)
+    end)
+    local previous = c.zone:GetScript("OnUpdate")
+    assert(c.zoneText:GetText() == "Elwynn Forest" and state.reads == 0)
+    c:ResetCounts()
+    c.zoneText:SetText("Goldshire")
+    c:NoPresentationWrites()
+    assert(c.zoneText:GetText() == "Elwynn Forest", "native subzone replaced the API zone")
+    c:Event(c.clock, "CHAT_MSG_ADDON", "UNRELATED")
+    assert(c.zone:GetScript("OnUpdate") == previous)
+    c:Event(c.clock, "CHAT_MSG_ADDON", "AZSZONE")
+    boundary.AZS_ZONE = { zname = "Лес", zsub = "Subtitle" }
+    assert(c.zoneText:GetText() == "Elwynn Forest", "zone was read before native parsing")
+    c:Call(c.zone, "OnUpdate", 0.1)
+    assert(c.zoneText:GetText() == "Лес" and priorUpdates == 1)
+    assert(c.zone:GetScript("OnUpdate") == previous and state.reads == 0, "zone refresh retained a worker or read time")
+    c.panel:Hide()
+    boundary.AZS_ZONE.zname = "Westfall"
+    c:Event(c.clock, "CHAT_MSG_ADDON", "AZSZONE")
+    c:ResetCounts()
+    c.zoneText:SetText("Sentinel Hill")
+    c:NoPresentationWrites()
+    c.panel:Show()
+    assert(c.zoneText:GetText() == "Westfall", "hidden zone did not recover on Show")
+    c:Call(c.zone, "OnUpdate", 0.1)
+    for _, invalid in ipairs({ false, 42, {} }) do
+        boundary.AZS_ZONE.zname = invalid
+        c.zoneText:SetText("Sentinel Hill")
+        assert(c.zoneText:GetText() == "", "invalid zone used the native area fallback")
+    end
+    boundary.AZS_ZONE.zname = "Westfall"
+    phase = nil
+    c.zoneText:SetText("Sentinel Hill")
+    assert(c.zoneText:GetText() == "", "out-of-run zone displayed stale API data")
+    phase = "ready"
+    c:Event(c.clock, "PLAYER_ENTERING_WORLD")
+    c:Call(c.zone, "OnUpdate", 0.1)
+    assert(c.zoneText:GetText() == "Westfall")
+    c:Event(c.clock, "CHAT_MSG_ADDON", "AZSZONE")
+    c:Event(c.clock, "PLAYER_LEAVING_WORLD")
+    assert(c.zoneText:GetText() == "" and c.zone:GetScript("OnUpdate") == previous)
+    c.zoneText:SetText("Sentinel Hill")
+    assert(c.zoneText:GetText() == "", "native write restored a retired zone")
+end
+print(
+    "PASS exact API minimap zone, native subzone suppression, deferred publication and clock-off/hidden/world lifecycle"
+)
+
+for _, performance in ipairs({ false, true }) do
     local c, state, boundary = NativeClock(
         true,
         function(_, _, env) env.SurvivorsDragonUiDisplay = { performanceMode = performance } end
