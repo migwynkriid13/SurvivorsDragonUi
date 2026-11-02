@@ -86,7 +86,7 @@ measure this sixteen-band layout.
 The original cyan is reduced by 95% during image preparation to match the
 neutral action-bar metal. This changes only RGB inside the housing atlas cell;
 alpha, shading, dimensions and all other atlas cells are preserved. Runtime
-multiplies this grey artwork by a 75% native-rarity/25% white RGB blend, only
+multiplies this grey artwork by a 90% native-rarity/10% white RGB blend, only
 when that final color changes while visible. Empty or unknown-quality slots
 use white, retaining the prepared grey pixels. Tooltip text keeps full native RGB.
 

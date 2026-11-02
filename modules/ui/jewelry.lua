@@ -102,7 +102,7 @@ DFRL:NewMod("Jewelry", 4, function()
     local carvingSize = RIM_SIZE * 128 / 108
     local socketBounds = math.max(socketSize, carvingSize)
     local ANIMATION_INTERVAL = 1 / 30
-    local RARITY_TINT_STRENGTH = 0.75
+    local RARITY_TINT_STRENGTH = 0.9
     local RARITY_GLOW_ALPHA = 0.4
     local performanceMode = DFRL.display.Get("performanceMode")
     local texturePath = DFRL:GetInfoOrCons("tex") .. "jewelry\\"

@@ -85,7 +85,7 @@ slot.texture = "native:item"
 api.Quality(slot)
 env.performanceMode = true
 assert(not api.Update(slot) and allocations == 0, "Performance Mode allocated glow")
-Color(slot.carving, 0.34, 1, 0.25)
+Color(slot.carving, 0.208, 1, 0.1)
 env.performanceMode = false
 assert(api.Update(slot) and allocations == 1)
 local glow = slot.glow
@@ -127,7 +127,7 @@ assert(writes.color == colors and writes.uv == uvs and not glow.shown)
 visible = true
 assert(api.Update(slot) and slot.glow == glow and allocations == 1)
 Color(glow, red, green, blue)
-Color(slot.carving, 0.73, 0.4075, 0.9475)
+Color(slot.carving, 0.676, 0.289, 0.937)
 -- Poor/common are valid native qualities; missing or malformed metadata stays grey.
 for _, rank in ipairs({ 0, 1 }) do
     quality, red, green, blue = rank, 0.62 + rank * 0.38, 0.62 + rank * 0.38, 0.62 + rank * 0.38
