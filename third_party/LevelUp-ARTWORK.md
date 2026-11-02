@@ -1,26 +1,119 @@
 # Level Up artwork
 
-The stored-level button retains the gold square border from the selected **28 · Framed Icon + Text** comparison, with the decorative flourishes removed. The native class icon has a round waiting-count badge at its upper-right. A single **LEVEL UP** heading centers vertically beside it, with no current-level subtitle. The compact icon/text group centers inside its edit box. A translucent black backdrop with feathered edges and a pulsing gold halo improve visibility. The heading uses the Guardian waypoint’s resolved DEFAULT font, outline and black shadow; the badge and editor label retain DEFAULT. Text remains live through the shared language system.
+The selected **04 · Artisan metal** design uses a dark profession panel,
+silver beveled corners and a small crest at the top and bottom. The native class
+icon sits in the matching silver rim beside the single live **LEVEL UP** heading.
+The existing gold waiting-count badge retains its original plain DEFAULT 12 font.
+The heading retains DEFAULT 22, global outline/shadow choices and translations.
 
-## Gold frame source
+The local static preview is `docs/designs/level-up-styles/artisan-selected.png`,
+excluded from Git and the runtime payload. It is an enlarged artwork assembly,
+with an example Mage icon and five waiting
+levels. Georgia approximates the runtime DEFAULT font. It does not establish
+client rendering or native font metrics.
 
-- [NeticSoul/DragonUI, commit 6d9cc95eedd1de78fab3b965683df13421e21604](https://github.com/NeticSoul/DragonUI/tree/6d9cc95eedd1de78fab3b965683df13421e21604).
-- Exact source file: [`DragonUI/Textures/Collections/IconFrameGold.tga`](https://github.com/NeticSoul/DragonUI/blob/6d9cc95eedd1de78fab3b965683df13421e21604/DragonUI/Textures/Collections/IconFrameGold.tga), a 128-by-128 uncompressed RGBA TGA. The prepared rim reuses its clean upper-right border pixels, with the surrounding decoration and inner fill removed.
-- The source's [third-party notices](https://github.com/NeticSoul/DragonUI/blob/6d9cc95eedd1de78fab3b965683df13421e21604/DragonUI/THIRD_PARTY_NOTICES.md) identify this isolated image as a cut and resample from DragonflightUI's Spellbook-Parts sheet. The upstream file is [`Textures/UI/Spellbook-Parts.blp`](https://github.com/Karl-HeinzSchneider/WoW-DragonflightUI/blob/f59cbc3f7010ef692fb983c7c3c848c4b70f56ce/Textures/UI/Spellbook-Parts.blp). The implementation uses the verified isolated TGA rather than guessing coordinates on that upstream sheet. Repository family names do not establish an exact retail client build for these pixels.
-- Source software notices: [MIT, NeticSoul and DragonUI contributors, 2026](https://github.com/NeticSoul/DragonUI/blob/6d9cc95eedd1de78fab3b965683df13421e21604/LICENSE), and [MIT, Karl-HeinzSchneider, 2022](https://github.com/Karl-HeinzSchneider/WoW-DragonflightUI/blob/f59cbc3f7010ef692fb983c7c3c848c4b70f56ce/LICENSE). The applicable notices are retained in shipped `modules/ui/levels.lua` comments.
+## Source and ownership
 
-Underlying World of Warcraft artwork remains copyright Blizzard Entertainment. The repositories' software licenses do not relicense Blizzard artwork. No source-addon Lua, framework, font or runtime dependency is imported.
+- Source: [ghbset/DragonUI_NewEra, commit 2384e1d96dd58ef325b236c0dfccbd21a08bfccb](https://github.com/ghbset/DragonUI_NewEra/tree/2384e1d96dd58ef325b236c0dfccbd21a08bfccb).
+- File: [`Textures/Professions/4417031-professions-chrome-sheet.blp`](https://github.com/ghbset/DragonUI_NewEra/blob/2384e1d96dd58ef325b236c0dfccbd21a08bfccb/Textures/Professions/4417031-professions-chrome-sheet.blp), BLP2, 2048 × 2048.
+- File SHA-256: `64d0b5b23103d999d0b8ab7a695c77fc5e0867c7233a04ab60860cc067106f8c`.
+- The source's [`modules/professions/Assets.lua`](https://github.com/ghbset/DragonUI_NewEra/blob/2384e1d96dd58ef325b236c0dfccbd21a08bfccb/modules/professions/Assets.lua) transcribes the named regions from build **12.0.5.67451**. This verifies shared profession artwork in Midnight-era data; it does not establish Midnight as its original expansion.
 
-## Assembly and preparation
+Blizzard Entertainment owns the underlying World of Warcraft artwork. The source
+mirror describes extracted retail art and supplies no separate artwork grant;
+public availability does not resolve redistribution rights. No source-addon
+Lua, framework or retail atlas API is imported. The gold badge and silver halo
+are original geometric artwork.
 
-`scripts/prepare_levelup_art.py --source /path/to/IconFrameGold.tga` reads the original isolated source. Its upper-right rectangle `(61, 19)` through `(99, 57)`, with an exclusive far edge, supplies a clean 38-by-38 quadrant. Horizontal and vertical mirrors place the four quadrants at `(23, 19)`, `(61, 19)`, `(23, 57)` and `(61, 57)` on a transparent 128-by-128 canvas. A clear rounded opening spans `(29, 24)` through `(93, 89)` with radius three. This preserves the original gold color and border pixels while omitting the vines, leaves and inner fill. The result is the uncompressed RGBA `media/tex/levelup/IconFrameGold.tga`.
+All rectangles below use `(left, top, right, bottom)` with exclusive far edges.
 
-The same tool draws `CountBadge.tga`, an original gold disk with a muted brown rim and transparent outer corners, at four times the output resolution before downsampling to a 64-by-64 uncompressed RGBA TGA. `Backdrop.tga` and `Glow.tga` are original 512-by-128 uncompressed RGBA textures, calculated from a rounded rectangle's signed distance. The black backdrop varies from 54% opacity near the upper/lower edges to 68% at its center, with a 12-pixel feather. The gold halo follows the same inset rounded boundary, with a 4.5-pixel Gaussian falloff and maximum source alpha of 72%. Both fill the compact panel fitted to the active caption, below the icon/text group. This is artwork preparation and does not execute addon code.
+| Named source region                 | Source rectangle      | Prepared use                             |
+| ----------------------------------- | --------------------- | ---------------------------------------- |
+| `professions-qualitypane-bg-top`    | `(478,431,738,531)`   | First 45 rows at atlas `(0,0,260,45)`    |
+| `professions-qualitypane-bg-bottom` | `(740,431,1000,530)`  | Last 45 rows at `(0,45,260,90)`          |
+| `professions-slot-frame`            | `(405,1643,445,1683)` | Complete 40 × 40 rim at `(272,0,312,40)` |
 
-The runtime draws the prepared frame's full canvas at 72 by 72 local units, offset 12 units left and four down inside the content group. The native square class icon occupies `72 * 55 / 103` units, offset `72 * 21 / 103 - 12` from the left and `72 * 17 / 103 + 4` from the top. The offsets reclaim the removed ornament's empty space and center the clean icon vertically beside the heading. The native class-atlas quadrant stays under the frame.
+The proposed one-row middle region is unnecessary at this height: the original
+comparison already joined these top and bottom caps. The implementation retains
+that exact 260 × 90 assembly, without tinting or resampling its source pixels.
 
-The heading starts 60 units from the content group's left and centers vertically, in the same resolved DEFAULT face as the Guardian waypoint at size 22, with outline and black shadow at alpha 0.9 and offset `(1, -1)`. Its column fits the active translation's natural glyph width plus four units. The content group's width is 60 plus that column. The surrounding panel adds ten units of padding on each side and centers inside the visual bounds. Shared edit bounds fit the new heading across all supported languages and retain the 0.7 visual scale; confirmed position and scale records are not rewritten.
+## Preparation and runtime geometry
 
-The count badge starts at 20 by 20 local units. Its right edge anchors 56 units from the content group's left edge, with its top eight units below the group's top so the disk stays below the backdrop's upper border. Larger native counts widen the badge around the live DEFAULT 12 text. The halo and a duplicate clean gold-frame texture use additive blending, driven by one smooth 1.8-second cosine pulse on the visible button. Halo alpha varies from 0.25 to 0.9; frame-glow alpha varies from 0.1 to 0.5, with a 0.2 hover boost. Normal frame hiding stops the updater and resets its elapsed cosmetic time; the pulse continues while editing a visible active button. Ordinary legacy texture and anchor APIs handle all assets; no retail atlas or mask API is required.
+`scripts/prepare_levelup_art.py --source /path/to/professions-chrome.blp`
+prepares `media/tex/levelup/Artisan.tga` and its lossless Raw3 BLP2 counterpart.
+The 512 × 256 canvas fits the current native client's power-of-two size gate.
+The lower half `(0,128,512,256)` contains the original neutral silver halo.
+`CountBadge.blp` and its existing 64 × 64 authoring TGA are unchanged.
 
-Only the four used TGA files join `packaging/runtime-files.json`. Source sheets, comparison previews and preparation tools are excluded from the shipped payload. Static artwork inspection does not establish in-game rendering; local validation and addon/game execution remain unauthorized.
+Five side-by-side panel strips use x boundaries `0,20,106,154,240,260` and the
+same `0..90` vertical range. At the existing 72-unit panel height, left/right
+corners keep 16-unit widths and the central crests keep 38.4 units. Only the two
+plain spans stretch between those three anchored pieces. Native anchors follow
+the measured caption width; changing language or font adds no regions or
+per-frame layout loop. Adjacent strips share their original atlas neighbours
+for filtering.
+
+The content keeps its 60-unit title inset and ten-unit side padding. A 40-unit
+class icon centers inside a 44-unit silver rim; its upper-right badge keeps the
+existing count measurement and widening behavior. The complete panel remains
+centered within the same multilingual Layout owner, at the existing 0.7 visual
+scale. Confirmed position, scale, counts, native action and ownership are not
+rewritten.
+
+The existing visible 1.8-second pulse drives only the silver halo and duplicated
+silver icon rim. Text and panel remain steady. Performance Mode hides both pulse
+layers and detaches that same cosmetic worker, retaining the complete static
+panel, count and native click. Hiding, zero count and world/reload retirement
+retain their existing cleanup. No event, frame, updater, setting or saved state
+is added. Five panel strips replace one background: **four additional static
+texture regions**, ten textures total including icon, badge and optional effects.
+These counts do not establish native draw calls, memory use or FPS.
+
+Only `Artisan.blp` and `CountBadge.blp` ship for this component. The retired
+`Backdrop.blp`, `Glow.blp` and `IconFrameGold.blp` are removed from the runtime
+manifest and installed tree. The full downloaded sheet and inspection output
+are temporary, and the authoring TGA and selected preview stay outside the
+payload. Local work uses artwork preparation, source review and pinned
+formatting. CI-only cases cover fixed corners/crests, caption fitting and reuse,
+silver pulse suppression and the existing hidden/native lifecycle. No local
+tests, standalone validation or addon/game execution were performed.
+
+## Retained earlier design sources
+
+The original comparison retains its gold-framed alternatives. The retired gold
+rim, backdrop and glow authoring TGAs are available in Git history; they no longer
+stay in runtime media. The loot and Guardian preview tools recreate their shared
+original geometric backgrounds through `legacy_backdrops()` in the artwork
+preparation module, without retaining duplicate images or downloading artwork.
+
+The earlier gold rim came from [NeticSoul/DragonUI, commit 6d9cc95eedd1de78fab3b965683df13421e21604](https://github.com/NeticSoul/DragonUI/blob/6d9cc95eedd1de78fab3b965683df13421e21604/DragonUI/Textures/Collections/IconFrameGold.tga),
+128 × 128. Its notices trace it to DragonflightUI's
+[`Textures/UI/Spellbook-Parts.blp`](https://github.com/Karl-HeinzSchneider/WoW-DragonflightUI/blob/f59cbc3f7010ef692fb983c7c3c848c4b70f56ce/Textures/UI/Spellbook-Parts.blp).
+The prior preparation mirrored the clean 38 × 38 upper-right quadrant
+`(61,19,99,57)` into a plain rim and cleared its inner opening. The earlier
+black backdrop and gold glow were original geometric images from that design.
+Blizzard ownership remains separate from the software notices below.
+
+```text
+MIT License
+Copyright (c) 2026 NeticSoul and DragonUI contributors
+Copyright (c) 2022 Karl-HeinzSchneider
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```

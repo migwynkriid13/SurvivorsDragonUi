@@ -2,7 +2,7 @@
 
 The game's stored-level **Level Up!** button is drawn outside Lua's frame system. Its public addon API supports hiding the original, reading the waiting count and opening the choices. It does not expose the original button's anchors or artwork for direct movement or reskinning.
 
-`modules/ui/levels.lua` supplies an addon-owned replacement with a plain gold border around the native class icon and a round waiting-count badge at its upper-right, inset below the backdrop's top edge. The single **LEVEL UP** heading centers vertically beside the icon, with no current-level caption or decorative flourishes. It uses the same resolved DEFAULT font as the Guardian waypoint, at the existing heading size 22 with outline and black shadow, and the existing fourteen-language system. The badge and editor label retain DEFAULT. The complete icon/text group and its backdrop fit the active translation with compact side padding, centered inside the multilingual edit bounds. A soft-edged translucent black backdrop improves contrast, with a gold halo and icon-frame glow pulsing every 1.8 seconds while the button is visible with waiting levels. Text stays steady. Hiding the group, spending its final waiting level or world cleanup stops and resets its cosmetic pulse. See [artwork sources and preparation](../third_party/LevelUp-ARTWORK.md).
+`modules/ui/levels.lua` supplies an addon-owned replacement using the selected **04 · Artisan metal** design: a dark profession panel, silver corners and small central crests, plus a matching silver rim around the native class icon. The round gold waiting-count badge stays at its upper-right. The single **LEVEL UP** heading centers vertically beside the icon, with no current-level caption. It retains the existing DEFAULT 22 font, shared outline/shadow choices and fourteen-language system. The badge keeps its plain DEFAULT 12 font; the editor label retains DEFAULT. The complete icon/text group and panel fit the active translation with compact side padding, centered inside the multilingual owner. Five static panel strips preserve corner and crest widths while the two plain spans stretch. The existing 1.8-second pulse now uses a neutral silver halo and icon rim; text and panel stay steady. Performance Mode keeps the static panel and hides both pulse layers. Hiding the group, spending its final waiting level or world cleanup stops and resets the same cosmetic worker. See [artwork sources and preparation](../third_party/LevelUp-ARTWORK.md).
 
 ## Native API
 
@@ -28,8 +28,9 @@ usable snapshot arrives; the waiting count and native click action remain
 available. Spending all waiting levels does not retire the current run's class.
 Returning from dead/victory to playing without leaving the run can reuse that
 same class snapshot. Both Performance Mode states use the existing controller,
-artwork and changed-only crop writes, with no added frame, region, event, updater
-or saved state; hidden views defer class validation and painting.
+artwork and changed-only crop writes; hidden views defer class validation and
+painting. The selected panel adds four static texture regions over the former
+background, without a new frame, event, updater or saved state.
 
 Unchanged counts and class icons do not repeat text or crop writes. Text-width
 measurements are reused until text, font or effective scale changes; edit entry,
@@ -44,7 +45,7 @@ The original is hidden only after the replacement has been built and populated a
 
 ## Shared layout
 
-`levelUp` is an independent group in the existing layout registry, labeled **LEVEL UP**. Its default anchor is centered 190 UI units above the bottom of UIParent. The layout owner retains its multilingual width to preserve saved coordinates, while the shared editor's `region` uses the compact panel for its outline and corner grips. The edit box therefore fits the active-language popup instead of reserving empty space for the longest translation. Panel measurements refresh on edit entry and language changes even without waiting levels. The inner visual retains the requested 0.7 default scale. The icon, text, badge and gold frame scale together. The shared Layout scale stays relative to this design, so confirmed scale and position records remain unchanged.
+`levelUp` is an independent group in the existing layout registry, labeled **LEVEL UP**. Its default anchor is centered 190 UI units above the bottom of UIParent. The layout owner retains its multilingual width to preserve saved coordinates, while the shared editor's `region` uses the compact panel for its outline and corner grips. The edit box therefore fits the active-language popup instead of reserving empty space for the longest translation. Panel measurements refresh on edit entry and language changes even without waiting levels. The inner visual retains the requested 0.7 default scale. The icon, text, badge and silver panel scale together. The shared Layout scale stays relative to this design, so confirmed scale and position records remain unchanged.
 
 The existing editor owns dragging, corner resizing, numeric placement, Hide frame, Confirm, Cancel, both full resets and world/reload draft discard. Only confirmed geometry and optional visibility use `SurvivorsDragonUiLayout`; no SavedVariable, display setting or command is added. The layout handle remains available when no levels are waiting without showing invented counts or enabling a gameplay click. Its label sits above the box so it cannot overlap the real heading. Editing disables the button's click action.
 

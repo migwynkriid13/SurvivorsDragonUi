@@ -1,42 +1,20 @@
 -- A movable replacement for the game's stored-level button, using its own APIs.
 --[[
-The selected Framed Icon + Text design uses IconFrameGold.tga from
-NeticSoul/DragonUI commit 6d9cc95eedd1de78fab3b965683df13421e21604,
-DragonUI/Textures/Collections/IconFrameGold.tga. The clean upper-right border
-is mirrored into a plain gold rim; the decorative flourishes are omitted.
-Its source notices credit the DragonflightUI Spellbook-Parts artwork.
-Underlying World of Warcraft artwork remains copyright Blizzard Entertainment;
-the software license below does not relicense Blizzard artwork.
-CountBadge.tga, Backdrop.tga and Glow.tga are original geometric artwork.
+The selected 04 Artisan metal design uses Blizzard professions chrome from
+ghbset/DragonUI_NewEra commit 2384e1d96dd58ef325b236c0dfccbd21a08bfccb,
+Textures/Professions/4417031-professions-chrome-sheet.blp. Named quality-pane
+and slot-frame crops are documented by that source's build 12.0.5.67451 data.
+This shared retail artwork is not established as Midnight-original.
+World of Warcraft artwork remains copyright Blizzard Entertainment; the
+source mirror provides no separate artwork license. Artisan.blp contains
+only the selected panel/rim pixels and an original geometric silver halo.
+CountBadge.blp retains the existing original gold disk.
 No source-addon Lua is imported.
 Full provenance and preparation: third_party/LevelUp-ARTWORK.md.
-
-Applicable source notices:
-MIT License
-Copyright (c) 2026 NeticSoul and DragonUI contributors
-Copyright (c) 2022 Karl-HeinzSchneider
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
 ]]
 DFRL:NewMod("StoredLevels", 5, function()
     local HEIGHT, INTERVAL, VISUAL_SCALE, PULSE_PERIOD = 72, 0.1, 0.7, 1.8
-    local TEXT_LEFT, PANEL_PADDING, ICON_OFFSET_X, ICON_OFFSET_Y = 60, 10, -12, 4
+    local TEXT_LEFT, PANEL_PADDING, ICON_SIZE, RIM_SIZE = 60, 10, 40, 44
     local texturePath = DFRL:GetInfoOrCons("tex") .. "levelup\\"
     local CLASS_ICONS = {
         warrior = { 0, 0.25, 0, 0.25 },
@@ -69,11 +47,30 @@ DFRL:NewMod("StoredLevels", 5, function()
     panel:SetHeight(HEIGHT)
     panel:SetPoint("CENTER", visual, "CENTER", 0, 0)
     panel:EnableMouse(false)
-    local backdrop = panel:CreateTexture(nil, "BACKGROUND")
-    backdrop:SetTexture(texturePath .. "Backdrop.blp")
-    backdrop:SetAllPoints(panel)
+    local function PanelPiece(left, right)
+        local piece = panel:CreateTexture(nil, "BACKGROUND")
+        piece:SetTexture(texturePath .. "Artisan.blp")
+        piece:SetTexCoord(left / 512, right / 512, 0, 90 / 256)
+        return piece
+    end
+    local panelLeft, panelMiddle, panelRight = PanelPiece(0, 20), PanelPiece(106, 154), PanelPiece(240, 260)
+    panelLeft:SetWidth(16)
+    panelLeft:SetHeight(HEIGHT)
+    panelLeft:SetPoint("TOPLEFT", panel, "TOPLEFT", 0, 0)
+    panelMiddle:SetWidth(38.4)
+    panelMiddle:SetHeight(HEIGHT)
+    panelMiddle:SetPoint("TOP", panel, "TOP", 0, 0)
+    panelRight:SetWidth(16)
+    panelRight:SetHeight(HEIGHT)
+    panelRight:SetPoint("TOPRIGHT", panel, "TOPRIGHT", 0, 0)
+    local panelSpanLeft, panelSpanRight = PanelPiece(20, 106), PanelPiece(154, 240)
+    panelSpanLeft:SetPoint("TOPLEFT", panelLeft, "TOPRIGHT", 0, 0)
+    panelSpanLeft:SetPoint("BOTTOMRIGHT", panelMiddle, "BOTTOMLEFT", 0, 0)
+    panelSpanRight:SetPoint("TOPLEFT", panelMiddle, "TOPRIGHT", 0, 0)
+    panelSpanRight:SetPoint("BOTTOMRIGHT", panelRight, "BOTTOMLEFT", 0, 0)
     local glow = panel:CreateTexture(nil, "BORDER")
-    glow:SetTexture(texturePath .. "Glow.blp")
+    glow:SetTexture(texturePath .. "Artisan.blp")
+    glow:SetTexCoord(0, 1, 0.5, 1)
     glow:SetAllPoints(panel)
     glow:SetBlendMode("ADD")
     glow:Hide()
@@ -84,14 +81,15 @@ DFRL:NewMod("StoredLevels", 5, function()
 
     local icon = content:CreateTexture(nil, "BACKGROUND")
     icon:SetTexture("Interface\\Glues\\CharacterCreate\\UI-CharacterCreate-Classes")
-    icon:SetWidth(HEIGHT * 55 / 103)
-    icon:SetHeight(HEIGHT * 55 / 103)
-    icon:SetPoint("TOPLEFT", content, "TOPLEFT", HEIGHT * 21 / 103 + ICON_OFFSET_X, -HEIGHT * 17 / 103 - ICON_OFFSET_Y)
+    icon:SetWidth(ICON_SIZE)
+    icon:SetHeight(ICON_SIZE)
+    icon:SetPoint("LEFT", content, "LEFT", 0, 0)
     local bezel = content:CreateTexture(nil, "ARTWORK")
-    bezel:SetTexture(texturePath .. "IconFrameGold.blp")
-    bezel:SetWidth(HEIGHT)
-    bezel:SetHeight(HEIGHT)
-    bezel:SetPoint("TOPLEFT", content, "TOPLEFT", ICON_OFFSET_X, -ICON_OFFSET_Y)
+    bezel:SetTexture(texturePath .. "Artisan.blp")
+    bezel:SetTexCoord(272 / 512, 312 / 512, 0, 40 / 256)
+    bezel:SetWidth(RIM_SIZE)
+    bezel:SetHeight(RIM_SIZE)
+    bezel:SetPoint("CENTER", icon, "CENTER", 0, 0)
     local title = content:CreateFontString(nil, "OVERLAY")
     DFRL.locale.Bind(title)
     T.SetFont(title, 22, "OUTLINE")
@@ -146,7 +144,7 @@ DFRL:NewMod("StoredLevels", 5, function()
     local badge = CreateFrame("Frame", nil, content)
     badge:SetWidth(20)
     badge:SetHeight(20)
-    badge:SetPoint("TOPRIGHT", content, "TOPLEFT", 68 + ICON_OFFSET_X, -8)
+    badge:SetPoint("TOPRIGHT", icon, "TOPRIGHT", 10, 8)
     local badgeArt = badge:CreateTexture(nil, "BACKGROUND")
     badgeArt:SetTexture(texturePath .. "CountBadge.blp")
     badgeArt:SetAllPoints(badge)
@@ -158,7 +156,8 @@ DFRL:NewMod("StoredLevels", 5, function()
     countText:SetPoint("CENTER", badge, "CENTER", 0, 0)
 
     local highlight = content:CreateTexture(nil, "OVERLAY")
-    highlight:SetTexture(texturePath .. "IconFrameGold.blp")
+    highlight:SetTexture(texturePath .. "Artisan.blp")
+    highlight:SetTexCoord(272 / 512, 312 / 512, 0, 40 / 256)
     highlight:SetAllPoints(bezel)
     highlight:SetBlendMode("ADD")
     highlight:Hide()

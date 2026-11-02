@@ -5,6 +5,7 @@ import json
 from PIL import Image, ImageChops, ImageDraw, ImageFont
 
 from prepare_jewelry_art import rgba
+from prepare_levelup_art import legacy_backdrops
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs/designs/guardian-tracker"
@@ -279,7 +280,8 @@ def make(index, selected=False, collapsed=False):
         heading(image,214,126,296);rows(image,216,171,289,height=24,small=True)
         line(image,214,302,296)
     elif index==17:
-        paste(image,art("levelup/Backdrop.tga"),(129,95,463,269),0.9)
+        backdrop, _ = legacy_backdrops()
+        paste(image,backdrop,(129,95,463,269),0.9)
         heading(image,164,125,392);rows(image,168,174,384,height=29)
     elif index==18:
         panel(image,140,103,440,253);heading(image,165,126,389)

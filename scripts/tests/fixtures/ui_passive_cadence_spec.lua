@@ -126,6 +126,12 @@ do
             setCrop(self, ...)
             self.crop = { ... }
         end
+        local setPoint = object.SetPoint
+        function object:SetPoint(point, relative, relativePoint, x, y)
+            setPoint(self, point, relative, relativePoint, x, y)
+            self.anchors = self.anchors or {}
+            self.anchors[point] = { relative, relativePoint, x, y }
+        end
         function object:RegisterForClicks(value) assert(value == "LeftButtonUp") end
         function object:SetBlendMode(value) assert(value == "ADD") end
         return object
@@ -158,6 +164,30 @@ do
         assert(crop[1] == left and crop[2] == right and crop[3] == top and crop[4] == bottom, "stale class artwork")
         assert(not context.reads.characterClass, "stored levels queried the character-selection class")
     end
+    local pieces, halo, rim = {}, nil, nil
+    for _, object in ipairs(context.objects) do
+        if object.texture == "Interface\\AddOns\\SurvivorsDragonUi\\media\\tex\\levelup\\Artisan.blp" then
+            local crop = object.crop
+            if crop[3] == 0 and crop[4] == 90 / 256 then
+                pieces[crop[1] * 512] = object
+            elseif crop[3] == 0.5 then
+                halo = object
+            elseif crop[1] == 272 / 512 then
+                rim = object
+            end
+        end
+    end
+    assert(pieces[0] and pieces[20] and pieces[106] and pieces[154] and pieces[240], "Artisan panel lost a strip")
+    assert(halo and rim, "Artisan panel lost its silver halo or icon rim")
+    local function ArtisanCaps()
+        assert(pieces[0]:GetWidth() == 16 and pieces[240]:GetWidth() == 16, "translated text stretched the corners")
+        assert(pieces[106]:GetWidth() == 38.4 and pieces[106]:GetHeight() == 72, "translated text stretched the crests")
+        assert(pieces[20].anchors.TOPLEFT[1] == pieces[0] and pieces[20].anchors.TOPLEFT[2] == "TOPRIGHT")
+        assert(pieces[20].anchors.BOTTOMRIGHT[1] == pieces[106] and pieces[20].anchors.BOTTOMRIGHT[2] == "BOTTOMLEFT")
+        assert(pieces[154].anchors.TOPLEFT[1] == pieces[106] and pieces[154].anchors.TOPLEFT[2] == "TOPRIGHT")
+        assert(pieces[154].anchors.BOTTOMRIGHT[1] == pieces[240] and pieces[154].anchors.BOTTOMRIGHT[2] == "BOTTOMLEFT")
+    end
+    ArtisanCaps()
     Crop(0.25, 0.5, 0, 0.25)
     assert(label and button:IsVisible() and context.nativeShown == false)
     assert(context.reads.hud == 2, "initial takeover did not read back the setter")
@@ -215,10 +245,9 @@ do
     context:SetSetting("performanceMode", true)
     assert(button:IsVisible() and label:GetText() == "3", "Performance Mode hid the stored-level information")
     assert(not button:GetScript("OnUpdate"), "Performance Mode retained the stored-level pulse")
-    for _, object in ipairs(context.objects) do
-        if object.kind == "Texture" and (object.texture or ""):find("Glow.blp", 1, true) then
-            assert(not object:IsShown(), "Performance Mode retained the gold halo")
-        end
+    assert(not halo:IsShown() and not rim:IsShown(), "Performance Mode retained an Artisan pulse layer")
+    for _, piece in pairs(pieces) do
+        assert(piece:IsVisible(), "Performance Mode hid the static Artisan panel")
     end
     context:ResetCounts()
     context:Call(button, "OnUpdate", 0.5)
@@ -228,6 +257,7 @@ do
     assert(not button:GetScript("OnUpdate"), "hidden mode exit restarted the stored-level pulse")
     context:SetLayoutHidden(false)
     assert(button:GetScript("OnUpdate"), "Show did not restore the configured stored-level pulse")
+    assert(halo:IsShown() and rim:IsShown(), "Show did not restore the Artisan pulse layers")
     local function Tick() context:Call(controller, "OnUpdate", 0.1) end
     context:ResetCounts()
     for _ = 1, 10 do
@@ -238,6 +268,19 @@ do
     assert(not context.reads.formats, "unchanged stored-level counts were formatted repeatedly")
     assert(not context.reads.metrics, "unchanged stored-level labels were measured repeatedly")
     assert(not context.writes.SetTexCoord, "unchanged run class repeated its crop write")
+    local nativeTitle, objectCount = title:GetText(), #context.objects
+    for _, caption in ipairs({ "NIVEAU SUPERIEUR", "LEVEL UP" }) do
+        title:SetText(caption)
+        Tick()
+        assert(pieces[0]:GetParent():GetWidth() == 60 + #caption * 7 + 4 + 20, "Artisan panel did not fit the caption")
+        ArtisanCaps()
+        assert(#context.objects == objectCount, "caption changes recreated the Artisan artwork")
+        context:ResetCounts()
+        Tick()
+        context:NoPresentationWrites()
+    end
+    title:SetText(nativeTitle)
+    Tick()
     label.text = "native reset"
     context:ResetCounts()
     Tick()

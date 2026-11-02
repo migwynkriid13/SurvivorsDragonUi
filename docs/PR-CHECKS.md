@@ -38,6 +38,12 @@ kits retain the legacy fallback. Both Performance Mode states share these cases.
 These are CI-only ownership/input-boundary checks. They do not execute client
 code or prove actual native hit testing, AS settings behavior or run preservation.
 
+Stored-level Artisan cases cover all five source strips, fixed corners and
+central crests, caption-width fitting, region reuse, unchanged idle writes and
+the static panel with its silver halo disabled in Performance Mode. They use
+the existing complete-controller fixture, remain CI-only and do not establish
+native filtering, text metrics or artwork appearance.
+
 Stored-level cases keep `UnitClass("player")` fixed to a different character
 while changing received run classes. They cover Warlock-to-Hunter switching,
 next-frame zone receipt, missing/malformed metadata, unchanged crop writes,

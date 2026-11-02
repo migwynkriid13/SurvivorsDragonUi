@@ -1,41 +1,31 @@
-"""Prepare the gold bezel, count badge, translucent backdrop and soft gold glow.
+"""Prepare the selected Artisan metal artwork without executing addon code.
 
-This prepares artwork only, without loading or executing addon code. Supply
-the isolated IconFrameGold.tga from the source pinned in LevelUp-ARTWORK.md.
+Supply the professions chrome sheet pinned in third_party/LevelUp-ARTWORK.md.
+Only prepared artwork is retained; the source sheet stays outside the project.
 """
 
 import argparse
 import math
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageOps
+from PIL import Image
+
+from prepare_client_textures import blp_from_bgra
 
 ROOT = Path(__file__).resolve().parents[1]
+TOP = (478, 431, 738, 531)
+BOTTOM = (740, 431, 1000, 530)
+SLOT = (405, 1643, 445, 1683)
 
 
-def prepare_border(source, output):
-    # Retain the original clean gold pixels, omitting the vines and leaves.
-    # Mirror the upper-right quadrant into a square with a clear opening.
-    original = Image.open(source).convert("RGBA")
-    corner = original.crop((61, 19, 99, 57))
-    border = Image.new("RGBA", original.size)
-    border.alpha_composite(corner, (61, 19))
-    border.alpha_composite(ImageOps.mirror(corner), (23, 19))
-    border.alpha_composite(ImageOps.flip(corner), (61, 57))
-    border.alpha_composite(ImageOps.flip(ImageOps.mirror(corner)), (23, 57))
-    ImageDraw.Draw(border).rounded_rectangle((29, 24, 93, 89), radius=3, fill=(0, 0, 0, 0))
-    border.save(output / "IconFrameGold.tga", compression=None)
-
-
-def prepare_backdrop(output):
+def legacy_backdrops():
+    """Recreate the original geometric art still used by other design previews."""
     width, height = 512, 128
     backdrop = Image.new("RGBA", (width, height))
     glow = Image.new("RGBA", (width, height))
     dark_pixels, glow_pixels = backdrop.load(), glow.load()
     for y in range(height):
         for x in range(width):
-            # Rounded-rectangle signed distance, inset eight pixels so the
-            # feathered halo stays within the existing click/edit bounds.
             qx = abs(x + 0.5 - width / 2) - (width / 2 - 28)
             qy = abs(y + 0.5 - height / 2) - (height / 2 - 28)
             distance = math.hypot(max(qx, 0), max(qy, 0)) + min(max(qx, qy), 0) - 20
@@ -44,24 +34,35 @@ def prepare_backdrop(output):
             dark_pixels[x, y] = (0, 0, 0, round(255 * shade * coverage))
             halo = math.exp(-0.5 * (distance / 4.5) ** 2)
             glow_pixels[x, y] = (242, 184, 73, round(255 * 0.72 * halo))
-    backdrop.save(output / "Backdrop.tga", compression=None)
-    glow.save(output / "Glow.tga", compression=None)
+    return backdrop, glow
 
 
 def prepare(source, output):
     output.mkdir(parents=True, exist_ok=True)
-    prepare_border(source, output)
-    scale, size = 4, 64
-    image = Image.new("RGBA", (size * scale, size * scale))
-    draw = ImageDraw.Draw(image)
-    draw.ellipse(
-        (scale, scale, (size - 1) * scale, (size - 1) * scale),
-        fill=(247, 209, 107, 255),
-        outline=(110, 80, 34, 255),
-        width=3 * scale,
+    original = Image.open(source).convert("RGBA")
+    atlas = Image.new("RGBA", (512, 256))
+    # Keep proposal 04's top/bottom 45-row caps. Five side-by-side strips
+    # preserve both corners and the central crests at translated widths.
+    top = original.crop(TOP)
+    bottom = original.crop(BOTTOM)
+    atlas.paste(top.crop((0, 0, 260, 45)), (0, 0))
+    atlas.paste(bottom.crop((0, 54, 260, 99)), (0, 45))
+    atlas.paste(original.crop(SLOT), (272, 0))
+
+    glow = Image.new("RGBA", (512, 128))
+    pixels = glow.load()
+    for y in range(128):
+        for x in range(512):
+            qx = abs(x + 0.5 - 256) - 242
+            qy = abs(y + 0.5 - 64) - 50
+            distance = math.hypot(max(qx, 0), max(qy, 0)) + min(max(qx, qy), 0) - 6
+            halo = math.exp(-0.5 * (distance / 3) ** 2)
+            pixels[x, y] = (205, 216, 221, round(255 * 0.45 * halo))
+    atlas.paste(glow, (0, 128))
+    atlas.save(output / "Artisan.tga", compression=None)
+    (output / "Artisan.blp").write_bytes(
+        blp_from_bgra(atlas.width, atlas.height, atlas.tobytes("raw", "BGRA"))
     )
-    image.resize((size, size), Image.Resampling.LANCZOS).save(output / "CountBadge.tga", compression=None)
-    prepare_backdrop(output)
 
 
 if __name__ == "__main__":

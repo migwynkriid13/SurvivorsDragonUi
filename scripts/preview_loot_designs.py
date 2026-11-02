@@ -14,6 +14,7 @@ from PIL import Image, ImageChops, ImageDraw, ImageFont
 
 from preview_guardian_designs import panel
 from prepare_client_textures import image_from_bytes
+from prepare_levelup_art import legacy_backdrops
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -139,6 +140,7 @@ def prepare(scratch):
     OUT.mkdir(parents=True, exist_ok=True)
     atlas = fetch(scratch, "card")
     toast = fetch(scratch, "toast")
+    backdrop, glow = legacy_backdrops()
     art = {
         "card_bg": atlas.crop((0, 0, 298, 76)),
         "card_rim": atlas.crop((0, 78, 298, 154)),
@@ -146,8 +148,8 @@ def prepare(scratch):
         "boots": fetch(scratch, "boots"),
         "helm": fetch(scratch, "helm"),
         "icon_rim": load(ROOT / "media/tex/character/QualityBorder.tga"),
-        "backdrop": load(ROOT / "media/tex/levelup/Backdrop.tga"),
-        "glow": load(ROOT / "media/tex/levelup/Glow.tga"),
+        "backdrop": backdrop,
+        "glow": glow,
     }
     # Actual candidate pixels on a checkerboard, distinct from the assembled proposals.
     candidates = Image.new("RGBA", (800, 490), "#202729")

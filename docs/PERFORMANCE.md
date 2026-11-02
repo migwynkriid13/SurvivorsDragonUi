@@ -4,6 +4,26 @@ The performance work removes repeated presentation writes while retaining native
 data, pause-aware timing, saved preferences and artwork. It adds no gameplay clock
 or native client dependency. Display choices use the existing saved display table.
 
+## Artisan metal LEVEL UP — 2026-11-02
+
+The selected 04 design replaces the former soft background with five static
+panel strips from one 512 × 256 atlas. Fixed corners and central crests retain
+their widths; native anchors stretch only the two plain spans when the existing
+cached caption measurement changes. This adds four texture regions, ten total
+including the live icon, badge and optional pulse layers, without another frame,
+event, reader or updater. Panel/rim crops bind once during construction. The
+complete sheet is not loaded or shipped.
+
+The same visible 1.8-second pulse now paints a neutral silver halo and silver
+icon rim. Performance Mode hides both effects and detaches that worker while
+the five-piece panel stays static. Hidden, zero-count and world/reload cleanup,
+ten-Hz validity/native ownership and changed-only text/class reads retain their
+existing paths. Settings, translations, saved placement and native spending
+remain with the existing owners. CI-only cases cover fixed cap geometry,
+caption fitting/reuse and suppression of the silver effects. These source and
+region counts do not establish live timing, FPS or native appearance; no local
+tests, standalone validation or addon/game execution were performed.
+
 ## Jewelry caches and idle controllers — 2026-11-02
 
 The jewelry hover reader keeps one successful description per equipped slot,
@@ -1247,7 +1267,7 @@ this caption above the category buttons.
 | Boss bars                   | Keep native fill and health text instant. Hide the Crimson echo loss strip, clear its baseline and active state, and skip effect time/geometry work. Rows first used in this mode do not prepare a loss texture.                                                                                                                                                                           |
 | Cache tally                 | Refresh kills and gold numbers once every five UI seconds. Keep cache cost at its normal cadence. Clear the affordable-cache gold halo, rays and sparkles and detach its animation worker.                                                                                                                                                                                                 |
 | XP                          | Snap the fill to received XP, clear gain/spark artwork and detach completed effect work. Existing deferred native reads remain.                                                                                                                                                                                                                                                            |
-| Abilities and stored levels | Clear cooldown-number overlays and detach their timing worker. Suppress the seven native ability-ready flashes while retaining unfinished cooldown swipes. Hide level-button glow/highlight layers and detach the pulse worker; retain its static gold artwork, count and click behavior.                                                                                                  |
+| Abilities and stored levels | Clear cooldown-number overlays and detach their timing worker. Suppress the seven native ability-ready flashes while retaining unfinished cooldown swipes. Hide level-button glow/highlight layers and detach the pulse worker; retain its static metal panel, count and click behavior.                                                                                                   |
 | Notifications and revive    | Loot cards and banners stay opaque until their original expiry; hidden notices still retire. Revive displays received fill/percentage directly without smoothing, fade, spark or pulsing crosses, using its existing ten-Hz state reader.                                                                                                                                                  |
 | Action range                | Keep the current out-of-range warning static and remove any active native fade on a mode transition.                                                                                                                                                                                                                                                                                       |
 
