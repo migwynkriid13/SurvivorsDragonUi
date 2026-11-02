@@ -1097,7 +1097,7 @@ The existing required job runs the fixture; it is not shipped or run locally.
 This isolates the view boundary, rather than executing the full timer/game or
 proving native packet delivery and appearance.
 
-## Draft world guidance and adjustable SCT distance
+## Released world guidance and adjustable SCT distance
 
 CI-only native-boundary fixtures cover authoritative downed-party positions in
 instances without map UVs, valid zero coordinates, exact map/run/space matching,
@@ -1109,7 +1109,7 @@ new getter is absent.
 General world-marker fixtures load the production adapter with explicit fake
 capability/discovery/projection/registration endpoints. They separate ordinary
 service and post-camera phases and cover defaults, complete pagination, bounded
-batches, no early placement, frameCurrent, camera movement, offscreen/occluded
+batches, no early placement, frameCurrent, camera movement, offscreen/unavailable
 hiding, atomic malformed-batch rejection, collection/revival, pooling,
 changed-only writes, partial registration, failed release, retired/foreign
 callbacks, disabled work and old providers in both Performance Mode states.
@@ -1119,7 +1119,7 @@ missing/negative/nonfinite metrics, missing capability, camera-only changes and
 existing normal/Performance Mode lifetimes. Settings cases cover search,
 dependencies, normalized bounds, preview/Confirm/Cancel, profiles and reset.
 These fixtures are authored for CI and were not run locally. They cannot prove
-the proposed provider's existence, payload compatibility, native timing,
+the actual provider's delivery, native timing,
 instance locations, overhead placement, wall visibility, appearance or FPS.
 
 Affordable-only world-cache cases cover default-off and explicit saved choices,
@@ -1134,7 +1134,7 @@ unchanged in both Performance Mode states. These cases are authored for CI only
 and were not run locally; actual native gold publication and rendering remain
 unverified.
 
-Provider-note compatibility cases model position-only caches/downed allies and
+Released-contract compatibility cases model position-only caches/downed allies and
 unit-only overhead, including capability combinations without global overhead,
 correct screen spacing and explicit unsupported-attachment recovery. Fake
 catalog cursors expire when the fixture frame changes, so multi-page acceptance
@@ -1145,8 +1145,8 @@ handles across many camera frames without discovery reads; and retire a
 complete empty catalog. Delayed native enemy-to-guardian classification keeps
 its opaque handle and never uses name-based inference. Both Performance Mode
 states retain affordability/pooling/cleanup coverage. These cases use the
-provisional consumer schema and are authored for CI only; they do not establish
-that the developer's final API uses these field names or payloads.
+released 2026-11-02 API schema and are authored for CI only; they do not prove
+engine delivery, scheduling or appearance.
 
 World-marker performance cases count capability, discovery, phase, player-position,
 option and projection calls. Disabled, UIParent-hidden (including an independently
@@ -1168,3 +1168,15 @@ waypoint cases exercise hidden UIParent, hidden HUD plus minimap, visible-minima
 recovery and disabled/no-party getter suppression. They are authored for CI only;
 no local tests, validation or addon/game execution were run. Counts do not prove
 native call cost, rendering cost, appearance or live FPS gains.
+
+Released world-anchor cases use string-list capabilities and attachments,
+`maxEntriesPerCall` / `maxProjectionsPerCall`, cache state `present`, and catalog
+records without a draft `anchorStatus`. The fake query validates states as well
+as kinds, preventing ignored query fields from hiding contract mismatches.
+Pages/projections carry native stream identities. Cases cover discovery and
+projection `STREAM_CHANGED`, projection stream replacement, mixed-stream pages,
+overflowed catalogs, missing clock metadata, incomplete capabilities, and
+terminal `expired` / `unknownAnchor` retirement. They retain pools and the exact
+callback across stream recovery and count zero later projections for retired
+handles in both Performance Mode states. No runtime test hook is shipped and
+no local tests, validation or addon/game execution were run.

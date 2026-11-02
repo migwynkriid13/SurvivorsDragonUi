@@ -300,8 +300,10 @@ distant numbers smaller. Off keeps your selected SCT size at every distance; wor
 active. The choice previews immediately, saves with Confirm and follows Cancel,
 profiles and both full resets. MSBT dims the control while retaining its value.
 
-When enabled, distance sizing uses native camera depth: up to 20 yards retains
-the selected SCT size, farther text shrinks to a minimum of 55%. Existing animation scale and
+When enabled, distance sizing uses the documented distance from your hero.
+**Full size distance (yards)** defaults to 20 and **Minimum size (%)** to 55.
+Turning or zooming the camera alone does not change that factor. Missing native
+player-distance data retains the chosen size. Existing animation scale and
 critical pop multiply that factor. Both Performance Mode states share the
 projection, size and visibility behavior. Normal mode displays every hit separately;
 Performance Mode retains its 300 ms sums. Separate native targets/casters cannot share an arbitrary anchor.

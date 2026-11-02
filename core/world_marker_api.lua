@@ -1,4 +1,4 @@
--- Draft general-anchor consumer. Optional provider shape: docs/FALLEN-ALLY-POSITION-API-PROPOSAL.md.
+-- Native version-one world anchors: docs/AzerothSurvivors-Addon-API.md.
 -- Uses existing waypoint artwork and its controller; no nameplate/entity inference.
 setfenv(1, DFRL:GetEnv())
 
@@ -22,7 +22,7 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
         cache = {
             key = "worldCacheIcons",
             art = "Chest.blp",
-            state = "available",
+            state = "present",
             attachment = "position",
             padding = 22,
             crop = { 0, 1, 0, 1 },
@@ -89,6 +89,20 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
         end
         return count
     end
+    local function StringList(value)
+        local count = Array(value, 256)
+        if not count then return end
+        for index = 1, count do
+            if not Id(value[index]) then return end
+        end
+        return count
+    end
+    local function Contains(list, count, value)
+        for index = 1, count do
+            if list[index] == value then return true end
+        end
+        return false
+    end
     local function Trim(list, count)
         for index = table.getn(list), count + 1, -1 do
             list[index] = nil
@@ -150,7 +164,7 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
         Trim(state.points, 0)
         ClearMap(state.seen)
         ClearMap(state.cursors)
-        state.catalog, state.world = nil, nil
+        state.catalog, state.world, state.stream = nil, nil, nil
         state.mapId, state.runId, state.spaceId, state.clock = nil, nil, nil, nil
         state.discoveryAt, state.discoveryStarted, state.discoveryFailures = nil, nil, nil
     end
@@ -271,7 +285,7 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
         -- Validate every batch before showing any icon. Reuse scalar result slots.
         while first <= total do
             local size = 0
-            while first <= total and size < state.capabilities.maxAnchorsPerRead do
+            while first <= total and size < state.capabilities.maxProjectionsPerCall do
                 local record = state.records[first]
                 if
                     Wanted(record.kind)
@@ -291,21 +305,17 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
             Trim(state.requests, size)
             Trim(state.indices, size)
             if size > 0 then
-                local projection = Read("AZS_ProjectWorldAnchors", state.requests)
-                if
-                    projection
-                    and Number(projection.clockSeconds)
-                    and state.clock
-                    and projection.clockSeconds < state.clock
-                then
-                    state.retire = true
-                    return
+                local projection, failure = Read("AZS_ProjectWorldAnchors", state.requests)
+                if failure == "STREAM_CHANGED" then
+                    ClearCatalog()
+                    return true
                 end
                 if
                     not projection
                     or projection.apiVersion ~= 1
                     or projection.frameCurrent ~= true
-                    or projection.worldId ~= state.world
+                    or not Id(projection.worldId)
+                    or not Id(projection.streamId)
                     or not Id(projection.cameraSampleId)
                     or not Number(projection.clockSeconds)
                     or projection.clockSeconds < 0
@@ -314,6 +324,14 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
                     or Array(projection.entries, size) ~= size
                 then
                     return
+                end
+                if
+                    projection.worldId ~= state.world
+                    or projection.streamId ~= state.stream
+                    or (state.clock and projection.clockSeconds < state.clock)
+                then
+                    ClearCatalog()
+                    return true
                 end
                 sample, clock = projection.cameraSampleId, projection.clockSeconds
                 for index = 1, size do
@@ -327,11 +345,12 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
                         return
                     end
                     if entry.state == "worldChanged" then
-                        state.retire = true
-                        return
+                        ClearCatalog()
+                        return true
                     end
                     local point = state.points[state.indices[index]] or {}
                     point.visible = false
+                    point.retired = entry.state == "expired" or entry.state == "unknownAnchor"
                     if entry.state == "onScreen" then
                         if
                             not Number(entry.x)
@@ -342,16 +361,10 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
                             or entry.cameraDepth <= 0
                             or not Number(entry.uiUnitsPerYard)
                             or entry.uiUnitsPerYard <= 0
-                            or (
-                                entry.occlusion ~= nil
-                                and entry.occlusion ~= "visible"
-                                and entry.occlusion ~= "notTested"
-                                and entry.occlusion ~= "occluded"
-                            )
                         then
                             return
                         end
-                        point.visible = entry.entityState == styles[record.kind].state and entry.occlusion ~= "occluded"
+                        point.visible = entry.entityState == styles[record.kind].state
                         point.x, point.y = entry.x, entry.y + styles[record.kind].padding
                     elseif entry.x ~= nil or entry.y ~= nil then
                         return
@@ -362,8 +375,16 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
         end
         if clock then state.clock = clock end
         state.drawPass = (state.drawPass or 0) + 1
+        local used = 0
         for index = 1, total do
             local record, point = state.records[index], state.points[index]
+            if point and point.retired then
+                local marker = state.markers[record.anchorId]
+                if marker then Recycle(record.anchorId, marker) end
+            else
+                used = used + 1
+                state.records[used], state.points[used] = record, point
+            end
             if point and point.visible and Wanted(record.kind) then
                 local marker = Marker(record)
                 if marker.ready then
@@ -377,6 +398,8 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
                 end
             end
         end
+        Trim(state.records, used)
+        Trim(state.points, used)
         for _, marker in pairs(state.markers) do
             if marker.drawPass ~= state.drawPass and marker:IsShown() then marker:Hide() end
         end
@@ -427,26 +450,33 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
             or now - state.capabilityAt >= 30
         then
             local caps = Read("AZS_GetWorldAnchorCapabilities")
+            local kinds = caps and StringList(caps.kinds)
+            local attachments = caps and StringList(caps.attachments)
             if
                 not caps
                 or caps.apiVersion ~= 1
                 or caps.frameHandler ~= true
-                or type(caps.kinds) ~= "table"
-                or type(caps.attachments) ~= "table"
-                or not Integer(caps.maxEntriesPerRead, 1, 256)
-                or not Integer(caps.maxAnchorsPerRead, 1, 256)
+                or caps.frameProjection ~= true
+                or not kinds
+                or not attachments
+                or not Integer(caps.maxEntriesPerCall, 1, 256)
+                or not Integer(caps.maxProjectionsPerCall, 1, 256)
             then
                 return
             end
-            cached =
-                { maxEntriesPerRead = caps.maxEntriesPerRead, maxAnchorsPerRead = caps.maxAnchorsPerRead, kinds = {} }
+            cached = {
+                maxEntriesPerCall = caps.maxEntriesPerCall,
+                maxProjectionsPerCall = caps.maxProjectionsPerCall,
+                kinds = {},
+            }
             for _, kind in ipairs(markerKinds) do
-                cached.kinds[kind] = caps.kinds[kind] == true and caps.attachments[styles[kind].attachment] == true
+                cached.kinds[kind] = Contains(caps.kinds, kinds, kind)
+                    and Contains(caps.attachments, attachments, styles[kind].attachment)
             end
             state.cachedCapabilities, state.capabilityGetter, state.capabilityAt = cached, getter, now
         end
         state.capabilities = cached
-        state.query, state.kinds = { kinds = {}, states = { "available", "alive", "downed" } }, {}
+        state.query, state.kinds = { kinds = {}, states = { "present", "alive", "downed" } }, {}
         state.queryDirty = true
         if SetQuery() == 0 then return end
         local session = {}
@@ -472,18 +502,22 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
     local function Discover(position)
         -- Cursors are valid only inside this synchronous, bounded frame pass.
         -- Never publish a partial list or discard live handles for a failed refresh.
-        local cursor, catalog, world
+        local cursor, catalog, world, stream, clock
         local used, total, stagingSize = 0, 0, table.getn(state.staging)
         ClearMap(state.seen)
         ClearMap(state.cursors)
         for pageNumber = 1, 256 do
-            local page, failure = Read("AZS_GetWorldAnchors", state.query, cursor, state.capabilities.maxEntriesPerRead)
+            local page, failure = Read("AZS_GetWorldAnchors", state.query, cursor, state.capabilities.maxEntriesPerCall)
             if not page then return false, failure end
-            local count = Array(page.entries, state.capabilities.maxEntriesPerRead)
+            local count = Array(page.entries, state.capabilities.maxEntriesPerCall)
             if
                 page.apiVersion ~= 1
                 or not Id(page.catalogId)
                 or not Id(page.worldId)
+                or not Id(page.streamId)
+                or not Number(page.clockSeconds)
+                or page.clockSeconds < 0
+                or page.overflowed ~= false
                 or not Context(page, position)
                 or not count
                 or type(page.hasMore) ~= "boolean"
@@ -493,12 +527,22 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
                 return false
             end
             if pageNumber == 1 then
-                catalog, world = page.catalogId, page.worldId
-                if state.world and (state.world ~= world or not Context(state, position)) then
+                catalog, world, stream, clock = page.catalogId, page.worldId, page.streamId, page.clockSeconds
+                if
+                    state.world
+                    and (
+                        state.world ~= world
+                        or state.stream ~= stream
+                        or not Context(state, position)
+                        or (state.clock and clock < state.clock)
+                    )
+                then
                     ClearCatalog()
                     stagingSize = 0
                 end
-            elseif catalog ~= page.catalogId or world ~= page.worldId then
+            elseif world ~= page.worldId or stream ~= page.streamId then
+                return false, "STREAM_CHANGED"
+            elseif catalog ~= page.catalogId or clock ~= page.clockSeconds then
                 return false, "CATALOG_CHANGED"
             end
             total = total + count
@@ -510,34 +554,26 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
                     type(entry) ~= "table"
                     or not state.kinds[entry.kind]
                     or entry.state ~= styles[entry.kind].state
-                    or (entry.anchorStatus ~= "ready" and entry.anchorStatus ~= "unavailable")
+                    or not Id(entry.anchorId)
+                    or state.seen[entry.anchorId] ~= nil
                 then
                     return false
                 end
-                if entry.anchorStatus == "ready" then
-                    if
-                        not Id(entry.anchorId)
-                        or state.seen[entry.anchorId] ~= nil
-                        or type(entry.attachments) ~= "table"
-                    then
-                        return false
+                local attachments = StringList(entry.attachments)
+                if not attachments then return false end
+                local attachment = styles[entry.kind].attachment
+                local usable = Contains(entry.attachments, attachments, attachment)
+                state.seen[entry.anchorId] = usable
+                if usable then
+                    used = used + 1
+                    local record = state.staging[used] or {}
+                    record.anchorId, record.kind, record.attachment = entry.anchorId, entry.kind, attachment
+                    state.staging[used] = record
+                    -- Failed partial scans must also remain clearable on Lua 5.0.
+                    if used > stagingSize then
+                        if table.setn then table.setn(state.staging, used) end
+                        stagingSize = used
                     end
-                    local attachment = styles[entry.kind].attachment
-                    local usable = entry.attachments[attachment] == true
-                    state.seen[entry.anchorId] = usable
-                    if usable then
-                        used = used + 1
-                        local record = state.staging[used] or {}
-                        record.anchorId, record.kind, record.attachment = entry.anchorId, entry.kind, attachment
-                        state.staging[used] = record
-                        -- Failed partial scans must also remain clearable on Lua 5.0.
-                        if used > stagingSize then
-                            if table.setn then table.setn(state.staging, used) end
-                            stagingSize = used
-                        end
-                    end
-                elseif entry.anchorId ~= nil then
-                    return false
                 end
             end
             if not page.hasMore then
@@ -560,7 +596,7 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
                 end
                 Trim(state.staging, used)
                 state.records, state.staging = state.staging, state.records
-                state.catalog, state.world = catalog, world
+                state.catalog, state.world, state.stream, state.clock = catalog, world, stream, clock
                 state.mapId, state.runId, state.spaceId = page.mapId, page.runId, page.spaceId
                 for id, marker in pairs(state.markers) do
                     if not state.seen[id] then Recycle(id, marker) end
@@ -637,6 +673,9 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
         local delay = DISCOVERY_INTERVAL
         if accepted then
             state.discoveryFailures = nil
+        elseif failure == "STREAM_CHANGED" then
+            ClearCatalog()
+            delay = TRANSIENT_RETRY
         else
             state.discoveryFailures = (state.discoveryFailures or 0) + 1
             local base = (failure == "NOT_READY" or failure == "CATALOG_CHANGED") and TRANSIENT_RETRY or FAILURE_RETRY

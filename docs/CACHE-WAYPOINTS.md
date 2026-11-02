@@ -41,7 +41,7 @@ the confirmed current-zone sheet. Unsupported instance maps, `(0, 0)` map UVs
 and missing calibration still hide the map arrow/pins or show **On map**. No
 last-alive or historical location is substituted.
 
-### World icons (draft native API)
+### World icons (native API)
 
 **Waypoints** also has three independent world-icon switches. **Icons above
 caches** and **Icons above fallen allies** default on; **Icons above guardians
@@ -57,8 +57,8 @@ caches** is off and retains its choice. It shares preview, Confirm/Cancel,
 profiles and both resets; HUD/minimap guidance and other world icons keep their
 existing behavior.
 
-Icons require all five general world-anchor endpoints and the explicit draft
-schema in [the API proposal](FALLEN-ALLY-POSITION-API-PROPOSAL.md#draft-sdui-consumer-profile).
+Icons require the five documented general world-anchor endpoints and version-one
+capabilities in [the released API](AzerothSurvivors-Addon-API.md#world-anchors-version-1).
 Discovery uses opaque handles; guardians/bosses follow the actual living entity,
 not the fixed lair. Encounters use the native `overhead` point with six UI units
 of screen padding. Caches and fallen allies use their native `position` point:
@@ -69,13 +69,14 @@ Only kinds with their required advertised attachment are requested. No
 nameplate matching or old screen point is substituted.
 
 Discovery finishes every page in one bounded controller pass; cursors never
-cross frames. Complete catalogs replace the previous list atomically. Valid
+cross frames. Complete catalogs replace the queried kinds atomically. Valid
 handles continue projecting each native post-camera frame while periodic
 discovery checks for new entities and delayed guardian classifications. A
 `CATALOG_CHANGED`, first-read `NOT_READY` or malformed refresh keeps the last
 valid handles; their native projection still decides whether they can be drawn.
 These failures do not release the callback or publish a partial list. Explicit
-world/context changes retire the old handles.
+world/context/stream changes retire the old handles. `STREAM_CHANGED` clears
+old icons immediately; expired and unknown handles stop receiving projections.
 
 Only marker kinds that can currently be shown are requested. The affordability
 filter skips cache discovery and projection while gold is insufficient or
@@ -86,12 +87,12 @@ Options update through the existing settings listener, and repeated failures
 back off instead of flooding the provider. Visible recovery reads fresh data.
 
 Only current post-camera projections place icons. Offscreen/behind-camera,
-expired, unavailable and explicitly occluded anchors hide. The developer reports
-no occlusion or world-offset support; neither is requested. Untested markers can
-show through walls. Collected caches and revived/departed allies are removed by
-the next complete native catalog or native handle retirement. The developer's
-behavior notes guide these changes; the exact official function/field schema and
-installed-game delivery remain unconfirmed.
+expired and unavailable anchors hide. The released API supports optional world
+offsets, which these icons do not request. Occlusion is unsupported, so markers
+can show through walls. Collected caches and revived/departed allies are removed
+by the next complete native catalog or native handle retirement. The released
+reference defines the accepted schema; installed-game delivery and appearance
+remain unverified.
 
 The native party-position contract is documented by
 [benilla worldmap.rs at 0259668](https://github.com/samwhosung/benilla/blob/0259668162cd2674730e078f5bf3def4cf4dfb35/crates/benilla-ui/src/script/worldmap.rs#L953)

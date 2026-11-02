@@ -1,9 +1,11 @@
 # Proposal: party positions and general world anchors
 
-Status: provisional API schema. The developer has described an implementation,
-but official function/field documentation and installed-game delivery have not
-been supplied or verified. The original proposal below remains a design
-reference; reported behavior and the addon consumer are distinguished later.
+Status: the released API reference supplied on 2026-11-02 supersedes this
+historical proposal and the preliminary provider notes below. See the
+[official world-anchor contract](AzerothSurvivors-Addon-API.md#world-anchors-version-1)
+and [current SDUI integration](#sdui-integration-with-the-released-api).
+The proposal remains as design history; it is not another accepted wire format.
+Actual installed-game timing, placement and performance remain unverified.
 
 ## Purpose
 
@@ -343,8 +345,9 @@ not by itself provide persistent entity discovery or all of these marker types.
 
 ## Provider behavior reported on 2026-11-02
 
-The following comes from the provider developer's message supplied by the user,
-not an official API reference or an inspected implementation:
+These are historical notes from the provider developer's earlier message. The
+released reference supplied later on the same day takes precedence, including
+its advertised world-offset support and 60-second fallen-enemy retention:
 
 - Occlusion and world-space offsets are optional and unsupported; capabilities
   report them false. Markers can show through walls.
@@ -369,166 +372,106 @@ not an official API reference or an inspected implementation:
   not establish a lifetime limit for native downed-party positions or the
   separate combat-text anchors.
 
-These notes are sufficient to adjust attachment choice, pagination and retry
-behavior. Exact endpoint names, capability/record/error layouts, coordinate
-identity and combat-text `playerDistanceMetrics`/`playerDistance` still need to
-be checked against official documentation before claiming native compatibility.
+The released reference now confirms the endpoint and payload definitions.
+It advertises `worldOffsets = true`, while occlusion remains false. SDUI does
+not request world offsets, occlusion or general fallen-enemy discovery.
 
-## Draft SDUI consumer profile
+## SDUI integration with the released API
 
-The PR includes addon-side consumers, not a game implementation. The reported
-behavior above informs those consumers. Until provider owners confirm a final
-schema, SDUI requires the explicit provisional version-one profile below; it
-does not probe alternate field names, parse handles or match display captions. Unknown/missing capabilities
-leave world icons hidden. This profile is provisional and must be reconciled
-with the delivered native API before the PR is ready to merge.
+The authoritative source is the user-supplied `addon_docs(2).md`, preserved
+verbatim in [Azeroth Survivors: Addon API](AzerothSurvivors-Addon-API.md).
+The runtime consumer and CI fixtures use that released contract, replacing the
+previous provisional profile rather than probing alternate names.
 
-`AZS_GetDownedPartyMembers()` uses the bare complete dense member list above,
-bounded to four other party members. Position identity follows the validated
-existing player getter, including matching absent `runId` where allowed. The
-getter's presence selects this authoritative path; unavailable results do not
-fall back to map/ghost locations.
+### Capabilities and catalogs
 
-General marker capabilities use these exact keys:
+World markers require all five documented functions, version 1,
+`frameProjection = true` and `frameHandler = true`. Capability `kinds` and
+`attachments` are dense string lists. SDUI copies only supported-kind booleans
+and `maxEntriesPerCall` / `maxProjectionsPerCall` into its own metadata cache;
+it retains no provider table. Unsupported kinds/attachments stay hidden.
 
-```lua
-{
-    apiVersion = 1,
-    frameHandler = true,
-    kinds = { cache = true, guardian = true, boss = true,
-        finalBoss = true, downedPartyMember = true },
-    attachments = { position = true, overhead = true },
-    maxEntriesPerRead = 256, -- positive integer, at most 256
-    maxAnchorsPerRead = 256, -- positive integer, at most 256
-}
-```
+Queries contain only needed `cache`, `guardian`, `boss`, `finalBoss` and
+`downedPartyMember` kinds. Their states are `present`, `alive` and `downed`.
+Catalog entries supply opaque `anchorId` handles directly and list their
+attachments. The catalog does not need the proposal's `anchorStatus` field;
+the separate downed-position getter still documents its own readiness fields.
 
-SDUI requests supported enabled kinds with
-`{ kinds = { ... }, states = { "available", "alive", "downed" } }`. The first
-cursor is nil. Each response must provide:
+Every discovery pass completes all pages synchronously in one frame, bounded
+to 256 entries and 256 pages. Pages must agree on catalog, stream, world,
+clock and current map/run/space. Only a complete valid catalog replaces the
+queried kinds. Cyclic/sparse/duplicate/malformed, overflowing and over-budget
+responses never publish partial replacement or removal evidence.
 
-```lua
-{
-    apiVersion = 1,
-    catalogId = "opaque coherent revision",
-    worldId = "opaque world epoch",
-    mapId = 0,
-    runId = "same as current player", -- absent only when absent for player
-    spaceId = "same as current player",
-    entries = {
-        {
-            kind = "cache", -- or guardian, boss, finalBoss, downedPartyMember
-            state = "available", -- alive for guardians/bosses, downed for allies
-            anchorStatus = "ready",
-            anchorId = "opaque lifetime handle",
-            attachments = { position = true },
-        },
-    },
-    hasMore = false,
-    -- nextCursor: nonempty opaque string only while hasMore is true
-}
-```
+Accepted refreshes run no more often than every 0.2 UI seconds through the
+existing waypoint reader. `NOT_READY` / `CATALOG_CHANGED` first retry after
+0.1 seconds; other first failures wait half a second. Consecutive failures back
+off to eight seconds and a complete accepted read restores normal timing.
+Valid handles continue projecting during a temporary discovery failure.
+`STREAM_CHANGED` clears all accepted/staging handles and hides old icons,
+then starts a fresh catalog on a later shared pass without rebinding the owner.
+A changed world, stream, coordinate context or regressed native clock also
+retires the old catalog.
 
-An unavailable entry uses `anchorStatus = "unavailable"` with no `anchorId` and
-is not drawn. Ready caches/downed members require `attachments.position = true`;
-ready guardians/bosses/final bosses require `attachments.overhead = true`.
-The corresponding global attachment capability and native kind must also be
-advertised; lack of overhead support does not disable usable position markers.
-Each ready handle must be unique throughout the complete catalog.
+### Projection and placement
 
-Every page must preserve catalog/world identity and current map/run/space. All
-pages are read synchronously in one service/frame pass, bounded to 256 total
-entries and 256 pages. Cyclic cursors, changing identities and malformed arrays
-reject the whole attempted replacement. SDUI publishes only a complete catalog.
-Accepted refreshes are scheduled every 0.2 UI seconds through the existing
-waypoint controller; per-frame projection reuses accepted handles without
-re-reading discovery. This allows later native guardian classification to be
-picked up without requesting ordinary enemies or inferring their kind.
+Projection runs only inside the native post-camera callback. Every batch must
+have `frameCurrent = true`, the accepted world and stream, one coherent camera
+sample and clock, and exact request order. A changed stream/world response or
+`STREAM_CHANGED` error clears the catalog immediately. Malformed/noncurrent
+batches hide all icons atomically and retire the presentation for retry.
 
-`CATALOG_CHANGED` and first-read `NOT_READY` retry no sooner than 0.1 UI seconds
-(the next ordinary shared reader pass); other failed catalogs retry after 0.5
-seconds on the first failure. Repeated failures back off exponentially up to
-eight seconds; a successful complete read restores normal timing. These refresh
-failures preserve the existing accepted handles, marker
-pool and exact registered callback while their native projections remain valid.
-No cursor is retained for a later frame and no partial list proves removal.
-A complete empty catalog retires old handles; explicit world/map/run/space
-changes retire the old context even if a replacement is not yet ready.
+Encounters use the native unit `overhead` point with six screen units above it.
+Caches and fallen allies use `position`; a 32-unit icon is centered 22 screen
+units above that point, leaving six units beneath the image. This screen-space
+gap is explicitly permitted by the released API and does not claim the top of
+a chest or the head of a downed hero. World offsets are supported by the game
+but unused here. Occlusion is unsupported, so markers can show through walls.
 
-Projection uses the request/result shape above, including `apiVersion = 1`,
-`worldId`, `cameraSampleId`, finite nonnegative `clockSeconds`, exact request
-order, the requested `attachment`, native `entityState`, and `frameCurrent = true`.
-All chunks must use one camera sample and clock. Onscreen entries require finite
-screen coordinates, nonnegative camera distance, positive camera depth and
-positive UI units per yard. Other states carry no screen coordinates. SDUI
-requests no extra occlusion work, honors explicit `occluded`, and treats an
-absent/`notTested` result as untested. Cache, ally and living encounter lifetimes
-remain native; general fallen-enemy/lair discovery is outside this UI scope.
+Offscreen, behind-camera, clipped, notReady and unsupported/unavailable entries
+hide without inventing a point. `expired` and `unknownAnchor` handles retire
+from the accepted list and recycle their views, so later frames stop projecting
+them. A `worldChanged` result clears the whole catalog. Frames are children of
+WorldFrame and reuse the existing artwork, static bindings and changed-only
+placement/visibility in both Performance Mode states.
 
-The three switches are **Icons above caches** (on), **Icons above guardians and
-bosses** (off, including final bosses) and **Icons above fallen allies** (on), in
-`/sdui` → **Waypoints**. They are independent of HUD/minimap guidance. Existing
-32-unit artwork uses `overhead` plus six screen UI units for encounter units,
-and `position` plus 22 screen UI units for caches and downed allies. The latter
-leaves six units beneath the icon above the projected location; it does not
-claim a native head/chest-top measurement. No world offset, occlusion query,
-guessed world height or nameplate fallback is provided.
+### Demand, caching and cleanup
 
-The optional **Only show affordable caches** filter defaults off and uses the
-existing published `AZS_RUN.gold` and `AZS_RUN.chest` (the next cache cost),
-requiring a finite `AZS_RUN_UPDATED` receipt. Both amounts must be finite and
-nonnegative; compare without rounding, accepting equality and zero-cost caches.
-Missing/invalid readings hide world cache icons while the filter is on. This
-does not add a general-anchor field or getter, alter HUD/minimap guidance, or
-filter guardians/bosses/allies. Affordability changes use the current received
-values without rebinding the native handler or retiring valid cached handles.
-A changed eligible-kind mask triggers a fresh complete catalog. Unaffordable
-caches skip discovery, projection and drawing.
+Display choices are cached through the existing settings listener. Copied
+capability metadata can be reused for up to 30 seconds on later activation;
+a changed getter or regressed UI clock invalidates it. There is no per-frame
+capability, setting, phase or player-position read in the marker callback.
+Visible eligible handles still need current-camera projection each frame.
 
-### Consumer demand and cache boundaries
+The default-off **Only show affordable caches** filter reads published
+`AZS_RUN.gold >= AZS_RUN.chest`, requiring finite nonnegative values and a valid
+receipt. Equality, fractional values and free caches keep their native meaning.
+Unaffordable caches skip discovery, projection and drawing. A changed eligible
+kind mask requests a fresh complete catalog while retaining callback ownership.
 
-Display choices are cached by the existing settings listener, and supported
-capability scalars are copied rather than retaining native tables. The copied
-capabilities can be reused for up to 30 seconds during a later activation;
-changing the getter or regressing UI time invalidates that cache. No capability
-poll is added to the camera loop. Confirmed context/lifecycle retirement still
-releases gameplay handles and prepared rows through the shared lifecycle.
+Known solo state suppresses ally work. An already validated empty downed feed
+also suppresses duplicate ally discovery within that same reader pass, without
+caching gameplay presence across passes. Disabled/hidden roots do no marker API
+reads. Temporarily unqueried but enabled kinds can keep dormant scalar handles
+and prepared frames; accepted active plus dormant records remain bounded to 256. Fully disabled/world-retired owners release the callback through the
+shared service. Failed release retries at most twice per second and preserves
+the exact function needed for release; retired callbacks remain inert and
+foreign callbacks stay untouched.
 
-Discovery only requests currently needed kinds. Unaffordable caches are omitted
-when the filter is selected; known empty parties omit downed-member kinds;
-disabled encounter markers never request an enemy scan. Temporarily unqueried
-but still-enabled kinds can retain bounded opaque handles while a complete
-refresh replaces only the queried kinds. They do not project while suspended.
-The total accepted active/dormant cache remains at most 256 records.
+Downed-position guidance uses the released `AZS_GetDownedPartyMembers()` fields,
+including exact map/run/space and valid zeros. A missing getter keeps the old
+map path; an available but empty/unavailable/malformed feed never borrows map,
+ghost or historical positions. Hidden HUD plus minimap, hidden UIParent,
+disabled guidance and known solo state skip this getter. Empty or entirely
+position-unavailable lists do no player-position read. Failed reads hide old
+locations and back off from half a second to eight seconds; successful reads,
+changed getters, known solo state and world reset release that delay.
 
-A marker frame uses only the accepted world epoch plus the native current-frame
-projection; it does not issue another player-position, phase, capability or
-saved-setting read. Discovery's timing gate precedes its player-position read.
-Empty lists and all-suspended consumers do no frame API work. Visible eligible
-handles still project every native camera frame; screen coordinates are never
-cached across frames. Both WorldFrame and UIParent hiding stop marker queries.
-Failed callback release is throttled to half-second retries without losing the
-exact function that must be released.
+SCT distance sizing already consumes the released `playerDistanceMetrics` /
+`playerDistance` contract. Zero or absent/invalid distances keep the chosen
+size; camera metrics never substitute. No extra getter or catalog scan is
+added by the sizing controls.
 
-An already validated empty downed-party feed suppresses general ally discovery
-within that same shared reader pass. Its presence flag is not cached across
-passes: unavailable feeds remain unknown, and marker-only consumers still use
-their bounded discovery path when guidance did not read positions. No second
-getter or member scan is added to decide this demand.
-
-Failed or malformed downed-position reads clear old positions and retry with
-progressive half-second to eight-second delays. Valid reads restore normal
-response time; changed getters, known solo state and world resets release the
-delay. A retry never enables legacy fallback while the native getter exists.
-
-The authoritative downed feed is also demand-gated by visible HUD/minimap
-presentation and a feature-detected native party count shared within one reader
-pass. Unknown roster metadata does not imply an empty party. An empty or wholly
-position-unavailable native downed list does not request player position.
-
-Combat text continues using its existing endpoints. Optional
-`playerDistanceMetrics = true` and finite nonnegative `entry.playerDistance`
-enable the new reference-distance/minimum-size controls. Missing metrics retain
-the selected SCT size while native world/death tracking continues. Default
-scaling remains off; when enabled the reference defaults to 20 yards and the
-minimum to 55%, adjustable to 1–100 yards and 25–100% respectively.
+The request-count, pooling, paging, failure and stream/terminal-handle cases
+are CI-only mocks. They do not prove native scheduling, delivery, rendering
+cost, instance revive locations, appearance or live FPS.

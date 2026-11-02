@@ -1,4 +1,4 @@
--- CI only: full production marker boundary with separate post-camera frames.
+-- CI only: released world-anchor v1 contract, with separate post-camera frames.
 local H = dofile("scripts/tests/fixtures/ui_helpers.lua")
 local function Scene(performance)
     local c = H.New()
@@ -25,6 +25,7 @@ local function Scene(performance)
         unregisters = 0,
         catalog = "catalog",
         world = "world",
+        stream = "stream",
         frame = 0,
         queryKinds = {},
     }
@@ -34,19 +35,32 @@ local function Scene(performance)
     native.handlers[native.foreign] = true
     env.AZS_GetWorldAnchorCapabilities = function()
         native.capabilityReads = (native.capabilityReads or 0) + 1
+        local attachments = {}
+        if native.position ~= false then table.insert(attachments, "position") end
+        if native.overhead ~= false then table.insert(attachments, "overhead") end
         local caps = {
             apiVersion = 1,
+            frameProjection = true,
             frameHandler = true,
             kinds = {
-                cache = true,
-                guardian = true,
-                boss = true,
-                finalBoss = true,
-                downedPartyMember = true,
+                "cache",
+                "guardian",
+                "boss",
+                "finalBoss",
+                "downedPartyMember",
+                "enemy",
+                "elite",
+                "guardianLair",
             },
-            attachments = { position = native.position ~= false, overhead = native.overhead ~= false },
-            maxEntriesPerRead = native.pageLimit or 2,
-            maxAnchorsPerRead = 1,
+            attachments = attachments,
+            maxEntriesPerCall = native.pageLimit or 2,
+            maxProjectionsPerCall = 1,
+            playerDistanceMetrics = true,
+            worldOffsets = true,
+            occlusion = false,
+            fallenRetentionSeconds = 60,
+            fallenCapacity = 4096,
+            livingCapacity = 4096,
         }
         native.capabilitySnapshot = caps
         return caps
@@ -71,13 +85,17 @@ local function Scene(performance)
             local failure = native.discoveryFault(cursor)
             if failure then return nil, { code = failure } end
         end
-        local kinds, entries = {}, {}
+        local kinds, states, entries = {}, {}, {}
         for _, kind in ipairs(query.kinds) do
             kinds[kind], native.queryKinds[kind] = true, true
         end
+        for _, state in ipairs(query.states) do
+            assert(state == "present" or state == "alive" or state == "downed", "query used a draft state")
+            states[state] = true
+        end
         native.lastKinds = kinds
         for _, entry in ipairs(native.entries) do
-            if kinds[entry.kind] then table.insert(entries, entry) end
+            if kinds[entry.kind] and states[entry.state] then table.insert(entries, entry) end
         end
         local first = 1
         if cursor then
@@ -90,6 +108,9 @@ local function Scene(performance)
             apiVersion = 1,
             catalogId = native.catalog .. ":" .. native.frame,
             worldId = native.world,
+            streamId = native.stream,
+            clockSeconds = c.now,
+            overflowed = native.overflowed == true,
             mapId = position.mapId,
             spaceId = position.spaceId,
             runId = position.runId,
@@ -106,6 +127,7 @@ local function Scene(performance)
     env.AZS_ProjectWorldAnchors = function(requests)
         native.projections = (native.projections or 0) + 1
         assert(native.inFrame and #requests == 1, "projection escaped post-camera phase or batching")
+        if native.projectionError then return nil, { code = native.projectionError } end
         local id, attachment = requests[1].anchorId, requests[1].attachment
         for key in pairs(requests[1]) do
             assert(key == "anchorId" or key == "attachment", "marker requested optional world offsets/occlusion")
@@ -118,24 +140,32 @@ local function Scene(performance)
             anchorId = id,
             attachment = attachment,
             state = source and source.projectState or "expired",
-            entityState = source and source.state,
+            reason = not source and "collected" or nil,
         }
         if source then
             local expected = (source.kind == "cache" or source.kind == "downedPartyMember") and "position" or "overhead"
             assert(attachment == expected, "consumer requested an unsupported entity attachment")
-            if source.attachments[attachment] ~= true then
+            local supported = false
+            for _, offered in ipairs(source.attachments) do
+                if offered == attachment then supported = true end
+            end
+            if not supported then
                 entry.state, entry.reason = "unavailable", "unsupportedAttachment"
             end
+        end
+        if entry.state ~= "expired" and entry.state ~= "unknownAnchor" and entry.state ~= "worldChanged" then
+            entry.entityState = source and source.state
         end
         if entry.state == "onScreen" then
             entry.x, entry.y = source.x or 100, source.y or 200
             entry.cameraDistance, entry.cameraDepth, entry.uiUnitsPerYard = 20, 20, 16
-            entry.occlusion = source.occlusion or "notTested"
+            entry.playerDistance = 20
         end
         local batch = {
             apiVersion = 1,
             worldId = native.world,
-            cameraSampleId = "camera",
+            streamId = native.stream,
+            cameraSampleId = "camera:" .. native.frame,
             clockSeconds = c.now,
             frameCurrent = native.frameCurrent ~= false,
             entries = { entry },
@@ -197,9 +227,15 @@ local function Record(id, kind)
     return {
         anchorId = id,
         kind = kind,
-        state = kind == "cache" and "available" or (kind == "downedPartyMember" and "downed" or "alive"),
-        anchorStatus = "ready",
-        attachments = { position = true, overhead = kind ~= "cache" and kind ~= "downedPartyMember" },
+        state = kind == "cache" and "present" or (kind == "downedPartyMember" and "downed" or "alive"),
+        attachments = (kind == "cache" or kind == "downedPartyMember") and { "position" } or { "position", "overhead" },
+        positionAvailable = true,
+        x = 100,
+        y = 200,
+        z = 0,
+        mapId = 0,
+        spaceId = "instance",
+        runId = "run",
         projectState = "onScreen",
     }
 end
@@ -226,10 +262,10 @@ for _, performance in ipairs({ false, true }) do
     c:Frame()
     assert(#c:Markers() == 1, "behind-camera icon remained visible")
     native.entries[1].projectState = "onScreen"
-    native.entries[1].occlusion = "occluded"
+    native.entries[1].projectState = "unavailable"
     c:Frame()
-    assert(#c:Markers() == 1, "explicitly occluded icon remained visible")
-    native.entries[1].occlusion = nil
+    assert(#c:Markers() == 1, "unavailable icon remained visible")
+    native.entries[1].projectState = "onScreen"
     local visibleBefore = #c:Markers()
     display.Set("worldBossIcons", true)
     local discoveryReads = native.calls
@@ -442,10 +478,10 @@ for _, performance in ipairs({ false, true }) do
         c:Frame()
         assert(#c:Markers() == 3, "complete catalog did not recover after rejected refresh")
     end
-    native.entries[1].attachments.position = false
+    native.entries[1].attachments = {}
     c:Frame()
     assert(#c:Markers() == 2, "unsupported attachment reused stale screen coordinates")
-    native.entries[1].attachments.position = true
+    native.entries[1].attachments = { "position" }
     c:Frame()
     assert(#c:Markers() == 3, "unavailable attachment did not recover without rebinding")
     native.entries = {}
@@ -521,6 +557,119 @@ assert(
     "oversized catalog exceeded its frame budget or published a partial replacement"
 )
 bounded.api.Reset()
+-- Released contract: list capabilities/attachments, present caches, no catalog
+-- anchorStatus, and explicit stream/overflow/terminal-handle fences.
+for _, performance in ipairs({ false, true }) do
+    local released = Scene(performance)
+    local rn = released.native
+    rn.entries = { Record("old-cache", "cache"), Record("old-ally", "downedPartyMember") }
+    assert(rn.entries[1].anchorStatus == nil and rn.entries[1].state == "present")
+    released:Service()
+    released:Frame()
+    assert(#released:Markers() == 2, "released catalog without draft readiness fields failed to draw")
+    assert(rn.capabilitySnapshot.maxEntriesPerRead == nil and rn.capabilitySnapshot.maxAnchorsPerRead == nil)
+    local objects, registrations, projections = #released.objects, rn.registers, rn.projections
+    rn.discoveryFault = function() return "STREAM_CHANGED" end
+    released:Service(0.21)
+    assert(#released:Markers() == 0, "discovery STREAM_CHANGED retained old markers")
+    released:Frame()
+    assert(rn.projections == projections and rn.registers == registrations and rn.unregisters == 0)
+    rn.discoveryFault = nil
+    rn.stream = "next-stream"
+    rn.entries = { Record("new-cache", "cache"), Record("new-ally", "downedPartyMember") }
+    released:Service(0.11)
+    released:Frame()
+    assert(#released:Markers() == 2 and #released.objects == objects and rn.registers == registrations)
+    rn.projectFault = function(batch) batch.streamId = "another-stream" end
+    released:Frame()
+    assert(#released:Markers() == 0, "projection stream change reused old-world presentation")
+    projections = rn.projections
+    released:Frame()
+    assert(rn.projections == projections, "retired stream kept projecting old handles")
+    rn.projectFault = nil
+    released:Service()
+    released:Frame()
+    assert(#released:Markers() == 2 and #released.objects == objects and rn.registers == registrations)
+    rn.projectionError = "STREAM_CHANGED"
+    released:Frame()
+    assert(#released:Markers() == 0, "projection STREAM_CHANGED error retained old markers")
+    rn.projectionError = nil
+    released:Service()
+    released:Frame()
+    assert(#released:Markers() == 2 and rn.unregisters == 0 and rn.handlers[rn.foreign])
+    released.api.Reset()
+
+    local pages = Scene(performance)
+    local pn = pages.native
+    pn.entries = { Record("kept", "cache") }
+    pages:Service()
+    pages:Frame()
+    objects = #pages.objects
+    pages.env.DFRL.display.Set("worldBossIcons", true)
+    pn.entries[2], pn.entries[3] = Record("partial-ally", "downedPartyMember"), Record("partial-boss", "boss")
+    pn.pageFault = function(page, cursor)
+        if cursor then page.streamId = "changed-mid-page" end
+    end
+    pages:Service(0.21)
+    pages:Frame()
+    assert(#pages:Markers() == 0 and #pages.objects == objects and pn.registers == 1, "mixed streams published a page")
+    pn.pageFault = nil
+    pages:Service(0.11)
+    pages:Frame()
+    assert(#pages:Markers() == 3, "complete released catalog failed after mixed-stream rejection")
+    pn.overflowed = true
+    pn.entries[4] = Record("overflow-cache", "cache")
+    objects = #pages.objects
+    pages:Service(0.21)
+    pages:Frame()
+    assert(#pages:Markers() == 3 and #pages.objects == objects, "overflowed catalog published incomplete replacement")
+    pn.overflowed = false
+    pages:Service(0.51)
+    pages:Frame()
+    assert(#pages:Markers() == 4, "complete catalog failed to recover after overflow")
+    pn.pageFault = function(page) page.clockSeconds = nil end
+    pages:Service(0.21)
+    pages:Frame()
+    assert(#pages:Markers() == 4, "malformed catalog header discarded accepted handles")
+    pn.pageFault = nil
+    pages.api.Reset()
+
+    for _, terminal in ipairs({ "expired", "unknownAnchor" }) do
+        local retired = Scene(performance)
+        local tn = retired.native
+        tn.entries = { Record("terminal", "cache") }
+        retired:Service()
+        retired:Frame()
+        tn.entries[1].projectState = terminal
+        retired:Frame()
+        assert(#retired:Markers() == 0, "terminal projection remained visible")
+        projections = tn.projections
+        for _ = 1, 60 do
+            retired:Frame()
+        end
+        assert(tn.projections == projections, "terminal handle flooded unnecessary frame projections")
+        retired.api.Reset()
+    end
+    for _, fault in ipairs({
+        function(caps) caps.frameProjection = false end,
+        function(caps) caps.kinds = { cache = true } end,
+        function(caps) caps.attachments = { position = true } end,
+    }) do
+        local unsupported = Scene(performance)
+        local getter = unsupported.env.AZS_GetWorldAnchorCapabilities
+        unsupported.env.AZS_GetWorldAnchorCapabilities = function()
+            local caps = getter()
+            fault(caps)
+            return caps
+        end
+        unsupported:Service()
+        assert(
+            unsupported.native.registers == 0 and unsupported.native.calls == 0,
+            "incomplete or draft capability shape activated the released consumer"
+        )
+        unsupported.api.Reset()
+    end
+end
 -- Request budgets: disabled/hidden/no-demand consumers stay quiet; camera frames
 -- project only eligible cached handles and never repeat phase/position/capability reads.
 for _, performance in ipairs({ false, true }) do
@@ -705,7 +854,7 @@ for _, performance in ipairs({ false, true }) do
     empty.api.Reset()
     empty:Service()
     assert(en.capabilityReads == capabilities, "same-provider capability cache was not reused")
-    en.capabilitySnapshot.kinds.cache = false
+    en.capabilitySnapshot.kinds[1] = "unrecognizedKind"
     empty.api.Reset()
     empty:Service()
     assert(en.calls == calls + 2, "returned capability table mutated the copied cache")

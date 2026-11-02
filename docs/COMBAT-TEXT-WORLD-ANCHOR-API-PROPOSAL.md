@@ -1,11 +1,11 @@
 # World-anchored combat text: API and addon integration
 
-The owner-supplied `addon_docs.md` from 2026-11-01 is preserved verbatim in
+The owner-supplied `addon_docs(2).md` from 2026-11-02 is preserved verbatim in
 [Azeroth Survivors: Addon API](AzerothSurvivors-Addon-API.md).
 Its [World-anchored combat text section](AzerothSurvivors-Addon-API.md#world-anchored-combat-text-version-1)
 is the authoritative provider contract. It supersedes the original proposal's
-assumptions about event fields and callback timing. The supplied 0.139.0 release
-notes add credited meter-source fields, documented in the
+assumptions about event fields and callback timing. The updated reference includes credited meter-source fields; the earlier
+0.139.0 announcement is recorded in the
 [API supplement](API-NOTES.md#combat-text-meter-attribution--01390-2026-11-02).
 This file describes the requested result and SDUI's consumer; it does not define
 another payload schema.
@@ -37,14 +37,14 @@ the chosen SCT size (25–100%, default 55). Both numeric choices share the exis
 display transaction and profiles. They are disabled while scaling is off, outside
 Custom mode or in MSBT style. Changing them preserves active hits and expiry.
 
-Scaling requires the proposed optional `playerDistanceMetrics = true` capability
+Scaling uses the documented optional `playerDistanceMetrics = true` capability
 and a finite, nonnegative `playerDistance` from that same combat-text projection.
 The factor is `max(minimum / 100, min(1, reference / playerDistance))`; zero uses
 full size. Missing/invalid distances and older providers retain the chosen SCT
 size. Camera depth/distance never substitutes for player distance. Camera-only
 movement changes placement without changing size for a stationary hero/enemy.
-This optional extension is defined in [the draft proposal](FALLEN-ALLY-POSITION-API-PROPOSAL.md#player-relative-combat-text-scaling);
-provider delivery and behavior remain unverified.
+These fields are now included in the [released projection contract](AzerothSurvivors-Addon-API.md#azs_projectcombattextanchorsanchorids-mode).
+Native delivery and behavior remain unverified.
 
 ## Calls and frame timing
 

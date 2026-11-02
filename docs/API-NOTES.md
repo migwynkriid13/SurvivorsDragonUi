@@ -1,11 +1,31 @@
 # Official addon API integration — 2026-10-14
 
+## Released world-anchor contract — 2026-11-02
+
+The user-supplied `addon_docs(2).md` replaces the earlier reference in
+[Azeroth Survivors: Addon API](AzerothSurvivors-Addon-API.md). Its world-anchor,
+downed-party and player-distance sections supersede the provisional proposal.
+The consumer now uses string-list capabilities/attachments,
+`maxEntriesPerCall` / `maxProjectionsPerCall`, cache state `present`, direct
+catalog handles without `anchorStatus`, and explicit stream identity/reset.
+Overflowed catalogs cannot prove removal; expired/unknown handles retire from
+frame projection. Caching, request-demand gates, pools and existing camera
+callback ownership remain shared in both Performance Mode states.
+
+The game now advertises world offsets; SDUI retains the documented fixed screen
+gap and requests no offset. Occlusion remains unsupported. SCT sizing and
+instance downed-position guidance already use the documented fields.
+CI-only fixtures now model the released shapes and stream/terminal boundaries;
+no local tests, standalone validation or addon/game execution were run. Native
+appearance, scheduling and performance remain unverified.
+
 ## Combat-text meter attribution — 0.139.0, 2026-11-02
 
 The developer's supplied 0.139.0 release notes add two fields to events from
 `AZS_GetCombatTextEvents`. This supplements the
-[2026-11-01 API reference](AzerothSurvivors-Addon-API.md#azs_getcombattexteventscursor-limit),
-which remains preserved verbatim; its event table predates these additions.
+earlier 2026-11-01 API reference. The updated
+[2026-11-02 reference](AzerothSurvivors-Addon-API.md#azs_getcombattexteventscursor-limit)
+is now preserved verbatim and includes these fields.
 
 | Event field      | Meaning                                                                                |
 | ---------------- | -------------------------------------------------------------------------------------- |
