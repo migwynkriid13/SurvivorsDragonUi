@@ -3,7 +3,7 @@
 The request is to reduce rendering cost with five different equipped icons while
 preserving their current appearance and behavior, using addon changes only.
 This investigation found a further candidate, but it has not established a safe
-replacement. The runtime retains the existing fourteen strips per icon.
+replacement. This is the frozen fourteen-strip baseline from before the Runecarver end-cap fit correction. The current runtime has sixteen inset bands; the comparisons below do not measure that later layout.
 
 ## Geometry in place of sampling clamps
 

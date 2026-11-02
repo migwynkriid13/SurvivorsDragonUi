@@ -1,18 +1,26 @@
 -- Five equipped jewelry sockets, attached by default and optionally independent.
 --[[
-The selected thin-bezel design keeps the Blizzard circular rim artwork, with
-native rarity colors for equipped items and the original gold for empty slots.
+Selected 03 Runecarver housings use grey metal matching the action-bar surround.
+Native rarity colors remain on equipped items' effects-only hover text.
+The housing and soft halo are baked together in the existing Frame.blp atlas;
+five static regions inherit the shared overlay's visibility and scale.
+The grey carving never receives the item's quality tint; no inner circle is drawn.
 SocketRail BLP strips join all upper socket arches and straight spans on one baseline
 using pixels from the existing HDActionBar.tga. The original bar texture is
 unchanged; only its narrow top strip switches while this jewelry row is visible.
-No extra inner or lower curved line is drawn beneath the gold circles.
+No extra inner or lower curved rail line is drawn beneath the housings.
 SocketDetached.blp retains the silver-gray circle borders in detached mode.
 EmptyNeck.blp, EmptyRing.blp and EmptyTrinket.blp use Blizzard's original
-paper-doll placeholders, fitted inside the circular rim without cropping.
+paper-doll placeholders, fitted inside the carving without cropping.
 Texture conversion does not change the underlying artwork's ownership.
 No upstream Lua is imported. Sources and preparation: third_party/Jewelry-ARTWORK.md.
 
-Gold circular rim source: commit b8b35451d4621a8097e887385f72ec03e17765f1,
+Runecarver housing: Blizzard's Runecarving/RuneCarvingUI.PNG from Gethe's
+wow-ui-textures mirror, commit da4d3587e46ee7db8655b978d49b7d55024084ff,
+Shadowlands 9.0.5 build 37705. The runes-lit frame and separate glow retain
+Blizzard Entertainment's artwork ownership; MIT below does not relicense them.
+
+Shared pet/meter rim source: commit b8b35451d4621a8097e887385f72ec03e17765f1,
 Textures/bagborder2.blp; provenance is recorded in the document above.
 Empty-slot artwork: Gethe/wow-ui-textures, commit
 e80e3278cc833c89e1f3fc79557b68315d750935, PaperDoll/UI-PaperDoll-Slot-
@@ -44,10 +52,35 @@ SOFTWARE.
 ]]
 DFRL:NewMod("Jewelry", 4, function()
     local WIDTH, HEIGHT, ICON_SIZE, INTERVAL = 317, 88, 32, 0.2
+    local ICON_ART_SIZE = 31.939331
     local RIM_SIZE = 43
     local ICON_ZOOM = 1.05
     local iconSpan = 1 / ICON_ZOOM
     local iconInset = (1 - iconSpan) / 2
+    local function PrepareIconParts()
+        local parts = {}
+        local scale = ICON_ART_SIZE / ICON_SIZE
+        local padding = (ICON_SIZE - ICON_ART_SIZE) / 2
+        for part = 1, 16 do
+            local top, bottom = (part - 1) * 2, part * 2
+            local edge = math.max(math.abs(top - 16), math.abs(bottom - 16))
+            -- The old outer-edge formula made both end caps zero-width.
+            -- Sample their midpoint so the complete image height is retained.
+            if part == 1 or part == 16 then edge = 15 end
+            local half = math.sqrt(math.max(0, 256 - edge * edge))
+            table.insert(parts, {
+                left = 16 - half * scale,
+                top = padding + top * scale,
+                width = half * 2 * scale,
+                height = 2 * scale,
+                firstU = iconInset + (16 - half) * iconSpan / ICON_SIZE,
+                lastU = iconInset + (16 + half) * iconSpan / ICON_SIZE,
+                firstV = iconInset + top * iconSpan / ICON_SIZE,
+                lastV = iconInset + bottom * iconSpan / ICON_SIZE,
+            })
+        end
+        return parts
+    end
     local actionDefaults = DFRL.actionBarDefaults
     if
         type(actionDefaults) ~= "table"
@@ -63,15 +96,17 @@ DFRL:NewMod("Jewelry", 4, function()
     local defaultScale = actionDefaults.buttonWidth / RIM_SIZE
     local columnPitch = (actionDefaults.buttonWidth + actionDefaults.buttonGap) / defaultScale
     local socketSize = RIM_SIZE * 40 / 36
+    local carvingSize = RIM_SIZE * 128 / 108
+    local socketBounds = math.max(socketSize, carvingSize)
     local ANIMATION_INTERVAL = 1 / 30
     local texturePath = DFRL:GetInfoOrCons("tex") .. "jewelry\\"
-    local SLOT_NAMES = { "Finger0Slot", "Finger1Slot", "NeckSlot", "Trinket0Slot", "Trinket1Slot" }
+    local SLOT_NAMES = { "Finger0Slot", "Trinket0Slot", "NeckSlot", "Trinket1Slot", "Finger1Slot" }
     local EMPTY_TEXTURES = {
         "EmptyRing.blp",
-        "EmptyRing.blp",
+        "EmptyTrinket.blp",
         "EmptyNeck.blp",
         "EmptyTrinket.blp",
-        "EmptyTrinket.blp",
+        "EmptyRing.blp",
     }
     local slots, slotsReady = {}, false
     local inWorld, editing, attached, elapsed, animationElapsed = true, false, false, 0, 0
@@ -411,23 +446,7 @@ DFRL:NewMod("Jewelry", 4, function()
     artwork:EnableMouse(false)
     local iconProbe = artwork:CreateTexture(nil, "ARTWORK")
     iconProbe:Hide()
-    local iconParts, iconPool, iconGroups, iconByTexture, iconsDirty = {}, {}, {}, {}, false
-    for part = 1, 16 do
-        local top, bottom = (part - 1) * 2, part * 2
-        local edge = math.max(math.abs(top - 16), math.abs(bottom - 16))
-        local half = math.sqrt(math.max(0, 256 - edge * edge))
-        if half > 0 then
-            table.insert(iconParts, {
-                left = 16 - half,
-                top = top,
-                width = half * 2,
-                firstU = iconInset + (16 - half) * iconSpan / ICON_SIZE,
-                lastU = iconInset + (16 + half) * iconSpan / ICON_SIZE,
-                firstV = iconInset + top * iconSpan / ICON_SIZE,
-                lastV = iconInset + bottom * iconSpan / ICON_SIZE,
-            })
-        end
-    end
+    local iconParts, iconPool, iconGroups, iconByTexture, iconsDirty = PrepareIconParts(), {}, {}, {}, false
     local function SetIcon(slot, texture)
         -- A failed native texture assignment keeps the preceding slot artwork.
         -- Probe from empty so a retained image cannot masquerade as success.
@@ -493,7 +512,7 @@ DFRL:NewMod("Jewelry", 4, function()
                     end
                     if strip.jewelryPart ~= part then
                         strip:SetWidth(part.width)
-                        strip:SetHeight(2)
+                        strip:SetHeight(part.height)
                         strip:SetTexCoord(part.firstU, part.lastU, part.firstV, part.lastV)
                         strip.jewelryPart = part
                     end
@@ -522,7 +541,9 @@ DFRL:NewMod("Jewelry", 4, function()
         local slot = { name = name, button = button }
         local placeholder = button:CreateTexture(nil, "ARTWORK")
         placeholder:SetTexture(texturePath .. EMPTY_TEXTURES[index])
-        placeholder:SetAllPoints(button)
+        placeholder:SetWidth(ICON_ART_SIZE)
+        placeholder:SetHeight(ICON_ART_SIZE)
+        placeholder:SetPoint("CENTER", button, "CENTER", 0, 0)
         placeholder:Hide()
         slot.placeholder = placeholder
         local socket = hud:CreateTexture(nil, "BACKGROUND")
@@ -535,7 +556,9 @@ DFRL:NewMod("Jewelry", 4, function()
         slot.socket = socket
         local cooldown = button:CreateTexture(nil, "OVERLAY")
         cooldown:SetTexture(texturePath .. "Cooldown.blp")
-        cooldown:SetAllPoints(button)
+        cooldown:SetWidth(ICON_ART_SIZE)
+        cooldown:SetHeight(ICON_ART_SIZE)
+        cooldown:SetPoint("CENTER", button, "CENTER", 0, 0)
         cooldown:Hide()
         slot.cooldown = cooldown
         button:SetScript("OnEnter", function() ShowTooltip(slot) end)
@@ -545,37 +568,21 @@ DFRL:NewMod("Jewelry", 4, function()
         table.insert(slots, slot)
     end
 
-    -- Reuse one rim crop independently so socket spacing can match the buttons.
+    -- The carving is the only jewelry surround; no separate inner rim is drawn.
     local overlay = CreateFrame("Frame", nil, hud)
     overlay:SetAllPoints(hud)
     overlay:SetFrameLevel(hud:GetFrameLevel() + 3)
     overlay:EnableMouse(false)
     for _, slot in ipairs(slots) do
-        local rim = overlay:CreateTexture(nil, "OVERLAY")
-        rim:SetTexture(texturePath .. "Frame.blp")
-        rim:SetWidth(RIM_SIZE * 72 / 86)
-        rim:SetHeight(RIM_SIZE * 72 / 86)
-        rim:SetPoint("CENTER", slot.button, "CENTER", 0, 0)
-        -- Trim the source rim's uneven clear padding; its visible circle is
-        -- centered in this square crop rather than the full source rectangle.
-        -- Compensate the crop size to preserve the visible rim's diameter.
-        rim:SetTexCoord(1 / 512, 73 / 512, 1 / 128, 73 / 128)
-        slot.rim = rim
+        -- The soft halo is already baked, with no alpha animation or recurring writes.
+        local carving = overlay:CreateTexture(nil, "BORDER")
+        carving:SetTexture(texturePath .. "Frame.blp")
+        carving:SetWidth(carvingSize)
+        carving:SetHeight(carvingSize)
+        carving:SetPoint("CENTER", slot.button, "CENTER", 0, 0)
+        carving:SetTexCoord(384 / 512, 1, 0, 1)
     end
     local function SetQuality(slot, quality, red, green, blue)
-        if (slot.qualityR ~= nil) ~= (red ~= nil) then
-            -- The neutral copy keeps the same shading and alpha without
-            -- multiplying rarity colors by the stock gold's yellow channels.
-            local left = red ~= nil and 257 or 1
-            slot.rim:SetTexCoord(left / 512, (left + 72) / 512, 1 / 128, 73 / 128)
-        end
-        if
-            (slot.qualityR or 1) ~= (red or 1)
-            or (slot.qualityG or 1) ~= (green or 1)
-            or (slot.qualityB or 1) ~= (blue or 1)
-        then
-            slot.rim:SetVertexColor(red or 1, green or 1, blue or 1, 1)
-        end
         slot.quality, slot.qualityR, slot.qualityG, slot.qualityB = quality, red, green, blue
     end
     local function UpdateQuality(slot)
@@ -794,7 +801,12 @@ DFRL:NewMod("Jewelry", 4, function()
         if DFRL.SetActionBarJewelryTop then
             local top = actionDefaults.topInset
             if DFRL.display.Get("equippedJewelry") and docked then
-                top = math.max(top, actionDefaults.jewelryTopInset)
+                -- Grow only the edit envelope; the rail and icon anchors stay put.
+                top = math.max(
+                    top,
+                    actionDefaults.jewelryTopInset,
+                    defaultScale * (RIM_SIZE * 20 / 36 + socketBounds / 2)
+                )
             end
             DFRL.SetActionBarJewelryTop(top)
         end
@@ -817,9 +829,9 @@ DFRL:NewMod("Jewelry", 4, function()
         UpdateDisplay()
     end
     local detachedRegion = CreateFrame("Frame", nil, detached)
-    detachedRegion:SetWidth(socketSize + columnPitch * 4)
-    detachedRegion:SetHeight(socketSize)
-    detachedRegion:SetPoint("TOP", detached, "TOP", 0, -(46.5 - socketSize / 2))
+    detachedRegion:SetWidth(socketBounds + columnPitch * 4)
+    detachedRegion:SetHeight(socketBounds)
+    detachedRegion:SetPoint("TOP", detached, "TOP", 0, -(46.5 - socketBounds / 2))
     DFRL.layout.Register("jewelryBar", detached, function()
         local artTop = actionDefaults.bottom + actionDefaults.height + actionDefaults.topInset
         local bottom = (artTop + 4) / defaultScale - (HEIGHT - 46.5 - socketSize / 2)

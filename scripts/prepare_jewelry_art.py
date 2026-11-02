@@ -1,8 +1,9 @@
-"""Prepare transparent gold jewelry rims and circular cooldown artwork.
+"""Prepare jewelry rarity rims, the cold-lit housing and circular cooldown art.
 
 Requires Pillow and a scratch source directory containing the pinned
-bagborder2.blp listed in third_party/Jewelry-ARTWORK.md. No item icons,
-labels, panel backgrounds or ornaments are baked into the artwork.
+bagborder2.blp listed in third_party/Jewelry-ARTWORK.md. The retained
+Runecarver.tga input supplies only static housing artwork; item icons and labels
+are never baked into it.
 """
 
 import argparse
@@ -52,6 +53,8 @@ def prepare(sources, output):
         canvas.alpha_composite(rim, (98 + index * 88, 50))
     prepare_pet_rim(canvas)
     prepare_quality_rim(canvas)
+    # Repacking moves this complete cell to x=384 in the legal 512-by-128 atlas.
+    canvas.alpha_composite(rgba(ROOT / "media/tex/jewelry/Runecarver.tga"), (768, 0))
     output.parent.mkdir(parents=True, exist_ok=True)
     canvas.save(output, compression=None)
 

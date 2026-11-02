@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Native-base batching reference model; not addon execution or GPU measurement.
 
+Frozen fourteen-strip baseline: the later sixteen-band Runecarver cap/inset
+correction is outside this historical model.
+
 Transcribes crt_qsort_into from crates/benilla-ui/src/script/layer_batch.rs,
 read in the local source reconstruction. The public base substitutes texture
 creation rank for device addresses. It is not proof of the packaged client's

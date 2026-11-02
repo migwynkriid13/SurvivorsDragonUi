@@ -42,6 +42,30 @@ end
 local chunk = assert(loadfile(arg[1]))
 setfenv(chunk, env)
 local api = chunk()
+-- Actual production geometry must include both caps and retain the full
+-- selected UV height, with equal inset for items, placeholders and cooldowns.
+local prepared = api.PrepareIconParts()
+assert(#prepared == 16, "jewelry lost a top/bottom cap")
+local firstEdge = prepared[1].top
+local lastEdge = prepared[16].top + prepared[16].height
+assert(firstEdge >= 0 and firstEdge < 1 and math.abs(firstEdge + lastEdge - 32) < 0.000001, "icon fit is not centered")
+assert(math.abs(prepared[1].firstV - 1 / 42) < 0.000001, "top of the selected image was clipped")
+assert(math.abs(prepared[16].lastV - 41 / 42) < 0.000001, "bottom of the selected image was clipped")
+for index, part in ipairs(prepared) do
+    assert(
+        part.width > 0 and math.abs(part.height * 16 - (lastEdge - firstEdge)) < 0.000001,
+        "invalid cap or inset height"
+    )
+    assert(
+        part.left >= firstEdge - 0.000001 and part.left + part.width <= lastEdge + 0.000001,
+        "icon exceeds the carved opening"
+    )
+    assert(part.firstU >= 1 / 42 - 0.000001 and part.lastU <= 41 / 42 + 0.000001)
+    if index > 1 then
+        local previous = prepared[index - 1]
+        assert(previous.top + previous.height == part.top and previous.lastV == part.firstV, "gap between icon bands")
+    end
+end
 local slot = env.slots[1]
 assert(api.ReadEffects(slot) == "+12% chance" and scans == 1)
 assert(table.concat(order, ",") == "owner,clear,inventory,hide", "fresh scan changed native ownership order")
@@ -89,8 +113,8 @@ end
 -- Changing equipment must reuse its groups/regions without changing those parts.
 env.iconGroups, env.iconByTexture, env.iconPool = {}, {}, {}
 env.iconParts = {
-    { left = 3, top = 2, width = 26, firstU = 0.1, lastU = 0.9, firstV = 0.1, lastV = 0.2 },
-    { left = 1, top = 4, width = 30, firstU = 0.05, lastU = 0.95, firstV = 0.2, lastV = 0.3 },
+    { left = 3, top = 2, width = 26, height = 1.875, firstU = 0.1, lastU = 0.9, firstV = 0.1, lastV = 0.2 },
+    { left = 1, top = 4, width = 30, height = 1.875, firstU = 0.05, lastU = 0.95, firstV = 0.2, lastV = 0.3 },
 }
 local textureWrites, regions = 0, {}
 local methods = {}
@@ -125,7 +149,7 @@ local function CheckParts()
         if region:IsShown() then
             local part, entry = region.jewelryPart, region.jewelrySlot
             assert(region.texture == entry.artTexture and region.point[2] == entry.button)
-            assert(region.width == part.width and region.height == 2)
+            assert(region.width == part.width and region.height == part.height)
             assert(region.uv[1] == part.firstU and region.uv[2] == part.lastU)
             assert(region.uv[3] == part.firstV and region.uv[4] == part.lastV)
         end

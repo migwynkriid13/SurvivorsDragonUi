@@ -1,53 +1,71 @@
 # Equipped jewelry artwork
 
-The selected thin-bezel attachment retains each equipped item icon and its gold circular rim, adding a thin socket arch that joins the existing action bar. The preview's extra inner/lower curved line is omitted. Socket artwork retains transparent circular openings; empty slots place the selected original WoW inventory pictures and charcoal circles behind the gold rims. The formed socket body uses the original bar material inside the border and below its bends. There is no jewelry panel, permanent title, filigree or side ornament. Native item icons are read at runtime rather than bundled into this artwork.
+Selected **03 — Cold-lit runes** uses static Runecarver metal and rune accents, desaturated to grey to match the action-bar surround, with no separate inner-circle rim. The thin-bezel attachment keeps each item joined to the existing action bar without an extra inner/lower curved rail line. Empty slots retain the selected original WoW inventory pictures inside the carving, without a gold circle. The socket body keeps the original bar material, without a panel, title or side ornament. Native item icons are read at runtime rather than bundled into this artwork.
 
-## Gold rim source
+## Selected grey-metal Runecarver housing
+
+- Original Blizzard texture: [`Runecarving/RuneCarvingUI.PNG`](https://github.com/Gethe/wow-ui-textures/blob/da4d3587e46ee7db8655b978d49b7d55024084ff/Runecarving/RuneCarvingUI.PNG), **1024 × 2048**, Gethe mirror commit `da4d3587e46ee7db8655b978d49b7d55024084ff`, **Shadowlands 9.0.5 build 37705**.
+- Source SHA-256: `8df6e6c889eda1e100b9550762b573a647730b0435a6702ae194b55b830f124c`.
+- `runecarving-frame-runes-lit`: sheet rectangle `(451,1135)-(899,1589)`, **448 × 454**.
+- `runecarving-frame-glow`: sheet rectangle `(1,1135)-(449,1589)`, **448 × 454**.
+- Atlas names/UVs come from [TextureAtlasViewer Data.lua](https://github.com/LanceDH/TextureAtlasViewer/blob/e58691c23218b25a368f20c8cfebd8f482ed8ce3/Data.lua), embedded **build 37864**. The selected crops were inspected against the earlier pinned 37705 sheet; the complete atlas is not an isolated widget.
+- The [native Runeforge crafting XML](https://github.com/Gethe/wow-ui-source/blob/6b65c2922baca3db5a28fb39b69c95cef1047bec/Interface/AddOns/Blizzard_RuneforgeUI/Blizzard_RuneforgeCraftingFrame.xml) separates the normal and runes-lit backgrounds. Its **10.2.7 build 55461** source pin corroborates native use, rather than matching the earlier texture export's build. This jewelry assembly uses the lit artwork continuously, without importing crafting logic or animation.
+
+`scripts/prepare_jewelry_runecarver.py --source /path/to/RuneCarvingUI.PNG` accepts only the pinned source bytes. It clears the original inner crafting controls with an antialiased normalized-radius 0.33 cut, resizes the remaining lit frame to 118 × 120 and places it at `(5,4)` on a transparent 128 × 128 canvas. The original halo resizes to 124 × 126 at `(2,1)`, with source alpha multiplied by 0.32, below the frame. The completed cell blends 95% grayscale with 5% source RGB to neutralize the cyan metal, runes and halo while retaining their shading and alpha. This color treatment is baked by the preparation script; runtime performs no desaturation or tint writes. No generated lookalike, pulse, native crafting state or item power is introduced.
+
+The durable authoring input is `media/tex/jewelry/Runecarver.tga`; the original full sheet and intermediate crops do not ship or remain as task downloads. `prepare_jewelry_art.py` includes this complete cell at authoring rectangle `(768,0)-(896,128)`. The existing client-texture repacker moves it to `(384,0)-(512,128)` in the legal **512 × 128** `Frame.blp`, retaining the existing gold, pet/meter and neutral rarity cells. This reuses an existing runtime file and does not change the shared manifest.
+
+Each of the five new static `BORDER` regions uses UVs `384/512, 1, 0, 1`, centered on the corresponding icon, at local size `43 * 128 / 108`. At the reference 36-unit action buttons this is a 42⅔-unit canvas including clear padding and the soft halo. The original five circle regions are removed entirely, without a replacement border. No gold or rarity-colored circle is drawn around equipped or empty icons. Native rarity RGB remains on the effects-only hover text; missing quality keeps its existing green text fallback. The grey metal and rune accents receive no item-quality tint. Pet/meter crops, cooldown values and source/slot identities are unchanged; the inset icon fit and end-cap correction are described below.
+
+Only the existing Layout edit envelopes grow to include the larger static canvas: attached top clearance becomes 41⅓ units at the reference button size, while the detached region uses the larger of the socket and carving sizes around the same center. This does not move icons, rims, rails, roots or confirmed geometry. The five regions reuse the current overlay, parent visibility and attachment/world cleanup in both Performance Mode states. They add no frame, getter, event, updater, setting or saved state. All carving writes happen at construction; the steady halo is baked into that same region. Source/region counts do not establish native rendering or FPS. Only static artwork preparation, source review and pinned formatting were performed, with no local tests, standalone validation or addon/game execution.
+
+This is original World of Warcraft artwork, copyright Blizzard Entertainment. Public availability and software licenses do not transfer its ownership or supply a blanket art redistribution license. Existing project permission for upstream custom art does not relicense this Blizzard texture; its provenance remains in the shipped jewelry module. No source addon code, fonts or framework is imported.
+
+![Prepared grey-metal housings without an extra circular rim](../docs/previews/jewelry-runecarver-rarity.png)
+
+## Shared pet/meter rim source
 
 - [Karl-HeinzSchneider/WoW-DragonflightUI, commit b8b35451d4621a8097e887385f72ec03e17765f1](https://github.com/Karl-HeinzSchneider/WoW-DragonflightUI/tree/b8b35451d4621a8097e887385f72ec03e17765f1).
 - Original file: [`Textures/bagborder2.blp`](https://github.com/Karl-HeinzSchneider/WoW-DragonflightUI/blob/b8b35451d4621a8097e887385f72ec03e17765f1/Textures/bagborder2.blp), 64-by-64 RGBA, preserving source colors and alpha.
 - [MIT notice](https://github.com/Karl-HeinzSchneider/WoW-DragonflightUI/blob/b8b35451d4621a8097e887385f72ec03e17765f1/LICENSE), copyright 2022 Karl-HeinzSchneider. The relevant notice is retained in shipped `modules/ui/jewelry.lua` comments.
 
-Original World of Warcraft artwork remains copyright Blizzard Entertainment. The source addon's software license does not transfer ownership of Blizzard artwork. The project owner has confirmed upstream custom texture redistribution permission; this does not change Blizzard ownership. No upstream Lua or fonts are imported. The previously used stone, filigree and timer trim are absent from the current jewelry texture.
+Original World of Warcraft artwork remains copyright Blizzard Entertainment. The source addon's software license does not transfer ownership of Blizzard artwork. The project owner has confirmed upstream custom texture redistribution permission; this does not change Blizzard ownership. No upstream Lua or fonts are imported. The former panel filigree and timer trim remain absent.
 
 ## Preparation and transparency
 
 `scripts/prepare_jewelry_art.py` reads `bagborder2.blp` from a scratch directory supplied with `--sources`. A shared Raw1/Raw3 decoder preserves indexed colors and the separate alpha block; Pillow handles the other source formats. Pillow's own Raw1 path is not used because it omits that alpha block. This tool prepares image assets without loading or executing addon code.
 
-`media/tex/jewelry/Frame.blp` contains five gold rims on a transparent 1024-by-256, uncompressed BLP2 Raw3 canvas. The original TGA pixels are repacked without resampling for the updated client loader; see [Client compatibility](../docs/CLIENT-COMPATIBILITY.md). The runtime reuses the first rim's centered pixel rectangle `(106, 56)` through `(178, 128)` independently for all five sockets, with UV bounds `106 / 1024`, `178 / 1024`, `56 / 256`, `128 / 256`. This trims the previous 86-pixel crop's uneven transparent padding. Each 72-pixel crop occupies `43 * 72 / 86`, or 36, local units, preserving its visible artwork size. The jewelry frame scale remains the native action-button width divided by 43, inherited alongside the action bar's scale. At the 36-unit button reference, the cropped texture occupies about 30.14 units and its visible gold diameter is about 29 units. Each rim shares its icon frame's center anchor; the continuous rail's socket centers use the corresponding bar coordinates. Per-slot placement matches button center spacing and spans buttons 2 through 6; it does not stretch the baked five-rim row.
+`prepare_jewelry_art.py` retains its 1024-by-256 authoring canvas. The legal runtime `media/tex/jewelry/Frame.blp` is **512 × 128**, with the gold rim at `(1,1)-(73,73)`, pet/meter rim at `(129,1)-(201,73)` and neutral rarity rim at `(257,1)-(329,73)`. The client repacker copies these from the original authoring crops without resampling; see [Client compatibility](../docs/CLIENT-COMPATIBILITY.md). Jewelry no longer binds the old gold or neutral rim cells. Their shared authoring/source records remain for the pet/meter artwork; removing a jewelry drawing region does not alter another consumer's source pixels. All five Runecarver housings use only the fourth cell, centered on their original item and socket positions. The jewelry frame scale remains the native action-button width divided by 43. Native rarity reads remain solely for the effects-only hover text, without circle tint or UV writes.
 
-Equipped rarity uses a neutral copy at `(664,56)-(736,128)` in the same atlas.
-`prepare_quality_rim` copies the original `(106,56)-(178,128)` crop without
-resampling, replacing each RGB triplet with its greatest channel in all three
-channels and retaining every alpha byte. This preserves the original highlight
-and shadow structure without the yellow cast when applying native rarity RGB.
-Empty or unresolved slots use the unchanged original gold crop. The five rim
-regions retain their sizes, centers and layers; the silver sockets, pet/meter
-crop and every pixel outside the new neutral rectangle stay unchanged. The
-runtime atlas retains its original canvas, mip membership and lossless BLP2
-encoding through `prepare_client_textures.py`, with no new runtime file. A local
-pixel-comparison and conversion receipt is retained at
-`/tmp/sdui-jewelry-rarity-20261027/receipt.json`, alongside the original BLP and
-full-canvas TGA preparation input. This is asset-data evidence, not a game test.
+Native item hover frames remain 32 by 32 at local vertical center 46.5.
+The rendered item uses a centered artwork box set by `ICON_ART_SIZE` (currently 31.939331 units), shared by empty-slot
+pictures and cooldown shade geometry. At reference 36-unit buttons this is
+about 26.74 UI units, fitting inside the unchanged Runecarver opening. The
+sixteen source bands keep the original fourteen interior UV windows, while
+midpoint widths restore nonzero top and bottom caps. Uniform inset scaling
+preserves image proportions; source UVs retain `1 / 1.05` magnification, from
+`1 / 42` through `41 / 42`, including the complete selected vertical range.
+Parts carry their scaled height of `ICON_ART_SIZE / 16` local units. A full five-item row uses
+80 pooled image regions instead of 70, through the existing grouped compositor
+and hidden/world retirement. No icon getter, clock, worker, frame, extra border
+or saved value is added. This fit correction supersedes the earlier exact
+fourteen-band geometry requirement; native rendering remains unverified.
 
-Native item textures have nominal local size 32 by 32, centered in each rim at local vertical center 46.5. Horizontal pitch is `(button width + button gap) / default jewelry scale`, centered in the existing 317-by-88 anchor frame. Each icon uses 14 nonempty horizontal texture strips from a 16-strip circle partition. Strip widths use the narrower circular boundary at their two edges, so no texture extends beyond the circle. The centered source UV span is `1 / 1.05`, from `1 / 42` through `41 / 42` on each axis (approximately 2.38% through 97.62%). This gives exactly 5% added magnification instead of the former `58 / 64` span's approximately 10.34%, without changing icon or rim dimensions. Each strip maps into that same square span, preserving the source image's proportions in attached and detached modes. Texture strips are allocated lazily in one shared pool and rebound only when the native item-texture roster changes; their original geometry and UV windows remain unchanged. This leaves real transparency outside the icon, without opaque black corner covers or a retail mask API.
+`media/tex/jewelry/Cooldown.tga` is original generated geometry: an 8-by-8 atlas of 64 circular shade states, each 64 by 64 pixels on a transparent 512-by-512 canvas. State zero is clear, and states 1–63 cover increasing clockwise fractions of the circle, with transparent cell padding. The runtime selects a state from native inventory cooldown values and the native `GetTime` clock; it does not advance a private gameplay timer. The shade remains inside the icon circle and Runecarver housing.
 
-`media/tex/jewelry/Cooldown.tga` is original generated geometry: an 8-by-8 atlas of 64 circular shade states, each 64 by 64 pixels on a transparent 512-by-512 canvas. State zero is clear, and states 1–63 cover increasing clockwise fractions of the circle, with transparent cell padding. The runtime selects a state from native inventory cooldown values and the native `GetTime` clock; it does not advance a private gameplay timer. The shade remains inside the icon circle, under its gold rim.
-
-Pet frames use a separate 72-by-72 crop at `(576, 56)` through `(648, 128)` in
-the same `Frame.blp` atlas. `prepare_pet_rim` copies the original first rim's
+Pet frames use the runtime 72-by-72 crop `(129,1)-(201,73)`, from
+authoring rectangle `(576,56)-(648,128)`. `prepare_pet_rim` copies the original first rim's
 RGB pixels and multiplies its alpha by an antialiased annular mask centered at
 `(36, 36)`, retaining the gold band while removing the baked inner and outer
 shadow. The circle has transparent padding inside its crop, avoiding a cut
-through the shadow at the right edge. The five original jewelry crops and the
-atlas dimensions remain unchanged; no new runtime file is added.
+through the shadow at the right edge. The original jewelry and pet/meter
+runtime cells remain unchanged; no new runtime file is added.
 
 The damage meter reuses that same prepared pet-rim crop for its circular source
 icons: a 31-unit gold rim surrounds a 26-unit native circular icon at the existing
 row icon center. It retains the original gold RGB/alpha, without a quality tint
 or another prepared image. Legacy fallback strips clip only the source icon;
-the complete ring is never sliced. The five jewelry crops and their original
-fourteen-strip icon sampling remain unchanged. See
+the complete ring is never sliced. Jewelry uses its own inset sixteen-band icon fit; this does not alter the meter rim. See
 [DAMAGE-METER.md](../docs/DAMAGE-METER.md).
 
 ## Thin socket attachment
@@ -56,7 +74,7 @@ fourteen-strip icon sampling remain unchanged. See
 
 `media/tex/jewelry/SocketRail.blp` is a 2048-by-256 uncompressed BLP2 Raw3 canvas, preserving the original RGBA pixels. Its upper-left 1200-by-152 rectangle contains the complete rail, prepared at four pixels per UI unit for a nominal 300-by-38 display; the remaining pixels are clear. Runtime UVs are `0`, `1200 / 2048`, `0`, `152 / 256`. One bar-owned texture spans from six units outside each side of the bar, with its top 40 units above the button tops and bottom two units above them. The sockets and straight spans therefore share one sampling rectangle and anchor space. The existing bar backgrounds draw below the narrow replacement strip. The complete original backgrounds return when jewelry is unavailable or hidden. All seven button positions and button artwork are unchanged.
 
-The seven prepared BLP files ship through the runtime manifest. TGA preparation inputs, original source BLPs, sample item icons and previews are excluded. Static image preparation does not establish packaged-client rendering; runtime appearance remains unverified.
+The prepared jewelry BLP files ship through the runtime manifest. TGA preparation inputs, original source BLPs, sample item icons and previews are excluded. Static image preparation does not establish packaged-client rendering; runtime appearance remains unverified.
 
 ## Detached silver outline
 
@@ -78,6 +96,6 @@ The script writes the existing uncompressed RGBA `EmptyNeck.tga`, `EmptyRing.tga
 
 The full 64-by-64 image maps to the existing 32-by-32 placeholder frame, independently of the equipped item’s 5% zoom and cropped strips. Both rings share the ring picture and both trinkets share the trinket picture. Attached and detached rows retain their original rims, dimensions and placement; no native reads, tooltip/cooldown state, layout lifecycle, setting or saved value changes. Only static artwork preparation and previews were performed; game-side rendering remains unverified.
 
-The following static preview combines the prepared placeholder pixels and the existing rim at their runtime size ratio. It is artwork evidence, not an in-game capture. The preview is outside the runtime manifest.
+The following historical static preview shows the original placeholder preparation with the former gold rim. That extra rim is no longer drawn by jewelry; the current Runecarver-only preview is above. It is artwork evidence, not an in-game capture. The preview is outside the runtime manifest.
 
 ![Prepared empty jewelry artwork inside the original gold rims](../docs/previews/jewelry-empty-slots.png)

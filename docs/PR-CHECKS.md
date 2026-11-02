@@ -114,6 +114,12 @@ Cancel, profile copies, reset and the custom-boss master dependency. These are
 authored for CI only; no local tests, standalone validation or game execution
 are authorized. They do not establish native text clipping or appearance.
 
+Jewelry geometry cases also extract the production preparation function to
+require both top/bottom caps, continuous complete selected vertical UV coverage,
+the unchanged 5% source zoom and a centered artwork box at the selected icon size. Compositor cases
+retain inset band heights through pooling. These cases are CI-only and do not
+establish native pixel coverage.
+
 Jewelry cache cases use the exact production reader/cache/compositor functions
 over fake native tooltip and texture boundaries. They cover unchanged successful
 reads, same-icon item replacement, inventory/language invalidation, missing or

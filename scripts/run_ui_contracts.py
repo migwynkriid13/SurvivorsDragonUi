@@ -29,9 +29,10 @@ def main():
             "FormatCooldown", "UpdateCooldownNumber", "CreateCooldownNumbers",
         ])
         jewelry_cache = extract_source("modules/ui/jewelry.lua", [
+            "ICON_SIZE", "ICON_ART_SIZE", "ICON_ZOOM", "iconSpan", "iconInset", "PrepareIconParts",
             "InvalidateEffects", "ReadEffects", "ClearSlot", "PaintIcons",
         ])
-        jewelry_cache = jewelry_cache.rsplit("\nreturn ", 1)[0] + "\nreturn { InvalidateEffects = InvalidateEffects, ReadEffects = ReadEffects, ClearSlot = ClearSlot, PaintIcons = PaintIcons }\n"
+        jewelry_cache = jewelry_cache.rsplit("\nreturn ", 1)[0] + "\nreturn { InvalidateEffects = InvalidateEffects, ReadEffects = ReadEffects, ClearSlot = ClearSlot, PaintIcons = PaintIcons, PrepareIconParts = PrepareIconParts }\n"
         run_hud = "local render, refreshRows, scheduleCache = {}, false, nil\n" + extract_source("modules/ui/run.lua", [
             "nativeParts", "TakeOver", "Restore", "SyncReplacements",
         ])

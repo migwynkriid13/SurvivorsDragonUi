@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """Non-runtime sampling reference; not addon execution or GPU/pixel proof.
 
-The current jewelry icon has fourteen rectangular strips. Each uses the native
+Frozen fourteen-strip baseline: the later sixteen-band Runecarver cap/inset
+correction is outside this historical model.
+
+The historical jewelry icon has fourteen rectangular strips. Each uses the native
 half-texel-inset UV clamp. The candidate subdivides every strip into nine cells,
 samples a losslessly 180-degree-flipped alias with negative UVs and REPEAT, and
 therefore needs no per-strip clamp material. Reflecting both axes is exact in
@@ -224,7 +227,7 @@ def main():
     print("Positive affine scale/translation cancel from this identity; finite geometry/interpolation need separate evidence.")
     print("The negative/reflected address identity assumes lossless alias texels and no outer-image seam footprint.")
     print("\nFive different icons, isolated contiguous native texture groups:")
-    print("  current: 70 regions; 70 clamp-material runs; 280 vertices; 140 triangles")
+    print("  historical baseline: 70 regions; 70 clamp-material runs; 280 vertices; 140 triangles")
     print("  nine-cell candidate: 630 regions; 5 possible runs; 2520 vertices; 1260 triangles")
     print("  delta: +560 regions; -65 possible runs; +2240 vertices; +1120 triangles")
     print("  V-only three-cell/seven-width-alias alternative: 210 regions; 35 possible runs; 840 vertices; 420 triangles")

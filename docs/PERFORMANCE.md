@@ -4,6 +4,64 @@ The performance work removes repeated presentation writes while retaining native
 data, pause-aware timing, saved preferences and artwork. It adds no gameplay clock
 or native client dependency. Display choices use the existing saved display table.
 
+## Jewelry icon fit and end caps — 2026-11-02
+
+The screenshot exposed flat top/bottom cuts after the old inner rim was removed.
+The old outer-edge circle formula made the first and last two-unit bands
+zero-width, so only fourteen bands rendered. Both caps now sample their band
+midpoint. The original fourteen interior source windows and 5% source zoom are
+retained; sixteen bands cover the complete selected UV height. Images,
+empty-slot pictures and cooldown shades share the current centered artwork box
+inside the unchanged 32-unit hover frame, leaving clearance inside the existing
+Runecarver aperture. Slot centers, spacing, artwork, attachment and tooltip
+anchors remain unchanged.
+
+The two restored bands add two pooled texture regions per occupied icon:
+16 per icon, or 80 across five populated slots, ten more than before. They use
+the same lazy compositor, grouped order, changed-only bindings and hidden/world
+retirement. The geometry table is prepared once at module construction and
+includes each band's inset height; there is no extra getter, event, worker,
+setting or saved state. Both Performance Mode states share the fix. Existing
+circle regions stay removed, and native rarity colors stay in hover text.
+
+CI-only cases extract the production geometry and check both nonzero caps,
+continuous vertical UV coverage, preserved source zoom, inset bounds and pooled
+region reuse with non-default band heights. No local tests, standalone
+validation or addon/game execution were performed. Static source/geometry
+review does not prove native pixel coverage or FPS. Earlier fourteen-strip
+batching/repeat experiments remain frozen historical comparisons and do not
+measure this sixteen-band layout.
+
+## Cold-lit Runecarver jewelry — 2026-11-02
+
+The original cyan is reduced by 95% during image preparation to match the
+neutral action-bar metal. This changes only RGB inside the housing atlas cell;
+alpha, shading, dimensions and all other atlas cells are preserved. Runtime
+adds no color conversion or recurring tint writes.
+
+Selected design 03 uses one static housing texture per socket: five regions in
+the existing overlay. The former five gold/quality circles are removed, without
+a replacement border; housing region count matches the original rim count. Its carved metal
+and steady grey halo are baked into one 128-square cell in previously clear
+space in the existing 512-by-128 `Frame.blp` atlas. The atlas dimensions, native
+rarity/hover reads, equipment/cooldown cadence,
+attachment, item geometry and pet/meter cells stay unchanged. No new runtime
+texture file, gameplay frame, getter, event, setting, saved state or updater is
+added.
+
+The existing Layout edit envelopes grow around the larger housing canvas,
+without moving the rail, icons or confirmed geometry.
+Each new region binds texture, dimensions, anchor and UVs at construction only;
+there are no per-refresh or per-frame writes to the carving. Existing parent
+visibility and world/disabled cleanup hide it. Both Performance Mode states use
+the same static pixels. These housings render while visible; baking the halo avoids another region and
+animation worker but is not an FPS claim. Native inventory rarity RGB remains
+on the effects-only hover text. No gold, rarity-colored or replacement circle
+is drawn, and the grey carving receives no item-quality tint. Local work is static
+art preparation, source review and pinned formatting; no local tests,
+standalone validation or addon/game execution were performed. Actual native
+appearance and cost remain unverified.
+
 ## Artisan metal LEVEL UP — 2026-11-02
 
 The selected 04 design replaces the former soft background with five static
@@ -1587,7 +1645,7 @@ has an active visual, native-data, ownership or readiness purpose:
 | Health-loss and XP effects                         | Frame updates exist only for active loss/gain/fade animation and detach on completion. Target health and XP reads are coalesced next-frame native/event work, not additional idle pollers.                                                                                                                           |
 | Resources, absorbs and pets                        | Ten-Hz native phase/current values/readiness; power events and feed receipts can refresh earlier. Hidden views retain retirement while skipping presentation/timer-only reads. Unreported native changes and failed icon/style readiness still need fallback.                                                        |
 | Native buffs/received timers                       | Native anchor repair follows native resets; timing uses the official getter at ten Hz while active. Hovered tooltips display tenths, so their required timing refresh stays. Paused/static/hidden timers already stop or defer work.                                                                                 |
-| Jewelry                                            | Five-Hz native equipment/cooldown and metadata readiness; active exact 64-cell cooldown painting at thirty Hz, cursor placement only while hovered. Fourteen-strip icon sampling and original rims remain.                                                                                                           |
+| Jewelry                                            | Five-Hz native equipment/cooldown and metadata readiness; active exact 64-cell cooldown painting at thirty Hz, cursor placement only while hovered. Sixteen-band inset sampling and the Runecarver housings remain.                                                                                                  |
 | Loot                                               | Five-Hz service/readiness/native ownership and bounded queue delivery, populated frame fades/expiry, bounded five-Hz metadata retry. Hidden cards must expire and free capacity; empty cosmetic pools already detach.                                                                                                |
 | Banners                                            | Five-Hz registration/ownership/readiness, next-frame pending native errors and original thirty-Hz fade/expiry/promotion. Settled disabled/faulted cleanup already detaches.                                                                                                                                          |
 | Damage meter                                       | One-Hz regular native/legacy reads, readiness/ownership and rates; user actions prime next-frame reads. Off detaches; hidden views skip rows/rates/icon work. Accepted counter processing already has publication caches.                                                                                            |
@@ -2696,7 +2754,7 @@ kept separately so normal native state can resume on showing.
 | `bossBars`          | Hidden health/debuff text, icon allocation, timing getters and reflow stop. Existing hovers/debuff rows clear once on Hide. Native encounter validation, row retirement and takeover remain, including a valid empty boss list; Show requests fresh rows.                                                                                                                         |
 | `runTally`          | Hidden counter formatting/measurement and glow preparation stop. Native counter validation/takeover and attachment metadata remain; Show requests fresh presentation.                                                                                                                                                                                                             |
 | `xpBar`             | Native XP/level events still coalesce the latest tuple. Hidden gain animation stops and detaches, final private bar writes defer, and requested visibility changes only on transitions. Show restores the latest fraction and schedules a fresh instant read.                                                                                                                     |
-| `jewelryBar`        | Its existing polling controller detaches behind the active hidden Layout owner. Hidden inventory/cooldown reads, icon composition and cosmetic cooldown painting stop; visible recovery retries metadata. Attachment changes and world cleanup remain. Exact fourteen-strip sampling is unchanged.                                                                                |
+| `jewelryBar`        | Its existing polling controller detaches behind the active hidden Layout owner. Hidden inventory/cooldown reads, icon composition and cosmetic cooldown painting stop; visible recovery retries metadata. Attachment changes and world cleanup remain. The sixteen-band inset image fit is shared.                                                                                |
 | `minimap`           | Clock painting stops with its hidden parent. The glyph launcher stops its active drag and clears its hover; square-edge button projection/reflow stops until shown. Custom pins skip hidden styling/projection/facing work, while required native guardian-flag ownership/restoration continues at the existing lifecycle poll. The addon creates no full world-map presentation. |
 | `cacheWaypoint`     | Hidden guide interpolation, distance formatting, arrow rotation and facing samples stop. Native destination acceptance/selection, world cleanup and independently visible minimap markers remain.                                                                                                                                                                                 |
 | `guardianWaypoint`  | Same visibility boundary as cache guidance; accepted lairs still feed the guardian data foundation independently of this HUD's visibility.                                                                                                                                                                                                                                        |
@@ -3409,7 +3467,7 @@ or FPS evidence.
 ## Jewelry rendering
 
 Jewelry keeps its existing magnified icon crop and stepped circular outline:
-14 regions per populated icon, or 70 across five populated slots. Even merging
+16 regions per populated icon, or 80 across five populated slots, including the restored end caps. Even merging
 the geometrically identical central strips could change sampling at their
 shared seam on clients that clamp cropped UVs per quad, so their original
 partition remains unchanged. Icon regions now share one artwork owner, ordered
@@ -3417,21 +3475,18 @@ by exact texture path, then strip, then slot. Equal images with the same UV
 window are adjacent for native batching. Their slot-relative anchors, dimensions,
 crop and order within each icon stay the same. The icons cannot overlap: their
 32-unit canvases have at least 43 units between centers, including while detached.
-Cooldowns and circular rims retain their original layers above the icons.
+Cooldowns retain their original layer; the Runecarver housing replaces the extra circular rim.
 
-Equipped rarity adds one optional inventory-quality read per populated slot to
-the existing five-Hz equipment refresh. Native color lookup retries missing
+Equipped rarity retains one optional inventory-quality read per populated slot
+at the existing five-Hz equipment refresh. Native color lookup retries missing
 metadata and otherwise runs only when quality changes; empty slots skip it.
-The same five rim regions use a neutral shaded copy at `(664,56)-(736,128)`
-inside the existing atlas and change vertex tint only when RGB changes. Stock
-and neutral UVs switch only on known-rarity availability. Empty slots restore
-the original gold crop and white vertex tint. The pooled effects card changes
-text color before its unchanged-text measurement shortcut, without adding text
-regions or remeasuring for color alone. Hidden/off views stop these reads and
-writes through their existing controller. Atlas dimensions, file count,
-fourteen icon strips, alpha coverage, material texture and visible-region count
-stay unchanged; mixed empty/equipped slots can use two rim UV windows. No GPU
-or FPS result is inferred from these source counts.
+The original gold/quality circle regions, their tint writes and their UV
+switching are removed entirely. The pooled effects card still changes native
+rarity text color before its unchanged-text measurement shortcut, without
+adding text regions or remeasuring for color alone. Hidden/off views stop
+those reads and writes through their existing controller. Atlas dimensions and file count stay unchanged; the two end caps bring the icon to sixteen bands. The same five static
+Runecarver housings surround occupied and empty sockets; no replacement inner
+circle is drawn. No GPU or FPS result is inferred from these source counts.
 
 The base renderer additionally sorts equal-texture quads using an unstable
 native-style sort. For an isolated batch of two equal icons, that sort leaves

@@ -1,29 +1,28 @@
 # Equipped jewelry
 
-The user selected action-bar attachment design **4 — Thin shared bezel**, with the extra inner/lower curved line beneath the gold circles removed. The original bar artwork is retained, adding only five upper socket extensions. There is no jewelry panel, permanent title or side ornament. The row uses the character's five normal equipment slots, ordered left to right as first ring, second ring, necklace, first trinket and second trinket. The necklace occupies the middle socket in both attached and detached modes, including its empty-slot placeholder. It is independent of the native six-pickup run build and does not add an ability row or infer run jewelry from worn gear, stats or chat.
+The selected **03 — Cold-lit runes** artwork uses grey-metal Runecarver housings matched to the action bar with no separate inner-circle rim. Its soft grey halo is static. The row keeps the **Thin shared bezel** connection to the original action bar, with no jewelry panel, permanent title or side ornament. It uses the character's five normal equipment slots, ordered left to right as first ring, first trinket, necklace, second trinket and second ring. The necklace occupies the middle socket in both attached and detached modes, including its empty-slot placeholder. It is independent of the native six-pickup run build and does not add an ability row or infer run jewelry from worn gear, stats or chat.
 
 ## Data and interaction
 
-`modules/ui/jewelry.lua` resolves `NeckSlot`, `Finger0Slot`, `Finger1Slot`, `Trinket0Slot` and `Trinket1Slot` through `GetInventorySlotInfo`, requiring five distinct valid native IDs. `GetInventoryItemTexture("player", id)` supplies each current icon. Item art uses a centered texture crop with exactly 5% added magnification in both attached and detached modes; circle and rim dimensions are unchanged. No sample equipped items, item IDs, item names, item statistics, invented ranks or sixth slot are shipped.
+`modules/ui/jewelry.lua` resolves `NeckSlot`, `Finger0Slot`, `Finger1Slot`, `Trinket0Slot` and `Trinket1Slot` through `GetInventorySlotInfo`, requiring five distinct valid native IDs. `GetInventoryItemTexture("player", id)` supplies each current icon. Item art retains its centered 5% source magnification in both modes. The rendered icon, empty-slot picture and cooldown shade use a centered artwork box (currently about 31.94 units) inside the unchanged 32-unit hover frame, giving the Runecarver opening clearance. Sixteen bands include the formerly missing top and bottom caps, preserving the complete selected vertical image range without adding another circle. No sample equipped items, item IDs, item names, item statistics, invented ranks or sixth slot are shipped.
 
-Empty sockets use the selected original WoW inventory pictures for the necklace, both rings and both trinkets over subtle charcoal circles. The complete source interiors are scaled down and centered with clearance inside the gold rims, so the chain and trinket are not clipped by the circular opening. Source pixels and preparation are recorded in [Jewelry-ARTWORK.md](../third_party/Jewelry-ARTWORK.md). The existing gold rims, silver socket artwork, spacing and positions remain unchanged in attached and detached modes. A successful native texture read returning nil or an empty string shows the matching placeholder; an actual item texture replaces it at the existing refresh cadence. Read failures keep the icon area clear. Placeholders are cosmetic artwork, never stored as equipped-item textures: empty slots clear effects and cooldown state and do not call the item tooltip reader or inventory cooldown getter. Disable, missing required APIs/player and world cleanup hide them with the rest of the row. No new setting or saved state is added.
+Empty sockets use the selected original WoW inventory pictures for the necklace, both rings and both trinkets over subtle charcoal circles. The complete source interiors are scaled down and centered with clearance inside the Runecarver housings, so the chain and trinket are not clipped by the circular opening. Source pixels and preparation are recorded in [Jewelry-ARTWORK.md](../third_party/Jewelry-ARTWORK.md). The silver socket artwork, spacing and positions remain unchanged in attached and detached modes. A successful native texture read returning nil or an empty string shows the matching placeholder; an actual item texture replaces it at the existing refresh cadence. Read failures keep the icon area clear. Placeholders are cosmetic artwork, never stored as equipped-item textures: empty slots clear effects and cooldown state and do not call the item tooltip reader or inventory cooldown getter. Disable, missing required APIs/player and world cleanup hide them with the rest of the row. No new setting or saved state is added.
 
-Equipped items use their native rarity color for the circular rim and all text
-inside their effects-only hover card. `GetInventoryItemQuality("player", id)`
-supplies the rank, including poor and common items; `GetItemQualityColor` or the
-native `ITEM_QUALITYn_COLOR` table supplies RGB. Missing, failed or invalid
-metadata keeps the original gold rim and existing green hover text while the
-normal equipment refresh retries. It never keeps a removed item's color.
-Empty slots retain the exact stock gold rim and have no hover card.
+Equipped items retain native rarity colors in their effects-only hover text,
+including poor and common quality. `GetInventoryItemQuality("player", id)`
+supplies the rank; `GetItemQualityColor` or the native `ITEM_QUALITYn_COLOR`
+table supplies RGB. Missing, failed or invalid metadata keeps the existing
+green hover-text fallback while the normal equipment refresh retries. It never
+keeps a removed item's color. Empty slots have no hover card.
 
-The equipped rim uses a neutral copy of the original shaded rim in an unused
-part of the existing atlas, preserving its alpha, dimensions and placement.
-The attached rail and detached silver socket retain their stock colors. Rarity
-and texture reads share the existing five-Hz refresh; only a changed quality
-resolves another native color, and only changed colors or equipped/stock mode
-write tint or UVs. A same-text rarity change updates the pooled hover color
-before its text/measurement cache can return. No region, updater, event,
-setting, runtime file or SavedVariable is added.
+There is no separate gold, rarity-colored or replacement inner circle. Only
+the fixed grey-metal Runecarver housing surrounds each item or empty-slot
+picture. Its steady halo and rune accents never receive an item-quality tint.
+The same five regions work in attached and detached modes and both Performance
+Mode states. Parent visibility and world cleanup hide them without another
+worker. The original rim regions and their tint/UV writes are removed. Native
+quality reads and the changed-only hover-text color update remain. Sources and
+baking are recorded in [Jewelry-ARTWORK.md](../third_party/Jewelry-ARTWORK.md).
 
 Hover shows only the equipped item's native **Equip**, **Use** and **Chance on hit** effect descriptions. A private `GameTooltipTemplate` under a permanently hidden parent reads `SetInventoryItem("player", id)`; this reader never owns or clears the shared `GameTooltip`, whose visual styling is handled separately by the common hover module. The reader scans at most 64 native rows, skipping the item title and selecting effect rows by the native localized `ITEM_SPELL_TRIGGER_*` prefixes, with English fallback labels only when those globals are missing. The complete matched trigger label and its following whitespace are removed for display, including multiword labels such as Chance on hit. Effect wording, numbers and wrapped text are preserved; no arbitrary first word of a description is removed. Binding, equipment type, requirements, flavor text, sale value and separate cooldown metadata are omitted. No effect values are inferred from the icon or item name. Missing APIs, unavailable descriptions or items without recognized effect rows produce no popup; a hovered slot retries at the existing five-Hz cadence so late native data can appear.
 
@@ -49,7 +48,7 @@ Refresh is bounded to five reads per second per slot while in the world, with wo
 
 ## Layout and original build
 
-By default, the five circles line up with action buttons **2 through 6**, one above each button. Center spacing matches button width plus its six-unit gap. While attached, the row is parented to the action bar, so its attachment follows the bar's confirmed position, uniform scale, visibility and editing draft. At the 36-unit reference button size, each visible circle is about 29 units wide, its outer socket is 40 units wide, and its center is 20 units above the button tops. The rim crop removes uneven transparent padding while preserving the visible size; each rim shares its icon's center anchor. The socket rail is anchored directly to the action bar, with its centers at the same positions.
+By default, the five circles line up with action buttons **2 through 6**, one above each button. Center spacing matches button width plus its six-unit gap. While attached, the row is parented to the action bar, so its attachment follows the bar's confirmed position, uniform scale, visibility and editing draft. At the 36-unit reference button size, each rendered item is about 26.74 units wide inside its unchanged 26.8-unit hover frame, its outer socket is 40 units wide, and its center is 20 units above the button tops. The 42⅔-unit Runecarver canvas includes its soft halo and shares the icon center. The socket rail is anchored directly to the action bar, with its centers at the same positions.
 
 `SocketRail.blp` combines all five socket arches, feet and straight spans in one continuous upper-edge texture, prepared from the existing `HDActionBar.tga`. It replaces the previous separate caps and gap pieces, which could place the feet and straight edge on different screen rows. The rail uses one bar-owned rectangle and one UV mapping; socket feet have no independent vertical anchors or scale. The original bar texture file is unchanged. Only its 12-unit upper strip switches to the rail; gaps retain the original native pixels and the lower background retains its original UV mapping. The rail uses the native bevel's color, alpha and vertical alignment at the join. Original dark bar material sits inside the border and below the bends; circular openings stay transparent. Transparent cutouts prevent the old straight edge from crossing empty socket openings. No inner/lower quarter-circle line is drawn. When jewelry is unavailable or hidden, the original complete bar background is restored.
 
