@@ -208,8 +208,8 @@ DFRL:NewMod("Bars", 1, function()
         DFRL.actionBarBGleft = left
         DFRL.actionBarBGright = right
 
-        -- Keep every socket foot and straight span on one shared baseline.
-        -- Legal source strips join with neighbour gutters, without separate caps.
+        -- Keep the original straight edge clear beneath the Runecarver openings.
+        -- These guttered strips contain no legacy circular socket surrounds.
         local artHeight = defaults.height + 2 * defaults.topInset
         local socketBottom = defaults.buttonWidth * 2 / 36
         local upper = T.CreateArtworkStrip(bar, "BACKGROUND", 3)

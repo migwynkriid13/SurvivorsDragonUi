@@ -84,31 +84,38 @@ measure this sixteen-band layout.
 ## Cold-lit Runecarver jewelry and rarity halo — 2026-11-02
 
 The original cyan is reduced by 95% during image preparation to match the
-neutral action-bar metal. This changes only RGB inside the housing atlas cell;
-alpha, shading, dimensions and all other atlas cells are preserved. Runtime
-multiplies this grey artwork by a 90% native-rarity/10% white RGB blend, only
-when that final color changes while visible. Empty or unknown-quality slots
-use white, retaining the prepared grey pixels. Tooltip text keeps full native RGB.
+neutral action-bar metal. The original `Runecarver.tga` remains unchanged for
+empty or unavailable-quality slots. Only the equipped variant receives a fixed
+0.55 gamma lift followed by 0.8 RGB gain, retaining the selected reduced
+brightness. Both crops preserve the original alpha, cutout and dimensions.
+Native rarity RGB still supplies the 90% color/10% white housing multiplier;
+empty and unknown-quality slots use white over the original grey pixels.
+Tooltip text keeps full native RGB.
 
-Selected design 03 uses one static housing texture per socket: five regions in
-the existing overlay. The former five gold/quality circles are removed, without
-a replacement border; housing region count matches the original rim count. Its carved metal
-and steady grey halo are baked into one 128-square cell in previously clear
-space in the existing 512-by-128 `Frame.blp` atlas. The atlas dimensions, native
-rarity/hover reads, equipment/cooldown cadence,
-attachment, item geometry and pet/meter cells stay unchanged.
+The same 512-by-128 `Frame.blp` holds the original housing at x=256–384 and the
+brighter equipped housing at x=384–512. The original crop reuses the retired,
+unreferenced neutral-rim cell. Stock gold and shared pet/meter pixels, file
+size and region count remain unchanged. Each of the same five `BORDER` regions
+starts on the original crop. A visible empty/unknown-to-known-equipped
+transition changes only its UV window and tint; settled or hidden slots do no
+extra UV writes. Missing metadata and item removal return to the original crop.
+The five-Hz reader and both Performance Mode states share this gate, with no
+new getter, source scan, region, runtime file, event or updater.
 
-The existing Layout edit envelopes grow around the larger housing canvas,
-without moving the rail, icons or confirmed geometry.
-Each housing binds texture, dimensions, anchor and UVs at construction only;
-only changed native rarity updates its vertex color. Parent visibility and
-world/disabled cleanup hide it. Both Performance Mode states retain this static
-tint. No gold, rarity-colored or replacement circle is drawn.
+Mixed empty/equipped rows can contain two housing UV-clamp states instead of
+one. This is the presentation distinction required to retain the original
+empty default, not an extra drawing layer or a claim of fewer draw calls.
+Texture/geometry bind at construction; the existing Layout edit envelopes,
+rail, icons and confirmed geometry retain their placement. The retained input
+and both atlas recipes reproduce the same two crops without compounding the
+brightness or modifying the default. CI-only asset coverage pins the original
+input and compares its runtime crop, including equal alpha across variants.
 
 Normal mode lazily adds at most five steady glow regions on the existing
 overlay, one per visible equipped slot with valid native rarity RGB. Each
 additive `OVERLAY` region reuses the same `Frame.blp` housing crop, size and
-center, brightening the existing carving at fixed alpha 0.4. Texture, geometry,
+center, brightening the existing carving at fixed alpha 0.52 (30% stronger than
+the former 0.4 glow). Texture, geometry,
 UVs, blend mode and alpha bind once. Native rarity color and shown state change
 only when needed through the existing five-Hz equipment refresh. No glow clock,
 sprite frames, upward movement or recurring glow painting remains. The retired

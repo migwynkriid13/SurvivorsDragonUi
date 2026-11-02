@@ -33,17 +33,24 @@ table supplies RGB. Missing, failed or invalid metadata keeps the existing
 green hover-text fallback while the normal equipment refresh retries. It never
 keeps a removed item's color. Empty slots have no hover card.
 
-There is no separate gold, rarity-colored or replacement inner circle. The
-grey Runecarver housing receives a 90% blend toward native rarity RGB, retaining
-its subdued metal shading. A steady additive glow brightens that same carved
+There is no separate gold, rarity-colored or replacement inner circle. Empty
+slots and unavailable rarity keep the original grey housing and default empty
+pictures, without any brightness adjustment. A known equipped item selects the
+brighter housing and receives a 90% blend toward native rarity RGB, retaining
+its carved shading. The prepared housing lifts dark and middle tones, then
+tones that brightness down by 20%, keeping the rarity color visible in both
+Performance Mode states. Only the equipped housing receives this adjustment. Its transparency,
+shape and dimensions stay the same. A steady additive glow brightens that same carved
 artwork in native rarity RGB. It uses the housing's existing crop, size and
 center, without upward movement, pulsing or animated texture frames. Empty
 slots and unavailable rarity metadata stay grey with no glow. Performance
 Mode keeps the static tint without the extra glow; layout editing also hides
 it. Attached and detached modes share the effect, and hidden/off/world cleanup
 hides it. One lazy region per equipped slot is retained for reuse. Its artwork,
-geometry and 40% alpha bind once; only changed visible rarity updates its color.
-No new artwork, event, worker, setting or saved state is added. Native quality
+geometry and 52% alpha bind once; only changed visible rarity updates its color.
+Both crops share the existing atlas and housing region, switching only when
+the visible slot changes between known equipped rarity and the original default.
+No new runtime file, region, event, worker, setting or saved state is added. Native quality
 reads and the changed-only hover-text color update retain their cadence.
 Sources and preparation are recorded in
 [Jewelry-ARTWORK.md](../third_party/Jewelry-ARTWORK.md).

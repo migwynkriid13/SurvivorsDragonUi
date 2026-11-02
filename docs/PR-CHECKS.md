@@ -151,7 +151,11 @@ Jewelry rarity cases extract the production native-quality and steady-glow
 helpers over fake color/texture boundaries. They cover poor/common quality,
 invalid metadata recovery, grey fallback, stronger housing tint and a stationary
 additive pass using the existing housing crop/geometry at fixed intensity.
-Repeated refreshes retain UVs, alpha, bindings and shown state. Hidden, empty,
+Repeated refreshes retain UVs, alpha, bindings and shown state. Original-empty
+and bright-equipped housing crops switch only for visible validated inventory/
+rarity transitions, including missing metadata, removal and hidden recovery.
+Asset cases pin the unchanged original empty-slot input and compare its exact
+runtime crop and shared alpha with the equipped variant. Hidden, empty,
 editing and Performance Mode hide the glow and reuse its region on recovery;
 Performance Mode keeps the tint without allocating glow regions. These cases
 are authored for CI only and do not establish native appearance or performance.

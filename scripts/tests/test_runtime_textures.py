@@ -1,5 +1,6 @@
 """CI-only artwork data contracts; never execute addon or game code."""
 
+import hashlib
 import json
 from pathlib import Path
 import re
@@ -8,13 +9,34 @@ import sys
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from prepare_client_textures import blp_bgra_levels
+from prepare_client_textures import blp_bgra_levels, blp_from_tga
 
 
 ROOT = Path(__file__).resolve().parents[2]
 
 
 class RuntimeTextureTests(unittest.TestCase):
+    def test_empty_jewelry_housing_retains_the_original_input_and_exact_runtime_pixels(self):
+        source = (ROOT / "media/tex/jewelry/Runecarver.tga").read_bytes()
+        self.assertEqual(
+            hashlib.sha256(source).hexdigest(),
+            "b53931149f049507f2ac5a983340ffbf3c886cd691e083bee8d8c0690acc6b17",
+        )
+        converted, _ = blp_from_tga(source)
+        source_width, source_height, source_levels = blp_bgra_levels(converted)
+        width, height, levels = blp_bgra_levels((ROOT / "media/tex/jewelry/Frame.blp").read_bytes())
+        self.assertEqual((source_width, source_height), (128, 128))
+        self.assertEqual((width, height), (512, 128))
+        empty, equipped = bytearray(), bytearray()
+        for row in range(128):
+            left = (row * width + 256) * 4
+            empty.extend(levels[0][left:left + 128 * 4])
+            left = (row * width + 384) * 4
+            equipped.extend(levels[0][left:left + 128 * 4])
+        self.assertEqual(empty, source_levels[0], "empty slots received equipped brightness or another crop")
+        self.assertEqual(empty[3::4], equipped[3::4], "housing variants changed coverage")
+        self.assertNotEqual(empty, equipped, "equipped housing lost its separate brightness treatment")
+
     def test_every_shipped_texture_fits_the_native_device_size_gate(self):
         manifest = json.loads((ROOT / "packaging/runtime-files.json").read_text())
         for name in manifest["files"]:

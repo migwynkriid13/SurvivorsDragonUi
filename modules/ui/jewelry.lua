@@ -5,13 +5,14 @@ Native rarity colors tint the grey carving and its steady additive glow.
 Effects-only hover text keeps the full native rarity color.
 The housing and soft halo are baked together in the existing Frame.blp atlas;
 five static regions inherit the shared overlay's visibility and scale.
+Empty or unknown-quality slots keep the original grey housing; only known
+equipped rarity selects the brighter crop in the same atlas.
 No inner circle is drawn. The glow reuses the same housing artwork without
 animation, hiding while empty, editing or in Performance Mode; the tint remains.
-SocketRail BLP strips join all upper socket arches and straight spans on one baseline
-using pixels from the existing HDActionBar.tga. The original bar texture is
-unchanged; only its narrow top strip switches while this jewelry row is visible.
-No extra inner or lower curved rail line is drawn beneath the housings.
-SocketDetached.blp retains the silver-gray circle borders in detached mode.
+SocketRail BLP strips retain the original straight bar edge with clear item
+openings, using pixels from the existing HDActionBar.tga. Only its narrow top
+strip switches while this jewelry row is visible. No old socket arch or
+detached circle is drawn behind the Runecarver housings.
 EmptyNeck.blp, EmptyRing.blp and EmptyTrinket.blp use Blizzard's original
 paper-doll placeholders, fitted inside the carving without cropping.
 Texture conversion does not change the underlying artwork's ownership.
@@ -103,7 +104,7 @@ DFRL:NewMod("Jewelry", 4, function()
     local socketBounds = math.max(socketSize, carvingSize)
     local ANIMATION_INTERVAL = 1 / 30
     local RARITY_TINT_STRENGTH = 0.9
-    local RARITY_GLOW_ALPHA = 0.4
+    local RARITY_GLOW_ALPHA = 0.52
     local performanceMode = DFRL.display.Get("performanceMode")
     local texturePath = DFRL:GetInfoOrCons("tex") .. "jewelry\\"
     local SLOT_NAMES = { "Finger0Slot", "Finger1Slot", "NeckSlot", "Trinket0Slot", "Trinket1Slot" }
@@ -553,14 +554,6 @@ DFRL:NewMod("Jewelry", 4, function()
         placeholder:Hide()
         slot.placeholder = placeholder
         slot.placeholderShown = false
-        local socket = hud:CreateTexture(nil, "BACKGROUND")
-        socket:SetTexture(texturePath .. "SocketDetached.blp")
-        socket:SetWidth(socketSize)
-        socket:SetHeight(socketSize)
-        socket:SetPoint("CENTER", button, "CENTER", 0, 0)
-        socket:SetTexCoord(0, 160 / 256, 0, 160 / 256)
-        socket:Hide()
-        slot.socket = socket
         local cooldown = button:CreateTexture(nil, "OVERLAY")
         cooldown:SetTexture(texturePath .. "Cooldown.blp")
         cooldown:SetWidth(ICON_ART_SIZE)
@@ -587,8 +580,9 @@ DFRL:NewMod("Jewelry", 4, function()
         carving:SetWidth(carvingSize)
         carving:SetHeight(carvingSize)
         carving:SetPoint("CENTER", slot.button, "CENTER", 0, 0)
-        carving:SetTexCoord(384 / 512, 1, 0, 1)
+        carving:SetTexCoord(256 / 512, 384 / 512, 0, 1)
         slot.carving = carving
+        slot.carvingKnown = false
     end
     local function HideSlotGlow(slot)
         if slot.glowShown then slot.glow:Hide() end
@@ -600,7 +594,7 @@ DFRL:NewMod("Jewelry", 4, function()
         end
     end
     local function UpdateRarity(slot)
-        local known = slot.texture and slot.qualityR ~= nil
+        local known = slot.texture ~= nil and slot.qualityR ~= nil
         local red, green, blue = 1, 1, 1
         if known then
             red = 1 - RARITY_TINT_STRENGTH + RARITY_TINT_STRENGTH * slot.qualityR
@@ -608,6 +602,11 @@ DFRL:NewMod("Jewelry", 4, function()
             blue = 1 - RARITY_TINT_STRENGTH + RARITY_TINT_STRENGTH * slot.qualityB
         end
         local visible = hud:IsVisible()
+        if visible and slot.carvingKnown ~= known then
+            local left = known and 384 or 256
+            slot.carving:SetTexCoord(left / 512, (left + 128) / 512, 0, 1)
+            slot.carvingKnown = known
+        end
         if visible and (slot.carvingR ~= red or slot.carvingG ~= green or slot.carvingB ~= blue) then
             slot.carving:SetVertexColor(red, green, blue, 1)
             slot.carvingR, slot.carvingG, slot.carvingB = red, green, blue
@@ -881,11 +880,6 @@ DFRL:NewMod("Jewelry", 4, function()
             end
             for _, slot in ipairs(slots) do
                 if slot.button:GetFrameLevel() ~= level + 1 then slot.button:SetFrameLevel(level + 1) end
-                if docked then
-                    if slot.socket:IsShown() then slot.socket:Hide() end
-                else
-                    if not slot.socket:IsShown() then slot.socket:Show() end
-                end
             end
             if overlay:GetFrameLevel() ~= level + 3 then overlay:SetFrameLevel(level + 3) end
         end

@@ -59,7 +59,8 @@ env.carvingSize = 43 * 128 / 108
 env.performanceMode, env.editing = false, false
 env.slots = {}
 for index = 1, 5 do
-    env.slots[index] = { id = index, button = {}, carving = Region() }
+    env.slots[index] = { id = index, button = {}, carving = Region(), carvingKnown = false }
+    env.slots[index].carving.uv = { 256 / 512, 384 / 512, 0, 1 }
 end
 local quality, red, green, blue = 2, 0.12, 1, 0
 env.GetInventoryItemQuality = function(unit, id)
@@ -79,17 +80,24 @@ local function Color(region, r, g, b)
     assert(math.abs(region.color[2] - g) < 0.000001)
     assert(math.abs(region.color[3] - b) < 0.000001 and region.color[4] == 1)
 end
+local function Housing(region, left)
+    assert(region.uv[1] == left / 512 and region.uv[2] == (left + 128) / 512)
+    assert(region.uv[3] == 0 and region.uv[4] == 1)
+end
 assert(not api.Update(slot) and allocations == 0, "empty slot allocated glow")
 Color(slot.carving, 1, 1, 1)
+Housing(slot.carving, 256)
+assert(writes.uv == 0, "settled empty slot rebound its original housing")
 slot.texture = "native:item"
 api.Quality(slot)
 env.performanceMode = true
 assert(not api.Update(slot) and allocations == 0, "Performance Mode allocated glow")
 Color(slot.carving, 0.208, 1, 0.1)
+Housing(slot.carving, 384)
 env.performanceMode = false
 assert(api.Update(slot) and allocations == 1)
 local glow = slot.glow
-assert(glow.texture == "owned/Frame.blp" and glow.blend == "ADD" and glow.alpha == 0.4)
+assert(glow.texture == "owned/Frame.blp" and glow.blend == "ADD" and glow.alpha == 0.52)
 assert(glow.width == env.carvingSize and glow.height == env.carvingSize)
 assert(glow.point[2] == slot.button and glow.point[4] == 0 and glow.point[5] == 0)
 assert(glow.uv[1] == 384 / 512 and glow.uv[2] == 1 and glow.uv[3] == 0 and glow.uv[4] == 1)
@@ -139,6 +147,9 @@ quality = nil
 api.Quality(slot)
 assert(not api.Update(slot) and not glow.shown and not slot.qualityR)
 Color(slot.carving, 1, 1, 1)
+Housing(slot.carving, 256)
+uvs = writes.uv
+assert(not api.Update(slot) and writes.uv == uvs, "pending rarity repeated empty-housing crop writes")
 quality, red = 5, 2
 api.Quality(slot)
 assert(not api.Update(slot) and not slot.qualityR, "invalid RGB retained previous rarity")
@@ -159,5 +170,21 @@ end
 slot.texture = nil
 assert(not api.Update(slot), "empty slot retained glow")
 Color(slot.carving, 1, 1, 1)
+Housing(slot.carving, 256)
+uvs = writes.uv
+assert(not api.Update(slot) and writes.uv == uvs, "settled empty slot repainted its housing")
+slot.texture = "native:return"
+api.Quality(slot)
+assert(api.Update(slot))
+Housing(slot.carving, 384)
+visible, slot.texture = false, nil
+uvs, colors = writes.uv, writes.color
+assert(not api.Update(slot) and writes.uv == uvs and writes.color == colors, "hidden empty transition painted early")
+visible = true
+assert(not api.Update(slot))
+Housing(slot.carving, 256)
+Color(slot.carving, 1, 1, 1)
+assert(allocations == 5, "empty/equipped housing transitions grew the region pool")
 print("PASS jewelry rarity reuses the housing artwork with a steady native-color glow and unchanged writes")
+print("PASS original empty housing and bright equipped housing switch only on visible native rarity transitions")
 print("PASS jewelry glow retires for hidden/empty/editing/Performance Mode without native reads")
