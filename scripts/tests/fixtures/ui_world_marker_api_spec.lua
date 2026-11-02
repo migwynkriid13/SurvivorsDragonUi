@@ -299,7 +299,7 @@ for _, performance in ipairs({ false, true }) do
     for _, marker in ipairs(c:Markers()) do
         local raised = marker.kind == "cache" or marker.kind == "downedPartyMember"
         local expectedY = raised and 280 or 206
-        local expectedSize = raised and 22.4 or 32
+        local expectedSize = marker.kind == "downedPartyMember" and 29.12 or (raised and 22.4 or 32)
         assert(marker.point[5] == expectedY, "marker ignored native world offset or used incorrect screen padding")
         assert(marker:GetWidth() == expectedSize and marker:GetHeight() == expectedSize, "incorrect world-icon size")
     end
@@ -378,10 +378,16 @@ for _, performance in ipairs({ false, true }) do
     c:ResetCounts()
     c:Frame()
     assert(
-        c:Markers()[1] == marker and marker:GetWidth() == 22.4 and marker:GetHeight() == 22.4 and marker.point[5] == 240,
-        "fallen ally failed to match cache size and world height"
+        c:Markers()[1] == marker
+            and marker:GetWidth() == 29.12
+            and marker:GetHeight() == 29.12
+            and marker.point[5] == 240,
+        "fallen ally lost its larger size or shared world height"
     )
-    assert(not c.writes.SetWidth and not c.writes.SetHeight, "same-size cache/ally reuse rewrote dimensions")
+    assert(c.writes.SetWidth == 1 and c.writes.SetHeight == 1, "cache/ally pool reuse did not resize exactly once")
+    c:ResetCounts()
+    c:Frame()
+    assert(not c.writes.SetWidth and not c.writes.SetHeight and not c.writes.SetPoint, "settled ally rewrote geometry")
     native.entries = { Record("pooled-boss", "boss") }
     c.env.DFRL.display.Set("worldBossIcons", true)
     c:Service(0.21)

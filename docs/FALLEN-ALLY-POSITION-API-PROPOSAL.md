@@ -427,8 +427,9 @@ batches hide all icons atomically and retire the presentation for retry.
 Encounters use the native unit `overhead` point with six screen units above it.
 Caches and fallen allies use `position` with the same shared `{ z = 5 }`
 offset, placing their centers five world yards above the cache or revive spot
-without extra screen padding. Their sides share one 22.4-unit value, 70% of the
-former 32. Every request slot explicitly sets or clears its offset, so this
+without extra screen padding. Cache sides are 22.4 units; fallen-ally sides
+are 29.12 units, 30% larger than their former 22.4. Every request slot explicitly
+sets or clears its offset, so this
 height never leaks to an encounter kind. Pooled frames update dimensions only when the required size
 changes. Occlusion is unsupported, so markers can show through walls.
 

@@ -63,8 +63,9 @@ Discovery uses opaque handles; guardians/bosses follow the actual living entity,
 not the fixed lair. Encounters use the native `overhead` point with six UI units
 of screen padding. Cache and fallen-ally icons use `position` with the same
 documented world offset `{ z = 5 }`: their centers sit five yards above the
-cache or revive spot, without extra screen padding. Both have 22.4-unit sides,
-30% smaller than their former 32-unit icons. These two kinds require advertised
+cache or revive spot, without extra screen padding. Cache sides are 22.4 units;
+fallen-ally sides are 29.12 units, a 30% increase from their former 22.4.
+These two kinds require advertised
 world-offset support; encounter icons remain usable without it.
 Only kinds with their required advertised attachment are requested. No
 nameplate matching or old screen point is substituted.

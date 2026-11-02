@@ -13,8 +13,9 @@ frame projection. Caching, request-demand gates, pools and existing camera
 callback ownership remain shared in both Performance Mode states.
 
 The game advertises world offsets; cache and fallen-ally icons share
-`{ z = 5 }` to sit five yards above the cache or revive spot, with matching
-22.4-unit sides (30% smaller). Encounter icons retain their prior size and
+`{ z = 5 }` to sit five yards above the cache or revive spot. Cache sides are
+22.4 units; fallen-ally sides are 29.12 units, a 30% increase from 22.4.
+Encounter icons retain their prior size and
 screen spacing. Cache and fallen-ally world markers require advertised
 offset support. Occlusion remains unsupported. SCT sizing and
 instance downed-position guidance already use the documented fields.

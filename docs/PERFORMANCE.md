@@ -3750,9 +3750,10 @@ callback needed for retry; retired callbacks stay inert and foreign handlers
 remain untouched. The released API has no occlusion support, so markers can
 show through walls; no occlusion query or undocumented result field is used.
 
-Attachment selection is per kind and advertised capability. Cache and
-fallen-ally icons share one 22.4-unit size (30% smaller) and one `{ z = 5 }`
-world-offset table, using `position` with zero screen padding. The existing
+Attachment selection is per kind and advertised capability. Cache icons use
+22.4-unit sides; fallen-ally icons use 29.12-unit sides, 30% larger than before.
+Both reuse one `{ z = 5 }` world-offset table with `position` and zero screen
+padding. The existing
 batched projection places them five yards above the cache or revive spot
 without another query or per-frame offset-table allocation. Both kinds require
 advertised `worldOffsets`; encounter kinds stay usable without it. Every reused

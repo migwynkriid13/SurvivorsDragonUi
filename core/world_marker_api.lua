@@ -18,14 +18,14 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
         cursors = {},
         choices = {},
     }
-    local positionIconSize, positionIconOffset = 22.4, { z = 5 }
+    local positionIconOffset = { z = 5 }
     local styles = {
         cache = {
             key = "worldCacheIcons",
             art = "Chest.blp",
             state = "present",
             attachment = "position",
-            size = positionIconSize,
+            size = 22.4,
             offset = positionIconOffset,
             padding = 0,
             crop = { 0, 1, 0, 1 },
@@ -59,7 +59,7 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
             art = "FallenAlly.blp",
             state = "downed",
             attachment = "position",
-            size = positionIconSize,
+            size = 29.12,
             offset = positionIconOffset,
             padding = 0,
             crop = { 0, 1, 0, 1 },

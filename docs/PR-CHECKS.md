@@ -1185,8 +1185,9 @@ Cache/ally styling cases in both Performance Mode states require the reused
 native request to carry the same `offset = { z = 5 }` table for caches and
 fallen allies, with no offset for encounters. A changed fake camera projection alters the five-yard point without
 an added screen gap or metadata query. Pooled cache → ally → boss → cache views
-retain one frame while restoring 22.4/32-unit sizes and existing encounter
-spacing. Cache → ally reuse issues no redundant size writes. Settled frames
+retain one frame while restoring 22.4/29.12/32-unit sizes and existing encounter
+spacing. Cache → ally reuse resizes exactly once to the 30%-larger ally icon.
+Settled ally and cache frames
 issue no size/placement writes. Missing world-offset support omits cache and
 ally icons while leaving encounter markers usable. These cases
 are CI-only; no local tests, validation or game execution were run.
