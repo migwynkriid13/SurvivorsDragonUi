@@ -49,6 +49,14 @@ and bosses** defaults off and includes final bosses. These switches retain live
 preview, Confirm/Cancel, profiles and both resets. They are independent of the
 HUD/minimap guidance switches.
 
+**Only show affordable caches** defaults off. Enable it to show a world cache
+icon only when the latest received native gold covers the next cache cost.
+Equality and a free cache count as affordable. Missing or invalid gold/cost data
+hides cache icons while this filter is on. The option dims when **Icons above
+caches** is off and retains its choice. It shares preview, Confirm/Cancel,
+profiles and both resets; HUD/minimap guidance and other world icons keep their
+existing behavior.
+
 Icons require all five general world-anchor endpoints and the explicit draft
 schema in [the API proposal](FALLEN-ALLY-POSITION-API-PROPOSAL.md#draft-sdui-consumer-profile).
 Discovery uses opaque handles; guardians/bosses follow the actual living entity,

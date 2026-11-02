@@ -229,6 +229,7 @@ Test("named distance-scaling profiles retain saved choices and default older pro
                 sctDistanceReference = 15,
                 sctDistanceMinimum = 70,
                 worldCacheIcons = false,
+                worldCacheAffordableOnly = true,
                 worldBossIcons = true,
                 worldPartyIcons = false,
             },
@@ -243,6 +244,7 @@ Test("named distance-scaling profiles retain saved choices and default older pro
     display.BeginEdit()
     profiles.BeginEdit()
     assert(profiles.Load("Old") and not display.Get("sctDistanceScaling"), "older profile did not default to off")
+    assert(not display.Get("worldCacheAffordableOnly"), "older profile enabled affordability filtering")
     assert(env.SurvivorsDragonUiProfiles.Old.display.sctDistanceScaling == nil, "preview rewrote an older profile")
     display.FinishEdit(false)
     profiles.FinishEdit(false)
@@ -256,6 +258,7 @@ Test("named distance-scaling profiles retain saved choices and default older pro
     display.BeginEdit()
     profiles.BeginEdit()
     assert(profiles.Load("Scaled") and display.Get("sctDistanceScaling"), "profile lost explicit on")
+    assert(display.Get("worldCacheAffordableOnly"), "profile lost affordability choice")
     assert(
         display.Get("sctDistanceReference") == 15 and display.Get("sctDistanceMinimum") == 70,
         "profile lost numeric choices"
@@ -267,8 +270,10 @@ Test("named distance-scaling profiles retain saved choices and default older pro
     display.FinishEdit(true)
     profiles.FinishEdit(true)
     assert(display.Get("sctDistanceScaling"), "profile Confirm lost explicit on")
+    assert(display.Get("worldCacheAffordableOnly"), "Confirm lost affordability choice")
     display.Reset()
     assert(not display.Get("sctDistanceScaling"), "reset did not restore default off")
+    assert(not display.Get("worldCacheAffordableOnly"), "reset retained affordability filtering")
 end)
 
 Test("distance values and world icons share normalized display transactions", function()
@@ -310,6 +315,31 @@ Test("distance values and world icons share normalized display transactions", fu
     assert(invalid.worldCacheIcons and invalid.worldPartyIcons and not invalid.worldBossIcons)
     display.Reset()
     assert(display.Get("sctDistanceMinimum") == 55 and not display.Get("worldBossIcons"))
+end)
+
+Test("affordable-only cache setting preserves preview, Cancel, Confirm and invalid defaults", function()
+    local c = H.New()
+    c:Load("core/display.lua", "Display")
+    local display = c.env.DFRL.display
+    assert(not display.Get("worldCacheAffordableOnly"))
+    display.BeginEdit()
+    display.Set("worldCacheAffordableOnly", true)
+    assert(display.Get("worldCacheAffordableOnly") and not c.env.SurvivorsDragonUiDisplay)
+    display.FinishEdit(false)
+    assert(not display.Get("worldCacheAffordableOnly"), "Cancel retained affordability preview")
+    display.BeginEdit()
+    display.Set("worldCacheAffordableOnly", true)
+    display.FinishEdit(true)
+    assert(display.Get("worldCacheAffordableOnly"), "Confirm lost affordability filter")
+    for _, invalid in ipairs({ 0, "true", {} }) do
+        assert(not display.Copy({ worldCacheAffordableOnly = invalid }).worldCacheAffordableOnly)
+    end
+    display.BeginEdit()
+    display.Set("worldCacheAffordableOnly", false)
+    display.FinishEdit(false)
+    assert(display.Get("worldCacheAffordableOnly"), "Cancel lost confirmed affordability filter")
+    display.Reset()
+    assert(not display.Get("worldCacheAffordableOnly"), "reset did not restore default off")
 end)
 
 local function NativeMode(saved, damage, incoming, realDisplay)

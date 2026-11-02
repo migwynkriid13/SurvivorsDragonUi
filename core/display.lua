@@ -100,6 +100,7 @@ DFRL:NewMod("Display", 0, function()
         showGryphons = false,
         cacheGuidance = true,
         worldCacheIcons = true,
+        worldCacheAffordableOnly = false,
         worldBossIcons = false,
         worldPartyIcons = true,
         partyGuidance = true,

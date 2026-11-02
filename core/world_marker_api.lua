@@ -4,7 +4,7 @@ setfenv(1, DFRL:GetEnv())
 
 function DFRL.tools.NewWorldMarkerApi(navigation)
     local api = {}
-    local state = { records = {}, staging = {}, requests = {}, points = {}, markers = {}, pool = {} }
+    local state = { records = {}, staging = {}, requests = {}, indices = {}, points = {}, markers = {}, pool = {} }
     local styles = {
         cache = { key = "worldCacheIcons", art = "Chest.blp", state = "available", crop = { 0, 1, 0, 1 } },
         guardian = {
@@ -102,6 +102,7 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
         Trim(state.records, 0)
         Trim(state.staging, 0)
         Trim(state.requests, 0)
+        Trim(state.indices, 0)
         Trim(state.points, 0)
         state.catalog, state.cursor, state.seen, state.world = nil, nil, nil, nil
         state.query, state.cursors, state.stagingCount, state.total = nil, nil, nil, nil
@@ -142,6 +143,17 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
         end
         return marker
     end
+    local function CacheAffordable()
+        if not DFRL.display.Get("worldCacheAffordableOnly") then return true end
+        local run = _G.AZS_RUN
+        return type(run) == "table"
+            and Number(_G.AZS_RUN_UPDATED)
+            and Number(run.gold)
+            and run.gold >= 0
+            and Number(run.chest)
+            and run.chest >= 0
+            and run.gold >= run.chest
+    end
     local function Project()
         if
             not state.enabled
@@ -162,89 +174,100 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
         end
         local sample, clock, total = nil, nil, table.getn(state.records)
         local first = 1
+        local cacheVisible = CacheAffordable()
         -- Validate every batch before showing any icon. Reuse scalar result slots.
         while first <= total do
-            local size = math.min(state.capabilities.maxAnchorsPerRead, total - first + 1)
-            for index = 1, size do
-                local request = state.requests[index] or {}
-                request.anchorId, request.attachment = state.records[first + index - 1].anchorId, "overhead"
-                state.requests[index] = request
+            local size = 0
+            while first <= total and size < state.capabilities.maxAnchorsPerRead do
+                local record = state.records[first]
+                if record.kind ~= "cache" or cacheVisible then
+                    size = size + 1
+                    local request = state.requests[size] or {}
+                    request.anchorId, request.attachment = record.anchorId, "overhead"
+                    state.requests[size], state.indices[size] = request, first
+                else
+                    local point = state.points[first]
+                    if point then point.visible = false end
+                end
+                first = first + 1
             end
             Trim(state.requests, size)
-            local projection = Read("AZS_ProjectWorldAnchors", state.requests)
-            if
-                projection
-                and Number(projection.clockSeconds)
-                and state.clock
-                and projection.clockSeconds < state.clock
-            then
-                state.retire = true
-                return
-            end
-            if
-                not projection
-                or projection.apiVersion ~= 1
-                or projection.frameCurrent ~= true
-                or projection.worldId ~= state.world
-                or not Id(projection.cameraSampleId)
-                or not Number(projection.clockSeconds)
-                or projection.clockSeconds < 0
-                or (sample and sample ~= projection.cameraSampleId)
-                or (clock and clock ~= projection.clockSeconds)
-                or Array(projection.entries, size) ~= size
-            then
-                return
-            end
-            sample, clock = projection.cameraSampleId, projection.clockSeconds
-            for index = 1, size do
-                local entry, record = projection.entries[index], state.records[first + index - 1]
+            Trim(state.indices, size)
+            if size > 0 then
+                local projection = Read("AZS_ProjectWorldAnchors", state.requests)
                 if
-                    type(entry) ~= "table"
-                    or entry.anchorId ~= record.anchorId
-                    or entry.attachment ~= "overhead"
-                    or not projectionStates[entry.state]
+                    projection
+                    and Number(projection.clockSeconds)
+                    and state.clock
+                    and projection.clockSeconds < state.clock
                 then
-                    return
-                end
-                if entry.state == "worldChanged" then
                     state.retire = true
                     return
                 end
-                local point = state.points[first + index - 1] or {}
-                point.visible = false
-                if entry.state == "onScreen" then
+                if
+                    not projection
+                    or projection.apiVersion ~= 1
+                    or projection.frameCurrent ~= true
+                    or projection.worldId ~= state.world
+                    or not Id(projection.cameraSampleId)
+                    or not Number(projection.clockSeconds)
+                    or projection.clockSeconds < 0
+                    or (sample and sample ~= projection.cameraSampleId)
+                    or (clock and clock ~= projection.clockSeconds)
+                    or Array(projection.entries, size) ~= size
+                then
+                    return
+                end
+                sample, clock = projection.cameraSampleId, projection.clockSeconds
+                for index = 1, size do
+                    local entry, record = projection.entries[index], state.records[state.indices[index]]
                     if
-                        not Number(entry.x)
-                        or not Number(entry.y)
-                        or not Number(entry.cameraDistance)
-                        or entry.cameraDistance < 0
-                        or not Number(entry.cameraDepth)
-                        or entry.cameraDepth <= 0
-                        or not Number(entry.uiUnitsPerYard)
-                        or entry.uiUnitsPerYard <= 0
-                        or (
-                            entry.occlusion ~= nil
-                            and entry.occlusion ~= "visible"
-                            and entry.occlusion ~= "notTested"
-                            and entry.occlusion ~= "occluded"
-                        )
+                        type(entry) ~= "table"
+                        or entry.anchorId ~= record.anchorId
+                        or entry.attachment ~= "overhead"
+                        or not projectionStates[entry.state]
                     then
                         return
                     end
-                    point.visible = entry.entityState == styles[record.kind].state and entry.occlusion ~= "occluded"
-                    point.x, point.y = entry.x, entry.y + 6
-                elseif entry.x ~= nil or entry.y ~= nil then
-                    return
+                    if entry.state == "worldChanged" then
+                        state.retire = true
+                        return
+                    end
+                    local point = state.points[state.indices[index]] or {}
+                    point.visible = false
+                    if entry.state == "onScreen" then
+                        if
+                            not Number(entry.x)
+                            or not Number(entry.y)
+                            or not Number(entry.cameraDistance)
+                            or entry.cameraDistance < 0
+                            or not Number(entry.cameraDepth)
+                            or entry.cameraDepth <= 0
+                            or not Number(entry.uiUnitsPerYard)
+                            or entry.uiUnitsPerYard <= 0
+                            or (
+                                entry.occlusion ~= nil
+                                and entry.occlusion ~= "visible"
+                                and entry.occlusion ~= "notTested"
+                                and entry.occlusion ~= "occluded"
+                            )
+                        then
+                            return
+                        end
+                        point.visible = entry.entityState == styles[record.kind].state and entry.occlusion ~= "occluded"
+                        point.x, point.y = entry.x, entry.y + 6
+                    elseif entry.x ~= nil or entry.y ~= nil then
+                        return
+                    end
+                    state.points[state.indices[index]] = point
                 end
-                state.points[first + index - 1] = point
             end
-            first = first + size
         end
         if clock then state.clock = clock end
         state.drawPass = (state.drawPass or 0) + 1
         for index = 1, total do
             local record, point = state.records[index], state.points[index]
-            if point.visible and Wanted(record.kind) then
+            if point and point.visible and Wanted(record.kind) then
                 local marker = Marker(record)
                 if marker.ready then
                     if marker.x ~= point.x or marker.y ~= point.y then

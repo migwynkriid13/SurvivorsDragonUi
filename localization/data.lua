@@ -2,6 +2,8 @@
 DFRL.locale.data = {
     en = {
         ui = {
+            ["Only show affordable caches"] = "Only show affordable caches",
+            ["Hide world cache icons until you have enough gold."] = "Hide world cache icons until you have enough gold.",
             ["Icons above caches"] = "Icons above caches",
             ["Icons above guardians and bosses"] = "Icons above guardians and bosses",
             ["Icons above fallen allies"] = "Icons above fallen allies",
@@ -687,6 +689,8 @@ DFRL.locale.data = {
     },
     pl = {
         ui = {
+            ["Only show affordable caches"] = "Pokazuj tylko dostępne cenowo skrytki",
+            ["Hide world cache icons until you have enough gold."] = "Ukrywaj ikony skrytek w świecie, dopóki nie masz dość złota.",
             ["Icons above caches"] = "Ikony nad skrytkami",
             ["Icons above guardians and bosses"] = "Ikony nad strażnikami i bossami",
             ["Icons above fallen allies"] = "Ikony nad poległymi sojusznikami",
@@ -1843,6 +1847,8 @@ DFRL.locale.data = {
     },
     cs = {
         ui = {
+            ["Only show affordable caches"] = "Zobrazovat jen truhly, na které máš zlato",
+            ["Hide world cache icons until you have enough gold."] = "Skrýt ikony truhel ve světě, dokud nemáš dost zlata.",
             ["Icons above caches"] = "Ikony nad truhlami",
             ["Icons above guardians and bosses"] = "Ikony nad strážci a bossy",
             ["Icons above fallen allies"] = "Ikony nad padlými spojenci",
@@ -3002,6 +3008,8 @@ DFRL.locale.data = {
     },
     de = {
         ui = {
+            ["Only show affordable caches"] = "Nur bezahlbare Truhen anzeigen",
+            ["Hide world cache icons until you have enough gold."] = "Truhensymbole in der Welt ausblenden, bis genug Gold vorhanden ist.",
             ["Icons above caches"] = "Symbole über Truhen",
             ["Icons above guardians and bosses"] = "Symbole über Wächtern und Bossen",
             ["Icons above fallen allies"] = "Symbole über gefallenen Verbündeten",
@@ -4159,6 +4167,8 @@ DFRL.locale.data = {
     },
     pt = {
         ui = {
+            ["Only show affordable caches"] = "Mostrar apenas baús acessíveis",
+            ["Hide world cache icons until you have enough gold."] = "Ocultar ícones de baús no mundo até ter ouro suficiente.",
             ["Icons above caches"] = "Ícones acima dos baús",
             ["Icons above guardians and bosses"] = "Ícones acima de guardiões e chefes",
             ["Icons above fallen allies"] = "Ícones acima dos aliados caídos",
@@ -5307,6 +5317,8 @@ DFRL.locale.data = {
     },
     es = {
         ui = {
+            ["Only show affordable caches"] = "Mostrar solo cofres asequibles",
+            ["Hide world cache icons until you have enough gold."] = "Ocultar los iconos de cofres en el mundo hasta tener suficiente oro.",
             ["Icons above caches"] = "Iconos sobre los cofres",
             ["Icons above guardians and bosses"] = "Iconos sobre guardianes y jefes",
             ["Icons above fallen allies"] = "Iconos sobre aliados caídos",
@@ -6459,6 +6471,8 @@ DFRL.locale.data = {
     },
     fr = {
         ui = {
+            ["Only show affordable caches"] = "Afficher uniquement les coffres abordables",
+            ["Hide world cache icons until you have enough gold."] = "Masquer les icônes des coffres dans le monde tant que vous manquez d’or.",
             ["Icons above caches"] = "Icônes au-dessus des coffres",
             ["Icons above guardians and bosses"] = "Icônes au-dessus des gardiens et boss",
             ["Icons above fallen allies"] = "Icônes au-dessus des alliés tombés",
@@ -7619,6 +7633,8 @@ DFRL.locale.data = {
     },
     ro = {
         ui = {
+            ["Only show affordable caches"] = "Arată doar cuferele pe care ți le permiți",
+            ["Hide world cache icons until you have enough gold."] = "Ascunde pictogramele cuferelor din lume până ai destul aur.",
             ["Icons above caches"] = "Pictograme deasupra cuferelor",
             ["Icons above guardians and bosses"] = "Pictograme deasupra străjerilor și șefilor",
             ["Icons above fallen allies"] = "Pictograme deasupra aliaților căzuți",
@@ -8762,6 +8778,8 @@ DFRL.locale.data = {
     },
     tr = {
         ui = {
+            ["Only show affordable caches"] = "Yalnızca altınının yettiği sandıkları göster",
+            ["Hide world cache icons until you have enough gold."] = "Yeterli altının olana kadar dünyadaki sandık simgelerini gizle.",
             ["Icons above caches"] = "Sandıkların üzerinde simgeler",
             ["Icons above guardians and bosses"] = "Muhafızların ve patronların üzerinde simgeler",
             ["Icons above fallen allies"] = "Düşen müttefiklerin üzerinde simgeler",
@@ -9781,6 +9799,8 @@ DFRL.locale.data = {
     },
     ru = {
         ui = {
+            ["Only show affordable caches"] = "Показывать только доступные по цене тайники",
+            ["Hide world cache icons until you have enough gold."] = "Скрывать значки тайников в мире, пока не хватит золота.",
             ["Icons above caches"] = "Значки над тайниками",
             ["Icons above guardians and bosses"] = "Значки над стражами и боссами",
             ["Icons above fallen allies"] = "Значки над павшими союзниками",
@@ -11019,6 +11039,8 @@ DFRL.locale.data = {
     },
     uk = {
         ui = {
+            ["Only show affordable caches"] = "Показувати лише доступні за ціною схованки",
+            ["Hide world cache icons until you have enough gold."] = "Приховувати значки схованок у світі, доки не вистачить золота.",
             ["Icons above caches"] = "Значки над схованками",
             ["Icons above guardians and bosses"] = "Значки над вартовими та босами",
             ["Icons above fallen allies"] = "Значки над полеглими союзниками",
@@ -12231,6 +12253,8 @@ DFRL.locale.data = {
     },
     zh = {
         ui = {
+            ["Only show affordable caches"] = "仅显示买得起的宝箱",
+            ["Hide world cache icons until you have enough gold."] = "金币不足时隐藏世界中的宝箱图标。",
             ["Icons above caches"] = "宝箱上方图标",
             ["Icons above guardians and bosses"] = "守卫和首领上方图标",
             ["Icons above fallen allies"] = "倒下盟友上方图标",
@@ -13370,6 +13394,8 @@ DFRL.locale.data = {
     },
     ja = {
         ui = {
+            ["Only show affordable caches"] = "購入できる宝箱のみ表示",
+            ["Hide world cache icons until you have enough gold."] = "ゴールドが足りるまでワールド上の宝箱アイコンを非表示にします。",
             ["Icons above caches"] = "宝箱の上のアイコン",
             ["Icons above guardians and bosses"] = "ガーディアンとボスの上のアイコン",
             ["Icons above fallen allies"] = "倒れた味方の上のアイコン",
@@ -14541,6 +14567,8 @@ DFRL.locale.data = {
     },
     ko = {
         ui = {
+            ["Only show affordable caches"] = "구매 가능한 보물함만 표시",
+            ["Hide world cache icons until you have enough gold."] = "골드가 충분해질 때까지 월드 보물함 아이콘을 숨깁니다.",
             ["Icons above caches"] = "보물함 위 아이콘",
             ["Icons above guardians and bosses"] = "수호자 및 우두머리 위 아이콘",
             ["Icons above fallen allies"] = "쓰러진 아군 위 아이콘",

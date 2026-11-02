@@ -3726,8 +3726,22 @@ map/run/space coordinates participate. It shares the existing same-pass player
 sample, adds no native unit scans and retains no native snapshot tables. Missing
 getter uses the old party-map path; present but unavailable native data never
 borrows stale map/ghost positions. No world position is saved. The three world
-switches add three ordinary lazy settings toggles (three button frames, twelve
-texture regions and six FontStrings) to the existing page.
+switches and the affordable-only cache filter add four ordinary lazy settings
+toggles (four button frames, sixteen texture regions and eight FontStrings) to
+the existing page.
+
+The default-off `worldCacheAffordableOnly` filter checks published native
+`AZS_RUN.gold >= AZS_RUN.chest` once per existing post-camera pass when selected.
+Both amounts must be finite/nonnegative and the run receipt must be valid;
+equality, fractional amounts and free caches retain their exact native meaning.
+No affordability history, getter, event or updater is added. The existing request
+preparation walk skips unaffordable caches with one reused bounded request-index
+array; it adds no record scan. Skipped caches do no projection, texture binding,
+allocation or placement. Existing handles/pools remain available for immediate
+recovery after earning gold or a cost change. Other entity kinds retain their
+projection and visibility, and affordability changes do not restart discovery
+or native handler ownership. The checkbox uses the existing dependency helper
+and keeps its choice while cache icons are off.
 
 Coverage is authored for CI only. No local tests, syntax/validation checks or
 addon/game execution were performed. Operation bounds and mocks do not prove

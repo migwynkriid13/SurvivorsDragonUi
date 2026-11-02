@@ -1350,6 +1350,8 @@ DFRL:NewMod("RunTimers", 5, function()
                     or key == "attachTally"
                 then
                     enabled = DFRL.display.Get("customActionBar")
+                elseif key == "worldCacheAffordableOnly" then
+                    enabled = DFRL.display.Get("worldCacheIcons")
                 elseif key == "guardianRespawnGuidance" then
                     enabled = DFRL.display.Get("guardianGuidance")
                 end
@@ -2062,6 +2064,11 @@ DFRL:NewMod("RunTimers", 5, function()
                 options = {
                     { "cacheGuidance", "Cache guidance", "Show the cache direction and distance." },
                     { "worldCacheIcons", "Icons above caches", "Requires an updated game." },
+                    {
+                        "worldCacheAffordableOnly",
+                        "Only show affordable caches",
+                        "Hide world cache icons until you have enough gold.",
+                    },
                     { "worldBossIcons", "Icons above guardians and bosses", "Requires an updated game." },
                     { "worldPartyIcons", "Icons above fallen allies", "Requires an updated game." },
                     {

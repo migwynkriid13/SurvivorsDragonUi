@@ -70,6 +70,7 @@ local function Scene(performance)
         return page
     end
     env.AZS_ProjectWorldAnchors = function(requests)
+        native.projections = (native.projections or 0) + 1
         assert(native.inFrame and #requests == 1, "projection escaped post-camera phase or batching")
         local id = requests[1].anchorId
         local source
@@ -217,6 +218,65 @@ for _, performance in ipairs({ false, true }) do
     c:Service()
     c:Frame()
     assert(native.calls == reads and #c:Markers() == 0, "disabled markers retained discovery or drawings")
+    c.api.Reset()
+end
+-- Affordability changes gate only world caches, without re-discovery or rebinding.
+for _, performance in ipairs({ false, true }) do
+    local c = Scene(performance)
+    local env, native = c.env, c.native
+    local display = env.DFRL.display
+    assert(not display.Get("worldCacheAffordableOnly"), "affordable-only changed the default cache visibility")
+    native.entries = { Record("cache", "cache"), Record("ally", "downedPartyMember") }
+    c:Service()
+    c:Frame()
+    assert(#c:Markers() == 2, "default cache icons require affordability data")
+    local registrations, calls, objects = native.registers, native.calls, #c.objects
+    display.Set("worldCacheAffordableOnly", true)
+    local function Check(run, stamp, expected, projected)
+        env.AZS_RUN, env.AZS_RUN_UPDATED = run, stamp
+        local before = native.projections or 0
+        c:Frame()
+        assert(#c:Markers() == expected, "incorrect affordability visibility")
+        assert((native.projections or 0) - before == projected, "hidden cache still requested projection")
+        assert(
+            native.registers == registrations and native.calls == calls,
+            "affordability rebound or rediscovered anchors"
+        )
+        assert(#c.objects == objects, "affordability allocated another marker")
+    end
+    Check({ gold = 9, chest = 10 }, 1, 1, 1)
+    Check({ gold = 10, chest = 10 }, 1, 2, 2)
+    c:ResetCounts()
+    Check({ gold = 10, chest = 10 }, 1, 2, 2)
+    assert(
+        not c.writes.SetPoint and not c.writes.SetTexture and not c.writes.Show and not c.writes.Hide,
+        "unchanged affordability repainted world icons"
+    )
+    Check({ gold = 10, chest = 11 }, 1, 1, 1)
+    Check({ gold = 20, chest = 11 }, 1, 2, 2)
+    Check({ gold = 5, chest = 11 }, 1, 1, 1)
+    Check({ gold = 0, chest = 0 }, 1, 2, 2)
+    Check({ gold = 1.5, chest = 1.5 }, 1, 2, 2)
+    Check({ gold = 1.49, chest = 1.5 }, 1, 1, 1)
+    Check(nil, 1, 1, 1)
+    Check({}, 1, 1, 1)
+    Check({ gold = 10, chest = 1 }, nil, 1, 1)
+    Check({ gold = 10, chest = 1 }, 0 / 0, 1, 1)
+    for _, invalid in ipairs({ -1, "10", 0 / 0, math.huge }) do
+        Check({ gold = invalid, chest = 1 }, 1, 1, 1)
+        Check({ gold = 10, chest = invalid }, 1, 1, 1)
+    end
+    display.Set("worldCacheAffordableOnly", false)
+    Check(nil, nil, 2, 2)
+    display.Set("worldCacheAffordableOnly", true)
+    native.entries = { Record("cache", "cache") }
+    c:Service()
+    local projections = native.projections or 0
+    c:Frame()
+    assert(
+        #c:Markers() == 0 and (native.projections or 0) == projections,
+        "all-unaffordable caches retained native projections"
+    )
     c.api.Reset()
 end
 local old = Scene(false)

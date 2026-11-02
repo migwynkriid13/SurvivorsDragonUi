@@ -420,6 +420,16 @@ bosses** (off, including final bosses) and **Icons above fallen allies** (on), i
 32-unit artwork uses native `overhead` attachment plus six screen UI units of
 padding. No guessed world height or nameplate fallback is provided.
 
+The optional **Only show affordable caches** filter defaults off and uses the
+existing published `AZS_RUN.gold` and `AZS_RUN.chest` (the next cache cost),
+requiring a finite `AZS_RUN_UPDATED` receipt. Both amounts must be finite and
+nonnegative; compare without rounding, accepting equality and zero-cost caches.
+Missing/invalid readings hide world cache icons while the filter is on. This
+does not add a general-anchor field or getter, alter HUD/minimap guidance, or
+filter guardians/bosses/allies. Affordability changes use the current received
+values without restarting discovery, rebinding the native handler or retiring
+valid cached handles. Unaffordable caches skip projection and drawing.
+
 Combat text continues using its existing endpoints. Optional
 `playerDistanceMetrics = true` and finite nonnegative `entry.playerDistance`
 enable the new reference-distance/minimum-size controls. Missing metrics retain

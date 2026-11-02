@@ -1121,3 +1121,15 @@ dependencies, normalized bounds, preview/Confirm/Cancel, profiles and reset.
 These fixtures are authored for CI and were not run locally. They cannot prove
 the proposed provider's existence, payload compatibility, native timing,
 instance locations, overhead placement, wall visibility, appearance or FPS.
+
+Affordable-only world-cache cases cover default-off and explicit saved choices,
+preview/Confirm/Cancel, older/named profiles, invalid values and reset. Editor
+cases cover the searchable checkbox and its retained/disabled state while cache
+icons are off. Production marker fixtures compare native gold and next-cache
+cost without rounding: below/equal/above threshold, earning/spending, price
+changes, free caches, fractional amounts, missing receipts and malformed or
+nonfinite values. Hidden caches request no projection and unchanged affordable
+icons skip painting; ally icons, pools and callback/catalog ownership remain
+unchanged in both Performance Mode states. These cases are authored for CI only
+and were not run locally; actual native gold publication and rendering remain
+unverified.
