@@ -107,13 +107,13 @@ DFRL:NewMod("Jewelry", 4, function()
     local FLAME_FRAMES = 16
     local performanceMode = DFRL.display.Get("performanceMode")
     local texturePath = DFRL:GetInfoOrCons("tex") .. "jewelry\\"
-    local SLOT_NAMES = { "Finger0Slot", "Trinket0Slot", "NeckSlot", "Trinket1Slot", "Finger1Slot" }
+    local SLOT_NAMES = { "Finger0Slot", "Finger1Slot", "NeckSlot", "Trinket0Slot", "Trinket1Slot" }
     local EMPTY_TEXTURES = {
         "EmptyRing.blp",
-        "EmptyTrinket.blp",
+        "EmptyRing.blp",
         "EmptyNeck.blp",
         "EmptyTrinket.blp",
-        "EmptyRing.blp",
+        "EmptyTrinket.blp",
     }
     local slots, slotsReady = {}, false
     local inWorld, editing, attached, elapsed, animationElapsed = true, false, false, 0, 0

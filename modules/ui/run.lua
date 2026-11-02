@@ -3588,7 +3588,7 @@ DFRL:NewMod("RunTimers", 5, function()
         detached:SetFrameStrata("HIGH")
         detached:EnableMouse(false)
         detached:Hide()
-        local docked, lastBottom, lastWidth, lastStyle, lastMask
+        local docked, lastBottom, lastWidth, lastStyle, lastMask, joinOverlap
         local artwork = T.CreateArtworkStrip(tally, "BACKGROUND", 2)
         artwork:SetTexCoord(DFRL.tallyStyleCanvas.left, DFRL.tallyStyleCanvas.right, 0, DFRL.tallyStyleCanvas.bottom)
         artwork:SetPoint("TOPLEFT", tally, "TOPLEFT", 0, 0)
@@ -3608,7 +3608,7 @@ DFRL:NewMod("RunTimers", 5, function()
             else
                 tally:Hide()
             end
-            DFRL.SetRunTallyBarExtent(docked and visible and tally:GetHeight() or 0)
+            DFRL.SetRunTallyBarExtent(docked and visible and (tally:GetHeight() - joinOverlap) or 0)
         end
 
         function tallyAttachment.Refresh(force)
@@ -3619,7 +3619,9 @@ DFRL:NewMod("RunTimers", 5, function()
             else
                 joined = DFRL.display.Get("customActionBar") ~= false and DFRL.display.Get("attachTally")
             end
-            local bottom = joined and DFRL.GetActionBarSilverBottom() or nil
+            -- Share one reference unit of the lower bevel instead of abutting its soft outer edge.
+            local overlap = joined and lastWidth / DFRL.tallyStyleCanvas.width or 0
+            local bottom = joined and (DFRL.GetActionBarSilverBottom() + overlap) or nil
             local style = DFRL.tallyStyleById[DFRL.display.Get("tallyStyle")]
             local appearance = not joined and style.detached or style
             local mask = ""
@@ -3633,7 +3635,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 return
             end
             tally:Hide()
-            docked, lastBottom, lastStyle, lastMask = joined, bottom, style, mask
+            docked, lastBottom, lastStyle, lastMask, joinOverlap = joined, bottom, style, mask, overlap
             local owner = joined and DFRL.mainBar or detached
             if tally:GetParent() ~= owner then tally:SetParent(owner) end
             tally:SetScale(1)

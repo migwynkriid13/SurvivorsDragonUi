@@ -27,6 +27,9 @@ native `AZS_RUN.chest` value and tooltip above the icon.
 ## Attached and detached artwork
 
 Attached artwork has an open top, sharing the action bar's lower silver edge.
+Its top overlaps that bevel by one unit at the 300-unit reference width,
+scaling with the artwork to close the gap at the soft edge. The action-bar
+edit bounds follow the shifted bottom of the attached strip.
 Detached artwork has a complete matching surround. The shared registry in
 `core/tally.lua` owns each mode's texture, full extent and counter center.
 `tallyAttachment.Refresh` selects these together whenever attachment or style
