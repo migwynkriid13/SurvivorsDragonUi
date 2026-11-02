@@ -11,15 +11,42 @@ Selected **03 — Cold-lit runes** uses static Runecarver metal and rune accents
 - Atlas names/UVs come from [TextureAtlasViewer Data.lua](https://github.com/LanceDH/TextureAtlasViewer/blob/e58691c23218b25a368f20c8cfebd8f482ed8ce3/Data.lua), embedded **build 37864**. The selected crops were inspected against the earlier pinned 37705 sheet; the complete atlas is not an isolated widget.
 - The [native Runeforge crafting XML](https://github.com/Gethe/wow-ui-source/blob/6b65c2922baca3db5a28fb39b69c95cef1047bec/Interface/AddOns/Blizzard_RuneforgeUI/Blizzard_RuneforgeCraftingFrame.xml) separates the normal and runes-lit backgrounds. Its **10.2.7 build 55461** source pin corroborates native use, rather than matching the earlier texture export's build. This jewelry assembly uses the lit artwork continuously, without importing crafting logic or animation.
 
-`scripts/prepare_jewelry_runecarver.py --source /path/to/RuneCarvingUI.PNG` accepts only the pinned source bytes. It clears the original inner crafting controls with an antialiased normalized-radius 0.33 cut, resizes the remaining lit frame to 118 × 120 and places it at `(5,4)` on a transparent 128 × 128 canvas. The original halo resizes to 124 × 126 at `(2,1)`, with source alpha multiplied by 0.32, below the frame. The completed cell blends 95% grayscale with 5% source RGB to neutralize the cyan metal, runes and halo while retaining their shading and alpha. This color treatment is baked by the preparation script; runtime performs no desaturation or tint writes. No generated lookalike, pulse, native crafting state or item power is introduced.
+`scripts/prepare_jewelry_runecarver.py --source /path/to/RuneCarvingUI.PNG` accepts only the pinned source bytes. It clears the original inner crafting controls with an antialiased normalized-radius 0.33 cut, resizes the remaining lit frame to 118 × 120 and places it at `(5,4)` on a transparent 128 × 128 canvas. The original halo resizes to 124 × 126 at `(2,1)`, with source alpha multiplied by 0.32, below the frame. The completed cell blends 95% grayscale with 5% source RGB to neutralize the cyan metal, runes and halo while retaining their shading and alpha. This color treatment is baked by the preparation script; runtime performs no desaturation. A changed-only 60% native-rarity/40% white vertex-color multiplier subtly tints the prepared grey housing. No native crafting state or item power is introduced.
 
 The durable authoring input is `media/tex/jewelry/Runecarver.tga`; the original full sheet and intermediate crops do not ship or remain as task downloads. `prepare_jewelry_art.py` includes this complete cell at authoring rectangle `(768,0)-(896,128)`. The existing client-texture repacker moves it to `(384,0)-(512,128)` in the legal **512 × 128** `Frame.blp`, retaining the existing gold, pet/meter and neutral rarity cells. This reuses an existing runtime file and does not change the shared manifest.
 
-Each of the five new static `BORDER` regions uses UVs `384/512, 1, 0, 1`, centered on the corresponding icon, at local size `43 * 128 / 108`. At the reference 36-unit action buttons this is a 42⅔-unit canvas including clear padding and the soft halo. The original five circle regions are removed entirely, without a replacement border. No gold or rarity-colored circle is drawn around equipped or empty icons. Native rarity RGB remains on the effects-only hover text; missing quality keeps its existing green text fallback. The grey metal and rune accents receive no item-quality tint. Pet/meter crops, cooldown values and source/slot identities are unchanged; the inset icon fit and end-cap correction are described below.
+Each of the five new static `BORDER` regions uses UVs `384/512, 1, 0, 1`, centered on the corresponding icon, at local size `43 * 128 / 108`. At the reference 36-unit action buttons this is a 42⅔-unit canvas including clear padding and the soft halo. The original five circle regions are removed entirely, without a replacement border. No gold or rarity-colored circle is drawn around equipped or empty icons. Native rarity RGB colors the effects-only hover text and the housing multiplier; missing quality keeps its existing green text fallback and untinted grey metal. The animated halo below uses native RGB with clear moving highlights. Pet/meter crops, cooldown values and source/slot identities are unchanged; the inset icon fit and end-cap correction are described below.
 
-Only the existing Layout edit envelopes grow to include the larger static canvas: attached top clearance becomes 41⅓ units at the reference button size, while the detached region uses the larger of the socket and carving sizes around the same center. This does not move icons, rims, rails, roots or confirmed geometry. The five regions reuse the current overlay, parent visibility and attachment/world cleanup in both Performance Mode states. They add no frame, getter, event, updater, setting or saved state. All carving writes happen at construction; the steady halo is baked into that same region. Source/region counts do not establish native rendering or FPS. Only static artwork preparation, source review and pinned formatting were performed, with no local tests, standalone validation or addon/game execution.
+Only the existing Layout edit envelopes grow to include the larger static canvas: attached top clearance becomes 41⅓ units at the reference button size, while the detached region uses the larger of the socket and carving sizes around the same center. This does not move icons, rims, rails, roots or confirmed geometry. The five regions reuse the current overlay, parent visibility and attachment/world cleanup in both Performance Mode states. They add no frame, getter, event, updater, setting or saved state. Carving texture, geometry and UV writes happen at construction; only changed visible rarity updates vertex color. The steady halo is baked into that same region. Source/region counts do not establish native rendering or FPS. Only static artwork preparation, source review and pinned formatting were performed, with no local tests, standalone validation or addon/game execution.
 
 This is original World of Warcraft artwork, copyright Blizzard Entertainment. Public availability and software licenses do not transfer its ownership or supply a blanket art redistribution license. Existing project permission for upstream custom art does not relicense this Blizzard texture; its provenance remains in the shipped jewelry module. No source addon code, fonts or framework is imported.
+
+## Animated rarity halo atlas
+
+`scripts/prepare_jewelry_flames.py` prepares the white-alpha edge halo in
+`media/tex/jewelry/RarityFlames.tga` and its lossless Raw3 runtime BLP.
+The mask follows the existing Runecarver housing alpha, softly blurred and
+confined to radii 17.5–24.8 local units, leaving the item center clear. A narrow
+soft band stays close to the artwork. Brighter patches travel upward through
+dark gaps, making motion visible without restoring the earlier tall plumes.
+Maximum lift is 0.7 local units; no separate flame extends above the housing.
+The 256-by-256 atlas contains sixteen 64-square cells in a four-by-four grid,
+with clear cell edges.
+
+One lazy `ARTWORK` region per equipped slot uses the same size and center as
+the housing. Additive blending, alpha 0.75 and validated native rarity RGB color
+the moving mask, whose own alpha never exceeds 0.84. The sixteen frames loop
+over 0.96 seconds with different starting phases per slot. Only changed UVs
+are written through the existing painting gate; no texture or geometry rebind
+occurs per frame. Empty or unknown-quality slots have no animated halo.
+Visibility, editing, Performance Mode and world/disabled cleanup stop it while
+retaining regions for reuse. Icon size, slot order and attachment are unchanged.
+
+Only `RarityFlames.blp` is added to the runtime manifest. The TGA and generator
+remain authoring files. This derived mask retains the Runecarver artwork's
+Blizzard attribution above; no external flame art or animation code is imported.
+Static artwork review does not establish animation appearance in the packaged
+client; no addon or game was executed locally.
 
 ## Shared pet/meter rim source
 
@@ -33,12 +60,12 @@ Original World of Warcraft artwork remains copyright Blizzard Entertainment. The
 
 `scripts/prepare_jewelry_art.py` reads `bagborder2.blp` from a scratch directory supplied with `--sources`. A shared Raw1/Raw3 decoder preserves indexed colors and the separate alpha block; Pillow handles the other source formats. Pillow's own Raw1 path is not used because it omits that alpha block. This tool prepares image assets without loading or executing addon code.
 
-`prepare_jewelry_art.py` retains its 1024-by-256 authoring canvas. The legal runtime `media/tex/jewelry/Frame.blp` is **512 × 128**, with the gold rim at `(1,1)-(73,73)`, pet/meter rim at `(129,1)-(201,73)` and neutral rarity rim at `(257,1)-(329,73)`. The client repacker copies these from the original authoring crops without resampling; see [Client compatibility](../docs/CLIENT-COMPATIBILITY.md). Jewelry no longer binds the old gold or neutral rim cells. Their shared authoring/source records remain for the pet/meter artwork; removing a jewelry drawing region does not alter another consumer's source pixels. All five Runecarver housings use only the fourth cell, centered on their original item and socket positions. The jewelry frame scale remains the native action-button width divided by 43. Native rarity reads remain solely for the effects-only hover text, without circle tint or UV writes.
+`prepare_jewelry_art.py` retains its 1024-by-256 authoring canvas. The legal runtime `media/tex/jewelry/Frame.blp` is **512 × 128**, with the gold rim at `(1,1)-(73,73)`, pet/meter rim at `(129,1)-(201,73)` and neutral rarity rim at `(257,1)-(329,73)`. The client repacker copies these from the original authoring crops without resampling; see [Client compatibility](../docs/CLIENT-COMPATIBILITY.md). Jewelry no longer binds the old gold or neutral rim cells. Their shared authoring/source records remain for the pet/meter artwork; removing a jewelry drawing region does not alter another consumer's source pixels. All five Runecarver housings use only the fourth cell, centered on their original item and socket positions. The jewelry frame scale remains the native action-button width divided by 43. Native rarity reads also supply the stronger housing tint and separate animated halo below, without restoring a circle region or changing housing UVs.
 
 Native item hover frames remain 32 by 32 at local vertical center 46.5.
-The rendered item uses a centered artwork box set by `ICON_ART_SIZE` (currently 31.939331 units), shared by empty-slot
+The rendered item uses a centered artwork box set by `ICON_ART_SIZE` (currently 33.897596 units), shared by empty-slot
 pictures and cooldown shade geometry. At reference 36-unit buttons this is
-about 26.74 UI units, fitting inside the unchanged Runecarver opening. The
+about 28.38 UI units, fitting inside the unchanged Runecarver opening. The
 sixteen source bands keep the original fourteen interior UV windows, while
 midpoint widths restore nonzero top and bottom caps. Uniform inset scaling
 preserves image proportions; source UVs retain `1 / 1.05` magnification, from

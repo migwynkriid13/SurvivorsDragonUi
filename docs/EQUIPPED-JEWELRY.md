@@ -1,10 +1,10 @@
 # Equipped jewelry
 
-The selected **03 — Cold-lit runes** artwork uses grey-metal Runecarver housings matched to the action bar with no separate inner-circle rim. Its soft grey halo is static. The row keeps the **Thin shared bezel** connection to the original action bar, with no jewelry panel, permanent title or side ornament. It uses the character's five normal equipment slots, ordered left to right as first ring, first trinket, necklace, second trinket and second ring. The necklace occupies the middle socket in both attached and detached modes, including its empty-slot placeholder. It is independent of the native six-pickup run build and does not add an ability row or infer run jewelry from worn gear, stats or chat.
+The selected **03 — Cold-lit runes** artwork uses grey-metal Runecarver housings matched to the action bar with no separate inner-circle rim. Equipped items give the metal a clear rarity tint and an animated edge shimmer in their native rarity color. The row keeps the **Thin shared bezel** connection to the original action bar, with no jewelry panel, permanent title or side ornament. It uses the character's five normal equipment slots, ordered left to right as first ring, first trinket, necklace, second trinket and second ring. The necklace occupies the middle socket in both attached and detached modes, including its empty-slot placeholder. It is independent of the native six-pickup run build and does not add an ability row or infer run jewelry from worn gear, stats or chat.
 
 ## Data and interaction
 
-`modules/ui/jewelry.lua` resolves `NeckSlot`, `Finger0Slot`, `Finger1Slot`, `Trinket0Slot` and `Trinket1Slot` through `GetInventorySlotInfo`, requiring five distinct valid native IDs. `GetInventoryItemTexture("player", id)` supplies each current icon. Item art retains its centered 5% source magnification in both modes. The rendered icon, empty-slot picture and cooldown shade use a centered artwork box (currently about 31.94 units) inside the unchanged 32-unit hover frame, giving the Runecarver opening clearance. Sixteen bands include the formerly missing top and bottom caps, preserving the complete selected vertical image range without adding another circle. No sample equipped items, item IDs, item names, item statistics, invented ranks or sixth slot are shipped.
+`modules/ui/jewelry.lua` resolves `NeckSlot`, `Finger0Slot`, `Finger1Slot`, `Trinket0Slot` and `Trinket1Slot` through `GetInventorySlotInfo`, requiring five distinct valid native IDs. `GetInventoryItemTexture("player", id)` supplies each current icon. Item art retains its centered 5% source magnification in both modes. The rendered icon, empty-slot picture and cooldown shade use a centered artwork box (currently about 33.90 units) centered on the unchanged 32-unit hover frame, giving the Runecarver opening clearance. Sixteen bands include the formerly missing top and bottom caps, preserving the complete selected vertical image range without adding another circle. No sample equipped items, item IDs, item names, item statistics, invented ranks or sixth slot are shipped.
 
 Empty sockets use the selected original WoW inventory pictures for the necklace, both rings and both trinkets over subtle charcoal circles. The complete source interiors are scaled down and centered with clearance inside the Runecarver housings, so the chain and trinket are not clipped by the circular opening. Source pixels and preparation are recorded in [Jewelry-ARTWORK.md](../third_party/Jewelry-ARTWORK.md). The silver socket artwork, spacing and positions remain unchanged in attached and detached modes. A successful native texture read returning nil or an empty string shows the matching placeholder; an actual item texture replaces it at the existing refresh cadence. Read failures keep the icon area clear. Placeholders are cosmetic artwork, never stored as equipped-item textures: empty slots clear effects and cooldown state and do not call the item tooltip reader or inventory cooldown getter. Disable, missing required APIs/player and world cleanup hide them with the rest of the row. No new setting or saved state is added.
 
@@ -15,14 +15,19 @@ table supplies RGB. Missing, failed or invalid metadata keeps the existing
 green hover-text fallback while the normal equipment refresh retries. It never
 keeps a removed item's color. Empty slots have no hover card.
 
-There is no separate gold, rarity-colored or replacement inner circle. Only
-the fixed grey-metal Runecarver housing surrounds each item or empty-slot
-picture. Its steady halo and rune accents never receive an item-quality tint.
-The same five regions work in attached and detached modes and both Performance
-Mode states. Parent visibility and world cleanup hide them without another
-worker. The original rim regions and their tint/UV writes are removed. Native
-quality reads and the changed-only hover-text color update remain. Sources and
-baking are recorded in [Jewelry-ARTWORK.md](../third_party/Jewelry-ARTWORK.md).
+There is no separate gold, rarity-colored or replacement inner circle. The
+grey Runecarver housing receives a 60% blend toward native rarity RGB, retaining
+its subdued metal shading. An additive shimmer follows the carved border, with bright patches moving upward
+and only a trace beyond the artwork. It uses native rarity RGB with distinct bright and dark patches,
+leaving the icon center clear. Empty slots and unavailable
+rarity metadata stay grey with no flames. Performance Mode keeps the static
+tint and stops the flames; layout editing also stops the flames. Attached and
+detached modes share the effect, and hidden/off/world cleanup retires its
+animation. One lazy sprite region per equipped slot uses the existing
+controller, with no new event, worker, setting or saved state. Native quality
+reads and the changed-only hover-text color update retain their cadence.
+Sources and preparation are recorded in
+[Jewelry-ARTWORK.md](../third_party/Jewelry-ARTWORK.md).
 
 Hover shows only the equipped item's native **Equip**, **Use** and **Chance on hit** effect descriptions. A private `GameTooltipTemplate` under a permanently hidden parent reads `SetInventoryItem("player", id)`; this reader never owns or clears the shared `GameTooltip`, whose visual styling is handled separately by the common hover module. The reader scans at most 64 native rows, skipping the item title and selecting effect rows by the native localized `ITEM_SPELL_TRIGGER_*` prefixes, with English fallback labels only when those globals are missing. The complete matched trigger label and its following whitespace are removed for display, including multiword labels such as Chance on hit. Effect wording, numbers and wrapped text are preserved; no arbitrary first word of a description is removed. Binding, equipment type, requirements, flavor text, sale value and separate cooldown metadata are omitted. No effect values are inferred from the icon or item name. Missing APIs, unavailable descriptions or items without recognized effect rows produce no popup; a hovered slot retries at the existing five-Hz cadence so late native data can appear.
 

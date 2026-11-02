@@ -34,6 +34,7 @@ end
 -- exposes a complete native effect or unavailable rows to the real cache.
 env.EffectDescription = function(text) return text and string.match(text, "^Equip: (.+)$") end
 env.SetQuality = function(slot) slot.quality = nil end
+env.UpdateRarity = function() end -- Separate rarity lifecycle fixture owns this boundary.
 env.HideTooltip = function(slot) slot.hidden = true end
 for _, slot in ipairs(env.slots) do
     slot.placeholder = { Hide = function() end }
@@ -48,7 +49,7 @@ local prepared = api.PrepareIconParts()
 assert(#prepared == 16, "jewelry lost a top/bottom cap")
 local firstEdge = prepared[1].top
 local lastEdge = prepared[16].top + prepared[16].height
-assert(firstEdge >= 0 and firstEdge < 1 and math.abs(firstEdge + lastEdge - 32) < 0.000001, "icon fit is not centered")
+assert(math.abs(firstEdge) < 1 and math.abs(firstEdge + lastEdge - 32) < 0.000001, "icon fit is not centered")
 assert(math.abs(prepared[1].firstV - 1 / 42) < 0.000001, "top of the selected image was clipped")
 assert(math.abs(prepared[16].lastV - 41 / 42) < 0.000001, "bottom of the selected image was clipped")
 for index, part in ipairs(prepared) do
@@ -63,7 +64,10 @@ for index, part in ipairs(prepared) do
     assert(part.firstU >= 1 / 42 - 0.000001 and part.lastU <= 41 / 42 + 0.000001)
     if index > 1 then
         local previous = prepared[index - 1]
-        assert(previous.top + previous.height == part.top and previous.lastV == part.firstV, "gap between icon bands")
+        assert(
+            math.abs(previous.top + previous.height - part.top) < 0.000001 and previous.lastV == part.firstV,
+            "gap between icon bands"
+        )
     end
 end
 local slot = env.slots[1]

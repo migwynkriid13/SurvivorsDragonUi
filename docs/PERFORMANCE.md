@@ -12,7 +12,7 @@ zero-width, so only fourteen bands rendered. Both caps now sample their band
 midpoint. The original fourteen interior source windows and 5% source zoom are
 retained; sixteen bands cover the complete selected UV height. Images,
 empty-slot pictures and cooldown shades share the current centered artwork box
-inside the unchanged 32-unit hover frame, leaving clearance inside the existing
+centered on the unchanged 32-unit hover frame, leaving clearance inside the existing
 Runecarver aperture. Slot centers, spacing, artwork, attachment and tooltip
 anchors remain unchanged.
 
@@ -22,7 +22,7 @@ the same lazy compositor, grouped order, changed-only bindings and hidden/world
 retirement. The geometry table is prepared once at module construction and
 includes each band's inset height; there is no extra getter, event, worker,
 setting or saved state. Both Performance Mode states share the fix. Existing
-circle regions stay removed, and native rarity colors stay in hover text.
+circle regions stay removed. The rarity treatment below uses the same native colors as hover text.
 
 CI-only cases extract the production geometry and check both nonzero caps,
 continuous vertical UV coverage, preserved source zoom, inset bounds and pooled
@@ -32,12 +32,14 @@ review does not prove native pixel coverage or FPS. Earlier fourteen-strip
 batching/repeat experiments remain frozen historical comparisons and do not
 measure this sixteen-band layout.
 
-## Cold-lit Runecarver jewelry — 2026-11-02
+## Cold-lit Runecarver jewelry and rarity halo — 2026-11-02
 
 The original cyan is reduced by 95% during image preparation to match the
 neutral action-bar metal. This changes only RGB inside the housing atlas cell;
 alpha, shading, dimensions and all other atlas cells are preserved. Runtime
-adds no color conversion or recurring tint writes.
+multiplies this grey artwork by a 60% native-rarity/40% white RGB blend, only
+when that final color changes while visible. Empty or unknown-quality slots
+use white, retaining the prepared grey pixels. Tooltip text keeps full native RGB.
 
 Selected design 03 uses one static housing texture per socket: five regions in
 the existing overlay. The former five gold/quality circles are removed, without
@@ -45,22 +47,36 @@ a replacement border; housing region count matches the original rim count. Its c
 and steady grey halo are baked into one 128-square cell in previously clear
 space in the existing 512-by-128 `Frame.blp` atlas. The atlas dimensions, native
 rarity/hover reads, equipment/cooldown cadence,
-attachment, item geometry and pet/meter cells stay unchanged. No new runtime
-texture file, gameplay frame, getter, event, setting, saved state or updater is
-added.
+attachment, item geometry and pet/meter cells stay unchanged.
 
 The existing Layout edit envelopes grow around the larger housing canvas,
 without moving the rail, icons or confirmed geometry.
-Each new region binds texture, dimensions, anchor and UVs at construction only;
-there are no per-refresh or per-frame writes to the carving. Existing parent
-visibility and world/disabled cleanup hide it. Both Performance Mode states use
-the same static pixels. These housings render while visible; baking the halo avoids another region and
-animation worker but is not an FPS claim. Native inventory rarity RGB remains
-on the effects-only hover text. No gold, rarity-colored or replacement circle
-is drawn, and the grey carving receives no item-quality tint. Local work is static
+Each housing binds texture, dimensions, anchor and UVs at construction only;
+only changed native rarity updates its vertex color. Parent visibility and
+world/disabled cleanup hide it. Both Performance Mode states retain this static
+tint. No gold, rarity-colored or replacement circle is drawn.
+
+Normal mode lazily adds at most five texture regions on the existing overlay,
+one per visible equipped slot with valid native rarity RGB. Their white-alpha
+256-square Raw3 atlas is 256 KiB of pixels, separate from the unchanged housing
+atlas. Its moving edge mask matches the housing canvas and stays within
+24.8 local units of the icon center, with less than one local unit of lift.
+Sixteen frames loop over 0.96 seconds, staggered across the five slots.
+The existing at-most-30-Hz cooldown painting gate advances only changed sprite
+UVs; texture, geometry, alpha and color are retained. The phase advances from
+the existing frame delta without another clock read or per-frame allocation.
+The five-Hz equipment/quality cadence is unchanged. Hidden/off, empty, missing
+rarity, editing and Performance Mode retire the flames; retained regions are
+reused on return. Performance Mode never allocates a flame region. Editing
+hides the effect so the static housing edit envelopes remain sufficient.
+No gameplay frame, getter, event, setting, saved state or updater is added.
+
+CI-only mocks cover native color validation, poor/common qualities, grey
+fallback, changed-only writes, atlas wrap, staggered frames and lazy reuse
+across visibility/editing/Performance Mode retirement. Local work is static
 art preparation, source review and pinned formatting; no local tests,
-standalone validation or addon/game execution were performed. Actual native
-appearance and cost remain unverified.
+standalone validation or addon/game execution were performed. Region and
+payload counts do not establish native appearance, rendering cost or FPS.
 
 ## Artisan metal LEVEL UP — 2026-11-02
 
@@ -3484,9 +3500,11 @@ The original gold/quality circle regions, their tint writes and their UV
 switching are removed entirely. The pooled effects card still changes native
 rarity text color before its unchanged-text measurement shortcut, without
 adding text regions or remeasuring for color alone. Hidden/off views stop
-those reads and writes through their existing controller. Atlas dimensions and file count stay unchanged; the two end caps bring the icon to sixteen bands. The same five static
-Runecarver housings surround occupied and empty sockets; no replacement inner
-circle is drawn. No GPU or FPS result is inferred from these source counts.
+those reads and writes through their existing controller. The two end caps bring
+the icon to sixteen bands. The same five Runecarver housings surround occupied
+and empty sockets; no replacement inner circle is drawn. Changed-only housing
+tints and the separate lazy flame atlas are described above. No GPU or FPS
+result is inferred from these source counts.
 
 The base renderer additionally sorts equal-texture quads using an unstable
 native-style sort. For an isolated batch of two equal icons, that sort leaves

@@ -33,6 +33,11 @@ def main():
             "InvalidateEffects", "ReadEffects", "ClearSlot", "PaintIcons",
         ])
         jewelry_cache = jewelry_cache.rsplit("\nreturn ", 1)[0] + "\nreturn { InvalidateEffects = InvalidateEffects, ReadEffects = ReadEffects, ClearSlot = ClearSlot, PaintIcons = PaintIcons, PrepareIconParts = PrepareIconParts }\n"
+        jewelry_rarity = extract_source("modules/ui/jewelry.lua", [
+            "RARITY_TINT_STRENGTH", "FLAME_PERIOD", "FLAME_FRAMES", "Number",
+            "StopSlotFlames", "StopFlames", "UpdateRarity", "PaintFlames", "SetQuality", "UpdateQuality",
+        ])
+        jewelry_rarity = jewelry_rarity.rsplit("\nreturn ", 1)[0] + "\nreturn { Update = UpdateRarity, Paint = PaintFlames, Stop = StopFlames, Quality = UpdateQuality }\n"
         run_hud = "local render, refreshRows, scheduleCache = {}, false, nil\n" + extract_source("modules/ui/run.lua", [
             "nativeParts", "TakeOver", "Restore", "SyncReplacements",
         ])
@@ -142,6 +147,7 @@ def main():
             ("run-hud-source.lua", run_hud, "ui_shared_rules_spec.lua"),
             ("cooldown-source.lua", cooldown, "ui_spec.lua"),
             ("jewelry-cache-source.lua", jewelry_cache, "ui_jewelry_cache_spec.lua"),
+            ("jewelry-rarity-source.lua", jewelry_rarity, "ui_jewelry_rarity_spec.lua"),
             ("guardian-hover-source.lua", guardian_hover, "ui_guardian_hover_spec.lua"),
             ("guardian-timers-source.lua", guardian_timers, "ui_guardian_timer_spec.lua"),
             ("border-modes-source.lua", border_modes, "ui_border_spec.lua"),
