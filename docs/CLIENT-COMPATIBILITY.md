@@ -151,9 +151,24 @@ they do not apply a resolution, refresh rate or other video setting.
 
 The stale popup is retired only after a recognized oversized initializer has
 completed through the paged path and its text remains unchanged. Unrecognized,
-unrelated, incomplete or failed recoveries leave it visible. New failures go to
-the existing error handler; no broad message or error-handler suppression is
-introduced. Without an identified startup control, the exact initial caller
+incomplete or failed recoveries retain the original startup behavior. After
+addon loading, the user's requested presentation filter hides only the exact
+`Interface\FrameXML\UIDropDownMenu.lua:156: attempt to concatenate global 'UIDROPDOWNMENU_OPEN_MENU' (a nil value)`
+diagnostic, whether recovery succeeded or not. The existing error handler skips
+that same message before chat counting. Both paths share one full-message
+matcher, accepting slash and quote variants only. Different files, line numbers,
+globals, value types, reasons, prefixes or additional text remain visible.
+
+The existing `ADDON_LOADED` error-handler callback dismisses an already visible
+matching popup and binds a guarded `ScriptErrors` OnShow. Later matching shows
+hide synchronously; unrelated errors retain the previous OnShow and native
+popup behavior. Repeated addon loads reuse the guard, preserving later callback
+owners when rebinding. Missing popup methods leave popup handling untouched.
+The original [BasicControls popup](https://github.com/MOUZU/Blizzard-WoW-Interface/blob/d162a4c0d198a4381b5b6573d975635ed7316702/1.12.1/FrameXML/BasicControls.xml#L5-L11)
+assigns the diagnostic text before calling Show. The filter adds no CVar,
+frame, region, event, updater or saved state and leaves dropdown data and
+initializers unchanged. The underlying error is not repaired by suppression.
+Without an identified startup control, the exact initial caller
 still needs a client traceback. A native engine repair remains useful, but is
 not required for addon-side recovery of these recognized paths.
 
@@ -421,7 +436,8 @@ file load and after every `ADDON_LOADED`, printing the original red
 `DFRL: Error` messages directly to chat. Each distinct message appears twice,
 followed by one `ERROR SPAM THROTTLED` notice; later repeats stay hidden for
 the Lua session. Chat announcement filtering leaves these messages visible.
-Caught module failures still call the current `geterrorhandler()`. This
+Caught module failures still call the current `geterrorhandler()`. Only the
+exact native dropdown diagnostic described above is omitted. This
 restores the original behavior without forwarding to collectors such as
 SurvivorBugs. Reloading the UI is required to use the restored handler.
 

@@ -38,6 +38,15 @@ kits retain the legacy fallback. Both Performance Mode states share these cases.
 These are CI-only ownership/input-boundary checks. They do not execute client
 code or prove actual native hit testing, AS settings behavior or run preservation.
 
+Dropdown error-filter cases keep the production error handler and popup guard.
+They cover the exact reported file/line/global/nil-concatenation diagnostic,
+slash/quote variants, pre-addon popups, retained native Show calls and unchanged
+chat throttling for other errors. Near matches, prefixed/appended messages,
+previous/later OnShow ownership, repeated addon loads and missing native
+dropdown/popup boundaries remain covered. These are CI-only cases; no local
+tests, standalone validation or addon/game execution were run. Native popup
+timing remains unverified.
+
 Stored-level Artisan cases cover all five source strips, fixed corners and
 central crests, matching five-part halo crops/anchors, caption-width fitting,
 region reuse, unchanged idle writes and the static panel with all six pulse

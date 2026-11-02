@@ -330,3 +330,91 @@ Test("partial native kits stay untouched and unrelated initializer failures stil
     c:Open(menu)
     assert(env.DropDownList1.numButtons == 32, "failed initialization poisoned the next dropdown")
 end)
+
+Test("only the exact reported error is suppressed in chat and the native popup", function()
+    local c, env = Kit()
+    local messages, shown = {}, 0
+    env.DEFAULT_CHAT_FRAME = {
+        AddMessage = function(_, message) table.insert(messages, message) end,
+    }
+    env.seterrorhandler = function(handler) c.handler = handler end
+    local nativeShow = env.ScriptErrors.Show
+    env.ScriptErrors:SetScript("OnShow", function()
+        assert(env.this == env.ScriptErrors, "popup filter changed native callback context")
+        shown = shown + 1
+    end)
+    env.ScriptErrors_Message:SetText(ERROR)
+    env.ScriptErrors:Show()
+    c:Load("core/error.lua")
+    c:LoadCompat()
+    assert(env.ScriptErrors:IsShown(), "suppression ran before existing startup recovery")
+    local controller = c:Controller("ADDON_LOADED")
+    c:Event(controller, "ADDON_LOADED", "SurvivorsDragonUi")
+    assert(not env.ScriptErrors:IsShown(), "pre-addon matching popup remained visible")
+    local before = shown
+    for _, message in ipairs({
+        ERROR,
+        (string.gsub(ERROR, "\\", "/")),
+        (string.gsub(ERROR, "'", '"')),
+        (string.gsub(ERROR, "'UIDROPDOWNMENU_OPEN_MENU", string.char(96) .. "UIDROPDOWNMENU_OPEN_MENU")),
+    }) do
+        for _ = 1, 4 do
+            c.handler(message)
+        end
+        env.ScriptErrors_Message:SetText(message)
+        nativeShow(env.ScriptErrors)
+        assert(not env.ScriptErrors:IsShown(), "retained native Show exposed the matching error")
+    end
+    assert(#messages == 0 and shown == before, "suppressed error reached chat or popup presentation")
+    for _, message in ipairs({
+        (string.gsub(ERROR, ":156:", ":157:")),
+        (string.gsub(ERROR, "UIDropDownMenu%.lua", "AnotherFile.lua")),
+        (string.gsub(ERROR, "UIDROPDOWNMENU_OPEN_MENU", "UIDROPDOWNMENU_OTHER")),
+        (string.gsub(ERROR, "concatenate", "index")),
+        (string.gsub(ERROR, "a nil value", "a string value")),
+        "Other addon: " .. ERROR,
+        ERROR .. "\nAnother failure",
+    }) do
+        local count = #messages
+        for _ = 1, 4 do
+            c.handler(message)
+        end
+        assert(#messages == count + 3, "unrelated error lost its two messages and throttle notice")
+        assert(string.find(messages[count + 1], message, 1, true), "unrelated diagnostic was rewritten")
+        assert(string.find(messages[count + 3], "ERROR SPAM THROTTLED", 1, true))
+        env.ScriptErrors_Message:SetText(message)
+        nativeShow(env.ScriptErrors)
+        assert(env.ScriptErrors:IsShown(), "near-match error popup was suppressed")
+        env.ScriptErrors:Hide()
+        before = before + 1
+    end
+    assert(shown == before, "unrelated popup lost its previous OnShow callback")
+    local hook = env.ScriptErrors:GetScript("OnShow")
+    c:ResetCounts()
+    c:Event(controller, "ADDON_LOADED", "AnotherAddon")
+    c:NoPresentationWrites()
+    assert(env.ScriptErrors:GetScript("OnShow") == hook, "repeated addon loads stacked popup hooks")
+    local foreign = 0
+    env.ScriptErrors:SetScript("OnShow", function() foreign = foreign + 1 end)
+    c:Event(controller, "ADDON_LOADED", "LaterAddon")
+    env.ScriptErrors_Message:SetText("A later unrelated error")
+    nativeShow(env.ScriptErrors)
+    assert(env.ScriptErrors:IsShown() and foreign == 1, "later popup callback was discarded")
+end)
+
+Test("exact suppression does not require the native dropdown pool or a popup frame", function()
+    local c, env = Kit()
+    env.UIDROPDOWNMENU_MAXBUTTONS, env.ScriptErrors, env.ScriptErrors_Message = nil, nil, nil
+    local messages = {}
+    env.DEFAULT_CHAT_FRAME = {
+        AddMessage = function(_, message) table.insert(messages, message) end,
+    }
+    env.seterrorhandler = function(handler) c.handler = handler end
+    c:Load("core/error.lua")
+    c:LoadCompat()
+    c:Event(c:Controller("ADDON_LOADED"), "ADDON_LOADED", "SurvivorsDragonUi")
+    c.handler(ERROR)
+    c.handler("An unrelated error")
+    assert(#messages == 1 and string.find(messages[1], "An unrelated error", 1, true))
+    assert(not env.T.IsSuppressedDropdownError(nil) and not env.T.IsSuppressedDropdownError({}))
+end)

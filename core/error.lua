@@ -1,6 +1,11 @@
 local error_counts = {}
 local max_errors = 2
 
+local function IsSuppressedError(msg)
+    local tools = DFRL and DFRL.tools
+    return tools and type(tools.IsSuppressedDropdownError) == "function" and tools.IsSuppressedDropdownError(msg)
+end
+
 local function GetAddonName(msg)
     local start = string.find(msg, "AddOns\\")
     if start then
@@ -25,6 +30,7 @@ local function FormatErrorMessage(addon, msg, throttled)
 end
 
 local function ErrorHandler(msg)
+    if IsSuppressedError(msg) then return end
     local addon = GetAddonName(msg)
 
     if not error_counts[msg] then
@@ -42,6 +48,39 @@ end
 
 seterrorhandler(ErrorHandler)
 
+local filteredPopup, filteredLabel, popupOnShow
+local function FilterPopup()
+    local popup, label = ScriptErrors, ScriptErrors_Message
+    if
+        not popup
+        or not label
+        or type(popup.GetScript) ~= "function"
+        or type(popup.SetScript) ~= "function"
+        or type(popup.IsShown) ~= "function"
+        or type(popup.Hide) ~= "function"
+        or type(label.GetText) ~= "function"
+    then
+        return
+    end
+    if popup ~= filteredPopup or label ~= filteredLabel or popup:GetScript("OnShow") ~= popupOnShow then
+        local previous = popup:GetScript("OnShow")
+        popupOnShow = function()
+            if IsSuppressedError(label:GetText()) then
+                popup:Hide()
+                return
+            end
+            if previous then return previous() end
+        end
+        popup:SetScript("OnShow", popupOnShow)
+        filteredPopup, filteredLabel = popup, label
+    end
+    if popup:IsShown() and IsSuppressedError(label:GetText()) then popup:Hide() end
+end
+
 local f = CreateFrame("Frame")
 f:RegisterEvent("ADDON_LOADED")
-f:SetScript("OnEvent", function() seterrorhandler(ErrorHandler) end)
+-- Bind after the files load so existing dropdown recovery keeps its startup path.
+f:SetScript("OnEvent", function()
+    seterrorhandler(ErrorHandler)
+    FilterPopup()
+end)

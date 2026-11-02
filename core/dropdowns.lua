@@ -2,6 +2,15 @@
 -- Startup recovery uses native UI initializers only; it never changes video settings.
 setfenv(1, DFRL:GetEnv())
 
+-- Shared with the error handler; suppress only the exact reported diagnostic.
+function DFRL.tools.IsSuppressedDropdownError(message)
+    if type(message) ~= "string" then return false end
+    local normalized = string.gsub(string.gsub(message, "/", "\\"), string.char(96), "'")
+    local prefix = "Interface\\FrameXML\\UIDropDownMenu.lua:156: attempt to concatenate global "
+    return normalized == prefix .. "'UIDROPDOWNMENU_OPEN_MENU' (a nil value)"
+        or normalized == prefix .. '"UIDROPDOWNMENU_OPEN_MENU" (a nil value)'
+end
+
 local native = {
     initialize = _G.UIDropDownMenu_Initialize,
     add = _G.UIDropDownMenu_AddButton,
@@ -266,15 +275,7 @@ local function MatchingPopup()
     end
     if not popup:IsShown() then return end
     local text = label:GetText()
-    if type(text) ~= "string" then return end
-    local normalized = string.gsub(string.gsub(text, "/", "\\"), string.char(96), "'")
-    local prefix = "Interface\\FrameXML\\UIDropDownMenu.lua:156: attempt to concatenate global "
-    if
-        normalized == prefix .. "'UIDROPDOWNMENU_OPEN_MENU' (a nil value)"
-        or normalized == prefix .. '"UIDROPDOWNMENU_OPEN_MENU" (a nil value)'
-    then
-        return text
-    end
+    if T.IsSuppressedDropdownError(text) then return text end
 end
 
 -- A failed stock OnLoad retains its initializer. Replay only known, UI-only
