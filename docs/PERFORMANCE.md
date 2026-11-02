@@ -22,6 +22,16 @@ identity. Party portraits prefer the native texture-object call with one
 legacy-name fallback per changed binding; settled and hidden rows keep their
 existing work gates.
 
+Native dropdown compatibility reuses the three existing 32-button lists rather
+than expanding their frame/region pools. Only menu construction and wheel input
+capture or repaint choices; normal gameplay adds no polling or updater. Each
+oversized level retains at most 512 shallow choice records until rebuilt.
+Selected-name/value lookups cache unchanged inputs instead of rescanning those
+records during every native refresh row. A matching startup error permits one
+bounded native-control recovery pass, including at most 4096 enumerated frames.
+No saved settings or video configuration is written. CI-only mocks do not prove
+packaged-client recovery or appearance.
+
 Pet and meter image textures share `T.NewCircularIcon` for native circular
 binding and the lazy physical-pixel strip fallback. Each view keeps its original
 icon/rim dimensions, strip-density minimum, metadata and hidden lifecycle. This

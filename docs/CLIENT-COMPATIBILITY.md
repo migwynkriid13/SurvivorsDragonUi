@@ -61,7 +61,7 @@ review and pinned formatting only. No local tests, standalone validation or
 addon/game execution is performed; actual native/browser appearance remains
 unverified.
 
-### Native startup dropdown error
+### Native startup dropdown recovery
 
 The reported `UIDropDownMenu.lua:156` error matches the stock 1.12.1
 [button-overflow branch](https://github.com/tekkub/wow-ui-source/blob/1.12.1/FrameXML/UIDropDownMenu.lua#L149-L158):
@@ -69,14 +69,55 @@ after the 32-button limit, its diagnostic concatenates a nil
 `UIDROPDOWNMENU_OPEN_MENU`. The user reports it immediately during loading.
 Wenilla loads the stock
 [core and layer before third-party addons](https://github.com/Arnesen/wenilla/blob/407a76e83d03ba6e0a755a5a89b564c80e16025d/crates/benilla-app/src/ui_script/lifecycle.rs#L557-L627),
-so an SDUI hook cannot prevent an error already raised in that startup path.
+so the original call can fail before SDUI runs. The native initializer is
+assigned before its callback, however, and remains available for recovery.
 
-This remains a client issue. The exact overflowing native menu needs the
-client's startup traceback; screen-resolution enumeration is one candidate,
-not an established caller. The engine repair must make the diagnostic nil-safe
-and build oversized native choices safely before stock initialization, retaining
-their actual selection IDs. SDUI does not hide the popup, truncate choices,
-invent an open-menu owner or modify client files.
+This failure need not affect every installation. The public engine's
+[resolution catalog](https://github.com/Arnesen/wenilla/blob/407a76e83d03ba6e0a755a5a89b564c80e16025d/crates/benilla-app/src/video.rs#L583-L645)
+uses connected monitors, their reported modes and scale, plus the current window
+size. Different setups can therefore produce different dropdown lengths. The
+same nil-concatenation error is also
+[documented with oversized resolution lists in other clients](https://github.com/jhinzuo/another.ScreenResolutionDropdownFix#fix-the-uidropdownmenu_open_menu-error).
+This makes display enumeration a supported hypothesis, not proof of the exact
+overflowing control or received choice count in the reported game session.
+
+`core/dropdowns.lua` now installs an addon-side compatibility path at file load,
+after the existing error handler and core. It requires the complete native
+three-level, 32-button kit and feature-detects mouse-wheel ownership. Oversized
+initializers retain at most 512 shallow-copied choice records per level and
+render through the existing 32 buttons. Wheel input moves through all retained
+choices, closes obsolete submenus and keeps original selection IDs, values,
+callback arguments and native row placement. Ordinary menus retain their native
+path. The global pool size, video getters/setters and saved settings do not change.
+
+The addon restores previous wheel handlers and flags on hiding or replacement,
+preserving later foreign ownership. Native initializer errors still propagate.
+Choice records remain bounded until that shared level is rebuilt; selected
+name/value lookups use a changed-only cache. No frame, region, asset, event,
+updater, setting, SavedVariable or runtime test hook is added.
+
+For a visible popup matching this exact file, line, global and nil-concatenation
+message, and only while no dropdown is open, startup recovery can replay recognized native resolution, refresh-rate
+and multisample setup when their supplied lists exceed 32 choices. Recognized
+Benilla options entry rows can recover through their own setup function, with a
+one-time enumeration capped at 4096 frames. These setup paths only rebuild UI;
+they do not apply a resolution, refresh rate or other video setting.
+
+The stale popup is retired only after a recognized oversized initializer has
+completed through the paged path and its text remains unchanged. Unrecognized,
+unrelated, incomplete or failed recoveries leave it visible. New failures go to
+the existing error handler; no broad message or error-handler suppression is
+introduced. Without an identified startup control, the exact initial caller
+still needs a client traceback. A native engine repair remains useful, but is
+not required for addon-side recovery of these recognized paths.
+
+CI-only fixtures reproduce the original overflow before loading production
+compatibility code, then cover paging, original IDs/callbacks, physical row
+placement, value/name selection, submenu closure, wheel ownership, both startup
+recovery families and untouched/error cases. Local tests and game execution
+remain unauthorized; recovery in the packaged client remains unverified.
+
+## Earlier engine updates
 
 The reported regression followed the Azeroth Survivors client update. The supplied changelog identifies 0.101.0 as the move to a newer client and Lua 5.0 behavior. The screenshots show `SetText(): Font not set` in the player and target modules, an incomplete layout entry at `core/layout.lua:730`, and the client's 48 MB script-memory popup. They do not establish the exact engine commit packaged by the game or the allocation responsible for the memory popup.
 

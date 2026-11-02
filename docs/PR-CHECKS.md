@@ -15,8 +15,16 @@ unchanged writes. Navigation covers old zero-valued and new texture-height map
 returns; party portraits cover object and legacy-name forms. Native SCT cases
 separate equal-caption borrowed spells by received meter source keys, retain
 same-key sums and accept older events without optional attribution. These cases
-do not establish packaged-client appearance or repair native FrameXML errors
-that occur before addon loading.
+do not establish packaged-client appearance.
+
+The separate native-dropdown fixture reproduces the stock 32-button overflow
+before loading production compatibility code. It covers bounded paging through
+the existing pool, physical row placement with original selection IDs, callback
+arguments, value/name selection, submenu closure, wheel-handler restoration,
+foreign ownership, recognized stock/Benilla startup setup and unrelated,
+unrecognized, failed or partial paths. It runs only in CI over fake native
+boundaries. It does not prove recovery in the packaged game or change the
+project's local-execution restriction.
 
 ## What fails a PR
 
