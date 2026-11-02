@@ -552,6 +552,7 @@ DFRL:NewMod("Jewelry", 4, function()
         placeholder:SetPoint("CENTER", button, "CENTER", 0, 0)
         placeholder:Hide()
         slot.placeholder = placeholder
+        slot.placeholderShown = false
         local socket = hud:CreateTexture(nil, "BACKGROUND")
         socket:SetTexture(texturePath .. "SocketDetached.blp")
         socket:SetWidth(socketSize)
@@ -676,12 +677,22 @@ DFRL:NewMod("Jewelry", 4, function()
         -- Never retain another item's rarity or suppress an otherwise valid icon.
         SetQuality(slot)
     end
-    local function ClearSlot(slot)
+    local function SetPlaceholderShown(slot, shown)
+        shown = shown and true or false
+        if slot.placeholderShown == shown then return end
+        if shown then
+            slot.placeholder:Show()
+        else
+            slot.placeholder:Hide()
+        end
+        slot.placeholderShown = shown
+    end
+    local function ClearSlot(slot, placeholderShown)
         slot.effectLink, slot.effectLanguage, slot.effectDescription = nil, nil, nil
-        slot.placeholder:Hide()
+        SetPlaceholderShown(slot, placeholderShown)
         if slot.texture or slot.artTexture then iconsDirty = true end
         slot.texture, slot.artTexture = nil, nil
-        slot.cooldown:Hide()
+        if slot.painted then slot.cooldown:Hide() end
         slot.start, slot.duration, slot.painted = nil, nil, nil
         SetQuality(slot)
         UpdateRarity(slot)
@@ -763,7 +774,7 @@ DFRL:NewMod("Jewelry", 4, function()
                 if frame ~= slot.painted then
                     local column, row = math.mod(frame, 8), math.floor(frame / 8)
                     slot.cooldown:SetTexCoord(column / 8, (column + 1) / 8, row / 8, (row + 1) / 8)
-                    slot.cooldown:Show()
+                    if not slot.painted then slot.cooldown:Show() end
                     slot.painted = frame
                 end
             elseif slot.painted then
@@ -814,15 +825,14 @@ DFRL:NewMod("Jewelry", 4, function()
         for _, slot in ipairs(slots) do
             local ok, texture = pcall(GetInventoryItemTexture, "player", slot.id)
             if ok and type(texture) == "string" and texture ~= "" then
-                slot.placeholder:Hide()
+                SetPlaceholderShown(slot, false)
                 if slot.texture ~= texture then SetIcon(slot, texture) end
                 UpdateQuality(slot)
                 UpdateRarity(slot)
                 UpdateCooldown(slot)
                 if hoveredSlot == slot then ShowTooltip(slot) end
             else
-                ClearSlot(slot)
-                if ok and (texture == nil or texture == "") then slot.placeholder:Show() end
+                ClearSlot(slot, ok and (texture == nil or texture == ""))
             end
             if slot.start or slot.painted then cooldownsActive = true end
         end

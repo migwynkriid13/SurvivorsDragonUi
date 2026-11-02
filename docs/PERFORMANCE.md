@@ -169,13 +169,35 @@ Missing/throwing links, pending native items and empty effect rows stay uncached
 and retry at the existing cadence. Rarity, cooldowns and live tooltip placement
 keep their separate readers and changed-only presentation.
 
+Jewelry placeholder visibility now records its own shown state on the existing
+slot. Refresh chooses the final empty/pending/occupied state once, so an empty
+picture is not hidden and reshown during every equipment read. Clear/disable,
+missing player and world cleanup retire that same state; inherited parent
+hiding leaves it intact for recovery. Cooldown visibility reuses the existing
+painted-frame state: Show occurs only when a shade first becomes active, and
+Hide occurs only when an active shade expires or its item retires. Changed
+cooldown frames still write the original UVs at the original painting cadence.
+
+At the regular five-Hz cadence, five settled occupied slots avoid 25 redundant
+placeholder Hide calls per second. Five settled empty slots avoid 50 placeholder
+Show/Hide calls and 25 already-hidden cooldown Hide calls per second. Native
+equipment/quality/cooldown reads, missing-data retries, hover behavior and both
+Performance Mode paths retain their existing cadence and ownership. The sixteen
+icon bands, native textures, housing/glow passes, rarity RGB, alpha, layers,
+geometry and final visibility are unchanged. This reduces recurring native
+visibility writes and empty-picture layout churn, not persistent visible
+regions or measured GPU cost. CI-only cases cover occupied/empty transitions,
+failed/malformed inventory, hidden recovery, active/expired cooldowns and
+player/world/disable retirement without executing the addon locally.
+
 Jewelry composition now reuses at most five grouping records, their slot lists
 and one texture-key lookup. Equipment changes clear old references before reuse;
-settled icons still bypass composition. The fourteen authored strips, texture
-ordering, zoom, UVs, rims and attachment geometry are unchanged. Five occupied
-icons still require seventy icon regions: this reduces temporary Lua tables,
+settled icons still bypass composition. The current sixteen inset bands, texture
+ordering, zoom, UVs, housings and attachment geometry are unchanged. Five occupied
+icons still require eighty icon regions: this reduces temporary Lua tables,
 not their persistent rendering cost. No substitute rectangular/native-circle
-presentation or claim of reduced draw calls is introduced.
+presentation or claim of reduced draw calls is introduced. Earlier fourteen-strip
+batching/sampling models remain frozen historical comparisons.
 
 Layout-hidden Pet frames detach their steady tenth-second updater. Pet/totem
 receipts can arm one deferred phase-gated pass to preserve shared SCT icon

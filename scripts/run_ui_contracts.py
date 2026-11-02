@@ -29,10 +29,11 @@ def main():
             "FormatCooldown", "UpdateCooldownNumber", "CreateCooldownNumbers",
         ])
         jewelry_cache = extract_source("modules/ui/jewelry.lua", [
-            "ICON_SIZE", "ICON_ART_SIZE", "ICON_ZOOM", "iconSpan", "iconInset", "PrepareIconParts",
-            "InvalidateEffects", "ReadEffects", "ClearSlot", "PaintIcons",
+            "ICON_SIZE", "ICON_ART_SIZE", "ICON_ZOOM", "iconSpan", "iconInset", "PrepareIconParts", "Number",
+            "InvalidateEffects", "ReadEffects", "SetPlaceholderShown", "ClearSlot", "PaintIcons",
+            "Clear", "PaintCooldowns", "Refresh",
         ])
-        jewelry_cache = jewelry_cache.rsplit("\nreturn ", 1)[0] + "\nreturn { InvalidateEffects = InvalidateEffects, ReadEffects = ReadEffects, ClearSlot = ClearSlot, PaintIcons = PaintIcons, PrepareIconParts = PrepareIconParts }\n"
+        jewelry_cache = jewelry_cache.rsplit("\nreturn ", 1)[0] + "\nreturn { InvalidateEffects = InvalidateEffects, ReadEffects = ReadEffects, ClearSlot = ClearSlot, PaintIcons = PaintIcons, PrepareIconParts = PrepareIconParts, Clear = Clear, Cooldowns = PaintCooldowns, Refresh = Refresh }\n"
         jewelry_rarity = extract_source("modules/ui/jewelry.lua", [
             "RARITY_TINT_STRENGTH", "RARITY_GLOW_ALPHA", "Number",
             "HideSlotGlow", "HideGlows", "UpdateRarity", "SetQuality", "UpdateQuality",
@@ -148,6 +149,7 @@ def main():
             ("run-hud-source.lua", run_hud, "ui_shared_rules_spec.lua"),
             ("cooldown-source.lua", cooldown, "ui_spec.lua"),
             ("jewelry-cache-source.lua", jewelry_cache, "ui_jewelry_cache_spec.lua"),
+            ("jewelry-visibility-source.lua", jewelry_cache, "ui_jewelry_visibility_spec.lua"),
             ("jewelry-rarity-source.lua", jewelry_rarity, "ui_jewelry_rarity_spec.lua"),
             ("jewelry-order-source.lua", jewelry_order, "ui_jewelry_order_spec.lua"),
             ("guardian-hover-source.lua", guardian_hover, "ui_guardian_hover_spec.lua"),

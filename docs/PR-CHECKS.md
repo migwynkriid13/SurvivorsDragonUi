@@ -151,7 +151,14 @@ Jewelry cache cases use the exact production reader/cache/compositor functions
 over fake native tooltip and texture boundaries. They cover unchanged successful
 reads, same-icon item replacement, inventory/language invalidation, missing or
 throwing links/items, empty-row retries, slot retirement and reusable grouping
-records/regions with unchanged supplied crops. Pet-controller cases cover
+records/regions with unchanged supplied crops. Jewelry visibility cases exercise
+the production refresh, retirement and cooldown painter in both Performance Mode
+states. Settled occupied and empty slots make no placeholder/cooldown visibility
+writes while native reads and failed-inventory retries continue. Empty pictures
+change only on the final native inventory state; active cooldowns keep the same
+atlas frames/expiry and Show only once. Hidden recovery, missing player, world
+leave and disable retire/recover the existing regions without changing artwork,
+color, alpha or geometry. Pet-controller cases cover
 Layout-hidden sleep, deferred SCT icon learning, choice/run recovery and fresh
 Show data. Meter-controller cases cover zero view construction before first
 enable, immediate preview, disabled Reset and reuse after toggling, in both

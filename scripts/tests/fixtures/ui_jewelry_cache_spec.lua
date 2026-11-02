@@ -37,6 +37,7 @@ env.SetQuality = function(slot) slot.quality = nil end
 env.UpdateRarity = function() end -- Separate rarity lifecycle fixture owns this boundary.
 env.HideTooltip = function(slot) slot.hidden = true end
 for _, slot in ipairs(env.slots) do
+    slot.placeholderShown = false
     slot.placeholder = { Hide = function() end }
     slot.cooldown = { Hide = function() end }
 end
