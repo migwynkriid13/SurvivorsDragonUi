@@ -253,12 +253,22 @@ Tick()
 assert(not hud:IsShown(), "world entry replayed a retired roster")
 members.party1 = Member("Returned ally", 0.6, 0.5)
 Tick()
-env.UnitIsDead = function() error("native API unavailable") end
-Tick()
-assert(not hud:IsShown(), "a failed native state getter retained a destination")
-env.UnitIsDead = nil
-Tick()
-assert(not hud:IsShown(), "an absent native getter invented a dead member")
+do
+    local nativeIsDead = env.UnitIsDead
+    env.UnitIsDead = function() error("native API unavailable") end
+    Tick()
+    assert(not hud:IsShown(), "a failed native state getter retained a destination")
+    env.UnitIsDead = nil
+    Tick()
+    assert(not hud:IsShown(), "an absent native getter invented a dead member")
+    -- Later fallback cases need the healthy boundary restored after fault injection.
+    env.UnitIsDead = nativeIsDead
+    Tick()
+    assert(
+        hud:IsShown() and title:GetText() == "Returned ally",
+        "restored native death getter did not recover guidance"
+    )
+end
 display.Reset()
 assert(display.Get("partyGuidance") and not display.Get("mirrorPartyWaypoint"), "full reset lost defaults")
 print(
@@ -267,6 +277,7 @@ print(
 
 -- Exercise the same full controller's guardian fallback independently of the
 -- optional defeated minimap icons and their separate timer presentation.
+members = {} -- Guardian-only cases do not depend on the earlier party roster/faults.
 minimapVisible = false
 local guardianHud = registered.guardianWaypoint
 local guardianDistance
@@ -613,4 +624,8 @@ assert(not hud:IsVisible(), "empty native feed retained an ally")
 env.DFRL.navigation.DownedPartySnapshot = nil
 Tick()
 assert(hud:IsVisible() and positionReads > 0, "missing native getter did not restore the old map path")
+assert(
+    title:GetText() == "Legacy member" and lastGuidePoint.key == "party1:Legacy member",
+    "legacy fallback reused the previous native destination"
+)
 display.FinishEdit(false)
