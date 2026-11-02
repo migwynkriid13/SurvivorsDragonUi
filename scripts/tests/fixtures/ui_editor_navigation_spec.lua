@@ -1382,23 +1382,45 @@ context:Call(profileInput, "OnEscapePressed")
 assert(not dialog:IsShown() and display.Get("unitShortHealth") == false, "profile input Escape did not cancel")
 display.BeginEdit()
 dialog:Show()
-dialog.navigation.Select("waypoints")
+dialog.navigation.Select("map")
 local affordableOnly = assert(env.displayControls.worldCacheAffordableOnly, "missing affordability checkbox")
+assert(
+    dialog.navigation.selected == "map" and pages.waypoints:IsVisible() and affordableOnly:IsVisible(),
+    "affordability case did not open the visible Map & navigation category"
+)
 assert(not display.Get("worldCacheAffordableOnly") and affordableOnly.mouse, "wrong affordability default/dependency")
 context:Call(affordableOnly, "OnClick")
 assert(display.Get("worldCacheAffordableOnly"), "affordability checkbox did not preview")
 display.Set("worldCacheIcons", false)
 editor.Display()
-assert(not affordableOnly.mouse and affordableOnly.editorChecked, "cache-off did not disable/retain affordability")
+assert(
+    affordableOnly:IsVisible()
+        and not affordableOnly.mouse
+        and affordableOnly.editorAvailable == false
+        and affordableOnly.editorChecked
+        and affordableOnly:GetAlpha() == 0.45,
+    "cache-off did not disable/retain affordability"
+)
 display.Set("worldCacheIcons", true)
 editor.Display()
-assert(affordableOnly.mouse and affordableOnly.editorChecked, "cache-on lost affordability input/choice")
+assert(
+    affordableOnly:IsVisible()
+        and affordableOnly.mouse
+        and affordableOnly.editorAvailable == true
+        and affordableOnly.editorChecked
+        and affordableOnly:GetAlpha() == 1,
+    "cache-on lost affordability input/choice"
+)
 dialog.navigation.Search("Only show affordable caches")
 assert(
     #dialog.navigation.results == 1 and dialog.navigation.results[1].target == "worldCacheAffordableOnly",
     "affordability filter missing from search"
 )
 dialog.navigation.OpenResult(1)
+assert(
+    dialog.navigation.selected == "map" and affordableOnly:IsVisible(),
+    "affordability search opened a hidden section"
+)
 dialog.navigation.ClearSearch()
 display.Set("worldCacheAffordableOnly", false)
 dialog.navigation.Select("action")
