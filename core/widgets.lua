@@ -952,6 +952,24 @@ function DFRL.tools.CreateUnitBorder(frame, healthBar, portraitTexture, backgrou
             strip:SetTexture(path)
         end
         local name = string.gsub(path, "^.*[\\/]", "")
+        if mirrored then
+            -- Close the pointed rim's cropped columns above/below the health
+            -- opening without restoring its obsolete divider inside that opening.
+            local width = 256 - 33 - (name == "UI-TargetingFrameDF.blp" and portraitWidth or 104)
+            for _, piece in ipairs(widthPieces) do
+                if piece.stretch and piece.width ~= width then
+                    piece.width, piece.x = width, 256 - 33 - width
+                    piece.texture:SetTexCoord(
+                        (33 + width) / 256,
+                        33 / 256,
+                        -piece.y / 128,
+                        (piece.texture:GetHeight() - piece.y) / 128
+                    )
+                    piece.texture:SetWidth(width + widthDelta)
+                    UnitPoint(piece.texture, "TOPLEFT", frame, piece.x, piece.y)
+                end
+            end
+        end
         artworkBounds = unitBorderBounds[name] or fullUnitBorderBounds
         RefreshEditRegion()
     end

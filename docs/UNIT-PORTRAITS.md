@@ -268,6 +268,15 @@ Player and target use compact edit regions around their visible border art and e
 
 The shared Layout root stores `width` beside its position/scale. Let `delta` be the chosen root width minus its original native width. Player and target content becomes `122 + delta`, with portrait overlap and one-unit render underlap added separately. The player retains its 15-unit round or two-unit pointed overlap. The target uses seven units: its right fill/background edge moves eight UI units left from the former 15-unit overlap, toward the inside edge of the gold ring. Its far-left edge, health text positions, portrait and border stay fixed. This reduces the hidden portion of the health fill without claiming to remove the circular ring's entire overlap. Source columns 0–33 keep the outer cap's native size while columns 33–152 extend the straight horizontal artwork. The portraits and their original rim crops retain their sizes. The target still follows its rim even when its native anchor was expressed from the root center or left side. The player's status pulse and resting animation stay with its fixed portrait area rather than shifting to the widened root center.
 
+The pointed player rim ends at local x102.5, while the original top/bottom
+straight strips began at x104. Those two strips now include source columns
+152–153.5 to meet the rim, closing the gap beside the name panel and lower
+shadow. Switching to the round rim restores their original crop. The existing
+width-piece records retain the corrected crop and anchor through resizing;
+health/resource openings, captions and portrait geometry stay unchanged. This
+reuses the same regions and texture-change path, with no new asset or updater.
+Native filtering and in-game appearance remain unverified.
+
 **Hide portraits** continues to remove only the existing overlap and display the shared closed border attached to the actual health rectangle. It does not reset the chosen width. Pointed and round player rims, native 2D/optional 3D portraits, health values/percentages, names, levels and damage-loss fractions keep their existing owners. A shown resource strip follows the health span at its original height. No target-of-target or pet-frame width control is added.
 
 Party's 128-unit artwork is split at columns 44 and 112: the portrait portion and outer end retain their size, and the middle span takes `delta`. Its existing health-only artwork retains the exact divider-removal crops, splitting only the top/bottom horizontal spans at column 112. The native 35-unit portrait stays at its original position relative to that fixed portrait portion. Native health/resource values remain unchanged; optional resource strips follow the wider housing. Names gain the same horizontal room without changing their fonts.
