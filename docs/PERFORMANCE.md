@@ -3710,8 +3710,9 @@ refreshes run no more often than every 0.2 UI seconds, without a catalog read
 on each projection frame.
 
 Discovery failures preserve the last accepted handles and the exact callback.
-`NOT_READY` and `CATALOG_CHANGED` retry on the next shared pass no sooner than
-0.1 seconds; other discovery failures wait 0.5 seconds. Existing markers keep
+The first `NOT_READY`/`CATALOG_CHANGED` retry waits at least 0.1 seconds;
+other first failures wait 0.5 seconds. Consecutive failures double that delay up
+to eight seconds, and a complete accepted snapshot restores the normal cadence. Existing markers keep
 using fresh native projections while the refresh is pending. A complete empty
 catalog removes old records; confirmed world/context changes retire them rather
 than borrowing another world's identities. Reused staging/seen/cursor buffers
@@ -3723,11 +3724,17 @@ Only enabled cache/guardian/boss/fallen-ally kinds are requested. General enemy
 and lair markers are not requested. Up to 256 lazy frame/texture pairs reuse a
 single pool and existing waypoint artwork. Removed handles recycle before new
 frames are acquired. Successful texture bindings, placement and visibility are
-changed-only; failed bindings retry on a later visible frame. A fresh validated
-player context and all bounded projection batches must agree before painting;
-all chunks share one world, camera sample and clock. Hidden world/off/retired
-consumers do no discovery or projection. Unsupported providers retry capability
-selection at half-second intervals. Failed release retains only the exact
+changed-only; failed bindings retry on a later visible frame. The current
+player context is validated during eligible discovery. Every projection batch
+must match that accepted world epoch and all chunks share one current camera
+sample and clock before painting. The camera callback does not repeat native
+phase/player-position/capability reads. Hidden world/off/retired
+consumers do no discovery or projection. Unsupported/erroring provider selection
+starts at a half-second retry and backs off to eight seconds. Valid capability
+metadata is copied into a small cache, reused during later activation for up to
+30 seconds, and invalidated by a changed getter or clock regression. No native
+capability snapshot table is retained. Failed callback release retries at most
+twice per second and retains only the exact
 callback needed for retry; retired callbacks stay inert and foreign handlers
 remain untouched. Occlusion is not requested; explicit occluded responses hide,
 and untested markers can show through walls.
@@ -3764,9 +3771,58 @@ preparation walk skips unaffordable caches with one reused bounded request-index
 array; it adds no record scan. Skipped caches do no projection, texture binding,
 allocation or placement. Existing handles/pools remain available for immediate
 recovery after earning gold or a cost change. Other entity kinds retain their
-projection and visibility, and affordability changes do not restart discovery
-or native handler ownership. The checkbox uses the existing dependency helper
+projection and visibility. Changes to the eligible kind mask request a fresh
+complete catalog without resetting native handler ownership or valid handles. The checkbox uses the existing dependency helper
 and keeps its choice while cache icons are off.
+
+World-marker options are copied only at construction and through the existing
+display listener. The controller and marker frames do no saved-option reads.
+Requests contain only enabled kinds that can currently be displayed: affordable
+cache icons when the filter is on, encounter icons when enabled, and ally icons
+when a known native party is present. A valid zero `GetNumPartyMembers()` result
+suppresses party work; absent, throwing or invalid roster metadata remains
+conservative and does not suppress the authoritative feed. That cheap roster
+sample is shared only within the existing controller pass, without another event
+or updater.
+
+Filtered cache kinds are omitted from discovery as well as projection. A refresh
+of other kinds retains bounded scalar handles for temporarily unqueried but
+still-enabled kinds, with a maximum of 256 records across active and dormant
+rows. Disabled kinds and world/run retirement clear their gameplay records.
+Temporarily unaffordable handles and prepared marker bindings can resume without
+reallocating a view or rebinding the callback. If all kinds lack demand, the
+already-owned callback stays inert and sends no native reads/projections; it has
+only its constant callback dispatch cost. The shared service releases fully
+disabled/hidden/world-retired owners. Both WorldFrame and UIParent visibility are
+checked, including clients whose WorldFrame does not inherit UIParent hiding.
+
+The discovery cadence gate runs before native player-position reads. Empty
+catalogs and suspended kinds do no frame API work, texture preparation, row
+placement or per-frame option/phase reads. Fresh current-camera projections are
+not cached across frames for visible eligible handles; this prevents stale
+screen locations while moving the camera. Required native movement/context
+reads for existing HUD/minimap guides keep their shared original sampling.
+
+An already validated empty downed-party feed suppresses general ally discovery
+within that same shared reader pass. Its presence flag is not cached across
+passes: unavailable feeds remain unknown, and marker-only consumers still use
+their bounded discovery path when guidance did not read positions. No second
+getter or member scan is added to decide this demand.
+
+The downed-party getter is skipped when its HUD and minimap are both hidden,
+when UIParent is hidden, when guidance is off, or when the native roster is
+known empty. Empty/position-unavailable downed snapshots do not request player
+position at all. Its small identity-validation map is reused rather than
+allocated on each read. Failed or malformed downed reads hide retired positions
+and back off from half a second to eight seconds. Valid reads restore normal
+response time; a changed getter, known solo state or world reset releases that
+delay. Visible recovery reads current native data; unknown roster metadata
+preserves the old conservative behavior.
+
+SCT distance sizing uses the scalar already returned by its existing batched
+combat-text projection. These controls add no event/history/position/capability
+query of their own. They retain existing pooling and current-frame projection,
+with no cached stale hit locations or locally invented distances.
 
 Coverage is authored for CI only. No local tests, syntax/validation checks or
 addon/game execution were performed. Operation bounds and mocks do not prove

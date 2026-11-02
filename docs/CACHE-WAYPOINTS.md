@@ -77,6 +77,14 @@ valid handles; their native projection still decides whether they can be drawn.
 These failures do not release the callback or publish a partial list. Explicit
 world/context changes retire the old handles.
 
+Only marker kinds that can currently be shown are requested. The affordability
+filter skips cache discovery and projection while gold is insufficient or
+unknown; disabled encounter kinds do not start the native enemy scan. Known
+empty parties skip ally requests. Hidden UI and disabled features do no marker
+API reads. Existing handles, artwork bindings and pooled frames are reused.
+Options update through the existing settings listener, and repeated failures
+back off instead of flooding the provider. Visible recovery reads fresh data.
+
 Only current post-camera projections place icons. Offscreen/behind-camera,
 expired, unavailable and explicitly occluded anchors hide. The developer reports
 no occlusion or world-offset support; neither is requested. Untested markers can

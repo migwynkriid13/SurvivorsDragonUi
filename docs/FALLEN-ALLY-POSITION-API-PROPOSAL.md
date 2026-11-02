@@ -447,7 +447,9 @@ picked up without requesting ordinary enemies or inferring their kind.
 
 `CATALOG_CHANGED` and first-read `NOT_READY` retry no sooner than 0.1 UI seconds
 (the next ordinary shared reader pass); other failed catalogs retry after 0.5
-seconds. These refresh failures preserve the existing accepted handles, marker
+seconds on the first failure. Repeated failures back off exponentially up to
+eight seconds; a successful complete read restores normal timing. These refresh
+failures preserve the existing accepted handles, marker
 pool and exact registered callback while their native projections remain valid.
 No cursor is retained for a later frame and no partial list proves removal.
 A complete empty catalog retires old handles; explicit world/map/run/space
@@ -479,8 +481,50 @@ nonnegative; compare without rounding, accepting equality and zero-cost caches.
 Missing/invalid readings hide world cache icons while the filter is on. This
 does not add a general-anchor field or getter, alter HUD/minimap guidance, or
 filter guardians/bosses/allies. Affordability changes use the current received
-values without restarting discovery, rebinding the native handler or retiring
-valid cached handles. Unaffordable caches skip projection and drawing.
+values without rebinding the native handler or retiring valid cached handles.
+A changed eligible-kind mask triggers a fresh complete catalog. Unaffordable
+caches skip discovery, projection and drawing.
+
+### Consumer demand and cache boundaries
+
+Display choices are cached by the existing settings listener, and supported
+capability scalars are copied rather than retaining native tables. The copied
+capabilities can be reused for up to 30 seconds during a later activation;
+changing the getter or regressing UI time invalidates that cache. No capability
+poll is added to the camera loop. Confirmed context/lifecycle retirement still
+releases gameplay handles and prepared rows through the shared lifecycle.
+
+Discovery only requests currently needed kinds. Unaffordable caches are omitted
+when the filter is selected; known empty parties omit downed-member kinds;
+disabled encounter markers never request an enemy scan. Temporarily unqueried
+but still-enabled kinds can retain bounded opaque handles while a complete
+refresh replaces only the queried kinds. They do not project while suspended.
+The total accepted active/dormant cache remains at most 256 records.
+
+A marker frame uses only the accepted world epoch plus the native current-frame
+projection; it does not issue another player-position, phase, capability or
+saved-setting read. Discovery's timing gate precedes its player-position read.
+Empty lists and all-suspended consumers do no frame API work. Visible eligible
+handles still project every native camera frame; screen coordinates are never
+cached across frames. Both WorldFrame and UIParent hiding stop marker queries.
+Failed callback release is throttled to half-second retries without losing the
+exact function that must be released.
+
+An already validated empty downed-party feed suppresses general ally discovery
+within that same shared reader pass. Its presence flag is not cached across
+passes: unavailable feeds remain unknown, and marker-only consumers still use
+their bounded discovery path when guidance did not read positions. No second
+getter or member scan is added to decide this demand.
+
+Failed or malformed downed-position reads clear old positions and retry with
+progressive half-second to eight-second delays. Valid reads restore normal
+response time; changed getters, known solo state and world resets release the
+delay. A retry never enables legacy fallback while the native getter exists.
+
+The authoritative downed feed is also demand-gated by visible HUD/minimap
+presentation and a feature-detected native party count shared within one reader
+pass. Unknown roster metadata does not imply an empty party. An empty or wholly
+position-unavailable native downed list does not request player position.
 
 Combat text continues using its existing endpoints. Optional
 `playerDistanceMetrics = true` and finite nonnegative `entry.playerDistance`

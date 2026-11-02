@@ -1147,3 +1147,24 @@ its opaque handle and never uses name-based inference. Both Performance Mode
 states retain affordability/pooling/cleanup coverage. These cases use the
 provisional consumer schema and are authored for CI only; they do not establish
 that the developer's final API uses these field names or payloads.
+
+World-marker performance cases count capability, discovery, phase, player-position,
+option and projection calls. Disabled, UIParent-hidden (including an independently
+visible WorldFrame), unaffordable solo and no-party consumers remain quiet. Only
+eligible kinds enter each query; temporarily omitted cache handles and static
+bindings survive other-kind refreshes. Repeated camera frames do no metadata or
+option reads; gated discovery does no player-position read; empty lists do no
+frame API work. Cases cover copied capability-table mutation safety, reuse and
+later activation expiry, progressive failure backoff/recovery, throttled failed
+release, and stable foreign callbacks/pools in both Performance Mode states.
+
+Native downed-position cases count coarse roster reads once per shared pass,
+zero API/player-position calls for known solo state, same-pass empty downed-feed
+suppression of duplicate world discovery, no player-position reads for
+empty/unavailable downed lists, conservative unknown-roster recovery, bounded
+failure retries without stale/fallback positions, successful retry recovery and
+world-reset delay cleanup. Full
+waypoint cases exercise hidden UIParent, hidden HUD plus minimap, visible-minimap
+recovery and disabled/no-party getter suppression. They are authored for CI only;
+no local tests, validation or addon/game execution were run. Counts do not prove
+native call cost, rendering cost, appearance or live FPS gains.

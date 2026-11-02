@@ -33,7 +33,8 @@ local function Scene(performance)
     native.foreign = function() end
     native.handlers[native.foreign] = true
     env.AZS_GetWorldAnchorCapabilities = function()
-        return {
+        native.capabilityReads = (native.capabilityReads or 0) + 1
+        local caps = {
             apiVersion = 1,
             frameHandler = true,
             kinds = {
@@ -47,6 +48,8 @@ local function Scene(performance)
             maxEntriesPerRead = native.pageLimit or 2,
             maxAnchorsPerRead = 1,
         }
+        native.capabilitySnapshot = caps
+        return caps
     end
     env.AZS_RegisterWorldAnchorFrameHandler = function(handler)
         native.registers = native.registers + 1
@@ -72,6 +75,7 @@ local function Scene(performance)
         for _, kind in ipairs(query.kinds) do
             kinds[kind], native.queryKinds[kind] = true, true
         end
+        native.lastKinds = kinds
         for _, entry in ipairs(native.entries) do
             if kinds[entry.kind] then table.insert(entries, entry) end
         end
@@ -139,12 +143,28 @@ local function Scene(performance)
         if native.projectFault then native.projectFault(batch) end
         return batch
     end
+    local getDisplay = env.DFRL.display.Get
+    env.DFRL.display.Get = function(key)
+        native.optionReads = (native.optionReads or 0) + 1
+        return getDisplay(key)
+    end
     c:Load("core/world_marker_api.lua")
     c.api = env.T.NewWorldMarkerApi({
-        WorldPosition = function() return position end,
-        Phase = function() return "playing" end,
+        WorldPosition = function()
+            assert(native.inService, "marker projection repeated the native player-position getter")
+            native.positionReads = (native.positionReads or 0) + 1
+            return position
+        end,
+        Phase = function()
+            assert(native.inService, "marker callback repeated the native phase getter")
+            native.phaseReads = (native.phaseReads or 0) + 1
+            return "playing"
+        end,
+        HasParty = function() return native.partyPresent ~= false end,
+        NeedsPartyMarker = function() return native.downedPresent ~= false end,
         IsRunPhase = function() return true end,
     })
+    env.DFRL.display.Listen(c.api.UpdateOptions)
     function c:Service(elapsed)
         if elapsed then
             self.now = self.now + elapsed
@@ -210,12 +230,13 @@ for _, performance in ipairs({ false, true }) do
     c:Frame()
     assert(#c:Markers() == 1, "explicitly occluded icon remained visible")
     native.entries[1].occlusion = nil
+    local visibleBefore = #c:Markers()
     display.Set("worldBossIcons", true)
     local discoveryReads = native.calls
     c:Service()
     assert(
-        native.calls - discoveryReads == 2 and #c:Markers() == 0,
-        "catalog did not complete inside one service frame"
+        native.calls - discoveryReads == 2 and #c:Markers() == visibleBefore,
+        "catalog did not complete inside one frame while retaining existing markers"
     )
     c:Frame()
     assert(#c:Markers() == 3, "same-frame pagination omitted a boss")
@@ -275,7 +296,7 @@ for _, performance in ipairs({ false, true }) do
     assert(native.calls == reads and #c:Markers() == 0, "disabled markers retained discovery or drawings")
     c.api.Reset()
 end
--- Affordability changes gate only world caches, without re-discovery or rebinding.
+-- Camera-frame affordability changes gate caches without discovery or rebinding.
 for _, performance in ipairs({ false, true }) do
     local c = Scene(performance)
     local env, native = c.env, c.native
@@ -500,6 +521,263 @@ assert(
     "oversized catalog exceeded its frame budget or published a partial replacement"
 )
 bounded.api.Reset()
+-- Request budgets: disabled/hidden/no-demand consumers stay quiet; camera frames
+-- project only eligible cached handles and never repeat phase/position/capability reads.
+for _, performance in ipairs({ false, true }) do
+    local quiet = Scene(performance)
+    local qn, qd = quiet.native, quiet.env.DFRL.display
+    qn.partyPresent = false
+    qd.Set("worldCacheAffordableOnly", true)
+    quiet.env.AZS_RUN, quiet.env.AZS_RUN_UPDATED = { gold = 0, chest = 10 }, 1
+    qn.entries = { Record("cache", "cache") }
+    for _ = 1, 40 do
+        quiet:Service(0.1)
+        quiet:Frame()
+    end
+    assert(
+        qn.calls == 0 and not qn.capabilityReads and not qn.positionReads and not qn.phaseReads and qn.registers == 0,
+        "unaffordable solo markers retained native requests"
+    )
+    quiet.env.AZS_RUN.gold = 10
+    quiet:Service()
+    quiet:Frame()
+    assert(#quiet:Markers() == 1 and qn.calls == 1 and qn.capabilityReads == 1 and qn.registers == 1)
+    local objects, calls, positions, phases, capabilities =
+        #quiet.objects, qn.calls, qn.positionReads, qn.phaseReads, qn.capabilityReads
+    local optionReads = qn.optionReads
+    for _ = 1, 60 do
+        quiet:Frame()
+    end
+    assert(qn.optionReads == optionReads, "marker frames re-read saved options")
+    assert(
+        qn.calls == calls
+            and qn.positionReads == positions
+            and qn.phaseReads == phases
+            and qn.capabilityReads == capabilities,
+        "camera frames repeated metadata/discovery reads"
+    )
+    quiet:Service(0.05)
+    assert(qn.calls == calls and qn.positionReads == positions, "gated discovery still read player position")
+    quiet.env.AZS_RUN.gold = 0
+    quiet:Service()
+    calls, positions, phases = qn.calls, qn.positionReads, qn.phaseReads
+    optionReads = qn.optionReads
+    for _ = 1, 20 do
+        quiet:Service(0.1)
+        quiet:Frame()
+    end
+    assert(qn.optionReads == optionReads, "quiet marker controller re-read saved options")
+    assert(
+        qn.calls == calls
+            and qn.positionReads == positions
+            and qn.phaseReads == phases
+            and qn.registers == 1
+            and qn.unregisters == 0,
+        "hidden affordable-only cache lost its quiet cached owner"
+    )
+    quiet.env.AZS_RUN.gold = 10
+    quiet:Service()
+    quiet:Frame()
+    assert(
+        #quiet:Markers() == 1 and #quiet.objects == objects and qn.registers == 1 and qn.capabilityReads == capabilities,
+        "affordability recovery rebuilt cached metadata/markers"
+    )
+    qd.Set("worldCacheIcons", false)
+    qd.Set("worldBossIcons", false)
+    qd.Set("worldPartyIcons", false)
+    quiet:Service()
+    calls, positions, phases, capabilities = qn.calls, qn.positionReads, qn.phaseReads, qn.capabilityReads
+    for _ = 1, 20 do
+        quiet:Service(0.1)
+        quiet:Frame()
+    end
+    assert(
+        qn.calls == calls
+            and qn.positionReads == positions
+            and qn.phaseReads == phases
+            and qn.capabilityReads == capabilities,
+        "disabled markers retained native requests"
+    )
+    quiet.api.Reset()
+
+    local alive = Scene(performance)
+    alive.native.downedPresent = false
+    alive.env.DFRL.display.Set("worldCacheIcons", false)
+    for _ = 1, 20 do
+        alive:Service(0.1)
+        alive:Frame()
+    end
+    assert(
+        alive.native.calls == 0 and not alive.native.capabilityReads and not alive.native.positionReads,
+        "known empty downed feed retained duplicate world discovery"
+    )
+    alive.native.downedPresent = true
+    alive.native.entries = { Record("new-ally", "downedPartyMember") }
+    alive:Service()
+    alive:Frame()
+    assert(#alive:Markers() == 1 and alive.native.calls == 1, "new downed presence failed to wake marker demand")
+    alive.api.Reset()
+
+    local hidden = Scene(performance)
+    hidden.env.WorldFrame.parent = nil -- Native WorldFrame need not inherit UIParent hiding.
+    hidden.env.UIParent:Hide()
+    for _ = 1, 20 do
+        hidden:Service(0.1)
+        hidden:Frame()
+    end
+    assert(
+        hidden.native.calls == 0
+            and not hidden.native.capabilityReads
+            and not hidden.native.positionReads
+            and hidden.native.registers == 0,
+        "hidden UIParent retained world-marker reads"
+    )
+    hidden.env.UIParent:Show()
+    hidden.native.entries = { Record("visible-cache", "cache") }
+    hidden:Service()
+    hidden:Frame()
+    assert(#hidden:Markers() == 1)
+    hidden.env.UIParent:Hide()
+    local projections = hidden.native.projections
+    for _ = 1, 60 do
+        hidden:Frame() -- A hidden UIParent may also stop the shared controller.
+    end
+    assert(hidden.native.projections == projections and #hidden:Markers() == 0, "hidden root retained frame requests")
+    hidden:Service()
+    assert(hidden.native.unregisters == 1, "shared service did not release hidden marker ownership")
+    hidden.api.Reset()
+
+    local split = Scene(performance)
+    local sn, sd = split.native, split.env.DFRL.display
+    sd.Set("worldCacheAffordableOnly", true)
+    split.env.AZS_RUN, split.env.AZS_RUN_UPDATED = { gold = 0, chest = 10 }, 1
+    sn.entries = { Record("cache", "cache"), Record("ally", "downedPartyMember") }
+    split:Service()
+    split:Frame()
+    assert(
+        #split:Markers() == 1 and not sn.lastKinds.cache and sn.lastKinds.downedPartyMember,
+        "unaffordable caches remained in another kind's discovery request"
+    )
+    split.env.AZS_RUN.gold = 10
+    split:Service(0.21)
+    split:Frame()
+    assert(#split:Markers() == 2 and sn.lastKinds.cache)
+    objects = #split.objects
+    split.env.AZS_RUN.gold = 0
+    split:Service(0.21)
+    split:Frame()
+    assert(
+        #split:Markers() == 1 and not sn.lastKinds.cache and sn.registers == 1,
+        "per-kind suspension retained cache reads or rebound the callback"
+    )
+    split.env.AZS_RUN.gold = 10
+    split:Service(0.21)
+    split:Frame()
+    assert(
+        #split:Markers() == 2 and #split.objects == objects and sn.capabilityReads == 1,
+        "per-kind discovery discarded the dormant cache pool"
+    )
+    sn.partyPresent = false
+    split:Service(0.21)
+    split:Frame()
+    assert(
+        #split:Markers() == 1 and sn.lastKinds.cache and not sn.lastKinds.downedPartyMember,
+        "no-party world icons remained in discovery/projection"
+    )
+    split.api.Reset()
+
+    local empty = Scene(performance)
+    empty.native.partyPresent = false
+    empty:Service()
+    local en = empty.native
+    calls, positions, phases, capabilities = en.calls, en.positionReads, en.phaseReads, en.capabilityReads
+    for _ = 1, 60 do
+        empty:Frame()
+    end
+    assert(
+        en.calls == calls
+            and en.positionReads == positions
+            and en.phaseReads == phases
+            and en.capabilityReads == capabilities
+            and not en.projections,
+        "empty catalog retained frame API work"
+    )
+    empty.api.Reset()
+    empty:Service()
+    assert(en.capabilityReads == capabilities, "same-provider capability cache was not reused")
+    en.capabilitySnapshot.kinds.cache = false
+    empty.api.Reset()
+    empty:Service()
+    assert(en.calls == calls + 2, "returned capability table mutated the copied cache")
+    empty.now = empty.now + 31
+    empty.api.Reset()
+    empty:Service()
+    assert(en.capabilityReads == capabilities + 1, "capability cache failed to refresh at a later activation")
+    empty.api.Reset()
+
+    local retry = Scene(performance)
+    retry.native.entries = { Record("cache", "cache") }
+    retry:Service()
+    retry:Frame()
+    local rn = retry.native
+    calls = rn.calls
+    rn.discoveryFault = function() return "NOT_READY" end
+    for _ = 1, 50 do
+        retry:Service(0.1)
+        retry:Frame()
+    end
+    assert(
+        rn.calls - calls >= 3
+            and rn.calls - calls <= 7
+            and #retry:Markers() == 1
+            and rn.registers == 1
+            and rn.unregisters == 0,
+        "persistent discovery failure flooded requests or lost cached handles"
+    )
+    rn.discoveryFault = nil
+    retry:Service(8.1)
+    retry:Frame()
+    assert(#retry:Markers() == 1)
+    rn.discoveryFault = function() return "NOT_READY" end
+    retry:Service(0.21)
+    calls = rn.calls
+    retry:Service(0.11)
+    assert(rn.calls == calls + 1, "successful discovery did not restore the short first retry")
+    rn.releaseFault = true
+    retry.env.DFRL.display.Set("worldCacheIcons", false)
+    retry.env.DFRL.display.Set("worldBossIcons", false)
+    retry.env.DFRL.display.Set("worldPartyIcons", false)
+    local releases = rn.unregisters
+    retry:Service()
+    for _ = 1, 4 do
+        retry:Service(0.1)
+        retry:Frame()
+    end
+    assert(rn.unregisters == releases + 1, "failed callback release retried at controller speed")
+    rn.releaseFault = false
+    retry:Service(0.51)
+    assert(rn.unregisters == releases + 2 and rn.handlers[rn.foreign], "throttled callback release failed to recover")
+    retry.api.Reset()
+
+    local unavailable = Scene(performance)
+    unavailable.env.AZS_GetWorldAnchorCapabilities = function()
+        unavailable.native.capabilityReads = (unavailable.native.capabilityReads or 0) + 1
+        return nil, { code = "NOT_READY" }
+    end
+    for _ = 1, 100 do
+        unavailable:Service(0.1)
+        unavailable:Frame()
+    end
+    assert(
+        unavailable.native.capabilityReads >= 3
+            and unavailable.native.capabilityReads <= 6
+            and unavailable.native.calls == 0
+            and not unavailable.native.positionReads
+            and unavailable.native.registers == 0,
+        "unavailable capabilities flooded reads or started gameplay work"
+    )
+    unavailable.api.Reset()
+end
 local old = Scene(false)
 old.env.AZS_GetWorldAnchorCapabilities = nil
 old:Service()

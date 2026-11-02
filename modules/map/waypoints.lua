@@ -697,7 +697,9 @@ DFRL:NewMod("Waypoints", 3, function()
     end
 
     local function PartySnapshot(tracker)
-        if not DFRL.display.Get(tracker.displayKey) then return end
+        if not DFRL.display.Get(tracker.displayKey) or not FrameVisible(UIParent) then return end
+        if DFRL.layout.IsHidden(tracker.layoutKey) and (not Minimap or not FrameVisible(Minimap)) then return end
+        if navigation.HasParty and not navigation.HasParty() then return end
         if navigation.DownedPartySnapshot then
             local native, supported = navigation.DownedPartySnapshot()
             if supported then return native end
@@ -1210,7 +1212,10 @@ DFRL:NewMod("Waypoints", 3, function()
     end
     controller:SetScript("OnUpdate", function() navigation.WithSample(UpdateWaypoints) end)
     local function UpdateDisplay()
-        if worldMarkers then worldMarkers.Service(inWorld) end
+        if worldMarkers then
+            worldMarkers.UpdateOptions()
+            worldMarkers.Service(inWorld)
+        end
         dirty = true
         -- Visibility drafts do not retire snapshots, selections or calibration.
         showGuardianTimers = DFRL.display.Get("guardianMinimapTimers")

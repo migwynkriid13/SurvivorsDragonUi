@@ -12,8 +12,8 @@ DFRL:NewMod("Navigation", 2, function()
     local sampling, frameSample = false, {}
     local runSample = {}
     local liveSample, liveAdvertised = {}, false
-    local downedPoints = {}
-    local capabilitiesRetry, positionRetry = {}, {}
+    local downedPoints, downedSeen = {}, {}
+    local capabilitiesRetry, positionRetry, downedRetry = {}, {}, {}
     local projections, projectionRows, projectionCells = {}, {}, {}
     local projectionDirty, projectionPass = true, 0
 
@@ -125,10 +125,15 @@ DFRL:NewMod("Navigation", 2, function()
             downedPoints[index] = nil
         end
         if table.setn then table.setn(downedPoints, 0) end
+        for id in pairs(downedSeen) do
+            downedSeen[id] = nil
+        end
         ResetCalibration()
         ClearSample()
         ClearRetry(capabilitiesRetry)
         ClearRetry(positionRetry)
+        ClearRetry(downedRetry)
+        downedRetry.getter, downedRetry.failures = nil, nil
     end
     function navigation.SetPoints(key, list)
         if points[key] ~= list then
@@ -148,6 +153,21 @@ DFRL:NewMod("Navigation", 2, function()
             frameSample.phaseRead, frameSample.phase = true, phase
         end
         return phase
+    end
+    function navigation.HasParty()
+        if sampling and frameSample.partyRead then return frameSample.partyPresent end
+        local present = true
+        local getter = _G.GetNumPartyMembers
+        if type(getter) == "function" then
+            local ok, count = pcall(getter)
+            if ok and Number(count) and count >= 0 and count <= 4 and count == math.floor(count) then
+                present = count > 0
+            end
+        end
+        if sampling then
+            frameSample.partyRead, frameSample.partyPresent = true, present
+        end
+        return present
     end
     local function ReadLivePosition()
         if not RetryReady(capabilitiesRetry) then return nil, true end
@@ -219,14 +239,45 @@ DFRL:NewMod("Navigation", 2, function()
             and Number(target.x)
             and Number(target.y)
     end
+    function navigation.NeedsPartyMarker()
+        return not (sampling and frameSample.downedRead and frameSample.downedPresent == false)
+    end
     function navigation.WorldPosition() return LivePosition() end
     function navigation.DownedPartySnapshot()
         local getter = _G.AZS_GetDownedPartyMembers
-        if type(getter) ~= "function" then return nil, false end
+        if type(getter) ~= "function" then
+            ClearRetry(downedRetry)
+            downedRetry.getter, downedRetry.failures = nil, nil
+            return nil, false
+        end
+        if downedRetry.getter ~= getter then
+            ClearRetry(downedRetry)
+            downedRetry.getter, downedRetry.failures = getter, nil
+        end
+        if sampling then
+            frameSample.downedRead, frameSample.downedPresent = true, nil
+        end
         -- Never keep an old downed location after an unavailable/invalid read.
         local previous = table.getn(downedPoints)
-        local ok, members, failure = pcall(getter)
-        local count, seen = 0, {}
+        for id in pairs(downedSeen) do
+            downedSeen[id] = nil
+        end
+        if not navigation.HasParty() then
+            ClearRetry(downedRetry)
+            downedRetry.failures = nil
+            for index = previous, 1, -1 do
+                downedPoints[index] = nil
+            end
+            if table.setn then table.setn(downedPoints, 0) end
+            if sampling then frameSample.downedPresent = false end
+            return downedPoints, true
+        end
+        local attempted = RetryReady(downedRetry)
+        local ok, members, failure
+        if attempted then
+            ok, members, failure = pcall(getter)
+        end
+        local count, seen, hasPosition = 0, downedSeen, false
         if ok and failure == nil and type(members) == "table" then
             for key in pairs(members) do
                 if not Number(key) or key < 1 or key > 4 or key ~= math.floor(key) then
@@ -268,10 +319,22 @@ DFRL:NewMod("Navigation", 2, function()
                     break
                 end
                 seen[member.id] = true
+                if member.positionAvailable then hasPosition = true end
             end
         end
+        if attempted then
+            if members then
+                ClearRetry(downedRetry)
+                downedRetry.failures = nil
+            else
+                downedRetry.failures = (downedRetry.failures or 0) + 1
+                downedRetry.started = GetTime()
+                downedRetry.delay = math.min(8, 0.5 * 2 ^ math.min(downedRetry.failures - 1, 4))
+            end
+        end
+        if sampling and members then frameSample.downedPresent = count > 0 end
         local used = 0
-        if members then
+        if members and hasPosition then
             local position = LivePosition()
             for index = 1, count do
                 local member = members[index]

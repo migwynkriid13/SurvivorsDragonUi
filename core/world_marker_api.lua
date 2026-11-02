@@ -5,6 +5,7 @@ setfenv(1, DFRL:GetEnv())
 function DFRL.tools.NewWorldMarkerApi(navigation)
     local api = {}
     local DISCOVERY_INTERVAL, TRANSIENT_RETRY, FAILURE_RETRY = 0.2, 0.1, 0.5
+    local markerKinds = { "cache", "guardian", "boss", "finalBoss", "downedPartyMember" }
     local state = {
         records = {},
         staging = {},
@@ -15,6 +16,7 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
         pool = {},
         seen = {},
         cursors = {},
+        choices = {},
     }
     local styles = {
         cache = {
@@ -120,9 +122,15 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
     end
     local function Release()
         if not state.handler then return true end
+        local now = GetTime()
+        if state.releaseAt and now >= state.releaseStarted and now < state.releaseAt then return false end
         local ok, result, failure = pcall(state.unregister, state.handler)
-        if not ok or result == false or failure ~= nil then return false end
+        if not ok or result == false or failure ~= nil then
+            state.releaseStarted, state.releaseAt = now, now + FAILURE_RETRY
+            return false
+        end
         state.handler, state.unregister = nil, nil
+        state.releaseStarted, state.releaseAt = nil, nil
         return true
     end
     local function ClearMap(map)
@@ -144,12 +152,14 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
         ClearMap(state.cursors)
         state.catalog, state.world = nil, nil
         state.mapId, state.runId, state.spaceId, state.clock = nil, nil, nil, nil
-        state.discoveryAt, state.discoveryStarted = nil, nil
+        state.discoveryAt, state.discoveryStarted, state.discoveryFailures = nil, nil, nil
     end
     function api.Reset()
         state.session, state.enabled, state.retire = nil, false, nil
         ClearCatalog()
-        state.query, state.kinds, state.options, state.capabilities = nil, nil, nil, nil
+        state.query, state.kinds, state.capabilities = nil, nil, nil
+        state.queryCache, state.queryBoss, state.queryParty = nil, nil, nil
+        state.active, state.configFailures = false, nil
         state.retryAt, state.retryStarted = nil, nil
         Release() -- A partial/failed release is retried by the existing controller.
     end
@@ -158,7 +168,7 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
     end
     local function Wanted(kind)
         local style = styles[kind]
-        return style and DFRL.display.Get(style.key)
+        return style and state.choices[style.key]
     end
     local function Marker(record)
         local marker = state.markers[record.anchorId]
@@ -186,7 +196,7 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
         return marker
     end
     local function CacheAffordable()
-        if not DFRL.display.Get("worldCacheAffordableOnly") then return true end
+        if not state.choices.worldCacheAffordableOnly then return true end
         local run = _G.AZS_RUN
         return type(run) == "table"
             and Number(_G.AZS_RUN_UPDATED)
@@ -196,28 +206,65 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
             and run.chest >= 0
             and run.gold >= run.chest
     end
-    local function Project()
+    local function Shown(frame)
+        if not frame then return false end
+        local visible = frame:IsVisible()
+        return visible == true or visible == 1
+    end
+    function api.UpdateOptions()
+        local cache = DFRL.display.Get("worldCacheIcons")
+        local boss = DFRL.display.Get("worldBossIcons")
+        local party = DFRL.display.Get("worldPartyIcons")
+        local affordable = DFRL.display.Get("worldCacheAffordableOnly")
+        local choices = state.choices
         if
-            not state.enabled
-            or not state.world
-            or not WorldFrame:IsVisible()
-            or not navigation.IsRunPhase(navigation.Phase())
+            choices.worldCacheIcons == cache
+            and choices.worldBossIcons == boss
+            and choices.worldPartyIcons == party
+            and choices.worldCacheAffordableOnly == affordable
         then
             return
         end
-        if table.getn(state.records) == 0 then
+        local visibilityChanged = choices.worldCacheIcons ~= cache
+            or choices.worldBossIcons ~= boss
+            or choices.worldPartyIcons ~= party
+        choices.worldCacheIcons, choices.worldBossIcons, choices.worldPartyIcons = cache, boss, party
+        choices.worldCacheAffordableOnly = affordable
+        state.queryDirty = true
+        if visibilityChanged then
+            local used = 0
+            for index = 1, table.getn(state.records) do
+                local record = state.records[index]
+                if Wanted(record.kind) then
+                    used = used + 1
+                    state.records[used], state.points[used] = record, state.points[index]
+                else
+                    local marker = state.markers[record.anchorId]
+                    if marker then Recycle(record.anchorId, marker) end
+                end
+            end
+            Trim(state.records, used)
+            Trim(state.points, used)
+            for _, record in ipairs(state.staging) do
+                if record.kind and not Wanted(record.kind) then
+                    record.anchorId, record.kind, record.attachment = nil, nil, nil
+                end
+            end
+        end
+        if not cache and not boss and not party then
+            state.active = false
+            HideAll()
+        end
+    end
+    local function Project()
+        if not state.enabled or not state.world or not state.active then return true end
+        if not Shown(WorldFrame) or not Shown(UIParent) then
             HideAll()
             return true
         end
-        local position = navigation.WorldPosition()
-        if not position then
-            HideAll()
-            return true
-        end
-        if not Context(state, position) then
-            state.retire = true
-            return
-        end
+        if table.getn(state.records) == 0 then return true end
+        -- Projection already validates this frame's world epoch. The shared
+        -- discovery reader checks map/run/space without another player getter per frame.
         local sample, clock, total = nil, nil, table.getn(state.records)
         local first = 1
         local cacheVisible = CacheAffordable()
@@ -226,7 +273,11 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
             local size = 0
             while first <= total and size < state.capabilities.maxAnchorsPerRead do
                 local record = state.records[first]
-                if record.kind ~= "cache" or cacheVisible then
+                if
+                    Wanted(record.kind)
+                    and (record.kind ~= "cache" or cacheVisible)
+                    and (record.kind ~= "downedPartyMember" or state.requestParty)
+                then
                     size = size + 1
                     local request = state.requests[size] or {}
                     request.anchorId, request.attachment = record.anchorId, record.attachment
@@ -331,7 +382,33 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
         end
         return true
     end
-    local function Configure()
+    local function SetQuery()
+        if
+            not state.queryDirty
+            and state.queryCache == state.requestCache
+            and state.queryBoss == state.requestBoss
+            and state.queryParty == state.requestParty
+        then
+            return table.getn(state.query.kinds)
+        end
+        state.queryCache, state.queryBoss, state.queryParty = state.requestCache, state.requestBoss, state.requestParty
+        state.queryDirty = nil
+        ClearMap(state.kinds)
+        local count, list = 0, state.query.kinds
+        for _, kind in ipairs(markerKinds) do
+            local requested = kind == "cache" and state.requestCache
+                or kind == "downedPartyMember" and state.requestParty
+                or (kind ~= "cache" and kind ~= "downedPartyMember" and state.requestBoss)
+            if requested and state.capabilities.kinds[kind] then
+                count = count + 1
+                list[count], state.kinds[kind] = kind, true
+            end
+        end
+        Trim(list, count)
+        state.discoveryAt, state.discoveryStarted, state.discoveryFailures = nil, nil, nil
+        return count
+    end
+    local function Configure(now)
         for _, name in ipairs({
             "AZS_GetWorldAnchorCapabilities",
             "AZS_GetWorldAnchors",
@@ -341,29 +418,37 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
         }) do
             if type(_G[name]) ~= "function" then return end
         end
-        local caps = Read("AZS_GetWorldAnchorCapabilities")
+        local getter = _G.AZS_GetWorldAnchorCapabilities
+        local cached = state.cachedCapabilities
         if
-            not caps
-            or caps.apiVersion ~= 1
-            or caps.frameHandler ~= true
-            or type(caps.kinds) ~= "table"
-            or type(caps.attachments) ~= "table"
-            or not Integer(caps.maxEntriesPerRead, 1, 256)
-            or not Integer(caps.maxAnchorsPerRead, 1, 256)
+            not cached
+            or state.capabilityGetter ~= getter
+            or now < state.capabilityAt
+            or now - state.capabilityAt >= 30
         then
-            return
-        end
-        local kinds, selected = {}, {}
-        for _, kind in ipairs({ "cache", "guardian", "boss", "finalBoss", "downedPartyMember" }) do
-            if Wanted(kind) and caps.kinds[kind] == true and caps.attachments[styles[kind].attachment] == true then
-                table.insert(kinds, kind)
-                selected[kind] = true
+            local caps = Read("AZS_GetWorldAnchorCapabilities")
+            if
+                not caps
+                or caps.apiVersion ~= 1
+                or caps.frameHandler ~= true
+                or type(caps.kinds) ~= "table"
+                or type(caps.attachments) ~= "table"
+                or not Integer(caps.maxEntriesPerRead, 1, 256)
+                or not Integer(caps.maxAnchorsPerRead, 1, 256)
+            then
+                return
             end
+            cached =
+                { maxEntriesPerRead = caps.maxEntriesPerRead, maxAnchorsPerRead = caps.maxAnchorsPerRead, kinds = {} }
+            for _, kind in ipairs(markerKinds) do
+                cached.kinds[kind] = caps.kinds[kind] == true and caps.attachments[styles[kind].attachment] == true
+            end
+            state.cachedCapabilities, state.capabilityGetter, state.capabilityAt = cached, getter, now
         end
-        if table.getn(kinds) == 0 then return end
-        state.query = { kinds = kinds, states = { "available", "alive", "downed" } }
-        state.kinds = selected
-        state.capabilities = { maxEntriesPerRead = caps.maxEntriesPerRead, maxAnchorsPerRead = caps.maxAnchorsPerRead }
+        state.capabilities = cached
+        state.query, state.kinds = { kinds = {}, states = { "available", "alive", "downed" } }, {}
+        state.queryDirty = true
+        if SetQuery() == 0 then return end
         local session = {}
         state.session = session
         local handler = function()
@@ -456,6 +541,23 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
                 end
             end
             if not page.hasMore then
+                for _, old in ipairs(state.records) do
+                    if
+                        not state.kinds[old.kind]
+                        and Wanted(old.kind)
+                        and used < 256
+                        and state.seen[old.anchorId] == nil
+                    then
+                        used = used + 1
+                        local record = state.staging[used] or {}
+                        record.anchorId, record.kind, record.attachment = old.anchorId, old.kind, old.attachment
+                        state.staging[used], state.seen[old.anchorId] = record, true
+                        if used > stagingSize then
+                            if table.setn then table.setn(state.staging, used) end
+                            stagingSize = used
+                        end
+                    end
+                end
                 Trim(state.staging, used)
                 state.records, state.staging = state.staging, state.records
                 state.catalog, state.world = catalog, world
@@ -470,50 +572,78 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
         end
         return false
     end
+    local function RetryDelay(base, failures) return math.min(8, base * 2 ^ math.min(failures - 1, 7)) end
     function api.Service(inWorld)
-        local options = (DFRL.display.Get("worldCacheIcons") and "1" or "0")
-            .. (DFRL.display.Get("worldBossIcons") and "1" or "0")
-            .. (DFRL.display.Get("worldPartyIcons") and "1" or "0")
+        local choices = state.choices
         if
             not inWorld
-            or options == "000"
-            or not WorldFrame
-            or not WorldFrame:IsVisible()
-            or not navigation.IsRunPhase(navigation.Phase())
+            or not Shown(WorldFrame)
+            or not Shown(UIParent)
+            or (not choices.worldCacheIcons and not choices.worldBossIcons and not choices.worldPartyIcons)
         then
             api.Reset()
             return
         end
+        state.requestCache = choices.worldCacheIcons and CacheAffordable()
+        state.requestBoss = choices.worldBossIcons
+        state.requestParty = choices.worldPartyIcons
+            and (not navigation.HasParty or navigation.HasParty())
+            and (not navigation.NeedsPartyMarker or navigation.NeedsPartyMarker())
+        local active = state.requestCache or state.requestBoss or state.requestParty
+        if not active then
+            if state.active ~= false then HideAll() end
+            state.active = false
+            return
+        end
+        if not navigation.IsRunPhase(navigation.Phase()) then
+            api.Reset()
+            return
+        end
+        if not state.active then
+            state.discoveryAt, state.discoveryStarted = nil, nil
+        end
+        state.active = true
         local now = GetTime()
         if state.retire then
             api.Reset()
             state.retryStarted, state.retryAt = now, now + FAILURE_RETRY
             return
         end
-        if state.options and state.options ~= options then api.Reset() end
         if state.retryAt and now >= state.retryStarted and now < state.retryAt then return end
-        local function Retry()
-            api.Reset()
-            state.retryStarted, state.retryAt = now, now + FAILURE_RETRY
-        end
         if not state.enabled then
-            if not Release() or not Configure() then
-                Retry()
+            if not Release() or not Configure(now) then
+                local failures = (state.configFailures or 0) + 1
+                api.Reset()
+                state.configFailures = failures
+                state.retryStarted, state.retryAt = now, now + RetryDelay(FAILURE_RETRY, failures)
                 return
             end
-            state.options = options
+            state.configFailures = nil
         end
-        local position = navigation.WorldPosition()
-        if position and state.world and not Context(state, position) then ClearCatalog() end
-        if not position then
+        if SetQuery() == 0 then
+            state.active = false
             HideAll()
             return
         end
         if state.discoveryAt and now >= state.discoveryStarted and now < state.discoveryAt then return end
+        local position = navigation.WorldPosition()
+        if position and state.world and not Context(state, position) then ClearCatalog() end
+        if not position then
+            HideAll()
+            state.discoveryStarted, state.discoveryAt = now, now + FAILURE_RETRY
+            return
+        end
         local accepted, failure = Discover(position)
-        local delay = accepted and DISCOVERY_INTERVAL or FAILURE_RETRY
-        if failure == "NOT_READY" or failure == "CATALOG_CHANGED" then delay = TRANSIENT_RETRY end
+        local delay = DISCOVERY_INTERVAL
+        if accepted then
+            state.discoveryFailures = nil
+        else
+            state.discoveryFailures = (state.discoveryFailures or 0) + 1
+            local base = (failure == "NOT_READY" or failure == "CATALOG_CHANGED") and TRANSIENT_RETRY or FAILURE_RETRY
+            delay = RetryDelay(base, state.discoveryFailures)
+        end
         state.discoveryStarted, state.discoveryAt = now, now + delay
     end
+    api.UpdateOptions()
     return api
 end

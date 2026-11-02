@@ -629,3 +629,53 @@ assert(
     "legacy fallback reused the previous native destination"
 )
 display.FinishEdit(false)
+
+-- Hidden/no-party guidance must not query either the new feed or legacy units.
+display.BeginEdit()
+display.Set("cacheGuidance", false)
+display.Set("guardianGuidance", false)
+display.Set("partyGuidance", true)
+local partyPresent, feedReads = false, 0
+env.DFRL.navigation.HasParty = function() return partyPresent end
+env.DFRL.navigation.DownedPartySnapshot = function()
+    feedReads = feedReads + 1
+    return { { key = "visible-native", name = "Visible ally", mx = 0.55, my = 0.5 } }, true
+end
+unitReads, positionReads = 0, 0
+for _ = 1, 20 do
+    Tick()
+end
+assert(feedReads == 0 and unitReads == 0 and positionReads == 0, "no-party guidance retained native/unit reads")
+partyPresent = true
+Tick()
+assert(feedReads == 1 and hud:IsVisible(), "party recovery failed to read fresh guidance")
+env.UIParent:Hide()
+local before = feedReads
+for _ = 1, 20 do
+    Tick()
+end
+assert(feedReads == before, "hidden UIParent retained downed-party API reads")
+env.UIParent:Show()
+Tick()
+assert(feedReads == before + 1 and hud:IsVisible(), "shown UIParent failed to recover fresh guidance")
+hiddenWaypoints.partyWaypoint = true
+minimapVisible = false
+hud:Hide()
+before = feedReads
+for _ = 1, 20 do
+    Tick()
+end
+assert(feedReads == before, "hidden HUD and minimap retained downed-party reads")
+minimapVisible = true
+Tick()
+assert(feedReads == before + 1, "visible minimap lost independently needed party data")
+hiddenWaypoints.partyWaypoint = false
+display.Set("partyGuidance", false)
+before = feedReads
+for _ = 1, 20 do
+    Tick()
+end
+assert(feedReads == before, "disabled guidance retained authoritative party reads")
+env.DFRL.navigation.HasParty, env.DFRL.navigation.DownedPartySnapshot = nil, nil
+display.FinishEdit(false)
+print("PASS new guidance API request budgets skip no-party, hidden and disabled consumers")

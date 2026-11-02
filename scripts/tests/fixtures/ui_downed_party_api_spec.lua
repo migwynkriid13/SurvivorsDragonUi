@@ -56,11 +56,14 @@ value, supported = nav.DownedPartySnapshot()
 assert(supported and #value == 0, "unavailable member acquired a guessed location")
 members = { Member("member", 1, 1), Member("member", 2, 2) }
 assert(nav.DownedPartySnapshot() == nil, "duplicate native IDs accepted")
+c.now = c.now + 8.1
 members = { [2] = Member("member", 1, 1) }
 assert(nav.DownedPartySnapshot() == nil, "sparse native list accepted")
+c.now = c.now + 8.1
 members = { Member("member", 1, 1) }
 members[1].z = 0 / 0
 assert(nav.DownedPartySnapshot() == nil, "nonfinite coordinate accepted")
+c.now = c.now + 8.1
 members = { Member("member", 1, 1) }
 members[1].runId, position.runId = nil, nil
 value = nav.DownedPartySnapshot()
@@ -70,4 +73,80 @@ value, supported = nav.DownedPartySnapshot()
 assert(value == nil and supported, "native failure enabled map fallback")
 env.AZS_GetDownedPartyMembers = function() return {} end
 assert(#nav.DownedPartySnapshot() == 0, "revival/departure retained a destination")
+-- Coarse native roster and presentation demand avoid unnecessary new API reads.
+local rosterReads, downedReads, playerReads = 0, 0, 0
+local roster = 0
+env.GetNumPartyMembers = function()
+    rosterReads = rosterReads + 1
+    return roster
+end
+env.AZS_GetDownedPartyMembers = function()
+    downedReads = downedReads + 1
+    return members
+end
+env.AZS_GetPlayerPosition = function()
+    playerReads = playerReads + 1
+    return position
+end
+members = { Member("unused", 1, 1) }
+for _ = 1, 20 do
+    assert(#nav.DownedPartySnapshot() == 0)
+end
+assert(downedReads == 0 and playerReads == 0, "solo guidance queried downed members or player position")
+nav.WithSample(function()
+    local before = rosterReads
+    for _ = 1, 10 do
+        assert(not nav.HasParty())
+        nav.DownedPartySnapshot()
+    end
+    assert(rosterReads == before + 1, "one controller pass repeated native roster reads")
+end)
+roster = 1
+members = {}
+nav.WithSample(function()
+    assert(nav.HasParty())
+    assert(#nav.DownedPartySnapshot() == 0)
+    assert(not nav.NeedsPartyMarker(), "same-pass empty native feed did not suppress duplicate world discovery")
+end)
+assert(nav.NeedsPartyMarker(), "downed presence escaped its validated reader pass")
+assert(downedReads == 1 and playerReads == 0, "empty downed snapshot queried player position")
+members = { { id = "unavailable", name = "Downed", positionAvailable = false } }
+assert(#nav.DownedPartySnapshot() == 0 and playerReads == 0, "unavailable downed locations queried player position")
+position.runId = "run"
+members = { Member("needed", 1, 1) }
+assert(#nav.DownedPartySnapshot() == 1 and playerReads == 1, "returning party did not read a fresh native location")
+roster = "unknown"
+local before = downedReads
+assert(
+    #nav.DownedPartySnapshot() == 1 and downedReads == before + 1,
+    "unknown roster incorrectly suppressed authoritative API"
+)
+-- Persistent native failure hides stale positions and backs off, then a valid
+-- read restores normal response time without affecting the legacy boundary.
+roster = 1
+local attempts, failing = 0, true
+env.AZS_GetDownedPartyMembers = function()
+    attempts = attempts + 1
+    if failing then return nil, { code = "NOT_READY" } end
+    return members
+end
+before = playerReads
+for _ = 1, 100 do
+    c.now = c.now + 0.1
+    value, supported = nav.DownedPartySnapshot()
+    assert(value == nil and supported, "native retry used stale positions or enabled legacy fallback")
+end
+assert(attempts >= 3 and attempts <= 6 and playerReads == before, "downed API failure flooded native requests")
+failing = false
+c.now = c.now + 8.1
+assert(#nav.DownedPartySnapshot() == 1, "downed API retry failed to recover fresh data")
+failing = true
+assert(nav.DownedPartySnapshot() == nil)
+before = attempts
+c.now = c.now + 0.51
+assert(nav.DownedPartySnapshot() == nil and attempts == before + 1, "successful downed read retained long backoff")
+nav.Reset()
+failing = false
+assert(#nav.DownedPartySnapshot() == 1, "world reset retained a failed downed-read delay")
+nav.Reset()
 print("downed-party native position cases passed")
