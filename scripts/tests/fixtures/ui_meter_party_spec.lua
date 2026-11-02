@@ -198,15 +198,19 @@ local function Meter(configure)
     context:Load("core/meter_rates.lua")
     context:Load("core/widgets.lua")
     context:Load("modules/ui/meter.lua", "DamageMeter")
-    context.controller = context:Controller("CHAT_MSG_ADDON")
-    context.root = env.DFRL_DamageMeter
-    for _, object in ipairs(context.objects) do
-        if object.kind == "Button" and object.parent == context.root then context.header = object end
+    function context:AttachMeter()
+        self.root = env.DFRL_DamageMeter
+        if not self.root then return end
+        self.controller = self:Controller("CHAT_MSG_ADDON")
+        for _, object in ipairs(self.objects) do
+            if object.kind == "Button" and object.parent == self.root then self.header = object end
+        end
+        for _, object in ipairs(self.objects) do
+            if object.kind == "FontString" and object.parent == self.header then self.title = object end
+            if object.kind == "FontString" and object.parent == self.root then self.status = object end
+        end
     end
-    for _, object in ipairs(context.objects) do
-        if object.kind == "FontString" and object.parent == context.header then context.title = object end
-        if object.kind == "FontString" and object.parent == context.root then context.status = object end
-    end
+    context:AttachMeter()
     function context:Tick(elapsed)
         local step = elapsed or 1.01
         self.now = self.now + step
@@ -252,6 +256,32 @@ local function NoMeterReads(context)
         "navigation read meter getters before its visible deferred reader"
     )
 end
+
+Test("disabled meter defers all view construction until live first enable", function()
+    for _, performance in ipairs({ false, true }) do
+        local c = Meter(function(context)
+            context.settings.meterEnabled = false
+            context.settings.performanceMode = performance
+        end)
+        local allocated = #c.objects
+        assert(not c.env.DFRL_DamageMeter and not c.env.SurvivorsDragonUiMeterIcon1, "disabled view was built")
+        c:SetSetting("meterRows", 8)
+        c.env.DFRL.ResetMeterStats()
+        assert(#c.objects == allocated, "disabled settings/reset constructed the view")
+        NoMeterReads(c)
+        c:SetSetting("meterEnabled", true)
+        c:AttachMeter()
+        assert(c.root and c.header and c.controller, "live preview did not construct the view")
+        c:Tick(0.01)
+        assert(c.root:IsVisible() and c:Row(1).entry, "first enable waited for another interval")
+        local root, used = c.root, #c.objects
+        c:SetSetting("meterEnabled", false)
+        assert(not c.controller:GetScript("OnUpdate") and not root:IsShown(), "disable retained active work")
+        c:SetSetting("meterEnabled", true)
+        c:Tick(0.01)
+        assert(c.env.DFRL_DamageMeter == root and #c.objects == used, "reenable duplicated the view")
+    end
+end)
 
 Test("legacy meter coalesces packets for one second and explicit actions arm the next frame", function()
     for _, performance in ipairs({ false, true }) do

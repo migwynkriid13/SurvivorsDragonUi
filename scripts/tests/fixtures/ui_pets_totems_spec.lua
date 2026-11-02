@@ -24,6 +24,16 @@ local function Pets()
     function env.UIParent:GetEffectiveScale() return 1 end
     env.DFRL.layout.IsHidden = function() return not context.layoutMask:IsShown() end
     env.DFRL.layout.Place = function() end
+    local listenVisibility = env.DFRL.layout.ListenVisibility
+    env.DFRL.layout.ListenVisibility = function(name, callback)
+        context.visibilityChanged = callback
+        listenVisibility(name, callback)
+    end
+    local setLayoutHidden = context.SetLayoutHidden
+    function context:SetLayoutHidden(hidden)
+        setLayoutHidden(self, hidden)
+        if self.visibilityChanged then self.visibilityChanged(not hidden) end
+    end
     local register = env.DFRL.layout.Register
     env.DFRL.layout.Register = function(name, frame, anchor, options)
         assert(name == "petFrames", "totems created another Layout group")
@@ -290,12 +300,51 @@ Test("hidden groups accept data without allocating rows and resume current nativ
     c:ResetCounts()
     c:Tick()
     c:NoPresentationWrites()
-    assert(not c.reads.totems and not c.reads.clock, "hidden groups polled countdowns")
+    assert(
+        not c.controller:GetScript("OnUpdate") and not c.reads.phase and not c.reads.totems and not c.reads.clock,
+        "hidden groups retained idle phase/countdown polling"
+    )
     c.runTime = 27
     c:SetLayoutHidden(false)
     c:Tick()
     local name, timer, count = c:Labels(1)
     assert(name == "Localized searing_totem" and timer == "0:03" and count == "x3", "unhide replayed stale timing")
+end)
+
+Test("hidden receipt work learns current SCT icons once and returns to sleep", function()
+    for _, performance in ipairs({ false, true }) do
+        local c = Pets()
+        c:SetSetting("performanceMode", performance)
+        c:SetLayoutHidden(true)
+        assert(not c.controller:GetScript("OnUpdate"), "hidden empty group kept its worker")
+        local allocated = #c.objects
+        c:Publish("AZSPETS", { Summon(1, "imp", "Imp", nil, true) })
+        assert(c.controller:GetScript("OnUpdate") and not c.reads.pets, "receipt missed its deferred handoff")
+        c:Tick()
+        assert(c.learned.Imp and not c.controller:GetScript("OnUpdate"), "icon learning did not settle")
+        assert(#c.objects == allocated, "hidden metadata allocated presentation")
+        c:ResetCounts()
+        c:Tick()
+        c:NoPresentationWrites()
+        assert(not next(c.reads), "sleeping metadata performed native work")
+        c.env.AZS_PETS[1].name = "Localized Imp"
+        c:NotifyLocale()
+        c:Tick()
+        assert(c.learned["Localized Imp"] and not c.controller:GetScript("OnUpdate"), "language metadata stayed stale")
+        c:ResetCounts()
+        c.phase = "choosing"
+        c:Publish("AZSTOTEMS", { Totem("searing_totem", 2) })
+        c:Tick()
+        assert(not c.reads.totems and not c.controller:GetScript("OnUpdate"), "choice cards polled hidden data")
+        c.phase = "playing"
+        c:Event(c.controller, "CHAT_MSG_ADDON", "AZSRUN")
+        c:Tick()
+        assert(c.learned["Localized searing_totem"], "resume lost deferred icon learning")
+        assert(not c.controller:GetScript("OnUpdate"), "resumed hidden metadata left an idle updater")
+        c:SetLayoutHidden(false)
+        c:Tick()
+        assert(#c:Rows() == 2 and c.layoutFrame:IsVisible(), "show did not recover current native rows")
+    end
 end)
 
 Test("shared pet settings reflow cached groups without extra getters or portrait binds", function()

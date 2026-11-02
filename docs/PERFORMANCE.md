@@ -1,9 +1,51 @@
 # Rendering and update costs
 
-The October 2026 performance work removes repeated presentation writes while
-retaining native data, pause-aware timing, saved preferences and artwork.
-It adds no gameplay clock or native client dependency. Display choices use the
-existing saved display table; the optional minimap clock below defaults on.
+The performance work removes repeated presentation writes while retaining native
+data, pause-aware timing, saved preferences and artwork. It adds no gameplay clock
+or native client dependency. Display choices use the existing saved display table.
+
+## Jewelry caches and idle controllers — 2026-11-02
+
+The jewelry hover reader keeps one successful description per equipped slot,
+keyed by the complete native item link and current UI language. An unchanged
+hover still checks the link at the existing five-Hz equipment cadence but skips
+the private tooltip build, row reads and concatenation. Inventory changes,
+language changes, slot retirement and world cleanup invalidate those entries.
+Missing/throwing links, pending native items and empty effect rows stay uncached
+and retry at the existing cadence. Rarity, cooldowns and live tooltip placement
+keep their separate readers and changed-only presentation.
+
+Jewelry composition now reuses at most five grouping records, their slot lists
+and one texture-key lookup. Equipment changes clear old references before reuse;
+settled icons still bypass composition. The fourteen authored strips, texture
+ordering, zoom, UVs, rims and attachment geometry are unchanged. Five occupied
+icons still require seventy icon regions: this reduces temporary Lua tables,
+not their persistent rendering cost. No substitute rectangular/native-circle
+presentation or claim of reduced draw calls is introduced.
+
+Layout-hidden Pet frames detach their steady tenth-second updater. Pet/totem
+receipts can arm one deferred phase-gated pass to preserve shared SCT icon
+learning, without constructing rows, painting timers or reading the totem clock.
+That pass detaches again. Choice cards defer metadata until a subsequent native
+run receipt; Show requests fresh data and resumes the existing reader. World,
+zone, reset and reload retirement retain their original fences and pools.
+
+A disabled meter now retains only its first-enable settings listener and a
+no-op Reset entry point. Its view, adapters, rows, native subscriptions and
+workers are constructed on first enable, including live preview. Later
+disable/enable cycles reuse the existing view and its ownership/cleanup rules.
+This reduces initial allocation; the disabled meter already had no regular
+reader, so it is not an additional steady-state polling reduction.
+
+Both Performance Mode states share these paths. No setting, SavedVariable,
+asset, gameplay frame/region, event or independent updater is added. CI-only
+cases cover successful/pending/failed cache reads, item/language invalidation,
+slot cleanup, compositor reuse, hidden metadata handoffs and first-enable
+construction. Local work is source review and pinned formatting; no local tests,
+standalone validation or addon/game execution is performed. These operation and
+allocation boundaries do not establish live CPU/GPU timings or FPS gains.
+
+## Client compatibility work
 
 The 0.139.0 texture compatibility repair uses static source strips to fit the
 native 8–512 power-of-two size gate. It adds two texture regions to the jewelry
@@ -2725,8 +2767,8 @@ no meter/phase getters, icon work or drawing run. Off also unsubscribes from nat
 addon messages, clears receipt flags, copied snapshots, sampled rates and displayed
 row/header values, and requires a fresh publication when enabled again. It collects
 no private off-period history and writes no damage log. World lifecycle cleanup
-stays registered. A pending native HUD restore may retry through the same controller
-with CVar observation until its captured preference is released. The initial readiness row and any previously grown pools remain
+stays registered after first enable. A pending native HUD restore may retry through the same controller
+with CVar observation until its captured preference is released. The readiness row is constructed on first enable; afterward it and any grown pools remain
 allocated for reuse, with no visible drawing cost. Live enable/disable, profiles,
 Confirm/Cancel/discard and both resets share the existing display lifecycle.
 

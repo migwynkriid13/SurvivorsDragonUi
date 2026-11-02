@@ -39,6 +39,7 @@ DFRL:NewMod("PetFrames", 4, function()
     local choiceHidden = false
     local entryCount = 0
     local dirty, paintedScale = true, nil
+    local metadataPending, learningDeferred, SyncUpdates = false, false, nil
 
     local function Number(value) return type(value) == "number" and value - value == 0 end
     local function Wipe(target)
@@ -376,17 +377,23 @@ DFRL:NewMod("PetFrames", 4, function()
         -- Retained roster tables are never read before the native phase gate.
         local phase = Native("AZS_GetPhase")
         if not DFRL.navigation.IsRunPhase(phase) then
+            learningDeferred = false
             Retire()
             return
         end
         if phase == "choosing" then
             choiceHidden = true
+            learningDeferred = DFRL.layout.IsHidden("petFrames")
             if root:IsShown() then root:Hide() end
             return
         end
+        learningDeferred = false
         for _, feed in ipairs(feeds) do
             RefreshFeed(feed)
         end
+        -- Hidden receipt work only maintains the shared SCT icon metadata.
+        -- Geometry, countdown painting and the steady phase reader wait for Show.
+        if DFRL.layout.IsHidden("petFrames") then return end
         if dirty then
             Wipe(entries)
             entryCount = 0
@@ -437,11 +444,20 @@ DFRL:NewMod("PetFrames", 4, function()
         dirty, paintedScale = retry, scale
     end
     local controller = CreateFrame("Frame")
+    local updating
     local function Tick()
         age = age + (tonumber(arg1) or 0)
         if age < 0.1 then return end
         age = 0
+        metadataPending = false
         Refresh()
+        SyncUpdates()
+    end
+    SyncUpdates = function()
+        local active = inWorld and (not DFRL.layout.IsHidden("petFrames") or metadataPending)
+        if updating == active then return end
+        updating = active
+        controller:SetScript("OnUpdate", active and Tick or nil)
     end
     root:SetScript("OnShow", function()
         if choiceHidden then
@@ -460,11 +476,24 @@ DFRL:NewMod("PetFrames", 4, function()
             root:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 2, -220)
         end
     end, { labelAbove = true, refreshDefault = true, onReset = Clear })
+    DFRL.layout.ListenVisibility("petFrames", function(permitted)
+        if permitted then
+            for _, feed in ipairs(feeds) do
+                feed.packet = nil
+            end
+            dirty, age = true, 0.1
+        elseif choiceHidden then
+            learningDeferred = true
+        end
+        SyncUpdates()
+    end)
     DFRL.locale.Listen(function()
         for _, feed in ipairs(feeds) do
             feed.packet = nil
         end
         dirty, age = true, 0.1
+        metadataPending = true
+        SyncUpdates()
     end)
     DFRL.display.Listen(function()
         dirty, age = true, 0.1
@@ -475,20 +504,28 @@ DFRL:NewMod("PetFrames", 4, function()
     controller:SetScript("OnEvent", function()
         if event == "PLAYER_ENTERING_WORLD" then
             inWorld, age = true, 0.1
-            controller:SetScript("OnUpdate", Tick)
+            metadataPending = true
+            SyncUpdates()
         elseif event == "PLAYER_LEAVING_WORLD" or event == "PLAYER_LOGOUT" then
             inWorld = false
-            controller:SetScript("OnUpdate", nil)
+            metadataPending, learningDeferred = false, false
+            SyncUpdates()
             Retire()
         elseif arg1 == "AZSZONE" then
             Retire()
+            metadataPending, learningDeferred = false, false
             age = 0.1
+            SyncUpdates()
         elseif arg1 == "AZSPETS" or arg1 == "AZSTOTEMS" then
             local feed = arg1 == "AZSPETS" and feeds[1] or feeds[2]
             feed.received = feed.received + 1
+            metadataPending = true
             age = 0.1
+            SyncUpdates()
         elseif arg1 == "AZSRUN" then
+            if learningDeferred then metadataPending = true end
             age = 0.1
+            SyncUpdates()
         end
         -- Native packet parsing finishes before the next OnUpdate reads getters.
     end)
@@ -496,10 +533,11 @@ DFRL:NewMod("PetFrames", 4, function()
         local reloadUI = _G.ReloadUI
         _G.ReloadUI = function()
             inWorld = false
-            controller:SetScript("OnUpdate", nil)
+            metadataPending, learningDeferred = false, false
+            SyncUpdates()
             Retire()
             return reloadUI()
         end
     end
-    controller:SetScript("OnUpdate", Tick)
+    SyncUpdates()
 end)

@@ -28,6 +28,9 @@ def main():
             "COOLDOWN_INTERVAL", "COOLDOWN_ZERO", "COOLDOWN_FINAL_WINDOW", "COOLDOWN_UNITS",
             "FormatCooldown", "UpdateCooldownNumber", "CreateCooldownNumbers",
         ])
+        jewelry_cache = extract_source("modules/ui/jewelry.lua", [
+            "InvalidateEffects", "ReadEffects", "ClearSlot", "PaintIcons",
+        ])
         run_hud = "local render, refreshRows, scheduleCache = {}, false, nil\n" + extract_source("modules/ui/run.lua", [
             "nativeParts", "TakeOver", "Restore", "SyncReplacements",
         ])
@@ -136,6 +139,7 @@ def main():
             ("settings-views-source.lua", settings_views, "ui_settings_visibility_spec.lua"),
             ("run-hud-source.lua", run_hud, "ui_shared_rules_spec.lua"),
             ("cooldown-source.lua", cooldown, "ui_spec.lua"),
+            ("jewelry-cache-source.lua", jewelry_cache, "ui_jewelry_cache_spec.lua"),
             ("guardian-hover-source.lua", guardian_hover, "ui_guardian_hover_spec.lua"),
             ("guardian-timers-source.lua", guardian_timers, "ui_guardian_timer_spec.lua"),
             ("border-modes-source.lua", border_modes, "ui_border_spec.lua"),

@@ -100,6 +100,11 @@ DFRL:NewMod("Jewelry", 4, function()
     local function Number(value) return type(value) == "number" and value - value == 0 end
     local hoveredSlot, effectPanel, effectText, scanner, scannerParent
     local effectSlot, effectValue, effectScale
+    local function InvalidateEffects()
+        for _, slot in ipairs(slots) do
+            slot.effectLink, slot.effectLanguage, slot.effectDescription = nil, nil, nil
+        end
+    end
     local SCANNER_NAME = "SurvivorsDragonUiJewelryScanner"
     local EFFECT_MAX_WIDTH, EFFECT_PADDING = 272, 10
     local EFFECT_PREFIXES = {
@@ -279,6 +284,16 @@ DFRL:NewMod("Jewelry", 4, function()
         return nil
     end
     local function ReadEffects(slot)
+        local link
+        if type(GetInventoryItemLink) == "function" then
+            local ok, value = pcall(GetInventoryItemLink, "player", slot.id)
+            if ok and type(value) == "string" and value ~= "" then link = value end
+        end
+        local language = DFRL.locale.code
+        if link and slot.effectLink == link and slot.effectLanguage == language and slot.effectDescription then
+            return slot.effectDescription
+        end
+        slot.effectLink, slot.effectLanguage, slot.effectDescription = nil, nil, nil
         local tooltip = GetScanner()
         if not tooltip then return nil end
         -- Hide releases native ownership and clears lines, so re-own for every
@@ -296,7 +311,13 @@ DFRL:NewMod("Jewelry", 4, function()
             end
         end
         tooltip:Hide()
-        if table.getn(effects) > 0 then return table.concat(effects, "\n\n") end
+        if table.getn(effects) > 0 then
+            local description = table.concat(effects, "\n\n")
+            if link then
+                slot.effectLink, slot.effectLanguage, slot.effectDescription = link, language, description
+            end
+            return description
+        end
         return nil
     end
     local function GetEffectPanel()
@@ -390,7 +411,7 @@ DFRL:NewMod("Jewelry", 4, function()
     artwork:EnableMouse(false)
     local iconProbe = artwork:CreateTexture(nil, "ARTWORK")
     iconProbe:Hide()
-    local iconParts, iconPool, iconsDirty = {}, {}, false
+    local iconParts, iconPool, iconGroups, iconByTexture, iconsDirty = {}, {}, {}, {}, false
     for part = 1, 16 do
         local top, bottom = (part - 1) * 2, part * 2
         local edge = math.max(math.abs(top - 16), math.abs(bottom - 16))
@@ -420,20 +441,36 @@ DFRL:NewMod("Jewelry", 4, function()
     end
     local function PaintIcons()
         if not iconsDirty then return end
-        local groups, byTexture = {}, {}
+        for texture in pairs(iconByTexture) do
+            iconByTexture[texture] = nil
+        end
+        for _, group in ipairs(iconGroups) do
+            for index = 1, group.count do
+                group.slots[index] = nil
+            end
+            group.count, group.texture = 0, nil
+        end
+        local groupCount = 0
         for _, slot in ipairs(slots) do
             if slot.artTexture then
-                local group = byTexture[slot.artTexture]
+                local group = iconByTexture[slot.artTexture]
                 if not group then
-                    group = { texture = slot.artTexture, slots = {} }
-                    byTexture[slot.artTexture] = group
-                    table.insert(groups, group)
+                    groupCount = groupCount + 1
+                    group = iconGroups[groupCount]
+                    if not group then
+                        group = { count = 0, slots = {} }
+                        iconGroups[groupCount] = group
+                    end
+                    group.texture = slot.artTexture
+                    iconByTexture[slot.artTexture] = group
                 end
-                table.insert(group.slots, slot)
+                group.count = group.count + 1
+                group.slots[group.count] = slot
             end
         end
         local used = 0
-        for _, group in ipairs(groups) do
+        for index = 1, groupCount do
+            local group = iconGroups[index]
             for _, part in ipairs(iconParts) do
                 for _, slot in ipairs(group.slots) do
                     used = used + 1
@@ -577,6 +614,7 @@ DFRL:NewMod("Jewelry", 4, function()
         SetQuality(slot)
     end
     local function ClearSlot(slot)
+        slot.effectLink, slot.effectLanguage, slot.effectDescription = nil, nil, nil
         slot.placeholder:Hide()
         if slot.texture or slot.artTexture then iconsDirty = true end
         slot.texture, slot.artTexture = nil, nil
@@ -807,6 +845,7 @@ DFRL:NewMod("Jewelry", 4, function()
             Refresh()
             PaintCooldowns()
         elseif event ~= "UNIT_INVENTORY_CHANGED" or arg1 == "player" then
+            if event == "UNIT_INVENTORY_CHANGED" then InvalidateEffects() end
             elapsed = INTERVAL
         end
     end)
@@ -837,6 +876,10 @@ DFRL:NewMod("Jewelry", 4, function()
     DFRL.display.Listen(function()
         UpdateDisplay()
         if hoveredSlot and effectPanel and effectPanel:IsShown() then PlaceEffectTooltip(hoveredSlot) end
+    end)
+    DFRL.locale.Listen(function()
+        InvalidateEffects()
+        elapsed = INTERVAL
     end)
     UpdateDisplay()
 end)

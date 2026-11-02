@@ -1,5 +1,11 @@
 # Jewelry effect wording
 
+Successful hover descriptions are cached per equipped slot using the complete
+native item link and UI language. Inventory/language changes, slot removal and
+world cleanup invalidate them. Pending items, missing links and empty native
+effect rows keep retrying at the existing five-Hz cadence. The private tooltip's
+ownership and the wording rules below are unchanged.
+
 ## Catalog and maintenance
 
 The formatter in `modules/ui/jewelry.lua` uses the game's localized item-effect sentence templates rather than item IDs, screenshots or calculated stats. A read-only inspection of the Windows client on 2026-10-18 found 2,621 English localization keys. The item-modifier sections supply **47 general/named-ability templates and 22 special-modifier templates**, recorded below. This is coverage of those 69 templates in the inspected build; it does not establish exhaustive coverage of future versions, arbitrary spell descriptions or unsupported languages. All fourteen native catalogs, including Čeština (Czech), are now represented; see [LOCALIZATION.md](LOCALIZATION.md). The pairs below document the unchanged English output.

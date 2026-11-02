@@ -77,6 +77,17 @@ An explicit Bash shell enables `pipefail`, so piping fixture/model output into
 
 ## UI work and cleanup tests
 
+Jewelry cache cases use the exact production reader/cache/compositor functions
+over fake native tooltip and texture boundaries. They cover unchanged successful
+reads, same-icon item replacement, inventory/language invalidation, missing or
+throwing links/items, empty-row retries, slot retirement and reusable grouping
+records/regions with unchanged supplied crops. Pet-controller cases cover
+Layout-hidden sleep, deferred SCT icon learning, choice/run recovery and fresh
+Show data. Meter-controller cases cover zero view construction before first
+enable, immediate preview, disabled Reset and reuse after toggling, in both
+Performance Mode states. These remain CI-only; no local tests or game execution
+are authorized, and mocks do not establish native timing, pixel parity or FPS.
+
 Shared-tooltip cases load the production controller over explicit native owner,
 content-clear, visibility and scale boundaries. They cover Tooltip hiding/scaling
 without suppressing ability/item UI hovers or changing the game's Enhanced

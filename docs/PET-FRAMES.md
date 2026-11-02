@@ -18,6 +18,12 @@ geometry remains independent of these defaults.
 
 ## Totems — 0.125.0
 
+Layout hiding detaches the steady updater. Native pet/totem receipts can wake
+one deferred metadata pass for the shared SCT icon resolver, then stop again;
+that pass creates no rows and reads no totem clock. Choice cards postpone that
+metadata pass until native run state resumes. Showing the group refreshes the
+current roster and remaining times through the existing controller.
+
 Totems share this group and all its existing controls with Hunter pets,
 Warlock demons and other summons. Each received totem kind uses the same
 gold-rimmed native icon, localized name, `xN` count for more than one, optional

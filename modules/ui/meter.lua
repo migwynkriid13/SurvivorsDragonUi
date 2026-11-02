@@ -2,7 +2,7 @@
 -- media/tex/meter/LICENSE.txt. Pinned source: third_party/DetailsTWW-ARTWORK.md.
 -- Reset glyph: Blizzard Entertainment; provenance in the same source notes.
 -- The existing gold ring retains third_party/Jewelry-ARTWORK.md's provenance.
-DFRL:NewMod("DamageMeter", 7, function()
+local function BuildMeter()
     local HEADER, ROW_HEIGHT, FOOTER, REFRESH_SECONDS = 32, 32, 32, 1
     local width, fontSize = 240, DFRL.display.Get("meterFontSize")
     local nameFontSize = DFRL.display.Get("meterNameFontSize")
@@ -1645,4 +1645,21 @@ DFRL:NewMod("DamageMeter", 7, function()
     end
     if not enabled then Invalidate() end
     UpdateController()
+end
+
+DFRL:NewMod("DamageMeter", 7, function()
+    -- Disabled installs retain only this settings listener until first use.
+    -- The built view keeps its existing preview, ownership and pooled lifecycle.
+    local built = false
+    local function Prepare()
+        if built or not DFRL.display.Get("meterEnabled") then return end
+        built = true
+        local build = BuildMeter
+        BuildMeter = nil
+        setfenv(build, DFRL:GetEnv())
+        build()
+    end
+    DFRL.ResetMeterStats = function() end
+    DFRL.display.Listen(Prepare)
+    Prepare()
 end)

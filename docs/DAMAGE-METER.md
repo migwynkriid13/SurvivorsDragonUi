@@ -177,6 +177,10 @@ the shared Cancel/discard/profile paths; both full resets turn it off. Turning
 it off hides and clears the custom view and restores the native HUD preference
 captured by the replacement. It does not force the game's own meter setting off.
 
+The view is constructed on first enable, including preview. Before that, no
+meter frames, rows, data adapters or native subscriptions are created. Later
+disable/enable cycles retain the existing pooled view and cleanup behavior.
+
 Click its heading to cycle through Damage Done, Healing Done, Boss Damage and Party Damage;
 views still waiting for their first usable native publication are skipped.
 Right-click goes backwards. The gold header shows **Total** and **DPS** (or **HPS**
