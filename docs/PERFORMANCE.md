@@ -9,18 +9,27 @@ or native client dependency. Display choices use the existing saved display tabl
 The selected 04 design replaces the former soft background with five static
 panel strips from one 512 × 256 atlas. Fixed corners and central crests retain
 their widths; native anchors stretch only the two plain spans when the existing
-cached caption measurement changes. This adds four texture regions, ten total
-including the live icon, badge and optional pulse layers, without another frame,
+cached caption measurement changes. The matching five-piece halo brings this
+to fourteen texture regions including the live icon, badge and optional pulse
+layers, eight more than the original soft-background design, without another frame,
 event, reader or updater. Panel/rim crops bind once during construction. The
 complete sheet is not loaded or shipped.
 
-The same visible 1.8-second pulse now paints a neutral silver halo and silver
-icon rim. Performance Mode hides both effects and detaches that worker while
+The initial Artisan halo was a single stretched rounded rectangle, which the
+supplied screenshot shows outside the metal border. It now derives from the
+actual border pixels and uses the same five crops and strip anchors as the
+panel, preserving its corners and crests at translated widths. This correction
+adds four optional texture regions and four alpha writes per visible pulse
+callback: six alpha writes total, with the original 1.8-second equation/cadence.
+No per-frame geometry, texture binding, allocation or additional reader is added.
+Performance Mode hides all five halo strips and the icon highlight, detaching
+that same worker while
 the five-piece panel stays static. Hidden, zero-count and world/reload cleanup,
 ten-Hz validity/native ownership and changed-only text/class reads retain their
 existing paths. Settings, translations, saved placement and native spending
 remain with the existing owners. CI-only cases cover fixed cap geometry,
-caption fitting/reuse and suppression of the silver effects. These source and
+caption fitting/reuse, matching halo/metal anchors and suppression/restoration
+of every silver effect. These source and
 region counts do not establish live timing, FPS or native appearance; no local
 tests, standalone validation or addon/game execution were performed.
 

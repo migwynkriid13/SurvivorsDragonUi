@@ -7,7 +7,7 @@ and slot-frame crops are documented by that source's build 12.0.5.67451 data.
 This shared retail artwork is not established as Midnight-original.
 World of Warcraft artwork remains copyright Blizzard Entertainment; the
 source mirror provides no separate artwork license. Artisan.blp contains
-only the selected panel/rim pixels and an original geometric silver halo.
+only the selected panel/rim pixels and a silver halo derived from that border.
 CountBadge.blp retains the existing original gold disk.
 No source-addon Lua is imported.
 Full provenance and preparation: third_party/LevelUp-ARTWORK.md.
@@ -47,10 +47,11 @@ DFRL:NewMod("StoredLevels", 5, function()
     panel:SetHeight(HEIGHT)
     panel:SetPoint("CENTER", visual, "CENTER", 0, 0)
     panel:EnableMouse(false)
-    local function PanelPiece(left, right)
-        local piece = panel:CreateTexture(nil, "BACKGROUND")
+    local function PanelPiece(left, right, layer, top)
+        top = top or 0
+        local piece = panel:CreateTexture(nil, layer or "BACKGROUND")
         piece:SetTexture(texturePath .. "Artisan.blp")
-        piece:SetTexCoord(left / 512, right / 512, 0, 90 / 256)
+        piece:SetTexCoord(left / 512, right / 512, top / 256, (top + 90) / 256)
         return piece
     end
     local panelLeft, panelMiddle, panelRight = PanelPiece(0, 20), PanelPiece(106, 154), PanelPiece(240, 260)
@@ -68,12 +69,29 @@ DFRL:NewMod("StoredLevels", 5, function()
     panelSpanLeft:SetPoint("BOTTOMRIGHT", panelMiddle, "BOTTOMLEFT", 0, 0)
     panelSpanRight:SetPoint("TOPLEFT", panelMiddle, "TOPRIGHT", 0, 0)
     panelSpanRight:SetPoint("BOTTOMRIGHT", panelRight, "BOTTOMLEFT", 0, 0)
-    local glow = panel:CreateTexture(nil, "BORDER")
-    glow:SetTexture(texturePath .. "Artisan.blp")
-    glow:SetTexCoord(0, 1, 0.5, 1)
-    glow:SetAllPoints(panel)
-    glow:SetBlendMode("ADD")
-    glow:Hide()
+    local glows = {}
+    local function AddGlow(base, left, right)
+        local glow = PanelPiece(left, right, "BORDER", 128)
+        glow:SetAllPoints(base)
+        glow:SetBlendMode("ADD")
+        glow:Hide()
+        table.insert(glows, glow)
+    end
+    AddGlow(panelLeft, 0, 20)
+    AddGlow(panelSpanLeft, 20, 106)
+    AddGlow(panelMiddle, 106, 154)
+    AddGlow(panelSpanRight, 154, 240)
+    AddGlow(panelRight, 240, 260)
+    local function PaintGlow(alpha)
+        for index = 1, 5 do
+            glows[index]:SetAlpha(alpha)
+        end
+    end
+    local function HideGlow()
+        for index = 1, 5 do
+            if glows[index]:IsShown() then glows[index]:Hide() end
+        end
+    end
     local content = CreateFrame("Frame", nil, panel)
     content:SetHeight(HEIGHT)
     content:SetPoint("CENTER", panel, "CENTER", 0, 0)
@@ -168,20 +186,22 @@ DFRL:NewMod("StoredLevels", 5, function()
         pulseElapsed = pulseElapsed + math.min(tonumber(arg1) or 0, 0.1)
         if pulseElapsed >= PULSE_PERIOD then pulseElapsed = pulseElapsed - PULSE_PERIOD end
         local pulse = 0.5 - 0.5 * math.cos(pulseElapsed * 2 * math.pi / PULSE_PERIOD)
-        glow:SetAlpha(0.25 + 0.65 * pulse)
+        PaintGlow(0.25 + 0.65 * pulse)
         highlight:SetAlpha((hovered and 0.3 or 0.1) + 0.4 * pulse)
     end
     local function RefreshEffects()
         pulseElapsed = 0
         if performanceMode or not button:IsVisible() then
             button:SetScript("OnUpdate", nil)
-            if glow:IsShown() then glow:Hide() end
+            HideGlow()
             if highlight:IsShown() then highlight:Hide() end
             return
         end
-        glow:SetAlpha(0.25)
+        PaintGlow(0.25)
         highlight:SetAlpha(0.1)
-        glow:Show()
+        for index = 1, 5 do
+            glows[index]:Show()
+        end
         highlight:Show()
         button:SetScript("OnUpdate", AnimatePulse)
     end
@@ -196,7 +216,7 @@ DFRL:NewMod("StoredLevels", 5, function()
     button:SetScript("OnHide", function()
         pulseElapsed, hovered = 0, false
         button:SetScript("OnUpdate", nil)
-        glow:Hide()
+        HideGlow()
         highlight:Hide()
     end)
     DFRL.display.Listen(function()

@@ -132,6 +132,11 @@ do
             self.anchors = self.anchors or {}
             self.anchors[point] = { relative, relativePoint, x, y }
         end
+        local setAllPoints = object.SetAllPoints
+        function object:SetAllPoints(relative)
+            setAllPoints(self, relative)
+            self.allPoints = relative
+        end
         function object:RegisterForClicks(value) assert(value == "LeftButtonUp") end
         function object:SetBlendMode(value) assert(value == "ADD") end
         return object
@@ -164,21 +169,29 @@ do
         assert(crop[1] == left and crop[2] == right and crop[3] == top and crop[4] == bottom, "stale class artwork")
         assert(not context.reads.characterClass, "stored levels queried the character-selection class")
     end
-    local pieces, halo, rim = {}, nil, nil
+    local pieces, halos, rim = {}, {}, nil
     for _, object in ipairs(context.objects) do
         if object.texture == "Interface\\AddOns\\SurvivorsDragonUi\\media\\tex\\levelup\\Artisan.blp" then
             local crop = object.crop
             if crop[3] == 0 and crop[4] == 90 / 256 then
                 pieces[crop[1] * 512] = object
             elseif crop[3] == 0.5 then
-                halo = object
+                assert(crop[4] == 218 / 256, "Artisan halo retained the generic rectangle crop")
+                halos[crop[1] * 512] = object
             elseif crop[1] == 272 / 512 then
                 rim = object
             end
         end
     end
     assert(pieces[0] and pieces[20] and pieces[106] and pieces[154] and pieces[240], "Artisan panel lost a strip")
-    assert(halo and rim, "Artisan panel lost its silver halo or icon rim")
+    assert(rim, "Artisan panel lost its silver icon rim")
+    local haloCount = 0
+    for left, piece in pairs(pieces) do
+        local halo = halos[left]
+        assert(halo and halo.allPoints == piece, "Artisan halo does not follow its matching panel strip")
+        haloCount = haloCount + 1
+    end
+    assert(haloCount == 5, "Artisan halo lost a border strip")
     local function ArtisanCaps()
         assert(pieces[0]:GetWidth() == 16 and pieces[240]:GetWidth() == 16, "translated text stretched the corners")
         assert(pieces[106]:GetWidth() == 38.4 and pieces[106]:GetHeight() == 72, "translated text stretched the crests")
@@ -186,6 +199,9 @@ do
         assert(pieces[20].anchors.BOTTOMRIGHT[1] == pieces[106] and pieces[20].anchors.BOTTOMRIGHT[2] == "BOTTOMLEFT")
         assert(pieces[154].anchors.TOPLEFT[1] == pieces[106] and pieces[154].anchors.TOPLEFT[2] == "TOPRIGHT")
         assert(pieces[154].anchors.BOTTOMRIGHT[1] == pieces[240] and pieces[154].anchors.BOTTOMRIGHT[2] == "BOTTOMLEFT")
+        for left, piece in pairs(pieces) do
+            assert(halos[left].allPoints == piece, "caption fitting detached an Artisan halo strip")
+        end
     end
     ArtisanCaps()
     Crop(0.25, 0.5, 0, 0.25)
@@ -245,8 +261,9 @@ do
     context:SetSetting("performanceMode", true)
     assert(button:IsVisible() and label:GetText() == "3", "Performance Mode hid the stored-level information")
     assert(not button:GetScript("OnUpdate"), "Performance Mode retained the stored-level pulse")
-    assert(not halo:IsShown() and not rim:IsShown(), "Performance Mode retained an Artisan pulse layer")
-    for _, piece in pairs(pieces) do
+    assert(not rim:IsShown(), "Performance Mode retained the Artisan icon pulse")
+    for left, piece in pairs(pieces) do
+        assert(not halos[left]:IsShown(), "Performance Mode retained an Artisan border pulse")
         assert(piece:IsVisible(), "Performance Mode hid the static Artisan panel")
     end
     context:ResetCounts()
@@ -257,7 +274,10 @@ do
     assert(not button:GetScript("OnUpdate"), "hidden mode exit restarted the stored-level pulse")
     context:SetLayoutHidden(false)
     assert(button:GetScript("OnUpdate"), "Show did not restore the configured stored-level pulse")
-    assert(halo:IsShown() and rim:IsShown(), "Show did not restore the Artisan pulse layers")
+    assert(rim:IsShown(), "Show did not restore the Artisan icon pulse")
+    for _, halo in pairs(halos) do
+        assert(halo:IsShown(), "Show did not restore an Artisan border pulse")
+    end
     local function Tick() context:Call(controller, "OnUpdate", 0.1) end
     context:ResetCounts()
     for _ = 1, 10 do

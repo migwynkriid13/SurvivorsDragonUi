@@ -22,8 +22,8 @@ client rendering or native font metrics.
 Blizzard Entertainment owns the underlying World of Warcraft artwork. The source
 mirror describes extracted retail art and supplies no separate artwork grant;
 public availability does not resolve redistribution rights. No source-addon
-Lua, framework or retail atlas API is imported. The gold badge and silver halo
-are original geometric artwork.
+Lua, framework or retail atlas API is imported. The gold badge is original
+geometric artwork; the silver halo derives from the selected Blizzard border.
 
 All rectangles below use `(left, top, right, bottom)` with exclusive far edges.
 
@@ -42,7 +42,13 @@ that exact 260 × 90 assembly, without tinting or resampling its source pixels.
 `scripts/prepare_levelup_art.py --source /path/to/professions-chrome.blp`
 prepares `media/tex/levelup/Artisan.tga` and its lossless Raw3 BLP2 counterpart.
 The 512 × 256 canvas fits the current native client's power-of-two size gate.
-The lower half `(0,128,512,256)` contains the original neutral silver halo.
+The border-shaped silver halo occupies `(0,128,260,218)`; the unused remainder
+of the lower half is transparent. Its source mask uses each panel pixel's
+largest RGB channel, subtracts 32 to exclude the dark interior, scales the
+remaining brightness by 0.55 and multiplies by the source alpha. A one-pixel
+Gaussian blur softens that mask. The halo color is `(205,216,221)`.
+Omitting `--source` rebuilds only this halo from the retained authoring atlas;
+the original panel and icon-rim pixels stay in place.
 `CountBadge.blp` and its existing 64 × 64 authoring TGA are unchanged.
 
 Five side-by-side panel strips use x boundaries `0,20,106,154,240,260` and the
@@ -60,22 +66,31 @@ centered within the same multilingual Layout owner, at the existing 0.7 visual
 scale. Confirmed position, scale, counts, native action and ownership are not
 rewritten.
 
-The existing visible 1.8-second pulse drives only the silver halo and duplicated
-silver icon rim. Text and panel remain steady. Performance Mode hides both pulse
-layers and detaches that same cosmetic worker, retaining the complete static
-panel, count and native click. Hiding, zero count and world/reload retirement
-retain their existing cleanup. No event, frame, updater, setting or saved state
-is added. Five panel strips replace one background: **four additional static
-texture regions**, ten textures total including icon, badge and optional effects.
-These counts do not establish native draw calls, memory use or FPS.
+The halo uses the same five source x boundaries and is anchored directly to the
+corresponding five panel strips. It follows the beveled corners and central
+crests at every caption width. The former single stretched rounded rectangle
+produced the visibly detached white outline in the supplied client screenshot.
+The icon highlight already shares the icon rim's exact crop and bounds.
+
+The existing visible 1.8-second pulse drives the five silver halo strips and
+duplicated silver icon rim. Text and panel remain steady. Performance Mode hides
+all six pulse textures and detaches that same cosmetic worker, retaining the
+complete static panel, count and native click. Hiding, zero count and world/reload
+retirement retain their existing cleanup. No event, frame, updater, setting or
+saved state is added. The fitted halo adds four texture regions over the first
+Artisan iteration, **fourteen textures total**, eight more than the original
+soft-background design. While the visible cosmetic pulse runs, its existing
+callback makes six alpha writes instead of two; it adds no idle work. These
+counts do not establish native draw calls, memory use or FPS.
 
 Only `Artisan.blp` and `CountBadge.blp` ship for this component. The retired
 `Backdrop.blp`, `Glow.blp` and `IconFrameGold.blp` are removed from the runtime
 manifest and installed tree. The full downloaded sheet and inspection output
 are temporary, and the authoring TGA and selected preview stay outside the
 payload. Local work uses artwork preparation, source review and pinned
-formatting. CI-only cases cover fixed corners/crests, caption fitting and reuse,
-silver pulse suppression and the existing hidden/native lifecycle. No local
+formatting. CI-only cases cover fixed corners/crests, matching halo crops and
+strip anchors, caption fitting and reuse, all six pulse textures' suppression
+and restoration, and the existing hidden/native lifecycle. No local
 tests, standalone validation or addon/game execution were performed.
 
 ## Retained earlier design sources

@@ -8,7 +8,7 @@ import argparse
 import math
 from pathlib import Path
 
-from PIL import Image
+from PIL import Image, ImageChops, ImageFilter
 
 from prepare_client_textures import blp_from_bgra
 
@@ -39,25 +39,31 @@ def legacy_backdrops():
 
 def prepare(source, output):
     output.mkdir(parents=True, exist_ok=True)
-    original = Image.open(source).convert("RGBA")
-    atlas = Image.new("RGBA", (512, 256))
-    # Keep proposal 04's top/bottom 45-row caps. Five side-by-side strips
-    # preserve both corners and the central crests at translated widths.
-    top = original.crop(TOP)
-    bottom = original.crop(BOTTOM)
-    atlas.paste(top.crop((0, 0, 260, 45)), (0, 0))
-    atlas.paste(bottom.crop((0, 54, 260, 99)), (0, 45))
-    atlas.paste(original.crop(SLOT), (272, 0))
+    if source:
+        original = Image.open(source).convert("RGBA")
+        atlas = Image.new("RGBA", (512, 256))
+        # Keep proposal 04's top/bottom 45-row caps. Five side-by-side strips
+        # preserve both corners and the central crests at translated widths.
+        top = original.crop(TOP)
+        bottom = original.crop(BOTTOM)
+        atlas.paste(top.crop((0, 0, 260, 45)), (0, 0))
+        atlas.paste(bottom.crop((0, 54, 260, 99)), (0, 45))
+        atlas.paste(original.crop(SLOT), (272, 0))
+    else:
+        # Rebuild only the halo from retained authoring pixels, without another
+        # download or changing any of the original panel/rim pixels.
+        atlas = Image.open(output / "Artisan.tga").convert("RGBA")
 
-    glow = Image.new("RGBA", (512, 128))
-    pixels = glow.load()
-    for y in range(128):
-        for x in range(512):
-            qx = abs(x + 0.5 - 256) - 242
-            qy = abs(y + 0.5 - 64) - 50
-            distance = math.hypot(max(qx, 0), max(qy, 0)) + min(max(qx, qy), 0) - 6
-            halo = math.exp(-0.5 * (distance / 3) ** 2)
-            pixels[x, y] = (205, 216, 221, round(255 * 0.45 * halo))
+    panel = atlas.crop((0, 0, 260, 90))
+    red, green, blue, alpha = panel.split()
+    brightness = ImageChops.lighter(red, ImageChops.lighter(green, blue))
+    # The dark interior does not emit light. Derive the luminous metal and
+    # crests from their actual pixels, then soften in the same source space.
+    mask = brightness.point(lambda value: round(max(0, value - 32) * 0.55))
+    mask = ImageChops.multiply(mask, alpha).filter(ImageFilter.GaussianBlur(1))
+    glow = Image.new("RGBA", panel.size, (205, 216, 221, 0))
+    glow.putalpha(mask)
+    atlas.paste((0, 0, 0, 0), (0, 128, 512, 256))
     atlas.paste(glow, (0, 128))
     atlas.save(output / "Artisan.tga", compression=None)
     (output / "Artisan.blp").write_bytes(
@@ -67,7 +73,7 @@ def prepare(source, output):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--source", type=Path, required=True)
+    parser.add_argument("--source", type=Path, help="Pinned source sheet; omit to refresh only the halo")
     parser.add_argument("--output", type=Path, default=ROOT / "media/tex/levelup")
     options = parser.parse_args()
     prepare(options.source, options.output)

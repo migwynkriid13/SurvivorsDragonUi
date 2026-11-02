@@ -30,7 +30,8 @@ Returning from dead/victory to playing without leaving the run can reuse that
 same class snapshot. Both Performance Mode states use the existing controller,
 artwork and changed-only crop writes; hidden views defer class validation and
 painting. The selected panel adds four static texture regions over the former
-background, without a new frame, event, updater or saved state.
+background; its fitted five-strip halo adds four more optional regions over
+the first Artisan iteration. No frame, event, updater or saved state is added.
 
 Unchanged counts and class icons do not repeat text or crop writes. Text-width
 measurements are reused until text, font or effective scale changes; edit entry,

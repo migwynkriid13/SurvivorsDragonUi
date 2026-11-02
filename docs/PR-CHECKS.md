@@ -39,8 +39,9 @@ These are CI-only ownership/input-boundary checks. They do not execute client
 code or prove actual native hit testing, AS settings behavior or run preservation.
 
 Stored-level Artisan cases cover all five source strips, fixed corners and
-central crests, caption-width fitting, region reuse, unchanged idle writes and
-the static panel with its silver halo disabled in Performance Mode. They use
+central crests, matching five-part halo crops/anchors, caption-width fitting,
+region reuse, unchanged idle writes and the static panel with all six pulse
+textures disabled in Performance Mode and restored on Show. They use
 the existing complete-controller fixture, remain CI-only and do not establish
 native filtering, text metrics or artwork appearance.
 
