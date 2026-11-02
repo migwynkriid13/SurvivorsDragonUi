@@ -31,6 +31,7 @@ def main():
         jewelry_cache = extract_source("modules/ui/jewelry.lua", [
             "InvalidateEffects", "ReadEffects", "ClearSlot", "PaintIcons",
         ])
+        jewelry_cache = jewelry_cache.rsplit("\nreturn ", 1)[0] + "\nreturn { InvalidateEffects = InvalidateEffects, ReadEffects = ReadEffects, ClearSlot = ClearSlot, PaintIcons = PaintIcons }\n"
         run_hud = "local render, refreshRows, scheduleCache = {}, false, nil\n" + extract_source("modules/ui/run.lua", [
             "nativeParts", "TakeOver", "Restore", "SyncReplacements",
         ])

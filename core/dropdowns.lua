@@ -164,7 +164,7 @@ local function AcquireWheel(state)
     state.frame:SetScript("OnMouseWheel", state.wheel)
     if not state.previousWheelEnabled then state.frame:EnableMouseWheel(true) end
     state.ownsWheel = true
-    if state.frame:GetScript("OnHide") ~= state.hide then
+    if not state.hide or state.frame:GetScript("OnHide") ~= state.hide then
         local previous = state.frame:GetScript("OnHide")
         state.hide = function()
             if previous then previous() end
