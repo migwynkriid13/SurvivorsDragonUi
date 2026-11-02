@@ -467,10 +467,20 @@ DFRL:NewMod("RunTimers", 5, function()
         text:SetTextColor(1, 1, 1)
         frame.paintedWidth = BAR_WIDTH
         function frame.RefreshWidth()
-            local width = frame:GetWidth() - 16
+            local outerWidth = frame:GetWidth()
+            local inset = math.min(8, outerWidth / 4)
+            local width = outerWidth - inset * 2
             if T.NearlyEqual(frame.paintedWidth, width) then return end
             -- Stretch the original background sample; StatusBar owns fill UVs.
-            background:SetWidth(width + 4)
+            local capWidth = math.min(35, outerWidth * 0.49)
+            left:SetWidth(capWidth)
+            right:SetWidth(capWidth)
+            background:SetWidth(width + inset / 2)
+            background:ClearAllPoints()
+            background:SetPoint("LEFT", frame, "LEFT", inset * 0.75, 0)
+            bar:ClearAllPoints()
+            bar:SetPoint("LEFT", frame, "LEFT", inset, 0)
+            bar:SetPoint("RIGHT", frame, "RIGHT", -inset, 0)
             frame.paintedWidth = width
         end
         frame:Hide()
@@ -1897,6 +1907,11 @@ DFRL:NewMod("RunTimers", 5, function()
                 master = "customBossBars",
                 options = {
                     { "customBossBars", "Enable custom boss bars", "Off: use the game's original boss bars." },
+                    {
+                        "bossCombineBars",
+                        "Combine boss bars",
+                        "Split one row equally between all visible bosses and guardians.",
+                    },
                     { "bossShowCurrentHealth", "Show current health", "Show current health on health bars." },
                     { "bossShowMaximumHealth", "Show maximum health", "Show maximum health on health bars." },
                     { "bossShowHealthPercentage", "Show health percentage", "Show remaining health as a percentage." },
@@ -3199,7 +3214,9 @@ DFRL:NewMod("RunTimers", 5, function()
     -- Its bounds include the first name and every stacked health pill.
     local bossGroup = CreateFrame("Frame", "DFRL_BossHealthGroup", UIParent)
     bossGroup:SetWidth(BAR_WIDTH + 16)
-    bossGroup:SetHeight(math.max(47, DFRL.display.Get("bossRows") * ROW_HEIGHT - 1))
+    bossGroup:SetHeight(
+        math.max(47, (DFRL.display.Get("bossCombineBars") and 0 or DFRL.display.Get("bossRows")) * ROW_HEIGHT - 1)
+    )
     bossGroup:SetFrameStrata("HIGH")
     bossGroup:Hide()
     DFRL.layout.Register("bossBars", bossGroup, function()
@@ -3211,6 +3228,7 @@ DFRL:NewMod("RunTimers", 5, function()
         maxWidth = 1200,
         onResize = function() bossGroup.widthDirty = true end,
         onHeightDrag = function(height, start)
+            if DFRL.display.Get("bossCombineBars") then return end
             start.rows = start.rows
                 or math.max(
                     1,
@@ -3835,7 +3853,7 @@ DFRL:NewMod("RunTimers", 5, function()
         T.SetTextIfChanged(row.name, "")
         T.SetEncounterHealthText(row.health, nil, nil, false, false)
         if row.value ~= 0 then row.bar:SetValue(0) end
-        row.value, row.layoutOffset = 0, nil
+        row.value, row.layoutOffset, row.layoutX = 0, nil, nil
         row.id, row.key = nil, nil
         table.insert(spareRows, row)
     end
@@ -4359,8 +4377,10 @@ DFRL:NewMod("RunTimers", 5, function()
         frame:SetParent(bossGroup)
         T.SetFont(name, 12, "OUTLINE")
         name:SetWidth(BAR_WIDTH)
+        name:SetHeight(14)
         local health = rowOverlay:CreateFontString(nil, "OVERLAY")
         health:SetPoint("CENTER", frame, "CENTER", 0, 0)
+        health:SetHeight(14)
         T.StyleEncounterHealth(bar, health)
         return { frame = frame, bar = bar, overlay = rowOverlay, name = name, health = health, debuffs = {} }
     end
@@ -4495,7 +4515,7 @@ DFRL:NewMod("RunTimers", 5, function()
         local paint = bossGroup:IsVisible()
         if not paint then return row.debuffHeight or 0 end
         local getter = _G.AZS_GetDebuffs
-        if enabled and type(getter) == "function" then
+        if enabled and row.debuffsFit ~= false and type(getter) == "function" then
             -- The getter owns timing and returns current effects for this exact
             -- spawn, including when no unit is targeted. Never advance a local clock.
             local ok, effects = pcall(getter, row.id)
@@ -4539,17 +4559,28 @@ DFRL:NewMod("RunTimers", 5, function()
     end
 
     local function ReflowRows()
-        local offset = 0
-        for _, row in ipairs(rowOrder) do
-            if row.layoutOffset ~= offset then
+        local combined = DFRL.display.Get("bossCombineBars")
+        local count = table.getn(rowOrder)
+        local groupWidth = bossGroup:GetWidth()
+        local width = groupWidth / math.max(1, count)
+        local offset, deepest = 0, 0
+        for index, row in ipairs(rowOrder) do
+            local x = combined and ((index - 0.5) * width - groupWidth / 2) or 0
+            if row.layoutOffset ~= offset or not T.NearlyEqual(row.layoutX, x) then
                 row.frame:ClearAllPoints()
-                row.frame:SetPoint("TOP", bossGroup, "TOP", 0, -16 - offset)
-                row.layoutOffset = offset
+                row.frame:SetPoint("TOP", bossGroup, "TOP", x, -16 - offset)
+                row.layoutOffset, row.layoutX = offset, x
             end
-            offset = offset + ROW_HEIGHT + (row.debuffHeight or 0)
+            if combined then
+                deepest = math.max(deepest, row.debuffHeight or 0)
+            else
+                offset = offset + ROW_HEIGHT + (row.debuffHeight or 0)
+            end
         end
-        local capacity = DFRL.display.Get("bossRows")
-        local height = math.max(47, offset - 1 + math.max(0, capacity - table.getn(rowOrder)) * ROW_HEIGHT)
+        local capacity = combined and 0 or DFRL.display.Get("bossRows")
+        local height = combined and (ROW_HEIGHT - 1 + deepest)
+            or (offset - 1 + math.max(0, capacity - count) * ROW_HEIGHT)
+        height = math.max(47, height)
         if not T.NearlyEqual(bossGroup:GetHeight(), height) then
             bossGroup:SetHeight(height)
             DFRL.layout.Place("bossBars", bossGroup)
@@ -4603,7 +4634,8 @@ DFRL:NewMod("RunTimers", 5, function()
             end
         end
         local count = table.getn(entries)
-        local capacity = DFRL.display.Get("bossRows")
+        local combined = DFRL.display.Get("bossCombineBars")
+        local capacity = combined and 0 or DFRL.display.Get("bossRows")
         render.bossCount = count
         render.bossOffset = math.min(render.bossOffset or 0, math.max(0, count - (capacity > 0 and capacity or count)))
         local first = render.bossOffset + 1
@@ -4647,6 +4679,7 @@ DFRL:NewMod("RunTimers", 5, function()
             end
         end
         local reflow = bossGroup.visibleRows ~= table.getn(rowOrder)
+        local width = bossGroup:GetWidth() / (combined and math.max(1, bossGroup.visibleRows) or 1)
         for sourceIndex = first, last do
             local entry = entries[sourceIndex]
             local index = sourceIndex - first + 1
@@ -4659,10 +4692,15 @@ DFRL:NewMod("RunTimers", 5, function()
             row.key = entry.key
             row.id = entry.id
             if paint then
-                local width = bossGroup:GetWidth()
-                if not T.NearlyEqual(row.frame:GetWidth(), width) then row.frame:SetWidth(width) end
+                if not T.NearlyEqual(row.frame:GetWidth(), width) then
+                    row.frame:SetWidth(width)
+                    reflow = true
+                end
                 row.frame.RefreshWidth()
-                if not T.NearlyEqual(row.name:GetWidth(), width - 16) then row.name:SetWidth(width - 16) end
+                local textWidth = width - 2 * math.min(8, width / 4)
+                row.debuffsFit = textWidth >= DEBUFF_SIZE
+                if not T.NearlyEqual(row.name:GetWidth(), textWidth) then row.name:SetWidth(textWidth) end
+                if not T.NearlyEqual(row.health:GetWidth(), textWidth) then row.health:SetWidth(textWidth) end
                 local columns = math.max(1, math.floor((width - 16 + DEBUFF_GAP) / (DEBUFF_SIZE + DEBUFF_GAP)))
                 if row.columns ~= columns then
                     row.columns, reflow = columns, true
@@ -4698,6 +4736,7 @@ DFRL:NewMod("RunTimers", 5, function()
     end
 
     function bossGroup.ScrollRows(direction)
+        if DFRL.display.Get("bossCombineBars") then return end
         local capacity = DFRL.display.Get("bossRows")
         if capacity <= 0 then return end
         local offset = math.max(
@@ -4737,10 +4776,13 @@ DFRL:NewMod("RunTimers", 5, function()
         UpdateDisplayLabels()
         RefreshTimerCaptions()
         refreshRows = true
+        local combined = DFRL.display.Get("bossCombineBars")
         local capacity = DFRL.display.Get("bossRows")
-        if render.bossCapacity ~= capacity then
-            render.bossCapacity, render.bossOffset = capacity, 0
-            local height = math.max(47, (capacity > 0 and capacity or render.bossCount or 0) * ROW_HEIGHT - 1)
+        if render.bossCapacity ~= capacity or render.bossCombined ~= combined then
+            render.bossCapacity, render.bossCombined, render.bossOffset = capacity, combined, 0
+            -- Keep the shared edit outline useful without painting hidden rows.
+            local slots = combined and 1 or (capacity > 0 and capacity or render.bossCount or 0)
+            local height = math.max(47, slots * ROW_HEIGHT - 1)
             if not T.NearlyEqual(bossGroup:GetHeight(), height) then
                 bossGroup:SetHeight(height)
                 DFRL.layout.Place("bossBars", bossGroup)

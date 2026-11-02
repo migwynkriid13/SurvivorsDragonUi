@@ -435,6 +435,200 @@ do
     assert(row.bar.value == 0 and not row.frame:IsShown(), "retirement lost the existing health cleanup")
 end
 
+-- Combined geometry uses the same native rows and preserves the stacked limit.
+do
+    local context = H.New()
+    local env = context.env
+    context:Load("core/display.lua", "Display")
+    local display = env.DFRL.display
+    assert(display.Get("bossCombineBars") == false)
+    for _, invalid in ipairs({ 1, "true", {} }) do
+        assert(display.Copy({ bossCombineBars = invalid }).bossCombineBars == false)
+    end
+    display.BeginEdit()
+    display.Set("bossCombineBars", true)
+    assert(display.Get("bossCombineBars") and not env.SurvivorsDragonUiDisplay, "boss preview saved early")
+    display.FinishEdit(false)
+    assert(not display.Get("bossCombineBars"), "Cancel retained combined bosses")
+    display.BeginEdit()
+    display.Set("bossCombineBars", true)
+    display.FinishEdit(true)
+    assert(display.Get("bossCombineBars") and env.SurvivorsDragonUiDisplay.bossCombineBars)
+    env.SurvivorsDragonUiProfiles = {
+        Old = { layout = {}, display = {}, runFont = {} },
+        Combined = { layout = {}, display = { bossCombineBars = true, bossRows = 2 }, runFont = {} },
+    }
+    env.DFRL.layout.Copy = function(value) return value end
+    env.DFRL.layout.Load = function() end
+    env.DFRL.runFont = { Copy = function(value) return value end, Load = function() end }
+    context:Load("core/profiles.lua", "Profiles")
+    local profiles = env.DFRL.profiles
+    profiles.BeginEdit()
+    display.BeginEdit()
+    assert(profiles.Load("Old") and not display.Get("bossCombineBars"), "older profile enabled combined bosses")
+    display.FinishEdit(false)
+    assert(display.Get("bossCombineBars"), "profile Cancel lost combined bosses")
+    display.BeginEdit()
+    assert(profiles.Load("Combined") and display.Get("bossCombineBars") and display.Get("bossRows") == 2)
+    display.FinishEdit(true)
+    profiles.FinishEdit(false)
+    display.BeginEdit()
+    display.Load({})
+    assert(not display.Get("bossCombineBars"), "Addon defaults retained combined bosses")
+    display.FinishEdit(false)
+    assert(display.Get("bossCombineBars"), "discarding defaults lost combined bosses")
+    display.Reset()
+    assert(not display.Get("bossCombineBars") and not env.SurvivorsDragonUiDisplay)
+end
+
+for _, performance in ipairs({ false, true }) do
+    local context, env, controller = New(performance)
+    env.ROW_HEIGHT, env.DEBUFF_SIZE, env.DEBUFF_GAP = 48, 18, 4
+    env.render = { bossLoss = controller, customBosses = true }
+    env.bossGroup = env.CreateFrame("Frame", nil, env.UIParent)
+    env.bossGroup:SetWidth(296)
+    env.activeRows, env.rowOrder, env.spareRows = {}, {}, {}
+    context.settings.bossRows, context.settings.bossCombineBars = 2, true
+    context.settings.bossShowCurrentHealth, context.settings.bossShowMaximumHealth = true, true
+    local entries, seen, saved, heights = {}, {}, {}, {}
+    env.EncounterRows = function() return entries, seen end
+    env.TakeOver = function() return true end
+    env.ClearDebuffs = function(row) row.debuffHeight = 0 end
+    env.DFRL.layout.Place = function(key) assert(key == "bossBars") end
+    env.NewRow = function()
+        local row = table.remove(env.spareRows)
+        if row then return row end
+        row = context:Row()
+        row.name, row.health, row.debuffs = row.frame:CreateFontString(), row.frame:CreateFontString(), {}
+        row.frame.RefreshWidth = function()
+            local width = row.frame:GetWidth()
+            width = width - 2 * math.min(8, width / 4)
+            if row.bar.width ~= width then row.bar:SetWidth(width) end
+        end
+        function row.bar:SetValue(value)
+            context.writes.value = (context.writes.value or 0) + 1
+            self.value = value
+        end
+        return row
+    end
+    env.UpdateDebuffRows = function(_, reflow)
+        for _, row in ipairs(env.rowOrder) do
+            local height = heights[row.id] or 0
+            if row.debuffHeight ~= height then reflow = true end
+            row.debuffHeight = height
+        end
+        if reflow or env.render.rowsDirty then context.source.Reflow() end
+        env.render.rowsDirty = nil
+    end
+    env.T.SetEncounterHealthText = function(label, current, maximum)
+        env.T.SetTextIfChanged(label, current and (tostring(current) .. "/" .. tostring(maximum)) or "")
+    end
+    local function Count(count)
+        entries, seen = {}, {}
+        for index = 1, count do
+            local entry = saved[index]
+                or { hp = 1000, maximum = 1000, key = "boss:" .. index, id = index, name = "Boss " .. index }
+            saved[index], entries[index], seen[entry.key] = entry, entry, true
+        end
+        env.render.rowsDirty = true
+        context.source.Rows("playing")
+    end
+    local function Check(count, width)
+        assert(#env.rowOrder == count and env.bossGroup.visibleRows == count)
+        for index, row in ipairs(env.rowOrder) do
+            Near(row.frame:GetWidth(), width / count, "combined boss width is not an equal share")
+            Near(row.frame.point[4], (index - 0.5) * width / count - width / 2, "combined boss order/center changed")
+            assert(row.frame.point[5] == -16 and row.id == index, "combined bosses did not share one row")
+            Near(row.name:GetWidth(), width / count - 2 * math.min(8, width / count / 4), "name escaped its segment")
+            Near(row.health:GetWidth(), row.name:GetWidth(), "health escaped its segment")
+        end
+    end
+    for _, count in ipairs({ 1, 2, 3, 4, 5, 8, 4 }) do
+        Count(count)
+        Check(count, 296)
+        assert(context.settings.bossRows == 2, "combined mode rewrote the stacked viewport")
+    end
+    local poolSize = #context.objects
+    local original = env.activeRows["boss:1"]
+    entries[1], entries[3] = entries[3], entries[1]
+    context.source.Rows("playing")
+    assert(env.rowOrder[1].id == 3 and env.rowOrder[3] == original, "same-count native reorder changed row identity")
+    Near(original.frame.point[4], 37, "same-count native reorder retained the old segment position")
+    entries[1], entries[3] = entries[3], entries[1]
+    context.source.Rows("playing")
+    Check(4, 296)
+    heights[2], heights[3] = 22, 66
+    env.render.rowsDirty = true
+    context.source.Rows("playing")
+    assert(env.bossGroup:GetHeight() == 47 + 66, "combined outline omitted the deepest debuffs")
+    local first = env.activeRows["boss:1"]
+    saved[1].hp = 800
+    context.source.Rows("playing")
+    assert(first.bar.value == 0.8 and env.activeRows["boss:2"].bar.value == 1, "combined mode merged boss health")
+    local started = first.lossStart
+    assert(performance or (controller.count == 1 and first.lossTexture:IsShown()))
+    env.bossGroup:SetWidth(600)
+    context.source.Rows("playing")
+    Check(4, 600)
+    controller:Update()
+    assert(first.lossStart == started, "resizing restarted an independent loss trail")
+    assert(not performance or not first.lossTexture, "combined Performance Mode prepared loss artwork")
+    context:ResetCounts()
+    context.source.Rows("playing")
+    context:NoPresentationWrites()
+    env.bossGroup:Hide()
+    context:ResetCounts()
+    context.source.Rows("playing")
+    context:NoPresentationWrites()
+    assert(env.render.rowsPresentationDirty, "hidden combined rows did not defer presentation")
+    env.bossGroup:Show()
+    context.source.Rows("playing")
+    context.settings.bossCombineBars = false
+    env.render.rowsDirty = true
+    context.source.Rows("playing")
+    assert(#env.rowOrder == 2, "stacked mode did not restore the saved viewport")
+    assert(env.rowOrder[1].frame:GetWidth() == 600 and env.rowOrder[2].frame:GetWidth() == 600)
+    assert(env.rowOrder[1].frame.point[4] == 0 and env.rowOrder[2].frame.point[5] == -64)
+    context.settings.bossCombineBars = true
+    Count(1)
+    Check(1, 600)
+    Count(0)
+    assert(not next(env.activeRows) and not env.bossGroup:IsShown() and controller.count == 0)
+    Count(4)
+    Check(4, 600)
+    assert(#context.objects <= poolSize + 1, "combined count changes rebuilt the existing row pool")
+end
+
+do
+    local context, env = New()
+    env.BAR_WIDTH = 280
+    local create = context.Object
+    function context:Object(...)
+        local object = create(self, ...)
+        function object:SetMinMaxValues(low, high) self.range = { low, high } end
+        function object:SetStatusBarTexture(value) self.fillTexture = value end
+        function object:SetValue(value) self.value = value end
+        return object
+    end
+    local frame, bar, name, overlay = context.source.Pill("CombinedPill", "FillWhite")
+    local allocated = #context.objects
+    local caps = {}
+    for _, object in ipairs(context.objects) do
+        if object:GetParent() == overlay and object ~= name then table.insert(caps, object) end
+    end
+    assert(#caps == 3, "pill gained drawing regions")
+    for _, width in ipairs({ 296, 148, 296 / 3, 74, 296 / 5, 3, 296 }) do
+        frame:SetWidth(width)
+        frame.RefreshWidth()
+        assert(caps[1]:GetWidth() + caps[2]:GetWidth() < width, "narrow pill caps overlap")
+        assert(frame.paintedWidth > 0 and bar.fillTexture == "timer\\FillWhite.blp")
+        context:ResetCounts()
+        frame.RefreshWidth()
+        context:NoPresentationWrites()
+    end
+    assert(#context.objects == allocated, "resizing pills allocated artwork")
+end
+
 print(
     "PASS boss Crimson echo keeps one lazy reused strip, exact easing, bounded rapid losses and idle/static/hidden cleanup"
 )

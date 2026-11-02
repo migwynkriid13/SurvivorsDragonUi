@@ -119,8 +119,8 @@ def main():
             "ReflowRows", "RefreshDebuffHover", "UpdateDebuffRows", "Update",
         ])
         run_debuff_cadence = run_debuff_cadence.rsplit("\nreturn ", 1)[0] + "\nreturn { Update = Update, Rows = UpdateDebuffRows }\n"
-        run_boss_health_loss = extract_source("modules/ui/run.lua", ["CreateBossHealthLoss", "Retire", "UpdateRows"])
-        run_boss_health_loss = run_boss_health_loss.rsplit("\nreturn ", 1)[0] + "\nreturn { New = CreateBossHealthLoss, Rows = UpdateRows, Retire = Retire }\n"
+        run_boss_health_loss = extract_source("modules/ui/run.lua", ["Texture", "Pill", "CreateBossHealthLoss", "Retire", "ReflowRows", "UpdateRows"])
+        run_boss_health_loss = run_boss_health_loss.rsplit("\nreturn ", 1)[0] + "\nreturn { New = CreateBossHealthLoss, Pill = Pill, Rows = UpdateRows, Retire = Retire, Reflow = ReflowRows }\n"
     except RuntimeError as error:
         print(error, file=sys.stderr)
         return 1

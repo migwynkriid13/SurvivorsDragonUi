@@ -1312,6 +1312,31 @@ for _, key in ipairs({ "meter", "action", "encounters", "map", "interface", "pro
         "live timer update ignored the selected category's sample visibility"
     )
 end
+do
+    dialog.navigation.Search("Combine boss bars")
+    assert(
+        #dialog.navigation.results == 1 and dialog.navigation.results[1].target == "bossCombineBars",
+        "combined boss layout was missing from settings search"
+    )
+    dialog.navigation.OpenResult(1)
+    local combinedBosses = assert(env.displayControls.bossCombineBars, "missing combined boss checkbox")
+    assert(not combinedBosses.editorChecked and not display.Get("bossCombineBars"), "combined bosses defaulted on")
+    context:Call(combinedBosses, "OnClick")
+    editor.Display()
+    assert(combinedBosses.editorChecked and display.Get("bossCombineBars"), "combined bosses did not preview")
+    assert(not env.SurvivorsDragonUiDisplay, "combined bosses saved before Confirm")
+    display.Set("customBossBars", false)
+    editor.Display()
+    assert(
+        not combinedBosses.mouse and combinedBosses:GetAlpha() == 0.45 and combinedBosses.editorChecked,
+        "native boss bars did not disable and retain the combined choice"
+    )
+    display.FinishEdit(false)
+    display.BeginEdit()
+    editor.Display()
+    assert(not combinedBosses.editorChecked and display.Get("customBossBars"), "Cancel retained combined boss previews")
+    dialog.navigation.Search("")
+end
 local pageCount = 0
 for _ in pairs(pages) do
     pageCount = pageCount + 1

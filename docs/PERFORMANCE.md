@@ -1359,6 +1359,22 @@ coverage is authored for CI only and has not been run locally.
 
 ## Boss health loss — 2026-10-28
 
+The optional `bossCombineBars` layout splits the existing width among all
+accepted boss/guardian rows. It reuses the same pooled pills, labels, debuff
+icons, native reader and display listener in both Performance Mode states.
+Changed widths and count/order/options dirty the existing reflow; settled
+geometry skips size and anchor writes. Hidden groups defer this presentation.
+Combined mode displays the full accepted list even when the saved stacked
+viewport is smaller, so more existing pooled rows may be visible. It adds no
+gameplay frame, drawing region, texture, asset, event or updater. Narrow pills
+compress their existing end caps without overlap, retaining a positive center
+and fill; labels keep their font size and are bounded to their segment. Segments
+too narrow for one full-size debuff icon skip that getter and hide the existing
+icons until space returns. The lazy settings toggle adds one Button, five
+texture regions (checkbox, checkmark, hover and two divider strips) and two
+FontStrings, using existing artwork.
+Source review and CI-only fixtures do not establish native appearance or FPS.
+
 The selected **04 Crimson echo** adds at most one lazily prepared FillWhite
 texture per pooled boss-bar row, including guardian rows in this view. Each
 existing base pill retains its five regions; one extra region and its material/

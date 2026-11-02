@@ -98,6 +98,15 @@ An explicit Bash shell enables `pipefail`, so piping fixture/model output into
 
 ## UI work and cleanup tests
 
+Boss-row cases cover equal halves/thirds/quarters and larger counts, one/zero
+boss recovery, group resizing, native order and row reuse, independent health
+and loss effects, deepest debuff bounds, stacked viewport restoration and
+hidden deferral in both Performance Mode states. Display/editor cases cover
+the default-off Combine boss bars choice, normalization, preview, Confirm,
+Cancel, profile copies, reset and the custom-boss master dependency. These are
+authored for CI only; no local tests, standalone validation or game execution
+are authorized. They do not establish native text clipping or appearance.
+
 Jewelry cache cases use the exact production reader/cache/compositor functions
 over fake native tooltip and texture boundaries. They cover unchanged successful
 reads, same-icon item replacement, inventory/language invalidation, missing or

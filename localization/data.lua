@@ -2,6 +2,8 @@
 DFRL.locale.data = {
     en = {
         ui = {
+            ["Combine boss bars"] = "Combine boss bars",
+            ["Split one row equally between all visible bosses and guardians."] = "Split one row equally between all visible bosses and guardians.",
             ["World cache icons"] = "World cache icons",
             ["World guardian and boss icons"] = "World guardian and boss icons",
             ["When to show"] = "When to show",
@@ -700,6 +702,8 @@ DFRL.locale.data = {
     },
     pl = {
         ui = {
+            ["Combine boss bars"] = "Połącz paski bossów",
+            ["Split one row equally between all visible bosses and guardians."] = "Podziel jeden rząd równo między wszystkich widocznych bossów i strażników.",
             ["World cache icons"] = "Ikony skrytek w świecie",
             ["World guardian and boss icons"] = "Ikony strażników i bossów w świecie",
             ["When to show"] = "Kiedy pokazywać",
@@ -1869,6 +1873,8 @@ DFRL.locale.data = {
     },
     cs = {
         ui = {
+            ["Combine boss bars"] = "Spojit ukazatele bossů",
+            ["Split one row equally between all visible bosses and guardians."] = "Rozdělit jeden řádek rovnoměrně mezi všechny zobrazené bossy a strážce.",
             ["World cache icons"] = "Ikony truhel ve světě",
             ["World guardian and boss icons"] = "Ikony strážců a bossů ve světě",
             ["When to show"] = "Kdy zobrazovat",
@@ -3041,6 +3047,8 @@ DFRL.locale.data = {
     },
     de = {
         ui = {
+            ["Combine boss bars"] = "Bossleisten zusammenfassen",
+            ["Split one row equally between all visible bosses and guardians."] = "Eine Zeile gleichmäßig auf alle sichtbaren Bosse und Wächter aufteilen.",
             ["World cache icons"] = "Truhensymbole in der Welt",
             ["World guardian and boss icons"] = "Wächter- und Bosssymbole in der Welt",
             ["When to show"] = "Wann anzeigen",
@@ -4211,6 +4219,8 @@ DFRL.locale.data = {
     },
     pt = {
         ui = {
+            ["Combine boss bars"] = "Combinar barras de chefes",
+            ["Split one row equally between all visible bosses and guardians."] = "Divida uma linha igualmente entre todos os chefes e guardiões visíveis.",
             ["World cache icons"] = "Ícones de baús no mundo",
             ["World guardian and boss icons"] = "Ícones de guardiões e chefes no mundo",
             ["When to show"] = "Quando mostrar",
@@ -5372,6 +5382,8 @@ DFRL.locale.data = {
     },
     es = {
         ui = {
+            ["Combine boss bars"] = "Combinar barras de jefes",
+            ["Split one row equally between all visible bosses and guardians."] = "Divide una fila por igual entre todos los jefes y guardianes visibles.",
             ["World cache icons"] = "Iconos de cofres en el mundo",
             ["World guardian and boss icons"] = "Iconos de guardianes y jefes en el mundo",
             ["When to show"] = "Cuándo mostrar",
@@ -6537,6 +6549,8 @@ DFRL.locale.data = {
     },
     fr = {
         ui = {
+            ["Combine boss bars"] = "Regrouper les barres des boss",
+            ["Split one row equally between all visible bosses and guardians."] = "Partage une ligne à parts égales entre tous les boss et gardiens visibles.",
             ["World cache icons"] = "Icônes des coffres dans le monde",
             ["World guardian and boss icons"] = "Icônes des gardiens et boss dans le monde",
             ["When to show"] = "Quand afficher",
@@ -7710,6 +7724,8 @@ DFRL.locale.data = {
     },
     ro = {
         ui = {
+            ["Combine boss bars"] = "Combină barele șefilor",
+            ["Split one row equally between all visible bosses and guardians."] = "Împarte un rând în mod egal între toți șefii și străjerii vizibili.",
             ["World cache icons"] = "Pictograme de cufere în lume",
             ["World guardian and boss icons"] = "Pictograme de străjeri și șefi în lume",
             ["When to show"] = "Când se afișează",
@@ -8866,6 +8882,8 @@ DFRL.locale.data = {
     },
     tr = {
         ui = {
+            ["Combine boss bars"] = "Patron çubuklarını birleştir",
+            ["Split one row equally between all visible bosses and guardians."] = "Bir satırı görünen tüm patronlar ve muhafızlar arasında eşit böl.",
             ["World cache icons"] = "Dünyadaki sandık simgeleri",
             ["World guardian and boss icons"] = "Dünyadaki muhafız ve patron simgeleri",
             ["When to show"] = "Ne zaman gösterilsin",
@@ -9898,6 +9916,8 @@ DFRL.locale.data = {
     },
     ru = {
         ui = {
+            ["Combine boss bars"] = "Объединить полосы боссов",
+            ["Split one row equally between all visible bosses and guardians."] = "Разделить одну строку поровну между всеми видимыми боссами и стражами.",
             ["World cache icons"] = "Значки тайников в мире",
             ["World guardian and boss icons"] = "Значки стражей и боссов в мире",
             ["When to show"] = "Когда показывать",
@@ -11149,6 +11169,8 @@ DFRL.locale.data = {
     },
     uk = {
         ui = {
+            ["Combine boss bars"] = "Об’єднати смуги босів",
+            ["Split one row equally between all visible bosses and guardians."] = "Поділити один рядок порівну між усіма видимими босами та вартовими.",
             ["World cache icons"] = "Значки схованок у світі",
             ["World guardian and boss icons"] = "Значки вартових і босів у світі",
             ["When to show"] = "Коли показувати",
@@ -12374,6 +12396,8 @@ DFRL.locale.data = {
     },
     zh = {
         ui = {
+            ["Combine boss bars"] = "合并首领血条",
+            ["Split one row equally between all visible bosses and guardians."] = "将一行平均分配给所有显示的首领和守卫。",
             ["World cache icons"] = "世界宝箱图标",
             ["World guardian and boss icons"] = "世界守卫和首领图标",
             ["When to show"] = "显示时机",
@@ -13526,6 +13550,8 @@ DFRL.locale.data = {
     },
     ja = {
         ui = {
+            ["Combine boss bars"] = "ボスバーをまとめる",
+            ["Split one row equally between all visible bosses and guardians."] = "表示中のすべてのボスとガーディアンで1行を均等に分割します。",
             ["World cache icons"] = "ワールドの宝箱アイコン",
             ["World guardian and boss icons"] = "ワールドのガーディアンとボスのアイコン",
             ["When to show"] = "表示する範囲",
@@ -14710,6 +14736,8 @@ DFRL.locale.data = {
     },
     ko = {
         ui = {
+            ["Combine boss bars"] = "우두머리 바 합치기",
+            ["Split one row equally between all visible bosses and guardians."] = "표시된 모든 우두머리와 수호자가 한 줄을 균등하게 나눠 씁니다.",
             ["World cache icons"] = "월드 보물함 아이콘",
             ["World guardian and boss icons"] = "월드 수호자 및 우두머리 아이콘",
             ["When to show"] = "표시 범위",

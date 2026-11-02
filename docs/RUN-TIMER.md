@@ -280,6 +280,22 @@ The existing 27 flow regions retain their speed, lane, phase and update interval
 
 Boss health also has top/bottom handles for 1–40 viewport slots, with mouse-wheel access to further validated native entries. The `bossRows` display preference defaults to zero (automatic full list), copied by profiles and restored on resets. Full encounter validation and native HUD ownership remain intact. Visible health rows use the current group width, preserve end caps and text size, and wrap their eighteen-unit debuffs into the available columns. Debuff height remains part of the measured outline. No data, health value or boss is fabricated to fill empty viewport slots.
 
+**Combine boss bars** in `/sdui` → **Encounters** → **Boss bars** is off by
+default. On places every current boss beside the others in one row, sharing the
+group's existing width equally: halves for two, thirds for three, and so on.
+Enabled guardian bars share that row too. Each bar keeps its own name, health,
+debuffs and loss effect; one remaining bar uses the full width. Names and health
+captions stay inside their own segment, so narrow segments can truncate text.
+Debuffs hide when a segment cannot fit one full-size icon. Widen Boss health in
+Layout for more room.
+
+Combined mode ignores the saved vertical row limit, height dragging and wheel
+scrolling. Turning it off restores the saved stacked viewport. The shared
+outline includes the deepest debuff column. `bossCombineBars` uses the existing
+display preview, Confirm, Cancel/discard, profiles and reset lifecycle; missing
+or invalid values select off. Both Performance Mode states use the same instant
+layout, retaining their existing loss-effect behavior.
+
 Source inspection and pinned formatting do not establish animation appearance, input behavior, native rendering or FPS in the packaged client. No local tests or game execution were run.
 
 ## Replacement switches and native settings

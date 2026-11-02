@@ -121,6 +121,14 @@ context.phase = "ready"
 context:ResetCounts()
 Refresh()
 assert(not context.reads.debuffs and not icon:IsShown() and icon.effect == nil)
+context.phase = "playing"
+row.debuffsFit = false
+context:ResetCounts()
+Refresh()
+assert(not context.reads.debuffs and not icon:IsShown(), "narrow combined cell painted overflowing debuffs")
+row.debuffsFit = true
+Refresh()
+assert(icon:IsShown() and context.reads.debuffs == 1, "widened combined cell did not recover current debuffs")
 env.inWorld = false
 context:ResetCounts()
 api.Update()

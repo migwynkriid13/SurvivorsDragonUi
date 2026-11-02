@@ -37,6 +37,7 @@ DFRL:NewMod("Display", 0, function()
         customRunTimer = true,
         attachAffixes = true,
         customBossBars = true,
+        bossCombineBars = false,
         lootMode = "sdui",
         lootShowMarks = true,
         petRows = 6,
