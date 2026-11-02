@@ -4,6 +4,7 @@
     "SurvivorsDragonUi.toc",
     "core/core.lua",
     "core/combat_text_api.lua",
+    "core/world_marker_api.lua",
     "core/display.lua",
     "core/dropdowns.lua",
     "core/editor.lua",

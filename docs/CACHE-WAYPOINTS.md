@@ -20,23 +20,49 @@ Cancel/world/logout/reload discard, profiles and both full resets. Turning this
 guide off clears its live roster and skips party reads; enabling waits for a
 fresh native sample. No member positions or death state are saved.
 
-The existing ten-Hz/deferred controller reads current `party1` through `party4`
-using `UnitExists`, `UnitIsConnected`, `UnitIsDead`, `UnitIsGhost`, `UnitName` and
-`GetPlayerMapPosition(unit)`. Boolean true and numeric one mean eligible; zero
-does not. Membership/name and death are checked again after the position read.
-Revival, disconnect, missing/failed coordinates, inactive phase and world cleanup
-remove guidance at the next existing refresh. No last-alive or historical
-location is substituted. Ghosts are excluded because their current unit position
-cannot establish their body's location.
+The existing ten-Hz/deferred controller prefers the proposed
+`AZS_GetDownedPartyMembers()` when that function exists. It copies at most four
+members by opaque native ID and validates the complete snapshot before accepting
+positions. World X/Y/Z can be zero; map, run and coordinate-space identity must
+match the current validated `AZS_GetPlayerPosition()` reading. Matching absent
+run IDs are accepted where the player-position contract permits them. This path
+needs no map UVs and can guide inside instances and to a released hero's
+native revive location. It never uses a moving ghost's position.
 
-Remote party UVs are accepted only on the confirmed current-zone map sheet with
-a readable player position. Another open map, `(0, 0)` or an unsupported instance
-map hides this guide. Distance and bearing require the same native map-scale
-calibration as existing map guidance; without scale the caption is **On map** and
-the arrow/pins hide. Received cache/lair world guidance retains its existing
-instance fallback. No remote world coordinates or 3D body projection API are
-available, so this is HUD/minimap guidance and does not draw above the body in
-the world.
+An empty native snapshot removes guidance. A failed/unavailable snapshot or an
+unavailable location hides it; neither falls back to old map coordinates while
+the new getter is present. The current read replaces the last position. Revival,
+disconnect, map/run changes and world cleanup retire the guide. Native API
+availability and actual instance behavior remain unverified.
+
+When the getter is absent, the original `party1`–`party4` map path remains:
+connected, dead, non-ghost units with a rechecked native name and readable UVs on
+the confirmed current-zone sheet. Unsupported instance maps, `(0, 0)` map UVs
+and missing calibration still hide the map arrow/pins or show **On map**. No
+last-alive or historical location is substituted.
+
+### World icons (draft native API)
+
+**Waypoints** also has three independent world-icon switches. **Icons above
+caches** and **Icons above fallen allies** default on; **Icons above guardians
+and bosses** defaults off and includes final bosses. These switches retain live
+preview, Confirm/Cancel, profiles and both resets. They are independent of the
+HUD/minimap guidance switches.
+
+Icons require all five general world-anchor endpoints and the explicit draft
+schema in [the API proposal](FALLEN-ALLY-POSITION-API-PROPOSAL.md#draft-sdui-consumer-profile).
+Discovery uses opaque handles; guardians/bosses follow the actual living entity,
+not the fixed lair. The provider must supply an `overhead` attachment. No
+nameplate matching, inferred height, old screen point or general enemy marker is
+substituted. Existing chest, guardian and Winged Soul artwork is reused at 32 UI
+units with six UI units of screen padding above the native point.
+
+Only current post-camera projections place icons. Offscreen/behind-camera,
+expired, unavailable and explicitly occluded anchors hide. An untested occlusion
+result can allow icons through walls. Collected caches and revived/departed
+allies are removed by the next complete native catalog or native handle
+retirement. These are addon-side draft consumers, pending native implementation
+and confirmation of the proposed field layout.
 
 The native party-position contract is documented by
 [benilla worldmap.rs at 0259668](https://github.com/samwhosung/benilla/blob/0259668162cd2674730e078f5bf3def4cf4dfb35/crates/benilla-ui/src/script/worldmap.rs#L953)

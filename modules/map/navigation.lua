@@ -12,6 +12,7 @@ DFRL:NewMod("Navigation", 2, function()
     local sampling, frameSample = false, {}
     local runSample = {}
     local liveSample, liveAdvertised = {}, false
+    local downedPoints = {}
     local capabilitiesRetry, positionRetry = {}, {}
     local projections, projectionRows, projectionCells = {}, {}, {}
     local projectionDirty, projectionPass = true, 0
@@ -120,6 +121,10 @@ DFRL:NewMod("Navigation", 2, function()
         samples, seen, width, height = {}, {}, nil, nil
     end
     function navigation.Reset()
+        for index = table.getn(downedPoints), 1, -1 do
+            downedPoints[index] = nil
+        end
+        if table.setn then table.setn(downedPoints, 0) end
         ResetCalibration()
         ClearSample()
         ClearRetry(capabilitiesRetry)
@@ -205,7 +210,7 @@ DFRL:NewMod("Navigation", 2, function()
     end
     local function MatchesLivePosition(target, position)
         return position
-            and Id(target.runId)
+            and (Id(target.runId) or (target.nativeDowned and target.runId == nil and position.runId == nil))
             and target.runId == position.runId
             and MapId(target.mapId)
             and target.mapId == position.mapId
@@ -214,15 +219,93 @@ DFRL:NewMod("Navigation", 2, function()
             and Number(target.x)
             and Number(target.y)
     end
+    function navigation.WorldPosition() return LivePosition() end
+    function navigation.DownedPartySnapshot()
+        local getter = _G.AZS_GetDownedPartyMembers
+        if type(getter) ~= "function" then return nil, false end
+        -- Never keep an old downed location after an unavailable/invalid read.
+        local previous = table.getn(downedPoints)
+        local ok, members, failure = pcall(getter)
+        local count, seen = 0, {}
+        if ok and failure == nil and type(members) == "table" then
+            for key in pairs(members) do
+                if not Number(key) or key < 1 or key > 4 or key ~= math.floor(key) then
+                    members = nil
+                    break
+                end
+                count = count + 1
+            end
+        else
+            members = nil
+        end
+        if members then
+            for index = 1, count do
+                local member = members[index]
+                if
+                    type(member) ~= "table"
+                    or not Id(member.id)
+                    or seen[member.id]
+                    or not Id(member.name)
+                    or type(member.positionAvailable) ~= "boolean"
+                    or (member.positionAvailable and (not Number(member.x) or not Number(member.y) or not Number(
+                        member.z
+                    ) or not MapId(member.mapId) or not Id(member.spaceId) or (member.runId ~= nil and not Id(
+                        member.runId
+                    ))))
+                    or (
+                        not member.positionAvailable
+                        and (
+                            member.x ~= nil
+                            or member.y ~= nil
+                            or member.z ~= nil
+                            or member.mapId ~= nil
+                            or member.spaceId ~= nil
+                            or member.runId ~= nil
+                        )
+                    )
+                then
+                    members = nil
+                    break
+                end
+                seen[member.id] = true
+            end
+        end
+        local used = 0
+        if members then
+            local position = LivePosition()
+            for index = 1, count do
+                local member = members[index]
+                if
+                    member.positionAvailable
+                    and position
+                    and member.runId == position.runId
+                    and member.mapId == position.mapId
+                    and member.spaceId == position.spaceId
+                then
+                    used = used + 1
+                    local point = downedPoints[used] or {}
+                    point.key, point.name, point.nativeDowned = member.id, member.name, true
+                    point.x, point.y, point.z = member.x, member.y, member.z
+                    point.mapId, point.runId, point.spaceId = member.mapId, member.runId, member.spaceId
+                    downedPoints[used] = point
+                end
+            end
+        end
+        for index = previous, used + 1, -1 do
+            downedPoints[index] = nil
+        end
+        if table.setn then table.setn(downedPoints, used) end
+        return members and downedPoints or nil, true
+    end
     function navigation.IsCurrentDestination(target)
         if type(target) ~= "table" then return false end
         if target.mapSelection then return true end
         local position, supported = LivePosition()
-        return not supported or (MatchesLivePosition(target, position) and true or false)
+        return (not supported and not target.nativeDowned) or (MatchesLivePosition(target, position) and true or false)
     end
     local function LiveDelta(target)
         local position, supported = LivePosition()
-        if not supported then return false end
+        if not supported then return target.nativeDowned and true or false end
         if not MatchesLivePosition(target, position) then return true end
         local east, north = position.y - target.y, target.x - position.x
         local distance = math.sqrt(east * east + north * north)

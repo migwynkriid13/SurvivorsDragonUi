@@ -31,10 +31,20 @@ boolean shares preview/Confirm/Cancel, profiles and both full resets; missing or
 invalid values reset to off while explicit saved choices survive. MSBT dims the
 control and retains the choice. Both Performance Mode states share this path.
 
-When enabled, farther numbers appear smaller while remaining readable. SDUI multiplies
-the selected SCT size by `min(1, max(0.55, 20 / cameraDepth))`: full size through
-20 yards of camera depth, shrinking farther away with a 55% floor. Camera turns,
-player movement and zoom update this factor without restarting the label.
+When enabled, **Full size distance (yards)** selects the reference distance
+(1–100 yards, default 20). **Minimum size (%)** sets the smallest proportion of
+the chosen SCT size (25–100%, default 55). Both numeric choices share the existing
+display transaction and profiles. They are disabled while scaling is off, outside
+Custom mode or in MSBT style. Changing them preserves active hits and expiry.
+
+Scaling requires the proposed optional `playerDistanceMetrics = true` capability
+and a finite, nonnegative `playerDistance` from that same combat-text projection.
+The factor is `max(minimum / 100, min(1, reference / playerDistance))`; zero uses
+full size. Missing/invalid distances and older providers retain the chosen SCT
+size. Camera depth/distance never substitutes for player distance. Camera-only
+movement changes placement without changing size for a stationary hero/enemy.
+This optional extension is defined in [the draft proposal](FALLEN-ALLY-POSITION-API-PROPOSAL.md#player-relative-combat-text-scaling);
+provider delivery and behavior remain unverified.
 
 ## Calls and frame timing
 

@@ -39,6 +39,7 @@ local function Scene(style, performance, configure)
                 followAnchors = true,
                 frameProjection = true,
                 distanceMetrics = true,
+                playerDistanceMetrics = native.playerDistanceMetrics ~= false,
                 frameHandler = true,
                 maxEventsPerRead = 256,
                 maxAnchorsPerRead = 256,
@@ -148,6 +149,7 @@ local function Scene(style, performance, configure)
                 y = 300,
                 cameraDistance = 20,
                 cameraDepth = 20,
+                playerDistance = 20,
                 uiUnitsPerYard = 16,
             }
         end
@@ -300,27 +302,72 @@ Test("native distance sizing defaults off while death anchors continue tracking 
     end
 end)
 
-Test("native depth makes distant text smaller, with stable readable bounds in both performance modes", function()
+Test(
+    "native player distance makes distant text smaller, with stable readable bounds in both performance modes",
+    function()
+        for _, performance in ipairs({ false, true }) do
+            local context = Scene("enemy", performance, function(setup) setup.settings.sctDistanceScaling = true end)
+            context:Prime()
+            local _, point = context:NativeHit(123)
+            context:Tick(0.31)
+            local label = assert(context:Labels()[1])
+            local visual = label:GetParent()
+            Close(visual.scale, 1)
+            point.playerDistance = 30
+            context:Tick(0.1)
+            Close(visual.scale, 20 / 30)
+            point.playerDistance = 100000
+            context:Tick(0.1)
+            Close(visual.scale, 0.55)
+            point.playerDistance = 1
+            context:Tick(0.1)
+            Close(visual.scale, 1)
+            context.writes.SetScale = nil
+            context:Tick(0.1)
+            assert(not context.writes.SetScale, "unchanged distance rewrote scale")
+        end
+    end
+)
+
+Test("player distance controls ignore camera metrics and preserve unavailable/older providers", function()
     for _, performance in ipairs({ false, true }) do
-        local context = Scene("enemy", performance, function(setup) setup.settings.sctDistanceScaling = true end)
+        local context = Scene("enemy", performance, function(setup)
+            setup.settings.sctDistanceScaling = true
+            setup.settings.sctDistanceReference = 10
+            setup.settings.sctDistanceMinimum = 30
+        end)
         context:Prime()
         local _, point = context:NativeHit(123)
+        point.playerDistance = 20
         context:Tick(0.31)
-        local label = assert(context:Labels()[1])
-        local visual = label:GetParent()
+        local visual = assert(context:Labels()[1]):GetParent()
+        Close(visual.scale, 0.5)
+        point.cameraDepth, point.cameraDistance = 1000, 2000
+        context:Tick(0.02)
+        Close(visual.scale, 0.5)
+        point.playerDistance = 1000
+        context:Tick(0.02)
+        Close(visual.scale, 0.3)
+        context:SetSetting("sctDistanceMinimum", 80)
+        context:Tick(0.02)
+        Close(visual.scale, 0.8)
+        for _, value in ipairs({ 0, -1, 0 / 0, math.huge }) do
+            point.playerDistance = value
+            context:Tick(0.02)
+            Close(visual.scale, 1)
+        end
+        point.playerDistance = nil
+        context:Tick(0.02)
         Close(visual.scale, 1)
-        point.cameraDepth = 30
-        context:Tick(0.1)
-        Close(visual.scale, 20 / 30)
-        point.cameraDepth = 100000
-        context:Tick(0.1)
-        Close(visual.scale, 0.55)
-        point.cameraDepth = 1
-        context:Tick(0.1)
-        Close(visual.scale, 1)
-        context.writes.SetScale = nil
-        context:Tick(0.1)
-        assert(not context.writes.SetScale, "unchanged distance rewrote scale")
+        local old = Scene("enemy", performance, function(setup)
+            setup.settings.sctDistanceScaling = true
+            setup.native.playerDistanceMetrics = false
+        end)
+        old:Prime()
+        local _, oldPoint = old:NativeHit(123)
+        oldPoint.playerDistance, oldPoint.cameraDepth = 1000, 1000
+        old:Tick(0.31)
+        Close(assert(old:Labels()[1]):GetParent().scale, 1)
     end
 end)
 
@@ -333,7 +380,7 @@ Test("distance scaling choice preserves live death anchors, animations and expir
             control:Prime()
             local _, point = context:NativeHit(123)
             local _, reference = control:NativeHit(123)
-            point.cameraDepth, reference.cameraDepth = 40, 40
+            point.playerDistance, reference.playerDistance = 40, 40
             context:Tick(0.31)
             control:Tick(0.31)
             local label, original = assert(context:Labels()[1]), assert(control:Labels()[1])

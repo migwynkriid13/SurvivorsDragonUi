@@ -1096,3 +1096,28 @@ retain CI-only coverage.
 The existing required job runs the fixture; it is not shipped or run locally.
 This isolates the view boundary, rather than executing the full timer/game or
 proving native packet delivery and appearance.
+
+## Draft world guidance and adjustable SCT distance
+
+CI-only native-boundary fixtures cover authoritative downed-party positions in
+instances without map UVs, valid zero coordinates, exact map/run/space matching,
+optional absent run IDs, detached copies, unavailable/empty snapshots, malformed
+and duplicate/sparse members, observer movement and removal. Full waypoint
+controller cases retain native-feed preference and legacy fallback only when the
+new getter is absent.
+
+General world-marker fixtures load the production adapter with explicit fake
+capability/discovery/projection/registration endpoints. They separate ordinary
+service and post-camera phases and cover defaults, complete pagination, bounded
+batches, no early placement, frameCurrent, camera movement, offscreen/occluded
+hiding, atomic malformed-batch rejection, collection/revival, pooling,
+changed-only writes, partial registration, failed release, retired/foreign
+callbacks, disabled work and old providers in both Performance Mode states.
+
+SCT cases cover player-distance sizing with adjustable reference/floor, zero,
+missing/negative/nonfinite metrics, missing capability, camera-only changes and
+existing normal/Performance Mode lifetimes. Settings cases cover search,
+dependencies, normalized bounds, preview/Confirm/Cancel, profiles and reset.
+These fixtures are authored for CI and were not run locally. They cannot prove
+the proposed provider's existence, payload compatibility, native timing,
+instance locations, overhead placement, wall visibility, appearance or FPS.

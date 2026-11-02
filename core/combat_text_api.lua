@@ -103,7 +103,7 @@ function DFRL.tools.NewCombatTextApi()
     function adapter.Configure(wanted)
         adapter.Reset()
         state.wanted, state.handoffAt, state.handoffStarted = wanted, nil, nil
-        state.selected, state.limit = false, nil
+        state.selected, state.limit, state.playerDistanceMetrics = false, nil, false
         if state.registered then
             if not FrameCall(state.unregister, state.handler) then
                 PendingFrame()
@@ -143,6 +143,7 @@ function DFRL.tools.NewCombatTextApi()
             return
         end
         state.limit, state.projectLimit = value.maxEventsPerRead, value.maxAnchorsPerRead
+        state.playerDistanceMetrics = value.playerDistanceMetrics == true
         -- A native call may fail after installing the handler. Always release
         -- that same function before a retry can register it again.
         state.registered, state.unregister = true, _G.AZS_UnregisterCombatTextFrameHandler
@@ -323,7 +324,7 @@ function DFRL.tools.NewCombatTextApi()
             and value.y == nil
             and (value.state ~= "expired" or value.reason == "age" or value.reason == "resourceLimit")
     end
-    function adapter.Project(texts, now, scaleByDistance)
+    function adapter.Project(texts, now, scaleByDistance, referenceDistance, minimumPercent)
         if not state.selected then return true end
         local count = table.getn(texts)
         if count == 0 or not state.cursor then return true end
@@ -365,8 +366,14 @@ function DFRL.tools.NewCombatTextApi()
                 local point, origin = value.entries[index], origins[index]
                 if point.state == "onScreen" then
                     origin.x, origin.y, origin.visible = point.x, point.y, true
-                    -- Retain the user's font size nearby; keep distant hits readable.
-                    origin.distanceScale = scaleByDistance and math.max(0.55, math.min(1, 20 / point.cameraDepth)) or 1
+                    -- Camera metrics never substitute for distance from the hero.
+                    local distance = state.playerDistanceMetrics and point.playerDistance
+                    local factor = 1
+                    if scaleByDistance and Number(distance) and distance > 0 then
+                        factor =
+                            math.max((minimumPercent or 55) / 100, math.min(1, (referenceDistance or 20) / distance))
+                    end
+                    origin.distanceScale = factor
                 end
             end
             for index = 1, size do

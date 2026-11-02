@@ -1,4 +1,4 @@
--- Official cache/lair snapshots and live native dead-party map positions.
+-- Official cache/lair snapshots and authoritative downed-party positions.
 --[[
 The navigation and guardian artwork is owned by Blizzard Entertainment. The Gethe archive is a public extraction of World of Warcraft client UI assets; it does not grant a new license to Blizzard artwork.
 
@@ -28,6 +28,7 @@ it does not assert that a resurrection is in progress. Copyright Blizzard.
 DFRL:NewMod("Waypoints", 3, function()
     local navigation = DFRL.navigation
     if not navigation then return end
+    local worldMarkers = T.NewWorldMarkerApi and T.NewWorldMarkerApi(navigation)
     local texturePath = DFRL:GetInfoOrCons("tex") .. "waypoint\\"
     local actionDefaults, xpDefaults = DFRL.actionBarDefaults, DFRL.xpBarDefaults
     if not actionDefaults or not xpDefaults then return end
@@ -652,6 +653,7 @@ DFRL:NewMod("Waypoints", 3, function()
         T.SetTextIfChanged(tracker.distanceText, "")
     end
     local function ClearAll()
+        if worldMarkers then worldMarkers.Reset() end
         for _, tracker in ipairs(trackers) do
             Clear(tracker)
         end
@@ -696,6 +698,10 @@ DFRL:NewMod("Waypoints", 3, function()
 
     local function PartySnapshot(tracker)
         if not DFRL.display.Get(tracker.displayKey) then return end
+        if navigation.DownedPartySnapshot then
+            local native, supported = navigation.DownedPartySnapshot()
+            if supported then return native end
+        end
         local result = tracker.partyEntries or {}
         tracker.partyEntries = result
         local count = 0
@@ -1192,6 +1198,7 @@ DFRL:NewMod("Waypoints", 3, function()
         if dirty or age >= 0.1 then
             dirty, age = false, 0
             Refresh()
+            if worldMarkers then worldMarkers.Service(inWorld) end
             refreshed = true
         end
         if inWorld then
@@ -1203,6 +1210,8 @@ DFRL:NewMod("Waypoints", 3, function()
     end
     controller:SetScript("OnUpdate", function() navigation.WithSample(UpdateWaypoints) end)
     local function UpdateDisplay()
+        if worldMarkers then worldMarkers.Service(inWorld) end
+        dirty = true
         -- Visibility drafts do not retire snapshots, selections or calibration.
         showGuardianTimers = DFRL.display.Get("guardianMinimapTimers")
         local nextGuideRespawns = DFRL.display.Get("guardianRespawnGuidance")
@@ -1230,6 +1239,7 @@ DFRL:NewMod("Waypoints", 3, function()
         local reloadUI = _G.ReloadUI
         _G.ReloadUI = function()
             StopMinimapPins()
+            if worldMarkers then worldMarkers.Reset() end
             return reloadUI()
         end
     end

@@ -602,7 +602,7 @@ categories, without proposed-only `basicAttack` or `abilityKey` dependencies.
 Missing native miss wording skips that event's presentation before queue work;
 it does not discard valid damage, re-prime the stream or invent a caption.
 
-Current-camera world projection, offscreen hiding and bounded depth scaling are
+Current-camera world projection, offscreen hiding and bounded player-distance scaling are
 identical in both Performance Mode states. Distance multiplies the existing
 animation scale, with no extra effect loop or unchanged scale writes. Hidden
 labels keep expiring while skipping font/geometry/animation writes; they do not
@@ -617,6 +617,19 @@ lifecycle are retained. The existing listener caches the choice; the next owned
 post-camera pass applies it without resetting hits, lifetimes or handler ownership.
 Off skips the factor calculation. Hidden/off consumers retain their deferred
 work rules, and both Performance Mode states share the same choice.
+
+The two numeric distance choices use normalized `sctDistanceReference` (1–100
+yards, default 20) and `sctDistanceMinimum` (25–100%, default 55). Scaling consumes
+only optional `playerDistanceMetrics`/`playerDistance` on existing combat-text
+projection batches, without extra lookup/discovery/member passes. Missing,
+negative or nonfinite distance retains full chosen size; zero is full size.
+Camera metrics do not substitute. The existing settings listener updates one
+small sizing record, without adding closure captures to the frame handler.
+
+The lazy numeric settings add one container, two row frames, four existing
+editor buttons (16 texture regions/four labels), and six row FontStrings. The
+scroll page grows by 96 units; search reuses its two caption records. Disabled
+sizing controls retain their chosen values and do no gameplay work.
 
 The lazy Combat text page adds one standard button, four texture regions and
 two FontStrings for the caption/hint, using existing checkbox artwork. Its row
@@ -3683,3 +3696,40 @@ timer's event integration was source-reviewed; these mocks do not establish
 live delivery or the packaged Lua VM. Local work was source/diff inspection,
 image-data preparation and pinned formatting, without local tests, standalone
 validation or addon/game execution.
+
+### Draft general world markers and downed positions
+
+`core/world_marker_api.lua` shares the waypoint controller's ten-Hz/deferred
+service pass; it adds no event or ordinary updater. One native post-camera
+callback owns screen projection. Discovery reads at most one advertised page
+per service pass, bounded to 256 pages and 256 total catalog entries; cyclic
+cursors, changed catalog identity within pagination and malformed pages retire
+the attempt. Complete pages commit atomically. Both Performance Mode states
+use the same instant, static marker lifecycle.
+
+Only enabled cache/guardian/boss/fallen-ally kinds are requested. General enemy
+and lair markers are not requested. Up to 256 lazy frame/texture pairs reuse a
+single pool and existing waypoint artwork. Removed handles recycle before new
+frames are acquired. Successful texture bindings, placement and visibility are
+changed-only; failed bindings retry on a later visible frame. A fresh validated
+player context and all bounded projection batches must agree before painting;
+all chunks share one world, camera sample and clock. Hidden world/off/retired
+consumers do no discovery or projection. Unsupported providers retry capability
+selection at half-second intervals. Failed release retains only the exact
+callback needed for retry; retired callbacks stay inert and foreign handlers
+remain untouched. Occlusion is not requested; explicit occluded responses hide,
+and untested markers can show through walls.
+
+Native downed-party reads reuse one array and at most four point records. The
+whole dense native list is validated before copying; only current matching
+map/run/space coordinates participate. It shares the existing same-pass player
+sample, adds no native unit scans and retains no native snapshot tables. Missing
+getter uses the old party-map path; present but unavailable native data never
+borrows stale map/ghost positions. No world position is saved. The three world
+switches add three ordinary lazy settings toggles (three button frames, twelve
+texture regions and six FontStrings) to the existing page.
+
+Coverage is authored for CI only. No local tests, syntax/validation checks or
+addon/game execution were performed. Operation bounds and mocks do not prove
+native API delivery, instance revive locations, overhead attachment correctness,
+wall visibility, camera timing, appearance or FPS.

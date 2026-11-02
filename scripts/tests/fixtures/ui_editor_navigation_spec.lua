@@ -1022,6 +1022,31 @@ assert(env.displayControls.sctDistanceScaling.description, "distance choice lost
 context:Call(env.displayControls.sctDistanceScaling, "OnClick")
 assert(display.Get("sctDistanceScaling") and not env.SurvivorsDragonUiDisplay, "distance preview saved before Confirm")
 dialog.navigation.ClearSearch()
+assert(pages.combat:GetHeight() >= 736, "distance controls clipped the last filters")
+assert(dialog.sctDistanceSettings and #dialog.sctDistanceSettings.controls == 4, "missing numeric distance controls")
+assert(display.Get("sctDistanceReference") == 20 and display.Get("sctDistanceMinimum") == 55)
+for _, button in ipairs(dialog.sctDistanceSettings.controls) do
+    assert(button.mouse, "enabled scaling kept number input disabled")
+end
+context:Call(dialog.sctDistanceSettings.controls[2], "OnClick")
+assert(display.Get("sctDistanceReference") == 21 and not env.SurvivorsDragonUiDisplay, "distance step did not preview")
+dialog.navigation.Search("Minimum size (%)")
+assert(
+    #dialog.navigation.results == 1 and dialog.navigation.results[1].target == "sctDistanceMinimum",
+    "minimum size missing from search"
+)
+dialog.navigation.OpenResult(1)
+dialog.navigation.ClearSearch()
+display.Set("sctStyle", "msbt")
+for _, button in ipairs(dialog.sctDistanceSettings.controls) do
+    assert(not button.mouse, "MSBT retained distance input")
+end
+display.Set("sctStyle", "diablo")
+display.Set("sctDistanceScaling", false)
+for _, button in ipairs(dialog.sctDistanceSettings.controls) do
+    assert(not button.mouse, "off scaling retained distance input")
+end
+display.Set("sctDistanceScaling", true)
 context:Call(env.displayControls.sctShortNumbers, "OnClick")
 assert(not display.Get("sctShortNumbers") and not env.SurvivorsDragonUiDisplay, "full numbers did not preview")
 local function AssertSctFont(selected)

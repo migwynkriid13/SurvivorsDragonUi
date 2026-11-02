@@ -222,7 +222,18 @@ Test("named distance-scaling profiles retain saved choices and default older pro
     env.SurvivorsDragonUiProfiles = {
         Old = { layout = {}, display = {}, runFont = {} },
         Fixed = { layout = {}, display = { sctDistanceScaling = false }, runFont = {} },
-        Scaled = { layout = {}, display = { sctDistanceScaling = true }, runFont = {} },
+        Scaled = {
+            layout = {},
+            display = {
+                sctDistanceScaling = true,
+                sctDistanceReference = 15,
+                sctDistanceMinimum = 70,
+                worldCacheIcons = false,
+                worldBossIcons = true,
+                worldPartyIcons = false,
+            },
+            runFont = {},
+        },
     }
     env.DFRL.layout.Copy = function(value) return value end
     env.DFRL.layout.Load = function() end
@@ -245,11 +256,60 @@ Test("named distance-scaling profiles retain saved choices and default older pro
     display.BeginEdit()
     profiles.BeginEdit()
     assert(profiles.Load("Scaled") and display.Get("sctDistanceScaling"), "profile lost explicit on")
+    assert(
+        display.Get("sctDistanceReference") == 15 and display.Get("sctDistanceMinimum") == 70,
+        "profile lost numeric choices"
+    )
+    assert(
+        not display.Get("worldCacheIcons") and display.Get("worldBossIcons") and not display.Get("worldPartyIcons"),
+        "profile lost world choices"
+    )
     display.FinishEdit(true)
     profiles.FinishEdit(true)
     assert(display.Get("sctDistanceScaling"), "profile Confirm lost explicit on")
     display.Reset()
     assert(not display.Get("sctDistanceScaling"), "reset did not restore default off")
+end)
+
+Test("distance values and world icons share normalized display transactions", function()
+    local context = H.New()
+    context:Load("core/display.lua", "Display")
+    local display = context.env.DFRL.display
+    local defaults = display.Snapshot()
+    assert(defaults.sctDistanceReference == 20 and defaults.sctDistanceMinimum == 55)
+    assert(defaults.worldCacheIcons and defaults.worldPartyIcons and not defaults.worldBossIcons)
+    display.BeginEdit()
+    display.Set("sctDistanceReference", 1000)
+    display.Set("sctDistanceMinimum", -2)
+    display.Set("worldCacheIcons", false)
+    display.Set("worldPartyIcons", false)
+    display.Set("worldBossIcons", true)
+    assert(display.Get("sctDistanceReference") == 100 and display.Get("sctDistanceMinimum") == 25)
+    assert(context.env.SurvivorsDragonUiDisplay == nil, "preview saved before Confirm")
+    display.FinishEdit(false)
+    assert(display.Get("sctDistanceReference") == 20 and display.Get("worldCacheIcons"))
+    display.BeginEdit()
+    display.Load({
+        sctDistanceReference = 12.6,
+        sctDistanceMinimum = 72.4,
+        worldCacheIcons = false,
+        worldBossIcons = true,
+        worldPartyIcons = false,
+    })
+    display.FinishEdit(true)
+    assert(display.Get("sctDistanceReference") == 13 and display.Get("sctDistanceMinimum") == 72)
+    assert(not display.Get("worldCacheIcons") and display.Get("worldBossIcons") and not display.Get("worldPartyIcons"))
+    local invalid = display.Copy({
+        sctDistanceReference = 0 / 0,
+        sctDistanceMinimum = math.huge,
+        worldCacheIcons = 0,
+        worldBossIcons = "true",
+        worldPartyIcons = "false",
+    })
+    assert(invalid.sctDistanceReference == 20 and invalid.sctDistanceMinimum == 55)
+    assert(invalid.worldCacheIcons and invalid.worldPartyIcons and not invalid.worldBossIcons)
+    display.Reset()
+    assert(display.Get("sctDistanceMinimum") == 55 and not display.Get("worldBossIcons"))
 end)
 
 local function NativeMode(saved, damage, incoming, realDisplay)

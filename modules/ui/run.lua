@@ -1270,6 +1270,10 @@ DFRL:NewMod("RunTimers", 5, function()
                 distanceScaling.editorAvailable = available
             end
         end
+        SetSettingsEnabled(
+            fontEditor and fontEditor.sctDistanceSettings,
+            mode == "on" and style ~= "msbt" and DFRL.display.Get("sctDistanceScaling")
+        )
         SetSettingsEnabled(fontEditor and fontEditor.combatSettings, mode == "on")
     end
 
@@ -2057,6 +2061,9 @@ DFRL:NewMod("RunTimers", 5, function()
                 label = "Waypoints",
                 options = {
                     { "cacheGuidance", "Cache guidance", "Show the cache direction and distance." },
+                    { "worldCacheIcons", "Icons above caches", "Requires an updated game." },
+                    { "worldBossIcons", "Icons above guardians and bosses", "Requires an updated game." },
+                    { "worldPartyIcons", "Icons above fallen allies", "Requires an updated game." },
                     {
                         "mirrorCacheWaypoint",
                         "Mirror cache waypoint",
@@ -2139,7 +2146,7 @@ DFRL:NewMod("RunTimers", 5, function()
         local combatFilters = {
             {
                 label = "Damage type",
-                y = -434,
+                y = -530,
                 entries = {
                     { key = "sctNormalHits", label = "Normal damage" },
                     { key = "sctCriticalHits", label = "Critical damage" },
@@ -2147,7 +2154,7 @@ DFRL:NewMod("RunTimers", 5, function()
             },
             {
                 label = "Damage categories",
-                y = -496,
+                y = -592,
                 entries = {
                     { key = "sctAutoAttacks", label = "Auto-attacks" },
                     { key = "sctDirectDamage", label = "Direct abilities / spells" },
@@ -2218,6 +2225,18 @@ DFRL:NewMod("RunTimers", 5, function()
                     label = "Scale damage by distance",
                     description = "Make distant damage numbers smaller. Requires an updated game.",
                     offset = 354,
+                },
+                {
+                    key = "sctDistanceReference",
+                    label = "Full size distance (yards)",
+                    description = "Keep the chosen size within this distance.",
+                    offset = 418,
+                },
+                {
+                    key = "sctDistanceMinimum",
+                    label = "Minimum size (%)",
+                    description = "Smallest size relative to your SCT size.",
+                    offset = 418,
                 },
             },
             timer = {
@@ -2479,6 +2498,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 local step = direction * entry.step
                 local button = T.CreateEditorButton(control, direction < 0 and "-" or "+", 28, 28)
                 button:SetPoint("TOPRIGHT", control, "TOPRIGHT", direction < 0 and -108 or 0, -36)
+                if parent.editorSettingsGroup then table.insert(parent.editorSettingsGroup.controls, button) end
                 button:SetScript("OnClick", function()
                     local value = DFRL.display.Get(entry[1]) + step
                     if entry[1] == "meterDpsWindow" and value < 0 then return end
@@ -2678,7 +2698,7 @@ DFRL:NewMod("RunTimers", 5, function()
             sctDescription:SetJustifyV("TOP")
             sctDescription:SetTextColor(0.75, 0.73, 0.67)
             local combatPage = combat
-            combatPage:SetHeight(640)
+            combatPage:SetHeight(736)
             combat = CreateFrame("Frame", nil, combatPage)
             combat:SetAllPoints(combatPage)
             combat:EnableMouse(false)
@@ -2781,8 +2801,25 @@ DFRL:NewMod("RunTimers", 5, function()
             distanceScaling:SetHeight(60)
             distanceScaling.description:SetHeight(28)
             distanceScaling.description:SetJustifyV("TOP")
+            local distanceOptions = CreateFrame("Frame", nil, combat)
+            distanceOptions:SetPoint("TOPLEFT", combat, "TOPLEFT", 0, -418)
+            distanceOptions:SetWidth(contentWidth)
+            distanceOptions:SetHeight(88)
+            local distanceSettings = { frame = distanceOptions, controls = {} }
+            distanceOptions.editorSettingsGroup = distanceSettings
+            fontEditor.sctDistanceSettings = distanceSettings
+            for index, key in ipairs({ "sctDistanceReference", "sctDistanceMinimum" }) do
+                local caption = captions[key]
+                local control = DisplayNumber(
+                    distanceOptions,
+                    { key, caption.label, caption.description, step = 1 },
+                    filterSize,
+                    88
+                )
+                control:SetPoint("TOPLEFT", distanceOptions, "TOPLEFT", (index - 1) * (filterSize + gap), 0)
+            end
             divider = T.EditorDivider(combat, contentWidth)
-            divider:SetPoint("TOPLEFT", combat, "TOPLEFT", 0, -490)
+            divider:SetPoint("TOPLEFT", combat, "TOPLEFT", 0, -586)
             for _, group in ipairs(combatFilters) do
                 heading = FontEditorLabel(combat, group.label, 0, group.y, 12)
                 heading:SetTextColor(0.94, 0.79, 0.47)

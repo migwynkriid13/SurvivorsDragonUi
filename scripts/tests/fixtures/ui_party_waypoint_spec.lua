@@ -591,3 +591,26 @@ display.FinishEdit(false)
 print(
     "PASS five-second nearest guidance retains responsive arrows, ties, native readiness, hidden idleness and retirement"
 )
+
+-- Prefer an authoritative native feed and never fall back on its empty/failure path.
+display.BeginEdit()
+display.Set("cacheGuidance", false)
+display.Set("guardianGuidance", false)
+display.Set("partyGuidance", true)
+members = { party1 = Member("Legacy member", 0.55, 0.5) }
+local nativeParty = { { key = "native-member", name = "Native downed", mx = 0.52, my = 0.5 } }
+env.DFRL.navigation.DownedPartySnapshot = function() return nativeParty, true end
+positionReads, unitReads = 0, 0
+Tick()
+assert(hud:IsVisible() and lastGuidePoint.key == "native-member", "waypoint ignored authoritative downed feed")
+assert(positionReads == 0 and unitReads == 0, "native feed also scanned map/ghost units")
+nativeParty = nil
+Tick()
+assert(not hud:IsVisible() and positionReads == 0, "unavailable native feed borrowed map coordinates")
+nativeParty = {}
+Tick()
+assert(not hud:IsVisible(), "empty native feed retained an ally")
+env.DFRL.navigation.DownedPartySnapshot = nil
+Tick()
+assert(hud:IsVisible() and positionReads > 0, "missing native getter did not restore the old map path")
+display.FinishEdit(false)

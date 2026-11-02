@@ -11,6 +11,8 @@ local function SCT(scrolling, setup)
     context.settings.sctFont = "default"
     context.settings.sctShortNumbers = false
     context.settings.sctDistanceScaling = false
+    context.settings.sctDistanceReference = 20
+    context.settings.sctDistanceMinimum = 55
     context.settings.sctAreaDamage = true
     context.settings.sctNormalHits, context.settings.sctCriticalHits = true, true
     context.settings.sctAutoAttacks, context.settings.sctMisses = true, true
