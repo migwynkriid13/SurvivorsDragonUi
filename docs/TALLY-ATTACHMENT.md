@@ -31,6 +31,11 @@ Detached artwork has a complete matching surround. The shared registry in
 `core/tally.lua` owns each mode's texture, full extent and counter center.
 `tallyAttachment.Refresh` selects these together whenever attachment or style
 changes, and retains the shared content scale, counter values and divider rules.
+Attached Continuous silver counters sit four units higher, while Knotted iron,
+Gothic leaf corners and Roth shrine sit six units higher. Their counter centers
+are respectively 9.5, 10, 7 and 6 units below the artwork top at the 300-unit
+reference width. These offsets move icons and numbers together in both
+Performance Mode states; detached centers and artwork remain unchanged.
 The tally creates only its frame, counter overlay and selected artwork; it has
 no hidden status bar, yellow fill, pill background, border pieces or title.
 Its existing frame name, initial dimensions, overlay level and layout lifecycle
@@ -87,7 +92,8 @@ No new setting, command, SavedVariable or gameplay persistence is added.
 `scripts/prepare_tally_variants.py` stages the three attached corrections, ten
 detached TGAs and corresponding registry metadata. It reads the existing
 attached runtime artwork and style records as its baseline, without executing
-Lua or loading the addon. Pillow is a preparation-only dependency.
+Lua or loading the addon. Detached centers determine the reflection crop
+independently of attached counter alignment. Pillow is a preparation-only dependency.
 
 Obtain the five immutable originals listed in
 [tally-sources.json](../third_party/tally-sources.json), retaining the listed

@@ -136,7 +136,7 @@ def prepare(originals, output):
         block = match.group(0)
         identifier = re.search(r'^        id = "([^"]+)",', block, re.M).group(1)
         texture = re.search(r'^        textures = \{ "([^"]+)",', block, re.M).group(1)
-        center_y = float(re.search(r'^        contentY = ([\d.]+),', block, re.M).group(1))
+        center = float(re.search(r'^            contentY = ([\d.]+),', block, re.M).group(1))
         image = repaired.get(identifier)
         if image is None:
             image = tally_canvas(ROOT / "media/tex/tally" / texture)
@@ -146,12 +146,14 @@ def prepare(originals, output):
             image = reliquary(sources, body, False)
             save_image(image, output / texture)
             detached = reliquary(sources, body, True)
-            extent, center = detached.getbbox()[3] / SCALE, center_y + 16
+            extent = detached.getbbox()[3] / SCALE
         elif identifier == "gothic04":
             detached = close_iron(image)
-            extent, center = detached.getbbox()[3] / SCALE, center_y + 6
+            extent = detached.getbbox()[3] / SCALE
         else:
-            start = round(center_y * SCALE)
+            # The detached center records the reflected lower half's height.
+            # Attached counter alignment must not change this artwork crop.
+            start = image.getbbox()[3] - round(center * SCALE)
             upper = image.crop((0, start, WIDTH, image.getbbox()[3])).transpose(Image.Transpose.FLIP_TOP_BOTTOM)
             lower = image.crop((0, start, WIDTH, image.getbbox()[3]))
             detached = Image.new("RGBA", CANVAS)
