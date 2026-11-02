@@ -34,7 +34,7 @@ green hover-text fallback while the normal equipment refresh retries. It never
 keeps a removed item's color. Empty slots have no hover card.
 
 There is no separate gold, rarity-colored or replacement inner circle. The
-grey Runecarver housing receives a 60% blend toward native rarity RGB, retaining
+grey Runecarver housing receives a 75% blend toward native rarity RGB, retaining
 its subdued metal shading. An additive shimmer follows the carved border, with bright patches moving upward
 and only a trace beyond the artwork. It uses native rarity RGB with distinct bright and dark patches,
 leaving the icon center clear. Empty slots and unavailable
