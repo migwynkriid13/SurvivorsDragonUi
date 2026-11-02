@@ -3,9 +3,9 @@
 The navigation and guardian artwork is owned by Blizzard Entertainment. The Gethe archive is a public extraction of World of Warcraft client UI assets; it does not grant a new license to Blizzard artwork.
 
 Navigation artwork: retail 9.2.7 (45114), Gethe mirror commit
-d23deaf8f44a7d280dc974a5c9d5321c013db59b. The navigation atlas was cropped
-to TGA, preserving original colors and alpha:
-https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/Navigation/IngameNavigationUI.PNG
+d23deaf8f44a7d280dc974a5c9d5321c013db59b. The selected Quest spear retains
+the complete original 32-by-32 canvas, colors and alpha in TGA/BLP:
+https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/MINIMAP/MiniMap-QuestArrow.PNG
 
 Guardian medallion artwork is Blizzard game artwork from source commit
 00197f223180323ea7297c0157edbd1a43d2f99f:
@@ -43,8 +43,8 @@ DFRL:NewMod("Waypoints", 3, function()
         + 8
         + HUD_HEIGHT / 2
     local sideOffset = actionDefaults.width / 2 + actionDefaults.sideInset + 8 + HUD_WIDTH / 2
-    -- The selected preview shows 19 visible pixels; the source glyph spans 24/32.
-    local POINTER_SIZE = 19 * 1.2 * 32 / 24
+    -- Quest spear: keep the selected preview's 24-unit height for its 23/32 glyph.
+    local POINTER_SIZE = 24 * 32 / 23
     local trackers = {
         {
             kind = "cache",

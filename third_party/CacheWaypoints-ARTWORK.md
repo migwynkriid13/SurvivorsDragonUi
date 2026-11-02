@@ -31,7 +31,8 @@ the artwork copyright; the public mirror supplies no additional artwork license.
 The cache/navigation texture mirror snapshot used here is `9.2.7 (45114)`, commit `d23deaf8f44a7d280dc974a5c9d5321c013db59b`. Dragonflight's UI source still names the corresponding waypoint and navigation atlases; see the pinned Dragonflight references below. Those source texture files are from this earlier retail snapshot. The guardian medallion uses the separate pinned game-art source below.
 
 - [Original tracked minimap waypoint PNG](https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/MINIMAP/Minimap-Waypoint-MapPin-Tracked.PNG)
-- [Original navigation atlas PNG](https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/Navigation/IngameNavigationUI.PNG)
+- [Selected 05 Quest spear PNG](https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/MINIMAP/MiniMap-QuestArrow.PNG)
+- [Former navigation-triangle atlas PNG](https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/Navigation/IngameNavigationUI.PNG)
 - [Original map waypoint atlas PNG, inspected as an additional reference](https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/Waypoint/WaypoinMapPinUI.PNG)
 
 ## Dragonflight UI references
@@ -46,11 +47,15 @@ These references are pinned to Dragonflight `10.2.7 (54847)`, commit `88f272e94c
 
 The PNG originals were visually inspected before cropping. Original colors and transparency are retained. Outputs are uncompressed, 32-bit RGBA TGA files with power-of-two canvas dimensions. No addon or game code was executed during preparation.
 
-| Preparation input                 | Canvas  | Preparation                                                                                                            |
-| --------------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `media/tex/waypoint/HudArrow.tga` | 32 × 32 | Original navigation atlas pixel rectangle `[0, 35, 24, 55)`, placed at `(4, 6)` on a transparent canvas. No rescaling. |
+| Preparation input                 | Canvas  | Preparation                                                                                                                                                        |
+| --------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `media/tex/waypoint/HudArrow.tga` | 32 × 32 | Selected **05 Quest spear**: full `MINIMAP/MiniMap-QuestArrow.PNG` canvas. Visible alpha rectangle `[5, 4, 26, 27)` is 21 × 23. No crop, recoloring or resampling. |
 
 Pixel rectangles use a top-left origin and exclusive right/bottom edges.
+
+The selected source PNG SHA-256 is `bea3dd8c5fba2ec05c8b42b33678903c2ab98233870884fe33ac4d0f40f8c1a6`. The TGA preserves its complete RGBA canvas; `scripts/prepare_client_textures.py` prepares the lossless `HudArrow.blp` through the existing conversion helpers. Only that existing BLP path ships. Its decoded top-down BGRA base-level SHA-256 is `8411d1eec84a18dfe842807b6a8391bdb240685459ad1ff0ba757ec9d5dcece7`.
+
+This replaces the former 24 × 20 navigation-triangle crop. Quest spear is a proposal label for Blizzard's shared quest-minimap direction artwork in the pinned Shadowlands snapshot, not an expansion-exclusive design or a new gameplay category. Cache, guardian and fallen-ally marker artwork is unchanged. No new runtime file, frame, region, setting, reader or updater is added; direction sampling, rotation, mirroring and both Performance Mode lifecycles retain their existing paths. Static artwork preparation does not verify native appearance.
 
 ## User-supplied cache chest
 
@@ -94,7 +99,7 @@ Square sampling preserves the guardian glyph's proportions inside its 32-by-32 H
 - Cache HUD marker: draw `Chest.blp` in its existing 32-by-32 field with `SetTexCoord(0, 1, 0, 1)`. Keep the chest upright.
 - Guardian HUD marker: draw `GuardianFloating.tga` in a 32-by-32 field with `SetTexCoord(0, 65 / 128, 0, 65 / 128)`. Keep the gold dragon and skull upright.
 - Place a left-aligned DEFAULT 13 destination title above DEFAULT 15 distance beside the icon, with outline and black shadow. Rotate the arrow in place to the right of the text.
-- Direction arrow: retain the full original `HudArrow.tga`. The selected preview has a 19-pixel-wide visible arrow; increase that visible width by 20% to 22.8. The original source glyph is 24 pixels wide on a 32-pixel canvas, so draw the full texture at `19 * 1.2 * 32 / 24 = 30.4` square. Its artwork points upward at zero rotation and is centered at `(16, 16)`. Both guides share this size and the existing supported texture-coordinate rotation, without assuming retail `Texture:SetRotation`.
+- Direction arrow: retain the selected **05 Quest spear**'s full `HudArrow.tga` canvas and full UVs. Its 21 × 23 visible glyph on a 32 × 32 canvas draws at 24 units high and about 21.91 units wide using a full texture size of `24 * 32 / 23` (about 33.39 square). The original upward-facing artwork rotates around the same texture pivot. Cache, guardian and fallen-ally guides share this size and the existing supported texture-coordinate rotation, without assuming retail `Texture:SetRotation`.
 - Default anchors use the midpoint of the combined DEFAULT action-bar artwork and XP border height from static addon-owned appearance metadata. Cache is left and Guardian right with an eight-unit gap beyond the artwork. Uniform HUD scaling preserves the 190:46 proportions; confirmed independent geometry stays in use.
 - Addon texture paths use `Interface\\AddOns\\SurvivorsDragonUi\\media\\tex\\waypoint\\` with the filenames above.
 
