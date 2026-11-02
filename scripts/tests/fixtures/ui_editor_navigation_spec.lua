@@ -1338,6 +1338,10 @@ do
     assert(not combinedBosses.editorChecked and display.Get("customBossBars"), "Cancel retained combined boss previews")
     dialog.navigation.Search("")
 end
+-- Prepare every lazy category before counting; the next walk checks reuse.
+for _, key in ipairs(categoryKeys) do
+    dialog.navigation.Select(key)
+end
 local pageCount = 0
 for _ in pairs(pages) do
     pageCount = pageCount + 1

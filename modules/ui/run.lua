@@ -1287,6 +1287,9 @@ DFRL:NewMod("RunTimers", 5, function()
                 if fontEditor.RefreshOptionLayout then fontEditor.RefreshOptionLayout() end
             end
         end
+        if sctSizeLabel and sctSizeLabel:IsVisible() then
+            T.SetTextIfChanged(sctSizeLabel, tostring(math.floor(DFRL.display.Get("sctScale") * 100 + 0.5)) .. "%")
+        end
         if fontEditor.tallyStyleDropdown and fontEditor.tallyStyleDropdown:IsVisible() then
             fontEditor.tallyStyleDropdown:SetValue(DFRL.display.Get("tallyStyle"))
         end
