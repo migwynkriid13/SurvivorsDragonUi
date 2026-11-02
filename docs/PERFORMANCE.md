@@ -74,14 +74,16 @@ bounded native-control recovery pass, including at most 4096 enumerated frames.
 No saved settings or video configuration is written. CI-only mocks do not prove
 packaged-client recovery or appearance.
 
-On clients with the complete adapted native menu, the Menu module returns
-before disabling the native frame or constructing its replacement. The client
-retains `ToggleGameMenu`, settings wrappers, events, scripts, geometry and panel
-ownership. Only older/partial kits construct and register SDUI's existing
-fallback. This initialization-only detection is shared by both Performance Mode
-states and adds no frame, region, asset, event, updater or saved state. It removes
-replacement allocations on the current native path; no live timing or rendering
-gain is claimed. See [Escape menu ownership](CLIENT-COMPATIBILITY.md#escape-menu-ownership).
+On AS clients with the newer stock menu adapter, the Menu module suppresses
+only the stock `GameMenuFrame` and rejects its `ShowUIPanel` calls before panel
+ownership changes. The native Escape close ladder and other panel calls retain
+their original handlers, arguments and returns; AS owns the visible pause menu.
+Direct/retained Show attempts stay hidden through the shared Show/OnShow guards.
+Only older kits construct and register SDUI's existing fallback. Both Performance
+Mode states share initialization-only detection, with no replacement allocation,
+new frame, region, asset, event, updater or saved state. Each existing panel-open
+call adds one frame-identity comparison; normal gameplay adds no polling. No live
+timing or rendering gain is claimed. See [Escape menu ownership](CLIENT-COMPATIBILITY.md#escape-menu-ownership).
 
 Pet and meter image textures share `T.NewCircularIcon` for native circular
 binding and the lazy physical-pixel strip fallback. Each view keeps its original

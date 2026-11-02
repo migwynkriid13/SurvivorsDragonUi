@@ -17,8 +17,20 @@ local function New(performance)
         context:Object("Frame", name, env.UIParent)
     end
     local calls = {}
+    -- Stock-layer suppression must not wait for the AS API initialization.
+    env.ShowUIPanel = function(frame, force)
+        context.reads.panels = (context.reads.panels or 0) + 1
+        context.panel = frame
+        frame:Show()
+        return "native panel", nil, force
+    end
+    env.HideUIPanel = function(frame)
+        if context.panel == frame then context.panel = nil end
+        frame:Hide()
+    end
     local toggle = function(clicked)
         table.insert(calls, { clicked = clicked })
+        env.ShowUIPanel(env.GameMenuFrame, clicked)
         return "native", nil, clicked
     end
     env.ToggleGameMenu = toggle
@@ -28,51 +40,87 @@ local function New(performance)
 end
 
 for _, performance in ipairs({ false, true }) do
-    local context, env, toggle, calls = New(performance)
-    local menu = env.GameMenuFrame
-    local shows, hides, events = 0, 0, 0
-    local onShow = function() shows = shows + 1 end
-    local onHide = function() hides = hides + 1 end
-    local onEvent = function() events = events + 1 end
-    menu:SetScript("OnShow", onShow)
-    menu:SetScript("OnHide", onHide)
-    menu:SetScript("OnEvent", onEvent)
-    menu:RegisterEvent("NATIVE_MENU_EVENT")
-    menu:Hide()
-    local objectCount = #context.objects
-    local parent = menu:GetParent()
-    local options, buttons = env.IsOptionFrameOpen, env.UpdateMicroButtons
-    env.T.CreateDFRLFrame = function() error("native menu constructed a replacement") end
-    env.T.CreateButton = function() error("native menu constructed a button") end
-    env.DFRL.layout.Register = function() error("native menu registered SDUI geometry") end
-    context:ResetCounts()
-    context:Load("modules/menu/menu.lua", "Menu")
-    assert(env.ToggleGameMenu == toggle, "native Escape handler replaced")
-    assert(env.DFRL.menuframe == menu, "native menu reference lost")
-    assert(#context.objects == objectCount and menu:GetParent() == parent, "native menu allocated or reparented")
-    assert(menu:GetScript("OnShow") == onShow and menu:GetScript("OnHide") == onHide, "native visibility hooks lost")
-    assert(menu:GetScript("OnEvent") == onEvent and menu.events.NATIVE_MENU_EVENT, "native event ownership lost")
-    assert(env.IsOptionFrameOpen == options and env.UpdateMicroButtons == buttons, "native settings wrappers lost")
-    context:NoPresentationWrites()
-    assert(#calls == 0 and not menu:IsShown(), "module opened or invoked the native menu")
+    for _, missing in ipairs({
+        false,
+        "BenillaOptionsFrame",
+        "BenillaOptionsFrameCloseButton",
+        "BenillaGameMenuButtonEditMode",
+        "BenillaGameMenuButtonSupport",
+    }) do
+        local context, env, toggle, calls = New(performance)
+        if missing then env[missing] = nil end
+        local menu = env.GameMenuFrame
+        local stockLogout = context:Object("Button", nil, menu)
+        local exits, optionOpens = 0, 0
+        stockLogout:SetScript("OnClick", function() exits = exits + 1 end)
+        -- Independent native AS controls occupy the same pointer location as the
+        -- stock Logout rung. Dispatch to both visible layers models the report.
+        local asMenu = context:Object("Frame", nil, env.UIParent)
+        local asOptions = context:Object("Button", nil, asMenu)
+        local optionsPanel = context:Object("Frame", nil, env.UIParent)
+        asOptions:SetScript("OnClick", function()
+            optionOpens = optionOpens + 1
+            env.ShowUIPanel(optionsPanel, "AS options")
+        end)
+        local function ClickOptions()
+            if asOptions:IsVisible() then context:Call(asOptions, "OnClick") end
+            if stockLogout:IsVisible() then context:Call(stockLogout, "OnClick") end
+        end
+        ClickOptions()
+        assert(optionOpens == 1 and exits == 1, "fixture did not reproduce the overlapping click")
+        exits, optionOpens = 0, 0
+        local nativeShow = menu.Show
+        menu:SetScript("OnShow", function() exits = exits + 1 end)
+        context.panel = menu
+        local objectCount, parent = #context.objects, menu:GetParent()
+        local options, buttons = env.IsOptionFrameOpen, env.UpdateMicroButtons
+        env.T.CreateDFRLFrame = function() error("AS menu constructed a replacement") end
+        env.T.CreateButton = function() error("AS menu constructed a button") end
+        env.DFRL.layout.Register = function() error("AS menu registered SDUI geometry") end
+        context:ResetCounts()
+        context:Load("modules/menu/menu.lua", "Menu")
+        assert(env.ToggleGameMenu == toggle, "native Escape close ladder replaced")
+        assert(env.DFRL.menuframe == nil, "stock menu retained as an addon menu")
+        assert(
+            #context.objects == objectCount and menu:GetParent() == parent,
+            "suppression allocated or reparented frames"
+        )
+        assert(not menu:IsShown() and context.panel == nil, "stock panel ownership survived suppression")
+        assert(env.IsOptionFrameOpen == options and env.UpdateMicroButtons == buttons, "native settings wrappers lost")
+        assert(#calls == 0, "initialization invoked the Escape handler")
+        context:ResetCounts()
 
-    local first, second, third = env.ToggleGameMenu()
-    assert(first == "native" and second == nil and third == nil, "Escape returns changed")
-    first, second, third = env.ToggleGameMenu(true)
-    assert(first == "native" and second == nil and third == true, "portrait click returns changed")
-    assert(#calls == 2 and calls[1].clicked == nil and calls[2].clicked == true, "native arguments changed")
-    context:SetSetting("performanceMode", not performance)
-    context:NotifyLocale()
-    context:NoPresentationWrites()
+        local first, second, third = env.ToggleGameMenu()
+        assert(first == "native" and second == nil and third == nil, "Escape returns changed")
+        first, second, third = env.ToggleGameMenu(true)
+        assert(first == "native" and second == nil and third == true, "clicked returns changed")
+        assert(#calls == 2 and calls[1].clicked == nil and calls[2].clicked == true, "native arguments changed")
+        assert(
+            not context.reads.panels and context.panel == nil and not menu:IsShown(),
+            "stock menu reached the panel manager"
+        )
+        context:NoPresentationWrites()
 
-    menu:Show()
-    menu:Hide()
-    context:Event(menu, "NATIVE_MENU_EVENT")
-    assert(shows == 1 and hides == 2 and events == 1, "native callbacks stopped working")
-    local foreign = function() return "foreign" end
-    env.ToggleGameMenu = foreign
-    context:SetSetting("performanceMode", performance)
-    assert(env.ToggleGameMenu == foreign, "later foreign handler overwritten")
+        menu:Show()
+        nativeShow(menu) -- A retained native Show bypasses the replaced method.
+        assert(not menu:IsShown() and not stockLogout:IsVisible() and exits == 0, "native Show exposed stock controls")
+        context:ResetCounts()
+        first, second, third = env.ShowUIPanel(optionsPanel, "force")
+        assert(first == "native panel" and second == nil and third == "force", "other panel arguments/returns changed")
+        assert(context.panel == optionsPanel and optionsPanel:IsShown(), "other panel did not open")
+        ClickOptions()
+        assert(optionOpens == 1 and exits == 0 and optionsPanel:IsShown(), "AS Options reached the hidden stock Logout")
+        env.HideUIPanel(optionsPanel)
+        assert(context.panel == nil, "ordinary panel close lost ownership")
+        context:ResetCounts()
+        context:SetSetting("performanceMode", not performance)
+        context:NotifyLocale()
+        context:NoPresentationWrites()
+        local foreign = function() return "foreign" end
+        env.ToggleGameMenu = foreign
+        context:SetSetting("performanceMode", performance)
+        assert(env.ToggleGameMenu == foreign, "later foreign Escape handler overwritten")
+    end
 end
 
 -- Partial/older kits retain the established fallback, including settings and
@@ -81,11 +129,10 @@ for _, missing in ipairs({
     "GameMenuFrame",
     "BenillaOptionsFrame",
     "BenillaOptionsFrameCloseButton",
-    "BenillaGameMenuButtonEditMode",
-    "BenillaGameMenuButtonSupport",
     "ToggleGameMenu",
 }) do
     local context, env, nativeToggle = New(false)
+    env.BenillaGameMenuButtonEditMode, env.BenillaGameMenuButtonSupport = nil, nil
     env[missing] = nil
     local widgets = {}
     env.T.CreateDFRLFrame = function(parent, width, height)
@@ -159,5 +206,5 @@ for _, missing in ipairs({
     end
 end
 
-print("PASS native menu retains Escape, click, settings, events and visibility ownership without SDUI allocation")
+print("PASS AS Options cannot reach suppressed stock Logout; native Escape and other panel ownership are retained")
 print("PASS incomplete native menus retain legacy Escape/settings behavior and layout ownership")

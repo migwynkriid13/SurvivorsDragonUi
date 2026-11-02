@@ -1,15 +1,20 @@
 DFRL:NewMod("Menu", 1, function()
-    -- Newer clients adapt the stock menu and wrap ToggleGameMenu themselves.
-    -- Keep their panel callbacks and ESC/settings integration intact.
+    -- AS owns its pause menu outside FrameXML. The newer stock menu can open
+    -- underneath it and receive the same click, including Logout/Exit Game.
+    local stockMenu, showPanel = GameMenuFrame, _G.ShowUIPanel
     if
-        GameMenuFrame
-        and BenillaOptionsFrame
-        and BenillaOptionsFrameCloseButton
-        and BenillaGameMenuButtonEditMode
-        and BenillaGameMenuButtonSupport
-        and type(ToggleGameMenu) == "function"
+        stockMenu
+        and type(showPanel) == "function"
+        and (BenillaGameMenuButtonEditMode or BenillaGameMenuButtonSupport)
     then
-        DFRL.menuframe = GameMenuFrame
+        if type(_G.HideUIPanel) == "function" then _G.HideUIPanel(stockMenu) end
+        PermanentlyDisableFrame(stockMenu)
+        -- Stop before the panel manager claims a slot for the suppressed menu.
+        -- Keep the native Escape close ladder and every other panel untouched.
+        _G.ShowUIPanel = function(frame, force)
+            if frame == stockMenu then return end
+            return showPanel(frame, force)
+        end
         return
     end
     KillFrame(GameMenuFrame)

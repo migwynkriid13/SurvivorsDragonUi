@@ -65,37 +65,47 @@ unverified.
 
 ### Escape menu ownership
 
-The reported three-button **Azeroth Survivors / Resume Game / Options / Exit
-Game** window is SDUI's older replacement menu. `modules/menu/menu.lua`
-unconditionally disabled `GameMenuFrame`, removing its scripts and events,
-then replaced `ToggleGameMenu`. The installed client's embedded
-`GameMenuAdapters.xml` now reshapes the stock menu and supplies its own settings
-and Escape wrapper. SDUI was therefore replacing that integration. This
-identifies the source of the reported window; it does not establish which
-preceding Escape action made an individual press reach the menu.
+Azeroth Survivors has its own pause menu with **Back**, **Options**, **End Run**
+and **Quit game**. The stock Wenilla/FrameXML `GameMenuFrame` is a separate
+window with **Options**, **Support**, **Macros**, **Logout** and **Exit Game**.
+The supplied screenshots show both at once. The user reports that clicking
+AS **Options** opens settings and also ends the run.
 
-The public Wenilla [menu adapter](https://github.com/Arnesen/wenilla/blob/491940b5177c5709df4ad484d40927ea1655f39e/crates/benilla-app/assets/ui/GameMenuAdapters.xml#L1-L127)
-also defines `BenillaGameMenuButtonEditMode` and
-`BenillaGameMenuButtonSupport`, alongside the stock menu, full settings frame
-and close button. SDUI now requires all five controls and a callable
-`ToggleGameMenu` before retaining the native menu. It returns before disabling
-the frame, constructing replacement artwork or overwriting the handler.
-Native geometry, input, panel registration, callbacks and settings wrappers
-stay with the client. The existing player-portrait menu click reaches that
-same native handler with its original `true` argument.
+The earlier compatibility change returned before suppressing `GameMenuFrame`.
+That exposed the stock menu under the AS menu. Its presence was established,
+but the previous CI fixture only retained a mock native handler; it did not
+model two overlapping menus or their destructive controls. The exact native
+logout/exit intent in the reported session was not captured.
 
-Older or partial kits retain the existing replacement and its Escape/settings
-behavior. Only that fallback registers SDUI's `menu` Layout group; saved menu
-geometry is left intact but does not reposition or reparent the current
-client's menu. Both Performance Mode states use the same detection. There is
-no new setting, SavedVariable, frame, region, asset, event or updater.
+On AS clients exposing the newer stock menu markers
+`BenillaGameMenuButtonEditMode` or `BenillaGameMenuButtonSupport`, the Menu
+module now permanently suppresses only `GameMenuFrame`, using the existing
+shared Show/OnShow guards. It releases stock panel ownership through native
+`HideUIPanel` when available, then filters only that frame from `ShowUIPanel`
+before the panel manager can claim a slot. Other panels are forwarded to the
+original function with their arguments and return values preserved. Missing
+modern Options controls or delayed AS API initialization do not enable another
+menu.
 
-CI-only mocks cover untouched native handler identity and returns, settings
-wrappers, scripts/events, zero replacement allocation, native Show/Hide and
-later foreign ownership, plus partial-kit fallback and Escape consumption.
-No local tests or game execution were performed. Actual native menu appearance
-and input timing remain unverified. This is separate from the startup dropdown
-error below.
+The native `ToggleGameMenu` close ladder, settings wrappers and AS-owned pause
+menu remain untouched. SDUI creates no replacement menu or Layout registration
+on this path. Saved legacy menu geometry stays available only to the older
+fallback. The native AS menu remains reachable through Escape; there is no
+documented Lua bridge for opening it through the player-portrait shortcut, and
+that shortcut must not reveal the stock menu instead.
+
+Older kits without these adapter markers retain the existing replacement and
+its Escape/settings behavior. Both Performance Mode states use the same
+initialization-only path, with no new setting, SavedVariable, frame, region,
+asset, event or updater.
+
+CI-only mocks first reproduce one pointer click reaching AS Options and a
+visible stock Logout control. They then cover suppression, direct and retained
+native Show attempts, panel-manager exclusion, AS Options isolation, ordinary
+panel arguments/returns and cleanup, native Escape identity, partial modern
+kits, legacy fallback and both Performance Mode states. No local tests or game
+execution were performed. Actual native input dispatch and run preservation
+remain unverified. This is separate from the startup dropdown error below.
 
 ### Native startup dropdown recovery
 
