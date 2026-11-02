@@ -91,15 +91,33 @@ the complete ring is never sliced. Jewelry uses its own inset sixteen-band icon 
 
 ## Thin socket attachment
 
-`scripts/prepare_jewelry_sockets.py` reads the existing `media/tex/actionbars/HDActionBar.tga` as texture data, without importing or executing addon code. The original file and its existing upstream artwork attribution remain intact. At the native reference of 36-unit buttons, six-unit gaps and a 300-by-64 bar background, it copies the original 12-unit upper strip into one continuous 300-by-38 rail and extends it around five sockets. Each shape unites a 20-unit-radius circle with the bar below it, leaving a 13.7-unit-radius circular opening transparent. Distance to this shape's outer boundary selects the native border's original color and alpha rows, with no compressed bevel or opaque replacement stroke. The horizontal boundary starts at rail coordinate 33.5, matching source row 30 in the four-pixels-per-unit native composition with its 26-unit offset. Straight feet and gaps retain the same native rows directly, rather than being drawn as separate pieces. The bottom four image rows blend into the original lower background's row mapping. Bar material fills the inside of each bend, without a separate inner or lower curved line.
+`scripts/prepare_jewelry_sockets.py` reads the existing
+`media/tex/actionbars/HDActionBar.tga` as texture data, without importing or
+executing addon code. The original artwork and attribution remain intact. At
+the 36-unit button reference, it copies only the original 12-unit straight
+upper edge into the existing 300-by-38 rail space, 26 units below its top.
+Pixels above that strip stay clear. Five existing 13.7-unit-radius cutouts
+keep the bar from crossing the item openings. The former 20-unit circular
+arches, feet and socket body are no longer generated; Runecarver supplies the
+complete visible surround.
 
-`media/tex/jewelry/SocketRail.blp` is a 2048-by-256 uncompressed BLP2 Raw3 canvas, preserving the original RGBA pixels. Its upper-left 1200-by-152 rectangle contains the complete rail, prepared at four pixels per UI unit for a nominal 300-by-38 display; the remaining pixels are clear. Runtime UVs are `0`, `1200 / 2048`, `0`, `152 / 256`. One bar-owned texture spans from six units outside each side of the bar, with its top 40 units above the button tops and bottom two units above them. The sockets and straight spans therefore share one sampling rectangle and anchor space. The existing bar backgrounds draw below the narrow replacement strip. The complete original backgrounds return when jewelry is unavailable or hidden. All seven button positions and button artwork are unchanged.
+The helper writes `SocketRail.blp`, `SocketRail_2.blp` and `SocketRail_3.blp`
+directly through the shared lossless BLP encoder, without a temporary large
+atlas. Each 512-by-256 strip retains its 400-pixel content span, one-pixel
+neighbour gutters and clear padding. Runtime UVs remain `1/512, 401/512, 0,
+152/256`; the existing bar-owned strip group retains its size and anchors.
+The lower background and all seven buttons are unchanged. Hiding or detaching
+jewelry restores the complete original action-bar artwork.
 
 The prepared jewelry BLP files ship through the runtime manifest. TGA preparation inputs, original source BLPs, sample item icons and previews are excluded. Static image preparation does not establish packaged-client rendering; runtime appearance remains unverified.
 
-## Detached silver outline
+## Retired detached silver outline
 
-The same preparation script also writes `media/tex/jewelry/SocketDetached.tga`, an uncompressed 256-by-256 RGBA canvas with a 160-by-160 occupied rectangle at its upper-left. A complete 20-unit-radius circle uses the same native border profile and 13.7-unit-radius transparent opening as the attached sockets. There are no feet or horizontal bar spans. Each of the five detached slots reuses this crop at 40 by 40 units at the native button reference. The gray texture sits behind the unchanged item icon and gold rim, preserving the silver-gray outline around the entire circle. The rail is restored to the original bar artwork while detached; neither the original action-bar source nor item artwork is modified. The prepared `SocketDetached.blp` is included in the shared runtime manifest; its TGA remains a preparation input. Exact palette packing preserves its full canvas and alpha.
+The old `SocketDetached.tga` / `SocketDetached.blp` drew a second silver circle
+behind every detached Runecarver housing. Both files and their runtime-manifest
+entry are removed. Jewelry no longer creates those five backing regions or
+shows/hides them when attachment changes. Runecarver, item icons, empty-slot
+pictures, cooldowns, hover frames and the original detached placement remain.
 
 ## Original WoW empty-slot pictures
 

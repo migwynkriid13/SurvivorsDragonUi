@@ -147,6 +147,13 @@ the unchanged 5% source zoom and a centered artwork box at the selected icon siz
 retain inset band heights through pooling. These cases are CI-only and do not
 establish native pixel coverage.
 
+Jewelry rail asset cases require clear pixels above the original straight
+upper strip, clear item openings, retained bar pixels and exclusion of the
+retired detached-circle file from the runtime manifest. Existing strip cases
+retain both neighbour pixels at every join. These are CI-only data cases;
+local work is artwork preparation, source review and pinned formatting, with
+no local tests, standalone validation or addon/game execution.
+
 Jewelry rarity cases extract the production native-quality and steady-glow
 helpers over fake color/texture boundaries. They cover poor/common quality,
 invalid metadata recovery, grey fallback, stronger housing tint and a stationary

@@ -38,7 +38,8 @@ def prepare(bar_path, output):
             for px in range(40 * SCALE):
                 x = (px + 0.5) / SCALE
                 radial = math.hypot(x - center, y - center)
-                if radial < opening: pixels[start + px, py] = (0, 0, 0, 0)
+                if radial < opening:
+                    pixels[start + px, py] = (0, 0, 0, 0)
     output.parent.mkdir(parents=True, exist_ok=True)
     # Match the existing three 400-pixel spans and both neighbour gutters.
     for index in range(3):

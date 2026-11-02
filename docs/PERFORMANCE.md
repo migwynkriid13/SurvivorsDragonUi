@@ -83,6 +83,18 @@ measure this sixteen-band layout.
 
 ## Cold-lit Runecarver jewelry and rarity halo — 2026-11-02
 
+The legacy socket surround is removed in both attachment modes. The three
+attached `SocketRail` strips now contain only the original straight bar edge
+and transparent item cutouts, with no circular arches or added socket body.
+Their region count, anchors, guttered joins and visibility handoff stay the
+same. Detached jewelry no longer creates five hidden/visible backing-circle
+textures or updates their visibility on display changes. `SocketDetached.blp`
+and its authoring copy are retired from the repository and runtime manifest.
+The same five Runecarver housings supply the complete surround in both modes;
+item, placeholder, cooldown, glow, hover and saved-placement behavior remain.
+This removes five allocated regions and old circle pixels, without a new
+reader, event, updater or setting. No live rendering or FPS result is claimed.
+
 The original cyan is reduced by 95% during image preparation to match the
 neutral action-bar metal. The original `Runecarver.tga` remains unchanged for
 empty or unavailable-quality slots. Only the equipped variant receives a fixed
