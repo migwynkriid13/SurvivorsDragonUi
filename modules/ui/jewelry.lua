@@ -546,7 +546,8 @@ DFRL:NewMod("Jewelry", 4, function()
         button:SetHeight(ICON_SIZE)
         button:SetPoint("TOPLEFT", hud, "TOPLEFT", WIDTH / 2 - ICON_SIZE / 2 + (index - 3) * columnPitch, -30.5)
         button:EnableMouse(true)
-        local slot = { name = name, button = button, flamePhase = (index - 1) / 5 }
+        local slot =
+            { name = name, button = button, flamePhase = (index - 1) / 5, orderKey = tostring(index), position = index }
         local placeholder = button:CreateTexture(nil, "ARTWORK")
         placeholder:SetTexture(texturePath .. EMPTY_TEXTURES[index])
         placeholder:SetWidth(ICON_ART_SIZE)
@@ -842,7 +843,28 @@ DFRL:NewMod("Jewelry", 4, function()
         end
         PaintIcons()
     end
+    local function PlaceSlots()
+        if not inWorld or not attached or not DFRL.display.Get("equippedJewelry") then return end
+        local order = DFRL.display.Get("jewelryCustomOrder") and DFRL.display.Get("jewelryOrder") or "12345"
+        if displayGeometry.order == order then return end
+        displayGeometry.order = order
+        for _, slot in ipairs(slots) do
+            local position = string.find(order, slot.orderKey, 1, true)
+            if slot.position ~= position then
+                slot.button:ClearAllPoints()
+                slot.button:SetPoint(
+                    "TOPLEFT",
+                    hud,
+                    "TOPLEFT",
+                    WIDTH / 2 - ICON_SIZE / 2 + (position - 3) * columnPitch,
+                    -30.5
+                )
+                slot.position = position
+            end
+        end
+    end
     local function UpdateDisplay()
+        PlaceSlots()
         local docked = Docked()
         if attached then
             local owner = docked and DFRL.mainBar or detached
@@ -933,6 +955,7 @@ DFRL:NewMod("Jewelry", 4, function()
             inWorld = true
             elapsed, animationElapsed = 0, 0
             Clear()
+            PlaceSlots()
             Refresh()
             PaintCooldowns()
         elseif event ~= "UNIT_INVENTORY_CHANGED" or arg1 == "player" then

@@ -1017,11 +1017,12 @@ function DFRL.tools.CreateEditorNavigator(parent, sidebar, groups, sections, opt
     scroll:SetScript("OnMouseWheel", Scroll)
 
     local groupLabels = {}
+    local categoryPitch = options.categoryPitch or 48
     for index, group in ipairs(groups) do
         groupLabels[group.key] = group.label
         local key = group.key
-        local button = DFRL.tools.CreateEditorCategory(sidebar, group.label, options.sidebarWidth, 42)
-        button:SetPoint("TOPLEFT", sidebar, "TOPLEFT", 6, -48 - navigation.searchHeight - (index - 1) * 48)
+        local button = DFRL.tools.CreateEditorCategory(sidebar, group.label, options.sidebarWidth, categoryPitch - 6)
+        button:SetPoint("TOPLEFT", sidebar, "TOPLEFT", 6, -48 - navigation.searchHeight - (index - 1) * categoryPitch)
         button.label:SetHeight(32)
         button.label:SetJustifyV("MIDDLE")
         button:SetScript("OnClick", function() navigation.Select(key) end)

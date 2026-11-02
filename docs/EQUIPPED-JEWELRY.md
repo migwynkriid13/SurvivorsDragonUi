@@ -1,6 +1,24 @@
 # Equipped jewelry
 
-The selected **03 — Cold-lit runes** artwork uses grey-metal Runecarver housings matched to the action bar with no separate inner-circle rim. Equipped items give the metal a clear rarity tint and an animated edge shimmer in their native rarity color. The row keeps the **Thin shared bezel** connection to the original action bar, with no jewelry panel, permanent title or side ornament. It uses the character's five normal equipment slots, ordered left to right as first ring, second ring, necklace, first trinket and second trinket. The necklace occupies the middle socket in both attached and detached modes, including its empty-slot placeholder. It is independent of the native six-pickup run build and does not add an ability row or infer run jewelry from worn gear, stats or chat.
+The selected **03 — Cold-lit runes** artwork uses grey-metal Runecarver housings matched to the action bar with no separate inner-circle rim. Equipped items give the metal a clear rarity tint and an animated edge shimmer in their native rarity color. The row keeps the **Thin shared bezel** connection to the original action bar, with no jewelry panel, permanent title or side ornament. It uses the character's five normal equipment slots, ordered left to right as first ring, second ring, necklace, first trinket and second trinket. By default, the necklace occupies the middle socket in both attached and detached modes, including its empty-slot placeholder. It is independent of the native six-pickup run build and does not add an ability row or infer run jewelry from worn gear, stats or chat.
+
+## Settings and placement
+
+Open `/sdui` → **Jewelry** for equipped-jewelry visibility, attachment and the
+game's original jewelry/ability rows. These controls now live together on this
+page rather than under Action bar.
+
+**Custom jewelry order** is off by default, keeping **ring → ring → neck →
+trinket → trinket**. Turn it on to choose the item in each of the five positions,
+from left to right. Choosing an item swaps its position with the selected item,
+so each equipped slot appears once. The order works attached or detached.
+Turning it off restores the original order while retaining your custom choice.
+
+Changes preview immediately. Confirm saves the choice; Cancel, world leave,
+logout and reload discard an unconfirmed change. Profiles include the order,
+and both full resets turn custom order off. Disabling equipped jewelry dims its
+custom-order controls without clearing the choice. Item artwork, size, rarity
+effects, native cooldowns and effects-only hover text retain their behavior.
 
 ## Data and interaction
 
@@ -59,7 +77,7 @@ By default, the five circles line up with action buttons **2 through 6**, one ab
 
 The original 317-by-88 internal jewelry frame remains. Attached mode uses **Action bar** for the combined assembly, extending its edit region to include the sockets. Detached mode parents the same icons to a separate UIParent-owned container registered as **Equipped jewelry (detached)**, with its own uniform scale, location and optional hidden flag under the existing `jewelryBar` layout key. This keeps attached and detached geometry separate without moving either registered owner between parents. Confirm, Cancel, Hide frame, discard and full reset use the shared lifecycle. Earlier standalone geometry is reused only when detached; it never moves the attached row. Reattaching retains detached geometry for the next detachment. No migration flag or SavedVariable is added. Existing action-bar geometry, other groups' geometry, native button handlers and equipment-data behavior are preserved. Both layout groups suppress jewelry tooltips while editing.
 
-**Equipped jewelry** in `/sdui` → **HUD** defaults on. Turning it off hides the five icons, rims and socket extensions, restores the original complete action-bar edge and contracts the action-bar editing bounds. Equipment reads and cooldown painting stop while disabled. The toggle previews immediately, saves its normalized `equippedJewelry` boolean in the existing `SurvivorsDragonUiDisplay` table only with Confirm, and rolls back on Cancel, world leave/logout/reload. Both full resets restore on. It does not change native build visibility or action-bar geometry.
+**Equipped jewelry** in `/sdui` → **Jewelry** defaults on. Turning it off hides the five icons, rims and socket extensions, restores the original complete action-bar edge and contracts the action-bar editing bounds. Equipment reads and cooldown painting stop while disabled. The toggle previews immediately, saves its normalized `equippedJewelry` boolean in the existing `SurvivorsDragonUiDisplay` table only with Confirm, and rolls back on Cancel, world leave/logout/reload. Both full resets restore on. It does not change native build visibility or action-bar geometry.
 
 **Attach jewelry to action bar** defaults on and is dimmed and mouse-disabled while Equipped jewelry is off. It retains its value while disabled. Off replaces the attached rail with five complete silver-gray circular outlines from `SocketDetached.tga` and restores the original action-bar edge. Independent defaults derive from the static bar appearance metadata: the detached circles' bottom sits four units above the default action-art canvas top, without reading moved/scaled bar geometry. Only Confirm saves the normalized `attachJewelry` boolean in the existing display table. Cancel and world leave/logout/reload discard mode and detached-layout drafts; both full resets restore attached mode and default geometry. The native-build visibility choice remains independent.
 

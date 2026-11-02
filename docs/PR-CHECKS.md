@@ -114,6 +114,15 @@ Cancel, profile copies, reset and the custom-boss master dependency. These are
 authored for CI only; no local tests, standalone validation or game execution
 are authorized. They do not establish native text clipping or appearance.
 
+Jewelry order cases load the production Display owner and extract the actual
+placement helper. They cover default-off behavior, permutation validation,
+atomic swaps, unchanged native slot identities, changed-only anchors,
+disabled/world-hidden deferral, Confirm/Cancel, profile copies and reset.
+Editor cases cover the dedicated Jewelry category, five position selectors,
+attachment/master dependencies, swap feedback, search metadata, lazy reuse and
+ten sidebar rows staying above the footer. Coverage is authored for CI only;
+no local tests or addon/game execution are authorized.
+
 Jewelry geometry cases also extract the production preparation function to
 require both top/bottom caps, continuous complete selected vertical UV coverage,
 the unchanged 5% source zoom and a centered artwork box at the selected icon size. Compositor cases
@@ -367,7 +376,7 @@ preview/Confirm/discard/profiles/resets and searchable controls. These cases
 remain CI-only and were not run locally; native glyph fit is unverified.
 
 The editor fixture covers the single sidebar search above Performance Mode,
-compact caption/input geometry, all nine category rows staying clear of the footer,
+compact caption/input geometry, all ten category rows staying clear of the footer,
 the recovered full content viewport and result geometry remaining in that
 viewport. Category changes reuse the same header and preserve draft/scroll
 behavior. It also covers metadata search without constructing unopened pages,
@@ -525,7 +534,7 @@ The assertions cover:
   The same fixture loads the AST-extracted production settings constructor with
   the actual locale/Display/Profiles owners and explicit native font/HUD
   boundaries. It covers shell-only construction, selected-page preparation, all
-  nine categories/twenty sections, current defaults, preview/Confirm/discard,
+  ten categories/twenty-two sections, current defaults, preview/Confirm/discard,
   pending Layout input, independent Damage meter preparation, centered section
   headings, description-free checkbox alignment, plain input regions,
   deferred font-menu selection and reuse, closed language

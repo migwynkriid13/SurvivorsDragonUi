@@ -1319,6 +1319,17 @@ DFRL:NewMod("RunTimers", 5, function()
                 end
             end
         end
+        local jewelry = fontEditor.jewelryOrderSettings
+        if jewelry and jewelry.controls[1]:IsVisible() then
+            SetSettingsEnabled(jewelry, DFRL.display.Get("equippedJewelry") and DFRL.display.Get("jewelryCustomOrder"))
+            local order = DFRL.display.Get("jewelryOrder")
+            for position, row in ipairs(jewelry.rows) do
+                local selected = string.sub(order, position, position)
+                for choice, button in pairs(row.buttons) do
+                    if button.editorSelected ~= (choice == selected) then button:SetSelected(choice == selected) end
+                end
+            end
+        end
         if fontEditor and fontEditor.displayModes then
             for key, group in pairs(fontEditor.displayModes) do
                 if group.description:IsVisible() then
@@ -1351,6 +1362,8 @@ DFRL:NewMod("RunTimers", 5, function()
                     enabled = not DFRL.display.Get("hidePortraits")
                 elseif key == "attachJewelry" then
                     enabled = DFRL.display.Get("equippedJewelry") and DFRL.display.Get("customActionBar")
+                elseif key == "jewelryCustomOrder" then
+                    enabled = DFRL.display.Get("equippedJewelry")
                 elseif
                     key == "lockActionButtons"
                     or key == "cooldownNumbers"
@@ -2038,11 +2051,6 @@ DFRL:NewMod("RunTimers", 5, function()
                     { "showGryphons", "Show gryphons", "Show winged ornaments at both ends of the action bar." },
                     { "attachXP", "Attach XP to action bar", "Off: move and resize the XP bar separately." },
                     { "xpShowText", "Show XP text", "Show current and required XP on the XP bar." },
-                    {
-                        "hideNativeBuild",
-                        "Hide default jewelry / abilities",
-                        "Off: show the game's original jewelry and ability rows.",
-                    },
                 },
             },
             {
@@ -2079,12 +2087,23 @@ DFRL:NewMod("RunTimers", 5, function()
             {
                 key = "jewelry",
                 label = "Equipped jewelry",
+                jewelryPicker = true,
                 options = {
                     { "equippedJewelry", "Equipped jewelry", "Show five equipped items attached to the action bar." },
                     {
                         "attachJewelry",
                         "Attach jewelry to action bar",
                         "Off: move jewelry separately, keeping the silver rims.",
+                    },
+                    {
+                        "hideNativeBuild",
+                        "Hide default jewelry / abilities",
+                        "Off: show the game's original jewelry and ability rows.",
+                    },
+                    {
+                        "jewelryCustomOrder",
+                        "Custom jewelry order",
+                        "Off: keep the original ring, ring, neck, trinket, trinket order.",
                     },
                 },
             },
@@ -2251,7 +2270,8 @@ DFRL:NewMod("RunTimers", 5, function()
             { key = "units", label = "Unit frames", sections = { "units", "pets", "auras" } },
             { key = "combat", label = "Combat", sections = { "combat", "nameplates" } },
             { key = "meter", label = "Damage meter", sections = { "meter" } },
-            { key = "action", label = "Action bar", sections = { "abilities", "jewelry", "tally" } },
+            { key = "action", label = "Action bar", sections = { "abilities", "tally" } },
+            { key = "jewelry", label = "Jewelry", sections = { "jewelry" } },
             { key = "encounters", label = "Encounters", sections = { "timer", "bosses", "guardians" } },
             {
                 key = "map",
@@ -2390,6 +2410,27 @@ DFRL:NewMod("RunTimers", 5, function()
                 end
             end
         end
+        local jewelryOrderCaption = {
+            label = "Slot order",
+            description = "Left to right. Choosing an item swaps its position with the selected item.",
+            target = "jewelryOrder",
+        }
+        local jewelryPositions = { "Position 1", "Position 2", "Position 3", "Position 4", "Position 5" }
+        byKey.jewelry.search = { jewelryOrderCaption }
+        for _, label in ipairs(jewelryPositions) do
+            table.insert(byKey.jewelry.search, {
+                label = label,
+                description = jewelryOrderCaption.label,
+                target = "jewelryOrder",
+            })
+        end
+        for _, entry in ipairs(DFRL.display.jewelrySlots) do
+            table.insert(byKey.jewelry.search, {
+                label = entry.label,
+                description = jewelryOrderCaption.label,
+                target = "jewelryOrder",
+            })
+        end
         local tallyStyleCaption = {
             label = "Frame style",
             description = "Styles stay the same when attached or detached.",
@@ -2465,6 +2506,7 @@ DFRL:NewMod("RunTimers", 5, function()
             top = sidebarTop,
             height = footerTop - sidebarTop - 8,
             sidebarWidth = sidebarWidth,
+            categoryPitch = 46,
             search = true,
             searchEntries = { performanceCaption },
             onEscape = function() DFRL.layout.CancelEdit() end,
@@ -2670,7 +2712,9 @@ DFRL:NewMod("RunTimers", 5, function()
                 end
                 if category.mode then category.searchOffsets[category.mode.key] = modeTop end
                 if ArrangeMode then ArrangeMode(modeTop) end
-                if not category.stylePicker and page:GetHeight() ~= optionsHeight then page:SetHeight(optionsHeight) end
+                if not category.stylePicker and not category.jewelryPicker and page:GetHeight() ~= optionsHeight then
+                    page:SetHeight(optionsHeight)
+                end
             end
             if category.mode then
                 local mode = category.mode
@@ -2713,6 +2757,64 @@ DFRL:NewMod("RunTimers", 5, function()
             end
             LayoutOptions()
             table.insert(optionLayouts, { group = category.group, arrange = LayoutOptions })
+            if category.jewelryPicker then
+                local settings = { controls = {}, rows = {} }
+                fontEditor.jewelryOrderSettings = settings
+                local heading = FontEditorLabel(content, jewelryOrderCaption.label, 0, 0, 12)
+                heading:SetTextColor(0.94, 0.79, 0.47)
+                local hint = FontEditorLabel(content, jewelryOrderCaption.description, 0, 0, 10)
+                hint:SetWidth(contentWidth)
+                hint:SetHeight(40)
+                hint:SetJustifyH("LEFT")
+                hint:SetJustifyV("TOP")
+                local labelWidth, choiceGap = 94, 6
+                local choiceWidth = (contentWidth - labelWidth - choiceGap * 4) / 5
+                for index, caption in ipairs(jewelryPositions) do
+                    local position = index
+                    local row = { label = FontEditorLabel(content, caption, 0, 0, 11), buttons = {} }
+                    row.label:SetWidth(labelWidth - 6)
+                    row.label:SetHeight(36)
+                    row.label:SetJustifyV("MIDDLE")
+                    settings.rows[index] = row
+                    for _, entry in ipairs(DFRL.display.jewelrySlots) do
+                        local choice = entry.value
+                        local button = T.CreateEditorButton(content, entry.label, choiceWidth, 36)
+                        button.label:SetHeight(32)
+                        button:SetScript("OnClick", function()
+                            if settings.enabled then DFRL.display.SetJewelryPosition(position, choice) end
+                        end)
+                        button:EnableMouseWheel(true)
+                        button:SetScript("OnMouseWheel", ScrollOptions)
+                        row.buttons[choice] = button
+                        table.insert(settings.controls, button)
+                    end
+                end
+                local appliedTop
+                local function LayoutJewelry()
+                    local top = optionsHeight + 16
+                    if appliedTop == top then return end
+                    appliedTop = top
+                    heading:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -top)
+                    hint:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -top - 24)
+                    for position, row in ipairs(settings.rows) do
+                        local y = -top - 72 - (position - 1) * 44
+                        row.label:SetPoint("TOPLEFT", content, "TOPLEFT", 0, y)
+                        for index, entry in ipairs(DFRL.display.jewelrySlots) do
+                            row.buttons[entry.value]:SetPoint(
+                                "TOPLEFT",
+                                content,
+                                "TOPLEFT",
+                                labelWidth + (index - 1) * (choiceWidth + choiceGap),
+                                y
+                            )
+                        end
+                    end
+                    category.searchOffsets.jewelryOrder = top
+                    page:SetHeight(top + 72 + 5 * 44 + 8)
+                end
+                LayoutJewelry()
+                table.insert(optionLayouts, { group = category.group, arrange = LayoutJewelry })
+            end
             if category.stylePicker then
                 local stylePageWidth = content:GetWidth()
                 local heading = FontEditorLabel(content, tallyStyleCaption.label, 0, 0, 12)

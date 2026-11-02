@@ -38,6 +38,7 @@ def main():
             "StopSlotFlames", "StopFlames", "UpdateRarity", "PaintFlames", "SetQuality", "UpdateQuality",
         ])
         jewelry_rarity = jewelry_rarity.rsplit("\nreturn ", 1)[0] + "\nreturn { Update = UpdateRarity, Paint = PaintFlames, Stop = StopFlames, Quality = UpdateQuality }\n"
+        jewelry_order = extract_source("modules/ui/jewelry.lua", ["PlaceSlots"])
         run_hud = "local render, refreshRows, scheduleCache = {}, false, nil\n" + extract_source("modules/ui/run.lua", [
             "nativeParts", "TakeOver", "Restore", "SyncReplacements",
         ])
@@ -148,6 +149,7 @@ def main():
             ("cooldown-source.lua", cooldown, "ui_spec.lua"),
             ("jewelry-cache-source.lua", jewelry_cache, "ui_jewelry_cache_spec.lua"),
             ("jewelry-rarity-source.lua", jewelry_rarity, "ui_jewelry_rarity_spec.lua"),
+            ("jewelry-order-source.lua", jewelry_order, "ui_jewelry_order_spec.lua"),
             ("guardian-hover-source.lua", guardian_hover, "ui_guardian_hover_spec.lua"),
             ("guardian-timers-source.lua", guardian_timers, "ui_guardian_timer_spec.lua"),
             ("border-modes-source.lua", border_modes, "ui_border_spec.lua"),

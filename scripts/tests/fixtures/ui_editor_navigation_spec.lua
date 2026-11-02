@@ -832,20 +832,21 @@ assert(
     -dialogSearchHeader.point[5] + dialogSearchHeader:GetHeight() <= -performanceControl.point[5],
     "search header overlaps Performance Mode"
 )
-local categoryKeys = { "layout", "units", "combat", "meter", "action", "encounters", "map", "interface", "profiles" }
+local categoryKeys =
+    { "layout", "units", "combat", "meter", "action", "jewelry", "encounters", "map", "interface", "profiles" }
 local previousBottom = -performanceControl.point[5] + performanceControl:GetHeight()
 for index, key in ipairs(categoryKeys) do
     local button = dialog.navigation.buttons[key]
     local top = -button.point[5]
     assert(
-        button:GetParent() == dialogSidebar and top == 112 + (index - 1) * 48 and top >= previousBottom,
+        button:GetParent() == dialogSidebar and top == 112 + (index - 1) * 46 and top >= previousBottom,
         "category rows overlap search, Performance Mode or another category"
     )
     previousBottom = top + button:GetHeight()
 end
 assert(
-    previousBottom == 538 and previousBottom <= dialogSidebar:GetHeight(),
-    "the ninth sidebar category extends into the footer"
+    previousBottom == 566 and previousBottom <= dialogSidebar:GetHeight(),
+    "the tenth sidebar category extends into the footer"
 )
 local dialogScroll = env.SurvivorsDragonUiSettingsScroll
 assert(
@@ -1355,7 +1356,7 @@ for _, key in ipairs(categoryKeys) do
         "an editor category replaced or hid the shared sidebar search"
     )
 end
-assert(#context.objects == allCategoryObjects, "revisiting all nine categories allocated another sidebar search")
+assert(#context.objects == allCategoryObjects, "revisiting all ten categories allocated another sidebar search")
 assert(env.fontSampleClock and not env.fontMenu, "Encounters eagerly prepared the closed font popup")
 local affixes, shadow = env.displayControls.attachAffixes, env.shadowControl
 assert(
@@ -1518,14 +1519,33 @@ for _, key in ipairs({
     "attachXP",
     "xpShowText",
     "attachTally",
-    "attachJewelry",
 }) do
     local control = assert(env.displayControls[key], "missing native-bar dependent control: " .. key)
     assert(control:GetAlpha() == 0.45 and not control.mouse, "native bar left a custom-bar option interactive: " .. key)
 end
+dialog.navigation.Select("jewelry")
+editor.Display()
+local attachJewelry = assert(env.displayControls.attachJewelry, "Jewelry did not prepare its attachment control")
+assert(attachJewelry:GetAlpha() == 0.45 and not attachJewelry.mouse, "native bar left jewelry attachment interactive")
+assert(env.displayControls.hideNativeBuild:GetParent() == pages.jewelry, "native build control stayed on Action bar")
+local customJewelry = assert(env.displayControls.jewelryCustomOrder)
+local jewelryChoices = assert(dialog.jewelryOrderSettings)
+assert(not customJewelry.editorChecked and not jewelryChoices.enabled and #jewelryChoices.controls == 25)
+context:Call(customJewelry, "OnClick")
+editor.Display()
+assert(jewelryChoices.enabled, "custom order incorrectly depends on the SDUI action bar")
+context:Call(jewelryChoices.rows[1].buttons["4"], "OnClick")
+editor.Display()
+assert(display.Get("jewelryOrder") == "42315", "position choice did not swap equipped slots")
+assert(jewelryChoices.rows[1].buttons["4"].editorSelected and jewelryChoices.rows[4].buttons["1"].editorSelected)
+assert(not env.SurvivorsDragonUiDisplay.jewelryCustomOrder, "custom jewelry order saved before Confirm")
 assert(display.Get("attachJewelry") and display.Get("attachTally"), "native preview rewrote attachment preferences")
 env.DFRL.layout.CancelEdit()
 assert(display.Get("customActionBar") and display.Get("attachJewelry") and display.Get("attachTally"))
+assert(
+    not display.Get("jewelryCustomOrder") and display.Get("jewelryOrder") == "12345",
+    "Cancel retained jewelry order"
+)
 display.BeginEdit()
 dialog:Show()
 dialog.navigation.Select("action")

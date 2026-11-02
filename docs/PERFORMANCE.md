@@ -4,6 +4,26 @@ The performance work removes repeated presentation writes while retaining native
 data, pause-aware timing, saved preferences and artwork. It adds no gameplay clock
 or native client dependency. Display choices use the existing saved display table.
 
+## Jewelry settings and optional order — 2026-11-02
+
+The dedicated Jewelry page moves existing controls out of Action bar. Its
+five-by-five position picker is built only on first visiting the page and
+retains 25 choice buttons plus seven captions, one new toggle and one sidebar
+category using existing editor artwork;
+these are settings-only objects, not gameplay regions. The tenth sidebar row
+uses the existing navigator with a 46-unit pitch, staying clear of the footer.
+
+Custom order defaults off. Its boolean and immutable five-character
+permutation use the existing display draft, saving/profile/reset lifecycle.
+Swaps publish one setting change and preserve native slot IDs and all item
+widgets. The existing jewelry display listener prepares positions only when
+the effective order changes and only reanchors slots whose positions changed.
+Disabled/world-hidden edits defer until recovery. There is no extra equipment
+read, icon rebind, gameplay frame/region, asset, event, updater or separate
+SavedVariable. Both Performance Mode states share the same static ordering.
+These source/region counts do not establish native appearance or performance;
+coverage is CI-only, without local tests or game execution.
+
 ## Jewelry icon fit and end caps — 2026-11-02
 
 The screenshot exposed flat top/bottom cuts after the old inner rim was removed.
