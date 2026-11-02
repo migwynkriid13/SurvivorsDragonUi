@@ -144,7 +144,7 @@ DFRL:NewMod("Profiles", 1, function()
         input:SetMaxLetters(48)
         input:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, -52)
         Label(captions.saved.label, -90, 10)
-        local status = Label(captions.summary.description, -340, 10, 44)
+        local status = Label(captions.summary.description, -340, 9, 44)
         local selected, offset = nil, 0
         local rows, buttons = {}, {}
         local pageSize = 5

@@ -1067,6 +1067,20 @@ preloading. Search uses caption metadata without preparing unvisited pages;
 there is no category content title or repeated section title matching the sidebar category.
 See [SETTINGS.md](SETTINGS.md).
 
+The full settings window uses 80% of the existing viewport-fit scale, reducing
+its width, height and inherited text/control sizes by 20%. The main title drops
+from 17 to 16 units before that shared transform. Help text uses nine units
+before scaling, and numeric descriptions gain twelve units of width while
+retaining an eight-unit gap before their step buttons. More descriptions fit
+one line; long wording retains native wrapping and its existing help height.
+Caption sizes, native strings and search targets remain unchanged. Layout/Profile
+controls and both settings-owned dropdown menus inherit the same root scale.
+Saved HUD font sizes and the separate moving view retain their own sizing.
+The existing fit helper still compares the final scale before assigning it;
+there is no extra traversal, font rewrite, region, asset, event or updater.
+Both Performance Mode states share this static presentation. Pinned formatting
+and source review do not establish native glyph fit or rendering performance.
+
 Category changes perform bounded work over twenty section records. Settled
 navigation returns before presentation writes. Scroll offsets remain
 session-only. The sidebar uses its existing 232-unit maximum without measuring

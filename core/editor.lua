@@ -561,7 +561,7 @@ function DFRL.tools.CreateEditorToggle(parent, text, description, width, callbac
     button.label:SetHeight(16)
     button.label:SetJustifyH("LEFT")
     if description then
-        button.description = Label(button, 10, description)
+        button.description = Label(button, 9, description)
         button.description:SetTextColor(0.59, 0.59, 0.56)
         button.description:SetPoint("TOPLEFT", button, "TOPLEFT", 32, -24)
         button.description:SetWidth(math.max(1, width - 36))

@@ -3,8 +3,25 @@
 `/sdui` uses Blizzard’s Dragonflight plain metal settings frame, gold accents,
 compact category rows, checkbox artwork and
 Confirm/Cancel footer. The wider content column and nine categories replace
-the old twenty-entry sidebar. The editor fits to the available viewport without
-the former additional 85% scale reduction.
+the old twenty-entry sidebar. The editor uses 80% of its viewport-fitted scale,
+making the window, controls and inherited text 20% smaller. It still fits smaller
+screens through the existing viewport calculation.
+
+The main title uses a 16-unit font before scaling, reduced from 17. Section
+headings retain 13 units; buttons, sidebar categories, inputs and ordinary
+captions retain 12; smaller labels use 11 and help text uses 9. At the normal
+80% window scale these render at 12.8, 10.4, 9.6, 8.8 and 7.2 units
+respectively. Shared dropdown menus, Layout and Profiles inherit the same
+window scale. The small 9-unit preview caption receives only that proportional
+reduction. Font faces, saved HUD text sizes and the live timer preview's selected
+font/size remain unchanged; the preview inherits the window scale like its page.
+
+Help text uses the smaller size across toggles, numeric options, mode hints,
+Layout, Jewelry, Combat text and Profiles. Numeric descriptions gain twelve
+units of width beside their step buttons, retaining an eight-unit gap. This
+lets more descriptions fit on one line without shortening or cutting their
+wording. Longer descriptions and translations still wrap in their existing
+help areas.
 
 | Category         | Sections                                            |
 | ---------------- | --------------------------------------------------- |

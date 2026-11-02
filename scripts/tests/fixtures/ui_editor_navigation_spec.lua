@@ -556,7 +556,7 @@ local function Number(parent)
     control.label:SetWidth(322)
     control.label:SetHeight(28)
     control.description = control:CreateFontString(nil, "OVERLAY")
-    control.description:SetWidth(166)
+    control.description:SetWidth(178)
     control.description:SetHeight(40)
     return control
 end
@@ -568,7 +568,7 @@ env.T.CompactEditorNumber(number)
 context:NoPresentationWrites()
 number.label.naturalWidth = 500
 assert(env.T.CompactEditorNumber(number) == 84, "wrapped numeric title lost its second line")
-assert(number.description.point[5] == -38 and number.description:GetWidth() == 166, "number help overlaps steps")
+assert(number.description.point[5] == -38 and number.description:GetWidth() == 178, "number help overlaps steps")
 number.label.naturalWidth = 0
 env.T.CompactEditorNumber(number)
 assert(not number.editorNumberHeight, "missing numeric glyph metrics were cached")
