@@ -26,6 +26,15 @@ unrecognized, failed or partial paths. It runs only in CI over fake native
 boundaries. It does not prove recovery in the packaged game or change the
 project's local-execution restriction.
 
+The native-menu fixture loads the production Menu module over explicit fake
+client controls. Complete adapted kits must retain the native Escape handler,
+arguments/returns, settings wrappers, visibility/event callbacks and parent,
+without replacement frames, regions, presentation writes or SDUI Layout
+registration. Both Performance Mode states and later foreign handler ownership
+are covered. Missing controls or handlers retain the legacy menu, settings
+handoff and one Escape consumer per press. These are CI-only ownership checks;
+they do not execute client code or prove native input timing or appearance.
+
 ## What fails a PR
 
 - Prettier or StyLua formatting differences, or a missing TOC version increment

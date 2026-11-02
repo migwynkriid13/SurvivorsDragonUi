@@ -1,4 +1,17 @@
 DFRL:NewMod("Menu", 1, function()
+    -- Newer clients adapt the stock menu and wrap ToggleGameMenu themselves.
+    -- Keep their panel callbacks and ESC/settings integration intact.
+    if
+        GameMenuFrame
+        and BenillaOptionsFrame
+        and BenillaOptionsFrameCloseButton
+        and BenillaGameMenuButtonEditMode
+        and BenillaGameMenuButtonSupport
+        and type(ToggleGameMenu) == "function"
+    then
+        DFRL.menuframe = GameMenuFrame
+        return
+    end
     KillFrame(GameMenuFrame)
     -- OptionsFrame is the original client's Video Options window. Newer
     -- benilla builds expose their complete game settings as BenillaOptionsFrame.

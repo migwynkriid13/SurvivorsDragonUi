@@ -63,6 +63,40 @@ review and pinned formatting only. No local tests, standalone validation or
 addon/game execution is performed; actual native/browser appearance remains
 unverified.
 
+### Escape menu ownership
+
+The reported three-button **Azeroth Survivors / Resume Game / Options / Exit
+Game** window is SDUI's older replacement menu. `modules/menu/menu.lua`
+unconditionally disabled `GameMenuFrame`, removing its scripts and events,
+then replaced `ToggleGameMenu`. The installed client's embedded
+`GameMenuAdapters.xml` now reshapes the stock menu and supplies its own settings
+and Escape wrapper. SDUI was therefore replacing that integration. This
+identifies the source of the reported window; it does not establish which
+preceding Escape action made an individual press reach the menu.
+
+The public Wenilla [menu adapter](https://github.com/Arnesen/wenilla/blob/491940b5177c5709df4ad484d40927ea1655f39e/crates/benilla-app/assets/ui/GameMenuAdapters.xml#L1-L127)
+also defines `BenillaGameMenuButtonEditMode` and
+`BenillaGameMenuButtonSupport`, alongside the stock menu, full settings frame
+and close button. SDUI now requires all five controls and a callable
+`ToggleGameMenu` before retaining the native menu. It returns before disabling
+the frame, constructing replacement artwork or overwriting the handler.
+Native geometry, input, panel registration, callbacks and settings wrappers
+stay with the client. The existing player-portrait menu click reaches that
+same native handler with its original `true` argument.
+
+Older or partial kits retain the existing replacement and its Escape/settings
+behavior. Only that fallback registers SDUI's `menu` Layout group; saved menu
+geometry is left intact but does not reposition or reparent the current
+client's menu. Both Performance Mode states use the same detection. There is
+no new setting, SavedVariable, frame, region, asset, event or updater.
+
+CI-only mocks cover untouched native handler identity and returns, settings
+wrappers, scripts/events, zero replacement allocation, native Show/Hide and
+later foreign ownership, plus partial-kit fallback and Escape consumption.
+No local tests or game execution were performed. Actual native menu appearance
+and input timing remain unverified. This is separate from the startup dropdown
+error below.
+
 ### Native startup dropdown recovery
 
 The reported `UIDropDownMenu.lua:156` error matches the stock 1.12.1
