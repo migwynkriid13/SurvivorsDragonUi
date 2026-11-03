@@ -266,7 +266,7 @@ Player, Target and Party frames have left/right side handles in Layout. Dragging
 
 Player and target use compact edit regions around their visible border art and enabled name/level captions, rather than the native roots' transparent canvas. Width grips sit at the middle of that outline's left/right borders. The shared helper reads prepared nonzero-alpha bounds for the pointed, round, boss, elite and rare sheets as static metadata; classification and portrait-mode changes select the appropriate bounds. Hidden portraits use the existing closed-border frame plus the enabled caption height. The native root, input, saved position/scale and independent health-width value stay unchanged. Corner scaling and Shift alignment measure this same compact region. Target bounds also include its currently shown native aura buttons through the existing tooltip-owned aura registry, so the border does not cross visible icons. Aura measurements run only while editing. Auras and attached pets retain their native attachment and input.
 
-The shared Layout root stores `width` beside its position/scale. Let `delta` be the chosen root width minus its original native width. Player and target content becomes `122 + delta`, with portrait overlap and one-unit render underlap added separately. The player retains its 15-unit round or two-unit pointed overlap. The target uses seven units: its right fill/background edge moves eight UI units left from the former 15-unit overlap, toward the inside edge of the gold ring. Its far-left edge, health text positions, portrait and border stay fixed. This reduces the hidden portion of the health fill without claiming to remove the circular ring's entire overlap. Source columns 0–33 keep the outer cap's native size while columns 33–152 extend the straight horizontal artwork. The portraits and their original rim crops retain their sizes. The target still follows its rim even when its native anchor was expressed from the root center or left side. The player's status pulse and resting animation stay with its fixed portrait area rather than shifting to the widened root center.
+The shared Layout root stores `width` beside its position/scale. Let `delta` be the chosen root width minus its original native width. Player and target content becomes `122 + delta`, with portrait overlap and one-unit render underlap added separately. The player retains its 15-unit round or two-unit pointed overlap. The target uses seven units: its right fill/background edge moves eight UI units left from the former 15-unit overlap, toward the inside edge of the gold ring. Its far-left edge, health text positions, portrait and border stay fixed. This reduces the hidden portion of the health fill without claiming to remove the circular ring's entire overlap. Source columns 0–33 keep the outer cap's native size while columns 33–152 extend the straight horizontal artwork. The portraits and their original rim crops retain their sizes. The target still follows its rim even when its native anchor was expressed from the root center or left side. The player's static resting icon stays with its fixed portrait area rather than shifting to the widened root center.
 
 The pointed player rim ends at local x102.5, while the original top/bottom
 straight strips began at x104. Those two strips now include source columns
@@ -315,8 +315,24 @@ asset is shipped.
 
 The ordinary portrait sheets are hidden while this border is active. The small
 target-of-target hides only its sheet strips, retaining its foreground health
-and dead text. Player portrait pulses and the resting icon remain hidden while
-portraits are off. Native primary pet and summon frames are unaffected.
+and dead text. The resting icon remains hidden while portraits are off. Native primary pet and summon frames are unaffected.
+
+The resting icon uses the first tile of its existing image in both Performance
+Mode states. Its original position and size remain; the existing native resting
+event and display listener only change visibility. No animation clock, frame
+index or OnUpdate is retained. Parent hiding and Hide portraits still hide it.
+
+Combat/rest portrait pulse effects are removed in both modes. The original
+static round/pointed borders remain, with health, power, absorbs, native clicks
+and saved layout retaining their existing paths. Removing the two cosmetic
+owners and their round variants removes four frames and eight texture regions.
+The unused `UI-Player-Status.blp` is removed from the tree and runtime manifest;
+the existing resting image and shared static-border sheets remain in use.
+
+CI-only player-status cases cover the fixed image, native visibility events,
+mode and portrait choices, parent hiding, reuse and absence of animation work.
+They were authored without local tests or addon/game execution; native
+appearance and FPS remain unverified.
 
 ## Verification
 

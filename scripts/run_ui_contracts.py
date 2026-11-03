@@ -106,7 +106,8 @@ def main():
         tally_counters = tally_counters.rsplit("\nreturn ", 1)[0] + "\nreturn { Update = UpdateTally, Clear = ClearTally, Boundary = UpdateRunBoundary }\n"
         minimap_clock = extract_source("modules/map/map.lua", ["WatchClock", "SetLauncherEditing"])
         minimap_clock = minimap_clock.rsplit("\nreturn ", 1)[0] + "\nreturn { Watch = WatchClock, Editing = SetLauncherEditing }\n"
-        player_pulse = extract_source("modules/unit/player.lua", ["CreatePulse"])
+        player_status = extract_source("modules/unit/player.lua", ["CreateRestingIcon", "UpdatePortraitShape"])
+        player_status = player_status.rsplit("\nreturn ", 1)[0] + "\nreturn { Resting = CreateRestingIcon, Shape = UpdatePortraitShape }\n"
         aura_layout = extract_source("modules/unit/auras.lua", ["PlaceNativeFrame", "Layout"])
         pet_captions = extract_source("modules/unit/pets.lua", ["Number", "Time", "TimerText", "CountText", "HideRow"])
         pet_captions = pet_captions.rsplit("\nreturn ", 1)[0] + "\nreturn { Timer = TimerText, Count = CountText, Hide = HideRow }\n"
@@ -167,7 +168,7 @@ def main():
             ("run-captions-source.lua", run_captions, "ui_run_captions_perf_spec.lua"),
             ("tally-counters-source.lua", tally_counters, "ui_tally_counter_cadence_spec.lua"),
             ("minimap-clock-source.lua", minimap_clock, "ui_idle_clock_spec.lua"),
-            ("player-pulse-source.lua", player_pulse, "ui_player_pulse_perf_spec.lua"),
+            ("player-status-source.lua", player_status, "ui_player_status_spec.lua"),
             ("aura-layout-source.lua", aura_layout, "ui_aura_layout_perf_spec.lua"),
             ("pet-captions-source.lua", pet_captions, "ui_pet_caption_perf_spec.lua"),
             ("chat-idle-source.lua", chat_idle, "ui_chat_idle_perf_spec.lua"),

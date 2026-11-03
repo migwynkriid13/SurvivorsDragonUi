@@ -5,13 +5,12 @@ DFRL:NewMod("Player", 1, function()
     local healthLabels
     local primaryBar, primaryText, setPowerShown, setPortraitOverlap
     local updateBorder, resizeHealth, editRegion
-    local pulseTextures = {}
     local initialized = false
     local healthUnderlap = T.LargeHealthFill.underlap
 
     local UpdateHealthColor = T.BindClassHealthColor(PlayerFrameHealthBar, "player")
 
-    local appliedRound, appliedHidden, appliedPerformance
+    local appliedRound, appliedHidden
     local appliedExtension
     local function UpdateHealthWidth(extension)
         extension = extension or setPortraitOverlap(appliedRound)
@@ -47,23 +46,10 @@ DFRL:NewMod("Player", 1, function()
         if not updateBorder then return end
         local round = DFRL.display.Get("roundPlayerPortrait")
         local hidden = DFRL.display.Get("hidePortraits")
-        local performance = DFRL.display.Get("performanceMode")
-        if round == appliedRound and hidden == appliedHidden and performance == appliedPerformance then return end
-        appliedRound, appliedHidden, appliedPerformance = round, hidden, performance
+        if round == appliedRound and hidden == appliedHidden then return end
+        appliedRound, appliedHidden = round, hidden
         updateBorder(tex .. (round and "UI-TargetingFrameDF1.blp" or "UI-TargetingFrameDF.blp"))
         UpdateHealthWidth()
-        for _, textures in ipairs(pulseTextures) do
-            if hidden or performance then
-                textures.original:Hide()
-                textures.round:Hide()
-            elseif round then
-                textures.original:Hide()
-                textures.round:Show()
-            else
-                textures.original:Show()
-                textures.round:Hide()
-            end
-        end
     end
     DFRL.display.Listen(UpdatePortraitShape)
 
@@ -249,135 +235,27 @@ DFRL:NewMod("Player", 1, function()
         end
     end
 
-    local function CreatePulse(r, g, b, active, startEvent, stopEvent)
-        local overlay = CreateFrame("Frame", nil, PlayerFrame)
-        overlay:SetAllPoints(PlayerFrame)
-        overlay:SetFrameStrata("MEDIUM")
-        local texture = overlay:CreateTexture(nil, "OVERLAY")
-        texture:SetTexture(tex .. "UI-Player-Status.blp")
-        texture:SetPoint(
-            "CENTER",
-            PlayerFrame,
-            "TOPLEFT",
-            PlayerFrame:GetWidth() / 2 + 45,
-            -PlayerFrame:GetHeight() / 2 - 21
-        )
-        texture:SetVertexColor(r, g, b)
-        texture:SetBlendMode("ADD")
-        texture:SetAlpha(0)
-        -- Use the same circular rim as the target for the optional status pulse,
-        -- so the original pointed silhouette cannot return during combat/rest.
-        local round = T.CreateRoundPlayerRim(PlayerFrame, PlayerFrame, r, g, b, "ADD")
-        round:SetFrameLevel(PlayerFrameHealthBar:GetFrameLevel() + 3)
-        round:SetAlpha(0)
-        round:Hide()
-        table.insert(pulseTextures, { original = texture, round = round })
-        local pulseTime, pulseAlpha = 0, 0
-        local inWorld, enabled, running = true, false, false
-        local portraitsShown = not DFRL.display.Get("hidePortraits")
-        local function StopUpdates()
-            if running then overlay:SetScript("OnUpdate", nil) end
-            running = false
-        end
-        local function AnimatePulse()
-            if not inWorld or not PlayerFrame:IsVisible() or not portraitsShown then
-                StopUpdates()
-                return
-            end
-            local elapsed = arg1 or 0
-            if enabled then
-                pulseTime = math.mod(pulseTime + elapsed, 1)
-                texture:SetAlpha(0.5 + 0.5 * math.sin(pulseTime * 2 * math.pi))
-            else
-                texture:SetAlpha(math.max(0, texture:GetAlpha() - elapsed * 2))
-            end
-            pulseAlpha = texture:GetAlpha()
-            if round:GetAlpha() ~= pulseAlpha then round:SetAlpha(pulseAlpha) end
-            if not enabled and pulseAlpha == 0 and round:GetAlpha() == 0 then StopUpdates() end
-        end
-        local function RefreshPulse()
-            portraitsShown = not DFRL.display.Get("hidePortraits")
-            if performanceMode then
-                StopUpdates()
-                pulseTime, pulseAlpha, enabled = 0, 0, false
-                if texture:GetAlpha() ~= 0 then texture:SetAlpha(0) end
-                if round:GetAlpha() ~= 0 then round:SetAlpha(0) end
-                if texture:IsShown() then texture:Hide() end
-                if round:IsShown() then round:Hide() end
-                return
-            end
-            if not inWorld or not PlayerFrame:IsVisible() or not portraitsShown then
-                StopUpdates()
-                return
-            end
-            enabled = active() and true or false
-            pulseAlpha = texture:GetAlpha()
-            if enabled or pulseAlpha > 0 or round:GetAlpha() > 0 then
-                if not running then overlay:SetScript("OnUpdate", AnimatePulse) end
-                running = true
-            else
-                StopUpdates()
-            end
-        end
-        overlay:RegisterEvent(startEvent)
-        if stopEvent then overlay:RegisterEvent(stopEvent) end
-        overlay:RegisterEvent("PLAYER_ENTERING_WORLD")
-        overlay:RegisterEvent("PLAYER_LEAVING_WORLD")
-        overlay:RegisterEvent("PLAYER_LOGOUT")
-        overlay:SetScript("OnEvent", function()
-            if event == "PLAYER_LEAVING_WORLD" or event == "PLAYER_LOGOUT" then
-                inWorld = false
-                StopUpdates()
-            else
-                if event == "PLAYER_ENTERING_WORLD" then inWorld = true end
-                RefreshPulse()
-            end
-        end)
-        HookScript(PlayerFrame, "OnShow", RefreshPulse)
-        HookScript(PlayerFrame, "OnHide", StopUpdates)
-        DFRL.display.Listen(RefreshPulse)
-        RefreshPulse()
-    end
-
-    local function CreateRestingAnimation()
-        local animation = CreateFrame("Frame", nil, PlayerFrame)
-        animation:SetPoint(
+    local function CreateRestingIcon()
+        local indicator = CreateFrame("Frame", nil, PlayerFrame)
+        indicator:SetPoint(
             "CENTER",
             PlayerFrame,
             "TOPLEFT",
             PlayerFrame:GetWidth() / 2 - 20,
             -PlayerFrame:GetHeight() / 2 + 30
         )
-        animation:SetWidth(24)
-        animation:SetHeight(24)
-        local texture = animation:CreateTexture(nil, "OVERLAY")
+        indicator:SetWidth(24)
+        indicator:SetHeight(24)
+        local texture = indicator:CreateTexture(nil, "OVERLAY")
         texture:SetTexture(tex .. "UIUnitFrameRestingFlipbook")
-        texture:SetAllPoints(animation)
-        local tick, index = 0, 0
+        texture:SetAllPoints(indicator)
+        -- Reuse the former Performance Mode still image in both modes.
         texture:SetTexCoord(0, 60 / 512, 0, 60 / 512)
-        local function AnimateResting()
-            if not animation:IsVisible() then return end
-            tick = tick + (arg1 or 0)
-            if tick >= 0.05 then
-                local steps = math.floor(tick / 0.05)
-                tick = tick - steps * 0.05
-                index = math.mod(index + steps, 36)
-                local x = math.mod(index, 6) * 60 / 512
-                local y = math.floor(index / 6) * 60 / 512
-                texture:SetTexCoord(x, x + 60 / 512, y, y + 60 / 512)
-            end
-        end
         local function UpdateResting()
-            local update = not performanceMode and AnimateResting or nil
-            if animation:GetScript("OnUpdate") ~= update then animation:SetScript("OnUpdate", update) end
-            if performanceMode and (tick ~= 0 or index ~= 0) then
-                tick, index = 0, 0
-                texture:SetTexCoord(0, 60 / 512, 0, 60 / 512)
-            end
             if IsResting() and not DFRL.display.Get("hidePortraits") then
-                if not animation:IsShown() then animation:Show() end
+                if not indicator:IsShown() then indicator:Show() end
             else
-                if animation:IsShown() then animation:Hide() end
+                if indicator:IsShown() then indicator:Hide() end
             end
         end
         local events = CreateFrame("Frame")
@@ -478,17 +356,8 @@ DFRL:NewMod("Player", 1, function()
                 texture:Hide()
             end
         end
-        CreatePulse(
-            1,
-            0,
-            0,
-            function() return UnitAffectingCombat("player") end,
-            "PLAYER_REGEN_DISABLED",
-            "PLAYER_REGEN_ENABLED"
-        )
-        CreatePulse(0, 1, 1, IsResting, "PLAYER_UPDATE_RESTING")
         UpdatePortraitShape()
-        CreateRestingAnimation()
+        CreateRestingIcon()
         FixPlayerClick()
         UpdateValues()
         DFRL.layout.Register("playerFrame", PlayerFrame, nil, {

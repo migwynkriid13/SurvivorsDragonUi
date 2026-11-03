@@ -668,10 +668,18 @@ The assertions cover:
   off and display transactions; selective final-window cooldown
   reads; strict SCT retirement deadlines and native raid-icon UV forms; dirty
   boss marker reconciliation with exact active halos; settled loot hold/hidden
-  expiry; Revive clipping reuse; event-driven player pulses; shared Layout
+  expiry; Revive clipping reuse; static player status; shared Layout
   samples/final release; unchanged waypoint math with active interpolation;
   lazy Chat time and observed/unreported tooltip owners. These fixtures are
   authored for CI and were not run locally; no live rendering/FPS is inferred.
+
+- Player-status cases in `ui_player_status_spec.lua` extract the production
+  resting-icon and portrait-shape helpers. They require a fixed first image in
+  both modes, no animation callback or frame-time native polling, event-driven
+  resting visibility, unchanged mode switches, Hide portraits, parent hiding
+  and round-border recovery without another region. Source contracts reject the
+  retired pulse construction/art binding. These replace the old pulse fixture
+  and remain CI-only; no local tests or addon/game execution were run.
 
 - Native local-clock cases in `ui_idle_clock_spec.lua` reuse the production
   clock and shared HUD owner. They cover 24-hour conversion from native numeric
