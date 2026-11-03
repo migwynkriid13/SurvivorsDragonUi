@@ -39,9 +39,9 @@ game.
 
 The panel defaults off. The module allocates one event controller and one
 mouse-transparent Layout frame. The first usable reading adds 20 font strings
-and four textures. The two [Quest Tracker header strips](../third_party/GuardianTracker-ARTWORK.md)
-share the guardian tracker's layout and alpha. The native amulet icon uses
-the existing loot quality rim with a warm gold tint. Four text rows sit
+and three textures. The two [Quest Tracker header strips](../third_party/GuardianTracker-ARTWORK.md)
+share the guardian tracker's layout and alpha. The Bonus Objective star uses
+its original transparency directly over the header. Four text rows sit
 directly over the world, with the shared text outline and shadow for contrast.
 Reward names can wrap. The side handles resize the header and all columns, with
 the default 240-unit width as the minimum for full percentages.
@@ -55,5 +55,12 @@ Playing, paused and eligible card selection show the panel. On supported
 builds SDUI verifies that its named frame is above the cards before showing it
 there. Invalid data, disabled visibility, world leave and reload hide the
 panel and release its registration. The panel accepts no clicks. The feature
-adds no asset or separate SavedVariable. Mock coverage runs in PR CI.
+adds no separate SavedVariable. Mock coverage runs in PR CI.
 Appearance and layering in the installed game remain unverified.
+
+The star is Blizzard Entertainment artwork from `bonus-objective-star` in
+The War Within build `11.0.2.56162`. Its [512×512 WorldQuest BLP](https://wago.tools/api/casc/1339312?build=11.0.2.56162)
+uses FileDataID `1339312`. The [atlas table](https://wago.tools/db2/UiTextureAtlasMember/csv?build=11.0.2.56162)
+identifies the crop `(479, 223, 511, 255)`, with exclusive right and bottom.
+The runtime `media/tex/rarity/BonusObjectiveStar.blp` keeps all 32×32 crop pixels
+and their alpha in a lossless BLP. No frame rim is baked into the asset.

@@ -136,17 +136,11 @@ DFRL:NewMod("RarityOdds", 5, function()
     local function PreparePanel()
         local header = T.CreateQuestTrackerHeader(panel, width, HEADER_HEIGHT)
         local icon = panel:CreateTexture(nil, "ARTWORK")
-        icon:SetTexture("Interface\\Icons\\INV_Jewelry_Amulet_03")
-        icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
-        icon:SetWidth(18)
-        icon:SetHeight(18)
-        icon:SetPoint("TOPLEFT", panel, "TOPLEFT", 10, -(HEADER_HEIGHT - 18) / 2)
-        local rim = panel:CreateTexture(nil, "OVERLAY")
-        rim:SetTexture(DFRL:GetInfoOrCons("tex") .. "character\\QualityBorder.blp")
-        rim:SetVertexColor(0.87, 0.74, 0.49)
-        rim:SetWidth(22)
-        rim:SetHeight(22)
-        rim:SetPoint("CENTER", icon, "CENTER", 0, 0)
+        -- Blizzard's Bonus Objective star, cropped with its original alpha.
+        icon:SetTexture(DFRL:GetInfoOrCons("tex") .. "rarity\\BonusObjectiveStar.blp")
+        icon:SetWidth(20)
+        icon:SetHeight(20)
+        icon:SetPoint("TOPLEFT", panel, "TOPLEFT", 9, -(HEADER_HEIGHT - 20) / 2)
         labels = {
             header = header,
             title = Label(panel, TITLE_SIZE, style.titleColor, "LEFT", TITLE_HEIGHT),

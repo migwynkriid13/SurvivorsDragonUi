@@ -105,8 +105,9 @@ for _, performance in ipairs({ false, true }) do
     for _, object in ipairs(context.objects) do
         if object.kind == "Texture" and object.parent == panel then table.insert(art, object:GetTexture()) end
     end
-    assert(#art == 4 and string.find(art[1], "guardians\\Header.blp", 1, true))
+    assert(#art == 3 and string.find(art[1], "guardians\\Header.blp", 1, true))
     assert(string.find(art[2], "guardians\\Header_2.blp", 1, true), "the second header strip was not reused")
+    assert(string.find(art[3], "rarity\\BonusObjectiveStar.blp", 1, true), "the header lost its transparent star")
     assert(panel:GetWidth() == 240 and panel.scale == 0.85 and panel.point[1] == "RIGHT")
     assert(env.T.NearlyEqual(panel.point[4] * panel.scale, -1.2), "odds were not aligned with the tracker")
     assert(env.T.NearlyEqual(panel.point[5] * panel.scale, 287.3), "odds were not centered in the default gap")
