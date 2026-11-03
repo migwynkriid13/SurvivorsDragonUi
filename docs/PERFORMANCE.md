@@ -4,6 +4,119 @@ The performance work removes repeated presentation writes while retaining native
 data, pause-aware timing, saved preferences and artwork. It adds no gameplay clock
 or native client dependency. Display choices use the existing saved display table.
 
+## How to review a new feature or performance change
+
+The November work covered readers, animations, frame callbacks, retries and
+event-driven work in both Performance Mode states. The dated sections record
+the individual changes, including the later tally and run-clock changes,
+retired jewelry cooldown artwork and idle HUD passes. Use the owning controller
+to confirm today's behavior before reusing an old rate.
+
+1. **Trace what wakes the feature.** Identify the native event or publication,
+   the regular fallback, input and Show recovery, and any active animation.
+   Record which work runs when settled, hidden, disabled or hovered in each mode.
+   Use an existing event when it reliably reports the change. If the native
+   parser publishes after the event handler, coalesce the read to the next
+   frame. A frame callback can return before reading native data. A retry delay,
+   expiry, grouping window and displayed clock step each serve a different purpose.
+2. **Remove duplicate work at the current cadence first.** Share a native sample
+   within a refresh, prepare static metadata on a validated publication, and
+   format captions only when their displayed inputs change. Gate layout and
+   artwork on their own inputs so a new health value or countdown does not redo
+   static work. Defer hidden paint and optional effect allocation. Keep native
+   readiness, HUD release, queue expiry and other required cleanup eligible.
+   An event can satisfy a matching fallback pass. A settled notice can wait
+   for its next fade, expiry or retry deadline.
+3. **Give every cache an invalidation path.** Include the relevant source,
+   receipt, run/world/stream identity, locale, font, scale, bounds and options.
+   A provider can reuse a table across receipts. Validate the complete candidate
+   before publication, preserve the identity signal consumers use, and leave
+   failed reads or writes retryable. Check actual properties the game can reset.
+   Reuse synchronous readbacks where possible. A private widget can reuse
+   confirmed state if all writes and invalidation are owned here.
+4. **Follow the full lifecycle.** Trace first use, Hide/Show, settings preview
+   and discard, mode switches, row reuse, new run/world entry and reload as
+   applicable. Pool rows for the largest active view and prepare decoration on
+   eligible first use. Track partially painted rows before fallible writes and
+   retire them once, clearing owned hover and stale metadata. Restore only the
+   native state the feature owns, and preserve foreign handlers and tooltips.
+   Wake via the existing controller and listeners where they cover the feature.
+5. **Protect feedback and deadlines.** Keep camera projection, cursor tracking,
+   active drag, native repairs and authored animation at their required cadence.
+   Use UI time to schedule a native clock read and the received value to display
+   it. Change a cadence only when events or deadlines cover the required
+   recovery, or when the requested behavior explicitly changes. Follow the
+   [drawing and asset rules](#mandatory-rule-for-all-drawing-and-assets) for
+   both modes, including the static presentation of new cosmetic effects.
+6. **Show what the change saves.** Record the skipped reads, formatting,
+   setters or allocations for a concrete active or settled case. Count allocated,
+   visible and submitted regions separately, alongside texture/material states
+   and shipped bytes. Where coverage is warranted, use
+   [CI-only mocks](PR-CHECKS.md) to check both the steady work and the next
+   change or failure that must still recover. Local work uses source review and
+   pinned formatting. In-game appearance, native timing and FPS require live
+   evidence. Stop when the remaining work serves a live dependency and the
+   next reduction would trade away recovery or add state without a clear saving.
+
+### Cadence examples from the review
+
+- **Chat.** Keep one-second font and geometry repair as a fallback for
+  unannounced native changes. Repair the selected pane and visible input, and
+  use native window events, selection, Show and resize for immediate recovery.
+  Selected-pane scroll and visibility still use the frame path.
+- **Layout and waypoints.** Keep the 100 ms viewport and waypoint readers.
+  Settled Layout exits after matching native viewport inputs. Waypoints reuse
+  accepted publications and keep frame projection current. The five-second
+  nearest-target reconsideration is separate and initial or lost targets can
+  bypass it. Reuse nearest scoring only after a complete native distance pass
+  for the same position and accepted destination set. Partial or map-fallback
+  scores retry. Pin placement uses offsets without calculating distance.
+- **Native time and presentation.** Run elapsed time samples at whole native
+  second boundaries and at a fractional zone limit when needed. Fill follows
+  two-second native steps. Schedule and duration have publication wakeups and a
+  one-second fallback. Phase, boundary and HUD ownership still have frame checks.
+- **Tally.** Kills and gold refresh every 250 ms in normal mode and every five
+  seconds in Performance Mode. The existing frame callback can wake the counters
+  between 100-ms HUD passes. Cache cost and affordability follow the shared
+  pass. First display and a new run take a fresh baseline. See [Tally](TALLY-ATTACHMENT.md).
+- **Separate existing timings.** The visible minimap clock samples every 60
+  seconds in both modes. Loot service stays at 1.5 seconds in both modes, with
+  separate metadata, fade and expiry timing. The damage meter reads once a
+  second in both modes and primes its reader for input and Show.
+
+### Later refinements on the same branch
+
+- Run markers rebuild for changed schedule, width, duration or visible
+  recovery, with marker state and Heroic refresh handled separately. Clock
+  labels reuse the observed text within a paint and read it back after a write.
+  Disabled tally fields retain the latest sampled value and format it when
+  enabled.
+- Meter tooltips reuse number formatting while the input and language match,
+  preserving missing rates and signed zero. The custom non-Party palette
+  skips unused class-color lookup. Tooltip placement skips parent-scale reads
+  on the UI-hover path and still checks the tooltip's actual scale.
+- Clean aura groups skip visibility reads and the timer controller only
+  attaches or detaches on a state change. Guardian trackers skip health-label
+  preparation when no lair is fighting. Totems read the run clock only when
+  an eligible countdown needs it. The resource reader skips the player-unit
+  existence check when neither class resources nor usable absorbs need it.
+- Empty native SCT batches still advance the accepted cursor and clock without
+  allocating event and duplicate-ID tables. Unchanged nameplate health skips
+  loss bookkeeping. Boss-loss and XP painting sample only the width they use,
+  and the ready-cooldown model path checks Performance Mode before reading the
+  custom-bar setting.
+- The jewelry cooldown shade retired its five regions, cooldown reads, 30 Hz
+  painter and 525,460-byte runtime atlas together. The five-Hz equipment and
+  rarity reader still serves the static gemmed housings. LEVEL UP and the resting
+  icon are static in both modes. The resting tile and removed combat/rest rim
+  effects show how to retire an unused asset and its update path together.
+  See [jewelry artwork](#runecarver-jewelry-and-gemmed-rarity-artwork--2026-11-03)
+  and [remaining frame work](#remaining-frame-work--2026-10-28).
+- Optional portrait models and HUD decorations prepare only on eligible first
+  use. The low-health warning retains its four gradient shapes and 50 ms pulse
+  updates through one parent-opacity write. See [decorative allocation and
+  warning opacity](#decorative-allocation-and-warning-opacity--2026-11-03).
+
 ## Decorative allocation and warning opacity — 2026-11-03
 
 The six effects retain their original artwork, geometry, animation equations,
@@ -3784,10 +3897,10 @@ anonymous-plate identity limit and snapshot policy are documented in
   complete group. Native colors are compared directly so later native writes
   are still repaired. Numeric health reads for captions stop when both numeric
   choices are off. Dead/Ghost captions and text repair remain active.
-- Player pulses retain frame-by-frame native state detection and their original
-  fades, then stop alpha writes after reaching zero. Resource polling stops
-  outside the world. Cooldown sampling preserves its final positive-time zero
-  window while avoiding identical text, color and visibility writes.
+- Player combat/rest portrait pulses have been removed in both modes. Resource
+  polling stops outside the world. Cooldown sampling preserves its final
+  positive-time zero window while avoiding identical text, color and visibility
+  writes.
 - Jewelry hover cards retain native retries and only repeat layout when their
   text, owner or effective scale changes.
 
