@@ -417,9 +417,13 @@ preservation, synchronous synthetic release, real WorldFrame/plate release,
 death/reuse during a hold, hidden/filtered plates, pre-existing/external camera
 ownership and world/logout/reload cleanup in both Performance Mode states.
 Reentrant world hiding, unnotified native stops and partially failed starts
-clear or replace owned state without sticking later presses.
-Missing APIs retain native interaction; repeated discovery and idle updates add
-no hooks or drawing work. These cases remain CI-only and were not run locally.
+clear or replace owned state without sticking later presses. A physical release
+that bypasses both hooks stops the owned camera on the next update without a
+click, including after a long hold and plate retirement. A missing or failing
+button read cannot start a hold; a read failure during a hold retires it. Idle
+updates and foreign mouse-look do not read the physical button. Missing APIs
+retain native interaction; repeated discovery adds no hooks or drawing work.
+These cases remain CI-only and were not run locally.
 
 Meter spacing cases use the production meter with explicit native text metrics.
 They cover reclaiming unused numeric space, caption-aware metric caching and

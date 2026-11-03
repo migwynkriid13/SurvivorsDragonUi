@@ -590,32 +590,36 @@ updater, SavedVariable or client change is added. Verification was source/diff
 review and pinned formatting only; local tests, standalone validation and
 addon/game execution were not run.
 
-## Nameplate right-button camera turning — 2026-10-31
+## Nameplate right-button camera turning — updated 2026-11-03
 
-A right-button press on a visible enemy plate now starts native mouse-look,
-which uses the client's right-turn channel. Left-click targeting and existing
-mouse handlers stay native. The addon does not change native mouse-enabled
-flags, hit rectangles, click registrations, V or the boss/guardian filter.
-Masked and hidden plates cannot start the gesture. This works independently of
-the selected SCT mode/style and uses the same input path in Performance Mode.
+A right-button press on a visible enemy plate starts native mouse-look only
+when the client also exposes a usable `IsMouseButtonDown("RightButton")` read.
+Clients without that read keep native nameplate input. Left-click targeting,
+existing handlers, mouse flags, hit rectangles, click registration, V and the
+boss/guardian filter stay native. Both Performance Mode states and all SCT
+modes/styles share this input behavior.
 
 The reference client's [movement calls](https://github.com/Arnesen/wenilla/blob/ea514d8bb724c0571fc74183f23de7b1bbb303cf/crates/benilla-ui/src/script/input_verbs.rs#L510)
 allow `MouselookStart`/`MouselookStop` from addon handlers; `TurnOrActionStart`
 has a separate movement gate. Native [camera entry](https://github.com/Arnesen/wenilla/blob/ea514d8bb724c0571fc74183f23de7b1bbb303cf/crates/benilla-ui/src/script/pointer.rs#L309)
 sends a synthetic mouse-up to the plate and releases its capture. The addon
 ignores that entry-time release and ends its own hold on the later real
-right-button release through WorldFrame, with a plate mouse-up fallback. Plate
-death, hiding and reuse do not end a held camera gesture. Native left-click
-selection remains available; right-button presses prioritize camera control.
+right-button release through WorldFrame, with a plate mouse-up fallback.
+[Issue #96](https://github.com/migwynkriid13/SurvivorsDragonUi/issues/96) reports
+the cursor staying hidden when neither hook stops the look. The reference
+[input dispatcher](https://github.com/samwhosung/benilla/blob/e2aeaecffcfcaea27f762f61901ec4046587b843/crates/benilla-app/src/ui_script/input.rs#L351-L397)
+has a path that bypasses both Lua mouse-up hooks when the release has no
+cursor point. The installed executable has the mouse-look symbols but no
+`IsMouseButtonDown` symbol, so the addon uses native plate input there unless
+the client supplies that getter separately.
 
-Only an addon-started hold is stopped. Pre-existing mouse-look is left alone,
-and a later external start takes ownership. Real release, WorldFrame hiding,
-world leave, logout and reload clear the owned hold. Missing camera APIs leave
-native interaction unchanged. Hooks are installed once on discovered plates
-and the existing WorldFrame, with no idle polling, new controller or saved data.
-CI-only mocks cover native entry/release ordering and cleanup. Source inspection
-does not establish input delivery in the packaged game; no local tests or
-addon/game execution were performed.
+The existing controller checks the physical button only during an addon-owned
+hold. If the release was missed or the read fails, it stops that hold without
+sending a click. Plate death, hiding and reuse do not end a held gesture.
+WorldFrame hiding, world leave, logout and reload still clear owned holds.
+Pre-existing and later external mouse-look keep their ownership. CI-only mocks
+cover the missed release, long hold and native fallback. Packaged input delivery
+was not tested in game.
 
 ## First-allocation nameplate flash — 2026-10-15
 

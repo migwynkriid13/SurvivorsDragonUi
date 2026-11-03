@@ -2499,17 +2499,17 @@ result is claimed; the packaged renderer's exact revision remains unverified.
 Each discovered native plate adds one mouse-down and one mouse-up wrapper,
 preserving previous handlers. One shared WorldFrame mouse-up/hide pair and two
 native mouse-look post-hooks manage session-only ownership, entry and deferred
-cleanup flags. Only eligible enemy right presses read camera state and call the
-native camera verb; releases/cleanup inspect it only while a hold is owned.
+cleanup flags. Only eligible enemy right presses with a verified physical
+right-button hold read camera state and call the native camera verb.
 The synchronous synthetic plate release during camera entry is ignored, while
-cleanup requested during entry runs immediately afterward. A new press can
-recover from an unnotified native camera stop without polling.
-Retirement/reuse does no camera work, and later external ownership is preserved.
-Both Performance Mode states use this same native input path. There is no new
-frame, region, asset, event, updater, CVar, saved data or per-frame polling.
-CI-only plate cases cover gesture routing, native handler preservation, masked
-input, retirement/reuse and ownership cleanup; they were not run locally and
-do not establish packaged-game input delivery or live performance.
+cleanup requested during entry runs immediately afterward. During an owned
+hold, the existing controller reads the physical button once per update and
+stops the hold if the release was missed or the read fails. Idle and external
+mouse-look perform no button reads. Clients without the getter install no
+camera input hooks. Retirement/reuse does no camera work, and both Performance
+Mode states use the same path. There is no new frame, region, asset, event,
+updater, CVar or saved data. CI-only cases cover missed releases, native input
+fallback and ownership; they were not run locally.
 
 ### Native nameplate layers
 

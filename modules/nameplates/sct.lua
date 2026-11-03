@@ -231,6 +231,11 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         and type(_G.MouselookStart) == "function"
         and type(_G.MouselookStop) == "function"
         and type(_G.IsMouselooking) == "function"
+        and type(_G.IsMouseButtonDown) == "function"
+    function cameraDrag.RightButtonHeld()
+        local ok, held = pcall(_G.IsMouseButtonDown, "RightButton")
+        return ok and (held == true or held == 1)
+    end
     function cameraDrag.Stop(cleanup)
         -- Native freelook entry sends a synthetic up to the old capture.
         -- Only the later real release, or world cleanup, ends our hold.
@@ -245,6 +250,9 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     end
     function cameraDrag.Start()
         if not cameraDragSupported or not inWorld or cameraDrag.starting then return end
+        -- Some clients can swallow the physical mouse-up after camera entry.
+        -- Without an independent button read, leave this press to the client.
+        if not cameraDrag.RightButtonHeld() then return end
         local looking = _G.IsMouselooking()
         if looking and looking ~= 0 then return end
         -- A native release can end look without visiting either Lua up hook.
@@ -2635,6 +2643,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         UpdateTexts(now, 0)
     end)
     frame:SetScript("OnUpdate", function()
+        if cameraDrag.owned and not cameraDrag.starting and not cameraDrag.RightButtonHeld() then cameraDrag.Stop() end
         if not inWorld then
             -- A failed unregister can finish through this existing controller
             -- without reading combat data or running a retired world handler.

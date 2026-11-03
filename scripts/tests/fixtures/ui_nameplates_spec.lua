@@ -956,13 +956,14 @@ end
 print("PASS normal hits follow their own origins while mixed Performance Mode sums keep their centroid")
 
 -- CI-only native camera boundary: freelook releases the old plate capture
--- synchronously, then routes the later physical release to WorldFrame.
+-- synchronously. The later physical release can bypass both Lua hooks.
 local function CameraPlates(performance, missing)
     return Plates(function(current, env)
         current.settings.performanceMode = performance
         current.settings.nameplatesBossGuardiansOnly = false
         local camera = { starts = 0, stops = 0, queries = 0, looking = false, worldUps = {}, reloads = 0 }
         current.camera = camera
+        camera.rightDown, camera.buttonReads = false, 0
         local function NativeInput(plate)
             plate.nativeDown, plate.nativeUp = {}, {}
             plate:SetScript("OnMouseDown", function()
@@ -1004,18 +1005,27 @@ local function CameraPlates(performance, missing)
             if performance then return camera.looking end
             return camera.looking and 1 or 0
         end
+        env.IsMouseButtonDown = function(button)
+            assert(button == "RightButton", "queried the wrong physical button")
+            camera.buttonReads = camera.buttonReads + 1
+            if camera.buttonFailure then error("injected button read failure") end
+            if performance then return camera.rightDown end
+            return camera.rightDown and 1 or 0
+        end
         env.TurnOrActionStart = function() error("binding-only TurnOrActionStart called from a plate script") end
         env.TurnOrActionStop = function() error("binding-only TurnOrActionStop called from a plate script") end
         env.ReloadUI = function() camera.reloads = camera.reloads + 1 end
         if missing then env[missing] = nil end
         function current:Press(plate, button)
+            if button == "RightButton" then camera.rightDown = true end
             camera.capture = plate
             self:Call(plate, "OnMouseDown", button)
         end
-        function current:Release(button)
+        function current:Release(button, missed)
+            if button == "RightButton" then camera.rightDown = false end
             local recipient = camera.focus or camera.capture
             camera.capture = nil
-            if recipient then self:Call(recipient, "OnMouseUp", button) end
+            if recipient and not missed then self:Call(recipient, "OnMouseUp", button) end
         end
     end)
 end
@@ -1063,19 +1073,19 @@ for _, performance in ipairs({ false, true }) do
 
     local starts = camera.starts
     current.env.HideNameplates()
-    current:Call(plate, "OnMouseDown", "RightButton")
+    current:Press(plate, "RightButton")
     assert(camera.starts == starts, "V-off tracking plate started camera input")
     current.env.ShowNameplates()
     current:SetSetting("nameplatesBossGuardiansOnly", true)
-    current:Call(plate, "OnMouseDown", "RightButton")
+    current:Press(plate, "RightButton")
     assert(camera.starts == starts, "filtered plate started camera input")
     current:SetSetting("nameplatesBossGuardiansOnly", false)
     current:Tick(0)
     plate:Hide()
-    current:Call(plate, "OnMouseDown", "RightButton")
+    current:Press(plate, "RightButton")
     plate:Show()
     plate.nativeBar.color = { 0, 1, 0, 1 }
-    current:Call(plate, "OnMouseDown", "RightButton")
+    current:Press(plate, "RightButton")
     plate.nativeBar.color = { 1, 0, 0, 1 }
     assert(camera.starts == starts, "hidden or friendly plate started hostile camera input")
 
@@ -1094,7 +1104,7 @@ for _, performance in ipairs({ false, true }) do
     current.env.DFRL.sct.FinishEdit(false)
     current:SetSetting("sctStyle", "enemy")
     current:Tick(0)
-    local queries = camera.queries
+    local queries, buttonReads = camera.queries, camera.buttonReads
     allocated = #current.objects
     for _, object in ipairs(current.objects) do
         assert(
@@ -1107,7 +1117,10 @@ for _, performance in ipairs({ false, true }) do
         current:Tick(1 / 60)
     end
     current:NoPresentationWrites()
-    assert(camera.queries == queries and #current.objects == allocated, "idle camera support polled or allocated")
+    assert(
+        camera.queries == queries and camera.buttonReads == buttonReads and #current.objects == allocated,
+        "idle camera support polled or allocated"
+    )
     assert(
         plate:GetScript("OnMouseDown") == down
             and plate:GetScript("OnMouseUp") == up
@@ -1119,6 +1132,33 @@ end
 print(
     "PASS right-button camera entry survives native capture transfer and plate reuse while preserving left targeting and SCT modes"
 )
+
+for _, performance in ipairs({ false, true }) do
+    local current = CameraPlates(performance)
+    local plate, camera = current.ordinary, current.camera
+    current:Press(plate, "RightButton")
+    plate:Hide()
+    for _ = 1, 180 do
+        current:Tick(1 / 60)
+    end
+    assert(camera.looking and camera.stops == 0, "a long physical hold timed out after the plate hid")
+    current:Release("RightButton", true)
+    current:Tick(1 / 60)
+    assert(camera.stops == 1 and not camera.looking, "a missed physical release left the cursor captured")
+    assert(not camera.worldUps.RightButton and plate.nativeUp.RightButton == 1, "recovery synthesized a click")
+
+    plate:Show()
+    camera.buttonFailure = true
+    current:Press(plate, "RightButton")
+    assert(camera.starts == 1 and not camera.looking, "unreadable physical input allowed camera entry")
+    camera.buttonFailure = nil
+    current:Press(plate, "RightButton")
+    assert(camera.starts == 2 and camera.looking, "release recovery prevented the next drag")
+    camera.buttonFailure = true
+    current:Tick(1 / 60)
+    assert(camera.stops == 2 and not camera.looking, "failed button read left an owned hold stuck")
+end
+print("PASS missed physical releases recover owned mouse-look without ending a held drag or dispatching a click")
 
 for _, performance in ipairs({ false, true }) do
     for _, cleanup in ipairs({ "worldHide", "PLAYER_LEAVING_WORLD", "PLAYER_LOGOUT", "reload" }) do
@@ -1155,7 +1195,10 @@ for _, performance in ipairs({ false, true }) do
     transferred:Tick(0)
     transferred:Press(transferred.ordinary, "RightButton")
     transferred.env.MouselookStart()
-    transferred:Release("RightButton")
+    transferred:Release("RightButton", true)
+    local buttonReads = transferred.camera.buttonReads
+    transferred:Tick(1 / 60)
+    assert(transferred.camera.buttonReads == buttonReads, "release recovery polled an external look session")
     transferred:Event(transferred.controller, "PLAYER_LEAVING_WORLD")
     assert(transferred.camera.looking and transferred.camera.stops == 0, "external start did not take camera ownership")
     local stopped = CameraPlates(performance)
@@ -1216,7 +1259,7 @@ print(
     "PASS camera entry flushes synchronous cleanup, recovers from unobserved native release and stops partial native errors"
 )
 
-for _, missing in ipairs({ "MouselookStart", "MouselookStop", "IsMouselooking" }) do
+for _, missing in ipairs({ "MouselookStart", "MouselookStop", "IsMouselooking", "IsMouseButtonDown" }) do
     local current = CameraPlates(false, missing)
     current:Tick(0)
     local plate, camera = current.ordinary, current.camera
@@ -1228,7 +1271,11 @@ for _, missing in ipairs({ "MouselookStart", "MouselookStop", "IsMouselooking" }
             "missing API changed native plate handlers"
         )
     end
-    assert(camera.starts == 0 and camera.stops == 0 and camera.queries == 0, "partial native camera API was used")
+    current:Tick(1 / 60)
+    assert(
+        camera.starts == 0 and camera.stops == 0 and camera.queries == 0 and camera.buttonReads == 0,
+        "partial native camera API was used"
+    )
     assert(current.nativeTarget == plate, "missing API fallback changed left-click targeting")
     current:Event(current.controller, "PLAYER_LEAVING_WORLD")
 end
