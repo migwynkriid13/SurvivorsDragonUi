@@ -55,7 +55,7 @@ bar, and no missing health value creates a placeholder fill.
 
 Names use DEFAULT 12 and the header shares the DPS meter's default title size
 and gold color. The shared font settings control the outline and black shadow.
-Ordinary body text is white; text-only states use the
+Guardian names use pale gold. Text-only states use the
 chosen subdued green, red, amber and grey palette. Row height is 26. Actual glyph
 widths are measured across all fourteen translations; no external font is shipped.
 The complete tracker defaults to scale `0.85`, making the artwork, text and rows

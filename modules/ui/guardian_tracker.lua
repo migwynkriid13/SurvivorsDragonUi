@@ -45,12 +45,16 @@ DFRL:NewMod("GuardianTracker", 4, function()
     frame:EnableMouseWheel(true)
     frame:Hide()
 
-    local function Label(parent, size, justify)
+    local function Label(parent, size, justify, isTitle)
         local label = parent:CreateFontString(nil, "OVERLAY")
-        T.SetFont(label, size, "")
+        T.SetFont(label, size, isTitle and "" or "OUTLINE")
         label:SetJustifyH(justify or "LEFT")
         label:SetJustifyV("MIDDLE")
-        label:SetTextColor(unpack(style.bodyColor))
+        if isTitle then
+            label:SetTextColor(unpack(style.titleColor))
+        else
+            label:SetTextColor(0.87, 0.74, 0.49)
+        end
         T.SetChatShadow(label)
         return label
     end
@@ -65,8 +69,7 @@ DFRL:NewMod("GuardianTracker", 4, function()
     local header = T.CreateQuestTrackerHeader(frame, width, headerHeight)
     local icon = Texture(frame, "waypoint\\GuardianFloating", "ARTWORK", 28, 28, 65 / 128, 65 / 128)
     icon:SetPoint("TOPLEFT", frame, "TOPLEFT", 9, -6)
-    local title = Label(frame, TITLE_SIZE)
-    title:SetTextColor(unpack(style.titleColor))
+    local title = Label(frame, TITLE_SIZE, nil, true)
     title:SetPoint("TOPLEFT", frame, "TOPLEFT", TITLE_LEFT, -8)
     title:SetHeight(23)
     local measure = Label(frame, 12)
@@ -221,7 +224,7 @@ DFRL:NewMod("GuardianTracker", 4, function()
     -- populated format fields. Native guardian names remain bounded separately.
     local function CaptionWidth(source, first, size)
         if presentation.measureSize ~= (size or 12) then
-            T.SetFont(measure, size or 12, "")
+            T.SetFont(measure, size or 12, "OUTLINE")
             presentation.measureSize = size or 12
         end
         local maximum = 0
