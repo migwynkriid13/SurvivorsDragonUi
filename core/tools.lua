@@ -109,6 +109,19 @@ function DFRL.tools.CreateArtworkStrip(parent, layer, count)
     return view
 end
 
+-- The packaged Quest Tracker crop is shared by the guardian and reward HUDs.
+-- See third_party/GuardianTracker-ARTWORK.md for the original art and notice.
+function DFRL.tools.CreateQuestTrackerHeader(parent, width, height)
+    local header = T.CreateArtworkStrip(parent, "BACKGROUND", 2)
+    header:SetTextures(DFRL:GetInfoOrCons("tex"), { "guardians\\Header.blp", "guardians\\Header_2.blp" })
+    header:SetWidth(width)
+    header:SetHeight(height)
+    header:SetTexCoord(1 / 512, 281 / 512, 0, 70 / 128)
+    header:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, 0)
+    header:SetAlpha(0.8)
+    return header
+end
+
 -- The original two horizontal halves are stacked in a legal 512x512 atlas.
 function DFRL.tools.SetChromeTexture(texture, left, top, right, bottom)
     texture:SetTexture(DFRL:GetInfoOrCons("tex") .. "character\\Chrome.blp")

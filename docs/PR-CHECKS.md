@@ -8,7 +8,8 @@ check in the repository's branch rules; editing a workflow does not configure
 branch protection by itself.
 
 The rarity odds fixture drives the production panel with mocked phase, run
-and stats feeds. It covers known estimates by reward type, level caps, zero
+and stats feeds. It covers the shared quest header, the compact reward table,
+known estimates by reward type, level caps, zero
 and invalid Luck, preview/Confirm/Cancel/reset, stale data across run
 boundaries, overlay readback failures and hidden or unchanged work. The
 minimap fixtures also cover the nearest off-map cache arrow, artwork retry,

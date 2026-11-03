@@ -7,7 +7,9 @@ Confirm, Cancel, profiles and reset paths.
 
 ## What the numbers measure
 
-The table estimates each base rarity roll given a reward type. Spell upgrade
+The table estimates each base rarity roll given a reward type. Spell cards and
+cache rings/trinkets share a row because they use the same base roll. Guardian
+jewelry and new amulets each show the applicable source modifier. Spell upgrade
 eligibility can raise the rolled tier, a new amulet may use a different
 available tier, and empowering an existing amulet keeps its rarity. The odds
 for any particular hand of cards also depend on which reward types the game
@@ -32,13 +34,16 @@ game.
 ## Drawing and lifecycle
 
 The panel defaults off. The module allocates one event controller and one
-mouse-transparent Layout frame. The first usable reading adds 26 font strings,
-one divider and the shared dark SDUI backdrop. Both Performance Mode states
-use the same static presentation and shared fonts. The controller samples at
-most four times per second while permitted. Unchanged Luck and capped level
-bonus skip odds formatting and text writes. A language change refreshes the
-captions on the next permitted update. Off, Layout hiding, world leave and
-logout detach the reader.
+mouse-transparent Layout frame. The first usable reading adds 21 font strings
+and four textures. The two [Quest Tracker header strips](../third_party/GuardianTracker-ARTWORK.md)
+share the guardian tracker's layout and alpha. The native amulet icon uses
+the existing loot quality rim with a warm gold tint. Four text rows sit
+directly over the world, with the shared text outline and shadow for contrast.
+Both Performance Mode states use this static presentation. The controller
+samples at most four times per second while permitted. Unchanged roll strength
+skips odds formatting and text writes. A language change refreshes captions on
+the next permitted update. Off, Layout hiding, world leave and logout detach
+the reader.
 
 Playing, paused and eligible card selection show the panel. On supported
 builds SDUI verifies that its named frame is above the cards before showing it

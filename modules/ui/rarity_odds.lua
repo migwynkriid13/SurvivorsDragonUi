@@ -1,6 +1,7 @@
 DFRL:NewMod("RarityOdds", 5, function()
-    local INTERVAL, WIDTH, HEIGHT = 0.25, 420, 166
-    local GOLD, MUTED, WHITE = { 0.93, 0.8, 0.53 }, { 0.73, 0.76, 0.82 }, { 1, 0.96, 0.87 }
+    local INTERVAL, WIDTH, HEIGHT = 0.25, 420, 140
+    local HEADER_HEIGHT, ROW_HEIGHT = WIDTH / 8, 16
+    local GOLD, MUTED, WHITE = { 0.87, 0.74, 0.49 }, { 0.78, 0.72, 0.61 }, { 1, 0.96, 0.87 }
     local TIERS = {
         { "Rare", 0.28, 0.65, 1 },
         { "Epic", 0.76, 0.49, 1 },
@@ -9,17 +10,16 @@ DFRL:NewMod("RarityOdds", 5, function()
     -- Source modifiers for a base roll. A new amulet adds 0.50; the
     -- guardian reward path adds 0.25 to either jewelry category.
     local REWARDS = {
-        { "Spell cards", 0 },
-        { "Cache jewelry", 0 },
-        { "New cache amulets", 0.5 },
+        { "Spells / cache jewelry", 0 },
         { "Guardian jewelry", 0.25 },
+        { "New cache amulets", 0.5 },
         { "New guardian amulets", 0.75 },
     }
     local display, layout, locale = DFRL.display, DFRL.layout, DFRL.locale
     local enabled, overCards = display.Get("rarityOdds"), display.Get("rarityOddsOverCards")
     local inWorld, permitted, elapsed = true, not layout.IsHidden("rarityOdds"), INTERVAL
     local labels, language, registeredTop, shown
-    local retiredRun, retiredStats, paintedLuck, paintedLevel
+    local retiredRun, retiredStats, paintedStrength
     local lastRun, lastStats, lastZone, lastClock
     local pendingFonts = {}
     local controller = CreateFrame("Frame", nil, UIParent)
@@ -78,7 +78,7 @@ DFRL:NewMod("RarityOdds", 5, function()
         if strength <= 0 or not Number(100 * (strength + 0.75) ^ 4) then return end
         retiredRun, retiredStats = nil, nil
         lastRun, lastStats, lastZone, lastClock = runStamp, stats, Number(zoneStamp) and zoneStamp or lastZone, run.t
-        return luck, bonus, strength, phase == "choosing"
+        return strength, phase == "choosing"
     end
 
     local function Label(parent, size, x, y, width, color, justify)
@@ -87,34 +87,41 @@ DFRL:NewMod("RarityOdds", 5, function()
         label:SetWidth(width)
         label:SetHeight(size + 5)
         label:SetJustifyH(justify or "LEFT")
+        label:SetJustifyV("MIDDLE")
         label:SetTextColor(unpack(color))
         T.SetFont(label, size, "OUTLINE")
+        T.SetChatShadow(label)
         if not label:GetFont() then pendingFonts[label] = size end
         return label
     end
 
     local function PreparePanel()
-        T.StyleHoverCard(panel, 0.58, 0.47, 0.31)
-        local rule = panel:CreateTexture(nil, "ARTWORK")
-        rule:SetTexture("Interface\\Buttons\\WHITE8X8")
-        rule:SetVertexColor(0.61, 0.47, 0.29, 0.6)
-        rule:SetPoint("TOPLEFT", panel, "TOPLEFT", 12, -56)
-        rule:SetWidth(WIDTH - 24)
-        rule:SetHeight(1)
+        T.CreateQuestTrackerHeader(panel, WIDTH, HEADER_HEIGHT)
+        local icon = panel:CreateTexture(nil, "ARTWORK")
+        icon:SetTexture("Interface\\Icons\\INV_Jewelry_Amulet_03")
+        icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+        icon:SetWidth(23)
+        icon:SetHeight(23)
+        icon:SetPoint("TOPLEFT", panel, "TOPLEFT", 13, -(HEADER_HEIGHT - 23) / 2)
+        local rim = panel:CreateTexture(nil, "OVERLAY")
+        rim:SetTexture(DFRL:GetInfoOrCons("tex") .. "character\\QualityBorder.blp")
+        rim:SetVertexColor(unpack(GOLD))
+        rim:SetWidth(27)
+        rim:SetHeight(27)
+        rim:SetPoint("CENTER", icon, "CENTER", 0, 0)
         labels = {
-            title = Label(panel, 15, 12, -10, 190, GOLD),
-            luck = Label(panel, 11, 204, -13, WIDTH - 216, MUTED, "RIGHT"),
-            note = Label(panel, 10, 12, -146, WIDTH - 24, MUTED),
+            title = Label(panel, 15, 46, -(HEADER_HEIGHT - 20) / 2, 244, GOLD),
+            note = Label(panel, 10, 290, -(HEADER_HEIGHT - 15) / 2, WIDTH - 304, MUTED, "RIGHT"),
             tiers = {},
             rows = {},
         }
         for index, tier in ipairs(TIERS) do
             local x = 180 + (index - 1) * 76
-            labels.tiers[index] = Label(panel, 11, x, -36, 76, { tier[2], tier[3], tier[4] }, "CENTER")
+            labels.tiers[index] = Label(panel, 11, x, -HEADER_HEIGHT - 2, 76, { tier[2], tier[3], tier[4] }, "CENTER")
         end
         for index = 1, table.getn(REWARDS) do
-            local y = -60 - (index - 1) * 16
-            local row = { name = Label(panel, 11, 12, y, 168, WHITE) }
+            local y = -HEADER_HEIGHT - 18 - (index - 1) * ROW_HEIGHT
+            local row = { name = Label(panel, 11, 12, y, 168, GOLD) }
             for column = 1, table.getn(TIERS) do
                 row[column] = Label(panel, 11, 180 + (column - 1) * 76, y, 76, WHITE, "CENTER")
             end
@@ -150,12 +157,11 @@ DFRL:NewMod("RarityOdds", 5, function()
         SetTop(false)
     end
 
-    local function Paint(luck, bonus, strength)
+    local function Paint(strength)
         local currentLanguage = locale.code or "en"
-        local relabel = language ~= currentLanguage
-        if relabel then
+        if language ~= currentLanguage then
             T.SetTextIfChanged(labels.title, locale.Text("Rarity odds"))
-            T.SetTextIfChanged(labels.note, locale.Text("Estimated base rolls per card"))
+            T.SetTextIfChanged(labels.note, locale.Text("Estimates"))
             for index, tier in ipairs(TIERS) do
                 T.SetTextIfChanged(labels.tiers[index], locale.Text(tier[1]))
             end
@@ -164,36 +170,23 @@ DFRL:NewMod("RarityOdds", 5, function()
             end
             language = currentLanguage
         end
-        if paintedLuck == luck and paintedLevel == bonus and not relabel then return end
-        T.SetTextIfChanged(
-            labels.luck,
-            string.format(locale.Text("Luck %.1f%%  /  Level +%.0f%%"), luck * 100, bonus * 100)
-        )
-        if paintedLuck ~= luck or paintedLevel ~= bonus then
-            local previousBonus, rareText, epicText, legendaryText
-            for index, reward in ipairs(REWARDS) do
-                if reward[2] ~= previousBonus then
-                    local k = strength + reward[2]
-                    local square = k * k
-                    local rare, epic, legendary = 10 * square, 4 * square * k, square * square
-                    local total = 60 + 25 * k + rare + epic + legendary
-                    rareText = string.format("%.1f%%", 100 * rare / total)
-                    epicText = string.format("%.1f%%", 100 * epic / total)
-                    legendaryText = string.format("%.1f%%", 100 * legendary / total)
-                    previousBonus = reward[2]
-                end
-                local row = labels.rows[index]
-                T.SetTextIfChanged(row[1], rareText)
-                T.SetTextIfChanged(row[2], epicText)
-                T.SetTextIfChanged(row[3], legendaryText)
-            end
-            paintedLuck, paintedLevel = luck, bonus
+        if paintedStrength == strength then return end
+        for index, reward in ipairs(REWARDS) do
+            local k = strength + reward[2]
+            local square = k * k
+            local rare, epic, legendary = 10 * square, 4 * square * k, square * square
+            local total = 60 + 25 * k + rare + epic + legendary
+            local row = labels.rows[index]
+            T.SetTextIfChanged(row[1], string.format("%.1f%%", 100 * rare / total))
+            T.SetTextIfChanged(row[2], string.format("%.1f%%", 100 * epic / total))
+            T.SetTextIfChanged(row[3], string.format("%.1f%%", 100 * legendary / total))
         end
+        paintedStrength = strength
     end
 
     local function Update()
-        local luck, bonus, strength, choosing = Read()
-        if not luck then
+        local strength, choosing = Read()
+        if not strength then
             Hide()
             return
         end
@@ -207,7 +200,7 @@ DFRL:NewMod("RarityOdds", 5, function()
             Hide()
             return
         end
-        Paint(luck, bonus, strength)
+        Paint(strength)
         if not shown then panel:Show() end
         shown = true
     end
