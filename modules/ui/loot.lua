@@ -13,7 +13,7 @@ DFRL:NewMod("LootNotifications", 0, function()
     local retry = false
     local SyncUpdates
     local queue, count, sequence, age = {}, 0, 0, 0
-    local MAX_QUEUE = 32
+    local MAX_QUEUE, SERVICE_INTERVAL = 32, 1.5
     local controller = CreateFrame("Frame")
 
     local function Clear()
@@ -148,7 +148,7 @@ DFRL:NewMod("LootNotifications", 0, function()
 
     local function Update()
         age = age + (tonumber(arg1) or 0)
-        if age < 0.2 then return end
+        if age < SERVICE_INTERVAL then return end
         age = 0
         local custom = Refresh()
         SyncUpdates()

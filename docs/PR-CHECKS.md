@@ -893,6 +893,11 @@ The assertions cover:
   target sample serves each pass while visible buttons retain independent
   range reads; missing/friendly/hostile transitions and hidden allocation/cleanup
   use fresh native boundaries.
+- Loot service cadence cases retain queued notifications through the former
+  200-ms interval and deliver at the 1.5-second boundary in both Performance Mode
+  states. Failed native handoffs use that same interval; renderer backpressure,
+  card expiry and world/settings cleanup keep their existing cases. Coverage
+  remains CI-only, without local tests or addon/game execution.
 - Loot cards clear retired text/icon bindings and reuse the original three-card
   pool. Settled updates perform zero presentation writes, and a full pool does
   not allocate a fourth card.

@@ -61,7 +61,7 @@ Test(
             env.DFRL.loot.Observe(message, "CHAT_MSG_SYSTEM")
             local text, kind = chat.PrettifyMessage(message, "CHAT_MSG_SYSTEM")
             assert(text == nil and kind == "hide", "the converted item/reward remained in chat")
-            context:Call(service, "OnUpdate", 0.2)
+            context:Call(service, "OnUpdate", 1.5)
             local first
             for _, object in ipairs(context.objects) do
                 if object.entry then first = object end
@@ -83,7 +83,7 @@ Test(
             env.DFRL.loot.Observe(earned, "CHAT_MSG_SYSTEM")
             text, kind = chat.PrettifyMessage(earned, "CHAT_MSG_SYSTEM")
             assert(text == nil and kind == "hide", "the duplicate marks balance remained in chat")
-            context:Call(service, "OnUpdate", 0.2)
+            context:Call(service, "OnUpdate", 1.5)
             assert(
                 first.entry.sequence == 1 and first.started == started,
                 "the balance notice replayed or restarted a toast"
@@ -91,7 +91,7 @@ Test(
             assert(chat.PrettifyMessage(earned, "CHAT_MSG_PARTY") == earned, "conversation text was hidden")
             context.now = started + 1
             env.DFRL.loot.Observe("You receive loot: [Second item] (already collected) +1 marks", "CHAT_MSG_LOOT")
-            context:Call(service, "OnUpdate", 0.2)
+            context:Call(service, "OnUpdate", 1.5)
             local second, active = nil, 0
             for _, object in ipairs(context.objects) do
                 if object.entry then
@@ -270,7 +270,7 @@ Test("marks checkbox off excludes conversions before popup metadata reads", func
             "CHAT_MSG_SYSTEM"
         )
     end
-    context:Call(context:Controller("CVAR_UPDATE"), "OnUpdate", 0.2)
+    context:Call(context:Controller("CVAR_UPDATE"), "OnUpdate", 1.5)
     assert(
         delivered == 0 and metadataReads == 0,
         "a marks conversion displayed or resolved an already-owned item popup"

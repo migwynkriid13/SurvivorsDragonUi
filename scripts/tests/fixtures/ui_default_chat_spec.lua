@@ -120,7 +120,7 @@ end
 local lootContext, controller, pushed, stock, original = Loot(true)
 assert(controller.events.CHAT_MSG_LOOT and controller.events.CHAT_MSG_SYSTEM, "independent loot intake did not attach")
 lootContext:Event(controller, "CHAT_MSG_LOOT", "You receive loot: [Native Band].")
-lootContext:Call(controller, "OnUpdate", 0.2)
+lootContext:Call(controller, "OnUpdate", 1.5)
 assert(#pushed == 1 and pushed[1].name == "Native Band", "default chat stopped independent SDUI loot delivery")
 assert(
     stock.AddMessage == original.add and not lootContext.env.DFRL.CleanerChat,

@@ -182,7 +182,10 @@ takeover; `Clear()` clears queued and visible notices without changing the
 registered view or its readiness.
 
 The session queue retains the latest 32 occurrences and delivers at most four
-every 0.2 seconds. Each has its own increasing `sequence` and cosmetic
+every 1.5 seconds in both Performance Mode states. The same interval gates
+regular renderer readiness and native HUD ownership/retry work. Settings, world
+and observed native-preference events retain their immediate handoff/cleanup
+paths. Each occurrence has its own increasing `sequence` and cosmetic
 `receivedAt` UI time. Overflow retires the oldest queued notice; it does not
 alter chat or actual item acquisition. Arrays are synchronized through
 `table.setn` for Lua 5.0. Nothing is replayed from before attachment, world leave,
@@ -245,7 +248,7 @@ Cancel does not permanently enable a previously hidden native box. Failed
 handoffs retain the last and attempted owned states for restoration. Synchronous
 CVar callbacks remain guarded. No native visibility write occurs when the getter
 already matches. Game/Off detach the service updater after a successful handoff;
-only unsuccessful native handoffs retry on its existing 0.2-second controller.
+only unsuccessful native handoffs retry on the shared 1.5-second service interval.
 Both skip custom parsing, item metadata, queueing, card animation and painting.
 
 Accepted conversion cards reuse the existing heading/name regions and lifetime.

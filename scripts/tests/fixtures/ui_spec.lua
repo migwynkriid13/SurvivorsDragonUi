@@ -54,8 +54,26 @@ end
 
 local function Deliver(context, service, name)
     context.env.DFRL.loot.Observe(name, "CHAT_MSG_LOOT")
-    context:Call(service, "OnUpdate", 0.2)
+    context:Call(service, "OnUpdate", 1.5)
 end
+
+Test("loot service waits 1.5 seconds between queue deliveries in both modes", function()
+    for _, performance in ipairs({ false, true }) do
+        local context, service = Loot({ performanceMode = performance })
+        context.env.DFRL.loot.Observe("Queued reward", "CHAT_MSG_LOOT")
+        local function Card()
+            for _, object in ipairs(context.objects) do
+                if object.entry then return object end
+            end
+        end
+        context:Call(service, "OnUpdate", 0.2)
+        assert(not Card(), "loot service retained its former 200-ms delivery interval")
+        context:Call(service, "OnUpdate", 1.05)
+        assert(not Card(), "loot service delivered before its 1.5-second interval")
+        context:Call(service, "OnUpdate", 0.25)
+        assert(Card() and Card().entry.name == "Queued reward", "loot service missed the 1.5-second boundary")
+    end
+end)
 
 Test("unchanged cooldowns do no presentation writes or allocations", function()
     local context, _, controller = Cooldowns()
@@ -578,7 +596,9 @@ Test("native handoff failures retry only until accepted and preserve later exter
     display.Set("lootMode", "game")
     assert(not context.nativeShown and service:GetScript("OnUpdate"), "failed Game handoff stopped retrying")
     fail = false
-    context:Call(service, "OnUpdate", 0.21)
+    context:Call(service, "OnUpdate", 0.75)
+    assert(not context.nativeShown and service:GetScript("OnUpdate"), "native handoff retried before 1.5 seconds")
+    context:Call(service, "OnUpdate", 0.75)
     assert(context.nativeShown and not service:GetScript("OnUpdate"), "successful native handoff retained polling")
     context.nativeShown = false
     context:Event(service, "CVAR_UPDATE", "hudLoot")
@@ -701,13 +721,13 @@ Test("a full loot pool defers queued metadata resolution until delivery", functi
     local queued = { name = "Queued item", itemReference = "item:4" }
     Deliver(context, service, queued)
     for _ = 1, 5 do
-        context:Call(service, "OnUpdate", 0.2)
+        context:Call(service, "OnUpdate", 1.5)
     end
     assert(reads == 3, "a full pool repeatedly resolved its waiting head")
     assert(queued.icon == nil, "resolution mutated the intake entry")
     context.now = context.now + 10
     context:Call(animation, "OnUpdate", 0.1)
-    context:Call(service, "OnUpdate", 0.2)
+    context:Call(service, "OnUpdate", 1.5)
     assert(reads == 4, "freed capacity did not resolve the queued item exactly once")
 end)
 

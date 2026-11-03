@@ -1747,7 +1747,8 @@ performance.
   flipbook remain twenty Hz only while active.
 - Resources, pets, normal cooldowns, guardian tracker and encounter fallback reads
   remain ten Hz. Meter reads and rates use one-Hz regular updates; jewelry
-  metadata, loot service, banner readiness and tooltip styling remain five Hz. Required phase,
+  metadata, banner readiness and tooltip styling remain five Hz. Loot service
+  work uses a 1.5-second interval in both modes. Required phase,
   publication, native ownership and failed-read readiness work is retained.
 - Jewelry cursor placement runs only for a visible hovered card. Its exact
   fourteen-strip icons, original rims and five-distinct-icon cost remain;
@@ -1817,7 +1818,7 @@ has an active visual, native-data, ownership or readiness purpose:
 | Resources, absorbs and pets                        | Ten-Hz native phase/current values/readiness; power events and feed receipts can refresh earlier. Hidden views retain retirement while skipping presentation/timer-only reads. Unreported native changes and failed icon/style readiness still need fallback.                                                        |
 | Native buffs/received timers                       | Native anchor repair follows native resets; timing uses the official getter at ten Hz while active. Hovered tooltips display tenths, so their required timing refresh stays. Paused/static/hidden timers already stop or defer work.                                                                                 |
 | Jewelry                                            | Five-Hz native equipment/cooldown and metadata readiness; active exact 64-cell cooldown painting at thirty Hz, cursor placement only while hovered. Sixteen-band inset sampling and the Runecarver housings remain.                                                                                                  |
-| Loot                                               | Five-Hz service/readiness/native ownership and bounded queue delivery, populated frame fades/expiry, bounded five-Hz metadata retry. Hidden cards must expire and free capacity; empty cosmetic pools already detach.                                                                                                |
+| Loot                                               | Service/readiness/native ownership and bounded queue delivery run every 1.5 seconds in both modes. Populated card fades/expiry and bounded five-Hz item-metadata retry keep their separate timing. Hidden cards must expire and free capacity; empty cosmetic pools already detach.                                  |
 | Banners                                            | Five-Hz registration/ownership/readiness, next-frame pending native errors and original thirty-Hz fade/expiry/promotion. Settled disabled/faulted cleanup already detaches.                                                                                                                                          |
 | Damage meter                                       | One-Hz regular native/legacy reads, readiness/ownership and rates; user actions prime next-frame reads. Off detaches; hidden views skip rows/rates/icon work. Accepted counter processing already has publication caches.                                                                                            |
 | Chat/tooltip/character                             | Visible chat slides/reveals and cursor tooltip placement need frames; chat geometry repair stays one Hz and tooltip styling five Hz. Character stats already coalesce to a next-frame flush only after relevant events while open. Capture/Copy remain opt-in/event/user driven.                                     |
@@ -2665,7 +2666,7 @@ control stays inactive at 0.45 alpha outside SDUI mode.
 
 Game/Off clear the existing queue/cards, reject intake before parsing or metadata
 resolution and detach the loot service updater after the native handoff. Only
-pending native visibility handoffs retry on the existing five-Hz controller.
+pending native visibility handoffs retry on the shared 1.5-second service interval.
 The shared HUD owner accepts true or false, retaining the original/latest
 external preference across mode previews and guarded synchronous callbacks;
 other owners still acquire hidden visibility by default. Getter matches skip
