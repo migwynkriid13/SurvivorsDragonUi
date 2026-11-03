@@ -2176,6 +2176,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 label = "Minimap",
                 options = {
                     { "minimapShowClock", "Show clock", "Show local time beside the minimap zone name." },
+                    { "minimapShowLauncher", "Show SDUI button", "You can always open settings with /sdui." },
                     {
                         "keepDefeatedGuardianIcons",
                         "Keep defeated guardian icons",

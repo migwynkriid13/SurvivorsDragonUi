@@ -80,6 +80,8 @@ For a clear view while moving, use `/sdui lock`. Click a blue frame for its cont
 
 Click **Confirm** in the full editor to save or **Cancel** to undo. In **Profiles**, **Save profile and close** and **Overwrite and close** save the named profile and current setup together, then close the editor. Loading or deleting a profile stays a preview until Confirm. Click the minimap glyph again or press **Escape** to cancel and close. Leaving the run or reloading also discards unsaved changes. **Addon defaults** resets the same options as `/sdui reset`.
 
+To hide the gold launcher, turn off **Show SDUI button** under **Map & navigation** → **Minimap**. You can still open the editor with `/sdui`.
+
 **Performance Mode**, above **Layout**, starts off. Turn it on for static portraits and HUD effects, chat and banners without fading, and no cooldown numbers. Combat text keeps its usual motion and selected style. Your individual choices return when you turn it off.
 
 ### Action bar and portraits

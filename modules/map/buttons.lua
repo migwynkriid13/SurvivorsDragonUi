@@ -174,7 +174,7 @@ DFRL:NewMod("Minimap Buttons", 3, function()
         StopDrag()
     end)
     launcher:SetScript("OnClick", function()
-        if dragging or GetTime() < suppressClickUntil then return end
+        if not launcher:IsVisible() or dragging or GetTime() < suppressClickUntil then return end
         HideTooltip()
         DFRL.layout.ToggleEdit()
     end)
@@ -193,7 +193,19 @@ DFRL:NewMod("Minimap Buttons", 3, function()
     launcher:SetScript("OnHide", function()
         StopDrag()
         HideTooltip()
+        SetAlpha(0.85)
     end)
+    local function RefreshLauncherVisibility()
+        local shown = launcher:IsShown() and true or false
+        if DFRL.display.Get("minimapShowLauncher") == shown then return end
+        if shown then
+            launcher:Hide()
+        else
+            launcher:Show()
+        end
+    end
+    DFRL.display.Listen(RefreshLauncherVisibility)
+    RefreshLauncherVisibility()
     Register(launcher)
     launcher:SetPoint("CENTER", Minimap, "CENTER", -1, -1)
     HookScript(Minimap, "OnShow", DiscoverButtons)
