@@ -146,8 +146,16 @@ Test("SCT display defaults normalize missing values while retaining valid saved 
     local context = H.New()
     context:Load("core/display.lua", "Display")
     local display = context.env.DFRL.display
-    local defaults =
-        { sctStyle = "diablo", sctFont = "default", sctScale = 0.9, sctShortNumbers = true, sctDistanceScaling = false }
+    local defaults = {
+        sctStyle = "diablo",
+        sctFont = "default",
+        sctScale = 0.9,
+        sctShortNumbers = true,
+        sctDistanceScaling = false,
+        sctGroupDamage = false,
+        sctGroupWindow = 0.5,
+        sctShowGroupCount = true,
+    }
     local function AssertChoices(expected)
         for key, value in pairs(expected) do
             assert(display.Get(key) == value, key .. " lost its display transaction value")
@@ -161,6 +169,9 @@ Test("SCT display defaults normalize missing values while retaining valid saved 
             sctScale = 0 / 0,
             sctShortNumbers = "false",
             sctDistanceScaling = "false",
+            sctGroupDamage = "true",
+            sctGroupWindow = "0.25",
+            sctShowGroupCount = "false",
         },
         {
             sctStyle = "invalid",
@@ -168,6 +179,9 @@ Test("SCT display defaults normalize missing values while retaining valid saved 
             sctScale = math.huge,
             sctShortNumbers = 0,
             sctDistanceScaling = 0,
+            sctGroupDamage = 1,
+            sctGroupWindow = math.huge,
+            sctShowGroupCount = 0,
         },
     }) do
         local copy = display.Copy(saved)
@@ -176,12 +190,28 @@ Test("SCT display defaults normalize missing values while retaining valid saved 
         end
     end
     AssertChoices(defaults)
-    local saved =
-        { sctStyle = "enemy", sctFont = "diablo", sctScale = 1.25, sctShortNumbers = false, sctDistanceScaling = false }
+    local saved = {
+        sctStyle = "enemy",
+        sctFont = "diablo",
+        sctScale = 1.25,
+        sctShortNumbers = false,
+        sctDistanceScaling = false,
+        sctGroupDamage = false,
+        sctGroupWindow = 0.25,
+        sctShowGroupCount = false,
+    }
     context.env.SurvivorsDragonUiDisplay = saved
     AssertChoices(saved)
-    local preview =
-        { sctStyle = "msbt", sctFont = "default", sctScale = 0.75, sctShortNumbers = true, sctDistanceScaling = true }
+    local preview = {
+        sctStyle = "msbt",
+        sctFont = "default",
+        sctScale = 0.75,
+        sctShortNumbers = true,
+        sctDistanceScaling = true,
+        sctGroupDamage = true,
+        sctGroupWindow = 0.75,
+        sctShowGroupCount = true,
+    }
     display.BeginEdit()
     for key, value in pairs(preview) do
         display.Set(key, value)
@@ -1301,6 +1331,87 @@ Test("Performance Mode renders summed damage while restored normal mode shows ev
         assert(#context:Labels() == 3 and not summed:IsVisible(), "sum lifetime was restarted by the mode transition")
         context:Tick(0.3)
         assert(#context:Labels() == 0, "normal groups lost their full original display lifetime")
+    end
+end)
+
+Test("grouped damage keeps its hit count through window and number previews and clears it on reuse", function()
+    for _, style in ipairs({ "enemy", "msbt", "diablo" }) do
+        local context = SCT(style == "msbt", function(setup)
+            setup.settings.sctStyle = style
+            setup.settings.sctGroupDamage, setup.settings.sctGroupWindow = true, 0.5
+            setup.settings.sctShowGroupCount = true
+        end)
+        context:Hit(1500)
+        context:Hit(1500)
+        context:Tick(0.2)
+        assert(#context:Labels() == 0, "the group drew before its window closed")
+        context:SetSetting("sctGroupWindow", 0.75)
+        context:Tick(0.01)
+        local labels = context:Labels()
+        local label = assert(labels[1], "a window change discarded settled hits")
+        local full = style == "diablo" and "(x2) 3,000" or "(x2) 3000"
+        assert(#labels == 1 and label:GetText() == full, "the combined label lost its count or total")
+        context:SetSetting("sctShortNumbers", true)
+        assert(label:GetText() == "(x2) 3K", "abbreviating the total changed the hit count")
+        context:SetSetting("sctShowGroupCount", false)
+        assert(context:Labels()[1] == label and label:GetText() == "3K", "hiding the count replaced the active total")
+        context:SetSetting("sctShowGroupCount", true)
+        assert(context:Labels()[1] == label and label:GetText() == "(x2) 3K", "the active count did not restore")
+        local icon
+        for _, object in ipairs(context.objects) do
+            if object.kind == "Texture" and object.parent == label.parent then icon = object end
+        end
+        assert(icon and not icon:IsVisible(), "the grouped label ignored disabled icons")
+        context:SetSetting("damageIcons", true)
+        assert(icon:IsVisible() and label:GetText() == "(x2) 3K", "showing the icon changed the grouped label")
+        context:Tick(2)
+        assert(#context:Labels() == 0, "the grouped label did not expire")
+        context:SetSetting("sctShowGroupCount", false)
+        context:Hit(600)
+        context:Tick(0.76)
+        labels = context:Labels()
+        assert(#labels == 1 and labels[1] == label and label:GetText() == "600", "pool reuse showed a hidden count")
+        context:SetSetting("sctShowGroupCount", true)
+        assert(label:GetText() == "(x1) 600", "pool reuse lost the new count or retained the old one")
+    end
+end)
+
+Test("grouped damage combines normal and critical hits while respecting each result filter", function()
+    for _, scrolling in ipairs({ false, true }) do
+        for _, case in ipairs({
+            { false, "(x2) 1195" },
+            { "sctCriticalHits", "(x1) 956" },
+            { "sctNormalHits", "(x1) 239" },
+        }) do
+            local context = SCT(scrolling, function(setup)
+                setup.settings.sctGroupDamage, setup.settings.sctGroupWindow = true, 0.5
+                setup.settings.sctShowGroupCount = true
+            end)
+            context:Hit(956)
+            context.critical = true
+            context:Hit(239)
+            context:Tick(0.2)
+            if case[1] then context:SetSetting(case[1], false) end
+            context:Tick(0.31)
+            local labels = context:Labels()
+            assert(#labels == 1 and labels[1]:GetText() == case[2], "result filtering counted the wrong hits")
+            if not case[1] then
+                local label = labels[1]
+                local r, g, b = label:GetTextColor()
+                assert(r == 1 and g == 0.45 and b == 0.10, "mixed damage lost its critical styling")
+                context:SetSetting("sctCriticalHits", false)
+                assert(
+                    context:Labels()[1] == label and label:GetText() == "(x1) 956",
+                    "filtering replaced the live total"
+                )
+                r, g, b = label:GetTextColor()
+                assert(r == 0.72 and g == 0.72 and b == 0.72, "filtered critical damage still colored the label")
+                context:SetSetting("sctCriticalHits", true)
+                assert(label:GetText() == "(x1) 956", "filter restoration replayed retired critical damage")
+                context:SetSetting("sctNormalHits", false)
+                assert(#context:Labels() == 0, "filtering the last visible subtotal left the label active")
+            end
+        end
     end
 end)
 

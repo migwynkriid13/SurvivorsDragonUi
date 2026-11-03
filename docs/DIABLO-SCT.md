@@ -146,8 +146,8 @@ status and resolved icon. Unidentified unnamed abilities stay yellow rather
 than sharing an invented source. No target identity, health loss, damage
 amount tier, random chance or inferred spawn identity is introduced.
 
-The same rule runs on each normal-mode hit and before Performance Mode's 300 ms
-sums. A sum of many ordinary-sized criticals stays yellow. A group containing
+The same rule runs on each original hit before any grouping.
+A sum of many ordinary-sized criticals stays yellow. A group containing
 an amber-qualified original critical displays amber; its total never trains or
 qualifies against the baseline. Original amounts, critical flags, matching,
 filters, meter counters and normal-hit color samples remain unchanged.
@@ -192,13 +192,12 @@ place and omits a zero decimal; the T tier remains the highest. Full Diablo
 values retain comma grouping when off; other styles keep their original full
 format. Localized miss/avoidance text never goes through numeric abbreviation.
 
-Each active label keeps only its own original display value (the completed
-presentation-group total when applicable). Preview/Cancel reformats and refits
-that value without moving or restarting the number, changing its font/color or
-expiry, closing intake, or recomputing a total from compact text. Pool retirement
-clears this value. Queued hits use the current choice when displayed; their
-original matching amounts and the separate normal hits / 300 ms sum policies stay
-intact. The meter and native counters never consume abbreviated values.
+Each active label keeps its display value (the completed group total when
+applicable) and optional hit count. Preview/Cancel reformats and refits the value
+without changing the hit count, moving or restarting the number, changing its
+font/color or expiry, closing intake, or recomputing a total from compact text.
+Pool retirement clears both scalars. Queued hits use the current abbreviation
+choice when displayed. The meter and native counters never consume abbreviated values.
 
 The checkbox adds one lazy settings button, four texture regions and one label;
 no combat region, asset, event, updater or SavedVariable is added. Formatting
@@ -305,8 +304,7 @@ When enabled, distance sizing uses the documented distance from your hero.
 Turning or zooming the camera alone does not change that factor. Missing native
 player-distance data retains the chosen size. Existing animation scale and
 critical pop multiply that factor. Both Performance Mode states share the
-projection, size and visibility behavior. Normal mode displays every hit separately;
-Performance Mode retains its 300 ms sums. Separate native targets/casters cannot share an arbitrary anchor.
+projection, size and visibility behavior. Groups keep separate casters.
 MSBT remains independent of world anchors.
 
 The addon feature-detects and validates the complete provider. Old builds keep
@@ -336,18 +334,52 @@ old numbers never follow its new occupant. Pool retirement clears the label's
 origin reference before another hit acquires it. Existing matching ambiguity,
 health reads and native input ownership remain unchanged.
 
-Performance Mode follows the existing explicit SCT exception: preserve the
-selected animation and lifetime, and sum matching same-attack damage within the
-fixed inclusive 300 ms window. Normal mode displays every damage hit separately,
-including equal amounts on the same or different enemies, without a grouping window.
-Mode changes close old intake without
-restarting active labels or rewriting an existing group total.
+## Group damage numbers
+
+The optional grouping switch starts off. Its window offers 0.1, 0.25, 0.5,
+0.75 and 1 second, with 0.5 seconds selected by default. The first hit starts a
+fixed window; matching hits at or before the deadline join the sum. A later hit
+starts another batch. Once the window closes and its hits have settled, the
+existing label shows the total, with the attack icon if enabled.
+**Show hit count** starts on and prefixes explicit groups with `(x1)`, `(x2)`
+and so on. It reformats active groups during preview and Cancel without
+restarting their animation or changing the collection window. Misses and
+unidentified attacks stay separate. The window trades response time for fewer
+numbers.
+
+Spell, attacker, damage category, school and icon still separate hits.
+Normal and critical hits share the attack window. Each enemy retains one
+subtotal per result so its current filters determine which hits contribute.
+If a visible total includes a critical hit, it uses critical styling. Turning
+off either result removes that subtotal from active labels. Turning it back
+on applies to future labels. At the deadline,
+the native world feed combines nearby visible targets using a same-frame
+projection estimate of eight yards. The combined number follows the enemy
+with the largest subtotal. Distant targets and targets without a visible point
+retain separate labels. On older clients, the equivalent comparison uses
+recently resolved nameplate positions within 100 UI units. Unresolved hits
+use their reported names and existing fallback positions. MSBT groups within
+its single screen stream.
+
+The optional native grouping uses the received attack identity even if the
+hits have different meter credit. Combat text totals do not affect the meter.
+
+The option uses the selected window in either Performance Mode state. With it
+off, Performance Mode keeps its inclusive 300 ms sums without a count and normal
+mode shows individual hits. Preview, Confirm, Cancel, profiles and both resets
+use the existing display settings. Changing the effective grouping policy
+closes old intake without dropping queued hits or changing active labels.
+The lazy Combat page reuses the shared dropdown pool and adds three buttons,
+one passive wrapper, twelve textures and eight FontStrings. Gameplay reuses the
+existing queue, renderer and pool, with no new frame, region, updater or saved
+variable.
 
 The Diablo animation adds no combat frame, drawing region, event, updater or
 SavedVariable. The optional font adds one unmodified 359,048-byte TTF. Each active entry still uses its original holder, inner visual,
 FontString and optional icon; the pool grows to observed peak concurrency and is
 reused. Formatting and random choices are chosen once at acquisition. Each
-pending group and active label can retain one existing origin reference. The
+pending group retains one origin per subtotal and each active label retains
+one origin. The
 active loop copies that origin's two cached coordinates; it adds no position
 history, smoothing, native read, scan or per-frame table. Only live labels run
 their own animation math, identically in both Performance Mode states.

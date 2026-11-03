@@ -1063,6 +1063,35 @@ for _, button in ipairs(dialog.sctDistanceSettings.controls) do
     assert(not button.mouse, "off scaling retained distance input")
 end
 display.Set("sctDistanceScaling", true)
+dialog.navigation.Search("Group damage numbers")
+assert(
+    #dialog.navigation.results >= 1 and dialog.navigation.results[1].target == "sctGroupDamage",
+    "grouping toggle was absent from search"
+)
+dialog.navigation.OpenResult(1)
+local grouping = assert(dialog.sctGroupSettings)
+local groupingToggle = assert(env.displayControls.sctGroupDamage)
+assert(not display.Get("sctGroupDamage") and not grouping.dropdown.mouse, "grouping input did not start off")
+dialog.navigation.Search("Show hit count")
+assert(
+    #dialog.navigation.results == 1 and dialog.navigation.results[1].target == "sctShowGroupCount",
+    "hit-count toggle was absent from search"
+)
+dialog.navigation.OpenResult(1)
+local countToggle = assert(env.displayControls.sctShowGroupCount)
+assert(countToggle.editorChecked and not countToggle.mouse, "hit count should default on and depend on grouping")
+context:Call(groupingToggle, "OnClick")
+assert(grouping.dropdown.mouse and grouping.dropdown.dropdownValue == 0.5, "grouping window did not become available")
+assert(countToggle.mouse, "enabled grouping kept the hit-count toggle disabled")
+context:Call(countToggle, "OnClick")
+assert(not display.Get("sctShowGroupCount") and not env.SurvivorsDragonUiDisplay, "hit count did not preview")
+SelectChoice(grouping.dropdown, 0.75)
+assert(display.Get("sctGroupWindow") == 0.75 and not env.SurvivorsDragonUiDisplay, "window selection did not preview")
+context:Call(groupingToggle, "OnClick")
+assert(not grouping.dropdown.mouse and display.Get("sctGroupWindow") == 0.75, "off grouping lost its selected window")
+assert(not countToggle.mouse and not countToggle.editorChecked, "off grouping lost its hit-count choice")
+context:Call(groupingToggle, "OnClick")
+dialog.navigation.ClearSearch()
 context:Call(env.displayControls.sctShortNumbers, "OnClick")
 assert(not display.Get("sctShortNumbers") and not env.SurvivorsDragonUiDisplay, "full numbers did not preview")
 local function AssertSctFont(selected)
@@ -1101,6 +1130,7 @@ for _, mode in ipairs({ "off", "default", "on" }) do
     assert(outgoingMode == mode and dialog.sctModeDropdown.dropdownValue == mode)
     assert(dialog.sctStyleDropdown.dropdownEnabled == (mode == "on"))
     assert(dialog.sctFontDropdown.dropdownEnabled == (mode == "on"))
+    assert(countToggle.mouse == (mode == "on") and not countToggle.editorChecked)
 end
 AssertSctStyle("diablo")
 SelectChoice(dialog.sctStyleDropdown, "enemy")
@@ -1111,6 +1141,9 @@ AssertSctFont("default")
 assert(
     display.Get("sctShortNumbers")
         and not display.Get("sctDistanceScaling")
+        and not display.Get("sctGroupDamage")
+        and display.Get("sctShowGroupCount")
+        and display.Get("sctGroupWindow") == 0.5
         and display.Get("sctScale") == 0.9
         and not display.Get("performanceMode"),
     "Cancel did not restore default combat choices"

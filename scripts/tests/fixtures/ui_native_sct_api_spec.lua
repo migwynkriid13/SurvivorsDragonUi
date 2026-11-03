@@ -481,6 +481,37 @@ Test("credited native meter sources separate borrowed-spell sums without caption
     assert(#context:Labels() == 1 and context:Labels()[1]:GetText() == "50", "optional metadata dropped legacy hits")
 end)
 
+Test("optional native grouping sums one skill across nearby targets and follows the strongest target", function()
+    for _, performance in ipairs({ false, true }) do
+        local context = Scene("enemy", performance, function(setup)
+            setup.settings.sctGroupDamage, setup.settings.sctGroupWindow = true, 0.5
+            setup.settings.sctShowGroupCount = true
+        end)
+        context:Prime()
+        local small, smallPoint =
+            context:NativeHit(239, { targetId = "nearby", meterSourceKey = "source:splash", critical = true })
+        local large, largePoint = context:NativeHit(956, { targetId = "main", meterSourceKey = "source:cast" })
+        local far, farPoint = context:NativeHit(250, { targetId = "distant", meterSourceKey = "source:cast" })
+        smallPoint.x, largePoint.x, farPoint.x = 200, 264, 560
+        context:Tick(0.35)
+        assert(#context:Labels() == 0, "native grouping ignored the chosen window")
+        context:Tick(0.16)
+        local labels, byValue = context:Labels(), {}
+        for _, label in ipairs(labels) do
+            byValue[label:GetText()] = label
+        end
+        local combined = assert(byValue["(x2) 1195"], "nearby targets or different credits prevented the skill sum")
+        local separate = assert(byValue["(x1) 250"], "distant damage lost its individual label")
+        assert(#labels == 2, "optional grouping duplicated a displayed hit")
+        Close(Holder(combined).anchor.x, largePoint.x)
+        Close(Holder(separate).anchor.x, farPoint.x)
+        assert(
+            small.amount == 239 and large.amount == 956 and far.amount == 250,
+            "display grouping changed native events"
+        )
+    end
+end)
+
 Test("native presentation timestamps retain inclusive grouping deadlines across batched receipt", function()
     for _, performance in ipairs({ false, true }) do
         local window = performance and 0.3 or 0.075

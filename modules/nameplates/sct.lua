@@ -143,12 +143,12 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         reflected = "sctReflectedDamage",
     }
 
-    local function ShouldShowText(info)
+    local function ShouldShowText(info, skipResult)
         if info.kind == "damage" then
             if info.sourceIsPet and not DFRL.display.Get("sctPetDamage") then return false end
             if info.areaDamage == true and not DFRL.display.Get("sctAreaDamage") then return false end
             local result = info.critical and "sctCriticalHits" or "sctNormalHits"
-            if not DFRL.display.Get(result) then return false end
+            if not skipResult and not DFRL.display.Get(result) then return false end
         end
         -- Result and damage-category choices must both allow a damage label.
         -- Miss/avoidance notices retain their independent control.
@@ -204,7 +204,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         reference = DFRL.display.Get("sctDistanceReference"),
         minimum = DFRL.display.Get("sctDistanceMinimum"),
     }
-    local groupWindow = DFRL.display.Get("performanceMode") and PERFORMANCE_GROUP_WINDOW or nil
+    local grouping = {}
     -- Keep V's visible request separate from the backing coordinate feed. The
     -- native verbs do not write FrameXML's saved NAMEPLATES_ON preference.
     local enemyPlatesEnabled = NAMEPLATES_ON and true or false
@@ -556,7 +556,8 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         text.holder:ClearAllPoints()
         text.spell, text.damageType, text.iconTexture = nil, nil, nil
         text.kind = nil
-        text.displayValue = nil
+        text.displayValue, text.hitCount = nil, nil
+        text.normalPart, text.criticalPart = nil, nil
         text.critical = nil
         text.largeCritical = nil
         text.sourceIsPet = nil
@@ -718,7 +719,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                 PlateRange(data, sample)
                 PlateValue(data, sample)
             end
-            plateStyle.Update(plate, data, nameplatesNamesOnly, nameplateFontSize, sample, groupWindow ~= nil)
+            plateStyle.Update(plate, data, nameplatesNamesOnly, nameplateFontSize, sample, grouping.performance)
         end
         if not IsShownEnemy(plate, data, sample) then
             RetirePlate(plate)
@@ -1675,9 +1676,13 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     end
 
     local function SyncGroupWindow()
-        local window = DFRL.display.Get("performanceMode") and PERFORMANCE_GROUP_WINDOW or nil
-        if groupWindow == window then return end
-        groupWindow = window
+        grouping.performance = DFRL.display.Get("performanceMode") == true
+        grouping.showCount = DFRL.display.Get("sctShowGroupCount") ~= false
+        local enabled = DFRL.display.Get("sctGroupDamage") == true
+        local window = enabled and DFRL.display.Get("sctGroupWindow")
+            or (grouping.performance and PERFORMANCE_GROUP_WINDOW or nil)
+        if grouping.window == window and grouping.enabled == enabled then return end
+        grouping.window, grouping.enabled = window, enabled
         -- Finish old intake under its existing matching/settle gates. Keep
         -- queued hits and active motion, without joining across mode changes.
         for _, group in ipairs(pendingGroups) do
@@ -1690,7 +1695,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
 
     local function LargeCritical(info, identity, now)
         -- Cosmetic emphasis, not an inferred native crit/Overpower result.
-        -- Observe original critical amounts before any Performance Mode sums.
+        -- Observe original critical amounts before any display sums.
         if textStyle ~= "diablo" or not info.critical or not identity then return end
         if not IsFiniteNumber(now) or not IsFiniteNumber(info.amount) or info.amount <= 0 then return end
         local history, config = criticalHistory, DIABLO.history
@@ -1755,6 +1760,18 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         return large
     end
 
+    local function AddGroupPart(target, info, largeCritical, x, y)
+        local key = info.critical and "criticalPart" or "normalPart"
+        local part = target[key]
+        if not part then
+            part = { info = info, amount = 0, count = 0, x = 0, y = 0 }
+            target[key] = part
+        end
+        part.amount, part.count = part.amount + info.amount, part.count + 1
+        part.x, part.y = part.x + x, part.y + y
+        part.largeCritical = part.largeCritical or largeCritical
+    end
+
     local function QueueCombatText(info, now)
         local identity, byAmount, group, bucketKey, largeCritical
         if info.kind == "damage" then
@@ -1783,14 +1800,17 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                     .. IconIdentityPart(info.sourceIsPet and "pet" or "")
                     .. IconIdentityPart(info.damageType or "")
                     .. IconIdentityPart(info.school or "")
-                    .. IconIdentityPart(info.critical and "critical" or "normal")
                     .. IconIdentityPart(info.areaDamage == true and "area" or "")
                     .. IconIdentityPart(TextureKey(info.iconTexture) or FALLBACK_ICON)
-                    .. IconIdentityPart(info.nativeIdentity or "")
-                largeCritical = LargeCritical(info, identity, now)
-                -- Normal mode gives every hit its own label, even when its
-                -- amount and receipt time match another enemy's damage.
-                if groupWindow then
+                local result = IconIdentityPart(info.critical and "critical" or "normal")
+                local exactIdentity = identity .. result .. IconIdentityPart(info.nativeIdentity or "")
+                largeCritical = LargeCritical(info, exactIdentity, now)
+                if grouping.window then
+                    -- Explicit grouping uses the received attack and caster.
+                    -- Result, target and credit remain part of the default key.
+                    identity = grouping.enabled
+                            and (identity .. IconIdentityPart(info.nativeAttackIdentity or info.nativeIdentity or ""))
+                        or exactIdentity
                     byAmount = intakeBuckets[identity]
                     if not byAmount then
                         byAmount = {}
@@ -1817,30 +1837,38 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             group = {
                 info = info,
                 time = now,
-                closesAt = groupWindow and now + groupWindow or nil,
+                closesAt = byAmount and now + grouping.window or nil,
                 bucket = byAmount,
                 bucketKey = bucketKey,
                 identity = identity,
                 displayAmount = byAmount and info.amount or nil,
+                explicit = byAmount and grouping.enabled or nil,
                 remaining = 0,
                 count = 0,
                 x = 0,
                 y = 0,
             }
+            if group.explicit and not msbtStyle then
+                group.targets, group.targetIndex = {}, {}
+            end
             table.insert(pendingGroups, group)
             if byAmount then byAmount[bucketKey] = group end
         end
         -- A grouped label may emphasize a qualifying original member. Its
         -- summed total never qualifies on its own or enters the baseline.
-        group.largeCritical = group.largeCritical or largeCritical
+        if not group.explicit then group.largeCritical = group.largeCritical or largeCritical end
         if msbtStyle then
             -- The fixed stream has no per-hit origin to resolve. Retain the
             -- latest member's original age gate without storing each arrival.
-            group.count = group.count + 1
+            if group.explicit then
+                AddGroupPart(group, info, largeCritical, 0, 0)
+            else
+                group.count = group.count + 1
+            end
             group.lastArrival = math.max(group.lastArrival or now, now)
         else
             group.remaining = group.remaining + 1
-            table.insert(pending, { info = info, time = now, group = group })
+            table.insert(pending, { info = info, time = now, group = group, largeCritical = largeCritical })
         end
     end
 
@@ -1870,18 +1898,24 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         end
     end
 
-    local function DamageValue(value, diablo)
-        if not IsFiniteNumber(value) or value < 0 then return tostring(value) end
+    local function DamageValue(value, diablo, hitCount)
         -- Shared K/M/B/T decimal tiers are display-only. This value may be a
         -- completed group's total; its original per-hit inputs stay untouched.
-        if shortNumbers then return T.CompactHealth(value, true) end
-        if not diablo then return tostring(value) end
-        local result = string.format("%.0f", value)
-        local grouped, changed
-        repeat
-            grouped, changed = string.gsub(result, "^(%d+)(%d%d%d)", "%1,%2")
-            result = grouped
-        until changed == 0
+        local result
+        if not IsFiniteNumber(value) or value < 0 then
+            result = tostring(value)
+        elseif shortNumbers then
+            result = T.CompactHealth(value, true)
+        elseif diablo then
+            result = string.format("%.0f", value)
+            local changed
+            repeat
+                result, changed = string.gsub(result, "^(%d+)(%d%d%d)", "%1,%2")
+            until changed == 0
+        else
+            result = tostring(value)
+        end
+        if hitCount and grouping.showCount then return "(x" .. hitCount .. ") " .. result end
         return result
     end
 
@@ -1987,8 +2021,38 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         end
     end
 
+    function grouping.HitSize(text)
+        if text.diablo then
+            return (text.critical and 1.25 or (text.damageType == "periodic" and 0.82 or 0.95)) * text.sizeJitter / 100
+        end
+        return text.critical and 1.5 or 1
+    end
+
+    local function GroupTotals(normal, critical)
+        return (normal and normal.amount or 0) + (critical and critical.amount or 0),
+            (normal and normal.count or 0) + (critical and critical.count or 0)
+    end
+
+    function grouping.RefreshFilters(text)
+        local normal, critical = text.normalPart, text.criticalPart
+        if normal and not DFRL.display.Get("sctNormalHits") then normal = nil end
+        if critical and not DFRL.display.Get("sctCriticalHits") then critical = nil end
+        if not normal and not critical then return false end
+        if normal == text.normalPart and critical == text.criticalPart then return true end
+        text.normalPart, text.criticalPart = normal, critical
+        text.displayValue, text.hitCount = GroupTotals(normal, critical)
+        text.critical, text.impact = critical ~= nil, critical ~= nil
+        text.largeCritical = critical and critical.largeCritical
+        text.color = (critical or normal).info.color
+        text.sizeScale = grouping.HitSize(text)
+        return true, true
+    end
+
+    SyncGroupWindow()
     DFRL.display.Listen(function()
+        local previousCountVisibility = grouping.showCount
         SyncGroupWindow()
+        local countChanged = previousCountVisibility ~= grouping.showCount
         local style = DFRL.display.Get("sctStyle")
         if textStyle ~= style then
             textStyle = style
@@ -2026,16 +2090,21 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         damageIcons = enabled
         for index = table.getn(activeTexts), 1, -1 do
             local text = activeTexts[index]
-            if not ShouldShowText(text) then
+            local visible, groupChanged = ShouldShowText(text, text.hitCount ~= nil), false
+            if visible and text.hitCount then
+                visible, groupChanged = grouping.RefreshFilters(text)
+            end
+            if not visible then
                 ReleaseText(table.remove(activeTexts, index))
             else
                 if fontChanged then ApplyTextFont(text, GetTime()) end
-                if numbersChanged and text.kind == "damage" then
-                    if T.SetTextIfChanged(text.label, DamageValue(text.displayValue, text.diablo)) then
+                local reformat = numbersChanged or groupChanged or (countChanged and text.hitCount)
+                if reformat and text.kind == "damage" then
+                    if T.SetTextIfChanged(text.label, DamageValue(text.displayValue, text.diablo, text.hitCount)) then
                         text.needsMeasure = true
                     end
                 end
-                if (fontChanged or numbersChanged) and text.needsMeasure then FitText(text) end
+                if (fontChanged or reformat) and text.needsMeasure then FitText(text) end
                 UpdateTextColor(text)
                 if iconsChanged then UpdateIcon(text) end
             end
@@ -2114,7 +2183,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         return strong and DAMAGE_COLORS.strong or DAMAGE_COLORS.normal
     end
 
-    local function DisplayDamage(info, x, y, displayAmount, largeCritical, origin)
+    local function DisplayDamage(info, x, y, displayAmount, largeCritical, origin, hitCount, parts)
         -- Filter only after every original hit has consumed its matching and
         -- color evidence, including members of a visually collapsed group.
         if not ShouldShowText(info) then return end
@@ -2134,12 +2203,10 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         text.started = GetTime()
         text.diablo = textStyle == "diablo"
         text.duration = text.diablo and DIABLO.duration or TEXT_DURATION
-        text.impact = info.critical or info.kind == "miss"
-        text.sizeScale = info.critical and 1.5 or 1
+        text.critical, text.damageType = info.critical, info.damageType
+        text.impact = text.critical or info.kind == "miss"
         if text.diablo then
-            text.sizeScale = (info.critical and 1.25 or (info.damageType == "periodic" and 0.82 or 0.95))
-                * math.random(94, 106)
-                / 100
+            text.sizeJitter = math.random(94, 106)
             text.arcX = arcDirection * math.random(18, 42)
             text.launch = math.random(-8, 18)
             arcDirection = -arcDirection
@@ -2149,16 +2216,17 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             text.gravity = text.launch + 65
             arcDirection = -arcDirection
         end
+        text.sizeScale = grouping.HitSize(text)
         local displayText = tostring(value)
-        if info.kind == "damage" then displayText = DamageValue(value, text.diablo) end
+        if info.kind == "damage" then displayText = DamageValue(value, text.diablo, hitCount) end
         if info.kind == "miss" and not info.nativeIdentity then displayText = DFRL.locale.CombatText(displayText) end
         text.kind = info.kind
-        text.displayValue = value
+        text.displayValue, text.hitCount = value, hitCount
+        text.normalPart, text.criticalPart = parts and parts.normalPart, parts and parts.criticalPart
         ApplyTextFont(text, text.started)
         text.label:SetText(displayText)
         text.label:Show()
-        text.spell, text.damageType, text.iconTexture = info.spell, info.damageType, info.iconTexture
-        text.critical = info.critical
+        text.spell, text.iconTexture = info.spell, info.iconTexture
         text.largeCritical = largeCritical
         text.sourceIsPet = info.sourceIsPet
         text.areaDamage = info.areaDamage
@@ -2186,6 +2254,105 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         table.insert(activeTexts, text)
     end
 
+    local function AddGroupTarget(group, entry, x, y, origin)
+        local key = origin and (origin.targetId or origin) or entry.info.targetName
+        local target = key and group.targetIndex[key]
+        if not target then
+            target = {}
+            table.insert(group.targets, target)
+            if key then group.targetIndex[key] = target end
+        end
+        target.origin = origin
+        AddGroupPart(target, entry.info, entry.largeCritical, x, y)
+    end
+
+    local function SelectGroupParts(target)
+        local normal, critical = target.normalPart, target.criticalPart
+        if normal and not ShouldShowText(normal.info) then normal = nil end
+        if critical and not ShouldShowText(critical.info) then critical = nil end
+        if not normal and not critical then return false end
+        target.normalPart, target.criticalPart = normal, critical
+        target.displayAmount, target.count = GroupTotals(normal, critical)
+        target.x = (normal and normal.x or 0) + (critical and critical.x or 0)
+        target.y = (normal and normal.y or 0) + (critical and critical.y or 0)
+        return true
+    end
+
+    local function MergeGroupPart(part, member)
+        if not part or not member then return part or member end
+        part.amount, part.count = part.amount + member.amount, part.count + member.count
+        part.largeCritical = part.largeCritical or member.largeCritical
+        return part
+    end
+
+    local function DisplayGroup(group, target)
+        local critical = group.criticalPart
+        local info = (critical or group.normalPart).info
+        DisplayDamage(
+            info,
+            target.x / target.count,
+            target.y / target.count,
+            group.displayAmount,
+            critical and critical.largeCritical,
+            target.origin,
+            group.hitCount or group.count,
+            group
+        )
+    end
+
+    local function NearbyGroupOrigins(first, second, now)
+        if not first or not second then return false end
+        local dx, dy = first.x - second.x, first.y - second.y
+        if first.native or second.native then
+            if not (first.native and first.visible and second.native and second.visible) then return false end
+            local units = math.min(first.unitsPerYard, second.unitsPerYard)
+            dx, dy = dx / units, dy / units
+            local depth = first.cameraDepth - second.cameraDepth
+            return dx * dx + dy * dy + depth * depth <= 8 * 8
+        end
+        -- Legacy plates have screen points only. A shared fallback point is
+        -- never evidence that different reported targets were close.
+        return first.positionAt
+            and second.positionAt
+            and now - first.positionAt <= RECENT_PLATE_TIME
+            and now - second.positionAt <= RECENT_PLATE_TIME
+            and dx * dx + dy * dy <= 100 * 100
+    end
+
+    local function DisplayGroupedTargets(targets, now)
+        local count, kept = table.getn(targets), 0
+        for index = 1, count do
+            local target, cluster = targets[index], nil
+            -- Bound the spatial search in unusually large pulls. Excess
+            -- distinct clusters still render without losing any damage.
+            for candidate = 1, math.min(kept, 32) do
+                if NearbyGroupOrigins(targets[candidate].origin, target.origin, now) then
+                    cluster = targets[candidate]
+                    break
+                end
+            end
+            if cluster then
+                local largest = cluster.largestAmount or cluster.displayAmount
+                if target.displayAmount > largest then
+                    cluster.largestAmount, cluster.representative = target.displayAmount, target
+                else
+                    cluster.largestAmount = largest
+                end
+                cluster.displayAmount = cluster.displayAmount + target.displayAmount
+                cluster.hitCount = (cluster.hitCount or cluster.count) + target.count
+                cluster.normalPart = MergeGroupPart(cluster.normalPart, target.normalPart)
+                cluster.criticalPart = MergeGroupPart(cluster.criticalPart, target.criticalPart)
+            else
+                kept = kept + 1
+                targets[kept] = target
+            end
+        end
+        for index = 1, kept do
+            local cluster = targets[index]
+            DisplayGroup(cluster, cluster.representative or cluster)
+        end
+    end
+
     local function UpdatePending(now)
         local count, groupCount = table.getn(pending), table.getn(pendingGroups)
         if count == 0 and groupCount == 0 then return end
@@ -2207,17 +2374,17 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                 end
                 if x and y then
                     local group = entry.group
-                    if origin and origin.native then
-                        -- Native grouping includes the exact target incarnation.
-                        -- Its latest member's handle has the longest retention.
-                        group.origin = origin
-                    elseif group.count == 0 then
-                        group.origin = origin
-                    elseif group.origin ~= origin then
-                        group.origin = nil
+                    if group.targets then
+                        AddGroupTarget(group, entry, x, y, origin)
+                    else
+                        if (origin and origin.native) or group.count == 0 then
+                            group.origin = origin
+                        elseif group.origin ~= origin then
+                            group.origin = nil
+                        end
+                        group.count = group.count + 1
+                        group.x, group.y = group.x + x, group.y + y
                     end
-                    group.count = group.count + 1
-                    group.x, group.y = group.x + x, group.y + y
                     group.remaining = group.remaining - 1
                     resolved = true
                 end
@@ -2239,6 +2406,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         originIndex.ClearQueries()
 
         kept = 0
+        local ready, anchors
         for index = 1, groupCount do
             local group = pendingGroups[index]
             local bucket = group.bucket
@@ -2258,14 +2426,41 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                 and not group.bucket
                 and (not group.lastArrival or now - group.lastArrival >= EVENT_SETTLE)
             then
-                DisplayDamage(
-                    group.info,
-                    group.x / group.count,
-                    group.y / group.count,
-                    group.displayAmount,
-                    group.largeCritical,
-                    group.origin
-                )
+                if group.targets then
+                    local targets = group.targets
+                    local targetCount, visibleCount = table.getn(targets), 0
+                    for index = 1, targetCount do
+                        local target = targets[index]
+                        if SelectGroupParts(target) then
+                            visibleCount = visibleCount + 1
+                            targets[visibleCount] = target
+                        end
+                    end
+                    for index = visibleCount + 1, targetCount do
+                        targets[index] = nil
+                    end
+                    table.setn(targets, visibleCount)
+                    if visibleCount > 1 and targets[1].origin and targets[1].origin.native then
+                        ready, anchors = ready or {}, anchors or {}
+                        table.insert(ready, targets)
+                        for _, target in ipairs(targets) do
+                            table.insert(anchors, target.origin)
+                        end
+                    else
+                        DisplayGroupedTargets(targets, now)
+                    end
+                elseif group.explicit then
+                    if SelectGroupParts(group) then DisplayGroup(group, group) end
+                else
+                    DisplayDamage(
+                        group.info,
+                        group.x / group.count,
+                        group.y / group.count,
+                        group.displayAmount,
+                        group.largeCritical,
+                        group.origin
+                    )
+                end
             else
                 kept = kept + 1
                 pendingGroups[kept] = group
@@ -2275,6 +2470,12 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             pendingGroups[index] = nil
         end
         table.setn(pendingGroups, kept)
+        if ready then
+            if not nativeText.Project(anchors, now, false, nil, nil, true) then return false end
+            for _, targets in ipairs(ready) do
+                DisplayGroupedTargets(targets, now)
+            end
+        end
     end
 
     local function PrepareScrollPositions(now, elapsed)
@@ -2626,9 +2827,10 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                 QueueCombatText(info, info.nativeTime)
             end
         end
-        UpdatePending(now)
+        local pendingReady = UpdatePending(now) ~= false
         if
-            not nativeText.Project(
+            not pendingReady
+            or not nativeText.Project(
                 activeTexts,
                 now,
                 distanceScaling.enabled,

@@ -914,6 +914,15 @@ The assertions cover:
   no replacement allocation and a fresh display value; abbreviation/Cancel must
   update both normal labels. Matching-cache cases check each original hit's
   position and loss consumption instead of a shared presentation centroid.
+  Opt-in grouping cases cover the first-hit deadline, late arrivals,
+  legacy target names versus the single MSBT stream, override of the 300 ms
+  Performance Mode window, settings defaults/discard, and count rendering in
+  all three styles through abbreviation, icon toggling and pool reuse. Editor
+  cases cover search, the dependent window selector and preview/discard.
+  Native cases combine a direct and nearby splash hit with distinct meter
+  credits, retain the stronger target's anchor and show distant damage separately.
+  Mixed-result cases check both result filters before display and on a live
+  group, critical styling, singleton counts and live count visibility.
   These are CI-only source/lifecycle assertions.
   Area-filter cases load the generated native spell data and production SCT
   over fake boundaries. They cover default-on normalization, saved off,

@@ -89,19 +89,22 @@ matching, hit sizes or inferred changes in totals. See the
 [field definitions and reported examples](API-NOTES.md#combat-text-meter-attribution--01390-2026-11-02).
 
 SDUI retains nonempty string values for both additions. The key supplements
-attack/caster/target identity; the caption alone never changes grouping.
-Missing or unusable values retain older-client behavior without dropping a
-valid hit or requiring a meter query. Preserve target incarnations, caster
-ownership, school, critical, periodic/reflected status and resolved icons.
-Normal mode displays every received hit separately; Performance Mode retains
-its inclusive 300 ms sums, using native presentation timestamps and leaving
-original amounts unchanged.
+attack/caster/target identity for the default Performance Mode sums. The
+caption alone never changes grouping. Missing or unusable values retain
+older-client behavior without dropping a valid hit or requiring a meter query.
+With **Group damage numbers** enabled, the received spell and caster identify
+the attack even when its hits have different meter credits. Target subtotals
+use exact incarnation IDs and can combine at the window deadline when
+same-frame projection places them near each other. The label keeps the
+strongest visible subtotal's follow anchor. The opt-in policy lets normal
+and critical hits share a total while retaining each result's filter.
+Both policies preserve damage category, school, artwork and original amounts,
+and use native presentation timestamps.
 
 The shipped contract has no required `basicAttack` or `abilityKey`. Map the
 received `melee`/`ranged` categories to Auto attacks and `spell` to Direct damage;
-periodic/reflected booleans retain their dedicated filters. Performance Mode groups known spells
-by `spellId`, even without a name/icon, while distinct credited meter keys keep
-borrowed-spell hits separate. Plain native melee/ranged attacks can use their
+periodic/reflected booleans retain their dedicated filters. Both grouping policies combine known spells
+by `spellId`, even without a name/icon. Plain native melee/ranged attacks can use their
 received category; otherwise missing native attack identity keeps hits separate,
 even with a meter source key. Names or matching artwork never establish an
 unknown identity.

@@ -76,6 +76,9 @@ DFRL:NewMod("Display", 0, function()
         sctStyle = "diablo",
         sctFont = "default",
         sctShortNumbers = true,
+        sctGroupDamage = false,
+        sctShowGroupCount = true,
+        sctGroupWindow = 0.5,
         sctDistanceScaling = false,
         sctDistanceReference = 20,
         sctDistanceMinimum = 55,
@@ -147,6 +150,13 @@ DFRL:NewMod("Display", 0, function()
         { value = "4", label = "Trinket 1" },
         { value = "5", label = "Trinket 2" },
     }
+    display.sctGroupWindows = {
+        { value = 0.1, label = "0.1 s" },
+        { value = 0.25, label = "0.25 s" },
+        { value = 0.5, label = "0.5 s" },
+        { value = 0.75, label = "0.75 s" },
+        { value = 1, label = "1 s" },
+    }
 
     local ranges = {
         meterRows = { minimum = 1, maximum = 10, integer = true },
@@ -184,6 +194,11 @@ DFRL:NewMod("Display", 0, function()
     end
     local function NormalizeSctFont(value)
         if value == "default" or value == "diablo" then return value end
+    end
+    local function NormalizeSctGroupWindow(value)
+        for _, entry in ipairs(display.sctGroupWindows) do
+            if value == entry.value then return value end
+        end
     end
     local function NormalizeUiFont(value)
         for _, entry in ipairs(display.fonts) do
@@ -253,6 +268,7 @@ DFRL:NewMod("Display", 0, function()
         if key == "tallyStyle" then return NormalizeTallyStyle(value) or defaults[key] end
         if key == "lootMode" then return NormalizeLootMode(value) or defaults[key] end
         if key == "sctFont" then return NormalizeSctFont(value) or defaults[key] end
+        if key == "sctGroupWindow" then return NormalizeSctGroupWindow(value) or defaults[key] end
         if key == "uiFont" then return NormalizeUiFont(value) or defaults[key] end
         if key == "uiFontOutline" then return NormalizeUiFontOutline(value) or defaults[key] end
         if key == "sctStyle" then
@@ -323,6 +339,9 @@ DFRL:NewMod("Display", 0, function()
             if not value then return end
         elseif key == "sctFont" then
             value = NormalizeSctFont(value)
+            if not value then return end
+        elseif key == "sctGroupWindow" then
+            value = NormalizeSctGroupWindow(value)
             if not value then return end
         elseif key == "uiFont" then
             value = NormalizeUiFont(value)

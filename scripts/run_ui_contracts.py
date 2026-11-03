@@ -74,11 +74,13 @@ def main():
         xp_glow = extract_source("modules/xprep/xprep.lua", ["PaintGlow"])
         sct_queue = extract_source("modules/nameplates/sct.lua", [
             "DIABLO", "criticalHistory", "textStyle",
-            "FALLBACK_ICON", "EVENT_SETTLE", "EVENT_FALLBACK_DELAY", "PERFORMANCE_GROUP_WINDOW", "groupWindow", "DAMAGE_COLORS",
+            "FALLBACK_ICON", "EVENT_SETTLE", "EVENT_FALLBACK_DELAY", "PERFORMANCE_GROUP_WINDOW", "RECENT_PLATE_TIME", "grouping", "DAMAGE_COLORS",
             "DAMAGE_SAMPLE_LIMIT", "DAMAGE_SAMPLE_TIME", "DAMAGE_SAMPLE_MINIMUM", "STRONG_DAMAGE_RATIO",
-            "IsFiniteNumber", "TextureKey", "IconIdentityPart", "AreaDamage", "DamageColor", "SyncGroupWindow", "LargeCritical", "QueueCombatText", "UpdatePending", "HandleCombatEvent",
+            "IsFiniteNumber", "TextureKey", "IconIdentityPart", "AreaDamage", "DamageColor", "SyncGroupWindow", "LargeCritical",
+            "AddGroupPart", "QueueCombatText", "GroupTotals", "AddGroupTarget", "SelectGroupParts", "MergeGroupPart", "DisplayGroup",
+            "NearbyGroupOrigins", "DisplayGroupedTargets", "UpdatePending", "HandleCombatEvent",
         ])
-        sct_queue = sct_queue.rsplit("\nreturn ", 1)[0] + "\nreturn { Queue = QueueCombatText, Update = UpdatePending, Handle = HandleCombatEvent, SyncWindow = SyncGroupWindow }\n"
+        sct_queue = sct_queue.rsplit("\nreturn ", 1)[0] + "\nSyncGroupWindow()\nreturn { Queue = QueueCombatText, Update = UpdatePending, Handle = HandleCombatEvent, SyncWindow = SyncGroupWindow }\n"
         run_foam = extract_source("modules/ui/run.lua", ["DrawFoam", "UpdateBlueFoam"])
         run_static = extract_source("modules/ui/run.lua", [
             "IsNumber", "RUN_TIER_STYLES", "RunTier", "ApplyRunFill",

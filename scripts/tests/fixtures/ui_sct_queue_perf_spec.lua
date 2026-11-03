@@ -12,6 +12,7 @@ local function Queues(scrolling, performance)
     env.T.SourceIconFallback = "Interface\\Icons\\INV_Misc_QuestionMark"
     env.CustomEnabled = function() return true end
     env.UsesPlateOrigins = function() return false end
+    env.ShouldShowText = function() return true end
     env.ParseCombatEvent = function(_, info) return info end
     context.icons, context.origins, context.displays = 0, {}, {}
     env.CombatIcon = function(info)
@@ -23,8 +24,11 @@ local function Queues(scrolling, performance)
         table.insert(context.origins, { info = info, now = now, fallback = fallback })
         if context.resolve or fallback then return info.fixtureX or 4, info.fixtureY or 6 end
     end
-    env.DisplayDamage = function(info, x, y, displayAmount)
-        table.insert(context.displays, { info = info, x = x, y = y, displayAmount = displayAmount })
+    env.DisplayDamage = function(info, x, y, displayAmount, _largeCritical, _origin, groupCount)
+        table.insert(
+            context.displays,
+            { info = info, x = x, y = y, displayAmount = displayAmount, groupCount = groupCount }
+        )
     end
     -- Production Lua 5.0 queues remember their size after compaction.
     local insert, remove = env.table.insert, env.table.remove
@@ -258,6 +262,32 @@ for _, scrolling in ipairs({ false, true }) do
     end
 end
 print("PASS both SCT styles sum equal hits inside a fixed inclusive 300 ms Performance Mode window")
+
+for _, scrolling in ipairs({ false, true }) do
+    local context = Queues(scrolling, true)
+    context.resolve = true
+    context.settings.sctGroupDamage, context.settings.sctGroupWindow = true, 0.5
+    context.settings.sctShowGroupCount = true
+    context.settings.sctNormalHits, context.settings.sctCriticalHits = true, true
+    context.settings.sctDirectDamage = true
+    context.queue.SyncWindow()
+    context:AbilityHit(20, 80)
+    -- The mock supplies coordinates without a confirmed plate incarnation.
+    context:AbilityHit(30, 80.35, { targetName = "Other enemy" })
+    context.queue.Update(80.45)
+    assert(#context.displays == 0, "custom grouping used the shorter Performance Mode window")
+    context:AbilityHit(50, 80.5)
+    context:AbilityHit(60, 80.501)
+    context.queue.Update(80.59)
+    local displayed = assert(context.displays[1])
+    assert(displayed.displayAmount == (scrolling and 100 or 70), "the batch lost its inclusive boundary")
+    assert(displayed.groupCount == (scrolling and 3 or 2), "unresolved targets joined the wrong batch")
+    context.queue.Update(81.01)
+    local last = context.displays[scrolling and 2 or 3]
+    assert(last and (last.displayAmount or last.info.amount) == 60, "a hit past the deadline joined the old batch")
+    assert(#context.displays == (scrolling and 2 or 3), "custom grouping dropped or duplicated a batch")
+end
+print("PASS custom grouping overrides Performance Mode and keeps unresolved legacy targets separate outside MSBT")
 
 for _, scrolling in ipairs({ false, true }) do
     local context, env = Queues(scrolling, true)

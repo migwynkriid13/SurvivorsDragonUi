@@ -1273,6 +1273,11 @@ DFRL:NewMod("RunTimers", 5, function()
             fontEditor and fontEditor.sctDistanceSettings,
             mode == "on" and style ~= "msbt" and DFRL.display.Get("sctDistanceScaling")
         )
+        local grouping = fontEditor.sctGroupSettings
+        if grouping and grouping.frame:IsVisible() then
+            grouping.dropdown:SetValue(DFRL.display.Get("sctGroupWindow"))
+            SetSettingsEnabled(grouping, mode == "on" and DFRL.display.Get("sctGroupDamage"))
+        end
         SetSettingsEnabled(fontEditor and fontEditor.combatSettings, mode == "on")
     end
 
@@ -2223,7 +2228,7 @@ DFRL:NewMod("RunTimers", 5, function()
         local combatFilters = {
             {
                 label = "Damage type",
-                y = -530,
+                y = -674,
                 entries = {
                     { key = "sctNormalHits", label = "Normal damage" },
                     { key = "sctCriticalHits", label = "Critical damage" },
@@ -2231,7 +2236,7 @@ DFRL:NewMod("RunTimers", 5, function()
             },
             {
                 label = "Damage categories",
-                y = -592,
+                y = -736,
                 entries = {
                     { key = "sctAutoAttacks", label = "Auto-attacks" },
                     { key = "sctDirectDamage", label = "Direct abilities / spells" },
@@ -2320,6 +2325,24 @@ DFRL:NewMod("RunTimers", 5, function()
                     description = "Smallest size relative to your SCT size.",
                     offset = 418,
                 },
+                {
+                    key = "sctGroupDamage",
+                    label = "Group damage numbers",
+                    description = "Combine repeated hits from the same attack.",
+                    offset = 522,
+                },
+                {
+                    key = "sctGroupWindow",
+                    label = "Grouping window",
+                    description = "Time to collect hits after the first one.",
+                    offset = 522,
+                },
+                {
+                    key = "sctShowGroupCount",
+                    label = "Show hit count",
+                    description = "Show (x1), (x2) and so on beside grouped damage.",
+                    offset = 594,
+                },
             },
             timer = {
                 {
@@ -2363,6 +2386,7 @@ DFRL:NewMod("RunTimers", 5, function()
         SearchChoices("combat", modes, captions.outgoing)
         SearchChoices("combat", sctStyles, captions.sctStyle)
         SearchChoices("combat", sctFonts, captions.sctFont)
+        SearchChoices("combat", DFRL.display.sctGroupWindows, captions.sctGroupWindow)
         SearchChoices("timer", fontFaces, captions.timerFont)
         SearchChoices("timer", fontOutlines, captions.timerOutline)
         for _, group in ipairs(combatFilters) do
@@ -2844,7 +2868,7 @@ DFRL:NewMod("RunTimers", 5, function()
             sctDescription:SetJustifyV("TOP")
             sctDescription:SetTextColor(0.75, 0.73, 0.67)
             local combatPage = combat
-            combatPage:SetHeight(736)
+            combatPage:SetHeight(880)
             combat = CreateFrame("Frame", nil, combatPage)
             combat:SetAllPoints(combatPage)
             combat:EnableMouse(false)
@@ -2958,8 +2982,57 @@ DFRL:NewMod("RunTimers", 5, function()
                 )
                 control:SetPoint("TOPLEFT", distanceOptions, "TOPLEFT", (index - 1) * (filterSize + gap), 0)
             end
+            local groupCaption, windowCaption = captions.sctGroupDamage, captions.sctGroupWindow
+            local groupToggle = DisplayToggle(
+                combat,
+                groupCaption.key,
+                groupCaption.label,
+                groupCaption.description,
+                -groupCaption.offset,
+                filterSize
+            )
+            groupToggle:SetHeight(66)
+            groupToggle.description:SetHeight(34)
+            groupToggle.description:SetJustifyV("TOP")
+            local groupOptions = CreateFrame("Frame", nil, combat)
+            groupOptions:SetPoint("TOPLEFT", combat, "TOPLEFT", 0, -windowCaption.offset)
+            groupOptions:SetWidth(contentWidth)
+            groupOptions:SetHeight(144)
+            groupOptions:EnableMouse(false)
+            local groupSettings = { frame = groupOptions, controls = {} }
+            groupOptions.editorSettingsGroup = groupSettings
+            fontEditor.sctGroupSettings = groupSettings
+            local windowX = filterSize + gap
+            local windowLabel = FontEditorLabel(groupOptions, windowCaption.label, windowX, -6, 11)
+            windowLabel:SetWidth(filterSize)
+            windowLabel:SetJustifyH("LEFT")
+            local windowDropdown = Dropdown(
+                groupOptions,
+                DFRL.display.sctGroupWindows,
+                filterSize,
+                30,
+                function(value) DFRL.display.Set(windowCaption.key, value) end
+            )
+            windowDropdown:SetPoint("TOPLEFT", groupOptions, "TOPLEFT", windowX, -26)
+            groupSettings.dropdown = windowDropdown
+            local groupHint = FontEditorLabel(groupOptions, windowCaption.description, windowX, -62, 9)
+            groupHint:SetWidth(filterSize)
+            groupHint:SetJustifyH("LEFT")
+            groupHint:SetTextColor(0.59, 0.59, 0.56)
+            local countCaption = captions.sctShowGroupCount
+            local countToggle = DisplayToggle(
+                groupOptions,
+                countCaption.key,
+                countCaption.label,
+                countCaption.description,
+                windowCaption.offset - countCaption.offset,
+                filterSize
+            )
+            countToggle:SetHeight(66)
+            countToggle.description:SetHeight(34)
+            countToggle.description:SetJustifyV("TOP")
             divider = T.EditorDivider(combat, contentWidth)
-            divider:SetPoint("TOPLEFT", combat, "TOPLEFT", 0, -586)
+            divider:SetPoint("TOPLEFT", combat, "TOPLEFT", 0, -730)
             for _, group in ipairs(combatFilters) do
                 heading = FontEditorLabel(combat, group.label, 0, group.y, 12)
                 heading:SetTextColor(0.94, 0.79, 0.47)
