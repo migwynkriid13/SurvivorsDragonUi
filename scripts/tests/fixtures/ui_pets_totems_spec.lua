@@ -16,6 +16,10 @@ local function Pets()
     local create = context.Object
     function context:Object(...)
         local object = create(self, ...)
+        function object:SetScale(value)
+            self.context.writes.SetScale = (self.context.writes.SetScale or 0) + 1
+            self.scale = value
+        end
         function object:GetEffectiveScale()
             return (self.scale or 1) * (self.parent and self.parent:GetEffectiveScale() or 1)
         end

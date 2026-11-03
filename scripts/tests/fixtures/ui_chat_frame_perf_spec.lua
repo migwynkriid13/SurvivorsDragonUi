@@ -117,6 +117,7 @@ for _, performance in ipairs({ false, true }) do
     local delivered = {}
     for index = 1, 2 do
         local pane = native.CreateFrame("ScrollingMessageFrame", "ChatFrame" .. index, native.UIParent)
+        pane:RegisterEvent("UPDATE_CHAT_WINDOWS")
         function pane:SetTimeVisible(value) self.hold = value end
         function pane:SetFadeDuration(value) self.duration = value end
         function pane:SetFading(value) self.fading = value end
