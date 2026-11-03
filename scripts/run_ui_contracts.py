@@ -48,7 +48,7 @@ def main():
             "PIN_SIZE", "Number", "HideGuardianTooltip", "UpdateGuardianTooltip",
         ])
         guardian_timers = "local hoveredPin, hoveredName\n" + extract_source("modules/map/waypoints.lua", [
-            "PIN_SIZE", "Number", "Native", "FrameVisible", "MinimapEntries", "HideGuardianTooltip",
+            "PIN_SIZE", "guardianArt", "BindGuardianIcon", "Number", "Native", "FrameVisible", "MinimapEntries", "HideGuardianTooltip",
             "HideGuardianTimer", "UpdateGuardianTimer", "RecyclePins", "MakeMinimapPin", "PlacePin",
             "Offset", "DrawTrackedPin", "UpdateTrackerPins",
         ])
@@ -127,7 +127,7 @@ def main():
             "HOLD", "FADE", "SLIDE", "AtBottom", "FadeSettings", "Rearm", "Reveal", "PositionNative", "NoticeMessage",
         ])
         run_markers = extract_source("modules/ui/run.lua", [
-            "path", "SKULL_ICON", "BOSS_MARKER_ICON", "BOSS_MARKER_HALO", "MARKER_SIZE", "ACTIVE_GLOW_PERIOD", "ACTIVE_GLOW_MIN_ALPHA",
+            "SKULL_ICON", "MARKER_SIZE", "ACTIVE_GLOW_PERIOD", "ACTIVE_GLOW_MIN_ALPHA",
             "ACTIVE_GLOW_MAX_ALPHA", "BindBossMarkerArt", "NewRunMarker",
             "PrepareMarkerGlow",
             "ShowMarkerGlow", "HideMarkerTooltip",

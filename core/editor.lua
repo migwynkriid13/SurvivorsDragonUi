@@ -1361,7 +1361,9 @@ function DFRL.tools.LayoutEditorOptions(parent, controls, columns, gap, top)
             top, column, height = top + height, 0, 0
         end
         local itemHeight
-        if record.color then
+        if record.height then
+            itemHeight = record.height
+        elseif record.color then
             itemHeight = T.CompactEditorColor(control)
         else
             itemHeight = record.numeric and T.CompactEditorNumber(control) or T.CompactEditorToggle(control)

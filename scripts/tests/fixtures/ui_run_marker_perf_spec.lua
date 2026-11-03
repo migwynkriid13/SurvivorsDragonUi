@@ -4,6 +4,7 @@ assert(_VERSION == "Lua 5.1", "marker fixtures require the CI Lua 5.1 interprete
 
 local context = H.New()
 local env = context.env
+context:Load("core/display.lua", "Display")
 local create = context.Object
 function context:Object(...)
     local object = create(self, ...)
@@ -42,7 +43,6 @@ local bossIcon = env.DFRL:GetInfoOrCons("tex") .. "waypoint\\WorldQuestBoss.blp"
 local bossHalo = env.DFRL:GetInfoOrCons("tex") .. "timer\\WorldQuestBossHalo.blp"
 for index = 1, 5 do
     local marker = source.New(env.UIParent)
-    assert(marker.skull.texture == bossIcon, "scheduled marker did not bind the boss icon")
     marker.check = marker:CreateTexture(nil)
     local shown = marker.IsShown
     function marker:IsShown()
@@ -57,6 +57,7 @@ local before = #context.objects
 env.performanceMode = true
 update(false)
 assert(#context.objects == before, "Performance Mode prepared disabled skull halo objects")
+assert(env.markers[1].skull.texture == bossIcon, "scheduled marker did not bind the boss icon")
 assert(math.abs(markerSizes[env.markers[1].skull] - 17.1) < 0.000001, "upcoming skull was not reduced by 5%")
 assert(markerSizes[env.markers[2].skull] == 18 and markerSizes[env.markers[3].skull] == 18)
 for _, marker in ipairs(env.markers) do
@@ -202,4 +203,28 @@ assert(env.markers[4]:IsShown() and not retryHalo:IsShown() and env.render.activ
 context.failTexture, env.render.markerStatesDirty = nil, true
 update(false)
 assert(env.markers[4].glow == retryHalo and retryHalo:IsShown(), "failed binding did not reuse its halo region")
+local display = env.DFRL.display
+display.BeginEdit()
+display.Set("bossIconStyle", "original")
+env.render.markerStatesDirty = true
+update(false)
+assert(env.markers[4].skull.texture == "Interface\\TargetingFrame\\UI-TargetingFrame-Skull")
+assert(
+    env.markers[4].glow == retryHalo
+        and retryHalo.texture == env.DFRL:GetInfoOrCons("tex") .. "timer\\ClassicBossHalo.blp"
+)
+display.FinishEdit(false)
+env.render.markerStatesDirty = true
+update(false)
+assert(
+    env.markers[4].skull.texture == bossIcon and retryHalo.texture == bossHalo,
+    "Cancel did not restore the active artwork"
+)
+display.BeginEdit()
+display.Load({ bossIconStyle = "original", guardianIconStyle = "original" })
+display.FinishEdit(true)
+assert(env.SurvivorsDragonUiDisplay.bossIconStyle == "original")
+assert(env.SurvivorsDragonUiDisplay.guardianIconStyle == "original")
+display.Reset()
+assert(display.Get("bossIconStyle") == "default" and display.Get("guardianIconStyle") == "default")
 print("PASS active skulls pulse one fixed contour without reflow and retire it with their marker state")

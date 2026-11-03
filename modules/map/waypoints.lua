@@ -25,6 +25,12 @@ DFRL:NewMod("Waypoints", 3, function()
     if not navigation then return end
     local worldMarkers = T.NewWorldMarkerApi and T.NewWorldMarkerApi(navigation)
     local texturePath = DFRL:GetInfoOrCons("tex") .. "waypoint\\"
+    local guardianArt = DFRL.display.GuardianIcon()
+    local function BindGuardianIcon(icon)
+        if icon.guardianArt ~= guardianArt and icon:SetTexture(guardianArt) ~= false then
+            icon.guardianArt = guardianArt
+        end
+    end
     local actionDefaults, xpDefaults = DFRL.actionBarDefaults, DFRL.xpBarDefaults
     if not actionDefaults or not xpDefaults then return end
     local stackTop = actionDefaults.bottom + actionDefaults.height + actionDefaults.topInset
@@ -64,7 +70,6 @@ DFRL:NewMod("Waypoints", 3, function()
             frameName = "DFRL_GuardianWaypoint",
             title = "Guardian",
             defaultSide = "RIGHT",
-            hudArt = "GuardianFloating.blp",
             hudTexCoord = { 0, 65 / 128, 0, 65 / 128 },
         },
         {
@@ -382,7 +387,7 @@ DFRL:NewMod("Waypoints", 3, function()
             pin:SetFrameLevel(navigation.MinimapLevel(tracker.kind))
             pin:EnableMouse(false)
             local art = pin:CreateTexture(nil, tracker.kind == "guardian" and "ARTWORK" or "OVERLAY")
-            art:SetTexture(texturePath .. tracker.hudArt)
+            if tracker.kind ~= "guardian" then art:SetTexture(texturePath .. tracker.hudArt) end
             art:SetTexCoord(unpack(tracker.hudTexCoord))
             if tracker.kind == "guardian" then
                 art:SetPoint("CENTER", pin, "CENTER", 0, 0)
@@ -433,6 +438,7 @@ DFRL:NewMod("Waypoints", 3, function()
             end
             pin.entryKey, pin.cycle = entry.key, tracker.minimapCycle
             if tracker.kind == "guardian" then
+                BindGuardianIcon(pin.art)
                 pin.guardianName = entry.name
                 local defeated = entry.state == "empty"
                 if pin.defeated ~= defeated then
@@ -589,7 +595,7 @@ DFRL:NewMod("Waypoints", 3, function()
         hud:EnableMouse(false)
         hud:Hide()
         local marker = hud:CreateTexture(nil, "ARTWORK")
-        marker:SetTexture(texturePath .. tracker.hudArt)
+        if tracker.kind ~= "guardian" then marker:SetTexture(texturePath .. tracker.hudArt) end
         marker:SetWidth(32)
         marker:SetHeight(32)
         marker:SetTexCoord(unpack(tracker.hudTexCoord))
@@ -1102,6 +1108,7 @@ DFRL:NewMod("Waypoints", 3, function()
             if tracker.pointer:IsShown() then tracker.pointer:Hide() end
             return
         end
+        if tracker.kind == "guardian" then BindGuardianIcon(tracker.marker) end
         elapsed = elapsed or 0
         local selected = tracker.selected
         if tracker.kind == "party" then T.SetTextIfChanged(tracker.titleText, selected.name) end
@@ -1309,6 +1316,7 @@ DFRL:NewMod("Waypoints", 3, function()
         end
     end)
     local function UpdateDisplay()
+        guardianArt = DFRL.display.GuardianIcon()
         if worldMarkers then
             worldMarkers.UpdateOptions()
             worldMarkers.Service(inWorld)

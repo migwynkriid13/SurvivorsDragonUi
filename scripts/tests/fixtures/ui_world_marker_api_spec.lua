@@ -260,6 +260,32 @@ end
 for _, performance in ipairs({ false, true }) do
     local c = Scene(performance)
     local native, display = c.native, c.env.DFRL.display
+    local tex = c.env.DFRL:GetInfoOrCons("tex") .. "waypoint\\"
+    native.entries = { Record("boss", "boss"), Record("final", "finalBoss"), Record("guardian", "guardian") }
+    c:Service()
+    c:Frame()
+    local markers = c:Markers()
+    assert(#markers == 3)
+    for _, marker in ipairs(markers) do
+        local filename = marker.kind == "guardian" and "GuardianFloating.blp" or "WorldQuestBoss.blp"
+        assert(marker.icon.texture == tex .. filename, "default encounter icon did not bind")
+    end
+    local calls, objects = native.calls, #c.objects
+    display.Set("bossIconStyle", "original")
+    display.Set("guardianIconStyle", "original")
+    c:Frame()
+    assert(native.calls == calls and #c.objects == objects, "changing art rebuilt markers or fetched the catalog")
+    for _, marker in ipairs(markers) do
+        assert(marker.icon.texture == tex .. "GuardianClassic.blp", "existing marker did not adopt original art")
+    end
+    c:ResetCounts()
+    c:Frame()
+    assert(not c.writes.SetTexture and not c.writes.SetTexCoord, "settled style repeated texture work")
+    c.api.Reset()
+end
+for _, performance in ipairs({ false, true }) do
+    local c = Scene(performance)
+    local native, display = c.native, c.env.DFRL.display
     assert(display.Get("worldCacheIcons") and display.Get("worldPartyIcons") and display.Get("worldBossIcons"))
     assert(
         not display.Get("cacheGuidance") and not display.Get("guardianGuidance") and not display.Get("partyGuidance")

@@ -681,7 +681,7 @@ The assertions cover:
   off and display transactions; selective final-window cooldown
   reads; strict SCT retirement deadlines and native raid-icon UV forms; dirty
   boss marker reconciliation with one fixed active contour, opacity-only
-  pulses and lazy binding retry; settled loot hold/hidden
+  pulses, lazy binding retry, and style changes on pooled markers; settled loot hold/hidden
   expiry; Revive clipping reuse; static player status; shared Layout
   samples/final release; unchanged waypoint math with active interpolation;
   lazy Chat time and observed/unreported tooltip owners. These fixtures are

@@ -21,6 +21,7 @@ DFRL:NewMod("GuardianTracker", 4, function()
     local showMaximum = DFRL.display.Get("guardianShowMaximumHealth")
     local showPercentage = DFRL.display.Get("guardianShowHealthPercentage") == true
     local shortenHealth = DFRL.display.Get("guardianShortHealth") ~= false
+    local guardianArt = DFRL.display.GuardianIcon()
     local DEFAULT_SCALE = 0.85
     local ROW_INSET, NAME_WIDTH, COLUMN_GAP = 12, 120, 16 * 0.9
     local HEALTH_RIGHT_OFFSET = 4
@@ -52,7 +53,7 @@ DFRL:NewMod("GuardianTracker", 4, function()
     end
     local function Texture(parent, file, layer, w, h, right, bottom)
         local texture = parent:CreateTexture(nil, layer)
-        texture:SetTexture(path .. file .. ".blp")
+        if file then texture:SetTexture(path .. file .. ".blp") end
         texture:SetWidth(w)
         texture:SetHeight(h)
         texture:SetTexCoord(0, right or 1, 0, bottom or 1)
@@ -65,7 +66,7 @@ DFRL:NewMod("GuardianTracker", 4, function()
     header:SetTexCoord(1 / 512, 281 / 512, 0, 70 / 128)
     header:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, 0)
     header:SetAlpha(0.8)
-    local icon = Texture(frame, "waypoint\\GuardianFloating", "ARTWORK", 28, 28, 65 / 128, 65 / 128)
+    local icon = Texture(frame, nil, "ARTWORK", 28, 28, 65 / 128, 65 / 128)
     icon:SetPoint("TOPLEFT", frame, "TOPLEFT", 9, -6)
     local title = Label(frame, 14)
     title:SetPoint("TOPLEFT", frame, "TOPLEFT", TITLE_LEFT, -8)
@@ -324,6 +325,9 @@ DFRL:NewMod("GuardianTracker", 4, function()
             frame:Show()
         end
         if not frame:IsVisible() then return end
+        if icon.guardianArt ~= guardianArt and icon:SetTexture(guardianArt) ~= false then
+            icon.guardianArt = guardianArt
+        end
         if not MeasureHealthLabels(snapshot) then
             Clear()
             return
@@ -496,6 +500,10 @@ DFRL:NewMod("GuardianTracker", 4, function()
     local uiFont = DFRL.display.Get("uiFont")
     local uiFontOutline = DFRL.display.Get("uiFontOutline")
     DFRL.display.Listen(function()
+        local selectedIcon = DFRL.display.GuardianIcon()
+        if selectedIcon ~= guardianArt then
+            guardianArt, age = selectedIcon, 0.1
+        end
         local selectedFont = DFRL.display.Get("uiFont")
         local selectedOutline = DFRL.display.Get("uiFontOutline")
         local selected = DFRL.display.Get("guardianRows")

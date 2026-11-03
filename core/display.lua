@@ -110,6 +110,8 @@ DFRL:NewMod("Display", 0, function()
         worldBossIcons = true,
         worldBossIconMode = "always",
         worldBossIconDistance = 40,
+        bossIconStyle = "default",
+        guardianIconStyle = "default",
         worldPartyIcons = true,
         partyGuidance = false,
         guardianGuidance = false,
@@ -220,6 +222,27 @@ DFRL:NewMod("Display", 0, function()
     local function NormalizeWorldIconMode(value)
         if value == "always" or value == "near" or value == "far" then return value end
     end
+    local iconStyleKeys = { bossIconStyle = true, guardianIconStyle = true }
+    local function NormalizeIconStyle(value)
+        if value == "default" or value == "original" then return value end
+    end
+    local tex = DFRL:GetInfoOrCons("tex")
+    local originalCrest = tex .. "waypoint\\GuardianClassic.blp"
+    local bossSkull = tex .. "waypoint\\WorldQuestBoss.blp"
+    local bossArt = {
+        default = {
+            world = bossSkull,
+            crop = { 0, 1, 0, 1 },
+            timer = bossSkull,
+            halo = tex .. "timer\\WorldQuestBossHalo.blp",
+        },
+        original = {
+            world = originalCrest,
+            crop = { 0, 65 / 128, 0, 65 / 128 },
+            timer = "Interface\\TargetingFrame\\UI-TargetingFrame-Skull",
+            halo = tex .. "timer\\ClassicBossHalo.blp",
+        },
+    }
     local function NormalizeJewelryOrder(value)
         if type(value) ~= "string" or string.len(value) ~= 5 then return end
         -- Five positions containing all five keys cannot duplicate an item.
@@ -252,6 +275,7 @@ DFRL:NewMod("Display", 0, function()
         local value
         if type(source) == "table" then value = source[key] end
         if colorKeys[key] then return NormalizeColor(value) or defaults[key] end
+        if iconStyleKeys[key] then return NormalizeIconStyle(value) or defaults[key] end
         if key == "jewelryOrder" then return NormalizeJewelryOrder(value) or defaults[key] end
         if key == "meterColorMode" then return NormalizeMeterColorMode(value) or defaults[key] end
         if key == "worldCacheIconMode" or key == "worldBossIconMode" then
@@ -301,6 +325,11 @@ DFRL:NewMod("Display", 0, function()
     end
 
     function display.Get(key) return Read(draft or _G.SurvivorsDragonUiDisplay, key) end
+    function display.BossIcon() return bossArt[display.Get("bossIconStyle")] end
+    function display.GuardianIcon()
+        return display.Get("guardianIconStyle") == "original" and originalCrest
+            or tex .. "waypoint\\GuardianFloating.blp"
+    end
     function display.Copy(source) return Normalize(source) end
     function display.Snapshot() return Normalize(draft or _G.SurvivorsDragonUiDisplay) end
     function display.Load(source)
@@ -315,6 +344,9 @@ DFRL:NewMod("Display", 0, function()
         if not draft or defaults[key] == nil then return end
         if colorKeys[key] then
             value = NormalizeColor(value)
+            if not value then return end
+        elseif iconStyleKeys[key] then
+            value = NormalizeIconStyle(value)
             if not value then return end
         elseif key == "jewelryOrder" then
             value = NormalizeJewelryOrder(value)

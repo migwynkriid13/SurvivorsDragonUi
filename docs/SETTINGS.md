@@ -23,6 +23,12 @@ lets more descriptions fit on one line without shortening or cutting their
 wording. Longer descriptions and translations still wrap in their existing
 help areas.
 
+Under **Map & navigation** → **World guardian and boss icons**, choose
+**Default** or **Original** for **Boss icon** and **Guardian icon**. One boss
+choice controls both the overhead marker and run timer. The guardian choice
+applies to overhead markers, the tracker, minimap and waypoint guidance.
+Changes preview immediately and save with **Confirm**.
+
 | Category         | Sections                                            |
 | ---------------- | --------------------------------------------------- |
 | Layout           | Frame selection, coordinates, size, hiding and grid |

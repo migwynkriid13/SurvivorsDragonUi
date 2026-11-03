@@ -4136,6 +4136,13 @@ writes. Failed texture bindings can retry on the next visible reconciliation.
 Performance Mode hides the contour. Blue flow and foam still skip identical
 size and UV writes.
 
+The encounter icon selectors reuse the settings dropdown popup and the
+existing marker textures. Display changes select cached artwork for each
+surface. Visible markers bind a new texture only when the style changes or a
+binding needs retry. Hidden markers defer binding until shown. A style change
+does not invalidate the world catalog, restart the timer, allocate a new halo
+region or change the pulse cadence.
+
 The timer's cosmetic layers use 44 shared regions plus up to 28 lazily prepared
 tier glints, for at most 72 allocated/visible regions, plus the base pill,
 schedule markers and one supported-rank numeral. Normal blue mode uses the

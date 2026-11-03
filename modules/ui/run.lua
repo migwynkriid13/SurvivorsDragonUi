@@ -6,8 +6,6 @@ DFRL:NewMod("RunTimers", 5, function()
     local ROW_HEIGHT = 48
     local DEBUFF_SIZE, DEBUFF_GAP = 18, 4
     local SKULL_ICON = "Interface\\TargetingFrame\\UI-TargetingFrame-Skull"
-    local BOSS_MARKER_ICON = DFRL:GetInfoOrCons("tex") .. "waypoint\\WorldQuestBoss.blp"
-    local BOSS_MARKER_HALO = path .. "WorldQuestBossHalo.blp"
     local ATTACK_ICON = "Interface\\Cursor\\Attack.blp"
     local CACHE_ICON = DFRL:GetInfoOrCons("tex") .. "waypoint\\Chest.blp"
     local COINS_ICON = DFRL:GetInfoOrCons("tex") .. "tally\\Coins.blp"
@@ -496,9 +494,11 @@ DFRL:NewMod("RunTimers", 5, function()
         return frame, bar, text, overlay, fill
     end
 
-    local function BindBossMarkerArt(texture)
-        if texture:SetTexture(BOSS_MARKER_ICON) ~= false then return true end
-        texture:SetTexture(SKULL_ICON)
+    local function BindBossMarkerArt(marker, art)
+        if marker.bossArt == art then return end
+        marker.hasBossArt = marker.skull:SetTexture(art.timer) ~= false
+        if not marker.hasBossArt then marker.skull:SetTexture(SKULL_ICON) end
+        marker.bossArt = art
     end
 
     local function NewRunMarker(parent)
@@ -509,7 +509,6 @@ DFRL:NewMod("RunTimers", 5, function()
         marker:SetAlpha(1)
         marker:EnableMouse(false)
         marker.skull = marker:CreateTexture(nil, "ARTWORK")
-        marker.hasBossArt = BindBossMarkerArt(marker.skull)
         marker.skull:SetWidth(MARKER_SIZE)
         marker.skull:SetHeight(MARKER_SIZE)
         marker.skull:SetPoint("CENTER", marker, "CENTER", 0, 0)
@@ -1363,6 +1362,11 @@ DFRL:NewMod("RunTimers", 5, function()
                 end
             end
         end
+        if fontEditor.iconSelectors then
+            for key, picker in pairs(fontEditor.iconSelectors) do
+                if picker:IsVisible() then picker:SetValue(DFRL.display.Get(key)) end
+            end
+        end
         for key, control in pairs(displayColors) do
             if control:IsVisible() then
                 control:SetColor(DFRL.display.Get(key))
@@ -1857,6 +1861,7 @@ DFRL:NewMod("RunTimers", 5, function()
             { "near", "Nearby only", "Show icons at or within the distance cutoff." },
             { "far", "Distant only", "Show icons beyond the distance cutoff." },
         }
+        local encounterIconOptions = { { "default", "Default" }, { "original", "Original" } }
         local categories = {
             { key = "layout", label = "Layout" },
             { key = "profiles", label = "Profiles" },
@@ -2227,6 +2232,18 @@ DFRL:NewMod("RunTimers", 5, function()
                         step = 5,
                         wide = true,
                         range = true,
+                    },
+                    {
+                        "bossIconStyle",
+                        "Boss icon",
+                        "Use this style above bosses and on the run timer.",
+                        choices = encounterIconOptions,
+                    },
+                    {
+                        "guardianIconStyle",
+                        "Guardian icon",
+                        "Use this style for guardian markers and the tracker.",
+                        choices = encounterIconOptions,
                     },
                 },
             },
@@ -2731,6 +2748,30 @@ DFRL:NewMod("RunTimers", 5, function()
                         function(value) DFRL.display.Set(key, value) end
                     )
                     displayColors[key] = control
+                elseif entry.choices then
+                    local key = entry[1]
+                    control = CreateFrame("Frame", nil, content)
+                    control:SetWidth(controlWidth)
+                    control:SetHeight(rowHeight)
+                    local title = FontEditorLabel(control, entry[2], 0, -3, 12)
+                    title:SetWidth(controlWidth)
+                    title:SetTextColor(0.94, 0.79, 0.47)
+                    local hint = FontEditorLabel(control, entry[3], 0, -54, 9)
+                    hint:SetWidth(controlWidth)
+                    hint:SetHeight(32)
+                    hint:SetJustifyV("TOP")
+                    hint:SetTextColor(0.59, 0.59, 0.56)
+                    local picker = Dropdown(
+                        control,
+                        entry.choices,
+                        controlWidth,
+                        30,
+                        function(value) DFRL.display.Set(key, value) end
+                    )
+                    picker:SetPoint("TOPLEFT", control, "TOPLEFT", 0, -22)
+                    picker.dropdownOpenUp = true
+                    fontEditor.iconSelectors = fontEditor.iconSelectors or {}
+                    fontEditor.iconSelectors[key] = picker
                 elseif entry.step then
                     control = DisplayNumber(content, entry, controlWidth, rowHeight)
                     if entry.range then
@@ -2742,12 +2783,16 @@ DFRL:NewMod("RunTimers", 5, function()
                 else
                     control = DisplayToggle(content, entry[1], entry[2], entry[3], 0, controlWidth)
                 end
-                table.insert(
-                    leading and beforeMode or controls,
-                    { frame = control, span = span, numeric = entry.step ~= nil, color = entry.color, entry = entry }
-                )
+                table.insert(leading and beforeMode or controls, {
+                    frame = control,
+                    span = span,
+                    numeric = entry.step ~= nil,
+                    color = entry.color,
+                    height = entry.choices and rowHeight or nil,
+                    entry = entry,
+                })
                 if leading and entry[1] == category.mode.after then leading = false end
-                if dependents and entry[1] ~= category.master and not entry.range then
+                if dependents and entry[1] ~= category.master and not entry.range and not entry.choices then
                     table.insert(dependents.controls, control)
                 end
                 control:EnableMouseWheel(true)
@@ -4121,7 +4166,8 @@ DFRL:NewMod("RunTimers", 5, function()
     end
 
     local function PrepareMarkerGlow(marker)
-        if marker.glowPrepared then return true end
+        local art = marker.bossArt.halo
+        if marker.glowArt == art then return true end
         local glow = marker.glow
         if not glow then
             glow = marker:CreateTexture(nil, "BACKGROUND")
@@ -4136,8 +4182,8 @@ DFRL:NewMod("RunTimers", 5, function()
             glow:SetAlpha(ACTIVE_GLOW_MIN_ALPHA)
             marker.glowAlpha = ACTIVE_GLOW_MIN_ALPHA
         end
-        if glow:SetTexture(BOSS_MARKER_HALO) == false then return false end
-        marker.glowPrepared = true
+        if glow:SetTexture(art) == false then return false end
+        marker.glowArt = art
         return true
     end
 
@@ -4466,9 +4512,12 @@ DFRL:NewMod("RunTimers", 5, function()
         -- skulls need frame animation; due/defeated/retired slots stay idle.
         if render.markerStatesDirty or render.markerAtLimit ~= atLimit then
             local count, pending = 0, false
+            local art = DFRL.display.BossIcon()
+            render.bossIcon = art
             for index, marker in ipairs(markers) do
                 local state = not atLimit and markerStates[index] or nil
                 if state then
+                    BindBossMarkerArt(marker, art)
                     if marker.state ~= state then
                         local size = state == "due" and MARKER_SIZE * 0.95 or MARKER_SIZE
                         T.StyleDefeatedMarker(marker.skull, marker.check, size, state == "dead")
@@ -4990,6 +5039,7 @@ DFRL:NewMod("RunTimers", 5, function()
     bossGroup:SetScript("OnMouseWheel", function() bossGroup.ScrollRows(arg1) end)
 
     DFRL.display.Listen(function()
+        if render.bossIcon ~= DFRL.display.BossIcon() then render.markerStatesDirty = true end
         local performance = DFRL.display.Get("performanceMode")
         if performanceMode ~= performance then
             performanceMode = performance

@@ -5,6 +5,7 @@ assert(_VERSION == "Lua 5.1", "guardian tracker fixtures require CI Lua 5.1")
 local function Tracker()
     local context = H.New()
     local env = context.env
+    env.DFRL.display.GuardianIcon = function() return env.DFRL:GetInfoOrCons("tex") .. "waypoint\\GuardianFloating.blp" end
     context.settings.guardianRows = 0
     context.settings.guardianShowDead = true
     context.settings.guardianShowCurrentHealth, context.settings.guardianShowMaximumHealth = true, true
