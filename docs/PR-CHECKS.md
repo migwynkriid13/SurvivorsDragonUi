@@ -776,6 +776,10 @@ The assertions cover:
   require one opacity setter instead of four repeated gradient setters.
   Revive's native reader and XP/health baselines remain immediate. These are
   authored CI-only cases, not local test results or native appearance/FPS proof.
+  The target-health fixture first publishes valid native health before requiring
+  its one retained loss frame/texture and rejects an animation on that baseline.
+  XP cases count the two effect regions at first animated use separately from
+  the earlier text pool, then require the same label and complete pool on detach.
 - Third-pass cases extend the existing pet/totem, world-marker, party-waypoint
   and player-resource fixtures in both Performance Mode states. They require
   unchanged native countdown sampling without layout/icon helper reentry,

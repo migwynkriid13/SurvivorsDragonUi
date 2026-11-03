@@ -61,7 +61,7 @@ local function Target(current, maximum)
     for _, object in ipairs(context.objects) do
         if object.kind == "Texture" and object.parent and object.parent.parent == bar then loss = object end
     end
-    assert(loss, "missing production loss texture")
+    assert(not loss, "unavailable target health prepared an unused loss texture")
     local animator = context:Controller("UNIT_TARGET")
     function context:Publish(hp, hpm, id, name, kind)
         -- Deliver the event before native parsing, then replace the table before OnUpdate.
@@ -76,7 +76,13 @@ local function Target(current, maximum)
         env.AZS_UNITS, env.AZS_UNITS_UPDATED = rows, self.now
         if not defer then self:Call(controller, "OnUpdate", 0.01) end
     end
+    local beforeHealth = #context.objects
     context:Publish(current, maximum)
+    for _, object in ipairs(context.objects) do
+        if object.kind == "Texture" and object.parent and object.parent.parent == bar then loss = object end
+    end
+    assert(loss and #context.objects == beforeHealth + 2, "valid target baseline did not prepare one loss overlay")
+    assert(not loss:IsShown() and not animator:GetScript("OnUpdate"), "first target baseline animated old damage")
     context:ResetCounts()
     return context, controller, bar, label, labels.percentage, loss, animator, labels
 end

@@ -241,6 +241,8 @@ do
         end
     end
     assert(gain and spark, "first real XP gain did not prepare its effects")
+    local effectsPoolSize = #context.objects
+    assert(effectsPoolSize == textPoolSize + 2, "first animated XP gain did not prepare exactly two effects")
     assert(
         bar:GetValue() > 0.2 and bar:GetValue() < 0.6 and gain:IsShown() and spark:IsShown(),
         "normal XP gain did not animate"
@@ -329,7 +331,10 @@ do
     assert(text:GetText() == "0/200" and text:IsVisible(), "zero XP or invalid-data recovery failed")
     display.BeginEdit()
     display.Set("attachXP", false)
-    assert(text:IsVisible() and #context.objects == textPoolSize, "detaching XP replaced or lost text")
+    assert(
+        text:IsVisible() and XPLabel() == text and #context.objects == effectsPoolSize,
+        "detaching XP replaced or lost text or effect regions"
+    )
     display.Reset()
     assert(not text:IsShown() and not display.Get("xpShowText"), "reset retained XP text")
     local maxLevelPool = #context.objects
