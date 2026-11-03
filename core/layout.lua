@@ -79,6 +79,7 @@ DFRL:NewMod("Layout", 0, function()
         sctMSBT = "MSBT-style scrolling",
         petFrames = "Pet frames",
         lootNotifications = "Loot notifications",
+        rarityOdds = "Rarity odds",
         menu = "Main menu",
         chat = "Chat",
         copyWindow = "Copy",

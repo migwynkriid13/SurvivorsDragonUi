@@ -184,6 +184,7 @@
     "modules/ui/guardians.lua",
     "modules/ui/jewelry.lua",
     "modules/ui/levels.lua",
+    "modules/ui/rarity_odds.lua",
     "modules/ui/loot.lua",
     "modules/ui/loot_icons.lua",
     "modules/ui/loot_view.lua",

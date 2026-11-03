@@ -7,6 +7,14 @@ executes selected production Lua against fake native boundaries. Keep the `Forma
 check in the repository's branch rules; editing a workflow does not configure
 branch protection by itself.
 
+The rarity odds fixture drives the production panel with mocked phase, run
+and stats feeds. It covers known estimates by reward type, level caps, zero
+and invalid Luck, preview/Confirm/Cancel/reset, stale data across run
+boundaries, overlay readback failures and hidden or unchanged work. The
+minimap fixtures also cover the nearest off-map cache arrow, artwork retry,
+in-range handoff, rounded distance and tooltip ownership. These fixtures do
+not establish the installed game's odds, rendering or input behavior.
+
 The 0.139.0 compatibility cases are authored for CI only. Artwork data fixtures
 check every packaged BLP against the native power-of-two size gate and compare
 both neighbour pixels at each strip join. Mocked production helpers cover strip
