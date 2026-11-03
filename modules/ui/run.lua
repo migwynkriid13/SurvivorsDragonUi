@@ -1179,12 +1179,6 @@ DFRL:NewMod("RunTimers", 5, function()
         end
         runEffects.Update(seconds, maximum)
     end
-    HookScript(run, "OnHide", function()
-        run.heroicLevel:Clear()
-        HideRunFlow()
-        runEffects.empty = nil
-    end)
-
     local runMoveRegion = CreateFrame("Frame", nil, run)
     local fontFaces = {
         { label = "Game DEFAULT", face = "DEFAULT" },
@@ -1705,7 +1699,7 @@ DFRL:NewMod("RunTimers", 5, function()
         RefreshTimerCaptions()
     end
 
-    local function UpdateClockCaptions(seconds, maximum, acceptRun)
+    local function UpdateClockCaptions(seconds, maximum, acceptRun, refreshLabels)
         -- The caller has already checked the native phase. Only received run
         -- flags select Endless; passing the zone limit or a boss death cannot.
         local state = AZS_RUN
@@ -1716,18 +1710,25 @@ DFRL:NewMod("RunTimers", 5, function()
         elseif received and state.endl == 0 then
             mode = "Regular"
         end
-        runClock.mode, runClock.seconds = mode, math.floor(seconds)
-        runClock.maximum = mode ~= "Endless" and math.floor(maximum) or nil
+        local elapsed = math.floor(seconds)
+        local limit = mode ~= "Endless" and math.floor(maximum) or nil
         local remaining
         if mode and IsNumber(state.nb) then
             -- Both modes supply pause-aware nb. Do not derive a countdown from
             -- schedules, the zone limit, boss deaths or a private deadline.
             remaining = math.ceil(state.nb)
         end
+        local changed = runClock.mode ~= mode
+            or runClock.seconds ~= elapsed
+            or runClock.maximum ~= limit
+            or bossClock.remaining ~= remaining
+        runClock.mode, runClock.seconds, runClock.maximum = mode, elapsed, limit
         bossClock.option = remaining ~= nil and "bossCountdown" .. mode or nil
         bossClock.remaining = remaining
-        RefreshTimerCaptions()
-        if fontSampleClock and fontSample:GetParent():IsVisible() then RefreshClockLabel(fontSampleClock) end
+        if changed or refreshLabels ~= false then
+            RefreshTimerCaptions()
+            if fontSampleClock and fontSample:GetParent():IsVisible() then RefreshClockLabel(fontSampleClock) end
+        end
         return mode
     end
 
@@ -3863,6 +3864,7 @@ DFRL:NewMod("RunTimers", 5, function()
     local reloading = false
     local render = {
         emptySchedule = {},
+        clockNow = 0,
         readPending = true,
         unitSequence = 0,
         unitBarrier = -1,
@@ -3870,6 +3872,12 @@ DFRL:NewMod("RunTimers", 5, function()
         activeMarkerCount = 0,
         bossLoss = CreateBossHealthLoss(),
     }
+    HookScript(run, "OnHide", function()
+        if render.runShown then render.clockHidden = true end
+        run.heroicLevel:Clear()
+        HideRunFlow()
+        runEffects.empty = nil
+    end)
     -- Only ReloadUI writes this handoff. Consume it once, keeping an initial
     -- nil phase from destroying it before the native API has replayed AZSRUN.
     local scheduleCache = _G.SurvivorsDragonUiBossSchedule
@@ -4130,8 +4138,13 @@ DFRL:NewMod("RunTimers", 5, function()
         marker.state = nil
     end
 
-    local function ReleaseClock()
-        render.clockRead, render.clockMaximum, render.clockSchedule, render.clockPhase = nil, nil, nil, nil
+    local function ReleaseClock(keepSamples)
+        if not keepSamples then
+            render.clockNextAt, render.clockSeconds, render.clockRunSequence = nil, nil, nil
+            render.clockScheduleAt, render.clockMaximum, render.clockSchedule, render.clockPhase = nil, nil, nil, nil
+            render.clockFin, render.clockBossCount, render.clockSpawned, render.clockKilled = nil, nil, nil, nil
+            render.clockHidden = nil
+        end
         render.runHeroic, render.runEndless = nil, nil
         run.affixes:Clear()
         run.heroicLevel:Clear()
@@ -4362,7 +4375,7 @@ DFRL:NewMod("RunTimers", 5, function()
     local function InvalidateSchedule(sequence)
         scheduleCache = nil
         render.nativeValidation, render.replayValidation, render.sample = nil, nil, nil
-        render.clockRead = nil
+        render.clockScheduleAt, render.clockNextAt = nil, nil
         scheduleBarrier = math.max(scheduleBarrier, sequence)
     end
 
@@ -4996,6 +5009,7 @@ DFRL:NewMod("RunTimers", 5, function()
         if zoneRunPending and runSequence > zoneRunPending then
             render.tallyCountersAt, render.tallyCounterWait = nil, nil
             zoneRunPending = nil
+            render.clockScheduleAt, render.clockNextAt = nil, nil
         end
         if
             not zoneRunPending
@@ -5025,25 +5039,71 @@ DFRL:NewMod("RunTimers", 5, function()
             Restore("clock")
             return
         end
-        local seconds = Read("AZS_GetRunTime")
+        local now = render.clockNow
+        local phaseChanged = render.clockPhase ~= phase
+        local showing = render.clockHidden and run:IsVisible()
         local zone = type(AZS_ZONE) == "table" and AZS_ZONE.zone or nil
-        if previousZone ~= zone or (previousTime and IsNumber(seconds) and seconds < previousTime) then
+        local zoneChanged = previousZone ~= zone
+        if zoneChanged then
             ClearRows()
             refreshRows = true
         end
         previousZone = zone
-        if IsNumber(seconds) then previousTime = seconds end
-        -- Duration and schedule publications use the existing ten-Hz/deferred
-        -- reader. Raw native time, ownership and animated effects retain frames.
-        if refreshRows or not render.clockRead or render.clockPhase ~= phase then
-            local maximum = RunLength()
-            local scheduled = maximum and ScheduleMarkers(maximum, phase) or nil
-            render.clockMaximum, render.clockSchedule = maximum, scheduled
-            render.clockPhase, render.clockRead = phase, true
+
+        -- AZSRUN also carries schedule continuity fields. Ordinary clock and
+        -- counter publications leave the accepted schedule alone.
+        local runPublished = render.clockRunSequence ~= runSequence
+        local state = runPublished and type(AZS_RUN) == "table" and AZS_RUN or nil
+        local scheduleChanged
+        if state then
+            scheduleChanged = render.clockFin ~= state.fin
+                or render.clockBossCount ~= state.bt
+                or render.clockSpawned ~= state.bs
+                or render.clockKilled ~= state.bk
+            render.clockFin, render.clockBossCount = state.fin, state.bt
+            render.clockSpawned, render.clockKilled = state.bs, state.bk
         end
+        render.clockRunSequence = runSequence
+        local previousMaximum = render.clockMaximum
+        if phaseChanged or zoneChanged or showing or scheduleChanged or now >= (render.clockScheduleAt or 0) then
+            local maximum = RunLength()
+            render.clockMaximum = maximum
+            render.clockSchedule = maximum and ScheduleMarkers(maximum, phase) or nil
+            render.clockScheduleAt = now + 1
+        end
+        render.clockPhase = phase
         local maximum, scheduled = render.clockMaximum, render.clockSchedule
+        local seconds = render.clockSeconds
+        local publishedSecond = state and IsNumber(state.t) and (not seconds or state.t >= math.floor(seconds) + 1)
+        local timeDue = phaseChanged
+            or zoneChanged
+            or showing
+            or publishedSecond
+            or maximum ~= previousMaximum
+            or now >= (render.clockNextAt or 0)
+        if timeDue then
+            seconds = Read("AZS_GetRunTime")
+            if not IsNumber(seconds) then seconds = nil end
+            local wait = 1
+            if seconds then
+                if previousTime and seconds < previousTime and not zoneChanged then
+                    ClearRows()
+                    refreshRows = true
+                end
+                previousTime = seconds
+                if phase == "playing" then
+                    wait = math.floor(seconds) + 1 - seconds
+                    -- The exact native limit can fall between displayed seconds.
+                    if maximum and seconds < maximum then wait = math.min(wait, maximum - seconds) end
+                end
+            end
+            -- UI time schedules the next read. Every displayed value still
+            -- comes from the native pause-aware clock or countdown.
+            render.clockNextAt, render.clockSeconds = now + wait, seconds
+        end
         if IsNumber(seconds) and maximum then
-            if not render.runShown then
+            local starting = not render.runShown
+            if starting then
                 render.runShown = true
                 run:Show()
             end
@@ -5051,8 +5111,14 @@ DFRL:NewMod("RunTimers", 5, function()
                 run.RefreshWidth()
                 if render.runMaximum ~= maximum then runBar:SetMinMaxValues(0, maximum) end
                 local atLimit = seconds >= maximum
-                local mode = UpdateClockCaptions(seconds, maximum, not zoneRunPending)
-                local endless = mode == "Endless"
+                if timeDue or runPublished or starting then
+                    local mode = UpdateClockCaptions(seconds, maximum, not zoneRunPending, refreshRows or starting)
+                    render.runEndless = mode == "Endless"
+                elseif refreshRows then
+                    -- Retry metrics and effective scale on the shared UI pass.
+                    RefreshTimerCaptions()
+                end
+                local endless = render.runEndless
                 -- Two-second native steps avoid per-frame fill/crop rewrites.
                 local value = (endless or atLimit) and maximum or math.floor(seconds / 2) * 2
                 if render.runValue ~= value then runBar:SetValue(value) end
@@ -5072,7 +5138,6 @@ DFRL:NewMod("RunTimers", 5, function()
                     render.markerEntries, render.markerMaximum = scheduled, maximum
                     render.markerWidth = runBar.layoutWidth or BAR_WIDTH
                 end
-                render.runEndless = endless
                 SetRunAppearance(render.runHeroic, endless)
                 UpdateRunFlow(value, maximum)
                 UpdateMarkerStates(atLimit)
@@ -5081,9 +5146,9 @@ DFRL:NewMod("RunTimers", 5, function()
                 render.clockHidden = true
             end
             run.affixes:Update(not zoneRunPending, refreshRows)
-            if not TakeOver("clock") then ReleaseClock() end
+            if not TakeOver("clock") then ReleaseClock(true) end
         else
-            ReleaseClock()
+            ReleaseClock(true)
         end
     end
 
@@ -5128,6 +5193,7 @@ DFRL:NewMod("RunTimers", 5, function()
             -- Refresh from native data before the client saves addon variables.
             -- Repeated reloads can hand off an accepted cached schedule too.
             refreshRows = true
+            render.clockScheduleAt, render.clockNextAt = nil, nil
             local ok = pcall(Update)
             local phase = render.customClock and Read("AZS_GetPhase") or nil
             local maximum = render.customClock and RunLength() or nil
@@ -5208,6 +5274,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 runSequence = packetSequence
             elseif arg1 == "AZSBOSSES" then
                 scheduleSequence = packetSequence
+                render.clockScheduleAt = nil
             elseif arg1 == "AZSUNITS" then
                 render.unitSequence = packetSequence
             end
@@ -5222,6 +5289,7 @@ DFRL:NewMod("RunTimers", 5, function()
         -- Visible groups retain frame-cadence phase/boundary detection. Debuffs
         -- use native timing at ten Hz, deferred publications and immediate hover.
         local elapsed = tonumber(arg1) or 0
+        render.clockNow = render.clockNow + elapsed
         pollAge = pollAge + elapsed
         local tallyDue = AdvanceTallyCounters(elapsed)
         if

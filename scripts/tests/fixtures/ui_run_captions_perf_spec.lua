@@ -123,3 +123,20 @@ env.AZS_RUN_UPDATED = nil
 assert(api.Update(60, 1300, true) == nil, "unstamped run returned a mode")
 env.AZS_RUN_UPDATED, env.AZS_RUN.endl = 2, 2
 assert(api.Update(60, 1300, true) == nil, "unknown flag inferred an Endless mode")
+
+env.AZS_RUN.endl, env.AZS_RUN.nb = 0, 30.875
+api.Update(60.125, 1300, true, false)
+assert(env.bossClock.source:GetText() == "BOSS: 0:31")
+context:ResetCounts()
+context.formats = 0
+for _, remaining in ipairs({ 30.75, 30.5, 30.125 }) do
+    env.AZS_RUN.nb = remaining
+    api.Update(60.125, 1300, true, false)
+end
+context:NoPresentationWrites()
+assert(context.formats == 0, "fractional countdown publications reformatted the same displayed second")
+env.AZS_RUN.nb = 30
+api.Update(60.125, 1300, true, false)
+assert(env.bossClock.source:GetText() == "BOSS: 0:30", "native countdown boundary waited for the elapsed clock")
+assert(context.formats > 0)
+print("PASS native boss countdown changes at its own whole-second boundary")

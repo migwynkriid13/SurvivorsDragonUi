@@ -194,10 +194,16 @@ Enabling the mode hides any already-active layers immediately. Native progress
 continues in two-second steps; captions and informative markers remain.
 Turning the mode off restores effects from the current accepted rank and mode.
 
-Native duration and schedule validation reuse the existing ten-Hz/deferred
-publication refresh. Phase changes, run/schedule retirement and reload invalidate
-that cache. Raw run time, phase/rollback checks, clock HUD ownership and authored
-animation retain their existing frame cadence while the clock is visible.
+The reader samples elapsed time near the next whole native second and at the
+exact native zone limit. Native phase, run and visibility changes can request a
+fresh sample. The boss countdown follows changes to the rounded `AZS_RUN.nb`
+value. Both captions use native time through pauses and card selection.
+
+Native boss schedule and relevant run publications request a refresh on the next
+frame. The duration and schedule also have a one-second fallback. Phase and zone
+changes, Show and reload request fresh data. The shared tenth-second pass still
+updates encounter health, marker geometry, affixes and Heroic rank. Visible HUD
+ownership and animation keep their existing cadence.
 Boss debuffs read current native effects at ten Hz or a deferred publication;
 hovering samples phase/effects immediately before opening the tooltip. Removed
 slots clear before opening and changed debuff height reflows at that point.

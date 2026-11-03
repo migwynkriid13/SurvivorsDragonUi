@@ -8,6 +8,7 @@ local function Clock()
     context.maximum, context.schedule, context.mode = 960, {}, "Regular"
     env.render = { customClock = true, emptySchedule = {} }
     env.AZS_ZONE = { zone = "Elwynn" }
+    env.AZS_RUN, env.runSequence = { t = 0, endl = 0, nb = 30 }, 0
     env.BAR_WIDTH = 280
     env.run = env.CreateFrame("Frame", nil, env.UIParent)
     env.run:Hide()
@@ -57,6 +58,7 @@ local function Clock()
         table.insert(context.captions, { seconds = seconds, maximum = maximum, accepted = accepted })
         return accepted and context.mode or nil
     end
+    env.RefreshTimerCaptions = function() end
     env.UpdateMarkers = function(maximum, entries)
         table.insert(context.markers, { maximum = maximum, entries = entries })
     end
@@ -80,52 +82,58 @@ local function Clock()
     local chunk = assert(loadfile(assert(arg[1], "missing extracted UpdateClock source")))
     setfenv(chunk, env)
     local update = chunk()
-    function context:Sample(seconds, phase, refresh)
+    function context:Sample(seconds, phase, refresh, elapsed)
         self.seconds = seconds
+        self.now = self.now + (elapsed or 0)
+        env.render.clockNow = self.now
         -- The existing outer controller consumes row refreshes after UpdateClock.
         env.refreshRows = refresh and true or false
         update(phase or "playing")
+    end
+    function context:PublishRun(time)
+        env.AZS_RUN.t = time
+        env.runSequence = env.runSequence + 1
     end
     return context, env
 end
 
 do
     local context, env = Clock()
-    for frame = 1, 120 do
-        context:Sample(10 + frame / 100)
+    context:Sample(10.25)
+    for frame = 1, 32 do
+        context:Sample(10.25 + frame / 32, nil, frame % 3 == 0, 1 / 32)
     end
     assert(context.writes.value == 1 and env.runBar.value == 10, "fill moved within a native two-second step")
     assert(context.writes.range == 1 and env.runBar.maximum == 960, "unchanged maximum rewrote the range")
-    assert(context.reads.time == 120 and context.reads.length == 1 and context.reads.ownership == 120)
-    assert(context.reads.schedule == 1, "one refresh scope repeatedly traversed its schedule")
-    assert(context.reads.numeral == 1, "static Heroic presentation ran between deferred refreshes")
-    assert(
-        #context.flows == 120 and #context.captions == 120 and #context.states == 120,
-        "presentation cadence changed"
-    )
+    assert(context.reads.time == 2, "row refreshes reread elapsed time between displayed seconds")
+    assert(context.reads.length == 2 and context.reads.schedule == 2, "schedule did not use one-second fallback")
+    assert(context.reads.ownership == 33, "native ownership lost frame cadence")
+    assert(#context.flows == 33 and #context.states == 33, "throttling native clock reads slowed cosmetic presentation")
     for index, flow in ipairs(context.flows) do
         assert(flow.value == 10 and flow.maximum == 960, "effect clipping did not follow the stepped native fill")
-        assert(context.captions[index].seconds == 10 + index / 100, "caption input lost native fractional seconds")
         assert(context.appearance[index] == false and context.states[index] == false, "markers reached the limit early")
     end
-    context:Sample(11.99)
+    assert(context.captions[1].seconds == 10.25 and context.captions[2].seconds == 11)
+    context:Sample(11.75, nil, false, 0.5)
     assert(context.writes.value == 1 and env.runBar.value == 10, "fill advanced before two native seconds")
-    context:Sample(12)
+    context:Sample(12, nil, false, 0.25)
     assert(
         context.writes.value == 2 and env.runBar.value == 12,
         "the next native two-second step did not advance the fill"
     )
     context:ResetPerf()
     for _ = 1, 20 do
-        context:Sample(12.4, "paused")
+        context:Sample(12.4, "paused", false, 1 / 32)
     end
     assert(not context.writes.value and #context.flows == 20, "paused progress repainted or stopped cosmetic cadence")
-    assert(context.schedulePhase == "paused" and context.captions[20].seconds == 12.4)
+    assert(context.schedulePhase == "paused" and context.captions[1].seconds == 12.4)
+    assert(context.reads.time == 1, "paused frames repeatedly read the native clock")
     context:Sample(9.8)
     assert(
         context.cleared == 1 and env.refreshRows and env.runBar.value == 8,
         "backward native time did not retire rows"
     )
+    env.render.clockNextAt = nil
     context:Sample(9.2)
     assert(context.cleared == 2 and env.refreshRows and env.runBar.value == 8, "same-step correction lost retirement")
     assert(context.writes.value == 1 and context.captions[#context.captions].seconds == 9.2)
@@ -137,23 +145,21 @@ print(
 do
     local context, env = Clock()
     context.maximum = 10.5
-    context:Sample(10.49)
+    context:Sample(10.25)
     assert(env.runBar.value == 10 and context.flows[1].value == 10 and context.states[1] == false)
-    context:Sample(10.5)
+    context:Sample(10.5, nil, false, 0.25)
     assert(env.runBar.value == 10.5 and context.flows[2].value == 10.5, "fractional maximum was not filled exactly")
     assert(
         context.appearance[2] == false and context.states[2] == true,
         "elapsed time inferred Endless or lost marker state"
     )
-    context:Sample(12.75)
+    context:Sample(12.75, nil, false, 2.25)
     assert(context.writes.value == 2 and context.flows[3].value == 10.5, "post-limit progress moved the completed fill")
     assert(context.captions[3].seconds == 12.75 and context.captions[3].maximum == 10.5, "Endless captions were capped")
     env.zoneRunPending = 7
-    context:Sample(12.8)
-    assert(
-        context.captions[4].accepted == false and context.captions[4].seconds == 12.8,
-        "publication caption gate changed"
-    )
+    context:PublishRun(12.75)
+    context:Sample(12.8, nil, true, 0.05)
+    assert(context.captions[4].accepted == false, "publication caption gate changed")
 end
 print("PASS fractional native limits fill exactly while captions and marker states retain original native inputs")
 
@@ -162,7 +168,7 @@ do
     context:Sample(2.2)
     context.hidden = true
     context:ResetPerf()
-    context:Sample(50.7, nil, true)
+    context:Sample(50.7, nil, true, 48.5)
     assert(not context.writes.value and not context.writes.range, "hidden clock wrote its fill")
     assert(#context.flows == 0 and #context.captions == 0 and #context.appearance == 0 and #context.states == 0)
     assert(#context.markers == 0 and env.render.clockHidden and env.runBar.value == 2, "hidden clock painted effects")
@@ -171,19 +177,20 @@ do
         "hidden lifecycle stopped"
     )
     context.hidden = false
-    context:Sample(50.9)
+    context:Sample(50.9, nil, false, 0.2)
     assert(env.runBar.value == 50 and context.writes.value == 1, "Show did not paint current native progress")
     assert(context.flows[1].value == 50 and context.captions[1].seconds == 50.9 and not env.render.clockHidden)
     assert(#context.markers == 1 and context.markers[1].entries == context.schedule, "Show lost schedule recovery")
     context:ResetPerf()
     context.maximum = 1200
-    context:Sample(50.91, nil, true)
+    env.render.clockScheduleAt = nil
+    context:Sample(50.91, nil, true, 0.01)
     assert(context.writes.range == 1 and not context.writes.value and env.runBar.maximum == 1200)
     assert(
         context.flows[1].value == 50 and context.flows[1].maximum == 1200,
         "maximum change left stale effect clipping"
     )
-    assert(context.captions[1].seconds == 50.91 and context.captions[1].maximum == 1200)
+    assert(math.floor(context.captions[1].seconds) == 50 and context.captions[1].maximum == 1200)
     assert(
         context.markers[1].maximum == 1200 and context.states[1] == false,
         "maximum change retained old marker inputs"
@@ -202,28 +209,59 @@ print(
 
 do
     local context, env = Clock()
-    context:Sample(1)
+    context:Sample(1.125)
     context:ResetPerf()
-    context.maximum, context.schedule = 1200, { { index = 1, at = 1200 } }
-    context:Sample(1.01)
+    context.maximum, context.schedule = 1200, { { index = 1, at = 1200, state = "up" } }
+    context:Sample(1.25, nil, true, 0.125)
     assert(not context.reads.length and not context.reads.schedule and env.runBar.maximum == 960)
-    assert(context.reads.time == 1 and context.reads.ownership == 1, "data caching delayed raw time or ownership")
-    context:Sample(1.02, nil, true)
+    assert(
+        not context.reads.time and context.reads.ownership == 1,
+        "row refresh changed the clock or ownership cadence"
+    )
+    -- The native event invalidates the deadline, then the next reader frame sees parsed data.
+    env.render.clockScheduleAt = nil
+    context:Sample(1.375, nil, true, 0.125)
     assert(context.reads.length == 1 and context.reads.schedule == 1 and env.runBar.maximum == 1200)
-    assert(context.markers[#context.markers].entries == context.schedule, "deferred data did not replace the cache")
+    assert(context.markers[#context.markers].entries == context.schedule, "publication did not replace the cache")
     context:ResetPerf()
-    context:Sample(1.02, "paused")
+    context.schedule = { { index = 1, at = 1200, state = "dead" } }
+    context:Sample(2.25, nil, true, 0.875)
+    assert(not context.reads.schedule, "schedule reread before its one-second fallback")
+    context:Sample(2.375, nil, false, 0.125)
+    assert(context.reads.schedule == 1 and context.markers[#context.markers].entries == context.schedule)
+    context:ResetPerf()
+    context:Sample(2.375, "paused")
     assert(context.reads.length == 1 and context.reads.schedule == 1, "phase change retained schedule sampling")
     context.maximum = nil
-    context:Sample(1.02, nil, true)
+    env.render.clockScheduleAt = nil
+    context:Sample(2.375, "paused", true)
     assert(context.released, "missing duration retained a visible clock")
     context.maximum = 900
-    context:Sample(1.03, nil, true)
-    assert(env.runBar.maximum == 900, "existing retry scope did not recover duration")
+    context:Sample(2.375, "paused", true, 1)
+    assert(env.runBar.maximum == 900, "fallback did not recover duration")
 end
-print(
-    "PASS duration and schedule reuse their refresh scope while phases, deferred reads and missing-data retries remain fresh"
-)
+print("PASS schedule updates on native publication and uses a one-second fallback independently of row wakes")
+
+do
+    local context, env = Clock()
+    context:Sample(10.125)
+    context:ResetPerf()
+    for _, time in ipairs({ 10.25, 10.375, 10.5 }) do
+        context:PublishRun(time)
+        context:Sample(time, nil, true, 0.125)
+    end
+    assert(not context.reads.time and not context.reads.length and not context.reads.schedule)
+    context:PublishRun(11)
+    context:Sample(11.125, nil, true, 0.125)
+    assert(context.reads.time == 1 and context.captions[#context.captions].seconds == 11.125)
+    assert(not context.reads.schedule, "a plain elapsed-clock publication refreshed the boss schedule")
+    env.AZS_RUN.bs = 1
+    context:PublishRun(11.25)
+    context:Sample(11.25, nil, true, 0.125)
+    assert(context.reads.schedule == 1, "boss progression publication did not reconcile the accepted schedule")
+    assert(context.reads.time == 1, "boss progression reread the current elapsed second")
+end
+print("PASS run publications wake only new elapsed seconds and changed boss schedule inputs")
 
 do
     local context, env = Clock()
@@ -231,6 +269,7 @@ do
     context:Sample(900, nil, true)
     assert(context.numeral.rank == 4 and context.numeral.maximum == 960 and context.numeral.width == 280)
     env.zoneRunPending = 7
+    context:PublishRun(900)
     context:Sample(900, nil, true)
     assert(context.numeral.rank == nil, "pending new-zone handshake replayed the old Heroic rank")
     env.zoneRunPending = nil
@@ -252,15 +291,18 @@ do
     assert(context.appearanceHeroic == 2 and context.numeral.rank == 2, "Endless replaced the accepted Heroic rank")
     assert(context.captions[1].seconds == 42.5, "full Endless rendering changed native elapsed time")
     context.mode = "Regular"
+    context:PublishRun(42.6)
     context:Sample(42.6)
     assert(env.runBar.value == 42 and context.appearance[2] == false, "regular mode retained full Endless progress")
     context.mode = "Endless"
     env.zoneRunPending = 9
+    context:PublishRun(42.7)
     context:Sample(42.7, nil, true)
     assert(env.runBar.value == 42 and context.appearance[3] == false, "pending run accepted the previous Endless flag")
     assert(context.appearanceHeroic == nil, "pending run retained the previous Heroic palette")
     env.zoneRunPending, context.mode = nil, nil
-    context:Sample(1000)
+    context:PublishRun(1000)
+    context:Sample(1000, nil, false, 957.3)
     assert(
         context.appearance[4] == false and env.runBar.value == 960,
         "elapsed time selected Endless without an accepted flag"
