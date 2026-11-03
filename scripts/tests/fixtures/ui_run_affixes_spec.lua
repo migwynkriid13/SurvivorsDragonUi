@@ -162,14 +162,17 @@ Test("the affix owner supplies the first visible opening center through placemen
         assert(math.abs(c.view:FirstCenter(280) - expected) < 0.000001, "row growth lost the first opening")
         c.env.bossClock.visible = true
         c.refreshBounds()
-        expected = (296 - 55) / 2 + 12.5 + 25 / 29 - 8
-        assert(math.abs(c.view:FirstCenter(280) - expected) < 0.000001, "two captions used a stale left anchor")
-        assert(math.abs(c.numeralCenter - expected) < 0.000001, "caption placement did not refresh the numeral")
+        assert(c.view.root.affixPoint == "BOTTOM", "two captions did not center the affix row")
+        assert(c.view:FirstCenter(280) == nil and c.numeralCenter == nil, "two captions pulled the numeral to center")
         c.owner:SetWidth(576)
         c.env.runBar.layoutWidth = 560
         c.refreshBounds()
-        expected = (576 - 55) / 2 + 12.5 + 25 / 29 - 8
+        assert(c.view:FirstCenter(560) == nil and c.numeralCenter == nil, "resize lost the percentage fallback")
+        c.env.bossClock.visible = false
+        c.refreshBounds()
+        expected = 18 + 12.5 + 25 / 29 - 8
         assert(math.abs(c.view:FirstCenter(560) - expected) < 0.000001, "resize lost the bar's left inset")
+        assert(math.abs(c.numeralCenter - expected) < 0.000001, "hiding the boss caption did not restore alignment")
         c.settings.attachAffixes = false
         c:Update(true)
         assert(c.view.root:IsVisible() and c.view:FirstCenter(560) == nil and c.numeralCenter == nil)

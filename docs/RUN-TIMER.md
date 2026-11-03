@@ -71,18 +71,19 @@ the defaults above. Changing a choice does not move or scale the timer.
 ## Heroic level inside the bar
 
 The live timer shows the received Heroic rank as a Bildad Roman numeral centered
-vertically inside the pill, directly below the first visible attached affix's
-picture and gold opening. The numeral follows existing caption and affix
-placement when the row changes. With no visible attached affix, it uses
-**9.375%** of the fill width, the 1:30 point of a 16:00 zone. Normal runs have no numeral. The atlas
+vertically inside the pill. When both the run caption and boss countdown are
+visible, the numeral stays **9.375%** from the left edge of the fill track, the
+1:30 point of a 16:00 zone. With one or no captions, it sits below the first
+visible attached affix and uses the same percentage when no affix is available.
+Normal runs have no numeral. The atlas
 contains I–X, made only from I, V and X; unavailable, fractional or unsupported
 ranks hide the marker instead of displaying an old value. Tier colors move
 from bright blue through steel blue and copper to red. Ranks above V use the final red tint.
 
 One static, transparent BLP cell supplies each marker, including its dark
 outline. It stays visible in Performance Mode. Its horizontal center comes from
-the affix owner's existing placement geometry, with `fillWidth * 3 / 32` as
-the detached/hidden/empty/unready fallback. Very narrow bars keep the
+the affix owner's existing placement geometry when eligible. The percentage
+uses `fillWidth * 3 / 32`. Very narrow bars keep the
 complete 32-unit cell inside their caps. Proportional Layout scaling is
 inherited normally. A valid positive native zone duration is still required;
 it no longer determines the marker's horizontal coordinate. The existing timer

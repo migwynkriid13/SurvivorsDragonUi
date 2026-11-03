@@ -90,6 +90,8 @@ DFRL:NewMod("RunTimers", 5, function()
             return 0
         end
         function view:FirstCenter(fillWidth)
+            -- With both captions shown, the centered affixes leave the numeral at its fixed percentage.
+            if self.bothCaptions or root.affixPoint ~= "BOTTOMLEFT" then return end
             if not self.attached or not self.rows[1] or not self.rows[1].active or not root:IsVisible() then return end
             local frameWidth, x = owner:GetWidth(), root.affixX
             if
@@ -100,11 +102,6 @@ DFRL:NewMod("RunTimers", 5, function()
                 or type(x) ~= "number"
                 or x - x ~= 0
             then
-                return
-            end
-            if root.affixPoint == "BOTTOM" then
-                x = x + (frameWidth - self.width) / 2
-            elseif root.affixPoint ~= "BOTTOMLEFT" then
                 return
             end
             return x + rowWidth / 2 + iconOffsetX - (frameWidth - fillWidth) / 2

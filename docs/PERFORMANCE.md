@@ -1148,12 +1148,12 @@ lossless BLP atlas, with a baked dark outline and a tier-specific vertex tint.
 The TGA is an authoring source only; no font is installed or shipped. Source
 and licensing are in [HeroicNumerals-ARTWORK.md](../third_party/HeroicNumerals-ARTWORK.md).
 
-Rank/UV/tint and binding caches skip unchanged native writes. The numeral uses
-the first visible attached affix's picture/gold-opening center, supplied by the
-affix owner from its existing row width, inset and cached anchor. A quarter-unit
-downward correction centers visible ink inside the pill. Detached, hidden,
-empty or unready rows retain the **9.375%** fallback (`width * 3 / 32`), equivalent
-to 1:30 of a 16:00 zone. Cap protection remains for narrow bars. A valid positive
+Rank/UV/tint and binding caches skip unchanged native writes. With one or no
+captions, the numeral uses the first visible attached affix's picture center
+from the affix owner's existing geometry. A quarter-unit downward correction
+centers visible ink inside the pill. When both captions are visible or no attached
+affix is ready and visible, it uses **9.375%** of the track (`width * 3 / 32`),
+equivalent to 1:30 of a 16:00 zone. Cap protection remains for narrow bars. A valid positive
 native duration remains an acceptance gate; duration changes do not move the
 marker or trigger another position write. Layout resizing reanchors the already
 accepted rank without another gameplay read. Lazy bindings retry on the

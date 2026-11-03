@@ -1294,9 +1294,9 @@ widgets/snapshots. Scenarios cover ordered placement, the selected 25-by-23
 gold minimap bevel and exact normal-state crop, the 16-square icon above its
 background layer, its measured rightward correction, source-coordinate bounds
 strictly inside the gold rails for both known and unknown pictures, untinted
-artwork, caption/edit bounds, first-opening coordinates for one/two captions,
-row growth, resize, attachment, hidden retirement and same-width readiness
-transitions, and shared static
+artwork, caption/edit bounds, first-opening alignment with a single caption and
+percentage fallback with both captions, row growth, resize, attachment, hidden
+retirement and same-width readiness transitions, and shared static
 behavior in both Performance Mode states. Hidden/unchanged work, missing or
 non-Heroic data, unknown-key/known-icon reuse, receipt retirement, separate
 icon/background binding failures, retry cadence, pool reuse, editing/Tooltip
