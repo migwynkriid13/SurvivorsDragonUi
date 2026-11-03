@@ -31,7 +31,7 @@ DFRL:NewMod("GuardianTracker", 4, function()
     local preferredStatusWidth, headerHeight = 128, WIDTH / 8
     local width, statusWidth = 240, 128
     local healthWidth = 0
-    local presentation = { snapshot = { rows = {}, counts = {} }, shown = false }
+    local presentation = { snapshot = { rows = {}, counts = {} }, shown = false, activeRows = 0 }
     local frame = CreateFrame("Frame", "DFRL_GuardianTracker", UIParent)
     frame:SetScale(DEFAULT_SCALE)
     frame:SetWidth(width)
@@ -145,6 +145,12 @@ DFRL:NewMod("GuardianTracker", 4, function()
         if row.pill:IsShown() then row.pill:Hide() end
         if row:IsShown() then row:Hide() end
     end
+    local function RetireRows(used)
+        while presentation.activeRows > used do
+            ClearRow(rows[presentation.activeRows])
+            presentation.activeRows = presentation.activeRows - 1
+        end
+    end
     local function Clear()
         rowOffset = 0
         presentation.healthLabels, healthWidth, dirty = nil, 0, true
@@ -156,9 +162,7 @@ DFRL:NewMod("GuardianTracker", 4, function()
             end
             table.setn(presentation.filtered, 0)
         end
-        for _, row in ipairs(rows) do
-            ClearRow(row)
-        end
+        RetireRows(0)
         if presentation.shown then
             presentation.shown = false
             frame:Hide()
@@ -366,6 +370,8 @@ DFRL:NewMod("GuardianTracker", 4, function()
             if entry then
                 used = used + 1
                 local row = rows[used] or MakeRow()
+                -- Keep partially painted rows eligible for cleanup.
+                if used > presentation.activeRows then presentation.activeRows = used end
                 if
                     row.layoutWidth ~= width
                     or row.layoutIndex ~= used
@@ -425,9 +431,7 @@ DFRL:NewMod("GuardianTracker", 4, function()
                 if not row:IsShown() then row:Show() end
             end
         end
-        for index = used + 1, table.getn(rows) do
-            ClearRow(rows[index])
-        end
+        RetireRows(used)
         local height = headerHeight + 12 + (visibleRows > 0 and visibleRows or used) * ROW_HEIGHT
         if not T.NearlyEqual(frame:GetHeight(), height) then frame:SetHeight(height) end
     end

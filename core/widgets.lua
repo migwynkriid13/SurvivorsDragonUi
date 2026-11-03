@@ -406,8 +406,9 @@ function DFRL.tools.BindUnitHealthText(bar, label, unit, hideDead, showDeathStat
         local current, maximum, status
         local valueShown = DFRL.display.Get("showHealthValue")
         local percentShown = DFRL.display.Get("showHealthPercentage")
+        local numericShown = valueShown or percentShown
         local shorten = DFRL.display.Get("unitShortHealth") ~= false
-        if UnitExists(unit) then
+        if (numericShown or showDeathState) and UnitExists(unit) then
             local dead, ghost
             if hideDead or showDeathState then
                 local deadValue, ghostValue = UnitIsDead(unit), UnitIsGhost(unit)
@@ -416,7 +417,7 @@ function DFRL.tools.BindUnitHealthText(bar, label, unit, hideDead, showDeathStat
             end
             if dead or ghost then
                 if showDeathState then status = DFRL.locale.Text(ghost and "Ghost" or "Dead") end
-            else
+            elseif numericShown then
                 current, maximum = T.GetUnitHealth(unit, not percentShown)
                 if type(current) ~= "number" or current < 0 or current - current ~= 0 then current = nil end
             end

@@ -301,10 +301,8 @@ DFRL:NewMod("PetFrames", 4, function()
     end
     local function ReadTotems(list, feed)
         Wipe(seen)
-        local clock = not DFRL.display.Get("hidePetTimers")
-            and not DFRL.layout.IsHidden("petFrames")
-            and Native("AZS_GetRunTime")
-        local clockReady = Number(clock) and clock >= 0
+        local readClock = not DFRL.display.Get("hidePetTimers") and not DFRL.layout.IsHidden("petFrames")
+        local clockReady
         local count = 0
         for _, entry in ipairs(list) do
             if
@@ -333,7 +331,13 @@ DFRL:NewMod("PetFrames", 4, function()
             group.id, group.name = entry.key, entry.name
             group.icon = type(entry.icon) == "string" and entry.icon ~= "" and entry.icon or nil
             group.count, group.temporary = entry.count, entry.count
-            group.remaining = clockReady and Number(entry.remaining) and entry.remaining >= 0 and entry.remaining or nil
+            local remaining = entry.remaining
+            if not readClock or clockReady == false or not Number(remaining) or remaining < 0 then remaining = nil end
+            if remaining and clockReady == nil then
+                local clock = Native("AZS_GetRunTime")
+                clockReady = Number(clock) and clock >= 0
+            end
+            group.remaining = clockReady and remaining or nil
         end
         for index = count + 1, table.getn(feed.entries) do
             if feed.entries[index].id then Wipe(feed.entries[index]) end

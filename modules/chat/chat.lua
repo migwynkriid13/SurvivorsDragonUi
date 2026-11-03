@@ -515,9 +515,14 @@ DFRL:NewMod("Chat", 1, function()
             if native.SetResizable then native:SetResizable(true) end
         end
 
+        local firstUnattached = 1
         RefreshFrames = function()
-            for i = 1, NUM_CHAT_WINDOWS or 7 do
-                AttachNative(i)
+            for i = firstUnattached, NUM_CHAT_WINDOWS or 7 do
+                if not states[i] then AttachNative(i) end
+            end
+            -- A missing slot can appear later, even with higher slots attached.
+            while states[firstUnattached] do
+                firstUnattached = firstUnattached + 1
             end
         end
 

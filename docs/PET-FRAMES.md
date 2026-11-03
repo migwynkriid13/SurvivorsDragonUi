@@ -42,6 +42,8 @@ IDs, so no individual totem frames or identities are manufactured.
 The optional timer shows the getter's earliest expiry for that kind, rounded
 up like pet timers. It stays `--:--` until `AZS_GetRunTime()` is available and
 finite, even if the getter computed a value against its pre-run zero fallback.
+The reader samples the clock once per refresh when at least one kind supplies
+a usable remaining time. Empty feeds and feeds without usable times skip it.
 No UI clock is subtracted from a raw deadline. Reaching zero keeps the native
 count until a new snapshot changes it. Duration can describe a different
 captured instance than the earliest expiry; neither is used to infer other

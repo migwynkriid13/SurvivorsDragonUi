@@ -571,6 +571,36 @@ Test("unit full-number preview preserves health and percentages and defers hidde
     assert(label:GetText() == "166.9K" and bar:GetValue() == value, "shown unit did not resume the current format")
 end)
 
+Test("disabled numeric labels repair text without consulting health sources", function()
+    local context, _, bar, label, percentage, _, _, labels = Target(70e12, 70e12)
+    local env = context.env
+    local exists, health = env.UnitExists, env.DFRL.targetHealth.Get
+    env.UnitExists = function(unit)
+        context.reads.labelExists = (context.reads.labelExists or 0) + 1
+        return exists(unit)
+    end
+    env.DFRL.targetHealth.Get = function()
+        context.reads.labelHealth = (context.reads.labelHealth or 0) + 1
+        return health()
+    end
+    for _, performance in ipairs({ false, true }) do
+        context:SetSetting("performanceMode", performance)
+        context:SetSetting("showHealthValue", false)
+        context:SetSetting("showHealthPercentage", false)
+        context:Publish(35e12, 70e12)
+        label:SetText("stale value")
+        percentage:SetText("stale percentage")
+        context:ResetCounts()
+        labels.Update()
+        assert(not context.reads.labelExists and not context.reads.labelHealth, "disabled captions read native health")
+        assert(label:GetText() == "" and percentage:GetText() == "" and bar:GetValue() == 0.5)
+        context:SetSetting("showHealthPercentage", true)
+        assert(label:GetText() == "" and percentage:GetText() == "50%", "percentage did not recover current health")
+        context:SetSetting("showHealthValue", true)
+        assert(label:GetText() == "35T", "value did not recover current health")
+    end
+end)
+
 Test("encounter format changes invalidate only presentation caches", function()
     local context = H.New()
     context:Load("core/widgets.lua")

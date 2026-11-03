@@ -51,6 +51,13 @@ assert(metric and distance > 141 and distance < 142)
 assert(reads == 3, "accepted base projection was repeated during native metric calibration")
 local copy = { x = point.x, y = point.y, mx = point.mx, my = point.my }
 reads = 0
+local nativeMath = env.math
+env.math = setmetatable({
+    sqrt = function() error("calibrated pin offsets computed a discarded distance") end,
+}, { __index = nativeMath })
+local pinEast, pinNorth, pinDistance, pinMetric = nav.GuideDelta(copy, true)
+assert(pinEast == east and pinNorth == north and not pinDistance and pinMetric)
+env.math = nativeMath
 for _ = 1, 20 do
     assert(nav.GuideDelta(copy) == east, "equal accepted coordinates changed projected placement")
 end

@@ -357,8 +357,14 @@ assert(
     "missing native unit retained its prior death caption"
 )
 member.exists, member.dead, member.ghost = true, false, false
+party:ResetCounts()
 party:Event(party.controller, "UNIT_CONNECTION", "party1")
 assert(member.label:GetText() == "" and member.percentage:GetText() == "", "revival discarded disabled numeric choices")
+assert(
+    party.reads["party1:dead"] and party.reads["party1:ghost"],
+    "disabled numbers stopped observing party death state"
+)
+assert(not party.reads["party1:current"] and not party.reads["party1:maximum"], "disabled numbers read party health")
 party:SetSetting("showHealthValue", true)
 party:SetSetting("showHealthPercentage", true)
 assert(

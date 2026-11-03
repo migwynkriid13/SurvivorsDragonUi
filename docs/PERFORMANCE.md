@@ -157,8 +157,8 @@ other callers keep their original formatter/cache. Filtered/scrolled rows cannot
 borrow another slot's caption, and actual text repair and native fills remain.
 
 Chat's one-second fallback now repairs only the selected pane, with input layout
-and font checks only while that input is visible. It retains cheap discovery of
-new native panes and current container dimensions. Attachment, selection, native
+and font checks only while that input is visible. Discovery checks only missing
+or new native pane slots at the existing cadence. Attachment, selection, native
 window events, root Show and resize retain their existing immediate work; input
 Show/header changes also recover immediately. Inactive panes and hidden input
 no longer receive the periodic font/geometry sweep. The selected pane still
@@ -2466,9 +2466,9 @@ The following changes remove specific avoidable work:
   string construction while actual text comparisons and failed-write retries
   remain. Clear invalidates the bounded caches. The native progress source,
   smoothing and percentage-step equations, fade and cross pulses are unchanged.
-- A revive animation callback shares one current root-width sample between
-  dirty fill/spark painting and its existing cross loop, removing one duplicate
-  native width read on dirty frames. Standalone paints read current width.
+- Revive animation reuses a valid root width until a resize or Show. Dirty
+  fill/spark painting and the cross loop share it. Standalone paints still read
+  current width.
 - Guardian tracker rows cache their latest received key/status, rounded native
   respawn second, language and status text. Unchanged tenth-second samples skip
   clock/status formatting without changing native time or static captions.
@@ -3754,7 +3754,9 @@ anonymous-plate identity limit and snapshot policy are documented in
   original cadence. The private health bar retains confirmed range, fill and
   color values in both Performance Mode states. Stable bars skip those three
   reads per style pass. Changed writes get read back, range changes recheck the
-  fill, and reused or unmasked plates sample the bar again.
+  fill, and reused or unmasked plates sample the bar again. Empty nameplate
+  scans still check the native child count each frame but skip the clock and
+  geometry scratch work when there is nothing to discover, sample or retire.
 - Run schedules are validated and copied per received native publication rather
   than per rendered frame. Receipt generations, run boundaries and the one-use
   reload handoff remain authoritative.
@@ -3767,17 +3769,21 @@ anonymous-plate identity limit and snapshot policy are documented in
   never returned to callers. The tracker reads native health for fighting
   guardians and time for displayed returning lairs at the existing ten-Hz
   cadence. Zero-only minimap countdowns skip the clock. Lair acceptance reuses
-  the phase from the current waypoint pass.
+  the phase from the current waypoint pass. Tracker rows are cleared when they
+  leave the viewport, and successfully cleared spare rows stay idle.
 - Waypoint snapshots reuse accepted copies between receipts. Live position,
   bearing and facing sampling remain unchanged; identical pin positions and
   arrow UVs are not resent. With every guide and the minimap hidden, the
   controller opens a shared sample only on its 100-ms or deferred refresh.
   The visible minimap still handles native flag and player arrow recovery
   every frame. Empty pin pools skip traversal when there is no usable geometry.
+  Pin projection calculates offsets without a distance square root. Live
+  instance offsets still reject overflowing distances.
 - Small unit frames route unit-specific events through the exact token and
   native unit aliases. Ownership, world and target transitions refresh the
   complete group. Native colors are compared directly so later native writes
-  are still repaired.
+  are still repaired. Numeric health reads for captions stop when both numeric
+  choices are off. Dead/Ghost captions and text repair remain active.
 - Player pulses retain frame-by-frame native state detection and their original
   fades, then stop alpha writes after reaching zero. Resource polling stops
   outside the world. Cooldown sampling preserves its final positive-time zero

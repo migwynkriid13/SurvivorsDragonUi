@@ -839,8 +839,8 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         RefreshPlate(plate, data, now, nil, geometry)
     end
 
-    local function DiscoverPlates(force, now, geometry)
-        local count = WorldFrame:GetNumChildren() or 0
+    local function DiscoverPlates(force, now, geometry, count)
+        count = count or WorldFrame:GetNumChildren() or 0
         if count < discoveredChildren then discoveredChildren = 0 end
         if force or count > discoveredChildren then
             geometry = geometry or {}
@@ -855,12 +855,16 @@ DFRL:NewMod("NameplateCombatText", 6, function()
 
     local function ScanPlates(force)
         if not inWorld or not WorldFrame then return end
+        local childCount = WorldFrame:GetNumChildren() or 0
+        if not force and childCount == discoveredChildren and not next(shownPlates) and not originIndex.retiredAt then
+            return
+        end
         local now = GetTime()
         -- Share root geometry only inside this synchronous pass. Show/health
         -- callbacks keep sampling afresh, including later in the same frame.
         -- Retry invalid geometry and retain each origin's last usable point.
         local geometry = UsesPlateOrigins() and {} or nil
-        DiscoverPlates(force, now, geometry)
+        DiscoverPlates(force, now, geometry, childCount)
         -- Snapshot on every frame, rather than every tenth of a second: a
         -- one-shot enemy can disappear between two of the old scans.
         for plate, data in pairs(shownPlates) do

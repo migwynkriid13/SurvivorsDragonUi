@@ -115,7 +115,7 @@ for _, performance in ipairs({ false, true }) do
         end,
     }
     local delivered = {}
-    for index = 1, 2 do
+    local function NewPane(index)
         local pane = native.CreateFrame("ScrollingMessageFrame", "ChatFrame" .. index, native.UIParent)
         pane:RegisterEvent("UPDATE_CHAT_WINDOWS")
         function pane:SetTimeVisible(value) self.hold = value end
@@ -125,7 +125,10 @@ for _, performance in ipairs({ false, true }) do
         function pane:ScrollUp() self.scrolled = true end
         function pane:ScrollDown() self.scrolled = false end
         function pane:AddMessage(text) table.insert(delivered, { pane = self, text = text }) end
+        return pane
     end
+    NewPane(1)
+    NewPane(2)
     local input = native.CreateFrame("EditBox", "ChatFrameEditBox", native.UIParent)
     function input:GetTextInsets() return unpack(self.insets or {}) end
     function input:SetTextInsets(...) self.insets = { ... } end
@@ -204,6 +207,30 @@ for _, performance in ipairs({ false, true }) do
     root:Hide()
     root:Show()
     assert(input:GetWidth() == root:GetWidth(), "root Show retained stale visible input geometry")
+
+    local discovered = {}
+    native._G = setmetatable({}, {
+        __index = function(_, key)
+            if string.find(key, "^ChatFrame%d+$") then discovered[key] = (discovered[key] or 0) + 1 end
+            return native[key]
+        end,
+        __newindex = native,
+    })
+    native.NUM_CHAT_WINDOWS = 4
+    local fourth = NewPane(4)
+    Tick(1.1)
+    assert(fourth:GetParent() == root and discovered.ChatFrame3 == 1 and discovered.ChatFrame4 == 1)
+    assert(not discovered.ChatFrame1 and not discovered.ChatFrame2, "chat rediscovered its attached prefix")
+    Tick(1.1)
+    assert(discovered.ChatFrame3 == 2 and discovered.ChatFrame4 == 1, "chat repeated lookup above a missing slot")
+    local third = NewPane(3)
+    current:Event(pane, "UPDATE_CHAT_WINDOWS")
+    assert(
+        third:GetParent() == root and discovered.ChatFrame3 == 3,
+        "chat did not attach a late pane on its window event"
+    )
+    Tick(1.1)
+    assert(discovered.ChatFrame3 == 3 and discovered.ChatFrame4 == 1, "chat did not settle after all panes attached")
 end
 print(
     "PASS real chat retains messages and input while periodic layout repair visits only the selected pane and visible input"

@@ -40,6 +40,7 @@ DFRL:NewMod("Revive", 4, function()
         root:SetFrameStrata("HIGH")
         root:EnableMouse(false)
         root:Hide()
+        root:SetScript("OnSizeChanged", function() view.animationWidth = nil end)
         local pill = CreateFrame("Frame", nil, root)
         pill:SetPoint("BOTTOMLEFT", root, "BOTTOMLEFT", 4, 0)
         pill:SetPoint("BOTTOMRIGHT", root, "BOTTOMRIGHT", -52, 0)
@@ -181,7 +182,9 @@ DFRL:NewMod("Revive", 4, function()
             pill:Hide()
             root:Show()
         end
-        function view.Resize() dirty = true end
+        function view.Resize()
+            view.animationWidth, dirty = nil, true
+        end
         function view.SetPerformance()
             transition, effectAge = 0, 0
             if performanceMode then
@@ -238,7 +241,7 @@ DFRL:NewMod("Revive", 4, function()
             if not T.NearlyEqual(width, root:GetWidth()) then
                 root:SetWidth(width)
                 if view.onResize then view.onResize() end
-                dirty = true
+                view.Resize()
             end
             if not T.NearlyEqual(caption:GetWidth(), width - 56) then caption:SetWidth(width - 56) end
             if fresh then
@@ -272,7 +275,11 @@ DFRL:NewMod("Revive", 4, function()
                 value = math.max(0, math.min(1, value + step))
                 dirty = true
             end
-            local width = root:GetWidth()
+            local width = view.animationWidth
+            if not width then
+                width = root:GetWidth()
+                if Number(width) and width > 0 then view.animationWidth = width end
+            end
             if dirty then Paint(width) end
             effectAge = effectAge + elapsed
             width = width - 72
@@ -441,6 +448,7 @@ DFRL:NewMod("Revive", 4, function()
     })
     view.onResize = function() DFRL.layout.Place("revive", root) end
     root:SetScript("OnShow", function()
+        view.animationWidth = nil
         dirty, age = true, INTERVAL
         SyncNative()
     end)

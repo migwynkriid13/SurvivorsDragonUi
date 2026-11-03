@@ -424,7 +424,7 @@ DFRL:NewMod("Waypoints", 3, function()
         end
 
         local function Offset(entry, scale)
-            local east, north, _, metric = navigation.GuideDelta(entry)
+            local east, north, _, metric = navigation.GuideDelta(entry, true)
             if not metric or not Number(east) or not Number(north) then return end
             local x, y = east * scale, north * scale
             if Number(x) and Number(y) then return x, y end

@@ -255,12 +255,21 @@ do
     context:Publish({ down = 1, by = "Alice", share = 0.2504 })
     context:ResetPerf()
     context:Tick(0.01)
-    assert(context.reads.rootWidth == 1, "dirty paint and crosses repeated the same root width read")
+    assert(not context.reads.rootWidth, "settled revive animation reread the root width")
     assert(
         context.percentFormats == 0 and context.percent:GetText() == "25%",
         "small smoothing steps reformatted percent"
     )
     assert(context.env.T.NearlyEqual(context.bar.value, 0.25 + 0.0004 * 0.01 / 0.14), "smoothing equation changed")
+    local crossX = context.crosses[3].anchor.x
+    context.root:SetWidth(376)
+    context:Call(context.root, "OnSizeChanged")
+    context:ResetPerf()
+    context:Tick(0.01)
+    assert(
+        context.reads.rootWidth == 1 and context.crosses[3].anchor.x == crossX + 5,
+        "native resize did not refresh cross geometry on the next frame"
+    )
     context.layoutWidth = 508
     context:Publish({ down = 1, by = "Beatrice", share = 0.5 })
     assert(context.spark.anchor.x == 226 and context.percent:GetText() == "50%", "fresh paint retained the prior width")
@@ -271,7 +280,7 @@ do
         "catch-up skipped its one-point step"
     )
 end
-print("PASS Revive shares width only within animation and preserves cross clipping, smoothing and percentage steps")
+print("PASS Revive reuses settled width and preserves resize, cross clipping, smoothing and percentage steps")
 
 do
     local context = Revive()

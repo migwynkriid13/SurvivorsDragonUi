@@ -1506,10 +1506,10 @@ Test("scrolling expires, reuses its pool and remains idle with no active labels"
     context:NoPresentationWrites()
 end)
 
-Test("empty legacy and scrolling SCT queues skip their clock and resume for new hits", function()
+Test("empty legacy and scrolling SCT skip clock reads while still checking for native plates", function()
     for _, scrolling in ipairs({ false, true }) do
         local context = SCT(scrolling)
-        local writes, clockReads = 0, 0
+        local writes, clockReads, childCountReads = 0, 0, 0
         local setn, getTime = context.env.table.setn, context.env.GetTime
         context.env.table.setn = function(list, count)
             writes = writes + 1
@@ -1519,16 +1519,24 @@ Test("empty legacy and scrolling SCT queues skip their clock and resume for new 
             clockReads = clockReads + 1
             return getTime()
         end
+        function context.env.WorldFrame:GetNumChildren()
+            childCountReads = childCountReads + 1
+            return 0
+        end
         context:Tick(0.016)
-        assert(writes == 0 and clockReads == 1, "empty SCT still worked after the existing plate scan")
+        assert(
+            writes == 0 and clockReads == 0 and childCountReads == 1,
+            "idle SCT stopped native discovery or read time"
+        )
         context:Hit(111)
         writes = 0
         context:Tick(0.2)
         assert(writes > 0 and context:Labels()[1]:GetText() == "111", "a new hit did not resume queue processing")
         context:Tick(1.5)
-        writes, clockReads = 0, 0
+        writes, clockReads, childCountReads = 0, 0, 0
         context:Tick(0.016)
-        assert(writes == 0 and clockReads == 1 and #context:Labels() == 0, "retired queues did not return to idle")
+        assert(writes == 0 and clockReads == 0 and childCountReads == 1, "retired queues did not return to idle")
+        assert(#context:Labels() == 0, "expired SCT labels remained visible")
     end
 end)
 

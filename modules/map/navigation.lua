@@ -370,13 +370,16 @@ DFRL:NewMod("Navigation", 2, function()
         local position, supported = LivePosition()
         return (not supported and not target.nativeDowned) or (MatchesLivePosition(target, position) and true or false)
     end
-    local function LiveDelta(target)
+    local function LiveDelta(target, offsetsOnly)
         local position, supported = LivePosition()
         if not supported then return target.nativeDowned and true or false end
         if not MatchesLivePosition(target, position) then return true end
         local east, north = position.y - target.y, target.x - position.x
-        local distance = math.sqrt(east * east + north * north)
-        if Number(east) and Number(north) and Number(distance) then return true, east, north, distance end
+        -- Reject the same overflowing live distances even for axis-only callers.
+        local squared = east * east + north * north
+        if Number(east) and Number(north) and Number(squared) then
+            return true, east, north, not offsetsOnly and math.sqrt(squared) or nil
+        end
         return true
     end
     local function ReadRunState()
@@ -623,7 +626,7 @@ DFRL:NewMod("Navigation", 2, function()
         if sampling then frameSample.aspect = aspect end
         return aspect
     end
-    local function MapDelta(target)
+    local function MapDelta(target, offsetsOnly)
         if type(target) ~= "table" then return end
         local x, y = navigation.Position()
         if not x then return end
@@ -639,15 +642,15 @@ DFRL:NewMod("Navigation", 2, function()
         local w, h = navigation.Metric()
         if w and h then
             local east, north = (targetX - x) * w, (y - targetY) * h
-            return east, north, math.sqrt(east * east + north * north), true
+            return east, north, not offsetsOnly and math.sqrt(east * east + north * north) or nil, true
         end
         return (targetX - x) * Aspect(), y - targetY, nil, false
     end
-    function navigation.Delta(target)
+    function navigation.Delta(target, offsetsOnly)
         if type(target) ~= "table" then return end
         if not navigation.IsRunPhase(navigation.Phase()) then return end
         if not target.mapSelection then
-            local supported, east, north, distance = LiveDelta(target)
+            local supported, east, north, distance = LiveDelta(target, offsetsOnly)
             if supported then return east, north, distance, east ~= nil end
         end
         local state, stamp = RunState()
@@ -655,21 +658,21 @@ DFRL:NewMod("Navigation", 2, function()
             -- Official world coordinates work without a map sheet or calibration,
             -- including instances. The stamp identifies sampled HUD presentation.
             local east, north = state.py - target.y, target.x - state.px
-            return east, north, math.sqrt(east * east + north * north), true, stamp
+            return east, north, not offsetsOnly and math.sqrt(east * east + north * north) or nil, true, stamp
         end
-        return MapDelta(target)
+        return MapDelta(target, offsetsOnly)
     end
-    function navigation.GuideDelta(target)
+    function navigation.GuideDelta(target, offsetsOnly)
         if type(target) ~= "table" or not navigation.IsRunPhase(navigation.Phase()) then return end
         if not target.mapSelection then
-            local supported, east, north, distance = LiveDelta(target)
+            local supported, east, north, distance = LiveDelta(target, offsetsOnly)
             if supported then return east, north, distance, east ~= nil end
         end
         -- A valid current-sheet native reading follows movement every frame.
         -- Keep sampled world coordinates for instances and other map sheets.
-        local east, north, distance, metric = MapDelta(target)
+        local east, north, distance, metric = MapDelta(target, offsetsOnly)
         if metric then return east, north, distance, true end
-        return navigation.Delta(target)
+        return navigation.Delta(target, offsetsOnly)
     end
 
     local function PlayerArrow()

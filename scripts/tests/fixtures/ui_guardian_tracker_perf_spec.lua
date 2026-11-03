@@ -140,6 +140,68 @@ end
 print("PASS guardian filters reuse accepted revisions while countdowns, publications and hidden recovery stay live")
 
 for _, performance in ipairs({ false, true }) do
+    local context, first = Tracker()
+    local env = context.env
+    context.settings.performanceMode = performance
+    local entry = {
+        key = "2:8",
+        index = 2,
+        id = 8,
+        name = "Fighting guardian",
+        state = "awake",
+        status = "fighting",
+        hp = 50,
+        maximum = 100,
+        healthFraction = 0.5,
+    }
+    context.entries[2], context.revision, context.generation = entry, 1, 1
+    context:Tick()
+    local second
+    for _, object in ipairs(context.objects) do
+        if object.parent == env.DFRL_GuardianTracker and object.status and object.bar and object ~= first then
+            second = object
+            break
+        end
+    end
+    assert(second and second:IsShown() and second.health:GetText() == "50 / 100")
+    local allocated, isShown = #context.objects, second.pill.IsShown
+    local failCleanup = true
+    function second.pill:IsShown()
+        context.reads.sparePill = (context.reads.sparePill or 0) + 1
+        if failCleanup then
+            failCleanup = false
+            error("injected guardian cleanup failure")
+        end
+        return isShown(self)
+    end
+    context.entries[2], context.revision = nil, 2
+    local ok = pcall(function() context:Tick() end)
+    assert(not ok and second:IsShown(), "guardian retirement did not reach the failed native operation")
+    context:ResetCounts()
+    context:Tick()
+    assert(
+        context.reads.sparePill == 1
+            and not second:IsShown()
+            and not isShown(second.pill)
+            and second.health:GetText() == ""
+            and second.bar.value == 0,
+        "failed guardian retirement did not retry and clear the departed row"
+    )
+    context:ResetCounts()
+    for _ = 1, 5 do
+        context:Tick()
+    end
+    assert(not context.reads.sparePill, "settled guardian refresh visited an already retired row")
+    entry.name, entry.hp, entry.healthFraction = "Returned guardian", 25, 0.25
+    context.entries[2], context.revision = entry, 3
+    context:Tick()
+    assert(second:IsShown() and second.health:GetText() == "25 / 100" and #context.objects == allocated)
+    context:Event(context.controller, "PLAYER_LEAVING_WORLD")
+    assert(not second:IsShown() and not isShown(second.pill), "world leave missed the reused active row")
+end
+print("PASS guardian spare rows retire once with native cleanup retries and pool reuse")
+
+for _, performance in ipairs({ false, true }) do
     local context, row = Tracker()
     local env = context.env
     context.settings.performanceMode = performance

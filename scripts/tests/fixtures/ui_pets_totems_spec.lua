@@ -213,6 +213,40 @@ Test("countdowns wait for native run time, respect pauses and keep zero-time nat
     assert(not c.layoutFrame:IsShown(), "empty native snapshot retained a visible totem")
 end)
 
+Test("totem clocks are sampled once only when a usable countdown is received", function()
+    for _, performance in ipairs({ false, true }) do
+        local c = Pets()
+        c:SetSetting("performanceMode", performance)
+        c:SetSetting("hidePetTimers", false)
+        c:Publish("AZSTOTEMS", {})
+        c:Tick()
+        assert(c.reads.phase == 1 and c.reads.totems == 1 and not c.reads.clock, "empty feed read the native clock")
+
+        local absent, invalid = Totem("absent_totem", 2), Totem("invalid_totem", 1)
+        absent.ends, invalid.ends, invalid.remaining = nil, nil, math.huge
+        local list = { absent, invalid }
+        c:Publish("AZSTOTEMS", list)
+        c:ResetCounts()
+        c:Tick()
+        local _, timer, count = c:Labels(1)
+        assert(timer == "--:--" and count == "x2" and select(2, c:Labels(2)) == "--:--")
+        assert(c.reads.phase == 1 and c.reads.totems == 1 and not c.reads.clock, "unusable timers read the clock")
+
+        local zero = Totem("zero_totem", 3)
+        zero.ends, zero.remaining = nil, 0
+        table.insert(list, zero)
+        table.insert(list, Totem("active_totem", 1, 20))
+        c.runTime = nil
+        c:ResetCounts()
+        c:Tick()
+        assert(c.reads.clock == 1 and select(2, c:Labels(3)) == "--:--" and select(2, c:Labels(4)) == "--:--")
+        c.runTime = 10
+        c:ResetCounts()
+        c:Tick()
+        assert(c.reads.clock == 1 and select(2, c:Labels(3)) == "0:00" and select(2, c:Labels(4)) == "0:10")
+    end
+end)
+
 Test("upgrade cards hide whole pet groups without retiring their roster or allocating hidden artwork", function()
     for _, performance in ipairs({ false, true }) do
         local c = Pets()

@@ -13,7 +13,10 @@ env.DFRL.navigation = {
     Phase = env.AZS_GetPhase,
     IsRunPhase = function(value) return value == "playing" or value == "paused" or value == "choosing" end,
     MinimapLevel = function() return 11 end,
-    GuideDelta = function(entry) return entry.x, entry.y, nil, true end,
+    GuideDelta = function(entry, offsetsOnly)
+        assert(offsetsOnly, "minimap pin requested an unused distance")
+        return entry.x, entry.y, nil, true
+    end,
 }
 env.navigation = env.DFRL.navigation
 env.texturePath = "Interface\\AddOns\\SurvivorsDragonUi\\media\\tex\\waypoint\\"

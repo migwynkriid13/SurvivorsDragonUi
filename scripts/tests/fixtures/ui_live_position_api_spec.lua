@@ -48,7 +48,18 @@ end
 -- Explicitly unadvertised clients keep the original packet fallback.
 Near(nav.Delta(point), 130, "an unadvertised API changed legacy navigation")
 assert(positionReads == 0, "unadvertised live position getter was called")
+local nativeMath = env.math
+env.math = setmetatable({
+    sqrt = function() error("pin offsets computed a discarded distance") end,
+}, { __index = nativeMath })
+local legacyEast, legacyNorth, legacyDistance, legacyMetric, legacyStamp = nav.GuideDelta(point, true)
+assert(legacyEast == 130 and legacyNorth == -80 and not legacyDistance and legacyMetric and legacyStamp == 10)
 advertised = true
+local liveEast, liveNorth, liveDistance, liveMetric = nav.GuideDelta(point, true)
+assert(liveEast == 30 and liveNorth == 20 and not liveDistance and liveMetric)
+local overflowEast, overflowNorth, _, overflowMetric = nav.GuideDelta(Point(1e200, 0), true)
+assert(not overflowEast and not overflowNorth and not overflowMetric, "overflowing native offsets were accepted")
+env.math = nativeMath
 capReads, positionReads = 0, 0
 nav.WithSample(function()
     for _ = 1, 10 do
