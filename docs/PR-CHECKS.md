@@ -150,7 +150,9 @@ establish native pixel coverage.
 Jewelry rail asset cases require clear pixels above the original straight
 upper strip, clear item openings, retained bottom-arch/bar pixels and exclusion of the
 retired detached-circle file from the runtime manifest. Existing strip cases
-retain both neighbour pixels at every join. These are CI-only data cases;
+retain both neighbour pixels at every join. The upper connector sits beneath
+solid housing pixels; both former crop-tab bands remain clear across all five
+sockets. These are CI-only data cases;
 local work is artwork preparation, source review and pinned formatting, with
 no local tests, standalone validation or addon/game execution.
 

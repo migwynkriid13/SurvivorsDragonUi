@@ -19,7 +19,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SCALE = 4
 
 
-def connector_curve(join):
+def connector_curve(join, baseline):
     """Start under the opaque housing and meet the bar with a flat tangent."""
     points = []
     for step in range(65):
@@ -27,7 +27,7 @@ def connector_curve(join):
         u = 1 - t
         points.append((
             6.5 * (1 - t ** 3) + join * t ** 3,
-            26 * u ** 3 + 3 * 29.5 * u * u * t + 3 * 33.5 * u * t * t + 33.5 * t ** 3,
+            26 * u ** 3 + 3 * 29.5 * u * u * t + 3 * baseline * u * t * t + baseline * t ** 3,
         ))
     return points
 
@@ -52,7 +52,7 @@ def prepare(bar_path, output):
     baseline = 33.5
     junction = math.sqrt(radius * radius - (baseline - center) ** 2)
     left_join, right_join = center - junction, center + junction
-    curve = connector_curve(left_join)
+    curve = connector_curve(left_join, baseline)
     segments = list(zip(curve, curve[1:]))
     # Geometry is shared by all five sockets; only native material pixels vary.
     geometry = []

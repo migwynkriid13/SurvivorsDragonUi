@@ -85,9 +85,9 @@ By default, the five circles line up with action buttons **2 through 6**, one ab
 
 The three `SocketRail` BLP strips retain the original straight upper edge and
 small bottom arch beneath each housing, with the existing transparent item
-cutouts. The lower connector keeps its native bevel and bar join. The old
-circle is removed from the top and sides where it could bleed out behind
-Runecarver.
+cutouts. The lower connector curves underneath the solid Runecarver rim and
+meets the bar smoothly, with no exposed cut ends. It keeps the original native
+bevel and bar join. The old circle is removed from the top and sides.
 They retain their shared bar-owned geometry, UVs and neighbour gutters. The
 original `HDActionBar.tga`, seven buttons and lower background stay unchanged.
 When jewelry is unavailable or hidden, the original complete bar background

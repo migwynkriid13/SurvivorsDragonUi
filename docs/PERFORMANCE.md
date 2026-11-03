@@ -86,8 +86,11 @@ measure this sixteen-band layout.
 The old upper and side socket surround is removed in both attachment modes.
 The three attached `SocketRail` strips retain the small bottom arch joining
 each housing to the original straight bar edge, with transparent item cutouts.
-The connector keeps its original native bevel and join; the rest of the old
-circle cannot bleed beyond Runecarver.
+The connector keeps its native bevel and bar join. Its narrow curved ends
+start underneath the solid housing, replacing the exposed y=28 cut and upright
+tabs. Curve distances and artwork are prepared offline; this adds no runtime
+geometry, frame, region, texture binding or recurring work. The rest of the old
+circle stays removed.
 Their region count, anchors, guttered joins and visibility handoff stay the
 same. Detached jewelry no longer creates five hidden/visible backing-circle
 textures or updates their visibility on display changes. `SocketDetached.blp`

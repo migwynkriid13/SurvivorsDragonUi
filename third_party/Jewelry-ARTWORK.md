@@ -97,11 +97,15 @@ the complete ring is never sliced. Jewelry uses its own inset sixteen-band icon 
 executing addon code. The original artwork and attribution remain intact. At
 the 36-unit button reference, it copies the original 12-unit straight upper
 edge into the existing 300-by-38 rail space, 26 units below its top. Pixels
-above that strip stay clear. The small lower arch is retained from y=28
-downward, with the same 20-unit curve, 33.5-unit join and native bevel phase.
-Only this bottom connector survives; the old upper and side circle is omitted
-so it cannot bleed outside Runecarver. Five existing 13.7-unit-radius cutouts
-keep the bar and connector from crossing the item openings.
+above that strip stay clear. A narrow cubic connector starts at `(6.5, 26)`
+inside the housing's opaque lower rim and mirrors on the right. Its control
+points keep the upper end beneath the housing and bring the lower end flat
+into the original 33.5-unit bar join. A 64-segment distance sample reuses the
+native bevel phase along the curve. This replaces the exposed horizontal
+y=28 crop and its upright tabs, retaining the small bottom arch without the
+old upper/side circle. Five existing 13.7-unit-radius cutouts keep the bar and
+connector from crossing the item openings. All geometry is baked offline;
+runtime region count, UVs and update work are unchanged.
 
 The helper writes `SocketRail.blp`, `SocketRail_2.blp` and `SocketRail_3.blp`
 directly through the shared lossless BLP encoder, without a temporary large

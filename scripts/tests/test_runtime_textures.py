@@ -60,7 +60,14 @@ class RuntimeTextureTests(unittest.TestCase):
 
         for y in range(104):
             self.assertFalse(any(alpha(x, y) for x in range(1200)), "old socket arch remains above the bar")
-        self.assertTrue(any(alpha(196, y) for y in range(112, 134)), "small lower connector was removed")
+        self.assertTrue(any(alpha(212, y) for y in range(104, 134)), "small lower connector was removed")
+        for start in (184, 352, 520, 688, 856):
+            for y in range(104, 120):
+                self.assertFalse(any(alpha(start + x, y) for x in range(24)), "left crop tab remains exposed")
+                self.assertFalse(any(alpha(start + 159 - x, y) for x in range(24)), "right crop tab remains exposed")
+        # The new upper connector starts beneath solid housing pixels.
+        width, _, housing = blp_bgra_levels((ROOT / "media/tex/jewelry/Frame.blp").read_bytes())
+        self.assertGreaterEqual(housing[0][(85 * width + 384 + 25) * 4 + 3], 224)
         for center in (264, 432, 600, 768, 936):
             self.assertFalse(any(alpha(center, y) for y in range(104, 134)), "bar crosses an item opening")
         self.assertTrue(any(alpha(348, y) for y in range(104, 152)), "straight bar edge was removed")
