@@ -180,7 +180,7 @@ context.now = context.now + 0.001
 source.Update(942, 960)
 assert(context.reads.pulses and math.abs(glow:GetWidth() - 280 * 942 / 960) < 1e-9)
 assert(math.abs(fillClip:GetWidth() - 280 * 942 / 960) < 1e-9)
-assert(math.abs(foamClip:GetWidth() - fillClip:GetWidth() - 6) < 1e-9)
+assert(foamClip:GetWidth() == 280, "foam escaped the pill near completion")
 assert(edge.geometryWrites.SetPoint == 1 and not edge.geometryWrites.SetWidth and not edge.geometryWrites.SetTexCoord)
 assert(
     interior.geometryWrites.SetPoint == 1

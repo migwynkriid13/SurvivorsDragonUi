@@ -278,7 +278,7 @@ function H.New()
         context.layoutFrame = frame
         context.layoutMask = context:Object("Frame", nil, env.UIParent)
         frame.parent = context.layoutMask
-        if anchor then anchor() end
+        if anchor then anchor(frame) end
         if visibility[name] then visibility[name](true) end
     end
     function context:SetSetting(name, value)
