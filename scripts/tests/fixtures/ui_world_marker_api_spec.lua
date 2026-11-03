@@ -1161,6 +1161,64 @@ for _, performance in ipairs({ false, true }) do
     )
     unavailable.api.Reset()
 end
+for _, performance in ipairs({ false, true }) do
+    local c = Scene(performance)
+    local native, display = c.native, c.env.DFRL.display
+    native.entries = { Record("cache", "cache") }
+    c:Service()
+    c:Frame()
+    local objects = #c.objects
+    local setn = c.env.table.setn
+    c.env.table.setn = function(...)
+        c.reads.trims = (c.reads.trims or 0) + 1
+        return setn(...)
+    end
+    native.releaseFault = true
+    display.Set("worldCacheIcons", false)
+    display.Set("worldBossIcons", false)
+    display.Set("worldPartyIcons", false)
+    c:ResetCounts()
+    c:Service()
+    assert((c.reads.trims or 0) >= 5 and #c:Markers() == 0, "first retirement skipped catalog cleanup")
+    local releases = native.unregisters
+    c:ResetCounts()
+    for _ = 1, 4 do
+        c:Service(0.1)
+        c:Frame()
+    end
+    assert(not c.reads.trims and native.unregisters == releases, "settled retirement repeated cleanup or release")
+    native.releaseFault = false
+    c:Service(0.51)
+    assert(not c.reads.trims and native.unregisters == releases + 1, "retired catalog blocked a pending release")
+    assert(native.handlers[native.foreign], "release removed a foreign handler")
+    display.Set("worldCacheIcons", true)
+    c:Service()
+    c:Frame()
+    assert(#c:Markers() == 1 and #c.objects == objects, "reenabling failed to reuse retired markers")
+
+    -- Each new active lifetime must make hidden/world cleanup eligible again.
+    for _, hidden in ipairs({ c.env.UIParent, c.env.WorldFrame }) do
+        hidden:Hide()
+        c:Service()
+        c:ResetCounts()
+        for _ = 1, 10 do
+            c:Service(0.1)
+        end
+        assert(not c.reads.trims and #c:Markers() == 0, "hidden markers repeated retirement")
+        hidden:Show()
+        c:Service()
+        c:Frame()
+        assert(#c:Markers() == 1, "hidden recovery reused the retired session")
+    end
+    c.api.Service(false)
+    c:ResetCounts()
+    for _ = 1, 10 do
+        c.api.Service(false)
+    end
+    assert(not c.reads.trims and #c:Markers() == 0, "world cleanup repeated after retirement")
+    c.api.Reset()
+end
+
 local old = Scene(false)
 old.env.AZS_GetWorldAnchorCapabilities = nil
 old:Service()

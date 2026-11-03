@@ -3847,6 +3847,7 @@ DFRL:NewMod("RunTimers", 5, function()
 
     local function HideDebuff(icon)
         icon.tooltipDrawn = nil
+        icon.stackValue, icon.stackText, icon.timeValue, icon.timeMinutes, icon.timeText = nil, nil, nil, nil, nil
         if GameTooltip and GameTooltip:IsOwned(icon) then GameTooltip:Hide() end
         if icon:IsShown() then icon:Hide() end
         if icon.iconPath or icon.effect then icon.texture:SetTexture(nil) end
@@ -4557,18 +4558,21 @@ DFRL:NewMod("RunTimers", 5, function()
                                 local assigned = icon.texture:GetTexture()
                                 icon.iconPath = T.TextureAssigned(loaded, assigned, effect.icon) and effect.icon or nil
                             end
-                            T.SetTextIfChanged(
-                                icon.count,
-                                IsNumber(effect.stacks) and effect.stacks > 1 and tostring(math.floor(effect.stacks))
-                                    or ""
-                            )
-                            local remaining = DebuffRemaining(effect)
-                            local text = ""
-                            if remaining then
-                                text = remaining >= 60 and (tostring(math.ceil(remaining / 60)) .. "m")
-                                    or tostring(math.ceil(remaining))
+                            local stacks = IsNumber(effect.stacks) and effect.stacks > 1 and math.floor(effect.stacks)
+                                or nil
+                            if icon.stackValue ~= stacks or icon.stackText == nil then
+                                icon.stackValue, icon.stackText = stacks, stacks and tostring(stacks) or ""
                             end
-                            T.SetTextIfChanged(icon.time, text)
+                            T.SetTextIfChanged(icon.count, icon.stackText)
+                            local remaining = DebuffRemaining(effect)
+                            local minutes = remaining ~= nil and remaining >= 60
+                            local value = remaining and math.ceil(minutes and remaining / 60 or remaining) or nil
+                            if icon.timeValue ~= value or icon.timeMinutes ~= minutes or icon.timeText == nil then
+                                local text = value and tostring(value) or ""
+                                if minutes then text = text .. "m" end
+                                icon.timeValue, icon.timeMinutes, icon.timeText = value, minutes, text
+                            end
+                            T.SetTextIfChanged(icon.time, icon.timeText)
                             if not icon:IsShown() then icon:Show() end
                             if GameTooltip and GameTooltip:IsOwned(icon) then DebuffTooltip(icon) end
                         end

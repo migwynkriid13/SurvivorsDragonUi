@@ -277,7 +277,7 @@ DFRL:NewMod("Chat", 1, function()
         end
 
         PositionInput = function()
-            if not input then return end
+            if not input or not root:IsVisible() or not input:IsVisible() then return end
             if not HasAnchor(input, "TOPLEFT", root, "BOTTOMLEFT", -1, -1) then
                 input:ClearAllPoints()
                 input:SetPoint("TOPLEFT", root, "BOTTOMLEFT", -1, -1)
@@ -618,10 +618,10 @@ DFRL:NewMod("Chat", 1, function()
                 ReadDimensions()
                 PositionInput()
                 RefreshFrames()
-                for _, state in pairs(states) do
-                    PositionNative(state, now, true)
-                    FadeSettings(state, state == selected and not atBottom)
-                end
+                -- Only the selected pane can render. Inactive panes recover
+                -- immediately on selection/native events/Show instead of an
+                -- all-window font and geometry sweep every second.
+                if selected then PositionNative(selected, now, true) end
             end
         end
         root:SetScript("OnUpdate", UpdateChat)
@@ -648,6 +648,7 @@ DFRL:NewMod("Chat", 1, function()
         end)
         HookScript(root, "OnShow", function()
             ReadDimensions()
+            PositionInput()
             for _, state in pairs(states) do
                 state.visualAlpha = 1
                 state.native:SetAlpha(1)

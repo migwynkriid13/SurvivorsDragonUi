@@ -115,6 +115,16 @@ An explicit Bash shell enables `pipefail`, so piping fixture/model output into
 
 ## UI work and cleanup tests
 
+The second shared pass covers unchanged debuff stack/countdown formatting with
+fresh timing and exact minute/second transitions; event-satisfied banner service
+checks with the original fallback; tooltip lookup misses and registry/list/owner
+invalidation; reuse of measured guardian captions after filtering; and periodic
+chat layout repair limited to the selected pane and visible input. Both modes
+retain native text/geometry repair, timing, hidden/world cleanup and existing
+pools. Chat cases also keep immediate native-window and Show recovery alongside
+message coalescing, wheel history and native expiry. These are CI-only cases,
+authored without local execution, and do not prove client appearance or FPS.
+
 The first shared cadence pass covers jewelry's changed-only rarity preparation
 and empty-slot cleanup while retaining five-Hz inventory/cooldown retries;
 guardian snapshot-copy and revision-filter reuse with fresh native health and

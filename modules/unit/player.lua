@@ -146,6 +146,7 @@ DFRL:NewMod("Player", 1, function()
         performanceMode = enabled
         HideAbsorb()
     end)
+    local primaryCaption = {}
     DFRL.playerResources.SetPrimary = function(value, maximum, powerType)
         if not primaryBar then return end
         if
@@ -157,6 +158,7 @@ DFRL:NewMod("Player", 1, function()
             or maximum - maximum ~= 0
             or type(powerType) ~= "number"
         then
+            primaryCaption.value, primaryCaption.text = nil, nil
             if primaryBar:IsShown() then primaryBar:Hide() end
             T.SetTextIfChanged(primaryText, "")
             setPowerShown(false)
@@ -179,7 +181,12 @@ DFRL:NewMod("Player", 1, function()
         local minimum, currentMaximum = primaryBar:GetMinMaxValues()
         if minimum ~= 0 or currentMaximum ~= maximum then primaryBar:SetMinMaxValues(0, maximum) end
         if primaryBar:GetValue() ~= value then primaryBar:SetValue(value) end
-        T.SetTextIfChanged(primaryText, value)
+        if primaryCaption.value ~= value then
+            primaryCaption.value, primaryCaption.text = value, tostring(value)
+        end
+        -- Reuse only the comparison string; the shared setter still receives
+        -- the original native number and repairs actual text on every sample.
+        T.SetTextIfChanged(primaryText, value, primaryCaption.text)
         setPowerShown(true)
         if not primaryBar:IsShown() then primaryBar:Show() end
     end

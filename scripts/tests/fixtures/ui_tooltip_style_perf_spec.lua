@@ -194,6 +194,36 @@ end
 
 for _, performance in ipairs({ false, true }) do
     local state, native, tip = HoverFixture(performance)
+    state:Hover(state.bag, "Native bag item")
+    local scans = 0
+    native.pairs = function(list)
+        if list == native.DFRL.actionButtons or list == native.DFRL.characterItemButtons then scans = scans + 1 end
+        return pairs(list)
+    end
+    for _ = 1, 10 do
+        state:Tick()
+    end
+    assert(scans == 0 and tip:IsShown(), "unchanged unregistered owner repeated icon searches")
+    native.T.RegisterTooltipIcon(state.bag)
+    state:Tick()
+    assert(scans == 2 and tip.point[2] == state.bag, "late registry publication retained a cached miss")
+    local other = native.CreateFrame("Button", nil, native.UIParent)
+    state:Hover(other)
+    native.DFRL.actionButtons = { other }
+    state:Tick()
+    assert(tip.point[2] == other and tip:GetScale() == 0.9, "replacement action list retained a cached miss")
+    local appended = native.CreateFrame("Button", nil, native.UIParent)
+    state:Hover(appended)
+    table.insert(native.DFRL.actionButtons, appended)
+    state:Tick()
+    assert(tip.point[2] == appended, "in-place action-list growth retained a cached miss")
+end
+print(
+    "PASS tooltip owner misses skip repeated searches and recover on registration and native list changes in both modes"
+)
+
+for _, performance in ipairs({ false, true }) do
+    local state, native, tip = HoverFixture(performance)
     local count = #state.objects
     state.layoutFrame:SetScale(0.36)
     state:Hover(native.UIParent)

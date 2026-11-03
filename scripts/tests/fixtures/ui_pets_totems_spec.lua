@@ -428,4 +428,73 @@ Test("world, reload and reset cleanup preserve the passive pool without stale re
     )
 end)
 
+Test("timer-only samples retain native reads without reentering layout or icon preparation", function()
+    for _, performance in ipairs({ false, true }) do
+        local c = Pets()
+        c:SetSetting("performanceMode", performance)
+        c:SetSetting("hidePetTimers", false)
+        local get = c.env.DFRL.display.Get
+        c.env.DFRL.display.Get = function(key)
+            if key == "petRows" or key == "petSpacing" then
+                c.reads.layout = (c.reads.layout or 0) + 1
+            end
+            return get(key)
+        end
+        local circle = c.env.T.NewCircularIcon
+        c.env.T.NewCircularIcon = function(...)
+            local image = circle(...)
+            local bind = image.Bind
+            image.Bind = function(...)
+                c.reads.binds = (c.reads.binds or 0) + 1
+                return bind(...)
+            end
+            return image
+        end
+        local summon = Summon(1, "imp", "Imp", 12)
+        summon.ends = 22
+        local totem = Totem("searing_totem", 3, 30)
+        c:Publish("AZSPETS", { summon })
+        c:Publish("AZSTOTEMS", { totem })
+        c:Tick()
+        local objects, width, height = #c.objects, c.layoutFrame:GetWidth(), c.layoutFrame:GetHeight()
+        c:ResetCounts()
+        for index = 1, 10 do
+            c.runTime = 10 + index / 10
+            c:Tick()
+        end
+        assert(c.reads.pets == 10 and c.reads.totems == 10 and c.reads.clock == 10, "timer sampling slowed")
+        assert(not c.reads.layout and not c.reads.binds and #c.objects == objects, "countdowns repeated static work")
+        local _, petTimer = c:Labels(1)
+        local _, totemTimer, count = c:Labels(2)
+        assert(petTimer == "0:11" and totemTimer == "0:19" and count == "x3", "native countdowns changed")
+        c.phase = "paused"
+        c:ResetCounts()
+        c:Tick()
+        c:NoPresentationWrites()
+        assert(not c.reads.layout and not c.reads.binds, "paused countdowns repeated static work")
+
+        -- A getter can change metadata or group count without a new receipt.
+        totem.name, totem.icon, totem.count = "Fresh native name", "Interface\\Icons\\FreshTotem", 4
+        c:Tick()
+        local name
+        name, _, count = c:Labels(2)
+        assert(name == totem.name and count == "x4", "same-sized native metadata stayed stale")
+        assert(c.env.SurvivorsDragonUiPetPortrait2:GetTexture() == totem.icon, "changed art did not bind")
+        table.insert(c.env.AZS_TOTEMS, Totem("magma_totem", 2))
+        c:Tick()
+        assert(#c:Rows() == 3 and c:Rows()[3]:IsShown(), "unannounced group growth missed layout")
+        table.remove(c.env.AZS_TOTEMS, 2)
+        c:Tick()
+        assert(not c:Rows()[3]:IsShown() and c.layoutFrame:GetHeight() == height, "group shrink retained a row")
+        c.layoutFrame:SetWidth(width + 20)
+        c.layoutFrame:SetHeight(height + 20)
+        c:Tick()
+        assert(c.layoutFrame:GetWidth() == width and c.layoutFrame:GetHeight() == height, "bounds stopped recovering")
+        c:ResetCounts()
+        c.layoutFrame:SetScale(1.25)
+        c:Tick()
+        assert(c.reads.binds == 2, "scale changes skipped icon recovery")
+    end
+end)
+
 print("PASS pet/totem UI contracts: " .. passed)

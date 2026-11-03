@@ -39,6 +39,7 @@ DFRL:NewMod("PetFrames", 4, function()
     local choiceHidden = false
     local entryCount = 0
     local dirty, paintedScale = true, nil
+    local geometry = {}
     local metadataPending, learningDeferred, SyncUpdates = false, false, nil
 
     local function Number(value) return type(value) == "number" and value - value == 0 end
@@ -126,6 +127,7 @@ DFRL:NewMod("PetFrames", 4, function()
     end
     local function HideRow(row)
         row.timerSecond, row.timerText, row.countValue, row.countText = nil, nil, nil, nil
+        row.paintName, row.paintIcon, row.paintCount, row.paintTemporary = nil, nil, nil, nil
         if not row.active then return end
         row.frame:Hide()
         Text(row.name, "")
@@ -146,7 +148,7 @@ DFRL:NewMod("PetFrames", 4, function()
             root:SetHeight(height)
             DFRL.layout.Place("petFrames")
         end
-        return rowCount, cellWidth, spacing
+        return rowCount, cellWidth, spacing, width, height
     end
     local function HideView()
         if not displayed then return end
@@ -236,6 +238,8 @@ DFRL:NewMod("PetFrames", 4, function()
         Text(row.status, TimerText(row, entry.remaining, showTimer))
         if not row.active then row.frame:Show() end
         row.active = true
+        row.paintName, row.paintIcon, row.paintCount, row.paintTemporary =
+            entry.name, entry.icon, entry.count, entry.temporary
         return usable
     end
     local function ReadRoster(list, feed)
@@ -356,13 +360,16 @@ DFRL:NewMod("PetFrames", 4, function()
             and not DFRL.display.Get("hidePetTimers")
             and (root:IsVisible() or (choiceHidden and not DFRL.layout.IsHidden("petFrames") and UIParent:IsVisible()))
         if not changed and not ticking then return end
-        dirty = true
+        if changed then dirty = true end
+        local previousCount = feed.count
         local list = Native(feed.getter)
         local reader = feed == feeds[1] and ReadRoster or ReadTotems
         if type(list) ~= "table" or not reader(list, feed) then
             ClearFeed(feed)
-            return
+            dirty = true
+            return true
         end
+        if previousCount ~= feed.count then dirty = true end
         local source = DFRL.sct
         if changed and source and type(source.LearnSummonIcon) == "function" then
             for index = 1, feed.count do
@@ -371,6 +378,7 @@ DFRL:NewMod("PetFrames", 4, function()
             end
         end
         feed.packet, feed.stamp, feed.acceptedReceived = packet, stamp, feed.received
+        return true
     end
     local function Refresh()
         if not inWorld then return end
@@ -388,8 +396,9 @@ DFRL:NewMod("PetFrames", 4, function()
             return
         end
         learningDeferred = false
+        local sampled = false
         for _, feed in ipairs(feeds) do
-            RefreshFeed(feed)
+            if RefreshFeed(feed) then sampled = true end
         end
         -- Hidden receipt work only maintains the shared SCT icon metadata.
         -- Geometry, countdown painting and the steady phase reader wait for Show.
@@ -419,11 +428,22 @@ DFRL:NewMod("PetFrames", 4, function()
         displayed = true
         local scale = root:GetEffectiveScale()
         if not Number(scale) or scale <= 0 then return end
-        if not dirty and T.NearlyEqual(paintedScale, scale) then return end
-        local rowCount, cellWidth, spacing = Bounds(entryCount)
-        -- Placing changed bounds may also apply confirmed/draft scale.
-        scale = root:GetEffectiveScale()
-        if not Number(scale) or scale <= 0 then return end
+        local layoutChanged = dirty or not T.NearlyEqual(paintedScale, scale)
+        if not layoutChanged and not sampled then return end
+        -- Ticking feeds still catch native size resets at the same reader pass.
+        -- Stable countdowns reuse the last layout rather than rebuilding it.
+        if not layoutChanged then
+            layoutChanged = not T.NearlyEqual(root:GetWidth(), geometry.width)
+                or not T.NearlyEqual(root:GetHeight(), geometry.height)
+        end
+        local rowCount, cellWidth, spacing = geometry.rows, geometry.cellWidth, geometry.spacing
+        if layoutChanged then
+            rowCount, cellWidth, spacing, geometry.width, geometry.height = Bounds(entryCount)
+            geometry.rows, geometry.cellWidth, geometry.spacing = rowCount, cellWidth, spacing
+            -- Placing changed bounds may also apply confirmed/draft scale.
+            scale = root:GetEffectiveScale()
+            if not Number(scale) or scale <= 0 then return end
+        end
         if not root:IsVisible() then
             dirty, paintedScale = false, scale
             return
@@ -432,7 +452,21 @@ DFRL:NewMod("PetFrames", 4, function()
         local column, line = 0, 0
         local retry = false
         for index = 1, entryCount do
-            if not Paint(Row(index), entries[index], scale, column, line, cellWidth, spacing) then retry = true end
+            local row, entry = rows[index], entries[index]
+            if
+                layoutChanged
+                or not row
+                or not row.active
+                or row.id ~= entry.id
+                or row.paintName ~= entry.name
+                or row.paintIcon ~= entry.icon
+                or row.paintCount ~= entry.count
+                or row.paintTemporary ~= entry.temporary
+            then
+                if not Paint(row or Row(index), entry, scale, column, line, cellWidth, spacing) then retry = true end
+            else
+                Text(row.status, TimerText(row, entry.remaining, row.showTimer))
+            end
             column = column + 1
             if column == perRow + (line < extra and 1 or 0) then
                 column, line = 0, line + 1

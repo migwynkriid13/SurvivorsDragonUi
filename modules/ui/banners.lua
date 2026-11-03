@@ -548,6 +548,9 @@ DFRL:NewMod("RunBanners", 4, function()
     end
     Refresh = function()
         local ready = RefreshState()
+        -- A native event already performed this service pass. Keep the same
+        -- 200-ms fallback from that attempt rather than immediately doing it twice.
+        if not delivering then age = 0 end
         SyncUpdates()
         return ready
     end

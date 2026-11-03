@@ -693,3 +693,51 @@ assert(feedReads == before, "disabled guidance retained authoritative party read
 env.DFRL.navigation.HasParty, env.DFRL.navigation.DownedPartySnapshot = nil, nil
 display.FinishEdit(false)
 print("PASS new guidance API request budgets skip no-party, hidden and disabled consumers")
+
+for _, performance in ipairs({ false, true }) do
+    display.BeginEdit()
+    display.Set("performanceMode", performance)
+    display.Set("cacheGuidance", false)
+    display.Set("guardianGuidance", false)
+    display.Set("partyGuidance", false)
+    phase = "playing"
+    local conversions, resets = 0, 0
+    local nativeString, reset = env.tostring, env.DFRL.navigation.Reset
+    env.tostring = function(value)
+        if type(value) == "number" and value >= 70001 then conversions = conversions + 1 end
+        return nativeString(value)
+    end
+    env.DFRL.navigation.Reset = function()
+        resets = resets + 1
+        return reset()
+    end
+    env.AZS_ZONE, env.AZS_ZONE_UPDATED = { zone = "cached-zone", map = 70001 }, 90001
+    Tick()
+    assert(conversions == 2 and resets == 1, "initial zone identity was not prepared")
+    -- Native table replacement alone is not a new zone identity.
+    env.AZS_ZONE = { zone = "cached-zone", map = 70001 }
+    for _ = 1, 20 do
+        Tick()
+    end
+    assert(conversions == 2 and resets == 1, "unchanged zone rebuilt identity or reset navigation")
+    env.AZS_ZONE.zone = "next-zone"
+    Tick()
+    assert(conversions == 4 and resets == 2, "changed zone name missed identity retirement")
+    env.AZS_ZONE.map = 70002
+    Tick()
+    assert(conversions == 6 and resets == 3, "changed map missed identity retirement")
+    env.AZS_ZONE_UPDATED = 90002
+    Tick()
+    assert(conversions == 8 and resets == 4, "changed stamp missed identity retirement")
+    env.AZS_ZONE.map = "invalid"
+    Tick()
+    assert(conversions == 8 and resets == 4, "invalid zone replaced accepted identity")
+    env.AZS_ZONE.map = 70002
+    c:Event(reader, "PLAYER_LEAVING_WORLD")
+    c:Event(reader, "PLAYER_ENTERING_WORLD")
+    Tick()
+    assert(conversions == 8 and resets == 6, "world recovery failed to compare the retained identity")
+    env.tostring, env.DFRL.navigation.Reset = nativeString, reset
+    display.FinishEdit(false)
+end
+print("PASS zone identity caches retain changed inputs, validation and world recovery in both modes")

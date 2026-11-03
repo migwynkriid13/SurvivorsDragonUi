@@ -4,6 +4,47 @@ The performance work removes repeated presentation writes while retaining native
 data, pause-aware timing, saved preferences and artwork. It adds no gameplay clock
 or native client dependency. Display choices use the existing saved display table.
 
+## Debuff captions, banners, tooltip lookup and chat — 2026-11-03
+
+Both Performance Mode states retain native debuff timing reads while reusing
+each icon's latest displayed stack and countdown strings. The minute/second
+boundary is part of the cached value; actual text repair and metadata retries
+remain live. Hiding or retiring an icon clears its caption cache.
+
+A banner event's completed service attempt resets the existing 200-ms fallback
+age. Run/CVar/world events still check native ownership immediately; the timer
+no longer repeats that same work just after the event. Rendering and notification
+deadlines use their independent clocks and keep the original fades/expiry.
+
+Tooltip placement caches a failed icon lookup only for an explicitly observed
+owner. New icon registrations, replacement action/equipment lists, list growth,
+owner changes and clear/hide invalidate it. Unknown native owners still require
+the existing live ownership search. Cursor projection, actual anchor/scale repair,
+unit colors and foreign ownership keep their original cadence. No tooltip
+content, successful native geometry or failed operation is frozen by the cache.
+
+Guardian filtering retains snapshot positions in its existing reused list, so
+painting can consume the exact caption already prepared for that snapshot slot's
+width measurement. The shared health setter accepts this optional prepared text;
+other callers keep their original formatter/cache. Filtered/scrolled rows cannot
+borrow another slot's caption, and actual text repair and native fills remain.
+
+Chat's one-second fallback now repairs only the selected pane, with input layout
+and font checks only while that input is visible. It retains cheap discovery of
+new native panes and current container dimensions. Attachment, selection, native
+window events, root Show and resize retain their existing immediate work; input
+Show/header changes also recover immediately. Inactive panes and hidden input
+no longer receive the periodic font/geometry sweep. The selected pane still
+repairs unannounced native changes within the existing second, with unchanged
+message delivery, scrolling, expiry, links, animations and input behavior.
+
+All changes share the existing controllers and pools in both modes, with no new
+frame, region, asset, event, updater, setting or saved state. CI-only cases cover
+unchanged formatting, unit boundaries, banner event/timer scheduling, lookup
+invalidation, filtered guardian captions and selected/hidden chat recovery.
+Only source review and pinned formatting ran locally; no tests, standalone
+validation or addon/game execution. Native appearance and FPS remain unverified.
+
 ## Jewelry, guardian roster, Layout and counters — 2026-11-03
 
 Both Performance Mode states skip settled jewelry rarity preparation, icon

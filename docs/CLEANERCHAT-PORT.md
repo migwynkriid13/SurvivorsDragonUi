@@ -47,7 +47,7 @@ Native mouse input, hyperlinks, wheel scrolling and text input remain active.
 
 Movement ownership is set during attachment and compared against actual native
 state at the existing presentation refresh points: native chat-window events,
-selection, Show and the one-second refresh. An unexpected restored drag region
+selection, Show and the selected pane's one-second fallback. An unexpected restored drag region
 is stopped and collapsed before anchors are checked. The slide animation does
 not poll or rewrite it. All eight native resize controls stay hidden and native
 `SetResizable(true)` remains, avoiding the earlier FrameXML resize error. No
@@ -71,7 +71,7 @@ In both modes, the frame callback visits only panes with active slides, history
 reveals or pending level/stat delivery. Completed effects leave that reused work
 set. The selected pane keeps per-frame scroll/unread and actual native
 visibility/opacity repair, skipping the opacity wrapper when already correct.
-Selection, native events, Show and the existing one-second geometry pass repair
+Selection, native events, Show and the existing selected-pane controller repair
 fade ownership. Hidden and mode transitions settle visual work without dropping
 pending messages, changing native history or replaying old effects. These are
 source-level call reductions with CI-only lifecycle coverage; no local tests or
@@ -80,6 +80,15 @@ addon/game execution were run, and FPS/input appearance remain unverified.
 The existing fade owner caches the effective duration, defers hidden changes
 and retries failed configuration writes; no timer, frame, event, updater,
 message copy or saved state is added.
+
+The periodic chat layout check keeps its one-second safety interval for the
+selected pane, catching unannounced native position, size and font resets at the
+same speed. It no longer revisits every inactive pane or a hidden input box.
+Input Show/header changes and native chat-window events still repair immediately;
+root Show repairs visible input too. Native-pane discovery and container-size
+reads remain cheap periodic checks. Both modes share this path, with no new
+poller or setting. This reduces the work in each check without extending visible
+recovery time. CI-only cases retain messages, scrolling, input and hidden recovery.
 
 The inspected public native-base
 [fade setters and retirement branch](https://github.com/samwhosung/benilla/blob/cdebda36fb4c611ad0a8c35ddc45bf53e4ff1c60/crates/benilla-ui/src/widget/kinds/messageframe.rs#L622)

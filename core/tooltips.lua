@@ -85,11 +85,13 @@ function DFRL.tools.CreateHoverCard(parent, width, height)
 end
 
 local registeredIcons, iconAnchors, iconSides = {}, {}, {}
+local iconRegistryRevision = 0
 local unitAuraIcons = {}
 function DFRL.tools.GetUnitAuraIcons(unit) return unitAuraIcons[unit] end
 function DFRL.tools.RegisterTooltipIcon(button, icon, side)
     if not button or registeredIcons[button] then return end
     registeredIcons[button] = button
+    iconRegistryRevision = iconRegistryRevision + 1
     iconAnchors[button] = icon or button
     iconSides[button] = side
     HookScript(button, "OnHide", function()
@@ -137,6 +139,7 @@ DFRL:NewMod("Tooltips", 2, function()
     if not tooltip then return end
     local currentUnit
     local lastIconOwner, lastIconIsDetail, currentOwner
+    local ownerMiss = {}
     local elapsed, inWorld = 0, true
     local editing = false
     local nativeScale = tooltip:GetScale()
@@ -187,9 +190,29 @@ DFRL:NewMod("Tooltips", 2, function()
         end
         local button = lastIconOwner
         if not button or (owner and button ~= owner) or (not owner and not tooltip:IsOwned(button)) then
-            button = IconOwner(DFRL.actionButtons, owner) or IconOwner(DFRL.characterItemButtons, owner)
-            lastIconIsDetail = button ~= nil
-            button = button or IconOwner(registeredIcons, owner)
+            local actions, items = DFRL.actionButtons, DFRL.characterItemButtons
+            local actionCount, itemCount = actions and table.getn(actions), items and table.getn(items)
+            local missed = owner
+                and ownerMiss.owner == owner
+                and ownerMiss.revision == iconRegistryRevision
+                and ownerMiss.actions == actions
+                and ownerMiss.items == items
+                and ownerMiss.actionCount == actionCount
+                and ownerMiss.itemCount == itemCount
+            if not missed then
+                button = IconOwner(actions, owner) or IconOwner(items, owner)
+                lastIconIsDetail = button ~= nil
+                button = button or IconOwner(registeredIcons, owner)
+                if owner and not button then
+                    ownerMiss.owner, ownerMiss.revision = owner, iconRegistryRevision
+                    ownerMiss.actions, ownerMiss.items = actions, items
+                    ownerMiss.actionCount, ownerMiss.itemCount = actionCount, itemCount
+                else
+                    ownerMiss.owner, ownerMiss.actions, ownerMiss.items = nil, nil, nil
+                end
+            else
+                button, lastIconIsDetail = nil, false
+            end
             lastIconOwner = button
         end
         if button then currentOwner = button end
@@ -319,6 +342,7 @@ DFRL:NewMod("Tooltips", 2, function()
     end
     local function Clear(keepOwner)
         currentUnit, lastIconOwner, lastIconIsDetail, elapsed = nil, nil, nil, 0
+        ownerMiss.owner, ownerMiss.actions, ownerMiss.items = nil, nil, nil
         if not keepOwner or (currentOwner and not tooltip:IsOwned(currentOwner)) then currentOwner = nil end
         DFRL.tools.StyleHoverCard(tooltip)
         if bar and bar:IsShown() then bar:Hide() end

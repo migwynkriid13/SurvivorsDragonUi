@@ -188,11 +188,16 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
         state.discoveryAt, state.discoveryStarted, state.discoveryFailures = nil, nil, nil
     end
     function api.Reset()
-        state.session, state.enabled, state.retire = nil, false, nil
-        ClearCatalog()
-        state.query, state.kinds, state.capabilities = nil, nil, nil
-        state.queryCache, state.queryBoss, state.queryParty = nil, nil, nil
-        state.active, state.configFailures = false, nil
+        if not state.reset then
+            state.session, state.enabled, state.retire = nil, false, nil
+            ClearCatalog()
+            state.query, state.kinds, state.capabilities = nil, nil, nil
+            state.queryCache, state.queryBoss, state.queryParty = nil, nil, nil
+            state.active, state.reset = false, true
+        end
+        -- Failure backoff can be installed after Reset. Off/hidden cleanup
+        -- still clears it, and an unfinished release keeps its original retry.
+        state.configFailures = nil
         state.retryAt, state.retryStarted = nil, nil
         Release() -- A partial/failed release is retried by the existing controller.
     end
@@ -722,7 +727,7 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
         if not state.active then
             state.discoveryAt, state.discoveryStarted = nil, nil
         end
-        state.active = true
+        state.active, state.reset = true, nil
         local now = GetTime()
         if state.retire then
             api.Reset()

@@ -44,6 +44,28 @@ local function NewBannerContext()
 end
 
 local context = NewBannerContext()
+for _, performance in ipairs({ false, true }) do
+    local current = NewBannerContext()
+    current:SetSetting("customBanners", true)
+    current:SetSetting("performanceMode", performance)
+    local service = current:Controller("CVAR_UPDATE")
+    current:Call(service, "OnUpdate", 0.19)
+    current:ResetCounts()
+    current:Event(service, "CHAT_MSG_ADDON", "AZSRUN")
+    assert(current.reads.hud == 1, "run receipt delayed native banner ownership")
+    current:Call(service, "OnUpdate", 0.02)
+    assert(current.reads.hud == 1, "timer repeated the event's completed service pass")
+    current:Call(service, "OnUpdate", 0.19)
+    assert(current.reads.hud == 2, "event refresh stopped the independent 200-ms fallback")
+    current.nativeShown = true
+    current:Event(service, "CHAT_MSG_ADDON", "AZSRUN")
+    assert(current.nativeShown == false, "event coalescing delayed repair of a native HUD reset")
+    current:Event(service, "PLAYER_LEAVING_WORLD")
+    assert(current.nativeShown == true and not service:GetScript("OnUpdate"), "service reuse broke world release")
+end
+print(
+    "PASS banner events satisfy periodic service checks with immediate ownership and unchanged fallback in both modes"
+)
 local env = context.env
 local controller = context:Controller("CVAR_UPDATE")
 assert(controller:GetScript("OnUpdate") == nil, "initially disabled banners retained an idle callback")

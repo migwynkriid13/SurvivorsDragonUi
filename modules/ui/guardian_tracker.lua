@@ -341,10 +341,10 @@ DFRL:NewMod("GuardianTracker", 4, function()
             or presentation.filterRows ~= snapshot.rows
             or presentation.filterShowDead ~= showDead
         then
-            for _, entry in ipairs(snapshot.rows) do
+            for index, entry in ipairs(snapshot.rows) do
                 if showDead or entry.state == "asleep" or entry.state == "awake" then
                     count = count + 1
-                    filtered[count] = entry
+                    filtered[count] = index
                 end
             end
             for index = count + 1, table.getn(filtered) do
@@ -361,7 +361,8 @@ DFRL:NewMod("GuardianTracker", 4, function()
         rowOffset = math.max(0, math.min(rowOffset, count - capacity))
         local used = 0
         for index = rowOffset + 1, math.min(count, rowOffset + capacity) do
-            local entry = filtered[index]
+            local snapshotIndex = filtered[index]
+            local entry = snapshot.rows[snapshotIndex]
             if entry then
                 used = used + 1
                 local row = rows[used] or MakeRow()
@@ -392,6 +393,15 @@ DFRL:NewMod("GuardianTracker", 4, function()
                     ClearStatus(row)
                     if row.value ~= entry.healthFraction then row.bar:SetValue(entry.healthFraction) end
                     row.value = entry.healthFraction
+                    -- Measurement prepared this exact snapshot row's caption.
+                    -- All text controls off needs no formatting in either pass.
+                    local prepared = presentation.healthLabels and presentation.healthLabels[snapshotIndex]
+                    local text
+                    if not (showCurrent or showMaximum or showPercentage) then
+                        text = ""
+                    elseif prepared then
+                        text = prepared.encounterText
+                    end
                     T.SetEncounterHealthText(
                         row.health,
                         entry.hp,
@@ -399,7 +409,8 @@ DFRL:NewMod("GuardianTracker", 4, function()
                         showCurrent,
                         showMaximum,
                         shortenHealth,
-                        showPercentage
+                        showPercentage,
+                        text
                     )
                     if row.status:IsShown() then row.status:Hide() end
                     if not row.pill:IsShown() then row.pill:Show() end

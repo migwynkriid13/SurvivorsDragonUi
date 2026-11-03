@@ -190,7 +190,7 @@ function DFRL.tools.ValidateEncounterEntries(source, seen)
     return true
 end
 
-function DFRL.tools.SetTextIfChanged(label, text)
+function DFRL.tools.SetTextIfChanged(label, text, numberText)
     local language = DFRL.locale
     local binding = language and language.labels[label]
     local value = text
@@ -198,7 +198,7 @@ function DFRL.tools.SetTextIfChanged(label, text)
         binding.source = text
         if type(text) == "string" then value = language.Text(text) end
     end
-    if type(value) == "number" then value = tostring(value) end
+    if type(value) == "number" then value = numberText or tostring(value) end
     if (label:GetText() or "") == (value or "") then return false end
     if binding then
         binding.original(label, value)

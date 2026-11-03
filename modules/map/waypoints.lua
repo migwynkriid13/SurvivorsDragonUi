@@ -87,6 +87,7 @@ DFRL:NewMod("Waypoints", 3, function()
         },
     }
     local identity
+    local identitySource = {}
     local runWasActive = false
     local inWorld, dirty, age = true, true, 0
     local nearestClock = 0
@@ -1108,7 +1109,17 @@ DFRL:NewMod("Waypoints", 3, function()
             and Number(zone.map)
             and Number(_G.AZS_ZONE_UPDATED)
         then
-            local nextIdentity = zone.zone .. ":" .. tostring(zone.map) .. ":" .. tostring(_G.AZS_ZONE_UPDATED)
+            local stamp = _G.AZS_ZONE_UPDATED
+            if
+                identitySource.zone ~= zone.zone
+                or identitySource.map ~= zone.map
+                or identitySource.stamp ~= stamp
+                or not identitySource.value
+            then
+                identitySource.value = zone.zone .. ":" .. tostring(zone.map) .. ":" .. tostring(stamp)
+                identitySource.zone, identitySource.map, identitySource.stamp = zone.zone, zone.map, stamp
+            end
+            local nextIdentity = identitySource.value
             if nextIdentity ~= identity then
                 if identity then RetireSnapshots(false) end
                 ClearAll()

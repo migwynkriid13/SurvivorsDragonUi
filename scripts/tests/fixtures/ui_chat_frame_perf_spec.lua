@@ -50,6 +50,7 @@ assert(alphaCalls == 1 and selected.native.alpha == 1 and selected.native.shown,
 env.arg1 = 0.81
 update()
 assert(reads == 1 and layouts == 1, "one-second repair did not take a fresh native time sample")
+assert(panePasses == 0, "periodic chat repair still traversed inactive panes")
 selected.slideStart, selected.revealStart = now, now
 selected.pendingLevel = { deadline = now + 0.1 }
 env.activeStates[selected] = true
@@ -98,7 +99,12 @@ for _, performance in ipairs({ false, true }) do
         return object
     end
     native.NUM_CHAT_WINDOWS = 2
-    native.T.SetChatFont = function() end
+    native.T.SetChatFont = function(frame)
+        local key = frame == native.ChatFrame1 and "selectedFont"
+            or frame == native.ChatFrame2 and "inactiveFont"
+            or frame == native.ChatFrameEditBox and "inputFont"
+        if key then current.reads[key] = (current.reads[key] or 0) + 1 end
+    end
     native.DFRL.locale.Bind = function() end
     native.IsShiftKeyDown = function() return false end
     native.DFRL.CleanerChat = {
@@ -119,6 +125,10 @@ for _, performance in ipairs({ false, true }) do
         function pane:ScrollDown() self.scrolled = false end
         function pane:AddMessage(text) table.insert(delivered, { pane = self, text = text }) end
     end
+    local input = native.CreateFrame("EditBox", "ChatFrameEditBox", native.UIParent)
+    function input:GetTextInsets() return unpack(self.insets or {}) end
+    function input:SetTextInsets(...) self.insets = { ... } end
+    input:Hide()
     current:Load("modules/chat/chat.lua", "Chat")
     local root, pane, other = native.SurvivorsDragonUiChat, native.ChatFrame1, native.ChatFrame2
     local function Tick(elapsed)
@@ -170,5 +180,30 @@ for _, performance in ipairs({ false, true }) do
     assert(#delivered == 4 and delivered[4].text == "Level", "Show/mode change discarded pending delivery")
     Tick(0.7)
     assert(pane:GetAlpha() == 1 and #current.objects == allocated, "mode recovery replayed opacity or allocated views")
+    current:ResetCounts()
+    pane.width, other.width, input.width = 1, 2, 3
+    Tick(1.1)
+    assert(pane:GetWidth() == root:GetWidth() - 6, "selected pane lost its original fallback repair latency")
+    assert(
+        other:GetWidth() == 2 and input:GetWidth() == 3,
+        "periodic chat repair touched an inactive pane or hidden input"
+    )
+    assert(current.reads.selectedFont == 1 and not current.reads.inactiveFont and not current.reads.inputFont)
+    current:Event(other, "UPDATE_CHAT_WINDOWS")
+    assert(
+        other:GetWidth() == root:GetWidth() - 6 and current.reads.inactiveFont == 1,
+        "native window event delayed repair"
+    )
+    input:Show()
+    assert(
+        input:GetWidth() == root:GetWidth() and current.reads.inputFont == 1,
+        "input Show did not repair immediately"
+    )
+    input.width = 3
+    root:Hide()
+    root:Show()
+    assert(input:GetWidth() == root:GetWidth(), "root Show retained stale visible input geometry")
 end
-print("PASS real chat schedules both panes, coalesces messages and retains wheel, mode, hidden and pooled recovery")
+print(
+    "PASS real chat retains messages and input while periodic layout repair visits only the selected pane and visible input"
+)

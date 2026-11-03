@@ -38,6 +38,13 @@ The Lua `SetOwner` wrapper preserves the supplied owner and return, selecting `A
 
 The inspected client also has engine-internal cursor-anchored special hovers that bypass Lua `SetOwner`. That engine cursor pass is outside these Lua anchor hooks; its exact behavior in the packaged client remains unverified. No native content is copied or rebuilt to override it.
 
+Visible placement reuses a confirmed missing icon lookup while its explicitly
+observed owner, action/equipment lists and icon registry remain unchanged.
+Registration, list replacement/growth, ownership changes and clear/hide invalidate
+that result. Unobserved native ownership still uses the live search. Cursor
+motion, actual anchor/scale repair and native content remain unchanged in both
+Performance Mode states. This adds no frame, event or updater; coverage is CI-only.
+
 ## Equipped jewelry
 
 Jewelry keeps its effects-only private inventory reader and all 69 compact wording templates, native values, units, conditions, `(max)` and unknown-description fallback. Its reader never owns or clears shared `GameTooltip`. The separate visible card uses `DFRL.tools.CreateHoverCard` and DEFAULT 13 text matching the equipped item's native rarity color. Unavailable rarity metadata retains the existing green text until the normal refresh resolves it; empty slots have no card. Color updates precede the unchanged-text measurement cache, so replacing an item with identical effects still recolors the pooled card. It has no unit metadata or health bar, and its border retains the shared neutral color.

@@ -72,6 +72,12 @@ The view keeps its filtered list until that roster, Show dead or visibility
 changes; health, countdowns, actual caption repair and measurement retries keep
 their ten-Hz refresh in both Performance Mode states. Coverage remains CI-only.
 
+Health-column measurement prepares one caption per snapshot slot. Visible rows
+reuse that same caption through the shared text setter; the existing filtered
+list keeps snapshot positions so hiding dead rows or scrolling cannot select
+another guardian's measurement. All text choices off skips formatting, and actual
+native text repair and health fills remain unchanged in both modes.
+
 The separate boss-health group shows only bosses by default. Enable
 **Guardians in boss bar** in `/sdui` → **Boss bars** to include fighting guardians. This
 does not change target health, the tracker, guidance or map markers.

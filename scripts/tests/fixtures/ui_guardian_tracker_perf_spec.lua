@@ -138,6 +138,56 @@ for _, performance in ipairs({ false, true }) do
 end
 print("PASS guardian filters reuse accepted revisions while countdowns, publications and hidden recovery stay live")
 
+for _, performance in ipairs({ false, true }) do
+    local context, row = Tracker()
+    local env = context.env
+    context.settings.performanceMode = performance
+    local compact = env.T.CompactHealth
+    env.T.CompactHealth = function(...)
+        context.reads.healthFormats = (context.reads.healthFormats or 0) + 1
+        return compact(...)
+    end
+    context.entry.state, context.entry.status = "awake", "fighting"
+    context.entry.hp, context.entry.maximum, context.entry.healthFraction = 50, 100, 0.5
+    context:Tick()
+    assert(
+        row.health:GetText() == "50 / 100" and context.reads.healthFormats == 2,
+        "health was formatted for measurement and paint"
+    )
+    context:ResetCounts()
+    row.health.text = "native reset"
+    context:Tick()
+    assert(
+        row.health:GetText() == "50 / 100" and not context.reads.healthFormats,
+        "prepared caption lost actual text repair"
+    )
+    context.entry.hp, context.entry.healthFraction = 40, 0.4
+    context:Tick()
+    assert(row.health:GetText() == "40 / 100" and row.bar.value == 0.4 and context.reads.healthFormats == 2)
+    context.entry.state, context.entry.status = "empty", "returning"
+    context.entry.hp, context.entry.maximum, context.entry.healthFraction = nil, nil, nil
+    context.entries[2] = {
+        key = "2:8",
+        index = 2,
+        id = 8,
+        name = "Other",
+        state = "awake",
+        status = "fighting",
+        hp = 75,
+        maximum = 100,
+        healthFraction = 0.75,
+    }
+    context:SetSetting("guardianShowDead", false)
+    context:Tick()
+    assert(
+        row.health:GetText() == "75 / 100" and row.bar.value == 0.75,
+        "filtered row borrowed another slot's prepared caption"
+    )
+end
+print(
+    "PASS guardian health shares prepared captions across measurement and painting with filtered-row and native repair parity"
+)
+
 do
     local context, row = Tracker()
     assert(row.status:GetText() == "Respawns in 1:02")

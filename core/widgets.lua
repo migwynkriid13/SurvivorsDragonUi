@@ -310,8 +310,20 @@ function DFRL.tools.EncounterHealthText(current, maximum, showCurrent, showMaxim
     return text
 end
 
-function DFRL.tools.SetEncounterHealthText(label, current, maximum, showCurrent, showMaximum, shorten, showPercentage)
-    local text = T.EncounterHealthText(current, maximum, showCurrent, showMaximum, label, shorten, showPercentage)
+function DFRL.tools.SetEncounterHealthText(
+    label,
+    current,
+    maximum,
+    showCurrent,
+    showMaximum,
+    shorten,
+    showPercentage,
+    preparedText
+)
+    local text = preparedText
+    if text == nil then
+        text = T.EncounterHealthText(current, maximum, showCurrent, showMaximum, label, shorten, showPercentage)
+    end
     T.SetTextIfChanged(label, text)
     if text == "" then
         if label:IsShown() then label:Hide() end
