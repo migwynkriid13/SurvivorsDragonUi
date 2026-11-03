@@ -80,7 +80,8 @@ api.Update(slot)
 assert(writes.color == colors and writes.uv == crops, "hidden rarity painted early")
 visible = true
 api.Update(slot)
-Color(slot.carving, 0.784, 0.526, 0.958)
+Color(slot.carving, 0.658, 0.2495, 0.9335)
+assert(slot.qualityR == red and slot.qualityG == green and slot.qualityB == blue)
 assert(writes.uv == crops, "color-only change rebound the equipped crop")
 for _, rank in ipairs({ 0, 1 }) do
     quality, red, green, blue = rank, 0.62 + rank * 0.38, 0.62 + rank * 0.38, 0.62 + rank * 0.38

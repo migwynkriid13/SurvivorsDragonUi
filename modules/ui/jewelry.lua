@@ -2,7 +2,7 @@
 --[[
 Selected 03 Runecarver housings use grey metal matching the action-bar surround.
 Equipped rarity tints a brighter version of the same grey carving.
-Rare-blue artwork uses a lighter sky blue and legendary orange uses a stronger tint.
+Rare artwork uses a lighter sky blue. Epic and legendary artwork use stronger tints.
 Effects-only hover text keeps the full native rarity color.
 The housing and soft halo are baked together in the existing Frame.blp atlas;
 five static regions inherit the shared overlay's visibility and scale.
@@ -596,8 +596,8 @@ DFRL:NewMod("Jewelry", 4, function()
         end
         local red, green, blue = 1, 1, 1
         if known then
-            -- Legendary orange needs less neutral metal mixed into the tint.
-            local strength = slot.quality == 5 and 0.95 or RARITY_TINT_STRENGTH
+            -- Keep epic purple and legendary orange close to their native colors.
+            local strength = (slot.quality == 4 or slot.quality == 5) and 0.95 or RARITY_TINT_STRENGTH
             local neutral = 1 - strength
             red = neutral + strength * rarityR
             green = neutral + strength * rarityG

@@ -15,7 +15,7 @@ Selected **03 — Cold-lit runes** uses static Runecarver metal and rune accents
 
 Empty slots and unavailable rarity use the original grey housing. Known
 rarity uses the brighter cell with a 60% color multiplier, raised to 95% for
-legendary orange. The selected rare-blue accent is `66CCFF` and effects-only
+epic purple and legendary orange. The selected rare-blue accent is `66CCFF` and effects-only
 hover text uses raw native RGB.
 
 `--runtime media/tex/jewelry/Frame.blp` writes the neutral cell

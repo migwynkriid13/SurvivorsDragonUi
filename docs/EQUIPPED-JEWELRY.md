@@ -35,7 +35,7 @@ keeps a removed item's color. Empty slots have no hover card.
 
 Empty slots and items with unavailable rarity use the original grey housing.
 Known rarity uses a brighter crop of the same carving and tints the metal
-at 60%. Legendary items use a stronger 95% tint so the orange reads clearly.
+at 60%. Epic purple and legendary orange use a stronger 95% tint.
 Rare items use a lighter sky-blue accent on the artwork.
 Effects-only hover text uses the native rarity color.
 
