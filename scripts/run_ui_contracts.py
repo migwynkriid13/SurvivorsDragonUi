@@ -109,9 +109,9 @@ def main():
         ])
         settings_editor = settings_editor.rsplit("\nreturn ", 1)[0] + "\nreturn { Create = CreateFontEditor, Display = UpdateDisplayLabels, SCT = UpdateSctLabels, Font = RefreshFontControls, Clock = UpdateClockCaptions }\n"
         tally_counters = extract_source("modules/ui/run.lua", [
-            "TALLY_COUNTER_INTERVAL", "IsNumber", "TallyCountersDue", "ClearTally", "UpdateTally", "UpdateRunBoundary",
+            "TALLY_COUNTER_INTERVAL", "IsNumber", "TallyCountersDue", "AdvanceTallyCounters", "ClearTally", "UpdateTally", "UpdateRunBoundary",
         ])
-        tally_counters = tally_counters.rsplit("\nreturn ", 1)[0] + "\nreturn { Update = UpdateTally, Clear = ClearTally, Boundary = UpdateRunBoundary }\n"
+        tally_counters = tally_counters.rsplit("\nreturn ", 1)[0] + "\nreturn { Update = UpdateTally, Advance = AdvanceTallyCounters, Clear = ClearTally, Boundary = UpdateRunBoundary }\n"
         minimap_clock = extract_source("modules/map/map.lua", ["WatchClock", "SetLauncherEditing"])
         minimap_clock = minimap_clock.rsplit("\nreturn ", 1)[0] + "\nreturn { Watch = WatchClock, Editing = SetLauncherEditing }\n"
         player_status = extract_source("modules/unit/player.lua", ["CreateRestingIcon", "UpdatePortraitShape"])

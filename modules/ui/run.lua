@@ -19,7 +19,7 @@ DFRL:NewMod("RunTimers", 5, function()
     local FLOW_COUNT = math.ceil((BAR_WIDTH + FLOW_WIDTH) / FLOW_SPACING)
     local FLOW_SPAN = FLOW_SPACING * FLOW_COUNT
     local RED_SPARKLE_OPACITY = 0.85
-    local TALLY_COUNTER_INTERVAL = 5
+    local TALLY_COUNTER_INTERVAL = { normal = 0.25, performance = 5 }
     local performanceMode = DFRL.display.Get("performanceMode")
     local PHASES = {
         ready = true,
@@ -3808,7 +3808,7 @@ DFRL:NewMod("RunTimers", 5, function()
     local function Restore(part) return nativeParts[part].Release(true) end
 
     local function ClearTally()
-        render.tallyCountersAt = nil
+        render.tallyCountersAt, render.tallyCounterWait = nil, nil
         if render.tallyShown then
             render.tallyShown = false
             tallyAttachment.SetShown(false)
@@ -3823,17 +3823,31 @@ DFRL:NewMod("RunTimers", 5, function()
 
     local function TallyCountersDue()
         if not performanceMode then
-            render.tallyCountersAt = nil
+            if render.tallyCounterWait then return false end
+            render.tallyCounterWait = TALLY_COUNTER_INTERVAL.normal
             return true
         end
         local now = GetTime()
         local previous = render.tallyCountersAt
-        if previous and now >= previous and now - previous < TALLY_COUNTER_INTERVAL then return false end
+        if previous and now >= previous and now - previous < TALLY_COUNTER_INTERVAL.performance then return false end
         render.tallyCountersAt = now
         return true
     end
 
-    local function UpdateTally()
+    local function AdvanceTallyCounters(elapsed)
+        -- Normal counters can wake between the shared encounter and cache-cost passes.
+        local wait = render.tallyCounterWait
+        if not wait then return false end
+        wait = wait - elapsed
+        if wait > 0 then
+            render.tallyCounterWait = wait
+            return false
+        end
+        render.tallyCounterWait = nil
+        return tally:IsVisible()
+    end
+
+    local function UpdateTally(countersOnly)
         tallyPresentationDirty = false
         local state = AZS_RUN
         -- Zero is a valid counter or free cache. Missing fields must not be
@@ -3858,18 +3872,25 @@ DFRL:NewMod("RunTimers", 5, function()
         if tally:IsVisible() then
             local refreshCounters = TallyCountersDue()
             for _, field in ipairs(tallyFields) do
-                if refreshCounters or (field.key ~= "kills" and field.key ~= "gold") then
-                    local value = math.floor(state[field.key])
-                    if field.counterValue ~= value then
-                        field.counterValue, field.counterText = value, tostring(value)
+                local counter = field.key == "kills" or field.key == "gold"
+                if counter or not countersOnly then
+                    if refreshCounters or not counter then
+                        local value = math.floor(state[field.key])
+                        if field.counterValue ~= value then
+                            field.counterValue, field.counterText = value, tostring(value)
+                        end
+                        T.SetTextIfChanged(field.text, field.counterText)
                     end
-                    T.SetTextIfChanged(field.text, field.counterText)
+                    FitTallyField(field)
                 end
-                FitTallyField(field)
             end
-            SetGoldHighlight(DFRL.display.Get("highlightAffordableCache") and state.gold >= state.chest)
+            if countersOnly then
+                if goldField.glowRunning then goldField.UpdateGlow() end
+            else
+                SetGoldHighlight(DFRL.display.Get("highlightAffordableCache") and state.gold >= state.chest)
+            end
         end
-        if not TakeOver("tally") then ClearTally() end
+        if not countersOnly and not TakeOver("tally") then ClearTally() end
     end
     HookScript(tally, "OnShow", function()
         tallyPresentationDirty, render.readPending = true, true
@@ -4846,7 +4867,7 @@ DFRL:NewMod("RunTimers", 5, function()
         if performanceMode ~= performance then
             performanceMode = performance
             render.bossLoss:ClearAll(activeRows)
-            render.tallyCountersAt = nil
+            render.tallyCountersAt, render.tallyCounterWait = nil, nil
             HideRunFlow()
             if performance then
                 SetGoldHighlight(false)
@@ -4891,7 +4912,7 @@ DFRL:NewMod("RunTimers", 5, function()
         local nativeTime = type(AZS_RUN) == "table" and AZS_RUN.t or nil
         local zoneBoundary = zoneSequence
         if zoneBoundary then
-            render.tallyCountersAt = nil
+            render.tallyCountersAt, render.tallyCounterWait = nil, nil
             InvalidateSchedule(zoneBoundary)
             RetireEncounters(zoneBoundary)
             zoneSequence = nil
@@ -4902,7 +4923,7 @@ DFRL:NewMod("RunTimers", 5, function()
         -- mistake the first new clock sample for another boundary and reject
         -- a schedule already received after AZSZONE.
         if zoneRunPending and runSequence > zoneRunPending then
-            render.tallyCountersAt = nil
+            render.tallyCountersAt, render.tallyCounterWait = nil, nil
             zoneRunPending = nil
         end
         if
@@ -4912,7 +4933,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 or (previousNativeTime and IsNumber(nativeTime) and nativeTime < previousNativeTime)
             )
         then
-            render.tallyCountersAt = nil
+            render.tallyCountersAt, render.tallyCounterWait = nil, nil
             InvalidateSchedule(runSequence)
             RetireEncounters(runSequence)
             run.affixes:Clear(true)
@@ -4995,7 +5016,7 @@ DFRL:NewMod("RunTimers", 5, function()
         end
     end
 
-    local function Update()
+    local function Update(tallyDue)
         if not inWorld then
             ReleaseHUD()
             return
@@ -5022,8 +5043,10 @@ DFRL:NewMod("RunTimers", 5, function()
             refreshRows = false
             UpdateTally()
             UpdateRows(phase)
-        else
-            if tallyPresentationDirty then UpdateTally() end
+        elseif tallyPresentationDirty then
+            UpdateTally()
+        elseif tallyDue then
+            UpdateTally(true)
         end
         render.bossLoss:Update()
     end
@@ -5127,8 +5150,16 @@ DFRL:NewMod("RunTimers", 5, function()
     reader:SetScript("OnUpdate", function()
         -- Visible groups retain frame-cadence phase/boundary detection. Debuffs
         -- use native timing at ten Hz, deferred publications and immediate hover.
-        pollAge = pollAge + (tonumber(arg1) or 0)
-        if not run:IsVisible() and not bossGroup:IsVisible() and not render.readPending and pollAge < 0.1 then
+        local elapsed = tonumber(arg1) or 0
+        pollAge = pollAge + elapsed
+        local tallyDue = AdvanceTallyCounters(elapsed)
+        if
+            not tallyDue
+            and not run:IsVisible()
+            and not bossGroup:IsVisible()
+            and not render.readPending
+            and pollAge < 0.1
+        then
             return
         end
         render.readPending = false
@@ -5136,7 +5167,7 @@ DFRL:NewMod("RunTimers", 5, function()
             pollAge = 0
             refreshRows = true
         end
-        Update()
+        Update(tallyDue)
     end)
     SyncReplacements()
     Update()

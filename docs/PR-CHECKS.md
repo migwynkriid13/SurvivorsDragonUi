@@ -131,7 +131,7 @@ guardian snapshot-copy and revision-filter reuse with fresh native health and
 countdowns; unchanged gameplay Layout bypass with unannounced viewport recovery;
 shared stored-level scale sampling; and unchanged tally integer formatting in
 both modes. Existing fixtures retain native handoff, hidden/world cleanup,
-pool reuse and Performance Mode's five-second kills/gold deadlines. These cases
+pool reuse and kills/gold deadlines in both modes. These cases
 are authored for CI only and were not executed locally. They do not establish
 native publication timing, appearance or measured FPS improvement.
 
@@ -1223,9 +1223,11 @@ Related production mocks cover notification expiry, revive progress, static
 range feedback and skull-glow transitions. These fixtures run only in CI and
 were not run locally; they do not measure frame rate or verify native rendering.
 
-Extracted tally cases cover five-second kills/gold presentation, unchanged
-normal/cache-cost cadence, retained-text fitting, hidden recovery, mode changes
-and existing native run/tally retirement boundaries. These remain CI-only.
+Extracted tally cases cover kills/gold presentation at 250 ms in normal mode and
+five seconds in Performance Mode, counter-only wakeups between HUD passes,
+glowing number synchronization, separate cache-cost refresh, retained-text
+fitting, hidden recovery, mode changes and native run/tally retirement. These
+remain CI-only.
 
 Banner cases include the former
 fade-out window and hidden-born rows, preserving original receipt lifetimes.

@@ -43,6 +43,7 @@ env.FitTallyField = function(field)
     context.reads.fit = (context.reads.fit or 0) + 1
 end
 env.SetGoldHighlight = function(value) context.highlight = value end
+env.goldField = { glowRunning = true, UpdateGlow = function() context.glowGold = Value("gold") end }
 env.TakeOver = function(part)
     assert(part == "tally", "tally sampling changed another native HUD owner")
     context.reads.ownership = (context.reads.ownership or 0) + 1
@@ -107,9 +108,17 @@ context:ResetCounts()
 api.Update()
 assert(Value("kills") == "10" and Value("gold") == "200" and Value("chest") == "300")
 Values(11, 201, 301)
+assert(not api.Advance(255 / 1024), "normal-mode counters were due before 250 ms")
 api.Update()
+assert(Value("kills") == "10" and Value("gold") == "200" and Value("chest") == "301")
+assert(api.Advance(1 / 1024), "normal-mode counters were not due at 250 ms")
+Values(11, 201, 302)
+context:ResetCounts()
+api.Update(true)
 assert(Value("kills") == "11" and Value("gold") == "201" and Value("chest") == "301")
-assert(not context.reads.clock and context.reads.formats == 6, "normal mode acquired a counter throttle")
+assert(context.glowGold == "201", "counter-only refresh left the old glowing gold number")
+assert(not context.reads.clock and not context.reads.ownership and context.reads.formats == 2)
+Values(11, 201, 301)
 context:ResetCounts()
 for _ = 1, 10 do
     api.Update()
@@ -117,6 +126,7 @@ end
 assert(not context.reads.formats, "unchanged normal-mode counters repeated integer formatting")
 assert(context.reads.ownership == 10 and context.reads.fit == 30, "counter reuse skipped ownership or font retries")
 env.tallyFields[1].text.text = "native reset"
+assert(api.Advance(0.25))
 api.Update()
 assert(Value("kills") == "11" and not context.reads.formats, "cached integer text lost actual-state repair")
 Values(11.9, 201.9, 301.9)
@@ -232,5 +242,5 @@ api.Update()
 assert(Value("kills") == "1" and Value("gold") == "2", "UI clock rollback permanently froze held counters")
 assert(table.getn(context.objects) == allocated, "cadence changes allocated drawing objects")
 print(
-    "PASS only Performance Mode kill/gold text uses five-second sampling with live cache cost and safe lifecycle resets"
+    "PASS kill/gold text uses 250-ms normal and five-second Performance Mode sampling with live cache cost and safe resets"
 )

@@ -195,9 +195,9 @@ actual text/font checks, native count/phase reads and failed metrics retryable.
 
 Tally fields retain only their latest displayed integer and string, skipping
 formatting when the final integer is unchanged while preserving actual text
-repair, fitting retries and HUD ownership. Normal presentation and cache cost
-keep their existing cadence; Performance Mode kills/gold retain five-second
-sampling. Invalid state and failed ownership clear the cached strings.
+repair, fitting retries and HUD ownership. Kills and gold sample every 250 ms
+in normal mode and every five seconds in Performance Mode. Cache cost follows
+the shared HUD reader. Invalid state and failed ownership clear the cached strings.
 
 There is no new frame, region, asset, event, updater, setting or saved state.
 CI-only cases cover unchanged work, unannounced native changes, publication
@@ -1741,27 +1741,22 @@ the existing page fits the final row. CI-only cases
 were authored without local execution. These are source costs, not measured
 FPS or current native cast-consumer parity. See [SCT spell data](SCT-SPELL-DATA.md).
 
-Only the kills/gold number presentation uses the five-second cadence. The initial
-valid display paints immediately, then changing packets, styles and widths
-cannot refresh those numbers early. Cache cost, native phase/data validation,
-HUD ownership and the shared reader keep their existing cadence. One unsaved
-last-paint timestamp uses `GetTime()` for display scheduling only; it never
-supplies gameplay time or counters. Between due samples, kills/gold skip number
-formatting and text assignment, while the existing fit helper can refit the
-retained text after a width/style change or retry missing metrics.
+Kill and gold numbers refresh every 250 ms in normal mode and every five seconds
+in Performance Mode. The initial valid display paints immediately. Changing
+packets, styles and widths keep the current deadline. Normal mode uses the
+shared frame callback's elapsed time so the counters can refresh between
+100-ms HUD passes. That counter-only pass also refreshes any visible glow text.
+Cache cost, affordability and native ownership are refreshed through the shared
+HUD pass. Performance Mode schedules its display samples with `GetTime()`.
+Between samples the fit helper can refit retained text or retry missing metrics.
 
 Actual Performance Mode transitions, tally retirement and existing zone/new-run
-or native-clock rollback boundaries reset that presentation timestamp. Routine
-attachment/style Hide/Show cycles do not reset it. Hidden tallies perform no
-number formatting, text updates or cadence-clock read; required native data
-validation and HUD ownership remain active. Elapsed hidden time naturally makes
-the next visible sample due after five seconds. Disabling Performance Mode
-restores current numbers through the next normal refresh, including preview,
-Cancel, profiles and resets. There is no new event, updater, region, asset,
-setting or SavedVariable. CI-only extracted production cases cover the exact
-five-second boundary, unaffected normal/cache-cost refresh, mode changes,
-hidden recovery, refitting and retirement; they are not local execution or
-measured FPS evidence.
+or native-clock rollback boundaries reset the sampling deadline. Routine
+attachment and style changes retain it. Elapsed hidden time counts toward the
+next visible sample. Mode changes restore current numbers on the next refresh,
+including preview, Cancel, profiles and resets. CI-only extracted production
+cases cover both deadlines, separate cache-cost refresh, mode changes, hidden
+recovery, refitting and retirement.
 
 The new editor control uses one standard button, four existing editor textures
 and one caption. No gameplay frame, drawing region, texture file, event, updater
