@@ -48,18 +48,23 @@ DFRL:NewMod("Xprep", 1, function()
 
     -- Two passive regions reuse the fill and the native spark already used by
     -- the run timer. Both stay below the original metal border.
-    local gain = bar:CreateTexture(nil, "ARTWORK")
-    gain:SetTexture(fillTexture)
-    gain:SetBlendMode("ADD")
-    gain:SetVertexColor(0.9, 0.55, 1)
-    gain:SetHeight(defaults.height)
-    gain:Hide()
-    local spark = bar:CreateTexture(nil, "ARTWORK")
-    spark:SetTexture("Interface\\CastingBar\\UI-CastingBar-Spark")
-    spark:SetBlendMode("ADD")
-    spark:SetVertexColor(1, 0.75, 1)
-    spark:SetHeight(defaults.height + 4)
-    spark:Hide()
+    local gain, spark, effectsReady
+    local function PrepareEffects()
+        if effectsReady then return end
+        gain = gain or bar:CreateTexture(nil, "ARTWORK")
+        gain:SetTexture(fillTexture)
+        gain:SetBlendMode("ADD")
+        gain:SetVertexColor(0.9, 0.55, 1)
+        gain:SetHeight(defaults.height)
+        gain:Hide()
+        spark = spark or bar:CreateTexture(nil, "ARTWORK")
+        spark:SetTexture("Interface\\CastingBar\\UI-CastingBar-Spark")
+        spark:SetBlendMode("ADD")
+        spark:SetVertexColor(1, 0.75, 1)
+        spark:SetHeight(defaults.height + 4)
+        spark:Hide()
+        effectsReady = true
+    end
 
     local attached, registered, editing = false, false, false
     local docked
@@ -171,8 +176,8 @@ DFRL:NewMod("Xprep", 1, function()
         wrapping = false
         displayed = desired
         if bar:IsVisible() and bar:GetValue() ~= displayed then bar:SetValue(displayed) end
-        if gain:IsShown() then gain:Hide() end
-        if spark:IsShown() then spark:Hide() end
+        if gain and gain:IsShown() then gain:Hide() end
+        if spark and spark:IsShown() then spark:Hide() end
         if not pending then events:SetScript("OnUpdate", nil) end
     end
 
@@ -275,6 +280,7 @@ DFRL:NewMod("Xprep", 1, function()
     end
 
     local function BeginGain(value)
+        PrepareEffects()
         origin, destination, age, fadeAge = displayed, value, 0, nil
         gainStart = gainStart or displayed
         -- Use retail's distance-based pacing, bounded for this much shorter bar.

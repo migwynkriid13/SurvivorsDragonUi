@@ -34,13 +34,15 @@ local function Warning()
     context:Load("modules/ui/ui.lua", "Ui")
     context.controller = context:Controller("UNIT_MAXHEALTH")
     context.warning = env.DFRL_LowHpWarnFrame
-    for _, object in ipairs(context.objects) do
-        if object.parent == context.warning and object.kind == "Texture" then
-            context.top = object
-            break
+    function context:WarningAlpha()
+        for _, object in ipairs(self.objects) do
+            if object.parent == self.warning and object.kind == "Texture" then
+                self.top = object
+                return object.gradient[9] * self.warning:GetAlpha()
+            end
         end
+        return 0
     end
-    assert(context.top, "missing production warning edge")
     function context:Tick(delta) self:Call(self.controller, "OnUpdate", delta) end
     return context
 end
@@ -48,6 +50,7 @@ end
 do
     local context = Warning()
     assert(not context.controller:GetScript("OnUpdate") and not context.warning:IsShown())
+    assert(context:WarningAlpha() == 0 and not context.top, "healthy warning prepared unused gradients")
     context:ResetCounts()
     context:Tick(10)
     context:Event(context.controller, "UNIT_HEALTH", "target")
@@ -60,14 +63,19 @@ do
     assert(not context.writes.gradient, "warning painted before its existing50ms step")
     context:Tick(0.03)
     local firstAlpha = 0.7 * 0.55 * (0.3 + 0.7 * (math.sin(0.225) + 1) / 2)
-    assert(context.writes.gradient == 4 and math.abs(context.top.gradient[9] - firstAlpha) < 1e-12)
+    assert(context.writes.gradient == 4 and math.abs(context:WarningAlpha() - firstAlpha) < 1e-12)
+    local allocated = #context.objects
     assert(not next(context.reads), "warning animation repeated native health/death reads")
     context.health = 28
     context:Event(context.controller, "UNIT_HEALTH", "player")
     context:ResetCounts()
     context:Tick(0.05)
     local nextAlpha = 0.7 * 0.64 * (0.3 + 0.7 * (math.sin(0.485) + 1) / 2)
-    assert(context.writes.gradient == 4 and math.abs(context.top.gradient[9] - nextAlpha) < 1e-12)
+    assert(
+        not context.writes.gradient
+            and context.writes.SetAlpha == 1
+            and math.abs(context:WarningAlpha() - nextAlpha) < 1e-12
+    )
     assert(not next(context.reads), "changed warning intensity introduced animation polling")
     context.health = 71
     context:Event(context.controller, "UNIT_HEALTH", "player")
@@ -78,7 +86,7 @@ do
     context.dead = false
     context:Event(context.controller, "PLAYER_ALIVE")
     context:Tick(0.05)
-    assert(math.abs(context.top.gradient[9] - firstAlpha) < 1e-12, "warning retirement did not reset pulse phase")
+    assert(math.abs(context:WarningAlpha() - firstAlpha) < 1e-12, "warning retirement did not reset pulse phase")
     context:Event(context.controller, "PLAYER_LEAVING_WORLD")
     assert(not context.warning:IsShown() and not context.controller:GetScript("OnUpdate"))
     context:ResetCounts()
@@ -88,7 +96,8 @@ do
     context:Event(context.controller, "PLAYER_ENTERING_WORLD")
     assert(context.controller:GetScript("OnUpdate"), "world entry did not reread current native health")
     context:Tick(0.05)
-    assert(math.abs(context.top.gradient[9] - firstAlpha) < 1e-12)
+    assert(math.abs(context:WarningAlpha() - firstAlpha) < 1e-12)
+    assert(#context.objects == allocated, "warning recovery replaced its gradient pool")
     context.health, context.maximum = 100, 100
     context:Event(context.controller, "UNIT_MAXHEALTH", "player")
     assert(not context.controller:GetScript("OnUpdate"))
@@ -116,14 +125,14 @@ do
         context.warning:IsShown() and not context.controller:GetScript("OnUpdate"),
         "Performance Mode lost static low-health feedback or retained pulse work"
     )
-    assert(math.abs(context.top.gradient[9] - 0.7 * 0.55) < 1e-12, "static warning changed native health intensity")
+    assert(math.abs(context:WarningAlpha() - 0.7 * 0.55) < 1e-12, "static warning changed native health intensity")
     context:ResetCounts()
     context:Tick(10)
     context:NoPresentationWrites()
     assert(not next(context.reads), "static low-health warning polled native health")
     context.health = 28
     context:Event(context.controller, "UNIT_HEALTH", "player")
-    assert(math.abs(context.top.gradient[9] - 0.7 * 0.64) < 1e-12, "static warning ignored a new native health value")
+    assert(math.abs(context:WarningAlpha() - 0.7 * 0.64) < 1e-12, "static warning ignored a new native health value")
     assert(not context.controller:GetScript("OnUpdate"), "static health update restarted warning animation")
     context:SetSetting("performanceMode", false)
     assert(context.controller:GetScript("OnUpdate"), "normal warning pulse did not resume")

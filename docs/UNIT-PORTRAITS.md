@@ -233,8 +233,11 @@ its original TGA and the separate native-pet `Health.blp` remain intact.
 
 Portrait previews defer while hidden and apply through the existing Show/value
 callbacks. Unchanged previews and refreshes skip geometry writes and reuse the
-same artwork. Normal mode retains the original loss fade; Performance Mode
-keeps health instant and clears the trail without replay. CI-only production
+same artwork. Each player, target and target-of-target loss overlay prepares
+its one frame and texture only at the first enabled, visible, valid-health
+baseline outside Performance Mode, then remains pooled. Disabled or hidden
+bars do not prepare them. Normal mode retains the original loss fade;
+Performance Mode keeps health instant and clears the trail without replay. CI-only production
 mocks cover caption bounds, fixed label positions, border reuse, hidden recovery,
 native dead/health changes and trail transitions. Local tests and game execution
 were not run; the supplied screenshots establish the reported defect, not the

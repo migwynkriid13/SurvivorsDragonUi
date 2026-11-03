@@ -766,6 +766,16 @@ The assertions cover:
   clock reads and ten-Hz/deferred/fresh-hover boss-debuff work. Clock tests keep
   raw native phase/time/ownership and original effect inputs. These are CI-only
   call/lifecycle contracts and do not establish rendered parity or FPS gains.
+- Decorative-allocation cases extend the warning, skull, compact health,
+  Revive and XP production fixtures, plus `ui_gold_glow_perf_spec.lua` over
+  extracted production declarations. They cover zero unused allocation in
+  Performance Mode, disabled/hidden deferral, current first-use values and
+  fitted fonts, retained pools, failed gold preparation, unchanged glow alpha
+  writes and the original pulse equations. Warning cases compare effective
+  gradient-times-parent opacity at the existing fifty-millisecond step and
+  require one opacity setter instead of four repeated gradient setters.
+  Revive's native reader and XP/health baselines remain immediate. These are
+  authored CI-only cases, not local test results or native appearance/FPS proof.
 - Third-pass cases extend the existing pet/totem, world-marker, party-waypoint
   and player-resource fixtures in both Performance Mode states. They require
   unchanged native countdown sampling without layout/icon helper reentry,

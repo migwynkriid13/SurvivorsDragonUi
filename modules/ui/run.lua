@@ -3288,7 +3288,7 @@ DFRL:NewMod("RunTimers", 5, function()
     local tallyMeasure = tallyOverlay:CreateFontString(nil, "OVERLAY")
     tallyMeasure:Hide()
     local function RefreshTallyGlowBounds(entry)
-        if not entry.glowLights then return end
+        if not entry.glowPrepared then return end
         local contentWidth = entry.content:GetWidth()
         local width = contentWidth * entry.glowWidthScale
         if not T.NearlyEqual(entry.glowWidth, width) then
@@ -3364,6 +3364,180 @@ DFRL:NewMod("RunTimers", 5, function()
         entry.fieldWidth = width
         FitTallyField(entry)
     end
+    local function CreateGoldGlow(entry)
+        local content, text = entry.content, entry.text
+        local glowOpacity = 1.4
+        local glyphSpread = 1.25
+        entry.glowWidthScale = 1.65
+        entry.glow, entry.glowDirections = {}, {}
+        entry.glowLights = {
+            { anchor = content, centerX = -5, height = 26, sparkleSize = 5, radiusY = 9.5, offset = 0 },
+        }
+        local function PrepareGlow()
+            if entry.glowPrepared then return end
+            for _, light in ipairs(entry.glowLights) do
+                local spotlight = light.spotlight or content:CreateTexture(nil, "BACKGROUND")
+                light.spotlight = spotlight
+                spotlight:SetTexture(DFRL:GetInfoOrCons("tex") .. "tally\\AffordableGlow.blp")
+                spotlight:SetBlendMode("ADD")
+                spotlight:SetVertexColor(1, 0.86, 0.64, 0.16 * glowOpacity)
+                spotlight:SetHeight(light.height)
+                spotlight:SetPoint("CENTER", light.anchor, "CENTER", light.centerX, 0)
+                spotlight:Hide()
+                local rays = light.rays or content:CreateTexture(nil, "BORDER")
+                light.rays = rays
+                rays:SetTexture(DFRL:GetInfoOrCons("tex") .. "tally\\AffordableRays.blp")
+                rays:SetBlendMode("ADD")
+                rays:SetVertexColor(1, 0.87, 0.66, 0.32 * glowOpacity)
+                rays:SetHeight(light.height)
+                rays:SetPoint("CENTER", light.anchor, "CENTER", light.centerX, 0)
+                rays:Hide()
+                light.sparkles = light.sparkles or {}
+                for index = 1, 3 do
+                    local prepared = light.sparkles[index]
+                    local sparkle = prepared and prepared.texture or content:CreateTexture(nil, "ARTWORK")
+                    light.sparkles[index] = prepared
+                        or {
+                            texture = sparkle,
+                            offset = (index - 1) * 2 * math.pi / 3 + light.offset,
+                        }
+                    sparkle:SetTexture(DFRL:GetInfoOrCons("tex") .. "tally\\AffordableSparkle.blp")
+                    sparkle:SetBlendMode("ADD")
+                    sparkle:SetVertexColor(1, 0.94, 0.78)
+                    sparkle:SetWidth(light.sparkleSize)
+                    sparkle:SetHeight(light.sparkleSize)
+                    sparkle:Hide()
+                end
+            end
+            local copy = 1
+            for y = -1, 1 do
+                for x = -1, 1 do
+                    if x ~= 0 or y ~= 0 then
+                        local glow = entry.glow[copy] or content:CreateFontString(nil, "ARTWORK")
+                        entry.glow[copy] = glow
+                        T.SetFont(glow, entry.fitFontSize or 12, "")
+                        glow:SetTextColor(1, 0.91, 0.68)
+                        glow:SetAlpha(0.04 * glowOpacity)
+                        glow:SetHeight(18)
+                        if entry.fitTextWidth then glow:SetWidth(entry.fitTextWidth) end
+                        glow:SetJustifyH("CENTER")
+                        glow:SetJustifyV("MIDDLE")
+                        glow:SetPoint("CENTER", text, "CENTER", x * 1.5 * glyphSpread, y * 1.5)
+                        glow:Hide()
+                        local length = math.sqrt(x * x + y * y)
+                        entry.glowDirections[copy] = entry.glowDirections[copy] or { x = x / length, y = y / length }
+                        copy = copy + 1
+                    end
+                end
+            end
+            table.setn(entry.glow, copy - 1)
+            table.setn(entry.glowDirections, copy - 1)
+            entry.glowPrepared = true
+        end
+        function entry.UpdateGlow()
+            if not entry.glowPrepared or not content:IsVisible() then return end
+            local value = text:GetText() or ""
+            if entry.glowText ~= value then
+                for _, glow in ipairs(entry.glow) do
+                    glow:SetText(value)
+                end
+                entry.glowText = value
+            end
+            RefreshTallyGlowBounds(entry)
+        end
+        local function PaintGlow()
+            local c, s = math.cos(entry.glowPhase), math.sin(entry.glowPhase)
+            local halfC, halfS = c / 2, s / 2
+            for index, glow in ipairs(entry.glow) do
+                local direction = entry.glowDirections[index]
+                local facing = math.max(0, c * direction.x - s * direction.y)
+                local alpha = (0.04 + 0.14 * facing * facing * facing * facing) * glowOpacity
+                if glow.glowPaintAlpha ~= alpha then
+                    glow:SetAlpha(alpha)
+                    glow.glowPaintAlpha = alpha
+                end
+            end
+            for _, light in ipairs(entry.glowLights) do
+                light.rays:SetTexCoord(
+                    0.5 - halfC - halfS,
+                    0.5 + halfS - halfC,
+                    0.5 - halfC + halfS,
+                    0.5 + halfS + halfC,
+                    0.5 + halfC - halfS,
+                    0.5 - halfS - halfC,
+                    0.5 + halfC + halfS,
+                    0.5 - halfS + halfC
+                )
+                for _, sparkle in ipairs(light.sparkles) do
+                    local twinkle = math.max(0, math.sin(entry.glowPhase * 3 + sparkle.offset * 0.7 + 0.8))
+                    local alpha = 0.55 * twinkle * twinkle * twinkle * twinkle
+                    if alpha > 0.01 then
+                        local angle = entry.glowPhase + sparkle.offset
+                        sparkle.texture:SetPoint(
+                            "CENTER",
+                            light.anchor,
+                            "CENTER",
+                            light.centerX + light.radiusX * math.cos(angle),
+                            -light.radiusY * math.sin(angle)
+                        )
+                        sparkle.texture:SetAlpha(alpha * glowOpacity)
+                        if not sparkle.shown then sparkle.texture:Show() end
+                        sparkle.shown = true
+                    elseif sparkle.shown then
+                        sparkle.texture:Hide()
+                        sparkle.shown = false
+                    end
+                end
+            end
+        end
+        function entry.StopGlow()
+            if not entry.glowRunning then return end
+            entry.glowRunning = false
+            content:SetScript("OnUpdate", nil)
+            for _, light in ipairs(entry.glowLights) do
+                light.rays:Hide()
+                for _, sparkle in ipairs(light.sparkles) do
+                    sparkle.texture:Hide()
+                    sparkle.shown = false
+                end
+            end
+            entry.glowAge, entry.glowPhase = nil, nil
+        end
+        local function AnimateGlow()
+            if performanceMode or not entry.affordable or not content:IsVisible() then
+                entry.StopGlow()
+                return
+            end
+            local elapsed = math.max(0, math.min(tonumber(arg1) or 0, 0.1))
+            entry.glowPhase = math.mod(entry.glowPhase + elapsed * 2 * math.pi / 4.8, 2 * math.pi)
+            entry.glowAge = entry.glowAge + elapsed
+            if entry.glowAge < 1 / 30 then return end
+            entry.glowAge = 0
+            PaintGlow()
+        end
+        function entry.StartGlow()
+            if performanceMode or entry.glowRunning or not entry.affordable or not content:IsVisible() then return end
+            PrepareGlow()
+            entry.UpdateGlow()
+            for _, glow in ipairs(entry.glow) do
+                glow.glowPaintAlpha = nil
+                if not glow:IsShown() then glow:Show() end
+            end
+            for _, light in ipairs(entry.glowLights) do
+                if not light.spotlight:IsShown() then light.spotlight:Show() end
+            end
+            entry.glowRunning = true
+            entry.glowAge, entry.glowPhase = 0, 0
+            PaintGlow()
+            for _, light in ipairs(entry.glowLights) do
+                light.rays:Show()
+            end
+            content:SetScript("OnUpdate", AnimateGlow)
+        end
+        content:SetScript("OnShow", entry.StartGlow)
+        content:SetScript("OnHide", entry.StopGlow)
+        goldField = entry
+    end
     for index, counter in ipairs(counters) do
         local field = CreateFrame("Frame", nil, tallyOverlay)
         field:SetHeight(20)
@@ -3408,144 +3582,7 @@ DFRL:NewMod("RunTimers", 5, function()
             frame = field,
             content = content,
         }
-        if counter.key == "gold" then
-            local glowOpacity = 1.4
-            local glyphSpread = 1.25
-            entry.glowWidthScale = 1.65
-            entry.glow, entry.glowDirections = {}, {}
-            entry.glowLights = {
-                { anchor = content, centerX = -5, height = 26, sparkleSize = 5, radiusY = 9.5, offset = 0 },
-            }
-            for _, light in ipairs(entry.glowLights) do
-                local spotlight = content:CreateTexture(nil, "BACKGROUND")
-                spotlight:SetTexture(DFRL:GetInfoOrCons("tex") .. "tally\\AffordableGlow.blp")
-                spotlight:SetBlendMode("ADD")
-                spotlight:SetVertexColor(1, 0.86, 0.64, 0.16 * glowOpacity)
-                spotlight:SetHeight(light.height)
-                spotlight:SetPoint("CENTER", light.anchor, "CENTER", light.centerX, 0)
-                spotlight:Hide()
-                local rays = content:CreateTexture(nil, "BORDER")
-                rays:SetTexture(DFRL:GetInfoOrCons("tex") .. "tally\\AffordableRays.blp")
-                rays:SetBlendMode("ADD")
-                rays:SetVertexColor(1, 0.87, 0.66, 0.32 * glowOpacity)
-                rays:SetHeight(light.height)
-                rays:SetPoint("CENTER", light.anchor, "CENTER", light.centerX, 0)
-                rays:Hide()
-                light.spotlight, light.rays, light.sparkles = spotlight, rays, {}
-                for index = 1, 3 do
-                    local sparkle = content:CreateTexture(nil, "ARTWORK")
-                    sparkle:SetTexture(DFRL:GetInfoOrCons("tex") .. "tally\\AffordableSparkle.blp")
-                    sparkle:SetBlendMode("ADD")
-                    sparkle:SetVertexColor(1, 0.94, 0.78)
-                    sparkle:SetWidth(light.sparkleSize)
-                    sparkle:SetHeight(light.sparkleSize)
-                    sparkle:Hide()
-                    table.insert(light.sparkles, {
-                        texture = sparkle,
-                        offset = (index - 1) * 2 * math.pi / 3 + light.offset,
-                    })
-                end
-            end
-            for y = -1, 1 do
-                for x = -1, 1 do
-                    if x ~= 0 or y ~= 0 then
-                        local glow = content:CreateFontString(nil, "ARTWORK")
-                        T.SetFont(glow, 12, "")
-                        glow:SetTextColor(1, 0.91, 0.68)
-                        glow:SetAlpha(0.04 * glowOpacity)
-                        glow:SetHeight(18)
-                        glow:SetJustifyH("CENTER")
-                        glow:SetJustifyV("MIDDLE")
-                        glow:SetPoint("CENTER", text, "CENTER", x * 1.5 * glyphSpread, y * 1.5)
-                        glow:Hide()
-                        table.insert(entry.glow, glow)
-                        local length = math.sqrt(x * x + y * y)
-                        table.insert(entry.glowDirections, { x = x / length, y = y / length })
-                    end
-                end
-            end
-            local function PaintGlow()
-                local c, s = math.cos(entry.glowPhase), math.sin(entry.glowPhase)
-                local halfC, halfS = c / 2, s / 2
-                for index, glow in ipairs(entry.glow) do
-                    local direction = entry.glowDirections[index]
-                    local facing = math.max(0, c * direction.x - s * direction.y)
-                    glow:SetAlpha((0.04 + 0.14 * facing * facing * facing * facing) * glowOpacity)
-                end
-                for _, light in ipairs(entry.glowLights) do
-                    light.rays:SetTexCoord(
-                        0.5 - halfC - halfS,
-                        0.5 + halfS - halfC,
-                        0.5 - halfC + halfS,
-                        0.5 + halfS + halfC,
-                        0.5 + halfC - halfS,
-                        0.5 - halfS - halfC,
-                        0.5 + halfC + halfS,
-                        0.5 - halfS + halfC
-                    )
-                    for _, sparkle in ipairs(light.sparkles) do
-                        local twinkle = math.max(0, math.sin(entry.glowPhase * 3 + sparkle.offset * 0.7 + 0.8))
-                        local alpha = 0.55 * twinkle * twinkle * twinkle * twinkle
-                        if alpha > 0.01 then
-                            local angle = entry.glowPhase + sparkle.offset
-                            sparkle.texture:SetPoint(
-                                "CENTER",
-                                light.anchor,
-                                "CENTER",
-                                light.centerX + light.radiusX * math.cos(angle),
-                                -light.radiusY * math.sin(angle)
-                            )
-                            sparkle.texture:SetAlpha(alpha * glowOpacity)
-                            if not sparkle.shown then sparkle.texture:Show() end
-                            sparkle.shown = true
-                        elseif sparkle.shown then
-                            sparkle.texture:Hide()
-                            sparkle.shown = false
-                        end
-                    end
-                end
-            end
-            function entry.StopGlow()
-                if not entry.glowRunning then return end
-                entry.glowRunning = false
-                content:SetScript("OnUpdate", nil)
-                for _, light in ipairs(entry.glowLights) do
-                    light.rays:Hide()
-                    for _, sparkle in ipairs(light.sparkles) do
-                        sparkle.texture:Hide()
-                        sparkle.shown = false
-                    end
-                end
-                entry.glowAge, entry.glowPhase = nil, nil
-            end
-            local function AnimateGlow()
-                if performanceMode or not entry.affordable or not content:IsVisible() then
-                    entry.StopGlow()
-                    return
-                end
-                local elapsed = math.max(0, math.min(tonumber(arg1) or 0, 0.1))
-                entry.glowPhase = math.mod(entry.glowPhase + elapsed * 2 * math.pi / 4.8, 2 * math.pi)
-                entry.glowAge = entry.glowAge + elapsed
-                if entry.glowAge < 1 / 30 then return end
-                entry.glowAge = 0
-                PaintGlow()
-            end
-            function entry.StartGlow()
-                if performanceMode or entry.glowRunning or not entry.affordable or not content:IsVisible() then
-                    return
-                end
-                entry.glowRunning = true
-                entry.glowAge, entry.glowPhase = 0, 0
-                PaintGlow()
-                for _, light in ipairs(entry.glowLights) do
-                    light.rays:Show()
-                end
-                content:SetScript("OnUpdate", AnimateGlow)
-            end
-            content:SetScript("OnShow", entry.StartGlow)
-            content:SetScript("OnHide", entry.StopGlow)
-            goldField = entry
-        end
+        if counter.key == "gold" then CreateGoldGlow(entry) end
         SetTallyFieldWidth(entry, fieldWidth)
         table.insert(tallyFields, entry)
         field:SetScript("OnEnter", function()
@@ -3570,38 +3607,28 @@ DFRL:NewMod("RunTimers", 5, function()
 
     local function SetGoldHighlight(affordable)
         affordable = not performanceMode and affordable
-        if affordable then
-            local text = goldField.text:GetText() or ""
-            if goldField.glowText ~= text then
-                goldField.glowText = text
-                for _, glow in ipairs(goldField.glow) do
-                    glow:SetText(text)
-                end
-            end
-            RefreshTallyGlowBounds(goldField)
-        end
-        if goldField.affordable == affordable then return end
+        local previous = goldField.affordable
         goldField.affordable = affordable
-        for _, glow in ipairs(goldField.glow) do
-            if affordable then
-                glow:Show()
-            else
-                glow:SetText("")
-                glow:Hide()
-            end
-        end
         if affordable then
-            for _, light in ipairs(goldField.glowLights) do
-                light.spotlight:Show()
+            if goldField.glowRunning then
+                goldField.UpdateGlow()
+            else
+                goldField.StartGlow()
             end
-            goldField.StartGlow()
-        else
-            goldField.StopGlow()
+            return
+        end
+        if previous == false then return end
+        goldField.StopGlow()
+        for _, glow in ipairs(goldField.glow) do
+            glow:SetText("")
+            glow:Hide()
+        end
+        if goldField.glowPrepared then
             for _, light in ipairs(goldField.glowLights) do
                 light.spotlight:Hide()
             end
-            goldField.glowText, goldField.glowWidth = nil, nil
         end
+        goldField.glowText, goldField.glowWidth = nil, nil
     end
 
     do
@@ -3930,8 +3957,52 @@ DFRL:NewMod("RunTimers", 5, function()
         render.encountersRetired, refreshRows = true, true
     end
 
+    local function PrepareMarkerGlow(marker)
+        if marker.glowPrepared then return end
+        marker.glowCardinal = marker.glowCardinal or CreateFrame("Frame", nil, marker)
+        marker.glowDiagonal = marker.glowDiagonal or CreateFrame("Frame", nil, marker)
+        marker.glowCardinal:SetPoint("CENTER", marker, "CENTER", 0, 0)
+        marker.glowDiagonal:SetPoint("CENTER", marker, "CENTER", 0, 0)
+        marker.glowCardinal:SetWidth(2 * ACTIVE_GLOW_MIN_OFFSET)
+        marker.glowCardinal:SetHeight(2 * ACTIVE_GLOW_MIN_OFFSET)
+        marker.glowDiagonal:SetWidth(2 * ((1 / math.sqrt(2)) * ACTIVE_GLOW_MIN_OFFSET))
+        marker.glowDiagonal:SetHeight(2 * ((1 / math.sqrt(2)) * ACTIVE_GLOW_MIN_OFFSET))
+        marker.glowCardinal:Hide()
+        marker.glowDiagonal:Hide()
+        marker.glowOffset = ACTIVE_GLOW_MIN_OFFSET
+        -- Translucent copies trace the native skull silhouette. Their
+        -- offsets breathe inward/outward beneath the unchanged skull.
+        local slot = 1
+        for x = -1, 1 do
+            for y = -1, 1 do
+                if x ~= 0 or y ~= 0 then
+                    local distance = math.sqrt(x * x + y * y)
+                    local dx, dy = x / distance, y / distance
+                    local copy = marker.glow[slot]
+                    local glow = copy and copy.texture or marker:CreateTexture(nil, "BACKGROUND")
+                    marker.glow[slot] = copy or { texture = glow, x = dx, y = dy }
+                    glow:Hide()
+                    glow:SetTexture(SKULL_ICON)
+                    glow:SetWidth(MARKER_SIZE)
+                    glow:SetHeight(MARKER_SIZE)
+                    local point = (y == 1 and "TOP" or y == -1 and "BOTTOM" or "")
+                        .. (x == 1 and "RIGHT" or x == -1 and "LEFT" or "")
+                    glow:SetPoint("CENTER", distance == 1 and marker.glowCardinal or marker.glowDiagonal, point, 0, 0)
+                    glow:SetVertexColor(1, 0.25, 0, 1)
+                    glow:SetAlpha(ACTIVE_GLOW_MIN_ALPHA)
+                    glow:SetBlendMode("ADD")
+                    slot = slot + 1
+                end
+            end
+        end
+        table.setn(marker.glow, slot - 1)
+        marker.glowPrepared = true
+    end
+
     local function ShowMarkerGlow(marker, shown)
-        if marker.glowShown == shown then return end
+        shown = shown and marker:GetParent():IsVisible() or false
+        if shown then PrepareMarkerGlow(marker) end
+        if marker.glowShown == shown then return shown end
         for _, glow in ipairs(marker.glow) do
             if shown then
                 glow.texture:Show()
@@ -3940,6 +4011,7 @@ DFRL:NewMod("RunTimers", 5, function()
             end
         end
         marker.glowShown = shown
+        return shown
     end
 
     local function HideMarkerTooltip(marker)
@@ -4208,48 +4280,11 @@ DFRL:NewMod("RunTimers", 5, function()
             local marker = markers[index]
             if not marker then
                 marker = NewRunMarker(overlay)
+                HookScript(marker, "OnShow", function() render.markerStatesDirty = true end)
                 marker:SetScript("OnEnter", function() ShowMarkerTooltip(marker) end)
                 marker:SetScript("OnLeave", function() HideMarkerTooltip(marker) end)
                 T.RegisterTooltipIcon(marker)
                 marker.glow = {}
-                marker.glowCardinal = CreateFrame("Frame", nil, marker)
-                marker.glowDiagonal = CreateFrame("Frame", nil, marker)
-                marker.glowCardinal:SetPoint("CENTER", marker, "CENTER", 0, 0)
-                marker.glowDiagonal:SetPoint("CENTER", marker, "CENTER", 0, 0)
-                marker.glowCardinal:SetWidth(2 * ACTIVE_GLOW_MIN_OFFSET)
-                marker.glowCardinal:SetHeight(2 * ACTIVE_GLOW_MIN_OFFSET)
-                marker.glowDiagonal:SetWidth(2 * ((1 / math.sqrt(2)) * ACTIVE_GLOW_MIN_OFFSET))
-                marker.glowDiagonal:SetHeight(2 * ((1 / math.sqrt(2)) * ACTIVE_GLOW_MIN_OFFSET))
-                marker.glowCardinal:Hide()
-                marker.glowDiagonal:Hide()
-                marker.glowOffset = ACTIVE_GLOW_MIN_OFFSET
-                -- Translucent copies trace the native skull silhouette. Their
-                -- offsets breathe inward/outward beneath the unchanged skull.
-                for x = -1, 1 do
-                    for y = -1, 1 do
-                        if x ~= 0 or y ~= 0 then
-                            local distance = math.sqrt(x * x + y * y)
-                            local dx, dy = x / distance, y / distance
-                            local glow = marker:CreateTexture(nil, "BACKGROUND")
-                            glow:SetTexture(SKULL_ICON)
-                            glow:SetWidth(MARKER_SIZE)
-                            glow:SetHeight(MARKER_SIZE)
-                            local point = (y == 1 and "TOP" or y == -1 and "BOTTOM" or "")
-                                .. (x == 1 and "RIGHT" or x == -1 and "LEFT" or "")
-                            glow:SetPoint(
-                                "CENTER",
-                                distance == 1 and marker.glowCardinal or marker.glowDiagonal,
-                                point,
-                                0,
-                                0
-                            )
-                            glow:SetVertexColor(1, 0.25, 0, 1)
-                            glow:SetAlpha(ACTIVE_GLOW_MIN_ALPHA)
-                            glow:SetBlendMode("ADD")
-                            table.insert(marker.glow, { texture = glow, x = dx, y = dy })
-                        end
-                    end
-                end
                 marker.check = T.CreateDefeatedMarkerCheck(marker, MARKER_SIZE)
                 HideMarker(marker)
                 markers[index] = marker
@@ -4291,8 +4326,8 @@ DFRL:NewMod("RunTimers", 5, function()
                         T.StyleDefeatedMarker(marker.skull, marker.check, MARKER_SIZE, state == "dead")
                         marker.state = state
                     end
-                    ShowMarkerGlow(marker, state == "up" and not performanceMode)
-                    if state == "up" and not performanceMode then
+                    local glowShown = ShowMarkerGlow(marker, state == "up" and not performanceMode)
+                    if glowShown then
                         count = count + 1
                         render.activeMarkers[count] = marker
                     end

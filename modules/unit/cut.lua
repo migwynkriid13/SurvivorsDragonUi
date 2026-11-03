@@ -11,8 +11,24 @@ DFRL:NewMod("Cut-Out", 1, function()
 
     local function ReadValue(cutout) return T.GetUnitHealth(cutout.unit) end
 
+    local function PrepareLoss(cutout)
+        if cutout.lossPrepared then return end
+        local overlay = cutout.overlay or CreateFrame("Frame", nil, cutout.bar)
+        cutout.overlay = overlay
+        overlay:SetFrameLevel(cutout.bar:GetFrameLevel() + 1)
+        overlay:SetAllPoints(cutout.bar)
+        local texture = cutout.texture or overlay:CreateTexture(nil, "OVERLAY")
+        cutout.texture = texture
+        local healthFill = T.LargeHealthFill
+        texture:SetTexture(healthFill.texture)
+        texture:SetTexCoord(unpack(healthFill.texCoords))
+        texture:SetVertexColor(1, 1, 1, 0.7)
+        texture:Hide()
+        cutout.lossPrepared = true
+    end
+
     local function Stop(cutout)
-        if cutout.texture:IsShown() then cutout.texture:Hide() end
+        if cutout.texture and cutout.texture:IsShown() then cutout.texture:Hide() end
         cutout.startFraction, cutout.widthFraction = nil, nil
         if cutout.fading then
             for index = table.getn(fading), 1, -1 do
@@ -30,6 +46,7 @@ DFRL:NewMod("Cut-Out", 1, function()
         cutout.lastValue, cutout.lastMax, cutout.generation = ReadValue(cutout)
         if cutout.lastValue and cutout.lastMax and cutout.lastMax > 0 then
             cutout.lastValue = math.max(0, math.min(cutout.lastValue, cutout.lastMax))
+            PrepareLoss(cutout)
         end
     end
 
@@ -96,6 +113,7 @@ DFRL:NewMod("Cut-Out", 1, function()
         cutout.startFraction = current / maximum
         cutout.widthFraction = math.min(1 - cutout.startFraction, lost / maximum)
         if cutout.widthFraction <= 0 then return end
+        PrepareLoss(cutout)
         PlaceLoss(cutout)
         local texture = cutout.texture
         texture:SetAlpha(1)
@@ -126,15 +144,7 @@ DFRL:NewMod("Cut-Out", 1, function()
         for _, data in ipairs(bars) do
             local bar = _G[data[1]]
             if bar then
-                local overlay = CreateFrame("Frame", nil, bar)
-                overlay:SetFrameLevel(bar:GetFrameLevel() + 1)
-                overlay:SetAllPoints(bar)
-                local texture = overlay:CreateTexture(nil, "OVERLAY")
-                local healthFill = T.LargeHealthFill
-                texture:SetTexture(healthFill.texture)
-                texture:SetTexCoord(unpack(healthFill.texCoords))
-                texture:SetVertexColor(1, 1, 1, 0.7)
-                local cutout = { bar = bar, texture = texture, unit = data[2] }
+                local cutout = { bar = bar, unit = data[2] }
                 table.insert(cutouts, cutout)
                 Reset(cutout)
                 HookScript(bar, "OnHide", function() Reset(cutout) end)

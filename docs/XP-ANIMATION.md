@@ -18,10 +18,13 @@ or intermediate levels are invented. Further native gains during a rollover
 update its final destination without restarting the old-level sweep.
 
 Hiding, invalid native data, world leave/logout, layout entry/exit and both
-full resets stop the effect and remove both regions. Hidden or edited bars
+full resets stop the effect and hide both regions. Hidden or edited bars
 accept current XP immediately. Showing the bar schedules an immediate native
 baseline, so hidden gains are not replayed. The event controller has no idle
 OnUpdate: it runs only for a pending read or an active visual effect.
+The gain fill and spark prepare synchronously at the first eligible normal-mode
+gain and remain pooled afterward. Idle, hidden and Performance Mode baselines
+do not create them; changing modes does not replay suppressed gains.
 
 The purple color, six-unit height, mouse transparency and lack of XP
 text/tooltips stay intact. The animation uses two passive texture regions and

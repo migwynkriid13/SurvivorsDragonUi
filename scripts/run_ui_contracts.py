@@ -68,6 +68,8 @@ def main():
         ])
         waypoint_buffers = waypoint_buffers.rsplit("\nreturn ", 1)[0] + "\nreturn { Read = Snapshot, Clear = ClearSnapshotBuffer }\n"
         fstack_display = extract_source("core/fstack.lua", ["Number", "Read", "Place", "LineHeight", "Display"])
+        gold_glow = extract_source("modules/ui/run.lua", ["RefreshTallyGlowBounds", "CreateGoldGlow", "SetGoldHighlight"])
+        gold_glow = gold_glow.rsplit("\nreturn ", 1)[0] + "\nreturn { New = CreateGoldGlow, Set = SetGoldHighlight }\n"
         xp_glow = extract_source("modules/xprep/xprep.lua", ["PaintGlow"])
         sct_queue = extract_source("modules/nameplates/sct.lua", [
             "DIABLO", "criticalHistory", "textStyle",
@@ -122,8 +124,8 @@ def main():
             "HOLD", "FADE", "SLIDE", "AtBottom", "FadeSettings", "Rearm", "Reveal", "PositionNative", "NoticeMessage",
         ])
         run_markers = extract_source("modules/ui/run.lua", [
-            "MARKER_SIZE", "ACTIVE_GLOW_PERIOD", "ACTIVE_GLOW_MIN_ALPHA", "ACTIVE_GLOW_MAX_ALPHA",
-            "ACTIVE_GLOW_MIN_OFFSET", "ACTIVE_GLOW_MAX_OFFSET", "ShowMarkerGlow", "HideMarkerTooltip",
+            "SKULL_ICON", "MARKER_SIZE", "ACTIVE_GLOW_PERIOD", "ACTIVE_GLOW_MIN_ALPHA", "ACTIVE_GLOW_MAX_ALPHA",
+            "ACTIVE_GLOW_MIN_OFFSET", "ACTIVE_GLOW_MAX_OFFSET", "PrepareMarkerGlow", "ShowMarkerGlow", "HideMarkerTooltip",
             "HideMarker", "UpdateMarkerStates",
         ])
         run_markers = run_markers.rsplit("\nreturn ", 1)[0] + "\nreturn { Update = UpdateMarkerStates, Hide = HideMarker }\n"
@@ -170,6 +172,7 @@ def main():
             ("navigation-distance-source.lua", navigation_distance, "ui_navigation_distance_spec.lua"),
             ("waypoint-frame-source.lua", waypoint_frame, "ui_waypoint_frame_perf_spec.lua"),
             ("xp-glow-source.lua", xp_glow, "ui_xp_perf_spec.lua"),
+            ("gold-glow-source.lua", gold_glow, "ui_gold_glow_perf_spec.lua"),
             ("sct-queue-source.lua", sct_queue, "ui_sct_queue_perf_spec.lua"),
             ("run-foam-source.lua", run_foam, "ui_run_foam_perf_spec.lua"),
             ("run-static-source.lua", run_static, "ui_run_static_mode_spec.lua"),

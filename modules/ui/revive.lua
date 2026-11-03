@@ -72,22 +72,31 @@ DFRL:NewMod("Revive", 4, function()
         local center = Texture(overlay, "BorderCenter", "OVERLAY", 230, 31, 1, 31 / 32)
         center:SetPoint("LEFT", left, "RIGHT", 0, 0)
         center:SetPoint("RIGHT", right, "LEFT", 0, 0)
-        local spark = Texture(overlay, "Spark", "OVERLAY", 8, 32, 1, 1)
-        spark:SetBlendMode("ADD")
-        spark:Hide()
+        local spark, effectsReady
         local crosses = {}
-        for index = 1, CROSS_COUNT do
-            local cross = {}
-            for part = 1, 2 do
-                local texture = overlay:CreateTexture(nil, "ARTWORK")
-                texture:SetTexture("Interface\\Buttons\\WHITE8X8")
-                texture:SetWidth(part == 1 and 6 or 2)
-                texture:SetHeight(part == 1 and 2 or 6)
-                texture:SetBlendMode("ADD")
-                texture:Hide()
-                cross[part] = texture
+        local function PrepareEffects()
+            if effectsReady then return end
+            spark = spark or overlay:CreateTexture(nil, "OVERLAY")
+            spark:SetTexture(path .. "Spark.blp")
+            spark:SetWidth(8)
+            spark:SetHeight(32)
+            spark:SetTexCoord(0, 1, 0, 1)
+            spark:SetBlendMode("ADD")
+            spark:Hide()
+            for index = 1, CROSS_COUNT do
+                local cross = crosses[index] or {}
+                crosses[index] = cross
+                for part = 1, 2 do
+                    local texture = cross[part] or overlay:CreateTexture(nil, "ARTWORK")
+                    cross[part] = texture
+                    texture:SetTexture("Interface\\Buttons\\WHITE8X8")
+                    texture:SetWidth(part == 1 and 6 or 2)
+                    texture:SetHeight(part == 1 and 2 or 6)
+                    texture:SetBlendMode("ADD")
+                    texture:Hide()
+                end
             end
-            crosses[index] = cross
+            effectsReady = true
         end
         local function Label(size)
             local label = overlay:CreateFontString(nil, "OVERLAY")
@@ -127,10 +136,11 @@ DFRL:NewMod("Revive", 4, function()
             displayedPercent = rounded
             T.SetTextIfChanged(percent, percentText)
             if performanceMode then
-                if spark:IsShown() then spark:Hide() end
+                if spark and spark:IsShown() then spark:Hide() end
                 dirty = false
                 return
             end
+            PrepareEffects()
             local x = 8 + ((width or root:GetWidth()) - 72) * value
             if sparkX ~= x then
                 spark:ClearAllPoints()
@@ -140,7 +150,7 @@ DFRL:NewMod("Revive", 4, function()
             if value > 0 and value < 1 then
                 if not spark:IsShown() then spark:Show() end
             else
-                if spark:IsShown() then spark:Hide() end
+                if spark and spark:IsShown() then spark:Hide() end
             end
             dirty = false
         end
@@ -151,7 +161,7 @@ DFRL:NewMod("Revive", 4, function()
             root:SetAlpha(1)
             bar:SetValue(0)
             paintedValue = 0
-            spark:Hide()
+            if spark then spark:Hide() end
             for _, cross in ipairs(crosses) do
                 cross.geometryWidth, cross.geometryRight = nil, nil
                 for _, texture in ipairs(cross) do
@@ -178,7 +188,7 @@ DFRL:NewMod("Revive", 4, function()
                 fade = 1
                 value, origin = target, target
                 if root:GetAlpha() ~= 1 then root:SetAlpha(1) end
-                if spark:IsShown() then spark:Hide() end
+                if spark and spark:IsShown() then spark:Hide() end
                 for _, cross in ipairs(crosses) do
                     for _, texture in ipairs(cross) do
                         if texture:IsShown() then texture:Hide() end
@@ -249,6 +259,7 @@ DFRL:NewMod("Revive", 4, function()
         end
         function view.Animate(elapsed)
             if performanceMode or not view.active or not root:IsVisible() then return end
+            PrepareEffects()
             if fade < 1 then
                 fade = math.min(1, fade + elapsed / FADE_TIME)
                 root:SetAlpha(1 - (1 - fade) * (1 - fade))

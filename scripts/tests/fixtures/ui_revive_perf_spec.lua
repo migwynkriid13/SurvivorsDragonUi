@@ -105,25 +105,28 @@ local function Revive()
     context:Load("modules/ui/revive.lua", "Revive")
     context.root = assert(env.SurvivorsDragonUiRevive)
     context.controller = context:Controller("CHAT_MSG_ADDON")
-    context.crosses = {}
-    for _, object in ipairs(context.objects) do
-        if object.kind == "StatusBar" then context.bar = object end
-        if object.kind == "FontString" then
-            if object:GetFont() and select(2, object:GetFont()) == 12 then
-                context.percent = object
-            elseif object:GetHeight() == 22 then
-                context.caption = object
-            end
-        elseif object.kind == "Texture" then
-            local texture = object:GetTexture()
-            if texture == "Interface\\Buttons\\WHITE8X8" then
-                table.insert(context.crosses, object)
-            elseif texture and string.find(texture, "Spark.blp", 1, true) then
-                context.spark = object
+    function context:FindEffects()
+        context.crosses, context.spark = {}, nil
+        for _, object in ipairs(context.objects) do
+            if object.kind == "StatusBar" then context.bar = object end
+            if object.kind == "FontString" then
+                if object:GetFont() and select(2, object:GetFont()) == 12 then
+                    context.percent = object
+                elseif object:GetHeight() == 22 then
+                    context.caption = object
+                end
+            elseif object.kind == "Texture" then
+                local texture = object:GetTexture()
+                if texture == "Interface\\Buttons\\WHITE8X8" then
+                    table.insert(context.crosses, object)
+                elseif texture and string.find(texture, "Spark.blp", 1, true) then
+                    context.spark = object
+                end
             end
         end
     end
-    assert(context.bar and context.caption and context.percent and context.spark and #context.crosses == 12)
+    context:FindEffects()
+    assert(context.bar and context.caption and context.percent and not context.spark and #context.crosses == 0)
     function context:ResetPerf()
         self:ResetCounts()
         self.formats, self.percentFormats = 0, 0
@@ -132,17 +135,39 @@ local function Revive()
     function context:Tick(elapsed)
         self.now = self.now + elapsed
         self:Call(self.controller, "OnUpdate", elapsed)
+        self:FindEffects()
     end
     function context:Publish(state)
         self.env.AZS_REVIVE, self.env.AZS_REVIVE_UPDATED = state, self.now
         self:Event(self.controller, "CHAT_MSG_ADDON", "AZSREVIVE")
         self:Tick(0)
     end
+    local setSetting = context.SetSetting
+    function context:SetSetting(key, value)
+        setSetting(self, key, value)
+        self:FindEffects()
+    end
     function context:Hidden(hidden)
         self.hidden = hidden
         self:SetLayoutHidden(hidden)
     end
     return context
+end
+
+do
+    local context = Revive()
+    context:SetSetting("performanceMode", true)
+    local allocated = #context.objects
+    context:Publish({ down = 1, by = "Alice", share = 0.5 })
+    context:Tick(0.2)
+    assert(not context.spark and #context.crosses == 0 and #context.objects == allocated)
+    assert(context.bar.value == 0.5 and context.percent:GetText() == "50%")
+    context:SetSetting("performanceMode", false)
+    assert(context.spark and #context.crosses == 12 and #context.objects == allocated + 13)
+    allocated = #context.objects
+    context:SetSetting("performanceMode", true)
+    context:SetSetting("performanceMode", false)
+    assert(#context.objects == allocated, "revive decoration did not reuse its first-use pool")
 end
 
 do

@@ -19,6 +19,12 @@ preparation input retains the original pixels. The shared
 fitter reserves its icon width, the tooltip anchors above the icon, and the
 affordability halo includes both the coin and amount with its original offset.
 
+The five highlight textures and eight number copies prepare only on the first
+visible, affordable highlight with Performance Mode off. First use copies the
+current fitted font, number and bounds. The retained pool recovers on Show and
+mode changes without new regions. The original thirty-Hz animation skips only
+unchanged number-opacity writes; its appearance and timing remain unchanged.
+
 The cache-cost counter uses the supplied chest artwork from
 `media/tex/waypoint/Chest.blp`, shared with cache guidance and minimap markers.
 It retains its 18-unit icon, full texture coordinates, four-unit text gap,

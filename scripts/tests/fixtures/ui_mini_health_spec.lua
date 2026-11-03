@@ -178,12 +178,29 @@ context.dead = false
 context:Call(bar, "OnValueChanged")
 assert(label:GetText() == "1.2K" and percentage:GetText() == "100%", "native health did not recover")
 
+context:SetSetting("performanceMode", true)
 context:Load("modules/unit/cut.lua", "Cut-Out")
 local loss, animator
 for _, object in ipairs(context.objects) do
     if object.kind == "Texture" and object.parent and object.parent.parent == bar then loss = object end
     if object.events.PLAYER_LEAVING_WORLD then animator = object end
 end
+assert(not loss and animator, "Performance Mode prepared an unused health-loss overlay")
+local withoutLoss = #context.objects
+context.current = 900
+context:Call(bar, "OnValueChanged")
+assert(#context.objects == withoutLoss and animator:GetScript("OnUpdate") == nil)
+assert(label:GetText() == "900" and percentage:GetText() == "75%", "deferred trail delayed native health")
+context:SetSetting("healthLossAnimation", false)
+context:SetSetting("performanceMode", false)
+context.current = 1200
+context:Call(bar, "OnValueChanged")
+assert(#context.objects == withoutLoss, "disabled loss trails prepared their overlay")
+context:SetSetting("healthLossAnimation", true)
+for _, object in ipairs(context.objects) do
+    if object.kind == "Texture" and object.parent and object.parent.parent == bar then loss = object end
+end
+assert(#context.objects == withoutLoss + 2, "enabled trail did not prepare one retained frame and texture")
 assert(loss and animator and loss:GetTexture() == bar.fill:GetTexture(), "loss trail restored the old shaded fill")
 context.current = 900
 context:Call(bar, "OnValueChanged")

@@ -82,20 +82,28 @@ DFRL:NewMod("Ui", 5, function()
     warning:SetAllPoints(UIParent)
     warning:SetFrameStrata("BACKGROUND")
     warning:Hide()
-    local edges = {}
-    for _, side in ipairs({ "TOP", "BOTTOM", "LEFT", "RIGHT" }) do
-        local texture = warning:CreateTexture(nil, "BACKGROUND")
-        texture:SetTexture("Interface\\Buttons\\WHITE8X8")
-        if side == "TOP" or side == "BOTTOM" then
-            texture:SetPoint(side .. "LEFT", warning, side .. "LEFT", 0, 0)
-            texture:SetPoint(side .. "RIGHT", warning, side .. "RIGHT", 0, 0)
-            texture:SetHeight(64)
-        else
-            texture:SetPoint("TOP" .. side, warning, "TOP" .. side, 0, 0)
-            texture:SetPoint("BOTTOM" .. side, warning, "BOTTOM" .. side, 0, 0)
-            texture:SetWidth(64)
+    local edges, edgesReady = {}, false
+    local function PrepareEdges()
+        if edgesReady then return end
+        for _, side in ipairs({ "TOP", "BOTTOM", "LEFT", "RIGHT" }) do
+            local texture = edges[side] or warning:CreateTexture(nil, "BACKGROUND")
+            edges[side] = texture
+            texture:SetTexture("Interface\\Buttons\\WHITE8X8")
+            if side == "TOP" or side == "BOTTOM" then
+                texture:SetPoint(side .. "LEFT", warning, side .. "LEFT", 0, 0)
+                texture:SetPoint(side .. "RIGHT", warning, side .. "RIGHT", 0, 0)
+                texture:SetHeight(64)
+            else
+                texture:SetPoint("TOP" .. side, warning, "TOP" .. side, 0, 0)
+                texture:SetPoint("BOTTOM" .. side, warning, "BOTTOM" .. side, 0, 0)
+                texture:SetWidth(64)
+            end
         end
-        edges[side] = texture
+        edges.TOP:SetGradientAlpha("VERTICAL", 1, 0, 0, 0, 1, 0, 0, 1)
+        edges.BOTTOM:SetGradientAlpha("VERTICAL", 1, 0, 0, 1, 1, 0, 0, 0)
+        edges.LEFT:SetGradientAlpha("HORIZONTAL", 1, 0, 0, 1, 1, 0, 0, 0)
+        edges.RIGHT:SetGradientAlpha("HORIZONTAL", 1, 0, 0, 0, 1, 0, 0, 1)
+        edgesReady = true
     end
     local elapsed, pulse = 0, 0
     local monitor = CreateFrame("Frame")
@@ -109,10 +117,8 @@ DFRL:NewMod("Ui", 5, function()
     end
     local function PaintWarning(alpha)
         if paintedAlpha == alpha then return end
-        edges.TOP:SetGradientAlpha("VERTICAL", 1, 0, 0, 0, 1, 0, 0, alpha)
-        edges.BOTTOM:SetGradientAlpha("VERTICAL", 1, 0, 0, alpha, 1, 0, 0, 0)
-        edges.LEFT:SetGradientAlpha("HORIZONTAL", 1, 0, 0, alpha, 1, 0, 0, 0)
-        edges.RIGHT:SetGradientAlpha("HORIZONTAL", 1, 0, 0, 0, 1, 0, 0, alpha)
+        PrepareEdges()
+        warning:SetAlpha(alpha)
         if not warning:IsShown() then warning:Show() end
         paintedAlpha = alpha
     end

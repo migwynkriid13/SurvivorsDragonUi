@@ -4,6 +4,12 @@ assert(_VERSION == "Lua 5.1", "marker fixtures require the CI Lua 5.1 interprete
 
 local context = H.New()
 local env = context.env
+local create = context.Object
+function context:Object(...)
+    local object = create(self, ...)
+    function object:SetBlendMode(value) self.blend = value end
+    return object
+end
 env.markers, env.markerStates = {}, {}
 env.render = { activeMarkers = {}, activeMarkerCount = 0, markerStatesDirty = true }
 env.GameTooltip = { IsOwned = function() return false end }
@@ -31,12 +37,7 @@ for index = 1, 5 do
     local marker = env.CreateFrame("Frame", nil, env.UIParent)
     marker.skull = marker:CreateTexture(nil)
     marker.check = marker:CreateTexture(nil)
-    marker.glowCardinal = env.CreateFrame("Frame", nil, marker)
-    marker.glowDiagonal = env.CreateFrame("Frame", nil, marker)
     marker.glow = {}
-    for copy = 1, 8 do
-        marker.glow[copy] = { texture = marker:CreateTexture(nil) }
-    end
     local shown = marker.IsShown
     function marker:IsShown()
         context.reads.markerShown = (context.reads.markerShown or 0) + 1
@@ -49,7 +50,19 @@ local chunk = assert(loadfile(assert(arg[1], "missing extracted marker source"))
 setfenv(chunk, env)
 local source = chunk()
 local update = source.Update
+local before = #context.objects
+env.performanceMode = true
 update(false)
+assert(#context.objects == before, "Performance Mode prepared disabled skull halo objects")
+for _, marker in ipairs(env.markers) do
+    assert(not marker.glowCardinal and #marker.glow == 0)
+    marker.state = nil
+end
+env.performanceMode, env.render.markerStatesDirty = false, true
+context:ResetCounts()
+update(false)
+assert(not env.markers[1].glowCardinal and not env.markers[2].glowCardinal)
+assert(#context.objects == before + 10, "first active skull did not prepare exactly its existing halo")
 assert(env.render.activeMarkerCount == 1 and env.render.activeMarkers[1] == env.markers[3])
 assert(env.markers[1]:IsShown() and env.markers[2].check:IsShown() and not env.markers[4]:IsShown())
 assert(context.reads.styles == 3 and context.reads.clock == 1 and context.reads.pulses == 1)

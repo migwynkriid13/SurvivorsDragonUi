@@ -179,9 +179,24 @@ do
             if object.texture == "Interface\\CastingBar\\UI-CastingBar-Spark" then spark = object end
         end
     end
-    assert(gain and spark and bar:IsVisible(), "missing production XP effect regions")
+    assert(not gain and not spark and bar:IsVisible(), "idle XP allocated unused gain effects")
     context:Call(controller, "OnUpdate", 0.01)
     assert(bar:GetValue() == 0.2 and not controller:GetScript("OnUpdate"), "initial XP did not settle")
+    local idlePool = #context.objects
+    display.BeginEdit()
+    display.Set("performanceMode", true)
+    context.xp = 40
+    context:Event(controller, "PLAYER_XP_UPDATE", "player")
+    context:Call(controller, "OnUpdate", 0.01)
+    assert(
+        bar:GetValue() == 0.4 and #context.objects == idlePool and not controller:GetScript("OnUpdate"),
+        "first static XP gain prepared unused effects or delayed native progress"
+    )
+    context.xp = 20
+    context:Event(controller, "PLAYER_XP_UPDATE", "player")
+    context:Call(controller, "OnUpdate", 0.01)
+    display.FinishEdit(false)
+    assert(bar:GetValue() == 0.2 and #context.objects == idlePool, "mode exit prepared or replayed a static gain")
     assert(display.Get("xpShowText") == false and display.Copy({ xpShowText = "true" }).xpShowText == false)
     local function XPLabel()
         for _, object in ipairs(context.objects) do
@@ -219,6 +234,13 @@ do
     context.xp = 60
     context:Event(controller, "PLAYER_XP_UPDATE", "player")
     context:Call(controller, "OnUpdate", 0.05)
+    for _, object in ipairs(context.objects) do
+        if object.parent == bar and object.kind == "Texture" then
+            if object.texture and object.texture:find("main_soft.blp", 1, true) then gain = object end
+            if object.texture == "Interface\\CastingBar\\UI-CastingBar-Spark" then spark = object end
+        end
+    end
+    assert(gain and spark, "first real XP gain did not prepare its effects")
     assert(
         bar:GetValue() > 0.2 and bar:GetValue() < 0.6 and gain:IsShown() and spark:IsShown(),
         "normal XP gain did not animate"

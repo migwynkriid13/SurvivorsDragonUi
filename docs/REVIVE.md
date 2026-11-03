@@ -44,6 +44,12 @@ continue at frame cadence. Completed fade-in stops rewriting full opacity;
 the fill, spark and visibility setters likewise skip unchanged values. Clearing
 and new subjects retain the original fade and percentage-step behavior.
 
+The existing Layout root, fill, border and labels remain ready. The spark and
+twelve cross rectangles prepare only on the first visible normal-mode
+presentation, then remain pooled. Idle, hidden and Performance Mode views do
+not create those decorations. First use and mode exit use the current native
+progress without changing the reader, smoothing or animation timing.
+
 The view caches only the latest subject/direction, language and translated
 caption, plus the latest displayed percentage string. New native progress still
 updates normally, but unchanged text skips formatting. Hidden views defer
