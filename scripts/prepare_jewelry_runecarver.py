@@ -50,8 +50,8 @@ def runtime_housing(path, housing):
 def gemmed_housing(housing, palette):
     """Bake the preview's halo behind the grey metal and its gems above."""
     color, light, dark = palette
-    rgb = tuple(bytes.fromhex(color[1:]))
-    halo = Image.new("RGBA", (128, 128), (*rgb, 0))
+    halo_rgb = tuple(round(channel + (255 - channel) * 0.07) for channel in bytes.fromhex(color[1:]))
+    halo = Image.new("RGBA", (128, 128), (*halo_rgb, 0))
     pixels = halo.load()
     for y in range(128):
         for x in range(128):
@@ -64,7 +64,7 @@ def gemmed_housing(housing, palette):
             # The runtime draws the composite above the item. Clear the halo
             # inside the icon's reach to match the mockup's behind-icon halo.
             opening = min(1, max(0, (radius - 42.6) / 0.8))
-            pixels[x, y] = (*rgb, round(opacity * opening))
+            pixels[x, y] = (*halo_rgb, round(opacity * opening * 1.2))
     frame = Image.alpha_composite(halo, housing)
 
     scale = 4

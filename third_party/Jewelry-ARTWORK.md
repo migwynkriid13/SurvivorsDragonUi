@@ -29,8 +29,9 @@ copies it to x=256 in the **512 × 128** `Frame.blp`.
 Build the equipped atlas from the retained neutral input with
 `python3 scripts/prepare_jewelry_runecarver.py --rarity media/tex/jewelry/GemmedRunecarver.blp`.
 Each 128-square cell composites a radial rarity halo behind the original
-housing and four faceted stones above it. The halo fades to transparent
-by radius 61 and clears the item opening. The crown sits at `(64,17.5)`,
+housing and four faceted stones above it. The halo uses 20% more opacity than
+the approved preview and blends its color 7% toward white. It fades to
+transparent by radius 61 and clears the item opening. The crown sits at `(64,17.5)`,
 and the smaller stones sit at `(21,64)`, `(95,34)` and `(95,94)`.
 The generated geometry uses the same grey bezels for all four palettes.
 
