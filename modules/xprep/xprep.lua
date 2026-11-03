@@ -136,7 +136,13 @@ DFRL:NewMod("Xprep", 1, function()
     local xpText
     local events = CreateFrame("Frame")
     local OnUpdate
+    local updating = false
 
+    local function SetUpdates(active)
+        if updating == active then return end
+        events:SetScript("OnUpdate", active and OnUpdate or nil)
+        updating = active
+    end
     local function Number(value) return type(value) == "number" and value - value == 0 and value >= 0 end
 
     local function UpdateXPText()
@@ -178,7 +184,7 @@ DFRL:NewMod("Xprep", 1, function()
         if bar:IsVisible() and bar:GetValue() ~= displayed then bar:SetValue(displayed) end
         if gain and gain:IsShown() then gain:Hide() end
         if spark and spark:IsShown() then spark:Hide() end
-        if not pending then events:SetScript("OnUpdate", nil) end
+        if not pending then SetUpdates(false) end
     end
 
     local requestedShown, requestedDocked
@@ -286,7 +292,7 @@ DFRL:NewMod("Xprep", 1, function()
         -- Use retail's distance-based pacing, bounded for this much shorter bar.
         local width = T.GetLocalWidth(bar)
         duration = math.max(0.18, math.min(0.45, (value - displayed) * width * 0.008))
-        events:SetScript("OnUpdate", OnUpdate)
+        SetUpdates(true)
     end
 
     local function UpdateXP(animate)
@@ -343,7 +349,7 @@ DFRL:NewMod("Xprep", 1, function()
             UpdateXP(animate)
         end
         if not destination then
-            if not pending then events:SetScript("OnUpdate", nil) end
+            if not pending then SetUpdates(false) end
             return
         end
         if not bar:IsVisible() then
@@ -386,7 +392,7 @@ DFRL:NewMod("Xprep", 1, function()
     bar:SetScript("OnShow", function()
         bar:SetValue(desired)
         pending, instant = true, true
-        events:SetScript("OnUpdate", OnUpdate)
+        SetUpdates(true)
     end)
 
     function DFRL.AttachXPBar(mainBar)
@@ -464,7 +470,7 @@ DFRL:NewMod("Xprep", 1, function()
             end
             if inWorld and customActionBar then
                 pending = true
-                events:SetScript("OnUpdate", OnUpdate)
+                SetUpdates(true)
             end
         end
     end)

@@ -251,10 +251,16 @@ DFRL:NewMod("Chat", 1, function()
         local indicatorMessage = "Scroll down for latest messages"
 
         UpdateIndicator = function(atBottom)
-            if not root:IsVisible() then return end
-            if atBottom == nil and selected then atBottom = AtBottom(selected) end
+            local visible
+            if atBottom == nil then
+                if not root:IsVisible() then return end
+                visible = true
+                if selected then atBottom = AtBottom(selected) end
+            end
             if selected and not atBottom and not focused then
                 local message = selected.unread and "Unread messages" or "Scroll down for latest messages"
+                if indicatorShown and indicatorMessage == message then return end
+                if not visible and not root:IsVisible() then return end
                 if indicatorMessage ~= message then
                     indicatorText:SetText(message)
                     indicatorMessage = message
@@ -263,7 +269,7 @@ DFRL:NewMod("Chat", 1, function()
                     indicator:Show()
                     indicatorShown = true
                 end
-            elseif indicatorShown then
+            elseif indicatorShown and (visible or root:IsVisible()) then
                 indicator:Hide()
                 indicatorShown = false
             end

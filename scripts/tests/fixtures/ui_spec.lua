@@ -471,7 +471,7 @@ Test("loot holds skip card traversal until fade or retry and reuse one animation
         context.now = context.now + 0.01
         context:Call(animation, "OnUpdate", 0.01)
     end
-    assert(context.reads.lootVisibility == 30, "settled cards repeated root visibility reads within each frame")
+    assert(not context.reads.lootVisibility, "settled cards read root visibility before the next deadline")
     context:NoPresentationWrites()
     local cards = {}
     for _, object in ipairs(context.objects) do
@@ -482,6 +482,7 @@ Test("loot holds skip card traversal until fade or retry and reuse one animation
     context:ResetCounts()
     context:Call(animation, "OnUpdate", 3.6)
     local alpha = (5.5 - (context.now - cards[1].started)) / 1.5
+    assert(context.reads.lootVisibility == 1, "first fading frame did not sample current visibility")
     assert(math.abs(cards[1]:GetAlpha() - alpha) < 1e-12, "first fading frame lost its original alpha equation")
     assert(context.writes.SetAlpha == 3, "settled hold failed to wake when fade began")
     context:SetLayoutHidden(true)

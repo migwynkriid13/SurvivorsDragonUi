@@ -805,17 +805,16 @@ DFRL:NewMod("Layout", 0, function()
         then
             return
         end
-        local regionWidth, regionHeight = T.GetLocalSize(start.region)
-        if
-            not force
-            and start.lastCursorX == cursorX
-            and start.lastCursorY == cursorY
-            and start.lastWidth == entry.frame:GetWidth()
-            and start.lastHeight == entry.frame:GetHeight()
-            and T.NearlyEqual(start.lastRegionWidth, regionWidth)
-            and T.NearlyEqual(start.lastRegionHeight, regionHeight)
-        then
-            return
+        if not force and start.lastCursorX == cursorX and start.lastCursorY == cursorY then
+            local regionWidth, regionHeight = T.GetLocalSize(start.region)
+            if
+                start.lastWidth == entry.frame:GetWidth()
+                and start.lastHeight == entry.frame:GetHeight()
+                and T.NearlyEqual(start.lastRegionWidth, regionWidth)
+                and T.NearlyEqual(start.lastRegionHeight, regionHeight)
+            then
+                return
+            end
         end
         if entry.options.refreshRegion then entry.options.refreshRegion() end
         local right = string.find(start.corner, "RIGHT") ~= nil

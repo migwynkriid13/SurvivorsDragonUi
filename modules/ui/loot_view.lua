@@ -190,8 +190,10 @@ DFRL:NewMod("LootView", 4, function()
 
     local function Update()
         local now, changed = GetTime(), false
+        local waiting = nextUpdateAt and now < nextUpdateAt
+        if waiting and not needsReflow then return end
         local paint = frame:IsVisible()
-        if nextUpdateAt and now < nextUpdateAt and not (needsReflow and paint) then return end
+        if waiting and not paint then return end
         local nextAt, animating
         for index = count, 1, -1 do
             local card = visible[index]

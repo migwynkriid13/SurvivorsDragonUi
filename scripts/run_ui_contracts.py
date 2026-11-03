@@ -128,7 +128,8 @@ def main():
         ])
         run_markers = extract_source("modules/ui/run.lua", [
             "SKULL_ICON", "MARKER_SIZE", "ACTIVE_GLOW_PERIOD", "ACTIVE_GLOW_MIN_ALPHA", "ACTIVE_GLOW_MAX_ALPHA",
-            "ACTIVE_GLOW_MIN_OFFSET", "ACTIVE_GLOW_MAX_OFFSET", "PrepareMarkerGlow", "ShowMarkerGlow", "HideMarkerTooltip",
+            "ACTIVE_GLOW_MIN_OFFSET", "ACTIVE_GLOW_MAX_OFFSET", "ACTIVE_GLOW_DIAGONAL_FACTOR", "PrepareMarkerGlow",
+            "ShowMarkerGlow", "HideMarkerTooltip",
             "HideMarker", "UpdateMarkerStates",
         ])
         run_markers = run_markers.rsplit("\nreturn ", 1)[0] + "\nreturn { Update = UpdateMarkerStates, Hide = HideMarker }\n"

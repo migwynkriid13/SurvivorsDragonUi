@@ -233,8 +233,11 @@ do
     display.FinishEdit(false)
     assert(text:IsShown(), "profile discard lost confirmed XP text")
     context.xp = 60
+    context:ResetCounts()
+    context:Event(controller, "PLAYER_XP_UPDATE", "player")
     context:Event(controller, "PLAYER_XP_UPDATE", "player")
     context:Call(controller, "OnUpdate", 0.05)
+    assert(context.writes.SetScript == 1, "coalesced receipts or gain setup reinstalled the active XP worker")
     for _, object in ipairs(context.objects) do
         if object.parent == bar and object.kind == "Texture" then
             if object.texture and object.texture:find("main_soft.blp", 1, true) then gain = object end
@@ -266,8 +269,10 @@ do
     assert(not controller:GetScript("OnUpdate"), "Performance Mode retained an XP animation worker")
     local allocated = #context.objects
     context.xp = 80
+    context:ResetCounts()
     context:Event(controller, "PLAYER_XP_UPDATE", "player")
     context:Call(controller, "OnUpdate", 0.01)
+    assert(context.writes.SetScript == 2, "instant XP did not attach and detach exactly once")
     assert(
         bar:GetValue() == 0.8 and not gain:IsShown() and not spark:IsShown(),
         "Performance Mode did not use native XP immediately"

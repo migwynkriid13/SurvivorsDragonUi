@@ -154,6 +154,37 @@ assert(env.T.NearlyEqual(first:GetLeft(), initialLeft + 20), "shared viewport ch
 cursorX = cursorX + 15
 context:Call(handles[1], "OnMouseUp")
 assert(env.T.NearlyEqual(first:GetLeft(), initialLeft + 35), "release skipped its fresh final cursor sample")
+
+local rightGrip
+for _, object in ipairs(context.objects) do
+    if object.parent == handles[1] and object.dragButton and object.point[3] == "RIGHT" then rightGrip = object end
+end
+assert(rightGrip, "missing right width grip")
+local getLocalSize, setWidth = env.T.GetLocalSize, first.SetWidth
+local beforeResize, regionReads
+env.T.GetLocalSize = function(frame)
+    if frame == first and beforeResize then regionReads = regionReads + 1 end
+    return getLocalSize(frame)
+end
+function first:SetWidth(width)
+    beforeResize = false
+    return setWidth(self, width)
+end
+local initialWidth = first:GetWidth()
+context:Call(rightGrip, "OnDragStart")
+cursorX = cursorX + 20
+beforeResize, regionReads = true, 0
+context:Call(controller, "OnUpdate", 0.01)
+assert(regionReads == 0 and first:GetWidth() == initialWidth + 20, "moving resize took an unused pre-sample")
+beforeResize, regionReads = true, 0
+context:Call(controller, "OnUpdate", 0.01)
+assert(regionReads == 1 and beforeResize, "stationary resize skipped its geometry check")
+cursorX = cursorX + 15
+beforeResize, regionReads = true, 0
+context:Call(rightGrip, "OnMouseUp")
+assert(regionReads == 0 and first:GetWidth() == initialWidth + 35, "forced resize lost its fresh release position")
+env.T.GetLocalSize, first.SetWidth = getLocalSize, setWidth
+
 second:Show()
 Tick()
 assert(#Handles() == 2, "newly eligible conditional group did not prepare")

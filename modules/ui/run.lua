@@ -13,6 +13,7 @@ DFRL:NewMod("RunTimers", 5, function()
     local ACTIVE_GLOW_PERIOD = 2.4
     local ACTIVE_GLOW_MIN_ALPHA, ACTIVE_GLOW_MAX_ALPHA = 0.25, 0.5
     local ACTIVE_GLOW_MIN_OFFSET, ACTIVE_GLOW_MAX_OFFSET = 0.9, 4.55
+    local ACTIVE_GLOW_DIAGONAL_FACTOR = 1 / math.sqrt(2)
     local FLOW_WIDTH, FLOW_SPEED = 64, 32
     local FLOW_INTERVAL = 1 / 30
     local FLOW_SPACING = (BAR_WIDTH + FLOW_WIDTH) / 5 / 1.7
@@ -4084,10 +4085,12 @@ DFRL:NewMod("RunTimers", 5, function()
         marker.glowDiagonal = marker.glowDiagonal or CreateFrame("Frame", nil, marker)
         marker.glowCardinal:SetPoint("CENTER", marker, "CENTER", 0, 0)
         marker.glowDiagonal:SetPoint("CENTER", marker, "CENTER", 0, 0)
-        marker.glowCardinal:SetWidth(2 * ACTIVE_GLOW_MIN_OFFSET)
-        marker.glowCardinal:SetHeight(2 * ACTIVE_GLOW_MIN_OFFSET)
-        marker.glowDiagonal:SetWidth(2 * ((1 / math.sqrt(2)) * ACTIVE_GLOW_MIN_OFFSET))
-        marker.glowDiagonal:SetHeight(2 * ((1 / math.sqrt(2)) * ACTIVE_GLOW_MIN_OFFSET))
+        local cardinalSide = 2 * ACTIVE_GLOW_MIN_OFFSET
+        local diagonalSide = 2 * (ACTIVE_GLOW_DIAGONAL_FACTOR * ACTIVE_GLOW_MIN_OFFSET)
+        marker.glowCardinal:SetWidth(cardinalSide)
+        marker.glowCardinal:SetHeight(cardinalSide)
+        marker.glowDiagonal:SetWidth(diagonalSide)
+        marker.glowDiagonal:SetHeight(diagonalSide)
         marker.glowCardinal:Hide()
         marker.glowDiagonal:Hide()
         marker.glowOffset = ACTIVE_GLOW_MIN_OFFSET
@@ -4482,9 +4485,10 @@ DFRL:NewMod("RunTimers", 5, function()
         local pulse = 0.5 - 0.5 * math.cos(GetTime() * 2 * math.pi / ACTIVE_GLOW_PERIOD)
         local glowAlpha = ACTIVE_GLOW_MIN_ALPHA + (ACTIVE_GLOW_MAX_ALPHA - ACTIVE_GLOW_MIN_ALPHA) * pulse
         local glowOffset = ACTIVE_GLOW_MIN_OFFSET + (ACTIVE_GLOW_MAX_OFFSET - ACTIVE_GLOW_MIN_OFFSET) * pulse
+        local cardinalSide = 2 * glowOffset
+        local diagonalSide = 2 * (ACTIVE_GLOW_DIAGONAL_FACTOR * glowOffset)
         for _, marker in ipairs(render.activeMarkers) do
             if marker.glowOffset ~= glowOffset then
-                local cardinalSide, diagonalSide = 2 * glowOffset, 2 * ((1 / math.sqrt(2)) * glowOffset)
                 marker.glowCardinal:SetWidth(cardinalSide)
                 marker.glowCardinal:SetHeight(cardinalSide)
                 marker.glowDiagonal:SetWidth(diagonalSide)

@@ -46,15 +46,14 @@ function DFRL.tools.NewCombatTextApi()
     end
     local function Array(value, limit)
         if type(value) ~= "table" then return end
-        local count = 0
+        local count, lastIndex = 0, 0
         for key in pairs(value) do
             if not Integer(key, 1, limit) then return end
             count = count + 1
+            if key > lastIndex then lastIndex = key end
         end
-        for index = 1, count do
-            if value[index] == nil then return end
-        end
-        return count
+        -- Unique positive integer keys are dense exactly when the largest key equals the count.
+        if lastIndex == count then return count end
     end
     local function Part(value)
         value = value or ""

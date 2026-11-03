@@ -342,10 +342,15 @@ function DFRL.tools.NewNativeMeter()
     end
     local function RowsValid(snapshot, query)
         if type(snapshot.ownerIds) ~= "table" then return false end
-        local count, owners = 0, {}
-        for _, owner in ipairs(snapshot.ownerIds) do
+        -- These checks do not depend on order. The greatest positive integer
+        -- key equals the entry count only when the list has no holes.
+        local count, lastIndex, owners = 0, 0, {}
+        for key, owner in pairs(snapshot.ownerIds) do
             if
-                not Id(owner)
+                not Number(key)
+                or key < 1
+                or key ~= math.floor(key)
+                or not Id(owner)
                 or owners[owner]
                 or not Hero(snapshot.actors, owner)
                 or (query.scope == "self" and owner ~= snapshot.context.localOwnerId)
@@ -354,16 +359,17 @@ function DFRL.tools.NewNativeMeter()
                 return false
             end
             owners[owner], count = true, count + 1
+            if key > lastIndex then lastIndex = key end
         end
-        if count == 0 or (query.scope ~= "party" and count ~= 1) then return false end
-        for key in pairs(snapshot.ownerIds) do
-            if not Number(key) or key < 1 or key > count or key ~= math.floor(key) then return false end
-        end
-        local seen, maximum
-        count, seen, maximum = 0, {}, 0
-        for _, row in ipairs(snapshot.rows) do
+        if lastIndex ~= count or count == 0 or (query.scope ~= "party" and count ~= 1) then return false end
+        local seen, maximum = {}, 0
+        count, lastIndex = 0, 0
+        for key, row in pairs(snapshot.rows) do
             if
-                type(row) ~= "table"
+                not Number(key)
+                or key < 1
+                or key ~= math.floor(key)
+                or type(row) ~= "table"
                 or not Id(row.rowId)
                 or seen[row.rowId]
                 or not Id(row.ownerId)
@@ -396,12 +402,11 @@ function DFRL.tools.NewNativeMeter()
                 if query.groupBy == "actor_source" and not Actor(snapshot.actors, row.actorId) then return false end
             end
             seen[row.rowId], count = true, count + 1
+            if key > lastIndex then lastIndex = key end
             maximum = math.max(maximum, row.displayAmount)
         end
-        for key in pairs(snapshot.rows) do
-            if not Number(key) or key < 1 or key > count or key ~= math.floor(key) then return false end
-        end
-        return (snapshot.status == "ready_empty") == (count == 0)
+        return lastIndex == count
+            and (snapshot.status == "ready_empty") == (count == 0)
             and (count > 0 or snapshot.totals.displayAmount == 0)
             and snapshot.maxRowAmount == maximum
     end

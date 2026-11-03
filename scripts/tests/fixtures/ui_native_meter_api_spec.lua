@@ -1055,6 +1055,27 @@ Test("waiting and invalid native publications never replay old rows or use legac
     assert(not source and meter.IsReset(), "later poll silently removed an invalid reset fence")
 end)
 
+Test("native meter rejects sparse and non-integer owner and row keys before recovering", function()
+    for _, field in ipairs({ "ownerIds", "rows" }) do
+        for _, key in ipairs({ 3, 1.5, 0, "extra" }) do
+            local _, state, meter = Native()
+            assert(meter.Read(damage, 10))
+            state.mutate = function(snapshot)
+                local values = snapshot[field]
+                values[key], values[1] = values[1], nil
+            end
+            local source, _, _, message = meter.Read(damage, 10)
+            assert(
+                not source and message == "Meter data is unavailable.",
+                "invalid native " .. field .. " was accepted"
+            )
+            state.mutate = nil
+            source = assert(meter.Read(damage, 10))
+            assert(source[1].dmg == 100 and source[2].dmg == 40, "valid ordered rows failed to recover")
+        end
+    end
+end)
+
 Test("context errors honor native retry delays without returning an old phase", function()
     local c, state, meter = Native()
     state.contextError = Error("INTERNAL_ERROR")

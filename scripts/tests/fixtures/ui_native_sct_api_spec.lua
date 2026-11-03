@@ -719,11 +719,33 @@ Test("malformed batches retire atomically, throttle retries and never fall back 
     assert(context:Labels()[1]:GetText() == "42", "fresh native intake failed to recover")
 end)
 
+Test("native event batches reject sparse, fractional and mixed-key lists", function()
+    for _, key in ipairs({ 3, 1.5, "extra" }) do
+        local context = Scene("enemy", false)
+        context:Prime()
+        context:NativeHit(123)
+        context:Tick(0.31)
+        assert(context:Labels()[1])
+        context:NativeHit(456)
+        context:NativeHit(789)
+        context.native.readFault = function(batch)
+            batch.events[key], batch.events[2] = batch.events[2], nil
+            return batch
+        end
+        context:Tick(0.1)
+        assert(#context:Labels() == 0, "invalid event shape left an old or partially accepted label")
+    end
+end)
+
 Test("missing projection, mismatched handles and invalid distance never paint stale coordinates", function()
     for _, fault in ipairs({
         function() error("native failure") end,
         function(projection)
             projection.entries[1].anchorId = "foreign"
+            return projection
+        end,
+        function(projection)
+            projection.entries[2], projection.entries[1] = projection.entries[1], nil
             return projection
         end,
         function(projection)

@@ -8,7 +8,7 @@ local function Revive()
     local create = context.Object
     function context:Object(...)
         local object = create(self, ...)
-        local width, point = object.GetWidth, object.SetPoint
+        local width, point, visible = object.GetWidth, object.SetPoint, object.IsVisible
         function object:GetWidth()
             if self.name == "SurvivorsDragonUiRevive" then
                 context.reads.rootWidth = (context.reads.rootWidth or 0) + 1
@@ -18,6 +18,12 @@ local function Revive()
         function object:SetPoint(anchor, relative, relativePoint, x, y)
             point(self, anchor, relative, relativePoint, x, y)
             self.anchor = { point = anchor, relative = relative, relativePoint = relativePoint, x = x, y = y }
+        end
+        function object:IsVisible()
+            if self.name == "SurvivorsDragonUiRevive" and not context.changingVisibility then
+                context.reads.rootVisibility = (context.reads.rootVisibility or 0) + 1
+            end
+            return visible(self)
         end
         function object:GetEffectiveScale() return context.scale or 1 end
         function object:GetStringWidth()
@@ -256,6 +262,7 @@ do
     context:ResetPerf()
     context:Tick(0.01)
     assert(not context.reads.rootWidth, "settled revive animation reread the root width")
+    assert(context.reads.rootVisibility == 1, "between-sample animation reread root visibility")
     assert(
         context.percentFormats == 0 and context.percent:GetText() == "25%",
         "small smoothing steps reformatted percent"
@@ -281,6 +288,23 @@ do
     )
 end
 print("PASS Revive reuses settled width and preserves resize, cross clipping, smoothing and percentage steps")
+
+do
+    local context = Revive()
+    context:Publish({ down = 1, by = "Alice", share = 0.5 })
+    context:Tick(0)
+    local phase = context.env.AZS_GetPhase
+    context.env.AZS_GetPhase = function()
+        context.root:Hide()
+        return phase()
+    end
+    context:ResetPerf()
+    context:Tick(0.1)
+    assert(
+        context.reads.phase == 1 and context.reads.rootVisibility == 1 and context.pulses == 0,
+        "animation reused visibility across a native refresh that hid the revive frame"
+    )
+end
 
 do
     local context = Revive()

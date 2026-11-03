@@ -156,11 +156,33 @@ for _, performance in ipairs({ false, true }) do
     local _, _, _, _, y = pane:GetPoint()
     assert((performance and y == -5) or (not performance and y < -5), "message slide changed with idle scheduling")
     Tick(0.7)
+    local footer
+    for _, object in ipairs(current.objects) do
+        if object.kind == "FontString" and object:GetText() == "Scroll down for latest messages" then
+            footer = object:GetParent()
+        end
+    end
+    assert(footer and not footer:IsShown(), "chat did not prepare its hidden history footer")
+    local rootVisible = root.IsVisible
+    function root:IsVisible()
+        current.reads.rootVisible = (current.reads.rootVisible or 0) + 1
+        return rootVisible(self)
+    end
     current:ResetCounts()
     for _ = 1, 10 do
         Tick(0.01)
     end
     assert((current.writes.SetAlpha or 0) == 0, "settled chat kept writing opacity")
+    assert(current.reads.rootVisible == 10, "settled hidden footer repeated the root visibility check")
+    pane.scrolled = true
+    Tick(0.01)
+    assert(footer:IsShown(), "sampled native scrolling did not show the history footer")
+    current:ResetCounts()
+    Tick(0.01)
+    assert(current.reads.rootVisible == 1, "settled visible footer repeated the root visibility check")
+    pane.scrolled = false
+    Tick(0.01)
+    assert(not footer:IsShown(), "sampled native scrolling did not retire the history footer")
     pane.alpha, pane.shown = 0.2, false
     Tick(0.01)
     assert(pane:GetAlpha() == 1 and pane:IsShown(), "native visibility/opacity repair was lost")

@@ -33,6 +33,10 @@ env.math.cos = function(...)
     context.reads.pulses = (context.reads.pulses or 0) + 1
     return math.cos(...)
 end
+env.math.sqrt = function(...)
+    context.reads.squareRoots = (context.reads.squareRoots or 0) + 1
+    return math.sqrt(...)
+end
 for index = 1, 5 do
     local marker = env.CreateFrame("Frame", nil, env.UIParent)
     marker.skull = marker:CreateTexture(nil)
@@ -84,6 +88,20 @@ assert(env.markers[3].glowCardinal:GetHeight() == 2 * offset, "cardinal halo hei
 local diagonal = 2 * ((1 / math.sqrt(2)) * offset)
 assert(env.markers[3].glowDiagonal:GetWidth() == diagonal, "diagonal halo width lost its pulse")
 assert(env.markers[3].glowDiagonal:GetHeight() == diagonal, "diagonal halo height lost its pulse")
+
+env.markerStates[5], env.render.markerStatesDirty = "up", true
+update(false)
+context.now = context.now + 0.01
+context:ResetCounts()
+update(false)
+assert(
+    env.render.activeMarkerCount == 2 and context.reads.pulses == 1 and not context.reads.squareRoots,
+    "active skulls repeated pulse or diagonal math"
+)
+assert(context.writes.SetWidth == 4 and context.writes.SetHeight == 4 and context.writes.SetAlpha == 16)
+assert(env.markers[3].glowDiagonal:GetWidth() == env.markers[5].glowDiagonal:GetWidth())
+env.markerStates[5], env.render.markerStatesDirty = nil, true
+update(false)
 
 source.Hide(env.markers[3])
 assert(env.render.markerStatesDirty and not env.markers[3]:IsShown(), "external retirement did not dirty state")

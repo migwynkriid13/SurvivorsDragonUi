@@ -260,8 +260,8 @@ DFRL:NewMod("Revive", 4, function()
             if dirty then Paint() end
             if not requested then root:Show() end
         end
-        function view.Animate(elapsed)
-            if performanceMode or not view.active or not root:IsVisible() then return end
+        function view.Animate(elapsed, visibilityConfirmed)
+            if performanceMode or not view.active or (not visibilityConfirmed and not root:IsVisible()) then return end
             PrepareEffects()
             if fade < 1 then
                 fade = math.min(1, fade + elapsed / FADE_TIME)
@@ -411,18 +411,19 @@ DFRL:NewMod("Revive", 4, function()
         SyncNative()
     end
     local controller = CreateFrame("Frame")
-    local function Step(elapsed)
+    local function Step(elapsed, visibilityConfirmed)
         if age >= INTERVAL then
             age = 0
             Refresh()
         end
-        view.Animate(elapsed)
+        view.Animate(elapsed, visibilityConfirmed)
     end
     local function Tick()
         local elapsed = math.max(0, tonumber(arg1) or 0)
         age = age + elapsed
-        if age < INTERVAL and (performanceMode or not view.active or not root:IsVisible()) then return end
-        local ok, message = pcall(Step, elapsed)
+        local betweenReads = age < INTERVAL
+        if betweenReads and (performanceMode or not view.active or not root:IsVisible()) then return end
+        local ok, message = pcall(Step, elapsed, betweenReads)
         if not ok then
             Clear()
             controller:SetScript("OnUpdate", nil)
