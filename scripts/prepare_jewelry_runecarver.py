@@ -65,7 +65,7 @@ def gemmed_housing(housing, palette):
             # The runtime draws the composite above the item. Clear the halo
             # inside the icon's reach to match the mockup's behind-icon halo.
             opening = min(1, max(0, (radius - 42.6) / 0.8))
-            pixels[x, y] = (*halo_rgb, round(opacity * opening * 1.2))
+            pixels[x, y] = (*halo_rgb, round(opacity * opening * 1.35))
     frame = Image.alpha_composite(halo, housing)
 
     scale = 4
@@ -73,6 +73,7 @@ def gemmed_housing(housing, palette):
     draw = ImageDraw.Draw(gems)
     for x, y, size in ((64, 17.5, 6.6), (21, 64, 3.55), (95, 34, 3.55), (95, 94, 3.55)):
         bezel = size + 1.1
+        size += 0.35  # Show more color within the original bezel.
         for points, fill, outline in (
             (((0, -bezel), (bezel, 0), (0, bezel), (-bezel, 0)), "#202229", "#777981"),
             (((0, -size), (size, 0), (0, size), (-size, 0)), color, None),
