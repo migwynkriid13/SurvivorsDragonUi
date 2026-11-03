@@ -30,7 +30,8 @@ This is original World of Warcraft artwork, copyright Blizzard Entertainment. Pu
 One lazy `OVERLAY` region per equipped slot reuses the Runecarver housing crop
 `384/512, 1, 0, 1` in the existing `Frame.blp`. It shares the housing's size,
 center and original alpha, with additive blending, fixed alpha 0.52 and validated
-native rarity RGB. The original carved shading and baked halo supply the glow's
+native rarity RGB, except rare-blue artwork uses the lighter `66CCFF` sky blue.
+The original carved shading and baked halo supply the glow's
 shape; there is no upward movement, pulse or texture animation. Geometry, UVs,
 texture, blend and intensity bind only at construction. Color and visibility
 change only when needed through the existing equipment reader.

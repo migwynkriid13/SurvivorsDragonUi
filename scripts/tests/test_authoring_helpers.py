@@ -105,7 +105,7 @@ def blp_bytes(encoding, alpha_bits, payload):
 class ArtworkReaderTests(unittest.TestCase):
     def setUp(self):
         self.image = SimpleNamespace(frombytes=Mock(), open=Mock())
-        self.pillow = patch.dict(sys.modules, {"PIL": SimpleNamespace(Image=self.image, ImageDraw=Mock())})
+        self.pillow = patch.dict(sys.modules, {"PIL": SimpleNamespace(Image=self.image, ImageDraw=Mock(), ImageOps=Mock())})
         self.pillow.start()
         self.addCleanup(self.pillow.stop)
 

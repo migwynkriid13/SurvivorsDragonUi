@@ -102,9 +102,11 @@ neutral action-bar metal. The original `Runecarver.tga` remains unchanged for
 empty or unavailable-quality slots. Only the equipped variant receives a fixed
 0.55 gamma lift followed by 0.8 RGB gain, retaining the selected reduced
 brightness. Both crops preserve the original alpha, cutout and dimensions.
-Native rarity RGB still supplies the 90% color/10% white housing multiplier;
-empty and unknown-quality slots use white over the original grey pixels.
-Tooltip text keeps full native RGB.
+Native rarity RGB supplies the 90% color/10% white housing multiplier, except
+received rare rank 3 uses sky blue `66CCFF` for the housing and steady glow.
+This changes only the final artwork color through the existing changed-only
+writes. Empty and unknown-quality slots use white over the original grey
+pixels. Tooltip text keeps full native RGB.
 
 The same 512-by-128 `Frame.blp` holds the original housing at x=256–384 and the
 brighter equipped housing at x=384–512. The original crop reuses the retired,

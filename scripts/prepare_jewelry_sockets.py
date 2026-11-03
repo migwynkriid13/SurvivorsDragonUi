@@ -19,6 +19,25 @@ ROOT = Path(__file__).resolve().parents[1]
 SCALE = 4
 
 
+def connector_curve(join):
+    """Start under the opaque housing and meet the bar with a flat tangent."""
+    points = []
+    for step in range(65):
+        t = step / 64
+        u = 1 - t
+        points.append((
+            6.5 * (1 - t ** 3) + join * t ** 3,
+            26 * u ** 3 + 3 * 29.5 * u * u * t + 3 * 33.5 * u * t * t + 33.5 * t ** 3,
+        ))
+    return points
+
+
+def segment_distance(x, y, first, last):
+    dx, dy = last[0] - first[0], last[1] - first[1]
+    along = max(0, min(1, ((x - first[0]) * dx + (y - first[1]) * dy) / (dx * dx + dy * dy)))
+    return math.hypot(x - first[0] - along * dx, y - first[1] - along * dy)
+
+
 def prepare(bar_path, output):
     bar = Image.open(bar_path).convert("RGBA")
     half = bar.resize((150 * SCALE, 64 * SCALE), Image.Resampling.BILINEAR)
@@ -27,42 +46,52 @@ def prepare(bar_path, output):
     native.alpha_composite(half.transpose(Image.Transpose.FLIP_LEFT_RIGHT), (150 * SCALE, 0))
     rail = Image.new("RGBA", (300 * SCALE, 38 * SCALE))
     rail.alpha_composite(native.crop((0, 0, 300 * SCALE, 12 * SCALE)), (0, 26 * SCALE))
-    # Keep the original lower junction's native bevel phase and shape. Only
-    # its lowest portion survives; Runecarver owns the top and side surround.
+    # Keep the native bar join and bevel phase. Narrow curved upper ends tuck
+    # beneath the opaque housing instead of exposing a horizontal crop edge.
     center, radius, opening = 20, 20, 13.7
-    baseline, connector_top = 33.5, 28
+    baseline = 33.5
     junction = math.sqrt(radius * radius - (baseline - center) ** 2)
     left_join, right_join = center - junction, center + junction
+    curve = connector_curve(left_join)
+    segments = list(zip(curve, curve[1:]))
+    # Geometry is shared by all five sockets; only native material pixels vary.
+    geometry = []
+    for py in range(26 * SCALE, rail.height):
+        y = (py + 0.5) / SCALE
+        edge = left_join
+        if y < baseline:
+            for first, last in segments:
+                if first[1] <= y <= last[1]:
+                    along = (y - first[1]) / (last[1] - first[1])
+                    edge = first[0] + along * (last[0] - first[0])
+                    break
+        for px in range(40 * SCALE):
+            x = (px + 0.5) / SCALE
+            if math.hypot(x - center, y - center) < opening:
+                geometry.append((px, py, None))
+                continue
+            if y < baseline and (x < edge or x > 40 - edge):
+                continue
+            distance = min(
+                min(segment_distance(x, y, first, last) for first, last in segments),
+                min(segment_distance(40 - x, y, first, last) for first, last in segments),
+                math.hypot(x - min(x, left_join), y - baseline),
+                math.hypot(x - max(x, right_join), y - baseline),
+            )
+            geometry.append((px, py, min(48, 30 + math.floor(distance * SCALE))))
     pixels = rail.load()
     for index in range(5):
         start = (46 + index * 42) * SCALE
-        for py in range(26 * SCALE, rail.height):
-            y = (py + 0.5) / SCALE
-            for px in range(40 * SCALE):
-                x = (px + 0.5) / SCALE
-                radial = math.hypot(x - center, y - center)
-                if radial < opening:
-                    pixels[start + px, py] = (0, 0, 0, 0)
-                    continue
-                if y < connector_top or (radial > radius and y < baseline):
-                    continue
-                if y >= baseline and (x <= left_join or x >= right_join):
-                    continue
-                distance = min(
-                    math.hypot(x - left_join, y - baseline),
-                    math.hypot(x - right_join, y - baseline),
-                )
-                if radial > 0 and center + radius * (y - center) / radial <= baseline:
-                    distance = min(distance, abs(radius - radial))
-                if x <= left_join or x >= right_join:
-                    distance = min(distance, abs(y - baseline))
-                source_y = min(48, 30 + math.floor(distance * SCALE))
-                color = native.getpixel((start + px, source_y))
-                if py >= rail.height - SCALE:
-                    original = native.getpixel((start + px, py - 26 * SCALE))
-                    blend = (py - (rail.height - SCALE) + 1) / SCALE
-                    color = tuple(round(a * (1 - blend) + b * blend) for a, b in zip(color, original))
-                pixels[start + px, py] = color
+        for px, py, source_y in geometry:
+            if source_y is None:
+                pixels[start + px, py] = (0, 0, 0, 0)
+                continue
+            color = native.getpixel((start + px, source_y))
+            if py >= rail.height - SCALE:
+                original = native.getpixel((start + px, py - 26 * SCALE))
+                blend = (py - (rail.height - SCALE) + 1) / SCALE
+                color = tuple(round(a * (1 - blend) + b * blend) for a, b in zip(color, original))
+            pixels[start + px, py] = color
     output.parent.mkdir(parents=True, exist_ok=True)
     # Match the existing three 400-pixel spans and both neighbour gutters.
     for index in range(3):

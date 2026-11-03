@@ -36,8 +36,10 @@ keeps a removed item's color. Empty slots have no hover card.
 There is no separate gold, rarity-colored or replacement inner circle. Empty
 slots and unavailable rarity keep the original grey housing and default empty
 pictures, without any brightness adjustment. A known equipped item selects the
-brighter housing and receives a 90% blend toward native rarity RGB, retaining
-its carved shading. The prepared housing lifts dark and middle tones, then
+brighter housing and receives a 90% blend toward its rarity color, retaining
+its carved shading. Blue rarity uses a lighter sky blue for the housing and
+steady glow; other colors and effects-only hover text keep native RGB.
+The prepared housing lifts dark and middle tones, then
 tones that brightness down by 20%, keeping the rarity color visible in both
 Performance Mode states. Only the equipped housing receives this adjustment. Its transparency,
 shape and dimensions stay the same. A steady additive glow brightens that same carved

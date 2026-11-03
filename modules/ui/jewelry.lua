@@ -2,6 +2,7 @@
 --[[
 Selected 03 Runecarver housings use grey metal matching the action-bar surround.
 Native rarity colors tint the grey carving and its steady additive glow.
+Rare-blue artwork uses a lighter sky blue; other rarity colors stay native.
 Effects-only hover text keeps the full native rarity color.
 The housing and soft halo are baked together in the existing Frame.blp atlas;
 five static regions inherit the shared overlay's visibility and scale.
@@ -595,11 +596,16 @@ DFRL:NewMod("Jewelry", 4, function()
     end
     local function UpdateRarity(slot)
         local known = slot.texture ~= nil and slot.qualityR ~= nil
+        local rarityR, rarityG, rarityB = slot.qualityR, slot.qualityG, slot.qualityB
+        -- Lighten only rare-blue artwork; keep received RGB for effect text.
+        if known and slot.quality == 3 then
+            rarityR, rarityG, rarityB = 0.4, 0.8, 1
+        end
         local red, green, blue = 1, 1, 1
         if known then
-            red = 1 - RARITY_TINT_STRENGTH + RARITY_TINT_STRENGTH * slot.qualityR
-            green = 1 - RARITY_TINT_STRENGTH + RARITY_TINT_STRENGTH * slot.qualityG
-            blue = 1 - RARITY_TINT_STRENGTH + RARITY_TINT_STRENGTH * slot.qualityB
+            red = 1 - RARITY_TINT_STRENGTH + RARITY_TINT_STRENGTH * rarityR
+            green = 1 - RARITY_TINT_STRENGTH + RARITY_TINT_STRENGTH * rarityG
+            blue = 1 - RARITY_TINT_STRENGTH + RARITY_TINT_STRENGTH * rarityB
         end
         local visible = hud:IsVisible()
         if visible and slot.carvingKnown ~= known then
@@ -628,9 +634,9 @@ DFRL:NewMod("Jewelry", 4, function()
             glow:Hide()
             slot.glow = glow
         end
-        if slot.glowR ~= slot.qualityR or slot.glowG ~= slot.qualityG or slot.glowB ~= slot.qualityB then
-            glow:SetVertexColor(slot.qualityR, slot.qualityG, slot.qualityB, 1)
-            slot.glowR, slot.glowG, slot.glowB = slot.qualityR, slot.qualityG, slot.qualityB
+        if slot.glowR ~= rarityR or slot.glowG ~= rarityG or slot.glowB ~= rarityB then
+            glow:SetVertexColor(rarityR, rarityG, rarityB, 1)
+            slot.glowR, slot.glowG, slot.glowB = rarityR, rarityG, rarityB
         end
         if not slot.glowShown then
             glow:Show()

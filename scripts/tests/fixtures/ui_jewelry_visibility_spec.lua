@@ -33,13 +33,14 @@ local function Run(performanceMode)
         }
     end
     env.inWorld, env.attached, env.shownWanted, env.wantedDocked, env.cleared = true, true, true, true, false
-    env.DFRL =
-        { display = {
+    env.DFRL = {
+        display = {
             Get = function(key)
                 assert(key == "equippedJewelry")
                 return enabled
             end,
-        } }
+        },
+    }
     env.hud = { Show = function() end, Hide = function() end, IsVisible = function() return visible end }
     env.detached = { Show = function() end, Hide = function() end }
     env.Docked = function() return true end
