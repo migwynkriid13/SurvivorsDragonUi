@@ -2,7 +2,8 @@
 
 The original pinned sheet is supplied with --source; its source, atlas members
 and redistribution boundaries are recorded in third_party/Jewelry-ARTWORK.md.
-The original 128-square grey cell is shared by empty and equipped slots.
+The original 128-square grey cell is retained for empty slots. Equipped
+brightness is derived from it without changing the original.
 """
 
 import argparse
@@ -13,7 +14,7 @@ import struct
 
 from PIL import Image, ImageOps
 
-from prepare_client_textures import blp_bgra_levels
+from prepare_client_textures import blp_bgra_levels, brightened_jewelry_housing
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -24,14 +25,14 @@ SOURCE_SATURATION = 0.05
 
 
 def runtime_housing(path, housing):
-    """Keep the original housing and clear the retired brightness/glow cell."""
+    """Keep the original housing and fill the equipped brightness cell."""
     data = bytearray(path.read_bytes())
     width, height, levels = blp_bgra_levels(data)
     if (width, height) != (512, 128) or data[8] != 3 or len(levels) != 1:
         raise ValueError("Expected the existing single-level Raw3 jewelry atlas")
     offset = struct.unpack_from("<I", data, 20)[0]
     stride = 128 * 4
-    for left, image in ((256, housing), (384, Image.new("RGBA", (128, 128)))):
+    for left, image in ((256, housing), (384, brightened_jewelry_housing(housing))):
         pixels = image.tobytes("raw", "BGRA")
         for row in range(128):
             start = offset + (row * width + left) * 4
@@ -64,7 +65,7 @@ def prepare(source, output, runtime=None):
     grey = ImageOps.grayscale(canvas).convert("RGBA")
     grey.putalpha(canvas.getchannel("A"))
     canvas = Image.blend(grey, canvas, SOURCE_SATURATION)
-    # Preserve the original grey input byte-for-byte for every equipment state.
+    # Preserve the original grey input byte-for-byte for the empty state.
     if output.exists():
         with Image.open(output) as retained:
             if retained.size != canvas.size or retained.convert("RGBA").tobytes() != canvas.tobytes():
@@ -81,6 +82,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", type=Path, required=True)
     parser.add_argument("--output", type=Path, default=ROOT / "media/tex/jewelry/Runecarver.tga")
-    parser.add_argument("--runtime", type=Path, help="Refresh the shared original housing and clear its retired variant")
+    parser.add_argument("--runtime", type=Path, help="Refresh the neutral and bright-equipped housing cells")
     options = parser.parse_args()
     prepare(options.source, options.output, options.runtime)

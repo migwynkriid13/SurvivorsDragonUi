@@ -41,7 +41,7 @@ class RuntimeTextureTests(unittest.TestCase):
         for suffix in (".blp", ".tga"):
             self.assertFalse((directory / ("UIUnitFrameRestingFlipbook" + suffix)).exists())
 
-    def test_shared_jewelry_housing_retains_original_pixels_without_the_bright_variant(self):
+    def test_jewelry_housing_lifts_equipped_midtones_without_changing_neutral_pixels_or_alpha(self):
         source = (ROOT / "media/tex/jewelry/Runecarver.tga").read_bytes()
         self.assertEqual(
             hashlib.sha256(source).hexdigest(),
@@ -52,14 +52,20 @@ class RuntimeTextureTests(unittest.TestCase):
         width, height, levels = blp_bgra_levels((ROOT / "media/tex/jewelry/Frame.blp").read_bytes())
         self.assertEqual((source_width, source_height), (128, 128))
         self.assertEqual((width, height), (512, 128))
-        empty, retired = bytearray(), bytearray()
+        empty, equipped = bytearray(), bytearray()
         for row in range(128):
             left = (row * width + 256) * 4
             empty.extend(levels[0][left:left + 128 * 4])
             left = (row * width + 384) * 4
-            retired.extend(levels[0][left:left + 128 * 4])
+            equipped.extend(levels[0][left:left + 128 * 4])
         self.assertEqual(empty, source_levels[0], "empty slots received equipped brightness or another crop")
-        self.assertFalse(any(retired), "retired bright housing and glow cell still contains pixels")
+        self.assertEqual(equipped[3::4], empty[3::4], "equipped housing changed the silhouette or halo alpha")
+        self.assertNotEqual(equipped, empty, "equipped housing has no brightness lift")
+        for channel in range(3):
+            self.assertEqual(
+                equipped[channel::4],
+                bytes(round(255 * (value / 255) ** 0.65) for value in empty[channel::4]),
+            )
 
     def test_every_shipped_texture_fits_the_native_device_size_gate(self):
         manifest = json.loads((ROOT / "packaging/runtime-files.json").read_text())

@@ -1,13 +1,12 @@
 -- Five equipped jewelry sockets, attached by default and optionally independent.
 --[[
 Selected 03 Runecarver housings use grey metal matching the action-bar surround.
-Equipped rarity adds a restrained tint to the original grey carving.
+Equipped rarity tints a brighter version of the same grey carving.
 Rare-blue artwork uses a lighter sky blue; other rarity colors stay native.
 Effects-only hover text keeps the full native rarity color.
 The housing and soft halo are baked together in the existing Frame.blp atlas;
 five static regions inherit the shared overlay's visibility and scale.
-Empty, unknown-quality and equipped slots share the original housing crop.
-There is no equipped brightness lift, separate glow or inner circle.
+Empty and unknown-quality slots use the original neutral crop.
 Both Performance Mode states retain the same static metal and rarity tint.
 SocketRail BLP strips retain the straight bar edge and small bottom arch with
 clear item openings, using pixels from the existing HDActionBar.tga. Only its
@@ -20,7 +19,7 @@ No upstream Lua is imported. Sources and preparation: third_party/Jewelry-ARTWOR
 
 Runecarver housing: Blizzard's Runecarving/RuneCarvingUI.PNG from Gethe's
 wow-ui-textures mirror, commit da4d3587e46ee7db8655b978d49b7d55024084ff,
-Shadowlands 9.0.5 build 37705. The runes-lit frame and separate glow retain
+Shadowlands 9.0.5 build 37705. The runes-lit frame and baked halo retain
 Blizzard Entertainment's artwork ownership; MIT below does not relicense them.
 
 Shared pet/meter rim source: commit b8b35451d4621a8097e887385f72ec03e17765f1,
@@ -30,7 +29,7 @@ e80e3278cc833c89e1f3fc79557b68315d750935, PaperDoll/UI-PaperDoll-Slot-
 Finger.PNG, -Neck.PNG and -Trinket.PNG. World of Warcraft artwork remains
 copyright Blizzard Entertainment, distinct from the software license below.
 The cooldown atlas is original generated geometry. The housing keeps its
-original shading and alpha without an additional rarity drawing layer.
+original alpha and uses one drawing layer.
 
 Applicable source notices (Blizzard artwork is distinct from MIT software):
 MIT License
@@ -103,7 +102,7 @@ DFRL:NewMod("Jewelry", 4, function()
     local carvingSize = RIM_SIZE * 128 / 108
     local socketBounds = math.max(socketSize, carvingSize)
     local ANIMATION_INTERVAL = 1 / 30
-    local RARITY_TINT_STRENGTH = 0.35
+    local RARITY_TINT_STRENGTH = 0.60
     local texturePath = DFRL:GetInfoOrCons("tex") .. "jewelry\\"
     local SLOT_NAMES = { "Finger0Slot", "Finger1Slot", "NeckSlot", "Trinket0Slot", "Trinket1Slot" }
     local EMPTY_TEXTURES = {
@@ -580,11 +579,16 @@ DFRL:NewMod("Jewelry", 4, function()
         carving:SetHeight(carvingSize)
         carving:SetPoint("CENTER", slot.button, "CENTER", 0, 0)
         carving:SetTexCoord(256 / 512, 384 / 512, 0, 1)
-        slot.carving = carving
+        slot.carving, slot.carvingBright = carving, false
     end
     local function UpdateRarity(slot)
         if not hud:IsVisible() then return end
         local known = slot.texture ~= nil and slot.qualityR ~= nil
+        if slot.carvingBright ~= known then
+            local left = known and 384 or 256
+            slot.carving:SetTexCoord(left / 512, (left + 128) / 512, 0, 1)
+            slot.carvingBright = known
+        end
         local rarityR, rarityG, rarityB = slot.qualityR, slot.qualityG, slot.qualityB
         -- Lighten only rare-blue artwork; keep received RGB for effect text.
         if known and slot.quality == 3 then
@@ -663,6 +667,8 @@ DFRL:NewMod("Jewelry", 4, function()
             and not slot.effectDescription
             and slot.placeholderShown == (placeholderShown and true or false)
         then
+            -- A hidden clear can retire equipment before repainting the housing.
+            if slot.carvingBright then UpdateRarity(slot) end
             return
         end
         slot.effectLink, slot.effectLanguage, slot.effectDescription = nil, nil, nil
@@ -804,7 +810,9 @@ DFRL:NewMod("Jewelry", 4, function()
                 if slot.placeholderShown ~= false then SetPlaceholderShown(slot, false) end
                 if slot.texture ~= texture then SetIcon(slot, texture) end
                 local qualityChanged = UpdateQuality(slot)
-                if qualityChanged or slot.carvingR == nil then UpdateRarity(slot) end
+                if qualityChanged or slot.carvingR == nil or slot.carvingBright ~= (slot.qualityR ~= nil) then
+                    UpdateRarity(slot)
+                end
                 UpdateCooldown(slot)
                 if hoveredSlot == slot then ShowTooltip(slot) end
             else

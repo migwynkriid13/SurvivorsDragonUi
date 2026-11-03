@@ -318,7 +318,7 @@ review does not prove native pixel coverage or FPS. Earlier fourteen-strip
 batching/repeat experiments remain frozen historical comparisons and do not
 measure this sixteen-band layout.
 
-## Neutral Runecarver jewelry and rarity tint — 2026-11-03
+## Runecarver jewelry and rarity tint — 2026-11-03
 
 The old upper and side socket surround is removed in both attachment modes.
 The three attached `SocketRail` strips retain the small bottom arch joining
@@ -337,29 +337,24 @@ item, placeholder, cooldown, hover and saved-placement behavior remain.
 This removes five allocated regions and old circle pixels, without a new
 reader, event, updater or setting. No live rendering or FPS result is claimed.
 
-The original 95%-desaturated `Runecarver.tga` and its exact runtime crop at
-x=256–384 in the 512-by-128 `Frame.blp` now supply every empty and equipped
-housing. Equipped rarity adds only a 35% color multiplier; empty or invalid
-metadata retains white over the original grey pixels. Received rare rank 3
-keeps the selected sky-blue `66CCFF` artwork accent. Tooltip text retains raw
-native RGB. The equipped gamma/gain variant is removed, and its former
-x=384–512 atlas cell is clear. Stock gold, shared pet/meter artwork, original
-housing alpha and all geometry remain unchanged.
+The original 95%-desaturated `Runecarver.tga` supplies the neutral crop at
+x=256–384 in the 512-by-128 `Frame.blp`. Empty slots and invalid metadata use
+that crop. Known equipped rarity uses the brighter x=384–512 crop with a
+60% color multiplier. The 0.65 RGB gamma curve lifts midtones and preserves
+the original alpha. Rare rank 3 uses sky-blue `66CCFF` artwork and tooltip text
+retains native RGB.
 
-Each of the existing five housing regions binds one crop at construction.
-`UpdateRarity` returns before hidden work and changes only a visible final color
-that differs. There is no empty/equipped UV switch or second housing material
-state. The five optional additive glow regions and their allocation, coloring,
-visibility and cleanup paths are removed. Normal and Performance Mode now share
-the same static metal and tint, including while editing. The five-Hz equipment
-reader, tooltips, cooldown shade cadence, icons and parent/world lifecycle remain.
-No new frame, region, getter, event, updater, setting or saved state is added.
+Each of the five housing regions binds the neutral crop at construction.
+`UpdateRarity` defers hidden work and changes the visible crop or final color
+only when it differs. The same region supplies the static appearance in
+Normal and Performance Mode, including while editing. The existing five-Hz
+reader owns the update. A slot cleared while hidden restores its neutral
+artwork on the next visible refresh.
 
-The authoring helpers reproduce only the unchanged original housing and clear
-the retired bright cell. CI-only cases pin the original authoring SHA-256 and
-exact runtime pixels, reject retained variant pixels, and cover restrained
-rarity, poor/common quality, invalid metadata, preserved native tooltip RGB,
-changed-only writes, mode parity and hidden/empty recovery without an overlay.
+Both authoring paths derive the equipped crop from the original pixels.
+CI-only cases pin the original authoring SHA-256, neutral runtime pixels and
+equipped gamma curve and alpha. They cover poor/common quality, invalid
+metadata, raw tooltip RGB, changed-only writes, mode parity and hidden recovery.
 Local work is source/artwork inspection, preparation and pinned formatting;
 no local tests, standalone validation or addon/game execution were performed.
 Fewer drawing layers and unchanged reads do not establish a live FPS result.

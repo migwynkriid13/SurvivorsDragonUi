@@ -177,16 +177,13 @@ sockets. These are CI-only data cases;
 local work is artwork preparation, source review and pinned formatting, with
 no local tests, standalone validation or addon/game execution.
 
-Jewelry rarity cases extract the production native-quality and tint helpers.
-They cover poor/common quality, invalid metadata and grey fallback, the 35%
-rarity accent on the unchanged housing, selected rare-blue artwork and retained
-raw tooltip RGB. Settled and hidden states perform no extra writes; empty and
-known items keep the same UV crop in both Performance Mode states and editing.
-The fake native boundary rejects any additional overlay allocation. Asset cases
-pin the original authoring SHA-256 and runtime crop and require the retired
-bright/glow cell to be empty. These cases are authored for CI only; no local
-tests, standalone validation or addon/game execution were run. Native appearance
-and performance remain unverified.
+Jewelry rarity cases extract the production quality, tint and retirement
+helpers. They cover poor/common quality, invalid metadata, the 60% tint on the
+brighter equipped crop, selected rare-blue artwork and raw tooltip RGB.
+They check changed-only UV and color writes, mode parity and recovery of the
+neutral crop after a hidden slot clears. The fake native boundary rejects extra
+overlay allocation. Asset cases pin the original authoring SHA-256, neutral
+runtime crop and equipped RGB curve and alpha. These cases run in CI only.
 
 Jewelry cache cases use the exact production reader/cache/compositor functions
 over fake native tooltip and texture boundaries. They cover unchanged successful

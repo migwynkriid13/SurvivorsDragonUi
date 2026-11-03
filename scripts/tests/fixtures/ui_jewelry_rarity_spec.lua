@@ -16,10 +16,16 @@ end
 local function Region() return setmetatable({ uv = { 256 / 512, 384 / 512, 0, 1 } }, { __index = methods }) end
 env.hud = { IsVisible = function() return visible end }
 env.overlay = { CreateTexture = function() error("rarity must not allocate a drawing layer") end }
+env.HideTooltip = function() end
 env.performanceMode, env.editing = false, false
 env.slots = {}
 for index = 1, 5 do
-    env.slots[index] = { id = index, carving = Region() }
+    env.slots[index] = {
+        id = index,
+        carving = Region(),
+        carvingBright = false,
+        placeholderShown = false,
+    }
 end
 local quality, red, green, blue = 2, 0.12, 1, 0
 env.GetInventoryItemQuality = function(unit, id)
@@ -39,84 +45,92 @@ local function Color(region, r, g, b)
     assert(math.abs(region.color[2] - g) < 0.000001)
     assert(math.abs(region.color[3] - b) < 0.000001 and region.color[4] == 1)
 end
-local function OriginalHousing(region)
-    assert(region.uv[1] == 256 / 512 and region.uv[2] == 384 / 512)
+local function Housing(region, left)
+    assert(region.uv[1] == left / 512 and region.uv[2] == (left + 128) / 512)
     assert(region.uv[3] == 0 and region.uv[4] == 1)
 end
 api.Update(slot)
 Color(slot.carving, 1, 1, 1)
+Housing(slot.carving, 256)
 slot.texture = "native:item"
 api.Quality(slot)
 api.Update(slot)
-Color(slot.carving, 0.692, 1, 0.65)
-OriginalHousing(slot.carving)
+Color(slot.carving, 0.472, 1, 0.4)
+Housing(slot.carving, 384)
 local colors = writes.color
+local crops = writes.uv
+assert(crops == 1)
 for _ = 1, 10 do
     api.Update(slot)
 end
-assert(writes.color == colors and writes.uv == 0, "settled rarity repeated color or crop writes")
+assert(writes.color == colors and writes.uv == crops, "settled rarity repeated color or crop writes")
 for _, state in ipairs({ "performanceMode", "editing" }) do
     env[state] = true
     api.Update(slot)
-    Color(slot.carving, 0.692, 1, 0.65)
+    Color(slot.carving, 0.472, 1, 0.4)
     env[state] = false
     api.Update(slot)
 end
-assert(writes.color == colors and writes.uv == 0, "mode changes altered the static rarity treatment")
--- Hidden recoloring waits for Show and retains the same default housing.
+assert(writes.color == colors and writes.uv == crops, "mode changes altered the static rarity treatment")
+-- Hidden recoloring waits for Show and reuses the equipped crop.
 visible = false
 quality, red, green, blue = 4, 0.64, 0.21, 0.93
 api.Quality(slot)
 api.Update(slot)
-assert(writes.color == colors and writes.uv == 0, "hidden rarity painted early")
+assert(writes.color == colors and writes.uv == crops, "hidden rarity painted early")
 visible = true
 api.Update(slot)
-Color(slot.carving, 0.874, 0.7235, 0.9755)
-OriginalHousing(slot.carving)
+Color(slot.carving, 0.784, 0.526, 0.958)
+assert(writes.uv == crops, "color-only change rebound the equipped crop")
 for _, rank in ipairs({ 0, 1 }) do
     quality, red, green, blue = rank, 0.62 + rank * 0.38, 0.62 + rank * 0.38, 0.62 + rank * 0.38
     api.Quality(slot)
     api.Update(slot)
-    local value = rank == 0 and 0.867 or 1
+    local value = rank == 0 and 0.772 or 1
     Color(slot.carving, value, value, value)
+    Housing(slot.carving, 384)
 end
 quality = nil
 api.Quality(slot)
 api.Update(slot)
 assert(not slot.qualityR)
 Color(slot.carving, 1, 1, 1)
+Housing(slot.carving, 256)
 quality, red = 5, 2
 api.Quality(slot)
 api.Update(slot)
 assert(not slot.qualityR, "invalid RGB retained previous rarity")
 Color(slot.carving, 1, 1, 1)
+Housing(slot.carving, 256)
 -- Preserve the selected rare-blue accent without changing raw tooltip RGB.
 quality, red, green, blue = 3, 0, 0.44, 0.87
 for _, entry in ipairs(env.slots) do
     entry.texture = "native:item"
     api.Quality(entry)
     api.Update(entry)
-    Color(entry.carving, 0.79, 0.93, 1)
-    OriginalHousing(entry.carving)
+    Color(entry.carving, 0.64, 0.88, 1)
+    Housing(entry.carving, 384)
     assert(entry.qualityR == red and entry.qualityG == green and entry.qualityB == blue)
 end
-slot.texture = nil
-api.Update(slot)
+api.Clear(slot)
 Color(slot.carving, 1, 1, 1)
-colors = writes.color
-api.Update(slot)
-assert(writes.color == colors, "settled empty slot repainted its housing")
+Housing(slot.carving, 256)
+colors, crops = writes.color, writes.uv
+api.Clear(slot)
+assert(writes.color == colors and writes.uv == crops, "settled empty slot repainted its housing")
 slot.texture = "native:return"
+slot.empty = false
 api.Quality(slot)
 api.Update(slot)
-Color(slot.carving, 0.79, 0.93, 1)
-visible, slot.texture = false, nil
-colors = writes.color
-api.Update(slot)
-assert(writes.color == colors, "hidden empty transition painted early")
+Color(slot.carving, 0.64, 0.88, 1)
+visible = false
+colors, crops = writes.color, writes.uv
+api.Clear(slot)
+assert(writes.color == colors and writes.uv == crops, "hidden empty transition painted early")
 visible = true
-api.Update(slot)
+api.Clear(slot)
 Color(slot.carving, 1, 1, 1)
-assert(writes.uv == 0, "rarity rebound the original housing crop")
-print("PASS original jewelry housing retains neutral empty slots and restrained equipped rarity tint")
+Housing(slot.carving, 256)
+assert(writes.uv == crops + 1, "shown empty slot did not restore its neutral crop once")
+print("PASS original jewelry housing retains neutral empty slots and brighter equipped rarity tint")
 print("PASS rarity keeps raw native RGB, changed-only writes, hidden recovery and identical mode appearance")
