@@ -1429,9 +1429,9 @@ DFRL:NewMod("RunTimers", 5, function()
         return { source = source, ruler = ruler, parts = {}, caption = caption }
     end
 
-    local function RefreshClockLabel(clock)
+    local function RefreshClockLabel(clock, text)
         local source = clock.source
-        local text = source:GetText() or ""
+        if text == nil then text = source:GetText() or "" end
         local scale = source:GetParent():GetEffectiveScale()
         if not IsNumber(scale) or scale <= 0 then return end
         if clock.text == text and T.NearlyEqual(clock.scale, scale) and clock.drawn == clock.visible then return end
@@ -1575,9 +1575,13 @@ DFRL:NewMod("RunTimers", 5, function()
     run.affixes.onBounds = UpdateRunFontBounds
 
     local function SetClockLabelText(clock, text, visible)
-        if clock.source:GetText() ~= text then clock.source:SetText(text) end
+        local observed = clock.source:GetText()
+        if observed ~= text then
+            clock.source:SetText(text)
+            observed = nil
+        end
         clock.visible = visible
-        return RefreshClockLabel(clock)
+        return RefreshClockLabel(clock, observed)
     end
 
     local function RunCaption(seconds, maximum, textEnabled)

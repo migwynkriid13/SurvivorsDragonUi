@@ -535,8 +535,8 @@ DFRL:NewMod("Bars", 1, function()
                 -- sequence 1 for the ready flash. Stop before that handoff.
                 cooldown:SetScript("OnUpdateModel", function()
                     if
-                        DFRL.display.Get("customActionBar") ~= false
-                        and performanceMode
+                        performanceMode
+                        and DFRL.display.Get("customActionBar") ~= false
                         and HideReadyCooldown(cooldown)
                     then
                         return

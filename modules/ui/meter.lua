@@ -405,14 +405,28 @@ local function BuildMeter()
         end
     end
     local function ShiftHeld() return type(IsShiftKeyDown) == "function" and IsShiftKeyDown() and true or false end
+    local function TooltipNumber(value, previous, formatted, pattern)
+        if not value then return "--" end
+        -- A native negative zero compares equal to zero but can format differently.
+        if
+            tooltipState.language == DFRL.locale.code
+            and value == previous
+            and formatted
+            and (value ~= 0 or 1 / value == 1 / previous)
+        then
+            return formatted
+        end
+        return string.format(pattern, value)
+    end
     local function ShowRowTooltip(row)
         if editing or not row.entry or not row:IsVisible() or not GameTooltip then return end
         local entry, language, scale = row.entry, DFRL.locale.code, GameTooltip:GetEffectiveScale()
-        local damage = string.format("%.0f", entry.dmg)
-        local rate = entry.dps and string.format("%.1f", entry.dps) or "--"
-        local average = entry.averageDps and string.format("%.1f", entry.averageDps) or "--"
+        local amount, dps, averageDps, percent = entry.dmg, entry.dps, entry.averageDps, entry.share * 100
+        local damage = TooltipNumber(amount, tooltipState.amount, tooltipState.damage, "%.0f")
+        local rate = TooltipNumber(dps, tooltipState.dps, tooltipState.rate, "%.1f")
+        local average = TooltipNumber(averageDps, tooltipState.averageDps, tooltipState.average, "%.1f")
         local reset = IsReset()
-        local share = string.format("%.1f%%", entry.share * 100)
+        local share = TooltipNumber(percent, tooltipState.percent, tooltipState.share, "%.1f%%")
         local source, identity = apiActive and snapshot.source or nil, apiActive and entry.rateIdentity or nil
         local debug = source ~= nil and ShiftHeld() or false
         local details = debug and tooltipState.details or nil
@@ -445,6 +459,8 @@ local function BuildMeter()
             and tooltipState.debug == debug
             and T.NearlyEqual(tooltipState.scale, scale)
         then
+            tooltipState.amount, tooltipState.dps, tooltipState.averageDps, tooltipState.percent =
+                amount, dps, averageDps, percent
             return
         end
         HideTooltip()
@@ -467,6 +483,8 @@ local function BuildMeter()
             end
         end
         GameTooltip:Show()
+        tooltipState.amount, tooltipState.dps, tooltipState.averageDps, tooltipState.percent =
+            amount, dps, averageDps, percent
         tooltipState.name, tooltipState.damage, tooltipState.rate, tooltipState.share = entry.name, damage, rate, share
         tooltipState.average, tooltipState.reset = average, reset
         tooltipState.debug = debug
@@ -529,7 +547,8 @@ local function BuildMeter()
 
     local function ShowHeaderTooltip()
         if editing or not GameTooltip then return end
-        local average = snapshot.averageRate and string.format("%.1f", snapshot.averageRate) or "--"
+        local averageDps = snapshot.averageRate
+        local average = TooltipNumber(averageDps, tooltipState.averageDps, tooltipState.average, "%.1f")
         local reset = IsReset()
         local scale = GameTooltip:GetEffectiveScale()
         if
@@ -542,6 +561,7 @@ local function BuildMeter()
             and tooltipState.language == DFRL.locale.code
             and tooltipState.scale == scale
         then
+            tooltipState.averageDps = averageDps
             return
         end
         HideTooltip()
@@ -560,6 +580,7 @@ local function BuildMeter()
         end
         GameTooltip:AddLine(DFRL.locale.Text("Click to change meter view. Scroll to see more sources."), 1, 1, 1)
         GameTooltip:Show()
+        tooltipState.averageDps = averageDps
         tooltipState.mode, tooltipState.average, tooltipState.reset = mode, average, reset
         tooltipState.window, tooltipState.language = dps.window, DFRL.locale.code
         tooltipState.scale = scale

@@ -527,6 +527,14 @@ end
 for _, performance in ipairs({ false, true }) do
     local current, state, native = AuraOwner(performance)
     current:Tick()
+    local phaseReads = state.phaseReads
+    current:ResetCounts()
+    current:Event(current.controller, "CHAT_MSG_ADDON", "AZSRUN")
+    current:Call(current.controller, "OnUpdate", 0.01)
+    assert(
+        state.phaseReads == phaseReads + 1 and not current.writes.SetScript,
+        "run wake reinstalled the active worker or missed the next frame"
+    )
     local button
     for _, object in ipairs(current.objects) do
         if state.registered[object] and not object:GetName() and object:GetParent() == current.root then
@@ -539,8 +547,10 @@ for _, performance in ipairs({ false, true }) do
     current:Tick()
     assert(state.timerReads == samples + 1, "new timer packet identity reused old presentation")
     state.phase = "ready"
+    current:ResetCounts()
     current:Tick()
     assert(not button:IsShown() and not current.controller:GetScript("OnUpdate"))
+    assert(current.writes.SetScript == 1, "phase retirement detached the timer worker more than once")
     state.phase = "playing"
     current:Event(current.controller, "CHAT_MSG_ADDON", "AZSRUN")
     current:Tick()

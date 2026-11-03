@@ -160,7 +160,13 @@ DFRL:NewMod("Player Auras", 2, function()
     local publication = {}
     local phases = { playing = true, choosing = true, paused = true, victory = true }
     local Tick, RefreshTimers
+    local timerUpdates = false
 
+    local function SetTimerUpdates(active)
+        if timerUpdates == active then return end
+        controller:SetScript("OnUpdate", active and Tick or nil)
+        timerUpdates = active
+    end
     local function Number(value) return type(value) == "number" and value - value == 0 end
     local function Native(getter)
         if type(getter) ~= "function" then return end
@@ -217,7 +223,7 @@ DFRL:NewMod("Player Auras", 2, function()
         button:SetScript("OnEnter", function()
             if editing or not inWorld then return end
             hovered = entry
-            if RefreshTimers(true) then controller:SetScript("OnUpdate", Tick) end
+            if RefreshTimers(true) then SetTimerUpdates(true) end
             if hovered == entry then Tooltip(entry) end
         end)
         button:SetScript("OnLeave", HideHover)
@@ -251,7 +257,7 @@ DFRL:NewMod("Player Auras", 2, function()
         observePending = false
         blockedPacket, blockedStamp, blockedReceived = _G.AZS_TIMERS, _G.AZS_TIMERS_UPDATED, received
         blockedRun, blockedRunStamp = _G.AZS_RUN, _G.AZS_RUN_UPDATED
-        controller:SetScript("OnUpdate", nil)
+        SetTimerUpdates(false)
         ClearTimers()
     end
     local function Icon(value)
@@ -362,14 +368,14 @@ DFRL:NewMod("Player Auras", 2, function()
         if age < 0.1 then return end
         age = 0
         observePending = false
-        if not RefreshTimers() then controller:SetScript("OnUpdate", nil) end
+        if not RefreshTimers() then SetTimerUpdates(false) end
     end
     local function WakeTimers(observe)
         if not inWorld then return end
         observePending = observePending or observe == true
         if not container:IsVisible() and not observePending then return end
         age = 0.1
-        controller:SetScript("OnUpdate", Tick)
+        SetTimerUpdates(true)
     end
 
     local function HookGroup(group)
@@ -428,7 +434,7 @@ DFRL:NewMod("Player Auras", 2, function()
     end)
     HookScript(container, "OnHide", function()
         ClearTimers()
-        if not observePending then controller:SetScript("OnUpdate", nil) end
+        if not observePending then SetTimerUpdates(false) end
     end)
     HookScript(debuffContainer, "OnShow", function() Layout(true) end)
     DFRL.locale.Listen(function()

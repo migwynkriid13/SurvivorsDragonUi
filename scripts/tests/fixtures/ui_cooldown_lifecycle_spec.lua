@@ -43,6 +43,11 @@ end
 local context = H.New()
 local env = context.env
 context.settings.cooldownNumbers = true
+local readSetting = env.DFRL.display.Get
+env.DFRL.display.Get = function(key)
+    if key == "customActionBar" then context.reads.customBar = (context.reads.customBar or 0) + 1 end
+    return readSetting(key)
+end
 local bar = env.CreateFrame("Frame", nil, env.UIParent)
 env.DFRL.actionButtons = {}
 local cooldowns = {}
@@ -65,6 +70,7 @@ for _, cooldown in ipairs(cooldowns) do
     assert(not cooldown:GetScript("OnUpdate"), "flash suppression added a polling callback")
 end
 assert(foreignCooldown:GetScript("OnUpdateModel") == foreignCooldown.nativeUpdate, "unrelated cooldown was wrapped")
+context:ResetCounts()
 context.now = 10.999
 for _, cooldown in ipairs(cooldowns) do
     context:Call(cooldown, "OnUpdateModel")
@@ -79,6 +85,7 @@ for _, cooldown in ipairs(cooldowns) do
     cooldown.start, cooldown.duration, cooldown.stopping = 1, 10, 0
     cooldown:Show()
 end
+assert(not context.reads.customBar, "normal native model callbacks read the Performance Mode bar guard")
 context.now = 2
 context:ResetCounts()
 context:Call(controller, "OnUpdate", 0.01)
@@ -208,6 +215,7 @@ for _, cooldown in ipairs(cooldowns) do
     assert(cooldown.start == 20 and cooldown.duration == 1, "ready suppression mutated native timing")
 end
 assert(context.writes.Hide == 7 and not context.reads.cooldown, "ready suppression polled native cooldown timing")
+assert(context.reads.customBar == 7, "Performance Mode stopped checking the current bar setting before suppression")
 context:ResetCounts()
 for _, cooldown in ipairs(cooldowns) do
     context:Call(cooldown, "OnUpdateModel")

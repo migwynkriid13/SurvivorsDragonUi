@@ -51,11 +51,18 @@ local function Fixture()
     setfenv(chunk, env)
     state.Update, state.pin, state.minimap, state.tooltip = chunk(), pin, minimap, tooltip
     local parent, root = {}, {}
-    function parent:GetEffectiveScale() return 1 end
-    function root:GetEffectiveScale() return 1 end
+    function parent:GetEffectiveScale() return state.parentScale or 1 end
+    function root:GetEffectiveScale() return state.rootScale or 1 end
     function root:IsVisible() return not state.hidden end
-    function tooltip:GetParent() return parent end
-    function tooltip:GetScale() return 1 end
+    function tooltip:GetParent()
+        state.parentReads = (state.parentReads or 0) + 1
+        return parent
+    end
+    function tooltip:GetScale() return self.scale or 1 end
+    function tooltip:SetScale(scale)
+        self.scale = scale
+        state.writes = state.writes + 1
+    end
     function tooltip:GetNumPoints() return self.point and 1 or 0 end
     function tooltip:GetPoint() return unpack(self.point or {}) end
     function tooltip:ClearAllPoints()
@@ -201,3 +208,23 @@ state.ownerReads = 0
 state.Place()
 assert(state.ownerReads == 1, "recovered native owner did not use the single verified owner check")
 print("PASS observed foreign owner uses one native ownership read and unreported changes retain discovery")
+
+state = Fixture()
+local ability, world = { IsVisible = function() return true end }, {}
+state.env.DFRL.actionButtons = { ability }
+state.env.currentOwner, state.env.WorldFrame = ability, world
+state.tooltip.owner, state.tooltip.shown, state.tooltip.scale = ability, true, 2
+state.parentScale, state.rootScale = 3, 6
+state.Place()
+assert(not state.parentReads and state.tooltip:GetScale() == 1, "ability tooltip read a parent it does not use")
+assert(state.tooltip.point[1] == "BOTTOM" and state.tooltip.point[2] == ability)
+state.tooltip.point = { "TOP", state.env.tooltipRoot, "TOP", 0, 0 }
+state.Place()
+assert(not state.parentReads and state.tooltip.point[2] == ability, "ability anchor repair consulted the parent")
+state.env.currentOwner, state.tooltip.owner = world, world
+state.Place()
+assert(state.parentReads == 1 and state.tooltip:GetScale() == 2 and state.tooltip.point[2] == state.env.tooltipRoot)
+state.parentScale = 4
+state.Place()
+assert(state.parentReads == 2 and state.tooltip:GetScale() == 1.5, "world tooltip missed a native parent scale change")
+print("PASS UI tooltip placement avoids unused parent reads and world scale repair stays live")

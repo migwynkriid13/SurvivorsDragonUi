@@ -272,7 +272,9 @@ DFRL:NewMod("GuardianTracker", 4, function()
             T.SetFont(measure, T.EncounterHealthStyle.fontSize, "OUTLINE")
             presentation.measureSize = T.EncounterHealthStyle.fontSize
         end
-        if showCurrent or showMaximum or showPercentage then
+        if snapshot.counts.fighting == 0 then
+            presentation.healthLabels = nil
+        elseif showCurrent or showMaximum or showPercentage then
             local labels = presentation.healthLabels or {}
             presentation.healthLabels = labels
             for index, entry in ipairs(snapshot.rows) do

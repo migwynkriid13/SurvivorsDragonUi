@@ -518,10 +518,12 @@ do
     )
     shared[1].nativeBar.value = 900
     matching:Call(shared[1].nativeBar, "OnValueChanged")
+    local lossAt = first.lossAt
     matching:Hit(100)
     matching:Tick(0.09)
     assert(DamageLabel(100).parent.parent.anchor.x == 1024, "unique exact loss did not keep its own origin")
     assert(first.lossRemaining == 0, "the matched original hit did not consume its loss")
+    assert(first.lossAt == lossAt, "unchanged native health extended the existing loss evidence")
     shared[1].nativeBar.value, shared[2].nativeBar.value = 800, 900
     matching:Call(shared[1].nativeBar, "OnValueChanged")
     matching:Call(shared[2].nativeBar, "OnValueChanged")

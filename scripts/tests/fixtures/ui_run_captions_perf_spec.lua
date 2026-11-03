@@ -48,6 +48,13 @@ local chunk = assert(loadfile(assert(arg[1], "missing extracted run caption sour
 setfenv(chunk, env)
 local api = chunk()
 local runSource, bossSource = parent:CreateFontString(), parent:CreateFontString()
+for _, source in ipairs({ runSource, bossSource }) do
+    local getText = source.GetText
+    function source:GetText()
+        context.reads.clockText = (context.reads.clockText or 0) + 1
+        return getText(self)
+    end
+end
 runSource:SetHeight(18)
 bossSource:SetHeight(18)
 env.runClock, env.bossClock = api.New(runSource), api.New(bossSource, "RUN")
@@ -67,6 +74,15 @@ context.formats = 0
 api.Update(10.9, 1200.8, true)
 context:NoPresentationWrites()
 assert(context.formats == 0, "unchanged displayed seconds reformatted captions")
+assert(context.reads.clockText == 2, "unchanged captions read their source text more than once")
+
+local setText = runSource.SetText
+function runSource:SetText() end
+api.Update(11.2, 1200.8, true)
+assert(env.runClock.text == "RUN 00:10 / 20:00", "rejected native text write changed the rendered caption")
+runSource.SetText = setText
+api.Refresh()
+assert(env.runClock.text == "RUN 00:11 / 20:00", "rejected native text write did not retry")
 
 context.settings.runCurrentRegular, context.settings.runMaximumRegular, context.settings.runTextRegular =
     false, false, false

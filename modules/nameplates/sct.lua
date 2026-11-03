@@ -666,6 +666,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         if not maximum or not minimum or not value or maximum <= minimum then return end
         value = math.max(minimum, math.min(value, maximum))
         if origin.health and origin.maximum == maximum and origin.minimum == minimum then
+            if origin.health == value then return end
             local lost = origin.health - value
             if lost > 0 then
                 local remaining = 0

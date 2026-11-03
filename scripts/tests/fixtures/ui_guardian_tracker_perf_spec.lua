@@ -18,6 +18,7 @@ local function Tracker()
             context.reads.snapshot = (context.reads.snapshot or 0) + 1
             snapshot.status, snapshot.rows = "ready", context.entries
             snapshot.revision, snapshot.generation = context.revision, context.generation
+            snapshot.counts.fighting = context.fighting
             return snapshot
         end,
     }
@@ -210,6 +211,7 @@ for _, performance in ipairs({ false, true }) do
         context.reads.healthFormats = (context.reads.healthFormats or 0) + 1
         return compact(...)
     end
+    context.revision, context.generation, context.fighting = 1, 1, 1
     context.entry.state, context.entry.status = "awake", "fighting"
     context.entry.hp, context.entry.maximum, context.entry.healthFraction = 50, 100, 0.5
     context:Tick()
@@ -229,6 +231,17 @@ for _, performance in ipairs({ false, true }) do
     assert(row.health:GetText() == "40 / 100" and row.bar.value == 0.4 and context.reads.healthFormats == 2)
     context.entry.state, context.entry.status = "empty", "returning"
     context.entry.hp, context.entry.maximum, context.entry.healthFraction = nil, nil, nil
+    context.revision, context.fighting = 2, 0
+    context:Tick()
+    assert(row.health:GetText() == "" and row.bar.value == 0, "zero-fighting roster retained visible health")
+    env.ipairs = function(list)
+        if list == context.entries then context.reads.healthScans = (context.reads.healthScans or 0) + 1 end
+        return ipairs(list)
+    end
+    context:ResetCounts()
+    context:Tick()
+    assert(not context.reads.healthScans, "settled zero-fighting roster still scanned for health captions")
+    context.revision, context.fighting = 3, 1
     context.entries[2] = {
         key = "2:8",
         index = 2,

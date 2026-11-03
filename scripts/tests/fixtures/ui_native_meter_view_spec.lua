@@ -725,11 +725,20 @@ Test("native hover IDs require held Shift and refresh without extra snapshots or
             function tooltip:AddLine(text) table.insert(self.lines, text) end
             function tooltip:AddDoubleLine(left, right) table.insert(self.lines, left .. ": " .. right) end
         end)
+        local formats, nativeString = 0, env.string
+        env.string = setmetatable({
+            format = function(pattern, ...)
+                if pattern == "%.0f" or pattern == "%.1f" or pattern == "%.1f%%" then formats = formats + 1 end
+                return nativeString.format(pattern, ...)
+            end,
+        }, { __index = nativeString })
         local first, second = c:Row(1), c:Row(2)
         assert(state.descriptions == 0, "visible unhovered rows requested diagnostic data")
         assert(state.shiftReads == 0, "unhovered rows polled the Shift key")
         c:Call(c.header, "OnEnter")
-        c:Tick(0.01)
+        formats = 0
+        c:Tick()
+        assert(formats == 0, "unchanged header hover formatted average DPS again")
         assert(state.shiftReads == 0 and state.descriptions == 0, "header hover polled Shift or prepared row IDs")
         c:Call(c.header, "OnLeave")
         local reads = state.calls.snapshot
@@ -741,12 +750,14 @@ Test("native hover IDs require held Shift and refresh without extra snapshots or
         local paints = tooltip.paints
         c:Tick(0.01)
         assert(tooltip.paints == paints and state.descriptions == 0, "unchanged ordinary hover repeated work")
+        formats = 0
         state.shift = true
         c:Tick(0.01)
         text = table.concat(tooltip.lines, "\n")
         assert(string.find(text, "Native IDs", 1, true) and string.find(text, "nativeProc=true", 1, true))
         assert(string.find(text, "sourceKey: talent:shaman.enh_windfury_weapon:r2", 1, true))
         assert(state.calls.snapshot == reads, "entering the tooltip collected a native snapshot")
+        assert(formats == 0, "pressing Shift reformatted unchanged tooltip numbers")
         local descriptions, paints = state.descriptions, tooltip.paints
         c:Tick(0.01)
         assert(state.descriptions == descriptions and tooltip.paints == paints and state.calls.snapshot == reads)
@@ -758,6 +769,16 @@ Test("native hover IDs require held Shift and refresh without extra snapshots or
         text = table.concat(tooltip.lines, "\n")
         assert(not string.find(text, "Native IDs", 1, true) and string.find(text, "Damage Done", 1, true))
         assert(state.descriptions == descriptions and tooltip.paints == paints + 1 and state.calls.snapshot == reads)
+        local ordinaryPaints = tooltip.paints
+        state.records[1].recent, state.context.counterRevision = 4.4, "same-tooltip-rounding"
+        c:Tick()
+        assert(first.entry.dps > 0.4 and first.entry.dps < 0.45 and tooltip.paints == ordinaryPaints)
+        formats = 0
+        c:Tick()
+        assert(formats == 0 and tooltip.paints == ordinaryPaints, "equal rounded text did not retain the new input")
+        state.records[1].recentStatus, state.context.counterRevision = "unavailable", "missing-tooltip-dps"
+        c:Tick()
+        assert(string.find(table.concat(tooltip.lines, "\n"), "DPS: --", 1, true), "missing DPS retained stale text")
         state.records[1].variantKey = "received-extra-strike"
         state.context.metadataRevision = "changed-hover-id"
         c:Tick()

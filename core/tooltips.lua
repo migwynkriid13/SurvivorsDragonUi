@@ -224,8 +224,11 @@ DFRL:NewMod("Tooltips", 2, function()
             if tooltip:IsShown() then tooltip:Hide() end
             return
         end
-        local parent = tooltip:GetParent() or UIParent
-        local scale = uiHover and nativeScale or root:GetEffectiveScale() / parent:GetEffectiveScale()
+        local scale = nativeScale
+        if not uiHover then
+            local parent = tooltip:GetParent() or UIParent
+            scale = root:GetEffectiveScale() / parent:GetEffectiveScale()
+        end
         if not T.NearlyEqual(tooltip:GetScale(), scale) then tooltip:SetScale(scale) end
         local anchor, target, targetPoint, offsetY = "BOTTOMRIGHT", root, "BOTTOMRIGHT", 0
         if button and not button:IsVisible() then
