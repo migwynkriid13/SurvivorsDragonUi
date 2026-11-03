@@ -161,7 +161,7 @@ function messages.ParseLootMessage(text)
 
     -- Collection status is part of native self-loot text. Recognize both known
     -- statuses while preserving their wording and any existing suffix colors.
-    local collection, collectionText, marks
+    local collection, marks
     local plainSuffix = StripColors(suffix)
     if plainSuffix == "." then
         suffix = ""
@@ -182,7 +182,6 @@ function messages.ParseLootMessage(text)
             end
             statusColor = GRAY
             collection = "collected"
-            collectionText = collected
         elseif
             normalized == DFRL.locale.Native("New in your collection!")
             or string.find(plainSuffix, "^%s+New in your collection!$")
@@ -192,7 +191,6 @@ function messages.ParseLootMessage(text)
         else
             return nil
         end
-        collectionText = collectionText or normalized
         if suffix == plainSuffix then suffix = statusColor .. suffix .. "|r" end
     end
     local label = ItemLabel(item)
@@ -207,7 +205,6 @@ function messages.ParseLootMessage(text)
         itemReference = reference,
         color = color,
         collection = collection,
-        collectionText = collectionText,
         marks = marks,
         item = item,
         suffix = suffix,

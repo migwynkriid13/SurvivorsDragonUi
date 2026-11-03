@@ -819,9 +819,6 @@ DFRL:NewMod("Waypoints", 3, function()
                 lair.index, lair.id, lair.name, lair.state, lair.left =
                     entry.index, entry.id, entry.name, entry.state, entry.left
                 lair.x, lair.y, lair.z, lair.mx, lair.my = entry.x, entry.y, entry.z, entry.mx, entry.my
-                lair.runId = type(entry.runId) == "string" and entry.runId or nil
-                lair.mapId = Number(entry.mapId) and entry.mapId or nil
-                lair.spaceId = type(entry.spaceId) == "string" and entry.spaceId or nil
                 lairs[buffer.lairCount] = lair
             end
             if not guardian or occupied then
@@ -841,7 +838,7 @@ DFRL:NewMod("Waypoints", 3, function()
                 buffer.pointCount = buffer.pointCount + 1
                 local point = SnapshotRow(buffer.points, buffer.pointCount)
                 point.key, point.id = key, entry.id
-                point.index, point.state = guardian and entry.index or nil, guardian and entry.state or nil
+                point.state = guardian and entry.state or nil
                 point.name = guardian and type(entry.name) == "string" and entry.name ~= "" and entry.name or nil
                 point.x, point.y, point.mx, point.my = entry.x, entry.y, entry.mx, entry.my
                 point.runId = type(entry.runId) == "string" and entry.runId or nil

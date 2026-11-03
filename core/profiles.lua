@@ -112,13 +112,6 @@ DFRL:NewMod("Profiles", 1, function()
     }
     profiles.search =
         { captions.summary, captions.name, captions.saved, captions.save, actions[1], actions[2], actions[3] }
-    function profiles.MinimumWidth(measure)
-        local buttonWidth = 0
-        for _, entry in ipairs(actions) do
-            buttonWidth = math.max(buttonWidth, measure(entry.label) + 24)
-        end
-        return math.max(buttonWidth * 3 + 16, measure(captions.save.label) + 192, measure(captions.summary.label) + 24)
-    end
     function profiles.CreateControls(parent, width)
         local function Label(text, y, size, height)
             local label = parent:CreateFontString(nil, "OVERLAY")

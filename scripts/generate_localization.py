@@ -215,8 +215,9 @@ def generate(client):
     rules = json.loads((ROOT / "localization/effects.json").read_text(encoding="utf-8"))
     ui = translations(ROOT / "localization/ui.tsv")
     compact = translations(ROOT / "localization/effects.tsv", numbered=True)
-    required = json.loads((ROOT / "localization/native-keys.json").read_text(encoding="utf-8"))
-    identity = [key for key in english if re.match(r"^(class|race|zone)\.[^.]+\.(name|subtitle)$", key)]
+    shared_keys = json.loads((ROOT / "localization/native-keys.json").read_text(encoding="utf-8"))
+    identity = [key for key in english if re.match(r"^(class|zone)\.[^.]+\.(name|subtitle)$", key)]
+    native_keys = sorted(set(shared_keys + identity + ["common.yards"]))
     result = ["-- Generated text data; preparation and source fingerprint: docs/LOCALIZATION.md.", "DFRL.locale.data = {"]
     for code, catalog in zip(CODES, catalogs):
         result.extend(["    " + code + " = {", "        ui = {"])
@@ -227,10 +228,10 @@ def generate(client):
             result.append("            [" + lua_string(source) + "] = " + lua_string(value) + ",")
         # Native captions are shared by value only when no addon-specific row exists.
         for source, key in sorted(english_values.items()):
-            if source not in ui and key in required:
+            if source not in ui and key in shared_keys:
                 result.append("            [" + lua_string(source) + "] = " + lua_string(catalog[key]) + ",")
         result.extend(["        },", "        native = {"])
-        for key in sorted(set(required + identity)):
+        for key in native_keys:
             result.append("            [" + lua_string(key) + "] = " + lua_string(catalog[key]) + ",")
         result.extend(["        },", "        effects = {"])
         for number, rule in enumerate(rules, 1):

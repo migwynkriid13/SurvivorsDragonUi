@@ -208,7 +208,6 @@ DFRL:NewMod("ChatCopy", 0.75, function()
         frame.title = title
         frame.edit = edit
         frame.scroll = scroll
-        frame.resizeText = ResizeText
         HookScript(frame, "OnShow", function() ResizeText(edit:GetText()) end)
         local uiFont = DFRL.display.Get("uiFont")
         local uiFontOutline = DFRL.display.Get("uiFontOutline")

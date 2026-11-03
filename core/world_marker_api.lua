@@ -183,7 +183,7 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
         Trim(state.points, 0)
         ClearMap(state.seen)
         ClearMap(state.cursors)
-        state.catalog, state.world, state.stream = nil, nil, nil
+        state.world, state.stream = nil, nil
         state.mapId, state.runId, state.spaceId, state.clock = nil, nil, nil, nil
         state.discoveryAt, state.discoveryStarted, state.discoveryFailures = nil, nil, nil
     end
@@ -685,7 +685,7 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
                 end
                 Trim(state.staging, used)
                 state.records, state.staging = state.staging, state.records
-                state.catalog, state.world, state.stream, state.clock = catalog, world, stream, clock
+                state.world, state.stream, state.clock = world, stream, clock
                 state.mapId, state.runId, state.spaceId = page.mapId, page.runId, page.spaceId
                 for id, marker in pairs(state.markers) do
                     if not state.seen[id] then Recycle(id, marker) end

@@ -79,39 +79,6 @@ DFRL:NewMod("ChatCapture", 0.5, function()
         if first and DFRL.loot then DFRL.loot.Observe(text, eventName) end
     end
 
-    chat.GetCaptureText = function(states, plain)
-        if not captureEnabled then return "" end
-        Flush()
-        local lines = {}
-        for _, chunk in ipairs(history) do
-            table.insert(lines, Export(chunk, plain))
-        end
-        -- Some ports expose native history readers. Include their retained
-        -- output separately, including writes that bypass the Lua hook.
-        for i = 1, NUM_CHAT_WINDOWS or 7 do
-            local frame = states and states[i] and states[i].native or _G["ChatFrame" .. i]
-            if frame and frame.GetNumMessages and frame.GetMessageInfo then
-                local success, count = pcall(frame.GetNumMessages, frame)
-                if success and type(count) == "number" then
-                    for j = 1, count do
-                        local readable, text = pcall(frame.GetMessageInfo, frame, j)
-                        if readable and type(text) == "string" then
-                            if table.getn(lines) > 0 then table.insert(lines, "\n") end
-                            table.insert(
-                                lines,
-                                Export(
-                                    '[NATIVE] frame="' .. Value(FrameName(frame)) .. '" "' .. Value(text) .. '"',
-                                    plain
-                                )
-                            )
-                        end
-                    end
-                end
-            end
-        end
-        return table.concat(lines)
-    end
-
     -- The dialog reads one retained chunk or a bounded native page at a time.
     -- Its archive boundary stays fixed while normal session capture continues.
     chat.NewCaptureSnapshot = function(states, plain)

@@ -280,15 +280,6 @@ include the whole roster. The default consumer snapshot retains all available
 health and countdowns. Lair acceptance shares the current waypoint phase
 sample, while standalone snapshot reads check native phase afresh.
 
-`GetChanges(afterRevision, afterGeneration)` returns copied observations since a
-consumer's cursor, with `revision`, `generation`, `entries`, `reset` and, for a
-valid cursor, `truncated`. Initial/replayed snapshots establish a baseline and
-produce no notices. Observations are `vacated`, `returned`, `replaced` or `state`;
-missing rows never establish a death. Up to 64 observations are retained, and
-cursor truncation is explicit, including removal of part of a multi-row revision.
-Consumers must baseline on `reset` and resynchronise on `truncated`. The foundation
-never converts these observations into chat messages or sounds.
-
 ## Designs and payload
 
 [The gallery](designs/guardian-tracker/index.html) has 20 static proposals using

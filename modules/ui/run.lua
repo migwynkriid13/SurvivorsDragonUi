@@ -4347,8 +4347,8 @@ DFRL:NewMod("RunTimers", 5, function()
             or not cache.read
         then
             cache.entries = ValidateSchedule(source, maximum, expected)
-            cache.spawned, cache.killed = 0, 0
-            if cache.entries then
+            if not replay and cache.entries then
+                cache.spawned, cache.killed = 0, 0
                 for _, entry in ipairs(cache.entries) do
                     if entry.state ~= "due" then cache.spawned = cache.spawned + 1 end
                     if entry.state == "dead" then cache.killed = cache.killed + 1 end

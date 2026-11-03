@@ -3,15 +3,14 @@
 DFRL:NewMod("GuardianRoster", 2, function()
     local roster = {}
     DFRL.guardians = roster
-    local lairs, changes = {}, {}
+    local lairs = {}
     local revision, generation = 0, 0
     local stamp, packet, clock
     local zone
     local unitGeneration, blockedUnitGeneration = 0, -1
     local blockedUnits, blockedUnitStamp
-    local droppedThroughRevision = 0
     local ready = false
-    local MAX_SMOOTHING, MAX_CHANGES = 1.5, 64
+    local MAX_SMOOTHING = 1.5
     local copiedFields = { "left", "x", "y", "z", "mx", "my" }
     local health, healthSeen = {}, {}
 
@@ -43,32 +42,14 @@ DFRL:NewMod("GuardianRoster", 2, function()
         blockedUnits, blockedUnitStamp = _G.AZS_UNITS, _G.AZS_UNITS_UPDATED
         blockedUnitGeneration = unitGeneration
         if not ready then return end
-        lairs, changes = {}, {}
+        lairs = {}
         stamp, packet, clock, zone = nil, nil, nil, nil
         ready = false
         generation = generation + 1
         revision = revision + 1
-        droppedThroughRevision = revision
     end
 
     function roster.UnitsReceived() unitGeneration = unitGeneration + 1 end
-
-    local function Change(kind, row, previous)
-        table.insert(changes, {
-            revision = revision,
-            kind = kind,
-            index = row.index,
-            id = row.id,
-            previousId = previous.id,
-            state = row.state,
-            previousState = previous.state,
-            name = row.name,
-        })
-        if table.getn(changes) > MAX_CHANGES then
-            local removed = table.remove(changes, 1)
-            droppedThroughRevision = removed.revision
-        end
-    end
 
     -- Called only with copied rows from the existing accepted lair snapshot.
     -- The private source table is never read here or exposed to consumers.
@@ -86,10 +67,7 @@ DFRL:NewMod("GuardianRoster", 2, function()
             zone = nil
         end
         if ready and stamp == updated and packet == received then return end
-        local nextLairs, previous, seen = {}, {}, {}
-        for _, row in ipairs(lairs) do
-            previous[row.index] = row
-        end
+        local nextLairs, seen = {}, {}
         for _, row in ipairs(rows) do
             if
                 type(row) ~= "table"
@@ -112,24 +90,6 @@ DFRL:NewMod("GuardianRoster", 2, function()
             table.insert(nextLairs, copy)
         end
         revision = revision + 1
-        if ready then
-            for _, row in ipairs(nextLairs) do
-                local old = previous[row.index]
-                -- An initial/replayed row establishes a baseline. Missing lairs
-                -- do not establish a death, and a new spawn is never the old one.
-                if old then
-                    if Living(old) and not Living(row) then
-                        Change("vacated", row, old)
-                    elseif not Living(old) and Living(row) then
-                        Change("returned", row, old)
-                    elseif Living(old) and Living(row) and old.id ~= row.id then
-                        Change("replaced", row, old)
-                    elseif old.state ~= row.state then
-                        Change("state", row, old)
-                    end
-                end
-            end
-        end
         lairs, stamp, packet = nextLairs, updated, received
         local now = Native("AZS_GetRunTime")
         clock = Number(now) and now or nil
@@ -279,24 +239,5 @@ DFRL:NewMod("GuardianRoster", 2, function()
             table.setn(snapshot.rows, table.getn(lairs))
         end
         return snapshot
-    end
-
-    -- Optional future notification consumers use revision + generation as a
-    -- cursor. Nothing emits chat, sound or alerts in this foundation.
-    function roster.GetChanges(afterRevision, afterGeneration)
-        local result = { revision = revision, generation = generation, entries = {}, reset = false }
-        if not Active() or not ready then
-            result.reset = true
-            return result
-        end
-        if not Integer(afterRevision, 0) or afterRevision > revision or afterGeneration ~= generation then
-            result.reset = true
-            return result
-        end
-        result.truncated = afterRevision < droppedThroughRevision
-        for _, change in ipairs(changes) do
-            if change.revision > afterRevision then table.insert(result.entries, Copy(change)) end
-        end
-        return result
     end
 end)

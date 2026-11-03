@@ -1052,9 +1052,6 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local auraSpellTextures, talentSpellTextures = {}, {}
     local iconCatalog = T.SpellIconCatalog or {}
     local nativeIconSources = { iconCatalog.game or {}, iconCatalog.abilities or {}, iconCatalog.effects or {} }
-    local locale = type(_G.GetLocale) == "function" and _G.GetLocale() or nil
-    local localeIconTextures = iconCatalog.locales and iconCatalog.locales[locale] or {}
-    local localeSchoolIconTextures = iconCatalog.schools and iconCatalog.schools[locale] or {}
     local iconSourcesDirty = { talents = true, debuffs = true, target = true, mouseover = true }
     local iconScanAt
     local iconTooltip, iconTooltipParent
@@ -1575,8 +1572,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                     end
                 end
                 texture = auraSpellTextures[info.spell]
-                -- The game's picker can differ from GetLocale(). Read its
-                -- current optional aliases only for generated metadata tiers.
+                -- Resolve the selected game language's aliases against the English catalog.
                 local language = DFRL.locale
                 local catalog = language and language.data[language.code]
                 local spellNames = catalog and catalog.spellNames
@@ -1588,13 +1584,8 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                 if texture == nil then texture = NativeItemIcon(info.spell) end
                 if texture == nil then texture = talentSpellTextures[info.spell] end
                 if texture == nil then
-                    local database, schools = localeIconTextures, localeSchoolIconTextures
-                    if spellNames then
-                        -- These aliases name verified English catalog entries;
-                        -- use their English DBC rows and actual-school sets.
-                        database = iconCatalog.locales and iconCatalog.locales.enUS or {}
-                        schools = iconCatalog.schools and iconCatalog.schools.enUS or {}
-                    end
+                    local database = iconCatalog.locales and iconCatalog.locales.enUS or {}
+                    local schools = iconCatalog.schools and iconCatalog.schools.enUS or {}
                     texture = GeneratedTexture(database, info.spell, aliases)
                     if texture == false and CanRefineGenerated(database, info.spell, aliases) then
                         -- Only refine the database tier with the actual parsed

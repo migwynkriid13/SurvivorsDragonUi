@@ -184,7 +184,7 @@ DFRL:NewMod("ChatFormats", 0.25, function()
             return RED .. name .. ":|r " .. message
         end
         -- Fallback for known NPC-yell events without supplied author/body fields.
-        local first, last, name, body = string.find(text, "^(.+) yells: (.*)$")
+        local first, _, name, body = string.find(text, "^(.+) yells: (.*)$")
         if first then
             name = string.gsub(name, "|c%x%x%x%x%x%x%x%x", "")
             name = string.gsub(name, "|r", "")
@@ -222,7 +222,7 @@ DFRL:NewMod("ChatFormats", 0.25, function()
         end
         -- Capture the game's class label verbatim, including plural/compound names.
         -- Neither a class whitelist nor fixed XP/point amounts belong here.
-        local first, last, class, experience, tail =
+        local first, _, class, experience, tail =
             string.find(text, "^Your (.-) earns? (%d[%d,]*) talent experience(.*)$")
         if not first or not string.find(class, "%S") then return nil end
         local output = PLUS
@@ -237,7 +237,7 @@ DFRL:NewMod("ChatFormats", 0.25, function()
             .. "|r"
         if tail == "" or tail == "." or tail == "!" then return output end
 
-        local pointFirst, pointLast, points, instruction = string.find(tail, "^:%s*(%d+) new talent points?!(.*)$")
+        local pointFirst, _, points, instruction = string.find(tail, "^:%s*(%d+) new talent points?!(.*)$")
         if not pointFirst then return nil end
         local prompt = string.gsub(instruction, "^%s+", "")
         prompt = string.gsub(prompt, "%.$", "")
@@ -255,7 +255,7 @@ DFRL:NewMod("ChatFormats", 0.25, function()
         if talent then return talent end
         local level = CaptureFormat(text, _G.LEVEL_UP)
         if not level then
-            local first, last, value = string.find(text, "^Congratulations, you have reached level (%d+)!$")
+            local _, _, value = string.find(text, "^Congratulations, you have reached level (%d+)!$")
             level = value
         end
         -- Only the native plain-number announcement enters the levelup_ding format.

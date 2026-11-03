@@ -4,9 +4,9 @@
 -- textures reflect the lower structural trim into a complete upper surround.
 -- Iron sarcophagus retains its attached frame beneath a matching top bevel.
 -- Demon reliquary restores its complete wings and keeps its pendant below.
--- Each 600x128 span uses two lossless 512x128 BLP strips with neighbour gutters;
--- artHeight is the full 64-unit texture canvas, height is the counter row,
--- and extent includes the complete contour for that mode. No font or source framework ships.
+-- Each 600x128 span uses two lossless 512x128 BLP strips with neighbour gutters.
+-- The shared canvas is 64 units tall. Each mode's extent includes its complete contour.
+-- No font or source framework ships.
 -- contentY is the counter center below the texture top; contentScale affects
 -- only its icons and numbers, never the frame artwork.
 -- Immutable sources, crops and preparation: third_party/Tally-ARTWORK.md.
@@ -222,9 +222,7 @@ DFRL.tallyStyles = {
         id = "silver",
         label = "Continuous silver",
         textures = { "silver.blp", "silver_2.blp" },
-        height = 27,
         extent = 27,
-        artHeight = 64,
         contentY = 9.5,
         contentScale = 1,
         detached = {
@@ -237,9 +235,7 @@ DFRL.tallyStyles = {
         id = "graphite",
         label = "Soft graphite",
         textures = { "graphite.blp", "graphite_2.blp" },
-        height = 27,
         extent = 28,
-        artHeight = 64,
         contentY = 13.5,
         contentScale = 1,
         detached = {
@@ -252,9 +248,7 @@ DFRL.tallyStyles = {
         id = "gothic01",
         label = "Roth scrollwork",
         textures = { "gothic01.blp", "gothic01_2.blp" },
-        height = 36,
         extent = 36,
-        artHeight = 64,
         contentY = 10,
         contentScale = 0.9,
         detached = {
@@ -267,9 +261,7 @@ DFRL.tallyStyles = {
         id = "gothic02",
         label = "Roth shrine",
         textures = { "gothic02.blp", "gothic02_2.blp" },
-        height = 36,
         extent = 36,
-        artHeight = 64,
         contentY = 6,
         contentScale = 0.9,
         detached = {
@@ -282,9 +274,7 @@ DFRL.tallyStyles = {
         id = "gothic03",
         label = "Gothic cornerwork",
         textures = { "gothic03.blp", "gothic03_2.blp" },
-        height = 36,
         extent = 36,
-        artHeight = 64,
         contentY = 13,
         contentScale = 0.95,
         detached = {
@@ -297,9 +287,7 @@ DFRL.tallyStyles = {
         id = "gothic04",
         label = "Iron sarcophagus",
         textures = { "gothic04.blp", "gothic04_2.blp" },
-        height = 36,
         extent = 36,
-        artHeight = 64,
         contentY = 16,
         contentScale = 1,
         detached = {
@@ -312,9 +300,7 @@ DFRL.tallyStyles = {
         id = "gothic07",
         label = "Knotted iron",
         textures = { "gothic07.blp", "gothic07_2.blp" },
-        height = 36,
         extent = 37,
-        artHeight = 64,
         contentY = 10,
         contentScale = 1,
         detached = {
@@ -327,9 +313,7 @@ DFRL.tallyStyles = {
         id = "gothic10",
         label = "ARPG carved cornice",
         textures = { "gothic10.blp", "gothic10_2.blp" },
-        height = 36,
         extent = 40,
-        artHeight = 64,
         contentY = 14,
         contentScale = 1,
         detached = {
@@ -342,9 +326,7 @@ DFRL.tallyStyles = {
         id = "gothic11",
         label = "Gothic leaf corners",
         textures = { "gothic11.blp", "gothic11_2.blp" },
-        height = 36,
         extent = 36,
-        artHeight = 64,
         contentY = 7,
         contentScale = 0.95,
         detached = {
@@ -357,9 +339,7 @@ DFRL.tallyStyles = {
         id = "gothic13",
         label = "Demon reliquary",
         textures = { "gothic13.blp", "gothic13_2.blp" },
-        height = 36,
         extent = 39,
-        artHeight = 64,
         contentY = 13,
         contentScale = 0.95,
         detached = {

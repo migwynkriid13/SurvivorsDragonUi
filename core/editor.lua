@@ -108,9 +108,9 @@ function DFRL.tools.CreateEditorPanel(parent, width, height, name)
     frame:SetWidth(width)
     frame:SetHeight(height)
     frame:EnableMouse(true)
-    frame.editorFill = Fill(frame, 0.065, 0.068, 0.075, 0.98)
-    frame.editorFill:SetPoint("TOPLEFT", frame, "TOPLEFT", 7, -18)
-    frame.editorFill:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -3, 3)
+    local fill = Fill(frame, 0.065, 0.068, 0.075, 0.98)
+    fill:SetPoint("TOPLEFT", frame, "TOPLEFT", 7, -18)
+    fill:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -3, 3)
     local pieces = {}
     local regions = {
         { 0, 0, 150, 150, 75, 75 },
@@ -142,7 +142,6 @@ function DFRL.tools.CreateEditorPanel(parent, width, height, name)
     pieces[7]:SetPoint("TOPRIGHT", tr, "TOPLEFT", 0, 0)
     pieces[8]:SetPoint("BOTTOMLEFT", bl, "BOTTOMRIGHT", 0, 0)
     pieces[8]:SetPoint("BOTTOMRIGHT", br, "BOTTOMLEFT", 0, 0)
-    frame.editorBorder = pieces
     return frame
 end
 
@@ -470,10 +469,10 @@ function DFRL.tools.CreateEditorInput(parent, width, height)
     box:SetTextInsets(8, 8, 0, 0)
     -- Plain recessed fields match the metal panel without a decorative frame.
     -- Thin native-color edges avoid another full-surface alpha layer.
-    box.editorFill = Fill(box, 0.025, 0.028, 0.032, 0.98)
-    box.editorFill:ClearAllPoints()
-    box.editorFill:SetPoint("TOPLEFT", box, "TOPLEFT", 1, -1)
-    box.editorFill:SetPoint("BOTTOMRIGHT", box, "BOTTOMRIGHT", -1, 1)
+    local fill = Fill(box, 0.025, 0.028, 0.032, 0.98)
+    fill:ClearAllPoints()
+    fill:SetPoint("TOPLEFT", box, "TOPLEFT", 1, -1)
+    fill:SetPoint("BOTTOMRIGHT", box, "BOTTOMRIGHT", -1, 1)
     box.editorBorder = {}
     for index, side in ipairs({ "TOP", "BOTTOM", "LEFT", "RIGHT" }) do
         local edge = box:CreateTexture(nil, "BORDER")

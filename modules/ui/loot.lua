@@ -81,7 +81,7 @@ DFRL:NewMod("LootNotifications", 0, function()
             result[key] = value
         end
         if type(entry.itemReference) == "string" and type(GetItemInfo) == "function" then
-            local ok, name, _, quality, _, _, _, _, slot, icon = pcall(GetItemInfo, entry.itemReference)
+            local ok, name, _, quality, _, _, _, _, _, icon = pcall(GetItemInfo, entry.itemReference)
             if ok and type(name) == "string" and name ~= "" then
                 if
                     type(quality) == "number"
@@ -90,10 +90,6 @@ DFRL:NewMod("LootNotifications", 0, function()
                     and quality == math.floor(quality)
                 then
                     result.quality = quality
-                end
-                if type(slot) == "string" and string.find(slot, "^INVTYPE_[A-Z_]+$") then
-                    result.equipLoc = slot
-                    if type(_G[slot]) == "string" and _G[slot] ~= "" then result.equipText = _G[slot] end
                 end
                 if
                     type(icon) == "string"
@@ -136,7 +132,7 @@ DFRL:NewMod("LootNotifications", 0, function()
             if classOK and type(class) == "string" then entry.itemClass = string.lower(class) end
         end
         sequence = sequence + 1
-        entry.sequence, entry.receivedAt = sequence, GetTime()
+        entry.sequence = sequence
         if count == MAX_QUEUE then
             table.remove(queue, 1)
             count = count - 1

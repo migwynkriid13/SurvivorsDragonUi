@@ -143,19 +143,21 @@ def write_catalog(output, game, locales, schools, provenance, abilities=None, ef
             lines.append("        " + locale + " = {")
             append_names(catalog, "            ")
             lines.append("        },")
-        else:
-            lines.append("        " + locale + " = {},")
     lines += ["    },", "    schools = {"]
     for locale, by_school in schools.items():
-        if by_school:
+        refinements = {}
+        for school, catalog in by_school.items():
+            # A missing school refinement preserves the name-wide ambiguity.
+            resolved = {name: icon for name, icon in catalog.items() if icon}
+            if resolved:
+                refinements[school] = resolved
+        if refinements:
             lines.append("        " + locale + " = {")
-            for school, catalog in by_school.items():
+            for school, catalog in refinements.items():
                 lines.append("            " + school + " = {")
                 append_names(catalog, "                ")
                 lines.append("            },")
             lines.append("        },")
-        else:
-            lines.append("        " + locale + " = {},")
     lines += ["    },", "}", ""]
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text("\n".join(lines), encoding="utf-8")

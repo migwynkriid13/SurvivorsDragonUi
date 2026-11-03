@@ -161,12 +161,12 @@ local function CanonicalSchool(localizedSchool)
     return localizedSchool
 end
 
-local function Damage(data, damageType, critical, periodic, reflected)
+local function Damage(data, damageType, critical, periodic)
     if not data or not data.amount or data.amount <= 0 or not data.targetName or data.targetName == "" then
         return nil
     end
     data.kind = "damage"
-    data.damageType = periodic and "periodic" or (reflected and "reflected" or damageType)
+    data.damageType = periodic and "periodic" or damageType
     data.school = CanonicalSchool(data.school)
     data.critical = critical and 1 or nil
     data.periodic = periodic and 1 or nil
@@ -285,9 +285,9 @@ end
 local function ParseDamageShield(message)
     -- Native shield messages do not identify the originating aura.
     local data = CaptureGlobal(message, "DAMAGESHIELDSELFOTHER", captureFields.shield)
-    if data then return Damage(data, "reflected", nil, nil, 1) end
+    if data then return Damage(data, "reflected") end
     data = CaptureGlobal(message, "DAMAGESHIELDOTHEROTHER", captureFields.shieldSource)
-    if IsKnownOwnedSource(data) then return Damage(data, "reflected", nil, nil, 1) end
+    if IsKnownOwnedSource(data) then return Damage(data, "reflected") end
     -- Native SPELLLOGMISS packets share the damageshield category.
     data = ParseSpell(message)
     if data then return data end

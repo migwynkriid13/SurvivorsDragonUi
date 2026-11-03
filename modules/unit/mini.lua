@@ -58,7 +58,7 @@ DFRL:NewMod("Mini", 1, function()
     end
 
     local function AddValues(frame, health, mana, unit, showDeathState)
-        local values = { frame = frame, unit = unit, healthBar = health, manaBar = mana }
+        local values = { frame = frame, unit = unit, healthBar = health }
         values.health = health:CreateFontString(nil, "OVERLAY")
         T.SetFont(values.health, 9, "OUTLINE")
         values.health:SetPoint("CENTER", health, "CENTER", 0, 0)

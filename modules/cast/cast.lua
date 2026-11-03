@@ -3,5 +3,4 @@ DFRL:NewMod("Cast", 1, function()
     for _, name in ipairs({ "CastingBarFrame", "PetCastingBarFrame", "DFRLCastbar" }) do
         PermanentlyDisableFrame(_G[name])
     end
-    DFRL.castbar = nil
 end)

@@ -64,9 +64,9 @@ NOTICE = """-- Selected tally artwork metadata and source notices.
 -- textures reflect the lower structural trim into a complete upper surround.
 -- Iron sarcophagus uses its original closed source frame; the Demon reliquary
 -- pendant remains only on the lower edge.
--- Each TGA is 1024x128 with 600x128 content at 2x. Use UV 0,600/1024,0,1;
--- artHeight is the full 64-unit texture canvas, height is the counter row,
--- and extent includes the complete contour for that mode. No font or source framework ships.
+-- Each TGA is 1024x128 with 600x128 content at 2x. Use UV 0,600/1024,0,1.
+-- The shared canvas is 64 units tall. Each mode's extent includes its complete contour.
+-- No font or source framework ships.
 -- contentY is the counter center below the texture top; contentScale affects
 -- only its icons and numbers, never the frame artwork.
 -- Immutable sources, crops and preparation: third_party/Tally-ARTWORK.md.
@@ -292,9 +292,7 @@ def write_registry(rows, path):
                         '        id = "%s",\n'
                         '        label = "%s",\n'
                         '        textures = { "%s", "%s" },\n'
-                        '        height = %s,\n'
                         '        extent = %s,\n'
-                        '        artHeight = 64,\n'
                         '        contentY = %s,\n'
                         '        contentScale = %s,\n'
                         '        detached = {\n'
@@ -304,7 +302,7 @@ def write_registry(rows, path):
                         '        },\n'
                         '    },\n'
                         % (entry["id"], entry["label"], entry["texture"], Path(entry["texture"]).stem + "_2.blp",
-                           number(entry["height"]), number(entry["extent"]),
+                           number(entry["extent"]),
                            number(entry["contentY"]), number(entry["contentScale"]),
                            entry["detached"]["texture"], Path(entry["detached"]["texture"]).stem + "_2.blp", number(entry["detached"]["extent"]),
                            number(entry["detached"]["contentY"])))

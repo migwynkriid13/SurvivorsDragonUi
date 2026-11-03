@@ -74,7 +74,7 @@ DFRL:NewMod("GuardianTracker", 4, function()
     measure:Hide()
 
     local function Number(value) return type(value) == "number" and value - value == 0 end
-    local function Format(source, first, second) return string.format(DFRL.locale.Text(source), first, second) end
+    local function Format(source, value) return string.format(DFRL.locale.Text(source), value) end
     local function Time(seconds)
         local rounded = math.max(0, math.ceil(seconds))
         return string.format("%d:%02d", math.floor(rounded / 60), math.mod(rounded, 60))

@@ -109,8 +109,6 @@ An accepted record contains:
 - `color`: the original eight hexadecimal color digits, when present. This is
   a color, never evidence for an inferred item-quality index.
 - `collection`: `collected`, `new`, or absent when no status was supplied.
-- `collectionText`: the supplied localized status without color markup or the
-  final sentence period. Collected parentheses remain part of the supplied text.
 - `marks`: the received positive integer or decimal text from a collected item's marks
   suffix, when supplied. It is not a queried balance or an inferred reward.
 - `item` and `suffix`: the received item markup and recognized collection suffix
@@ -185,9 +183,8 @@ The session queue retains the latest 32 occurrences and delivers at most four
 every 1.5 seconds in both Performance Mode states. The same interval gates
 regular renderer readiness and native HUD ownership/retry work. Settings, world
 and observed native-preference events retain their immediate handoff/cleanup
-paths. Each occurrence has its own increasing `sequence` and cosmetic
-`receivedAt` UI time. Overflow retires the oldest queued notice; it does not
-alter chat or actual item acquisition. Arrays are synchronized through
+paths. Each queued occurrence has an increasing `sequence`. Overflow retires
+the oldest queued notice. Arrays are synchronized through
 `table.setn` for Lua 5.0. Nothing is replayed from before attachment, world leave,
 logout or reload. The selected renderer owns its visible pool, text, animation,
 lifetime and shared layout registration.
@@ -196,9 +193,8 @@ lifetime and shared layout registration.
 
 `Resolve(entry)` returns a fresh record, preserving the original name and color.
 It first feature-detects `GetItemInfo` and passes only the exact original
-`item:...` reference when supplied. Successful native data can add `quality`,
-`equipLoc`, localized `equipText` and `icon`. An icon records `iconSource =
-"native"`. No item id or substitute item is guessed.
+`item:...` reference when supplied. Successful native data can add `quality`
+and `icon`. A native icon records `iconSource = "native"`.
 
 Native self-loot notices also arrive as colored names without links. These
 previously returned before any icon lookup. The generated native gear catalog
