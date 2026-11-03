@@ -765,7 +765,26 @@ DFRL:NewMod("RunTimers", 5, function()
         local sparkleCount, effectRight = 0, 0
         local configured, geometryDirty = false, true
         local effectWidth, effectSeconds, effectMaximum, effectEndless, filledWidth
-        local runGlow = bar:CreateTexture(nil, "OVERLAY")
+        local function NewViewport()
+            local viewport = CreateFrame("ScrollFrame", nil, bar)
+            viewport:SetFrameLevel(bar:GetFrameLevel())
+            viewport:SetPoint("LEFT", bar, "LEFT", 0, 0)
+            viewport:EnableMouse(false)
+            viewport:Hide()
+            local canvas = CreateFrame("Frame", nil, viewport)
+            canvas:SetFrameLevel(bar:GetFrameLevel())
+            canvas:SetWidth(1)
+            canvas:SetHeight(1)
+            canvas:EnableMouse(false)
+            viewport:SetScrollChild(canvas)
+            return viewport, canvas
+        end
+        -- Native clipping keeps the source UVs fixed. Changing a texture crop
+        -- in Lua creates a new clamp key in the client's material cache.
+        local fillClip, fillCanvas = NewViewport()
+        local foamClip, foamCanvas = NewViewport()
+        local clipShown, clipWidth, foamWidth, clipHeight
+        local runGlow = fillCanvas:CreateTexture(nil, "OVERLAY")
         runGlow:SetTexture(path .. "FillWhite.blp")
         runGlow:SetBlendMode("ADD")
         runGlow:SetHeight(15)
@@ -779,7 +798,7 @@ DFRL:NewMod("RunTimers", 5, function()
         -- current. Each stream drifts right at its own speed and gently bends.
         for lane = 1, 3 do
             for index = 1, FLOW_COUNT do
-                local texture = bar:CreateTexture(nil, "OVERLAY")
+                local texture = fillCanvas:CreateTexture(nil, "OVERLAY")
                 texture:SetTexture("Interface\\CastingBar\\UI-CastingBar-Spark")
                 texture:SetBlendMode("ADD")
                 texture:Hide()
@@ -794,7 +813,7 @@ DFRL:NewMod("RunTimers", 5, function()
 
         local blueFoam = {}
         local function NewFoam(r, g, b, redG, redB)
-            local texture = bar:CreateTexture(nil, "OVERLAY")
+            local texture = foamCanvas:CreateTexture(nil, "OVERLAY")
             texture:SetTexture("Interface\\CastingBar\\UI-CastingBar-Spark")
             texture:SetBlendMode("ADD")
             local index = table.getn(blueFoam) + 1
@@ -837,11 +856,12 @@ DFRL:NewMod("RunTimers", 5, function()
         end
 
         local function DrawFoam(piece, left, y, width, height, alpha, filledWidth, halfHeight)
-            local right, lower, upper = left + width, y - height / 2, y + height / 2
-            local first = math.max(0, left)
-            local last = math.min(dynamicWidth, filledWidth + 6, right)
-            local bottom, top = math.max(-halfHeight, lower), math.min(halfHeight, upper)
-            if first >= last or bottom >= top then
+            if
+                left >= math.min(dynamicWidth, filledWidth + 6)
+                or left + width <= 0
+                or y - height / 2 >= halfHeight
+                or y + height / 2 <= -halfHeight
+            then
                 if piece.shown then
                     piece.texture:Hide()
                     piece.shown = false
@@ -849,28 +869,17 @@ DFRL:NewMod("RunTimers", 5, function()
                 return
             end
             local texture = piece.texture
-            -- Keep unclipped dimensions and UVs exact as the origin moves.
-            local fullWidth, fullHeight = first == left and last == right, bottom == lower and top == upper
-            local drawnWidth = fullWidth and width or last - first
-            local drawnHeight = fullHeight and height or top - bottom
-            if piece.drawnWidth ~= drawnWidth then
-                texture:SetWidth(drawnWidth)
-                piece.drawnWidth = drawnWidth
+            if piece.drawnWidth ~= width then
+                texture:SetWidth(width)
+                piece.drawnWidth = width
             end
-            if piece.drawnHeight ~= drawnHeight then
-                texture:SetHeight(drawnHeight)
-                piece.drawnHeight = drawnHeight
+            if piece.drawnHeight ~= height then
+                texture:SetHeight(height)
+                piece.drawnHeight = height
             end
-            local center = fullHeight and y or (bottom + top) / 2
-            if piece.x ~= first or piece.yOffset ~= center then
-                texture:SetPoint("LEFT", bar, "LEFT", first, center)
-                piece.x, piece.yOffset = first, center
-            end
-            local u1, u2 = (first - left) / width, last == right and 1 or (last - left) / width
-            local v1, v2 = (upper - top) / height, bottom == lower and 1 or (upper - bottom) / height
-            if piece.u1 ~= u1 or piece.u2 ~= u2 or piece.v1 ~= v1 or piece.v2 ~= v2 then
-                texture:SetTexCoord(u1, u2, v1, v2)
-                piece.u1, piece.u2, piece.v1, piece.v2 = u1, u2, v1, v2
+            if piece.x ~= left or piece.yOffset ~= y then
+                texture:SetPoint("LEFT", bar, "LEFT", left, y)
+                piece.x, piece.yOffset = left, y
             end
             alpha = math.min(1, math.max(0, alpha * 1.4))
             if piece.alpha ~= alpha then
@@ -883,10 +892,9 @@ DFRL:NewMod("RunTimers", 5, function()
             end
         end
 
-        local function UpdateBlueFoam(now, filledWidth)
+        local function UpdateBlueFoam(now, filledWidth, halfHeight)
             -- A broad, uneven crest feathers past the native edge while
             -- puffs wash back into the current, inside the metal pill.
-            local halfHeight = bar:GetHeight() / 2
             local acrossBar = endless
             local spacing = acrossBar and filledWidth / table.getn(foamFlecks) or 0
             DrawFoam(foamGlow, filledWidth - 11, 0, 17, 15, 0.42 + 0.08 * math.sin(now * 4.1), filledWidth, halfHeight)
@@ -938,9 +946,10 @@ DFRL:NewMod("RunTimers", 5, function()
         local sparklesShown = false
         local function EnsureSparkles(count)
             for index = table.getn(redSparkles) + 1, count do
-                local texture = bar:CreateTexture(nil, "OVERLAY")
+                local texture = fillCanvas:CreateTexture(nil, "OVERLAY")
                 texture:SetTexture("Interface\\CastingBar\\UI-CastingBar-Spark")
                 texture:SetBlendMode("ADD")
+                texture:SetWidth(14)
                 texture:SetHeight(9)
                 texture:Hide()
                 redSparkles[index] = {
@@ -969,6 +978,15 @@ DFRL:NewMod("RunTimers", 5, function()
             end
             if not geometryDirty then return end
             local glowWidth = math.max(0.001, effectRight)
+            if clipWidth ~= glowWidth then
+                fillClip:SetWidth(glowWidth)
+                clipWidth = glowWidth
+            end
+            local featherWidth = math.min(dynamicWidth, effectRight + 6)
+            if foamWidth ~= featherWidth then
+                foamClip:SetWidth(featherWidth)
+                foamWidth = featherWidth
+            end
             if style.glow > 0 and lastGlowWidth ~= glowWidth then
                 runGlow:SetWidth(glowWidth)
                 lastGlowWidth = glowWidth
@@ -976,22 +994,10 @@ DFRL:NewMod("RunTimers", 5, function()
             for index = 1, sparkleCount do
                 local sparkle = redSparkles[index]
                 local center = (index - 0.5) * effectRight / sparkleCount
-                local left = math.max(0, center - 7)
-                local u1 = math.max(0, (7 - center) / 14)
-                local u2 = math.min(1, (effectRight - center + 7) / 14)
-                local drawnWidth = math.max(0.001, (u2 - u1) * 14)
-                sparkle.eligible = u1 < u2
-                if sparkle.drawnWidth ~= drawnWidth then
-                    sparkle.texture:SetWidth(drawnWidth)
-                    sparkle.drawnWidth = drawnWidth
-                end
+                local left = center - 7
                 if sparkle.left ~= left then
                     sparkle.texture:SetPoint("LEFT", bar, "LEFT", left, sparkle.y)
                     sparkle.left = left
-                end
-                if sparkle.u1 ~= u1 or sparkle.u2 ~= u2 then
-                    sparkle.texture:SetTexCoord(u1, u2, 0, 1)
-                    sparkle.u1, sparkle.u2 = u1, u2
                 end
             end
             geometryDirty = false
@@ -999,6 +1005,11 @@ DFRL:NewMod("RunTimers", 5, function()
 
         local function HideAnimatedFlow()
             flowUpdatedAt = nil
+            if clipShown then
+                fillClip:Hide()
+                foamClip:Hide()
+                clipShown = nil
+            end
             HideBlueFoam()
             if glowShown then
                 runGlow:Hide()
@@ -1046,6 +1057,7 @@ DFRL:NewMod("RunTimers", 5, function()
                     flow.texture:SetHeight(point and 3 + math.mod(slot, 3) or (lane == 2 and 4 or 3))
                     flow.y = point and (math.mod(slot - 1, 3) - 1) * 4 or (lane - 2) * 4
                     flow.width = point and 4 + math.mod(slot, 3) * 2 or FLOW_WIDTH
+                    flow.texture:SetWidth(flow.width)
                     flow.frequency = point and 5.4 or 1.7
                 end
                 flow.red, flow.sparkle = red, point
@@ -1093,9 +1105,12 @@ DFRL:NewMod("RunTimers", 5, function()
                 ResizeEffects(filledWidth)
                 effectWidth, effectSeconds, effectMaximum, effectEndless = width, seconds, maximum, endless
             end
-            -- UI time only moves decoration; native elapsed time owns the fill.
-            -- Crop each pooled streak to that fill without texture wrapping or
-            -- newer clipping APIs, beneath the separate metal border and skulls.
+            local height = bar:GetHeight()
+            if clipHeight ~= height then
+                fillClip:SetHeight(height)
+                foamClip:SetHeight(height)
+                clipHeight = height
+            end
             local showGlow = style.glow > 0
             if glowShown ~= showGlow then
                 if showGlow then
@@ -1108,50 +1123,34 @@ DFRL:NewMod("RunTimers", 5, function()
             if not sparklesShown then
                 for index = 1, sparkleCount do
                     local sparkle = redSparkles[index]
-                    if sparkle.eligible then
-                        sparkle.texture:Show()
-                        sparkle.shown = true
-                    end
+                    sparkle.texture:Show()
+                    sparkle.shown = true
                 end
                 sparklesShown = true
             end
             for index = 1, sparkleCount do
                 local sparkle = redSparkles[index]
-                if sparkle.eligible then
-                    local pulse = 0.5 + 0.5 * math.sin(now * 2 * math.pi / sparkle.period + sparkle.phase)
-                    local intensity
-                    if endless then
-                        intensity = 0.28 + 0.72 * pulse * pulse
-                    else
-                        intensity = 0.22 + 0.68 * pulse * pulse * pulse
-                    end
-                    sparkle.texture:SetAlpha(intensity * RED_SPARKLE_OPACITY)
+                local pulse = 0.5 + 0.5 * math.sin(now * 2 * math.pi / sparkle.period + sparkle.phase)
+                local intensity
+                if endless then
+                    intensity = 0.28 + 0.72 * pulse * pulse
+                else
+                    intensity = 0.22 + 0.68 * pulse * pulse * pulse
                 end
+                sparkle.texture:SetAlpha(intensity * RED_SPARKLE_OPACITY)
             end
             local span = dynamicSpan
             for _, flow in ipairs(runFlows) do
                 local width = flow.width
                 local left = math.mod(now * flow.speed + flow.offset, span) - width
-                local right = left + width
-                local first, last = math.max(0, left), math.min(filledWidth, right)
-                if first < last then
+                if left < filledWidth and left + width > 0 then
                     local wave = math.sin(now * flow.frequency + flow.phase)
                     local y = flow.y + 0.65 * wave
                     if flow.sparkle then
                         local pulse = 0.5 + 0.5 * wave
                         flow.texture:SetAlpha(0.2 + 0.8 * pulse * pulse * pulse)
                     end
-                    local drawnWidth = first == left and last == right and width or last - first
-                    if flow.drawnWidth ~= drawnWidth then
-                        flow.texture:SetWidth(drawnWidth)
-                        flow.drawnWidth = drawnWidth
-                    end
-                    flow.texture:SetPoint("LEFT", bar, "LEFT", first, y)
-                    local u1, u2 = (first - left) / width, last == right and 1 or (last - left) / width
-                    if flow.u1 ~= u1 or flow.u2 ~= u2 then
-                        flow.texture:SetTexCoord(u1, u2, 0, 1)
-                        flow.u1, flow.u2 = u1, u2
-                    end
+                    flow.texture:SetPoint("LEFT", bar, "LEFT", left, y)
                     if not flow.shown then
                         flow.texture:Show()
                         flow.shown = true
@@ -1161,7 +1160,12 @@ DFRL:NewMod("RunTimers", 5, function()
                     flow.shown = false
                 end
             end
-            UpdateBlueFoam(now, filledWidth)
+            UpdateBlueFoam(now, filledWidth, height / 2)
+            if not clipShown then
+                fillClip:Show()
+                foamClip:Show()
+                clipShown = true
+            end
             flowUpdatedAt = now
         end
         return SetAnimatedAppearance, HideAnimatedFlow, UpdateAnimatedFlow

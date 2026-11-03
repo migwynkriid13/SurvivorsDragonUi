@@ -4,9 +4,14 @@ assert(_VERSION == "Lua 5.1", "timer fixtures require CI Lua 5.1")
 local context = H.New()
 local env = context.env
 local create = context.Object
+local textures, viewports = {}, {}
 function context:Object(...)
     local object = create(self, ...)
-    if object.kind == "Texture" then
+    if object.kind == "ScrollFrame" then
+        table.insert(viewports, object)
+        function object:SetScrollChild(child) self.child = child end
+    elseif object.kind == "Texture" then
+        table.insert(textures, object)
         object.geometryWrites = {}
         for _, key in ipairs({ "SetWidth", "SetPoint", "SetTexCoord", "ClearAllPoints" }) do
             local method, original = key, object[key]
@@ -51,12 +56,12 @@ end
 local chunk = assert(loadfile(assert(arg[1], "missing extracted timer source")))
 setfenv(chunk, env)
 local source = chunk()
-local allocated = #context.objects
+local allocated = #textures
 source.Appearance(nil, false)
 assert(env.runBar.fillTexture == "timer\\FillBlue.blp" and not source.effects.Appearance)
 source.Appearance(5, true)
 assert(env.runBar.fillTexture == "timer\\FillWhite.blp" and env.runBar.fillColor[1] == 0.72)
-assert(#context.objects == allocated, "Performance Mode allocated decoration")
+assert(#textures == allocated and #viewports == 0, "Performance Mode allocated decoration")
 context:ResetCounts()
 for _ = 1, 60 do
     source.Appearance(5, true)
@@ -67,32 +72,41 @@ assert(not next(context.reads) and not next(context.writes), "static timer retai
 env.performanceMode = false
 source.Appearance(0, false)
 source.Update(0, 960)
-assert(#context.objects == allocated, "empty regular progress allocated unused effects")
+assert(#textures == allocated and #viewports == 0, "empty regular progress allocated unused effects")
 source.Update(10, 960)
-assert(#context.objects == allocated + 44, "normal progress allocated unused glints")
+assert(#textures == allocated + 44 and #viewports == 2, "normal progress allocated unexpected effects")
+local fillClip, foamClip = viewports[1], viewports[2]
+assert(fillClip.child and foamClip.child and fillClip:IsShown() and foamClip:IsShown())
+assert(
+    fillClip:GetFrameLevel() == env.runBar:GetFrameLevel() and foamClip:GetFrameLevel() == env.runBar:GetFrameLevel()
+)
+assert(fillClip:GetHeight() == 15 and foamClip:GetHeight() == 15)
+assert(math.abs(fillClip:GetWidth() - 280 * 10 / 960) < 1e-9)
+assert(math.abs(foamClip:GetWidth() - fillClip:GetWidth() - 6) < 1e-9)
 local glints = { 2, 5, 10, 18, 28 }
 for tier = 1, 5 do
     source.Appearance(tier, false)
     context.now = context.now + 0.04
     source.Update(500, 960)
-    assert(#context.objects == allocated + 44 + glints[tier], "rank changes rebuilt or overallocated the pool")
+    assert(#textures == allocated + 44 + glints[tier], "rank changes rebuilt or overallocated the pool")
     context:ResetCounts()
     source.Appearance(tier, false)
     context:NoPresentationWrites()
 end
-local prepared = #context.objects
+local prepared = #textures
 source.Appearance(2, true)
 context.now = context.now + 0.04
 source.Update(42, 960)
 assert(env.runBar.fillColor[1] == 0.2 and env.runBar.fillColor[2] == 0.34, "Endless replaced the Heroic palette")
 local points, glow = 0, nil
 for index = allocated + 1, prepared do
-    local texture = context.objects[index]
+    local texture = textures[index]
     if texture:GetTexture() == "timer\\FillWhite.blp" then glow = texture end
     if texture:IsShown() and texture:GetWidth() <= 8 and texture:GetHeight() <= 5 then points = points + 1 end
 end
 assert(glow and glow:GetWidth() == 280, "received Endless did not use full decorative width")
-assert(points >= 3 and #context.objects == prepared, "Endless glitter lost its reusable pinpoints")
+assert(fillClip:GetWidth() == 280 and foamClip:GetWidth() == 280, "Endless foam escaped the pill")
+assert(points >= 3 and #textures == prepared, "Endless glitter lost its reusable pinpoints")
 context:ResetCounts()
 context.now = context.now + 0.001
 source.Update(42, 960)
@@ -116,9 +130,10 @@ assert(
 )
 env.performanceMode = true
 source.Hide()
+assert(not fillClip:IsShown() and not foamClip:IsShown(), "Performance Mode retained a clip viewport")
 source.Appearance(0, true)
 for index = allocated + 1, prepared do
-    assert(not context.objects[index]:IsShown(), "Performance Mode retained a cosmetic region")
+    assert(not textures[index]:IsShown(), "Performance Mode retained a cosmetic region")
 end
 context:ResetCounts()
 for _ = 1, 60 do
@@ -131,7 +146,7 @@ env.performanceMode = false
 source.Appearance(5, false)
 context.now = context.now + 0.04
 source.Update(42, 960)
-assert(#context.objects == prepared and context.reads.pulses, "mode exit rebuilt or failed to restore effects")
+assert(#textures == prepared and context.reads.pulses, "mode exit rebuilt or failed to restore effects")
 source.Appearance(10, false)
 assert(source.effects.tier == 5, "higher ranks exceeded the known palette")
 source.Appearance(1.5, false)
@@ -141,7 +156,7 @@ assert(
 )
 source.Hide()
 for index = allocated + 1, prepared do
-    assert(not context.objects[index]:IsShown(), "retirement retained a decorative region")
+    assert(not textures[index]:IsShown(), "retirement retained a decorative region")
 end
 print(
     "PASS API-driven tier palettes, lazy bounded effects, Endless width/glitter, throttle, retirement and Performance Mode"
@@ -150,9 +165,11 @@ print(
 env.runBar.layoutWidth = 280
 source.Appearance(5, false)
 source.Update(940, 960)
-local edge = context.objects[allocated + 45]
-local interior = context.objects[allocated + 46]
-assert(edge:GetWidth() < 14 and interior:GetWidth() == 14, "first paint lost edge clipping or full glint width")
+local edge = textures[allocated + 45]
+local interior = textures[allocated + 46]
+assert(edge:GetWidth() == 14 and interior:GetWidth() == 14, "glints changed source width before native clipping")
+assert(edge:GetParent() == fillClip.child and interior:GetParent() == fillClip.child)
+assert(not edge.geometryWrites.SetTexCoord and not interior.geometryWrites.SetTexCoord, "glints set a dynamic crop")
 edge.geometryWrites, interior.geometryWrites = {}, {}
 context:ResetCounts()
 context.now = context.now + 0.1
@@ -162,11 +179,14 @@ assert(not context.reads.pulses, "an advancing native fill forced an already-due
 context.now = context.now + 0.001
 source.Update(942, 960)
 assert(context.reads.pulses and math.abs(glow:GetWidth() - 280 * 942 / 960) < 1e-9)
-assert(edge.geometryWrites.SetWidth == 1 and edge.geometryWrites.SetTexCoord == 1 and not edge.geometryWrites.SetPoint)
+assert(math.abs(fillClip:GetWidth() - 280 * 942 / 960) < 1e-9)
+assert(math.abs(foamClip:GetWidth() - fillClip:GetWidth() - 6) < 1e-9)
+assert(edge.geometryWrites.SetPoint == 1 and not edge.geometryWrites.SetWidth and not edge.geometryWrites.SetTexCoord)
 assert(
     interior.geometryWrites.SetPoint == 1
         and not interior.geometryWrites.SetWidth
         and not interior.geometryWrites.SetTexCoord
+        and not context.writes.SetTexCoord
         and not context.writes.ClearAllPoints,
     "an unclipped glint rebuilt its dimensions, crop or anchor list"
 )
@@ -180,5 +200,7 @@ assert(context.reads.pulses and math.abs(glow:GetWidth() - 280 * 920 / 960) < 1e
 context:ResetCounts()
 source.Update(960, 960)
 assert(context.reads.pulses and glow:GetWidth() == 280, "completion did not immediately paint the exact limit")
-assert(#context.objects == prepared, "progress and correction rebuilt the effect pool")
+assert(fillClip:GetWidth() == 280 and foamClip:GetWidth() == 280)
+assert(not context.writes.SetTexCoord, "completion reintroduced a material crop")
+assert(#textures == prepared, "progress and correction rebuilt the effect pool")
 print("PASS progress growth defers cosmetic writes, clips corrections immediately and reuses settled glint geometry")

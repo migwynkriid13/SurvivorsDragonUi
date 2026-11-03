@@ -40,6 +40,54 @@ source changes reduce Lua-to-client writes and separate the fill and decoration
 work. CI-only fixtures cover the changed boundaries. The packaged client's
 frame pacing and appearance after the change still need a live comparison.
 
+### Native trace and material churn
+
+The callback and UI cost recorder captured five subsequent live switches.
+Each switch compares ten-second windows separated from the persisted native
+clock handoff by three seconds. Frame p95 is the median of the journal's
+one-second p95 values. Material additions are divided by logged UI frames.
+
+| Custom timer switch | Frame p95 before → after | UI materials added per frame |
+| ------------------- | ------------------------ | ---------------------------- |
+| Off at 2:18         | 43.57 → 23.53 ms         | 10.83 → 0.98                 |
+| On at 2:40          | 19.00 → 45.80 ms         | 0.48 → 12.51                 |
+| Off at 3:38         | 49.15 → 19.32 ms         | 27.49 → 0.49                 |
+| On at 4:15          | 31.06 → 51.70 ms         | 1.15 → 18.64                 |
+| Off at 4:58         | 60.54 → 31.07 ms         | 24.78 → 1.96                 |
+
+The custom HUD callback typically used about 0.12–0.19 ms per frame in the
+later timer-on intervals. The repeated change in native material creation was
+far larger than the Lua callback's change. The moving streaks and foam computed
+changing texture UV crops. The client uses the crop's sampling clamp as part
+of its material key, so moving an edge can make the renderer prepare another
+material. The cache is shared, and clearing it under load can affect other UI.
+Some long frame gaps occurred with the timer off too, and the trace does not
+attribute each isolated hitch.
+
+The timer now uses two native clip viewports with one private content frame
+each. The first clips glow, streaks and glints to the fill. The second clips
+foam to the pill and preserves the six-unit feather beyond the fill. The
+existing textures move at their full authored size with stable source UVs.
+The renderer clips their geometry separately from the material key. The
+viewports are mouse-disabled, stay below the border and markers and are
+allocated with the existing lazy decoration pool. Colors, motion, timing and
+texture count are preserved. Sampling at a clipped boundary can differ from
+the former half-texel clamp.
+
+A fresh launch using the same recorder repeated the clock switches with
+Performance Mode off. Across four stable custom-timer windows of 24–27
+seconds, the renderer added 0.46–0.78 materials per frame and the median
+window p95 was 18.02–23.20 ms. The three complete game-timer windows in that
+run used 0.36–0.70 materials per frame and had median p95 of 19.23–20.90 ms.
+The original trace's two heavier custom-timer windows averaged 20.92 and
+23.18 materials per frame. The separate runs had different scene loads.
+The repeated switches within each run establish the difference in material
+churn more directly than a comparison of their absolute frame times.
+Later in the patched run, with the reported Alt-Tab interval excluded, the
+game-timer window used 0.74 materials per frame at 28.22 ms median window p95.
+The next 54 seconds with the custom timer used 0.43 materials per frame at
+29.74 ms median window p95, with a higher median streamed count (131 vs 124).
+
 ## How to review a new feature or performance change
 
 The November work covered readers, animations, frame callbacks, retries and

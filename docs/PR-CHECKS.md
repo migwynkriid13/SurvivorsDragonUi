@@ -881,8 +881,9 @@ The assertions cover:
   only in CI. These assert call/object/lifecycle behavior, not rendering or FPS.
   Movement follow-ups cover incremental target-change discovery and synchronous
   minimap-size sharing, including unavailable and insufficient geometry retry.
-  Extracted timer foam also checks one native height sample per paint while
-  retaining the original clipping geometry and UVs at different authored heights.
+  Extracted timer foam keeps full source dimensions and leaves UVs alone.
+  The timer effect fixture checks viewport ownership, fill and foam bounds,
+  and retirement with the original texture pool.
   Production clock-progress cases cover unchanged writes within a native second,
   whole-second steps, native pauses/corrections, exact fractional completion,
   maximum changes and hidden recovery. They keep raw caption/marker inputs
