@@ -33,9 +33,9 @@ A current branch name is not treated as expansion evidence.
 
 ## Existing art reused
 
-The upright header medallion is the existing `GuardianFloating.tga` crop
-`(0, 0, 65, 65)` on a 128-by-128 canvas, drawn at 28 by 28. Its published source
-and Blizzard attribution remain in [CacheWaypoints-ARTWORK.md](CacheWaypoints-ARTWORK.md).
+The header draws the shared silver dragon crest from `GuardianFloating.blp`.
+It uses crop `(0, 0, 65, 65)` on a 128-by-128 canvas, drawn at 28 by 28.
+See [EncounterIcons-ARTWORK.md](EncounterIcons-ARTWORK.md) for the source.
 
 Fighting rows reuse the original timer `BorderLeft`, `BorderCenter`, `BorderRight`,
 `BackgroundCenter` and `FillWhite` TGA files. Their exact crops, pinned mirror and

@@ -18,7 +18,10 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
         cursors = {},
         choices = {},
     }
-    local positionIconOffset = { z = 5 }
+    -- Blizzard encounter artwork. See third_party/EncounterIcons-ARTWORK.md.
+    local bossArt = "WorldQuestBoss.blp"
+    local bossCrop = { 0, 1, 0, 1 }
+    local bossSize = 25.6
     local styles = {
         cache = {
             key = "worldCacheIcons",
@@ -28,7 +31,7 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
             state = "present",
             attachment = "position",
             size = 22.4,
-            offset = positionIconOffset,
+            offset = { z = 4 },
             padding = 0,
             crop = { 0, 1, 0, 1 },
         },
@@ -39,6 +42,7 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
             art = "GuardianFloating.blp",
             state = "alive",
             attachment = "overhead",
+            size = 27.2,
             padding = 6,
             crop = { 0, 65 / 128, 0, 65 / 128 },
         },
@@ -46,21 +50,23 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
             key = "worldBossIcons",
             mode = "worldBossIconMode",
             distance = "worldBossIconDistance",
-            art = "GuardianFloating.blp",
+            art = bossArt,
             state = "alive",
             attachment = "overhead",
+            size = bossSize,
             padding = 6,
-            crop = { 0, 65 / 128, 0, 65 / 128 },
+            crop = bossCrop,
         },
         finalBoss = {
             key = "worldBossIcons",
             mode = "worldBossIconMode",
             distance = "worldBossIconDistance",
-            art = "GuardianFloating.blp",
+            art = bossArt,
             state = "alive",
             attachment = "overhead",
+            size = bossSize,
             padding = 6,
-            crop = { 0, 65 / 128, 0, 65 / 128 },
+            crop = bossCrop,
         },
         downedPartyMember = {
             key = "worldPartyIcons",
@@ -68,7 +74,7 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
             state = "downed",
             attachment = "position",
             size = 29.12,
-            offset = positionIconOffset,
+            offset = { z = 5 },
             padding = 0,
             crop = { 0, 1, 0, 1 },
         },
@@ -264,7 +270,7 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
             end
             state.markers[record.anchorId] = marker
         end
-        local size = style.size or 32
+        local size = style.size
         if marker.size ~= size then
             marker:SetWidth(size)
             marker:SetHeight(size)

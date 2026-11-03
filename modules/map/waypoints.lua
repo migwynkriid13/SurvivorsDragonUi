@@ -7,13 +7,8 @@ d23deaf8f44a7d280dc974a5c9d5321c013db59b. The selected Quest spear retains
 the complete original 32-by-32 canvas, colors and alpha in TGA/BLP:
 https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/MINIMAP/MiniMap-QuestArrow.PNG
 
-Guardian medallion artwork is Blizzard game artwork from source commit
-00197f223180323ea7297c0157edbd1a43d2f99f:
-Textures/Nameplates/Quests/Kill/kill_elite.tga (GuardianFloating.tga)
-Source provenance and license: third_party/CacheWaypoints-ARTWORK.md.
-The upstream LICENSE excludes World of Warcraft artwork from its core MIT
-license: game textures are copyright Blizzard Entertainment and included only
-for use with the game. No upstream Lua is imported.
+GuardianFloating.blp uses Blizzard's vignettekillelite sprite. Source
+provenance and preparation: third_party/EncounterIcons-ARTWORK.md.
 
 The cache HUD, minimap and tally reuse the user's supplied chest.tga, prepared
 losslessly as Chest.blp. Its original pixels and alpha are retained.

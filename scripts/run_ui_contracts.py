@@ -127,12 +127,13 @@ def main():
             "HOLD", "FADE", "SLIDE", "AtBottom", "FadeSettings", "Rearm", "Reveal", "PositionNative", "NoticeMessage",
         ])
         run_markers = extract_source("modules/ui/run.lua", [
-            "SKULL_ICON", "MARKER_SIZE", "ACTIVE_GLOW_PERIOD", "ACTIVE_GLOW_MIN_ALPHA", "ACTIVE_GLOW_MAX_ALPHA",
-            "ACTIVE_GLOW_MIN_OFFSET", "ACTIVE_GLOW_MAX_OFFSET", "ACTIVE_GLOW_DIAGONAL_FACTOR", "PrepareMarkerGlow",
+            "path", "SKULL_ICON", "BOSS_MARKER_ICON", "BOSS_MARKER_HALO", "MARKER_SIZE", "ACTIVE_GLOW_PERIOD", "ACTIVE_GLOW_MIN_ALPHA",
+            "ACTIVE_GLOW_MAX_ALPHA", "BindBossMarkerArt", "NewRunMarker",
+            "PrepareMarkerGlow",
             "ShowMarkerGlow", "HideMarkerTooltip",
             "HideMarker", "UpdateMarkerStates",
         ])
-        run_markers = run_markers.rsplit("\nreturn ", 1)[0] + "\nreturn { Update = UpdateMarkerStates, Hide = HideMarker }\n"
+        run_markers = run_markers.rsplit("\nreturn ", 1)[0] + "\nreturn { New = NewRunMarker, Update = UpdateMarkerStates, Hide = HideMarker }\n"
         run_debuff_cadence = extract_source("modules/ui/run.lua", [
             "IsNumber", "HideDebuff", "ClearDebuffs", "Permanent", "DebuffRemaining", "DebuffIcon", "UpdateDebuffs",
             "ReflowRows", "RefreshDebuffHover", "UpdateDebuffRows", "Update",

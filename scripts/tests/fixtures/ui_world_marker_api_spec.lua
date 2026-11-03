@@ -148,14 +148,15 @@ local function Scene(performance)
             local offset = requests[1].offset
             if source.kind == "cache" or source.kind == "downedPartyMember" then
                 assert(native.worldOffsets ~= false, "position icon requested unadvertised world offsets")
-                assert(type(offset) == "table" and offset.z == 5 and offset.x == nil and offset.y == nil)
+                local expectedHeight = source.kind == "cache" and 4 or 5
+                assert(type(offset) == "table" and offset.z == expectedHeight)
                 for axis in pairs(offset) do
                     assert(axis == "z", "position icon shifted along another world axis")
                 end
-                if native.positionOffset then
-                    assert(offset == native.positionOffset, "cache and ally offsets were not shared across frames")
-                end
-                native.positionOffset = offset
+                native.positionOffsets = native.positionOffsets or {}
+                local previousOffset = native.positionOffsets[source.kind]
+                assert(not previousOffset or offset == previousOffset, "position offset was recreated between frames")
+                native.positionOffsets[source.kind] = offset
             else
                 assert(offset == nil, "shared request slot leaked position-icon height to an encounter")
             end
@@ -306,8 +307,8 @@ for _, performance in ipairs({ false, true }) do
     assert(#c:Markers() == 3, "same-frame pagination omitted a boss")
     for _, marker in ipairs(c:Markers()) do
         local raised = marker.kind == "cache" or marker.kind == "downedPartyMember"
-        local expectedY = raised and 280 or 206
-        local expectedSize = marker.kind == "downedPartyMember" and 29.12 or (raised and 22.4 or 32)
+        local expectedY = marker.kind == "cache" and 264 or (raised and 280 or 206)
+        local expectedSize = marker.kind == "downedPartyMember" and 29.12 or (raised and 22.4 or 25.6)
         assert(marker.point[5] == expectedY, "marker ignored native world offset or used incorrect screen padding")
         assert(marker:GetWidth() == expectedSize and marker:GetHeight() == expectedSize, "incorrect world-icon size")
     end
@@ -372,14 +373,14 @@ for _, performance in ipairs({ false, true }) do
     c:Service()
     c:Frame()
     local marker = c:Markers()[1]
-    assert(marker:GetWidth() == 22.4 and marker:GetHeight() == 22.4 and marker.point[5] == 280)
+    assert(marker:GetWidth() == 22.4 and marker:GetHeight() == 22.4 and marker.point[5] == 264)
     local objects, calls, capabilities = #c.objects, native.calls, native.capabilityReads
     c:ResetCounts()
     c:Frame()
     assert(not c.writes.SetWidth and not c.writes.SetHeight and not c.writes.SetPoint, "settled cache rewrote geometry")
     native.heightProjection = 8
     c:Frame()
-    assert(marker.point[5] == 240 and marker:GetWidth() == 22.4, "cache height substituted a fixed screen gap")
+    assert(marker.point[5] == 232 and marker:GetWidth() == 22.4, "cache height substituted a fixed screen gap")
     assert(native.calls == calls and native.capabilityReads == capabilities, "cache height added metadata queries")
     native.entries = { Record("pooled-ally", "downedPartyMember") }
     c:Service(0.21)
@@ -390,7 +391,7 @@ for _, performance in ipairs({ false, true }) do
             and marker:GetWidth() == 29.12
             and marker:GetHeight() == 29.12
             and marker.point[5] == 240,
-        "fallen ally lost its larger size or shared world height"
+        "fallen ally lost its larger size or five-yard height"
     )
     assert(c.writes.SetWidth == 1 and c.writes.SetHeight == 1, "cache/ally pool reuse did not resize exactly once")
     c:ResetCounts()
@@ -400,12 +401,12 @@ for _, performance in ipairs({ false, true }) do
     c.env.DFRL.display.Set("worldBossIcons", true)
     c:Service(0.21)
     c:Frame()
-    assert(c:Markers()[1] == marker and marker:GetWidth() == 32 and marker.point[5] == 206)
+    assert(c:Markers()[1] == marker and marker:GetWidth() == 25.6 and marker.point[5] == 206)
     native.entries = { Record("pooled-cache", "cache") }
     c:Service(0.21)
     c:Frame()
     assert(
-        c:Markers()[1] == marker and marker:GetWidth() == 22.4 and marker:GetHeight() == 22.4 and marker.point[5] == 240,
+        c:Markers()[1] == marker and marker:GetWidth() == 22.4 and marker:GetHeight() == 22.4 and marker.point[5] == 232,
         "mixed-kind pool failed to restore the smaller raised cache"
     )
     assert(#c.objects == objects and native.registers == 1, "cache styling rebuilt the pool or native owner")
@@ -764,12 +765,14 @@ for _, performance in ipairs({ false, true }) do
     delayed.native.entries[1].kind = "guardian"
     delayed:Service(0.21)
     delayed:Frame()
+    local guardians = delayed:Markers()
     assert(
-        #delayed:Markers() == 1
+        #guardians == 1
             and delayed.native.entries[1].anchorId == "stable-enemy-handle"
             and delayed.native.registers == 1,
         "delayed guardian metadata lost its stable handle"
     )
+    assert(guardians[1]:GetWidth() == 27.2 and guardians[1]:GetHeight() == 27.2, "incorrect guardian icon size")
     delayed.api.Reset()
 end
 -- A bounded frame pass cannot publish the first 256 records of a larger catalog.

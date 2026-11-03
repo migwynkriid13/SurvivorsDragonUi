@@ -680,7 +680,8 @@ The assertions cover:
   saved off choices, missing/invalid and reset defaults, centered zone text while
   off and display transactions; selective final-window cooldown
   reads; strict SCT retirement deadlines and native raid-icon UV forms; dirty
-  boss marker reconciliation with exact active halos; settled loot hold/hidden
+  boss marker reconciliation with one fixed active contour, opacity-only
+  pulses and lazy binding retry; settled loot hold/hidden
   expiry; Revive clipping reuse; static player status; shared Layout
   samples/final release; unchanged waypoint math with active interpolation;
   lazy Chat time and observed/unreported tooltip owners. These fixtures are
@@ -1422,10 +1423,10 @@ handles in both Performance Mode states. No runtime test hook is shipped and
 no local tests, validation or addon/game execution were run.
 
 Cache/ally styling cases in both Performance Mode states require the reused
-native request to carry the same `offset = { z = 5 }` table for caches and
-fallen allies, with no offset for encounters. A changed fake camera projection alters the five-yard point without
+native request to reuse `offset = { z = 4 }` for caches and
+`offset = { z = 5 }` for fallen allies, with no offset for encounters. A changed fake camera projection moves the raised cache point without
 an added screen gap or metadata query. Pooled cache → ally → boss → cache views
-retain one frame while restoring 22.4/29.12/32-unit sizes and existing encounter
+retain one frame while restoring 22.4/29.12/25.6-unit sizes and existing encounter
 spacing. Cache → ally reuse resizes exactly once to the 30%-larger ally icon.
 Settled ally and cache frames
 issue no size/placement writes. Missing world-offset support omits cache and

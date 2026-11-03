@@ -6,14 +6,14 @@ DFRL:NewMod("RunTimers", 5, function()
     local ROW_HEIGHT = 48
     local DEBUFF_SIZE, DEBUFF_GAP = 18, 4
     local SKULL_ICON = "Interface\\TargetingFrame\\UI-TargetingFrame-Skull"
+    local BOSS_MARKER_ICON = DFRL:GetInfoOrCons("tex") .. "waypoint\\WorldQuestBoss.blp"
+    local BOSS_MARKER_HALO = path .. "WorldQuestBossHalo.blp"
     local ATTACK_ICON = "Interface\\Cursor\\Attack.blp"
     local CACHE_ICON = DFRL:GetInfoOrCons("tex") .. "waypoint\\Chest.blp"
     local COINS_ICON = DFRL:GetInfoOrCons("tex") .. "tally\\Coins.blp"
     local MARKER_SIZE = 18
     local ACTIVE_GLOW_PERIOD = 2.4
-    local ACTIVE_GLOW_MIN_ALPHA, ACTIVE_GLOW_MAX_ALPHA = 0.25, 0.5
-    local ACTIVE_GLOW_MIN_OFFSET, ACTIVE_GLOW_MAX_OFFSET = 0.9, 4.55
-    local ACTIVE_GLOW_DIAGONAL_FACTOR = 1 / math.sqrt(2)
+    local ACTIVE_GLOW_MIN_ALPHA, ACTIVE_GLOW_MAX_ALPHA = 0.5, 0.85
     local FLOW_WIDTH, FLOW_SPEED = 64, 32
     local FLOW_INTERVAL = 1 / 20
     local FLOW_SPACING = (BAR_WIDTH + FLOW_WIDTH) / 5 / 1.7
@@ -496,6 +496,11 @@ DFRL:NewMod("RunTimers", 5, function()
         return frame, bar, text, overlay, fill
     end
 
+    local function BindBossMarkerArt(texture)
+        if texture:SetTexture(BOSS_MARKER_ICON) ~= false then return true end
+        texture:SetTexture(SKULL_ICON)
+    end
+
     local function NewRunMarker(parent)
         local marker = CreateFrame("Frame", nil, parent)
         marker:SetWidth(MARKER_SIZE)
@@ -504,7 +509,7 @@ DFRL:NewMod("RunTimers", 5, function()
         marker:SetAlpha(1)
         marker:EnableMouse(false)
         marker.skull = marker:CreateTexture(nil, "ARTWORK")
-        marker.skull:SetTexture(SKULL_ICON)
+        marker.hasBossArt = BindBossMarkerArt(marker.skull)
         marker.skull:SetWidth(MARKER_SIZE)
         marker.skull:SetHeight(MARKER_SIZE)
         marker.skull:SetPoint("CENTER", marker, "CENTER", 0, 0)
@@ -4116,58 +4121,34 @@ DFRL:NewMod("RunTimers", 5, function()
     end
 
     local function PrepareMarkerGlow(marker)
-        if marker.glowPrepared then return end
-        marker.glowCardinal = marker.glowCardinal or CreateFrame("Frame", nil, marker)
-        marker.glowDiagonal = marker.glowDiagonal or CreateFrame("Frame", nil, marker)
-        marker.glowCardinal:SetPoint("CENTER", marker, "CENTER", 0, 0)
-        marker.glowDiagonal:SetPoint("CENTER", marker, "CENTER", 0, 0)
-        local cardinalSide = 2 * ACTIVE_GLOW_MIN_OFFSET
-        local diagonalSide = 2 * (ACTIVE_GLOW_DIAGONAL_FACTOR * ACTIVE_GLOW_MIN_OFFSET)
-        marker.glowCardinal:SetWidth(cardinalSide)
-        marker.glowCardinal:SetHeight(cardinalSide)
-        marker.glowDiagonal:SetWidth(diagonalSide)
-        marker.glowDiagonal:SetHeight(diagonalSide)
-        marker.glowCardinal:Hide()
-        marker.glowDiagonal:Hide()
-        marker.glowOffset = ACTIVE_GLOW_MIN_OFFSET
-        -- Translucent copies trace the native skull silhouette. Their
-        -- offsets breathe inward/outward beneath the unchanged skull.
-        local slot = 1
-        for x = -1, 1 do
-            for y = -1, 1 do
-                if x ~= 0 or y ~= 0 then
-                    local distance = math.sqrt(x * x + y * y)
-                    local dx, dy = x / distance, y / distance
-                    local copy = marker.glow[slot]
-                    local glow = copy and copy.texture or marker:CreateTexture(nil, "BACKGROUND")
-                    marker.glow[slot] = copy or { texture = glow, x = dx, y = dy }
-                    glow:Hide()
-                    glow:SetTexture(SKULL_ICON)
-                    glow:SetWidth(MARKER_SIZE)
-                    glow:SetHeight(MARKER_SIZE)
-                    local point = (y == 1 and "TOP" or y == -1 and "BOTTOM" or "")
-                        .. (x == 1 and "RIGHT" or x == -1 and "LEFT" or "")
-                    glow:SetPoint("CENTER", distance == 1 and marker.glowCardinal or marker.glowDiagonal, point, 0, 0)
-                    glow:SetVertexColor(1, 0.25, 0, 1)
-                    glow:SetAlpha(ACTIVE_GLOW_MIN_ALPHA)
-                    glow:SetBlendMode("ADD")
-                    slot = slot + 1
-                end
-            end
+        if marker.glowPrepared then return true end
+        local glow = marker.glow
+        if not glow then
+            glow = marker:CreateTexture(nil, "BACKGROUND")
+            marker.glow = glow
+            glow:Hide()
+            -- The 64-pixel canvas holds a 48-pixel skull mask with an 8-pixel fade on each side.
+            local side = MARKER_SIZE * 64 / 48
+            glow:SetWidth(side)
+            glow:SetHeight(side)
+            glow:SetPoint("CENTER", marker, "CENTER", 0, 0)
+            glow:SetBlendMode("BLEND")
+            glow:SetAlpha(ACTIVE_GLOW_MIN_ALPHA)
+            marker.glowAlpha = ACTIVE_GLOW_MIN_ALPHA
         end
-        table.setn(marker.glow, slot - 1)
+        if glow:SetTexture(BOSS_MARKER_HALO) == false then return false end
         marker.glowPrepared = true
+        return true
     end
 
     local function ShowMarkerGlow(marker, shown)
-        shown = shown and marker:GetParent():IsVisible() or false
-        if shown then PrepareMarkerGlow(marker) end
+        shown = shown and marker.hasBossArt and marker:GetParent():IsVisible() and PrepareMarkerGlow(marker) or false
         if marker.glowShown == shown then return shown end
-        for _, glow in ipairs(marker.glow) do
+        if marker.glow then
             if shown then
-                glow.texture:Show()
+                marker.glow:Show()
             else
-                glow.texture:Hide()
+                marker.glow:Hide()
             end
         end
         marker.glowShown = shown
@@ -4449,7 +4430,6 @@ DFRL:NewMod("RunTimers", 5, function()
                 marker:SetScript("OnEnter", function() ShowMarkerTooltip(marker) end)
                 marker:SetScript("OnLeave", function() HideMarkerTooltip(marker) end)
                 T.RegisterTooltipIcon(marker)
-                marker.glow = {}
                 marker.check = T.CreateDefeatedMarkerCheck(marker, MARKER_SIZE)
                 HideMarker(marker)
                 markers[index] = marker
@@ -4490,7 +4470,8 @@ DFRL:NewMod("RunTimers", 5, function()
                 local state = not atLimit and markerStates[index] or nil
                 if state then
                     if marker.state ~= state then
-                        T.StyleDefeatedMarker(marker.skull, marker.check, MARKER_SIZE, state == "dead")
+                        local size = state == "due" and MARKER_SIZE * 0.95 or MARKER_SIZE
+                        T.StyleDefeatedMarker(marker.skull, marker.check, size, state == "dead")
                         marker.state = state
                     end
                     local glowShown = ShowMarkerGlow(marker, state == "up" and not performanceMode)
@@ -4520,21 +4501,9 @@ DFRL:NewMod("RunTimers", 5, function()
         -- The native run clock and schedule still own all gameplay timing/state.
         local pulse = 0.5 - 0.5 * math.cos(GetTime() * 2 * math.pi / ACTIVE_GLOW_PERIOD)
         local glowAlpha = ACTIVE_GLOW_MIN_ALPHA + (ACTIVE_GLOW_MAX_ALPHA - ACTIVE_GLOW_MIN_ALPHA) * pulse
-        local glowOffset = ACTIVE_GLOW_MIN_OFFSET + (ACTIVE_GLOW_MAX_OFFSET - ACTIVE_GLOW_MIN_OFFSET) * pulse
-        local cardinalSide = 2 * glowOffset
-        local diagonalSide = 2 * (ACTIVE_GLOW_DIAGONAL_FACTOR * glowOffset)
         for _, marker in ipairs(render.activeMarkers) do
-            if marker.glowOffset ~= glowOffset then
-                marker.glowCardinal:SetWidth(cardinalSide)
-                marker.glowCardinal:SetHeight(cardinalSide)
-                marker.glowDiagonal:SetWidth(diagonalSide)
-                marker.glowDiagonal:SetHeight(diagonalSide)
-                marker.glowOffset = glowOffset
-            end
             if marker.glowAlpha ~= glowAlpha then
-                for _, glow in ipairs(marker.glow) do
-                    glow.texture:SetAlpha(glowAlpha)
-                end
+                marker.glow:SetAlpha(glowAlpha)
                 marker.glowAlpha = glowAlpha
             end
         end

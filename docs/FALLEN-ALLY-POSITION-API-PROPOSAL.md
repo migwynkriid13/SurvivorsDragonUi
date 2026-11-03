@@ -373,10 +373,9 @@ its advertised world-offset support and 60-second fallen-enemy retention:
   separate combat-text anchors.
 
 The released reference now confirms the endpoint and payload definitions.
-It advertises `worldOffsets = true`, while occlusion remains false. SDUI does
-request the shared five-yard upward offset for caches and fallen allies,
-with no occlusion or general
-fallen-enemy discovery.
+It advertises `worldOffsets = true`, while occlusion remains false. SDUI
+requests upward offsets for caches and fallen allies, with no occlusion or
+general fallen-enemy discovery.
 
 ## SDUI integration with the released API
 
@@ -425,9 +424,9 @@ sample and clock, and exact request order. A changed stream/world response or
 batches hide all icons atomically and retire the presentation for retry.
 
 Encounters use the native unit `overhead` point with six screen units above it.
-Caches and fallen allies use `position` with the same shared `{ z = 5 }`
-offset, placing their centers five world yards above the cache or revive spot
-without extra screen padding. Cache sides are 22.4 units; fallen-ally sides
+Caches use `position` with `{ z = 4 }` and fallen allies use `position` with
+`{ z = 5 }`, placing each icon above its spot without extra screen padding.
+Cache sides are 22.4 units. Fallen-ally sides
 are 29.12 units, 30% larger than their former 22.4. Every request slot explicitly
 sets or clears its offset, so this
 height never leaks to an encounter kind. Pooled frames update dimensions only when the required size

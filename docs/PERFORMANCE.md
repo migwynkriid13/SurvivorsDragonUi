@@ -225,14 +225,14 @@ to confirm today's behavior before reusing an old rate.
 
 ## Decorative allocation and warning opacity — 2026-11-03
 
-The six effects retain their original artwork, geometry, animation equations,
-update rates and Performance Mode presentation. Existing visibility, settings
-and native callbacks prepare these resources synchronously when eligible:
+Existing visibility, settings and native callbacks prepare the six effects
+synchronously when eligible. The boss-skull contour retains its original
+pulse cadence and replaces the former moving glow copies:
 
 | Effect                     | Deferred resources and retained behavior                                                                                                                                                                                                                                                        |
 | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Affordable-cache gold glow | Five textures and eight number copies prepare only for a visible, affordable, highlighted counter in normal mode. First use takes the current fitted font, number and width; subsequent use retains the pool. Unchanged copy opacity skips its setter without reducing the thirty-Hz animation. |
-| Boss-skull halos           | Each skull's two positioning frames and eight glow textures prepare only for its first visible active normal-mode halo. Due, defeated, hidden and Performance Mode skulls do not prepare them. Existing frame-driven pulse and retry behavior remain.                                           |
+| Boss-skull halos           | One contour texture prepares for each skull's first visible active state in normal mode. Due, defeated, hidden and Performance Mode markers skip preparation. The existing frame-driven opacity pulse reuses the texture.                                                                       |
 | Health-loss trails         | Each existing bar prepares its overlay frame and texture at the first enabled, visible, valid-health baseline outside Performance Mode. Disabled/hidden bars allocate none; enabling establishes the current baseline without replaying damage. The half-second fade remains frame-driven.      |
 | Revive effects             | The Layout root, fill, border and labels remain ready. The spark and twelve cross rectangles prepare on the first visible normal-mode presentation, retaining native ten-Hz reads and the existing smoothing, fade and cross pulses.                                                            |
 | XP gains                   | The two gain/spark textures prepare only for the first eligible normal-mode gain. Idle, hidden, native-bar and Performance Mode paths retain instant baselines without these decorations. Gain, rollover and fade timing remain.                                                                |
@@ -2054,7 +2054,7 @@ lower authored animation cadence or replace native gameplay time.
 | SCT origin retirement       | Walk the complete live/recent catalog every frame                                                      | Skip that walk until the earliest real retirement is strictly older than the original 0.65 seconds, then stable-compact and retain the next deadline. Shown-plate sampling, matching, every original hit and active text motion retain frame cadence.                                                                                                 |
 | Nameplate raid-icon copying | Two native source texture reads per refresh and two UV reads when copying                              | One texture and one UV sample, retaining four/eight-coordinate forms, actual destination comparisons and retry.                                                                                                                                                                                                                                       |
 | Final cooldown numbers      | All seven buttons reread every frame when any is in the positive final 200 ms                          | Only the **m** already-finishing buttons receive intervening frame reads. All seven retain an independent ten-Hz full pass and immediate cooldown/slot events. Store only final-window flags, never a private completion clock or cached native timing.                                                                                               |
-| Boss skulls                 | Reconcile all historical marker slots and compute the pulse every frame, including when none is active | Reconcile on received state/native-limit changes. Only active marker references animate each frame. No marker time/cosine/pool traversal when none is active; unchanged alpha skips eight writes. Keep all eight glow copies and both cardinal/diagonal dimensions.                                                                                   |
+| Boss skulls                 | Reconcile all historical marker slots and compute the pulse every frame, including when none is active | Reconcile on received state/native-limit changes. Only active marker references animate each frame. With none active, skip time reads, cosine and pool traversal. One fixed contour per active marker changes only its opacity.                                                                                                                       |
 | Revive crosses              | Recompute all twelve clipping edges/positions and six pulse phases every active frame                  | Cache geometry until actual width or smoothed fill changes; calculate pulse only for crosses with visible parts. Visible pulse equations, frame smoothing/fade, native progress and cleanup remain.                                                                                                                                                   |
 | Loot cards                  | Traverse populated cards every frame, including a settled full-opacity hold                            | During a settled hold, wait until the existing fade, metadata-retry or expiry deadline before traversing cards. Sample root visibility once per callback, reuse one protected updater, and invalidate the wait on new cards/Show. Active fades keep frames; hidden cards still expire.                                                                |
 | Player combat/rest rims     | Native eligibility and display reads every frame, even after inactive alpha reached zero               | Remove both combat/rest pulse owners and their round variants in both modes: four frames, eight texture regions, their event/visibility/mode hooks and all per-frame pulse/fade work. Retain the original static portrait borders and event-driven resting icon.                                                                                      |
@@ -4127,20 +4127,20 @@ two internal UV clamps preserves bilinear samples. The variable-width tally
 keeps its original three-piece background. Borders, fills and geometry are
 unchanged; the new image is prepared by `scripts/prepare_timer_background.py`.
 
-Each active scheduled skull retains eight glow copies in the same creation and
-draw order. Their centers are permanently anchored to two empty geometric
-frames: cardinal copies follow edge centers and diagonal copies follow corners.
-Four dimension writes replace sixteen clear/reanchor calls per animated frame;
-the eight original texture-alpha writes remain. This reduces that loop from 24
-to 12 native methods per active marker per frame. The original trigonometry,
-alpha values, textures, timing and cadence remain. Blue flow and foam also skip
-identical size and UV writes, while position and animation continue normally.
+Each active scheduled skull uses one red contour derived from the skull's
+outer alpha edge. It replaces eight glow textures and two positioning frames.
+The 24-unit contour stays centered behind the 18-unit skull. The existing
+2.4-second pulse changes opacity from 50% to 85% in normal mode. Per active
+marker, one changed opacity write replaces eight opacity and four dimension
+writes. Failed texture bindings can retry on the next visible reconciliation.
+Performance Mode hides the contour. Blue flow and foam still skip identical
+size and UV writes.
 
 The timer's cosmetic layers use 44 shared regions plus up to 28 lazily prepared
 tier glints, for at most 72 allocated/visible regions, plus the base pill,
 schedule markers and one supported-rank numeral. Normal blue mode uses the
-43 flow/foam pieces; Heroic glow and glints can draw alongside that motion. Active boss markers retain their
-eight glow copies. Their drawing cost remains alongside the reductions above.
+43 flow/foam pieces; Heroic glow and glints can draw alongside that motion.
+Active normal-mode boss markers add one contour region each.
 A finite baked animation cannot preserve these independently phased effects at
 every native time and layout scale, so no animation frames are substituted.
 
@@ -4426,13 +4426,13 @@ show through walls; no occlusion query or undocumented result field is used.
 
 Attachment selection is per kind and advertised capability. Cache icons use
 22.4-unit sides; fallen-ally icons use 29.12-unit sides, 30% larger than before.
-Both reuse one `{ z = 5 }` world-offset table with `position` and zero screen
-padding. The existing
-batched projection places them five yards above the cache or revive spot
-without another query or per-frame offset-table allocation. Both kinds require
+The existing batched projection uses `position` and zero screen padding for
+both. Caches reuse `{ z = 4 }` and fallen allies reuse `{ z = 5 }`, so each
+keeps its own height without another query or per-frame offset allocation. Both kinds require
 advertised `worldOffsets`; encounter kinds stay usable without it. Every reused
-request slot sets or clears its offset. Encounters retain 32-unit icons at
-`overhead` plus six screen units. Pooled views cache their size and only write width/height on actual size
+request slot sets or clears its offset. Guardian icons are 27.2 units and boss
+icons are 25.6 units, both at `overhead` plus six screen units. Pooled views
+cache their size and only write width/height on actual size
 changes, including reuse across kinds. No frame, region, asset or updater is
 added. Unsupported attachment kinds skip discovery; per-entry unavailable or
 unsupported attachments hide without invented coordinates. No occlusion query
