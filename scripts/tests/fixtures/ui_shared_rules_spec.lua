@@ -52,7 +52,6 @@ Test("clipped fills reuse a full source texture and recover missing artwork", fu
     c:ResetCounts()
     fill.SetFraction(0.25)
     fill.RefreshWidth(100)
-    fill.RefreshLevel()
     fill.SetColor(1, 0.5, 0.2, 0.8)
     assert(fill.SetTexture(path) and not next(c.writes), "settled fill repeated native writes")
     fill.RefreshWidth(200)
@@ -65,8 +64,12 @@ Test("clipped fills reuse a full source texture and recover missing artwork", fu
     assert(not viewport:IsVisible(), "clip did not inherit parent hiding")
     bar:Show()
     bar:SetFrameLevel(8)
-    fill.RefreshLevel()
+    fill.BindViewport()
     assert(viewport:IsVisible() and viewport:GetFrameLevel() == 8 and canvas:GetFrameLevel() == 8)
+    assert(
+        c.writes.SetScrollChild == 1 and viewport.scrollChild == canvas,
+        "rebind did not reassign the existing canvas"
+    )
     assert(#c.objects == first + 3, "fill recovery allocated replacement widgets")
 end)
 

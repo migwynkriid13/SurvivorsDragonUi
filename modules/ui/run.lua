@@ -4611,7 +4611,7 @@ DFRL:NewMod("RunTimers", 5, function()
         local frame, bar, name, rowOverlay, fill =
             Pill("DFRL_BossHealthPill" .. tostring(createdRows), "FillWhite", true)
         frame:SetParent(bossGroup)
-        fill.RefreshLevel()
+        fill.BindViewport()
         T.SetFont(name, 12, "OUTLINE")
         name:SetWidth(BAR_WIDTH)
         name:SetHeight(14)

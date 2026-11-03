@@ -242,7 +242,6 @@ function DFRL.tools.NewClippedFill(bar)
     canvas:SetWidth(1)
     canvas:SetHeight(1)
     canvas:EnableMouse(false)
-    viewport:SetScrollChild(canvas)
     local texture = canvas:CreateTexture(nil, "ARTWORK")
     texture:SetAllPoints(bar)
 
@@ -306,12 +305,15 @@ function DFRL.tools.NewClippedFill(bar)
             Paint()
         end
     end
-    function fill.RefreshLevel()
+    function fill.BindViewport()
+        -- Reparenting an ancestor can clear native scroll membership even
+        -- though the viewport still points at the same canvas.
+        viewport:SetScrollChild(canvas)
         local level = bar:GetFrameLevel()
         if viewport:GetFrameLevel() ~= level then viewport:SetFrameLevel(level) end
         if canvas:GetFrameLevel() ~= level then canvas:SetFrameLevel(level) end
     end
-    fill.RefreshLevel()
+    fill.BindViewport()
     return fill
 end
 

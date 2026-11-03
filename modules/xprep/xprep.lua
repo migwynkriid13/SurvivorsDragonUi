@@ -58,9 +58,9 @@ DFRL:NewMod("Xprep", 1, function()
 
     -- Two passive regions reuse the fill and the native spark already used by
     -- the run timer. Both stay below the original metal border.
-    local gain, spark, sparkClip, effectsReady
+    local gain, spark, sparkClip, sparkCanvas
     local function PrepareEffects()
-        if effectsReady then return end
+        if sparkClip then return end
         local sparkHeight = defaults.height + 4
         sparkClip = CreateFrame("ScrollFrame", nil, bar)
         sparkClip:SetFrameLevel(bar:GetFrameLevel() + 1)
@@ -69,24 +69,23 @@ DFRL:NewMod("Xprep", 1, function()
         sparkClip:SetHeight(sparkHeight)
         sparkClip:EnableMouse(false)
         sparkClip:Hide()
-        local canvas = CreateFrame("Frame", nil, sparkClip)
-        canvas:SetWidth(1)
-        canvas:SetHeight(1)
-        canvas:EnableMouse(false)
-        sparkClip:SetScrollChild(canvas)
-        gain = canvas:CreateTexture(nil, "ARTWORK")
+        sparkCanvas = CreateFrame("Frame", nil, sparkClip)
+        sparkCanvas:SetWidth(1)
+        sparkCanvas:SetHeight(1)
+        sparkCanvas:EnableMouse(false)
+        sparkClip:SetScrollChild(sparkCanvas)
+        gain = sparkCanvas:CreateTexture(nil, "ARTWORK")
         gain:SetTexture(fillTexture)
         gain:SetBlendMode("ADD")
         gain:SetVertexColor(0.9, 0.55, 1)
         gain:SetHeight(defaults.height)
         gain:Hide()
-        spark = canvas:CreateTexture(nil, "ARTWORK")
+        spark = sparkCanvas:CreateTexture(nil, "ARTWORK")
         spark:SetTexture("Interface\\CastingBar\\UI-CastingBar-Spark")
         spark:SetBlendMode("ADD")
         spark:SetVertexColor(1, 0.75, 1)
         spark:SetWidth(12)
         spark:SetHeight(sparkHeight)
-        effectsReady = true
     end
 
     local attached, registered, editing = false, false, false
@@ -245,8 +244,11 @@ DFRL:NewMod("Xprep", 1, function()
         hud:SetFrameLevel(owner:GetFrameLevel() + 2)
         local barLevel = hud:GetFrameLevel() + 1
         bar:SetFrameLevel(barLevel)
-        fill.RefreshLevel()
-        if sparkClip then sparkClip:SetFrameLevel(barLevel + 1) end
+        fill.BindViewport()
+        if sparkClip then
+            sparkClip:SetScrollChild(sparkCanvas)
+            sparkClip:SetFrameLevel(barLevel + 1)
+        end
         overlay:SetFrameLevel(barLevel + 2)
         hud:ClearAllPoints()
         bar:ClearAllPoints()

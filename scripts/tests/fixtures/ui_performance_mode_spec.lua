@@ -106,7 +106,11 @@ do
             self.points[point] = { relative, relativePoint, x, y }
         end
         if object.kind == "ScrollFrame" then
-            function object:SetScrollChild(child) self.child = child end
+            local setScrollChild = object.SetScrollChild
+            function object:SetScrollChild(child)
+                setScrollChild(self, child)
+                child.scrollMember = true
+            end
         end
         function object:SetMinMaxValues(low, high)
             self.minimum, self.maximum = low, high
@@ -119,7 +123,18 @@ do
             self.value = value
         end
         function object:SetBlendMode(value) assert(value == "ADD") end
-        function object:SetParent(parent) self.parent = parent end
+        function object:SetParent(parent)
+            self.parent = parent
+            -- Native reparenting clears scroll membership across the moved
+            -- subtree even though each viewport still points at its child.
+            for _, frame in ipairs(context.objects) do
+                local ancestor = frame
+                while ancestor and ancestor ~= self do
+                    ancestor = ancestor.parent
+                end
+                if ancestor == self then frame.scrollMember = false end
+            end
+        end
         function object:SetScale(value) self.scale = value end
         return object
     end
@@ -193,7 +208,7 @@ do
         if not clip then return end
         local gain, spark
         for _, object in ipairs(context.objects) do
-            if object.kind == "Texture" and object.parent == clip.child and object.texture then
+            if object.kind == "Texture" and object.parent == clip.scrollChild and object.texture then
                 if object.texture:find("main_soft.blp", 1, true) then gain = object end
                 if object.texture == "Interface\\CastingBar\\UI-CastingBar-Spark" then spark = object end
             end
@@ -206,6 +221,7 @@ do
     assert(bar:GetValue() == 0.2 and not controller:GetScript("OnUpdate"), "initial XP did not settle")
     local fillClip = assert(XPViewport(bar:GetFrameLevel()), "XP fill did not prepare a clipped viewport")
     assert(fillClip:IsShown() and env.T.NearlyEqual(fillClip:GetWidth(), bar:GetWidth() * 0.2))
+    assert(fillClip.scrollChild.scrollMember, "initial XP attachment left the full texture outside the scroll draw")
     local barWidth = bar:GetWidth()
     bar:SetWidth(barWidth + 16)
     context:Call(bar, "OnSizeChanged")
@@ -272,7 +288,7 @@ do
     assert(gain and spark and sparkClip, "first real XP gain did not prepare its effects")
     local effectsPoolSize = #context.objects
     assert(effectsPoolSize == textPoolSize + 4, "first animated XP gain did not prepare two textures and one viewport")
-    assert(sparkClip.parent == bar and sparkClip.child == spark.parent and spark.parent.parent == sparkClip)
+    assert(sparkClip.parent == bar and sparkClip.scrollChild == spark.parent and spark.parent.parent == sparkClip)
     assert(
         sparkClip:GetFrameLevel() == fillClip:GetFrameLevel() + 1
             and text.parent:GetFrameLevel() == sparkClip:GetFrameLevel() + 1,
@@ -382,6 +398,10 @@ do
             and text.parent:GetFrameLevel() == bar:GetFrameLevel() + 2,
         "detaching XP changed its layer order"
     )
+    assert(
+        fillClip.scrollChild.scrollMember and sparkClip.scrollChild.scrollMember,
+        "detaching XP lost native clipping"
+    )
     context:Call(controller, "OnUpdate", 0.01)
     context.xp = 1
     context:ResetCounts()
@@ -401,6 +421,35 @@ do
     assert(not context.writes.SetTexCoord, "XP motion changed the spark's source UVs")
     context:Call(controller, "OnUpdate", 0.36)
     assert(not sparkClip:IsShown() and not controller:GetScript("OnUpdate"), "finished gain kept its viewport active")
+
+    context.level, context.xp = 4, 0
+    context:Event(controller, "PLAYER_LEVEL_UP")
+    context:Event(controller, "PLAYER_XP_UPDATE", "player")
+    context:Call(controller, "OnUpdate", 0.5)
+    assert(
+        bar:GetValue() == 0
+            and not fillClip:IsShown()
+            and not sparkClip:IsShown()
+            and not controller:GetScript("OnUpdate"),
+        "normal level-up did not clear the completed bar at zero XP"
+    )
+    context.xp = 100
+    context:Event(controller, "PLAYER_XP_UPDATE", "player")
+    context:Call(controller, "OnUpdate", 0.5)
+    context:Call(controller, "OnUpdate", 0.36)
+    context.level, context.xp = 5, 30
+    context:Event(controller, "PLAYER_LEVEL_UP")
+    context:Call(controller, "OnUpdate", 0.5)
+    assert(bar:GetValue() == 0 and not fillClip:IsShown(), "level-up with overflow skipped the empty bar")
+    context:Call(controller, "OnUpdate", 0.5)
+    assert(
+        bar:GetValue() == 0.15
+            and fillClip.scrollChild.scrollMember
+            and fillClip:IsShown()
+            and env.T.NearlyEqual(fillClip:GetWidth(), bar:GetWidth() * 0.15),
+        "level-up did not clip the bar to the new level's XP"
+    )
+    context:Call(controller, "OnUpdate", 0.36)
     display.Reset()
     assert(not text:IsShown() and not display.Get("xpShowText"), "reset retained XP text")
     local maxLevelPool = #context.objects
